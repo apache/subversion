@@ -59,59 +59,73 @@
 
 #include <svn_svr.h>     /* declarations for this library */
 #include <svn_fs.h>      /* the Subversion filesystem API */
-
+#include <svn_string.h>  /* Subversion bytestring routines */
 
 
 /* 
    This routine is called by each "wrappered" filesystem call in this
    library.
 
-   If any authorization hooks return NULL, then return NULL (failure).
-   Else return success (1).
+   Input:  a {repos, user, action, path} group
+
+   Returns: TRUE (action is authorized by *all* authorization plugin-hooks) 
+             or FALSE (denied by at least one authorization hook)
 */
 
-char
-call_authorization_hooks (svn_svr_policies_t *policy, svn_string_t *repos, 
-                          svn_user_t *user, svn_svr_action_t *action,
-                          svn_string_t *path)
+svn_boolean_t
+svr__call_authorization_hooks (svn_svr_policies_t *policy, 
+                               svn_string_t *repos, 
+                               svn_user_t *user, 
+                               svn_svr_action_t *action,
+                               svn_string_t *path)
 {
   int i;
-  char (* my_hook) (svn_string_t *r, svn_user_t *u,
-                    svn_svr_action_t *a, svr_string_t *p);
-  char authorized = 1;  /* start off assuming we're authorized */
+  svn_svr_plugin_t *current_plugin;
+  char (* current_auth_hook) (svn_string_t *r, svn_user_t *u,
+                              svn_svr_action_t *a, svr_string_t *p);
 
-  /* loop through our plugins */
-  for (i = 0; i < (policy->plugin_len); i++)
+  /* start off assuming we're authorized */
+  svn_boolean_t authorized = TRUE;  
+
+  /* loop through our policy's array of plugins */
+  for (i = 0; i < (policy->plugins->nelts); i++)
     {
-      /* grab an authorization routine from the plugin */
-      my_hook = policy->plugins[i]->authorization_hook;
+      /* grab a plugin from the list of plugins */
+      current_plugin = AP_ARRAY_GET_ITEM (policy->plugins, i,
+                                          (svn_svr_plugin_t *));
+
+      /* grab the authorization routine from this plugin */
+      current_auth_hook = current_plugin->authorization_hook;
       
-      if (my_hook != NULL)
+      if (current_auth_hook != NULL)
         {
           /* Call the authorization routine, giving it a chance to
-             kill authorization */
+             kill our authorization assumption */
           authorized = (*my_hook) (repos, user, action, path);
         }
 
-      if (! authorized) 
+      if (! authorized)  /* bail out if we fail at any point in the loop */
         {
-          return NULL;  /* no point in calling more auth_hooks! */
-          /* TODO: return a more detailed description of failure? */
+          return FALSE;
         }
     }
 
-  /* if all auth_hooks are successful, make sure that
-     user->svn_username is actually filled in! */
+  /* If all auth_hooks are successful, double-check that
+     user->svn_username is actually filled in! 
+     (A good auth_hook should fill it in automatically, though.)
+  */
 
-  if (user->svn_username == NULL)  /* TODO: clarify this test! */
+  if (svn_string_isempty (user->svn_username))
     {
-      svn_string_t canonical_name;
-      /* TODO:  set_value(&canonical_name, user->auth_username) */
-      user->svn_username = &canonical_name;
+      /* Using the policy's memory pool, duplicate the auth_username
+         string and assign it to svn_username */
+      user->svn_username = svn_string_dup (user->auth_username,
+                                           policy->pool);
     }
   
-  return 1;  /* successfully authorized to perform the action */
+  return TRUE;  /* successfully authorized to perform the action! */
 }
+
 
 
 
@@ -119,26 +133,27 @@ call_authorization_hooks (svn_svr_policies_t *policy, svn_string_t *repos,
    or NULL if authorization failed.  */
 
 svn_ver_t * 
-svn_svr_latest (svn_svr_policies_t *policy, svn_string_t *repos, 
+svn_svr_latest (svn_svr_policies_t *policy, 
+                svn_string_t *repos, 
                 svn_user_t *user)
 {
   svn_ver_t *latest_version;
-  char authorized = NULL;
+  svn_boolean_t authorized = FALSE;
 
   svn_svr_action_t my_action = foo;  /* TODO:  fix this */
 
-  authorized = call_authorization_hooks (policy, 
-                                         repos, 
-                                         user,
-                                         my_action,
-                                         NULL);
+  authorized = svr__call_authorization_hooks (policy, 
+                                              repos, 
+                                              user,
+                                              my_action,
+                                              NULL);
 
   if (! authorized)
     {
       /* play sad music */
 
       /* we need some kind of graceful authorization failure mechanism.
-         what do we return?  NULL?   */
+         insert general exception-handling system <here>.   */
     }
   else
     {

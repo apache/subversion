@@ -59,6 +59,11 @@
 
 #include <stdlib.h>          /* defines size_t */
 #include <apr_pools.h>       /* APR memory pools for everyone. */
+#include <apr_hash.h>        /* proplists are hashtables */
+
+
+/* useful macro, suggested by Greg Stein */
+#define AP_ARRAY_GET_ITEM(ary,i,type) (((type *)(ary)->elts)[i])
 
 
 /* a string of bytes  */
@@ -71,21 +76,11 @@ typedef struct svn_string_t
 } svn_string_t;
 
 
-/* a property is a pair of strings */
-typedef struct svn_prop_t
-{
-  svn_string_t *name;
-  svn_string_t *value;
-} svn_prop_t;
+/* a property list is an unordered list of properties, implemented as
+   an `ap_hash_t' whose keys and vals are bytestrings (`svn_string_t') */
 
+typedef ap_hash_t svn_proplist_t;
 
-/* kff todo: shouldn't we just use apr_hash_t for this? */
-/* a property list is an unordered list of properties */
-typedef struct svn_proplist_t
-{
-  svn_prop_t *list;         /* an array of props */
-  size_t len;               /* length of array */
-} svn_proplist_t;
 
 
 /* a file is a proplist and a string */
@@ -105,11 +100,12 @@ typedef struct svn_dirent_t
 } svn_dirent_t;
 
 
+/* TODO:  use an actual ap_array below */
 /* a directory is an unordered list of directory entries, and a proplist */
 typedef struct svn_directory_t
 {
   svn_dirent_t *list;        /* an array of dirents */
-  size_t len;         /* length of array */
+  size_t len;                /* length of array */
   svn_proplist_t *proplist;  /* directory's properties */
 } svn_directory_t;
 
@@ -159,7 +155,8 @@ typedef enum {add, rm, mv, checkout,
 
 typedef struct svn_user_t
 {
-  /* The first three fields are filled in by the network layer */
+  /* The first three fields are filled in by the network layer,
+     and possibly used by the server for informational or matching purposes */
 
   svn_string_t auth_username;       /* the authenticated username */
   svn_string_t auth_method;         /* the authentication system used */
@@ -169,7 +166,7 @@ typedef struct svn_user_t
   /* This field is used by all of the server's "wrappered" fs calls */
 
   svn_string_t svn_username;        /* the username which will
-                                       actually be used when making
+                                       >actually< be used when making
                                        filesystem calls */
 
   void *username_data;              /* if a security plugin needs to
