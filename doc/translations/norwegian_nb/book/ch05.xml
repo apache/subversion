@@ -35,7 +35,7 @@
     @ENGLISH }}} -->
     <para>I dette kapittelet vil vi diskutere hvordan du kan opprette og 
       konfigurere et Subversiondepot.
-      Vi vil ogs&#229; snakke om depotvedlikehold, includert bruken av 
+      Vi vil ogs&#229; snakke om depotvedlikehold, inkludert bruken av 
       verkt&#248;yene <command>svnlook</command> og 
       <command>svnadmin</command> (som f&#248;lger med Subversion).
       Vi vil adressere vanlige sp&#248;rsm&#229;l og feilgrep, og komme med noen 
@@ -166,7 +166,7 @@
         revisjonstreet i den forespurte revisjonen (vanligvis det 
         nyeste, eller <quote>yngste</quote> treet), og sender tilbake 
         informasjon som forteller klienten om hvilke forandringer som er 
-        n&#248;dvendig for &#229; forandre deres arbeidskopi inn i et replikat av 
+        n&#248;dvendig for &#229; forandre deres arbeidskopi til et replikat av 
         det aktuelle revisjonstreet.
         Etter at oppdateringen er fullf&#248;rt, blir den midlertidige 
         transaksjonen slettet.</para>
@@ -453,7 +453,7 @@
 
               <entry>nei</entry>
 
-              <entry>yes</entry>
+              <entry>ja</entry>
             </row>
             
             <row>
@@ -1687,8 +1687,8 @@ pre-commit.tmpl
         <filename>DB_CONFIG</filename>-filen.
         Pass bare p&#229; at mens Subversion aldri pr&#248;ver &#229; lese eller forst&#229; 
         innholdet i filen og bruker ingen av valgene i den, vil du unng&#229; 
-        gj&#248;re forandringer i konfigurasjonen som f&#229;r Berkeley DB seg til 
-        &#229; oppf&#248;re seg annerledes enn det Subversionkoden forventer.
+        &#229; gj&#248;re forandringer i konfigurasjonen som f&#229;r Berkeley DB seg 
+        til &#229; oppf&#248;re seg annerledes enn det Subversionkoden forventer.
         I tillegg vil ikke forandringer gjort i 
         <filename>DB_CONFIG</filename> aktiviseres f&#248;r du gjenoppretter 
         databasemilj&#248;et (ved bruk av <command>svnadmin 
@@ -1701,8 +1701,12 @@ pre-commit.tmpl
   <!-- ******************************************************************* -->
 
   <sect1 id="svn-ch-5-sect-3">
+    <!-- @ENGLISH {{{
     <title>Repository Maintenance</title>
+    @ENGLISH }}} -->
+    <title>Vedlikehold av depotet</title>
 
+    <!-- @ENGLISH {{{
     <para>Maintaining a Subversion repository can be a daunting task,
       mostly due to the complexities inherent in systems which have a
       database backend.  Doing the task well is all about knowing the
@@ -1711,11 +1715,25 @@ pre-commit.tmpl
       administration tools provided by Subversion, and how to wield
       them to accomplish tasks such as repository migrations,
       upgrades, backups and cleanups.</para>
+    @ENGLISH }}} -->
+    <para>&#197; vedlikeholde et Subversiondepot kan v&#230;re en skremmende 
+      oppgave, mest p&#229; grunn av kompleksiteten innebygget i systemer som 
+      har en bakenforliggende database.
+      &#197; utf&#248;re oppgaven godt handler om &#229; kjenne verkt&#248;yene &#8212; hva de er, 
+      n&#229;r de skal brukes, og hvordan de brukes.
+      Denne seksjonen vil introdusere deg for administrasjonsverkt&#248;y som 
+      f&#248;lger med Subversion, og hvordan <!-- &#164; wield -->f&#229; dem til &#229; 
+      utf&#248;re oppgaver som flytting av depot, oppgraderinger, 
+      sikkerhetskopier og opprydding.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-3.1">
+      <!-- @ENGLISH {{{
       <title>An Administrator's Toolkit</title>
+      @ENGLISH }}} -->
+      <title>En administrators verkt&#248;ykasse</title>
 
+      <!-- @ENGLISH {{{
       <para>Subversion provides a handful of utilities useful for
         creating, inspecting, modifying and repairing your repository.
         Let's look more closely at each of those tools.  Afterward,
@@ -1723,10 +1741,19 @@ pre-commit.tmpl
         Berkeley DB distribution that provide functionality specific
         to your repository's database backend not otherwise provided
         by Subversion's own tools.</para>
+      @ENGLISH }}} -->
+      <para>Subversion har en h&#229;ndfull programmer nyttige for &#229; 
+        opprette, inspisere, modifisere og reparere depotet ditt.
+        La oss se litt n&#230;rmere p&#229; hvert av disse verkt&#248;yene.
+        Etterp&#229; vil vi g&#229; raskt over noen av de programmene som er 
+        inkludert i Berkeley DB-distribusjonen som tilbyr funksjonalitet 
+        spesifikk til databasedelen i depotet som ikke Subversions egne 
+        verkt&#248;y tar seg av.</para>
 
       <sect3 id="svn-ch-5-sect-3.1.1">
         <title>svnlook</title>
             
+        <!-- @ENGLISH {{{
         <para><command>svnlook</command> is a tool provided by
           Subversion for examining the various revisions and
           transactions in a repository.  No part of this program
@@ -1738,11 +1765,29 @@ pre-commit.tmpl
           committed (in the case of the <command>post-commit</command>
           hook) to the repository.  A repository administrator may use
           this tool for diagnostic purposes.</para>
+        @ENGLISH }}} -->
+        <para><command>svnlook</command> er et verkt&#248;y som f&#248;lger med 
+          Subversion. Det er beregnet for &#229; utforske de forskjellige 
+          revisjonene og transaksjonene i et depot.
+          Ingen deler av dette programmet pr&#248;ver &#229; forandre depotet &#8212; 
+          det er et <quote>bare for lesing</quote>-verkt&#248;y.
+          <command>svnlook</command> blir vanligvis brukt av 
+          p&#229;hakningene i depotet for &#229; rapportere forandringene som er i 
+          ferd med &#229; bli lagt inn (i tilfellet med 
+          <command>pre-commit</command>-p&#229;hakningen) eller det som 
+          nettopp ble lagt inn (i tilfellet med 
+          <command>post-commit</command>-p&#229;hakningen) i depotet.
+          En depotadministrator kan bruke dette verkt&#248;yet for 
+          diagnoseform&#229;l.</para>
             
+        <!-- @ENGLISH {{{
         <para><command>svnlook</command> has a straightforward
           syntax:</para>
+        @ENGLISH }}} -->
+        <para><command>svnlook</command> har en <!-- &#164; -->likefrem 
+          syntaks:</para>
             
-        <screen>
+        <!-- &#164; Legg inn norsk versjon --><screen>
 $ svnlook help
 general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS &amp; OPTIONS ...]
 Note: any subcommand which takes the '--revision' and '--transaction'
@@ -1752,12 +1797,13 @@ Type "svnlook help &lt;subcommand&gt;" for help on a specific subcommand.
 &hellip;
 </screen>
 
+        <!-- @ENGLISH {{{
         <para>Nearly every one of <command>svnlook</command>'s
           subcommands can operate on either a revision or a
           transaction tree, printing information about the tree
           itself, or how it differs from the previous revision of the
-          repository.  You use the <option>--revision</option> and
-          <option>--transaction</option> options to specify which
+          repository.  You use the <option>-&#64738;-revision</option> and
+          <option>-&#64738;-transaction</option> options to specify which
           revision or transaction, respectively, to examine.  Note
           that while revision numbers appear as natural numbers,
           transaction names are alphanumeric strings.  Keep in mind
@@ -1767,34 +1813,85 @@ Type "svnlook help &lt;subcommand&gt;" for help on a specific subcommand.
           transactions, because transactions are usually either
           committed (which disqualifies them from viewing) or aborted
           and removed.</para>
+        @ENGLISH }}} -->
+        <para>Nesten hver eneste av delkommandoene til 
+          <command>svnlook</command> kan operere p&#229; enten et revisjons- 
+          eller transaksjonstre og skrive ut informasjon om selve treet, 
+          eller hvordan det skiller seg ut fra den forrige revisjonen i 
+          depotet.
+          Du bruker valgene <option>--revision</option> og 
+          <option>--transaction</option> for &#229; spesifisere henholdsvis 
+          hvilken revisjon eller transaksjon som skal unders&#248;kes.
+          Legg merke til at mens revisjonsnumre fremst&#229;r som naturlige 
+          tall, er transaksjonsnavn alfanumeriske strenger.
+          Husk at filsystemet bare tillater gjennomgang av transaksjoner 
+          som enda ikke er lagt inn (transaksjoner som ikke har 
+          resultert i en ny revisjon).
+          De fleste depot vil ikke ha noen slike transaksjoner, fordi 
+          transaksjoner vanligvis enten er lagt inn (som diskvalifiserer 
+          dem fra visning) eller avbrutt og fjernet.</para>
 
-        <para>In the absence of both the <option>--revision</option>
-          and <option>--transaction</option> options,
+        <!-- @ENGLISH {{{
+        <para>In the absence of both the <option>-&#64738;-revision</option>
+          and <option>-&#64738;-transaction</option> options,
           <command>svnlook</command> will examine the youngest (or
           <quote>HEAD</quote>) revision in the repository.  So the
           following two commands do exactly the same thing when 19 is
           the youngest revision in the repository located at
           <filename>/path/to/repos</filename>:</para>
+        @ENGLISH }}} -->
+        <para>Hvis b&#229;de valgene <option>--revision</option> og 
+          <option>--transaction</option> mangler, vil 
+          <command>svnlook</command> unders&#248;ke den yngste (eller 
+          <quote>HEAD</quote>) revisjonen i depotet.
+          S&#229; de f&#248;lgende to kommandoene gj&#248;r akkurat det samme n&#229;r 19 er 
+          den yngste revisjonen i depotet som ligger i 
+          <filename>/sti/til/depot</filename>:</para>
 
+        <!-- @ENGLISH {{{
         <screen>
 $ svnlook info /path/to/repos
-$ svnlook info /path/to/repos --revision 19
+$ svnlook info /path/to/repos -&#64738;-revision 19
+</screen>
+        @ENGLISH }}} -->
+        <screen>
+$ svnlook info /sti/til/depot
+$ svnlook info /sti/til/depot --revision 19
 </screen>
 
+        <!-- @ENGLISH {{{
         <para>The only exception to these rules about subcommands is
           the <command>svnlook youngest</command> subcommand, which
           takes no options, and simply prints out the
           <literal>HEAD</literal> revision number.</para>
+        @ENGLISH }}} -->
+        <para>Det eneste unntaket fra disse reglene om delkommandoer er 
+          <command>svnlook youngest</command>-delkommandoen, som ikke 
+          tar noen valg, og bare skriver ut nummeret for 
+          <literal>HEAD</literal>-revisjonen.</para>
 
+        <!-- @ENGLISH {{{
         <screen>
 $ svnlook youngest /path/to/repos
 19
 </screen>
+        @ENGLISH }}} -->
+        <screen>
+$ svnlook youngest /sti/til/depot
+19
+</screen>
             
+        <!-- @ENGLISH {{{
         <para>Output from <command>svnlook</command> is designed to be
           both human- and machine-parsable.  Take as an example the output
           of the <literal>info</literal> subcommand:</para>
+        @ENGLISH }}} -->
+        <para>Utdata fra <command>svnlook</command> er designet for &#229; 
+          v&#230;re b&#229;de for menneske og maskin.
+          Som et eksempel kan vi ta utdataene fra delkommandoen 
+          <literal>info</literal>:</para>
 
+        <!-- @ENGLISH {{{
         <screen>
 $ svnlook info /path/to/repos
 sally
@@ -1803,26 +1900,53 @@ sally
 Added the usual
 Greek tree.
 </screen>
+        @ENGLISH }}} -->
+        <!-- &#164; Fornorsk den --><screen>
+$ svnlook info /sti/til/depot
+sally
+2002-11-04 09:29:13 -0600 (Mon, 04 Nov 2002)
+27
+Added the usual
+Greek tree.
+</screen>
 
+        <!-- @ENGLISH {{{
         <para>The output of the <literal>info</literal> subcommand is
           defined as:</para>
+        @ENGLISH }}} -->
+        <para>Utdataene fra <literal>info</literal>-delkommandoen er 
+          definert som:</para>
 
         <orderedlist>
           <listitem>
+            <!-- @ENGLISH {{{
             <para>The author, followed by a newline.</para>
+            @ENGLISH }}} -->
+            <para>Forfatteren, etterfulgt av linjeslutt.</para>
           </listitem>
           <listitem>
+            <!-- @ENGLISH {{{
             <para>The date, followed by a newline.</para>
+            @ENGLISH }}} -->
+            <para>Datoen, etterfulgt av linjeslutt.</para>
           </listitem>
           <listitem>
+            <!-- @ENGLISH {{{
             <para>The number of characters in the log message,
               followed by a newline.</para>
+            @ENGLISH }}} -->
+            <para>Antallet tegn i loggmeldingen, etterfulgt av 
+              linjeslutt.</para>
           </listitem>
           <listitem>
+            <!-- @ENGLISH {{{
             <para>The log message itself, followed by a newline.</para>
+            @ENGLISH }}} -->
+            <para>Selve loggmeldingen, etterfulgt av linjeslutt.</para>
           </listitem>
         </orderedlist>
 
+        <!-- @ENGLISH {{{
         <para>This output is human-readable, meaning items like the
           datestamp are displayed using a textual representation
           instead of something more obscure (such as the number of
@@ -1836,18 +1960,68 @@ Greek tree.
           allocate for the message, or at least how many bytes to skip
           in the event that this output is not the last bit of data in
           the stream.</para>
+        @ENGLISH }}} -->
+        <para>Disse utdataene er leselige for det menneskelige &#248;ye, det 
+          vil si at elementer som datoen blir vist som tekst istedenfor 
+          noe mer obskurt (som antall nanosekunder siden <!-- &#164; Henviser 
+          dette til noe spesifikt, eller kan man la kreativiteten rulle? 
+          --> <quote>Tasy Freeze</quote>-fyren kj&#248;rte forbi).
+          Men disse utdataene er ogs&#229; lesbare for en datamaskin &#8212; fordi 
+          loggmeldingen kan inneholde flere linjer og ha ubegrenset 
+          lengde, skriver <command>svnlook</command> lengden p&#229; denne 
+          meldingen f&#248;r selve meldingen.
+          Dette tillater skript og andre programmer som bruker denne 
+          kommandoen &#229; gj&#248;re intelligente valg ang&#229;ende loggmeldingen, 
+          som hvor mye hukommelse som skal reserveres for meldingen, 
+          eller i det minste hvor mange byte som m&#229; hoppes over n&#229;r 
+          disse utdataene ikke er den siste datadelen i str&#248;mmen.</para>
 
+        <!-- @ENGLISH {{{
         <para>Another common use of <command>svnlook</command> is to
           actually view the contents of a revision or transaction
           tree.  The <command>svnlook tree</command> command displays
           the directories and files in the requested tree.  If you
-          supply the <option>--show-ids</option> option, it will also
+          supply the <option>-&#64738;-show-ids</option> option, it will also
           show the filesystem node revision IDs for each of those
           paths (which is generally of more use to developers than to
           users).</para>
+        @ENGLISH }}} -->
+        <para>En annen vanlig bruk av <command>svnlook</command> er &#229; 
+          faktisk vise innholdet i et revisjons- eller transaksjonstre.
+          Kommandoen <command>svnlook tree</command> viser katalogene og 
+          filene i det forespurte treet.
+          Hvis du angir valget <option>--show-ids</option>, vil den ogs&#229; 
+          vise noderevisjons-ID for hver av disse stiene (som vanligvis 
+          er mer nyttige for utviklere enn vanlige brukere).</para>
 
+        <!-- @ENGLISH {{{
         <screen>
-$ svnlook tree /path/to/repos --show-ids
+$ svnlook tree /path/to/repos -&#64738;-show-ids
+/ &lt;0.0.1&gt;
+ A/ &lt;2.0.1&gt;
+  B/ &lt;4.0.1&gt;
+   lambda &lt;5.0.1&gt;
+   E/ &lt;6.0.1&gt;
+    alpha &lt;7.0.1&gt;
+    beta &lt;8.0.1&gt;
+   F/ &lt;9.0.1&gt;
+  mu &lt;3.0.1&gt;
+  C/ &lt;a.0.1&gt;
+  D/ &lt;b.0.1&gt;
+   gamma &lt;c.0.1&gt;
+   G/ &lt;d.0.1&gt;
+    pi &lt;e.0.1&gt;
+    rho &lt;f.0.1&gt;
+    tau &lt;g.0.1&gt;
+   H/ &lt;h.0.1&gt;
+    chi &lt;i.0.1&gt;
+    omega &lt;k.0.1&gt;
+    psi &lt;j.0.1&gt;
+ iota &lt;1.0.1&gt;
+</screen>
+        @ENGLISH }}} -->
+        <screen>
+$ svnlook tree /sti/til/depot --show-ids
 / &lt;0.0.1&gt;
  A/ &lt;2.0.1&gt;
   B/ &lt;4.0.1&gt;
@@ -1871,12 +2045,20 @@ $ svnlook tree /path/to/repos --show-ids
  iota &lt;1.0.1&gt;
 </screen>
 
+        <!-- @ENGLISH {{{
         <para>Once you've seen the layout of directories and files in
           your tree, you can use commands like <command>svnlook
           cat</command>, <command>svnlook propget</command>, and
           <command>svnlook proplist</command> to dig into the details
           of those files and directories.</para>
+        @ENGLISH }}} -->
+        <para>N&#229;r du har sett p&#229; layouten for kataloger og filer i treet 
+          ditt, kan du bruke kommandoer som <command>svnlook 
+          cat</command>, <command>svnlook propget</command> og 
+          <command>svnlook proplist</command> for &#229; grave dypere inn i 
+          detaljene om disse filene og katalogene.</para>
 
+        <!-- @ENGLISH {{{
         <para><command>svnlook</command> can perform a variety of
           other queries, displaying subsets of bits of information
           we've mentioned previously, reporting which paths were
@@ -1885,113 +2067,176 @@ $ svnlook tree /path/to/repos --show-ids
           so on.  The following is a brief description of the current
           list of subcommands accepted by <command>svnlook</command>,
           and the output of those subcommands:</para>
+        @ENGLISH }}} -->
+        <para><command>svnlook</command> kan utf&#248;re en rekke andre 
+          foresp&#248;rsler, vise <!-- &#164; -->delsett av biter av informasjon 
+          vi tidligere har nevnt, rapportere hvilke stier som ble 
+          modifisert i en gitt revisjon eller transaksjon, vise tekst- 
+          og egenskapsforskjeller gjort med filer og kataloger og s&#229; 
+          videre.
+          Det f&#248;lgende er en rask beskrivelse av den n&#229;v&#230;rende listen 
+          med delkommandoer som <command>svnlook</command> aksepterer, 
+          og utdataene fra disse delkommandoene:</para>
 
         <variablelist>
           <varlistentry>
             <term><literal>author</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Print the tree's author.</para>
+              @ENGLISH }}} -->
+              <para>Skriv treets forfatter.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>cat</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Print the contents of a file in the tree.</para>
+              @ENGLISH }}} -->
+              <para>Skriv innholdet av en fil i treet.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>changed</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>List all files and directories that changed in the 
                 tree.</para>
+              @ENGLISH }}} -->
+              <para>List alle filer og kataloger som forandret seg i 
+                treet.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>date</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Print the tree's datestamp.</para>
+              @ENGLISH }}} -->
+              <para>Skriv dato og klokkeslett for treet.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>diff</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Print unified diffs of changed files.</para>
+              @ENGLISH }}} -->
+              <para>Lag <foreignphrase>unified diff</foreignphrase> 
+                (forskjellsfil) av forandrede filer.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>dirs-changed</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>List the directories in the tree that were
                 themselves changed, or whose file children were
                 changed.</para>
+              @ENGLISH }}} -->
+              <para>List katalogene i treet som enten selv forandret 
+                seg, eller der en <!-- &#164; -->fil under den forandret 
+                seg.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>history</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Display interesting points in the history of a
                 versioned path (places where modifications or copies
                 occurred).</para>
+              @ENGLISH }}} -->
+              <para>Vis interessante punkter i historien for en 
+                versjonert sti (steder der modifiseringer eller 
+                kopieringer skjedde).</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>info</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Print the tree's author, datestamp, log message
                 character count, and log message.</para>
+              @ENGLISH }}} -->
+              <para>Skriv treets forfatter, tidspunkt, antall tegn i 
+                loggmeldingen og selve loggmeldingen.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>log</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Print the tree's log message.</para>
+              @ENGLISH }}} -->
+              <para>Skriv treets loggmelding.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>propget</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Print the value of a property on a path in the
                 tree.</para>
+              @ENGLISH }}} -->
+              <para>Skriv verdien for en egenskap p&#229; en sti i 
+                treet.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>proplist</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Print the names and values of properties set on paths
                 in the tree.</para>
+              @ENGLISH }}} -->
+              <para>Skriv navnene og verdiene av egenskapene satt p&#229; 
+                stier i treet.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>tree</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Print the tree listing, optionally revealing the
                 filesystem node revision IDs associated with each
                 path.</para>
+              @ENGLISH }}} -->
+              <para>Skriv en liste over treet, med valgfri visning av 
+                filsystemets noderevisions-ID assosiert med hver 
+                sti.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>uuid</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Print the tree's unique user ID (UUID).</para>
+              @ENGLISH }}} -->
+              <para>Skriv treets unike bruker-ID (UUID).</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><literal>youngest</literal></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Print the youngest revision number.</para>
+              @ENGLISH }}} -->
+              <para>Skriv det yngste revisjonsnummeret.</para>
             </listitem>
           </varlistentry>
         </variablelist>
