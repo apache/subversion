@@ -356,17 +356,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       depends.append(self.targets['neon'])
     elif isinstance(target, gen_base.Target):
       if isinstance(target, gen_base.TargetExe):
-        deps = { }
-        for obj in self.get_win_depends(target, 0):
-          deps[obj] = None
-        for obj in self.get_win_depends(target, 2):
-          if isinstance(obj, gen_base.TargetLib):
-            deps[obj] = None
-        deps = deps.keys()
-        deps.sort()
-        depends.extend(deps)
+        depends.extend(self.get_win_depends(target, 1, 
+                                            ccls=gen_base.TargetLib))
       else:
-        depends.extend(self.get_unique_win_depends(target))
+        depends.extend(self.get_win_depends(target, 3))
     elif isinstance(target, gen_base.SWIGLibrary):
       for lib in self.graph.get_sources(gen_base.DT_LINK, target.name):
         if hasattr(lib, 'proj_name'):
@@ -381,41 +374,30 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     return depends
     
   
-  def get_win_depends(self, target, recurse=0):
+  def get_win_depends(self, target, recurse=0, cls=gen_base.Target, 
+                      ccls=gen_base.Target):
     """
-    Return the list of dependencies for target not including external libraries
+    Return the list of dependencies for target
     If recurse is 0, return just target's dependencies
     If recurse is 1, return a list of dependencies plus dependencies of dependencies
     If recurse is 2, only return the dependencies of target's dependencies
+    If recurse is 3, return a list of dependencies minus dependencies of dependencies
 
     """
-    deps = { }
+    if recurse == 0:
+      deps = { }
+      child_deps = None
+    elif recurse == 1:
+      deps = { }
+      child_deps = deps
+    elif recurse == 2:
+      deps = None
+      child_deps = { }
+    elif recurse == 3:
+      deps = { }
+      child_deps = { }
 
-    for obj in self.graph.get_sources(gen_base.DT_LINK, target.name):
-      if not isinstance(obj, gen_base.Target):
-        continue
-
-      if recurse != 2:
-        deps[obj] = None
-
-      if recurse:
-        for dep in self.get_win_depends(obj, 1):
-          deps[dep] = None
-
-    deps = deps.keys()
-    deps.sort()
-    return deps
-
-  def get_unique_win_depends(self, target):
-    "Return the list of dependencies for target that are not already depended upon by a child"
-
-    deps = { }
-
-    sub = self.get_win_depends(target, 2)
-    
-    for obj in self.graph.get_sources(gen_base.DT_LINK, target.name):
-      if not isinstance(obj, gen_base.Target):
-        continue
+    for obj in self.graph.get_sources(gen_base.DT_LINK, target.name, cls):
 
       if isinstance(obj, gen_base.TargetSWIG):
         tname = obj.install + '-' + gen_base.lang_abbrev[target.language]
@@ -423,9 +405,19 @@ class WinGeneratorBase(gen_base.GeneratorBase):
           deps[dep] = None
         continue
 
-      # if the object is in 'sub', then skip it
-      if obj not in sub:
+      if deps is not None:
         deps[obj] = None
+
+      if child_deps is not None:
+        for dep in self.get_win_depends(obj, 1, ccls, ccls):
+          child_deps[dep] = None
+
+    if recurse == 2:
+      deps = child_deps
+    elif recurse == 3:
+      for dep in deps.keys():
+        if child_deps.has_key(dep):
+          del deps[dep]
 
     deps = deps.keys()
     deps.sort()
