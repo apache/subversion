@@ -84,7 +84,7 @@ _svn()
 		;;
 	diff|di)
 		cmdOpts="$rOpts -x --extensions --diff-cmd --no-diff-deleted \
-		         $nOpts $pOpts --old --new --notice-ancestry"
+		         $nOpts $pOpts --force --old --new --notice-ancestry"
 		;;
 	export)
 		cmdOpts="$rOpts $qOpts $pOpts --force --native-eol"
