@@ -50,7 +50,7 @@ Candidate changes:
       r12061 is just a docstring clarification.
     Votes:
       +1: lundblad, maxb
-      +0: nori
+      +0: nori (not r12061)
 
   * r11936
     Fixes a 'working copy not locked' error.
@@ -79,7 +79,7 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r12063 (Issue #2119)
+  * r12063, r12084 (Issue #2119)
     Canonicalize paths received over the wire in ra_svn and svnserve.
     Justification:
       Protects against API violations, which lead to assertion failures.
