@@ -180,7 +180,7 @@ svn_fs__bdb_youngest_rev (svn_revnum_t *youngest_p,
         return
           svn_error_createf
           (SVN_ERR_FS_CORRUPT, 0,
-           "revision 0 missing from `revisions' table, in filesystem `%s'",
+           "revision 0 missing from 'revisions' table, in filesystem '%s'",
            fs->path);
       
       SVN_ERR (BDB_WRAP (fs, "getting youngest revision (finding last entry)",

@@ -276,13 +276,13 @@ not_found (svn_fs_root_t *root, const char *path)
     return
       svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, 0,
-       "file not found: transaction `%s', path `%s'",
+       "file not found: transaction '%s', path '%s'",
        root->txn, path);
   else if (root->kind == revision_root)
     return
       svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, 0,
-       "file not found: revision `%" SVN_REVNUM_T_FMT "', path `%s'",
+       "file not found: revision '%" SVN_REVNUM_T_FMT "', path '%s'",
        root->rev, path);
   else
     abort ();
@@ -299,14 +299,14 @@ already_exists (svn_fs_root_t *root, const char *path)
     return
       svn_error_createf
       (SVN_ERR_FS_ALREADY_EXISTS, 0,
-       "file already exists: filesystem `%s', transaction `%s', path `%s'",
+       "file already exists: filesystem '%s', transaction '%s', path '%s'",
        fs->path, root->txn, path);
   else if (root->kind == revision_root)
     return
       svn_error_createf
       (SVN_ERR_FS_ALREADY_EXISTS, 0,
-       "file already exists: filesystem `%s', revision `%" SVN_REVNUM_T_FMT
-       "', path `%s'", fs->path, root->rev, path);
+       "file already exists: filesystem '%s', revision '%" SVN_REVNUM_T_FMT
+       "', path '%s'", fs->path, root->rev, path);
   else
     abort ();
 }
@@ -1663,8 +1663,8 @@ undelete_change (svn_fs_t *fs,
          as we expected it to be in the changes table. */
       return svn_error_createf 
         (SVN_ERR_FS_CORRUPT, NULL,
-         "undelete_change: no deletion changes for path `%s' "
-         "in transaction `%s' of filesystem `%s'",
+         "undelete_change: no deletion changes for path '%s' "
+         "in transaction '%s' of filesystem '%s'",
          path, txn_id, fs->path);
     }
 
@@ -1745,7 +1745,7 @@ merge (svn_stringbuf_t *conflict_p,
       svn_string_t *id_str = svn_fs_unparse_id (target_id, trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL,
-         "Bad merge call -- target `%s' has id `%s', same as ancestor.",
+         "Bad merge call -- target '%s' has id '%s', same as ancestor.",
          target_path, id_str->data);
     }
 
@@ -2355,7 +2355,7 @@ txn_body_commit (void *baton, trail_t *trail)
       svn_string_t *id_str = svn_fs_unparse_id (y_rev_root_id, trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
-         "txn `%s' out of date w.r.t. revision `%s'", txn_name, id_str->data);
+         "txn '%s' out of date w.r.t. revision '%s'", txn_name, id_str->data);
     }
   
   /* Else, commit the txn. */
@@ -3608,12 +3608,12 @@ svn_fs_contents_changed (int *changed_p,
     SVN_ERR (svn_fs_is_file (&is_file, root1, path1, pool));
     if (! is_file)
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL, "`%s' is not a file.", path1);
+        (SVN_ERR_FS_GENERAL, NULL, "'%s' is not a file.", path1);
       
     SVN_ERR (svn_fs_is_file (&is_file, root2, path2, pool));
     if (! is_file)
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL, "`%s' is not a file.", path2);
+        (SVN_ERR_FS_GENERAL, NULL, "'%s' is not a file.", path2);
   }
 
   args.root1      = root1;

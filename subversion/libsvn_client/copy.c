@@ -77,7 +77,7 @@ wc_to_wc_copy (const char *src_path,
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   if (src_kind == svn_node_none)
     return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                              "path `%s' does not exist.", src_path);
+                              "path '%s' does not exist.", src_path);
 
   /* If DST_PATH does not exist, then its basename will become a new
      file or dir added to its parent (possibly an implicit '.').  If
@@ -96,7 +96,7 @@ wc_to_wc_copy (const char *src_path,
     }
   else
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                              "file `%s' already exists.", dst_path);
+                              "file '%s' already exists.", dst_path);
 
   if (is_move)
     {
@@ -384,7 +384,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   if (src_kind == svn_node_none)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FOUND, NULL,
-       "path `%s' does not exist in revision `%" SVN_REVNUM_T_FMT "'",
+       "path '%s' does not exist in revision '%" SVN_REVNUM_T_FMT "'",
        src_url, src_revnum);
 
   /* Figure out the basename that will result from this operation. */
@@ -397,7 +397,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
     {
       /* We disallow the overwriting of files. */
       return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                "fs path `%s' already exists.", dst_rel);
+                                "fs path '%s' already exists.", dst_rel);
     }
   else if (dst_kind == svn_node_dir)
     {
@@ -413,7 +413,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                                    dst_rel, youngest, pool));
       if (attempt_kind != svn_node_none)
         return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                  "fs path `%s' already exists.", dst_rel);
+                                  "fs path '%s' already exists.", dst_rel);
     }
   else
     {
@@ -614,7 +614,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
       /* DST_URL is an existing file, which can't be overwritten or
          used as a container, so error out. */
       return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                "file `%s' already exists.", dst_url);
+                                "file '%s' already exists.", dst_url);
     }
 
   /* Crawl the working copy for commit items. */
@@ -745,12 +745,12 @@ repos_to_wc_copy (const char *src_url,
       if (SVN_IS_VALID_REVNUM (src_revnum))
         return svn_error_createf
           (SVN_ERR_FS_NOT_FOUND, NULL,
-           "path `%s' not found in revision `%" SVN_REVNUM_T_FMT "'",
+           "path '%s' not found in revision '%" SVN_REVNUM_T_FMT "'",
            src_url, src_revnum);
       else
         return svn_error_createf
           (SVN_ERR_FS_NOT_FOUND, NULL,
-           "path `%s' not found in head revision", src_url);
+           "path '%s' not found in head revision", src_url);
     }
 
   /* There are two interfering sets of cases to watch out for here:
@@ -787,7 +787,7 @@ repos_to_wc_copy (const char *src_url,
   else if (dst_kind != svn_node_none)  /* must be a file */
     {
       return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                                "file `%s' already exists.", dst_path);
+                                "file '%s' already exists.", dst_path);
     }
 
   /* Now that dst_path has possibly been reset, check that there's
@@ -795,7 +795,7 @@ repos_to_wc_copy (const char *src_url,
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind != svn_node_none)
     return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                              "`%s' is in the way", dst_path);
+                              "'%s' is in the way", dst_path);
 
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, dst_path, TRUE, FALSE,
                                   pool));

@@ -86,7 +86,7 @@ svn_wc_merge (const char *left,
           if (apr_err)
             return svn_error_createf
               (apr_err, NULL,
-               "svn_wc_merge: unable to close tmp file `%s'",
+               "svn_wc_merge: unable to close tmp file '%s'",
                tmp_target);
       
           SVN_ERR (svn_io_copy_file (merge_target,
@@ -111,7 +111,7 @@ svn_wc_merge (const char *left,
       if (apr_err)
         return svn_error_createf
           (apr_err, NULL,
-           "svn_wc_merge: unable to close tmp file `%s'",
+           "svn_wc_merge: unable to close tmp file '%s'",
            tmp_left);
 
       SVN_ERR (svn_io_open_unique_file (&tmp_f, &tmp_right,
@@ -122,7 +122,7 @@ svn_wc_merge (const char *left,
       if (apr_err)
         return svn_error_createf
           (apr_err, NULL,
-           "svn_wc_merge: unable to close tmp file `%s'", tmp_right);
+           "svn_wc_merge: unable to close tmp file '%s'", tmp_right);
     
       SVN_ERR (svn_io_copy_file (left, tmp_left, TRUE, pool));
       SVN_ERR (svn_io_copy_file (right, tmp_right, TRUE, pool));
@@ -184,7 +184,7 @@ svn_wc_merge (const char *left,
       if (apr_err)
         return svn_error_createf
           (apr_err, NULL,
-           "svn_wc_merge: unable to close tmp file `%s'", result_target);
+           "svn_wc_merge: unable to close tmp file '%s'", result_target);
 
       if (contains_conflicts && ! dry_run)  /* got a conflict */
         {
@@ -209,7 +209,7 @@ svn_wc_merge (const char *left,
           if (apr_err)
             return svn_error_createf
               (apr_err, NULL,
-               "svn_wc_merge: unable to close tmp file `%s'", left_copy);
+               "svn_wc_merge: unable to close tmp file '%s'", left_copy);
 
           /* Have I mentioned how much I miss Lisp? */
 
@@ -224,7 +224,7 @@ svn_wc_merge (const char *left,
           if (apr_err)
             return svn_error_createf
               (apr_err, NULL,
-               "svn_wc_merge: unable to close tmp file `%s'", right_copy);
+               "svn_wc_merge: unable to close tmp file '%s'", right_copy);
 
           /* Why, how much more pleasant to be forced to unroll my loops.
              If I'd been writing in Lisp, I might have mapped an inline
@@ -242,7 +242,7 @@ svn_wc_merge (const char *left,
           if (apr_err)
             return svn_error_createf
               (apr_err, NULL,
-               "svn_wc_merge: unable to close tmp file `%s'", target_copy);
+               "svn_wc_merge: unable to close tmp file '%s'", target_copy);
 
           /* We preserve all the files with keywords expanded and line
              endings in local (working) form. */
@@ -360,7 +360,7 @@ svn_wc_merge (const char *left,
       if (apr_err)
         return svn_error_createf
           (apr_err, NULL,
-           "svn_wc_merge: unable to close tmp file `%s'", left_copy);
+           "svn_wc_merge: unable to close tmp file '%s'", left_copy);
 
       SVN_ERR (svn_io_open_unique_file (&rcopy_f,
                                         &right_copy,
@@ -372,7 +372,7 @@ svn_wc_merge (const char *left,
       if (apr_err)
         return svn_error_createf
           (apr_err, NULL,
-           "svn_wc_merge: unable to close tmp file `%s'", right_copy);
+           "svn_wc_merge: unable to close tmp file '%s'", right_copy);
 
       /* create the backup files */
       SVN_ERR (svn_io_copy_file (left,

@@ -89,7 +89,7 @@ svn_fs__bdb_read_rep (svn_fs__representation_t **rep_p,
   if (db_err == DB_NOTFOUND)
     return svn_error_createf
       (SVN_ERR_FS_NO_SUCH_REPRESENTATION, 0,
-       "svn_fs__bdb_read_rep: no such representation `%s'", key);
+       "svn_fs__bdb_read_rep: no such representation '%s'", key);
 
   /* Handle any other error conditions.  */
   SVN_ERR (BDB_WRAP (fs, "reading representation", db_err));
@@ -189,7 +189,7 @@ svn_fs__bdb_delete_rep (svn_fs_t *fs, const char *key, trail_t *trail)
   if (db_err == DB_NOTFOUND)
     return svn_error_createf
       (SVN_ERR_FS_NO_SUCH_REPRESENTATION, 0,
-       "svn_fs__bdb_delete_rep: no such representation `%s'", key);
+       "svn_fs__bdb_delete_rep: no such representation '%s'", key);
 
   /* Handle any other error conditions.  */
   SVN_ERR (BDB_WRAP (fs, "deleting representation", db_err));

@@ -101,7 +101,7 @@ locate_key (apr_size_t *length,
       (*cursor)->c_close (*cursor);
       return svn_error_createf
         (SVN_ERR_FS_NO_SUCH_STRING, 0,
-         "locate_key: no such string `%s'", (const char *)query->data);
+         "locate_key: no such string '%s'", (const char *)query->data);
     }
   if (db_err)
     {
@@ -351,7 +351,7 @@ svn_fs__bdb_string_clear (svn_fs_t *fs,
   if (db_err == DB_NOTFOUND)
     return svn_error_createf
       (SVN_ERR_FS_NO_SUCH_STRING, 0,
-       "svn_fs__string_clear: no such string `%s'", key);
+       "svn_fs__string_clear: no such string '%s'", key);
 
   /* Handle any other error conditions.  */
   SVN_ERR (BDB_WRAP (fs, "clearing string", db_err));
@@ -422,7 +422,7 @@ svn_fs__bdb_string_delete (svn_fs_t *fs,
   if (db_err == DB_NOTFOUND)
     return svn_error_createf
       (SVN_ERR_FS_NO_SUCH_STRING, 0,
-       "svn_fs__bdb_delete_string: no such string `%s'", key);
+       "svn_fs__bdb_delete_string: no such string '%s'", key);
 
   /* Handle any other error conditions.  */
   SVN_ERR (BDB_WRAP (fs, "deleting string", db_err));

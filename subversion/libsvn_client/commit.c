@@ -79,7 +79,7 @@ send_file_contents (const char *path,
   apr_err = apr_file_close (f);
   if (apr_err)
     return svn_error_createf
-      (apr_err, NULL, "error closing `%s'", path);
+      (apr_err, NULL, "error closing '%s'", path);
 
   return SVN_NO_ERROR;
 }
@@ -291,12 +291,12 @@ import_dir (const svn_delta_editor_t *editor,
   if (! (APR_STATUS_IS_ENOENT (err->apr_err)))
     return svn_error_createf
       (err->apr_err, err,
-       "error during import of `%s'", path);
+       "error during import of '%s'", path);
 
   /* Yes, it exited cleanly, so close the dir. */
   else if ((apr_err = apr_dir_close (dir)))
     return svn_error_createf
-      (apr_err, NULL, "error closing dir `%s'", path);
+      (apr_err, NULL, "error closing dir '%s'", path);
       
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;

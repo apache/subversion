@@ -122,7 +122,7 @@ svn_cl__propset (apr_getopt_t *os,
                                        &rev, ctx, opt_state->force, pool));
       if (! opt_state->quiet) 
         {
-          printf ("property `%s' set on repository revision '%"
+          printf ("property '%s' set on repository revision '%"
                   SVN_REVNUM_T_FMT"'\n",
                   pname, rev);
         }      
@@ -187,7 +187,7 @@ svn_cl__propset (apr_getopt_t *os,
               const char *target_native;
               SVN_ERR (svn_utf_cstring_from_utf8 (&target_native,
                                                   target, subpool));
-              printf ("property `%s' set%s on '%s'\n",
+              printf ("property '%s' set%s on '%s'\n",
                       pname, 
                       opt_state->recursive ? " (recursively)" : "",
                       target_native);

@@ -157,8 +157,8 @@ relegate_external (const char *path,
 }
 
 
-/* This implements the `svn_hash_diff_func_t' interface.
-   BATON is of type `struct handle_external_item_change_baton *'.  */
+/* This implements the 'svn_hash_diff_func_t' interface.
+   BATON is of type 'struct handle_external_item_change_baton *'.  */
 static svn_error_t *
 handle_external_item_change (const void *key, apr_ssize_t klen,
                              enum svn_hash_diff_key_status status,
@@ -381,8 +381,8 @@ struct handle_externals_desc_change_baton
 };
 
 
-/* This implements the `svn_hash_diff_func_t' interface.
-   BATON is of type `struct handle_externals_desc_change_baton *'.  
+/* This implements the 'svn_hash_diff_func_t' interface.
+   BATON is of type 'struct handle_externals_desc_change_baton *'.  
 */
 static svn_error_t *
 handle_externals_desc_change (const void *key, apr_ssize_t klen,

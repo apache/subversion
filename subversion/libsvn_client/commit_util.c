@@ -323,7 +323,7 @@ harvest_committables (apr_hash_t *committables,
       else if (! copy_mode)
         return svn_error_createf 
           (SVN_ERR_WC_CORRUPT, NULL,
-           "Did not expect `%s' to be a working copy root", path);
+           "Did not expect '%s' to be a working copy root", path);
 
       /* If the ENTRY's revision differs from that of its parent, we
          have to explicitly commit ENTRY as a copy. */
@@ -583,7 +583,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
         return svn_error_create (SVN_ERR_ENTRY_NOT_FOUND, NULL, target);
       if (! entry->url)
         return svn_error_createf (SVN_ERR_WC_CORRUPT, NULL, 
-                                  "Entry for `%s' has no URL", target);
+                                  "Entry for '%s' has no URL", target);
 
       /* We have to be especially careful around entries scheduled for
          addition or replacement. */
@@ -614,7 +614,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
           if (! p_entry)
             return svn_error_createf 
               (SVN_ERR_WC_CORRUPT, NULL, 
-               "Entry for `%s' is scheduled for addition, yet its parent\n"
+               "Entry for '%s' is scheduled for addition, yet its parent\n"
                "directory does not appear to be under version control", 
                target);
           if ((p_entry->schedule == svn_wc_schedule_add)
@@ -635,7 +635,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
       if ((entry->copied) && (entry->schedule == svn_wc_schedule_normal))
         return svn_error_createf 
           (SVN_ERR_ILLEGAL_TARGET, NULL, 
-           "Entry for `%s' is marked as `copied' but is not itself scheduled\n"
+           "Entry for '%s' is marked as 'copied' but is not itself scheduled\n"
            "for addition.  Perhaps you're committing a target that this\n"
            "inside of an unversioned (or not-yet-versioned) directory?",
            target);
@@ -675,7 +675,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
           {
             return svn_error_createf 
               (SVN_ERR_ILLEGAL_TARGET, NULL, 
-               "`%s' is not versioned in the repository "
+               "'%s' is not versioned in the repository "
                "and is not part of the commit, "
                "yet its child '%s' is part of the commit.",
                dangling_parent, dangling_child);
@@ -754,7 +754,7 @@ svn_client__condense_commit_items (const char **base_url,
       if ((last_item) && (strcmp (last_item->url, url) == 0))
         return svn_error_createf 
           (SVN_ERR_CLIENT_DUPLICATE_COMMIT_URL, NULL,
-           "Cannot commit both `%s' and `%s' as they refer to the same URL.",
+           "Cannot commit both '%s' and '%s' as they refer to the same URL.",
            item->path, last_item->path);
 
       /* In the first iteration, our BASE_URL is just our only
@@ -818,7 +818,7 @@ svn_client__condense_commit_items (const char **base_url,
       flags[4] = (this_item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
                    ? 'c' : '-';
       flags[5] = '\0';
-      fprintf (stderr, "   %s  %6" SVN_REVNUM_T_FMT "  `%s' (%s)\n", 
+      fprintf (stderr, "   %s  %6" SVN_REVNUM_T_FMT "  '%s' (%s)\n", 
                flags,
                this_item->revision,
                this_item->url ? this_item->url : "",

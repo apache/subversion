@@ -218,7 +218,7 @@ remove_file (const char *fname, apr_pool_t *pool)
         }
       else
         return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                  "non-file `%s' is in the way", fname);
+                                  "non-file '%s' is in the way", fname);
     }
 
   return SVN_NO_ERROR;

@@ -130,7 +130,7 @@ create_repos_dir (const char *path, apr_pool_t *pool)
         err = NULL;
       else
         err = svn_error_createf (SVN_ERR_DIR_NOT_EMPTY, 0,
-                                 "`%s' exists and is non-empty",
+                                 "'%s' exists and is non-empty",
                                  path);
     }
 
@@ -176,12 +176,12 @@ create_locks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
       return svn_error_createf (apr_err, NULL,
-                                "writing lock file `%s'", lockfile_path);
+                                "writing lock file '%s'", lockfile_path);
     
     apr_err = apr_file_close (f);
     if (apr_err)
       return svn_error_createf (apr_err, NULL,
-                                "closing lock file `%s'", lockfile_path);
+                                "closing lock file '%s'", lockfile_path);
   }
 
   return SVN_NO_ERROR;
@@ -228,7 +228,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       APR_EOL_STR
       "# by invoking a program (script, executable, binary, etc.) named"
       APR_EOL_STR
-      "# `" 
+      "# '" 
       SVN_REPOS__HOOK_START_COMMIT
       "' (for which this file is a template)"
       APR_EOL_STR
@@ -251,7 +251,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "#"
       APR_EOL_STR
       "# On a Unix system, the normal procedure is to have "
-      "`"
+      "'"
       SVN_REPOS__HOOK_START_COMMIT
       "'" 
       APR_EOL_STR
@@ -262,7 +262,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "#"
       APR_EOL_STR
       "# Note that"
-      " `" SVN_REPOS__HOOK_START_COMMIT "' "
+      " '" SVN_REPOS__HOOK_START_COMMIT "' "
       "must be executable by the user(s) who will"
       APR_EOL_STR
       "# invoke it (typically the user httpd runs as), and that user must"
@@ -273,8 +273,8 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       APR_EOL_STR
       "# On a Windows system, you should name the hook program"
       APR_EOL_STR
-      "# `" SVN_REPOS__HOOK_START_COMMIT ".bat' or "
-      "`" SVN_REPOS__HOOK_START_COMMIT ".exe',"
+      "# '" SVN_REPOS__HOOK_START_COMMIT ".bat' or "
+      "'" SVN_REPOS__HOOK_START_COMMIT ".exe',"
       APR_EOL_STR
       "# but the basic idea is the same."
       APR_EOL_STR
@@ -301,12 +301,12 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
       return svn_error_createf (apr_err, NULL,
-                                "writing hook file `%s'", this_path);
+                                "writing hook file '%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
       return svn_error_createf (apr_err, NULL,
-                                "closing hook file `%s'", this_path);
+                                "closing hook file '%s'", this_path);
   }  /* end start-commit hook */
 
   /* Pre-commit hook. */
@@ -334,7 +334,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "# committed.  Subversion runs this hook by invoking a program"
       APR_EOL_STR
       "# (script, executable, binary, etc.) named "
-      "`" 
+      "'" 
       SVN_REPOS__HOOK_PRE_COMMIT "' (for which"
       APR_EOL_STR
       "# this file is a template), with the following ordered arguments:"
@@ -351,14 +351,14 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       APR_EOL_STR
       "# if it exits with failure (non-zero), the txn is aborted and no"
       APR_EOL_STR
-      "# commit takes place.  The hook program can use the `svnlook'"
+      "# commit takes place.  The hook program can use the 'svnlook'"
       APR_EOL_STR
       "# utility to help it examine the txn."
       APR_EOL_STR
       "#"
       APR_EOL_STR
       "# On a Unix system, the normal procedure is to have "
-      "`"
+      "'"
       SVN_REPOS__HOOK_PRE_COMMIT
       "'" 
       APR_EOL_STR
@@ -370,7 +370,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       APR_EOL_STR
       "#   ***   NOTE: THE HOOK PROGRAM MUST NOT MODIFY THE TXN.    ***"
       APR_EOL_STR
-      "#   This is why we recommend using the read-only `svnlook' utility."
+      "#   This is why we recommend using the read-only 'svnlook' utility."
       APR_EOL_STR
       "#   In the future, Subversion may enforce the rule that pre-commit"
       APR_EOL_STR
@@ -385,7 +385,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "#"
       APR_EOL_STR
       "# Note that"
-      " `" SVN_REPOS__HOOK_PRE_COMMIT "' "
+      " '" SVN_REPOS__HOOK_PRE_COMMIT "' "
       "must be executable by the user(s) who will"
       APR_EOL_STR
       "# invoke it (typically the user httpd runs as), and that user must"
@@ -396,8 +396,8 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       APR_EOL_STR
       "# On a Windows system, you should name the hook program"
       APR_EOL_STR
-      "# `" SVN_REPOS__HOOK_PRE_COMMIT ".bat' or "
-      "`" SVN_REPOS__HOOK_PRE_COMMIT ".exe',"
+      "# '" SVN_REPOS__HOOK_PRE_COMMIT ".bat' or "
+      "'" SVN_REPOS__HOOK_PRE_COMMIT ".exe',"
       APR_EOL_STR
       "# but the basic idea is the same."
       APR_EOL_STR
@@ -436,12 +436,12 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
       return svn_error_createf (apr_err, NULL,
-                                "writing hook file `%s'", this_path);
+                                "writing hook file '%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
       return svn_error_createf (apr_err, NULL,
-                                "closing hook file `%s'", this_path);
+                                "closing hook file '%s'", this_path);
   }  /* end pre-commit hook */
 
 
@@ -470,7 +470,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "# is modified.  Subversion runs this hook by invoking a program"
       APR_EOL_STR
       "# (script, executable, binary, etc.) named "
-      "`" 
+      "'" 
       SVN_REPOS__HOOK_PRE_REVPROP_CHANGE "' (for which"
       APR_EOL_STR
       "# this file is a template), with the following ordered arguments:"
@@ -495,7 +495,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       APR_EOL_STR
       "# if it exits with failure (non-zero), the propchange doesn't happen."
       APR_EOL_STR
-      "# The hook program can use the `svnlook' utility to examine the "
+      "# The hook program can use the 'svnlook' utility to examine the "
       APR_EOL_STR
       "# existing value of the revision property."
       APR_EOL_STR
@@ -516,7 +516,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "#"      
       APR_EOL_STR
       "# On a Unix system, the normal procedure is to have "
-      "`"
+      "'"
       SVN_REPOS__HOOK_PRE_REVPROP_CHANGE
       "'" 
       APR_EOL_STR
@@ -527,7 +527,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "#"
       APR_EOL_STR
       "# Note that"
-      " `" SVN_REPOS__HOOK_PRE_REVPROP_CHANGE "' "
+      " '" SVN_REPOS__HOOK_PRE_REVPROP_CHANGE "' "
       "must be executable by the user(s) who will"
       APR_EOL_STR
       "# invoke it (typically the user httpd runs as), and that user must"
@@ -538,8 +538,8 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       APR_EOL_STR
       "# On a Windows system, you should name the hook program"
       APR_EOL_STR
-      "# `" SVN_REPOS__HOOK_PRE_REVPROP_CHANGE ".bat' or "
-      "`" SVN_REPOS__HOOK_PRE_REVPROP_CHANGE ".exe',"
+      "# '" SVN_REPOS__HOOK_PRE_REVPROP_CHANGE ".bat' or "
+      "'" SVN_REPOS__HOOK_PRE_REVPROP_CHANGE ".exe',"
       APR_EOL_STR
       "# but the basic idea is the same."
       APR_EOL_STR
@@ -565,12 +565,12 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
       return svn_error_createf (apr_err, NULL,
-                                "writing hook file `%s'", this_path);
+                                "writing hook file '%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
       return svn_error_createf (apr_err, NULL,
-                                "closing hook file `%s'", this_path);
+                                "closing hook file '%s'", this_path);
   }  /* end pre-revprop-change hook */
 
 
@@ -598,7 +598,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       APR_EOL_STR
       "# this hook by invoking a program (script, executable, binary,"
       APR_EOL_STR
-      "# etc.) named `" 
+      "# etc.) named '" 
       SVN_REPOS__HOOK_POST_COMMIT 
       "' (for which"
       APR_EOL_STR
@@ -616,14 +616,14 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       APR_EOL_STR
       "# the exit code of the hook program is ignored.  The hook program"
       APR_EOL_STR
-      "# can use the `svnlook' utility to help it examine the"
+      "# can use the 'svnlook' utility to help it examine the"
       APR_EOL_STR
       "# newly-committed tree."
       APR_EOL_STR
       "#"
       APR_EOL_STR
       "# On a Unix system, the normal procedure is to have "
-      "`"
+      "'"
       SVN_REPOS__HOOK_POST_COMMIT
       "'" 
       APR_EOL_STR
@@ -634,7 +634,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "#"
       APR_EOL_STR
       "# Note that"
-      " `" SVN_REPOS__HOOK_POST_COMMIT "' "
+      " '" SVN_REPOS__HOOK_POST_COMMIT "' "
       "must be executable by the user(s) who will"
       APR_EOL_STR
       "# invoke it (typically the user httpd runs as), and that user must"
@@ -645,8 +645,8 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       APR_EOL_STR
       "# On a Windows system, you should name the hook program"
       APR_EOL_STR
-      "# `" SVN_REPOS__HOOK_POST_COMMIT ".bat' or "
-      "`" SVN_REPOS__HOOK_POST_COMMIT ".exe',"
+      "# '" SVN_REPOS__HOOK_POST_COMMIT ".bat' or "
+      "'" SVN_REPOS__HOOK_POST_COMMIT ".exe',"
       APR_EOL_STR
       "# but the basic idea is the same."
       APR_EOL_STR
@@ -668,12 +668,12 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
       return svn_error_createf (apr_err, NULL,
-                                "writing hook file `%s'", this_path);
+                                "writing hook file '%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
       return svn_error_createf (apr_err, NULL,
-                                "closing hook file `%s'", this_path);
+                                "closing hook file '%s'", this_path);
   } /* end post-commit hook */
 
 
@@ -701,7 +701,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       APR_EOL_STR
       "# has been changed. Subversion runs this hook by invoking a program"
       APR_EOL_STR
-      "# (script, executable, binary, etc.) named `"
+      "# (script, executable, binary, etc.) named '"
       SVN_REPOS__HOOK_POST_REVPROP_CHANGE 
       "'"
       APR_EOL_STR
@@ -725,14 +725,14 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       APR_EOL_STR
       "# the exit code of the hook program is ignored.  The hook program"
       APR_EOL_STR
-      "# can use the `svnlook' utility to help it examine the"
+      "# can use the 'svnlook' utility to help it examine the"
       APR_EOL_STR
       "# new property value."
       APR_EOL_STR
       "#"
       APR_EOL_STR
       "# On a Unix system, the normal procedure is to have "
-      "`"
+      "'"
       SVN_REPOS__HOOK_POST_REVPROP_CHANGE
       "'" 
       APR_EOL_STR
@@ -743,7 +743,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "#"
       APR_EOL_STR
       "# Note that"
-      " `" SVN_REPOS__HOOK_POST_REVPROP_CHANGE "' "
+      " '" SVN_REPOS__HOOK_POST_REVPROP_CHANGE "' "
       "must be executable by the user(s) who will"
       APR_EOL_STR
       "# invoke it (typically the user httpd runs as), and that user must"
@@ -754,8 +754,8 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       APR_EOL_STR
       "# On a Windows system, you should name the hook program"
       APR_EOL_STR
-      "# `" SVN_REPOS__HOOK_POST_REVPROP_CHANGE ".bat' or "
-      "`" SVN_REPOS__HOOK_POST_REVPROP_CHANGE ".exe',"
+      "# '" SVN_REPOS__HOOK_POST_REVPROP_CHANGE ".bat' or "
+      "'" SVN_REPOS__HOOK_POST_REVPROP_CHANGE ".exe',"
       APR_EOL_STR
       "# but the basic idea is the same."
       APR_EOL_STR
@@ -779,12 +779,12 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
       return svn_error_createf (apr_err, NULL,
-                                "writing hook file `%s'", this_path);
+                                "writing hook file '%s'", this_path);
 
     apr_err = apr_file_close (f);
     if (apr_err)
       return svn_error_createf (apr_err, NULL,
-                                "closing hook file `%s'", this_path);
+                                "closing hook file '%s'", this_path);
   } /* end post-revprop-change hook */
 
   return SVN_NO_ERROR;
@@ -868,7 +868,7 @@ create_repos_structure (svn_repos_t *repos,
     const char *readme_file_name 
       = svn_path_join (path, SVN_REPOS__README, pool);
     static const char * const readme_contents =
-      "This is a Subversion repository; use the `svnadmin' tool to examine"
+      "This is a Subversion repository; use the 'svnadmin' tool to examine"
       APR_EOL_STR
       "it.  Do not add, delete, or modify files here unless you know how"
       APR_EOL_STR
@@ -897,12 +897,12 @@ create_repos_structure (svn_repos_t *repos,
                                    strlen (readme_contents), NULL);
     if (apr_err)
       return svn_error_createf (apr_err, 0,
-                                "writing to `%s'", readme_file_name);
+                                "writing to '%s'", readme_file_name);
     
     apr_err = apr_file_close (readme_file);
     if (apr_err)
       return svn_error_createf (apr_err, 0,
-                                "closing `%s'", readme_file_name);
+                                "closing '%s'", readme_file_name);
   }
 
   /* Write the top-level FORMAT file. */
@@ -996,7 +996,7 @@ check_repos_version (const char *path,
     return svn_error_createf 
       (SVN_ERR_REPOS_UNSUPPORTED_VERSION, err,
        "Expected version '%d' of repository; found no version at all; "
-       "is `%s' a valid repository path?",
+       "is '%s' a valid repository path?",
        SVN_REPOS__VERSION, path);
 
   if (version != SVN_REPOS__VERSION)
@@ -1067,7 +1067,7 @@ get_repos (svn_repos_t **repos_p,
         
         return svn_error_createf
           (apr_err, NULL,
-           "get_repos: %s db lock on repository `%s' failed",
+           "get_repos: %s db lock on repository '%s' failed",
            lockname, path);
       }
     
@@ -1185,14 +1185,14 @@ svn_repos_recover (const char *path,
     if (apr_err && ! APR_STATUS_IS_EACCES(apr_err))
       return svn_error_createf
         (apr_err, NULL,
-         "svn_repos_recover: failed to delete all locks on repository `%s'.",
+         "svn_repos_recover: failed to delete all locks on repository '%s'.",
          path);
 
     apr_err = apr_file_close (lockfile_handle);
     if (apr_err)
       return svn_error_createf
         (apr_err, NULL,
-         "svn_repos_recover: failed to close lockfile on repository `%s'.",
+         "svn_repos_recover: failed to close lockfile on repository '%s'.",
          path);
   }
   

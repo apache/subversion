@@ -767,12 +767,12 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
           apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
           if (apr_err)
             return svn_error_createf (apr_err, NULL, 
-                                      "writing config file `%s'", path);
+                                      "writing config file '%s'", path);
           
           apr_err = apr_file_close (f);
           if (apr_err)
             return svn_error_createf (apr_err, NULL, 
-                                      "closing config file `%s'", path);
+                                      "closing config file '%s'", path);
         }
     }
 
@@ -887,12 +887,12 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
           apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
           if (apr_err)
             return svn_error_createf (apr_err, NULL, 
-                                      "writing config file `%s'", path);
+                                      "writing config file '%s'", path);
           
           apr_err = apr_file_close (f);
           if (apr_err)
             return svn_error_createf (apr_err, NULL, 
-                                      "closing config file `%s'", path);
+                                      "closing config file '%s'", path);
         }
     }
 
@@ -930,14 +930,14 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "###   This will override the environment variables that Subversion\n"
         "###   examines by default to find this information ($EDITOR, \n"
         "###   et al).\n"
-        "### Set diff-cmd to the absolute path of your `diff' program.\n"
+        "### Set diff-cmd to the absolute path of your 'diff' program.\n"
         "###   This will override the compile-time default, which is to use\n"
         "###   Subversion's internal diff implementation.\n"
-        "### Set diff3-cmd to the absolute path of your `diff3' program.\n"
+        "### Set diff3-cmd to the absolute path of your 'diff3' program.\n"
         "###   This will override the compile-time default, which is to use\n"
         "###   Subversion's internal diff3 implementation.\n"
-        "### Set diff3-has-program-arg to `true' or `yes' if your `diff3'\n"
-        "###   program accepts the `--diff-program' option.\n"
+        "### Set diff3-has-program-arg to 'true' or 'yes' if your 'diff3'\n"
+        "###   program accepts the '--diff-program' option.\n"
         "# [helpers]\n"
         "# editor-cmd = editor (vi, emacs, notepad, etc.)\n"
         "# diff-cmd = diff_program (diff, gdiff, etc.)\n"
@@ -947,8 +947,8 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "### Section for configuring tunnel agents.\n"
         "# [tunnels]\n"
         "### Configure svn protocol tunnel schemes here.  By default, only\n"
-        "### the `ssh' scheme is defined.  You can define other schemes to\n"
-        "### be used with `svn+scheme://hostname/path' URLs.  A scheme\n"
+        "### the 'ssh' scheme is defined.  You can define other schemes to\n"
+        "### be used with 'svn+scheme://hostname/path' URLs.  A scheme\n"
         "### definition is simply a command, optionally prefixed by an\n"
         "### environment variable name which can override the command if it\n"
         "### is defined.  The command (or environment variable) may contain\n"
@@ -958,7 +958,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "### If the built-in ssh scheme were not predefined, it could be\n"
         "### defined as:\n"
         "# ssh = $SVN_SSH ssh\n"
-        "### If you wanted to define a new `rsh' scheme, to be used with\n"
+        "### If you wanted to define a new 'rsh' scheme, to be used with\n"
         "### 'svn+rsh:' URLs, you could do so as follows:\n"
         "# rsh = rsh\n"
         "### Or, if you wanted to specify a full path and arguments:\n"
@@ -971,7 +971,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "### Section for configuring miscelleneous Subversion options.\n"
         "# [miscellany]\n"
         "### Set global-ignores to a set of whitespace-delimited globs\n"
-        "###   which Subversion will ignore in its `status' output.\n"
+        "###   which Subversion will ignore in its 'status' output.\n"
         "# global-ignores = " SVN_CONFIG_DEFAULT_GLOBAL_IGNORES "\n"
         "### Set log-encoding to the default encoding for log messages\n"
         "# log-encoding = latin1\n"
@@ -992,12 +992,12 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
           apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
           if (apr_err)
             return svn_error_createf (apr_err, NULL, 
-                                      "writing config file `%s'", path);
+                                      "writing config file '%s'", path);
           
           apr_err = apr_file_close (f);
           if (apr_err)
             return svn_error_createf (apr_err, NULL, 
-                                      "closing config file `%s'", path);
+                                      "closing config file '%s'", path);
         }
     }
 

@@ -472,8 +472,8 @@ static const char *bigstring1 =
 "looked along the passage into the loveliest garden you ever saw.\n"
 "How she longed to get out of that dark hall, and wander about\n"
 "among those beds of bright flowers and those cool fountains, but\n"
-"she could not even get her head though the doorway; `and even if\n"
-"my head would go through,' thought poor Alice, `it would be of\n"
+"she could not even get her head though the doorway; 'and even if\n"
+"my head would go through,' thought poor Alice, 'it would be of\n"
 "very little use without my shoulders.  Oh, how I wish\n"
 "I could shut up like a telescope!  I think I could, if I only\n"
 "know how to begin.'  For, you see, so many out-of-the-way things\n"
@@ -484,15 +484,15 @@ static const char *bigstring2 =
 "    There seemed to be no use in waiting by the little door, so she\n"
 "went back to the table, half hoping she might find another key on\n"
 "it, or at any rate a book of rules for shutting people up like\n"
-"telescopes:  this time she found a little bottle on it, (`which\n"
+"telescopes:  this time she found a little bottle on it, ('which\n"
 "certainly was not here before,' said Alice,) and round the neck\n"
-"of the bottle was a paper label, with the words `DRINK ME'\n"
+"of the bottle was a paper label, with the words 'DRINK ME'\n"
 "beautifully printed on it in large letters.";
 
 static const char *bigstring3 =
-"    It was all very well to say `Drink me,' but the wise little\n"
-"Alice was not going to do THAT in a hurry.  `No, I'll look\n"
-"first,' she said, `and see whether it's marked \"poison\" or not';\n"
+"    It was all very well to say 'Drink me,' but the wise little\n"
+"Alice was not going to do THAT in a hurry.  'No, I'll look\n"
+"first,' she said, 'and see whether it's marked \"poison\" or not';\n"
 "for she had read several nice little histories about children who\n"
 "had got burnt, and eaten up by wild beasts and other unpleasant\n"
 "things, all because they WOULD not remember the simple rules\n"
@@ -500,7 +500,7 @@ static const char *bigstring3 =
 "will burn you if you hold it too long; and that if you cut your\n"
 "finger VERY deeply with a knife, it usually bleeds; and she had\n"
 "never forgotten that, if you drink much from a bottle marked\n"
-"`poison,' it is almost certain to disagree with you, sooner or\n"
+"'poison,' it is almost certain to disagree with you, sooner or\n"
 "later.";
 
 

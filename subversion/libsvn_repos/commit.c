@@ -112,7 +112,7 @@ static svn_error_t *
 out_of_date (const char *path, const char *txn_name)
 {
   return svn_error_createf (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
-                            "out of date: `%s' in txn `%s'", path, txn_name);
+                            "out of date: '%s' in txn '%s'", path, txn_name);
 }
 
 
@@ -216,7 +216,7 @@ add_directory (const char *path,
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
     return svn_error_createf 
       (SVN_ERR_FS_GENERAL, NULL,
-       "add_dir `%s': got copy_path, but no copy_rev", full_path);
+       "add_dir '%s': got copy_path, but no copy_rev", full_path);
 
   if (copy_path)
     {
@@ -240,7 +240,7 @@ add_directory (const char *path,
       if (strncmp (copy_path, eb->repos_url, repos_url_len) != 0)
         return svn_error_createf 
           (SVN_ERR_FS_GENERAL, NULL,
-           "add_dir `%s': copy_url is from different repo", full_path);
+           "add_dir '%s': copy_url is from different repo", full_path);
 
       fs_path = apr_pstrdup (subpool, copy_path + repos_url_len);
 
@@ -348,7 +348,7 @@ add_file (const char *path,
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
     return svn_error_createf 
       (SVN_ERR_FS_GENERAL, NULL,
-       "add_file `%s': got copy_path, but no copy_rev", full_path);
+       "add_file '%s': got copy_path, but no copy_rev", full_path);
 
   if (copy_path)
     {      
@@ -372,7 +372,7 @@ add_file (const char *path,
       if (strncmp (copy_path, eb->repos_url, repos_url_len) != 0)
             return svn_error_createf 
               (SVN_ERR_FS_GENERAL, NULL,
-               "add_file `%s': copy_url is from different repo", full_path);
+               "add_file '%s': copy_url is from different repo", full_path);
       
       fs_path = apr_pstrdup (subpool, copy_path + repos_url_len);
 

@@ -378,14 +378,14 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
   if (strcmp (txn_id, "0"))
     return svn_error_createf 
       (SVN_ERR_FS_CORRUPT, 0,
-       "initial transaction id not `0' in filesystem `%s'", fs->path);
+       "initial transaction id not '0' in filesystem '%s'", fs->path);
 
   /* Create a default copy (better have an id of "0") */
   SVN_ERR (svn_fs__bdb_reserve_copy_id (&copy_id, fs, trail));
   if (strcmp (copy_id, "0"))
     return svn_error_createf 
       (SVN_ERR_FS_CORRUPT, 0,
-       "initial copy id not `0' in filesystem `%s'", fs->path);
+       "initial copy id not '0' in filesystem '%s'", fs->path);
   SVN_ERR (svn_fs__bdb_create_copy (copy_id, fs, NULL, NULL, root_id, trail));
 
   /* Link it into filesystem revision 0. */
@@ -393,8 +393,8 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
   SVN_ERR (svn_fs__bdb_put_rev (&rev, fs, &revision, trail));
   if (rev != 0)
     return svn_error_createf (SVN_ERR_FS_CORRUPT, 0,
-                              "initial revision number is not `0'"
-                              " in filesystem `%s'", fs->path);
+                              "initial revision number is not '0'"
+                              " in filesystem '%s'", fs->path);
 
   /* Promote our transaction to a "committed" transaction. */
   SVN_ERR (svn_fs__txn_make_committed (fs, txn_id, rev, trail));
@@ -603,7 +603,7 @@ make_entry (dag_node_t **child_p,
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
       (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, NULL,
-       "Attempted to create a node with an illegal name `%s'", name);
+       "Attempted to create a node with an illegal name '%s'", name);
 
   /* Make sure that parent is a directory */
   if (! svn_fs__dag_is_directory (parent))
@@ -840,7 +840,7 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
       (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, NULL,
-       "Attempted to make a child clone with an illegal name `%s'", name);
+       "Attempted to make a child clone with an illegal name '%s'", name);
 
   /* Find the node named NAME in PARENT's entries list if it exists. */
   SVN_ERR (svn_fs__dag_open (&cur_entry, parent, name, trail));
@@ -959,19 +959,19 @@ delete_entry (dag_node_t *parent,
   if (! svn_fs__dag_is_directory (parent))
     return svn_error_createf
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
-       "Attempted to delete entry `%s' from *non*-directory node.", name);    
+       "Attempted to delete entry '%s' from *non*-directory node.", name);    
 
   /* Make sure parent is mutable. */
   if (! svn_fs__dag_check_mutable (parent, txn_id))
     return svn_error_createf
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
-       "Attempted to delete entry `%s' from immutable directory node.", name);
+       "Attempted to delete entry '%s' from immutable directory node.", name);
 
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
       (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, NULL,
-       "Attempted to delete a node with an illegal name `%s'", name);
+       "Attempted to delete a node with an illegal name '%s'", name);
 
   /* Get a fresh NODE-REVISION for the parent node. */
   SVN_ERR (get_node_revision (&parent_noderev, parent, trail));
@@ -985,7 +985,7 @@ delete_entry (dag_node_t *parent,
   if (! rep_key)
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_ENTRY, NULL,
-       "Delete failed--directory has no entry `%s'", name);
+       "Delete failed--directory has no entry '%s'", name);
 
   /* Ensure we have a key to a mutable representation of the entries
      list.  We'll have to update the NODE-REVISION if it points to an
@@ -1019,7 +1019,7 @@ delete_entry (dag_node_t *parent,
   if (! id)
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_ENTRY, NULL,
-       "Delete failed--directory has no entry `%s'", name);
+       "Delete failed--directory has no entry '%s'", name);
 
   /* Use the ID of this ENTRY to get the entry's node.  If the node we
      get is a directory, make sure it meets up to our emptiness
@@ -1033,7 +1033,7 @@ delete_entry (dag_node_t *parent,
       if (require_empty && entries_here && apr_hash_count (entries_here))
         return svn_error_createf
           (SVN_ERR_DIR_NOT_EMPTY, NULL,
-           "Attempt to delete non-empty directory `%s'.", name);
+           "Attempt to delete non-empty directory '%s'.", name);
     }
 
   /* If mutable, remove it and any mutable children from db. */
@@ -1212,7 +1212,7 @@ svn_fs__dag_link (dag_node_t *parent,
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
       (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, NULL,
-       "Attempted to link to a node with an illegal name `%s'", name);
+       "Attempted to link to a node with an illegal name '%s'", name);
 
   /* Verify that this parent node does not already have an entry named NAME. */
   SVN_ERR (dir_entry_id_from_node (&entry_id, parent, name, trail));
@@ -1463,13 +1463,13 @@ svn_fs__dag_open (dag_node_t **child_p,
   if (! node_id)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FOUND, NULL,
-       "Attempted to open non-existant child node `%s'", name);
+       "Attempted to open non-existant child node '%s'", name);
   
   /* Make sure that NAME is a single path component. */
   if (! svn_path_is_single_path_component (name))
     return svn_error_createf 
       (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, NULL,
-       "Attempted to open node with an illegal name `%s'", name);
+       "Attempted to open node with an illegal name '%s'", name);
 
   /* Now get the node that was requested. */
   return svn_fs__dag_get_node (child_p, svn_fs__dag_get_fs (parent),

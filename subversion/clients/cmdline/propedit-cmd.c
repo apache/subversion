@@ -125,12 +125,12 @@ svn_cl__propedit (apr_getopt_t *os,
                                            URL, &(opt_state->start_revision),
                                            &rev, ctx, opt_state->force, pool));
 
-          printf ("Set new value for property `%s' on revision %"
+          printf ("Set new value for property '%s' on revision %"
                   SVN_REVNUM_T_FMT"\n", pname, rev);
         }
       else
         {
-          printf ("No changes to property `%s' on revision %"
+          printf ("No changes to property '%s' on revision %"
                   SVN_REVNUM_T_FMT"\n", pname, rev);
         }
     }
@@ -152,9 +152,9 @@ svn_cl__propedit (apr_getopt_t *os,
        *
        * and then when he closed his editor, he was surprised to see
        *
-       *    Set new value for property `HACKING' on `'
+       *    Set new value for property 'HACKING' on ''
        *
-       * ...meaning that the property named `HACKING' had been set on
+       * ...meaning that the property named 'HACKING' had been set on
        * the current working directory, with the value taken from the
        * editor.  So we don't do the implicit dot thing anymore; an
        * explicit target is always required when editing a versioned
@@ -225,6 +225,8 @@ svn_cl__propedit (apr_getopt_t *os,
           
           SVN_ERR (svn_utf_cstring_from_utf8 (&target_native, target, 
                                               subpool));
+          if (target_native[0] == '\0')
+            target_native = ".";
 
           /* ...and re-set the property's value accordingly. */
           if (new_propval)
@@ -246,12 +248,12 @@ svn_cl__propedit (apr_getopt_t *os,
               
               SVN_ERR (svn_client_propset (pname_utf8, propval, target, 
                                            FALSE, subpool));
-              printf ("Set new value for property `%s' on `%s'\n",
+              printf ("Set new value for property '%s' on '%s'\n",
                       pname, target_native);
             }
           else
             {
-              printf ("No changes to property `%s' on `%s'\n",
+              printf ("No changes to property '%s' on '%s'\n",
                       pname, target_native);
             }
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));

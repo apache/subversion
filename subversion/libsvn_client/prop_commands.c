@@ -182,8 +182,8 @@ svn_client_revprop_set (const char *propname,
 /* Set *PROPS to the pristine (base) properties at PATH, if PRISTINE
  * is true, or else the working value if PRISTINE is false.  
  *
- * The keys of *PROPS will be `const char *' property names, and the
- * values `const svn_string_t *' property values.  Allocate *PROPS
+ * The keys of *PROPS will be 'const char *' property names, and the
+ * values 'const svn_string_t *' property values.  Allocate *PROPS
  * and its contents in POOL.
  */
 static svn_error_t *
@@ -237,9 +237,9 @@ pristine_or_working_propval (const svn_string_t **propval,
  * with the values of property PROPNAME.  If PRISTINE is true, use the
  * base values, else use working values.
  *
- * The keys of PROPS will be `const char *' paths, rooted at the
+ * The keys of PROPS will be 'const char *' paths, rooted at the
  * path svn_wc_adm_access_path(ADM_ACCESS), and the values are
- * `const svn_string_t *' property values.
+ * 'const svn_string_t *' property values.
  */
 static svn_error_t *
 recursive_propget (apr_hash_t *props,
@@ -357,8 +357,8 @@ maybe_convert_to_url (const char **new_target,
 /* Helper for the remote case of svn_client_propget.
  *
  * Get the value of property PROPNAME in REVNUM, using RA_LIB and
- * SESSION.  Store the value (`svn_string_t *') in PROPS, under the
- * path key "TARGET_PREFIX/TARGET_RELATIVE" (`const char *').
+ * SESSION.  Store the value ('svn_string_t *') in PROPS, under the
+ * path key "TARGET_PREFIX/TARGET_RELATIVE" ('const char *').
  *
  * If RECURSE is true and KIND is svn_node_dir, then recurse.
  *
@@ -616,9 +616,9 @@ svn_client_revprop_get (const char *propname,
 }
 
 
-/* Push a new `svn_client_proplist_item_t *' item onto LIST.
+/* Push a new 'svn_client_proplist_item_t *' item onto LIST.
  * Allocate the item itself in POOL; set item->node_name to an
- * `svn_stringbuf_t *' created from PATH and also allocated in POOL,
+ * 'svn_stringbuf_t *' created from PATH and also allocated in POOL,
  * and set item->prop_hash to PROP_HASH.
  *
  * If PROP_HASH is null or has zero count, do nothing.
@@ -643,11 +643,11 @@ push_props_on_list (apr_array_header_t *list,
 
 /* Helper for the remote case of svn_client_proplist.
  *
- * Push a new `svn_client_proplist_item_t *' item onto PROPLIST,
+ * Push a new 'svn_client_proplist_item_t *' item onto PROPLIST,
  * containing the properties for "TARGET_PREFIX/TARGET_RELATIVE" in
  * REVNUM, obtained using RA_LIB and SESSION.  The item->node_name
  * will be "TARGET_PREFIX/TARGET_RELATIVE", and the value will be a
- * hash mapping `const char *' property names onto `svn_string_t *'
+ * hash mapping 'const char *' property names onto 'svn_string_t *'
  * property values.  Allocate the new item and its contents in POOL.
  *
  * KIND is the kind of the node at "TARGET_PREFIX/TARGET_RELATIVE".
@@ -744,8 +744,8 @@ remote_proplist (apr_array_header_t *proplist,
 }
 
 
-/* Push an `svn_client_proplist_item_t *' item onto PROP_LIST, where
- * item->node_name is an `svn_stringbuf_t *' created from NODE_NAME,
+/* Push an 'svn_client_proplist_item_t *' item onto PROP_LIST, where
+ * item->node_name is an 'svn_stringbuf_t *' created from NODE_NAME,
  * and item->prop_hash is the property hash for NODE_NAME.
  *
  * If PRISTINE is true, get base props, else get working props.
@@ -774,9 +774,9 @@ add_to_proplist (apr_array_header_t *prop_list,
  * with the values of property PROPNAME.  If PRISTINE is true, use the
  * base values, else use working values.
  *
- * The keys of PROPS will be `const char *' paths, rooted at the
+ * The keys of PROPS will be 'const char *' paths, rooted at the
  * path svn_wc_adm_access_path(ADM_ACCESS), and the values are
- * `const svn_string_t *' property values.
+ * 'const svn_string_t *' property values.
  */
 static svn_error_t *
 recursive_proplist (apr_array_header_t *props,

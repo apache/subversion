@@ -469,13 +469,13 @@ log_do_modify_entry (struct log_runner *loggy,
       if (err)
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, err,
-           "error checking path `%s'", tfile);
+           "error checking path '%s'", tfile);
           
       err = svn_io_file_affected_time (&text_time, tfile, loggy->pool);
       if (err)
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, err,
-           "error getting file affected time on `%s'", tfile);
+           "error getting file affected time on '%s'", tfile);
 
       entry->text_time = text_time;
     }
@@ -500,13 +500,13 @@ log_do_modify_entry (struct log_runner *loggy,
       if (err)
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, err,
-           "error checking path `%s'", pfile);
+           "error checking path '%s'", pfile);
       
       err = svn_io_file_affected_time (&prop_time, pfile, loggy->pool);
       if (err)
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, NULL,
-           "error getting file affected time on `%s'", pfile);
+           "error getting file affected time on '%s'", pfile);
 
       entry->prop_time = prop_time;
     }
@@ -516,7 +516,7 @@ log_do_modify_entry (struct log_runner *loggy,
                               entry, modify_flags, FALSE, loggy->pool);
   if (err)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, err,
-                              "error merge_syncing entry `%s'", name);
+                              "error merge_syncing entry '%s'", name);
   loggy->entries_modified = TRUE;
 
   return SVN_NO_ERROR;
@@ -827,7 +827,7 @@ log_do_committed (struct log_runner *loggy,
                                                       loggy->adm_access,
                                                       tmpf, pool)))
             return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, err,
-                                      "error comparing `%s' and `%s'",
+                                      "error comparing '%s' and '%s'",
                                       wf, tmpf);
 
           /* If they are the same, use the working file's timestamp,
@@ -896,7 +896,7 @@ log_do_committed (struct log_runner *loggy,
            did with text-time above. */
         if ((err = svn_io_files_contents_same_p (&same, wf, tmpf, pool)))
           return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, err,
-                                    "error comparing `%s' and `%s'",
+                                    "error comparing '%s' and '%s'",
                                     wf, tmpf);
 
         /* If they are the same, use the working file's timestamp,
@@ -1168,7 +1168,7 @@ start_handler (void *userData, const char *eltname, const char **atts)
       signal_error
         (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
                                    NULL,
-                                   "unrecognized logfile element in `%s': `%s'",
+                                   "unrecognized logfile element in '%s': '%s'",
                                    svn_wc_adm_access_path (loggy->adm_access),
                                    eltname));
       return;

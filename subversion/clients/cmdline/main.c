@@ -943,7 +943,7 @@ main (int argc, const char * const *argv)
           svn_handle_error
             (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
                                "Log message file is a versioned file; "
-                               "use `--force-log' to override."),
+                               "use '--force-log' to override."),
              stderr, FALSE);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
@@ -956,7 +956,7 @@ main (int argc, const char * const *argv)
           svn_handle_error
             (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
                                "The log message is a pathname "
-                               "(was -F intended?); use `--force-log' "
+                               "(was -F intended?); use '--force-log' "
                                "to override."),
              stderr, FALSE);
           svn_pool_destroy (pool);

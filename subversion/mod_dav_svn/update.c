@@ -678,7 +678,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         {
           if (! child->first_cdata.first)
             return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's `target-revision' element contains empty cdata; "
+              "The request's 'target-revision' element contains empty cdata; "
               "there is a problem with the client.");
 
           /* ### assume no white space, no child elems, etc */
@@ -692,7 +692,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 
           if (! child->first_cdata.first)
             return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's `src-path' element contains empty cdata; "
+              "The request's 'src-path' element contains empty cdata; "
               "there is a problem with the client.");
 
           /* split up the 1st public URL. */
@@ -714,7 +714,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 
           if (! child->first_cdata.first)
             return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's `dst-path' element contains empty cdata; "
+              "The request's 'dst-path' element contains empty cdata; "
               "there is a problem with the client.  See "
               "http://subversion.tigris.org/issues/show_bug.cgi?id=1055");
 
@@ -734,7 +734,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         {
           if (! child->first_cdata.first)
             return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's `update-target' element contains empty cdata; "
+              "The request's 'update-target' element contains empty cdata; "
               "there is a problem with the client.");
 
           /* ### assume no white space, no child elems, etc */
@@ -744,7 +744,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         {
           if (! child->first_cdata.first)
             return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's `recursive' element contains empty cdata; "
+              "The request's 'recursive' element contains empty cdata; "
               "there is a problem with the client.");
 
           /* ### assume no white space, no child elems, etc */
@@ -755,7 +755,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         {
           if (! child->first_cdata.first)
             return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's `ignore-ancestry' element contains empty cdata; "
+              "The request's 'ignore-ancestry' element contains empty cdata; "
               "there is a problem with the client.");
 
           /* ### assume no white space, no child elems, etc */
@@ -767,7 +767,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         {
           if (! child->first_cdata.first)
             return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's `resource-walk' element contains empty cdata; "
+              "The request's 'resource-walk' element contains empty cdata; "
               "there is a problem with the client.");
 
           /* ### assume no white space, no child elems, etc */
