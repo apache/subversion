@@ -104,11 +104,23 @@ static svn_error_t * log_receiver(void *baton,
            hi != NULL;
            hi = apr_hash_next(hi))
         {
-          apr_hash_this(hi, (void *) &path, NULL, NULL);
+          void *val;
+          char action;
+          
+          apr_hash_this(hi, (void *) &path, NULL, &val);
+          action = (char) ((int) val);
+
           /* ### todo: is there a D: namespace equivalent for
              `changed-path'?  Should use it if so. */
-          send_xml(lrb, "<S:changed-path>%s</S:changed-path>" DEBUG_CR,
-                   apr_xml_quote_string(lrb->pool, path, 0));
+          if (action == 'A')
+            send_xml(lrb, "<S:added-path>%s</S:added-path>" DEBUG_CR,
+                     apr_xml_quote_string(lrb->pool, path, 0));
+          else if (action == 'D')
+            send_xml(lrb, "<S:deleted-path>%s</S:deleted-path>" DEBUG_CR,
+                     apr_xml_quote_string(lrb->pool, path, 0));
+          else
+            send_xml(lrb, "<S:changed-path>%s</S:changed-path>" DEBUG_CR,
+                     apr_xml_quote_string(lrb->pool, path, 0));
         }
     }
 
