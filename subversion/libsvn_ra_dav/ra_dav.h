@@ -22,6 +22,8 @@
 #include <http_request.h>
 #include <uri.h>
 
+#include "svn_ra.h"
+
 
 typedef struct {
   apr_pool_t *pool;
@@ -36,7 +38,8 @@ typedef struct {
    nobody really uses this prototype right now. */
 /* ### hmm. when we statically link these, this prototype may be handy */
 svn_error_t *svn_ra_dav_init(int abi_version,
-                             svn_ra_init_params *params);
+                             apr_pool_t *pconf,
+                             const svn_ra_plugin_t **plugin);
 
 
 /** plugin function prototypes */

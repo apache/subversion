@@ -47,13 +47,13 @@ typedef struct svn_ra_plugin_t
   /* Open a "session" with a repository at URL.  *SESSION_BATON is
      returned and then used (opaquely) for all further interactions
      with the repository. */
-  svn_error_t *(*svn_ra_open) (void **session_baton,
-                               svn_string_t *repository_URL,
-                               apr_pool_t *pool);
+  svn_error_t *(*open) (void **session_baton,
+                        svn_string_t *repository_URL,
+                        apr_pool_t *pool);
 
 
   /* Close a repository session. */
-  svn_error_t *(*svn_ra_close) (void *session_baton);
+  svn_error_t *(*close) (void *session_baton);
 
 
   /* Return an *EDITOR and *EDIT_BATON capable of transmitting a
@@ -61,19 +61,19 @@ typedef struct svn_ra_plugin_t
      if close_edit() returns successfully, that *NEW_REVISION will be
      set to the repository's new revision number resulting from the
      commit. */
-  svn_error_t *(*svn_ra_get_commit_editor) (void *session_baton,
-                                            const svn_delta_edit_fns_t **editor,
-                                            void **edit_baton,
-                                            svn_revnum_t *new_revision);
+  svn_error_t *(*get_commit_editor) (void *session_baton,
+                                     const svn_delta_edit_fns_t **editor,
+                                     void **edit_baton,
+                                     svn_revnum_t *new_revision);
 
 
   /* Ask the network layer to check out a copy of ROOT_PATH from a
      repository's filesystem, using EDITOR and EDIT_BATON to create a
      working copy. */
-  svn_error_t *(*svn_ra_do_checkout) (void *session_baton,
-                                      const svn_delta_edit_fns_t *editor,
-                                      void *edit_baton,
-                                      svn_string_t *root_path);
+  svn_error_t *(*do_checkout) (void *session_baton,
+                               const svn_delta_edit_fns_t *editor,
+                               void *edit_baton,
+                               svn_string_t *root_path);
 
 
   /* Ask the network layer to update a working copy from URL.
@@ -90,11 +90,11 @@ typedef struct svn_ra_plugin_t
 
      When the update_editor->close_edit() returns, then
      commit_editor->close_edit() returns too.  */
-  svn_error_t *(*svn_ra_do_update) (void *session_baton,
-                                    const svn_delta_edit_fns_t **commit_editor,
-                                    void **commit_baton,
-                                    const svn_delta_edit_fns_t *update_editor,
-                                    void *update_baton);
+  svn_error_t *(*do_update) (void *session_baton,
+                             const svn_delta_edit_fns_t **commit_editor,
+                             void **commit_baton,
+                             const svn_delta_edit_fns_t *update_editor,
+                             void *update_baton);
 
 } svn_ra_plugin_t;
 
@@ -103,6 +103,7 @@ typedef struct svn_ra_plugin_t
 
 /* The client will keep a private hash that maps
    names->svn_ra_library_t objects. */
+/* ### this will probably become internal to libsvn_client */
 typedef struct svn_ra_library_t
 {
   const svn_ra_plugin_t *plugin;  /* the vtable to use */
@@ -112,16 +113,18 @@ typedef struct svn_ra_library_t
 
 
 /* libsvn_client will be reponsible for loading each RA DSO it needs.
-   However, all "ra_FOO" implmentations *must* export a function named
+   However, all "ra_FOO" implementations *must* export a function named
    `svn_ra_FOO_init()':
 
       svn_error_t *svn_ra_FOO_init (int abi_version,
-                                    svn_ra_plugin_t **plugin);
+                                    apr_pool_t *pconf,
+                                    const svn_ra_plugin_t **plugin);
 
    When called by libsvn_client, this routine simply returns an
    internal, static plugin structure.  (The client then adds it to its
    ra_library hash.)
 
+   PCONF is a pool for allocating configuration / one-time data.
 */
 
 

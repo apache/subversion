@@ -21,20 +21,27 @@
 #include "svn_ra.h"
 #include "svn_wc.h"
 
+/* declare explicitly when we call directly (rather than via DSO load) */
+svn_error_t *svn_ra_dav_init(int abi_version,
+                             apr_pool_t *pconf,
+                             const svn_ra_plugin_t **plugin);
+
 
 int
 main (int argc, char **argv)
 {
   apr_pool_t *pool;
   svn_error_t *err;
-  svn_ra_session_t *ras;
-  const char *url;
+  void *session_baton;
+  svn_string_t *url;
   const char *dir;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
   svn_string_t *repos;
   svn_string_t *anc_path;
+  svn_string_t *root_path;
   svn_revnum_t revision;
+  const svn_ra_plugin_t *plugin;
 
   apr_initialize ();
   pool = svn_pool_create (NULL);
@@ -45,17 +52,25 @@ main (int argc, char **argv)
       return 1;
     }
 
-  url = argv[1];
+  url = svn_string_create(argv[1], pool);
   dir = argv[2];        /* ### default to the last component of the URL */
 
-  err = svn_ra_open(&ras, url, pool);
+  err = svn_ra_dav_init(0, pool, &plugin);
   if (err)
     {
       svn_handle_error (err, stdout, 0);
       return 1;
     }
 
-  repos = svn_string_create(url, pool);
+  err = (*plugin->svn_ra_open)(&session_baton, url, pool);
+  if (err)
+    {
+      svn_handle_error (err, stdout, 0);
+      return 1;
+    }
+
+  /* ### hmm... */
+  repos = url;
 
   /* ### what the heck does "ancestor path" mean for a checkout? */
   anc_path = svn_string_create("", pool);
@@ -69,7 +84,10 @@ main (int argc, char **argv)
   if (err)
     goto error;
 
-  err = svn_ra_checkout(ras, "", 1, editor, edit_baton);
+  /* ### what is this path? */
+  root_path = svn_string_create("", pool);
+  err = (*plugin->svn_ra_do_checkout)(session_baton, editor, edit_baton,
+                                      root_path);
   if (err)
     goto error;
 
@@ -77,7 +95,7 @@ main (int argc, char **argv)
   if (err)
     goto error;
 
-  svn_ra_close(ras);
+  (*plugin->svn_ra_close)(session_baton);
 
   apr_destroy_pool(pool);
   apr_terminate();
