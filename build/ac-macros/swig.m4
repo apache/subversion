@@ -122,7 +122,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     fi
 
     if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_python" = "yes"; then
-      AC_MSG_NOTICE("Configuring python swig binding")
+      AC_MSG_NOTICE([Configuring python swig binding])
       AC_CACHE_CHECK([if swig needs -L for its libraries],
         [ac_cv_swig_ldflags],[
         # The swig libraries are one directory above the
