@@ -6,7 +6,7 @@ TEST_DIR_2=t2
 COMMIT_RESULTFILE_NAME=commit
 ANCESTOR_PATH=anni       # See if Greg Stein notices. :-) 
 
-function check_status
+check_status()
 {
     res=$?
     if [ $res -ne 0 ]; then
