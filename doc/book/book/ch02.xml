@@ -194,7 +194,7 @@
       <para>But what if Jane's changes <emphasis>do</emphasis> overlap
         with Joe's changes?  What then?  This situation is called a
         <firstterm>conflict</firstterm>, and it's usually not much of
-        a problem.  When Joe asks his client to merge the the latest
+        a problem.  When Joe asks his client to merge the latest
         repository changes into his working copy, his copy of file A
         is somehow flagged as being in a state of conflict: he'll be
         able to see both sets of conflicting changes, and manually
