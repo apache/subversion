@@ -28,7 +28,6 @@
 #include "../util/fs_skels.h"
 #include "../trail.h"
 #include "../key-gen.h"
-#include "../id.h"
 #include "../../libsvn_fs/fs_loader.h"
 #include "bdb-err.h"
 #include "nodes-table.h"

@@ -31,7 +31,6 @@
 #include "key-gen.h"
 #include "node-rev.h"
 #include "trail.h"
-#include "id.h"
 #include "reps-strings.h"
 #include "revs-txns.h"
 

@@ -29,7 +29,6 @@
 #include "fs.h"
 #include "dag.h"
 #include "err.h"
-#include "id.h"
 #include "trail.h"
 #include "tree.h"
 #include "revs-txns.h"

@@ -24,7 +24,6 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "../fs.h"
-#include "../id.h"
 #include "../err.h"
 #include "../trail.h"
 #include "../util/fs_skels.h"
