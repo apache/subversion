@@ -1382,7 +1382,7 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
      checksum as if for the empty string?  The representation behind
      noderev->edit_key ought to be finalized by now, and have the
      checksum of the new 'A/mu'... Debug with Mike in the morning. */
-  if (0 && checksum)
+  if (checksum)
     {
       unsigned char digest[MD5_DIGESTSIZE];
       const char *hex;
