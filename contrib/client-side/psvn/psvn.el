@@ -1073,6 +1073,15 @@ The result may be parsed with the various `svn-status-line-info->...' functions.
     (when overlay
       (overlay-get overlay 'svn-info))))
 
+(defun svn-status-get-file-list (use-marked-files)
+  "Get either the marked files or the files, where the cursor is on"
+  (if use-marked-files
+      (svn-status-marked-files)
+    (list (svn-status-get-line-information))))
+
+(defun svn-status-get-file-list-names (use-marked-files)
+  (mapcar 'svn-status-line-info->filename (svn-status-get-file-list use-marked-files)))
+
 (defun svn-status-select-line ()
   (interactive)
   (let ((info (svn-status-get-line-information)))
@@ -1374,12 +1383,13 @@ If ARG then prompt for revision to diff against, else compare working copy with 
   (interactive)
   (svn-status-show-process-buffer-internal))
 
-(defun svn-status-add-file ()
+(defun svn-status-add-file (arg)
   "Run `svn add' on all selected files.
-See `svn-status-marked-files' for what counts as selected."
-  (interactive)
-  (message "adding: %S" (svn-status-marked-file-names))
-  (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
+See `svn-status-marked-files' for what counts as selected.
+When this function is called with a prefix argument, use the actual file instead."
+  (interactive "P")
+  (message "adding: %S" (svn-status-get-file-list-names (not arg)))
+  (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-get-file-list (not arg)) "")
   (svn-run-svn t t 'add "add" "--targets" svn-status-temp-arg-file))
 
 (defun svn-status-make-directory (dir)
