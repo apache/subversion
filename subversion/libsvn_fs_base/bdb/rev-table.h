@@ -47,27 +47,30 @@ int svn_fs_bdb__open_revisions_table (DB **revisions_p,
 
 /* Set *REVISION_P to point to the revision structure for the
    filesystem revision REV in FS, as part of TRAIL.  Perform all
-   allocations in TRAIL->pool.  */
+   allocations in POOL.  */
 svn_error_t *svn_fs_bdb__get_rev (revision_t **revision_p,
                                   svn_fs_t *fs,
                                   svn_revnum_t rev,
-                                  trail_t *trail);
+                                  trail_t *trail,
+                                  apr_pool_t *pool);
 
 /* Store REVISION in FS as revision *REV as part of TRAIL.  If *REV is
    an invalid revision number, create a brand new revision and return
    its revision number as *REV to the caller.  Do any necessary
-   temporary allocation in TRAIL->pool.  */
+   temporary allocation in POOL.  */
 svn_error_t *svn_fs_bdb__put_rev (svn_revnum_t *rev,
                                   svn_fs_t *fs,
                                   const revision_t *revision,
-                                  trail_t *trail);
+                                  trail_t *trail,
+                                  apr_pool_t *pool);
 
 
 /* Set *YOUNGEST_P to the youngest revision in filesystem FS,
-   as part of TRAIL.  Use TRAIL->pool for all temporary allocation. */
+   as part of TRAIL.  Use POOL for all temporary allocation. */
 svn_error_t *svn_fs_bdb__youngest_rev (svn_revnum_t *youngest_p,
                                        svn_fs_t *fs,
-                                       trail_t *trail);
+                                       trail_t *trail,
+                                       apr_pool_t *pool);
 
 
 #ifdef __cplusplus

@@ -24,6 +24,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_utf.h"
+#include "svn_time.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
@@ -994,6 +995,7 @@ svn_repos_create (svn_repos_t **repos_p,
                   apr_pool_t *pool)
 {
   svn_repos_t *repos;
+  svn_error_t *err;
 
   /* Allocate a repository object. */
   repos = apr_pcalloc (pool, sizeof (*repos));
@@ -1005,8 +1007,16 @@ svn_repos_create (svn_repos_t **repos_p,
   SVN_ERR_W (create_repos_structure (repos, path, pool),
              _("Repository creation failed"));
   
-  /* Create a Berkeley DB environment for the filesystem. */
-  SVN_ERR (svn_fs_create (&repos->fs, repos->db_path, fs_config, pool));
+  /* Create an environment for the filesystem. */
+  if ((err = svn_fs_create (&repos->fs, repos->db_path, fs_config, pool)))
+    {
+      /* If there was an error making the filesytem, e.g. unknown/supported
+       * filesystem type.  Clean up after ourselves.  Yes this is safe because
+       * create_repos_structure will fail if the path existed before we started
+       * so we can't accidentally remove a directory that previously existed. */
+      svn_error_clear (svn_io_remove_dir (path, pool));
+      return err;
+    }
 
   *repos_p = repos;
   return SVN_NO_ERROR;
@@ -1113,7 +1123,7 @@ get_repos (svn_repos_t **repos_p,
     SVN_ERR_W (err, _("Error opening db lockfile"));
   }
 
-  /* Open up the Berkeley filesystem only after obtaining the lock. */
+  /* Open up the filesystem only after obtaining the lock. */
   if (open_fs)
     SVN_ERR (svn_fs_open (&repos->fs, repos->db_path, NULL, pool));
 
@@ -1169,7 +1179,7 @@ svn_repos_delete (const char *path,
 {
   const char *db_path = svn_path_join (path, SVN_REPOS__DB_DIR, pool);
 
-  /* Delete the Berkeley environment... */
+  /* Delete the filesystem environment... */
   SVN_ERR (svn_fs_delete_fs (db_path, pool));
 
   /* ...then blow away everything else.  */
@@ -1423,4 +1433,46 @@ const svn_version_t *
 svn_repos_version (void)
 {
   SVN_VERSION_BODY;
+}
+
+
+
+svn_error_t *
+svn_repos_stat (svn_dirent_t **dirent,
+                svn_fs_root_t *root,
+                const char *path,
+                apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  svn_dirent_t *ent;
+  const char *datestring;
+  apr_hash_t *prophash;
+
+  SVN_ERR (svn_fs_check_path (&kind, root, path, pool));
+  
+  if (kind == svn_node_none)
+    {
+      *dirent = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  ent = apr_pcalloc (pool, sizeof(*ent));
+  ent->kind = kind;
+
+  if (kind == svn_node_file)
+    SVN_ERR (svn_fs_file_length (&(ent->size), root, path, pool));
+
+  SVN_ERR (svn_fs_node_proplist (&prophash, root, path, pool));
+  if (apr_hash_count(prophash) > 0)
+    ent->has_props = TRUE;
+  
+  SVN_ERR (svn_repos_get_committed_info (&(ent->created_rev),
+                                         &datestring,
+                                         &(ent->last_author),
+                                         root, path, pool));
+  if (datestring)
+    SVN_ERR (svn_time_from_cstring (&(ent->time), datestring, pool));
+
+  *dirent = ent;
+  return SVN_NO_ERROR;
 }

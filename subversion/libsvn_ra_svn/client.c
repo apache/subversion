@@ -24,6 +24,7 @@
 #include <apr_strings.h>
 #include <apr_network_io.h>
 #include <apr_md5.h>
+#include <apr_uri.h>
 #include <assert.h>
 
 #include "svn_types.h"
@@ -67,22 +68,18 @@ typedef struct {
   void *edit_baton;
 } ra_svn_reporter_baton_t;
 
-/* Parse an svn URL's authority section into tunnel, user, host, and
- * port components.  Return 0 on success, -1 on failure.  *tunnel
- * and *user may be set to NULL. */
-static int parse_url(const char *url, const char **tunnel, const char **user,
-                     unsigned short *port, const char **hostname,
-                     apr_pool_t *pool)
+/* Parse an svn URL's tunnel portion into tunnel, if there is a tunnel
+   portion. */
+
+static void parse_tunnel(const char *url, const char **tunnel,
+                         apr_pool_t *pool)
 {
   const char *p;
 
   *tunnel = NULL;
-  *user = NULL;
-  *port = SVN_RA_SVN_PORT;
-  *hostname = NULL;
 
   if (strncasecmp(url, "svn", 3) != 0)
-    return -1;
+    return;
   url += 3;
 
   /* Get the tunnel specification, if any. */
@@ -91,40 +88,10 @@ static int parse_url(const char *url, const char **tunnel, const char **user,
       url++;
       p = strchr(url, ':');
       if (!p)
-        return -1;
+        return;
       *tunnel = apr_pstrmemdup(pool, url, p - url);
       url = p;
     }
-
-  if (strncmp(url, "://", 3) != 0)
-    return -1;
-  url += 3;
-
-  while (1)
-    {
-      p = url + strcspn(url, "@:/");
-      if (*p == '@' && !*user)
-        *user = apr_pstrmemdup(pool, url, p - url);
-      else if (*p == ':' && !*hostname)
-        *hostname = apr_pstrmemdup(pool, url, p - url);
-      else if (*p == '/' || *p == '\0')
-        {
-          if (!*hostname)
-            *hostname = apr_pstrmemdup(pool, url, p - url);
-          else
-            *port = atoi(url);
-          break;
-        }
-      else
-        return -1;
-      url = p + 1;
-    }
-
-  /* Decode any escaped characters in the hostname and user. */
-  *hostname = svn_path_uri_decode(*hostname, pool);
-  if (*user)
-    *user = svn_path_uri_decode(*user, pool);
-  return 0;
 }
 
 static svn_error_t *make_connection(const char *hostname, unsigned short port,
@@ -132,9 +99,34 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
 {
   apr_sockaddr_t *sa;
   apr_status_t status;
+  int family = APR_INET;
+  int ipv6_supported = APR_HAVE_IPV6;
+  
+  /* Make sure we have IPV6 support first before giving apr_sockaddr_info_get
+     APR_UNSPEC, because it may give us back an IPV6 address even if we can't
+     create IPV6 sockets.  */  
+
+#if APR_HAVE_IPV6
+  if (ipv6_supported)
+    {
+#ifdef MAX_SECS_TO_LINGER
+      status = apr_socket_create(sock, APR_INET6, SOCK_STREAM, pool);
+#else
+      status = apr_socket_create(sock, APR_INET6, SOCK_STREAM,
+                                 APR_PROTO_TCP, pool);
+#endif
+      if (status != 0)
+        ipv6_supported = 0;
+      else 
+        {
+          apr_socket_close(*sock);
+          family = APR_UNSPEC;
+        }
+    }
+#endif
 
   /* Resolve the hostname. */
-  status = apr_sockaddr_info_get(&sa, hostname, APR_INET, port, 0, pool);
+  status = apr_sockaddr_info_get(&sa, hostname, family, port, 0, pool);
   if (status)
     return svn_error_createf(status, NULL, _("Unknown hostname '%s'"),
                              hostname);
@@ -142,9 +134,10 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   /* Create the socket. */
 #ifdef MAX_SECS_TO_LINGER
   /* ### old APR interface */
-  status = apr_socket_create(sock, APR_INET, SOCK_STREAM, pool);
+  status = apr_socket_create(sock, sa->family, SOCK_STREAM, pool);
 #else
-  status = apr_socket_create(sock, APR_INET, SOCK_STREAM, APR_PROTO_TCP, pool);
+  status = apr_socket_create(sock, sa->family, SOCK_STREAM, APR_PROTO_TCP, 
+                             pool);
 #endif
   if (status)
     return svn_error_wrap_apr(status, _("Can't create socket"));
@@ -590,10 +583,20 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
   unsigned short port;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *caplist;
-
-  if (parse_url(url, &tunnel, &user, &port, &hostname, pool) != 0)
+  apr_uri_t uri;
+  apr_status_t err;
+  
+  err = apr_uri_parse (pool, url, &uri);
+  
+  if (err != 0)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("Illegal svn repository URL '%s'"), url);
+  
+  port = uri.port ? uri.port : SVN_RA_SVN_PORT;
+  hostname = uri.hostname;
+  user = uri.user;
+  
+  parse_tunnel (url, &tunnel, pool);
 
   if (tunnel)
     {
@@ -1138,6 +1141,50 @@ static svn_error_t *ra_svn_check_path(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *ra_svn_stat(svn_ra_session_t *session,
+                                const char *path, svn_revnum_t rev,
+                                svn_dirent_t **dirent, apr_pool_t *pool)
+{
+  ra_svn_session_baton_t *sess_baton = session->priv;
+  svn_ra_svn_conn_t *conn = sess_baton->conn;
+  apr_array_header_t *list = NULL;
+  const char *kind, *cdate, *cauthor;
+  svn_revnum_t crev;
+  svn_boolean_t has_props;
+  apr_uint64_t size;
+  svn_dirent_t *the_dirent;
+
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "stat", "c(?r)", path, rev));
+  SVN_ERR(handle_auth_request(sess_baton, pool));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?l)", &list));
+
+  if (! list)
+    {
+      *dirent = NULL;
+    }
+  else
+    {
+      SVN_ERR(svn_ra_svn_parse_tuple(list, pool, "wnbr(?c)(?c)",
+                                     &kind, &size, &has_props,
+                                     &crev, &cdate, &cauthor));
+      
+      the_dirent = apr_palloc(pool, sizeof(*the_dirent));
+      SVN_ERR(interpret_kind(kind, pool, &the_dirent->kind));
+      the_dirent->size = size;/* FIXME: svn_filesize_t */
+      the_dirent->has_props = has_props;
+      the_dirent->created_rev = crev;
+      SVN_ERR(svn_time_from_cstring(&the_dirent->time, cdate, pool));
+      the_dirent->last_author = cauthor;
+
+      *dirent = the_dirent;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
                                          apr_hash_t **locations,
                                          const char *path,
@@ -1330,6 +1377,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_diff,
   ra_svn_log,
   ra_svn_check_path,
+  ra_svn_stat,
   ra_svn_get_uuid,
   ra_svn_get_repos_root,
   ra_svn_get_locations,

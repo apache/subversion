@@ -272,6 +272,13 @@ svn_error_t *svn_ra_dav__do_check_path(
   svn_node_kind_t *kind,
   apr_pool_t *pool);
 
+svn_error_t *svn_ra_dav__do_stat(
+  svn_ra_session_t *session,
+  const char *path,
+  svn_revnum_t revision,
+  svn_dirent_t **dirent,
+  apr_pool_t *pool);
+
 svn_error_t *svn_ra_dav__get_file_revs (svn_ra_session_t *session,
                                         const char *path,
                                         svn_revnum_t start,

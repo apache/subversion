@@ -1,6 +1,6 @@
 (* is_main.pas: Pascal Scripts routines for Inno Setup Windows installer.
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -26,7 +26,7 @@ var
     g_sApachePath: String;
     g_sApachePathBin: String;
     g_sApachePathConf: String;
-    g_sApachePathModules: String;
+
 
 const
     // Visual C++ 6.0 Runtime file related
@@ -46,22 +46,31 @@ const
     STATUS_DISABLED = 1;
     STATUS_ENABLED = 2;
 
-// ***************************************************************************
-// UninsHs stuff
-function ComponentList(Default: string):string;
+// ****************************************************************************
+// Name:    BackslashToSlash
+// Purpose: Turning back slashes into slashes. This function is stolen
+//          shamelessly from the Inno help file.
+// NOTE:    For some unknown reason, this function has to stay here before
+//          other functions in order to avoid compile errors from the setup
+//          program. I don't not why, ..anyone?
+function BackslashToSlash(const S: String): String;
+var
+  I: Integer;
 begin
-    Result := WizardSelectedComponents(False);
+  Result := S;
+  I := 1;
+  while I <= Length(Result) do
+  begin
+    if Result[I] = '\' then
+      Result[I] := '/';
+    // Go to the next character. But do not simply increment I by 1.
+    // Increment by CharLength() in case Result[I] is a double-byte character.
+    I := I + CharLength(Result, I);
+  end;
 end;
 
-function ShouldSkipPage(CurPage: Integer): Boolean;
-begin
-    if Pos('/SP-', UpperCase(GetCmdTail)) > 0 then
-        case CurPage of
-            wpWelcome, wpLicense, wpPassword, wpInfoBefore, wpUserInfo,
-            wpSelectDir, wpSelectProgramGroup, wpInfoAfter:
-            Result := True;
-    end;
-end;
+///////////////////////////////////////////////////////////////////////////////
+// APACHE related stuff
 
 // ****************************************************************************
 // Name:    ApachePathParent
@@ -104,7 +113,7 @@ end;
 
 // ****************************************************************************
 // Name:    ApacheBinFound
-// Purpose: Checks if bin\apache.exe excists in Apache's parent folder .
+// Purpose: Checks if bin\apache.exe excists in Apache's parent folder.
 //          Returns True if Yes and False if No
 function ApacheBinFound(): Boolean;
 var
@@ -121,32 +130,25 @@ begin
 end;
 
 // ****************************************************************************
-// Name:    ApacheServiceUninstall
-// Purpose: Stopping and uninstalling the Apache Service
-procedure ApacheServiceUninstall();
+// Name:    ApacheServiceStop
+// Purpose: Stopping the Apache Service
+procedure ApacheServiceStop();
 var
     bRetVal: Boolean;
     ErrorCode: Integer;
 begin
-    // Stop and uninstall the Apache service
     bRetVal := Exec('cmd.exe', '/C apache -k stop', g_sApachePathBin,
-                             SW_HIDE, ewWaitUntilTerminated, ErrorCode);
-    bRetVal := Exec('cmd.exe', '/C apache -k uninstall', g_sApachePathBin,
                              SW_HIDE, ewWaitUntilTerminated, ErrorCode);
 end;
 
 // ****************************************************************************
-// Name:    ApacheServiceInstall
-// Purpose: Installing and starting the Apache Service
-procedure ApacheServiceInstall();
+// Name:    ApacheServiceStart
+// Purpose: Starting the Apache Service
+procedure ApacheServiceStart();
 var
     bRetVal: Boolean;
     ErrorCode: Integer;
 begin
-    // Install and start the Apache service
-	 	bRetVal := Exec('cmd.exe', '/C apache -k install', g_sApachePathBin,
-                     SW_HIDE, ewWaitUntilTerminated, ErrorCode);
-
     bRetVal := Exec('cmd.exe', '/C apache -k start', g_sApachePathBin,
                         SW_HIDE, ewWaitUntilTerminated, ErrorCode);
 end;
@@ -214,15 +216,19 @@ procedure ApacheConfFileEdit(aHttpdConf: TArrayOfString;
                              iPosModAuthzSvn, iStatusModAuthzSvn: Integer);
 var
     sConfFileName, sTimeString: String;
-    sLoadModDav, sLoadModDavSvn, sLoadModAuthzSvn: String;
+    sModuleDir, sLoadModDav, sLoadModDavSvn, sLoadModAuthzSvn: String;
 
 begin
     sConfFileName := g_sApachePathConf + '\httpd.conf';
     sTimeString := GetDateTimeString('yyyy/mm/dd hh:mm:ss', '-', ':');
 
+    sModuleDir := ExpandConstant('{app}');
+    sModuleDir := sModuleDir + '\bin';
+    sModuleDir := BackslashToSlash(sModuleDir);
+
     sLoadModDav := 'LoadModule dav_module modules/mod_dav.so';
-    sLoadModDavSvn := 'LoadModule dav_svn_module modules/mod_dav_svn.so';
-    sLoadModAuthzSvn := 'LoadModule authz_svn_module modules/mod_authz_svn.so';
+    sLoadModDavSvn := 'LoadModule dav_svn_module "' + sModuleDir + '/mod_dav_svn.so"';
+    sLoadModAuthzSvn := 'LoadModule authz_svn_module "' + sModuleDir + '/mod_authz_svn.so"';
 
     //Backup the current httpd.conf
     FileCopy (sConfFileName, sConfFileName + '-svn-' + sTimeString + '.bak', False);
@@ -353,28 +359,6 @@ begin
 end;
 
 // ****************************************************************************
-// Name:    ApacheCopyModules
-// Purpose: Extracting Apache's modules and the Berkeley DB from the
-//          installation file and copy them to Apache's module directory
-procedure ApacheCopyModules();
-var
-    sTPathTmp: String;
-begin
-    sTPathTmp := ExpandConstant('{tmp}');
-    // extract the files from the setup to the current IS Temp folder
-    ExtractTemporaryFile('libdb42.dll');
-    ExtractTemporaryFile('mod_dav_svn.so');
-    ExtractTemporaryFile('mod_authz_svn.so');
-    ExtractTemporaryFile('intl.dll');
-	
-    //Copy the files from the temp dir to Apache's module foder
-    FileCopy (sTPathTmp + '\libdb42.dll', g_sApachePathModules + '\libdb42.dll', False);
-    FileCopy (sTPathTmp + '\mod_dav_svn.so', g_sApachePathModules + '\mod_dav_svn.so', False);
-    FileCopy (sTPathTmp + '\mod_authz_svn.so', g_sApachePathModules + '\mod_authz_svn.so', False);
-	FileCopy (sTPathTmp + '\intl.dll', g_sApachePathModules + '\intl.dll', False);
-end;
-
-// ****************************************************************************
 // Name:    ApacheVersion
 // Purpose: Returns apache.exe's version with the last number stripped.
 function ApacheVersion(): String;
@@ -421,17 +405,6 @@ begin
         BrowseForFolder(sMsg, g_sApachePathConf, false);
     end;
 
-    // Modules folder
-    if g_sApachePathModules = '' then
-        g_sApachePathModules := g_sApachePath + '\modules';
-
-    if not DirExists(g_sApachePathModules) then
-    begin
-        sMsg := 'Could not find the ''modules'' folder in the system. Please,' +
-                ' browse to the folder where the Apache modules is.';
-        BrowseForFolder(sMsg, g_sApachePathModules, false);
-    end;
-
     // Check that we have the required Apache version and warn the user if
     // needed
     sApacheVersion := ApacheVersion;
@@ -447,6 +420,18 @@ begin
 
             MsgBox(sMsg, mbError, MB_OK);
     end;
+end;
+
+///////////////////////////////////////////////////////////////////////////////
+// Misc. funtions used by the setup
+
+// ****************************************************************************
+// Name:    ComponentList
+// Purpose: In use for UninsHs when the user wants to uninstall/repair the
+//          installation,
+function ComponentList(Default: string):string;
+begin
+    Result := WizardSelectedComponents(False);
 end;
 
 // ****************************************************************************
@@ -526,9 +511,14 @@ begin
     Result:= g_bMsVcpNotFound;
 end;
 
+///////////////////////////////////////////////////////////////////////////////
+// Build in Inno Setup Pascal functions
+// See Inno help file for usage about this functions.
+
 // ****************************************************************************
-// The rest is build-in functions/events. (See Inno help file for  info about
-// function/event names).
+// Name:    InitializeSetup
+// Purpose: Called during Setup's initialization.
+//          Return False to abort Setup, True otherwise.
 function InitializeSetup(): Boolean;
 begin
     //Initialize some global variables
@@ -538,6 +528,9 @@ begin
     Result := True;
 end;
 
+// ****************************************************************************
+// Name:    CurPageChanged
+// Purpose: Called after a new wizard page (specified by CurPageID) is shown.
 procedure CurPageChanged(CurStep: Integer);
 begin
     case CurStep of
@@ -547,22 +540,30 @@ begin
         wpInstalling: // Event before setup is copying destination files
             if g_bHandleApache then
             begin
-                ApacheServiceUninstall;
-                ApacheCopyModules;
+                ApacheServiceStop;
+                //ApacheCopyModules;
             end;
     end;
 end;
 
+// ****************************************************************************
+// Name:    CurStepChanged
+// Purpose: Event function to perform pre- and post-install tasks.
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
-    // Event after setup has copyed destination files
     if (CurStep = ssPostInstall) and g_bHandleApache then
     begin;
         ApacheConfFileHandle;
-        ApacheServiceInstall;
+        ApacheServiceStart;
     end;
 end;
 
+// ****************************************************************************
+// Name:    NextButtonClick
+// Purpose: Called when the user clicks the Next button.
+//          If you return True, the wizard will move to the next page; if you
+//          return False, it will remain on the current page (specified by
+//          CurPageID).
 function NextButtonClick(CurPage: Integer): Boolean;
 begin
     if (CurPage = wpSelectComponents) then
@@ -570,4 +571,20 @@ begin
             SysFilesDownLoadInfo();
 
     Result := True;
+end;
+
+// ****************************************************************************
+// Name:    ShouldSkipPage
+// Purpose: Event function to determine whether or not a particular page
+//          (specified by PageID) should be shown at all.
+function ShouldSkipPage(CurPage: Integer): Boolean;
+begin
+    // START In use by UninsHs
+    if Pos('/SP-', UpperCase(GetCmdTail)) > 0 then
+        case CurPage of
+            wpWelcome, wpLicense, wpPassword, wpInfoBefore, wpUserInfo,
+            wpSelectDir, wpSelectProgramGroup, wpInfoAfter:
+            Result := True;
+    end;
+    // END In use by UninsHs
 end;

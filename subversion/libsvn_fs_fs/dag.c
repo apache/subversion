@@ -23,6 +23,7 @@
 #include "svn_error.h"
 #include "svn_fs.h"
 #include "svn_props.h"
+#include "svn_pools.h"
 
 #include "dag.h"
 #include "err.h"
@@ -238,29 +239,42 @@ svn_fs_fs__dag_walk_predecessors (dag_node_t *node,
   svn_fs_t *fs = svn_fs_fs__dag_get_fs (node);
   dag_node_t *this_node;
   svn_boolean_t done = FALSE;
+  apr_pool_t *last_iterpool, *iterpool, *tmp_iterpool;
 
+  last_iterpool = svn_pool_create (pool);
+  iterpool = svn_pool_create (pool);
   this_node = node;
   while ((! done) && this_node)
     {
       node_revision_t *noderev;
 
+      /* Cycle the pools so iterpool will remain valid on the next
+       * iteration. */
+      tmp_iterpool = last_iterpool;
+      last_iterpool = iterpool;
+      iterpool = tmp_iterpool;
+      svn_pool_clear (iterpool);
+
       /* Get the node revision for THIS_NODE so we can examine its
          predecessor id.  */
-      SVN_ERR (get_node_revision (&noderev, this_node, pool));
+      SVN_ERR (get_node_revision (&noderev, this_node, iterpool));
 
       /* If THIS_NODE has a predecessor, replace THIS_NODE with the
          precessor, else set it to NULL.  */
       if (noderev->predecessor_id)
         SVN_ERR (svn_fs_fs__dag_get_node (&this_node, fs, 
-                                          noderev->predecessor_id, pool));
+                                          noderev->predecessor_id,
+                                          iterpool));
       else
         this_node = NULL;
 
       /* Now call the user-supplied callback with our predecessor
          node. */
       if (callback)
-        SVN_ERR (callback (baton, this_node, &done, pool));
+        SVN_ERR (callback (baton, this_node, &done, iterpool));
     }
+  apr_pool_destroy (iterpool);
+  apr_pool_destroy (last_iterpool);
 
   return SVN_NO_ERROR;
 }

@@ -246,11 +246,11 @@ svn_repos_history2 (svn_fs_t *fs,
   /* Now, we loop over the history items, calling svn_fs_history_prev(). */
   do
     {
-      apr_pool_t *tmppool;
-
       /* Note that we have to do some crazy pool work here.  We can't
          get rid of the old history until we use it to get the new, so
          we alternate back and forth between our subpools.  */
+      apr_pool_t *tmppool;
+
       SVN_ERR (svn_fs_history_prev (&history, history, cross_copies, newpool));
 
       /* Only continue if there is further history to deal with. */

@@ -30,7 +30,7 @@ InternalCompressLevel=max
 SolidCompression=true
 AppCopyright={#= svn_cpr}
 UninstallDisplayIcon={app}\bin\svn.exe
-UninstallDisplayName=Subversion {#= svn_version}{#= svn_pretxtrevision}{#= svn_revision} (Uninstall)
+UninstallDisplayName=Subversion {#= svn_version}{#= svn_pretxtrevision}{#= svn_revision}
 AlwaysShowDirOnReadyPage=true
 AlwaysShowGroupOnReadyPage=true
 InfoAfterFile=Post.rtf
@@ -58,7 +58,7 @@ Name: apachehandler; Description: Install and configure Subversion modules (the 
 Source: in\subversion\Readme.dist; DestDir: {app}; DestName: Readme.txt
 Source: W32notes.txt; DestDir: {app}
 Source: {#= path_setup_in}\subversion\svn-proxy-template.reg; DestDir: {app}; Flags: ignoreversion
-Source: {#= path_svn_win32}\README.txt; DestDir: {app}; DestName: Buildnotes.txt
+Source: {#= path_svn}\README.txt; DestDir: {app}; DestName: Buildnotes.txt
 Source: {#= path_svnclient}\svn.exe; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_svnadmin}\svnadmin.exe; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_svnlook}\svnlook.exe; DestDir: {app}\bin; Flags: ignoreversion
@@ -93,8 +93,8 @@ Source: missing_msvcp60dll.html; DestDir: {app}\doc; Check: VCRuntimeNotFound
 Source: missing_shfolderdll.html; DestDir: {app}\doc; Check: ShFolderDllNotFound
 
 ; httpd modules
-Source: {#= path_davsvn}\mod_dav_svn.so; DestDir: {app}\httpd; Flags: ignoreversion
-Source: {#= path_authzsvn}\mod_authz_svn.so; DestDir: {app}\httpd; Flags: ignoreversion
+Source: {#= path_davsvn}\mod_dav_svn.so; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_authzsvn}\mod_authz_svn.so; DestDir: {app}\bin; Flags: ignoreversion
 
 ;Helpers ---------------------------------------------------------------------
 Source: {#= path_svnpath}\svnpath.exe; DestDir: {app}\helpers; Flags: ignoreversion

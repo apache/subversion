@@ -34,6 +34,7 @@
 #include "svn_dav.h"
 #include "svn_base64.h"
 #include "svn_xml.h"
+#include "svn_time.h"
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "../libsvn_ra/ra_loader.h"
@@ -1155,4 +1156,143 @@ svn_ra_dav__do_check_path(svn_ra_session_t *session,
     }
 
   return err;
+}
+
+
+svn_error_t *
+svn_ra_dav__do_stat(svn_ra_session_t *session,
+                    const char *path,
+                    svn_revnum_t revision,
+                    svn_dirent_t **dirent,
+                    apr_pool_t *pool)
+{
+  svn_ra_dav__session_t *ras = session->priv;
+  const char *url = ras->url;
+  const char *final_url;
+  apr_hash_t *resources;
+  apr_hash_index_t *hi;
+  svn_error_t *err;
+
+  /* If we were given a relative path to append, append it. */
+  if (path)
+    url = svn_path_url_add_component(url, path, pool);
+
+  /* Invalid revision means HEAD, which is just the public URL. */
+  if (! SVN_IS_VALID_REVNUM(revision))
+    {
+      final_url = url;
+    }
+  else
+    {
+      /* Else, convert (rev, path) into an opaque server-generated URL. */
+      svn_string_t bc_url, bc_relative;
+
+      err = svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative,
+                                          NULL, ras->sess,
+                                          url, revision, pool);
+      if (err) 
+        {
+          if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+            {
+              /* easy out: */
+              svn_error_clear (err);
+              *dirent = NULL;
+              return SVN_NO_ERROR;
+            }
+          else
+            return err;
+        }
+
+      final_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
+                                             pool);
+    }
+
+  /* Depth-zero PROPFIND is the One True DAV Way. */
+  err = svn_ra_dav__get_props(&resources, ras->sess, final_url, NE_DEPTH_ZERO,
+                              NULL, NULL /* all props */, pool);
+  if (err) 
+    {
+      if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+        {
+          /* easy out: */
+          svn_error_clear (err);
+          *dirent = NULL;
+          return SVN_NO_ERROR;
+        }
+      else
+        return err;
+    }
+
+  /* Copying parsing code from svn_ra_dav__get_dir() here.  The hash
+     of resources only contains one item, but there's no other way to
+     get the item. */
+  for (hi = apr_hash_first (pool, resources); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      const char *childname;
+      svn_ra_dav_resource_t *resource;
+      const svn_string_t *propval;
+      apr_hash_index_t *h;
+      svn_dirent_t *entry;
+
+      apr_hash_this (hi, &key, NULL, &val);
+      childname =  key;
+      resource = val;
+          
+      entry = apr_pcalloc (pool, sizeof(*entry));
+          
+      entry->kind = resource->is_collection ? svn_node_dir : svn_node_file;
+
+      /* entry->size is already 0 by virtue of pcalloc(). */
+      if (entry->kind == svn_node_file)
+        {
+          propval = apr_hash_get(resource->propset,
+                                 SVN_RA_DAV__PROP_GETCONTENTLENGTH,
+                                 APR_HASH_KEY_STRING);
+          if (propval)
+            entry->size = svn__atoui64(propval->data);
+        }
+          
+      /* does this resource contain any 'dead' properties? */
+      for (h = apr_hash_first (pool, resource->propset);
+           h; h = apr_hash_next (h))
+        {
+          const void *kkey;
+          void *vval;
+          apr_hash_this (h, &kkey, NULL, &vval);
+          
+          if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_CUSTOM,
+                      sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1) == 0)
+            entry->has_props = TRUE;
+          
+          else if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_SVN,
+                           sizeof(SVN_DAV_PROP_NS_SVN) - 1) == 0)
+            entry->has_props = TRUE;
+        }
+      
+      /* created_rev & friends */
+      propval = apr_hash_get(resource->propset,
+                             SVN_RA_DAV__PROP_VERSION_NAME,
+                             APR_HASH_KEY_STRING);
+      if (propval != NULL)
+        entry->created_rev = SVN_STR_TO_REV(propval->data);
+      
+      propval = apr_hash_get(resource->propset,
+                             SVN_RA_DAV__PROP_CREATIONDATE,
+                             APR_HASH_KEY_STRING);
+      if (propval != NULL)
+        SVN_ERR( svn_time_from_cstring(&(entry->time),
+                                       propval->data, pool) );
+      
+      propval = apr_hash_get(resource->propset,
+                             SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME,
+                             APR_HASH_KEY_STRING);
+      if (propval != NULL)
+        entry->last_author = propval->data;
+
+      *dirent = entry;
+    }
+
+  return SVN_NO_ERROR;
 }

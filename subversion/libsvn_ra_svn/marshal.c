@@ -517,15 +517,23 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 }
 
 /* Given the first non-whitespace character FIRST_CHAR, read an item
- * into the already allocated structure ITEM. */
+ * into the already allocated structure ITEM.  LEVEL should be set
+ * to 0 for the first call and is used to enforce a recurssion limit
+ * on the parser. */
 static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                              svn_ra_svn_item_t *item, char first_char)
+                              svn_ra_svn_item_t *item, char first_char,
+                              int level)
 {
   char c = first_char;
   apr_uint64_t val, prev_val=0;
   svn_stringbuf_t *str;
   svn_ra_svn_item_t *listitem;
 
+  if (++level >= 64)
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                            _("Too many nested items"));
+  
+  
   /* Determine the item type and read it in.  Make sure that c is the
    * first character at the end of the item so we can test to make
    * sure it's whitespace. */
@@ -582,7 +590,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           if (c == ')')
             break;
           listitem = apr_array_push(item->u.list);
-          SVN_ERR(read_item(conn, pool, listitem, c));
+          SVN_ERR(read_item(conn, pool, listitem, c, level));
         }
       SVN_ERR(readbuf_getchar(conn, pool, &c));
     }
@@ -602,7 +610,7 @@ svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
    * the work.  This makes sense because of the way lists are read. */
   *item = apr_palloc(pool, sizeof(**item));
   SVN_ERR(readbuf_getchar_skip_whitespace(conn, pool, &c));
-  return read_item(conn, pool, *item, c);
+  return read_item(conn, pool, *item, c, 0);
 }
 
 svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,

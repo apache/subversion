@@ -24,7 +24,7 @@ import java.util.Date;
  * the working copy. Will be returned by SVNClient.status or
  * SVNClient.singleStatus
  * @author Patrick Mayweg
- * @author Cédric Chabanois
+ * @author C&eacute;dric Chabanois
  *         <a href="mailto:cchabanois@ifrance.com">cchabanois@ifrance.com</a>
  */
 public class Status

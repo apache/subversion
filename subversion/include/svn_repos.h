@@ -568,6 +568,20 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
                               apr_pool_t *pool);
 
 
+/**
+ * @since New in 1.2.
+ *
+ * Set @a *dirent to an @c svn_dirent_t associated with @a path in @a
+ * root.  If @a path does not exist in @a root, set @a *dirent to
+ * NULL.  Use @a pool for memory allocation.
+*/
+svn_error_t *
+svn_repos_stat (svn_dirent_t **dirent,
+                svn_fs_root_t *root,
+                const char *path,
+                apr_pool_t *pool);
+
+
 /** Callback type for use with svn_repos_history().  @a path and @a
  * revision represent interesting history locations in the lifetime
  * of the path passed to svn_repos_history().  @a baton is the same

@@ -1596,106 +1596,6 @@ def basic_checkout_file(sbox):
   else:
     raise svntest.Failure
 
-#----------------------------------------------------------------------
-def basic_history(sbox):
-  "verify that 'svn cat' traces renames"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  rho_path   = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  pi_path    = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
-  bloo_path  = os.path.join(wc_dir, 'A', 'D', 'G', 'bloo')
-
-  # rename rho to bloo. commit r2.
-  svntest.main.run_svn(None, 'mv', rho_path, bloo_path)
-
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/rho' : Item(verb='Deleting'),
-    'A/D/G/bloo' : Item(verb='Adding')
-    })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
-  expected_status.remove('A/D/G/rho');
-  expected_status.add({ 'A/D/G/bloo' :
-                        Item(wc_rev=2, repos_rev=2, status='  ') })
-
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None,
-                                         None, None,
-                                         wc_dir)
-  
-  # rename pi to rho.  commit r3.
-  svntest.main.run_svn(None, 'mv', pi_path, rho_path)
-
-  # svn cat -r1 rho  --> should show pi's contents.
-  svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'pi'."], None,
-                                      'cat',  '-r', '1', rho_path)
-  
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/pi' : Item(verb='Deleting'),
-    'A/D/G/rho' : Item(verb='Adding')
-    })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
-  expected_status.remove('A/D/G/pi');
-  expected_status.tweak('A/D/G/rho', wc_rev=3)
-  expected_status.add({ 'A/D/G/bloo' :
-                        Item(wc_rev=2, repos_rev=3, status='  ') })
-
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None,
-                                         None, None,
-                                         wc_dir)
-
-  # update whole wc to HEAD
-  expected_output = svntest.wc.State(wc_dir, { }) # no output
-  expected_status.tweak(wc_rev=3)
-  expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('A/D/G/pi', 'A/D/G/rho')
-  expected_disk.add({
-    'A/D/G/rho' : Item("This is the file 'pi'."),
-    })
-  expected_disk.add({
-    'A/D/G/bloo' : Item("This is the file 'rho'."),
-    })
-  svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status)  
-
-  # 'svn cat bloo' --> should show rho's contents.
-  svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'rho'."], None,
-                                      'cat',  bloo_path)
-  
-  # svn cat -r1 bloo --> should still show rho's contents.
-  svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'rho'."], None,
-                                      'cat',  '-r', '1', bloo_path)
-
-  # svn cat -r1 rho  --> should show pi's contents.
-  svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'pi'."], None,
-                                      'cat',  '-r', '1', rho_path)
-  
-  # svn up -r1
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r', '1', wc_dir)
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=3)
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-
-  # svn cat -rHEAD rho --> should see 'unrelated object' error.
-  svntest.actions.run_and_verify_svn ("unrelated object",
-                                      None, SVNAnyOutput,
-                                      'cat',  '-r', 'HEAD', rho_path)
-
 
 ########################################################################
 # Run the tests
@@ -1727,7 +1627,6 @@ test_list = [ None,
               basic_import_ignores,
               uri_syntax,
               basic_checkout_file,
-              basic_history,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

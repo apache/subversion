@@ -102,7 +102,6 @@ begin_trail (trail_t **trail_p,
 
   trail->pool = svn_pool_create (pool);
   trail->fs = fs;
-  trail->scratchpool = svn_pool_create (trail->pool);
   trail->undo = 0;
   if (use_txn)
     {
@@ -201,11 +200,6 @@ commit_trail (trail_t *trail)
             (fs, "checkpointing after Berkeley DB transaction", db_err);
         }
     }
-
-  /* We don't destroy the pool; we assume it contains stuff which will
-     be useful beyond the transaction.  But we *do* destroy the
-     trail's scratchpool, freeing any temporary memory used. */
-  svn_pool_destroy (trail->scratchpool);
 
   return SVN_NO_ERROR;
 }

@@ -51,31 +51,35 @@ int svn_fs_bdb__open_changes_table (DB **changes_p,
 svn_error_t *svn_fs_bdb__changes_add (svn_fs_t *fs,
                                       const char *key,
                                       change_t *change,
-                                      trail_t *trail);
+                                      trail_t *trail,
+                                      apr_pool_t *pool);
 
 
 /* Remove all changes associated with KEY from the `changes' table in
    FS, as part of TRAIL. */
 svn_error_t *svn_fs_bdb__changes_delete (svn_fs_t *fs,
                                          const char *key,
-                                         trail_t *trail);
+                                         trail_t *trail,
+                                         apr_pool_t *pool);
 
 /* Return a hash *CHANGES_P, keyed on const char * paths, and
    containing svn_fs_path_change_t * values representing summarized
    changed records associated with KEY in FS, as part of TRAIL.
-   Allocate the array and its items in TRAIL->pool.  */
+   Allocate the array and its items in POOL.  */
 svn_error_t *svn_fs_bdb__changes_fetch (apr_hash_t **changes_p,
                                         svn_fs_t *fs,
                                         const char *key,
-                                        trail_t *trail);
+                                        trail_t *trail,
+                                        apr_pool_t *pool);
 
 /* Return an array *CHANGES_P of change_t * items representing
    all the change records associated with KEY in FS, as part of TRAIL.
-   Allocate the array and its items in TRAIL->pool.  */
+   Allocate the array and its items in POOL.  */
 svn_error_t *svn_fs_bdb__changes_fetch_raw (apr_array_header_t **changes_p,
                                             svn_fs_t *fs,
                                             const char *key,
-                                            trail_t *trail);
+                                            trail_t *trail,
+                                            apr_pool_t *pool);
 
 
 #ifdef __cplusplus

@@ -255,6 +255,7 @@ svn_client_info (const char *path_or_url,
   const char *parent_url, *base_name;
   svn_dirent_t *the_ent;
   svn_info_t *info;
+  svn_error_t *err;
    
   if ((revision == NULL 
        || revision->kind == svn_opt_revision_unspecified)
@@ -278,45 +279,71 @@ svn_client_info (const char *path_or_url,
 
   SVN_ERR (svn_ra_get_repos_root (ra_session, &repos_root_URL, pool));
   SVN_ERR (svn_ra_get_uuid (ra_session, &repos_UUID, pool));
-  SVN_ERR (svn_ra_check_path (ra_session, "", rev, &url_kind, pool));
+  
+  svn_path_split (url, &parent_url, &base_name, pool);
+  base_name = svn_path_uri_decode(base_name, pool);
+  
+  /* Get the dirent for the URL itself. */
+  err = svn_ra_stat (ra_session, "", rev, &the_ent, pool);
 
-  if (url_kind == svn_node_none)
+  /* svn_ra_stat() will work against old versions of mod_dav_svn, but
+     not old versions of svnserve.  In the case of a pre-1.2 svnserve,
+     catch the specific error it throws:*/
+  if (err && err->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD)
+    {
+      /* Fall back to pre-1.2 strategy for fetching dirent's URL. */
+      svn_error_clear (err);
+
+      SVN_ERR (svn_ra_check_path (ra_session, "", rev, &url_kind, pool));      
+      if (url_kind == svn_node_none)
+        return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                  _("URL '%s' non-existent in revision '%ld'"),
+                                  url, rev);
+
+      if (strcmp (url, repos_root_URL) == 0)
+        {
+          /* In this universe, there's simply no way to fetch
+             information about the repository's root directory!  So
+             degrade gracefully.  Rather than throw error, return no
+             information about the repos root, but at least give
+             recursion a chance. */     
+          goto recurse;
+        }        
+      
+      /* Open a new RA session to the item's parent. */
+      SVN_ERR (svn_client__open_ra_session (&parent_ra_session, parent_url,
+                                            NULL,
+                                            NULL, NULL, FALSE, TRUE, 
+                                            ctx, pool));
+      
+      /* Get all parent's entries, and find the item's dirent in the hash. */
+      SVN_ERR (svn_ra_get_dir (parent_ra_session, "", rev, &parent_ents, 
+                               NULL, NULL, pool));
+      the_ent = apr_hash_get (parent_ents, base_name, APR_HASH_KEY_STRING);
+      if (the_ent == NULL)
+        return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                  _("URL '%s' non-existent in revision '%ld'"),
+                                  url, rev);
+    }
+  else if (err)
+    {
+      return err;
+    }
+  
+  if (! the_ent)
     return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
                               _("URL '%s' non-existent in revision '%ld'"),
                               url, rev);
 
-  /* Step 1:  find the dirent of the file or directory URL. */
-
-  /* Open a new RA session to the item's parent. */
-  svn_path_split (url, &parent_url, &base_name, pool);
-  
-  /* 'base_name' is now the last component of an URL, but we want
-     to use it as a plain file name. Therefore, we must URI-decode
-     it. */
-  base_name = svn_path_uri_decode(base_name, pool);
-  SVN_ERR (svn_client__open_ra_session (&parent_ra_session, parent_url,
-                                        NULL,
-                                        NULL, NULL, FALSE, TRUE, 
-                                        ctx, pool));
-  
-  /* Get all parent's entries, no props. */
-  SVN_ERR (svn_ra_get_dir (parent_ra_session, "", rev, &parent_ents, 
-                           NULL, NULL, pool));
-  
-  /* Find the item's own dirent and push it an the info receiver.*/
-  the_ent = apr_hash_get (parent_ents, base_name, APR_HASH_KEY_STRING);
-  if (the_ent == NULL)
-    return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
-                              _("URL '%s' non-existent in that revision"),
-                              url);
-  
+  /* Push the URL's dirent at the callback.*/  
   SVN_ERR (build_info_from_dirent (&info, the_ent, url, rev,
                                    repos_UUID, repos_root_URL, pool));
   SVN_ERR (receiver (receiver_baton, base_name, info, pool));
   
-  /* Step 2:  possibly recurse, using the original RA session. */
-
-  if (recurse && (url_kind == svn_node_dir))
+ recurse:
+  
+  /* Possibly recurse, using the original RA session. */      
+  if (recurse && (the_ent->kind == svn_node_dir))
     {
       SVN_ERR (push_dir_info (ra_session, url, "", rev,
                               repos_UUID, repos_root_URL,
