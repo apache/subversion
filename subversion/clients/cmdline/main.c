@@ -507,18 +507,20 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { NULL, NULL, {0}, NULL, {0} }
 };
 
+
+#if 0  /* ### See also #if 0 below in main() */
 /* A flag to see if we've been cancelled by the client or not. */
 static volatile sig_atomic_t cancelled = FALSE;
 
 /* A signal handler to support cancellation. */
-void
+static void
 sig_int (int unused)
 {
   cancelled = TRUE;
 }
 
 /* Our cancellation callback. */
-svn_error_t *
+static svn_error_t *
 check_cancel (void *baton)
 {
   if (cancelled)
@@ -526,6 +528,7 @@ check_cancel (void *baton)
   else
     return SVN_NO_ERROR;
 }
+#endif /* 0 */
 
 
 /*** Main. ***/
@@ -1002,7 +1005,7 @@ main (int argc, const char * const *argv)
     svn_auth_open (&ab, providers, pool);
     ctx.auth_baton = ab;
 
-#if 0
+#if 0  /* ### See also #if 0 above at declaration of `cancelled'. */
     /* Set up our cancellation support.
      *
      * This is temporarily #if 0'd out while the cancellation support is 
