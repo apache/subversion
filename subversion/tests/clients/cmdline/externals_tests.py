@@ -672,12 +672,19 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   externals_value_3 = "foo/..  "         + repo_url + "/A/B/E" + "\n"
   externals_value_4 = ". "               + repo_url + "/A/B/E" + "\n"
   externals_value_5 = "./ "              + repo_url + "/A/B/E" + "\n"
+  externals_value_6 = ".."               + repo_url + "/A/B/E" + "\n"
+  externals_value_7 = "././/.///."       + repo_url + "/A/B/E" + "\n"
+  externals_value_8 = "/foo"             + repo_url + "/A/B/E" + "\n"
+
 
   set_externals_for_path_expect_error(B_path, externals_value_1, wc_dir)
   set_externals_for_path_expect_error(G_path, externals_value_2, wc_dir)
   set_externals_for_path_expect_error(H_path, externals_value_3, wc_dir)
   set_externals_for_path_expect_error(C_path, externals_value_4, wc_dir)
   set_externals_for_path_expect_error(F_path, externals_value_5, wc_dir)
+  set_externals_for_path_expect_error(B_path, externals_value_6, wc_dir)
+  set_externals_for_path_expect_error(G_path, externals_value_7, wc_dir)
+  set_externals_for_path_expect_error(H_path, externals_value_8, wc_dir)
 
 
 #----------------------------------------------------------------------
