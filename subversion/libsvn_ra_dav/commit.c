@@ -22,7 +22,7 @@
 #include "svn_ra.h"
 #include "svn_wc.h"
 
-#include "ra_session.h"
+#include "ra_dav.h"
 
 
 typedef struct
@@ -201,12 +201,14 @@ static const svn_delta_edit_fns_t commit_editor = {
   commit_close_edit
 };
 
-svn_error_t *
-svn_ra_get_commit_editor(svn_ra_session_t *ras,
-                         const svn_delta_edit_fns_t **editor,
-                         void **edit_baton,
-                         svn_revnum_t *new_revision)
+svn_error_t * svn_ra_dav__get_commit_editor(
+  void *session_baton,
+  const svn_delta_edit_fns_t **editor,
+  void **edit_baton,
+  svn_revnum_t *new_revision)
 {
+  svn_ra_session_t *ras = session_baton;
+
   commit_ctx_t *cc = apr_pcalloc(ras->pool, sizeof(*cc));
   svn_error_t *err;
 

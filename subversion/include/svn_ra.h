@@ -65,7 +65,7 @@ typedef struct svn_ra_plugin_t
      set to the repository's new revision number resulting from the
      commit. */
   svn_error_t *(*svn_ra_get_commit_editor) (void *session_baton,
-                                            svn_delta_edit_fns_t **editor,
+                                            const svn_delta_edit_fns_t **editor,
                                             void **edit_baton,
                                             svn_revnum_t *new_revision);
 
@@ -73,7 +73,7 @@ typedef struct svn_ra_plugin_t
   /* Ask the network layer to check out a copy of URL, using EDITOR
      and EDIT_BATON to create a working copy. */
   svn_error_t *(*svn_ra_do_checkout) (void *session_baton,
-                                      svn_delta_edit_fns_t *editor,
+                                      const svn_delta_edit_fns_t *editor,
                                       void *edit_baton,
                                       svn_string_t *URL);
 
@@ -93,9 +93,9 @@ typedef struct svn_ra_plugin_t
      When the update_editor->close_edit() returns, then
      commit_editor->close_edit() returns too.  */
   svn_error_t *(*svn_ra_do_update) (void *session_baton,
-                                    svn_delta_edit_fns_t **commit_editor,
+                                    const svn_delta_edit_fns_t **commit_editor,
                                     void **commit_baton,
-                                    svn_delta_edit_fns_t *update_editor,
+                                    const svn_delta_edit_fns_t *update_editor,
                                     void *update_baton,
                                     svn_string_t *URL);
 
@@ -121,7 +121,7 @@ typedef struct svn_ra_init_params
    `svn_ra_FOO_init()':
 
       svn_error_t *svn_ra_FOO_init (int abi_version,
-                                    svn_ra_init_params *params);
+                                    const svn_ra_init_params *params);
 
    When called by libsvn_client, this routine must:
 
@@ -130,21 +130,8 @@ typedef struct svn_ra_init_params
     * call the routine below, which adds it to libsvn_client's array.  
 
 */
-svn_error_t *svn_ra_register_plugin (svn_ra_plugin_t *new_ra_plugin,
-                                     svn_ra_init_params *params);
-
-
-
-/*-------------------------------------------------------------------*/
-
-/* Greg, please update ra_dav to use the declarations above, not
-   below!  I'm leaving these here so that we can still compile. */
-
-typedef struct svn_ra_session_t svn_ra_session_t;
-
-svn_error_t * svn_ra_open (svn_ra_session_t **p_ras,
-                           const char *repository,
-                           apr_pool_t *pool);
+svn_error_t *svn_ra_register_plugin (const svn_ra_plugin_t *new_ra_plugin,
+                                     const svn_ra_init_params *params);
 
 
 #endif  /* SVN_RA_H */
