@@ -63,7 +63,7 @@ create_string (const char *data, apr_size_t size,
 {
   svn_string_t *new_string;
 
-  new_string = (svn_string_t *) apr_palloc (pool, sizeof (*new_string)); 
+  new_string = apr_palloc (pool, sizeof (*new_string)); 
 
   new_string->data = data;
   new_string->len = size;
@@ -201,7 +201,7 @@ create_stringbuf (char *data, apr_size_t size, apr_pool_t *pool)
 {
   svn_stringbuf_t *new_string;
 
-  new_string = (svn_stringbuf_t *) apr_palloc (pool, sizeof (*new_string)); 
+  new_string = apr_palloc (pool, sizeof (*new_string)); 
 
   new_string->data = data;
   new_string->len = size;
