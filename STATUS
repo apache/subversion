@@ -60,3 +60,9 @@ Candidate changes:
     Votes:
       +1: jszakmeister
 
+  * r11364 (Issue 2076)
+    fsfs does not check if the revision is valid for proplist/propedit/etc
+    Justification:
+      User complaint.  Simple fix.
+    Votes:
+      +1: bliss
