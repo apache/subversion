@@ -259,7 +259,7 @@ def get_child(node, name):
 
 
 # Helper for compare_trees
-def default_singleton_handler(a):
+def default_singleton_handler(a, baton):
   "Printing SVNTreeNode A's name, then raise SVNTreeUnequal."
   print "Got singleton", a.name
   raise SVNTreeUnequal
@@ -273,12 +273,14 @@ def default_singleton_handler(a):
 # Main tree comparison routine!  
 
 def compare_trees(a, b,
-                  singleton_handler_a=default_singleton_handler,
-                  singleton_handler_b=default_singleton_handler):
+                  singleton_handler_a = default_singleton_handler,
+                  a_baton = None,
+                  singleton_handler_b = default_singleton_handler,
+                  b_baton = None):
   """Compare SVNTreeNodes A and B, expressing differences using FUNC_A
-  and FUNC_B.  FUNC_A and FUNC_B are functions of one argument, an
-  SVNTreeNode, and may raise exception SVNTreeUnequal.  Their return
-  value is ignored.
+  and FUNC_B.  FUNC_A and FUNC_B are functions of two arguments (a
+  SVNTreeNode and a context baton), and may raise exception
+  SVNTreeUnequal.  Their return value is ignored.
 
   If A and B are both files, then return 0 if their contents,
   properties, and names are all the same; else raise a SVNTreeUnequal.
@@ -312,12 +314,13 @@ def compare_trees(a, b,
         if b_child:
           accounted_for.append(b_child)
           compare_trees(a_child, b_child,
-                        singleton_handler_a, singleton_handler_b)
+                        singleton_handler_a, a_baton,
+                        singleton_handler_b, b_baton)
         else:
-          singleton_handler_a(a_child)
+          singleton_handler_a(a_child, a_baton)
       for b_child in b.children:
         if (b_child not in accounted_for):
-          singleton_handler_b(b_child)
+          singleton_handler_b(b_child, b_baton)
       return 0
   except SVNTypeMismatch:
     print 'Unequal Types: one Node is a file, the other is a directory'

@@ -16,7 +16,7 @@
 #
 ######################################################################
 
-import shutil, string, sys, os.path
+import shutil, string, sys, re, os.path
 
 # Load the svn testing framework package:
 try: 
@@ -109,8 +109,10 @@ def guarantee_greek_repository(path):
 # svntest.tree.build_generic_tree().
 
 def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
-                            singleton_handler_a=None,
-                            singleton_handler_b=None):
+                            singleton_handler_a = None,
+                            a_baton = None,
+                            singleton_handler_b = None,
+                            b_baton = None):
   """Checkout the the URL into a new directory WC_DIR_NAME.
 
   The subcommand output will be verified against OUTPUT_TREE,
@@ -135,7 +137,8 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
 
   # Verify expected disk against actual disk.
   if svntest.tree.compare_trees (mytree, disk_tree,
-                             singleton_handler_a, singleton_handler_b):
+                                 singleton_handler_a, a_baton,
+                                 singleton_handler_b, b_baton):
     return 1
 
   return 0
@@ -143,8 +146,10 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
 
 def run_and_verify_update(wc_dir_name,
                           output_tree, disk_tree, status_tree,
-                          singleton_handler_a=None,
-                          singleton_handler_b=None,
+                          singleton_handler_a = None,
+                          a_baton = None,
+                          singleton_handler_b = None,
+                          b_baton = None,
                           *args):
   """Update WC_DIR_NAME into a new directory WC_DIR_NAME.  *ARGS are
   any extra optional args to the update subcommand.
@@ -170,7 +175,8 @@ def run_and_verify_update(wc_dir_name,
 
   # Verify expected disk against actual disk.
   if svntest.tree.compare_trees (mytree, disk_tree,
-                             singleton_handler_a, singleton_handler_b):
+                                 singleton_handler_a, a_baton,
+                                 singleton_handler_b, b_baton):
     return 1
 
   # Verify via 'status' command too, if possible.
@@ -182,8 +188,10 @@ def run_and_verify_update(wc_dir_name,
 
 
 def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
-                          singleton_handler_a=None,
-                          singleton_handler_b=None,
+                          singleton_handler_a = None,
+                          a_baton = None,
+                          singleton_handler_b = None,
+                          b_baton = None,
                           *args):
   """Commit and verify results within working copy WC_DIR_NAME,
   sending ARGS to the commit subcommand.
@@ -225,8 +233,10 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
 
 
 def run_and_verify_status(wc_dir_name, output_tree,
-                          singleton_handler_a=None,
-                          singleton_handler_b=None):
+                          singleton_handler_a = None,
+                          a_baton = None,
+                          singleton_handler_b = None,
+                          b_baton = None):
   """Run 'status' on WC_DIR_NAME and compare it with the
   expected OUTPUT_TREE.  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will
   be passed to svntest.tree.compare_trees - see that function's doc string for
@@ -239,7 +249,8 @@ def run_and_verify_status(wc_dir_name, output_tree,
 
   # Verify actual output against expected output.
   if svntest.tree.compare_trees (mytree, output_tree,
-                             singleton_handler_a, singleton_handler_b):
+                                 singleton_handler_a, a_baton,
+                                 singleton_handler_b, b_baton):
     return 1
 
   return 0
@@ -387,8 +398,8 @@ def basic_commit():
   return run_and_verify_commit (wc_dir,
                                 expected_output_tree,
                                 expected_status_tree,
-                                None,
-                                None,
+                                None, None,
+                                None, None,
                                 wc_dir)
   
 #----------------------------------------------------------------------
@@ -425,8 +436,8 @@ def commit_one_file():
   return run_and_verify_commit (wc_dir,
                                 expected_output_tree,
                                 expected_status_tree,
-                                None,
-                                None,
+                                None, None,
+                                None, None,
                                 rho_path)
   
 #----------------------------------------------------------------------
@@ -484,8 +495,8 @@ def commit_multiple_targets():
   return run_and_verify_commit (wc_dir,
                                 expected_output_tree,
                                 expected_status_tree,
-                                None,
-                                None,
+                                None, None,
+                                None, None,
                                 psi_path, AB_path, pi_path)
   
 #----------------------------------------------------------------------
@@ -545,8 +556,8 @@ def commit_multiple_targets_2():
   return run_and_verify_commit (wc_dir,
                                 expected_output_tree,
                                 expected_status_tree,
-                                None,
-                                None,
+                                None, None,
+                                None, None,
                                 psi_path, AB_path, omega_path, pi_path)
   
 #----------------------------------------------------------------------
@@ -584,7 +595,8 @@ def basic_update():
 
   # Commit.
   if run_and_verify_commit (wc_dir, expected_output_tree,
-                            expected_status_tree, None, None, wc_dir):
+                            expected_status_tree,
+                            None, None, None, None, wc_dir):
     return 1
 
   # Create expected output tree for an update of the wc_backup.
@@ -618,6 +630,7 @@ def basic_merge():
   
   if make_repo_and_wc('basic_merge'):
     return 1
+  
   # First change the greek tree to make two files 10 lines long
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
@@ -645,8 +658,10 @@ def basic_merge():
   
   # Initial commit.
   if run_and_verify_commit (wc_dir, expected_output_tree,
-                            expected_status_tree, None, None, wc_dir):
+                            expected_status_tree,
+                            None, None, None, None, wc_dir):
     return 1
+  
   # Make a backup copy of the working copy
   wc_backup = os.path.join (general_wc_dir, 'basic_merge_backup')
   duplicate_dir(wc_dir, wc_backup)
@@ -672,13 +687,16 @@ def basic_merge():
 
   # Commit.
   if run_and_verify_commit (wc_dir, expected_output_tree,
-                            expected_status_tree, None, None, wc_dir):
+                            expected_status_tree,
+                            None, None, None, None,
+                            wc_dir):
     return 1
 
   # Make local mods to wc_backup by recreating mu and rho
   mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
   rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
   fp_mu = open(mu_path_backup, 'w+')
+
   # open in 'truncate to zero then write" mode
   backup_mu_text='This is the new line 1 in the backup copy of mu'
   for x in range(2,11):
@@ -729,33 +747,22 @@ def basic_merge():
 
 #----------------------------------------------------------------------
 
-# Ok, so extra_files is a global dictionary...but we have to have a list of
-# expected extra files that the backup copy will have after a conflict that
-# both conflict_from_wc_top() and verify_rej_file() can see.
 
-extra_files = { 'mu.rej':'mu reject file',
-                'rho.rej':'rho reject file'}
+# Helper for basic_conflict() test -- a custom singleton handler.
+def detect_conflict_files(node, extra_files):
+  """NODE has been discovered an an extra file on disk.  Verify that
+  it matches one of the regular expressions in the EXTRA_FILES list.
+  If it matches, remove the match from the list.  If it doesn't match,
+  raise an exception."""
 
-def verify_rej_file(node):
-  "Handles a reject file from a conflict."
-  # four files are expected - mu~, mu reject file, rho~ and rho reject file
-  length_of_name = len(node.name)
-  if ((node.name[0:3] == "mu.") and
-      (node.name[(length_of_name - 4):length_of_name] == ".rej")):
-    del extra_files['mu.rej']
-  elif ((node.name[0:4] == "rho.") and
-      (node.name[(length_of_name - 4):length_of_name] == ".rej")):
-    del extra_files['rho.rej']
-  elif (node.name == "mu~"):
-    # Some versions of PATCH produce these twiddle files, but not all.
-    # Thus, these two cases for mu~ and rho~ have been added to make the
-    # test more robust.
-    return 0
-  elif (node.name == "rho~"):
-    return 0
-  else:
-    print node.name,"is an unknown file."
-    raise svntest.tree.SVNTreeUnequal
+  for pattern in extra_files:
+    mo = re.match(pattern, node.name)
+    if mo:
+      extra_files.pop(extra_files.index(pattern)) # delete pattern from list
+      return 0
+
+  print "Found unexpected disk object:", node.name
+  raise svntest.tree.SVNTreeUnequal
 
 
 def basic_conflict():
@@ -799,14 +806,13 @@ def basic_conflict():
 
   # Commit.
   if run_and_verify_commit (wc_dir, expected_output_tree,
-                            expected_status_tree, None, None, wc_dir):
+                            expected_status_tree,
+                            None, None, None, None, wc_dir):
     return 1
 
   # Create expected output tree for an update of the wc_backup.
-  output_list = [[os.path.join(wc_backup, 'A', 'mu'),
-                  None, {'status' : 'C '}],
-                 [os.path.join(wc_backup, 'A', 'D', 'G', 'rho'),
-                   None, {'status' : 'C '}]]
+  output_list = [ [mu_path_backup, None, {'status' : 'C '}],
+                  [rho_path_backup, None, {'status' : 'C '}]]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
   
   # Create expected disk tree for the update.
@@ -821,15 +827,21 @@ def basic_conflict():
     if (item[0] == mu_path_backup) or (item[0] == rho_path_backup):
       item[2]['status'] = 'C '
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # "Extra" files that we expect to result from the conflicts.
+  # These are expressed as regexps.
+  extra_files = ['mu.*\.rej', 'rho.*\.rej', '\.#mu.*', '\.#rho.*']
   
   # Do the update and check the results in three ways.
+  # All "extra" files are passed to detect_conflict_files().
   if run_and_verify_update(wc_backup,
                            expected_output_tree,
                            expected_disk_tree,
                            expected_status_tree,
-                           verify_rej_file,
-                           None):
+                           detect_conflict_files, # our singleton handler func
+                           extra_files):    # our handler will look for these
     return 1
+  
   # verify that the extra_files list is now empty.
   if len(extra_files) != 0:
     # Because we want to be a well-behaved test, we silently return
