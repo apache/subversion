@@ -1,6 +1,8 @@
 
-top_builddir = @abs_builddir@
+top_builddir = .
 top_srcdir = @top_srcdir@
+abs_builddir = @abs_builddir@
+abs_srcdir = @abs_srcdir@
 
 SVN_RA_LIB_DEPS = @SVN_RA_LIB_DEPS@
 SVN_RA_LIB_LINK = @SVN_RA_LIB_LINK@
@@ -29,7 +31,7 @@ DVIPDF = dvipdf
 
 CC = @CC@
 
-LIBTOOL = @LIBTOOL@
+LIBTOOL = $(SHELL) $(abs_builddir)/libtool
 LTFLAGS = --silent
 LT_LDFLAGS =
 
@@ -95,7 +97,6 @@ local-install: install-lib install-include install-bin install-sbin \
 ### they should ...
 check: $(TEST_DEPS)
 	@logfile=`pwd`/tests.log ; \
-	abs_srcdir="`cd $(top_srcdir) && pwd`" ; \
 	echo > $$logfile ; \
 	failed=no ; \
 	list='$(TEST_PROGRAMS)'; for prog in $$list; do \
@@ -105,7 +106,7 @@ check: $(TEST_DEPS)
 	    echo ; \
 	    echo -n "Running all sub-tests in $$progbase..." ; \
 	    echo "START: $$progbase" >> $$logfile ; \
-	    (cd $$progdir && ./$$progbase $$abs_srcdir) >> $$logfile ; \
+	    (cd $$progdir && ./$$progbase $(abs_srcdir)) >> $$logfile ; \
 	    if test $$? -eq 0; then \
 		echo "SUCCESS" ; \
 	    else \

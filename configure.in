@@ -77,7 +77,7 @@ if test "$abs_srcdir" != "$abs_builddir"; then
   SVN_APR_INCLUDES='-I$(top_builddir)/apr/include '"$SVN_APR_INCLUDES"
 fi
 AC_SUBST(SVN_APR_INCLUDES)
-SVN_APR_LIBS='$(top_builddir)/apr/libapr.la '"$LIBTOOL_LIBS"
+SVN_APR_LIBS='$(abs_builddir)/apr/libapr.la '"$LIBTOOL_LIBS"
 AC_SUBST(SVN_APR_LIBS)
 
 dnl Expat
@@ -105,7 +105,7 @@ dnl find Apache
 SVN_FIND_APACHE
 
 dnl ### should we ever bother with the system install?
-INSTALL="$abs_srcdir/apr/build/install.sh"
+INSTALL="$top_srcdir/apr/build/install.sh"
 AC_SUBST(INSTALL)
 
 dnl use APR's mkdir to enable creating intervening directories
@@ -205,13 +205,13 @@ if test "$enable_shared" = "no"; then
   AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_DAV, 1,
         [Defined if libsvn_client should link against libsvn_ra_dav])
   SVN_RA_LIB_DEPS="subversion/libsvn_ra_dav/libsvn_ra_dav.la"
-  SVN_RA_LIB_LINK="-L\$(top_builddir)/subversion/libsvn_ra_dav/.libs -lsvn_ra_dav -L\$(top_builddir)/neon/src/.libs -lneon"
+  SVN_RA_LIB_LINK="-L\$(abs_builddir)/subversion/libsvn_ra_dav/.libs -lsvn_ra_dav -L\$(abs_builddir)/neon/src/.libs -lneon"
 
   if test "$svn_lib_berkeley_db" = "yes"; then
     AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL, 1,
         [Defined if libsvn_client should link against libsvn_ra_local])
     SVN_RA_LIB_DEPS="$SVN_RA_LIB_DEPS subversion/libsvn_ra_local/libsvn_ra_local.la subversion/libsvn_repos/libsvn_repos.la subversion/libsvn_fs/libsvn_fs.la"
-    SVN_RA_LIB_LINK="$SVN_RA_LIB_LINK -L\$(top_builddir)/subversion/libsvn_ra_local/.libs -lsvn_ra_local -L\$(top_builddir)/subversion/libsvn_repos/.libs -lsvn_repos -L\$(top_builddir)/subversion/libsvn_fs/.libs -lsvn_fs"
+    SVN_RA_LIB_LINK="$SVN_RA_LIB_LINK -L\$(abs_builddir)/subversion/libsvn_ra_local/.libs -lsvn_ra_local -L\$(abs_builddir)/subversion/libsvn_repos/.libs -lsvn_repos -L\$(abs_builddir)/subversion/libsvn_fs/.libs -lsvn_fs"
   fi
 
 fi
@@ -224,6 +224,7 @@ dnl Pass some config data ----------------------------
 AC_DEFINE_UNQUOTED(SVN_VERSION, "$VERSION", [Version number of Subversion])
 
 AC_SUBST(abs_builddir)
+AC_SUBST(abs_srcdir)
 
 dnl
 dnl BSD/OS (BSDi) needs to use a different include syntax in the Makefiles
