@@ -27,19 +27,104 @@
 
 /*----------------------------------------------------------------------*/
 
-/** The parser **/
+/** The parser and related helper funcs **/
 
 
+/* Allocate a new hash *HEADERS in POOL, and read a series of
+   RFC822-style headers from STREAM.  Duplicate each header's name and
+   value into POOL and store in hash as a const char * ==> const char *.
+
+   The headers are assumed to be terminated by a blank line ("\n\n").
+ */
+static svn_error_t *
+read_header_block (svn_stream_t *stream,
+                   apr_hash_t **headers,
+                   apr_pool_t *pool)
+{
+  char c, last_c = 0;
+  apr_size_t numbytes, old_i = 0, i = 0;
+  const char *name, *value;
+  svn_stringbuf_t *header_str = svn_stringbuf_create ("", pool);
+  *headers = apr_hash_make (pool);  
+
+  /* Suck the whole block of headers into a stringbuf.  We read only
+     one character at a time, because we're carefully looking for a
+     blank line to signal the end of the header block. */
+  while (1)
+    {
+      numbytes = 1;
+      SVN_ERR (svn_stream_read (stream, &c, &numbytes));
+
+      if ((c == '\n') && (last_c == '\n'))
+        break;
+
+      /* Note: we're using a stringbuf here, even though we know the
+         header block won't ever contain anything but simple ASCII.
+         That's because the appendbytes() function is more efficient
+         than trying to grow a regular C string one-byte-at-a-time:
+         appendbytes() keeps doubling the stringbuf's storage space. */
+      svn_stringbuf_appendbytes (header_str, &c, 1);
+      last_c = c;      
+    }
+
+  /* Parse the stringbuf into a hash.  Walk over the stringbuf's bytes
+     until we see a NULL somewhere, which signifies that this
+     particular stringbuf's data has run out. */
+  while (1)
+    {
+      /* Find the next colon.  Bam, we have the header's name. */
+      while (header_str->data[i] != ':')
+        {
+          if (header_str->data[i] == '\0')
+            goto malformed_error;
+          
+          i++;
+        }
+      name = apr_pstrmemdup (pool, header_str->data + old_i, (i - old_i));
+      
+      /* Find the next newline.  Bam, we have the header's value. */
+      i++;
+      old_i = i;
+      while (header_str->data[i] != '\n')
+        {
+          if (header_str->data[i] == '\0')
+            goto malformed_error;
+          
+          i++;
+        }
+      value = apr_pstrmemdup (pool, header_str->data + old_i, (i - old_i));
+      
+      apr_hash_set (*headers, name, APR_HASH_KEY_STRING, value);
+
+      /* 'i' now points to a newline.  If the next character is a NULL,
+         then we're done.  This is the only legitimate place for a
+         NULL.  If not NULL, there must be another header to read, so
+         we loop.  */
+      i++;
+      if (header_str->data[i] == '\0')
+        break;
+    }
+
+  return SVN_NO_ERROR;
+
+ malformed_error:
+  return svn_error_create (SVN_ERR_MALFORMED_STREAM_DATA, 0, NULL, pool,
+                           "Found malformed header block in dumpfile stream.");
+}
+
+
+/* The Main Parser */
 svn_error_t *
 svn_repos_parse_dumpstream (svn_stream_t *stream,
                             const svn_repos_parser_fns_t *parse_fns,
                             void *parse_baton,
                             apr_pool_t *pool)
 {
+  apr_hash_t *headers;
+
   /* ### verify that we support the dumpfile format version number. */
 
   /* ### outline:
-
 
   while (stream):
   {
@@ -60,7 +145,13 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
     if in a node,
         close_node()
    }
+   if in a revision,
+     close_revision()
  */
+
+  /* shut up compiler warnings about unused functions. */
+  SVN_ERR (read_header_block (stream, &headers, pool));
+  
 
   return SVN_NO_ERROR;
 }
