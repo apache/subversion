@@ -1,3 +1,4 @@
+dnl
 dnl  SVN_LIB_APR(version)
 dnl
 dnl  Check configure options and assign variables related to
@@ -6,21 +7,9 @@ dnl
 
 AC_DEFUN(SVN_LIB_APR,
 [
-
   AC_MSG_NOTICE([Apache Portable Runtime (APR) library configuration])
 
-  APR_FIND_APR(apr, $abs_builddir)
-
-  if test $apr_found = "no" \
-     && test "$abs_srcdir" != "$abs_builddir" \
-     && test -d "$abs_srcdir/apr"; then
-    dnl HACKS to get builddir != srcdir to work, should APR_FIND_APR do this?
-    echo "using apr in Subversion source dir"
-    apr_found="reconfig"
-    apr_config=$abs_builddir/apr/apr-config
-    apr_la_file=$abs_builddir/apr/libapr.la
-    apr_srcdir=apr
-  fi
+  APR_FIND_APR("$top_srcdir/apr", "./apr")
 
   if test $apr_found = "no"; then
     AC_MSG_WARN([APR not found])
@@ -28,42 +17,30 @@ AC_DEFUN(SVN_LIB_APR,
   fi
 
   if test $apr_found = "reconfig"; then
-    SVN_SUBDIR_CONFIG($apr_srcdir)
-    SVN_SUBDIRS="$SVN_SUBDIRS $apr_srcdir"
+    SVN_SUBDIR_CONFIG(apr)
+    SVN_SUBDIRS="$SVN_SUBDIRS apr"
   fi
 
-  dnl Get libraries and thread flags from APR ---------------------
+  dnl Get build information from APR
 
-  if test -x "$apr_config"; then
-    CPPFLAGS="$CPPFLAGS `$apr_config --cppflags`"
-    CFLAGS="$CFLAGS `$apr_config --cflags`"
-    LIBS="$LIBS `$apr_config --libs`"
-  else
-    AC_MSG_WARN([apr-config not found])
-    SVN_DOWNLOAD_APR
-  fi
+  CPPFLAGS="$CPPFLAGS `$apr_config --cppflags`"
+  CFLAGS="$CFLAGS `$apr_config --cflags`"
+  LDFLAGS="$LDFLAGS `$apr_config --ldflags`"
+  LIBS="$LIBS `$apr_config --libs`"
 
-  SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES $apr_includes"
-  if test "$abs_srcdir" != "$abs_builddir" && test -d "$abs_srcdir/apr" ; then
-      SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES -I$abs_srcdir/apr/include -I$abs_builddir/apr/include"
-  fi
+  SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES `$apr_config --includes`"
 
-  if test -z "$apr_la_file" ; then
-    SVN_APR_LIBS="-lapr $LIBTOOL_LIBS"
-  else
-    SVN_APR_LIBS="$apr_la_file $LIBTOOL_LIBS"
-  fi
+  SVN_APR_LIBS="`$apr_config --apr-libtool`"
   AC_SUBST(SVN_APR_LIBS)
-
 ])
 
 dnl SVN_DOWNLOAD_APR()
 dnl no apr found, print out a message telling the user what to do
 AC_DEFUN(SVN_DOWNLOAD_APR,
 [
-  echo "No Apache Portable Runtime (APR) library can be found."
-  echo "Either install APR on this system and supply appropriate"
-  echo "--with-apr-libs and --with-apr-includes options"
+  echo "The Apache Portable Runtime (APR) library cannot be found."
+  echo "Please install APR on this system and supply appropriate the"
+  echo "--with-apr option to 'configure'"
   echo ""
   echo "or"
   echo ""
