@@ -135,11 +135,11 @@ SRPMS_RPM_DIR  := $(RPMDIR)/SRPMS
 
 # Where the svn executable is
 SVNEXEC := $(shell which svn 2>/dev/null)
-SVNEXEC := $(if ldd $(SVNEXEC) | grep 'not found',,$(SVNEXEC))
+SVNEXEC := $(if $(shell ldd $(SVNEXEC) | grep 'not found'),,$(SVNEXEC))
 SVNEXEC := $(if $(BLESSED),,$(SVNEXEC))
 
 # Whether this is being compiled on the trunk
-TRUNK := $(if $(SVNEXEC),$(shell $(SVNEXEC) info . | grep Url),$(shell pwd))
+TRUNK := $(if $(SVNEXEC),$(shell $(SVNEXEC) info . | grep -i url:),$(shell pwd))
 TRUNK := $(shell echo $(TRUNK) | grep trunk | wc -l | sed 's/ //g')
 
 ifneq ($(TRUNK),0)
