@@ -67,7 +67,6 @@ Commit access for specific areas:
         zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
         mprice   Michael Price <mprice@atl.lmco.com>         (releases)
            pll   Paul lussier <p.lussier@comcast.net>        (releases)
-     gthompson   Glenn A. Thompson <gthompson@cdr.net>       (pluggable-db br.)
            kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
       lonestar   Martin Maurer <martin.maurer@email.de>      (svnshow)
@@ -77,7 +76,6 @@ Commit access for specific areas:
       martinto   Martin Tomes <lists@tomes.org>              (chk-case-insens)
         danpat   Daniel Patterson <danpat@danpat.net>        (svn-graph.pl)
    archiecobbs   Archie Cobbs <archie@awarix.com>            (svnmerge)
-       sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
         offby1   Eric Hanchrow <offby1@blarg.net>            (doc)
        nomis80   Simon Perreault <nomis80@nomis80.org>       (svn-clean)
         imajes   James Cox <?@?.?>                           (?)
@@ -113,7 +111,9 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
 
   Experimental branches:
 
-        pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-versioning)
+     gthompson   Glenn A. Thompson <gthompson@cdr.net>       (pluggable-db br.)
+       sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
+        pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-v br.)
       markphip   Mark Phippard <MarkP@softlanding.com>       (ebcdic)
         pburba   Paul Burba <PaulB@softlanding.com>          (ebcdic)
 
