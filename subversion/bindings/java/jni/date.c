@@ -17,14 +17,19 @@
  * ====================================================================
  */
 
-/* includes */
+/*** Includes ***/
 #include <jni.h>
 #include <apr_time.h>
 #include "j.h"
+#include "global.h"
 
-/* defines */
+/*** Defines ***/
 #define SVN_JNI_DATE__CLASS "java/util/Date"
 #define SVN_JNI_DATE__SIG "(J)V"
+
+//DO YOU WANT TO DEBUG THIS CODE?
+//JUST UNCOMMENT THE FOLLOWING LINE
+//#define SVN_JNI_DATE__DEBUG
 
 /* we can be lucky apr_time_t matches the constructor 
  * java.util.Date(long) so conversion is an easy job
@@ -35,6 +40,10 @@ date__apr_to_j(JNIEnv *env, jboolean *hasException,
 {
   jobject result = NULL;
   jboolean _hasException = JNI_FALSE;
+
+#ifdef SVN_JNI_DATE__DEBUG
+  fprintf(stderr, ">>>date__apr_to_j(...)\n");
+#endif
 
   /*
    * references needed:
@@ -83,6 +92,10 @@ date__apr_to_j(JNIEnv *env, jboolean *hasException,
 
       (*env)->PopLocalFrame(env, result);
     }
+
+#ifdef SVN_JNI_DATE__DEBUG
+  fprintf(stderr, "<<<date_apr_to_j\n");
+#endif
 				    
   if( hasException != NULL )
     {
@@ -97,7 +110,3 @@ date__apr_to_j(JNIEnv *env, jboolean *hasException,
  * eval: (load-file "../../../svn-dev.el")
  * end: 
  */
-
-
-
-

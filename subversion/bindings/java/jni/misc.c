@@ -16,9 +16,12 @@
  * ====================================================================
  */
 
+/*** Includes ***/
 #include <jni.h>
 #include <svn_client.h>
+#include "global.h"
 
+/*** Code ***/
 void
 misc__throw_exception_by_name(JNIEnv *env,
                               const char *name,
@@ -27,9 +30,10 @@ misc__throw_exception_by_name(JNIEnv *env,
   jclass cls = NULL;
 
 #ifdef SVN_JNI__VERBOSE
-  fprintf(stderr, 
-	  "misc__throw_exception_by_name(name=\"%s\", msg=\"%s\"\n",
-	  name, msg);
+  fprintf(stderr, ">>>misc__throw_exception_by_name(");
+  SVN_JNI__DEBUG_STR(name);
+  SVN_JNI__DEBUG_STR(msg);
+  fprintf(stderr, ")\n");
 #endif
   /* ensure there is enough memory and stuff
    * for one local reference
@@ -48,6 +52,10 @@ misc__throw_exception_by_name(JNIEnv *env,
       (*env)->PopLocalFrame(env, NULL);
     }
 
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, "\n<<<misc_throw_exception_by_name\n");
+#endif
+
   return;
 }
    
@@ -60,7 +68,8 @@ misc__make_auth_baton(JNIEnv *env, jobject jobj)
    * is being returned 
    */
 #ifdef SVN_JNI__VERBOSE
-    fprintf(stderr, "misc__make_auth_baton\n");
+    fprintf(stderr, ">>>misc__make_auth_baton(...)\n");
+    fprintf(stderr, "<<<misc__make_auth_baton\n");
 #endif
 
   return NULL;
@@ -72,15 +81,3 @@ misc__make_auth_baton(JNIEnv *env, jobject jobj)
  * eval: (load-file "../../../svn-dev.el")
  * end: 
  */
-
-
-
-
-
-
-
-
-
-
-
-

@@ -17,11 +17,15 @@
  * ====================================================================
  */
 
+/*** Includes ***/
 #include <jni.h>
 #include <svn_client.h>
 
+/*** Defines ***/
 #define SVN_JNI_ITEM__CONSTRUCTOR \
 "(Ljava/lang/Object;Ljava/lang/Object;)V"
+
+/*** Code ***/
 
 /*
  * utility function to create a java Item
@@ -34,7 +38,7 @@ item__create(JNIEnv *env, jobject jpath, jobject jstatus,
   jboolean _hasException = JNI_FALSE;
 
 #ifdef SVN_JNI__VERBOSE
-  fprintf(stderr, "svn_jni__create_item\n");
+  fprintf(stderr, ">>>item__create(...)\n");
 #endif
 
   if( (*env)->PushLocalFrame(env,4) )
@@ -66,6 +70,10 @@ item__create(JNIEnv *env, jobject jpath, jobject jstatus,
       (*env)->PopLocalFrame(env, jitem);
     }
 
+#ifdef SVN_JNI__VERBOSE
+  fprintf(stderr, "\nitem__create\n");
+#endif
+
   if( hasException != NULL )
   {
       *hasException = _hasException;
@@ -79,11 +87,3 @@ item__create(JNIEnv *env, jobject jpath, jobject jstatus,
  * eval: (load-file "../../../svn-dev.el")
  * end: 
  */
-
-
-
-
-
-
-
-
