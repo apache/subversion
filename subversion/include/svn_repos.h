@@ -506,7 +506,7 @@ svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
 
 
 /* Dump the contents of the filesystem within already-open REPOS into
-   already-open FILE.  Begin at revision START_REV, and dump every
+   writable STREAM.  Begin at revision START_REV, and dump every
    revision up through END_REV.
 
    If START_REV is SVN_INVALID_REVNUM, then start dumping at revision 0.
@@ -515,7 +515,7 @@ svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
    Use POOL for all allocation.
 */
 svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
-                                apr_file_t *file,
+                                svn_stream_t *stream,
                                 svn_revnum_t start_rev,
                                 svn_revnum_t end_rev,
                                 apr_pool_t *pool);

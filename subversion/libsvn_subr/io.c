@@ -603,6 +603,27 @@ svn_stream_close (svn_stream_t *stream)
 }
 
 
+svn_error_t *
+svn_stream_printf (svn_stream_t *stream,
+                   apr_pool_t *pool,
+                   const char *fmt,
+                   ...)
+{
+  const char *message;
+  va_list ap;
+  apr_size_t len;
+
+  va_start (ap, fmt);
+  message = apr_pvsprintf (pool, fmt, ap);
+  va_end (ap);
+  
+  len = strlen(message);
+  return svn_stream_write (stream, message, &len);
+}
+
+
+
+
 
 /*** Generic readable empty stream ***/
 

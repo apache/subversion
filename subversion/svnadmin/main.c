@@ -442,8 +442,7 @@ main (int argc, const char * const *argv)
 
     case svnadmin_cmd_dump:
       {
-        apr_file_t *outfile;
-        apr_status_t status;
+        svn_stream_t *stdout_stream;
         svn_revnum_t
           lower = SVN_INVALID_REVNUM,
           upper = SVN_INVALID_REVNUM;
@@ -470,15 +469,9 @@ main (int argc, const char * const *argv)
         
         /* Run the dump to STDOUT.  Let the user redirect output into
            a file if they want.  :-)  */
-        if ((status = apr_file_open_stdout (&outfile, pool)))
-          {
-            svn_error_t *err = svn_error_create (status, 0, NULL,
-                                                 pool, "can't open stdout");
-            svn_handle_error (err, stderr, 0);
-            return EXIT_FAILURE;
-          }
+        stdout_stream = svn_stream_from_stdio (stdout, pool);
 
-        INT_ERR (svn_repos_dump_fs (repos, outfile, lower, upper, pool));
+        INT_ERR (svn_repos_dump_fs (repos, stdout_stream, lower, upper, pool));
 
         fflush(stdout);                                   
       }

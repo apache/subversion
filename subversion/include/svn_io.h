@@ -313,6 +313,15 @@ svn_error_t *svn_stream_write (svn_stream_t *stream, const char *data,
 
 svn_error_t *svn_stream_close (svn_stream_t *stream);
 
+
+/* Write to STREAM using a printf-style FMT specifier, passed through
+   apr_psprintf using memory from POOL.   */
+svn_error_t *svn_stream_printf (svn_stream_t *stream,
+                                apr_pool_t *pool,
+                                const char *fmt,
+                                ...);
+
+
 /* Sets *RESULT to a string containing the contents of FILENAME. */
 svn_error_t *svn_string_from_file (svn_stringbuf_t **result, 
                                    const char *filename, 
