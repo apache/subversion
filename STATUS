@@ -219,7 +219,7 @@ Bindings changes that don't affect the build system:
      And make blame work right when/if the apr_off_t thing gets handled
      on 32-bit platforms.
      Votes:
-      +1: breser (r8348, r8378), clkao (r8348, r8378, r8380)
+      +1: breser (r8348, r8378), clkao (r8348, r8378, r8380), epg
 
      * r8397
      Fix declaration after statement bug.
