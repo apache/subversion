@@ -3527,7 +3527,7 @@ trunk/
       @ENGLISH }}} -->
       <para>Hvis du vil ha en mer detaljert liste, angi 
         <option>--verbose</option> (<option>-v</option>)-flagget for &#229; 
-        f&#229; en liste som dette.</para>
+        f&#229; en liste som dette:</para>
 
       <screen>
 $ svn list --verbose http://svn.collab.net/repos/svn
