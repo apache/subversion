@@ -55,7 +55,7 @@ LINK32=link.exe
 [for platforms][for configs]# Name "[target.proj_name] - [platforms] [configs.name]"
 [end][end][for sources]# Begin Source File
 
-SOURCE=[sources.path][if-any sources.reldir]
+SOURCE="[sources.path]"[if-any sources.reldir]
 [for platforms][for configs]
 ![if-index platforms first][if-index configs first][else]ELSE[end][else]ELSE[end]IF  "$(CFG)" == "[target.proj_name] - [platforms] [configs.name]"
 
@@ -67,7 +67,7 @@ USERDEP__=[else] [end]"[sources.user_deps]"[end][if-any sources.custom_build]
 
 # Begin Custom Build
 
-InputPath=[sources.path]
+InputPath="[sources.path]"
 
 [sources.custom_target] : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
 [if-any sources.custom_build]	[sources.custom_build]
