@@ -85,22 +85,24 @@ analogous to CVS/ sudirs:
        tree-edits               /* Records changes to tree structure */
        prop-edits               /* Records changes to properties */
        lock                     /* Optional, tells others this dir is busy */
-       doing-*                  /* What this dir is busy doing (expand star) */
-            -co                       /* checkout */
-            -ci                       /* commit */
-            -up                       /* update */
-            -lc                       /* local changes */
+       doing/                   /* What this dir is doing right now */
+          action                    /* Tells the action in progress */
+          files                     /* Files involved in the action */
+          started                   /* Action started iff exists */
+          finished                  /* Action finished iff exists */
        tmp                      /* Local tmp space is preferable to /tmp */
        text-base/               /* Pristine repos versions of the files... */
             foo.c
-            qux/                /* Subdirs are empty, though */
+            qux/                    /* Subdirs are empty, though */
             bar.c
             baz.c
        prop-base/               /* Pristine repos hashdumps of these files
             foo.c
-            bar.c               /* Hashdump of bar.c's file & dirent props */
+            bar.c                   /* Stores bar.c's file properties */
             baz.c
-            qux                 /* Hashdump of qux's dirent props */
+       dprop-base/              /* Tentative dirent entry property storage */
+            foo.c
+            bar.c                   /* Would store bar.c's dirent props */
 
 `versions':
 
@@ -164,6 +166,22 @@ analogous to CVS/ sudirs:
 
    Present iff some client is making changes in this SVN/ subdir.
    Both read and write locks block on this.
+
+`doing'
+
+   This directory records the start and end of every action, for
+   interrupt-safe operations.  The `action' files says what exactly is
+   happening now (for example, not only that this is a checkout, but
+   that the text-base is being written).  Before the wc library starts
+   doing an action, it always announces what it's about to do in this
+   directory; when it's done, it then creates a `finished' file, then
+   cleans up the other files, including the `started' file, and only
+   *then* removes the `finished' file.
+
+   A lock always exists on the adm subdir during the entire time of
+   activity in doing/.
+
+   More details to come, naturally. :-)
 
 `tmp'
 
