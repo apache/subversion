@@ -1,10 +1,10 @@
 ## Makefile.in is generated from this by automake.
 
 noinst_PROGRAMS = svn
-svn_SOURCES = main.c
+svn_SOURCES = main.c status.c trace.c
 
 ## Flags needed when compiling:
-INCLUDES = -I../include -I../../apr/include -I../../expat-lite
+INCLUDES = -I. -I../include -I../../apr/include -I../../expat-lite
 
 ## Libraries this binary depends upon:
 svn_LDADD = ../libsvn_client/libsvn_client.la     \

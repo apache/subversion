@@ -65,12 +65,16 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_update (svn_string_t *path,
+svn_client_update (const svn_delta_edit_fns_t *passenger_editor,
+                   void *passenger_edit_baton,
+                   svn_string_t *path,
                    svn_string_t *xml_src,
                    svn_vernum_t version,
                    apr_pool_t *pool)
 {
-  return svn_client__update_internal (path, xml_src, version, pool);
+  return svn_client__update_internal (passenger_editor,
+                                      passenger_edit_baton,
+                                      path, xml_src, version, pool);
 }
 
 

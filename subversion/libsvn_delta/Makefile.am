@@ -9,7 +9,7 @@ lib_LTLIBRARIES = libsvn_delta.la
 
 ## Sources needed to build each library (names canonicalized)
 libsvn_delta_la_SOURCES = xml_parse.c xml_output.c text_delta.c vdelta.c \
-			  svndiff.c
+			  svndiff.c compose_editors.c
 
 ## Build flags ---------
 
