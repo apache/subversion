@@ -21,8 +21,8 @@ In a nutshell:
     An appropriate Apache module handles the request, and makes calls
     into the "main" Subversion library.
 @item
-    The "main" library interacts with a particular implementation of the
-    versioned filesystem, and returns a response.
+    The "main" library interacts with an abstract, versioned filesystem
+    and returns a response.
 @item
     The Apache module converts this response back into an HTTP response
     to be sent to the client.
@@ -75,7 +75,8 @@ unit} of change.  Specifically,
    work as having been performed.  (And if the database allows you to
    "undo" the work, the entire set of changes is undone as a unit.)
 @item
-   If some portion of the transaction fails, then the @emph{entire}
+   If some portion of the transaction fails (for either logical or
+   hardware-crash reasons), then the @emph{entire}
    transaction fails, and no changes are made at all.  The database is
    guaranteed to remain in a good, consistent state.
 @end enumerate
@@ -86,7 +87,7 @@ and is the critical concept behind transactions.
 Subversion's @dfn{database interface} (@dfn{svn_db.h}), therefore, is a
 simple API for reading and writing information to any sort of disk-based
 system that supports transactions.  The Subversion Filesystem
-(@xref{Filesystem}.)  is the only library that will depend on this
+(@xref{Filesystem}.)  is the only library that depends on this
 interface.
 
 @c OK, guys, this is tricky to specify.  This requires a good knowledge
@@ -133,12 +134,20 @@ independent of the actual means of storage.
 
 Like any typical UNIX-like filesystem, files are stored in a tree.
 However, while CVS uses the actual UNIX filesystem to store items, the
-svn_fs treats implments files and directories as database objects.
+svn_fs implements files and directories as database objects
+(@xref{Database}.)
 
-Because of this, the svn_fs can store any sort of information in a
-"file" or "directory".  Here's a simple schema used by svn_fs:
+To begin, please be sure that you're already casually familiar with
+Subversion's ideas of files, directories, and version histories.  If
+not, @xref{Model}.  
 
-@c This is taken from jimb's very first Subversion spec.
+For completeness, we can now offer a precise, technical description of
+these terms.  Here is the schema used by svn_fs:
+
+@c This is taken from jimb's very first Subversion spec!
+@c <jimb> -----------------------------
+
+@quotation
 
 A @dfn{text string} is a string of Unicode characters which is
 canonically decomposed and ordered, according to the rules described in
@@ -175,24 +184,48 @@ of positive integers containing 1.
 
 A @dfn{repository} consists of node table and a history.
 
+@end quotation
+@c  </jimb> ----------------------
 
-Here is a rough draft of the Subversion Filesystem API.
+
+@subsection Properties
+
+(expound) A note on properties:  they're stored as a bytestream that's
+simply appended to a file's text.  Need common routines to decode/encode
+them.  To fetch a list of @emph{all} of a file
+
+Also, it's important to remember that properties aren't only attached to
+files;  they're attached to directory entries and versions too.
+
+@table @code
+@item read_node_prop (version, path, propname)
+@itemx write_node_prop (version, path, propname)
+ read/write a particular property of a file or directory entry
+@item read_version_prop (version, propname)
+@itemx write_version_prop (version, propname)
+ read/write a particular property of a version-history (such as a log)
+@end table
+
+
+@subsection Deltas
+
+(expound) A @dfn{delta} object is a specific data structure used by the
+Subversion server and client.  It's used to 
+
+@table @code
+@item delta (versionA, pathA, versionB, pathB)
+ return a delta object (which converts subtree A into subtree B)
+@end table
+
+@subsection foo
 
 @table @code
 
 @item latest ()
  returns the latest global version of the repository
 @item read (version, path)
- if path is a file, return full text (which includes property stream);
+ if path is a file, return full text (which includes property stream);@*
  if path is a directory, return list of directory entries.
-@item read_node_prop (version, path, propname)
-@itemx write_node_prop (version, path, propname)
- read/write a particular property of a file or directory
-@item read_version_prop (version, propname)
-@itemx write_version_prop (version, propname)
- read/write a particular property of a version-history (such as a log)
-@item delta (from_version, from_path, to_version, to_path)
- produce a delta object which converts one subtree to another
 @item submit (delta)
  ask filesystem's lock manager for approval of delta; returns token (or
 failure)
