@@ -151,8 +151,21 @@ already know about.)
    * r8013
      Add may_save option to the auth prompt functions and credentials.
      Justification: trivial change, but important for GUI clients
+     Concerns: This change contains a doc bug, see
+       http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=53378
+       (Message-Id: 1072539445.2824.0.camel@kepler>)
+       r8101 below solves the problem, I believe, so will remove this
+       veto when that one has got approval.
      Votes:
       +1: jerenkrantz
+      -1: kfogel
+
+
+   * r8101
+     Improved authentication system documentation.
+     Justification: Better external API documentation, ultra-low risk.
+     Notes: See Concerns field of r8013 above.
+     Votes:
 
 
    * r8015,r8020
@@ -214,12 +227,6 @@ already know about.)
      Rename SVN_CONFIG_OPTION_STORE_PASSWORD to
      SVN_CONFIG_OPTION_STORE_AUTH_CREDS.
      Justification: API stability; low risk
-     Votes:
-
-
-   * r8101
-     Improved authentication system documentation.
-     Justification: Better external API documentation, ultra-low risk.
      Votes:
 
 
