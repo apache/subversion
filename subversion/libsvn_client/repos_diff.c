@@ -494,6 +494,8 @@ delete_entry (const char *path,
   struct edit_baton *eb = pb->edit_baton;
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
+  svn_wc_notify_action_t action;
+  svn_wc_notify_state_t state;
 
   /* We need to know if this is a directory or a file */
   SVN_ERR (pb->edit_baton->ra_lib->check_path (&kind,
@@ -523,7 +525,7 @@ delete_entry (const char *path,
         get_file_mime_types (&mimetype1, &mimetype2, b);
         
         SVN_ERR (pb->edit_baton->diff_callbacks->file_deleted 
-                 (adm_access, b->wcpath,
+                 (adm_access, &state, b->wcpath,
                   b->path_start_revision,
                   b->path_end_revision,
                   mimetype1, mimetype2,
@@ -534,7 +536,7 @@ delete_entry (const char *path,
     case svn_node_dir:
       {
         SVN_ERR (pb->edit_baton->diff_callbacks->dir_deleted 
-                 (adm_access, svn_path_join (eb->target, path, pool),
+                 (adm_access, &state, svn_path_join (eb->target, path, pool),
                   pb->edit_baton->diff_cmd_baton));
         break;
       }
@@ -542,14 +544,18 @@ delete_entry (const char *path,
       break;
     }
 
+  if (state == svn_wc_notify_state_missing)
+    action = svn_wc_notify_skip;
+  else
+    action = svn_wc_notify_delete;
+
   if (pb->edit_baton->notify_func)
     (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
                                     svn_path_join (eb->target, path, pool),
-                                    svn_wc_notify_delete,
+                                    action,
                                     kind,
                                     NULL,
-                                    svn_wc_notify_state_unknown,
-                                    svn_wc_notify_state_unknown,
+                                    state, state,
                                     SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
@@ -754,6 +760,7 @@ close_file (void *file_baton,
                             svn_wc_notify_state_missing, prop_state,
                             SVN_INVALID_REVNUM);
       
+      svn_error_clear (err);
       return SVN_NO_ERROR;
     }
   else if (err)
@@ -849,7 +856,8 @@ close_directory (void *dir_baton,
                                 svn_wc_notify_state_missing,
                                 svn_wc_notify_state_missing,
                                 SVN_INVALID_REVNUM);
-      
+
+          svn_error_clear (err);      
           return SVN_NO_ERROR;
         }
       else if (err)
