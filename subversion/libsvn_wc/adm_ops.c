@@ -293,6 +293,8 @@ svn_wc_delete (svn_string_t *path, apr_pool_t *pool)
      file, so we split off basename from the parent path, then fold in
      the addition of a delete flag. */
   svn_path_split (path, &dir, &basename, svn_path_local_style, pool);
+  if (svn_path_is_empty (dir, svn_path_local_style))
+    svn_string_set (dir, ".");
 
   SVN_ERR (svn_wc__entry_fold_sync_intelligently 
            (dir, basename, SVN_INVALID_REVNUM, svn_node_none,
