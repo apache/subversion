@@ -105,7 +105,7 @@ cancel (void *baton)
 {
   struct status_baton *sb = baton;
   if (sb->done)
-    return svn_error_create (SVN_ERR_CANCELLED, NULL, "Finished");
+    return svn_error_create (SVN_ERR_CANCELLED, NULL, _("Finished"));
   else
     return SVN_NO_ERROR;
 }

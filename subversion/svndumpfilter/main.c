@@ -1163,7 +1163,7 @@ main (int argc, const char * const *argv)
       if (os->ind >= os->argc)
         {
           svn_error_clear (svn_cmdline_fprintf
-                           (stderr, pool, _("subcommand argument required\n")));
+                           (stderr, pool, _("Subcommand argument required\n")));
           subcommand_help (NULL, NULL, pool);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
@@ -1185,7 +1185,7 @@ main (int argc, const char * const *argv)
                 }
                 
               svn_error_clear (svn_cmdline_fprintf (stderr, pool,
-                                                    _("unknown command: '%s'\n"),
+                                                    _("Unknown command: '%s'\n"),
                                                     first_arg_utf8));
               subcommand_help (NULL, NULL, pool);
               svn_pool_destroy (pool);
@@ -1247,7 +1247,7 @@ main (int argc, const char * const *argv)
           svn_opt_format_option (&optstr, badopt, FALSE, pool);
           svn_error_clear (svn_cmdline_fprintf
                            (stderr, pool,
-                            _("subcommand '%s' doesn't accept option '%s'\n"
+                            _("Subcommand '%s' doesn't accept option '%s'\n"
                               "Type 'svndumpfilter help %s' for usage.\n"),
                             subcommand->name, optstr, subcommand->name));
           svn_pool_destroy (pool);
