@@ -164,9 +164,15 @@ svn_path_condense_targets (const char **pbasedir,
                 rel_item = ((const char **)abs_targets->elts)[i];
 
                 /* If a common prefix was found, condensed_targets
-                   are given relative to that prefix. */
+                   are given relative to that prefix.  */
                 if (basedir_len > 0)
-                  rel_item += basedir_len + 1;
+                  {
+                    /* Only advance our pointer past a path separator
+                       if REL_ITEM isn't the same as *PBASEDIR.  */
+                    rel_item += basedir_len;
+                    if (rel_item[0])
+                      rel_item++;
+                  }
                 
                 (*((const char **)apr_array_push (*pcondensed_targets)))
                   = apr_pstrdup (pool, rel_item);
