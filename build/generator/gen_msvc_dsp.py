@@ -91,8 +91,7 @@ class Generator(gen_win.WinGeneratorBase):
     for target in install_targets:
       name = target.name
       # These aren't working yet
-      if isinstance(target, gen_base.TargetScript) \
-         or isinstance(target, gen_base.TargetSWIG):
+      if isinstance(target, gen_base.TargetScript):
         continue
 
       if isinstance(target, gen_base.TargetProject):
