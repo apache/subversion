@@ -20,7 +20,7 @@ Candidate changes:
     Fix the use of a non-existent symbol (PyInt_FromLongLong) introduced in
     r8713 and merged into the release branch in r8723.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, breser
 
 Status of 1.0.1:
 ================
