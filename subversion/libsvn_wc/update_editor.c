@@ -251,7 +251,7 @@ make_dir_baton (const char *path,
          another target). */
       if (! pb)
         {
-          if (*eb->target) /* anchor is also target */
+          if (! *eb->target) /* anchor is also target */
             d->new_URL = apr_pstrdup (pool, eb->switch_url);
           else
             d->new_URL = svn_path_dirname (eb->switch_url, pool);

@@ -75,7 +75,6 @@ def basic_checkout(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', G_path)
 
-  extra_files = ['lambda']
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.tweak('A/mu', status='M ')
   expected_output.tweak('A/B/lambda', status='! ')
@@ -84,12 +83,7 @@ def basic_checkout(sbox):
                         'A/D/G/rho',
                         'A/D/G/tau', status='D ')
   
-  svntest.actions.run_and_verify_status(wc_dir, expected_output,
-                                        None, None,
-                                        expect_extra_files, extra_files)
-  if len(extra_files) != 0:
-    print "Status check 1 failed"
-    raise svntest.Failure
+  svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
   # Repeat checkout of original URL into working copy with modifications
   url = svntest.main.current_repo_url
