@@ -109,7 +109,10 @@ class MakefileGenerator(_GeneratorBase):
     self.ofile.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n\n')
 
   def write(self):
-    ra_modules = [ ]
+    # write this into the file first so the RA_FOO_DEPS variables are
+    # defined before their use in dependency lines.
+    self.write_ra_modules()
+
     errors = 0
     for target in self.target_names:
       target_ob = self.targets[target]
@@ -196,8 +199,6 @@ class MakefileGenerator(_GeneratorBase):
             self.ofile.write('%s%s: %s\n\t$(COMPILE_SWIG_PY)\n'
                              % (src[:-2], objext, src))
         self.ofile.write('\n')
-      elif custom == 'ra-module':
-        ra_modules.append(target_ob)
 
     for g_name, g_targets in self.install.items():
       self.target_names = [ ]
@@ -332,20 +333,6 @@ class MakefileGenerator(_GeneratorBase):
     self.ofile.write('TEST_PROGRAMS = %s\n\n' %
                      string.join(self.test_progs + scripts))
 
-    for mod in ra_modules:
-      name = string.upper(mod.name[7:])  # strip 'libsvn_' and upper-case it
-
-      # construct a list of the other .la libs to link against
-      retreat = _retreat_dots(mod.path)
-      deps = [ mod.output ]
-      link = [ os.path.join(retreat, mod.output) ]
-      for dep in mod.deps:
-        deps.append(dep.output)
-        link.append(os.path.join(retreat, dep.output))
-      self.ofile.write('%s_DEPS = %s\n'
-                       '%s_LINK = %s\n\n' % (name, string.join(deps, ' '),
-                                             name, string.join(link, ' ')))
-
     self.ofile.write('MANPAGES = %s\n\n' % string.join(self.manpages))
     self.ofile.write('INFOPAGES = %s\n\n' % string.join(self.infopages))
 
@@ -385,6 +372,24 @@ class MakefileGenerator(_GeneratorBase):
         hdrs.append(include_deps[short][0])
       self.ofile.write('%s: %s %s\n' % (objname, src, string.join(hdrs)))
 
+  def write_ra_modules(self):
+    for target in self.target_names:
+      if self.parser.get(target, 'custom') != 'ra-module':
+        continue
+
+      mod = self.targets[target]
+      name = string.upper(mod.name[7:])  # strip 'libsvn_' and upper-case it
+
+      # construct a list of the other .la libs to link against
+      retreat = _retreat_dots(mod.path)
+      deps = [ mod.output ]
+      link = [ os.path.join(retreat, mod.output) ]
+      for dep in mod.deps:
+        deps.append(dep.output)
+        link.append(os.path.join(retreat, dep.output))
+      self.ofile.write('%s_DEPS = %s\n'
+                       '%s_LINK = %s\n\n' % (name, string.join(deps, ' '),
+                                             name, string.join(link, ' ')))
 
 
 class _Target:
