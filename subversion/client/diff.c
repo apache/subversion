@@ -71,12 +71,16 @@ svn_cl__print_file_diff (svn_string_t *path,
   
   apr_close (outhandle);
 
-  /* Cleanup the tmp pristine file now that we're done with it. */
-  status = apr_remove_file (pristine_copy_path->data, pool);
-  if (status)
-    return svn_error_createf (status, 0, NULL, pool,
-                              "error: can't remove temporary file `%s'",
-                              pristine_copy_path->data);
+  /* TODO:  someday we'll need to worry about two things here:
+
+     1.  svn_client_file_diff may be returning a file from RA instead
+     of the WC's text-base.  If this is so, it will need to provide a
+     "clean up" routine to remove the temporary file created by RA.
+
+     2.  we're going to need to write a diff plug-in mechanism that
+     makes use of the two paths, instead of just blindly running
+     SVN_CLIENT_DIFF. 
+  */
 
   return SVN_NO_ERROR;
 }
