@@ -67,6 +67,7 @@ svn_cl__prompt_user (const char **result,
 
   if (! hide)
     {
+      svn_boolean_t saw_first_half_of_eol = FALSE;
       fprintf (stderr, "%s", prompt_native);
       fflush (stderr);
 
@@ -75,8 +76,28 @@ svn_cl__prompt_user (const char **result,
           status = apr_file_getc (&c, fp);
           if (status && ! APR_STATUS_IS_EOF(status))
             return svn_error_create (status, NULL, "error reading stdin.");
-          if ((c == '\n') || (c == '\r'))
-            break;
+
+          if (saw_first_half_of_eol)
+            {
+              if (c == APR_EOL_STR[1])
+                break;
+              else
+                saw_first_half_of_eol = FALSE;
+            }
+          else if (c == APR_EOL_STR[0])
+            {
+              if (sizeof(APR_EOL_STR) == 3)
+                {
+                  saw_first_half_of_eol = TRUE;
+                  continue;
+                }
+              else if (sizeof(APR_EOL_STR) == 2)
+                break;
+              else
+                /* ### APR_EOL_STR holds more than two chars?  Who
+                   ever heard of such a thing? */
+                abort ();
+            }
           
           svn_stringbuf_appendbytes (strbuf, &c, 1);
         }
