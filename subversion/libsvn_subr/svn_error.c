@@ -162,7 +162,12 @@ svn_handle_error (svn_error_t *err, FILE *stream)
 void 
 svn_handle_warning (void *data, char *fmt, ...)
 {
-  fprintf (stderr, fmt, ...);
+  va_list ap;
+
+  va_start (ap, fmt);
+  fprintf (stderr, fmt, ap);
+  va_end (ap);
+
   fprintf (stderr, "\n");
   fflush (stderr);
 }
