@@ -179,7 +179,7 @@ generate_random_file (apr_uint32_t maxlen,
       while (seqlen-- > 0)
         {
           const int ch = (random_bytes
-                          ? random_bytes[r % bytes_range]
+                          ? (unsigned)random_bytes[r % bytes_range]
                           : r % bytes_range);
           if (buf == end)
             {
