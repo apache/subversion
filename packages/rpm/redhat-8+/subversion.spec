@@ -3,8 +3,7 @@
 %define neon_version 0.24.7
 %define swig_version 1.3.19
 %define apache_dir /usr
-# If you don't have 360+ MB of free disk space or don't want to run checks then
-# set make_*_check to 0.
+# If you don't want to take time for the tests then set make_*_check to 0.
 %define make_ra_local_check 1
 %define make_ra_svn_check 1
 %define make_ra_dav_check 1
@@ -101,6 +100,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Thu Mar 31 2005 David Summers <david@summersoft.fay.ar.us> r13821
+- Greatly reduce disk usage by telling each test pass to cleanup after
+  successful tests.
+
 * Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13711
 - Take out "static build" feature that never actually worked as intended.
 
@@ -388,7 +391,7 @@ cd ../../../../..
 
 %if %{make_ra_local_check}
 echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
-make check
+make check CLEANUP=true
 echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 %endif
 
@@ -397,7 +400,7 @@ echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
 ./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
-make svncheck
+make svncheck CLEANUP
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
@@ -409,7 +412,7 @@ sleep 1
 sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/redhat-8+/httpd.davcheck.conf > httpd.conf
 /usr/sbin/httpd -f `pwd`/httpd.conf
 sleep 1
-make check BASE_URL='http://localhost:15835'
+make check CLEANUP=true BASE_URL='http://localhost:15835'
 killall httpd
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
