@@ -1,3 +1,5 @@
+#!/bin/sh
+
 ### Run this to produce everything needed for configuration. ###
 
 # First check that we're using at least automake 1.4, lest
