@@ -147,9 +147,9 @@ txn_body_youngest_rev (void *baton,
 
 
 svn_error_t *
-svn_fs_youngest_rev (svn_revnum_t *youngest_p,
-                     svn_fs_t *fs,
-                     apr_pool_t *pool)
+svn_fs_base__youngest_rev (svn_revnum_t *youngest_p,
+                           svn_fs_t *fs,
+                           apr_pool_t *pool)
 {
   svn_revnum_t youngest;
   SVN_ERR (svn_fs__check_fs (fs));
@@ -178,10 +178,10 @@ txn_body_revision_proplist (void *baton, trail_t *trail)
 
 
 svn_error_t *
-svn_fs_revision_proplist (apr_hash_t **table_p,
-                          svn_fs_t *fs,
-                          svn_revnum_t rev,
-                          apr_pool_t *pool)
+svn_fs_base__revision_proplist (apr_hash_t **table_p,
+                                svn_fs_t *fs,
+                                svn_revnum_t rev,
+                                apr_pool_t *pool)
 {
   struct revision_proplist_args args;
   apr_hash_t *table;
@@ -198,11 +198,11 @@ svn_fs_revision_proplist (apr_hash_t **table_p,
 
 
 svn_error_t *
-svn_fs_revision_prop (svn_string_t **value_p,
-                      svn_fs_t *fs,
-                      svn_revnum_t rev,
-                      const char *propname,
-                      apr_pool_t *pool)
+svn_fs_base__revision_prop (svn_string_t **value_p,
+                            svn_fs_t *fs,
+                            svn_revnum_t rev,
+                            const char *propname,
+                            apr_pool_t *pool)
 {
   struct revision_proplist_args args;
   apr_hash_t *table;
@@ -271,11 +271,11 @@ txn_body_change_rev_prop (void *baton, trail_t *trail)
 
 
 svn_error_t *
-svn_fs_change_rev_prop (svn_fs_t *fs,
-                        svn_revnum_t rev,
-                        const char *name,
-                        const svn_string_t *value,
-                        apr_pool_t *pool)
+svn_fs_base__change_rev_prop (svn_fs_t *fs,
+                              svn_revnum_t rev,
+                              const char *name,
+                              const svn_string_t *value,
+                              apr_pool_t *pool)
 {
   struct change_rev_prop_args args;
 
@@ -442,9 +442,9 @@ txn_body_txn_proplist (void *baton, trail_t *trail)
 
 
 svn_error_t *
-svn_fs_txn_proplist (apr_hash_t **table_p,
-                     svn_fs_txn_t *txn,
-                     apr_pool_t *pool)
+svn_fs_base__txn_proplist (apr_hash_t **table_p,
+                           svn_fs_txn_t *txn,
+                           apr_pool_t *pool)
 {
   struct txn_proplist_args args;
   apr_hash_t *table;
@@ -453,7 +453,7 @@ svn_fs_txn_proplist (apr_hash_t **table_p,
   SVN_ERR (svn_fs__check_fs (fs));
 
   args.table_p = &table;
-  SVN_ERR (svn_fs_txn_name (&args.id, txn, pool));
+  args.id = txn->id;
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_txn_proplist, &args, pool));
 
   *table_p = table ? table : apr_hash_make (pool);
@@ -462,10 +462,10 @@ svn_fs_txn_proplist (apr_hash_t **table_p,
 
 
 svn_error_t *
-svn_fs_txn_prop (svn_string_t **value_p,
-                 svn_fs_txn_t *txn,
-                 const char *propname,
-                 apr_pool_t *pool)
+svn_fs_base__txn_prop (svn_string_t **value_p,
+                       svn_fs_txn_t *txn,
+                       const char *propname,
+                       apr_pool_t *pool)
 {
   struct txn_proplist_args args;
   apr_hash_t *table;
@@ -475,7 +475,7 @@ svn_fs_txn_prop (svn_string_t **value_p,
 
   /* Get the proplist. */
   args.table_p = &table;
-  SVN_ERR (svn_fs_txn_name (&args.id, txn, pool));
+  args.id = txn->id;
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_txn_proplist, &args, pool));
 
   /* And then the prop from that list (if there was a list). */
@@ -534,17 +534,17 @@ txn_body_change_txn_prop (void *baton, trail_t *trail)
 
 
 svn_error_t *
-svn_fs_change_txn_prop (svn_fs_txn_t *txn,
-                        const char *name,
-                        const svn_string_t *value,
-                        apr_pool_t *pool)
+svn_fs_base__change_txn_prop (svn_fs_txn_t *txn,
+                              const char *name,
+                              const svn_string_t *value,
+                              apr_pool_t *pool)
 {
   struct change_txn_prop_args args;
   svn_fs_t *fs = txn->fs;
 
   SVN_ERR (svn_fs__check_fs (fs));
 
-  SVN_ERR (svn_fs_txn_name (&args.id, txn, pool));
+  args.id = txn->id;
   args.name = name;
   args.value = value;
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_change_txn_prop, &args, pool));
@@ -601,10 +601,10 @@ txn_body_begin_txn (void *baton,
 /* Note:  it is acceptable for this function to call back into
    public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
-svn_fs_begin_txn (svn_fs_txn_t **txn_p,
-                  svn_fs_t *fs,
-                  svn_revnum_t rev,
-                  apr_pool_t *pool)
+svn_fs_base__begin_txn (svn_fs_txn_t **txn_p,
+                        svn_fs_t *fs,
+                        svn_revnum_t rev,
+                        apr_pool_t *pool)
 {
   svn_fs_txn_t *txn;
   struct begin_txn_args args;
@@ -625,27 +625,10 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
      automatically overwritten with a revision datestamp. */
   date.data = svn_time_to_cstring (apr_time_now(), pool);
   date.len = strlen (date.data);
-  SVN_ERR (svn_fs_change_txn_prop (txn, SVN_PROP_REVISION_DATE, 
-                                   &date, pool));
+  SVN_ERR (svn_fs_base__change_txn_prop (txn, SVN_PROP_REVISION_DATE, 
+                                         &date, pool));
 
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_fs_txn_name (const char **name_p,
-                 svn_fs_txn_t *txn,
-                 apr_pool_t *pool)
-{
-  *name_p = apr_pstrdup (pool, txn->id);
-  return SVN_NO_ERROR;
-}
-
-
-svn_revnum_t
-svn_fs_txn_base_revision (svn_fs_txn_t *txn)
-{
-  return txn->base_rev;
 }
 
 
@@ -675,10 +658,10 @@ txn_body_open_txn (void *baton,
 
 
 svn_error_t *
-svn_fs_open_txn (svn_fs_txn_t **txn_p,
-                 svn_fs_t *fs,
-                 const char *name,
-                 apr_pool_t *pool)
+svn_fs_base__open_txn (svn_fs_txn_t **txn_p,
+                       svn_fs_t *fs,
+                       const char *name,
+                       apr_pool_t *pool)
 {
   svn_fs_txn_t *txn;
   struct open_txn_args args;
@@ -842,9 +825,9 @@ txn_body_delete_txn (void *baton, trail_t *trail)
 
 
 svn_error_t *
-svn_fs_purge_txn (svn_fs_t *fs,
-                  const char *txn_id,
-                  apr_pool_t *pool)
+svn_fs_base__purge_txn (svn_fs_t *fs,
+                        const char *txn_id,
+                        apr_pool_t *pool)
 {
   struct cleanup_txn_args args;
   svn_fs__transaction_t *txn;
@@ -903,8 +886,8 @@ txn_body_abort_txn (void *baton, trail_t *trail)
 
 
 svn_error_t *
-svn_fs_abort_txn (svn_fs_txn_t *txn,
-                  apr_pool_t *pool)
+svn_fs_base__abort_txn (svn_fs_txn_t *txn,
+                        apr_pool_t *pool)
 {
   SVN_ERR (svn_fs__check_fs (txn->fs));
 
@@ -912,7 +895,7 @@ svn_fs_abort_txn (svn_fs_txn_t *txn,
   SVN_ERR (svn_fs__retry_txn (txn->fs, txn_body_abort_txn, txn, pool));
   
   /* Now, purge it. */
-  SVN_ERR_W (svn_fs_purge_txn (txn->fs, txn->id, pool),
+  SVN_ERR_W (svn_fs_base__purge_txn (txn->fs, txn->id, pool),
              "Transaction aborted, but cleanup failed");
 
   return SVN_NO_ERROR;
@@ -937,9 +920,9 @@ txn_body_list_transactions (void* baton,
 }
 
 svn_error_t *
-svn_fs_list_transactions (apr_array_header_t **names_p,
-                          svn_fs_t *fs,
-                          apr_pool_t *pool)
+svn_fs_base__list_transactions (apr_array_header_t **names_p,
+                                svn_fs_t *fs,
+                                apr_pool_t *pool)
 {
   apr_array_header_t *names;
   struct list_transactions_args args;

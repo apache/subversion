@@ -148,6 +148,52 @@ svn_error_t *svn_fs__set_txn_prop (svn_fs_t *fs,
                                    trail_t *trail);
 
 
+/* These functions implement some of the calls in the FS loader
+   library's fs and txn vtables. */
+
+svn_error_t *svn_fs_base__youngest_rev (svn_revnum_t *youngest_p, svn_fs_t *fs,
+                                        apr_pool_t *pool);
+
+svn_error_t *svn_fs_base__revision_prop (svn_string_t **value_p, svn_fs_t *fs,
+                                         svn_revnum_t rev,
+                                         const char *propname,
+                                         apr_pool_t *pool);
+
+svn_error_t *svn_fs_base__revision_proplist (apr_hash_t **table_p,
+                                             svn_fs_t *fs,
+                                             svn_revnum_t rev,
+                                             apr_pool_t *pool);
+
+svn_error_t *svn_fs_base__change_rev_prop (svn_fs_t *fs, svn_revnum_t rev,
+                                           const char *name,
+                                           const svn_string_t *value,
+                                           apr_pool_t *pool);
+
+svn_error_t *svn_fs_base__begin_txn (svn_fs_txn_t **txn_p, svn_fs_t *fs,
+                                     svn_revnum_t rev, apr_pool_t *pool);
+
+svn_error_t *svn_fs_base__open_txn (svn_fs_txn_t **txn, svn_fs_t *fs,
+                                    const char *name, apr_pool_t *pool);
+
+svn_error_t *svn_fs_base__purge_txn (svn_fs_t *fs, const char *txn_id,
+                                     apr_pool_t *pool);
+
+svn_error_t *svn_fs_base__list_transactions (apr_array_header_t **names_p,
+                                             svn_fs_t *fs, apr_pool_t *pool);
+
+svn_error_t *svn_fs_base__abort_txn (svn_fs_txn_t *txn, apr_pool_t *pool);
+
+svn_error_t *svn_fs_base__txn_prop (svn_string_t **value_p, svn_fs_txn_t *txn,
+                                    const char *propname, apr_pool_t *pool);
+
+svn_error_t *svn_fs_base__txn_proplist (apr_hash_t **table_p,
+                                        svn_fs_txn_t *txn,
+                                        apr_pool_t *pool);
+
+svn_error_t *svn_fs_base__change_txn_prop (svn_fs_txn_t *txn, const char *name,
+                                           const svn_string_t *value,
+                                           apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

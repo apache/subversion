@@ -634,10 +634,10 @@ svn_fs__clean_logs(const char *live_path,
 {
   apr_array_header_t *logfiles;
 
-  SVN_ERR (svn_fs_berkeley_logfiles (&logfiles,
-                                     live_path,
-                                     TRUE,        /* Only unused logs */
-                                     pool));
+  SVN_ERR (base_bdb_logfiles (&logfiles,
+                              live_path,
+                              TRUE,        /* Only unused logs */
+                              pool));
 
   {  /* Process unused logs from live area */
     int idx;
@@ -712,10 +712,10 @@ base_hotcopy (const char *src_path,
     apr_array_header_t *logfiles;
     int idx;
 
-    SVN_ERR (svn_fs_berkeley_logfiles (&logfiles,
-                                       src_path,
-                                       FALSE,   /* All logs */
-                                       pool));
+    SVN_ERR (base_bdb_logfiles (&logfiles,
+                                src_path,
+                                FALSE,   /* All logs */
+                                pool));
 
     /* Process log files. */
     for (idx = 0; idx < logfiles->nelts; idx++)
@@ -728,7 +728,7 @@ base_hotcopy (const char *src_path,
   }
 
   /* Since this is a copy we will have exclusive access to the repository. */
-  SVN_ERR (svn_fs_berkeley_recover (dest_path, pool));
+  SVN_ERR (base_bdb_recover (dest_path, pool));
 
   if (clean_logs == TRUE)
     SVN_ERR (svn_fs__clean_logs (src_path, dest_path, pool));

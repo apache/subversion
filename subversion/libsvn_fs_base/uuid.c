@@ -20,6 +20,7 @@
 #include "fs.h"
 #include "trail.h"
 #include "err.h"
+#include "uuid.h"
 #include "bdb/uuids-table.h"
 #include "../libsvn_fs/fs_loader.h"
 
@@ -40,9 +41,9 @@ txn_body_get_uuid (void *baton, trail_t *trail)
 
 
 svn_error_t *
-svn_fs_get_uuid (svn_fs_t *fs,
-                 const char **uuid,
-                 apr_pool_t *pool)
+svn_fs_base__get_uuid (svn_fs_t *fs,
+                       const char **uuid,
+                       apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
 
@@ -86,9 +87,9 @@ txn_body_set_uuid (void *baton, trail_t *trail)
 
 
 svn_error_t *
-svn_fs_set_uuid (svn_fs_t *fs,
-                 const char *uuid,
-                 apr_pool_t *pool)
+svn_fs_base__set_uuid (svn_fs_t *fs,
+                       const char *uuid,
+                       apr_pool_t *pool)
 {
   struct set_uuid_args args;
   base_fs_data_t *bfd = fs->fsap_data;
