@@ -34,6 +34,9 @@ for name in dir(libsvn.fs):
   if name[:7] == 'svn_fs_':
     vars()[name[7:]] = getattr(libsvn.fs, name)
 
+  # XXX: For compatibility reasons, also include the prefixed name
+  vars()[name] = getattr(libsvn.fs, name)
+
 # we don't want these symbols exported
 del name, libsvn
 
