@@ -942,28 +942,24 @@ III.  BUILDING A SUBVERSION SERVER
          $ svnserve -d     # becomes a background daemon
          $ svn checkout svn://localhost/usr/local/svn/repository
 
-      This network layer passes 'make check', but is still relatively
-      new and untested.  You can use the "-r" option to svnserve to
-      set a logical root for repositories, and the "-R" option to
-      restrict connections to read-only access.  ("Read-only" is a
-      logical term here; svnserve still needs write access to the
-      database in this mode.)
+      You can use the "-r" option to svnserve to set a logical root
+      for repositories, and the "-R" option to restrict connections to
+      read-only access.  ("Read-only" is a logical term here; svnserve
+      still needs write access to the database in this mode, but will
+      not allow commits or revprop changes.)
+
+      (Expect the server invocation options to change incompatibly
+      before they are finalized.)
 
       For now, svnserve in daemon mode only supports anonymous access.
-      But you can also tunnel ra_svn over ssh or any similar tool.  To
-      do this, create a server group for the repository server in
-      ~/.subversion/servers, and set the variable "svn-tunnel-agent"
-      to "ssh".  An example:
+      But you can also tunnel ra_svn over ssh or any similar tool:
 
-        [groups]
-        mygroup = server.host.name
+         $ svn checkout svn+ssh://hostname/usr/local/svn/repository
 
-        [mygroup]
-        svn-tunnel-agent = ssh
-
-      (Right now you can't put any arguments to ssh in that variable.
-      That may change.)  Make sure svnserve is in your path on the
-      server.
-
-      Expect the server invocation options to change incompatibly
-      before they are finalized.
+      In this mode of operation, there is no svnserve daemon process;
+      the svn client will ssh to the server and run "svnserve -t" to
+      do the serving.  Make sure svnserve is in your path on the
+      server.  You can override the "ssh" command with the SVN_SSH
+      environment variable, or you can define new tunnel schemes in
+      the [tunnels] section of ~/.subversion/config.  By default, only
+      the "ssh" scheme is allowed.

@@ -54,20 +54,39 @@ typedef struct {
   void *edit_baton;
 } ra_svn_reporter_baton_t;
 
-/* Parse an svn URL's authority section into user, host, and port components.
- * Return 0 on success, -1 on failure.  *user may be set to NULL. */
-static int parse_url(const char *url, const char **user, unsigned short *port,
-                     const char **hostname, apr_pool_t *pool)
+/* Parse an svn URL's authority section into tunnel, user, host, and
+ * port components.  Return 0 on success, -1 on failure.  *tunnel
+ * and *user may be set to NULL. */
+static int parse_url(const char *url, const char **tunnel, const char **user,
+                     unsigned short *port, const char **hostname,
+                     apr_pool_t *pool)
 {
   const char *p;
 
+  *tunnel = NULL;
   *user = NULL;
   *port = SVN_RA_SVN_PORT;
   *hostname = NULL;
 
-  if (strncmp(url, "svn://", 6) != 0)
+  if (strncasecmp(url, "svn", 3) != 0)
     return -1;
-  url += 6;
+  url += 3;
+
+  /* Get the tunnel specification, if any. */
+  if (*url == '+')
+    {
+      url++;
+      p = strchr(url, ':');
+      if (!p)
+        return -1;
+      *tunnel = apr_pstrmemdup(pool, url, p - url);
+      url = p;
+    }
+
+  if (strncmp(url, "://", 3) != 0)
+    return -1;
+  url += 3;
+
   while (1)
     {
       p = url + strcspn(url, "@:/");
@@ -252,21 +271,66 @@ static void ra_svn_get_reporter(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 /* --- RA LAYER IMPLEMENTATION --- */
 
-static svn_error_t *find_tunnel_agent(const char *hostname, const char **agent,
-                                      apr_hash_t *config, apr_pool_t *pool)
+static svn_error_t *find_tunnel_agent(const char *tunnel, const char *hostname,
+                                      const char ***argv, apr_hash_t *config,
+                                      apr_pool_t *pool)
 {
-  svn_config_t *cfg = config ? apr_hash_get (config, 
-                                             SVN_CONFIG_CATEGORY_SERVERS,
-                                             APR_HASH_KEY_STRING) : NULL;
-  const char *server_group;
+  svn_config_t *cfg;
+  const char *val, *var, *cmd;
+  char **cmd_argv;
+  apr_size_t len;
+  apr_status_t status;
+  int n;
 
-  server_group = svn_config_find_group(cfg, hostname, 
-                                       SVN_CONFIG_SECTION_GROUPS, pool);
-  if (! server_group)
-    server_group = SVN_CONFIG_SECTION_GLOBAL;
+  /* Look up the tunnel specification in config. */
+  cfg = config ? apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
+                              APR_HASH_KEY_STRING) : NULL;
+  svn_config_get(cfg, &val, SVN_CONFIG_SECTION_TUNNELS, tunnel, NULL);
 
-  svn_config_get(cfg, agent, server_group, SVN_CONFIG_OPTION_SVN_TUNNEL_AGENT,
-                 NULL);
+  /* We have one predefined tunnel scheme, if it isn't overridden by config. */
+  if (!val && strcmp(tunnel, "ssh") == 0)
+    val = "$SVN_SSH ssh";
+
+  if (!val || !*val)
+    return svn_error_createf(SVN_ERR_BAD_URL, NULL,
+                             "Undefined tunnel scheme %s", tunnel);
+
+  /* If the scheme definition begins with "$varname", it means there
+   * is an environment variable which can override the command. */
+  if (*val == '$')
+    {
+      val++;
+      len = strcspn(val, " ");
+      var = apr_pstrmemdup(pool, val, len);
+      cmd = getenv(var);
+      if (!cmd)
+        {
+          cmd = val + len;
+          while (*cmd == ' ')
+            cmd++;
+          if (!*cmd)
+            return svn_error_createf(SVN_ERR_BAD_URL, NULL,
+                                     "Tunnel scheme %s requires environment "
+                                     "variable %s to be defined", tunnel, var);
+        }
+    }
+  else
+    cmd = val;
+
+  /* Tokenize the command into a list of arguments. */
+  status = apr_tokenize_to_argv(cmd, &cmd_argv, pool);
+  if (status != APR_SUCCESS)
+    return svn_error_createf(status, NULL, "Can't tokenize command %s", cmd);
+
+  /* Append the fixed arguments to the result. */
+  for (n = 0; cmd_argv[n] != NULL; n++)
+    ;
+  *argv = apr_palloc(pool, (n + 4) * sizeof(char *));
+  memcpy(*argv, cmd_argv, n * sizeof(char *));
+  (*argv)[n++] = hostname;
+  (*argv)[n++] = "svnserve";
+  (*argv)[n++] = "-t";
+  (*argv)[n] = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -307,31 +371,25 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
 {
   svn_ra_svn_conn_t *conn;
   apr_socket_t *sock;
-  const char *hostname, *user, *status, *tunnel_agent, *args[5];
+  const char *hostname, *user, *status, *tunnel, **args;
   unsigned short port;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *caplist, *status_param;
   apr_procattr_t *attr;
   apr_proc_t *proc;
 
-  if (parse_url(url, &user, &port, &hostname, pool) != 0)
+  if (parse_url(url, &tunnel, &user, &port, &hostname, pool) != 0)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              "Illegal svn repository URL '%s'", url);
 
-  SVN_ERR(find_tunnel_agent(hostname, &tunnel_agent, config, pool));
-  if (tunnel_agent)
+  if (tunnel)
     {
-      /* ### It would be nice if tunnel_agent could contain flags. */
-      args[0] = tunnel_agent;
-      args[1] = hostname;
-      args[2] = "svnserve";
-      args[3] = "-t";
-      args[4] = NULL;
+      SVN_ERR(find_tunnel_agent(tunnel, hostname, &args, config, pool));
       apr_procattr_create(&attr, pool);
       apr_procattr_io_set(attr, 1, 1, 0);
       apr_procattr_cmdtype_set(attr, APR_PROGRAM_PATH);
       proc = apr_palloc(pool, sizeof(*proc));
-      apr_proc_create(proc, tunnel_agent, args, NULL, attr, pool);
+      apr_proc_create(proc, *args, args, NULL, attr, pool);
       conn = svn_ra_svn_create_conn(NULL, proc->out, proc->in, pool);
       conn->proc = proc;
 
@@ -367,7 +425,7 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
     return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
                              "Server requires minimum version %d",
                              (int) minver);
-  if (tunnel_agent && find_mech(mechlist, "EXTERNAL"))
+  if (tunnel && find_mech(mechlist, "EXTERNAL"))
     {
       /* Ask the server to use the ssh connection environment (on
        * Unix, that means uid) to determine the authentication name. */

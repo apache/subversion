@@ -247,6 +247,12 @@ davcheck:
 svncheck: 
 	@make check BASE_URL=svn://localhost
 
+# First make sure you can ssh to localhost and that "svnserve" is in
+# the path of the resulting shell.
+svnsshcheck:
+	@make check \
+	  BASE_URL=svn+ssh://localhost`pwd`/subversion/tests/clients/cmdline
+
 check-clean:
 	rm -rf subversion/tests/clients/cmdline/repositories   \
                subversion/tests/clients/cmdline/working_copies \
