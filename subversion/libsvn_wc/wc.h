@@ -249,6 +249,16 @@ svn_error_t *svn_wc__prop_path (svn_string_t **prop_path,
                                 apr_pool_t *pool);
 
 
+/* Set *PROP_PATH to PATH's `pristine' properties file.
+   If TMP is set, return a path to the tmp working property file. 
+   PATH can be a directory or file, and even have changed w.r.t. the
+   working copy's adm knowledge. */
+svn_error_t *svn_wc__prop_base_path (svn_string_t **prop_path,
+                                     const svn_string_t *path,
+                                     svn_boolean_t tmp,
+                                     apr_pool_t *pool);
+
+
 /* Ensure that PATH is a locked working copy directory.
  *
  * (In practice, this means creating an adm area if none exists, in

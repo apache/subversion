@@ -140,12 +140,12 @@ enum svn_wc__timestamp_kind
 };
 
 
-/* Is FILENAME's timestamp the same as the one recorded in our
-   `entries' file?  Return the answer in EQUAL_P.  TIMESTAMP_NAME
-   should be one of */
+/* Is PATH's timestamp the same as the one recorded in our
+   `entries' file?  Return the answer in EQUAL_P.  TIMESTAMP_KIND
+   should be one of the enumerated type above. */
 static svn_error_t *
 timestamps_equal_p (svn_boolean_t *equal_p,
-                    svn_string_t *filename,
+                    svn_string_t *path,
                     const enum svn_wc__timestamp_kind timestamp_kind,
                     apr_pool_t *pool)
 {
@@ -154,8 +154,16 @@ timestamps_equal_p (svn_boolean_t *equal_p,
   svn_string_t *dirpath, *entryname;
   apr_hash_t *entries = NULL;
   struct svn_wc_entry_t *entry;
+  enum svn_node_kind kind;
 
-  svn_path_split (filename, &dirpath, &entryname, svn_path_local_style, pool);
+  svn_io_check_path (path, &kind, pool);
+  if (kind == svn_node_dir)
+    {
+      dirpath = path;
+      entryname = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
+    }
+  else
+    svn_path_split (path, &dirpath, &entryname, svn_path_local_style, pool);
 
   /* Get the timestamp from the entries file */
   err = svn_wc__entries_read (&entries, dirpath, pool);
@@ -166,7 +174,7 @@ timestamps_equal_p (svn_boolean_t *equal_p,
   /* Get the timestamp from the working file and the entry */
   if (timestamp_kind == svn_wc__text_time)
     {
-      err = svn_io_file_affected_time (&wfile_time, filename, pool);
+      err = svn_io_file_affected_time (&wfile_time, path, pool);
       if (err) return err;
 
       entrytime = entry->text_time;
@@ -174,12 +182,11 @@ timestamps_equal_p (svn_boolean_t *equal_p,
   
   else if (timestamp_kind == svn_wc__prop_time)
     {
-      svn_string_t *prop_path = svn_wc__adm_path (dirpath,
-                                                  0, /* not tmp */
-                                                  pool,
-                                                  SVN_WC__ADM_PROPS,
-                                                  filename,
-                                                  NULL);
+      svn_string_t *prop_path;
+
+      err = svn_wc__prop_path (&prop_path, path, 0, pool);
+      if (err) return err;
+
       err = svn_io_file_affected_time (&wfile_time, prop_path, pool);
       if (err) return err;      
 
@@ -461,20 +468,12 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   svn_error_t *err;
   svn_string_t *prop_path;
   svn_string_t *prop_base_path;
-  svn_string_t *working_path, *basename;
   svn_boolean_t different_filesizes, equal_timestamps;
 
-  /* First, construct the prop_path from the original path */
-  svn_path_split (path, &working_path, &basename,
-                  svn_path_local_style, pool);
+  /* First, get the prop_path from the original path */
+  err = svn_wc__prop_path (&prop_path, path, 0, pool);
+  if (err) return err;
   
-  prop_path = svn_wc__adm_path (working_path,
-                                0, /* not tmp */
-                                pool,
-                                SVN_WC__ADM_PROPS,
-                                basename,
-                                NULL);
-
   /* Sanity check:  if the prop_path doesn't exist, return FALSE. */
   err = svn_io_check_path (prop_path, &kind, pool);
   if (err) return err;
@@ -485,13 +484,17 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
     }              
 
   /* Get the full path of the prop-base `pristine' file */
-  prop_base_path = svn_wc__adm_path (working_path,
-                                     0, /* not tmp */
-                                     pool,
-                                     SVN_WC__ADM_PROP_BASE,
-                                     basename,
-                                     NULL);
+  err = svn_wc__prop_base_path (&prop_base_path, path, 0, pool);
+  if (err) return err;
 
+  /* Sanity check:  if the prop_base_path doesn't exist, return FALSE. */
+  err = svn_io_check_path (prop_base_path, &kind, pool);
+  if (err) return err;
+  if (kind != svn_node_file)
+    {
+      *modified_p = FALSE;
+      return SVN_NO_ERROR;
+    }              
   
   /* There are at least three tests we can try in succession. */
   
@@ -514,7 +517,7 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
       
   /* See if the local file's timestamp is the same as the one recorded
      in the administrative directory.  */
-  err = timestamps_equal_p (&equal_timestamps, prop_path,
+  err = timestamps_equal_p (&equal_timestamps, path,
                             svn_wc__prop_time, pool);
   if (err) return err;
   

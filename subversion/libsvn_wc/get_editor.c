@@ -649,6 +649,7 @@ close_directory (void *dir_baton)
      to deal with them. */
   if (db->prop_changed)
     {
+      svn_boolean_t prop_modified;
       apr_status_t apr_err;
       char *revision_str;
       apr_file_t *log_fp = NULL;
@@ -683,18 +684,41 @@ close_directory (void *dir_baton)
                                    "%d",
                                    db->edit_baton->target_revision);
       
-      /* Because this is a directory, we're not setting the timestamp
-         here.  Directories become "out of date" iff some descendant
-         does. */
+      /* Write a log entry to bump the directory's revision. */
       svn_xml_make_open_tag (&entry_accum,
                              db->pool,
                              svn_xml_self_closing,
                              SVN_WC__LOG_MODIFY_ENTRY,
                              SVN_WC__LOG_ATTR_NAME,
-                             db->name,
+                             svn_string_create
+                             (SVN_WC_ENTRY_THIS_DIR, db->pool),
                              SVN_WC_ENTRY_ATTR_REVISION,
                              svn_string_create (revision_str, db->pool),
                              NULL);
+
+
+      /* Are the directory's props locally modified? */
+      err = svn_wc_props_modified_p (&prop_modified,
+                                     db->path,
+                                     db->pool);
+      if (err) return err;
+
+      /* Log entry which sets a new property timestamp, but *only* if
+         there are no local changes to the props. */
+      if (! prop_modified)
+        svn_xml_make_open_tag (&entry_accum,
+                               db->pool,
+                               svn_xml_self_closing,
+                               SVN_WC__LOG_MODIFY_ENTRY,
+                               SVN_WC__LOG_ATTR_NAME,
+                               svn_string_create
+                               (SVN_WC_ENTRY_THIS_DIR, db->pool),
+                               SVN_WC_ENTRY_ATTR_PROP_TIME,
+                               /* use wfile time */
+                               svn_string_create (SVN_WC_TIMESTAMP_WC,
+                                                  db->pool),
+                               NULL);
+
       
       /* Write our accumulation of log entries into a log file */
       apr_err = apr_full_write (log_fp, entry_accum->data,

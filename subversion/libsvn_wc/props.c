@@ -840,17 +840,36 @@ svn_wc__do_property_merge (svn_string_t *path,
       
 
       /* Mark entry as "conflicted" with a particular .prej file. */
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MODIFY_ENTRY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             name,
-                             SVN_WC_ENTRY_ATTR_CONFLICT,
-                             svn_string_create ("true", pool),
-                             SVN_WC_ENTRY_ATTR_PREJFILE,
-                             reject_path,
-                             NULL);
+      if (name == NULL)
+        {
+          svn_xml_make_open_tag (entry_accum,
+                                 pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_MODIFY_ENTRY,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 svn_string_create
+                                 (SVN_WC_ENTRY_THIS_DIR,
+                                  pool),
+                                 SVN_WC_ENTRY_ATTR_CONFLICT,
+                                 svn_string_create ("true", pool),
+                                 SVN_WC_ENTRY_ATTR_PREJFILE,
+                                 reject_path,
+                                 NULL);
+        }
+      else
+        {
+          svn_xml_make_open_tag (entry_accum,
+                                 pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_MODIFY_ENTRY,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 name,
+                                 SVN_WC_ENTRY_ATTR_CONFLICT,
+                                 svn_string_create ("true", pool),
+                                 SVN_WC_ENTRY_ATTR_PREJFILE,
+                                 reject_path,
+                                 NULL);
+        }
     }  
   
   /* At this point, we need to write log entries that bump revision
@@ -867,13 +886,13 @@ svn_wc__do_property_merge (svn_string_t *path,
 
 
 svn_error_t *
-svn_wc_prop_find (apr_hash_t **props,
+svn_wc_prop_list (apr_hash_t **props,
                   svn_string_t *path,
                   apr_pool_t *pool)
 {
   svn_error_t *err;
   enum svn_node_kind kind, pkind;
-  svn_string_t *prop_path, *prop_name, *base_path;
+  svn_string_t *prop_path;
   
   *props = apr_make_hash (pool);
 
@@ -892,25 +911,8 @@ svn_wc_prop_find (apr_hash_t **props,
                               path->data);
 
   /* Construct a path to the relevant property file */
-  if (kind == svn_node_file)
-    {
-      svn_path_split (path, &base_path, &prop_name,
-                      svn_path_local_style, pool);
-      prop_path = svn_wc__adm_path (base_path,
-                                    0, /* not tmp */
-                                    pool,
-                                    SVN_WC__ADM_PROPS,
-                                    prop_name->data,
-                                    NULL);
-    }
-
-  else if (kind == svn_node_dir)
-    prop_path = svn_wc__adm_path (path,
-                                  0, /* not tmp */
-                                  pool,
-                                  SVN_WC__ADM_DIR_PROPS,
-                                  NULL);
-
+  err = svn_wc__prop_path (&prop_path, path, 0, pool);
+  if (err) return err;
 
   /* Does the property file exist? */
   err = svn_io_check_path (prop_path, &pkind, pool);
@@ -920,7 +922,6 @@ svn_wc_prop_find (apr_hash_t **props,
     /* No property file exists.  Just go home, with an empty hash. */
     return SVN_NO_ERROR;
   
-
   /* else... */
 
   err = svn_wc__load_prop_file (prop_path, *props, pool);
@@ -943,7 +944,7 @@ svn_wc_prop_get (svn_string_t **value,
   apr_hash_t *prophash;
 
   /* Boy, this is an easy routine! */
-  err = svn_wc_prop_find (&prophash, path, pool);
+  err = svn_wc_prop_list (&prophash, path, pool);
   if (err)
     return
       svn_error_quick_wrap
@@ -958,17 +959,16 @@ svn_wc_prop_get (svn_string_t **value,
 
 
 svn_error_t *
-svn_wc_prop_patch (svn_string_t *name,
-                   svn_string_t *value,
-                   svn_string_t *path,
-                   apr_pool_t *pool)
+svn_wc_prop_set (svn_string_t *name,
+                 svn_string_t *value,
+                 svn_string_t *path,
+                 apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_hash_t *prophash;
-  svn_string_t *prop_path, *base_path, *base_name;
-  enum svn_node_kind kind;
+  svn_string_t *prop_path;
 
-  err = svn_wc_prop_find (&prophash, path, pool);
+  err = svn_wc_prop_list (&prophash, path, pool);
   if (err)
     return
       svn_error_quick_wrap
@@ -978,34 +978,10 @@ svn_wc_prop_patch (svn_string_t *name,
      property into it. */
   apr_hash_set (prophash, name->data, name->len, value);
   
-  /* TODO:  factorize this code somehow;  svn_wc_prop_find already
-     went through these shenanigans! */
-
   /* Construct a path to the relevant property file */
-  err = svn_io_check_path (path, &kind, pool);
+  err = svn_wc__prop_path (&prop_path, path, 0, pool);
   if (err) return err;
-
-  if (kind == svn_node_file)
-    {
-      svn_path_split (path, &base_path, &base_name,
-                      svn_path_local_style, pool);
-      prop_path = svn_wc__adm_path (base_path,
-                                    0, /* not tmp */
-                                    pool,
-                                    SVN_WC__ADM_PROPS,
-                                    base_name->data,
-                                    NULL);
-    }
-
-  else if (kind == svn_node_dir)
-    prop_path = svn_wc__adm_path (path,
-                                  0, /* not tmp */
-                                  pool,
-                                  SVN_WC__ADM_DIR_PROPS,
-                                  NULL);
-
-  /* end TODO */
-
+  
   /* Write the properties back out to disk. */
   err = svn_wc__save_prop_file (prop_path, prophash, pool);
   if (err) return err;
