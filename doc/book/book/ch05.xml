@@ -41,6 +41,18 @@
   <sect1 id="svn-ch-5-sect-1">
     <title>Repository Basics</title>
 
+    <para>Before jumping into the broader topic of repository
+      administration, let's further define what a repository is.  How
+      does it look?  How does it feel?  Does it take its tea hot or
+      iced, sweetened, and with lemon?  As an administrator, you'll be
+      expected to understand the composition of a repository both from
+      a logical perspective&mdash;dealing with how data is represented
+      inside the repository&mdash;and from a physical nuts-and-bolts
+      perspective&mdash;how a repository looks and acts with respect
+      to non-Subversion tools.  The following few
+      sections cover at a very high level some of these basic
+      concepts.</para>
+
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-1.1">
       <title>Understanding Transactions and Revisions</title>
@@ -595,6 +607,15 @@ pre-commit.tmpl
 
   <sect1 id="svn-ch-5-sect-3">
     <title>Repository Maintenance</title>
+
+    <para>Maintaining a Subversion repository can be a daunting task,
+      mostly due to the complexities inherent in systems which have a
+      database backend.  Doing the task well is all about knowing the
+      tools&mdash;what they are, when to use them, and how to use
+      them.  This section will introduce you to the repository
+      administration tools provided by Subversion, and how to wield
+      them to accomplish tasks such as repository migrations,
+      upgrades, backups and cleanups.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-3.1">
