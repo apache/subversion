@@ -45,7 +45,6 @@ write_hash_to_stringbuf (apr_hash_t *hash,
                          apr_pool_t *pool)
 {
   apr_hash_index_t *this;      /* current hash entry */
-  char buf[SVN_KEYLINE_MAXLEN];
 
   *strbuf = svn_stringbuf_create ("", pool);
 
@@ -54,7 +53,6 @@ write_hash_to_stringbuf (apr_hash_t *hash,
       const void *key;
       void *val;
       apr_ssize_t keylen;
-      int bytes_used;
       svn_string_t *value;
 
       /* Get this key and val. */
@@ -72,22 +70,18 @@ write_hash_to_stringbuf (apr_hash_t *hash,
 
       /* Output name length, then name. */
 
-      svn_stringbuf_appendbytes (*strbuf, "K ", 2);
-
-      sprintf (buf, "%" APR_SSIZE_T_FMT "%n", keylen, &bytes_used);
-      svn_stringbuf_appendbytes (*strbuf, buf, bytes_used);
-      svn_stringbuf_appendbytes (*strbuf, "\n", 1);
+      svn_stringbuf_appendcstr (*strbuf,
+                                apr_psprintf (pool, "K %" APR_SSIZE_T_FMT "\n",
+                                              keylen));
 
       svn_stringbuf_appendbytes (*strbuf, (const char *) key, keylen);
       svn_stringbuf_appendbytes (*strbuf, "\n", 1);
 
       /* Output value length, then value. */
 
-      svn_stringbuf_appendbytes (*strbuf, "V ", 2);
-
-      sprintf (buf, "%" APR_SIZE_T_FMT "%n", value->len, &bytes_used);
-      svn_stringbuf_appendbytes (*strbuf, buf, bytes_used);
-      svn_stringbuf_appendbytes (*strbuf, "\n", 1);
+      svn_stringbuf_appendcstr (*strbuf,
+                                apr_psprintf (pool, "V %" APR_SIZE_T_FMT "\n",
+                                              value->len));
 
       svn_stringbuf_appendbytes (*strbuf, value->data, value->len);
       svn_stringbuf_appendbytes (*strbuf, "\n", 1);
@@ -102,7 +96,6 @@ write_hash_to_stringbuf (apr_hash_t *hash,
           const void *key;
           void *val;
           apr_ssize_t keylen;
-          int bytes_used;
 
           /* Get this key and val. */
           apr_hash_this (this, &key, &keylen, &val);
@@ -113,11 +106,10 @@ write_hash_to_stringbuf (apr_hash_t *hash,
 
           /* Output name length, then name. */
 
-          svn_stringbuf_appendbytes (*strbuf, "D ", 2);
-
-          sprintf (buf, "%" APR_SSIZE_T_FMT "%n", keylen, &bytes_used);
-          svn_stringbuf_appendbytes (*strbuf, buf, bytes_used);
-          svn_stringbuf_appendbytes (*strbuf, "\n", 1);
+          svn_stringbuf_appendcstr (*strbuf, 
+                                    apr_psprintf (pool,
+                                                  "D %" APR_SSIZE_T_FMT "\n",
+                                                  keylen));
 
           svn_stringbuf_appendbytes (*strbuf, (const char *) key, keylen);
           svn_stringbuf_appendbytes (*strbuf, "\n", 1);

@@ -62,15 +62,11 @@ print_status (const char *path,
               svn_wc_status_t *status,
               apr_pool_t *pool)
 {
-  char ood_status = '@';    /* Silence a gcc uninitialized warning */
-  char working_rev_buf[21]; /* Enough for 2^64 in base 10 plus '\0' */
-  char commit_rev_buf[21];
-  const char *working_rev = working_rev_buf;
-  const char *commit_rev = commit_rev_buf;
-  const char *commit_author = NULL; /* Silence a gcc uninitialised warning */
-
   if (detailed)
     {
+      char ood_status;
+      const char *working_rev;
+
       if (! status->entry)
         working_rev = "";
       else if (! SVN_IS_VALID_REVNUM (status->entry->revision))
@@ -78,8 +74,7 @@ print_status (const char *path,
       else if (status->copied)
         working_rev = "-";
       else
-        sprintf (working_rev_buf, "%ld",
-                 status->entry->revision);
+        working_rev = apr_psprintf (pool, "%ld", status->entry->revision);
 
       if (status->repos_text_status != svn_wc_status_none
           || status->repos_prop_status != svn_wc_status_none)
@@ -89,9 +84,11 @@ print_status (const char *path,
 
       if (show_last_committed)
         {
+          const char *commit_rev;
+          const char *commit_author;
+
           if (status->entry && SVN_IS_VALID_REVNUM (status->entry->cmt_rev))
-            sprintf(commit_rev_buf, "%ld",
-                    status->entry->cmt_rev);
+            commit_rev = apr_psprintf(pool, "%ld", status->entry->cmt_rev);
           else if (status->entry)
             commit_rev = " ? ";
           else
@@ -114,33 +111,30 @@ print_status (const char *path,
             commit_author = " ? ";
           else
             commit_author = "";
+
+          printf ("%c%c%c%c%c  %c   %6s   %6s %-12s %s\n",
+                  generate_status_code (status->text_status),
+                  generate_status_code (status->prop_status),
+                  status->locked ? 'L' : ' ',
+                  status->copied ? '+' : ' ',
+                  status->switched ? 'S' : ' ',
+                  ood_status,
+                  working_rev,
+                  commit_rev,
+                  commit_author,
+                  path);
         }
+      else
+        printf ("%c%c%c%c%c  %c   %6s   %s\n",
+                generate_status_code (status->text_status),
+                generate_status_code (status->prop_status),
+                status->locked ? 'L' : ' ',
+                status->copied ? '+' : ' ',
+                status->switched ? 'S' : ' ',
+                ood_status,
+                working_rev,
+                path);
     }
-
-  if (detailed && show_last_committed)
-    printf ("%c%c%c%c%c  %c   %6s   %6s %-12s %s\n",
-            generate_status_code (status->text_status),
-            generate_status_code (status->prop_status),
-            status->locked ? 'L' : ' ',
-            status->copied ? '+' : ' ',
-            status->switched ? 'S' : ' ',
-            ood_status,
-            working_rev,
-            commit_rev,
-            commit_author,
-            path);
-
-  else if (detailed)
-    printf ("%c%c%c%c%c  %c   %6s   %s\n",
-            generate_status_code (status->text_status),
-            generate_status_code (status->prop_status),
-            status->locked ? 'L' : ' ',
-            status->copied ? '+' : ' ',
-            status->switched ? 'S' : ' ',
-            ood_status,
-            working_rev,
-            path);
-
   else
     printf ("%c%c%c%c%c  %s\n",
             generate_status_code (status->text_status),
