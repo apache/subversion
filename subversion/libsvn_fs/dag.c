@@ -115,6 +115,38 @@ has_mutable_flag (skel_t *node_content)
 }
 
 
+/* Add the "mutable" flag to node revision CONTENT, using PARENT_ID.
+   Allocate the flag in POOL; it is advisable that POOL be at least as
+   long-lived as the pool CONTENT is allocated in.  If the mutability
+   flag is already set, this function does nothing.  If PARENT_ID is
+   null, the mutable flag skel will not have a parent_id element. */
+static void
+set_mutable_flag (skel_t *content, svn_fs_id_t *parent_id, apr_pool_t *pool)
+{
+  if (has_mutable_flag (content))
+    return;
+  else
+    {
+      skel_t *the_word_mutable = svn_fs__str_atom ((char *) "mutable", pool);
+      skel_t *p_atom = NULL;
+      skel_t *flag_skel = svn_fs__make_empty_list (pool);
+
+      svn_fs__append (the_word_mutable, flag_skel);
+
+      if (parent_id)
+        {
+          svn_string_t *p_string = svn_fs_unparse_id (parent_id, pool);
+          p_atom = svn_fs__str_atom (p_string->data, pool);
+          svn_fs__append (p_atom, flag_skel);
+        }
+
+      content->children->children->next->next = flag_skel;
+    }
+
+  return;
+}
+
+
 /* Clear NODE's cache of its node revision.  */
 static void
 uncache_node_revision (void *baton)
@@ -630,7 +662,11 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
                                           trail));
 
       /* With its Y-chromosome changed to X...
-         (If the root has already been cloned, read its current contents.)  */
+         (If it's not mutable already, make it so). */
+      if (! has_mutable_flag (root_skel))
+        set_mutable_flag (root_skel, NULL, trail->pool);
+
+      /* Store it. */
       SVN_ERR (svn_fs__create_successor (&root_id, fs, base_root_id, root_skel,
                                          trail));
     }
