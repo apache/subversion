@@ -668,13 +668,13 @@ copy_source_ops (apr_size_t offset, apr_size_t limit,
               apr_size_t tgt_off = target_offset;
               assert(ptn_length > ptn_overlap);
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define TMP_MIN(a, b) ((a) < (b) ? (a) : (b))
               if (ptn_overlap >= 0)
                 {
                   /* Issue second subrange in the pattern. */
                   const apr_size_t length =
-                    MIN(op->length - fix_off - fix_limit,
-                        ptn_length - ptn_overlap);
+                    TMP_MIN(op->length - fix_off - fix_limit,
+                            ptn_length - ptn_overlap);
                   copy_source_ops(op->offset + ptn_overlap,
                                   op->offset + ptn_overlap + length,
                                   tgt_off,
@@ -689,7 +689,7 @@ copy_source_ops (apr_size_t offset, apr_size_t limit,
                 {
                   /* Issue the first subrange in the pattern. */
                   const apr_size_t length =
-                    MIN(op->length - fix_off - fix_limit, ptn_overlap);
+                    TMP_MIN(op->length - fix_off - fix_limit, ptn_overlap);
                   copy_source_ops(op->offset,
                                   op->offset + length,
                                   tgt_off,
@@ -697,7 +697,7 @@ copy_source_ops (apr_size_t offset, apr_size_t limit,
                   fix_off += length;
                   tgt_off += length;
                 }
-#undef MIN
+#undef TMP_MIN
 
               assert(fix_off + fix_limit <= op->length);
               if (fix_off + fix_limit < op->length)
