@@ -1,0 +1,58 @@
+   -*- text -*-
+
+Issues to discuss/prioritize POST Milestone 2
+=============================================
+
+
+* How ACLs should work.  Do they live as filesystem props?  How should
+  authorization and authentication work in general?
+
+   We need a security architecture that:
+  
+      * will take advantage of Apache
+
+      * fits well with the Sourcecast 2.0 framework
+
+      * will still be present even with nothing but ra_local
+
+      * is doable in svn 1.0, providing security as good as cvs.
+
+      * has a consistent user interface for *all* present and future
+        authentication mechanisms.
+
+* Who is going to write the cvs2svn converter (using cvs2cl's code)?
+  Who is going to write a lossy svn2cvs converter?
+
+* Who is going to write a gui design/whitepaper?  Who will write them?
+
+* svn import?  annotate?  log?  other commands that are still missing?
+
+* How will we present branches and tags to the user?  Show them as
+  subdirs, or hide them under a cvs-compatible command interface?
+
+* still need a perl/python external test framework.
+
+* how does svn_wc_cleanup() get used?  exposed as a user command?
+
+* exteral diff program invocation via client-side plugins.
+
+* Hook system. need pre-post commit hooks.  Other hooks?  How will we
+  implement?  How will we make them available to users?
+
+* svnadmin app.  What does it need to do?
+
+* Chris wants to talk about distributed repositories: read-only
+  repositories that have data "pushed" at them via hierarchy, while
+  only the Master repo can accept commits.
+
+* copy nodes (or props).  we need better history tracking when making
+  cheap copies in the fs.
+
+* all client commands need to accept multiple targets.
+
+* svn mv and cp commands.  (trivial to write).
+
+* 90% solution to the "repeated merge" problem?  genetic merging?  how
+  much changeset metadata should we be tracking?
+
+
