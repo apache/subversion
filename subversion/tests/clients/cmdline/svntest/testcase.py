@@ -90,7 +90,7 @@ class TestCase:
         sys.exit(0)
       except SystemExit, ex:
         print "Caught SystemExit(%d), skipping cleanup" % ex.code
-        print ('PASS: ', 'FAIL: ')[ex.code != 0],
+        print ex.code and 'FAIL: ' or 'PASS: ',
         self._print_name()
         raise
       except:
