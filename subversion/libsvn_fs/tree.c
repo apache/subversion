@@ -51,6 +51,26 @@
 #include "proplist.h"
 
 
+
+/* ### I believe this constant will become internal to reps-strings.c.
+   ### see the comment in window_consumer() for more information. */
+
+/* ### the comment also seems to need tweaking: the log file stuff
+   ### is no longer an issue... */
+/* Data written to the filesystem through the svn_fs_apply_textdelta()
+   interface is cached in memory until the end of the data stream, or
+   until a size trigger is hit.  Define that trigger here (in bytes).
+   Setting the value to 0 will result in no filesystem buffering at
+   all.  The value only really matters when dealing with file contents
+   bigger than the value itself.  Above that point, large values here
+   allow the filesystem to buffer more data in memory before flushing
+   to the database, which increases memory usage but greatly decreases
+   the amount of disk access (and log-file generation) in database.
+   Smaller values will limit your overall memory consumption, but can
+   drastically hurt throughput by necessitating more write operations
+   to the database (which also generates more log-files).  */
+#define SVN_FS_WRITE_BUFFER_SIZE   512000
+
 
 /* The root structure.  */
 
@@ -2480,13 +2500,16 @@ txn_body_finalize_edits (void *baton, trail_t *trail)
 }
 
 
+/* ### see comment in window_consumer() regarding this function. */
+
 /* Helper function of generic type `svn_write_fn_t'.  Implements a
    writable stream which appends to an svn_stringbuf_t. */
 static svn_error_t *
 write_to_string (void *baton, const char *data, apr_size_t *len)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
-  
+
+
   svn_stringbuf_appendbytes (tb->target_string, data, *len);
 
   return SVN_NO_ERROR;
@@ -2504,6 +2527,26 @@ window_consumer (svn_txdelta_window_t *window, void *baton)
      In theory, the interpreter will then write more data to
      cb->target_string. */
   SVN_ERR (tb->interpreter (window, tb->interpreter_baton));
+
+  /* ### the write_to_string() callback for the txdelta's output stream
+     ### should be doing all the flush determination logic, not here.
+     ### in a drastic case, a window could generate a LOT more than the
+     ### maximum buffer size. we want to flush to the underlying target
+     ### stream much sooner (e.g. also in a streamy fashion). also, by
+     ### moving this logic inside the stream, the stream becomes nice
+     ### and encapsulated: it holds all the logic about buffering and
+     ### flushing.
+     ###
+     ### further: I believe the buffering should be removed from tree.c
+     ### the buffering should go into the target_stream itself, which
+     ### is defined by reps-string.c. Specifically, I think the
+     ### rep_write_contents() function will handle the buffering and
+     ### the spill to the underlying DB. by locating it there, then
+     ### anybody who gets a writable stream for FS content can take
+     ### advantage of the buffering capability. this will be important
+     ### when we export an FS API function for writing a fulltext into
+     ### the FS, rather than forcing that fulltext thru apply_textdelta.
+  */
 
   /* Check to see if we need to purge the portion of the contents that
      have been written thus far. */
