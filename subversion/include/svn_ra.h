@@ -19,6 +19,7 @@
 #define SVN_RA_H
 
 #include <apr_pools.h>
+#include <apr_tables.h>
 
 #include "svn_error.h"
 #include "svn_delta.h"
