@@ -243,7 +243,7 @@ add_directory (svn_stringbuf_t *name,
             return 
               svn_error_createf 
               (SVN_ERR_FS_GENERAL, 0, NULL, eb->pool,
-               "fs editor: add_file`%s': copyfrom_url is from different repo",
+               "fs editor: add_dir`%s': copyfrom_url is from different repo",
                name->data);
       
       /* Now use the "fs_path" as an absolute path within the
@@ -581,9 +581,6 @@ svn_error_t *
 svn_ra_local__get_editor (svn_delta_edit_fns_t **editor,
                           void **edit_baton,
                           svn_ra_local__session_baton_t *session,
-                          svn_fs_t *fs,
-                          svn_stringbuf_t *base_path,
-                          const char *user,
                           svn_stringbuf_t *log_msg,
                           svn_ra_local__commit_hook_t *hook,
                           void *hook_baton,
@@ -610,14 +607,14 @@ svn_ra_local__get_editor (svn_delta_edit_fns_t **editor,
 
   /* Set up the edit baton. */
   eb->pool = subpool;
-  eb->user = apr_pstrdup (subpool, user);
+  eb->user = apr_pstrdup (subpool, session->username);
   eb->log_msg.data = apr_pmemdup (subpool, log_msg->data, log_msg->len + 1);
   eb->log_msg.len = log_msg->len;
   eb->hook = hook;
   eb->hook_baton = hook_baton;
-  eb->base_path = svn_stringbuf_dup (base_path, subpool);
+  eb->base_path = svn_stringbuf_dup (session->fs_path, subpool);
   eb->session = session;
-  eb->fs = fs;
+  eb->fs = session->fs;
   eb->txn = NULL;
 
   *edit_baton = eb;

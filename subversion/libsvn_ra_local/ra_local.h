@@ -137,10 +137,10 @@ svn_ra_local__checkout (svn_fs_t *fs,
                         apr_pool_t *pool);
 
 
-/* Return an EDITOR and EDIT_BATON to commit changes to FS, beginning
- * at location `rev:BASE_PATH', where "rev" is the argument given to
- * replace_root().  Store USER as the author of the commit and
- * LOG_MSG as the commit message.
+/* Return an EDITOR and EDIT_BATON to commit changes to SESSION->fs,
+ * beginning at location `rev:SESSION->base_path', where "rev" is the
+ * argument given to replace_root().  Store SESSION->user as the
+ * author of the commit and LOG_MSG as the commit message.
  *
  * FS is a previously opened file system.
  *
@@ -159,9 +159,6 @@ svn_ra_local__checkout (svn_fs_t *fs,
 svn_error_t *svn_ra_local__get_editor (svn_delta_edit_fns_t **editor,
                                        void **edit_baton,
                                        svn_ra_local__session_baton_t *session,
-                                       svn_fs_t *fs,
-                                       svn_stringbuf_t *base_path,
-                                       const char *user,
                                        svn_stringbuf_t *log_msg,
                                        svn_ra_local__commit_hook_t *hook,
                                        void *hook_baton,
