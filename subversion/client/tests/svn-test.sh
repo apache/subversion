@@ -23,7 +23,7 @@ ${SVN_PROG} checkout                                      \
 
 res=$?
 [ $res -ne 0 ] && {
-  echo Oops $res
+  echo Oops 1 - exit code $res
   exit $res
 }
 
@@ -45,7 +45,7 @@ ${SVN_PROG} add ${TEST_DIR_1}/newfile1
 
 res=$?
 [ $res -ne 0 ] && {
-  echo Oops $res
+  echo Oops 2 - exit code $res
   exit $res
 }
 
@@ -56,7 +56,7 @@ ${SVN_PROG} add ${TEST_DIR_1}/A/B/E/newfile2
 
 res=$?
 [ $res -ne 0 ] && {
-  echo Oops $res
+  echo Oops 3 - exit code $res
   exit $res
 }
 
@@ -66,7 +66,7 @@ ${SVN_PROG} delete --force ${TEST_DIR_1}/A/D/H/omega
 
 res=$?
 [ $res -ne 0 ] && {
-  echo Oops $res
+  echo Oops 4 - exit code $res
   exit $res
 }
 
@@ -82,7 +82,7 @@ echo "Committing changes in ${TEST_DIR_1}."
 
 res=$?
 [ $res -ne 0 ] && {
-  echo Oops $res
+  echo Oops 5 - exit code $res
   exit $res
 }
 
@@ -96,7 +96,7 @@ echo "Updating ${TEST_DIR_2} from changes in ${TEST_DIR_1}."
 
 res=$?
 [ $res -ne 0 ] && {
-  echo Oops $res
+  echo Oops 6 - exit code $res
   exit $res
 }
 
@@ -130,7 +130,7 @@ echo "Committing changes, this time in ${TEST_DIR_2}."
 
 res=$?
 [ $res -ne 0 ] && {
-  echo Oops $res
+  echo Oops 7 - exit code $res
   exit $res
 }
 
@@ -144,7 +144,7 @@ echo "Updating ${TEST_DIR_1} from changes in ${TEST_DIR_2}."
 
 res=$?
 [ $res -ne 0 ] && {
-  echo Oops $res
+  echo Oops 8 - exit code $res
   exit $res
 }
 
@@ -188,7 +188,7 @@ echo "Committing changes for merge, from ${TEST_DIR_1}."
 
 res=$?
 [ $res -ne 0 ] && {
-  echo Oops $res
+  echo Oops 9 - exit code $res
   exit $res
 }
 
@@ -202,8 +202,8 @@ echo "Updating ${TEST_DIR_2}, merging changes from ${TEST_DIR_1}."
 
 res=$?
 [ $res -ne 0 ] && {
-  echo Oops $res
+  echo Oops 11 - exit code $res
   exit $res
 }
 
-
+exit 0
