@@ -444,9 +444,9 @@ svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn,
  * the error @c SVN_ERR_FS_TRANSACTION_NOT_DEAD is returned.  (The
  * caller probably forgot to abort the transcation.) 
  */
-svn_error_t *svn_fs_cleanup_dead_txn (svn_fs_t *fs,
-                                      const char *txn_id,
-                                      apr_pool_t *pool);
+svn_error_t *svn_fs_purge_txn (svn_fs_t *fs,
+                               const char *txn_id,
+                               apr_pool_t *pool);
 
 
 /** Set @a *name_p to the name of the transaction @a txn, as a

@@ -838,9 +838,9 @@ txn_body_delete_txn (void *baton, trail_t *trail)
 
 
 svn_error_t *
-svn_fs_cleanup_dead_txn (svn_fs_t *fs,
-                         const char *txn_id,
-                         apr_pool_t *pool)
+svn_fs_purge_txn (svn_fs_t *fs,
+                  const char *txn_id,
+                  apr_pool_t *pool)
 {
   struct cleanup_txn_args args;
   svn_fs__transaction_t *txn;
@@ -904,9 +904,10 @@ svn_fs_abort_txn (svn_fs_txn_t *txn,
   /* Set the transaction to "dead". */
   SVN_ERR (svn_fs__retry_txn (txn->fs, txn_body_abort_txn, txn, pool));
   
-  /* Now, clean it up. */
-  SVN_ERR_W (svn_fs_cleanup_dead_txn (txn->fs, txn->id, pool),
+  /* Now, purge it. */
+  SVN_ERR_W (svn_fs_purge_txn (txn->fs, txn->id, pool),
              "Transaction aborted, but cleanup failed");
+
   return SVN_NO_ERROR;
 }
 
