@@ -302,13 +302,10 @@ const char *svn_path_is_child (const char *path1,
 
 /*** URI/URL stuff ***/
 
-/* Compare PATH to an array of const char * URL SCHEMES (like "file",
-   "http", etc.) to determine if PATH looks like a URL.  If so, return
-   the matching scheme used by PATH, else return NULL.  Returned
-   values point to the allocations in SCHEMES. */
+/* Return TRUE iff PATH looks like a valid URL, FALSE otherwise. */
 svn_boolean_t svn_path_is_url (const char *path);
 
-/* Return TRUE if PATH is URI-safe, FALSE otherwise. */
+/* Return TRUE iff PATH is URI-safe, FALSE otherwise. */
 svn_boolean_t svn_path_is_uri_safe (const char *path);
 
 /* Return a URI-encoded copy of PATH, allocated in POOL. */

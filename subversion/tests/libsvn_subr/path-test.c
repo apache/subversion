@@ -178,7 +178,7 @@ test_is_url (const char **msg,
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, 0, NULL,
            "svn_path_is_url (%s) returned %s instead of %s",
-           paths[i], retvals[i] ? "TRUE" : "FALSE", retval ? "TRUE" : "FALSE");
+           paths[i], retval ? "TRUE" : "FALSE", retvals[i] ? "TRUE" : "FALSE");
     }
 
   return SVN_NO_ERROR;
