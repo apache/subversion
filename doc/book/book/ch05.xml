@@ -1808,7 +1808,7 @@ The latest repos revision is 19.
         successfully unwedge your repository, you should do two
         things.  First, move your broken repository out of the way and
         restore your latest backup of it.  Then, send an email to the
-        Subversion developer list (at
+        Subversion user list (at
         <email>users@subversion.tigris.org</email>) describing your
         problem in detail.  Data integrity is an extremely high
         priority to the Subversion developers.</para>
