@@ -573,7 +573,8 @@ A and B must be line-info's."
 (when (not svn-status-mode-map)
   (setq svn-status-mode-map (make-sparse-keymap))
   (suppress-keymap svn-status-mode-map)
-  (define-key svn-status-mode-map (kbd "<return>") 'svn-status-find-file-or-examine-directory)
+  ;; Don't use (kbd "<return>"); it's unreachable with GNU Emacs 21.3 on a TTY.
+  (define-key svn-status-mode-map (kbd "RET") 'svn-status-find-file-or-examine-directory)
   (define-key svn-status-mode-map (kbd "^") 'svn-status-examine-parent)
   (define-key svn-status-mode-map [?s] 'svn-status-show-process-buffer)
   (define-key svn-status-mode-map [?f] 'svn-status-find-file)
@@ -585,8 +586,28 @@ A and B must be line-info's."
   (define-key svn-status-mode-map [?h] 'svn-status-use-history)
   (define-key svn-status-mode-map [?m] 'svn-status-set-user-mark)
   (define-key svn-status-mode-map [?u] 'svn-status-unset-user-mark)
-  (define-key svn-status-mode-map "\M-DEL" 'svn-status-unset-all-user-mark)
-  (define-key svn-status-mode-map [(backspace)] 'svn-status-unset-user-mark-backwards)
+  ;; This matches a binding of `dired-unmark-all-files' in `dired-mode-map'
+  ;; of both GNU Emacs and XEmacs.  It seems unreachable with XEmacs on
+  ;; TTY, but if that's a problem then its Dired needs fixing too.
+  ;; Or you could just use "*!".
+  (define-key svn-status-mode-map "\M-\C-?" 'svn-status-unset-all-usermarks)
+  ;; The key that normally deletes characters backwards should here
+  ;; instead unmark files backwards.  In GNU Emacs, that would be (kbd
+  ;; "DEL") aka [?\177], but XEmacs treats those as [(delete)] and
+  ;; would bind a key that normally deletes forwards.  [(backspace)]
+  ;; is unreachable with GNU Emacs on a tty.  Try to recognize the
+  ;; dialect and act accordingly.
+  ;;
+  ;; XEmacs has a `delete-forward-p' function that checks the
+  ;; `delete-key-deletes-forward' option.  We don't use those, for two
+  ;; reasons: psvn.el may be loaded before user customizations, and
+  ;; XEmacs allows simultaneous connections to multiple devices with
+  ;; different keyboards.
+  (define-key svn-status-mode-map
+              (if (member (kbd "DEL") '([(delete)] [delete]))
+                  [(backspace)]         ; XEmacs
+                (kbd "DEL"))            ; GNU Emacs
+              'svn-status-unset-user-mark-backwards)
   (define-key svn-status-mode-map [?$] 'svn-status-toggle-elide)
   (define-key svn-status-mode-map [?.] 'svn-status-goto-root-or-return)
   (define-key svn-status-mode-map [?I] 'svn-status-parse-info)
@@ -595,6 +616,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map [?a] 'svn-status-add-file)
   (define-key svn-status-mode-map [?+] 'svn-status-make-directory)
   (define-key svn-status-mode-map (kbd "R") 'svn-status-mv)
+  ;; TODO: Move `svn-status-rm' to "D", matching Dired of GNU Emacs?
   (define-key svn-status-mode-map "\C-d" 'svn-status-rm)
   (define-key svn-status-mode-map [?c] 'svn-status-commit-file)
   (define-key svn-status-mode-map [(meta ?c)] 'svn-status-cleanup)
@@ -604,6 +626,8 @@ A and B must be line-info's."
   (define-key svn-status-mode-map [?i] 'svn-status-info)
   (define-key svn-status-mode-map [?b] 'svn-status-blame)
   (define-key svn-status-mode-map [?=] 'svn-status-show-svn-diff)
+  ;; [(control ?=)] is unreachable on TTY, but you can use "*u" instead.
+  ;; (Is the "u" mnemonic for something?)
   (define-key svn-status-mode-map [(control ?=)] 'svn-status-show-svn-diff-for-marked-files)
   (define-key svn-status-mode-map [?~] 'svn-status-get-specific-revision)
   (define-key svn-status-mode-map [?E] 'svn-status-ediff-with-revision)
@@ -626,11 +650,17 @@ A and B must be line-info's."
   (define-key svn-status-mode-property-map [?e] 'svn-status-property-edit-one-entry)
   (define-key svn-status-mode-property-map [?i] 'svn-status-property-ignore-file)
   (define-key svn-status-mode-property-map [?I] 'svn-status-property-ignore-file-extension)
+  ;; XEmacs 21.4.15 on TTY (vt420) converts `C-i' to `TAB',
+  ;; which [(control ?i)] won't match.  Handle it separately.
+  ;; On GNU Emacs, the following two forms bind the same key,
+  ;; reducing clutter in `where-is'.
   (define-key svn-status-mode-property-map [(control ?i)] 'svn-status-property-edit-svn-ignore)
+  (define-key svn-status-mode-property-map (kbd "TAB") 'svn-status-property-edit-svn-ignore)
   (define-key svn-status-mode-property-map [?k] 'svn-status-property-set-keyword-list)
   (define-key svn-status-mode-property-map [?y] 'svn-status-property-set-eol-style)
   (define-key svn-status-mode-property-map [?p] 'svn-status-property-parse)
-  (define-key svn-status-mode-property-map [return] 'svn-status-select-line)
+  ;; TODO: Why is `svn-status-select-line' in `svn-status-mode-property-map'?
+  (define-key svn-status-mode-property-map (kbd "RET") 'svn-status-select-line)
   (define-key svn-status-mode-map [?P] svn-status-mode-property-map))
 
 
