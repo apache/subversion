@@ -299,6 +299,7 @@ AH_BOTTOM(
 #else
 #define _(x) (x)
 #define gettext(x) (x)
+#define dgettext(domain,x) (x)
 #endif
 )
 

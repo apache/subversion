@@ -135,7 +135,7 @@ print_command_info (const svn_opt_subcommand_desc_t *cmd,
       const apr_getopt_option_t *option;
       svn_boolean_t have_options = FALSE;
 
-      fprintf (stream, ": %s", _(cmd->help));
+      fprintf (stream, ": %s", dgettext (PACKAGE_NAME, cmd->help));
 
       /* Loop over all valid option codes attached to the subcommand */
       for (i = 0; i < SVN_OPT_MAX_OPTIONS; i++)
@@ -221,7 +221,8 @@ svn_opt_format_option (const char **string,
     opts = apr_pstrcat (pool, opts, " arg", NULL);
 
   if (doc)
-    opts = apr_psprintf (pool, "%-24s : %s", opts, _(opt->description));
+    opts = apr_psprintf (pool, "%-24s : %s", opts,
+                         dgettext( PACKAGE_NAME, opt->description));
 
   *string = opts;
 }
