@@ -510,7 +510,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     if not isinstance(target, gen_base.TargetExe):
       return []
 
-    nondeplibs = []
+    nondeplibs = ['setargv.obj']
     depends = [target] + self.get_win_depends(target, 1)
     for dep in depends:
       for lib in self.graph.get_sources(gen_base.DT_LINK, dep.name):
