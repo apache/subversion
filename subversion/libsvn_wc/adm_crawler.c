@@ -373,31 +373,6 @@ do_dir_replaces (void **newest_baton,
 }
 
 
-
-
-/* Remove stackframes from STACK until the top points to DESIRED_PATH.
-   Before stack frames are popped, call EDITOR->close_directory() on
-   any non-null batons. */
-static svn_error_t *
-do_dir_closures (svn_stringbuf_t *desired_path,
-                 struct stack_object **stack,
-                 const svn_delta_edit_fns_t *editor)
-{
-   while (svn_path_compare_paths (desired_path, (*stack)->path))
-    {
-      if ((*stack)->baton)
-        SVN_ERR (editor->close_directory ((*stack)->baton));
-      
-      pop_stack (stack);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-
-
-
 /* Obtain a window handler by invoking EDITOR->apply_txdelta on
    TB->editor_baton, then feed the handler windows from a txdelta
    stream expressing the difference between FILENAME's text-base and
@@ -1487,267 +1462,6 @@ crawl_dir (svn_stringbuf_t *path,
 
 
 
-/* The main logic of svn_wc_crawl_local_mods(), which is not much more
-   than a public wrapper for this routine.  See its docstring.
-
-   The differences between this routine and the public wrapper:
-
-      - assumes that CONDENSED_TARGETS has been sorted (critical!)
-      - takes an initialized LOCKED_DIRS hash for storing locked wc dirs.
-            
-   Temporary:  take a REVNUM_FN/REV_BATON so that we check that
-   directories are up-to-date when they have propchanges.
-*/
-static svn_error_t *
-crawl_local_mods (svn_stringbuf_t *parent_dir,
-                  apr_array_header_t *condensed_targets,
-                  const svn_delta_edit_fns_t *editor,
-                  void *edit_baton,
-                  const svn_ra_get_latest_revnum_func_t *revnum_fn,
-                  void *rev_baton,                          
-                  apr_hash_t *locked_dirs,
-                  apr_hash_t *affected_targets,
-                  apr_pool_t *pool)
-{
-  svn_error_t *err;
-  void *dir_baton = NULL;
-
-  /* A stack that will store all paths and dir_batons as we drive the
-     editor depth-first. */
-  struct stack_object *stack = NULL;
-
-  /* A cache of the youngest revision in the repository, in case we
-     discover any directory propchanges.  An invalid value means that
-     this crawl hasn't yet discovered the info.  */
-  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
-
-  /* No targets at all?  This means we are committing the entries in a
-     single directory. */
-  if (condensed_targets->nelts == 0)
-    {
-      /* Do a single crawl from parent_dir, that's it.  Parent_dir
-         will be automatically pushed to the empty stack, but not
-         removed.  This way we can examine the frame to see if there's
-         a root_dir_baton, and thus whether we need to call
-         close_edit(). */
-      err = crawl_dir (parent_dir,
-                       NULL,
-                       editor, 
-                       edit_baton,
-                       revnum_fn,
-                       rev_baton,
-                       &youngest_rev,
-                       FALSE,
-                       FALSE,
-                       &stack, 
-                       affected_targets, 
-                       locked_dirs,
-                       pool);
-
-      if (err)        
-        return svn_error_quick_wrap 
-          (err, "commit failed: while sending tree-delta to repos.");
-    }
-
-  /* This is the "multi-arg" commit processing branch.  That's not to
-     say that there is necessarily more than one commit target, but
-     whatever..." */
-  else 
-    {
-      svn_wc_entry_t *parent_entry, *tgt_entry;
-      int i;
-
-      /* To begin, put the grandaddy parent_dir at the base of the stack. */
-      SVN_ERR (svn_wc_entry (&parent_entry, parent_dir, pool));
-      push_stack (&stack, parent_dir, NULL, parent_entry, pool);
-
-      /* For each target in our CONDENSED_TARGETS list (which are
-         given as paths relative to the PARENT_DIR 'grandaddy
-         directory'), we pop or push stackframes until the stack is
-         pointing to the immediate parent of the target.  From there,
-         we can crawl the target for mods. */
-      for (i = 0; i < condensed_targets->nelts; i++)
-        {
-          svn_stringbuf_t *ptarget;
-          svn_stringbuf_t *remainder;
-          svn_stringbuf_t *target, *subparent;
-          svn_stringbuf_t *tgt_name =
-            (((svn_stringbuf_t **) condensed_targets->elts)[i]);
-
-          /* Get the full path of the target. */
-          target = svn_stringbuf_dup (parent_dir, pool);
-          svn_path_add_component (target, tgt_name);
-          
-          /* Examine top of stack and target, and get a nearer common
-             'subparent'. */
-
-          subparent = svn_path_get_longest_ancestor 
-            (target, stack->path, pool);
-          
-          /* If the current stack path is NOT equal to the subparent,
-             it must logically be a child of the subparent.  So... */
-          if (svn_path_compare_paths (stack->path, subparent))
-            {
-              /* ...close directories and remove stackframes until the
-                 stack reaches the common parent. */
-              err = do_dir_closures (subparent, &stack, editor);         
-              if (err)
-                return svn_error_quick_wrap 
-                  (err, "commit failed: error traversing working copy.");
-
-              /* Reset the dir_baton to NULL; it is of no use to our
-                 target (which is not a sibling, or a child of a
-                 sibling, to any previous targets we may have
-                 processed. */
-              dir_baton = NULL;
-            }
-
-          /* Push new stackframes to get down to the immediate parent
-             of the target PTARGET, which must also be a child of the
-             subparent. */
-          svn_path_split (target, &ptarget, NULL, pool);
-          remainder = svn_path_is_child (stack->path, ptarget, pool);
-          
-          /* If PTARGET is below the current stackframe, we have to
-             push a new stack frame for each directory level between
-             them. */
-          if (remainder)  
-            {
-              apr_array_header_t *components;
-              int j;
-              
-              /* Invalidate the dir_baton, because it no longer
-                 represents target's immediate parent directory. */
-              dir_baton = NULL;
-
-              /* split the remainder into path components. */
-              components = svn_path_decompose (remainder, pool);
-              
-              for (j = 0; j < components->nelts; j++)
-                {
-                  svn_stringbuf_t *new_path;
-                  svn_wc_entry_t *new_entry;
-                  svn_stringbuf_t *component = 
-                    (((svn_stringbuf_t **) components->elts)[j]);
-
-                  new_path = svn_stringbuf_dup (stack->path, pool);
-                  svn_path_add_component (new_path, component);
-                  err = svn_wc_entry (&new_entry, new_path, pool);
-                  if (err)
-                    return svn_error_quick_wrap 
-                      (err, "commit failed: looking for next commit target");
-
-                  push_stack (&stack, new_path, NULL, new_entry, pool);
-                }
-            }
-          
-
-          /* NOTE: At this point of processing, the topmost stackframe
-           * is GUARANTEED to be the parent of TARGET, regardless of
-           * whether TARGET is a file or a directory. 
-           */
-          
-
-          /* Get the entry for TARGET. */
-          err = svn_wc_entry (&tgt_entry, target, pool);
-          if (err)
-            return svn_error_quick_wrap 
-              (err, "commit failed: getting entry of commit target");
-
-          if (tgt_entry)
-            {
-              apr_pool_t *subpool = svn_pool_create (pool);
-              const char *basename = svn_path_basename (target->data, pool);
-              
-              /* If TARGET is a file, we check that file for mods.  No
-                 stackframes will be pushed or popped, since (the file's
-                 parent is already on the stack).  No batons will be
-                 closed at all (in case we need to commit more files in
-                 this parent). */
-              err = report_single_mod (basename,
-                                       tgt_entry,
-                                       &stack,
-                                       affected_targets,
-                                       locked_dirs,
-                                       editor,
-                                       edit_baton,
-                                       revnum_fn,
-                                       rev_baton,
-                                       &youngest_rev,
-                                       &dir_baton,
-                                       FALSE,
-                                       FALSE,
-                                       subpool,
-                                       pool);
-              
-              svn_pool_destroy (subpool);
-              
-              if (err)
-                return svn_error_quick_wrap 
-                  (err, "commit failed: while sending tree-delta.");
-            }
-          else
-            return svn_error_createf
-              (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
-               "svn_wc_crawl_local_mods: '%s' is not a versioned resource",
-               target->data);
-
-        } /*  -- End of main target loop -- */
-      
-      /* To finish, pop the stack all the way back to the grandaddy
-         parent_dir, and call close_dir() on all batons we find. */
-      err = do_dir_closures (parent_dir, &stack, editor);
-      if (err)
-        return svn_error_quick_wrap 
-          (err, "commit failed: finishing the crawl");
-
-      /* Don't forget to close the root-dir baton on the bottom
-         stackframe, if one exists. */
-      if (stack->baton)        
-        {
-          err = editor->close_directory (stack->baton);
-          if (err)
-            return svn_error_quick_wrap 
-              (err, "commit failed: closing editor's root directory");
-        }
-
-    }  /* End of multi-target section */
-
-
-  /* All crawls are completed, so affected_targets potentially has
-     some still-open file batons. Loop through affected_targets, and
-     fire off any postfix text-deltas that need to be sent. */
-  err = do_postfix_text_deltas (affected_targets, editor, pool);
-  if (err)
-    return svn_error_quick_wrap 
-      (err, "commit failed:  while sending postfix text-deltas.");
-
-  /* Have *any* edits been made at all?  We can tell by looking at the
-     foundation stackframe; it might still contain a root-dir baton.
-     If so, close the entire edit. */
-  if (stack->baton)
-    {
-      err = editor->close_edit (edit_baton);
-      if (err)
-        {
-          /* Commit failure, though not *necessarily* from the
-             repository.  close_edit() does a LOT of things, including
-             bumping all working copy revision numbers.  Again, see
-             earlier comment.
-
-             The interesting thing here is that the commit might have
-             succeeded in the repository, but the WC lib returned a
-             revision-bumping or wcprop error. */
-          return svn_error_quick_wrap
-            (err, "commit failed: while calling close_edit()");
-        }
-    }
-
-  /* The commit is complete, and revisions have been bumped. */  
-  return SVN_NO_ERROR;
-}
-
-
 /* Helper for report_revisions().
    
    Perform an atomic restoration of the file FILE_PATH; that is, copy
@@ -2128,82 +1842,6 @@ crawl_as_copy (svn_stringbuf_t *parent,
 /*** Public Interfaces ***/
 
 
-/* This is the main driver of the commit-editor.   It drives the
-   editor in postfix-text-delta style. */
-
-
-/* Fascinating note about the potential values of {parent_dir,
-   condensed_targets} coming into this function:
-
-   There are only four possibilities.
-
-    1. No targets.
-       parent = /home/sussman, targets = []
-
-    2. One file target.
-       parent = /home/sussman, targets = [foo.c]
-
-    3. One directory target.(*)
-       parent = /home/sussman, targets = [bar]
-
-    4. Two or more targets of any type.
-       parent = /home/sussman, targets = [foo.c, bar, baz, ...]
-
-   (*) While svn_path_condense_targets does not allow for the
-   possibility of a single directory target, the caller should have
-   used svn_wc_get_actual_target in this case, which would result in
-   the {parent_dir, NULL} combination possibly turning into a
-   {parent_dir's parent, parent_dir} combination. */
-svn_error_t *
-svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
-                         apr_array_header_t *condensed_targets,
-                         const svn_delta_edit_fns_t *editor,
-                         void *edit_baton,
-                         const svn_ra_get_latest_revnum_func_t *revnum_fn,
-                         void *rev_baton,
-                         apr_pool_t *pool)
-{
-  svn_error_t *err, *err2;
-
-  /* All the locally modified files which are waiting to be sent as
-     postfix-textdeltas. */
-  apr_hash_t *affected_targets = apr_hash_make (pool);
-
-  /* All the wc directories that are "locked" as we commit local
-     changes. */
-  apr_hash_t *locked_dirs = apr_hash_make (pool);
-
-  /* Sanity check. */
-  assert (parent_dir != NULL);
-  assert (condensed_targets != NULL);
-
-  /* Sort the condensed targets so that targets which share "common
-     sub-parent" directories are all lumped together.  This guarantees
-     a depth-first drive of the editor. */
-  qsort (condensed_targets->elts,
-         condensed_targets->nelts,
-         condensed_targets->elt_size,
-         svn_sort_compare_strings_as_paths);
-
-  /* Now pass the locked_dirs hash into the *real* routine that does
-     the work. */
-  err = crawl_local_mods (parent_dir,
-                          condensed_targets,
-                          editor, edit_baton,
-                          revnum_fn, rev_baton,
-                          locked_dirs,
-                          affected_targets,
-                          pool);
-
-  /* Cleanup after the commit. */
-  err2 = cleanup_commit (locked_dirs, affected_targets, pool);
-
-  /* Return the merged commit errors. */
-  return merge_commit_errors (err, err2);
-}
-
-
-
 /* This is the main driver of the working copy state "reporter", used
    for updates. */
 svn_error_t *
@@ -2370,6 +2008,7 @@ svn_wc_transmit_text_deltas (svn_stringbuf_t *path,
                              svn_wc_entry_t *entry,
                              const svn_delta_editor_t *editor,
                              void *file_baton,
+                             svn_stringbuf_t **tempfile,
                              apr_pool_t *pool)
 {
   svn_stringbuf_t *tmpf, *tmp_base;
@@ -2401,6 +2040,14 @@ svn_wc_transmit_text_deltas (svn_stringbuf_t *path,
   SVN_ERR (svn_wc_translated_file (&tmpf, path, pool));
   tmp_base = svn_wc__text_base_path (path, TRUE, pool);
   SVN_ERR (svn_io_copy_file (tmpf->data, tmp_base->data, FALSE, pool));
+
+  /* Alert the caller that we have created a temporary file that might
+     need to be cleaned up. */
+  if (tempfile)
+    *tempfile = tmp_base;
+
+  /* If the translation step above actually created a new file, delete
+     the old one. */
   if (tmpf != path)
     SVN_ERR (svn_io_remove_file (tmpf->data, pool));
       
@@ -2447,6 +2094,7 @@ svn_wc_transmit_prop_deltas (svn_stringbuf_t *path,
                              svn_node_kind_t kind,
                              const svn_delta_editor_t *editor,
                              void *baton,
+                             svn_stringbuf_t **tempfile,
                              apr_pool_t *pool)
 {
   int i;
@@ -2465,6 +2113,11 @@ svn_wc_transmit_prop_deltas (svn_stringbuf_t *path,
   SVN_ERR (svn_wc__prop_path (&props_tmp, path, 1, pool));
   SVN_ERR (svn_io_copy_file (props->data, props_tmp->data, FALSE, pool));
 
+  /* Alert the caller that we have created a temporary file that might
+     need to be cleaned up. */
+  if (tempfile)
+    *tempfile = props_tmp;
+
   /* Load all properties into hashes */
   SVN_ERR (svn_wc__load_prop_file (props_tmp->data, localprops, pool));
   SVN_ERR (svn_wc__load_prop_file (props_base->data, baseprops, pool));
@@ -2476,11 +2129,11 @@ svn_wc_transmit_prop_deltas (svn_stringbuf_t *path,
   /* Apply each local change to the baton */
   for (i = 0; i < propmods->nelts; i++)
     {
-      const svn_prop_t *mod = &APR_ARRAY_IDX (propmods, i, svn_prop_t);
+      const svn_prop_t *p = &APR_ARRAY_IDX (propmods, i, svn_prop_t);
       if (kind == svn_node_file)
-        SVN_ERR (editor->change_file_prop (baton, mod->name, mod->value, pool));
+        SVN_ERR (editor->change_file_prop (baton, p->name, p->value, pool));
       else
-        SVN_ERR (editor->change_dir_prop (baton, mod->name, mod->value, pool));
+        SVN_ERR (editor->change_dir_prop (baton, p->name, p->value, pool));
     }
 
   return SVN_NO_ERROR;

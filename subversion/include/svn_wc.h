@@ -604,30 +604,6 @@ svn_error_t *svn_wc_set_wc_prop (const char *path,
                                  apr_pool_t *pool);
 
 
-/* Crawl a working copy tree depth-first, describing all local mods to
-   EDIT_FNS/EDIT_BATON.  
-
-   Start the crawl at PARENT_DIR, and only report changes found within
-   CONDENSED_TARGETS.  As the name implies, the targets must be
-   non-overlapping children of the parent dir, either files or
-   directories. (Use svn_path_condense_targets to create the target
-   list).  If the target list is NULL or contains no elements, then a
-   single crawl will be made from PARENT_DIR.
-
-   REVNUM_FN/REV_BATON allows this routine to query the repository for
-   the latest revision.  It is used (temporarily) for checking that
-   directories are "up-to-date" when a dir-propchange is discovered.
-   We don't expect it to be here forever.  :-)  */
-svn_error_t *
-svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
-                         apr_array_header_t *condensed_targets,
-                         const svn_delta_edit_fns_t *edit_fns,
-                         void *edit_baton,
-                         const svn_ra_get_latest_revnum_func_t *revnum_fn,
-                         void *rev_baton,
-                         apr_pool_t *pool);
-
-
 /* Perform a commit crawl of a single working copy path (which is a
    PARENT directory plus a NAME'd entry in that directory) as if that
    path was scheduled to be added to the repository as a copy of
@@ -1186,23 +1162,34 @@ svn_error_t *svn_wc_locked (svn_boolean_t *locked,
 /* Given a PATH (with ENTRY and FILE_BATON) representing a file with
    local textual modifications, transmit those modifications using
    EDITOR, closing the FILE BATON after the textual mod has been
-   transmitted.  Use POOL for all allocations.  This in intended to be
-   suitable for use with both infix and postfix text-delta styled
-   editor drivers.  */
+   transmitted.  Use POOL for all allocations.  
+
+   If a temporary file remains after this function is finished, the
+   path to that file is returned in *TEMPFILE (so the caller can clean
+   this up if it wishes to do so).
+
+   This in intended to be suitable for use with both infix and postfix
+   text-delta styled editor drivers.  */
 svn_error_t *svn_wc_transmit_text_deltas (svn_stringbuf_t *path,
                                           svn_wc_entry_t *entry,
                                           const svn_delta_editor_t *editor,
                                           void *file_baton,
+                                          svn_stringbuf_t **tempfile,
                                           apr_pool_t *pool);
 
 
 /* Given a PATH of a given node KIND, transmit all local property
    modifications using the appropriate EDITOR method (in conjunction
-   with BATON).  Use POOL for all allocations.  */
+   with BATON).  Use POOL for all allocations.
+
+   If a temporary file remains after this function is finished, the
+   path to that file is returned in *TEMPFILE (so the caller can clean
+   this up if it wishes to do so).  */
 svn_error_t *svn_wc_transmit_prop_deltas (svn_stringbuf_t *path,
                                           svn_node_kind_t kind,
                                           const svn_delta_editor_t *editor,
                                           void *baton,
+                                          svn_stringbuf_t **tempfile,
                                           apr_pool_t *pool);
 
 

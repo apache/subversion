@@ -339,9 +339,13 @@ svn_client__condense_commit_items (svn_stringbuf_t **base_url,
 
    NOTIFY_FUNC/BATON will be called as the commit progresses, as a way
    of describing actions to the application layer (if non NULL).
+
    DISPLAY_DIR is used to send shorter, relative paths to the
    notify_func (it's subtracted from the front of absolute paths.)
- */
+
+   If the caller wants to keep track of any outstanding temporary
+   files left after the transmission of text and property mods,
+   *TEMPFILES is the place to look.  */
 svn_error_t *
 svn_client__do_commit (svn_stringbuf_t *base_url,
                        apr_array_header_t *commit_items,
@@ -350,6 +354,7 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
                        svn_wc_notify_func_t notify_func,
                        void *notify_baton,
                        svn_stringbuf_t *display_dir,
+                       apr_hash_t **tempfiles,
                        apr_pool_t *pool);
 
                

@@ -601,6 +601,7 @@ do_item_commit (const char *url,
                 apr_array_header_t *db_stack,
                 int *stack_ptr,
                 apr_array_header_t *file_mods,
+                apr_hash_t *tempfiles,
                 svn_wc_notify_func_t notify_func,
                 void *notify_baton,
                 svn_stringbuf_t *display_dir,
@@ -669,6 +670,8 @@ do_item_commit (const char *url,
   /* Now handle property mods. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
     {
+      svn_stringbuf_t *tempfile;
+
       if (kind == svn_node_file)
         {
           if (! file_baton)
@@ -687,7 +690,10 @@ do_item_commit (const char *url,
 
       SVN_ERR (svn_wc_transmit_prop_deltas 
                (item->path, kind, editor,
-                (kind == svn_node_dir) ? dir_baton : file_baton, pool));
+                (kind == svn_node_dir) ? dir_baton : file_baton, 
+                &tempfile, pool));
+      if (tempfile && tempfiles)
+        apr_hash_set (tempfiles, tempfile->data, tempfile->len, (void *)1);
     }
 
   /* Finally, handle text mods (in that we need to open a file if it
@@ -736,6 +742,7 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
                        svn_wc_notify_func_t notify_func,
                        void *notify_baton,
                        svn_stringbuf_t *display_dir,
+                       apr_hash_t **tempfiles,
                        apr_pool_t *pool)
 {
   apr_array_header_t *db_stack;
@@ -754,6 +761,11 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
                                test_editor, test_edit_baton, pool);
   }
 #endif /* SVN_CLIENT_COMMIT_DEBUG */
+
+  /* If the caller wants us to track temporary file creation, create a
+     hash to store those paths in. */
+  if (tempfiles)
+    *tempfiles = apr_hash_make (pool);
 
   /* We start by opening the root. */
   SVN_ERR (init_stack (&db_stack, &stack_ptr, editor, edit_baton, pool));
@@ -831,7 +843,7 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
 
       /*** Step D - Commit the item.  ***/
       SVN_ERR (do_item_commit (item_url->data, item, editor,
-                               db_stack, &stack_ptr, file_mods, 
+                               db_stack, &stack_ptr, file_mods, *tempfiles,
                                notify_func, notify_baton, display_dir, pool));
 
       /* Save our state for the next iteration. */
@@ -856,12 +868,16 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
         = ((struct file_mod_t *) file_mods->elts) + i;
       svn_client_commit_item_t *item = mod->item;
       void *file_baton = mod->file_baton;
-      
+      svn_stringbuf_t *tempfile;
+
       if (notify_func)
         (*notify_func) (notify_baton, svn_wc_notify_commit_postfix_txdelta, 
                         item->path->data);
-      SVN_ERR (svn_wc_transmit_text_deltas 
-               (item->path, item->entry, editor, file_baton, pool));
+      SVN_ERR (svn_wc_transmit_text_deltas (item->path, item->entry, 
+                                            editor, file_baton, 
+                                            &tempfile, pool));
+      if (tempfile && *tempfiles)
+        apr_hash_set (*tempfiles, tempfile->data, tempfile->len, (void *)1);
     }
 
   /* Close the edit. */
