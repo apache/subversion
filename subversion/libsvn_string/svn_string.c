@@ -89,7 +89,6 @@ svn_string_create (char *cstring, ap_pool_t *pool)
   new_string->data = NULL;
   new_string->len = 0;
   new_string->blocksize = 0;
-
   svn_string_appendbytes (new_string, cstring, strlen(cstring), pool);
 
   return new_string;
@@ -121,9 +120,9 @@ svn_string_ncreate (char *bytes, size_t size, ap_pool_t *pool)
 void
 svn_string_setnull (svn_string_t *str)
 {
-  free (str->data);
   str->data = NULL;
   str->len = 0;
+  str->blocksize = 0;
 }
 
 
@@ -132,8 +131,6 @@ svn_string_setnull (svn_string_t *str)
 void 
 svn_string_fillchar (svn_string_t *str, unsigned char c)
 {
-  size_t i;
-  
   /* safety check */
   if (str->len > str->blocksize)
     str->len = str->blocksize;
@@ -144,11 +141,7 @@ svn_string_fillchar (svn_string_t *str, unsigned char c)
     }
   else
     { 
-      /* not using memset(), because it wants an int */
-      for (i = 0; i < str->len; i++)
-        {
-          str->data[i] = c;
-        }
+      memset (str->data,  (int) c, str->len);
     }
 }
 
