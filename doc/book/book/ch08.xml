@@ -690,7 +690,6 @@ $ svn checkout file:///tmp/repos/test test
 A  test/a
 A  test/b
 ^C
-subversion/clients/cmdline/main.c:550: (apr_err=200015)
 svn: The operation was interrupted
 svn: caught SIGINT
 
@@ -698,7 +697,6 @@ $ svn checkout file:///tmp/repos/test test
 A  test/c
 A  test/d
 ^C
-subversion/clients/cmdline/main.c:550: (apr_err=200015)
 svn: The operation was interrupted
 svn: caught SIGINT
 
@@ -874,7 +872,6 @@ Committed revision 5.
 
           <screen>
 $ svn commit --file file_under_vc.txt foo.c
-subversion/clients/cmdline/main.c:862: (apr_err=205004)
 svn: The log message file is under version control
 svn: Log message file is a versioned file; use `--force-log' to override.
 
@@ -1149,10 +1146,8 @@ Committed revision 15.
 
           <screen>
 $ svn delete over-there 
-subversion/clients/cmdline/delete-cmd.c:47: (apr_err=195006)
 svn: Attempting restricted operation for modified resource
 svn: Use --force to override this restriction
-subversion/libsvn_client/delete.c:90: (apr_err=195006)
 svn: 'over-there' has local modifications
 
 $ svn delete --force over-there 
@@ -3231,10 +3226,8 @@ $ mv repos newlocation
 $ cd test/
 
 $ svn update
-subversion/libsvn_ra_local/ra_plugin.c:225: (apr_err=180001)
 svn: Couldn't open a repository.
 svn: Unable to open an ra_local session to URL
-subversion/libsvn_ra_local/split_url.c:105: (apr_err=180001)
 svn: Unable to open repository 'file:///tmp/repos'
 
 $ svn switch --relocate file:///tmp/repos file:///tmp/newlocation .
