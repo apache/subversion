@@ -28,6 +28,7 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_types.h"
 #include "cl.h"
 
 
@@ -50,11 +51,26 @@ svn_cl__diff (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
+      enum svn_node_kind kind;
 
-      err = svn_cl__print_file_diff (target, pool);
+      err = svn_io_check_path (target, &kind, pool);
+      if (err) return err;
+
+      switch (kind) 
+        {
+        case svn_node_file:
+          err = svn_cl__print_file_diff (target, pool);
+          break;
+        case svn_node_dir:
+          err = svn_cl__print_dir_diff (target, pool);
+          break;
+        default:
+          break;
+        }
+
       if (err) return err;
     }
-
+  
   return SVN_NO_ERROR;
 }
 
