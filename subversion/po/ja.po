@@ -61,12 +61,12 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-08-18 19:54+0900\n"
-"PO-Revision-Date: 2004-08-18 19:06+0900\n"
+"POT-Creation-Date: 2004-08-21 12:34+0900\n"
+"PO-Revision-Date: 2004-08-21 12:29+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #: clients/cmdline/blame-cmd.c:162
@@ -319,10 +319,11 @@ msgstr "処理の実行を強制します"
 msgid "force validity of log message source"
 msgstr "ログメッセージを含むファイルの正当性を強制します"
 
-# * Description for 'svn{,admin,look} --help'.
+# * Description for 'svn{,admin,dumpfilter,look} --help'.
 # * 29 one-byte characters are displayed on the left.
 #: clients/cmdline/main.c:67 clients/cmdline/main.c:68 svnadmin/main.c:199
-#: svnadmin/main.c:202 svnlook/main.c:89 svnlook/main.c:92
+#: svnadmin/main.c:202 svndumpfilter/main.c:699 svndumpfilter/main.c:702
+#: svnlook/main.c:89 svnlook/main.c:92
 msgid "show help on a subcommand"
 msgstr "サブコマンドに関するヘルプを表示します"
 
@@ -4860,7 +4861,7 @@ msgstr ""
 "このクライアントは、作業コピー '%s' を扱うには古すぎます。もっと新しい "
 "Subversion クライアントをダウンロードしてください。"
 
-#: libsvn_wc/questions.c:348
+#: libsvn_wc/questions.c:351
 #, c-format
 msgid ""
 "Checksum mismatch indicates corrupt text base: '%s'\n"
@@ -4970,7 +4971,7 @@ msgstr "'%s' には系統情報がありません"
 msgid "Unable to make any directories"
 msgstr "ディレクトリを作れません"
 
-#: svnadmin/main.c:72
+#: svnadmin/main.c:72 svndumpfilter/main.c:62
 msgid "Can't open stdio file"
 msgstr "標準入出力のファイルを開けません"
 
@@ -4983,9 +4984,10 @@ msgstr "リポジトリの引数が必要です"
 msgid "'%s' is an URL when it should be a path"
 msgstr "'%s' は URL です。そこはパスで指定するべきです"
 
-# * Description for 'svn{admin,look,version} --revision'.
+# * Description for 'svn{admin,dumpfilter,look,version} --revision'.
 # * 29 one-byte characters are displayed on the left.
-#: svnadmin/main.c:205 svnlook/main.c:95 svnversion/main.c:201
+#: svnadmin/main.c:205 svndumpfilter/main.c:705 svnlook/main.c:95
+#: svnversion/main.c:201
 msgid "show version information"
 msgstr "バージョン情報を表示します"
 
@@ -5328,7 +5330,7 @@ msgstr "リビジョンの指定は 1 つだけしかできません"
 msgid "Exactly one file argument required"
 msgstr "ファイルの引数が 1 つだけ必要です"
 
-#: svnadmin/main.c:1065 svnlook/main.c:1939
+#: svnadmin/main.c:1065 svndumpfilter/main.c:1103 svnlook/main.c:1939
 msgid "subcommand argument required\n"
 msgstr "サブコマンドに引数が必要です\n"
 
@@ -5341,6 +5343,20 @@ msgstr ""
 "サブコマンド '%s' にはオプション '%s' をつけられません。\n"
 "使用方法を知りたいときは 'svnadmin help %s' と打ってください。\n"
 
+#: svndumpfilter/main.c:363
+#, c-format
+msgid "Invalid copy source path '%s'"
+msgstr "コピー元のパス '%s' が不正です。"
+
+#: svndumpfilter/main.c:414
+msgid "Node with dropped parent sneaked in"
+msgstr "親が取り除かれたノードが入ってしまっています"
+
+# * Each empty revision only contains date and this log message.
+#: svndumpfilter/main.c:586
+msgid "This is an empty revision for padding."
+msgstr "単に番号が飛ばないようにするための空のリビジョンです。"
+
 #: svndumpfilter/main.c:641
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
@@ -5351,35 +5367,126 @@ msgstr "リビジョン %ld は %ld としてコミットされました。\n"
 msgid "Revision %ld skipped.\n"
 msgstr "リビジョン %ld は飛ばされました。\n"
 
-#: svndumpfilter/main.c:883
+# * Description for 'svndumpfilter --quiet'.
+# * 29 one-byte characters are displayed on the left.
+#: svndumpfilter/main.c:707
+msgid "Do not display filtering statistics."
+msgstr "フィルタリングを行うときに統計を表示しません。"
+
+# * Description for 'svndumpfilter --drop-empty-revs'.
+# * 29 one-byte characters are displayed on the left.
+#: svndumpfilter/main.c:709
+msgid "Remove revisions emptied by filtering."
+msgstr ""
+"フィルタをかけたために空になったリビジョンを取り除\n"
+"                             きます。"
+
+# * Description for 'svndumpfilter --renumber-revs'.
+# * 29 one-byte characters are displayed on the left.
+#: svndumpfilter/main.c:711
+msgid "Renumber revisions left after filtering."
+msgstr ""
+"フィルタをかけた後に残ったリビジョンに番号をふりな\n"
+"                             おします。"
+
+# * Description for 'svndumpfilter --preserve-revprops'.
+# * 29 one-byte characters are displayed on the left.
+#: svndumpfilter/main.c:713
+msgid "Don't filter revision properties."
+msgstr "リビジョン属性にはフィルタをかけません。"
+
+#: svndumpfilter/main.c:724
+msgid ""
+"Filter out nodes with given prefixes from dumpstream.\n"
+"usage: svndumpfilter exclude PATH_PREFIX...\n"
+msgstr ""
+"指定されたプレフィックスをもつノードをダンプストリームから取り除きます。\n"
+"使用方法: svndumpfilter exclude <パスのプレフィックス>...\n"
+
+#: svndumpfilter/main.c:730
+msgid ""
+"Filter out nodes without given prefixes from dumpstream.\n"
+"usage: svndumpfilter include PATH_PREFIX...\n"
+msgstr ""
+"指定されたプレフィックスをもたないノードをダンプストリームから取り除きま"
+"す。\n"
+"使用方法: svndumpfilter include <パスのプレフィックス>...\n"
+
+#: svndumpfilter/main.c:736
+msgid ""
+"Describe the usage of this program or its subcommands.\n"
+"usage: svndumpfilter help [SUBCOMMAND...]\n"
+msgstr ""
+"このプログラムやそのサブコマンドの使用方法を説明します。\n"
+"使用方法: svndumpfilter help [<サブコマンド>...]\n"
+
+#: svndumpfilter/main.c:799
+msgid ""
+"general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
+"Type \"svndumpfilter help <subcommand>\" for help on a specific subcommand.\n"
+"\n"
+"Available subcommands:\n"
+msgstr ""
+"一般的な使用方法: svndumpfilter <サブコマンド> [<引数やオプション> ...]\n"
+"特定のサブコマンドに関するヘルプを読みたいときは、\n"
+"\"svndumpfilter help <サブコマンド>\" と打ってください。\n"
+"\n"
+"利用可能なサブコマンド:\n"
+
+#: svndumpfilter/main.c:854
+msgid "Excluding (and dropping empty revisions for) prefixes:\n"
+msgstr ""
+"次のプレフィックスをもつノードを取り除きます (空になったリビジョンは落としま"
+"す):\n"
+
+#: svndumpfilter/main.c:856
+msgid "Excluding prefixes:\n"
+msgstr "次のプレフィックスをもつノードを取り除きます:\n"
+
+#: svndumpfilter/main.c:858
+msgid "Including (and dropping empty revisions for) prefixes:\n"
+msgstr ""
+"次のプレフィックスをもつノードを残します (空になったリビジョンは落としま"
+"す):\n"
+
+#: svndumpfilter/main.c:860
+msgid "Including prefixes:\n"
+msgstr "次のプレフィックスをもつノードを残します:\n"
+
+#: svndumpfilter/main.c:887
 #, c-format
 msgid ""
 "Dropped %d revision(s).\n"
 "\n"
 msgstr ""
-"%d 個のリビジョンが抜け落ちました。\n"
+"%d 個のリビジョンを取り除きました。\n"
 "\n"
 
-#: svndumpfilter/main.c:889
+#: svndumpfilter/main.c:893
 msgid "Revisions renumbered as follows:\n"
 msgstr "以下のようにリビジョン番号がふりなおされました:\n"
 
-#: svndumpfilter/main.c:917
+#: svndumpfilter/main.c:921
 #, c-format
 msgid "   %ld => (dropped)\n"
-msgstr "   %ld => (抜け落ちました)\n"
+msgstr "   %ld => (取り除かれました)\n"
 
-#: svndumpfilter/main.c:921
+#: svndumpfilter/main.c:925
 #, c-format
 msgid "   %ld => %ld\n"
 msgstr "   %ld => %ld\n"
 
-#: svndumpfilter/main.c:932
+#: svndumpfilter/main.c:936
 #, c-format
 msgid "Dropped %d node(s):\n"
-msgstr "%d 個のノードが抜け落ちました:\n"
+msgstr "%d 個のノードを取り除きました:\n"
 
-#: svndumpfilter/main.c:1140
+#: svndumpfilter/main.c:1125
+#, c-format
+msgid "unknown command: '%s'\n"
+msgstr "未知のコマンドです: '%s'\n"
+
+#: svndumpfilter/main.c:1144
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
@@ -5387,7 +5494,7 @@ msgstr ""
 "\n"
 "プレフィックスが与えられていません。\n"
 
-#: svndumpfilter/main.c:1183
+#: svndumpfilter/main.c:1187
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -5804,14 +5911,14 @@ msgstr "エクスポートされたものです\n"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
 
-#~ msgid "Impossibly long relative URL"
-#~ msgstr "相対 URL が長すぎます"
-
-#~ msgid "Can't create directory '%s'"
-#~ msgstr "ディレクトリ '%s' を作成できません"
+#~ msgid "No commit for revision 0.%s"
+#~ msgstr "リビジョン 0 のコミットはありません。%s"
 
 #~ msgid "Changed paths:%s"
 #~ msgstr "変更のあったパス:%s"
 
-#~ msgid "No commit for revision 0.%s"
-#~ msgstr "リビジョン 0 のコミットはありません。%s"
+#~ msgid "Can't create directory '%s'"
+#~ msgstr "ディレクトリ '%s' を作成できません"
+
+#~ msgid "Impossibly long relative URL"
+#~ msgstr "相対 URL が長すぎます"
