@@ -57,11 +57,12 @@ typedef struct svn_ra_plugin_t
 
 
   /* Return an *EDITOR and *EDIT_BATON capable of transmitting a
-     commit to the repository.  Also, ra's editor must guarantee that
-     if close_edit() returns successfully, that *NEW_REVISION will be
-     set to the repository's new revision number resulting from the
-     commit. */
+     commit to the repository beginning at absolute repository path
+     ROOT_PATH.  Also, ra's editor must guarantee that if close_edit()
+     returns successfully, that *NEW_REVISION will be set to the
+     repository's new revision number resulting from the commit. */
   svn_error_t *(*get_commit_editor) (void *session_baton,
+                                     svn_string_t *root_path,
                                      const svn_delta_edit_fns_t **editor,
                                      void **edit_baton,
                                      svn_revnum_t *new_revision);
@@ -78,19 +79,27 @@ typedef struct svn_ra_plugin_t
 
   /* Ask the network layer to update a working copy from URL.
 
-     The network layer returns a REPORT_EDITOR and REPORT_BATON to the
-     client; the client then uses it to transmit an empty tree-delta
-     to the repository which describes all revision numbers in the
-     working copy.
+     The client library provides a ROOT_PATH (absolute path within the
+     repository) that represents to the topmost working copy subdir
+     that will be updated.  The client also provides an UPDATE_EDITOR
+     (and baton) that can be used to modify the working copy.
+
+     The network layer then returns a REPORT_EDITOR and REPORT_BATON
+     to the client; the client first uses this to transmit an empty
+     tree-delta to the repository which describes all revision numbers
+     in the working copy.
 
      There is one special property of the REPORT_EDITOR: its
      close_edit() function.  When the client calls close_edit(), the
      network layer then talks to the repository and proceeds to use
-     UPDATE_EDITOR and UPDATE_BATON to patch the working copy!
+     UPDATE_EDITOR and UPDATE_BATON to patch the working copy.
 
      When the update_editor->close_edit() returns, then
-     report_editor->close_edit() returns too.  */
+     report_editor->close_edit() returns too.  Therefore the return
+     value of report_editor->close_edit() contains the result of the
+     entire update.  */
   svn_error_t *(*do_update) (void *session_baton,
+                             svn_string_t *root_path,
                              const svn_delta_edit_fns_t **report_editor,
                              void **report_baton,
                              const svn_delta_edit_fns_t *update_editor,
