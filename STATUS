@@ -44,7 +44,7 @@ Candidate changes:
     Justification:
       Completely breaks Perl bindings for some versions of Perl.
     Votes:
-      +1: breser
+      +1: breser, clkao
 
   * r11394
     Fix javahl bindings not using the default config directory if nothing
