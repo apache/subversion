@@ -3,7 +3,7 @@
 # USAGE: get-neon-ver.sh NEON-DIRECTORY
 #
 
-conf=$1/configure
+conf=$1/macros/neon.m4
 
 major=`sed -n '/NEON_VERSION_MAJOR=/s/.*=//p' $conf`
 

@@ -112,7 +112,7 @@ my_basename(const char *url, apr_pool_t *pool)
 }
 
 static void *
-start_resource (void *userdata, const char *url)
+create_private(void *userdata, const char *url)
 {
   fetch_ctx_t *fc = userdata;
   resource_t *r = apr_pcalloc(fc->pool, sizeof(*r));
@@ -132,11 +132,13 @@ start_resource (void *userdata, const char *url)
 }
 
 static void
-end_resource (void *userdata, void *resource, const char *status_line,
-              const http_status *status, const char *description)
+pfind_results (void *userdata, const char *uri, const dav_prop_result_set *rset)
 {
   fetch_ctx_t *fc = userdata;
-  resource_t *r = resource;
+  resource_t *r = dav_propset_private(rset);
+
+  /* ### should use dav_propset_status(rset) to determine whether the
+   * ### PROPFIND failed for the properties we're interested in. */
 
   if (r->is_collection)
     {
@@ -214,11 +216,7 @@ start_element (void *userdata, const struct hip_xml_elm *elm,
                const char **atts)
 {
   fetch_ctx_t *fc = userdata;
-  resource_t *r = dav_propfind_get_current_resource(fc->dph);
-
-  /* ### need logic to determine whether this (property) element is in
-     ### a successful propstat, or a failing one...
-     ### waiting on Joe for feedback */
+  resource_t *r = dav_propfind_current_private(fc->dph);
 
   switch (elm->id)
     {
@@ -242,7 +240,7 @@ static int
 end_element (void *userdata, const struct hip_xml_elm *elm, const char *cdata)
 {
   fetch_ctx_t *fc = userdata;
-  resource_t *r = dav_propfind_get_current_resource(fc->dph);
+  resource_t *r = dav_propfind_current_private(fc->dph);
 
   if (elm->id == DAV_ELM_href)
     {
@@ -271,13 +269,14 @@ fetch_dirents (svn_ra_session_t *ras,
   fc->cur_collection = url;
   fc->dph = dav_propfind_create(ras->sess, url, DAV_DEPTH_ONE);
 
-  dav_propfind_set_resource_handlers(fc->dph, start_resource, end_resource);
+  dav_propfind_set_complex(fc->dph, fetch_props, create_private, fc);
+
   hip = dav_propfind_get_parser(fc->dph);
 
   hip_xml_push_handler(hip, fetch_elems,
                        validate_element, start_element, end_element, fc);
 
-  rv = dav_propfind_named(fc->dph, fetch_props, fc);
+  rv = dav_propfind_named(fc->dph, pfind_results, fc);
 
   dav_propfind_destroy(fc->dph);
 

@@ -86,7 +86,7 @@ AC_SUBST(SVN_EXPAT_LIBS)
 dnl Neon
 SVN_NEON_INCLUDES=-'I$(top_srcdir)/neon/src'
 AC_SUBST(SVN_NEON_INCLUDES)
-SVN_NEON_LIBS='$(top_builddir)/neon/libneon.la'
+SVN_NEON_LIBS='$(top_builddir)/neon/src/libneon.la'
 AC_SUBST(SVN_NEON_LIBS)
 
 dnl tests
