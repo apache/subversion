@@ -67,7 +67,8 @@ svn_io_check_path (const char *path,
   /* Not using svn_io_stat() here because we want to check the
      apr_err return anyway. */
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  apr_err = apr_stat (&finfo, path_native, APR_FINFO_MIN, pool);
+  apr_err = apr_stat (&finfo, path_native, 
+                      (APR_FINFO_MIN | APR_FINFO_LINK), pool);
 
   if (apr_err && !APR_STATUS_IS_ENOENT(apr_err))
     return svn_error_createf
