@@ -1,0 +1,73 @@
+
+                                DAV SETUP
+                                =========
+                                   or, 
+   how Subversion developers can set up Apache/mod_dav/mod_dav_svn locally.
+
+
+1.  Checkout the "httpd-2.0" cvs module from apache.org.  Put it
+    whereever you wish;  it's an independent project.
+
+      cvs -d :pserver:anoncvs@apache.org:/home/cvspublic login
+         (password 'anoncvs')
+
+      cvs -d :pserver:anoncvs@apache.org:/home/cvspublic co httpd-2.0
+
+2.  cd httpd-2.0/srclib/, and checkout the "apr" and "apr-util"
+    modules into this directory:
+
+      cvs -d :pserver:anoncvs@apache.org:/home/cvspublic co apr
+      cvs -d :pserver:anoncvs@apache.org:/home/cvspublic co apr-util
+
+3.  At the top of the httpd-2.0 tree, run "buildconf".
+
+4.  ./configure --enable-dav --enable-so --prefix=/usr/local/apache2
+
+     The first arg says to build mod_dav.
+     The second arg says to enable (and build everything) as shared libs.
+     The third arg is where you will ultimately install apache.
+
+5.  make && make install
+
+6.  Go back into your subversion working copy and run ./autogen.sh if
+    you need to.  Then run
+ 
+      ./configure --with-apxs=/usr/local/apache2/bin/apxs
+      make
+
+    This argument tells subversion to build mod_dav_svn, and where to
+    find the required information to do so.
+
+    Note:  do *not* configure subversion with "--disable-shared"!
+    mod_dav_svn *must* be built as a shared library.
+
+7.  After compiling all of subversion as shared libs, enter these
+    directories one at a time and run `make install`:
+
+           libsvn_fs
+           libsvn_subr
+           libsvn_delta
+           mod_dav_svn
+
+    This will copy the shared libraries into /usr/local/lib.
+
+8.  cd into /usr/local/apache2, or wherever your "httpd.conf" file was
+    installed, and add these lines to the *bottom* of httpd.conf:
+
+          <Location /svn/repos>
+             dav svn
+             svn /absolute/path/to/repository
+          </Location>
+
+9.  Now go ahead and fire up apache 2.0, using the 'apachectl' script,
+    whereever it was installed:
+
+           ./apachectl start
+
+10. Finally, try doing a network checkout from the repository:
+
+          svn co http://localhost/svn/repos -d wc
+
+
+There now, wasn't that easy?  :)
+
