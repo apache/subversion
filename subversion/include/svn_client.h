@@ -266,7 +266,7 @@ typedef svn_error_t *
  */
 typedef struct svn_client_ctx_t
 {
-  /** main auth baton. */
+  /** main authentication baton. */
   svn_auth_baton_t *auth_baton;
 
   /** prompt callback function */
@@ -317,9 +317,7 @@ typedef struct svn_client_ctx_t
 /** @} */
 
 
-/** Check out a working copy from the repository.
- *
- * Checkout a working copy of @a url at @a revision, using @a path as 
+/** Checkout a working copy of @a url at @a revision, using @a path as 
  * the root directory of the newly checked out working copy, and 
  * authenticating with the authentication baton cached in @a ctx.
  *
@@ -342,9 +340,7 @@ svn_client_checkout (const char *URL,
                      apr_pool_t *pool);
 
 
-/** Update a working copy.
- *
- * Update working tree @a path to @a revision, authenticating with
+/** Update working tree @a path to @a revision, authenticating with
  * the authentication baton cached in @a ctx.
  *
  * @a revision must be of kind @c svn_client_revision_number,
@@ -366,9 +362,7 @@ svn_client_update (const char *path,
                    apr_pool_t *pool);
 
 
-/** Switch a working copy to another URL.
- *
- * Switch working tree @a path to @a url at @a revision, authenticating 
+/** Switch working tree @a path to @a url at @a revision, authenticating 
  * with the authentication baton cached in @a ctx.
  *
  * Summary of purpose: this is normally used to switch a working
@@ -395,9 +389,8 @@ svn_client_switch (const char *path,
                    apr_pool_t *pool);
 
 
-/** Schedule a working copy path for addition to the repository.
+/** Schedule a working copy @a path for addition to the repository.
  *
- * Schedule a working copy @a path for addition to the repository.
  * @a path's parent must be under revision control already, but @a 
  * path is not.  If @a recursive is set, then assuming @a path is a 
  * directory, all of its contents will be scheduled for addition as 
@@ -485,9 +478,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                    apr_pool_t *pool);
 
 
-/** Import a file or directory into a repository.
- *
- * Import file or directory @a path into repository directory @a url at
+/** Import file or directory @a path into repository directory @a url at
  * head, authenticating with the authentication baton cached in @a ctx, 
  * and using @a ctx->log_msg_func/@ctx->log_msg_baton to get a log message 
  * for the (implied) commit.  Set @a *commit_info to the results of the 
@@ -538,9 +529,7 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
                                 apr_pool_t *pool);
 
 
-/** Commit a file or directory into a repository.
- *
- * Commit file or directory @a path into repository, authenticating with
+/** Commit file or directory @a path into repository, authenticating with
  * the authentication baton cached in @a ctx, and using 
  * @a ctx->log_msg_func/@a ctx->log_msg_baton to obtain the log message. 
  * Set @a *commit_info to the results of the commit, allocated in @a pool.
@@ -671,9 +660,7 @@ svn_client_log (const apr_array_header_t *targets,
                 apr_pool_t *pool);
 
 
-/** Produce a diff between two paths and revisions.
- *
- * Produce diff output which describes the delta between
+/** Produce diff output which describes the delta between
  * @a path1/@a revision1 and @a path2/@a revision2.  Print the output 
  * of the diff to @a outfile, and any errors to @a errfile.  @a path1 
  * and @a path2 can be either working-copy paths or URLs.
@@ -712,9 +699,7 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               apr_pool_t *pool);
 
 
-/** Merge changes into a working copy.
- *
- * Merge changes from @a url1/@a revision1 to @a url2/@a revision2 into 
+/** Merge changes from @a url1/@a revision1 to @a url2/@a revision2 into 
  * the working-copy path @a target_wcpath.
  *
  * By "merging", we mean:  apply file differences using
@@ -758,9 +743,7 @@ svn_client_merge (const char *URL1,
                   apr_pool_t *pool);
 
 
-/** Clean up a working copy. 
- *
- * Recursively cleanup a working copy directory @a dir, finishing any
+/** Recursively cleanup a working copy directory @a dir, finishing any
  * incomplete operations, removing lockfiles, etc.
  */
 svn_error_t *
@@ -768,9 +751,7 @@ svn_client_cleanup (const char *dir,
                     apr_pool_t *pool);
 
 
-/** Revert any changes to a working copy path.
- *
- * Restore the pristine version of a working copy @a path, effectively
+/** Restore the pristine version of a working copy @a path, effectively
  * undoing any local mods.  If @a path is a directory, and @a recursive 
  * is @a true, this will be a recursive operation.
  *
@@ -785,9 +766,7 @@ svn_client_revert (const char *path,
                    apr_pool_t *pool);
 
 
-/** Resolve the 'conflicted' state from a working copy path.
- *
- * Remove the 'conflicted' state on a working copy @a path.  This will
+/** Remove the 'conflicted' state on a working copy @a path.  This will
  * not semantically resolve conflicts;  it just allows @a path to be
  * committed in the future.  The implementation details are opaque.
  * If @a recursive is set, recurse below @a path, looking for conflicts 
@@ -805,8 +784,6 @@ svn_client_resolve (const char *path,
 
 
 /** Copy @a src_path to @a dst_path.
- *
- * Copy @a src_path to @a dst_path.
  *
  * @a src_path must be a file or directory under version control, or the
  * @a url of a versioned item in the repository.  If @a src_path is a @a 
@@ -849,8 +826,6 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
 
 
 /** Move @a src_path to @a dst_path.
- *
- * Move @a src_path to @a dst_path.
  *
  * @a src_path must be a file or directory under version control, or the
  * URL of a versioned item in the repository.  
@@ -921,9 +896,7 @@ svn_client_move (svn_client_commit_info_t **commit_info,
  */
 
 
-/** Set a property on a target.
- *
- * Set @a propname to @a propval on @a target.  If @a recurse is true, 
+/** Set @a propname to @a propval on @a target.  If @a recurse is true, 
  * then @a propname will be set on recursively on @a target and all 
  * children.  If @a recurse is false, and @a target is a directory, @a 
  * propname will be set on _only_ @a target.
@@ -943,9 +916,7 @@ svn_client_propset (const char *propname,
                     svn_boolean_t recurse,
                     apr_pool_t *pool);
 
-/** Set a revision property on a URL in a repository.
- *
- * Set @a propname to @a propval on revision @a revision in the repository
+/** Set @a propname to @a propval on revision @a revision in the repository
  * represented by @a url.  Use the authentication baton in @a ctx for 
  * authentication, and @a pool for all memory allocation.  Return the actual 
  * rev affected in @a *set_rev.  A @a propval of @c NULL will delete the 
@@ -1082,9 +1053,7 @@ svn_client_revprop_list (apr_hash_t **props,
 /** @} */
 
 
-/** Export the contents of a repository url or working copy directory.
- *
- * Export the contents of either a subversion repository or a subversion 
+/** Export the contents of either a subversion repository or a subversion 
  * working copy into a 'clean' directory (meaning a directory with no 
  * administrative directories).
  *
@@ -1140,9 +1109,7 @@ svn_client_ls (apr_hash_t **dirents,
                apr_pool_t *pool);
 
 
-/** Output the contents of a file in a repository to a stream.
- *
- * Output the content of file identified by @a path_or_url and @a
+/** Output the content of file identified by @a path_or_url and @a
  * revision to the stream @a out.
  *
  * If @a path_or_url is not a local path, then if @a revision is of
@@ -1166,15 +1133,16 @@ svn_client_cat (svn_stream_t* out,
 
 
 
-/*** Converting paths to URLs. ***/
+/* Converting paths to URLs. */
 
-/* Set @a *url to the url for @a path_or_url.
-
-   If @a path_or_url is already a url, set @a *url to @a path_or_url.
-
-   If @a path_or_url is a versioned item, set @a *url to @a
-   path_or_url's entry url.  If @a path_or_url is a unversioned (has
-   no entry), set @a *url to null. */
+/** Set @a *url to the url for @a path_or_url.
+ *
+ * If @a path_or_url is already a url, set @a *url to @a path_or_url.
+ *
+ * If @a path_or_url is a versioned item, set @a *url to @a
+ * path_or_url's entry url.  If @a path_or_url is a unversioned (has
+ * no entry), set @a *url to null.
+ */
 svn_error_t *
 svn_client_url_from_path (const char **url,
                           const char *path_or_url,
