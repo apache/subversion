@@ -739,8 +739,8 @@ def _sorted_files(graph, area):
   while targets:
     # find a target that has no dependencies in our current targets list.
     for t in targets:
-      s = graph.get_sources(DT_LINK, t.name, Target)
-      s += graph.get_sources(DT_NONLIB, t.name, Target)
+      s = graph.get_sources(DT_LINK, t.name, Target) \
+          + graph.get_sources(DT_NONLIB, t.name, Target)
       for d in s:
         if d in targets:
           break
