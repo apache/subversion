@@ -22,6 +22,16 @@ most likely to annoy new users.
 
    <p>
 
+   <li><b>Charset conversion not yet supported on Win32</b><br>
+   <p>Charset encoding (i18n) conversion is not yet supported on
+      Win32, due to problems with our portability libraries, apr
+      and apr-util.  There is no issue associated with this, but 
+      it is being actively worked on and should be fixed soon.
+      Meanwhile, stick with 7-bit ascii on Windows.</p>
+   </li>
+
+   <p>
+
    <li><b>Charset conversion failure mode too extreme</b><br>
    <p>If Subversion cannot convert log data to your local charset
       encoding, it will (currently) just show "[unconvertible data]"
