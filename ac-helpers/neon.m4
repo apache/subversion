@@ -116,10 +116,9 @@ AC_DEFUN(SVN_NEON_CONFIG,
       $NEON_WANTED_REGEX)
         changequote(<<, >>)dnl
         SVN_NEON_INCLUDES=`$neon_config --cflags | sed -e 's/-D[^ ]*//g'`
-        NEON_LIBS=`$neon_config --libs | sed -e 's/-lneon//g'`
+        NEON_LIBS=`$neon_config --libs`
         CFLAGS="$CFLAGS `$neon_config --cflags | sed -e 's/-I[^ ]*//g'`"
         changequote([, ])dnl
-        NEON_LIBS="$NEON_LIBS "`$neon_config --prefix `"/lib/libneon.la"
         ;;
       *)
         echo "You have neon version $NEON_VERSION,"
