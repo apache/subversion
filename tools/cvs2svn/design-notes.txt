@@ -13,7 +13,7 @@ The goal of this pass is to get a summary of all the revisions for
 each file written out to 'cvs2svn-data.revs'; at the end of this
 stage, revisions will be grouped by RCS file, not by logical commits.
 
-We walk over the repository, processing each RCS file with with
+We walk over the repository, processing each RCS file with
 rcsparse.parse(), using cvs2svn's CollectData class, which is a
 subclass of rcsparse.Sink(), the parser's callback class.  For each
 RCS file, the first thing the parser encounters is the administrative

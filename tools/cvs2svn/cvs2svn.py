@@ -728,7 +728,7 @@ class RepositoryMirror:
     which means the returned path may differ from PATH.  In other
     words, if PATH was the last entry in its parent, then delete
     PATH's parent, unless it too is the last entry in *its* parent, in
-    which case delete that parent, and and so on up the chain, until a
+    which case delete that parent, and so on up the chain, until a
     directory is encountered that has an entry which is not a member
     of the parent stack of the original target.
 

@@ -30,7 +30,7 @@ Version 0.36.0 [Beta Interim 1]
 http://svn.collab.net/repos/svn/tags/0.36.0
 
  User-visible changes:
- * add cancellation suport to svnadmin and svnlook (r8222)
+ * add cancellation support to svnadmin and svnlook (r8222)
  * runtime 'store-password' option renamed to 'store-auth-creds' (r8014)
  * 'svn blame' changes:
     - now shows correct revision info (r8035-6)

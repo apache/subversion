@@ -93,8 +93,8 @@
       release manager doesn't have to rebuild the book.)
 
 6. Merge CHANGES and svn_version.h into the release branch. Do it the
-   the same way as described in section 4 in this document when
-   merging fixes to the release branch.
+   same way as described in section 4 in this document when merging
+   fixes to the release branch.
 
 7. Run './dist.sh [ARGS ...]'    (see dist.sh for details about ARGS)
    Watch dist.sh's output to make sure everything goes smoothly; when
