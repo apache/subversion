@@ -188,10 +188,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
   def create_fake_target(self, dep):
     "Return a new target which depends on another target but builds nothing"
-    section = gen_base.TargetProject.Section({'path': 'build/win32'},
-                                             gen_base.TargetProject)
-    section.create_targets(self.graph, dep.name + "_fake", self.cfg,
-                           self._extension_map)
+    section = gen_base.TargetProject.Section(gen_base.TargetProject,
+                                             dep.name + "_fake",
+                                             {'path': 'build/win32'}, self)
+    section.create_targets()
     section.target.msvc_name = dep.msvc_name and dep.msvc_name + "_fake"
     self.graph.add(gen_base.DT_LINK, section.target.name, dep)
     dep.msvc_fake = section.target
@@ -366,7 +366,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       return target.name + '.so'
     elif isinstance(target, gen_base.TargetLib):
       if target.msvc_static:
-        return '%s-%d.lib' % (target.name, self.cfg.version)
+        return '%s-%d.lib' % (target.name, self.version)
       else:
         return os.path.basename(target.filename)
     elif isinstance(target, gen_base.TargetProject):

@@ -270,7 +270,7 @@ class Generator(gen_base.GeneratorBase):
 
     # write the install-include rule
     includedir = build_path_join('$(includedir)',
-                                 'subversion-%s' % self.cfg.version)
+                                 'subversion-%s' % self.version)
     self.ofile.write('install-include: %s\n'
                      '\t$(MKDIR) $(DESTDIR)%s\n'
                      % (string.join(self.includes), includedir))
@@ -362,7 +362,7 @@ class Generator(gen_base.GeneratorBase):
 
   def write_symbols(self, install_sources):
     wrappers = { }
-    for lang in self.cfg.swig_lang:
+    for lang in self.swig_lang:
       wrappers[lang] = [ ]
 
     for target in install_sources:
