@@ -295,17 +295,9 @@ svn_error_t *svn_fs_fs__txn_proplist (apr_hash_t **proplist,
                                       svn_fs_txn_t *txn,
                                       apr_pool_t *pool);
 
-/* If the representation REP is mutable in transaction TXN_ID as part
-   of filesystem FS, remove it.  Perform temporary allocations in
-   POOL. */
-svn_error_t *svn_fs_fs__delete_rep_if_mutable (svn_fs_t *fs,
-                                               const svn_fs_id_t *id,
-                                               representation_t *rep,
-                                               const char *txn_id,
-                                               apr_pool_t *pool);
-
-/* If the node-revision referenced by ID is mutable in fileystem FS,
-   delete it.  Perform temporary allocations in POOL. */
+/* Delete the mutable node-revision referenced by ID, along with any
+   mutable props or directory contents associated with it.  Perform
+   temporary allocations in POOL. */
 svn_error_t *svn_fs_fs__delete_node_revision (svn_fs_t *fs,
                                               const svn_fs_id_t *id,
                                               apr_pool_t *pool);
