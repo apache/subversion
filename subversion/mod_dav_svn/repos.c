@@ -793,7 +793,7 @@ static dav_resource *dav_svn_create_private_resource(
   return &comb->res;
 }
 
-static void log_warning(void *baton, const char *fmt, ...)
+static void log_warning(apr_pool_t *pool, void *baton, const char *fmt, ...)
 {
   request_rec *r = baton;
   va_list va;
@@ -804,6 +804,9 @@ static void log_warning(void *baton, const char *fmt, ...)
   va_end(va);
 
   ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "%s", s);
+
+  /* Ignore the `pool' parameter, we got our pool from the baton. */
+  (void) pool;
 }
 
 static dav_error * dav_svn_get_resource(request_rec *r,
