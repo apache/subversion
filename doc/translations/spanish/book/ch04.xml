@@ -1452,21 +1452,21 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
         es que el comando de actualización siempre compara dos
         rutas idénticas.</para>
       
-       <para>That is, if your working copy is a mirror of
-        <filename>/calc/trunk</filename>, then <command>svn
-        update</command> will automatically compare your working copy
-        of <filename>/calc/trunk</filename> to
-        <filename>/calc/trunk</filename> in the
-        <literal>HEAD</literal> revision.  If you're switching your
-        working copy to a branch, then <command>svn switch</command>
-        will compare your working copy of
-        <filename>/calc/trunk</filename> to some
-        <emphasis>other</emphasis> branch-directory in the
-        <literal>HEAD</literal> revision.</para>
+      <para>Es decir, si su copia local es una réplica de
+        <filename>/calc/trunk</filename>, entonces <command>svn
+        update</command> comparará automáticamente su
+        copia local de <filename>/calc/trunk</filename>
+        con <filename>/calc/trunk</filename> en la revisión
+        <literal>HEAD</literal>.  Si está cambiando su copia local a
+        una rama, entonces <command>svn switch</command> comparará
+        su copia local de <filename>/calc/trunk</filename> a algún
+        <emphasis>otro</emphasis> directorio rama en la revisión
+        <literal>HEAD</literal>.</para>
 
-      <para>In other words, an update moves your working copy through
-        time.  A switch moves your working copy through time
-        <emphasis>and</emphasis> space.</para>
+      <para>En otras palabras, una actualización mueve su copia
+        de trabajo local a través del tiempo. Un cambio
+        mueve su copia de trabajo local a través del tiempo
+        <emphasis>y</emphasis> el espacio.</para>
     </sidebar>
 
     <para>Because <command>svn switch</command> is essentially a
