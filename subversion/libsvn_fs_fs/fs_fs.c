@@ -1541,9 +1541,9 @@ rep_read_contents (void *baton,
           apr_md5_final (checksum, &rb->md5_context);
           if (! svn_md5_digests_match (checksum, rb->checksum))
             return svn_error_createf (SVN_ERR_FS_CORRUPT, NULL,
-               "Checksum mismatch while reading representation:\n"
-               "   expected:  %s\n"
-               "     actual:  %s\n",
+               _("Checksum mismatch while reading representation:\n"
+                 "   expected:  %s\n"
+                 "     actual:  %s\n"),
                svn_md5_digest_to_cstring (rb->checksum, rb->pool),
                svn_md5_digest_to_cstring (checksum, rb->pool));
         }
@@ -2341,8 +2341,8 @@ create_txn_dir (const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
 
   return svn_error_createf (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
                             NULL,
-                            "Unable to create transaction directory "
-                            "in '%s' for revision %ld",
+                            _("Unable to create transaction directory "
+                              "in '%s' for revision %ld"),
                             fs->path, rev);
 }
 
