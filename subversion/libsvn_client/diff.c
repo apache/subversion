@@ -185,6 +185,8 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
                    const char *tmpfile2,
                    svn_revnum_t rev1,
                    svn_revnum_t rev2,
+                   const char *mimetype1,
+                   const char *mimetype2,
                    void *diff_baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
@@ -286,16 +288,51 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
       SVN_ERR (svn_diff_file (&diff, tmpfile1, tmpfile2, subpool));
       if (svn_diff_contains_diffs (diff))
         {
+          svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
+
           /* Print out the diff header. */
           SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, subpool));
           SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n%s\n",
                                        path_native, equal_string));
 
-          /* Output the actual diff */
-          SVN_ERR(svn_diff_file_output_unified(outfile, diff,
-                                               tmpfile1, tmpfile2,
-                                               label1, label2,
-                                               subpool));
+          /* If either file is marked as a known binary type, just
+             print a warning. */
+          if (mimetype1)
+            mt1_binary = svn_mime_type_is_binary (mimetype1);
+          if (mimetype2)
+            mt2_binary = svn_mime_type_is_binary (mimetype2);
+
+          if (mt1_binary || mt2_binary)
+            {
+              svn_io_file_printf 
+                (outfile,
+                 "Cannot display: file marked as a binary type.\n");
+              
+              if (mt1_binary && !mt2_binary)
+                svn_io_file_printf (outfile,
+                                    "svn:mime-type = %s\n", mimetype1);
+              else if (mt2_binary && !mt1_binary)
+                svn_io_file_printf (outfile,
+                                    "svn:mime-type = %s\n", mimetype2);
+              else if (mt1_binary && mt2_binary)
+                {
+                  if (strcmp (mimetype1, mimetype2) == 0)
+                    svn_io_file_printf (outfile,
+                                        "svn:mime-type = %s\n", mimetype1);
+                  else
+                    svn_io_file_printf (outfile,
+                                        "svn:mime-type = (%s, %s)\n",
+                                        mimetype1, mimetype2);
+                }
+            }
+          else
+            {
+              /* Output the actual diff */
+              SVN_ERR(svn_diff_file_output_unified(outfile, diff,
+                                                   tmpfile1, tmpfile2,
+                                                   label1, label2,
+                                                   subpool));
+            }
         }
     }
 
@@ -320,13 +357,15 @@ diff_file_added (svn_wc_adm_access_t *adm_access,
                  const char *path,
                  const char *tmpfile1,
                  const char *tmpfile2,
+                 const char *mimetype1,
+                 const char *mimetype2,
                  void *diff_baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
   return diff_file_changed (adm_access, NULL, path, tmpfile1, tmpfile2, 
                             diff_cmd_baton->revnum1, diff_cmd_baton->revnum2,
-                            diff_baton);
+                            mimetype1, mimetype2, diff_baton);
 }
 
 static svn_error_t *
@@ -334,13 +373,15 @@ diff_file_deleted_with_diff (svn_wc_adm_access_t *adm_access,
                              const char *path,
                              const char *tmpfile1,
                              const char *tmpfile2,
+                             const char *mimetype1,
+                             const char *mimetype2,
                              void *diff_baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
   return diff_file_changed (adm_access, NULL, path, tmpfile1, tmpfile2, 
                             diff_cmd_baton->revnum1, diff_cmd_baton->revnum2,
-                            diff_baton);
+                            mimetype1, mimetype2, diff_baton);
 }
 
 static svn_error_t *
@@ -348,6 +389,8 @@ diff_file_deleted_no_diff (svn_wc_adm_access_t *adm_access,
                            const char *path,
                            const char *tmpfile1,
                            const char *tmpfile2,
+                           const char *mimetype1,
+                           const char *mimetype2,
                            void *diff_baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
@@ -440,6 +483,8 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
                     const char *yours,
                     svn_revnum_t older_rev,
                     svn_revnum_t yours_rev,
+                    const char *mimetype1,
+                    const char *mimetype2,
                     void *baton)
 {
   struct merge_cmd_baton *merge_b = baton;
@@ -496,6 +541,8 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
                   const char *mine,
                   const char *older,
                   const char *yours,
+                  const char *mimetype1,
+                  const char *mimetype2,
                   void *baton)
 {
   struct merge_cmd_baton *merge_b = baton;
@@ -576,6 +623,8 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
                     const char *mine,
                     const char *older,
                     const char *yours,
+                    const char *mimetype1,
+                    const char *mimetype2,
                     void *baton)
 {
   struct merge_cmd_baton *merge_b = baton;
@@ -933,6 +982,8 @@ do_single_file_merge (const char *URL1,
   svn_stream_t *fstream1, *fstream2;
   svn_revnum_t rev1, rev2;
   apr_hash_t *props1, *props2;
+  const char *mimetype1, *mimetype2;
+  svn_string_t *pval;
   apr_array_header_t *propchanges;
   void *ra_baton, *session1, *session2;
   svn_ra_plugin_t *ra_lib;
@@ -988,15 +1039,23 @@ do_single_file_merge (const char *URL1,
   if (status)
     return svn_error_createf (status, NULL, "failed to close '%s'.",
                               tmpfile2);   
+  
+  /* Discover any svn:mime-type values in the proplists */
+  pval = apr_hash_get (props1, SVN_PROP_MIME_TYPE, strlen(SVN_PROP_MIME_TYPE));
+  mimetype1 = pval ? pval->data : NULL;
 
-  SVN_ERR (merge_file_changed(adm_access,
-                              &text_state,
-                              merge_b->target,
-                              tmpfile1,
-                              tmpfile2,
-                              rev1,
-                              rev2,
-                              merge_b));
+  pval = apr_hash_get (props2, SVN_PROP_MIME_TYPE, strlen(SVN_PROP_MIME_TYPE));
+  mimetype2 = pval ? pval->data : NULL;
+
+  SVN_ERR (merge_file_changed (adm_access,
+                               &text_state,
+                               merge_b->target,
+                               tmpfile1,
+                               tmpfile2,
+                               rev1,
+                               rev2,
+                               NULL, NULL, /* ### TODO: pass real mimetypes */
+                               merge_b));
 
   SVN_ERR (svn_io_remove_file (tmpfile1, pool));
   SVN_ERR (svn_io_remove_file (tmpfile2, pool));

@@ -49,6 +49,7 @@
 #include <assert.h>
 
 #include "wc.h"
+#include "props.h"
 #include "adm_files.h"
 
 
@@ -307,6 +308,113 @@ make_file_baton (const char *path,
 }
 
 
+/* Helper function:  load a file_baton's base_props. */
+static void
+load_base_props (struct file_baton *b)
+{
+  /* the 'base' props to compare against, in this case, are
+     actually the working props.  that's what we do with texts,
+     anyway, in the 'svn diff -rN foo' case.  */
+  
+  /* also notice we're ignoring error here;  there's a chance that
+     this path might not exist in the working copy, in which case
+     the baseprops remains an empty hash. */
+  svn_error_t *err = svn_wc_prop_list (&(b->baseprops), b->path,
+                                       b->edit_baton->anchor, b->pool);
+  if (err)
+    svn_error_clear (err);
+  b->fetched_baseprops = TRUE;
+}
+
+
+/* Helper function for retrieving svn:mime-type properties, if
+   present, on file PATH.  File baton B is optional:  if present,
+   assume it refers to PATH, and use its caching abilities.
+
+   If PRISTINE_MIMETYPE is non-NULL, then set *PRISTINE_MIMETYPE to
+   the value of svn:mime-type if available.  Else set to NULL.  Search
+   for the property in B->PROPCHANGES first (if B is non-NULL), then
+   search in the pristine properties of PATH, using ADM_ACCESS.
+
+   If WORKING_MIMETYPE is non-NULL, then set *WORKING_MIMETYPE to
+   the value of svn:mime-type if available.  Else set to NULL.  Search
+   in the working properties of PATH, using ADM_ACCESS.
+
+   Return the property value allocated in POOL, or if B is non-NULL,
+   whatever pool B is allocated in.
+*/
+static svn_error_t *
+get_local_mimetypes (const char **pristine_mimetype,
+                     const char **working_mimetype,
+                     struct file_baton *b,
+                     svn_wc_adm_access_t *adm_access,
+                     const char *path,
+                     apr_pool_t *pool)
+{
+  const svn_string_t *pristine_val, *working_val;
+
+  if (working_mimetype)
+    {
+      if (b)
+        {
+          /* If we have the file_baton, try to use its working props. */
+          if (! b->fetched_baseprops)
+            load_base_props (b);
+
+          working_val = apr_hash_get (b->baseprops, SVN_PROP_MIME_TYPE,
+                                      strlen(SVN_PROP_MIME_TYPE));
+        }
+      else
+        {
+          /* else use the public API */
+          SVN_ERR (svn_wc_prop_get (&working_val, SVN_PROP_MIME_TYPE,
+                                    path, adm_access, pool));
+        }
+
+      *working_mimetype = working_val ? working_val->data : NULL;
+    }
+
+  if (pristine_mimetype)
+    {
+      svn_boolean_t found_prop = FALSE;
+
+      if (b && b->propchanges)
+        {
+          /* first search any new propchanges from the repository */
+          int i;
+          svn_prop_t *propchange;
+                    
+          for (i = 0; i < b->propchanges->nelts; i++)
+            {
+              propchange = &APR_ARRAY_IDX(b->propchanges, i, svn_prop_t);
+              if (strcmp (propchange->name, SVN_PROP_MIME_TYPE) == 0)
+                {
+                  pristine_val = propchange->value;
+                  found_prop = TRUE;
+                  break;
+                }
+            }          
+        }
+      if (! found_prop)
+        {
+          /* otherwise, try looking in the pristine props in the wc */
+          const char *props_base_path;
+          apr_hash_t *baseprops = apr_hash_make (pool);
+
+          SVN_ERR (svn_wc__prop_base_path (&props_base_path, path, adm_access,
+                                           FALSE, pool));
+          SVN_ERR (svn_wc__load_prop_file (props_base_path, baseprops, pool));
+          pristine_val = apr_hash_get (baseprops, SVN_PROP_MIME_TYPE,
+                                       strlen(SVN_PROP_MIME_TYPE));
+        }
+
+      *pristine_mimetype = pristine_val ? pristine_val->data : NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Called by directory_elements_diff when a file is to be compared. At this
  * stage we are dealing with a file that does exist in the working copy.
  *
@@ -330,6 +438,10 @@ file_diff (struct dir_baton *dir_baton,
   svn_boolean_t modified;
   enum svn_wc_schedule_t schedule = entry->schedule;
   svn_wc_adm_access_t *adm_access;
+  const char *pristine_mimetype, *working_mimetype;
+
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, dir_baton->edit_baton->anchor,
+                                dir_baton->path, pool));
 
   /* If the directory is being added, then this file will need to be
      added. */
@@ -348,10 +460,16 @@ file_diff (struct dir_baton *dir_baton,
       pristine_copy = svn_wc__text_base_path (path, FALSE, pool);
       empty_file = svn_wc__empty_file_path (path, pool);
 
+      /* Get svn:mimetype from pristine props of PATH. */
+      SVN_ERR (get_local_mimetypes (&pristine_mimetype, NULL, NULL,
+                                    adm_access, path, pool));
+
       SVN_ERR (dir_baton->edit_baton->callbacks->file_deleted
                (NULL, path, 
                 pristine_copy, 
                 empty_file,
+                pristine_mimetype,
+                NULL,
                 dir_baton->edit_baton->callback_baton));
 
       /* Replace will fallthrough! */
@@ -361,14 +479,18 @@ file_diff (struct dir_baton *dir_baton,
     case svn_wc_schedule_add:
       empty_file = svn_wc__empty_file_path (path, pool);
 
+      /* Get svn:mimetype from working props of PATH. */
+      SVN_ERR (get_local_mimetypes (NULL, &working_mimetype, NULL,
+                                    adm_access, path, pool));
+
       SVN_ERR (dir_baton->edit_baton->callbacks->file_added
                (NULL, path,
                 empty_file,
                 path,
+                NULL,
+                working_mimetype,
                 dir_baton->edit_baton->callback_baton));
 
-      SVN_ERR (svn_wc_adm_retrieve (&adm_access, dir_baton->edit_baton->anchor,
-                                    dir_baton->path, pool));
       SVN_ERR (svn_wc_props_modified_p (&modified, path, adm_access, pool));
       if (modified)
         {
@@ -406,6 +528,10 @@ file_diff (struct dir_baton *dir_baton,
           SVN_ERR (svn_wc_translated_file (&translated, path, adm_access,
                                            TRUE, pool));
           
+          /* Get svn:mimetype for both pristine and working file. */
+          SVN_ERR (get_local_mimetypes (&pristine_mimetype, &working_mimetype,
+                                        NULL, adm_access, path, pool));
+
           err = dir_baton->edit_baton->callbacks->file_changed
             (NULL, NULL,
              path,
@@ -413,6 +539,8 @@ file_diff (struct dir_baton *dir_baton,
              translated,
              entry->revision,
              SVN_INVALID_REVNUM,
+             pristine_mimetype,
+             working_mimetype,
              dir_baton->edit_baton->callback_baton);
           
           if (translated != path)
@@ -622,6 +750,7 @@ delete_entry (const char *path,
   const char *full_path = svn_path_join (pb->edit_baton->anchor_path, path,
                                          pb->pool);
   svn_wc_adm_access_t *adm_access;
+  const char *working_mimetype;
 
   SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, pb->edit_baton->anchor,
                                       full_path, pool));
@@ -632,10 +761,17 @@ delete_entry (const char *path,
       /* A delete is required to change working-copy into requested
          revision, so diff should show this as and add. Thus compare the
          empty file against the current working copy. */
+
+      /* ### get svn:mimetype from working props of full_path */
+      SVN_ERR (get_local_mimetypes (NULL, &working_mimetype, NULL,
+                                    adm_access, full_path, pool));
+
       SVN_ERR (pb->edit_baton->callbacks->file_added
                (NULL, full_path,
                 svn_wc__empty_file_path (full_path, pool),
                 full_path,
+                NULL,
+                working_mimetype,
                 pb->edit_baton->callback_baton));
       apr_hash_set (pb->compared, full_path, APR_HASH_KEY_STRING, "");
       break;
@@ -919,6 +1055,7 @@ close_file (void *file_baton,
   struct file_baton *b = file_baton;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
+  const char *pristine_mimetype, *working_mimetype;
 
   /* The path to the temporary copy of the pristine repository version. */
   const char *temp_file_path
@@ -927,15 +1064,25 @@ close_file (void *file_baton,
                                       b->wc_path, b->pool));
   SVN_ERR (svn_wc_entry (&entry, b->wc_path, adm_access, FALSE, b->pool));
 
+  /* We want to figure out if the file from the repository has an
+     svn:mime-type.  So first look for svn:mime-type in
+     b->propchanges... if not there, look for it in the *pristine*
+     properties of path. */
+  SVN_ERR (get_local_mimetypes (&pristine_mimetype, &working_mimetype,
+                                b, adm_access, b->wc_path, pool));
+
   if (b->added)
     {
       /* Add is required to change working-copy into requested revision, so
          diff should show this as and delete. Thus compare the current
          working copy against the empty file. */
+
       SVN_ERR (b->edit_baton->callbacks->file_deleted
                (NULL, b->path,
                 temp_file_path,
                 svn_wc__empty_file_path (b->wc_path, b->pool),
+                pristine_mimetype,
+                NULL,
                 b->edit_baton->callback_baton));
     }
   else
@@ -950,6 +1097,8 @@ close_file (void *file_baton,
           SVN_ERR (svn_wc_translated_file (&translated, b->path, adm_access,
                                            TRUE, b->pool));
 
+          /* ### look for svn:mime-type in working props of path. */
+
           err1 = b->edit_baton->callbacks->file_changed
             (NULL, NULL,
              b->path,
@@ -957,6 +1106,8 @@ close_file (void *file_baton,
              translated,
              b->edit_baton->revnum,
              SVN_INVALID_REVNUM,
+             pristine_mimetype,
+             working_mimetype,
              b->edit_baton->callback_baton);
       
           if (translated != b->path)
@@ -1001,20 +1152,7 @@ change_file_prop (void *file_baton,
   
   /* Read the baseprops if you haven't already. */
   if (! b->fetched_baseprops)
-    {
-      /* the 'base' props to compare against, in this case, are
-         actually the working props.  that's what we do with texts,
-         anyway, in the 'svn diff -rN foo' case.  */
-
-      /* also notice we're ignoring error here;  there's a chance that
-         this path might not exist in the working copy, in which case
-         the baseprops remains an empty hash. */
-      svn_error_t *err = svn_wc_prop_list (&(b->baseprops), b->path,
-                                           b->edit_baton->anchor, b->pool);
-      if (err)
-        svn_error_clear (err);
-      b->fetched_baseprops = TRUE;
-    }
+    load_base_props (b);
 
   return SVN_NO_ERROR;
 }

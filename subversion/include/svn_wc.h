@@ -334,6 +334,11 @@ typedef struct svn_wc_diff_callbacks_t
    * @a tmpfile1 and @a tmpfile2, which represent @a rev1 and @a rev2 of 
    * the file, respectively.
    *
+   * If known, the @c svn:mime-type value of each file is passed into
+   * @a mimetype1 and @a mimetype2;  either or both of the values can
+   * be NULL.  The implementor can use this information to decide if
+   * (or how) to generate differences.
+   *
    * @a adm_access will be an access baton for the directory containing 
    * @a path, or @c NULL if the diff editor is not using access batons.
    *
@@ -351,12 +356,19 @@ typedef struct svn_wc_diff_callbacks_t
                                 const char *tmpfile2,
                                 svn_revnum_t rev1,
                                 svn_revnum_t rev2,
+                                const char *mimetype1,
+                                const char *mimetype2,
                                 void *diff_baton);
 
   /** A file @a path was added.
    *
    * A file @a path was added.  The contents can be seen by comparing
    * @a tmpfile1 and @a tmpfile2.
+   *
+   * If known, the @c svn:mime-type value of each file is passed into
+   * @a mimetype1 and @a mimetype2;  either or both of the values can
+   * be NULL.  The implementor can use this information to decide if
+   * (or how) to generate differences.
    *
    * @a adm_access will be an access baton for the directory containing 
    * @a path, or @c NULL if the diff editor is not using access batons.
@@ -365,12 +377,19 @@ typedef struct svn_wc_diff_callbacks_t
                               const char *path,
                               const char *tmpfile1,
                               const char *tmpfile2,
+                              const char *mimetype1,
+                              const char *mimetype2,
                               void *diff_baton);
   
   /** A file @a path was deleted.
    *
    * A file @a path was deleted.  The [loss of] contents can be seen by
    * comparing @a tmpfile1 and @a tmpfile2.
+   *
+   * If known, the @c svn:mime-type value of each file is passed into
+   * @a mimetype1 and @a mimetype2;  either or both of the values can
+   * be NULL.  The implementor can use this information to decide if
+   * (or how) to generate differences.
    *
    * @a adm_access will be an access baton for the directory containing 
    * @a path, or @c NULL if the diff editor is not using access batons.
@@ -379,6 +398,8 @@ typedef struct svn_wc_diff_callbacks_t
                                 const char *path,
                                 const char *tmpfile1,
                                 const char *tmpfile2,
+                                const char *mimetype1,
+                                const char *mimetype2,
                                 void *diff_baton);
   
   /** A directory @a path was added.
