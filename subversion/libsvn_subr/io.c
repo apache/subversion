@@ -21,6 +21,10 @@
 #include <stdio.h>
 #include <assert.h>
 
+#ifndef WIN32
+#include <unistd.h>
+#endif
+
 #include <apr_lib.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
@@ -966,6 +970,50 @@ svn_error_t *svn_io_file_lock (const char *lock_file,
   return SVN_NO_ERROR;
 }
 
+
+
+/* Data consistency/coherency operations. */
+
+svn_error_t *svn_io_file_flush_to_disk (apr_file_t *file,
+                                        apr_pool_t *pool)
+{
+  /* First make sure that any user-space buffered data is flushed. */
+  apr_status_t apr_err;
+  apr_os_file_t filehand;
+
+  apr_err = apr_file_flush (file);
+
+  if (apr_err)
+    return svn_error_wrap_apr
+      (apr_err, "Can't flush file '%s' to disk.", file);
+
+    apr_os_file_get (&filehand, file);
+    
+  /* Call the operating system specific function to actually force the
+     data to disk. */
+    {
+#ifdef WIN32
+      
+      if (! FlushFileBuffers (filehand))
+        return svn_error_wrap_apr
+          (apr_get_os_error (), "Can't flush file to disk.");
+      
+#else
+      apr_size_t rv;
+      
+      do {
+        rv = fsync (filehand);
+      } while (rv == (apr_size_t)-1 && (errno == EAGAIN || errno == EINTR));
+      
+      if (rv == (apr_size_t)-1)
+        return svn_error_wrap_apr
+          (apr_get_os_error (), "Can't flush file to disk.");
+      
+#endif
+    }
+  return APR_SUCCESS;
+}
+    
 
 
 /* TODO write test for these two functions, then refactor. */
