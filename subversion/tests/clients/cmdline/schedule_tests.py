@@ -34,6 +34,9 @@ def sandbox(x):
 
 #----------------------------------------------------------------------
 
+### BIG FAT TODO: I think all these tests should verify that
+### committing after the changes have been made is all good.
+
 def add_files():
   "add some files"
 
@@ -225,6 +228,72 @@ def nested_adds():
 
 #----------------------------------------------------------------------
 
+def delete_files():
+  "delete some files"
+
+  # Bootstrap
+  sbox = sandbox(delete_files)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  # Schedule some files for deletion
+  iota_path = os.path.join (wc_dir, 'iota')
+  mu_path = os.path.join (wc_dir, 'A', 'mu')
+  rho_path = os.path.join (wc_dir, 'A', 'D', 'G', 'rho')
+  omega_path = os.path.join (wc_dir, 'A', 'D', 'H', 'omega')
+  
+  svntest.main.run_svn(None, 'del', iota_path, mu_path, rho_path, omega_path)
+    
+  # Make sure the deletes show up as such in status
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  for item in status_list:
+    if item[0] == iota_path or item[0] == mu_path or item[0] == rho_path or item[0] == omega_path:
+      item[3]['status'] = 'D '
+  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+
+  return svntest.actions.run_and_verify_status (wc_dir, expected_output_tree)
+
+#----------------------------------------------------------------------
+
+def delete_dirs():
+  "delete some directories"
+
+  # Bootstrap
+  sbox = sandbox(delete_dirs)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  # Schedule some directories for deletion (this is recursive!)
+  E_path = os.path.join (wc_dir, 'A', 'B', 'E')
+  F_path = os.path.join (wc_dir, 'A', 'B', 'F')
+  H_path = os.path.join (wc_dir, 'A', 'D', 'H')
+
+  # Finally, let's try some recursive adds of our new files and directories
+  svntest.main.run_svn(None, 'del', E_path, F_path, H_path)
+    
+  # Make sure the deletes show up as such in status
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  for item in status_list:
+    if item[0] == E_path \
+    or item[0] == os.path.join (E_path, 'alpha') \
+    or item[0] == os.path.join (E_path, 'beta') \
+    or item[0] == F_path \
+    or item[0] == H_path \
+    or item[0] == os.path.join (H_path, 'chi') \
+    or item[0] == os.path.join (H_path, 'omega') \
+    or item[0] == os.path.join (H_path, 'psi'):
+      item[3]['status'] = 'D '
+  expected_output_tree = svntest.tree.build_generic_tree(status_list)
+
+  return svntest.actions.run_and_verify_status (wc_dir, expected_output_tree)
+
+
+#----------------------------------------------------------------------
+
 
 ########################################################################
 # Run the tests
@@ -235,6 +304,8 @@ test_list = [ None,
               add_files,
               add_directories,
               nested_adds,
+              delete_files,
+              delete_dirs,
              ]
 
 if __name__ == '__main__':
