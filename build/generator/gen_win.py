@@ -292,7 +292,9 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       swig_options = ["-" + target.lang]
       swig_deps = []
 
-      if self.swig_vernum >= 103020:
+      if self.swig_vernum >= 103024:
+        pass
+      elif self.swig_vernum >= 103020:
         if target.include_runtime:
           swig_options.append("-runtime")
         else:

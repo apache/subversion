@@ -118,6 +118,7 @@ SWIG_INCLUDES = -I$(SWIG_SRC_DIR) \
                 -I$(abs_srcdir)/subversion/include \
                 -I$(SWIG_LIBSWIG_DIR) \
                 -DSVN_SWIG_VERSION=$(SWIG_VERSION) \
+                -DSWIG_TABLE_TYPE=subversion \
                 $(SVN_APR_INCLUDES) $(SVN_APRUTIL_INCLUDES)
 SWIG_NORUNTIME_FLAG = @SWIG_NORUNTIME_FLAG@
 SWIG_LDFLAGS = @SWIG_LDFLAGS@

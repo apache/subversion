@@ -109,26 +109,42 @@ AC_DEFUN(SVN_FIND_SWIG,
     #   packages/rpm/redhat-7.x/subversion.spec
     #   packages/rpm/redhat-8.x/subversion.spec
     if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103019" -a \
-                                       "$SWIG_VERSION" -lt "103022"; then
-        SWIG_SUITABLE=yes
-        AC_CACHE_CHECK([for swig library directory], [ac_cv_swig_swiglib_dir],[
-                        ac_cv_swig_swiglib_dir="`$SWIG -swiglib`"
-                       ])
-        SWIG_LIBSWIG_DIR="$ac_cv_swig_swiglib_dir"
+                                       "$SWIG_VERSION" -lt "103022" -o \
+                                       "$SWIG_VERSION" -ge "103024"; then
+      SWIG_SUITABLE=yes
 
       dnl Newer versions of SWIG have deprecated the -c "do not
       dnl include SWIG runtime functions (used for creating multi-module
       dnl packages)" in favor of the -noruntime flag.
-      if test "$SWIG_VERSION" -ge "103020"; then
-          SWIG_NORUNTIME_FLAG='-noruntime'
+      if test "$SWIG_VERSION" -ge "103024"; then
+        SWIG_NORUNTIME_FLAG=''
+        LSWIGPL=''
+        LSWIGPY=''
       else
+        if test "$SWIG_VERSION" -ge "103020"; then
+          SWIG_NORUNTIME_FLAG='-noruntime'
+        else
           SWIG_NORUNTIME_FLAG='-c'
+        fi
+        LSWIGPL='-lswigpl'
+        LSWIGPY='-lswigpy'
       fi
+
     else
-        SWIG_SUITABLE=no
-        AC_MSG_WARN([swig versions 1.3.19, 1.3.20 or 1.3.21 are needed for swig support.])
+      SWIG_SUITABLE=no
+      AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
+      AC_MSG_WARN([This is not compatible with Subversion])
+      AC_MSG_WARN([Subversion can use SWIG versions 1.3.19, 1.3.20, 1.3.21]
+      AC_MSG_WARN([or 1.3.24 or later])
     fi
 
+    if test "$SWIG_SUITABLE" = "yes"; then
+      AC_CACHE_CHECK([for swig library directory], [ac_cv_swig_swiglib_dir],[
+                      ac_cv_swig_swiglib_dir="`$SWIG -swiglib`"
+                     ])
+      SWIG_LIBSWIG_DIR="$ac_cv_swig_swiglib_dir"
+    fi
+    
     if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_python" = "yes"; then
       AC_MSG_NOTICE([Configuring python swig binding])
       AC_CACHE_CHECK([if swig needs -L for its libraries],
@@ -234,5 +250,7 @@ AC_DEFUN(SVN_FIND_SWIG,
   AC_SUBST(SWIG_JAVA_LINK)
   AC_SUBST(SWIG_PL_INCLUDES)
   AC_SUBST(SWIG_LIBSWIG_DIR)
+  AC_SUBST(LSWIGPL)
+  AC_SUBST(LSWIGPY)
   AC_SUBST(SWIG_LDFLAGS)
 ])

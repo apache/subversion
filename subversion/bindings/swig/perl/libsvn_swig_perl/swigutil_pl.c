@@ -29,6 +29,12 @@
 #include "svn_pools.h"
 #include "svn_opt.h"
 
+#if SVN_SWIG_VERSION >= 103024
+#include <swigrun.swg>
+#include <perl5/perlrun.swg>
+#include <runtime.swg>
+#endif
+
 #include "swigutil_pl.h"
 
 /* cache SWIG_TypeQuery results in a perl hash */
