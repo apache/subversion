@@ -101,7 +101,7 @@ restore_file (const char *file_path,
    DIR_REV.  If so, report this fact to REPORTER.  If an entry is
    missing from disk, report its absence to REPORTER.  
 
-   If RECURSE, and TRAVERSAL_INFO is non-null, record this directory's
+   If TRAVERSAL_INFO is non-null, record this directory's
    value of svn:externals in both TRAVERSAL_INFO->externals_old and
    TRAVERSAL_INFO->externals_new, using wc_path + dir_path as the key,
    and the raw (unparsed) value of the property as the value.  NOTE:
@@ -151,6 +151,30 @@ report_revisions (svn_wc_adm_access_t *adm_access,
   this_url = apr_pstrdup (pool, dot_entry->url);
   this_path = apr_pstrdup (subpool, dir_path);
   this_full_path = apr_pstrdup (subpool, full_path);
+
+  /* If "this dir" has "svn:externals" property set on it, store its name
+     in traversal_info. */
+  if (traversal_info)
+    {
+      const svn_string_t *val_s;
+      SVN_ERR (svn_wc_prop_get
+               (&val_s, SVN_PROP_EXTERNALS, this_full_path, pool));
+
+      if (val_s)
+        {
+          const char *dup_path = apr_pstrdup (traversal_info->pool,
+                                              this_full_path);
+          const char *dup_val = apr_pstrmemdup (traversal_info->pool,
+                                                val_s->data,
+                                                val_s->len);
+
+          apr_hash_set (traversal_info->externals_old,
+                        dup_path, APR_HASH_KEY_STRING, dup_val);
+
+          apr_hash_set (traversal_info->externals_new,
+                        dup_path, APR_HASH_KEY_STRING, dup_val);
+        }
+    }
 
   /* Looping over current directory's SVN entries: */
   for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
@@ -313,29 +337,6 @@ report_revisions (svn_wc_adm_access_t *adm_access,
             SVN_ERR (reporter->set_path (report_baton,
                                          this_path,
                                          subdir_entry->revision));
-
-          if (traversal_info)
-            {
-              const svn_string_t *val_s;
-              const char *dup_path = apr_pstrdup (traversal_info->pool,
-                                                  this_full_path);
-
-              SVN_ERR (svn_wc_prop_get
-                       (&val_s, SVN_PROP_EXTERNALS, this_full_path, pool));
-            
-              if (val_s)
-                {
-                  const char *dup_val = apr_pstrmemdup (traversal_info->pool,
-                                                        val_s->data,
-                                                        val_s->len);
-
-                  apr_hash_set (traversal_info->externals_old,
-                                dup_path, APR_HASH_KEY_STRING, dup_val);
-                  
-                  apr_hash_set (traversal_info->externals_new,
-                                dup_path, APR_HASH_KEY_STRING, dup_val);
-                }
-            }
 
           /* Recurse. */
           SVN_ERR (report_revisions (adm_access, this_path,

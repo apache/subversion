@@ -151,12 +151,12 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
-  SVN_ERR (svn_client__handle_externals
-           (traversal_info,
-            notify_func, notify_baton,
-            auth_baton,
-            TRUE,  /* update unchanged externals */
-            pool));
+  if (recurse)
+    SVN_ERR (svn_client__handle_externals (traversal_info,
+                                           notify_func, notify_baton,
+                                           auth_baton,
+                                           TRUE, /* update unchanged ones */
+                                           pool));
 
   SVN_ERR (svn_wc_adm_close (adm_access));
 
