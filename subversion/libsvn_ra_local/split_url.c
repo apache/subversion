@@ -30,7 +30,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
                          apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
-  const char *candidate_url;
+  const char *repos_root;
   const char *hostname, *path;
 
   /* Decode the URL, as we only use its parts as filesystem paths
@@ -69,7 +69,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
 
   /* Duplicate the URL, starting at the top of the path */
 #ifndef SVN_WIN32
-  candidate_url = apr_pstrdup (pool, path);
+  repos_root = apr_pstrdup (pool, path);
 #else  /* SVN_WIN32 */
   /* On Windows, we'll typically have to skip the leading / if the
      path starts with a drive letter.  Like most Web browsers, We
@@ -92,72 +92,30 @@ svn_ra_local__split_URL (svn_repos_t **repos,
        char *const dup_path = apr_pstrdup (pool, ++path);
        if (dup_path[1] == '|')
          dup_path[1] = ':';
-       candidate_url = dup_path;
+       repos_root = dup_path;
      }
    else
-     candidate_url = apr_pstrdup (pool, path);
+     repos_root = apr_pstrdup (pool, path);
  }
 #endif /* SVN_WIN32 */
 
-  /* Loop, trying to open a repository at URL.  If this fails, remove
-     the last component from the URL, then try again. */
-  while (1)
-    {
-      /* Attempt to open a repository at URL. */
-      err = svn_repos_open (repos, candidate_url, pool);
+  /* Search for a repository in the full path. */
+  repos_root = svn_repos_find_root_path(repos_root, pool);
+  if (!repos_root)
+    return svn_error_createf 
+      (SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, NULL,
+       "Unable to open repository '%s'", URL);
 
-      /* Hey, cool, we were successful.  Stop looping. */
-      if (err == SVN_NO_ERROR)
-        break;   
-
-      /* If we get an error -other- than the path or 'format' file not
-         existing, then throw the error immediately.  For example, we
-         want permissions errors to be seen right away. */
-      if ((! APR_STATUS_IS_ENOENT(err->apr_err))
-          && (err->apr_err != SVN_ERR_REPOS_UNSUPPORTED_VERSION))
-        return svn_error_createf 
-          (SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, err,
-           "Unable to open repository '%s'", URL);
-
-      /* It would be strange indeed if "/" were a repository, but hey,
-         people do strange things sometimes.  Anyway, if "/" failed
-         the test above, then reduce it to the empty string.
-
-         ### I'm not sure whether SVN_EMPTY_PATH and SVN_PATH_IS_EMPTY
-         in libsvn_subr/path.c is are supposed to be changeable.  If
-         they are, this code could conceivably break.  If they're not,
-         then we should probably make SVN_PATH_EMPTY_PATH a public
-         constant and use it here.  But either way, note that the test
-         for '/' below is kosher, because we know it's the canonical
-         APR separator. */
-      if ((candidate_url[0] == '/') && (candidate_url[1] == '\0'))
-        candidate_url = "";
-
-      /* If we're down to an empty path here, and we still haven't
-         found the repository, we're just out of luck.  Time to bail
-         and face the music. */
-      if (svn_path_is_empty (candidate_url))
-        break;
-
-      /* We didn't successfully open the repository, and we haven't
-         hacked this path down to a bare nub yet, so we'll chop off
-         the last component of this path. */
-      candidate_url = svn_path_dirname (candidate_url, pool);
-      if (err)
-        svn_error_clear (err);
-    }
-
-  /* If we are still sitting in an error-ful state, we must not have
-     found the repository.  We give up. */
+  /* Attempt to open a repository at URL. */
+  err = svn_repos_open (repos, repos_root, pool);
   if (err)
     return svn_error_createf 
-      (SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND, NULL, 
-       "svn_ra_local__split_URL: Unable to find valid repository\n"
-       "   (%s)", URL);
+      (SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, err,
+       "Unable to open repository '%s'", URL);
 
   /* What remains of URL after being hacked at in the previous step is
      REPOS_URL.  FS_PATH is what we've hacked off in the process. */
-  *fs_path = apr_pstrdup (pool, path + strlen (candidate_url));
+  *fs_path = apr_pstrdup (pool, path + strlen (repos_root));
   *repos_url = apr_pstrmemdup (pool, URL, strlen(URL) - strlen(*fs_path));
 
   return SVN_NO_ERROR;

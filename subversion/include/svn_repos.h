@@ -44,6 +44,16 @@ typedef struct svn_repos_t svn_repos_t;
 /* Opening and creating repositories. */
 
 
+/** Find the root path of the repository that contains @a path by
+ * removing a component at a time from the end of @a path until a
+ * likely repository root path is found.
+ *
+ * If a repository was found, the path to the root of the repository
+ * is returned, else @c NULL.
+ */
+char *svn_repos_find_root_path (const char *path,
+                                apr_pool_t *pool);
+
 /** Set @a *repos_p to a repository object for the repository at @a path.
  *
  * Allocate @a *repos_p in @a pool.
