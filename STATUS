@@ -139,7 +139,7 @@ Candidate changes:
     Votes:
       +1: epg, ghudson
 
-  * r13218
+  * r13218, r13465
     Fix runaway memory usage in svnadmin hotcopy (fsfs).
     Justification:
       consuming all memory is bad
