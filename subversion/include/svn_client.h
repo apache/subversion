@@ -722,7 +722,7 @@ typedef svn_boolean_t (*svn_client_cancellation_func_t) (void *baton);
 
 
 /* Set *EDITOR and *EDIT_BATON to an editor that returns
- * SVN_ERR_CANCELLED if SHOULD_I_CANCEL(CANCEL_BATON) ever returns
+ * SVN_ERR_CANCELED if SHOULD_I_CANCEL(CANCEL_BATON) ever returns
  * true.  Should be composed before any editor that does any real
  * work.
  */

@@ -48,7 +48,7 @@ check_cancel (struct edit_baton *eb)
     {
       return svn_error_create (SVN_ERR_CANCELED,
                                0, NULL, eb->pool,
-                               "Operation cancelled, presumably by user.");
+                               "Operation canceled, presumably by user.");
     }
   return SVN_NO_ERROR;
 }
