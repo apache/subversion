@@ -26,13 +26,6 @@
 #include "svn_test.h"
 #include "fs-helpers.h"
 
-#include "../libsvn_fs_base/fs.h"
-#include "../libsvn_fs_base/dag.h"
-#include "../libsvn_fs_base/trail.h"
-
-#include "../libsvn_fs_base/bdb/rev-table.h"
-#include "../libsvn_fs_base/bdb/nodes-table.h"
-
 
 /*-------------------------------------------------------------------*/
 
