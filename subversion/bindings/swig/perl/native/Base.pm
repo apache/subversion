@@ -7,7 +7,7 @@ SVN::Base - Base class for importing symbols for svn modules
 =head1 SYNOPSIS
 
     # Load the svn_ra_* functions into the SVN::Ra namespace.
-    pacakge SVN::Ra;
+    package SVN::Ra;
     use SVN::Base qw(Ra svn_ra_);
 
     # Load svn_config_t structure accessors in the magic namcespace
