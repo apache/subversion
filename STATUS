@@ -28,12 +28,6 @@ Candidate changes:
     Votes:
       +1 lundblad
 
-  * r10431
-    Disable wait_for_input on Windows.
-    Justification: Fix prompting on Windows so it actually works right.
-    Votes:
-      +1: breser, sussman, cmpilato
-
   * r10440
     Fix pool usage for SVN::Ra in the Perl bindings.
     Justification:
