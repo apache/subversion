@@ -838,23 +838,37 @@ Url: http://svn.example.com/branches/calc/my-calc-branch
       the directory.  And it's usually more efficient to use this
       command, because often branches only differ by a small degree.
       The server sends only the minimal set of changes necessary to
-      make your working copy reflect the branch.</para>
+      make your working copy reflect the branch directory.</para>
 
-    <para>Of course, <command>svn switch</command> also takes a
+    <para>The <command>svn switch</command> command also takes a
       <option>--revision</option> (<option>-r</option>) option, so you
       need not always move your working copy to the <quote>tip</quote>
       of the branch.</para>
 
     <para>Of course, most projects are more complicated than our
-      <filename>calc</filename> example.  Users often create a branch
-      of a project's subdirectory, and then use <command>svn
-      switch</command> to move that specific subdirectory in their
-      working copy to the new branch.  Or sometimes users will only
-      switch a single working file to a branch.  That way, they can
-      continue to receive normal updates to most of their working
-      copy, but the "switched" portions will remain immune (unless
-      someone commits a change to their branch).  This feature adds a
-      whole new dimension to the concept of a "mixed working copy" &mdash;
+      <filename>calc</filename> example, containing multiple
+      subdirectories.  Subversion users often follow a specific
+      algorithm when using branches:</para>
+
+      <orderedlist>
+        <listitem> <para>Copy the project's entire 'trunk' to a new
+        branch directory.</para>
+        </listitem>
+        <listitem>
+          <para>Switch only <emphasis>part</emphasis> of the trunk
+          working copy to mirror the branch.</para>
+        </listitem>
+      </orderedlist>
+    
+    <para>In other words, if a user knows that the branch-work only
+      needs to happen on a specific subdirectory, they use
+      <command>svn switch</command> to move only that subdirectory to
+      the branch.  (Or sometimes users will switch just a single
+      working file to the branch!)  That way, they can continue to
+      receive normal 'trunk' updates to most of their working copy,
+      but the switched portions will remain immune (unless someone
+      commits a change to their branch).  This feature adds a whole
+      new dimension to the concept of a "mixed working copy" &mdash;
       not only can working copies contain a mixture of working
       revisions, but a mixture of repository locations as well.</para>
     
