@@ -89,13 +89,17 @@ struct dav_resource_private {
   */
   svn_string_t *path;
 
+  /* the repository this resource is associated with */
+  dav_svn_repos *repos;
+
   /* resource-type-specific data */
   const char *object_name;      /* ### not really defined right now */
 
   /* for REGULAR resources: an open node for the revision */
   svn_fs_node_t *node;
 
-  dav_svn_repos *repos;
+  /* for ACTIVITY resources: the transaction name */
+  const char *txn_name;
 };
 
 

@@ -311,6 +311,7 @@ static dav_error * dav_svn_prep_activity(dav_resource_combined *comb)
   const char *txn_name = dav_svn_get_txn(comb->priv.repos,
                                          comb->priv.object_name);
 
+  comb->priv.txn_name = txn_name;
   comb->res.exists = txn_name != NULL;
 
   return NULL;
