@@ -9,12 +9,6 @@ Status of 1.1.0:
 
 Candidate changes:
 
-  * r10299, r10338:
-    When configured without Berkeley DB, make libsvn_fs default to
-    the fsfs back-end.
-    Votes:
-      +1: ghudson, epg, rooneg
-
   * r10313:
     Shouldn't tell people that --without-berkeley-db will keep us
     from building the server parts of Subversion when it really doesn't.

@@ -327,6 +327,9 @@ if test "$svn_lib_berkeley_db" = "yes"; then
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-bdb-lib"
   BDB_TEST_DEPS="\$(BDB_TEST_DEPS)"
   BDB_TEST_PROGRAMS="\$(BDB_TEST_PROGRAMS)"
+  DEFAULT_FS_TYPE="bdb"
+else
+  DEFAULT_FS_TYPE="fsfs"
 fi
 
 if test "$svn_lib_neon" = "yes"; then
@@ -352,6 +355,8 @@ AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_MINOR, $SVN_FS_WANT_DB_MINOR,
                    [The desired minor version for the Berkeley DB])
 AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_PATCH, $SVN_FS_WANT_DB_PATCH,
                    [The desired patch version for the Berkeley DB])
+AC_DEFINE_UNQUOTED(DEFAULT_FS_TYPE, "$DEFAULT_FS_TYPE",
+                   [The fs type to use by default])
 
 dnl Check for header files ----------------
 
