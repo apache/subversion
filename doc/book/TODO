@@ -1,0 +1,55 @@
+This is a -*- text -*- file.
+
+Here is a list of all the things that the Subversion Book DOESN'T yet cover.
+
+  - certificate support in the client.  how to configure
+    ~/.subversion/servers, manage certs, etc.
+
+  - the auth data now lives in ~/.subversion/auth.  explain exactly
+    when stuff gets cached, how to prevent it from being cached, and
+    how to invalidate a cache.
+
+  - define a 'project root', recommend 'standard' repos layout beneath
+    such roots.
+
+  - svndumpfilter.  in particular, show how to "migrate" a subdir in
+    one repos to a subdir in another one.
+
+  - 'svn diff/merge --ignore-ancestry'.  Demonstrate how this switch
+    can be used as an alternate strategy for vendor branching (instead
+    of using svn_load_dirs.pl): just import each new vendor release
+    unrelatedly, and apply the diffs to your vendor-branch working copy.
+
+  - appendix A: how authentication differs from CVS.  Explain that the
+    server challenges, rather than the client explicitly "logging in".
+
+    Also, in 'branches are dirs' section, stress that users would NOT
+    want to ever checkout the root of an svn repository.... it would
+    be humongous.  Some CVS users have been confused by this.
+
+  - some folks want a glossary.  that's good, since we have a
+    glossary.xml anyway.  :-)  probably something we do at the last minute.
+
+  - svnserve documentation: four people have already gotten confused
+    (in the same way) by this phrase: "To configure your client to
+    perform SSH tunneling, you just need to edit your servers run-time
+    configuration file".  They think the book is talking about some
+    config file on the *server*, rather than the client.  oof, clarify.
+
+  - document new svn+ssh:// syntax.  also explain 'svnserve -t' flag.
+
+  - ch06:  .cvsignore files aren't recursive.  neither is svn:ignore prop.
+
+  - ch07: maybe a explanation for the person writing a new main()
+    application... what are all those callbacks in the ctx_t used for?
+    people have asked this in irc.  what sort of things does an
+    application *have* to set up in the cxt_t in order to call an
+    svn_client_foo() function?
+
+  - document how to use 'svn up' to restart an interrupted checkout.
+
+  - document new 'svn st' symbol for incomplete directories
+
+  - new 'svn diff' UI (when it's done) -- affects ch03, ch08, and
+    maybe other chapters.
+
