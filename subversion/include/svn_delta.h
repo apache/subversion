@@ -182,6 +182,13 @@ void svn_txdelta (svn_txdelta_stream_t **stream,
                   apr_pool_t *pool);
 
 
+/* Set *STREAM to a pointer to a delta stream that will turn an empty
+   bytestream into STRING. */
+void svn_txdelta_from_string (svn_txdelta_stream_t **stream,
+                              svn_string_t *string,
+                              apr_pool_t *pool);
+
+
 /* Free the delta stream STREAM.  */
 void svn_txdelta_free (svn_txdelta_stream_t *stream);
 
