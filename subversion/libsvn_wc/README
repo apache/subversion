@@ -16,14 +16,12 @@ working copy accumulates uncommitted changes, some of which may affect
 its tree layout.  By commit time, the working copy's layout could be
 arbitrarily different from the repository tree on which it was based.
 
-Furthermore, even after an update/commit, the working copy and the
-repository are not necessarily perfect mirrors, since the entire tree
-is not always involved (thus local changes and local out-of-datenesses
-can remain).
+Furthermore, updates/commits do not always involve the entire tree, so
+it is possible for the working copy to go a very long time without
+being a perfect mirror of some tree in the repository.
 
-To resolve all situations safely, we must carefully define what is a
-conflict between repository and working copy, and describe how such
-conflicts are resolved.
+To resolve all situations safely, we define exactly what a "change" is
+and what a "conflict" is, and how conflicts are resolved.
 
 Kinds of Changes.
 =================
@@ -47,10 +45,11 @@ changes, "direct" and "indirect":
 
 In other words, a change that directly affects an entity's textual
 contents, its name, or its existence is a "direct" change.  A change
-that affects the name or existence of an entity's immediate child is
-an "indirect" change to that entity (although it's a direct change to
-the child, of course).  Only directories can have indirect changes,
-therefore.
+that affects the name or existence of an directory's immediate child
+is an "indirect" change to the directory (although it's a direct
+change to the child, of course).  Only directories can have indirect
+changes.
+
 
 Comparing Changes.
 ==================
@@ -64,16 +63,16 @@ server to client.
 Since commits do not change the working copy, pre-commit checks need
 not do intelligent conflict checking and merging.  They are only
 concerned with whether entities in question are "up-to-date" -- that
-is, whether there have been divergent changes to the same entities in
-both the working copy and the repository.  If there have, then the
-working copy is out-of-date.
+is, for the entities in question, have there been divergent changes
+between working copy and repository?  If so, then the working copy is
+out-of-date.
 
 Updates, on the other hand, can affect the working copy.  Updates
 merge changes into the working copy where possible (not only textual
-changes, but even tree-structure changes), and signal a conflict
-wherever merging is not possible.
+changes, but even tree-structure changes), and describe conflicts as
+usefully as possible when merging is not an option.
 
-Below, we describe
+To understand how the above happens, you need to know
 
   * How the working copy describes its state to the server.
 
@@ -90,15 +89,16 @@ How the working copy describes its state to the server.
 =======================================================
 
 The problem of describing the working copy's state to the server is
-the same whether for pre-commit check or for update.  Both involve
-some subset of the working copy (the subset could be everything in the
-working copy, or it could be some selection of files and directories).
-The client sends this subset to the server as a "snapshot", and the
-server uses the snapshot to figure out how to respond to the client.
+the same whether for pre-commit check or for update.  In both
+scenarios, the working copy describes its state to the server by
+sending over a "snapshot".  The server uses the snapshot to determine
+how to respond to the client.  (The state includes only those entities
+involved in the transaction -- the working copy is certainly not
+required to describe its *entire* state for every operation.)
 
-For the moment, let's treat the snapshot as a kind of black box (in
-practice, it's probably a skelta, but that's not a requirement).  The
-black box contains one entry per entity, each entry consisting of:
+For the moment, let's treat the snapshot as a black box (in practice,
+it's probably a skelta).  It contains one entry per entity, and each
+entry consists of:
 
    Original Name      (a full path, of course)
    Original Version   (i.e., "base" version)
@@ -106,70 +106,102 @@ black box contains one entry per entity, each entry consisting of:
    New Name           (if any)
    New Version        (only if other than repository latest)
 
-(Of course, the snapshot must first of all be consistent with itself
--- if it claims that two files have been renamed to the same name, or
-something equally ridiculous, then the server simply rejects it out of
-hand.)
+First of all, the snapshot must be consistent with itself -- if it
+claims that two files have been renamed to the same name, or something
+equally ridiculous, then the server simply rejects it out of hand.
+
+Assuming the snapshot makes sense, the server
 
 fooo working here
 
-These two tables show directories because only directories can have
-indirect changes.  BUT, if it happens that the entity's type is
-changing -- it's a dir on one side, but a regular file on the other --
-that's always a conflict.  This needs to be expressed formally...
 
+C = conflict
+M = mergeable
+
+          Table 1: Direct changes against indirect changes
+          ************************************************
 
   [changes    |         d i r e c t     c h a n g e s
    on direc-  |
    tories]    |    self add         self remove        self rename
-  ------------|----------------------------------------------------
-  i           |
-  n     child |  [impossible]        CONFLICT          commit: CONFLICT
-  d      add  |                                        update: MERGEABLE
-  i           |
-  r           |
-  e           |
-  c     child |
-  t    remove |  [impossible]        CONFLICT          commit: CONFLICT
-              |                                        update: MERGEABLE
-              |
-  c           |
-  h           |
-  a     child |
-  n    rename |  [impossible]        CONFLICT          commit: CONFLICT
-  g           |                                        update: MERGEABLE
-  e           |
-  s           |
+  ------------|------------------.---------------.-------------------.
+  i           | C                .               .                   .
+  n     child | (Must be really  .       C       .     commit: C     .
+  d      add  | out-of-date for  .               .     update: M     .
+  i           | this to happen!) .               .                   .
+  r           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  e           |                  .               .                   .
+  c     child |  C               .               .                   .
+  t    remove |                  .       C       .     commit: C     .
+              | (Same as above.) .               .     update: M     .
+              |                  .               .                   .
+  c           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  h           |                  .               .                   .
+  a     child |  C               .               .                   .
+  n    rename |                  .       C       .     commit: C     .
+  g           | (Same as above.) .               .     update: M     .
+  e           |                  .               .                   .
+  s           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
 
 
+         Table 2: Indirect changes against indirect changes
+         **************************************************
 
   [changes    |         i n d i r e c t     c h a n g e s
    on direc-  |
    tories]    |    child add        child remove      child rename
-  ------------|----------------------------------------------------
-  i           |
-  n     child |    conflict         conflict          conflict
-  d      add  |    on name          on name           on name
-  i           |
-  r           |
-  e           |                  commit: conflict
-  c     child |    conflict              on name.     conflict
-  t    remove |    on name       update: mergeable!   on name
-              |
-  c           |
-  h           |
-  a     child |    conflict         conflict          conflict
-  n    rename |    on name          on name           on name
-  g           |
-  e           |
-  s           |
+  ------------|----------------.-------------------.-----------------.
+  i           |                .                   .                 .
+  n     child |    C, if name  .    C, if name     .  C, if name     .
+  d      add  |    conflicts   .    conflicts      .  conflicts      .
+  i           |                .                   .                 .
+  r           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  e           |                . commit: C, if name.                 .
+  c     child |    C, if name  .         conflicts .  C, if name     .
+  t    remove |    conflicts   . update: M         .  conflicts      .
+              |                .                   .                 .
+  c           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  h           |                .                   .                 .
+  a     child |    C, if name  .    C, if name     .  C, if name     .
+  n    rename |    conflicts   .    conflicts      .  conflicts      .
+  g           |                .                   .                 .
+  e           |                .                   .                 .
+  s           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
 
 
-The corresponding table for direct changes against direct changes is
-not shown, because direct changes *always* conflict.
+           Table 3: Direct changes against direct changes
+           **********************************************
 
+  [changes to |            d i r e c t     c h a n g e s
+   any kind   |
+   of entity] |   add          remove         rename         text change
+  ------------|------------.-------------.---------------.-----------------.
+              | commit: C  .             .               .  commit: C      .
+      add     |            .             .               .                 .
+  d           | update: M  .     C       .     C         .  update: M      .
+  i           |   or C     .             .               .    or C         .
+  r           |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  e           |            . commit: C   .               .                 .
+  c   remove  |            .             .               .                 .
+  t           |    C       . update: M   .     C         .    C            .
+              |            .             .               .                 .
+  c           |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  h           |            .             .  commit: C    .  commit: C      .
+  a   rename  |            .             .               .                 .
+  n           |    C       .     C       .  update: M    .  update: M      .
+  g           |            .             .    or C       .                 .
+  e           |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  s           | commit: C  .             .  commit: C    .  commit: C      .
+      text    |            .             .               .                 .
+      change  | update: M  .     C       .  update: M    .  update: M or C .
+              |   or C     .             .               .                 .
+              |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+
+
+[Not clear if `rename' shoud be a separate operation...]
 
 
 
