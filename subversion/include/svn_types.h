@@ -69,11 +69,6 @@ typedef struct svn_error
 /** index into an apr_array_header_t */
 #define APR_ARRAY_IDX(ary,i,type) (((type *)(ary)->elts)[i])
 
-/** push into an apr_array_header_t */
-#define APR_ARRAY_PUSH(ary, type) (*((type *)apr_array_push (ary)))
-
-
-
 /** The various types of nodes in the Subversion filesystem. */
 typedef enum
 {
@@ -147,23 +142,6 @@ enum svn_recurse_kind
   svn_nonrecursive = 1,
   svn_recursive
 };
-
-
-/** An enum for describing the depth of operations on directories (for
-    files, depth is not a useful concept). */
-typedef enum svn_depth_t
-{
-  /** depth 0: operate only on the directory itself */
-  svn_depth_zero = 0,
-
-  /** depth 1: operate on the directory and its immediate
-      non-directory children. */
-  svn_depth_one,
-
-  /** depth infinity: full recursion on the directory. */
-  svn_depth_infinity
-
-} svn_depth_t;
 
 
 /** A general subversion directory entry. */
