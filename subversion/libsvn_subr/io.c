@@ -204,8 +204,6 @@ svn_io_open_unique_file (apr_file_t **f,
 #if 1 /* TODO: Remove this code when APR 0.9.6 is released. */
 #include "apr_env.h"
 
-static char global_temp_dir[APR_PATH_MAX+1] = { 0 };
-
 /* Try to open a temporary file in the temporary dir, write to it,
    and then close it. */
 static int test_tempdir(const char *temp_dir, apr_pool_t *p)
@@ -232,12 +230,9 @@ svn_io_temp_dir (const char **dir,
   apr_status_t apr_err;
   static const char *try_dirs[] = { "/tmp", "/usr/tmp", "/var/tmp" };
   static const char *try_envs[] = { "TMP", "TEMP", "TMPDIR" };
+  const char *temp_dir;
   char *cwd;
   int i;
-
-  /* If we have a cached tmp dir, use it. */
-  if (global_temp_dir[0])
-    goto end;
 
   /* Our goal is to find a temporary directory suitable for writing
      into.  We'll only pay the price once if we're successful -- we
@@ -266,7 +261,7 @@ svn_io_temp_dir (const char **dir,
           apr_size_t len = strlen(value);
           if (len && (len < APR_PATH_MAX) && test_tempdir(value, pool))
 	    {
-              memcpy(global_temp_dir, value, len + 1);
+              temp_dir = value;
               goto end;
             }
         }
@@ -275,17 +270,17 @@ svn_io_temp_dir (const char **dir,
   /* Next, on Win32, try the C:\TEMP directory. */
   if (test_tempdir("C:\\TEMP", p))
     {
-      memcpy(global_temp_dir, "C:\\TEMP", 7 + 1);
+      temp_dir = "C:\\TEMP";
       goto end;
     }
-#endif
+#endif /* SVN_WIN32 */
 			    
   /* Next, try a set of hard-coded paths. */
   for (i = 0; i < (sizeof(try_dirs) / sizeof(const char *)); i++)
     {
       if (test_tempdir(try_dirs[i], pool))
         {
-          memcpy(global_temp_dir, try_dirs[i], strlen(try_dirs[i]) + 1);
+	  temp_dir = try_dirs[i];
           goto end;
         }
     }
@@ -295,22 +290,18 @@ svn_io_temp_dir (const char **dir,
     {
       if (test_tempdir(cwd, pool))
         {
-          /* Don't cache if the selected temp dir is the cwd */
-          *dir = apr_pstrdup(pool, cwd);
-          return SVN_NO_ERROR;
+          temp_dir = cwd;
+	  goto end;
         }
     }
 
-end:
-  if (global_temp_dir[0])
-    {
-      *dir = apr_pstrdup(pool, global_temp_dir);
-      return SVN_NO_ERROR;
-    }
-    
   return svn_error_create
            (APR_EGENERAL, NULL,
             "svn_io_temp_dir: Unable to find a suitable temporary directory");
+
+end:
+  *dir = svn_path_canonicalize(temp_dir, pool);
+  return SVN_NO_ERROR;
 
 #else
   apr_status_t apr_err = apr_temp_dir_get (dir, pool);
@@ -319,6 +310,8 @@ end:
     return svn_error_create
       (apr_err, NULL,
        "svn_io_temp_dir: Unable to find a suitable temporary directory");
+
+  *dir = svn_path_canonicalize (*dir, pool);
 
   return SVN_NO_ERROR;
 #endif
