@@ -438,9 +438,9 @@ dav_svn_create_lock(dav_lockdb *lockdb,
   dlock->type = DAV_LOCKTYPE_UNKNOWN;
   dlock->depth = 0;
 
-  serr = svn_fs_generate_token(&(token->uuid_str), 
-                               resource->info->repos->fs,
-                               resource->pool);
+  serr = svn_fs_generate_lock_token(&(token->uuid_str), 
+                                    resource->info->repos->fs,
+                                    resource->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Failed to generate a lock token.",
