@@ -48,10 +48,10 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
   void *edit_baton;
   svn_error_t *err;
 
+  /* If not given an ancestor path, we will (for the time being)
+     simply create an empty one. */
   if (! ancestor_path)
     ancestor_path = svn_string_create ("", pool);
-  if (ancestor_revision == SVN_INVALID_REVNUM)
-    ancestor_revision = 1;
       
   if (is_update)
     {
@@ -165,7 +165,8 @@ svn_client__checkout_internal (const svn_delta_edit_fns_t *before_editor,
 {
   return do_edits (before_editor, before_edit_baton,
                    after_editor, after_edit_baton,
-                   path, xml_src, ancestor_path, ancestor_revision, pool, 0);
+                   path, xml_src, ancestor_path, ancestor_revision, 
+                   pool, FALSE);
 }
 
 
@@ -181,7 +182,8 @@ svn_client__update_internal (const svn_delta_edit_fns_t *before_editor,
 {
   return do_edits (before_editor, before_edit_baton,
                    after_editor, after_edit_baton,
-                   path, xml_src, NULL, ancestor_revision, pool, 1);
+                   path, xml_src, NULL, ancestor_revision, 
+                   pool, TRUE);
 }
 
 
