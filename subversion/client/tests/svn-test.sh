@@ -28,15 +28,17 @@ echo "Modifying A/mu."
 echo "moo" >> this/A/mu
 
 ### Adding.
-# echo
-# echo "Adding newfile1."
-# touch this/newfile1
-# ${SVN_PROG} add this/newfile1
-# 
-# echo
-# echo "Adding A/B/E/newfile2."
-# touch this/A/B/E/newfile2
-# ${SVN_PROG} add this/A/B/E/newfile2
+echo
+echo "Adding newfile1."
+touch this/newfile1
+echo "This is added file newfile1."
+${SVN_PROG} add this/newfile1
+
+echo
+echo "Adding A/B/E/newfile2."
+touch this/A/B/E/newfile2
+echo "This is added file newfile2."
+${SVN_PROG} add this/A/B/E/newfile2
 
 ### Updating.
 # echo
