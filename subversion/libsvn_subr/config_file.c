@@ -462,7 +462,7 @@ svn_config_ensure (apr_pool_t *pool)
    "should examine a particular file to learn what configuration\n"
    "directives are valid for that file.\n"
    "\n"
-   "The syntax is the same as that recognised by Python's ConfigParser module:"
+   "The syntax is standard INI format:"
    "\n"
    "\n"
    "   - Empty lines, and lines starting with '#', are ignored.\n"
