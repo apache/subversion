@@ -91,7 +91,7 @@ def create_config(config_dir, enable_flag):
 def create_test_file(dir, name):
   "create a test file"
 
-  fd = open(os.path.join(dir, name), 'w', 0644)
+  fd = open(os.path.join(dir, name), 'w')
   fd.write('foo\nbar\nbaz\n')
   fd.close()
 
