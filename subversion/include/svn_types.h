@@ -134,7 +134,7 @@ typedef struct svn_dirent
  * would take care of both internationalization issues and custom
  * keywords (e.g., $NetBSD$).  See
  * 
- *    http://subversion.tigris.org/servlets/ReadMsg?msgId=49180&listName=dev
+ *    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8921
  *    =====
  *    From: "Jonathan M. Manning" <jmanning@alisa-jon.net>
  *    To: dev@subversion.tigris.org
@@ -144,7 +144,7 @@ typedef struct svn_dirent
  *
  * and Eric Gillespie's support of same:
  * 
- *    http://subversion.tigris.org/servlets/ReadMsg?msgId=48658&listName=dev
+ *    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8757
  *    =====
  *    From: "Eric Gillespie, Jr." <epg@pretzelnet.org>
  *    To: dev@subversion.tigris.org
