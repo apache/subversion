@@ -88,7 +88,7 @@ check_status 5
 echo "Committing changes in ${TEST_DIR_1}."
 (cd ${TEST_DIR_1};                                                \
  ${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-2.xml \
-             --revision 2;                                        \
+             --revision 2 -m "log msg";                           \
 )
 
 check_status 6
@@ -129,7 +129,7 @@ echo "for commit rev2, tenth line in A/mu" >> ${TEST_DIR_2}/A/mu
 echo "Committing changes, this time from ${TEST_DIR_2}."
 (cd ${TEST_DIR_2};                                                \
  ${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-3.xml \
-             --revision 3;                                        \
+             --revision 3 -m "log msg";                           \
 )
 
 check_status 8
@@ -178,7 +178,7 @@ echo "for commit rev4, a non-conflicting change" >> ${TEST_DIR_2}/A/mu
 echo "Committing changes for merge, from ${TEST_DIR_1}."
 (cd ${TEST_DIR_1};                                                \
  ${SVN_PROG} commit --xml-file ../${COMMIT_RESULTFILE_NAME}-4.xml \
-             --revision 4;                                        \
+             --revision 4 -m "log msg";                           \
 )
 
 check_status 10

@@ -1206,7 +1206,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
 
   svntest.main.run_svn(None, 'move', A_path, Z_path)
 
-  out, err = svntest.main.run_svn(1, 'commit', mu_path)
+  out, err = svntest.main.run_svn(1, 'commit', '-m', '"logmsg"', mu_path)
 
   if len(err) == 0: 
     return 1 
