@@ -71,8 +71,10 @@ section for approved changes.)
       in invalid set of changes to be returned.  This bug *probably*
       only gets triggered by cvs2svn during directory pruning, but
       cvs2svn is only gonna get more popular as time goes on...
+      Notes: ghudson (ugly and a source of O(n^2) behavior, but better
+                      than being incorrect, I guess)
       Votes:
-       +1: cmpilato, kfogel
+       +1: cmpilato, kfogel, ghudson
 
        
     * r8299
@@ -80,18 +82,19 @@ section for approved changes.)
       it to return an incomplete root URL, if the session URL was already the
       root URL.
       Votes:
-       +1: jszakmeister
+       +1: jszakmeister, ghudson
 
 
     * r8341, r8352
       Fix some more 'access denied' errors on Windows.
       Votes:
+       +1: ghudson
 
 
     * r8346
       Fix infinite recursion in libsvn_subr/utf.c.
       Votes:
-       +1: epg
+       +1: epg, ghudson
 
     * Issue #1705
       Exorcise apr_off_t.
@@ -99,14 +102,17 @@ section for approved changes.)
       now.  Creates crashes with the perl bindings.
       Notes: breser (I'd vote for this but I don't think my
                      vote counts).
+             ghudson (svn_io_file_seek needs a little more work)
       Votes:
+       +0: ghudson
 
     * r8296
       Change to correctly build Fedora Core 1 RPMs.
       Justification: Without this the generated package name
          contains "Unknown" instead of the platform abbreviation.
       Notes:
-      Votes: david
+      Votes:
+       +1: david, ghudson
 
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
