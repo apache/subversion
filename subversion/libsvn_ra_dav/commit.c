@@ -195,7 +195,8 @@ static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc,
       SVN_ERR( (*cc->get_func)(cc->close_baton,
                                rsrc->local_path->data,
                                SVN_RA_DAV__LP_VSN_URL,
-                               &vsn_url_value) );
+                               &vsn_url_value,
+                               cc->ras->pool) );
       if (vsn_url_value != NULL)
         {
           rsrc->vsn_url = vsn_url_value->data;
@@ -254,7 +255,8 @@ static svn_error_t * get_activity_url(commit_ctx_t *cc,
       SVN_ERR( (*cc->get_func)(cc->close_baton,
                                ".",
                                SVN_RA_DAV__LP_ACTIVITY_URL,
-                               activity_url) );
+                               activity_url,
+                               cc->ras->pool) );
 
       if (*activity_url != NULL)
         {

@@ -71,7 +71,8 @@ static svn_error_t *
 get_wc_prop(void *baton,
             const char *relpath,
             const char *name,
-            const svn_string_t **value)
+            const svn_string_t **value,
+            apr_pool_t *pool)
 {
   svn_client__callback_baton_t *cb = baton;
   struct svn_wc_close_commit_baton ccb;
@@ -86,9 +87,8 @@ get_wc_prop(void *baton,
   /* ### this should go away, and svn_wc_get_wc_prop should just take this
      ### stuff as parameters */
   ccb.prefix_path = cb->base_dir;
-  ccb.pool = cb->pool;
 
-  return svn_wc_get_wc_prop(&ccb, relpath, name, value);
+  return svn_wc_get_wc_prop(&ccb, relpath, name, value, pool);
 }
 
 

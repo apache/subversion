@@ -179,13 +179,15 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
  
   /* store the version URL */
   SVN_ERR( (*mc->set_prop)(mc->close_baton, path,
-                           SVN_RA_DAV__LP_VSN_URL, &vsn_url_str) );
+                           SVN_RA_DAV__LP_VSN_URL, &vsn_url_str,
+                           mc->pool) );
       
   /* bump the revision/date/author and commit the file */
   return (*mc->close_commit)(mc->close_baton, path_str, FALSE,
                              mc->rev,
                              mc->committed_date->data,
-                             mc->last_author->data);
+                             mc->last_author->data,
+                             mc->pool);
 }
 
 static svn_error_t * handle_resource(merge_ctx_t *mc)
@@ -626,7 +628,7 @@ svn_error_t * svn_ra_dav__merge_activity(
          this necessary, given that things are being deleted? */
       if (close_commit)
         SVN_ERR( (*close_commit)(close_baton, path_str, FALSE,
-                                 mc.rev, NULL, NULL) );
+                                 mc.rev, NULL, NULL, pool) );
     }
 
 

@@ -59,7 +59,8 @@ extern "C" {
 typedef svn_error_t *(*svn_ra_get_wc_prop_func_t) (void *baton,
                                                    const char *relpath,
                                                    const char *name,
-                                                   const svn_string_t **value);
+                                                   const svn_string_t **value,
+                                                   apr_pool_t *pool);
 
 /* This is a function type which allows the RA layer to store working
    copy (WC) properties.
@@ -72,7 +73,8 @@ typedef svn_error_t *(*svn_ra_get_wc_prop_func_t) (void *baton,
 typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *baton,
                                                    const char *relpath,
                                                    const char *name,
-                                                   const svn_string_t *value);
+                                                   const svn_string_t *value,
+                                                   apr_pool_t *pool);
 
 
 /* Function type for post-commit processing.  PATH is the path that
@@ -89,12 +91,13 @@ typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *baton,
    Typically, the client layer supplies this routine to an RA layer,
    which calls this routine on each PATH that was committed, allowing
    the client to bump revision numbers, possibly recursively.  */
-typedef svn_error_t *(*svn_ra_close_commit_func_t) (void *close_baton,
+typedef svn_error_t *(*svn_ra_close_commit_func_t) (void *baton,
                                                     svn_stringbuf_t *relpath,
                                                     svn_boolean_t recurse,
                                                     svn_revnum_t new_rev,
                                                     const char *rev_date,
-                                                    const char *rev_author);
+                                                    const char *rev_author,
+                                                    apr_pool_t *pool);
 
 /* A function type for retrieving the youngest revision from a repos.   */
 typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t) 
