@@ -8,7 +8,6 @@ RA->lock()
 
          - force flag
          - working-revnum (for OOD check)
-         - want-creationdate
 
      * mod_dav_svn should call authz_read func on path, if it exists.
 
@@ -32,6 +31,7 @@ RA->unlock()
 
      * what if older server?  just returns '405 Method not Allowed'.
 
+----
 
 RA->get_lock()
 
@@ -46,7 +46,7 @@ RA->get_lock()
        a standard property value that describes almost all the
        svn_lock_t fields. 
 
-         - add one custom response header:  creation-date
+         - add one custom response header:  X-SVN-creation-date
 
      * what if older server?  just returns '404 Not Found'.
 

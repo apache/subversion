@@ -126,6 +126,13 @@ WHAT USERS SHOULD EXPECT FROM PATH-BASED AUTHZ
        the working copy, but the .svn/entries file still contains an
        entry for it (marked 'absent').
 
+7. LOCKING
+
+   If a client attempts to lock or unlock an unreadable path, the
+   command will fail.  If a client attempts to retrieve a list of all
+   locks "below" a directory, only readable paths will ever be
+   returned;  unreadable locked paths remain unknown.
+
 
 ============================================================================
 HOW TO IMPLEMENT PATH-BASED AUTHZ
@@ -143,6 +150,7 @@ here are its responsibilities:
            svn_repos_get_file_revs()
            svn_repos_rev_prop()
            svn_repos_rev_proplist()
+           svn_repos_fs_get_locks()
    
    2. Manually implement read-authz for incoming network requests that
       represent calls to:
@@ -150,6 +158,10 @@ here are its responsibilities:
            RA->get_file()
            RA->get_dir()
            RA->check_path()
+           RA->lock()
+           RA->unlock()
+           RA->get_lock()
+           RA->get_locks()
    
       (These concepts aren't wrapped by libsvn_repos becauseit's just
       as easy to call an authz func directly on a single path, rather
