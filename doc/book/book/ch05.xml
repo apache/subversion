@@ -757,9 +757,9 @@ general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS &amp; OPTIONS ...]
 Type "svnadmin help &lt;subcommand&gt;" for help on a specific subcommand.
 
 Available subcommands:
+   archive
    create
    createtxn
-   dump
 &hellip;
 </screen>
 
@@ -771,6 +771,14 @@ Available subcommands:
           subcommands offers.</para>
 
         <variablelist>
+          <varlistentry>
+            <term><literal>archive</literal></term>
+            <listitem>
+              <para>Displays the paths of database log files which can be
+                safely archived away (and removed) from the repository.</para>
+            </listitem>
+          </varlistentry>
+
           <varlistentry>
             <term><literal>create</literal></term>
             <listitem>
