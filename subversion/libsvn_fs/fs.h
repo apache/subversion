@@ -52,11 +52,7 @@ struct svn_fs_t {
   /* The path to the repository's conf directory. */
   char *conf_path;
 
-  /* The path to the Berkeley DB environment, for use in error
-     messages.  Although the repository is officially the parent of
-     this dir, the path we're always needing is the one to Berkeley,
-     so that's what we record here.  The rest of the repository
-     doesn't do much right now anyway.  */
+  /* The path to the Berkeley DB environment. */
   char *env_path;
 
   /* A Berkeley DB environment for all the filesystem's databases.
