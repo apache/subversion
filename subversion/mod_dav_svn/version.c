@@ -87,6 +87,16 @@ static dav_error *dav_svn_get_option(const dav_resource *resource,
   return NULL;
 }
 
+static int dav_svn_versionable(const dav_resource *resource)
+{
+  return 0;
+}
+
+static dav_auto_version dav_svn_auto_versionable(const dav_resource *resource)
+{
+  return 0;
+}
+
 static dav_error *dav_svn_vsn_control(dav_resource *resource,
                                       const char *target)
 {
@@ -95,6 +105,7 @@ static dav_error *dav_svn_vsn_control(dav_resource *resource,
 }
 
 static dav_error *dav_svn_checkout(dav_resource *resource,
+                                   int auto_checkout,
                                    int is_unreserved, int is_fork_ok,
                                    int create_activity,
                                    apr_array_header_t *activities,
@@ -279,16 +290,6 @@ static dav_error *dav_svn_checkin(dav_resource *resource,
                        "CHECKIN is not yet implemented.");
 }
 
-static int dav_svn_versionable(const dav_resource *resource)
-{
-  return 0;
-}
-
-static int dav_svn_auto_version_enabled(const dav_resource *resource)
-{
-  return 0;
-}
-
 static dav_error *dav_svn_avail_reports(const dav_resource *resource,
                                         const dav_report_elem **reports)
 {
@@ -296,7 +297,7 @@ static dav_error *dav_svn_avail_reports(const dav_resource *resource,
                        "REPORT is not yet implemented.");
 }
 
-static int dav_svn_report_target_selector_allowed(const ap_xml_doc *doc)
+static int dav_svn_report_label_header_allowed(const ap_xml_doc *doc)
 {
   return 0;
 }
@@ -404,14 +405,14 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
 const dav_hooks_vsn dav_svn_hooks_vsn = {
   dav_svn_get_vsn_options,
   dav_svn_get_option,
+  dav_svn_versionable,
+  dav_svn_auto_versionable,
   dav_svn_vsn_control,
   dav_svn_checkout,
   dav_svn_uncheckout,
   dav_svn_checkin,
-  dav_svn_versionable,
-  dav_svn_auto_version_enabled,
   dav_svn_avail_reports,
-  dav_svn_report_target_selector_allowed,
+  dav_svn_report_label_header_allowed,
   dav_svn_get_report,
   NULL,                 /* update */
   NULL,                 /* add_label */
