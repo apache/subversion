@@ -47,3 +47,9 @@ Candidate changes:
       r10389 is a doc and utility fix for r10206.
     Votes:
       +3: brane. That should be enough :-)
+
+  * r10405:
+    Make sure to use BDB for BDB-specific operations.
+    Justification: Fixes embarassing crashes when built without BDB.
+    Votes:
+      +1: ghudson, brane
