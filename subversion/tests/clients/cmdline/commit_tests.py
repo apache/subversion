@@ -874,7 +874,7 @@ def hudson_part_2_1(sbox):
   expected_status.tweak(wc_rev=2)
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
+  expected_disk.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
   expected_disk.add({
     'A/D/G/chi' : Item("This is the file 'chi'."),
     })
@@ -1977,7 +1977,7 @@ test_list = [ None,
               hudson_part_1_variation_1,
               hudson_part_1_variation_2,
               hudson_part_2,
-              XFail(hudson_part_2_1),
+              hudson_part_2_1,
               XFail(hook_test),
               merge_mixed_revisions,
               commit_uri_unsafe,
