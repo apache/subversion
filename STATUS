@@ -55,3 +55,11 @@ Candidate changes:
       r10487 really doesn't need a vote, but I included it for completness.
     Votes:
       +1: breser, kfogel
+
+  * r10557:
+    Display verbose Berkeley DB errors.
+    Justification:
+      "Invalid argument" simply isn't helpful! :-)
+    Votes:
+      +1: maxb
+
