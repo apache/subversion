@@ -495,7 +495,7 @@ def add_with_history(sbox):
 #----------------------------------------------------------------------
 
 def delete_file_and_dir(sbox):
-  "merge and that deletes items"
+  "merge that deletes items"
 
   sbox.build()
 
@@ -572,7 +572,7 @@ def delete_file_and_dir(sbox):
   # dry-run without force fails to delete local mods
   outlines, errlines = svntest.main.run_svn(1, 'merge', '-r', '2:3', B_url,
                                             B2_path, '--dry-run')
-  if not errlines:
+  if errlines:
     raise svntest.Failure
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   # force dry-run to delete
@@ -585,7 +585,7 @@ def delete_file_and_dir(sbox):
   # merge without force fails to delete local mods
   outlines, errlines = svntest.main.run_svn(1, 'merge', '-r', '2:3', B_url,
                                             B2_path)
-  if not errlines:
+  if errlines:
     raise svntest.Failure
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -1285,6 +1285,163 @@ def merge_in_new_file_and_diff(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'diff', branch_path)
 
 
+#----------------------------------------------------------------------
+
+# Issue #1425:  'svn merge' should skip over any unversioned obstructions.
+
+def merge_skips_obstructions(sbox):
+  "merge should skip over unversioned obstructions"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  F_url = svntest.main.current_repo_url + '/A/B/F'
+
+  Q_path = os.path.join(F_path, 'Q')
+  foo_path = os.path.join(F_path, 'foo')
+  bar_path = os.path.join(F_path, 'Q', 'bar')
+
+  svntest.main.run_svn(None, 'mkdir', Q_path)
+  svntest.main.file_append(foo_path, "foo")
+  svntest.main.file_append(bar_path, "bar")
+  svntest.main.run_svn(None, 'add', foo_path, bar_path)
+
+  expected_output = wc.State(wc_dir, {
+    'A/B/F/Q'     : Item(verb='Adding'),
+    'A/B/F/Q/bar' : Item(verb='Adding'),
+    'A/B/F/foo'   : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/F/Q'     : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/F/Q/bar' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/F/foo'   : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+  # Revision 2 now has A/B/F/foo, A/B/F/Q, A/B/F/Q/bar.  Let's merge
+  # those 'F' changes into empty dir 'C'.  But first, create an
+  # unversioned 'foo' within C, and make sure 'svn merge' doesn't
+  # error when the addition of foo is obstructed.
+
+  svntest.main.file_append(os.path.join(C_path, "foo"), "foo") # unversioned
+
+  outlines,errlines = svntest.main.run_svn(None, 'merge', '-r', '1:2', F_url,
+                                           C_path)
+  if errlines:
+    raise svntest.Failure
+
+  # Revert the local mods, and this time make "Q" obstructed.  An
+  # unversioned file called "Q" will obstruct the adding of the
+  # directory of the same name.
+
+  outlines,errlines = svntest.main.run_svn(None, 'revert', '-R', wc_dir)
+  if errlines:
+    raise svntest.Failure
+
+  os.unlink(os.path.join(C_path, "foo"))
+  svntest.main.safe_rmtree(os.path.join(C_path, "Q"))
+  svntest.main.file_append(os.path.join(C_path, "Q"), "foo") # unversioned
+  
+  outlines,errlines = svntest.main.run_svn(None, 'merge', '-r', '1:2', F_url,
+                                           C_path)
+  if errlines:
+    raise svntest.Failure
+
+  # Revert the local mods, and commit the deletion of iota and A/D/G. (r3)
+  os.unlink(os.path.join(C_path, "foo"))
+  outlines,errlines = svntest.main.run_svn(None, 'revert', '-R', wc_dir)
+  if errlines:
+    raise svntest.Failure
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  outlines,errlines = svntest.main.run_svn(None, 'rm', iota_path, G_path)
+  if errlines:
+    raise svntest.Failure
+
+  outlines,errlines = svntest.main.run_svn(None, 'commit', '-m', 'msg',
+                                           wc_dir)
+  if errlines:
+    raise svntest.Failure
+
+  # Now create unversioned iota and A/D/G, try running a merge -r2:3.
+  # The merge process should skip over these targets, since they're
+  # unversioned.
+  
+  svntest.main.file_append(iota_path, "foo") # unversioned
+  os.mkdir(G_path) # unversioned
+  outlines,errlines = svntest.main.run_svn(None, 'merge', '-r', '2:3',
+                                           svntest.main.current_repo_url,
+                                           wc_dir)
+  if errlines:
+    raise svntest.Failure
+  
+  # Revert the local mods, and commit a change to A/B/lambda (r4), and then
+  # commit the deletion of the same file. (r5)
+  os.unlink(iota_path)
+  svntest.main.safe_rmtree(G_path)
+  outlines,errlines = svntest.main.run_svn(None, 'revert', '-R', wc_dir)
+  if errlines:
+    raise svntest.Failure
+
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  svntest.main.file_append(lambda_path, "more text")
+  outlines,errlines = svntest.main.run_svn(None, 'commit', '-m', 'msg', wc_dir)
+  if errlines:
+    raise svntest.Failure
+
+  outlines,errlines = svntest.main.run_svn(None, 'rm', lambda_path)
+  if errlines:
+    raise svntest.Failure
+
+  outlines,errlines = svntest.main.run_svn(None, 'commit', '-m', 'msg', wc_dir)
+  if errlines:
+    raise svntest.Failure
+
+  # lambda is gone, so create an unversioned lambda in its place.
+  # Then attempt to merge -r3:4, which is a change to lambda.  The merge
+  # should simply skip the unversioned file.
+
+  svntest.main.file_append(lambda_path, "foo") # unversioned
+
+  outlines,errlines = svntest.main.run_svn(None, 'merge', '-r', '3:4',
+                                           svntest.main.current_repo_url,
+                                           wc_dir)
+  if errlines:
+    raise svntest.Failure
+
+  # OK, so let's commit the new lambda (r6), and then delete the
+  # working file.  Then re-run the -r3:4 merge, and see how svn deals
+  # with a file being under version control, but missing.
+
+  outlines,errlines = svntest.main.run_svn(None, 'add', lambda_path)
+  if errlines:
+    raise svntest.Failure
+
+  outlines,errlines = svntest.main.run_svn(None, 'commit', '-m', 'msg', wc_dir)
+  if errlines:
+    raise svntest.Failure
+
+  os.unlink(lambda_path)
+
+  outlines,errlines = svntest.main.run_svn(None, 'merge', '-r', '3:4',
+                                           svntest.main.current_repo_url,
+                                           wc_dir)
+  if errlines:
+    raise svntest.Failure
+
+
 ########################################################################
 # Run the tests
 
@@ -1303,6 +1460,7 @@ test_list = [ None,
               merge_binary_file,
               merge_one_file,
               merge_in_new_file_and_diff,
+              merge_skips_obstructions,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.

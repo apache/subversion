@@ -513,7 +513,7 @@ file_diff (struct dir_baton *dir_baton,
 
       if (! eb->use_text_base)
         SVN_ERR (dir_baton->edit_baton->callbacks->file_added
-                 (NULL, path,
+                 (NULL, NULL, path,
                   empty_file,
                   path,
                   0, entry->revision,
@@ -816,7 +816,7 @@ delete_entry (const char *path,
         {
           /* Or normally, show the working file being added. */
           SVN_ERR (pb->edit_baton->callbacks->file_added
-                   (NULL, full_path,
+                   (NULL, NULL, full_path,
                     svn_wc__empty_file_path (full_path, pool),
                     full_path,
                     0, entry->revision,
@@ -1137,7 +1137,7 @@ close_file (void *file_baton,
          show an add. */
       if (eb->reverse_order)
         SVN_ERR (b->edit_baton->callbacks->file_added
-                 (NULL, b->path,
+                 (NULL, NULL, b->path,
                   svn_wc__empty_file_path (b->wc_path, b->pool),
                   temp_file_path,
                   0, 
