@@ -185,7 +185,6 @@ svn_diff__file_datasource_open(void *baton,
 {
   svn_diff__file_baton_t *file_baton = baton;
   int idx;
-  apr_status_t apr_err;
   apr_finfo_t finfo;
   apr_size_t length;
   char *curp;
