@@ -291,7 +291,7 @@ maybe_copy_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool)
     }
   else /* SRC exists, so copy it to DST. */
     {    
-      err = svn_io_copy_file (src, dst, pool);
+      err = svn_io_copy_file (src->data, dst->data, pool);
       if (err)
         return err;
     }

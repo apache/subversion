@@ -110,8 +110,8 @@ svn_error_t *svn_io_open_unique_file (apr_file_t **f,
 
 /* Copy SRC to DST.  DST will be overwritten if it exists, else it
    will be created. */
-svn_error_t *svn_io_copy_file (svn_stringbuf_t *src,
-                               svn_stringbuf_t *dst,
+svn_error_t *svn_io_copy_file (const char *src,
+                               const char *dst,
                                apr_pool_t *pool);
 
 /* Recursively copy directory SRC into DST_PARENT, as a new entry
