@@ -43,6 +43,8 @@
    that should be fine for now, but a better solution must be found in
    combination with issue #850. */
 #include "arch/win32/apr_arch_utf8.h"
+
+#include <mbctype.h>
 #endif
 
 #define SVN_UTF_CONTOU_XLATE_HANDLE "svn-utf-contou-xlate-handle"
@@ -173,7 +175,15 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
     apr_pool_create (&pool, 0);
     /* get exe name - our locale info will be in '../share/locale' */
     inwords = sizeof (ucs2_path) / sizeof(ucs2_path[0]);
-    GetModuleFileNameW (0, ucs2_path, inwords);
+    if (! GetModuleFileNameW (0, ucs2_path, inwords))
+      {
+        CHAR ansi_path[MAX_PATH];
+        GetModuleFileNameA (0, ansi_path, sizeof (ansi_path));
+        MultiByteToWideChar (_getmbcp (), MB_PRECOMPOSED, ansi_path,
+                             lstrlenA (ansi_path), ucs2_path,
+                             sizeof (ucs2_path) / sizeof (ucs2_path[0]));
+      }
+
     inwords = lstrlenW (ucs2_path);
     outbytes = outlength = 3 * (inwords + 1);
     utf8_path = apr_palloc (pool, outlength);
