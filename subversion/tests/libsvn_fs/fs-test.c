@@ -1672,7 +1672,7 @@ commit_transaction (const char **msg)
   svn_fs_root_t *revision_root;
   svn_revnum_t new_rev;
 
-  *msg = "create a tree and commit it";
+  *msg = "committing (INCOMPLETE TEST)";
 
   /* Prepare a txn to receive the greek tree. */
   SVN_ERR (create_fs_and_repos (&fs, "test-repo-commit-txn"));
@@ -1685,11 +1685,13 @@ commit_transaction (const char **msg)
   /* Commit it. */
   SVN_ERR (svn_fs_commit_txn (&new_rev, txn));
 
+#if 0
   /* Get root of the revision */
   SVN_ERR (svn_fs_revision_root (&revision_root, fs, new_rev, pool));
 
   /* Check the tree. */
   SVN_ERR (check_greek_tree_under_root (revision_root));
+#endif /* 0 */
 
   /* Close the transaction and fs. */
   SVN_ERR (svn_fs_close_txn (txn));
@@ -1720,7 +1722,7 @@ svn_error_t * (*test_funcs[]) (const char **msg) = {
   abort_txn,
   merge_trees,
   /* fetch_youngest_rev, */
-  /* commit_transaction, */
+  commit_transaction,
   0
 };
 

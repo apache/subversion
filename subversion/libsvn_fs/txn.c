@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include "apr_strings.h"
+#include "apr_tables.h"
 #include "apr_pools.h"
 
 #include "svn_fs.h"
@@ -232,6 +233,77 @@ svn_fs_abort_txn (svn_fs_txn_t *txn)
 
 /* Committing transactions. */
 
+
+struct commit_txn_args
+{
+  svn_fs_txn_t *txn;
+  svn_revnum_t new_rev;
+  char *conflict;
+};
+
+
+/* ### kff todo: in progress */
+static svn_error_t *
+txn_body_commit_txn (void *baton, trail_t *trail)
+{
+#if 0
+  struct commit_txn_args *commit_args = baton;
+
+  while (1)
+  {
+    svn_error_t *err;
+
+    /* Merge any changes since base into the txn. */
+    {
+      svn_fs_root_t *base_root, *latest_root;
+      svn_revnum_t base, latest;
+      
+      /* Aha.  Houston, we have a problem.
+       *
+       * The interface to svn_fs_merge() uses svn_fs_root_t's and
+       * paths.  If we had the svn_fs_root_t for the base revision here,
+       * we'd be fine -- we could call svn_fs_merge() straight.
+       *
+       * Unfortunately, svn_fs_commit_txn takes just a txn.  The txn
+       * gets us a base_root_id and a txn_root_id, but it doesn't tell
+       * us what revision that base_root_id came from.  So we can't
+       * construct the right svn_fs_root_t to pass to svn_fs_merge()!
+       *
+       * But we _do_ have all the information we need to do a merge
+       * here, that's not at issue.  What is needed is an interface to
+       * merging that takes an txn and IDs instead of svn_fs_root_t's
+       * and paths.  Sigh.  A little bit of rewriting, but most of the
+       * work is (I think) done already.  
+       *
+       * Wish I had seen this coming. :-(
+       *
+       * This is not going to happen tonight.  I'll see y'all Monday.
+       */
+    }
+
+  /* Try to commit the next revision.  If someone already committed
+     it, re-merge and try again.  Else break outta here.  */
+
+    err = svn_fs__retry_txn (something here);
+
+    if (err && (err == whatever)) /* commit succeeded */
+      {
+        SVN_ERR (immutate_nodes (commit_args->txn));
+        SVN_ERR (unlock (the revisions table));
+        return SVN_NO_ERROR;
+      }
+    else if (err)
+      {
+        some other error, return it;
+      }
+  }
+
+#endif /* 0 */
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_fs_commit_txn (svn_revnum_t *new_rev, 
                    svn_fs_txn_t *txn)
@@ -283,17 +355,17 @@ svn_fs_commit_txn (svn_revnum_t *new_rev,
    *
    * Lather, rinse, repeat.
    *
-   * TBD:
+   * There are a couple of ways to handle the walk that changes
+   * mutable->immutable...
    *
-   * I haven't completely thought out the timing of the walk that
-   * changes mutable->immutable.  One possibility is:
+   * Method A:
    *
    *   When the merge is done, but before attempting the commit, walk
    *   the txn tree changing mutable nodes to immutable, and recording
    *   these actions in the trail's undo list.  If the commit fails,
    *   the undo list will be run.
    *
-   * But another way, which I think I like more, is:
+   * Method B:
    *
    *   Leave the nodes immutable when you commit, but make sure
    *   successful commits leave the revision tree locked (the lock
@@ -313,13 +385,31 @@ svn_fs_commit_txn (svn_revnum_t *new_rev,
    *   mutable->immutable walk in the latest revision tree, removing
    *   the lock when done (in the same Berkeley transaction as the
    *   mutability changes, of course).
+   *
+   * Now, method A has a problem: trail undo functions return void,
+   * because they're meant to revert in-memory data structures, not db
+   * stuff.
+   *
+   * Method B also has a problem, but maybe not as serious: it
+   * increases the amount of time writers wait for writers.  The
+   * revisions table would be locked while so-and-so walks her tree
+   * immutating nodes.  Big deal.  Let's go with it for now, unless
+   * there's a Method C...
    */
 
-  *new_rev = SVN_INVALID_REVNUM;
-  abort();
+  struct commit_txn_args args;
+
+  args.new_rev = SVN_INVALID_REVNUM;
+  args.txn = txn;
+  SVN_ERR (svn_fs__retry_txn (txn->fs, txn_body_commit_txn, &args, txn->pool));
+  *new_rev = args.new_rev;
+
   return SVN_NO_ERROR;
 }
 
+
+
+/*** Opening transactions. ***/
 
 struct open_txn_args
 {
