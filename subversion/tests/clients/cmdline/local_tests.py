@@ -19,8 +19,12 @@
 import shutil, string, sys, os.path
 
 # Load the svn testing framework package:
-import svntest
-from svntest import *
+try: 
+  import svntest
+  from svntest import *
+except SyntaxError:
+  print "Sorry, this script requires python 2.0 or later."
+  sys.exit(1)
 
 
 ######################################################################
