@@ -197,6 +197,7 @@ svn_wc_status (svn_wc_status_t **status,
 svn_error_t *
 svn_wc_statuses (apr_hash_t *statushash,
                  svn_string_t *path,
+                 svn_boolean_t descend,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -276,9 +277,18 @@ svn_wc_statuses (apr_hash_t *statushash,
           err = svn_io_check_path (fullpath, &kind, pool);
           if (err) return err;
 
-          if ((kind == svn_node_dir)
+          /* In deciding whether or not to descend, we use the actual
+             kind of the entity, not the kind claimed by the entries
+             file.  The two are usually the same, but where they are
+             not, its usually because some directory got moved, and
+             one would still want a status report on its contents.
+             kff todo: However, must handle mixed working copies.
+             What if the subdir is not under revision control, or is
+             from another repository? */
+          if (descend
+              && (kind == svn_node_dir)
               && (strcmp (basename, SVN_WC_ENTRY_THIS_DIR) != 0))
-            svn_wc_statuses (statushash, fullpath, pool);
+            svn_wc_statuses (statushash, fullpath, descend, pool);
           else
             {
               err = add_status_structure (statushash, fullpath, entry, pool);

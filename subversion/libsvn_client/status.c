@@ -36,16 +36,20 @@
 /*** Public Interface. ***/
 
 /* Given PATH to a working copy directory or file, allocate and return
-   a STATUSHASH structure containing the stati of all entries.  */
+   a STATUSHASH structure containing the stati of all entries.  If
+   DESCEND is non-zero, recurse fully, else do only immediate
+   children.  (See svn_wc.h:svn_wc_statuses() for more verbiage on
+   this). */
 svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_string_t *path,
+                   svn_boolean_t descend,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_hash_t *hash = apr_make_hash (pool);
 
-  err = svn_wc_statuses (hash, path, pool);
+  err = svn_wc_statuses (hash, path, descend, pool);
   if (err) return err;
 
   /* TODO: each status structure in the hash now has all fields filled
