@@ -57,13 +57,22 @@ svn_client_revert (const char *path,
 
       if (entry->kind == svn_node_dir)
         {
-          svn_wc_adm_access_t *dir_access;
-          SVN_ERR (svn_wc_adm_close (adm_access));
-          SVN_ERR (svn_wc_adm_open (&adm_access, NULL,
-                                    svn_path_remove_component_nts (path, pool),
-                                    TRUE, FALSE, pool));
-          SVN_ERR (svn_wc_adm_open (&dir_access, adm_access, path,
-                                    TRUE, recursive, pool));
+          svn_node_kind_t kind;
+
+          SVN_ERR (svn_io_check_path (path, &kind, pool));
+          if (kind == svn_node_dir)
+            {
+              /* While we could add the parent to the access baton set, there
+                 is no way to close such a set. */
+              svn_wc_adm_access_t *dir_access;
+              SVN_ERR (svn_wc_adm_close (adm_access));
+              SVN_ERR (svn_wc_adm_open (&adm_access, NULL,
+                                        svn_path_remove_component_nts (path,
+                                                                       pool),
+                                        TRUE, FALSE, pool));
+              SVN_ERR (svn_wc_adm_open (&dir_access, adm_access, path,
+                                        TRUE, recursive, pool));
+            }
         }
     }
 
