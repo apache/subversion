@@ -1035,11 +1035,19 @@ def pass4(ctx):
   if ctx.verbose:
     print count, 'commits processed.'
 
+def pass5(ctx):
+  if not ctx.dry_run:
+    # ### FIXME: Er, does this "<" stuff work under Windows?
+    # ### If not, then in general how do we load dumpfiles under Windows?
+    print 'loading %s into %s' % (ctx.dumpfile, ctx.target)
+    os.system('%s load %s < %s' % (ctx.svnadmin, ctx.target, ctx.dumpfile))
+
 _passes = [
   pass1,
   pass2,
   pass3,
   pass4,
+  pass5,
   ]
 
 class _ctx:
@@ -1092,6 +1100,7 @@ def main():
   ctx.tags_base = "tags"
   ctx.branches_base = "branches"
   ctx.encoding = "ascii"
+  ctx.svnadmin = "svnadmin"
 
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'p:s:vn',
