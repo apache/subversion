@@ -563,8 +563,9 @@ set_entry (dag_node_t *parent,
   /* Finally, replace the old entries list with the new one. */
   SVN_ERR (svn_fs__unparse_entries_skel (&entries_skel, entries, trail->pool));
   raw_entries_buf = svn_fs__unparse_skel (entries_skel, trail->pool);
-  wstream = svn_fs__rep_contents_write_stream (fs, mutable_rep_key, txn_id, 
-                                               trail, trail->pool);
+  SVN_ERR (svn_fs__rep_contents_write_stream (&wstream, fs, mutable_rep_key,
+                                              txn_id, TRUE, trail, 
+                                              trail->pool));
   len = raw_entries_buf->len;
   svn_stream_write (wstream, raw_entries_buf->data, &len);
   return SVN_NO_ERROR;
@@ -748,8 +749,9 @@ svn_fs__dag_set_proplist (dag_node_t *node,
     SVN_ERR (svn_fs__unparse_proplist_skel (&proplist_skel, proplist, 
                                             trail->pool));
     raw_proplist_buf = svn_fs__unparse_skel (proplist_skel, trail->pool);
-    wstream = svn_fs__rep_contents_write_stream (fs, mutable_rep_key, txn_id,
-                                                 trail, trail->pool);
+    SVN_ERR (svn_fs__rep_contents_write_stream (&wstream, fs, mutable_rep_key,
+                                                txn_id, TRUE, trail, 
+                                                trail->pool));
     len = raw_proplist_buf->len;
     SVN_ERR (svn_stream_write (wstream, raw_proplist_buf->data, &len));
   }
@@ -1032,8 +1034,9 @@ delete_entry (dag_node_t *parent,
     SVN_ERR (svn_fs__unparse_entries_skel (&entries_skel, entries, 
                                            trail->pool));
     unparsed_entries = svn_fs__unparse_skel (entries_skel, trail->pool);
-    ws = svn_fs__rep_contents_write_stream (fs, mutable_rep_key, txn_id,
-                                            trail, trail->pool);
+    SVN_ERR (svn_fs__rep_contents_write_stream (&ws, fs, mutable_rep_key,
+                                                txn_id, TRUE, trail,
+                                                trail->pool));
     len = unparsed_entries->len;
     SVN_ERR (svn_stream_write (ws, unparsed_entries->data, &len));
   }
@@ -1309,8 +1312,8 @@ svn_fs__dag_get_edit_stream (svn_stream_t **contents,
   SVN_ERR (svn_fs__bdb_put_node_revision (fs, file->id, noderev, trail));
 
   /* Return a writable stream with which to set new contents. */
-  ws = svn_fs__rep_contents_write_stream (fs, mutable_rep_key, txn_id,
-                                          NULL, pool);
+  SVN_ERR (svn_fs__rep_contents_write_stream (&ws, fs, mutable_rep_key,
+                                              txn_id, FALSE, trail, pool));
   *contents = ws;
 
   return SVN_NO_ERROR;

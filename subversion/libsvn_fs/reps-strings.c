@@ -971,6 +971,10 @@ svn_fs__rep_contents_read_stream (svn_fs_t *fs,
 }
 
 
+/* Clear the contents of REP_KEY, so that it represents the empty
+   string, as part of TRAIL.  TXN_ID is the id of the Subversion
+   transaction under which this occurs.  If REP_KEY is not mutable,
+   return the error SVN_ERR_FS_REP_NOT_MUTABLE.  */
 static svn_error_t *
 rep_contents_clear (svn_fs_t *fs,
                     const char *rep_key,
@@ -1002,27 +1006,27 @@ rep_contents_clear (svn_fs_t *fs,
 }
 
 
-                                       
-svn_stream_t *
-svn_fs__rep_contents_write_stream (svn_fs_t *fs,
+svn_error_t *
+svn_fs__rep_contents_write_stream (svn_stream_t **ws_p,
+                                   svn_fs_t *fs,
                                    const char *rep_key,
                                    const char *txn_id,
+                                   svn_boolean_t use_trail_for_writes,
                                    trail_t *trail,
                                    apr_pool_t *pool)
 {
-  struct rep_write_baton *wb
-    = rep_write_get_baton (fs, rep_key, txn_id, trail, pool);
+  struct rep_write_baton *wb;
 
-  svn_stream_t *ws = svn_stream_create (wb, pool);
-  svn_stream_set_write (ws, rep_write_contents);
+  /* Clear the current rep contents (free mutability check!). */
+  SVN_ERR (rep_contents_clear (fs, rep_key, txn_id, trail));
 
-  /* ### todo: This is yicky, but should be fixed in a forthcoming
-     commit by kfogel, who is making this function return an
-     svn_error_t *. */
-  if (trail && rep_contents_clear (fs, rep_key, txn_id, trail))
-    return NULL;
+  /* Now, generate the write baton and stream. */
+  wb = rep_write_get_baton (fs, rep_key, txn_id,
+                            use_trail_for_writes ? trail : NULL, pool);
+  *ws_p = svn_stream_create (wb, pool);
+  svn_stream_set_write (*ws_p, rep_write_contents);
 
-  return ws;
+  return SVN_NO_ERROR;
 }
 
 
