@@ -1373,8 +1373,10 @@ abort_txn (const char **msg,
          "expected error trying to abort a committed txn; got none");
     else if (err->apr_err != SVN_ERR_FS_TRANSACTION_NOT_MUTABLE)
       return svn_error_create
-        (SVN_ERR_FS_GENERAL, NULL,
+        (SVN_ERR_FS_GENERAL, err,
          "got an unexpected error trying to abort a committed txn");
+    else
+      svn_error_clear (err);
   }
   return SVN_NO_ERROR;
 }
