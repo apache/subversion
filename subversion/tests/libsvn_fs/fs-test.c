@@ -5286,6 +5286,227 @@ test_node_created_rev (const char **msg,
 }
 
 
+static svn_error_t *
+check_related (const char **msg,
+               svn_boolean_t msg_only,
+               apr_pool_t *pool)
+{ 
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t youngest_rev = 0;
+  
+  *msg = "test svn_fs_check_related";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-check-related", pool));
+
+  /*** Step I: Build up some state in our repository through a series
+       of commits */
+
+  /* Using files because bubble-up complicates the testing.  However,
+     the algorithm itself is ambivalent about what type of node is
+     being examined.
+
+     - New files show up in this order (through time): A,B,C,D,E,F
+     - Number following filename is the revision.
+     - Vertical motion shows revision history
+     - Horizontal motion show copy history.
+
+     A1---------C4         E7
+     |          |          |
+     A2         C5         E8---F9
+     |          |               |
+     A3---B4    C6              F10
+     |    |
+     A4   B5----------D6
+          |           |
+          B6          D7
+  */
+  /* Revision 1 */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A", subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A", "1", subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (subpool);
+  /* Revision 2 */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A", "2", subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (subpool);
+  /* Revision 3 */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A", "3", subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (subpool);
+  /* Revision 4 */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A", "4", subpool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, 3, subpool));
+  SVN_ERR (svn_fs_copy (rev_root, "A", txn_root, "B", subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "B", "4", subpool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, 1, subpool));
+  SVN_ERR (svn_fs_copy (rev_root, "A", txn_root, "C", subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "C", "4", subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (subpool);
+  /* Revision 5 */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "B", "5", subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "C", "5", subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (subpool);
+  /* Revision 6 */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "B", "6", subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "C", "6", subpool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, 5, subpool));
+  SVN_ERR (svn_fs_copy (rev_root, "B", txn_root, "D", subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "D", "5", subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (subpool);
+  /* Revision 7 */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "D", "7", subpool));
+  SVN_ERR (svn_fs_make_file (txn_root, "E", subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "E", "7", subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (subpool);
+  /* Revision 8 */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "E", "8", subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (subpool);
+  /* Revision 9 */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, 8, subpool));
+  SVN_ERR (svn_fs_copy (rev_root, "E", txn_root, "F", subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "F", "9", subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (subpool);
+  /* Revision 10 */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "F", "10", subpool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /*** Step II: Exhausively verify relationship between all nodes in
+       existence. */
+  {
+    int i, j;
+
+    struct path_rev_t
+    {
+      const char *path;
+      const svn_revnum_t rev;
+    };
+
+    /* Our 16 existing files/revisions. */
+    struct path_rev_t path_revs[16] = {
+      { "A", 1 }, { "A", 2 }, { "A", 3 }, { "A", 4 },
+      { "B", 4 }, { "B", 5 }, { "B", 6 }, { "C", 4 },
+      { "C", 5 }, { "C", 6 }, { "D", 6 }, { "D", 7 },
+      { "E", 7 }, { "E", 8 }, { "F", 9 }, { "F", 10 }
+    };
+
+    int related_matrix[16][16] = {
+      /* A1 ... F10 across the top here*/
+      { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 }, /* A1 */
+      { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 }, /* A2 */
+      { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 }, /* A3 */
+      { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 }, /* A4 */
+      { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 }, /* B4 */
+      { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 }, /* B5 */
+      { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 }, /* B6 */
+      { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 }, /* C4 */
+      { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 }, /* C5 */
+      { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 }, /* C6 */
+      { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 }, /* D6 */
+      { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 }, /* D7 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1 }, /* E7 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1 }, /* E8 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1 }, /* F9 */
+      { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1 }  /* F10 */
+    };
+
+    /* Here's the fun part.  Running the tests. */
+    for (i = 0; i < 16; i++)
+      {
+        for (j = 0; j < 16; j++)
+          {
+            struct path_rev_t pr1 = path_revs[i];
+            struct path_rev_t pr2 = path_revs[j];
+            svn_fs_id_t *id1, *id2;
+            int related = 0;
+
+            /* Get the ID for the first path/revision combination. */
+            SVN_ERR (svn_fs_revision_root (&rev_root, fs, pr1.rev, pool));
+            SVN_ERR (svn_fs_node_id (&id1, rev_root, pr1.path, pool));
+          
+            /* Get the ID for the second path/revision combination. */
+            SVN_ERR (svn_fs_revision_root (&rev_root, fs, pr2.rev, pool));
+            SVN_ERR (svn_fs_node_id (&id2, rev_root, pr2.path, pool));
+            
+            /* <exciting> Now, run the relationship check! </exciting> */
+            SVN_ERR (svn_fs_check_related (&related, fs, id1, id2, pool));
+            if (related == related_matrix[i][j])
+              {
+                /* xlnt! */
+              }
+            else if (related && (! related_matrix[i][j]))
+              {
+                return svn_error_createf
+                  (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                   "expected `%s:%d' to be related to `%s:%d'; it was not",
+                   pr1.path, (int)pr1.rev, pr2.path, (int)pr2.rev);
+              }
+            else if ((! related) && related_matrix[i][j])
+              {
+                return svn_error_createf
+                  (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                   "expected `%s:%d' to not be related to `%s:%d'; it was",
+                   pr1.path, (int)pr1.rev, pr2.path, (int)pr2.rev);
+              }
+
+            svn_pool_clear (subpool);
+          } /* for ... */
+      } /* for ... */
+  }
+
+  /* Destroy the subpool. */
+  svn_pool_destroy (subpool);
+
+  /* Close the filesystem. */
+  svn_fs_close_fs (fs);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ------------------------------------------------------------------------ */
 
 /* The test table.  */
 
@@ -5326,6 +5547,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   check_root_revision,
   undeltify_deltify,
   test_node_created_rev,
+  check_related,
   0
 };
 

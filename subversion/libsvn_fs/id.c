@@ -311,6 +311,86 @@ svn_fs_predecessor_id (const svn_fs_id_t *id, apr_pool_t *pool)
   return predecessor_id;
 }
 
+/* --------------------------------------------------------------------- */
+
+/*** Related-ness checking */
+
+/*  Things to remember:
+
+    - If B is a copy of directory A, B's children are id-related to the
+      corresponding children of A.
+ 
+    - Brand new nodes (like, resulting from adds and copies) have the
+      first component of their node id > older nodes. */
+svn_error_t *
+svn_fs_check_related (int *related, 
+                      svn_fs_t *fs,
+                      const svn_fs_id_t *id1,
+                      const svn_fs_id_t *id2,
+                      apr_pool_t *pool)
+{
+  const svn_fs_id_t *older, *younger;
+  svn_fs_id_t *tmp_id;
+
+  /* Default answer: not related, until proven otherwise. */
+  *related = 0;
+
+  /* Are the two IDs related via node id ancestry? */
+  if (svn_fs_id_distance (id1, id2) != -1)
+    {
+      *related = 1;
+      return SVN_NO_ERROR;
+    }
+  
+  /* Figure out which id is youngest. */
+  if (id1[0] > id2[0])
+    {
+      older = id2;
+      younger = id1;
+    }
+  else
+    {
+      older = id1;
+      younger = id2;
+    }
+
+  /* Copy YOUNGER so we can possible tweak it later. */
+  tmp_id = svn_fs_copy_id (younger, pool);
+
+  /* Now, we loop here from TMP_ID, through each of its predecessors,
+     until no predecessors exist, trying to find some relationship to
+     the OLDER id. */
+  do
+    {
+      svn_revnum_t rev = SVN_INVALID_REVNUM;
+      const char *cp_path = NULL;
+      svn_fs_root_t *root;
+      svn_stringbuf_t *id_str = svn_fs_unparse_id (tmp_id, pool);
+      svn_fs_id_t *copy_id;
+      int len = svn_fs_id_length (tmp_id);
+
+      /* See if OLDER is a copy of another node. */
+      svn_fs_id_root (&root, fs, pool);
+      SVN_ERR (svn_fs_copied_from (&rev, &cp_path, root, id_str->data, pool));
+      if (SVN_IS_VALID_REVNUM (rev))
+        {
+          SVN_ERR (svn_fs_revision_root (&root, fs, rev, pool));
+          SVN_ERR (svn_fs_node_id (&copy_id, root, cp_path, pool));
+          svn_fs_check_related (related, fs, older, copy_id, pool);
+          if (*related)
+            return SVN_NO_ERROR;
+        }
+
+      /* Hack up TMP_ID so that it represents its own predecessor. */
+      tmp_id[len - 1]--;
+      if (tmp_id[len - 1] == 0)
+        tmp_id[len - 2] = -1;
+    }
+  while (tmp_id[0] != -1);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* 

@@ -312,6 +312,17 @@ svn_fs_id_t *svn_fs_copy_id (const svn_fs_id_t *id, apr_pool_t *pool);
 svn_fs_id_t *svn_fs_predecessor_id (const svn_fs_id_t *id, apr_pool_t *pool);
 
 
+/* Perform an exhaustive traversal through node-id and copy-from
+   history to determine if the nodes associated with ID1 and ID2, and
+   found in filesystem FS, are related.  If so, set *RELATED to 1,
+   else to 0.  Use POOL for allocations.  */
+svn_error_t *svn_fs_check_related (int *related, 
+                                   svn_fs_t *fs,
+                                   const svn_fs_id_t *id1,
+                                   const svn_fs_id_t *id2,
+                                   apr_pool_t *pool);
+
+
 /* Parse the LEN bytes at DATA as a node or node revision ID.  Return
    zero if the bytes are not a properly-formed ID.  A properly formed
    ID matches the regexp:
@@ -329,6 +340,7 @@ svn_fs_id_t *svn_fs_parse_id (const char *data, apr_size_t len,
    or node revision id ID.  Allocate the string containing the
    unparsed form in POOL.  */
 svn_stringbuf_t *svn_fs_unparse_id (const svn_fs_id_t *id, apr_pool_t *pool);
+
 
 
 /* Transactions.  */
