@@ -33,7 +33,8 @@
 static void
 print_command_info (const svn_cl__cmd_desc_t *cmd_desc,
                     svn_boolean_t help, 
-                    apr_pool_t *pool)
+                    apr_pool_t *pool,
+                    FILE *stream)
 {
   const svn_cl__cmd_desc_t *this_cmd
     = svn_cl__get_canonical_command (cmd_desc->name);
@@ -41,33 +42,33 @@ print_command_info (const svn_cl__cmd_desc_t *cmd_desc,
   svn_boolean_t first_time;
 
   /* Print the canonical command name. */
-  fputs (canonical_cmd->name, stdout);
+  fputs (canonical_cmd->name, stream);
 
   /* Print the list of aliases. */
   first_time = TRUE;
   for (this_cmd++; (this_cmd->name && this_cmd->is_alias); this_cmd++) 
     {
       if (first_time) {
-        printf (" (");
+        fprintf (stream, " (");
         first_time = FALSE;
       }
       else
-        printf (", ");
+        fprintf (stream, ", ");
       
-      printf ("%s", this_cmd->name);
+      fprintf (stream, "%s", this_cmd->name);
     }
 
   if (! first_time)
-    printf (")");
+    fprintf (stream, ")");
   
   if (help)
-    printf (": %s\n", canonical_cmd->help);
+    fprintf (stream, ": %s\n", canonical_cmd->help);
 }
 
 
 /* Print a generic (non-command-specific) usage message. */
 static void
-print_generic_help (apr_pool_t *pool)
+print_generic_help (apr_pool_t *pool, FILE *stream)
 {
   static const char usage[] =
     "usage: svn <subcommand> [options] [args]\n"
@@ -86,21 +87,21 @@ print_generic_help (apr_pool_t *pool)
 
   int i = 0;
 
-  printf ("%s", usage);
+  fprintf (stream, "%s", usage);
   while (svn_cl__cmd_table[i].name) 
     {
       /*  for (i = 0; i < max; i++) */
       if (! svn_cl__cmd_table[i].is_alias)
         {
-          printf ("   ");
-          print_command_info (svn_cl__cmd_table + i, FALSE, pool);
-          printf ("\n");
+          fprintf (stream, "   ");
+          print_command_info (svn_cl__cmd_table + i, FALSE, pool, stream);
+          fprintf (stream, "\n");
         }
       i++;
     }
 
-  printf ("\n");
-  printf ("%s\n", info);
+  fprintf (stream, "\n");
+  fprintf (stream, "%s\n", info);
 
 }
 
@@ -159,14 +160,26 @@ svn_cl__help (apr_getopt_t *os,
         svn_stringbuf_t *this = (((svn_stringbuf_t **) (targets)->elts))[i];
 	svn_cl__subcommand_help (this->data, pool);
       }
+  /* the help command was given with no subcommands */
+  else if (os && !targets->nelts)
+    {
+      /* the -h or --help option was given */
+      if (opt_state && opt_state->help)
+        print_generic_help (pool, stdout);
+      
+      /* help was given by itself */
+      else
+        svn_cl__subcommand_help ("help", pool);
+    }
   else
     {
       /* the -v or --version option was given */
       if (opt_state && opt_state->version) 
           SVN_ERR (print_version_info (pool));        
 
+      /* an unknown option was given */
       else
-        print_generic_help (pool);      
+        print_generic_help (pool, stderr);      
     }
 
   return SVN_NO_ERROR;
@@ -184,7 +197,7 @@ svn_cl__subcommand_help (const char* subcommand,
     svn_cl__get_canonical_command (subcommand);
     
   if (cmd)
-    print_command_info (cmd, TRUE, pool);
+    print_command_info (cmd, TRUE, pool, stdout);
   else
     fprintf (stderr, "\"%s\": unknown command.\n\n", subcommand);
 }
