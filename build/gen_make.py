@@ -63,14 +63,7 @@ class MakefileGenerator(gen_base.GeneratorBase):
         if self.parser.get(target, 'testing') != 'skip':
           self.fs_test_progs.append(tpath)
 
-      objects = [ ]
-      for src in target_ob.sources:
-        if src[-2:] == '.c':
-          objname = src[:-2] + objext
-          objects.append(objname)
-          self.file_deps.append((src, objname))
-        else:
-          raise GenError('ERROR: unknown file extension on ' + src)
+      objects = self.graph.get(gen_base.DT_LINK, target)
 
       retreat = gen_base._retreat_dots(path)
       libs = [ ]
@@ -125,8 +118,11 @@ class MakefileGenerator(gen_base.GeneratorBase):
         self.ofile.write('\n')
 
     # for each install group, write a rule to install its outputs
-    for itype, i_outputs in self.inst_outputs.items():
-      self.ofile.write('%s: %s\n\n' % (itype, string.join(i_outputs)))
+    for itype, i_targets in self.graph.get_deps(gen_base.DT_INSTALL):
+      outputs = [ ]
+      for t in i_targets:
+        outputs.append(t.output)
+      self.ofile.write('%s: %s\n\n' % (itype, string.join(outputs)))
 
     cfiles = [ ]
     for target in self.targets.values():
@@ -262,11 +258,13 @@ class MakefileGenerator(gen_base.GeneratorBase):
         more_deps = gen_base._create_include_deps(hdrs, include_deps)
         include_deps.update(more_deps)
 
-    for src, objname in self.file_deps:
+    for objname, sources in self.graph.get_deps(gen_base.DT_OBJECT):
+      assert len(sources) == 1
       hdrs = [ ]
-      for short in gen_base._find_includes(src, include_deps):
+      for short in gen_base._find_includes(sources[0], include_deps):
         hdrs.append(include_deps[short][0])
-      self.ofile.write('%s: %s %s\n' % (objname, src, string.join(hdrs)))
+      self.ofile.write('%s: %s %s\n' % (objname, sources[0],
+                                        string.join(hdrs)))
 
   def write_ra_modules(self):
     for target in self.target_names:
