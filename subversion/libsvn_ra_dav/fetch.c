@@ -55,7 +55,7 @@
 #define CHKERR(e)               \
 do {                            \
   if ((rb->err = (e)) != NULL)  \
-    return SVN_RA_DAV__XML_INVALID;      \
+    return NE_XML_ABORT;        \
 } while(0)
 
 typedef struct {
@@ -155,6 +155,19 @@ typedef struct {
 
   /* Empty string means no encoding, "base64" means base64. */
   svn_stringbuf_t *encoding;
+
+  /* These are used when receiving an inline txdelta, and null at all
+     other times. */
+  svn_txdelta_window_handler_t whandler;
+  void *whandler_baton;
+  svn_stream_t *svndiff_decoder;
+  svn_stream_t *base64_decoder;
+
+  /* A generic accumulator for elements that have small bits of cdata,
+     like md5_checksum, href, etc.  Uh, or where our own API gives us
+     no choice about holding them in memory, as with prop values, ahem.  
+     This is always the empty stringbuf when not in use. */
+  svn_stringbuf_t *cdata_accum;
 
   const char *current_wcprop_path;
   svn_boolean_t is_switch;
@@ -1389,9 +1402,10 @@ static void push_dir(report_baton_t *rb,
   di->pool = pool;
 }
 
-/* This implements the `svn_ra_dav__xml_startelm_cb' prototype. */
-static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
-                         const char **atts)
+/* This implements the `ne_xml_startelm_cb' prototype. */
+static int
+start_element(void *userdata, int parent_state, const char *nspace,
+              const char *elt_name, const char **atts)
 {
   report_baton_t *rb = userdata;
   const char *att;
@@ -1405,6 +1419,18 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
   svn_stringbuf_t *pathbuf;
   apr_pool_t *subpool;
   const char *base_checksum = NULL;
+  const svn_ra_dav__xml_elm_t *elm;
+  int rc;
+
+  elm = svn_ra_dav__lookup_xml_elem(report_elements, nspace, elt_name);
+
+  if (elm == NULL)
+    return NE_XML_DECLINE;
+
+  rc = validate_element(NULL, parent_state, elm->id);
+
+  if (rc != SVN_RA_DAV__XML_VALID)
+    return (rc == SVN_RA_DAV__XML_DECLINE) ? NE_XML_DECLINE : NE_XML_ABORT;
 
   switch (elm->id)
     {
@@ -1658,6 +1684,21 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
 
       break;
 
+    case ELEM_txdelta:
+      CHKERR( (*rb->editor->apply_textdelta)(rb->file_baton,
+                                             NULL, /* ### base_checksum */
+                                             rb->file_pool,
+                                             &(rb->whandler),
+                                             &(rb->whandler_baton)) );
+      
+      rb->svndiff_decoder = svn_txdelta_parse_svndiff(rb->whandler,
+                                                      rb->whandler_baton,
+                                                      TRUE, rb->file_pool);
+      
+      rb->base64_decoder = svn_base64_decode(rb->svndiff_decoder,
+                                             rb->file_pool);
+      break;
+
     case ELEM_set_prop:
       {
         const char *encoding = get_attr(atts, "encoding");
@@ -1750,7 +1791,7 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       break;
     }
 
-  return SVN_RA_DAV__XML_VALID;
+  return elm->id;
 }
 
 
@@ -1826,13 +1867,54 @@ add_node_props (report_baton_t *rb, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* This implements the `svn_ra_dav__xml_endelm_cb' prototype. */
-static int end_element(void *userdata, 
-                       const svn_ra_dav__xml_elm_t *elm,
-                       const char *cdata)
+/* This implements the `ne_xml_cdata_cb' prototype. */
+static int cdata_handler(void *userdata, int state,
+                         const char *cdata, size_t len)
+{
+  report_baton_t *rb = userdata;
+
+  switch(state)
+    {
+    case ELEM_href:
+    case ELEM_set_prop:
+    case ELEM_md5_checksum:
+    case ELEM_version_name:
+    case ELEM_creationdate:
+    case ELEM_creator_displayname:
+      svn_stringbuf_appendbytes(rb->cdata_accum, cdata, len);
+      break;
+
+    case ELEM_txdelta:
+      {
+        apr_size_t nlen = len;
+
+        CHKERR( svn_stream_write(rb->base64_decoder, cdata, &nlen) );
+        if (nlen != len)
+          {
+            /* Short write without associated error?  "Can't happen." */
+            CHKERR( svn_error_createf(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
+                                      "error writing to '%s'",
+                                      rb->namestr->data) );
+          }
+      }
+      break;
+    }
+
+  return 0; /* no error */
+}
+
+/* This implements the `ne_xml_endelm_cb' prototype. */
+static int end_element(void *userdata, int state,
+                       const char *nspace, const char *elt_name)
 {
   report_baton_t *rb = userdata;
   const svn_delta_editor_t *editor = rb->editor;
+  const svn_ra_dav__xml_elm_t *elm;
+
+  elm = svn_ra_dav__lookup_xml_elem(report_elements, nspace, elt_name);
+
+  if (elm == NULL)
+    return NE_XML_DECLINE;
 
   switch (elm->id)
     {
@@ -1897,29 +1979,12 @@ static int end_element(void *userdata,
       rb->file_pool = NULL;
       break;
 
-      /* ### kff speeeeeed: accept the shim for now */
     case ELEM_txdelta:
-      {
-        svn_txdelta_window_handler_t handler;
-        void *handler_baton;
-        svn_stream_t *svndiff_decoder;
-        svn_stream_t *base64_decoder;
-        apr_size_t len = strlen(cdata); /* ### shim must die */
-
-        CHKERR( (*rb->editor->apply_textdelta)(rb->file_baton,
-                                               NULL, /* ### base_checksum */
-                                               rb->file_pool,
-                                               &handler,
-                                               &handler_baton) );
-
-        svndiff_decoder = svn_txdelta_parse_svndiff(handler, handler_baton,
-                                                    TRUE, rb->file_pool);
-
-        base64_decoder = svn_base64_decode(svndiff_decoder, rb->file_pool);
-
-        CHKERR( svn_stream_write(base64_decoder, cdata, &len) );
-        CHKERR( svn_stream_close(base64_decoder) );
-      }
+      CHKERR( svn_stream_close(rb->base64_decoder) );
+      rb->whandler = NULL;
+      rb->whandler_baton = NULL;
+      rb->svndiff_decoder = NULL;
+      rb->base64_decoder = NULL;
       break;
 
     case ELEM_open_file:
@@ -1949,8 +2014,8 @@ static int end_element(void *userdata,
         else
           pool = TOP_DIR(rb).pool;
 
-        decoded_value.data = cdata;
-        decoded_value.len = strlen(cdata);
+        decoded_value.data = rb->cdata_accum->data;
+        decoded_value.len = rb->cdata_accum->len;
 
         /* Determine the cdata encoding, if any. */
         if (svn_stringbuf_isempty(rb->encoding))
@@ -1981,6 +2046,8 @@ static int end_element(void *userdata,
                                         &decoded_value, pool);
           }
       }
+
+      svn_stringbuf_setempty(rb->cdata_accum);
       break;
       
     case ELEM_href:
@@ -1989,7 +2056,8 @@ static int end_element(void *userdata,
         break;
       
       /* record the href that we just found */
-      svn_ra_dav__copy_href(rb->href, cdata);
+      svn_ra_dav__copy_href(rb->href, rb->cdata_accum->data);
+      svn_stringbuf_setempty(rb->cdata_accum);
       
       /* if we're within a <resource> tag, then just call the generic
          RA set_wcprop_callback directly;  no need to use the
@@ -2038,7 +2106,11 @@ static int end_element(void *userdata,
     case ELEM_md5_checksum:
       /* We only care about file checksums. */
       if (rb->file_baton)
-        rb->result_checksum = apr_pstrdup(rb->file_pool, cdata);
+        {
+          rb->result_checksum = apr_pstrdup(rb->file_pool,
+                                            rb->cdata_accum->data);
+        }
+      svn_stringbuf_setempty(rb->cdata_accum);
       break;
 
     case ELEM_version_name:
@@ -2054,9 +2126,10 @@ static int end_element(void *userdata,
         void *baton = rb->file_baton ? rb->file_baton : TOP_DIR(rb).baton;
         svn_string_t valstr;
 
-        valstr.data = cdata;
-        valstr.len = strlen(cdata);
+        valstr.data = rb->cdata_accum->data;
+        valstr.len = rb->cdata_accum->len;
         CHKERR( set_special_wc_prop(name, &valstr, setter, baton, pool) );
+        svn_stringbuf_setempty(rb->cdata_accum);
       }
       break;
   
@@ -2064,7 +2137,7 @@ static int end_element(void *userdata,
       break;
     }
 
-  return SVN_RA_DAV__XML_VALID;
+  return 0;
 }
 
 
@@ -2228,11 +2301,13 @@ static svn_error_t * reporter_finish_report(void *report_baton)
     }
 
   /* dispatch the REPORT. */
-  err = svn_ra_dav__parsed_request_compat(rb->ras->sess, "REPORT", vcc,
-                                          NULL, rb->tmpfile, NULL,
-                                          report_elements, validate_element,
-                                          start_element, end_element, rb,
-                                          NULL, &http_status, rb->ras->pool);
+  err = svn_ra_dav__parsed_request(rb->ras->sess, "REPORT", vcc,
+                                   NULL, rb->tmpfile, NULL,
+                                   start_element,
+                                   cdata_handler,
+                                   end_element,
+                                   rb,
+                                   NULL, &http_status, rb->ras->pool);
 
   /* we're done with the file */
   (void) apr_file_close(rb->tmpfile);
@@ -2300,6 +2375,11 @@ make_reporter (void *session_baton,
   rb->is_switch = dst_path ? TRUE : FALSE;
   rb->target = target;
   rb->receiving_all = FALSE;
+  rb->whandler = NULL;
+  rb->whandler_baton = NULL;
+  rb->svndiff_decoder = NULL;
+  rb->base64_decoder = NULL;
+  rb->cdata_accum = svn_stringbuf_create("", pool);
 
   /* Neon "pulls" request body content from the caller. The reporter is
      organized where data is "pushed" into self. To match these up, we use

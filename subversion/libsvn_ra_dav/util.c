@@ -45,15 +45,11 @@ typedef struct {
   svn_stringbuf_t *cdata_accum;              /* stringbuffer for CDATA */
 } neon_shim_baton_t;
 
-/** Find a given element in the table of elements.
- *
- * The table of XML elements @a table is searched until element identified by
- * namespace @a nspace and name @a name is found. If no elements are found,
- * tries to find and return element identified by @c ELEM_unknown. If that is
- * not found, returns NULL pointer. */
-static const svn_ra_dav__xml_elm_t *
-lookup_elem(const svn_ra_dav__xml_elm_t *table, const char *nspace,
-            const char *name)
+
+const svn_ra_dav__xml_elm_t *
+svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
+                            const char *nspace,
+                            const char *name)
 {
   /* placeholder for `unknown' element if it's present */
   const svn_ra_dav__xml_elm_t *elem_unknown = NULL;
@@ -78,19 +74,20 @@ lookup_elem(const svn_ra_dav__xml_elm_t *table, const char *nspace,
 
 /** Fill in temporary structure for ELEM_unknown element.
  *
- * Call only for element ELEM_unknown!
- * For Neon 0.23 API compatibility, we need to fill the XML element structure
- * with real namespace and element name, as "old-style" handler used to get
- * that from Neon parser. This is a hack, so don't expect it to be elegant.
- * The @a elem_pointer is a reference to element pointer which is returned
- * by lookup_elem, and supposedly points at en entry in the XML elements
- * table supplied by an "old-style" handler. @a elem_unknown_temporary is
- * a reference to XML element structure allocated on the stack. There's
- * no reason to allocate it anywhere else because it's going to use
- * @a nspace and @a name which are passed into the "new-style" handler by
- * the Neon parser, so the structure pointed at by @a elem_unknown_temporary
- * must die when the calling function completes. This function is designed
- * to be called from "new-style" startelm and endelm callbacks. */
+ * Call only for element ELEM_unknown!  For Neon 0.23 API
+ * compatibility, we need to fill the XML element structure with real
+ * namespace and element name, as "old-style" handler used to get that
+ * from Neon parser. This is a hack, so don't expect it to be elegant.
+ * The @a elem_pointer is a reference to element pointer which is
+ * returned by svn_ra_dav__lookup_xml_elem, and supposedly points at
+ * en entry in the XML elements table supplied by an "old-style"
+ * handler. @a elem_unknown_temporary is a reference to XML element
+ * structure allocated on the stack. There's no reason to allocate it
+ * anywhere else because it's going to use @a nspace and @a name which
+ * are passed into the "new-style" handler by the Neon parser, so the
+ * structure pointed at by @a elem_unknown_temporary must die when the
+ * calling function completes. This function is designed to be called
+ * from "new-style" startelm and endelm callbacks. */
 static void
 handle_unknown(const svn_ra_dav__xml_elm_t **elem_pointer,
                svn_ra_dav__xml_elm_t *elem_unknown_temporary,
@@ -122,8 +119,8 @@ shim_startelm(void *userdata, int parent_state, const char *nspace,
 {
   neon_shim_baton_t *baton = userdata;
   svn_ra_dav__xml_elm_t elem_unknown_temporary;
-  const svn_ra_dav__xml_elm_t *elem = lookup_elem(baton->elements, nspace,
-                                                  name);
+  const svn_ra_dav__xml_elm_t *elem =
+    svn_ra_dav__lookup_xml_elem(baton->elements, nspace, name);
   int rc;
 
   if (!elem)
@@ -184,8 +181,8 @@ static int shim_endelm(void *userdata, int state, const char *nspace,
 {
   const neon_shim_baton_t *baton = userdata;
   svn_ra_dav__xml_elm_t elem_unknown_temporary;
-  const svn_ra_dav__xml_elm_t *elem = lookup_elem(baton->elements, nspace,
-                                                  name);
+  const svn_ra_dav__xml_elm_t *elem =
+    svn_ra_dav__lookup_xml_elem(baton->elements, nspace, name);
   int rc;
 
   if (!elem)
@@ -468,7 +465,7 @@ parsed_request(ne_session *sess,
                apr_file_t *body_file,
                void set_parser (ne_xml_parser *parser,
                                 void *baton),
-               const svn_ra_dav__xml_elm_t *elements, 
+               const svn_ra_dav__xml_elm_t *elements,
                svn_boolean_t use_neon_shim,
                /* These three are defined iff use_neon_shim is defined. */
                svn_ra_dav__xml_validate_cb validate_compat_cb,
@@ -676,7 +673,6 @@ svn_ra_dav__parsed_request(ne_session *sess,
                            apr_file_t *body_file,
                            void set_parser (ne_xml_parser *parser,
                                             void *baton),
-                           const svn_ra_dav__xml_elm_t *elements, 
                            ne_xml_startelm_cb *startelm_cb,
                            ne_xml_cdata_cb *cdata_cb,
                            ne_xml_endelm_cb *endelm_cb,
@@ -686,7 +682,7 @@ svn_ra_dav__parsed_request(ne_session *sess,
                            apr_pool_t *pool)
 {
   return parsed_request(sess, method, url,
-                        body, body_file, set_parser, elements, FALSE,
+                        body, body_file, set_parser, NULL, FALSE,
                         NULL, NULL, NULL, startelm_cb, cdata_cb, endelm_cb,
                         baton, extra_headers, status_code, pool);
 }

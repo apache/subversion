@@ -476,12 +476,22 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
                                                 apr_file_t *body_file);
 
 
+/** Find a given element in the table of elements.
+ *
+ * The table of XML elements @a table is searched until element identified by
+ * namespace @a nspace and name @a name is found. If no elements are found,
+ * tries to find and return element identified by @c ELEM_unknown. If that is
+ * not found, returns NULL pointer. */
+const svn_ra_dav__xml_elm_t *
+svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
+                            const char *nspace,
+                            const char *name);
+
+
 /* Send a METHOD request (e.g., "MERGE", "REPORT", "PROPFIND") to URL
  * in session SESS, and parse the response.  If BODY is non-null, it is
  * the body of the request, else use the contents of file BODY_FILE
  * as the body.
- *
- * ELEMENTS is the set of xml elements to recognize in the response.
  *
  * VALIDATE_CB, STARTELM_CB, and ENDELM_CB are Neon validation, start
  * element, and end element handlers, respectively, from Neon > 0.24.
@@ -507,7 +517,6 @@ svn_ra_dav__parsed_request(ne_session *sess,
                            apr_file_t *body_file,
                            void set_parser (ne_xml_parser *parser,
                                             void *baton),
-                           const svn_ra_dav__xml_elm_t *elements, 
                            ne_xml_startelm_cb *startelm_cb,
                            ne_xml_cdata_cb *cdata_cb,
                            ne_xml_endelm_cb *endelm_cb,
@@ -517,8 +526,13 @@ svn_ra_dav__parsed_request(ne_session *sess,
                            apr_pool_t *pool);
   
 
-/* Same as svn_ra_dav__parsed_request, except that the Neon callbacks
-   are for the Neon <= 0.23 API.  */
+/* Same as svn_ra_dav__parsed_request, except:
+ *
+ * ELEMENTS is the set of xml elements to recognize in the response.
+ *
+ * The callbacks VALIDATE_CB, STARTELM_CB, and ENDELM_CB, are written
+ * for the Neon <= 0.23 API.
+ */
 svn_error_t *
 svn_ra_dav__parsed_request_compat(ne_session *sess,
                                   const char *method,
