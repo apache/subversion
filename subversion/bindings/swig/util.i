@@ -82,6 +82,14 @@
    handle the variadic, so ignore it. */
 %ignore svn_stream_printf;
 
+
+/* -----------------------------------------------------------------------
+   these types (as 'type **') will always be an OUT param
+*/
+%apply SWIGTYPE **OUTPARAM {
+  svn_auth_baton_t **
+}
+
 /* -----------------------------------------------------------------------
    apr_size_t * is always an IN/OUT parameter in svn_io.h
 */
@@ -91,6 +99,28 @@
    handle the MIME type return value of svn_io_detect_mimetype()
 */
 %apply const char **OUTPUT { const char ** };
+
+/* -----------------------------------------------------------------------
+   handle the providers array as an input type.
+*/
+%typemap(python, in) apr_array_header_t *providers {
+    svn_auth_provider_object_t *provider;
+    int targlen;
+    if (!PySequence_Check($input)) {
+        PyErr_SetString(PyExc_TypeError, "not a sequence");
+        return NULL;
+    }
+    targlen = PySequence_Length($input);
+    $1 = apr_array_make(_global_pool, targlen, sizeof(provider));
+    ($1)->nelts = targlen;
+    while (targlen--) {
+        SWIG_ConvertPtr(PySequence_GetItem($input, targlen),
+                        (void **)&provider, 
+                        $descriptor(svn_auth_provider_object_t *),
+                        SWIG_POINTER_EXCEPTION | 0);
+        APR_ARRAY_IDX($1, targlen, svn_auth_provider_object_t *) = provider;
+    }
+}
 
 /* -----------------------------------------------------------------------
    fix up the svn_stream_read() ptr/len arguments
@@ -149,6 +179,7 @@
 %typemap(perl5, argout, fragment="t_output_helper") (const char *data, apr_size_t *len) {
     /* ### FIXME-perl */
 }
+
 /* -----------------------------------------------------------------------
    describe how to pass a FILE* as a parameter (svn_stream_from_stdio)
 */
@@ -194,6 +225,7 @@ void apr_pool_destroy(apr_pool_t *p);
 %include svn_time.h
 %include svn_props.h
 %include svn_opt.h
+%include svn_auth.h
 
 /* SWIG won't follow through to APR's defining this to be empty, so we
    need to do it manually, before SWIG sees this in svn_io.h. */
@@ -211,6 +243,7 @@ void apr_pool_destroy(apr_pool_t *p);
 #include "svn_time.h"
 #include "svn_props.h"
 #include "svn_opt.h"
+#include "svn_auth.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"

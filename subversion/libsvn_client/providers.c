@@ -259,15 +259,16 @@ static const svn_auth_provider_t simple_provider = {
 
 /* Public API */
 void
-svn_client_get_simple_provider (const svn_auth_provider_t **provider,
-                                void **provider_baton,
+svn_client_get_simple_provider (svn_auth_provider_object_t **provider,
                                 apr_pool_t *pool)
 {
+  svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
   provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
   pb->cred_kind = SVN_AUTH_CRED_SIMPLE;
 
-  *provider = &simple_provider;
-  *provider_baton = pb;
+  po->vtable = &simple_provider;
+  po->provider_baton = pb;
+  *provider = po;
 }
 
 
@@ -339,13 +340,14 @@ static const svn_auth_provider_t username_provider = {
 
 /* Public API */
 void
-svn_client_get_username_provider (const svn_auth_provider_t **provider,
-                                  void **provider_baton,
+svn_client_get_username_provider (svn_auth_provider_object_t **provider,
                                   apr_pool_t *pool)
 {
+  svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
   provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
   pb->cred_kind = SVN_AUTH_CRED_USERNAME;
 
-  *provider = &username_provider;
-  *provider_baton = pb;
+  po->vtable = &username_provider;
+  po->provider_baton = pb;
+  *provider = po;
 }

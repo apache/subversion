@@ -309,21 +309,22 @@ static const svn_auth_provider_t simple_prompt_provider = {
 
 /* Public API */
 void
-svn_client_get_simple_prompt_provider (const svn_auth_provider_t **provider,
-                                       void **provider_baton,
+svn_client_get_simple_prompt_provider (svn_auth_provider_object_t **provider,
                                        svn_client_prompt_t prompt_func,
                                        void *prompt_baton,
-                                        int retry_limit,
+                                       int retry_limit,
                                        apr_pool_t *pool)
 {
+  svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
   prompt_provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
 
   pb->prompt_func = prompt_func;
   pb->prompt_baton = prompt_baton;
   pb->retry_limit = retry_limit;
 
-  *provider = &simple_prompt_provider;
-  *provider_baton = pb;
+  po->vtable = &simple_prompt_provider;
+  po->provider_baton = pb;
+  *provider = po;
 }
 
 
@@ -415,21 +416,22 @@ static const svn_auth_provider_t username_prompt_provider = {
 
 /* Public API */
 void
-svn_client_get_username_prompt_provider (const svn_auth_provider_t **provider,
-                                         void **provider_baton,
+svn_client_get_username_prompt_provider (svn_auth_provider_object_t **provider,
                                          svn_client_prompt_t prompt_func,
                                          void *prompt_baton,
                                          int retry_limit,
                                          apr_pool_t *pool)
 {
+  svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
   prompt_provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
 
   pb->prompt_func = prompt_func;
   pb->prompt_baton = prompt_baton;
   pb->retry_limit = retry_limit;
 
-  *provider = &username_prompt_provider;
-  *provider_baton = pb;
+  po->vtable = &username_prompt_provider;
+  po->provider_baton = pb;
+  *provider = po;
 }
 
 
@@ -616,27 +618,30 @@ static const svn_auth_provider_t client_ssl_pw_file_provider =
 
 
 void 
-svn_client_get_ssl_server_file_provider (const svn_auth_provider_t **provider,
-                                         void **provider_baton,
+svn_client_get_ssl_server_file_provider (svn_auth_provider_object_t **provider,
                                          apr_pool_t *pool)
 {
-  *provider = &server_ssl_file_provider;
+  svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
+  po->vtable = &server_ssl_file_provider;
+  *provider = po;
 }
 
 void 
-svn_client_get_ssl_client_file_provider (const svn_auth_provider_t **provider,
-                                         void **provider_baton,
+svn_client_get_ssl_client_file_provider (svn_auth_provider_object_t **provider,
                                          apr_pool_t *pool)
 {
-  *provider = &client_ssl_cert_file_provider;
+  svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
+  po->vtable = &client_ssl_cert_file_provider;
+  *provider = po;
 }
 
 void
-svn_client_get_ssl_pw_file_provider (const svn_auth_provider_t **provider,
-                                     void **provider_baton,
+svn_client_get_ssl_pw_file_provider (svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool)
 {
-  *provider = &client_ssl_pw_file_provider;
+  svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
+  po->vtable = &client_ssl_pw_file_provider;
+  *provider = po;
 }
 
 
@@ -831,7 +836,6 @@ static const svn_auth_provider_t client_ssl_prompt_provider =
     client_ssl_prompt_first_cred,
     NULL,
     NULL
-    
   };
 
 static const svn_auth_provider_t client_ssl_pass_prompt_provider =
@@ -840,47 +844,49 @@ static const svn_auth_provider_t client_ssl_pass_prompt_provider =
     client_ssl_pw_prompt_first_cred,
     NULL,
     NULL
-    
   };
 
 void
-svn_client_get_ssl_server_prompt_provider (const svn_auth_provider_t **provider,
-                                           void **provider_baton,
+svn_client_get_ssl_server_prompt_provider (svn_auth_provider_object_t **provider,
                                            svn_client_prompt_t prompt_func,
                                            void *prompt_baton,
                                            apr_pool_t *pool)
 {
+  svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
   cred_ssl_provider_baton *pb = apr_palloc (pool, sizeof(*pb));
   pb->prompt_func = prompt_func;
   pb->prompt_baton = prompt_baton;
-  *provider = &server_ssl_prompt_provider;
-  *provider_baton = pb;
+  po->vtable = &server_ssl_prompt_provider;
+  po->provider_baton = pb;
+  *provider = po;
 }
 
 void
-svn_client_get_ssl_client_prompt_provider (const svn_auth_provider_t **provider,
-                                           void **provider_baton,
+svn_client_get_ssl_client_prompt_provider (svn_auth_provider_object_t **provider,
                                            svn_client_prompt_t prompt_func,
                                            void *prompt_baton,
                                            apr_pool_t *pool)
 {
+  svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
   cred_ssl_provider_baton *pb = apr_palloc (pool, sizeof(*pb));
   pb->prompt_func = prompt_func;
   pb->prompt_baton = prompt_baton;
-  *provider = &client_ssl_prompt_provider;
-  *provider_baton = pb;
+  po->vtable = &client_ssl_prompt_provider;
+  po->provider_baton = pb;
+  *provider = po;
 }
 
 void
-svn_client_get_ssl_pw_prompt_provider (const svn_auth_provider_t **provider,
-                                       void **provider_baton,
+svn_client_get_ssl_pw_prompt_provider (svn_auth_provider_object_t **provider,
                                        svn_client_prompt_t prompt_func,
                                        void *prompt_baton,
                                        apr_pool_t *pool)
 {
+  svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
   cred_ssl_provider_baton *pb = apr_palloc (pool, sizeof(*pb));
   pb->prompt_func = prompt_func;
   pb->prompt_baton = prompt_baton;
-  *provider = &client_ssl_pass_prompt_provider;
-  *provider_baton = pb;
+  po->vtable = &client_ssl_pass_prompt_provider;
+  po->provider_baton = pb;
+  *provider = po;
 }

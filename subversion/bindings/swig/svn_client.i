@@ -33,7 +33,8 @@
    these types (as 'type **') will always be an OUT param
 */
 %apply SWIGTYPE **OUTPARAM {
-  svn_client_commit_info_t **
+  svn_client_commit_info_t **,
+  svn_auth_provider_object_t **
 };
 
 /* -----------------------------------------------------------------------
