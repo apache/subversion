@@ -1,7 +1,6 @@
 Version Pre-Alpha (released ? June 2002, revision ?)
 
  User-visible changes:
- * new Module System
  * repositories have a new database schema;  existing ones must be upgraded!
       - new svnadmin 'dump'/'load' commands to migrate repositories
       - read http://svn.collab.net/repos/svn/trunk/notes/repos_upgrade_HOWTO
