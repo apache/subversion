@@ -187,6 +187,12 @@ file_new (VALUE class, VALUE aPath, VALUE flag)
 }
 
 static VALUE
+file_init (VALUE self, VALUE aPath, VALUE flag)
+{
+  return self;
+}
+
+static VALUE
 file_write (VALUE self, VALUE aString)
 {
   svn_error_t *err;
@@ -261,6 +267,7 @@ svn_ruby_init_stream (void)
   cSvnFileStream = rb_define_class_under (svn_ruby_mSvn, "FileStream",
                                           cSvnStream);
   rb_define_singleton_method (cSvnFileStream, "new", file_new, 2);
+  rb_define_method (cSvnFileStream, "initialize", file_init, 2);
   rb_define_const (cSvnFileStream, "READ", INT2FIX (APR_READ));
   rb_define_const (cSvnFileStream, "WRITE", INT2FIX (APR_WRITE));
   rb_define_const (cSvnFileStream, "CREATE", INT2FIX (APR_CREATE));
