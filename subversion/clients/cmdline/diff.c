@@ -21,6 +21,9 @@
 
 
 /*** Includes. ***/
+#define APR_WANT_STRFUNC  /* for strcmp */
+#include <apr_want.h>
+
 #include <apr_hash.h>
 #include <apr_tables.h>
 #include <apr_file_io.h>
@@ -29,10 +32,60 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
+#include "svn_path.h"
 #include "svn_private_config.h"         /* for SVN_CLIENT_DIFF */
 
 #include "cl.h"
 
+/* todo: correctly handle entries which are being added or removed. */
+
+svn_error_t *
+svn_cl__print_dir_diff (svn_stringbuf_t *path,
+                        apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  err = svn_wc_entries_read (&entries, path, pool);
+  if (err)
+    return err;
+
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+    {
+      svn_wc_entry_t *ent;
+      const char *key;
+
+      apr_hash_this(hi, (const void **)&key, NULL, (void **)&ent);
+
+      /* skip entry for the directory itself */
+      if (strcmp (key, SVN_WC_ENTRY_THIS_DIR) == 0)
+        continue;
+
+      /* Construct the full path for this entry: the original 'path'
+       * is restored again after we're done with this entry. */
+      svn_path_add_component_nts (path, key, svn_path_local_style);
+
+      switch (ent->kind)
+        {
+        case svn_node_file:
+          err = svn_cl__print_file_diff (path, pool);
+          break;
+        case svn_node_dir:
+          err = svn_cl__print_dir_diff (path, pool);
+          break;
+        default:
+          break;
+        }
+      
+      svn_path_remove_component (path, svn_path_local_style);
+
+      if (err) return err;
+
+    }
+  
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_cl__print_file_diff (svn_stringbuf_t *path,
