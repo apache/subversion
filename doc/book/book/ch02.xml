@@ -526,7 +526,7 @@ calc/Makefile:6
           file should eventually be updated, to make it current with
           the public revision.  A <command>svn commit</command> of the
           file will do nothing, and a <command>svn update</command> of
-          the file fold the latest changes into your working
+          the file will fold the latest changes into your working
           copy.</para></listitem>
         </varlistentry>
         
