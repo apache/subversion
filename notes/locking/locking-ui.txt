@@ -289,12 +289,12 @@ II. New Client Behaviors
                displays it using some new symbol, in a new column:
 
                    $ svn status
-                   M        foo.c
-                   M      # bar.c
-                   A        baz.c 
+                   M      foo.c
+                   M    K bar.c
+                   A      baz.c 
 
-               The new symbol is up for discussion, '#' is used as an
-               example here.
+               Note that K (locKed) is used instead of the more
+               intuitive L, since L is already in use for another purpose.
 
             2. seeing locks in a repository.
 
@@ -303,11 +303,22 @@ II. New Client Behaviors
                locks that exist on the server:
 
                   $ svn status -u
-                  M        foo.c
-                  M      # bar.c
-                  A     *  baz.c 
-                        *  file1
-                         # file2
+                  M                   foo.c
+                  M    K  K           bar.c
+                  A      *            baz.c
+                         *            file1
+                          K           file2
+                  M    K  B           file3
+                   M   K  S
+
+               As with "svn st", the sixth column will be used to
+               indicate a lock token in the working copy.  Column nine
+               will indicate "out-of-dateness" information regarding
+               locks in the repository.  K means there is a lock held
+               on this path in the repository, B means the lock in the
+               current WC was broken (could be indicated with just a
+               space, but B is more vissible), and S means that the
+               lock was stolen from this WC.
 
             3.  'svn info', describes the attributes of a lock-token,
                 if attached to a working object.  If invoked on a URL,
