@@ -139,28 +139,51 @@ def print_statistics():
     ago that was. Not found authors will assigned the earliest log
     date found.
     """
+    request = [author for author, date in STATISTICS] + LOOKING_FOR
+    request.sort()
+    results = obtain_statistics(request)
+
+    for author in request:
+        date_text, days, commit = results[author]
+        if commit:
+            print "Last change from %s on %s, %d days ago" % (author,
+                date_text, days)
+        else:
+            print "No changes from %s since %s, %d days ago" % (author,
+                date_text, days)
+    return
+
+
+def obtain_statistics(author_list):
+    """f([nicks]) -> {nicks:(statistics_triplet)}
+
+    For a list of nicks, returns a dictionary with the nicks as
+    keys and the statistics as values. If a nick is not found in
+    the statistics, its value is None. Otherwise, it is a tuple
+    with a text string date, the the number of days ago in floating
+    point, and a boolean saying whether a commit was found or not
+    in the statistics.
+    """
     earliest_time, earliest_text = parse_date(STATE.earliest_date)
     current_time = time.localtime()
     current_seconds = time.mktime(current_time)
-    
-    for author, date in STATISTICS:
-        date_time, date_text = parse_date(date)
-        date_seconds = time.mktime(date_time)
+    statistics = dict(STATISTICS)
 
-        print "Last change from %s" % author,
-        if date_seconds > current_seconds:
-            print "in the future"
-        else:
+    results = {}
+    for author in author_list:
+        if author in statistics:
+            date_time, date_text = parse_date(statistics[author])
+            date_seconds = time.mktime(date_time)
+
             days = (current_seconds - date_seconds) / SECONDS_A_DAY
-            print "on %s, %d days ago." % (date_text[:10], days)
-
-    if LOOKING_FOR:
-        earliest_seconds = time.mktime(earliest_time)
-        for author in LOOKING_FOR:
+            results[author] = (date_text[:10], days, 1)
+        else:
+            earliest_seconds = time.mktime(earliest_time)
             days = (current_seconds - earliest_seconds) / SECONDS_A_DAY
-            print "Didn't find changes from %s since %s, %d days ago." % (
-                author, earliest_text[:10], days)
+            results[author] = (earliest_text[:10], days, 0)
 
+    return results
+    
 
 def update_working_copy():
     """Runs 'svn update' discarding any output."""
