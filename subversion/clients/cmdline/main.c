@@ -358,6 +358,8 @@ format_option (char **string,
       return;
     }
 
+  /* We have a valid option which may or may not have a "short
+     name" (a single-character alias for the long option). */
   if (opt->optch <= 255)  
     opts = apr_psprintf (pool, "-%c [--%s]", opt->optch, opt->name);
   else
@@ -365,9 +367,9 @@ format_option (char **string,
 
   if (opt->has_arg)
     opts = apr_pstrcat (pool, opts, " arg", NULL);
-  
+
   if (doc)
-    opts = apr_pstrcat (pool, opts, ":\t", opt->description, NULL);
+    opts = apr_psprintf (pool, "%-24s : %s", opts, opt->description);
 
   *string = opts;
 }
