@@ -103,6 +103,11 @@
 */
 %apply long *OUTPUT { svn_revnum_t * };
 
+/* -----------------------------------------------------------------------
+   'svn_node_kind_t *' will always be an OUTPUT parameter
+*/
+%apply unsigned int *OUTPUT { svn_node_kind_t * };
+
 /* ----------------------------------------------------------------------- */
 
 /* Define an OUTPUT typemap for 'svn_filesize_t *'.  For now, we'll
