@@ -458,6 +458,8 @@ svn_client_checkout (const char *URL,
  * @a ctx->notify_baton for each item handled by the update, and also for 
  * files restored from text-base.
  *
+ * If @a path is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
+ *
  * Use @a pool for any temporary allocation.
  */
 svn_error_t *
@@ -874,6 +876,8 @@ svn_client_cleanup (const char *dir,
  * If @a ctx->notify_func is non-null, then for each item reverted, call
  * @a ctx->notify_func with @a ctx->notify_baton and the path of the reverted 
  * item.
+ *
+ * If @a path is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  */
 svn_error_t *
 svn_client_revert (const char *path,
@@ -1130,6 +1134,8 @@ svn_client_revprop_get (const char *propname,
  * If @a recurse is false, or @a target is a file, @a *props will contain 
  * only a single element.  Otherwise, it will contain one element for each
  * versioned entry below (and including) @a target.
+ *
+ * If @a target is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  */
 svn_error_t *
 svn_client_proplist (apr_array_header_t **props,

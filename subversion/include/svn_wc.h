@@ -1280,6 +1280,8 @@ svn_wc_crawl_revisions (const char *path,
 /** Set @a *wc_root to @c TRUE if @a path represents a "working copy root",
  * @c FALSE otherwise.  Use @a pool for any intermediate allocations.
  *
+ * If @a path is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
+ *
  * NOTE: Due to the way in which "WC-root-ness" is calculated, passing
  * a @a path of `.' to this function will always return @c TRUE.
  */

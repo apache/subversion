@@ -66,13 +66,28 @@ svn_cl__update (apr_getopt_t *os,
   for (i = 0; i < condensed_targets->nelts; i++)
     {
       const char *target = ((const char **) (condensed_targets->elts))[i];
+      svn_error_t *err;
 
-      SVN_ERR (svn_client_update
+      err = svn_client_update
                (target,
                 &(opt_state->start_revision),
                 opt_state->nonrecursive ? FALSE : TRUE,
                 ctx,
-                pool));
+                pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+            {
+              if (!opt_state->quiet)
+                {
+                  svn_handle_warning (stderr, err);
+                }
+              continue;
+            }
+          else
+              return err;
+        }
+
     }
 
   return SVN_NO_ERROR;

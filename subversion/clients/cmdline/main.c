@@ -350,15 +350,15 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  for example, when redirecting binary property values to a file).\n",
     {'R', 'r', svn_cl__revprop_opt, svn_cl__strict_opt, 
      SVN_CL__AUTH_OPTIONS} },
-  
+
   { "proplist", svn_cl__proplist, {"plist", "pl"},
     "List all properties on files, dirs, or revisions.\n"
     "usage: 1. proplist [PATH [PATH ... ]]\n"
     "       2. proplist --revprop -r REV [URL]\n\n"
     "  1. Lists versioned props in working copy.\n"
     "  2. Lists unversioned remote props on repos revision.\n",
-    {'v', 'R', 'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS} },
-  
+    {'v', 'R', 'r', 'q', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS} },
+
   { "propset", svn_cl__propset, {"pset", "ps"},
     "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n\n"
     "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH [PATH [PATH ... ]]\n"
