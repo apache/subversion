@@ -8,7 +8,6 @@ skel_test_LDADD = ../libsvn_fs.la				\
 		  ../../../apr/libapr.a
 
 
-CFLAGS = @CFLAGS@ -pthread
 INCLUDES = -I .. -I ../../include -I ../../../apr/include
 
 ## Make libtool be quiet

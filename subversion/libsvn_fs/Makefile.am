@@ -16,7 +16,6 @@ libsvn_fs_la_SOURCES = convert-size.c		\
 		       txn.c			\
 		       version.c
 
-CFLAGS = @CFLAGS@ -pthread
 INCLUDES = -I../include -I../../apr/include -I../../expat-lite
 
 ## Build *this* directory first, *then* the test subdirectory!

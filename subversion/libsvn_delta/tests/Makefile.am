@@ -9,7 +9,6 @@ xml_output_test_SOURCES = xml-output-test.c
 svndiff_test_SOURCES = svndiff-test.c
 
 ## Flags needed when compiling:
-CFLAGS = @CFLAGS@ -pthread
 INCLUDES = -I../../include -I../../../apr/include -I../../../expat-lite
 
 ## Libraries this binary depends upon:

@@ -43,6 +43,17 @@ if test "$enable_subdir_config" = "yes"; then
 fi
 
 
+dnl Get libraries and thread flags from APR ---------------------
+
+if test -f apr/APRVARS; then
+  . apr/APRVARS
+  CPPFLAGS="$CPPFLAGS $EXTRA_CPPFLAGS"
+  CFLAGS="$CFLAGS $EXTRA_CFLAGS"
+  LIBS="$LIBS $EXTRA_LIBS"
+else
+  AC_MSG_ERROR([Must configure APR before Subversion.])
+fi
+
 dnl Check for programs ---------------------
 
 dnl Look for a C compiler

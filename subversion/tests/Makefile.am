@@ -5,7 +5,6 @@ libsvn_tests_main_la_SOURCES = svn_tests_main.c
 libsvn_test_editor_la_SOURCES = svn_test_editor.c
 
 ## Flags needed when compiling:
-CFLAGS = @CFLAGS@ -pthread
 INCLUDES = -I../../apr/include -I../include
 
 

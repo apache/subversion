@@ -4,7 +4,6 @@ noinst_PROGRAMS = ra-dav-test
 ra_dav_test_SOURCES = ra-dav-test.c
 
 ## Flags needed when compiling:
-CFLAGS = @CFLAGS@ -pthread
 INCLUDES = -I../../include -I../../../apr/include
 
 ## Libraries this binary depends upon:
