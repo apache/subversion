@@ -1600,6 +1600,7 @@ main (int argc, const char * const *argv)
 {
   svn_error_t *err;
   apr_status_t apr_err;
+  apr_allocator_t *allocator;
   apr_pool_t *pool;
 
   const svn_opt_subcommand_desc_t *subcommand = NULL;
@@ -1613,8 +1614,14 @@ main (int argc, const char * const *argv)
   if (svn_cmdline_init ("svnlook", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
-  /* Create our top-level pool. */
-  pool = svn_pool_create (NULL);
+  /* Create our top-level pool.  Use a seperate mutexless allocator,
+   * given this application is single threaded.
+   */
+  if (apr_allocator_create (&allocator))
+    return EXIT_FAILURE;
+      
+  pool = svn_pool_create_ex (NULL, allocator);
+  apr_allocator_set_owner (allocator, pool);
 
   if (argc <= 1)
     {
