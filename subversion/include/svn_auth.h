@@ -17,7 +17,6 @@
  *
  * @file svn_auth.h
  * @brief Support for user authentication
- * @{
  */
 
 #ifndef SVN_AUTH_H
@@ -100,6 +99,5 @@ svn_error_t * svn_auth_save_credentials(const char *cred_kind,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-/** @} */
 
 #endif /* SVN_AUTH_H */

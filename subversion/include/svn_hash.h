@@ -17,8 +17,6 @@
  *
  * @file svn_hash.h
  * @brief Dumping and reading hash tables to/from files.
- *
- * @{
  */
 
 

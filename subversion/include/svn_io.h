@@ -17,8 +17,6 @@
  *
  * @file svn_io.h
  * @brief general Subversion I/O definitions
- *
- * @{
  */
 
 /* ==================================================================== */
@@ -722,6 +720,5 @@ svn_io_write_version_file (const char *path, int version, apr_pool_t *pool);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-/** @} */
 
 #endif /* SVN_IO_H */

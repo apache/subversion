@@ -17,8 +17,6 @@
  *
  * @file svn_utf.h
  * @brief UTF-8 conversion routines
- *
- * @{
  */
 
 
@@ -172,6 +170,5 @@ const char *svn_utf_utf8_to_native (const char *utf8_string,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-/** @} */
 
 #endif /* SVN_XML_H */

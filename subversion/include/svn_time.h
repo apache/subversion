@@ -17,7 +17,6 @@
  *
  * @file svn_time.h
  * @brief Time/date utilities
- * @{
  */
 
 #ifndef SVN_TIME_H
@@ -76,6 +75,5 @@ time_t svn_parse_date (char *text, struct getdate_time *now);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-/** @} */
 
 #endif /* SVN_TIME_H */

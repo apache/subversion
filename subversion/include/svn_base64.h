@@ -17,7 +17,6 @@
  *
  * @file svn_base64.h
  * @brief Base64 encoding and decoding functions
- * @{
  */
 
 #ifndef SVN_BASE64_H
@@ -67,6 +66,5 @@ svn_stringbuf_t *svn_base64_decode_string (svn_stringbuf_t *str,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-/** }@ */
 
 #endif /* SVN_BASE64_H */

@@ -17,8 +17,6 @@
  *
  * @file svn_types.h
  * @brief Subversion's data types
- *
- * @{
  */
 
 #ifndef SVN_TYPES_H
@@ -335,6 +333,5 @@ svn_boolean_t svn_mime_type_is_binary (const char *mime_type);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-/** @} */
 
 #endif /* SVN_TYPES_H */

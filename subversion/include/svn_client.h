@@ -17,7 +17,6 @@
  *
  * @file svn_client.h
  * @brief Public interface for libsvn_client.
- * @{
  */
 
 
@@ -1112,6 +1111,5 @@ svn_client_cat (svn_stream_t* out,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-/** @} */
 
 #endif  /* SVN_CLIENT_H */

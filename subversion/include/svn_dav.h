@@ -17,7 +17,6 @@
  *
  * @file svn_dav.h
  * @brief Code related to WebDAV/DeltaV usage in Subversion.
- * @{
  */
 
 
@@ -110,6 +109,5 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-/** @} */
 
 #endif  /* SVN_DAV_H */

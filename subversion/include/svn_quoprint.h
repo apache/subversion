@@ -17,8 +17,6 @@
  *
  * @file svn_quoprint.h
  * @brief quoted-printable encoding and decoding functions.
- *
- * @{
  */
 
 
