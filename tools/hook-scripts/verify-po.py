@@ -1,4 +1,4 @@
-'''This is a pre-comiit hook that checks whether the contents of PO files
+'''This is a pre-commit hook that checks whether the contents of PO files
 committed to the repository are encoded in UTF-8.
 '''
 
