@@ -1196,8 +1196,17 @@ $ svn switch file:///home/repos/trunk
 $ svn merge file:///home/repos/tags/branch_traces/bar_last_merge \
             file:///home/repos/branches/bar_branch
 
-# and check the file content of 'foo.txt'
+# Now check the file content of 'foo.txt', it should contain the changes.
 
+# commit the merge
+$ svn commit -m "Merge change X from bar_branch."
+
+# finally, update the trace branch to reflect the new state of things
+$ svn delete -m "Remove old trace branch in preparation for refresh." \
+             file:///home/repos/tags/branch_traces/bar_last_merge
+$ svn copy file:///home/repos/branches/bar_branch                     \
+           file:///home/repos/tags/branch_traces/bar_last_merge       \
+           -m "Reflect merge of change X."
 </pre>
 
 <![CDATA[=========================================================]]>
