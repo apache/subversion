@@ -15,36 +15,8 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Produce aclocal.m4, so autoconf gets the automake macros it needs
-echo "Creating aclocal.m4..."
-aclocal -I ac-helpers
-
-# Produce config.h.in
-# Do this before the automake (automake barfs if the header isn't available).
-# Do it after the aclocal command -- automake sets up the header to depend
-# on aclocal.m4
-echo "Creating svn_private_config.h.in..."
-autoheader
-
-# Produce all the `Makefile.in's, verbosely, and create neat missing things
-# like `libtool', `install-sh', etc.
-automake --add-missing --verbose
-
-# If there's a config.cache file, we may need to delete it.  
-# If we have an existing configure script, save a copy for comparison.
-if [ -f config.cache ] && [ -f configure ]; then
-  cp configure configure.$$.tmp
-fi
-
-# Produce ./configure
-echo "Creating configure..."
-autoconf
-
 # Meta-configure apr/ subdir
-if [ -d apr ]; then
-  echo "Creating config files for APR..."
-  (cd apr; ./buildconf)  # this is apr's equivalent of autogen.sh
-else
+if [ ! -d apr ]; then
   echo ""
   echo "...Uh oh, there is a problem."
   echo "You don't have an apr/ subdirectory here.  Please get one:"
@@ -86,6 +58,37 @@ if test "$NEON_WANTED" != "$NEON_VERSION"; then
   echo "directory from ./neon-${NEON_WANTED}/ to ./neon/"
   echo ""
   exit 1
+fi
+
+# Produce aclocal.m4, so autoconf gets the automake macros it needs
+echo "Creating aclocal.m4..."
+aclocal -I ac-helpers
+
+# Produce config.h.in
+# Do this before the automake (automake barfs if the header isn't available).
+# Do it after the aclocal command -- automake sets up the header to depend
+# on aclocal.m4
+echo "Creating svn_private_config.h.in..."
+autoheader
+
+# Produce all the `Makefile.in's, verbosely, and create neat missing things
+# like `libtool', `install-sh', etc.
+automake --add-missing --verbose
+
+# If there's a config.cache file, we may need to delete it.  
+# If we have an existing configure script, save a copy for comparison.
+if [ -f config.cache ] && [ -f configure ]; then
+  cp configure configure.$$.tmp
+fi
+
+# Produce ./configure
+echo "Creating configure..."
+autoconf
+
+# Meta-configure apr/ subdir
+if [ -d apr ]; then
+  echo "Creating config files for APR..."
+  (cd apr; ./buildconf)  # this is apr's equivalent of autogen.sh
 fi
 
 # If we have a config.cache file, toss it if the configure script has
