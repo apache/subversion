@@ -49,7 +49,7 @@ svn_cl__import (apr_getopt_t *os,
   const svn_delta_edit_fns_t *trace_editor;
   void *trace_edit_baton;
 
-  svn_client_auth_t *auth_obj;
+  svn_client_auth_baton_t *auth_baton;
   
   /* Take our message from ARGV or a FILE */
   if (opt_state->filedata) 
@@ -58,7 +58,7 @@ svn_cl__import (apr_getopt_t *os,
     message = opt_state->message;
   
   /* Build an authentication object to give to libsvn_client. */
-  auth_obj = svn_cl__make_auth_obj (opt_state, pool);
+  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   /* Import takes up to three arguments, for example
    *
@@ -132,7 +132,7 @@ svn_cl__import (apr_getopt_t *os,
   SVN_ERR (svn_client_import (NULL, NULL,
                               opt_state->quiet ? NULL : trace_editor, 
                               opt_state->quiet ? NULL : trace_edit_baton,
-                              auth_obj,
+                              auth_baton,
                               path,
                               url,
                               new_entry,

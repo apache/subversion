@@ -35,87 +35,67 @@
 #include "ra_dav.h"
 
 
+/* a cleanup routine attached to the pool that contains the RA session
+   baton. */
 static apr_status_t cleanup_session(void *sess)
 {
   ne_session_destroy(sess);
   return APR_SUCCESS;
 }
 
-static svn_error_t * auth_set_username (const char *username, void *auth_baton)
-{
-  svn_ra_session_t *ras = auth_baton;
 
-  ras->username = apr_pstrdup(ras->pool, username);
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t * auth_set_password (const char *password, void *auth_baton)
-{
-  svn_ra_session_t *ras = auth_baton;
-
-  ras->password = apr_pstrdup(ras->pool, password);
-
-  return SVN_NO_ERROR;
-}
-
+/* A neon-session callback to 'pull' authentication data when
+   challenged.  In turn, this routine 'pulls' the data from the client
+   callbacks if needed.  */
 static int request_auth(void *userdata, const char *realm,
                         char **username, char **password)
 {
-  svn_ra_session_t *ras = userdata;
   apr_size_t l;
+  void *a, *auth_baton;
+  char *uname, *pword;
+  svn_ra_simple_password_authenticator_t *authenticator = NULL;
+  svn_ra_session_t *ras = userdata;
 
+  /* ### my only worry is that we're not catching any svn_errors from
+     get_authenticator, get_username, get_password... */
+  
+  if ((! ras->username) || (! ras->password))
+    {
+      /* pull the username and password from the client */
+      ras->callbacks->get_authenticator (&a, &auth_baton, 
+                                         SVN_RA_AUTH_SIMPLE_PASSWORD, 
+                                         ras->callback_baton, ras->pool);      
+      authenticator = (svn_ra_simple_password_authenticator_t *) a;      
+      authenticator->get_user_and_pass (&uname, &pword,
+                                        auth_baton, ras->pool);
+      ras->username = uname;
+      ras->password = pword;
+    }
+
+  /* send a malloc'd copy of the username to neon */
   l = strlen(ras->username) + 1;
   *username = malloc(l);
   memcpy(*username, ras->username, l);
-
-  if (ras->password == NULL)
-    {
-      *password = malloc(1);
-      **password = '\0';
-    }
-  else
-    {
-      l = strlen(ras->password) + 1;
-      *password = malloc(l);
-      memcpy(*password, ras->password, l);
-    }
+  
+  /* send a malloc'd copy of the password to neon */
+  l = strlen(ras->password) + 1;
+  *password = malloc(l);
+  memcpy(*password, ras->password, l);
 
   return 0;
 }
 
-static svn_error_t * auth_authenticate (void **session_baton, void *auth_baton)
-{
-  svn_ra_session_t *ras = auth_baton;
-
-  ne_set_server_auth(ras->sess, request_auth, ras);
-  ne_set_server_auth(ras->sess2, request_auth, ras);
-
-  *session_baton = ras;
-
-  return SVN_NO_ERROR;
-}
-
-static const svn_ra_username_authenticator_t username_authenticator =
-{
-  auth_set_username,
-  auth_authenticate
-};
-static const svn_ra_simple_password_authenticator_t userpass_authenticator =
-{
-  auth_set_username,
-  auth_set_password,
-  auth_authenticate
-};
 
 /* ### need an ne_session_dup to avoid the second gethostbyname
  * call and make this halfway sane. */
 
-static svn_error_t * svn_ra_get_authenticator (const void **authenticator,
-                                               void **auth_baton,
-                                               svn_stringbuf_t *repos_URL,
-                                               apr_uint64_t method,
-                                               apr_pool_t *pool)
+
+static svn_error_t *
+svn_ra_dav__open (void **session_baton,
+                  svn_stringbuf_t *repos_URL,
+                  svn_ra_callbacks_t *callbacks,
+                  void *callback_baton,
+                  apr_pool_t *pool)
 {
   const char *repository = repos_URL->data;
   apr_size_t len;
@@ -123,13 +103,7 @@ static svn_error_t * svn_ra_get_authenticator (const void **authenticator,
   struct uri uri = { 0 };
   svn_ra_session_t *ras;
 
-  if ((method & (SVN_RA_AUTH_USERNAME | SVN_RA_AUTH_SIMPLE_PASSWORD)) == 0)
-    {
-      return svn_error_create(SVN_ERR_RA_UNKNOWN_AUTH, 0, NULL, pool,
-                              "this RA module does not know that "
-                              "authentication/authorization mechanism");
-    }
-
+  /* Sanity check the URI */
   if (uri_parse(repository, &uri, NULL) 
       || uri.host == NULL || uri.path == NULL)
     {
@@ -137,11 +111,13 @@ static svn_error_t * svn_ra_get_authenticator (const void **authenticator,
                               "illegal URL for repository");
     }
 
+  /* Can we initialize network? */
   if (sock_init() != 0) {
     return svn_error_create(SVN_ERR_RA_SOCK_INIT, 0, NULL, pool,
                             "network socket initialization failed");
   }
 
+  /* Create two neon session objects, and set their properties... */
   sess = ne_session_create();
   sess2 = ne_session_create();
 
@@ -206,23 +182,32 @@ static svn_error_t * svn_ra_get_authenticator (const void **authenticator,
   if (len > 1 && uri.path[len - 1] == '/')
     uri.path[len - 1] = '\0';
 
+  /* Create and fill a session_baton. */
   ras = apr_pcalloc(pool, sizeof(*ras));
   ras->pool = pool;
   ras->root = uri;
   ras->sess = sess;
   ras->sess2 = sess2;  
+  ras->callbacks = callbacks;
+  ras->callback_baton = callback_baton;
 
-  if (method == SVN_RA_AUTH_USERNAME)
-    *authenticator = &username_authenticator;
-  else if (method == SVN_RA_AUTH_SIMPLE_PASSWORD)
-    *authenticator = &userpass_authenticator;
+  /* note that ras->username and ras->password are still NULL at this
+     point. */
 
-  *auth_baton = ras;
 
-  return NULL;
+  /* Register an authentication 'pull' callback with the neon sessions */
+  ne_set_server_auth(sess, request_auth, ras);
+  ne_set_server_auth(sess2, request_auth, ras);
+
+
+  *session_baton = ras;
+
+  return SVN_NO_ERROR;
 }
 
-static svn_error_t *svn_ra_close (void *session_baton)
+
+
+static svn_error_t *svn_ra_dav__close (void *session_baton)
 {
   svn_ra_session_t *ras = session_baton;
 
@@ -234,9 +219,8 @@ static svn_error_t *svn_ra_close (void *session_baton)
 static const svn_ra_plugin_t dav_plugin = {
   "ra_dav",
   "Module for accessing a repository via WebDAV (DeltaV) protocol.",
-  (apr_uint64_t) (SVN_RA_AUTH_SIMPLE_PASSWORD),
-  svn_ra_get_authenticator,
-  svn_ra_close,
+  svn_ra_dav__open,
+  svn_ra_dav__close,
   svn_ra_dav__get_latest_revnum,
   svn_ra_dav__get_dated_revision,
   svn_ra_dav__get_commit_editor,

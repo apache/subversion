@@ -39,11 +39,15 @@ typedef struct {
   apr_pool_t *pool;
 
   struct uri root;              /* repository root */
-  const char *username;
-  const char *password;
 
   ne_session *sess;           /* HTTP session to server */
   ne_session *sess2;
+
+  const char *username;       /* authentication data */
+  const char *password;
+  
+  svn_ra_callbacks_t *callbacks;  /* callbacks to get auth data */
+  void *callback_baton;
 
 } svn_ra_session_t;
 
@@ -243,6 +247,14 @@ svn_error_t * svn_ra_dav__merge_activity(
 #define MAKE_BUFFER(p) svn_stringbuf_ncreate("", 0, (p))
 
 void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src);
+
+
+
+/* If RAS contains authentication info, attempt to store it via client
+   callbacks.  */
+svn_error_t *
+svn_ra_dav__maybe_store_auth_info (svn_ra_session_t *ras);
+
 
 #endif  /* RA_DAV_H */
 

@@ -36,7 +36,7 @@
 #include "svn_test.h"
 #include "svn_io.h"
 
-
+#include "client.h"
 
 
 /* Shared internals of import and commit. */
@@ -388,7 +388,7 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
                apr_array_header_t *condensed_targets,
                svn_stringbuf_t *url,        /* null unless importing */
                svn_stringbuf_t *new_entry,  /* null except when importing */
-               svn_client_auth_t *auth_obj,
+               svn_client_auth_baton_t *auth_baton,
                svn_stringbuf_t *log_msg,
                svn_stringbuf_t *xml_dst,
                svn_revnum_t revision,
@@ -406,8 +406,9 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
   const svn_delta_edit_fns_t *test_editor;
   void *test_edit_baton;
 #endif /* 0 */
-  void *ra_baton, *session;
+  void *ra_baton, *session, *cb_baton;
   svn_ra_plugin_t *ra_lib;
+  svn_ra_callbacks_t *ra_callbacks;
   svn_boolean_t is_import;
   struct svn_wc_close_commit_baton ccb = {base_dir, pool};
   apr_array_header_t *tgt_array
@@ -494,10 +495,16 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url->data, pool));
       
-      /* Open an RA session to URL */
-      SVN_ERR (svn_client_authenticate (&session, 
-                                        ra_lib, url, base_dir,
-                                        auth_obj, pool));
+      /* Open an RA session to URL. */
+      /* (Notice that in the case of import, we do NOT want the RA
+         layer to attempt to store auth info in the wc.) */
+      SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
+                                             auth_baton, base_dir, 
+                                             is_import ? FALSE : TRUE,
+                                             pool));
+      SVN_ERR (ra_lib->open (&session, url,
+                             ra_callbacks, cb_baton, pool));
+
       
       /* Fetch RA commit editor, giving it svn_wc_set_revision(). */
       SVN_ERR (ra_lib->get_commit_editor
@@ -577,16 +584,9 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
         return svn_error_createf (apr_err, 0, NULL, pool,
                                   "error closing %s", xml_dst->data);      
     }
-  else  /* We were committing to RA, so close the session. */
-    {
-      SVN_ERR (ra_lib->close (session));
-
-      /* Possibly store any authentication info from the RA
-         session. */
-      if (! is_import)
-        if (auth_obj->storage_callback)
-          SVN_ERR (auth_obj->storage_callback (auth_obj->storage_baton));
-    }
+  else  
+    /* We were committing to RA, so close the session. */
+    SVN_ERR (ra_lib->close (session));
 
   return SVN_NO_ERROR;
 }
@@ -601,7 +601,7 @@ svn_client_import (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,
-                   svn_client_auth_t *auth_obj,
+                   svn_client_auth_baton_t *auth_baton,
                    svn_stringbuf_t *path,
                    svn_stringbuf_t *url,
                    svn_stringbuf_t *new_entry,
@@ -615,7 +615,7 @@ svn_client_import (const svn_delta_edit_fns_t *before_editor,
                           after_editor, after_edit_baton,                   
                           path, NULL,
                           url, new_entry,
-                          auth_obj,
+                          auth_baton,
                           log_msg,
                           xml_dst, revision,
                           pool));
@@ -629,7 +629,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton, 
-                   svn_client_auth_t *auth_obj,
+                   svn_client_auth_baton_t *auth_baton,
                    const apr_array_header_t *targets,
                    svn_stringbuf_t *log_msg,
                    svn_stringbuf_t *xml_dst,
@@ -679,7 +679,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                           base_dir,
                           condensed_targets,
                           NULL, NULL,  /* NULLs because not importing */
-                          auth_obj,
+                          auth_baton,
                           log_msg,
                           xml_dst, revision,
                           pool));

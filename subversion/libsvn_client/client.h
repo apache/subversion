@@ -26,6 +26,35 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_ra.h"
+#include "svn_client.h"
+
+
+/* ---------------------------------------------------------------- */
+
+/*** RA callbacks ***/
+
+/* Fetch a vtable of CALLBACKS/CALLBACK_BATON suitable for passing
+   to RA->open().  AUTH_BATON is originally provided by the calling
+   application.  Do allocation in POOL.
+
+   The calling libsvn_client routine customizes these callbacks, based
+   on what it's about to do with the RA session:
+
+      - PATH customizes the callbacks to operate on a specific path in
+        the working copy.  
+
+      - DO_STORE indicates whether the RA layer should attempt to
+        store authentication info.
+
+*/
+svn_error_t *svn_client__get_ra_callbacks (svn_ra_callbacks_t **callbacks,
+                                           void **callback_baton,
+                                           svn_client_auth_baton_t *auth_baton,
+                                           svn_stringbuf_t *path,
+                                           svn_boolean_t do_store,
+                                           apr_pool_t *pool);
+
 
 
 /* ---------------------------------------------------------------- */

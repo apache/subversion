@@ -58,7 +58,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
                    void *after_edit_baton,
-                   svn_client_auth_t *auth_obj,
+                   svn_client_auth_baton_t *auth_baton,
                    svn_stringbuf_t *path,
                    svn_stringbuf_t *xml_src,
                    svn_revnum_t revision,
@@ -145,8 +145,9 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
   /* if using an RA layer */
   if (! xml_src)
     {
-      void *ra_baton, *session;
+      void *ra_baton, *session, *cb_baton;
       svn_ra_plugin_t *ra_lib;
+      svn_ra_callbacks_t *ra_callbacks;
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -159,9 +160,10 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
           base_dir = svn_stringbuf_dup (path, pool);
           svn_path_remove_component (base_dir, svn_path_local_style);
         }
-      SVN_ERR (svn_client_authenticate (&session, 
-                                        ra_lib, URL, base_dir,
-                                        auth_obj, pool));
+      SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
+                                             auth_baton, path, TRUE, pool));
+      SVN_ERR (ra_lib->open (&session, URL,
+                             ra_callbacks, cb_baton, pool));
 
       /* Decide which revision to update to: */
 
@@ -190,10 +192,6 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
 
       /* Close the RA session. */
       SVN_ERR (ra_lib->close (session));
-
-      /* Possibly store any authentication info from the RA session. */
-      if (auth_obj->storage_callback)
-        SVN_ERR (auth_obj->storage_callback (auth_obj->storage_baton));
     }      
   
   /* else we're checking out from xml */

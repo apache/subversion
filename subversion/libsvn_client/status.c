@@ -25,6 +25,9 @@
 #include <apr_strings.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
+
+#include "client.h"
+
 #include "svn_wc.h"
 #include "svn_delta.h"
 #include "svn_client.h"
@@ -47,12 +50,13 @@ static svn_error_t *
 get_youngest_from_ra (svn_revnum_t *youngest,
                       svn_stringbuf_t *path,
                       const char *URL,
-                      svn_client_auth_t *auth_obj,
+                      svn_client_auth_baton_t *auth_baton,
                       apr_pool_t *pool)
 { 
   svn_error_t *err;
-  void *ra_baton, *session;
+  void *ra_baton, *session, *cb_baton;
   svn_ra_plugin_t *ra_lib;
+  svn_ra_callbacks_t *ra_callbacks;
   svn_revnum_t latest_revnum;
   svn_boolean_t close_session = FALSE, rev_known = FALSE;
 
@@ -71,9 +75,11 @@ get_youngest_from_ra (svn_revnum_t *youngest,
         return SVN_NO_ERROR;
     }
  
-  err = svn_client_authenticate (&session, ra_lib,
-                                 svn_stringbuf_create (URL, pool),
-                                 path, auth_obj, pool);
+  /* Open a repository session to the URL */
+  SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
+                                         auth_baton, path, TRUE, pool));
+  err = ra_lib->open (&session, svn_stringbuf_create (URL, pool),
+                      ra_callbacks, cb_baton, pool);
   if (! err)
     close_session = TRUE;
 
@@ -84,11 +90,7 @@ get_youngest_from_ra (svn_revnum_t *youngest,
     rev_known = TRUE;
 
   if (close_session)
-    {
       ra_lib->close (session);
-      if (auth_obj->storage_callback)
-        SVN_ERR (auth_obj->storage_callback (auth_obj->storage_baton));
-    }
   
   if (rev_known)
     *youngest = latest_revnum;
@@ -108,7 +110,7 @@ svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_stringbuf_t *path,
                    svn_boolean_t descend,
-                   svn_client_auth_t *auth_obj,
+                   svn_client_auth_baton_t *auth_baton,
                    apr_pool_t *pool)
 {
   svn_wc_entry_t *entry;
@@ -158,7 +160,7 @@ svn_client_status (apr_hash_t **statushash,
     SVN_ERR (get_youngest_from_ra (&latest_revnum,
                                    parent ? parent : path,
                                    entry->ancestor->data,
-                                   auth_obj,
+                                   auth_baton,
                                    pool));
 
   /* Write the latest revnum into each status structure. */

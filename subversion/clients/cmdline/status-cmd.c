@@ -42,12 +42,12 @@ svn_cl__status (apr_getopt_t *os,
   apr_hash_t *statushash;
   apr_array_header_t *targets;
   int i;
-  svn_client_auth_t *auth_obj;
+  svn_client_auth_baton_t *auth_baton;
 
   targets = svn_cl__args_to_target_array (os, pool);
 
   /* Build an authentication object to give to libsvn_client. */
-  auth_obj = svn_cl__make_auth_obj (opt_state, pool);
+  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   /* Add "." if user passed 0 arguments */
   svn_cl__push_implicit_dot_target(targets, pool);
@@ -59,9 +59,9 @@ svn_cl__status (apr_getopt_t *os,
       /* Recursion is the default, unless the nonrecursive option was
          specified on the command-line. */
       if (opt_state->nonrecursive)
-        err = svn_client_status (&statushash, target, 0, auth_obj, pool);
+        err = svn_client_status (&statushash, target, 0, auth_baton, pool);
       else
-        err = svn_client_status (&statushash, target, 1, auth_obj, pool);
+        err = svn_client_status (&statushash, target, 1, auth_baton, pool);
 
       if (err)
         return err;
