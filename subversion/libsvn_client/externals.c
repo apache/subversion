@@ -589,7 +589,6 @@ svn_client__handle_externals (svn_wc_traversal_info_t *traversal_info,
 svn_error_t*
 svn_client__recognize_externals (apr_hash_t *status_hash,
                                  svn_wc_traversal_info_t *traversal_info,
-                                 svn_boolean_t remove_statuses,
                                  apr_pool_t *pool)
 {
   apr_hash_t *externals_old, *externals_new;
@@ -653,15 +652,8 @@ svn_client__recognize_externals (apr_hash_t *status_hash,
               status = apr_hash_get (status_hash, extpath, keylen);
               if (status && status->text_status == svn_wc_status_unversioned)
                 {
-                  if (remove_statuses)
-                    {
-                      apr_hash_set (status_hash, extpath, keylen, NULL);
-                    }
-                  else
-                    {
-                      status->text_status = svn_wc_status_external;
-                      apr_hash_set (status_hash, extpath, keylen, status);
-                    }
+                  status->text_status = svn_wc_status_external;
+                  apr_hash_set (status_hash, extpath, keylen, status);
                 }
             }
         }

@@ -172,8 +172,7 @@ svn_client_status (apr_hash_t **statushash,
      are interesting to an svn:externals property to
      svn_wc_status_unversioned, otherwise we'll just remove the status
      item altogether. */
-  SVN_ERR (svn_client__recognize_externals (hash, traversal_info, 
-                                            get_all ? FALSE : TRUE, pool));
+  SVN_ERR (svn_client__recognize_externals (hash, traversal_info, pool));
 
   if (update)    
     {
