@@ -26,6 +26,7 @@
 #include "svn_diff.h"
 #include "svn_pools.h"
 #include "svn_path.h"
+#include "svn_sorts.h"
 
 /* The metadata associated with a particular revision. */
 struct rev
@@ -218,6 +219,17 @@ const svn_diff_output_fns_t output_fns = {
         NULL,
         output_diff_modified
 };
+
+
+static int 
+compare_items_as_paths (const void *a, const void *b)
+{
+  const char *item1 = a;
+  const char *item2 = b;
+  return svn_path_compare_paths (item1, item2);
+}
+
+
                      
 /* Callback for log messages: accumulates revision metadata into
    a chronologically ordered list stored in the baton. */
@@ -245,7 +257,6 @@ log_message_receiver (void *baton,
   rev->next = lmb->eldest;
   lmb->eldest = rev;
 
-
   /* See if the path was explicitly changed in this revision.  If so,
      we'll either use the path, or, if was copied, use its
      copyfrom_path. */
@@ -257,43 +268,57 @@ log_message_receiver (void *baton,
 
       return SVN_NO_ERROR;
     }
-  else
+  else if (apr_hash_count (changed_paths))
     {
       /* The path was not explicitly changed in this revision.  The
          fact that we're hearing about this revision implies, then,
          that the path was a child of some copied directory.  We need
          to find that directory, and effective "re-base" our path on
          that directory's copyfrom_path. */
+      int i;
       apr_hash_index_t *hi;
+      apr_array_header_t *paths = 
+        apr_array_make (pool, apr_hash_count (changed_paths), 
+                        sizeof (const char *));
 
-      for (hi = apr_hash_first (pool, changed_paths); hi;
+      /* Build a sorted list of the changed paths. */
+      for (hi = apr_hash_first (pool, changed_paths); hi; 
            hi = apr_hash_next (hi))
         {
           const void *key;
-          apr_ssize_t klen;
-          void *val;
+          apr_hash_this (hi, &key, NULL, NULL);
+          APR_ARRAY_PUSH (paths, const char *) = key;
+        }
+      qsort (paths->elts, paths->nelts, paths->elt_size, 
+             compare_items_as_paths);
 
-          apr_hash_this (hi, &key, &klen, &val);
-          change = val;
+      /* Now, walk the list of paths backwards, looking a parent of
+         our path that has copyfrom information. */
+      for (i = paths->nelts; i > 0; i--)
+        {
+          const char *ch_path = APR_ARRAY_IDX (paths, i - 1, const char *);
+          int len = strlen (ch_path);
 
-          /* See if our path is the child of this change's path. */
-          if ((strncmp (key, lmb->path, klen) == 0)
-              && (lmb->path[klen] == '/'))
+          /* See if our path is the child of this change path. */
+          if ((strncmp (ch_path, lmb->path, len) == 0)
+              && (lmb->path[len] == '/'))
             {
-              /* Yes!  If this change was copied, we just need to
-                 apply the portion of our path that is relative to
-                 this change's path, to the change's copyfrom path.  */
+              /* Okay, our path *is* a child of this change path.
+                 Does the change path have copyfrom data? */
+              change = apr_hash_get (changed_paths, ch_path, len);
               if (change->copyfrom_path)
                 {
+                  /* Yes!  This change was copied, so we just need to
+                     apply the portion of our path that is relative to
+                     this change's path, to the change's copyfrom path.  */
                   lmb->path = svn_path_join (change->copyfrom_path, 
-                                             lmb->path + klen + 1,
+                                             lmb->path + len + 1,
                                              lmb->pool);
                   return SVN_NO_ERROR;
                 }
-
-              /* We didn't find what we expected here.  Stop looking,
-                 and fall through to an errorful return. */
-              break;
+              
+              /* Nope.  No copyfrom data.  That's okay, we'll keep
+                 looking. */
             }
         }
     }
