@@ -35,35 +35,61 @@ static apr_status_t cleanup_session(void *sess)
   return APR_SUCCESS;
 }
 
-static svn_error_t * svn_ra_get_authenticator (void **authenticator,
-                                               svn_stringbuf_t *repos_URL,
-                                               apr_uint64_t method,
-                                               apr_pool_t *pool)
+static svn_error_t * auth_set_username (const char *username, void *auth_baton)
 {
-  /* ### need to write this.  see below, and see svn_ra.h. */
+  svn_ra_session_t *ras = auth_baton;
+
+  ras->username = apr_pstrdup(ras->pool, username);
 
   return SVN_NO_ERROR;
 }
 
-/* ### This routine needs to be rewritten (split up, really) into
-   multiple routines:   
- 
-         get_authenticator()
-         authenticator.set_username()
-         authenticator.set_password()
-         authenticator.authorize()
-*/
-#if 0
-static svn_error_t * svn_ra_open (void **session_baton,
-                                  svn_stringbuf_t *repository_name,
-                                  apr_pool_t *pool)
+static svn_error_t * auth_set_password (const char *password, void *auth_baton)
 {
-  const char *repository = repository_name->data;
-  apr_size_t len;
+  svn_ra_session_t *ras = auth_baton;
 
+  ras->password = apr_pstrdup(ras->pool, password);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t * auth_authenticate (void **session_baton, void *auth_baton)
+{
+  *session_baton = auth_baton;
+
+  return SVN_NO_ERROR;
+}
+
+static const svn_ra_username_authenticator_t username_authenticator =
+{
+  auth_set_username,
+  auth_authenticate
+};
+static const svn_ra_simple_password_authenticator_t userpass_authenticator =
+{
+  auth_set_username,
+  auth_set_password,
+  auth_authenticate
+};
+
+static svn_error_t * svn_ra_get_authenticator (const void **authenticator,
+                                               void **auth_baton,
+                                               svn_stringbuf_t *repos_URL,
+                                               apr_uint64_t method,
+                                               apr_pool_t *pool)
+{
+  const char *repository = repos_URL->data;
+  apr_size_t len;
   ne_session *sess;
   struct uri uri = { 0 };
   svn_ra_session_t *ras;
+
+  if ((method & (SVN_RA_AUTH_USERNAME | SVN_RA_AUTH_SIMPLE_PASSWORD)) == 0)
+    {
+      return svn_error_create(SVN_ERR_RA_UNKNOWN_AUTH, 0, NULL, pool,
+                              "this RA module does not know that "
+                              "authentication/authorization mechanism");
+    }
 
   if (uri_parse(repository, &uri, NULL) 
       || uri.host == NULL || uri.path == NULL)
@@ -129,11 +155,15 @@ static svn_error_t * svn_ra_open (void **session_baton,
   ras->root = uri;
   ras->sess = sess;
 
-  *session_baton = ras;
+  if (method == SVN_RA_AUTH_USERNAME)
+    *authenticator = &username_authenticator;
+  else if (method == SVN_RA_AUTH_SIMPLE_PASSWORD)
+    *authenticator = &userpass_authenticator;
+
+  *auth_baton = ras;
 
   return NULL;
 }
-#endif
 
 static svn_error_t *svn_ra_close (void *session_baton)
 {
