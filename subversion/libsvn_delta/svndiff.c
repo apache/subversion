@@ -501,11 +501,15 @@ write_handler (void *baton,
       npos = 0;
       for (op = ops; op < ops + ninst; op++)
 	{
+          /* ### Why don't we use a build baton and svn_txdelta__make_window
+                 like everyone else?  --xbc */
           /* FIXME: The way things stand now, every svndiff insn is decoded
              twice. We should integrate what count_and_verify_instructions
              does here, instead.  --xbc */
 	  p = decode_instruction (op, p, end);
-	  if (op->action_code == svn_txdelta_new)
+	  if (op->action_code == svn_txdelta_source)
+            ++window.src_ops;
+	  else if (op->action_code == svn_txdelta_new)
 	    {
 	      op->offset = npos;
 	      npos += op->length;

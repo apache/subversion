@@ -395,6 +395,14 @@ do_random_combine_test (const char **msg,
             if (print_windows)
               delta_window_print (composite, "AB", stdout);
 
+            /* The source view length should not be 0 if there are
+               source copy ops in the window. */
+            if (composite
+                && composite->sview_len == 0 && composite->src_ops > 0)
+              return svn_error_create
+                (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                 "combined delta window is inconsistent");
+
             SVN_ERR (handler (composite, handler_baton));
             svn_pool_clear (wpool);
           }

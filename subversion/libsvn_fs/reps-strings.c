@@ -185,7 +185,7 @@ get_one_window (svn_txdelta_window_t **window,
   wb.window = NULL;
   wb.window_pool = *window_pool = svn_pool_create (trail->pool);
 
- /* Set up a window handling stream for the svndiff data. */
+  /* Set up a window handling stream for the svndiff data. */
   wstream = svn_txdelta_parse_svndiff (window_handler, &wb, TRUE,
                                        *window_pool);
 
@@ -245,7 +245,6 @@ rep_undeltify_range (svn_fs_t *fs,
     {
       svn_fs__representation_t *rep;
       svn_txdelta_window_t *window_B;
-      svn_txdelta__compose_ctx_t context;
       apr_pool_t *wpool_B;
       int cur_rep;
 
@@ -260,20 +259,16 @@ rep_undeltify_range (svn_fs_t *fs,
           /* That's it, no more source data is available. */
           break;
 
-      for (cur_rep = 1;
-           cur_rep < deltas->nelts
-             && window_B->src_ops > 0
-             && window_B->sview_len > 0;
-           ++cur_rep)
+      for (cur_rep = 1; cur_rep < deltas->nelts; ++cur_rep)
         {
           svn_txdelta_window_t *window_A, *composite;
           apr_pool_t *wpool_A, *wpool_composite;
+          svn_txdelta__compose_ctx_t context = { 0 };
           rep = APR_ARRAY_IDX (deltas, cur_rep, svn_fs__representation_t*);
           SVN_ERR (get_one_window
                    (&window_A, &wpool_A, fs, rep, cur_chunk, trail));
 
           wpool_composite = svn_pool_create (trail->pool);
-          context.sview_offset = window_B->sview_offset;
           composite = svn_txdelta__compose_windows
             (window_A, window_B, &context, wpool_composite);
 
@@ -289,12 +284,23 @@ rep_undeltify_range (svn_fs_t *fs,
               svn_pool_destroy (wpool_composite);
               window_B->sview_offset = context.sview_offset;
               window_B->sview_len = context.sview_len;
+
+              /* This can only happen if the window doesn't touch
+                 source data; so ... */
+              break;
             }
+          else
+            /* Can't happen, because window_B should never be NULL. */
+            abort ();
         }
+
+      /* The source view length should not be 0 if there are source
+         copy ops in the window. */
+      assert (window_B->sview_len > 0 || window_B->src_ops == 0);
 
       /* window_B is the combined delta window. Read the source text
          into a buffer. */
-      if (fulltext && window_B->sview_len > 0 && window_B->src_ops)
+      if (fulltext && window_B->sview_len > 0 && window_B->src_ops > 0)
         {
           apr_size_t source_len = window_B->sview_len;
           source_buf = apr_palloc (wpool_B, source_len);

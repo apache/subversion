@@ -748,9 +748,8 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
       context->sview_len = 0;
     }
 
-  if (window_B->src_ops == 0)
+  if (!window_A || window_B->src_ops == 0)
     {
-      /* It's a trivial composition, the source stream isn't used at all. */
       context->use_second = TRUE;
       return NULL;
     }
@@ -838,6 +837,7 @@ svn_txdelta__copy_window (const svn_txdelta_window_t *window,
   const apr_size_t ops_alloc_size = (window->num_ops
                                      * sizeof(*build_baton.ops));
   build_baton.num_ops = build_baton.ops_size = window->num_ops;
+  build_baton.src_ops = window->src_ops;
   build_baton.ops = apr_palloc(pool, ops_alloc_size);
   memcpy(build_baton.ops, window->ops, ops_alloc_size);
   build_baton.new_data = svn_stringbuf_ncreate(window->new_data->data,
