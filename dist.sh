@@ -14,7 +14,7 @@
 # simplest if you just make sure your working copy is at HEAD as well.
 # Then you won't get any unexpected results.
 #
-# Note: currently, you'll also need a line in your ~.cvspass about
+# Note: currently, you'll also need a line in your ~/.cvspass about
 # ":pserver:guest@cvs.tigris.org:/cvs", for the export.  If you've
 # been following the Subversion project, chances are you already have
 # such a line.
