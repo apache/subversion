@@ -109,16 +109,26 @@ extern "C" {
    File locations
    ==============
 
-   Typically, Subversion will use two config files: One for site-wide
-   configuration,
+   Typically, Subversion will use two config directories, one for
+   site-wide configuration,
 
-     /etc/subversion.conf    or
+     /etc/subversion/proxies
+     /etc/subversion/config
+     /etc/subversion/hairstyles
+        -- or --
+     REGISTRY:HKLM\Software\Tigris.org\Subversion\Proxies
      REGISTRY:HKLM\Software\Tigris.org\Subversion\Config
+     REGISTRY:HKLM\Software\Tigris.org\Subversion\Hairstyles
 
    and one for per-user configuration:
 
-     ~/.subversion/config    or
+     ~/.subversion/proxies
+     ~/.subversion/config
+     ~/.subversion/hairstyles
+        -- or --
+     REGISTRY:HKCU\Software\Tigris.org\Subversion\Proxies
      REGISTRY:HKCU\Software\Tigris.org\Subversion\Config
+     REGISTRY:HKCU\Software\Tigris.org\Subversion\Hairstyles
 
 */
 
@@ -127,42 +137,28 @@ extern "C" {
 typedef struct svn_config_t svn_config_t;
 
 
-/* Merge config information from all available sources and store it in
-   *CFGP, which is allocated in POOL.  That is, first read any
-   *system-wide configurations (from a file or from the registry),
-   *then merge in personal configurations (again from file or
-   *registry).
+/* Merge proxy configuration information from all available sources
+   and store it in *CFGP, which is allocated in POOL.  That is, first
+   read any system-wide proxy configurations (from a file or from the
+   registry), then merge in personal proxy configurations (again from
+   file or registry).
 
    Under Unix, or a Unix emulator such as Cygwin, personal config is
-   always located in .subversion/config in the user's home directory.
-   Under Windows it may be there, or in the registry; if both are
-   present, the registry is read first and then the file info is
-   merged in.  System config information under Windows is found only
-   in the registry.
+   always located in .subversion/proxies in the user's home
+   directory.  Under Windows it may be there, or in the registry; if
+   both are present, the registry is read first and then the file info
+   is merged in.  System config information under Windows is found
+   only in the registry.
 
-   If no config information is available, return an empty *CFGP.  
+   If no proxy config information is available, return an empty *CFGP.  
 
-   ### Notes: This function obviates the need for svn_config_read()
-   and svn_config_merge() as public interfaces.  However, I'm leaving
-   them for now, to leave the door open for a multi-file system,
-   e.g.,
-
-      ~/.subversion/options
-      ~/.subversion/proxies
-      ~/.subversion/hairstyles
-
-  and so forth.  In that system, most calls to svn_config_read_all()
-  would instead invoke
-
-     svn_config_read_options()
-     svn_config_read_proxies()
-     svn_config_read_hairstyles()
-     etc...
-
-  each of which invokes svn_config_{read,merge}() on particular config
-  files.
+   ### Notes: This function, and future ones like it, rather obviates
+   the need for svn_config_read() and svn_config_merge() as public
+   interfaces.  However, I'm leaving them public for now, until it's
+   clear they can be de-exported.  Hmm, funny how in this context, the
+   opposite of "exported" is not "imported", eh?
 */
-svn_error_t *svn_config_read_all (svn_config_t **cfgp, apr_pool_t *pool);
+svn_error_t *svn_config_read_proxies (svn_config_t **cfgp, apr_pool_t *pool);
 
 
 /* Read configuration data from FILE (a file or registry path) into
