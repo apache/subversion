@@ -34,13 +34,5 @@ Candidate changes:
     Votes:
       +1: clkao, breser
 
-  * r12450
-    Update our docs and configure script to reject newer versions of SWIG
-    which we still don't work with yet.
-    Justification:
-      We said we'd do this until we actually fix them.
-    Votes:
-      +1: breser, maxb, jerenkrantz
-
 Approved changes (further review is welcome, but not required):
 
