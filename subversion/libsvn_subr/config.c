@@ -195,11 +195,11 @@ svn_config_read_config (svn_config_t **cfgp, apr_pool_t *pool)
 #endif /* SVN_WIN32 */
 
   SVN_ERR (svn_config__sys_config_path (&sys_cfg_path,
-                                        SVN_CONFIG__USR_CONFIG_FILE,
+                                        SVN_CONFIG_CATEGORY_CONFIG,
                                         pool));
 
   SVN_ERR (svn_config__user_config_path (&usr_cfg_path,
-                                         SVN_CONFIG__USR_CONFIG_FILE,
+                                         SVN_CONFIG_CATEGORY_CONFIG,
                                          pool));
 
   SVN_ERR (read_all (cfgp,
@@ -225,11 +225,11 @@ svn_config_read_servers (svn_config_t **cfgp, apr_pool_t *pool)
 #endif /* SVN_WIN32 */
 
   SVN_ERR (svn_config__sys_config_path (&sys_cfg_path,
-                                        SVN_CONFIG__USR_SERVERS_FILE,
+                                        SVN_CONFIG_CATEGORY_SERVERS,
                                         pool));
 
   SVN_ERR (svn_config__user_config_path (&usr_cfg_path,
-                                         SVN_CONFIG__USR_SERVERS_FILE,
+                                         SVN_CONFIG_CATEGORY_SERVERS,
                                          pool));
 
   SVN_ERR (read_all (cfgp,
