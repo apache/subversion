@@ -17,7 +17,7 @@ _svn()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without unambiguous abbreviations such as "up".
-	cmds='add blame annotate cat checkout co cleanup commit ci \
+	cmds='add blame annotate praise cat checkout co cleanup commit ci \
               copy cp delete remove rm diff export help ? import info \
               list ls log merge mkdir move mv rename \
               propdel pdel propedit pedit propget pget \
@@ -60,7 +60,7 @@ _svn()
 	add)
 		cmdOpts="--auto-props --no-auto-props --targets $nOpts $qOpts"
 		;;
-	blame|annotate|ann)
+	blame|annotate|ann|praise)
 		cmdOpts="$rOpts $pOpts --strict"
 		;;
 	cat)
@@ -213,7 +213,7 @@ _svnadmin ()
 	COMPREPLY=()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
-	cmds='create dump help h ? load lscr list-dblogs \
+	cmds='create dump help h ? hotcopy load lscr list-dblogs \
 	      list-unused-dblogs lstxns recover rmtxns setlog verify'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
@@ -244,6 +244,9 @@ _svnadmin ()
 		;;
 	help|h|\?)
 		cmdOpts="$cmds $qOpts"
+		;;
+	hotcopy)
+		cmdOpts="--clean-logs"
 		;;
 	load)
 		cmdOpts="--ignore-uuid --force-uuid --parent-dir"
