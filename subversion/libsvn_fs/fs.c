@@ -1,5 +1,4 @@
-/*
- * fs.c --- creating, opening and closing filesystems
+/* fs.c --- creating, opening and closing filesystems
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
