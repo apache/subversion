@@ -629,6 +629,7 @@ svn_wc_transmit_prop_deltas (const char *path,
       /* do nothing: baseprop hash should be -empty- for comparison
          purposes.  if they already exist on disk, they're "leftover"
          from the old file that was replaced. */
+      props_base = NULL;
     }
   else
     /* the real prop-base hash */
@@ -645,7 +646,8 @@ svn_wc_transmit_prop_deltas (const char *path,
 
   /* Load all properties into hashes */
   SVN_ERR (svn_wc__load_prop_file (props_tmp, localprops, pool));
-  SVN_ERR (svn_wc__load_prop_file (props_base, baseprops, pool));
+  if (props_base)
+    SVN_ERR (svn_wc__load_prop_file (props_base, baseprops, pool));
   
   /* Get an array of local changes by comparing the hashes. */
   SVN_ERR (svn_wc_get_local_propchanges (&propmods, localprops, 
