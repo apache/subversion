@@ -580,11 +580,11 @@ collabnet = svn.collab.net
         information that your site needs to display without having to
         read an index file or play path manipulation games.</para>
 
-      <para>Of course, how (and if) you use Subversion properties is
-        up to you.  As we mentioned, Subversion has it own uses for
-        properties, which we'll discuss a little later in this
-        chapter.  But first, let's discuss how to manipulate options
-        using the <command>svn</command> program.</para>
+      <para>How (and if) you use Subversion properties is up to you.
+        As we mentioned, Subversion has it own uses for properties,
+        which we'll discuss a little later in this chapter.  But
+        first, let's discuss how to manipulate options using the
+        <command>svn</command> program.</para>
 
     </sect2>
 
@@ -605,14 +605,13 @@ property `copyright' set on 'calc/button.c'
 $
 </screen>
        
-      <para>Of course, we've been touting the flexibility that
-        Subversion offers for your property values.  And if you are
-        planning to have a multi-line textual, or even binary,
-        property value, you probably do not want to supply that value
-        on the command-line.  So the <command>propset</command>
-        subcommand takes a <option>--file (-F)</option> option for
-        specifying the name of a file which contains the new property
-        value.</para>
+      <para>But we've been touting the flexibility that Subversion
+        offers for your property values.  And if you are planning to
+        have a multi-line textual, or even binary, property value, you
+        probably do not want to supply that value on the command-line.
+        So the <command>propset</command> subcommand takes a
+        <option>--file (-F)</option> option for specifying the name of
+        a file which contains the new property value.</para>
 
       <screen>
 $ svn propset license -F /path/to/LICENSE calc/button.c
@@ -788,7 +787,7 @@ $
         commands.</para>
 
       <screen>
-$ svn st calc/button.c
+$ svn status calc/button.c
  M     calc/button.c
 $ svn diff calc/button.c
 Property changes on: calc/button.c
@@ -839,86 +838,268 @@ $
       
      <title>Special properties</title>
 
-      <para>Subversion has no particular policy regarding properties;
-        they can be used for any purpose.  The only restriction is
-        that Subversion has reserved the <literal>svn:</literal> name
-        prefix for itself.  A number of special <quote>magic</quote>
-        properties begin with this prefix.  We'll cover these features
-        here.</para>
+      <para>Subversion has no particular policy regarding
+        properties&mdash;you can use them for any purpose.  Subversion
+        asks only that you not use property names that begin with the
+        prefix <literal>svn:</literal>.  That's the namespace that its
+        sets aside for its own use.  In fact, Subversion defines
+        certain properties that have magical effects on the files and
+        directories to which they are attached.  In this section,
+        we'll untangle the mystery, and describe how these special
+        properties make your life just a little easier.</para>
       
       <sect3 id="svn-ch-6-sect-2.3.1">
         <title><literal>svn:executable</literal></title>
-        
-        <para>This is a file-only property, and can be set to any
-          value.  Its mere existence causes a file's permissions to be
-          executable.</para>
+ 
+        <para>The <literal>svn:executable</literal> property is used
+          to control a versioned file's filesystem-level execute
+          permission bit in a semi-automated way.  This property has
+          no defined values&mdash;its mere presence indicates a desire
+          the execute permission bit to be kept enabled by Subversion.
+          Removing this property will restore full control of the
+          execute bit back to the operation system.</para>
+
+        <para>On many operating systems, the ability to execute a file
+          as a command is governed by the presence of an execute
+          permission bit.  This bit usually defaults to being
+          disabled, and must be explicitly enabled by the user for
+          each file that needs it.  In a working copy, new files are
+          being created all the time as new versions of existing files
+          are received during an update.  This means that you might
+          enable the execute bit on a file, then update your working
+          copy, and if that file was changed as part of the update,
+          its execute bit might get disabled.  So, Subversion provides
+          the <literal>svn:executable</literal> property as a way to
+          keep the execute bit enabled.</para>
+
+        <para>This property has no effect on filesystems that have no
+          concept of an executable permission bit, such as FAT32 and
+          NTFS.
+          <footnote>
+            <para>The Windows filesystems use file extensions (such as
+              <literal>.EXE</literal>, <literal>.BAT</literal>, and
+              <literal>.COM</literal>) to denote executable
+              files.</para>
+          </footnote>
+          Also, while it has no defined values, some people choose as
+          a convention a value (such as <literal>on</literal>) to use
+          when setting this property.  Subversion doesn't
+          care&mdash;it won't even read the property value.  But be
+          careful when choosing such conventions&mdash;inexperienced
+          users might mistakenly believe that the way to disable this
+          functionality is to change the property value to its
+          idiomatic <!-- is that the right word? --> opposite (in this
+          case, <literal>off</literal>).  Finally, this property is
+          valid only on files, not on directories.</para>
 
       </sect3>
 
       <sect3 id="svn-ch-6-sect-2.3.2">
         <title><literal>svn:mime-type</literal></title>
         
-        <para>At the present time, Subversion examines the
-          <literal>svn:mime-type</literal> property to decide if a
-          file is text or binary.  If the file has no
-          <literal>svn:mime-type</literal> property, or if the
-          property's value matches <literal>text/*</literal>, then
-          Subversion assumes it is a text file.  If the file has the
-          <literal>svn:mime-type</literal> property set to anything
-          other than <literal>text/*</literal>, it assumes the file is
-          binary.</para>
+        <para>The <literal>svn:mime-type</literal> property serves
+          many purposes in Subversion.  Besides being a
+          general-purpose storage location for a file's Multipurpose
+          Internet Mail Extensions (MIME) classification, the value of
+          this property determines several behavioral characteristics
+          of Subversion itself.</para>
 
-        <para>If Subversion believes that the file is binary, it will
-          not attempt to perform contextual merges during updates.
-          Instead, Subversion creates two files side-by-side in your
-          working copy; the one containing your local modifications is
-          renamed with a <filename>.orig</filename> extension.</para>
+        <para>For example, if a file's
+          <literal>svn:mime-type</literal> property is set to a
+          non-text MIME type (generally, something that doesn't begin
+          with <literal>text/</literal>, though there are exceptions),
+          Subversion will assume that the file contains
+          binary&mdash;that is, not human-readable&mdash;data.  One of
+          the benefits that Subversion typically provides is
+          contextual, line-based merging of changes received from the
+          server during an update into your working file.  But for
+          files that are believe to contain binary data, there is no
+          concept of <quote>line</quote> of data.  So, for those
+          files, Subversion does not attempt to perform contextual
+          merges during updates.  Instead, any time you have locally
+          modified a binary working copy file that is also being
+          updated, your file is renamed with a
+          <filename>.orig</filename> extension, and then Subversion
+          stores a new working copy file that contains the changes
+          received during the update, but not your own local
+          modifications, at the original filename.  This behavior is
+          really for the protection of the user against failed
+          attempts at performing contextual merges on files that
+          simply cannot be contextually merged.</para>
 
-        <para>Subversion also helps users by running a
-          binary-detection algorithm in the <command>svn
-          import</command> and <command>svn add</command> subcommands.
-          These subcommands try to make a good guess at a file's
-          binary-ness, and then (possibly) set a
-          <literal>svn:mime-type</literal> property of
-          <literal>application/octet-stream</literal> on the file
-          being added.  (If Subversion guesses wrong, you can always
-          remove or hand-edit the property.)</para>
+        <para>Subversion assists users by running a binary-detection
+          algorithm in the <command>svn import</command> and
+          <command>svn add</command> subcommands.  These subcommands
+          make a heuristical guess at a file's
+          <quote>binary-ness</quote>, and then set the
+          <literal>svn:mime-type</literal> property to
+          <literal>application/octet-stream</literal> (the generic
+          <quote>this is a collection of bytes</quote> MIME type) on
+          any files that are deemed binary.  If Subversion guesses
+          wrong, or if you wish to set the
+          <literal>svn:mime-type</literal> property to something more
+          accurate&mdash;perhaps <literal>image/png</literal> or
+          <literal>application/x-shockwave-flash</literal>&mdash;you
+          can always remove or hand-edit the property.</para>
 
         <para>Finally, if the <literal>svn:mime-type</literal>
-          property is set, then mod_dav_svn will use it to fill in the
-          <literal>Content-type:</literal> header when responding to
-          an http GET request.  This makes files display more nicely
-          when perusing a repository with a web browser.</para>
+          property is set, then the Subversion Apache module will use
+          its value to populate the <literal>Content-type:</literal>
+          HTTP header when responding to GET request.  This gives a
+          crucial clue to about how to display a file when perusing
+          your repository with a web browser.</para>
 
       </sect3>
 
       <sect3 id="svn-ch-6-sect-2.3.3">
         <title><literal>svn:ignore</literal></title>
 
-        <para>If you attach this property to a directory, it causes
-          certain file patterns within the directory to be ignored by
-          <command>svn status</command>.  For example, suppose I don't
-          want to see object files or backup files in my status
-          listing:</para>
+        <para>The <literal>svn:ignore</literal> property contains a
+          list of file patterns which certain Subversion operations
+          will ignore.  Perhaps the most commonly used special
+          property, it works in conjunction with the
+          <literal>global-ignores</literal> run-time configuration
+          option (see <xref linkend="svn-ch-6-sect-1.3.2" />) to
+          filter unversioned files and directories out of commands
+          like <command>svn status</command>.</para>
+
+        <para>The rationale behind the <literal>svn:ignore</literal>
+          property is easily explained.  Subversion does not assume
+          that every file or subdirectory in a working copy directory
+          is intended for version control.  Resources must be
+          explicitly placed under Subversion's management using the
+          <command>svn add</command> command.  As a result, there are
+          often many resources in a working copy that are not
+          versioned.</para>
+
+        <para>Now, the <command>svn status</command> command displays
+          as part of its output every unversioned file or subdirectory
+          in a working copy that is not already filtered out by the
+          <literal>global-ignores</literal> option (or its built-in
+          default value).  This is done so that users can see if
+          perhaps they've forgotten to add a resource to version
+          control.</para>
+
+       <para>But Subversion cannot possibly guess the names of
+          every resource that should be ignored.  Also, quite often
+          there are things that should be ignored in
+          <emphasis>every</emphasis> working copy of a particular
+          repository.  To force every user of that repository to add
+          patterns for those resources to their run-time configuration
+          areas would be not just a burden, but has the potential to
+          clash with the configuration needs of other working copies
+          that the user has checked out.</para>
+
+        <para>The solution is to store ignore patterns that are unique
+          to the resources likely to appear in a given directory with
+          the directory itself.  Common examples of unversioned
+          resources that are basically unique to a directory, yet
+          likely to appear there, include output from program
+          compilations.  Or&mdash;to use an example more appropriate
+          to this book&mdash;the HTML, PDF, or PostScript files
+          generated as the result of a conversion of some source
+          DocBook XML files to a more legible output format.</para>
+
+        <sidebar>
+          <title>Ignore Patterns for CVS Users</title>
+        
+          <para>The Subversion <literal>svn:ignore</literal> property
+            is very similar in syntax and function to the CVS
+            <filename>.cvsignore</filename> file.  The two systems use
+            the ignore patterns at some different times, and there are
+            slight discrepencies in what the ignore patterns apply to.
+            Also, Subversion does not recognize the use of the
+            <literal>!</literal> pattern as a reset back to having no
+            ignore patterns at all.  But the most common uses of the
+            <filename>.cvsignore</filename> are quite functional in
+            Subversion.  In fact, if you are migrating a CVS working
+            copy to Subversion, you can directly migrate the ignore
+            patterns by the <filename>.cvsignore</filename> file as
+            input file to the <command>svn propset</command>
+            command:</para>
+       
+          <screen>
+$ svn pset svn:ignore -F .cvsignore .
+property `svn:ignore' set on '.'
+$
+</screen>        
+
+        </sidebar>
+
+        <para>For this purpose, the <literal>svn:ignore</literal>
+          property is the solution.  Its value is a multi-line
+          collection of file patterns, one pattern per line.  The
+          property is set on the directory in which your wish the
+          patterns to be applied.
+          <footnote>
+            <para>The patterns are strictly for that
+              directory&mdash;they do not carry recursively into
+              subdirectories.</para>
+          </footnote>
+          For example, say you have the following output from
+          <command>svn status</command>:</para>
+
+       <screen>
+$ svn status calc
+ M     calc/button.c
+?      calc/calculator
+?      calc/data.c
+?      calc/debug_log
+?      calc/debug_log.1
+?      calc/debug_log.2.gz
+?      calc/debug_log.3.gz
+</screen>
+
+        <para>In this example, you have made some property
+          modifications to <filename>button.c</filename>, but in your
+          working copy you also have some unversioned files, in this
+          case, the latest <filename>calculator</filename> program
+          that you've compiled from your source code, a source file
+          named <filename>data.c</filename>, and a set of debugging
+          output logfiles.  Now, you know that your build system
+          always results in the <filename>calculator</filename>
+          program being generated.
+          <footnote>
+            <para>Isn't that the whole point of a build system?</para>
+          </footnote>
+          And you know that your test suite always leaves those
+          debugging log files lying around.  These facts are true for
+          all working copies, not just your own.  And you know that
+          you aren't interested in seeing those things every time you
+          run <command>svn status</command>.  So you use <command>svn
+          propedit svn:ignore calc</command> to add some ignore
+          patterns to the <filename>calc</filename> directory.  For
+          example, you might add this as the new value of the
+          <literal>svn:ignore</literal> property:</para>
+
+        <programlisting>
+calc
+debug_log*
+</programlisting>
+
+        <para>After you've added this property, you will now have a
+          local property modification on the <filename>calc</filename>
+          directory.  But notice what else is different about your
+          <command>svn status</command> output:</para>
 
         <screen>
 $ svn status
-M  ./foo.c
-?  ./foo.o
-?  ./foo.c~
-        </screen>
+ M     calc
+ M     calc/button.c
+?      calc/data.c
+</screen>
 
-        <para>Using <command>svn propedit</command>, I would set the
-          value of <literal>svn:ignore</literal> to a
-          newline-delimited list of patterns:</para>
-
-        <screen>
-$ svn propget svn:ignore .
-*.o
-*~
-        </screen>
+        <para>Now, all the cruft is missing from the output!  Of
+          course, those files are still in your working copy.
+          Subversion is simply not reminding you that they are present
+          and unversioned.  And now with all the trivial noise removed
+          from the display, you are left with more interesting
+          items&mdash; such as that source code file that you probably
+          forgot to add to version control.</para>
 
       </sect3>
+
+      <!-- cmpilato was here -->
 
       <sect3 id="svn-ch-6-sect-2.3.4">
         <title><literal>svn:keywords</literal></title>
