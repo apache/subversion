@@ -101,7 +101,7 @@ svn_repos_set_path (void *report_baton,
       svn_path_add_component (from_path, path, svn_path_repos_style);
 
       /* Copy into our txn. */
-      SVN_ERR (svn_fs_copy (from_root, from_path->data,
+      SVN_ERR (svn_fs_link (from_root, from_path->data,
                             rbaton->txn_root, from_path->data, rbaton->pool));
       
       /* Remember this path in our hashtable. */

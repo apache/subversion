@@ -2022,6 +2022,7 @@ struct copy_args
   const char *from_path;
   svn_fs_root_t *to_root;
   const char *to_path;
+  svn_boolean_t preserve_history;
 };
 
 
@@ -2062,6 +2063,7 @@ txn_body_copy (void *baton,
       SVN_ERR (svn_fs__dag_copy (to_parent_path->parent->node,
                                  to_parent_path->entry,
                                  from_parent_path->node,
+                                 args->preserve_history,
                                  svn_fs_revision_root_revision (from_root),
                                  from_path,
                                  trail));
@@ -2097,10 +2099,34 @@ svn_fs_copy (svn_fs_root_t *from_root,
   if (! svn_fs_is_txn_root (to_root))
     return not_txn (to_root);
 
-  args.from_root = from_root;
-  args.from_path = from_path;
-  args.to_root   = to_root;
-  args.to_path   = to_path;
+  args.from_root         = from_root;
+  args.from_path         = from_path;
+  args.to_root           = to_root;
+  args.to_path           = to_path;
+  args.preserve_history  = 1;
+
+  return svn_fs__retry_txn (to_root->fs, txn_body_copy, &args, pool);
+}
+
+
+svn_error_t *
+svn_fs_link (svn_fs_root_t *from_root,
+             const char *from_path,
+             svn_fs_root_t *to_root,
+             const char *to_path,
+             apr_pool_t *pool)
+{
+  struct copy_args args;
+
+  if (! svn_fs_is_txn_root (to_root))
+    return not_txn (to_root);
+
+  args.from_root         = from_root;
+  args.from_path         = from_path;
+  args.to_root           = to_root;
+  args.to_path           = to_path;
+  args.preserve_history  = 0;
+
   return svn_fs__retry_txn (to_root->fs, txn_body_copy, &args, pool);
 }
 
