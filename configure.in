@@ -78,6 +78,20 @@ dnl Set of available languages.
 dnl ALL_LINGUAS="de fr es ko nl no pl pt sl sv"
 dnl                 I volunteer for this ^^ translation :-)  -xbc
 
+dnl Check for programs ---------------------
+
+dnl Look for a C compiler (before anything can set CFLAGS)
+AC_PROG_CC
+
+dnl Look for a C pre-processor
+AC_PROG_CPP
+
+dnl Look for an extended grep, this macro appeared in autoconf-2.53b
+ifdef([AC_PROG_EGREP],[AC_PROG_EGREP],[])
+
+dnl See if 'ln -s' works
+AC_PROG_LN_S
+
 dnl Sub-package configuration ---------------------
 
 dnl Possibly reconfigure packages in subdirectories
@@ -173,22 +187,8 @@ docdir='${datadir}/doc'
 docdir="${docdir}/subversion-${svn_version}"
 AC_SUBST(docdir)
 
-dnl Check for programs ---------------------
-
-dnl Look for a C compiler
-AC_PROG_CC
-
-dnl Look for a C pre-processor
-AC_PROG_CPP
-
 dnl Pass EXEEXT on to the Makefiles
 AC_SUBST(EXEEXT)
-
-dnl Look for an extended grep, this macro appeared in autoconf-2.53b
-ifdef([AC_PROG_EGREP],[AC_PROG_EGREP],[])
-
-dnl See if 'ln -s' works
-AC_PROG_LN_S
 
 dnl Check for libtool -- we'll definitely need it for all our shared libs!
 echo "configuring libtool now"
