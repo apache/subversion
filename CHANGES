@@ -1,5 +1,8 @@
 
-Version 0.9.rc1 (released 15 Feb 2002, revision ??)
+Version 0.9.rc2 (released 15 Feb 2002, revision 1302)
+
+ [Note: this will probably become the 0.9 release, just want to finish
+ reviewing the testing feedback before marking it as such.]
 
  User-visible changes:
  * 'svn switch', for switching part of a working copy to a branch
