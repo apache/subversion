@@ -1050,10 +1050,10 @@ static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
          ### return an error so we can easily identify the cases where
          ### we've called this function unexpectedly. */
       return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                           ap_psprintf(resource->pool,
-                                       "get_parent_resource was called for "
-                                       "%s (type %d)",
-                                       resource->uri, resource->type));
+                           apr_psprintf(resource->pool,
+                                        "get_parent_resource was called for "
+                                        "%s (type %d)",
+                                        resource->uri, resource->type));
       break;
     }
 
