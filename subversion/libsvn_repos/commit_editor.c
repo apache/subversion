@@ -482,8 +482,8 @@ close_edit (void *edit_baton)
   svn_revnum_t new_revision = SVN_INVALID_REVNUM;
   svn_error_t *err;
   const char *conflict;
-  svn_string_t date_prop_name = { SVN_PROP_REVISION_LOG,
-                                  sizeof(SVN_PROP_REVISION_LOG) - 1};
+  svn_string_t log_prop_name = { SVN_PROP_REVISION_LOG,
+                                 sizeof(SVN_PROP_REVISION_LOG) - 1};
   svn_string_t author_prop_name = { SVN_PROP_REVISION_AUTHOR,
                                     sizeof(SVN_PROP_REVISION_AUTHOR) - 1};
 
@@ -502,7 +502,7 @@ close_edit (void *edit_baton)
   }
 
   /* Log message. */
-  SVN_ERR (svn_fs_change_txn_prop (eb->txn, &date_prop_name,
+  SVN_ERR (svn_fs_change_txn_prop (eb->txn, &log_prop_name,
                                    &eb->log_msg, eb->pool));
 
   /* Commit. */
