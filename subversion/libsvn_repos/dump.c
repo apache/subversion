@@ -105,6 +105,7 @@ struct edit_baton
 
   /* The fs revision root, so we can read the contents of paths. */
   svn_fs_root_t *fs_root;
+  svn_revnum_t current_rev;
 
   /* The first revision dumped in this dumpstream. */
   svn_revnum_t oldest_dumped_rev;
@@ -189,6 +190,7 @@ dump_node (struct edit_baton *eb,
   apr_hash_t *prophash;
   apr_off_t textlen;
   apr_size_t content_length = 0, len;
+  svn_boolean_t must_dump_text = FALSE, must_dump_props = FALSE;
 
   /* Write out metadata headers for this file node. */
   SVN_ERR (svn_stream_printf (eb->stream, pool,
@@ -203,9 +205,29 @@ dump_node (struct edit_baton *eb,
   
   if (action == svn_node_action_change)
     {
+      svn_fs_root_t *prev_root;
+      int text_changed = 0, props_changed = 0;
+
       SVN_ERR (svn_stream_printf (eb->stream, pool,
                                   SVN_REPOS_DUMPFILE_NODE_ACTION
-                                  ": change\n"));  
+                                  ": change\n"));
+
+      /* either the text or props changed, or possibly both. */
+      SVN_ERR (svn_fs_revision_root (&prev_root, 
+                                     svn_fs_root_fs (eb->fs_root),
+                                     (eb->current_rev - 1), pool));
+      
+      SVN_ERR (svn_fs_props_changed (&props_changed,
+                                     prev_root, path,
+                                     eb->fs_root, path, pool));
+      if (kind == svn_node_file)
+        SVN_ERR (svn_fs_contents_changed (&text_changed,
+                                          prev_root, path,
+                                          eb->fs_root, path, pool));
+      if (props_changed)
+        must_dump_props = TRUE;
+      if (text_changed)
+        must_dump_text = TRUE;        
     }
   else if (action == svn_node_action_replace)
     {
@@ -215,23 +237,29 @@ dump_node (struct edit_baton *eb,
           SVN_ERR (svn_stream_printf (eb->stream, pool,
                                       SVN_REPOS_DUMPFILE_NODE_ACTION
                                       ": replace\n")); 
+
+          /* definitely need to dump all content for a replace. */
+          must_dump_text = TRUE;
+          must_dump_props = TRUE;
         }
       else
         {
           /* more complex:  delete original, then add-with-history.  */
 
           /* the path & kind headers have already been printed;  just
-             add a delete action, and end the record.*/
+             add a delete action, and end the current record.*/
           SVN_ERR (svn_stream_printf (eb->stream, pool,
                                       SVN_REPOS_DUMPFILE_NODE_ACTION
                                       ": delete\n\n"));  
 
-          /* recurse:  print an add-with-history record. */
+          /* recurse:  print an additional add-with-history record. */
           SVN_ERR (dump_node (eb, path, kind, svn_node_action_add,
                               copyfrom_path, copyfrom_rev, pool));
 
-          /* get out, because we don't need to dump any content. */
-          return SVN_NO_ERROR;
+          /* we can leave this routine quietly now, don't need to dump
+             any content;  that was already done in the second record. */
+          must_dump_text = FALSE;
+          must_dump_props = FALSE;
         }
 
     }
@@ -239,21 +267,29 @@ dump_node (struct edit_baton *eb,
     {
       SVN_ERR (svn_stream_printf (eb->stream, pool,
                                   SVN_REPOS_DUMPFILE_NODE_ACTION
-                                  ": delete\n\n"));  
-      /* Notice the extra \n above;  that's because this is the -last-
-         header in the block.  (Normally, we have a double \n after the
-         Content-length header.) */
+                                  ": delete\n"));  
 
-      /* Get out!  We're done! */
-      return SVN_NO_ERROR;
+      /* we can leave this routine quietly now, don't need to dump
+         any content. */
+      must_dump_text = FALSE;
+      must_dump_props = FALSE;
     }
   else if (action == svn_node_action_add)
     {
       SVN_ERR (svn_stream_printf (eb->stream, pool,
                                   SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
 
-      if (copyfrom_path != NULL)
+      if (copyfrom_path == NULL)
         {
+          /* For a simple 'add', we need to dump both props and text. */
+          must_dump_text = TRUE;
+          must_dump_props = TRUE;
+        }
+      else
+        {
+          svn_fs_root_t *src_root;
+          int text_changed = 0, props_changed = 0;
+
           if ((copyfrom_rev < eb->oldest_dumped_rev)
               && eb->feedback_stream)
             svn_stream_printf 
@@ -269,52 +305,59 @@ dump_node (struct edit_baton *eb,
                                       SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH
                                       ": %s\n",                  
                                       copyfrom_rev, copyfrom_path));
-          
-          /* Being careful here.  We only want to dump the copied
-             node's contents if there were local mods made.
 
-             All we're trying to do here is guarantee that when
-             comparing the source and copy nodes,
-             svn_fs_contents_changed() returns the same results both
-             before *and* after the the dump/load. */
-          {
-            int contents_changed;
-            svn_fs_root_t *src_root;
+          SVN_ERR (svn_fs_revision_root (&src_root, 
+                                         svn_fs_root_fs (eb->fs_root),
+                                         copyfrom_rev, pool));
 
-            SVN_ERR (svn_fs_revision_root (&src_root, 
-                                           svn_fs_root_fs (eb->fs_root),
-                                           copyfrom_rev, pool));
-
-            SVN_ERR (svn_fs_contents_changed (&contents_changed,
+          /* Need to decide if the copied node had any extra textual or
+             property mods as well.  */
+          SVN_ERR (svn_fs_props_changed (&props_changed,
+                                         src_root, copyfrom_path,
+                                         eb->fs_root, path, pool));
+          if (kind == svn_node_file)
+            SVN_ERR (svn_fs_contents_changed (&text_changed,
                                               src_root, copyfrom_path,
                                               eb->fs_root, path, pool));
-
-            if (! contents_changed)
-              {
-                /* solo 'copy' record is enough, no need to dump contents */
-                len = 1;
-                SVN_ERR (svn_stream_write (eb->stream, "\n", &len));
-                return SVN_NO_ERROR;
-              }
-          }
-
+          if (props_changed)
+            must_dump_props = TRUE;
+          if (text_changed)
+            must_dump_text = TRUE;
+          
           /* ### someday write a node-copyfrom-source-checksum. */
         }
     }
   
-  /* The content-length is going to be a combination of the full
-     proplist and full text of the file.  Let's make a prop-string to
-     write out. */
+  /* If we're not supposed to dump text or props, so be it, we can
+     just go home.  However, if either one needs to be dumped, then
+     our dumpstream format demands that at a *minimum*, we see a lone
+     "PROPS-END" as a divider between text and props content within
+     the content-block. */
+  if ((! must_dump_text) && (! must_dump_props))
+    {
+      len = 2;
+      SVN_ERR (svn_stream_write (eb->stream, "\n\n", &len)); /* ### needed? */
+      
+      return SVN_NO_ERROR;
+    }
 
-  /* If the file has no props, then the prophash will be empty, and
-     the propstring will be nothing but "END".  */    
-  SVN_ERR (svn_fs_node_proplist (&prophash, eb->fs_root, path, pool));
+  /* Start prepping content to dump... */
+
+  /* If the node either has no props, or we're not supposed to dump
+     props, then the prophash will be empty, and the propstring will
+     be nothing but "PROPS-END".  */
+  if (must_dump_props)
+    SVN_ERR (svn_fs_node_proplist (&prophash, eb->fs_root, path, pool));
+  else
+    prophash = apr_hash_make (pool);
+
   write_hash_to_stringbuf (prophash, svn_unpack_bytestring, 
                            &propstring, pool);
   content_length += propstring->len;
-  
-  /* Add the length of file's text, too. */
-  if (kind == svn_node_file)
+
+
+  /* Add the length of file's text, too, if we're supposed to dump it. */
+  if (must_dump_text && (kind == svn_node_file))
     {
       SVN_ERR (svn_fs_file_length (&textlen, eb->fs_root, path, pool));
       content_length += textlen;
@@ -322,19 +365,20 @@ dump_node (struct edit_baton *eb,
 
   /* ### someday write a node-content-checksum here.  */
 
-  /* This is the last header before we dump the content. */
+  /* 'Content-length:' is the last header before we dump the content. */
   SVN_ERR (svn_stream_printf (eb->stream, pool,
                               SVN_REPOS_DUMPFILE_CONTENT_LENGTH 
                               ": %" APR_SIZE_T_FMT "\n\n", content_length));
 
-  /* Dump property content. */
+  /* Dump property content unconditionally;  at a minimum, we need a
+     solitary 'PROPS-END' divider. */
   len = propstring->len;
   SVN_ERR (svn_stream_write (eb->stream, propstring->data, &len));
   
   /* Dump text content */
   /*    (this stream "pull and push" code was stolen from
         libsvn_ra_local/ra_plugin.c:get_file().  */
-  if (kind == svn_node_file)
+  if (must_dump_text && (kind == svn_node_file))
     {
       apr_size_t rlen, wlen;
       svn_stream_t *contents;
@@ -582,6 +626,7 @@ get_dump_editor (const svn_delta_editor_t **editor,
   eb->bufsize = sizeof(eb->buffer);
   eb->path = apr_pstrdup (pool, root_path);
   SVN_ERR (svn_fs_revision_root (&(eb->fs_root), fs, to_rev, pool));
+  eb->current_rev = to_rev;
 
   /* Set up the editor. */
   dump_editor->open_root = open_root;

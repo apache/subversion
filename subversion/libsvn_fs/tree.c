@@ -3056,6 +3056,21 @@ svn_fs_contents_changed (int *changed_p,
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
        "Asking props changed in two different filesystems.");
   
+  /* Check that both paths are files. */
+  {
+    int is_file;
+
+    SVN_ERR (svn_fs_is_file (&is_file, root1, path1, pool));
+    if (! is_file)
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool, "`%s' is not a file.", path1);
+      
+    SVN_ERR (svn_fs_is_file (&is_file, root2, path2, pool));
+    if (! is_file)
+      return svn_error_createf
+        (SVN_ERR_FS_GENERAL, 0, NULL, pool, "`%s' is not a file.", path2);
+  }
+
   args.root1      = root1;
   args.root2      = root2;
   args.path1      = path1;
