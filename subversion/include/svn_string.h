@@ -225,6 +225,10 @@ apr_size_t svn_stringbuf_find_char_backward (const svn_stringbuf_t *str,
    chopped, so if no such CHAR in STR, chops nothing and returns 0. */
 apr_size_t svn_stringbuf_chop_back_to_char (svn_stringbuf_t *str, char ch);
 
+/* Return TRUE iff STR1 and STR2 have identical length and data. */
+svn_boolean_t svn_string_compare_stringbuf (const svn_string_t *str1,
+                                            const svn_stringbuf_t *str2);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

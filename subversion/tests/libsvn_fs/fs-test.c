@@ -737,7 +737,7 @@ revision_props (const char **msg,
      the expected values. */
   SVN_ERR (svn_fs_revision_proplist (&proplist, fs, 0, pool));
   {
-    svn_stringbuf_t *prop_value;
+    svn_string_t *prop_value;
 
     if (apr_hash_count (proplist) < 4 )
       return svn_error_createf
@@ -850,7 +850,7 @@ transaction_props (const char **msg,
      the expected values. */
   SVN_ERR (svn_fs_txn_proplist (&proplist, txn, pool));
   {
-    svn_stringbuf_t *prop_value;
+    svn_string_t *prop_value;
 
     /* All transactions get a datestamp property at their inception,
        so we expect *5*, not 4 properties. */
@@ -900,7 +900,7 @@ transaction_props (const char **msg,
      existed on the transaction just prior to its being committed. */
   SVN_ERR (svn_fs_revision_proplist (&proplist, fs, after_rev, pool));
   {
-    svn_stringbuf_t *prop_value;
+    svn_string_t *prop_value;
 
     if (apr_hash_count (proplist) < 5 )
       return svn_error_createf
@@ -1018,7 +1018,7 @@ node_props (const char **msg,
      the expected values. */
   SVN_ERR (svn_fs_node_proplist (&proplist, txn_root, "music.txt", pool));
   {
-    svn_stringbuf_t *prop_value;
+    svn_string_t *prop_value;
 
     if (apr_hash_count (proplist) != 4 )
       return svn_error_createf

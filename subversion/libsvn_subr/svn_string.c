@@ -504,6 +504,23 @@ svn_stringbuf_chop_back_to_char (svn_stringbuf_t *str, char ch)
 }
 
 
+svn_boolean_t
+svn_string_compare_stringbuf (const svn_string_t *str1,
+                              const svn_stringbuf_t *str2)
+{
+  /* easy way out :)  */
+  if (str1->len != str2->len)
+    return FALSE;
+
+  /* now that we know they have identical lengths... */
+
+  if (memcmp (str1->data, str2->data, str1->len))
+    return FALSE;
+  else
+    return TRUE;
+}
+
+
 
 /* --------------------------------------------------------------
  * local variables:

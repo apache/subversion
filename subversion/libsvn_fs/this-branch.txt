@@ -81,7 +81,7 @@ svn_error_t *svn_fs_node_prop (svn_stringbuf_t **value_p,
 
 /* Set *TABLE_P to the entire property list of PATH in ROOT, as an APR
    hash table allocated in POOL.  The resulting table maps property
-   names to pointers to svn_stringbuf_t objects containing the property
+   names to pointers to svn_string_t objects containing the property
    value.  */
 svn_error_t *svn_fs_node_proplist (apr_hash_t **table_p,
                                    svn_fs_root_t *root,
