@@ -81,9 +81,6 @@ typedef struct
   svn_ra_session_t *ras;
   const char *activity_url;
 
-  /* ### resources may not be needed */
-  apr_hash_t *resources;        /* URL (const char *) -> RESOURCE_T */
-
   apr_hash_t *valid_targets;
 
   svn_ra_get_wc_prop_func_t get_func;
@@ -356,7 +353,7 @@ static svn_error_t * create_activity(commit_ctx_t *cc)
   return SVN_NO_ERROR;
 }
 
-/* add a child resource. TEMP_POOL should be as "temporary" as possible,
+/* add a child resource.  POOL should be as "temporary" as possible,
    but probably not as far as requiring a new temp pool. */
 static svn_error_t * add_child(resource_t **child,
                                commit_ctx_t *cc,
@@ -364,10 +361,8 @@ static svn_error_t * add_child(resource_t **child,
                                const char *name,
                                int created,
                                svn_revnum_t revision,
-                               apr_pool_t *temp_pool)
+                               apr_pool_t *pool)
 {
-  /* use ras->pool for the proper lifetime */
-  apr_pool_t *pool = cc->ras->pool;
   resource_t *rsrc;
 
   /* ### todo:  This from Yoshiki Hayashi <yoshiki@xemacs.org>:
@@ -394,9 +389,7 @@ static svn_error_t * add_child(resource_t **child,
      This means it has a VR URL already, and the WR URL won't exist
      until it's "checked out". */
   else
-    SVN_ERR( get_version_url(cc, rsrc, FALSE, temp_pool) );
-
-  apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
+    SVN_ERR( get_version_url(cc, rsrc, FALSE, pool) );
 
   *child = rsrc;
   return SVN_NO_ERROR;
@@ -618,8 +611,6 @@ static svn_error_t * commit_open_root(void *edit_baton,
 
   SVN_ERR( get_version_url(cc, rsrc, FALSE, dir_pool) );
 
-  apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
-
   root = apr_pcalloc(dir_pool, sizeof(*root));
   root->pool = dir_pool;
   root->cc = cc;
@@ -656,12 +647,6 @@ static svn_error_t * commit_delete_entry(const char *path,
   /* create the URL for the child resource */
   child = svn_path_url_add_component(parent->rsrc->wr_url, name, pool);
 
-  /* Note: the child cannot have a resource stored in the resources table
-     because of the editor traversal rules. That is: this is the first time
-     we have seen anything about the child, and we're deleting it. As a
-     corollary, we know the child hasn't been checked out. */
-
-  /* delete the child resource */
   /* ### 404 is ignored, because mod_dav_svn is effectively merging
      against the HEAD revision on-the-fly.  In such a universe, a
      failed deletion (because it's already missing) is OK;  deletion
@@ -1218,7 +1203,6 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   /* Build the main commit editor's baton. */
   cc = apr_pcalloc(pool, sizeof(*cc));
   cc->ras = ras;
-  cc->resources = apr_hash_make(pool);
   cc->valid_targets = apr_hash_make(pool);
   cc->get_func = ras->callbacks->get_wc_prop;
   cc->push_func = ras->callbacks->push_wc_prop;
