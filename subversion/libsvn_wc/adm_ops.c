@@ -1142,7 +1142,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
              missing altogether), copy the text-base out into
              the working copy, and update the timestamp in the entries
              file. */
-          svn_wc_keywords_t *keywords;
+          svn_subst_keywords_t *keywords;
           const char *eol;
           base_thing = svn_wc__text_base_path (fullpath, 0, pool);
 
@@ -1154,12 +1154,13 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
              sure to do any eol translations or keyword substitutions,
              as dictated by the property values.  If these properties
              are turned off, then this is just a normal copy. */
-          if ((err = svn_wc_copy_and_translate (base_thing,
-                                                fullpath,
-                                                eol, FALSE, /* don't repair */
-                                                keywords,
-                                                TRUE, /* expand keywords */
-                                                pool)))
+          if ((err = svn_subst_copy_and_translate (base_thing,
+                                                   fullpath,
+                                                   eol, 
+                                                   FALSE, /* don't repair */
+                                                   keywords,
+                                                   TRUE, /* expand keywords */
+                                                   pool)))
             return revert_error (err, fullpath, "restoring text", pool);
 
           /* If necessary, tweak the new working file's executable bit. */

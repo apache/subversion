@@ -42,6 +42,7 @@
 #include "svn_io.h"
 #include "svn_pools.h"
 #include "svn_utf.h"
+#include "svn_subst.h"
 #include "svn_config.h"
 #include "cl.h"
 
@@ -214,13 +215,13 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
           if (err)
             goto cleanup;
 
-          err = svn_wc_translate_cstring (edited_utf8_contents,
-                                          edited_contents,
-                                          "\n",  /* translate to LF */
-                                          FALSE, /* no repair */
-                                          NULL,  /* no keywords */
-                                          FALSE, /* no expansion */
-                                          pool);
+          err = svn_subst_translate_cstring (edited_utf8_contents,
+                                             edited_contents,
+                                             "\n",  /* translate to LF */
+                                             FALSE, /* no repair */
+                                             NULL,  /* no keywords */
+                                             FALSE, /* no expansion */
+                                             pool);
           if (err)
             goto cleanup;
         }
@@ -420,12 +421,12 @@ svn_cl__get_log_message (const char **log_msg,
                                           NULL, pool));
       
       /* Convert the utf8 message to "repos normal" LF eol-style. */
-      SVN_ERR (svn_wc_translate_cstring (log_msg_utf8, log_msg,
-                                         "\n",  /* translate to LF */
-                                         FALSE, /* no repair */
-                                         NULL,  /* no keywords */
-                                         FALSE, /* no expansion */
-                                         pool));
+      SVN_ERR (svn_subst_translate_cstring (log_msg_utf8, log_msg,
+                                            "\n",  /* translate to LF */
+                                            FALSE, /* no repair */
+                                            NULL,  /* no keywords */
+                                            FALSE, /* no expansion */
+                                            pool));
       return SVN_NO_ERROR;
     }
 

@@ -51,7 +51,7 @@ restore_file (const char *file_path,
               apr_pool_t *pool)
 {
   const char *text_base_path, *tmp_text_base_path;
-  svn_wc_keywords_t *keywords;
+  svn_subst_keywords_t *keywords;
   const char *eol;
 
   text_base_path = svn_wc__text_base_path (file_path, FALSE, pool);
@@ -68,12 +68,12 @@ restore_file (const char *file_path,
      sure to do any eol translations or keyword substitutions,
      as dictated by the property values.  If these properties
      are turned off, then this is just a normal copy. */
-  SVN_ERR (svn_wc_copy_and_translate (tmp_text_base_path,
-                                      file_path,
-                                      eol, FALSE, /* don't repair */
-                                      keywords,
-                                      TRUE, /* expand keywords */
-                                      pool));
+  SVN_ERR (svn_subst_copy_and_translate (tmp_text_base_path,
+                                         file_path,
+                                         eol, FALSE, /* don't repair */
+                                         keywords,
+                                         TRUE, /* expand keywords */
+                                         pool));
   
   SVN_ERR (svn_io_remove_file (tmp_text_base_path, pool));
 
