@@ -109,8 +109,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-03-26 23:25+0900\n"
-"PO-Revision-Date: 2005-03-26 23:23+0900\n"
+"POT-Creation-Date: 2005-03-27 00:02+0900\n"
+"PO-Revision-Date: 2005-03-27 00:01+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1570,7 +1570,7 @@ msgstr ""
 msgid "Print client version info\n"
 msgstr "クライアントのバージョン情報を表示します\n"
 
-#: clients/cmdline/main.c:754 svnadmin/main.c:76
+#: clients/cmdline/main.c:754 svnadmin/main.c:76 svnlook/main.c:264
 msgid "Caught signal"
 msgstr "シグナルを受け取りました"
 
@@ -2966,7 +2966,7 @@ msgstr ""
 #: libsvn_client/diff.c:1380 libsvn_client/diff.c:1977
 #: libsvn_client/diff.c:2452 libsvn_client/diff.c:2561 libsvn_client/log.c:129
 #: libsvn_client/prop_commands.c:213 libsvn_client/prop_commands.c:446
-#: libsvn_client/prop_commands.c:599 libsvn_client/prop_commands.c:955
+#: libsvn_client/prop_commands.c:602 libsvn_client/prop_commands.c:951
 #: libsvn_client/ra.c:180 libsvn_client/revisions.c:89
 #: libsvn_client/status.c:131 libsvn_client/switch.c:104
 #: libsvn_wc/adm_ops.c:2127 libsvn_wc/copy.c:386 libsvn_wc/entries.c:1383
@@ -3315,7 +3315,7 @@ msgstr "不正な属性名: '%s'"
 msgid "Value will not be set unless forced"
 msgstr "強制されないときは値は設定されません"
 
-#: libsvn_client/prop_commands.c:499 libsvn_client/prop_commands.c:762
+#: libsvn_client/prop_commands.c:499 libsvn_client/prop_commands.c:758
 #, c-format
 msgid "Unknown node kind for '%s'"
 msgstr "'%s' のノード種別が不明です"
@@ -3461,150 +3461,150 @@ msgstr ""
 "ファイルシステムモジュール '%s' のバージョンが一致しません: 実際 %d.%d.%d%s, "
 "予想 %d.%d.%d%s"
 
-#: libsvn_fs_base/bdb/bdb-err.c:95
+#: libsvn_fs_base/bdb/bdb-err.c:97
 #, c-format
 msgid "Berkeley DB error for filesystem %s while %s:\n"
 msgstr ""
 "ファイルシステム %s に対して %s をしているときに Berkeley DB エラーが起きまし"
 "た\n"
 
-#: libsvn_fs_base/bdb/changes-table.c:86
+#: libsvn_fs_base/bdb/changes-table.c:88
 msgid "creating change"
 msgstr "変更を作成しています"
 
-#: libsvn_fs_base/bdb/changes-table.c:112
+#: libsvn_fs_base/bdb/changes-table.c:114
 msgid "deleting changes"
 msgstr "変更を削除しています"
 
-#: libsvn_fs_base/bdb/changes-table.c:144 libsvn_fs_fs/fs_fs.c:1876
+#: libsvn_fs_base/bdb/changes-table.c:146 libsvn_fs_fs/fs_fs.c:1876
 msgid "Missing required node revision ID"
 msgstr "必要なノードリビジョン識別番号がありません"
 
-#: libsvn_fs_base/bdb/changes-table.c:155 libsvn_fs_fs/fs_fs.c:1886
+#: libsvn_fs_base/bdb/changes-table.c:157 libsvn_fs_fs/fs_fs.c:1886
 msgid "Invalid change ordering: new node revision ID without delete"
 msgstr "不正な変更順序: ノードリビジョン識別番号を削除せず新しく追加しています"
 
-#: libsvn_fs_base/bdb/changes-table.c:165 libsvn_fs_fs/fs_fs.c:1897
+#: libsvn_fs_base/bdb/changes-table.c:167 libsvn_fs_fs/fs_fs.c:1897
 msgid "Invalid change ordering: non-add change on deleted path"
 msgstr "不正な変更順序: 削除したパスに対して、追加ではない変更をしています"
 
-#: libsvn_fs_base/bdb/changes-table.c:255
-#: libsvn_fs_base/bdb/changes-table.c:379
+#: libsvn_fs_base/bdb/changes-table.c:257
+#: libsvn_fs_base/bdb/changes-table.c:381
 msgid "creating cursor for reading changes"
 msgstr "変更を読み込むためのカーソルを作成しています"
 
-#: libsvn_fs_base/bdb/changes-table.c:281
-#: libsvn_fs_base/bdb/changes-table.c:400
+#: libsvn_fs_base/bdb/changes-table.c:283
+#: libsvn_fs_base/bdb/changes-table.c:402
 #, c-format
 msgid "Error reading changes for key '%s'"
 msgstr "キー '%s' の変更の読み込み中にエラーが発生しました"
 
-#: libsvn_fs_base/bdb/changes-table.c:340
-#: libsvn_fs_base/bdb/changes-table.c:423
+#: libsvn_fs_base/bdb/changes-table.c:342
+#: libsvn_fs_base/bdb/changes-table.c:425
 msgid "fetching changes"
 msgstr "変更を取得しています"
 
-#: libsvn_fs_base/bdb/changes-table.c:353
-#: libsvn_fs_base/bdb/changes-table.c:436
+#: libsvn_fs_base/bdb/changes-table.c:355
+#: libsvn_fs_base/bdb/changes-table.c:438
 msgid "closing changes cursor"
 msgstr "変更のカーソルを閉じています"
 
-#: libsvn_fs_base/bdb/copies-table.c:85
+#: libsvn_fs_base/bdb/copies-table.c:87
 msgid "storing copy record"
 msgstr "コピー記録を保存しています"
 
-#: libsvn_fs_base/bdb/copies-table.c:110
+#: libsvn_fs_base/bdb/copies-table.c:112
 msgid "allocating new copy ID (getting 'next-key')"
 msgstr "新しいコピー ID を割り当てています ('next-key' を取得しています)"
 
 # ? bump
-#: libsvn_fs_base/bdb/copies-table.c:128
+#: libsvn_fs_base/bdb/copies-table.c:130
 msgid "bumping next copy key"
 msgstr "次のコピーキーにぶつかっています"
 
-#: libsvn_fs_base/bdb/copies-table.c:167
+#: libsvn_fs_base/bdb/copies-table.c:169
 msgid "deleting entry from 'copies' table"
 msgstr "'copies' テーブルからエントリを削除しています"
 
-#: libsvn_fs_base/bdb/copies-table.c:195
+#: libsvn_fs_base/bdb/copies-table.c:197
 msgid "reading copy"
 msgstr "コピーを読み込んでいます"
 
-#: libsvn_fs_base/bdb/nodes-table.c:97
+#: libsvn_fs_base/bdb/nodes-table.c:99
 msgid "allocating new node ID (getting 'next-key')"
 msgstr "新しいノード ID を割り当てています ('next-key' を取得しています)"
 
 # ? bump
-#: libsvn_fs_base/bdb/nodes-table.c:115
+#: libsvn_fs_base/bdb/nodes-table.c:117
 msgid "bumping next node ID key"
 msgstr "次のノード ID キーにぶつかっています"
 
 # ? successor id
-#: libsvn_fs_base/bdb/nodes-table.c:152
+#: libsvn_fs_base/bdb/nodes-table.c:154
 #, c-format
 msgid "Successor id '%s' (for '%s') already exists in filesystem '%s'"
 msgstr ""
 "継承 ID '%s' (旧 ID: '%s') は既にファイルシステム '%s' に存在しています"
 
-#: libsvn_fs_base/bdb/nodes-table.c:178
+#: libsvn_fs_base/bdb/nodes-table.c:180
 msgid "deleting entry from 'nodes' table"
 msgstr "'nodes' テーブルからエントリを削除しています"
 
 #. Handle any other error conditions.
-#: libsvn_fs_base/bdb/nodes-table.c:218
+#: libsvn_fs_base/bdb/nodes-table.c:220
 msgid "reading node revision"
 msgstr "ノードリビジョンを読み込んでいます"
 
-#: libsvn_fs_base/bdb/nodes-table.c:250
+#: libsvn_fs_base/bdb/nodes-table.c:252
 msgid "storing node revision"
 msgstr "ノードリビジョンを保存しています"
 
-#: libsvn_fs_base/bdb/reps-table.c:93 libsvn_fs_base/bdb/reps-table.c:200
+#: libsvn_fs_base/bdb/reps-table.c:95 libsvn_fs_base/bdb/reps-table.c:202
 #, c-format
 msgid "No such representation '%s'"
 msgstr "'%s' という表現はありません"
 
 #. Handle any other error conditions.
-#: libsvn_fs_base/bdb/reps-table.c:96
+#: libsvn_fs_base/bdb/reps-table.c:98
 msgid "reading representation"
 msgstr "表現を読み込んでいます"
 
-#: libsvn_fs_base/bdb/reps-table.c:124
+#: libsvn_fs_base/bdb/reps-table.c:126
 msgid "storing representation"
 msgstr "表現を保存しています"
 
-#: libsvn_fs_base/bdb/reps-table.c:154
+#: libsvn_fs_base/bdb/reps-table.c:156
 msgid "allocating new representation (getting next-key)"
 msgstr "新しい表現を割り当てています (next-key を取得しています)"
 
 # ? bump
-#: libsvn_fs_base/bdb/reps-table.c:175
+#: libsvn_fs_base/bdb/reps-table.c:177
 msgid "bumping next representation key"
 msgstr "次の表現キーにぶつかっています"
 
 #. Handle any other error conditions.
-#: libsvn_fs_base/bdb/reps-table.c:203
+#: libsvn_fs_base/bdb/reps-table.c:205
 msgid "deleting representation"
 msgstr "表現を削除しています"
 
 #. Handle any other error conditions.
-#: libsvn_fs_base/bdb/rev-table.c:86
+#: libsvn_fs_base/bdb/rev-table.c:88
 msgid "reading filesystem revision"
 msgstr "ファイルシステムのリビジョンを読み込んでいます"
 
-#: libsvn_fs_base/bdb/strings-table.c:89
+#: libsvn_fs_base/bdb/strings-table.c:91
 msgid "creating cursor for reading a string"
 msgstr "文字列を読み込むためのカーソルを作成しています"
 
-#: libsvn_fs_base/bdb/txn-table.c:92
+#: libsvn_fs_base/bdb/txn-table.c:94
 msgid "storing transaction record"
 msgstr "トランザクションの記録を保存しています"
 
-#: libsvn_fs_base/bdb/uuids-table.c:110
+#: libsvn_fs_base/bdb/uuids-table.c:112
 msgid "get repository uuid"
 msgstr "リポジトリ UUID を取得しています"
 
-#: libsvn_fs_base/bdb/uuids-table.c:138
+#: libsvn_fs_base/bdb/uuids-table.c:140
 msgid "set repository uuid"
 msgstr "リポジトリ UUID を設定しています"
 
@@ -4275,6 +4275,30 @@ msgstr "URL スキーム '%s' を認識できません"
 msgid "Could not create a request (%s '%s')"
 msgstr "リクエストを作成できませんでした (%s '%s')"
 
+#: libsvn_ra_dav/commit.c:263
+msgid ""
+"Could not fetch the Version Resource URL (needed during an import or when it "
+"is missing from the local, cached props)"
+msgstr ""
+"Version Resource URL (インポート中、またはローカルからなくなった際に必要にな"
+"る、キャッシュされた属性) を取得できませんでした"
+
+#: libsvn_ra_dav/commit.c:433
+#, c-format
+msgid "Could not create a CHECKOUT request (%s)"
+msgstr "CHECKOUT リクエストを作成できませんでした (%s)"
+
+#: libsvn_ra_dav/commit.c:505
+#, c-format
+msgid "Your file or directory '%s' is probably out-of-date"
+msgstr ""
+"ファイルまたはディレクトリ '%s' はおそらくリポジトリ側と比べて古くなっていま"
+"す"
+
+#: libsvn_ra_dav/commit.c:513
+msgid "The CHECKOUT response did not contain a 'Location:' header"
+msgstr "CHECKOUT レスポンスに 'Location:' ヘッダが含まれていません"
+
 #: libsvn_ra_dav/commit.c:1016
 msgid "Could not write svndiff to temp file"
 msgstr "svndiff を一時ファイルに書き込めませんでした"
@@ -4331,8 +4355,8 @@ msgid "Invalid server response to dated-rev request"
 msgstr "dated-rev リクエストへのサーバのレスポンスが不正です"
 
 #: libsvn_ra_dav/fetch.c:1241
-msgid "get-locations REPORT not implemented"
-msgstr "get-locations REPORT は実装されていません"
+msgid "'get-locations' REPORT not implemented"
+msgstr "'get-locations' REPORT は実装されていません"
 
 #: libsvn_ra_dav/fetch.c:1309
 msgid ""
@@ -4357,8 +4381,8 @@ msgid "REPORT response handling failed to complete the editor drive"
 msgstr "REPORT レスポンスの処理はエディタの実行を終えるのに失敗しました"
 
 #: libsvn_ra_dav/file_revs.c:359
-msgid "get-file-revs REPORT not implemented"
-msgstr "get-file-revs REPORT は実装されていません"
+msgid "'get-file-revs' REPORT not implemented"
+msgstr "'get-file-revs' REPORT は実装されていません"
 
 #: libsvn_ra_dav/file_revs.c:366
 msgid "The file-revs report didn't contain any revisions"
@@ -4707,32 +4731,36 @@ msgstr "log エントリがリストではありません"
 msgid "Changed-path entry not a list"
 msgstr "changed-path エントリがリストではありません"
 
-#: libsvn_ra_svn/client.c:1220
-msgid "get-locations not implemented"
-msgstr "get-locations は実装されていません"
+#: libsvn_ra_svn/client.c:1164
+msgid "'stat' not implemented"
+msgstr "'stat' は実装されていません"
 
-#: libsvn_ra_svn/client.c:1233
+#: libsvn_ra_svn/client.c:1227
+msgid "'get-locations' request not implemented"
+msgstr "'get-locations' リクエストは実装されていません"
+
+#: libsvn_ra_svn/client.c:1240
 msgid "Location entry not a list"
 msgstr "location エントリがリストではありません"
 
-#: libsvn_ra_svn/client.c:1287
-msgid "get-file-revs not implemented"
-msgstr "get-file-revs は実装されていません"
+#: libsvn_ra_svn/client.c:1294
+msgid "'get-file-revs' request not implemented"
+msgstr "'get-file-revs' リクエストは実装されていません"
 
-#: libsvn_ra_svn/client.c:1301
+#: libsvn_ra_svn/client.c:1308
 msgid "Revision entry not a list"
 msgstr "revision エントリはリストではありません"
 
 # ? text delta chunk
-#: libsvn_ra_svn/client.c:1314 libsvn_ra_svn/client.c:1339
+#: libsvn_ra_svn/client.c:1321 libsvn_ra_svn/client.c:1346
 msgid "Text delta chunk not a string"
 msgstr "テキスト差分の塊が文字列ではありません"
 
-#: libsvn_ra_svn/client.c:1351
+#: libsvn_ra_svn/client.c:1358
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "コマンド get-file-revs がリビジョンを返しませんでした"
 
-#: libsvn_ra_svn/client.c:1406
+#: libsvn_ra_svn/client.c:1413
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr ""
@@ -5113,65 +5141,65 @@ msgstr "DB ロックファイルを作成しています"
 msgid "Creating lock dir"
 msgstr "ロック用のディレクトリを作成しています"
 
-#: libsvn_repos/repos.c:238
+#: libsvn_repos/repos.c:249
 msgid "Creating hook directory"
 msgstr "フック用のディレクトリを作成しています"
 
-#: libsvn_repos/repos.c:342
+#: libsvn_repos/repos.c:354
 msgid "Creating start-commit hook"
 msgstr "start-commit フックを作成しています"
 
-#: libsvn_repos/repos.c:477
+#: libsvn_repos/repos.c:490
 msgid "Creating pre-commit hook"
 msgstr "pre-commit フックを作成しています"
 
-#: libsvn_repos/repos.c:607
+#: libsvn_repos/repos.c:621
 msgid "Creating pre-revprop-change hook"
 msgstr "pre-revprop-change フックを作成しています"
 
-#: libsvn_repos/repos.c:706
+#: libsvn_repos/repos.c:721
 msgid "Creating post-commit hook"
 msgstr "post-commit フックを作成しています"
 
-#: libsvn_repos/repos.c:816
+#: libsvn_repos/repos.c:832
 msgid "Creating post-revprop-change hook"
 msgstr "post-revprop-change フックを作成しています"
 
-#: libsvn_repos/repos.c:826
+#: libsvn_repos/repos.c:842
 msgid "Creating conf directory"
 msgstr "設定用のディレクトリを作成しています"
 
-#: libsvn_repos/repos.c:878
+#: libsvn_repos/repos.c:894
 msgid "Creating svnserve.conf file"
 msgstr "svnserve.conf ファイルを作成しています"
 
-#: libsvn_repos/repos.c:903
+#: libsvn_repos/repos.c:919
 msgid "Creating passwd file"
 msgstr "パスワードファイルを作成しています"
 
-#: libsvn_repos/repos.c:929
+#: libsvn_repos/repos.c:945
 msgid "Could not create top-level directory"
 msgstr "トップレベルのディレクトリを作成できませんでした"
 
-#: libsvn_repos/repos.c:933
+#: libsvn_repos/repos.c:949
 msgid "Creating DAV sandbox dir"
 msgstr "DAV サンドボックスディレクトリを作成しています"
 
-#: libsvn_repos/repos.c:976
+#: libsvn_repos/repos.c:992
 msgid "Creating readme file"
 msgstr "readme ファイルを作成しています"
 
-#: libsvn_repos/repos.c:1008
+#: libsvn_repos/repos.c:1024
 msgid "Repository creation failed"
 msgstr "リポジトリの作成に失敗しました"
 
-#: libsvn_repos/repos.c:1078
+#: libsvn_repos/repos.c:1094
 #, c-format
 msgid "Expected version '%d' of repository; found version '%d'"
 msgstr ""
 "リポジトリの予想されるバージョンは '%d' ですが、実際のバージョンは '%d' です"
 
-#: libsvn_repos/repos.c:1123
+#: libsvn_repos/repos.c:1139
 msgid "Error opening db lockfile"
 msgstr "DB ロックファイルを開く際にエラーが発生しました"
 
@@ -7275,6 +7303,11 @@ msgstr ""
 "\n"
 "最新のリビジョン番号を表示します。\n"
 
+#: svnlook/main.c:566
+#, c-format
+msgid "Error creating dir '%s' (path exists)"
+msgstr "ディレクトリ '%s' の作成中にエラーが発生しました (パスが存在します)"
+
 # * This message replaces 'Index: ...' in the header of each diff in the output
 #   from 'svnlook diff'.
 #: svnlook/main.c:833
@@ -8228,3 +8261,15 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "使用方法: info [<パス>...]\n"
 #~ "\n"
 #~ "  各 <パス> (デフォルト: '.') に関する情報を表示します。\n"
+
+#~ msgid "get-locations REPORT not implemented"
+#~ msgstr "get-locations REPORT は実装されていません"
+
+#~ msgid "get-locations not implemented"
+#~ msgstr "get-locations は実装されていません"
+
+#~ msgid "get-file-revs REPORT not implemented"
+#~ msgstr "get-file-revs REPORT は実装されていません"
+
+#~ msgid "get-file-revs not implemented"
+#~ msgstr "get-file-revs は実装されていません"
