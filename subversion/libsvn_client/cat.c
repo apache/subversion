@@ -79,8 +79,8 @@ svn_client_cat (svn_stream_t* out,
   /* FIXME: Someday we should also check the keywords property and if it's 
    * set do keyword expansion, but that's a fair amount of work. */
 
-  if (mime_type && svn_mime_type_is_binary (mime_type->data)
-      || ! eol_style)
+  if ((mime_type && svn_mime_type_is_binary (mime_type->data))
+      || (! eol_style))
     {
       /* Either it's a binary file, or it's a text file with no special eol 
          style. */
