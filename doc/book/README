@@ -25,10 +25,10 @@ I. PRIMER
   It's very short and clears up many things.
 
   Note that there are actually two DocBook documents here: The book
-  itself, "Subversion: The Definitive Guide", and a miscellaneous
+  itself, "Version Control with Subversion", and a miscellaneous
   holding area known only as the "misc docs" (e.g., misc-docs.pdf,
   etc).  The Misc Docs hold material that either isn't yet ready to go
-  into the Definitive Guide, or which may never go into the Guide but
+  into the book itself, or which may never go into the book but
   instead into companion documents that will also be available from
   the Subversion site.  Think of Misc Docs as a temporary, but
   published, holding area.
