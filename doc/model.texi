@@ -63,7 +63,7 @@ For example, suppose you have a repository laid out like this:
 @end example
 
 In other words, the repository's root directory has a single
-subdirectory named @file{main}, which itself contains two
+subdirectory named @file{trunk}, which itself contains two
 subdirectories: @file{paint} and @file{write}.
 
 To get a working directory, you must @dfn{check out} some subtree of the
@@ -125,8 +125,8 @@ specify which files to update; Subversion uses the information in the
 @file{SVN} directory, and further information in the repository, to
 decide which files need to be brought up to date.
 
-We explain below what happens when both you and Felix make changes the
-same file.
+We explain below what happens when both you and Felix make changes to
+the same file.
 
 
 @c -----------------------------------------------------------------------
