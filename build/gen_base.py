@@ -262,18 +262,22 @@ class DependencyNode:
 class ObjectFile(DependencyNode):
   pass
 class ApacheObject(ObjectFile):
+  ### hmm. this is Makefile-specific
   build_cmd = '$(COMPILE_APACHE_MOD)'
 class SWIGObject(ObjectFile):
   def __init__(self, fname, lang):
     ObjectFile.__init__(self, fname)
     self.lang = lang
     self.lang_abbrev = lang_abbrev[lang]
+    ### hmm. this is Makefile-specific
     self.build_cmd = '$(COMPILE_%s_WRAPPER)' % string.upper(self.lang_abbrev)
 
 # the SWIG utility libraries
 class SWIGUtilPython(ObjectFile):
+  ### hmm. this is Makefile-specific
   build_cmd = '$(COMPILE_SWIG_PY)'
 class SWIGUtilJava(ObjectFile):
+  ### hmm. this is Makefile-specific
   build_cmd = '$(COMPILE_SWIG_JAVA)'
 
 _custom_build = {
@@ -283,6 +287,9 @@ _custom_build = {
   }
 
 class SWIGLibrary(DependencyNode):
+  ### stupid Target vs DependencyNode
+  ldflags = add_deps = ''
+
   def __init__(self, fname, lang):
     DependencyNode.__init__(self, fname)
     self.lang = lang
@@ -295,10 +302,8 @@ class SWIGLibrary(DependencyNode):
     ### maybe tweak to avoid these duplicate attrs
     self.output = fname
 
-    ### stupid Target vs DependencyNode
-    self.ldflags = ''
-    self.add_deps = ''
-    self.custom = ''
+    ### hmm. this is Makefile-specific
+    self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(self.lang_abbrev)
 
 class ExternalLibrary(DependencyNode):
   pass
@@ -320,8 +325,9 @@ class Target:
     self.path = path
     self.cfg = cfg
 
-    ### should choose a Target class instead of this
-    self.custom = custom
+    ### this should be a class attr and we should use different Target
+    ### classes based on the "custom" value.
+    self.object_cls = _custom_build.get(custom, ObjectFile)
 
     if not install:
       try:
@@ -352,8 +358,7 @@ class Target:
       if src[-2:] == '.c':
         objname = src[:-2] + self.objext
 
-        cls = _custom_build.get(self.custom, ObjectFile)
-        ofile = cls(objname)
+        ofile = self.object_cls(objname)
 
         # object depends upon source
         graph.add(DT_OBJECT, ofile, src)
@@ -396,7 +401,9 @@ class Target:
 
 class TargetLinked(Target):
   "The target is linked (by libtool) against other libraries."
-  pass
+
+  ### hmm. this is Makefile-specific
+  link_cmd = '$(LINK)'
 
 class TargetExe(TargetLinked):
   default_install = 'bin'
@@ -437,7 +444,17 @@ class TargetLib(TargetLinked):
       tfile = '%s-%s%s' % (name, cfg.version, extmap['lib', 'target'])
     else:
       tfile = name + extmap['lib', 'target']
+
+      # we have a custom linking rule
+      ### hmm. this is Makefile-specific
+      ### kind of hacky anyways. we should use a different Target subclass
+      self.link_cmd = '$(LINK_APACHE_MOD)'
+
     self.output = os.path.join(path, tfile)
+
+    ### eek. this is pretty ugly. we should have a new Target subclass.
+    if custom == 'ra-module':
+      self.is_ra_module = 1
 
 class TargetDoc(Target):
   # no default_install
