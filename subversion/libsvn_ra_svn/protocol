@@ -191,7 +191,7 @@ The main command set corresponds to the svn_ra interfaces.
 
   get-file
     params:   ( path:string [ rev:number ] want-props:bool want-contents:bool )
-    response: ( rev:number props:proplist )
+    response: ( [ checksum:string ] rev:number props:proplist )
     If want-contents is specified, then after sending response, server
      sends file contents as a series of strings, terminated by the empty
      string, followed by a second empty command response to indicate
@@ -280,7 +280,7 @@ The main command set corresponds to the svn_ra interfaces.
     response: ( file-token:string )
 
   apply-textdelta:
-    params:   ( file-token:string )
+    params:   ( file-token:string [ base-checksum:string ] )
     response: ( wanted:bool )
     Upon receiving positive response, client sends svndiff data as
      strings, terminated by an empty string.  Server then sends an
@@ -291,7 +291,7 @@ The main command set corresponds to the svn_ra interfaces.
     response: ( )
 
   close-file:
-    params:   ( file-token:string )
+    params:   ( file-token:string [ text-checksum:string ] )
     response: ( )
 
   close-edit:
@@ -310,13 +310,13 @@ the command which invoked the report (following an abort-edit call).
 Errors resulting from an abort-report call are ignored.
 
   set-path:
-    params: ( path:string rev:number )
+    params: ( path:string rev:number start-empty:bool )
 
   delete-path:
     params: ( path:string )
 
   link-path:
-    params: ( path:string url:string rev:number )
+    params: ( path:string url:string rev:number start-empty:bool )
 
   finish-report:
     params: ( )
