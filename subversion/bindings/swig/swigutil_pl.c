@@ -1226,9 +1226,9 @@ static svn_error_t *io_handle_read (void *baton,
 	SV *buf = sv_newmortal();
 	const char *fmt;
 
-	if (sizeof (apr_size_t) == 32) {
+	if (sizeof (apr_size_t) == 4) {
 	    fmt = "OOl";
-	} else if (sizeof (apr_size_t) == 64) {
+	} else if (sizeof (apr_size_t) == 8) {
             fmt = "OOL";
 	}
 	svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"READ", &ret, fmt,
@@ -1251,9 +1251,9 @@ static svn_error_t *io_handle_write (void *baton,
     MAGIC *mg;
     const char *fmt;
 
-    if (sizeof (apr_size_t) == 32) {
+    if (sizeof (apr_size_t) == 4) {
         fmt = "OOl";
-    } else if (sizeof (apr_size_t) == 64) {
+    } else if (sizeof (apr_size_t) == 8) {
         fmt = "OOL";
     }
 
