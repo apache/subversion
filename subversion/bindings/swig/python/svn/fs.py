@@ -64,12 +64,12 @@ class FileDiff:
     if self.path1 is not None:
       prop = node_prop(self.root1, self.path1, _util.SVN_PROP_MIME_TYPE,
                        self.pool)
-      if _util.svn_mime_type_is_binary(prop):
+      if prop and _util.svn_mime_type_is_binary(prop):
         return 1
     if self.path2 is not None:
       prop = node_prop(self.root2, self.path2, _util.SVN_PROP_MIME_TYPE,
                        self.pool)
-      if _util.svn_mime_type_is_binary(prop):
+      if prop and _util.svn_mime_type_is_binary(prop):
         return 1
     return 0
 
