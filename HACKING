@@ -6,7 +6,8 @@ this first.
                      ============================
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
-              Last updated:  $Date: 2000-12-21 21:38:14 $
+
+              Last updated:  $Date: 2001-02-01 12:24:26 $
 
 
 TABLE OF CONTENTS
@@ -128,9 +129,12 @@ version 3.1.17 libraries and tools from
 
 Unpack the distribution, then set the environment variable
 SVN_DB3_WIN32 to the full path of the db-win32 directory (use the
-System control panel on WinNT/Win2k). MSVC will look for the include
-files in $(SVN_DB3_WIN32)\include, and the libraries in
-$(SVN_DB3_WIN32)\lib.
+System control panel on WinNT/Win2k).
+
+MSVC will look for the include files in $(SVN_DB3_WIN32)\include and
+for the libraries in $(SVN_DB3_WIN32)\lib, so if you decide to build
+Berkeley DB from sources, you'll have to set up those directories
+yourself.
 
 The workspace `subversion.dsw' at the top of the source tree includes
 all the necessary projects. Right now, only static libraries are
