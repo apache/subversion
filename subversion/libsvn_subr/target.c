@@ -212,8 +212,12 @@ svn_path_condense_targets (svn_string_t **pbasedir,
             {
               svn_string_t *abs_targets_i = ((svn_string_t **)
                                              abs_targets->elts)[i];
-              if (svn_string_compare (abs_targets_i, *pbasedir))
-                removed[i] = TRUE;
+              if ((svn_string_compare (abs_targets_i, *pbasedir))
+                  && !removed[i])
+                {
+                  removed[i] = TRUE;
+                  num_condensed--;
+                }
             }
           
           /* Now create the return array, and copy the non-removed items */
@@ -236,13 +240,12 @@ svn_path_condense_targets (svn_string_t **pbasedir,
       
       /* Finally check if pbasedir is a dir or a file. */
       SVN_ERR (svn_path_split_if_file (*pbasedir, pbasedir, &file, pool));
-      if (pcondensed_targets != NULL)
+      if ((pcondensed_targets != NULL)
+          && (! svn_path_is_empty (file, svn_path_local_style)))
         {
-          /* If we have only one element, then it is currently the
-             empty string.  Set it to the file if we found one, or the
-             empty string, if not. */
-          if (num_condensed == 1)
-            ((svn_string_t **)(*pcondensed_targets)->elts)[0] = file;
+          /* If there was just one target, and it was a file, then
+             return it as the sole condensed target. */
+          (*((svn_string_t**)apr_array_push(*pcondensed_targets))) = file;
         }
     }
   
