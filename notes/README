@@ -9,3 +9,6 @@ we hope to fix with with Inversion).
 Outline mode is used for `inversion.txt' because we'll be editing it a
 lot for a while.  Once it gets to the point of being's browsed more
 often than it's edited, we can recast it into HTML, SGML, whatever.
+Actually, I think in about an hour I can write a Perl script to
+convert the outline-format document to presentable HTML, so maybe I'll
+just do that, hmm...
