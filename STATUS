@@ -83,9 +83,3 @@ Candidate changes:
             installer for 1.0.1 had to be set up manually.
     Votes:
       +1: josander
-
-  * r9085, r9101, r9109, r9130
-    Issue 1509: unable to share working copy.
-    Notes: Backport attached to the issue with conflicts removed.
-    Votes:
-      +1: striker, gstein, philip

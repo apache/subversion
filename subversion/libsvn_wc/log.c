@@ -157,8 +157,7 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
       }
 
     case svn_wc__xfer_mv:
-      /* Remove read-only flag on destination. */
-      SVN_ERR (svn_io_set_file_read_write (full_dest_path, TRUE, pool));
+      SVN_ERR (svn_wc__prep_file_for_replacement (full_dest_path, TRUE, pool));
 
       err = svn_io_file_rename (full_from_path,
                                 full_dest_path, pool);
@@ -952,9 +951,8 @@ log_do_committed (struct log_runner *loggy,
               }                
           }
 
-        /* Make the tmp prop file the new pristine one.  Note that we
-           have to temporarily set the file permissions for writability. */
-        SVN_ERR (svn_io_set_file_read_write (basef, TRUE, pool));
+        /* Make the tmp prop file the new pristine one. */
+        SVN_ERR (svn_wc__prep_file_for_replacement (basef, TRUE, pool));
         SVN_ERR (svn_io_file_rename (tmpf, basef, pool));
         SVN_ERR (svn_io_set_file_read_only (basef, FALSE, pool));
       }

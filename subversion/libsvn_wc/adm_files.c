@@ -203,35 +203,6 @@ svn_wc__make_adm_thing (svn_wc_adm_access_t *adm_access,
 
 
 
-/* Copy SRC to DST if SRC exists, else create DST empty. */
-static svn_error_t *
-maybe_copy_file (const char *src, const char *dst, apr_pool_t *pool)
-{
-  svn_node_kind_t kind;
-
-  /* First test if SRC exists. */
-  SVN_ERR (svn_io_check_path (src, &kind, pool));
-  if (kind == svn_node_none)
-    {
-      /* SRC doesn't exist, create DST empty. */
-      apr_file_t *f = NULL;
-      SVN_ERR (svn_io_file_open (&f,
-                                 dst,
-                                 (APR_WRITE | APR_CREATE),
-                                 APR_OS_DEFAULT,
-                                 pool));
-      SVN_ERR (svn_io_file_close (f, pool));
-    }
-  else /* SRC exists, so copy it to DST. */
-    {    
-      SVN_ERR (svn_io_copy_file (src, dst, FALSE, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-
 /*** Syncing files in the adm area. ***/
 
 static svn_error_t *
@@ -256,10 +227,8 @@ sync_adm_file (const char *path,
   path = v_extend_with_adm_name (path, extension, 0, pool, ap);
   va_end (ap);
   
-  /* Remove read-only flag on destination. */
-  SVN_ERR (svn_io_set_file_read_write (path, TRUE, pool));
- 
   /* Rename. */
+  SVN_ERR (svn_wc__prep_file_for_replacement (path, TRUE, pool));
   SVN_ERR (svn_io_file_rename (tmp_path, path, pool));
   SVN_ERR (svn_io_set_file_read_only (path, FALSE, pool));
 
@@ -430,19 +399,14 @@ open_adm_file (apr_file_t **handle,
     {
       if (flags & APR_APPEND)
         {
-          const char *opath, *tmp_path;
-
-          va_start (ap, pool);
-          opath = v_extend_with_adm_name (path, extension, 0, pool, ap);
-          va_end (ap);
-
-          va_start (ap, pool);
-          tmp_path = v_extend_with_adm_name (path, extension, 1, pool, ap);
-          va_end (ap);
-
-          /* Copy the original thing to the tmp location. */
-          SVN_ERR (maybe_copy_file (opath, tmp_path, pool));
+          /* We don't handle append.  To do so we would need to copy the
+             contents into the apr_file_t once it has been opened. */
+          return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                   "APR_APPEND not supported for adm files");
         }
+
+      /* Need to own the temporary file, so don't reuse an existing one. */
+      flags |= APR_EXCL | APR_CREATE;
 
       /* Extend with tmp name. */
       va_start (ap, pool);
@@ -458,6 +422,14 @@ open_adm_file (apr_file_t **handle,
     }
 
   err = svn_io_file_open (handle, path, flags, protection, pool);
+  if ((flags & APR_WRITE) && err && APR_STATUS_IS_EEXIST(err->apr_err))
+    {
+      /* Exclusive open failed, delete and retry */
+      svn_error_clear (err);
+      SVN_ERR (svn_io_remove_file (path, pool));
+      err = svn_io_file_open (handle, path, flags, protection, pool);
+    }
+
   if (err)
     {
       /* Oddly enough, APR will set *HANDLE even if the open failed.
@@ -516,10 +488,8 @@ close_adm_file (apr_file_t *fp,
       path = v_extend_with_adm_name (path, extension, 0, pool, ap);
       va_end (ap);
       
-      /* Temporarily remove read-only flag on destination. */
-      SVN_ERR (svn_io_set_file_read_write (path, TRUE, pool));
-      
       /* Rename. */
+      SVN_ERR (svn_wc__prep_file_for_replacement (path, TRUE, pool));
       SVN_ERR (svn_io_file_rename (tmp_path, path, pool));
       SVN_ERR (svn_io_set_file_read_only (path, FALSE, pool));
       
@@ -562,8 +532,6 @@ svn_wc__remove_adm_file (const char *path, apr_pool_t *pool, ...)
   path = v_extend_with_adm_name (path, NULL, 0, pool, ap);
   va_end (ap);
       
-  /* Remove read-only flag on path. */
-  SVN_ERR(svn_io_set_file_read_write (path, FALSE, pool));
   SVN_ERR(svn_io_remove_file (path, pool));
 
   return SVN_NO_ERROR;
@@ -1163,6 +1131,30 @@ svn_wc_create_tmp_file (apr_file_t **fp,
   /* Open a unique file;  use APR_DELONCLOSE. */  
   SVN_ERR (svn_io_open_unique_file (fp, &ignored_filename,
                                     path, ".tmp", delete_on_close, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__prep_file_for_replacement (const char *path,
+                                   svn_boolean_t ignore_enoent,
+                                   apr_pool_t *pool)
+{
+   /* On Unix a read-only file can still be removed or replaced because
+      this is really an edit of the parent directory, not of the file
+      itself.  Windows apparently has different semantics, and so
+      when the svn_io_set_file_read_write() call was temporarily
+      removed in revision 5663, Subversion stopped working on Windows. 
+      
+      However, the svn_io_set_file_read_write() call sets all write
+      permissions on Unix, which is undesireable.  Since it is unnecessary
+      to make the file writeable, do nothing to prep the file for replacement
+      on Unix. */
+
+#ifdef WIN32
+  return svn_io_set_file_read_write (path, ignore_enoent, pool);
+#endif /* WIN32 */
 
   return SVN_NO_ERROR;
 }

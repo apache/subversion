@@ -1011,19 +1011,8 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
   const char *path_apr;
 
 #ifdef WIN32
-  /* ### On Unix a read-only file can still be removed, because
-     removal is really an edit of the parent directory, not of the
-     file itself.  Windows apparently has different semantics, and so
-     when the svn_io_set_file_read_write() call below was temporarily
-     removed in revision 5663, Subversion stopped working on Windows.
-
-     Still, this chmod should probably should be controlled by a flag.
-     Certain callers, namely libsvn_wc when dealing with the read-only
-     files in .svn/, frequently have read-only files to remove; but
-     many others don't, and the chmod is a waste of time for them.
-
-     But see http://subversion.tigris.org/issues/show_bug.cgi?id=1294
-     for a more thorough discussion of long term solutions to this. */
+  /* Set the file writable but only on Windows, because Windows
+     will not allow us to remove files that are read-only. */
   SVN_ERR (svn_io_set_file_read_write (path, TRUE, pool));
 #endif /* WIN32 */
 
@@ -2062,6 +2051,7 @@ svn_io_write_version_file (const char *path,
                            apr_pool_t *pool)
 {
   apr_file_t *format_file = NULL;
+  const char *path_tmp;
   const char *format_contents = apr_psprintf (pool, "%d\n", version);
 
   /* We only promise to handle non-negative integers. */
@@ -2069,17 +2059,29 @@ svn_io_write_version_file (const char *path,
     return svn_error_createf (SVN_ERR_INCORRECT_PARAMS, NULL,
                               "Version %d is not non-negative", version);
 
-  /* Open (or create+open) PATH... */
-  SVN_ERR (svn_io_file_open (&format_file, path,
-                             APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
-  
+  /* Create a temporary file to write the data to */
+  SVN_ERR (svn_io_open_unique_file (&format_file, &path_tmp, path, ".tmp",
+                                    FALSE, pool));
+  		  
   /* ...dump out our version number string... */
   SVN_ERR (svn_io_file_write_full (format_file, format_contents,
                                    strlen (format_contents), NULL, pool));
   
   /* ...and close the file. */
   SVN_ERR (svn_io_file_close (format_file, pool));
-  
+
+#ifdef WIN32
+  /* make the destination writable, but only on Windows, because
+     Windows does not let us replace read-only files. */
+  SVN_ERR (svn_io_set_file_read_write (path, TRUE, pool));
+#endif /* WIN32 */
+
+  /* rename the temp file as the real destination */
+  SVN_ERR (svn_io_file_rename (path_tmp, path, pool));
+
+  /* And finally remove the perms to make it read only */
+  SVN_ERR (svn_io_set_file_read_only (path, FALSE, pool));
+ 
   return SVN_NO_ERROR;
 }
 

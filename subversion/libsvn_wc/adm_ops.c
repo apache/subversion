@@ -251,7 +251,7 @@ svn_wc_process_committed (const char *path,
   SVN_ERR (svn_wc__open_adm_file (&log_fp,
                                   svn_wc_adm_access_path (adm_access),
                                   SVN_WC__ADM_LOG,
-                                  (APR_WRITE | APR_APPEND | APR_CREATE),
+                                  (APR_WRITE | APR_CREATE),
                                   pool));
 
   base_name = svn_path_is_child (svn_wc_adm_access_path (adm_access), path,
@@ -1196,7 +1196,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       if (kind == svn_node_file)
         {
           if ((working_props_kind == svn_node_file)
-              && (err = svn_io_set_file_read_write (thing, FALSE, pool)))
+              && (err = svn_wc__prep_file_for_replacement (thing, FALSE, pool)))
             return revert_error (err, fullpath, "restoring props", pool);
 
           if ((err = svn_io_copy_file (base_thing, thing, FALSE, pool)))
@@ -1207,9 +1207,6 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
         }
       else if (working_props_kind == svn_node_file)
         {
-          if ((err = svn_io_set_file_read_write (thing, FALSE, pool)))
-            return revert_error (err, fullpath, "removing props", pool);
-
           if ((err = svn_io_remove_file (thing, pool)))
             return revert_error (err, fullpath, "removing props", pool);
         }
@@ -1685,25 +1682,21 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
 
         /* Text base. */
         svn_thang = svn_wc__text_base_path (full_path, 0, pool);
-        SVN_ERR (svn_io_set_file_read_write (svn_thang, TRUE, pool));
         SVN_ERR (remove_file_if_present (svn_thang, pool));
 
         /* Working prop file. */
         SVN_ERR (svn_wc__prop_path (&svn_thang, full_path, adm_access, FALSE,
                                     pool));
-        SVN_ERR (svn_io_set_file_read_write (svn_thang, TRUE, pool));
         SVN_ERR (remove_file_if_present (svn_thang, pool));
 
         /* Prop base file. */
         SVN_ERR (svn_wc__prop_base_path (&svn_thang, full_path, adm_access,
                                          FALSE, pool));
-        SVN_ERR (svn_io_set_file_read_write (svn_thang, TRUE, pool));
         SVN_ERR (remove_file_if_present (svn_thang, pool));
 
         /* wc-prop file. */
         SVN_ERR (svn_wc__wcprop_path (&svn_thang, full_path, adm_access, FALSE,
                                       pool));
-        SVN_ERR (svn_io_set_file_read_write (svn_thang, TRUE, pool));
         SVN_ERR (remove_file_if_present (svn_thang, pool));
       }
 
