@@ -905,11 +905,11 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
         </variablelist>
 
         <para>The second column tells the status of a file or
-          directory's properties (See <xref linkend="svn-ch-6-sect-2">
-          for more information on properties).  If an
-          <computeroutput>M</computeroutput> appears in the second
-          column, then the properties have been modified, otherwise a
-          whitespace will be printed.</para>
+          directory's properties (See <xref
+          linkend="svn-ch-6-sect-2"></xref> for more information on
+          properties).  If an <computeroutput>M</computeroutput>
+          appears in the second column, then the properties have been
+          modified, otherwise a whitespace will be printed.</para>
         
         <para>The third column will only show whitespace or an
           <computeroutput>L</computeroutput> which means that
@@ -1031,6 +1031,7 @@ A                0         ?     ?        ./stuff/things/bloo.h
           context output format while ignoring whitespace changes, you
           might run <quote>svn diff --diff-cmd /usr/bin/diff
           --extensions '-bc' foo.c</quote>.</para>
+          </footnote></para>
         
         <screen>
 $ svn diff
