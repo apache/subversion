@@ -17,6 +17,12 @@ Version 0.28.0 (released 24 August 2003, rev XXXX, branches/release-0.28)
 ##                                                                 ##
 #####################################################################
 
+ Please see the notes/repository_upgrade_HOWTO document located  for
+ documentation on migrating pre-.28 repos to revision .28.
+
+ Also located here:
+    http://svn.collab.net/repos/svn/trunk/notes/repos_upgrade_HOWTO
+
  User-visible changes:
  * fs schema change, see issue #1003 **NOTE: repos dump/load cycle required!**
  * command-line options
@@ -37,8 +43,8 @@ Version 0.28.0 (released 24 August 2003, rev XXXX, branches/release-0.28)
  * fixed 'svn diff -r PREV:HEAD" failed if tmp/ exists in cwd (r6838,#1487)
 
  Developer-visible changes:
+ * database schema changed (see warning above!) (r6752,#1003,#1248,#1438)
  * svn Perl bindings are ready - see swig/INSTALL
- * dumpfile format changed (see warning above!) (r6752,#1003,#1248,#1438)
  * internal changes to treat swig libraries more like normal libraries (r6761)
  * improved handling of errors opening a repository over ra_svn (r6841)
 
