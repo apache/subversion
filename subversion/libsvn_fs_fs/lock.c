@@ -50,18 +50,34 @@
 #define COMMENT_KEY "comment"
 
 
+/* Return the base path to the directory in FS where lock files (and
+   lock entries files) are stored. */
+static const char *
+base_lock_dir (svn_fs_t *fs,
+               const char *md5_str,
+               apr_pool_t *pool)
+{
+  const char *base_path;
+  apr_size_t len = 3; /* 4096 subdirectories. */
+  const char *subdir = apr_pstrmemdup (pool, md5_str, len);
+
+  base_path = svn_path_join_many (pool, fs->path, LOCK_ROOT_DIR, 
+                                  subdir, NULL);
+  return base_path;
+}
+
+
 /* Set ABS_PATH to the absolute path to the lock file or lock entries
    file for which DIGEST is the hashed repository relative path. */
+/* ### TODO return char* -- nothing we call throws an svn_error_t. */
 static svn_error_t *
 abs_path_to_lock_digest_file (const char **abs_path,
                               svn_fs_t *fs,
                               const char *digest,
                               apr_pool_t *pool)
 {
-  *abs_path = svn_path_join_many (pool, fs->path, LOCK_ROOT_DIR,
-                                  digest, NULL);
-  /* ###TODO create a 1 or 2 char subdir to spread the love across
-     many directories */
+  *abs_path = svn_path_join (base_lock_dir (fs, digest, pool),
+                             digest, pool);
   
   return SVN_NO_ERROR;
 }
@@ -79,6 +95,7 @@ make_digest (const char *str,
 
 /* Set ABS_PATH to the absolute path to REL_PATH, where REL_PATH is
    the path to the lock file or lock entries file in FS. */
+/* ### TODO return char* -- nothing we call throws an svn_error_t. */
 static svn_error_t *
 abs_path_to_lock_file (const char **abs_path,
                        svn_fs_t *fs,
@@ -88,28 +105,8 @@ abs_path_to_lock_file (const char **abs_path,
   const char *digest_cstring;
 
   digest_cstring = make_digest (rel_path, pool);
-
-  *abs_path = svn_path_join_many (pool, fs->path, LOCK_ROOT_DIR,
-                                  digest_cstring, NULL);
-  /* ###TODO create a 1 or 2 char subdir to spread the love across
-     many directories */
-
-  return SVN_NO_ERROR;
-}
-
-/* ###Shouldn't abs_path_to_lock_file and base_path_to_lock_file be
-   using this function? */
-/* ###TODO Rename this to base_lock_dir or somesuch. */
-/* Set BASE_PATH to the directory in FS where lock files (and lock
-   entries files) are stored. */
-static svn_error_t *
-base_path_to_lock_file (const char **base_path,
-                        svn_fs_t *fs,
-                        apr_pool_t *pool)
-{
-  *base_path = svn_path_join (fs->path, LOCK_ROOT_DIR, pool);
-  /* ###TODO create a 1 or 2 char subdir to spread the love across
-     many directories (and take the hash as an optional arg. */
+  *abs_path = svn_path_join (base_lock_dir (fs, digest_cstring, pool), 
+                             digest_cstring, pool);
 
   return SVN_NO_ERROR;
 }
@@ -262,53 +259,6 @@ fix_path_perms (const char *path,
 }
 
 
-
-/* If ABS_PATH exists, add DIGEST_STR to it iff it's not already in
-   it.  Else, create ABS_PATH with DIGEST_STR as its only member.  If
-   a new file is created, CREATED_NEW_FILE is set to TRUE. */
-static svn_error_t *
-add_hash_to_entries_file (const char *abs_path,
-                          svn_fs_t *fs,
-                          const char *digest_str,
-                          svn_boolean_t *created_new_file,
-                          apr_pool_t *pool)
-{
-  apr_hash_t *entries;
-  apr_file_t *fd;
-
-  /* Try to open the existing entries file. */
-  SVN_ERR (read_entries_file(&entries, abs_path, NULL, pool));
-
-  if (apr_hash_count (entries)) /* We have an entries file. */
-    {
-      /* Append the MD5 hash of the next component to entries it's not
-         already in there. */
-      if (apr_hash_get (entries, digest_str, APR_HASH_KEY_STRING) == NULL)
-        {
-          apr_hash_set (entries, digest_str,
-                        APR_HASH_KEY_STRING, &(digest_str)[0]);
-          write_entries_file (entries, (char *)abs_path, pool);
-        }
-      created_new_file = FALSE;
-    }
-  else /* Entries file DOES NOT exist. */
-    {
-      char *content;
-
-      content = apr_pstrcat (pool, digest_str, "\n", NULL);
-
-      SVN_ERR (svn_io_file_open (&fd, abs_path, APR_WRITE | APR_CREATE, 
-                                 APR_OS_DEFAULT, pool));
-      SVN_ERR (svn_io_file_write_full (fd, content, strlen (content), 
-                                       NULL, pool));
-      SVN_ERR (svn_io_file_close (fd, pool));
-      SVN_ERR (fix_path_perms (abs_path, fs, pool));
-      *created_new_file = TRUE;
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Create a directory at PATH with the same permissions as
    REF_PATH. */
 static svn_error_t *
@@ -331,6 +281,62 @@ make_dir (const char *path,
 
   /* Unconditionally clear the error otherwise. */
   svn_error_clear (err);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* If ABS_PATH exists, add DIGEST_STR to it iff it's not already in
+   it.  Else, create entries file for PARENT_PATH with DIGEST_STR as
+   its only member.  If a new file is created, CREATED_NEW_FILE is set
+   to TRUE. */
+static svn_error_t *
+add_hash_to_entries_file (const char *parent_path,
+                          svn_fs_t *fs,
+                          const char *digest_str,
+                          svn_boolean_t *created_new_file,
+                          apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  apr_file_t *fd;
+  const char *abs_path;
+
+  SVN_ERR (abs_path_to_lock_file (&abs_path, fs, parent_path, pool));
+
+  /* Try to open the existing entries file. */
+  SVN_ERR (read_entries_file(&entries, abs_path, NULL, pool));
+
+  if (apr_hash_count (entries)) /* We have an entries file. */
+    {
+      /* Append the MD5 hash of the next component to entries it's not
+         already in there. */
+      if (apr_hash_get (entries, digest_str, APR_HASH_KEY_STRING) == NULL)
+        {
+          apr_hash_set (entries, digest_str,
+                        APR_HASH_KEY_STRING, &(digest_str)[0]);
+          write_entries_file (entries, (char *)abs_path, pool);
+        }
+      created_new_file = FALSE;
+    }
+  else /* Entries file DOES NOT exist. */
+    {
+      char *content;
+      const char *lock_dir;
+
+      lock_dir = base_lock_dir (fs, make_digest (parent_path, pool), pool);
+
+      SVN_ERR (make_dir (lock_dir, fs->path, pool));
+
+      content = apr_pstrcat (pool, digest_str, "\n", NULL);
+
+      SVN_ERR (svn_io_file_open (&fd, abs_path, APR_WRITE | APR_CREATE, 
+                                 APR_OS_DEFAULT, pool));
+      SVN_ERR (svn_io_file_write_full (fd, content, strlen (content), 
+                                       NULL, pool));
+      SVN_ERR (svn_io_file_close (fd, pool));
+      SVN_ERR (fix_path_perms (abs_path, fs, pool));
+      *created_new_file = TRUE;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -372,9 +378,8 @@ write_lock_to_file (svn_fs_t *fs,
   const char *digest_str, *path, *parent_path, *child_path;
 
   /* Make sure that the base dir exists. */
-  SVN_ERR (base_path_to_lock_file (&abs_path, fs, pool));
-  
-  SVN_ERR (make_dir (abs_path, fs->path, pool));
+  SVN_ERR (make_dir (svn_path_join (fs->path, LOCK_ROOT_DIR, pool), 
+                     fs->path, pool));
 
   path = repository_abs_path (lock->path, pool);
   nodes = svn_path_decompose (path, pool);
@@ -393,14 +398,12 @@ write_lock_to_file (svn_fs_t *fs,
       node_name = apr_array_pop (nodes);
       SVN_ERR (merge_array_components (&parent_path, nodes, pool));
 
-      SVN_ERR (abs_path_to_lock_file (&abs_path, fs, parent_path, pool));
-
       /* Make sure we don't put the root hash in the root dir. */
       if ((strcmp (child_path, "/") == 0)
           && (strcmp (parent_path, "/") == 0))
         break;
 
-      SVN_ERR (add_hash_to_entries_file (abs_path, fs, digest_str, 
+      SVN_ERR (add_hash_to_entries_file (parent_path, fs, digest_str, 
                                          &created_new_file, pool));
       if (!created_new_file) /* We just added our entry to an existing dir. */
         break;
@@ -421,6 +424,10 @@ write_lock_to_file (svn_fs_t *fs,
               svn_time_to_cstring(lock->expiration_date, pool), pool);
 
   digest_str = make_digest (path, pool);
+
+  /* Make certain that lock subdirectory exists before writing lockfile. */
+  SVN_ERR (make_dir (base_lock_dir (fs, digest_str, pool),
+           fs->path, pool));
 
   SVN_ERR (abs_path_to_lock_file (&abs_path, fs, path, pool));
 
