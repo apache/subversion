@@ -154,6 +154,38 @@ trivial_transaction (const char **msg)
 }
 
 
+static int
+reopen_trivial_transaction (const char **msg)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+
+  *msg = "reopen and check the transaction name";
+
+  /* Open the FS. */
+  fs = svn_fs_new (pool);
+  if (fs == NULL)
+    return fail();
+
+  if (SVN_NO_ERROR != svn_fs_open_berkeley (fs, repository))
+    return fail();
+
+  /* Open the transaceion, just to make sure it's in the database. */
+  if (SVN_NO_ERROR != svn_fs_open_txn (&txn, fs, "0", pool))
+    return fail();
+
+  /* Close it. */
+  if (SVN_NO_ERROR != svn_fs_close_txn (txn))
+    return fail();
+
+  /* Close the FS. */
+  if (SVN_NO_ERROR != svn_fs_close_fs (fs))
+    return fail();
+
+  return 0;
+}
+
+
 
 /* The test table.  */
 
@@ -162,6 +194,7 @@ int (*test_funcs[]) (const char **msg) = {
   create_berkeley_filesystem,
   open_berkeley_filesystem,
   trivial_transaction,
+  reopen_trivial_transaction,
   0
 };
 
