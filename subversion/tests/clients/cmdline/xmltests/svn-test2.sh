@@ -28,8 +28,8 @@ echo
 ### Checking out.
 echo "Checking out ${TEST_DIR_1}."
 ${SVN_PROG} checkout                                      \
-      --destination ${TEST_DIR_1}                          \
-      --xml-file $XML_DIR/co1-inline.xml    \
+      --destination ${TEST_DIR_1}                         \
+      --xml-file $XML_DIR/co1-inline.xml                  \
       --revision 1                                        \
       ${ANCESTOR_PATH}
 
@@ -110,7 +110,8 @@ check_status 11
 ### Try to commit;  the conflict should abort due to conflicts.
 echo "Attempting to commit while conflicts are present:"
 ${SVN_PROG} commit  --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
-                   --revision 22 ${TEST_DIR_1}
+                   --revision 22 ${TEST_DIR_1}                 \
+2>/dev/null
 # (no check_status here, because we *expect* the commit to fail!)
 
 
@@ -124,7 +125,8 @@ check_status 12
 ### Try to commit again;  the conflict should abort due to text conflict.
 echo "Attempting to commit while conflicts are present:"
 ${SVN_PROG} commit --xml-file ${COMMIT_RESULTFILE_NAME}-1.xml \
-                   --revision 23 ${TEST_DIR_1}
+                   --revision 23 ${TEST_DIR_1}                \
+2>/dev/null
 # (no check_status here, because we *expect* the commit to fail!)
 
 
