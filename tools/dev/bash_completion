@@ -81,7 +81,8 @@ _svn()
 		cmdOpts="--force $mOpts $qOpts --targets $pOpts"
 		;;
 	diff|di)
-		cmdOpts="$rOpts -x --extensions $nOpts $pOpts"
+		cmdOpts="$rOpts -x --extensions --no-diff-deleted $nOpts \
+                         $pOpts"
 		;;
 	export)
 		cmdOpts="$rOpts $qOpts $pOpts"

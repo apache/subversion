@@ -39,6 +39,12 @@
 #include <assert.h>
 
 
+/*
+ * This string is used anywhere diff output is printed.
+ */
+static const char equal_string[] = 
+  "===================================================================";
+
 /*-----------------------------------------------------------------*/
 
 /* Utilities */
@@ -192,9 +198,8 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
     }
 
   /* Print out the diff header. */
-  SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n", path));
-  apr_file_printf (outfile, 
-     "===================================================================\n");
+  SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n%s\n",
+                               path, equal_string));
 
   label1 = diff_label (path, rev1, subpool);
   label2 = diff_label (path, rev2, subpool);
@@ -235,17 +240,30 @@ diff_file_added (svn_wc_adm_access_t *adm_access,
 }
 
 static svn_error_t *
-diff_file_deleted (svn_wc_adm_access_t *adm_access,
-                   const char *path,
-                   const char *tmpfile1,
-                   const char *tmpfile2,
-                   void *diff_baton)
+diff_file_deleted_with_diff (svn_wc_adm_access_t *adm_access,
+                             const char *path,
+                             const char *tmpfile1,
+                             const char *tmpfile2,
+                             void *diff_baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
   return diff_file_changed (adm_access, NULL, path, tmpfile1, tmpfile2, 
                             diff_cmd_baton->revnum1, diff_cmd_baton->revnum2,
                             diff_baton);
+}
+
+static svn_error_t *
+diff_file_deleted_no_diff (svn_wc_adm_access_t *adm_access,
+                           const char *path,
+                           const char *tmpfile1,
+                           const char *tmpfile2,
+                           void *diff_baton)
+{
+  printf("Index: %s (deleted)\n%s\n", path, equal_string);
+  fflush(stdout);
+
+  return SVN_NO_ERROR;
 }
 
 /* For now, let's have 'svn diff' send feedback to the top-level
@@ -298,18 +316,6 @@ diff_props_changed (svn_wc_adm_access_t *adm_access,
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
-
-/* The main callback table for 'svn diff'.  */
-static const svn_wc_diff_callbacks_t 
-diff_callbacks =
-  {
-    diff_file_changed,
-    diff_file_added,
-    diff_file_deleted,
-    diff_dir_added,
-    diff_dir_deleted,
-    diff_props_changed
-  };
 
 
 /*-----------------------------------------------------------------*/
@@ -1285,12 +1291,22 @@ svn_client_diff (const apr_array_header_t *options,
                  const char *path2,
                  const svn_opt_revision_t *revision2,
                  svn_boolean_t recurse,
+                 svn_boolean_t no_diff_deleted,
                  apr_file_t *outfile,
                  apr_file_t *errfile,
                  apr_pool_t *pool)
 {
   struct diff_cmd_baton diff_cmd_baton;
+  svn_wc_diff_callbacks_t diff_callbacks;
 
+  diff_callbacks.file_changed = diff_file_changed;
+  diff_callbacks.file_added = diff_file_added;
+  diff_callbacks.file_deleted = no_diff_deleted ? diff_file_deleted_no_diff :
+                                                  diff_file_deleted_with_diff;
+  diff_callbacks.dir_added =  diff_dir_added;
+  diff_callbacks.dir_deleted = diff_dir_deleted;
+  diff_callbacks.props_changed = diff_props_changed;
+    
   diff_cmd_baton.options = options;
   diff_cmd_baton.pool = pool;
   diff_cmd_baton.outfile = outfile;
