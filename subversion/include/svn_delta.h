@@ -760,19 +760,19 @@ svn_delta_edit_fns_t *svn_delta_old_default_editor (apr_pool_t *pool);
  * is not an error.
  */
 void
-svn_delta_compose_editors (const svn_delta_edit_fns_t **new_editor,
-                           void **new_edit_baton,
-                           const svn_delta_edit_fns_t *editor_1,
-                           void *edit_baton_1,
-                           const svn_delta_edit_fns_t *editor_2,
-                           void *edit_baton_2,
-                           apr_pool_t *pool);
+svn_delta_compose_old_editors (const svn_delta_edit_fns_t **new_editor,
+                               void **new_edit_baton,
+                               const svn_delta_edit_fns_t *editor_1,
+                               void *edit_baton_1,
+                               const svn_delta_edit_fns_t *editor_2,
+                               void *edit_baton_2,
+                               apr_pool_t *pool);
 
 
 /* Compose BEFORE_EDITOR, BEFORE_EDIT_BATON with MIDDLE_EDITOR,
  * MIDDLE_EDIT_BATON, then compose the result with AFTER_EDITOR,
  * AFTER_EDIT_BATON, all according to the conventions of
- * svn_delta_compose_editors().  Return the resulting editor in
+ * svn_delta_compose_old_editors().  Return the resulting editor in
  * *NEW_EDITOR, *NEW_EDIT_BATON.
  *
  * If either BEFORE_EDITOR or AFTER_EDITOR is null, that editor will
@@ -783,15 +783,15 @@ svn_delta_compose_editors (const svn_delta_edit_fns_t **new_editor,
  * MIDDLE_EDITOR must not be null.  I'm not going to tell you what
  * happens if it is.
  */
-void svn_delta_wrap_editor (const svn_delta_edit_fns_t **new_editor,
-                            void **new_edit_baton,
-                            const svn_delta_edit_fns_t *before_editor,
-                            void *before_edit_baton,
-                            const svn_delta_edit_fns_t *middle_editor,
-                            void *middle_edit_baton,
-                            const svn_delta_edit_fns_t *after_editor,
-                            void *after_edit_baton,
-                            apr_pool_t *pool);
+void svn_delta_wrap_old_editor (const svn_delta_edit_fns_t **new_editor,
+                                void **new_edit_baton,
+                                const svn_delta_edit_fns_t *before_editor,
+                                void *before_edit_baton,
+                                const svn_delta_edit_fns_t *middle_editor,
+                                void *middle_edit_baton,
+                                const svn_delta_edit_fns_t *after_editor,
+                                void *after_edit_baton,
+                                apr_pool_t *pool);
 
 
 /* These public structures are for use in customizing a 'pipe' editor;
@@ -870,11 +870,11 @@ struct svn_pipe_handler_wrapper
  * sending to the wrapped editor.
  */
 void 
-svn_delta_default_pipe_editor (svn_delta_edit_fns_t **new_editor,
-                               struct svn_pipe_edit_baton **new_edit_baton,
-                               const svn_delta_edit_fns_t *editor_to_wrap,
-                               void *edit_baton_to_wrap,
-                               apr_pool_t *pool);
+svn_delta_old_default_pipe_editor (svn_delta_edit_fns_t **new_editor,
+                                   struct svn_pipe_edit_baton **new_edit_baton,
+                                   const svn_delta_edit_fns_t *editor_to_wrap,
+                                   void *edit_baton_to_wrap,
+                                   apr_pool_t *pool);
 
 
 
@@ -930,12 +930,12 @@ typedef struct svn_delta_xml_parser_t svn_delta_xml_parser_t;
    callbacks.)  Additionally, this XML parser will use BASE_PATH and
    BASE_REVISION as default "context variables" when computing ancestry
    within a tree-delta. */
-svn_error_t  *svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
-                                         const svn_delta_edit_fns_t *editor,
-                                         void *edit_baton,
-                                         const char *base_path, 
-                                         svn_revnum_t base_revision,
-                                         apr_pool_t *pool);
+svn_error_t *svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
+                                        const svn_delta_edit_fns_t *editor,
+                                        void *edit_baton,
+                                        const char *base_path, 
+                                        svn_revnum_t base_revision,
+                                        apr_pool_t *pool);
 
 
 /* Destroy an svn_delta_xml_parser_t when finished with it. */

@@ -88,10 +88,10 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                          checkout_editor, checkout_edit_baton, pool);
 
   /* Wrap it up with outside editors. */
-  svn_delta_wrap_editor (&wrap_editor, &wrap_edit_baton,
-                         before_editor, before_edit_baton,
-                         wrap_editor, wrap_edit_baton,
-                         after_editor, after_edit_baton, pool);
+  svn_delta_wrap_old_editor (&wrap_editor, &wrap_edit_baton,
+                             before_editor, before_edit_baton,
+                             wrap_editor, wrap_edit_baton,
+                             after_editor, after_edit_baton, pool);
 
   /* if using an RA layer */
   if (! xml_src)

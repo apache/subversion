@@ -370,8 +370,8 @@ svn_ra_local__get_update_pipe_editor (svn_delta_edit_fns_t **editor,
   struct edit_baton *my_eb;
 
   /* Create a 'pipe' editor that wraps around the original update editor: */
-  svn_delta_default_pipe_editor (&e, &eb,
-                                 update_editor, update_edit_baton, pool);
+  svn_delta_old_default_pipe_editor (&e, &eb,
+                                     update_editor, update_edit_baton, pool);
 
   /* The default pipe editor just makes direct calls to the
      update-editor;  but we want to swap in 6 of our own functions

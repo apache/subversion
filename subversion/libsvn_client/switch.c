@@ -151,10 +151,10 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
                              switch_editor, switch_edit_baton, pool);
 
       /* Wrap it up with outside editors. */
-      svn_delta_wrap_editor (&wrap_editor, &wrap_edit_baton,
-                             before_editor, before_edit_baton,
-                             wrap_editor, wrap_edit_baton,
-                             after_editor, after_edit_baton, pool);
+      svn_delta_wrap_old_editor (&wrap_editor, &wrap_edit_baton,
+                                 before_editor, before_edit_baton,
+                                 wrap_editor, wrap_edit_baton,
+                                 after_editor, after_edit_baton, pool);
 
       /* Tell RA to do a update of URL+TARGET to REVISION; if we pass an
          invalid revnum, that means RA will use the latest revision. */

@@ -339,10 +339,10 @@ get_commit_editor (void *session_baton,
                          sess_baton->pool);
   
   /* Set up a pipeline between the editors, creating a composed editor. */
-  svn_delta_compose_editors (&composed_editor, &composed_edit_baton,
-                             wrap_cmt_editor, wrap_cmt_edit_baton,
-                             wrap_trk_editor, wrap_trk_edit_baton,
-                             sess_baton->pool);
+  svn_delta_compose_old_editors (&composed_editor, &composed_edit_baton,
+                                 wrap_cmt_editor, wrap_cmt_edit_baton,
+                                 wrap_trk_editor, wrap_trk_edit_baton,
+                                 sess_baton->pool);
 
   /* Give the magic composed-editor back to the client */
   *editor = composed_editor;

@@ -416,13 +416,13 @@ change_dir_prop (void *dir_baton,
 /*** Public interfaces. ***/
 
 void
-svn_delta_compose_editors (const svn_delta_edit_fns_t **new_editor,
-                           void **new_edit_baton,
-                           const svn_delta_edit_fns_t *editor_1,
-                           void *edit_baton_1,
-                           const svn_delta_edit_fns_t *editor_2,
-                           void *edit_baton_2,
-                           apr_pool_t *pool)
+svn_delta_compose_old_editors (const svn_delta_edit_fns_t **new_editor,
+                               void **new_edit_baton,
+                               const svn_delta_edit_fns_t *editor_1,
+                               void *edit_baton_1,
+                               const svn_delta_edit_fns_t *editor_2,
+                               void *edit_baton_2,
+                               apr_pool_t *pool)
 {
   struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
   svn_delta_edit_fns_t *editor = svn_delta_old_default_editor (pool);
@@ -456,34 +456,34 @@ svn_delta_compose_editors (const svn_delta_edit_fns_t **new_editor,
 
 
 void
-svn_delta_wrap_editor (const svn_delta_edit_fns_t **new_editor,
-                       void **new_edit_baton,
-                       const svn_delta_edit_fns_t *before_editor,
-                       void *before_edit_baton,
-                       const svn_delta_edit_fns_t *middle_editor,
-                       void *middle_edit_baton,
-                       const svn_delta_edit_fns_t *after_editor,
-                       void *after_edit_baton,
-                       apr_pool_t *pool)
+svn_delta_wrap_old_editor (const svn_delta_edit_fns_t **new_editor,
+                           void **new_edit_baton,
+                           const svn_delta_edit_fns_t *before_editor,
+                           void *before_edit_baton,
+                           const svn_delta_edit_fns_t *middle_editor,
+                           void *middle_edit_baton,
+                           const svn_delta_edit_fns_t *after_editor,
+                           void *after_edit_baton,
+                           apr_pool_t *pool)
 {
   assert (middle_editor != NULL);
 
   if (before_editor)
     {
-      svn_delta_compose_editors (new_editor, new_edit_baton,
-                                 before_editor, before_edit_baton,
-                                 middle_editor, middle_edit_baton,
-                                 pool);
+      svn_delta_compose_old_editors (new_editor, new_edit_baton,
+                                     before_editor, before_edit_baton,
+                                     middle_editor, middle_edit_baton,
+                                     pool);
       middle_editor = *new_editor;
       middle_edit_baton = *new_edit_baton;
     }
 
   if (after_editor)
     {
-      svn_delta_compose_editors (new_editor, new_edit_baton,
-                                 middle_editor, middle_edit_baton,
-                                 after_editor, after_edit_baton,
-                                 pool);
+      svn_delta_compose_old_editors (new_editor, new_edit_baton,
+                                     middle_editor, middle_edit_baton,
+                                     after_editor, after_edit_baton,
+                                     pool);
     }
 }
 
