@@ -59,7 +59,7 @@
 
 #include "svn_error.h"
 #include "svn_delta.h"
-
+#include "svn_wc.h"
 
 typedef struct svn_ra_session_t svn_ra_session_t;
 
@@ -76,9 +76,19 @@ svn_error_t * svn_ra_checkout (svn_ra_session_t *ras,
                                void *edit_baton,
                                void *dir_baton);
 
-svn_error_t * svn_ra_get_commit_editor(svn_ra_session_t *ras,
-                                       const svn_delta_edit_fns_t **editor,
-                                       void **edit_baton);
+/* Return an delta editor in *EDITOR for transmitting a commit to the
+   server.  *CLOSE_COMMIT_FN and *CLOSE_COMMIT_BATON will be set to
+   the addresses into which the driver of the editor should store the
+   addresses of a function and a baton for completing the commit.
+   This function is called with the baton and a new version number as
+   arguments, usually by (*EDITOR)->close_edit(). */ 
+svn_error_t *
+svn_ra_get_commit_editor(svn_ra_session_t *ras,
+                         svn_wc_close_commit_fn_t ***close_commit_fn,
+                         void ***close_commit_baton,
+                         const svn_delta_edit_fns_t **editor,
+                         void **edit_baton);
+
 
 svn_error_t * svn_ra_get_update_editor(const svn_delta_edit_fns_t **editor,
                                        void **edit_baton,
