@@ -53,7 +53,11 @@
 
 /*** Includes. ***/
 
+#include <assert.h>
+#include <apr_strings.h>
+#include <apr_uuid.h>
 #include "svn_wc.h"
+#include "svn_delta.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -61,7 +65,30 @@
 
 
 
-/*** Code. ***/
+/*** Helpers. ***/
+static svn_error_t *
+generic_write (void *baton,
+               const char *buffer,
+               apr_size_t *len,
+               apr_pool_t *pool)
+{
+  apr_file_t *dst = (apr_file_t *) baton;
+  apr_status_t stat;
+  
+  stat = apr_full_write (dst, buffer, (apr_size_t) *len, (apr_size_t *) len);
+  
+  if (stat && (stat != APR_EOF))
+    return
+      svn_error_create (stat, 0, NULL, pool,
+                        "error writing xml delta");
+  else 
+    return 0;  
+}
+
+
+
+
+/*** Public Interface. ***/
 
 svn_error_t *
 svn_client_commit (svn_string_t *path,
@@ -69,9 +96,60 @@ svn_client_commit (svn_string_t *path,
                    svn_vernum_t version,  /* this param is temporary */
                    apr_pool_t *pool)
 {
-  /* kff todo */
-  printf ("libsvn_client: commit %s (xml_dst == %s)\n",
-          path->data, xml_dst->data);
+  svn_error_t *err;
+  apr_status_t apr_err;
+  svn_string_t *tok;
+  apr_file_t *dst = NULL; /* old habits die hard */
+  svn_delta_edit_fns_t *editor;
+  void *edit_baton;
+
+  /* Step 1: make a unique ID for this commit. */
+#if 0  /* APR's uuid support isn't quite done yet. */
+  apr_uuid_t uuid;
+  char uuid_buf[APR_UUID_FORMATTED_LENGTH + 1];
+  apr_get_uuid (&uuid);
+  apr_format_uuid (uuid_buf, &uuid);
+  tok = svn_string_create (uuid_buf, pool);
+#else
+  tok = svn_string_create (apr_psprintf (pool, "%ld", apr_now()), pool);
+#endif /* 0 */
+
+  /* Step 2: look for local mods and send 'em out. */
+  apr_err = apr_open (&dst, xml_dst->data,
+                      (APR_WRITE | APR_CREATE),
+                      APR_OS_DEFAULT,
+                      pool);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL, pool,
+                              "error opening %s", xml_dst->data);
+
+  err = svn_delta_get_xml_editor (generic_write,
+                                  dst,
+                                  (const svn_delta_edit_fns_t **) &editor,
+                                  &edit_baton,
+                                  pool);
+  if (err)
+    return err;
+
+  if (! path)
+    path = svn_string_create (".", pool);
+  err = svn_wc_crawl_local_mods (path,
+                                 editor,
+                                 edit_baton,
+                                 tok,
+                                 pool);
+  if (err)
+    return err;
+
+  apr_err = apr_close (dst);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, NULL, pool,
+                              "error closing %s", xml_dst->data);
+  
+  /* Step 3: tell the working copy the commit succeeded. */
+  err = svn_wc_close_commit (path, tok, version, pool);
+  if (err)
+    return err;
 
   return SVN_NO_ERROR;
 }
