@@ -11,6 +11,13 @@
  * ====================================================================
  */
 
+/* This is on hold until the fs is robust and complete, at which point
+   this editor will be written using the public svn_fs.h functions
+   (i.e., the same tree.c stuff the networking layer uses).  Exercise
+   those code paths!  Exorcise those code paths! */
+
+#if 0  /* till end of file */
+
 #include "apr_pools.h"
 #include "apr_file_io.h"
 
@@ -26,6 +33,22 @@
 struct edit_baton
 {
   apr_pool_t *pool;
+
+  /* Transaction associated with this edit.
+     This is zero until the driver calls replace_root.  */
+  svn_fs_txn_t *txn;
+
+  /* The txn name.  This is just the cached result of applying
+     svn_fs_txn_name to TXN, above.
+     This is zero until the driver calls replace_root.  */
+  char *txn_name;
+
+  /* The root directory of the transaction. */
+  svn_fs_root_t *root_p;
+
+
+
+  
 
   /* Subversion file system.
      Supplied by the user when we create the editor.  */
@@ -44,14 +67,6 @@ struct edit_baton
   svn_fs_commit_hook_t *hook;
   void *hook_baton;
 
-  /* Transaction associated with this edit.
-     This is zero until the driver calls replace_root.  */
-  svn_fs_txn_t *txn;
-
-  /* The txn name.  This is just the cached result of applying
-     svn_fs_txn_name to TXN, above.
-     This is zero until the driver calls replace_root.  */
-  char *txn_name;
 };
 
 
@@ -701,6 +716,8 @@ svn_fs_get_editor (svn_delta_edit_fns_t **editor,
   return SVN_NO_ERROR;
 }
 
+
+#endif /* 0 */
 
 
 /* 
