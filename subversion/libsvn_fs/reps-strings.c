@@ -1116,6 +1116,12 @@ svn_fs__rep_contents_clear (svn_fs_t *fs,
 
 /*** Deltified storage. ***/
 
+/* Change this to 1 to test deltification/undeltification.  When we're
+   ready for it to be permanently on, we should just remove the
+   #define altogther of course. */
+#define DELTIFYING 0
+
+#if DELTIFYING
 /* Baton for svn_write_fn_t write_string(). */
 struct write_string_baton
 {
@@ -1152,6 +1158,7 @@ write_string (void *baton, const char *data, apr_size_t *len)
 
   return SVN_NO_ERROR;
 }
+#endif /* ! DELTIFYING */
 
 
 svn_error_t *
@@ -1160,8 +1167,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
                      const char *source,
                      trail_t *trail)
 {
-#if 0  /* We don't do deltification for now */
-
+#if DELTIFYING
   svn_stream_t *source_stream; /* stream to read the source */
   svn_stream_t *target_stream; /* stream to read the target */
   svn_txdelta_stream_t *txdelta_stream; /* stream to read delta windows  */
@@ -1306,11 +1312,10 @@ svn_fs__rep_deltify (svn_fs_t *fs,
     SVN_ERR (svn_fs__write_rep (fs, target, rep, trail));
     SVN_ERR (svn_fs__string_delete (fs, orig_str_key, trail));
   }
+#endif /* ! DELTIFYING */
 
-#endif /* 0 */
   return SVN_NO_ERROR;
 }
-
 
 
 
