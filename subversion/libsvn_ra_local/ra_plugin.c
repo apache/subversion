@@ -160,6 +160,9 @@ svn_ra_local__open (void **session_baton,
                                       session->pool),
              "Unable to open an ra_local session to URL");
 
+  /* Encode the repos_url into repos_root for get_repos_root. */
+  session->repos_root = svn_path_uri_encode (session->repos_url, pool);
+
   /* Cache the filesystem object from the repos here for
      convenience. */
   session->fs = svn_repos_fs (session->repos);
@@ -275,7 +278,7 @@ svn_ra_local__get_repos_root (void *session_baton,
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  *url = baton->repos_url;
+  *url = baton->repos_root;
 
   return SVN_NO_ERROR;
 }

@@ -54,6 +54,10 @@ typedef struct svn_ra_local__session_baton_t
   const char *repos_url;
   const char *fs_path;
 
+  /* repos_url, but URI-encoded. Used by svn_ra_local__get_repos_root.
+     It needs to live as long as the session. */
+  const char *repos_root;
+
   /* A repository object. */
   svn_repos_t *repos;
 
