@@ -535,7 +535,7 @@ svn_boolean_t svn_cstring_match_glob_list (const char *str,
 
 int svn_cstring_count_newlines (const char *msg)
 {
-  int count = 1;
+  int count = 0;
   const char *p;
 
   for (p = msg; *p; p++)

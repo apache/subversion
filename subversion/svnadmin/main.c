@@ -1015,7 +1015,7 @@ subcommand_lslocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       else
         exp_date = _("never");
 
-      comment_lines = svn_cstring_count_newlines (lock->comment);
+      comment_lines = svn_cstring_count_newlines (lock->comment) + 1;
 
       SVN_ERR (svn_cmdline_printf (pool, _("Path: %s\n"), path));
       SVN_ERR (svn_cmdline_printf (pool, _("UUID Token: %s\n"), lock->token));

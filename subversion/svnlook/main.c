@@ -1771,7 +1771,7 @@ subcommand_lock (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       SVN_ERR (svn_cmdline_printf (pool,
                                    _("Expires: %s\n"), exp_date));
 
-      comment_lines = svn_cstring_count_newlines (lock->comment);
+      comment_lines = svn_cstring_count_newlines (lock->comment) + 1;
       SVN_ERR (svn_cmdline_printf (pool,
                                    _("Comment: (%i %s)\n%s\n"),
                                    comment_lines, 
