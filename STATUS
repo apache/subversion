@@ -37,8 +37,7 @@ Candidate changes:
     Justification: It is not possible to build the SWIG Java bindings
     without this fix.
     Votes:
-      +1: dlr
-      +1: breser
+      +1: dlr, breser
 
   * r9315
     Change the formating codes used in svn_swig_pl_callback_thunk.
@@ -51,4 +50,4 @@ Candidate changes:
     Justification: 0.24.4 has a security issue.  See
     http://cve.mitre.org/cgi-bin/cvename.cgi?name=CAN-2004-0179
     Votes:
-      +1: blair
+      +1: blair, dlr
