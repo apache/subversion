@@ -54,12 +54,3 @@ Candidate changes:
     Justification: If you can set it you should be able to read it.
     Votes:
       +1: breser, sussman
-
-  * r10183, r10184, r10216
-    mod_authz_svn security hole:  check access on *whole tree* when authorizing
-                                  COPY or DELETE requests.
-    Justification: hole allows users to copy trees that aren't 100% readable,
-                   thereby circumventing read-restriction on subtrees.
-    Votes:
-      +0: sussman (not yet reviewed)
-      +1: striker, breser

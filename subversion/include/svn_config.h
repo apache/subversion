@@ -186,6 +186,26 @@ void svn_config_set_bool (svn_config_t *cfg,
                           const char *section, const char *option,
                           svn_boolean_t value);
 
+/** A callback function used in enumerating config sections.
+ *
+ * See @c svn_config_enumerate_sections for the details of this type.
+ */
+typedef svn_boolean_t (*svn_config_section_enumerator_t)
+       (const char *name, void *baton);
+
+/** Enumerate the sections, passing @a baton and the current section's name to
+ * @a callback.  Continue the enumeration if @a callback returns @c TRUE.
+ * Return the number of times @a callback was called.
+ *
+ * ### See kff's comment to @c svn_config_enumerate.  It applies to this
+ * function, too. ###
+ *
+ * @a callback's @a name and @a name parameters are only valid for the
+ * duration of the call.
+ */
+int svn_config_enumerate_sections (svn_config_t *cfg, 
+                                   svn_config_section_enumerator_t callback,
+                                   void *baton);
 
 /** A callback function used in enumerating config options.
  *
@@ -207,7 +227,7 @@ typedef svn_boolean_t (*svn_config_enumerator_t)
  *     of an enumeration early, with no error, than an invocation of
  *     @a callback is likely to need to return an error? ###
  *
- * @a callback's @a name and @a name parameters are only valid for the
+ * @a callback's @a name and @a value parameters are only valid for the
  * duration of the call.
  */
 int svn_config_enumerate (svn_config_t *cfg, const char *section,
