@@ -76,8 +76,11 @@ typedef struct svn_cl__opt_state_t
 /* All client command procedures conform to this prototype.
  * OPT_STATE likewise should hold the result of processing the options.
  * TARGETS is an apr array of filenames and directories, a-la CVS.
- * (kff todo: document TARGETS more formally.)
- */
+ *
+ * TARGETS is normalized by main before being passed to any command
+ * (with the exception of svn_cl__help, which will oftentime be passed
+ * an empty array of targets. That is, all duplicates are removed, and
+ * all paths are made relative to the working copy root directory). */
 typedef svn_error_t *(svn_cl__cmd_proc_t) (svn_cl__opt_state_t *opt_state,
                                            apr_array_header_t *targets,
                                            apr_pool_t *pool);
