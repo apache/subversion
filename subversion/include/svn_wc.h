@@ -125,8 +125,7 @@ svn_error_t *svn_wc_adm_open3 (svn_wc_adm_access_t **adm_access,
 /**
  * @deprecated Provided for backward compatibility with the 1.1 API.
  *
- * Similar to svn_wc_adm_open3().  @a depth is set to -1 if tree_lock
- * is @c TRUE, else 0.
+ * Similar to @c svn_wc_adm_open3(), but without cancellation support.
  */
 svn_error_t *svn_wc_adm_open2 (svn_wc_adm_access_t **adm_access,
                                svn_wc_adm_access_t *associated,
@@ -138,8 +137,8 @@ svn_error_t *svn_wc_adm_open2 (svn_wc_adm_access_t **adm_access,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_wc_adm_open3().  @a depth is set to -1 if @a tree_lock
- * is @c TRUE, else 0.
+ * Similar to @c svn_wc_adm_open2(), but with @a tree_lock instead of
+ * @a depth.  @a depth is set to -1 if @a tree_lock is @c TRUE, else 0.
  */
 svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                               svn_wc_adm_access_t *associated,
@@ -186,8 +185,8 @@ svn_error_t *svn_wc_adm_probe_open2 (svn_wc_adm_access_t **adm_access,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_wc_adm_probe_open3().  @a depth is set to -1 if
- * @a tree_lock is @c TRUE, else 0.
+ * Similar to @c svn_wc_adm_probe_open2(), but with @a tree_lock instead of
+ * @a depth.  @a depth is set to -1 if @a tree_lock is @c TRUE, else 0.
  */
 svn_error_t *svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
                                     svn_wc_adm_access_t *associated,
@@ -301,8 +300,8 @@ svn_error_t *svn_wc_adm_probe_try2 (svn_wc_adm_access_t **adm_access,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_wc_adm_probe_try3().  @a depth is set to -1 if
- * @a tree_lock is @c TRUE, else 0.
+ * Similar to @c svn_wc_adm_probe_try2(), but with @a tree_lock instead of
+ * @a depth.  @a depth is set to -1 if @a tree_lock is @c TRUE, else 0.
  */
 svn_error_t *svn_wc_adm_probe_try (svn_wc_adm_access_t **adm_access,
                                    svn_wc_adm_access_t *associated,
