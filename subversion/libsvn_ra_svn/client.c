@@ -628,6 +628,17 @@ static svn_error_t *ra_svn_open(void **baton, const char *url,
   /* Read the repository's uuid. */
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c?c", &conn->uuid,
                                        &conn->repos_root));
+  if (conn->repos_root)
+    {
+      conn->repos_root = svn_path_canonicalize(conn->repos_root, pool);
+      /* We should check that the returned string is a prefix of url, since
+         that's the API guarantee, but this isn't true for 1.0 servers.
+         Checking the length prevents client crashes. */
+      if (strlen(conn->repos_root) > strlen(url))
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                _("Impossibly long repository root from "
+                                  "server"));
+    }
 
   *baton = sess;
   return SVN_NO_ERROR;
@@ -885,6 +896,7 @@ static svn_error_t *ra_svn_get_dir(void *baton, const char *path,
       SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cwnbr(?c)(?c)",
                                      &name, &kind, &size, &has_props,
                                      &crev, &cdate, &cauthor));
+      name = svn_path_canonicalize(name, pool);
       dirent = apr_palloc(pool, sizeof(*dirent));
       SVN_ERR(interpret_kind(kind, pool, &dirent->kind));
       dirent->size = size;/* FIXME: svn_filesize_t */
@@ -1049,6 +1061,9 @@ static svn_error_t *ra_svn_log(void *baton, const apr_array_header_t *paths,
               SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, subpool, "cw(?cr)",
                                              &cpath, &action, &copy_path,
                                              &copy_rev));
+              cpath = svn_path_canonicalize(cpath, subpool);
+              if (copy_path)
+                copy_path = svn_path_canonicalize(copy_path, subpool);
               change = apr_palloc(subpool, sizeof(*change));
               change->action = *action;
               change->copyfrom_path = copy_path;
@@ -1135,6 +1150,7 @@ static svn_error_t *ra_svn_get_locations(void *session_baton,
         {
           SVN_ERR(svn_ra_svn_parse_tuple (item->u.list, pool, "rc",
                                           &revision, &ret_path));
+          ret_path = svn_path_canonicalize(ret_path, pool);
           apr_hash_set(*locations, apr_pmemdup(pool, &revision,
                                                sizeof(revision)),
                        sizeof(revision), ret_path);
@@ -1201,6 +1217,7 @@ static svn_error_t *ra_svn_get_file_revs(void *session_baton, const char *path,
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, rev_pool,
                                      "crll", &p, &rev, &rev_proplist,
                                      &proplist));
+      p = svn_path_canonicalize(p, rev_pool);
       SVN_ERR(parse_proplist(rev_proplist, rev_pool, &rev_props));
       SVN_ERR(parse_prop_diffs(proplist, rev_pool, &props));
 

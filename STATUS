@@ -70,9 +70,3 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: cmpilato, kfogel, jerenkrantz
 
-  * r12063, r12084 (Issue #2119)
-    Canonicalize paths received over the wire in ra_svn and svnserve.
-    Justification:
-      Protects against API violations, which lead to assertion failures.
-    Votes:
-      +1: lundblad, epg, ghudson

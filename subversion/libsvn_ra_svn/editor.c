@@ -30,6 +30,7 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_ra_svn.h"
 #include "svn_pools.h"
@@ -430,6 +431,7 @@ static svn_error_t *ra_svn_handle_delete_entry(svn_ra_svn_conn_t *conn,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)c", &path, &rev, &token));
   SVN_ERR(lookup_token(ds, token, &entry, pool));
+  path = svn_path_canonicalize(path, entry->pool);
   SVN_CMD_ERR(ds->editor->delete_entry(path, rev, entry->baton, entry->pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
@@ -451,6 +453,9 @@ static svn_error_t *ra_svn_handle_add_dir(svn_ra_svn_conn_t *conn,
                                  &child_token, &copy_path, &copy_rev));
   SVN_ERR(lookup_token(ds, token, &entry, pool));
   subpool = svn_pool_create(entry->pool);
+  path = svn_path_canonicalize(path, subpool);
+  if (copy_path)
+    copy_path = svn_path_canonicalize(copy_path, subpool);
   SVN_CMD_ERR(ds->editor->add_directory(path, entry->baton, copy_path,
                                         copy_rev, subpool, &child_baton));
   store_token(ds, child_baton, child_token, subpool);
@@ -474,6 +479,7 @@ static svn_error_t *ra_svn_handle_open_dir(svn_ra_svn_conn_t *conn,
                                  &child_token, &rev));
   SVN_ERR(lookup_token(ds, token, &entry, pool));
   subpool = svn_pool_create(entry->pool);
+  path = svn_path_canonicalize(path, subpool);
   SVN_CMD_ERR(ds->editor->open_directory(path, entry->baton, rev, subpool,
                                          &child_baton));
   store_token(ds, child_baton, child_token, subpool);
@@ -542,6 +548,9 @@ static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
 
   /* File may outlive parent directory, so use ds->pool here. */
   subpool = svn_pool_create(ds->pool);
+  path = svn_path_canonicalize(path, subpool);
+  if (copy_path)
+    copy_path = svn_path_canonicalize(copy_path, subpool);
   file_entry = store_token(ds, NULL, file_token, subpool);
   file_entry->err = ds->editor->add_file(path, entry->baton, copy_path,
                                          copy_rev, subpool,
@@ -566,6 +575,7 @@ static svn_error_t *ra_svn_handle_open_file(svn_ra_svn_conn_t *conn,
 
   /* File may outlive parent directory, so use ds->pool here. */
   subpool = svn_pool_create(ds->pool);
+  path = svn_path_canonicalize(path, subpool);
   file_entry = store_token(ds, NULL, file_token, subpool);
   file_entry->err = ds->editor->open_file(path, entry->baton, rev, subpool,
                                           &file_entry->baton);
