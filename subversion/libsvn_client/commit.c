@@ -99,10 +99,17 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
     {
       void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
+      svn_wc_entry_t *entry;
+      const char *URL;
 
       /* Construct full URL from PATH. */
       /* todo:  API here??  need to get from working copy. */
-      const char *URL = "";
+      SVN_ERR (svn_wc_entry (&entry, path, pool));
+      URL = entry->ancestor->data;
+
+      /* Make sure our log message at least exists, even if empty. */
+      if (! log_msg)
+        log_msg = svn_string_create ("", pool);
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
