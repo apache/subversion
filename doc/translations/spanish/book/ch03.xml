@@ -1085,12 +1085,11 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
           <computeroutput>M&nbsp;&nbsp;+</computeroutput> significa que
           el objeto es parte de un subárbol programado para la
           adición-con-historial, <emphasis>y</emphasis> este tiene
-          modificaciones locales. Cuando envie los cambios<!--TODO:commit-->
-          , primero el padre será añadido-con-historial (copiado),
+          modificaciones locales. Cuando envie los cambios,
+          primero el padre será añadido-con-historial (copiado),
           lo que significa que este fichero existirá automaticamente
           en la copia. Entonces las modificaciones locales serán
-          subidas en la copia<!--TODO:will be uploaded into the
-          copy-->.</para>
+          enviadas al repositorio.</para>
 
         <para>La quinta columna solo mostrará un espacio en blanco o
           una <computeroutput>S</computeroutput>. Esto significa que
