@@ -115,10 +115,11 @@ static const struct special_defn
   { NULL }
 };
 
-static dav_resource * dav_svn_get_resource(request_rec *r,
-                                           const char *root_uri,
-                                           const char *target,
-                                           int is_label)
+static dav_error * dav_svn_get_resource(request_rec *r,
+                                        const char *root_uri,
+                                        const char *target,
+                                        int is_label,
+                                        dav_resource **resource)
 {
   const char *fs_path;
   dav_resource_combined *comb;
@@ -133,13 +134,12 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
 
   if ((fs_path = dav_svn_get_fs_path(r)) == NULL)
     {
-      /* ### return an error rather than log it? */
-      ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO,
-                    SVN_ERR_APMOD_MISSING_PATH_TO_FS, r,
-                    "The server is misconfigured: an SVNPath directive is "
-                    "required to specify the location of this resource's "
-                    "repository.");
-      return NULL;
+      /* ### are SVN_ERR_APMOD codes within the right numeric space? */
+      return dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                           SVN_ERR_APMOD_MISSING_PATH_TO_FS,
+                           "The server is misconfigured: an SVNPath "
+                           "directive is required to specify the location "
+                           "of this resource's repository.");
     }
 
   comb = apr_pcalloc(r->pool, sizeof(*comb));
@@ -207,11 +207,10 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
   serr = svn_fs_open_berkeley(repos->fs, fs_path);
   if (serr != NULL)
     {
-      /* ### do something with serr */
-      /* ### return an error rather than log it? */
-      ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO, serr->apr_err, r,
-                    "Could not open the SVN filesystem at %s", fs_path);
-      return NULL;
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 apr_psprintf(r->pool,
+                                              "Could not open the SVN "
+                                              "filesystem at %s", fs_path));
     }
 
 
@@ -282,12 +281,9 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
 #endif
       if (serr != NULL)
         {
-          /* ### do something with serr */
-          /* ### return an error rather than log it? */
-          ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO,
-                        serr->apr_err, r,
-                        "Could not determine the proper revision to access");
-          return NULL;
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Could not determine the proper "
+                                     "revision to access");
         }
 
       /* get the root of the tree */
@@ -300,12 +296,9 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
 #endif
       if (serr != NULL)
         {
-          /* ### do something with serr */
-          /* ### return an error rather than log it? */
-          ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO,
-                        serr->apr_err, r,
-                        "Could not open the root of the repository");
-          return NULL;
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Could not open the root of the "
+                                     "repository");
         }
 
       /* open the node itself */
@@ -325,12 +318,11 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
                                   relative + 1, r->pool);
           if (serr != NULL)
             {
-              /* ### do something with serr */
-              /* ### return an error rather than log it? */
-              ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO,
-                            serr->apr_err, r,
-                            "Could not open the resource '%s'", relative);
-              return NULL;
+              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                         apr_psprintf(r->pool,
+                                                      "Could not open the "
+                                                      "resource '%s'",
+                                                      relative));
             }
 
           comb->res.collection = svn_fs_node_is_dir(comb->priv.node);
@@ -355,33 +347,38 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
      ### as "versioned"? */
   comb->res.versioned = TRUE;
 
-  return &comb->res;
+  *resource = &comb->res;
+  return NULL;
 
  malformed_URI:
   /* A malformed URI error occurs when a URI indicates the "special" area,
      yet it has an improper construction. Generally, this is because some
      doofus typed it in manually or has a buggy client. */
-  /* ### return an error rather than log it? */
-  ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO,
-                SVN_ERR_APMOD_MALFORMED_URI, r,
-                "The URI indicated a resource within Subversion's special "
-                "resource area, but does not exist. This is generally "
-                "caused by a problem in the client software.");
-
-  /* FALLTHROUGH */
+  /* ### are SVN_ERR_APMOD codes within the right numeric space? */
+  return dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                       SVN_ERR_APMOD_MALFORMED_URI,
+                       "The URI indicated a resource within Subversion's "
+                       "special resource area, but does not exist. This is "
+                       "generally caused by a problem in the client "
+                       "software.");
 
  unknown_URI:
   /* Unknown URI. Return NULL to indicate "no resource" */
+  *resource = NULL;
   return NULL;
 }
 
-static dav_resource * dav_svn_get_parent_resource(const dav_resource *resource)
+static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
+                                               dav_resource **parent_resource)
 {
   svn_string_t *path = resource->info->path;
 
   /* the root of the repository has no parent */
   if (path->len == 1 && *path->data == '/')
-    return NULL;
+    {
+      *parent_resource = NULL;
+      return NULL;
+    }
 
   /* ### fill this in */
   /* ### note: only needed for methods which modify the repository */
