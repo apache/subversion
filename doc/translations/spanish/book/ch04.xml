@@ -530,13 +530,14 @@ Changed paths:
         <emphasis>antes</emphasis> de que comience a trabajar de
         forma intensiva en el mismo sitio.</para>
 
-      <para>It's time to use the <command>svn merge</command> command.
-        This command, it turns out, is a very close cousin to the
-        <command>svn diff</command> command (which you read about in
-        Chapter 3).  Both commands are able to compare any two objects
-        in the repository and describe the differences.  For example,
-        you can ask <command>svn diff</command> to show you the exact
-        change made by Sally in revision 344:</para>
+      <para>Es el momento de usar el comando <command>svn
+        merge</command>.  Este comando, descubrirá que es un primo
+        cercano del comando <command>svn diff</command> (sobre
+        el cual leímos en el tercer capítulo). Ambos comandos son
+        capaces de comparar dos objetos cualquiera del repositorio
+        y describir sus diferencias.  Por ejemplo, puede preguntar a
+        <command>svn diff</command> que le muestre el cambio exacto
+        realizaod por Sally en la revisión 344:</para>
 
 <screen>
 $ svn diff -r 343:344 http://svn.example.com/repos/calc/trunk
@@ -583,10 +584,11 @@ Index: integer.c
      printf("error: fseek() returned non-zero\n");
 </screen>
       
-      <para>The <command>svn merge</command> is almost exactly the
-        same.  Instead of printing the differences to your terminal,
-        however, it applies them directly to your working copy as
-        <emphasis>local modifications</emphasis>:</para>
+      <para>El comando <command>svn merge</command> es casi
+        exáctamente idéntico.  En lugar de mostrar las diferencias
+        en su terminal, no obstante, las aplica directamente
+        a su copia local como <emphasis>modificaciones
+        locales</emphasis>:</para>
     
 <screen>
 $ svn merge -r 343:344 http://svn.example.com/repos/calc/trunk
