@@ -33,6 +33,7 @@
 #include "svn_io.h"
 #include "svn_pools.h"
 #include "diff.h"
+#include "svn_private_config.h"
 
 
 typedef struct svn_diff__file_token_t
@@ -1165,7 +1166,7 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
           apr_status_t rv = apr_mmap_delete(mm[idx]);
           if (rv != APR_SUCCESS)
             {
-              return svn_error_wrap_apr(rv, "Failed to delete mmap '%s'",
+              return svn_error_wrap_apr(rv, _("Failed to delete mmap '%s'"),
                                         baton.path[idx]);
             }
         }

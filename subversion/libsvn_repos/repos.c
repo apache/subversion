@@ -145,7 +145,7 @@ create_repos_dir (const char *path, apr_pool_t *pool)
         err = NULL;
       else
         err = svn_error_createf (SVN_ERR_DIR_NOT_EMPTY, 0,
-                                 "'%s' exists and is non-empty",
+                                 _("'%s' exists and is non-empty"),
                                  path);
     }
 
@@ -169,7 +169,7 @@ create_db_logs_lock (svn_repos_t *repos, apr_pool_t *pool) {
     "You should never have to edit or remove this file.\n";
 
   SVN_ERR_W (svn_io_file_create (lockfile_path, contents, pool),
-             "Creating db logs lock file");
+             _("Creating db logs lock file"));
 
   return SVN_NO_ERROR;
 }
@@ -194,7 +194,7 @@ create_db_lock (svn_repos_t *repos, apr_pool_t *pool) {
       "You should never have to edit or remove this file.\n";
     
   SVN_ERR_W (svn_io_file_create (lockfile_path, contents, pool),
-             "Creating db lock file");
+             _("Creating db lock file"));
     
   return SVN_NO_ERROR;
 }
@@ -204,7 +204,7 @@ create_locks (svn_repos_t *repos, apr_pool_t *pool)
 {
   /* Create the locks directory. */
   SVN_ERR_W (create_repos_dir (repos->lock_path, pool),
-             "Creating lock dir");
+             _("Creating lock dir"));
 
   SVN_ERR (create_db_lock (repos, pool));
   SVN_ERR (create_db_logs_lock (repos, pool));
@@ -220,7 +220,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
 
   /* Create the hook directory. */
   SVN_ERR_W (create_repos_dir (repos->hook_path, pool),
-             "Creating hook directory");
+             _("Creating hook directory"));
 
   /*** Write a default template for each standard hook file. */
 
@@ -321,7 +321,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR;
 
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
-              "Creating start-commit hook");
+               _("Creating start-commit hook"));
   }  /* end start-commit hook */
 
   /* Pre-commit hook. */
@@ -453,7 +453,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR;
     
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
-               "Creating pre-commit hook");
+               _("Creating pre-commit hook"));
   }  /* end pre-commit hook */
 
 
@@ -580,7 +580,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR;
     
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
-              "Creating pre-revprop-change hook");
+               _("Creating pre-revprop-change hook"));
   }  /* end pre-revprop-change hook */
 
 
@@ -676,7 +676,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR;
 
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
-               "Creating post-commit hook");
+               _("Creating post-commit hook"));
   } /* end post-commit hook */
 
 
@@ -783,7 +783,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR;
 
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
-               "Creating post-revprop-change hook");
+               _("Creating post-revprop-change hook"));
   } /* end post-revprop-change hook */
 
   return SVN_NO_ERROR;
@@ -793,7 +793,7 @@ static svn_error_t *
 create_conf (svn_repos_t *repos, apr_pool_t *pool)
 {
   SVN_ERR_W (create_repos_dir (repos->conf_path, pool),
-             "Creating conf directory");
+             _("Creating conf directory"));
 
   /* Write a default template for svnserve.conf. */
   {
@@ -845,7 +845,7 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
 
     SVN_ERR_W (svn_io_file_create (svn_repos_svnserve_conf (repos, pool),
                                    svnserve_conf_contents, pool),
-               "Creating svnserve.conf file");
+               _("Creating svnserve.conf file"));
   }
 
   {
@@ -870,7 +870,7 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
                                                   SVN_REPOS__CONF_PASSWD,
                                                   pool),
                                    passwd_contents, pool),
-               "Creating passwd file");
+               _("Creating passwd file"));
   }
 
 
@@ -896,11 +896,11 @@ create_repos_structure (svn_repos_t *repos,
 {
   /* Create the top-level repository directory. */
   SVN_ERR_W (create_repos_dir (path, pool),
-             "Could not create top-level directory");
+             _("Could not create top-level directory"));
 
   /* Create the DAV sandbox directory.  */
   SVN_ERR_W (create_repos_dir (repos->dav_path, pool),
-             "Creating DAV sandbox dir");
+             _("Creating DAV sandbox dir"));
 
   /* Create the lock directory.  */
   SVN_ERR (create_locks (repos, pool));
@@ -943,7 +943,7 @@ create_repos_structure (svn_repos_t *repos,
       APR_EOL_STR;
 
     SVN_ERR_W (svn_io_file_create (readme_file_name, readme_contents, pool),
-               "Creating readme file");
+               _("Creating readme file"));
   }
 
   /* Write the top-level FORMAT file. */
@@ -974,7 +974,7 @@ svn_repos_create (svn_repos_t **repos_p,
 
   /* Create the various files and subdirectories for the repository. */
   SVN_ERR_W (create_repos_structure (repos, path, pool),
-             "Repository creation failed");
+             _("Repository creation failed"));
   
   /* Create a Berkeley DB environment for the filesystem. */
   SVN_ERR (svn_fs_create (&repos->fs, repos->db_path, fs_config, pool));
@@ -1036,7 +1036,7 @@ check_repos_version (const char *path,
   if (version != SVN_REPOS__VERSION)
     return svn_error_createf 
       (SVN_ERR_REPOS_UNSUPPORTED_VERSION, NULL,
-       "Expected version '%d' of repository; found version '%d'", 
+       _("Expected version '%d' of repository; found version '%d'"), 
        SVN_REPOS__VERSION, version);
 
   return SVN_NO_ERROR;
@@ -1081,7 +1081,7 @@ get_repos (svn_repos_t **repos_p,
     err = svn_io_file_lock2 (lockfile_path, exclusive, nonblocking, pool);
     if (err != NULL && APR_STATUS_IS_EAGAIN (err->apr_err))
       return err;
-    SVN_ERR_W (err, "Error opening db lockfile");
+    SVN_ERR_W (err, _("Error opening db lockfile"));
   }
 
   /* Open up the Berkeley filesystem only after obtaining the lock. */

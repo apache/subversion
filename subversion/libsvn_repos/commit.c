@@ -30,6 +30,7 @@
 #include "svn_repos.h"
 #include "svn_md5.h"
 #include "svn_props.h"
+#include "svn_private_config.h"
 
 
 
@@ -113,7 +114,7 @@ static svn_error_t *
 out_of_date (const char *path, const char *txn_name)
 {
   return svn_error_createf (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
-                            "Out of date: '%s' in transaction '%s'",
+                            _("Out of date: '%s' in transaction '%s'"),
                             path, txn_name);
 }
 
@@ -220,7 +221,7 @@ add_directory (const char *path,
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
     return svn_error_createf 
       (SVN_ERR_FS_GENERAL, NULL,
-       "Got source path but no source revision for '%s'", full_path);
+       _("Got source path but no source revision for '%s'"), full_path);
 
   if (copy_path)
     {
@@ -244,7 +245,7 @@ add_directory (const char *path,
       if (strncmp (copy_path, eb->repos_url, repos_url_len) != 0)
         return svn_error_createf 
           (SVN_ERR_FS_GENERAL, NULL,
-           "Source url '%s' is from different repository", full_path);
+           _("Source url '%s' is from different repository"), full_path);
 
       fs_path = apr_pstrdup (subpool, copy_path + repos_url_len);
 
@@ -352,7 +353,7 @@ add_file (const char *path,
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
     return svn_error_createf 
       (SVN_ERR_FS_GENERAL, NULL,
-       "Got source path but no source revision for '%s'", full_path);
+       _("Got source path but no source revision for '%s'"), full_path);
 
   if (copy_path)
     {      
@@ -376,7 +377,7 @@ add_file (const char *path,
       if (strncmp (copy_path, eb->repos_url, repos_url_len) != 0)
             return svn_error_createf 
               (SVN_ERR_FS_GENERAL, NULL,
-               "Source url '%s' is from different repository", full_path);
+               _("Source url '%s' is from different repository"), full_path);
       
       fs_path = apr_pstrdup (subpool, copy_path + repos_url_len);
 
@@ -482,10 +483,10 @@ close_file (void *file_baton,
         {
           return svn_error_createf
             (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-             "Checksum mismatch for resulting fulltext\n"
-             "(%s):\n"
-             "   expected checksum:  %s\n"
-             "   actual checksum:    %s\n",
+             _("Checksum mismatch for resulting fulltext\n"
+               "(%s):\n"
+               "   expected checksum:  %s\n"
+               "   actual checksum:    %s\n"),
              fb->path, text_checksum, hex_digest);
         }
     }
