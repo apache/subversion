@@ -211,14 +211,6 @@ svn_io_copy_file (const char *src,
   const char *src_native, *dst_native;
   const char *dst_tmp;
 
-  /* ### FIXME: apr_file_copy with perms may fail on Win32.  We need a
-     platform-specific implementation to get the permissions right. */
-#ifndef SVN_WIN32
-  apr_int32_t perms = copy_perms ? APR_FILE_SOURCE_PERMS : APR_OS_DEFAULT;
-#else
-  apr_int32_t perms = APR_OS_DEFAULT;
-#endif
-
   SVN_ERR (svn_utf_cstring_from_utf8 (&src_native, src, pool));
   SVN_ERR (svn_utf_cstring_from_utf8 (&dst_native, dst, pool));
 
@@ -236,11 +228,63 @@ svn_io_copy_file (const char *src,
          "svn_io_copy_file: error closing %s", dst_tmp);
     }
 
-  apr_err = apr_file_copy (src_native, dst_tmp, perms, pool);
+  apr_err = apr_file_copy (src_native, dst_tmp, APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_createf
       (apr_err, 0, NULL, "svn_io_copy_file: error copying %s to %s",
        src_native, dst_tmp);
+
+  /* If copying perms, set the perms on dst_tmp now, so they will be
+     atomically inherited in the upcoming rename.  But note that we
+     had to wait until now to set perms, because if they say
+     read-only, then we'd have failed filling dst_tmp's contents. */
+
+  /* ### FIXME: apr_file_copy with perms may fail on Win32.  We need a
+     platform-specific implementation to get the permissions right. */
+#ifndef SVN_WIN32
+  if (copy_perms)
+    {
+      apr_file_t *s;
+      apr_finfo_t finfo;
+
+      apr_err = apr_file_open (&s, src_native, APR_READ, APR_OS_DEFAULT, pool);
+      if (apr_err)
+        return svn_error_createf
+          (apr_err, 0, NULL,
+           "svn_io_copy_file: opening %s for perms", src_native);
+
+      apr_err = apr_file_info_get (&finfo, APR_FINFO_PROT, s);
+      if (apr_err)
+        {
+          apr_file_close (s);  /* toss any error */
+          return svn_error_createf
+            (apr_err, 0, NULL,
+             "svn_io_copy_file: getting perm info for %s", src_native);
+        }
+
+      apr_err = apr_file_close (s);
+      if (apr_err)
+        return svn_error_createf
+          (apr_err, 0, NULL,
+           "svn_io_copy_file: closing %s after reading perms", src_native);
+
+      apr_err = apr_file_perms_set (dst_tmp, finfo.protection);
+
+      /* We shouldn't be able to get APR_INCOMPLETE or APR_ENOTIMPL
+         here under normal circumstances, because the perms themselves
+         came from a call to apr_file_info_get(), and we already know
+         this is the non-Win32 case.  But if it does happen, it's not
+         an error. */ 
+      if ((apr_err != APR_SUCCESS)
+          && (apr_err != APR_INCOMPLETE)
+          && (apr_err != APR_ENOTIMPL))
+        {
+          return svn_error_createf
+            (apr_err, 0, NULL,
+             "svn_io_copy_file: setting perms on %s", dst_tmp);
+        }
+    }
+#endif /* ! SVN_WIN32 */
 
   /* We already have the dst_tmp filename in native encoding, so call
      apr_file_rename directly, instead of svn_io_file_rename. */
