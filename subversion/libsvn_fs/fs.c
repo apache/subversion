@@ -27,6 +27,7 @@
 #include "nodes-table.h"
 #include "rev-table.h"
 #include "txn-table.h"
+#include "strings-table.h"
 #include "dag.h"
 #include "svn_private_config.h"
 
@@ -318,6 +319,10 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   svn_err = DB_WRAP (fs, "creating `transactions' table",
                      svn_fs__open_transactions_table (&fs->transactions,
                                                       fs->env, 1));
+  if (svn_err) goto error;
+  svn_err = DB_WRAP (fs, "creating `strings' table",
+                     svn_fs__open_strings_table (&fs->strings,
+                                                 fs->env, 1));
   if (svn_err) goto error;
   svn_err = svn_fs__dag_init_fs (fs);
   if (svn_err) goto error;
