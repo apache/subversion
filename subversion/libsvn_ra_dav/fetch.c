@@ -2047,7 +2047,7 @@ static int end_element(void *userdata,
 
       /* close the topmost directory, and pop it from the stack */
       CHKERR( (*rb->editor->close_directory)(TOP_DIR(rb).baton) );
-      --rb->dirs->nelts;
+      apr_array_pop(rb->dirs);
       break;
 
     case ELEM_add_file:

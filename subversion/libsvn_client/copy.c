@@ -286,7 +286,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
     {
       svn_path_split_nts (dst_url, &unused, &base_name, pool);
       if (dst_pieces)
-        dst_pieces->nelts--; /* hack - where's apr_array_pop()? */
+        apr_array_pop (dst_pieces);
     }
   else if (dst_kind == svn_node_dir)
     {
