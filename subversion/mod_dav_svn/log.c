@@ -34,9 +34,6 @@
 
 struct log_receiver_baton
 {
-  /* True on the first call to receiver. */
-  svn_boolean_t first_call;
-
   /* Where to store the output for sending. */
   /* ### todo: Make this a file instead of an apr_text_header, because
      it can grow quite large.  NO, WAIT, we won't even do that --
@@ -69,18 +66,9 @@ static svn_error_t * log_receiver(void *baton,
                                   svn_revnum_t rev,
                                   const char *author,
                                   const char *date,
-                                  const char *msg,
-                                  svn_boolean_t last_call)
+                                  const char *msg)
 {
   struct log_receiver_baton *lrb = baton;
-
-  if (lrb->first_call)
-    {
-      send_xml(lrb,
-               "<S:log-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-               "xmlns:D=\"DAV:\">" DEBUG_CR);
-      lrb->first_call = 0;
-    }
 
   send_xml(lrb,
            "<S:log-item>" DEBUG_CR
@@ -125,9 +113,6 @@ static svn_error_t * log_receiver(void *baton,
     }
 
   send_xml(lrb, "</S:log-item>" DEBUG_CR);
-
-  if (last_call)
-    send_xml(lrb, "</S:log-report>" DEBUG_CR);
 
   return SVN_NO_ERROR;
 }
@@ -191,21 +176,29 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
         }
       else if (strcmp(child->name, "path") == 0)
         {
-          /* ### Presumably, we can see the "path" element multiple
-             times, adding the corresponding value to `paths' each
-             time? */
+          /* Convert these relative paths to absolute paths in the
+             repository. */
 
-          target = svn_stringbuf_create (child->first_cdata.first->text,
+          target = svn_stringbuf_create (resource->info->repos_path,
                                          resource->pool);
+          svn_path_add_component_nts (target,
+                                      child->first_cdata.first->text,
+                                      svn_path_repos_style);
+
           (*((svn_stringbuf_t **)(apr_array_push (paths)))) = target;
         }
       /* else unknown element; skip it */
     }
 
-  lrb.first_call = 1;
   lrb.output = report;
   lrb.pool = resource->pool;
 
+  /* Start the log report. */
+  send_xml(&lrb,
+           "<S:log-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+           "xmlns:D=\"DAV:\">" DEBUG_CR);
+
+  /* Send zero or more log items. */
   serr = svn_repos_get_logs(repos->fs,
                             paths,
                             start,
@@ -215,11 +208,13 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
                             &lrb,
                             resource->pool);
 
+  /* End the log report. */
+  send_xml(&lrb, "</S:log-report>" DEBUG_CR);
+
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "The log receiver or its caller encountered "
                                "an error.");
-  
   
   return NULL;
 }

@@ -158,7 +158,10 @@ add_component_internal (svn_stringbuf_t *path,
       && len == 1 && component[0] == '.')
     return;
 
-  if (! svn_stringbuf_isempty (path))
+  /* Append a dir separator, but only if this path is neither empty
+     nor consists of a single dir separator already. */
+  if ((! svn_stringbuf_isempty (path))
+      && (! ((path->len == 1) && (*(path->data) == ctx->dirsep))))
     svn_stringbuf_appendbytes (path, &ctx->dirsep, sizeof (ctx->dirsep));
 
   svn_stringbuf_appendbytes (path, component, len);

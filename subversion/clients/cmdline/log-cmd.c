@@ -72,6 +72,7 @@ num_lines (const char *msg)
 /* Baton for log_message_receiver(). */
 struct log_message_receiver_baton
 {
+  svn_boolean_t first_call;
   apr_pool_t *pool;
 };
 
@@ -83,8 +84,7 @@ log_message_receiver (void *baton,
                       svn_revnum_t rev,
                       const char *author,
                       const char *date,
-                      const char *msg,
-                      svn_boolean_t last_call)
+                      const char *msg)
 {
   struct log_message_receiver_baton *lb = baton;
 
@@ -119,7 +119,12 @@ log_message_receiver (void *baton,
 #define SEP_STRING \
   "------------------------------------------------------------------------\n"
 
-  printf (SEP_STRING);
+  if (lb->first_call)
+    {
+      printf (SEP_STRING);
+      lb->first_call = 0;
+    }
+
   lines = num_lines (msg);
   printf ("rev %lu:  %s | %s | %d line%s\n",
           rev, author, dbuf, lines, (lines > 1) ? "s" : "");
@@ -154,11 +159,7 @@ log_message_receiver (void *baton,
     }
   printf ("\n");  /* A blank line always precedes the log message. */
   printf ("%s\n", msg);
-
-  if (last_call)
-    printf (SEP_STRING);
-
-  /* Turns out we don't need the baton at all, oh well. */
+  printf (SEP_STRING);
 
   return SVN_NO_ERROR;
 }
@@ -184,6 +185,7 @@ svn_cl__log (apr_getopt_t *os,
   /* ### todo: If opt_state->{start,end}_date, then convert to
      opt_state->{start,end}_revision here. */
 
+  lb.first_call = 1;
   lb.pool = pool;
   SVN_ERR (svn_client_log (auth_baton,
                            targets,

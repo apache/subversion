@@ -214,20 +214,10 @@ svn_repos_dated_revision (svn_revnum_t *revision,
  * added or deleted).  Each path is an (svn_stringbuf_t *)
  * representing an absolute path in the repository.
  *
- * ### Path filtering doesn't work, because the callers of this
- * function don't currently convert the path to absolute (by the way,
- * is that with or without a leading "/"?  Should be with, to match
- * the changed_paths hash, but could compensate internally if not.)
- * Anyway, I'm not exactly sure how to do that conversion in the ra
- * layers yet...  -kff
- *
  * If DISCOVER_CHANGED_PATHS, then each call to receiver passes a
  * `const apr_hash_t *' for the receiver's CHANGED_PATHS argument; the
  * hash's keys are all the paths committed in that revision.
  * Otherwise, each call to receiver passes null for CHANGED_PATHS.
- *
- * The last call to receiver (i.e., for the last requested log
- * message) passes the FINAL_CALL flag.
  *
  * If any invocation of RECEIVER returns error, return that error
  * immediately and without wrapping it.

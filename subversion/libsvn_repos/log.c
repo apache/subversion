@@ -34,9 +34,8 @@
  * or properties of the node were changed, or that the node was added
  * or deleted.  
  *
- * The key is allocated in POOL; the value is currently (void *) 1,
- * but in the future may be a more informative value indicating the
- * nature of the change.  ### todo: implement that sentence.
+ * The key is allocated in POOL; the value is (void *) 'A', 'D', or
+ * 'R', for added, deleted, or replaced, respectively.
  * 
  * The paths are constructed by adding components to PATH in
  * repository style.
@@ -55,10 +54,17 @@ detect_changed (apr_hash_t *changed,
   if (node->sibling)
     detect_changed (changed, node->sibling, path, pool);
     
-  /* Then "enter" this node. */
-  svn_path_add_component_nts (path,
-                              node->name,
-                              svn_path_repos_style);
+  /* Then "enter" this node; but if its name is the empty string, then
+     there's no need to extend path (and indeed, the behavior
+     svn_path_add_component_nts is to strip the trailing slash even
+     when the new path is "/", so we'd end up with "", which would
+     screw everything up anyway). */ 
+  if (node->name && *(node->name))
+    {
+      svn_path_add_component_nts (path,
+                                  node->name,
+                                  svn_path_repos_style);
+    }
 
   /* Recurse downward before processing this node. */
   if (node->child)
@@ -79,6 +85,11 @@ detect_changed (apr_hash_t *changed,
 
   /* "Leave" this node. */
   svn_path_remove_component (path, svn_path_repos_style);
+
+  /* ### todo: See issue #559.  This workaround is slated for
+     demolition in the next ten microseconds. */
+  if (path->len == 0)
+    svn_stringbuf_appendcstr (path, "/");
 }
 
 
@@ -181,33 +192,39 @@ svn_repos_get_logs (svn_fs_t *fs,
              for repository style. */
         }
 
-#if 0
+      /* Check if any of the filter paths changed in this revision. */
       if (paths && paths->nelts > 0)
         {
           int i;
+          void *val;
 
           for (i = 0; i < paths->nelts; i++)
             {
               svn_stringbuf_t *this_path;
               this_path = (((svn_stringbuf_t **)(paths)->elts)[i]);
+              val = apr_hash_get (changed_paths,
+                                  this_path->data, this_path->len); 
               
-              /* ### Okay, this is where the problem is.  This path is
-                 no good for filtering unless it's absolute, like the
-                 ones in changed_paths.  But it's just whatever the
-                 client passed in, because the RA layers aren't
-                 converting it to absolute yet.  Hmm, how to make them
-                 do that? */
+              if (val)   /* Stop looking -- we've found a match. */
+                break;
             }
+
+          /* The check below happens outside the `for' loop
+             immediately above, so that the `continue' will apply to
+             the outermost `for' loop.  The logic is: if we are doing
+             path filtering, and this revision *doesn't* affect one of
+             the filter paths, then we skip the invocation of the log
+             receiver and `continue' on to the next revision. */
+          if (! val)
+            continue;
         }
-#endif /* 0 */
 
       SVN_ERR ((*receiver) (receiver_baton,
                             (discover_changed_paths ? changed_paths : NULL),
                             this_rev,
                             author ? author->data : "",
                             date ? date->data : "",
-                            message ? message->data : "",
-                            (this_rev == end)));
+                            message ? message->data : ""));
       
       svn_pool_clear (subpool);
     }

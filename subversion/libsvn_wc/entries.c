@@ -1576,7 +1576,6 @@ svn_wc_get_version_controlled_paths (apr_hash_t *paths,
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  svn_wc_entry_t *this_dir;
   
   /* Read PATH's entries. */
   SVN_ERR (svn_wc_entries_read (&entries, path, pool));

@@ -175,9 +175,6 @@ enum svn_recurse_kind
  * "various reasons" are actually ever relevant anymore, and if
  * they're not, it might be nice to change apr_hash_first() so
  * read-only uses of hashes can be protected via the type system.
- *
- * On the final call for a given set of log messages, LAST_CALL is
- * set.
  */
 typedef svn_error_t *(*svn_log_message_receiver_t)
      (void *baton,
@@ -185,8 +182,7 @@ typedef svn_error_t *(*svn_log_message_receiver_t)
       svn_revnum_t revision,
       const char *author,
       const char *date,  /* use svn_time_from_string() if need apr_time_t */
-      const char *message,  /* use svn_string_t if we ever have binary... */
-      svn_boolean_t last_call);
+      const char *message); /* use svn_string_t if we ever have binary... */
 
 
 
