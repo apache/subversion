@@ -208,8 +208,10 @@ svn_error_t *svn_io_set_file_read_write (const char *path,
 /** Toggle a file's "executability".
  *
  * When making the file executable on operating systems with unix style
- * permissions only make the file executable for the user, group or world
- * if the user, group or world already have permission to read the file.
+ * permissions, never add an execute permission where there is not
+ * already a read permission: that is, only make the file executable
+ * for the user, group or world if the corresponding read permission
+ * is already set for user, group or world.
  *
  * When making the file non-executable on operating systems with unix style
  * permissions, remove all execute permissions.
