@@ -47,33 +47,6 @@
 }
 
 /* -----------------------------------------------------------------------
-   Create a typemap to handle enums.
-*/
-
-%typemap(python, in, numinputs=0) enum SWIGTYPE *OUTENUM ($*1_type temp) {
-    $1 = ($1_ltype)&temp;
-}
-%typemap(perl5, in, numinputs=0) enum SWIGTYPE *OUTENUM (long temp) {
-    $1 = ($1_ltype)&temp;
-}
-
-%typemap(perl5, argout) enum SWIGTYPE *OUTENUM {
-    if (argvi >= items) {
-        EXTEND(sp,1);
-    }
-    $result = sv_newmortal();
-    sv_setiv($result,(IV) *($1));
-    argvi++;
-}
-
-%typemap(java, in) enum SWIGTYPE *OUTENUM ($*1_type temp) {
-    $1 = ($1_ltype)&temp;
-}
-%typemap(python, argout, fragment="t_output_helper") enum SWIGTYPE *OUTENUM {
-    $result = t_output_helper($result, PyInt_FromLong(*$1));
-}
-
-/* -----------------------------------------------------------------------
    Create a typemap for specifying string args that may be NULL.
 */
 %typemap(python, in, parse="z") const char *MAY_BE_NULL "";
@@ -286,11 +259,6 @@
 	_global_pool = *(apr_pool_t **)&j$1;
 	$1 = 0;
 }
-
-/* -----------------------------------------------------------------------
-   result of check_path
-*/
-%apply enum SWIGTYPE *OUTENUM { svn_node_kind_t * };
 
 /* -----------------------------------------------------------------------
    get_logs takes a callback function, so we have to thunk it
