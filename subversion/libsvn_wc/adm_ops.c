@@ -234,7 +234,7 @@ svn_error_t *svn_wc_get_wc_prop (void *baton,
   svn_path_add_component (path, target, svn_path_local_style);
 
   /* And use our public interface to get the property value. */
-  SVN_ERR (svn_wc_prop_get (value, name, path, ccb->pool));
+  SVN_ERR (svn_wc__wcprop_get (value, name, path, ccb->pool));
 
   return SVN_NO_ERROR;
 }
@@ -253,7 +253,7 @@ svn_error_t *svn_wc_set_wc_prop (void *baton,
   svn_path_add_component (path, target, svn_path_local_style);
 
   /* And use our public interface to get the property value. */
-  SVN_ERR (svn_wc_prop_set (name, value, path, ccb->pool));
+  SVN_ERR (svn_wc__wcprop_set (name, value, path, ccb->pool));
 
   return SVN_NO_ERROR;
 }
