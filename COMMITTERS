@@ -40,3 +40,4 @@ Commit access for specific areas:
         kbohling   Kirby C. Bohling <kbohling@birddog.com>     (tools/dev)
              nsd   Nick Duffek <nick@duffek.com>               (doc)
          fmatias   Féliciano Matias <feliciano.matias@free.fr> (French docs)
+             mbk   Mark Benedetto King <bking@inquira.com>     (libsvn_ra_pipe)
