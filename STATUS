@@ -52,12 +52,6 @@ Candidate changes:
     Justification: Perl correctness issue.
     Votes:
 
-  * r8715
-    apr_file_open_stdout and apr_file_open_stdout bindings fix.
-    Justification: Easy warning fix.
-    Votes:
-      +1: breser, clkao
-
   * r8718
     Remove shell calls in perl bindings tests.
     Justification: Will fail if svn isn't already installed.
