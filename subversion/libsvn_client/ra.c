@@ -255,16 +255,6 @@ svn_client__open_ra_session (void **session_baton,
   cb->commit_items = commit_items;
   cb->config = ctx->config;
 
-  /* Decide if the user passed new auth info into the system by
-     examining the auth_baton's runtime params. */
-  {
-    const char *uname, *passwd;
-    uname = svn_auth_get_parameter (ctx->auth_baton,
-                                    SVN_AUTH_PARAM_DEFAULT_USERNAME);
-    passwd = svn_auth_get_parameter (ctx->auth_baton,
-                                     SVN_AUTH_PARAM_DEFAULT_PASSWORD);
-  }
-
   SVN_ERR (ra_lib->open (session_baton, base_url, cbtable, cb, ctx->config,
                          pool));
 
