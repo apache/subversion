@@ -1,0 +1,24 @@
+TOD for locking
+===============
+
+This is a summary of the current state of the locking implementation.
+
+* svn:needs-lock property
+* svn info URL
+* svn update removes defunct locks svn status -u shows locking info from repo
+  - Rev reporter in libsvn_repos (lundblad)
+  - Rev svn_ra_reporter and RA APIs (lundblad)
+    + ra_dav
+    + ra_svn/svnserve
+    + ra_local
+  - Rev svn_wc_notify_func_t (!)
+  - WC stuff (lundblad)
+  - Client changes
+* client test cases (fitz)
+* Fix svn_fs_access_t handling in svnserve
+* Fix svn_ra_unlcok force==true for ra_dav.
+* libsvn_fs_fs writelock handling bugs
+* Improve cmdline help messages
+* svn lock and unlock should continue with next target on certain errors
+* Decide what should happen when unlocking in commit operation if an error
+  happens.
