@@ -14,8 +14,6 @@ MUST HAVE
 
 * chat with jorton about neon 0.25/svn1.2 coordination.
 
-* fs lock-enforcement issues (cmpilato)
-
 * fix svn_fs_access_t handling in svnserve (lundblad?)
    
 * automatic bumping of fs format file (kfogel)
