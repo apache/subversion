@@ -2,16 +2,21 @@
 
 # Testing merging and conflict resolution.
 
+case `uname -s` in
+    CYGWIN*) CURRENT_DIR=`pwd | sed -e 's@^/cygdrive/\([a-z]\)@\1:@'` ;;
+    *)       CURRENT_DIR=`pwd` ;;
+esac
+
 SVN_PROG=../../../../clients/cmdline/svn
 XML_DIR=../../../xml
 if [ "x${1}" = "x" ]; then
-    SVN_PROG=`pwd`/${SVN_PROG}
+    SVN_PROG=${CURRENT_DIR}/${SVN_PROG}
 else
     # argument passed by make when builddir != srcdir
     SVN_PROG=${1}/${SVN_PROG}
 fi
 if [ "x${2}" = "x" ]; then
-    XML_DIR=`pwd`/${XML_DIR}
+    XML_DIR=${CURRENT_DIR}/${XML_DIR}
 else
     # argument passed by make when builddir != srcdir
     XML_DIR=${2}/${XML_DIR}
