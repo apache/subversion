@@ -140,8 +140,6 @@ svn_wc__do_update_cleanup (const char *path,
       const char *parent, *base_name;
       svn_wc_adm_access_t *dir_access;
       svn_path_split_nts (path, &parent, &base_name, pool);
-      if (svn_path_is_empty_nts (parent))
-        parent = ".";
       SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, parent, pool));
       SVN_ERR (svn_wc_entries_read (&entries, dir_access, TRUE, pool));
       SVN_ERR (svn_wc__tweak_entry (entries, base_name,
