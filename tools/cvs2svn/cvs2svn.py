@@ -1687,11 +1687,12 @@ class SymbolicNameTracker:
     ### It wouldn't be so awfully hard to determine whether a name is
     ### just a branch or just a tag, which would allow for more
     ### intuitive messages below.
-    print "Finishing branches:"
-    for name in parent.keys():
-      if name[0] != '/':
-        print "finishing '%s' as branch" % name
-        self.fill_branch(dumper, ctx, name, [1])
+    if not ctx.trunk_only:
+      print "Finishing branches:"
+      for name in parent.keys():
+        if name[0] != '/':
+          print "finishing '%s' as branch" % name
+          self.fill_branch(dumper, ctx, name, [1])
     print "Finishing tags:"
     for name in parent.keys():
       if name[0] != '/':
