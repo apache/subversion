@@ -99,7 +99,7 @@ typedef struct {
 /* Custom function of type ne_accept_response. */
 static int ra_dav_error_accepter(void *userdata,
                                  ne_request *req,
-                                 ne_status *st)
+                                 const ne_status *st)
 {
   /* Only accept the body-response if the HTTP status code is *not* 2XX. */
   return (st->klass != 2);
