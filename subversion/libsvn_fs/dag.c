@@ -1358,6 +1358,30 @@ svn_error_t *svn_fs__dag_get_contents (svn_stream_t **contents,
 
 
 
+svn_error_t *svn_fs__dag_file_length (apr_off_t *length,
+                                      dag_node_t *file,
+                                      trail_t *trail)
+{ 
+  skel_t *node_rev;
+
+  /* Make sure our node is a file. */
+  if (! svn_fs__dag_is_file (file))
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_NOT_FILE, 0, NULL, trail->pool,
+       "Attempted to get length of a *non*-file node.");
+
+  /* Go get a fresh node-revision for FILE. */
+  SVN_ERR (get_node_revision (&node_rev, file, trail));
+
+  /* ### skel.len is apr_size_t ... we return apr_off_t */
+  *length = node_rev->children->next->len;
+
+  return SVN_NO_ERROR;
+}
+
+
+
 svn_error_t *
 svn_fs__dag_set_contents (dag_node_t *file,
                           svn_string_t *contents,
