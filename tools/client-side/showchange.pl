@@ -20,6 +20,9 @@ EOF
 }
 
 my $revision = shift || die ("Revision argument required.\n");
+if ($revision =~ /r([0-9]+)/) {
+  $revision = $1;
+}
 
 my $url = shift || "";
 
