@@ -622,6 +622,42 @@ svn_stream_printf (svn_stream_t *stream,
 }
 
 
+svn_error_t *
+svn_stream_readline (svn_stream_t *stream,
+                     svn_stringbuf_t **stringbuf,
+                     apr_pool_t *pool)
+{
+  apr_size_t numbytes;
+  char c;
+  svn_stringbuf_t *str = svn_stringbuf_create ("", pool);
+
+  /* Since we're reading one character at a time, let's at least
+     optimize for the 90% case.  90% of the time, we can avoid the
+     stringbuf ever having to realloc() itself if we start it out at
+     80 chars.  */
+  svn_stringbuf_ensure (str, 80);
+
+  while (1)
+    {
+      numbytes = 1;
+      SVN_ERR (svn_stream_read (stream, &c, &numbytes));
+      if (numbytes != 1)
+        {
+          /* a 'short' read means the stream has run out. */
+          *stringbuf = NULL;
+          return SVN_NO_ERROR;
+        }
+
+      if ((c == '\n'))
+        break;
+
+      svn_stringbuf_appendbytes (str, &c, 1);
+    }
+  
+  *stringbuf = str;
+  return SVN_NO_ERROR;
+}
+
 
 
 

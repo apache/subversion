@@ -87,6 +87,12 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_MALFORMED_FILE,
               "Malformed file")
 
+  SVN_ERRDEF (SVN_ERR_MALFORMED_STREAM_DATA,
+              "Malformed stream data")
+
+  SVN_ERRDEF (SVN_ERR_UNRECOGNIZED_STREAM_DATA,
+              "Unrecognized stream data")
+
   SVN_ERRDEF (SVN_ERR_INCOMPLETE_DATA,
               "Incomplete data")
 

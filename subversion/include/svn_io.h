@@ -321,6 +321,17 @@ svn_error_t *svn_stream_printf (svn_stream_t *stream,
                                 const char *fmt,
                                 ...);
 
+/* Allocate *STRINGBUF in POOL, and read one line from STREAM into it.
+   The '\n' is read from the stream, but is not added to the end of
+   the stringbuf.  Instead, the stringbuf ends with a usual \0.
+
+   If STREAM runs out of bytes before encountering a '\n', then set
+   *STRINGBUF to NULL and return no error.
+*/
+svn_error_t *
+svn_stream_readline (svn_stream_t *stream,
+                     svn_stringbuf_t **stringbuf,
+                     apr_pool_t *pool);
 
 /* Sets *RESULT to a string containing the contents of FILENAME. */
 svn_error_t *svn_string_from_file (svn_stringbuf_t **result, 
