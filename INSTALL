@@ -50,94 +50,189 @@ II.  PARTICIPATING
 
 III.  INSTALLATION
 
-  A.  BOOTSTRAPPING FROM A TARBALL
+  A.  BOOTSTRAPPING FROM A TARBALL OR RPM
 
       In order to get the very latest Subversion source code, you need
       to check it out of a Subversion repository, and therefore you
-      first need a Subversion client.  Download the most recent
-      distribution tarball from:
+      first need a Subversion client.
 
-        http://subversion.tigris.org/servlets/ProjectDownloadList
+      1.  BOOSTRAPPING FROM TARBALL
 
-      Unpack it, and use the standard GNU procedure to compile:
+          Download the most recent distribution tarball from:
 
-         $ ./configure --enable-maintainer-mode --disable-shared
-         $ make
+            http://subversion.tigris.org/servlets/ProjectDownloadList
 
-      (The first switch to ./configure turns on debugging, and the
-      second switch builds a statically-linked client binary.)
+          Unpack it, and use the standard GNU procedure to compile:
 
-      After compiling, you will have a large 'svn' binary sitting in
-      the tree.  Use it to check out a real Subversion working copy:
+             $ ./configure --enable-maintainer-mode --disable-shared
+             $ make
 
-         $ subversion/clients/cmdline/svn checkout \
-              http://svn.collab.net/repos/svn/trunk -d svn
+          (The first switch to ./configure turns on debugging, and the
+          second switch builds a statically-linked client binary.)
 
-         A  svn/dist.sh
-         A  svn/buildcheck.sh
-         A  svn/HACKING
-         ...
+          After compiling, you will have a large 'svn' binary sitting in
+          the tree.  Use it to check out a real Subversion working copy:
 
-   B.  BUILDING THE LATEST SOURCE
+             $ subversion/clients/cmdline/svn checkout \
+                  http://svn.collab.net/repos/svn/trunk -d svn
 
-      You can discard the directory created by the tarball; you're
-      about to build the latest, greatest Subversion client.
+             A  svn/dist.sh
+             A  svn/buildcheck.sh
+             A  svn/HACKING
+             ...
 
-      First off, if you have any Subversion libraries lying around
-      from previous 'make installs', clean them up first!
+      2.  BOOTSTRAPPING FROM RPM
 
-         # rm -f /usr/local/lib/libsvn*
-         # rm -f /usr/local/lib/libapr*
-         # rm -f /usr/local/lib/libexpat*
-         # rm -f /usr/local/lib/libneon*
+          If you are using Linux (or any OS that can use RPM) then another
+          possibility is to download the binary RPM from the
+          http://summersoft.fay.ar.us/pub/linux/RPMS/i386 or
+          http://summersoft.fay.ar.us/pub/linux/RPMS/ppc directory.
+          Currently on Linux on the i386 and ppc platforms are supported
+          using this method.  You might also require additional RPMS
+          (which can be found in the above mentioned directory) to use the
+          subversion RPM depending on what packages you already have installed:
 
-      Start the process by running "autogen.sh":
+             subversion*.i386.rpm
+             apr*.i386.rpm (Version 0.2002.01.19 or greater)
+             db*.i386.rpm  (Version 4.0.14 or greater)
+             expat         (Comes with RedHat)
+             neon          (Version 0.18.2 or greater)
 
-         $ chmod +x autogen.sh    # if not already executable
-         $ ./autogen.sh
+          After downloading, install it:
 
-      This script will make sure you have all the necessary components
-      available to build Subversion.  If any are missing, you will be
-      told where to get them from.  (See the 'requirements' section
-      further down.)
+             rpm -ivh subversion*.386.rpm (add other packages as necessary)
 
-      After all components are in place, follow the usual procedure:
+          After installing, you can then use the svn command to check out the
+          latest source code:
 
-         $ ./configure --enable-maintainer-mode --disable-shared
-         $ make
-         $ make check    (optional)           
-         # make install
+          $ /usr/bin/svn checkout http://svn.collab.net/repos/svn/trunk -d svn
+          A  svn/dist.sh
+          A  svn/buildcheck.sh
+          A  svn/HACKING
+          ...
 
-      The flags to `configure' are highly recommended for developers,
-      as they build a statically-linked binary.  If you don't use
-      those flags, then you must reverse the order of the "make check"
-      and "make install" steps, because the shared libraries must be
-      installed before "make check" will work.
+   B.  BUILDING THE LATEST SOURCE FROM TARBALL, SOURCE RPM,
+       OR DIRECTLY FROM THE SUBVERSION WORKING COPY
 
-      Additionally, with shared library builds, the destination
-      library directory must be listed in either /etc/ld.so.conf or
-      $LD_LIBRARY_PATH (for linux systems), so that Subversion will be
-      able to dynamically load repository access plugins.  If you try
-      to do a checkout and see an error like:
+      1.  BUILDING FROM SOURCE TARBALL
+         You can discard the directory created by the tarball; you're
+         about to build the latest, greatest Subversion client.
 
-      svn_error: #21068 : <Bad URL passed to RA layer>
-         Unrecognized URL scheme: http://svn.collab.net/repos/svn/trunk
+         First off, if you have any Subversion libraries lying around
+         from previous 'make installs', clean them up first!
 
-      It probably means that the dynamic loader/linker can't find all
-      of the libsvn_* libraries.
+            # rm -f /usr/local/lib/libsvn*
+            # rm -f /usr/local/lib/libapr*
+            # rm -f /usr/local/lib/libexpat*
+            # rm -f /usr/local/lib/libneon*
 
-      Note that if you commonly build with the -jN option to make, the
-      make step above may fail, because we don't ensure that third
-      party libraries in our source tree will finish building before
-      subversion itself.  If you want to use -jN, use the following
-      instead:
+         Start the process by running "autogen.sh":
 
-         $ ./configure --enable-maintainer-mode --disable-shared
-         $ make -jN external-all
-         $ make -jN local-all
-         $ make check
-         # make install
+            $ chmod +x autogen.sh    # if not already executable
+            $ ./autogen.sh
 
+         This script will make sure you have all the necessary components
+         available to build Subversion.  If any are missing, you will be
+         told where to get them from.  (See the 'requirements' section
+         further down.)
+
+         After all components are in place, follow the usual procedure:
+
+            $ ./configure --enable-maintainer-mode --disable-shared
+            $ make
+            $ make check    (optional)           
+            # make install
+
+         The flags to `configure' are highly recommended for developers,
+         as they build a statically-linked binary.  If you don't use
+         those flags, then you must reverse the order of the "make check"
+         and "make install" steps, because the shared libraries must be
+         installed before "make check" will work.
+
+         Additionally, with shared library builds, the destination
+         library directory must be listed in either /etc/ld.so.conf or
+         $LD_LIBRARY_PATH (for linux systems), so that Subversion will be
+         able to dynamically load repository access plugins.  If you try
+         to do a checkout and see an error like:
+
+         svn_error: #21068 : <Bad URL passed to RA layer>
+            Unrecognized URL scheme: http://svn.collab.net/repos/svn/trunk
+
+         It probably means that the dynamic loader/linker can't find all
+         of the libsvn_* libraries.
+
+         Note that if you commonly build with the -jN option to make, the
+         make step above may fail, because we don't ensure that third
+         party libraries in our source tree will finish building before
+         subversion itself.  If you want to use -jN, use the following
+         instead:
+
+            $ ./configure --enable-maintainer-mode --disable-shared
+            $ make -jN external-all
+            $ make -jN local-all
+            $ make check
+            # make install
+
+      2.  BUILDING FROM SOURCE RPM
+
+          The following has only been tested on RedHat Linux 7.1 and 7.2 and
+          PPC Linux and assumes that you have already set up your
+          $HOME/.rpmmacros and $HOME/rpms tree structure (see option 3 below
+          on how to set up RPM config files and directories so that a user
+          can build an RPM without root privileges).
+
+          Download the latest subversion source RPM from the
+          http://summersoft.fay.ar.us/pub/linux/RPMS/src/directory.
+
+          Additional Requirements (RPM packages can also be found in the same
+          directory):
+
+          apache      (Version 2.0.31 or greater) (ONLY NEEDED for SVN SERVER)
+          apr-devel   (Version 0.2002.01.19 or greater)
+          autoconf    (Version 2.52 or greater)
+          db-devel    (Version 4.0.14 or greater)
+          expat-devel (Comes with RedHat)
+          libtool     (Version 1.4.2 or greater)
+          neon        (Version 0.18.2)
+          python      (Version 1.5 or greater or 2.0 or greater for testing)
+
+          To build Subversion, make sure that the previous requirements are
+          met and type the command:
+
+             rpm --rebuild subversion*src.rpm
+
+          This should build the binary subversion, subversion-server and
+          subversion-devel packages.
+
+          You may then install from the $HOME/rpms/rpms/i386 directory with
+          the "rpm -ivh subversion*.i386.rpm".  Lastly, if you are using the
+          server you must configure the apache server to your setup.  The
+          subversion-server RPM will automatically put the LoadModule directive
+          and the example repository setup into the /etc/httpd/conf/httpd.conf
+          file but make it inactive by default.
+
+          After fufilling pre-requisite packages, it normally takes me less
+          than 5 minutes to set up a Subversion client and server using RPMs.
+
+      3.  BUILDING FROM SUBVERSION WORKING COPY
+
+          A third option is to build the Subversion RPM binary package
+          directly from the existing subversion working copy (assuming that
+          you have already installed the subversion binary (or binary RPM)
+          and have already pulled the newest version of subversion into your
+          working copy).
+
+          cd packages/rpm
+          make
+
+          * OR *
+          cd packages/rpm
+          make RELEASE=1024 (or whatever release number you want to build)
+
+          This will create a $HOME/.rpmmacros file (only if it doesn't already
+          exist), create a $HOME/rpms directory tree, and copy all the files
+          files needed from the subversion working copy.  It will then proceed
+          to build the subversion source and binary RPM packages.
 
    C. BUILD REQUIREMENTS
 
@@ -310,6 +405,10 @@ IV.  QUICKSTART GUIDE
 
 V.  BUILDING A SUBVERSION SERVER
 
+      (Following the RPM Binary install or RPM Source install procedures above
+      will build a SUBVERSION server for Linux RedHat 7.1, 7.2, and PPC Linux
+      systems *IF* the apache-devel-2.0.31 or greater package is already
+      installed when the SUBVERSION RPM is built.)
 
   1.  Checkout the "httpd-2.0" cvs module from apache.org.  Put it
       whereever you wish;  it's an independent project.

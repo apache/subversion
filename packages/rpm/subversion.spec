@@ -181,7 +181,7 @@ if [ "`pidof httpd`"x != "x" ]; then
 fi
 
 %clean
-#rm -rf $RPM_BUILD_ROOT
+rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
