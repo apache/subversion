@@ -66,7 +66,7 @@ Candidate changes:
     Fix test suite to adjust for r8731, r8754 above.
     Notes: We should all be embarrassed in front of Philip Martin.
     Votes:
-      +1: kfogel
+      +1: kfogel, epg
 
   * r8756
     Turn off warnings for bad constant values in SWIG bindings.
