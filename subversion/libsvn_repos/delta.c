@@ -337,7 +337,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
         }
       else
         {
-          /* The nodes are at least related.  Just open the one
+          /* The nodes are at least related.  Just replace the one
              with the other. */
           SVN_ERR (replace_file_or_dir (&c, root_baton,
                                         src_parent_dir,
@@ -619,7 +619,7 @@ send_text_delta (struct context *c,
            (file_baton, &delta_handler, &delta_handler_baton));
 
   
-  if (c->text_deltas)
+  if (c->text_deltas && delta_stream)
     {
       /* Deliver the delta stream to the file.  */
       SVN_ERR (svn_txdelta_send_txstream (delta_stream,
@@ -647,7 +647,7 @@ delta_files (struct context *c,
              const char *target_path,
              apr_pool_t *pool)
 {
-  svn_txdelta_stream_t *delta_stream;
+  svn_txdelta_stream_t *delta_stream = NULL;
   apr_pool_t *subpool;
 
   /* Make a subpool for local allocations. */
@@ -657,41 +657,41 @@ delta_files (struct context *c,
   SVN_ERR (delta_proplists (c, source_path, target_path,
                             change_file_prop, file_baton, subpool));
 
-  /* ### this is too much work if !c->text_deltas. there is no reason to
-     ### ask the FS for a delta stream if we aren't going to use it. */
-
-  if (source_path)
+  if (c->text_deltas)
     {
-      int changed;
-
-      /* Is this deltification worth our time? */
-      SVN_ERR (svn_fs_contents_changed (&changed,
-                                        c->target_root,
-                                        target_path,
-                                        c->source_root,
-                                        source_path,
-                                        subpool));
-      if (! changed)
+      if (source_path)
         {
-          svn_pool_destroy (subpool);
-          return SVN_NO_ERROR;
+          int changed;
+          
+          /* Is this deltification worth our time? */
+          SVN_ERR (svn_fs_contents_changed (&changed,
+                                            c->target_root,
+                                            target_path,
+                                            c->source_root,
+                                            source_path,
+                                            subpool));
+          if (! changed)
+            {
+              svn_pool_destroy (subpool);
+              return SVN_NO_ERROR;
+            }
+          
+          /* Get a delta stream turning SOURCE_PATH's contents into
+             TARGET_PATH's contents.  */
+          SVN_ERR (svn_fs_get_file_delta_stream 
+                   (&delta_stream, 
+                    c->source_root, source_path,
+                    c->target_root, target_path,
+                    subpool));
         }
-
-      /* Get a delta stream turning SOURCE_PATH's contents into
-         TARGET_PATH's contents.  */
-      SVN_ERR (svn_fs_get_file_delta_stream 
-               (&delta_stream, 
-                c->source_root, source_path,
-                c->target_root, target_path,
-                subpool));
-    }
-  else
-    {
-      /* Get a delta stream turning an empty file into one having
-         TARGET_PATH's contents.  */
-      SVN_ERR (svn_fs_get_file_delta_stream 
-               (&delta_stream, 0, 0,
-                c->target_root, target_path, subpool));
+      else
+        {
+          /* Get a delta stream turning an empty file into one having
+             TARGET_PATH's contents.  */
+          SVN_ERR (svn_fs_get_file_delta_stream 
+                   (&delta_stream, 0, 0,
+                    c->target_root, target_path, subpool));
+        }
     }
 
   SVN_ERR (send_text_delta (c, file_baton, delta_stream, subpool));
@@ -803,10 +803,10 @@ add_file_or_dir (struct context *c, void *dir_baton,
 static svn_error_t *
 replace_file_or_dir (struct context *c, 
                      void *dir_baton,
-                     const char *target_parent, 
-                     const char *target_entry,
                      const char *source_parent, 
                      const char *source_entry,
+                     const char *target_parent, 
+                     const char *target_entry,
                      apr_pool_t *pool)
 {
   int is_dir;

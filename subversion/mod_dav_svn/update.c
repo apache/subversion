@@ -53,6 +53,10 @@ typedef struct {
 
   /* where to deliver the output */
   ap_filter_t *output;
+
+  /* where do these editor paths *really* point to? */
+  apr_hash_t *pathmap;
+
 } update_ctx_t;
 
 typedef struct {
@@ -71,8 +75,70 @@ typedef struct {
 
 } item_baton_t;
 
+
 #define DIR_OR_FILE(is_dir) ((is_dir) ? "directory" : "file")
 
+
+/* add PATH to the pathmap HASH with a repository path of LINKPATH.
+   if LINKPATH is NULL, PATH will map to itself. */
+static void add_to_path_map(apr_hash_t *hash,
+                            const char *path,
+                            const char *linkpath)
+{
+  /* normalize 'root paths' to have a slash */
+  const char *norm_path = strcmp(path, "") ? path : "/";
+
+  /* if there is an actual linkpath given, it is the repos path, else
+     our path maps to itself. */
+  const char *repos_path = linkpath ? linkpath : norm_path;
+
+  /* now, geez, put the path in the map already! */
+  apr_hash_set(hash, path, APR_HASH_KEY_STRING, (void *)repos_path);
+}
+
+
+/* return the actual repository path referred to by the editor's PATH,
+   allocated in POOL, determined by examining the pathmap HASH. */
+static const char *get_from_path_map(apr_hash_t *hash,
+                                     const char *path,
+                                     apr_pool_t *pool)
+{
+  const char *repos_path;
+  svn_stringbuf_t *my_path;
+  
+  /* no hash means no map.  that's easy enough. */
+  if (! hash)
+    return apr_pstrdup(pool, path);
+  
+  if ((repos_path = apr_hash_get(hash, path, APR_HASH_KEY_STRING)))
+    {
+      /* what luck!  this path is a hash key!  if there is a linkpath,
+         use that, else return the path itself. */
+      return apr_pstrdup(pool, repos_path);
+    }
+
+  /* bummer.  PATH wasn't a key in path map, so we get to start
+     hacking off components and looking for a parent from which to
+     derive a repos_path.  use a stringbuf for convenience. */
+  my_path = svn_stringbuf_create(path, pool);
+  do 
+    {
+      svn_path_remove_component(my_path);
+      if ((repos_path = apr_hash_get(hash, my_path->data, my_path->len)))
+        {
+          /* we found a mapping ... but of one of PATH's parents.
+             soooo, we get to re-append the chunks of PATH that we
+             broke off to the REPOS_PATH we found. */
+          return apr_pstrcat(pool, repos_path, "/", 
+                             path + my_path->len + 1, NULL);
+        }
+    }
+  while (! svn_path_is_empty(my_path));
+  
+  /* well, we simply never found anything worth mentioning the map.
+     PATH is its own default finding, then. */
+  return apr_pstrdup(pool, path);
+}
 
 static item_baton_t *make_child_baton(item_baton_t *parent, const char *name,
 				      svn_boolean_t is_dir)
@@ -119,17 +185,23 @@ static void send_vsn_url(item_baton_t *baton)
   svn_fs_id_t *id;
   svn_stringbuf_t *stable_id;
   const char *href;
+  const char *path;
 
-  /* note: baton->path has a leading "/" */
-  serr = svn_fs_node_id(&id, baton->uc->rev_root, baton->path2, baton->pool);
-  if (serr != NULL)
+  /* when sending back vsn urls, we'll try to see what this editor
+     path really points to in the repos.  if it doesn't point to
+     something other than itself, we'll use path2.  if it does point
+     to something else, we'll use the path that it points to. */
+  path = get_from_path_map(baton->uc->pathmap, baton->path, baton->pool);
+  path = strcmp(path, baton->path) ? path : baton->path2;
+    
+  if ((serr = svn_fs_node_id(&id, baton->uc->rev_root, path, baton->pool)))
     {
       /* ### what to do? */
       return;
     }
 
   stable_id = svn_fs_unparse_id(id, baton->pool);
-  svn_stringbuf_appendcstr(stable_id, baton->path2);
+  svn_stringbuf_appendcstr(stable_id, path);
 
   href = dav_svn_build_uri(baton->uc->resource->info->repos,
 			   DAV_SVN_BUILD_URI_VERSION,
@@ -457,7 +529,6 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   int ns;
   svn_error_t *serr;
   const char *dst_path = NULL;
-  const char *dir_delta_target = NULL;
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = NULL;
   svn_boolean_t recurse = TRUE;
@@ -528,32 +599,6 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         }
     }
 
-  /* If dst_path never came over the wire, then assume this is a
-     normal update.  */
-  if (dst_path == NULL)
-    {
-      /* All vsn-urls and CR props should be mined from the normal
-         anchor of the update:  */
-      dst_path = apr_pstrdup(resource->pool, resource->info->repos_path);
-
-      /* The 2nd argument to dir_delta should be [anchor + target]. */
-      dir_delta_target = dst_path;
-      if (target)
-        dir_delta_target = apr_pstrcat(resource->pool, 
-                                       dir_delta_target, "/", target, NULL);
-    }
-  else  /* this is some kind of 'switch' operation */
-    {
-      /* All vsn-urls and CR props will be mined from dst_path, which
-         should already be equal to the fs portion of the extra URL we
-         received. */
-
-      /* The 2nd argument to dir_delta should be the fs portion the
-         extra URL. */
-      dir_delta_target = dst_path;
-    }
-
-
   editor = svn_delta_old_default_editor(resource->pool);
   editor->set_target_revision = upd_set_target_revision;
   editor->open_root = upd_open_root;
@@ -572,13 +617,18 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   uc.resource = resource;
   uc.output = output;
   uc.anchor = resource->info->repos_path;
-  uc.dst_path = dst_path;
+  uc.dst_path = dst_path ? dst_path 
+                         : svn_path_join_many(resource->pool,
+                                              resource->info->repos_path,
+                                              target ? target : NULL,
+                                              NULL);
   uc.bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+  uc.pathmap = NULL;
 
   /* Get the root of the revision we want to update to. This will be used
      to generated stable id values. */
-  serr = svn_fs_revision_root(&uc.rev_root, repos->fs, revnum, resource->pool);
-  if (serr != NULL)
+  if ((serr = svn_fs_revision_root(&uc.rev_root, repos->fs, 
+                                   revnum, resource->pool)))
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "The revision root could not be created.");
@@ -588,15 +638,13 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
      dir_delta() between REPOS_PATH/TARGET and TARGET_PATH.  In the
      case of an update or status, these paths should be identical.  In
      the case of a switch, they should be different. */
-  serr = svn_repos_begin_report(&rbaton, revnum, repos->username, 
-                                repos->repos, 
-                                resource->info->repos_path, target,
-                                dir_delta_target,
-                                FALSE, /* don't send text-deltas */
-                                recurse,
-                                editor, &uc, resource->pool);
-
-  if (serr != NULL)
+  if ((serr = svn_repos_begin_report(&rbaton, revnum, repos->username, 
+                                     repos->repos, 
+                                     resource->info->repos_path, target,
+                                     dst_path,
+                                     FALSE, /* don't send text-deltas */
+                                     recurse,
+                                     editor, &uc, resource->pool)))
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "The state report gatherer could not be "
@@ -616,9 +664,9 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 
             while (this_attr)
               {
-                if (! strcmp (this_attr->name, "rev"))
+                if (! strcmp(this_attr->name, "rev"))
                   rev = SVN_STR_TO_REV(this_attr->value);
-                else if (! strcmp (this_attr->name, "linkpath"))
+                else if (! strcmp(this_attr->name, "linkpath"))
                   linkpath = this_attr->value;
 
                 this_attr = this_attr->next;
@@ -653,6 +701,21 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                            "recording one of the items of "
                                            "working copy state.");
               }
+
+            /* now, add this path to our path map, but only if we are
+               doing a regular update (not a `switch') */
+            if (linkpath && (! dst_path))
+              {
+                const char *this_path
+                  = svn_path_join_many(resource->pool,
+                                       resource->info->repos_path,
+                                       target ? target : path,
+                                       target ? path : NULL,
+                                       NULL);
+                if (! uc.pathmap)
+                  uc.pathmap = apr_hash_make(resource->pool);
+                add_to_path_map(uc.pathmap, this_path, linkpath);
+              }
           }
         else if (strcmp(child->name, "missing") == 0)
           {
@@ -673,6 +736,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
               }
           }
       }
+
 
   /* this will complete the report, and then drive our editor to generate
      the response to the client. */

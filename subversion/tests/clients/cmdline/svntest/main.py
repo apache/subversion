@@ -105,6 +105,9 @@ svnlook_binary = os.path.abspath('../../../svnlook/svnlook' + _exe)
 wc_author = 'jrandom'
 wc_passwd = 'rayjandom'
 
+# Global URL to testing area.  Default to ra_local, current working dir.
+test_area_url = "file://" + os.path.splitdrive(os.path.abspath(os.getcwd()))[1]
+
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!
 general_repo_dir = "repositories"
@@ -112,6 +115,7 @@ general_wc_dir = "working_copies"
 
 # A symlink that will always point to latest repository
 current_repo_dir = os.path.join(general_repo_dir, "current-repo")
+current_repo_url = None
 
 # temp directory in which we will create our 'pristine' local
 # repository and other scratch data.  This should be removed when we
@@ -122,8 +126,6 @@ temp_dir = 'local_tmp'
 pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 
-# Global URL to testing area.  Default to ra_local, current working dir.
-test_area_url = "file://" + os.path.splitdrive(os.path.abspath(os.getcwd()))[1]
 
 
 # Our pristine greek-tree list of lists.
@@ -387,6 +389,7 @@ def run_tests(test_list):
   """
 
   global test_area_url
+  global current_repo_url
   testnum = None
 
   for arg in sys.argv:
@@ -412,6 +415,7 @@ def run_tests(test_list):
       except ValueError:
         pass
 
+  current_repo_url = os.path.join(test_area_url, current_repo_dir)
   exit_code = _internal_run_tests(test_list, testnum)
 
   # remove all scratchwork: the 'pristine' repository, greek tree, etc.
