@@ -55,7 +55,7 @@ JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM *jvm, void *reserved)
 {
 #ifdef SVN_JNI__VERBOSE
-    fprintf(stderr, "JNI_OnLoad\n");
+  fprintf(stderr, "JNI_OnLoad\n");
 #endif
   apr_initialize();
   svn_jni__pool = NULL;
@@ -142,9 +142,9 @@ Java_org_tigris_subversion_lib_ClientImpl_status
 #endif
 
   /* do all the type conversion stuff */
-  target_string = svn_jni_string__jstring_to_svn_string(env, 
-					  jtarget, &hasException,
-					  svn_jni__pool);
+  target_string = svn_jni_string__j_to_svn(env, 
+                                           jtarget, &hasException,
+                                           svn_jni__pool);
 
   if( !hasException )
     {
@@ -200,7 +200,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
 		  char *path;
 		  svn_wc_status_t *status;
 		  jobject jitem = NULL;
-		  jobject jpath = NULL;
+		  jstring jpath = NULL;
 		  jobject jstatus = NULL;
 
 		  apr_hash_this(index, NULL, NULL, (void*)&item);
@@ -208,11 +208,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
 		  status = item->data;
 
 		  /* convert native string to java string */
-		  jpath = (*env)->NewStringUTF(env, path);
-		  if( jpath == NULL )
-		    {
-		      hasException = TRUE;
-		    }
+		  jpath = svn_jni_string_c_to_j(env, path, &hasException);
 
 		  /* convert svn_wc_status_t to java class Status */
 		  if( !hasException )
@@ -267,7 +263,8 @@ Java_org_tigris_subversion_lib_ClientImpl_cleanup
 
 }
 
-/* local variables:
+/* 
+ * local variables:
  * eval: (load-file "../../../svn-dev.el")
  * end: */
 
