@@ -124,13 +124,16 @@ main (int argc, char *argv[])
   else
     prog_name = argv[0];
 
-  /* Notice if there's a command-line argument */
-  if (argc >= 2) 
+  if (argc >= 2)  /* notice command-line arguments */
     {
-      test_num = atoi (argv[1]);
-      got_error = do_test_num (prog_name, test_num);
+      for (i = 1; i < argc; i++)
+        {
+          test_num = atoi (argv[i]);
+          if (do_test_num (prog_name, test_num))
+            got_error = 1;
+        }
     }
-  else /* just run all tests */
+  else            /* just run all tests */
     for (i = 1; i <= array_size; i++)
       if (do_test_num (prog_name, i))
         got_error = 1;
