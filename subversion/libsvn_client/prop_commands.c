@@ -104,6 +104,16 @@ svn_client_propset (const char *propname,
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *node;
 
+  if (svn_path_is_url (target))
+    {
+      /* ### Note that this function will need to take an auth baton
+         if it's ever to support setting properties remotely. */
+      return svn_error_createf
+        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+         "Setting property on non-local target '%s' not yet supported.",
+         target);
+    }
+
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, TRUE, TRUE, pool));
   SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
   if (!node)
