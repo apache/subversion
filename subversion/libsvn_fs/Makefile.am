@@ -23,6 +23,8 @@ libsvn_fs_la_SOURCES =				\
 			rev-table.h		\
 			skel.c			\
 			skel.h			\
+			strings-table.c		\
+			strings-table.h		\
 			trail.c			\
 			trail.h			\
 			tree.c			\

@@ -150,8 +150,11 @@ typedef enum svn_errno_t {
   /* The filesystem has no transaction with the given name.  */
   SVN_ERR_FS_NO_SUCH_TRANSACTION,
 
-  /* An particular entry was not found in a directory. */
+  /* A particular entry was not found in a directory. */
   SVN_ERR_FS_NO_SUCH_ENTRY,
+
+  /* A particular string was not found. */
+  SVN_ERR_FS_NO_SUCH_STRING,
 
   /* There is no file by the given name.  */
   SVN_ERR_FS_NOT_FOUND,
