@@ -626,6 +626,7 @@ static svn_error_t *ra_svn_get_file(void *sess, const char *path,
       SVN_ERR(svn_stream_write(stream, item->u.string->data,
                                &item->u.string->len));
     }
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   if (expected_checksum)
     {

@@ -194,7 +194,8 @@ The main command set corresponds to the svn_ra interfaces.
     response: ( rev:number props:proplist )
     If want-contents is specified, then after sending response, server
      sends file contents as a series of strings, terminated by the empty
-     string.
+     string, followed by a second empty command response to indicate
+     whether an error occurred during the sending of the file.
 
   get-dir
     params:   ( path:string [ rev:number ] want-props:bool want-contents:bool )
@@ -282,7 +283,8 @@ The main command set corresponds to the svn_ra interfaces.
     params:   ( file-token:string )
     response: ( wanted:bool )
     Upon receiving positive response, client sends svndiff data as
-     strings, terminated by an empty string.
+     strings, terminated by an empty string.  Server then sends an
+     empty command response indicating whether an error occurred.
 
   change-file-prop:
     params:   ( file-token:string name:string [ value:string ] )
