@@ -74,9 +74,8 @@ def status_update_with_nested_adds(sbox):
   os.makedirs(newdir_path)
   svntest.main.file_append (newfile_path, 'new text')
 
-  # Schedule newdir and newfile for addition
+  # Schedule newdir and newfile for addition (note that the add is recursive)
   svntest.main.run_svn(None, 'add', newdir_path)
-  svntest.main.run_svn(None, 'add', newfile_path)
 
   # Created expected output tree for commit
   expected_output = svntest.wc.State(wc_dir, {
