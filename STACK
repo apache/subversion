@@ -56,7 +56,6 @@ Greg:
 	deltav: target
 
       - vsn hooks: ???  REPORT and MKACTIVITY first
-      - deadprop hooks: stub at first
 
    - mod_dav: no apparent changes until vsn comes in
       - need: MKACTIVITY, MERGE
