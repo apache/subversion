@@ -41,8 +41,7 @@ make_clones_key (const char *svn_txn,
 		 const char *base_path,
 		 apr_pool_t *pool)
 {
-  /* Might want to replace this with something with less overhead.  */
-  return apr_psprintf (pool, "%s %s", svn_txn, base_path);
+  return apr_pstrcat (pool, svn_txn, " ", base_path, 0);
 }
 
 
