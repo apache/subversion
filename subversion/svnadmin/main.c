@@ -669,6 +669,7 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
+        opt_state.on_disk = svn_path_internal_style (opt_state.on_disk, pool);
         break;
       case svnadmin__in_repos_template:
         err = svn_utf_cstring_to_utf8 (&opt_state.in_repos, opt_arg,
@@ -679,6 +680,8 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
+        opt_state.in_repos = svn_path_internal_style (opt_state.in_repos,
+                                                      pool);
         break;
       case svnadmin__ignore_uuid:
         opt_state.uuid_action = svn_repos_load_uuid_ignore;
