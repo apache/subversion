@@ -677,10 +677,14 @@ remove_tmpfiles (apr_hash_t *tempfiles,
                  apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
+  apr_pool_t *subpool;
 
   /* Split if there's nothing to be done. */
   if (! tempfiles)
     return SVN_NO_ERROR;
+
+  /* Make a subpool. */
+  subpool = svn_pool_create (pool);
 
   /* Clean up any tempfiles. */
   for (hi = apr_hash_first (pool, tempfiles); hi; hi = apr_hash_next (hi))
@@ -689,11 +693,15 @@ remove_tmpfiles (apr_hash_t *tempfiles,
       void *val;
       svn_node_kind_t kind;
 
+      svn_pool_clear (subpool);
       apr_hash_this (hi, &key, NULL, &val);
-      SVN_ERR (svn_io_check_path ((const char *)key, &kind, pool));
+      SVN_ERR (svn_io_check_path ((const char *)key, &kind, subpool));
       if (kind == svn_node_file)
-        SVN_ERR (svn_io_remove_file ((const char *)key, pool));
+        SVN_ERR (svn_io_remove_file ((const char *)key, subpool));
     }
+
+  /* Remove the subpool. */
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
