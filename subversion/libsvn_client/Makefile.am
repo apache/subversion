@@ -8,7 +8,7 @@
 lib_LTLIBRARIES = libsvn_client.la
 
 ## Sources needed to build each library (names canonicalized)
-libsvn_client_la_SOURCES = checkout.c update.c add.c commit.c
+libsvn_client_la_SOURCES = checkout.c update.c add.c delete.c commit.c
 
 ## Libraries this binary depends upon:
 libsvn_client_la_LIBADD = ../libsvn_subr/libsvn_subr.la     \

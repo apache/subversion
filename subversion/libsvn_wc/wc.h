@@ -291,7 +291,7 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 #define SVN_WC__ENTRIES_ATTR_KIND      "kind"
 #define SVN_WC__ENTRIES_ATTR_TIMESTAMP "timestamp"
 #define SVN_WC__ENTRIES_ATTR_CHECKSUM  "checksum"
-#define SVN_WC__ENTRIES_ATTR_NEW       "new"
+#define SVN_WC__ENTRIES_ATTR_ADD       "add"
 #define SVN_WC__ENTRIES_ATTR_DELETE    "delete"
 #define SVN_WC__ENTRIES_ATTR_ANCESTOR  "ancestor"
 
@@ -366,7 +366,8 @@ typedef struct svn_wc__entry_baton_t
 
   svn_boolean_t found_it;  /* Gets set to true iff we see a matching entry. */
 
-  svn_boolean_t removing;  /* Set iff the task is to remove an entry. */
+  svn_boolean_t removing;        /* Set iff the task is to remove an entry. */
+  svn_boolean_t allow_duplicate; /* Set iff should preserve previous entry. */
 
   apr_file_t *infile;      /* The entries file we're reading from. */
   apr_file_t *outfile;     /* If this is NULL, then we're GETTING

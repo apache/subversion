@@ -140,7 +140,18 @@ svn_wc_copy (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 svn_error_t *
 svn_wc_delete_file (svn_string_t *file, apr_pool_t *pool)
 {
-  /* kff todo */
+  svn_string_t *dir, *basename;
+  svn_error_t *err;
+
+  svn_path_split (file, &dir, &basename, svn_path_local_style, pool);
+
+  err = svn_wc__entry_merge (dir, basename, 0, svn_file_kind, pool,
+                             SVN_WC__ENTRIES_ATTR_DELETE,
+                             svn_string_create ("true", pool),
+                             NULL);
+  if (err)
+    return err;
+
   return SVN_NO_ERROR;
 }
 
@@ -153,7 +164,10 @@ svn_wc_add_file (svn_string_t *file, apr_pool_t *pool)
 
   svn_path_split (file, &dir, &basename, svn_path_local_style, pool);
 
-  err = svn_wc__entry_merge (dir, basename, 0, svn_file_kind, pool, NULL);
+  err = svn_wc__entry_merge (dir, basename, 0, svn_file_kind, pool,
+                             SVN_WC__ENTRIES_ATTR_ADD,
+                             svn_string_create ("true", pool),
+                             NULL);
   if (err)
     return err;
 
