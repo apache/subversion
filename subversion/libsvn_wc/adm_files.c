@@ -339,20 +339,17 @@ copy_file (svn_string_t *src, svn_string_t *dst, apr_pool_t *pool)
 
 /*** opening all kinds of adm files ***/
 
-/* Rename a tmp file in PATH's adm area to the real thing.
-   The file had better already be closed. */
-svn_error_t *
-svn_wc__sync_adm_file (svn_string_t *path,
-                       apr_pool_t *pool,
-                       int num_vaparams,
-                       ...)
+static svn_error_t *
+sync_adm_file (svn_string_t *path,
+               apr_pool_t *pool,
+               int num_vaparams,
+               ...)
 {
   /* kff todo: big code duplication with close_adm_file(), see comment
      there */
 
   svn_string_t *tmp_path = svn_string_dup (path, pool);
   apr_status_t apr_err;
-  svn_error_t *err;
   int components_added;
   va_list ap;
   
@@ -474,7 +471,6 @@ close_adm_file (apr_file_t *fp,
                 int num_vaparams,
                 ...)
 {
-  svn_error_t *err = NULL;
   svn_string_t *tmp_path;
   apr_status_t apr_err = 0;
   int components_added;
@@ -499,13 +495,12 @@ close_adm_file (apr_file_t *fp,
   if (sync)
     {
       /* kff todo: this is a big code duplication with
-         svn_wc__sync_adm_file(), perhaps temporary if certain
+         sync_adm_file(), perhaps temporary if certain
          properties I hope for in va_lists turn out to be present.
          Will talk to greg or jimb, they probably know. */
 
       svn_string_t *tmp_path = svn_string_dup (path, pool);
       apr_status_t apr_err;
-      svn_error_t *err;
       int components_added;
       
       /* Extend real name. */
@@ -563,10 +558,9 @@ svn_wc__close_adm_file (apr_file_t *fp,
 
 
 /* kff todo: svn_wc__*_text_base() are all essentially the same except
-   for one function call... Abstracting their guts might be nice, but
+   for one function call.  Abstracting their guts might be nice, but
    then again it's not a lot of code and tossing void *'s and pointers
-   to vararg functions into the pot might just make things muddier,
-   too. */
+   to vararg functions into the pot might just make things muddier... */
 
 
 svn_error_t *
@@ -626,11 +620,11 @@ svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool)
 
   svn_path_remove_component (path, SVN_PATH_LOCAL_STYLE);
 
-  err = svn_wc__sync_adm_file (path,
-                               pool,
-                               2,
-                               SVN_WC__ADM_TEXT_BASE,
-                               last_component->data);
+  err = sync_adm_file (path,
+                       pool,
+                       2,
+                       SVN_WC__ADM_TEXT_BASE,
+                       last_component->data);
   
   /* Restore caller's path unconditionally. */
   svn_path_add_component (path, last_component,
@@ -670,7 +664,11 @@ svn_wc__remove_adm_thing (svn_string_t *path,
 /* Set *EXISTS to non-zero iff there's an adm area for PATH.
    If an error occurs, just return error and don't touch *EXISTS. */
 static svn_error_t *
-check_adm_exists (int *exists, svn_string_t *path, apr_pool_t *pool)
+check_adm_exists (int *exists,
+                  svn_string_t *path,
+                  svn_string_t *ancestor_path,
+                  svn_vernum_t ancestor_version,
+                  apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
   apr_status_t apr_err;
@@ -707,7 +705,7 @@ check_adm_exists (int *exists, svn_string_t *path, apr_pool_t *pool)
   /* Restore path to its original state. */
   chop_admin_name (path, components_added);
 
-  /* Okay, first stopping point; see how we're doing. */
+  /** Step 1.  If no adm directory, then we're done. */
   if (err)
     return err;
   else if (! dir_exists)
@@ -730,6 +728,9 @@ check_adm_exists (int *exists, svn_string_t *path, apr_pool_t *pool)
   err = svn_wc__close_adm_file (f, path, SVN_WC__ADM_README, 0, pool);
   if (err)
     return err;
+
+  /** kff todo:
+      Step 3: now check that repos and ancestry are correct **/
 
   return SVN_NO_ERROR;
 }
@@ -793,6 +794,7 @@ init_adm_file (svn_string_t *path,
 static svn_error_t *
 init_adm (svn_string_t *path,
           svn_string_t *repository,
+          svn_string_t *ancestor_path,
           apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -885,6 +887,12 @@ init_adm (svn_string_t *path,
     return err;
 
 
+  /* SVN_WC__ADM_ANCESTOR */
+  err = init_adm_file (path, SVN_WC__ADM_ANCESTOR, ancestor_path, pool);
+  if (err)
+    return err;
+
+
   /* SVN_WC__ADM_VERSIONS */
   err = init_adm_file (path, SVN_WC__ADM_VERSIONS, versions_contents, pool);
   if (err)
@@ -934,19 +942,25 @@ init_adm (svn_string_t *path,
 svn_error_t *
 svn_wc__ensure_adm (svn_string_t *path,
                     svn_string_t *repository,
+                    svn_string_t *ancestor_path,
+                    svn_vernum_t ancestor_version,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
   int exists_already;
 
   /* kff todo: check repos... and ancestry? */
-  err = check_adm_exists (&exists_already, path, pool);
+  err = check_adm_exists (&exists_already,
+                          path,
+                          ancestor_path,
+                          ancestor_version,
+                          pool);
   if (err)
     return err;
 
   if (! exists_already)
     {
-      err = init_adm (path, repository, pool);
+      err = init_adm (path, repository, ancestor_path, pool);
       if (err)
         return err;
     }

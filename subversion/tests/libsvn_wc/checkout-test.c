@@ -92,12 +92,11 @@ apply_delta (void *delta_src,
 {
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
-  void *dir_baton;
   svn_error_t *err;
 
   /* Get the editor and friends... */
   err = svn_wc_get_update_editor (dest, repos, version,
-                                  &editor, &edit_baton, &dir_baton, pool);
+                                  &editor, &edit_baton, pool);
   if (err)
     return err;
 
@@ -105,10 +104,9 @@ apply_delta (void *delta_src,
   return svn_xml_auto_parse (read_fn,
                              delta_src,
                              editor,
-                             dest,
-                             version,
+                             svn_string_create ("", pool),
+                             1,
                              edit_baton,
-                             dir_baton,
                              pool);
 }
 
