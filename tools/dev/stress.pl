@@ -147,12 +147,13 @@ sub status_update_commit
     # return value and parse the error text.
     my $pid = open3(\*COMMIT_WRITE, \*COMMIT_READ, \*COMMIT_ERR_READ,
                     $svn_cmd);
+    print while ( <COMMIT_READ> );
 
-    # Look for acceptable errors
+    # Look for acceptable errors, ones we expect to occur due to conflicts
     my $acceptable_error = 0;
     while ( <COMMIT_ERR_READ> )
       {
-        print STDERR;
+        print;
         s/\r*$//;               # [Windows compat] Remove trailing \r's
         $acceptable_error = 1 if ( /^svn:[ ]
                                    (
@@ -166,7 +167,6 @@ sub status_update_commit
       }
     close COMMIT_ERR_READ or die "close COMMIT_ERR_READ: $!\n";
     close COMMIT_WRITE or die "close COMMIT_WRITE: $!\n";
-    print while ( <COMMIT_READ> );
     close COMMIT_READ or die "close COMMIT_READ: $!\n";
 
     # Get commit subprocess exit status
