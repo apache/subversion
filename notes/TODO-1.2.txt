@@ -5,11 +5,13 @@ TO-DO list for svn 1.2
 
 CODING TASKS:
 
-   - Slog through Julian Foad's 1.2 API Review email.
+   - Slog through Julian Foad's 1.2 API Review email.  (fitz,
+     cmpilato, sussman)
 
    - create svn_wc_status2_t() and svn_wc_create_status() (sussman)
 
    - finish Dan Berlin's streamy-blame stuff;  make it work with libsvn_diff.
+     (sander, philip, dberlin?)
 
    - 'svn st -u' should show remote locks on files not yet in the
      working copy.  (lundblad)
@@ -17,31 +19,15 @@ CODING TASKS:
    - subversion/libsvn_wc/status.c:982
       /* ### lundblad TODO: Make sure lock info is added. */ (lundblad)
 
-   - ??? port the fs-merge-algorithm-rewrite (r13222, 13223, 133232)
-     from fs_fs to fs_base ?
-
    - build system:
-
         - any changes maxb wants to make?
-
         - verify mod_dav_svn build on win32 with httpd-trunk patch.
-
-   - bindings:  
-
-       (note that bindings changes don't restart the soak period,
-        so the 1.2 branch-freeze don't need to block on these things)
-
-        - any swig cleanup folks want to do?
-
-        - perl bindings will be caught up shortly (clkao)
-
-        - javahl bindings need to catch up a tiny bit
 
 
 BUGS:
 
    - ra_dav: fix DELETE to send multiple tokens for a directory.
-     (lock_tests.py #11)
+     (lock_tests.py #11)   (sussman)
 
    - Fix pool lifetime issue in mod_dav_svn when attempting to lock
      multiple files at once (fitz).
@@ -52,6 +38,8 @@ BUGS:
 QUESTIONS:
 
    - revisit auto-repos-upgrading strategy;  see list discussion.
+     proposal:  no lock support until 'svnadmin upgrade', which (1)
+     bumps format number and (2) upgrades fs schema in-place.
 
    - Determine what to do about the fact that if someone schedules a
      file for deletion, and then commits it with the --no-unlock
