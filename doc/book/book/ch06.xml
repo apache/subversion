@@ -350,7 +350,6 @@ collabnet = svn.collab.net
                 makes use of Neon, see <xref linkend="svn-ch-7" />.</para>
             </listitem>
           </varlistentry>
-          <!--
           <varlistentry>
             <term><literal>svn-tunnel-agent</literal></term>
             <listitem>
@@ -358,7 +357,6 @@ collabnet = svn.collab.net
                 which to tunnel SVN protocol requests.</para>
             </listitem>
           </varlistentry>
-          -->
         </variablelist>
 
       </sect3>

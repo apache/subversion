@@ -377,6 +377,15 @@ C    Conflict
   <!-- ================================================================= -->
   <sect1 id="svn-app-a-sect-8">
     <title>Binary files and translation</title>
+
+    <para>In the most general sense, Subversion handles binary files
+      more gracefully than CVS does.  Because CVS uses RCS, it can
+      only store successive full copies of a changing binary file.
+      But internally, Subversion expresses differences between files
+      using a binary-differencing algoritm, regardless of whether they
+      contain textual or binary data.  That means that all files are
+      stored differentially (compressed) in the repository, and small
+      differences are always sent over the network.</para>
     
     <para>CVS users have to mark binary files with
       <option>-kb</option> flags, to prevent data from being garbled

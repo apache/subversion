@@ -81,7 +81,7 @@
           </row>
           <row>
             <entry>libsvn_ra_svn</entry>
-            <entry>A proprietary protocal Repository Access module</entry>
+            <entry>A proprietary protocol Repository Access module</entry>
           </row>
           <row>
             <entry>libsvn_repos</entry>
@@ -655,7 +655,19 @@ The following repository access (RA) modules are available:
           proprietary protocol.  The libsvn_ra_svn module implements
           its own network socket connectivity, and communicates with a
           stand-alone server&mdash;the <filename>svnserve</filename>
-          program&mdash;on the machine that hosts the repository.</para>
+          program&mdash;on the machine that hosts the
+          repository.  Clients access the repository using the
+          <literal>svn://</literal> schema.</para>
+
+        <para>This RA implementation lacks most of the advantages of
+          Apache mentioned in the previous section; however, it may be
+          appealing to some sysadmins nonetheless.  It is dramatically
+          easier to configure and run; setting up an
+          <filename>svnserve</filename> process is nearly instantaneous.
+          Furthermore, some sysadmins may already have an SSH security
+          infrastructure in place, and want Subversion to use it.
+          Clients using ra_svn can easily tunnel the protocol over
+          SSH.</para>
 
       </sect3>
 
