@@ -38,11 +38,6 @@ TEXI2DVI = texi2dvi
 DVIPS = dvips
 DVIPDF = dvipdf
 
-### See `dist' rule.
-DIST_SANDBOX = .dist_sandbox
-DISTNAME = subversion
-VERSION = `grep SVN_VERSION configure.in | cut -f 2 -d ' ' | sed -e 's/"//g' | sed -e 's/,//g'`
-
 
 CC = @CC@
 
