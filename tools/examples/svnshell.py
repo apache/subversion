@@ -47,7 +47,7 @@ class SVNShell:
     print "  exit         : exit the shell"
     print "  ls [PATH]    : list the contents of the current directory"
     print "  lstxns       : list the transactions available for browsing"
-    print "  propcat      : list the properties of FILE or DIR"
+    print "  pcat [PATH]  : list the properties of PATH"
     print "  setrev REV   : set the current revision to browse"
     print "  settxn TXN   : set the current transaction to browse"
     print "  youngest     : list the youngest browsable revision number"
@@ -162,18 +162,19 @@ class SVNShell:
     print ""
     util.svn_pool_clear(self.taskpool)
     
-  def cmd_propcat(self, *args):
-    """dump the properties of a file or dir"""
+  def cmd_pcat(self, *args):
+    """list the properties of a path"""
     args = args[0]
-    if not len(args):
-      print "You must supply a path."
-      return
-    catpath = self._parse_path(args[0])
+    catpath = self.path
+    if len(args):
+      catpath = self._parse_path(args[0])
     kind = fs.check_path(self.root, catpath, self.taskpool)
     if kind == util.svn_node_none:
       print "Path '%s' does not exist." % catpath
       return
     plist = fs.node_proplist(self.root, catpath, self.taskpool)
+    if not len(plist):
+      return
     for pkey in plist.keys():
       pval = plist[pkey]
       print 'K ' + str(len(pkey))
