@@ -418,7 +418,14 @@ bdb_write_config  (svn_fs_t *fs)
     "# If you see \"log region out of memory\" errors, bump lg_regionmax.\n"
     "# See http://www.sleepycat.com/docs/ref/log/config.html and\n"
     "# http://svn.haxx.se/users/archive-2004-10/1001.shtml for more.\n"
-    "set_lg_regionmax 131072\n";
+    "set_lg_regionmax 131072\n"
+    "#\n"
+    /* ### Configure this with "svnadmin create --bdb-cache-size" */
+    "# The default cache size in BDB os only 256k. As explained in\n"
+    "# http://svn.haxx.se/dev/archive-2004-12/0369.shtml, this is too\n"
+    "# small for most applications. Bump this number if \"db_stat -m\"\n"
+    "# shows too many cache misses.\n"
+    "set_cachesize    0 1048576 1\n";
 
   /* Run-time configurable options.
      Each option set consists of a minimum required BDB version, a
