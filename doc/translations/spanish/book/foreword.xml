@@ -10,7 +10,7 @@ ch00.xml. -->
 
   <simplesect>
 
-    <para>Una mala lista de preguntas y respuestas frequentes
+    <para>Una mala lista de preguntas y respuestas frecuentes
       (FAQ<footnote><para>N.T.: El acrónimo
       proviene del inglés <quote>frequently asked
       questions</quote>.</para></footnote>.) es aquella
@@ -28,7 +28,7 @@ ch00.xml. -->
       <para>R: Muchos de nuestros clientes desean saber cómo maximizar
         su productividad a través de nuestras patentadas innovaciones
         de software para trabajo en grupo. La respuesta es simple:
-        primero, haga click en el menú
+        primero, haga clic en el menú
         <quote><literal>Archivo</literal></quote>, baje hasta
         <quote><literal>Incrementar&nbsp;productividad</literal></quote>,
         entonces&hellip;</para>
@@ -68,7 +68,7 @@ ch00.xml. -->
       escribir <!-- TODO traducir citas? --><citetitle>The Subversion
       Handbook</citetitle>, un manual de sesenta páginas que cubría el
       uso básico de Subversion. El manual no tenía pretensiones de ser
-      una obra completa, pero fue distribuído con Subversion y ayudó a
+      una obra completa, pero fue distribuido con Subversion y ayudó a
       los usuarios a superar ese bache inicial en su curva de
       aprendizaje. Cuando <!-- TODO traducir título empresa? -->
       O'Reilly and Associates decidió publicar un libro completo sobre
@@ -83,7 +83,7 @@ ch00.xml. -->
       traducido otros traductores (ej: francés o alemán)-->,
       comenzando a partir de una tabla de contenidos y borrador inicial.
       Pero también tenían acceso a un flujo constante&mdash;de hecho,
-      un geiser incontrolable&mdash;de material práctico. Subversion
+      un géiser incontrolable&mdash;de material práctico. Subversion
       ya estaba en manos de miles de usuarios, y éstos estaban
       proporcionando toneladas de críticas, no sólo sobre Subversion,
       sino también sobre la documentación existente.<!--TODO revisar
@@ -112,7 +112,7 @@ ch00.xml. -->
       problemas <!-- TODO: troubleshooting? -->.  Sólo cuando se vuelve
       a revisar se ve brillar su autenticidad: los detalles que sólo
       pueden resultar de encuentros con lo desconocido, ejemplos
-      extraídos de genuínos casos de uso, y sobre todo, la sensibilidad
+      extraídos de genuinos casos de uso, y sobre todo, la sensibilidad
       hacia la necesidad del usuario y su punto de vista.</para>
 
     <para>Por supuesto, nadie puede garantizar que este libro responderá
