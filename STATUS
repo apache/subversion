@@ -31,15 +31,6 @@ Candidate changes:
       -0 breser (I'm still not sure this belongs in 1.1.0, but I don't see
                  anything technically wrong with it).
 
-  * r10400, r10401
-    Perl bindings build fixes.
-    r10400: Add cygwin to the list of platforms requiring explicit linking of
-      apr.
-    r10401: Transfer some libsvn_swig_perl dependencies incorrectly listed as
-      nonlibs to libs.
-    Votes:
-      +1: maxb, ghudson, clkao, breser
-
   * r10422
     Python bindings build fix. Make the compile flags more like distutils uses,
     avoiding large amounts of compiler warnings.
