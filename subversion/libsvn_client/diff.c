@@ -1450,6 +1450,11 @@ diff_wc_wc (const apr_array_header_t *options,
                                 FALSE, recurse, pool));
     }
 
+  /* Resolve named revisions to real numbers. */
+  SVN_ERR (svn_client__get_revision_number
+           (&callback_baton->revnum1, NULL, NULL, revision1, path1, pool));
+  callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
+
   SVN_ERR (svn_wc_diff (adm_access, target, callbacks, callback_baton,
                         recurse, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
