@@ -70,4 +70,4 @@ Candidate changes:
     Fix potential attack path in pre-commit-hook template.
     Justification: Don't offer templates we don't want to use ourselves.
     Votes:
-      +1: dionisos
+      +1: dionisos, kfogel
