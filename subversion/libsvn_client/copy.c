@@ -137,7 +137,7 @@ wc_to_wc_copy (const char *src_path,
       if (!force)
         /* Ensure there are no "awkward" files. */
         SVN_ERR_W (svn_client__can_delete (src_path, ctx, pool),
-                   "Pass --force to override this restriction");
+                   "Move will not be attempted unless forced");
     }
   else 
     {

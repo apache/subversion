@@ -180,8 +180,7 @@ svn_client_revprop_set (const char *propname,
   if (strcmp (propname, SVN_PROP_REVISION_AUTHOR) == 0
       && strchr (propval->data, '\n') != NULL && !force)
     return svn_error_create (SVN_ERR_CLIENT_REVISION_AUTHOR_CONTAINS_NEWLINE,
-                             NULL,
-                             "Pass --force to override this restriction");
+                             NULL, "Value will not be set unless forced");
 
   if (propval && ! is_valid_prop_name (propname))
     return svn_error_createf (SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
