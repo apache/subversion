@@ -242,7 +242,7 @@ create_file_transaction (const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
 
-  *msg = "begin a txn, get the txn root, and add a file!";
+  *msg = "begin a txn, get the txn root, and add a file";
 
   SVN_ERR (svn_test__create_fs_and_repos 
            (&fs, "test-repo-create-file-txn", pool));
@@ -460,7 +460,7 @@ create_mini_tree_transaction (const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
 
-  *msg = "make a file, a subdir, and another file in that subdir!";
+  *msg = "make a file, a subdir, and another file in that subdir";
 
   SVN_ERR (svn_test__create_fs_and_repos 
            (&fs, "test-repo-create-mini-tree-txn", pool));
