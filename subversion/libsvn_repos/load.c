@@ -76,6 +76,31 @@ struct node_baton
 
 /*----------------------------------------------------------------------*/
 
+/** A conversion function between the two vtable types. **/
+static
+svn_repos_parser_fns2_t *fns2_from_fns (const svn_repos_parser_fns_t *fns,
+                                        apr_pool_t *pool)
+{
+  svn_repos_parser_fns2_t *fns2;
+
+  fns2 = apr_palloc (pool, sizeof (*fns2));
+  fns2->new_revision_record = fns->new_revision_record;
+  fns2->uuid_record = fns->uuid_record;
+  fns2->new_node_record = fns->new_node_record;
+  fns2->set_revision_property = fns->set_revision_property;
+  fns2->set_node_property = fns->set_node_property;
+  fns2->remove_node_props = fns->remove_node_props;
+  fns2->set_fulltext = fns->set_fulltext;
+  fns2->close_node = fns->close_node;
+  fns2->close_revision = fns->close_revision;
+  fns2->delete_node_property = NULL;
+  fns2->apply_textdelta = NULL;
+  return fns2;
+}
+
+
+/*----------------------------------------------------------------------*/
+
 /** The parser and related helper funcs **/
 
 
@@ -172,7 +197,7 @@ stream_malformed (void)
 static svn_error_t *
 parse_property_block (svn_stream_t *stream,
                       svn_filesize_t content_length,
-                      const svn_repos_parser_fns_t *parse_fns,
+                      const svn_repos_parser_fns2_t *parse_fns,
                       void *record_baton,
                       svn_boolean_t is_node,
                       apr_pool_t *pool)
@@ -276,6 +301,41 @@ parse_property_block (svn_stream_t *stream,
           else
             return stream_malformed (); /* didn't find expected 'V' line */
         }
+      else if ((buf[0] == 'D') && (buf[1] == ' '))
+        {
+          apr_size_t numread;
+          char *keybuf;
+          char c;
+          
+          /* Get the length of the key */
+          apr_size_t keylen = (apr_size_t) atoi (buf + 2);
+
+          /* Now read that much into a buffer, + 1 byte for null terminator */
+          keybuf = apr_pcalloc (pool, keylen + 1);
+          numread = keylen;
+          SVN_ERR (svn_stream_read (stream, keybuf, &numread));
+          content_length -= numread;
+          if (numread != keylen)
+            return stream_ran_dry ();
+          keybuf[keylen] = '\0';
+
+          /* Suck up extra newline after key data */
+          numread = 1;
+          SVN_ERR (svn_stream_read (stream, &c, &numread));
+          content_length -= numread;
+          if (numread != 1)
+            return stream_ran_dry ();
+          if (c != '\n') 
+            return stream_malformed ();
+
+          /* We don't expect these in revision properties, and if we see
+             one when we don't have a delete_node_property callback,
+             then we're seeing a v3 feature in a v2 dump. */
+          if (!is_node || !parse_fns->delete_node_property)
+            return stream_malformed ();
+
+          SVN_ERR (parse_fns->delete_node_property (record_baton, keybuf));
+        }
       else
         return stream_malformed (); /* didn't find expected 'K' line */
       
@@ -293,7 +353,8 @@ parse_property_block (svn_stream_t *stream,
 static svn_error_t *
 parse_text_block (svn_stream_t *stream,
                   svn_filesize_t content_length,
-                  const svn_repos_parser_fns_t *parse_fns,
+                  svn_boolean_t is_delta,
+                  const svn_repos_parser_fns2_t *parse_fns,
                   void *record_baton,
                   char *buffer,
                   apr_size_t buflen,
@@ -301,9 +362,21 @@ parse_text_block (svn_stream_t *stream,
 {
   svn_stream_t *text_stream = NULL;
   apr_size_t num_to_read, rlen, wlen;
-  
-  /* Get a stream to which we can push the data. */
-  SVN_ERR (parse_fns->set_fulltext (&text_stream, record_baton));
+
+  if (is_delta)
+    {
+      svn_txdelta_window_handler_t wh;
+      void *whb;
+
+      SVN_ERR (parse_fns->apply_textdelta (&wh, &whb, record_baton));
+      if (wh)
+        text_stream = svn_txdelta_parse_svndiff (wh, whb, TRUE, pool);
+    }
+  else
+    {
+      /* Get a stream to which we can push the data. */
+      SVN_ERR (parse_fns->set_fulltext (&text_stream, record_baton));
+    }
 
   /* If there are no contents to read, just write an empty buffer
      through our callback. */
@@ -384,12 +457,12 @@ parse_format_version (const char *versionstring, int *version)
 
 /* The Main Parser Logic */
 svn_error_t *
-svn_repos_parse_dumpstream (svn_stream_t *stream,
-                            const svn_repos_parser_fns_t *parse_fns,
-                            void *parse_baton,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            apr_pool_t *pool)
+svn_repos_parse_dumpstream2 (svn_stream_t *stream,
+                             const svn_repos_parser_fns2_t *parse_fns,
+                             void *parse_baton,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *pool)
 {
   svn_boolean_t eof;
   svn_stringbuf_t *linebuf;
@@ -408,6 +481,14 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
   /* The first two lines of the stream are the dumpfile-format version
      number, and a blank line. */
   SVN_ERR (parse_format_version (linebuf->data, &version));
+
+  /* If we were called from svn_repos_parse_dumpstream(), the
+     callbacks to handle delta contents will be NULL, so we have to
+     reject dumpfiles with the current version. */
+  if (version == SVN_REPOS_DUMPFILE_FORMAT_VERSION
+      && (!parse_fns->delete_node_property || !parse_fns->apply_textdelta))
+    return svn_error_createf (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                              "Unsupported dumpfile version: %d", version);
 
   /* A dumpfile "record" is defined to be a header-block of
      rfc822-style headers, possibly followed by a content-block.
@@ -509,8 +590,14 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                                   SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH,
                                   APR_HASH_KEY_STRING)))
         {
-          /* First, remove all node properties. */
-          if (found_node)
+          const char *delta = apr_hash_get (headers,
+                                            SVN_REPOS_DUMPFILE_PROP_DELTA,
+                                            APR_HASH_KEY_STRING);
+          svn_boolean_t is_delta = (delta && strcmp (delta, "true") == 0);
+
+          /* First, remove all node properties, unless this is a delta
+             property block. */
+          if (found_node && !is_delta)
             SVN_ERR (parse_fns->remove_node_props (node_baton));
 
           SVN_ERR (parse_property_block (stream,
@@ -526,11 +613,17 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                                   SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH,
                                   APR_HASH_KEY_STRING)))
         {
-          SVN_ERR (parse_text_block (stream, 
+          const char *delta = apr_hash_get (headers,
+                                            SVN_REPOS_DUMPFILE_TEXT_DELTA,
+                                            APR_HASH_KEY_STRING);
+          svn_boolean_t is_delta = (delta && strcmp (delta, "true") == 0);
+
+          SVN_ERR (parse_text_block (stream,
                                      svn__atoui64 (valstr),
+                                     is_delta,
                                      parse_fns,
                                      found_node ? node_baton : rev_baton,
-                                     buffer, 
+                                     buffer,
                                      buflen,
                                      found_node ? nodepool : revpool));
         }
@@ -558,6 +651,19 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 }
 
 
+svn_error_t *
+svn_repos_parse_dumpstream (svn_stream_t *stream,
+                            const svn_repos_parser_fns_t *parse_fns,
+                            void *parse_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *pool)
+{
+  svn_repos_parser_fns2_t *fns2 = fns2_from_fns (parse_fns, pool);
+
+  return svn_repos_parse_dumpstream2 (stream, fns2, parse_baton,
+                                      cancel_func, cancel_baton, pool);
+}
 
 /*----------------------------------------------------------------------*/
 
@@ -873,6 +979,20 @@ set_node_property (void *baton,
 
 
 static svn_error_t *
+delete_node_property (void *baton,
+                      const char *name)
+{
+  struct node_baton *nb = baton;
+  struct revision_baton *rb = nb->rb;
+
+  SVN_ERR (svn_fs_change_node_prop (rb->txn_root, nb->path,
+                                    name, NULL, nb->pool));
+  
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 remove_node_props (void *baton)
 {
   struct node_baton *nb = baton;
@@ -897,6 +1017,21 @@ remove_node_props (void *baton)
     }
 
   return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+apply_textdelta (svn_txdelta_window_handler_t *handler,
+                 void **handler_baton,
+                 void *node_baton)
+{
+  struct node_baton *nb = node_baton;
+  struct revision_baton *rb = nb->rb;
+
+  return svn_fs_apply_textdelta (handler, handler_baton,
+                                 rb->txn_root, nb->path,
+                                 NULL, nb->md5_checksum,
+                                 nb->pool);
 }
 
 
@@ -995,6 +1130,33 @@ close_revision (void *baton)
 
 
 svn_error_t *
+svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **callbacks,
+                                void **parse_baton,
+                                svn_repos_t *repos,
+                                svn_boolean_t use_history,
+                                enum svn_repos_load_uuid uuid_action,
+                                svn_stream_t *outstream,
+                                const char *parent_dir,
+                                apr_pool_t *pool)
+{
+  const svn_repos_parser_fns_t *fns;
+  svn_repos_parser_fns2_t *parser;
+
+  /* Fetch the old-style vtable and baton, convert the vtable to a
+   * new-style vtable, and set the new callbacks. */
+  SVN_ERR (svn_repos_get_fs_build_parser (&fns, parse_baton, repos,
+                                          use_history, uuid_action, outstream,
+                                          parent_dir, pool));
+  parser = fns2_from_fns (fns, pool);
+  parser->delete_node_property = delete_node_property;
+  parser->apply_textdelta = apply_textdelta;
+  *callbacks = parser;
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
 svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
                                void **parse_baton,
                                svn_repos_t *repos,
@@ -1041,21 +1203,21 @@ svn_repos_load_fs (svn_repos_t *repos,
                    void *cancel_baton,
                    apr_pool_t *pool)
 {
-  const svn_repos_parser_fns_t *parser;
+  const svn_repos_parser_fns2_t *parser;
   void *parse_baton;
   
   /* This is really simple. */  
 
-  SVN_ERR (svn_repos_get_fs_build_parser (&parser, &parse_baton,
-                                          repos,
-                                          TRUE, /* look for copyfrom revs */
-                                          uuid_action,
-                                          feedback_stream,
-                                          parent_dir,
-                                          pool));
+  SVN_ERR (svn_repos_get_fs_build_parser2 (&parser, &parse_baton,
+                                           repos,
+                                           TRUE, /* look for copyfrom revs */
+                                           uuid_action,
+                                           feedback_stream,
+                                           parent_dir,
+                                           pool));
 
-  SVN_ERR (svn_repos_parse_dumpstream (dumpstream, parser, parse_baton,
-                                       cancel_func, cancel_baton, pool));
+  SVN_ERR (svn_repos_parse_dumpstream2 (dumpstream, parser, parse_baton,
+                                        cancel_func, cancel_baton, pool));
 
   return SVN_NO_ERROR;
 }

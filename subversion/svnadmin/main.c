@@ -154,6 +154,7 @@ enum
   { 
     svnadmin__version = SVN_OPT_FIRST_LONGOPT_ID,
     svnadmin__incremental,
+    svnadmin__deltas,
     svnadmin__ignore_uuid,
     svnadmin__force_uuid,
     svnadmin__parent_dir,
@@ -187,6 +188,9 @@ static const apr_getopt_option_t options_table[] =
 
     {"incremental",   svnadmin__incremental, 0,
      "dump incrementally"},
+
+    {"deltas",        svnadmin__deltas, 0,
+     "use deltas in dump output"},
 
     {"bypass-hooks",  svnadmin__bypass_hooks, 0,
      "bypass the repository hook system"},
@@ -247,7 +251,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "revision trees.  If only LOWER is given, dump that one revision tree.\n"
      "If --incremental is passed, then the first revision dumped will be\n"
      "a diff against the previous revision, instead of the usual fulltext.\n",
-     {'r', svnadmin__incremental, 'q'} },
+     {'r', svnadmin__incremental, svnadmin__deltas, 'q'} },
 
     {"help", subcommand_help, {"?", "h"},
      "usage: svnadmin help [SUBCOMMAND...]\n\n"
@@ -329,6 +333,7 @@ struct svnadmin_opt_state
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
   svn_boolean_t incremental;                        /* --incremental */
+  svn_boolean_t use_deltas;                         /* --deltas */
   svn_boolean_t quiet;                              /* --quiet */
   svn_boolean_t bdb_txn_nosync;                     /* --bdb-txn-nosync */
   svn_boolean_t bdb_log_keep;                       /* --bdb-log-keep */
@@ -492,9 +497,10 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     SVN_ERR (create_stdio_stream (&stderr_stream,
                                   apr_file_open_stderr, pool));
 
-  SVN_ERR (svn_repos_dump_fs (repos, stdout_stream, stderr_stream,
-                              lower, upper, opt_state->incremental,
-                              check_cancel, NULL, pool));
+  SVN_ERR (svn_repos_dump_fs2 (repos, stdout_stream, stderr_stream,
+                               lower, upper, opt_state->incremental,
+                               opt_state->use_deltas, check_cancel, NULL,
+                               pool));
 
   return SVN_NO_ERROR;
 }
@@ -918,6 +924,9 @@ main (int argc, const char * const *argv)
         break;
       case svnadmin__incremental:
         opt_state.incremental = TRUE;
+        break;
+      case svnadmin__deltas:
+        opt_state.use_deltas = TRUE;
         break;
       case svnadmin__ignore_uuid:
         opt_state.uuid_action = svn_repos_load_uuid_ignore;
