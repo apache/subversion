@@ -95,7 +95,7 @@
           <row>
             <entry>mod_authz_svn</entry>
             <entry>Apache authorization module for Subversion
-            repositories access via WebDAV.</entry>
+            repositories access via WebDAV</entry>
           </row>
           <row>
             <entry>mod_dav_svn</entry>
@@ -1558,11 +1558,11 @@ crawl_dir (apr_array_header_t *files,
 
       <screen>
 $ svn checkout http://svn.collab.net/repos/svn/trunk subversion
-A  HACKING
-A  INSTALL
-A  README
-A  autogen.sh
-A  build.conf
+A  subversion/HACKING
+A  subversion/INSTALL
+A  subversion/README
+A  subversion/autogen.sh
+A  subversion/build.conf
 &hellip;
 </screen>
 
