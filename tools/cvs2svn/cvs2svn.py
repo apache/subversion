@@ -38,7 +38,6 @@ trunk_rev = re.compile('^[0-9]+\\.[0-9]+$')
 branch_tag = re.compile('^[0-9.]+\\.0\\.[0-9]+$')
 vendor_tag = re.compile('^[0-9]+\\.[0-9]+\\.[0-9]+$')
 
-SVNADMIN = 'svnadmin'      # Location of the svnadmin binary.
 DATAFILE = 'cvs2svn-data'
 DUMPFILE = 'cvs2svn-dump'  # The "dumpfile" we create to load into the repos
 
