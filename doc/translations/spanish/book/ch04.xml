@@ -302,10 +302,10 @@ Committed revision 341.
     </sect2>
     
     <sect2 id="svn-ch-4-sect-2.2">
-      <title>Working with Your Branch</title> 
+      <title>Trabajando con su rama</title>
 
-      <para>Now that you've created a branch of the project, you can
-        check out a new working copy to start using it:</para>
+      <para>Ahora que ha creado una rama del proyecto, puede obtener
+        una nueva copia local para comenzar a usarla:</para>
 
 <screen>
 $ svn checkout http://svn.example.com/repos/calc/branches/my-calc-branch
@@ -315,17 +315,17 @@ A  my-calc-branch/button.c
 Checked out revision 341.
 </screen>
 
-      <para>There's nothing special about this working copy; it simply
-        mirrors a different directory in the repository.  When you
-        commit changes, however, Sally won't ever see them when she
-        updates.  Her working copy is of
-        <filename>/calc/trunk</filename>.  (Be sure to read <xref
-        linkend="svn-ch-4-sect-5"/> later in this chapter: the
-        <command>svn switch</command> command is an alternate way of
-        creating a working copy of a branch.)</para>
+      <para>No hay nada especial sobre esta copia local; simplemente
+        refleja un directorio diferente del repositorio. Cuando
+        envíe sus cambios, no obstante, Sally nunca los
+        verá cuando se actualice. Su copia local es de
+        <filename>/calc/trunk</filename>.  (Asegúrese de leer <xref
+        linkend="svn-ch-4-sect-5"/> más adelante en este capítulo:
+        el comando <command>svn switch</command> permite crear una
+        copia local de una rama de modo diferente.)</para>
 
-      <para>Let's pretend that a week goes by, and the following
-      commits happen:</para>
+      <para>Pretendamos que ha pasado una semana, y se realizan los
+        siguientes cambios:</para>
 
       <itemizedlist>
         <listitem><para>
