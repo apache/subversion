@@ -194,7 +194,7 @@ Committed revision 1.
           <para>But not from a remote host:</para>
 
           <screen>
-$ svn import testfile http://svn.red-bean.com/test -m "import"
+$ svn import test http://svn.red-bean.com/test -m "Initial import"
 harry's password: xxxxxxx
 
 svn_error: #21110 : 
