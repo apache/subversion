@@ -619,7 +619,8 @@ svn_wc__open_adm_file (apr_file_t **handle,
                        apr_int32_t flags,
                        apr_pool_t *pool)
 {
-  return open_adm_file (handle, path, NULL, APR_OS_DEFAULT, flags, pool, fname, NULL);
+  return open_adm_file (handle, path, NULL, APR_OS_DEFAULT, flags, pool,
+                        fname, NULL);
 }
 
 
