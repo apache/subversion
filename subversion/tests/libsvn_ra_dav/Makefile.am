@@ -11,6 +11,8 @@ INCLUDES = -I../../include -I../../../apr/include
 ra_dav_test_LDADD = ../libsvn_ra_dav.la      \
                     ../../libsvn_subr/libsvn_subr.la           \
                     ../../libsvn_string/libsvn_string.la           \
+                    ../../libsvn_wc/libsvn_wc.la           \
+                    ../../libsvn_delta/libsvn_delta.la           \
                     ../../../expat-lite/libexpat.la           \
                     ../../../neon/libneon.la                  \
                     ../../../apr/libapr.a
