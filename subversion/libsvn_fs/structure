@@ -410,10 +410,10 @@ following forms:
     (cloned CLONE)
         This means that the named node has been cloned in TXN; CLONE
 	is the clone's node revision ID.
-    (moved PARENT-CLONE ENTRY)
+    (moved PARENT-CLONE ENTRY-NAME)
         This means that the named node has been moved (renamed) in the
-	transaction, and the entry referring to it is now the
-        directory entry named ENTRY in the directory whose node
+        transaction, and the entry referring to it is now the
+        directory entry named ENTRY-NAME in the directory whose node
         revision ID is PARENT-CLONE.  Note that PARENT-CLONE must be
         a clone in TXN, since its contents have been modified.
 
@@ -431,7 +431,7 @@ Otherwise:
   If there is an entry of the form (moved PARENT-CLONE ENTRY),
     Create our own clone of BASE-PATH, CLONE.
     Change the entry in `clones' to (cloned CLONE).
-    Change the entry named ENTRY in PARENT-CLONE to point to CLONE.
+    Change the entry named ENTRY-NAME in PARENT-CLONE to point to CLONE.
   If there is no entry in `clones':
     The directory path BASE-PATH contains at least one component;
     divide it into its rightmost component, LAST, and the path leading
@@ -539,3 +539,109 @@ ANCESTOR:
 Non-Historical Properties
 
 [[Yes, do tell.]]
+
+
+
+Appendix: Filesystem structure summary
+======================================
+
+Berkeley DB tables
+------------------
+
+                "nodes" : btree(ID -> REPRESENTATION)
+            "revisions" : recno(REVISION)
+         "transactions" : btree(TXN -> TRANSACTION,
+                                "next-id" -> TXN)
+               "clones" : btree((TXN BASE-PATH) -> CLONE)
+
+
+Syntactic elements
+------------------
+
+Table keys:
+
+                     ID ::= node.id ;
+                    TXN ::= number ;
+##            BASE-PATH ::= [xbc todo: whatzis?]
+
+
+Nodes:
+
+         REPRESENTATION ::= ("fulltext" NODE-REVISION)
+                          | ("younger" DELTA CHECKSUM) ;
+                  DELTA ::= ("svndiff" DATA) ;
+               CHECKSUM ::= ("md5" BYTES) ;
+            DATA, BYTES ::= atom ;
+
+
+Filesystem revisions:
+
+               REVISION ::= ("revision" ID PROPLIST) ;
+               PROPLIST ::= (PROP ...) ;
+                   PROP ::= atom atom ;
+
+
+Transactions:
+
+            TRANSACTION ::= (ROOT-ID BASE-ROOT-ID) ;
+                ROOT-ID ::= node.id ;
+           BASE-ROOT-ID ::= node.id ;
+
+
+Clones:
+
+                  CLONE ::= ("cloned" CLONE-ID)
+                          | ("moved" PARENT-CLONE-ID ENTRY-NAME);
+               CLONE-ID ::= node.id ;
+        PARENT-CLONE-ID ::= node.id ;
+             ENTRY-NAME ::= atom ;
+
+
+Node revisions:
+
+          NODE-REVISION ::= FILE | DIR ;
+                   FILE ::= (HEADER DATA) ;
+                    DIR ::= (HEADER (ENTRY ...)) ;
+                  ENTRY ::= (NAME ID) | (NAME ID BASE-PATH) ;
+                   NAME ::= atom ;
+
+
+                 HEADER ::= (KIND PROPLIST FLAG ...) ;
+                   KIND ::= "file" | "dir" ;
+                   FLAG ::= skel ;
+
+
+
+Lexical elements
+----------------
+
+Node & revision IDs:
+
+                node.id ::= number | node.revision-id '.' number ;
+       node.revision-id ::= node.id '.' number ;
+                 number ::= /{digit.class}+/ ;
+
+
+(Note: the following are described in skel.h)
+Skels:
+
+                   skel ::= atom | list;
+                   list ::= list.head list.body.opt list.tail ;
+                   atom ::= atom.imp-len | atom.exp-len ;
+
+              list.head ::= '(' spaces.opt ;
+              list.tail ::= spaces.opt ')' ;
+          list.body.opt ::=  | list.body ;
+              list.body ::= skel | list.body spaces.opt skel ;
+
+           atom.imp-len ::= /{name.class}[^{ws.class}]*{ws.class}/ ;
+           atom.exp-len ::= /({digit.class}+){ws.class}.{\1}/ ;
+
+             spaces.opt ::= /{ws.class}*/ ;
+
+
+Character classes:
+
+               ws.cpass ::= [\t\n\f\r\ ] ;
+            digit.class ::= [0-9] ;
+            name.class  ::= [A-Za-z] ;
