@@ -1,5 +1,10 @@
 								-*-text-*-
 
+
+==> For instructions on how to get swig bindings working, read the
+     INSTALL file in this directory.
+
+
 SVN HEADER -> SWIG MODULE
 -------------------------
 
