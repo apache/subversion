@@ -67,6 +67,7 @@ class SVNTreeIsNotDirectory(Exception): pass
 # Windows specifics
 if sys.platform == 'win32':
   windows = 1
+  file_schema_prefix = 'file:///'
   _exe = '.exe'
 
   # svn on windows doesn't support backslashes in path names
@@ -96,6 +97,7 @@ if sys.platform == 'win32':
 
 else:
   windows = 0
+  file_schema_prefix = 'file://'
   _exe = ''
 
 # The locations of the svn, svnadmin and svnlook binaries, relative to
@@ -109,7 +111,7 @@ wc_author = 'jrandom'
 wc_passwd = 'rayjandom'
 
 # Global URL to testing area.  Default to ra_local, current working dir.
-test_area_url = "file://" + os.path.splitdrive(os.path.abspath(os.getcwd()))[1]
+test_area_url = file_schema_prefix + os.path.abspath(os.getcwd())
 
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!
