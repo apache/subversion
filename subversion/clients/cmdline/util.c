@@ -151,15 +151,17 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
   for (; os->ind < os->argc; os->ind++)
     {
       svn_stringbuf_t *target = svn_stringbuf_create (os->argv[os->ind], pool);
-      svn_stringbuf_t *basename = 
-        svn_path_last_component (target, svn_path_local_style, pool);
+      svn_stringbuf_t *basename;
+
+      svn_path_canonicalize (target, svn_path_local_style);
+      basename = svn_path_last_component (target, svn_path_local_style, pool);
 
       /* If this target is not a Subversion administrative directory,
          add it to the target list.  TODO: Perhaps this check should
          not call the target a SVN admin dir unless svn_wc_check_wc
          passes on the target, too? */
       if (strcmp (basename->data, SVN_WC_ADM_DIR_NAME))
-        array_push_svn_string (targets, os->argv[os->ind], pool);
+        (*((svn_stringbuf_t **) apr_array_push (targets))) = target;
     }
 
   /* kff todo: need to remove redundancies from targets before
