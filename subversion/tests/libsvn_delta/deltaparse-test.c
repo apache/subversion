@@ -332,11 +332,11 @@ int main(int argc, char *argv[])
 
 
   /* Fire up the XML parser */
-  err = svn_delta_parse (my_read_func, source_baton, /* read from here */
-                         &my_walker,                 /* call these callbacks */
-                         my_walk_baton,
-                         my_parent_baton,            /* with these objects */
-                         globalpool);
+  err = svn_XML_parse (my_read_func, source_baton, /* read from here */
+                       &my_walker,                 /* call these callbacks */
+                       my_walk_baton,
+                       my_parent_baton,            /* with these objects */
+                       globalpool);
 
   apr_close (source_baton);
 
