@@ -170,12 +170,12 @@ log changelog ChangeLog:
 
 doc: doc-info doc-txt doc-html
 
-doc-info: doc/programmer/design/svn-design.info
-doc-dvi: doc/programmer/design/svn-design.dvi
-doc-txt: doc/programmer/design/svn-design.txt
-doc-html: doc/programmer/design/svn-design.html
-doc-ps: doc/programmer/design/svn-design.ps
-doc-pdf: doc/programmer/design/svn-design.pdf
+doc-info: doc/programmer/design/svn-design.info doc/user/manual/svn-manual.info
+doc-dvi: doc/programmer/design/svn-design.dvi doc/user/manual/svn-manual.dvi
+doc-txt: doc/programmer/design/svn-design.txt doc/user/manual/svn-manual.txt
+doc-html: doc/programmer/design/svn-design.html doc/user/manual/svn-manual.html
+doc-ps: doc/programmer/design/svn-design.ps doc/user/manual/svn-manual.ps
+doc-pdf: doc/programmer/design/svn-design.pdf doc/user/manual/svn-manual.pdf
 
 ## Build a tarball.
 #
@@ -229,16 +229,16 @@ dist: ChangeLog
 
 .texi.info:
 	rm -f $@ $@-[0-9] $@-[0-9][0-9]
-	$(MAKEINFO) -I $(top_srcdir)/doc -o $@ $< 
+	$(MAKEINFO) -I `dirname $(top_srcdir)/$<` -o $@ $< 
 
 .texi.dvi:
-	$(TEXI2DVI) -I $(top_srcdir)/doc/programmer/design $<
+	$(TEXI2DVI) -I `dirname $(top_srcdir)/$<` $<
 
 .texi.txt:
-	$(MAKEINFO) -I $(top_srcdir)/doc/programmer/design --no-headers -o $@ $<
+	$(MAKEINFO) -I `dirname $(top_srcdir)/$<` --no-headers -o $@ $<
 
 .texi.html:
-	$(MAKEINFO) -I $(top_srcdir)/doc/programmer/design --no-headers --html -o $@ $<
+	$(MAKEINFO) -I `dirname $(top_srcdir)/$<` --no-headers --html -o $@ $<
 
 .dvi.ps:
 	$(DVIPS) $< -o $@
