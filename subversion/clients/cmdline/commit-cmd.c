@@ -51,7 +51,6 @@ svn_cl__commit (apr_getopt_t *os,
   const char *base_dir;
   svn_client_auth_baton_t *auth_baton;
   svn_client_commit_info_t *commit_info = NULL;
-  svn_revnum_t revnum;
   svn_wc_notify_func_t notify_func = NULL;
   void *notify_baton = NULL;
     
@@ -83,12 +82,6 @@ svn_cl__commit (apr_getopt_t *os,
         base_dir = apr_pstrdup (pool, parent_dir);
     }
 
-  /* Get revnum set to something meaningful, to cover the xml case. */
-  if (opt_state->start_revision.kind == svn_opt_revision_number)
-    revnum = opt_state->start_revision.value.number;
-  else
-    revnum = SVN_INVALID_REVNUM; /* no matter, this is fine */
-
   if (! opt_state->quiet)
     svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
 
@@ -100,8 +93,6 @@ svn_cl__commit (apr_getopt_t *os,
             targets,
             svn_cl__get_log_message,
             svn_cl__make_log_msg_baton (opt_state, base_dir, pool),
-            opt_state->xml_file,
-            revnum,
             opt_state->nonrecursive,
             pool));
   if (commit_info && ! opt_state->quiet)

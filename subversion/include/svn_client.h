@@ -206,13 +206,6 @@ typedef svn_error_t *
    If NOTIFY_FUNC is non-null, invoke NOTIFY_FUNC with NOTIFY_BATON as
    the checkout progresses.
 
-   If XML_SRC is non-NULL, it is an xml file to check out from; in
-   this case, the working copy will record the URL as artificial
-   ancestry information.  If REVISION is
-   svn_client_revision_unspecified, then the revision *must* be
-   present in the <delta-pkg> tag; otherwise, store REVISION in the
-   wc. (Note: a <delta-pkg> revision still overrides REVISION.)
-
    Use POOL for any temporary allocation. */
 svn_error_t *
 svn_client_checkout (svn_wc_notify_func_t notify_func,
@@ -222,7 +215,6 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
                      const char *path,
                      const svn_opt_revision_t *revision,
                      svn_boolean_t recurse,
-                     const char *xml_src,
                      apr_pool_t *pool);
 
 
@@ -239,16 +231,10 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
    for each item handled by the update, and also for files restored
    from text-base.
 
-   If XML_SRC is non-NULL, it is an xml file to update from.  If
-   REVISION is svn_client_revision_unspecified, then the revision
-   *must* be present in the <delta-pkg> tag; otherwise, store REVISION
-   in the wc. (Note: a <delta-pkg> revision still overrides REVISION.)
-   
    Use POOL for any temporary allocation. */
 svn_error_t *
 svn_client_update (svn_client_auth_baton_t *auth_baton,
                    const char *path,
-                   const char *xml_src,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_wc_notify_func_t notify_func,
@@ -399,9 +385,6 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
    as the import progresses, with any of the following actions:
    svn_wc_notify_commit_added, svn_wc_notify_commit_postfix_txdelta.
 
-   If XML_DST is non-NULL, it is a file in which to store the xml
-   result of the commit, and REVISION is used as the revision.
-   
    Use POOL for any temporary allocation.  
    
    LOG_MSG_FUNC/LOG_MSG_BATON are a callback/baton combo that this
@@ -410,10 +393,6 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
 
    Use NONRECURSIVE to indicate that imported directories should not
    recurse into any subdirectories they may have.
-
-   Note: REVISION is svn_revnum_t, rather than svn_opt_revision_t,
-   because only the svn_opt_revision_number kind would be useful
-   anyway.
 
    ### kff todo: This import is similar to cvs import, in that it does
    not change the source tree into a working copy.  However, this
@@ -431,8 +410,6 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
                                 const char *new_entry,
                                 svn_client_get_commit_log_t log_msg_func,
                                 void *log_msg_baton,
-                                const char *xml_dst,
-                                svn_revnum_t revision,
                                 svn_boolean_t nonrecursive,
                                 apr_pool_t *pool);
 
@@ -452,18 +429,6 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
    svn_wc_notify_commit_deleted, svn_wc_notify_commit_replaced,
    svn_wc_notify_commit_postfix_txdelta.
 
-   If XML_DST is NULL, then the commit will write to a repository, and
-   the REVISION argument is ignored.
-
-   If XML_DST is non-NULL, it is a file path to commit to.  In this
-   case, if REVISION is valid, the working copy's revision numbers
-   will be updated appropriately.  If REVISION is invalid, the working
-   copy remains unchanged.
-
-   Note: REVISION is svn_revnum_t, rather than svn_opt_revision_t,
-   because only the svn_opt_revision_number kind would be useful
-   anyway.
-
    Use NONRECURSIVE to indicate that subdirectories of directory
    TARGETS should be ignored.
 
@@ -481,8 +446,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                    const apr_array_header_t *targets,
                    svn_client_get_commit_log_t log_msg_func,
                    void *log_msg_baton,
-                   const char *xml_dst,
-                   svn_revnum_t revision,
                    svn_boolean_t nonrecursive,
                    apr_pool_t *pool);
 

@@ -39,7 +39,6 @@
 svn_error_t *
 svn_client_update (svn_client_auth_baton_t *auth_baton,
                    const char *path,
-                   const char *xml_src,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_wc_notify_func_t notify_func,
@@ -86,8 +85,7 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
     revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
-     either the RA or XML driver will call editor->set_target_revision
-     later on. */
+     the RA driver will call editor->set_target_revision later on. */
   SVN_ERR (svn_wc_get_update_editor (adm_access,
                                      target,
                                      revnum,
@@ -102,8 +100,6 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
   svn_delta_compat_wrap (&wrapped_old_editor, &wrapped_old_edit_baton, 
                          update_editor, update_edit_baton, pool);
 
-  /* Using an RA layer */
-  if (! xml_src)
     {
       void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
@@ -159,37 +155,6 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
       SVN_ERR (ra_lib->close (session));
     }      
   
-  /* Else we're checking out from xml */
-  else
-    {
-      apr_file_t *in = NULL;
-
-      /* Open xml file. */
-      SVN_ERR (svn_io_file_open (&in, xml_src,
-                                 (APR_READ | APR_CREATE),
-                                 APR_OS_DEFAULT, pool));
-
-      /* Do an update by xml-parsing the stream.  An invalid revnum
-         means that there will be a revision number in the <delta-pkg>
-         tag.  Otherwise, a valid revnum will be stored in the wc,
-         assuming there's no <delta-pkg> tag to override it. */
-      err = svn_delta_xml_auto_parse (svn_stream_from_aprfile (in, pool),
-                                      wrapped_old_editor,
-                                      wrapped_old_edit_baton,
-                                      URL,
-                                      revnum,
-                                      pool);
-
-      /* Sleep for one second to ensure timestamp integrity. */
-      apr_sleep (APR_USEC_PER_SEC * 1);
-
-      if (err)
-        return err;
-
-      /* Close XML file. */
-      apr_file_close (in);
-    }
-
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */

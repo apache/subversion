@@ -43,8 +43,7 @@ extern "C" {
    option. Options that have both long and short options should just
    use the short option letter as identifier.  */
 typedef enum {
-  svn_cl__xml_file_opt = SVN_OPT_FIRST_LONGOPT_ID,
-  svn_cl__ancestor_path_opt,
+  svn_cl__ancestor_path_opt = SVN_OPT_FIRST_LONGOPT_ID,
   svn_cl__force_opt,
   svn_cl__msg_encoding_opt,
   svn_cl__version_opt,
@@ -78,7 +77,6 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t recursive, nonrecursive;
 
   const char *message;           /* log message */
-  const char *xml_file;          /* xml source/target file */ /* UTF-8! */
   const char *ancestor_path;     /* ### todo: who sets this? */
   svn_boolean_t force;           /* be more forceful, as in "svn rm -f ..." */
   svn_boolean_t incremental;     /* yield output suitable for concatenation */

@@ -449,24 +449,6 @@ import (const char *path,
 
 
 static svn_error_t *
-get_xml_editor (apr_file_t **xml_hnd,
-                const svn_delta_editor_t **editor,
-                void **edit_baton,
-                const char *xml_file,
-                apr_pool_t *pool)
-{
-  /* Open the xml file for writing. */
-  SVN_ERR (svn_io_file_open (xml_hnd, xml_file,
-                             (APR_WRITE | APR_CREATE),
-                             APR_OS_DEFAULT, pool));
-  
-  /* ... we need an XML commit editor. */
-  return svn_delta_get_xml_editor (svn_stream_from_aprfile (*xml_hnd, pool), 
-                                   editor, edit_baton, pool);
-}
-
-
-static svn_error_t *
 get_ra_editor (void **ra_baton, 
                void **session,
                svn_ra_plugin_t **ra_lib,
@@ -515,12 +497,9 @@ svn_client_import (svn_client_commit_info_t **commit_info,
                    const char *new_entry,
                    svn_client_get_commit_log_t log_msg_func,
                    void *log_msg_baton,
-                   const char *xml_dst,
-                   svn_revnum_t revision,
                    svn_boolean_t nonrecursive,
                    apr_pool_t *pool)
 {
-  apr_status_t apr_err;
   svn_error_t *err;
   const char *log_msg;
   const svn_delta_editor_t *editor;
@@ -530,7 +509,6 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
   const char *committed_date = NULL;
   const char *committed_author = NULL;
-  apr_file_t *xml_hnd;
 
   /* Sanity check: NEW_ENTRY can be null or non-empty, but it can't be
      empty. */
@@ -565,13 +543,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   else
     log_msg = "";
 
-  /* If we're importing to XML ... */
-  if (xml_dst)
-    SVN_ERR (get_xml_editor (&xml_hnd, &editor, &edit_baton, 
-                             xml_dst, pool));
-
-  /* Else we're importing to an RA layer. */
-  else  
+  /* We're importing to an RA layer. */
     {
       svn_node_kind_t kind;
       const char *base_dir = path;
@@ -582,7 +554,8 @@ svn_client_import (svn_client_commit_info_t **commit_info,
       SVN_ERR (get_ra_editor (&ra_baton, &session, &ra_lib, 
                               &editor, &edit_baton, auth_baton, url, base_dir,
                               NULL, log_msg, NULL, &committed_rev,
-                              &committed_date, &committed_author, FALSE, pool));
+                              &committed_date, &committed_author, 
+                              FALSE, pool));
     }
 
   /* If an error occured during the commit, abort the edit and return
@@ -595,22 +568,8 @@ svn_client_import (svn_client_commit_info_t **commit_info,
       return err;
     }
 
-  /* Finish the import. */
-  if (xml_dst)
-    {
-      /* If we were committing into XML, close the xml file. */      
-      if ((apr_err = apr_file_close (xml_hnd)))
-        return svn_error_createf (apr_err, 0, NULL, pool,
-                                  "error closing %s", xml_dst);
-      
-      /* Use REVISION for COMMITTED_REV. */
-      committed_rev = revision;
-    }
-  else  
-    {
-      /* We were committing to RA, so close the session. */
-      SVN_ERR (ra_lib->close (session));
-    }
+  /* Close the session. */
+  SVN_ERR (ra_lib->close (session));
 
   /* Finally, fill in the commit_info structure. */
   *commit_info = svn_client__make_commit_info (committed_rev,
@@ -741,8 +700,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                    const apr_array_header_t *targets,
                    svn_client_get_commit_log_t log_msg_func,
                    void *log_msg_baton,
-                   const char *xml_dst,
-                   svn_revnum_t revision,
                    svn_boolean_t nonrecursive,
                    apr_pool_t *pool)
 {
@@ -760,11 +717,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   apr_hash_t *committables, *tempfiles = NULL;
   svn_wc_adm_access_t *base_dir_access;
   apr_array_header_t *commit_items;
-  apr_status_t apr_err = 0;
-  apr_file_t *xml_hnd = NULL;
   svn_error_t *cmt_err = NULL, *unlock_err = NULL;
   svn_error_t *bump_err = NULL, *cleanup_err = NULL;
-  svn_boolean_t use_xml = (xml_dst && xml_dst[0]) ? TRUE : FALSE;
   svn_boolean_t commit_in_progress = FALSE;
   const char *display_dir = "";
   int i;
@@ -836,19 +790,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                                     pool)))
     goto cleanup;
 
-  /* If we're committing to XML ... */
-  if (use_xml)
-    {
-      if ((cmt_err = get_xml_editor (&xml_hnd, &editor, &edit_baton, 
-                                     xml_dst, pool)))
-        goto cleanup;
-
-      /* Make a note that we have a commit-in-progress. */
-      commit_in_progress = TRUE;
-    }
-
-  /* Else we're commit to RA */
-  else
     {
       svn_revnum_t head = SVN_INVALID_REVNUM;
 
@@ -864,9 +805,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
       commit_in_progress = TRUE;
 
       /* ### Temporary: If we have any non-added directories with
-         property mods, and we're not committing to an XML file, make
-         sure those directories are up-to-date.  Someday this should
-         just be protected against by the server.  */
+         property mods, make sure those directories are up-to-date.
+         Someday this should just be protected against by the server.  */
       for (i = 0; i < commit_items->nelts; i++)
         {
           svn_client_commit_item_t *item
@@ -913,9 +853,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   if (! cmt_err)
     {
       apr_pool_t *subpool = svn_pool_create (pool);
-
-      if (use_xml)
-        committed_rev = revision;
 
       for (i = 0; i < commit_items->nelts; i++)
         {
@@ -981,25 +918,9 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
         svn_pool_destroy (subpool);
     }
 
-  /* If we were committing into XML, close the xml file. */      
-  if (use_xml)
-    {
-      if ((apr_err = apr_file_close (xml_hnd)))
-        {
-          cleanup_err = svn_error_createf (apr_err, 0, NULL, pool,
-                                           "error closing %s", xml_dst);
-          goto cleanup;
-        }
-
-      /* Use REVISION for COMMITTED_REV. */
-      committed_rev = revision;
-    }
-  else  
-    {
-      /* We were committing to RA, so close the session. */
-      if ((cleanup_err = ra_lib->close (session)))
-        goto cleanup;
-    }
+  /* Close the RA session. */
+  if ((cleanup_err = ra_lib->close (session)))
+    goto cleanup;
 
   /* Sleep for one second to ensure timestamp integrity. */
   apr_sleep (APR_USEC_PER_SEC * 1);

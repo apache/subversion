@@ -68,8 +68,6 @@ const apr_getopt_option_t svn_cl__options[] =
     {"file",          'F', 1, "read data from file ARG"},
     {"incremental",   svn_cl__incremental_opt, 0,
                       "give output suitable for concatenation"},
-    {"xml-file",      svn_cl__xml_file_opt, 1,
-                      "read/write xml to specified file ARG"},
     {"message-encoding", svn_cl__msg_encoding_opt, 1,
                       "take log message in charset encoding ARG"},
     {"version",       svn_cl__version_opt, 0, "print client version info"},
@@ -116,8 +114,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  sub-directory being the basename of the URL.\n",
     {'r', 'q', 'N',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
-     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
-     svn_cl__xml_file_opt }  },
+     svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt } },
 
   { "cleanup", svn_cl__cleanup, {0},
     "Recursively clean up the working copy, removing locks, resuming\n"
@@ -128,12 +125,11 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { "commit", svn_cl__commit, {"ci"},
     "Send changes from your working copy to the repository.\n"
     "usage: svn commit [TARGETS]\n\n"
-    "  Be sure to use one of -m or -F to send a log message;\n"
-    "  the -r switch is only for use with --xml-file.\n",
+    "  Be sure to use one of -m or -F to send a log message.\n",
     {'m', 'F', 'q', 'N', svn_cl__targets_opt,
      svn_cl__force_opt, svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__no_auth_cache_opt,  svn_cl__non_interactive_opt,
-     svn_cl__xml_file_opt, 'r', svn_cl__msg_encoding_opt} },
+     svn_cl__msg_encoding_opt} },
   
   { "copy", svn_cl__copy, {"cp"},
     "Duplicate something in working copy or repos, remembering history.\n"
@@ -212,10 +208,10 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    Recursively commit a copy of PATH to REPOS_URL.\n"
     "    If no 3rd arg, copy top-level contents of PATH into REPOS_URL\n"
     "    directly.  Otherwise, create NEW_ENTRY underneath REPOS_URL and\n"
-    "    begin copy there.  (-r is only needed if importing to --xml-file)\n",
+    "    begin copy there.\n",
     {'F', 'm', 'q', 'N', svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__no_auth_cache_opt, svn_cl__non_interactive_opt,
-     svn_cl__xml_file_opt, 'r', svn_cl__msg_encoding_opt} },
+     svn_cl__msg_encoding_opt} },
  
   { "info", svn_cl__info, {0},
     "Display info about a resource.\n"
@@ -426,7 +422,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "    G  Merged\n",
     {'r', 'N', 'q', svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
-     svn_cl__non_interactive_opt, svn_cl__xml_file_opt} },
+     svn_cl__non_interactive_opt } },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -567,16 +563,6 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__incremental_opt:
         opt_state.incremental = TRUE;
-        break;
-      case svn_cl__xml_file_opt:
-        err = svn_utf_cstring_to_utf8 (&opt_state.xml_file, opt_arg,
-                                       NULL, pool);
-        if (err)
-          {
-            svn_handle_error (err, stdout, FALSE);
-            svn_pool_destroy (pool);
-            return EXIT_FAILURE;
-          }
         break;
       case 'F':
         err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, NULL, pool);

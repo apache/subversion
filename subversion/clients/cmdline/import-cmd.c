@@ -46,7 +46,6 @@ svn_cl__import (apr_getopt_t *os,
   const char *new_entry;
   svn_client_auth_baton_t *auth_baton;
   svn_client_commit_info_t *commit_info = NULL;
-  svn_revnum_t revnum;
   svn_wc_notify_func_t notify_func = NULL;
   void *notify_baton = NULL;
   
@@ -114,12 +113,6 @@ svn_cl__import (apr_getopt_t *os,
       (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
        "too many arguments to import command");
   
-  /* Get revnum set to something meaningful, to cover the xml case. */
-  if (opt_state->start_revision.kind == svn_opt_revision_number)
-    revnum = opt_state->start_revision.value.number;
-  else
-    revnum = SVN_INVALID_REVNUM; /* no matter, this is fine */
-
   if (! opt_state->quiet)
     svn_cl__get_notifier (&notify_func, &notify_baton,
                           FALSE, FALSE, pool);
@@ -133,8 +126,6 @@ svn_cl__import (apr_getopt_t *os,
             new_entry,
             &svn_cl__get_log_message,
             svn_cl__make_log_msg_baton (opt_state, NULL, pool),
-            opt_state->xml_file,
-            revnum,
             opt_state->nonrecursive,
             pool));
 

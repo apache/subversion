@@ -57,9 +57,6 @@ Package=<4>
     Project_Dep_Name __build__
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name tests_libsvn_delta_deltaparse
-    End Project Dependency
-    Begin Project Dependency
     Project_Dep_Name tests_libsvn_delta_random
     End Project Dependency
     Begin Project Dependency
@@ -67,9 +64,6 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name tests_libsvn_delta_vdelta
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name tests_libsvn_delta_xml_output
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name tests_libsvn_fs_skel
@@ -103,9 +97,6 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name tests_libsvn_subr_time
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name tests_libsvn_wc_checkout
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name tests_libsvn_wc_translate
@@ -483,21 +474,6 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_delta_deltaparse"=.\subversion\tests\libsvn_delta\deltaparse_test.dsp - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
-    Begin Project Dependency
-    Project_Dep_Name __config__
-    End Project Dependency
-}}}
-
-###############################################################################
-
 Project: "tests_libsvn_delta_random"=.\subversion\tests\libsvn_delta\random_test.dsp - Package Owner=<4>
 
 Package=<5>
@@ -547,21 +523,6 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_delta
-    End Project Dependency
-}}}
-
-###############################################################################
-
-Project: "tests_libsvn_delta_xml_output"=.\subversion\tests\libsvn_delta\xml_output_test.dsp - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
-    Begin Project Dependency
-    Project_Dep_Name __config__
     End Project Dependency
 }}}
 
@@ -814,21 +775,6 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_tests_main
-    End Project Dependency
-}}}
-
-###############################################################################
-
-Project: "tests_libsvn_wc_checkout"=.\subversion\tests\libsvn_wc\checkout_test.dsp - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
-    Begin Project Dependency
-    Project_Dep_Name __config__
     End Project Dependency
 }}}
 

@@ -74,7 +74,6 @@ svn_cl__update (apr_getopt_t *os,
       SVN_ERR (svn_client_update
                (auth_baton,
                 target,
-                opt_state->xml_file,
                 &(opt_state->start_revision),
                 opt_state->nonrecursive ? FALSE : TRUE,
                 notify_func, notify_baton,
