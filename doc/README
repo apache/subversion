@@ -65,6 +65,14 @@ http://www.gnu.org/manual/texinfo-4.0/html_chapter/texinfo_toc.html
    a / at the end of the URL.  This saves a redirect and loads the
    page faster.
 6) Svn keywords, i.e. svn:ignore, should be in @samp{}.
+7) Use @dots{} instead of ``...'' and @enddots{} instead of ``....''.
+   Do not use @dots{} or @enddots when showing the output of a command
+   and the command really does print the ...'s, such as when ``svn
+   commit'' runs.  Do use @dots{} when truncating the example output
+   of a command, such as ``svn checkout'', and you don't want to list
+   every line of output.  Do not put the ...'s in [] because with
+   @dots{} or @enddots{}, the formatted output will use a smaller font
+   and the ...'s will be visually distinct already.
 
 -------------
 JimB fixed up a lot of our Texinfo problems, here's what he says:

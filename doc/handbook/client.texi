@@ -586,11 +586,11 @@ particular order, or just a single revision, pass the
 
 @example
 $ svn log -r 5:19
-[@dots{}]  # shows logs 5 through 19 in chronological order
+@dots{}  # shows logs 5 through 19 in chronological order
 $ svn log -r 19:5
-[@dots{}]  # shows logs 5 through 19 in reverse order
+@dots{}  # shows logs 5 through 19 in reverse order
 $ svn log -r 8
-[@dots{}]
+@dots{}
 @end example
 
 You can also examine the log history on a single file or directory.
@@ -598,9 +598,9 @@ The commands
 
 @example
 $ svn log foo.c
-[@dots{}]
+@dots{}
 $ svn log http://foo.com/svn/trunk/code/foo.c
-[@dots{}]
+@dots{}
 @end example
 
 will display log messages @emph{only} for those revisions in which the
@@ -688,7 +688,7 @@ working copy available:
 
 @example
 $ svn diff -r 23:24 http://foo.com/some/project
-[@dots{}]
+@dots{}
 @end example
 
 
@@ -849,7 +849,7 @@ For example, suppose the bug fix happened in a commit to the
 @example
 $ svn diff -r 101:102 http://foo.com/repos/mooIRC-beta
 
-[@dots{}]   # diffs sent to screen
+@dots{}   # diffs sent to screen
 
 $ svn merge -r 101:102 http://foo.com/repos/mooIRC-beta mooIRC
 U   mooIRC/glorb.c
@@ -879,7 +879,7 @@ Transmitting file data ..
 Committed revision 10.
 $
 
-[@dots{}] # developer continues on and realizes he made a mistake
+@dots{} # developer continues on and realizes he made a mistake
 
 $ svn merge -r 10:9 .
 U ./bar.c
@@ -907,7 +907,7 @@ Transmitting file data ..
 Committed revision 12.
 $
 
-[@dots{}] # developer continues on and later makes another mistake
+@dots{} # developer continues on and later makes another mistake
 
 $ svn merge -r 13:12 baz/foo.c baz/foo.c
 U ./baz/foo.c
@@ -1014,7 +1014,7 @@ $ cd ~/foobar
 $ svn merge http://svnhost/repos/vendor/foobar/foobar-1.0 \
             http://svnhost/repos/vendor/foobar/foobar-1.1
 $
-[@dots{}] # resolve all the conflicts between their changes and your changes
+@dots{} # resolve all the conflicts between their changes and your changes
 $ svn commit -m `merging foobar 1.1 into trunk'
 @end example
 
@@ -1397,7 +1397,7 @@ A  projectdir/subdir1/foo/rho.txt
 A  projectdir/subdir1/foo/pi.txt
 A  projectdir/subdir1/foo/tau.doc
 Checked out revision 128.
-[@dots{}]
+@dots{}
 @end example
 
 By tweaking the value of the @samp{svn:externals} property, the
@@ -1533,7 +1533,7 @@ Adding  mytree/foo.c
 Adding  mytree/bar.c
 Adding  mytree/subdir
 Adding  mytree/subdir/quux.h
-Transmitting file data@dots{}
+Transmitting file data....
 Committed revision 1.
 @end example
 
@@ -1557,7 +1557,7 @@ Adding  mytree/foo.c
 Adding  mytree/bar.c
 Adding  mytree/subdir
 Adding  mytree/subdir/quux.h
-Transmitting file data@dots{}
+Transmitting file data....
 Committed revision 1.
 @end example
 

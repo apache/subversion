@@ -722,7 +722,7 @@ URL ``file:'') et la commande @samp{import} du client Subversion.
 
 @example
 $ svn import file:///usr/local/svn/repos1 someproject myproj    
-[...]
+@dots{}
 Committed revision 1.
 @end example
 

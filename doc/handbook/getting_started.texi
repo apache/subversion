@@ -661,7 +661,7 @@ using the ra_local access method (invoked by using a ``file'' URL):
 
 @example
 $ svn import file:///absolute/path/to/myrepos someproject myproj    
-[...]
+@dots{}
 Committed revision 1.
 @end example
 
