@@ -108,11 +108,6 @@ SOURCE=.\delta.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\dir.c
-# PROP Exclude_From_Build 1
-# End Source File
-# Begin Source File
-
 SOURCE=.\err.c
 # End Source File
 # Begin Source File
@@ -127,11 +122,6 @@ SOURCE=.\fs.c
 # Begin Source File
 
 SOURCE=.\id.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\node.c
-# PROP Exclude_From_Build 1
 # End Source File
 # Begin Source File
 
@@ -217,10 +207,6 @@ SOURCE=".\node-rev.h"
 # End Source File
 # Begin Source File
 
-SOURCE=.\node.h
-# End Source File
-# Begin Source File
-
 SOURCE=".\nodes-table.h"
 # End Source File
 # Begin Source File
@@ -245,7 +231,7 @@ SOURCE=.\tree.h
 # End Source File
 # Begin Source File
 
-SOURCE=".\txm-table.h"
+SOURCE=".\txn-table.h"
 # End Source File
 # Begin Source File
 
