@@ -23,162 +23,77 @@
 #include "key-gen.h"
 #include "validate.h"
 
+
 
-/* Finding the length of an ID.  */
+/* Creating ID's.  */
 
-
-int
-svn_fs__id_length (const svn_fs_id_t *id)
+svn_fs_id_t *
+svn_fs__create_id (const char *node_id,
+                   const char *copy_id,
+                   const char *txn_id,
+                   apr_pool_t *pool)
 {
-  int len;
-
-  for (len = 0; id->digits[len] != -1; len++)
-    continue;
-
-  return len;
+  svn_fs_id_t *id = apr_palloc (pool, sizeof (*id));
+  id->node_id = apr_pstrdup (pool, node_id);
+  id->copy_id = apr_pstrdup (pool, copy_id);
+  id->txn_id = apr_pstrdup (pool, txn_id);
+  return id;
 }
+
+
+
+/* Accessing ID Pieces.  */
+
+const char *
+svn_fs__id_node_id (const svn_fs_id_t *id)
+{
+  return id->node_id;
+}
+
+const char *
+svn_fs__id_copy_id (const svn_fs_id_t *id)
+{
+  return id->copy_id;
+}
+
+const char *
+svn_fs__id_txn_id (const svn_fs_id_t *id)
+{
+  return id->txn_id;
+}
+
+
+
+/* Copying ID's.  */
+
+svn_fs_id_t *
+svn_fs__id_copy (const svn_fs_id_t *id, apr_pool_t *pool)
+{
+  svn_fs_id_t *new_id = apr_palloc (pool, sizeof (*new_id));
+  new_id->node_id = apr_pstrdup (pool, id->node_id);
+  new_id->copy_id = apr_pstrdup (pool, id->copy_id);
+  new_id->txn_id = apr_pstrdup (pool, id->txn_id);
+  return new_id;
+}
+
 
 
 /* Comparing node ID's.  */
 
 int
-svn_fs__id_eq (const svn_fs_id_t *a, const svn_fs_id_t *b)
+svn_fs__id_eq (const svn_fs_id_t *a, 
+               const svn_fs_id_t *b)
 {
-  int i;
-
-  for (i = 0; a->digits[i] == b->digits[i]; i++)
-    if (a->digits[i] == -1)
-      return 1;
-
-  return 0;
-}
-
-
-int
-svn_fs__id_is_ancestor (const svn_fs_id_t *a, const svn_fs_id_t *b)
-{
-  int i = 0;
-
-  for (;;)
-    {
-      /* Invariant: i is even, and for all j < i, a[j] == b[j].
-         Keep in mind: every even-numbered entry in A or B is a
-         node/branch number; every odd-numbered entry is a revision
-         number.  So i is pointing at a node/branch number.  */
-
-      /* If we've reached the end of A, then either A and B are equal,
-         or A is a prefix of B, so A is an ancestor of B.  Examples:
-         100.20 vs. 100.20; 100.20 vs. 100.20.3.2  */
-      if (a->digits[i] == -1)
-        return 1;
-
-      /* If the node/branch numbers differ, then they're unrelated.
-         Examples: 100.20 vs. 101.20; 100.20.2.3 vs. 100.20.3.1;
-
-         This also catches the case where B has ended before A ---
-         they're related, but A isn't B's ancestor.
-         Example: 100.20.3.2 vs 100.20.  */
-      if (a->digits[i] != b->digits[i])
+  if (a != b)
+    {  
+      if ((a->node_id != b->node_id) && (strcmp (a->node_id, b->node_id)))
         return 0;
-
-      /* If A's revision number is greater than B's, then A is not B's
-         ancestor.  Examples: 100.30 vs 100.20; 2.3.4.5 vs 2.3.4.4.  */
-      if (a->digits[i+1] > b->digits[i+1])
+      if ((a->copy_id != b->copy_id) && (strcmp (a->copy_id, b->copy_id)))
         return 0;
-
-      /* If A's revision number is less than B's, then A is an ancestor
-         iff its ID ends now.  Examples: 100.30 vs 100.31; 100.30 vs
-         100.32.2.4.  */
-      if (a->digits[i+1] < b->digits[i+1])
-        return (a->digits[i+2] == -1);
-
-      /* Otherwise, we've established that the node/branch numbers and
-         revision numbers are equal, so go around again.  */
-      i += 2;
-    }
-}
-
-
-/* Compute the distance from the node revision A to the node revision
-   identified by the first PREFIX elements of A.  In other words, this
-   is the distance from a node revision to some branch of the node
-   revision.  */
-static int
-distance_from_prefix (const svn_fs_id_t *a, int prefix)
-{
-  int i;
-  int d = 0;
-
-  for (i = 0; a->digits[prefix + i] != -1; i += 2)
-    d += a->digits[prefix + i + 1];
-
-  return d;
-}
-
-
-int
-svn_fs_id_distance (const svn_fs_id_t *a, const svn_fs_id_t *b)
-{
-  int i;
-
-  /* Are they completely unrelated?  */
-  if (a->digits[0] != b->digits[0])
-    return -1;
-
-  /* Skip any common prefix.  */
-  for (i = 0; (a->digits[i] == b->digits[i] 
-               && a->digits[i] != -1 
-               && a->digits[i+1] == b->digits[i+1]); i += 2)
-    continue;
-
-  /* If they're completely identical, then the distance is zero.  */
-  if (a->digits[i] == -1 && b->digits[i] == -1)
-    return 0;
-
-  /* Are they (branches off) different revisions of the same node?
-     Account for the distance between the two revisions.  */
-  if (a->digits[i] == b->digits[i])
-    return (distance_from_prefix (a, i+2)
-            + distance_from_prefix (b, i+2)
-            + abs (a->digits[i+1] - b->digits[i+1]));
-  else
-    /* Or two branches off the same node revision?  */
-    return (distance_from_prefix (a, i)
-            + distance_from_prefix (b, i));
-}
-
-
-int
-svn_fs__id_is_parent (const svn_fs_id_t *parent,
-                      const svn_fs_id_t *child)
-{
-  int i;
-
-  for (i = 0; parent->digits[i] == child->digits[i]; i++)
-    {
-      /* If they're completely identical, then CHILD isn't a direct
-         child of PARENT.  */
-      if (parent->digits[i] == -1)
+      if ((a->txn_id != b->txn_id) && (strcmp (a->txn_id, b->txn_id)))
         return 0;
     }
-
-  /* Is CHILD the next revision of PARENT?  */
-  if ((i & 1) == 1
-      && child->digits[i] == parent->digits[i] + 1
-      && child->digits[i + 1] == -1
-      && parent->digits[i + 1] == -1)
-    return 1;
-
-  /* Is CHILD the first revision of any branch from PARENT?  */
-  if ((i & 1) == 0
-      && parent->digits[i] == -1
-      && child->digits[i + 1] != -1
-      && child->digits[i + 2] == 1
-      && child->digits[i + 3] == -1)
-    return 1;
-
-  /* Anything else is no good.  */
-  return 0;
+  return 1;
 }
 
 
@@ -191,210 +106,111 @@ svn_fs_parse_id (const char *data,
                  apr_pool_t *pool)
 {
   svn_fs_id_t *id;
-  int id_len;
-  
-  /* Count the number of components in the ID, and check its syntax.  */
-  id_len = svn_fs__count_id_components (data, data_len);
-  if (id_len == 0)
-      return 0;
+  char *data_copy;
+  char *dot;
 
-  /* Allocate the ID array.  Note that if pool is zero, apr_palloc
-     just calls malloc, which meets our promised interface.  */
+  /* Dup the ID data into POOL, if we have one, or just malloc a copy
+     it otherwise. */
+  if (pool)
+    {
+      data_copy = apr_pstrmemdup (pool, data, data_len);
+    }
+  else
+    {
+      data_copy = malloc (sizeof (*data_copy) * data_len + 1);
+      if (! data_copy)
+        abort (); /* couldn't malloc */
+      memcpy (data_copy, data, data_len);
+      data_copy[data_len] = 0;
+    }
+  
+  /* Alloc a new svn_fs_id_t structure. */
   if (pool)
     {
       id = apr_palloc (pool, sizeof (*id));
-      id->digits = apr_palloc (pool, sizeof (*(id->digits)) * (id_len + 1));
     }
   else
     {
       id = malloc (sizeof (*id));
       if (! id)
-        abort(); /* couldn't malloc */
-      id->digits = malloc (sizeof (*(id->digits)) * (id_len + 1));
-      if (! (id->digits))
-        abort(); /* couldn't malloc */
+        abort (); /* couldn't malloc */
     }
 
-  {
-    int i = 0;
-    const char *end = data + data_len;
+  /* Now, we basically just need to "split" this data on `.'
+     characters.  There should be exactly three pieces (around two
+     `.'s) as a result.  To do this, we'll just replace the `.'s with
+     NULL terminators, and do fun pointer-y things.  */
 
-    for (;;)
-      {
-        const char *next;
-        id->digits[i++] = svn_fs__getsize (data, end - data, &next, 100000000);
-        if (next == end)
-          break;
-        if (! next
-            || *next != '.')
-          {
-            if (! pool) free (id);
-            return 0;
-          }
+  /* Node Id */
+  id->node_id = data_copy;
+  dot = strchr (id->node_id, '.');
+  if ((! dot) || (dot <= id->node_id))
+    goto cleanup;
+  *dot = 0;
 
-        data = next + 1;
-      }
+  /* Copy Id */
+  id->copy_id = dot + 1;
+  dot = strchr (id->copy_id, '.');
+  if ((! dot) || (dot <= id->copy_id))
+    goto cleanup;
+  *dot = 0;
+  
+  /* Txn Id */
+  id->txn_id = dot + 1;
+  dot = strchr (id->copy_id, '.');
+  if (dot)
+    goto cleanup;
 
-    id->digits[i] = -1;
-  }
-
+  /* Return our ID */
   return id;
+
+ cleanup:
+
+  /* Don't bother cleaning up if we have a POOL ... this will happen
+     when someone else clears/destroys the pool. */
+  if (! pool)
+    {
+      if (id)
+        free (id);
+      if (data_copy)
+        free (data_copy);
+    }
+  return NULL;
 }
 
 
-svn_stringbuf_t *
+svn_string_t *
 svn_fs_unparse_id (const svn_fs_id_t *id,
                    apr_pool_t *pool)
 {
-  svn_stringbuf_t *unparsed = svn_stringbuf_ncreate (0, 0, pool);
-  int i;
-
-  for (i = 0; id->digits[i] != -1; i++)
-    {
-      char buf[200];
-      int len = svn_fs__putsize (buf, sizeof (buf), id->digits[i]);
-
-      if (len == 0)
-        abort ();
-
-      if (id->digits[i + 1] != -1)
-        buf[len++] = '.';
-
-      svn_stringbuf_appendbytes (unparsed, buf, len);
-    }
-
-  return unparsed;
+  return svn_string_createf (pool, "%s.%s.%s", 
+                             id->node_id, id->copy_id, id->txn_id);
 }
 
-
-
-/* Copying ID's.  */
-
-svn_fs_id_t *
-svn_fs__id_copy (const svn_fs_id_t *id, apr_pool_t *pool)
-{
-  svn_fs_id_t *new_id = apr_palloc (pool, sizeof (*new_id));
-  new_id->digits = apr_pmemdup 
-    (pool, id->digits, (svn_fs__id_length (id) + 1) * sizeof (id->digits[0]));
-  return new_id;
-}
-
-
-
-/* Predecessor ID's. */
-
-void
-svn_fs__precede_id (svn_fs_id_t *id)
-{
-  int len = svn_fs__id_length (id);
-
-  id->digits[len - 1]--;
-  
-  if (id->digits[len - 1] > 0)
-    {
-      /* Decrementing the last digit still resulted in a valid node
-         revision number, so that must be the predecessor of ID. */
-      return;
-    }
-  
-  /* Else decrementing the last digit still resulted in a branch
-     number, so the predecessor is the node revision on which the
-     branch itself is based. */
-  if (len > 2)
-    id->digits[len - 2] = -1;
-  else
-    id->digits[0] = -1;
-}
-
-
-svn_fs_id_t *
-svn_fs__id_predecessor (const svn_fs_id_t *id, apr_pool_t *pool)
-{
-  svn_fs_id_t *predecessor_id;
-
-  predecessor_id = svn_fs__id_copy (id, pool);
-  svn_fs__precede_id (predecessor_id);
-
-  return predecessor_id;
-}
 
 /* --------------------------------------------------------------------- */
 
 /*** Related-ness checking */
 
-/*  Things to remember:
-
-    - If B is a copy of directory A, B's children are id-related to the
-      corresponding children of A.
- 
-    - Brand new nodes (like, resulting from adds and copies) have the
-      first component of their node id > older nodes. 
-
-    Also note:  it is acceptable for this function to call back into
-    public FS API interfaces because it does not itself use trails.  */
-svn_error_t *
-svn_fs_check_related (int *related, 
-                      svn_fs_t *fs,
-                      const svn_fs_id_t *id1,
-                      const svn_fs_id_t *id2,
-                      apr_pool_t *pool)
+int
+svn_fs_check_related (const svn_fs_id_t *id1,
+                      const svn_fs_id_t *id2)
 {
-  const svn_fs_id_t *older, *younger;
-  svn_fs_id_t *tmp_id;
+  if (id1 == id2)
+    return 1;
+  if (id1->node_id == id2->node_id)
+    return 1;
+  return (! strcmp (id1->node_id, id2->node_id));
+}
 
-  /* Default answer: not related, until proven otherwise. */
-  *related = 0;
 
-  /* Are the two IDs related via node id ancestry? */
-  if (svn_fs_id_distance (id1, id2) != -1)
-    {
-      *related = 1;
-      return SVN_NO_ERROR;
-    }
-  
-  /* Figure out which id is youngest. */
-  if (id1->digits[0] > id2->digits[0])
-    {
-      older = id2;
-      younger = id1;
-    }
-  else
-    {
-      older = id1;
-      younger = id2;
-    }
-
-  /* Copy YOUNGER so we can possible tweak it later. */
-  tmp_id = svn_fs__id_copy (younger, pool);
-
-  /* Now, we loop here from TMP_ID, through each of its predecessors,
-     until no predecessors exist, trying to find some relationship to
-     the OLDER id. */
-  do
-    {
-      svn_revnum_t rev = SVN_INVALID_REVNUM;
-      const char *cp_path = NULL;
-      svn_fs_root_t *root;
-      svn_stringbuf_t *id_str = svn_fs_unparse_id (tmp_id, pool);
-      svn_fs_id_t *copy_id;
-
-      /* See if OLDER is a copy of another node. */
-      svn_fs_id_root (&root, fs, pool);
-      SVN_ERR (svn_fs_copied_from (&rev, &cp_path, root, id_str->data, pool));
-      if (SVN_IS_VALID_REVNUM (rev))
-        {
-          SVN_ERR (svn_fs_revision_root (&root, fs, rev, pool));
-          SVN_ERR (svn_fs_node_id (&copy_id, root, cp_path, pool));
-          svn_fs_check_related (related, fs, older, copy_id, pool);
-          if (*related)
-            return SVN_NO_ERROR;
-        }
-
-      svn_fs__precede_id (tmp_id);
-    }
-  while (tmp_id->digits[0] != -1);
-
-  return SVN_NO_ERROR;
+int 
+svn_fs_compare_ids (const svn_fs_id_t *a, 
+                    const svn_fs_id_t *b)
+{
+  if (svn_fs__id_eq (a, b))
+    return 0;
+  return (svn_fs_check_related (a, b) ? 1 : -1);
 }
 
 

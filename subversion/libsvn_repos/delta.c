@@ -297,7 +297,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
     {
       /* Use the distance between the node ids to determine the best
          way to update the requested entry. */
-      distance = svn_fs_id_distance (src_id, tgt_id);
+      distance = svn_fs_compare_ids (src_id, tgt_id);
       if (distance == 0)
         {
           /* They're the same node!  No-op (you gotta love those). */
@@ -892,19 +892,15 @@ delta_dirs (struct context *c,
 
           if (c->recurse || !is_dir)
             {
+              /* Use svn_fs_compare_ids() to compare our current
+                 source and target ids.
 
-              /* Check the distance between the ids.  
-
-                 0 means they are the same id, and this is a noop.
-
-                 -1 means they are unrelated, so try to find an ancestor
-                 elsewhere in the directory.  Theoretically, using an
-                 ancestor as a baseline will reduce the size of the deltas.
-
-                 Any other positive value means the nodes are related
-                 through ancestry, so go ahead and do the replace
-                 directly.  */
-              distance = svn_fs_id_distance (s_entry->id, t_entry->id);
+                    0: means they are the same id, and this is a noop.
+                   -1: means they are unrelated, so we have to delete the
+                       old one and add the new one.
+                    1: means the nodes are related through ancestry, so go
+                       ahead and do the replace directly.  */
+              distance = svn_fs_compare_ids (s_entry->id, t_entry->id);
               if (distance == 0)
                 {
                   /* no-op */
@@ -934,8 +930,12 @@ delta_dirs (struct context *c,
 
           if (c->recurse || (! is_dir))
             {
-              SVN_ERR (add_file_or_dir (c, dir_baton, target_path, 
-                                        t_entry->name, subpool));
+              /* We didn't find an entry with this name in the source
+                 entries hash.  This must be something new that needs to
+                 be added. */
+              SVN_ERR (add_file_or_dir (c, dir_baton, 
+                                        target_path, t_entry->name,
+                                        subpool));
             } 
         }
 

@@ -25,14 +25,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Validating node and node revision IDs. */
-
-/* Count the number of components in the ID, and check its syntax.
-   Return 0 if the syntax is incorrect. */
-int svn_fs__count_id_components (const char *data, apr_size_t data_len);
-
-
-
 /* Validating paths. */
 
 /* Validate that name NAME is a single path component, not a

@@ -83,8 +83,7 @@ svn_fs__check_fs (svn_fs_t *fs)
 static svn_error_t *
 corrupt_id (const char *fmt, const svn_fs_id_t *id, svn_fs_t *fs)
 {
-  svn_stringbuf_t *unparsed_id = svn_fs_unparse_id (id, fs->pool);
-
+  svn_string_t *unparsed_id = svn_fs_unparse_id (id, fs->pool);
   return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
                             fmt, unparsed_id->data, fs->path);
 }
@@ -134,10 +133,8 @@ svn_fs__err_corrupt_id (svn_fs_t *fs, const svn_fs_id_t *id)
 svn_error_t *
 svn_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id)
 {
-  svn_stringbuf_t *id_str = svn_fs_unparse_id (id, fs->pool);
-
-  return
-    svn_error_createf
+  svn_string_t *id_str = svn_fs_unparse_id (id, fs->pool);
+  return svn_error_createf
     (SVN_ERR_FS_ID_NOT_FOUND, 0, 0, fs->pool,
      "reference to non-existent node `%s' in filesystem `%s'",
      id_str->data, fs->path);
@@ -167,13 +164,13 @@ svn_fs__err_corrupt_nodes_key (svn_fs_t *fs)
 
 
 svn_error_t *
-svn_fs__err_corrupt_next_txn_id (svn_fs_t *fs)
+svn_fs__err_corrupt_next_id (svn_fs_t *fs, const char *table)
 {
   return
     svn_error_createf
     (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
-     "corrupt value for `next-id' key in `transactions' table"
-     " of filesystem `%s'", fs->path);
+     "corrupt value for `next-id' key in `%s' table of filesystem `%s'", 
+     table, fs->path);
 }
 
 
@@ -186,6 +183,17 @@ svn_fs__err_corrupt_txn (svn_fs_t *fs,
     (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
      "corrupt entry in `transactions' table for `%s'"
      " in filesystem `%s'", txn, fs->path);
+}
+
+
+svn_error_t *
+svn_fs__err_corrupt_copy (svn_fs_t *fs, const char *copy_id)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+     "corrupt entry in `copies' table for `%s' in filesystem `%s'", 
+     copy_id, fs->path);
 }
 
 
@@ -222,7 +230,27 @@ svn_fs__err_no_such_txn (svn_fs_t *fs, const char *txn)
 }
 
 
-/* SVN_ERR_FS_NOT_DIRECTORY: PATH does not refer to a directory in FS.  */
+svn_error_t *
+svn_fs__err_txn_not_mutable (svn_fs_t *fs, const char *txn)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_TRANSACTION_NOT_MUTABLE, 0, 0, fs->pool,
+     "cannot modify transaction named `%s' in filesystem `%s'",
+     txn, fs->path);
+}
+
+
+svn_error_t *
+svn_fs__err_no_such_copy (svn_fs_t *fs, const char *copy_id)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NO_SUCH_COPY, 0, 0, fs->pool,
+     "no copy with id `%s' in filesystem `%s'", copy_id, fs->path);
+}
+
+
 svn_error_t *
 svn_fs__err_not_directory (svn_fs_t *fs, const char *path)
 {

@@ -119,13 +119,16 @@ svn_error_t *svn_fs__err_dangling_rev (svn_fs_t *fs, svn_revnum_t rev);
 /* SVN_ERR_FS_CORRUPT: a key in FS's `nodes' table is bogus.  */
 svn_error_t *svn_fs__err_corrupt_nodes_key (svn_fs_t *fs);
 
-/* SVN_ERR_FS_CORRUPT: the `next-id' value is the `transactions' table
-   is bogus.  */
-svn_error_t *svn_fs__err_corrupt_next_txn_id (svn_fs_t *fs);
+/* SVN_ERR_FS_CORRUPT: the `next-id' value in TABLE is bogus.  */
+svn_error_t *svn_fs__err_corrupt_next_id (svn_fs_t *fs, const char *table);
 
 /* SVN_ERR_FS_CORRUPT: the entry for TXN in the `transactions' table
    is corrupt.  */
 svn_error_t *svn_fs__err_corrupt_txn (svn_fs_t *fs, const char *txn);
+
+/* SVN_ERR_FS_CORRUPT: the entry for COPY_ID in the `copies' table
+   is corrupt.  */
+svn_error_t *svn_fs__err_corrupt_copy (svn_fs_t *fs, const char *copy_id);
 
 /* SVN_ERR_FS_NOT_MUTABLE: the caller attempted to change a node
    outside of a transaction.  */
@@ -137,6 +140,13 @@ svn_error_t *svn_fs__err_path_syntax (svn_fs_t *fs, const char *path);
 
 /* SVN_ERR_FS_NO_SUCH_TRANSACTION: there is no transaction named TXN in FS.  */
 svn_error_t *svn_fs__err_no_such_txn (svn_fs_t *fs, const char *txn);
+
+/* SVN_ERR_FS_TRANSACTION_NOT_MUTABLE: trying to change the
+   unchangeable transaction named TXN in FS.  */
+svn_error_t *svn_fs__err_txn_not_mutable (svn_fs_t *fs, const char *txn);
+
+/* SVN_ERR_FS_NO_SUCH_COPY: there is no copy with id COPY_ID in FS.  */
+svn_error_t *svn_fs__err_no_such_copy (svn_fs_t *fs, const char *copy_id);
 
 /* SVN_ERR_FS_NOT_DIRECTORY: PATH does not refer to a directory in FS.  */
 svn_error_t *svn_fs__err_not_directory (svn_fs_t *fs, const char *path);

@@ -464,7 +464,7 @@ write_and_read_file (const char **msg,
 
   /* And write some data into this file. */
   SVN_ERR (svn_test__set_file_contents (txn_root, "beer.txt", 
-                              wstring->data, pool));
+                                        wstring->data, pool));
   
   /* Now let's read the data back from the file. */
   SVN_ERR (svn_fs_file_contents (&rstream, txn_root, "beer.txt", pool));  
@@ -1114,7 +1114,7 @@ txn_body_check_id (void *baton, trail_t *trail)
     args->present = TRUE;
   else
     {
-      svn_stringbuf_t *id_str = svn_fs_unparse_id (args->id, trail->pool);
+      svn_string_t *id_str = svn_fs_unparse_id (args->id, trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
          "error looking for node revision id \"%s\"", id_str->data);
@@ -1154,7 +1154,7 @@ check_id_present (svn_fs_t *fs, svn_fs_id_t *id, apr_pool_t *pool)
 
   if (! present)
     {
-      svn_stringbuf_t *id_str = svn_fs_unparse_id (id, pool);
+      svn_string_t *id_str = svn_fs_unparse_id (id, pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "node revision id \"%s\" absent when should be present",
@@ -1174,7 +1174,7 @@ check_id_absent (svn_fs_t *fs, svn_fs_id_t *id, apr_pool_t *pool)
 
   if (present)
     {
-      svn_stringbuf_t *id_str = svn_fs_unparse_id (id, pool);
+      svn_string_t *id_str = svn_fs_unparse_id (id, pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "node revision id \"%s\" present when should be absent",
@@ -1640,380 +1640,6 @@ test_tree_node_validation (const char **msg,
 }
 
 
-static svn_error_t *
-fetch_by_id (const char **msg,
-             svn_boolean_t msg_only,
-             apr_pool_t *pool)
-{
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root, *revision_root, *id_root;
-  svn_revnum_t after_rev;
-  svn_error_t *err;
-
-  *msg = "fetch by id";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  /* Commit a Greek Tree as the first revision. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-fetch-by-id", pool));
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &after_rev, txn));
-  SVN_ERR (svn_fs_close_txn (txn));
-
-  /* Get one root for the committed Greek Tree, one for the fs. */
-  SVN_ERR (svn_fs_revision_root (&revision_root, fs, after_rev, pool));
-  SVN_ERR (svn_fs_id_root (&id_root, fs, pool));
-
-  /* Get the IDs of some random paths, then fetch some content by ID. */
-  {
-    svn_fs_id_t *iota_id, *beta_id, *C_id, *D_id, *omega_id;
-    svn_stringbuf_t *iota_str, *beta_str, *C_str, *D_str, *omega_str;
-    svn_stringbuf_t *not_an_id_str = svn_stringbuf_create ("fish", pool);
-    apr_hash_t *entries;
-    apr_off_t len;
-    void *val;
-    int is;
-
-    SVN_ERR (svn_fs_node_id (&iota_id, revision_root, "iota", pool));
-    SVN_ERR (svn_fs_node_id (&beta_id, revision_root, "A/B/E/beta", pool));
-    SVN_ERR (svn_fs_node_id (&C_id, revision_root, "A/C", pool));
-    SVN_ERR (svn_fs_node_id (&D_id, revision_root, "A/D", pool));
-    SVN_ERR (svn_fs_node_id (&omega_id, revision_root, "A/D/H/omega", pool));
-  
-    iota_str  = svn_fs_unparse_id (iota_id, pool);
-    beta_str  = svn_fs_unparse_id (beta_id, pool);
-    C_str     = svn_fs_unparse_id (C_id, pool);
-    D_str     = svn_fs_unparse_id (D_id, pool);
-    omega_str = svn_fs_unparse_id (omega_id, pool);
-
-    /* Check iota. */
-    SVN_ERR (svn_fs_is_dir (&is, id_root, iota_str->data, pool));
-    if (is)
-      return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-         "file fetched by node claimed to be a directory");
-
-    SVN_ERR (svn_fs_is_file (&is, id_root, iota_str->data, pool));
-    if (! is)
-      return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-         "file fetched by node claimed not to be a file");
-
-    SVN_ERR (svn_fs_is_different (&is, revision_root, "iota",
-                                  id_root, iota_str->data, pool));
-    if (is)
-      return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-         "fetching file by path and by node got different results");
-
-
-    /* Check D. */
-    SVN_ERR (svn_fs_is_file (&is, id_root, D_str->data, pool));
-    if (is)
-      return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-         "dir fetched by node claimed to be a file");
-
-    SVN_ERR (svn_fs_is_dir (&is, id_root, D_str->data, pool));
-    if (! is)
-      return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-         "dir fetched by node claimed not to be a dir");
-
-    SVN_ERR (svn_fs_is_different (&is, revision_root, "A/D",
-                                  id_root, D_str->data, pool));
-    if (is)
-      return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-         "fetching dir by path and by node got different results");
-
-
-    SVN_ERR (svn_fs_dir_entries (&entries, id_root, D_str->data, pool));
-    val = apr_hash_get (entries, "gamma", APR_HASH_KEY_STRING);
-    if (! val)
-      return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-         "dir fetched by id doesn't have expected entry \"gamma\"");
-
-    val = apr_hash_get (entries, "G", APR_HASH_KEY_STRING);
-    if (! val)
-      return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-         "dir fetched by id doesn't have expected entry \"G\"");
-
-    val = apr_hash_get (entries, "H", APR_HASH_KEY_STRING);
-    if (! val)
-      return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-         "dir fetched by id doesn't have expected entry \"H\"");
-
-    if (apr_hash_count (entries) != 3)
-      return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-         "dir fetched by id has unexpected number of entries");
-      
-
-    /* Check omega. */
-    SVN_ERR (svn_fs_file_length (&len, id_root, omega_str->data, pool));
-    if (len != strlen ("This is the file 'omega'.\n"))
-      return svn_error_create
-        (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-         "file fetched by id has wrong length");
-      
-    {
-      svn_stream_t *contents_stream;
-      svn_stringbuf_t *contents_string;
-
-      SVN_ERR (svn_fs_file_contents (&contents_stream, id_root,
-                                     omega_str->data, pool));
-      SVN_ERR (svn_test__stream_to_string (&contents_string, 
-                                           contents_stream, pool));
-
-      if (strcmp (contents_string->data, "This is the file 'omega'.\n") != 0)
-        return svn_error_create
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-           "file fetched by id had wrong contents");
-    }
-
-
-    /* Try fetching a non-ID. */
-    err = svn_fs_file_length (&len, id_root, not_an_id_str->data, pool);
-    if (! err)
-      {
-        return svn_error_create
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-           "fetching an invalid id should fail, but did not");
-      }
-    else if (err->apr_err != SVN_ERR_FS_NOT_ID)
-      {
-        return svn_error_create
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-           "fetching an invalid id failed with the wrong error");
-      }
-
-
-    /* Try changing a node fetched by ID. */
-    err = svn_fs_delete (id_root, C_str->data, pool);
-    if (! err)
-      {
-        return svn_error_create
-          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-           "deleting an ID path should fail, but did not");
-      }
-    
-  }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Helper function.  Return an specific error. */
-static svn_error_t *
-unexpected_node_id (svn_fs_root_t *root, 
-                    const char *path, 
-                    svn_fs_id_t *id, 
-                    apr_pool_t *pool)
-{
-  svn_stringbuf_t *id_str = svn_fs_unparse_id (id, pool);
-  return svn_error_createf 
-    (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-     "Path '%s' in revision '%"
-     SVN_REVNUM_T_FMT
-     "' has unexpected node id '%s'.\n",
-     path, svn_fs_revision_root_revision (root), id_str->data);
-}
-
-
-static svn_error_t *
-merge_re_id (const char **msg,
-             svn_boolean_t msg_only,
-             apr_pool_t *pool)
-{
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn, *txn2;
-  svn_fs_root_t *txn_root, *txn2_root, *rev_root;
-  svn_revnum_t greek, youngest;
-  svn_fs_id_t *root_1_id, *A_1_id, *D_1_id;
-  svn_fs_id_t *root_2_id, *A_2_id, *D_2_id;
-  svn_fs_id_t *root_3_id, *A_3_id, *D_3_id;
-  svn_fs_id_t *root_4_id, *A_4_id, *D_4_id;
-
-  *msg = "re-id nodes after merging";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-merge-re-id", pool));
-
-  /* Check in a greek tree to start off with. */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
-  SVN_ERR (test_commit_txn (&greek, txn, NULL, pool));
-  SVN_ERR (svn_fs_close_txn (txn));
-
-  /* Let's track the ids of the root node, of A, and of A/D. */
-  SVN_ERR (svn_fs_revision_root (&rev_root, fs, greek, pool));
-  SVN_ERR (svn_fs_node_id (&root_1_id, rev_root, "", pool));
-  SVN_ERR (svn_fs_node_id (&A_1_id, rev_root, "A", pool));
-  SVN_ERR (svn_fs_node_id (&D_1_id, rev_root, "A/D", pool));
-  
-  /* Now check in some mods -- additions of files to /A/D. */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, greek, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  {
-    static svn_test__txn_script_command_t script_entries[] = {
-      { 'a', "A/D/zeta",    "This is the file 'zeta'.\n" },
-      { 'a', "A/D/zima",    "This is the file 'zima'.\n" },
-    };
-    SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 2, pool));
-  }
-  SVN_ERR (test_commit_txn (&youngest, txn, NULL, pool));
-  SVN_ERR (svn_fs_close_txn (txn));
-
-  /* Let's track the second revision's ids for our three favorite nodes. */
-  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest, pool));
-  SVN_ERR (svn_fs_node_id (&root_2_id, rev_root, "", pool));
-  SVN_ERR (svn_fs_node_id (&A_2_id, rev_root, "A", pool));
-  SVN_ERR (svn_fs_node_id (&D_2_id, rev_root, "A/D", pool));
-
-  /* We fully expect revision 2's ids to not have branched, meaning
-     that if the revision 1 ids are of the form `A.B', revision 2's will
-     look like `A.B+1'. */
-  if ( !((svn_fs__id_length (root_1_id) == 2)
-         && (root_2_id->digits[0] == root_1_id->digits[0])
-         && (root_2_id->digits[1] == root_1_id->digits[1] + 1)
-         && (root_2_id->digits[2] == root_1_id->digits[2])))
-    return unexpected_node_id (rev_root, "", root_2_id, pool);
-
-  if ( !((svn_fs__id_length (A_1_id) == 2)
-         && (A_2_id->digits[0] == A_1_id->digits[0])
-         && (A_2_id->digits[1] == A_1_id->digits[1] + 1)
-         && (A_2_id->digits[2] == A_1_id->digits[2])))
-    return unexpected_node_id (rev_root, "", A_2_id, pool);
-
-  if ( !((svn_fs__id_length (D_1_id) == 2)
-         && (D_2_id->digits[0] == D_1_id->digits[0])
-         && (D_2_id->digits[1] == D_1_id->digits[1] + 1)
-         && (D_2_id->digits[2] == D_1_id->digits[2])))
-    return unexpected_node_id (rev_root, "", D_2_id, pool);
-       
-  /* Now, if we try to commit a transaction based on the greek tree
-     alone, the filesystem will attempt to merge all the changes
-     that have happened since the base revision of our txn into the
-     txn itself.  In the following commit, we are making changes to
-     A/D that do not conflict with the changes made above.  Now, when
-     this is all said and done, we need to make sure that the node IDs
-     for A, D, and / reveal an accurate ancestry.  */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, greek, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  {
-    static svn_test__txn_script_command_t script_entries[] = {
-      { 'a', "A/D/data",    "This is the file 'data'.\n" },
-      { 'a', "A/D/diva",    "This is the file 'diva'.\n" },
-    };
-    SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 2, pool));
-  }
-  SVN_ERR (test_commit_txn (&youngest, txn, NULL, pool));
-  SVN_ERR (svn_fs_close_txn (txn));
-
-  /* Let's track the second revision's ids for our three favorite nodes. */
-  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest, pool));
-  SVN_ERR (svn_fs_node_id (&root_3_id, rev_root, "", pool));
-  SVN_ERR (svn_fs_node_id (&A_3_id, rev_root, "A", pool));
-  SVN_ERR (svn_fs_node_id (&D_3_id, rev_root, "A/D", pool));
-
-  /* Again, we expect revision 3's ids to not have branched. */
-  if ( !((svn_fs__id_length (root_3_id) == 2)
-         && (root_3_id->digits[0] == root_2_id->digits[0])
-         && (root_3_id->digits[1] == root_2_id->digits[1] + 1)
-         && (root_3_id->digits[2] == root_2_id->digits[2])))
-    return unexpected_node_id (rev_root, "", root_3_id, pool);
-
-  if ( !((svn_fs__id_length (A_3_id) == 2)
-         && (A_3_id->digits[0] == A_2_id->digits[0])
-         && (A_3_id->digits[1] == A_2_id->digits[1] + 1)
-         && (A_3_id->digits[2] == A_2_id->digits[2])))
-    return unexpected_node_id (rev_root, "", A_3_id, pool);
-
-  if ( !((svn_fs__id_length (D_3_id) == 2)
-         && (D_3_id->digits[0] == D_2_id->digits[0])
-         && (D_3_id->digits[1] == D_2_id->digits[1] + 1)
-         && (D_3_id->digits[2] == D_2_id->digits[2])))
-    return unexpected_node_id (rev_root, "", D_3_id, pool);
-
-  /* Now, for a case where we *do* expect node id branching to occur.
-     This time, we will begin a transaction that changes entries in
-     A/D, but we'll leave it hanging while we try to commit a second
-     transaction with other non-conflicting edits to A/D! */
-  SVN_ERR (svn_fs_begin_txn (&txn2, fs, youngest, pool));
-  SVN_ERR (svn_fs_txn_root (&txn2_root, txn2, pool));
-  {
-    static svn_test__txn_script_command_t script_entries[] = {
-      { 'a', "A/D/pita",     "This is the file 'pita'.\n" },
-      { 'a', "A/D/pizza",    "This is the file 'pizza'.\n" },
-    };
-    SVN_ERR (svn_test__txn_script_exec (txn2_root, script_entries, 2, pool));
-  }
-  
-  /* Without aborting or committing the previous txn, we will commit
-     more changes to A/D based on the original Greek Tree. */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, greek, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  {
-    static svn_test__txn_script_command_t script_entries[] = {
-      { 'a', "A/D/quota",    "This is the file 'quota'.\n" },
-      { 'a', "A/D/quiva",    "This is the file 'quiva'.\n" },
-    };
-    SVN_ERR (svn_test__txn_script_exec (txn_root, script_entries, 2, pool));
-  }
-  SVN_ERR (test_commit_txn (&youngest, txn, NULL, pool));
-  SVN_ERR (svn_fs_close_txn (txn));
-
-  /* Let's track the second revision's ids for our three favorite nodes. */
-  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest, pool));
-  SVN_ERR (svn_fs_node_id (&root_4_id, rev_root, "", pool));
-  SVN_ERR (svn_fs_node_id (&A_4_id, rev_root, "A", pool));
-  SVN_ERR (svn_fs_node_id (&D_4_id, rev_root, "A/D", pool));
-
-  /* Now, we expect revision 4's ids to have branched *from revision
-     1*.  The hanging transaction above made the first branch of each
-     of these nodes, appending `.1.1' to the node ids.  So we expect
-     these node id's to make a second branch, having `.2.1' after the
-     original node ids.  */
-  if ( !((svn_fs__id_length (root_4_id) == 4)
-         && (root_4_id->digits[0] == root_1_id->digits[0])
-         && (root_4_id->digits[1] == root_1_id->digits[1])
-         && (root_4_id->digits[2] == 2)
-         && (root_4_id->digits[3] == 1)))
-    return unexpected_node_id (rev_root, "", root_4_id, pool);
-
-  if ( !((svn_fs__id_length (A_4_id) == 4)
-         && (A_4_id->digits[0] == A_1_id->digits[0])
-         && (A_4_id->digits[1] == A_1_id->digits[1])
-         && (A_4_id->digits[2] == 2)
-         && (A_4_id->digits[3] == 1)))
-    return unexpected_node_id (rev_root, "", A_4_id, pool);
-
-  if ( !((svn_fs__id_length (D_4_id) == 4)
-         && (D_4_id->digits[0] == D_1_id->digits[0])
-         && (D_4_id->digits[1] == D_1_id->digits[1])
-         && (D_4_id->digits[2] == 2)
-         && (D_4_id->digits[3] == 1)))
-    return unexpected_node_id (rev_root, "", D_3_id, pool);
-
-  /* Abort the hanging transaction. */
-  SVN_ERR (svn_fs_abort_txn (txn2));
-  SVN_ERR (svn_fs_close_fs (fs));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Commit with merging (committing against non-youngest). */ 
 static svn_error_t *
 merging_commit (const char **msg,
@@ -2329,6 +1955,7 @@ merging_commit (const char **msg,
     SVN_ERR (svn_test__set_file_contents 
              (txn_root, "theta", "This is another file 'theta'.\n", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/theta", pool));
+    SVN_ERR (svn_fs_abort_txn (txn));
 
     /* (1) E exists in ANCESTOR, but has been deleted from B.  Can't
        occur, by assumption that E doesn't exist in ANCESTOR. */
@@ -2389,6 +2016,7 @@ merging_commit (const char **msg,
     SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
     SVN_ERR (svn_fs_delete (txn_root, "A/D/H/omega", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/A/D/H", pool));
+    SVN_ERR (svn_fs_abort_txn (txn));
 
     /* E exists in both ANCESTOR and B ... */
     {
@@ -2424,6 +2052,7 @@ merging_commit (const char **msg,
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
       SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/zeta", pool));
       SVN_ERR (test_commit_txn (&after_rev, txn, "/A/D/H", pool));
+      SVN_ERR (svn_fs_abort_txn (txn));
 
       /* (1) and refers to the same node revision.  Omit E from the
          merged tree.  This is already tested in Merge-Test 3
@@ -2531,6 +2160,7 @@ merging_commit (const char **msg,
     SVN_ERR (svn_test__set_file_contents 
              (txn_root, "A/mu", "This is the file 'mu'.\n", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/A/mu", pool));
+    SVN_ERR (svn_fs_abort_txn (txn));
 
     /* (1) E exists in both ANCESTOR and B, but refers to different
        revisions of the same node.  Conflict. */
@@ -2539,6 +2169,7 @@ merging_commit (const char **msg,
     SVN_ERR (svn_test__set_file_contents 
              (txn_root, "A/mu", "A change to file 'mu'.\n", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/A/mu", pool));
+    SVN_ERR (svn_fs_abort_txn (txn));
 
     /* (1) E exists in both ANCESTOR and B, and refers to the same
        node revision.  Replace E with A's node revision.  */
@@ -2653,6 +2284,7 @@ merging_commit (const char **msg,
              (txn_root, "A/B/lambda", "A different change to 'lambda'.\n", 
               pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/A/B/lambda", pool));
+    SVN_ERR (svn_fs_abort_txn (txn));
 
     /* (1b) E exists in both ANCESTOR and B, but refers to different
        revisions of the same directory node.  Merge A/E and B/E,
@@ -2709,6 +2341,7 @@ merging_commit (const char **msg,
     SVN_ERR (svn_test__set_file_contents 
              (txn_root, "A/D/G/xi", "This is a different file 'xi'.\n", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, "/A/D/G/xi", pool));
+    SVN_ERR (svn_fs_abort_txn (txn));
 
     /* (1) E exists in both ANCESTOR and B, and refers to the same node
        revision.  Replace E with A's node revision.  */
@@ -2788,6 +2421,7 @@ merging_commit (const char **msg,
   SVN_ERR (svn_test__set_file_contents 
            (txn_root, "iota", "New contents for 'iota'.\n", pool));
   SVN_ERR (test_commit_txn (&after_rev, txn, "/iota", pool));
+  SVN_ERR (svn_fs_abort_txn (txn));
 
   /* Close the filesystem. */
   SVN_ERR (svn_fs_close_fs (fs));
@@ -3095,6 +2729,9 @@ copy_test (const char **msg,
 }
 
 
+#if 0 /* ### todo: svn_fs_link() as we knew it no longer exists.  This
+         test should be rewritten as a test of svn_fs_revision_link()
+         or discarded. */
 static svn_error_t *
 link_test (const char **msg,
            svn_boolean_t msg_only,
@@ -3248,7 +2885,7 @@ link_test (const char **msg,
   SVN_ERR (svn_fs_close_fs (fs));
   return SVN_NO_ERROR;
 }
-
+#endif /* 0 */
 
 /* This tests deleting of mutable nodes.  We build a tree in a
  * transaction, then try to delete various items in the tree.  We
@@ -4895,23 +4532,6 @@ large_file_integrity (const char **msg,
 }
 
 
-struct get_node_revision_args
-{
-  svn_fs_t *fs;
-  svn_fs_id_t *id;
-  svn_fs__node_revision_t *noderev;
-};
-
-
-static svn_error_t *
-txn_body_get_node_revision (void *baton, trail_t *trail)
-{
-  struct get_node_revision_args *args = baton;
-  return svn_fs__get_node_revision (&(args->noderev), args->fs, 
-                                    args->id, trail);
-}
-
-
 static svn_error_t *
 check_root_revision (const char **msg,
                      svn_boolean_t msg_only,
@@ -4921,7 +4541,6 @@ check_root_revision (const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *rev_root;
   svn_revnum_t youngest_rev, test_rev;
-  struct get_node_revision_args args;
   int i;
 
   *msg = "make sure the root node's stored revision is accurate";
@@ -4932,9 +4551,6 @@ check_root_revision (const char **msg,
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-check-root-revision", pool));
 
-  /* Initialize this once for all time. */
-  args.fs = fs;
-
   /* Create and commit the greek tree. */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
@@ -4944,9 +4560,7 @@ check_root_revision (const char **msg,
 
   /* Root node's revision should be the same as YOUNGEST_REV. */
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool)); 
-  SVN_ERR (svn_fs_node_id (&args.id, rev_root, "", pool));
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_node_revision, &args, pool));
-  test_rev = args.noderev->revision;
+  SVN_ERR (svn_fs_node_created_rev (&test_rev, rev_root, "", pool));
   if (test_rev != youngest_rev)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
@@ -4968,10 +4582,7 @@ check_root_revision (const char **msg,
 
       /* Root node's revision should be the same as YOUNGEST_REV. */
       SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool)); 
-      SVN_ERR (svn_fs_node_id (&args.id, rev_root, "", pool));
-      SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_node_revision, 
-                                  &args, pool));
-      test_rev = args.noderev->revision;
+      SVN_ERR (svn_fs_node_created_rev (&test_rev, rev_root, "", pool));
       if (test_rev != youngest_rev)
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, 0, NULL, pool,
@@ -5081,6 +4692,8 @@ undeltify_deltify (const char **msg,
                "%s:%" SVN_REVNUM_T_FMT
                " undeltified contents are incorrect", path, i_rev);
 
+#if 0 /* svn_fs_deltify() is not currently enabled as a feature  */
+
           /* Now, re-deltify, and again get its contents and verify them.  */
           SVN_ERR (svn_fs_deltify (rev_root, path, 0, iterpool));
           SVN_ERR (svn_test__get_file_contents (rev_root, path, &contents,
@@ -5090,7 +4703,7 @@ undeltify_deltify (const char **msg,
               (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
                "%s:%" SVN_REVNUM_T_FMT
                " re-deltified contents are incorrect", path, i_rev);
-
+#endif /* 0 */
           /* Clear out the per-file pool. */
           svn_pool_clear (iterpool);
         }
@@ -5139,6 +4752,8 @@ undeltify_deltify (const char **msg,
       svn_pool_clear (subpool);
     }
 
+#if 0 /* svn_fs_deltify() is not currently enabled as a feature  */
+
   /* And re-deltify... */
   for (i_rev = 1; i_rev <= youngest_rev; i_rev++)
     {
@@ -5172,6 +4787,8 @@ undeltify_deltify (const char **msg,
          completely drains the other (iterpool)... */
       svn_pool_clear (subpool);
     }
+
+#endif /* 0 */
 
   /* Destroy the per-revision pool. */
   svn_pool_destroy (subpool);
@@ -5544,7 +5161,7 @@ check_related (const char **msg,
             SVN_ERR (svn_fs_node_id (&id2, rev_root, pr2.path, pool));
             
             /* <exciting> Now, run the relationship check! </exciting> */
-            SVN_ERR (svn_fs_check_related (&related, fs, id1, id2, pool));
+            related = svn_fs_check_related (id1, id2);
             if (related == related_matrix[i][j])
               {
                 /* xlnt! */
@@ -5838,13 +5455,11 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   delete,
   abort_txn,
   test_tree_node_validation,
-  fetch_by_id,
   fetch_youngest_rev,
   basic_commit,
   copy_test,
-  link_test,
+  /* link_test, */
   merging_commit,
-  merge_re_id,
   commit_date,
   check_old_revisions,
   check_all_revisions,

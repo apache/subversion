@@ -31,23 +31,10 @@ extern "C" {
    of numbers separated by periods that look a lot like RCS revision
    numbers.
 
-     node_id ::= number | node_revision_id "." number
-     node_revision_id ::= node_id "." number
-
-   So: 
-   - "100" is a node id.
-   - "100.10" is a node revision id, referring to revision 10 of node 100.
-   - "100.10.3" is a node id, referring to the third branch based on
-     revision 10 of node 100.
-   - "100.10.3.4" is a node revision id, referring to revision 4 of
-     of the third branch from revision 10 of node 100.
-   And so on.
-
-   Node revision numbers start with 1.  Thus, N.1 is the first revision
-   of node N.
-
-   Node / branch numbers start with 1.  Thus, N.M.1 is the first
-   branch off of N.M.
+              node_id ::= number ;
+              copy_id ::= number ;
+               txn_id ::= number ;
+     node_revision_id ::= node_id "." copy_id "." txn_id ;
 
    A directory entry identifies the file or subdirectory it refers to
    using a node revision number --- not a node number.  This means that
@@ -60,84 +47,48 @@ extern "C" {
    revision ID that appears in its parent will be unchanged.  When
    doing an update, we can notice this, and ignore that entire
    subtree.  This makes it efficient to find localized changes in
-   large trees.
+   large trees.  */
 
-   Note that the number specifying a particular revision of a node is
-   unrelated to the global filesystem revision when that node revision
-   was created.  So 100.10 may have been created in filesystem revision
-   1218; 100.10.3.2 may have been created any time after 100.10; it
-   doesn't matter.
-
-   Since revision numbers increase by one each time a delta is added,
-   we can compute how many deltas separate two related node revisions
-   simply by comparing their ID's.  For example, the distance between
-   100.10.3.2 and 100.12 is the distance from 100.10.3.2 to their
-   common ancestor, 100.10 (two deltas), plus the distance from 100.10
-   to 100.12 (two deltas).
-
-   However, this is kind of a kludge, since the number of deltas is
-   not necessarily an accurate indicator of how different two files
-   are --- a single delta could be a minor change, or a complete
-   replacement.  Furthermore, the filesystem may decide arbitrary to
-   store a given node revision as a delta or as full text --- perhaps
-   depending on how recently the node was used --- so revision id
-   distance isn't necessarily an accurate predictor of retrieval time.
-
-   If you have insights about how this stuff could work better, let me
-   know.  I've read some of Josh MacDonald's stuff on this; his
-   discussion seems to be mostly about how to retrieve things quickly,
-   which is important, but only part of the issue.  I'd like to find
-   better ways to recognize renames, and find appropriate ancestors in
-   a source tree for changed files.  */
 
 struct svn_fs_id_t
 {
-  /* Within the code, we represent node and node revision ID's as arrays
-     of integers, terminated by a -1 element.  This is the type of an
-     element of a node ID.  */
-  svn_revnum_t *digits;
+  /* node id, unique to a node across all revisions of that node. */
+  const char *node_id;
+
+  /* copy id, a key into the `copies' table. */
+  const char *copy_id;
+
+  /* txn id, a key into the `transactions' table. */
+  const char *txn_id;
 };
 
 
 
+/*** Accessor functions. ***/
+
+/* Create a ID based on NODE_ID, COPY_ID, and TXN_ID, and allocated in
+   POOL.  */
+svn_fs_id_t *svn_fs__create_id (const char *node_id,
+                                const char *copy_id,
+                                const char *txn_id,
+                                apr_pool_t *pool);
+
+/* Access the "node id" portion of ID. */
+const char *svn_fs__id_node_id (const svn_fs_id_t *id);
+
+/* Access the "copy id" portion of ID. */
+const char *svn_fs__id_copy_id (const svn_fs_id_t *id);
+
+/* Access the "txn id" portion of ID. */
+const char *svn_fs__id_txn_id (const svn_fs_id_t *id);
+
 /* Return non-zero iff the node or node revision ID's A and B are equal.  */
-int svn_fs__id_eq (const svn_fs_id_t *a, const svn_fs_id_t *b);
-
-
-/* Return the number of components in ID, not including the final -1.  */
-int svn_fs__id_length (const svn_fs_id_t *id);
-
-
-/* Convert ID to its predecessor.  If there is no possible predecessor
-   id, set ID to the empty id (that is, an id of zero length, whose
-   first digit is -1).  No allocation is performed, as ID can only
-   stay the same length or shrink.
-
-   Does not check that the predecessor id is actually present in the
-   filesystem.
-
-   Does not check that ID is a valid node revision ID.  If you pass in
-   something else, the results are undefined.  */
-void svn_fs__precede_id (svn_fs_id_t *id);
-
-
-/* Like svn_fs__precede_id(), but return the predecessor allocated in
-   POOL.  If no possible predecessor, still return an empty id.  */
-svn_fs_id_t *svn_fs__id_predecessor (const svn_fs_id_t *id, apr_pool_t *pool);
-
-
-/* Return non-zero iff node revision A is an ancestor of node revision B.  
-   If A == B, then we consider A to be an ancestor of B.  */
-int svn_fs__id_is_ancestor (const svn_fs_id_t *a, const svn_fs_id_t *b);
-
+int svn_fs__id_eq (const svn_fs_id_t *a, 
+                   const svn_fs_id_t *b);
 
 /* Return a copy of ID, allocated from POOL.  */
-svn_fs_id_t *svn_fs__id_copy (const svn_fs_id_t *id, apr_pool_t *pool);
-
-
-/* Return true iff PARENT is a direct parent of CHILD.  */
-int svn_fs__id_is_parent (const svn_fs_id_t *parent,
-                          const svn_fs_id_t *child);
+svn_fs_id_t *svn_fs__id_copy (const svn_fs_id_t *id, 
+                              apr_pool_t *pool);
 
 
 #ifdef __cplusplus
