@@ -569,19 +569,26 @@ build_range_list (apr_off_t offset, apr_off_t limit, range_index_t *ndx)
         }
       else
         {
+          /* TODO: (Potential optimization) Investigate if it would
+             make sense to forbid range_from_target lengths shorter
+             than, say, VD_KEY_SIZE (see vdelta.c) */
+
           if (offset >= node->limit)
             node = node->next;
           else
             {
+              const apr_off_t target_offset =
+                offset - node->offset + node->target_offset;
+
               if (limit <= node->limit)
                 return alloc_range_list(&range_list, &last_range, ndx,
                                         range_from_target,
-                                        offset, limit, node->target_offset);
+                                        offset, limit, target_offset);
               else
                 {
                   alloc_range_list(&range_list, &last_range, ndx,
                                    range_from_target,
-                                   offset, node->limit, node->target_offset);
+                                   offset, node->limit, target_offset);
                   offset = node->limit;
                   node = node->next;
                 }
@@ -589,7 +596,7 @@ build_range_list (apr_off_t offset, apr_off_t limit, range_index_t *ndx)
         }
     }
 
-  assert(!"This can't happen");
+  assert(!"A renge's offset isn't smaller then its limit? Impossible!");
   return range_list;
 }
 
@@ -610,7 +617,7 @@ copy_source_ops (apr_off_t offset, apr_off_t limit,
       const svn_txdelta_op_t *const op = &window->ops[op_ndx];
       const apr_off_t *const off = &ndx->offs[op_ndx];
 
-      const apr_off_t fix_offset = (offset > *off ? offset - *off : 0);
+      const apr_off_t fix_offset = (offset > off[0] ? offset - off[0] : 0);
       const apr_off_t fix_limit = (off[1] > limit ? off[1] - limit : 0);
 
       /* It would be extremely weird if the fixed-up op had zero length. */
@@ -634,11 +641,11 @@ copy_source_ops (apr_off_t offset, apr_off_t limit,
         {
           /* The source of a target copy must start before the current
              offset in the (virtual) target stream. */
-          assert(op->offset < *off);
+          assert(op->offset < off[0]);
 
-          if (op->offset + op->length > *off)
+          if (op->offset + op->length - fix_limit > off[0])
             {
-              /* Overlapping target copies are a pain in the ass. */
+              assert(!"Overlapping target copies are a pain in the ass.");
             }
           else
             {
