@@ -37,6 +37,13 @@ extern svn_error_t *(*test_funcs[])(const char **msg,
                                     svn_boolean_t msg_only,
                                     apr_pool_t *pool);
 
+
+/* Some Subversion test programs may want to parse options in the
+   argument list, so we remember it here. */
+int test_argc;
+char **test_argv;
+
+
 /* ================================================================= */
 
 
@@ -131,7 +138,19 @@ main (int argc, char *argv[])
   if (prog_name)
     prog_name++;
   else
-    prog_name = argv[0];
+    {
+      /* Just check if this is that weird platform that uses \ instead
+         of / for the path separator. */
+      prog_name = strrchr (argv[0], '\\');
+      if (prog_name)
+        prog_name++;
+      else
+        prog_name = argv[0];
+    }
+
+  /* Remember the command line */
+  test_argc = argc;
+  test_argv = argv;
 
   if (argc >= 2)  /* notice command-line arguments */
     {
@@ -163,7 +182,7 @@ main (int argc, char *argv[])
                   /* Clear the per-function pool */
                   svn_pool_clear (pool);
                 }
-              else
+              else if (argv[i][0] != '-')
                 {
                   /* (probably) a source directory pathname */
                   printf ("notice: ignoring argument %d\n", i);
