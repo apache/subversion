@@ -875,8 +875,8 @@ new release over that working copy, handle any renames, additions or
 removals manually, and then commit.
 
 @example
-$ cd ~/foobar-1.1
 $ svn co http://svnhost/repos/vendor/foobar/current ~/current
+$ cd ~/foobar-1.1
 $ tar -cf - . | (cd ~/current ; tar -xf -)
 $ cd ~/current
 $ mv foobar.c main.c
@@ -919,6 +919,72 @@ $ svn commit -m `merging foobar 1.1 into trunk'
 
 There, you're done.  You now have a copy of foobar 1.1 with all your local 
 changes merged into it in your tree.
+
+Vendor branches that have more than several deletes, additions and moves
+can use the @command{svn_load_dirs.pl} script that comes with the
+Subversion distribution.  This script automates the above importing
+steps to make sure that mistakes are minimized.  You still need to use
+the merge commands to merge the new versions of foobar into your own
+local copy containing your local modifications.
+
+This script takes care of complications where Subversion requires a
+commit before renaming a file or directory twice, such as if you had a
+vendor branch that renamed @samp{foobar-1.1/docs/doc.ps} to
+{foobar-1.2/documents/doc-1.2.ps}.  Here, you would rename @samp{docs}
+to @samp{documents}, perform a commit, then rename @samp{doc.ps} to
+@samp{doc-1.2.ps}.  You could not do the two renames without the commit,
+because @samp{doc.ps} was already moved once from @samp{docs/doc.ps} to
+@samp{documents/doc.ps}.
+
+This script always compares the directory being imported to what
+currently exists in the Subversion repository and takes the necessary
+steps to add, delete and rename files and directories to make the
+subversion repository match the imported directory.  As such, it can be
+used on an empty subversion directory for the first import or for any
+following imports to upgrade a vendor branch.
+
+For the first foobar-1.0 release located in @samp{~/foobar-1.0}:
+
+@example
+$ svn_load_dirs.pl -t foobar-1.0                      \
+                   http://svnhost/repos/vendor/foobar \
+                   current                            \
+                   ~/foobar-1.0
+@end example
+
+@command{svn_load_dirs.pl} takes three mandatory arguments.  The first
+argument, @samp{http://svnhost/repos/vendor/foobar}, is the URL to the
+base Subversion directory to work in.  In this case, we're working in
+the vendor/foobar part of the Subversion repository.  The next argument,
+@samp{current}, is relative to the first and is the directory where the
+current import will take place, in this case
+@samp{http://svnhost/repos/vendor/foobar/current}.  The last argument,
+@samp{~/foobar-1.0}, is the directory to import.  Finally, the optional
+@samp{-t} command line option is also relative to
+@samp{http://svnhost/repos/vendor/foobar} and tells
+@command{svn_load_dirs.pl} to create a tag of the imported directory in
+@samp{http://svnhost/repos/vendor/foobar/foobar-1.0}.
+
+The import of foobar-1.1 would be taken care of in the same way:
+
+@example
+$ svn_load_dirs.pl -t foobar-1.1                      \
+                   http://svnhost/repos/vendor/foobar \
+                   current                            \
+                   ~/foobar-1.1
+@end example
+
+The script looks in your current
+@samp{http://svnhost/repos/vendor/foobar/current} directory and sees
+what changes need to take place for it to match @samp{~/foobar-1.1}.
+The script is kind enough to notice that there are files and directories
+that exist in 1.0 and not in 1.1 and asks if you want to perform any
+renames.  At this point, you can indicate that main.c was renamed to
+foobar.c and then indicate that no further renames have taken place.
+
+The script will then delete dead.c and add doc and doc/* to the
+Subversion repository and finally create a tag foobar-1.1 in
+@samp{http://svnhost/repos/vendor/foobar/foobar-1.1}.
 
 @subsection Removing a branch or tag with @command{svn rm}
 
@@ -1096,11 +1162,13 @@ Cumulus clouds are appearing more frequently as summer approaches.
 @end example
 
 Subversion is able substitute the @samp{$LastChangedDate$} string with
-the actual date in which this file last changed:
+the actual date in which this file last changed.  The keyword string is
+not removed in the replacement, just the specific information is placed
+after the keyword string:
 
 @example
 Here is the latest report from the front lines.
-$LastChangedDate: 2002-07-15T03:53:48 $
+$LastChangedDate: 2002-07-22 21:42:37 -0700 (Mon, 22 Jul 2002) $
 Cumulus clouds are appearing more frequently as summer approaches.
 @end example
 
@@ -1110,18 +1178,30 @@ to substitute:
 @table @b
 @item LastChangedDate
 The last time this file changed.  Can also be abbreviated as 'Date'.
-@item LastChangedRev
+The keyword substitution of @samp{$LastChangedDate$} will look something
+like
+@samp{$LastChangedDate: 2002-07-22 21:42:37 -0700 (Mon, 22 Jul 2002) $}.
+
+@item LastChangedRevision
 The last revision in which this file changed.  Can be abbreviated as
-'Rev'.
+'Rev'.  The keyword substitution of @samp{$LastChangedRevision} will
+look something like @samp{$LastChangedRevision: 144 $}.
+
 @item LastChangedBy
-The last user to change this file.  Can be abbreviated as 'Author'.
+The last user to change this file.  Can be abbreviated as 'Author'.  The
+keyword substitution of @samp{$LastChangedBy$} will look something like
+@samp{$LastChangedBy: joe $}.
+
 @item HeadURL
-A full URL to the latest version of the file in the repository.  Can
-be abbreviated as 'URL'.
+A full URL to the latest version of the file in the repository.  Can be
+abbreviated as 'URL'.  The keyword substitution of @samp{$HeadURL$} will
+look something like
+@samp{$HeadURL: http://svn.collab.net/repos/trunk/README $}.
 @end table
 
 To activate a keyword, or set of keywords, you merely need to set the
-@samp{svn:keywords} property to a list of keywords:
+@samp{svn:keywords} property to a list of keywords you want replaced.
+Keywords not listed in @samp{svn:keywords} will not be replaced.
 
 @example
 $ svn propset svn:keywords "Date Author" foo.c
