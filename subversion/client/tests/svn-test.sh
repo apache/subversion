@@ -22,7 +22,7 @@ ${SVN_PROG} checkout                                      \
       --ancestor-path ${ANCESTOR_PATH}
 
 ### Copy the pristine checked-out tree, so we can test updates later.
-cp -a ${TEST_DIR_1} ${TEST_DIR_2}
+cp -R -p ${TEST_DIR_1} ${TEST_DIR_2}
 
 ### Modify some existing files.
 echo "Modifying ${TEST_DIR_1}/A/D/G/pi."
