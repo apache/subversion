@@ -80,7 +80,7 @@
       
       <screen>
 $ svn commit --message "Corrected number of cheese slices."
-Sending        sandwich
+Sending        sandwich.txt
 Transmitting file data .
 Committed revision 3.
       </screen>
@@ -1161,28 +1161,27 @@ C  ./bar.c
       </itemizedlist>
       
       <para>For example, Sally makes changes to the file
-        <filename>sandwich</filename> in the repository.  Harry has
+        <filename>sandwich.txt</filename> in the repository.  Harry has
         just changed the file in his working copy and checked it in.
         Sally updates her working copy before checking in and she gets
         a conflict:</para>
       
       <screen>
 $ svn update
-C  sandwich
+C  sandwich.txt
 Updated to revision 2.
 $ ls -1
-sandwich                       
-sandwich.59528.00001.r2        
-sandwich.59524.00001.r1
-sandwich.59532.00001.mine
+sandwich.txt                       
+sandwich.txt.59528.00001.r2        
+sandwich.txt.59524.00001.r1
+sandwich.txt.59532.00001.mine
 $
       </screen>
       <!-- ###TODO What happens if the revnum is gt 99999?-->
       
       <para>At this point, Subversion will <emphasis>not</emphasis>
-        allow you to commit the file
-        <filename>sandwich </filename>until the three temporary files
-        are removed.</para>
+        allow you to commit the file <filename>sandwich.txt</filename>
+        until the three temporary files are removed.</para>
 
       <screen>
 $ svn ci --message "Add a few more things"
@@ -1190,7 +1189,7 @@ subversion/libsvn_client/commit.c:654: (apr_err=155015, src_err=0)
 svn: A conflict in the working copy obstructs the current operation
 svn: Commit failed (details follow):
 subversion/libsvn_client/commit_util.c:180: (apr_err=155015, src_err=0)
-svn: Aborting commit: '/home/sally/svn-work/sandwich' remains in conflict.
+svn: Aborting commit: '/home/sally/svn-work/sandwich.txt' remains in conflict.
       </screen>
 
       <para>If you get a conflict, you need to do one of three
@@ -1218,25 +1217,152 @@ svn: Aborting commit: '/home/sally/svn-work/sandwich' remains in conflict.
 
         </itemizedlist>
 
-<!-- ###TODO EMERG Subsection and example for each
- -->
-
-      <screen>
-$ cp sandwich.59532.00001.mine sandwich
-      </screen>
-      
       <para>Once you've resolved the conflict, you need to let
-        Subversion know by removing the three temporary files.  (The
-        <command>svn resolve</command> command, by the way, is a
-        shortcut that does nothing but automatically remove the three
-        temporary files for you.)  When those files are gone,
-        Subversion no longer considers the file to be in a state of
-        conflict anymore.</para>
+        Subversion know by removing the three temporary files.  When
+        those files are gone, Subversion no longer considers the file
+        to be in a state of conflict anymore.</para>
 
       <screen>
-$ svn resolve sandwich
-Resolved conflicted state of sandwich
+$ svn resolve sandwich.txt
+Resolved conflicted state of sandwich.txt
       </screen>
+
+      <sect3 id="svn-ch-3-sect-4.4.1">
+        <title>Merging conflicts by hand</title>
+
+        <para>Merging conflicts by hand can be quite intimidating the
+          first time you attempt it, but with a little practice, it
+          can become as easy as falling off a bike.</para>
+
+        <para>Here's an example.  Let's say that, due to a
+          miscommunication between you and your collaborator, Sally,
+          both edit the file named <filename>sandwich.txt</filename>
+          at the same time.  Sally commits her changes, and when you
+          go to update your working copy, you get a conflict and we're
+          going to have to edit <filename>sandwich.txt</filename> to
+          resolve the conflicts.  First, let's take a look at the
+          file:</para>
+        
+        <screen>
+Top piece of bread
+Mayonnaise
+Lettuce
+Tomato
+Provolone
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; .mine
+Salami
+Mortadella
+Prosciutto
+=======
+Sauerkraut
+Grilled Chicken
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; .r2
+Creole Mustard
+Bottom piece of bread
+        </screen>
+
+        <para>The strings of less-than signs, equal signs, and
+          greater-than signs are called <firstterm>conflict
+          markers</firstterm>.  The text between the first two sets of
+          markers is composed of the changes you made in the
+          conflicting area:</para>
+
+        <screen>
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; .mine
+Salami
+Mortadella
+Prosciutto
+=======
+        </screen>
+
+        <para>Whereas the text between the second and third sets of
+        conflict markers is the text from Sally's commit:</para>
+
+        <screen>
+=======
+Sauerkraut
+Grilled Chicken
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; .r2
+        </screen>
+
+        <para>Usually you won't want to just delete the conflict
+        markers and Sally's changes&mdash;she's going to be awfully
+        surprised when the sandwich arrives and it's not what she
+        wanted.  So this is where you pick up the phone or walk across
+        the office and explain to Sally that you can't get sauerkraut
+        from an Italian deli.<footnote><para>And if you ask them for
+        it, they may very well ride you out of town on a
+        rail</para></footnote>  Once you've agreed on the changes you
+        will check in, edit your file and remove the conflict markers.</para>
+
+        <screen>
+Top piece of bread
+Mayonnaise
+Lettuce
+Tomato
+Provolone
+Salami
+Mortadella
+Prosciutto
+Creole Mustard
+Bottom piece of bread
+        </screen>
+
+        <para>Now run <command>svn resolve</command> and you're now
+          ready to commit your changes:</para>
+
+        <screen>
+$ svn resolve sandwich.txt
+$ svn commit -m "Go ahead and use my sandwich, discarding Sally's edits."
+        </screen>
+
+        <para>Remember, if you ever get confused while editing the
+          conflicted file, you can always consult the three files that
+          Subversion creates for you in your working
+          copy&mdash;including your file as it was before you
+          updated.</para>
+
+      </sect3>
+
+      <sect3 id="svn-ch-3-sect-4.4.2">
+        <title>Copying a file onto your working file</title>
+
+        <para>If you get a conflict and decide that you want to throw
+          out your changes, you can merely copy one of the temporary
+          files created by Subversion over the file in your working
+          copy:</para>
+
+        <screen>
+$ svn update
+C  sandwich.txt
+Updated to revision 2.
+$ ls sandwich.*
+sandwich.txt  sandwich.txt.53180.00001.mine  sandwich.txt.53184.00001.r2  sandwich.txt.53188.00001.r1
+$ cp sandwich.txt.53184.00001.r2 sandwich.txt
+$ svn resolve
+$ svn commit -m "Go ahead and use Sally's sandwich, discarding my edits."
+        </screen>
+
+      </sect3>
+
+      <sect3 id="svn-ch-3-sect-4.4.3">
+        <title>Punting: Using <command>svn revert</command></title>
+
+        <para>If you get a conflict, and upon examination decide that
+        you want to throw out your changes and start your edits again,
+        just revert your changes:</para>
+
+        <screen>
+$ svn revert sandwich.txt
+Reverted sandwich.txt
+$ ls sandwich.*
+sandwich.txt
+        </screen>
+
+        <para>Note that when you revert a conflicted file, you don't
+        have to run <command>svn resolve</command>.</para>
+
+      </sect3>
 
       <para>Now you're ready to check in your changes.  Note that
         <command>svn resolve</command>, unlike most of the other
@@ -1321,7 +1447,8 @@ $
 
     </sect2>
 
-  </sect1>
+  </sect1
+>
 
   <!-- ================================================================= -->
   <!-- ======================== SECTION 6 ============================== -->
@@ -1345,9 +1472,11 @@ $
       shows you broad information: log messages attached to revisions,
       and which paths changed in each revision.  <command>svn
       diff</command>, on the other hand, can show you the specific
-      details of how a file changed over time.  Finally, <command>svn
+      details of how a file changed over time. <command>svn
       cat</command> can be used to retrieve any file as it existed in
-      a particular revision number and display it on your screen.</para>
+      a particular revision number and display it on your screen.  And
+      finally, <command>svn list</command> can display the files in a
+      directory for any given revision.</para>
 
     <sect2 id="svn-ch-3-sect-5.1">
       <title><command>svn log</command></title>
@@ -1429,6 +1558,32 @@ Frozzled the sub-space winch.
 
 ------------------------------------------------------------------------
       </screen>
+
+      <sidebar>
+        <title>Why Does <command>svn log</command> Gives Me an Empty
+          Response?</title>
+        
+        <para>After working with Subversion for a bit, most users will
+          come across something like this:</para>
+
+        <screen>
+$ svn log -r 2
+------------------------------------------------------------------------
+$
+        </screen>
+
+        <para>At first glance, this seems like an error, but you need
+          to remember that while revisions are repository-wide,
+          <command>svn log</command> operates on a path in the
+          repository (If you supply no path, Subversion defaults to
+          <literal>"."</literal>).  As a result, if you're operating
+          in a subdirectory of your working copy and attempt to log a
+          revision where nothing beneath your current directory
+          changed, Subversion will give you an empty log.  If you want
+          to see what changed in that revision, try running the same
+          command from the top directory of your working copy.</para>
+
+      </sidebar>
            
     </sect2>
 
@@ -1553,14 +1708,8 @@ $
 
     </sect2>
 
-
-<!-- ###TODO EMERG Mention that log always updates on a target
-(implicit .) Warn about logging specific revisions on a path. Also
-about log and date -->
-
-
     <sect2 id="svn-ch-3-sect-5.3">
-       <title><command>svn cat</command> and <command>svn ls</command></title>
+       <title><command>svn cat</command></title>
 
       <para>If you want to examine an earlier version of a file and
         not necessarily the differences between two files, you can use
@@ -1602,10 +1751,9 @@ $
 
       </sect2>
 
-<!-- ###TODO EMERG Mention svn ls. renumber id and move prev bit to subsect. -->
     <sect2 id="svn-ch-3-sect-5.4">
       <title><command>svn list</command></title>
-
+      
       <para>The <command>svn list</command> command shows you what
         files are in a repository directory without actually
         downloading the files to your local machine:</para>
@@ -1640,9 +1788,24 @@ _    2785    brane        0 Jul 29 19:07 trunk/
  
     </sect2>
 
-<!-- ###TODO EMERG section on update -r
- ###TODO EMERG section on checkout -r
- -->
+    <sect2 id="svn-ch-3-sect-5.5">
+      <title>A Final Word on History</title>
+
+      <para>In addition to all of the above commands, you can use
+        <command>svn update</command> and <command>svn
+        checkout</command> with the <option>--revision</option> switch
+        to take an entire working copy <quote>back in time</quote>
+        <footnote><para>See?  We told you that Subversion was a time
+        machine.</para></footnote>:</para>
+
+      <screen>
+$ svn checkout --revision 1729 # Checks out a new working copy at r1729
+&hellip;
+$ svn update --revision 1729 # Updates an existing working copy to r1729
+&hellip;
+      </screen>
+
+    </sect2>
 
   </sect1>
 
