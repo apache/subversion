@@ -51,7 +51,7 @@ my $svnlook = "/usr/local/bin/svnlook";
         }
       else
         {
-          warn "$0: required program `$svnlook' does not exist, edit $0.\n";
+          warn "$0: required program `$program' does not exist, edit $0.\n";
           $ok = 0;
         }
     }
