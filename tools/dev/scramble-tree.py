@@ -1,6 +1,6 @@
 #!/usr/bin/env python2.2
 #
-# Usage: scramble-tree.py <dir>
+# Usage: scramble-tree.py <dir> [SEED]
 #
 # Makes multiple random file changes to a directory tree, for testing.
 #
@@ -38,21 +38,25 @@ import pre
 import pwd
 import random
 import md5
-
+import base64
 
 class hashDir:
 
   """Given a directory, creates a string containing all directories
-  and files under that directory and makes an md5 hash of the
-  resulting string.  Call hashDir.md5() to get the md5 object."""
+  and files under that directory (sorted alphanumerically) and makes a
+  base64-encoded md5 hash of the resulting string.  Call
+  hashDir.gen_seed() to generate a seed value for this tree."""
 
   def __init__(self, rootdir):
     self.allfiles = []
     os.path.walk(rootdir, self.walker_callback, len(rootdir))
 
 
-  def md5(self):
-    return md5.md5(''.join(self.allfiles))
+  def gen_seed(self):
+    # Return a base64-encoded (kinda ... strip the '==\n' from the
+    # end) MD5 hash of sorted tree listing.
+    self.allfiles.sort()
+    return base64.encodestring(md5.md5(''.join(self.allfiles)).digest())[:-3]
 
     
   def walker_callback(self, baselen, dirname, fnames):
@@ -132,7 +136,7 @@ talented scramble-tree.py script.
 
 
 def usage():
-  print "Usage:", sys.argv[0], "<directory>"
+  print "Usage:", sys.argv[0], "<directory> [SEED]"
   sys.exit(255)
 
 
@@ -149,13 +153,17 @@ def walker_callback(scrambler, dirname, fnames):
 
 if __name__ == '__main__':
   # If we have no ARG, exit
-  if not len(sys.argv) == 2:
+  argc = len(sys.argv)
+  if argc < 2 or argc > 3:
     usage()
     sys.exit(254)
 
   rootdir = sys.argv[1]
-
-  seed = hashDir(rootdir).md5().digest()
+  if argc == 2:
+    seed = hashDir(rootdir).gen_seed()
+  else:
+    seed = sys.argv[2]
+  print 'Using seed: ' + seed
   scrambler = Scrambler(seed)
   
   # Fire up the treewalker
