@@ -246,6 +246,7 @@ svn_error_t *svn_fs__get_txn_list (apr_array_header_t **names_p,
     {
       svn_fs__transaction_t *txn;
       skel_t *txn_skel;
+      svn_error_t *err;
 
       svn_fs__track_dbt (&key, trail->pool);
       svn_fs__track_dbt (&value, trail->pool);
@@ -261,12 +262,19 @@ svn_error_t *svn_fs__get_txn_list (apr_array_header_t **names_p,
       /* Parse TRANSACTION skel */
       txn_skel = svn_fs__parse_skel (value.data, value.size, subpool);
       if (! txn_skel)
-        return svn_fs__err_corrupt_txn 
-          (fs, apr_pstrmemdup (trail->pool, key.data, key.size));
+        {
+          cursor->c_close (cursor);
+          return svn_fs__err_corrupt_txn 
+            (fs, apr_pstrmemdup (trail->pool, key.data, key.size));
+        }
 
       /* Convert skel to native type. */
-      SVN_ERR (svn_fs__parse_transaction_skel (&txn, txn_skel, subpool));
-      
+      if ((err = svn_fs__parse_transaction_skel (&txn, txn_skel, subpool)))
+        {
+          cursor->c_close (cursor);
+          return err;
+        }
+
       /* If this is a immutable "committed" transaction, ignore it. */
       if (is_committed (txn))
         continue;

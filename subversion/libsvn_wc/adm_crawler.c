@@ -365,7 +365,7 @@ svn_wc_crawl_revisions (const char *path,
                         svn_wc_traversal_info_t *traversal_info,
                         apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
   svn_wc_entry_t *entry;
   svn_revnum_t base_rev = SVN_INVALID_REVNUM;
   svn_boolean_t missing = FALSE;
@@ -407,17 +407,8 @@ svn_wc_crawl_revisions (const char *path,
              them locally. */
           err = reporter->delete_path (report_baton, "");
           if (err)
-            {
-              /* Clean up the fs transaction. */
-              svn_error_t *fserr;
-              fserr = reporter->abort_report (report_baton);
-              if (fserr)
-                return svn_error_quick_wrap (fserr, "Error aborting report.");
-              else
-                return err;
-            }
+            goto abort_report;
         }
-
       else 
         {
           /* Recursively crawl ROOT_DIRECTORY and report differing
@@ -431,15 +422,7 @@ svn_wc_crawl_revisions (const char *path,
                                   traversal_info,
                                   pool);
           if (err)
-            {
-              /* Clean up the fs transaction. */
-              svn_error_t *fserr;
-              fserr = reporter->abort_report (report_baton);
-              if (fserr)
-                return svn_error_quick_wrap (fserr, "Error aborting report.");
-              else
-                return err;
-            }
+            goto abort_report;
         }
     }
 
@@ -448,7 +431,9 @@ svn_wc_crawl_revisions (const char *path,
       if (missing && restore_files)
         {
           /* Recreate file from text-base. */
-          SVN_ERR (restore_file (path, pool));
+          err = restore_file (path, pool);
+          if (err)
+            goto abort_report;
 
           /* Report the restoration to the caller. */
           if (notify_func != NULL)
@@ -469,20 +454,14 @@ svn_wc_crawl_revisions (const char *path,
              empty string to set_path. */
           err = reporter->set_path (report_baton, "", base_rev);
           if (err)
-            {
-              /* Clean up the fs transaction. */
-              svn_error_t *fserr;
-              fserr = reporter->abort_report (report_baton);
-              if (fserr)
-                return svn_error_quick_wrap (fserr, "Error aborting report.");
-              else
-                return err;
-            }
+            goto abort_report;
         }
     }
 
   /* Finish the report, which causes the update editor to be driven. */
   err = reporter->finish_report (report_baton);
+
+ abort_report:
   if (err)
     {
       /* Clean up the fs transaction. */
