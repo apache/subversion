@@ -397,7 +397,7 @@ test_two_way_unified (const char **msg,
                       svn_boolean_t msg_only,
                       apr_pool_t *pool)
 {
-  *msg = "two way unified diff and trivial merge";
+  *msg = "2-way unified diff and trivial merge";
   if (msg_only)
     return SVN_NO_ERROR;
 
@@ -721,7 +721,7 @@ test_two_way_unified_suspect (const char **msg,
                               svn_boolean_t msg_only,
                               apr_pool_t *pool)
 {
-  *msg = "two way unified diff where output is suspect";
+  *msg = "2-way unified diff where output is suspect";
   if (msg_only)
     return SVN_NO_ERROR;
 
@@ -838,7 +838,7 @@ test_three_way_merge_no_overlap (const char **msg,
                                  svn_boolean_t msg_only,
                                  apr_pool_t *pool)
 {
-  *msg = "three way merge where the changes don't overlap";
+  *msg = "3-way merge, non-overlapping changes";
   if (msg_only)
     return SVN_NO_ERROR;
 
@@ -1037,7 +1037,7 @@ test_three_way_merge_with_overlap (const char **msg,
                                    svn_boolean_t msg_only,
                                    apr_pool_t *pool)
 {
-  *msg = "three way merge with non-conflicting overlapping changes";
+  *msg = "3-way merge, non-conflicting overlapping changes";
   if (msg_only)
     return SVN_NO_ERROR;
 
@@ -1194,7 +1194,7 @@ test_three_way_merge_with_conflict (const char **msg,
                                     svn_boolean_t msg_only,
                                     apr_pool_t *pool)
 {
-  *msg = "three way merge with conflicting overlapping changes";
+  *msg = "3-way merge, conflicting overlapping changes";
   if (msg_only)
     return SVN_NO_ERROR;
 
@@ -1348,7 +1348,7 @@ random_three_way_merge (const char **msg,
   int i;
   apr_pool_t *subpool = svn_pool_create (pool);
 
-  *msg = apr_psprintf (pool, "random three way merge (seed:%u)", seed_val());
+  *msg = apr_psprintf (pool, "random 3-way merge (seed:%u)", seed_val());
   if (msg_only)
     return SVN_NO_ERROR;
 
@@ -1486,7 +1486,7 @@ merge_adjacent_changes (const char **msg,
                         svn_boolean_t msg_only,
                         apr_pool_t *pool)
 {
-  *msg = "three way merge with adjacent changes";
+  *msg = "3-way merge, adjacent changes";
   if (msg_only)
     return SVN_NO_ERROR;
 

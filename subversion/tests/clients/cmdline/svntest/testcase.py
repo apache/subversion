@@ -16,7 +16,7 @@
 #
 ######################################################################
 
-import os, sys
+import os, sys, string
 import traceback # for print_exc()
 
 import svntest
@@ -64,10 +64,13 @@ class TestCase:
     self.index = index
 
   def _check_name(self):
-    if len(self.pred.func.__doc__) > 50:
+    name = self.pred.func.__doc__
+    if len(name) > 50:
       print 'WARNING: Test docstring exceeds 50 characters'
-    if self.pred.func.__doc__[-1] == '.':
+    if name[-1] == '.':
       print 'WARNING: Test docstring ends in a period (.)'
+    if not string.lower(name[0]) == name[0]:
+      print 'WARNING: Test docstring is capitalized'
     
   def func_code(self):
     return self.pred.func.func_code

@@ -312,7 +312,7 @@ call_functions_with_unopened_fs (const char **msg,
                 APR_HASH_KEY_STRING, "1");
   fs = svn_fs_new (fs_config, pool);
 
-  *msg = "call functions with unopened filesystem and check errors";
+  *msg = "call functions with unopened fs and check errors";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -380,7 +380,7 @@ verify_txn_list (const char **msg,
   const char *name1, *name2;
   apr_array_header_t *txn_list;
 
-  *msg = "create 2 txns, list them, and verify the list.";
+  *msg = "create 2 txns, list them, and verify the list";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -482,7 +482,7 @@ create_mini_tree_transaction (const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
 
-  *msg = "make a file, a subdir, and another file in that subdir";
+  *msg = "make a file, a subdir, and another file in the subdir";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -4480,7 +4480,7 @@ medium_file_integrity (const char **msg,
 {
   apr_uint32_t seed = (apr_uint32_t) apr_time_now();
   *msg = apr_psprintf (pool,
-                       "create, modify, and verify a medium file (seed=%lu)", 
+                       "create and modify medium file (seed=%lu)", 
                        (unsigned long) seed);
 
   if (msg_only)
@@ -4499,7 +4499,7 @@ large_file_integrity (const char **msg,
 {
   apr_uint32_t seed = (apr_uint32_t) apr_time_now();
   *msg = apr_psprintf (pool,
-                       "create, modify, and verify a large file (seed=%lu)", 
+                       "create and modify large file (seed=%lu)", 
                        (unsigned long) seed);
 
   if (msg_only)
@@ -4522,7 +4522,7 @@ check_root_revision (const char **msg,
   svn_revnum_t youngest_rev, test_rev;
   int i;
 
-  *msg = "make sure the root node's stored revision is accurate";
+  *msg = "ensure accurate storage of root node";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -4602,7 +4602,7 @@ undeltify_deltify (const char **msg,
   
   apr_uint32_t seed = (apr_uint32_t) apr_time_now();
   *msg = apr_psprintf (pool,
-                       "pound on explicit undeltification code (seed=%lu)", 
+                       "test explicit undeltify (seed=%lu)", 
                        (unsigned long) seed);
 
   if (msg_only)
