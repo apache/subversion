@@ -449,8 +449,9 @@ X    Resource is external to this working copy (comes from another
 
     <para>Unlike CVS, a Subversion working copy is aware that it has
       checked out a module.  That means that if somebody changes the
-      definition of a module, then a call to <command>svn update</command>
-      will update the working copy appropriately.</para>
+      definition of a module (e.g. adds or removes components), then a
+      call to <command>svn update</command> will update the working
+      copy appropriately, adding and removing components.</para>
 
     <para>Subversion defines modules as a list of directories within a
       directory property:  see <xref linkend="svn-ch-7-sect-3"/>.</para>
@@ -467,7 +468,8 @@ X    Resource is external to this working copy (comes from another
     <para>With CVS's pserver, you are required to <quote>login</quote>
       to the server before any read or write operation&mdash;you even
       have to login for anonymous operations.  With a Subversion
-      repository using Apache HTTPD as the server, you don't provide
+      repository using Apache <command>httpd</command> or
+      <command>svnserve</command> as the server, you don't provide
       any authentication credentials at the outset&mdash;if an
       operation that you perform requires authentication, the server
       will challenge you for your credentials (whether those
@@ -481,7 +483,11 @@ X    Resource is external to this working copy (comes from another
       directory) unless you tell it not to by using the
       <option>--no-auth-cache</option> switch.</para>
 
-
+    <para>The exception to this behaviors, however, is in the case of
+      accessing an <command>svnserve</command> server over an ssh
+      tunnel, using the <literal>svn+ssh://</literal> URL schema.  In
+      that case, the <command>ssh</command> program unconditionally
+      demands authentication just to start the tunnel.</para>
 
   </sect1>
 

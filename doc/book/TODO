@@ -32,19 +32,8 @@ To be fixed by cmpilato:
 
 ch05:
 
-   - document that if either the start-commit or pre-commit hook
-     fails, STDERR is marshalled back to the client.  (not true of
-     post-commit, see issue 443).
-
-   - in the section about migrating a repository, it might be useful
-     to xref or mention 'svn switch --relocate'.  it's almost always
-     what happens after migration finishes.
 
 ch07:
-
-   - explain additional limitations of svn:externals:
-         - '..'-type paths don't work
-         - URLs can only point to dirs, not files.
 
 --------------------------------------------------------------
 
@@ -59,28 +48,9 @@ ch04:
      revision, then only back/fore-date *files*, not dirs.
 
 
-ch06:  mod_authz_svn:  clarify that the most specific match wins:
- 
-         * [repos:/foo] overrides [/foo]
-         * "harry = " overrides "* = r"
-
-       put in FAQ about ssh-agent usage.
+ch06:  
 
 
-appC:
-
-   "Mapping Subversion to DeltaV": checkouts don't cause the client to
-   do repeated GET and PROPFIND requests.  The data is all embedded in
-   the REPORT response now.
-
-
-appA:
-
-   http://svnbook.red-bean.com/svnbook/apas09.html
-   What do you mean by "changing the definition of a module"?
-
-   http://svnbook.red-bean.com/svnbook/apas10.html
-   Authentication: Can I use subversion via ssh?
 
 
 -----------------------------------------------

@@ -1775,7 +1775,10 @@ Fetching external item into calc/third-party/skins
       themselves.</para>
 
     <para>The support that exists for externals definitions in
-      Subversion today can be a little misleading, though.  The
+      Subversion today can be a little misleading, though.  First, an
+      externals definition can only point to directories, not files.
+      Second, the externals definition cannot point to relative paths
+      (paths like <filename>../../skins/myskin</filename>).  Third, the
       working copies created via the externals definition support are
       still disconnected from the primary working copy (on whose
       versioned directories the <literal>svn:externals</literal>

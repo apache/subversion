@@ -3549,11 +3549,21 @@ Updated to revision 31.
               copy.</para>
           </tip>
 
-          <para>If the location of your repository changes and you
-             have an existing working copy that you'd like to continue
-             to use, you can use <command>svn switch
-             --relocate</command> to change your working copy from one
-             URL to another:</para>
+          <para>Sometimes an administrator might change the "base
+             location" of your repository &mdash; in other words,
+             the contents of the repository doesn't change, but the
+             main URL used to reach the root of the repository does.
+             For example, the hostname may change, or the URL schema,
+             or perhaps just the path which leads to the repository.
+             Rather than checkout a new working copy, you can have the
+             <command>svn switch</command> command "rewrite" the the
+             beginnings of all the URLs in your working copy.  Use the
+             <option>--relocate</option> command to do the
+             substitution.  No file contents are changed, nor is the
+             repository contacted.  It's similar to running a perl
+             script over your working copy <filename>.svn/</filename>
+             directories which runs
+             <command>s/OldRoot/NewRoot/</command>.</para>
 
           <screen>
 $ svn checkout file:///tmp/repos test

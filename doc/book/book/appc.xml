@@ -309,13 +309,12 @@
               Send a custom <literal>REPORT</literal> request that
               describes the mixed-revision (and mixed-url) state of
               the working copy.  The server sends a custom response
-              that describes which items need updating.  The client
-              loops over the response, performing
-              <literal>GET</literal> and <literal>PROPFIND</literal>
-              requests as needed.  For updates and switches, install
-              the new data in the working copy.  For diff and merge
-              commands, compare the data to the working copy, possibly
-              applying changes as local modifications.
+              that describes which items need updating and includes
+              binary deltas of file contents.  Parses the response.
+              For updates and switches, install the new data in the
+              working copy.  For diff and merge commands, compare the
+              data to the working copy, possibly applying changes as
+              local modifications.
             </para>
           </listitem>
         </varlistentry>
