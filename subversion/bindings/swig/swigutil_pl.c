@@ -283,9 +283,8 @@ static svn_error_t *perl_callback_thunk (perl_func_invoker_t caller_func,
 	croak("Big trouble\n") ;
 
     if (result) {
-	SV *ret = sv_mortalcopy(POPs);
-	SvREFCNT_inc(ret);
-	*result = ret;
+	*result = POPs;
+	SvREFCNT_inc(*result);
     }
 
     FREETMPS ;
@@ -745,4 +744,82 @@ svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
     SvREFCNT_inc(perl_callbacks);
 
     return SVN_NO_ERROR;
+}
+
+/* stream interpolability with io::handle */
+
+typedef struct  {
+    SV *obj;
+    PerlIO *f;
+    apr_pool_t *pool;
+} io_baton_t;
+
+static svn_error_t *io_handle_read (void *baton,
+				    char *buffer,
+				    apr_size_t *len)
+{
+    io_baton_t *io = baton;
+    *len = PerlIO_read (io->f, buffer, *len);
+    return SVN_NO_ERROR;
+}
+
+static svn_error_t *io_handle_write (void *baton,
+				     const char *data,
+				     apr_size_t *len)
+{
+    io_baton_t *io = baton;
+    *len = PerlIO_write (io->f, data, *len);
+    return SVN_NO_ERROR;
+}
+
+static svn_error_t *io_handle_close (void *baton)
+{
+    io_baton_t *io = baton;
+    PerlIO_close (io->f);
+    SvREFCNT_dec (io->obj);
+    apr_pool_destroy (io->pool);
+}
+
+svn_error_t *svn_swig_pl_make_stream (svn_stream_t **stream, SV *obj)
+{
+    swig_type_info *tinfo = SWIG_TypeQuery("svn_stream_t *");
+
+    if (obj && SvROK(obj) && SvTYPE(SvRV(obj)) == SVt_PVGV && GvIO(SvRV(obj))) {
+	apr_pool_t *pool = svn_pool_create (NULL);
+	io_baton_t *io = apr_palloc (pool, sizeof(io_baton_t));
+	io->obj = obj;
+	io->f = IoIFP(GvIO(SvRV(obj)));
+	SvREFCNT_inc (obj);
+	io->obj = obj;
+	io->pool = pool;
+	*stream = svn_stream_create (io, pool);
+	svn_stream_set_read (*stream, io_handle_read);
+	svn_stream_set_write (*stream, io_handle_write);
+	svn_stream_set_close (*stream, io_handle_close);
+	return SVN_NO_ERROR;
+    }
+
+    if (obj && sv_isobject(obj)) {
+	if (sv_derived_from (obj, "SVN::Stream"))
+	    perl_callback_thunk (CALL_METHOD, "svn_stream", &obj, "O", obj);
+	else if (!sv_derived_from(obj, "_p_svn_stream_t"))
+	    croak ("unknown type for svn_stream_t");
+
+	SWIG_ConvertPtr(obj, (void **)stream, tinfo, 0);
+    }
+    else {
+	croak ("unknown type for svn_stream_t");
+    }
+    return SVN_NO_ERROR;
+}
+
+SV *svn_swig_pl_from_stream (svn_stream_t *stream)
+{
+    swig_type_info *tinfo = SWIG_TypeQuery("svn_stream_t *");
+    SV *ret;
+
+    perl_callback_thunk (CALL_METHOD, "new", &ret, "sS",
+			 "SVN::Stream", stream, tinfo);
+
+    return ret;
 }

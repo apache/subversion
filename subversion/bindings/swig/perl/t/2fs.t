@@ -30,10 +30,11 @@ SVN::Fs::make_dir($txn->root, 'trunk');
 my $path = 'trunk/filea';
 my $text = "this is just a test\n";
 SVN::Fs::make_file($txn->root, 'trunk/filea');
+{
 my $stream = SVN::Fs::apply_text($txn->root, 'trunk/filea', undef);
-$stream->write($text);
-$stream->close;
-
+print $stream $text;
+close $stream;
+}
 SVN::Fs::commit_txn($txn);
 
 cmp_ok($fs->youngest_rev, '==', 1, 'revision increased');
@@ -42,10 +43,11 @@ my $root = $fs->revision_root ($fs->youngest_rev);
 
 cmp_ok(SVN::Fs::check_path($root, $path), '==', $SVN::Core::node_file);
 
-my $filelen = SVN::Fs::file_length($root, $path);
+{
 my $stream = SVN::Fs::file_contents($root, $path);
-is($stream->read($filelen), $text, 'content verified');
-
+local $/;
+is(<$stream>, $text, 'content verified');
+}
 ok (eq_array(SVN::Repos::revisions_changed ($fs, 'trunk/filea', 0, 1, 0), [1]),
     'revisions_changed');
 

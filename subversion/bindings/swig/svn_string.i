@@ -87,6 +87,9 @@ typedef struct svn_string_t svn_string_t;
 %typemap(python,in,numinputs=0) svn_stringbuf_t ** (svn_stringbuf_t *temp) {
     $1 = &temp;
 }
+%typemap(perl5,in,numinputs=0) svn_stringbuf_t ** (svn_stringbuf_t *temp) {
+    $1 = &temp;
+}
 %apply RET_STRING { svn_stringbuf_t ** };
 
 
