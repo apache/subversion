@@ -58,6 +58,7 @@ typedef struct {
   dav_resource res;             /* wres.resource refers here */
   dav_resource_private info;    /* the info in res */
   svn_string_t *uri;            /* the uri within res */
+  svn_string_t *repos_path;     /* the repos_path within res */
 
 } dav_svn_walker_context;
 
@@ -1267,6 +1268,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   apr_hash_index_t *hi;
   apr_size_t path_len;
   apr_size_t uri_len;
+  apr_size_t repos_len;
   apr_hash_t *children;
 
   /* The current resource is a collection (possibly here thru recursion)
@@ -1292,27 +1294,29 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
 
   /* assert: collection resource. isdir == TRUE */
 
-  /* append "/" to the path, in preparation for appending child names */
+  /* append "/" to the paths, in preparation for appending child names */
   svn_string_appendcstr(ctx->info.uri_path, "/");
+  svn_string_appendcstr(ctx->repos_path, "/");
 
   /* NOTE: the URI should already have a trailing "/" */
+
+  /* fix up the dependent pointers */
+  ctx->info.repos_path = ctx->repos_path->data;
 
   /* all of the children exist. also initialize the collection flag. */
   ctx->res.exists = TRUE;
   ctx->res.collection = FALSE;
 
   /* remember these values so we can chop back to them after each time
-     we append a child name to the path/uri */
+     we append a child name to the path/uri/repos */
   path_len = ctx->info.uri_path->len;
   uri_len = ctx->uri->len;
+  repos_len = ctx->repos_path->len;
 
   /* fetch this collection's children */
   /* ### shall we worry about filling params->pool? */
-  /* ### assuming REGULAR resource. uri_path is repository path. not using
-     ### repos_path because the uri_path manipulation above may have changed
-     ### repos_path's intended memory location. */
   serr = svn_fs_dir_entries(&children, ctx->info.root.root,
-                            ctx->info.uri_path->data, params->pool);
+                            ctx->info.repos_path, params->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not fetch collection members");
@@ -1339,13 +1343,11 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       /* append this child to our buffers */
       svn_string_appendbytes(ctx->info.uri_path, key, klen);
       svn_string_appendbytes(ctx->uri, key, klen);
+      svn_string_appendbytes(ctx->repos_path, key, klen);
 
-      /* reset the URI pointer since the above may have changed it */
+      /* reset the pointers since the above may have changed them */
       ctx->res.uri = ctx->uri->data;
-
-      /* reset the repos_path in case the above may have changed it */
-      /* ### assuming REGULAR resource. uri_path is repository path */
-      ctx->info.repos_path = ctx->info.uri_path->data;
+      ctx->info.repos_path = ctx->repos_path->data;
 
       serr = svn_fs_is_file(&is_file,
                             ctx->info.root.root, ctx->info.repos_path,
@@ -1378,9 +1380,10 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
           ctx->res.collection = 0;
         }
 
-      /* chop the child off the path and uri. NOTE: no null-term. */
+      /* chop the child off the paths and uri. NOTE: no null-term. */
       ctx->info.uri_path->len = path_len;
       ctx->uri->len = uri_len;
+      ctx->repos_path->len = repos_len;
     }
 
   return NULL;
@@ -1414,6 +1417,9 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
   /* prep the URI buffer */
   ctx.uri = svn_string_create(params->root->uri, params->pool);
 
+  /* same for repos_path */
+  ctx.repos_path = svn_string_create(ctx.info.repos_path, params->pool);
+
   /* if we have a collection, then ensure the URI has a trailing "/" */
   /* ### get_resource always kills the trailing slash... */
   if (ctx.res.collection && ctx.uri->data[ctx.uri->len - 1] != '/') {
@@ -1423,9 +1429,8 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
   /* the current resource's URI is stored in the (telescoping) ctx.uri */
   ctx.res.uri = ctx.uri->data;
 
-  /* the current resource's repos_path is stored in ctx.info.uri_path */
-  /* ### assuming REGULAR resource. uri_path is repository path */
-  ctx.info.repos_path = ctx.info.uri_path->data;
+  /* the current resource's repos_path is stored in ctx.repos_path */
+  ctx.info.repos_path = ctx.repos_path->data;
 
   /* ### is the root already/always open? need to verify */
 
