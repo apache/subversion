@@ -295,8 +295,6 @@ svn_boolean_t svn_string_compare_stringbuf (const svn_string_t *str1,
  *
  * If @a chop_whitespace is true, then remove leading and trailing
  * whitespace from the returned strings.
- *
- * @a input may not be null.
  */
 apr_array_header_t *svn_cstring_split (const char *input,
                                        const char *sep_chars,

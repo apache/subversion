@@ -84,8 +84,6 @@ svn_error_t *svn_io_check_resolved_path (const char *path,
  * then the @c APR_DELONCLOSE flag will be used when opening the file. The
  * @c APR_BUFFERED flag will always be used.
  *
- * @a suffix may not be null.
- *
  * The first attempt will just append @a suffix.  If the result is not
  * a unique name, then subsequent attempts will append a dot,
  * followed by an iteration number ("2", then "3", and so on),
