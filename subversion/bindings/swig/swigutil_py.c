@@ -26,6 +26,9 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_portable.h>
+#ifdef WITH_THREAD
+#include <apr_thread_proc.h>
+#endif
 
 #include "svn_string.h"
 #include "svn_opt.h"
@@ -37,18 +40,50 @@
 
 /*** Manage the Global Interpreter Lock ***/
 
-static PyThreadState *_saved_thread_state = NULL;
+/*
+  Python requires us to keep track of the PyThreadState on a per-thread
+  basis, so we have to use pthreads.  If we don't have pthreads or
+  python threading is disabled, this all becomes a no-op and the
+  python global interpreter lock will be held during calls to to
+  subversion functions. 
+*/
+
+#ifdef WITH_THREAD
+static apr_threadkey_t *_saved_thread_key = NULL;
+static apr_pool_t *_saved_thread_pool = NULL;
+#endif
 
 void release_py_lock(void)
 {
-  assert(_saved_thread_state == NULL);
-  _saved_thread_state = PyEval_SaveThread();
+#ifdef WITH_THREAD
+  PyThreadState *thread_state;
+
+  if (_saved_thread_key == NULL) {
+
+    /* This is ugly.  We call release_py_lock before executing any
+       subversion function.  Thus it gets called before any call to
+       apr_initialize in our script.  This means we have to call
+       apr_initialize ourselves, or otherwise we won't be able to
+       create our pool. */
+    apr_initialize();
+    
+    /* Obviously, creating a top-level pool for this is pretty stupid. */
+    apr_pool_create(&_saved_thread_pool, NULL);
+    apr_threadkey_private_create(&_saved_thread_key, NULL, _saved_thread_pool);
+  }
+
+  thread_state = PyEval_SaveThread();
+  apr_threadkey_private_set(thread_state, _saved_thread_key);
+#endif
 }
 
 void acquire_py_lock(void)
 {
-  PyEval_RestoreThread(_saved_thread_state);
-  _saved_thread_state = NULL;
+#ifdef WITH_THREAD
+  PyThreadState *thread_state;
+  apr_threadkey_private_get((void **)&thread_state, _saved_thread_key);
+  PyEval_RestoreThread(thread_state);
+#endif
 }
 
 /*** Helper/Conversion Routines ***/
