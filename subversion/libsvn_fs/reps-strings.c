@@ -43,7 +43,7 @@ static int rep_is_mutable (svn_fs__representation_t *rep, const char *txn_id)
 {
   if (! rep->txn_id)
     return 0;
-  return (! strcmp (rep->txn_id, txn_id));
+  return (strcmp (rep->txn_id, txn_id) == 0);
 }
 
 
