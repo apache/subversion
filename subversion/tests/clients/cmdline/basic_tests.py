@@ -1295,20 +1295,45 @@ def basic_cat(sbox):
 #----------------------------------------------------------------------
 
 def basic_ls(sbox):
-  "basic ls of files"
+  'basic ls'
 
   sbox.build()
-
   wc_dir = sbox.wc_dir
 
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  # Even on Windows, the output will use forward slashes, so that's
+  # what we expect below.
 
-  svntest.actions.run_and_verify_svn(None, ["mu\n"],
+  cwd = os.getcwd()
+  try:
+    os.chdir(wc_dir)
+    svntest.actions.run_and_verify_svn("ls implicit current directory",
+                                       ["A/\n", "iota\n"],
+                                       None, 'ls',
+                                       '--username', svntest.main.wc_author,
+                                       '--password', svntest.main.wc_passwd)
+  finally:
+    os.chdir(cwd)
+
+  svntest.actions.run_and_verify_svn('ls the root of working copy',
+                                     ['A/\n', 'iota\n'],
                                      None, 'ls',
-                                     ###TODO is user/pass really necessary?
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
-                                     mu_path)
+                                     wc_dir)
+
+  svntest.actions.run_and_verify_svn('ls a working copy directory',
+                                     ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
+                                     None, 'ls',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     os.path.join(wc_dir, 'A'))
+
+  svntest.actions.run_and_verify_svn('ls a single file',
+                                     ['mu\n'],
+                                     None, 'ls',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     os.path.join(wc_dir, 'A', 'mu'))
 
 
 #----------------------------------------------------------------------
