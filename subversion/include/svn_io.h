@@ -756,7 +756,8 @@ svn_io_read_version_file (int *version, const char *path, apr_pool_t *pool);
 
 /** Create (or overwrite) the file at @a path with new contents,
  * formatted as a non-negative integer @a version followed by a single
- * newline.  Use @a pool for all allocations.
+ * newline.  On successful completion the file will be read-only.  Use
+ * @a pool for all allocations.
  */
 svn_error_t *
 svn_io_write_version_file (const char *path, int version, apr_pool_t *pool);
