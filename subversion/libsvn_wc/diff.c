@@ -546,7 +546,7 @@ file_diff (struct dir_baton *dir_baton,
       if (modified && (! eb->use_text_base))
         {
           const char *translated;
-          svn_error_t *err;
+          svn_error_t *err, *err2 = SVN_NO_ERROR;
 
           pristine_copy = svn_wc__text_base_path (path, FALSE, pool);   
 
@@ -574,10 +574,15 @@ file_diff (struct dir_baton *dir_baton,
              dir_baton->edit_baton->callback_baton);
           
           if (translated != path)
-            SVN_ERR (svn_io_remove_file (translated, pool));
+            err2 = svn_io_remove_file (translated, pool);
 
           if (err)
-            return err;
+            {
+              svn_error_compose (err, err2);
+              return err;
+            }
+          if (err2)
+            return err2;
         }
 
       SVN_ERR (svn_wc_props_modified_p (&modified, path, adm_access, pool));

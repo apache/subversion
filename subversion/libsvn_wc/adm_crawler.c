@@ -570,11 +570,12 @@ svn_wc_crawl_revisions (const char *path,
     {
       /* Clean up the fs transaction. */
       svn_error_t *fserr;
-      fserr = reporter->abort_report (report_baton);
-      if (fserr)
-        return svn_error_quick_wrap (fserr, "Error aborting report.");
-      else
-        return err;
+      if ((fserr = reporter->abort_report (report_baton)))
+        {
+          fserr = svn_error_quick_wrap (fserr, "Error aborting report.");
+          svn_error_compose (err, fserr);
+        }
+      return err;
     }
 
   return SVN_NO_ERROR;

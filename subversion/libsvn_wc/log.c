@@ -157,11 +157,15 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
 
       /* If we got an ENOENT, that's ok;  the move has probably
          already completed in an earlier run of this log.  */
-      if (err && (! APR_STATUS_IS_ENOENT(err->apr_err)))
-        return svn_error_quick_wrap (err,
-                                     "file_xfer_under_path: "
-                                     "can't move from to dest");
-  }
+      if (err)
+        {
+          if (! APR_STATUS_IS_ENOENT(err->apr_err))
+            return svn_error_quick_wrap (err,
+                                         "file_xfer_under_path: "
+                                         "can't move from to dest");
+          svn_error_clear (err);
+        }
+    }
 
   return SVN_NO_ERROR;
 }
