@@ -37,7 +37,7 @@
 
 # Silent 0/1
 # Setting this to 1 removes white noise
-SILENT := 0
+# SILENT := 0
 
 # No module activation - conf.d files control modules 0/1
 # Setting this to 0 puts the modules in to httpd2.conf - ugh
