@@ -23,6 +23,7 @@
 #include "txdelta.h"
 #include "error.h"
 
+static VALUE cSvnFsRoot;
 static VALUE cSvnFsRevisionRoot;
 static VALUE cSvnFsTxnRoot;
 
@@ -297,13 +298,20 @@ change_node_prop (VALUE self, VALUE path, VALUE aName, VALUE aValue)
   return Qnil;
 }
 
+svn_boolean_t
+svn_ruby_is_fs_root (VALUE obj)
+{
+  if (rb_obj_is_kind_of (obj, cSvnFsRoot) == Qtrue)
+    return TRUE;
+  else
+    return FALSE;
+}
+
 
 
 void
 svn_ruby_init_fs_root (void)
 {
-  VALUE cSvnFsRoot;
-
   cSvnFsRoot = rb_define_class_under (svn_ruby_mSvn, "FsRoot", rb_cObject);
   rb_undef_method (CLASS_OF (cSvnFsRoot), "new");
   rb_define_method (cSvnFsRoot, "close", fs_root_close, 0);
