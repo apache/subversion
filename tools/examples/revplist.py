@@ -27,7 +27,7 @@ def plist(pool, rev=None, home='.', *props):
   if not os.path.exists(db_path):
     db_path = home
 
-  fs_ptr = fs.new(pool)
+  fs_ptr = fs.new(None, pool)
   fs.open_berkeley(fs_ptr, db_path)
 
   if rev is None:
