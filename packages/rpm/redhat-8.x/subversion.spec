@@ -4,8 +4,8 @@
 # If you don't have 360+ MB of free disk space or don't want to run checks then
 # set make_check to 0.
 %define make_check 1
-# If you want to try to build cvs2svn then change build_cvs2svn to 1
-%define build_cvs2svn 0
+# If you don't want to try to build cvs2svn then change build_cvs2svn to 0
+%define build_cvs2svn 1
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -17,7 +17,6 @@ Source0: subversion-%{version}-%{release}.tar.gz
 Source1: subversion.conf
 Source2: rcsparse.py
 Patch0: install.patch
-Patch1: cvs2svn.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: httpd-apr >= %{apache_version}
@@ -92,6 +91,9 @@ See /usr/share/doc/subversion*/tools/cvs2svn directory for more information.
 %endif
 
 %changelog
+* Sat Dec 14 2002 David Summers <david@summersoft.fay.ar.us> 0.16.0-4128
+- SWIG now builds so we can use cvs2svn.
+
 * Fri Oct 04 2002 David Summers <david@summersoft.fay.ar.us> 0.14.3-3280
 - Made cvs2svn conditional (at least until we can get it to build consistently
   and work).
@@ -197,6 +199,7 @@ LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 	--prefix=/usr \
 %if %{build_cvs2svn}
 	--with-swig \
+	--with-python=/usr/bin/python2.2 \
 %endif
 	--with-apxs=%{apache_dir}/sbin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
@@ -205,13 +208,10 @@ LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 # Fix up mod_dav_svn installation.
 %patch0 -p1
 
-%if %{build_cvs2svn}
-# Fix up cvs2svn python bindings
-%patch1 -p1
-%endif
-
 %build
 make
+
+make swig-py-ext
 
 %if %{make_check}
 make check
@@ -235,6 +235,10 @@ make install \
 	infodir=$RPM_BUILD_ROOT/usr/share/info \
 	libexecdir=$RPM_BUILD_ROOT/%{apache_dir}/lib
 
+%if %{build_cvs2svn}
+make install-swig-py-ext DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT/usr
+%endif
+
 # Add subversion.conf configuration file into httpd/conf.d directory.
 mkdir -p $RPM_BUILD_ROOT/etc/httpd/conf.d
 cp %{SOURCE1} $RPM_BUILD_ROOT/etc/httpd/conf.d
@@ -245,7 +249,7 @@ cd subversion/bindings/swig/python
 /usr/bin/python2 setup.py install --prefix $RPM_BUILD_ROOT/usr
 sed -e 's;#!/usr/bin/env python;#!/usr/bin/env python2;' < $RPM_BUILD_DIR/%{name}-%{version}/tools/cvs2svn/cvs2svn.py > $RPM_BUILD_ROOT/usr/bin/cvs2svn
 chmod a+x $RPM_BUILD_ROOT/usr/bin/cvs2svn
-cp %{SOURCE2} $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages/svn
+cp %{SOURCE2} $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
 %endif
 
 %post
@@ -322,4 +326,6 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
 /usr/bin/cvs2svn
 /usr/lib/python2.2/site-packages/svn
+/usr/lib/python2.2/site-packages/rcsparse.py
+/usr/lib/libsvn_swig_py*so*
 %endif
