@@ -102,13 +102,17 @@ sparc-sun-solaris2.6:
 
      Notes:
 
-Tru64 5.0:  # Need host string
-     Client:     Build OK, Check OK
-     Filesystem: ?
-     Last Check: 21 Feb 2001
+alphaev6-dec-osf5.0:
+     Client:     Build OK, Check fails in svn-test.sh
+     Filesystem: Check fails in repos-test
+     Last Check: 27 Jun 2001
      Porter:     Joe Orton <joe@manyfish.co.uk>
 
      Notes:
+     -- libtool/config.sub weirdness, workaround was to use
+     configure with --host=alphaev6-dec-osf5.0
+     -- configure preferred /usr/lib/libdb.a to any other,
+     needed to muck around to get it to use the right -ldb.
 
 unixware7: # Need host string
      Client:     Build OK, Check OK
