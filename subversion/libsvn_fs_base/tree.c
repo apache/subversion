@@ -2520,8 +2520,8 @@ txn_body_merge (void *baton, trail_t *trail)
 }
 
 
-/* Verify that there registed with TRAIL->fs all the locks necessary to
-   permit all the changes associate with TXN_NAME. */
+/* Verify that there are registered with TRAIL->fs all the locks
+   necessary to permit all the changes associated with TXN_NAME. */
 static svn_error_t *
 verify_locks (const char *txn_name,
               trail_t *trail,
