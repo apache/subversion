@@ -5,14 +5,14 @@
 ; Version and release info:
 #include "svn_version.iss"
 
-;# paths_inno_src.iss ##########################################################
+;# svn_dynamics.iss ###########################################################
 ; This file contains all the paths needed by inno for finding the sources to
 ; compile a Windows Setup for Subversion.
 ; A template of the file can be found in the Subversion repository:
 ;     packages\win32-innosetup\tools\templates
-; Copy paths_inno_src.iss to the same folder as this file and read the
+; Copy svn_dynamics.iss to the same folder as this file and read the
 ; documentation inside it.
-#include "paths_inno_src.iss"
+#include "svn_dynamics.iss"
 
 AppName=Subversion
 AppVerName=Subversion-{#= svn_version}{#= svn_pretxtrevision}{#= svn_revision}
@@ -69,6 +69,11 @@ Source: {#= path_iconv}\*.so; DestDir: {app}\iconv; Flags: ignoreversion
 Source: {#= path_setup_in}\berkeley\BerkeleyLicense.txt; DestDir: {app}
 Source: {#= path_setup_in}\doc\svn-doc.chm; DestDir: {app}\doc
 
+; VC7 Runtime
+#ifdef VC7
+Source: {#= path_msvcr70_dll}\msvcr70.dll; DestDir: {sys}; Flags: sharedfile uninsneveruninstall onlyifdoesntexist
+#endif
+
 ;SSL
 Source: {#= path_ssl}\libeay32.dll; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_ssl}\ssleay32.dll; DestDir: {app}\bin; Flags: ignoreversion
@@ -85,6 +90,7 @@ Source: {#= path_authzsvn}\mod_authz_svn.so; DestDir: {app}\httpd; Flags: ignore
 Source: {#= path_svnpath}\svnpath.exe; DestDir: {app}\helpers; Flags: ignoreversion
 
 ; Debug symbols;
+#ifdef inc_dbgsyms
 Source: {#= path_svnclient_pdb}\svn.pdb; DestDir: {app}\bin; Flags: ignoreversion; Components: pdb
 Source: {#= path_svnadmin_pdb}\svnadmin.pdb; DestDir: {app}\bin; Flags: ignoreversion; Components: pdb
 Source: {#= path_svnlook_pdb}\svnlook.pdb; DestDir: {app}\bin; Flags: ignoreversion; Components: pdb
@@ -96,6 +102,7 @@ Source: {#= path_davsvn_pdb}\mod_dav_svn.pdb; DestDir: {app}\httpd; Flags: ignor
 Source: {#= path_authzsvn_pdb}\mod_authz_svn.pdb; DestDir: {app}\httpd; Flags: ignoreversion; Components: pdb
 
 Source: {#= path_iconv_pdb}\*.pdb; DestDir: {app}\iconv; Flags: ignoreversion; Components: pdb
+#endif
 
 ; Internet Shortcuts ----------------------------------------------------------
 Source: svn.url; DestDir: {app}
@@ -118,10 +125,8 @@ Name: {group}\Download and install shfolder.dll; Filename: {app}\doc\missing_shf
 [UninstallDelete]
 Type: files; Name: {app}\svn.url
 
-[_ISTool]
-EnableISX=true
-
 [Types]
+#ifdef inc_dbgsyms
 Name: standard; Description: Standard installation - Binaries only
 Name: full; Description: Full installation - Binaries and debugging symbols
 Name: custom; Description: Custom Installation; Flags: iscustom
@@ -129,6 +134,7 @@ Name: custom; Description: Custom Installation; Flags: iscustom
 [Components]
 Name: main; Description: Subversion application files; Types: standard custom full
 Name: pdb; Description: Debug Symbol Files; Types: full custom
+#endif
 
 [Registry]
 Root: HKCU; Subkey: SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe; ValueType: string; ValueData: {app}\svn.exe; Flags: uninsdeletekeyifempty uninsdeletevalue
