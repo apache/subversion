@@ -1,3 +1,15 @@
+Version 0.32.0 (released 21 October 2003, revision ????)
+http://svn.collab.net/repos/svn/tags/0.32.0
+
+ NOTICE: This release of Subversion causes an ra_dav client/server
+         compatibility break with Subversions older than 0.28.0.
+
+ User-visible changes:
+ * [in progress]
+
+ Developer-visible changes:
+ * [in progress]
+
 Version 0.31.0 (released 08 October 2003, revision 7355)
 http://svn.collab.net/repos/svn/tags/0.31.0
 
