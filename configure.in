@@ -33,7 +33,7 @@ dnl What version of Subversion are we configuring?
 # Note: this could be different from PACKAGE_VERSION. That symbol gets
 # defined at M4 evaluation time, but only for GNU M4. Other M4
 # implementations might end up with just "0.x"
-svn_version="`build/getversion.py subversion/include/svn_version.h`"
+svn_version="`$srcdir/build/getversion.py $srcdir/subversion/include/svn_version.h`"
 echo "Configuring Subversion $svn_version"
 
 abs_srcdir="`cd $srcdir && pwd`"
