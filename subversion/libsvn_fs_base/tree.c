@@ -46,6 +46,7 @@
 #include "key-gen.h"
 #include "dag.h"
 #include "tree.h"
+#include "lock.h"
 #include "revs-txns.h"
 #include "id.h"
 #include "bdb/txn-table.h"
@@ -1274,6 +1275,14 @@ txn_body_change_node_prop (void *baton,
   const char *txn_id = args->root->txn;
 
   SVN_ERR (open_path (&parent_path, args->root, args->path, 0, txn_id, trail));
+
+  /* Check to see if path is locked;  if so, check that we can use it. 
+     Notice that we're calling with recurse==0, regardless of node kind. */
+  SVN_ERR (svn_fs_base__allow_locked_operation 
+           (args->path,
+            svn_fs_base__dag_node_kind (parent_path->node),
+            0, trail));
+
   SVN_ERR (make_path_mutable (args->root, parent_path, args->path, trail));
   SVN_ERR (svn_fs_base__dag_get_proplist (&proplist, parent_path->node,
                                           trail));
@@ -2475,6 +2484,8 @@ static svn_error_t *
 txn_body_commit (void *baton, trail_t *trail)
 {
   struct commit_args *args = baton;
+  apr_hash_t *changed_paths;
+  apr_hash_index_t *hi;
 
   svn_fs_txn_t *txn = args->txn;
   svn_fs_t *fs = txn->fs;
@@ -2507,6 +2518,49 @@ txn_body_commit (void *baton, trail_t *trail)
         (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
          "Transaction '%s' out of date with respect to revision '%s'",
          txn_name, id_str->data);
+    }
+
+  /* Locks may have been added (or stolen) between the calling of
+     previous svn_fs.h functions and svn_fs_commit_txn(), so we need
+     to re-examine every changed-path in the txn and re-verify all
+     discovered locks. */
+  SVN_ERR (svn_fs_bdb__changes_fetch (&changed_paths, trail->fs, txn_name,
+                                      trail));
+  for (hi = apr_hash_first (trail->pool, changed_paths);
+       hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      const char *path;
+      dag_node_t *node;
+      svn_fs_path_change_t *change;
+      svn_node_kind_t kind;
+      
+      apr_hash_this (hi, &key, NULL, &val);
+      path = key;
+      change = val;
+
+      /* ### Ugh.  Gotta figure out the node_kind of each changed-path.
+         We REALLY REALLY need to put node-kind into the change skel!
+         Unfortunately, no schema changes allowed till svn 2.0. */
+      SVN_ERR (svn_fs_base__dag_get_node
+               (&node, trail->fs, change->node_rev_id, trail));
+      kind = svn_fs_base__dag_node_kind (node);
+
+      /* always do a non-recursive lock check on a file. */         
+      if (kind == svn_node_file)        
+        SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_file,
+                                                      0, trail));
+
+      /* if a directory wasn't added or deleted, then it must be
+         listed because of a propchange only;  do a non-recursive
+         lock-check.   otherwise, added/deleted dirs must be checked
+         recursively. */
+      else
+        SVN_ERR (svn_fs_base__allow_locked_operation 
+                 (path, svn_node_dir,                 
+                  (change->change_kind == svn_fs_path_change_modify) ? 0 : 1,
+                  trail));
     }
 
   /* Else, commit the txn. */
@@ -2790,6 +2844,14 @@ txn_body_make_dir (void *baton,
   if (parent_path->node)
     return already_exists (root, path);
 
+  /* Check to see if some lock is 'reserving' a file-path or dir-path
+     at that location, or even some child-path;  if so, check that we
+     can use it. */
+  SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_dir,
+                                                1, trail));
+  SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_file,
+                                                0, trail));
+
   /* Create the subdirectory.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, trail));
   SVN_ERR (svn_fs_base__dag_make_dir (&sub_dir,
@@ -2855,6 +2917,17 @@ txn_body_delete (void *baton,
     return svn_error_create (SVN_ERR_FS_ROOT_DIR, NULL,
                              "The root directory cannot be deleted");
 
+  /* Check to see if path (or any child thereof) is locked; if so,
+     check that we can use the existing lock(s). */
+  {
+    svn_node_kind_t kind = svn_fs_base__dag_node_kind (parent_path->node);
+    SVN_ERR (svn_fs_base__allow_locked_operation 
+             (path,
+              kind,
+              (kind == svn_node_dir) ? 1 : 0,
+              trail));
+  }
+
   /* Make the parent directory mutable, and do the deletion.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, trail));
   SVN_ERR (svn_fs_base__dag_delete (parent_path->parent->node,
@@ -2918,6 +2991,18 @@ txn_body_copy (void *baton,
      make one there. */
   SVN_ERR (open_path (&to_parent_path, to_root, to_path,
                       open_path_last_optional, txn_id, trail));
+
+  /* Check to see if to-path (or any child thereof) is locked, or at
+     least 'reserved', whether it exists or not; if so, check that we
+     can use the existing lock(s). */
+  {
+    svn_node_kind_t kind = svn_fs_base__dag_node_kind (from_node);
+    SVN_ERR (svn_fs_base__allow_locked_operation 
+             (to_path,
+              kind,
+              (kind == svn_node_dir) ? 1 : 0,
+              trail));
+  }
 
   /* If the destination node already exists as the same node as the
      source (in other words, this operation would result in nothing
@@ -3131,6 +3216,14 @@ txn_body_make_file (void *baton,
      This also catches the case of trying to make a file named `/'.  */
   if (parent_path->node)
     return already_exists (root, path);
+
+  /* Check to see if some lock is 'reserving' a file-path or dir-path
+     at that location, or even some child-path;  if so, check that we
+     can use it. */
+  SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_dir,
+                                                1, trail));
+  SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_file,
+                                                0, trail));
 
   /* Create the file.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, trail));
@@ -3447,6 +3540,12 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
      if the node for which we are searching doesn't exist. */
   SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, txn_id, trail));
 
+  /* Check to see if path is locked;  if so, check that we can use it. */
+  SVN_ERR (svn_fs_base__allow_locked_operation 
+           (tb->path,
+            svn_fs_base__dag_node_kind (parent_path->node),
+            0, trail));
+
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, trail));
   tb->node = parent_path->node;
@@ -3627,6 +3726,12 @@ txn_body_apply_text (void *baton, trail_t *trail)
   /* Call open_path with no flags, as we want this to return an error
      if the node for which we are searching doesn't exist. */
   SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, txn_id, trail));
+
+  /* Check to see if path is locked;  if so, check that we can use it. */
+  SVN_ERR (svn_fs_base__allow_locked_operation 
+           (tb->path,
+            svn_fs_base__dag_node_kind (parent_path->node),
+            0, trail));
 
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, trail));

@@ -417,14 +417,11 @@ svn_fs_base__get_locks (apr_hash_t **locks,
 
 
 svn_error_t *
-svn_fs_base__allow_locked_operation (svn_boolean_t *allow,
-                                     const char *path,
+svn_fs_base__allow_locked_operation (const char *path,
                                      svn_node_kind_t kind,
                                      svn_boolean_t recurse,
                                      trail_t *trail)
 {
-  *allow = FALSE;
-
   if (kind == svn_node_dir && recurse)
     {
       apr_hash_t *locks;
@@ -434,17 +431,14 @@ svn_fs_base__allow_locked_operation (svn_boolean_t *allow,
 
       /* Easy out. */
       if (apr_hash_count (locks) == 0)
-        {
-          *allow = TRUE;
           return SVN_NO_ERROR;
-        }
 
       /* Some number of locks exist below path; are we allowed to
          change them? */
-      return svn_fs__verify_locks (allow, trail->fs, locks, trail->pool);      
+      return svn_fs__verify_locks (trail->fs, locks, trail->pool);      
     }
 
-  /* We're either checking a file, or checking a path non-recursively: */
+  /* We're either checking a file, or checking a dir non-recursively: */
     {
       svn_lock_t *lock;
 
@@ -454,12 +448,9 @@ svn_fs_base__allow_locked_operation (svn_boolean_t *allow,
 
       /* Easy out. */
       if (! lock)
-        {
-          *allow = TRUE;
-          return SVN_NO_ERROR;
-        }
+        return SVN_NO_ERROR;
 
       /* The path is locked;  are we allowed to change it? */
-      return svn_fs__verify_lock (allow, trail->fs, lock, trail->pool);
+      return svn_fs__verify_lock (trail->fs, lock, trail->pool);
     }
 }
