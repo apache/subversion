@@ -647,7 +647,7 @@ test_list = [ None,
               unschedule_missing_added,
               delete_missing,
               revert_inside_newly_added_dir,
-              Skip(status_replaced_directory, "see issue #1609"),
+              Skip(status_replaced_directory, "see issue #1611"),
              ]
 
 if __name__ == '__main__':
