@@ -616,8 +616,58 @@ def file_dir_file(sbox):
                                      'switch', file_url, file_path)
 
 #----------------------------------------------------------------------
+# Issue 1751: "svn switch --non-recursive" does not switch existing files,
+# and generates the wrong URL for new files.
 
-### ...and a slew of others...
+def nonrecursive_switching(sbox):
+  "non-recursive switch"
+  sbox.build()
+  wc1_dir = sbox.wc_dir
+  wc2_dir = os.path.join(wc1_dir, 'wc2')
+
+  # "Trunk" will be the existing dir "A/", with existing file "mu".
+  # "Branch" will be the new dir "branch/version1/", with added file "newfile".
+  # "wc1" will hold the whole repository (including trunk and branch).
+  # "wc2" will hold the "trunk" and then be switched to the "branch".
+  # It is irrelevant that wc2 is located on disk as a sub-directory of wc1.
+  trunk_url = svntest.main.current_repo_url + '/A'
+  branch_url = svntest.main.current_repo_url + '/branch'
+  version1_url = branch_url + '/version1'
+  wc1_new_file = os.path.join(wc1_dir, 'branch', 'version1', 'newfile')
+  wc2_new_file = os.path.join(wc2_dir, 'newfile')
+  wc2_mu_file = os.path.join(wc2_dir, 'mu')
+  
+  # Check out the trunk as "wc2"
+  svntest.main.run_svn(None, 'co', '-N', trunk_url, wc2_dir)
+
+  # Make a branch, and add a new file, in "wc_dir" and repository
+  svntest.main.run_svn(None, 'mkdir', '-m', '', branch_url)
+  svntest.main.run_svn(None, 'cp', '-m', '', trunk_url, version1_url)
+  svntest.main.run_svn(None, 'up', wc1_dir)
+  svntest.main.file_append(wc1_new_file, "This is the file 'newfile'.")
+  svntest.main.run_svn(None, 'add', wc1_new_file)
+  svntest.main.run_svn(None, 'ci', '-m', '', wc1_dir)
+
+  # Try to switch "wc2" to the branch (non-recursively)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', '-N', version1_url, wc2_dir)
+
+  # Check the URLs of the switched files.
+  # ("svn status -u" might be a better check: it fails when newfile's URL
+  # is bad, and shows "S" when mu's URL is wrong.)
+  # mu: not switched
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'info', wc2_mu_file)
+  if out[2].find('/branch/version1/mu') == -1:
+    print out[2]
+    raise svntest.Failure
+  # newfile: wrong URL
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'info', wc2_new_file)
+  if out[2].find('/branch/version1/newfile') == -1:
+    print out[2]
+    raise svntest.Failure
+
 
 ########################################################################
 # Run the tests
@@ -635,6 +685,7 @@ test_list = [ None,
               relocate_deleted_and_missing,
               delete_subdir,
               XFail(file_dir_file),
+              XFail(nonrecursive_switching),
              ]
 
 if __name__ == '__main__':
