@@ -1,4 +1,4 @@
-noinst_PROGRAMS = skel-test
+noinst_PROGRAMS = skel-test fs-test
 
 COMMON_LIBS = 						\
 		../libsvn_fs.la				\
@@ -13,8 +13,8 @@ skel_test_SOURCES = skel-test.c
 skel_test_LDADD = ${COMMON_LIBS}
 
 # Tests for the filesystem.
-# fs_test_SOURCES = fs-test.c
-# fs_test_LDADD = ${COMMON_LIBS}
+fs_test_SOURCES = fs-test.c
+fs_test_LDADD = ${COMMON_LIBS}
 
 INCLUDES = -I .. -I ../../include -I ../../../apr/include
 
