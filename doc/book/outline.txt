@@ -66,8 +66,9 @@ V.  Repository Administration
 
       1. creating a repository
       2. repository hooks
+         - example hooks
+         - testing your hooks by hand
       3. DB_CONFIG file
-      4. examples of 'svn import'
 
    B.  Repository maintenance
 
@@ -79,8 +80,17 @@ V.  Repository Administration
 
       1. apache setup
       2. auth options
-      3. common mistakes (?? permissions of repos/dav and such)
+      3. common mistakes
+         - perms on repos/dav
+         - perms after svnadmin recover
+         - passing URLs to svnadmin/svnlook
+         - hand-editing the 'format' file
 
+   D.  Adding Projects
+      
+      1. repos layout
+      2. import vs. add vs. mkdir
+      
 
 VI.  Advanced Topics
 
