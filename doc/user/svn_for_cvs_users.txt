@@ -1,0 +1,61 @@
+
+(To do:  convert this outline to texinfo, and actually fill it in.
+ Possibly post this on the website as well.)
+
+SVN for former CVS Users
+=========================
+
+This document is meant to be a quick-start guide for CVS users new to
+Subversion.  It's not a substitute for real documentation and manuals;
+but it should give you a quick conceptual 'diff' when switching over.
+
+
+* Revision numbers mean something different now.
+
+* Distinction between 'status' and 'update'
+
+    - CVS has unreadable status output
+    - CVS shows status info while updating
+    - SVN unmuddles the two issues (explain)
+    - describe status output format, and switches
+
+* Reversion and Diffs
+
+    - SVN secretly keeps pristine copies of files
+    - To toss local mods, 'svn revert' works offline, and is
+      preferable to the CVS habit of 'rm foo; svn up'
+    - 'svn diff' works offline too
+
+* Directory versioning
+
+    - tree structures are versioned;  no more RCS backend.
+    - svn add/unadd, rm/undel works on dirs
+    - working revnums on dirs *only* increment on updates, else we're lying
+    - dirprops only committable on up-to-date dirs
+
+* Conflicts
+
+    - explain '.rej' system as alternative to in-code conflict markers
+    - To toss your version of foo:  'rm foo.rej;  svn revert foo'
+
+* Properties
+
+    - svn propset, propget, proplist
+    - properties are versioned too:  '.prej' files in conflicts
+    - examples of using -F switch
+    - describe common props:
+        svn:ignore, svn:mime-type, ...
+
+* Binariness
+
+    - implemented as a property
+    - auto-detected by 'svn add' and 'svn import', no need for -kb
+    - can be hand-modified using propset
+    - no merging on binary files -- two files appear side-by-side.
+    - line conversions and keyword expansions are suspended
+
+* Branches and Tags
+
+    - they don't exist, only 'cheap' subdir copies. 
+
+* any other things that may shock or confuse a CVS user?
