@@ -1081,7 +1081,7 @@ def basic_checkout_deleted(sbox):
                                      svntest.main.wc_author,
                                      '--password',
                                      svntest.main.wc_passwd,
-                                     url, wc2)
+                                     url + "@1", wc2)
   
 #----------------------------------------------------------------------
 

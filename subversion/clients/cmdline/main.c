@@ -199,9 +199,12 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 
   { "checkout", svn_cl__checkout, {"co"}, N_
     ("Check out a working copy from a repository.\n"
-     "usage: checkout URL... [PATH]\n"
+     "usage: checkout URL[@REV]... [PATH]\n"
      "\n"
-     "  Note: If PATH is omitted, the basename of the URL will be used as\n"
+     "  If specified, REV determines in which revision the URL is first\n"
+     "  looked up.\n"
+     "\n"
+     "  If PATH is omitted, the basename of the URL will be used as\n"
      "  the destination. If multiple URLs are given each will be checked\n"
      "  out into a sub-directory of PATH, with the name of the sub-directory\n"
      "  being the basename of the URL.\n"),

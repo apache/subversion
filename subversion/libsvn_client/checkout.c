@@ -42,8 +42,9 @@
 
 svn_error_t *
 svn_client__checkout_internal (svn_revnum_t *result_rev,
-                               const char *URL,
+                               const char *url,
                                const char *path,
+                               const svn_opt_revision_t *peg_revision,
                                const svn_opt_revision_t *revision,
                                svn_boolean_t recurse,
                                svn_boolean_t *timestamp_sleep,
@@ -55,6 +56,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
   svn_revnum_t revnum;
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
+  const char *URL;
 
   /* Sanity check.  Without these, the checkout is meaningless. */
   assert (path != NULL);
@@ -67,27 +69,19 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
     return svn_error_create (SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
   /* Canonicalize the URL. */
-  URL = svn_path_canonicalize (URL, pool);
+  URL = svn_path_canonicalize (url, pool);
 
     {
-      void *ra_baton, *session;
+      void *session;
       svn_ra_plugin_t *ra_lib;
       svn_node_kind_t kind;
       const char *uuid;
 
-      /* Get the RA vtable that matches URL. */
-      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-
-      /* Open an RA session to URL. Note that we do not have an admin area
-         for storing temp files. */
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
-                                            NULL, NULL, FALSE, TRUE,
-                                            ctx, pool));
-
-      SVN_ERR (svn_client__get_revision_number
-               (&revnum, ra_lib, session, revision, path, pool));
-
+      /* Get the RA connection. */
+      SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &revnum,
+                                             &URL, url, peg_revision,
+                                             revision, ctx, pool));
+      
       SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
       if (kind == svn_node_none)
         return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
@@ -192,6 +186,20 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
 }
 
 svn_error_t *
+svn_client_checkout2 (svn_revnum_t *result_rev,
+                      const char *URL,
+                      const char *path,
+                      const svn_opt_revision_t *peg_revision,
+                      const svn_opt_revision_t *revision,
+                      svn_boolean_t recurse,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool)
+{
+  return svn_client__checkout_internal (result_rev, URL, path, peg_revision,
+                                        revision, recurse, NULL, ctx, pool);
+}
+
+svn_error_t *
 svn_client_checkout (svn_revnum_t *result_rev,
                      const char *URL,
                      const char *path,
@@ -200,6 +208,10 @@ svn_client_checkout (svn_revnum_t *result_rev,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  return svn_client__checkout_internal (result_rev, URL, path, 
+  svn_opt_revision_t peg_revision;
+
+  peg_revision.kind = svn_opt_revision_unspecified;
+  
+  return svn_client__checkout_internal (result_rev, URL, path, &peg_revision,
                                         revision, recurse, NULL, ctx, pool);
 }
