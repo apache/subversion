@@ -111,6 +111,9 @@ svn_ruby_init_error (void)
   define_error (SVN_ERR_XML_ATTRIB_NOT_FOUND, "XmlAttribNotFound");
   define_error (SVN_ERR_XML_MISSING_ANCESTRY, "xmlmissingancestry");
   define_error (SVN_ERR_XML_UNKNOWN_ENCODING, "XmlUnknownEncoding");
+  define_error (SVN_ERR_IO_INCONSISTENT_EOL, "IoInconsistentEOL");
+  define_error (SVN_ERR_IO_UNKNOWN_EOL, "IoUnknownEOL");
+  define_error (SVN_ERR_IO_CORRUPT_EOL, "IoCorruptEOL");
   define_error (SVN_ERR_WC_OBSTRUCTED_UPDATE, "WcObstructedUpdate");
   define_error (SVN_ERR_WC_UNWIND_MISMATCH, "WcUnwindMismatch");
   define_error (SVN_ERR_WC_UNWIND_EMPTY, "WcUnwindEmpty");
@@ -161,6 +164,7 @@ svn_ruby_init_error (void)
   define_error (SVN_ERR_TXN_OUT_OF_DATE, "TxnOutOfDate");
   define_error (SVN_ERR_REPOS_LOCKED, "ReposLocked");
   define_error (SVN_ERR_REPOS_HOOK_FAILURE, "ReposHookFailure");
+  define_error (SVN_ERR_EXTERNAL_PROGRAM, "ExternalProgram");
   define_error (SVN_ERR_BERKELEY_DB, "BerkeleyDb");
   define_error (SVN_ERR_RA_ILLEGAL_URL, "RaIllegalUrl");
   define_error (SVN_ERR_RA_NOT_AUTHORIZED, "RaNotAuthorized");

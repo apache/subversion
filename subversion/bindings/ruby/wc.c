@@ -829,6 +829,7 @@ void svn_ruby_init_wc (void)
   rb_define_singleton_method (cSvnWcStatus, "new", wc_status, 1);
   rb_define_singleton_method (cSvnWcStatus, "statuses", wc_statuses, 3);
   rb_define_const (cSvnWcStatus, "NONE", INT2FIX (svn_wc_status_none));
+  rb_define_const (cSvnWcStatus, "UNVERSIONED", INT2FIX (svn_wc_status_unversioned));
   rb_define_const (cSvnWcStatus, "NORMAL", INT2FIX (svn_wc_status_normal));
   rb_define_const (cSvnWcStatus, "ADDED", INT2FIX (svn_wc_status_added));
   rb_define_const (cSvnWcStatus, "ABSENT", INT2FIX (svn_wc_status_absent));
