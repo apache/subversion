@@ -2113,18 +2113,18 @@ dav_resource *dav_svn_create_working_resource(const dav_resource *base,
                                               const char *txn_name)
 {
   dav_resource_combined *comb;
-  svn_stringbuf_t *path;
+  const char *path;
 
   if (base->baselined)
-    path = svn_stringbuf_createf(base->pool,
-                                 "/%s/wbl/%s/%" SVN_REVNUM_T_FMT,
-                                 base->info->repos->special_uri,
-                                 activity_id, base->info->root.rev);
+    path = apr_psprintf(base->pool,
+                        "/%s/wbl/%s/%" SVN_REVNUM_T_FMT,
+                        base->info->repos->special_uri,
+                        activity_id, base->info->root.rev);
   else
-    path = svn_stringbuf_createf(base->pool, "/%s/wrk/%s%s",
-                              base->info->repos->special_uri,
-                              activity_id, base->info->repos_path);
-  
+    path = apr_psprintf(base->pool, "/%s/wrk/%s%s",
+                        base->info->repos->special_uri,
+                        activity_id, base->info->repos_path);
+  path = svn_path_uri_encode(path, base->pool);
 
   comb = apr_pcalloc(base->pool, sizeof(*comb));
 
@@ -2136,12 +2136,12 @@ dav_resource *dav_svn_create_working_resource(const dav_resource *base,
   /* collection = FALSE.   ### not necessarily correct */
 
   comb->res.uri = apr_pstrcat(base->pool, base->info->repos->root_path,
-                              path->data, NULL);
+                              path, NULL);
   comb->res.info = &comb->priv;
   comb->res.hooks = &dav_svn_hooks_repos;
   comb->res.pool = base->pool;
 
-  comb->priv.uri_path = path;
+  comb->priv.uri_path = svn_stringbuf_create(path, base->pool);
   comb->priv.repos = base->info->repos;
   comb->priv.repos_path = base->info->repos_path;
   comb->priv.root.rev = base->info->root.rev;
