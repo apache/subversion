@@ -26,9 +26,9 @@ II. Client Implementation
           entryprop "svn:wc:entry:lock-token".  (In DAV parlance, what
           we call 'entryprops' are called 'live props'.)
 
-          libsvn_wc also stores the other fields of a lock (owner, comment,
-          creation-date, expiration-date) in the entries file, so that
-          they are available for the info command.  Note that this
+          libsvn_wc also stores the other fields of a lock (owner,
+          comment, creation-date) in the entries file, so that they
+          are available for the info command.  Note that this
           information is only stored if the current WC has a lock on
           the file.
 
