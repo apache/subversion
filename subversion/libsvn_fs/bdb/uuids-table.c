@@ -37,19 +37,19 @@ svn_fs__bdb_open_uuids_table (DB **uuids_p,
                               int create)
 {
   const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
-  char buffer[APR_UUID_FORMATTED_LENGTH+1];
+  char buffer[APR_UUID_FORMATTED_LENGTH + 1];
   DB *uuids;
   int error;
 
   BDB_ERR (svn_fs__bdb_check_version());
   BDB_ERR (db_create (&uuids, env, 0));
-  BDB_ERR (uuids->set_re_len (uuids, sizeof(buffer)));
-
-  error = uuids->open (SVN_BDB_OPEN_PARAMS(uuids, NULL),
+  BDB_ERR (uuids->set_re_len (uuids, sizeof (buffer) - 1));
+  
+  error = uuids->open (SVN_BDB_OPEN_PARAMS (uuids, NULL),
                        "uuids", 0, DB_RECNO,
                        open_flags | SVN_BDB_AUTO_COMMIT,
                        0666);
-
+  
   /* This is a temporary compatibility check; it creates the
      UUIDs table if one does not already exist. */
   if (error == ENOENT && create == 0)
@@ -68,19 +68,17 @@ svn_fs__bdb_open_uuids_table (DB **uuids_p,
 
       svn_fs__clear_dbt (&key);
       key.data = &recno;
-      key.size = sizeof(recno);
+      key.size = sizeof (recno);
 
       svn_fs__clear_dbt (&value);
       value.data = buffer;
-      value.size = sizeof(buffer);
+      value.size = sizeof (buffer) - 1;
 
       apr_uuid_get (&uuid);
       apr_uuid_format (buffer, &uuid);
 
-      BDB_ERR (uuids->put
-              (uuids, 0,
-               &key, &value,
-               DB_APPEND | SVN_BDB_AUTO_COMMIT));
+      BDB_ERR (uuids->put (uuids, 0, &key, &value, 
+                           DB_APPEND | SVN_BDB_AUTO_COMMIT));
     }
   
   *uuids_p = uuids;
@@ -92,24 +90,23 @@ svn_error_t *svn_fs__bdb_get_uuid (svn_fs_t *fs,
                                    const char **uuid,
                                    trail_t *trail)
 {
-    char buffer[APR_UUID_FORMATTED_LENGTH+1];
+    char buffer[APR_UUID_FORMATTED_LENGTH + 1];
     DB *uuids = fs->uuids;
     DBT key;
     DBT value;
 
     svn_fs__clear_dbt (&key);
     key.data = &idx;
-    key.size = sizeof(idx);
+    key.size = sizeof (idx);
 
     svn_fs__clear_dbt (&value);
     value.data = buffer;
-    value.size = sizeof(buffer);
+    value.size = sizeof (buffer) - 1;
 
-    SVN_ERR (BDB_WRAP (fs,
-                       "get repository uuid",
+    SVN_ERR (BDB_WRAP (fs, "get repository uuid",
                        uuids->get (uuids, trail->db_txn, &key, &value, 0)));
 
-    *uuid = apr_pstrmemdup(trail->pool, value.data, value.size);
+    *uuid = apr_pstrmemdup (trail->pool, value.data, value.size + 1);
 
     return SVN_NO_ERROR;
 }
@@ -125,11 +122,11 @@ svn_error_t *svn_fs__bdb_set_uuid (svn_fs_t *fs,
 
     svn_fs__clear_dbt (&key);
     key.data = &idx;
-    key.size = sizeof(idx);
+    key.size = sizeof (idx);
 
     svn_fs__clear_dbt (&value);
-    value.size = strlen(uuid) + 1;
-    value.data = apr_pstrmemdup(trail->pool, uuid, value.size);
+    value.size = strlen (uuid);
+    value.data = apr_pstrmemdup (trail->pool, uuid, value.size + 1);
      
     SVN_ERR (BDB_WRAP (fs,
                        "set repository uuid",
