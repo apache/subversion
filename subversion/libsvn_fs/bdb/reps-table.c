@@ -75,7 +75,6 @@ svn_fs__bdb_read_rep (svn_fs__representation_t **rep_p,
   skel_t *skel;
   int db_err;
   DBT query, result;
-  svn_fs__representation_t *rep;
 
   db_err = fs->representations->get
     (fs->representations,
@@ -98,8 +97,8 @@ svn_fs__bdb_read_rep (svn_fs__representation_t **rep_p,
   skel = svn_fs__parse_skel (result.data, result.size, trail->pool);
 
   /* Convert to a native type.  */
-  SVN_ERR (svn_fs__parse_representation_skel (&rep, skel, trail->pool));
-  *rep_p = rep;
+  SVN_ERR (svn_fs__parse_representation_skel (rep_p, skel, trail->pool));
+
   return SVN_NO_ERROR;
 }
 
