@@ -79,7 +79,7 @@
       Cygwin.</para>
 
     <para>De fleste leserne er sannsynligvis programmerere eller 
-      systemadministorer som har behov for &#229; f&#248;lge 
+      systemadministratorer som har behov for &#229; f&#248;lge 
       forandringer i kildekode.
       Dette er den vanligste bruken av Subversion, og derfor legges 
       dette scenarioet til grunn for alle bokens eksempler.
@@ -367,8 +367,8 @@
           <listitem>
             <para>Dekker likheter og forskjeller mellom Subversion og 
               CVS, med flere forslag om hvordan du kan bryte alle de 
-              d&#229;rlige vanene du plukket opp etter &#229;r med bruk 
-              av CVS.
+              d&#229;rlige vanene du har plukket opp etter &#229;r med 
+              bruk av CVS.
               Inkludert her er beskrivelser av Subversions 
               revisjonsnumre, versjonerte kataloger, frakoblede 
               operasjoner, <command>update</command> versus 
@@ -417,11 +417,11 @@
     <title>Denne boken er fri</title>
 
     <para>Denne boken startet som sm&#229;biter av dokumentasjon skrevet 
-      av Subversions prosjektutviklerne, og deretter satt sammen til et 
+      av Subversions prosjektutviklere, og deretter satt sammen til et 
       enkeltst&#229;ende verk og omskrevet.
       Som s&#229;dan har den alltid hatt en fri lisens.
       (Se <xref linkend="svn-copyright"/>.)
-      Boken ble faktisk skrevet med offentlig innsyn, som en del av 
+      Boken ble faktisk skrevet under offentlig oppsyn, som en del av 
       Subversion.
       Dette betyr to ting:</para>
 
@@ -458,7 +458,7 @@
   <sect1 id="svn-ch-0-sect-6">
     <title>Krediteringer</title>
 
-    <para>Denne boken ville ikke v&#230;rt mulig (heller ikke 
+    <para>Denne boken ville ikke v&#230;rt mulig (og heller ikke 
       s&#230;rlig nyttig) hvis Subversion ikke eksisterte.
       Derfor vil forfatterne takke Brian Behlendorf og CollabNet for 
       visjonen om &#229; st&#248;tte et slikt risikabelt og 
@@ -532,7 +532,7 @@
       
       <para>Takk til min storfamilie for deres oppriktige oppmuntring, 
         til tross for at de ikke har noen egentlig interesse for emnet.
-        (Du vet de som sier <quote>&#197;&#229;&#229;ja, du skriver en 
+        (Du vet, de som sier <quote>&#197;&#229;&#229;ja, du skriver en 
         bok?</quote>, og n&#229;r du forteller at det er en bok om 
         datamaskiner, forsvinner stjerneglansen i &#248;ynene 
         deres.)</para>
@@ -632,9 +632,9 @@
 
       <para>Spesiell takk til min kone Amy for hennes kj&#230;rlighet og 
         t&#229;lmodige st&#248;tte, for &#229; holde ut med sene 
-        kvelder, og til og med anmelde hele seksjoner av denne boken 
-        &#8212; du g&#229;r alltid den ekstra milen, og gj&#248;r det 
-        med utrolig ynde.
+        kvelder, og for &#229; til og med se over hele seksjoner av 
+        denne boken &#8212; du g&#229;r alltid den ekstra milen, og 
+        gj&#248;r det med utrolig ynde.
         Gavin, n&#229;r du er gammel nok til &#229; lese, h&#229;per jeg 
         du er like stolt av faren din som han er av deg.
         Mor og Far (og resten av familien), takk for deres konstante 
