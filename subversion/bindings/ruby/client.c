@@ -27,11 +27,13 @@
 
 static svn_error_t *
 cl_log_message_func (const char **log_msg,
+                     const char **tmp_file,
                      apr_array_header_t *commit_items,
                      void *baton,
                      apr_pool_t *pool)
 {
   *log_msg = apr_pstrdup (pool, baton);
+  *tmp_file = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -555,6 +557,8 @@ static VALUE
 cl_propget (VALUE class, VALUE name, VALUE aTarget, VALUE recurse)
 {
   apr_hash_t *props;
+  svn_opt_revision_t *revision = NULL;
+  svn_client_auth_baton_t *auth_baton = NULL;
   apr_pool_t *pool;
   VALUE obj;
 
@@ -564,7 +568,9 @@ cl_propget (VALUE class, VALUE name, VALUE aTarget, VALUE recurse)
   pool = svn_pool_create (NULL);
 
   SVN_RB_ERR (svn_client_propget (&props, StringValuePtr (name),
-                                  StringValuePtr (aTarget), RTEST (recurse),
+                                  StringValuePtr (aTarget),
+                                  revision, auth_baton,
+                                  RTEST (recurse),
                                   pool),
               pool);
 
@@ -577,6 +583,8 @@ static VALUE
 cl_proplist (VALUE class, VALUE aTarget, VALUE recurse)
 {
   apr_array_header_t *props;
+  svn_opt_revision_t *revision = NULL;
+  svn_client_auth_baton_t *auth_baton = NULL;
   apr_pool_t *pool;
 
   Check_Type (aTarget, T_STRING);
@@ -584,6 +592,7 @@ cl_proplist (VALUE class, VALUE aTarget, VALUE recurse)
   pool = svn_pool_create (NULL);
 
   SVN_RB_ERR (svn_client_proplist (&props, StringValuePtr (aTarget),
+                                   revision, auth_baton,
                                    RTEST (recurse), pool),
               pool);
 
