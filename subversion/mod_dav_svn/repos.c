@@ -56,21 +56,11 @@ typedef struct {
 } dav_svn_walker_context;
 
 
-static int dav_svn_parse_activity_uri(dav_resource_combined *comb,
-                                      const char *path)
-{
-  comb->res.type = DAV_RESOURCE_TYPE_ACTIVITY;
-
-  /* ### parse path */
-  comb->priv.object_name = path;
-
-  return FALSE;
-}
-
 static int dav_svn_parse_version_uri(dav_resource_combined *comb,
                                      const char *path)
 {
   comb->res.type = DAV_RESOURCE_TYPE_VERSION;
+  comb->res.versioned = TRUE;
 
   /* ### parse path */
   comb->priv.object_name = path;
@@ -94,6 +84,18 @@ static int dav_svn_parse_working_uri(dav_resource_combined *comb,
 {
   comb->res.type = DAV_RESOURCE_TYPE_WORKING;
   comb->res.working = TRUE;
+  comb->res.versioned = TRUE;
+
+  /* ### parse path */
+  comb->priv.object_name = path;
+
+  return FALSE;
+}
+
+static int dav_svn_parse_activity_uri(dav_resource_combined *comb,
+                                      const char *path)
+{
+  comb->res.type = DAV_RESOURCE_TYPE_ACTIVITY;
 
   /* ### parse path */
   comb->priv.object_name = path;
@@ -104,19 +106,20 @@ static int dav_svn_parse_working_uri(dav_resource_combined *comb,
 static const struct special_defn
 {
   const char *name;
-  int (*func)(dav_resource_combined *comb, const char *path);
+  int (*parse)(dav_resource_combined *comb, const char *path);
 
 } special_subdirs[] =
 {
-  { "act", dav_svn_parse_activity_uri },
   { "ver", dav_svn_parse_version_uri },
   { "his", dav_svn_parse_history_uri },
   { "wrk", dav_svn_parse_working_uri },
-  { NULL }
+  { "act", dav_svn_parse_activity_uri },
+
+  { NULL } /* sentinel */
 };
 
 /*
- * dav_svn_identify_uri: identify the type of URI provided
+ * dav_svn_parse_uri: parse the provided URI into its various bits
  *
  * URI will contain a path relative to our configured root URI. It should
  * not have a leading "/". The root is identified by "".
@@ -178,7 +181,7 @@ static int dav_svn_parse_uri(dav_resource_combined *comb,
                     }
                   else if (uri[len3] == '/')
                     {
-                      if ((*defn->func)(comb, uri + len3 + 1))
+                      if ((*defn->parse)(comb, uri + len3 + 1))
                         return TRUE;
                     }
                   else
@@ -206,6 +209,136 @@ static int dav_svn_parse_uri(dav_resource_combined *comb,
   return FALSE;
 }
 
+static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
+{
+  apr_pool_t *pool = comb->res.pool;
+  dav_svn_repos *repos = comb->priv.repos;
+  svn_error_t *serr;
+
+  /* ### note that we won't *always* go for the head... if this resource
+     ### corresponds to a Version Resource, then we have a specific
+     ### version to ask for.
+  */
+#if 0
+  serr = svn_fs_youngest_rev(&repos->root_rev);
+#else
+  /* ### svn_fs_youngest_rev() is not in the library (yet) */
+  serr = NULL;
+  repos->root_rev = 1;
+#endif
+  if (serr != NULL)
+    {
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "Could not determine the proper "
+                                 "revision to access");
+    }
+
+  /* get the root of the tree */
+#if 0
+  serr = svn_fs_open_rev_root(&repos->root_dir, repos->fs,
+                              repos->root_rev, pool);
+#else
+  serr = svn_error_create(0, 0, NULL, pool,
+                          "svn_fs_open_rev_root is not implemented");
+#endif
+  if (serr != NULL)
+    {
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "Could not open the root of the "
+                                 "repository");
+    }
+
+  /* open the node itself */
+  /* ### what happens if we want to modify this node?
+     ### well, you can't change a REGULAR resource, so this is probably
+     ### going to be fine. a WORKING resource will have more work
+  */
+  if (strcmp(comb->priv.path->data, "/") == 0)
+    {
+      comb->priv.node = repos->root_dir;
+      comb->res.collection = 1;
+    }
+  else
+    {
+      /* open the requested resource. note that we skip the leading "/" */
+      serr = svn_fs_open_node(&comb->priv.node, repos->root_dir,
+                              comb->priv.path->data + 1, pool);
+      if (serr != NULL)
+        {
+          const char *msg;
+
+          msg = apr_psprintf(pool, "Could not open the resource '%s'",
+                             ap_escape_html(pool, comb->res.uri));
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR, msg);
+        }
+
+      comb->res.collection = svn_fs_node_is_dir(comb->priv.node);
+    }
+
+  /* if we are here, then the resource exists */
+  comb->res.exists = TRUE;
+
+  return NULL;
+}
+
+static dav_error * dav_svn_prep_version(dav_resource_combined *comb)
+{
+  return NULL;
+}
+
+static dav_error * dav_svn_prep_history(dav_resource_combined *comb)
+{
+  return NULL;
+}
+
+static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
+{
+  return NULL;
+}
+
+static dav_error * dav_svn_prep_activity(dav_resource_combined *comb)
+{
+  return NULL;
+}
+
+static dav_error * dav_svn_prep_private(dav_resource_combined *comb)
+{
+  return NULL;
+}
+
+static const struct res_type_handler
+{
+  dav_resource_type type;
+  dav_error * (*prep)(dav_resource_combined *comb);
+
+} res_type_handlers[] =
+{
+  /* skip UNKNOWN */
+  { DAV_RESOURCE_TYPE_REGULAR, dav_svn_prep_working },
+  { DAV_RESOURCE_TYPE_VERSION, dav_svn_prep_version },
+  { DAV_RESOURCE_TYPE_HISTORY, dav_svn_prep_history },
+  { DAV_RESOURCE_TYPE_WORKING, dav_svn_prep_working },
+  /* skip WORKSPACE */
+  { DAV_RESOURCE_TYPE_ACTIVITY, dav_svn_prep_activity },
+  { DAV_RESOURCE_TYPE_PRIVATE, dav_svn_prep_private },
+
+  { 0, NULL }   /* sentinel */
+};
+
+static dav_error * dav_svn_prep_resource(dav_resource_combined *comb)
+{
+  const struct res_type_handler *scan;
+
+  for (scan = res_type_handlers; scan->prep != NULL; ++scan)
+    {
+      if (comb->res.type == scan->type)
+        return (*scan->prep)(comb);
+    }
+
+  return dav_new_error(comb->res.pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                       "DESIGN FAILURE: unknown resource type");
+}
+
 static dav_error * dav_svn_get_resource(request_rec *r,
                                         const char *root_uri,
                                         const char *target,
@@ -220,6 +353,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   const char *relative;
   const char *special_uri;
   svn_error_t *serr;
+  dav_error *err;
 
   if ((fs_path = dav_svn_get_fs_path(r)) == NULL)
     {
@@ -311,69 +445,6 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   if (dav_svn_parse_uri(comb, relative + 1, special_uri))
     goto malformed_URI;
 
-  if (comb->res.type == DAV_RESOURCE_TYPE_REGULAR)
-    {
-      /* ### note that we won't *always* go for the head... if this resource
-         ### corresponds to a Version Resource, then we have a specific
-         ### version to ask for.
-      */
-#if 0
-      serr = svn_fs_youngest_rev(&repos->root_rev);
-#else
-      /* ### svn_fs_youngest_rev() is not in the library (yet) */
-      serr = NULL;
-      repos->root_rev = 1;
-#endif
-      if (serr != NULL)
-        {
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not determine the proper "
-                                     "revision to access");
-        }
-
-      /* get the root of the tree */
-#if 0
-      serr = svn_fs_open_rev_root(&repos->root_dir, repos->fs,
-                                  repos->root_rev, r->pool);
-#else
-      serr = svn_error_create(0, 0, NULL, r->pool,
-                              "svn_fs_open_rev_root is not implemented");
-#endif
-      if (serr != NULL)
-        {
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not open the root of the "
-                                     "repository");
-        }
-
-      /* open the node itself */
-      /* ### what happens if we want to modify this node?
-         ### well, you can't change a REGULAR resource, so this is probably
-         ### going to be fine. a WORKING resource will have more work
-      */
-      if (strcmp(relative, "/") == 0)
-        {
-          comb->priv.node = repos->root_dir;
-          comb->res.collection = 1;
-        }
-      else
-        {
-          /* open the requested resource. note that we skip the leading "/" */
-          serr = svn_fs_open_node(&comb->priv.node, repos->root_dir,
-                                  relative + 1, r->pool);
-          if (serr != NULL)
-            {
-              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         apr_psprintf(r->pool,
-                                                      "Could not open the "
-                                                      "resource '%s'",
-                                                      relative));
-            }
-
-          comb->res.collection = svn_fs_node_is_dir(comb->priv.node);
-        }
-    }
-
 #ifdef SVN_DEBUG
   if (comb->res.type == DAV_RESOURCE_TYPE_UNKNOWN)
     {
@@ -382,13 +453,9 @@ static dav_error * dav_svn_get_resource(request_rec *r,
     }
 #endif
 
-  /* if we are here, then the resource exists */
-  comb->res.exists = TRUE;
-
-  /* everything in this URL namespace is versioned */
-  /* ### is it? why are activities, version, and working resources marked
-     ### as "versioned"? */
-  comb->res.versioned = TRUE;
+  /* prepare the resource for operation */
+  if ((err = dav_svn_prep_resource(comb)) != NULL)
+    return err;
 
   *resource = &comb->res;
   return NULL;
