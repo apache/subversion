@@ -117,6 +117,13 @@ diff = /usr/bin/diff -u -L %(label_from)s -L %(label_to)s %(from)s %(to)s
 # client subdirectories, then an email will be sent to all three commits@
 # mailing lists on tigris.org.
 #
+# The substitution variable "author" is provided by default, and is set
+# to the author name passed to mailer.py for revprop changes or the
+# author defined for a revision; if neither is available, then it is
+# set to "no_author". Thus, you might define a line like:
+#
+#   from_addr = %(author)s@example.com
+#
 #
 # SUMMARY
 #
@@ -179,6 +186,65 @@ suppress_deletes = yes
 ### DEPRECATED (if generate_diffs is not empty, this option is ignored)
 #suppress_adds = yes
 
+
+# --------------------------------------------------------------------------
+
+[maps]
+
+#
+# This section can be used define rewrite mappings for option values. It
+# is most helpful for computing from/to addresses, but can actually be
+# used to remap values for any option in this file.
+#
+# The mappings are global for the entire configuration file. There is
+# no group-specific mapping capability. For each mapping that you want
+# to perform, you will provide the name of the option (e.g. from_addr)
+# and a specification of how to perform those mappings. These declarations
+# are made here in the [maps] section.
+#
+# When an option is accessed, the value is loaded from the configuration
+# file and all %(NAME)s substitutions are performed. The resulting value
+# is then passed through the map. If a map entry is not available for
+# the value, then it will be used unchanged.
+#
+# The format to declare a map is:
+#
+#   option_name_to_remap = mapping_specification
+#
+# At the moment, there is only one type of mapping specification:
+#
+#   mapping_specification = '[' sectionname ']'
+#
+# This will use the given section to map values. The option names in
+# the section are the input values, and the option values are the result.
+#
+
+#
+# EXAMPLE:
+#
+# We have two projects using two repositories. The name of the repos
+# does not easily map to their commit mailing lists, so we will use
+# a mapping to go from a project name (extracted from the repository
+# path) to their commit list. The committers also need a special
+# mapping to derive their email address from their repository username.
+#
+# [projects]
+# for_repos = .*/(?P<project>.*)
+# from_addr = %(author)s
+# to_addr = %(project)s
+#
+# [maps]
+# from_addr = [authors]
+# to_addr = [mailing-lists]
+#
+# [authors]
+# john = jconnor@example.com
+# sarah = sconnor@example.com
+#
+# [mailing-lists]
+# t600 = spottable-commits@example.com
+# tx = hotness-commits@example.com
+#
 
 # --------------------------------------------------------------------------
 

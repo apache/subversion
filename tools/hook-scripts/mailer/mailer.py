@@ -575,7 +575,7 @@ class Config:
 
   # The predefined configuration sections. These are omitted from the
   # set of groups.
-  _predefined = ('general', 'defaults')
+  _predefined = ('general', 'defaults', 'maps')
 
   def __init__(self, fp, repos, global_params):
     cp = ConfigParser.ConfigParser()
@@ -589,7 +589,7 @@ class Config:
         section_ob = _sub_section()
         setattr(self, section, section_ob)
         if section not in self._predefined:
-          self._groups.append((section, section_ob))
+          self._groups.append(section)
       else:
         section_ob = getattr(self, section)
       for option in cp.options(section):
@@ -603,6 +603,10 @@ class Config:
     # these params are always available, although they may be overridden
     self._global_params = global_params.copy()
 
+    # prepare maps. this may remove sections from consideration as a group.
+    self._prep_maps()
+
+    # process all the group sections.
     self._prep_groups(repos)
 
   def get_diff_cmd(self, args):
@@ -625,11 +629,45 @@ class Config:
     return ob
 
   def get(self, option, group, params):
+    "Get a config value with appropriate substitutions and value mapping."
+
+    # get the right value mapper, or "identity" if no mapper is present
+    mapper = getattr(self.maps, option, lambda value: value)
+
+    # find the right value, parameterize it, and apply any mapper
     if group:
       sub = getattr(self, group)
       if hasattr(sub, option):
-        return getattr(sub, option) % params
-    return getattr(self.defaults, option, '') % params
+        return mapper(getattr(sub, option) % params)
+    return mapper(getattr(self.defaults, option, '') % params)
+
+  def _prep_maps(self):
+    "Rewrite the [maps] options into callables that look up values."
+
+    for optname, mapvalue in vars(self.maps).items():
+      if mapvalue[:1] == '[':
+        # a section is acting as a mapping
+        sectname = mapvalue[1:-1]
+        if not hasattr(self, sectname):
+          raise UnknownMappingSection(sectname)
+        # construct a lambda to look up the given value as an option name,
+        # and return the option's value. if the option is not present,
+        # then just return the value unchanged.
+        setattr(self.maps, optname,
+                lambda value,
+                       sect=getattr(self, sectname): getattr(sect, value,
+                                                             value))
+        # remove the mapping section from consideration as a group
+        self._groups.remove(sectname)
+
+      # elif test for other mapper types. possible examples:
+      #   dbm:filename.db
+      #   file:two-column-file.txt
+      #   ldap:some-query-spec
+      # just craft a mapper function and insert it appropriately
+
+      else:
+        raise UnknownMappingSpec(mapvalue)
 
   def _prep_groups(self, repos):
     self._group_re = [ ]
@@ -649,7 +687,8 @@ class Config:
       pass
 
     # select the groups that apply to this repository
-    for group, sub in self._groups:
+    for group in self._groups:
+      sub = getattr(self, group)
       params = default_params
       if hasattr(sub, 'for_repos'):
         match = re.match(sub.for_repos, repos_dir)
@@ -692,7 +731,10 @@ class _sub_section:
 
 class MissingConfig(Exception):
   pass
-
+class UnknownMappingSection(Exception):
+  pass
+class UnknownMappingSpec(Exception):
+  pass
 class UnknownSubcommand(Exception):
   pass
 
