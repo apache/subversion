@@ -42,6 +42,7 @@ public class AllTests {
 	    suite.addTestSuite( NodekindTests.class );
 	    suite.addTestSuite( RevisionTests.class );
 	    suite.addTestSuite( StatusKindTests.class );
+	    suite.addTestSuite( ClientTests.class );
 
 	    return suite;
 	}
