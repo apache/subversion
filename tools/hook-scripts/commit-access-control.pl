@@ -68,19 +68,19 @@ my $cfg_filename = shift;
 
 unless (-e $repos)
   {
-    &usage("$0: repository directory `$repos' does not exist.\n");
+    &usage("$0: repository directory `$repos' does not exist.");
   }
 unless (-d $repos)
   {
-    &usage("$0: repository directory `$repos' is not a directory.\n");
+    &usage("$0: repository directory `$repos' is not a directory.");
   }
 unless (-e $cfg_filename)
   {
-    &usage("$0: configuration file `$cfg_filename' does not exist.\n");
+    &usage("$0: configuration file `$cfg_filename' does not exist.");
   }
 unless (-r $cfg_filename)
   {
-    &usage("$0: configuration file `$cfg_filename' is not readable.\n");
+    &usage("$0: configuration file `$cfg_filename' is not readable.");
   }
 
 # Define two constant subroutines to stand for read-only or read-write
