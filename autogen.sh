@@ -28,7 +28,9 @@ done
 #
 echo "Copying libtool helper files..."
 
-libtoolize=$(which glibtoolize libtoolize 2>/dev/null | head -1)
+# Under Solaris 8, `which' prints "no blah in path1 path2..." if it
+# can't find the target.  The grep -v is to filter that out.
+libtoolize=$(which glibtoolize libtoolize 2>/dev/null | grep -v '^no ' | head -1)
 if [ "x$libtoolize" = "x" ]; then
     echo "libtoolize not found in path"
     exit 1
