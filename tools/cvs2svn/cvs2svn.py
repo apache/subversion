@@ -1084,7 +1084,7 @@ class Dumper:
                           '\n' % (path + '/' + ent))
 
   def add_or_change_path(self, cvs_path, svn_path, cvs_rev, rcs_file,
-                         tags, branches):
+                         tags, branches, cvs_revnums):
 
     # figure out the real file path for "co"
     try:
@@ -1094,15 +1094,20 @@ class Dumper:
       rcs_file = os.path.join(dirname, 'Attic', fname)
       f_st = os.stat(rcs_file)
 
-    if f_st[0] & stat.S_IXUSR:
-      is_executable = 1
-      # "K 14\n" + "svn:executable\n" + "V 1\n" + "*\n" + "PROPS-END\n"
-      props_len = 36
+    # We begin with only a "CVS revision" property.
+    if cvs_revnums:
+      prop_contents = 'K 15\ncvs2svn:cvs-rev\nV %d\n%s\n' \
+                      % (len(cvs_rev), cvs_rev)
     else:
-      is_executable = 0
-      # just "PROPS-END\n"
-      props_len = 10
+      prop_contents = ''
+    
+    # Check for executable-ness.
+    if f_st[0] & stat.S_IXUSR:
+      prop_contents = prop_contents + 'K 14\nsvn:executable\nV 1\n*\n'
 
+    # Calculate the property length (+10 for "PROPS-END\n")
+    props_len = len(prop_contents) + 10
+    
     ### FIXME: We ought to notice the -kb flag set on the RCS file and
     ### use it to set svn:mime-type.
 
@@ -1139,13 +1144,7 @@ class Dumper:
                         'Content-length: 0000000000000000\n'
                         '\n')
 
-    if is_executable:
-      self.dumpfile.write('K 14\n'
-                          'svn:executable\n'
-                          'V 1\n'
-                          '*\n')
-
-    self.dumpfile.write('PROPS-END\n')
+    self.dumpfile.write(prop_contents + 'PROPS-END\n')
 
     # Insert the rev contents, calculating length and checksum as we go.
     checksum = md5.new()
@@ -1933,12 +1932,14 @@ class Commit:
       # 1.1.1.1 from however it is in the copy from 1.1.
       if not (br and is_vendor_first_revision(cvs_rev)):
         print "    adding or changing %s : '%s'" % (cvs_rev, svn_path)
-        closed_tags, closed_branches = dumper.add_or_change_path(cvs_path,
-                                                                 svn_path,
-                                                                 cvs_rev,
-                                                                 rcs_file,
-                                                                 tags,
-                                                                 branches)
+        closed_tags, closed_branches = \
+                     dumper.add_or_change_path(cvs_path,
+                                               svn_path,
+                                               cvs_rev,
+                                               rcs_file,
+                                               tags,
+                                               branches,
+                                               ctx.cvs_revnums)
         sym_tracker.close_tags(svn_path, svn_rev, closed_tags)
         sym_tracker.close_branches(svn_path, svn_rev, closed_branches)
 
@@ -2261,6 +2262,9 @@ def usage(ctx):
         % ctx.username
   print '  --skip-cleanup   prevent the deletion of intermediate files (default: %s)' \
         % ctx.skip_cleanup
+  print '  --cvs-revnums    record CVS revision numbers as file properties (default: %s)' \
+        % ctx.cvs_revnums
+        
 
 
 def main():
@@ -2284,6 +2288,7 @@ def main():
   ctx.username = "unknown"
   ctx.print_help = 0
   ctx.skip_cleanup = 0
+  ctx.cvs_revnums = 0
 
   start_pass = 1
 
@@ -2294,7 +2299,7 @@ def main():
                                  "branches=", "tags=", "encoding=",
                                  "trunk-only", "no-prune",
                                  "dump-only", "dumpfile=", "svnadmin=",
-                                 "skip-cleanup"])
+                                 "skip-cleanup", "cvs-revnums"])
   except getopt.GetoptError, e:
     sys.stderr.write(error_prefix + ': ' + str(e) + '\n\n')
     usage(ctx)
@@ -2340,7 +2345,9 @@ def main():
       ctx.username = value
     elif opt == '--skip-cleanup':
       ctx.skip_cleanup = 1
-
+    elif opt == '--cvs-revnums':
+      ctx.cvs_revnums = 1
+      
   if ctx.print_help:
     usage(ctx)
     sys.exit(0)
