@@ -516,7 +516,8 @@ rep_read_range (svn_fs_t *fs,
                 trail_t *trail)
 {
   skel_t *rep;
-        
+  apr_pool_t *subpool = svn_pool_create (trail->pool);
+
   /* Read in our REP. */
   SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
   if (rep_is_fulltext (rep))
@@ -524,7 +525,7 @@ rep_read_range (svn_fs_t *fs,
       /* Get the string key associated with REP, and read the
          requested range from that string. */
       const char *str_key;
-      SVN_ERR (fulltext_string_key (&str_key, rep, trail->pool));
+      SVN_ERR (fulltext_string_key (&str_key, rep, subpool));
       SVN_ERR (svn_fs__string_read (fs, str_key, buf, offset, len, trail));
     }
   else
@@ -536,9 +537,9 @@ rep_read_range (svn_fs_t *fs,
       apr_size_t off;        /* offset into svndiff data */
       apr_size_t amt;        /* how much svndiff data to/was read */
       const char *base_rep;  /* representation this delta is based against */
-      
+
       /* Extract the base rep key from this rep. */
-      base_rep = apr_pstrndup (trail->pool,
+      base_rep = apr_pstrndup (subpool,
                                rep->children->next->data,
                                rep->children->next->len);
 
@@ -554,11 +555,11 @@ rep_read_range (svn_fs_t *fs,
       wb.len_read      = 0;
       wb.done          = FALSE;
       wb.trail         = trail;
-      wb.pool          = svn_pool_create (trail->pool);
+      wb.pool          = svn_pool_create (subpool);
 
       /* Set up a window handling stream for the svndiff data. */
       wstream = svn_txdelta_parse_svndiff (window_handler, &wb, 
-                                           FALSE, trail->pool);
+                                           FALSE, subpool);
 
       /* First things first:  send the "SVN\0" header through the
          stream. */
@@ -579,10 +580,10 @@ rep_read_range (svn_fs_t *fs,
           const char *str_key;
 
           /* Get the offset and size of this window from the skel. */
-          this_off = atoi (apr_pstrndup (trail->pool,
+          this_off = atoi (apr_pstrndup (subpool,
                                          this_window->children->data,
                                          this_window->children->len));
-          this_len = atoi (apr_pstrndup (trail->pool,
+          this_len = atoi (apr_pstrndup (subpool,
                                          wnd_skel->children->next->data,
                                          wnd_skel->children->next->len));
 
@@ -603,7 +604,7 @@ rep_read_range (svn_fs_t *fs,
 
           /* Get this string key which holds this window's data. 
              ### todo: make sure this is an `svndiff' DIFF skel here. */
-          str_key = apr_pstrndup (trail->pool,
+          str_key = apr_pstrndup (subpool,
                                   wnd_skel->children->children->next->data,
                                   wnd_skel->children->children->next->len);
 
@@ -611,7 +612,7 @@ rep_read_range (svn_fs_t *fs,
              stuff. */
           wb.cur_offset = this_off;
           wb.base_rep = 
-            apr_pstrndup (trail->pool,
+            apr_pstrndup (subpool,
                           wnd_skel->children->next->next->next->data,
                           wnd_skel->children->next->next->next->len);
 
@@ -644,6 +645,7 @@ rep_read_range (svn_fs_t *fs,
          Oh wait, news flash: See issue #413.  */
     }
 
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
