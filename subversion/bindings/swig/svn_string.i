@@ -53,10 +53,10 @@ typedef struct svn_string_t svn_string_t;
         return NULL;
     }
 %#error need pool argument from somewhere
-    $1 = svn_string_ncreate(PyString_AS_STRING($input),
-                                 PyString_GET_SIZE($input),
-                                 /* ### gah... what pool to use? */
-                                 pool);
+    $1 = svn_stringbuf_ncreate(PyString_AS_STRING($input),
+                               PyString_GET_SIZE($input),
+                               /* ### gah... what pool to use? */
+                               pool);
 }
 
 %typemap(python,out) svn_stringbuf_t * {
@@ -87,6 +87,14 @@ typedef struct svn_string_t svn_string_t;
 %typemap(default) const svn_string_t * {
     $1 = NULL;
 }
+
+/* when storing an svn_string_t* into a structure, we must allocate the
+   svn_string_t structure on the heap. */
+%typemap(python,memberin) const svn_string_t * {
+%#error need pool argument from somewhere
+    $1 = svn_string_dup($input, pool);
+}
+
 
 //%typemap(python,out) svn_string_t * {
 //    $result = PyBuffer_FromMemory($1->data, $1->len);

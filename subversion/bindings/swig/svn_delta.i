@@ -60,6 +60,14 @@
     $2 = PyString_GET_SIZE($input);
 }
 
+/* -----------------------------------------------------------------------
+   mark window.new_data as readonly since we would need a pool to set it
+   properly (e.g. to allocate an svn_string_t structure).
+*/
+/* ### well, there isn't an obvious way to make it readonly, so let's
+   ### just axe it altogether for now. */
+%ignore svn_txdelta_window_t::new_data;
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_delta.h
