@@ -33,12 +33,11 @@ I.    A FEW POINTERS
 
 II.   DOCUMENTATION
 
-      The main documentation lives in the doc/ tree.  It is built and
-      installed in Info format as part of the normal installation
-      process.  You can also run 'make doc-ps', 'make doc-pdf', or
-      'make doc-html' from the top level of the Subversion
-      distribution (after configuring, of course; see the INSTALL file
-      for more on that).
+      The main documentation is the Subversion Book, written in
+      DocBook XML, which lives in the doc/ tree.  If you wish to build
+      the documentation from source, read doc/book/README.  Otherwise,
+      an on-line version of the book can be found at
+      http://svnbook.red-bean.com.
 
       See COPYING for copyright information.
       See HACKING for development information.
@@ -75,8 +74,8 @@ IV.   QUICKSTART GUIDE
       like so:
 
           $ svn --version
-          svn, version 0.16.0
-             compiled Jan  3 2003, 16:43:58
+          svn, version 0.19.1
+             compiled March 13 2003, 16:43:58
 
           Copyright (C) 2000-2003 CollabNet.
           Subversion is open source software, see http://subversion.tigris.org/
