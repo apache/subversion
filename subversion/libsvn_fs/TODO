@@ -1,0 +1,18 @@
+Get rid of proplists; just give the user an APR hash table instead.
+
+The delta algorithm walks the whole tree using a single pool, so the
+memory used is proportional to the size of the target tree.  Instead,
+it should use a separate subpool every time it recurses into a new
+directory, and free that subpool as soon as it's done processing that
+subdirectory, so the memory used is proportional to the depth of the
+tree.
+
+Probably file contents should be stored in a separate record from the
+REPRESENTATION and NODE-VERSION skel, so we can parse those skels
+without having to read the whole file's data.
+
+svn_fs__getsize shouldn't rely on a maximum value for detecting
+overflow.
+
+The use of svn_fs__getsize in svn_fs__parse_id is ugly --- what if
+svn_vernum_t and apr_size_t aren't the same size?
