@@ -221,7 +221,7 @@ $ svn update --revision PREV foo.c
       
       <para>Estas palabras clave le permiten realizar muchas
         operaciones comunes (y útiles) sin tener que mirar números
-        <!--TODO: to look up specific--> especificos de revisión
+        <!--TODO: to look up specific--> específicos de revisión
         o recordar la revisión exacta de su copia de trabajo.</para>
       
     </sect2>
@@ -271,7 +271,7 @@ r12 | ira | 2002-11-27 12:31:51 -0600 (Wed, 27 Nov 2002) | 6 lines
         <title>¿Está Subversion un día anticipado?</title>
            <!--TODO:Is Subversion a Day Early?-->
         
-        <para>Si usted especifica una fecha simple como revsión sin
+        <para>Si usted especifica una fecha simple como revisión sin
           especificar una hora del día (por ejemplo
           <literal>2002-11-27</literal>), puede pensar que Subversion
           le dará la última revisión que tuvo lugar el 27 de Noviembre.
@@ -287,7 +287,7 @@ r12 | ira | 2002-11-27 12:31:51 -0600 (Wed, 27 Nov 2002) | 6 lines
 
         <para>Si quiere incluir el día 27 <!--TODO:the 27th...lo he
           traducido como "día 27", ya que no sé si hay alguna mejor-->
-          en su busqueda, puede especificar el día 27 con la hora
+          en su búsqueda, puede especificar el día 27 con la hora
           (<literal>{"2002-11-27 23:59"}</literal>), o justo el día
           siguiente (<literal>{2002-11-28}</literal>).</para>
           <!--TODO:you can either specify... puede especificar ambas...?
@@ -321,7 +321,7 @@ $ svn log --revision {2002-11-20}:4040
         una propiedad sin versionar<!--TODO:unversioned-->, modificable
         &mdash; la marca de tiempo<!--TODO:timestamp--> de la revisión puede
         cambiarse para representar una falsificación completa de la
-        verdadera cronología, o incluso borrarla totalmenta. Esto
+        verdadera cronología, o incluso borrarla totalmente. Esto
         causará estragos <!--TODO:This will wreak havoc--> en la
         conversión interna fecha-a-revisión que Subversion realiza.
         </para>
@@ -429,7 +429,7 @@ Checked out revision 2499.
         de directorios no mostrará este subdirectorio, pero este es
         sin embargo un directorio importante. Sea lo que fuere lo que haga
         <!--TODO:whatever you do--> ¡no borre o cambie nada en el área
-        administrativa!  Subversion depende de esta para administar su
+        administrativa!  Subversion depende de esta para administrar su
         copia de trabajo local.</para>
 
     </sidebar>
@@ -568,7 +568,7 @@ Updated to revision 2.
       
       <para>Vamos a examinar la salida de <command>svn update</command>
         un poco más. Cuando el servidor envía cambios a su copia de trabajo
-        local, una letra codigo <!--TODO:a letter code--> se visualiza al
+        local, una letra código <!--TODO:a letter code--> se visualiza al
         lado del objeto para hacerle saber qué acciones realizó Subversion
         para traer su copia de trabajo local a la actualización:<!--TODO:
         to bring...up-to-date--></para>
@@ -623,8 +623,8 @@ Updated to revision 2.
             <para>El fichero <filename>foo</filename> recibió nuevos
               cambios del repositorio, pero su copia local del
               fichero tenía sus modificaciones. O los cambios no se
-              intersectaron <!--TODO:intersect-->, o los cambios eran
-              exactamente iguales que sus modificaciones locales, asi que
+              tocaron <!--TODO:intersect-->, o los cambios eran
+              exactamente iguales que sus modificaciones locales, así que
               Subversion ha mer<computeroutput>G</computeroutput>ed
               <!--TODO: cambiar lo de merged--> satisfactoriamente los
               cambios del repositorio al fichero sin ningún problema.
@@ -656,13 +656,13 @@ Updated to revision 2.
         de trabajo local. Generalmente es más conveniente decidir un
         cambio particular (o un conjunto de cambios) a hacer, por ejemplo
         escribir una nueva característica, corregir un fallo, etc. Los
-        comandos de Subversion que puede usar aqui <!--TODO:use here...
+        comandos de Subversion que puede usar aquí <!--TODO:use here...
         poner mejor "en esta situación?"--> son <command>svn add</command>,
         <command>svn delete</command>, <command>svn copy</command>,
         y <command>svn move</command>. Sin embargo, si usted está
         simplemente corrigiendo los archivos que están ya en Subversion,
         puede no necesitar utilizar ninguno de estos comandos hasta que
-        envie los cambios. Cambios que puede hacer a su copia de trabajo
+        envíe los cambios. Cambios que puede hacer a su copia de trabajo
         local:</para>
       
       <variablelist>
@@ -674,7 +674,7 @@ Updated to revision 2.
             <para>Esta es la clase más simple de cambio. No necesita
               decirle a Subversion que se propone a cambiar un fichero;
               simplemente <!--TODO:just--> haga los cambios. Subversion
-              será capaz de detectar automaticamente qué archivos han
+              será capaz de detectar automáticamente qué archivos han
               sido cambiados.</para>
           </listitem>
         </varlistentry>
@@ -687,20 +687,20 @@ Updated to revision 2.
               el borrado planificado, la adición, la copia, o moverlos.
               <!--TODO:moving-->Mientras estos cambios pueden ocurrir
               inmediatamente en su copia de trabajo local, ninguna
-              adición o borrado sucederá en el respositorio hasta que
-              envie los cambios.</para>
+              adición o borrado sucederá en el repositorio hasta que
+              envíe los cambios.</para>
           </listitem>
         </varlistentry>
 
       </variablelist>
       
       <para>Para hacer cambios en los ficheros, use su editor de textos,
-        procesador de textos, programa de graficos <!--TODO: graphics
+        procesador de textos, programa de gráficos <!--TODO: graphics
         program-->, o cualquier herramienta que usaría normalmente.
         Subversion maneja ficheros binarios tan fácilmente como maneja
         archivos de texto&mdash;y tan eficientemente también.</para>
       
-      <para>Aqui hay una descripción de los cuatro subcomandos de
+      <para>Aquí hay una descripción de los cuatro subcomandos de
         Subversion que usted usará más a menudo para hacer cambios del
         árbol (cubriremos <command>svn import</command> y
         <command>svn mkdir</command> después.</para>
@@ -713,9 +713,9 @@ Updated to revision 2.
           <term><command>svn add foo</command></term>
           <listitem>
             <para>Programa añadir <filename>foo</filename> al repositorio.
-              <!--TODO:schedule foo to be added-->Cuando haga su proximo
-              envio, <filename>foo</filename> se convertirá en hijo de
-              su directorio padre. Fijese que si <filename>foo</filename>
+              <!--TODO:schedule foo to be added-->Cuando haga su próximo
+              envío, <filename>foo</filename> se convertirá en hijo de
+              su directorio padre. Fíjese que si <filename>foo</filename>
               es un directorio, todo por debajo de <filename>foo</filename>
               será programado para la adición <!--TODO:will be scheduled
               for addition-->. Si solo quiere añadir el propio
@@ -734,7 +734,7 @@ Updated to revision 2.
               inmediatamente de su copia de trabajo local. Si
               <filename>foo</filename> es un directorio, este no es
               borrado, pero Subversion lo programa para borrarlo. <!--TODO:
-              schedules it for deletion--> Cuando envie sus cambios,
+              schedules it for deletion--> Cuando envíe sus cambios,
               <filename>foo</filename> será borrado de su copia de trabajo
               y del repositorio.<footnote><para>Por supuesto, nada es
               borrado totalmente del repositorio&mdash;solo del<!--TODO:
@@ -753,7 +753,7 @@ Updated to revision 2.
               <filename>bar</filename> es automáticamente programado
               para la adición<!--TODO:is automatically scheduled for
               addition-->. Cuando <filename>bar</filename> es añadido al
-              repositorio en el siguiente envio de cambios, su historia
+              repositorio en el siguiente envío de cambios, su historia
               de copia es registrada (como que originalmente  viene de
               <filename>foo</filename><!--TODO:as having originally come
               from-->).<command>svn copy</command> no crea directorios
@@ -847,11 +847,11 @@ Updated to revision 2.
       <para>Subversion ha sido optimizado para ayudarle con esta tarea,
         y es capaz de hacer muchas cosas sin comunicarse con el
         repositorio. En particular, su copia de trabajo local contiene una
-        copia <quote>pristina</quote><!--TODO:secret cached pristine
+        copia <quote>prístina</quote><!--TODO:secret cached pristine
         copy of each version controlled file within the .svn area-->
         secreta almacenada de cada fichero de versión controlado dentro
         del área <filename>.svn</filename>. Debido a esto, Subversion
-        puede rapidamente mostrarle cómo sus ficheros de trabajo han cambiado,
+        puede rápidamente mostrarle cómo sus ficheros de trabajo han cambiado,
         o incluso permitirle deshacer sus cambios sin contactar con el
         repositorio.</para>
       
@@ -921,7 +921,7 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
           blanco<!--TODO:whitespace-->, seguido por un nombre de
           fichero o directorio. La primera columna dice el estado
           de un fichero o directorio y/o su contenido. Los códigos
-          impresos aqui son:</para>
+          impresos aquí son:</para>
 
 
         <variablelist>
@@ -1001,7 +1001,7 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
               <para>El fichero o directorio
                 <filename>file_or_dir</filename> está bajo el control de
                 versiones pero falta o está de alguna manera incompleto.
-                El objecto puede faltar si se ha borrado usando un comando
+                El objeto puede faltar si se ha borrado usando un comando
                 ajeno<!--TODO:non-Subversion command--> a Subversion. En
                 el caso de un directorio, puede estar incompleto si ha
                 interrumpido una descarga o una actualización.
@@ -1034,7 +1034,7 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
                 directorio <filename>file_or_dir</filename>, probablemente
                 porque usted se lo dijo. Para más información sobre
                 ficheros ignorados, vea <xref
-                linkend="svn-ch-7-sect-2.3.3"/>. Observe que este simbolo
+                linkend="svn-ch-7-sect-2.3.3"/>. Observe que este símbolo
                 solo aparece si le pasa la opción
                 <option>--no-ignore</option> a <command>svn status</command>.
               </para>
@@ -1054,7 +1054,7 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
         <para>La tercera columna solo mostrará un espacio en blanco
           o una <computeroutput>L</computeroutput>
           la cual significa que Subversion ha bloqueado <!--TODO:locked-->
-          el objeto en el area de trabajo <filename>.svn</filename>. Usted
+          el objeto en el área de trabajo <filename>.svn</filename>. Usted
           verá una <computeroutput>L</computeroutput> si ejecuta
           <command>svn status</command> en un directorio donde un
           <command>svn commit</command> esté en progreso&mdash;quizás
@@ -1075,7 +1075,7 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
           ve <computeroutput>A&nbsp;&nbsp;+</computeroutput>, esto
           significa que el objeto está programado para la
           adición-con-historial<!--TODO:for addition-with-history-->.
-          Este puede ser un fichero, o la raiz de un directorio copiado.
+          Este puede ser un fichero, o la raíz de un directorio copiado.
           <computeroutput>+</computeroutput> significa que el objeto
           es parte de un subárbol programado para la
           adición-con-historial, p.e.<!--TODO:i.e.-->algún padre fue
@@ -1637,7 +1637,7 @@ $ svn resolved sandwich.txt
 $ svn commit -m "Go ahead and use my sandwich, discarding Sally's edits."
 </screen>
 
-        <para>Recuerde, si algúna vez está confuso mientras edita el
+        <para>Recuerde, si alguna vez está confuso mientras edita el
           fichero conflictivo, siempre puede consultar los tres ficheros
           que Subversion crea para usted en su copia de
           trabajo&mdash;incluyendo su fichero como estaba antes de que
@@ -1764,8 +1764,8 @@ $
         si sus cambios tienen algún sentido en su totalidad; solo comprueba
         para asegurarse que nadie haya cambiado cualquiera de los mismos
         ficheros que usted mientras usted no miraba. Si alguien
-        <emphasis>ha</emphasis> hecho esto, el envio entero fallará con
-        un mensaje informandole que uno o más de sus ficheros está
+        <emphasis>ha</emphasis> hecho esto, el envío entero fallará con
+        un mensaje informándole que uno o más de sus ficheros está
         fuera-de-fecha:</para>
 
 <screen>
@@ -1776,15 +1776,15 @@ svn: Out of date: 'rules.txt' in transaction 'g'
 </screen>
 
       <para>En este punto, necesita ejecutar <command>svn
-        update</command>, ocupandose<!--TODO:deal with any merges or
+        update</command>, ocupándose<!--TODO:deal with any merges or
         conflicts--> con cualquier fusión o conflicto que resulte
         y procure enviarlo otra vez.</para>
 
            
-      <para>Eso cubre el ciclo basico de trabajo para usar Subversion.
+      <para>Eso cubre el ciclo básico de trabajo para usar Subversion.
         Hay muchas otras características en Subversion que usted puede
         usar para administrar su repositorio y copia de trabajo, pero
-        puede pasar facilmente<!--TODO: but you can get by
+        puede pasar fácilmente<!--TODO: but you can get by
         quite easily using--> usando solo los comandos que hemos visto
         <!--TODO:discussed so far--> hasta ahora en este capítulo.</para>
 
@@ -1818,7 +1818,7 @@ svn: Out of date: 'rules.txt' in transaction 'g'
           <term><command>svn log </command></term>
           <listitem>
             <para>Le muestra amplia información: mensajes de registro
-              unidos a las revisions, y que ruta de fichero cambió en
+              unidos a las revisiones, y que ruta de fichero cambió en
               cada revisión.</para>
           </listitem>
         </varlistentry>
@@ -1906,7 +1906,7 @@ $ svn log http://foo.com/svn/trunk/code/foo.c
         <emphasis>solo</emphasis> para esas revisiones en las cuales
         el fichero de trabajo (o URL) cambió.</para>
            
-      <para>Si deséa aún más información sobre un fichero o directorio,
+      <para>Si desea aún más información sobre un fichero o directorio,
         <command>svn log</command> también toma una opción
         <option>--verbose</option> (<option>-v</option>). Porque
         Subversion le permite mover y copiar ficheros y directorios,
@@ -1953,7 +1953,7 @@ $
           usted está trabajando<!--TODO:operating--> en un subdirectorio
           de su copia de trabajo y procurando registrar una revisión
           en la cual ni ese directorio ni cualquiera de sus hijos fue
-          cambiado, Subversion le dará un registro vacio. Si desea ver
+          cambiado, Subversion le dará un registro vacío. Si desea ver
           qué cambió en esa revisión, intente indicando
           <command>svn log</command> directamente en lo más alto del
           URL de su repositorio, como en <command>svn log -r 2
@@ -1972,7 +1972,7 @@ $
         modificaciones locales hechas a nuestra copia de trabajo
         antes de enviarlas al repositorio.</para>
       
-      <para>De hecho, resulta que hay <emphasis>three</emphasis> usos
+      <para>De hecho, resulta que hay <emphasis>tres</emphasis> usos
         distintos para <command>svn diff</command>:</para>
 
       <itemizedlist>
@@ -1997,7 +1997,7 @@ $
         <para>Como hemos visto, invocando<!--TODO:invoking... mejor
           poner otra cosa?--> <command>svn diff</command> sin
           argumentos comparará sus ficheros de trabajo con las
-          copias <quote>pristinas</quote> almacenadas en el área
+          copias <quote>prístinas</quote> almacenadas en el área
           <filename>.svn</filename>:</para>
         
         <screen>
@@ -2048,7 +2048,7 @@ $
         <title>Comparando repositorio con repositorio</title>
         
         <para>Si dos números de revisión, separados por una coma, son
-          pasados via <option>--revision</option>
+          pasados vía <option>--revision</option>
           (<option>-r</option>), entonces las dos revisiones son
           comparadas directamente.</para>
           
@@ -2292,13 +2292,13 @@ subdir/
         mayoría de los comandos del cliente de Subversion. Las
         excepciones notables son ésas que se ocupan de la ramificación
         y de la combinación (vea <xref linkend="svn-ch-4"/>) y
-        de las propiedadas (vea <xref linkend="svn-ch-7-sect-2"/>).
+        de las propiedades (vea <xref linkend="svn-ch-7-sect-2"/>).
         Sin embargo, usted puede querer tomarse un momento para <!--TODO:
         to skim through... no sé lo que es skim, asi que pongo lo que
-        creo que es--> hechar un ojo a <xref linkend="svn-ch-9"/>
+        creo que es--> echar un ojo a <xref linkend="svn-ch-9"/>
         para tener una idea de todos los muchos<!--TODO:of all the many-->
         comandos diferentes que tiene Subversion&mdash;y cómo puede usarlos
-        para hacer su trabajo más facil.</para>
+        para hacer su trabajo más fácil.</para>
 
   </sect1>
 
