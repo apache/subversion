@@ -758,7 +758,7 @@ svn_wc_translated_file (const char **xlated_p,
           SVN_ERR (svn_wc_copy_and_translate (vfile,
                                               tmp_vfile,
                                               SVN_WC__DEFAULT_EOL_MARKER,
-                                              FALSE,
+                                              TRUE,
                                               keywords,
                                               FALSE,
                                               pool));
