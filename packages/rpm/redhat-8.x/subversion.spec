@@ -190,6 +190,7 @@ LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_dav/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_local/.libs \
+	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_svn/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_subr/.libs \
 	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_wc/.libs \
 	" ./configure \
