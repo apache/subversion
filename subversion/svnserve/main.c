@@ -303,6 +303,7 @@ int main(int argc, const char *const *argv)
       switch (handling_mode)
         {
         case connection_mode_fork:
+#if APR_HAS_FORK
           status = apr_proc_fork(&proc, connection_pool);
           if (status == APR_INCHILD)
             {
@@ -320,6 +321,7 @@ int main(int argc, const char *const *argv)
               /* Log an error, when we support logging. */
               apr_socket_close(usock);
             }
+#endif
           break;
 
         case connection_mode_thread:
