@@ -296,10 +296,10 @@ maybe_bump_dir_info (struct edit_baton *eb,
       if (--bdi->ref_count > 0)
         return SVN_NO_ERROR;    /* directory isn't done yet */
 
-      /* Bump this dir to the new revision if this directory is beneath
-         the target of an update, or unconditionally if this is a
-         checkout. */
-      if (eb->is_checkout || bdi->parent)
+      /* Bump this dir to the new revision if this directory is, or is
+         beneath, the target of an update, or unconditionally if this
+         is a checkout. */
+      if (eb->is_checkout || bdi->parent || (! eb->target))
         {
           apr_uint32_t modify_flags = SVN_WC__ENTRY_MODIFY_REVISION;
 
