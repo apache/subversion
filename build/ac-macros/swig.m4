@@ -84,17 +84,17 @@ AC_DEFUN(SVN_FIND_SWIG,
       SWIG_LDFLAGS="$ac_cv_swig_ldflags"
 
       AC_CACHE_CHECK([for Python includes], [ac_cv_python_includes],[
-        ac_cv_python_includes="`$PYTHON ${abs_srcdir}/ac-helpers/get-py-info.py --includes`"
+        ac_cv_python_includes="`$PYTHON ${abs_srcdir}/build/get-py-info.py --includes`"
       ])
       SWIG_PY_INCLUDES="$ac_cv_python_includes"
 
       AC_CACHE_CHECK([for compiling Python extensions], [ac_cv_python_compile],[
-        ac_cv_python_compile="`$PYTHON ${abs_srcdir}/ac-helpers/get-py-info.py --compile`"
+        ac_cv_python_compile="`$PYTHON ${abs_srcdir}/build/get-py-info.py --compile`"
       ])
       SWIG_PY_COMPILE="$ac_cv_python_compile"
 
       AC_CACHE_CHECK([for linking Python extensions], [ac_cv_python_link],[
-        ac_cv_python_link="`$PYTHON ${abs_srcdir}/ac-helpers/get-py-info.py --link`"
+        ac_cv_python_link="`$PYTHON ${abs_srcdir}/build/get-py-info.py --link`"
       ])
       SWIG_PY_LINK="$ac_cv_python_link"
     fi
