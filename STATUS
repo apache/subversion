@@ -62,6 +62,7 @@ Candidate changes:
       1.1.x-mailer.py r12543:HEAD
     Votes:
       +1: maxb
+      +0: cmpilato (only tested that it didn't regress on Unix)
 
   * r13222, r13223, r13232
     Rewrite libsvn_fs_fs's auto-merge algorithm
@@ -78,7 +79,7 @@ Candidate changes:
     Justification:
       Tiny change, avoids our dependencies being stricter than they need to be.
     Votes:
-      +1: maxb
+      +1: maxb, cmpilato
 
   * r13553
     Fix issue #2173 (Symbolic links from Linux are not ignored in Windows)
