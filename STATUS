@@ -16,6 +16,14 @@ Candidate changes:
     Votes:
       +1: ghudson, bliss, mbk
 
+  * r10840
+    Insert cancellation points for the list (ls) command.
+    Justification:
+      Simple fix for an annoying problem reported by users.
+    Votes:
+      +1: bliss, sussman
+
+
 Status of 1.1.1:
 ================
 
