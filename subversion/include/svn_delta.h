@@ -205,19 +205,42 @@ extern svn_error_t *svn_txdelta (svn_txdelta_stream_t **stream,
                                  apr_pool_t *pool);
 
 
-/* Apply DELTA to a source stream to produce a target stream.  Call
- * SOURCE_FN to gather as much source data as needed and TARGET_FN to
- * output the generated target data.  Do any necessary allocation in a
- * sub-pool of DELTA's pool.  */
-extern svn_error_t *svn_txdelta_apply (svn_txdelta_stream_t *delta,
-                                       svn_read_fn_t *source_fn,
-                                       void *source_baton,
-                                       svn_write_fn_t *target_fn,
-                                       void *target_baton);
-
-
 /* Free the delta stream STREAM.  */
 extern void svn_txdelta_free (svn_txdelta_stream_t *stream);
+
+
+
+/*** Applying a text delta.  **/
+
+/* A delta applicator -- an opaque structure passed to each invocation
+ * of the window handler function.  Contains functions to read from the
+ * source input stream and write to the output stream, and buffered
+ * data from the input stream in case source views overlap between
+ * windows.  */
+typedef struct svn_txdelta_applicator_t svn_txdelta_applicator_t;
+
+
+/* Set *APPLICATOR to a new delta applicator.
+ * svn_txdelta_apply_window will invoke SOURCE_FN with SOURCE_BATON
+ * when it requires input, and will invoke TARGET_FN with TARGET_BATON
+ * when it has output to write.  Memory allocated for the applicator
+ * will live in a sub-pool of POOL.  */
+svn_error_t *svn_txdelta_applicator_create (svn_txdelta_applicator_t **appl,
+                                            svn_read_fn_t *source_fn,
+                                            void *source_baton,
+                                            svn_write_fn_t *target_fn,
+                                            void *target_baton,
+                                            apr_pool_t *pool);
+
+
+/* Apply WINDOW to a source stream to produce a target stream, using
+ * the functions from APPLICATOR.  */
+svn_error_t *svn_txdelta_apply_window (svn_txdelta_window_t *window,
+                                       svn_txdelta_applicator_t *appl);
+
+
+/* Free the text delta applicator APPLICATOR.  */
+void svn_txdelta_applicator_free (svn_txdelta_applicator_t *appl);
 
 
 
