@@ -51,8 +51,6 @@ svn_client__checkout_internal (const char *URL,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool)
 {
-  const svn_delta_editor_t *checkout_editor;
-  void *checkout_edit_baton;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
   svn_error_t *err = NULL;
   svn_revnum_t revnum;
@@ -70,32 +68,9 @@ svn_client__checkout_internal (const char *URL,
     return svn_error_create (SVN_ERR_CLIENT_BAD_REVISION, NULL,
                              "Bogus revision passed to svn_client_checkout");
 
-  /* Get revnum set to something meaningful, so we can fetch the
-     checkout editor. */
-  if (revision->kind == svn_opt_revision_number)
-    revnum = revision->value.number; /* do the trivial conversion manually */
-  else
-    revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
-
   /* Canonicalize the URL. */
   URL = svn_path_canonicalize (URL, pool);
 
-  /* Fetch the checkout editor.  If REVISION is invalid, that's okay;
-     the RA driver will call editor->set_target_revision
-     later on. */
-  SVN_ERR (svn_wc_get_checkout_editor (path,
-                                       URL,
-                                       revnum,
-                                       recurse,
-                                       ctx->notify_func,
-                                       ctx->notify_baton,
-                                       ctx->cancel_func,
-                                       ctx->cancel_baton,
-                                       &checkout_editor,
-                                       &checkout_edit_baton,
-                                       traversal_info,
-                                       pool));
-  
     {
       void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
