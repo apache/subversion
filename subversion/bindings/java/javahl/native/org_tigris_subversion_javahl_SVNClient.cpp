@@ -128,10 +128,10 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_list
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    status
- * Signature: (Ljava/lang/String;ZZ)[Lorg/tigris/subversion/javahl/Status;
+ * Signature: (Ljava/lang/String;ZZZ)[Lorg/tigris/subversion/javahl/Status;
  */
 JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_status
-  (JNIEnv* env, jobject jthis, jstring jpath, jboolean jrecurse, jboolean jonServer)
+  (JNIEnv* env, jobject jthis, jstring jpath, jboolean jrecurse, jboolean jonServer, jboolean jgetAll)
 {
 	JNIEntry(SVNClient, status);
 	SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -144,13 +144,13 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_statu
 	{
 		return NULL;
 	}
-	return cl->status(path, jrecurse ? true: false, jonServer ? true:false);
+	return cl->status(path, jrecurse ? true: false, jonServer ? true:false, jgetAll ? true:false);
 }
 
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    singleStatus
- * Signature: (Ljava/lang/String;Z)Lorg/tigris/subversion/javahl/Status;
+ * Signature: (Ljava/lang/String;ZZ)Lorg/tigris/subversion/javahl/Status;
  */
 JNIEXPORT jobject JNICALL Java_org_tigris_subversion_javahl_SVNClient_singleStatus
   (JNIEnv* env, jobject jthis, jstring jpath, jboolean jonServer)
@@ -332,7 +332,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_notification
  * Signature: (Ljava/lang/String;Ljava/lang/String;Z)V
  */
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_remove
-  (JNIEnv *env, jobject jthis, jstring jpath, jstring jmessage, jboolean jforce)
+  (JNIEnv* env, jobject jthis, jobjectArray jtargets, jstring jmessage, jboolean jforce)
 {
 	JNIEntry(SVNClient, remove);
 	SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -341,17 +341,13 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_remove
 		JNIUtil::throwError("bad c++ this");
 		return;
 	}
-	JNIStringHolder path(jpath);
-	if(JNIUtil::isExceptionThrown())
-	{
-		return;
-	}
+	Targets targets(jtargets);
 	JNIStringHolder message(jmessage);
 	if(JNIUtil::isExceptionThrown())
 	{
 		return;
 	}
-	cl->remove(path, message, jforce ? true : false);
+	cl->remove(targets, message, jforce ? true : false);
 }
 
 /*
@@ -534,7 +530,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_move
  * Signature: (Ljava/lang/String;Ljava/lang/String;)V
  */
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_mkdir
-  (JNIEnv* env, jobject jthis, jstring jpath, jstring jmessage)
+  (JNIEnv* env, jobject jthis, jobjectArray jtargets, jstring jmessage)
 {
 	JNIEntry(SVNClient, mkdir);
 	SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -543,17 +539,13 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_mkdir
 		JNIUtil::throwError("bad c++ this");
 		return;
 	}
-	JNIStringHolder path(jpath);
-	if(JNIUtil::isExceptionThrown())
-	{
-		return;
-	}
+	Targets targets(jtargets);
 	JNIStringHolder message(jmessage);
 	if(JNIUtil::isExceptionThrown())
 	{
 		return;
 	}
-	cl->mkdir(path, message);
+	cl->mkdir(targets, message);
 }
 
 /*
@@ -608,7 +600,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_resolved
  * Signature: (Ljava/lang/String;Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;)V
  */
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_doExport
-  (JNIEnv* env, jobject jthis, jstring jsrcPath, jstring jdestPath, jobject jrevision)
+  (JNIEnv* env, jobject jthis, jstring jsrcPath, jstring jdestPath, jobject jrevision,jboolean jforce)
 {
 	JNIEntry(SVNClient, doExport);
 	SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -632,7 +624,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_doExport
 	{
 		return;
 	}
-	cl->doExport(srcPath, destPath, revision);
+	cl->doExport(srcPath, destPath, revision, jforce ? true : false);
 }
 
 /*
@@ -674,7 +666,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_doSwitch
  * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V
  */
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_doImport
-  (JNIEnv* env, jobject jthis, jstring jpath, jstring jurl, jstring jnewEntry, jstring jmessage, jboolean jrecurse)
+  (JNIEnv* env, jobject jthis, jstring jpath, jstring jurl, jstring jmessage, jboolean jrecurse)
 {
 	JNIEntry(SVNClient, doImport);
 	SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -693,17 +685,12 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_doImport
 	{
 		return;
 	}
-	JNIStringHolder newEntry(jnewEntry);
-	if(JNIUtil::isExceptionThrown())
-	{
-		return;
-	}
 	JNIStringHolder message(jmessage);
 	if(JNIUtil::isExceptionThrown())
 	{
 		return;
 	}
-	cl->doImport(path, url, newEntry, message, jrecurse ? true : false);
+	cl->doImport(path, url, message, jrecurse ? true : false);
 }
 
 /*
@@ -899,6 +886,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_propertyCreat
 	cl->propertyCreate(path, name, value, jrecurse ? true:false);
 }
 
+
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    propertyCreate
@@ -963,6 +951,79 @@ JNIEXPORT jobject JNICALL Java_org_tigris_subversion_javahl_SVNClient_revPropert
 	}
 	return cl->revProperty(jthis, path, name, revision);
 }
+  /*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    propertyGet
+ * Signature: (Ljava/lang/String;Ljava/lang/String;)Lorg/tigris/subversion/javahl/PropertyData;
+ */
+JNIEXPORT jobject JNICALL Java_org_tigris_subversion_javahl_SVNClient_propertyGet
+  (JNIEnv *env, jobject jthis, jstring jpath, jstring jname)
+{
+	JNIEntry(SVNClient, propertyGet);
+	SVNClient *cl = SVNClient::getCppObject(jthis);
+	if(cl == NULL)
+	{
+		JNIUtil::throwError("bad c++ this");
+		return NULL;
+	}
+	JNIStringHolder path(jpath);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return NULL;
+	}
+	JNIStringHolder name(jname);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return NULL;
+	}
+	return cl->propertyGet(jthis, path, name);
+}
+
+
+  /*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    diff
+ * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;Ljava/lang/String;Z)V
+ */
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_diff
+  (JNIEnv *env, jobject jthis, jstring jtarget1, jobject jrevision1, jstring jtarget2, jobject jrevision2, jstring joutfileName,jboolean jrecurse)
+{
+	JNIEntry(SVNClient, propertyGet);
+	SVNClient *cl = SVNClient::getCppObject(jthis);
+	if(cl == NULL)
+	{
+		JNIUtil::throwError("bad c++ this");
+		return;
+	}
+	JNIStringHolder target1(jtarget1);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return;
+	}
+	Revision revision1(jrevision1);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return;
+	}
+	JNIStringHolder target2(jtarget2);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return;
+	}	
+	Revision revision2(jrevision2);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return;
+	}
+	JNIStringHolder outfileName(joutfileName);
+	if(JNIUtil::isExceptionThrown())
+	{
+		return;
+	}	
+	cl->diff(target1, revision1, target2, revision2, outfileName,jrecurse ? true:false);
+}
+
+
   /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    fileContent

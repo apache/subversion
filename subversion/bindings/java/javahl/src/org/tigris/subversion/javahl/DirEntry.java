@@ -66,9 +66,9 @@ public class DirEntry {
 	/**
 	 * @return revision
 	 */
-	public long getLastChangedRevision()
+	public Revision.Number getLastChangedRevision()
 	{
-		return lastChangedRevision;
+		return new Revision.Number(lastChangedRevision);
 	}
 
 	public boolean getHasProps()

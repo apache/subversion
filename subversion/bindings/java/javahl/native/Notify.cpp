@@ -128,60 +128,83 @@ Notify::onNotify (
 	switch(action)
 	{
 	case svn_wc_notify_add:
+		/* Adding a path to revision control. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_add;
 		break;
 	case svn_wc_notify_copy:
+		/* Copying a versioned path. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_copy;
 		break;
 	case svn_wc_notify_delete:
+		/* Deleting a versioned path. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_delete;
 		break;
 	case svn_wc_notify_restore:
+		/* Restoring a missing path from the pristine text-base. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_restore;
 		break;
 	case svn_wc_notify_revert:
+		/* Reverting a modified path. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_revert;
 		break;
 	case svn_wc_notify_failed_revert:
+		/* A revert operation has failed. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_failed_revert;
 		break;
 	case svn_wc_notify_resolved:
+		/* Resolving a conflict. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_resolved;
 		break;
-	case svn_wc_notify_status:
-		jAction = org_tigris_subversion_javahl_Notify_Action_status;
+	case svn_wc_notify_status_completed:
+		/* The last notification in a status (including status on externals). */
+		jAction = org_tigris_subversion_javahl_Notify_Action_status_completed;
+		break;
+	case svn_wc_notify_status_external:
+		/* Running status on an external module. */
+		jAction = org_tigris_subversion_javahl_Notify_Action_status_external;
 		break;
 	case svn_wc_notify_skip:
+		/* Skipping a path. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_skip;
 		break;
 	case svn_wc_notify_update_delete:
+		/* Got a delete in an update. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_update_delete;
 		break;
 	case svn_wc_notify_update_add:
+		/* Got an add in an update. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_update_add;
 		break;
 	case svn_wc_notify_update_update:
+		/* Got any other action in an update. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_update_update;
 		break;
 	case svn_wc_notify_update_completed:
+		/* The last notification in an update (including updates of externals). */
 		jAction = org_tigris_subversion_javahl_Notify_Action_update_completed;
 		break;
 	case svn_wc_notify_update_external:
+		/* Updating an external module. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_update_external;
 		break;
 	case svn_wc_notify_commit_modified:
+		/* Committing a modification. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_commit_modified;
 		break;
 	case svn_wc_notify_commit_added:
+		/* Committing an addition. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_commit_added;
 		break;
 	case svn_wc_notify_commit_deleted:
+		/* Committing a deletion. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_commit_deleted;
 		break;
 	case svn_wc_notify_commit_replaced:
+		/* Committing a replacement. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_commit_replaced;
 		break;
 	case svn_wc_notify_commit_postfix_txdelta:
+		/* Transmitting post-fix text-delta data for a file. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_commit_postfix_txdelta;
 		break;
 	}
@@ -239,6 +262,12 @@ jint Notify::mapState(svn_wc_notify_state_t state)
 
 	case svn_wc_notify_state_unchanged:
 		return org_tigris_subversion_javahl_Notify_Status_unchanged;
+
+	case svn_wc_notify_state_missing:
+		return org_tigris_subversion_javahl_Notify_Status_missing;
+
+	case svn_wc_notify_state_obstructed:
+		return org_tigris_subversion_javahl_Notify_Status_obstructed;
 
 	case svn_wc_notify_state_changed:
 		return org_tigris_subversion_javahl_Notify_Status_changed;

@@ -17,7 +17,9 @@
  */
 package org.tigris.subversion.javahl;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 /**
  * Class to specify a revision in a svn command.
@@ -38,29 +40,29 @@ public class Revision
 
     public String toString()
     {
-        switch (revKind)
-        {
-        case Kind.unspecified:
-            return "start revision";
-        case Kind.committed:
-            return "last commited revision";
-        case Kind.previous:
-            return "previous commited revision";
-        case Kind.base:
-            return "base of working revision";
-        case Kind.working:
-            return "working revision";
-        case Kind.head:
-            return "head revision";
-        default:
-            return "bad revision";
+        switch(revKind) {
+            case Kind.base : return "BASE";
+            case Kind.committed : return "COMMITTED";
+            case Kind.head : return "HEAD";
+            case Kind.previous : return "PREV";
+            case Kind.working : return "WORKING";
         }
+        return super.toString();
+    }
+
+    public boolean equals(Object target) {
+        if (this == target)
+            return true;
+        if (!(target instanceof Revision))
+            return false;
+
+        return ((Revision)target).revKind == revKind;        
     }
 
     public static final Revision HEAD = new Revision(Kind.head);
     public static final Revision START = new Revision(Kind.unspecified);
     public static final Revision COMMITTED = new Revision(Kind.committed);
-    public static final Revision PREVISIOUS = new Revision(Kind.previous);
+    public static final Revision PREVIOUS = new Revision(Kind.previous);
     public static final Revision BASE = new Revision(Kind.base);
     public static final Revision WORKING = new Revision(Kind.working);
     public static final int SVN_INVALID_REVNUM = -1;
@@ -80,31 +82,44 @@ public class Revision
             return revNumber;
         }
 
-        public String toString()
-        {
-            return "Revision number " + revNumber;
+        public String toString() {
+            return Long.toString(revNumber);
+        }
+        
+        public boolean equals(Object target) {
+            if (!super.equals(target))
+                return false;
+
+            return ((Revision.Number)target).revNumber == revNumber;        
         }
     }
 
     public static class DateSpec extends Revision
     {
         protected Date revDate;
-
         public DateSpec(Date date)
         {
             super(Kind.date);
             revDate = date;
         }
-
         public Date getDate()
         {
             return revDate;
         }
 
-        public String toString()
-        {
-            return "Revision date " + revDate.toString();
+        public String toString() {
+            
+            SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z", Locale.US); 
+            return '{'+dateFormat.format(revDate)+'}';
         }
+
+        public boolean equals(Object target) {
+            if (!super.equals(target))
+                return false;
+
+            return ((Revision.DateSpec)target).revDate.equals(revDate);        
+        }
+        
     }
 
     /** Various ways of specifying revisions.

@@ -100,11 +100,11 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 	/* Create our top-level pool. */
 	g_pool = svn_pool_create (NULL);
 
-	svn_error *err = svn_config_ensure (g_pool);
+	svn_error *err = svn_config_ensure (NULL, g_pool); // we use the default directory for config files
 	if (err)
 	{
 		svn_pool_destroy (g_pool);
-		handleSVNError(err, 0);
+		handleSVNError(err);
 		return false;
 	}
 
@@ -159,14 +159,14 @@ void JNIUtil::throwError(const char *message)
 	env->DeleteLocalRef(clazz);
 }
 
-void JNIUtil::handleSVNError(svn_error *err, const char *message)
+void JNIUtil::handleSVNError(svn_error *err)
 {
 	JNIEnv *env = getEnv();
 	jclass clazz = env->FindClass(JAVA_PACKAGE"/ClientException");
 	if(getLogLevel() >= exceptionLog)
 	{
 		JNICriticalSection cs(*g_logMutex);
-		g_logStream << "Error SVN exception thrown message:<" << (message ? message : "#")<< "> description:<";
+		g_logStream << "Error SVN exception thrown message:<";
 		g_logStream << err->message << "> file:<" << err->file << "> apr-err:<" << err->apr_err;
 		g_logStream	<< ">" << std::endl;
 	}
@@ -178,14 +178,9 @@ void JNIUtil::handleSVNError(svn_error *err, const char *message)
 	std::string buffer;
 	assembleErrorMessage(err, 0, APR_SUCCESS, buffer);
 	jstring jmessage = makeJString(buffer.c_str());
-	jstring jdescription = NULL;
 	if(isJavaExceptionThrown())
 	{
 		return;
-	}
-	if(message)
-	{
-		jdescription = makeJString(message);
 	}
 	if(isJavaExceptionThrown())
 	{
@@ -196,12 +191,12 @@ void JNIUtil::handleSVNError(svn_error *err, const char *message)
 	{
 		return;
 	}
-	jmethodID mid = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V");
+	jmethodID mid = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;Ljava/lang/String;I)V");
 	if(isJavaExceptionThrown())
 	{
 		return;
 	}
-	jobject error = env->NewObject(clazz, mid, jmessage, jdescription, jfile, static_cast<jint>(err->apr_err));
+	jobject error = env->NewObject(clazz, mid, jmessage, jfile, static_cast<jint>(err->apr_err));
 	if(isJavaExceptionThrown())
 	{
 		return;
@@ -212,11 +207,6 @@ void JNIUtil::handleSVNError(svn_error *err, const char *message)
 		return;
 	}
 	env->DeleteLocalRef(jmessage);
-	if(isJavaExceptionThrown())
-	{
-		return;
-	}
-	env->DeleteLocalRef(jdescription);
 	if(isJavaExceptionThrown())
 	{
 		return;

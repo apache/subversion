@@ -46,40 +46,73 @@ public interface Notify
     /** The type of action occuring. */
     public static final class Action
     {
+        /** Adding a path to revision control. */
         public static final int add = 0;
+        
+        /** Copying a versioned path. */
         public static final int copy = 1;
+        
+        /** Deleting a versioned path. */
         public static final int delete =2;
+        
+        /** Restoring a missing path from the pristine text-base. */
         public static final int restore = 3;
+        
+        /** Reverting a modified path. */
         public static final int revert = 4;
+        
+        /** A revert operation has failed. */
         public static final int failed_revert = 5;
+        
+        /** Resolving a conflict. */
         public static final int resolved = 6;
-        public static final int status = 7;
-        public static final int skip = 8;
+
+        /** Skipping a path. */
+        public static final int skip = 7;
 
         /* The update actions are also used for checkouts, switches, and merges. */
 
         /** Got a delete in an update. */
-        public static final int update_delete = 9;
+        public static final int update_delete = 8;
 
         /** Got an add in an update. */
-        public static final int update_add = 10;
+        public static final int update_add = 9;
 
         /** Got any other action in an update. */
-        public static final int update_update = 11;
+        public static final int update_update = 10;
 
         /** The last notification in an update */
-        public static final int update_completed = 12;
+        public static final int update_completed = 11;
 
         /** About to update an external module, use for checkouts and switches too,
          * end with @c svn_wc_update_completed.
          */
-        public static final int update_external = 13;
+        public static final int update_external = 12;
 
-        public static final int commit_modified = 14;
-        public static final int commit_added = 15;
-        public static final int commit_deleted = 16;
-        public static final int commit_replaced = 17;
-        public static final int commit_postfix_txdelta = 18;
+        /** The last notification in a status (including status on externals). */
+        public static final int status_completed = 13;
+        
+        /** Running status on an external module. */
+        public static final int status_external = 14;        
+
+
+        /** Committing a modification. */
+        public static final int commit_modified = 15;
+        
+        /** Committing an addition. */
+        public static final int commit_added = 16;
+        
+        /** Committing a deletion. */
+        public static final int commit_deleted = 17;
+        
+        /** Committing a replacement. */
+        public static final int commit_replaced = 18;
+        
+        /** Transmitting post-fix text-delta data for a file. */
+        public static final int commit_postfix_txdelta = 19;
+        
+ 
+
 		private static final String[] actionNames =
 		{
 			"add",
@@ -89,13 +122,14 @@ public interface Notify
 			"revert",
 			"failed revert",
 			"resolved",
-			"status",
 			"skip",
 			"update delete",
 			"update add",
 			"update modified",
 			"update completed",
 			"update external",
+            "status completed",
+            "status external",
 			"sending modified",
 			"sending added   ",
 			"sending deleted ",
@@ -120,20 +154,30 @@ public interface Notify
         /** The state did not change. */
         public static final int unchanged = 2;
 
+        /** The item wasn't present. */
+        public static final int missing = 3;
+
+        /** An unversioned item obstructed work. */
+        public static final int obstructed = 4;
+
         /** Pristine state was modified. */
-        public static final int changed = 3;
+        public static final int changed = 5;
 
         /** Modified state had mods merged in. */
-        public static final int merged = 4;
+        public static final int merged = 6;
 
         /** Modified state got conflicting mods. */
-        public static final int conflicted = 5;
+        public static final int conflicted = 7;
+
+
 
 		private static final String[] statusNames =
 		{
 			"inapplicable",
 			"unknown",
 			"unchanged",
+            "missing",
+            "obstructed",
 			"changed",
 			"merged",
 			"conflicted",

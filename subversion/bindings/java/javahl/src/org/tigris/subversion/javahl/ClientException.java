@@ -25,49 +25,42 @@ public class ClientException extends Exception
 {
     /**
      * The constructor is only used by the native library.
-     * @param m message
-     * @param d description
-     * @param s source
-     * @param a APR error code
+     * @param message message 
+     * @param source source
+     * @param aprError APR error code
      */
-    ClientException(String m, String d, String s, int a)
+    ClientException(String message, String source, int aprError)
     {
-        super(m);
-        de = d;
-        so = s;
-        ap = a;
+    	super(message);
+        this.source = source;
+		this.aprError = aprError;
     }
     /**
-     * the error message
+     * the exception message
      */
-    private String de;
+    private String message;
+
     /**
      * the error source
      */
-    private String so;
+    private String source;
     /**
      * the APR error id
      */
-    private int ap;
-    /**
-     * Returns the error message.
-     */
-    public String getDescription()
-    {
-        return de;
-    }
+    private int aprError;
+
     /**
      * Returns the error source.
      */
     public String getSource()
     {
-        return so;
+        return source;
     }
     /**
      * Returns the APR error id.
      */
     public int getAprError()
     {
-        return ap;
+        return aprError;
     }
 }

@@ -59,6 +59,15 @@ public class SVNClient
       */
      public native String getLastPath();
     /**
+     * List directory entries of a URL.
+     *
+     * @param path Path to explore.
+     * @param descend Recurse into subdirectories if existant.
+     * @return Array of Status entries.
+     */
+    public native Status[]status(String path, boolean descend, boolean onServer, boolean getAll) throws ClientException;
+
+	/**
      *
      * @param url
      * @param revision
@@ -66,14 +75,7 @@ public class SVNClient
      * @return
      */
     public native DirEntry[]list(String url, Revision revision, boolean recurse) throws ClientException;
-    /**
-     * Enumerates all files/dirs at a given path.
-     *
-     * @param path Path to explore.
-     * @param descend Recurse into subdirectories if existant.
-     * @return Array of Status entries.
-     */
-    public native Status[]status(String path, boolean descend, boolean onServer) throws ClientException;
+
     /**
      * Returns the status of a single file in the path.
      *
@@ -127,7 +129,7 @@ public class SVNClient
       * Sets a file for deletion.
       * @exception ClientException
       */
-    public native void remove(String path, String message, boolean force)throws ClientException;
+    public native void remove(String[] path, String message, boolean force)throws ClientException;
     /**
       * Reverts a file to a pristine state.
       * @exception ClientException
@@ -168,7 +170,7 @@ public class SVNClient
      * Moves or renames a file.
      * @exception ClientException
      */
-    public native void move(String srcPath, String destPath, String Message, Revision revision, boolean force) throws ClientException;
+    public native void move(String srcPath, String destPath, String message, Revision revision, boolean force) throws ClientException;
     /**
      * Creates a directory directly in a repository or creates a
      * directory on disk and schedules it for addition. If <i>path</i>
@@ -176,7 +178,7 @@ public class SVNClient
      * @param message log message.
      * @exception ClientException
      */
-    public native void mkdir(String path, String message) throws ClientException;
+    public native void mkdir(String[] path, String message) throws ClientException;
     /**
      * Recursively cleans up a local directory, finishing any
      * incomplete operations, removing lockfiles, etc.
@@ -196,7 +198,7 @@ public class SVNClient
      * @exception ClientException
      * @param destPath a destination path that must not already exist.
      */
-    public native void doExport(String srcPath, String destPath, Revision revision) throws ClientException;
+    public native void doExport(String srcPath, String destPath, Revision revision,boolean force) throws ClientException;
     /**
      * Update local copy to mirror a new url. This excapsulates the
      * svn_client_switch() client method.
@@ -207,16 +209,21 @@ public class SVNClient
      * Import file or directory PATH into repository directory URL at
      * head.  This usually requires authentication, see Auth.
      * @param message log message.
-     * @param newEntry new directory in which the contents of <i>path</i> are
-     *        imported.
      * @exception ClientException
      */
-    public native void doImport(String path, String url, String newEntry, String message, boolean recurse) throws ClientException;
+    public native void doImport(String path, String url, String message, boolean recurse) throws ClientException;
     /**
      * Merge changes from two paths into a new local path.
      * @exception ClientException
      */
     public native void merge(String path1, Revision revision1, String path2, Revision revision2, String localPath, boolean force, boolean recurse) throws ClientException;
+    
+    /**
+     * diff display the differences between two paths
+     * @exception ClientException
+     */
+    public native void diff(String target1, Revision revision1, String target2, Revision revision2, String outFileName, boolean recurse) throws ClientException;
+    
     /**
      * Returns the number of properties found.
      */
@@ -227,6 +234,12 @@ public class SVNClient
     public native void propertyCreate(String path, String name, String value, boolean recurse) throws ClientException;
     public native void propertyCreate(String path, String name, byte[] value, boolean recurse) throws ClientException;
     public native PropertyData revProperty(String path, String name, Revision rev) throws ClientException;
+
+    /**
+     * get the given property 
+     */
+    public native PropertyData propertyGet(String path, String name) throws ClientException;
+
 
     public native byte[] fileContent(String path, Revision revision) throws ClientException;
     public static native void enableLogging(int logLevel, String logFilePath);
