@@ -133,6 +133,9 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
                                                 special,
                                                 pool));
 
+        SVN_ERR (svn_wc__maybe_set_read_only (NULL, full_dest_path,
+                                              adm_access, pool));
+
         /* After copying, set the file executable if props dictate. */
         return svn_wc__maybe_set_executable (NULL, full_dest_path, adm_access,
                                              pool);
@@ -295,6 +298,8 @@ install_committed_file (svn_boolean_t *overwrote_working,
     }
 
   SVN_ERR (svn_io_remove_file (tmp_wfile, pool));
+
+  SVN_ERR (svn_wc__maybe_set_read_only (NULL, filepath, adm_access, pool));
 
   /* Set the working file's execute bit if props dictate. */
   SVN_ERR (svn_wc__maybe_set_executable (&did_set, filepath, adm_access, pool));
@@ -709,6 +714,7 @@ log_do_committed (struct log_runner *loggy,
   int is_this_dir = (strcmp (name, SVN_WC_ENTRY_THIS_DIR) == 0);
   const char *rev = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REVISION, atts);
   svn_boolean_t wc_root, overwrote_working = FALSE, remove_executable = FALSE;
+  svn_boolean_t set_read_write = FALSE;
   const char *full_path;
   const char *pdir, *base_name;
   apr_hash_t *entries;
@@ -1032,6 +1038,19 @@ log_do_committed (struct log_runner *loggy,
                     break;
                   }
               }                
+
+            for (i = 0; i < propchanges->nelts; i++)
+              {
+                svn_prop_t *propchange
+                  = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
+                
+                if ((! strcmp (propchange->name, SVN_PROP_NEEDS_LOCK))
+                    && (propchange->value == NULL))
+                  {
+                    set_read_write = TRUE;
+                    break;
+                  }
+              }                
           }
 
         /* Make the tmp prop file the new pristine one. */
@@ -1064,6 +1083,15 @@ log_do_committed (struct log_runner *loggy,
                                                FALSE, pool));
           overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
         }
+
+      if (set_read_write)
+        {
+          SVN_ERR (svn_io_set_file_read_write_carefully (full_path, TRUE, 
+                                                         FALSE, pool));
+          overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
+        }
+
+
       
       /* If the working file was overwritten (due to re-translation)
          or touched (due to +x / -x), then use *that* textual

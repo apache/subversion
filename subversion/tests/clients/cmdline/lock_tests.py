@@ -66,7 +66,7 @@ def lock_file(sbox):
                                      '-m', '', file_path)
 
   # --- Meanwhile, in our other working copy... ---
-  err_re = ".*User Sally does not own lock on path.*"
+  err_re = ".*User jconstant does not own lock on path.*"
 
   svntest.main.run_svn(None, 'update', wc_b)
   # -- Try to change a file --
@@ -335,6 +335,8 @@ def handle_defunct_lock(sbox):
 #----------------------------------------------------------------------
 # II.B.1: Set "svn:needs-lock" property on file in wc A.  Checkout wc
 # B and verify that that file is set as read-only.
+#
+# Tests propset, propdel, lock, and unlock
 def enforce_lock(sbox):
   "verify svn:needs-lock read-only behavior"
 
@@ -354,6 +356,11 @@ def enforce_lock(sbox):
   check_prop('svn:needs-lock', iota_path, ['*'])
   check_prop('svn:needs-lock', lambda_path, ['*'])
   check_prop('svn:needs-lock', mu_path, ['*'])
+
+  svntest.main.run_svn(None, 'commit',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', iota_path, lambda_path, mu_path)
 
   # Now make sure that the perms were flipped on all files
   if os.name == 'posix':
@@ -387,6 +394,63 @@ def enforce_lock(sbox):
       print "Unlocking a file with 'svn:needs-lock' failed to unset write bit."
       raise svntest.Failure
 
+    # Verify that removing the property restores the file to read-write
+    svntest.main.run_svn(None, 'propdel', 'svn:needs-lock', iota_path)
+    if not (os.stat (iota_path)[0] & mode):
+      print "Deleting 'svn:needs-lock' failed to set write bit."
+      raise svntest.Failure
+
+#----------------------------------------------------------------------
+# Tests update / checkout with changing props
+def defunct_lock(sbox):
+  "verify svn:needs-lock behavior with defunct lock"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a second copy of the working copy
+  wc_b = sbox.add_wc_path('_b')
+  svntest.actions.duplicate_dir(wc_dir, wc_b)
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  iota_path_b = os.path.join(wc_b, 'iota')
+
+  mode = stat.S_IWGRP | stat.S_IWOTH | stat.S_IWRITE
+
+# Set the prop in wc a
+  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', 'foo', iota_path)
+
+  # commit r2
+  svntest.main.run_svn(None, 'commit',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', iota_path)
+
+  # update wc_b
+  svntest.main.run_svn(None, 'update', wc_b)
+
+  # lock iota in wc_b
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', iota_path_b)
+
+
+  # break the lock iota in wc a
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock', '--force',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', iota_path)
+  # update wc_b
+  svntest.main.run_svn(None, 'update', wc_b)
+
+  # make sure that iota got set to read-only
+  if (os.stat (iota_path_b)[0] & mode):
+    print "Upon removal of a defunct lock, a file with 'svn:needs-lock'"
+    print "was not set back to read-only"
+    raise svntest.Failure
+
+
 
 #----------------------------------------------------------------------
 
@@ -401,7 +465,8 @@ test_list = [ None,
               steal_lock,
               examine_lock,
               XFail(handle_defunct_lock),
-              XFail(enforce_lock),
+              enforce_lock,
+              XFail(Skip(defunct_lock, (os.name != 'posix'))),
              ]
 
 if __name__ == '__main__':

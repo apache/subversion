@@ -1971,6 +1971,7 @@ install_file (svn_wc_notify_state_t *content_state,
           svn_prop_t *propchange = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
             
           if ((! strcmp (propchange->name, SVN_PROP_EXECUTABLE))
+              || (! strcmp (propchange->name, SVN_PROP_NEEDS_LOCK))
               || (! strcmp (propchange->name, SVN_PROP_KEYWORDS))
               || (! strcmp (propchange->name, SVN_PROP_EOL_STYLE))
               || (! strcmp (propchange->name, SVN_PROP_SPECIAL)))
