@@ -46,7 +46,7 @@ check_release :
 	@if [ "$(RELEASE)"x = "x" ]; \
 	   then \
 		echo "Please specifiy RELEASE"; \
-		exit 1 \
+		exit 1; \
 	    else \
 		exit 0; \
 	fi
