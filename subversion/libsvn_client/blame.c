@@ -217,7 +217,7 @@ struct log_message_baton {
   apr_pool_t *pool; 
 };
 
-const svn_diff_output_fns_t output_fns = {
+static const svn_diff_output_fns_t output_fns = {
         NULL,
         output_diff_modified
 };
