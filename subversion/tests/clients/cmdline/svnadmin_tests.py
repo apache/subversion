@@ -101,27 +101,14 @@ def get_trees(repo_dir, revision_p = 0):
 def test_create(sbox):
   "test 'svnadmin create' subcommand"
 
+  # This call tests the creation of repository.
+  # It also imports to the repository, and checks out from the repository.
   if sbox.build():
     return 1
 
-  wc_dir = sbox.wc_dir
-  repo_dir = sbox.repo_dir
-
-  url = svntest.main.test_area_url + '/' + repo_dir
-
-  if os.path.exists(repo_dir):
-    shutil.rmtree(repo_dir)
-
-  if os.path.exists(wc_dir):
-    shutil.rmtree(wc_dir)
-
-  svntest.main.run_svnadmin ("create", repo_dir)
-
-  stdout_lines, stderr_lines = \
-                svntest.main.run_svn (None, "checkout", url, "-d", wc_dir)
-
-  if len (stderr_lines) > 0:
-    return 1
+  # ### TODO: someday this test should create an empty repo, checkout,
+  # ### and then look at the CR value using 'svn st -v'.  We're not
+  # ### parsing that value in our status regexp yet anyway.
 
   return 0  # success
 
