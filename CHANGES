@@ -1,3 +1,51 @@
+Version 1.1.1
+(22 October 2004, from /branches/1.1.1)
+http://svn.collab.net/repos/svn/tags/1.1.1
+
+ User-visible-changes:
+  - Client:
+    * fixed: 'svn status' win32 performance regression (issue #2016)
+    * fixed: 'svn ls' dying on non-ascii paths over DAV (issue #2060)
+    * fixed: allow URI-encoded colon or pipe on win32 (issue #2012)
+    * fixed: broken win32 UNC paths (issue #2011)
+    * fixed: memory bloat when committing many files over DAV (r11284, -321)
+    * fixed: eol-style translation error for 'svn propget' (r11202, -243)
+    * fixed: 'svn propedit' does EOL conversion properly (issue #2063)
+    * fixed: 'svn log --xml' shouldn't be locale-dependent. (r11181)
+    * fixed: 'svn export' of symlinks with 'use-commit-times' (r11224)
+    * fixed: 'svn export -rBASE' when WC has added items (r11296, -415)
+    * many translation updates for localized client messages.
+
+  - Server:
+    * fixed: 'svn ls' HTTP performance regression (r11211, -232, -285)
+    * fixed: make it possible to set "SVNPathAuthz off" in httpd.conf (r11190)
+    * fixed: fsfs validating revisions when accessing revprops (issue #2076)
+    * fixed: 'svn log -v' hiding too much info on 'empty' revisions. (r11137)
+    * fixed: encoding bug with 'svnlook log'/'svnlook author' (r11172)
+    * fixed: allow mod_authz_svn to return '403 Forbidden', not 500 (r11064)
+    * fixed: XML-escape author and date strings before sending (issue #2071)
+    * fixed: invalid XML being sent over DAV (issue #2090)
+
+ Developer-visible-changes:
+ * fixed: IRIX compile error (issue #2082)
+ * fixed: error in perl bindings (r11290)
+ * fixed: error leaks in mod_dav_svn (r11458)
+ * fixed: javahl should use default config directory (r11394)
+
+
+Version 1.0.9
+(13 October 2004, from /branches/1.0.9)
+http://svn.collab.net/repos/svn/tags/1.0.9
+
+ User-visible-changes:
+  - Server:
+    * fixed: 'svn ls' HTTP performance regression (r11211, -232, -285)
+    * fixed: 'svn log -v' hiding too much info on 'empty' revisions. (r11137)
+
+ Developer-visible-changes:
+ * fixed: make redhat 7/8 rpm scripts build the book correctly (11143)
+
+
 Version 1.1.0
 (29 September 2004, from /branches/1.1.x)
 http://svn.collab.net/repos/svn/tags/1.1.0
@@ -125,6 +173,35 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * win32 installer improvements (r10978)
  * huge improvements to python, perl, java bindings
  * huge changes to win32 build system
+
+
+Version 1.0.8
+(22 September 2004, from /branches/1.0.8)
+http://svn.collab.net/repos/svn/tags/1.0.8
+
+ User-visible-changes:
+ * fixed: mod_authz_svn path and log-message metadata leaks.
+          See CAN-2004-0749, and descriptive advisory at 
+          http://subversion.tigris.org/security/CAN-2004-0749-advisory.txt
+
+
+Version 1.0.7
+(17 September 2004, from /branches/1.0.x)
+http://svn.collab.net/repos/svn/tags/1.0.7
+
+ User-visible-changes:
+ * fixed: win32 'file not found' error [issue #1862]
+ * fixed: 'svn st -u' crash (r10841)
+ * fixed: potential repos corruption; ensure stdin/out/err always open (r10819)
+ * fixed: allow propnames containing ":" to be fetched via http:// (r10190)
+ * fixed: allow user to interrupt between authentication prompts (see r11014)
+ * fixed: work around +t directory-creation bug in APR (r10616, 10638, 10642)
+ * various small fixes to Book
+
+ Developer-visible changes:
+ * fix library dependencies for bindings (r9338, 9340)
+ * java bindings: fix a crash and other bugs (r9883, 9905, 8027)
+ * perl bindings: various fixes (see r11023)
 
 
 Version 1.0.6
