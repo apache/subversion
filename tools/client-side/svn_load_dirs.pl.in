@@ -416,7 +416,9 @@ my $wc_top_dir_cwd = cwd;
         }
       $message = wrap('', '  ', $message);
 
-      read_from_process($svn, 'add', '-N', @dirs_to_create);
+      my $target_filename = &make_targets_file(@dirs_to_create);
+      read_from_process($svn, 'add', '-N', '--targets', $target_filename);
+      unlink($target_filename);
       read_from_process($svn, 'commit', @svn_use_repos_cmd_opts,
                         '-m', $message);
     }
@@ -1011,7 +1013,9 @@ while (defined (my $load_dir = &get_next_load_dir))
       {
         my @add_files = sort {length($a) <=> length($b) || $a cmp $b}
                         keys %add_files;
-        read_from_process($svn, 'add', '-N', @add_files);
+        my $target_filename = &make_targets_file(@add_files);
+        read_from_process($svn, 'add', '-N', '--targets', $target_filename);
+        unlink($target_filename);
 
         # Add properties on the added files.
         foreach my $add_file (@add_files)
@@ -1036,7 +1040,9 @@ while (defined (my $load_dir = &get_next_load_dir))
       }
     if (@del_files)
       {
-        read_from_process($svn, 'rm', @del_files);
+        my $target_filename = &make_targets_file(@del_files);
+        read_from_process($svn, 'rm', '--targets', $target_filename);
+        unlink($target_filename);
       }
 
     # Go through the list of updated files and check the svn:eol-style
@@ -1178,6 +1184,40 @@ sub get_next_load_dir
 # subroutine has been passed an incorrect number of arguments.
 use vars qw($INCORRECT_NUMBER_OF_ARGS);
 $INCORRECT_NUMBER_OF_ARGS = "passed incorrect number of arguments.\n";
+
+# Creates a temporary file in the temporary directory and stores the
+# arguments in it for use by the svn --targets command line option.
+# If any part of the file creation failed, exit the program, as
+# there's no workaround.  Use a unique number as a counter to the
+# files.
+my $make_targets_file_counter;
+sub make_targets_file
+{
+  unless (@_)
+    {
+      confess "$0: make_targets_file $INCORRECT_NUMBER_OF_ARGS";
+    }
+
+  $make_targets_file_counter = 1 unless defined $make_targets_file_counter;
+
+  my $filename = sprintf "%s/targets.%05d",
+                 $temp_dir,
+                 $make_targets_file_counter;
+  ++$make_targets_file_counter;
+
+  open(TARGETS, ">$filename")
+    or die "$0: cannot open `$filename' for writing: $!\n";
+
+  foreach my $file (@_)
+    {
+      print TARGETS "$file\n";
+    }
+
+  close(TARGETS)
+    or die "$0: error in closing `$filename' for writing: $!\n";
+
+  $filename;
+}
 
 # Set the svn command line options that are used anytime svn connects
 # to the repository.
