@@ -18,6 +18,8 @@ A rough guide to the source tree:
       User and Developer documentation.
    www/
       Subversion web pages (live content at http://subversion.tigris.org/).
+   tools/
+      Stuff that works with Subversion, but that Subversion doesn't depend on.
    subversion/  
       Source code to subversion itself (as opposed to external libraries).
    subversion/include/
