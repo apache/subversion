@@ -15,7 +15,7 @@
 #include "paths_inno_src.iss"
 
 AppName=Subversion
-AppVerName=Subversion-{#= svn_version}-r{#= svn_release}
+AppVerName=Subversion-{#= svn_version}{#= svn_pretxtrevision}{#= svn_revision}
 AppPublisher=CollabNet
 AppPublisherURL=http://subversion.tigris.org/
 AppSupportURL=http://subversion.tigris.org/project_faq.html
@@ -30,14 +30,14 @@ InternalCompressLevel=max
 SolidCompression=true
 AppCopyright={#= svn_cpr}
 UninstallDisplayIcon={app}\svn.exe
-UninstallDisplayName=Subversion {#= svn_version}-r{#= svn_release} (Uninstall)
+UninstallDisplayName=Subversion {#= svn_version}{#= svn_pretxtrevision}{#= svn_revision} (Uninstall)
 AlwaysShowDirOnReadyPage=true
 AlwaysShowGroupOnReadyPage=true
 InfoAfterFile=Post.txt
 InfoBeforeFile=Pre.rtf
 DisableStartupPrompt=false
 UseSetupLdr=true
-AppVersion={#= svn_version}-r{#= svn_release}
+AppVersion={#= svn_version}{#= svn_pretxtrevision}{#= svn_revision}
 VersionInfoVersion={#= svn_version}
 VersionInfoDescription=Subversion-{#= svn_version} Windows Setup
 WizardImageFile=images\wiz-164x314x24.bmp
@@ -134,13 +134,13 @@ Name: pdb; Description: Debug Symbol Files; Types: full custom
 Root: HKCU; Subkey: SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe; ValueType: string; ValueData: {app}\svn.exe; Flags: uninsdeletekeyifempty uninsdeletevalue
 Root: HKCU; Subkey: SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe; ValueType: string; ValueName: Path; ValueData: {app}; Flags: uninsdeletekeyifempty uninsdeletevalue
 Root: HKCU; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName: Version; ValueData: {#= svn_version}; Flags: uninsdeletekeyifempty uninsdeletevalue
-Root: HKCU; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName: Revision; ValueData: {#= svn_release}; Flags: uninsdeletekeyifempty uninsdeletevalue
+Root: HKCU; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName: Revision; ValueData: {#= svn_revision}; Flags: uninsdeletekeyifempty uninsdeletevalue
 Root: HKCU; Subkey: Environment; ValueType: string; ValueName: APR_ICONV_PATH; ValueData: {app}\iconv; Flags: uninsdeletevalue noerror
 
 Root: HKLM; Subkey: SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe; ValueType: string; ValueData: {app}\svn.exe; Flags: noerror uninsdeletekeyifempty uninsdeletevalue
 Root: HKLM; Subkey: SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\svn.exe; ValueType: string; ValueName: Path; ValueData: {app}; Flags: uninsdeletekeyifempty uninsdeletevalue noerror
 Root: HKLM; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName: Version; ValueData: {#= svn_version}; Flags: noerror uninsdeletekey
-Root: HKLM; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName: Revision; ValueData: {#= svn_release}; Flags: uninsdeletevalue noerror uninsdeletekeyifempty
+Root: HKLM; SubKey: SOFTWARE\Tigris.org\Subversion; ValueType: string; ValueName: Revision; ValueData: {#= svn_revision}; Flags: uninsdeletevalue noerror uninsdeletekeyifempty
 Root: HKLM; Subkey: SYSTEM\CurrentControlSet\Control\Session Manager\Environment; ValueType: string; ValueName: APR_ICONV_PATH; ValueData: {app}\iconv; Flags: uninsdeletevalue noerror
 
 [Run]
