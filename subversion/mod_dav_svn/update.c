@@ -102,24 +102,13 @@ typedef struct {
 #define DIR_OR_FILE(is_dir) ((is_dir) ? "directory" : "file")
 
 
-struct authz_read_baton
+svn_error_t *dav_svn_authz_read(svn_boolean_t *allowed,
+                                svn_fs_root_t *root,
+                                const char *path,
+                                void *baton,
+                                apr_pool_t *pool)
 {
-  /* The original request, needed to generate a subrequest. */
-  request_rec *r;
-
-  /* We need this to construct a URI based on a repository abs path. */
-  const dav_svn_repos *repos;
-};
-
-
-/* This implements 'svn_repos_authz_func_t'. */
-static svn_error_t *authz_read(svn_boolean_t *allowed,
-                               svn_fs_root_t *root,
-                               const char *path,
-                               void *baton,
-                               apr_pool_t *pool)
-{
-  struct authz_read_baton *arb = baton;
+  dav_svn_authz_read_baton *arb = baton;
   request_rec *subreq = NULL;
   const char *uri;
   svn_revnum_t rev = SVN_INVALID_REVNUM;
@@ -1001,7 +990,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   svn_boolean_t recurse = TRUE;
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
-  struct authz_read_baton arb;
+  dav_svn_authz_read_baton arb;
   apr_pool_t *subpool = svn_pool_create(resource->pool);
 
   /* Construct the authz read check baton. */
@@ -1242,7 +1231,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      recurse,
                                      ignore_ancestry,
                                      editor, &uc,
-                                     authz_read,
+                                     dav_svn_authz_read,
                                      &arb,
                                      resource->pool)))
     {
@@ -1411,7 +1400,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      uc.rev_root, dst_path,
                                      /* re-use the editor */
                                      editor, &uc,
-                                     authz_read,
+                                     dav_svn_authz_read,
                                      &arb,
                                      FALSE, /* no text deltas */
                                      recurse,
