@@ -17,15 +17,15 @@
 ######################################################################
 
 # General modules
-import string, sys, os
+import string, sys, os, shutil
 
 # Our testing module
 import svntest
 
 
-# (abbreviation)
+# (abbreviations)
 path_index = svntest.actions.path_index
-  
+Item = svntest.wc.StateItem
 
 ######################################################################
 # Utilities
@@ -383,6 +383,81 @@ def receive_copy_in_update(sbox):
                                                expected_status_tree)
 
 
+#----------------------------------------------------------------------
+
+# Regression test for issue #683.  In particular, this bug prevented
+# us from running 'svn cp -rN src_URL dst_URL' as a means of
+# resurrecting a deleted directory.
+
+def resurrect_deleted_dir(sbox):
+  "resurrect a deleted directory"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Delete directory A/D/G, commit that as r2.
+  outlines, errlines = svntest.main.run_svn(None, 'rm', '--force',
+                                            wc_dir + '/A/D/G')
+  if errlines:
+    return 1
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G' : Item(verb='Deleting'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.remove('A/D/G')
+  expected_status.remove('A/D/G/pi')
+  expected_status.remove('A/D/G/rho')
+  expected_status.remove('A/D/G/tau')
+  
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output,
+                                            expected_status,
+                                            None,
+                                            None, None,
+                                            None, None,
+                                            wc_dir):
+    return 1
+
+  shutil.rmtree(wc_dir + '/A/D/G') # 'svn rm --force' won't remove the dir,
+                                   #  either before or after commit!
+
+  # Use 'svn cp -r1 URL URL' to resurrect the deleted directory, where
+  # the two URLs are identical.  This used to trigger a failure.  
+  url = svntest.main.test_area_url + '/' \
+        + svntest.main.current_repo_dir + '/A/D/G'
+  outlines, errlines = svntest.main.run_svn(None, 'cp', '-r1', url, url,
+                                            '-m', 'logmsg')
+  if errlines:
+    return 1
+
+  return 0
+
+  # For completeness' sake, update to HEAD, and verify we have a full
+  # greek tree again, all at revision 3.
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G'     : Item(status='A '),
+    'A/D/G/pi'  : Item(status='A '),
+    'A/D/G/rho' : Item(status='A '),
+    'A/D/G/tau' : Item(status='A '),
+    })
+
+  my_greek_tree = svntest.main.copy_greek_tree()
+  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  
+  return svntest.actions.run_and_verify_update(wc_dir,
+                                               expected_output,
+                                               expected_disk_tree,
+                                               expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -392,6 +467,7 @@ test_list = [ None,
               basic_copy_and_move_files,
               mv_unversioned_file,
               receive_copy_in_update,
+              resurrect_deleted_dir,
              ]
 
 if __name__ == '__main__':

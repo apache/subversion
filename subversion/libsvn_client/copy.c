@@ -152,6 +152,13 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
      case of a move. */
   top_url = svn_path_get_longest_ancestor (src_url, dst_url, pool);
 
+  /* Special edge-case!  (issue #683)  If you're resurrecting a
+     deleted item like this:  'svn cp -rN src_URL dst_URL', then it's
+     possible for src_URL == dst_URL == top_url.  In this situation,
+     we want to open an RA session to the *parent* of all three. */
+  if (! strcmp (src_url, dst_url))
+    top_url = svn_path_remove_component_nts (top_url, pool);
+
   /* Get the portions of the SRC and DST URLs that are relative to
      TOP_URL. */
   src_rel = svn_path_is_child (top_url, src_url, pool);
@@ -219,7 +226,8 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   if (dst_kind == svn_node_none)
     {
       svn_path_split_nts (dst_url, &unused, &base_name, pool);
-      dst_pieces->nelts--; /* hack - where's apr_array_pop()? */
+      if (dst_pieces)
+        dst_pieces->nelts--; /* hack - where's apr_array_pop()? */
     }
   else if (dst_kind == svn_node_dir)
     svn_path_split_nts (src_url, &unused, &base_name, pool);
