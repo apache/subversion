@@ -580,19 +580,21 @@ def build_tree_from_status(lines):
     repos_rev = '?'
     
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
-  rm = re.compile ('^([MACDRUG_ ][MACDRUG_ ])(.)(.)   .   [^0-9-]+(\d+|-)( +\S+ +\S+ +)(.+)')
+  rm = re.compile ('^([MACDRUG_ ][MACDRUG_ ])(.)(.)(.)  .   [^0-9-]+(\d+|-)( +\S+ +\S+ +)(.+)')
   for line in lines:
     match = rm.search(line)
     if match and match.groups():
-      if match.group(5) != '-': # ignore items that only exist on repos
+      if match.group(6) != '-': # ignore items that only exist on repos
         atthash = {'status' : match.group(1),
-                   'wc_rev' : match.group(4),
+                   'wc_rev' : match.group(5),
                    'repos_rev' : repos_rev}
         if match.group(2) != ' ':
           atthash['locked'] = match.group(2)
         if match.group(3) != ' ':
           atthash['copied'] = match.group(3)
-        new_branch = create_from_path(match.group(6), None, {}, atthash)
+        if match.group(4) != ' ':
+          atthash['switched'] = match.group(4)
+        new_branch = create_from_path(match.group(7), None, {}, atthash)
 
       root.add_child(new_branch)
 

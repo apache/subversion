@@ -86,6 +86,10 @@ add_ignore_patterns (const char *dirpath,
    Else, ENTRY's pool must not be shorter-lived than STATUS's, since
    ENTRY will be stored directly, not copied.
 
+   PARENT_ENTRY is the entry for the parent directory of PATH, it may be
+   NULL if entry is NULL or if PATH is a working copy root.  The lifetime
+   of PARENT_ENTRY's pool is not important.
+
    PATH_KIND is the node kind of PATH as determined by the caller.
    NOTE: this may be svn_node_unknown if the caller has made no such
    determination.
@@ -99,6 +103,7 @@ assemble_status (svn_wc_status_t **status,
                  const char *path,
                  svn_wc_adm_access_t *adm_access,
                  const svn_wc_entry_t *entry,
+                 const svn_wc_entry_t *parent_entry,
                  svn_node_kind_t path_kind,
                  svn_boolean_t get_all,
                  apr_pool_t *pool)
@@ -108,6 +113,7 @@ assemble_status (svn_wc_status_t **status,
   svn_boolean_t text_modified_p = FALSE;
   svn_boolean_t prop_modified_p = FALSE;
   svn_boolean_t locked_p = FALSE;
+  svn_boolean_t switched_p = FALSE;
 
   /* Defaults for two main variables. */
   enum svn_wc_status_kind final_text_status = svn_wc_status_normal;
@@ -128,6 +134,7 @@ assemble_status (svn_wc_status_t **status,
       stat->repos_prop_status = svn_wc_status_none;
       stat->locked = FALSE;
       stat->copied = FALSE;
+      stat->switched = FALSE;
 
       /* If this path has no entry, but IS present on disk, it's
          unversioned. */
@@ -150,6 +157,24 @@ assemble_status (svn_wc_status_t **status,
       SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
       if (! is_wc)
         final_text_status = svn_wc_status_obstructed;
+    }
+
+  /* Is this item switched?  Well, to be switched it must have both an URL
+     and a parent with an URL, at the very least. */
+  if (entry->url && parent_entry && parent_entry->url)
+    {
+      /* An item is switched if it's working copy basename differs from the
+         basename of its URL. */
+      if (strcmp (svn_path_uri_encode (svn_path_basename (path, pool), pool),
+                  svn_path_basename (entry->url, pool)))
+        switched_p = TRUE;
+
+      /* An item is switched if it's URL, without the basename, does not
+         equal its parent's URL. */
+      if (! switched_p
+          && strcmp (svn_path_remove_component_nts (entry->url, pool),
+                     parent_entry->url))
+        switched_p = TRUE;
     }
 
   if (final_text_status != svn_wc_status_obstructed)
@@ -255,7 +280,7 @@ assemble_status (svn_wc_status_t **status,
          || (final_text_status == svn_wc_status_normal))
         && ((final_prop_status == svn_wc_status_none)
             || (final_prop_status == svn_wc_status_normal))
-        && (! locked_p))
+        && (! locked_p) && (! switched_p))
       {
         *status = NULL;
         return SVN_NO_ERROR;
@@ -271,6 +296,7 @@ assemble_status (svn_wc_status_t **status,
   stat->repos_text_status = svn_wc_status_none;   /* default */
   stat->repos_prop_status = svn_wc_status_none;   /* default */
   stat->locked = locked_p;
+  stat->switched = switched_p;
   stat->copied = entry->copied;
 
   *status = stat;
@@ -286,14 +312,15 @@ add_status_structure (apr_hash_t *statushash,
                       const char *path,
                       svn_wc_adm_access_t *adm_access,
                       const svn_wc_entry_t *entry,
+                      const svn_wc_entry_t *parent_entry,
                       svn_node_kind_t path_kind,
                       svn_boolean_t get_all,
                       apr_pool_t *pool)
 {
   svn_wc_status_t *statstruct;
   
-  SVN_ERR (assemble_status (&statstruct, path, adm_access, entry, path_kind, 
-                            get_all, pool));
+  SVN_ERR (assemble_status (&statstruct, path, adm_access, entry, parent_entry,
+                            path_kind, get_all, pool));
   if (statstruct)
     apr_hash_set (statushash, path, APR_HASH_KEY_STRING, statstruct);
   
@@ -393,6 +420,7 @@ add_unversioned_items (const char *path,
                                          printable_path,
                                          adm_access,
                                          NULL, /* no entry */
+                                         NULL,
                                          *path_kind,
                                          FALSE,
                                          pool));
@@ -412,28 +440,157 @@ svn_wc_status (svn_wc_status_t **status,
                apr_pool_t *pool)
 {
   svn_wc_status_t *s;
-  const svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry, *parent_entry;
 
-  /* PATH may be unversioned, or nonexistent (in the case of 'svn st -u'
-     being told about as-yet-unknnown paths), and either condition will
-     cause svn_wc_entry to return an error.  If this routine returns error,
-     then a NULL entry will be passed to assemble_status() below. */
   if (adm_access)
-    {
-      svn_error_t *err = svn_wc_entry (&entry, path, adm_access, FALSE, pool);
-      if (err)
-        svn_error_clear_all (err);
-    }
+    SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   else
     entry = NULL;
 
-  SVN_ERR (assemble_status (&s, path, adm_access, entry, svn_node_unknown,
-                            TRUE, pool));
+  /* If we have an entry, and PATH is not a root, then we need a parent
+     entry */
+  if (entry)
+    {
+      svn_boolean_t is_root;
+      SVN_ERR (svn_wc_is_wc_root (&is_root, path, adm_access, pool));
+      if (! is_root)
+        {
+          const char *parent_path = svn_path_remove_component_nts (path, pool);
+          svn_wc_adm_access_t *parent_access;
+          SVN_ERR (svn_wc_adm_open (&parent_access, NULL, parent_path,
+                                    FALSE, FALSE, pool));
+          SVN_ERR (svn_wc_entry (&parent_entry, parent_path, parent_access,
+                                 FALSE, pool));
+        }
+    }
+
+  SVN_ERR (assemble_status (&s, path, adm_access, entry, parent_entry,
+                            svn_node_unknown, TRUE, pool));
   *status = s;
   return SVN_NO_ERROR;
 }
 
+/* Fill STATUSHASH with (pointers to) svn_wc_status_t structures for the
+   directory PATH and for all its entries.  ADM_ACCESS is an access baton
+   for PATH, PARENT_ENTRY is the entry for the parent of PATH or NULL if
+   PATH is a working copy root. */
+static svn_error_t *
+get_dir_status (apr_hash_t *statushash,
+                const char *path,
+                const svn_wc_entry_t *parent_entry,
+                svn_wc_adm_access_t *adm_access,
+                svn_boolean_t descend,
+                svn_boolean_t get_all,
+                svn_boolean_t no_ignore,
+                apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  apr_array_header_t *ignores = NULL;
+  const svn_wc_entry_t *dir_entry;
 
+  /* Load entries file for the directory into the requested pool. */
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
+
+  /* Read the default ignores from the config files. */
+  if (! no_ignore)
+    SVN_ERR (get_default_ignores (&ignores, pool));
+
+  /* Add the unversioned items to the status output. */
+  SVN_ERR (add_unversioned_items (path, adm_access, entries, statushash,
+                                  ignores, pool));
+
+  SVN_ERR (svn_wc_entry (&dir_entry, path, adm_access, FALSE, pool));
+
+  /* Loop over entries hash */
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      const char *base_name;
+      const svn_wc_entry_t *entry;
+
+      /* Put fullpath into the request pool since it becomes a key
+         in the output statushash hash table. */
+      const char *fullpath = apr_pstrdup (pool, path);
+
+      /* Get the next dirent */
+      apr_hash_this (hi, &key, NULL, &val);
+      base_name = key;
+      if (strcmp (base_name, SVN_WC_ENTRY_THIS_DIR) != 0)
+        fullpath = svn_path_join (fullpath, base_name, pool);
+
+      entry = val;
+
+      /* ### todo: What if the subdir is from another repository? */
+          
+      /* Do *not* store THIS_DIR in the statushash, unless this
+         path has never been seen before.  We don't want to add
+         the path key twice. */
+      if (strcmp (base_name, SVN_WC_ENTRY_THIS_DIR) == 0)
+        {
+          svn_wc_status_t *status 
+            = apr_hash_get (statushash, fullpath, APR_HASH_KEY_STRING);
+          if (! status)
+            SVN_ERR (add_status_structure (statushash, fullpath, adm_access,
+                                           entry, parent_entry, svn_node_dir,
+                                           get_all, pool));
+        }
+      else
+        {
+          svn_node_kind_t fullpath_kind;
+
+          /* Get the entry's kind on disk. */
+          SVN_ERR (svn_io_check_path (fullpath, &fullpath_kind, pool));
+
+          if (fullpath_kind == svn_node_dir)
+            {
+              /* Directory entries are incomplete.  We must get
+                 their full entry from their own THIS_DIR entry.
+                 svn_wc_entry does this for us if it can.
+
+                 Of course, if there has been a kind-changing
+                 replacement (for example, there is an entry for a
+                 file 'foo', but 'foo' exists as a *directory* on
+                 disk), we don't want to reach down into that
+                 subdir to try to flesh out a "complete entry".  */
+
+              const svn_wc_entry_t *fullpath_entry = entry;
+
+              if (entry->kind == fullpath_kind)
+                SVN_ERR (svn_wc_entry (&fullpath_entry, fullpath, 
+                                       adm_access, FALSE, pool));
+
+              SVN_ERR (add_status_structure 
+                       (statushash, fullpath, adm_access, fullpath_entry, 
+                        dir_entry, fullpath_kind, get_all, pool));
+
+              /* Descend only if the subdirectory is a working copy
+                 directory (and DESCEND is non-zero ofcourse)  */
+
+              if (descend && fullpath_entry != entry)
+                {
+                  svn_wc_adm_access_t *dir_access;
+                  SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
+                                                fullpath, pool));
+                  SVN_ERR (get_dir_status (statushash, fullpath, dir_entry,
+                                           dir_access, descend, get_all,
+                                           no_ignore, pool));
+                }
+            }
+          else if ((fullpath_kind == svn_node_file) 
+                   || (fullpath_kind == svn_node_none))
+            {
+              /* File entries are ... just fine! */
+              SVN_ERR (add_status_structure 
+                       (statushash, fullpath, adm_access, entry, dir_entry,
+                        fullpath_kind, get_all, pool));
+            }
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc_statuses (apr_hash_t *statushash,
@@ -457,141 +614,56 @@ svn_wc_statuses (apr_hash_t *statushash,
      STATUSHASH and return. */
   if ((kind == svn_node_file) || (kind == svn_node_none))
     {
+      const svn_wc_entry_t *parent_entry;
       /* Get the entry for this file. Place it into the specified pool since
          we're going to return it in statushash. */
       SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+      SVN_ERR (svn_wc_entry (&parent_entry,
+                             svn_path_remove_component_nts (path,pool),
+                             adm_access, FALSE, pool));
 
       /* Convert the entry into a status structure, store in the hash.
          
          ### Notice that because we're getting one specific file,
          we're ignoring the GET_ALL flag and unconditionally fetching
          the status structure. */
-      SVN_ERR (add_status_structure (statushash, path, adm_access, entry, kind, 
-                                     TRUE, pool));
+      SVN_ERR (add_status_structure (statushash, path, adm_access, entry,
+                                     parent_entry, kind, TRUE, pool));
     }
 
-
   /* Fill the hash with a status structure for *each* entry in PATH */
-  else if (kind == svn_node_dir)
+  else
     {
-      apr_hash_t *entries;
-      apr_hash_index_t *hi;
-      int is_wc;
-      apr_array_header_t *ignores = NULL;
-
       /* Sanity check to make sure that we're being called on a working copy.
          This isn't strictly necessary, since svn_wc_entries_read will fail 
          anyway, but it lets us return a more meaningful error. */ 
+      int is_wc;
+      svn_boolean_t is_root;
+      const svn_wc_entry_t *parent_entry;
+
       SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
       if (! is_wc)
         return svn_error_createf
           (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
            "svn_wc_statuses: %s is not a working copy directory", path);
 
-      /* Load entries file for the directory into the requested pool. */
-      SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
-
-      /* Read the default ignores from the config files. */
-      if (! no_ignore)
-        SVN_ERR (get_default_ignores (&ignores, pool));
-
-      /* Add the unversioned items to the status output. */
-      SVN_ERR (add_unversioned_items (path, adm_access, entries, statushash,
-                                      ignores, pool));
-
-      /* Loop over entries hash */
-      for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+      SVN_ERR (svn_wc_is_wc_root (&is_root, path, adm_access, pool));
+      if (! is_root)
         {
-          const void *key;
-          void *val;
-          const char *base_name;
-
-          /* Put fullpath into the request pool since it becomes a key
-             in the output statushash hash table. */
-          const char *fullpath = apr_pstrdup (pool, path);
-
-          /* Get the next dirent */
-          apr_hash_this (hi, &key, NULL, &val);
-          base_name = key;
-          if (strcmp (base_name, SVN_WC_ENTRY_THIS_DIR) != 0)
-            fullpath = svn_path_join (fullpath, base_name, pool);
-
-          entry = val;
-
-          /* ### todo: What if the subdir is from another repository? */
-          
-          /* Do *not* store THIS_DIR in the statushash, unless this
-             path has never been seen before.  We don't want to add
-             the path key twice. */
-          if (strcmp (base_name, SVN_WC_ENTRY_THIS_DIR) == 0)
-            {
-              svn_wc_status_t *status 
-                = apr_hash_get (statushash, fullpath, APR_HASH_KEY_STRING);
-              if (! status)
-                SVN_ERR (add_status_structure (statushash, fullpath, adm_access,
-                                               entry, kind, get_all, pool));
-            }
-          else
-            {
-              svn_node_kind_t fullpath_kind;
-
-              /* Get the entry's kind on disk. */
-              SVN_ERR (svn_io_check_path (fullpath, &fullpath_kind, pool));
-
-              if (fullpath_kind == svn_node_dir)
-                {
-                  /* Directory entries are incomplete.  We must get
-                     their full entry from their own THIS_DIR entry.
-                     svn_wc_entry does this for us if it can.
-
-                     Don't error out if svn_wc_entry can't get the
-                     entry for us because the path is not a (working
-                     copy) directory.  Instead pass the incomplete
-                     entry to add_status_structure, since that contains
-                     enough information to determine the actual state
-                     of this entry.  
-
-                     Of course, if there has been a kind-changing
-                     replacement (for example, there is an entry for a
-                     file 'foo', but 'foo' exists as a *directory* on
-                     disk), we don't want to reach down into that
-                     subdir to try to flesh out a "complete entry".  */
-
-                  const svn_wc_entry_t *fullpath_entry = entry;
-
-                  if (entry->kind == fullpath_kind)
-                    SVN_ERR (svn_wc_entry (&fullpath_entry, fullpath, 
-                                           adm_access, FALSE, pool));
-
-                  SVN_ERR (add_status_structure 
-                           (statushash, fullpath, adm_access, fullpath_entry, 
-                            fullpath_kind, get_all, pool));
-
-                  /* Descend only if the subdirectory is a working copy
-                     directory (and DESCEND is non-zero ofcourse)  */
-
-                  if (descend && fullpath_entry != entry)
-                    {
-                      svn_wc_adm_access_t *dir_access;
-                      SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
-                                                    fullpath, pool));
-                      SVN_ERR (svn_wc_statuses (statushash, fullpath,
-                                                dir_access, descend,
-                                                get_all, no_ignore, pool));
-                    }
-                }
-              else if ((fullpath_kind == svn_node_file) 
-                       || (fullpath_kind == svn_node_none))
-                {
-                  /* File entries are ... just fine! */
-                  SVN_ERR (add_status_structure 
-                           (statushash, fullpath, adm_access, entry,
-                            fullpath_kind, get_all, pool));
-                }
-            }
+          const char *parent_path = svn_path_remove_component_nts (path, pool);
+          svn_wc_adm_access_t *parent_access;
+          SVN_ERR (svn_wc_adm_open (&parent_access, NULL, parent_path,
+                                    FALSE, FALSE, pool));
+          SVN_ERR (svn_wc_entry (&parent_entry, parent_path, parent_access,
+                                 FALSE, pool));
         }
+      else
+        parent_entry = NULL;
+
+      SVN_ERR (get_dir_status(statushash, path, parent_entry, adm_access,
+                              descend, get_all, no_ignore, pool));
     }
-  
+
   return SVN_NO_ERROR;
 }
 
