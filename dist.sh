@@ -295,9 +295,23 @@ echo "Done:"
 if [ -z "$ZIP" ]; then
   ls -l "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
   echo ""
+  echo "md5sums:"
   md5sum "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
+  type sha1sum > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo ""
+    echo "sha1sums:"
+    sha1sum "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
+  fi
 else
   ls -l "$DISTNAME.zip"
   echo ""
+  echo "md5sum:"
   md5sum "$DISTNAME.zip"
+  type sha1sum > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo ""
+    echo "sha1sum:"
+    sha1sum "$DISTNAME.zip"
+  fi
 fi
