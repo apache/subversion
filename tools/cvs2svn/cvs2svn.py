@@ -1052,7 +1052,8 @@ def pass5(ctx):
     # ### FIXME: Er, does this "<" stuff work under Windows?
     # ### If not, then in general how do we load dumpfiles under Windows?
     print 'loading %s into %s' % (ctx.dumpfile, ctx.target)
-    os.system('%s load %s < %s' % (ctx.svnadmin, ctx.target, ctx.dumpfile))
+    os.system('%s load --ignore-uuid %s < %s'
+              % (ctx.svnadmin, ctx.target, ctx.dumpfile))
 
 _passes = [
   pass1,
