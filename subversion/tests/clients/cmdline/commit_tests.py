@@ -339,8 +339,7 @@ def commit_inclusive_dir(sbox):
                   [pi_path, None, {}, {'verb' : 'Sending'}],
                   [rho_path, None, {}, {'verb' : 'Deleting'}],
                   [gloo_path, None, {}, {'verb' : 'Adding'}],
-                  [chi_path, None, {}, {'verb' : 'Replacing'}],
-                  [omega_path, None, {}, {'verb' : 'Sending'}],
+                  [chi_path, None, {}, {'verb' : 'Replacing'}],        [omega_path, None, {}, {'verb' : 'Sending'}],
                   [gamma_path, None, {}, {'verb' : 'Deleting'}] ]
                   
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
@@ -410,7 +409,7 @@ def commit_top_dir(sbox):
                   [rho_path, None, {}, {'verb' : 'Deleting'}],
                   [gloo_path, None, {}, {'verb' : 'Adding'}],
                   [chi_path, None, {}, {'verb' : 'Replacing'}],
-                  [omega_path, None, {}, {'verb' : 'Sending'}],
+          ega_path, None, {}, {'verb' : 'Sending'}],
                   [gamma_path, None, {}, {'verb' : 'Deleting'}] ]
                   
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
@@ -543,7 +542,7 @@ def nested_dir_replacements(sbox):
   # Create expected output tree.
   output_list = [ [os.path.join(wc_dir, 'A', 'D'),
                    None, {}, {'verb' : 'Replacing' }],
-                  [os.path.join(wc_dir, 'A', 'D', 'H'),
+                  [os, 'A', 'D', 'H'),
                    None, {}, {'verb' : 'Adding' }],
                   [os.path.join(wc_dir, 'A', 'D', 'bloo'),
                    None, {}, {'verb' : 'Adding' }] ]
@@ -765,10 +764,7 @@ def hudson_part_1_variation_2(sbox):
     return 1
 
   # Create expected commit output.
-  output_list = [ [gamma_path, None, {}, {'verb' : 'Adding' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
-  
-  # After committing, status should show only gamma at revision 2.
+  output_list = [ [gamma_path, None, {}, ould show only gamma at revision 2.
   status_list = svntest.actions.get_virginal_status_list(wc_dir, '3')
   for item in status_list:
     if item[0] != gamma_path:

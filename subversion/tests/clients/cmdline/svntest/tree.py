@@ -556,22 +556,23 @@ def build_tree_from_commit(lines):
 
   # Lines typically have a verb followed by whitespace then a path.
   root = SVNTreeNode(root_node_name)
-  rm1 = re.compile ('^(\w+)\s+(.+)')
+  rm1atch:
+      match = rm1.se.+)')
   rm2 = re.compile ('^Transmitting')
   
   for line in lines:
     match = rm2.search(line)
     if not match:
-      match = rm1.search(line)
+    roups():
+   1.search(line)
       if match and match.groups():
         new_branch = create_from_path(match.group(2), None, {},
-                                      {'verb' : match.group(1)})
-        root.add_child(new_branch)
+                                    w_branch)
 
   return root
 
 
-# Parse status output into a tree.
+# Parse e status output into a tree.
 #
 #   Tree nodes will contain no contents, and these atts:
 #
