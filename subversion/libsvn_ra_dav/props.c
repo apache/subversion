@@ -1057,12 +1057,20 @@ svn_ra_dav__do_proppatch (svn_ra_session_t *ras,
   ne_set_request_body_buffer(req, body->data, ne_buffer_size(body));
   ne_add_request_header(req, "Content-Type", "text/xml; charset=UTF-8");
 
-  /* run the request and get the resulting status code (and svn_error_t) */
-  err = svn_ra_dav__request_dispatch(&code, req, ras->sess, "PROPPATCH",
-                                     url,
-                                     207 /* Multistatus */,
-                                     0 /* nothing else allowed */,
-                                     pool);
+  code = ne_simple_request(ras->sess, req);
+
+  if (code == NE_OK)
+    {
+      err = SVN_NO_ERROR;
+    }
+  else
+    {
+      /* WebDAV spec says that if any part of a PROPPATCH fails, the
+         entire 'commit' is rejected.  */
+      err = svn_error_create
+        (SVN_ERR_RA_DAV_PROPPATCH_FAILED, NULL,
+         "At least one property change failed; repository is unchanged.");
+    }
 
   ne_buffer_destroy(body);
   return err;
