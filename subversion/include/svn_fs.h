@@ -781,7 +781,8 @@ svn_error_t *svn_fs_list_transactions (char ***names_p,
 
 /* Set *YOUNGEST_P to the number of the youngest revision in filesystem FS.
    The oldest revision in any filesystem is numbered zero.  */
-svn_error_t *svn_fs_youngest_rev (svn_revnum_t *youngest_p);
+svn_error_t *svn_fs_youngest_rev (svn_fs_t *fs,
+                                  svn_revnum_t *youngest_p);
 
 
 /* Set *DIR_P to the root directory of revision REV of filesystem FS.
