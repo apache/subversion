@@ -115,11 +115,14 @@ tweak_statushash (void *edit_baton,
   /* If not, make it so. */
   if (! statstruct)
     {
+      /* Need a path with the same lifetime as the hash */
+      const char *path_dup = apr_pstrdup (pool, path);
+
       /* Use the public API to get a statstruct: */
       SVN_ERR (svn_wc_status (&statstruct, path, pool));
 
       /* Put the path/struct into the hash. */
-      apr_hash_set (statushash, path, APR_HASH_KEY_STRING, statstruct);
+      apr_hash_set (statushash, path_dup, APR_HASH_KEY_STRING, statstruct);
     }
 
   /* Tweak the structure's repos fields. */
