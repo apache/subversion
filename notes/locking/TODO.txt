@@ -12,20 +12,29 @@ MUST HAVE
 
      - make svn_client_(un)lock() use the new notify callback also.
 
-* lock-null support:
+* lock-null support issues
 
-    - er.  there's still a bug here (not showing deep locks), and some
-      optimizations to be done (cmpilato)
+    - allow fs to lock nonexistent paths, as it already does.
 
-    - 'svn lock/unlock/info lock-null-URL' should work over all 3 RA
-      layers, but then disable this feature for 1.2 (sussman)
+    - mod_dav_svn changes:
 
-    - explicitly prevent 'svn lock schedule-add-wcpath' (sussman)
+        --> LOCK/UNLOCK/PROPFIND on lock-null should work.  (sussman)
+        --> revert cmpilato's code to list lock-nulls in parents,
+             after making it work properly.  (cmpilato)
+
+    - don't let svn clients lock nonexistent paths -- for now. 
+
+        --> reserve future option to do so.
+        --> 'svn lock/unlock/info lock-null-URL' should work over all 3 RA
+            layers, but then disable this feature for 1.2 (sussman)
+        --> explicitly prevent 'svn lock schedule-add-wcpath' (sussman)
+
+* use new client-id system instead of 'X-SVN-Options: svn-lock" (sussman)
 
 * scan the whole patch for TODO items introduced on the branch (all, please)
 
 * fsfs backend schema (not logic, mind you) must support the notion of
-  a directory lock, in prep for future support (fitz)
+  a directory lock, in prep for future support (cmpilato)
   
 
 NICE TO HAVE
