@@ -787,14 +787,11 @@ def update_after_add_rm_deleted(sbox):
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
   
-  # Forced removal of new alpha must restore "deleted" state
+  # Forced removal of new alpha and F must restore "deleted" state
   outlines, errlines = svntest.main.run_svn(None, 'rm', '--force',
                                             alpha_path, F_path)
-  if errlines:
+  if errlines or os.path.exists(alpha_path) or os.path.exists(F_path):
     return 1
-
-  # Physically delete F
-  svntest.main.remove_wc(F_path)
 
   # "deleted" state is not visible in status
   expected_status.remove('A/B/E/alpha', 'A/B/F')
@@ -807,8 +804,8 @@ def update_after_add_rm_deleted(sbox):
   if errlines:
     return 1
   expected_status.add({
-    'A/B/E/alpha' : Item(status='_ ', wc_rev=1, repos_rev=2),
-    'A/B/F'       : Item(status='_ ', wc_rev=1, repos_rev=2),
+    'A/B/E/alpha' : Item(status='  ', wc_rev=1, repos_rev=2),
+    'A/B/F'       : Item(status='  ', wc_rev=1, repos_rev=2),
     })
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     return 1
