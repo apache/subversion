@@ -517,6 +517,11 @@ send_to_repos (svn_revnum_t *committed_rev,
           /* Construct full URL from PATH. */
           SVN_ERR (svn_wc_entry (&entry, base_dir, pool));
           url = entry->url;
+
+          if (entry->copied)
+            return svn_error_createf
+              (SVN_ERR_CL_COMMIT_IN_ADDED_DIR, 0, NULL, pool, 
+               "%s was already scheduled for addition.", base_dir->data);
         }
       
       /* Make sure our log message at least exists, even if empty. */
