@@ -153,51 +153,12 @@ svn_svr_plugin_authorize (svn_fsrequest_t *request)
 
 
 
-/* svn_svr_policy_authorize():
-   See if general server `policy' allows an action.
-*/
-
-svn_error_t *
-svn_svr_policy_authorize (svn_fs_request_t *request)
-{
-  /* BIG TODO: loop through policy->global_restrictions array,
-     interpreting each restriction and checking authorization */
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/* svn_svr_authorize():
-   Convenience routine -- calls the other two authorization routines.
-*/
-
-svn_error_t *
-svn_svr_authorize (svn_fsrequest_t *request);
-{
-  svn_error_t *err;
-  
-  err = svn_svr_policy_authorize (request);
-  if (err)
-    return (svn_quick_wrap_error
-            (err, "Global server policy denied authorization."));
-
-  err = svn_svr_plugin_authorize (request);
-  if (err)
-    return (svn_quick_wrap_error
-            (err, "At least one server plugin denied authorization."));
-
-  return SVN_NO_ERROR;  /* successfully authorized! */
-}
-
-
-
 
 /* svn__svr_wrap_logic():
    Common logic called by all filesystem wrappers.
 
        - replaces repository name with "expanded" name in fsrequest struct
-       - passes fsrequest struct to authorization routines
+       - passes fsrequest struct to plugin authorization routines
 
    If authorization fails at any level, return the error.
 */
@@ -225,10 +186,10 @@ svn__svr_wrap_logic (svn_fsrequest_t *request)
       request->user->svn_username = request->user->auth_username;
     }
   
-  /* Check authorization in both server policy & plugins */
-  error = svn_svr_authorize (request);
+  /* Check authorization hooks within plugins */
+  error = svn_svr_plugin_authorize (request);
   if (error)
-    return svn_quick_wrap_error (error, "svn_svr_authorize() failed.");
+    return svn_quick_wrap_error (error, "svn_svr_plugin_authorize() failed.");
 }
 
 

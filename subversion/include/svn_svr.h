@@ -132,11 +132,6 @@ typedef struct svn_svr_policies_t
      KEY = bytestring data,  VAL = (svn_string_t *)  */
   ap_hash_t *repos_aliases;
 
-  /* A hash which maps security commands -> command args.
-     (These commands describe global security policies.)
-     KEY = bytestring data,  VAL = (svn_string_t *)  */
-  ap_hash_t *global_restrictions;
-  
   /* A hash which maps plugin names -> loaded plugin objects.
      KEY = bytestring data,  VAL = (svn_svr_plugin_t *)   */
   ap_hash_t *plugins;
@@ -233,168 +228,249 @@ extern void svn_svr_warning_callback (svn_server_policies_t *policy,
 				      void *data);
 
 
-/* Three routines for checking authorization.
-
-   The first one checks global server policy.
-
-   The second one loops through each plugin's authorization hook.
-
-   The third one is a convenience routine, which calls the other two.
-*/
-
-svn_error_t * svn_server_policy_authorize (svn_fsrequest_t *request);
+/* Loop through each plugin, calling each "authorization hook", if any
+   exist.  */
 
 svn_error_t * svn_svr_plugin_authorize (svn_fsrequest_t *request);
 
-svn_error_t * svn_svr_authorize (svn_fsrequest_t *request);
+
+/* Each wrappered filesystem call executes this routine, checking for
+   error.  It gives us a single point by which we can intercede
+   filesystem calls.  */
+
+svn_error_t * svn__svr_wrap_logic (svn_fsrequest_t *request)
 
 
 
-/*  The main UBER-filesystem wrapper!
-
-    Build a fsrequest_t with all relevant data inside, then pass it to
-    this routine.  This routine will look up the repository's true
-    name, check authorization on the request, and then actually do the
-    filesystem call.  
-
-    The filesystem call will return relevant data in **returndata.
-
-*/
-
-svn_error_t * svn_svr_do_fs_call (void **returndata, svn_fsrequest_t *request);
+/******************************
+   WRAPPERED FILESYSTEM CALLS
+*******************************/
 
 
-/******************************************
-
-   The wrappered Filesystem API
-
-******************************************/
-
-/* For reading history */
+/* Retrieve the latest `svn_ver_t' object in a repository */
 
 svn_error_t * svn_svr_latest (svn_ver_t **latest_ver,
                               svn_svr_policies_t *policy,
-                              svn_string_t *repos, 
+                              svn_string_t *repos,
                               svn_user_t *user);
 
-svn_string_t * svn_svr_get_ver_prop (svn_svr_policies_t *policy,
-                                     svn_string_t *repos, 
-                                     svn_user_t *user, 
-                                     unsigned long ver, 
+
+/* Retrieve an entire `node' object from the repository */
+
+svn_error_t * svn_svr_read (svn_node_t **node,
+                            svn_svr_policies_t *policy,
+                            svn_string_t *repos,
+                            svn_user_t *user,
+                            unsigned long ver,
+                            svn_string_t *path);
+
+
+/* Submit a skelta for approval, get back a token if SVN_NO_ERROR */
+
+svn_error_t * svn_svr_submit (svn_token_t **token,
+                              svn_svr_policies_t *policy,
+                              svn_string_t *repos,
+                              svn_user_t *user,
+                              svn_skelta_t *skelta);
+
+
+/* Write an approved delta, using token from submit(). */
+
+svn_error_t * svn_svr_submit (unsigned long *new_version,
+                              svn_svr_policies_t *policy,
+                              svn_string_t *repos,
+                              svn_user_t *user,
+                              svn_delta_t *delta,
+                              svn_token_t *token);
+
+
+/* Abandon an already approved skelta, using token. 
+   NOTICE that it has no argument-return value, just plain old svn_error_t *.
+ */
+
+svn_error_t * svn_svr_abandon (svn_svr_policies_t *policy,
+                               svn_string_t *repos,
+                               svn_user_t *user,
+                               svn_token_t *token);
+
+
+
+/* DIFFERENCE QUERIES ---------------------------------------------- */
+
+
+/* Retrieve a delta describing the difference between two trees in the
+   repository */
+
+svn_error_t * svn_svr_get_delta (svn_delta_t **delta,
+                                 svn_svr_policies_t *policy,
+                                 svn_string_t *repos,
+                                 svn_user_t *user,
+                                 unsigned long ver1,
+                                 svn_string_t *path1,
+                                 unsigned long ver2,
+                                 svn_string_t *path2);
+
+
+/* Retrieve a GNU-style diff describing the difference between two
+   files in the repository */
+
+svn_error_t * svn_svr_get_diff (svn_diff_t **diff,
+                                svn_svr_policies_t *policy,
+                                svn_string_t *repos,
+                                svn_user_t *user,
+                                unsigned long ver1,
+                                svn_string_t *path1,
+                                unsigned long ver2,
+                                svn_string_t *path2);
+
+
+
+/* PROPERTIES:   Getting individual values ------------------------- */
+
+
+/* Retrieve the value of a property attached to a version 
+   (such as a log message) 
+*/
+
+svn_error_t * svn_svr_get_ver_prop (svn_string_t **propvalue,
+                                    svn_svr_policies_t *policy,
+                                    svn_string_t *repos,
+                                    svn_user_t *user,
+                                    unsigned long ver,
+                                    svn_string_t *propname);
+
+
+/* Retrieve the value of a node's property */
+
+svn_error_t * svn_svr_get_node_prop (svn_string_t **propvalue,
+                                     svn_svr_policies_t *policy,
+                                     svn_string_t *repos,
+                                     svn_user_t *user,
+                                     unsigned long ver,
+                                     svn_string_t *path,
                                      svn_string_t *propname);
 
-ap_hash_t * svn_svr_get_ver_proplist (svn_svr_policies_t *policy,
-                                      svn_string_t *repos, 
-                                      svn_user_t *user, 
-                                      unsigned long ver);
 
-ap_hash_t * svn_svr_get_ver_propnames (svn_svr_policies_t *policy,
-                                       svn_string_t *repos, 
-                                       svn_user_t *user, 
-                                       unsigned long ver);
- 
+/* Retrieve the value of a dirent's property */
+
+svn_error_t * svn_svr_get_dirent_prop (svn_string_t **propvalue,
+                                       svn_svr_policies_t *policy,
+                                       svn_string_t *repos,
+                                       svn_user_t *user,
+                                       unsigned long ver,
+                                       svn_string_t *path,
+                                       svn_string_t *propname);
 
 
-/* For reading nodes */
+/* PROPERTIES:   Getting whole property lists  ------------------------- */
 
-svn_node_t * svn_svr_read (svn_svr_policies_t *policy,
-                           svn_string_t *repos, 
-                           svn_user_t *user, 
-                           unsigned long ver, 
-                           svn_string_t *path);
 
-svn_string_t * svn_svn_svr_get_node_prop (svn_svr_policies_t *policy,
-                                          svn_string_t *repos, 
-                                          svn_user_t *user, 
-                                          unsigned long ver, 
-                                          svn_string_t *path, 
-                                          svn_string_t *propname);
+/* Retrieve the entire property list of a version. */
 
-svn_string_t * svn_svr_get_dirent_prop (svn_svr_policies_t *policy,
-                                        svn_string_t *repos, 
-                                        svn_user_t *user, 
-                                        unsigned long ver, 
-                                        svn_string_t *path, 
-                                        svn_string_t *propname);
- 
-ap_hash_t * svn_svr_get_node_proplist (svn_svr_policies_t *policy,
-                                       svn_string_t *repos, 
-                                       unsigned long ver, 
-                                       svn_string_t *path);
- 
-ap_hash_t * svn_svr_get_dirent_proplist (svn_svr_policies_t *policy,
-                                         svn_string_t *repos, 
-                                         svn_user_t *user, 
-                                         unsigned long ver, 
+svn_error_t * svn_svr_get_ver_proplist (ap_hash_t **proplist,
+                                        svn_svr_policies_t *policy,
+                                        svn_string_t *repos,
+                                        svn_user_t *user,
+                                        unsigned long ver);
+
+
+/* Retrieve the entire property list of a node. */
+
+svn_error_t * svn_svr_get_node_proplist (ap_hash_t **proplist,
+                                         svn_svr_policies_t *policy,
+                                         svn_string_t *repos,
+                                         svn_user_t *user,
+                                         unsigned long ver,
                                          svn_string_t *path);
- 
-ap_hash_t * svn_svr_get_node_propnames (svn_svr_policies_t *policy,
-                                        svn_string_t *repos, 
-                                        svn_user_t *user, 
-                                        unsigned long ver, 
-                                        svn_string_t *path);
- 
-ap_hash_t * svn_svr_get_dirent_propnames (svn_svr_policies_t *policy,
-                                          svn_string_t *repos, 
-                                          svn_user_t *user, 
-                                          unsigned long ver, 
-                                          svn_string_t *path); 
+
+
+/* Retrieve the entire property list of a directory entry. */
+
+svn_error_t * svn_svr_get_dirent_proplist (ap_hash_t **proplist,
+                                           svn_svr_policies_t *policy,
+                                           svn_string_t *repos,
+                                           svn_user_t *user,
+                                           unsigned long ver,
+                                           svn_string_t *path);
+
+
+/* PROPERTIES:   Getting list of all property names  ----------------- */
+
+
+/* Retrieve all propnames of a version */
+
+svn_error_t * svn_svr_get_ver_propnames (ap_hash_t **propnames,
+                                         svn_svr_policies_t *policy,
+                                         svn_string_t *repos,
+                                         svn_user_t *user,
+                                         unsigned long ver);
+
+
+/* Retrieve all propnames of a node */
+
+svn_error_t * svn_svr_get_node_propnames (ap_hash_t **propnames,
+                                          svn_svr_policies_t *policy,
+                                          svn_string_t *repos,
+                                          svn_user_t *user,
+                                          unsigned long ver,
+                                          svn_string_t *path);
+
+
+/* Retrieve all propnames of a dirent */
+
+svn_error_t * svn_svr_get_dirent_propnames (ap_hash_t **propnames,
+                                            svn_svr_policies_t *policy,
+                                            svn_string_t *repos,
+                                            svn_user_t *user,
+                                            unsigned long ver,
+                                            svn_string_t *path);
+
+
+/*========================================================================
+
+  STATUS / UPDATE
+
+  The status() and update() routines are the only ones which aren't
+  simple wrappers for the filesystem API.  They make repeated small
+  calls to svn_fs_cmp() and svn_fs_get_delta() respectively (see
+  <svn_fs.h>)
+
+*/
 
 
 
-/* For writing */
+/* svn_svr_get_status():
 
-svn_token_t svn_svr_submit (svn_svr_policies_t *policy,
-                            svn_string_t *repos, 
-                            svn_user_t *user, 
-                            svn_skelta_t *skelta);
- 
-unsigned long * svn_svr_write (svn_svr_policies_t *policy,
-                               svn_string_t *repos, 
-                               svn_user_t *user, 
-                               svn_delta_t *delta, 
-                               svn_token_t token);
- 
-svn_boolean_t svn_svr_abandon (svn_svr_policies_t *policy,
-                               svn_string_t *repos, 
-                               svn_user_t *user, 
-                               svn_token_t token);
+   Input:  a skelta describing working copy's current tree
 
+   Returns: an svn error or SVN_NO_ERROR, and 
 
-/* For difference queries */
+            returndata = a skelta describing how the tree is out of date 
+*/
 
-svn_delta_t * svn_svr_get_delta (svn_svr_policies_t *policy,
-                                 svn_string_t *repos, 
-                                 svn_user_t *user, 
-                                 unsigned long ver1, 
-                                 svn_string_t *path1, 
-                                 unsigned long ver2, 
-                                 svn_string_t *path2);
- 
-svn_diff_t * svn_svr_get_diff (svn_svr_policies_t *policy,
-                               svn_string_t *repos, 
-                               svn_user_t *user, 
-                               unsigned long ver1, 
-                               svn_string_t *path1, 
-                               unsigned long ver2, 
-                               svn_string_t *path2); 
-
-
-/* The status() and update() routines are the only ones which aren't
-simple wrappers for the filesystem API.  They make repeated small
-calls to svn_fs_cmp() and svn_fs_get_delta() respectively (see
-<svn_fs.h>) */
-
-svn_skelta_t * svn_svr_get_status (svn_svr_policies_t *policy,
-                                   svn_string_t *repos, 
-                                   svn_user_t *user, 
-                                   svn_skelta_t *skelta);
- 
-svn_delta_t * svn_svr_get_update (svn_svr_policies_t *policy,
+svn_error_t * svn_svr_get_status (svn_skelta_t **returnskelta,
+                                  svn_svr_policies_t *policy,
                                   svn_string_t *repos, 
                                   svn_user_t *user, 
-                                  svn_skelta_t *skelta); 
+                                  svn_skelta_t *skelta);
 
+
+
+/* svn_svn_get_update():
+
+   Input: a skelta describing working copy's current tree.
+
+   Returns:  svn_error_t * or SVN_NO_ERROR, and
+
+            returndata = a delta which, when applied, will actually
+            update working copy's tree to latest version.  
+*/
+
+svn_error_t * svn_svr_get_update (svn_delta_t **returndelta,
+                                  svn_svr_policies_t *policy,
+                                  svn_string_t *repos, 
+                                  svn_user_t *user, 
+                                  svn_skelta_t *skelta);
 
 
 
