@@ -43,7 +43,6 @@
 
 struct status_baton
 {
-  apr_hash_t *hash;                        /* ### temporary */
   svn_boolean_t deleted_in_repos;          /* target is deleted in repos */
   svn_wc_status_func_t real_status_func;   /* real status function */
   void *real_status_baton;                 /* real status baton */
@@ -59,11 +58,6 @@ tweak_status (void *baton,
               svn_wc_status_t *status)
 {
   struct status_baton *sb = baton;
-
-  /* ### temporary sanity checking code */
-  assert (! apr_hash_get (sb->hash, path, APR_HASH_KEY_STRING));
-  apr_hash_set (sb->hash, apr_pstrdup (apr_hash_pool_get (sb->hash), path), 
-                APR_HASH_KEY_STRING, (void *)1);
 
   /* If we know that the target was deleted in HEAD of the repository,
      we need to note that fact in all the status structures that come
