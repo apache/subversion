@@ -1992,7 +1992,7 @@ svn_error_t *svn_wc_get_diff_editor3 (svn_wc_adm_access_t *anchor,
 /** @deprecated Provided for backwards compatibility with the 1.1.0 API.
  *
  * Similar to @c svn_wc_get_diff_editor3(), but with an
- * @c svn_wc_diff_callbacks_t instead of the @c svn_wc_diff_callbacks2_t. */
+ * @c svn_wc_diff_callbacks_t instead of @c svn_wc_diff_callbacks2_t. */
 svn_error_t *svn_wc_get_diff_editor2 (svn_wc_adm_access_t *anchor,
                                       const char *target,
                                       const svn_wc_diff_callbacks_t *callbacks,
