@@ -416,13 +416,15 @@ http://subversion.tigris.org/project_status.html</a>.</p>
 <p>Subversion 1.1 (and later) has the ability to put a symlink under
 version control, via the usual <tt>svn add</tt> command.</p>
 
-<p>Note: the Subversion repository has no internal concept of a
+<p>Details: the Subversion repository has no internal concept of a
 symlink.  It stores a "versioned symlink" as an ordinary file with an
 'svn:special' property attached.  The svn client (on unix) sees the
 property and translates the file into a symlink in the working copy.
 Win32 has no symlinks, so a win32 client won't do any such
 translation: the object appears as a normal file.</p>
 
+<p>As of this writing, Subversion 1.1 was in "release candidate"
+status.  By the time you read this, it might already be released.</p>.
 
 <![CDATA[-----------------------------------------------------------]]>
 
