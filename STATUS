@@ -23,14 +23,3 @@ Candidate changes:
                    not sure an optimization like this belongs in a
                    patch release.)
 
-  * r9439, 9808
-    Update many references to neon 0.24.6.
-    Justification: 0.24.6 has a security issue.  See
-    http://cve.mitre.org/cgi-bin/cvename.cgi?name=CAN-2004-0398
-    Notes: Make tweaks to spec files to have 1.0.4 in the changelogs when
-    merging.
-    Votes (9439 only):
-      +1: blair, dlr
-    Votes: (9439, 9808):
-      +1: breser, sussman
-
