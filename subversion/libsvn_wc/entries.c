@@ -703,22 +703,22 @@ svn_wc__entry_merge (svn_string_t *path,
   va_list ap;
   const char *key;
 
-  svn_vernum_t *existing_version;
-  enum svn_node_kind *existing_kind;
+  svn_vernum_t existing_version;
+  enum svn_node_kind existing_kind;
   apr_hash_t *existing_hash;
 
   /* First be sure to GET all information about the entry (assuming it
      already exists) */
   err = svn_wc__entry_get (path, entryname,
-                           existing_version, existing_kind,
+                           &existing_version, &existing_kind,
                            pool,
                            &existing_hash);
   if (err) return err;
 
   if (! version)
-    version = *existing_version;
+    version = existing_version;
   if (! kind)
-    kind = *existing_kind;
+    kind = existing_kind;
 
   /* Walk the va_list, storing attributes into the existing hash */
   va_start (ap, pool);
