@@ -192,7 +192,7 @@ test_is_uri_safe (const char **msg,
                   svn_boolean_t msg_only,
                   apr_pool_t *pool)
 {
-  int i;
+  apr_size_t i;
 
   /* Paths to test. */
   static const char * const paths[] = { 
