@@ -116,6 +116,22 @@ PYTHON = @PYTHON@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 
+PYTHON_DISTUTIL = setup.py                                               \
+                  -I$(SWIG_SRC_DIR)                                      \
+                  -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
+                  -S$(SWIG_SRC_DIR)                                      \
+                  -s"$(SWIG)"                                            \
+                  -L$(SVN_APR_PREFIX)/lib                                \
+                  -L../../../libsvn_client/.libs                         \
+                  -L../../../libsvn_delta/.libs                          \
+                  -L../../../libsvn_fs/.libs                             \
+                  -L../../../libsvn_ra/.libs                             \
+                  -L../../../libsvn_repos/.libs                          \
+                  -L../../../libsvn_wc/.libs                             \
+                  -L../../../libsvn_subr/.libs                           \
+                  -L../../../bindings/swig/.libs                         \
+                  $(SWIG_LDFLAGS)
+
 all: external-all local-all
 clean: external-clean local-clean
 distclean: external-distclean local-distclean
@@ -292,35 +308,26 @@ swig-assert-available:
 swig-clean: swig-py-ext-clean swig-java-ext-clean
 
 swig-py-ext: swig-assert-available
-	cd $(SWIG_SRC_DIR)/python;                                 \
-        $(PYTHON) setup.py                                         \
-            -I$(SWIG_SRC_DIR)                                      \
-            -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
-            -S$(SWIG_SRC_DIR)                                      \
-            -L$(DESTDIR)$(prefix)/lib -L$(SVN_APR_PREFIX)/lib      \
-            -s"$(SWIG)"                                            \
-	    $(SWIG_LDFLAGS)                                        \
-            build --build-base=$(SWIG_BUILD_DIR)/python/build
+	cd $(SWIG_SRC_DIR)/python; \
+        $(PYTHON) $(PYTHON_DISTUTIL) build
 
-install-swig-py-ext:
-	(cd $(SWIG_BUILD_DIR)/python;                       \
-         $(PYTHON) $(SWIG_SRC_DIR)/python/setup.py          \
-            -S$(SWIG_SRC_DIR)                               \
-            install --prefix $(DESTDIR)$(prefix))
+install-swig-py-ext: swig-assert-available
+	cd $(SWIG_BUILD_DIR)/python; \
+        $(PYTHON) $(PYTHON_DISTUTIL) install
 
 swig-py-ext-clean:
 	rm -rf $(SWIG_BUILD_DIR)/python/build
 
 swig-java-ext: swig-assert-available mkdir-init
 	cd $(SWIG_SRC_DIR)/java/org/tigris/subversion/swig; \
-    for source in $(SWIG_SRC_DIR)/*.i; do \
-        target="`echo -n $$source | sed 's!^.*/\(.*\)\.i$$!\1.c!'`"; \
-        $(SWIG) -c -java -noproxy -module 'Subversion' \
-            -package 'org.tigris.subversion.swig' \
-            -I$(SWIG_SRC_DIR) \
-            -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
-            -o $(SWIG_SRC_DIR)/java/build/$$target $$source; \
-    done
+        for source in $(SWIG_SRC_DIR)/*.i; do \
+            target="`echo -n $$source | sed 's!^.*/\(.*\)\.i$$!\1.c!'`"; \
+            $(SWIG) -c -java -noproxy -module 'Subversion' \
+                -package 'org.tigris.subversion.swig' \
+                -I$(SWIG_SRC_DIR) \
+                -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
+                -o $(SWIG_SRC_DIR)/java/build/$$target $$source; \
+        done
 
 swig-java-ext-clean:
 	rm -rf $(SWIG_SRC_DIR)/java
