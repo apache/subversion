@@ -635,24 +635,6 @@ close_edit (void *edit_baton)
 }
 
 
-static const svn_delta_edit_fns_t tree_editor =
-{
-  set_target_revision,
-  replace_root,
-  delete_entry,
-  add_directory,
-  replace_directory,
-  change_dir_prop,
-  close_directory,
-  add_file,
-  replace_file,
-  apply_textdelta,
-  change_file_prop,
-  close_file,
-  close_edit
-};
-
-
 svn_error_t *
 svn_delta_get_xml_editor (svn_stream_t *output,
 			  const svn_delta_edit_fns_t **editor,
@@ -661,8 +643,9 @@ svn_delta_get_xml_editor (svn_stream_t *output,
 {
   struct edit_baton *eb;
   apr_pool_t *subpool = svn_pool_create (pool);
+  svn_delta_edit_fns_t *tree_editor = svn_delta_default_editor (pool);
 
-  *editor = &tree_editor;
+  /* Construct an edit baton. */
   eb = apr_palloc (subpool, sizeof (*eb));
   eb->pool = subpool;
   eb->output = output;
@@ -670,7 +653,23 @@ svn_delta_get_xml_editor (svn_stream_t *output,
   eb->txdelta_id_counter = 1;
   eb->target_revision = SVN_INVALID_REVNUM;
 
+  /* Construct an editor. */
+  tree_editor->set_target_revision = set_target_revision;
+  tree_editor->replace_root = replace_root;
+  tree_editor->delete_entry = delete_entry;
+  tree_editor->add_directory = add_directory;
+  tree_editor->replace_directory = replace_directory;
+  tree_editor->change_dir_prop = change_dir_prop;
+  tree_editor->close_directory = close_directory;
+  tree_editor->add_file = add_file;
+  tree_editor->replace_file = replace_file;
+  tree_editor->apply_textdelta = apply_textdelta;
+  tree_editor->change_file_prop = change_file_prop;
+  tree_editor->close_file = close_file;
+  tree_editor->close_edit = close_edit;
+
   *edit_baton = eb;
+  *editor = tree_editor;
 
   return SVN_NO_ERROR;
 }
