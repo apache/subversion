@@ -151,22 +151,22 @@ static int request_auth(void *userdata, const char *realm, int attempt,
   return 0;
 }
 
-typedef struct ssl_verify_baton_t
+typedef struct svn_ssl_verify_baton_t
 {
   svn_config_t *cfg;
   const char *server_group;
-} ssl_verify_baton_t;
+} svn_ssl_verify_baton_t;
 
 
 /* A neon-session callback to validate the SSL certificate when the CA
    is unknown or there are other SSL certificate problems. */
-static int ssl_set_verify_callback(void *userdata, int failures,
-                                   const ne_ssl_certificate *cert)
+static int svn_ssl_set_verify_callback(void *userdata, int failures,
+				       const ne_ssl_certificate *cert)
 {
   const char *flag = NULL;
-  ssl_verify_baton_t *baton;
-
-  baton = (ssl_verify_baton_t *)userdata;
+  svn_ssl_verify_baton_t *baton;
+  
+  baton = (svn_ssl_verify_baton_t *)userdata;
 
   /* This is a bit complex - I assume I only need to fetch a value to
      confirm that there is a 'true' failure. */
@@ -401,12 +401,13 @@ svn_ra_dav__open (void **session_baton,
           ne_ssl_load_ca(sess, authorities_file);
           ne_ssl_load_ca(sess2, authorities_file);
         }
-      ssl_verify_baton_t *baton = 
-        (ssl_verify_baton_t*)apr_palloc(pool, sizeof(ssl_verify_baton_t));
+      svn_ssl_verify_baton_t *baton = 
+        (svn_ssl_verify_baton_t*)apr_palloc(pool,
+					    sizeof(svn_ssl_verify_baton_t));
       baton->cfg = cfg;
       baton->server_group = server_group;
-      ne_ssl_set_verify(sess, ssl_set_verify_callback, baton);
-      ne_ssl_set_verify(sess2, ssl_set_verify_callback, baton);
+      ne_ssl_set_verify(sess, svn_ssl_set_verify_callback, baton);
+      ne_ssl_set_verify(sess2, svn_ssl_set_verify_callback, baton);
     }
 
 #if 0
