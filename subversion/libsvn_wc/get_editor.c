@@ -113,7 +113,8 @@ struct handler_baton
 {
   apr_file_t *source;
   apr_file_t *dest;
-  svn_txdelta_applicator_t *appl;
+  svn_txdelta_window_handler_t *apply_handler;
+  void *apply_baton;
   apr_pool_t *pool;
   struct file_baton *fb;
 };
@@ -339,14 +340,10 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   struct file_baton *fb = hb->fb;
   svn_error_t *err = NULL, *err2 = NULL;
 
-  if (window != NULL)
-    {
-      /* Apply this window.  Continue on if there is an error, since
-         the cleanup is very similar to the case when we're finished.  */
-      err = svn_txdelta_apply_window (window, hb->appl);
-      if (err == SVN_NO_ERROR)
-        return SVN_NO_ERROR;
-    }
+  /* Apply this window.  We may be done at that point.  */
+  err = hb->apply_handler (window, hb->apply_baton);
+  if (window != NULL && err == SVN_NO_ERROR)
+    return err;
 
   /* Either we're done (window is NULL) or we had an error.  In either
      case, clean up the handler.  */
@@ -356,7 +353,6 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   err2 = svn_wc__close_text_base (hb->dest, fb->path, 0, window->pool);
   if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
     err = err2;
-  svn_txdelta_applicator_free (hb->appl);
   apr_destroy_pool (hb->pool);
 
   if (err != SVN_NO_ERROR)
@@ -647,9 +643,9 @@ apply_textdelta (void *file_baton,
   if (err != SVN_NO_ERROR)
     goto error;
 
-  /* Create the delta applicator.  */
-  err = svn_txdelta_applicator_create (&hb->appl, read_from_file, hb->source,
-                                       write_to_file, hb->dest, subpool);
+  /* Prepare to apply the delta.  */
+  err = svn_txdelta_apply (read_from_file, hb->source, write_to_file, hb->dest,
+                           subpool, &hb->apply_handler, &hb->apply_baton);
   if (err != SVN_NO_ERROR)
     goto error;
 

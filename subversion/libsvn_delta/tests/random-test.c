@@ -144,7 +144,8 @@ main (int argc, char **argv)
   int seed_set = 0, maxlen = DEFAULT_MAXLEN, c1, c2;
   svn_txdelta_stream_t *stream;
   svn_txdelta_window_t *window;
-  svn_txdelta_applicator_t *appl;
+  svn_txdelta_window_handler_t *handler;
+  void *handler_baton;
   svn_error_t *err;
 
   apr_initialize();
@@ -194,14 +195,16 @@ main (int argc, char **argv)
                      read_from_file, target,
                      pool);
   if (err == SVN_NO_ERROR)
-    err = svn_txdelta_applicator_create (&appl, read_from_file, source_copy,
-                                         write_to_file, target_regen, pool);
+    err = svn_txdelta_apply (read_from_file, source_copy,
+                             write_to_file, target_regen, pool,
+                             &handler, &handler_baton);
   while (err == SVN_NO_ERROR)
     {
       err = svn_txdelta_next_window (&window, stream);
+      if (err == SVN_NO_ERROR)
+        err = handler (window, handler_baton);
       if (window == NULL)
         break;
-      err = svn_txdelta_apply_window (window, appl);
       svn_txdelta_free_window (window);
     }
   if (err != SVN_NO_ERROR)
@@ -210,7 +213,6 @@ main (int argc, char **argv)
       exit (1);
     }
   svn_txdelta_free (stream);
-  svn_txdelta_applicator_free (appl);
   apr_destroy_pool (pool);
 
   /* Compare the two files.  */
