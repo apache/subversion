@@ -964,7 +964,7 @@ xml_handle_start (void *userData, const char *name, const char **atts)
     = apr_pcalloc (my_digger->pool, sizeof (svn_xml__stackframe_t));
 
   /* Initialize the ancestor version to a recognizably invalid value. */
-  new_frame->ancestor_version = -1;
+  new_frame->ancestor_version = SVN_INVALID_VERNUM;
 
   /* Set the tag field */
   err = set_tag_type (new_frame, name, my_digger);
@@ -1325,6 +1325,8 @@ svn_error_t *
 svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
                            const svn_delta_edit_fns_t *editor,
                            void *edit_baton,
+                           svn_string_t *base_path, 
+                           svn_vernum_t base_version,
                            apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -1356,11 +1358,11 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
      in the digger's stack.  */
   rootframe = apr_pcalloc (main_subpool, sizeof (svn_xml__stackframe_t));
 
-  rootframe->tag              = svn_delta__XML_dir;
-  rootframe->name             = NULL;
-  rootframe->ancestor_path    = NULL;
-  rootframe->ancestor_version = SVN_INVALID_VERNUM;
-  rootframe->baton            = rootdir_baton;
+  rootframe->tag            = svn_delta__XML_dir;
+  rootframe->name           = NULL; /* This frame's distinguishing feature! */
+  rootframe->ancestor_path  = svn_string_dup (base_path, main_subpool);
+  rootframe->ancestor_version = base_version;
+  rootframe->baton          = rootdir_baton;
 
   /* Create a new digger structure and fill it out*/
   digger = apr_pcalloc (main_subpool, sizeof (svn_xml__digger_t));
@@ -1368,6 +1370,8 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
   digger->pool             = main_subpool;
   digger->stack            = rootframe;
   digger->editor           = editor;
+  digger->base_path        = base_path;
+  digger->base_version     = base_version;
   digger->edit_baton       = edit_baton;
   digger->rootdir_baton    = rootdir_baton;
   digger->dir_baton        = rootdir_baton;
@@ -1454,6 +1458,8 @@ svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
                           void *source_baton,
                           const svn_delta_edit_fns_t *editor,
                           void *edit_baton,
+                          svn_string_t *base_path,
+                          svn_vernum_t base_version,
                           apr_pool_t *pool)
 {
   char buf[BUFSIZ];
@@ -1466,6 +1472,8 @@ svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
   err =  svn_delta_make_xml_parser (&delta_parser,
                                     editor,
                                     edit_baton,
+                                    base_path,
+                                    base_version,
                                     pool);
   if (err)
     return err;

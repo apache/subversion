@@ -468,6 +468,8 @@ main (int argc, char *argv[])
   err = svn_delta_xml_auto_parse (my_read_func, source_baton, 
                                   &my_editor,
                                   my_edit_baton,
+                                  base_path,
+                                  base_version,
                                   globalpool);
 
   apr_close (source_baton);

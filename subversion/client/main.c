@@ -77,6 +77,7 @@ parse_command_options (int argc,
                        svn_string_t **xml_file,
                        svn_string_t **target,
                        svn_vernum_t *version,
+                       svn_string_t **ancestor_path,
                        apr_pool_t *pool)
 {
   for (; i < argc; i++)
@@ -103,6 +104,17 @@ parse_command_options (int argc,
           else
             *target = svn_string_create (argv[i], pool);
         }
+      else if (strcmp (argv[i], "--ancestor-path") == 0)
+        {
+          if (++i >= argc)
+            {
+              fprintf (stderr, "%s: \"--ancestor-path\" needs an argument\n",
+                       progname);
+              exit (1);
+            }
+          else
+            *ancestor_path = svn_string_create (argv[i], pool);
+        }
       else if (strcmp (argv[i], "--version") == 0)
         {
           if (++i >= argc)
@@ -128,8 +140,9 @@ parse_options (int argc,
                char **argv,
                enum command *command,
                svn_string_t **xml_file,
-               svn_string_t **target,  /* dest_dir or file */
-               svn_vernum_t *version,
+               svn_string_t **target,  /* dest_dir or file to add */
+               svn_vernum_t *version,  /* ancestral or new */
+               svn_string_t **ancestor_path,
                apr_pool_t *pool)
 {
   char *s = argv[0];  /* svn progname */
@@ -167,7 +180,9 @@ parse_options (int argc,
     }
 
  do_command_opts:
-  parse_command_options (argc, argv, ++i, s, xml_file, target, version, pool);
+  parse_command_options (argc, argv, ++i, s,
+                         xml_file, target, version, ancestor_path,
+                         pool);
 
   /* Sanity checks: make sure we got what we needed. */
   if (! *command)
@@ -196,21 +211,24 @@ main (int argc, char **argv)
 {
   svn_error_t *err;
   apr_pool_t *pool;
-  svn_vernum_t new_version = SVN_INVALID_VERNUM;
+  svn_vernum_t version = SVN_INVALID_VERNUM;
   svn_string_t *xml_file = NULL;
   svn_string_t *target = NULL;
+  svn_string_t *ancestor_path = NULL;
   enum command command = 0;
 
   apr_initialize ();
   pool = svn_pool_create (NULL, NULL);
 
-  parse_options (argc, argv, &command, &xml_file, &target, &new_version,
+  parse_options (argc, argv, &command,
+                 &xml_file, &target, &version, &ancestor_path,
                  pool);
   
   switch (command)
     {
     case checkout_command:
-      err = svn_client_checkout (target, xml_file, pool);
+      err = svn_client_checkout (target, xml_file,
+                                 ancestor_path, version, pool);
       break;
     case update_command:
       err = svn_client_update (target, xml_file, pool);
@@ -219,7 +237,7 @@ main (int argc, char **argv)
       err = svn_client_add (target, pool);
       break;
     case commit_command:
-      err = svn_client_commit (target, xml_file, new_version, pool);
+      err = svn_client_commit (target, xml_file, version, pool);
       break;
     default:
       fprintf (stderr, "no command given");

@@ -110,6 +110,8 @@ apply_delta (void *delta_src,
                                    delta_src,
                                    editor,
                                    edit_baton,
+                                   svn_string_create ("", pool),
+                                   version,
                                    pool);
 }
 

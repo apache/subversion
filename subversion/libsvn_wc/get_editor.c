@@ -981,7 +981,7 @@ svn_wc_get_update_editor (svn_string_t *dest,
 {
   return
     make_editor (dest, target_version,
-                 1, NULL, NULL,
+                 0, NULL, NULL,
                  editor, edit_baton, pool);
 }
 
