@@ -44,7 +44,6 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
              svn_stringbuf_t *dest,
              svn_stringbuf_t *ancestor_path,    /* ignored if update */
              svn_revnum_t ancestor_revision,  /* ignored if update */
-             svn_boolean_t recurse,
              apr_pool_t *pool,
              svn_boolean_t is_update)
 {
@@ -65,7 +64,6 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
       err = svn_wc_get_update_editor (anchor,
                                       target,
                                       ancestor_revision,
-                                      recurse,
                                       &editor,
                                       &edit_baton,
                                       pool);
@@ -75,7 +73,6 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
       err = svn_wc_get_checkout_editor (dest,
                                         ancestor_path,
                                         ancestor_revision,
-                                        recurse,
                                         &editor,
                                         &edit_baton,
                                         pool);
@@ -112,7 +109,6 @@ do_edits (const svn_delta_edit_fns_t *before_editor,
           svn_stringbuf_t *xml_src,
           svn_stringbuf_t *URL,      /* ignored if update */
           svn_revnum_t revision,  /* ignored if update */
-          svn_boolean_t recurse,
           apr_pool_t *pool,
           svn_boolean_t is_update)
 {
@@ -141,7 +137,6 @@ do_edits (const svn_delta_edit_fns_t *before_editor,
                      path,
                      URL,
                      revision,
-                     recurse,
                      pool,
                      is_update);
   if (err)
@@ -168,12 +163,11 @@ svn_client__checkout_internal (const svn_delta_edit_fns_t *before_editor,
                                svn_stringbuf_t *xml_src,
                                svn_stringbuf_t *URL,
                                svn_revnum_t revision,
-                               svn_boolean_t recurse,
                                apr_pool_t *pool)
 {
   return do_edits (before_editor, before_edit_baton,
                    after_editor, after_edit_baton,
-                   path, xml_src, URL, revision, recurse,
+                   path, xml_src, URL, revision, 
                    pool, FALSE);
 }
 
@@ -186,12 +180,11 @@ svn_client__update_internal (const svn_delta_edit_fns_t *before_editor,
                              svn_stringbuf_t *path,
                              svn_stringbuf_t *xml_src,
                              svn_revnum_t ancestor_revision,
-                             svn_boolean_t recurse,
                              apr_pool_t *pool)
 {
   return do_edits (before_editor, before_edit_baton,
                    after_editor, after_edit_baton,
-                   path, xml_src, NULL, ancestor_revision, recurse,
+                   path, xml_src, NULL, ancestor_revision, 
                    pool, TRUE);
 }
 

@@ -46,7 +46,6 @@ struct context {
   apr_hash_t *source_rev_diffs;
   svn_fs_root_t *target_root;
   svn_boolean_t text_deltas;
-  svn_boolean_t recurse;
   int target_is_rev;
 };
 
@@ -172,7 +171,6 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      const svn_delta_edit_fns_t *editor,
                      void *edit_baton,
                      svn_boolean_t text_deltas,
-                     svn_boolean_t recurse,
                      apr_pool_t *pool)
 {
   void *root_baton;
@@ -234,7 +232,6 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   c.source_rev_diffs = src_revs;
   c.target_root = tgt_root;
   c.target_is_rev = svn_fs_is_revision_root (tgt_root);
-  c.recurse = recurse;
   c.text_deltas = text_deltas;
 
   /* Set the global target revision if the target is a revision. */
@@ -971,120 +968,105 @@ delta_dirs (struct context *c,
           && ((s_entry = apr_hash_get (s_entries, key, klen)) != 0))
         {
           int distance;
-          int is_dir;
-          svn_fs_is_dir(&is_dir, c->target_root, t_entry->name, subpool); 
 
-          if (c->recurse || !is_dir)
+          /* Check the distance between the ids.  
+
+             0 means they are the same id, and this is a noop.
+
+             -1 means they are unrelated, so try to find an ancestor
+             elsewhere in the directory.  Theoretically, using an
+             ancestor as a baseline will reduce the size of the deltas.
+
+             Any other positive value means the nodes are related
+             through ancestry, so go ahead and do the replace
+             directly.  */
+          distance = svn_fs_id_distance (s_entry->id, t_entry->id);
+          if (distance == 0)
             {
-
-              /* Check the distance between the ids.  
-
-                 0 means they are the same id, and this is a noop.
-
-                 -1 means they are unrelated, so try to find an ancestor
-                 elsewhere in the directory.  Theoretically, using an
-                 ancestor as a baseline will reduce the size of the deltas.
-
-                 Any other positive value means the nodes are related
-                 through ancestry, so go ahead and do the replace
-                 directly.  */
-              distance = svn_fs_id_distance (s_entry->id, t_entry->id);
-              if (distance == 0)
-                {
-                  /* no-op */
-                }
-              else if (distance == -1)
-                {
-#if SVN_FS_SUPPORT_COPY_FROM_ARGS
-                  svn_fs_dirent_t *best_entry;
-                  int best_distance;
-
-                  SVN_ERR (find_nearest_entry (&best_entry, &best_distance,
-                                               c, source_path, 
-                                               target_path, t_entry));
-
-                  if (best_distance == -1)
-#endif
-                    {
-                      /* We found no ancestral match at all.  Delete this
-                         entry and create a new one from scratch. */
-                      SVN_ERR (delete (c, dir_baton, target_name, subpool));
-                      SVN_ERR (add_file_or_dir 
-                               (c, dir_baton, 0, 0, 
-                                target_path, target_name, subpool));
-                    }
-#if SVN_FS_SUPPORT_COPY_FROM_ARGS
-                  else
-                    {
-                      /* We found a relative.  It *shouldn't* have the
-                         same name (since this case gets caught in the
-                         first distance check above), but does it really
-                         matter? */
-                      SVN_ERR (replace_file_or_dir 
-                               (c, dir_baton,
-                                source_path, 
-                                svn_stringbuf_create (best_entry->name,
-                                                      subpool), 
-                                target_path,
-                                target_name,
-                                subpool));
-                    } 
-#endif
-                }
-              else
-                {
-                  SVN_ERR (replace_file_or_dir
-                           (c, dir_baton, 
-                            source_path,
-                            svn_stringbuf_create (s_entry->name, subpool),
-                            target_path,
-                            target_name,
-                            subpool));
-                }
+              /* no-op */
             }
-
-          /*  Remove the entry from the source_hash. */
-          apr_hash_set (s_entries, key, APR_HASH_KEY_STRING, NULL);
-        }            
-      else
-        {
-          int is_dir;
-          svn_fs_is_dir(&is_dir, c->target_root, t_entry->name, subpool);
-
-          if (c->recurse || !is_dir)
+          else if (distance == -1)
             {
 #if SVN_FS_SUPPORT_COPY_FROM_ARGS
-              /* We didn't find an entry with this name in the source
-                 entries hash.  This must be something new that needs to
-                 be added.  But let's first check to see if we can find an
-                 ancestor from which to copy this new entry. */
               svn_fs_dirent_t *best_entry;
               int best_distance;
 
               SVN_ERR (find_nearest_entry (&best_entry, &best_distance,
                                            c, source_path, 
-                                           target_path, t_entry, subpool));
-              
-              /* Add (with history if we found an ancestor) this new
-                 entry. */
+                                           target_path, t_entry));
+
               if (best_distance == -1)
 #endif
-                SVN_ERR (add_file_or_dir 
-                         (c, dir_baton, 0, 0, target_path, target_name,
-                          subpool));
+                {
+                  /* We found no ancestral match at all.  Delete this
+                     entry and create a new one from scratch. */
+                  SVN_ERR (delete (c, dir_baton, target_name, subpool));
+                  SVN_ERR (add_file_or_dir 
+                           (c, dir_baton, 0, 0, 
+                            target_path, target_name, subpool));
+                }
 #if SVN_FS_SUPPORT_COPY_FROM_ARGS
               else
-                SVN_ERR (add_file_or_dir
-                         (c, dir_baton, 
-                          source_path, 
-                          svn_stringbuf_create (best_entry->name, subpool),
-                          target_path, 
-                          target_name,
-                          subpool));
+                {
+                  /* We found a relative.  It *shouldn't* have the
+                     same name (since this case gets caught in the
+                     first distance check above), but does it really
+                     matter? */
+                  SVN_ERR (replace_file_or_dir 
+                           (c, dir_baton,
+                            source_path, 
+                            svn_stringbuf_create (best_entry->name, subpool), 
+                            target_path,
+                            target_name,
+                            subpool));
+                } 
 #endif
-            } 
-        }
+            }
+          else
+            {
+              SVN_ERR (replace_file_or_dir
+                       (c, dir_baton, 
+                        source_path,
+                        svn_stringbuf_create (s_entry->name, subpool),
+                        target_path,
+                        target_name,
+                        subpool));
+            }
 
+          /*  Remove the entry from the source_hash. */
+          apr_hash_set (s_entries, key, APR_HASH_KEY_STRING, NULL);
+        }
+      else
+        {
+#if SVN_FS_SUPPORT_COPY_FROM_ARGS
+          /* We didn't find an entry with this name in the source
+             entries hash.  This must be something new that needs to
+             be added.  But let's first check to see if we can find an
+             ancestor from which to copy this new entry. */
+          svn_fs_dirent_t *best_entry;
+          int best_distance;
+
+          SVN_ERR (find_nearest_entry (&best_entry, &best_distance,
+                                       c, source_path, 
+                                       target_path, t_entry, subpool));
+          
+          /* Add (with history if we found an ancestor) this new
+             entry. */
+          if (best_distance == -1)
+#endif
+            SVN_ERR (add_file_or_dir 
+                     (c, dir_baton, 0, 0, target_path, target_name, subpool));
+#if SVN_FS_SUPPORT_COPY_FROM_ARGS
+          else
+            SVN_ERR (add_file_or_dir
+                     (c, dir_baton, 
+                      source_path, 
+                      svn_stringbuf_create (best_entry->name, subpool),
+                      target_path, 
+                      target_name,
+                      subpool));
+#endif
+        }
       /* Clear out our subpool for the next iteration... */
       svn_pool_clear (subpool);
     }
@@ -1099,21 +1081,14 @@ delta_dirs (struct context *c,
           const void *key;
           void *val;
           apr_size_t klen;
-          int is_dir;
           
           /* KEY is the entry name in source, VAL the dirent */
           apr_hash_this (hi, &key, &klen, &val);
           s_entry = val;
-
-          /* Do we actually want to delete the dir if we're non-recursive? */
-          svn_fs_is_dir(&is_dir, c->source_root, s_entry->name, subpool); 
-
-          if (c->recurse || !is_dir)
-            {
-              SVN_ERR (delete (c, dir_baton, 
-                               svn_stringbuf_create (s_entry->name, subpool),
-                               subpool));
-            }
+          
+          SVN_ERR (delete (c, dir_baton, 
+                           svn_stringbuf_create (s_entry->name, subpool),
+                           subpool));
         }
     }
 

@@ -413,7 +413,6 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                              committed_root, rootpath,
                              editor, &mrc, 
                              FALSE, /* don't bother with text-deltas */
-                             TRUE, /* Do recurse into subdirectories */
                              pool);
   if (serr != NULL)
     {

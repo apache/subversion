@@ -59,9 +59,6 @@ struct edit_baton
   /* The revision we're targeting...or something like that. */
   svn_revnum_t target_revision;
 
-  /* Whether this edit will descend into subdirs */
-  svn_boolean_t recurse;
-
   /* These used only in checkouts. */
   svn_boolean_t is_checkout;
   svn_stringbuf_t *ancestor_path;
@@ -1587,7 +1584,6 @@ close_edit (void *edit_baton)
       if (entry->kind == svn_node_dir)
         SVN_ERR (svn_wc__ensure_uniform_revision (full_path,
                                                   eb->target_revision,
-                                                  eb->recurse,
                                                   eb->pool));
     }
 
@@ -1608,7 +1604,6 @@ make_editor (svn_stringbuf_t *anchor,
              svn_revnum_t target_revision,
              svn_boolean_t is_checkout,
              svn_stringbuf_t *ancestor_path,
-             svn_boolean_t recurse,
              const svn_delta_edit_fns_t **editor,
              void **edit_baton,
              apr_pool_t *pool)
@@ -1628,7 +1623,6 @@ make_editor (svn_stringbuf_t *anchor,
   eb->ancestor_path   = ancestor_path;
   eb->anchor          = anchor;
   eb->target          = target;
-  eb->recurse         = recurse;
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
@@ -1656,12 +1650,11 @@ svn_error_t *
 svn_wc_get_update_editor (svn_stringbuf_t *anchor,
                           svn_stringbuf_t *target,
                           svn_revnum_t target_revision,
-                          svn_boolean_t recurse,
                           const svn_delta_edit_fns_t **editor,
                           void **edit_baton,
                           apr_pool_t *pool)
 {
-  return make_editor (anchor, target, target_revision, FALSE, NULL, recurse,
+  return make_editor (anchor, target, target_revision, FALSE, NULL,
                       editor, edit_baton, pool);
 }
 
@@ -1670,12 +1663,11 @@ svn_error_t *
 svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
                             svn_stringbuf_t *ancestor_path,
                             svn_revnum_t target_revision,
-                            svn_boolean_t recurse,
                             const svn_delta_edit_fns_t **editor,
                             void **edit_baton,
                             apr_pool_t *pool)
 {
-  return make_editor (dest, NULL, target_revision, TRUE, ancestor_path, recurse,
+  return make_editor (dest, NULL, target_revision, TRUE, ancestor_path,
                       editor, edit_baton, pool);
 }
 

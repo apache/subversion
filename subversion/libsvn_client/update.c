@@ -63,7 +63,6 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    svn_stringbuf_t *xml_src,
                    svn_revnum_t revision,
                    apr_time_t tm,
-                   svn_boolean_t recurse,
                    apr_pool_t *pool)
 {
   const svn_delta_edit_fns_t *update_editor;
@@ -110,7 +109,6 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
   SVN_ERR (svn_wc_get_update_editor (anchor,
                                      target,
                                      revision,
-                                     recurse,
                                      &update_editor,
                                      &update_edit_baton,
                                      pool));
@@ -148,14 +146,13 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                                   &reporter, &report_baton,
                                   revision,
                                   target,
-                                  recurse,
                                   update_editor, update_edit_baton));
 
       /* Drive the reporter structure, describing the revisions within
          PATH.  When we call reporter->finish_report, the
          update_editor will be driven by svn_repos_dir_delta. */
       SVN_ERR (svn_wc_crawl_revisions (path, reporter, report_baton,
-                                       TRUE, TRUE, recurse, pool));
+                                       TRUE, TRUE, pool));
 
       /* Close the RA session. */
       SVN_ERR (ra_lib->close (session));

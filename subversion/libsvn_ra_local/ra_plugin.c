@@ -288,7 +288,6 @@ do_update (void *session_baton,
            void **report_baton,
            svn_revnum_t update_revision,
            svn_stringbuf_t *update_target,
-           svn_boolean_t recurse,
            const svn_delta_edit_fns_t *update_editor,
            void *update_baton)
 {
@@ -309,7 +308,6 @@ do_update (void *session_baton,
                                  sbaton->username,
                                  sbaton->fs, sbaton->fs_path,
                                  update_target, TRUE,
-                                 recurse,
                                  update_editor, update_baton,
                                  sbaton->pool);
 }
@@ -320,7 +318,6 @@ do_status (void *session_baton,
            const svn_ra_reporter_t **reporter,
            void **report_baton,
            svn_stringbuf_t *status_target,
-           svn_boolean_t recurse,
            const svn_delta_edit_fns_t *status_editor,
            void *status_baton)
 {
@@ -338,7 +335,6 @@ do_status (void *session_baton,
                                  sbaton->username,
                                  sbaton->fs, sbaton->fs_path,
                                  status_target, FALSE,
-                                 recurse,
                                  status_editor, status_baton,
                                  sbaton->pool);
 }
