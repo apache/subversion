@@ -470,14 +470,14 @@ sub usage
       "next -m resets the -h, -l, -r and -s command line options and the\n",
       "list of email addresses.\n",
       "\n",
-      "To support a single project and the old usage, the script\n",
-      "initializes itself with an implicit -m . rule that matches any\n",
-      "modifications to the repository.  Therefore, to use the script for\n",
-      "a single project repository, just use the other comand line options\n",
-      "and list email addresses on the command line as before.  If you do\n",
-      "not want a project that matches the entire repository, then use a -m\n",
-      "and a regular expression before any other command line options or\n",
-      "email addresses.\n";
+      "To support a single project conveniently, the script initializes\n",
+      "itself with an implicit -m . rule that matches any modifications\n",
+      "to the repository.  Therefore, to use the script for a single\n",
+      "project repository, just use the other comand line options and\n",
+      "a list of email addresses on the command line.  If you do not want\n",
+      "a project that matches the entire repository, then use a -m with a\n",
+      "regular expression before any other command line options or email\n",
+      "addresses.\n";
 }
 
 # Return a new hash data structure for a new empty project that
@@ -499,7 +499,7 @@ sub safe_read_from_pipe
     {
       croak "$0: safe_read_from_pipe passed no arguments.\n";
     }
-  print "Running @_\n";
+
   my $pid = open(SAFE_READ, '-|');
   unless (defined $pid)
     {
