@@ -77,10 +77,10 @@ make_get_locks_baton (apr_pool_t *pool)
 static svn_error_t *
 verify_matching_lock_paths (struct get_locks_baton_t *baton,
                             const char *expected_paths[],
-                            int num_expected_paths,
+                            apr_size_t num_expected_paths,
                             apr_pool_t *pool)
 {
-  int i;
+  apr_size_t i;
   if (num_expected_paths != apr_hash_count (baton->locks))
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Unexpected number of locks.");
@@ -236,6 +236,7 @@ attach_lock (const char **msg,
   mylock.comment = "This is a comment.  Yay comment!";
   mylock.creation_date = apr_time_now();
   mylock.expiration_date = apr_time_now() + apr_time_from_sec(3);
+  mylock.xml_comment = 0;
 
   SVN_ERR (svn_fs_attach_lock (fs, &mylock, FALSE, SVN_INVALID_REVNUM, pool));
 
@@ -271,7 +272,7 @@ get_locks (const char **msg,
   svn_fs_access_t *access;
   svn_lock_t *mylock;
   struct get_locks_baton_t *get_locks_baton;
-  int i, num_expected_paths;
+  apr_size_t i, num_expected_paths;
 
   *msg = "get locks";
 
@@ -507,6 +508,7 @@ lock_credentials (const char **msg,
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, NULL,
        "Uhoh, able to commit locked file without any fs username.");
+  svn_error_clear (err);
     
   /* We are now 'hortense'. */
   SVN_ERR (svn_fs_create_access (&access, "hortense", pool));
@@ -518,6 +520,7 @@ lock_credentials (const char **msg,
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, NULL,
        "Uhoh, able to commit locked file as non-owner.");
+  svn_error_clear (err);
 
   /* Be 'bubba' again. */
   SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
@@ -529,6 +532,7 @@ lock_credentials (const char **msg,
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, NULL,
        "Uhoh, able to commit locked file with no lock token.");
+  svn_error_clear (err);
   
   /* Push the proper lock-token into the fs access context. */
   SVN_ERR (svn_fs_access_add_lock_token (access, mylock->token));
@@ -596,6 +600,7 @@ final_lock_check (const char **msg,
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, NULL,
        "Uhoh, able to commit dir deletion when a child is locked.");
+  svn_error_clear (err);
 
   /* Supply correct username and token;  commit should work. */
   SVN_ERR (svn_fs_set_access (fs, access));
@@ -716,6 +721,7 @@ lock_name_reservation (const char **msg,
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, NULL,
        "Uhoh, copy succeeded when path within target was locked.");
+  svn_error_clear (err);
    
   return SVN_NO_ERROR;
 }
@@ -735,7 +741,7 @@ directory_locks_kinda (const char **msg,
   svn_fs_root_t *txn_root;
   svn_fs_access_t *access;
   svn_lock_t *mylock;
-  int num_expected_paths, i;
+  apr_size_t num_expected_paths, i;
   struct get_locks_baton_t *get_locks_baton;
 
   *msg = "directory locks (kinda)";
@@ -854,6 +860,7 @@ lock_expiration (const char **msg,
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, NULL,
        "Uhoh, able to commit a file that has a non-expired lock.");
+  svn_error_clear (err);
 
   /* Sleep 5 seconds, so the lock auto-expires.  Anonymous commit
      should then succeed. */
@@ -993,6 +1000,7 @@ lock_out_of_date (const char **msg,
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, NULL,
        "Uhoh, able to lock an out-of-date file.");
+  svn_error_clear (err);
 
   /* Attempt lock again, this time claiming to have r2. */
   SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", "", 0, 0, 2, pool));
@@ -1004,6 +1012,7 @@ lock_out_of_date (const char **msg,
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, NULL,
        "Uhoh, able to refresh a lock on an out-of-date file.");
+  svn_error_clear (err);
 
   return SVN_NO_ERROR;
 }
