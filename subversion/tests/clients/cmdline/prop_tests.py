@@ -209,6 +209,7 @@ def update_props():
                                                expected_status_tree,
                                                None, None, None, None, 1)
 
+#----------------------------------------------------------------------
 
 def downdate_props():
   "receive property changes as part of a downdate"
@@ -220,8 +221,10 @@ def downdate_props():
   if svntest.actions.make_repo_and_wc(sbox):
     return 1
 
-  # Add a property to a file
   iota_path = os.path.join(wc_dir, 'iota') 
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  
+  # Add a property to a file
   svntest.main.run_svn(None, 'propset', 'cash-sound', 'cha-ching!', iota_path)
 
   # Create expected output tree.
@@ -234,7 +237,7 @@ def downdate_props():
     item[3]['repos_rev'] = '2'     # post-commit status
     if (item[0] == iota_path):
       item[3]['wc_rev'] = '2'
-      item[3]['status'] = '_U'
+      item[3]['status'] = '__'
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
 
   # Commit the one file.
@@ -244,32 +247,96 @@ def downdate_props():
                                             wc_dir):
     return 1
 
+  # Make some mod (something to commit)
+  svntest.main.file_append (mu_path, "some mod")
+
+  # Create expected output tree.
+  output_list = [ [mu_path, None, {}, {'verb' : 'Sending'}] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Created expected status tree.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  for item in status_list:
+    item[3]['repos_rev'] = '3'     # post-commit status
+    if (item[0] == iota_path):
+      item[3]['wc_rev'] = '2'
+      item[3]['status'] = '__'
+    if (item[0] == mu_path):
+      item[3]['wc_rev'] = '3'
+      item[3]['status'] = '_ '
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Commit the one file.
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
+                                            expected_status_tree,
+                                            None, None, None, None, None,
+                                            wc_dir):
+    return 1
+  
   # Create expected output tree for an update.
-  output_list = [ [iota_path, None, {}, {'status' : '_U'}] ]
+  output_list = [ [iota_path, None, {}, {'status' : '_U'}],
+                  [mu_path,   None, {}, {'status' : 'U '}] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
   
   # Create expected disk tree for the update.
   my_greek_tree = svntest.main.copy_greek_tree()
-  # my_greek_tree[2][2]['blue'] = 'azul'  # A/mu
-  # my_greek_tree[16][2]['red'] = 'rojo'  # A/D/H
   expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
-
-  # fooo
-
+  
   # Create expected status tree for the update.
-  status_list = svntest.actions.get_virginal_status_list(wc_backup, '2')
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
   for item in status_list:
-    if (item[0] == mu_path) or (item[0] == H_path):
-      item[3]['status'] = '__'
+    item[3]['repos_rev'] = '3'
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
 
   # Do the update and check the results in three ways... INCLUDING PROPS
-  return svntest.actions.run_and_verify_update(wc_backup,
+  return svntest.actions.run_and_verify_update(wc_dir,
                                                expected_output_tree,
                                                expected_disk_tree,
                                                expected_status_tree,
-                                               None, None, None, None, 1)
+                                               None, None, None, None, 1,
+                                               '-r1')
 
+#----------------------------------------------------------------------
+
+def remove_props():
+  "commit the removal of props"
+
+  # Bootstrap
+  sbox = sandbox(downdate_props)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  # Add a property to a file
+  iota_path = os.path.join(wc_dir, 'iota') 
+  svntest.main.run_svn(None, 'propset', 'cash-sound', 'cha-ching!', iota_path)
+
+  # Commit the file
+  svntest.main.run_svn(None, 'ci', iota_path)
+
+  # Now, remove the property
+  svntest.main.run_svn(None, 'propdel', 'cash-sound', iota_path)
+
+  # Create expected output tree.
+  output_list = [ [iota_path, None, {}, {'verb' : 'Sending'}] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Created expected status tree.
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  for item in status_list:
+    item[3]['repos_rev'] = '3'     # post-commit status
+    if (item[0] == iota_path):
+      item[3]['wc_rev'] = '3'
+      item[3]['status'] = '_ '
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Commit the one file.
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
+                                            expected_status_tree,
+                                            None, None, None, None, None,
+                                            wc_dir):
+    return 1
 
 ########################################################################
 # Run the tests
@@ -279,8 +346,9 @@ def downdate_props():
 test_list = [ None,
               make_local_props,
               commit_props,
-              update_props
-              ## downdate_props
+              update_props,
+              downdate_props,
+              remove_props,
              ]
 
 if __name__ == '__main__':
