@@ -837,26 +837,29 @@ struct file_mod_t
 };
 
 
+/* A baton for use with the path-based editor driver */
 struct path_driver_cb_baton
 {
-  svn_wc_adm_access_t *adm_access;
-  const svn_delta_editor_t *editor;
-  void *edit_baton;
-  apr_hash_t *file_mods;
-  apr_hash_t *tempfiles;
-  const char *notify_path_prefix;
-  svn_client_ctx_t *ctx;
-  apr_hash_t *commit_items;
+  svn_wc_adm_access_t *adm_access;     /* top-level access baton */
+  const svn_delta_editor_t *editor;    /* commit editor */
+  void *edit_baton;                    /* commit editor's baton */
+  apr_hash_t *file_mods;               /* hash: path->file_mod_t */
+  apr_hash_t *tempfiles;               /* hash of tempfiles created */
+  const char *notify_path_prefix;      /* notification path prefix */
+  svn_client_ctx_t *ctx;               /* client context baton */
+  apr_hash_t *commit_items;            /* the committables */
 };
 
 
+/* This implements svn_delta_path_driver_cb_func_t */
 static svn_error_t *
 do_item_commit (void **dir_baton,
-                const char *path,
                 void *parent_baton,
-                struct path_driver_cb_baton *cb_baton,
+                void *callback_baton,
+                const char *path,
                 apr_pool_t *pool)
 {
+  struct path_driver_cb_baton *cb_baton = callback_baton;
   svn_client_commit_item_t *item = apr_hash_get (cb_baton->commit_items,
                                                  path, APR_HASH_KEY_STRING);
   svn_node_kind_t kind = item->kind;
@@ -1089,18 +1092,6 @@ do_item_commit (void **dir_baton,
 }
 
 
-static svn_error_t *
-path_driver_cb_func (void **dir_baton,
-                     void *parent_baton,
-                     void *callback_baton,
-                     const char *path,
-                     apr_pool_t *pool)
-{
-  struct path_driver_cb_baton *cb_baton = callback_baton;
-  return do_item_commit (dir_baton, path, parent_baton, cb_baton, pool);
-}
-
-
 #ifdef SVN_CLIENT_COMMIT_DEBUG
 /* Prototype for function below */
 static svn_error_t *get_test_editor (const svn_delta_editor_t **editor,
@@ -1168,8 +1159,7 @@ svn_client__do_commit (const char *base_url,
 
   /* Drive the commit editor! */
   SVN_ERR (svn_delta_path_driver (editor, edit_baton, SVN_INVALID_REVNUM,
-                                  paths, path_driver_cb_func, 
-                                  &cb_baton, pool));
+                                  paths, do_item_commit, &cb_baton, pool));
 
   /* Transmit outstanding text deltas. */
   for (hi = apr_hash_first (pool, file_mods); hi; hi = apr_hash_next (hi))
