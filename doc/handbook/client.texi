@@ -14,11 +14,56 @@ How to make a lovely gumbo with your Subversion client, in 11 easy steps.
 @end menu
 
 @c ------------------------------------------------------------------
+
+@node Overview
+@section Overview
+
+Hmm. It just occurred to me that we need an overview of the client.
+
 @node Checkout
 @section Checkout
 
 Most of the time, you will start using a Subversion repository by doing
-a @dfn{checkout} of your project. 
+a @dfn{checkout} of your project. "Checking out" will provide you with a
+local copy of the HEAD of the Subversion repository
+that you checked out.
+
+@example
+$ svn co http://svn.collab.net/repos/svn/trunk
+A  trunk/subversion.dsw
+A  trunk/svn_check.dsp
+A  trunk/COMMITTERS
+A  trunk/configure.in
+A  trunk/IDEAS
+...
+Checked out revision 2499.
+@end example
+
+Although the above example checks out the entire repository, you can
+just as easily checkout any subdirectory of a repository by specifying
+the subdirectory in the checkout URL:
+
+@example
+$ svn co http://svn.collab.net/repos/svn/trunk/doc/handbook
+A  handbook/svn-handbook.texi
+A  handbook/getting_started.texi
+A  handbook/outline.txt
+A  handbook/license.texi
+A  handbook/repos_admin.texi
+A  handbook/client.texi
+Checked out revision 2499.
+pantheon: /tmp>
+@end example
+
+Since Subversion uses copy-modify-merge instead of lock-modify-unlock,
+you're now ready to start making changes to the files that you've
+checked out, known collectively as your @dfn{Working copy}. You can even
+delete the entire working copy and forget about it entirely--there's no
+need to notify the Subversion server unless you're ready to @dfn{check
+in} changes, a new file, or even a directory.
+
+See @code{svn help checkout} for command line options to checkout.
+
 
 @node Basic Work Cycle
 @section Basic Work Cycle
