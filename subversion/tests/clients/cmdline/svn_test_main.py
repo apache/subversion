@@ -37,8 +37,9 @@
 #####################################################################
 # Global stuff
 
-import sys   # for argv[]
-import os    # for popen2()
+import sys     # for argv[]
+import os      # for popen2()
+import shutil  # for rmtree()
 
 # Global:  set this to the location of the svn binary
 svn_binary = '../../../client/svn'
@@ -46,6 +47,7 @@ svn_binary = '../../../client/svn'
 ######################################################################
 # Utilities shared by the tests
 
+# For running subversion and returning the output
 def run_svn(*varargs):
   "Run svn with VARARGS, and return stdout as a list of lines."
 
@@ -55,6 +57,21 @@ def run_svn(*varargs):
   infile, outfile = os.popen2(command) # run command, get 2 file descriptors
   return outfile.readlines()           # convert stdout to list of lines
 
+
+# For clearing away working copies
+def remove_wc(dirname):
+  "Remove a working copy named DIRNAME."
+
+  if os.path.exists(dirname):
+    shutil.rmtree(dirname)
+
+# For making local mods to files
+def file_append(path, new_text):
+  "Append NEW_TEXT to file at PATH"
+
+  fp = open(path, 'a')  # open in (a)ppend mode
+  fp.write(new_text)
+  fp.close()
 
 #  -- put more shared routines here --
 
