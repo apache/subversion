@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <delta-pkg>
   <tree-delta>
-    <replace name="iota" version="2">
+    <replace name="iota">
       <file>
-        <text-delta>This is an updated version of 'iota', v2.</text-delta>
+        <text-delta>This is an updated version of 'iota'.</text-delta>
       </file>
     </replace>
   </tree-delta>
