@@ -2110,31 +2110,32 @@ $ svn cat --revision 2 rules.txt &gt; rules.txt.v2
 $
 </screen>
 
-      <para>You're probably wondering why we don't just use
-        <command>svn update --revision</command> to update the file to
-        the older revision.  There are a few reasons why we might
-        prefer to use <command>svn cat</command>.</para>
+      <para>Probablemente se esté preguntando por qué <!--TODO:why we
+        don't just use--> no usamos <command>svn update --revision</command>
+        para actualizar el fichero a la revisión más antígua. Hay algunas
+        razones por las que <!--TODO:we might prefer--> preferimos usar
+        <command>svn cat</command>.</para>
 
-      <para>First, you may want to see the differences between two
-        revisions of a file using an external diff program (perhaps a
-        graphical one, or perhaps your file is in such a format that
-        the output of unified diff is nonsensical).  In this case,
-        you'll need to grab a copy of the old revision, redirect it to
-        a file, and pass both that and the file in your working copy
-        to your external diff program.</para>
+      <para>Primero, usted puede querer ver las diferencias entre dos
+        revisiones de un fichero usando un programa diff externo (quizás
+        uno grafico, o quizás su fichero está en <!--TODO:is in such
+        a format--> un formato que la salida de un diff unificado es
+        absurdo). En este caso, necesitará coger una copia de la revisión
+        antigua, redireccionarla a un fichero, y pasar este y el fichero
+        de su copia de trabajo a su programa diff externo.</para>
 
-      <para>Sometimes it's easier to look at an older version of a
-        file in its entirety as opposed to just the differences
-        between it and another revision.</para>
+      <para>A veces es más facil mirar una versión más antigua de un fichero
+        en su totalidad en comparación con las diferencias entre esta y
+        otra revisión.</para>
 
       </sect2>
 
     <sect2 id="svn-ch-3-sect-5.4">
       <title><command>svn list</command></title>
       
-      <para>The <command>svn list</command> command shows you what
-        files are in a repository directory without actually
-        downloading the files to your local machine:</para>
+      <para>El comando <command>svn list</command> le muestra qué ficheros
+        están en un directorio de un repositorio sin realmente descargar
+        los ficheros a su máquina local:</para>
       
       <screen>
 $ svn list http://svn.collab.net/repos/svn
@@ -2145,9 +2146,9 @@ tags/
 trunk/
 </screen>
 
-      <para>If you want a more detailed listing, pass the
-        <option>--verbose</option> (<option>-v</option>) flag to get
-        output like this.</para>
+      <para>Si desea un listado más detallado, pase la opción
+        <option>--verbose</option> (<option>-v</option>) para obtener
+        una salida como esta.</para>
 
       <screen>
 $ svn list --verbose http://svn.collab.net/repos/svn
@@ -2158,22 +2159,23 @@ $ svn list --verbose http://svn.collab.net/repos/svn
    2785 sally               Jul 29 19:07 trunk/
 </screen>
 
-      <para>The columns tell you the revision at which the file or
-        directory was last modified, the user who modified it, the size
-        if it is a file, the date it was last modified, and the item's
-        name.</para>
+      <para>Las columnas le dicen la revisión en la cual el fichero o
+        directorio fue modificado por última vez, el usuario qué lo
+        modificó, el tamaño si este es un fichero, la fecha de la
+        última modificación, y el nombre del objeto.</para>
  
     </sect2>
 
     <sect2 id="svn-ch-3-sect-5.5">
-      <title>A Final Word on History</title>
+      <title>Una palabra final en el historial</title>
+            <!--TODO: A Final Word on History-->
 
-      <para>In addition to all of the above commands, you can use
-        <command>svn update</command> and <command>svn
-        checkout</command> with the <option>--revision</option> switch
-        to take an entire working copy <quote>back in time</quote>
-        <footnote><para>See?  We told you that Subversion was a time
-        machine.</para></footnote>:</para>
+      <para>Además de todos los comandos anteriores, usted puede usar
+        <command>svn update</command> y <command>svn checkout</command>
+        con la opción <option>--revision</option> para tomar una
+        copia de trabajo entera <quote>aterior en el tiempo</quote>
+        <!--TODO:back in time--><footnote><para>¿Ve? Le dijimos que
+        Subversion era una máquina del tiempo.</para></footnote>:</para>
 
       <screen>
 $ svn checkout --revision 1729 # Checks out a new working copy at r1729
@@ -2191,11 +2193,11 @@ $ svn update --revision 1729 # Updates an existing working copy to r1729
   <!-- ======================== SECTION 7 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-3-sect-7">
-    <title>Other Useful Commands</title>
+    <title>Otros comandos útiles</title>
 
-      <para>While not as frequently used as the commands previously
-      discussed in this chapter, you will occasionally need these
-      commands.</para>
+      <para>Mientras que no son usados con tanta frecuencia como los comandos
+        discutidos<!--TODO:previously discused--> previamente en este
+        capítulo, usted necesitará de vez en cuando estos comandos.</para>
 
     <sect2 id="svn-ch-3-sect-7.1">
       <title><command>svn cleanup</command></title>
