@@ -1,3 +1,5 @@
+#!/bin/sh
+
 #
 # Root of the test tree
 #

@@ -8,8 +8,3 @@
 export LD_LIBRARY_PATH=.
 export CLASSPATH=$CLASSPATH:tests
 java AllTests
-
-
-
-
-
