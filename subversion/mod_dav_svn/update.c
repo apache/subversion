@@ -30,6 +30,7 @@
 #include "svn_md5.h"
 #include "svn_xml.h"
 #include "svn_path.h"
+#include "svn_dav.h"
 
 #include "dav_svn.h"
 
@@ -77,6 +78,7 @@ typedef struct {
                             without dst_path as prefix. */
 
   const char *base_checksum;   /* base_checksum (from apply_textdelta) */
+  const char *text_checksum;   /* text_checksum (from close_file) */
 
   svn_boolean_t text_changed;        /* Did the file's contents change? */
   svn_boolean_t added;               /* File added? (Implies text_changed.) */
@@ -180,45 +182,6 @@ static item_baton_t *make_child_baton(item_baton_t *parent,
 }
 
 
-/* Construct an xml element with optional BASE_CHECKSUM and
- * RESULT_CHECKSUM attributes.
- *
- * (PREFIX and SUFFIX don't need whitespace on the end and beginning
- * respectively; this function will add the padding itself.
- */
-static const char *
-insert_checksum_attributes(const char *prefix,
-                           const char *base_checksum,
-                           const char *result_checksum,
-                           const char *suffix,
-                           apr_pool_t *pool)
-{
-  if (base_checksum && result_checksum)
-    {
-      return apr_pstrcat(pool, prefix, " ",
-                         "base-checksum=\"", base_checksum, "\" ",
-                         "result-checksum=\"", result_checksum, "\" ",
-                         suffix, NULL);
-    }
-  else if (base_checksum)
-    {
-      return apr_pstrcat(pool, prefix, " ",
-                         "base-checksum=\"", base_checksum, "\" ",
-                         suffix, NULL);
-    }
-  else if (result_checksum)
-    {
-      return apr_pstrcat(pool, prefix, " ",
-                         "result-checksum=\"", result_checksum, "\" ",
-                         suffix, NULL);
-    }
-  else
-    {
-      return apr_pstrcat(pool, prefix, " ", suffix, NULL);
-    }
-}
-
-
 static void send_xml(update_ctx_t *uc, const char *fmt, ...)
 {
   va_list ap;
@@ -268,8 +231,6 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
                                 void **child_baton)
 {
   item_baton_t *child;
-  const char *qname;
-  const char *qpath;
   update_ctx_t *uc = parent->uc;
 
   child = make_child_baton(parent, path, pool);
@@ -277,15 +238,14 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
 
   if (uc->resource_walk)
     {
-      qpath = apr_xml_quote_string(pool, child->path3, 1);
-
-      send_xml(child->uc, "<S:resource path=\"%s\">" DEBUG_CR, qpath);      
+      send_xml(child->uc, "<S:resource path=\"%s\">" DEBUG_CR, 
+               apr_xml_quote_string(pool, child->path3, 1));
     }
   else
     {
-      const char *hex_digest = NULL;
-
-      qname = apr_xml_quote_string(pool, child->name, 1);
+      const char *qname = apr_xml_quote_string(pool, child->name, 1);
+      const char *elt;
+      const char *chk_attr = "";
       
       if (! is_dir)
         {
@@ -295,35 +255,30 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
           SVN_ERR (svn_fs_file_md5_checksum
                    (digest, uc->rev_root, real_path, pool));
           
-          hex_digest = svn_md5_digest_to_cstring(digest, pool);
+          child->text_checksum = svn_md5_digest_to_cstring(digest, pool);
+#ifdef SVN_DAV_OLD_UPDATE_CHECKSUMS
+          if (child->text_checksum)
+            chk_attr = apr_pstrcat(pool, " result-checksum=\"", 
+                                   child->text_checksum, "\"", NULL);
+#endif /* SVN_DAV_OLD_UPDATE_CHECKSUMS */
         }
 
       if (copyfrom_path == NULL)
         {
-          const char *prefix
-            = apr_psprintf(pool, "<S:add-%s name=\"%s\"",
-                           DIR_OR_FILE(is_dir), qname);
-
-          const char *elt = insert_checksum_attributes(prefix,
-                                                       NULL, hex_digest,
-                                                       ">", pool);
-          send_xml(child->uc, "%s" DEBUG_CR, elt);
+          elt = apr_psprintf(pool, "<S:add-%s name=\"%s\"%s>" DEBUG_CR,
+                             DIR_OR_FILE(is_dir), qname, chk_attr);
         }
       else
         {
           const char *qcopy = apr_xml_quote_string(pool, copyfrom_path, 1);
-          const char *prefix
-            = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
-                           "copyfrom-path=\"%s\" copyfrom-rev=\"%"
-                           SVN_REVNUM_T_FMT "\"",
-                           DIR_OR_FILE(is_dir),
-                           qname, qcopy, copyfrom_revision);
-
-          const char *elt = insert_checksum_attributes(prefix,
-                                                       NULL, hex_digest,
-                                                       ">", pool);
-          send_xml(child->uc, "%s" DEBUG_CR, elt);
+          elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
+                             "copyfrom-path=\"%s\" copyfrom-rev=\"%"
+                             SVN_REVNUM_T_FMT "\"%s>" DEBUG_CR,
+                             DIR_OR_FILE(is_dir),
+                             qname, qcopy, copyfrom_revision, chk_attr);
         }
+
+      send_xml(child->uc, elt);
     }
 
   send_vsn_url(child, pool);
@@ -410,6 +365,10 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
       send_xml(baton->uc, "<D:creator-displayname>%s</D:creator-displayname>",
                baton->last_author);
 
+    if (baton->text_checksum)
+      send_xml(baton->uc, "<V:md5-checksum>%s</V:md5-checksum>", 
+               baton->text_checksum);
+
     send_xml(baton->uc, "</S:prop>\n");
   }
     
@@ -430,6 +389,7 @@ static svn_error_t * upd_set_target_revision(void *edit_baton,
       send_xml(uc,
                DAV_XML_HEADER DEBUG_CR
                "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+               "xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\" "
                "xmlns:D=\"DAV:\">" DEBUG_CR
                "<S:target-revision rev=\"%" SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
                target_revision);
@@ -603,7 +563,7 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
 {
   item_baton_t *file = file_baton;
 
-  file->base_checksum = apr_pstrdup (file->pool, base_checksum);
+  file->base_checksum = apr_pstrdup(file->pool, base_checksum);
   file->text_changed = TRUE;
   *handler = NULL;
 
@@ -616,15 +576,28 @@ static svn_error_t * upd_close_file(void *file_baton,
 {
   item_baton_t *file = file_baton;
 
+  file->text_checksum = apr_pstrdup(file->pool, text_checksum);
+
   /* if we added the file, then no need to tell the client to fetch it */
   if ((! file->added) && file->text_changed)
     {
-      const char *elt = insert_checksum_attributes("<S:fetch-file",
-                                                   file->base_checksum,
-                                                   text_checksum,
-                                                   "/>",
-                                                   pool);
-      send_xml(file->uc, "%s" DEBUG_CR, elt);
+      const char *elt;
+#ifdef SVN_DAV_OLD_UPDATE_CHECKSUMS
+      elt = apr_psprintf(pool, "<S:fetch-file%s%s%s%s%s%s/>" DEBUG_CR,
+                         file->base_checksum ? " base-checksum=\"" : "",
+                         file->base_checksum ? file->base_checksum : "",
+                         file->base_checksum ? "\"" : "",
+                         file->text_checksum ? " result-checksum=\"" : "",
+                         file->text_checksum ? file->text_checksum : "",
+                         file->text_checksum ? "\"" : "");
+#else /* SVN_DAV_OLD_UPDATE_CHECKSUMS */
+      elt = apr_psprintf(pool, "<S:fetch-file%s%s%s/>" DEBUG_CR,
+                         file->base_checksum ? " base-checksum=\"" : "",
+                         file->base_checksum ? file->base_checksum : "",
+                         file->base_checksum ? "\"" : "");
+#endif /* SVN_DAV_OLD_UPDATE_CHECKSUMS */
+
+      send_xml(file->uc, elt);
     }
 
   close_helper(FALSE /* is_dir */, file);

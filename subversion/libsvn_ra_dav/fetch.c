@@ -1883,12 +1883,13 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
       parent_dir = &TOP_DIR(rb);
       rb->file_pool = svn_pool_create(rb->ras->pool);
+      rb->result_checksum = NULL;
 
+#ifdef SVN_DAV_OLD_UPDATE_CHECKSUMS
       result_checksum = get_attr(atts, "result-checksum");
       if (result_checksum)
         rb->result_checksum = apr_pstrdup(rb->file_pool, result_checksum);
-      else
-        rb->result_checksum = NULL;
+#endif /* SVN_DAV_OLD_UPDATE_CHECKSUMS */
 
       /* Add this file's name into the directory's path buffer. It will be
          removed in end_element() */
@@ -1947,6 +1948,8 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
     case ELEM_fetch_file:
       base_checksum = get_attr(atts, "base-checksum");
+      rb->result_checksum = NULL;
+
       /* assert: rb->href->len > 0 */
       CHKERR( simple_fetch_file(rb->ras->sess2, 
                                 rb->href->data,
@@ -1959,12 +1962,12 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
                                 rb->ras->callback_baton,
                                 rb->file_pool) );
 
+#ifdef SVN_DAV_OLD_UPDATE_CHECKSUMS
       /* Save result_checksum for a later call to editor->close_file(). */
       result_checksum = get_attr(atts, "result-checksum");
       if (result_checksum)
         rb->result_checksum = apr_pstrdup(rb->file_pool, result_checksum);
-      else
-        rb->result_checksum = NULL;
+#endif /* SVN_DAV_OLD_UPDATE_CHECKSUMS */
 
       break;
 
@@ -2178,6 +2181,12 @@ static int end_element(void *userdata,
                                        rb->editor->change_file_prop,
                                        rb->file_pool) );
         }
+      break;
+
+    case ELEM_md5_checksum:
+      /* We only care about file checksums. */
+      if (rb->file_baton)
+        rb->result_checksum = apr_pstrdup(rb->file_pool, cdata);
       break;
 
     case ELEM_version_name:
