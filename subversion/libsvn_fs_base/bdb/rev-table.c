@@ -83,7 +83,7 @@ svn_fs_bdb__get_rev (revision_t **revision_p,
     return svn_fs_base__err_dangling_rev (fs, rev);
 
   /* Handle any other error conditions.  */
-  SVN_ERR (BDB_WRAP (fs, "reading filesystem revision", db_err));
+  SVN_ERR (BDB_WRAP (fs, _("reading filesystem revision"), db_err));
 
   /* Parse REVISION skel.  */
   skel = svn_fs_base__parse_skel (value.data, value.size, pool);

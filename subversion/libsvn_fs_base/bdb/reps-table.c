@@ -90,10 +90,10 @@ svn_fs_bdb__read_rep (representation_t **rep_p,
   if (db_err == DB_NOTFOUND)
     return svn_error_createf
       (SVN_ERR_FS_NO_SUCH_REPRESENTATION, 0,
-       "No such representation '%s'", key);
+       _("No such representation '%s'"), key);
 
   /* Handle any other error conditions.  */
-  SVN_ERR (BDB_WRAP (fs, "reading representation", db_err));
+  SVN_ERR (BDB_WRAP (fs, _("reading representation"), db_err));
 
   /* Parse the REPRESENTATION skel.  */
   skel = svn_fs_base__parse_skel (result.data, result.size, pool);
@@ -121,7 +121,7 @@ svn_fs_bdb__write_rep (svn_fs_t *fs,
 
   /* Now write the record. */
   svn_fs_base__trail_debug (trail, "representations", "put");
-  SVN_ERR (BDB_WRAP (fs, "storing representation",
+  SVN_ERR (BDB_WRAP (fs, _("storing representation"),
                      bfd->representations->put
                      (bfd->representations, trail->db_txn,
                       svn_fs_base__str_to_dbt (&query, key),
@@ -151,7 +151,7 @@ svn_fs_bdb__write_new_rep (const char **key,
   /* Get the current value associated with `next-key'.  */
   svn_fs_base__str_to_dbt (&query, NEXT_KEY_KEY);
   svn_fs_base__trail_debug (trail, "representations", "get");
-  SVN_ERR (BDB_WRAP (fs, "allocating new representation (getting next-key)",
+  SVN_ERR (BDB_WRAP (fs, _("allocating new representation (getting next-key)"),
                      bfd->representations->get
                      (bfd->representations, trail->db_txn, &query,
                       svn_fs_base__result_dbt (&result), 0)));
@@ -172,7 +172,7 @@ svn_fs_bdb__write_new_rep (const char **key,
      svn_fs_base__str_to_dbt (&result, next_key),
      0);
 
-  SVN_ERR (BDB_WRAP (fs, "bumping next representation key", db_err));
+  SVN_ERR (BDB_WRAP (fs, _("bumping next representation key"), db_err));
 
   return SVN_NO_ERROR;
 }
@@ -197,10 +197,10 @@ svn_fs_bdb__delete_rep (svn_fs_t *fs,
   if (db_err == DB_NOTFOUND)
     return svn_error_createf
       (SVN_ERR_FS_NO_SUCH_REPRESENTATION, 0,
-       "No such representation '%s'", key);
+       _("No such representation '%s'"), key);
 
   /* Handle any other error conditions.  */
-  SVN_ERR (BDB_WRAP (fs, "deleting representation", db_err));
+  SVN_ERR (BDB_WRAP (fs, _("deleting representation"), db_err));
 
   return SVN_NO_ERROR;
 }
