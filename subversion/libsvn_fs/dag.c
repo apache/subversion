@@ -339,7 +339,7 @@ svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
     id_str = svn_fs_unparse_id (parent->id, trail->pool);
     
     /* Create a new skel for our new node, the format of which is
-       (HEADER KIND-SPECIFIC), where HEADER is (file PROPLIST ()
+       (HEADER KIND-SPECIFIC), where HEADER is (file PROPLIST
        (mutable PARENT-ID)), and KIND-SPECIFIC is an empty atom. */
     
     /* Step 1: create the FLAG skel. */
