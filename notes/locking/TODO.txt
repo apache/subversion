@@ -11,22 +11,18 @@ MUST HAVE
        --> depends on patch-in-progress:
            rev svn_wc_notify_func_t (on trunk) (lundblad/sussman)
 
-* research future ra_dav shim removal plan:  will it work? (sussman)
-
 * fix svn_fs_access_t handling in svnserve (sussman)
+
+* ?? make post-lock and post-unlock take list of paths.
    
+       --> then possibly teach mailer.py to send lock/unlock mails.
+
 * autoversioning:
 
     - finish issue 2161:  PROPFIND depth 1 should show locked,
       nonexistent paths.  (cmpilato)
 
-    - research interoperability with popular dav clients (fitz)
-
-* test 4 new hook scripts.  do they actually work? (fitz)
-
-* teach mailer.py to send lock/unlock notification mails. (cmpilato)
-
-* chat with jorton about neon 0.25/svn1.2 coordination.
+    - research interoperability with popular dav clients (collabnet folks)
 
 * fix svn_xml_is_xml_safe.  currently, it allows invalid UTF8!  (lundblad?)
 
@@ -47,6 +43,7 @@ NICE TO HAVE
 * get httpd 2.0.54 released, so that svn 1.2 can compile on win32
 
 * get neon 0.25 released, so the control-c bug can go away
+  (chat with jorton about neon 0.25/svn 1.2 coordination?)
 
 * make --keep-locks into a runtime 'config' option
 
