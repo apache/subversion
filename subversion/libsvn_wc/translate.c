@@ -380,25 +380,25 @@ svn_wc_keywords_differ (svn_wc_keywords_t *a,
   
   /* Else both A and B have some keywords. */
   
-  if ((!! a->revision) != (!! b->revision))
+  if ((! a->revision) != (! b->revision))
     return TRUE;
   else if ((compare_values && (a->revision != NULL))
            && (strcmp (a->revision->data, b->revision->data) != 0))
     return TRUE;
     
-  if ((!! a->date) != (!! b->date))
+  if ((! a->date) != (! b->date))
     return TRUE;
   else if ((compare_values && (a->date != NULL))
            && (strcmp (a->date->data, b->date->data) != 0))
     return TRUE;
     
-  if ((!! a->author) != (!! b->author))
+  if ((! a->author) != (! b->author))
     return TRUE;
   else if ((compare_values && (a->author != NULL))
            && (strcmp (a->author->data, b->author->data) != 0))
     return TRUE;
   
-  if ((!! a->url) != (!! b->url))
+  if ((! a->url) != (! b->url))
     return TRUE;
   else if ((compare_values && (a->url != NULL))
            && (strcmp (a->url->data, b->url->data) != 0))
