@@ -201,12 +201,15 @@ def check_perms(filename, section, repos, txn=None, rev=None, author=None):
         pathperms = perm.get(author, path)
         if changedata == "A" and "add" not in pathperms:
             permerrors.append("you can't add "+path)
-        if changedata == "U" and "update" not in pathperms:
+        elif changedata == "U" and "update" not in pathperms:
             permerrors.append("you can't update "+path)
-        if changedata == "R" and "remove" not in pathperms:
+        elif changedata == "D" and "remove" not in pathperms:
             permerrors.append("you can't remove "+path)
-        if changeprop == "U" and "update" not in pathperms:
+        elif changeprop == "U" and "update" not in pathperms:
             permerrors.append("you can't update properties of "+path)
+        #else:
+        #    print "cdata=%s cprop=%s path=%s perms=%s" % \
+        #          (str(changedata), str(changeprop), path, str(pathperms))
     if permerrors:
         permerrors.insert(0, "you don't have enough permissions for "
                              "this transaction:")
