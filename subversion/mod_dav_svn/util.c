@@ -212,7 +212,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
     {
       /* this is an ordinary "public" URI, so back up to include the
          leading '/' and just return... no need to parse further. */
-      info->repos_path = path - 1;
+      info->repos_path = svn_path_uri_decode (path - 1, pool);
       return NULL;
     }
 
@@ -251,7 +251,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
         {
           created_rev_str = apr_pstrndup(pool, path, slash - path);
           info->rev = SVN_STR_TO_REV(created_rev_str);
-          info->repos_path = slash;
+          info->repos_path = svn_path_uri_decode (slash, pool);
         }
       if (info->rev == SVN_INVALID_REVNUM)
         goto malformed_uri;
