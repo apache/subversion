@@ -491,6 +491,7 @@ svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
           && (child_kind == svn_node_dir)
           && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
         {
+          svn_error_clear (err);
           return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
                                     "'%s' is not a working copy",
                                     svn_path_local_style (path, pool));
