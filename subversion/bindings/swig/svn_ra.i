@@ -53,7 +53,7 @@
 %apply SWIGTYPE **OUTPARAM {
     svn_ra_plugin_t **,
     svn_ra_session_t **,
-    const svn_ra_reporter_t **reporter,
+    const svn_ra_reporter2_t **reporter,
     void **report_baton
 };
 
@@ -92,6 +92,10 @@
 %typemap(perl5, in) apr_hash_t *config {
     $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
 					   _global_pool);
+}
+
+%typemap(perl5, in) apr_hash_t *lock_tokens {
+    $1 = svn_swig_pl_strings_to_hash ($input, _global_pool);
 }
 
 /* ----------------------------------------------------------------------- */
