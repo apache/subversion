@@ -74,6 +74,7 @@ struct delta_baton {
   svn_txdelta_window_handler_t wrapped_handler;
   void *wrapped_baton;
   struct file_rev_baton *file_rev_baton;
+  apr_file_t *source_file;  /* the delta source */
   apr_file_t *file;  /* the result of the delta */
   const char *filename;
 };
@@ -342,6 +343,12 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   if (window)
     return SVN_NO_ERROR;
 
+  /* Close the files used for the delta.
+     It is important to do this early, since otherwise, they will be deleted
+     before all handles are closed, which leads to failures on some platforms
+     when new tempfiles are to be created. */
+  if (dbaton->source_file)
+    SVN_ERR (svn_io_file_close (dbaton->source_file, frb->currpool));
   SVN_ERR (svn_io_file_close (dbaton->file, frb->currpool));
 
   /* Process this file. */
@@ -394,7 +401,6 @@ file_rev_handler (void *baton, const char *path, svn_revnum_t revnum,
                   apr_pool_t *pool)
 {
   struct file_rev_baton *frb = baton;
-  apr_file_t *last_file;
   svn_stream_t *last_stream;
   svn_stream_t *cur_stream;
   const char *temp_dir;
@@ -433,12 +439,12 @@ file_rev_handler (void *baton, const char *path, svn_revnum_t revnum,
 
   /* Prepare the text delta window handler. */
   if (frb->last_filename)
-    SVN_ERR (svn_io_file_open (&last_file, frb->last_filename, APR_READ,
-                               APR_OS_DEFAULT, frb->currpool));
+    SVN_ERR (svn_io_file_open (&delta_baton->source_file, frb->last_filename,
+                               APR_READ, APR_OS_DEFAULT, frb->currpool));
   else
     /* Means empty stream below. */
-    last_file = NULL;
-  last_stream = svn_stream_from_aprfile (last_file, pool);
+    delta_baton->source_file = NULL;
+  last_stream = svn_stream_from_aprfile (delta_baton->source_file, pool);
 
   SVN_ERR (svn_io_temp_dir (&temp_dir, frb->currpool));
   SVN_ERR (svn_io_open_unique_file (&delta_baton->file, &delta_baton->filename,
