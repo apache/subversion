@@ -104,3 +104,9 @@ Candidate changes:
     Justification: very hard for the user to recover
     Votes:
       +1: philip
+
+  * r9168
+    Check latest APR default install path in 'configure'
+    Justification: Ease of installation; very simple change. 
+    Votes:
+      +1: dionisos
