@@ -34,7 +34,29 @@ Status Quo:
         out-of-date dirs.  Thus users could end up with working copies
         containing dirs whose revision numbers are incorrect.
 
-      
+
+Another TODO:      
+
+  We would like to get rid of the ghudson-scenario 'deleted' existence
+  flag in the working copy.  It makes the commit-crawler insanely
+  complex.  
+
+   Here's how:
+
+      - 'deleted' flag is only needed in the commit case, because the
+        crawler is assuming that it's building a perfect mirror of the
+        working copy on the server (which is true with ra_local).
+        After our commit process is always merging against HEAD
+        on-the-fly, we no longer need to send extra delete commands.
+
+      - 'deleted' flag is used during updates, where we really *are*
+        always building a perfect mirror of the working copy on the
+        server.  But we don't *have* to build a perfect mirror;  if we
+        left out the extra deletes, then dir_deltas will send us back
+        an extra delete.  This isn't a problem if we make the update
+        editor treat an 'extra' delete as a no-op!
+
+
 -----------------------------------------------------------------------
 
 Key:  HEAD  := the latest revision number in the repository
