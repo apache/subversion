@@ -469,10 +469,10 @@ svn_client_propget (apr_table_t **props,
                     svn_boolean_t recurse,
                     apr_pool_t *pool);
 
-/* Returns an apr_array_header_t of svn_client_proplist_itme_t's in *PROPS,
+/* Returns an apr_array_header_t of svn_client_proplist_item_t's in *PROPS,
    allocated from POOL. Each item will contain the node_name relative to the
-   same base as target in item->node_name, and a property hash of (const char *)
-   property names, and (svn_stringbuf_t *) property values.
+   same base as target in item->node_name, and a property hash of 
+   (const char *) property names, and (svn_stringbuf_t *) property values.
 
    If recurse is false, or TARGET is a file, *PROPS will contain only a single
    element.  Otherwise, it will contain one for each versioned entry below
