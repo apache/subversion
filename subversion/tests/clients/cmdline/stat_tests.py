@@ -37,7 +37,7 @@ Item = svntest.wc.StateItem
 #----------------------------------------------------------------------
 
 def status_unversioned_file_in_current_dir(sbox):
-  "run status on an unversioned file in the current directory"
+  "status on unversioned file in current directory"
 
   if sbox.build():
     return 1
@@ -63,8 +63,7 @@ def status_unversioned_file_in_current_dir(sbox):
     os.chdir(was_cwd)
 
 #----------------------------------------------------------------------
-
-# regression for issue #590
+# Regression for issue #590
 
 def status_update_with_nested_adds(sbox):
   "run 'status -u' when nested additions are pending"
@@ -132,7 +131,7 @@ def status_update_with_nested_adds(sbox):
 
 # svn status -vN should include all entries in a directory
 def status_shows_all_in_current_dir(sbox):
-  "status -vN and test if all items in the current directory show up"
+  "status -vN shows all items in current directory"
 
   if sbox.build():
     return 1
@@ -155,6 +154,8 @@ def status_shows_all_in_current_dir(sbox):
 
   return 0
 
+
+#----------------------------------------------------------------------
 
 def status_missing_file(sbox):
   "status with a versioned file missing"
@@ -181,8 +182,10 @@ def status_missing_file(sbox):
   return 0
 
 
+#----------------------------------------------------------------------
+
 def status_type_change(sbox):
-  "status with versioned items whose working type has changed"
+  "status on versioned items whose type has changed"
 
   if sbox.build():
     return 1
@@ -235,8 +238,10 @@ def status_type_change(sbox):
 
   return 0
 
+#----------------------------------------------------------------------
+
 def status_type_change_to_symlink(sbox):
-  "status with versioned items replaced by symbolic links"
+  "status on versioned items replaced by symlinks"
 
   if sbox.build():
     return 1
@@ -279,8 +284,11 @@ def status_type_change_to_symlink(sbox):
   return 0
 
 
+#----------------------------------------------------------------------
+# Regression test for revision 3686.
+
 def status_with_new_files_pending(sbox):
-  "status -u with new files pending in the repository (tests rev 3686)"
+  "status -u with new files in the repository"
 
   if sbox.build():
     return 1
@@ -317,6 +325,8 @@ def status_with_new_files_pending(sbox):
   return 0
 
 
+#----------------------------------------------------------------------
+
 def status_for_unignored_file(sbox):
   "status for unignored file and directory"
 
@@ -351,8 +361,10 @@ def status_for_unignored_file(sbox):
     os.chdir(was_cwd)
 
 
+#----------------------------------------------------------------------
+
 def status_for_nonexistent_file(sbox):
-  "status for a file neither on disk nor under version control"
+  "status on missing and unversioned file"
 
   sbox.build()
 
@@ -376,8 +388,10 @@ def status_for_nonexistent_file(sbox):
     os.chdir(was_cwd)
 
 
+#----------------------------------------------------------------------
+
 def status_file_needs_update(sbox):
-  "status -u should show that outdated file needs update"
+  "status -u indicates out-of-dateness"
 
   # See this thread:
   #
@@ -443,8 +457,10 @@ def status_file_needs_update(sbox):
   return not saw_it
 
 
+#----------------------------------------------------------------------
+
 def status_uninvited_parent_directory(sbox):
-  "status -u wc/added-and-outdated-file should show only that status"
+  "status -u on outdated, added file shows only that"
 
   # To reproduce, check out working copies wc1 and wc2, then do:
   #

@@ -837,7 +837,7 @@ def merge_catches_nonexistent_target(sbox):
 #----------------------------------------------------------------------
 
 def merge_tree_deleted_in_target(sbox):
-  "merge should not fail on deleted directory in target"
+  "merge on deleted directory in target"
   
   sbox.build()
 
@@ -1252,7 +1252,7 @@ def merge_binary_file (sbox):
 # The diff should succeed.
 
 def merge_in_new_file_and_diff(sbox):
-  "diff the results of a merge that creates a new file"
+  "diff after merge that creates a new file"
 
   sbox.build()
   wc_dir = sbox.wc_dir

@@ -311,7 +311,7 @@ def check_log_chain (chain, revlist):
 
 #----------------------------------------------------------------------
 def plain_log(sbox):
-  "'svn log', no args, top of wc."
+  "'svn log', no args, top of wc"
 
   guarantee_repos_and_wc(sbox)
 
@@ -389,7 +389,7 @@ def versioned_log_message(sbox):
 
 #----------------------------------------------------------------------
 def log_with_empty_repos(sbox):
-  "test 'svn log' on an empty repository"
+  "'svn log' on an empty repository"
 
   # Create virgin repos
   if os.path.exists(sbox.repo_dir):
@@ -409,7 +409,7 @@ def log_with_empty_repos(sbox):
 
 #----------------------------------------------------------------------
 def log_where_nothing_changed(sbox):
-  "test 'svn log -rN some_dir_unchanged_in_N'"
+  "'svn log -rN some_dir_unchanged_in_N'"
   sbox.build()
 
   # Fix bug whereby running 'svn log -rN SOMEPATH' would result in an
@@ -434,8 +434,10 @@ def log_where_nothing_changed(sbox):
 
 #----------------------------------------------------------------------
 def log_to_revision_zero(sbox):
-  "'svn log -v -r 1:0 wc_root' shouldn't segfault server"
+  "'svn log -v -r 1:0 wc_root'"
   sbox.build()
+
+  # This used to the segfault the server.
   stdout_lines, stderr_lines = svntest.main.run_svn(0, 'log', '-v',
                                                     '-r', '1:0', sbox.wc_dir)
   if stderr_lines:
@@ -444,7 +446,7 @@ def log_to_revision_zero(sbox):
 
 #----------------------------------------------------------------------
 def log_with_path_args(sbox):
-  "'svn log', no args, top of wc."
+  "'svn log', no args, top of wc"
 
   guarantee_repos_and_wc(sbox)
 

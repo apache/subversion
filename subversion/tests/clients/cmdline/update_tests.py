@@ -355,7 +355,7 @@ def update_missing(sbox):
 #----------------------------------------------------------------------
 
 def update_ignores_added(sbox):
-  "ensure update is not munging additions or replacements"
+  "update should not munge adds or replaces"
 
   sbox.build()
 
@@ -441,7 +441,7 @@ def update_to_rev_zero(sbox):
 #----------------------------------------------------------------------
 
 def receive_overlapping_same_change(sbox):
-  "make sure overlapping identical changes do not conflict"
+  "overlapping identical changes should not conflict"
 
   ### (See http://subversion.tigris.org/issues/show_bug.cgi?id=682.)
   ###
@@ -986,7 +986,7 @@ def update_receive_illegal_name(sbox):
 #----------------------------------------------------------------------
 
 def update_deleted_missing_dir(sbox):
-  "update missing dir to revision in which it is absent"
+  "update missing dir to rev in which it is absent"
 
   sbox.build()
 

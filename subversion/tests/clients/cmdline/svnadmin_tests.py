@@ -83,7 +83,7 @@ def get_txns(repo_dir):
 #----------------------------------------------------------------------
 
 def test_create(sbox):
-  "test 'svnadmin create' subcommand"
+  "'svnadmin create'"
 
   # This call tests the creation of repository.
   # It also imports to the repository, and checks out from the repository.
@@ -99,7 +99,7 @@ def test_create(sbox):
 #----------------------------------------------------------------------
 
 def create_txn(sbox):
-  "test 'svnadmin createtxn' subcommand"
+  "'svnadmin createtxn'"
 
   sbox.build()
 
@@ -118,7 +118,7 @@ def create_txn(sbox):
 #----------------------------------------------------------------------
 
 def remove_txn(sbox):
-  "test 'svnadmin rmtxns' subcommand"
+  "'svnadmin rmtxns'"
 
   sbox.build()
 
@@ -148,7 +148,7 @@ def remove_txn(sbox):
 #----------------------------------------------------------------------
 
 def dump_copied_dir(sbox):
-  "test 'svnadmin dump' on a copied directory"
+  "'svnadmin dump' on copied directory"
   sbox.build()
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
@@ -169,7 +169,7 @@ def dump_copied_dir(sbox):
 #----------------------------------------------------------------------
 
 def dump_move_dir_modify_child(sbox):
-  "test 'svnadmin dump' on modified child of copied directory"
+  "'svnadmin dump' on modified child of copied dir"
   sbox.build()
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
@@ -188,38 +188,24 @@ def dump_move_dir_modify_child(sbox):
                "* Dumped revision 2.\n"], errput):
     raise svntest.Failure
 
-#----------------------------------------------------------------------
-
-def dump_quiet(sbox):
-  "test 'svnadmin dump --quiet'"
-  sbox.build()
-
-  output, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir, '--quiet')
-  if svntest.actions.compare_and_display_lines(
-    "Output of 'svnadmin dump --quiet' is unexpected.",
-    'STDERR', [], errput):
-    raise svntest.Failure
-
-#----------------------------------------------------------------------
-
-def dump_head(sbox):
-  "test 'svnadmin dump -r 0:HEAD' on modified child of copied directory"
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  repo_dir = sbox.repo_dir
-
-  B_path = os.path.join(wc_dir, 'A', 'B')
-  Q_path = os.path.join(wc_dir, 'A', 'Q')
-  svntest.main.run_svn(None, 'cp', B_path, Q_path)
-  svntest.main.file_append(os.path.join(Q_path, 'lambda'), 'hello')
-  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet', '-m', 'log msg')
-
   output, errput = svntest.main.run_svnadmin("dump", "-r", "0:HEAD", repo_dir)
   if svntest.actions.compare_and_display_lines(
     "Output of 'svnadmin dump' is unexpected.",
     'STDERR', ["* Dumped revision 0.\n",
                "* Dumped revision 1.\n",
                "* Dumped revision 2.\n"], errput):
+    raise svntest.Failure
+
+#----------------------------------------------------------------------
+
+def dump_quiet(sbox):
+  "'svnadmin dump --quiet'"
+  sbox.build()
+
+  output, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir, '--quiet')
+  if svntest.actions.compare_and_display_lines(
+    "Output of 'svnadmin dump --quiet' is unexpected.",
+    'STDERR', [], errput):
     raise svntest.Failure
 
 
@@ -235,7 +221,6 @@ test_list = [ None,
               dump_copied_dir,
               dump_move_dir_modify_child,
               dump_quiet,
-              dump_head,
              ]
 
 if __name__ == '__main__':
