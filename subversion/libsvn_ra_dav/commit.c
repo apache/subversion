@@ -935,6 +935,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   SVN_ERR( checkout_resource(cc, &baseline_rsrc) );
 
   /* XML-Escape the log message. */
+  xml_data = NULL;              /* Required by svn_xml_escape_string. */
   svn_xml_escape_string (&xml_data, 
                         svn_stringbuf_create (log_msg->data, cc->ras->pool),
                         cc->ras->pool);
