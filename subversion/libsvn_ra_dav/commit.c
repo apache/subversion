@@ -482,12 +482,13 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
   ne_request_destroy(req);
   ne_buffer_destroy(body);
 
-  if (rv != NE_OK || code != 207) {
+  if (rv != NE_OK || code != 207)
+    {
       return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
                                ras->pool,
                                "The PROPPATCH request failed (neon: %d) (%s)",
                                rv, rsrc->wr_url);
-  }
+    }
 
   return NULL;
 }
