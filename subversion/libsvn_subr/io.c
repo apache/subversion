@@ -696,7 +696,7 @@ svn_io_copy_and_translate (const char *src,
     return translate_err (apr_err, "opening", src, pool);
   
   /* Open dest file. */
-  apr_err = apr_file_open (&d, dst, APR_WRITE | APR_CREATE, 
+  apr_err = apr_file_open (&d, dst, APR_WRITE | APR_CREATE | APR_TRUNCATE, 
                            APR_OS_DEFAULT, pool);
   if (apr_err)
     {
