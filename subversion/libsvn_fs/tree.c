@@ -122,6 +122,34 @@ make_txn_root (svn_fs_t *fs,
 
 
 
+/* Getting dag nodes for roots.  */
+
+
+/* Set *NODE_P to a freshly opened dag node referring to the root
+   directory of ROOT, as part of TRAIL.  */
+static svn_error_t *
+root_node (dag_node_t **node_p,
+           svn_fs_root_t *root,
+           trail_t *trail)
+{
+  if (root->rev != -1)
+    {
+      /* It's a revision root, so we already have its root directory
+         opened.  */
+      *node_p = svn_fs__dag_dup (root->root_dir, trail);
+      return SVN_NO_ERROR;
+    }
+  else if (root->txn)
+    {
+      /* It's a transaction root.  Open a fresh copy.  */
+      return svn_fs__dag_txn_root (node_p, root->fs, root->txn, trail);
+    }
+  else
+    abort ();
+}
+
+
+
 /* Simple root operations.  */
 
 void
@@ -174,51 +202,179 @@ svn_fs_revision_root_revision (svn_fs_root_t *root)
 /* Traversing directory paths.  */
 
 
-/* Open the node identified by PATH under ROOT, as part of TRAIL. Set
-   *CHILD_P to the new node, *PARENT_P to its parent, *NAME_P to
-   *CHILD_P's name in *PARENT_P, all allocated in TRAIL->pool. PATH is
-   a slash-separated directory path with.  If PATH is empty, *PARENT_P
-   will be NULL, *CHILD_P will be ROOT and *NAME_P will be empty. */
-static svn_error_t *
-open_path (dag_node_t **child_p,
-                       dag_node_t **parent_p,
-                       const char **name_p,
-                       dag_node_t *root,
-                       const char *path,
-                       trail_t *trail)
+/* A linked list representing the path from a node up to a root
+   directory.  We use this for cloning, and for operations that need
+   to deal with both a node and its parent directory.  For example, a
+   `delete' operation needs to know that the node actually exists, but
+   also needs to change the parent directory.  */
+typedef struct parent_path_t
 {
-#if 0
-  dag_node_t *child = root;
-  dag_node_t *parent = NULL;
-  char *mutable_path = apr_pstrdup (trail->pool, path);
-  const char *name;
+  
+  /* A node along the path.  This could be the final node, one of its
+     parents, or the root.  Every parent path ends with an element for
+     the root directory.  */
+  dag_node_t *node;
 
-  while (svn_path_first_component(&name, &mutable_path,
-                                  svn_path_repos_style))
-    {
-      parent = child;
-      SVN_ERR (svn_fs__dag_open (&child, parent, name, trail));
-    }
+  /* The name NODE has in its parent directory.  This is zero for the
+     root directory, which (obviously) has no name in its parent.  */
+  char *entry;
 
-  *child_p = child;
-  *parent_p = parent;
-  *name_p = name;
-#else
-  abort ();
-#endif
-  return SVN_NO_ERROR;
+  /* The parent of NODE, or zero if NODE is the root directory.  */
+  struct parent_path_t *parent;
+  
+} parent_path_t;
+
+
+/* Allocate a new path_t node from POOL, referring to NODE, ENTRY, and
+   PARENT.  */
+static parent_path_t *
+make_parent_path (dag_node_t *node,
+                  char *entry,
+                  parent_path_t *parent,
+                  apr_pool_t *pool)
+{
+  parent_path_t *parent_path = apr_pcalloc (pool, sizeof (*parent_path));
+
+  parent_path->node = node;
+  parent_path->entry = entry;
+  parent_path->parent = parent;
+
+  return parent_path;
 }
 
 
-/* Set *NODE_P to the node referred to by PATH in ROOT, as part of 
-   TRAIL.  */
+/* Free the dag nodes in PARENT_PATH.  It isn't strictly necessary to
+   do this, since it's all allocated in pools, but it would be nice to
+   clean the memory up a little sooner when we can.  */
+static void
+free_parent_path (parent_path_t *parent_path)
+{
+  while (parent_path)
+    {
+      svn_fs__dag_close (parent_path->node);
+      parent_path = parent_path->parent;
+    }
+}
+
+
+/* Return a null-terminated copy of the first component of PATH,
+   allocated in POOL.  PATH must not begin with a slash, and must not
+   be the empty string; return zero if PATH is malformed.
+
+   If the component is followed by one or more slashes, we set *NEXT_P
+   to point after the slashes.  If the component ends PATH, we set
+   *NEXT_P to zero.  This means:
+   - If *NEXT_P is zero, then the component ends the PATH, and there
+     are no trailing slashes in the path.
+   - If *NEXT_P points at PATH's terminating null character, then
+     the component returned was the last, and PATH ends with one or more
+     slash characters.
+   - Otherwise, *NEXT_P points to the beginning of the next component
+     of PATH.  You can pass this value to next_entry_name to extract
+     the next component.  */
+
+static char *
+next_entry_name (const char **next_p,
+                 const char *path,
+                 apr_pool_t *pool)
+{
+  const char *end;
+
+  /* Absolute paths and empty paths are not allowed.  */
+  if (*path == '/' || *path == '\0')
+    return 0;
+
+  /* Find the end of the current component.  */
+  end = strchr (path, '/');
+
+  if (! end)
+    {
+      /* The path contains only one component, with no trailing
+         slashes.  */
+      *next_p = 0;
+      return apr_pstrdup (pool, path);
+    }
+  else
+    {
+      /* There's a slash after the first component.  Skip over an arbitrary
+         number of slashes to find the next one.  */
+      const char *next = end;
+      while (*next == '/')
+        next++;
+      *next_p = next;
+      return apr_pstrndup (pool, path, end - path);
+    }
+}
+
+
+/* Open the node identified by PATH in ROOT, as part of TRAIL.  Set
+   *PARENT_PATH_P to a path from the node up to ROOT, allocated in
+   TRAIL->pool.  */
 static svn_error_t *
-open_path (dag_node_t **node_p,
+open_path (parent_path_t **parent_path_p,
            svn_fs_root_t *root,
            const char *path,
            trail_t *trail)
 {
-  abort (); /* to be written */
+  svn_fs_t *fs = root->fs;
+  apr_pool_t *pool = trail->pool;
+
+  /* The directory we're currently looking at.  */
+  dag_node_t *here;
+
+  /* The path from HERE up to the root.  */
+  parent_path_t *parent_path;
+  
+  /* The portion of PATH we haven't traversed yet.  */
+  const char *rest = path;
+
+  SVN_ERR (root_node (&here, root, trail));
+  parent_path = make_parent_path (here, 0, 0, pool);
+
+  for (;;)
+    {
+      const char *next;
+      char *entry;
+      dag_node_t *child;
+
+      /* At the top of this loop, HERE is our current directory,
+         REST is the path we're going to find in HERE, and PARENT_PATH
+         includes HERE and all its parents.  */
+      entry = next_entry_name (&next, rest, pool);
+      if (! entry)
+        {
+          free_parent_path (parent_path);
+          return svn_fs__err_path_syntax (fs, path);
+        }
+      
+      SVN_ERR (svn_fs__dag_open (&child, here, entry, trail));
+      parent_path = make_parent_path (child, entry, parent_path, pool);
+      
+      /* Are we finished traversing the path?  */
+      if (! next)
+        {
+          *parent_path_p = parent_path;
+          return 0;
+        }
+
+      /* The path isn't finished yet; we'd better be in a directory.  */
+      if (! svn_fs__dag_is_directory (child))
+        {
+          free_parent_path (parent_path);
+          return svn_fs__err_not_directory (fs, path);
+        }
+
+      /* Was the path slash-terminated?  If so, then we're done, now
+         that we've verified that it's a directory.  */
+      if (! *next)
+        {
+          *parent_path_p = parent_path;
+          return 0;
+        }
+
+      rest = next;
+      here = child;
+    }
 }
 
 
