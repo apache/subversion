@@ -36,6 +36,12 @@ dnl Check for programs ---------------------
 dnl Look for a C compiler
 AC_PROG_CC
 
+dnl Add some useful GCC-specific flags
+case "$GCC" in
+  yes )
+    CFLAGS="$CFLAGS -Wall -Wmissing-prototypes -Wpointer-arith" ;;
+esac
+
 dnl Look for a BSD-compatible install program
 dnl  (Or we can include install-sh at our top level)
 AC_PROG_INSTALL
