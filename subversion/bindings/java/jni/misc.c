@@ -21,6 +21,14 @@
 #include <svn_client.h>
 #include "global.h"
 
+/*** Defines ***/
+
+/**
+ * Do you want to debug code in this file?
+ * Just uncomment the following define
+ */
+//#define SVN_JNI_MISC__DEBUG
+
 /*** Code ***/
 void
 misc__throw_exception_by_name(JNIEnv *env,
@@ -29,7 +37,7 @@ misc__throw_exception_by_name(JNIEnv *env,
 {
   jclass cls = NULL;
 
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_MISC__DEBUG
   fprintf(stderr, ">>>misc__throw_exception_by_name(");
   SVN_JNI__DEBUG_STR(name);
   SVN_JNI__DEBUG_STR(msg);
@@ -52,7 +60,7 @@ misc__throw_exception_by_name(JNIEnv *env,
       (*env)->PopLocalFrame(env, NULL);
     }
 
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_MISC__DEBUG
   fprintf(stderr, "\n<<<misc_throw_exception_by_name\n");
 #endif
 
@@ -67,7 +75,7 @@ misc__make_auth_baton(JNIEnv *env, jobject jobj)
    * right now, this doesnt work. now only NULL
    * is being returned 
    */
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_MISC__DEBUG
     fprintf(stderr, ">>>misc__make_auth_baton(...)\n");
     fprintf(stderr, "<<<misc__make_auth_baton\n");
 #endif

@@ -39,6 +39,13 @@
 
 /*** Defines. ***/
 
+/*
+ * Do you want to debug code in this file?
+ * Just uncomment the following define
+ */
+//#define SVN_JNI_MAIN__DEBUG
+
+
 
 
 /*** Code. ***/
@@ -50,12 +57,12 @@
 JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM *jvm, void *reserved)
 {
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_MAIN__DEBUG
   fprintf(stderr, ">>>JNI_OnLoad\n");
 #endif
   apr_initialize();
 
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_MAIN__DEBUG
   fprintf(stderr, "\n<<<JNI_OnLoad\n");
 #endif
 
@@ -67,11 +74,11 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
  */
 JNIEXPORT OnUnload(JavaVM *jvm, void *reserved)
 {
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_MAIN__DEBUG
   fprintf(stderr, ">>>JNI_OnUnload\n");
 #endif
   apr_terminate();
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_MAIN__DEBUG
   fprintf(stderr, "\n<<<JNI_OnUnload\n");
 #endif
 

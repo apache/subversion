@@ -42,6 +42,13 @@
 #define SVN_JNI__CLIENTIMPL_STATUS \
 "Java_org_tigris_subversion_lib_ClientImpl_status"
 
+/*
+ * Do you want to debug code in this file?
+ * Just uncomment the following define
+ */
+//#define SVN_JNI_CLIENTIMPL_STATUS__DEBUG
+
+
 /*** Code ***/
 JNIEXPORT jobject JNICALL 
 Java_org_tigris_subversion_lib_ClientImpl_status
@@ -61,7 +68,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
   apr_pool_t *pool = NULL;
   svn_revnum_t youngest;
 
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_CLIENTIMPL_STATUS__DEBUG
   fprintf(stderr, ">>>" SVN_JNI__CLIENTIMPL_STATUS "\n");
 #endif
 
@@ -136,7 +143,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
     {
       auth_baton = misc__make_auth_baton(env, jobj);
 
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_CLIENTIMPL_STATUS__DEBUG
       fprintf(stderr, ">>>svn_client_status(");
       SVN_JNI__DEBUG_PTR(statushash);
       SVN_JNI__DEBUG_PTR(target_stringbuf);
@@ -162,7 +169,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
 
       if( error != NULL )
 	{
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_CLIENTIMPL_STATUS__DEBUG
           SVN_JNI__DEBUG_STR(error->message);
 #endif
 	  /* in the case of an error, throw a java exception */
@@ -171,7 +178,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
                                         SVN_JNI__SUBVERSION_EXCEPTION,
                                         SVN_JNI__ERROR_CLIENT_STATUS);
 	}
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_CLIENTIMPL_STATUS__DEBUG
       fprintf(stderr, "\n<<<svn_client_status\n");
 #endif
     }
@@ -243,21 +250,21 @@ Java_org_tigris_subversion_lib_ClientImpl_status
                   /* delete local refs... */
                   if( jpath != NULL )
                     {
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_CLIENTIMPL_STATUS__DEBUG
                       fprintf(stderr, "\nDeleteLocalRef(jpath)...");
 #endif
                       (*env)->DeleteLocalRef(env, jpath);
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_CLIENTIMPL_STATUS__DEBUG
                       fprintf(stderr, "Done\n");
 #endif
                     }
                   if( jstatus != NULL )
                     {
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_CLIENTIMPL_STATUS__DEBUG
                       fprintf(stderr, "DeleteLocalRef(jstatus)...");
 #endif
                       (*env)->DeleteLocalRef(env, jstatus);
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_CLIENTIMPL_STATUS__DEBUG
                       fprintf(stderr, "Done\n");
 #endif
                     }
@@ -268,7 +275,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
                     }
 		} /* while( ... ) */
 
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_CLIENTIMPL_STATUS__DEBUG
               SVN_JNI__DEBUG_BOOL(hasException);
               fprintf(stderr, "\nend of while loop!\n");
 #endif
@@ -285,7 +292,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
       svn_pool_destroy(pool);
     }
 
-#ifdef SVN_JNI__VERBOSE
+#ifdef SVN_JNI_CLIENTIMPL_STATUS__DEBUG
   fprintf(stderr, "\n<<<" SVN_JNI__CLIENTIMPL_STATUS "(");
   SVN_JNI__DEBUG_BOOL(hasException);
   fprintf(stderr, ")\n");
