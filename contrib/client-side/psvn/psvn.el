@@ -177,6 +177,10 @@ However, it is possible, that the sorting is wrong in this case.")
   "*List of operations after which all user marks will be removed.
 Possible values are: commit, revert.")
 
+(defvar svn-status-negate-meaning-of-arg-commands nil
+  "*List of operations that sould use a negated meaning of the prefix argument.
+The only possible function at the moment is svn-status-update.")
+
 (defvar svn-status-svn-executable "svn" "*The name of the svn executable.")
 
 (defvar svn-status-svn-environment-var-list nil
@@ -557,6 +561,8 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                   (when (member 'commit svn-status-unmark-files-after-list)
                     (svn-status-unset-all-usermarks))
                   (svn-status-update-with-command-list (svn-status-parse-commit-output))
+                  (run-hooks 'svn-log-edit-done-hook)
+                  (setq svn-status-files-to-commit nil)
                   (message "svn commit finished"))
                  ((eq svn-process-cmd 'update)
                   (svn-status-show-process-buffer-internal t)
@@ -1562,10 +1568,17 @@ non-interactive use."
   (when (svn-status-get-line-information)
     (goto-char (+ (point-at-bol) svn-status-default-column))))
 
+(defun svn-status-possibly-negate-meaning-of-arg (arg)
+  "Negate arg, if this-command is a member of svn-status-possibly-negate-meaning-of-arg."
+  (if (member this-command svn-status-negate-meaning-of-arg-commands)
+      (not arg)
+    arg))
+
 (defun svn-status-update (&optional arg)
   "Run 'svn status -v'.
 When called with a prefix argument run 'svn status -vu'."
   (interactive "P")
+  (setq arg (svn-status-possibly-negate-meaning-of-arg arg))
   (unless (interactive-p)
     (save-excursion
       (set-buffer "*svn-process*")
@@ -2702,9 +2715,7 @@ Commands:
       (svn-status-create-arg-file svn-status-temp-arg-file ""
                                   svn-status-files-to-commit "")
       (svn-run-svn t t 'commit "commit" "--targets" svn-status-temp-arg-file
-                   "-F" svn-status-temp-file-to-remove)
-      (run-hooks 'svn-log-edit-done-hook)
-      (setq svn-status-files-to-commit nil))
+                   "-F" svn-status-temp-file-to-remove))
     (set-window-configuration svn-status-pre-commit-window-configuration)
     (message "svn-log editing done")))
 
