@@ -1105,7 +1105,7 @@ merge (const char **conflict_p,
     {
       svn_stringbuf_t *id_str = svn_fs_unparse_id (target_id, trail->pool);
       return svn_error_createf
-        (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
+        (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
          "Bad merge call -- target `%s' has id `%s', same as ancestor.",
          target_path, id_str->data);
     }
