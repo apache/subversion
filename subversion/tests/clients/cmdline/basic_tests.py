@@ -337,11 +337,8 @@ def basic_corruption(sbox):
   os.chmod (tb_dir_path, tb_dir_saved_mode)
   os.chmod (mu_tb_path, mu_tb_saved_mode)
 
-  outlines, errlines = svntest.main.run_svn(None, 'cleanup', other_wc)
-  if errlines:
-    return 1
-  
-  # This update should succeed.
+  # This update should succeed.  (Actually, I'm kind of astonished
+  # that this works without even an intervening "svn cleanup".)
   return svntest.actions.run_and_verify_update (other_wc,
                                                 expected_output,
                                                 expected_disk,

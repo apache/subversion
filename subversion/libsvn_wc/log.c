@@ -1291,6 +1291,7 @@ svn_wc_cleanup (const char *path,
                                            SVN_WC__ADM_LOG, NULL);
   enum svn_node_kind kind;
   svn_wc_adm_access_t *adm_access;
+  svn_boolean_t cleanup;
   int is_wc;
 
   SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
@@ -1324,10 +1325,18 @@ svn_wc_cleanup (const char *path,
         }
     }
 
-  /* Is there a log?  If so, run it. */
-  SVN_ERR (svn_io_check_path (log_path, &kind, pool));
-  if (kind == svn_node_file)
-    SVN_ERR (svn_wc__run_log (adm_access, pool));
+  /* As an attempt to maintain consitency between the decisions made in
+     this function, and those made in the access baton lock-removal code,
+     we use the same test as the lock-removal code even though it is,
+     strictly speaking, redundant. */
+  SVN_ERR (svn_wc__adm_is_cleanup_required (&cleanup, adm_access, pool));
+  if (cleanup)
+    {
+      /* Is there a log?  If so, run it. */
+      SVN_ERR (svn_io_check_path (log_path, &kind, pool));
+      if (kind == svn_node_file)
+        SVN_ERR (svn_wc__run_log (adm_access, pool));
+    }
 
   /* Cleanup the tmp area of the admin subdir, if running the log has not
      removed it!  The logs have been run, so anything left here has no hope
