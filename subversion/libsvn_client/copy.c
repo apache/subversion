@@ -931,8 +931,10 @@ repos_to_wc_copy (const char *src_url,
              Unfortunately, svn_wc_add() is such a mess that it chokes
              at the moment when we pass a NULL copyfromurl. */
           
-          return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                   "Source URL is from foreign repository");
+          return svn_error_createf
+            (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+             "Source URL '%s' is from foreign repository; "
+             "leaving it as a disjoint WC", src_url);
         }
     } /* end directory case */
 

@@ -141,14 +141,16 @@ svn_client_ls (apr_hash_t **dirents,
       *dirents = apr_hash_make (pool);
       the_ent = apr_hash_get (parent_ents, base_name, APR_HASH_KEY_STRING);
       if (the_ent == NULL)
-        return svn_error_create (SVN_ERR_FS_NOT_FOUND, NULL,
-                                 "URL non-existent in that revision");
-        
+        return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
+                                  "URL '%s' non-existent in that revision",
+                                  url);
+
       apr_hash_set (*dirents, base_name, APR_HASH_KEY_STRING, the_ent);
     }
   else
-    return svn_error_create (SVN_ERR_FS_NOT_FOUND, NULL,
-                             "URL non-existent in that revision");
+    return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
+                              "URL '%s' non-existent in that revision",
+                              url);
 
   return SVN_NO_ERROR;
 }
