@@ -1267,7 +1267,7 @@ svn_client_ls (apr_hash_t **dirents,
  * ### TODO: Add an expansion/translation flag?
  */
 svn_error_t *
-svn_client_cat (svn_stream_t* out,
+svn_client_cat (svn_stream_t *out,
                 const char *path_or_url,
                 const svn_opt_revision_t *revision,
                 svn_client_ctx_t *ctx,
