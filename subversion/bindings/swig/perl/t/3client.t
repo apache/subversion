@@ -311,7 +311,10 @@ is(readline(*CAT),'foobar',
    'read the first line of the cat file');
 ok(close(CAT),'close cat file');
 
-my ($dirents) = $ctx->ls($reposurl,'HEAD', 1);
+# the string around the $current_rev exists to expose a past
+# bug.  In the past we did not accept values that simply
+# had not been converted to a number yet.
+my ($dirents) = $ctx->ls($reposurl,"$current_rev", 1);
 isa_ok($dirents, 'HASH','ls returns a HASH');
 isa_ok($dirents->{'dir1'},'_p_svn_dirent_t',
        'hash value is a _p_svn_dirent_t');

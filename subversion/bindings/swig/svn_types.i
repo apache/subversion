@@ -358,7 +358,7 @@
     else if (sv_isobject($input) && sv_derived_from($input, "_p_svn_opt_revision_t")) {
         SWIG_ConvertPtr($input, (void **)&$1, $1_descriptor, 0);
     }
-    else if (SvIOK($input)) {
+    else if (looks_like_number($input)) {
         rev.kind = svn_opt_revision_number;
         rev.value.number = SvIV($input);
     }
