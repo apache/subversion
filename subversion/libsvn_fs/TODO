@@ -1,3 +1,5 @@
+Do transactions need an open_count field too?
+
 We don't store older node versions as deltas yet.
 
 svn_fs_open_node leaves `dir' open if an error occurs while traversing
