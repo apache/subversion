@@ -54,7 +54,7 @@ svn_error_t *svn_fs__write_rep (svn_fs_t *fs,
 
 /* Store SKEL as a new representation in FS, and the new rep's key in
    *KEY, as part of trail.  The new key is allocated in TRAIL->pool.  */
-svn_error_t *svn_fs__write_new_rep (char **key,
+svn_error_t *svn_fs__write_new_rep (const char **key,
                                     svn_fs_t *fs,
                                     skel_t *skel,
                                     trail_t *trail);
@@ -89,8 +89,8 @@ int svn_fs__rep_is_mutable (skel_t *rep);
 
 /* Get a key to a mutable version of the representation pointed to by
    KEY in FS, and store it in *NEW_KEY.  If KEY is already mutable,
-   *NEW_KEY will be set to KEY, else NEW_KEY will be allocated in
-   TRAIL->pool.  */
+   *NEW_KEY is set to KEY, else *NEW_KEY is set to a new rep key
+   allocated in TRAIL->pool.  */
 svn_error_t *svn_fs__get_mutable_rep (const char **new_key,
                                       const char *key,
                                       svn_fs_t *fs, 
