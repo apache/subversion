@@ -62,8 +62,11 @@ main (int argc, char **argv)
   if (err)
     goto error;
 
+  /* ### this whole thing needs to be updated for the close_commit stuff
+     ### and tossing svn_wc_close_commit */
+
   err = (*plugin->get_commit_editor)(session_baton, &editor, &edit_baton,
-                                     &new_revision);
+                                     NULL, NULL, NULL, NULL);
   if (err)
     goto error;
 
@@ -76,6 +79,7 @@ main (int argc, char **argv)
     goto error;
 
   printf("Committing new version to working copy...\n");
+  new_revision = 1;
   err = svn_wc_close_commit(root_dir, new_revision, targets, pool);
   if (err)
     goto error;
@@ -83,7 +87,7 @@ main (int argc, char **argv)
   printf("Completed. Wrapping up...\n");
   (*plugin->close)(session_baton);
 
-  apr_destroy_pool(pool);
+  apr_pool_destroy(pool);
   apr_terminate();
 
   return 0;
