@@ -312,8 +312,11 @@ void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
   ra_svn_edit_baton_t *eb;
 
   if (svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_EDIT_PIPELINE))
-    return svn_ra_svn__get_editorp(editor, edit_baton, conn, pool, callback,
-                                   callback_baton);
+    {
+      svn_ra_svn__get_editorp(editor, edit_baton, conn, pool, callback,
+                              callback_baton);
+      return;
+    }
 
   eb = apr_palloc(pool, sizeof(*eb));
   eb->conn = conn;
