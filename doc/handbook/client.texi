@@ -1364,8 +1364,7 @@ $LastChangedDate: 2002-07-22 21:42:37 -0700 (Mon, 22 Jul 2002) $
 Cumulus clouds are appearing more frequently as summer approaches.
 @end example
 
-All in all, there are four special keywords that Subversion knows how
-to substitute:
+Subversion substitutes five keywords:
 
 @table @b
 @item LastChangedDate
@@ -1389,6 +1388,13 @@ A full URL to the latest version of the file in the repository.  Can be
 abbreviated as @samp{URL}.  The keyword substitution of @samp{$HeadURL$} will
 look something like
 @samp{$HeadURL: http://svn.collab.net/repos/trunk/README $}.
+@end table
+
+@item Id
+A compressed summary of the other keywords, for example:
+@samp{$Id: bar 148 2002-07-28 21:30:43 epg $}.  This means the file
+@samp{bar} was last changed in revision 148 by committer @samp{epg},
+at 2002-07-28 21:30:43.
 @end table
 
 To activate a keyword, or set of keywords, you merely need to set the

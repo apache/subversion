@@ -173,6 +173,10 @@ typedef struct svn_dirent
 #define SVN_KEYWORD_URL_LONG         "HeadURL"
 #define SVN_KEYWORD_URL_SHORT        "URL"
 
+/* A compressed combination of the above four keywords.
+   (But see comments above about a more general solution to keyword
+   combinations.) */
+#define SVN_KEYWORD_ID               "Id"
 
 
 /*** Shared function types ***/

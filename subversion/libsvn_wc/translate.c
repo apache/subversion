@@ -284,6 +284,16 @@ translate_keyword (char *buf,
         return TRUE;
     }
 
+  /* Id */
+  if (keywords->id)
+    {
+      if (translate_keyword_subst (buf, len,
+                                   SVN_KEYWORD_ID,
+                                   (sizeof (SVN_KEYWORD_ID)) - 1,
+                                   expand ? keywords->id : NULL))
+        return TRUE;
+    }
+
   /* No translations were successful.  Return FALSE. */
   return FALSE;
 }
@@ -861,6 +871,41 @@ svn_wc__eol_value_from_string (const char **value, const char *eol)
 }
 
 
+/* Return time T as string in the form "YYYY-MM-DD HH:MM:SS",
+   allocated in POOL. */
+static const char *
+time_to_keyword_time (apr_time_t t, apr_pool_t *pool)
+{
+  const char *t_cstr;
+  apr_time_exp_t exploded_time;
+
+  /* We toss apr_status_t return value here -- for one thing, caller
+     should pass in good information.  But also, where APR's own code
+     calls these functions it tosses the return values, and
+     furthermore their current implementations can only return success
+     anyway. */
+
+  /* We get the date in GMT now -- and expect the tm_gmtoff and
+     tm_isdst to be not set. We also ignore the weekday and yearday,
+     since those are not needed. */
+
+  apr_time_exp_gmt (&exploded_time, t);
+
+  /* It would be nice to use apr_strftime(), but APR doesn't give a
+     way to convert back, so we wouldn't be able to share the format
+     string between the writer and reader. */
+  t_cstr = apr_psprintf (pool, "%04d-%02d-%02d %02d:%02d:%02d",
+                         exploded_time.tm_year + 1900,
+                         exploded_time.tm_mon + 1,
+                         exploded_time.tm_mday,
+                         exploded_time.tm_hour,
+                         exploded_time.tm_min,
+                         exploded_time.tm_sec);
+
+  return t_cstr;
+}
+
+
 /* Helper for svn_wc__get_keywords().
    
    If KEYWORD is a valid keyword, look up its value in ENTRY, fill in
@@ -926,6 +971,25 @@ expand_keyword (svn_wc_keywords_t *keywords,
         keywords->url = svn_string_create (entry->url, pool);
       else
         keywords->url = svn_string_create ("", pool);
+    }
+  else if ((! strcasecmp (keyword, SVN_KEYWORD_ID)))
+    {
+      if (entry && (entry->cmt_rev && entry->cmt_date
+                    && entry->cmt_author && entry->url))
+        {
+          char *base_name = svn_path_basename (entry->url, pool);
+          svn_string_t *rev = svn_string_createf (pool, "%" SVN_REVNUM_T_FMT,
+                                                   entry->cmt_rev);
+          const char *date = time_to_keyword_time (entry->cmt_date, pool);
+
+          keywords->id = svn_string_createf (pool, "%s %s %s %s",
+                                             base_name,
+                                             rev->data,
+                                             date,
+                                             entry->cmt_author);
+        }
+      else
+        keywords->id = svn_string_create ("", pool);
     }
   else
     *is_valid_p = FALSE;

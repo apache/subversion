@@ -1502,6 +1502,7 @@ typedef struct svn_wc_keywords_t
   const svn_string_t *date;
   const svn_string_t *author;
   const svn_string_t *url;
+  const svn_string_t *id;
 } svn_wc_keywords_t;
 
 
