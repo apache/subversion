@@ -1216,12 +1216,16 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
   apr_status_t apr_err;
   char *revision_str = NULL;
   const char *parent_dir, *base_name;
-  const char *txtb, *tmp_txtb;
   svn_stringbuf_t *log_accum;
   svn_boolean_t is_locally_modified;
   svn_boolean_t magic_props_changed = FALSE, magic_props_caused_tweak = FALSE;
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
+
+  /* The code flow does not depend upon these being set to NULL, but
+     it removes a gcc 3.1 `might be used uninitialized in this
+     function' warning. */
+  const char *txtb = NULL, *tmp_txtb = NULL;
 
   /* Start by splitting FILE_PATH. */
   svn_path_split_nts (file_path, &parent_dir, &base_name, pool);
