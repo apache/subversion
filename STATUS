@@ -141,7 +141,7 @@ Candidate changes:
       The feature are implemented, so existing clients do not break.
       r10493 fixes line endings in the Java bindings to be set to native.
     Votes:
-      +1: pmayweg (without r10493)
+      +1: pmayweg (with r10493)
       +0: breser (with r10493)
 
   * r10502
