@@ -86,6 +86,7 @@ print_tree (svn_fs_root_t *root,
 static void
 usage (const char *progname, int exit_code)
 {
+  /*** PLEASE: Keep the following commands in alphabetical order!! ***/
   fprintf
     (exit_code ? stderr : stdout,
      "usage: %s SUBCOMMAND REPOS_PATH [ARGS...]\n"
@@ -104,13 +105,13 @@ usage (const char *progname, int exit_code)
      "      a directory, perform a recursive deltification of the\n"
      "      tree starting at PATH.\n"
      "\n"
-     "   lstxns    REPOS_PATH\n"
-     "      Print all txns and their trees.\n"
-     "\n"
      "   lsrevs    REPOS_PATH [LOWER_REV [UPPER_REV]]\n"
      "      If no revision is given, all revision trees are printed.\n"
      "      If just LOWER_REV is given, that revision tree is printed.\n"
      "      If two revisions are given, that range is printed, inclusive.\n"
+     "\n"
+     "   lstxns    REPOS_PATH\n"
+     "      Print all txns and their trees.\n"
      "\n"
 #if 0 
 /* see TODO below at next `#if 0' */
@@ -128,6 +129,9 @@ usage (const char *progname, int exit_code)
      "      (Careful!  Revision props are not historied, so this command\n"
      "       will -permanently- overwrite the previous log message.)\n"
      "\n"
+     "   shell  REPOS_PATH\n"
+     "      Enter interactive shell for exploring the repository.\n"
+     "\n"
      "   undeltify REPOS_PATH REVISION PATH\n"
      "      Undeltify (ensure fulltext storage for) PATH in REVISION.\n"
      "      If PATH represents a directory, perform a recursive\n"
@@ -135,9 +139,6 @@ usage (const char *progname, int exit_code)
      "\n"
      "   youngest  REPOS_PATH\n"
      "      Print the latest revision number.\n"
-     "\n"
-     "   shell  REPOS_PATH\n"
-     "      Enter interactive shell for exploring the repository.\n"
      "\n"
      "Printing a tree shows its structure, node ids, and file sizes.\n"
      "\n",
@@ -456,12 +457,19 @@ main (int argc, const char * const *argv)
       if (err) goto error;
 
       /* do the (un-)deltification */
+      printf ("%seltifying `%s' in revision %ld...", 
+              is_deltify ? "D" : "Und", node, (long int)the_rev);
       if (is_deltify)
-        err = svn_fs_deltify (rev_root, node, is_dir ? 1 : 0, pool);
+        {
+          err = svn_fs_deltify (rev_root, node, is_dir ? 1 : 0, pool);
+          if (err) goto error;
+        }
       else
-        err = svn_fs_undeltify (rev_root, node, is_dir ? 1 : 0, pool);
-        
-      if (err) goto error;
+        {
+          err = svn_fs_undeltify (rev_root, node, is_dir ? 1 : 0, pool);
+          if (err) goto error;
+        }
+      printf ("done.\n");
     }
 #if 0
   /* ### TODO: Get this working with new libsvn_repos API.  We need
