@@ -2693,7 +2693,6 @@ static svn_error_t * reporter_link_path(void *report_baton,
   
   svn_xml_escape_cdata_cstring (&qpath, path, pool);
   svn_xml_escape_attr_cstring (&qlinkpath, bc_relative.data, pool);
-  /* ### sussman TODO: Pass lock token as extra attribute. */
   if (start_empty)
     entry = apr_psprintf(pool,
                          "<S:entry rev=\"%ld\" %s"

@@ -1324,9 +1324,6 @@ lock_receiver(void *userdata,
         rb->err = svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
                                    status->reason_phrase);
     }
-
-  /* ### what happens to the ne_lock?  does neon free() it later?? */
-  
 }
 
 

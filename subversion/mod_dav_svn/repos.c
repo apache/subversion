@@ -1486,7 +1486,6 @@ static const char *get_parent_path(const char *path,
         tmp[len-1] = '\0';      
       svn_path_split(tmp, &parentpath, &base_name, pool);
 
-      /* ### preserve the slash on the parent?? */
       return parentpath;
     }  
 
