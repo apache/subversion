@@ -28,14 +28,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Open a `transactions' table in ENV.  If CREATE is non-zero, create
-   one if it doesn't exist.  Set *TRANSACTIONS_P to the new table.
-   Return a Berkeley DB error code.  */
-int svn_fs__bdb_open_transactions_table (DB **transactions_p,
-                                         DB_ENV *env,
-                                         int create);
-
-
 /* Create a new transaction in FS as part of TRAIL, with an initial
    root and base root ID of ROOT_ID.  Set *TXN_NAME_P to the name of the
    new transaction, allocated in TRAIL->pool.  */

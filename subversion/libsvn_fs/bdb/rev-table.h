@@ -29,17 +29,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Creating and opening the `revisions' table.  */
-
-/* Open a `revisions' table in ENV.  If CREATE is non-zero, create one
-   if it doesn't exist.  Set *REVS_P to the new table.  Return a
-   Berkeley DB error code.  */
-int svn_fs__bdb_open_revisions_table (DB **revisions_p,
-                                      DB_ENV *env,
-                                      int create);
-
-
-
 /* Storing and retrieving filesystem revisions.  */
 
 

@@ -21,6 +21,7 @@
 #include "../err.h"
 #include "../util/skel.h"
 #include "../util/fs_skels.h"
+#include "bdb-fs.h"
 #include "bdb-err.h"
 #include "dbt.h"
 #include "rev-table.h"

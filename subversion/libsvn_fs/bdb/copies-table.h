@@ -27,13 +27,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Open a `copies' table in ENV.  If CREATE is non-zero, create
-   one if it doesn't exist.  Set *COPIES_P to the new table.
-   Return a Berkeley DB error code.  */
-int svn_fs__bdb_open_copies_table (DB **copies_p,
-                                   DB_ENV *env,
-                                   int create);
-
 /* Reserve a slot in the `copies' table in FS for a new copy operation
    as part of TRAIL.  Return the slot's id in *COPY_ID_P, allocated in
    TRAIL->pool.  */

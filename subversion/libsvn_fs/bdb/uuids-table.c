@@ -23,6 +23,7 @@
 #include "../err.h"
 #include "dbt.h"
 #include "../trail.h"
+#include "bdb-fs.h"
 #include "bdb-err.h"
 #include "uuids-table.h"
 

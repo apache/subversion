@@ -28,6 +28,7 @@
 #include "../util/fs_skels.h"
 #include "../trail.h"
 #include "../id.h"
+#include "bdb-fs.h"
 #include "bdb-err.h"
 #include "txn-table.h"
 
