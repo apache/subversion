@@ -215,30 +215,28 @@ def client_test(test_list):
       for x in test_list[1:]:
         print " ", n, "      ", x.__doc__
         n = n+1
+      return 0
     else:
-      testnum = int(sys.argv[1])
-      return run_test(testnum, test_list)
+      try:
+        testnum = int(sys.argv[1])        
+        return run_test(testnum, test_list)
+      except ValueError:
+        print "warning: ignoring bogus argument"
+        
+  # run all the tests.
+  got_error = 0
+  for n in range(len(test_list)):
+    if n:
+      got_error = run_test(n, test_list)
+  return got_error
 
-  # or run all the tests if no arg.
-  else:
-    got_error = 0
-    for n in range(len(test_list)):
-      if n:
-        got_error = run_test(n, test_list)
-    return got_error
 
-###########################################################
-#
-#  Sanity check for anyone importing this module:
-#  Make sure they're using a recent-enough version of python.
 
-match = re.search('^(\d+\.\d+)', sys.version)
-this_version = string.atof(match.group(1))
-if (this_version < python_required_version):  
-  print "Error: this test suite requires python", python_required_version
-  print "       but you have python", this_version
-  sys.exit(1)
-  
+### It would be nice to print a graceful error if an older python
+### interpreter tries to load this file, instead of getting a cryptic
+### syntax error during initial byte-compilation.  Is there a way to
+### "require" a certain version of python?
+
 
 
 ### End of file.
