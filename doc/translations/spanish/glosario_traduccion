@@ -127,3 +127,9 @@ changeset -> ???
 ancestry -> ascendencia
     La traducción literal concuerda con el significado que se le
     da al mismo término en la jerga de Subversion.
+
+Harry, Sally -> Juan, Carmen
+    Estos nombres se traducen en todos los sitios en los que
+    aparecen, incluída la salida de texto de los comandos de
+    svn, como por ejemplo nombres de usuario que se ven al hacer
+    "svn log".

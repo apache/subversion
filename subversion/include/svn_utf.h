@@ -37,7 +37,8 @@ extern "C" {
 /** @since New in 1.1.
  * Initialize the UTF-8 encoding/decoding routines.
  * Allocate cached translation handles in a subpool of @a pool.
- * NOTE: It is optional to call this function, but if it is used, no other
+ *
+ * @note It is optional to call this function, but if it is used, no other
  * svn function may be in use in other threads during the call of this
  * function or when @a pool is cleared or destroyed.
  * Initializing the UTF-8 routines will improve performance.
@@ -172,4 +173,4 @@ svn_error_t *svn_utf_cstring_from_utf8_string (const char **dest,
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_XML_H */
+#endif /* SVN_UTF_H */

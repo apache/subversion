@@ -203,11 +203,13 @@ parse_property_block (svn_stream_t *stream,
                       const svn_repos_parser_fns2_t *parse_fns,
                       void *record_baton,
                       svn_boolean_t is_node,
+                      svn_filesize_t *actual_length,
                       apr_pool_t *pool)
 {
   svn_stringbuf_t *strbuf;
 
-  while (content_length)
+  *actual_length = 0;
+  while (content_length != *actual_length)
     {
       char *buf;  /* a pointer into the stringbuf's data */
       svn_boolean_t eof;
@@ -224,7 +226,7 @@ parse_property_block (svn_stream_t *stream,
              "Incomplete or unterminated property block");
         }
 
-      content_length -= (strbuf->len + 1); /* +1 because we read a \n too. */
+      *actual_length += (strbuf->len + 1); /* +1 because we read a \n too. */
       buf = strbuf->data;
 
       if (! strcmp (buf, "PROPS-END"))
@@ -243,7 +245,7 @@ parse_property_block (svn_stream_t *stream,
           keybuf = apr_pcalloc (pool, keylen + 1);
           numread = keylen;
           SVN_ERR (svn_stream_read (stream, keybuf, &numread));
-          content_length -= numread;
+          *actual_length += numread;
           if (numread != keylen)
             return stream_ran_dry ();
           keybuf[keylen] = '\0';
@@ -251,7 +253,7 @@ parse_property_block (svn_stream_t *stream,
           /* Suck up extra newline after key data */
           numread = 1;
           SVN_ERR (svn_stream_read (stream, &c, &numread));
-          content_length -= numread;
+          *actual_length += numread;
           if (numread != 1)
             return stream_ran_dry ();
           if (c != '\n') 
@@ -259,7 +261,7 @@ parse_property_block (svn_stream_t *stream,
 
           /* Read a val length line */
           SVN_ERR (svn_stream_readline (stream, &strbuf, "\n", &eof, pool));
-          content_length -= (strbuf->len + 1); /* +1 because we read \n too */
+          *actual_length += (strbuf->len + 1); /* +1 because we read \n too */
           buf = strbuf->data;
 
           if ((buf[0] == 'V') && (buf[1] == ' '))
@@ -273,7 +275,7 @@ parse_property_block (svn_stream_t *stream,
               char *valbuf = apr_palloc (pool, vallen + 1);
               numread = vallen;
               SVN_ERR (svn_stream_read (stream, valbuf, &numread));
-              content_length -= numread;
+              *actual_length += numread;
               if (numread != vallen)
                 return stream_ran_dry ();
               ((char *) valbuf)[vallen] = '\0';
@@ -281,7 +283,7 @@ parse_property_block (svn_stream_t *stream,
               /* Suck up extra newline after val data */
               numread = 1;
               SVN_ERR (svn_stream_read (stream, &c, &numread));
-              content_length -= numread;
+              *actual_length += numread;
               if (numread != 1)
                 return stream_ran_dry ();
               if (c != '\n') 
@@ -317,7 +319,7 @@ parse_property_block (svn_stream_t *stream,
           keybuf = apr_pcalloc (pool, keylen + 1);
           numread = keylen;
           SVN_ERR (svn_stream_read (stream, keybuf, &numread));
-          content_length -= numread;
+          *actual_length += numread;
           if (numread != keylen)
             return stream_ran_dry ();
           keybuf[keylen] = '\0';
@@ -325,7 +327,7 @@ parse_property_block (svn_stream_t *stream,
           /* Suck up extra newline after key data */
           numread = 1;
           SVN_ERR (svn_stream_read (stream, &c, &numread));
-          content_length -= numread;
+          *actual_length += numread;
           if (numread != 1)
             return stream_ran_dry ();
           if (c != '\n') 
@@ -511,9 +513,13 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
     {
       apr_hash_t *headers;
       void *node_baton;
-      const char *valstr;
       svn_boolean_t found_node = FALSE;
+      svn_boolean_t old_v1_with_cl = FALSE;
+      const char *content_length;
+      const char *prop_cl;
+      const char *text_cl;
       const char *value;
+      svn_filesize_t actual_prop_length;
 
       /* Clear our per-line pool. */
       svn_pool_clear (linepool);
@@ -587,11 +593,27 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
           return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
                                    "Unrecognized record type in stream");
         }
-      
+
+      /* Need 3 values below to determine v1 dump type
+
+         Old (pre 0.14?) v1 dumps don't have Prop-content-length
+         and Text-content-length fields, but always have a properties
+         block in a block with Content-Length > 0 */
+
+      content_length = apr_hash_get (headers,
+                                     SVN_REPOS_DUMPFILE_CONTENT_LENGTH,
+                                     APR_HASH_KEY_STRING);
+      prop_cl = apr_hash_get (headers,
+                               SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH,
+                               APR_HASH_KEY_STRING);
+      text_cl = apr_hash_get (headers,
+                              SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH,
+                              APR_HASH_KEY_STRING);
+      old_v1_with_cl =
+        version == 1 && content_length && ! prop_cl && ! text_cl;
+
       /* Is there a props content-block to parse? */
-      if ((valstr = apr_hash_get (headers,
-                                  SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH,
-                                  APR_HASH_KEY_STRING)))
+      if (prop_cl || old_v1_with_cl)
         {
           const char *delta = apr_hash_get (headers,
                                             SVN_REPOS_DUMPFILE_PROP_DELTA,
@@ -603,32 +625,36 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
           if (found_node && !is_delta)
             SVN_ERR (parse_fns->remove_node_props (node_baton));
 
-          SVN_ERR (parse_property_block (stream,
-                                         svn__atoui64 (valstr),
-                                         parse_fns,
-                                         found_node ? node_baton : rev_baton,
-                                         found_node,
-                                         found_node ? nodepool : revpool));
+          SVN_ERR (parse_property_block
+                   (stream,
+                    svn__atoui64 (prop_cl ? prop_cl : content_length),
+                    parse_fns,
+                    found_node ? node_baton : rev_baton,
+                    found_node,
+                    &actual_prop_length,
+                    found_node ? nodepool : revpool));
         }
 
       /* Is there a text content-block to parse? */
-      if ((valstr = apr_hash_get (headers,
-                                  SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH,
-                                  APR_HASH_KEY_STRING)))
+      if (text_cl || old_v1_with_cl)
         {
           const char *delta = apr_hash_get (headers,
                                             SVN_REPOS_DUMPFILE_TEXT_DELTA,
                                             APR_HASH_KEY_STRING);
           svn_boolean_t is_delta = (delta && strcmp (delta, "true") == 0);
+          svn_filesize_t cl_value = (old_v1_with_cl) ?
+            svn__atoui64 (content_length) - actual_prop_length :
+            svn__atoui64 (text_cl);
 
-          SVN_ERR (parse_text_block (stream,
-                                     svn__atoui64 (valstr),
-                                     is_delta,
-                                     parse_fns,
-                                     found_node ? node_baton : rev_baton,
-                                     buffer,
-                                     buflen,
-                                     found_node ? nodepool : revpool));
+          if (! (old_v1_with_cl && ! cl_value))
+            SVN_ERR (parse_text_block (stream,
+                                       cl_value,
+                                       is_delta,
+                                       parse_fns,
+                                       found_node ? node_baton : rev_baton,
+                                       buffer,
+                                       buflen,
+                                       found_node ? nodepool : revpool));
         }
       
       /* If we just finished processing a node record, we need to

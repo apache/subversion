@@ -98,6 +98,7 @@ Commit access for specific areas:
         danpat   Daniel Patterson <danpat@danpat.net>        (svn-graph.pl)
   gerhardoettl   Gerhard Oettl <gerhard.oettl.ml@oesoft.at>  (doc: de)
    archiecobbs   Archie Cobbs <archie@awarix.com>            (svnmerge)
+       sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl branch)
 
 Committers who have asked to be listed as dormant:
 

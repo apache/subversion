@@ -181,7 +181,7 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
       {
         CHAR ansi_path[MAX_PATH];
         GetModuleFileNameA (0, ansi_path, sizeof (ansi_path));
-        MultiByteToWideChar (_getmbcp (), MB_PRECOMPOSED, ansi_path,
+        MultiByteToWideChar (CP_ACP, 0, ansi_path,
                              lstrlenA (ansi_path), ucs2_path,
                              sizeof (ucs2_path) / sizeof (ucs2_path[0]));
       }

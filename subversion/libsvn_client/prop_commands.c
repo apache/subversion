@@ -22,8 +22,6 @@
 
 /*** Includes. ***/
 
-#include <ctype.h>
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
@@ -32,6 +30,7 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_props.h"
+#include "svn_ctype.h"
 
 #include "svn_private_config.h"
 
@@ -50,23 +49,20 @@ is_valid_prop_name (const char *name)
      and ASCII, so we can just test for the appropriate ASCII codes.
      But we can't use standard C character notation ('A', 'B', etc)
      because there's no guarantee that this C environment is using
-     ASCII.  So we hardcode the numbers below. */
+     ASCII. */
 
-  if (! ((*p >= 65 && *p <= 90)      /* ASCII 'A' to 'Z' */
-         || (*p >= 97 && *p <= 122)  /* ASCII 'a' to 'z' */
-         || (*p == 95)               /* ASCII '_' */
-         || (*p == 58)))             /* ASCII ':' */
+  if (!(svn_ctype_isalpha (*p)
+        || *p == SVN_CTYPE_ASCII_COLON
+        || *p == SVN_CTYPE_ASCII_UNDERSCORE))
     return FALSE;
   p++;
   for (; *p; p++)
     {
-      if (! ((*p >= 65 && *p <= 90)      /* ASCII 'A' to 'Z' */
-             || (*p >= 97 && *p <= 122)  /* ASCII 'a' to 'z' */
-             || (*p >= 48 && *p <= 57)   /* ASCII '0' to '9' */
-             || (*p == 95)               /* ASCII '_' */
-             || (*p == 58)               /* ASCII ':' */
-             || (*p == 46)               /* ASCII '.' */
-             || (*p == 45)))             /* ASCII '-' */
+      if (!(svn_ctype_isalnum (*p)
+            || *p == SVN_CTYPE_ASCII_MINUS
+            || *p == SVN_CTYPE_ASCII_DOT
+            || *p == SVN_CTYPE_ASCII_COLON
+            || *p == SVN_CTYPE_ASCII_UNDERSCORE))
         return FALSE;
     }
   return TRUE;
