@@ -58,14 +58,7 @@
 #include "dav_svn.h"
 
 
-const dav_hooks_propdb *dav_svn_get_propdb_hooks(request_rec *r)
-{
-#if 0
-    return &dav_hooks_db_dbm;
-#else
-    return NULL;
-#endif
-}
+const dav_hooks_propdb dav_svn_hooks_propdb = { 0 };
 
 
 /* 

@@ -60,6 +60,8 @@
 #include "dav_svn.h"
 
 
+const dav_hooks_liveprop dav_svn_hooks_liveprop = { 0 };
+
 void dav_svn_gather_propsets(apr_array_header_t *uris)
 {
 #ifndef WIN32

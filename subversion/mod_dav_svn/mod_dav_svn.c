@@ -93,10 +93,19 @@ static const command_rec dav_svn_cmds[] =
     { NULL }
 };
 
+static const dav_provider dav_svn_provider =
+{
+    &dav_svn_hooks_repos,
+    &dav_svn_hooks_propdb,
+    NULL,                       /* locks */
+    &dav_svn_hooks_liveprop,
+    &dav_svn_hooks_vsn
+};
+
 static void register_hooks(void)
 {
-    /* repository provider */
-    dav_svn_register_repos(NULL /* ### pconf */);
+    /* our provider */
+    dav_register_provider(NULL /* ### pconf */, "svn", &dav_svn_provider);
 
     /* live property handling */
     ap_hook_gather_propsets(dav_svn_gather_propsets, NULL, NULL,
@@ -105,17 +114,6 @@ static void register_hooks(void)
     ap_hook_insert_all_liveprops(dav_svn_insert_all_liveprops, NULL, NULL,
                                  AP_HOOK_MIDDLE);
     dav_svn_register_uris(NULL /* ### pconf */);
-
-    /* versioning provider stuff */
-    ap_hook_get_vsn_hooks(dav_svn_get_vsn_hooks, NULL, NULL, AP_HOOK_MIDDLE);
-
-#if 0
-    /* ### we don't have these yet */
-
-    /* dead property handling */
-    ap_hook_get_propdb_hooks(dav_fs_get_propdb_hooks, NULL, NULL,
-                             AP_HOOK_MIDDLE);
-#endif
 }
 
 module MODULE_VAR_EXPORT dav_svn_module =
