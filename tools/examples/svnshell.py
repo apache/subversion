@@ -20,11 +20,12 @@ import sys
 import string
 import time
 import re
+from cmd import Cmd
 from random import randint
 from svn import fs, core, repos
 
 
-class SVNShell:
+class SVNShell(Cmd):
   def __init__(self, pool, path):
     """initialize an SVNShell object"""
     if path[-1] == '/':
@@ -37,28 +38,27 @@ class SVNShell:
     self.txn = None
     self.root = fs.revision_root(self.fs_ptr, self.rev, pool)
     self.path = "/"
-    self._do_prompt()
-
-  def cmd_help(self, *args):
-    """print shell help"""
-    print "Available commands:"
-    print "  cat FILE     : dump the contents of FILE"
-    print "  cd DIR       : change the current working directory to DIR"
-    print "  exit         : exit the shell"
-    print "  ls [PATH]    : list the contents of the current directory"
-    print "  lstxns       : list the transactions available for browsing"
-    print "  pcat [PATH]  : list the properties of PATH"
-    print "  setrev REV   : set the current revision to browse"
-    print "  settxn TXN   : set the current transaction to browse"
-    print "  youngest     : list the youngest browsable revision number"
+    self._setup_prompt()
+    self.cmdloop()
     
-  def cmd_cat(self, *args):
+  def postcmd(self, stop, line):
+    self._setup_prompt()
+
+  _errors = ["Huh?",
+             "Whatchoo talkin' 'bout, Willis?",
+             "Say what?",
+             "Nope.  Not gonna do it.",
+             "Ehh...I don't think so, chief."]
+
+  def default(self, line):
+    print self._errors[randint(0, len(self._errors) - 1)]
+    
+  def do_cat(self, arg):
     """dump the contents of a file"""
-    args = args[0]
-    if not len(args):
+    if not len(arg):
       print "You must supply a file path."
       return
-    catpath = self._parse_path(args[0])
+    catpath = self._parse_path(arg)
     kind = fs.check_path(self.root, catpath, self.taskpool)
     if kind == core.svn_node_none:
       print "Path '%s' does not exist." % catpath
@@ -72,12 +72,9 @@ class SVNShell:
     stream = fs.file_contents(self.root, catpath, self.taskpool)
     print core.svn_stream_read(stream, filelen)
     
-  def cmd_cd(self, *args):
+  def do_cd(self, arg):
     """change directory"""
-    args = args[0]
-    if len(args) < 1:
-      return
-    newpath = self._parse_path(args[0])
+    newpath = self._parse_path(arg)
     
     # make sure that path actually exists in the filesystem as a directory
     kind = fs.check_path(self.root, newpath, self.taskpool)
@@ -87,16 +84,15 @@ class SVNShell:
     self.path = newpath
     core.svn_pool_clear(self.taskpool)
 
-  def cmd_ls(self, *args):
+  def do_ls(self, arg):
     """list the contents of the current directory or provided path"""
-    args = args[0]
     parent = self.path
-    if not len(args):
-      # no args -- show a listing for the current directory.
+    if not len(arg):
+      # no arg -- show a listing for the current directory.
       entries = fs.dir_entries(self.root, self.path, self.taskpool)
     else:
-      # args?  show a listing of that path.
-      newpath = self._parse_path(args[0])
+      # arg?  show a listing of that path.
+      newpath = self._parse_path(arg)
       kind = fs.check_path(self.root, newpath, self.taskpool)
       if kind == core.svn_node_dir:
         parent = newpath
@@ -147,7 +143,7 @@ class SVNShell:
                                             node_id, size, date, name)
     core.svn_pool_clear(self.taskpool)
   
-  def cmd_lstxns(self, *args):
+  def do_lstxns(self, arg):
     """list the transactions available for browsing"""
     txns = fs.list_transactions(self.fs_ptr, self.taskpool)
     txns.sort()
@@ -161,12 +157,11 @@ class SVNShell:
     print ""
     core.svn_pool_clear(self.taskpool)
     
-  def cmd_pcat(self, *args):
+  def do_pcat(self, arg):
     """list the properties of a path"""
-    args = args[0]
     catpath = self.path
-    if args:
-      catpath = self._parse_path(args[0])
+    if len(arg):
+      catpath = self._parse_path(arg)
     kind = fs.check_path(self.root, catpath, self.taskpool)
     if kind == core.svn_node_none:
       print "Path '%s' does not exist." % catpath
@@ -181,11 +176,10 @@ class SVNShell:
       print pval
     print 'PROPS-END'
     
-  def cmd_setrev(self, *args):
+  def do_setrev(self, arg):
     """set the current revision to view"""
-    args = args[0]
     try:
-      rev = int(args[0])
+      rev = int(arg)
       newroot = fs.revision_root(self.fs_ptr, rev, self.pool)
     except:
       print "Error setting the revision to '" + str(rev) + "'."
@@ -196,27 +190,28 @@ class SVNShell:
     self.is_rev = 1
     self._do_path_landing()
 
-  def cmd_settxn(self, *args):
+  def do_settxn(self, arg):
     """set the current transaction to view"""
-    args = args[0]
-    txn = args[0]
     try:
-      txnobj = fs.open_txn(self.fs_ptr, txn, self.pool)
+      txnobj = fs.open_txn(self.fs_ptr, arg, self.pool)
       newroot = fs.txn_root(txnobj, self.pool)
     except:
-      print "Error setting the transaction to '" + txn + "'."
+      print "Error setting the transaction to '" + arg + "'."
       return
     fs.close_root(self.root)
     self.root = newroot
-    self.txn = txn
+    self.txn = arg
     self.is_rev = 0
     self._do_path_landing()
   
-  def cmd_youngest(self, *args):
+  def do_youngest(self, arg):
     """list the youngest revision available for browsing"""
     rev = fs.youngest_rev(self.fs_ptr, self.taskpool)
     print rev
     core.svn_pool_clear(self.taskpool)
+
+  def do_exit(self, arg):
+    sys.exit(0)
 
   def _path_to_parts(self, path):
     return filter(None, string.split(path, '/'))
@@ -269,42 +264,13 @@ class SVNShell:
     self.path = newpath
     core.svn_pool_clear(self.taskpool)
 
-  _errors = ["Huh?",
-             "Whatchoo talkin' 'bout, Willis?",
-             "Say what?",
-             "Nope.  Not gonna do it.",
-             "Ehh...I don't think so, chief."]
-  def _do_prompt(self):
+  def _setup_prompt(self):
     """present the prompt and handle the user's input"""
     if self.is_rev:
-      prompt = "<rev: " + str(self.rev)
+      self.prompt = "<rev: " + str(self.rev)
     else:
-      prompt = "<txn: " + self.txn
-    prompt += " " + self.path + ">$ "
-    try:
-      input = raw_input(prompt)
-    except EOFError:
-      print "" # generate a new-line before returning control
-      return
-
-    cmds = filter(None, string.split(input, ';'))
-    for cmd in cmds:
-      cmd.strip()
-      
-      ### This will currently screw up when the arguments to the
-      ### commands have spaces in them, like 'cd "My Dir"'
-      args = filter(None, string.split(cmd, ' '))
-      if len(args) == 0:
-        pass
-      elif args[0] == 'exit':
-        return
-      elif not hasattr(self, 'cmd_' + args[0]):
-        msg = self._errors[randint(0, len(self._errors) - 1)]
-        print msg
-      else:
-        getattr(self, 'cmd_' + args[0])(args[1:])
-        
-    self._do_prompt()
+      self.prompt = "<txn: " + self.txn
+    self.prompt += " " + self.path + ">$ "
     
 
 def _basename(path):
@@ -331,15 +297,6 @@ def main():
   if len(sys.argv) < 2:
     usage(1)
 
-  try:
-    # try to map the erase character to the backspace key
-    import termios
-    attrs = termios.tcgetattr(sys.stdin)
-    attrs[6][termios.VERASE] = '\x08'
-    termios.tcsetattr(sys.stdin, termios.TCSANOW, attrs)
-  except:
-    pass
-  
   core.run_app(SVNShell, sys.argv[1])
 
 if __name__ == '__main__':
