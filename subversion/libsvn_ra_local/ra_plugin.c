@@ -153,52 +153,73 @@ svn_ra_local__get_file_revs (void *session_baton,
                                   NULL, handler, handler_baton, pool);
 }
 
+/* Pool cleanup handler: Ensure that the access descriptor of the filesystem
+   DATA is set to NULL. */
+static apr_status_t
+cleanup_access (void *data)
+{
+  svn_fs_t *fs = data;
+
+  /* ### What could go wrong here? Currently, it always succeeds. */
+  svn_error_clear (svn_fs_set_access (fs, NULL));
+
+  return APR_SUCCESS;
+}
+
 static svn_error_t *
 get_username (svn_ra_local__session_baton_t *session,
               apr_pool_t *pool)
 {
   svn_auth_iterstate_t *iterstate;
+  svn_fs_access_t *access_ctx;
 
-  /* If we've already found the username don't ask for it again */
-  if (session->username)
-    return SVN_NO_ERROR;
-
-  /* Get a username somehow, so we have some svn:author property to
-     attach to a commit. */
-  if (! session->callbacks->auth_baton)
+  /* If we've already found the username don't ask for it again. */
+  if (! session->username)
     {
-      session->username = "";
-    }
-  else
-    {
-      void *creds;
-      svn_auth_cred_username_t *username_creds;
-      SVN_ERR (svn_auth_first_credentials (&creds, &iterstate,
-                                           SVN_AUTH_CRED_USERNAME,
-                                           session->uuid, /* realmstring */
-                                           session->callbacks->auth_baton,
-                                           pool));
-
-      /* No point in calling next_creds(), since that assumes that the
-         first_creds() somehow failed to authenticate.  But there's no
-         challenge going on, so we use whatever creds we get back on
-         the first try. */
-      username_creds = creds;
-      if (username_creds && username_creds->username)
+      /* Get a username somehow, so we have some svn:author property to
+         attach to a commit. */
+      if (session->callbacks->auth_baton)
         {
-          svn_fs_access_t *access_ctx;
-
-          session->username = apr_pstrdup (pool, username_creds->username);
-          svn_error_clear (svn_auth_save_credentials (iterstate, pool));
-
-          /* If we have a real username, attach it to the filesystem
-             so that it can be used to validate locks. */
-          SVN_ERR (svn_fs_create_access (&access_ctx, session->username,
-                                         session->pool));
-          SVN_ERR (svn_fs_set_access (session->fs, access_ctx));
+          void *creds;
+          svn_auth_cred_username_t *username_creds;
+          SVN_ERR (svn_auth_first_credentials (&creds, &iterstate,
+                                               SVN_AUTH_CRED_USERNAME,
+                                               session->uuid, /* realmstring */
+                                               session->callbacks->auth_baton,
+                                               pool));
+          
+          /* No point in calling next_creds(), since that assumes that the
+             first_creds() somehow failed to authenticate.  But there's no
+             challenge going on, so we use whatever creds we get back on
+             the first try. */
+          username_creds = creds;
+          if (username_creds && username_creds->username)
+            {
+              session->username = apr_pstrdup (session->pool,
+                                               username_creds->username);
+              svn_error_clear (svn_auth_save_credentials (iterstate, pool));
+            }
+          else
+            session->username = "";
         }
       else
         session->username = "";
+    }
+
+  /* If we have a real username, attach it to the filesystem so that it can
+     be used to validate locks.  Even if there already is a user context
+     associated, it may contain irrelevant lock tokens, so always create a new.
+  */
+  if (*session->username)
+    {
+      SVN_ERR (svn_fs_create_access (&access_ctx, session->username,
+                                     pool));
+      SVN_ERR (svn_fs_set_access (session->fs, access_ctx));
+
+      /* Make sure this context is disassociated when the pool gets
+         destroyed. */
+      apr_pool_cleanup_register (pool, session->fs, cleanup_access,
+                                 apr_pool_cleanup_null);
     }
 
   return SVN_NO_ERROR;
@@ -366,13 +387,16 @@ svn_ra_local__rev_prop (void *session_baton,
 struct deltify_etc_baton
 {
   svn_fs_t *fs;                    /* the fs to deltify in */
+  svn_repos_t *repos;              /* repos for unlocking */
+  apr_hash_t *lock_tokens;         /* tokens to unlock, if any */
   apr_pool_t *pool;                /* pool for scratch work */
   svn_commit_callback_t callback;  /* the original callback */
   void *callback_baton;            /* the original callback's baton */
 };
 
 /* This implements 'svn_commit_callback_t'.  Its invokes the original
-   (wrapped) callback, but also does deltification on the new revision.
+   (wrapped) callback, but also does deltification on the new revision and
+   possibly unlocks committed paths.
    BATON is 'struct deltify_etc_baton *'. */
 static svn_error_t * 
 deltify_etc (svn_revnum_t new_revision,
@@ -382,11 +406,37 @@ deltify_etc (svn_revnum_t new_revision,
 {
   struct deltify_etc_baton *db = baton;
   svn_error_t *err1, *err2;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
 
   /* Invoke the original callback first, in case someone's waiting to
      know the revision number so they can go off and annotate an
      issue or something. */
   err1 = (*db->callback) (new_revision, date, author, db->callback_baton);
+
+  /* Maybe unlock the paths. */
+  if (db->lock_tokens)
+    {
+      iterpool = svn_pool_create (db->pool);
+      for (hi = apr_hash_first (db->pool, db->lock_tokens); hi;
+           hi = apr_hash_next (hi))
+        {
+          void *val;
+          const char *token;
+
+          svn_pool_clear (iterpool);
+          apr_hash_this (hi, NULL, NULL, &val);
+          token = val;
+          /* We may get errors here if the lock was broken or stolen after
+             the commit succeeded.  This is fine and should be ignored.
+             ### What about the other errors? Collecting them all could mean
+             ### a lot of errors for the user. Should we just collect the first
+             ### error and continue? */
+          svn_error_clear (svn_repos_fs_unlock (db->repos, token, FALSE,
+                                                iterpool));
+        }
+      svn_pool_destroy (iterpool);
+    }
 
   /* But, deltification shouldn't be stopped just because someone's
      random callback failed, so proceed unconditionally on to
@@ -406,24 +456,53 @@ deltify_etc (svn_revnum_t new_revision,
 
 
 static svn_error_t *
-svn_ra_local__get_commit_editor (void *session_baton,
-                                 const svn_delta_editor_t **editor,
-                                 void **edit_baton,
-                                 const char *log_msg,
-                                 svn_commit_callback_t callback,
-                                 void *callback_baton,
-                                 apr_pool_t *pool)
+svn_ra_local__get_commit_editor2 (void *session_baton,
+                                  const svn_delta_editor_t **editor,
+                                  void **edit_baton,
+                                  const char *log_msg,
+                                  svn_commit_callback_t callback,
+                                  void *callback_baton,
+                                  apr_hash_t *lock_tokens,
+                                  svn_boolean_t keep_locks,
+                                  apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session_baton;
   struct deltify_etc_baton *db = apr_palloc (pool, sizeof(*db));
+  apr_hash_index_t *hi;
+  svn_fs_access_t *fs_access;
 
   db->fs = sess->fs;
+  db->repos = sess->repos;
+  if (! keep_locks)
+    db->lock_tokens = lock_tokens;
   db->pool = pool;
   db->callback = callback;
   db->callback_baton = callback_baton;
 
   SVN_ERR (get_username (sess, pool));
 
+  /* If there are lock tokens to add, do so. */
+  if (lock_tokens)
+    {
+      SVN_ERR (svn_fs_get_access (&fs_access, sess->fs));
+
+      /* If there is no access context, the filesystem will scream if a
+         lock is needed. */      
+      if (fs_access)
+        {
+          for (hi = apr_hash_first (pool, lock_tokens); hi;
+               hi = apr_hash_next (hi))
+            {
+              void *val;
+              const char *token;
+
+              apr_hash_this (hi, NULL, NULL, &val);
+              token = val;
+              SVN_ERR (svn_fs_access_add_lock_token (fs_access, token));
+            }
+        }
+    }
+              
   /* Get the repos commit-editor */     
   SVN_ERR (svn_repos_get_commit_editor (editor, edit_baton, sess->repos,
                                         svn_path_uri_decode (sess->repos_url,
@@ -435,6 +514,19 @@ svn_ra_local__get_commit_editor (void *session_baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+svn_ra_local__get_commit_editor (void *session_baton,
+                                 const svn_delta_editor_t **editor,
+                                 void **edit_baton,
+                                 const char *log_msg,
+                                 svn_commit_callback_t callback,
+                                 void *callback_baton,
+                                 apr_pool_t *pool)
+{
+  return svn_ra_local__get_commit_editor2 (session_baton, editor, edit_baton,
+                                           log_msg, callback, callback_baton,
+                                           NULL, TRUE, pool);
+}
 
 
 static svn_error_t *
@@ -1066,7 +1158,8 @@ static const svn_ra_plugin_t ra_local_plugin =
   svn_ra_local__lock,
   svn_ra_local__unlock,
   svn_ra_local__get_lock,
-  svn_ra_local__get_locks
+  svn_ra_local__get_locks,
+  svn_ra_local__get_commit_editor2
 };
 
 

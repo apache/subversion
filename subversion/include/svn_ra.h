@@ -915,7 +915,8 @@ typedef struct svn_ra_plugin_t
    * @a lock_tokens, if non-NULL, is a hash mapping <tt>const char
    * *</tt> paths (relative to the URL of @a session_baton) to <tt>
    * const char *</tt> lock tokens.  The server checks that the
-   * correct token is provided for each committed, locked path.
+   * correct token is provided for each committed, locked path.  @a lock_tokens
+   * must live during the whole commit operation.
    *
    * If @a keep_locks is @c TRUE, then do not release locks on
    * committed objects.  Else, automatically release such locks.
@@ -923,7 +924,7 @@ typedef struct svn_ra_plugin_t
    * The caller may not perform any RA operations using
    * @a session_baton before finishing the edit.
    * 
-   * Use @a pool for memory allocation.
+   * Use @a pool for memory allocation during the commit.
    */
   svn_error_t *(*get_commit_editor2) (void *session_baton,
                                       const svn_delta_editor_t **editor,
