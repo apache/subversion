@@ -271,7 +271,7 @@ static VALUE
 change_node_prop (VALUE self, VALUE path, VALUE aName, VALUE aValue)
 {
   svn_ruby_fs_root_t *root;
-  const svn_string_t *name, *value;
+  const svn_string_t *value;
   apr_pool_t *pool;
   svn_error_t *err;
 
@@ -283,13 +283,12 @@ change_node_prop (VALUE self, VALUE path, VALUE aName, VALUE aValue)
   Data_Get_Struct (self, svn_ruby_fs_root_t, root);
 
   pool = svn_pool_create (root->pool);
-  name = svn_string_create (StringValuePtr (aName), pool);
   if (aValue == Qnil)
     value = NULL;
   else
     value = svn_string_create (StringValuePtr (aValue), pool);
   err = svn_fs_change_node_prop (root->root, StringValuePtr (path),
-				 name, value, pool);
+				 StringValuePtr (aName), value, pool);
   apr_pool_destroy (pool);
 
   if (err)

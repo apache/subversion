@@ -177,10 +177,9 @@ fs_youngest_rev (VALUE self)
 static VALUE
 fs_revision_prop (VALUE self, VALUE aRev, VALUE aPropname)
 {
-  svn_stringbuf_t *value;
+  svn_string_t *value;
   svn_ruby_fs_t *fs;
   svn_revnum_t rev;
-  const svn_string_t *propname;
   apr_pool_t *pool;
   svn_error_t *err;
   VALUE obj;
@@ -192,9 +191,9 @@ fs_revision_prop (VALUE self, VALUE aRev, VALUE aPropname)
   rev = NUM2LONG (aRev);
   Check_Type (aPropname, T_STRING);
   pool = svn_pool_create (fs->pool);
-  propname = svn_string_create (StringValuePtr (aPropname), pool);
 
-  err = svn_fs_revision_prop (&value, fs->fs, rev, propname, pool);
+  err = svn_fs_revision_prop (&value, fs->fs, rev,
+			      StringValuePtr (aPropname), pool);
   if (err)
     {
       apr_pool_destroy (pool);
@@ -261,7 +260,7 @@ fs_change_rev_prop (VALUE self, VALUE aRev, VALUE aName, VALUE aValue)
 {
   svn_ruby_fs_t *fs;
   svn_revnum_t rev;
-  const svn_string_t *name, *value;
+  const svn_string_t *value;
   apr_pool_t *pool;
   svn_error_t *err;
 
@@ -275,13 +274,13 @@ fs_change_rev_prop (VALUE self, VALUE aRev, VALUE aName, VALUE aValue)
     Check_Type (aValue, T_STRING);
 
   pool = svn_pool_create (fs->pool);
-  name = svn_string_create (StringValuePtr (aName), pool);
   if (aValue == Qnil)
     value = NULL;
   else
     value = svn_string_create (StringValuePtr (aValue), pool);
 
-  err = svn_fs_change_rev_prop (fs->fs, rev, name, value, pool);
+  err = svn_fs_change_rev_prop (fs->fs, rev,
+				StringValuePtr (aName), value, pool);
   apr_pool_destroy (pool);
   if (err)
     svn_ruby_raise (err);

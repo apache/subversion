@@ -119,9 +119,8 @@ proplist (VALUE self)
 static VALUE
 prop (VALUE self, VALUE aPropname)
 {
-  svn_stringbuf_t *value;
+  svn_string_t *value;
   svn_fs_root_t *root;
-  svn_string_t *propname;
   apr_pool_t *pool;
   svn_error_t *err;
   svn_ruby_fs_node *node;
@@ -130,9 +129,8 @@ prop (VALUE self, VALUE aPropname)
   Data_Get_Struct (self, svn_ruby_fs_node, node);
   root = svn_ruby_fs_root (node->fs_root);
   pool = svn_pool_create (node->pool);
-  propname = svn_string_create (StringValuePtr (aPropname), pool);
   err = svn_fs_node_prop (&value, root, StringValuePtr (node->path),
-                          propname, pool);
+                          StringValuePtr (aPropname), pool);
   if (err)
     {
       apr_pool_destroy (pool);
