@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.10 $ of this document.)
+              ($Revision: 1.11 $ of this document.)
 
 * Introduction
 
@@ -480,7 +480,7 @@ There are certain properties which we would like any implementation to
 have.  I'm listing them here instead of in the "Requirements" section,
 because they aren't really features, they're more like principles.
 
-*** Network turnarounds
+*** Minimize network turnarounds
 
 The CVS client/server protocol goes to great effort to make sure that
 the client and server need only a minimum of exchanges per operationn.
@@ -489,7 +489,7 @@ turnarounds (i.e., client asks server preliminary questions, server
 responds, client then does the real request, server responds), and
 most things can be done with just 1.
 
-*** Database turnarounds
+*** Minimize database turnarounds
 
 We need to make sure that traversing tree structures does not require
 N separate database accesses, where N is proportional to the depth or
