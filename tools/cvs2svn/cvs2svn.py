@@ -383,89 +383,6 @@ class Commit:
     print 'committing: %s, over %d seconds' % (time.ctime(self.t_min),
                                                self.t_max - self.t_min)
 
-    def _commit_internal(txn):
-      ### FIXME: 
-      #
-      # There's some disagreement between C and Python as to how the
-      # return parameters from commit_txn() are to be handled.
-      #
-      # In C, svn_fs_commit_txn() returns two parameters by reference:
-      # conflict_p and new_rev.  If there is no conflict, then
-      # *conflict_p is set to NULL.
-      #
-      # In Python, the equivalent would be for fs.commit_txn(txn) to
-      # return a sequence.  For example, if the commit results in new
-      # revision 3, then
-      #
-      #   conflict, new_rev = fs.commit_txn(txn)
-      #
-      # should return (None, 3), setting conflict and new_rev to those
-      # values respectively.
-      #
-      # However, that's not what happens.  Looking at the generated
-      # file subversion/bindings/swig/python/svn_fs.c, you can see
-      # that in a successful commit, _wrap_svn_fs_commit_txn() calls
-      # t_output_helper() twice in succession: the first time to
-      # stuff the conflict information ('arg1') into the Python
-      # resultobj, the second time to append the new revision ('arg2')
-      # onto that resultobj.
-      #
-      # The conflict information is NULL, of course, which gets
-      # converted to None by SWIG_NewPointerObj() before it is passed
-      # to t_output_helper().  The problem is that t_output_helper()
-      # is a bit lazy about how it uses None.  It seems it can't
-      # distinguish between "there's nothing in this result list" and
-      # "there's a single None in this result list", see this code:
-      #
-      #    if (!target) {                   
-      #        target = o;
-      #    } else if (target == Py_None) {  
-      #        Py_DECREF(Py_None);
-      #        target = o;
-      #    } else {                         
-      #        if (!PyTuple_Check(target)) {
-      #            o2 = target;
-      #            target = PyTuple_New(1);
-      #            PyTuple_SetItem(target, 0, o2);
-      #
-      # When t_output_helper() receives a None in the first call,
-      # 'target' ('resultobj' in the caller) is already None, so
-      # the code goes to the middle 'else if', replaces target with
-      # None, and returns it.
-      #
-      # Now comes the second call, which should append new_rev to the
-      # resultobj.  But resultobj is still None, so the code goes
-      # again to the middle 'else if', replaces target with the new
-      # revision (a Python number object), and returns target.
-      #
-      # So the end result is that _wrap_svn_fs_commit_txn() returns
-      # just new_rev, not the list (None, new_rev).
-      #
-      # This is probably a bug, but I don't yet know if it's a bug in
-      # SWIG itself, or in our use of SWIG.  The logic below is a
-      # workaround until we get it fixed.
-
-      commit_result = fs.commit_txn(txn)
-      if type(commit_result) == type(()):
-        if commit_result[0] == None:
-          print "_commit_internal: yo, the bug is fixed, update this code"
-          sys.exit(1)
-        else:
-          conflicts = commit_result[0]
-          new_rev = commit_result[1]
-      elif type(commit_result) == type(0):
-        conflicts = None
-        new_rev = commit_result
-      else:
-        print "Unexpected type for commit result:", str(commit_result)
-        sys.exit(1)
-          
-      if conflicts:
-        print 'Exiting due to conflicts:', str(conflicts)
-        sys.exit(1)
-
-      return new_rev
-
     if ctx.dry_run:
       for f, r, br, tags, branches in self.changes:
         # compute a repository path. ensure we have a leading "/" and drop
@@ -604,7 +521,12 @@ class Commit:
     fs.change_txn_prop(txn, 'svn:author', a.encode('utf8'), c_pool)
     fs.change_txn_prop(txn, 'svn:log', l.encode('utf8'), c_pool)
 
-    new_rev = _commit_internal(txn)
+    conflicts, new_rev = fs.commit_txn(txn)
+    if conflicts:
+      # our commit processing should never generate a conflict. if we *do*
+      # see something, then we've got some badness going on. punt.
+      print 'Exiting due to conflicts:', str(conflicts)
+      sys.exit(1)
     print '    new revision:', new_rev
 
     # set the time to the proper (past) time
@@ -630,10 +552,17 @@ class Commit:
       fs.change_txn_prop(txn, 'svn:author', "cvs2svn", c_pool)
       fs.change_txn_prop(txn, 'svn:log', log_msg, c_pool)
 
-      new_rev = _commit_internal(txn)
+      conflicts, new_rev = fs.commit_txn(txn)
+      if conflicts:
+        # our commit processing should never generate a conflict. if we *do*
+        # see something, then we've got some badness going on. punt.
+        print 'Exiting due to conflicts:', str(conflicts)
+        sys.exit(1)
       print '    new revision:', new_rev
 
       # FIXME: we don't set a date here
+      # gstein sez: tags don't have dates, so no biggy. commits to
+      #             branches have dates, tho.
 
     # done with the commit and file pools
     util.svn_pool_destroy(c_pool)
