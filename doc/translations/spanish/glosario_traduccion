@@ -184,3 +184,10 @@ namespace -> espacio de nombrado,
     Tecnicismo del C++, obtenido de la traducción del libro
     "Pensar en C++", en concreto la sección 3.2 disponible en
     http://arco.inf-cr.uclm.es/~dvilla/pensar_en_C++/ch02s03.html#id2589039.
+
+hash table -> tabla hash
+    Sin traducción satisfactoria por el momento.
+
+memory pool -> grupo de memoria
+    Traducción temporal hasta que se revise algún libro en castellano
+    de programación que use el mismo término.
