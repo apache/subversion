@@ -11,9 +11,6 @@
  * ====================================================================
  */
 
-/* ==================================================================== */
-
-
 #ifndef SVN_LIBSVN_FS_FS_H
 #define SVN_LIBSVN_FS_FS_H
 
@@ -51,15 +48,14 @@ struct svn_fs_t {
      the ID's of the nodes that are part of that transaction.  */
   DB *transactions;
 
-  /* A cache of nodes we've read in, mapping svn_fs_id_t arrays (not
-     including the terminating -1) onto pointers to svn_fs_node_t
-     objects.  */
-  apr_hash_t *node_cache;
+  /* The head of a linked list of all currently open transactions, or
+     zero if we have no currently open transactions.  */
+  svn_fs_txn_t *all_txns;
 
-  /* A table of all currently open transactions.  Each value is a
-     pointer to an svn_fs_txn_t object, T; every key is T->id.  */
-  apr_hash_t *open_txns;
-
+  /* The head of a linked list of all currently open nodes, or zero if
+     we have no currently open nodes.  */
+  svn_fs_node_t *all_nodes;
+  
   /* A callback function for printing warning messages, and a baton to
      pass through to it.  */
   svn_fs_warning_callback_t *warning;
@@ -87,6 +83,90 @@ struct svn_fs_t {
      fs_cleanup won't overwrite a pointer to an existing svn_error_t
      if it finds one.  */
   svn_error_t **cleanup_error;
+};
+
+
+
+/* Transactions.  */
+
+
+struct svn_fs_txn_t {
+
+  /* The filesystem of which this transaction is a part.  */
+  svn_fs_t *fs;
+
+  /* The links in a doubly-linked list of all the transactions open
+     in this filesystem.  */
+  svn_fs_txn_t *next, *prev;
+
+  /* A subpool for use by this transaction.  Destroying this pool
+     closes the transaction neatly.  */
+  apr_pool_t *pool;
+
+  /* This transaction's ID, as a null-terminated C string.  If this ID
+     no longer exists in the `transactions' table, then the
+     transaction is dead; if we discover that this transaction is
+     dead, we cache that fact by setting this to zero.  */
+  char *id;
+
+  /* The node revision ID of this transaction's root directory.  */
+  svn_fs_id_t *root;
+
+};
+
+
+
+/* Nodes.  */
+
+
+/* A parent directory of a node.  */
+struct node_parent_t {
+
+  /* The node revision ID of this parent.  */
+  svn_fs_id_t *id;
+
+  /* The name of the entry in this parent which we traversed to reach
+     the node.  */
+  char *entry;
+
+  /* The directory's parent.  */
+  struct node_parent_t *parent;
+
+};
+typedef struct node_parent_t node_parent_t;
+
+
+struct svn_fs_node_t {
+
+  /* A pool storing information about this node.  Destroying this pool
+     closes the node neatly.  */
+  apr_pool_t *pool;
+
+  /* The filesystem of which this transaction is a part.  */
+  svn_fs_t *fs;
+
+  /* The links in a doubly-linked list of all the nodes open in this
+     filesystem.  */
+  svn_fs_node_t *next, *prev;
+
+  /* The node revision ID for this node, allocated in POOL.  */
+  svn_fs_id_t *id;
+
+  /* The following fields provide information for bubbling up.  If we
+     reach an immutable node via some transaction's root directory,
+     and then we change that node, we need to create mutable clones of all
+     the node's parents.  */
+
+  /* If this node was reached via a transaction's root directory, this
+     is the ID of that transaction, as a null-terminated string
+     allocated in POOL.  */
+  char *txn_id;
+
+  /* This points to the list of parents through which we reached this
+     node, up to the root of the transaction or version.  All the
+     elements of this list are allocated in POOL.  */
+  node_parent_t *parent;
+
 };
 
 

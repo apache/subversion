@@ -20,20 +20,6 @@
 
 
 
-/* Creating and opening the Berkeley DB `nodes' table.  */
-
-
-/* Create a new `nodes' table for the new filesystem FS.  FS->env must
-   already be open; this sets FS->nodes.  */
-svn_error_t *svn_fs__create_nodes (svn_fs_t *fs);
-
-
-/* Open the existing `nodes' table for the filesystem FS.  FS->env
-   must already be open; this sets FS->nodes.  */
-svn_error_t *svn_fs__open_nodes (svn_fs_t *fs);
-
-
-
 /* Operations on nodes.  */
 
 /* Open the node identified by ID in FS, and set *NODE_P to point to
@@ -47,26 +33,28 @@ svn_error_t *svn_fs__open_node_by_id (svn_fs_node_t **node_p,
 /* Create and open an entirely new, mutable node in the filesystem FS,
    whose NODE-REVISION skel is SKEL, and set *NODE_P to point to it, as
    part of the Berkeley DB transaction DB_TXN.  SKEL must have a
-   well-formed HEADER, with the "mutable" flag set.
+   well-formed HEADER, with the "mutable" flag set.  Use POOL as
+   NODE's pool; it should be a subpool of FS.
 
    After this call, the node table manager assumes that the new node's
    contents will change frequently.  */
 svn_error_t *svn_fs__create_node (svn_fs_node_t **node_p,
 				  svn_fs_t *fs,
 				  skel_t *skel,
-				  DB_TXN *db_txn);
+				  DB_TXN *db_txn,
+				  apr_pool_t *pool);
 
 
 /* Create and open a mutable node which is an immediate successor of
    OLD, and set *NEW_P to point to it.  Do this as part of the
    Berkeley DB transaction DB_TXN, and the Subversion transaction
-   SVN_TXN.
+   whose ID is SVN_TXN_ID.
 
    After this call, the node table manager assumes that the new node's
    contents will change frequently.  */
 svn_error_t *svn_fs__create_successor (svn_fs_node_t **new_p,
 				       svn_fs_node_t *old,
-				       svn_fs_txn_t *svn_txn,
+				       char *svn_txn_id,
 				       DB_TXN *db_txn);
 
 
@@ -83,7 +71,16 @@ svn_fs_t *svn_fs__node_fs (svn_fs_node_t *node);
 svn_fs_id_t *svn_fs__node_id (svn_fs_node_t *node);
 
 
+<<<<<<< node.h
+/* Return the transaction ID of NODE, if it is mutable.  The result
+   is live for as long as NODE is.  */
+char *svn_fs__node_txn_id (svn_fs_node_t *node);
+
+
+/* Set *SKEL_P to the NODE-VERSION skel for NODE, as part of the
+=======
 /* Set *SKEL_P to the NODE-REVISION skel for NODE, as part of the
+>>>>>>> 1.5
    Berkeley DB transaction DB_TXN.  *SKEL_P is guaranteed to be a list
    at least one element long, whose first element is a well-formed
    HEADER skel.
@@ -112,6 +109,16 @@ svn_error_t *svn_fs__put_node_revision (svn_fs_node_t *node,
    represent other nodes' contents as deltas against NODE's contents,
    if it so desired.  */
 svn_error_t *svn_fs__stable_node (svn_fs_node_t *node);
+
+
+
+/* Operations on HEADER skels.  */
+
+
+/* Build a new HEADER skel in POOL whose kind is the string KIND.
+   If TXN_ID is non-zero, include a "mutable" flag in the header
+   with the given transaction ID.  */
+skel_t *svn_fs__new_header (char *kind, char *txn_id, apr_pool_t *pool);
 
 
 #endif /* SVN_LIBSVN_FS_NODE_H */

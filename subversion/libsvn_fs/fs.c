@@ -14,6 +14,10 @@
 
 /* Header files.  */
 
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -48,7 +52,7 @@ check_already_open (svn_fs_t *fs)
 /* A default warning handling function.  */
 
 static void
-default_warning_func (void *baton, const char *fmt, ...)
+default_warning_func (void *baton, char *fmt, ...)
 {
   /* The one unforgiveable sin is to fail silently.  Dumping to stderr
      or /dev/tty is not acceptable default behavior for server
@@ -82,30 +86,32 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
 static svn_error_t *
 cleanup_fs (svn_fs_t *fs)
 {
+  DB_ENV *env = fs->env;
+
+  if (! env)
+    return 0;
+
   /* Close the databases.  */
   SVN_ERR (cleanup_fs_db (fs, &fs->revisions, "revisions"));
   SVN_ERR (cleanup_fs_db (fs, &fs->nodes, "nodes"));
   SVN_ERR (cleanup_fs_db (fs, &fs->transactions, "transactions"));
 
-  if (fs->env != NULL)
-    {
-      DB_ENV *env = fs->env;
-      int db_err;
+  /* Checkpoint any changes.  */
+  {
+    int db_err = txn_checkpoint (env, 0, 0, 0);
 
-      /* Checkpoint any changes.  */
-      db_err = txn_checkpoint (env, 0, 0, 0);
-      while (db_err == DB_INCOMPLETE)
-        {
-          apr_sleep (1000000L);
-          db_err = txn_checkpoint (env, 0, 0, 0);
-        }
-      SVN_ERR (DB_WRAP (fs, "checkpointing environment", db_err));
+    while (db_err == DB_INCOMPLETE)
+      {
+	apr_sleep (1000000L);
+	db_err = txn_checkpoint (env, 0, 0, 0);
+      }
+    SVN_ERR (DB_WRAP (fs, "checkpointing environment", db_err));
+  }
       
-      /* Finally, close the environment.  */
-      fs->env = NULL;
-      SVN_ERR (DB_WRAP (fs, "closing environment",
-                        env->close (env, 0)));
-    }
+  /* Finally, close the environment.  */
+  fs->env = 0;
+  SVN_ERR (DB_WRAP (fs, "closing environment",
+		    env->close (env, 0)));
 
   return 0;
 }
@@ -243,6 +249,12 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 
   SVN_ERR (check_already_open (fs));
 
+  /* Create the directory for the new environment.  */
+  if (mkdir (path, 0777) < 0)
+    return svn_error_createf (errno, 0, 0, fs->pool,
+			      "creating Berkeley DB environment dir `%s'",
+			      path);
+
   svn_err = allocate_env (fs);
   if (svn_err) goto error;
 
@@ -264,6 +276,10 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
   svn_err = svn_fs__create_transactions (fs);
   if (svn_err) goto error;
+  svn_err = svn_fs__create_root (fs);
+  if (svn_err) goto error;
+
+  fs->env_path = apr_pstrdup (fs->pool, path);
 
   return 0;
 
@@ -284,7 +300,7 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   SVN_ERR (check_already_open (fs));
 
   svn_err = allocate_env (fs);
-  if (svn_err) goto error_env;
+  if (svn_err) goto error;
 
   /* Open the Berkeley DB environment.  */
   svn_err = DB_WRAP (fs, "opening environment",
@@ -294,7 +310,7 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 				     | DB_INIT_MPOOL
 				     | DB_INIT_TXN),
 				    0666));
-  if (svn_err) goto error_env;
+  if (svn_err) goto error;
 
   /* Open the various databases.  */
   svn_err = svn_fs__open_revisions (fs);
@@ -306,10 +322,6 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 
   return 0;
   
- error_env:
-  fs->env = NULL;
-  /* FALLTHRU */
-
  error:
   cleanup_fs (fs);
   return svn_err;

@@ -76,7 +76,7 @@ get_revision_skel (skel_t **skel,
 
   svn_fs__result_dbt (&value);
   db_err = fs->revisions->get (fs->revisions, 0, /* no transaction */ 
-                               &key, &value, DB_SET_RECNO);
+                               &key, &value, 0);
   if (db_err == DB_NOTFOUND)
     return no_such_revision (fs, v);
   SVN_ERR (DB_WRAP (fs, "reading revision root from filesystem", db_err));
@@ -178,34 +178,17 @@ put_revision_skel (svn_revnum_t *v_p,
 static svn_error_t *
 make_revisions (svn_fs_t *fs, int create)
 {
-  DB *revisions;
-
   SVN_ERR (DB_WRAP (fs, "allocating `revisions' table object",
-		    db_create (&revisions, fs->env, 0)));
+		    db_create (&fs->revisions, fs->env, 0)));
   SVN_ERR (DB_WRAP (fs,
 		    (create
 		     ? "creating `revisions' table"
 		     : "opening `revisions' table"),
-		    revisions->open (revisions, "revisions", 0, DB_RECNO,
-                                     create ? (DB_CREATE | DB_EXCL) : 0,
-                                     0666)));
+		    fs->revisions->open (fs->revisions, "revisions", 0,
+					 DB_RECNO,
+					 create ? (DB_CREATE | DB_EXCL) : 0,
+					 0666)));
 
-  if (create)
-    {
-      /* Create the initial revision.  */
-      static char revision_0[] = "(revision 3 1.1 ())";
-      skel_t *revision_skel = svn_fs__parse_skel (revision_0,
-                                                  sizeof (revision_0) - 1,
-                                                  fs->pool);
-      svn_revnum_t v;
-      SVN_ERR (put_revision_skel (&v, fs, revision_skel, 0, fs->pool));
-
-      /* That had better have created revision zero.  */
-      if (v != 0)
-	abort ();
-    }
-
-  fs->revisions = revisions;
   return 0;
 }
 

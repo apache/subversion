@@ -96,4 +96,27 @@ svn_error_t *svn_fs__retry_txn (svn_fs_t *fs,
 							  DB_TXN *db_txn),
 				void *baton);
 
+
+
+/* Building common error objects.  */
+
+
+/* SVN_ERR_FS_CORRUPT: the REPRESENTATION skel of node ID in FS is corrupt.  */
+svn_error_t *svn_fs__err_corrupt_representation (svn_fs_t *fs,
+						 const svn_fs_id_t *id);
+
+/* SVN_ERR_FS_CORRUPT: the NODE-REVISION skel of node ID in FS is corrupt.  */
+svn_error_t *svn_fs__err_corrupt_node_revision (svn_fs_t *fs,
+						const svn_fs_id_t *id);
+
+/* SVN_ERR_FS_CORRUPT: ID is a node ID, not a node revision ID.  */
+svn_error_t *svn_fs__err_corrupt_id (svn_fs_t *fs, const svn_fs_id_t *id);
+
+/* SVN_ERR_FS_CORRUPT: something in FS refers to node revision ID, but
+   that node revision doesn't exist.  */
+svn_error_t *svn_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id);
+
+/* SVN_ERR_FS_CORRUPT: a key in FS's `nodes' table is bogus.  */
+svn_error_t *svn_fs__err_corrupt_nodes_key (svn_fs_t *fs);
+
 #endif /* SVN_LIBSVN_FS_ERR_H */

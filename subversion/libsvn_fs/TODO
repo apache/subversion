@@ -1,5 +1,11 @@
 It would be nice to organize this file somehow.
 
+Extend svn_fs_copy to handle mutable nodes.
+
+Even read-only operations need to be part of a transaction, if they
+are to be applied to mutable nodes.  Perhaps an "activity" (whatever)
+structure that contains a Berkeley DB transaction and a pool.
+
 The 'delete' operation should actually delete mutable nodes, not just
 leave them around for the commit to clean up.  When this happens,
 svn_fs_open_node needs to use a transaction.
@@ -20,6 +26,8 @@ characters.
 
 We should convert filenames to some canonical Unicode form, for
 comparison.
+
+We need to make sure transaction ID's aren't reused.
 
 The delta algorithm walks the whole tree using a single pool, so the
 memory used is proportional to the size of the target tree.  Instead,
@@ -74,6 +82,12 @@ Long term ideas:
   As people update, we're going to be recomputing text deltas for the
   most recently changed files pretty often.  It might be worthwhile to
   cache the deltas for a little while.
+
+- Handle Unicode canonicalization for directory and property names
+  ourselves.  People should be able to hand us any valid UTF-8
+  sequence, perhaps with precomposed characters or non-spacing marks
+  in a non-canonical order, and find the appropriate matches, given
+  the rules defined by the Unicode standard.
 
 
 Keeping repositories alive in the long term: Berkeley DB is infamous
