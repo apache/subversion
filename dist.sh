@@ -98,9 +98,9 @@ rm -f doc/programmer/design/svn-design.info
 rm -f doc/programmer/design/svn-design.info-*
 rm -f doc/programmer/design/svn-design.html
 rm -f doc/programmer/design/svn-design.txt
-rm -f doc/user/manual/svn-manual.info
-rm -f doc/user/manual/svn-manual.html
-rm -f doc/user/manual/svn-manual.txt
+rm -f doc/user/manual/svn-handbook.info
+rm -f doc/handbook/svn-handbook.html
+rm -f doc/handbook/svn-handbook.txt
 
 ### Build new docs.
 echo "Building new docs in docs/ ..."
@@ -170,9 +170,9 @@ for name in doc/programmer/design/svn-design.info   \
             doc/programmer/design/svn-design.info-* \
             doc/programmer/design/svn-design.html   \
             doc/programmer/design/svn-design.txt    \
-            doc/user/manual/svn-manual.info         \
-            doc/user/manual/svn-manual.html         \
-            doc/user/manual/svn-manual.txt
+            doc/handbook/svn-handbook.info         \
+            doc/handbook/svn-handbook.html         \
+            doc/handbook/svn-handbook.txt
 do
    cp ${name} ${DIST_SANDBOX}/${DISTNAME}/${name}
 done
