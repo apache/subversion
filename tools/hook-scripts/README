@@ -16,10 +16,10 @@ Your Mileage May Vary.
       mailer (to avoid in-memory buffering).
 
    3. commit-access-control.pl, commit-access-control.cfg.example
-      Uses the `svnlook' program to check if check if the user that
-      submitted the commit has appropriate rights to perform the
-      commit on all the modified files and directories using the
-      permissions specified in the configuration file.
+      Uses the `svnlook' program to check if the user who submitted
+      the commit has appropriate rights to perform the commit on all
+      the modified files and directories using the permissions
+      specified in the configuration file.
 
    4. svnperms.py, svnperms.conf.example
       Similar to commit-access-control.pl, but uses a different
