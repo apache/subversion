@@ -181,6 +181,9 @@ struct dav_resource_private {
 
   /* ### hack to deal with the Content-Type header on a PUT */
   int is_svndiff;
+
+  /* ### record the base for computing a delta during a GET */
+  const char *delta_base;
 };
 
 

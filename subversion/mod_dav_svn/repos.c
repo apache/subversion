@@ -32,6 +32,7 @@
 #include "svn_error.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
+#include "svn_dav.h"
 
 #include "dav_svn.h"
 
@@ -862,8 +863,12 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 
     comb->priv.is_svndiff =
       ct != NULL
-      && strcmp(ct, "application/vnd.svn-svndiff") == 0;
+      && strcmp(ct, SVN_SVNDIFF_MIME_TYPE) == 0;
   }
+
+  /* ### and another hack for computing diffs to send to the client */
+  comb->priv.delta_base = apr_table_get(r->headers_in,
+                                        SVN_DAV_DELTA_BASE_HEADER);
 
   /* make a copy so that we can do some work on it */
   uri = apr_pstrdup(r->pool, r->uri);
@@ -1163,15 +1168,77 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
 
   if (mode == DAV_MODE_READ)
     {
-      serr = svn_fs_file_contents(&(*stream)->rstream,
-                                  resource->info->root.root,
-                                  DAV_SVN_REPOS_PATH(resource),
-                                  resource->pool);
-      if (serr != NULL)
+      /* If we have a base for a delta, then we want to compute an svndiff
+         between the provided base and the requested resource. For a simple
+         request, then we just grab the file contents. */
+#if 0
+      if (resource->info->delta_base == NULL)
+#endif
         {
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "could not prepare to read the file");
+          serr = svn_fs_file_contents(&(*stream)->rstream,
+                                      resource->info->root.root,
+                                      DAV_SVN_REPOS_PATH(resource),
+                                      resource->pool);
+          if (serr != NULL)
+            {
+              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                         "could not prepare to read the file");
+            }
         }
+#if 0
+      else /* delta_base != NULL */
+        {
+          dav_svn_uri_info info;
+          svn_fs_root_t *root;
+          svn_stringbuf_t *id_str;
+          int is_file;
+
+          /* First order of business is to parse it. */
+          serr = dav_svn_simple_parse_uri(&info, resource,
+                                          resource->info->delta_base,
+                                          resource->pool);
+          if (serr != NULL)
+            return dav_svn_convert_err(serr, HTTP_BAD_REQUEST,
+                                       "could not parse the delta base");
+          if (info.node_id == NULL)
+            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                                 "the delta base was not a version "
+                                 "resource URL");
+
+          /* We are always accessing the base resource by ID, so open
+             an ID root. */
+          serr = svn_fs_id_root(&root, resource->info->repos->fs,
+                                resource->pool);
+          if (serr != NULL)
+            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                       "could not open a root for the base");
+
+          id_str = svn_fs_unparse_id(info.node_id, resource->pool);
+
+          /* verify that it is a file */
+          serr = svn_fs_is_file(&is_file, root, id_str->data, resource->pool);
+          if (serr != NULL)
+            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                       "could not determine if the base "
+                                       "is really a file");
+          if (!is_file)
+            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                                 "the delta base does not refer to a file");
+
+          /* Okay. Let's open up a delta stream for the client to read. */
+          serr = svn_fs_get_file_delta_stream(
+                                              /* ### not right: */
+                                              &(*stream)->rstream,
+
+                                              root, id_str->data,
+                                              resource->info->root.root,
+                                              DAV_SVN_REPOS_PATH(resource),
+                                              resource->pool);
+          if (serr != NULL)
+              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                         "could not prepare to read a delta");
+        }
+#endif /* 0 */
     }
   else if (mode == DAV_MODE_WRITE_TRUNC)
     {

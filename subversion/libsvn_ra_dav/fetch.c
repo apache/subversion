@@ -41,6 +41,7 @@
 #include "svn_ra.h"
 #include "svn_path.h"
 #include "svn_xml.h"
+#include "svn_dav.h"
 
 #include "ra_dav.h"
 
@@ -460,7 +461,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
          get mod_dav updated and the backend APIs expanded, then we
          can switch to using the If: header. For now, use a custom
          header to specify the version resource to use as the base. */
-      ne_add_request_header(req, "X-SVN-VR-Base", delta_base);
+      ne_add_request_header(req, SVN_DAV_DELTA_BASE_HEADER, delta_base);
     }
 
   /* add in a reader to capture the body of the response. */
