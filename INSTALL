@@ -202,9 +202,11 @@ I.    BUILD REQUIREMENTS
 
       If you are on the Windows platform and want to build Subversion,
       a precompiled version of the Berkeley DB library is available for
-      download at the Subversion web site:
+      download at the Subversion web site "Documents & files" area:
 
           http://subversion.tigris.org/servlets/ProjectDocumentList
+
+      Look in the "Releases > Windows > Windows BDB" section.
 
 
       6.  Apache Web Server 2.0.49 or newer
