@@ -99,7 +99,7 @@ print_generic_help (apr_pool_t *pool)
       i++;
     }
 
-  printf ("\nSubversion, version %s\n", SVN_VERSION);
+  printf ("\n");
   printf ("%s\n", info);
 
 }
