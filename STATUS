@@ -56,8 +56,7 @@ Candidate changes:
     Notes:
        2nd changeset is just a casting & docstring fixes.
     Votes:
-      +1: sussman, ghudson
-     (+0: maxb, I assume, since he wrote it.)
+      +1: sussman, ghudson, maxb
 
   * r10561:
     Make swig-wrapped svn_fs_create and svn_fs_open usable.
