@@ -227,48 +227,49 @@ close_file (void *file_baton)
   char statchar_buf[3] = "_ ";
 
   if (fb->added)
-    {
-      statchar_buf[0] = 'A';
-    }
-  else
-    {
-      /* First, check for conflicted state. */
-      svn_wc_entry_t *entry;
-      svn_boolean_t merged, tc, pc;
-      apr_pool_t *subpool = svn_pool_create (eb->pool);
-      svn_stringbuf_t *pdir = svn_stringbuf_dup (fb->path, subpool);
-      svn_path_remove_component (pdir);
+    statchar_buf[0] = 'A';
 
-      SVN_ERR (svn_wc_entry (&entry, fb->path, subpool));
-      SVN_ERR (svn_wc_conflicted_p (&tc, &pc, pdir, entry, subpool));
-      if (fb->text_changed)
-        {
-          if (! tc)
-            SVN_ERR (svn_wc_text_modified_p (&merged, fb->path, subpool));
+  /* We need to check the state of the file now to see if it was
+     merged or is in a state of conflict.  Believe it or not, this can
+     be the case even when FB->ADDED is set.  */
+  {
+    /* First, check for conflicted state. */
+    svn_wc_entry_t *entry;
+    svn_boolean_t merged, tc, pc;
+    apr_pool_t *subpool = svn_pool_create (eb->pool);
+    svn_stringbuf_t *pdir = svn_stringbuf_dup (fb->path, subpool);
+    svn_path_remove_component (pdir);
 
-          if (tc)
-            statchar_buf[0] = 'C';
-          else if (merged)
-            statchar_buf[0] = 'G';
-          else
-            statchar_buf[0] = 'U';
-        }
-      if (fb->prop_changed)
-        {
-          if (! pc)
-            SVN_ERR (svn_wc_props_modified_p (&merged, fb->path, subpool));
-          
-          if (pc)
-            statchar_buf[1] = 'C';
-          else if (merged)
-            statchar_buf[1] = 'G';
-          else
-            statchar_buf[1] = 'U';
-        }
-      
-      /* Destroy the subpool. */
-      svn_pool_destroy (subpool);
-    }
+    SVN_ERR (svn_wc_entry (&entry, fb->path, subpool));
+    SVN_ERR (svn_wc_conflicted_p (&tc, &pc, pdir, entry, subpool));
+    if (fb->text_changed)
+      {
+        if (! tc)
+          SVN_ERR (svn_wc_text_modified_p (&merged, fb->path, subpool));
+        
+        if (tc)
+          statchar_buf[0] = 'C';
+        else if (merged)
+          statchar_buf[0] = 'G';
+        else if (! fb->added)
+          statchar_buf[0] = 'U';
+      }
+    if (fb->prop_changed)
+      {
+        if (! pc)
+          SVN_ERR (svn_wc_props_modified_p (&merged, fb->path, subpool));
+        
+        if (pc)
+          statchar_buf[1] = 'C';
+        else if (merged)
+          statchar_buf[1] = 'G';
+        else if (! fb->added)
+          statchar_buf[1] = 'U';
+      }
+    
+    /* Destroy the subpool. */
+    svn_pool_destroy (subpool);
+  }
 
   printf ("%s %s\n", statchar_buf, fb->path->data);
 
