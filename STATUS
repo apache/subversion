@@ -68,3 +68,10 @@ Candidate changes:
       (which is why it was implemented in the first place).
     Votes:
       +1: bliss
+
+  * r11211
+    Fix performance regression for ls/RA->get_dir over ra_rav.
+    Justification:
+      Positively huge performance regression.
+    Votes:
+      +1: bliss
