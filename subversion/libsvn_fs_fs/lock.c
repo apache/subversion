@@ -298,9 +298,21 @@ read_path_from_lock_token_file(svn_fs_t *fs,
 {
   char *abs_path;
   const char *abs_path_utf8;
+  apr_status_t status;
+  apr_finfo_t finfo;
   svn_stringbuf_t *buf;
 
   SVN_ERR (abs_path_to_lock_token_file (&abs_path, fs, token, pool));
+
+  status = apr_stat (&finfo, abs_path, APR_FINFO_TYPE, pool);
+
+  /* If token file doesn't exist, then there's no lock, so return
+     immediately. */
+  if (APR_STATUS_IS_ENOENT (status))
+    {
+      *path_p = NULL;
+      return svn_fs_fs__err_bad_lock_token (fs, token);
+    }      
 
   SVN_ERR (svn_utf_cstring_to_utf8 (&abs_path_utf8, abs_path, pool));
   
