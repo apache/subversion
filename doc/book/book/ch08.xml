@@ -1472,7 +1472,7 @@ Properties on 'foo.c':
   svn:mime-type : text/plain
   svn:keywords : AuthorLastChangedBy
 Rev
-  owner : fitz
+  owner : sally
 
 ============================================================
 
@@ -1493,6 +1493,22 @@ Switches:
 
 Examples
 
+Discard changes to a file:
+
+$ svn revert foo.c
+Reverted foo.c
+
+If you want to revert a whole directory of files, use the --recursive flag:
+
+$svn revert --recursive .
+Reverted newdir/afile
+Reverted foo.c
+Reverted bar.txt
+
+Note: If you provide no targets to svn revert, it will do nothing--to
+protect you from accidentally losing changes in your working copy, svn
+revert requires you to provide at least one target.
+
 ============================================================
 
 svn resolve
@@ -1512,6 +1528,27 @@ Switches:
 --quiet (-q)
 
 Examples
+
+If you get a conflict on an update, your working copy will sprout
+three new files:
+
+$ svn up
+C  foo.c
+Updated to revision 31.
+$ ls
+foo.c
+foo.c.mine
+foo.c.r30
+foo.c.r31
+
+Once you've resolved the conflict and foo.c is ready to be committed,
+run 'svn resolve' to let your working copy know you've taken care of
+everything.
+
+Note: You <emphasis>can</emphasis> just remove the conflict files and
+commit, but svn resolve fixes up some bookkeeping data in the working
+copy administrative area in addition to removing the conflict files,
+so we recommend that you use this command.
 
 ============================================================
 
@@ -1556,23 +1593,6 @@ by both the last committed revision and last committed author if -v is
 given.  The working copy path is always the final field, so it can
 include spaces.
 
-  Examples output:
-    svn status wc
-     M     wc/bar.c
-    A  +   wc/qax.c
-
-    svn status -u wc
-     M           965    wc/bar.c
-           *     965    wc/foo.c
-    A  +         965    wc/qax.c
-    Head revision:   981
-
-    svn status --show-updates --verbose wc
-     M           965       938     kfogel   wc/bar.c
-           *     965       922    sussman   wc/foo.c
-    A  +         965       687        joe   wc/qax.c
-                 965       687        joe   wc/zig.c
-    Head revision:   981
 
 
 Alternate names: stat, st
@@ -1590,6 +1610,28 @@ Switches:
 --no-ignore
 
 Examples
+
+
+
+$ svn status wc
+ M     wc/bar.c
+A  +   wc/qax.c
+
+$ svn status --show-updates wc
+ M           965    wc/bar.c
+       *     965    wc/foo.c
+A  +         965    wc/qax.c
+Head revision:   981
+
+$ svn status --show-updates --verbose wc
+ M           965       938     kfogel   wc/bar.c
+       *     965       922    sussman   wc/foo.c
+A  +         965       687        joe   wc/qax.c
+             965       687        joe   wc/zig.c
+Head revision:   981
+
+Note: For many more examples of svn status, see <xref 
+linkend="svn-ch-3-sect-4.3.1"/>.
 
 ============================================================
 
@@ -1612,6 +1654,30 @@ Switches:
 --non-interactive
 
 Examples
+
+If you're currently inside the directory 'vendors' which was branched
+to 'vendors-with-fix' and you'd like to switch your working copy to
+that branch:
+
+$ svn switch http://svn.red-bean.com/repos/branches/vendors-with-fix .
+U  myproj/foo.txt
+U  myproj/bar.txt
+U  myproj/baz.c
+U  myproj/qux.c
+Updated to revision 31.
+
+And to switch back, just provide the URL to the location in the
+repository that your working copy was at before:
+
+$ svn switch http://svn.red-bean.com/repos/trunk/vendors .
+U  myproj/foo.txt
+U  myproj/bar.txt
+U  myproj/baz.c
+U  myproj/qux.c
+Updated to revision 31.
+
+Tip: You can just switch a subdirectory deep inside of your working
+copy if you don't want to switch your entire working copy.
 
 ============================================================
 
@@ -1647,6 +1713,28 @@ Switches:
 --non-interactive
 
 Examples
+
+Pick up repository changes that have happened since your last update:
+
+$ svn up
+A  newdir/toggle.c
+A  newdir/disclose.c
+A  newdir/launch.c
+D  newdir/README
+Updated to revision 32.
+
+You can also update your working copy to an older revision:
+
+svn up -r30
+A  newdir/README
+D  newdir/toggle.c
+D  newdir/disclose.c
+D  newdir/launch.c
+U  foo.c
+Updated to revision 30.
+
+Tip: If you want to examine an older revision of a single file, you
+may want to use 'svn cat' (###TODO xref)
 
 ============================================================
         </screen>        
