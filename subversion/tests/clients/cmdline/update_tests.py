@@ -465,6 +465,83 @@ def update_to_rev_zero(sbox):
                                                '-r', '0')
 
 
+def receive_overlapping_same_change(sbox):
+  "Make sure overlapping idental changes do not conflict."
+
+  ### (See http://subversion.tigris.org/issues/show_bug.cgi?id=682.)
+  ###
+  ### How this test works:
+  ###
+  ### Create working copy foo, modify foo/iota.  Duplicate foo,
+  ### complete with locally modified iota, to bar.  Now we should
+  ### have:
+  ### 
+  ###    $ svn st foo
+  ###    M    foo/iota
+  ###    $ svn st bar
+  ###    M    bar/iota
+  ###    $ 
+  ### 
+  ### Commit the change from foo, then update bar.  The repository
+  ### change should get folded into bar/iota with no conflict, since
+  ### the two modifications are identical.
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Modify iota.
+  iota_path = os.path.join(wc_dir, 'iota')
+  svntest.main.file_append(iota_path, "\nA change to iota.\n")
+
+  # Duplicate locally modified wc, giving us the "other" wc.
+  other_wc = wc_dir + '-other'
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+  other_iota_path = os.path.join(other_wc, 'iota')
+
+  # Created expected output tree for 'svn ci'
+  output_list = [ [iota_path, None, {}, {'verb' : 'Sending' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Create expected status tree
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    item[3]['wc_rev'] = '1'
+    if (item[0] == iota_path):
+      item[3]['wc_rev'] = '2'
+      item[3]['repos_rev'] = '2'
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+
+  # Commit the change, creating revision 2.
+  if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
+                                            expected_status_tree, None,
+                                            None, None, None, None, wc_dir):
+    return 1
+
+  # Expected output tree for update of other_wc.
+  output_list = [ [other_iota_path, None, {}, {'status' : 'U ' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+
+  # Expected disk tree for the update.
+  dtree = svntest.main.copy_greek_tree()
+  for item in dtree:
+    if item[0] == 'iota':
+      item[1] = "This is the file 'iota'.\nA change to iota.\n"
+  expected_disk_tree = svntest.tree.build_generic_tree(dtree)
+
+  # Expected status tree for the update.
+  status_list = svntest.actions.get_virginal_status_list(other_wc, '2')
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  
+  # Do the update and check the results in three ways.
+  return svntest.actions.run_and_verify_update(other_wc,
+                                               expected_output_tree,
+                                               expected_disk_tree,
+                                               expected_status_tree)
+
+  return 0
+
 ########################################################################
 # Run the tests
 
@@ -475,6 +552,7 @@ test_list = [ None,
               update_binary_file_2,
               update_ignores_added,
               update_to_rev_zero,
+              receive_overlapping_same_change,
               # update_missing,
              ]
 

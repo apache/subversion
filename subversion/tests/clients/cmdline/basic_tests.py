@@ -356,15 +356,13 @@ def basic_conflict(sbox):
   my_greek_tree = svntest.main.copy_greek_tree()
   my_greek_tree[2][1] =  """<<<<<<< .mine
 This is the file 'mu'.
-Conflicting appended text for mu||||||| .r1
-This is the file 'mu'.=======
+Conflicting appended text for mu=======
 This is the file 'mu'.
 Original appended text for mu>>>>>>> .r2
 """
   my_greek_tree[14][1] = """<<<<<<< .mine
 This is the file 'rho'.
-Conflicting appended text for rho||||||| .r1
-This is the file 'rho'.=======
+Conflicting appended text for rho=======
 This is the file 'rho'.
 Original appended text for rho>>>>>>> .r2
 """
