@@ -4,7 +4,7 @@ See "Stabilizing and maintaining releases" in trunk/HACKING for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.1.4:
+Status of 1.1.5:
 ================
 
 Candidate changes that seem to have become stalled
@@ -32,6 +32,12 @@ Candidate changes:
     Teach swig-1.3.19-3 to co-exist with swig package that comes with Redhat.
     Justification: Less hassle for software developers because packages
       co-exist.
+    Votes:
+      +1: david
+
+  * r13858
+    When I finally got to test my change I discovered a typo which prevents
+    the Redhat 8 and 9 RPMs from being built.
     Votes:
       +1: david
 
