@@ -527,6 +527,7 @@ open_path (parent_path_t **parent_path_p,
                     {
                       parent_path = make_parent_path (0, entry,
                                                       parent_path, pool);
+                      svn_error_free (svn_err);
                       break;
                     }
                   else
