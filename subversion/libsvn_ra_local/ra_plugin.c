@@ -347,6 +347,22 @@ do_status (void *session_baton,
 
 
 
+svn_error_t *
+get_log (void *session_baton,
+         apr_hash_t *paths,
+         svn_revnum_t *start,
+         svn_revnum_t *end,
+         svn_boolean_t discover_changed_paths,
+         svn_ra_log_entry_receiver_t receiver,
+         void *receiver_baton)
+{
+  /* ### todo */
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /*----------------------------------------------------------------*/
 
 /** The ra_plugin **/
@@ -362,7 +378,8 @@ static const svn_ra_plugin_t ra_local_plugin =
   get_commit_editor,
   do_checkout,
   do_update,
-  do_status
+  do_status,
+  get_log
 };
 
 
