@@ -75,13 +75,33 @@ svn_wc_relocate (const char *path,
         {
           char *url = apr_psprintf(svn_wc_adm_access_pool(adm_access),
                                    "%s%s", to, entry->url + from_len);
-          SVN_ERR(validator(validator_baton, entry->uuid, url));
+          if (entry->uuid)
+            SVN_ERR(validator(validator_baton, entry->uuid, url));
           entry->url = url;
           SVN_ERR(svn_wc__entries_write (entries, adm_access, pool));
         }
 
       return SVN_NO_ERROR;
     }
+
+  /* Relocate THIS_DIR first, in order to pre-validate the relocated URL
+     of all of the other entries.  This is technically cheating, but it
+     significantly cuts down on the number of expensive validations the
+     validator has to do. */
+  {
+    svn_wc_entry_t *entry = apr_hash_get(entries,
+                                         SVN_WC_ENTRY_THIS_DIR,
+                                         APR_HASH_KEY_STRING);
+    if (entry->url &&
+        (strncmp(entry->url, from, from_len) == 0)) 
+      {
+        char *url = apr_psprintf(svn_wc_adm_access_pool(adm_access),
+                                 "%s%s", to, entry->url + from_len);
+        if (entry->uuid)
+          SVN_ERR(validator(validator_baton, entry->uuid, url));
+        entry->url = url;
+      }
+  }
 
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
@@ -91,10 +111,12 @@ svn_wc_relocate (const char *path,
 
       apr_hash_this(hi, &key, NULL, &val);
       entry = val;
- 
+
+      if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
+        continue;
+
       if (recurse
-          && (entry->kind == svn_node_dir)
-          && (strcmp(key, SVN_WC_ENTRY_THIS_DIR) != 0))
+          && (entry->kind == svn_node_dir))
         {
           svn_wc_adm_access_t *subdir_access;
           const char *subdir = svn_path_join (path, key, pool);
@@ -109,7 +131,8 @@ svn_wc_relocate (const char *path,
         {
           char *url = apr_psprintf(svn_wc_adm_access_pool(adm_access),
                                    "%s%s", to, entry->url + from_len);
-          SVN_ERR(validator(validator_baton, entry->uuid, url));
+          if (entry->uuid)
+            SVN_ERR(validator(validator_baton, entry->uuid, url));
           entry->url = url;
         }
     }

@@ -99,7 +99,8 @@ validator(void *baton, const char *uuid, const char *url)
   SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, url, auth_dir,
                                         NULL, NULL, FALSE, TRUE,
                                         b->ctx, subpool));
-  SVN_ERR (ra_lib->get_uuid(sess, &ra_uuid, pool));
+  SVN_ERR (ra_lib->get_uuid(sess, &ra_uuid, subpool));
+  ra_uuid = apr_pstrdup(pool, ra_uuid);
   svn_pool_destroy(subpool);
 
   if (strcmp(uuid, ra_uuid))
