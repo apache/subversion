@@ -120,12 +120,6 @@ the section for unapproved changes.)
        +1: epg, ghudson, philip
 
 
-    * r8341, r8352
-      Fix some more 'access denied' errors on Windows.
-      Votes:
-       +1: ghudson, philip, brane
-
-
     * r8343
       Use 'unsigned char secret[64]' instead of 'char secret[64]'.
       Justification: SVN won't compile on AIX with xlc without this.
