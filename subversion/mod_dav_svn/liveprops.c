@@ -41,40 +41,57 @@ enum {
     /* ### SVN-specific */
 };
 
-/*
-** The properties that we define.
-*/
-enum {
-  /* using DAV_SVN_URI_DAV */
-  DAV_PROPID_SVN_creationdate = 1,
-  DAV_PROPID_SVN_displayname,
-  DAV_PROPID_SVN_getcontentlength,
-  DAV_PROPID_SVN_getetag,
-  DAV_PROPID_SVN_getlastmodified,
-  DAV_PROPID_SVN_source
-
-  /* ### SVN props... */
-};
-typedef struct {
-    int ns;
-    const char * name;
-
-    int propid;
-} dav_svn_liveprop_name;
-
-static const dav_svn_liveprop_name dav_svn_props[] =
+static const dav_liveprop_spec dav_svn_props[] =
 {
-  { DAV_SVN_URI_DAV, "creationdate",     DAV_PROPID_SVN_creationdate },
-  { DAV_SVN_URI_DAV, "getcontentlength", DAV_PROPID_SVN_getcontentlength },
-  { DAV_SVN_URI_DAV, "getetag",          DAV_PROPID_SVN_getetag },
-  { DAV_SVN_URI_DAV, "getlastmodified",  DAV_PROPID_SVN_getlastmodified },
+  {
+    DAV_SVN_URI_DAV,
+    "creationdate",
+    DAV_PROPID_creationdate,
+    0
+  },
+  {
+    DAV_SVN_URI_DAV,
+    "getcontentlength",
+    DAV_PROPID_getcontentlength,
+    0
+  },
+  {
+    DAV_SVN_URI_DAV,
+    "getetag",
+    DAV_PROPID_getetag,
+    0
+  },
+  {
+    DAV_SVN_URI_DAV,
+    "getlastmodified",
+    DAV_PROPID_getlastmodified,
+    0
+  },
 
   /* ### these aren't SVN specific */
-  { DAV_SVN_URI_DAV, "displayname",      DAV_PROPID_SVN_displayname },
-  { DAV_SVN_URI_DAV, "source",           DAV_PROPID_SVN_source },
+  {
+    DAV_SVN_URI_DAV,
+    "displayname",
+    DAV_PROPID_displayname,
+    1
+  },
+  {
+    DAV_SVN_URI_DAV,
+    "source",
+    DAV_PROPID_source,
+    1
+  },
 
   { 0 } /* sentinel */
 };
+
+static const dav_liveprop_group dav_svn_liveprop_group =
+{
+    dav_svn_props,
+    dav_svn_namespace_uris,
+    &dav_svn_hooks_liveprop
+};
+
 
 static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
                                            int propid, int insvalue,
@@ -84,8 +101,8 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   const char *s;
   dav_prop_insert which;
   apr_pool_t *p = resource->info->pool;
-  const dav_svn_liveprop_name *scan;
-  int ns;
+  const dav_liveprop_spec *info;
+  int global_ns;
 
   /*
   ** None of SVN provider properties are defined if the resource does not
@@ -104,12 +121,12 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
 
   switch (propid)
     {
-    case DAV_PROPID_SVN_creationdate:
+    case DAV_PROPID_creationdate:
       /* ### need a creation date */
       return DAV_PROP_INSERT_NOTDEF;
       break;
 
-    case DAV_PROPID_SVN_getcontentlength:
+    case DAV_PROPID_getcontentlength:
       /* our property, but not defined on collection resources */
       if (resource->collection)
         return DAV_PROP_INSERT_NOTDEF;
@@ -118,17 +135,17 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       value = "0";
       break;
 
-    case DAV_PROPID_SVN_getetag:
+    case DAV_PROPID_getetag:
       value = dav_svn_getetag(resource);
       break;
 
-    case DAV_PROPID_SVN_getlastmodified:
+    case DAV_PROPID_getlastmodified:
       /* ### need a modified date */
       return DAV_PROP_INSERT_NOTDEF;
       break;
 
-    case DAV_PROPID_SVN_displayname:
-    case DAV_PROPID_SVN_source:
+    case DAV_PROPID_displayname:
+    case DAV_PROPID_source:
     default:
       /*
       ** This property is not defined. However, it may be a dead
@@ -139,22 +156,18 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
 
   /* assert: value != NULL */
 
-  for (scan = dav_svn_props; scan->name != NULL; ++scan)
-    if (scan->propid == propid)
-      break;
+  /* get the information and global NS index for the property */
+  global_ns = dav_get_liveprop_info(propid, &dav_svn_liveprop_group, &info);
 
-  /* assert: scan->name != NULL */
-
-  /* map our namespace into a global NS index */
-  ns = dav_get_liveprop_ns_index(dav_svn_namespace_uris[scan->ns]);
+    /* assert: info != NULL && info->name != NULL */
 
   if (insvalue) {
     s = apr_psprintf(p, "<lp%d:%s>%s</lp%d:%s>" DEBUG_CR,
-                     ns, scan->name, value, ns, scan->name);
+                     global_ns, info->name, value, global_ns, info->name);
     which = DAV_PROP_INSERT_VALUE;
   }
   else {
-    s = apr_psprintf(p, "<lp%d:%s/>" DEBUG_CR, ns, scan->name);
+    s = apr_psprintf(p, "<lp%d:%s/>" DEBUG_CR, global_ns, info->name);
     which = DAV_PROP_INSERT_NAME;
   }
   ap_text_append(p, phdr, s);
@@ -163,14 +176,12 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   return which;
 }
 
-static dav_prop_rw dav_svn_is_writable(const dav_resource *resource,
-                                       int propid)
+static int dav_svn_is_writable(const dav_resource *resource, int propid)
 {
-  if (propid == DAV_PROPID_SVN_displayname
-      || propid == DAV_PROPID_SVN_source)
-    return DAV_PROP_RW_YES;
+  const dav_liveprop_spec *info;
 
-  return DAV_PROP_RW_NO;
+  (void) dav_get_liveprop_info(propid, &dav_svn_liveprop_group, &info);
+  return info->is_writable;
 }
 
 static dav_error * dav_svn_patch_validate(const dav_resource *resource,
@@ -225,19 +236,7 @@ void dav_svn_gather_propsets(apr_array_header_t *uris)
 int dav_svn_find_liveprop(request_rec *r, const char *ns_uri, const char *name,
                           const dav_hooks_liveprop **hooks)
 {
-  const dav_svn_liveprop_name *scan;
-
-  if (*ns_uri != 'D' || strcmp(ns_uri, "DAV:") != 0)
-    return 0;
-
-  for (scan = dav_svn_props; scan->name != NULL; ++scan)
-    if (DAV_SVN_URI_DAV == scan->ns && strcmp(name, scan->name) == 0)
-      {
-        *hooks = &dav_svn_hooks_liveprop;
-        return scan->propid;
-      }
-
-  return 0;
+  return dav_do_find_liveprop(ns_uri, name, &dav_svn_liveprop_group, hooks);
 }
 
 void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
@@ -253,13 +252,13 @@ void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
 	return;
     }
 
-    (void) dav_svn_insert_prop(resource, DAV_PROPID_SVN_creationdate,
+    (void) dav_svn_insert_prop(resource, DAV_PROPID_creationdate,
                                insvalue, phdr);
-    (void) dav_svn_insert_prop(resource, DAV_PROPID_SVN_getcontentlength,
+    (void) dav_svn_insert_prop(resource, DAV_PROPID_getcontentlength,
                                insvalue, phdr);
-    (void) dav_svn_insert_prop(resource, DAV_PROPID_SVN_getlastmodified,
+    (void) dav_svn_insert_prop(resource, DAV_PROPID_getlastmodified,
                                insvalue, phdr);
-    (void) dav_svn_insert_prop(resource, DAV_PROPID_SVN_getetag,
+    (void) dav_svn_insert_prop(resource, DAV_PROPID_getetag,
                                insvalue, phdr);
 
     /* ### we know the others aren't defined as liveprops */
@@ -267,11 +266,8 @@ void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
 
 void dav_svn_register_uris(apr_pool_t *p)
 {
-    const char * const * uris = dav_svn_namespace_uris;
-
-    for ( ; *uris != NULL; ++uris) {
-        dav_register_liveprop_namespace(p, *uris);
-    }
+    /* register the namespace URIs */
+    dav_register_liveprop_group(p, &dav_svn_liveprop_group);
 }
 
 
