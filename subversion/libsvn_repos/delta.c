@@ -468,7 +468,6 @@ delta_proplists (struct context *c,
       if (SVN_IS_VALID_REVNUM (committed_rev))
         {
           svn_fs_t *fs = svn_fs_root_fs (c->target_root);
-          const char *uuid;
 
           /* Transmit the committed-rev. */
           cr_str = svn_string_createf (subpool, "%" SVN_REVNUM_T_FMT,
@@ -487,18 +486,6 @@ delta_proplists (struct context *c,
                                 SVN_PROP_REVISION_AUTHOR, subpool);
           SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_LAST_AUTHOR,
                               last_author, subpool));
-
-          /* Transmit the last-author. */
-          svn_fs_revision_prop (&last_author, fs, committed_rev, 
-                                SVN_PROP_REVISION_AUTHOR, subpool);
-          SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_UUID,
-                              last_author, subpool));
-
-          /* Transmit the UUID. */
-          svn_fs_get_uuid (fs, &uuid, subpool);
-          SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_UUID,
-                              svn_string_create(uuid, subpool),
-                              subpool));
         }
     }
 

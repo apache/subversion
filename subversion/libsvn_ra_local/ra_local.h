@@ -61,9 +61,6 @@ typedef struct svn_ra_local__session_baton_t
      convenience). */
   svn_fs_t *fs;
 
-  /* The UUID associated with REPOS above (cached) */
-  const char *uuid;
-
   /* Callback stuff. */
   const svn_ra_callbacks_t *callbacks;
   void *callback_baton;

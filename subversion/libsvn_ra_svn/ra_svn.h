@@ -42,7 +42,6 @@ struct svn_ra_svn_conn_st {
   char write_buf[4096];
   int write_pos;
   apr_pool_t *pool;
-  const char *uuid;
 };
 
 #ifdef __cplusplus
