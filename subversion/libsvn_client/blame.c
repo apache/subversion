@@ -39,7 +39,7 @@ struct rev
   svn_revnum_t revision; /* the revision number */
   const char *author;    /* the author of the revision */
   const char *date;      /* the date of the revision */
-  /* Only used by the old code. */
+  /* Only used by the pre-1.1 code. */
   const char *path;      /* the absolute repository path */
   struct rev *next;      /* the next revision */
 };
@@ -68,7 +68,7 @@ struct file_rev_baton {
   apr_pool_t *currpool;  /* pool used during this call */
 };
 
-/* The baton used by the txdelta window hanlder. */
+/* The baton used by the txdelta window handler. */
 struct delta_baton {
   /* Our underlying handler/baton that we wrap */
   svn_txdelta_window_handler_t wrapped_handler;
@@ -78,6 +78,9 @@ struct delta_baton {
   const char *filename;
 };
 
+/* Remove a temporary file F, which is of type apr_file_t *.  First, try
+   to close the file, ignoring any errors.  Return an error if the remove
+   fails. */
 static apr_status_t
 cleanup_tempfile (void *f)
 {
@@ -360,8 +363,8 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   return SVN_NO_ERROR;
 }
 
-/* Throw an error if PROP_DIFFS indicates a binary MIME type. Else, return
-   SVN_NO_ERROR. */
+/* Throw an SVN_ERR_CLIENT_IS_BINARY_FILE error if PROP_DIFFS indicates a
+   binary MIME type.  Else, return SVN_NO_ERROR. */
 static svn_error_t *
 check_mimetype (apr_array_header_t *prop_diffs, const char *target,
                 apr_pool_t *pool)
@@ -620,7 +623,7 @@ svn_client_blame (const char *target,
 }
 
 
-/* This is used when there is no get_file_revs avaliable. */
+/* This is used when there is no get_file_revs available. */
 static svn_error_t *
 old_blame (const char *target, const char *url,
            svn_ra_plugin_t *ra_lib,
