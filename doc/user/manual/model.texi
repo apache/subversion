@@ -7,6 +7,8 @@
 @c self-hosting and Subversion supports symlinks, we can symlink this to
 @c one in the 'design' directory.)
 
+@c In general, this is a good introduction to the whole non-locking CVS
+@c model of revision control -- for those who are new to it.
 
 This chapter explains the user's view of Subversion --- what ``objects''
 you interact with, how they behave, and how they relate to each other.
