@@ -284,6 +284,16 @@ svn_error_t *svn_io_file_checksum (unsigned char digest[],
                                    apr_pool_t *pool);
 
 
+/* Set @a *same to non-zero if @a file1 and @a file2 have the same
+ * contents, else set it to zero.  Use @a pool for temporary allocations.
+ */
+svn_error_t *svn_io_files_contents_same_p (svn_boolean_t *same,
+                                           const char *file1,
+                                           const char *file2,
+                                           apr_pool_t *pool);
+
+
+
 
 /** Generic byte-streams
  *

@@ -258,7 +258,7 @@ def textual_merges_galore(sbox):
     if (not re.match("tau.*\.(r\d+|working)", a.name)):
       print "Merge got unexpected singleton", a.name
       raise svntest.main.SVNTreeUnequal
-
+  return 0
   svntest.actions.run_and_verify_merge(other_wc, '1', '3',
                                        svntest.main.current_repo_url,
                                        expected_output,
@@ -1244,7 +1244,8 @@ def merge_with_prev (sbox):
     
 #----------------------------------------------------------------------
 # Regression test for issue #1319: 'svn merge' should *not* 'C' when
-# merging a change into a binary file, unless it has local mods.
+# merging a change into a binary file, unless it has local mods, or has
+# different contents from the left side of the merge.
 
 def merge_binary_file (sbox):
   "merge change into unchanged binary file"
@@ -1253,7 +1254,7 @@ def merge_binary_file (sbox):
 
   wc_dir = sbox.wc_dir
 
-  # Add a binary file to the project, 'theata.bin'
+  # Add a binary file to the project
   fp = open(os.path.join(sys.path[0], "theta.bin"))
   theta_contents = fp.read()  # suck up contents of a test .png file
   fp.close()
@@ -1308,14 +1309,17 @@ def merge_binary_file (sbox):
                      props={'svn:mime-type' : 'application/octet-stream'}),
     })
   expected_status = svntest.actions.get_virginal_state(other_wc, 3)
+  expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='M ', wc_rev=3, repos_rev=3),
+    'A/theta' : Item(status='M ', wc_rev=2, repos_rev=3),
     })
   svntest.actions.run_and_verify_merge(other_wc, '2', '3',
                                        svntest.main.current_repo_url,
                                        expected_output,
                                        expected_disk,
-                                       expected_status)
+                                       expected_status,
+                                       None, None, None, None, None,
+                                       1)
 
 
 ########################################################################
@@ -1333,7 +1337,7 @@ test_list = [ None,
               merge_tree_deleted_in_target,
               merge_similar_unrelated_trees,
               merge_with_prev,
-              XFail(merge_binary_file),
+              merge_binary_file,
               # merge_one_file,          # See issue #1150.
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
