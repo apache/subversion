@@ -40,7 +40,6 @@
 #include "svn_delta.h"
 #include "svn_io.h"
 #include "svn_ra.h"
-#include "svn_wc.h"
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_dav.h"
