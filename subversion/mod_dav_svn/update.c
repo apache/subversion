@@ -929,19 +929,23 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
                                          void **handler_baton)
 {
   item_baton_t *file = file_baton;
-  struct window_handler_baton *wb = apr_palloc(file->pool, sizeof(*wb));
+  struct window_handler_baton *wb;
   svn_stream_t *base64_stream;
 
-  if (file->uc->resource_walk)
+  /* Store the base checksum and the fact the file's text changed. */
+  file->base_checksum = apr_pstrdup(file->pool, base_checksum);
+  file->text_changed = TRUE;
+
+  /* If this is a resource walk, or if we're not in "send-all" mode,
+     we don't actually want to transmit text-deltas. */
+  if (file->uc->resource_walk || (! file->uc->send_all))
     {
       *handler = dummy_window_handler;
       *handler_baton = NULL;
       return SVN_NO_ERROR;
     }
 
-  file->base_checksum = apr_pstrdup(file->pool, base_checksum);
-  file->text_changed = TRUE;
-
+  wb = apr_palloc(file->pool, sizeof(*wb));
   wb->seen_first_window = FALSE;
   wb->uc = file->uc;
   base64_stream = dav_svn_make_base64_output_stream(wb->uc->bb, wb->uc->output,
