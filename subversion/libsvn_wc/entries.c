@@ -828,7 +828,7 @@ check_entries (apr_hash_t *entries,
         return svn_error_createf
           (SVN_ERR_WC_CORRUPT, NULL,
            _("Corrupt working copy: '%s' in directory '%s' (which is "
-             "scheduled for replacement) has in invalid schedule"),
+             "scheduled for replacement) has an invalid schedule"),
            name, path);
     }
   

@@ -101,7 +101,7 @@ parse_local_repos_path (apr_getopt_t *os,
   else if (svn_path_is_url (*repos_path))
     {
       return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("'%s' is an url when it should be a path"),
+                                _("'%s' is an URL when it should be a path"),
                                 *repos_path);
     }
 
@@ -218,7 +218,7 @@ static const apr_getopt_option_t options_table[] =
      N_("read user configuration files from directory ARG")},
 
     {"clean-logs", svnadmin__clean_logs, 0,
-     N_("remove redundant log files from source repository.")},
+     N_("remove redundant log files from source repository")},
 
     {NULL}
   };

@@ -941,7 +941,7 @@ svn_wc_add (const char *path,
   if (! parent_entry)
     return svn_error_createf 
       (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       _("Can't not find parent directory's entry while trying to add '%s'"),
+       _("Can't find parent directory's entry while trying to add '%s'"),
        path);
   if (parent_entry->schedule == svn_wc_schedule_delete)
     return svn_error_createf 

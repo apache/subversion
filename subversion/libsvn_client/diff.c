@@ -1247,7 +1247,7 @@ do_merge (const char *URL1,
     {
       return svn_error_create
         (SVN_ERR_CLIENT_BAD_REVISION, NULL, 
-	 "Not all required revisions specified");
+         "Not all required revisions are specified");
     }
 
   /* Establish first RA session to URL1. */

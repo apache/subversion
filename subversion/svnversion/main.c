@@ -122,7 +122,7 @@ usage(const apr_getopt_option_t *options, apr_pool_t *pool)
 {
   fprintf
     (stderr, 
-     _("usage: svnversion [options] wc_path [trail_url]\n\n"
+     _("usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n\n"
        "  Produce a compact \"version number\" for the working copy path\n"
        "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
        "  determine if WC_PATH itself is switched (detection of switches\n"
