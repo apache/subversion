@@ -41,7 +41,7 @@ check_already_open (svn_fs_t *fs)
     return svn_error_create (SVN_ERR_FS_ALREADY_OPEN, 0, 0, fs->pool,
                              "filesystem object already open");
   else
-    return 0;
+    return SVN_NO_ERROR;
 }
 
 
@@ -75,7 +75,7 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
       SVN_ERR (DB_WRAP (fs, msg, db->close (db, 0)));
     }
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 /* Close whatever Berkeley DB resources are allocated to FS.  */
@@ -85,7 +85,7 @@ cleanup_fs (svn_fs_t *fs)
   DB_ENV *env = fs->env;
 
   if (! env)
-    return 0;
+    return SVN_NO_ERROR;
 
   /* Close the databases.  */
   SVN_ERR (cleanup_fs_db (fs, &fs->nodes, "nodes"));
@@ -122,7 +122,7 @@ cleanup_fs (svn_fs_t *fs)
   SVN_ERR (DB_WRAP (fs, "closing environment",
                     env->close (env, 0)));
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -239,7 +239,7 @@ allocate_env (svn_fs_t *fs)
   SVN_ERR (DB_WRAP (fs, "setting deadlock detection policy",
                     fs->env->set_lk_detect (fs->env, DB_LOCK_RANDOM)));
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -293,7 +293,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   svn_err = svn_fs__dag_init_fs (fs);
   if (svn_err) goto error;
 
-  return 0;
+  return SVN_NO_ERROR;
 
 error:
   (void) cleanup_fs (fs);
@@ -339,7 +339,7 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
                                                       fs->env, 0));
   if (svn_err) goto error;
 
-  return 0;
+  return SVN_NO_ERROR;
   
  error:
   cleanup_fs (fs);
@@ -380,7 +380,7 @@ svn_fs_berkeley_recover (const char *path,
   if (db_err)
     return svn_fs__dberr (pool, db_err);
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 

@@ -413,12 +413,12 @@ txn_body_node_prop (void *baton,
         {
           *(args->value_p) = svn_string_ncreate (value->data, value->len,
                                                  trail->pool);
-          return 0;
+          return SVN_NO_ERROR;
         }
     }
 
   *(args->value_p) = 0;
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -440,7 +440,7 @@ svn_fs_node_prop (svn_string_t **value_p,
   SVN_ERR (svn_fs__retry_txn (node->fs, txn_body_node_prop, &args, pool));
 
   *value_p = value;
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -505,7 +505,7 @@ txn_body_change_node_prop (void *baton,
 
   SVN_ERR (svn_fs__dag_set_proplist (args->node->dag_node, proplist, trail));
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -525,7 +525,7 @@ svn_fs_change_node_prop (svn_fs_root_t *root,
   SVN_ERR (svn_fs__retry_txn (node->fs, txn_body_change_node_prop, &args,
                               pool));
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -596,7 +596,7 @@ txn_body_delete (void *baton,
   SVN_ERR (make_clone (parent, trail));
   SVN_ERR (svn_fs__dag_delete (parent, entry_name, trail));
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 

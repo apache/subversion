@@ -86,7 +86,7 @@ get_revision_skel (skel_t **skel,
   if (! revision)
     return corrupt_revision (fs, v);
   *skel = revision;
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -116,7 +116,7 @@ svn_fs__revision_root (svn_fs_id_t **id_p,
     goto corrupt;
 
   *id_p = id;
-  return 0;
+  return SVN_NO_ERROR;
 
  corrupt:
   apr_pool_destroy (subpool);
@@ -163,7 +163,7 @@ put_revision_skel (svn_revnum_t *v_p,
      Revisions are numbered starting with zero; Berkeley DB record numbers
      begin with one.  */
   *v_p = recno - 1;
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -189,7 +189,7 @@ make_revisions (svn_fs_t *fs, int create)
                                          create ? (DB_CREATE | DB_EXCL) : 0,
                                          0666)));
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 

@@ -143,7 +143,7 @@ make_nodes (svn_fs_t *fs, int create)
                                      create ? (DB_CREATE | DB_EXCL) : 0,
                                      0666)));
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -197,7 +197,7 @@ get_representation_skel (skel_t **skel_p,
     return svn_fs__err_corrupt_representation (fs, id);
 
   *skel_p = skel;
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -219,7 +219,7 @@ put_representation_skel (svn_fs_t *fs,
                                     svn_fs__skel_to_dbt (&value, skel, pool),
                                     0)));
 
-  return 0;
+  return SVN_NO_ERROR;
 }
                          
 
@@ -249,7 +249,7 @@ svn_fs__get_node_revision (skel_t **skel_p,
     return svn_fs__err_corrupt_representation (fs, id);
 
   *skel_p = skel->children->next;
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -351,7 +351,7 @@ new_node_id (svn_fs_id_t **id_p,
   id[2] = -1;
 
   *id_p = id;
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -371,7 +371,7 @@ svn_fs__create_node (svn_fs_id_t **id_p,
   SVN_ERR (put_representation_skel (fs, db_txn, id, skel, pool));
 
   *id_p = id;
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -471,7 +471,7 @@ new_successor_id (svn_fs_id_t **successor_p,
     {
       /* NEW_ID isn't currently in use, so return that.  */
       *successor_p = new_id;
-      return 0;
+      return SVN_NO_ERROR;
     }
   else
     SVN_ERR (DB_WRAP (fs, "checking for next node revision", db_err));
@@ -523,7 +523,7 @@ new_successor_id (svn_fs_id_t **successor_p,
         new_id[id_len + 2] = -1;
 
         *successor_p = new_id;
-        return 0;
+        return SVN_NO_ERROR;
       }
 
     /* If the last key before NEW_ID is a branch off of ID, then
@@ -538,7 +538,7 @@ new_successor_id (svn_fs_id_t **successor_p,
         new_id[id_len + 2] = -1;
 
         *successor_p = new_id;
-        return 0;
+        return SVN_NO_ERROR;
       }
 
     /* Otherwise, something strange is going on.  */
@@ -565,7 +565,7 @@ svn_fs__create_successor (svn_fs_id_t **new_id_p,
   SVN_ERR (put_representation_skel (fs, db_txn, new_id, new_skel, pool));
 
   *new_id_p = new_id;
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
