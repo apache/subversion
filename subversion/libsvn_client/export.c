@@ -264,8 +264,6 @@ struct edit_baton
 struct dir_baton
 {
   struct edit_baton *edit_baton;
-  struct dir_baton *parent_dir_baton;
-  apr_hash_t *props;
 };
 
 
@@ -281,12 +279,10 @@ struct file_baton
 
 struct handler_baton
 {
-  apr_file_t *source;
-  apr_file_t *dest;
   svn_txdelta_window_handler_t apply_handler;
   void *apply_baton;
   apr_pool_t *pool;
-  struct file_baton *fb;
+  const char *tmppath;
 };
 
 
@@ -302,13 +298,12 @@ open_root (void *edit_baton,
   struct dir_baton *db = apr_pcalloc (pool, sizeof(*db));
   svn_node_kind_t kind;
   
-  db->parent_dir_baton = NULL;
   db->edit_baton = edit_baton;
-  db->props = apr_hash_make (pool);
 
   SVN_ERR (svn_io_check_path (eb->root_path, &kind, pool));
-  if (kind != svn_node_none && kind != svn_node_dir)
-    return svn_error_create (APR_ENOTDIR, NULL, eb->root_path);
+  if (kind != svn_node_none)
+    return svn_error_create (SVN_ERR_WC_OBSTRUCTED_UPDATE,
+                             NULL, eb->root_path);
 
   SVN_ERR (svn_io_dir_make (eb->root_path, APR_OS_DEFAULT, pool));
 
@@ -338,17 +333,10 @@ add_directory (const char *path,
 {
   struct dir_baton *db = apr_pcalloc (pool, sizeof(*db));
   struct dir_baton *parent = parent_baton;
-  svn_node_kind_t kind;
   const char *full_path = svn_path_join (parent->edit_baton->root_path,
                                          path, pool);
 
-  db->parent_dir_baton = parent;
   db->edit_baton = parent->edit_baton;
-  db->props = apr_hash_make (pool);
-
-  SVN_ERR (svn_io_check_path (full_path, &kind, pool));
-  if (kind != svn_node_none && kind != svn_node_dir)
-    return svn_error_create (APR_ENOTDIR, NULL, full_path);
 
   SVN_ERR (svn_io_dir_make (full_path, APR_OS_DEFAULT, pool));
 
@@ -378,17 +366,12 @@ add_file (const char *path,
 {
   struct dir_baton *parent = parent_baton;
   struct file_baton *fb = apr_pcalloc (pool, sizeof(*fb));
-  svn_node_kind_t kind;
   const char *full_path = svn_path_join (parent->edit_baton->root_path,
                                          path, pool);
 
   fb->parent_dir_baton = parent;
   fb->path = full_path;
   fb->props = apr_hash_make (pool);
-
-  SVN_ERR (svn_io_check_path (full_path, &kind, pool));
-  if (kind != svn_node_none && kind != svn_node_file)
-    return svn_error_create (APR_EEXIST, NULL, full_path);
 
   *baton = fb;
   return SVN_NO_ERROR;
@@ -399,7 +382,6 @@ static svn_error_t *
 window_handler (svn_txdelta_window_t *window, void *baton)
 {
   struct handler_baton *hb = baton;
-  struct file_baton *fb = hb->fb;
   svn_error_t *err;
 
   err = hb->apply_handler (window, hb->apply_baton);
@@ -409,7 +391,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   if (err != SVN_NO_ERROR)
     {
       /* We failed to apply the patch; clean up the temporary file.  */
-      apr_file_remove (fb->tmppath, hb->pool);
+      apr_file_remove (hb->tmppath, hb->pool);
     }
 
   return err;
@@ -426,21 +408,18 @@ apply_textdelta (void *file_baton,
                  void **handler_baton)
 {
   struct file_baton *fb = file_baton;
-  apr_pool_t *handler_pool = pool;
-  struct handler_baton *hb = apr_palloc (handler_pool, sizeof (*hb));
-  apr_file_t *tmp_file = NULL; 
+  struct handler_baton *hb = apr_palloc (pool, sizeof (*hb));
+  apr_file_t *tmp_file; 
 
   SVN_ERR (svn_io_open_unique_file (&tmp_file, &(fb->tmppath),
-                                    fb->path, ".tmp", FALSE, handler_pool));
+                                    fb->path, ".tmp", FALSE, pool));
 
-  hb->pool = handler_pool;
-  hb->fb = fb;
-  hb->source = NULL;
-  hb->dest = tmp_file;
+  hb->pool = pool;
+  hb->tmppath = fb->tmppath;
 
-  svn_txdelta_apply (svn_stream_from_aprfile (hb->source, handler_pool),
-                     svn_stream_from_aprfile (hb->dest, handler_pool),
-                     NULL, NULL, handler_pool,
+  svn_txdelta_apply (svn_stream_empty (pool),
+                     svn_stream_from_aprfile (tmp_file, pool),
+                     NULL, NULL, pool,
                      &hb->apply_handler, &hb->apply_baton);
   
   *handler_baton = hb;
