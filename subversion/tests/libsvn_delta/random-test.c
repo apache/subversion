@@ -281,14 +281,14 @@ print_node_data (range_index_node_t *node, const char *msg, apr_off_t ndx)
   if (-node->target_offset == ndx)
     {
       printf ("   * Node: [%3"APR_OFF_T_FMT
-              ", %3"APR_OFF_T_FMT
+              ",%3"APR_OFF_T_FMT
               ") = %-5"APR_OFF_T_FMT"%s\n",
               node->offset, node->limit, -node->target_offset, msg);
     }
   else
     {
       printf ("     Node: [%3"APR_OFF_T_FMT
-              ", %3"APR_OFF_T_FMT
+              ",%3"APR_OFF_T_FMT
               ") = %"APR_OFF_T_FMT"\n",
               node->offset, node->limit,
               (node->target_offset < 0
@@ -334,6 +334,15 @@ print_range_index (range_index_node_t *node, const char *msg, apr_off_t ndx)
 }
 
 
+static void
+check_copy_count (int src_cp, int tgt_cp)
+{
+  printf ("Source copies: %d  Target copies: %d\n", src_cp, tgt_cp);
+  if (src_cp > tgt_cp)
+    printf ("WARN: More source than target copies; inefficient combiner?\n");
+}
+
+
 static svn_error_t *
 random_range_index_test (const char **msg,
                          svn_boolean_t msg_only,
@@ -344,6 +353,7 @@ random_range_index_test (const char **msg,
   unsigned long seed;
   int i, maxlen, iterations;
   range_index_t *ndx;
+  int tgt_cp = 0, src_cp = 0;
 
   /* Initialize parameters and print out the seed in case we dump core
      or something. */
@@ -363,22 +373,32 @@ random_range_index_test (const char **msg,
     {
       apr_off_t offset = myrand (&seed) % 47;
       apr_off_t limit = offset + myrand (&seed) % 16 + 1;
+      range_list_node_t *list, *r;
       apr_off_t ret;
       const char *msg2;
 
-      printf ("%3d: Inserting [%3"APR_OFF_T_FMT", %3"APR_OFF_T_FMT") ...... ",
+      printf ("%3d: Inserting [%3"APR_OFF_T_FMT",%3"APR_OFF_T_FMT") ...",
               i, offset, limit);
+      splay_range_index (offset, ndx);
+      list = build_range_list (offset, limit, ndx);
       insert_range (offset, limit, i, ndx);
       prev_prev_node = prev_node = NULL;
       ret = walk_range_index (ndx->tree, &msg2);
       if (ret == 0)
         {
+          for (r = list; r; r = r->next)
+            printf (" %s[%3"APR_OFF_T_FMT",%3"APR_OFF_T_FMT")",
+                    (r->kind == range_from_source ?
+                     (++src_cp, "S") : (++tgt_cp, "T")),
+                    r->offset, r->limit);
+          free_range_list (list, ndx);
           printf (" OK\n");
         }
       else
         {
           printf (" Ooops!\n");
           print_range_index (ndx->tree, msg2, ret);
+          check_copy_count(src_cp, tgt_cp);
           return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL, pool,
                                    "insert_range");
         }
@@ -386,6 +406,7 @@ random_range_index_test (const char **msg,
 
   printf ("Final tree state:\n");
   print_range_index (ndx->tree, "", iterations + 1);
+  check_copy_count(src_cp, tgt_cp);
   return SVN_NO_ERROR;
 }
 
