@@ -461,6 +461,23 @@ svn_wc_crawl_revisions (const char *path,
      ROOT_DIRECTORY.  This is the first revnum that entries will be
      compared to. */
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+
+  if ((entry->schedule == svn_wc_schedule_add)
+      && (entry->kind == svn_node_dir))
+    {
+      SVN_ERR (svn_wc_entry (&parent_entry,
+                             svn_path_dirname (path, pool),
+                             adm_access,
+                             FALSE, pool));
+      base_rev = parent_entry->revision;
+      SVN_ERR (reporter->set_path (report_baton, "", base_rev,
+                                   entry->incomplete, 
+                                   pool));
+      SVN_ERR(reporter->delete_path (report_baton, "", pool)); 
+
+      return SVN_NO_ERROR;
+    }
+
   base_rev = entry->revision;
   if (base_rev == SVN_INVALID_REVNUM)
     {
