@@ -34,8 +34,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-01 23:28+0200\n"
-"PO-Revision-Date: 2004-09-01 23:24+0200\n"
+"POT-Creation-Date: 2004-09-03 17:32+0200\n"
+"PO-Revision-Date: 2004-09-03 23:40+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -258,8 +258,8 @@ msgstr "Plik z opisem konfliktu atrybutów: %s\n"
 #, fuzzy
 msgid "'svn info' only works on working copy paths, not URLs"
 msgstr ""
-"Listy plików do porównania nie mogą zawierać jednocześnie ścieżek\n"
-"z kopii roboczej i URLi"
+"'svn info' działa tylko na ścieżkach kopii roboczej, \n"
+"a nie na URLach"
 
 #: clients/cmdline/info-cmd.c:264
 #, c-format
@@ -577,17 +577,17 @@ msgstr ""
 "\n"
 "  Zarówno ŹRÓDŁO jak i CEL mogą być albo ścieżką kopii roboczej (KR)\n"
 "  albo URLem:\n"
-"     KR -> KR:  skopiuj ale nie zatwierdzaj zmian, zmiana musi zostać\n"
+"    KR -> KR:   skopiuj ale nie zatwierdzaj zmian, zmiana musi zostać\n"
 "                zatwierdzona by trafiła do repozytorium\n"
-"     KR -> URL: skopiuj dane z katalogu roboczego pod podany URL i \n"
+"    KR -> URL:  skopiuj dane z katalogu roboczego pod podany URL i \n"
 "                natychmiast zatwierdź zmiany, zapisując je w repozytorium\n"
-"     URL -> KR: skopiuj dane z URL do kopii roboczej ale nie zatwierdzaj \n"
+"    URL -> KR:  skopiuj dane z URL do kopii roboczej ale nie zatwierdzaj \n"
 "                zmian, zmiana musi zostać zatwierdzona by trafiła do \n"
 "                repozytorium\n"
-"     URL -> URL: kopiowanie wyłącznie po stronie repozytorium, \n"
-"                 natychmiastowo zatwierdzane i nie wprowadzające zmian w \n"
-"                 kopii roboczej; zapis często używany do tworzenia \n"
-"                 odgałęzień i tagów.\n"
+"    URL -> URL: kopiowanie wyłącznie po stronie repozytorium, \n"
+"                natychmiastowo zatwierdzane i nie wprowadzające zmian w \n"
+"                kopii roboczej; zapis często używany do tworzenia \n"
+"                odgałęzień i tagów.\n"
 
 #: clients/cmdline/main.c:228
 msgid ""
@@ -730,7 +730,7 @@ msgid ""
 "  If PATH is omitted '.' is assumed.  Parent directories are created\n"
 "  as necessary in the repository.\n"
 msgstr ""
-"Umieść w repozytorium plik lub katalog dotychczas nie podlegajacy\n"
+"Umieść w repozytorium plik lub katalog dotychczas nie podlegający\n"
 "zarządzaniu wesjami.\n"
 "Wykorzystanie: import [ŚCIEŻKA] URL\n"
 "\n"
@@ -748,8 +748,8 @@ msgstr ""
 "Przedstaw szczegółowe informacje o podanym pliku lub katalogu.\n"
 "Wykorzystanie: info [ŚCIEŻKA]\n"
 "\n"
-"   Wypisuje informacje o każdym z podanych parametrów (domyślnie o .\n"
-"   czyli katalogu bieżacym).\n"
+"  Wypisuje informacje o każdym z podanych parametrów (domyślnie o\n"
+"  '.' czyli katalogu bieżącym).\n"
 
 #: clients/cmdline/main.c:336
 msgid ""
@@ -1370,19 +1370,19 @@ msgstr ""
 
 #: clients/cmdline/main.c:675
 msgid "Print client version info\n"
-msgstr "podaj wersję klienta\n"
+msgstr "Podaj wersję klienta\n"
 
 #: clients/cmdline/main.c:729 svnadmin/main.c:75
 msgid "Caught signal"
 msgstr "Złapano sygnał"
 
-#: clients/cmdline/main.c:826 svnadmin/main.c:1005
+#: clients/cmdline/main.c:826 svnadmin/main.c:1006
 msgid ""
 "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr ""
 "Wielokrotnie podano opcję numeru wersji; spróbuj '-r M:N' zamiast '-r M -r N'"
 
-#: clients/cmdline/main.c:838 svnadmin/main.c:1022
+#: clients/cmdline/main.c:838 svnadmin/main.c:1023
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Błąd składniowy w numerze wersji '%s'"
@@ -1400,7 +1400,7 @@ msgstr "Błąd składniowy w nazwie native-eol '%s'"
 msgid "Subcommand argument required\n"
 msgstr "Polecenie wymaga podania parametru\n"
 
-#: clients/cmdline/main.c:1070 svnadmin/main.c:1142 svnlook/main.c:1962
+#: clients/cmdline/main.c:1070 svnadmin/main.c:1143 svnlook/main.c:1962
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Nieznane polecenie: '%s'\n"
@@ -4916,6 +4916,8 @@ msgid ""
 "wait instead of exit if the the repository is in\n"
 "                             use by another process"
 msgstr ""
+"zamiast wyjść czekaj jeśli repozytorium jest w\n"
+"                              użyciu przez inny process"
 
 #: svnadmin/main.c:282
 msgid ""
@@ -5139,10 +5141,13 @@ msgstr ""
 "Dostępne polecenia:\n"
 
 #: svnadmin/main.c:653
-msgid "Please wait; recovering the repository may take some time...\n"
+#, fuzzy
+msgid ""
+"Repository lock acquired.\n"
+"Please wait; recovering the repository may take some time...\n"
 msgstr "Proszę czekać; odtwarzanie repozytorium może trwać długo...\n"
 
-#: svnadmin/main.c:687
+#: svnadmin/main.c:688
 #, fuzzy
 msgid ""
 "Failed to get exclusive repository access; perhaps another process\n"
@@ -5150,12 +5155,12 @@ msgid ""
 msgstr ""
 "Oczekiwanie na blokadę repozytorium; możliwe, że inny proces blokuje dostęp\n"
 
-#: svnadmin/main.c:692
+#: svnadmin/main.c:693
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
 msgstr ""
 "Oczekiwanie na blokadę repozytorium; możliwe, że inny proces blokuje dostęp\n"
 
-#: svnadmin/main.c:699
+#: svnadmin/main.c:700
 msgid ""
 "\n"
 "Recovery completed.\n"
@@ -5163,33 +5168,33 @@ msgstr ""
 "\n"
 "Odtwarzanie zakończone.\n"
 
-#: svnadmin/main.c:706
+#: svnadmin/main.c:707
 #, c-format
 msgid "The latest repos revision is %ld.\n"
 msgstr "Najnowsza wersja repozytorium to %ld.\n"
 
-#: svnadmin/main.c:814
+#: svnadmin/main.c:815
 #, c-format
 msgid "Transaction '%s' removed.\n"
 msgstr "Usunięto transakcję '%s'.\n"
 
-#: svnadmin/main.c:838
+#: svnadmin/main.c:839
 msgid "Missing revision"
 msgstr "Brak wersji"
 
-#: svnadmin/main.c:841
+#: svnadmin/main.c:842
 msgid "Only one revision allowed"
 msgstr "Tylko jedna wersja jest dozwolona"
 
-#: svnadmin/main.c:847
+#: svnadmin/main.c:848
 msgid "Exactly one file argument required"
 msgstr "Wymagany dokładnie jeden parametr - plik"
 
-#: svnadmin/main.c:1120 svndumpfilter/main.c:1103 svnlook/main.c:1939
+#: svnadmin/main.c:1121 svndumpfilter/main.c:1103 svnlook/main.c:1939
 msgid "subcommand argument required\n"
 msgstr "polecenie wymaga parametrów\n"
 
-#: svnadmin/main.c:1210
+#: svnadmin/main.c:1211
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -5204,8 +5209,9 @@ msgid "Invalid copy source path '%s'"
 msgstr "Błędna składnia ścieżki '%s'"
 
 #: svndumpfilter/main.c:414
+#, fuzzy
 msgid "Node with dropped parent sneaked in"
-msgstr ""
+msgstr "Wkradł się obiekt, którego przodek został wcześniej opuszczony"
 
 #: svndumpfilter/main.c:586
 msgid "This is an empty revision for padding."
@@ -5729,29 +5735,14 @@ msgstr "wyeksportowano\n"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "%s' nie podlegające zarządzaniu wersjami i nie eksportowane\n"
 
-#~ msgid "file"
-#~ msgstr "plik"
+#~ msgid "Can't create directory '%s'"
+#~ msgstr "Nie można stworzyć katalogu '%s'"
 
-#~ msgid "directory"
-#~ msgstr "katalog"
+#~ msgid "Unknown revision kind"
+#~ msgstr "Nieznany rodzaj wersji"
 
-#~ msgid "restoring text"
-#~ msgstr "odtwarzanie treści"
-
-#~ msgid "removing props"
-#~ msgstr "usuwanie atrybutów"
-
-#~ msgid "restoring props"
-#~ msgstr "odtwarzanie atrybutów"
-
-#~ msgid "Error '%s' for '%s'"
-#~ msgstr "Błąd '%s' dla '%s'"
-
-#~ msgid "Impossibly long relative URL"
-#~ msgstr "Względny URL jest zbyt długi"
-
-#~ msgid "WARNING: error decoding UTF-8 for ?\n"
-#~ msgstr "OSTRZEŻENIE: błąd odczytu UTF-8 dla ?\n"
+#~ msgid "'%s' is a URL, but revision kind requires a working copy"
+#~ msgstr "'%s' jest URLem, tymczasem rodzaj wersji wymaga kopii roboczej"
 
 #~ msgid ""
 #~ "Display the differences between two paths.\n"
@@ -5807,11 +5798,26 @@ msgstr "%s' nie podlegające zarządzaniu wersjami i nie eksportowane\n"
 #~ "  wprowadzone w kopii roboczej w stosunku do wersji pobranej z\n"
 #~ "  repozytorium (zmiany do zatwierdzenia).\n"
 
-#~ msgid "'%s' is a URL, but revision kind requires a working copy"
-#~ msgstr "'%s' jest URLem, tymczasem rodzaj wersji wymaga kopii roboczej"
+#~ msgid "WARNING: error decoding UTF-8 for ?\n"
+#~ msgstr "OSTRZEŻENIE: błąd odczytu UTF-8 dla ?\n"
 
-#~ msgid "Unknown revision kind"
-#~ msgstr "Nieznany rodzaj wersji"
+#~ msgid "Impossibly long relative URL"
+#~ msgstr "Względny URL jest zbyt długi"
 
-#~ msgid "Can't create directory '%s'"
-#~ msgstr "Nie można stworzyć katalogu '%s'"
+#~ msgid "Error '%s' for '%s'"
+#~ msgstr "Błąd '%s' dla '%s'"
+
+#~ msgid "restoring props"
+#~ msgstr "odtwarzanie atrybutów"
+
+#~ msgid "removing props"
+#~ msgstr "usuwanie atrybutów"
+
+#~ msgid "restoring text"
+#~ msgstr "odtwarzanie treści"
+
+#~ msgid "directory"
+#~ msgstr "katalog"
+
+#~ msgid "file"
+#~ msgstr "plik"
