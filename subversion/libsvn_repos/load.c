@@ -42,6 +42,8 @@ struct parse_baton
   svn_stream_t *outstream;
   enum svn_repos_load_uuid uuid_action;
   const char *parent_dir;
+  apr_pool_t *pool;
+  apr_hash_t *rev_map;
 };
 
 struct revision_baton
@@ -772,6 +774,7 @@ new_revision_record (void **revision_baton,
   struct parse_baton *pb = parse_baton;
   struct revision_baton *rb;
   svn_revnum_t head_rev;
+  svn_revnum_t *old_rev, *new_rev;
 
   rb = make_revision_baton (headers, pb, pool);
   SVN_ERR (svn_fs_youngest_rev (&head_rev, pb->fs, pool));
@@ -779,6 +782,13 @@ new_revision_record (void **revision_baton,
   /* Calculate the revision 'offset' for finding copyfrom sources.
      It might be positive or negative. */
   rb->rev_offset = (rb->rev) - (head_rev + 1);
+ 
+  /* Store the new revision for finding copyfrom sources. */
+  old_rev = apr_palloc (pb->pool, sizeof(svn_revnum_t) * 2);
+  new_rev = old_rev + 1;
+  *old_rev = rb->rev;
+  *new_rev = head_rev + 1;
+  apr_hash_set (pb->rev_map, old_rev, sizeof(svn_revnum_t), new_rev);
 
   if (rb->rev > 0)
     {
@@ -825,6 +835,10 @@ maybe_add_with_history (struct node_baton *nb,
       /* Hunt down the source revision in this fs. */
       svn_fs_root_t *copy_root;
       svn_revnum_t src_rev = nb->copyfrom_rev - rb->rev_offset;
+      svn_revnum_t *src_rev_from_map;
+      if (src_rev_from_map = apr_hash_get (pb->rev_map, &nb->copyfrom_rev,
+                                           sizeof(nb->copyfrom_rev)))
+        src_rev = *src_rev_from_map;
 
       if (! SVN_IS_VALID_REVNUM(src_rev))
         return svn_error_createf (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
@@ -1182,6 +1196,8 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
   pb->outstream = outstream;
   pb->uuid_action = uuid_action;
   pb->parent_dir = parent_dir;
+  pb->pool = pool;
+  pb->rev_map = apr_hash_make (pool);
 
   *parser_callbacks = parser;
   *parse_baton = pb;
