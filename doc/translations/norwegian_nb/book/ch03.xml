@@ -16,14 +16,14 @@
       into your working copy, examine them, and work through any
       conflicts that might arise.</para>
     @ENGLISH }}} -->
-    <para>N&#229; vil vi g&#229; inn i detaljene ved &#229; bruke Subversion.
+    <para>N&#229; vil vi g&#229; inn i detaljene omkring bruken av Subversion.
       N&#229;r du har n&#229;dd slutten av dette kapittelet, vil du v&#230;re i stand 
       til &#229; utf&#248;re omtrent alle de oppgavene du trenger for &#229; bruke 
       Subversion i en vanlig dags arbeid.
       Du starter med en innledende uthenting av koden din, og g&#229;r 
       gjennom &#229; gj&#248;re forandringer og studere disse forandringene.
-      Du vil ogs&#229; se hvordan du legger inn forandringer laget av andre 
-      inn i arbeidskopien din, studere dem, og jobbe deg gjennom 
+      Du vil ogs&#229; f&#229; se hvordan du legger inn forandringer laget av 
+      andre inn i arbeidskopien din, studere dem, og jobbe deg gjennom 
       eventuelle konflikter som m&#229;tte oppst&#229;.</para>
 
     <!-- @ENGLISH {{{
@@ -71,7 +71,7 @@
       Kommandolinjeklienten til Subversion er selvdokumenterende &#8212; til 
       enhver tid vil en rask <command>svn help 
       &lt;delkommando&gt;</command> beskrive syntaksen, valg, og 
-      oppf&#248;rselen til <command>delkommando</command>en.</para>
+      oppf&#248;rselen til <command>delkommando</command>.</para>
 
   </sect1>
 
@@ -123,8 +123,7 @@
     <para>F&#248;r vi g&#229;r videre, b&#248;r du vite litt om hvordan du kan 
       identifisere en spesiell revisjon i depotet.
       Som du l&#230;rte i <xref linkend="svn-ch-2-sect-3.2"/>, er en revisjon 
-      et <quote>&#248;yeblikksbilde</quote> av depotet i et spesielt &#248;yeblikk 
-      i tid.
+      et <quote>&#248;yeblikksbilde</quote> av depotet p&#229; et visst tidspunkt.
       N&#229;r du fortsetter med &#229; legge inn revisjoner og &#248;ker st&#248;rrelsen p&#229; 
       depotet ditt, trenger du en mekanisme for &#229; identifisere disse 
       &#248;yeblikksbildene.</para>
@@ -143,8 +142,7 @@
       revisjonen du &#248;nsker (<command>svn --revision REV</command> eller 
       du kan spesifisere et omr&#229;de ved &#229; separere to revisjoner med et 
       kolon (<command>svn --revision REV1:REV2</command>).
-      Og Subversion lar deg referere til disse revisjonene ved nummer, 
-      n&#248;kkelord, eller dato.</para>
+      Og Subversion lar deg referere til disse revisjonene via nummer, n&#248;kkelord eller dato.</para>
     
     <sect2 id="svn-ch-3-sect-3.1">
       <!-- @ENGLISH {{{
@@ -232,9 +230,9 @@ Committed revision 3.
           administrativ underkatalog kalt <filename>.svn</filename>.
           For hver eneste fil i en katalog lagrer Subversion en kopi av 
           hver fil i det administrative omr&#229;det.
-          Denne kopien er en en umodifisert (ingen n&#248;kkelordutviding, 
+          Denne kopien er en en umodifisert (ingen n&#248;kkelordutvidelser, 
           ingen linjesluttkonvertering, ingen noesomhelst) kopi av filen 
-          som den eksisterte i den siste revisjonen (kalt 
+          som da den eksisterte i den siste revisjonen (kalt 
           <quote>BASE</quote>-revisjonen) som du oppdaterte den til i 
           arbeidskopien din.
           Vi refererer til denne filen som den <firstterm>uber&#248;rte 
@@ -275,7 +273,7 @@ Committed revision 3.
             <para>The last revision in which an item changed before (or
               at) <literal>BASE</literal>.</para>
             @ENGLISH }}} -->
-            <para>Den siste revisjonen som et element forandret seg f&#248;r 
+            <para>Den siste revisjonen som et element forandret seg i f&#248;r 
               (eller p&#229;) <literal>BASE</literal>.</para>
           </listitem>
         </varlistentry>
@@ -349,7 +347,7 @@ $ svn log --revision HEAD
 # viser loggmelding for den seneste innleggingen i depotet
 
 $ svn diff --revision HEAD
-# sammenligner din aktuelle arbeidsfil (med lokale forandringer) med den 
+# sammenligner arbeidsfilen din (med lokale forandringer) med den 
 # seneste versjonen i depotet.
 
 $ svn diff --revision BASE:HEAD foo.c
@@ -402,7 +400,7 @@ $ svn update --revision PREV foo.c
         spaces.</para>
       @ENGLISH }}} -->
       <para>Her er eksempler p&#229; dataformater som Subversion aksepterer.
-        Husk &#229; bruke hermetegn rundt datoer som inneholder 
+        Husk &#229; bruke anf&#248;rselstegn rundt datoer som inneholder 
         mellomrom.</para>
 
       <!-- @ENGLISH {{{
@@ -479,7 +477,7 @@ r12 | ira | 2002-11-27 12:31:51 -0600 (Wed, 27 Nov 2002) | 6 lines
           00:00:00, so looking for the most recent revision won't
           return anything on the day of the 27th.</para>
         @ENGLISH }}} -->
-        <para>Hvis du spesifiserer en enkel dato som en revisjon uten &#229; 
+        <para>Hvis du spesifiserer en enkelt dato som en revisjon uten &#229; 
           spesifisere klokkeslett (for eksempel 
           <literal>2002-11-27</literal>, forventer du kanskje at 
           Subversion skal gi deg den siste revisjonen som ble opprettet 
@@ -488,7 +486,7 @@ r12 | ira | 2002-11-27 12:31:51 -0600 (Wed, 27 Nov 2002) | 6 lines
           enda tidligere.
           Husk at Subversion vil finne den <emphasis>nyeste versjonen i 
           depotet</emphasis> p&#229; den datoen du oppgir.
-          Hvis du gir en dato uten klokkeslett, som 
+          Hvis du angir en dato uten klokkeslett, som 
           <literal>2002-11-27</literal>, bruker Subversion klokkeslettet 
           00:00:00, s&#229; det &#229; se etter den nyeste revisjonen vil ikke 
           returnere noe som helst fra denne datoen.</para>
@@ -558,7 +556,7 @@ $ svn log --revision {2002-11-20}:4040
         revisjonsegenskaper bli forandret til &#229; representere helt feil 
         kronologi, eller kan til og med bli fjernet helt.
         Dette vil rote til den interne 
-        <quote>dato-til-revisjons</quote>-konverteringen som Subversion 
+        <quote>dato-til-revisjon</quote>-konverteringen som Subversion 
         utf&#248;rer.</para>
         
     </sect2>
@@ -624,9 +622,9 @@ Checked out revision 2499.
         more about in <xref linkend="svn-ch-4"/>.</para>
       @ENGLISH }}} -->
       <title>Oppbygning av depotet</title>
-      <para>Hvis du lurer p&#229; <!-- &#164; -->hva det g&#229;r i med 
+      <para>Hvis du lurer p&#229; hva det er med 
         <literal>trunk</literal> i URLen ovenfor, s&#229; er den en del av 
-        m&#229;ten vi anbefaler du legger ut Subversiondepotet, noe som vi 
+        m&#229;ten vi anbefaler du legger opp Subversiondepotet, noe som vi 
         vil snakke en god del mer om i <xref 
         linkend="svn-ch-4"/>.</para>
 
@@ -1311,8 +1309,8 @@ Updated to revision 2.
           forandringene du gj&#248;r for at depotet skal bli i stand til &#229; 
           gjengi disse forandringene.
           Det er ikke helt sant &#8212; det <emphasis>er</emphasis> noen 
-          tilfeller som &#248;yeblikkelig legger inn treforandringer til 
-          depotet.
+          tilfeller som legger inn treforandringer til 
+          depotet med en gang.
           Dette skjer bare n&#229;r en delkommando opererer direkte mot en 
           URL istedenfor en sti i en arbeidskopi.
           I s&#230;rdeleshet, spesifikk bruk av <command>svn mkdir</command>, 
@@ -1333,8 +1331,8 @@ Updated to revision 2.
           arbeidskopien som et slags <quote>anleggsomr&#229;de</quote> der du 
           gj&#248;r i stand forandringene f&#248;r du legger dem inn i depotet.
           Kommandoer som opererer p&#229; URLer har ikke denne luksusen, s&#229; 
-          n&#229;r du opererer direkte mot en URL, alle de ovennevnte 
-          operasjonene representerer en &#248;yeblikkelig innlegging.</para>
+          n&#229;r du opererer direkte mot en URL, representerer alle de ovennevnte 
+          operasjonene en &#248;yeblikkelig innlegging.</para>
 
       </sidebar>
 
