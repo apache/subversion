@@ -186,7 +186,7 @@
         <term>Hackability</term>
         <listitem>
           <para>Subversion has no historical baggage; it is
-            implemented a collection of shared C libraries with
+            implemented as a collection of shared C libraries with
             well-defined APIs.  This makes Subversion extremely
             maintainable and usable by other applications and
             languages.</para>
