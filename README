@@ -45,4 +45,5 @@ A rough guide to the source tree:
       Common code for client operations.
    subversion/client/
       The command line client
-
+   subversion/tests-common/
+      Common code for automated tests.
