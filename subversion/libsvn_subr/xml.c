@@ -50,13 +50,14 @@
 
 
 #include <string.h>
+#include "svn_xml.h"
 
 
 
 
 /* See svn_xml.h for details. */
 const char *
-get_attribute_value (char *name, const char **atts)
+svn_get_xml_attr_value (const char *name, const char **atts)
 {
   while (atts && (*atts))
     {

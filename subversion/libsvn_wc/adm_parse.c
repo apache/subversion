@@ -144,8 +144,8 @@ xml_handle_start (void *userData, const char *tagname, const char **atts)
       const char *entry_name;
       const char *entry_version;
 
-      entry_name = get_attribute_value ("name", atts);
-      entry_version = get_attribute_value ("version", atts);
+      entry_name = svn_get_xml_attr_value ("name", atts);
+      entry_version = svn_get_xml_attr_value ("version", atts);
 
       if (entry_name)  /* Name is some file in this directory. */
         {
