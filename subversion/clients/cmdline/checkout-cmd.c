@@ -101,7 +101,7 @@ svn_cl__checkout (apr_getopt_t *os,
       /* Ensure that we have a default dir to checkout into. */
       if (! opt_state->target)
         local_dir = svn_path_last_component (repos_url,
-                                             svn_path_local_style,
+                                             svn_path_url_style,
                                              pool);
       else
         local_dir = opt_state->target;
