@@ -1347,6 +1347,26 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info,
                                        APR_HASH_KEY_STRING))))
     goto cleanup;
 
+  /* If our array of targets contains only locks (and no actual file
+     or prop modifications), then we return here to avoid committing a
+     revision with no changes. */
+  {
+    svn_boolean_t found_changed_path = FALSE;
+
+    for (i = 0; i < commit_items->nelts; ++i)
+      {
+        svn_client_commit_item_t *item;
+        item = APR_ARRAY_IDX (commit_items, i, svn_client_commit_item_t *);
+        
+        if (item->state_flags != SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN) {
+          found_changed_path = TRUE;
+        }
+      }
+
+    if (!found_changed_path)
+      goto cleanup;
+  }
+
   /* Go get a log message.  If an error occurs, or no log message is
      specified, abort the operation. */
   if (ctx->log_msg_func)
@@ -1500,7 +1520,7 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info,
   /* A bump error is likely to occur while running a working copy log file,
      explicitly unlocking and removing temporary files would be wrong in
      that case.  A commit error (cmt_err) should only occur before any
-     attempt to modify the working copy, so it doesn't prevent explict
+     attempt to modify the working copy, so it doesn't prevent explicit
      clean-up. */
   if (! bump_err)
     {
