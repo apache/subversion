@@ -940,18 +940,10 @@ svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
        MERGE_TARGET, labeled with LEFT_LABEL, RIGHT_LABEL, and
        TARGET_LABEL.
  
-     * Copy the original MERGE_TARGET to a unique name in the same
-       directory, ending with the suffix '.TARGET_LABEL'.
-
-     * Similarly, copy MERGE_TARGET's text base to a unique name,
-       ending with the suffix '.rev-N', where N is the base revision
-       of MERGE-TARGET.  (This is useful because the calling code is
-       usually about to replace the old text base with RIGHT anyway.)
-
-     * Similarly, copy LEFT to a file ending with '.LEFT_LABEL'.
-       (RIGHT is not copied because it is very likely about to become
-       the new text-base.  If not, the caller is still free to
-       preserve it.) 
+     * Copy LEFT, RIGHT, and the original MERGE_TARGET to unique names
+       in the same directory as MERGE_TARGET, ending with the suffixes
+       ".LEFT_LABEL", ".RIGHT_LABEL", and ".TARGET_LABEL"
+       respectively.
 
      * Mark the entry for MERGE_TARGET as "conflicted", and track the
        abovementioned backup files in the entry as well.
