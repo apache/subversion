@@ -472,7 +472,7 @@ class TargetI18N(Target):
       self.gen_obj.graph.add(DT_OBJECT, ofile, SourceFile(src, reldir))
 
       # target depends upon object
-      self.gen_obj.graph.add(DT_NONLIB, self.name, ofile)
+      self.gen_obj.graph.add(DT_LINK, self.name, ofile)
 
     # Add us to the list of target dirs, so we're created in mkdir-init.
     self.gen_obj.target_dirs.append(self.path)
@@ -920,15 +920,18 @@ def _sorted_files(graph, area):
       else:
         # no dependencies found in the targets list. this is a good "base"
         # to add to the files list now.
-        # If the filename is blank, see if there are any NONLIB dependencies
-        # rather than adding a blank filename to the list.
-        if not isinstance(t, TargetI18N) and not isinstance(t, TargetJava):
-          files.append(t.filename)
-        else:
-          s = graph.get_sources(DT_NONLIB, t.name)
+        if isinstance(t, TargetJava):
+          # Java targets have no filename, and we just ignore them.
+          pass
+        elif isinstance(t, TargetI18N):
+          # I18N targets have no filename, we recurse one level deeper, and
+          # get the filenames of their dependencies.
+          s = graph.get_sources(DT_LINK, t.name)
           for d in s:
             if d not in targets:
               files.append(d.filename)
+        else:
+          files.append(t.filename)
 
         # don't consider this target any more
         targets.remove(t)
