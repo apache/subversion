@@ -281,7 +281,7 @@ def create_repos(path):
 
   if not(os.path.exists(path)):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
-  run_svnadmin("create", path)
+  run_svnadmin("create", path, "--bdb-txn-nosync")
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)

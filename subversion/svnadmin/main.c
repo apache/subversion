@@ -83,7 +83,8 @@ enum
     svnadmin__on_disk_template,
     svnadmin__in_repos_template,
     svnadmin__ignore_uuid,
-    svnadmin__force_uuid
+    svnadmin__force_uuid,
+    svnadmin__bdb_txn_nosync
   };
 
 /* Option codes and descriptions.
@@ -125,6 +126,9 @@ static const apr_getopt_option_t options_table[] =
     {"force-uuid", svnadmin__force_uuid, 0,
      "set repos UUID to that found in stream, if any."},
 
+    {"bdb-txn-nosync", svnadmin__bdb_txn_nosync, 0,
+     "disable fsync at database transaction commit [Berkeley DB]."},
+
     {NULL}
   };
 
@@ -137,7 +141,8 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"create", subcommand_create, {0},
      "usage: svnadmin create REPOS_PATH\n\n"
      "Create a new, empty repository at REPOS_PATH.\n",
-     {svnadmin__on_disk_template, svnadmin__in_repos_template} },
+     {svnadmin__on_disk_template, svnadmin__in_repos_template,
+      svnadmin__bdb_txn_nosync} },
     
     {"createtxn", subcommand_createtxn, {0},
      "usage: svnadmin createtxn REPOS_PATH -r REVISION\n\n"
@@ -216,6 +221,7 @@ struct svnadmin_opt_state
   svn_boolean_t incremental;                        /* --incremental */
   svn_boolean_t follow_copies;                      /* --copies */
   svn_boolean_t quiet;                              /* --quiet */
+  svn_boolean_t bdb_txn_nosync;                     /* --bdb-txn-nosync */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
   const char *on_disk;
@@ -229,11 +235,18 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   apr_hash_t *config;
-  
+  apr_hash_t *fs_config = NULL;
+
+  if (opt_state->bdb_txn_nosync)
+    {
+      fs_config = apr_hash_make (pool);
+      apr_hash_set (fs_config, "bdb-txn-nosync", 14, "1");
+    }
+
   SVN_ERR (svn_config_get_config (&config, pool));
   SVN_ERR (svn_repos_create (&repos, opt_state->repository_path,
                              opt_state->on_disk, opt_state->in_repos, 
-                             config, pool));
+                             config, fs_config, pool));
 
   return SVN_NO_ERROR;
 }
@@ -675,6 +688,9 @@ main (int argc, const char * const *argv)
         break;
       case svnadmin__force_uuid:
         opt_state.uuid_action = svn_repos_load_uuid_force;
+        break;
+      case svnadmin__bdb_txn_nosync:
+        opt_state.bdb_txn_nosync = TRUE;
         break;
       default:
         {
