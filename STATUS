@@ -74,19 +74,6 @@ section for approved changes.)
            http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=54039
            Message-Id:  <200401082033.i08KXMv45357@newton.ch.collab.net>
 
-   * Issue #1693
-     Improved signal handling for svnadmin, svnlook and svn
-     Justification: Avoids uncontrolled termination resulting in
-        wedged repositories. API change. Low risk.
-     Votes:
-      +1: bliss, rooneg, ghudson, striker
-      -1: gstein
-          -- seems like a SIGPIPE should cause a graceful exit, rather
-             than to have it continue chewing CPU.
-          -- Rebuttal, see:
-          http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=54076
-          Message-Id:  <1073614613.32657.258.camel@error-messages.mit.edu>
-
 
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
@@ -352,6 +339,15 @@ the section for unapproved changes.)
      Votes:
       +1 (concept): gstein
       +1: kfogel, david, striker
+
+
+   * Issue #1693
+     Improved signal handling for svnadmin, svnlook and svn
+     Justification: Avoids uncontrolled termination resulting in
+        wedged repositories. API change. Low risk.
+     Votes:
+      +1: bliss, rooneg, ghudson, striker
+      +1 (concept): gstein
 
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
