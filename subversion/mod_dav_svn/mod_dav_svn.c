@@ -47,6 +47,7 @@ typedef struct {
   const char *fs_path;          /* path to the SVN FS */
   const char *repo_name;        /* repository name */
   const char *xslt_uri;         /* XSL transform URI */
+  const char *fs_parent_path;   /* path to parent of of SVN FS'es  */
 } dav_svn_dir_conf;
 
 #define INHERIT_VALUE(parent, child, field) \
@@ -118,6 +119,7 @@ static void *dav_svn_merge_dir_config(apr_pool_t *p,
     newconf->fs_path = INHERIT_VALUE(parent, child, fs_path);
     newconf->repo_name = INHERIT_VALUE(parent, child, repo_name);
     newconf->xslt_uri = INHERIT_VALUE(parent, child, xslt_uri);
+    newconf->fs_parent_path = INHERIT_VALUE(parent, child, fs_parent_path);
 
     return newconf;
 }
@@ -147,7 +149,24 @@ static const char *dav_svn_path_cmd(cmd_parms *cmd, void *config,
 {
     dav_svn_dir_conf *conf = config;
 
+    if (conf->fs_parent_path != NULL)
+      return "SVNPath cannot be defined at same time as SVNParentPath.";
+
     conf->fs_path = apr_pstrdup(cmd->pool, arg1);
+
+    return NULL;
+}
+
+
+static const char *dav_svn_parent_path_cmd(cmd_parms *cmd, void *config,
+                                           const char *arg1)
+{
+    dav_svn_dir_conf *conf = config;
+
+    if (conf->fs_path != NULL)
+      return "SVNParentPath cannot be defined at same time as SVNPath.";
+
+    conf->fs_parent_path = apr_pstrdup(cmd->pool, arg1);
 
     return NULL;
 }
@@ -193,6 +212,15 @@ const char *dav_svn_get_fs_path(request_rec *r)
     conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
     return conf->fs_path;
 }
+
+const char *dav_svn_get_fs_parent_path(request_rec *r)
+{
+    dav_svn_dir_conf *conf;
+
+    conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+    return conf->fs_parent_path;
+}
+
 
 const char *dav_svn_get_repo_name(request_rec *r)
 {
@@ -242,6 +270,12 @@ static const command_rec dav_svn_cmds[] =
   AP_INIT_TAKE1("SVNIndexXSLT", dav_svn_xslt_uri, NULL, ACCESS_CONF,
                 "specify the URI of an XSL transformation for "
                 "directory indexes"),
+
+  /* per directory/location */
+  AP_INIT_TAKE1("SVNParentPath", dav_svn_parent_path_cmd, NULL, ACCESS_CONF,
+                "specifies the location in the filesystem whose "
+                "subdirectories are assumed to be Subversion repositories."),
+
 
   { NULL }
 };

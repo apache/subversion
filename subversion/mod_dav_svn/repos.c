@@ -815,6 +815,10 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   const char *fs_path;
   const char *repo_name;
   const char *xslt_uri;
+  const char *fs_parent_path;
+  const char *true_root_path;
+  const char *true_fs_path;
+  const char *true_relative_path;
   dav_resource_combined *comb;
   dav_svn_repos *repos;
   apr_size_t len1;
@@ -828,16 +832,18 @@ static dav_error * dav_svn_get_resource(request_rec *r,
      the error pool, as a subpool of the request pool. */
   (void) svn_error_init_pool(r->pool);
 
-  if ((fs_path = dav_svn_get_fs_path(r)) == NULL)
+  if (((fs_path = dav_svn_get_fs_path(r)) == NULL)
+      && ((fs_parent_path = dav_svn_get_fs_parent_path(r)) == NULL))
     {
       /* ### are SVN_ERR_APMOD codes within the right numeric space? */
       return dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
                            SVN_ERR_APMOD_MISSING_PATH_TO_FS,
-                           "The server is misconfigured: an SVNPath "
+                           "The server is misconfigured: "
+                           "either an SVNPath or SVNParentPath "
                            "directive is required to specify the location "
                            "of this resource's repository.");
     }
-
+  
   repo_name = dav_svn_get_repo_name(r);
   xslt_uri = dav_svn_get_xslt_uri(r);
 
@@ -905,11 +911,41 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* ### need a better name... it isn't "relative" because of the leading
      ### slash. something about SVN-private-path */
 
+  if (fs_path != NULL)
+    {
+      /* normal case:  the SVNPath command was used to specify a
+         particular repository.  Don't change a thing.  */
+      true_relative_path = relative;
+      true_root_path = root_path;
+      true_fs_path = fs_path;
+    }
+  else if (fs_parent_path != NULL)
+    {
+      /* SVNParentPath was used: assume the first component of
+         'relative' is the name of a repository. */
+      const char *magic_component;
+      int i;
+      apr_size_t len = strlen(relative);
+
+      for (i = 1; i < len; i++)
+        {
+          if (relative[i] == '/')
+            break;
+        }
+
+      magic_component = apr_pstrndup(r->pool, relative + 1, i - 1);
+
+      true_relative_path = relative + i;
+      true_root_path = svn_path_join (root_path, magic_component, r->pool);
+      true_fs_path = svn_path_join (fs_parent_path, magic_component, r->pool);
+    }
+
+
   /* "relative" is part of the "uri" string, so it has the proper
      lifetime to store here. */
   /* ### that comment no longer applies. we're creating a string with its
      ### own lifetime now. so WHY are we using a string? hmm... */
-  comb->priv.uri_path = svn_stringbuf_create(relative, r->pool);
+  comb->priv.uri_path = svn_stringbuf_create(true_relative_path, r->pool);
 
   /* initialize this until we put something real here */
   comb->priv.root.rev = SVN_INVALID_REVNUM;
@@ -923,10 +959,10 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* We are assuming the root_path will live at least as long as this
      resource. Considering that it typically comes from the per-dir
      config in mod_dav, this is valid for now. */
-  repos->root_path = root_path;
+  repos->root_path = true_root_path;
 
   /* where is the SVN FS for this resource? */
-  repos->fs_path = fs_path;
+  repos->fs_path = true_fs_path;
 
   /* A name for the repository */
   repos->repo_name = repo_name;
@@ -943,13 +979,14 @@ static dav_error * dav_svn_get_resource(request_rec *r,
     repos->username = "anonymous";
 
   /* open the SVN FS */
-  serr = svn_repos_open(&(repos->repos), fs_path, r->pool);
+  serr = svn_repos_open(&(repos->repos), true_fs_path, r->pool);
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  apr_psprintf(r->pool,
                                               "Could not open the SVN "
-                                              "filesystem at %s", fs_path));
+                                              "filesystem at %s",
+                                              true_fs_path));
     }
 
   /* cache the filesystem object */
@@ -964,7 +1001,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
      the type of the resource. */
 
   /* skip over the leading "/" in the relative URI */
-  if (dav_svn_parse_uri(comb, relative + 1, label, use_checked_in))
+  if (dav_svn_parse_uri(comb, true_relative_path + 1, label, use_checked_in))
     goto malformed_URI;
 
 #ifdef SVN_DEBUG
