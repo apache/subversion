@@ -139,6 +139,8 @@ svn_error_t *svn_wc_apply_delta (void *delta_src,
  * This walker will effect the changes during an update/checkout.
  */
 svn_error_t *svn_wc_get_change_walker(svn_string_t *dest,
+                                      svn_string_t *repos,
+                                      svn_vernum_t version,
                                       const svn_delta_walk_t **walker,
                                       void **walk_baton,
                                       void **dir_baton,
