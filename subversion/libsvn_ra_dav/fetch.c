@@ -395,13 +395,15 @@ static svn_error_t *custom_get_request(ne_session *sess,
     }
 
   /* add in a reader to capture the body of the response. */
-  if (ras->compression) {
-    decompress = ne_decompress_reader(req, ne_accept_2xx, reader, &cgc);
-  }
-  else {
-    decompress = NULL;
-    ne_add_response_body_reader(req, ne_accept_2xx, reader, &cgc);
-  }
+  if (ras->compression) 
+    {
+      decompress = ne_decompress_reader(req, ne_accept_2xx, reader, &cgc);
+    }
+  else 
+    {
+      decompress = NULL;
+      ne_add_response_body_reader(req, ne_accept_2xx, reader, &cgc);
+    }
 
   /* complete initialization of the body reading context */
   cgc.subctx = subctx;
@@ -412,12 +414,10 @@ static svn_error_t *custom_get_request(ne_session *sess,
                                      226 /* IM Used */,
                                      pool);
 
-  if (decompress) {
+  if (decompress) 
     decompress_rv = ne_decompress_destroy(decompress);
-  }
-  else {
+  else 
     decompress_rv = 0;
-  }
 
   /* we no longer need this */
   if (cgc.ctype.value != NULL)

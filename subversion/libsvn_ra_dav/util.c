@@ -478,7 +478,14 @@ svn_ra_dav__parsed_request(ne_session *sess,
   if (body != NULL)
     ne_set_request_body_buffer(req, body, strlen(body));
   else
-    SVN_ERR(svn_ra_dav__set_neon_body_provider(req, body_file));
+    {
+      err = svn_ra_dav__set_neon_body_provider(req, body_file);
+      if (err)
+        {
+          ne_request_destroy(req);
+          return err;
+        }
+    }
 
   /* ### use a symbolic name somewhere for this MIME type? */
   ne_add_request_header(req, "Content-Type", "text/xml");
@@ -577,7 +584,7 @@ svn_ra_dav__parsed_request(ne_session *sess,
   ne_request_destroy(req);
 
   if (err) /* If the error parser had a problem */
-    goto error;
+    goto cleanup;
 
   /* Set the expected code based on the method. */
   expected_code = 200;
@@ -597,7 +604,7 @@ svn_ra_dav__parsed_request(ne_session *sess,
         msg = apr_psprintf(pool, "%s of '%s'", method, url);
         err = svn_ra_dav__convert_error(sess, msg, rv);
       }
-      goto error;
+      goto cleanup;
     }
 
   /* was there an XML parse error somewhere? */
@@ -608,19 +615,19 @@ svn_ra_dav__parsed_request(ne_session *sess,
                               "The %s request returned invalid XML "
                               "in the response: %s. (%s)",
                               method, msg, url);
-      goto error;
+      goto cleanup;
     }
-  /* ### maybe hook this to a pool? */
+
+  /* ### necessary?  be paranoid for now. */
+  err = SVN_NO_ERROR;
+
+ cleanup:
   ne_xml_destroy(success_parser);
   ne_xml_destroy(error_parser);
-
-  return NULL;
-
- error:
-  ne_xml_destroy(success_parser);
-  ne_xml_destroy(error_parser);
-  return svn_error_createf(err->apr_err, err,
-                           "%s request failed on '%s'", method, url );
+  if (err)
+    return svn_error_createf(err->apr_err, err,
+                             "%s request failed on '%s'", method, url );
+  return SVN_NO_ERROR;
 }
 
 
