@@ -13,7 +13,7 @@ Candidate changes:
     Fix bug in the changes table change-folding code.
     Justification: Historical correctness issue.
     Votes:
-      +1: cmpilato, dlr
+      +1: cmpilato, dlr, sussman
 
   * r8708
     Use warnings pragma on perl hook-scripts.
@@ -66,7 +66,7 @@ Candidate changes:
     Justification: The paths are for URLS they should be copyable for use on
     repo URLS.
     Votes:
-      +1: breser
+      +1: breser, sussman
 
   * r9212, r9231
     Added VC7 support and defines for including debug symbol files.
@@ -101,4 +101,4 @@ Candidate changes:
   * r9358
     Make mod_authz_svn less restrictive per issue #1821.
     Votes:
-      +1: striker, dlr
+      +1: striker, dlr, sussman
