@@ -118,7 +118,7 @@ svn_string_t *svn_string_create (const char *cstring,
                                  apr_pool_t *pool);
 
 /** Create a new bytestring containing a generic string of bytes 
- * (NON-null-terminated) */
+ * (NOT null-terminated) */
 svn_string_t *svn_string_ncreate (const char *bytes,
                                   apr_size_t size, 
                                   apr_pool_t *pool);
@@ -158,9 +158,6 @@ svn_boolean_t svn_string_compare (const svn_string_t *str1,
  * @a str->len if none.
  */
 apr_size_t svn_string_first_non_whitespace (const svn_string_t *str);
-
-/** Strips whitespace from both sides of @a str (modified in place). */
-void svn_string_strip_whitespace (svn_string_t *str);
 
 /** Return position of last occurrence of @a char in @a str, or return
  * @a str->len if no occurrence.
@@ -265,7 +262,7 @@ svn_boolean_t svn_stringbuf_compare (const svn_stringbuf_t *str1,
  */
 apr_size_t svn_stringbuf_first_non_whitespace (const svn_stringbuf_t *str);
 
-/** Strips whitespace from both sides of @a str (modified in place). */
+/** Strip whitespace from both sides of @a str (modified in place). */
 void svn_stringbuf_strip_whitespace (svn_stringbuf_t *str);
 
 /** Return position of last occurrence of @a ch in @a str, or return

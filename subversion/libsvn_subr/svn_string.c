@@ -178,44 +178,6 @@ svn_string_first_non_whitespace (const svn_string_t *str)
 }
 
 
-void
-svn_string_strip_whitespace (svn_string_t *str)
-{
-  apr_size_t i;
-
-  /* Find first non-whitespace character */
-  apr_size_t offset = svn_string_first_non_whitespace (str);
-
-  if (offset == str->len)
-    return;
-
-  /* Go ahead!  Waste some RAM, we've got pools! :)  */
-  str->data += offset;
-  str->len -= offset;
-  /* Can't adjust `blocksize' here, because svn_string_t does not
-     record a blocksize independent of len, thus can't be
-     realloc'd. */
-
-  /* Now that we've chomped whitespace off the front, search backwards
-     from the end for the first non-whitespace. */
-
-  for (i = (str->len - 1); i >= 0; i--)
-    {
-      if (! apr_isspace (str->data[i]))
-        {
-          break;
-        }
-    }
-  
-  /* Mmm, waste some more RAM */
-  str->len = i + 1;
-
-  /* ### In svn_stringbuf_strip_whitespace, we reset the null
-     terminator here.  But svn_string_t can have const data, so I
-     don't think we can do that, unfortunately.  */
-}
-
-
 apr_size_t
 svn_string_find_char_backward (const svn_string_t *str, char ch)
 {
@@ -460,32 +422,17 @@ svn_stringbuf_first_non_whitespace (const svn_stringbuf_t *str)
 void
 svn_stringbuf_strip_whitespace (svn_stringbuf_t *str)
 {
-  apr_size_t i;
-
   /* Find first non-whitespace character */
   apr_size_t offset = svn_stringbuf_first_non_whitespace (str);
-
-  if (offset == str->len)
-    return;
 
   /* Go ahead!  Waste some RAM, we've got pools! :)  */
   str->data += offset;
   str->len -= offset;
   str->blocksize -= offset;
 
-  /* Now that we've chomped whitespace off the front, search backwards
-     from the end for the first non-whitespace. */
-
-  for (i = (str->len - 1); i >= 0; i--)
-    {
-      if (! apr_isspace (str->data[i]))
-        {
-          break;
-        }
-    }
-  
-  /* Mmm, waste some more RAM */
-  str->len = i + 1;
+  /* Now that we've trimmed the front, trim the end, wasting more RAM. */
+  while ((str->len > 0) && apr_isspace (str->data[str->len - 1]))
+    str->len--;
   str->data[str->len] = '\0';
 }
 
