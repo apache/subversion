@@ -21,10 +21,6 @@ check_status()
       echo Oops, problem: ${@-"(no further details)"}
       exit $res
     fi
-    # REMOVE ME;  for easy debugging step-throughs:
-    if test "`whoami 2> /dev/null`" = "sussman"; then
-      read foo
-    fi
 }
 
 # Remove the testing tree
