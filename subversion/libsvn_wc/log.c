@@ -498,8 +498,7 @@ log_do_modify_entry (struct log_runner *loggy,
 {
   svn_error_t *err;
   apr_hash_t *ah = svn_xml_make_att_hash (atts, loggy->pool);
-  const char *sname = apr_pstrdup (loggy->pool, name);
-  const char *tfile = apr_pstrdup (loggy->pool, loggy->path);
+  const char *tfile;
   svn_wc_entry_t *entry;
   apr_uint32_t modify_flags;
   const char *valuestr;
@@ -507,6 +506,11 @@ log_do_modify_entry (struct log_runner *loggy,
   /* Convert the attributes into an entry structure. */
   SVN_ERR (svn_wc__atts_to_entry (&entry, &modify_flags, ah, loggy->pool));
 
+  /* Make TFILE the path of the thing being modified.  */
+  tfile = svn_path_join (loggy->path,
+                         strcmp (name, SVN_WC_ENTRY_THIS_DIR) ? name : "",
+                         loggy->pool);
+      
   /* Did the log command give us any timestamps?  There are three
      possible scenarios here.  We must check both text_time
      and prop_time for each of the three scenarios.  */
@@ -521,9 +525,6 @@ log_do_modify_entry (struct log_runner *loggy,
       enum svn_node_kind tfile_kind;
       apr_time_t text_time;
 
-      if (strcmp (sname, SVN_WC_ENTRY_THIS_DIR))
-        tfile = svn_path_join (tfile, sname, loggy->pool);
-      
       err = svn_io_check_path (tfile, &tfile_kind, loggy->pool);
       if (err)
         return svn_error_createf
@@ -560,7 +561,7 @@ log_do_modify_entry (struct log_runner *loggy,
           (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
            "error checking path `%s'", pfile);
       
-      err = svn_io_file_affected_time (&prop_time, tfile, loggy->pool);
+      err = svn_io_file_affected_time (&prop_time, pfile, loggy->pool);
       if (err)
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
@@ -570,7 +571,7 @@ log_do_modify_entry (struct log_runner *loggy,
     }
 
   /* Now write the new entry out */
-  err = svn_wc__entry_modify (loggy->path, sname, entry, modify_flags, 
+  err = svn_wc__entry_modify (loggy->path, name, entry, modify_flags, 
                               loggy->pool);
   if (err)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
