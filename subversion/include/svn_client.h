@@ -775,6 +775,15 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  void *notify_baton,
                  apr_pool_t *pool);
 
+
+/** Properties **/
+
+/*  Note that certain svn-controlled properties must always have their
+    values set and stored in UTF8 with LF line endings.  When
+    retrieving these properties, callers must convert the values back
+    to native locale and native line-endings before displaying them to
+    the user.  For help with this task, see
+    svn_prop_needs_translation() and svn_subst_[de]translate_string(). */
 
 
 /* Set PROPNAME to PROPVAL on TARGET.  If RECURSE is true, then PROPNAME
@@ -911,6 +920,7 @@ svn_client_revprop_list (apr_hash_t **props,
                          svn_revnum_t *set_rev,
                          apr_pool_t *pool);
 
+
 
 /* Export the contents of either a subversion repository or a subversion 
    working copy into a 'clean' directory (meaning a directory with no 

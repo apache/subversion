@@ -139,6 +139,28 @@ svn_subst_translate_cstring (const char *src,
                              svn_boolean_t expand,
                              apr_pool_t *pool);
 
+
+/*** Eol conversion and character encodings ***/
+
+/* Translate the data in VALUE (assumed to be in encoded in charset
+   ENCODING) to UTF8 and LF line-endings.  If ENCODING is NULL, then
+   assume that VALUE is in the system-default language encoding.
+   Return the translated data in *NEW_VALUE, allocated in POOL.  
+*/
+svn_error_t *svn_subst_translate_string (svn_string_t **new_value,
+                                         const svn_string_t *value,
+                                         const char *encoding,
+                                         apr_pool_t *pool);
+
+/* Translate the data in VALUE from UTF8 and LF line-endings into
+   native locale and native line-endings.  Return the translated data
+   in *NEW_VALUE, allocated in POOL.  
+*/
+svn_error_t *svn_subst_detranslate_string (svn_string_t **new_value,
+                                           const svn_string_t *value,
+                                           apr_pool_t *pool);
+
+
 
 #ifdef __cplusplus
 }

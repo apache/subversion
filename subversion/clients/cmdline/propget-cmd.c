@@ -29,6 +29,7 @@
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_utf.h"
+#include "svn_subst.h"
 #include "cl.h"
 
 
@@ -100,9 +101,9 @@ svn_cl__propget (apr_getopt_t *os,
           /* If this is a special Subversion property, it is stored as
              UTF8 and LF, so convert to the native locale and eol-style. */
           
-          if (svn_cl__prop_needs_translation (pname_utf8))
-            SVN_ERR (svn_cl__detranslate_string (&printable_val, propval,
-                                                 pool));
+          if (svn_prop_needs_translation (pname_utf8))
+            SVN_ERR (svn_subst_detranslate_string (&printable_val, propval,
+                                                   pool));
           
           printf ("%s\n", printable_val->data);
         }
@@ -144,8 +145,9 @@ svn_cl__propget (apr_getopt_t *os,
               
               /* If this is a special Subversion property, it is stored as
                  UTF8, so convert to the native format. */
-              if (svn_cl__prop_needs_translation (pname_utf8))
-                SVN_ERR (svn_cl__detranslate_string (&propval, propval, pool));
+              if (svn_prop_needs_translation (pname_utf8))
+                SVN_ERR (svn_subst_detranslate_string (&propval, propval,
+                                                       pool));
 
               /* ### this won't handle binary property values */
               if (print_filenames) 

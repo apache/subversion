@@ -185,28 +185,6 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash, apr_pool_t *pool);
 svn_error_t *
 svn_cl__print_prop_names (apr_hash_t *prop_hash, apr_pool_t *pool);
 
-
-/* If PROPNAME requires that its value be stored as UTF8/LF in the
-   repository, then return TRUE.  Else return FALSE. */
-svn_boolean_t svn_cl__prop_needs_translation (const char *propname);
-
-/* Translate the data in VALUE (assumed to be in encoded in charset
-   ENCODING) to UTF8 and LF line-endings.  If ENCODING is NULL, then
-   assume that VALUE is in the system-default language encoding.
-   Return the translated data in *NEW_VALUE, allocated in POOL.  */
-svn_error_t *svn_cl__translate_string (svn_string_t **new_value,
-                                       const svn_string_t *value,
-                                       const char *encoding,
-                                       apr_pool_t *pool);
-
-/* Translate the data in VALUE from UTF8 and LF line-endings into
-   native locale and native line-endings.  Return the translated data
-   in *NEW_VALUE, allocated in POOL.  */
-svn_error_t *svn_cl__detranslate_string (svn_string_t **new_value,
-                                         const svn_string_t *value,
-                                         apr_pool_t *pool);
-
-
 /* Return a SVN_ERR_CL_ARG_PARSING_ERROR error, with a message stating
    that one must give an explicit revision when operating on a
    revision property. */

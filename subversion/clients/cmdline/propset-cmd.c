@@ -29,6 +29,7 @@
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_utf.h"
+#include "svn_subst.h"
 #include "cl.h"
 
 
@@ -70,9 +71,9 @@ svn_cl__propset (apr_getopt_t *os,
   
   /* We only want special Subversion property values to be in UTF-8
      and LF line endings.  All other propvals are taken literally. */
-  if (svn_cl__prop_needs_translation (pname_utf8))
-    SVN_ERR (svn_cl__translate_string (&propval, propval,
-                                       opt_state->encoding, pool));
+  if (svn_prop_needs_translation (pname_utf8))
+    SVN_ERR (svn_subst_translate_string (&propval, propval,
+                                         opt_state->encoding, pool));
   else 
     if (opt_state->encoding)
       return svn_error_create 

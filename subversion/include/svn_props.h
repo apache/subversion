@@ -75,6 +75,14 @@ svn_prop_kind_t svn_property_kind (int *prefix_len,
 svn_boolean_t svn_prop_is_svn_prop (const char *prop_name);
 
 
+/* If PROPNAME requires that its value be stored as UTF8/LF in the
+   repository, then return TRUE.  Else return FALSE.  This is for
+   users of libsvn_client or libsvn_fs, since it their responsibility
+   to do this translation in both directions.  (See
+   svn_subst_[de]translate_string for help with this task.) */
+svn_boolean_t svn_prop_needs_translation (const char *propname);
+
+
 /* Given an PROPLIST array of svn_prop_t structures, allocate three
    new arrays in POOL.  Categorize each property and then create new
    svn_prop_t structures in the proper lists.  Each new svn_prop_t
@@ -112,7 +120,9 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 
 /* NOTE: the values of these properties are always UTF8-encoded with
    LF line-endings.  It is the burden of svn library users to enforce
-   this.  */
+   this.  Use svn_prop_needs_translation() above to discover if a
+   certain property needs translation, and you can use
+   svn_subst_[de]translate_string() to do the translation. */
 
 /* The mime-type of a given file. */
 #define SVN_PROP_MIME_TYPE  SVN_PROP_PREFIX "mime-type"
