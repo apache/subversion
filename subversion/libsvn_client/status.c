@@ -121,10 +121,17 @@ svn_client_status (svn_revnum_t *result_rev,
   /* Close up our ADM area.  We'll be re-opening soon. */
   SVN_ERR (svn_wc_adm_close (adm_access));
 
-  /* Need to lock the tree as even a non-recursive status requires the
-     immediate directories to be locked. */
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, anchor, 
-                                  FALSE, TRUE, pool));
+  /* Need to lock the tree.  A recursive status requires us to lock the whole
+     tree.  A non-recursive status requires the target directory and immediate
+     subdirectories to be locked.  However, if the user does "svn status
+     --non-recursive dir1/dir2", then we start locking from dir1, so in order
+     to lock the children of dir2 we need a depth of 2.
+     ### FIXME: In the non-recursive case this always locks too much.  This
+     ###        is a performance bug.  (But this is better than locking too
+     ###        little, which would be a correctness bug).
+   */
+  SVN_ERR (svn_wc_adm_probe_open_depth (&adm_access, NULL, anchor, 
+                                        FALSE, (descend ? -1 : 2), pool));
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
