@@ -487,8 +487,8 @@ static svn_error_t *change_rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rc?s", &rev, &name, &value));
   SVN_ERR(must_have_write_access(conn, pool, b));
-  SVN_CMD_ERR(svn_repos_fs_change_rev_prop(b->repos, rev, b->user, name, value,
-                                           pool));
+  SVN_CMD_ERR(svn_repos_fs_change_rev_prop2(b->repos, rev, b->user,
+                                            name, value, NULL, NULL, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -502,7 +502,8 @@ static svn_error_t *rev_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "r", &rev));
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(svn_fs_revision_proplist(&props, b->fs, rev, pool));
+  SVN_CMD_ERR(svn_repos_fs_revision_proplist(&props, b->repos, rev,
+                                              NULL, NULL, pool));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
   SVN_ERR(write_proplist(conn, pool, props));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
@@ -519,7 +520,8 @@ static svn_error_t *rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rc", &rev, &name));
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(svn_fs_revision_prop(&value, b->fs, rev, name, pool));
+  SVN_CMD_ERR(svn_repos_fs_revision_prop(&value, b->repos, rev, name,
+                                         NULL, NULL, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "(?s)", value));
   return SVN_NO_ERROR;
 }
@@ -906,9 +908,9 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Get logs.  (Can't report errors back to the client at this point.) */
   lb.fs_path = b->fs_path;
   lb.conn = conn;
-  err = svn_repos_get_logs(b->repos, full_paths, start_rev, end_rev,
-                           changed_paths, strict_node, log_receiver, &lb,
-                           pool);
+  err = svn_repos_get_logs2(b->repos, full_paths, start_rev, end_rev,
+                            changed_paths, strict_node, NULL, NULL,
+                            log_receiver, &lb, pool);
 
   write_err = svn_ra_svn_write_word(conn, pool, "done");
   if (write_err)
@@ -987,7 +989,7 @@ static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   err = svn_repos_trace_node_locations(b->fs, &fs_locations, abs_path,
                                        peg_revision, location_revisions,
-                                       pool);
+                                       NULL, NULL, pool);
 
   /* Now, write the results to the connection. */
   if (!err)
@@ -1096,8 +1098,8 @@ static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   frb.conn = conn;
   frb.pool = NULL;
 
-  err = svn_repos_get_file_revs(b->repos, full_path, start_rev, end_rev,
-                                file_rev_handler, &frb, pool);
+  err = svn_repos_get_file_revs(b->repos, full_path, start_rev, end_rev, NULL,
+                                NULL, file_rev_handler, &frb, pool);
   write_err = svn_ra_svn_write_word(conn, pool, "done");
   if (write_err)
     {

@@ -668,6 +668,17 @@ SVN_ERROR_START
               SVN_ERR_AUTHZ_CATEGORY_START + 0,
               "Read access denied for root of edit")
 
+  /* @since New in 1.1. */
+  SVN_ERRDEF (SVN_ERR_AUTHZ_UNREADABLE,
+              SVN_ERR_AUTHZ_CATEGORY_START + 1,
+              "Item is not readable.")
+
+  /* @since New in 1.1. */
+  SVN_ERRDEF (SVN_ERR_AUTHZ_PARTIALLY_READABLE,
+              SVN_ERR_AUTHZ_CATEGORY_START + 2,
+              "Item is partially readable.")
+
+
   /* svndiff errors */
 
   SVN_ERRDEF (SVN_ERR_SVNDIFF_INVALID_HEADER,

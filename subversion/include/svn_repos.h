@@ -577,11 +577,40 @@ typedef svn_error_t *(*svn_repos_history_func_t) (void *baton,
                                                   svn_revnum_t revision,
                                                   apr_pool_t *pool);
 
-/** Call @a history_func (with @a history_baton) for each interesting
+/**
+ * @since New in 1.1.
+ *
+ * Call @a history_func (with @a history_baton) for each interesting
  * history location in the lifetime of @a path in @a fs, from the
  * youngest of @a end and @ start to the oldest.  Only cross
  * filesystem copy history if @a cross_copies is @c TRUE.  And do all
  * of this in @a pool.
+ *
+ * If @a authz_read_func is non-NULL, then use it (and @a
+ * authz_read_baton) to verify that @a path in @a end is readable; if
+ * not, return SVN_ERR_AUTHZ_UNREADABLE.  Also verify the readability
+ * of every ancestral path/revision pair before pushing them at @a
+ * history_func.  If a pair is deemed unreadable, then do not send
+ * them; instead, immmediately stop traversing history and return
+ * SVN_NO_ERROR.
+ */
+svn_error_t *
+svn_repos_history2 (svn_fs_t *fs,
+                    const char *path,
+                    svn_repos_history_func_t history_func,
+                    void *history_baton,
+                    svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton,
+                    svn_revnum_t start,
+                    svn_revnum_t end,
+                    svn_boolean_t cross_copies,
+                    apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * Similar to svn_repos_history(), but with @a authz_read_func and
+ * @a authz_read_baton always set to NULL.
  */
 svn_error_t *
 svn_repos_history (svn_fs_t *fs,
@@ -592,6 +621,7 @@ svn_repos_history (svn_fs_t *fs,
                    svn_revnum_t end,
                    svn_boolean_t cross_copies,
                    apr_pool_t *pool);
+
 
 /**
  * @since New in 1.1.
@@ -604,6 +634,13 @@ svn_repos_history (svn_fs_t *fs,
  * @a location_revisions is an array of svn_revnum_t's and @a *locations
  * maps 'svn_revnum_t *' to 'const char *'.
  *
+ * If optional @a authz_read_func is non-NULL, then use it (and @a
+ * authz_read_baton) to verify that the peg-object is readable.  If not,
+ * return SVN_ERR_AUTHZ_UNREADABLE.  Also use the @a authz_read_func
+ * to check that every path returned in the hash is readable.  If an
+ * unreadable path is encountered, stop tracing and return
+ * SVN_NO_ERROR.
+ *
  * @a pool is used for all allocations.
  */
 svn_error_t *
@@ -612,6 +649,8 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
                                 const char *fs_path,
                                 svn_revnum_t peg_revision,
                                 apr_array_header_t *location_revisions,
+                                svn_repos_authz_func_t authz_read_func,
+                                void *authz_read_baton,
                                 apr_pool_t *pool);
 
 /* ### other queries we can do someday --
@@ -666,9 +705,36 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
  * If @a start or @a end is a non-existent revision, return the error
  * @c SVN_ERR_FS_NO_SUCH_REVISION, without ever invoking @a receiver.
  *
+ * If optional @a authz_read_func is non-NULL, then use this function
+ * (along with optional @a authz_read_baton) to check the readability
+ * of each changed-path in each revision about to be "pushed" at
+ * @a receiver.  If a revision has all unreadable changed-paths, then
+ * don't push the revision at all.  If a revision has a mixture of
+ * readable and unreadable changed-paths, then silently omit the
+ * unreadable changed-paths when pushing the revision.
+ *
  * See also the documentation for @c svn_log_message_receiver_t.
  *
  * Use @a pool for temporary allocations.
+ */
+svn_error_t *
+svn_repos_get_logs2 (svn_repos_t *repos,
+                     const apr_array_header_t *paths,
+                     svn_revnum_t start,
+                     svn_revnum_t end,
+                     svn_boolean_t discover_changed_paths,
+                     svn_boolean_t strict_node_history,
+                     svn_repos_authz_func_t authz_read_func,
+                     void *authz_read_baton,
+                     svn_log_message_receiver_t receiver,
+                     void *receiver_baton,
+                     apr_pool_t *pool);
+
+/** 
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * Same as to svn_repos_dump_fs2(), but with @a authz_read_func and
+ * @a authz_read_baton always set to NULL.
  */
 svn_error_t *
 svn_repos_get_logs (svn_repos_t *repos,
@@ -682,6 +748,7 @@ svn_repos_get_logs (svn_repos_t *repos,
                     apr_pool_t *pool);
 
 
+
 /* ---------------------------------------------------------------*/
 
 /* Retreiving multiple revisions of a file. */
@@ -692,6 +759,16 @@ svn_repos_get_logs (svn_repos_t *repos,
  * @a handler_baton as its first argument for each such revision.
  * @a pool is used for all allocations.  See @c svn_fs_history_prev for
  * a discussion of interesting revisions.
+ *
+ * If optional @a authz_read_func is non-NULL, then use this function
+ * (along with optional @a authz_read_baton) to check the readability
+ * of the rev-path in each interesting revision encountered.
+ *
+ * Revision discovery happens from @a end to @a start, and if an
+ * unreadable revision is encountered before @a start is reached, then
+ * revision discovery stops and only the revisions from @a end to the
+ * oldest readable revision are returned (So it will appear that @a
+ * path was added without history in the latter revision).
  *
  * If there is an interesting revision of the file that is less than or
  * equal to start, the iteration will start at that revision.  Else, the
@@ -706,6 +783,8 @@ svn_error_t *svn_repos_get_file_revs (svn_repos_t *repos,
                                       const char *path,
                                       svn_revnum_t start,
                                       svn_revnum_t end,
+                                      svn_repos_authz_func_t authz_read_func,
+                                      void *authz_read_baton,
                                       svn_repos_file_rev_handler_t handler,
                                       void *handler_baton,
                                       apr_pool_t *pool);
@@ -772,7 +851,10 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
                                                 apr_pool_t *pool);
 
 
-/** Like @c svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
+/** 
+ * @since New in 1.1. 
+ *
+ * Like @c svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
  * post-revprop-change hooks around the change.  Use @a pool for
  * temporary allocations.
  *
@@ -780,6 +862,27 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
  * name of the property, and @a new_value is the new value of the
  * property.   @a author is the authenticated username of the person
  * changing the property value, or null if not available.
+ *
+ * If @a authz_read_func is non-NULL, then use it (with @a
+ * authz_read_baton) to validate the changed-paths associated with @a
+ * rev.  If the revision contains any unreadable changed paths, then
+ * return SVN_ERR_AUTHZ_UNREADABLE.
+ */
+svn_error_t *svn_repos_fs_change_rev_prop2 (svn_repos_t *repos,
+                                            svn_revnum_t rev,
+                                            const char *author,
+                                            const char *name,
+                                            const svn_string_t *new_value,
+                                            svn_repos_authz_func_t
+                                                          authz_read_func,
+                                            void *authz_read_baton,
+                                            apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * Similar to svn_repos_fs_change_rev_prop2(), but with the
+ * @a authz_read_func parameter always NULL.
  */
 svn_error_t *svn_repos_fs_change_rev_prop (svn_repos_t *repos,
                                            svn_revnum_t rev,
@@ -787,6 +890,58 @@ svn_error_t *svn_repos_fs_change_rev_prop (svn_repos_t *repos,
                                            const char *name,
                                            const svn_string_t *new_value,
                                            apr_pool_t *pool);
+
+
+
+/**
+ * @since New in 1.1.
+ *
+ * Set @a *value_p to the value of the property named @a propname on
+ * revision @a rev in the filesystem opened in @a repos.  If @a rev
+ * has no property by that name, set @a *value_p to zero.  Allocate
+ * the result in @a pool.
+ *
+ * If @a authz_read_func is non-NULL, then use it (with @a
+ * authz_read_baton) to validate the changed-paths associated with @a
+ * rev.  If the changed-paths are all unreadable, then set @a *value_p
+ * to zero unconditionally.  If only some of the changed-paths are
+ * unreadable, then allow 'svn:author' and 'svn:date' propvalues to be
+ * fetched, but return 0 for any other property.
+ */
+svn_error_t *svn_repos_fs_revision_prop (svn_string_t **value_p,
+                                         svn_repos_t *repos,
+                                         svn_revnum_t rev,
+                                         const char *propname,
+                                         svn_repos_authz_func_t
+                                                      authz_read_func,
+                                         void *authz_read_baton,
+                                         apr_pool_t *pool);
+
+
+/**
+ * @since New in 1.1.
+ *
+ * Set @a *table_p to the entire property list of revision @a rev in
+ * filesystem opened in @a repos, as a hash table allocated in @a
+ * pool.  The table maps <tt>char *</tt> property names to @c
+ * svn_string_t * values; the names and values are allocated in @a
+ * pool.
+ *
+ * If @a authz_read_func is non-NULL, then use it (with @a
+ * authz_read_baton) to validate the changed-paths associated with @a
+ * rev.  If the changed-paths are all unreadable, then return an empty
+ * hash. If only some of the changed-paths are unreadable, then return
+ * an empty hash, except for 'svn:author' and 'svn:date' properties
+ * (assuming those properties exist).
+ */
+svn_error_t *svn_repos_fs_revision_proplist (apr_hash_t **table_p,
+                                             svn_repos_t *repos,
+                                             svn_revnum_t rev,
+                                             svn_repos_authz_func_t
+                                                        authz_read_func,
+                                             void *authz_read_baton,
+                                             apr_pool_t *pool);
+
 
 
 /* ---------------------------------------------------------------*/

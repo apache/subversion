@@ -175,6 +175,7 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
 }
 
 
+/* Deprecated. */
 svn_error_t *
 svn_repos_history (svn_fs_t *fs,
                    const char *path,
@@ -184,6 +185,25 @@ svn_repos_history (svn_fs_t *fs,
                    svn_revnum_t end,
                    svn_boolean_t cross_copies,
                    apr_pool_t *pool)
+{
+  return svn_repos_history2 (fs, path, history_func, history_baton,
+                             NULL, NULL,
+                             start, end, cross_copies, pool);
+}
+
+
+
+svn_error_t *
+svn_repos_history2 (svn_fs_t *fs,
+                    const char *path,
+                    svn_repos_history_func_t history_func,
+                    void *history_baton,
+                    svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton,
+                    svn_revnum_t start,
+                    svn_revnum_t end,
+                    svn_boolean_t cross_copies,
+                    apr_pool_t *pool)
 {
   svn_fs_history_t *history;
   apr_pool_t *oldpool = svn_pool_create (pool);
@@ -212,6 +232,16 @@ svn_repos_history (svn_fs_t *fs,
 
   /* Get a revision root for END, and an initial HISTORY baton.  */
   SVN_ERR (svn_fs_revision_root (&root, fs, end, pool));
+
+  if (authz_read_func)
+    {
+      svn_boolean_t readable;
+      SVN_ERR (authz_read_func (&readable, root, path,
+                                authz_read_baton, pool));
+      if (! readable)
+        return svn_error_create (SVN_ERR_AUTHZ_UNREADABLE, NULL, NULL);
+    }
+
   SVN_ERR (svn_fs_node_history (&history, root, path, oldpool));
 
   /* Now, we loop over the history items, calling svn_fs_history_prev(). */
@@ -237,6 +267,19 @@ svn_repos_history (svn_fs_t *fs,
       if (history_rev < start)
         break;
 
+      /* Is the history item readable?  If not, quit. */
+      if (authz_read_func)
+        {
+          svn_boolean_t readable;
+          svn_fs_root_t *history_root;
+          SVN_ERR (svn_fs_revision_root (&history_root, fs,
+                                         history_rev, newpool));
+          SVN_ERR (authz_read_func (&readable, history_root, history_path,
+                                    authz_read_baton, newpool));
+          if (! readable)
+            break;
+        }
+      
       /* Call the user-provided callback function. */
       SVN_ERR (history_func (history_baton, history_path, 
                              history_rev, newpool));
@@ -252,6 +295,24 @@ svn_repos_history (svn_fs_t *fs,
 
   svn_pool_destroy (oldpool);
   svn_pool_destroy (newpool);
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper func:  return SVN_ERR_AUTHZ_UNREADABLE if ROOT/PATH is
+   unreadable. */
+static svn_error_t *
+check_readability (svn_fs_root_t *root,
+                   const char *path,
+                   svn_repos_authz_func_t authz_read_func,
+                   void *authz_read_baton,                          
+                   apr_pool_t *pool)
+{
+  svn_boolean_t readable;
+  SVN_ERR (authz_read_func (&readable, root, path, authz_read_baton, pool));
+  if (! readable)
+    return svn_error_create (SVN_ERR_AUTHZ_UNREADABLE, NULL,
+                             _("Unreadable path encountered; access denied."));
   return SVN_NO_ERROR;
 }
 
@@ -321,12 +382,15 @@ check_ancestry_of_peg_path (svn_boolean_t *is_ancestor,
   return SVN_NO_ERROR;
 }
 
+
 svn_error_t *
 svn_repos_trace_node_locations (svn_fs_t *fs,
                                 apr_hash_t **locations,
                                 const char *fs_path,
                                 svn_revnum_t peg_revision,
                                 apr_array_header_t *location_revisions_orig,
+                                svn_repos_authz_func_t authz_read_func,
+                                void *authz_read_baton,
                                 apr_pool_t *pool)
 {
   apr_array_header_t *location_revisions;
@@ -340,6 +404,15 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
 
   /* Sanity check. */
   assert (location_revisions_orig->elt_size == sizeof(svn_revnum_t));
+
+  /* Another sanity check. */
+  if (authz_read_func)
+    {
+      svn_fs_root_t *peg_root;
+      SVN_ERR (svn_fs_revision_root (&peg_root, fs, peg_revision, pool));
+      SVN_ERR (check_readability (peg_root, fs_path,
+                                  authz_read_func, authz_read_baton, pool));
+    }
 
   *locations = apr_hash_make (pool);
 
@@ -374,6 +447,9 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
                                  (is_ancestor ?
                                   (*revision_ptr) :
                                   peg_revision), pool));
+  if (authz_read_func)
+    SVN_ERR (check_readability (root, fs_path, authz_read_func,
+                                authz_read_baton, pool));
 
   SVN_ERR (svn_fs_node_history (&history, root, fs_path, lastpool));
 
@@ -386,6 +462,20 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
         break;
 
       SVN_ERR (svn_fs_history_location (&path, &revision, history, currpool));
+
+      if (authz_read_func)
+        {
+          svn_boolean_t readable;
+          svn_fs_root_t *tmp_root;
+
+          SVN_ERR (svn_fs_revision_root (&tmp_root, fs, revision, currpool));
+          SVN_ERR (authz_read_func (&readable, tmp_root, path,
+                                    authz_read_baton, currpool));
+          if (! readable)
+            {
+              return SVN_NO_ERROR;
+            }
+        }
 
       /* Assign the current path to all younger revisions until we reach
          the current one. */
@@ -416,6 +506,8 @@ svn_repos_get_file_revs (svn_repos_t *repos,
                          const char *path,
                          svn_revnum_t start,
                          svn_revnum_t end,
+                         svn_repos_authz_func_t authz_read_func,
+                         void *authz_read_baton,
                          svn_repos_file_rev_handler_t handler,
                          void *handler_baton,
                          apr_pool_t *pool)
@@ -456,6 +548,19 @@ svn_repos_get_file_revs (svn_repos_t *repos,
       if (!history)
         break;
       SVN_ERR (svn_fs_history_location (&rev_path, &rev, history, iter_pool));
+      if (authz_read_func)
+        {
+          svn_boolean_t readable;
+          svn_fs_root_t *tmp_root;
+
+          SVN_ERR (svn_fs_revision_root (&tmp_root, repos->fs, rev, iter_pool));
+          SVN_ERR (authz_read_func (&readable, tmp_root, rev_path,
+                                    authz_read_baton, iter_pool));
+          if (! readable)
+            {
+              break;
+            }
+        }
       *(svn_revnum_t*) apr_array_push (revnums) = rev;
       *(char **) apr_array_push (paths) = apr_pstrdup (pool, rev_path);
       if (rev <= start)
