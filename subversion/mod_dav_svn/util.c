@@ -24,8 +24,7 @@
 #include "svn_fs.h"
 #include "svn_dav.h"
 
-#include "mod_dav_svn.h"
-
+#include "dav_svn.h"
 
 
 dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
