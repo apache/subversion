@@ -216,7 +216,7 @@ get_representation_skel (skel_t **skel_p,
    necessary temporary allocation in POOL.  */
 static svn_error_t *
 put_representation_skel (svn_fs_t *fs,
-			 svn_fs_id_t *id, 
+			 const svn_fs_id_t *id, 
 			 skel_t *skel,
 			 DB_TXN *txn,
 			 apr_pool_t *pool)
@@ -282,7 +282,7 @@ put_node_revision_skel (svn_fs_t *fs,
 
   /* Start with a dummy "fulltext" skel, and just drop in the
      NODE-REVISION skel for this node.  */
-  static skel_t rep[] = {
+  skel_t rep[] = {
     { 0, 0, 0, &rep[1], 0 },
     { 1, "fulltext", 8, 0, 0 }
   };
@@ -492,11 +492,11 @@ make_nodes (svn_fs_t *fs, int create)
   if (create)
     {
       /* Create node 1.1, the initial root directory.  */
-      static char node_1_1[] = "(fulltext ((directory ()) ()))";
+      static const char node_1_1[] = "(fulltext ((directory ()) ()))";
       skel_t *rep_skel = svn_fs__parse_skel (node_1_1,
 					     sizeof (node_1_1) - 1,
 					     fs->pool);
-      static svn_fs_id_t id_1_1[] = { 1, 1, -1 };
+      static const svn_fs_id_t id_1_1[] = { 1, 1, -1 };
       
       SVN_ERR (put_representation_skel (fs, id_1_1, rep_skel, 0, fs->pool));
     }
@@ -1288,3 +1288,10 @@ svn_fs_run_cleanup_node (apr_pool_t *pool, svn_fs_node_t *node)
 {
   apr_run_cleanup (pool, node, apr_cleanup_node);
 }
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

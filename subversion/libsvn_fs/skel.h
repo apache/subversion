@@ -159,7 +159,7 @@ void svn_fs__prepend (skel_t *skel, skel_t *list);
 
 /* Return a string whose contents are a concrete representation of
    SKEL.  Allocate the string from POOL.  */
-svn_string_t *svn_fs__unparse_skel (skel_t *skel, apr_pool_t *pool);
+svn_string_t *svn_fs__unparse_skel (const skel_t *skel, apr_pool_t *pool);
 
 
 /* Return true iff SKEL is an atom whose data is the same as STR.  */

@@ -139,7 +139,7 @@ svn_fs__compare_dbt (const DBT *a, const DBT *b)
    Return DBT.  */
 DBT *
 svn_fs__id_to_dbt (DBT *dbt,
-		   svn_fs_id_t *id,
+		   const svn_fs_id_t *id,
 		   apr_pool_t *pool)
 {
   svn_string_t *unparsed_id = svn_fs_unparse_id (id, pool);
@@ -151,7 +151,7 @@ svn_fs__id_to_dbt (DBT *dbt,
 /* Set DBT to the unparsed form of SKEL; allocate memory form POOL.  */
 DBT *
 svn_fs__skel_to_dbt (DBT *dbt,
-		     skel_t *skel,
+		     const skel_t *skel,
 		     apr_pool_t *pool)
 {
   svn_string_t *unparsed_skel = svn_fs__unparse_skel (skel, pool);

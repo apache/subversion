@@ -295,13 +295,13 @@ explicit_atom (const char *data,
 
 /* Unparsing skeletons.  */
 
-static apr_size_t estimate_unparsed_size (skel_t *, int);
-static svn_string_t *unparse (skel_t *, svn_string_t *, int,
+static apr_size_t estimate_unparsed_size (const skel_t *, int);
+static svn_string_t *unparse (const skel_t *, svn_string_t *, int,
 			      apr_pool_t *);
 
 
 svn_string_t *
-svn_fs__unparse_skel (skel_t *skel, apr_pool_t *pool)
+svn_fs__unparse_skel (const skel_t *skel, apr_pool_t *pool)
 {
   svn_string_t *str;
   
@@ -320,7 +320,7 @@ svn_fs__unparse_skel (skel_t *skel, apr_pool_t *pool)
    we're inside at the moment, to account for space used by
    indentation.  */
 static apr_size_t
-estimate_unparsed_size (skel_t *skel, int depth)
+estimate_unparsed_size (const skel_t *skel, int depth)
 {
   if (skel->is_atom)
     {
@@ -356,7 +356,7 @@ estimate_unparsed_size (skel_t *skel, int depth)
 /* Return non-zero iff we should use the implicit-length form for SKEL.  
    Assume that SKEL is an atom.  */
 static int
-use_implicit (skel_t *skel)
+use_implicit (const skel_t *skel)
 {
   /* If it's null, or long, we should use explicit-length form.  */
   if (skel->len == 0
@@ -388,7 +388,7 @@ use_implicit (skel_t *skel)
    DEPTH indicates how many lists we're inside; we use it for
    indentation.  Grow S with new space from POOL as necessary.  */
 static svn_string_t *
-unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
+unparse (const skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
 {
   if (skel->is_atom)
     {
