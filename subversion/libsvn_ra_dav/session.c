@@ -893,9 +893,11 @@ create_request_hook(ne_request *req,
 {
   struct lock_request_baton *lrb = userdata;
 
-  /* If a LOCK or UNLOCK is happening, then remember the http method. */
+  /* If a LOCK, UNLOCK, or PROPFIND is happening, then remember the
+     http method. */
   if ((strcmp(method, "LOCK") == 0)
-      || (strcmp(method, "UNLOCK") == 0))  
+      || (strcmp(method, "UNLOCK") == 0)
+      || (strcmp(method, "PROPFIND") == 0))  
     lrb->method = apr_pstrdup(lrb->pool, method);
 }
 
@@ -935,7 +937,11 @@ pre_send_hook(ne_request *req,
                                    lrb->current_rev);
           ne_buffer_zappend(header, buf);
         }
+    }
 
+  if ((strcmp(lrb->method, "LOCK") == 0)
+      || (strcmp(lrb->method, "PROPFIND") == 0))
+    {           
       /* Register a callback for custom 'creationdate' response header. */
       ne_add_response_header_handler(req, SVN_DAV_CREATIONDATE_HEADER,
                                      handle_creationdate_header, lrb);
@@ -985,7 +991,7 @@ svn_ra_dav__lock(void *session_baton,
   if ((rv = ne_uri_parse(url, &(nlock->uri))))
     {
       ne_lock_destroy(nlock);
-      return svn_ra_dav__convert_error(ras->sess, "Failed to parse URI",
+      return svn_ra_dav__convert_error(ras->sess, _("Failed to parse URI"),
                                        rv, pool);
     }
 
@@ -1008,7 +1014,7 @@ svn_ra_dav__lock(void *session_baton,
       if (lrb->error_parser)
         ne_xml_destroy(lrb->error_parser);
       return svn_ra_dav__convert_error(ras->sess,
-                                       "Lock request failed", rv, pool);
+                                       _("Lock request failed"), rv, pool);
     }
 
   /* Build an svn_lock_t based on the returned ne_lock. */
@@ -1066,7 +1072,7 @@ svn_ra_dav__unlock(void *session_baton,
   if ((rv = ne_uri_parse(url, &(nlock->uri))))
     {
       ne_lock_destroy(nlock);
-      return svn_ra_dav__convert_error(ras->sess, "Failed to parse URI",
+      return svn_ra_dav__convert_error(ras->sess, _("Failed to parse URI"),
                                        rv, pool);
     }
 
@@ -1090,7 +1096,7 @@ svn_ra_dav__unlock(void *session_baton,
       if (lrb->error_parser)
         ne_xml_destroy(lrb->error_parser);
       return svn_ra_dav__convert_error(ras->sess,
-                                       "Lock request failed", rv, pool);
+                                       _("Unlock request failed"), rv, pool);
     }  
 
   /* Free neon things. */
@@ -1102,6 +1108,69 @@ svn_ra_dav__unlock(void *session_baton,
 }
 
 
+/* A context for lock_receiver(). */
+struct receiver_baton
+{
+  /* Set this if something goes wrong. */
+  svn_error_t *err;
+  
+  /* The thing being retrieved and assembled. */
+  svn_lock_t *lock;
+
+  /* Our RA session. */
+  svn_ra_dav__session_t *ras;
+
+  /* The baton used by the handle_creation_date() callback */
+  struct lock_request_baton *lrb;
+  
+  /* The absolute FS path that we're querying. */
+  const char *fs_path;
+
+  /* A place to allocate the lock. */
+  apr_pool_t *pool;
+};
+
+
+/* A callback of type ne_lock_result;  called by ne_lock_discover(). */
+static void
+lock_receiver(void *userdata,
+              const struct ne_lock *lock,
+              const char *uri,
+              const ne_status *status)
+{
+  struct receiver_baton *rb = userdata;
+
+  if (lock)
+    {
+      /* Convert the ne_lock into an svn_lock_t. */
+      rb->lock = apr_pcalloc(rb->pool, sizeof(*(rb->lock)));      
+      rb->lock->token = apr_pstrdup(rb->pool, lock->token);
+      rb->lock->path = rb->fs_path;
+      if (lock->owner)
+        rb->lock->comment = apr_pstrdup(rb->pool, lock->owner);
+      if (rb->ras->auth_username)
+        rb->lock->owner = apr_pstrdup(rb->pool, rb->ras->auth_username);
+      if (rb->lrb->creation_date)
+        rb->lock->creation_date = rb->lrb->creation_date;
+      if (lock->timeout == NE_TIMEOUT_INFINITE)
+        rb->lock->expiration_date = 0;
+      else if (lock->timeout > 0)
+        rb->lock->expiration_date = rb->lock->creation_date + 
+                                    apr_time_from_sec(lock->timeout);      
+    }
+  else
+    {
+      /* There's no lock... is that because the path isn't locked?  Or
+         because of a real error?  */
+      if (status->code != 404)
+        rb->err = svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
+                                   status->reason_phrase);
+    }
+
+  /* ### what happens to the ne_lock?  does neon free() it later?? */
+  
+}
+
 
 static svn_error_t *
 svn_ra_dav__get_lock(void *session_baton,
@@ -1109,8 +1178,67 @@ svn_ra_dav__get_lock(void *session_baton,
                      const char *path,
                      apr_pool_t *pool)
 {
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                           "Function not yet implemented.");
+  svn_ra_dav__session_t *ras = session_baton;
+  int rv;
+  const char *url;
+  struct lock_request_baton *lrb;
+  struct receiver_baton *rb;
+  svn_string_t fs_path;
+
+  /* To begin, we convert the incoming path into an absolute fs-path. */
+  url = svn_path_url_add_component (ras->url, path, pool);  
+  SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
+                                        url, SVN_INVALID_REVNUM, pool));
+
+  /* Build context for neon callbacks and then register them. */
+  lrb = apr_pcalloc(pool, sizeof(*lrb));
+  lrb->pool = pool;
+  ne_hook_create_request(ras->sess, create_request_hook, lrb);
+  ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
+
+  /* Build context for the lock_receiver() callback. */
+  rb = apr_pcalloc(pool, sizeof(*rb));
+  rb->pool = pool;
+  rb->ras = ras;
+  rb->lrb = lrb;
+  rb->fs_path = fs_path.data;
+
+  /* Ask neon to "discover" the lock (presumably by doing a PROPFIND
+     for the DAV:supportedlock property). */
+  rv = ne_lock_discover(ras->sess, url, lock_receiver, rb);
+
+  /* Did we get a <D:error> response? */
+  if (lrb->err)
+    {
+      if (lrb->error_parser)
+        ne_xml_destroy(lrb->error_parser);
+      return lrb->err;
+    }
+
+  /* Did lock_receiver() generate an error? */
+  if (rb->err)
+    {
+      if (lrb->error_parser)
+        ne_xml_destroy(lrb->error_parser);
+      return rb->err;
+    }
+
+  /* Did we get some other sort of neon error? */
+  if (rv)
+    {
+      if (lrb->error_parser)
+        ne_xml_destroy(lrb->error_parser);
+      return svn_ra_dav__convert_error(ras->sess,
+                                       _("Failed to fetch lock information"),
+                                       rv, pool);
+    }  
+
+  /* Free neon things. */
+  if (lrb->error_parser)
+    ne_xml_destroy(lrb->error_parser);
+
+  *lock = rb->lock;
+  return SVN_NO_ERROR;
 }
 
 
