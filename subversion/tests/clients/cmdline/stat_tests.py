@@ -243,8 +243,8 @@ def status_with_new_files_pending(sbox):
   return 0
 
 
-def status_blank_for_ignored_file(sbox):
-  "status blank for ignored file"
+def status_blank_for_unignored_file(sbox):
+  "status blank for unignored file"
 
   if sbox.build():
     return 1
@@ -282,7 +282,7 @@ test_list = [ None,
               status_missing_file,
               status_type_change,
               status_with_new_files_pending,
-              status_blank_for_ignored_file,
+              status_blank_for_unignored_file,
              ]
 
 if __name__ == '__main__':
