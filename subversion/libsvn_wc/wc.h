@@ -346,8 +346,8 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
 
 
 /* Create a new entry NAME in ENTRIES with appropriate fields.
-   Varargs specify any other xml attributes, in the form of
-   alternating pairs (char *), (svn_string_t *). 
+   Varargs specify any other xml attributes, as alternating pairs of
+   key (char *), value (svn_string_t *).  
 
    An error SVN_ERR_WC_ENTRY_EXISTS is returned if the entry already
    exists. */
@@ -362,8 +362,7 @@ svn_error_t *svn_wc__entry_add (apr_hash_t *entries,
 
 
 /* Remove entry NAME from ENTRIES. */
-svn_error_t *svn_wc__entry_remove (apr_hash_t *entries,
-                                   svn_string_t *name);
+void svn_wc__entry_remove (apr_hash_t *entries, svn_string_t *name);
 
 
 #else /* ! BRAVE_NEW_INTERFACE */
