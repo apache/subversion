@@ -14,6 +14,7 @@ libsvn_ra_local_la_SOURCES = ra_plugin.c split_url.c checkout.c
 ### shared libs are being built. libtool barfs on us. we need to upgrade
 ### to libtool 1.4 when it gets released
 libsvn_ra_local_la_LIBADD = \
+	-L$(top_builddir)/subversion/libsvn_repos/.libs -lsvn_repos \
 	-L$(top_builddir)/subversion/libsvn_fs/.libs -lsvn_fs \
 	-L$(top_builddir)/subversion/libsvn_delta/.libs -lsvn_delta \
 	-L$(top_builddir)/subversion/libsvn_subr/.libs -lsvn_subr
