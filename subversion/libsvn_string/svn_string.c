@@ -163,10 +163,10 @@ svn_string_isempty (const svn_string_t *str)
 
 static void
 ensure_block_capacity (svn_string_t *str, 
-                       size_t minimum_new_size,
+                       size_t minimum_size,
                        apr_pool_t *pool)
 {
-  while (str->blocksize < minimum_new_size)
+  while (str->blocksize < minimum_size)
     str->blocksize *= 2;
 
   str->data = (char *) my__realloc (str->data, 
