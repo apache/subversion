@@ -68,7 +68,9 @@ typedef enum {
   svn_cl__editor_cmd_opt,
   svn_cl__old_cmd_opt,
   svn_cl__new_cmd_opt,
-  svn_cl__config_dir_opt
+  svn_cl__config_dir_opt,
+  svn_cl__autoprops_opt,
+  svn_cl__no_autoprops_opt
 } svn_cl__longopt_t;
 
 
@@ -121,6 +123,8 @@ typedef struct svn_cl__opt_state_t
   const char *new_target;        /* diff target */
   svn_boolean_t relocate;        /* rewrite urls (svn switch) */
   const char * config_dir;       /* over-riding configuration directory */
+  svn_boolean_t autoprops;       /* enable automatic properties */
+  svn_boolean_t no_autoprops;    /* disable automatic properties */
 } svn_cl__opt_state_t;
 
 

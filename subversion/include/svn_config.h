@@ -81,7 +81,9 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_LOG_ENCODING              "log-encoding"
 #define SVN_CONFIG_OPTION_USE_COMMIT_TIMES          "use-commit-times"
 #define SVN_CONFIG_OPTION_TEMPLATE_ROOT             "template-root"
+#define SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS         "enable-auto-props"
 #define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
+#define SVN_CONFIG_SECTION_AUTO_PROPS           "auto-props"
 
 
 /*** Configuration Default Values ***/

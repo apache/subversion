@@ -124,6 +124,10 @@ const apr_getopt_option_t svn_cl__options[] =
                       "relocate via URL-rewriting"},
     {"config-dir",    svn_cl__config_dir_opt, 1,
                       "read user configuration files from directory ARG"},
+    {"auto-props",    svn_cl__autoprops_opt, 0,
+                      "enable automatic properties"},
+    {"no-auto-props", svn_cl__no_autoprops_opt, 0,
+                      "disable automatic properties"},
     {0,               0, 0, 0}
   };
 
@@ -151,7 +155,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "Put files and directories under revision control, scheduling\n"
     "them for addition to repository.  They will be added in next commit.\n"
     "usage: add PATH...\n",
-    {svn_cl__targets_opt, 'N', 'q', svn_cl__config_dir_opt} },
+    {svn_cl__targets_opt, 'N', 'q', svn_cl__config_dir_opt,
+     svn_cl__autoprops_opt, svn_cl__no_autoprops_opt} },
 
   { "cat", svn_cl__cat, {0},
     "Output the content of specified files or URLs.\n"
@@ -261,7 +266,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  If PATH is omitted '.' is assumed.  Parent directories are created\n"
     "  as necessary in the repository.\n",
     {'m', 'F', 'q', 'N', SVN_CL__AUTH_OPTIONS, svn_cl__force_log_opt,
-     svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__config_dir_opt} },
+     svn_cl__editor_cmd_opt, svn_cl__encoding_opt, svn_cl__config_dir_opt,
+     svn_cl__autoprops_opt, svn_cl__no_autoprops_opt} },
  
   { "info", svn_cl__info, {0},
     "Display info about a resource.\n"
@@ -843,6 +849,30 @@ main (int argc, const char * const *argv)
                                             svn_path_canonicalize (opt_arg,
                                                                    pool));
         break;
+      case svn_cl__autoprops_opt:
+        if (opt_state.no_autoprops)
+          {
+            err = svn_error_create (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                    "--auto-props and --no-auto-props are "
+                                    "mutually exclusive.");
+            svn_handle_error (err, stderr, FALSE);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
+        opt_state.autoprops = TRUE;
+        break;
+      case svn_cl__no_autoprops_opt:
+        if (opt_state.autoprops)
+          {
+            err = svn_error_create (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                    "--auto-props and --no-auto-props are "
+                                    "mutually exclusive.");
+            svn_handle_error (err, stderr, FALSE);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
+        opt_state.no_autoprops = TRUE;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -994,6 +1024,22 @@ main (int argc, const char * const *argv)
   if (opt_state.merge_cmd)
     svn_config_set (cfg, SVN_CONFIG_SECTION_HELPERS,
                     SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
+
+  /* Update auto-props-enable option for add/import commands */
+  if (subcommand->cmd_func == svn_cl__add
+      || subcommand->cmd_func == svn_cl__import)
+    {
+      if (opt_state.autoprops)
+        {
+          svn_config_set (cfg, SVN_CONFIG_SECTION_MISCELLANY,
+                          SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS, "yes");
+        }
+      if (opt_state.no_autoprops)
+        {
+          svn_config_set (cfg, SVN_CONFIG_SECTION_MISCELLANY,
+                          SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS, "no");
+        }
+    }
 
   /* Set the log message callback function.  Note that individual
      subcommands will populate the ctx.log_msg_baton */

@@ -888,8 +888,6 @@ svn_wc_add (const char *path,
   svn_boolean_t is_replace = FALSE;
   svn_node_kind_t kind;
   apr_uint32_t modify_flags = 0;
-  const char *mimetype = NULL;
-  svn_boolean_t executable = FALSE;
   svn_wc_adm_access_t *adm_access;
   
   /* Make sure something's there. */
@@ -996,37 +994,7 @@ svn_wc_add (const char *path,
       SVN_ERR (remove_file_if_present (prop_path, pool));
     }
 
-  if (kind == svn_node_file)
-    {
-      /* If this is a new file being added instead of a file copy,
-         then try to detect the mime-type of this file and set
-         svn:executable if the file is executable.  Otherwise, use the
-         values in the original file. */
-      if (! copyfrom_url)
-        {
-          SVN_ERR (svn_io_detect_mimetype (&mimetype, path, pool));
-          if (mimetype)
-            {
-              svn_string_t mt_str;
-              mt_str.data = mimetype;
-              mt_str.len = strlen(mimetype);
-              SVN_ERR (svn_wc_prop_set (SVN_PROP_MIME_TYPE, &mt_str, path,
-                                        parent_access, pool));
-            }
-
-          /* Set svn:executable if the new addition is executable. */
-          SVN_ERR (svn_io_is_file_executable (&executable, path, pool));
-          if (executable)
-            {
-              svn_string_t emptystr;
-              emptystr.data = "";
-              emptystr.len = 0;
-              SVN_ERR (svn_wc_prop_set (SVN_PROP_EXECUTABLE, &emptystr, path,
-                                        parent_access, pool));
-            }
-        }
-    }
-  else /* scheduling a directory for addition */
+  if (kind == svn_node_dir) /* scheduling a directory for addition */
     {
       if (! copyfrom_url)
         {
@@ -1112,7 +1080,7 @@ svn_wc_add (const char *path,
   if (notify_func != NULL)
     (*notify_func) (notify_baton, path, svn_wc_notify_add,
                     kind,
-                    mimetype,
+                    NULL,
                     svn_wc_notify_state_unknown,
                     svn_wc_notify_state_unknown,
                     SVN_INVALID_REVNUM);
