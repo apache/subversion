@@ -694,7 +694,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
    * when the report is complete. */
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
   SVN_CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
-                                     b->fs_path, target, versus_path, FALSE,
+                                     b->fs_path, target, versus_path, TRUE,
                                      recurse, editor, edit_baton, pool));
 
   /* Write an empty command-reponse, telling the client to start reporting. */
