@@ -366,7 +366,7 @@ svn_parse (apr_hash_t **uberhash, const char *filename, apr_pool_t *pool)
 */
 
 void
-svn_hash_print (apr_hash_t *hash, file *stream)
+svn_hash_print (apr_hash_t *hash, FILE *stream)
 {
   apr_hash_index_t *hash_index;   /* this represents a hash entry */
   void *key, *val;
@@ -412,7 +412,7 @@ svn_hash_print (apr_hash_t *hash, file *stream)
 
 
 void
-svn_uberhash_print (apr_hash_t *uberhash, file *stream)
+svn_uberhash_print (apr_hash_t *uberhash, FILE *stream)
 {
   apr_hash_index_t *hash_index;   /* this represents a hash entry */
   void *key, *val;
