@@ -199,35 +199,74 @@ svn_ra_get_ra_library (svn_ra_plugin_t **library,
 }
 
 
+
+typedef struct ra_lib_list_t
+{
+  const svn_ra_plugin_t *ra_lib;
+  const char *schema;
+} ra_lib_list_t;
+
+static int
+compare_ra_lib_lists (const void *key_a, const void *key_b)
+{
+  const ra_lib_list_t *const a = key_a;
+  const ra_lib_list_t *const b = key_b;
+  const int cmp = strcmp (a->ra_lib->name, b->ra_lib->name);
+  if (cmp == 0)
+    return strcmp (a->schema, b->schema);
+  else
+    return cmp;
+}
+
 
 svn_error_t *
 svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
                            void *ra_baton,
                            apr_pool_t *pool)
 {
+  const svn_ra_plugin_t *prev_ra_lib;
   apr_hash_index_t *this;
   apr_hash_t *hash = ra_baton;
-  *descriptions = svn_stringbuf_create ("", pool);
+  int count = apr_hash_count (hash);
+  ra_lib_list_t *list = apr_pcalloc (pool, count * sizeof (*list));
+  int index = 0;
 
+  /* Copy the RA library list into an array. */
   for (this = apr_hash_first (pool, hash); this; this = apr_hash_next (this))
     {
       const void *key;
       void *val;
       size_t keylen;
-      const char *keystr;
-      char *libdesc;
-      svn_ra_plugin_t *lib;
 
       /* Get key and val. */
       apr_hash_this (this, &key, &keylen, &val);
-      keystr = (const char *) key;
-      lib = (svn_ra_plugin_t *) val;
-
-      libdesc = apr_psprintf (pool, "* %s : handles '%s' schema\n (%s)\n",
-                              lib->name, keystr, lib->description);
-      svn_stringbuf_appendcstr (*descriptions, libdesc);
+      list[index].ra_lib = val;
+      list[index].schema = key;
+      ++index;
     }      
-     
+
+  /* Sort the RA libs by name to print each name and description only once. */
+  qsort (list, index, sizeof (*list), compare_ra_lib_lists);
+  *descriptions = svn_stringbuf_create ("", pool);
+  prev_ra_lib = NULL;
+  for (index = 0; index < count; ++index)
+    {
+      char *line;
+
+      if (list[index].ra_lib != prev_ra_lib)
+        {
+          line = apr_psprintf (pool, "* %s : %s\n",
+                               list[index].ra_lib->name,
+                               list[index].ra_lib->description);
+          svn_stringbuf_appendcstr (*descriptions, line);
+        }
+
+      line = apr_psprintf (pool, "  - handles '%s' schema\n",
+                           list[index].schema);
+      svn_stringbuf_appendcstr (*descriptions, line);
+      prev_ra_lib = list[index].ra_lib;
+    }
+
   return SVN_NO_ERROR;
 }
 
