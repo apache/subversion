@@ -53,7 +53,7 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_file_io.h>
-
+#include <ctype.h>           /* isspace() */
 
 
 /* 
@@ -71,7 +71,7 @@
 
 
 ap_status_t
-my__readline (ap_file_t *FILE, svn_string_t *line, ap_pool_t *pool)
+my__readline (const ap_file_t *FILE, svn_string_t *line, ap_pool_t *pool)
 {
   char c;
   ap_status_t result;
@@ -118,9 +118,59 @@ my__readline (ap_file_t *FILE, svn_string_t *line, ap_pool_t *pool)
 */
 
 size_t
-first__non_whitespace (svn_string_t *str)
+first__non_whitespace (const svn_string_t *str)
 {
+  size_t i;
+
+  for (i = 0; i < str->len; i++)
+    {
+      if (! isspace (str->data[i]))
+        {
+          return i;
+        }
+    }
+
+  /* if we get here, then the string must be entirely whitespace */
+  return (str->len);  
 }
+
+
+/* 
+   NOT EXPORTED.
+
+   Input:  a bytestring
+
+   Output:  same bytestring, stripped of whitespace on both sides
+            (input bytestring is modified IN PLACE)
+*/
+
+void
+strip__whitespace (svn_string_t *str)
+{
+  size_t i;
+
+  /* Find first non-whitespace character */
+  size_t offset = first__non_whitespace (str);
+
+  /* Go ahead!  Waste some RAM, we've got pools! :)  */
+  str->data += offset;
+  str->len -= offset;
+
+  /* Now that we've chomped whitespace off the front, search backwards
+     from the end for the first non-whitespace. */
+
+  for (i = (str->len - 1); i >= 0; i--)
+    {
+      if (! isspace (str->data[i]))
+        {
+          break;
+        }
+    }
+  
+  /* Mmm, waste some more RAM */
+  str->len -= i;
+}
+
 
 
 /* 
@@ -136,18 +186,44 @@ first__non_whitespace (svn_string_t *str)
      If used repeatedly, this routine is like a poor man's `split' 
      (combined with chomp).
 
-     If search character ISN'T in the bytestring, then return NULL for
-     a substring!
+     If search character ISN'T in the bytestring, then return NULL as
+     the substring!
              
 */
 
 size_t
-slurp__to (svn_string_t *searchstr,
+slurp__to (const svn_string_t *searchstr,
            svn_string_t *substr,
-           size_t start, 
-           char sc,
+           const size_t start, 
+           const char sc,
            ap_pool_t *pool)
 {
+  size_t i;
+
+  /* Create a new bytestring */
+  substr = ap_palloc (pool, sizeof(svn_string_t));
+
+  for (i = start; i < searchstr->len; i++)
+    {
+      if (searchstr->data[i] == sc)
+        {
+          svn_string_appendbytes (substr,                 /* new substring */
+                                  searchstr->data[start], /* start copy here */
+                                  (i - start - 1),        /* number to copy */
+                                  pool);
+          
+          strip__whitespace (substr);
+
+          return i;
+        }
+    }
+
+  /* If we get here, then the bytestring doesn't contain our search
+     character.  This is bogus. */
+  
+  substr = NULL;
+  return NULL;
+
 }
 
 
@@ -207,10 +283,9 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
     }
 
   /* Create a scratch memory pool for buffering our file as we read it */
-
   if ((result = ap_create_pool (&scratchpool, NULL)) != APR_SUCCESS)
     {
-      /* hoo boy, obfuscated C below!  :)  */
+      /* hoo boy, look at this yummy syntax: */
       svn_handle_error 
         (svn_create_error 
          (result, TRUE, 
@@ -218,8 +293,8 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
                              pool), pool));
     }
 
-  /* Create a bytestring to hold the current line of FILE */
 
+  /* Create a bytestring to hold the current line of FILE */
   currentline = svn_string_create ("<nobody home>", scratchpool);
 
 
@@ -264,9 +339,8 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
                   ("svn_parse(): warning: skipping malformed line: ", pool);
                 svn_string_appendstr (msg, currentline, pool);
                 
-                svn_handle_error 
-                  (svn_create_error 
-                   (result, FALSE, msg, pool), pool);
+                svn_handle_error (svn_create_error 
+                                  (result, FALSE, msg, pool), pool);
                 break;
               }
                                         
@@ -289,7 +363,7 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
             /* If it's not a blank line, comment line, or section line,
                then it MUST be a key : val line!  */
 
-            /* Slurp up both the key and value, split on colons.  */
+            /* Slurp up the key by searching for a colon */
 
             svn_string_t *new_key, *new_val;
             size_t local_offset;
@@ -300,24 +374,29 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
                                       ':',         /* look for a colon */
                                       pool);       /* build substr here */
 
-            if (new_key == NULL)
+            if (new_key == NULL)  /* didn't find a colon! */
               {
                 svn_string_t *msg = 
                   svn_string_create 
                   ("svn_parse(): warning: skipping malformed line: ", pool);
                 svn_string_appendstr (msg, currentline, pool);
                 
-                svn_handle_error 
-                  (svn_create_error 
-                   (result, FALSE, msg, pool), pool);
+                svn_handle_error (svn_create_error 
+                                  (result, FALSE, msg, pool), pool);
                 break;
               }
 
+            /* Now slurp up the value, starting just past the colon */
+
             slurp__to (currentline,
                        new_val,
-                       local_offset,
+                       local_offset + 1,
                        '\n',
                        pool);
+
+            /* Should we check for a NULL result from slurp__to?
+               What are the chances it's not going to find a newline? :)
+            */
 
             /* Store key and val in the currently active hash */
             ap_hash_set (current_hash,
@@ -325,10 +404,9 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
                          sizeof(svn_string_t),
                          new_val);            /* val: ptr to bytestring */
             break;
-          }
-        }
-
-    }
+          }         /* default: */
+        }           /* switch (c) */
+    }               /* while (readline) */
 
      
   /* Close the file and free our scratchpool */
