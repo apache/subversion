@@ -5,7 +5,6 @@ hashdump_test_SOURCES = hashdump-test.c
 stringtest_SOURCES = stringtest.c
 
 ## Flags needed when compiling:
-CFLAGS = @CFLAGS@ -pthread
 INCLUDES = -I../../include -I../../../apr/include
 
 ## Libraries this binary depends upon:

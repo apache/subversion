@@ -4,7 +4,6 @@ noinst_PROGRAMS = svn
 svn_SOURCES = main.c
 
 ## Flags needed when compiling:
-CFLAGS = @CFLAGS@ -pthread
 INCLUDES = -I../include -I../../apr/include -I../../expat-lite
 
 ## Libraries this binary depends upon:
