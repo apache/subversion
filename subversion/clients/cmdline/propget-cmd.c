@@ -27,7 +27,6 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
-#include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_utf.h"
@@ -162,7 +161,6 @@ svn_cl__propget (apr_getopt_t *os,
               void *val;
               const char *filename; 
               svn_string_t *propval;
-              const char *filename_stdout;
               
               apr_hash_this (hi, &key, NULL, &val);
               filename = key;
@@ -176,8 +174,9 @@ svn_cl__propget (apr_getopt_t *os,
               
               if (print_filenames) 
                 {
-                  SVN_ERR (svn_cmdline_cstring_from_utf8 (&filename_stdout,
-                                                          filename, subpool));
+                  const char *filename_stdout;
+                  SVN_ERR (svn_cmdline_path_local_style_from_utf8
+                           (&filename_stdout, filename, subpool));
                   SVN_ERR (stream_write (out, filename_stdout,
                                          strlen (filename_stdout)));
                   SVN_ERR (stream_write (out, " - ", 3));

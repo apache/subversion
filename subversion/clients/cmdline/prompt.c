@@ -28,11 +28,9 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
-#include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_auth.h"
 #include "svn_error.h"
-#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -129,7 +127,7 @@ maybe_print_realm (const char *realm, apr_pool_t *pool)
 
   if (realm)
     {
-      SVN_ERR (svn_utf_cstring_from_utf8 (&realm_native, realm, pool));
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&realm_native, realm, pool));
       fprintf (stderr, "Authentication realm: %s\n", realm_native);
       fflush (stderr);
     }

@@ -222,7 +222,7 @@ log_message_receiver (void *baton,
       
       SVN_ERR (svn_time_from_cstring (&time_temp, date, pool));
       date_utf8 = svn_time_to_human_cstring(time_temp, pool);
-      SVN_ERR (svn_utf_cstring_from_utf8 (&date_stdout, date_utf8, pool));
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&date_stdout, date_utf8, pool));
     }
   else
     date_stdout = "(no date)";
@@ -279,16 +279,16 @@ log_message_receiver (void *baton,
           if (log_item->copyfrom_path 
               && SVN_IS_VALID_REVNUM (log_item->copyfrom_rev))
             {
-              SVN_ERR (svn_cmdline_cstring_from_utf8 (&path_stdout, 
-                                                      log_item->copyfrom_path, 
-                                                      pool));
+              SVN_ERR (svn_cmdline_path_local_style_from_utf8
+                       (&path_stdout, log_item->copyfrom_path, pool));
               copy_data 
                 = apr_psprintf (pool, 
                                 " (from %s:%" SVN_REVNUM_T_FMT ")",
                                 path_stdout,
                                 log_item->copyfrom_rev);
             }
-          SVN_ERR (svn_cmdline_cstring_from_utf8 (&path_stdout, path, pool));
+          SVN_ERR (svn_cmdline_path_local_style_from_utf8
+                   (&path_stdout, path, pool));
           SVN_ERR (svn_stream_printf (lb->out, pool, "   %c %s%s" APR_EOL_STR,
                                       log_item->action, path_stdout,
                                       copy_data));

@@ -253,7 +253,7 @@ def delete_dirs(sbox):
 def check_reversion(files, output):
   expected_output = []
   for file in files:
-    expected_output = expected_output + ["Reverted " + file + "\n"]
+    expected_output = expected_output + ["Reverted '" + file + "'\n"]
   output.sort()
   expected_output.sort()
   if output != expected_output:

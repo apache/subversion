@@ -27,7 +27,6 @@
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_string.h"
-#include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_utf.h"
@@ -189,8 +188,8 @@ svn_cl__propset (apr_getopt_t *os,
               const char *target_stdout;
               SVN_ERR (svn_cmdline_cstring_from_utf8 (&pname_stdout,
                                                       pname_utf8, subpool));
-              SVN_ERR (svn_cmdline_cstring_from_utf8 (&target_stdout,
-                                                      target, subpool));
+              SVN_ERR (svn_cmdline_path_local_style_from_utf8
+                       (&target_stdout, target, subpool));
               printf ("property '%s' set%s on '%s'\n",
                       pname_stdout,
                       opt_state->recursive ? " (recursively)" : "",

@@ -25,7 +25,6 @@
 #include <apr_tables.h>
 #include "svn_cmdline.h"
 #include "svn_sorts.h"
-#include "svn_path.h"
 #include "svn_wc.h"
 #include "cl.h"
 
@@ -170,9 +169,7 @@ svn_cl__print_status (const char *path,
           && status->repos_text_status == svn_wc_status_none))
     return;
 
-  err = svn_cmdline_cstring_from_utf8 (&path_stdout,
-                                       svn_path_local_style (path, pool),
-                                       pool);
+  err = svn_cmdline_path_local_style_from_utf8 (&path_stdout, path, pool);
   if (err)
     {
       svn_handle_error (err, stderr, FALSE);
