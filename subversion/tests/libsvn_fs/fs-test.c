@@ -41,26 +41,32 @@ const char repository[] = "test-repo";
 
 /* Create a filesystem.  */
 
+/* Safe to call this multiple times -- only creates a filesystem once. */
 static int
 create_berkeley_filesystem (const char **msg)
 {
   svn_fs_t *fs;
+  static int fs_already_created = 0;
 
   *msg = "create Berkeley DB filesystem";
 
-  fs = svn_fs_new (pool);
-  if (fs == NULL)
-    return fail();
-
-  if (SVN_NO_ERROR != svn_fs_create_berkeley (fs, repository))
-    return fail();
-
-  if (SVN_NO_ERROR != svn_fs_close_fs (fs))
-    return fail();
+  if (! fs_already_created)
+    {
+      fs = svn_fs_new (pool);
+      if (fs == NULL)
+        return fail();
+      
+      if (SVN_NO_ERROR != svn_fs_create_berkeley (fs, repository))
+        return fail();
+      
+      if (SVN_NO_ERROR != svn_fs_close_fs (fs))
+        return fail();
+      
+      fs_already_created = 1;
+    }
 
   return 0;
 }
-
 
 
 
@@ -88,8 +94,13 @@ static int
 open_berkeley_filesystem (const char **msg)
 {
   svn_fs_t *fs;
+  const char *ignored;
 
   *msg = "open Berkeley DB filesystem";
+
+  /* Make sure the FS exists. */
+  if (create_berkeley_filesystem (&ignored) != 0)
+    return fail();
 
   fs = svn_fs_new (pool);
   if (fs == NULL)
@@ -109,46 +120,58 @@ open_berkeley_filesystem (const char **msg)
 }
 
 
+/* Safe to call this multiple times -- only creates first txn once. */
 static int
 trivial_transaction (const char **msg)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   svn_error_t *err;
+  const char *ignored;
+  static int made_first_txn_already = 0;
 
   *msg = "begin a txn, check its name, then immediately close it";
 
-  /* Open the FS. */
-  fs = svn_fs_new (pool);
-  if (fs == NULL)
-    return fail();
+  if (! made_first_txn_already)
+    {
+      /* Make sure the FS exists. */
+      if (create_berkeley_filesystem (&ignored) != 0)
+        return fail();
+      
+      /* Open the FS. */
+      fs = svn_fs_new (pool);
+      if (fs == NULL)
+        return fail();
+      
+      if (SVN_NO_ERROR != svn_fs_open_berkeley (fs, repository))
+        return fail();
+      
+      /* Begin a transaction. */
+      if (SVN_NO_ERROR != svn_fs_begin_txn (&txn, fs, 0, pool))
+        return fail();
+      
+      /* Test that it got id "0", since it's the first txn. */
+      {
+        char *txn_name;
+        
+        err = svn_fs_txn_name (&txn_name, txn, pool);
+        if (err)
+          return fail();
+        
+        if (strcmp (txn_name, "0") != 0)
+          return fail();
+      }
+      
+      /* Close it. */
+      if (SVN_NO_ERROR != svn_fs_close_txn (txn))
+        return fail();
+      
+      /* Close the FS. */
+      if (SVN_NO_ERROR != svn_fs_close_fs (fs))
+        return fail();
 
-  if (SVN_NO_ERROR != svn_fs_open_berkeley (fs, repository))
-    return fail();
-
-  /* Begin a transaction. */
-  if (SVN_NO_ERROR != svn_fs_begin_txn (&txn, fs, 0, pool))
-    return fail();
-
-  /* Test that it got id "0", since it's the first txn. */
-  {
-    char *txn_name;
-
-    err = svn_fs_txn_name (&txn_name, txn, pool);
-    if (err)
-      return fail();
-
-    if (strcmp (txn_name, "0") != 0)
-      return fail();
-  }
-
-  /* Close it. */
-  if (SVN_NO_ERROR != svn_fs_close_txn (txn))
-    return fail();
-
-  /* Close the FS. */
-  if (SVN_NO_ERROR != svn_fs_close_fs (fs))
-    return fail();
+      made_first_txn_already = 1;
+    }
 
   return 0;
 }
@@ -159,8 +182,13 @@ reopen_trivial_transaction (const char **msg)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
+  const char *ignored;
 
   *msg = "reopen and check the transaction name";
+
+  /* Make sure the FS exists. */
+  if (create_berkeley_filesystem (&ignored) != 0)
+    return fail();
 
   /* Open the FS. */
   fs = svn_fs_new (pool);
@@ -170,7 +198,11 @@ reopen_trivial_transaction (const char **msg)
   if (SVN_NO_ERROR != svn_fs_open_berkeley (fs, repository))
     return fail();
 
-  /* Open the transaceion, just to make sure it's in the database. */
+  /* Make sure the transaction exists. */
+  if (trivial_transaction (&ignored) != 0)
+    return fail();
+
+  /* Open the transaction, just to make sure it's in the database. */
   if (SVN_NO_ERROR != svn_fs_open_txn (&txn, fs, "0", pool))
     return fail();
 
@@ -191,8 +223,13 @@ list_live_transactions (const char **msg)
 {
   svn_fs_t *fs;
   char **txn_list;
+  const char *ignored;
 
   *msg = "list active transactions";
+
+  /* Make sure the FS exists. */
+  if (create_berkeley_filesystem (&ignored) != 0)
+    return fail();
 
   /* Open the FS. */
   fs = svn_fs_new (pool);
@@ -200,6 +237,10 @@ list_live_transactions (const char **msg)
     return fail();
 
   if (SVN_NO_ERROR != svn_fs_open_berkeley (fs, repository))
+    return fail();
+
+  /* Make sure the transaction exists. */
+  if (trivial_transaction (&ignored) != 0)
     return fail();
 
   /* Get the list of transactions. */
