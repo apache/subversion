@@ -10,7 +10,6 @@ lib_LTLIBRARIES = libsvn_subr.la
 ## Sources needed to build each library (names canonicalized)
 libsvn_subr_la_SOURCES = svn_error.c hashdump.c
 
-
 ## Build flags ---------
 
 ## These should be variables, no?  (from autoconf?)
