@@ -63,52 +63,9 @@ List of 1.1 features/changes
     new section in the book's preface, complete with <xref> links to
     the new 1.1 features.
 
-  * new fsfs backend for repository.  make a comparison chart with
-    bdb, just like we did for apache/svnserve that shows tradeoffs.
-    also show new libraries in ch01 'big picture' diagram and ch08
-    library listing.
-
-      Outline:
-
-
-5. Repository Administration
-
-    Repository Basics
-
-        Understanding Transactions and Revisions
-        Unversioned Properties
-        Berkeley DB
-   ***  FSFS
-   ***  Choosing a Data Store (comparison table)
-
-    Repository Creation and Configuration
-
-        Hook Scripts
-    *   Berkeley DB Configuration ("if you're using BDB")
-
-    Repository Maintenance
-
-        An Administrator's Toolkit
-
-            svnlook
-            svnadmin
-            svndumpfilter
-            svnshell.py
-     *      Berkeley DB Utilities (** mention maxb's bdb scripts)
-
-        Repository Cleanup
-     *  Managing Disk Space (differentiate bdb issues from fsfs)
-     *  Repository Recovery (same)
-     *  Migrating a Repository (same  -- switching from bdb to fsfs)
-     *  Repository Backup (same)
-
-    Adding Projects
-
-        Choosing a Repository Layout
-        Creating the Layout, and Importing Initial Data
-
-    Summary
-
+  * FSFS TODO:  update 'svnadmin create' in reference section.
+                expand Omnigraffle picture.
+                scan other chapters for BDB-specific stuff.
 
   * symlink versioning
 
