@@ -220,7 +220,7 @@ message_from_editor(apr_pool_t *pool,
         {
           /* we didn't manage to write the complete file, we can't fulfill
              what we're set out to do, get out */
-          return SVN_ERR_BAD_URL; /* FIX! add a correct error code */
+          return NULL; /* FIX! add a correct error code */
         }
 
       /* Get information about the temporary file before the user has
