@@ -591,6 +591,60 @@ def inappropriate_props(sbox):
     return 1
 
 
+#----------------------------------------------------------------------
+
+def move_keeps_latest_props(sbox):
+  "moving a file should keep the latest property settings"
+
+  # Bootstrap
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Create a new file
+  new_path1 = os.path.join(wc_dir, 'new_file1.gif')
+  new_path1 = os.path.join(wc_dir, 'new_file2.gif')
+
+  svntest.main.file_append(new_path1, "some text")
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'add', new_path1)
+  if len (stderr_lines) > 0:
+    print "Add command printed the following to stderr:"
+    print stderr_lines
+    return 1
+
+  # Add initial property to the file
+  svntest.main.run_svn(None, 'propset', 'svn:mime-type',
+                       'application/octet-stream', new_path1)
+
+  # Commit the file
+  svntest.main.run_svn(None, 'ci', '-m', 'logmsg')
+
+  # Change the property
+  svntest.main_run_svn(None, 'propset', 'svn:mime-type', 'image/gif',
+                       new_path1)
+
+  # Commit the new property
+  svntest.main.run_svn(None, 'ci', '-m', 'logmsg')
+
+  # Move the file
+  svntest.main_run_svn(None, 'mv', new_path1, new_path2)
+
+  # Create expected output tree
+  expected_output = svntest.wc.State(wc_dir, {
+    'new_file2.gif' : Item(verb='Sending'),
+    })
+
+  # Commit the move
+  svntest.main.actions.run_and_verify_commit(wc_dir,
+                                             expected_output,
+                                             None,
+                                             None,
+                                             None, None,
+                                             None, None,
+                                             wc_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -606,6 +660,7 @@ test_list = [ None,
               commit_replacement_props,
               revert_replacement_props,
               inappropriate_props,
+              move_keeps_latest_props,
              ]
 
 if __name__ == '__main__':
