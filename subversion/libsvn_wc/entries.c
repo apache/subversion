@@ -512,6 +512,13 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
   /* Inherits parent's url if doesn't have a url of one's own. */
   if (! dst->url) 
     dst->url = svn_path_url_add_component (src->url, dst->name, pool);
+
+  if ((! dst->uuid) 
+      && (! ((dst->schedule == svn_wc_schedule_add)
+             || (dst->schedule == svn_wc_schedule_replace))))
+    {
+      dst->uuid = src->uuid;
+    }
 }
 
 
