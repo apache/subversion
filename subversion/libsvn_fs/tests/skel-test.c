@@ -606,8 +606,8 @@ parse_list (const char **msg)
 static skel_t *
 build_atom (apr_size_t len, char *data)
 {
-  char *copy = NEWARRAY (pool, char, len);
-  skel_t *skel = NEW (pool, skel_t);
+  char *copy = apr_palloc (pool, len);
+  skel_t *skel = apr_palloc (pool, sizeof (*skel));
 
   memcpy (copy, data, len);
   skel->is_atom = 1;
@@ -621,7 +621,7 @@ build_atom (apr_size_t len, char *data)
 static skel_t *
 empty (void)
 {
-  skel_t *skel = NEW (pool, skel_t);
+  skel_t *skel = apr_palloc (pool, sizeof (*skel));
 
   skel->is_atom = 0;
   skel->children = 0;
