@@ -685,8 +685,6 @@ svn_ra_local__get_file (void *session_baton,
   svn_fs_root_t *root;
   svn_stream_t *contents;
   svn_revnum_t youngest_rev;
-  char buf[SVN_STREAM_CHUNK_SIZE];
-  apr_size_t rlen, wlen;
   svn_ra_local__session_baton_t *sbaton = session_baton;
   const char *abs_path = sbaton->fs_path;
 
@@ -719,42 +717,15 @@ svn_ra_local__get_file (void *session_baton,
       /* Get a stream representing the file's contents. */
       SVN_ERR (svn_fs_file_contents (&contents, root, abs_path, pool));
       
-      /* Now push data from the fs stream back at the caller's stream. */
-      while (1)
-        {
-          /* read a maximum number of bytes from the file, please. */
-          rlen = SVN_STREAM_CHUNK_SIZE; 
-          SVN_ERR (svn_stream_read (contents, buf, &rlen));
-          
-          /* Note that this particular RA layer does not computing a
-             checksum as we go, and confirming it against the
-             repository's checksum when done.  That's because it calls
-             svn_fs_file_contents() directly, which already checks the
-             stored checksum, and all we're doing here is writing
-             bytes in a loop.  Truly, Nothing Can Go Wrong :-).  But
-             RA layers that go over a network should confirm the
-             checksum. */
-
-          /* write however many bytes you read, please. */
-          wlen = rlen;
-          SVN_ERR (svn_stream_write (stream, buf, &wlen));
-          if (wlen != rlen)
-            {
-              /* Uh oh, didn't write as many bytes as we read, and no
-                 error was returned.  According to the docstring, this
-                 should never happen. */
-              return svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                                       "Error writing to stream");
-            }
-          
-          if (rlen != SVN_STREAM_CHUNK_SIZE)
-            {
-              /* svn_stream_read didn't throw an error, yet it didn't read
-                 all the bytes requested.  According to the docstring,
-                 this means a plain old EOF happened, so we're done. */
-              break;
-            }
-        }
+      /* Now push data from the fs stream back at the caller's stream.
+         Note that this particular RA layer does not computing a
+         checksum as we go, and confirming it against the repository's
+         checksum when done.  That's because it calls
+         svn_fs_file_contents() directly, which already checks the
+         stored checksum, and all we're doing here is writing bytes in
+         a loop.  Truly, Nothing Can Go Wrong :-).  But RA layers that
+         go over a network should confirm the checksum. */
+      svn_stream_copy (contents, stream, pool);
     }
 
   /* Handle props if requested. */

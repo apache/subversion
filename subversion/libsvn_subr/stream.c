@@ -180,6 +180,28 @@ svn_stream_readline (svn_stream_t *stream,
 }
 
 
+svn_error_t *svn_stream_copy (svn_stream_t *from, svn_stream_t *to,
+                              apr_pool_t *pool)
+{
+  char buf[SVN_STREAM_CHUNK_SIZE];
+  apr_size_t len;
+
+  /* Read and write chunks until we get a short read, indicating the
+     end of the stream.  (We can't get a short write without an
+     associated error.) */
+  while (1)
+    {
+      len = sizeof (buf); 
+      SVN_ERR (svn_stream_read (from, buf, &len));
+      if (len > 0)
+        SVN_ERR (svn_stream_write (to, buf, &len));
+      if (len != sizeof (buf))
+        break;
+    }
+  return SVN_NO_ERROR;
+}
+
+
 
 
 /*** Generic readable empty stream ***/
