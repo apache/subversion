@@ -2,10 +2,10 @@
 top_builddir = @abs_builddir@
 top_srcdir = @top_srcdir@
 
-SVN_CLIENT_DEPS = @LIBSVN_CLIENT_DEPS@
+SVN_RA_LIB_DEPS = @SVN_RA_LIB_DEPS@
+SVN_RA_LIB_LINK = @SVN_RA_LIB_LINK@
 
 SVN_APR_LIBS = @SVN_APR_LIBS@
-SVN_NEON_LIBS = @SVN_NEON_LIBS@
 
 #SVN_DB_LIBS = -L/usr/local/BerkeleyDB.3.2/lib -ldb
 #DB_INCLUDES = -I/usr/local/BerkeleyDB.3.2/include
