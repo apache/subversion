@@ -14,42 +14,38 @@ each particular interface lies.
 
 @example
 @group
-             +--------------------+
-             | commandline or GUI |
-             |    client app      |
-         +----------------------------+      <====== Client interface
-         |      Client Library        |
-         |                            |
-         |        +----+              |
-         |        |    |              |
- +-------+--------+    +--------------+----+ <====== Network interface
- | Working Copy   |    | Repository Access |
- | Management lib |    |       lib         |
- +----------------+    +---------+---------+
-                       |      libneon      |
-                       +---------+---------+
-                      ^              ^
-                     /              /
-               DAV  /              /  HTTP
-                   /              /
-                  v              v
-          +---------+    +---------+
-          |         |    |         |
-          | Apache  |    | Apache  |
-          |         |    |         |
-          +---------+    +---------+
-          | mod_DAV |    |         |
-        +-------------+  | mod_SVN |
-        | mod_DAV_SVN |  |         |
- +------+-------------+--+---------+-------+ <===== Server interface
- |                                         |
- |           SVN Server Library            |
- |                                         |
- +-----------------------------------------+ <===== Filesystem interface
- |                                         |
- |          Subversion Filesystem          |
- |                                         |
- +-----------------------------------------+
+                    +--------------------+
+                    | commandline or GUI |
+                    |    client app      |
+         +----------+--------------------+----------+ <=== Client interface
+         |              Client Library              |
+         |                                          |
+         |        +----+                            |
+         |        |    |                            |
+ +-------+--------+    +--------------+--+----------+ <=== Network interface
+ | Working Copy   |    |    Remote    |  | Local    |
+ | Management lib |    | Repos Access |  | Repos    |
+ +----------------+    +--------------+  | Access   |
+                       |     neon     |  |          |
+                       +--------------+  |          |
+                          ^              |          |
+                         /               |          |
+                   DAV  /                |          |
+                       /                 |          |
+                      v                  |          |
+              +---------+                |          |
+              |         |                |          |
+              | Apache  |                |          |
+              |         |                |          |
+              +---------+                |          |
+              | mod_DAV |                |          |
+            +-------------+              |          |
+            | mod_DAV_SVN |              |          |
+ +----------+-------------+--------------+----------+ <=== Filesystem interface
+ |                                                  |
+ |               Subversion Filesystem              |
+ |                                                  |
+ +--------------------------------------------------+
 
 @end group
 @end example
@@ -59,7 +55,7 @@ each particular interface lies.
 @menu
 * Client Layer::              Client-side overview.
 * Network Layer::             Network overview.
-* Server Layer::              Server-side overview.
+* Filesystem Layer::          Server-side overview.
 @end menu
 
 @c ------------------------------------------------------------------
@@ -77,7 +73,9 @@ maintaining administrative files in the @file{SVN/} directory.
 The second library provides an API for exchanging information with a
 Subversion repository.  This includes the ability to read files, write
 new versions of files, and ask the repository to compare a working copy
-against its latest version.
+against its latest version.  Note that there are two implementations of
+this interface:  one designed to talk to a repository over a network,
+and one designed to work with a repository on local disk.  
 
 The third library provides general client functions such as
 @code{update()} and @code{commit()}, which may involve one or both of
@@ -93,9 +91,8 @@ The network layer's job is to move the repository API requests over a
 wire.
 
 On the client side, a network library translates these requests into a
-set of either HTTP 1.1 or WebDAV method extensions.  The information is
-sent over TCP/IP to an Apache server.  Apache is used for the following
-reasons:
+set of WebDAV DeltaV requests.  The information is sent over TCP/IP to
+an Apache server.  Apache is used for the following reasons:
 
 @itemize @bullet
 @item
@@ -116,30 +113,21 @@ Our suspicion is that any attempt to write a dedicated "Subversion
 server" (with a "Subversion protocol") would inevitably end up evolving
 towards Apache's already-existing feature set.  (However, Subversion's
 layered architecture certainly doesn't @emph{prevent} anyone from
-writing a totally new network layer!)
+writing a totally new network 
 
-Depending on whether DAV or HTTP 1.1 is used, an appropriate Apache
-module will translate the method-requests back into API calls against a
-particular repository.
+An appropriate Apache module will translate the DAV requests into API
+calls against a particular repository.
 
 For details, @xref{Protocol}.
 
 @c ------------------------------------------------------------------
-@node Server Layer
-@section Server Layer
-
-The back-end of Subversion consists of two libraries: the Subversion
-Server library and the Subversion Filesystem.
-
-The @dfn{Subversion Server library} implements the same repository API
-that the client uses, but multiplexes the calls to different
-repositories on the server machine.
+@node Filesystem Layer
+@section Filesystem Layer
 
 When the requests reach a particular repository, they are interpreted by
 the @dfn{Subversion Filesystem library}.  The Subversion Filesystem is a
 custom Unix-like filesystem, with a twist: writes are versioned and
-atomic, and no data is ever deleted!  This filesystem is implemented on
-top of a normal filesystem, using Berkeley DBM files or something
-similar.
+atomic, and no data is ever deleted!  This filesystem is currently
+implemented on top of a normal filesystem, using Berkeley DBM files.
 
 For a more detailed explanation: @xref{Server}.
