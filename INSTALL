@@ -77,7 +77,7 @@ I.    BUILD REQUIREMENTS
       the apr-config script in the standard location under that directory
       (e.g. ${prefix}/bin).
 
-      Similar, you can specify the location of APRUTIL using the
+      Similarly, you can specify the location of APRUTIL using the
       "--with-apr-util=" option to "./configure". It will look for the
       apu-config script relative to that directory.
 
@@ -171,7 +171,7 @@ I.    BUILD REQUIREMENTS
       neon-config script (which identifies various features of the Neon
       library) is kept by giving the "--with-neon=" option to
       "./configure". Note that the script should be kept in a "bin"
-      subdirectory beneath whereever "--with-neon" is pointed.
+      subdirectory beneath wherever "--with-neon" is pointed.
 
 
       6.  Berkeley DB 4.0.14
@@ -237,7 +237,7 @@ I.    BUILD REQUIREMENTS
 
       Many of the features of the Subversion client require the ability
       to call out to an external diff or diff3 program, one that
-      conforms to the behaviour of the GNU versions of these programs.
+      conforms to the behavior of the GNU versions of these programs.
 
       On some versions of Unix, this may involve getting a replacement
       for your already existing diff and diff3 program. On FreeBSD
@@ -309,7 +309,7 @@ I.    BUILD REQUIREMENTS
 
           http://www.openssl.org/
 
-      Many Unix systems already come with zlib, but if you need it it
+      Many Unix systems already come with zlib, but if you need it, it
       is available from:
 
           http://www.gzip.org/zlib/
@@ -534,11 +534,11 @@ II.   INSTALLATION
 
       The last reason above is possibly the most useful.  For instance
       you can have separate debug and optimised builds each using the
-      same working copy. Or you may want a client only build and a
+      same working copy. Or you may want a client-only build and a
       client-server build. Using multiple build directories you can
       rebuild any or all configurations after an edit without the need
       to either clean and reconfigure, or identify and copy changes
-      into a another working copy.
+      into another working copy.
 
 
   D.  Bootstrapping from a Zip File under Windows
@@ -592,7 +592,7 @@ II.   INSTALLATION
 
           to point to the appropriate directories.
 
-          See Section I.11 for more details.
+          See Section I.11 for more details.]
 
       If you are installing under Win9x, NT4, or WinME, and svn.exe
       doesn't run, try installing shfolder.dll from here:
@@ -634,7 +634,7 @@ II.   INSTALLATION
       You will have to edit the file svn_private_config.hw to set the
       correct paths for diff and diff3.
 
-      [NOTE: There have been rumours that Subversion on Win32 can be built
+      [NOTE: There have been rumors that Subversion on Win32 can be built
           using the latest cygwin. ymmv.]
 
 
@@ -751,9 +751,9 @@ III.  BUILDING A SUBVERSION SERVER
 
       The mod_dav_svn module can now be built on Windows, using the
       mod_dav_svn project in the workspace `subversion.dsw'. You must
-      have Apache source tree installed in parallel to the Subversion
+      have the Apache source tree installed in parallel to the Subversion
       source tree, and will use the apr and apr-util libraries from
-      the Apache sources; like this:
+      the Apache sources, like this:
 
           .../
             svn/
@@ -768,7 +768,7 @@ III.  BUILDING A SUBVERSION SERVER
               ...
 
       You must have Berkeley DB available, as described in II.E.
-      First, buld (and install) Apache and the Subversion client and
+      First, build (and install) Apache and the Subversion client and
       local server. Then select mod_dav_svn as the active project,
       build it, and copy mod_dav_svn.so to the Apache modules
       directory. Apache configuration is the same as on Unix.
@@ -828,12 +828,12 @@ III.  BUILDING A SUBVERSION SERVER
 
       These are only a few simple examples.  For a complete tutorial
       on Apache access contol, please consider taking a look at the
-      tutorials found under the "Security" on the following page:
+      tutorials found under "Security" on the following page:
       http://httpd.apache.org/docs-2.0/misc/tutorials.html
 
       In order for 'svn cp' to work (which is actually implemented as a
-      DAV COPY command), mod_dav needs to be able to be able to determine
-      the hostname of the server.  A standard way of doing this is to use
+      DAV COPY command), mod_dav needs to be able to determine the
+      hostname of the server.  A standard way of doing this is to use
       Apache's ServerName directive to set the server's hostname.  Edit
       your /usr/local/apache2/conf/httpd.conf to include:
 
