@@ -214,7 +214,7 @@ print "Lock removed.  Cleanup complete."
 ###         NUM_BACKUPS.
 
 if num_backups > 0:
-  regexp = re.compile("^" + repo + "-[0-9]+$")
+  regexp = re.compile("^" + repo + "-[0-9]+(-[0-9]+)?$")
   directory_list = os.listdir(backup_dir)
   old_list = filter(lambda x: regexp.search(x), directory_list)
   old_list.sort(comparator)
