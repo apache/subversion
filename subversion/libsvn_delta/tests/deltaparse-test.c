@@ -42,7 +42,7 @@ struct file_baton
 
 
 /* For making formatting all purty. */
-void
+static void
 print_spaces (int total)
 {
   int i;
@@ -51,13 +51,13 @@ print_spaces (int total)
     printf(" ");
 }
 
-void
+static void
 inc_spaces (struct edit_baton *eb)
 {
   eb->indentation += 4;
 }
 
-void
+static void
 dec_spaces (struct edit_baton *eb)
 {
   eb->indentation -= 4;
@@ -67,7 +67,7 @@ dec_spaces (struct edit_baton *eb)
 /* A dummy routine designed to consume windows of vcdiff data, (of
    type svn_text_delta_window_handler_t).  This will be called by the
    vcdiff parser everytime it has a window ready to go. */
-svn_error_t *
+static svn_error_t *
 my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
 {
   struct file_baton *fb = (struct file_baton *) baton;
@@ -111,7 +111,7 @@ my_vcdiff_windoweater (svn_txdelta_window_t *window, void *baton)
 
 /* A bunch of dummy callback routines.  */
 
-svn_error_t *
+static svn_error_t *
 test_delete (svn_string_t *filename, void *parent_baton)
 {
   struct dir_baton *d = (struct dir_baton *) parent_baton;
@@ -124,7 +124,7 @@ test_delete (svn_string_t *filename, void *parent_baton)
 }
 
 
-svn_error_t *
+static svn_error_t *
 test_replace_root (svn_string_t *base_path,
                    svn_vernum_t base_version,
                    void *edit_baton,
@@ -157,7 +157,7 @@ add_or_replace_dir (svn_string_t *name,
   inc_spaces (pd->edit_baton);
   print_spaces (pd->edit_baton->indentation);
 
-  printf ("%s:  name '%s', ancestor '%s' version %d\n",
+  printf ("%s:  name '%s', ancestor '%s' version %ld\n",
           pivot_string, Aname, ancestor, ancestor_version);
 
   /* Set child_baton to a new dir baton. */
@@ -174,7 +174,7 @@ add_or_replace_dir (svn_string_t *name,
 }
 
 
-svn_error_t *
+static svn_error_t *
 test_add_directory (svn_string_t *name,
                     void *parent_baton,
                     svn_string_t *ancestor_path,
@@ -190,8 +190,7 @@ test_add_directory (svn_string_t *name,
 }
 
 
-
-svn_error_t *
+static svn_error_t *
 test_replace_directory (svn_string_t *name,
                         void *parent_baton,
                         svn_string_t *ancestor_path,
@@ -207,7 +206,7 @@ test_replace_directory (svn_string_t *name,
 }
 
 
-svn_error_t *
+static svn_error_t *
 test_close_directory (void *dir_baton)
 {
   struct dir_baton *d = (struct dir_baton *) dir_baton;
@@ -223,7 +222,7 @@ test_close_directory (void *dir_baton)
 }
 
 
-svn_error_t *
+static svn_error_t *
 test_close_file (void *file_baton)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
@@ -240,8 +239,7 @@ test_close_file (void *file_baton)
 }
 
 
-
-svn_error_t *
+static svn_error_t *
 test_apply_textdelta (void *file_baton,
                       svn_txdelta_window_handler_t **handler,
                       void **handler_baton)
@@ -278,7 +276,7 @@ add_or_replace_file (svn_string_t *name,
   inc_spaces (d->edit_baton);
   print_spaces (d->edit_baton->indentation);
 
-  printf ("%s:  name '%s', ancestor '%s' version %d\n",
+  printf ("%s:  name '%s', ancestor '%s' version %ld\n",
           pivot_string, Aname, ancestor, ancestor_version);
 
   /* Put the filename in file_baton */
@@ -291,7 +289,7 @@ add_or_replace_file (svn_string_t *name,
 }
 
 
-svn_error_t *
+static svn_error_t *
 test_add_file (svn_string_t *name,
                void *parent_baton,
                svn_string_t *ancestor_path,
@@ -307,7 +305,7 @@ test_add_file (svn_string_t *name,
 }
 
 
-svn_error_t *
+static svn_error_t *
 test_replace_file (svn_string_t *name,
                    void *parent_baton,
                    svn_string_t *ancestor_path,
@@ -323,7 +321,7 @@ test_replace_file (svn_string_t *name,
 }
 
 
-svn_error_t *
+static svn_error_t *
 test_change_file_prop (void *file_baton,
                        svn_string_t *name, svn_string_t *value)
 {
@@ -343,7 +341,7 @@ test_change_file_prop (void *file_baton,
 }
 
 
-svn_error_t *
+static svn_error_t *
 test_change_dir_prop (void *parent_baton,
                       svn_string_t *name, svn_string_t *value)
 {
@@ -363,7 +361,7 @@ test_change_dir_prop (void *parent_baton,
 }
 
 
-svn_error_t *
+static svn_error_t *
 test_change_dirent_prop (void *parent_baton,
                          svn_string_t *entry,
                          svn_string_t *name, svn_string_t *value)
@@ -393,10 +391,9 @@ test_change_dirent_prop (void *parent_baton,
 
 /* An official subversion "read" routine, comforming to POSIX standards. 
    This one reads our XML filehandle, passed in as our baton.  */
-svn_error_t *
+static svn_error_t *
 my_read_func (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_status_t stat;
 
   /* Recover our filehandle */
@@ -424,12 +421,8 @@ my_read_func (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
 }
 
 
-
-
-
-
-
-int main(int argc, char *argv[])
+int
+main (int argc, char *argv[])
 {
   svn_delta_edit_fns_t my_editor;
   svn_error_t *err;
