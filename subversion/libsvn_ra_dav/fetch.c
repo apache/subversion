@@ -2329,6 +2329,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   report_baton_t *rb = report_baton;
   apr_status_t status;
   svn_error_t *err;
+  const char *vcc;
 
   status = apr_file_write_full(rb->tmpfile,
                                report_tail, sizeof(report_tail) - 1, NULL);
@@ -2346,11 +2347,37 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   rb->cpathstr = MAKE_BUFFER(rb->ras->pool);
   rb->href = MAKE_BUFFER(rb->ras->pool);
 
-  err = svn_ra_dav__parsed_request(rb->ras->sess, "REPORT", rb->ras->root.path,
+  err = svn_ra_dav__get_vcc(&vcc, rb->ras->sess, rb->ras->url, rb->ras->pool);
+  if (err)
+    {
+      (void) apr_file_close(rb->tmpfile);
+      return err;
+    }
+
+  err = svn_ra_dav__parsed_request(rb->ras->sess, "REPORT", vcc,
                                    NULL, rb->tmpfile,
                                    report_elements, validate_element,
                                    start_element, end_element, rb,
                                    NULL, rb->ras->pool);
+
+  if (err)
+    {
+      /* If running the update-report on the VCC failed, it's probably
+         an older server.  Fall back to the old-style, by requesting
+         the report on the src-url itself.  This runs a risk of
+         choking on issue #891 ("REPORT fails on item not in HEAD"),
+         but hey, it's better than nothing.  */
+
+      /* ### someday, remove this fallback code. */
+
+      svn_error_clear (err);
+      err = svn_ra_dav__parsed_request(rb->ras->sess, "REPORT",
+                                       rb->ras->root.path,
+                                       NULL, rb->tmpfile,
+                                       report_elements, validate_element,
+                                       start_element, end_element, rb,
+                                       NULL, rb->ras->pool);
+    }
 
   /* we're done with the file */
   (void) apr_file_close(rb->tmpfile);
@@ -2442,6 +2469,18 @@ make_reporter (void *session_baton,
   if (status)
     {
       msg = "Could not write the header for the temporary report file.";
+      goto error;
+    }
+
+  /* always write the original source path.  this is part of the "new
+     style" update-report syntax.  if the tmpfile is used in an "old
+     style' update-report request, older servers will just ignore this
+     unknown xml element. */
+  s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>", ras->root.path);
+  status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
+  if (status)
+    {
+      msg = "Failed writing the src-path to the report tempfile.";
       goto error;
     }
 
