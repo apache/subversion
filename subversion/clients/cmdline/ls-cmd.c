@@ -100,7 +100,7 @@ print_dirents (apr_hash_t *dirents,
             timestr[0] = '\0';
 
           printf ("%7"SVN_REVNUM_T_FMT" %8.8s "
-                  "%8"SVN_FILESIZE_T_FMT" %12s %s%s\n",
+                  "%10"SVN_FILESIZE_T_FMT" %12s %s%s\n",
                   dirent->created_rev,
                   stdout_author ? stdout_author : "      ? ",
                   dirent->size,
