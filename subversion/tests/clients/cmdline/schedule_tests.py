@@ -22,6 +22,7 @@ import string, sys, os, shutil
 
 # Our testing module
 import svntest
+from svntest import SVNAnyOutput
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -66,8 +67,7 @@ def add_files(sbox):
 
   wc_dir = sbox.wc_dir
 
-  if svntest.actions.make_repo_and_wc(sbox):
-    return 1
+  svntest.actions.make_repo_and_wc(sbox)
 
   # Create some files, then schedule them for addition
   delta_path = os.path.join(wc_dir, 'delta')
@@ -88,7 +88,7 @@ def add_files(sbox):
     'A/D/G/epsilon' : Item(status='A ', wc_rev=0, repos_rev=1),
     })
 
-  return svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
 
@@ -97,8 +97,7 @@ def add_directories(sbox):
 
   wc_dir = sbox.wc_dir
 
-  if svntest.actions.make_repo_and_wc(sbox):
-    return 1
+  svntest.actions.make_repo_and_wc(sbox)
 
   # Create some directories, then schedule them for addition
   X_path = os.path.join(wc_dir, 'X')
@@ -119,7 +118,7 @@ def add_directories(sbox):
     'A/D/H/Z' : Item(status='A ', wc_rev=0, repos_rev=1),
     })
 
-  return svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
 
@@ -128,8 +127,7 @@ def nested_adds(sbox):
 
   wc_dir = sbox.wc_dir
 
-  if svntest.actions.make_repo_and_wc(sbox):
-    return 1
+  svntest.actions.make_repo_and_wc(sbox)
 
   # Create some directories then schedule them for addition
   X_path = os.path.join(wc_dir, 'X')
@@ -178,27 +176,28 @@ def nested_adds(sbox):
     'A/D/H/Z/zeta' : Item(status='A ', wc_rev=0, repos_rev=1),
     })
 
-  return svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
 
 def add_executable(sbox):
   "schedule: add some executable files"
 
-  if sbox.build():
-    return 1
+  sbox.build()
+
   def runTest(wc_dir, fileName, perm, executable):
     fileName = os.path.join(wc_dir, fileName)
     if executable:
-      expected = (["*\n"], [])
+      expected_out = ["*\n"]
     else:
-      expected = ([], [])
+      expected_out = []
     f = open(fileName,"w")
     f.close()
     os.chmod(fileName,perm)
     svntest.main.run_svn(None, 'add', fileName)
-    return expected != svntest.main.run_svn(None, 'propget',
-                                            "svn:executable", fileName)
+    svntest.actions.run_and_verify_svn(None, expected_out, [],
+                                       'propget', "svn:executable", fileName)
+    
   test_cases = [
     ("all_exe",   0777, 1),
     ("none_exe",  0666, 0),
@@ -207,8 +206,7 @@ def add_executable(sbox):
     ("other_exe", 0667, 0),
     ]
   for test_case in test_cases:
-    if runTest(sbox.wc_dir, *test_case):
-      return 1
+    runTest(sbox.wc_dir, *test_case)
 
 #----------------------------------------------------------------------
 
@@ -217,8 +215,7 @@ def delete_files(sbox):
 
   wc_dir = sbox.wc_dir
 
-  if svntest.actions.make_repo_and_wc(sbox):
-    return 1
+  svntest.actions.make_repo_and_wc(sbox)
 
   # Schedule some files for deletion
   iota_path = os.path.join(wc_dir, 'iota')
@@ -233,7 +230,7 @@ def delete_files(sbox):
   expected_status.tweak('iota', 'A/mu', 'A/D/G/rho', 'A/D/H/omega',
                         status='D ')
 
-  return svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
 
@@ -242,8 +239,7 @@ def delete_dirs(sbox):
 
   wc_dir = sbox.wc_dir
 
-  if svntest.actions.make_repo_and_wc(sbox):
-    return 1
+  svntest.actions.make_repo_and_wc(sbox)
 
   # Schedule some directories for deletion (this is recursive!)
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
@@ -265,7 +261,7 @@ def delete_dirs(sbox):
                         'A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi',
                         status='D ')
 
-  return svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
 #######################################################################
@@ -275,10 +271,8 @@ def delete_dirs(sbox):
 def revert_add_files(sbox):
   "revert: add some files"
 
+  add_files(sbox)
   wc_dir = sbox.wc_dir
-
-  if add_files(sbox):
-    return 1
 
   # Revert our changes recursively from wc_dir.
   delta_path = os.path.join(wc_dir, 'delta')
@@ -287,31 +281,24 @@ def revert_add_files(sbox):
   expected_output = ["Reverted " + delta_path + "\n",
                      "Reverted " + zeta_path + "\n",
                      "Reverted " + epsilon_path + "\n"]
-  output, errput = svntest.main.run_svn (None, 'revert', '--recursive', wc_dir)
-
-  # Make sure we got the right output.
-  if len(errput) > 0:
-    print errput
-    return 1
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'revert',
+                                                   '--recursive', wc_dir)
 
   ### do we really need to sort these?
-  output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
+  output = _tweak_paths(output) # FIXME: see comment at _tweak_paths
   output.sort()
   expected_output.sort()
   if output != expected_output:
-    return 1
-
-  return 0
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 
 def revert_add_directories(sbox):
   "revert: add some directories"
 
+  add_directories(sbox)
   wc_dir = sbox.wc_dir
-
-  if add_directories(sbox):
-    return 1
 
   # Revert our changes recursively from wc_dir.
   X_path = os.path.join(wc_dir, 'X')
@@ -320,31 +307,24 @@ def revert_add_directories(sbox):
   expected_output = ["Reverted " + X_path + "\n",
                      "Reverted " + Y_path + "\n",
                      "Reverted " + Z_path + "\n"]
-  output, errput = svntest.main.run_svn (None, 'revert', '--recursive', wc_dir)
-
-  # Make sure we got the right output.
-  if len(errput) > 0:
-    print errput
-    return 1
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'revert',
+                                                   '--recursive', wc_dir)
 
   ### do we really need to sort these?
   output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
   output.sort()
   expected_output.sort()
   if output != expected_output:
-    return 1
-
-  return 0
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 
 def revert_nested_adds(sbox):
   "revert: add some nested files and directories"
 
+  nested_adds(sbox)
   wc_dir = sbox.wc_dir
-
-  if nested_adds(sbox):
-    return 1
 
   # Revert our changes recursively from wc_dir.
   X_path = os.path.join(wc_dir, 'X')
@@ -353,31 +333,24 @@ def revert_nested_adds(sbox):
   expected_output = ["Reverted " + X_path + "\n",
                      "Reverted " + Y_path + "\n",
                      "Reverted " + Z_path + "\n"]
-  output, errput = svntest.main.run_svn (None, 'revert', '--recursive', wc_dir)
-
-  # Make sure we got the right output.
-  if len(errput) > 0:
-    print errput
-    return 1
-
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'revert',
+                                                   '--recursive', wc_dir)
   ### do we really need to sort these?
   output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
   output.sort()
   expected_output.sort()
   if output != expected_output:
-    return 1
-
-  return 0
-
+    raise svntest.Failure
+  
 #----------------------------------------------------------------------
 
 def revert_add_executable(sbox):
   "revert: add some executable files"
 
-  if add_executable(sbox):
-    return 1
-
+  add_executable(sbox)
   wc_dir = sbox.wc_dir
+  
   all_path = os.path.join(wc_dir, 'all_exe')
   none_path = os.path.join(wc_dir, 'none_exe')
   user_path = os.path.join(wc_dir, 'user_exe')
@@ -390,32 +363,24 @@ def revert_add_executable(sbox):
                      "Reverted " + group_path + "\n",
                      "Reverted " + other_path + "\n"]
 
-  output, errput = svntest.main.run_svn (None, 'revert', 
-                                         '--recursive', wc_dir)
-
-  # Make sure we got the right output.
-  if len(errput) > 0:
-    print errput
-    return 1
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'revert',
+                                                   '--recursive', wc_dir)
 
   ### do we really need to sort these?
-  output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
+  expected_output = _tweak_paths(expected_output)
   output.sort()
   expected_output.sort()
   if output != expected_output:
-    return 1
-
-  return 0
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 
 def revert_delete_files(sbox):
   "revert: delete some files"
 
+  delete_files(sbox)
   wc_dir = sbox.wc_dir
-
-  if delete_files(sbox):
-    return 1
 
   # Revert our changes recursively from wc_dir.
   iota_path = os.path.join(wc_dir, 'iota')
@@ -426,31 +391,23 @@ def revert_delete_files(sbox):
                      "Reverted " + mu_path + "\n",
                      "Reverted " + omega_path + "\n",
                      "Reverted " + rho_path + "\n"]
-  output, errput = svntest.main.run_svn (None, 'revert', '--recursive', wc_dir)
-
-  # Make sure we got the right output.
-  if len(errput) > 0:
-    print errput
-    return 1
-
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'revert',
+                                                   '--recursive', wc_dir)
   ### do we really need to sort these?
   output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
   output.sort()
   expected_output.sort()
   if output != expected_output:
-    return 1
-
-  return 0
+    raise svntest.Failure
 
 #----------------------------------------------------------------------
 
 def revert_delete_dirs(sbox):
   "revert: delete some directories"
 
+  delete_dirs(sbox)
   wc_dir = sbox.wc_dir
-
-  if delete_dirs(sbox):
-    return 1
 
   # Revert our changes recursively from wc_dir.
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
@@ -469,22 +426,15 @@ def revert_delete_dirs(sbox):
                      "Reverted " + chi_path + "\n",
                      "Reverted " + omega_path + "\n",
                      "Reverted " + psi_path + "\n"]
-  output, errput = svntest.main.run_svn (None, 'revert', '--recursive', wc_dir)
-
-  # Make sure we got the right output.
-  if len(errput) > 0:
-    print errput
-    return 1
-
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'revert',
+                                                   '--recursive', wc_dir)
   ### do we really need to sort these?
   output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
   output.sort()
   expected_output.sort()
   if output != expected_output:
-    return 1
-
-  return 0
-
+    raise svntest.Failure
 
 #######################################################################
 #  Stage III - Commit of modifications made in Stage 1
@@ -493,66 +443,55 @@ def revert_delete_dirs(sbox):
 def commit_add_files(sbox):
   "commit: add some files"
 
-  if add_files(sbox):
-    return 1
+  add_files(sbox)
 
-  return 1
-  return 0
+  raise svntest.Failure
 
 #----------------------------------------------------------------------
 
 def commit_add_directories(sbox):
   "commit: add some directories"
 
-  if add_directories(sbox):
-    return 1
+  add_directories(sbox)
 
-  return 1
-  return 0
+  raise svntest.Failure
 
 #----------------------------------------------------------------------
 
 def commit_nested_adds(sbox):
   "commit: add some nested files and directories"
 
-  if nested_adds(sbox):
-    return 1
+  nested_adds(sbox)
 
-  return 1
-  return 0
+  raise svntest.Failure
 
 #----------------------------------------------------------------------
 
 def commit_add_executable(sbox):
   "commit: add some executable files"
 
-  if add_executable(sbox):
-    return 1
+  add_executable(sbox)
 
-  return 1
-  return 0
+  raise svntest.Failure
+
 
 #----------------------------------------------------------------------
 
 def commit_delete_files(sbox):
   "commit: delete some files"
 
-  if delete_files(sbox):
-    return 1
+  delete_files(sbox)
 
-  return 1
-  return 0
+  raise svntest.Failure
 
 #----------------------------------------------------------------------
 
 def commit_delete_dirs(sbox):
   "commit: delete some directories"
 
-  if delete_dirs(sbox):
-    return 1
+  delete_dirs(sbox)
 
-  return 1
-  return 0
+  raise svntest.Failure
 
 #----------------------------------------------------------------------
 # Regression test for issue #863:
@@ -568,8 +507,7 @@ def unschedule_missing_added(sbox):
 
   wc_dir = sbox.wc_dir
 
-  if svntest.actions.make_repo_and_wc(sbox):
-    return 1
+  svntest.actions.make_repo_and_wc(sbox)
 
   # Create some files and dirs, then schedule them for addition
   file1_path = os.path.join(wc_dir, 'file1')
@@ -591,8 +529,7 @@ def unschedule_missing_added(sbox):
     'dir2' : Item(status='A ', wc_rev=0, repos_rev=1),
     })
 
-  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
-    return 1
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Poof, all 4 added things are now missing in action.
   os.remove(file1_path)
@@ -606,10 +543,7 @@ def unschedule_missing_added(sbox):
 
   # 'svn st' should now show absolutely zero local mods.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
-    return 1
-
-  return 0
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
 # Regression test for issue #962:
@@ -622,8 +556,7 @@ def delete_missing(sbox):
 
   wc_dir = sbox.wc_dir
 
-  if svntest.actions.make_repo_and_wc(sbox):
-    return 1
+  svntest.actions.make_repo_and_wc(sbox)
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
@@ -633,9 +566,7 @@ def delete_missing(sbox):
   svntest.main.safe_rmtree(H_path)
 
   # Now schedule them for deletion anyway, and make sure no error is output.
-  stdout, stderr = svntest.main.run_svn(None, 'rm', mu_path, H_path)
-  if len(stderr) != 0:
-    return 1
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', mu_path, H_path)
 
   # Commit the deletions.
   expected_output = svntest.wc.State(wc_dir, {
@@ -648,11 +579,11 @@ def delete_missing(sbox):
                          'A/D/H/psi', 'A/D/H/omega', 'A/D/H/chi')
   expected_status.tweak(wc_rev=1)
 
-  return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output,
-                                                expected_status,
-                                                None, None, None, None, None,
-                                                wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
 #----------------------------------------------------------------------
 # Regression test for issue #854:
@@ -667,19 +598,18 @@ def revert_inside_newly_added_dir(sbox):
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
 
-  # Schedule a new directory for addition
-  os.mkdir('foo')
-  svntest.main.run_svn(None, 'add', 'foo')
+  try:
+    # Schedule a new directory for addition
+    os.mkdir('foo')
+    svntest.main.run_svn(None, 'add', 'foo')
 
-  # Now change into the newly added directory, revert and make sure
-  # an error is output.
-  os.chdir('foo')
-  out, err = svntest.main.run_svn(None, 'revert', '.')
-  if not(err):
+    # Now change into the newly added directory, revert and make sure
+    # an error is output.
+    os.chdir('foo')
+    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+                                       'revert', '.')
+  finally:
     os.chdir(was_cwd)
-    raise svntest.Failure
-
-  os.chdir(was_cwd)
 
 ########################################################################
 # Run the tests
