@@ -856,34 +856,6 @@ static svn_error_t *svn_ra_dav__do_get_uuid(svn_ra_session_t *session,
 }
 
 
-
-/* Context for neon request hooks;  shared by the next three callbacks.  */
-struct lock_request_baton
-{
-  /* The method neon is about to execute. */
-  const char *method;
-
-  /* The current working revision of item being locked. */
-  svn_revnum_t current_rev;
-
-  /* Whether client is "forcing" a lock or unlock. */
-  svn_boolean_t force;
-
-  /* The creation-date returned for newly created lock. */
-  apr_time_t creation_date;
-
-  /* A parser for handling <D:error> responses from mod_dav_svn. */
-  ne_xml_parser *error_parser;
-
-  /* If <D:error> is returned, here's where the parsed result goes. */
-  svn_error_t *err;
-
-  /* A place for allocating fields in this structure. */
-  apr_pool_t *pool;
-};
-
-
-
 /* A callback of type ne_header_handler, invoked when neon encounters
    mod_dav_svn's custom 'creationdate' header in a LOCK response. */
 static void
@@ -986,6 +958,24 @@ pre_send_hook(ne_request *req,
 }
 
 
+static void
+setup_neon_request_hook(svn_ra_dav__session_t *ras,
+                        apr_pool_t *pool)
+{
+  /* We need to set up the lock callback once and only once per neon
+     session creation. */
+
+  struct lock_request_baton *lrb;
+  /* Build context for neon callbacks and then register them. */
+  lrb = apr_pcalloc(pool, sizeof(*lrb));
+
+  ne_hook_create_request(ras->sess, create_request_hook, lrb);
+  ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
+
+  lrb->pool = pool;
+  ras->lrb = lrb;
+}
+
 /* ### TODO for 1.3: Send all locks to the server at once. */
 static svn_error_t *
 shim_svn_ra_dav__lock(svn_ra_session_t *session,
@@ -1000,7 +990,6 @@ shim_svn_ra_dav__lock(svn_ra_session_t *session,
   int rv;
   const char *url;
   svn_string_t fs_path;
-  struct lock_request_baton *lrb;
   struct ne_lock *nlock;
   svn_lock_t *slock;
 
@@ -1009,13 +998,13 @@ shim_svn_ra_dav__lock(svn_ra_session_t *session,
   SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
                                         url, SVN_INVALID_REVNUM, pool));
 
-  /* Build context for neon callbacks and then register them. */
-  lrb = apr_pcalloc(pool, sizeof(*lrb));
-  lrb->current_rev = current_rev;
-  lrb->force = force;
-  lrb->pool = pool;
-  ne_hook_create_request(ras->sess, create_request_hook, lrb);
-  ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
+  /* Clear out the lrb... */
+  memset((ras->lrb), 0, sizeof(ras->lrb));
+
+  /* ...and load it up again. */
+  ras->lrb->pool = pool;
+  ras->lrb->current_rev = current_rev;
+  ras->lrb->force = force;
 
   /* Make a neon lock structure. */
   nlock = ne_lock_create();
@@ -1032,20 +1021,20 @@ shim_svn_ra_dav__lock(svn_ra_session_t *session,
   rv = ne_lock(ras->sess, nlock);
 
   /* Did we get a <D:error> response? */
-  if (lrb->err)
+  if (ras->lrb->err)
     {
       ne_lock_destroy(nlock);
-      if (lrb->error_parser)
-        ne_xml_destroy(lrb->error_parser);
-      return lrb->err;
+      if (ras->lrb->error_parser)
+        ne_xml_destroy(ras->lrb->error_parser);
+      return ras->lrb->err;
     }
 
   /* Did we get some other sort of neon error? */
   if (rv)
     {
       ne_lock_destroy(nlock);
-      if (lrb->error_parser)
-        ne_xml_destroy(lrb->error_parser);
+      if (ras->lrb->error_parser)
+        ne_xml_destroy(ras->lrb->error_parser);
       return svn_ra_dav__convert_error(ras->sess,
                                        _("Lock request failed"), rv, pool);
     }
@@ -1058,8 +1047,8 @@ shim_svn_ra_dav__lock(svn_ra_session_t *session,
     slock->comment = apr_pstrdup(pool, nlock->owner);
   if (ras->auth_username)
     slock->owner = apr_pstrdup(pool, ras->auth_username);
-  if (lrb->creation_date)
-    slock->creation_date = lrb->creation_date;
+  if (ras->lrb->creation_date)
+    slock->creation_date = ras->lrb->creation_date;
 
   if (nlock->timeout == NE_TIMEOUT_INFINITE)
     slock->expiration_date = 0;
@@ -1069,8 +1058,8 @@ shim_svn_ra_dav__lock(svn_ra_session_t *session,
   
   /* Free neon things. */
   ne_lock_destroy(nlock);
-  if (lrb->error_parser)
-    ne_xml_destroy(lrb->error_parser);
+  if (ras->lrb->error_parser)
+    ne_xml_destroy(ras->lrb->error_parser);
 
   *lock = slock;
   return SVN_NO_ERROR;
@@ -1088,6 +1077,8 @@ svn_ra_dav__lock(svn_ra_session_t *session,
 {
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create (pool);
+
+  setup_neon_request_hook(session->priv, pool);
 
   /* ### TODO for 1.3: Send all the locks over the wire at once.  This
         loop is just a temporary shim. */
@@ -1112,7 +1103,7 @@ svn_ra_dav__lock(svn_ra_session_t *session,
          calls to the shim, so until we figure out how to fix this, we
          just use the main pool. */
       err = shim_svn_ra_dav__lock(session, &lock, path, comment, 
-                                  force, *revnum, pool);
+                                  force, *revnum, iterpool);
 
       if (err && !SVN_ERR_IS_LOCK_ERROR (err))
         return err;
@@ -1178,6 +1169,7 @@ shim_svn_ra_dav__unlock(svn_ra_session_t *session,
       nlock->token = ne_strdup(token);
     }
 
+  /* ### TODO Use setup_neon_request_hook. */
   /* Build context for neon callbacks and then register them. */
   lrb = apr_pcalloc(pool, sizeof(*lrb));
   lrb->force = force;
