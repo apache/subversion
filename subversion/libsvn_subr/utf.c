@@ -31,6 +31,7 @@
 #include "svn_pools.h"
 #include "svn_utf.h"
 #include "utf_impl.h"
+#include "svn_private_config.h"
 
 
 
@@ -143,8 +144,7 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
           apr_err = apr_thread_mutex_lock (xlate_handle_mutex);
           if (apr_err != APR_SUCCESS)
             return svn_error_create (apr_err, NULL,
-                                     "Can't lock charset translation "
-                                     "mutex");
+                                     _("Can't lock charset translation mutex"));
 #endif
           old_handle_p = apr_hash_get (xlate_handle_hash, userdata_key,
                                        APR_HASH_KEY_STRING);
@@ -162,8 +162,8 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
                   apr_err = apr_thread_mutex_unlock (xlate_handle_mutex);
                   if (apr_err != APR_SUCCESS)
                     return svn_error_create (apr_err, NULL,
-                                             "Can't unlock charset "
-                                             "translation mutex");
+                                             _("Can't unlock charset "
+                                               "translation mutex"));
 #endif
                   *ret = old_handle;
                   return SVN_NO_ERROR;
@@ -212,8 +212,7 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
       apr_status_t unlock_err = apr_thread_mutex_unlock (xlate_handle_mutex);
       if (unlock_err != APR_SUCCESS)
         return svn_error_create (unlock_err, NULL,
-                                 "Can't unlock charset translation "
-                                 "mutex");
+                                 _("Can't unlock charset translation mutex"));
     }
 #endif
 
@@ -226,9 +225,9 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
     /* Can't use svn_error_wrap_apr here because it calls functions in
        this file, leading to infinite recursion. */
     return svn_error_createf
-      (apr_err, NULL, "Can't create a converter from '%s' to '%s'",
-       (topage == APR_LOCALE_CHARSET ? "native" : topage),
-       (frompage == APR_LOCALE_CHARSET ? "native" : frompage));
+      (apr_err, NULL, _("Can't create a converter from '%s' to '%s'"),
+       (topage == APR_LOCALE_CHARSET ? _("native") : topage),
+       (frompage == APR_LOCALE_CHARSET ? _("native") : frompage));
 
   return SVN_NO_ERROR;
 }
@@ -359,7 +358,7 @@ convert_to_stringbuf (apr_xlate_t *convset,
   if (apr_err)
     /* Can't use svn_error_wrap_apr here because it calls functions in
        this file, leading to infinite recursion. */
-    return svn_error_create (apr_err, NULL, "Can't recode string");
+    return svn_error_create (apr_err, NULL, _("Can't recode string"));
   
   /* Else, exited due to success.  Trim the result buffer down to the
      right length. */
@@ -399,20 +398,20 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
 
               return svn_error_createf
                 (APR_EINVAL, NULL,
-                 "Safe data:\n"
-                 "\"%s\"\n"
-                 "... was followed by non-ASCII byte %d.\n"
-                 "\n"
-                 "Non-ASCII character detected (see above), "
-                 "and unable to convert to/from UTF-8",
+                 _("Safe data:\n"
+                   "\"%s\"\n"
+                   "... was followed by non-ASCII byte %d.\n"
+                   "\n"
+                   "Non-ASCII character detected (see above), "
+                   "and unable to convert to/from UTF-8"),
                  error_data, *((const unsigned char *) data));
             }
           else
             {
               return svn_error_createf
                 (APR_EINVAL, NULL,
-                 "Non-ASCII character (code %d) detected, "
-                 "and unable to convert to/from UTF-8",
+                 _("Non-ASCII character (code %d) detected, "
+                   "and unable to convert to/from UTF-8"),
                  *((const unsigned char *) data));
             }
         }
@@ -430,7 +429,7 @@ static svn_error_t *
 invalid_utf8 (const char *data, apr_size_t len, apr_pool_t *pool)
 {
   const char *last = svn_utf__last_valid (data, len);
-  const char *msg = "Valid UTF-8 data\n(hex:";
+  const char *msg = _("Valid UTF-8 data\n(hex:");
   int i, valid, invalid;
 
   /* We will display at most 24 valid octets (this may split a leading
@@ -443,7 +442,7 @@ invalid_utf8 (const char *data, apr_size_t len, apr_pool_t *pool)
                                                 (unsigned char)last[i-valid]),
                        NULL);
   msg = apr_pstrcat (pool, msg,
-                     ")\nfollowed by invalid UTF-8 sequence\n(hex:", NULL);
+                     _(")\nfollowed by invalid UTF-8 sequence\n(hex:"), NULL);
 
   /* 4 invalid octets will guarantee that the faulty octet is displayed */
   invalid = data + len - last;
@@ -452,7 +451,7 @@ invalid_utf8 (const char *data, apr_size_t len, apr_pool_t *pool)
   for (i = 0; i < invalid; ++i)
     msg = apr_pstrcat (pool, msg, apr_psprintf (pool, " %02x",
                                                 (unsigned char)last[i]), NULL);
-  msg = apr_pstrcat (pool, msg, ")", NULL);
+  msg = apr_pstrcat (pool, msg, _(")"), NULL);
 
   return svn_error_create (APR_EINVAL, NULL, msg);
 }

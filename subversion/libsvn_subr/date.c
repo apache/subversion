@@ -18,6 +18,8 @@
 #include <svn_time.h>
 #include "svn_error.h"
 
+#include "svn_private_config.h"
+
 /* Valid rule actions */
 enum rule_action {
   ACCUM,    /* Accumulate a decimal value */
@@ -199,7 +201,7 @@ svn_parse_date (svn_boolean_t *matched, apr_time_t *result, const char *text,
 
   apr_err = apr_time_exp_lt (&expnow, now);
   if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr (apr_err, "Can't manipulate current date");
+    return svn_error_wrap_apr (apr_err, _("Can't manipulate current date"));
 
   if (template_match (&expt, &localtz, /* ISO-8601 extended, date only */
                       "YYYY-MM-DD",
@@ -268,15 +270,16 @@ svn_parse_date (svn_boolean_t *matched, apr_time_t *result, const char *text,
       expt.tm_gmtoff = expnow.tm_gmtoff;
       apr_err = apr_time_exp_gmt_get (&candidate, &expt);
       if (apr_err != APR_SUCCESS)
-        return svn_error_wrap_apr (apr_err, "Can't calculate requested date");
+        return svn_error_wrap_apr (apr_err,
+                                   _("Can't calculate requested date"));
       apr_err = apr_time_exp_lt (&expthen, candidate);
       if (apr_err != APR_SUCCESS)
-        return svn_error_wrap_apr (apr_err, "Can't expand time");
+        return svn_error_wrap_apr (apr_err, _("Can't expand time"));
       expt.tm_gmtoff = expthen.tm_gmtoff;
     }
   apr_err = apr_time_exp_gmt_get (result, &expt);
   if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr (apr_err, "Can't calculate requested date");
+    return svn_error_wrap_apr (apr_err, _("Can't calculate requested date"));
 
   *matched = TRUE;
   return SVN_NO_ERROR;

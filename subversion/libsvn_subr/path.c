@@ -1061,7 +1061,7 @@ svn_path_get_absolute(const char **pabsolute,
 
       if (apr_err)
         return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                                 "Couldn't determine absolute path of '%s'", 
+                                 _("Couldn't determine absolute path of '%s'"), 
                                  svn_path_local_style (relative, pool));
     }
 
@@ -1100,7 +1100,7 @@ svn_path_split_if_file(const char *path,
   else 
     {
       return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                               "'%s' is neither a file nor a directory name",
+                               _("'%s' is neither a file nor a directory name"),
                                svn_path_local_style(path, pool));
     }
 
@@ -1206,7 +1206,7 @@ get_path_encoding (svn_boolean_t *path_is_utf8, apr_pool_t *pool)
   apr_err = apr_filepath_encoding (&encoding_style, pool);
   if (apr_err)
     return svn_error_wrap_apr (apr_err,
-                               "Can't determine the native path encoding");
+                               _("Can't determine the native path encoding"));
 
   /* ### What to do about APR_FILEPATH_ENCODING_UNKNOWN?
      Well, for now we'll just punt to the svn_utf_ functions;
