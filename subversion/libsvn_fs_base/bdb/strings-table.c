@@ -205,6 +205,8 @@ svn_fs_bdb__string_read (svn_fs_t *fs,
     {
       offset -= length;
 
+      /* Remember, if any error happens, our cursor has been closed
+         for us. */
       db_err = get_next_length (&length, cursor, &query);
 
       /* No more records? They tried to read past the end. */
@@ -245,6 +247,8 @@ svn_fs_bdb__string_read (svn_fs_t *fs,
           break;
         }
 
+      /* Remember, if any error happens, our cursor has been closed
+         for us. */
       db_err = get_next_length (&length, cursor, &query);
       if (db_err == DB_NOTFOUND)
         break;
@@ -405,6 +409,8 @@ svn_fs_bdb__string_size (svn_filesize_t *size,
   total = length;
   while (1)
     {
+      /* Remember, if any error happens, our cursor has been closed
+         for us. */
       db_err = get_next_length (&length, cursor, &query);
 
       /* No more records? Then return the total length. */

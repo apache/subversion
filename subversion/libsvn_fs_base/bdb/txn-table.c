@@ -234,7 +234,6 @@ svn_fs_bdb__get_txn_list (apr_array_header_t **names_p,
   apr_size_t const next_id_key_len = strlen (NEXT_KEY_KEY);
   apr_pool_t *subpool = svn_pool_create (trail->pool);
   apr_array_header_t *names;
-
   DBC *cursor;
   DBT key, value;
   int db_err, db_c_err;
