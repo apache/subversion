@@ -53,6 +53,7 @@
 ;; ^     - svn-status-examine-parent
 ;; ~     - svn-status-get-specific-revision
 ;; E     - svn-status-ediff-with-revision
+;; X X   - svn-status-resolve-conflicts
 ;; s     - svn-status-show-process-buffer
 ;; e     - svn-status-toggle-edit-cmd-flag
 ;; ?     - svn-status-toggle-hide-unknown
@@ -853,7 +854,6 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "C-=") 'svn-status-show-svn-diff-for-marked-files)
   (define-key svn-status-mode-map (kbd "~") 'svn-status-get-specific-revision)
   (define-key svn-status-mode-map (kbd "E") 'svn-status-ediff-with-revision)
-  (define-key svn-status-mode-map (kbd "X") 'svn-status-resolve-conflicts)
 
   (define-key svn-status-mode-map (kbd "C-n") 'svn-status-next-line)
   (define-key svn-status-mode-map (kbd "C-p") 'svn-status-previous-line)
@@ -892,6 +892,7 @@ A and B must be line-info's."
 (when (not svn-status-mode-extension-map)
   (setq svn-status-mode-extension-map (make-sparse-keymap))
   (define-key svn-status-mode-extension-map (kbd "v") 'svn-status-resolved)
+  (define-key svn-status-mode-extension-map (kbd "X") 'svn-status-resolve-conflicts)
   (define-key svn-status-mode-map (kbd "X") svn-status-mode-extension-map))
 (when (not svn-status-mode-options-map)
   (setq svn-status-mode-options-map (make-sparse-keymap))
