@@ -32,6 +32,7 @@
 #include <ne_207.h>
 #include <ne_props.h>
 #include <ne_xml.h>
+#include <ne_request.h>
 
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -59,9 +60,15 @@ typedef struct {
 
 typedef struct {
   apr_pool_t *pool;
-  svn_error_t *err;
+
+  svn_error_t *err;             /* propagate an error out of the reader */
+
+  /* these two are the handler that the editor gave us */
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
+
+  int checked_type;             /* have we processed ctype yet? */
+  ne_content_type ctype;        /* the Content-Type header */
 
 } file_read_ctx_t;
 
@@ -194,6 +201,25 @@ static svn_error_t *store_vsn_url(const svn_ra_dav_resource_t *rsrc,
   return simple_store_vsn_url(vsn_url, baton, setter, vuh);
 }
 
+static svn_error_t *get_delta_base(const char **delta_base,
+                                   const char *relpath,
+                                   svn_ra_get_wc_prop_func_t get_wc_prop,
+                                   void *cb_baton,
+                                   apr_pool_t *pool)
+{
+  const svn_string_t *value;
+
+  if (relpath == NULL || get_wc_prop == NULL)
+    {
+      *delta_base = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR( (*get_wc_prop)(cb_baton, relpath, SVN_RA_DAV__LP_VSN_URL, &value) );
+
+  *delta_base = value ? value->data : NULL;
+  return SVN_NO_ERROR;
+}
 
 /* helper func which maps certain DAV: properties to svn:wc:
    properties.  Used during checkouts and updates.  */
@@ -383,10 +409,6 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
   svn_txdelta_window_t window = { 0 };
   svn_txdelta_op_t op;
   svn_stringbuf_t data;
-  data.data		= (char *)buf;
-  data.len		= len;
-  data.blocksize	= len;
-  data.pool		= frc->pool;
 
   if (frc->err)
     {
@@ -406,6 +428,20 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
       return;
     }
 
+  if (!frc->checked_type)
+    {
+#if 0
+      printf("Content-Type: %s/%s; charset=%s\n",
+             frc->ctype.type, frc->ctype.subtype, frc->ctype.charset);
+#endif
+      frc->checked_type = 1;
+    }
+
+  data.data		= (char *)buf;
+  data.len		= len;
+  data.blocksize	= len;
+  data.pool		= frc->pool;
+
   op.action_code = svn_txdelta_new;
   op.offset = 0;
   op.length = len;
@@ -424,17 +460,23 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
 
 static svn_error_t *simple_fetch_file(ne_session *sess,
                                       const char *url,
+                                      const char *relpath,
                                       svn_boolean_t text_deltas,
                                       void *file_baton,
                                       const svn_delta_edit_fns_t *editor,
+                                      svn_ra_get_wc_prop_func_t get_wc_prop,
+                                      void *cb_baton,
                                       apr_pool_t *pool)
 {
   file_read_ctx_t frc = { 0 };
   svn_error_t *err;
   svn_error_t *err2;
   int rv;
+  int code;
   svn_string_t my_url;
   svn_stringbuf_t *url_str;
+  ne_request *req;
+  const char *delta_base;
 
   my_url.data	= url;
   my_url.len	= strlen(url);
@@ -458,13 +500,64 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
   frc.err = NULL;
   frc.pool = pool;
 
-  rv = ne_read_file(sess, url_str->data, fetch_file_reader, &frc);
+  /* See if we can get a version URL for this resource. This will refer to
+     what we already have in the working copy, thus we can get a diff against
+     this particular resource. */
+  SVN_ERR( get_delta_base(&delta_base, relpath, get_wc_prop, cb_baton, pool) );
+
+  req = ne_request_create(sess, "GET", url_str->data);
+  if (req == NULL)
+    {
+      return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL, pool,
+                               "Could not create a GET request for %s",
+                               url_str->data);
+    }
+
+  /* we want to get the Content-Type so that we can figure out whether
+     this is an svndiff or a fulltext */
+  ne_add_response_header_handler(req, "Content-Type", ne_content_type_handler,
+                                 &frc.ctype);
+
+  if (delta_base)
+    {
+      /* The HTTP delta draft uses an If-None-Match header holding an
+         entity tag corresponding to the copy we have. It is much more
+         natural for us to use a version URL to specify what we have.
+         Thus, we want to use the If: header to specify the URL. But
+         mod_dav sees all "State-token" items as lock tokens. When we
+         get mod_dav updated and the backend APIs expanded, then we
+         can switch to using the If: header. For now, use a custom
+         header to specify the version resource to use as the base. */
+      ne_add_request_header(req, "X-SVN-VR-Base", delta_base);
+    }
+
+  /* add in a reader to capture the body of the response. */
+  ne_add_response_body_reader(req, ne_accept_2xx, fetch_file_reader, &frc);
+
+  /* do the response now */
+  rv = ne_request_dispatch(req);
+  code = ne_get_status(req)->code;
+  ne_request_destroy(req);
+
+  /* we no longer need this */
+  if (frc.ctype.value != NULL)
+    free(frc.ctype.value);
+
   if (rv != NE_OK)
     {
       err = svn_ra_dav__convert_error(sess, "fetching a file", rv, pool);
     }
+  else if (code != 200 && code != 226)
+    {
+      err = svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
+                               "GET request failed for %s",
+                               url_str->data);
+    }
   /* else: err == NULL */
 
+  /* if there was an error reading the contents, then bail *before*
+     closing the handler. we don't want to tell the handler that the
+     file is "done". */
   if (frc.err)
     return frc.err;
 
@@ -495,7 +588,11 @@ static svn_error_t *fetch_file(ne_session *sess,
   if (err)
     return svn_error_quick_wrap(err, "could not add a file");
 
-  err = simple_fetch_file(sess, bc_url, TRUE, file_baton, editor, pool);
+  /* fetch_file() is only used for checkout, so we just pass NULL for the
+     simple_fetch_file() params related to fetching version URLs (for
+     fetching deltas) */
+  err = simple_fetch_file(sess, bc_url, NULL, TRUE, file_baton, editor,
+                          NULL, NULL, pool);
   if (err)
     {
       /* ### do we really need to bother with closing the file_baton? */
@@ -1130,9 +1227,13 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
     case ELEM_fetch_file:
       /* assert: rb->href->len > 0 */
-      CHKERR( simple_fetch_file(rb->ras->sess2, rb->href->data, 
+      CHKERR( simple_fetch_file(rb->ras->sess2, rb->href->data,
+                                NULL, /* ### need relpath */
                                 rb->fetch_content,
-                                rb->file_baton, rb->editor, rb->ras->pool) );
+                                rb->file_baton, rb->editor,
+                                rb->ras->callbacks->get_wc_prop,
+                                rb->ras->callback_baton,
+                                rb->ras->pool) );
       break;
 
     case ELEM_delete_entry:
@@ -1234,9 +1335,13 @@ static int end_element(void *userdata,
          retrieve the href before fetching. */
 
       /* fetch file */
-      CHKERR( simple_fetch_file(rb->ras->sess2, rb->href->data, 
+      CHKERR( simple_fetch_file(rb->ras->sess2, rb->href->data,
+                                NULL, /* ### need relpath */
                                 rb->fetch_content,
-                                rb->file_baton, rb->editor, rb->ras->pool) );
+                                rb->file_baton, rb->editor,
+                                rb->ras->callbacks->get_wc_prop,
+                                rb->ras->callback_baton,
+                                rb->ras->pool) );
 
 
       /*** FALLTHRU ***/
