@@ -1,4 +1,4 @@
-/* convert-size.h : interface to ascii-to-size and vice-versa conversions
+/* key-gen.c --- manufacturing sequential keys for some db tables
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -11,8 +11,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_CONVERT_SIZE_H
-#define SVN_LIBSVN_FS_CONVERT_SIZE_H
+#ifndef SVN_LIBSVN_FS_KEY_GEN_H
+#define SVN_LIBSVN_FS_KEY_GEN_H
 
 #include "apr.h"
 
@@ -36,7 +36,33 @@ apr_size_t svn_fs__getsize (const char *data, apr_size_t len,
 int svn_fs__putsize (char *data, apr_size_t len, apr_size_t value);
 
 
-#endif /* SVN_LIBSVN_FS_CONVERT_SIZE_H */
+/* In the `representations' and `strings', the value at this key is
+   the key to use when next storing a rep or string. */
+extern const char next_key_key[];
+
+
+/* Generate the next key after a given alphanumeric key.
+ *
+ * The first *LEN bytes of THIS are an ascii representation of a
+ * number in base 36: digits 0-9 have their usual values, and a-z have
+ * values 10-35.
+ *
+ * The new key is stored in NEXT, null-terminated.  NEXT must be at
+ * least *LEN + 2 bytes long -- one extra byte to hold a possible
+ * overflow column, and one for null termination.  On return, *LEN
+ * will be set to the length of the new key, not counting the null
+ * terminator.  In other words, the outgoing *LEN will be either equal
+ * to the incoming, or to the incoming + 1.
+ *
+ * If THIS contains anything other than digits and lower-case
+ * alphabetic characters, or if it starts with `0' but is not the
+ * string "0", then *LEN is set to zero and the effect on NEXT
+ * is undefined.
+ */
+void svn_fs__next_key (const char *this, apr_size_t *len, char *next);
+
+
+#endif /* SVN_LIBSVN_FS_KEY_GEN_H */
 
 
 

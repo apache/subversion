@@ -14,7 +14,7 @@
 #include "string.h"
 #include "svn_string.h"
 #include "skel.h"
-#include "convert-size.h"
+#include "key-gen.h"
 
 
 /* Parsing skeletons.  */
