@@ -664,7 +664,8 @@ svn_repos_get_logs (svn_repos_t *repos,
  * Retrieve a subset of the interesting revisions of a file @a path in
  * @a repos as seen in revision @a end.  Invoke @a handler with
  * @a handler_baton as its first argument for each such revision.
- * @a pool is used for all allocations.
+ * @a pool is used for all allocations.  See @c svn_fs_history_prev for
+ * a discussion of interesting revisions.
  *
  * If there is an interesting revision of the file that is less than or
  * equal to start, the iteration will start at that revision.  Else, the

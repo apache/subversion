@@ -482,6 +482,8 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
                                 const apr_xml_doc *doc,
                                 ap_filter_t *output);
 
+/* Respond to a client request for a REPORT of type file-revs-report for the
+   RESOURCE.  Get request body from DOC and send result to OUTPUT. */
 dav_error * dav_svn__file_revs_report(const dav_resource *resource,
                                       const apr_xml_doc *doc,
                                       ap_filter_t *output);
@@ -514,8 +516,9 @@ dav_error * dav_svn__get_locations_report(const dav_resource *resource,
 
 
 
-/* Create a writable generic stream that will encode its output to base64
-   and send it to the Apache filter OUTPUT using BB. */
+/* Return a writable generic stream that will encode its output to base64
+   and send it to the Apache filter OUTPUT using BB.  Allocate the stream in
+   POOL. */
 svn_stream_t * dav_svn_make_base64_output_stream(apr_bucket_brigade *bb,
                                                  ap_filter_t *output,
                                                  apr_pool_t *pool);

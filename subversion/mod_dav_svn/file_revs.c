@@ -80,7 +80,7 @@ static svn_error_t *maybe_send_header(struct file_rev_baton *frb)
 }
 
 /* Send a property named NAME with value VAL in an element named ELEM_NAME. 
-   NAME is properly quoted and VAL is encoded if necessary. */
+   Quote NAME and base64-encode VAL if necessary. */
 static svn_error_t *
 send_prop(struct file_rev_baton *frb, const char *elem_name,
           const char *name, const svn_string_t *val, apr_pool_t *pool)
@@ -126,7 +126,7 @@ delta_window_handler(svn_txdelta_window_t *window, void *baton)
   return SVN_NO_ERROR;
 }
 
-/* This implements the svn_repos_file_rev_handler_t intefrace. */
+/* This implements the svn_repos_file_rev_handler_t interface. */
 static svn_error_t *
 file_rev_handler(void *baton,
                  const char *path,
