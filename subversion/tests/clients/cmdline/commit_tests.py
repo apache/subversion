@@ -915,7 +915,7 @@ def hook_test(sbox):
   expected_output = (abs_repo_dir + "\n",
                      abs_repo_dir + " 1\n",
                      abs_repo_dir + " 2\n")
-  output, errput = svntest.main.run_svn ('ci', '--quiet', wc_dir)
+  output, errput = svntest.main.run_svn (None, 'ci', '--quiet', wc_dir)
 
   # Make sure we got the right output.
   if len (expected_output) != len (output): return 1
