@@ -95,7 +95,7 @@ class GeneratorBase:
     """Return a list of section objects from a string of section names."""
     sections = [ ]
     for section_name in string.split(section_list):
-      if section_name not in self.skip_sections:
+      if not self.skip_sections.has_key(section_name):
         sections.append(self.sections[section_name])
     return sections
 
