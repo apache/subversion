@@ -210,7 +210,7 @@ delete_entry (svn_stringbuf_t *name,
      deleting, else return an out-of-dateness error. */
   SVN_ERR (svn_fs_node_created_rev (&cr_rev, eb->txn_root, path->data,
                                     parent->subpool));
-  if (revision < cr_rev)
+  if (SVN_IS_VALID_REVNUM (revision) && (revision < cr_rev))
     return out_of_date (path->data, eb->txn_name, parent->subpool);
   
   /* This routine is a mindless wrapper.  We call svn_fs_delete_tree
