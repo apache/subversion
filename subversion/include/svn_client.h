@@ -917,11 +917,6 @@ svn_client_resolved (const char *path,
  * the @a src_path.  @a dst_path must be a file or directory under version
  * control, or a repository @a url, existent or not.
  *
- * ### 838 The argument to be removed when 838 stops using @c svn_client_copy.
- * @a optional_adm_access can either be a baton that holds a write lock for
- * the parent of @a path, or it can be @c NULL. If it is @c NULL the lock for 
- * the parent will be acquired and released by the function.
- *
  * If either @a src_path or @a dst_path are URLs, use the authentication baton 
  * in @a ctx and @a ctx->log_msg_func/@a ctx->log_msg_baton to immediately 
  * attempt to commit the copy action in the repository.  If the commit 
@@ -946,7 +941,6 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  const char *src_path,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
-                 svn_wc_adm_access_t *optional_adm_access,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
