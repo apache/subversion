@@ -117,6 +117,6 @@ svnlook_find_child_by_name (repos_node_t *parent,
 
 /* 
  * local variables:
- * eval: (load-file "../../svn-dev.el")
+ * eval: (load-file "../svn-dev.el")
  * end:
  */
