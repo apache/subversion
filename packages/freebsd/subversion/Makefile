@@ -14,7 +14,7 @@ MAINTAINER=	rooneg@electricjellyfish.net
 LIB_DEPENDS=	db4:${PORTSDIR}/databases/db4 \
 		neon.19:${PORTSDIR}/www/neon \
 		expat:${PORTSDIR}/textproc/expat \
-		apr:${PORTSDIR}/devel/apr-snapshot
+		apr:${PORTSDIR}/devel/apr-devel
 
 RUN_DEPENDS=	gdiff:${PORTSDIR}/textproc/diffutils \
 		gpatch:${PORTSDIR}/devel/patch
