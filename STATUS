@@ -45,9 +45,3 @@ Candidate changes:
        -1: brane [until someone explains to me why this should be a
                   Unix-only change]
 
-  * r10894
-    Allow cancelation during recursive addition of a dir without subdirs.
-    Justification:
-      Simple usability fix.
-    Votes:
-      +1: breser, ghudson
