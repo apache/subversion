@@ -13,6 +13,9 @@
 #   Using CONFIG-FILE, deliver an email describing the changes between
 #   REV and REV-1 for the repository REPOS.
 #
+#   This version of mailer.py requires the python bindings from
+#   subversion 1.2.0 or later.
+#
 
 import os
 import sys
@@ -453,7 +456,7 @@ def generate_list(output, header, changelist, selection):
         else:
           text = ' unchanged'
         output.write('      - copied%s from r%d, %s%s\n'
-                     % (text, change.base_rev, change.base_path[1:], is_dir))
+                     % (text, change.base_rev, change.base_path, is_dir))
 
 
 def generate_diff(output, cfg, repos, date, change, group, params, pool):
@@ -524,12 +527,12 @@ def generate_diff(output, cfg, repos, date, change, group, params, pool):
 
       # note that we strip the leading slash from the base (copyfrom) path
       output.write('\nCopied: %s (from r%d, %s)\n'
-                   % (change.path, change.base_rev, change.base_path[1:]))
+                   % (change.path, change.base_rev, change.base_path))
       diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
-                             change.base_path[1:],
+                             change.base_path,
                              repos.root_this, change.path,
                              pool)
-      label1 = change.base_path[1:] + '\t(original)'
+      label1 = change.base_path + '\t(original)'
       label2 = '%s\t%s' % (change.path, date)
       singular = False
     else:
@@ -554,10 +557,10 @@ def generate_diff(output, cfg, repos, date, change, group, params, pool):
 
     output.write('\nModified: %s\n' % change.path)
     diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
-                           change.base_path[1:],
+                           change.base_path,
                            repos.root_this, change.path,
                            pool)
-    label1 = change.base_path[1:] + '\t(original)'
+    label1 = change.base_path + '\t(original)'
     label2 = '%s\t%s' % (change.path, date)
     singular = False
 
