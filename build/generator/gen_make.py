@@ -48,18 +48,18 @@ class Generator(gen_base.GeneratorBase):
       libs = [ ]
 
       for source in sources:
-        if isinstance(source, gen_base.TargetLib):
-          # append the output of the target to our stated dependencies
-          deps.append(source.filename)
+        if isinstance(source, gen_base.Target):
+          if hasattr(source, 'make_lib'):
+            libs.append(source.make_lib)
+          else:
+            # append the output of the target to our stated dependencies
+            deps.append(source.filename)
 
-          # link against the library
-          libs.append(os.path.join(retreat, source.filename))
+            # link against the library
+            libs.append(os.path.join(retreat, source.filename))
         elif isinstance(source, gen_base.ObjectFile):
           # link in the object file
           objects.append(source.filename)
-        elif isinstance(source, gen_base.ExternalLibrary):
-          # link against the library
-          libs.append(source.filename)
         else:
           ### we don't know what this is, so we don't know what to do with it
           raise UnknownDependency
@@ -79,7 +79,7 @@ class Generator(gen_base.GeneratorBase):
            target_ob.filename, targ_varname,
 
            path, target_ob.link_cmd, os.path.basename(target_ob.filename),
-           targ_varname, string.join(libs))
+           targ_varname, string.join(gen_base.unique(libs)))
         )
 
     # for each install group, write a rule to install its outputs
