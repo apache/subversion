@@ -293,7 +293,7 @@ read_from_file (svn_string_t **result, const char *filename, apr_pool_t *pool)
                               filename);
       
   do {
-    apr_err = apr_file_read_file (f, buf, sizeof(buf), &len);
+    apr_err = apr_file_read_full (f, buf, sizeof(buf), &len);
     if (apr_err && !APR_STATUS_IS_EOF (apr_err))
       return svn_error_createf (apr_err, 0, NULL, pool,
                                 "read_from_file: failed to read '%s'",
