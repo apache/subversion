@@ -874,12 +874,14 @@ svn_wc_set_auth_file (svn_stringbuf_t *path,
 /* Create a unique temporary file in administrative tmp/ area of
    directory PATH.  Return a handle in *FP.
    
-   The flags will be APR_WRITE | APR_CREATE | APR_EXCL | APR_DELONCLOSE.
+   The flags will be APR_WRITE | APR_CREATE | APR_EXCL and
+   optionally APR_DELONCLOSE (if the delete_on_close argument is set TRUE).
 
    This means that as soon as FP is closed, the tmp file will vanish.  */
 svn_error_t *
 svn_wc_create_tmp_file (apr_file_t **fp,
                         svn_stringbuf_t *path,
+                        svn_boolean_t delete_on_close,
                         apr_pool_t *pool);
 
 
