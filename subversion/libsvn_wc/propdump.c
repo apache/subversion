@@ -263,20 +263,19 @@ svn_wc_proplist_write (svn_proplist_t *proplist,
   for (this = ap_hash_first (proplist); this; this = ap_hash_next (this))
     {
       void *key, *val;
+      size_t keylen;
       size_t num_len;
       char buf[100];   /* Only holds lengths expressed in decimal digits. */
 
       /* Get this key and val. */
-      ap_hash_this (this, &key, NULL, &val);
+      ap_hash_this (this, &key, &keylen, &val);
 
       /* Output the name's length, then the name itself. */
       guaranteed_ap_write (destfile, "N ", 2);
-      num_len = size_t_into_string (buf, ((svn_string_t *) key)->len);
+      num_len = size_t_into_string (buf, keylen);
       guaranteed_ap_write (destfile, buf, num_len);
       guaranteed_ap_write (destfile, "\n", 1);
-      guaranteed_ap_write (destfile, 
-                           ((svn_string_t *) key)->data, 
-                           ((svn_string_t *) key)->len);
+      guaranteed_ap_write (destfile, key, keylen);
       guaranteed_ap_write (destfile, "\n", 1);
 
       /* Output the value's length, then the value itself. */
@@ -322,6 +321,7 @@ main ()
 {
   ap_pool_t *pool = NULL;
   svn_proplist_t *proplist;
+  svn_string_t *key;
 
   /* Our longest piece of test data. */
   char *review =
@@ -339,23 +339,29 @@ main ()
   
   /* Fill it in with test data. */
 
-  ap_hash_set (proplist,
-               svn_string_create ("color", pool),
-               sizeof (svn_string_t *),
+  key = svn_string_create ("color", pool);
+  ap_hash_set (proplist, key->data, key->len,
                svn_string_create ("red", pool));
   
-  ap_hash_set (proplist,
-               svn_string_create ("wine review", pool),
-               sizeof (svn_string_t *),
+  key = svn_string_create ("wine review", pool);
+  ap_hash_set (proplist, key->data, key->len,
                svn_string_create (review, pool));
   
-  ap_hash_set (proplist,
-               svn_string_create ("price", pool),
-               sizeof (svn_string_t *),
+  key = svn_string_create ("price", pool);
+  ap_hash_set (proplist, key->data, key->len,
                svn_string_create ("US $6.50", pool));
 
-  svn_wc_proplist_write (proplist, 
-                         svn_string_create ("propdump.out", pool));
+  key = svn_string_create ("twice-used property name", pool);
+  ap_hash_set (proplist, key->data, key->len,
+               svn_string_create ("This is the first value.", pool));
+
+  key = svn_string_create ("twice-used property name", pool);
+  ap_hash_set (proplist, key->data, key->len,
+               svn_string_create ("This is the second value.", pool));
+
+  /* Dump it. */
+  svn_wc_proplist_write
+    (proplist, svn_string_create ("propdump.out", pool));
 
   ap_destroy_pool (pool);
 }
