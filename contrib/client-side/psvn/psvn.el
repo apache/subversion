@@ -2329,8 +2329,16 @@ When called with a prefix argument, it is possible to enter a new property."
            (unless (string= prop-name "")
              (save-excursion
                (set-buffer "*svn-status*")
-               (message "setting property %s := %s for %S" prop-name prop-value
-                        (svn-status-marked-files)))))
+               (message "Setting property %s := %s for %S" prop-name prop-value
+                        (svn-status-marked-file-names))
+               (let ((file-names (svn-status-marked-file-names)))
+                 (when file-names
+                   (svn-run-svn nil t 'propset 
+                                (append (list "propset" prop-name prop-value) file-names))
+                   )
+                 )
+               (message "propset finished.")
+               )))
           ((eq last-command 'svn-status-property-delete)
            (setq prop-name
                  (completing-read "Delete Property - Name: " (mapcar 'list pl) nil t))
