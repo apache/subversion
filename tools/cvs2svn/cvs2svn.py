@@ -392,6 +392,8 @@ class RepositoryMirror:
     each full path to each missing intermediate directory in PATH, in
     order from shortest to longest."""
 
+    print "KFF changing: '%s'" % path
+
     components = string.split(path, '/')
     path_so_far = None
 
@@ -455,6 +457,8 @@ class RepositoryMirror:
     parent_dir[last_component] = leaf_key
     self.nodes_db[parent_dir_key] = marshal.dumps(parent_dir)
     self.nodes_db[leaf_key] = marshal.dumps(self.empty_mutable_thang)
+    print "KFF changed file '%s' (parent_dir_key %s, leaf_key %s), parent_dir"\
+          % (path, parent_dir_key, leaf_key), parent_dir
     return retval
 
   def delete_path(self, path, prune=None):
@@ -543,6 +547,7 @@ class RepositoryMirror:
       print "KFF new_key: %s" % new_key
       parent_key = parent_item[1]
       parent_val = marshal.loads(self.nodes_db[parent_key])
+      print "KFF parent_val", parent_val
       if prune:
         if (new_key == None) and is_prunable(parent_val):
           print "KFF is prunable:", parent_val
@@ -580,9 +585,10 @@ class RepositoryMirror:
     if pruned_count > -1:
       retpath = string.join(components[:0 - pruned_count], '/')
       print "KFF pruned_count: '%d'" % pruned_count
-      print "KFF returning '%s'" % retpath
+      print "KFF deletion returning '%s'" % retpath
       return retpath
     else:
+      print "KFF deletion returning full '%s'" % path
       return path
 
 
