@@ -341,7 +341,7 @@ compare_and_verify (svn_boolean_t *modified_p,
     apr_md5_final (digest, &context);
 
     checksum = svn_md5_digest_to_cstring (digest, pool);
-    if (strcmp (checksum, entry->checksum) != 0)
+    if (entry->checksum && strcmp (checksum, entry->checksum) != 0)
       {
         return svn_error_createf
           (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
