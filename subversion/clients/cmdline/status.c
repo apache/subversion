@@ -167,7 +167,8 @@ svn_cl__print_status_list (apr_hash_t *statushash,
 
       if (! status 
           || (skip_unrecognized && ! status->entry)
-          || (status->text_status == svn_wc_status_none))
+          || (status->text_status == svn_wc_status_none
+              && status->repos_text_status == svn_wc_status_none))
         continue;
 
       err = svn_utf_cstring_from_utf8 (&path, item->key, pool);

@@ -306,7 +306,10 @@ def status_with_new_files_pending(sbox):
   # class is not the same as os.popen3().  Got that?)  See the Python
   # docs for details; in the meantime, no output means there was a
   # problem.
-  if not stat_output:
+  for line in stat_output:
+    if line.find('newfile') != -1:
+      break;
+  else:
     return 1
 
   os.chdir(was_cwd)
