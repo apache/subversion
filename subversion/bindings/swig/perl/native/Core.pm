@@ -1,7 +1,8 @@
+use strict;
+
 package SVN::Core;
 use SVN::Base qw(Core svn_);
-$VERSION = "$VER_MAJOR.$VER_MINOR.$VER_MICRO";
-use strict;
+$SVN::Base::VERSION = "$VER_MAJOR.$VER_MINOR.$VER_MICRO";
 
 =head1 NAME
 
@@ -44,12 +45,12 @@ functions.
 =cut
 
 BEGIN {
-    SVN::_Core::apr_initialize;
+    SVN::_Core::apr_initialize();
 
 }
 
 END {
-    SVN::_Core::apr_terminate;
+    SVN::_Core::apr_terminate();
 }
 
 =item SVN::Core::auth_open([auth provider array]);
@@ -337,9 +338,12 @@ destroyed by the perl garbage collector.
 
 =cut
 
-no strict 'refs';
-*{"apr_pool_$_"} = *{"SVN::_Core::apr_pool_$_"}
-    for qw/clear destroy/;
+{
+    # block is here to restrict no strict refs to this block
+    no strict 'refs';
+    *{"apr_pool_$_"} = *{"SVN::_Core::apr_pool_$_"}
+        for qw/clear destroy/;
+}
 
 my @POOLSTACK;
 
@@ -430,6 +434,7 @@ sub handle_warning {
 }
 
 foreach my $function (qw(compose clear quick_wrap)) {
+    no strict 'refs';
     my $real_function = \&{"SVN::_Core::svn_error_$function"};
     *{"_p_svn_error_t::$function"} = sub {
 			  return $real_function->(@_);
@@ -543,6 +548,7 @@ our $handler = \&croak_on_error;
 
 # Import functions that don't follow the normal naming scheme.
 foreach my $function (qw(handle_error handle_warning strerror)) {
+    no strict 'refs';
     my $real_function = \&{"SVN::_Core::svn_$function"};
 	  *{"SVN::Error::$function"} = sub {
 	      return $real_function->(@_);

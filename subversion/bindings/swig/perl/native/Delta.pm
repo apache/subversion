@@ -1,5 +1,6 @@
-package SVN::Delta;
 use strict;
+
+package SVN::Delta;
 use SVN::Base qw(Delta svn_delta_);
 
 =head1 NAME

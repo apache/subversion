@@ -1,3 +1,5 @@
+use strict;
+
 package SVN::Fs;
 use SVN::Base qw(Fs svn_fs_);
 
@@ -8,6 +10,7 @@ our @methods = qw/youngest_rev revision_root revision_prop revision_proplist
 		  get_uuid set_uuid/;
 
 for (@methods) {
+    no strict 'refs';
     *{$_} = *{"SVN::Fs::$_"};
 }
 
@@ -22,9 +25,10 @@ our @methods = qw/apply_textdelta apply_text change_node_prop
 		 node_proplist paths_changed revision_link
 		 revision_root_revision/;
 
-*fs = *{"SVN::Fs::root_fs"};
+*fs = *SVN::Fs::root_fs;
 
 for (@methods) {
+    no strict 'refs';
     *{$_} = *{"SVN::Fs::$_"};
 }
 

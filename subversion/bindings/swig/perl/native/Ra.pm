@@ -1,3 +1,5 @@
+use strict;
+
 package SVN::Ra;
 use SVN::Base qw(Ra svn_ra_);
 
@@ -58,10 +60,9 @@ objects, with the session_baton and pool omitted.
 
 =cut
 
-use strict;
 require SVN::Client;
 
-my $ralib = init_ra_libs;
+my $ralib = init_ra_libs();
 
 our $AUTOLOAD;
 

@@ -1,3 +1,4 @@
+use strict;
 use SVN::Core;
 use SVN::Wc;
 
@@ -792,7 +793,7 @@ foreach my $function (qw(checkout update switch add mkdir delete commit
                        propget uuid_from_url uuid_from_path
                        url_from_path revprop_get revprop_list))
 {
-
+    no strict 'refs';
     my $real_function = \&{"SVN::_Client::svn_client_$function"};
     *{"SVN::Client::$function"} = sub
     {

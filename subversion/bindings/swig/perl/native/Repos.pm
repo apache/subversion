@@ -1,6 +1,7 @@
+use strict;
+
 package SVN::Repos;
 use SVN::Base qw(Repos svn_repos_);
-use strict;
 
 =head1 NAME
 
@@ -48,8 +49,8 @@ my @methods = qw/fs get_logs get_commit_editor path db_env lock_dir
 		 fs_begin_txn_for_update fs_change_rev_prop
 		 node_editor dump_fs load_fs get_fs_build_parser/;
 
-no strict 'refs';
 for (@methods) {
+    no strict 'refs';
     *{$_} = *{"SVN::Repos::$_"};
 }
 
