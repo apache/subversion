@@ -24,7 +24,12 @@ import stat    # for ST_MODE
 import string  # for atof()
 import copy    # for deepcopy()
 import time    # for time()
+
 import getopt
+try:
+  my_getopt = getopt.gnu_getopt
+except AttributeError:
+  my_getopt = getopt.getopt
 
 from svntest import Failure
 from svntest import Skip
@@ -586,8 +591,8 @@ def run_tests(test_list):
   os.environ['SVN_EDITOR'] = ''
 
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'v',
-                               ['url=', 'fs-type=', 'verbose', 'cleanup'])
+    opts, args = my_getopt(sys.argv[1:], 'v',
+                           ['url=', 'fs-type=', 'verbose', 'cleanup'])
   except getopt.GetoptError:
     args = []
 
