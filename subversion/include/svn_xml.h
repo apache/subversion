@@ -24,7 +24,11 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 
+#ifdef SVN_HAVE_OLD_EXPAT
 #include "xmlparse.h"
+#else
+#include "expat.h"
+#endif
 
 #include "svn_error.h"
 #include "svn_delta.h"
