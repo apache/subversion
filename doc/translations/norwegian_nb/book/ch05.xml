@@ -898,17 +898,32 @@
   <!-- *** SECTION 2:  REPOSITORY CREATION AND CONFIGURATION           *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-5-sect-2">
+    <!-- @ENGLISH {{{
     <title>Repository Creation and Configuration</title>
+    @ENGLISH }}} -->
+    <title>Opprettelse og konfigurering av depotet</title>
 
+    <!-- @ENGLISH {{{
     <para>Creating a Subversion repository is an incredibly simple
       task.  The <command>svnadmin</command> utility, provided with
       Subversion, has a subcommand for doing just that.  To create a
       new repository, just run:</para>
+    @ENGLISH }}} -->
+    <para>Det &#229; opprette et Subversiondepot er en utrolig enkel oppgave.
+      <command>svnadmin</command>-verkt&#248;yet som f&#248;lger med Subversion 
+      har en delkommando som gj&#248;r akkurat det.
+      For &#229; opprette et nytt depot, er det bare &#229; kj&#248;re:</para>
           
+    <!-- @ENGLISH {{{
     <screen>
 $ svnadmin create /path/to/repos
 </screen>
+    @ENGLISH }}} -->
+    <screen>
+$ svnadmin create /sti/til/depot
+</screen>
           
+    <!-- @ENGLISH {{{
     <para>This creates a new repository in the directory
       <filename>/path/to/repos</filename>.  This new repository begins
       life at revision 0, which is defined to consist of nothing but
@@ -916,19 +931,42 @@ $ svnadmin create /path/to/repos
       directory.  Initially, revision 0 also has a single revision
       property, <literal>svn:date</literal>, set to the time at which
       the repository was created.</para>
+    @ENGLISH }}} -->
+    <para>Dette oppretter et nytt depot i katalogen 
+      <filename>/sti/til/depot</filename>.
+      Dette nye depotet starter livet ved revisjon 0, som er definert 
+      til &#229; bare innholde en rot p&#229; toppniv&#229; (<filename>/</filename>) i 
+      filsystemet.
+      Revisjon 0 har ogs&#229; en enkelt revisjonsegenskap satt 
+      innledningsvis, <literal>svn:date</literal>, som er satt til 
+      tidspunktet depotet ble opprettet.</para>
 
+    <!-- @ENGLISH {{{
     <para>In Subversion 1.1, a repository is created with a Berkeley
       DB back-end by default.  This behavior may change in future
       releases.  Regardless, the type can be explicitly chosen with
-      the <option>--fs-type</option> argument:</para>
+      the <option>-&#64738;-fs-type</option> argument:</para>
+    @ENGLISH }}} -->
+    <para>I Subversion 1.1 blir et depot opprettet med en 
+      bakenforliggende Berkeley DB-database som standard.
+      Denne oppf&#248;rselen kan forandre seg i fremtidige releaser.
+      Uansett, typen kan bli eksplisitt valgt med 
+      <option>--fs-type</option>-valget:</para>
 
+    <!-- @ENGLISH {{{
     <screen>
-$ svnadmin create --fs-type fsfs /path/to/repos
-$ svnadmin create --fs-type bdb /path/to/other/repos
+$ svnadmin create -&#64738;-fs-type fsfs /path/to/repos
+$ svnadmin create -&#64738;-fs-type bdb /path/to/other/repos
+</screen>
+    @ENGLISH }}} -->
+    <screen>
+$ svnadmin create --fs-type fsfs /sti/til/depot
+$ svnadmin create --fs-type bdb /sti/til/annet/depot
 </screen>
 
 
     <warning>
+      <!-- @ENGLISH {{{
       <para>Do not create a Berkeley DB repository on a network
         share&mdash;it <emphasis>cannot</emphasis> exist on a remote
         filesystem such as NFS, AFS, or Windows SMB.  Berkeley DB
@@ -940,7 +978,20 @@ $ svnadmin create --fs-type bdb /path/to/other/repos
         unpredictable&mdash;you may see mysterious errors right away,
         or it may be months before you discover that your repository
         database is subtly corrupted.</para>
+      @ENGLISH }}} -->
+      <para>Opprett ikke et Berkeley DB-depot p&#229; en nettverksdisk &#8212; det 
+        <emphasis>kan ikke</emphasis> eksistere p&#229; et fjerntliggende 
+        filsystem som NFS, AFS eller Windows SMB.
+        Berkeley DB krever at det underliggende filsystemet har 
+        implementert streng POSIX l&#229;sesemantikk, og enda viktigere, 
+        muligheten til &#229; mappe filer direkte inn i prosesshukommelsen.
+        Nesten ingen nettverksfilsystemer tilbyr disse mulighetene.
+        Hvis du fors&#248;ker &#229; bruke Berkeley DB p&#229; en nettverksdisk, er 
+        resultatene uforutsigelige &#8212; du kan se mystiske feilmeldinger 
+        med en gang, eller det kan g&#229; m&#229;nedsvis f&#248;r du oppdager at 
+        depotet i all stillhet blir herpa.</para>
 
+      <!-- @ENGLISH {{{
       <para>If you need multiple computers to access the repository,
         you create an FSFS repository on the network share, not a
         Berkeley DB repository.  Or better yet, set up a real server
@@ -949,8 +1000,18 @@ $ svnadmin create --fs-type bdb /path/to/other/repos
         access, and make the repository available over a network.
         <xref linkend="svn-ch-6"/> covers this process in
         detail.</para>
+      @ENGLISH }}} -->
+      <para>Hvis du trenger flere datamaskiner for &#229; aksessere depotet, 
+        lager du et FSFS-depot p&#229; nettverksdisken, ikke et Berkeley 
+        DB-depot.
+        Eller enda bedre, sett opp en skikkelig tjenerprosess (som for 
+        eksempel Apache eller <command>svnserve</command>), legg depotet 
+        i et lokalt filsystem som tjeneren aksessere, og gj&#248;r depotet 
+        tilgjengelig over et nettverk. <xref linkend="svn-ch-6"/> dekker 
+        denne prosessen i detalj.</para>
     </warning>
           
+    <!-- @ENGLISH {{{
     <para>You may have noticed that the path argument to
       <command>svnadmin</command> was just a regular filesystem path
       and not a URL like the <command>svn</command> client program
@@ -962,17 +1023,43 @@ $ svnadmin create --fs-type bdb /path/to/other/repos
       tasks across a network.  A common mistake made by Subversion
       newcomers is trying to pass URLs (even <quote>local</quote>
       <literal>file:</literal> ones) to these two programs.</para>
+    @ENGLISH }}} -->
+    <para>Du har kanskje lagt merke til at stiargumentet til 
+      <command>svnadmin</command> bare var en vanlig filsystemsti og 
+      ikke en URL lik det <command>svn</command>-klienten bruker n&#229;r den 
+      refererer til depot.
+      B&#229;de <command>svnadmin</command> og <command>svnlook</command> 
+      ansees som tjenerside-verkt&#248;y &#8212; de blir brukt p&#229; maskinen hvor 
+      depotet ligger for &#229; unders&#248;ke og modifisere aspekter ved depotet, 
+      og er faktisk ikke i stand til &#229; utf&#248;re oppgaver over nettverket.
+      En vanlig feil som blir gjort av nybakte Subversionbrukere er &#229; gi 
+      URLer (til og med av typene <quote>local</quote> og 
+      <literal>file:</literal>) til disse to programmene.</para>
 
+    <!-- @ENGLISH {{{
     <para>So, after you've run the <command>svnadmin create</command>
       command, you have a shiny new Subversion repository in its own
       directory.  Let's take a peek at what is actually created inside
       that subdirectory.</para>
+    @ENGLISH }}} -->
+    <para>S&#229;, etter at du har kj&#248;rt <command>svnadmin 
+      create</command>-kommandoen, har du et skinnende nytt depot i sin 
+      egen katalog.
+      La oss ta en kikk p&#229; hva som egentlig er laget i denne 
+      katalogen.</para>
             
+    <!-- @ENGLISH {{{
     <screen>
 $ ls repos
 conf/  dav/  db/  format  hooks/  locks/  README.txt
 </screen>
+    @ENGLISH }}} -->
+    <screen>
+$ ls depot
+conf/  dav/  db/  format  hooks/  locks/  README.txt
+</screen>
       
+    <!-- @ENGLISH {{{
     <para>With the exception of the <filename>README.txt</filename> and
       <filename>format</filename> files,
       the repository directory is a collection of subdirectories.  As
@@ -980,60 +1067,102 @@ conf/  dav/  db/  format  hooks/  locks/  README.txt
       high regard, and hierarchical organization is preferred to
       cluttered chaos.  Here is a brief description of all of
       the items you see in your new repository directory:</para>
+    @ENGLISH }}} -->
+    <para>Med unntak av filene <filename>README.txt</filename> og 
+      <filename>format</filename>, er depotkatalogen en samling av 
+      underkataloger.
+      Som i andre omr&#229;der av Subversion-designet er modularitet gitt 
+      stor oppmerksomhet, og hierarkisk organisering er foretrukket 
+      framfor <!-- cluttered -->rotete kaos.
+      Her er en rask beskrivelse av alle elementene som du ser i den nye 
+      depotkatalogen:</para>
 
     <variablelist>
       <varlistentry>
         <term>conf</term>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>A directory containing repository configuration files.</para>
+          @ENGLISH }}} -->
+          <para>En katalog som inneholder konfigurasjonsfiler for 
+            depotet.</para>
         </listitem>
       </varlistentry>
       <varlistentry>
         <term>dav</term>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>A directory provided to Apache and mod_dav_svn for
             their private housekeeping data.</para>
+          @ENGLISH }}} -->
+          <para>En katalog der Apache og mod_dav_svn lagrer sine 
+            husholdningsdata.</para>
         </listitem>
       </varlistentry>
       <varlistentry>
         <term>db</term>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Where all of your versioned data resides.  This
             directory is either a Berkeley DB environment (full of DB
             tables and other things), or is an FSFS environment
             containing revision files.</para>
+          @ENGLISH }}} -->
+          <para>Hvor alle dine versjonerte data ligger.
+            Denne katalogen er enten et Berkeley DB-milj&#248; (full av 
+            databasetabeller og andre ting), eller i et FSFS-milj&#248; som 
+            inneholder revisjonsfiler.</para>
         </listitem>
       </varlistentry>
       <varlistentry>
         <term>format</term>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>A file whose contents are a single integer value that
             dictates the version number of the repository layout.</para>
+          @ENGLISH }}} -->
+          <para>En fil som inneholder en enkelt heltallsverdi som 
+            dikterer versjonsnummeret til depotlayouten.</para>
         </listitem>
       </varlistentry>
       <varlistentry>
         <term>hooks</term>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>A directory full of hook script templates (and hook
             scripts themselves, once you've installed some).</para>
+          @ENGLISH }}} -->
+          <para>En katalog full av maler for p&#229;hakningsskript (Engelsk: 
+            <foreignphrase>hooks</foreignphrase>) (og 
+            p&#229;hakningsskriptene selv, n&#229;r du har installert 
+            noen).</para>
         </listitem>
       </varlistentry>
       <varlistentry>
         <term>locks</term>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>A directory for Subversion's repository locking
             data, used for tracking accessors to the repository.</para>
+          @ENGLISH }}} -->
+          <para>En katalog for Subversions l&#229;sedata, brukt for &#229; f&#248;lge 
+            <!-- &#164; -->tilganger til depotet.</para>
         </listitem>
       </varlistentry>
       <varlistentry>
         <term>README.txt</term>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>A file which merely informs its readers that they
             are looking at a Subversion repository.</para>
+          @ENGLISH }}} -->
+          <para>En fil som bare informerer sine lesere om at de ser p&#229; 
+            et Subversiondepot.</para>
         </listitem>
       </varlistentry>
     </variablelist>
       
+    <!-- @ENGLISH {{{
     <para>In general, you shouldn't tamper with your repository
       <quote>by hand</quote>.  The <command>svnadmin</command> tool
       should be sufficient for any changes necessary to your
@@ -1041,11 +1170,24 @@ conf/  dav/  db/  format  hooks/  locks/  README.txt
       Berkeley DB's tool suite) for tweaking relevant subsections of
       the repository.  Some exceptions exist, though, and we'll cover
       those here.</para>
+    @ENGLISH }}} -->
+    <para>Generelt sett skal du ikke fikle med depotet <quote>for 
+      h&#229;nd</quote>.
+      <command>svnadmin</command>-verkt&#248;yet skal v&#230;re nok til alle 
+      n&#248;dvendige forandringer i depotet, eller du kan se p&#229; 
+      tredjeparti-verkt&#248;y (som Berkeley DBs verkt&#248;ysamling) for &#229; 
+      finpusse relevante subseksjoner av depotet.
+      Noen unntak gjelder imidlertid, og disse skal vi g&#229; gjennom 
+      her.</para>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-2.1">
+      <!-- @ENGLISH {{{
       <title>Hook Scripts</title>
+      @ENGLISH }}} -->
+      <title>P&#229;hakningsskript</title>
 
+      <!-- @ENGLISH {{{
       <para>A <firstterm>hook</firstterm> is a program triggered by
         some repository event, such as the creation of a new revision
         or the modification of an unversioned property.  Each hook is
@@ -1054,18 +1196,43 @@ conf/  dav/  db/  format  hooks/  locks/  README.txt
         who triggered the event.  Depending on the hook's output or
         return status, the hook program may continue the action, stop
         it, or suspend it in some way.</para>
+      @ENGLISH }}} -->
+      <para>Et <!-- &#164; --><firstterm>p&#229;hakningsskript</firstterm> (p&#229; 
+        engelsk kalt <foreignphrase>hooks</foreignphrase>) er et program 
+        som blir utl&#248;st av en hendelse i depotet, som for eksempel 
+        opprettelsen av en ny revisjon eller modifiseringen av en 
+        uversjonert egenskap.
+        Hver p&#229;hakning blir gitt nok informasjon til &#229; fortelle hva 
+        denne hendelsen er, hvilke m&#229;l den opererer p&#229;, og brukernavnet 
+        til personen som satte i gang hendelsen.
+        Avhengig av p&#229;hakningens utdata eller returstatus, kan 
+        p&#229;hakningsprogrammet fortsette hendelsen, stoppe den, eller 
+        utsette den p&#229; en eller annen m&#229;te.</para>
             
+      <!-- @ENGLISH {{{
       <para>The <filename>hooks</filename> subdirectory is, by
         default, filled with templates for various repository
         hooks.</para>
+      @ENGLISH }}} -->
+      <para><filename>hooks</filename>-katalogen er, som standard, fylt 
+        med maler for diverse depotp&#229;hakninger.</para>
             
+      <!-- @ENGLISH {{{
       <screen>
 $ ls repos/hooks/
 post-commit.tmpl          pre-revprop-change.tmpl
 post-revprop-change.tmpl  start-commit.tmpl
 pre-commit.tmpl           
 </screen>
+      @ENGLISH }}} -->
+      <screen>
+$ ls depot/hooks/
+post-commit.tmpl          pre-revprop-change.tmpl
+post-revprop-change.tmpl  start-commit.tmpl
+pre-commit.tmpl
+</screen>
             
+      <!-- @ENGLISH {{{
       <para>There is one template for each hook that the Subversion
         repository implements, and by examining the contents of those
         template scripts, you can see what triggers each such script
@@ -1078,6 +1245,22 @@ pre-commit.tmpl
         which can be executed as the name (like
         <command>start-commit</command> or
         <command>post-commit</command>) of the hook.</para>
+      @ENGLISH }}} -->
+      <para>Det er en mal for hver p&#229;hakning som Subversiondepotet 
+        implementerer, og ved &#229; unders&#248;ke innholdet til disse 
+        eksempelskriptene, kan du se hva som f&#248;rer til at hvert av disse 
+        skriptene begynner &#229; kj&#248;re og hvilke data som blir levert til 
+        dette skriptet.
+        Det som ogs&#229; ligger i mange av disse malene er eksempler p&#229; 
+        hvordan man kan bruke skriptet, i sammenheng med andre 
+        Subversion-<!-- &#164; -->st&#248;ttede programmer, for &#229; utf&#248;re vanlige, 
+        nyttige oppgaver.
+        For &#229; faktisk installere en p&#229;hakning som virker, trenger du 
+        bare &#229; plassere et kj&#248;rbart program eller skript i 
+        <filename>depot/hooks</filename>-katalogen som kan bli kj&#248;rt 
+        basert p&#229; navnet (som for eksempel 
+        <command>start-commit</command> eller 
+        <command>post-commit</command>) til p&#229;hakningen.</para>
 
       <para>On Unix platforms, this means supplying a script or
         program (which could be a shell script, a Python program, a
