@@ -73,6 +73,7 @@ sub Main
     my $DocOut=&cmn_ValuePathfile('path_setup_in');
     my $PathWinIsPack='';
     my $Pwd='';
+    my $CntVerXml='';
 
     # Get absolute path of the current PWD's parent
     $PathWinIsPack=getcwd;
@@ -110,6 +111,15 @@ sub Main
     #Copy style sheet and background image to $RootSvnBook\src\out
     system ("copy /Y ..\\templates\\svn-doc.css $RootSvnBook\\src\\out");
     system ("copy /Y ..\\images\\svn_bck.png $RootSvnBook\\src\\out");
+
+    # Set the revision number in $RootSvnBook\src\en\book\version.xml
+    chdir "$RootSvnBook\\src\\en";
+    $CntVerXml=`svnversion .`;
+    chomp($CntVerXml);
+
+    open (FH_VERXML, ">" . "$RootSvnBook\\src\\en\\book\\version.xml");
+        print FH_VERXML "<!ENTITY svn.version \"Revision $CntVerXml\">";
+    close (FH_VERXML);
 
     # Make the chm file
     chdir "$RootSvnBook\\src\\out";
