@@ -47,7 +47,7 @@ while test "$final" != "";  do
             echo -n "...extra text, still no newline" >> foofile
 
             # do a diff, create a patch.
-            ${searchdir}/diff -u foofile foofile2 > foo.patch
+            ${searchdir}/diff -u foofile foofile2 > foo.patch 2>/dev/null
 
             # apply the patch to foofile2
             ${gnu_patch_path} < foo.patch 2>&1 >/dev/null
@@ -56,6 +56,7 @@ while test "$final" != "";  do
             cmp -s foofile foofile2 2>&1 >/dev/null
             if test $? -eq 0; then
                 gnu_diff_path=${searchdir}/diff
+                final=""
             fi
 
             # cleanup
