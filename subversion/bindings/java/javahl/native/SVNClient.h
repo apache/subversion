@@ -41,6 +41,8 @@ class CommitMessage;
 class SVNClient :public SVNBase
 {
 public:
+	jobjectArray revProperties(jobject jthis, const char *path, 
+                                Revision &revision);
     void cancelOperation();
     void commitMessageHandler(CommitMessage *commitMessage);
     const char * getConfigDirectory();
@@ -61,7 +63,8 @@ public:
                          JNIByteArray &value, bool recurse);
     void propertySet(const char *path, const char *name, const char *value,
                          bool recurse);
-    jobjectArray properties(jobject jthis, const char *path);
+    jobjectArray properties(jobject jthis, const char *path,
+                            Revision &revision);
     void merge(const char *path1, Revision &revision1, const char *path2,
                    Revision &revision2, const char *localPath, bool force,
                    bool recurse);
@@ -99,7 +102,12 @@ public:
     jobjectArray list(const char *url, Revision &revision, bool recurse);
     jobject revProperty(jobject jthis, const char *path, const char *name,
                             Revision &rev);
-    jobject propertyGet(jobject jthis, const char *path, const char *name);
+    void setRevProperty(jobject jthis, const char *path, const char *name,
+                            Revision &rev, const char *value, bool force);
+    jstring getVersionInfo(const char *path, const char *trailUrl,
+                            bool lastChanged);
+    jobject propertyGet(jobject jthis, const char *path, const char *name,
+                            Revision &revision);
     void diff(const char *target1, Revision &revision1,
                   const char *target2, Revision &revision2,
                   const char *outfileName,bool recurse);

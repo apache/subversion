@@ -509,6 +509,23 @@ public class SVNClientSynchronized implements SVNClientInterface
             return worker.properties(path);
         }
     }
+
+    /**
+     * Retrieves the properties of an item
+     *
+     * @param path     the path of the item
+     * @param revision the revision of the item
+     * @return array of property objects
+     */
+    public PropertyData[] properties(String path, Revision revision)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.properties(path, revision);
+        }
+    }
+
     /**
      * Sets one property of an item with a String value
      * @param path      path of the item
@@ -604,6 +621,44 @@ public class SVNClientSynchronized implements SVNClientInterface
             return worker.revProperty(path, name, rev);
         }
     }
+
+    /**
+     * Retrieve all revsision properties of one item
+     *
+     * @param path path of the item
+     * @param rev  revision to retrieve
+     * @return the Properties
+     * @throws ClientException
+     *
+     */
+    public PropertyData[] revProperties(String path, Revision rev)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.revProperties(path, rev);
+        }
+    }
+
+    /**
+     * set one revsision property of one item
+     * @param path      path of the item
+     * @param name      name of the property
+     * @param rev       revision to retrieve
+     * @param value     value of the property
+     * @param force
+     * @throws ClientException
+     */
+    public void setRevProperty(String path, String name, Revision rev,
+                               String value, boolean force)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.setRevProperty(path, name, rev, value, force);
+        }
+    }
+
     /**
      * Retrieve one property of one iten
      * @param path      path of the item
@@ -619,6 +674,25 @@ public class SVNClientSynchronized implements SVNClientInterface
             return worker.propertyGet(path, name);
         }
     }
+    /**
+     * Retrieve one property of one iten
+     *
+     * @param path     path of the item
+     * @param name     name of property
+     * @param revision revision of the item
+     * @return the Property
+     * @throws ClientException
+     *
+     */
+    public PropertyData propertyGet(String path, String name, Revision revision)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.propertyGet(path, name, revision);
+        }
+    }
+
     /**
      *  Retrieve the content of a file
      * @param path      the path of the file
@@ -732,6 +806,23 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             return worker.info(path);
+        }
+    }
+
+    /**
+     *  Produce a compact "version number" for a working copy
+     * @param path          path of the working copy
+     * @param trailUrl      to detect switches of the whole working copy
+     * @param lastChanged   last changed rather than current revisions
+     * @return      the compact "version number"
+     * @throws ClientException
+     */
+    public String getVersionInfo(String path, String trailUrl,
+                                 boolean lastChanged) throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.getVersionInfo(path, trailUrl, lastChanged);
         }
     }
 
