@@ -311,7 +311,8 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, SAFEARRAY **ppsa)
 		goto Cleanup;
 	fLockedSA = TRUE;
 
-	for (i = 0, hi = apr_hash_first(hash); hi; i++, hi = apr_hash_next(hi)) {
+	for (i = 0, hi = apr_hash_first(g_pool, hash); hi;
+									 i++, hi = apr_hash_next(hi)) {
 		apr_hash_this(hi, (const void **)&pszKey, &klen, (void **)&status);
 		hr = CComObject<CSVNStatus>::CreateInstance(&com_status);
 		if (FAILED(hr))
