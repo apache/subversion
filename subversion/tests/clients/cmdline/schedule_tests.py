@@ -599,6 +599,47 @@ def status_add_deleted_directory(sbox):
   expected_status.tweak('', 'iota', wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+
+#----------------------------------------------------------------------
+# Regression test for issue #939:
+# Recursive 'svn add' should still traverse already-versioned dirs.
+def add_recursive_already_versioned(sbox):
+  "'svn add' should traverse already-versioned dirs"
+
+  wc_dir = sbox.wc_dir
+
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  # Create some files, then schedule them for addition
+  delta_path = os.path.join(wc_dir, 'delta')
+  zeta_path = os.path.join(wc_dir, 'A', 'B', 'zeta')
+  epsilon_path = os.path.join(wc_dir, 'A', 'D', 'G', 'epsilon')
+  
+  svntest.main.file_append(delta_path, "This is the file 'delta'.")
+  svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
+  svntest.main.file_append(epsilon_path, "This is the file 'epsilon'.")
+  
+  saved_wd = os.getcwd()
+  try:
+    os.chdir(wc_dir)
+    svntest.main.run_svn(None, 'add', '--force', '.')
+  finally:
+    os.chdir(saved_wd)
+  
+  # Make sure the adds show up as such in status
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'delta' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/B/zeta' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/D/G/epsilon' : Item(status='A ', wc_rev=0, repos_rev=1),
+    })
+
+  return svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+
+
 ########################################################################
 # Run the tests
 
@@ -627,6 +668,7 @@ test_list = [ None,
               delete_missing,
               revert_inside_newly_added_dir,
               status_add_deleted_directory,
+              add_recursive_already_versioned,
              ]
 
 if __name__ == '__main__':

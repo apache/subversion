@@ -240,6 +240,7 @@ add_file (const char *path,
 static svn_error_t *
 add_dir_recursive (const char *dirname,
                    svn_wc_adm_access_t *adm_access,
+                   svn_boolean_t force,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -256,10 +257,14 @@ add_dir_recursive (const char *dirname,
     SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
 
   /* Add this directory to revision control. */
-  SVN_ERR (svn_wc_add (dirname, adm_access,
-                       NULL, SVN_INVALID_REVNUM,
-                       ctx->cancel_func, ctx->cancel_baton,
-                       ctx->notify_func, ctx->notify_baton, pool));
+  err = svn_wc_add (dirname, adm_access,
+                    NULL, SVN_INVALID_REVNUM,
+                    ctx->cancel_func, ctx->cancel_baton,
+                    ctx->notify_func, ctx->notify_baton, pool);
+  if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
+    svn_error_clear (err);
+  else if (err)
+    return err;
 
   SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, dirname, pool));
 
@@ -293,12 +298,20 @@ add_dir_recursive (const char *dirname,
       /* Construct the full path of the entry. */
       fullpath = svn_path_join (dirname, this_entry.name, subpool);
 
+      /* Recurse on directories; add files; ignore the rest. */
       if (this_entry.filetype == APR_DIR)
-        /* Recurse. */
-        SVN_ERR (add_dir_recursive (fullpath, dir_access, ctx, subpool));
-
+        {
+          SVN_ERR (add_dir_recursive (fullpath, dir_access, force,
+                                      ctx, subpool));
+        }
       else if (this_entry.filetype == APR_REG)
-        SVN_ERR (add_file (fullpath, ctx, dir_access, subpool));
+        {
+          err = add_file (fullpath, ctx, dir_access, subpool);
+          if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
+            svn_error_clear (err);
+          else if (err)
+            return err;
+        }
 
       /* Clean out the per-iteration pool. */
       svn_pool_clear (subpool);
@@ -338,6 +351,7 @@ add_dir_recursive (const char *dirname,
 static svn_error_t *
 add (const char *path, 
      svn_boolean_t recursive,
+     svn_boolean_t force,
      svn_wc_adm_access_t *adm_access,
      svn_client_ctx_t *ctx,
      apr_pool_t *pool)
@@ -347,7 +361,7 @@ add (const char *path,
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if ((kind == svn_node_dir) && recursive)
-    err = add_dir_recursive (path, adm_access, ctx, pool);
+    err = add_dir_recursive (path, adm_access, force, ctx, pool);
   else if (kind == svn_node_file)
     err = add_file (path, ctx, adm_access, pool);
   else
@@ -355,6 +369,12 @@ add (const char *path,
                       ctx->cancel_func, ctx->cancel_baton,
                       ctx->notify_func, ctx->notify_baton, pool);
 
+  /* Ignore SVN_ERR_ENTRY_EXISTS when FORCE is set.  */
+  if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
+    {
+      svn_error_clear (err);
+      err = SVN_NO_ERROR;
+    }
   return err;
 }
 
@@ -373,7 +393,36 @@ svn_client_add (const char *path,
   SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, parent_path,
                              TRUE, 0, pool));
 
-  err = add (path, recursive, adm_access, ctx, pool);
+  err = add (path, recursive, FALSE, adm_access, ctx, pool);
+  
+  err2 = svn_wc_adm_close (adm_access);
+  if (err2)
+    {
+      if (err)
+        svn_error_clear (err2);
+      else
+        err = err2;
+    }
+
+  return err;
+}
+
+
+svn_error_t *
+svn_client_add2 (const char *path, 
+                 svn_boolean_t recursive,
+                 svn_boolean_t force,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  svn_error_t *err, *err2;
+  svn_wc_adm_access_t *adm_access;
+  const char *parent_path = svn_path_dirname (path, pool);
+
+  SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, parent_path,
+                             TRUE, 0, pool));
+
+  err = add (path, recursive, force, adm_access, ctx, pool);
   
   err2 = svn_wc_adm_close (adm_access);
   if (err2)

@@ -172,7 +172,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "them for addition to repository.  They will be added in next commit.\n"
        "usage: add PATH...\n"),
     {svn_cl__targets_opt, 'N', 'q', svn_cl__config_dir_opt,
-     svn_cl__autoprops_opt, svn_cl__no_autoprops_opt} },
+     svn_cl__force_opt, svn_cl__autoprops_opt, svn_cl__no_autoprops_opt} },
 
   { "blame", svn_cl__blame, {"praise", "annotate", "ann"},
     N_("Output the content of specified files or\n"
