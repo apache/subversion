@@ -137,7 +137,7 @@ def delete_file_in_moved_dir(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               test_youngest,
-              XFail(delete_file_in_moved_dir),
+              delete_file_in_moved_dir,
              ]
 
 if __name__ == '__main__':
