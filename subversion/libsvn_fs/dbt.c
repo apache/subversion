@@ -62,8 +62,6 @@ svn_fs__result_dbt (DBT *dbt)
 }
 
 
-/* A `recno' dbt is used for a key dbt in operations on RECNO
-   tables. */
 DBT *
 svn_fs__recno_dbt (DBT *dbt, db_recno_t *recno)
 {
