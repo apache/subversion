@@ -117,7 +117,7 @@ typedef struct svn_svr_plugin_t
      
      This hook isn't fully fleshed out yet */
 
-  (svn_delta_t *) (* conflict_resolve_hook) (svn_delta_t *rejected_delta,
+  svn_delta_t * (* conflict_resolve_hook) (svn_delta_t *rejected_delta,
                                              svn_error_t *rationale);
 
 } svn_svr_plugin_t;
@@ -169,13 +169,14 @@ typedef struct svn_svr_policies_t
    Returns a svn_svr_policies_t to be used with all server routines. 
 */
 
-svn_svr_policies_t svn_svr_init (svn_string_t *config_file, ap_pool_t *pool);
+svn_svr_policies_t * svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool);
 
 
 /* Routine which each plugin's init() routine uses to register itself
    in the server's policy structure.  */
 
 void svn_svr_register_plugin (svn_svr_policies_t *policy,
+                              svn_string_t *dso_filename,
                               svn_svr_plugin_t *new_plugin);
 
 
