@@ -197,7 +197,7 @@ svn_fs_new (apr_pool_t *parent_pool)
 
   apr_register_cleanup (new->pool, (void *) new,
 			(apr_status_t (*) (void *)) cleanup_fs_apr,
-			0);
+			apr_null_cleanup);
 
   return new;
 }
@@ -227,12 +227,6 @@ svn_fs_close_fs (svn_fs_t *fs)
   return svn_err;
 }
 
-
-apr_pool_t *
-svn_fs_subpool (svn_fs_t *fs)
-{
-  return svn_pool_create (fs->pool, 0);
-}
 
 
 /* Allocating an appropriate Berkeley DB environment object.  */

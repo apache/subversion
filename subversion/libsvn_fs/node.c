@@ -238,13 +238,7 @@ cache_node (svn_fs_node_t *node)
   svn_fs_id_t *id = node->id;
   int id_size = svn_fs_id_length (id) * sizeof (id[0]);
 
-  /* Sanity check: we can't cache nodes that live in pools other than
-     the filesystem's pool --- we might hand out pointers to it to
-     random modules, and then the user could free it.  */
-  if (node->pool != fs->pool)
-    abort ();
-
-  /* Sanity check: the node's open count must be zero.  */
+  /* Sanity check: the new node object's open count must be zero.  */
   if (node->open_count != 0)
     abort ();
 
@@ -259,7 +253,7 @@ cache_node (svn_fs_node_t *node)
 
   node->open_count = 1;
   apr_hash_set (fs->node_cache, id, id_size, node);
-  apr_register_cleanup (node->pool, node, pool_uncache_node, 0);
+  apr_register_cleanup (node->pool, node, pool_uncache_node, apr_null_cleanup);
 }
 
 
@@ -271,14 +265,17 @@ close_node (svn_fs_node_t *node)
 {
   node->open_count--;
 
-  if (node->open_count == 0)
-    /* At the moment, our cache policy is trivial: if the node's open
-       count drops to zero, we free it.  The node's pool's cleanup
-       list takes care of removing the node from the node cache.
+  /* At the moment, our cache policy is trivial: if the node's open
+     count drops to zero, we free it.  In other words, we only cache
+     nodes that are currently open.
 
-       This kind of sucks, especially for directory traversal --- the
-       nodes towards the top of the filesystem are going to get hit
-       pretty frequently.  */
+     This kind of sucks, especially for directory traversal --- the
+     nodes towards the top of the filesystem are going to get hit
+     pretty frequently, so it would be worthwhile keeping them in
+     the cache even when nobody has them open.  */
+  if (node->open_count == 0)
+    /* The node's pool's cleanup function takes care of removing the
+       node from the node cache.  */
     apr_destroy_pool (node->pool);
 }
 
@@ -293,36 +290,33 @@ svn_fs__open_node_by_id (svn_fs_node_t **node_p,
 {
   svn_fs_node_t *node = get_cached_node (fs, id);
 
-  if (node)
+  /* If the node wasn't in the cache, we'll have to read it in
+     ourselves.  */
+  if (! node)
     {
-      *node_p = node;
-      return 0;
+      apr_pool_t *skel_pool = svn_pool_create (fs->pool, 0);
+      skel_t *nv, *kind;
+
+      SVN_ERR (get_node_version_skel (&nv, fs, id, skel_pool));
+      if (svn_fs__list_length (nv) < 2
+	  || ! nv->children->is_atom)
+	return corrupt_node_version (fs, id);
+
+      kind = nv->children;
+      if (svn_fs__is_atom (kind, "file"))
+	SVN_ERR (svn_fs__file_from_skel (&node, fs, id, nv, skel_pool));
+      else if (svn_fs__is_atom (kind, "dir"))
+	SVN_ERR (svn_fs__dir_from_skel (&node, fs, id, nv, skel_pool));
+      else
+	return corrupt_node_version (fs, id);
+
+      cache_node (node);
+
+      apr_destroy_pool (skel_pool);
     }
 
-  /* It's not cached; we'll have to read it in ourselves.  */
-  {
-    apr_pool_t *skel_pool = svn_pool_create (fs->pool, 0);
-    skel_t *nv, *kind;
-
-    SVN_ERR (get_node_version_skel (&nv, fs, id, skel_pool));
-    if (svn_fs__list_length (nv) < 2
-	|| ! nv->children->is_atom)
-      return corrupt_node_version (fs, id);
-
-    kind = nv->children;
-    if (svn_fs__is_atom (kind, "file"))
-      SVN_ERR (svn_fs__file_from_skel (&node, fs, id, nv, skel_pool));
-    else if (svn_fs__is_atom (kind, "dir"))
-      SVN_ERR (svn_fs__dir_from_skel (&node, fs, id, nv, skel_pool));
-    else
-      return corrupt_node_version (fs, id);
-
-    cache_node (node);
-
-    *node_p = node;
-    apr_destroy_pool (skel_pool);
-    return 0;
-  }
+  *node_p = node;
+  return 0;
 }
 
 
@@ -365,13 +359,6 @@ svn_fs_node_is_file (svn_fs_node_t *node)
 }
 
 
-apr_pool_t *
-svn_fs_node_subpool (svn_fs_node_t *node)
-{
-  return svn_pool_create (node->pool, 0);
-}
-
-
 void
 svn_fs_close_node (svn_fs_node_t *node)
 {
@@ -403,7 +390,7 @@ apr_cleanup_node (void *node_ptr)
 void
 svn_fs_cleanup_node (apr_pool_t *pool, svn_fs_node_t *node)
 {
-  apr_register_cleanup (pool, node, apr_cleanup_node, 0);
+  apr_register_cleanup (pool, node, apr_cleanup_node, apr_null_cleanup);
 }
 
 
@@ -411,4 +398,11 @@ void
 svn_fs_kill_cleanup_node (apr_pool_t *pool, svn_fs_node_t *node)
 {
   apr_kill_cleanup (pool, node, apr_cleanup_node);
+}
+
+
+void
+svn_fs_run_cleanup_node (apr_pool_t *pool, svn_fs_node_t *node)
+{
+  apr_run_cleanup (pool, node, apr_cleanup_node);
 }
