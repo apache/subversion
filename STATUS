@@ -49,7 +49,7 @@ Candidate changes:
     Justification: Subsequent releases of SWIG will remove support for
     the old flag.
     Votes:
-      +1: dlr
+      +1: dlr, breser
 
   * r9003
     Include the path to the directory containing libsvn_swig_java in
@@ -58,3 +58,4 @@ Candidate changes:
     without this fix.
     Votes:
       +1: dlr
+      +0: breser
