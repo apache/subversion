@@ -67,13 +67,17 @@ class Generator(gen_win.WinGeneratorBase):
                            libs=libs,
                            ))
 
-    ### this is very different from msvc_dsp
-    sources = [ ]
+    ### this is very different from msvc_dsp. also note that we remove dups.
+    sources = { }
     for obj in self.graph.get_sources(gen_base.DT_LINK, target_ob):
       for src in self.graph.get_sources(gen_base.DT_OBJECT, obj):
         rsrc = string.replace(string.replace(src, target_ob.path + os.sep, ''),
                               os.sep, '\\')
-        sources.append(rsrc)
+        sources[rsrc] = None
+
+    # sort for output stability, to watch for regressions
+    sources = sources.keys()
+    sources.sort()
 
     data = {
       'target' : target_ob,
@@ -127,6 +131,9 @@ class Generator(gen_win.WinGeneratorBase):
     "Write a Solution (.sln)"
 
     install_targets = self.graph.get_all_sources(gen_base.DT_INSTALL)
+
+    # sort these for output stability, to watch out for regressions.
+    install_targets.sort()
 
     targets = [ ]
 
@@ -192,11 +199,15 @@ class Generator(gen_win.WinGeneratorBase):
       ### this is different from writeProject
       configs.append(_item(name=self.configs[i], index=i))
 
+    # sort the values for output stability.
+    guidvals = guids.values()
+    guidvals.sort()
+
     data = {
       'targets' : targets,
       'configs' : configs,
       'platforms' : self.platforms,
-      'guids' : guids.values(),
+      'guids' : guidvals,
       }
 
     fout = StringIO()
