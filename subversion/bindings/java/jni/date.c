@@ -32,7 +32,7 @@
 #define SVN_JNI_DATE__DEBUG
 
 jobject 
-date__create(JNIEnv *env, jboolean *hasException, long time)
+date__create(JNIEnv *env, jboolean *hasException, jlong time)
 {
   jobject result = NULL;
   jboolean _hasException = JNI_FALSE;
@@ -115,7 +115,7 @@ date__create_from_apr_time_t(JNIEnv *env, jboolean *hasException,
    * to milliseconds since 1970-01-01 00:00:00 GMT
    * which is a simple integer division
    */
-  long milliseconds = time / 1000;
+  jlong milliseconds = time / 1000;
   return date__create(env, hasException, milliseconds);
 }
 
