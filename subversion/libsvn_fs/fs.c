@@ -415,7 +415,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
     const char *dbconfig_file_name
       = svn_path_join (path, "DB_CONFIG", fs->pool);
 
-    static const char * const dbconfig_contents =
+    static const char dbconfig_contents[] =
       "# This is the configuration file for the Berkeley DB environment\n"
       "# used by your Subversion repository.\n"
       "\n"
@@ -428,7 +428,23 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
       "# before tweaking these values.\n"
       "set_lk_max_locks   2000\n"
       "set_lk_max_lockers 2000\n"
-      "set_lk_max_objects 2000\n";
+      "set_lk_max_objects 2000\n"
+      "\n"
+      "### Log file subsystem\n"
+      "#\n"
+      "# Make sure you read the documentation at:\n"
+      "#\n"
+      "#   http://www.sleepycat.com/docs/api_c/env_set_lg_bsize.html\n"
+      "#   http://www.sleepycat.com/docs/api_c/env_set_lg_max.html\n"
+      "#   http://www.sleepycat.com/docs/ref/log/limits.html\n"
+      "#\n"
+      "# Increase the size of the in-memory log buffer from the default\n"
+      "# of 32 Kbytes to 128 Kbytes.  Decrease the log file size from\n"
+      "# 10 Mbytes to 1 Mbyte.  This will help reduce the amount of disk\n"
+      "# space required for hot backups.  The size of the log file must be\n"
+      "# at least four times the size of the the in-memory log buffer.\n"
+      "set_lg_bsize  131072\n"
+      "set_lg_max   1048576\n";
 
     SVN_ERR (svn_io_file_open (&dbconfig_file, dbconfig_file_name,
                                APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
