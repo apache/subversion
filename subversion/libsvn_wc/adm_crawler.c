@@ -172,9 +172,10 @@ static svn_error_t *
 do_lock (svn_stringbuf_t *path, apr_hash_t *locks, apr_pool_t *pool)
 {
   svn_error_t *err, *err2;
-  svn_boolean_t locked;
 
-  /* See if this directory is locked already */
+  /* See if this directory is locked already.  If so, there's not
+     really much to do here.  ### todo: Should we do check the actual
+     working copy admin area with a call to svn_wc_locked() here? */
   if (apr_hash_get (locks, path->data, APR_HASH_KEY_STRING) != NULL)
     return SVN_NO_ERROR;
 
