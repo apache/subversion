@@ -308,8 +308,8 @@ read_from_file (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
       *len = 0;
       return SVN_NO_ERROR;
     }
-  status = apr_full_read(fp, buffer, *len, len);
-  if (status)
+  status = apr_full_read (fp, buffer, *len, len);
+  if (status && (status != APR_EOF))
     return svn_error_create (status, 0, NULL, pool, "Can't read base file");
   return SVN_NO_ERROR;
 }
