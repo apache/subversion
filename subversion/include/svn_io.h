@@ -259,12 +259,15 @@ svn_error_t *svn_io_get_dirents (apr_hash_t **dirents,
 /* Invoke PROGRAM with ARGS, using PATH as working directory.
    Connect PROGRAM's stdin, stdout, and stderr to INFILE, OUTFILE, and
    ERRFILE, except where they are null.
+
+   STATUS will contain the exit code of the process upon return.
   
    ARGS is a list of (const char *)'s, terminated by NULL.  ARGS[0] is
    the name of the program, though it need not be the same as CMD.  */
 svn_error_t *svn_io_run_cmd (const char *path,
                              const char *cmd,
                              const char *const *args,
+                             apr_wait_t *status,
                              apr_file_t *infile,
                              apr_file_t *outfile,
                              apr_file_t *errfile,

@@ -787,6 +787,7 @@ svn_error_t *
 svn_io_run_cmd (const char *path,
                 const char *cmd,
                 const char *const *args,
+                apr_wait_t *status,
                 apr_file_t *infile,
                 apr_file_t *outfile,
                 apr_file_t *errfile,
@@ -870,7 +871,7 @@ svn_io_run_cmd (const char *path,
        cmd);
 
   /* Wait for the cmd command to finish. */
-  apr_err = apr_proc_wait (&cmd_proc, NULL, APR_WAIT);
+  apr_err = apr_proc_wait (&cmd_proc, status, APR_WAIT);
   if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
     return svn_error_createf
       (apr_err, 0, NULL, pool,
