@@ -1013,12 +1013,10 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
 
 
 
-
-
 svn_error_t *
 svn_wc_crawl_revisions (svn_string_t *root_directory,
-                        const svn_delta_edit_fns_t *edit_fns,
-                        void *edit_baton,
+                        const svn_ra_reporter_t *reporter,
+                        void *report_baton,
                         apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -1044,15 +1042,12 @@ svn_wc_crawl_revisions (svn_string_t *root_directory,
      edit_fns, edit_baton,
      &stack, master_revnum,
      pool); */
-  if (err) return err;
 
 
   /* Close the edit, causing the update_editor to be driven. */
-  err = edit_fns->close_edit (edit_baton);
-  if (err) return err; /* pay attention to this return value!! */
+  /*  err = edit_fns->close_edit (edit_baton); */
 
   return SVN_NO_ERROR;
-
 }
 
 
