@@ -577,7 +577,8 @@ send_text_delta (struct context *c,
 
   /* Get a handler that will apply the delta to the file.  */
   SVN_ERR (c->editor->apply_textdelta 
-           (file_baton, pool, &delta_handler, &delta_handler_baton));
+           (file_baton, NULL, NULL, pool,
+            &delta_handler, &delta_handler_baton));
 
   /* Our editor didn't provide a window handler, so don't sweat the deltas. */
   if (delta_handler == NULL)

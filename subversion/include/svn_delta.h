@@ -691,6 +691,26 @@ typedef struct
    * @a *handler_baton to the value we should pass as the @a baton
    * argument to @a *handler.
    *
+   * @a base_checksum is the hex MD5 digest for the base text against
+   * which the delta is being applied; it is ignored if null, and may
+   * be ignored even if not null.  If it is not ignored, it must match
+   * the checksum of the base text against which svndiff data is being
+   * applied; if it does not, the @a *handler call which detects the
+   * mismatch will return the error SVN_ERR_CHECKSUM_MISMATCH.  If
+   * there is no base text, then the @a *handler may error if 
+   * @a base_checksum is neither null nor the hex MD5 checksum of the
+   * empty string.
+   *
+   * @a result_checksum is the hex MD5 digest for the fulltext that
+   * results from this delta application.  It is ignored if null, but
+   * if not null, it must match the checksum of the result; if it
+   * does not, then the @a *handler call which detects the mismatch
+   * will return the error SVN_ERR_CHECKSUM_MISMATCH.
+   *
+   * (### Or anyway that's the plan.  The checksums are still being
+   * implemented for issue #689, as of 13 Jan 2003, so they are
+   * always ignored right now.)
+   *
    * If @a *handler is set to @c NULL, then the editor is indicating to 
    * the driver that it is not interested in receiving information about
    * the changes in this file. The driver can use this information to
@@ -699,6 +719,8 @@ typedef struct
    * simply indicating that it doesn't want the details.
    */
   svn_error_t *(*apply_textdelta) (void *file_baton, 
+                                   const char *base_checksum,
+                                   const char *result_checksum,
                                    apr_pool_t *pool,
                                    svn_txdelta_window_handler_t *handler,
                                    void **handler_baton);

@@ -708,6 +708,10 @@ SVN_ERROR_START
               SVN_ERR_MISC_CATEGORY_START + 13,
               "Python exception has been set with the error")
 
+  SVN_ERRDEF (SVN_ERR_CHECKSUM_MISMATCH,
+              SVN_ERR_MISC_CATEGORY_START + 14,
+              "A checksum mismatch occurred")
+
   /* command-line client errors */
 
   SVN_ERRDEF (SVN_ERR_CL_ARG_PARSING_ERROR,

@@ -306,6 +306,8 @@ open_directory (const char *path,
 
 static svn_error_t *
 apply_textdelta (void *file_baton,
+                 const char *base_checksum,
+                 const char *result_checksum,
                  apr_pool_t *pool,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
