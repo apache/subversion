@@ -262,7 +262,7 @@ svn_io_open_unique_file (apr_file_t **f,
 svn_error_t *
 svn_io_create_unique_link (const char **unique_name_p,
                            const char *path,
-                           const char *dest,  /* native, not UTF-8 */
+                           const char *dest,
                            const char *suffix,
                            apr_pool_t *pool)
 {
@@ -270,7 +270,10 @@ svn_io_create_unique_link (const char **unique_name_p,
   unsigned int i;
   const char *unique_name;
   const char *unique_name_apr;
+  const char *dest_apr;
   int rv;
+
+  SVN_ERR (svn_path_cstring_from_utf8 (&dest_apr, dest, pool));
 
   for (i = 1; i <= 99999; i++)
     {
@@ -300,7 +303,7 @@ svn_io_create_unique_link (const char **unique_name_p,
                                            pool));
 
       do {
-        rv = symlink (dest, unique_name_apr);
+        rv = symlink (dest_apr, unique_name_apr);
       } while (rv == -1 && APR_STATUS_IS_EINTR (apr_get_os_error ()));
       
       apr_err = apr_get_os_error();
@@ -354,8 +357,9 @@ svn_io_read_link (svn_string_t **dest,
                   apr_pool_t *pool)
 {
 #ifdef HAVE_READLINK  
+  svn_string_t dest_apr;
   const char *path_apr;
-  char buf[1024];
+  char buf[1025];
   int rv;
   
   SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
@@ -367,8 +371,13 @@ svn_io_read_link (svn_string_t **dest,
     return svn_error_wrap_apr
       (apr_get_os_error (), _("Can't read contents of link"));
 
-  /* Note: returning non-UTF-8 here */
-  *dest = svn_string_ncreate (buf, rv, pool);
+  buf[rv] = '\0';
+  dest_apr.data = buf;
+  dest_apr.len = rv;
+
+  /* ### Cast needed, one of these interfaces is wrong */
+  SVN_ERR (svn_utf_string_to_utf8 ((const svn_string_t **)dest, &dest_apr,
+                                   pool));
   
   return SVN_NO_ERROR;
 #else
