@@ -100,3 +100,30 @@ Candidate changes:
      to the 1.1.0 API.
     Votes:
       +1: ghudson
+
+  * r10858
+    Allow 'svn commit' to delete schedule-delete symlinks. (issue 2045)
+    Justification:
+      Trivial fix to a  new svn 1.1 feature.
+    Votes:
+      +1: sussman
+      +0: (jpieper?  sussman is guessing here)
+
+  * r10676
+    Fix segfault when committing renamed-file with changed svn:eol-style prop.
+    Justification:
+        Segfaults are bad.  One-line fix to prevent deref'ing NULL.
+    Votes:
+      +1: sussman
+      +0: (philip?  sussman is guessing here)
+
+  * r10851
+    Fix bug in commit-editor driver.  Stop doing 'delete' operations
+        on every target before adding-with-history.
+    Justification:
+      One-line patch.
+      Creates unnecessary network turnarounds.
+      Also, a user should not require DELETE permission in order to
+      add a new object.
+    Votes:
+      +1: sussman, cmpilato
