@@ -595,19 +595,16 @@ open_root (void *edit_baton,
       /* For an update with a NULL target, this is equivalent to open_dir(): */
       svn_wc_adm_access_t *adm_access;
       svn_wc_entry_t tmp_entry;
-      apr_uint32_t modify_flags = 0;
 
       /* Mark directory as being at target_revision, but incomplete. */  
       tmp_entry.revision = eb->target_revision;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
-      
       tmp_entry.incomplete = TRUE;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_INCOMPLETE;
-      
       SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
                                     d->path, pool));
       SVN_ERR (svn_wc__entry_modify (adm_access, NULL /* THIS_DIR */,
-                                     &tmp_entry, modify_flags,
+                                     &tmp_entry,
+                                     SVN_WC__ENTRY_MODIFY_REVISION |
+                                     SVN_WC__ENTRY_MODIFY_INCOMPLETE,
                                      TRUE /* immediate write */,
                                      pool));
     }
@@ -755,16 +752,6 @@ add_directory (const char *path,
                                                   db->name,
                                                   db->pool);
       copyfrom_revision = pb->edit_baton->target_revision;      
-
-      /* Immediately create an entry for the new directory in the parent.
-         Note that the parent must already be either added or opened, and
-         thus it's in an 'incomplete' state just like the new dir.  */      
-      tmp_entry.kind = svn_node_dir;
-      tmp_entry.deleted = FALSE;
-      SVN_ERR (svn_wc__entry_modify (adm_access, db->name, &tmp_entry,
-                                     (SVN_WC__ENTRY_MODIFY_KIND
-                                      | SVN_WC__ENTRY_MODIFY_DELETED),
-                                     TRUE /* immediate write */, pool));
       
       /* Extra check:  a directory by this name may not exist, but there
          may still be one scheduled for addition.  That's a genuine
@@ -776,6 +763,14 @@ add_directory (const char *path,
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            "failed to add dir '%s': \nobject of the same name is already "
            "scheduled for addition", path);
+
+      /* Immediately create an entry for the new directory in the parent.
+         Note that the parent must already be either added or opened, and
+         thus it's in an 'incomplete' state just like the new dir.  */      
+      tmp_entry.kind = svn_node_dir;
+      SVN_ERR (svn_wc__entry_modify (adm_access, db->name, &tmp_entry,
+                                     SVN_WC__ENTRY_MODIFY_KIND,
+                                     TRUE /* immediate write */, pool));
     }
 
   /* Create dir (if it doesn't yet exist), make sure it's formatted
@@ -809,7 +804,6 @@ open_directory (const char *path,
   struct edit_baton *eb = parent_dir_baton->edit_baton;
   svn_wc_entry_t tmp_entry;
   svn_wc_adm_access_t *adm_access;
-  apr_uint32_t modify_flags = 0;
 
   /* kff todo: check that the dir exists locally, find it somewhere if
      its not there?  Yes, all this and more...  And ancestor_url and
@@ -825,17 +819,14 @@ open_directory (const char *path,
   *child_baton = this_dir_baton;
 
   /* Mark directory as being at target_revision, but incomplete. */
-  
   tmp_entry.revision = eb->target_revision;
-  modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
-
   tmp_entry.incomplete = TRUE;
-  modify_flags |= SVN_WC__ENTRY_MODIFY_INCOMPLETE;
-
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
                                 this_dir_baton->path, pool));  
   SVN_ERR (svn_wc__entry_modify (adm_access, NULL /* THIS_DIR */,
-                                 &tmp_entry, modify_flags,
+                                 &tmp_entry,
+                                 SVN_WC__ENTRY_MODIFY_REVISION |
+                                 SVN_WC__ENTRY_MODIFY_INCOMPLETE,
                                  TRUE /* immediate write */,
                                  pool));
 
