@@ -85,18 +85,19 @@ svn_ra_local__split_URL (svn_repos_t **repos,
   {
     static const char valid_drive_letters[] =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    /* ### What about URI-encoded drive letters? */
-    if (path[1] && strchr(valid_drive_letters, path[1])
-        && (path[2] == ':' || path[2] == '|')
-        && path[3] == '/')
+    char *dup_path = svn_path_uri_decode (path, pool);
+    if (dup_path[1] && strchr(valid_drive_letters, dup_path[1])
+        && (dup_path[2] == ':' || dup_path[2] == '|')
+        && dup_path[3] == '/')
       {
-        char *const dup_path = svn_path_uri_decode (++path, pool);
+        /* Skip the leading slash. */
+        ++dup_path;
+        /* We're using path below to calculate fs_path, so keep it in sync. */
+        ++path;
         if (dup_path[1] == '|')
           dup_path[1] = ':';
-        repos_root = dup_path;
       }
-    else
-      repos_root = svn_path_uri_decode (path, pool);
+    repos_root = dup_path;
   }
 #endif /* WIN32 */
 

@@ -30,13 +30,6 @@ Candidate changes:
     Votes:
       +1: jaa, sussman
 
-  * r11262, r11274
-    Fix issue #2012.  Allow URI-encoded drive letter and separator (: or |).
-    Justification:
-      Regression fix.
-    Votes:
-      +1: lundblad, sussman, bliss
-
   * r11215, r11264
       SVN has needed a good packaging script for Win32 since forever.
     Justification:
