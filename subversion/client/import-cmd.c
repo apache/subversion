@@ -60,7 +60,7 @@ svn_cl__import (apr_getopt_t *os,
    *
    *   $ svn import  file:///home/jrandom/repos/some/subdir  .  myproj
    *
-   * What is the nicest behavior for merge, from the user's point of
+   * What is the nicest behavior for import, from the user's point of
    * view?  This is a subtle question.  Seemingly intuitive answers
    * can lead to weird situations, such never being able to create
    * non-directories in the top-level of the repository.
