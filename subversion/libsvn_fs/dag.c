@@ -178,14 +178,28 @@ int svn_fs__dag_is_mutable (dag_node_t *node)
   return FALSE;
 }
 
+
+
 svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
                                        dag_node_t *node,
                                        trail_t *trail)
 {
-  abort();
-  /* NOTREACHED */
-  return NULL;
+  /* The node "header" is the first element of a node-revision skel,
+     itself a list. */
+  skel_t *header = node->contents->children;
+
+  /* The property list is the 2nd item in the header skel. */
+  skel_t *props = header->children->next;
+
+  /* Return a copy dup'd in TRAIL's pool, to fufill this routine's
+     promise about lifetimes.  This is instead of doing fancier
+     cache-y things. */
+  *proplist_p = svn_fs__copy_skel (props, trail->pool);
+   
+  return SVN_NO_ERROR;
 }
+
+
 svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
                                        skel_t *proplist,
                                        trail_t *trail)
@@ -194,6 +208,7 @@ svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
   /* NOTREACHED */
   return NULL;
 }
+
 svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
                                       dag_node_t *parent,
                                       const char *name,
