@@ -271,7 +271,7 @@ static int start_element(void *userdata,
     {
     case NE_ELM_response:
       if (pc->rsrc)
-        return 1;
+        return NE_XML_INVALID;
       /* Create a new resource. */
       pc->rsrc = apr_pcalloc(pc->pool, sizeof(*(pc->rsrc)));
       pc->rsrc->pool = pc->pool;
@@ -331,7 +331,7 @@ static int end_element(void *userdata,
     case NE_ELM_response:
       /* Verify that we've received a URL for this resource. */
       if (!pc->rsrc->url)
-        return 1;
+        return NE_XML_INVALID;
 
       /* Store the resource in the top-level hash table. */
       apr_hash_set(pc->props, pc->rsrc->url, APR_HASH_KEY_STRING, pc->rsrc);
@@ -363,14 +363,14 @@ static int end_element(void *userdata,
       else if (! pc->status)
         {
           /* No status at all?  Bogosity. */
-          return 1;
+          return NE_XML_INVALID;
         }
       return 0;
 
     case NE_ELM_status:
       /* Parse the <status> tag's CDATA for a status code. */
       if (ne_parse_statusline(cdata, &status))
-        return 1;
+        return NE_XML_INVALID;
       free(status.reason_phrase);
       pc->status = status.code;
       return 0;
@@ -432,7 +432,7 @@ static int end_element(void *userdata,
             }
           else /* unknown encoding type! */
             {
-              return 1;
+              return NE_XML_INVALID;
             }
           pc->encoding = NULL;
         }

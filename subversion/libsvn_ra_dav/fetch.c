@@ -53,7 +53,7 @@
 #define CHKERR(e)               \
 do {                            \
   if ((rb->err = (e)) != NULL)  \
-    return 1;                   \
+    return NE_XML_INVALID;      \
 } while(0)
 
 typedef struct {
