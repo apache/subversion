@@ -838,29 +838,33 @@ The following repository access (RA) modules are available:
         por el cliente de línea de comando.</para>
 
       <sidebar>
-        <title>Binding Directly&mdash;A Word About Correctness</title>
+        <title>Acceso directo&mdash;unas palabras sobre corrección</title>
 
-        <para>Why should your GUI program bind directly with a
-          libsvn_client instead of acting as a wrapper around a
-          command-line program?  Besides simply being more efficient,
-          this can address potential correctness issues as well.  A
-          command-line program (like the one supplied with Subversion)
-          that binds to the client library needs to effectively
-          translate feedback and requested data bits from C types to
-          some form of human-readable output.  This type of
-          translation can be lossy.  That is, the program may not
-          display all of the information harvested from the API, or
-          may combine bits of information for compact representation.</para>
+        <para>¿Por qué debería su programa de interfaz gráfica
+          acceder directamente a libsvn_client en lugar de
+          actuar como envoltorio sobre el programa de línea de
+          comando? Aparte de ser simplemente más eficiente, esto
+          puede solucionar potenciales problemas de corrección. Un
+          programa de línea de comando (como el que trae Subversion)
+          que accede a la librería cliente necesita traducir con
+          efectividad las respuestas y bits de datos solicitados
+          desde tipos de datos de C a alguna forma de salida legible
+          por un ser humano. Este tipo de traducción puede tener
+          pérdidas. Es decir, un programa puede que no muestre
+          toda la información cosechada a través de la API, o
+          puede combinar bits de información para compactar la
+          representación.</para>
 
-        <para>If you wrap such a command-line program with yet another
-          program, the second program has access only to
-          already-interpreted (and as we mentioned, likely incomplete)
-          information, which it must <emphasis>again</emphasis>
-          translate into <emphasis>its</emphasis> representation
-          format.  With each layer of wrapping, the integrity of the
-          original data is potentially tainted more and more, much
-          like the result of making a copy of a copy (of a copy &hellip;)
-          of a favorite audio or video cassette.</para>
+        <para>Si envuelve a un programa de línea de comando de este
+          tipo con otro programa, el segundo sólo tiene acceso a la
+          información ya interpretada (que como hemos mencionado, es
+          posiblemente incompleta), que <emphasis>de nuevo</emphasis>
+          debe ser traducida a <emphasis>su</emphasis> formato
+          de representación.  Con cada capa de envoltorio, la
+          integridad de los datos originales es potencialmente
+          corrompida más y más, igual que el resultado de hacer una
+          copia de una copia (de una copia &hellip;) de su cinta de
+          audio o vídeo favorita.</para>
 
       </sidebar>
 
