@@ -10,20 +10,13 @@ short-term tasks to it, if that's helpful.
 ------------------------------------------------------------------------
 
 Ben todo:
-   - adm_crawler.c: almost done with props!!  big bug still:  after
-     sending local propchanges to editor callbacks, and if the commit
-     is successful, we need a log entry to move the local propfile to
-     the pristine propfile.
-
    - update-after-editor: isn't printing `G' for prop merges.  isn't
      printing `C' for either textual or property conflicts.  fix this.
 
    - stupid `M' bug only shows up in certain status commands!!!
+        (garg, is this reproducible?  it might be fixed now after
+         finishing commit bugfixes.)
         
-   - redo syntax of client, especially for property commands.  stop
-     using --target-dir for anything but update or checkout.  use new
-     apr longopts.
-
    - look at all calls to svn_wc__get_local_propchanges.  Notice how
      it's always the same code preceding the call?  Perhaps we should
      therefore put this code *inside* get_local_propchanges, and
