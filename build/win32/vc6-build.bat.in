@@ -7,6 +7,8 @@ rem DIR is appended to src- to make the dir name, e.g., src-trunk
 set DIR=trunk
 set DRIVE=C
 set PYTHONDIR=C:\Python22
+set AWKDIR=C:\SVN\awk
+set NASMDIR=C:\SVN\nasm
 set SDKINC=C:\Program Files\Microsoft SDK\include
 set SDKLIB=C:\Program Files\Microsoft SDK\lib
 set APACHEDIR=C:\Program Files\Apache Group\Apache2
@@ -16,7 +18,7 @@ set GETTEXTBIN=C:\SVN\gettext\bin
 rem ====== End of shell variables which need to be set.
 
 rem Set up path to include Python and BDB.
-PATH=%PATH%;%DRIVE%:\SVN\src-%DIR%\db4-win32;%DRIVE%:\SVN\nasm;%PYTHONDIR%;%GETTEXTBIN%
+PATH=%PATH%;%DRIVE%:\SVN\src-%DIR%\db4-win32;%NASMDIR%;%PYTHONDIR%;%AWKDIR%;%GETTEXTBIN%
 
 rem Set INCLUDE and LIB for the msdev builds.
 set INCLUDE=%SDKINC%;%INCLUDE%;%GETTEXTINC%
@@ -105,6 +107,7 @@ copy openssl-0.9.7d\out32dll\libeay32.dll svn-win32-%VER%\bin
 copy openssl-0.9.7d\out32dll\ssleay32.dll svn-win32-%VER%\bin
 copy httpd-2.0.50\srclib\apr\Release\libapr.dll svn-win32-%VER%\bin
 copy httpd-2.0.50\srclib\apr-iconv\Release\libapriconv.dll svn-win32-%VER%\bin
+copy httpd-2.0.50\srclib\apr-iconv\Release\iconv\*.so svn-win32-%VER%\iconv
 copy httpd-2.0.50\srclib\apr-util\Release\libaprutil.dll svn-win32-%VER%\bin
 copy gettext\bin\intl.dll svn-win32-%VER%\bin
 copy gettext\bin\iconv.dll svn-win32-%VER%\bin
@@ -119,7 +122,6 @@ copy src-%DIR%\Release\subversion\mod_dav_svn\mod_dav_svn.so svn-win32-%VER%\htt
 copy svn-win32-%VER%\bin\intl.dll "%APACHEDIR%\bin"
 copy svn-win32-%VER%\bin\iconv.dll "%APACHEDIR%\bin"
 copy svn-win32-%VER%\bin\libdb42.dll "%APACHEDIR%\bin"
-copy httpd-2.0.50\srclib\apr-iconv\Release\iconv\*.so svn-win32-%VER%\iconv
 
 rem ====== Configure Apache ready for doing tests.
 @echo off
