@@ -45,7 +45,7 @@ int svn_fs_bdb__open_lock_tokens_table (DB **locks_tokens_p,
 svn_error_t *
 svn_fs_bdb__lock_token_add (svn_fs_t *fs,
                             const char *path,
-                            const svn_node_kind_t kind,
+                            svn_node_kind_t kind,
                             const char *lock_token,
                             trail_t *trail);
 
@@ -59,7 +59,7 @@ svn_fs_bdb__lock_token_add (svn_fs_t *fs,
 svn_error_t *
 svn_fs_bdb__lock_token_delete (svn_fs_t *fs,
                                const char *path,
-                               const svn_node_kind_t kind,
+                               svn_node_kind_t kind,
                                trail_t *trail);
 
 
@@ -82,7 +82,7 @@ svn_error_t *
 svn_fs_bdb__lock_token_get (const char **lock_token_p,
                             svn_fs_t *fs,
                             const char *path,
-                            const svn_node_kind_t kind,
+                            svn_node_kind_t kind,
                             trail_t *trail);
 
 

@@ -54,13 +54,7 @@ generate_new_lock (svn_lock_t **lock_p,
   lock->creation_date = apr_time_now();
 
   if (timeout)
-    {
-      long int seconds;
-
-      seconds = apr_time_sec(lock->creation_date);
-      seconds += timeout;
-      lock->expiration_date = apr_time_from_sec(seconds);
-    }
+    lock->expiration_date = lock->creation_date + apr_time_from_sec(timeout);
 
   *lock_p = lock;
   return SVN_NO_ERROR;

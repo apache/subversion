@@ -140,7 +140,7 @@ svn_fs_bdb__lock_get (svn_lock_t **lock_p,
       && (apr_time_now() > lock->expiration_date))
     {
       SVN_ERR (svn_fs_bdb__lock_delete (fs, lock_token, trail));
-      return svn_fs_base__err_lock_expired (fs, lock_token);
+      return svn_fs_base__err_lock_expired (fs, lock_token); 
     }
 
   *lock_p = lock;
@@ -189,7 +189,7 @@ svn_fs_bdb__locks_get (apr_hash_t **locks_p,
   /* As long as the prefix of the returned KEY matches LOOKUP_PATH 
    * we know it is either LOOKUP_PATH or a decendant thereof.
    */
-  while (! db_err && strncmp(lookup_path, key.data, key.size) != 0)
+  while (! db_err && strncmp(lookup_path, key.data, strlen(lookup_path)) == 0)
     {
       const char *lock_token;
       char *child_path;

@@ -56,7 +56,7 @@ svn_fs_bdb__open_lock_tokens_table (DB **lock_tokens_p,
 svn_error_t *
 svn_fs_bdb__lock_token_add (svn_fs_t *fs,
                             const char *path,
-                            const svn_node_kind_t kind,
+                            svn_node_kind_t kind,
                             const char *lock_token,
                             trail_t *trail)
 {
@@ -81,7 +81,7 @@ svn_fs_bdb__lock_token_add (svn_fs_t *fs,
 svn_error_t *
 svn_fs_bdb__lock_token_delete (svn_fs_t *fs,
                                const char *path,
-                               const svn_node_kind_t kind,
+                               svn_node_kind_t kind,
                                trail_t *trail)
 {
   base_fs_data_t *bfd = fs->fsap_data;
@@ -108,7 +108,7 @@ svn_error_t *
 svn_fs_bdb__lock_token_get (const char **lock_token_p,
                             svn_fs_t *fs,
                             const char *path,
-                            const svn_node_kind_t kind,
+                            svn_node_kind_t kind,
                             trail_t *trail)
 {
   base_fs_data_t *bfd = fs->fsap_data;
@@ -142,7 +142,10 @@ svn_fs_bdb__lock_token_get (const char **lock_token_p,
               || (err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)))
     {
       /* If `locks' doesn't have the lock, then we should lose it too. */
-      SVN_ERR (svn_fs_bdb__lock_token_delete (fs, path, kind, trail));
+      svn_error_t *delete_err;
+      delete_err = svn_fs_bdb__lock_token_delete (fs, path, kind, trail);
+      if (delete_err)
+        svn_error_compose (err, delete_err);
       return err;
     }
   else if (err)
