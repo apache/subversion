@@ -707,7 +707,7 @@ repos_to_wc_copy (const char *src_url,
   svn_wc_adm_access_t *adm_access;
   apr_hash_t *props = NULL;
   apr_hash_index_t *hi;
-  const char *src_uuid, *dst_uuid;
+  const char *src_uuid = NULL, *dst_uuid = NULL;
   svn_boolean_t same_repositories;
   const char *auth_dir;
 
@@ -795,20 +795,35 @@ repos_to_wc_copy (const char *src_url,
   else
     adm_access = optional_adm_access;
 
-  /* Get the repository uuid of SRC_URL */
-  SVN_ERR (ra_lib->get_uuid (sess, &src_uuid, pool));
-
-  /* Get the repository uuid for the *parent* of the destination,
-     since dst_path doesn't actually exist yet. */
-  {
+  /* Decide whether the two repositories are the same or not. */
+  { 
+    svn_error_t *src_err, *dst_err;
     const char *parent;
-    svn_path_split (dst_path, &parent, NULL, pool);
-    SVN_ERR (svn_client_uuid_from_path (&dst_uuid, parent, adm_access,
-                                        ctx, pool));
-  }
+   
+    /* Get the repository uuid of SRC_URL */
+    src_err = ra_lib->get_uuid (sess, &src_uuid, pool);
+    if (src_err && src_err->apr_err != SVN_ERR_RA_NO_REPOS_UUID)
+      return src_err;
 
-  /* And compare uuids. */
-  same_repositories = (strcmp (src_uuid, dst_uuid) == 0) ? TRUE : FALSE;
+    /* Get repository uuid of dst's parent directory, since dst may
+       not exist.  ### TODO:  we should probably walk up the wc here,
+       in case the parent dir has an imaginary URL.  */
+    svn_path_split (dst_path, &parent, NULL, pool);
+    dst_err = svn_client_uuid_from_path (&dst_uuid, parent, adm_access,
+                                         ctx, pool);
+    if (dst_err && dst_err->apr_err != SVN_ERR_RA_NO_REPOS_UUID)
+      return dst_err;
+    
+    /* If either of the UUIDs are nonexistent, then at least one of
+       the repositories must be very old.  Rather than punish the
+       user, just assume the repositories are different, so no
+       copy-history is attempted. */
+    if (src_err || dst_err || (! src_uuid) || (! dst_uuid))
+      same_repositories = FALSE;
+        
+    else
+      same_repositories = (strcmp (src_uuid, dst_uuid) == 0) ? TRUE : FALSE; 
+  }
 
   if (src_kind == svn_node_dir)
     {    

@@ -516,7 +516,11 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_RA_OUT_OF_DATE,
               SVN_ERR_RA_CATEGORY_START + 4,
               "Item is out-of-date.")
-       
+
+  SVN_ERRDEF (SVN_ERR_RA_NO_REPOS_UUID,
+              SVN_ERR_RA_CATEGORY_START + 5,
+              "Repository has no UUID.")
+      
   /* ra_dav errors */
 
   SVN_ERRDEF (SVN_ERR_RA_DAV_SOCK_INIT,
