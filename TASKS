@@ -8,4 +8,13 @@ to take something on.
    tools/cvs2svn/.
 
 
-2. Hook up fs w/ Apache, wc w/ libsvn_ra_dav.
+2. Hook up libsvn_client w/ libsvn_ra_dav.
+
+
+3. Split XML file handling out of libsvn_client. That stuff should go
+   into libsvn_ra_xml since it is (effectively) a different repository 
+   type for patches, commits, etc.
+
+   libsvn_client would then select the appropriate RA layer
+   (libsvn_ra_dav, libsvn_ra_xml, or libsvn_ra_local) depending upon
+   the desired operation.
