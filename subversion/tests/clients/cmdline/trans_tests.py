@@ -243,7 +243,7 @@ def keywords_from_birth(sbox):
   fp = open(url_unexp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$URL: (http://|file://|svn://)", lines[0]))):
+          and (re.match("\$URL: (http|file|svn|svn\\+ssh)://", lines[0]))):
     print "URL expansion failed for", url_unexp_path
     return 1
   fp.close()
@@ -252,7 +252,7 @@ def keywords_from_birth(sbox):
   fp = open(url_exp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$URL: (http://|file://|svn://)", lines[0]))):
+          and (re.match("\$URL: (http|file|svn|svn\\+ssh)://", lines[0]))):
     print "URL expansion failed for", url_exp_path
     return 1
   fp.close()
@@ -513,7 +513,7 @@ def keyword_expanded_on_checkout(sbox):
   fp = open(other_url_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$URL: (http://|file://|svn://)", lines[0]))):
+          and (re.match("\$URL: (http|file|svn|svn\\+ssh)://", lines[0]))):
     print "URL expansion failed for", other_url_path
     return 1
   fp.close()
