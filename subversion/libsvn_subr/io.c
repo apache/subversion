@@ -268,7 +268,7 @@ svn_io_temp_dir (const char **dir,
     }
 #ifdef SVN_WIN32
   /* Next, on Win32, try the C:\TEMP directory. */
-  if (test_tempdir("C:\\TEMP", p))
+  if (test_tempdir("C:\\TEMP", pool))
     {
       temp_dir = "C:\\TEMP";
       goto end;
