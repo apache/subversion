@@ -69,8 +69,8 @@ struct svn_txdelta_stream_t {
   apr_pool_t *pool;             /* Pool to allocate stream data from. */
   svn_boolean_t more;           /* TRUE if there are more data in the pool. */
   apr_off_t pos;                /* Offset of next read in source file. */
-  char *sbuf;                   /* Source view data from the last window. */
-  apr_size_t sbuf_len;
+  char *buf;                    /* Buffer for vdelta data. */
+  apr_size_t saved_source_len;  /* Amount of source data saved in buf. */
 };
 
 
@@ -195,8 +195,8 @@ svn_txdelta (svn_txdelta_stream_t **stream,
   (*stream)->pool = subpool;
   (*stream)->more = TRUE;
   (*stream)->pos = 0;
-  (*stream)->sbuf = apr_palloc (subpool, svn_txdelta__window_size);
-  (*stream)->sbuf_len = 0;
+  (*stream)->buf = apr_palloc (subpool, 3 * svn_txdelta__window_size);
+  (*stream)->saved_source_len = 0;
 }
 
 
@@ -241,67 +241,57 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
     }
   else
     {
-      svn_error_t *err = SVN_NO_ERROR;
-      apr_size_t source_len = svn_txdelta__window_size;
+      svn_error_t *err;
+      apr_size_t total_source_len;
+      apr_size_t new_source_len = svn_txdelta__window_size;
       apr_size_t target_len = svn_txdelta__window_size;
-      apr_size_t source_total, copy_len;
-      apr_pool_t *temp_pool = svn_pool_create (stream->pool);
-      char *buffer;
 
       /* If there is no saved source data yet, read an extra half
          window of data this time to get things started. */
-      if (stream->sbuf_len == 0)
-        source_len += svn_txdelta__window_size / 2;
+      if (stream->saved_source_len == 0)
+        new_source_len += svn_txdelta__window_size / 2;
 
-      /* Prepare the vdelta buffer and copy in the stashed source data. */
-      buffer = apr_palloc (temp_pool,
-                           stream->sbuf_len + source_len + target_len);
-      memcpy (buffer, stream->sbuf, stream->sbuf_len);
+      /* Read the source stream. */
+      err = stream->source_fn (stream->source_baton,
+                               stream->buf + stream->saved_source_len,
+                               &new_source_len, stream->pool);
+      total_source_len = stream->saved_source_len + new_source_len;
 
-      /* Read the source and target streams. */
-      err = stream->source_fn (stream->source_baton, buffer + stream->sbuf_len,
-                               &source_len, temp_pool);
+      /* Read the target stream. */
       if (err == SVN_NO_ERROR)
         err = stream->target_fn (stream->target_baton,
-                                 buffer + stream->sbuf_len + source_len,
-                                 &target_len, temp_pool);
+                                 stream->buf + total_source_len,
+                                 &target_len, stream->pool);
       if (err != SVN_NO_ERROR)
         return err;
-      stream->pos += source_len;
-
-      /* Stash the last window's worth of data from the source view. */
-      source_total = stream->sbuf_len + source_len;
-      copy_len = (source_total < svn_txdelta__window_size) ? source_total
-        : svn_txdelta__window_size;
-      memcpy (stream->sbuf, buffer + source_total - copy_len, copy_len);
-      stream->sbuf_len = copy_len;
+      stream->pos += new_source_len;
 
       /* Forget everything if there's no target data. */
-      *window = NULL;
       if (target_len == 0)
         {
+          *window = NULL;
           stream->more = FALSE;
-          apr_destroy_pool (temp_pool);
           return SVN_NO_ERROR;
         }
 
-      /* Create the delta window */
+      /* Create the delta window. */
       *window = svn_txdelta__make_window (stream->pool);
-      (*window)->sview_offset = stream->pos - source_total;
-      (*window)->sview_len = source_total;
+      (*window)->sview_offset = stream->pos - total_source_len;
+      (*window)->sview_len = total_source_len;
       (*window)->tview_len = target_len;
-      svn_txdelta__vdelta (*window, buffer,
-                           source_total, target_len,
-                           temp_pool);
+      svn_txdelta__vdelta (*window, stream->buf,
+                           total_source_len, target_len,
+                           stream->pool);
+
+      /* Save the last window's worth of data from the source view. */
+      stream->saved_source_len = (total_source_len < svn_txdelta__window_size)
+        ? total_source_len : svn_txdelta__window_size;
+      memmove (stream->buf,
+               stream->buf + total_source_len - stream->saved_source_len,
+               stream->saved_source_len);
 
       /* That's it. */
-      apr_destroy_pool (temp_pool);
-      if (err)
-        {
-          svn_txdelta_free_window (*window);
-          *window = NULL;
-        }
-      return err;
+      return SVN_NO_ERROR;
     }
 }
 
