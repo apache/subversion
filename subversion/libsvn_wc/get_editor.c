@@ -171,11 +171,11 @@ free_dir_baton (struct dir_baton *dir_baton)
   struct dir_baton *parent = dir_baton->parent_baton;
 
   /* Bump this dir to the new version. */
-  err = svn_wc__set_versions_entry (dir_baton->path,
-                                    dir_baton->pool,
-                                    NULL,
-                                    dir_baton->edit_baton->target_version,
-                                    NULL);                                    
+  err = svn_wc__entry_set (dir_baton->path,
+                           dir_baton->pool,
+                           NULL,
+                           dir_baton->edit_baton->target_version,
+                           NULL);                                    
   if (err)
     return err;
 
@@ -660,7 +660,7 @@ close_file (void *file_baton)
            SVN/tmp/prop-base/blah; and the file_baton is appropriately
            marked if so.
 
-         - The SVN/versions file still reflects the old blah.
+         - The SVN/entries file still reflects the old blah.
 
          - And SVN/text-base/blah is the old pristine blah, too.
 
@@ -707,9 +707,9 @@ close_file (void *file_baton)
                        really applicable here. -->
               <replace-prop-base name="blah"/>
                   <!-- You know what to do. -->
-              <set-version name="blah" version="N"/>
+              <set-entry name="blah" version="N"/>
                   <!-- Once everything else is done, we can set blah's
-                       version to N, changing the ./SVN/versions
+                       entry to version N, changing the ./SVN/entries
                        file. -->
          
          3. Now run over the log file, doing each operation.  Note
@@ -745,24 +745,24 @@ close_file (void *file_baton)
   if (fb->text_changed)
     {
       /* Merge text. */
-      err = svn_wc__write_adm_entry (log_fp,
-                                     fb->pool,
-                                     SVN_WC__LOG_MERGE_TEXT,
-                                     SVN_WC__LOG_ATTR_NAME,
-                                     fb->name,
-                                     SVN_WC__LOG_ATTR_SAVED_MODS,
-                                     svn_string_create ("kff todo", fb->pool),
-                                     NULL);
+      err = svn_wc__write_adm_item (log_fp,
+                                    fb->pool,
+                                    SVN_WC__LOG_MERGE_TEXT,
+                                    SVN_WC__LOG_ATTR_NAME,
+                                    fb->name,
+                                    SVN_WC__LOG_ATTR_SAVED_MODS,
+                                    svn_string_create ("kff todo", fb->pool),
+                                    NULL);
       if (err)
         return err;
       
       /* Replace text base. */
-      err = svn_wc__write_adm_entry (log_fp,
-                                     fb->pool,
-                                     SVN_WC__LOG_REPLACE_TEXT_BASE,
-                                     SVN_WC__LOG_ATTR_NAME,
-                                     fb->name,
-                                     NULL);
+      err = svn_wc__write_adm_item (log_fp,
+                                    fb->pool,
+                                    SVN_WC__LOG_REPLACE_TEXT_BASE,
+                                    SVN_WC__LOG_ATTR_NAME,
+                                    fb->name,
+                                    NULL);
       if (err)
         return err;
     }
@@ -770,22 +770,22 @@ close_file (void *file_baton)
   if (fb->prop_changed)
     {
       /* Merge props. */
-      err = svn_wc__write_adm_entry (log_fp,
-                                     fb->pool,
-                                     SVN_WC__LOG_MERGE_PROPS,
-                                     SVN_WC__LOG_ATTR_NAME,
-                                     fb->name,
-                                     NULL);
+      err = svn_wc__write_adm_item (log_fp,
+                                    fb->pool,
+                                    SVN_WC__LOG_MERGE_PROPS,
+                                    SVN_WC__LOG_ATTR_NAME,
+                                    fb->name,
+                                    NULL);
       if (err)
         return err;
       
       /* Replace prop base. */
-      err = svn_wc__write_adm_entry (log_fp,
-                                     fb->pool,
-                                     SVN_WC__LOG_REPLACE_PROP_BASE,
-                                     SVN_WC__LOG_ATTR_NAME,
-                                     fb->name,
-                                     NULL);
+      err = svn_wc__write_adm_item (log_fp,
+                                    fb->pool,
+                                    SVN_WC__LOG_REPLACE_PROP_BASE,
+                                    SVN_WC__LOG_ATTR_NAME,
+                                    fb->name,
+                                    NULL);
       if (err)
         return err;
     }
@@ -795,14 +795,14 @@ close_file (void *file_baton)
                               "%d",
                               fb->dir_baton->edit_baton->target_version);
 
-  err = svn_wc__write_adm_entry (log_fp,
-                                 fb->pool,
-                                 SVN_WC__LOG_SET_VERSION,
-                                 SVN_WC__LOG_ATTR_NAME,
-                                 fb->name,
-                                 SVN_WC__LOG_ATTR_VERSION,
-                                 svn_string_create (version_str, fb->pool),
-                                 NULL);
+  err = svn_wc__write_adm_item (log_fp,
+                                fb->pool,
+                                SVN_WC__LOG_SET_ENTRY,
+                                SVN_WC__LOG_ATTR_NAME,
+                                fb->name,
+                                SVN_WC__LOG_ATTR_VERSION,
+                                svn_string_create (version_str, fb->pool),
+                                NULL);
   if (err)
     return err;
 

@@ -12,7 +12,7 @@ libsvn_wc_la_SOURCES = get_editor.c                      \
                        adm_files.c adm_ops.c             \
                        lock.c util.c questions.c         \
                        log.c local_changes.c             \
-                       versions.c                        \
+                       entries.c                         \
                        adm_crawler.c
 
 ## Libraries this binary depends upon:
