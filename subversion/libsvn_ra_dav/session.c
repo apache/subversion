@@ -150,35 +150,55 @@ static int request_auth(void *userdata, const char *realm, int attempt,
   return 0;
 }
 
+/* TODO: userdata needs
+   - some mechanism for passing back errors
+   - server group name
+*/
+typedef struct ssl_verify_baton_t
+{
+  svn_error_t *err;
+  const char *server_group;
+} ssl_verify_baton_t;
+
 
 /* A neon-session callback to validate the SSL certificate when the CA
    is unknown or there are other SSL certificate problems. */
 static int ssl_set_verify_callback(void *userdata, int failures,
                                    const ne_ssl_certificate *cert)
 {
-  /* XXX Right now this accepts any SSL server certificates.
-     Subversion should perform checks of the SSL certificates and keep
-     any information related to the certificates in $HOME/.subversion
-     and not in the .svn directories so that the same information can
-     be used for multiple working copies.
+  svn_config_t *cfg;
+  apr_pool_t *pool;
+  const char *flag = NULL;
+  ssl_verify_baton_t *baton;
 
-     Upon connecting to an SSL svn server, this is was subversion
-     should do:
+  baton = (ssl_verify_baton_t *)userdata;
+  apr_pool_create(&pool, NULL);
+  svn_config_read_servers(&cfg, pool);
 
-     1) Check if a copy of the SSL certificate exists for the given
-     svn server hostname in $HOME/.subversion.  If it is there, then
-     just continue processing the svn request.  Otherwise, print all
-     the information about the svn server's SSL certificate and ask if
-     the user wants to:
-     a) Cancel the request.
-     b) Continue this request but do the store the SSL certificate so
-        that the next request will require the same revalidation.
-     c) Accept the SSL certificate forever.  Store a copy of the
-        certificate in $HOME/.subversion.
-
-     Also, when checking the certificate, warn if the certificate is
-     not properly signed by a CA.
-   */
+  /* This is a bit complex - I assume I only need to fetch a value to
+     confirm that there is a 'true' failure. */
+  if (failures & (NE_SSL_UNKNOWNCA))
+    {
+      flag = get_server_setting(cfg, baton->server_group,
+				"ignore-ssl-unknown-ca", NULL);
+      if (flag == NULL)
+	return -1;
+    }
+  if (failures & (NE_SSL_CNMISMATCH))
+    {
+      flag = get_server_setting(cfg, baton->server_group,
+				"ignore-ssl-host-mismatch", NULL);
+      if (flag == NULL)
+	return -1;
+    }
+  if (failures & (NE_SSL_NOTYETVALID | NE_SSL_EXPIRED))
+    {
+      flag = get_server_setting(cfg, baton->server_group,
+				"ignore-ssl-invalid-date", NULL);
+      if (flag == NULL)
+	return -1;
+    }
+  
   return 0;
 }
 
@@ -252,6 +272,8 @@ svn_ra_dav__open (void **session_baton,
   ne_uri uri = { 0 };
   svn_ra_session_t *ras;
   int is_ssl_session;
+  svn_config_t *cfg;
+  const char *server_group;
 
   /* Sanity check the URI */
   if (ne_uri_parse(repos_URL, &uri) 
@@ -274,23 +296,12 @@ svn_ra_dav__open (void **session_baton,
   /* ### not yet: http_redirect_register(sess, ... ); */
 
   is_ssl_session = (strcasecmp(uri.scheme, "https") == 0);
-  if (is_ssl_session)
+  if ((is_ssl_session) && (ne_supports_ssl() == 0))
     {
-      if (ne_supports_ssl() == 0)
-        {
-          ne_uri_free(&uri);
-          return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
-                                  "SSL is not supported");
-        }
+      ne_uri_free(&uri);
+      return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
+			      "SSL is not supported");
     }
-#if 0
-  else
-    {
-      /* accept server-requested TLS upgrades... useless feature
-       * currently since there is no server support yet. */
-      (void) ne_set_accept_secure_upgrade(sess, 1);
-    }
-#endif
 
   if (uri.port == 0)
     {
@@ -310,8 +321,6 @@ svn_ra_dav__open (void **session_baton,
     apr_int64_t timeout;
     apr_int64_t debug;
     svn_error_t *err;    
-    svn_config_t *cfg;
-    const char *server_group;
     SVN_ERR( svn_config_read_servers(&cfg, pool) );
     server_group = svn_config_find_group(cfg, uri.host, "groups", pool);
 
@@ -390,8 +399,21 @@ svn_ra_dav__open (void **session_baton,
      to tell it to ignore the problem.  */
   if (is_ssl_session)
     {
-      ne_ssl_set_verify(sess, ssl_set_verify_callback, NULL);
-      ne_ssl_set_verify(sess2, ssl_set_verify_callback, NULL);
+      const char *authorities_file;
+      authorities_file = get_server_setting(cfg, server_group,
+					    "ssl-authorities-file", NULL);
+      
+      if (authorities_file != NULL)
+	{
+	  ne_ssl_load_ca(sess, authorities_file);
+	  ne_ssl_load_ca(sess2, authorities_file);
+	}
+      ssl_verify_baton_t *baton = 
+	(ssl_verify_baton_t*)apr_palloc(pool, sizeof(ssl_verify_baton_t));
+      baton->server_group = server_group;
+      baton->err = NULL;
+      ne_ssl_set_verify(sess, ssl_set_verify_callback, baton);
+      ne_ssl_set_verify(sess2, ssl_set_verify_callback, baton);
     }
 
 #if 0
