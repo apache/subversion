@@ -315,10 +315,10 @@ intersections in depth.
 
 
 A note about Table 1: technically, it is possible for the horizontal
-axis to include a change on a file, not a directory.  But this would
-mean a directory's type had changed to file, which would mean an add
-or remove at some point in the past, and that would conflict (by
-columns one and two).
+axis to include changes on files as well as directories.  But this
+would mean a directory's type had changed to file, which would imply
+an add or remove at some point in the past, and that would have
+conflicted already (by columns one and two).
 
 
          Table 2: Indirect changes against indirect changes
@@ -360,6 +360,7 @@ the same intersections.  It did. :-) -kff]
 A note about Table 2: "if name conflicts" means "if the same child
 name is mentioned in both changes".  (It doesn't matter if it's oName
 or nName; if it appears anywhere on both sides, it's a conflict.)
+
 
            Table 3: Direct changes against direct changes
            **********************************************
