@@ -1685,28 +1685,32 @@ Committed revision 352.
 /calc/tags
 </screen>
 
-      <para>Of course, you're free to ignore these common layouts.
-        You can create any sort of variation, whatever works best for
-        you or your team.  Remember that whatever you choose, it's not
-        a permanent commitment.  You can reorganize your repository at
-        any time.  Because branches and tags are ordinary directories,
-        the <command>svn move</command> command can move or rename
-        them however you wish.  Switching from one layout to another
-        is just a matter of issuing a series of server-side moves; if
-        you don't like the way things are organized in the repository,
-        just juggle the directories around.</para>
+      <para>Por supuesto, es libre de ignorar estas estructuras
+        comunes. Puede crear cualquier tipo de variación, lo que
+        sea mejor para usted y su equipo. Recuerde que sea lo
+        que sea lo que elija, no es una decisión final. Puede
+        reorganizar su repositorio en cualquier momento. Dado
+        que las ramas y etiquetas son directorios ordinarios,
+        el comando <command>svn move</command> puede moverlos o
+        renombrarlos como desee. Cambiar de una estructura a otra
+        es una cuestión de ejecutar una serie de movimientos en el
+        servidor; si no le gusta cómo se organizan las cosas en el
+        repositorio, simplemente juegue un poco con los directorios.
+        <!-- TODO en efecto, esa última frase no veo cómo traducirla
+        literalmente.--></para>
 
-      <para>Remember, though, that while moving directories may be
-        easy to do, you need to be considerate of your users as well.
-        Your juggling can be disorienting to users with existing
-        working copies.  If a user has a working copy of a particular
-        repository directory, your <command>svn move</command>
-        operation might remove the path from the latest revision.
-        When the user next runs <command>svn update</command>, they'll
-        be told that their working copy represents a path that no
-        longer exists, and the user will be forced to <command>svn
-        switch</command> to the new location.
-        </para>
+      <para>Recuerde, no obstante, que aunque mover directorios
+        puede ser fácil, necesita ser considerado <!-- TODO:
+        considerate == considerado? --> con sus usuarios. Sus
+        movimientos pueden desorientar a los usuarios que tengan
+        copias locales de trabajo. Si un usuario tiene una copia
+        local de un directorio particular del repositorio, su
+        operación <command>svn move</command> quizás elimine la
+        ruta de la última revisión.  Cuando el usuario ejecute
+        <command>svn update</command>, se le informará que su
+        copia local usa una ruta que ya no existe, y el usuario
+        se verá forzado a hacer <command>svn switch</command>
+        a otra localización.</para>
       
     </sect2>
     
