@@ -48,7 +48,6 @@
 <p>
 <strong>Troubleshooting:</strong>
 </p>
-<li><a href="#diff3-diff">I get exitcode 2 from diff3 on Windows</a></li>
 <li><a href="#wedged-repos">What the heck!  Every time I try to access
     my repository, the process just hangs.  Is my repository
     corrupt?</a></li>
@@ -89,6 +88,7 @@
 <li><a href="#http-methods">What are all the HTTP methods Subversion 
     uses?</a></li>
 <li><a href="#bikeshed">What's a 'bikeshed'?</a></li> 
+<li><a href="#baton">What's a 'baton'?</a></li> 
 </ol>
 
 <![CDATA[=========================================================]]>
@@ -599,32 +599,6 @@ understood it <em>before</em> actually hacking the code, right? :)
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3>I get exitcode 2 from diff3 on Windows <a name="diff3-diff"></a></h3>
-
-<p>
-This happens when your diff utilities are not installed on the
-default location, which on Windows is <samp>C:\Cygwin\bin</samp>.
-This is caused by a bug in Subversion's config file processing,
-which was fixed in revision 4578 (version 0.17.1+).</p>
-<p>
-The workaround is to add a non-standard option to your configuration
-file. For example, if your diff utilities are installed in
-<samp>D:\Cygwin\bin</samp>, your config file probably contains:</p>
-
-<pre>
-[helpers]
-diff-cmd = D:\Cygwin\bin\diff.exe
-diff3-cmd = D:\Cygwin\bin\diff3.exe
-</pre>
-
-<p>Adding the following line to the <samp>[helpers]</samp> section
-should fix this problem:</p>
-
-<pre>
-diff_cmd = D:\Cygwin\bin\diff.exe
-</pre>
-<![CDATA[-----------------------------------------------------------]]>
-
 <h3>What the heck! Every time I try to access my repository, the
 process just hangs. Is my repository <a name="wedged-repos">corrupt?</a></h3>
 
@@ -977,3 +951,15 @@ he can check the RFC's for further information.
 
 <p>See Poul-Henning Kamp's post to freebsd-hackers: <a href="http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING">http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING</a>.
 </p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="baton">What's a 'baton'?</a></h3>
+
+<p>Throughout subversion's source code there are many references to
+'baton' objects.  These are just <pre>void *</pre> datastructures that
+provide context to a function.  In other APIs, they're often called
+<pre>void *ctx</pre> or <pre>void *userdata</pre>.  Subversion
+developers call the structures "batons" because they're passed around
+quite a bit.</p>
+
