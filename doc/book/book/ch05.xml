@@ -684,6 +684,14 @@ $ svnlook tree path/to/repos --show-ids
           </varlistentry>
 
           <varlistentry>
+            <term><literal>changed</literal></term>
+            <listitem>
+              <para>List all files and directories that changed in the 
+                tree.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
             <term><literal>date</literal></term>
             <listitem>
               <para>Print the tree's datestamp.</para>
@@ -691,20 +699,12 @@ $ svnlook tree path/to/repos --show-ids
           </varlistentry>
 
           <varlistentry>
-            <term><literal>changed</literal></term>
-            <listitem>
-              <para>List all files and directories that changed in the 
-                tree.</para>
-            </listitem>
-          </varlistentry>
-          
-          <varlistentry>
             <term><literal>diff</literal></term>
             <listitem>
               <para>Print unified diffs of changed files.</para>
             </listitem>
           </varlistentry>
-          
+
           <varlistentry>
             <term><literal>dirs-changed</literal></term>
             <listitem>
@@ -739,6 +739,14 @@ $ svnlook tree path/to/repos --show-ids
           </varlistentry>
 
           <varlistentry>
+            <term><literal>propget</literal></term>
+            <listitem>
+              <para>Print the value of a property on a path in the
+                tree.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
             <term><literal>proplist</literal></term>
             <listitem>
               <para>Print the names and values of properties set on paths
@@ -752,6 +760,13 @@ $ svnlook tree path/to/repos --show-ids
               <para>Print the tree listing, optionally revealing the
                 filesystem node revision IDs associated with each
                 path.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term><literal>uuid</literal></term>
+            <listitem>
+              <para>Print the tree's unique user ID (UUID).</para>
             </listitem>
           </varlistentry>
 
