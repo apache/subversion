@@ -466,8 +466,8 @@ svn_wc_crawl_revisions (const char *path,
      compared to. */
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
 
-  if ((entry->schedule == svn_wc_schedule_add)
-      && (entry->kind == svn_node_dir))
+  if ((! entry) || ((entry->schedule == svn_wc_schedule_add)
+                    && (entry->kind == svn_node_dir)))
     {
       SVN_ERR (svn_wc_entry (&parent_entry,
                              svn_path_dirname (path, pool),
@@ -475,9 +475,13 @@ svn_wc_crawl_revisions (const char *path,
                              FALSE, pool));
       base_rev = parent_entry->revision;
       SVN_ERR (reporter->set_path (report_baton, "", base_rev,
-                                   entry->incomplete, 
+                                   entry ? entry->incomplete : TRUE, 
                                    pool));
-      SVN_ERR(reporter->delete_path (report_baton, "", pool)); 
+      SVN_ERR (reporter->delete_path (report_baton, "", pool)); 
+
+      /* Finish the report, which causes the update editor to be
+         driven. */
+      SVN_ERR (reporter->finish_report (report_baton, pool));
 
       return SVN_NO_ERROR;
     }

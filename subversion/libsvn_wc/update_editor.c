@@ -2702,14 +2702,12 @@ check_wc_root (svn_boolean_t *wc_root,
      (code-wise) values. */
   *wc_root = TRUE;
 
-  /* Get our ancestry (this doubles as a sanity check).  */
+  /* Get our ancestry.  In the event that the path is unversioned,
+     treat it as if it were a file so that the anchor will be the
+     parent directory. */
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf 
-      (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-       _("'%s' is not under version control"), path);
   if (kind)
-    *kind = entry->kind;
+    *kind = entry ? entry->kind : svn_node_file;
 
   /* If PATH is the current working directory, we have no choice but
      to consider it a WC root (we can't examine its parent at all) */
@@ -2739,7 +2737,7 @@ check_wc_root (svn_boolean_t *wc_root,
 
   /* If PATH's parent in the WC is not its parent in the repository,
      PATH is a WC root. */
-  if (entry->url 
+  if (entry && entry->url 
       && (strcmp (svn_path_url_add_component (p_entry->url, base_name, pool),
                   entry->url) != 0))
     return SVN_NO_ERROR;

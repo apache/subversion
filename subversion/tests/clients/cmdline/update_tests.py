@@ -1325,6 +1325,84 @@ def update_schedule_add_dir(sbox):
   svntest.actions.run_and_verify_status (wc_dir, expected_status)
   
 
+#----------------------------------------------------------------------
+# Test updating items that do not exist in the current WC rev, but do
+# exist at some future revision.
+
+def update_to_future_add(sbox):
+  "update target that was added in a future rev"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  # Update the entire WC to rev 0
+  # Create expected output tree for an update to rev 0
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='D '),
+    'A' : Item(status='D '),
+    })
+
+  # Create expected disk tree for the update to rev 0
+  expected_disk = svntest.wc.State(wc_dir, { })
+  
+  # Do the update and check the results.
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        None, None,
+                                        None, None, None, None, 0,
+                                        '-r', '0', wc_dir)
+
+  # Update iota to the current HEAD.
+  iota_path = os.path.join(wc_dir, 'iota')
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='A '),
+    })
+  expected_disk = svntest.wc.State('', {
+   'iota' : Item("This is the file 'iota'.")
+   })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        None, None,
+                                        None, None, None, None, 0,
+                                        iota_path)
+
+  # Now try updating the directory into the future
+  A_path = os.path.join(wc_dir, 'A')
+
+  expected_status = svntest.wc.State(wc_dir, {
+    'A'              : Item(status='A '),
+    'A/mu'           : Item(status='A '),
+    'A/B'            : Item(status='A '),
+    'A/B/lambda'     : Item(status='A '),
+    'A/B/E'          : Item(status='A '),
+    'A/B/E/alpha'    : Item(status='A '),
+    'A/B/E/beta'     : Item(status='A '),
+    'A/B/F'          : Item(status='A '),
+    'A/C'            : Item(status='A '),
+    'A/D'            : Item(status='A '),
+    'A/D/gamma'      : Item(status='A '),
+    'A/D/G'          : Item(status='A '),
+    'A/D/G/pi'       : Item(status='A '),
+    'A/D/G/rho'      : Item(status='A '),
+    'A/D/G/tau'      : Item(status='A '),
+    'A/D/H'          : Item(status='A '),
+    'A/D/H/chi'      : Item(status='A '),
+    'A/D/H/psi'      : Item(status='A '),
+    'A/D/H/omega'    : Item(status='A ')
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_status,
+                                        expected_disk,
+                                        None, None,
+                                        None, None, None, None, 0,
+                                        A_path);
+
+
 
 ########################################################################
 # Run the tests
@@ -1353,6 +1431,7 @@ test_list = [ None,
               update_to_deletion,
               update_deletion_inside_out,
               update_schedule_add_dir,
+              update_to_future_add,
              ]
 
 if __name__ == '__main__':
