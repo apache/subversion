@@ -449,7 +449,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
 {
   int code;
   const char *locn = NULL;
-  struct uri parse;
+  ne_uri parse;
   svn_error_t *err;
 
   if (res->wr_url != NULL)
@@ -493,9 +493,9 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   /* The location is an absolute URI. We want just the path portion. */
   /* ### what to do with the rest? what if it points somewhere other
      ### than the current session? */
-  uri_parse(locn, &parse, NULL);
+  ne_uri_parse(locn, &parse);
   res->wr_url = apr_pstrdup(cc->ras->pool, parse.path);
-  uri_free(&parse);
+  ne_uri_free(&parse);
   free((void *)locn);
 
   return SVN_NO_ERROR;

@@ -352,7 +352,7 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
                                    apr_pool_t *pool)
 {
   apr_hash_t *dirents;
-  struct uri parsed_url;
+  ne_uri parsed_url;
   apr_hash_index_t *hi;
 
   /* Fetch all properties so we can snarf ones out of the svn:custom
@@ -383,7 +383,7 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
    * :-)
    */
 
-  uri_parse(url, &parsed_url, NULL);
+  ne_uri_parse(url, &parsed_url);
 
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
@@ -395,7 +395,7 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
 
       if (r->is_collection)
         {
-          if (uri_compare(parsed_url.path, r->url) == 0)
+          if (ne_path_compare(parsed_url.path, r->url) == 0)
             {
               /* don't insert "this dir" into the set of subdirs */
 
@@ -422,7 +422,7 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
         }
     }
 
-  uri_free(&parsed_url);
+  ne_uri_free(&parsed_url);
 
   return SVN_NO_ERROR;
 }

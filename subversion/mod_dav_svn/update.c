@@ -181,9 +181,6 @@ static void send_xml(update_ctx_t *uc, const char *fmt, ...)
 
 static void send_vsn_url(item_baton_t *baton)
 {
-  svn_error_t *serr;
-  svn_fs_id_t *id;
-  svn_stringbuf_t *stable_id;
   const char *href;
   const char *path;
 
@@ -194,18 +191,10 @@ static void send_vsn_url(item_baton_t *baton)
   path = get_from_path_map(baton->uc->pathmap, baton->path, baton->pool);
   path = strcmp(path, baton->path) ? path : baton->path2;
     
-  if ((serr = svn_fs_node_id(&id, baton->uc->rev_root, path, baton->pool)))
-    {
-      /* ### what to do? */
-      return;
-    }
-
-  stable_id = svn_fs_unparse_id(id, baton->pool);
-  svn_stringbuf_appendcstr(stable_id, path);
-
   href = dav_svn_build_uri(baton->uc->resource->info->repos,
 			   DAV_SVN_BUILD_URI_VERSION,
-			   SVN_INVALID_REVNUM, stable_id->data,
+			   SVN_INVALID_REVNUM,
+                           baton->uc->rev_root, path,
 			   0 /* add_href */, baton->pool);
 
   send_xml(baton->uc, 
@@ -621,11 +610,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   uc.resource = resource;
   uc.output = output;
   uc.anchor = resource->info->repos_path;
-  uc.dst_path = dst_path ? dst_path 
-                         : svn_path_join_many(resource->pool,
-                                              resource->info->repos_path,
-                                              target ? target : NULL,
-                                              NULL);
+  uc.dst_path = dst_path ? dst_path : uc.anchor;
+
   uc.bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
   uc.pathmap = NULL;
 

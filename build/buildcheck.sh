@@ -56,8 +56,8 @@ echo "buildcheck: libtool version $lt_pversion (ok)"
 #--------------------------------------------------------------------------
 # check for the correct version of Neon
 #
-NEON_WANTED_REGEX=0.19.4
-NEON_LATEST_WORKING_VER=0.19.4
+NEON_WANTED_REGEX=0.21.1
+NEON_LATEST_WORKING_VER=0.21.1
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_LATEST_WORKING_VER}.tar.gz"
 NEON_TEST_REGEX="$NEON_WANTED_REGEX"
 if test "$NEON_CHECK_CONTROL" = "--disable-neon-version-check"; then

@@ -317,22 +317,22 @@ svn_ra_dav__open (void **session_baton,
   const char *repository = repos_URL->data;
   apr_size_t len;
   ne_session *sess, *sess2;
-  struct uri uri = { 0 };
+  ne_uri uri = { 0 };
   svn_ra_session_t *ras;
   int is_ssl_session;
 
   /* Sanity check the URI */
-  if (uri_parse(repository, &uri, NULL) 
+  if (ne_uri_parse(repository, &uri) 
       || uri.host == NULL || uri.path == NULL)
     {
-      uri_free(&uri);
+      ne_uri_free(&uri);
       return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool,
                               "illegal URL for repository");
     }
 
   /* Can we initialize network? */
-  if (sock_init() != 0) {
-    uri_free(&uri);
+  if (ne_sock_init() != 0) {
+    ne_uri_free(&uri);
     return svn_error_create(SVN_ERR_RA_SOCK_INIT, 0, NULL, pool,
                             "network socket initialization failed");
   }
@@ -348,13 +348,9 @@ svn_ra_dav__open (void **session_baton,
   is_ssl_session = (strcasecmp(uri.scheme, "https") == 0);
   if (is_ssl_session)
     {
-      if (uri.port == -1)
-        {
-          uri.port = 443;
-        }
       if (ne_supports_ssl() == 0)
         {
-          uri_free(&uri);
+          ne_uri_free(&uri);
           return svn_error_create(SVN_ERR_RA_SOCK_INIT, 0, NULL, pool,
                                   "SSL is not supported");
         }
@@ -368,9 +364,9 @@ svn_ra_dav__open (void **session_baton,
     }
 #endif
 
-  if (uri.port == -1)
+  if (uri.port == 0)
     {
-      uri.port = 80;
+      uri.port = ne_uri_defaultport(uri.scheme);
     }
 
   /* Create two neon session objects, and set their properties... */

@@ -92,7 +92,7 @@ static dav_error *dav_svn_get_option(const dav_resource *resource,
           ap_text_append(resource->pool, option,
                          dav_svn_build_uri(resource->info->repos,
                                            DAV_SVN_BUILD_URI_ACT_COLLECTION,
-                                           SVN_INVALID_REVNUM, NULL,
+                                           SVN_INVALID_REVNUM, NULL, NULL,
                                            1 /* add_href */, resource->pool));
           ap_text_append(resource->pool, option,
                          "</D:activity-collection-set>");
@@ -211,7 +211,7 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
 
   /* verify the specified version resource is the "latest", thus allowing
      changes to be made. */
-  if (resource->baselined || resource->info->node_id == NULL)
+  if (resource->baselined || resource->info->root.rev == SVN_INVALID_REVNUM)
     {
       /* a Baseline, or a standard Version Resource which was accessed
          via a Label against a VCR within a Baseline Collection. */
@@ -255,8 +255,8 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
 
       svn_fs_txn_t *txn;
       svn_fs_root_t *txn_root;
+      svn_revnum_t txn_created_rev;
       dav_error *err;
-      int matches;
 
       /* open the specified transaction so that we can verify this version
          resource corresponds to the current/latest in the transaction. */
@@ -274,23 +274,33 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
 
       /* assert: repos_path != NULL (for this type of resource) */
 
-      serr = svn_fs_txn_path_is_id(&matches, txn_root,
-                                   resource->info->repos_path,
-                                   resource->info->node_id,
-                                   resource->pool);
+
+      /* Out-of-dateness check:  compare the created-rev of the item
+         in the txn against the created-rev of the version resource
+         being changed. */
+      serr = svn_fs_node_created_rev(&txn_created_rev,
+                                     txn_root, resource->info->repos_path,
+                                     resource->pool);
       if (serr != NULL)
         {
           /* ### correct HTTP error? */
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not match the node ID.");
+                                     "Could not get created-rev of txn node.");
         }
 
-      if (!matches)
+      /* If txn_created_rev is invalid, that means it's already
+         mutable in the txn... which means it has already passed this
+         out-of-dateness check.  (Usually, this happens when looking
+         at a parent directory of an already checked-out
+         resource.)  */
+
+      if (SVN_IS_VALID_REVNUM(txn_created_rev)
+          && (resource->info->root.rev != txn_created_rev))
         {
-          /* The node ID they are trying to change does not match what was
-             found in the transaction. That means they are trying to modify
-             an old (out of date) revision of the resource, or they are
-             trying to modify a *newer* revision.
+          /* The node they are trying to change does not match what
+             was found in the transaction. That means they are trying
+             to modify an old (out of date) revision of the resource,
+             or they are trying to modify a *newer* revision.
 
              If the version resource is *newer* than the transaction
              root, then the client started a commit, a new revision was
@@ -321,18 +331,12 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
 
 #else
           /* ### some debugging code */
-
-          svn_fs_id_t *res_id;
-          svn_stringbuf_t *r_id;
-          svn_stringbuf_t *t_id;
           const char *msg;
 
-          (void) svn_fs_node_id (&res_id, txn_root,
-                                 resource->info->repos_path, resource->pool);
-          r_id = svn_fs_unparse_id(resource->info->node_id, resource->pool);
-          t_id = svn_fs_unparse_id(res_id, resource->pool);
-          msg = apr_psprintf(resource->pool, "id mismatch: r=%s  t=%s",
-                             r_id->data, t_id->data);
+          msg = apr_psprintf(resource->pool, 
+                             "created-rev mismatch: r=%" SVN_REVNUM_T_FMT 
+                             ", t=%" SVN_REVNUM_T_FMT,
+                             resource->info->root.rev, txn_created_rev);
 
           return dav_new_error_tag(resource->pool, HTTP_CONFLICT, 
                                    SVN_ERR_FS_CONFLICT, msg,

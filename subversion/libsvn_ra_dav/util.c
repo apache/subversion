@@ -32,7 +32,7 @@
 
 void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src)
 {
-  struct uri parsed_url;
+  ne_uri parsed_url;
 
   /* parse the PATH element out of the URL and store it.
 
@@ -41,9 +41,9 @@ void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src)
      Note: mod_dav does not (currently) use an absolute URL, but simply a
      server-relative path (i.e. this uri_parse is effectively a no-op).
   */
-  (void) uri_parse(src, &parsed_url, NULL);
+  (void) ne_uri_parse(src, &parsed_url);
   svn_stringbuf_set(dst, parsed_url.path);
-  uri_free(&parsed_url);
+  ne_uri_free(&parsed_url);
 }
 
 svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
@@ -98,7 +98,7 @@ typedef struct {
 /* Custom function of type ne_accept_response. */
 static int ra_dav_error_accepter(void *userdata,
                                  ne_request *req,
-                                 ne_status *st)
+                                 const ne_status *st)
 {
   /* Only accept the body-response if the HTTP status code is *not* 2XX. */
   return (st->klass != 2);

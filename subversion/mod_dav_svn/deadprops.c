@@ -48,7 +48,7 @@ struct dav_deadprop_rollback {
 /* retrieve the "right" string to use as a repos path */
 static const char *get_repos_path (struct dav_resource_private *info)
 {
-  return info->node_id_str ? info->node_id_str : info->repos_path;
+  return info->repos_path;
 }
 
 

@@ -34,7 +34,7 @@
 
 /* This is the default "special uri" used for SVN's special resources
    (e.g. working resources, activities) */
-#define SVN_DEFAULT_SPECIAL_URI "$svn"
+#define SVN_DEFAULT_SPECIAL_URI "!svn"
 
 /* per-server configuration */
 typedef struct {
