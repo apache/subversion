@@ -193,7 +193,8 @@ static dav_error *dav_svn_db_firstkey(dav_db *db, dav_datum *pkey)
 static dav_error *dav_svn_db_nextkey(dav_db *db, dav_datum *pkey)
 {
   /* skip to the next hash entry */
-  db->hi = apr_hash_next(db->hi);
+  if (db->hi != NULL)
+    db->hi = apr_hash_next(db->hi);
 
   /* fetch the key */
   get_key(db->hi, pkey);
