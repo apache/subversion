@@ -610,12 +610,12 @@ class Dump:
     # This record is done.
     self.dumpfile.write('\n')
 
-  def delete_path(self, svn_path):
+  def delete_path(self, svn_path, prune=None):
     """If SVN_PATH exists in the head mirror, output its deletion and
-    return the path actually deleted; else return None.
-    ### FIXME: the path deleted can differ from SVN_PATH because of
-    pruning, which really ought to be a boolean parameter here."""
-    deleted_path = self.head_mirror.delete_path(svn_path, 1) # 1 means prune
+    return the path actually deleted; else return None.  (The path
+    deleted can differ from SVN_PATH because of pruning, but only if
+    PRUNE is true.)"""
+    deleted_path = self.head_mirror.delete_path(svn_path, prune)
     if deleted_path:
       print '    (deleted %s)' % deleted_path
       self.dumpfile.write('Node-path: %s\n'
@@ -773,7 +773,7 @@ class Commit:
         ### won't show up 'svn log' output, even when invoked on the
         ### root -- because no paths changed!  That needs to be fixed,
         ### regardless of whether cvs2svn creates such revisions.
-        dump.delete_path(svn_path)
+        dump.delete_path(svn_path, ctx.prune)
 
     if started_revision:
       previous_rev = dump.end_revision()
@@ -1174,6 +1174,7 @@ def main():
   ctx.initial_revision = 1  ### Should we take a --initial-revision option?
   ctx.verbose = 0
   ctx.dry_run = 0
+  ctx.prune = 1
   ctx.create_repos = 0
   ctx.trunk_base = "trunk"
   ctx.tags_base = "tags"
@@ -1218,6 +1219,8 @@ def main():
       ctx.branches_base = value
     elif opt == '--tags':
       ctx.tags_base = value
+    elif opt == '--no-prune':
+      ctx.prune = None
     elif opt == '--encoding':
       ctx.encoding = value
 
