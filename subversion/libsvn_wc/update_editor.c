@@ -1780,6 +1780,21 @@ svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
                             void **edit_baton,
                             apr_pool_t *pool)
 {
+  svn_node_kind_t kind;
+
+  /* Checkout into an existing working-copy isn't supported. */
+  SVN_ERR (svn_io_check_path (dest->data, &kind, pool));
+  if (kind == svn_node_dir)
+    {
+      svn_boolean_t is_wc;
+      SVN_ERR (svn_wc_check_wc (dest, &is_wc, pool));
+      if (is_wc)
+        return svn_error_createf
+          (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+           "checkout into '%s' which is already a working copy",
+           dest->data);
+    }
+
   return make_editor (dest, NULL, target_revision, 
                       TRUE, ancestor_url, 
                       FALSE, NULL,

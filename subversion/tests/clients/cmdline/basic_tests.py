@@ -37,7 +37,19 @@ path_index = svntest.actions.path_index
 def basic_checkout(sbox):
   "basic checkout of a wc"
 
-  return sbox.build()
+  if sbox.build():
+    return 1
+
+  # second checkout is expected to fail
+  wc_dir = sbox.wc_dir
+  url = svntest.main.current_repo_url
+  stdout_lines, stderr_lines = svntest.main.run_svn (1, 'checkout', url,
+                                                     '-d', wc_dir)
+  for stderr_line in stderr_lines:
+    if re.match('.*already a working copy', stderr_line):
+      return 0
+    
+  return 1
 
 #----------------------------------------------------------------------
 
