@@ -1265,7 +1265,10 @@ svn_io_run_diff3 (const char *dir,
 {
   const char *args[14];
   const char *diff3_utf8;
-  int nargs = 13, i = 0;
+#ifndef NDEBUG
+  int nargs = 13;
+#endif
+  int i = 0;
 
   SVN_ERR (svn_path_cstring_to_utf8 (&diff3_utf8, diff3_cmd, pool));
 
@@ -1315,7 +1318,9 @@ svn_io_run_diff3 (const char *dir,
                         SVN_CONFIG_OPTION_DIFF_CMD, SVN_CLIENT_DIFF);
         SVN_ERR (svn_path_cstring_to_utf8 (&diff_utf8, diff_cmd, pool));
         args[i++] = apr_pstrcat(pool, "--diff-program=", diff_utf8, NULL);
+#ifndef NDEBUG
         ++nargs;
+#endif
       }
   }
 #endif

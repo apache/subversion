@@ -68,7 +68,7 @@ typedef enum {
   svn_cl__editor_cmd_opt,
   svn_cl__old_cmd_opt,
   svn_cl__new_cmd_opt,
-  svn_cl__config_dir_opt,
+  svn_cl__config_dir_opt
 } svn_cl__longopt_t;
 
 

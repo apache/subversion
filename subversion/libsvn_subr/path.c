@@ -134,6 +134,7 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
 }
 
 
+#ifndef NDEBUG
 static svn_boolean_t
 is_canonical (const char *path,
               apr_size_t len)
@@ -141,6 +142,7 @@ is_canonical (const char *path,
   return (! SVN_PATH_IS_PLATFORM_EMPTY (path, len)
           && (len <= 1 || path[len-1] != '/'));
 }
+#endif
 
 
 char *svn_path_join (const char *base,
