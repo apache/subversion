@@ -844,14 +844,16 @@ Updated to revision 2.
       <!-- therefore, nothing has been clearly stated wrt the fact that the -->
       <!-- repository may not be local.                                     -->
       
-      <para>Subversion has been optimized to help you with this task,
-        and is able to do many things without communicating with the
-        repository.  In particular, your working copy contains a
-        secret cached <quote>pristine</quote> copy of each version
-        controlled file within the <filename>.svn</filename> area.
-        Because of this, Subversion can quickly show you how your
-        working files have changed, or even allow you to undo your
-        changes without contacting the repository.</para>
+      <para>Subversion ha sido optimizado para ayudarle con esta tarea,
+        y es capaz de hacer muchas cosas sin comunicarse con el
+        repositorio. En particular, su copia de trabajo local contiene una
+        copia <quote>pristina</quote><!--TODO:secret cached pristine
+        copy of each version controlled file within the .svn area-->
+        secreta almacenada de cada fichero de versión controlado dentro
+        del área <filename>.svn</filename>. Debido a esto, Subversion
+        puede rapidamente mostrarle cómo sus ficheros de trabajo han cambiado,
+        o incluso permitirle deshacer sus cambios sin contactar con el
+        repositorio.</para>
       
       <sect3 id="svn-ch-3-sect-4.3.1">
         <title><command>svn status</command></title>
