@@ -28,8 +28,10 @@ PASS
 
 # Create the object directory
 START "create object directory" "Creating object directory..."
-$RM_RF $TEST_ROOT/$OBJ >> $LOG_FILE 2>&1 || FAIL
-$MKDIR $TEST_ROOT/$OBJ >> $LOG_FILE 2>&1 || FAIL
+$RM_RF "$TEST_ROOT/$OBJ" >> $LOG_FILE 2>&1 || FAIL
+$MKDIR "$TEST_ROOT/$OBJ" >> $LOG_FILE 2>&1 || FAIL
+$MKDIR_P "$TEST_ROOT/$OBJ/subversion/tests" >> $LOG_FILE 2>&1 || FAIL
+mount_ramdisk "$TEST_ROOT/$OBJ/subversion/tests" >> $LOG_FILE 2>&1 || FAIL 
 PASS
 
 # Configure
@@ -50,9 +52,22 @@ PASS
 # Build
 START "build" "Building..."
 cd $TEST_ROOT/$OBJ
-$MAKE > "$TEST_ROOT/LOG_svn_build_$BUILD_TYPE" 2>&1
+$MAKE $MAKE_OPTS > "$TEST_ROOT/LOG_svn_build_$BUILD_TYPE" 2>&1
 test $? = 0 || {
     FAIL_LOG "$TEST_ROOT/LOG_svn_build_$BUILD_TYPE"
     FAIL
 }
 PASS
+
+
+# Install (bc mod_dav_svn.so) 
+START "install" "Installing..."
+cd $TEST_ROOT/$OBJ
+$RM_RF "$INST_DIR/$SVN_NAME"
+$MAKE install > "$TEST_ROOT/LOG_svn_install_$BUILD_TYPE" 2>&1
+test $? = 0 || {
+    FAIL_LOG "$TEST_ROOT/LOG_svn_build_$BUILD_TYPE"
+    FAIL
+}
+PASS
+

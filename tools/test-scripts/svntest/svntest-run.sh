@@ -34,6 +34,7 @@ START "check RA type" "Checking RA methd..."
 case $RA_TYPE in
     ra_local) CHECK_TARGET="check" ;;
     ra_svn)   CHECK_TARGET="svncheck" ;;
+    ra_dav)   CHECK_TARGET="davcheck" ;;
     *)  echo "$RA_TYPE: unknown RA type"
         echo "$RA_TYPE: unknown RA type" >> $LOG_FILE
         FAIL ;;
@@ -55,6 +56,29 @@ test -x $TEST_ROOT/$OBJ/subversion/svnserve/svnserve || FAIL; PASS
 START "check svnversion executable" "Checking svnversion executable..."
 test -x $TEST_ROOT/$OBJ/subversion/svnversion/svnversion || FAIL; PASS
 
+# Build has initially mounted ramdisk for us, but this
+# script will at the end to do unmount, so check if it is mounted or not
+# and if it is not, do initial fire up for it
+if test "xyes" == "x$RAMDISK";
+then
+    test -x $TEST_ROOT/$OBJ/subversion/tests/clients || {
+        START "re-initializing ramdisk" "Re-initializing ramdisk"
+        mount_ramdisk "$TEST_ROOT/$OBJ/subversion/tests" >> "$LOG_FILE" 2>&1 || FAIL
+        cd "$TEST_ROOT/$OBJ"
+        $MAKE  mkdir-init > "$LOG_FILE.ramdisk" 2>&1
+        test $? = 0 || {
+            FAIL_LOG "$LOG_FILE.ramdisk"
+            FAIL
+        }
+        $MAKE $MAKE_OPTS > "$LOG_FILE.ramdisk" 2>&1
+        test $? = 0 || {
+            FAIL_LOG "$LOG_FILE.ramdisk"
+            FAIL
+        }
+        PASS
+    }
+fi
+        
 # Prepare the server
 case $CHECK_TARGET in
     check)
@@ -75,6 +99,20 @@ case $CHECK_TARGET in
         test -n "$SVNSERVE_PID" || FAIL
         PASS
         ;;
+    davcheck)
+        START "run $HTTPD_NAME" "Running $HTTPD_NAME..."
+        $CP_F "$TEST_ROOT/$HTTPD_NAME.conf" \
+            "$INST_DIR/$HTTPD_NAME/conf/httpd.conf" || FAIL
+
+        $CP_F "$TEST_ROOT/mod_dav_svn_$BUILD_TYPE.conf" \
+            "$INST_DIR/$HTTPD_NAME/conf/mod_dav_svn.conf" || FAIL
+
+        "$INST_DIR/$HTTPD_NAME/bin/apachectl" start \
+            >> $LOG_FILE 2>&1
+        test $? = 0 || FAIL
+        PASS
+        CHECK_ARGS="$RA_DAV_CHECK_ARGS"
+        ;;
 esac
 
 # Kill the server
@@ -88,14 +126,29 @@ kill_svnserve() {
             $KILL $SVNSERVE_PID || FAIL
             PASS
             ;;
+        davcheck)
+            START "kill $HTTPD_NAME" "Stopping $HTTPD_NAME..."
+            "$INST_DIR/$HTTPD_NAME/bin/apachectl" stop || \
+                FAIL
+            PASS
+            ;;
     esac
+    
+    umount_ramdisk "$TEST_ROOT/$OBJ/subversion/tests"
 }
 
 # Test
 START "make $CHECK_TARGET" "Testing $RA_TYPE..."
 CHECK_LOG_FILE="$TEST_ROOT/LOG_svn_check_${BUILD_TYPE}_${RA_TYPE}"
 cd $TEST_ROOT/$OBJ
-$MAKE $CHECK_TARGET > $CHECK_LOG_FILE 2>&1
+if test $CHECK_TARGET == davcheck ;
+then
+    # At the moment we can't give repository url with
+    # make davcheck, so use check & BASE_URL here for the present
+    $MAKE check "$CHECK_ARGS" > $CHECK_LOG_FILE 2>&1    
+else
+    $MAKE $CHECK_TARGET > $CHECK_LOG_FILE 2>&1
+fi
 test $? = 0 || {
     FAIL_LOG $CHECK_LOG_FILE
     $CP "tests.log" "$LOG_FILE_PREFIX.log.$BUILD_TYPE.$RA_TYPE.$REV.failed" \
