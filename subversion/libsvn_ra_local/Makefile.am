@@ -8,7 +8,7 @@
 lib_LTLIBRARIES = libsvn_ra_local.la
 
 ## Sources needed to build each library (names canonicalized)
-libsvn_ra_local_la_SOURCES = ra_plugin.c split_url.c checkout.c update.c
+libsvn_ra_local_la_SOURCES = ra_plugin.c split_url.c checkout.c
 
 ### this is a hack, but we can't pass libsvn_fs.la (et al) to libtool when
 ### shared libs are being built. libtool barfs on us. we need to upgrade

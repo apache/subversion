@@ -3,7 +3,8 @@
 
 lib_LTLIBRARIES = libsvn_repos.la
 libsvn_repos_la_SOURCES =                         \
-                          commit_editor.c         
+                          commit_editor.c         \
+                          reporter.c
 
 INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
 
