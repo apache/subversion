@@ -748,7 +748,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_CANCELLED,
               SVN_ERR_MISC_CATEGORY_START + 15,
-              "The operation was canceled")
+              "The operation was interrupted")
 
   /* command-line client errors */
 
