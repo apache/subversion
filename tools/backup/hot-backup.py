@@ -22,18 +22,10 @@
 
 ######################################################################
 
-import os, shutil, string
+import sys, os, shutil, string
 
 ######################################################################
 # Global Settings
-
-# Path to repository
-repo_dir = "/usr/www/repositories/svn"
-
-# Where to store the repository backup.  The backup will be placed in
-# a *subdirectory* of this location, named after the youngest
-# revision.
-backup_dir = "/usr/backup"
 
 # Path to svnadmin utility
 svnadmin = "/usr/local/bin/svnadmin"
@@ -43,6 +35,23 @@ db_archive = "/usr/local/BerkeleyDB.4.0/bin/db_archive"
 
 # Number of backups to keep around
 num_backups = 64
+
+######################################################################
+# Command line arguments
+
+
+if len(sys.argv) != 3:
+  print "Usage: ", os.path.basename(sys.argv[0]), " <repos_path> <backup_path>"
+  sys.exit(1)
+
+# Path to repository
+repo_dir = sys.argv[1]
+repo = os.path.basename(repo_dir)
+
+# Where to store the repository backup.  The backup will be placed in
+# a *subdirectory* of this location, named after the youngest
+# revision.
+backup_dir = sys.argv[2]
 
 ######################################################################
 
@@ -64,7 +73,7 @@ print "Youngest revision is", youngest
 
 # Step 2:  copy the whole repository structure.
 
-backup_subdir = os.path.join(backup_dir, "repo-bkp-" + youngest)
+backup_subdir = os.path.join(backup_dir, repo + "-" + youngest)
 print "Backing up repository to '" + backup_subdir + "'..."
 shutil.copytree(repo_dir, backup_subdir)
 print "Done."
@@ -132,7 +141,7 @@ print "Lock removed.  Cleanup complete."
 # than the one we just created.
 
 kill_rev = int(youngest) - num_backups
-old_backup_subdir = os.path.join(backup_dir, "repo-bkp-" + `kill_rev`)
+old_backup_subdir = os.path.join(backup_dir, repo + "-" + `kill_rev`)
 if os.path.exists(old_backup_subdir):
   print "Removing old backup: " + old_backup_subdir
   shutil.rmtree(old_backup_subdir)
