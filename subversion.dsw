@@ -42,6 +42,9 @@ Package=<4>
     Project_Dep_Name svnlook
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name svnversion
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name svnserve
     End Project Dependency
 }}}
@@ -497,6 +500,60 @@ Package=<5>
 
 Package=<4>
 {{{
+}}}
+
+###############################################################################
+
+Project: "svnversion"=.\subversion\svnversion\svnversion.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name aprutil
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name xml
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_client
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_delta
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_wc
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_fs
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_repos
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_ra
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_ra_local
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_ra_dav
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_ra_svn
+    End Project Dependency
 }}}
 
 ###############################################################################
