@@ -495,7 +495,12 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
   if ((err->apr_err > APR_OS_START_USEERR) 
       && (err->apr_err <= APR_OS_START_CANONERR))
     fprintf (stream, "\nsvn_error: #%d : <%s>\n", err->apr_err,
-             svn_strerror (err->apr_err, err->pool));
+#ifdef TEST_ALTERNATE_ERROR_SYSTEM
+             svn_strerror (err->apr_err, buf, sizeof(buf))
+#else
+             svn_strerror (err->apr_err, err->pool)
+#endif
+             );
 
   /* Otherwise, this must be an APR error code. */
   else
@@ -537,6 +542,31 @@ svn_handle_warning (void *data, const char *fmt, ...)
 
 /* svn_strerror() and helpers */
 
+#ifdef TEST_ALTERNATE_ERROR_SYSTEM
+
+typedef struct {
+  svn_errno_t errcode;
+  const char *errdesc;
+} err_defn;
+
+#define SVN_ERROR_BUILD_ARRAY
+#include "svn_error_codes.h"
+
+char * svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
+{
+  const err_defn *defn;
+
+  for (defn = error_table; defn->errdesc != NULL; ++defn)
+    if (defn->errcode == statcode)
+      {
+        apr_cpystrn (buf, defn->errdesc, bufsize);
+        return buf;
+      }
+
+  return apr_strerror (statcode, buf, bufsize);
+}
+
+#else /* TEST_ALTERNATE_ERROR_SYSTEM */
 
 /* Helper for initialize_svn_error_descriptions */
 static void
@@ -813,6 +843,8 @@ svn_strerror (apr_status_t apr_err, apr_pool_t *pool)
   else
     return description;
 }
+
+#endif /* TEST_ALTERNATE_ERROR_SYSTEM */
 
 
 
