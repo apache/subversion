@@ -305,11 +305,6 @@ svn_error_t *svn_ra_dav__parsed_request(ne_session *sess,
   ne_xml_push_handler(success_parser, elements,
                        validate_cb, startelm_cb, endelm_cb, baton);
 
-  /* if our caller is interested in having access to this parser, call
-     the SET_PARSER callback with BATON. */
-  if (set_parser != NULL)
-    set_parser(success_parser, baton);
-
   /* create a parser to read the <D:error> response body */
   error_parser = ne_xml_create();
   ne_xml_push_handler(error_parser, error_elements, validate_error_elements,
