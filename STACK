@@ -40,18 +40,31 @@ Ben & Karl todo:
 
 Ben todo:
 
-   - filesystem work -- oh gawd, the humanity!
+   Ben's magic list of bugs:
 
-   - make a new mini-crawler (lots of shared code with adm_crawler.c)
-     which reports "version differences" to an editor.  this will be
-     used to communicate the working copy's state to the repository
-     *before* receiving an update.
-         |
-         +-- Specifically: we need to define a new vtable with just
-             replace_dir() and replace_file().  This vtable is part of
-             the RA interface, and designed for nothing other than
-             reporting WC revisions.  (We will NOT use an editor for
-             reporting WC state!)
+       - svn add a file, then run svn status.  you can see it.
+         svn add a dir, then run svn status.  you can't see it.
+
+            -why?  because we should format the new dir as soon as we add
+             it (make it into a wc subir.)
+
+            -whoops, svn_client_add() assumes files only!!!
+
+       - svn ci --xml-file foo.xml
+         this command segfaults, but not if we add a --revision arg.
+
+       - svn rm some/dir/
+         when you run svn status, the dir doesn't show up as being
+         marked for deletion, *unless* you remove it... ???  I know
+         that a dir can't be deleted unless it's empty, but this is
+         going too far.
+
+   Ben's todo list:
+
+       - finish svn_fs_is_different, make status command use it.
+
+       - change svn_ra.h so that we can check out a specific revision.
+
 
 
 Mike Pilato wc todo:
