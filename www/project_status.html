@@ -3,7 +3,7 @@
 <center>
 <img src="/subversion.jpg">
 <h2>Weekly Status</h2>
-$Date: 2001-07-13 00:23:32 $
+$Date: 2001-07-20 22:06:50 $
 </center>
 
 <!-- ------------------------------------------------------------- -->
@@ -121,20 +121,23 @@ $Date: 2001-07-13 00:23:32 $
 <h3>Recent Activities</h3>
 
 <p>
-Ben Collins-Sussman is organizing the resolution of various issues
-related to directory versioning (the so-called "Greg Hudson" issues,
-because Greg raised them in an email some time ago).  Ben is also
-patiently dealing with lots of little issues: configuration stuff,
-list watching, tests, various cleanups, etc.
+Ben Collins-Sussman has resolved, tested and documented the snafus
+related to directory versioning (the so-called "Greg Hudson" issues.)
+
 <p>
-Joe Orton is making properties-over-DAV work; seems to be done, or
-almost done, now.
+Mike Pilato has written and tested the `svn cleanup' command, as well
+doing Win32 work and fixing/testing filesystem merge() bugs.
+
 <p>
-Karl Fogel and Mike Pilato finished implementing filesystem
-deltification, and are now writing various paranoid tests to make sure
-it never regresses.  After that, they will move, with Ben and anyone
-else who cares to join, on to the rest of the stuff in
-alpha-checklist.txt.
+Karl Fogel implemented filesytem copies (so the history of a copied
+node is preserved), wrote svn_fs_link(), and has been fixing python
+tests.
+
+<p>
+Next week, Mike and Karl will be designing and writing a
+hook/authorization system.  Ben will rewriting the way properties work
+over DAV.
+
 <p>
 If you did something and we forgot to list it here, please send a
 patch to kfogel@collab.net, or change this file yourself.
