@@ -2,15 +2,20 @@
 #
 # gen-make.py -- generate makefiles for building Subversion
 #
+# USAGE:
+#    gen-make.py [-s] BUILD-CONFIG
+#
 
 import sys
 import os
 import ConfigParser
 import string
 import glob
+import fileinput
+import re
 
 
-def main(fname, oname=None):
+def main(fname, oname=None, skip_depends=0):
   parser = ConfigParser.ConfigParser(_cfg_defaults)
   parser.read(fname)
 
@@ -22,15 +27,19 @@ def main(fname, oname=None):
 
   errors = 0
   groups = { }
-  deps = { }
+  target_deps = { }
   build_targets = { }
   build_dirs = { }
   install = { }
   test_progs = [ ]
+  file_deps = [ ]
+  proj_dirs = { }
 
   targets = _filter_targets(parser.sections())
   for target in targets:
     path = parser.get(target, 'path')
+    proj_dirs[path] = None
+
     install_type = parser.get(target, 'install')
 
     bldtype = parser.get(target, 'type')
@@ -68,17 +77,19 @@ def main(fname, oname=None):
     objects = [ ]
     for src in sources:
       if src[-2:] == '.c':
-        objects.append(src[:-2] + objext)
+        objname = src[:-2] + objext
+        objects.append(objname)
+        file_deps.append((src, objname))
       else:
         print 'ERROR: unknown file extension on', src
         errors = 1
 
     retreat = _retreat_dots(path)
     libs = [ ]
-    deps[target] = [ ]
+    target_deps[target] = [ ]
     for lib in string.split(parser.get(target, 'libs')):
       if lib in targets:
-        deps[target].append(lib)
+        target_deps[target].append(lib)
         dep_path = parser.get(lib, 'path')
         if bldtype == 'lib':
           # we need to hack around a libtool problem: it cannot record a
@@ -127,7 +138,7 @@ def main(fname, oname=None):
       groups[group] = [ target ]
 
   for group in groups.keys():
-    group_deps = _sort_deps(groups[group], deps)
+    group_deps = _sort_deps(groups[group], target_deps)
     for i in range(len(group_deps)):
       group_deps[i] = build_targets[group_deps[i]]
     ofile.write('%s: %s\n\n' % (group, string.join(group_deps)))
@@ -153,7 +164,7 @@ def main(fname, oname=None):
           la_tweaked[file + '-a'] = None
 
       for t in inst_targets:
-        for dep in deps[t]:
+        for dep in target_deps[t]:
           bt = build_targets[dep]
           if bt[-3:] == '.la':
             la_tweaked[bt + '-a'] = None
@@ -212,6 +223,38 @@ def main(fname, oname=None):
   errors = errors or s_errors
 
   ofile.write('TEST_PROGRAMS = %s\n\n' % string.join(test_progs + scripts))
+
+  if not skip_depends:
+    #
+    # Find all the available headers and what they depend upon. the
+    # include_deps is a dictionary mapping a short header name to a tuple
+    # of the full path to the header and a dictionary of dependent header
+    # names (short) mapping to None.
+    #
+    # Example:
+    #   { 'short.h' : ('/path/to/short.h',
+    #                  { 'other.h' : None, 'foo.h' : None }) }
+    #
+    # Note that this structure does not allow for similarly named headers
+    # in per-project directories. SVN doesn't have this at this time, so
+    # this structure works quite fine. (the alternative would be to use
+    # the full pathname for the key, but that is actually a bit harder to
+    # work with since we only see short names when scanning, and keeping
+    # a second variable around for mapping the short to long names is more
+    # than I cared to do right now)
+    #
+    include_deps = _create_include_deps(includes)
+    for d in proj_dirs.keys():
+      hdrs = glob.glob(os.path.join(d, '*.h'))
+      if hdrs:
+        more_deps = _create_include_deps(hdrs, include_deps)
+        include_deps.update(more_deps)
+
+    for src, objname in file_deps:
+      hdrs = [ ]
+      for short in _find_includes(src, include_deps):
+        hdrs.append(include_deps[short][0])
+      ofile.write('%s: %s %s\n' % (objname, src, string.join(hdrs)))
 
   if errors:
     sys.exit(1)
@@ -285,5 +328,61 @@ def _retreat_dots(path):
   parts = string.split(path, os.sep)
   return (os.pardir + os.sep) * len(parts)
 
+def _find_includes(fname, include_deps):
+  hdrs = _scan_for_includes(fname, include_deps.keys())
+  return _include_closure(hdrs, include_deps).keys()
+
+def _create_include_deps(includes, prev_deps={}):
+  shorts = map(os.path.basename, includes)
+
+  # limit intra-header dependencies to just these headers, and what we
+  # may have found before
+  limit = shorts + prev_deps.keys()
+
+  deps = prev_deps.copy()
+  for inc in includes:
+    short = os.path.basename(inc)
+    deps[short] = (inc, _scan_for_includes(inc, limit))
+
+  # keep recomputing closures until we see no more changes
+  while 1:
+    changes = 0
+    for short in shorts:
+      old = deps[short]
+      deps[short] = (old[0], _include_closure(old[1], deps))
+      if not changes:
+        ok = old[1].keys()
+        ok.sort()
+        nk = deps[short][1].keys()
+        nk.sort()
+        changes = ok != nk
+    if not changes:
+      return deps
+
+def _include_closure(hdrs, deps):
+  new = hdrs.copy()
+  for h in hdrs.keys():
+    new.update(deps[h][1])
+  return new
+
+_re_include = re.compile(r'^#\s*include\s*[<"]([^<"]+)[>"]')
+def _scan_for_includes(fname, limit):
+  "Return a dictionary of headers found (fnames as keys, None as values)."
+  # note: we don't worry about duplicates in the return list
+  hdrs = { }
+  for line in fileinput.input(fname):
+    match = _re_include.match(line)
+    if match:
+      h = match.group(1)
+      if h in limit:
+        hdrs[match.group(1)] = None
+  return hdrs
+
 if __name__ == '__main__':
-  main(sys.argv[1])
+  if sys.argv[1] == '-s':
+    skip = 1
+    fname = sys.argv[2]
+  else:
+    skip = 0
+    fname = sys.argv[1]
+  main(fname, skip_depends=skip)
