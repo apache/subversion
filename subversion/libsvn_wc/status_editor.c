@@ -327,6 +327,7 @@ delete_entry (const char *path,
   const char *dir_path;
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
+  const char *hash_key;
 
   /* Note:  when something is deleted, it's okay to tweak the
      statushash immediately.  No need to wait until close_file or
@@ -339,12 +340,18 @@ delete_entry (const char *path,
   /* ### use svn_wc_entry() instead? */
   SVN_ERR (svn_io_check_path (full_path, &kind, pool));
   if (kind == svn_node_dir)
-    dir_path = full_path;
+    {
+      dir_path = full_path;
+      hash_key = SVN_WC_ENTRY_THIS_DIR;
+    }
   else
-    dir_path = svn_path_dirname (full_path, pool);
+    {
+      dir_path = svn_path_dirname (full_path, pool);
+      hash_key = name;
+    }
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, dir_path, pool));
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
-  if (apr_hash_get (entries, name, APR_HASH_KEY_STRING))
+  if (apr_hash_get (entries, hash_key, APR_HASH_KEY_STRING))
     SVN_ERR (tweak_statushash (db->edit_baton,
                                full_path, kind == svn_node_dir,
                                svn_wc_status_deleted, 0));
