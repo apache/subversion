@@ -317,9 +317,9 @@ def basic_update():
   
   # Do the update and check the results in three ways.
   return svntest.actions.run_and_verify_update(wc_backup,
-                               expected_output_tree,
-                               expected_disk_tree,
-                               expected_status_tree)
+                                               expected_output_tree,
+                                               expected_disk_tree,
+                                               expected_status_tree)
 
 #----------------------------------------------------------------------
 def basic_merge():
