@@ -88,6 +88,7 @@ struct edit_baton
 {
   svn_stringbuf_t *path;
   apr_pool_t *pool;
+  svn_boolean_t started_sending_txdeltas;
 };
 
 
@@ -307,63 +308,26 @@ close_directory (void *dir_baton)
 }
 
 
-#if 0
-static svn_error_t *
-close_file (void *file_baton)
-{
-  struct file_baton *fb = file_baton;
-
-  if (fb->added)
-    {
-      void *vp = apr_hash_get (fb->parent_dir_baton->entrymods, 
-                               fb->path->data, fb->path->len);
-      if (vp == NULL)
-        {
-          if (fb->binary)
-            vp = (void *)ITEM_ADDED_BINARY;
-          else
-            vp = (void *)ITEM_ADDED;
-        }
-      else
-        {
-          if (fb->binary)
-            vp = (void *)ITEM_REPLACED_BINARY;
-          else
-            vp = (void*)ITEM_REPLACED;
-        }
-
-      apr_hash_set (fb->parent_dir_baton->entrymods, 
-                    fb->path->data, fb->path->len, vp);
-
-    }
-  else
-    printf ("Sending         %s\n", fb->path->data);
-
-  decrement_dir_ref_count (fb->parent_dir_baton);
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-window_handler (svn_txdelta_window_t *window, void *handler_pair)
-{
-  return SVN_NO_ERROR;
-}
-
-
 static svn_error_t *
 apply_textdelta (void *file_baton,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
   struct file_baton *fb = file_baton;
-  fb->text_changed = TRUE;
   *handler = NULL;
   *handler_baton = NULL;
+
+  if (! fb->edit_baton->started_sending_txdeltas)
+    {
+      printf ("Transmitting file data ");
+      fb->edit_baton->started_sending_txdeltas = TRUE;
+    }
+
+  printf (".");
+  fflush (stdout);
+
   return SVN_NO_ERROR;
 }
-#endif
-
 
 static svn_error_t *
 add_file (const char *path,
@@ -462,6 +426,10 @@ close_edit (void *edit_baton)
 {
   struct edit_baton *eb = edit_baton;
   svn_pool_destroy (eb->pool);
+
+  printf ("\n");
+  fflush (stdout);
+
   return SVN_NO_ERROR;
 }
 
@@ -481,6 +449,7 @@ svn_cl__get_trace_commit_editor (const svn_delta_editor_t **editor,
 
   /* Set up the edit context. */
   eb->pool = subpool;
+  eb->started_sending_txdeltas = FALSE;
   if (initial_path && (! svn_path_is_empty (initial_path)))
     eb->path = svn_stringbuf_dup (initial_path, subpool);
   else
@@ -496,10 +465,7 @@ svn_cl__get_trace_commit_editor (const svn_delta_editor_t **editor,
   trace_editor->add_file = add_file;
   trace_editor->open_file = open_file;
   trace_editor->change_file_prop = change_file_prop;
-#if 0
   trace_editor->apply_textdelta = apply_textdelta;
-  trace_editor->close_file = close_file;
-#endif
   trace_editor->close_edit = close_edit;
 
   *edit_baton = eb;
