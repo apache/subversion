@@ -91,15 +91,6 @@ reset_file_rev (struct report_baton *rb)
   rb->stream = NULL;
 }
 
-static const char *
-get_attr (const char **atts, const char *which)
-{
-  for (; atts && *atts; atts += 2)
-    if (strcmp (*atts, which) == 0)
-      return atts[1];
-  return NULL;
-}
-
 
 /* Our beloved elements. */
 static const svn_ra_dav__xml_elm_t report_elements[] =
@@ -147,11 +138,11 @@ start_element (void *userdata, int parent_state, const char *ns,
       if (elm->id == ELEM_file_rev)
         {
           reset_file_rev (rb);
-          att = get_attr (atts, "rev");
+          att = svn_xml_get_attr_value ("rev", atts);
           if (!att)
             return NE_XML_ABORT;
           rb->revnum = SVN_STR_TO_REV (att);
-          att = get_attr (atts, "path");
+          att = svn_xml_get_attr_value ("path", atts);
           if (!att)
             return NE_XML_ABORT;
           rb->path = apr_pstrdup (rb->subpool, att);
@@ -168,11 +159,11 @@ start_element (void *userdata, int parent_state, const char *ns,
         {
         case ELEM_rev_prop:
         case ELEM_set_prop:
-          att = get_attr (atts, "name");
+          att = svn_xml_get_attr_value ("name", atts);
           if (!att)
             return NE_XML_ABORT;
           rb->prop_name = apr_pstrdup (rb->subpool, att);
-          att = get_attr (atts, "encoding");
+          att = svn_xml_get_attr_value ("encoding", atts);
           if (att && strcmp (att, "base64") == 0)
             rb->base64_prop = TRUE;
           else
@@ -181,7 +172,7 @@ start_element (void *userdata, int parent_state, const char *ns,
         case ELEM_remove_prop:
           {
             svn_prop_t *prop = apr_array_push (rb->prop_diffs);
-            att = get_attr (atts, "name");
+            att = svn_xml_get_attr_value ("name", atts);
             if (!att || *att == '\0')
               return NE_XML_ABORT;
             prop->name = apr_pstrdup (rb->subpool, att);

@@ -1121,8 +1121,6 @@ static const svn_ra_dav__xml_elm_t gloc_report_elements[] =
   { NULL }
 };
 
-static const char *get_attr(const char **atts, const char *which);
-
 /* This implements the `ne_xml_startelem_cb' prototype. */
 static int gloc_start_element(void *userdata, int parent_state, const char *ns,
                               const char *ln, const char **atts)
@@ -1143,11 +1141,11 @@ static int gloc_start_element(void *userdata, int parent_state, const char *ns,
       const char *path;
       const char *r;
 
-      r = get_attr(atts, "rev");
+      r = svn_xml_get_attr_value("rev", atts);
       if (r)
         rev = SVN_STR_TO_REV(r);
 
-      path = get_attr(atts, "path");
+      path = svn_xml_get_attr_value("path", atts);
 
       if (SVN_IS_VALID_REVNUM(rev) && path)
         apr_hash_set(baton->hash,
@@ -1493,14 +1491,6 @@ static int validate_element(void *userdata,
   /* NOTREACHED */
 }
 
-static const char *get_attr(const char **atts, const char *which)
-{
-  for (; atts && *atts; atts += 2)
-    if (strcmp(*atts, which) == 0)
-      return atts[1];
-  return NULL;
-}
-
 static void push_dir(report_baton_t *rb, 
                      void *baton, 
                      svn_stringbuf_t *pathbuf,
@@ -1547,7 +1537,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
   switch (elm->id)
     {
     case ELEM_update_report:
-      att = get_attr(atts, "send-all");
+      att = svn_xml_get_attr_value("send-all", atts);
 
       if (att && (strcmp(att, "true") == 0))
         rb->receiving_all = TRUE;
@@ -1555,7 +1545,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
       break;
 
     case ELEM_target_revision:
-      att = get_attr(atts, "rev");
+      att = svn_xml_get_attr_value("rev", atts);
       /* ### verify we got it. punt on error. */
 
       CHKERR( (*rb->editor->set_target_revision)(rb->edit_baton,
@@ -1564,7 +1554,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
       break;
 
     case ELEM_absent_directory:
-      name = get_attr(atts, "name");
+      name = svn_xml_get_attr_value("name", atts);
       /* ### verify we got it. punt on error. */
 
       parent_dir = &TOP_DIR(rb);
@@ -1577,7 +1567,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
       break;
 
     case ELEM_absent_file:
-      name = get_attr(atts, "name");
+      name = svn_xml_get_attr_value("name", atts);
       /* ### verify we got it. punt on error. */
 
       parent_dir = &TOP_DIR(rb);
@@ -1590,13 +1580,13 @@ start_element(void *userdata, int parent_state, const char *nspace,
       break;
 
     case ELEM_resource:
-      att = get_attr(atts, "path");
+      att = svn_xml_get_attr_value("path", atts);
       /* ### verify we got it. punt on error. */
       rb->current_wcprop_path = svn_path_join(rb->target, att, rb->ras->pool);
       break;
 
     case ELEM_open_directory:
-      att = get_attr(atts, "rev");
+      att = svn_xml_get_attr_value("rev", atts);
       /* ### verify we got it. punt on error. */
       base = SVN_STR_TO_REV(att);
       if (rb->dirs->nelts == 0)
@@ -1623,7 +1613,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
         }
       else
         {
-          name = get_attr(atts, "name");
+          name = svn_xml_get_attr_value("name", atts);
           /* ### verify we got it. punt on error. */
           svn_stringbuf_set(rb->namestr, name);
 
@@ -1647,17 +1637,17 @@ start_element(void *userdata, int parent_state, const char *nspace,
       break;
 
     case ELEM_add_directory:
-      name = get_attr(atts, "name");
+      name = svn_xml_get_attr_value("name", atts);
       /* ### verify we got it. punt on error. */
       svn_stringbuf_set(rb->namestr, name);
 
-      att = get_attr(atts, "copyfrom-path");
+      att = svn_xml_get_attr_value("copyfrom-path", atts);
       if (att != NULL)
         {
           cpath = rb->cpathstr;
           svn_stringbuf_set(cpath, att);
 
-          att = get_attr(atts, "copyfrom-rev");
+          att = svn_xml_get_attr_value("copyfrom-rev", atts);
           /* ### verify we got it. punt on error. */
           crev = SVN_STR_TO_REV(att);
         }
@@ -1681,7 +1671,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
          a modern server. */
       TOP_DIR(rb).fetch_props = TRUE;
 
-      bc_url = get_attr(atts, "bc-url");
+      bc_url = svn_xml_get_attr_value("bc-url", atts);
 
       /* In non-modern report responses, we're just told to fetch the
          props later.  In that case, we can at least do a pre-emptive
@@ -1732,11 +1722,11 @@ start_element(void *userdata, int parent_state, const char *nspace,
       break;
 
     case ELEM_open_file:
-      att = get_attr(atts, "rev");
+      att = svn_xml_get_attr_value("rev", atts);
       /* ### verify we got it. punt on error. */
       base = SVN_STR_TO_REV(att);
 
-      name = get_attr(atts, "name");
+      name = svn_xml_get_attr_value("name", atts);
       /* ### verify we got it. punt on error. */
       svn_stringbuf_set(rb->namestr, name);
 
@@ -1759,17 +1749,17 @@ start_element(void *userdata, int parent_state, const char *nspace,
       break;
 
     case ELEM_add_file:
-      name = get_attr(atts, "name");
+      name = svn_xml_get_attr_value("name", atts);
       /* ### verify we got it. punt on error. */
       svn_stringbuf_set(rb->namestr, name);
 
-      att = get_attr(atts, "copyfrom-path");
+      att = svn_xml_get_attr_value("copyfrom-path", atts);
       if (att != NULL)
         {
           cpath = rb->cpathstr;
           svn_stringbuf_set(cpath, att);
 
-          att = get_attr(atts, "copyfrom-rev");
+          att = svn_xml_get_attr_value("copyfrom-rev", atts);
           /* ### verify we got it. punt on error. */
           crev = SVN_STR_TO_REV(att);
         }
@@ -1812,8 +1802,8 @@ start_element(void *userdata, int parent_state, const char *nspace,
 
     case ELEM_set_prop:
       {
-        const char *encoding = get_attr(atts, "encoding");
-        name = get_attr(atts, "name");
+        const char *encoding = svn_xml_get_attr_value("encoding", atts);
+        name = svn_xml_get_attr_value("name", atts);
         /* ### verify we got it. punt on error. */
         svn_stringbuf_set(rb->namestr, name);
         if (encoding)
@@ -1825,7 +1815,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
       break;
 
     case ELEM_remove_prop:
-      name = get_attr(atts, "name");
+      name = svn_xml_get_attr_value("name", atts);
       /* ### verify we got it. punt on error. */
       svn_stringbuf_set(rb->namestr, name);
 
@@ -1865,7 +1855,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
       break;
 
     case ELEM_fetch_file:
-      base_checksum = get_attr(atts, "base-checksum");
+      base_checksum = svn_xml_get_attr_value("base-checksum", atts);
       rb->result_checksum = NULL;
 
       /* If we aren't expecting to see the file contents inline, we
@@ -1894,7 +1884,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
       break;
 
     case ELEM_delete_entry:
-      name = get_attr(atts, "name");
+      name = svn_xml_get_attr_value("name", atts);
       /* ### verify we got it. punt on error. */
       svn_stringbuf_set(rb->namestr, name);
 

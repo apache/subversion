@@ -112,15 +112,6 @@ log_validate(void *userdata, svn_ra_dav__xml_elmid parent,
   return SVN_RA_DAV__XML_VALID;
 }
 
-
-static const char *get_attr(const char **atts, const char *which)
-{
-  for (; atts && *atts; atts += 2)
-    if (strcmp(*atts, which) == 0)
-      return atts[1];
-  return NULL;
-}
-
 /*
  * This implements the `svn_ra_dav__xml_startelm_cb' prototype.
  */
@@ -150,8 +141,8 @@ log_start_element(void *userdata,
         {
           lb->this_path_item->action 
             = (elm->id == ELEM_added_path) ? 'A' : 'R';
-          copyfrom_path = get_attr(atts, "copyfrom-path");
-          copyfrom_revstr = get_attr(atts, "copyfrom-rev");
+          copyfrom_path = svn_xml_get_attr_value("copyfrom-path", atts);
+          copyfrom_revstr = svn_xml_get_attr_value("copyfrom-rev", atts);
           if (copyfrom_path && copyfrom_revstr
               && (SVN_IS_VALID_REVNUM
                   (copyfrom_rev = SVN_STR_TO_REV (copyfrom_revstr))))
