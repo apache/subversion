@@ -9,7 +9,7 @@
 javac -classpath . org/tigris/subversion/*.java
 javac -classpath . org/tigris/subversion/lib/*.java
 javac -classpath . *.java
-javac -classpath $CLASSPATH:tests tests/*.java
+javac -classpath $CLASSPATH:.:tests tests/*.java
 
 # second step: build the JNI header
 javah -classpath . -o svn_jni.h org.tigris.subversion.lib.ClientImpl
