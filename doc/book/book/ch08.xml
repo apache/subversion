@@ -417,7 +417,7 @@ $ svn checkout -r 1729:{2/17/02}
 The basis for this is the results of svn help for each subcommand.
 The goal is to coordinate it and add examples for every subcommmand.
 
-###TODO Stopped at import
+###TODO Stopped at svn merge
   
 ============================================================
 svn add
@@ -970,6 +970,34 @@ Switches:
 
 Examples
 
+svn info will show you all the useful metadata that it has for items in your working copy.  Both files:
+
+$ svn info foo.c
+Path: foo.c
+Name: foo.c
+Url: http://svn.red-bean.com/repos/test/foo.c
+Revision: 4417
+Node Kind: file
+Schedule: normal
+Last Changed Author: sally
+Last Changed Rev: 20
+Last Changed Date: 2003-01-13 16:43:13 -0600 (Mon, 13 Jan 2003)
+Text Last Updated: 2003-01-16 21:18:16 -0600 (Thu, 16 Jan 2003)
+Properties Last Updated: 2003-01-13 21:50:19 -0600 (Mon, 13 Jan 2003)
+Checksum: /3L38YwzhT93BWvgpdF6Zw==
+
+and directories:
+
+$ svn info vendors
+Path: trunk
+Url: http://svn.red-bean.com/repos/test/vendors
+bRevision: 19
+Node Kind: directory
+Schedule: normal
+Last Changed Author: harry
+Last Changed Rev: 19
+Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
+
 ============================================================
 
 svn list
@@ -977,7 +1005,6 @@ svn list
 svn list URL [URL ... ]
 
 If URL is a file, just file entry will be displayed.
-
 
 Alternate names: ls
 Changes: Nothing
@@ -992,6 +1019,13 @@ Switches:
 --non-interactive
 
 Examples
+
+svn list is most useful if you want to see what files a repository has
+without downloading a working copy:
+
+$ svn list http://svn.red-bean.com/repos/test/support
+README.txt
+INSTALL
 
 ============================================================
 
@@ -1008,12 +1042,6 @@ body itself (note that this is compatible with -v).
 Each log message is printed just once, even if more than one of the
 affected paths for that revision were explicitly requested.  Logs
 cross copy history by default; use --strict to disable this.
-For example:
-
-svn log
-svn log foo.c
-svn log http://www.example.com/repo/project/foo.c
-svn log http://www.example.com/repo/project foo.c bar.c
 
 Alternate names: None
 Changes: Nothing
@@ -1032,6 +1060,57 @@ Switches:
 --xml
 
 Examples
+
+You can see the log messages for all the paths that changed in your
+working copy by running svn log from the top:
+
+$ svn log
+------------------------------------------------------------------------
+rev 20:  harry | 2003-01-17 22:56:19 -0600 (Fri, 17 Jan 2003) | 1 line
+
+Tweak.
+------------------------------------------------------------------------
+rev 17:  sally | 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003) | 2 lines
+...
+
+Examine all log messages for a particular file in your working copy:
+
+$ svn log foo.c
+------------------------------------------------------------------------
+rev 32:  sally | 2003-01-13 16:43:13 -0600 (Mon, 13 Jan 2003) | 1 line
+
+Added defines.
+------------------------------------------------------------------------
+rev 28:  sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
+...
+
+If you don't have a working copy handy, you can log a URL:
+
+$ svn log http://svn.red-bean.com/repos/test/foo.c
+------------------------------------------------------------------------
+rev 32:  sally | 2003-01-13 16:43:13 -0600 (Mon, 13 Jan 2003) | 1 line
+
+Added defines.
+------------------------------------------------------------------------
+rev 28:  sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
+...
+
+Warning: If you run svn log on a specific path and provide a specific
+revision and get no output at all
+
+$ svn log -r 20 http://svn.red-bean.com/untouched.txt
+------------------------------------------------------------------------
+
+That just means that the path was not modified in that revision.  If
+you log from the top of the repository, or know the file that changed
+in that revision, you can specify it explicitly:
+
+$ svn log -r 20 touched.txt 
+------------------------------------------------------------------------
+rev 20:  sally | 2003-01-17 22:56:19 -0600 (Fri, 17 Jan 2003) | 1 line
+
+Made a change.
+------------------------------------------------------------------------
 
 ============================================================
 
