@@ -23,14 +23,16 @@
 #include "Pool.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
+#include "org_tigris_subversion_javahl_PromptUserPassword2.h"
 #include <svn_client.h>
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-Prompter::Prompter(jobject jprompter)
+Prompter::Prompter(jobject jprompter, bool v2)
 {
 	m_prompter = jprompter;
+	m_version2 = v2;
 }
 
 Prompter::~Prompter()
@@ -64,18 +66,29 @@ Prompter *Prompter::makeCPrompter(jobject jpromper)
 	{
 		return NULL;
 	}
+	jclass clazz2 = env->FindClass(JAVA_PACKAGE"/PromptUserPassword2");
+	if(JNIUtil::isJavaExceptionThrown())
+	{
+		return NULL;
+	}
+	bool v2 = env->IsInstanceOf(jpromper, clazz2) ? true: false;
+	env->DeleteLocalRef(clazz2);
+	if(JNIUtil::isJavaExceptionThrown())
+	{
+		return NULL;
+	}
 	jobject myPrompt = env->NewGlobalRef(jpromper);
 	if(JNIUtil::isJavaExceptionThrown())
 	{
 		return NULL;
 	}
-	return new Prompter(myPrompt);
+	return new Prompter(myPrompt, v2);
 }
 
 jstring Prompter::username()
 {
-	static jmethodID mid = 0;
 	JNIEnv *env = JNIUtil::getEnv();
+	static jmethodID mid = 0;
 	if(mid == 0)
 	{
 		jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
@@ -94,14 +107,13 @@ jstring Prompter::username()
 			return false;
 		}
 	}
-
 	return  static_cast<jstring>(env->CallObjectMethod(m_prompter, mid));
 }
 
 jstring Prompter::password()
 {
-	static jmethodID mid = 0;
 	JNIEnv *env = JNIUtil::getEnv();
+	static jmethodID mid = 0;
 	if(mid == 0)
 	{
 		jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
@@ -232,6 +244,74 @@ const char *Prompter::askQuestion(const char *realm, const char *question, bool 
 	}
 	return m_answer.c_str();
 }
+int Prompter::askTrust(const char *question, bool allow_permanent)
+{
+	if(m_version2)
+	{
+		static jmethodID mid = 0;
+		JNIEnv *env = JNIUtil::getEnv();
+		if(mid == 0)
+		{
+			jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword2");
+			if(JNIUtil::isJavaExceptionThrown())
+			{
+				return -1;
+			}
+			mid = env->GetMethodID(clazz, "askTrustSSLServer", "(Ljava/lang/String;Z)I");
+			if(JNIUtil::isJavaExceptionThrown() || mid == 0)
+			{
+				return -1;
+			}
+			env->DeleteLocalRef(clazz);
+			if(JNIUtil::isJavaExceptionThrown())
+			{
+				return -1;
+			}
+			jstring jquestion = JNIUtil::makeJString(question);
+			if(JNIUtil::isJavaExceptionThrown())
+			{
+				return -1;
+			}
+			jint ret = env->CallIntMethod(m_prompter, mid, jquestion, allow_permanent ? JNI_TRUE : JNI_FALSE);
+			if(JNIUtil::isJavaExceptionThrown())
+			{
+				return -1;
+			}
+			env->DeleteLocalRef(jquestion);
+			if(JNIUtil::isJavaExceptionThrown())
+			{
+				return -1;
+			}
+			return ret;
+		}
+
+	}
+	else
+	{
+		std::string q = question;
+		if(allow_permanent)
+		{
+			q += "(R)eject, accept (t)emporarily or accept (p)ermanently?";
+		}
+		else
+		{
+			q += "(R)eject or accept (t)emporarily?";
+		}
+		const char *answer = askQuestion(NULL, q.c_str(), true); 
+		if(*answer == 't' || *answer == 'T')
+		{
+			return org_tigris_subversion_javahl_PromptUserPassword2_AccecptTemporary;
+		}
+		else if(allow_permanent && (*answer == 'p' || *answer == 'P'))
+		{
+			return org_tigris_subversion_javahl_PromptUserPassword2_AcceptPermanently;
+		}
+		else
+			return org_tigris_subversion_javahl_PromptUserPassword2_Reject;
+	}
+	return -1;
+}
+
 bool Prompter::prompt(const char *realm, const char *username)
 {
 	static jmethodID mid = 0;
@@ -282,227 +362,180 @@ bool Prompter::prompt(const char *realm, const char *username)
 	}
 	return ret ? true:false;
 }
-svn_auth_provider_object_t *Prompter::getProvider(Prompter *that)
+svn_auth_provider_object_t *Prompter::getProviderSimple()
 {
 	apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
-    svn_auth_provider_object_t *prompt_provider = (svn_auth_provider_object_t *)apr_pcalloc (pool, sizeof(*prompt_provider));
-	svn_auth_provider_t *vtable = (svn_auth_provider_t *)apr_pcalloc (pool, sizeof(svn_auth_provider_t));
-	vtable->cred_kind = SVN_AUTH_CRED_SIMPLE;
-	vtable->first_credentials = firstCreds;
-	vtable->next_credentials = nextCreds;
-	vtable->save_credentials = NULL;
-	prompt_provider->vtable = vtable;
-	prompt_provider->provider_baton = that;
-	return prompt_provider;
+	svn_auth_provider_object_t *provider;
+	svn_client_get_simple_prompt_provider (&provider,
+                                           simple_prompt,
+                                           this,
+                                           2, /* retry limit */
+                                           pool);
+
+	return provider;
 }
-svn_auth_provider_object_t *Prompter::getProviderServerSSL(Prompter *that)
+svn_auth_provider_object_t *Prompter::getProviderUsername()
 {
 	apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
-    svn_auth_provider_object_t *prompt_provider = (svn_auth_provider_object_t *)apr_pcalloc (pool, sizeof(*prompt_provider));
-	svn_auth_provider_t *vtable = (svn_auth_provider_t *)apr_pcalloc (pool, sizeof(svn_auth_provider_t));
-	vtable->cred_kind = SVN_AUTH_CRED_SERVER_SSL;
-	vtable->first_credentials = firstCreds_server_ssl;
-	vtable->next_credentials = NULL;
-	vtable->save_credentials = NULL;
-	prompt_provider->vtable = vtable;
-	prompt_provider->provider_baton = that;
-	return prompt_provider;
+	svn_auth_provider_object_t *provider;
+    svn_client_get_username_prompt_provider (&provider,
+                                             username_prompt,
+                                             this, 
+                                             2, /* retry limit */
+                                             pool);
+
+	return provider;
 }
-svn_auth_provider_object_t *Prompter::getProviderClientSSL(Prompter *that)
+svn_auth_provider_object_t *Prompter::getProviderServerSSLTrust()
 {
 	apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
-    svn_auth_provider_object_t *prompt_provider = (svn_auth_provider_object_t *)apr_pcalloc (pool, sizeof(*prompt_provider));
-	svn_auth_provider_t *vtable = (svn_auth_provider_t *)apr_pcalloc (pool, sizeof(svn_auth_provider_t));
-	vtable->cred_kind = SVN_AUTH_CRED_CLIENT_SSL;
-	vtable->first_credentials = firstCreds_client_ssl;
-	vtable->next_credentials = NULL;
-	vtable->save_credentials = NULL;
-	prompt_provider->vtable = vtable;
-	prompt_provider->provider_baton = that;
-	return prompt_provider;
+	svn_auth_provider_object_t *provider;
+    svn_client_get_ssl_server_trust_prompt_provider
+          (&provider, ssl_server_trust_prompt, this, pool);
+
+	return provider;
 }
-svn_auth_provider_object_t *Prompter::getProviderClientSSLPass(Prompter *that)
+svn_auth_provider_object_t *Prompter::getProviderClientSSL()
 {
 	apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
-    svn_auth_provider_object_t *prompt_provider = (svn_auth_provider_object_t *)apr_pcalloc (pool, sizeof(*prompt_provider));
-	svn_auth_provider_t *vtable = (svn_auth_provider_t *)apr_pcalloc (pool, sizeof(svn_auth_provider_t));
-	vtable->cred_kind = SVN_AUTH_CRED_CLIENT_PASS_SSL;
-	vtable->first_credentials = firstCreds_client_ssl_pass;
-	vtable->next_credentials = NULL;
-	vtable->save_credentials = NULL;
-	prompt_provider->vtable = vtable;
-	prompt_provider->provider_baton = that;
-	return prompt_provider;
+	svn_auth_provider_object_t *provider;
+    svn_client_get_ssl_client_cert_prompt_provider
+          (&provider, ssl_client_cert_prompt, this, pool);
+
+	return provider;
 }
-svn_error_t *Prompter::firstCreds (void **credentials, void **iter_baton,
-							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool)
+svn_auth_provider_object_t *Prompter::getProviderClientSSLPassword()
 {
-	Prompter *that = (Prompter*)provider_baton;
+	apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
+	svn_auth_provider_object_t *provider;
+    svn_client_get_ssl_client_cert_pw_prompt_provider
+          (&provider, ssl_client_cert_pw_prompt, this, pool);
 
-	svn_auth_cred_simple_t *creds = (svn_auth_cred_simple_t *)apr_pcalloc (pool, sizeof(*creds));
-	  /* run-time parameters */
-	const char *username
-		= (const char *)apr_hash_get (parameters, SVN_AUTH_PARAM_DEFAULT_USERNAME,
-					APR_HASH_KEY_STRING);
-	const char *password
-		= (const char *)apr_hash_get (parameters, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
-					APR_HASH_KEY_STRING);
-	if(username != NULL)
-		creds->username = username;
-	else
-		creds->username = "";
-	if(password != NULL)
-		creds->password = password;
-	else
-		creds->password = "";
-    *credentials = creds;
-
-	*iter_baton = that;
-
-	if(that != NULL)
-	{
-		that->m_retry = 0;
-		if(realmstring != NULL)
-			that->m_realm = realmstring;
-		else
-			that->m_realm = "";
-	}
-	return SVN_NO_ERROR;
+	return provider;
 }
-svn_error_t *Prompter::nextCreds (void **credentials, void *iter_baton,
-                          apr_hash_t *parameters, apr_pool_t *pool)
+svn_error_t *Prompter::simple_prompt(svn_auth_cred_simple_t **cred_p, void *baton, 
+										const char *realm, const char *username, apr_pool_t *pool)
 {
-	Prompter *that = (Prompter*)iter_baton;
-	if(that->m_retry >= 2 || that == NULL)
-	{
-		credentials = NULL;
-		return SVN_NO_ERROR;
-	}
-
-	const char *username
-		= (const char *)apr_hash_get (parameters, SVN_AUTH_PARAM_DEFAULT_USERNAME,
-						APR_HASH_KEY_STRING);
-
-	if(!that->prompt(that->m_realm.c_str(), username))
-	{
-		credentials = NULL;
-		return SVN_NO_ERROR;
-	}
-
+	Prompter *that = (Prompter*)baton;
+	svn_auth_cred_simple_t *ret = (svn_auth_cred_simple_t*)apr_pcalloc(pool, sizeof(*ret));
+	if(!that->prompt(realm, username))
+		return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                        "User canceled dialog");
 	jstring juser = that->username();
-	jstring jpass = that->password();
 	JNIStringHolder user(juser);
+	if(user == NULL)
+		return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                        "User canceled dialog");
+	ret->username = apr_pstrdup(pool,user);
+	jstring jpass = that->password();
 	JNIStringHolder pass(jpass);
-	if(user != NULL)
-		that->m_userName = user;
+	if(pass == NULL)
+		return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                            "User canceled dialog");
 	else
-		that->m_userName = "";
-	if(pass != NULL)
-		that->m_passWord = pass;
-	else
-		that->m_passWord = "";
-	svn_auth_cred_simple_t *creds = (svn_auth_cred_simple_t *)apr_pcalloc (pool, sizeof(*creds));
-    creds->username = that->m_userName.c_str();
-    creds->password = that->m_passWord.c_str();
-    *credentials = creds;
+		ret->password  = apr_pstrdup(pool, pass);
+    *cred_p = ret;
 	return SVN_NO_ERROR;
 }
-svn_error_t *Prompter::firstCreds_server_ssl (void **credentials, void **iter_baton, 
-							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool)
+svn_error_t *Prompter::username_prompt(svn_auth_cred_username_t **cred_p, void *baton,
+										const char *realm, apr_pool_t *pool)
 {
-	Prompter *that = (Prompter*)provider_baton;
-    svn_boolean_t previous_output = FALSE;
-    svn_auth_cred_server_ssl_t *cred;
-    int failure;
-    int failures_in =
-        (int) apr_hash_get (parameters,
-                        SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
-                        APR_HASH_KEY_STRING);
-
-    svn_stringbuf_t *buf = svn_stringbuf_create
-        ("Error validating server certificate: ", pool);
-
-    failure = failures_in & SVN_AUTH_SSL_UNKNOWNCA;
-    if (failure)
-	{
-        svn_stringbuf_appendcstr (buf, "Unknown certificate issuer");
-        previous_output = TRUE;
-    }
-
-    failure = failures_in & SVN_AUTH_SSL_CNMISMATCH;
-    if (failure)
-    {
-        if (previous_output)
-        {
-            svn_stringbuf_appendcstr (buf, ", ");
-        }
-        svn_stringbuf_appendcstr (buf, "Hostname mismatch");
-        previous_output = TRUE;
-    } 
-    failure = failures_in & (SVN_AUTH_SSL_EXPIRED | SVN_AUTH_SSL_NOTYETVALID);
-    if (failure)
-	{
-        if (previous_output)
-        {
-            svn_stringbuf_appendcstr (buf, ", ");
-        }
-        svn_stringbuf_appendcstr (buf, "Certificate expired or not yet valid");
-        previous_output = TRUE;
-    }
-
-    svn_stringbuf_appendcstr (buf, ". Accept? (y/N): ");
-	if(that->askYesNo(realmstring, buf->data, false))
-    {
-        cred = (svn_auth_cred_server_ssl_t*)apr_palloc (pool, sizeof(*cred));
-        cred->accepted_failures = failures_in;
-        *credentials = cred;
-    }
-    else
-    {
-        *credentials = NULL;
-    }
-    *iter_baton = NULL;
-    return SVN_NO_ERROR;
-}
-
-svn_error_t *Prompter::firstCreds_client_ssl (void **credentials, void **iter_baton, 
-							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool)
-{
-	Prompter *that = (Prompter*)provider_baton;
-  const char *cert_file = NULL, *key_file = NULL;
-  svn_auth_cred_client_ssl_t *cred;
-
-
-  cert_file = that->askQuestion(realmstring, "client certificate filename: ", true);
-  
-  if ((cert_file == NULL) || (cert_file[0] == 0))
-    {
-      return NULL;
-    }
-
-  cred = (svn_auth_cred_client_ssl_t*)apr_palloc (pool, sizeof(*cred));
-  cred->cert_file = cert_file;
-  *credentials = cred;
-  *iter_baton = NULL;
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *Prompter::firstCreds_client_ssl_pass (void **credentials, void **iter_baton, 
-							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool)
-{
-	Prompter *that = (Prompter*)provider_baton;
-  const char *info = NULL;
-  info = that->askQuestion(realmstring, "client certificate passphrase: ", false);
-  if (info && info[0])
-    {
-      svn_auth_cred_client_ssl_pass_t *cred = (svn_auth_cred_client_ssl_pass_t*)apr_palloc (pool, sizeof(*cred));
-      cred->password = info;
-      *credentials = cred;
-    }
-  else
-    {
-      *credentials = NULL;
-    }
-  *iter_baton = NULL;
+	Prompter *that = (Prompter*)baton;
+	svn_auth_cred_username_t *ret = (svn_auth_cred_username_t*)apr_pcalloc(pool, sizeof(*ret));
+	const char *user = that->askQuestion(realm, "Username: ", true);
+	if(user == NULL)
+		return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                        "User canceled dialog");
+	ret->username = apr_pstrdup(pool,user);
+    *cred_p = ret;
 	return SVN_NO_ERROR;
 }
+svn_error_t *Prompter::ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t **cred_p,
+										void *baton,int failures, 
+										const svn_auth_ssl_server_cert_info_t *cert_info,
+										apr_pool_t *pool)
+{
+	Prompter *that = (Prompter*)baton;
+	svn_auth_cred_ssl_server_trust_t *ret = (svn_auth_cred_ssl_server_trust_t*)apr_pcalloc(pool, sizeof(*ret));
+	
+	bool allow_perm_accept = (failures & SVN_AUTH_SSL_UNKNOWNCA) ? true : false;
+
+	std::string question = "Error validating server certificate:\n";
+	
+	if(failures & SVN_AUTH_SSL_UNKNOWNCA)
+	{
+		question += " - Unknown certificate issuer\n";
+		question += "   Fingerprint: ";
+		question += cert_info->fingerprint;
+		question += "\n";
+		question += "   Distinguished name: ";
+		question += cert_info->issuer_dname;
+		question += "\n";
+	}
+
+	if(failures & SVN_AUTH_SSL_CNMISMATCH)
+	{
+		question += " - Hostname mismatch (";
+		question += cert_info->hostname;
+		question += ")\n";
+	}
+
+	if(failures & SVN_AUTH_SSL_NOTYETVALID)
+	{
+		question += " - Certificate is not yet valid\n";
+		question += "   Valid from ";
+		question += cert_info->valid_from;
+		question += "\n";
+	}
+
+	if(failures & SVN_AUTH_SSL_EXPIRED)
+	{
+		question += " - Certificate is expired\n";
+		question += "   Valid until ";
+		question += cert_info->valid_until;
+		question += "\n";
+	}
+
+	switch(that->askTrust(question.c_str(), allow_perm_accept))
+	{
+	case org_tigris_subversion_javahl_PromptUserPassword2_AccecptTemporary:
+	    *cred_p = ret;
+		ret->trust_permanently = FALSE;
+		break;
+	case org_tigris_subversion_javahl_PromptUserPassword2_AcceptPermanently:
+	    *cred_p = ret;
+		ret->trust_permanently = TRUE;
+		ret->accepted_failures = failures;
+		break;
+	default:
+		*cred_p = NULL;
+	}
+	return SVN_NO_ERROR;
+}
+svn_error_t *Prompter::ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **cred_p,
+										void *baton, apr_pool_t *pool)
+{
+	Prompter *that = (Prompter*)baton;
+	svn_auth_cred_ssl_client_cert_t *ret = (svn_auth_cred_ssl_client_cert_t*)apr_pcalloc(pool, sizeof(*ret));
+	const char *cert_file = that->askQuestion(NULL, "client certificate filename: ", true);
+	if(cert_file == NULL)
+		return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                        "User canceled dialog");
+	ret->cert_file = apr_pstrdup(pool, cert_file);
+    *cred_p = ret;
+	return SVN_NO_ERROR;
+}
+svn_error_t *Prompter::ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_pw_t **cred_p,
+										void *baton, apr_pool_t *pool)
+{
+	Prompter *that = (Prompter*)baton;
+	svn_auth_cred_ssl_client_cert_pw_t *ret = (svn_auth_cred_ssl_client_cert_pw_t*)apr_pcalloc(pool, sizeof(*ret));
+    const char *info = that->askQuestion(NULL, "client certificate passphrase: ", false);
+	if(info == NULL)
+		return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                        "User canceled dialog");
+	ret->password = apr_pstrdup(pool, info);
+    *cred_p = ret;
+	return SVN_NO_ERROR;
+}
+

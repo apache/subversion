@@ -178,11 +178,13 @@ Revision::Revision(jobject jthis)
 		m_revision.kind = svn_opt_revision_head;
 		break;
 	}
+	/*
 	env->DeleteLocalRef(jthis);
 	if(JNIUtil::isJavaExceptionThrown())
 	{
 		return;
 	}
+	*/
 }
 
 Revision::~Revision()

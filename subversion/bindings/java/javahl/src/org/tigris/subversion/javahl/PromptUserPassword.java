@@ -17,13 +17,6 @@
  */
 package org.tigris.subversion.javahl;
 
-/**
- * Created by IntelliJ IDEA.
- * User: patrick
- * Date: Feb 3, 2003
- * Time: 6:33:11 AM
- * To change this template use Options | File Templates.
- */
 public interface PromptUserPassword
 {
     public boolean prompt(String realm, String username);
