@@ -96,6 +96,12 @@
   }
 }
 
+%typemap(python, in, numinputs=0) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton) {
+  /* ### FIXME: Should have a thunk written for it. */
+  $1 = NULL;
+  $2 = NULL;
+}
+
 /* -----------------------------------------------------------------------
    handle config and fs_config in svn_repos_create
 */
