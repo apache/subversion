@@ -13,6 +13,10 @@
 (Please read the HACKING file if you're installing from a working copy
 rather than an unpacked distribution.)
 
+(Also, if you are trying to set up a subversion server, also look at
+notes/dav_setup.txt for instructions on compiling and installing 
+Apache 2.0 and mod_dav_svn).
+
 Subversion installs using the usual GNU procedure:
 
    $ ./configure --enable-maintainer-mode --disable-shared
