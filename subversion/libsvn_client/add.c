@@ -131,7 +131,7 @@ svn_client_add (const char *path,
   svn_node_kind_t kind;
   svn_error_t *err, *err2;
   svn_wc_adm_access_t *adm_access;
-  const char *parent_path = svn_path_remove_component_nts (path, pool);
+  const char *parent_path = svn_path_dirname (path, pool);
 
   SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, TRUE, pool));
 
@@ -208,7 +208,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
         message = "";
 
       /* Split the new directory name from its parent URL. */
-      svn_path_split_nts (path, &anchor, &target, pool);
+      svn_path_split (path, &anchor, &target, pool);
       target = svn_path_uri_decode (target, pool);
 
       /* Get the RA vtable that matches URL. */

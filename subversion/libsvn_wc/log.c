@@ -222,7 +222,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
   SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, filepath, pool));
   SVN_ERR (svn_wc__get_keywords (&keywords, filepath, adm_access, NULL, pool));
 
-  svn_path_split_nts (filepath, &pdir, &bname, pool);
+  svn_path_split (filepath, &pdir, &bname, pool);
   tmp_wfile = svn_wc__adm_path (pdir, TRUE, pool, bname, NULL);
   
   SVN_ERR (svn_io_open_unique_file (&ignored, &tmp_wfile,
@@ -1056,7 +1056,7 @@ log_do_committed (struct log_runner *loggy,
 
   /* Make sure our entry exists in the parent (if the parent is even a
      SVN working copy directory). */
-  svn_path_split_nts (svn_wc_adm_access_path (loggy->adm_access), &pdir,
+  svn_path_split (svn_wc_adm_access_path (loggy->adm_access), &pdir,
                       &base_name, pool);
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, loggy->adm_access, pdir, pool));
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
@@ -1280,8 +1280,8 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
         const char *parent, *bname;
         svn_wc_adm_access_t *parent_access;
 
-        svn_path_split_nts (svn_wc_adm_access_path (adm_access), &parent,
-                            &bname, pool);
+        svn_path_split (svn_wc_adm_access_path (adm_access), &parent,
+                        &bname, pool);
         SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent,
                                       pool));
         SVN_ERR (svn_wc_entry (&parent_entry, parent, parent_access, FALSE,

@@ -472,7 +472,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
      skipped. */
   in_anchor_not_target =
     (dir_baton->edit_baton->target
-     && (! svn_path_compare_paths_nts
+     && (! svn_path_compare_paths
          (dir_baton->path,
           svn_wc_adm_access_path (dir_baton->edit_baton->anchor))));
 

@@ -23,6 +23,7 @@
 #include <apr_tables.h>
 #include <string.h>       /* for strncmp() */
 #include <stdlib.h>       /* for qsort()   */
+#include <assert.h>
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
@@ -60,29 +61,15 @@
 int
 svn_sort_compare_items_as_paths (const svn_item_t *a, const svn_item_t *b)
 {
-  svn_stringbuf_t str_a, str_b;
+  const char *astr, *bstr;
 
-  /* ### these are bogus! compare_paths ought to take svn_string_t */
-
-  str_a.data = (char *)a->key;
-  str_a.len = str_a.blocksize = a->klen;
-  str_a.pool = NULL;
-
-  str_b.data = (char *)b->key;
-  str_b.len = str_b.blocksize = b->klen;
-  str_b.pool = NULL;
-
-  return svn_path_compare_paths (&str_a, &str_b);
+  astr = a->key;
+  bstr = b->key;
+  assert(astr[a->klen] == '\0');
+  assert(bstr[b->klen] == '\0');
+  return svn_path_compare_paths (astr, bstr);
 }
 
-
-int
-svn_sort_compare_strings_as_paths (const void *a, const void *b)
-{
-  const svn_stringbuf_t *str_a = *((const svn_stringbuf_t **) a);
-  const svn_stringbuf_t *str_b = *((const svn_stringbuf_t **) b);
-  return svn_path_compare_paths (str_a, str_b);
-}
 
 int
 svn_sort_compare_revisions (const void *a, const void *b)

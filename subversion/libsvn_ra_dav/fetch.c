@@ -1219,7 +1219,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
           const char *comp;
           comp = svn_path_uri_decode(svn_path_basename(url, subpool), 
                                      subpool);
-          svn_path_add_component_nts(edit_path, comp);
+          svn_path_add_component(edit_path, comp);
                                      
           SVN_ERR_W( (*editor->add_directory) (edit_path->data, parent_baton,
                                                NULL, SVN_INVALID_REVNUM,
@@ -1272,7 +1272,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
           rsrc = ((svn_ra_dav_resource_t **)files->elts)[i];
           comp = svn_path_uri_decode(svn_path_basename(rsrc->url, subpool), 
                                      subpool);
-          svn_path_add_component_nts(edit_path, comp);
+          svn_path_add_component(edit_path, comp);
 
           /* ### should we close the dir batons first? */
           SVN_ERR_W( fetch_file(ras->sess, rsrc, this_baton, editor,
@@ -1758,7 +1758,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
           subpool = svn_pool_create(parent_dir->pool);
 
           pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, subpool);
-          svn_path_add_component(pathbuf, rb->namestr);
+          svn_path_add_component(pathbuf, rb->namestr->data);
 
           CHKERR( (*rb->editor->open_directory)(pathbuf->data,
                                                 parent_dir->baton, base,
@@ -1793,7 +1793,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       subpool = svn_pool_create(parent_dir->pool);
 
       pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, subpool);
-      svn_path_add_component(pathbuf, rb->namestr);
+      svn_path_add_component(pathbuf, rb->namestr->data);
 
       CHKERR( (*rb->editor->add_directory)(pathbuf->data, parent_dir->baton,
                                            cpath ? cpath->data : NULL, 
@@ -1821,7 +1821,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
       /* Add this file's name into the directory's path buffer. It will be
          removed in end_element() */
-      svn_path_add_component(parent_dir->pathbuf, rb->namestr);
+      svn_path_add_component(parent_dir->pathbuf, rb->namestr->data);
 
       CHKERR( (*rb->editor->open_file)(parent_dir->pathbuf->data, 
                                        parent_dir->baton, base,
@@ -1854,7 +1854,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
       /* Add this file's name into the directory's path buffer. It will be
          removed in end_element() */
-      svn_path_add_component(parent_dir->pathbuf, rb->namestr);
+      svn_path_add_component(parent_dir->pathbuf, rb->namestr->data);
 
       CHKERR( (*rb->editor->add_file)(parent_dir->pathbuf->data,
                                       parent_dir->baton,
@@ -1927,7 +1927,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       subpool = parent_dir->pool;
 
       pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, subpool);
-      svn_path_add_component(pathbuf, rb->namestr);
+      svn_path_add_component(pathbuf, rb->namestr->data);
 
       CHKERR( (*rb->editor->delete_entry)(pathbuf->data,
                                           SVN_INVALID_REVNUM,

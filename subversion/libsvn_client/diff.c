@@ -465,7 +465,7 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
   switch (kind)
     {
     case svn_node_file:
-      svn_path_split_nts (mine, &parent_path, NULL, merge_b->pool);
+      svn_path_split (mine, &parent_path, NULL, merge_b->pool);
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
       SVN_ERR (svn_client_delete (NULL, mine, parent_access, merge_b->force,
@@ -555,7 +555,7 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
   switch (kind)
     {
     case svn_node_dir:
-      svn_path_split_nts (path, &parent_path, NULL, merge_b->pool);
+      svn_path_split (path, &parent_path, NULL, merge_b->pool);
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
       SVN_ERR (svn_client_delete (NULL, path, parent_access, merge_b->force,
@@ -1011,7 +1011,7 @@ do_diff (const apr_array_header_t *options,
       SVN_ERR (svn_wc_get_actual_target (path2, &anchor, &target, pool));
       if (target)
         {
-          svn_path_split_nts (URL1, &url_anchor, &url_target, pool);
+          svn_path_split (URL1, &url_anchor, &url_target, pool);
         }
       else
         {
@@ -1051,8 +1051,7 @@ do_diff (const apr_array_header_t *options,
         SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, path2, pool));
       else
         SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
-                                      svn_path_remove_component_nts (path2,
-                                                                     pool),
+                                      svn_path_dirname (path2, pool),
                                       pool));
 
       /* Create a txn mirror of path2;  the diff editor will print
@@ -1152,7 +1151,7 @@ do_diff (const apr_array_header_t *options,
 
       if (target2)
         {
-          svn_path_split_nts (URL1, &anchor1, &target1, pool); 
+          svn_path_split (URL1, &anchor1, &target1, pool); 
           target1 = svn_path_uri_decode (target1, pool);
         }
       else

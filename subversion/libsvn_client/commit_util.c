@@ -132,7 +132,7 @@ harvest_committables (apr_hash_t *committables,
   assert (url);
 
   /* Make P_PATH the parent dir. */
-  p_path = svn_path_remove_component_nts (path, pool);
+  p_path = svn_path_dirname (path, pool);
 
   /* Return error on unknown path kinds. */
   if ((entry->kind != svn_node_file) && (entry->kind != svn_node_dir))
@@ -458,7 +458,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
           /* See if the parent is under version control (corruption if it
              isn't) and possibly scheduled for addition (illegal target if
              it is). */
-          svn_path_split_nts (target, &parent, &base_name, pool);
+          svn_path_split (target, &parent, &base_name, pool);
           SVN_ERR (svn_wc_adm_retrieve (&parent_access, parent_dir, parent,
                                         pool));
           SVN_ERR (svn_wc_entry (&p_entry, parent, parent_access, FALSE, pool));
@@ -496,8 +496,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
       SVN_ERR (svn_wc_adm_retrieve (&dir_access, parent_dir,
                                     (entry->kind == svn_node_dir
                                      ? target
-                                     : svn_path_remove_component_nts (target,
-                                                                      pool)),
+                                     : svn_path_dirname (target, pool)),
                                     pool));
       SVN_ERR (harvest_committables (*committables, target, dir_access,
                                      url, NULL, entry, NULL, FALSE, FALSE, 
@@ -544,7 +543,7 @@ int svn_client__sort_commit_item_urls (const void *a, const void *b)
     = *((const svn_client_commit_item_t * const *) a);
   const svn_client_commit_item_t *item2
     = *((const svn_client_commit_item_t * const *) b);
-  return svn_path_compare_paths_nts (item1->url, item2->url);
+  return svn_path_compare_paths (item1->url, item2->url);
 }
 
 
@@ -598,7 +597,7 @@ svn_client__condense_commit_items (const char **base_url,
       if ((strlen (*base_url) == strlen (url))
           && (! ((item->kind == svn_node_dir)
                  && item->state_flags == SVN_CLIENT_COMMIT_ITEM_PROP_MODS)))
-        *base_url = svn_path_remove_component_nts (*base_url, pool);
+        *base_url = svn_path_dirname (*base_url, pool);
 
       /* Stash our item here for the next iteration. */
       last_item = item;
@@ -1019,7 +1018,7 @@ svn_client__do_commit (const char *base_url,
 
       /*** Step C - Open any directories between the common ancestor
            and the parent of the commit item. ***/
-      svn_path_split_nts (item_url, &item_dir, &item_name, pool);
+      svn_path_split (item_url, &item_dir, &item_name, pool);
       if (strlen (item_dir) > common_len)
         {
           char *rel = apr_pstrdup (pool, item_dir);
@@ -1110,7 +1109,7 @@ svn_client__do_commit (const char *base_url,
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         fulltext = TRUE;
 
-      dir_path = svn_path_remove_component_nts (item->path, mod->subpool);
+      dir_path = svn_path_dirname (item->path, mod->subpool);
       SVN_ERR (svn_wc_adm_retrieve (&item_access, adm_access, dir_path,
                                     mod->subpool));
       SVN_ERR (svn_wc_transmit_text_deltas (item->path, item_access, fulltext,

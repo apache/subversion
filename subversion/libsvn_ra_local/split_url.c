@@ -127,13 +127,13 @@ svn_ra_local__split_URL (svn_repos_t **repos,
       /* If we're down to an empty path here, and we still haven't
          found the repository, we're just out of luck.  Time to bail
          and face the music. */
-      if (svn_path_is_empty_nts (candidate_url))
+      if (svn_path_is_empty (candidate_url))
         break;
 
       /* We didn't successfully open the repository, and we haven't
          hacked this path down to a bare nub yet, so we'll chop off
          the last component of this path. */
-      candidate_url = svn_path_remove_component_nts (candidate_url, pool);
+      candidate_url = svn_path_dirname (candidate_url, pool);
       if (err)
         svn_error_clear (err);
     }

@@ -112,7 +112,7 @@ svn_cl__checkout (apr_getopt_t *os,
           (SVN_ERR_BAD_URL, 0, NULL, 
            "`%s' does not appear to be a URL", repos_url);
 
-      repos_url = svn_path_canonicalize_nts (repos_url, subpool);
+      repos_url = svn_path_canonicalize (repos_url, subpool);
 
       /* Use sub-directory of destination if checking-out multiple URLs */
       if (targets->nelts == 2)

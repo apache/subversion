@@ -92,11 +92,11 @@ wc_to_wc_copy (const char *src_path,
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind == svn_node_none)
     {
-      svn_path_split_nts (dst_path, &dst_parent, &base_name, pool);
+      svn_path_split (dst_path, &dst_parent, &base_name, pool);
     }
   else if (dst_kind == svn_node_dir)
     {
-      svn_path_split_nts (src_path, NULL, &base_name, pool);
+      svn_path_split (src_path, NULL, &base_name, pool);
       dst_parent = dst_path;
     }
   else
@@ -110,7 +110,7 @@ wc_to_wc_copy (const char *src_path,
       const char *src_parent;
       assert (! optional_adm_access);
 
-      svn_path_split_nts (src_path, &src_parent, NULL, pool);
+      svn_path_split (src_path, &src_parent, NULL, pool);
 
       SVN_ERR (svn_wc_adm_open (&src_access, NULL, src_parent, TRUE,
                                 src_kind == svn_node_dir,
@@ -213,7 +213,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
      possible for src_URL == dst_URL == top_url.  In this situation,
      we want to open an RA session to the *parent* of all three. */
   if (! strcmp (src_url, dst_url))
-    top_url = svn_path_remove_component_nts (top_url, pool);
+    top_url = svn_path_dirname (top_url, pool);
 
   /* Get the portions of the SRC and DST URLs that are relative to
      TOP_URL. */
@@ -284,7 +284,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   if ((dst_kind == svn_node_none)
       || (dst_kind == svn_node_file))
     {
-      svn_path_split_nts (dst_url, &unused, &base_name, pool);
+      svn_path_split (dst_url, &unused, &base_name, pool);
       if (dst_pieces)
         apr_array_pop (dst_pieces);
     }
@@ -533,12 +533,12 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
 
   /* Split the SRC_PATH into a parent and basename. */
-  svn_path_split_nts (src_path, &parent, &base_name, pool);
+  svn_path_split (src_path, &parent, &base_name, pool);
 
   SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent, FALSE, TRUE, pool));
 
   /* Split the DST_URL into an anchor and target. */
-  svn_path_split_nts (dst_url, &anchor, &target, pool);
+  svn_path_split (dst_url, &anchor, &target, pool);
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -739,7 +739,7 @@ repos_to_wc_copy (const char *src_url,
   if (dst_kind == svn_node_dir)
     {
       const char *base_name;
-      svn_path_split_nts (src_url, NULL, &base_name, pool);
+      svn_path_split (src_url, NULL, &base_name, pool);
       dst_path = svn_path_join (dst_path, 
                                 svn_path_uri_decode (base_name, pool),
                                 pool);

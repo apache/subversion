@@ -577,7 +577,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
                                             NULL, pool));
 
           /* strip any trailing '/' */
-          target = svn_path_canonicalize_nts (utf8_url, pool);
+          target = svn_path_canonicalize (utf8_url, pool);
         }
       else  /* not a url, so treat as a path */
         {
@@ -605,7 +605,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
                                             (const char *) truenamed_target,
                                             NULL, pool));
 
-          target = svn_path_canonicalize_nts (target, pool);
+          target = svn_path_canonicalize (target, pool);
 
           /* If this target is a Subversion administrative directory,
              skip it.  TODO: Perhaps this check should not call the

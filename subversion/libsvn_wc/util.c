@@ -69,7 +69,7 @@ svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
           /* Okay, so the problem is a missing intermediate
              directory.  We don't know which one, so we recursively
              back up one level and try again. */
-          const char *shorter = svn_path_remove_component_nts (path, pool);
+          const char *shorter = svn_path_dirname (path, pool);
 
           if (shorter[0] == '\0')
             {

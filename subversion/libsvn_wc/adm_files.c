@@ -290,7 +290,7 @@ svn_error_t *
 svn_wc__sync_text_base (const char *path, apr_pool_t *pool)
 {
   const char *parent_path, *base_name;
-  svn_path_split_nts (path, &parent_path, &base_name, pool);
+  svn_path_split (path, &parent_path, &base_name, pool);
   return sync_adm_file (parent_path,
                         SVN_WC__BASE_EXT,
                         pool,
@@ -306,7 +306,7 @@ svn_wc__text_base_path (const char *path,
 {
   const char *newpath, *base_name;
 
-  svn_path_split_nts (path, &newpath, &base_name, pool);
+  svn_path_split (path, &newpath, &base_name, pool);
   return extend_with_adm_name (newpath,
                                SVN_WC__BASE_EXT,
                                tmp,
@@ -352,7 +352,7 @@ prop_path_internal (const char **prop_path,
     }
   else  /* It's either a file, or a non-wc dir (i.e., maybe an ex-file) */
     {
-      svn_path_split_nts (path, prop_path, &entry_name, pool);
+      svn_path_split (path, prop_path, &entry_name, pool);
 
       SVN_ERR (svn_wc_check_wc (*prop_path, &wc_format_version, pool));
       if (wc_format_version == 0)
@@ -424,7 +424,7 @@ svn_wc__wcprop_path (const char **wcprop_path,
     }
   else  /* It's either a file, or a non-wc dir (i.e., maybe an ex-file) */
     {
-      svn_path_split_nts (path, wcprop_path, &entry_name, pool);
+      svn_path_split (path, wcprop_path, &entry_name, pool);
  
       SVN_ERR (svn_wc_check_wc (*wcprop_path, &is_wc, pool));
       if (! is_wc)
@@ -635,7 +635,7 @@ const char *
 svn_wc__empty_file_path (const char *path,
                          apr_pool_t *pool)
 {
-  const char *parent_path = svn_path_remove_component_nts (path, pool);
+  const char *parent_path = svn_path_dirname (path, pool);
   return extend_with_adm_name (parent_path, NULL, 0, pool,
                                SVN_WC__ADM_EMPTY_FILE, NULL);
 }
@@ -646,7 +646,7 @@ svn_wc__open_empty_file (apr_file_t **handle,
                          const char *path,
                          apr_pool_t *pool)
 {
-  const char *parent_path = svn_path_remove_component_nts (path, pool);
+  const char *parent_path = svn_path_dirname (path, pool);
   return open_adm_file (handle, parent_path, NULL, APR_OS_DEFAULT, APR_READ,
                         pool, SVN_WC__ADM_EMPTY_FILE, NULL);
 }
@@ -657,7 +657,7 @@ svn_wc__close_empty_file (apr_file_t *fp,
                           const char *path,
                           apr_pool_t *pool)
 {
-  const char *parent_path = svn_path_remove_component_nts (path, pool);
+  const char *parent_path = svn_path_dirname (path, pool);
   return close_adm_file (fp, parent_path, NULL, 0, pool,
                          SVN_WC__ADM_EMPTY_FILE, NULL);
 }
@@ -670,7 +670,7 @@ svn_wc__open_text_base (apr_file_t **handle,
                         apr_pool_t *pool)
 {
   const char *parent_path, *base_name;
-  svn_path_split_nts (path, &parent_path, &base_name, pool);
+  svn_path_split (path, &parent_path, &base_name, pool);
   return open_adm_file (handle, parent_path, SVN_WC__BASE_EXT, APR_OS_DEFAULT,
                         flags, pool, SVN_WC__ADM_TEXT_BASE, base_name, NULL);
 }
@@ -683,7 +683,7 @@ svn_wc__close_text_base (apr_file_t *fp,
                          apr_pool_t *pool)
 {
   const char *parent_path, *base_name;
-  svn_path_split_nts (path, &parent_path, &base_name, pool);
+  svn_path_split (path, &parent_path, &base_name, pool);
   return close_adm_file (fp, parent_path, SVN_WC__BASE_EXT, write, pool,
                          SVN_WC__ADM_TEXT_BASE, base_name, NULL);
 }
@@ -737,7 +737,7 @@ svn_wc__open_props (apr_file_t **handle,
 
   /* If file, split the path. */
   if (kind == svn_node_file)
-    svn_path_split_nts (path, &parent_dir, &base_name, pool);
+    svn_path_split (path, &parent_dir, &base_name, pool);
   else    
     parent_dir = path;
   
@@ -814,7 +814,7 @@ svn_wc__close_props (apr_file_t *fp,
 
   /* If file, split the path. */
   if (kind == svn_node_file)
-    svn_path_split_nts (path, &parent_dir, &base_name, pool);
+    svn_path_split (path, &parent_dir, &base_name, pool);
   else    
     parent_dir = path;
   
@@ -883,7 +883,7 @@ svn_wc__sync_props (const char *path,
 
   /* If file, split the path. */
   if (kind == svn_node_file)
-    svn_path_split_nts (path, &parent_dir, &base_name, pool);
+    svn_path_split (path, &parent_dir, &base_name, pool);
   else    
     parent_dir = path;
   

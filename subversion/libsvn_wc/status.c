@@ -185,7 +185,7 @@ assemble_status (svn_wc_status_t **status,
       /* An item is switched if it's URL, without the basename, does not
          equal its parent's URL. */
       if (! switched_p
-          && strcmp (svn_path_remove_component_nts (entry->url, pool),
+          && strcmp (svn_path_dirname (entry->url, pool),
                      parent_entry->url))
         switched_p = TRUE;
     }
@@ -227,7 +227,7 @@ assemble_status (svn_wc_status_t **status,
           if (entry->kind == svn_node_dir)
             parent_dir = path;
           else  /* non-directory, that's all we need to know */
-            parent_dir = svn_path_remove_component_nts (path, pool);
+            parent_dir = svn_path_dirname (path, pool);
 
           SVN_ERR (svn_wc_conflicted_p (&text_conflict_p, &prop_conflict_p,
                                         parent_dir, entry, pool));
@@ -508,7 +508,7 @@ svn_wc_status (svn_wc_status_t **status,
       SVN_ERR (svn_wc_is_wc_root (&is_root, path, adm_access, pool));
       if (! is_root)
         {
-          const char *parent_path = svn_path_remove_component_nts (path, pool);
+          const char *parent_path = svn_path_dirname (path, pool);
           svn_wc_adm_access_t *parent_access;
           SVN_ERR (svn_wc_adm_open (&parent_access, NULL, parent_path,
                                     FALSE, FALSE, pool));
@@ -682,7 +682,7 @@ svn_wc_statuses (apr_hash_t *statushash,
          we're going to return it in statushash. */
       SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
       SVN_ERR (svn_wc_entry (&parent_entry,
-                             svn_path_remove_component_nts (path,pool),
+                             svn_path_dirname (path,pool),
                              adm_access, FALSE, pool));
 
       /* Convert the entry into a status structure, store in the hash.
@@ -714,7 +714,7 @@ svn_wc_statuses (apr_hash_t *statushash,
       SVN_ERR (svn_wc_is_wc_root (&is_root, path, adm_access, pool));
       if (! is_root)
         {
-          const char *parent_path = svn_path_remove_component_nts (path, pool);
+          const char *parent_path = svn_path_dirname (path, pool);
           svn_wc_adm_access_t *parent_access;
           SVN_ERR (svn_wc_adm_open (&parent_access, NULL, parent_path,
                                     FALSE, FALSE, pool));

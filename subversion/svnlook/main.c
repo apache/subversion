@@ -419,11 +419,11 @@ open_writable_binary_file (apr_file_t **fh,
   if (! err)
     return SVN_NO_ERROR;
 
-  svn_path_split_nts (path, &dir, NULL, pool);
+  svn_path_split (path, &dir, NULL, pool);
 
   /* If the file path has no parent, then we've already tried to open
      it as best as we care to try above. */
-  if (svn_path_is_empty_nts (dir))
+  if (svn_path_is_empty (dir))
     return svn_error_createf (err->apr_err, err->src_err, err,
                               "Error opening writable file %s", path);
 
@@ -1269,7 +1269,7 @@ main (int argc, const char * const *argv)
         {
           INT_ERR (svn_utf_cstring_to_utf8 (&repos_path, os->argv[os->ind++],
                                             NULL, pool));
-          repos_path = svn_path_canonicalize_nts (repos_path, pool);
+          repos_path = svn_path_canonicalize (repos_path, pool);
         }
 
       if (repos_path == NULL)

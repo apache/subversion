@@ -85,7 +85,7 @@ print_entry (const char *target,
       printf ("Node Kind: file\n");
       {
         const char *dir_name;
-        svn_path_split_nts (target, &dir_name, NULL, pool);
+        svn_path_split (target, &dir_name, NULL, pool);
         SVN_ERR (svn_wc_conflicted_p (&text_conflict, &props_conflict,
                                       dir_name, entry, pool));
       }

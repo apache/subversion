@@ -117,41 +117,22 @@ test_path_split (const char **msg,
 
   for (i = 0; i < sizeof (paths) / sizeof (paths[0]); i++)
     {
-      svn_stringbuf_t *path = svn_stringbuf_create (paths[i][0], pool);
-      svn_stringbuf_t *dir, *base_name;
-      const char *dir_nts, *base_name_nts;
+      const char *dir, *base_name;
 
-      svn_path_split (path, &dir, &base_name, pool);
-
-      if (strcmp (dir->data, paths[i][1]))
+      svn_path_split (paths[i][0], &dir, &base_name, pool);
+      if (strcmp (dir, paths[i][1]))
         {
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, 0, NULL,
              "svn_path_split (%s) returned dirname '%s' instead of '%s'",
-             path->data, dir->data, paths[i][1]);
+             paths[i][0], dir, paths[i][1]);
         }
-      if (strcmp (base_name->data, paths[i][2]))
+      if (strcmp (base_name, paths[i][2]))
         {
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, 0, NULL,
              "svn_path_split (%s) returned basename '%s' instead of '%s'",
-             path->data, base_name->data, paths[i][2]);
-        }
-
-      svn_path_split_nts (paths[i][0], &dir_nts, &base_name_nts, pool);
-      if (strcmp (dir_nts, paths[i][1]))
-        {
-          return svn_error_createf
-            (SVN_ERR_TEST_FAILED, 0, NULL,
-             "svn_path_split_nts (%s) returned dirname '%s' instead of '%s'",
-             path->data, dir_nts, paths[i][1]);
-        }
-      if (strcmp (base_name_nts, paths[i][2]))
-        {
-          return svn_error_createf
-            (SVN_ERR_TEST_FAILED, 0, NULL,
-             "svn_path_split_nts (%s) returned basename '%s' instead of '%s'",
-             path->data, base_name_nts, paths[i][2]);
+             paths[i][0], base_name, paths[i][2]);
         }
     }
   return SVN_NO_ERROR;
@@ -505,27 +486,18 @@ test_canonicalize (const char **msg,
   i = 0;
   while (paths[i][0])
     {
-      svn_stringbuf_t *sbuf = svn_stringbuf_create (paths[i][0], pool);
-      const char *canonical = svn_path_canonicalize_nts (paths[i][0], pool);
+      const char *canonical = svn_path_canonicalize (paths[i][0], pool);
 
       if (strcmp (canonical, paths[i][1]))
         return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
-                                  "svn_path_canonicalize_nts(\"%s\") returned "
+                                  "svn_path_canonicalize(\"%s\") returned "
                                   "\"%s\" expected \"%s\"",
                                   paths[i][0], canonical, paths[i][1]);
 
       if (strcmp (paths[i][0], paths[i][1]) == 0 && canonical != paths[i][0])
         return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
-                                  "svn_path_canonicalize_nts(\"%s\") alloc'd",
+                                  "svn_path_canonicalize(\"%s\") alloc'd",
                                   paths[i][0]);
-
-      svn_path_canonicalize (sbuf);
-
-      if (strcmp (sbuf->data, paths[i][1]))
-        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL,
-                                  "svn_path_canonicalize(\"%s\") returned "
-                                  "\"%s\" expected \"%s\"",
-                                  paths[i][0], canonical, paths[i][1]);
 
       ++i;
     }

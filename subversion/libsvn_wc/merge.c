@@ -49,7 +49,7 @@ svn_wc_merge (const char *left,
   int exit_code;
   const svn_wc_entry_t *entry;
 
-  svn_path_split_nts (merge_target, &mt_pt, &mt_bn, pool);
+  svn_path_split (merge_target, &mt_pt, &mt_bn, pool);
 
   /* Sanity check:  the merge target must be under revision control. */
   SVN_ERR (svn_wc_entry (&entry, merge_target, adm_access, FALSE, pool));
@@ -228,9 +228,9 @@ svn_wc_merge (const char *left,
                                      target_copy, TRUE, pool));
 
           /* Derive the basenames of the 3 backup files. */
-          svn_path_split_nts (left_copy, NULL, &left_base, pool);
-          svn_path_split_nts (right_copy, NULL, &right_base, pool);
-          svn_path_split_nts (target_copy, &parentt, &target_base, pool);
+          svn_path_split (left_copy, NULL, &left_base, pool);
+          svn_path_split (right_copy, NULL, &right_base, pool);
+          svn_path_split (target_copy, &parentt, &target_base, pool);
           tmp_entry.conflict_old = left_base;
           tmp_entry.conflict_new = right_base;
           tmp_entry.conflict_wrk = target_base;
@@ -329,8 +329,8 @@ svn_wc_merge (const char *left,
                                  right_copy, TRUE, pool));
       
       /* Derive the basenames of the backup files. */
-      svn_path_split_nts (left_copy, &parentt, &left_base, pool);
-      svn_path_split_nts (right_copy, &parentt, &right_base, pool);
+      svn_path_split (left_copy, &parentt, &left_base, pool);
+      svn_path_split (right_copy, &parentt, &right_base, pool);
       tmp_entry.conflict_old = left_base;
       tmp_entry.conflict_new = right_base;
       tmp_entry.conflict_wrk = NULL;

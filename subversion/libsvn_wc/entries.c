@@ -666,7 +666,7 @@ svn_wc_entry (const svn_wc_entry_t **entry,
          parent.  So split and look in parent for entry info. */
 
       const char *dir, *base_name;
-      svn_path_split_nts (path, &dir, &base_name, pool);
+      svn_path_split (path, &dir, &base_name, pool);
 
       SVN_ERR (svn_wc_check_wc (dir, &is_wc, pool));
       if (! is_wc)

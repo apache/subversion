@@ -126,8 +126,7 @@ tweak_statushash (void *edit_baton,
         SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, path, pool));
       else
         SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
-                                      svn_path_remove_component_nts (path,
-                                                                     pool),
+                                      svn_path_dirname (path, pool),
                                       pool));
 
       /* Use the public API to get a statstruct: */
@@ -337,7 +336,7 @@ delete_entry (const char *path,
   if (kind == svn_node_dir)
     dir_path = full_path;
   else
-    dir_path = svn_path_remove_component_nts (full_path, pool);
+    dir_path = svn_path_dirname (full_path, pool);
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, dir_path, pool));
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
   if (apr_hash_get (entries, name, APR_HASH_KEY_STRING))

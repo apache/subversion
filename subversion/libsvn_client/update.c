@@ -126,8 +126,7 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
       SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
                                     (kind == svn_node_dir
                                      ? path
-                                     : svn_path_remove_component_nts (path,
-                                                                      pool)),
+                                     : svn_path_dirname (path, pool)),
                                     pool));
 
       /* Drive the reporter structure, describing the revisions within

@@ -180,7 +180,7 @@ svn_cl__propedit (apr_getopt_t *os,
           if (! entry)
             return svn_error_create (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, target);
           if (entry->kind == svn_node_file)
-            svn_path_split_nts (target, &base_dir, NULL, pool);
+            svn_path_split (target, &base_dir, NULL, pool);
           
           /* Run the editor on a temporary file which contains the
              original property value... */

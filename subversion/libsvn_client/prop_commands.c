@@ -65,7 +65,7 @@ recursive_propset (const char *propname,
 
       /* Compute the complete path of the entry */
       if (current_entry_name)
-        svn_path_add_component_nts (full_entry_path, current_entry_name);
+        svn_path_add_component (full_entry_path, current_entry_name);
 
       if (current_entry->schedule != svn_wc_schedule_delete)
         {

@@ -139,7 +139,7 @@ svn_wc__do_update_cleanup (const char *path,
     {
       const char *parent, *base_name;
       svn_wc_adm_access_t *dir_access;
-      svn_path_split_nts (path, &parent, &base_name, pool);
+      svn_path_split (path, &parent, &base_name, pool);
       SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, parent, pool));
       SVN_ERR (svn_wc_entries_read (&entries, dir_access, TRUE, pool));
       SVN_ERR (svn_wc__tweak_entry (entries, base_name,
@@ -652,7 +652,7 @@ svn_wc_delete (const char *path,
   was_schedule_add = entry->schedule == svn_wc_schedule_add;
   was_kind = entry->kind;
 
-  svn_path_split_nts (path, &parent, &base_name, pool);
+  svn_path_split (path, &parent, &base_name, pool);
 
   if (was_kind == svn_node_dir)
     {
@@ -808,7 +808,7 @@ svn_wc_add (const char *path,
     }
 
   /* Split off the base_name from the parent directory. */
-  svn_path_split_nts (path, &parent_dir, &base_name, pool);
+  svn_path_split (path, &parent_dir, &base_name, pool);
   SVN_ERR (svn_wc_entry (&parent_entry, parent_dir, parent_access, FALSE,
                          pool));
   if (! parent_entry)
@@ -1263,7 +1263,7 @@ svn_wc_revert (const char *path,
   if (! wc_root)
     {
       /* Split the base_name from the parent path. */
-      svn_path_split_nts (path, &p_dir, &bname, pool);
+      svn_path_split (path, &p_dir, &bname, pool);
     }
 
   tmp_entry = svn_wc_entry_dup (entry, pool);
@@ -1278,7 +1278,7 @@ svn_wc_revert (const char *path,
       svn_boolean_t was_deleted = FALSE;
       const char *parent, *basey;
 
-      svn_path_split_nts (path, &parent, &basey, pool);
+      svn_path_split (path, &parent, &basey, pool);
       if (entry->kind == svn_node_file)
         {
           was_deleted = entry->deleted;
@@ -1549,7 +1549,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
           {
             svn_wc_adm_access_t *parent_access;
 
-            svn_path_split_nts (full_path, &parent_dir, &base_name, pool);
+            svn_path_split (full_path, &parent_dir, &base_name, pool);
             
             SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access,
                                           parent_dir, pool));
@@ -1786,7 +1786,7 @@ resolve_found_entry_callback (const char *path,
   if (entry->kind == svn_node_dir)
     conflict_dir = path;
   else
-    svn_path_split_nts (path, &conflict_dir, &base_name, baton->pool);
+    svn_path_split (path, &conflict_dir, &base_name, baton->pool);
 
   return resolve_conflict_on_entry (path, entry, conflict_dir, base_name,
                                     baton->resolve_text, baton->resolve_props,

@@ -163,8 +163,8 @@ parse_externals_description (apr_hash_t **externals_p,
              "Invalid line: '%s'", parent_directory, line);
         }
 
-      item->target_dir = svn_path_canonicalize_nts (item->target_dir, pool);
-      item->url = svn_path_canonicalize_nts (item->url, pool);
+      item->target_dir = svn_path_canonicalize (item->target_dir, pool);
+      item->url = svn_path_canonicalize (item->url, pool);
 
       apr_hash_set (externals, item->target_dir, APR_HASH_KEY_STRING, item);
     }
@@ -346,7 +346,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
          the path leading down to the last component. */
       {
         const char *checkout_parent;
-        svn_path_split_nts (path, &checkout_parent, NULL, ib->pool);
+        svn_path_split (path, &checkout_parent, NULL, ib->pool);
         SVN_ERR (svn_io_make_dir_recursively (checkout_parent, ib->pool));
       }
 
@@ -470,7 +470,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
              the path leading down to the last component. */
           {
             const char *parent;
-            svn_path_split_nts (path, &parent, NULL, ib->pool);
+            svn_path_split (path, &parent, NULL, ib->pool);
             SVN_ERR (svn_io_make_dir_recursively (parent, ib->pool));
           }
           
