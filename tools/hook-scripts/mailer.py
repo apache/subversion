@@ -96,7 +96,11 @@ def generate_list(output, header, fnames):
 
 
 def generate_diff(output, cfg, repos, date, src, dst, change, pool):
+
   if change.item_type == ChangeCollector.DIR:
+    if not src and dst and change.base_path:
+      output.write('\nCopied: %s (from rev %d, %s)\n'
+                   % (dst, change.base_rev, change.base_path[1:]))
     ### do we want to display anything for a directory? probably... if
     ### the thing has properties, then heck ya.
     return
@@ -125,9 +129,9 @@ def generate_diff(output, cfg, repos, date, src, dst, change, pool):
       label1 = '(empty file)'
       label2 = '%s\t%s' % (dst, date)
   else:
-    output.write('\nModified: %s\n' % change.base_path[1:])
-    diff = svn.fs.FileDiff(repos.get_root(change.base_rev), src,
-                           repos.root_this, change.base_path[1:],
+    output.write('\nModified: %s\n' % dst)
+    diff = svn.fs.FileDiff(repos.get_root(change.base_rev), change.base_path[1:],
+                           repos.root_this, dst,
                            pool)
     label1 = change.base_path[1:] + '\t(original)'
     label2 = '%s\t%s' % (src, date)
