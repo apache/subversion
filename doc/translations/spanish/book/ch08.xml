@@ -263,26 +263,29 @@
           la base de datos tendrá el mismo aspecto que antes, como
           si nunca hubiésemos intentado crear nada)!</para>
 
-        <para>Fortunately for users of the filesystem API, the
-          transaction support provided by the database system itself
-          is hidden almost entirely from view (as should be expected
-          from a properly modularized library scheme).  It is only
-          when you start digging into the implementation of the
-          filesystem itself that such things become visible (or
-          interesting).</para>
+        <para>Afortunadamente para los usuarios de la API del
+          sistema de ficheros, el soporte de transacción
+          proporcionado por el propio sistema de base de datos está
+          oculto casi por completo (tal y como debería esperarse de
+          un esquema de librerías correctamente modularizadas). Sólo
+          cuando comienza a ahondar en la implementación del sistema
+          de ficheros este tipo de cosas se vuelven visibles (o
+          interesantes).</para>
 
       </sidebar>
 
-      <para>Most of the functionality provided by the filesystem
-        interface comes as an action that occurs on a filesystem path.
-        That is, from outside of the filesystem, the primary mechanism
-        for describing and accessing the individual revisions of files
-        and directories comes through the use of path strings like
-        <filename>/foo/bar</filename>, just as if you were addressing
-        files and directories through your favorite shell program.
-        You add new files and directories by passing their paths-to-be
-        to the right API functions.  You query for information about
-        them by the same mechanism.</para>
+      <para>La mayoría de la funcionalidad proporcionada por la
+        interfaz del sistema de ficheros se muestra como acciones
+        que trabajan sobre una ruta del sistema de ficheros.
+        Es decir, desde un punto de vista externo, el mecanismo
+        principal para describir y acceder a las revisiones
+        individuales de ficheros y directorios son las cadenas
+        con rutas como <filename>/foo/bar</filename>, igual que si
+        estuviese tratando con ficheros y directorios a través de
+        su programa favorito de línea de comando.  Añade nuevos
+        ficheros y directorios pasando sus futuras rutas a las
+        funciones correctas de la API. Obtiene información sobre
+        ellos usando el mismo mecanismo.</para>
 
       <para>Unlike most filesystems, though, a path alone is not
         enough information to identify a file or directory in
