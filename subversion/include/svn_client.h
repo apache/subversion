@@ -355,14 +355,17 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
         will be fetched.  This directly corresponds to the "-v"
         (--verbose) flag in the commandline client app.
 
-      - If UPDATE is set, then the repository will be contacted, and
-        the collection of structures will be augmented with
-        information about out-of-dateness.  This directly corresponds
-        to the "-u" (--show-updates) flag in the commandline client app.
+      - If UPDATE is set, then the repository will be contacted, so
+        that the structures in STATUSHASH are augmented with
+        information about out-of-dateness, and *YOUNGEST is set to the
+        youngest repository revision (*YOUNGEST is not touched unless
+        UPDATE is set).  This directly corresponds to the "-u"
+        (--show-updates) flag in the commandline client app.
 
   */
 svn_error_t *
 svn_client_status (apr_hash_t **statushash,
+                   svn_revnum_t *youngest,  /* only touched if `update' set */
                    svn_stringbuf_t *path,
                    svn_client_auth_baton_t *auth_baton,
                    svn_boolean_t descend,

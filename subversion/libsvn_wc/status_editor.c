@@ -44,8 +44,10 @@ struct edit_baton
   svn_stringbuf_t *path;
   svn_boolean_t descend;
 
-  /* The youngest revision in the repository.  */
-  svn_revnum_t youngest_revision;
+  /* The youngest revision in the repository.  This is a reference
+     because this editor returns youngest rev to the driver directly,
+     as well as in each statushash entry. */
+  svn_revnum_t *youngest_revision;
 
   /* The hash of status structures we're editing. */
   apr_hash_t *statushash;
@@ -359,7 +361,7 @@ set_target_revision (void *edit_baton, svn_revnum_t target_revision)
 {
   struct edit_baton *eb = edit_baton;
 
-  eb->youngest_revision = target_revision;
+  *(eb->youngest_revision) = target_revision;
 
   return SVN_NO_ERROR;
 }
@@ -644,7 +646,7 @@ close_edit (void *edit_baton)
       
       apr_hash_this (hi, &key, &klen, &val);
       status = (svn_wc_status_t *) val;
-      status->repos_rev = eb->youngest_revision;
+      status->repos_rev = *(eb->youngest_revision);
     }
   
   /* The edit is over, free its pool. */
@@ -666,6 +668,7 @@ svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
                           svn_stringbuf_t *path,
                           svn_boolean_t descend,
                           apr_hash_t *statushash,
+                          svn_revnum_t *youngest,
                           apr_pool_t *pool)
 {
   struct edit_baton *eb;
@@ -675,10 +678,11 @@ svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
 
   /* Construct an edit baton. */
   eb = apr_palloc (subpool, sizeof (*eb));
-  eb->pool            = subpool;
-  eb->hashpool        = pool;
-  eb->statushash      = statushash;
-  eb->descend         = descend;
+  eb->pool              = subpool;
+  eb->hashpool          = pool;
+  eb->statushash        = statushash;
+  eb->descend           = descend;
+  eb->youngest_revision = youngest;
 
   /* Anchor target analysis, to make this editor able to match
      hash-keys already in the hash.  (svn_wc_statuses is ignorant of

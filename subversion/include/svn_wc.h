@@ -336,20 +336,24 @@ svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               apr_pool_t *pool);
 
 
-/* Fetch an EDITOR/EDIT_BATON, which, when driven, will add 'update'
-   information to an existing STATUSHASH of status structures.
-   Allocation will be done in POOL.  ANCHOR/TARGET desribes how to
-   anchor the editor.  If DESCEND is zero, then only immediate
-   children of anchor will be edited.
+/* Set  *EDITOR and *EDIT_BATON to an editor that tweaks or adds
+   svn_wc_status_t structures to STATUSHASH to reflect repository
+   modifications that would be received on update, and that sets
+   *YOUNGEST to the youngest revision in the repository (the editor
+   also sets the repos_rev field in each svn_wc_status_t structure
+   to the same value).
 
-   The editor will edit the "repository" fields in existing structures
-   (repos_text_status, repos_prop_status, repos_rev).  If a structure
-   doesn't exist, it will be created and added to the hash. */
+   If DESCEND is zero, then only immediate children of PATH will be
+   done.
+
+   Allocate the editor itself in POOL, but the editor does temporary
+   allocations in a subpool of POOL.  */
 svn_error_t *svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
                                        void **edit_baton,
                                        svn_stringbuf_t *path,
                                        svn_boolean_t descend,
                                        apr_hash_t *statushash,
+                                       svn_revnum_t *youngest,
                                        apr_pool_t *pool);
 
 

@@ -205,11 +205,15 @@ svn_cl__subcommand_help (const char *subcommand,
 
 /* Print a hash that maps (char *) names to (svn_wc_status_t *)
    structs to stdout for human consumption.  Prints in abbreviated
-   format by default, or DETAILED format if flag is set.  
+   format by default, or DETAILED format if flag is set.  In the
+   latter case, print YOUNGEST as the youngest revision in the
+   repository, unless it is SVN_INVALID_REVNUM, in which case don't
+   print anything about the youngest revision.
 
    If SKIP_UNRECOGNIZED is TRUE, this function will not print out
    unversioned items found in the working copy. */
 void svn_cl__print_status_list (apr_hash_t *statushash,
+                                svn_revnum_t youngest,
                                 svn_boolean_t detailed,
                                 svn_boolean_t skip_unrecognized,
                                 apr_pool_t *pool);

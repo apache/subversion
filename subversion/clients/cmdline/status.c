@@ -189,6 +189,7 @@ print_long_format (const char *path,
 /* Called by status-cmd.c */
 void
 svn_cl__print_status_list (apr_hash_t *statushash, 
+                           svn_revnum_t youngest,
                            svn_boolean_t detailed,
                            svn_boolean_t skip_unrecognized,
                            apr_pool_t *pool)
@@ -221,15 +222,10 @@ svn_cl__print_status_list (apr_hash_t *statushash,
         print_short_format (path, status);
     }
 
-  /* Addendum:  if we printed in detailed format, we *might* have a
-     head revision to print as well. */
-  if (detailed)
-    {
-      /* look at the last structure we printed */
-      if (status && (status->repos_rev != SVN_INVALID_REVNUM))
-        printf ("Head revision: %6ld\n", status->repos_rev);
-    }
-
+  /* If printing in detailed format, we might have a head revision to
+     print as well. */
+  if (detailed && (youngest != SVN_INVALID_REVNUM))
+    printf ("Head revision: %6ld\n", youngest);
 }
 
 

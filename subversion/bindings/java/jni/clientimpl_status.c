@@ -150,7 +150,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
       fprintf(stderr, ")\n");
 #endif
       
-      error = svn_client_status(&statushash, target_stringbuf, 
+      error = svn_client_status(&statushash, fooo youngest, target_stringbuf, 
                                 auth_baton,descend, 
                                 get_all, update, 
                                 pool);
