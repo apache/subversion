@@ -585,6 +585,41 @@ def revert_inside_newly_added_dir(sbox):
   finally:
     os.chdir(was_cwd)
 
+#----------------------------------------------------------------------
+# Regression test for issue #1609:
+# 'svn status' should show a schedule-replace directory as 'R' not '?'
+
+def status_replaced_directory(sbox):
+  "status on a replaced directory"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # The original recipe:
+  #
+  # svnadmin create repo
+  # svn mkdir file://`pwd`/repo/foo -m r1
+  # svn co file://`pwd`/repo wc
+  # svn rm wc/foo
+  # rm -rf wc/foo
+  # svn ci wc -m r2
+  # svn mkdir wc/foo
+  
+  A_path = os.path.join(wc_dir, 'A')
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', A_path)
+  shutil.rmtree(A_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', A_path)
+  
+  # Now check that status says replaced.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A', status='R ', wc_rev=0)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -612,6 +647,7 @@ test_list = [ None,
               unschedule_missing_added,
               delete_missing,
               revert_inside_newly_added_dir,
+              Skip(status_replaced_directory, "see issue #1609"),
              ]
 
 if __name__ == '__main__':

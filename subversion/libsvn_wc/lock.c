@@ -402,7 +402,9 @@ do_open (svn_wc_adm_access_t **adm_access,
 
           apr_hash_this (hi, NULL, NULL, &val);
           entry = val;
-          if ((entry->deleted && entry->schedule != svn_wc_schedule_add)
+          if ((entry->deleted
+               && (entry->schedule != svn_wc_schedule_add)
+               && (entry->schedule != svn_wc_schedule_replace))
               || entry->kind != svn_node_dir
               || ! strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR))
             continue;
@@ -858,7 +860,9 @@ prune_deleted (svn_wc_adm_access_t *adm_access,
           const svn_wc_entry_t *entry;
           apr_hash_this (hi, NULL, NULL, &val);
           entry = val;
-          if ((entry->deleted && (entry->schedule != svn_wc_schedule_add))
+          if ((entry->deleted
+               && (entry->schedule != svn_wc_schedule_add)
+               && (entry->schedule != svn_wc_schedule_replace))
               || entry->absent)
             break;
         }
@@ -883,7 +887,8 @@ prune_deleted (svn_wc_adm_access_t *adm_access,
           apr_hash_this (hi, &key, NULL, &val);
           entry = val;
           if (((entry->deleted == FALSE) && (entry->absent == FALSE))
-              || (entry->schedule == svn_wc_schedule_add))
+              || (entry->schedule == svn_wc_schedule_add)
+              || (entry->schedule == svn_wc_schedule_replace))
             {
               apr_hash_set (adm_access->entries, key,
                             APR_HASH_KEY_STRING, entry);
