@@ -290,9 +290,9 @@ main (int argc, const char * const *argv)
       /* Do the args tell us what revisions to inspect? */
       if (argv[3])
         {
-          lower = (svn_revnum_t) atol (argv[3]);
+          lower = SVN_STR_TO_REV (argv[3]);
           if (argv[4])
-            upper = (svn_revnum_t) atol (argv[4]);
+            upper = SVN_STR_TO_REV (argv[4]);
         }
 
       /* Fill in for implied args. */
@@ -386,7 +386,7 @@ main (int argc, const char * const *argv)
 
       fs = svn_repos_fs (repos);
 
-      err = svn_fs_begin_txn (&txn, fs, (svn_revnum_t) atol(argv[3]), pool);
+      err = svn_fs_begin_txn (&txn, fs, SVN_STR_TO_REV (argv[3]), pool);
       if (err) goto error;
 
       err = svn_fs_close_txn (txn);
@@ -405,7 +405,7 @@ main (int argc, const char * const *argv)
         }
       
       /* get revision and file from argv[] */
-      the_rev = (svn_revnum_t) atol (argv[3]);
+      the_rev = SVN_STR_TO_REV (argv[3]);
       err = svn_string_from_file (&file_contents, argv[4], pool); 
       if (err) goto error;
 
@@ -438,7 +438,7 @@ main (int argc, const char * const *argv)
         }
 
       /* get revision and path from argv[] */
-      the_rev = (svn_revnum_t) atol (argv[3]);
+      the_rev = SVN_STR_TO_REV (argv[3]);
       node = argv[4];
 
       /* open the filesystem */

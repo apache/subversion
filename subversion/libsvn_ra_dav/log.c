@@ -133,7 +133,7 @@ log_end_element(void *userdata,
   switch (elm->id)
     {
     case ELEM_version_name:
-      lb->revision = (svn_revnum_t) atol (cdata);
+      lb->revision = SVN_STR_TO_REV (cdata);
       break;
     case ELEM_creator_displayname:
       lb->author = apr_pstrdup (lb->subpool, cdata);

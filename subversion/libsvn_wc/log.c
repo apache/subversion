@@ -886,7 +886,7 @@ log_do_committed (struct log_runner *loggy,
               | SVN_WC__ENTRY_MODIFY_TEXT_TIME
               | SVN_WC__ENTRY_MODIFY_PROP_TIME
               | SVN_WC__ENTRY_MODIFY_FORCE),
-             (svn_revnum_t) atol (revstr),
+             SVN_STR_TO_REV (revstr),
              svn_node_none,
              svn_wc_schedule_normal,
              FALSE, /* conflicted */
