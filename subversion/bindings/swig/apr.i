@@ -42,17 +42,6 @@
 }
 #endif
 
-/* -----------------------------------------------------------------------
-   This is default in SWIG 1.3.17 and is a really good idea
-*/
-
-%typemap(javagetcptr) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], \
-    SWIGTYPE (CLASS::*) %{
-  protected static long getCPtr($javaclassname obj) {
-    return (obj == null) ? 0 : obj.swigCPtr;
-  }
-%}
-
 /* ----------------------------------------------------------------------- */
 
 %include apr.h
@@ -179,52 +168,6 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
      apr_array_header_t **OUTPUT_OF_CONST_CHAR_P
 {
   $result = output_helper($result, svn_swig_rb_apr_array_to_array_string(*$1));
-}
-
-/* -----------------------------------------------------------------------
-   Handle an apr_hash_t ** in Java
-*/
-
-%typemap(jni) apr_hash_t ** "jobject"
-%typemap(jtype) apr_hash_t ** "java.util.Map"
-%typemap(jstype) apr_hash_t ** "java.util.Map"
-%typemap(javain) apr_hash_t ** "$javainput"
-
-%typemap(javaout) apr_hash_t ** {
-    return $jnicall;
-  }
-
-%typemap(java,in) apr_hash_t **(apr_hash_t *temp){
-    $1 = &temp;
-}
-
-%typemap(java,out) apr_hash_t ** {
-    svn_swig_java_add_to_map(jenv, *$1, $input);
-}
-
-%typemap(java,argout) apr_hash_t ** {
-    svn_swig_java_add_to_map(jenv, *$1, $input);
-}
-
-%typemap(java,argout) apr_hash_t **PROPHASH {
-    svn_swig_java_add_to_map(jenv, *$1, $input);
-}
-
-/* -----------------------------------------------------------------------
-   Handle an apr_array_header_t * in Java
-*/
-
-%typemap(jni) apr_array_header_t * "jobject"
-%typemap(jtype) apr_array_header_t * "java.util.List"
-%typemap(jstype) apr_array_header_t * "java.util.List"
-%typemap(javain) apr_array_header_t * "$javainput"
-
-%typemap(javaout) apr_array_header_t * {
-    return $jnicall;
-  }
-
-%typemap(java, argout) apr_array_header_t * {
-    svn_swig_java_add_to_list(jenv, $1, $input);
 }
 
 /* -----------------------------------------------------------------------

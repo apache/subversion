@@ -63,11 +63,6 @@ typedef struct svn_string_t svn_string_t;
     $result = output_helper($result, Qnil);
   }
 }
-%typemap(java,out) RET_STRING {
-    /* FIXME: This is just a stub -- implement JNI code for returning a string! */
-    $output = NULL;
-}
-%typemap(jni) char *                                         "jstring"
 
 %apply RET_STRING {
   svn_string_t **,
@@ -238,20 +233,6 @@ typedef struct svn_string_t svn_string_t;
 
 %typemap(ruby,in) const apr_array_header_t *STRINGLIST {
   $1 = svn_swig_rb_strings_to_apr_array($input, _global_pool);
-}
-
-%typemap(jni) const apr_array_header_t *STRINGLIST "jobjectArray"
-%typemap(jtype) const apr_array_header_t *STRINGLIST "java.lang.String[]"
-%typemap(jstype) const apr_array_header_t *STRINGLIST "java.lang.String[]"
-%typemap(javain) const apr_array_header_t *STRINGLIST "$javainput"
-
-%typemap(java,in) const apr_array_header_t *STRINGLIST (apr_array_header_t *temp) {
-	temp = (apr_array_header_t *)svn_swig_java_strings_to_array(jenv, $input, _global_pool);
-	$1 = temp;
-}
-
-%typemap(java,freearg) const apr_array_header_t *STRINGLIST {
-	/* FIXME: Perhaps free up "temp"? */
 }
 
 /* path lists */

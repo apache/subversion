@@ -252,21 +252,18 @@ class SWIGSource(SourceFile):
 
 lang_abbrev = {
   'python' : 'py',
-  'java' : 'java',
   'perl' : 'pl',
   'ruby' : 'rb',
   }
 
 lang_full_name = {
   'python' : 'Python',
-  'java' : 'Java',
   'perl' : 'Perl',
   'ruby' : 'Ruby',
   }
 
 lang_utillib_suffix = {
   'python' : 'py',
-  'java' : 'java',
   'perl' : 'perl',
   'ruby' : 'ruby',
   }

@@ -40,16 +40,6 @@
 /* ### ignore this structure because the accessors will need a pool */
 %ignore svn_wc_keywords_t;
 
-#ifdef SWIGJAVA
-/* Ignore these function pointer members because swig's string
-   representations of their types approach the maximum path
-   length on windows, causing swig to crash when it outputs 
-   java wrapper classes for them. */
-%ignore svn_wc_diff_callbacks_t::file_added;
-%ignore svn_wc_diff_callbacks_t::file_changed;
-%ignore svn_wc_diff_callbacks_t::file_deleted;
-#endif
-
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */
@@ -89,19 +79,6 @@
   $2 = $input; /* our function is the baton. */
 }
 
-%typemap(java,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
-  $1 = svn_swig_java_notify_func;
-  $2 = (void*)$input; /* our function is the baton. */
-}
-
-%typemap(jni) svn_wc_notify_func_t "jobject"
-%typemap(jtype) svn_wc_notify_func_t "org.tigris.subversion.wc.Notifier"
-%typemap(jstype) svn_wc_notify_func_t "org.tigris.subversion.wc.Notifier"
-%typemap(javain) svn_wc_notify_func_t "$javainput"
-%typemap(javaout) svn_wc_notify_func_t {
-    return $jnicall;
-  }
-
 /* -----------------------------------------------------------------------
    Callback: svn_wc_status_func_t
    svn_client_status()
@@ -125,10 +102,6 @@
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
-#endif
-
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
 #endif
 
 #ifdef SWIGPERL

@@ -50,11 +50,6 @@
   $result = output_helper($result, SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
 }
 
-%typemap(java, in) SWIGTYPE **OUTPARAM ($*1_type temp) {
-    $1 = ($1_ltype)&temp;
-}
-
-
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps
 */
@@ -91,15 +86,6 @@
     $result = rb_str_new2($1);
   } else {
     $result = Qnil;
-  }
-}
-
-%typemap(java, in) const char *MAY_BE_NULL { 
-  /* ### WHEN IS THIS USED? */
-  $1 = 0;
-  if ($input) {
-    $1 = ($1_ltype)JCALL2(GetStringUTFChars, jenv, $input, 0);
-    if (!$1) return $null;
   }
 }
 
@@ -174,20 +160,6 @@
   $result = Qnil;
 }
 
-%typemap(java, out) svn_error_t * %{
-    $result = ($1 != NULL) ? svn_swig_java_convert_error(jenv, $1) : NULL;
-%}
-%typemap(jni) svn_error_t * "jthrowable"
-%typemap(jtype) svn_error_t * "org.tigris.subversion.SubversionException"
-%typemap(jstype) svn_error_t * "org.tigris.subversion.SubversionException"
-%typemap(javain) svn_error_t * "@javainput"
-%typemap(javaout) svn_error_t * {
-	return $jnicall;
-}
-
-/* Make the proxy classes much more usable */
-%typemap(javaptrconstructormodifiers) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [] "public"
-
 /* -----------------------------------------------------------------------
    Define an OUTPUT typemap for 'svn_filesize_t *'.  For now, we'll
    treat it as a 'long' even if that isn't entirely correct...  
@@ -252,35 +224,6 @@
     }
 }
 
-%typemap(java, in) (const char *PTR, apr_size_t LEN) (char c) {
-    if ($input != NULL) {
-	    /* Do not use GetPrimitiveArrayCritical and ReleasePrimitiveArrayCritical
-		* since the Subversion client might block the thread */
-
-       $1 = JCALL2(GetByteArrayElements, jenv, $input, NULL);
-	   $2 = JCALL1(GetArrayLength, jenv, $input);
-	}
-	else {
-       $1 = &c;
-	   $2 = 0;
-	}
-}
-
-%typemap(java, freearg) (const char *PTR, apr_size_t LEN) {
-	if ($input != NULL) {
-           JCALL3(ReleaseByteArrayElements, jenv, $input, $1, JNI_ABORT);
-        }
-	/* Since this buffer is used as input JNI_ABORT is safe as "mode" above*/
-}
-
-%typemap(jni) (const char *PTR, apr_size_t LEN) "jbyteArray"
-%typemap(jtype) (const char *PTR, apr_size_t LEN) "byte[]"
-%typemap(jstype) (const char *PTR, apr_size_t LEN) "byte[]"
-%typemap(javain) (const char *PTR, apr_size_t LEN) "$javainput"
-%typemap(javaout) (const char *PTR, apr_size_t LEN) {
-    return $jnicall;
-  }
-
 /* -----------------------------------------------------------------------
    Handle retrieving the error message from svn_strerror
 */
@@ -327,12 +270,6 @@
 };
 #endif
 
-%typemap(java, arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {
-    /* ### HACK: Get the input variable based on naming convention */
-	_global_pool = *(apr_pool_t **)&j$1;
-	$1 = 0;
-}
-
 /* -----------------------------------------------------------------------
    Callback: svn_log_message_receiver_t
    svn_client_log()
@@ -357,20 +294,6 @@
     $2 = (void *)$input;
 }
 
-%typemap(java, in) (svn_log_message_receiver_t receiver,
-                    void *receiver_baton) {
-  $1 = svn_swig_java_log_message_receiver;
-  $2 = (void*)$input; /* our function is the baton. */
-}
-
-%typemap(jni) svn_log_message_receiver_t "jobject"
-%typemap(jtype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
-%typemap(jstype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
-%typemap(javain) svn_log_message_receiver_t "$javainput"
-%typemap(javaout) svn_log_message_receiver_t {
-    return $jnicall;
-  }
-
 /* -----------------------------------------------------------------------
    Callback: svn_commit_callback_t
    svn_ra get_commit_editor()
@@ -391,19 +314,6 @@
   $1 = svn_swig_py_cancel_func;
   $2 = $input; /* our function is the baton. */
 }
-
-%typemap(java, in) (svn_cancel_func_t cancel_func, void *cancel_baton) {
-  $1 = svn_swig_java_cancel_func;
-  $2 = (void*)$input; /* our function is the baton. */
-}
-
-%typemap(jni) svn_cancel_func_t "jobject"
-%typemap(jtype) svn_cancel_func_t "org.tigris.subversion.Canceller"
-%typemap(jstype) svn_cancel_func_t "org.tigris.subversion.Canceller"
-%typemap(javain) svn_cancel_func_t "$javainput"
-%typemap(javaout) svn_cancel_func_t {
-    return $jnicall;
-  }
 
 /* -----------------------------------------------------------------------
    svn_stream_t interoperability with language native io handles
@@ -430,14 +340,6 @@
 %typemap(ruby, in) svn_stream_t * {
     $1 = svn_swig_rb_make_stream($input, _global_pool);
 }
-
-%typemap(java, in) svn_stream_t *out %{
-    $1 = svn_swig_java_outputstream_to_stream(jenv, $input, _global_pool);
-%}
-%typemap(java, jni) svn_stream_t * "jobject";
-%typemap(java, jtype) svn_stream_t * "java.io.OutputStream";
-%typemap(java, jstype) svn_stream_t * "java.io.OutputStream";
-%typemap(java, javain) svn_stream_t * "$javainput";
 
 /* -----------------------------------------------------------------------
    Wrap the digest output for functions populating digests.
@@ -533,17 +435,8 @@
 }
 
 /* -----------------------------------------------------------------------
-   Special boolean mapping for java.
+   Special boolean mapping for ruby.
 */
-%typemap(java, jni) svn_boolean_t "jboolean";
-%typemap(java, jtype) svn_boolean_t "boolean";
-%typemap(java, jstype) svn_boolean_t "boolean";
-%typemap(java, in) svn_boolean_t %{
-    $1 = $input ? TRUE : FALSE;
-%}
-%typemap(java, out) svn_boolean_t %{
-    $result = $1 ? JNI_TRUE : JNI_FALSE;
-%}
 
 %typemap(ruby, in) svn_boolean_t "$1 = RTEST($input);";
 %typemap(ruby, out) svn_boolean_t "$result = $1 ? Qtrue : Qfalse;";
@@ -620,10 +513,6 @@
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
-#endif
-
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
 #endif
 
 #ifdef SWIGPERL
