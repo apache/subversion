@@ -120,6 +120,13 @@ section for approved changes.)
       +1: kfogel, jerenkrantz
 
 
+   * Issue #1689
+     Clean up structure definitions.
+     Justification: Negligible risk, API cleanliness and stability.
+     Votes:
+      +1: ghudson
+
+
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
