@@ -89,10 +89,11 @@
       debería volver atrás y leer información sobre revisiones en
       <xref linkend="svn-ch-2-sect-3.2"/>.</para>
 
-    <para>En este capítulo, volveremos al ejemplo del segundo capítulo.
-      <!-- TODO pues estaría bien revisar ambos ejemplos a la par y
-      verificar que coinciden --> Recuerde como usted y su compañera,
-      Sally, comparten un repositorio que contiene dos proyectos,
+    <para>En este capítulo, volveremos al ejemplo del segundo
+      capítulo.  <!-- TODO pues estaría bien revisar
+      ambos ejemplos a la par y verificar que coinciden
+      --> Recuerde cómo usted y su compañera, Carmen,
+      comparten un repositorio que contiene dos proyectos,
       <filename>paint</filename> y <filename>calc</filename>.
       Fíjese que en <xref linkend="svn-ch-4-dia-2"/>, no obstante,
       cada directorio de proyecto contiene subdirectorios llamados
@@ -104,7 +105,7 @@
         <graphic fileref="images/ch04dia2.png"/>
       </figure>
 
-    <para>Igual que antes, asuma que tanto Sally como usted tienen
+    <para>Igual que antes, asuma que tanto Carmen como usted tienen
       copias locales del proyecto <quote>calc</quote>. En
       concreto, ambos tienen una copia local de
       <filename>/calc/trunk</filename>.  Todos los ficheros
@@ -117,15 +118,15 @@
       reorganización radical del proyecto. Le tomará un largo
       tiempo realizar la modificación, y ésta afectará a todos
       los ficheros del proyecto. En esta situación el problema
-      es que no quiere intereferir con Sally, quien sigue en
+      es que no quiere intereferir con Carmen, quien sigue en
       el proceso de corregir pequeños fallos aquí y allá. Ella
       depende del hecho que la última versión del proyecto (en
       <filename>/calc/trunk</filename>) siempre es usable. Si
       comienza a enviar cambios al repositorio poco a poco,
-      seguramente fastidiará la tarea de Sally.</para>
+      seguramente fastidiará la tarea de Carmen.</para>
 
     <para>Una estrategia es esconderse en un agujero: usted y
-      Sally pueden dejar de compartir información durante una o
+      Carmen pueden dejar de compartir información durante una o
       dos semanas. Es decir, comienza a reorganizar los ficheros
       en su copia local, pero no envía los cambios al servidor o
       actualiza su copia hasta que ha completado la tarea. Sin
@@ -146,7 +147,7 @@
       potenciales. Finalmente, si ha finalizado con su tarea,
       puede encontrarse con que es muy difícil fusionar su trabajo
       final con el cuerpo principal del repositorio usado por el
-      resto de la compañía. Sally (y otros) puede haber realizado
+      resto de la compañía. Carmen (y otros) puede haber realizado
       cambios en el repositorio que son difíciles de incorporar en
       su copia local&mdash;especialmente si ejecuta <command>svn
       update</command> semanas tras el aislamiento.</para>
@@ -317,7 +318,7 @@ Checked out revision 341.
 
       <para>No hay nada especial sobre esta copia local; simplemente
         refleja un directorio diferente del repositorio. Cuando
-        envíe sus cambios, no obstante, Sally nunca los
+        envíe sus cambios, no obstante, Carmen nunca los
         verá cuando se actualice. Su copia local es de
         <filename>/calc/trunk</filename>.  (Asegúrese de leer <xref
         linkend="svn-ch-4-sect-5"/> más adelante en este capítulo:
@@ -341,7 +342,7 @@ Checked out revision 341.
         </listitem>
 
         <listitem><para>
-          Sally ha realizado un cambio en
+          Carmen ha realizado un cambio en
           <filename>/calc/trunk/integer.c</filename>, creando la
           revisión 344.</para>
         </listitem>
@@ -380,14 +381,14 @@ Changed paths:
 Creating a private branch of /calc/trunk.
 
 ------------------------------------------------------------------------
-r303 | sally | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
+r303 | carmen | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
 Changed paths:
    M /calc/trunk/integer.c
 
 * integer.c:  changed a docstring.
 
 ------------------------------------------------------------------------
-r98 | sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
+r98 | carmen | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
 Changed paths:
    M /calc/trunk/integer.c
 
@@ -403,30 +404,30 @@ Changed paths:
         historia, porque <filename>integer.c</filename> fue
         copiado de forma implícita cuando realizó la copia de
         <filename>/calc/trunk/</filename>. Ahora mire qué es lo
-        que ocurre cuando Sally ejecuta el mismo comando sobre su
+        que ocurre cuando Carmen ejecuta el mismo comando sobre su
         copia del fichero:</para>
 
 <screen>
 $ pwd
-/home/sally/calc
+/home/carmen/calc
 
 $ svn log --verbose integer.c
 ------------------------------------------------------------------------
-r344 | sally | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+r344 | carmen | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
 Changed paths:
    M /calc/trunk/integer.c
 
 * integer.c:  fix a bunch of spelling errors.
 
 ------------------------------------------------------------------------
-r303 | sally | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
+r303 | carmen | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
 Changed paths:
    M /calc/trunk/integer.c
 
 * integer.c:  changed a docstring.
 
 ------------------------------------------------------------------------
-r98 | sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
+r98 | carmen | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
 Changed paths:
    M /calc/trunk/integer.c
 
@@ -435,14 +436,14 @@ Changed paths:
 ------------------------------------------------------------------------
 </screen>
 
-      <para>Sally ve su propio cambio de la revisión 344, pero no
+      <para>Carmen ve su propio cambio de la revisión 344, pero no
         el cambio realizado en la revisión 343. Desde el punto de
         vista de Subversion, estos dos cambios afectaron ficheros
         diferentes en distintos lugares del repositorio. No obstante,
         Subversion <emphasis>muestra</emphasis> que ambos ficheros
         comparten una historia común.  Antes de que la rama fuese
         creada en la revisión 341, ambos eran el mismo fichero. Por
-        esta razón tanto usted como Sally ven los cambios realizados
+        esta razón tanto usted como Carmen ven los cambios realizados
         en las revisiones 303 y 98.</para>
 
     </sect2>
@@ -484,10 +485,10 @@ Changed paths:
   <sect1 id="svn-ch-4-sect-3">
     <title>Copiando cambios entre ramas</title>
 
-    <para>Ahora usted y Sally están trabajando en ramas paralelas del
-      proyecto: usted está trabajando en una rama privada, y Sally
-      está trabajando en el <firstterm>tronco</firstterm>, o línea
-      principal de desarrollo.</para>
+    <para>Ahora usted y Carmen están trabajando en ramas paralelas
+      del proyecto: usted está trabajando en una rama privada, y
+      Carmen está trabajando en el <firstterm>tronco</firstterm>,
+      o línea principal de desarrollo.</para>
 
     <para>En proyectos que tienen grandes cantidades de
       contribuyentes, es habitual que la mayoría tengan copias
@@ -496,15 +497,16 @@ Changed paths:
       estándar es crear una rama privada y realizar ahí los cambios
       hasta que todo el trabajo esté completo.</para>
 
-    <para>Así que las buenas noticias son que usted y Sally no están
-      interfiriendo en sus trabajos. Las malas noticias son que es muy
-      fácil derivar <emphasis>demasiado</emphasis> lejos. Recuerde
-      que uno de los problemas con la estrategia <quote>esconderse
-      en un agujero</quote> es que para cuando haya terminado con
-      su rama, puede que sea casi imposible fusionar los cambios
-      con el tronco sin un alto número de conflictos.</para>
+    <para>Así que las buenas noticias son que usted y Carmen no están
+      interfiriendo en sus trabajos. Las malas noticias son
+      que es muy fácil derivar <emphasis>demasiado</emphasis>
+      lejos. Recuerde que uno de los problemas con la estrategia
+      <quote>esconderse en un agujero</quote> es que para cuando
+      haya terminado con su rama, puede que sea casi imposible
+      fusionar los cambios con el tronco sin un alto número de
+      conflictos.</para>
     
-    <para>En su lugar, usted y Sally pueden continuar compartiendo
+    <para>En su lugar, usted y Carmen pueden continuar compartiendo
       cambios a medida que trabajan. Es tarea suya decidir qué
       cambios merece la pena compartir; Subversion le brinda la
       posibilidad de <quote>copiar</quote> cambios entre ramas de
@@ -517,7 +519,7 @@ Changed paths:
       <title>Copiando cambios específicos</title>
       
       <para>El la sección anterior, mencionamos que tanto usted
-        como Sally han realizado cambios a
+        como Carmen han realizado cambios a
         <filename>integer.c</filename> en ramas diferentes.
         Si observa el informe de cambios de la revisión 344,
         puede ver que ella realizó algunas correcciones de
@@ -526,7 +528,7 @@ Changed paths:
         futuros cambios al fichero afectarán las mismas áreas que
         tienen estos errores ortográficos, lo que potencialmente
         generará conflictos cuando fusione su rama algún día. Es
-        mejor, entonces, recibir ahora los cambios de Sally,
+        mejor, entonces, recibir ahora los cambios de Carmen,
         <emphasis>antes</emphasis> de que comience a trabajar de
         forma intensiva en el mismo sitio.</para>
 
@@ -537,7 +539,7 @@ Changed paths:
         capaces de comparar dos objetos cualquiera del repositorio
         y describir sus diferencias.  Por ejemplo, puede preguntar a
         <command>svn diff</command> que le muestre el cambio exacto
-        realizaod por Sally en la revisión 344:</para>
+        realizado por Carmen en la revisión 344:</para>
 
 <screen>
 $ svn diff -r 343:344 http://svn.example.com/repos/calc/trunk
@@ -600,7 +602,7 @@ M  integer.c
 
       <para>La salida del comando <command>svn merge</command>
         muestra que su copia de <filename>integer.c</filename>
-        fue parcheada. Ahora contiene el cambio de Sally&mdash;el
+        fue parcheada. Ahora contiene el cambio de Carmen&mdash;el
         cambio ha sido <quote>copiado</quote> desde el tronco a su
         copia local de la rama privada, y existe ahora como una
         modificación local. En este punto, es tarea suya revisar
@@ -664,7 +666,7 @@ done
           es bastante limitado; sólo permite modificar el contenido
           de los ficheros. No hay forma de representar cambios a
           <emphasis>árboles</emphasis>, como añadir, eliminar o
-          renombrar ficheros y directorios.  Si el cambio de Sally,
+          renombrar ficheros y directorios.  Si el cambio de Carmen,
           digamos, hubiese añadido un nuevo directorio, la salida
           de <command>svn diff</command> ni si quiera lo hubiese
           mencionado. <command>svn diff</command> sólo genera
