@@ -1342,10 +1342,23 @@ close_directory (void *dir_baton,
           const char *path = svn_path_join (eb->anchor, eb->target, pool);
           dir_status = eb->anchor_status;
           tgt_status = apr_hash_get (db->statii, path, APR_HASH_KEY_STRING);
-          /* ### need to pay attention to target's kind here */
-          /* ### need to pay attention to if dir was deleted here */
           if (tgt_status)
-            (eb->status_func) (eb->status_baton, path, tgt_status);
+            {
+              if ((eb->descend)
+                  && (tgt_status->entry)
+                  && (tgt_status->entry->kind == svn_node_dir))
+                {
+                  svn_wc_adm_access_t *dir_access;
+                  SVN_ERR (svn_wc_adm_retrieve (&dir_access, eb->adm_access, 
+                                                eb->target, pool));
+                  SVN_ERR (get_dir_status 
+                           (eb, tgt_status->entry, dir_access, NULL,
+                            eb->ignores, TRUE, eb->get_all, eb->no_ignore, 
+                            TRUE, eb->status_func, eb->status_baton, 
+                            eb->cancel_func, eb->cancel_baton, pool));
+                }
+              (eb->status_func) (eb->status_baton, path, tgt_status);
+            }
         }
       else
         {
