@@ -105,6 +105,15 @@ svn_error_t *svn_swig_java_log_message_receiver(void *baton,
       const char *message,
       apr_pool_t *pool);
 
+/* Create write-only svn_stream_t from java.io.OutputStream */
+svn_stream_t *svn_swig_java_outputstream_to_stream(JNIEnv *jenv, 
+                                                   jobject outputstream, 
+                                                   apr_pool_t *pool);
+
+/* Create read-only svn_stream_t from java.io.InputStream */
+svn_stream_t *svn_swig_java_inputstream_to_stream(JNIEnv *jenv,
+                                                  jobject inputstream,
+                                                  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

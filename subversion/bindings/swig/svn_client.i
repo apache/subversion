@@ -202,6 +202,17 @@
 
 /* ----------------------------------------------------------------------- */
 
+
+%typemap(java, in) svn_stream_t *out %{
+    $1 = svn_swig_java_outputstream_to_stream(jenv, $input, _global_pool);
+%}
+%typemap(java, jni) svn_stream_t * "jobject";
+%typemap(java, jtype) svn_stream_t * "java.io.OutputStream";
+%typemap(java, jstype) svn_stream_t * "java.io.OutputStream";
+%typemap(java, javain) svn_stream_t * "$javainput";
+
+/* ----------------------------------------------------------------------- */
+
 /* Include the headers before we swig-include the svn_client.h header file.
    SWIG will split the nested svn_client_revision_t structure, and we need
    the types declared *before* the split structure is encountered.  */
