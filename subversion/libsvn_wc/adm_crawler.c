@@ -643,11 +643,12 @@ verify_tree_deletion (svn_string_t *dir,
              fullpath->data);
         }
       /* If parent is marked for both deletion and addition, this
-         entry must be marked for either deletion only or addition
-         only. */
+         entry must be marked for either deletion, addition, or
+         replacement. */
       if ((schedule == svn_wc_schedule_replace)
           && (! ((entry->schedule == svn_wc_schedule_delete)
-                 || (entry->schedule == svn_wc_schedule_add))))
+                 || (entry->schedule == svn_wc_schedule_add)
+                 || (entry->schedule == svn_wc_schedule_replace))))
         {
           return svn_error_createf 
             (SVN_ERR_WC_FOUND_CONFLICT, 0, NULL, pool,
@@ -773,8 +774,8 @@ report_local_mods (svn_string_t *path,
       svn_string_t *current_entry_name;
       svn_wc_entry_t *current_entry; 
       svn_string_t *full_path_to_entry;
-      int do_add = FALSE; 
-      int do_delete = FALSE;
+      svn_boolean_t do_add;
+      svn_boolean_t do_delete;
       
       /* Get the next entry name (and structure) from the hash */
       apr_hash_this (entry_index, &key, &klen, &val);
@@ -785,10 +786,28 @@ report_local_mods (svn_string_t *path,
       else
         current_entry_name = svn_string_create (keystring, subpool);
       current_entry = (svn_wc_entry_t *) val;
-      do_add = ((current_entry->schedule == svn_wc_schedule_add)
-                || (current_entry->schedule == svn_wc_schedule_replace));
-      do_delete = ((current_entry->schedule == svn_wc_schedule_delete)
-                   || (current_entry->schedule == svn_wc_schedule_replace));
+
+      /* This entry gets deleted if all of the following hold true:
+
+         a) the algorithm is not in "adds only" mode
+         b) the entry is marked for deletion or replacement
+         c) the entry is NOT the "this dir" entry
+      */
+      do_delete = ((! only_add_entries)
+                   && current_entry_name
+                   && ((current_entry->schedule == svn_wc_schedule_delete)
+                       || (current_entry->schedule ==
+                           svn_wc_schedule_replace))) ? TRUE : FALSE;
+
+      /* This entry gets added if all of the following hold true:
+
+         a) the entry is marked for addition or replacement
+         b) the entry is NOT the "this dir" entry
+      */
+      do_add = (current_entry_name
+                && ((current_entry->schedule == svn_wc_schedule_add)
+                    || (current_entry->schedule ==
+                        svn_wc_schedule_replace))) ? TRUE : FALSE;
 
       /* If we're only looking to commit a single file in this dir,
          then skip past all irrelevant entries. */
@@ -827,7 +846,7 @@ report_local_mods (svn_string_t *path,
        */
       
       /* DELETION CHECK */
-      if (do_delete && current_entry_name && (! only_add_entries))
+      if (do_delete)
         {
           /* Do what's necessary to get a baton for current directory */
           if (! dir_baton)
@@ -842,7 +861,7 @@ report_local_mods (svn_string_t *path,
             SVN_ERR (verify_tree_deletion (full_path_to_entry, 
                                            current_entry->schedule,
                                            subpool));
-          
+
           /* Delete the entry */
           err = editor->delete_entry (current_entry_name, dir_baton);
           if (err) return err;
@@ -860,7 +879,7 @@ report_local_mods (svn_string_t *path,
   
 
       /* ADDITION CHECK */
-      if (do_add && current_entry_name)
+      if (do_add)
         {
           /* Create an affected-target object */
           svn_string_t *longpath;
