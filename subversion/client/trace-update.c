@@ -1,6 +1,6 @@
 /*
- * trace.c : an editor implementation that prints status characters
- *           (when composed to follow after the update-editor)
+ * trace-update.c : an editor implementation that prints status characters
+ *                  (when composed to follow after the update-editor)
  *
  * ====================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -354,10 +354,10 @@ static const svn_delta_edit_fns_t trace_editor =
 
 
 svn_error_t *
-svn_cl__get_trace_editor (const svn_delta_edit_fns_t **editor,
-                          void **edit_baton,
-                          svn_string_t *initial_path,
-                          apr_pool_t *pool)
+svn_cl__get_trace_update_editor (const svn_delta_edit_fns_t **editor,
+                                 void **edit_baton,
+                                 svn_string_t *initial_path,
+                                 apr_pool_t *pool)
 {
   struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
   eb->initial_path = initial_path;
