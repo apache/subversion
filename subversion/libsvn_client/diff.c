@@ -127,9 +127,10 @@ diff_cmd (svn_stringbuf_t *path1,
 svn_error_t *
 svn_client_diff (const apr_array_header_t *diff_options,
                  svn_client_auth_baton_t *auth_baton,
-                 const svn_client_revision_t *start,
-                 const svn_client_revision_t *end,
-                 svn_stringbuf_t *path,
+                 svn_stringbuf_t *path1,
+                 const svn_client_revision_t *revision1,
+                 svn_stringbuf_t *path2,
+                 const svn_client_revision_t *revision2,
                  svn_boolean_t recurse,
                  apr_file_t *outfile,
                  apr_file_t *errfile,
@@ -138,10 +139,9 @@ svn_client_diff (const apr_array_header_t *diff_options,
   svn_revnum_t start_revnum, end_revnum;
   svn_string_t path_str;
   svn_boolean_t path_is_url;
-  svn_boolean_t use_admin;
-  svn_stringbuf_t *anchor, *target;
+  svn_stringbuf_t *anchor = NULL, *target = NULL;
   svn_wc_entry_t *entry;
-  svn_stringbuf_t *URL;
+  svn_stringbuf_t *URL = path1;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   const svn_ra_reporter_t *reporter;
@@ -150,49 +150,46 @@ svn_client_diff (const apr_array_header_t *diff_options,
   void *diff_edit_baton;
   struct diff_cmd_baton diff_cmd_baton;
 
-  /* Sanity check. */
-  if ((start->kind == svn_client_revision_unspecified)
-      || (end->kind == svn_client_revision_unspecified))
+  /* Return an error if PATH1 and PATH2 aren't the same (for now). */
+  if (! svn_stringbuf_compare (path1, path2))
+    return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+                              "Multi-path diff is currently unsupprted");
+
+  /* Sanity check -- ensure that we have valid revisions to look at. */
+  if ((revision1->kind == svn_client_revision_unspecified)
+      || (revision2->kind == svn_client_revision_unspecified))
     {
       return svn_error_create
         (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, pool,
          "svn_client_diff: caller failed to specify any revisions");
     }
 
+  /* Populate the DIFF_CMD_BATON. */
   diff_cmd_baton.options = diff_options;
   diff_cmd_baton.pool = pool;
   diff_cmd_baton.outfile = outfile;
   diff_cmd_baton.errfile = errfile;
 
-  /* Determine if the target we have been given is a path or an URL */
-  path_str.data = path->data;
-  path_str.len = path->len;
-  path_is_url = svn_path_is_url (&path_str);
-
-  /* if the path is not a URL, then we can use the SVN admin area for
-     temporary files. */
-  use_admin = !path_is_url;
-
-  if (path_is_url)
+  /* Determine if the target we have been given is a path or an URL.
+     If it is a working copy path, we'll need to extract the URL from
+     the entry for that path. */
+  path_str.data = path1->data;
+  path_str.len = path1->len;
+  if (! ((path_is_url = svn_path_is_url (&path_str))))
     {
-      URL = path;
-      anchor = NULL;
-      target = NULL;
-    }
-  else
-    {
-      SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
+      SVN_ERR (svn_wc_get_actual_target (path1, &anchor, &target, pool));
       SVN_ERR (svn_wc_entry (&entry, anchor, pool));
       URL = svn_stringbuf_create (entry->url->data, pool);
     }
 
+  /* If we are diffing a working copy path, simply use this 'quick'
+     diff that does not contact the repository and simply uses the
+     text base. */
   if ((! path_is_url)
-      && ((start->kind == svn_client_revision_committed)
-          || (start->kind == svn_client_revision_base))
-      && (end->kind == svn_client_revision_working))
+      && ((revision1->kind == svn_client_revision_committed)
+          || (revision1->kind == svn_client_revision_base))
+      && (revision2->kind == svn_client_revision_working))
     {
-      /* This is the 'quick' diff that does not contact the repository
-         and simply uses the text base. */
       return svn_wc_diff (anchor, target, diff_cmd, &diff_cmd_baton,
                           recurse, pool);
     }
@@ -215,16 +212,16 @@ svn_client_diff (const apr_array_header_t *diff_options,
      sophisticated indication of their interaction with start and end,
      these calls will need to be rearranged. */
   SVN_ERR (svn_client__get_revision_number
-           (&start_revnum, ra_lib, session, start, path->data, pool));
+           (&start_revnum, ra_lib, session, revision1, path1->data, pool));
   SVN_ERR (svn_client__get_revision_number
-           (&end_revnum, ra_lib, session, end, path->data, pool));
+           (&end_revnum, ra_lib, session, revision2, path1->data, pool));
 
   /* ### todo: For the moment, we'll maintain the two distinct diff
      editors, svn_wc vs svn_client, in order to get this change done
      in a finite amount of time.  Next the two editors will be unified
      into one "lazy" editor that uses local data whenever possible. */
 
-  if (end->kind == svn_client_revision_working)
+  if (revision2->kind == svn_client_revision_working)
     {
       /* The working copy is involved in this case. */
       SVN_ERR (svn_wc_get_diff_editor (anchor, target,
@@ -240,7 +237,7 @@ svn_client_diff (const apr_array_header_t *diff_options,
                                   recurse,
                                   diff_editor, diff_edit_baton));
 
-      SVN_ERR (svn_wc_crawl_revisions (path, reporter, report_baton,
+      SVN_ERR (svn_wc_crawl_revisions (path1, reporter, report_baton,
                                        FALSE, recurse,
                                        NULL, NULL, /* notification is N/A */
                                        pool));

@@ -521,28 +521,32 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
                 apr_pool_t *pool);
 
 
-/* Given a TARGET which is either a path in the working copy or an URL,
-   compare it against the given repository version(s).  START and END
-   are the two revisions to be compared; if either has a `kind' of
-   `svn_client_revision_unspecified' or an unrecognized `kind', return
-   the error SVN_ERR_CLIENT_BAD_REVISION.
-  
-   If TARGET is a directory and RECURSE is true, this will be a recursive
-   operation.
-  
-   DIFF_OPTIONS is used to pass additional command line options to the diff
-   processes invoked to compare files.  DIFF_OPTIONS is an array of
-   svn_stringbuf_t * items.
+/* Produce diff output which describes the delta between
+   PATH1/REVISION1 and PATH2/REVISION2.  Print the output of the diff
+   to OUTFILE, and any errors to ERRFILE.
 
-   Print the output of the diff to OUTFILE, and any errors to ERRFILE.
+   PATH1 and PATH2 must both represent the same node kind -- that is,
+   if PATH1 is a directory, PATH2 must also be, and if PATH1 is a
+   file, PATH2 must also be.  (Currently, PATH1 and PATH2 must be the
+   exact same path)
+
+   If either REVISION1 or REVISION2 has an `unspecified' or
+   unrecognized `kind', return SVN_ERR_CLIENT_BAD_REVISION.
   
-   AUTH_BATON is used to communicate with the repository.
- */
+   If RECURSE is true (and the PATHs are directories) this will be a
+   recursive operation.
+  
+   DIFF_OPTIONS (an array of svn_stringbuf_t * items) is used to pass
+   additional command line options to the diff processes invoked to
+   compare files.
+  
+   AUTH_BATON is used to communicate with the repository.  */
 svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               svn_client_auth_baton_t *auth_baton,
-                              const svn_client_revision_t *start,
-                              const svn_client_revision_t *end,
-                              svn_stringbuf_t *target,
+                              svn_stringbuf_t *path1,
+                              const svn_client_revision_t *revision1,
+                              svn_stringbuf_t *path2,
+                              const svn_client_revision_t *revision2,
                               svn_boolean_t recurse,
                               apr_file_t *outfile,
                               apr_file_t *errfile,
