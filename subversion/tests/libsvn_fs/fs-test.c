@@ -5140,6 +5140,181 @@ undeltify_deltify (const char **msg,
 }
 
 
+struct node_created_rev_args {
+  const char *path;
+  svn_revnum_t rev;
+};
+
+
+static svn_error_t *
+verify_path_revs (svn_fs_root_t *root,
+                  struct node_created_rev_args *args,
+                  int num_path_revs,
+                  apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create (pool);
+  int i;
+  svn_revnum_t rev;
+
+  for (i = 0; i < num_path_revs; i++)
+    {
+      SVN_ERR (svn_fs_node_created_rev (&rev, root, args[i].path, subpool));
+      if (rev != args[i].rev)
+        return svn_error_createf
+          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+           "verify_path_revs: '%s' has created rev '%ld' (expected '%ld')",
+           args[i].path, rev, args[i].rev);
+    }
+
+  apr_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+test_node_created_rev (const char **msg,
+                       svn_boolean_t msg_only,
+                       apr_pool_t *pool)
+{ 
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t youngest_rev = 0;
+  int i;
+  struct node_created_rev_args path_revs[20];
+  const char *greek_paths[21] = { 
+    /*  0 */ "",
+    /*  1 */ "iota",
+    /*  2 */ "A",
+    /*  3 */ "A/mu",
+    /*  4 */ "A/B",
+    /*  5 */ "A/B/lambda",
+    /*  6 */ "A/B/E",
+    /*  7 */ "A/B/E/alpha",
+    /*  8 */ "A/B/E/beta",
+    /*  9 */ "A/B/F",
+    /* 10 */ "A/C",
+    /* 11 */ "A/D",
+    /* 12 */ "A/D/gamma",
+    /* 13 */ "A/D/G",
+    /* 14 */ "A/D/G/pi",
+    /* 15 */ "A/D/G/rho",
+    /* 16 */ "A/D/G/tau",
+    /* 17 */ "A/D/H",
+    /* 18 */ "A/D/H/chi",
+    /* 19 */ "A/D/H/psi",
+    /* 20 */ "A/D/H/omega",
+  };
+  
+  *msg = "svn_fs_node_created_rev test";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Initialize the paths in our args list. */
+  for (i = 0; i < 20; i++)
+    path_revs[i].path = greek_paths[i];
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_fs_and_repos 
+           (&fs, "test-repo-node-created-rev", pool));
+
+  /* Created the greek tree in revision 1. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, subpool));
+
+  /* Now, prior to committing, all these nodes should have an invalid
+     created rev.  After all, the rev has been created yet.  Verify
+     this. */
+  for (i = 0; i < 20; i++)
+    path_revs[i].rev = SVN_INVALID_REVNUM;
+  SVN_ERR (verify_path_revs (txn_root, path_revs, 20, subpool));
+
+  /* Now commit the transaction. */
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* Now, we have a new revision, and all paths in it should have a
+     created rev of 1.  Verify this. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, subpool));
+  for (i = 0; i < 20; i++)
+    path_revs[i].rev = 1;
+  SVN_ERR (verify_path_revs (rev_root, path_revs, 20, subpool));
+
+  /*** Let's make some changes/commits here and there, and make sure
+       we can keep this whole created rev thing in good standing.  The
+       general rule here is that prior to commit, mutable things have
+       an invalid created rev, immutable things have their original
+       created rev.  After the commit, those things which had invalid
+       created revs in the transaction now have the youngest revision
+       as their created rev.  
+
+       ### NOTE: Bubble-up currently affect the created revisions for
+       directory nodes.  I'm not sure if this is the behavior we've
+       settled on as desired. 
+  */
+
+  /*** clear the per-commit pool */
+  svn_pool_clear (subpool);
+  /* begin a new transaction */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  /* make mods */
+  SVN_ERR (svn_test__set_file_contents
+           (txn_root, "iota", "pointless mod here", subpool));
+  /* verify created revs */
+  path_revs[0].rev = SVN_INVALID_REVNUM; /* (root) */
+  path_revs[1].rev = SVN_INVALID_REVNUM; /* iota */
+  SVN_ERR (verify_path_revs (txn_root, path_revs, 20, subpool));
+  /* commit transaction */
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  /* get a revision root for the new revision */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, subpool));
+  /* verify created revs */
+  path_revs[0].rev = 2; /* (root) */
+  path_revs[1].rev = 2; /* iota */
+  SVN_ERR (verify_path_revs (rev_root, path_revs, 20, subpool));
+
+  /*** clear the per-commit pool */
+  svn_pool_clear (subpool);
+  /* begin a new transaction */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  /* make mods */
+  SVN_ERR (svn_test__set_file_contents
+           (txn_root, "A/D/H/omega", "pointless mod here", subpool));
+  /* verify created revs */
+  path_revs[0].rev  = SVN_INVALID_REVNUM; /* (root) */
+  path_revs[2].rev  = SVN_INVALID_REVNUM; /* A */
+  path_revs[11].rev = SVN_INVALID_REVNUM; /* D */
+  path_revs[17].rev = SVN_INVALID_REVNUM; /* H */
+  path_revs[20].rev = SVN_INVALID_REVNUM; /* omega */
+  SVN_ERR (verify_path_revs (txn_root, path_revs, 20, subpool));
+  /* commit transaction */
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  /* get a revision root for the new revision */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, subpool));
+  /* verify created revs */
+  path_revs[0].rev  = 3; /* (root) */
+  path_revs[2].rev  = 3; /* A */
+  path_revs[11].rev = 3; /* D */
+  path_revs[17].rev = 3; /* H */
+  path_revs[20].rev = 3; /* omega */
+  SVN_ERR (verify_path_revs (rev_root, path_revs, 20, subpool));
+
+
+  /* Destroy the per-commit subpool. */
+  svn_pool_destroy (subpool);
+
+  /* Close the filesystem. */
+  svn_fs_close_fs (fs);
+  return SVN_NO_ERROR;
+}
+
 
 
 /* The test table.  */
@@ -5180,6 +5355,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   large_file_integrity,
   check_root_revision,
   undeltify_deltify,
+  test_node_created_rev,
   0
 };
 

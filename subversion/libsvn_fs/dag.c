@@ -286,13 +286,20 @@ svn_fs__dag_get_revision (svn_revnum_t *rev,
                           dag_node_t *node,
                           trail_t *trail)
 {
-  skel_t *node_rev;
-
+  skel_t *node_rev, *rev_str;
+  const char *rev_cstr;
+  svn_revnum_t revision = SVN_INVALID_REVNUM;
+  
   SVN_ERR (get_node_revision (&node_rev, node, trail));
-  *rev = atoi ((SVN_FS__NR_HDR_REV (SVN_FS__NR_HEADER (node_rev)))->data);
-  if (*rev == 0)
-    *rev = SVN_INVALID_REVNUM;
-
+  rev_str = SVN_FS__NR_HDR_REV (SVN_FS__NR_HEADER (node_rev));
+  if (rev_str->len)
+    {
+      rev_cstr = apr_pstrndup (trail->pool, rev_str->data, rev_str->len);
+      revision = atoi (rev_cstr);
+      if (revision == 0)
+        revision = SVN_INVALID_REVNUM;
+    }
+  *rev = revision;
   return SVN_NO_ERROR;
 }
 
