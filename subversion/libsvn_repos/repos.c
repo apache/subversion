@@ -585,6 +585,10 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
       "The directory \""
       SVN_REPOS__DB_DIR
       "\" contains a Berkeley DB environment.\n"
+      "You may need to tweak the values in \""
+      SVN_REPOS__DB_DIR
+      "/DB_CONFIG\" to match the\n"
+      "requirements of your site.\n"
       "\n"
       "Visit http://subversion.tigris.org/ for more information.\n";
 
