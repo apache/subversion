@@ -23,6 +23,57 @@
     questions can be answered by reading the <a
     href="http://svnbook.red-bean.com">Subversion Book</a>.</p>
 
+
+<ul>
+
+<li><p>The best available version of Subversion is: <b>1.1.1</b></p>
+
+   <ul>
+     <li><p>Read the <a href="svn_1.1_releasenotes.html">1.1 Release
+            Notes</a>.  Also available is the master <a
+            href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a>
+            file for all releases.</p></li>
+
+     <li><p>There are no "unstable" releases;  don't be fooled by
+            the odd version number.  Every release is tested and
+            considered stable for production use.</p></li>
+
+     <li><p>Binary packages are usually available about a week after
+            Subversion source releases.  If not yet available for your
+            OS, try grabbing the <a href="getting_subversion.html">the
+            latest source release</a>.</p></li>
+    </ul>
+    </li>
+
+<li><p>The 1.0 development line is no longer active.</p>
+
+   <ul>
+     <li><p>We are no longer fixing bugs and doing 1.0.x releases.
+          Only the discovery of a horrible data-loss or security bug
+          would prompt us to do another 1.0.x release.</p></li>
+
+     <li><p>If you report a bug in 1.0, it is likely already fixed in
+          a later development line.  If you report the bug, you'll
+          probably be told to upgrade.</p></li>
+   </ul>
+   </li>
+
+<li><p>How does one upgrade to the latest release?</p>
+
+    <p>There's nothing special to do.  Just install "on top of" an
+       older release.  Any Subversion 1.X program is
+       forward-compatible with newer 1.Y libraries.  No repository
+       dump/load is required.  As long as clients and servers are in
+       the 1.X line, older clients work fine against newer servers and
+       newer clients work fine against older servers.  The only caveat
+       is that if the client and server versions don't match, certain
+       new features may not be available.</p>
+
+   </li>
+
+</ul>
+
+
 <center>
 <table border="0" cellpadding="2" width="98%" bgcolor="white">
 <tr>
@@ -31,27 +82,8 @@
 <b>
 Subversion versions up to and including 1.0.7 and 1.1.0-rc3 have a <a
 href="/security/CAN-2004-0749-advisory.txt">flaw that fails to protect
-metadata when using mod_authz_svn.</a>.  Users using mod_authz_svn are
+metadata when using mod_authz_svn.</a>.  Servers running mod_authz_svn are
 advised to upgrade to the latest releases in the 1.0.x or 1.1.x lines.</b>
-</b>
-</font>
-</td>
-</tr>
-</table>
-</center>
-
-<center>
-<table border="0" cellpadding="2" width="98%" bgcolor="white">
-<tr>
-<td width="100%" bgcolor="yellow">
-<font color="red">
-<b>
-Note: binary packages are usually available about a week after
-Subversion source releases.  If you're looking for the latest
-Subversion binaries, you might not yet find them below. In this case,
-we recommend either grabbing <a href="getting_subversion.html">the
-latest source release</a>, or checking back for binary packages a bit
-later.
 </b>
 </font>
 </td>
