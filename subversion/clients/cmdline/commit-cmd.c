@@ -55,14 +55,17 @@ svn_cl__commit (apr_getopt_t *os,
   svn_wc_notify_func_t notify_func = NULL;
   void *notify_baton = NULL;
     
-  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
+  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
+                                         opt_state->targets,
+                                         &(opt_state->start_revision),
+                                         &(opt_state->end_revision),
                                          FALSE, pool));
 
   /* Build an authentication object to give to libsvn_client. */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   /* Add "." if user passed 0 arguments. */
-  svn_cl__push_implicit_dot_target (targets, pool);
+  svn_opt_push_implicit_dot_target (targets, pool);
 
   /* Condense the targets (like commit does)... */
   SVN_ERR (svn_path_condense_targets (&base_dir,

@@ -386,14 +386,17 @@ svn_cl__log (apr_getopt_t *os,
   svn_client_auth_baton_t *auth_baton;
   struct log_message_receiver_baton lb;
 
-  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
+  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
+                                         opt_state->targets,
+                                         &(opt_state->start_revision),
+                                         &(opt_state->end_revision),
                                          FALSE, pool));
 
   /* Build an authentication object to give to libsvn_client. */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   /* Add "." if user passed 0 arguments */
-  svn_cl__push_implicit_dot_target(targets, pool);
+  svn_opt_push_implicit_dot_target(targets, pool);
 
   if ((opt_state->start_revision.kind != svn_opt_revision_unspecified)
       && (opt_state->end_revision.kind == svn_opt_revision_unspecified))

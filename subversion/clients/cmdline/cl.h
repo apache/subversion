@@ -142,59 +142,6 @@ extern const char svn_cl__help_footer[];
 void
 svn_cl__print_commit_info (svn_client_commit_info_t *commit_info);
 
-
-/*** Miscellaneous utility commands ***/
-
-void svn_cl__push_svn_string (apr_array_header_t *array,
-                              const char *str,
-                              apr_pool_t *pool);
-
-/* Pull remaining target arguments from OS into *TARGETS_P, including
-   targets stored in OPT_STATE->targets (that is, passed via the
-   "--targets" command line option), converting them to UTF-8.
-   Allocate *TARGETS_P and its elements in POOL.
-
-   If EXTRACT_REVISIONS is set, then this function will attempt to
-   look for trailing "@rev" syntax on the paths.  If one @rev is
-   found, it will overwrite the value of OPT_STATE->start_revision.
-   If a second one is found, it will overwrite OPT_STATE->end_revision.  
-   (Extra revisions beyond that are ignored.)  */
-svn_error_t *
-svn_cl__args_to_target_array (apr_array_header_t **targets_p,
-                              apr_getopt_t *os,
-			      svn_cl__opt_state_t *opt_state,
-                              svn_boolean_t extract_revisions,
-                              apr_pool_t *pool);
-
-
-/* If no targets exist in *TARGETS, add `.' as the lone target.
- *
- * (Some commands take an implicit "." string argument when invoked
- * with no arguments. Those commands make use of this function to
- * add "." to the target array if the user passes no args.)
- */
-void svn_cl__push_implicit_dot_target (apr_array_header_t *targets,
-                                       apr_pool_t *pool);
-
-
-/* Parse NUM_ARGS non-target arguments from the list of arguments in
-   OS->argv, return them as `const char *' in *ARGS_P, without doing
-   any UTF-8 conversion.  Allocate *ARGS_P and its values in POOL. */
-svn_error_t *
-svn_cl__parse_num_args (apr_array_header_t **args_p,
-                        apr_getopt_t *os,
-                        int num_args,
-                        apr_pool_t *pool);
-
-
-/* Parse all remaining arguments from OS->argv, return them as
-   `const char *' in *ARGS_P, without doing any UTF-8 conversion.
-   Allocate *ARGS_P and its values in POOL. */
-svn_error_t *
-svn_cl__parse_all_args (apr_array_header_t **args_p,
-                        apr_getopt_t *os,
-                        apr_pool_t *pool);
-
 
 
 /*** Command-line output functions -- printing to the user. ***/

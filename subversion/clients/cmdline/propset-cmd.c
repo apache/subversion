@@ -49,7 +49,7 @@ svn_cl__propset (apr_getopt_t *os,
   /* PNAME and PROPVAL expected as first 2 arguments if filedata was
      NULL, else PNAME alone will precede the targets.  Get a UTF-8
      version of the name, too. */
-  SVN_ERR (svn_cl__parse_num_args (&args, os,
+  SVN_ERR (svn_opt_parse_num_args (&args, os,
                                    opt_state->filedata ? 1 : 2, pool));
   pname = ((const char **) (args->elts))[0];
   SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, NULL, pool));
@@ -68,11 +68,14 @@ svn_cl__propset (apr_getopt_t *os,
     SVN_ERR (svn_utf_string_to_utf8 (&propval, propval, pool));
 
   /* Suck up all the remaining arguments into a targets array */
-  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
+  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
+                                         opt_state->targets,
+                                         &(opt_state->start_revision),
+                                         &(opt_state->end_revision),
                                          FALSE, pool));
 
   /* Add "." if user passed 0 file arguments */
-  svn_cl__push_implicit_dot_target (targets, pool);
+  svn_opt_push_implicit_dot_target (targets, pool);
               
   /* Decide if we're making a local mod to a versioned working copy
      prop, or making a permanent change to an unversioned repository

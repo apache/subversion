@@ -49,7 +49,10 @@ svn_cl__copy (apr_getopt_t *os,
   svn_wc_notify_func_t notify_func = NULL;
   void *notify_baton = NULL;
 
-  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
+  SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
+                                         opt_state->targets,
+                                         &(opt_state->start_revision),
+                                         &(opt_state->end_revision),
                                          FALSE, pool));
   if (targets->nelts != 2)
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
