@@ -39,7 +39,23 @@ static dav_error *dav_svn_get_option(const dav_resource *resource,
                                      ap_text_header *option)
 {
   /* ### DAV:version-history-collection-set */
-  /* ### DAV:activity-collection-set */
+
+  if (elem->ns == AP_XML_NS_DAV_ID)
+    {
+      if (strcmp(elem->name, "activity-collection-set") == 0)
+        {
+          ap_text_append(resource->pool, option,
+                         "<D:activity-collection-set>");
+          ap_text_append(resource->pool, option,
+                         dav_svn_build_uri(resource,
+                                           DAV_SVN_BUILD_URI_ACT_COLLECTION,
+                                           SVN_INVALID_REVNUM, NULL,
+                                           1 /* add_href */, resource->pool));
+          ap_text_append(resource->pool, option,
+                         "</D:activity-collection-set>");
+        }
+    }
+
   return NULL;
 }
 
@@ -118,14 +134,6 @@ static dav_error *dav_svn_checkin(dav_resource *resource,
                        "CHECKIN is not yet implemented.");
 }
 
-static dav_error *dav_svn_set_target(const dav_resource *resource,
-                                     const char *target,
-                                     int is_label)
-{
-  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
-                       "SET-TARGET is not yet implemented.");
-}
-
 static int dav_svn_versionable(const dav_resource *resource)
 {
   return 0;
@@ -155,21 +163,6 @@ static dav_error *dav_svn_get_report(request_rec *r,
 {
   return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
                        "REPORT is not yet implemented.");
-}
-
-static dav_error *dav_svn_add_label(const dav_resource *resource,
-                                    const char *label,
-                                    int replace)
-{
-  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
-                       "Adding labels is not yet implemented.");
-}
-
-static dav_error *dav_svn_remove_label(const dav_resource *resource,
-                                       const char *label)
-{
-  return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
-                       "Removing labels is not yet implemented.");
 }
 
 static int dav_svn_can_be_activity(const dav_resource *resource)
@@ -208,14 +201,14 @@ const dav_hooks_vsn dav_svn_hooks_vsn = {
   dav_svn_checkout,
   dav_svn_uncheckout,
   dav_svn_checkin,
-  dav_svn_set_target,
   dav_svn_versionable,
   dav_svn_auto_version_enabled,
   dav_svn_avail_reports,
   dav_svn_report_target_selector_allowed,
   dav_svn_get_report,
-  dav_svn_add_label,
-  dav_svn_remove_label,
+  NULL,                 /* update */
+  NULL,                 /* add_label */
+  NULL,                 /* remove_label */
   NULL,                 /* can_be_workspace */
   NULL,                 /* make_workspace */
   dav_svn_can_be_activity,
