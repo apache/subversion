@@ -224,6 +224,76 @@ remove_all_locks (apr_hash_t *locks, apr_pool_t *pool)
 }
 
 
+/* Remove administrative-area tmpfiles for each wc file in TARGETS hash */
+static svn_error_t *
+remove_all_tmpfiles (apr_hash_t *targets, apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_status_t apr_err;
+
+  for (hi = apr_hash_first (pool, targets); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      apr_size_t klen;
+      svn_stringbuf_t *tmpfile_path;
+      enum svn_node_kind kind;
+
+      apr_hash_this (hi, &key, &klen, &val);
+      tmpfile_path = 
+        svn_wc__text_base_path (svn_stringbuf_create ((char *)key, pool), 
+                                TRUE, pool);
+      
+      SVN_ERR (svn_io_check_path (tmpfile_path, &kind, pool));
+      if (kind == svn_node_file)
+        {
+          apr_err = apr_file_remove (tmpfile_path->data, pool);
+          if (apr_err) 
+            return svn_error_createf 
+              (apr_err, 0, NULL, pool, "Error removing tmpfile '%s'",
+               tmpfile_path->data);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Cleanup after a commit by removing locks and tmpfiles. */
+static svn_error_t *
+cleanup_commit (apr_hash_t *locked_dirs, 
+                apr_hash_t *affected_targets,
+                apr_pool_t *pool)
+{
+  svn_error_t *err, *err2;
+
+  /* Make sure that we always remove the locks that we installed. */
+  err = remove_all_locks (locked_dirs, pool);
+  
+  /* Cleanup the tmp/text-base files that might be left around
+     after a failed commit.  We only want to do this if the commit
+     failed, though, since*/
+  err2 = remove_all_tmpfiles (affected_targets, pool);
+
+  if (err && err2)
+    {
+      svn_error_t *scan;
+     
+      err = svn_error_quick_wrap (err, "---- lock cleanup error follows");
+      err2 = svn_error_quick_wrap (err2, "---- tmpfile cleanup error follows");
+
+      /* Concatenate the lock cleanup and tmpfile cleanup errors */
+      for (scan = err; scan->child != NULL; scan = scan->child)
+        continue;
+      scan->child = err2;
+      return err;
+    }
+  if (err)
+    return err;
+  if (err2)
+    return err2;
+  return SVN_NO_ERROR;
+}
 
 /* Attempt to grab a lock in PATH.  If we succeed, store PATH in LOCKS
    and return success.  If we fail to grab a lock, remove all locks in
@@ -1267,14 +1337,15 @@ crawl_dir (svn_stringbuf_t *path,
    directories are up-to-date when they have propchanges.
 */
 static svn_error_t *
-svn_wc__crawl_local_mods (svn_stringbuf_t *parent_dir,
-                          apr_array_header_t *condensed_targets,
-                          const svn_delta_edit_fns_t *editor,
-                          void *edit_baton,
-                          const svn_ra_get_latest_revnum_func_t *revnum_fn,
-                          void *rev_baton,                          
-                          apr_hash_t *locked_dirs,
-                          apr_pool_t *pool)
+crawl_local_mods (svn_stringbuf_t *parent_dir,
+                  apr_array_header_t *condensed_targets,
+                  const svn_delta_edit_fns_t *editor,
+                  void *edit_baton,
+                  const svn_ra_get_latest_revnum_func_t *revnum_fn,
+                  void *rev_baton,                          
+                  apr_hash_t *locked_dirs,
+                  apr_hash_t *affected_targets,
+                  apr_pool_t *pool)
 {
   svn_error_t *err;
   void *dir_baton = NULL;
@@ -1282,10 +1353,6 @@ svn_wc__crawl_local_mods (svn_stringbuf_t *parent_dir,
   /* A stack that will store all paths and dir_batons as we drive the
      editor depth-first. */
   struct stack_object *stack = NULL;
-
-  /* All the locally modified files which are waiting to be sent as
-     postfix-textdeltas. */
-  apr_hash_t *affected_targets = apr_hash_make (pool);
 
   /* A cache of the youngest revision in the repository, in case we
      discover any directory propchanges.  An invalid value means that
@@ -1849,6 +1916,10 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
 {
   svn_error_t *err, *err2;
 
+  /* All the locally modified files which are waiting to be sent as
+     postfix-textdeltas. */
+  apr_hash_t *affected_targets = apr_hash_make (pool);
+
   /* All the wc directories that are "locked" as we commit local
      changes. */
   apr_hash_t *locked_dirs = apr_hash_make (pool);
@@ -1868,25 +1939,27 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
 
   /* Now pass the locked_dirs hash into the *real* routine that does
      the work. */
-  err = svn_wc__crawl_local_mods (parent_dir,
-                                  condensed_targets,
-                                  editor, edit_baton,
-                                  revnum_fn, rev_baton,
-                                  locked_dirs,
-                                  pool);
+  err = crawl_local_mods (parent_dir,
+                          condensed_targets,
+                          editor, edit_baton,
+                          revnum_fn, rev_baton,
+                          locked_dirs,
+                          affected_targets,
+                          pool);
 
-  /* Make sure that we always remove the locks that we installed. */
-  err2 = remove_all_locks (locked_dirs, pool);
+  /* Cleanup after the commit. */
+  err2 = cleanup_commit (locked_dirs, affected_targets, pool);
 
-  /* Now deal with the two errors that may have occurred. */
+  /* Now deal with the errors that may have occurred. */
   if (err && err2)
     {
       svn_error_t *scan;
 
       /* This is tricky... wrap the two errors and concatenate them. */
       err = svn_error_quick_wrap (err, "---- commit error follows:");
+      
       err2 = svn_error_quick_wrap
-        (err2, "commit failed (see below); unable to remove all wc locks:");
+        (err2, "commit failed (see below), and commit cleanup failed:");
 
       /* Hook the commit error to the end of the unlock error. */
       for (scan = err2; scan->child != NULL; scan = scan->child)
@@ -1899,11 +1972,11 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
 
   if (err)
     return svn_error_quick_wrap 
-      (err, "commit failed: wc locks have been removed.");
+      (err, "commit failed: wc locks and tmpfiles have been removed.");
 
   if (err2)
     return svn_error_quick_wrap
-      (err, "commit succeeded, but unable to remove all wc locks!");
+      (err2, "commit succeeded, but cleanup failed");
 
   return SVN_NO_ERROR;
 }
