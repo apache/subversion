@@ -21,7 +21,7 @@ Candidate changes:
     Justification:
       Simple fix for an annoying problem reported by users.
     Votes:
-      +1: bliss, sussman
+      +1: bliss, sussman, lundblad
 
 
 Status of 1.1.1:
@@ -38,4 +38,4 @@ Candidate changes:
       Proposed during 1.1.0 preparation, but it is too late and complicated
       to put in 1.1.0 at this stage.
     Votes:
-      +1: (lundblad: not r10914 yet)
+      +1: lundblad
