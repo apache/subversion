@@ -51,6 +51,7 @@ Candidate changes:
       Allows users to install JavaHL without manually creating
       directories to work around Issue #2032.
     Votes:
+      +1: dlr
       Nominated by: David James <james82@gmail.com>
 
   * r11050
