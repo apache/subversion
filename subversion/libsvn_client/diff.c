@@ -1,5 +1,5 @@
 /*
- * diff.c: comparing/merging working copy with text-base or repository.
+ * diff.c: comparing and merging
  *
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
