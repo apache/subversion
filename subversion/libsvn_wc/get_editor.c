@@ -396,12 +396,13 @@ prep_directory (svn_string_t *path,
 static svn_boolean_t
 is_wc_prop (svn_string_t *name)
 {
-  if (! memcmp (name->data,
-                SVN_PROP_WC_PREFIX, /* defined in svn_types.h */
-                strlen(SVN_PROP_WC_PREFIX)))
-    return TRUE;
-  else
+  size_t prefix_len = sizeof (SVN_PROP_WC_PREFIX) - 1;
+
+  if ((name->len < prefix_len)
+      || (strncmp (name->data, SVN_PROP_WC_PREFIX, prefix_len) != 0))
     return FALSE;
+  else
+    return TRUE;
 }
 
 
