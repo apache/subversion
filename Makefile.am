@@ -10,7 +10,7 @@
 ##       generation.
 SUBDIRS = apr expat-lite neon subversion doc
 
-ACLOCAL = @ACLOCAL@ -l ac-helpers
+ACLOCAL = @ACLOCAL@ -I ac-helpers
 
 ## Use Karl's script to create a Changelog from CVS.
 
