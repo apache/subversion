@@ -83,3 +83,12 @@ Candidate changes:
     Notes: Attachment 312 is a backported version of this fix.  Which was
     applied to trunk in r8981. 
     Votes:
+
+  * r8985
+    Added fedora-1 and wbel-3 RPM package directories.
+    Justification: New RPMs now require db42 (rather than db4) so that users
+       won't get confused on how to install db packages that need to coexist
+       with existing db packages; lots of confused users out there, see the
+       users mailing list.
+    Votes:
+      +1: david
