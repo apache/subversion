@@ -196,9 +196,8 @@ log_message_receiver (void *baton,
 
   if (rev == 0)
     {
-      svn_stream_printf (lb->out, pool,
-                         "No commit for revision 0." APR_EOL_STR);
-      return SVN_NO_ERROR;
+      return svn_stream_printf (lb->out, pool,
+                                "No commit for revision 0." APR_EOL_STR);
     }
 
   /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=807
@@ -242,20 +241,21 @@ log_message_receiver (void *baton,
       }
     }
 
-  svn_stream_printf (lb->out, pool, SEP_STRING);
+  SVN_ERR (svn_stream_printf (lb->out, pool, SEP_STRING));
 
-  svn_stream_printf (lb->out, pool,
-                     "rev %" SVN_REVNUM_T_FMT ":  %s | %s",
-                     rev, author_stdout, date_stdout);
+  SVN_ERR (svn_stream_printf (lb->out, pool,
+                              "rev %" SVN_REVNUM_T_FMT ":  %s | %s",
+                              rev, author_stdout, date_stdout));
 
   if (! lb->quiet)
     {
       lines = num_lines (msg_stdout);
-      svn_stream_printf (lb->out, pool,
-                         " | %d line%s", lines, (lines > 1) ? "s" : "");
+      SVN_ERR (svn_stream_printf (lb->out, pool,
+                                  " | %d line%s", lines,
+                                  (lines > 1) ? "s" : ""));
     }
 
-  svn_stream_printf (lb->out, pool, APR_EOL_STR);
+  SVN_ERR (svn_stream_printf (lb->out, pool, APR_EOL_STR));
 
   if (changed_paths)
     {
@@ -267,7 +267,8 @@ log_message_receiver (void *baton,
                                            svn_sort_compare_items_as_paths, 
                                            pool);
 
-      svn_stream_printf (lb->out, pool, "Changed paths:" APR_EOL_STR);
+      SVN_ERR (svn_stream_printf (lb->out, pool,
+                                  "Changed paths:" APR_EOL_STR));
       for (i = 0; i < sorted_paths->nelts; i++)
         {
           svn_item_t *item = &(APR_ARRAY_IDX (sorted_paths, i, svn_item_t));
@@ -289,16 +290,17 @@ log_message_receiver (void *baton,
                                 log_item->copyfrom_rev);
             }
           SVN_ERR (svn_cmdline_cstring_from_utf8 (&path_stdout, path, pool));
-          svn_stream_printf (lb->out, pool, "   %c %s%s" APR_EOL_STR,
-                             log_item->action, path_stdout, copy_data);
+          SVN_ERR (svn_stream_printf (lb->out, pool, "   %c %s%s" APR_EOL_STR,
+                                      log_item->action, path_stdout,
+                                      copy_data));
         }
     }
 
   if (! lb->quiet)
     {
       /* A blank line always precedes the log message. */
-      svn_stream_printf (lb->out, pool, APR_EOL_STR "%s" APR_EOL_STR,
-                         msg_stdout);
+      SVN_ERR (svn_stream_printf (lb->out, pool, APR_EOL_STR "%s" APR_EOL_STR,
+                                  msg_stdout));
     }
 
   return SVN_NO_ERROR;
@@ -453,7 +455,7 @@ log_message_receiver_xml (void *baton,
   /* </logentry> */
   svn_xml_make_close_tag (&sb, pool, "logentry");
 
-  svn_stream_printf (lb->out, pool, "%s", sb->data);
+  SVN_ERR (svn_stream_printf (lb->out, pool, "%s", sb->data));
 
   return SVN_NO_ERROR;
 }
@@ -535,7 +537,7 @@ svn_cl__log (apr_getopt_t *os,
           /* "<log>" */
           svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "log", NULL);
 
-          svn_stream_printf (lb.out, pool, "%s", sb->data);  
+          SVN_ERR (svn_stream_printf (lb.out, pool, "%s", sb->data));
         }
       
       SVN_ERR (svn_client_log (targets,
@@ -555,7 +557,7 @@ svn_cl__log (apr_getopt_t *os,
           /* "</log>" */
           svn_xml_make_close_tag (&sb, pool, "log");
 
-          svn_stream_printf (lb.out, pool, "%s", sb->data);
+          SVN_ERR (svn_stream_printf (lb.out, pool, "%s", sb->data));
         }
     }
   else  /* default output format */
@@ -578,7 +580,7 @@ svn_cl__log (apr_getopt_t *os,
                                pool));
 
       if (! opt_state->incremental)
-        svn_stream_printf (lb.out, pool, SEP_STRING);
+        SVN_ERR (svn_stream_printf (lb.out, pool, SEP_STRING));
     }
 
   return SVN_NO_ERROR;
