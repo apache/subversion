@@ -1,5 +1,5 @@
 %define apache_version 2.0.45-0.1
-%define neon_version 0.23.2
+%define neon_version 0.23.9
 %define apache_dir /usr/local/apache2
 # If you don't have 360+ MB of free disk space or don't want to run checks then
 # set make_*_check to 0.
@@ -98,6 +98,7 @@ Tools for Subversion.
 %changelog
 * Sat May 24 2003 David Summers <david@summersoft.fay.ar.us> 0.23.0-6036
 - Track changes to Python SWIG build.
+- Now requires neon-0.23.9 to pick up bug and security fixes.
 
 * Thu May 15 2003 David Summers <david@summersoft.fay.ar.us> 0.22.2-5943
 - The subversion package now requires python 2 because cvs2svn has been
