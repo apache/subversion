@@ -53,8 +53,6 @@ typedef struct {
   svn_fs_root_t *root;
   const dav_svn_repos *repos;
 
-  struct mr_baton *root_baton;
-
 } merge_response_ctx;
 
 typedef struct mr_baton {
@@ -164,23 +162,17 @@ static svn_error_t *mr_replace_root(void *edit_baton,
                                     void **root_baton)
 {
   merge_response_ctx *mrc = edit_baton;
+  apr_pool_t *pool;
   mr_baton *b;
 
   /* note that we create a subpool; the root_baton is passed to the
-     close_directory callback, where we will destroy the pool.
-
-     HOWEVER: we do not place the baton itself into the subpool. It
-     needs to exist past the close_directory, so that we can inspect
-     it and use it after the editor sequencing is done.
-
-     Therefore, the subpool is only used for further children.
-  */
-  b = apr_pcalloc(mrc->pool, sizeof(*b));
+     close_directory callback, where we will destroy the pool. */
+  pool = svn_pool_create(mrc->pool);
+  b = apr_pcalloc(pool, sizeof(*b));
   b->mrc = mrc;
-  b->pool = svn_pool_create(mrc->pool);
+  b->pool = pool;
   b->path = "/";
 
-  mrc->root_baton = b;
   *root_baton = b;
   return NULL;
 }
@@ -420,19 +412,6 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "could not process the merge delta.");
-    }
-
-  /* we don't need to call close_edit, but we do need to send a response
-     for the root if a change was made. */
-  if (mrc.root_baton->seen_change)
-    {
-      serr = send_response(mrc.root_baton, TRUE /* is_dir */);
-      if (serr != NULL)
-        {
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "could not generate response for the "
-                                     "root directory.");
-        }
     }
 
   /* wrap up the merge response */
