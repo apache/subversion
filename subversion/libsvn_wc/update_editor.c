@@ -489,7 +489,7 @@ prep_directory (struct dir_baton *db,
 
 
 
-/*** The callbacks we'll plug into an svn_delta_edit_fns_t structure. ***/
+/*** The callbacks we'll plug into an svn_delta_editor_t structure. ***/
 
 static svn_error_t *
 set_target_revision (void *edit_baton, svn_revnum_t target_revision)

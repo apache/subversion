@@ -153,8 +153,8 @@ delete_entry (const char *path,
               void *parent_baton,
               apr_pool_t *pool)
 {
-  struct node_baton *d = (struct node_baton *) parent_baton;
-  struct edit_baton *eb = (struct edit_baton *) d->edit_baton;
+  struct node_baton *d = parent_baton;
+  struct edit_baton *eb = d->edit_baton;
   svn_repos_node_t *node;
   const char *name;
   svn_node_kind_t kind;
@@ -187,7 +187,7 @@ add_open_helper (const char *path,
                  apr_pool_t *pool,
                  void **child_baton)
 {
-  struct node_baton *pb = (struct node_baton *) parent_baton;
+  struct node_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   struct node_baton *nb = apr_pcalloc (pool, sizeof (*nb));
 
@@ -216,7 +216,7 @@ open_root (void *edit_baton,
            apr_pool_t *pool,
            void **root_baton)
 {
-  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct edit_baton *eb = edit_baton;
   struct node_baton *d = apr_pcalloc (pool, sizeof (*d));
 
   d->edit_baton = eb;
@@ -289,20 +289,13 @@ add_file (const char *path,
 
 
 static svn_error_t *
-window_handler (svn_txdelta_window_t *window, void *baton)
-{
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
 apply_textdelta (void *file_baton, 
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
-  struct node_baton *fb = (struct node_baton *) file_baton;
+  struct node_baton *fb = file_baton;
   fb->node->text_mod = TRUE;
-  *handler = window_handler;
+  *handler = NULL;
   *handler_baton = NULL;
   return SVN_NO_ERROR;
 }
@@ -315,7 +308,7 @@ change_node_prop (void *node_baton,
                   const svn_string_t *value,
                   apr_pool_t *pool)
 {
-  struct node_baton *nb = (struct node_baton *) node_baton;
+  struct node_baton *nb = node_baton;
   nb->node->prop_mod = TRUE;
   return SVN_NO_ERROR;
 }
@@ -363,7 +356,7 @@ svn_repos_node_editor (const svn_delta_editor_t **editor,
 svn_repos_node_t *
 svn_repos_node_from_baton (void *edit_baton)
 {
-  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct edit_baton *eb = edit_baton;
   return eb->node;
 }
 
