@@ -1045,8 +1045,8 @@ svn_error_t *svn_client_diff2 (const apr_array_header_t *diff_options,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_client_diff2(), but with the @a force parameter always set
- * to @c FALSE.
+ * Similar to svn_client_diff2(), but with the @a ignore_content_type
+ * parameter always set to @c FALSE.
  */
 svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
                               const char *path1,
@@ -1089,8 +1089,8 @@ svn_error_t *svn_client_diff_peg2 (const apr_array_header_t *diff_options,
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.1 API.
  *
- * Similar to svn_client_diff_peg2(), but with the @a force parameter always
- * set to @c FALSE.
+ * Similar to svn_client_diff_peg2(), but with the @a ignore_content_type
+ * parameter always set to @c FALSE.
  */
 svn_error_t *svn_client_diff_peg (const apr_array_header_t *diff_options,
                                   const char *path,
@@ -1414,7 +1414,7 @@ svn_client_propset2 (const char *propname,
 /**
  * @deprecated Provided for backward compatibility with the 1.1 API.
  * 
- * Like svn_client_propset2(), but with @a force always false and a
+ * Like svn_client_propset2(), but with @a skip_checks always false and a
  * newly created @a ctx.
  */
 svn_error_t *
