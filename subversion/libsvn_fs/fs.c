@@ -369,7 +369,6 @@ bdb_write_config  (svn_fs_t *fs)
   const char *dbconfig_file_name =
     svn_path_join (fs->path, "DB_CONFIG", fs->pool);
   apr_file_t *dbconfig_file = NULL;
-  apr_status_t apr_err;
   int i;
 
   static const char dbconfig_contents[] =
@@ -464,11 +463,9 @@ bdb_write_config  (svn_fs_t *fs)
                              APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
                              fs->pool));
 
-  apr_err = apr_file_write_full (dbconfig_file, dbconfig_contents,
-                                 sizeof (dbconfig_contents) - 1, NULL);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_createf (apr_err, 0,
-                              "writing to '%s'", dbconfig_file_name);
+  SVN_ERR (svn_io_file_write_full (dbconfig_file, dbconfig_contents,
+                                   sizeof (dbconfig_contents) - 1, NULL,
+                                   fs->pool));
 
   /* Write the variable DB_CONFIG flags. */
   for (i = 0; i < dbconfig_options_length; ++i)
@@ -483,15 +480,10 @@ bdb_write_config  (svn_fs_t *fs)
                                 APR_HASH_KEY_STRING);
         }
 
-      apr_err = apr_file_write_full (dbconfig_file,
-                                     dbconfig_options[i].header,
-                                     strlen (dbconfig_options[i].header),
-                                     NULL);
-      if (apr_err != APR_SUCCESS)
-        {
-          return svn_error_createf (apr_err, 0, "writing to '%s'",
-                                    dbconfig_file_name);
-        }
+      SVN_ERR(svn_io_file_write_full (dbconfig_file,
+                                      dbconfig_options[i].header,
+                                      strlen (dbconfig_options[i].header),
+                                      NULL, fs->pool));
 
       if (((DB_VERSION_MAJOR == dbconfig_options[i].bdb_major
             && DB_VERSION_MINOR >= dbconfig_options[i].bdb_minor)
@@ -501,13 +493,8 @@ bdb_write_config  (svn_fs_t *fs)
       else
         choice = dbconfig_options[i].inactive;
 
-      apr_err = apr_file_write_full (dbconfig_file,
-                                     choice, strlen (choice), NULL);
-      if (apr_err != APR_SUCCESS)
-        {
-          return svn_error_createf (apr_err, 0, "writing to '%s'",
-                                    dbconfig_file_name);
-        }
+      SVN_ERR (svn_io_file_write_full (dbconfig_file, choice, strlen (choice),
+                                       NULL, fs->pool));
     }
 
   SVN_ERR (svn_io_file_close (dbconfig_file, fs->pool));
@@ -534,9 +521,9 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   /* Create the directory for the new Berkeley DB environment.  */
   apr_err = apr_dir_make (path_apr, APR_OS_DEFAULT, fs->pool);
   if (apr_err != APR_SUCCESS)
-    return svn_error_createf (apr_err, 0,
-                              "creating Berkeley DB environment dir '%s'",
-                              fs->path);
+    return svn_error_wrap_apr (apr_err,
+                               "Can't create Berkeley DB environment dir '%s'",
+                               fs->path);
 
   SVN_ERR (bdb_write_config (fs));
 

@@ -685,9 +685,7 @@ svn_subst_translate_cstring (const char *src,
     {
       svn_stream_close (src_stream);
       svn_stream_close (dst_stream);      
-      return 
-        svn_error_create (err->apr_err, err,
-                          "stringbuf translation failed");
+      return err;
     }
 
   /* clean up nicely. */

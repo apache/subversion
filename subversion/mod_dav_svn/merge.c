@@ -96,8 +96,7 @@ static svn_error_t *send_response(const dav_svn_repos *repos,
                        "</D:response>" DEBUG_CR,
                        NULL);
   if (status != APR_SUCCESS)
-    return svn_error_create(status, NULL, 
-                            "could not write response to output");
+    return svn_error_wrap_apr(status, "Can't write response to output");
 
   return SVN_NO_ERROR;
 }

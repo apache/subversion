@@ -164,7 +164,7 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           SVN_ERR(conn->block_handler(conn, subpool, conn->block_baton));
         }
       if (status)
-        return svn_error_create(status, NULL, "Write failure");
+        return svn_error_wrap_apr(status, "Can't write to connection");
       data += count;
     }
 
@@ -246,7 +246,7 @@ static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
   if (conn->sock && conn->block_handler)
     apr_socket_timeout_set(conn->sock, 0);
   if (status && !APR_STATUS_IS_EOF(status))
-    return svn_error_create(status, NULL, "Read failure");
+    return svn_error_wrap_apr(status, "Can't read from connection");
   if (*len == 0)
     return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
                             "Connection closed unexpectedly");

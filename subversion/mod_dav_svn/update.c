@@ -315,7 +315,7 @@ static svn_error_t * brigade_write_fn(void *baton,
   apr_err = apr_brigade_write(wb->bb, ap_filter_flush, wb->output, data, *len);
 
   if (apr_err != APR_SUCCESS)
-    return svn_error_create(apr_err, NULL, "Error writing base64 data.");
+    return svn_error_wrap_apr(apr_err, "Error writing base64 data");
 
   return SVN_NO_ERROR;
 }

@@ -51,8 +51,8 @@ svn_config__win_config_path (const char **folder, int system_path,
   apr_status_t apr_err = apr_filepath_encoding(&style, pool);
 
   if (apr_err)
-    return svn_error_create (apr_err, NULL,
-                             "Can't determine the native path encoding");
+    return svn_error_wrap_apr (apr_err,
+                               "Can't determine the native path encoding");
 
   if (style == APR_FILEPATH_ENCODING_UTF8)
     {
@@ -75,8 +75,8 @@ svn_config__win_config_path (const char **folder, int system_path,
       if (!apr_err && (inwords > 0 || outbytes == 0))
         apr_err = APR_INCOMPLETE;
       if (apr_err)
-        return svn_error_create (apr_err, NULL,
-                                 "Can't convert config path to UTF-8");
+        return svn_error_wrap_apr (apr_err,
+                                   "Can't convert config path to UTF-8");
 
       /* Note that apr_conv_ucs2_to_utf8 does _not_ terminate the
          outgoing buffer. */

@@ -130,10 +130,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
      into tmpfile_name */
   apr_err = apr_filepath_get (&old_cwd, APR_FILEPATH_NATIVE, pool);
   if (apr_err)
-    {
-      return svn_error_create
-        (apr_err, NULL, "failed to get current working directory");
-    }
+    return svn_error_wrap_apr (apr_err, "Can't get working directory");
 
   /* APR doesn't like "" directories */
   if (base_dir[0] == '\0')
@@ -143,9 +140,8 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   apr_err = apr_filepath_set (base_dir_apr, pool);
   if (apr_err)
     {
-      return svn_error_createf
-        (apr_err, NULL,
-         "failed to change working directory to '%s'", base_dir);
+      return svn_error_wrap_apr
+        (apr_err, "Can't change working directory to '%s'", base_dir);
     }
 
   /*** From here on, any problems that occur require us to cd back!! ***/
@@ -171,8 +167,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   /* Make sure the whole CONTENTS were written, else return an error. */
   if (apr_err)
     {
-      err = svn_error_createf (apr_err, NULL,
-                               "failed writing '%s'", tmpfile_name);
+      err = svn_error_wrap_apr (apr_err, "Can't write to '%s'", tmpfile_name);
       goto cleanup;
     }
 
@@ -186,8 +181,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
                       APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
   if (apr_err)
     {
-      err =  svn_error_createf (apr_err, NULL,
-                                "failed to stat '%s'", tmpfile_name);
+      err = svn_error_wrap_apr (apr_err, "Can't stat '%s'", tmpfile_name);
       goto cleanup;
     }
 
@@ -211,8 +205,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
                       APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
   if (apr_err)
     {
-      err = svn_error_createf (apr_err, NULL,
-                               "failed to stat '%s'", tmpfile_name);
+      err = svn_error_wrap_apr (apr_err, "Can't stat '%s'", tmpfile_name);
       goto cleanup;
     }
   
@@ -258,9 +251,8 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   apr_err = apr_filepath_set (old_cwd, pool);
   if (apr_err)
     {
-      svn_handle_error (svn_error_create
-                        (apr_err, NULL,
-                         "failed to restore current working directory"),
+      svn_handle_error (svn_error_wrap_apr
+                        (apr_err, "Can't restore working directory"),
                         stderr, TRUE /* fatal */);
     }
 
