@@ -4,3 +4,8 @@
 ## SUBDIRS = doc subversion
 
 SUBDIRS = subversion
+
+ChangeLog: changelog
+
+changelog:
+	cvs2cl.pl -r -S -U ./AUTHORS subversion doc www
