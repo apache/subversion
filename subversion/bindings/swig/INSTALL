@@ -82,13 +82,17 @@ Step 3:  Install Specific Language Bindings
    install subversion before building and using it. Perl 5.8.0 is
    required.
 
-   1.  Run 'make install-swig-pl-lib' from the top of the
+   1.  Run `make swig-pl-lib' from the top of the
        Subversion source tree.
 
    2.  Go to subversion/bindings/swig/perl and run
-       `env APR_CONFIG=/path/to/apr-config perl Makefile.PL'
+       `env APR_CONFIG=/path/to/apr-config perl Makefile.PL'.
 
-   3.  run `make all test install'
+   3.  run `make all test'.
+
+   4.  to install, run `make install-swig-pl-lib' from the top of the
+       Subversion source tree, and `make install' from the perl
+       directory.
 
 *  Java
 
