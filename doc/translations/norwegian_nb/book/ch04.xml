@@ -1363,7 +1363,7 @@ U   my-calc-branch/integer.c
         <!-- @ENGLISH {{{
         <title>Previewing Merges</title>
         @ENGLISH }}} -->
-        <title>Forh&#229;ndsvise flettinger</title>
+        <title>Vise flettinger p&#229; forh&#229;nd</title>
         
         <!-- @ENGLISH {{{
         <para>Because merging only results in local modifications,
@@ -2185,7 +2185,7 @@ Committed revision 350.
         vi egentlig om &#229; fjerne den fra <literal>HEAD</literal>.
         Den originale forandringen eksisterer fortsatt i depotets 
         historie.
-        For de fleste situasjoner er dette bra nok.
+        I de fleste situasjoner er dette greit nok.
         De fleste er bare interessert i &#229; f&#248;lge <literal>HEAD</literal> 
         av et prosjekt uansett.
         Det er imidlertid spesielle tilfeller du virkelig vil &#248;delegge 
@@ -2221,11 +2221,11 @@ Committed revision 350.
         do I get my old file or directory back?</quote></para>
       @ENGLISH }}} -->
       <para>Det som er fint med versjonskontrollsystemer er at 
-        informasjon g&#229;r aldri tapt.
+        informasjon aldri g&#229;r tapt.
         Selv om du sletter en fil eller katalog, kan den v&#230;re borte fra 
         <literal>HEAD</literal>-revisjonen, men objektet eksisterer 
         fortsatt i tidligere revisjoner.
-        Et av de vanligste sp&#248;rsm&#229;lene nye brukere sp&#248;r er: 
+        Et av de vanligste sp&#248;rsm&#229;lene nye brukere sp&#248;r om, er: 
         <quote>Hvordan f&#229;r jeg den gamle filen eller katalogen min 
         tilbake?</quote>.</para>
 
@@ -2239,15 +2239,15 @@ Committed revision 350.
         every version of your file or directory can be defined by a
         specific coordinate pair.</para>
       @ENGLISH }}} -->
-      <para>F&#248;rste skritt er &#229; definere n&#248;yaktig <emphasis 
-        role="bold">hvilket</emphasis> element du skal pr&#248;ve &#229; hente 
+      <para>F&#248;rste skritt er &#229; definere n&#248;yaktig 
+        <emphasis>hvilket</emphasis> element du skal pr&#248;ve &#229; hente 
         tilbake.
         Her er en nyttig metafor:
         Du kan tenke p&#229; hvert objekt i depotet som om det eksisterer i 
         et slags todimensjonalt koordinatsystem.
         Det f&#248;rste koordinatet er et spesifikt revisjonstre, og det 
         andre koordinatet er en sti inne i dette treet.
-        S&#229; hver versjon av filen din eller katalogen kan bli definert 
+        S&#229; hver versjon av filen eller katalogen din kan bli definert 
         som et spesifikt koordinatpar.</para>
 
       <!-- @ENGLISH {{{
@@ -2341,7 +2341,7 @@ Removed real.c because code now in double.c.
         know what you want to restore, you have two different
         choices.</para>
       @ENGLISH }}} -->
-      <para>Dette var den vanskelige delen &#8212; etterforskningen.
+      <para>Dette var den vanskelige delen &#8212; <!-- &#164; -->etterforskningen.
         N&#229; som du vet hva du vil hente tilbake, har du to forskjellige 
         valg.</para>
       
@@ -2457,8 +2457,12 @@ Committed revision 1390.
   <!-- ======================== SECTION 5 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-5">
+    <!-- @ENGLISH {{{
     <title>Switching a Working Copy</title>
+    @ENGLISH }}} -->
+    <title>Bytte om en arbeidskopi</title>
 
+    <!-- @ENGLISH {{{
     <para>The <command>svn switch</command> command transforms an
       existing working copy into a different branch.  While this
       command isn't strictly necessary for working with branches, it
@@ -2468,6 +2472,17 @@ Committed revision 1390.
       simply ask Subversion to change your working copy of
       <filename>/calc/trunk</filename> to mirror the new branch
       location:</para>
+    @ENGLISH }}} -->
+    <para>Kommandoen <command>svn switch</command> forandrer en 
+      eksisterende arbeidskopi til en annen gren.
+      Selv om denne kommandoen strengt tatt ikke er n&#248;dvendig for &#229; 
+      arbeide med forgreninger, gir den en fin snarvei for brukere,
+      I det tidligere eksempelet v&#229;rt, etter at du opprettet en privat 
+      gren, hentet du ut en fersk arbeidskopi av den nye katalogen i 
+      depotet.
+      Istedenfor kan du rett og slett be Subversion om &#229; forandre 
+      arbeidskopien din av <filename>/calc/trunk</filename> til &#229; 
+      avspeile plasseringen til den nye grenen:</para>
 
 <screen>
 $ cd calc
@@ -2485,6 +2500,7 @@ $ svn info | grep URL
 URL: http://svn.example.com/repos/calc/branches/my-calc-branch
 </screen>
 
+    <!-- @ENGLISH {{{
     <para>After <quote>switching</quote> to the branch, your working
       copy is no different than what you would get from doing a fresh
       checkout of the directory.  And it's usually more efficient to
@@ -2492,28 +2508,58 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       degree.  The server sends only the minimal set of changes
       necessary to make your working copy reflect the branch
       directory.</para>
+    @ENGLISH }}} -->
+    <para>Etter &#229; ha <quote>byttet om</quote> til grenen, er ikke 
+      arbeidskopien mer forskjellig enn om du hadde gjort en fersk 
+      uthenting av katalogen.
+      Og det er vangligvis med praktisk &#229; bruke denne kommandoen, fordi 
+      grener &#164;differ kun i liten grad.
+      Tjeneren sender bare et minimalt sett med forandringer n&#248;dvendig 
+      for &#229; avspeile grenkatalogen.</para>
 
+    <!-- @ENGLISH {{{
     <para>The <command>svn switch</command> command also takes a
-      <option>--revision</option> (<option>-r</option>) option, so you
+      <option>-&#64738;-revision</option> (<option>-r</option>) option, so you
       need not always move your working copy to the <quote>tip</quote>
       of the branch.</para>
+    @ENGLISH }}} -->
+    <para><command>svn switch</command>-kommandoen tar ogs&#229; et 
+      <option>--revision</option> (<option>-r</option>)-valg, s&#229; du 
+      trenger ikke alltid &#229; flytte arbeidskopien din til 
+      <quote>tuppen</quote> av grenen.</para>
 
+    <!-- @ENGLISH {{{
     <para>Of course, most projects are more complicated than our
       <filename>calc</filename> example, containing multiple
       subdirectories.  Subversion users often follow a specific
       algorithm when using branches:</para>
+    @ENGLISH }}} -->
+    <para>Selvf&#248;lgelig, de fleste prosjekter er mer kompliserte enn 
+      <filename>calc</filename>-eksempelet v&#229;rt, og inneholder flere 
+      underkataloger.
+      Subversionbrukere f&#248;lger ofte en spesiell algoritme ved bruk av 
+      grener:</para>
 
       <orderedlist>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Copy the project's entire 'trunk' to a new branch
             directory.</para>
+          @ENGLISH }}} -->
+          <para>Kopier hele <quote>trunk</quote> fra prosjektet til en 
+            ny grenkatalog.</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Switch only <emphasis>part</emphasis> of the trunk
             working copy to mirror the branch.</para>
+          @ENGLISH }}} -->
+          <para>Bytt bare om <emphasis>en del</emphasis> av 
+            trunk-arbeidskopien for &#229; avspeile forgreningen.</para>
         </listitem>
       </orderedlist>
     
+    <!-- @ENGLISH {{{
     <para>In other words, if a user knows that the branch-work only
       needs to happen on a specific subdirectory, they use
       <command>svn switch</command> to move only that subdirectory to
@@ -2526,13 +2572,39 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       copy</quote>&mdash;not only can working copies contain a mixture
       of working revisions, but a mixture of repository locations as
       well.</para>
+    @ENGLISH }}} -->
+    <para>Med andre ord, hvis en bruker vet at grenarbeidet kun trenger 
+      &#229; skje i en spesiell underkatalog, bruker de <command>svn 
+      switch</command> for &#229; flytte bare denne underkatalogen til 
+      grenen.
+      (Og noen ganger vil brukere bare bytte om en enkelt arbeidsfil til 
+      grenen!)
+      P&#229; denne m&#229;ten kan de fortsette &#229; motta normale oppdateringer fra 
+      <quote>trunk</quote> til mesteparten av arbeidskopien deres, men 
+      de ombyttede delene vil forbli immune (unntatt hvis noen legger 
+      inn en forandring til denne grenen).
+      Denne funksjonalitetel legger til en hel ny dimensjon til 
+      konseptet med en <quote>blandet arbeidskopi</quote> &#8212; ikke bare 
+      kan arbeidskopier inneholde en blanding av av arbeidsrevisjoner, 
+      men ogs&#229; en blanding av depotbeliggenheter.</para>
     
+    <!-- @ENGLISH {{{
     <para>If your working copy contains a number of switched subtrees
       from different repository locations, it continues to function as
       normal.  When you update, you'll receive patches to each subtree
       as appropriate.  When you commit, your local changes will still
       be applied as a single, atomic change to the repository.</para>
+    @ENGLISH }}} -->
+    <para>Hvis arbeidskopien din inneholder et antall ombyttede 
+      katalogtr&#230;r fra forskjellige depotplasseringer, fortsetter den &#229; 
+      virke som normalt.
+      N&#229;r du oppdaterer, vil du motta patcher til hvert undertre <!-- &#164; 
+      -->der det passer.
+      N&#229;r du legger inn forandringer, vil dine lokale forandringer 
+      fortsatt bli lagt inn som en enkel, atomisk forandring til 
+      depotet.</para>
 
+    <!-- @ENGLISH {{{
     <para>Note that while it's okay for your working copy to reflect a
       mixture of repository locations, these locations must all be
       within the <emphasis>same</emphasis> repository.  Subversion
@@ -2540,27 +2612,62 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       that's a feature planned beyond Subversion
       1.0.<footnote><para>You <emphasis>can</emphasis>, however, use
       <command>svn switch</command> with the
-      <option>--relocate</option> switch if the URL of your server
+      <option>-&#64738;-relocate</option> switch if the URL of your server
       changes and you don't want to abandon an existing working copy.
       See the <command>svn switch</command> section in <xref
       linkend="svn-ch-9"/> for more information and an example.</para>
       </footnote></para>
+    @ENGLISH }}} -->
+    <para>Legg merke til at mens det er greit for arbeidskopien din &#229; 
+      gjenspeile en blanding av depotplasseringer, m&#229; alle disse 
+      plasseringene v&#230;re innenfor det <emphasis>samme</emphasis> 
+      depotet.
+      Subversiondepot er forel&#248;pig ikke i stand til &#229; kommunisere med 
+      hverandre; det er en funksjonalitet som er planlagt etter 
+      SUbversion 1.0.<footnote><para>Du <emphasis>kan</emphasis> 
+      imidlertid bruke <command>svn switch</command> med 
+      <option>--relocate</option>-valget hvis URL-en til tjeneren 
+      forandrer seg og du ikke vil forkaste en eksisterende arbeidskopi.
+      Se <command>svn switch</command>-seksjonen i <xref 
+      linkend="svn-ch-9"/> for mer informasjon og et 
+      eksempel.</para></footnote></para>
     
     <sidebar>
+      <!-- @ENGLISH {{{
       <title>Switches and Updates</title>
+      @ENGLISH }}} -->
+      <title>Ombyttinger og oppdateringer</title>
       
+      <!-- @ENGLISH {{{
       <para>Have you noticed that the output of <command>svn
         switch</command> and <command>svn update</command> look the
         same?  The switch command is actually a superset of the
         update command.</para>
+      @ENGLISH }}} -->
+      <para>Har du lagt merke til at utdataene fra <command>svn 
+        switch</command> og <command>svn update</command> ser likedan 
+        ut?
+        <command>switch</command>-kommandoen er faktisk et &#164;superset av 
+        <command>update</command>-kommandoen.</para>
 
+      <!-- @ENGLISH {{{
       <para>When you run <command>svn update</command>, you're asking
         the repository to compare two trees.  The repository does so,
         and then sends a description of the differences back to the
         client. The only difference between <command>svn
         switch</command> and <command>svn update</command> is that the
         update command always compares two identical paths.</para>
+      @ENGLISH }}} -->
+      <para>N&#229;r du kj&#248;rer <command>svn update</command>, ber du depotet 
+        om &#229; sammenligne to tr&#230;r.
+        Depotet gj&#248;r dette, og sender deretter en beskrivelse av 
+        forskjellene tilbake til klienten.
+        Den eneste forskjellen mellom <command>svn switch</command> og 
+        <command>svn update</command> er at 
+        <command>update</command>-kommandoen alltid sammenligner to 
+        identiske stier.</para>
       
+      <!-- @ENGLISH {{{
       <para>That is, if your working copy is a mirror of
         <filename>/calc/trunk</filename>, then <command>svn
         update</command> will automatically compare your working copy
@@ -2572,18 +2679,44 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
         <filename>/calc/trunk</filename> to some
         <emphasis>other</emphasis> branch-directory in the
         <literal>HEAD</literal> revision.</para>
+      @ENGLISH }}} -->
+      <para>Det vil si, hvis arbeidskopien din er et speil av 
+        <filename>/calc/trunk</filename>, vil <command>svn 
+        update</command> automatisk sammenligne arbeidskopien din av 
+        <filename>/calc/trunk</filename> med 
+        <filename>/calc/trunk</filename> i 
+        <literal>HEAD</literal>-revisjonen.
+        Hvis du bytter om arbeidskopien din til en gren, vil 
+        <command>svn switch</command> sammenligne arbeidskopien av 
+        <filename>/calc/trunk</filename> med en 
+        <emphasis>annen</emphasis> grenkatalog i 
+        <literal>HEAD</literal>-revisjonen.</para>
 
+      <!-- @ENGLISH {{{
       <para>In other words, an update moves your working copy through
         time.  A switch moves your working copy through time
         <emphasis>and</emphasis> space.</para>
+      @ENGLISH }}} -->
+      <para>Med andre ord, en <command>update</command>-kommando flytter 
+        arbeidskopien din gjennom tiden.
+        En <command>switch</command>-kommando flytter arbeidskopien 
+        gjennom tid <emphasis>og</emphasis> rom.</para>
     </sidebar>
 
+    <!-- @ENGLISH {{{
     <para>Because <command>svn switch</command> is essentially a
       variant of <command>svn update</command>, it shares the same
       behaviors; any local modifications in your working copy are
       preserved when new data arrives from the repository.  This
       allows you to perform all sorts of clever tricks.</para>
+    @ENGLISH }}} -->
+    <para>Fordi <command>svn switch</command> egentlig er en variant av 
+      <command>svn update</command> deler den samme oppf&#248;rsel; alle 
+      lokale modifiseringer i arbeidskopen blir tatt vare p&#229; n&#229;r nye 
+      data ankommer fra depotet.
+      Dette lar deg gj&#248;re en masse lure ting.</para>
 
+    <!-- @ENGLISH {{{
     <para>For example, suppose you have a working copy of
       <filename>/calc/trunk</filename> and make a number of changes to
       it.  Then you suddenly realize that you meant to make the
@@ -2591,6 +2724,16 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       switch</command> your working copy to the branch, the local
       changes will remain.  You can then test and commit them to the
       branch.</para>
+    @ENGLISH }}} -->
+    <para>For eksempel, tenk at du har en arbeidskopi av 
+      <filename>/calc/trunk</filename> og gj&#248;r et antall forandringer i 
+      den.
+      S&#229; finner du plutselig ut at du skulle gj&#248;re disse forandringene 
+      til en gren istedenfor.
+      Ikke noe problem!
+      N&#229;r du bruker <command>svn switch</command> for &#229; flytte 
+      arbeidskopien til grenen, vil de lokale forandringene bli v&#230;rende.
+      Du kan deretter teste og legge dem inn p&#229; grenen.</para>
 
   </sect1>
 
@@ -2599,30 +2742,63 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
   <!-- ======================== SECTION 6 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-6">
+    <!-- @ENGLISH {{{
     <title>Tags</title>
+    @ENGLISH }}} -->
+    <title>Merker</title>
 
+    <!-- @ENGLISH {{{
     <para>Another common version control concept is a
       <firstterm>tag</firstterm>.  A tag is just a
       <quote>snapshot</quote> of a project in time.  In Subversion,
       this idea already seems to be everywhere.  Each repository
       revision is exactly that&mdash;a snapshot of the filesystem
       after each commit.</para>
+    @ENGLISH }}} -->
+    <para>Et annet vanlig versjonskontrollkonsept er et 
+      <firstterm>merke</firstterm> &#8212; <foreignphrase>tag</foreignphrase>.
+      Et merke er bare et <quote>&#248;yeblikksbilde</quote> av et prosjekt 
+      p&#229; en spesiell tid.
+      I Subversion ser denne id&#233;en ut til &#229; v&#230;re overalt.
+      Hver depotrevisjon er akkurat det &#8212; et &#248;yeblikksbilde av 
+      filsystemet etter hver innlegging.</para>
 
+    <!-- @ENGLISH {{{
     <para>However, people often want to give more human-friendly names
       to tags, like <literal>release-1.0</literal>.  And they want to
       make snapshots of smaller subdirectories of the filesystem.
       After all, it's not so easy to remember that release-1.0 of a
       piece of software is a particular subdirectory of revision
       4822.</para>
+    @ENGLISH }}} -->
+    <para>Men folk vil ofte &#248;nske &#229; gi mer menneskevennlige navn til 
+      merker, som <literal>release-1.0</literal>.
+      Og de &#248;nsker &#229; ta &#248;yeblikksbilder av mindre underkataloger i 
+      filsystemet.
+      N&#229;r alt kommer til alt, er det ikke s&#229; lett &#229; huske at release-1.0 
+      av et programprosjekt er en spesiell underkatalog av revisjon 
+      4822.</para>
 
     <sect2 id="svn-ch-4-sect-6.1">
+      <!-- @ENGLISH {{{
       <title>Creating a Simple Tag</title>
+      @ENGLISH }}} -->
+      <title>Lage et enkelt merke</title>
 
+      <!-- @ENGLISH {{{
       <para>Once again, <command>svn copy</command> comes to the
         rescue.  If you want to create a snapshot of
         <filename>/calc/trunk</filename> exactly as it looks in the
         <literal>HEAD</literal> revision, then make a copy of it:</para>
+      @ENGLISH }}} -->
+      <para>Atter en gang kommer <command>svn copy</command> og redder 
+        situasjonen.
+        Hvis du vil lage et &#248;yeblikksbilde av 
+        <filename>/calc/trunk</filename> n&#248;yaktig som den ser ut i 
+        <literal>HEAD</literal>-revisjonen, kan du lage en kopi av 
+        den:</para>
 
+<!-- &#164; -->
 <screen>
 $ svn copy http://svn.example.com/repos/calc/trunk \
            http://svn.example.com/repos/calc/tags/release-1.0 \
@@ -2631,6 +2807,7 @@ $ svn copy http://svn.example.com/repos/calc/trunk \
 Committed revision 351.
 </screen>
 
+      <!-- @ENGLISH {{{
       <para>This example assumes that a
         <filename>/calc/tags</filename> directory already exists.  (If it
         doesn't, see <xref linkend="svn-ch-9-sect-1.2-re-mkdir"/>).
@@ -2645,7 +2822,24 @@ Committed revision 351.
         <filename>/calc/trunk</filename> is exactly the snapshot you
         want, you can specify it by passing <option>-r 350</option> to
         the <command>svn copy</command> command.</para>
+      @ENGLISH }}} -->
+      <para>Dette eksempelet forutsetter at en 
+        <filename>/calc/tags</filename>-katalog allerede eksisterer.
+        (Hvis den ikke gj&#248;r det, se <xref 
+        linkend="svn-ch-9-sect-1.2-re-mkdir"/>.)
+        Etter at kopieringen er fullf&#248;rt, vil den nye 
+        <filename>release-1.0</filename>-katalogen for alltid v&#230;re et 
+        &#248;yeblikksbilde av hvordan prosjektet s&#229; ut i 
+        <literal>HEAD</literal>-revisjonen p&#229; den tiden du lagde kopien.
+        Selvf&#248;lgelig vil du v&#230;re mer presis ang&#229;ende hvilken revisjon du 
+        kopierer, i tilfelle noen andre kan ha lagt inn forandringer til 
+        prosjektet mens du ikke s&#229; det.
+        S&#229; hvis du vet at revisjon 350 av 
+        <filename>/calc/trunk</filename> er n&#248;yaktig det &#248;eblikksbildet 
+        du &#248;nsker, kan du spesifisere dette ved &#229; angi <option>-r 
+        350</option> til <command>svn copy</command>-kommandoen.</para>
 
+      <!-- @ENGLISH {{{
       <para>But wait a moment: isn't this tag-creation procedure the
         same procedure we used to create a branch?  Yes, in fact, it
         is.  In Subversion, there's no difference between a tag and a
@@ -2656,7 +2850,23 @@ Committed revision 351.
         as long as nobody ever commits to the directory, it forever
         remains a snapshot.  If people start committing to it, it
         becomes a branch.</para>
+      @ENGLISH }}} -->
+      <para>Men vent n&#229; litt:
+        Er ikke denne prosedyren med opprettelse av merker den samme 
+        prosedyren som vi brukte da vi lagde en gren?
+        Ja, faktisk er det det.
+        I Subversion er det ingen forskjell mellom et merke og en gren.
+        Begge er bare vanlige kataloger som er opprettet ved kopiering.
+        Akkurat som med grener, den eneste grunnen til at en kopiert 
+        katalog er et <quote>merke</quote> er fordi 
+        <emphasis>mennesker</emphasis> har bestemt seg for &#229; behandle 
+        det p&#229; denne m&#229;ten:
+        S&#229; lenge ingen noen gang legger inn forandringer til katalogen, 
+        forblir den for alltid et &#248;yeblikksbilde.
+        Hvis noen begynner &#229; legge inn forandringer til den, blir den en 
+        gren.</para>
 
+      <!-- @ENGLISH {{{
       <para>If you are administering a repository, there are two
         approaches you can take to managing tags.  The first approach
         is <quote>hands off</quote>: as a matter of project policy,
@@ -2671,16 +2881,44 @@ Committed revision 351.
         accidentally commits a change to a tag-directory, you can
         simply undo the change as discussed in the previous section.
         This is version control, after all.</para>
+      @ENGLISH }}} -->
+      <para>Hvis du administrerer et depot, er det to fremgangsm&#229;ter du 
+        kan bruke for &#229; holde rede p&#229; merker.
+        Den f&#248;rste fremgangsm&#229;ten er <quote>ikke r&#248;r</quote>:
+        Som en del av reglene innen prosjektet, bestem hvor i depotet 
+        merkene skal ligge, og gj&#248;r det klart for alle brukere hvordan 
+        de skal behandle kataloger som de kopierer inn dit.
+        (Det vil si, v&#230;r sikker p&#229; at de vet at nye innlegginger ikke 
+        skal skje der.)
+        Den andre fremgangsm&#229;ten er mer paranoid:
+        Du kan bruke et av aksesskontrollskriptene som f&#248;lger med 
+        Subversion til &#229; forhindre noen fra &#229; gj&#248;re noe annet enn &#229; 
+        opprette nye kopier i merkeomr&#229;det (se <xref 
+        linkend="svn-ch-6"/>).
+        Den paranoide ruten er imidlertid vanligvis ikke n&#248;dvendig.
+        Hvis en bruker legger inn en forandring til en merkekatalog, kan 
+        du enkelt og greit omgj&#248;re forandringen som nevnt i den forrige 
+        seksjonen.
+        Dette er versjonskontroll, tross alt.</para>
 
     </sect2>
     
     <sect2 id="svn-ch-4-sect-6.2">
+      <!-- @ENGLISH {{{
       <title>Creating a Complex Tag</title>
+      @ENGLISH }}} -->
+      <title>Lage et komplekst merke</title>
       
+      <!-- @ENGLISH {{{
       <para>Sometimes you may want your <quote>snapshot</quote> to be
         more complicated than a single directory at a single
         revision.</para>
+      @ENGLISH }}} -->
+      <para>Noen ganger vil du at <quote>&#248;yeblikksbildet</quote> skal 
+        v&#230;re mer komplisert enn en enkel katalog med en enkelt 
+        revisjon.</para>
       
+      <!-- @ENGLISH {{{
       <para>For example, pretend your project is much larger than our
         <filename>calc</filename> example: suppose it contains a
         number of subdirectories and many more files.  In the course
@@ -2694,7 +2932,24 @@ Committed revision 351.
         hodgepodge of repository locations from different revisions.
         But after testing, you know it's the precise combination of
         data you need.</para>
+      @ENGLISH }}} -->
+      <para>For eksempel, tenk deg at prosjektet ditt er mye st&#248;rre enn 
+        <filename>calc</filename>-eksempelet v&#229;rt:
+        Det inneholder mange underkataloger og mange flere filer.
+        Mens du holder p&#229; med arbeidet, bestemmer du deg kanskje for at 
+        du m&#229; lage en arbeidskopi som er beregnet p&#229; &#229; ha en spesiell 
+        funksjonalitet og feilrettinger.
+        Du kan oppn&#229; dette ved &#229; selektivt tilbakedatere filer eller 
+        kataloger til spesielle revisjoner (ved &#229; bruke <command>svn 
+        update -r</command> i stor skala), eller ved &#229; bytte om filer og 
+        kataloger til spesielle grener (ved hjelp av <command>svn 
+        switch</command>).
+        N&#229;r du er ferdig, er arbeidskopien din et virvar av 
+        depotplasseringer fra forskjellige revisjoner.
+        Men etter at du har kj&#248;rt noen tester, vet du at dette er 
+        akkurat s&#229;nn som du vil ha det.</para>
 
+      <!-- @ENGLISH {{{
       <para>Time to make a snapshot.  Copying one URL to another won't
         work here. In this case, you want to make a snapshot of your
         exact working copy arrangement and store it in the repository.
@@ -2702,7 +2957,17 @@ Committed revision 351.
         different uses (which you can read about in Chapter 9),
         including the ability to copy a working-copy tree to the
         repository:</para>
+      @ENGLISH }}} -->
+      <para>P&#229; tide &#229; lagre et &#248;yeblikksbilde.
+        Det &#229; kopiere en URL til en annen vil ikke fungere her.
+        I dette tilfellet &#248;nsker du &#229; lage et &#248;yeblikksbilde av din 
+        eksakte arbeidskopi og lagre den i depotet.
+        Heldigvis har <command>svn copy</command> faktisk fire 
+        forskjellige bruksm&#229;ter (som du kan lese om i kapittel 9), 
+        inkludert muligheten til &#229; kopiere et tre av en arbeidskopi til 
+        depotet:</para>
 
+<!-- &#164; -->
 <screen>
 $ ls
 my-working-copy/
@@ -2712,11 +2977,18 @@ $ svn copy my-working-copy http://svn.example.com/repos/calc/tags/mytag
 Committed revision 352.
 </screen>
 
+      <!-- @ENGLISH {{{
       <para>Now there is a new directory in the repository,
         <filename>/calc/tags/mytag</filename>, which is an exact
         snapshot of your working copy&mdash;mixed revisions, URLs,
         and all.</para>
+      @ENGLISH }}} -->
+      <para>N&#229; er det en ny katalog i depotet, 
+        <filename>/calc/tags/mytag</filename>, som er et eksakt 
+        &#248;yeblikksbilde av arbeidskopien din &#8212; blandede revisjoner, URLer 
+        og hele pakken.</para>
 
+      <!-- @ENGLISH {{{
       <para>Other users have found interesting uses for this feature.
         Sometimes there are situations where you have a bunch of local
         changes made to your working copy, and you'd like a
@@ -2727,6 +2999,20 @@ Committed revision 352.
         of the repository.  Your collaborator can then either checkout
         a verbatim copy of your working copy, or use <command>svn
         merge</command> to receive your exact changes.</para>
+      @ENGLISH }}} -->
+      <para>Andre brukere har funnet interessante m&#229;ter &#229; bruke denne 
+        funksjonaliteten p&#229;.
+        Noen ganger er det situasjoner hvor du har en dunge med lokale 
+        forandringer i arbeidskopien, og du vil at en kollega skal se p&#229; 
+        dem.
+        Istedenfor &#229; kj&#248;re <command>svn diff</command> og sende 
+        patchfilen (som ikke vil fange opp treforandringer), kan du 
+        istedenfor bruke <command>svn copy</command> for &#229; 
+        <quote>sende</quote> arbeidskopien til et privat omr&#229;de i 
+        depotet.
+        Kollegaen din kan dermed enten hente ut en n&#248;yaktig kopi av 
+        arbeidskopien din, eller bruke <command>svn merge</command> for 
+        &#229; motta de eksakte forandringene dine.</para>
 
     </sect2>
 
@@ -2736,8 +3022,12 @@ Committed revision 352.
   <!-- ======================== SECTION 7 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-7">
+    <!-- @ENGLISH {{{
     <title>Branch Maintenance</title>
+    @ENGLISH }}} -->
+    <title>Vedlikehold av grener</title>
 
+    <!-- @ENGLISH {{{
     <para>You may have noticed by now that Subversion is extremely
       flexible.  Because it implements branches and tags with the same
       underlying mechanism (directory copies), and because branches
@@ -2745,10 +3035,23 @@ Committed revision 352.
       Subversion intimidating.  It's almost <emphasis>too</emphasis>
       flexible.  In this section, we'll offer some suggestions for
       arranging and managing your data over time.</para>
+    @ENGLISH }}} -->
+    <para>Du har kanskje sett n&#229; at Subversion er ekstremt fleksibel.
+      Fordi den implementerer grener og merker med den samme 
+      underliggende mekanismen (kopier av kataloger), og fordi grener og 
+      merker vises i filsystemet, finner mange Subversion <!-- &#164; -->litt 
+      skremmende.
+      Den er nesten <emphasis>for</emphasis> fleksibel.
+      I denne seksjonen vil vi komme med noen forslag for hvordan du kan 
+      arrangere og vedlikeholde dataene dine over tid.</para>
 
     <sect2 id="svn-ch-4-sect-7.1">
+      <!-- @ENGLISH {{{
       <title>Repository Layout</title>
+      @ENGLISH }}} -->
+      <title><!-- &#164; -->Layout p&#229; depotet</title>
       
+      <!-- @ENGLISH {{{
       <para>There are some standard, recommended ways to organize a
         repository.  Most people create a <filename>trunk</filename>
         directory to hold the <quote>main line</quote> of development,
@@ -2756,6 +3059,15 @@ Committed revision 352.
         copies, and a <filename>tags</filename> directory to contain
         tag copies.  If a repository holds only one project, then
         often people create these top-level directories:</para>
+      @ENGLISH }}} -->
+      <para>Det er noen standardiserte, anbefalte m&#229;ter &#229; organisere et 
+        depot p&#229;.
+        Mange lager en <filename>trunk</filename>-katalog for der 
+        <quote>hovedlinjen</quote> av utvikling foreg&#229;r, en 
+        <filename>branches</filename>-katalog som inneholder grenkopier, 
+        og en <filename>tags</filename>-katalog som inneholder merker.
+        Hvis et depot bare inneholder ett prosjekt, lager man ofte disse 
+        toppkatalogene:</para>
 
 <screen>
 /trunk
@@ -2763,10 +3075,16 @@ Committed revision 352.
 /tags
 </screen>
 
+      <!-- @ENGLISH {{{
       <para>If a repository contains multiple projects, admins
         typically index their layout by project (see <xref
         linkend="svn-ch-5-sect-6.1"/> to read more about
         <quote>project roots</quote>):</para>
+      @ENGLISH }}} -->
+      <para>Hvis et depot inneholder flere prosjekter, legger 
+        administratorer vanligvis depotet opp etter prosjekt (se <xref 
+        linkend="svn-ch-5-sect-6.1"/> for &#229; lese mer om 
+        <quote>prosjektr&#248;tter</quote>):</para>
 
 <screen>
 /paint/trunk
@@ -2777,6 +3095,7 @@ Committed revision 352.
 /calc/tags
 </screen>
 
+      <!-- @ENGLISH {{{
       <para>Of course, you're free to ignore these common layouts.
         You can create any sort of variation, whatever works best for
         you or your team.  Remember that whatever you choose, it's not
@@ -2787,7 +3106,23 @@ Committed revision 352.
         is just a matter of issuing a series of server-side moves; if
         you don't like the way things are organized in the repository,
         just juggle the directories around.</para>
+      @ENGLISH }}} -->
+      <para>Du st&#229;r selvf&#248;lgelig fritt til &#229; ignorere disse vanlige <!-- 
+        &#164; -->layoutene.
+        Du kan lage alle mulige varianter, hva som enn fungerer best for 
+        deg og ditt team.
+        Husk at hva du enn velger, er du ikke forpliktet til &#229; ha det 
+        s&#229;nn for alltid.
+        Du kan reorganisere depotet ditt n&#229;r du vil.
+        Fordi grener og merker er vanlige kataloger, kan <command>svn 
+        move</command>-kommandoen flytte eller skifte navn p&#229; dem s&#229;nn 
+        som du &#248;nsker.
+        &#197; bytte fra en layout til en annen er bare snakk om &#229; <!-- 
+        utf&#248;re --> en serie flyttinger p&#229; tjeneren; hvis du ikke liker 
+        m&#229;ten ting er organisert i depotet, bare <!-- &#164; -->flytt 
+        katalogene rundt om kring.</para>
 
+      <!-- @ENGLISH {{{
       <para>Remember, though, that while moving directories may be
         easy to do, you need to be considerate of your users as well.
         Your juggling can be disorienting to users with existing
@@ -2799,12 +3134,29 @@ Committed revision 352.
         longer exists, and the user will be forced to <command>svn
         switch</command> to the new location.
         </para>
+      @ENGLISH }}} -->
+      <para>Men husk at selv om det &#229; flytte kataloger er en enkel sak, 
+        m&#229; du ogs&#229; tenke p&#229; brukerne dine.
+        Omm&#248;bleringen kan v&#230;re forvirrende for brukere med eksisterende 
+        arbeidskopier.
+        Hvis en bruker har en arbeidskopi fra en spesiell depotkatalog, 
+        kan <command>svn move</command>-operasjonen fjerne stien fra den 
+        seneste revisjonen.
+        N&#229;r brukeren kj&#248;rer <command>svn update</command> neste gang, 
+        vil han bli fortalt at arbeidskopien hans representerer en sti 
+        som ikke lenger finnes, og brukeren vil bli tvunget til &#229; bruke 
+        <command>svn switch</command> for &#229; sette arbeidskopien til den 
+        nye plasseringen.</para>
       
     </sect2>
     
     <sect2 id="svn-ch-4-sect-7.2">
+      <!-- @ENGLISH {{{
       <title>Data Lifetimes</title>
+      @ENGLISH }}} -->
+      <title>Levetid for data</title>
 
+      <!-- @ENGLISH {{{
       <para>Another nice feature of Subversion's model is that
         branches and tags can have finite lifetimes, just like any
         other versioned item.  For example, suppose you eventually
@@ -2813,7 +3165,17 @@ Committed revision 352.
         changes back into <filename>/calc/trunk</filename>, there's
         no need for your private branch directory to stick around
         anymore:</para>
+      @ENGLISH }}} -->
+      <para>En annen fin funksjonalitet med Subversions modell er at 
+        grener og merker kan ha begrenset levetid, akkurat som ethvert 
+        annet versjoner element.
+        For eksempel, tenk at du etterhvert blir ferdig med alt arbeidet 
+        p&#229; din personlige gren i <filename>calc</filename>-prosjektet.
+        Etter at du har flettet alle dine forandringer tilbake til 
+        <filename>/calc/trunk</filename>, trenger ikke grenkatalogen &#229; 
+        ligge der mer:</para>
 
+<!-- &#164; -->
 <screen>
 $ svn delete http://svn.example.com/repos/calc/branches/my-calc-branch \
              -m "Removing obsolete branch of calc project."
@@ -2821,6 +3183,7 @@ $ svn delete http://svn.example.com/repos/calc/branches/my-calc-branch \
 Committed revision 375.
 </screen>
 
+      <!-- @ENGLISH {{{
       <para>And now your branch is gone.  Of course it's not really
         gone: the directory is simply missing from the
         <literal>HEAD</literal> revision, no longer distracting
@@ -2828,13 +3191,31 @@ Committed revision 375.
         <command>svn switch</command>, or <command>svn list</command>
         to examine an earlier revision, you'll still be able to see
         your old branch.</para>
+      @ENGLISH }}} -->
+      <para>Og n&#229; er forgreningen borte.
+        Selvf&#248;lgelig er den ikke egentlig borte, katalogen mangler bare 
+        fra <literal>HEAD</literal>-revisjonen og distraherer dermed 
+        ingen.
+        Hvis du bruker <command>svn checkout</command>, <command>svn 
+        switch</command> eller <command>svn list</command> for &#229; 
+        unders&#248;ke en tidligere revisjon, vil du fortsatt v&#230;re i stand 
+        til &#229; se den gamle grenen din.</para>
 
+      <!-- @ENGLISH {{{
       <para>If browsing your deleted directory isn't enough, you can
         always bring it back.  Resurrecting data is very easy in
         Subversion.  If there's a deleted directory (or file) that
         you'd like to bring back into <literal>HEAD</literal>, simply
         use <command>svn copy -r</command> to copy it from the old
         revision:</para>
+      @ENGLISH }}} -->
+      <para>Hvis det ikke er nok &#229; bare unders&#248;ke den slettede 
+        katalogen, kan du alltids hente den tilbake.
+        &#197; hente tilbake data i Subversion er veldig enkelt.
+        Hvis det er en slettet katalog (eller fil) som du vil hente 
+        tilbake inn i <literal>HEAD</literal>, kan du bruke <command>svn 
+        copy -r</command> for &#229; kopiere den fra den gamle 
+        revisjonen:</para>
 
 <screen>
 $ svn copy -r 374 http://svn.example.com/repos/calc/branches/my-calc-branch \
@@ -2843,6 +3224,7 @@ $ svn copy -r 374 http://svn.example.com/repos/calc/branches/my-calc-branch \
 Committed revision 376.
 </screen>
 
+      <!-- @ENGLISH {{{
       <para>In our example, your personal branch had a relatively
         short lifetime: you may have created it to fix a bug or
         implement a new feature.  When your task is done, so is the
@@ -2856,7 +3238,25 @@ Committed revision 376.
         developers to stop programming either.  So instead, you create
         a <quote>stable</quote> branch of the software that won't
         change much:</para>
+      @ENGLISH }}} -->
+      <para>I eksempelet v&#229;rt hadde den personlige grenen din en 
+        relativt kort levetid, du kan ha laget den for &#229; ordne en feil 
+        eller legge til en ny funksjonalitet.
+        N&#229;r oppgaven din er gjort, er levetiden til grenen over.
+        Men innen programutvikling er det ogs&#229; vanlig &#229; ha to 
+        <quote>hoved</quote>-grener som lever ved siden av hverandre for 
+        veldig lange perioder.
+        For eksempel, tenk at det er p&#229; tide &#229; utgi en stabil versjon av 
+        <filename>calc</filename>-prosjektet til offentligheten, og du 
+        vet at det kommer til &#229; ta noen m&#229;neder &#229; luke ut feil av 
+        programmet.
+        Du vil ikke at folk skal legge til ny funksjonalitet til 
+        prosjektet, men du vil heller ikke at utviklerne skal stoppe 
+        programmeringen.
+        S&#229; istedenfor lager du en <quote>stabil</quote> gren av 
+        programmet som ikke vil forandre seg s&#229; mye:</para>
 
+<!-- &#164; -->
 <screen>
 $ svn copy http://svn.example.com/repos/calc/trunk \
          http://svn.example.com/repos/calc/branches/stable-1.0 \
@@ -2865,6 +3265,7 @@ $ svn copy http://svn.example.com/repos/calc/trunk \
 Committed revision 377.
 </screen>
 
+      <!-- @ENGLISH {{{
       <para>And now developers are free to continue adding
         cutting-edge (or experimental) features to
         <filename>/calc/trunk</filename>, and you can declare a
@@ -2875,6 +3276,18 @@ Committed revision 377.
         stable branch has shipped, you'll probably continue to
         maintain the branch for a long time&mdash;that is, as long
         as you continue to support that release for customers.</para>
+      @ENGLISH }}} -->
+      <para>Og n&#229; kan utviklerne fortsette med &#229; legge til rykende 
+        ferske (eller eksperimentelle) funksjoner til 
+        <filename>/calc/trunk</filename>, og du kan lage en regel for 
+        prosjektet som sier at bare feilrettinger skal legges inn i 
+        <filename>/calc/branches/stable-1.0</filename>.
+        Det vil si, mens brukerne fortsetter &#229; arbeide i trunk, kan 
+        feilrettinger selektivt bli flettet over til den stabile grenen.
+        Selv etter at den stabile grenen er p&#229; markedet, vil du 
+        sannsynligvis fortsette &#229; vedlikeholde grenen i lang tid &#8212; det 
+        vil si s&#229; lenge du fortsetter med &#229; vedlikeholde utgivelsen for 
+        kunder.</para>
 
     </sect2>
 
@@ -2885,8 +3298,12 @@ Committed revision 377.
   <!-- ======================== SECTION 8 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-8">
+    <!-- @ENGLISH {{{
     <title>Summary</title>
+    @ENGLISH }}} -->
+    <title>Oppsummering</title>
 
+    <!-- @ENGLISH {{{
     <para>We've covered a lot of ground in this chapter.  We've
       discussed the concepts of tags and branches, and demonstrated
       how Subversion implements these concepts by copying directories
@@ -2897,9 +3314,26 @@ Committed revision 377.
       mixed-location working copies.  And we've talked about how one
       might manage the organization and lifetimes of branches in a
       repository.</para>
+    @ENGLISH }}} -->
+    <para>Vi har g&#229;tt igjennom en god del i dette kapittelet.
+      Vi har diskutert konseptene med merker og grener, og demonstrert 
+      hvordan Subversion implementerer disse konseptene ved &#229; kopiere 
+      kataloger med <command>svn copy</command>-kommandoen.
+      Vi har vist hvordan <command>svn merge</command> brukes for &#229; 
+      kopiere forandringer fra en gren til en annen, eller omgj&#248;re feile 
+      forandringer.
+      Vi har g&#229;tt over bruken av <command>svn switch</command> for &#229; 
+      lage arbeidskopier med blandede revisjoner.
+      Og vi har snakket om hvordan man kan vedlikeholde organiseringen 
+      og levetiden til grener i et depot.</para>
 
+    <!-- @ENGLISH {{{
     <para>Remember the Subversion mantra: branches and tags are cheap.
       So use them liberally!</para>
+    @ENGLISH }}} -->
+    <para>Husk mantraet til Subversion:
+      Grener og merker er billige.
+      S&#229; bruk dem s&#229; mye du vil!</para>
 
   </sect1>
 

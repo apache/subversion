@@ -64,7 +64,7 @@
     @ENGLISH }}} -->
     <para>Subversion er et fritt/opensource versjonskontrollsystem.
       Det betyr: Subversion behandler filer og kataloger over tid.
-      Et tre av filer er plassert inn i et sentralt 
+      Et tre av filer er plassert i i et sentralt 
       <firstterm>depot</firstterm>.
       Depotet ligner mye p&#229; en vanlig filtjener, med det unntaket at den 
       husker hver eneste forandring noensinne gjort p&#229; filene og 
@@ -72,7 +72,7 @@
       Dette tillater deg &#229; hente fram eldre versjoner av dataene dine, 
       eller studere historien for hvordan dataene dine har forandret 
       seg.
-      I anledning dette tenker mange p&#229; versjonskontroll som en slags 
+      P&#229; grunn av dette tenker mange p&#229; versjonskontroll som en slags 
       <quote>tidsmaskin</quote>.</para>
     
     <!-- @ENGLISH {{{
@@ -91,7 +91,7 @@
       P&#229; et visst niv&#229; gir muligheten for forskjellige personer til &#229; 
       modifisere og behandle den samme datamengden seg utslag i 
       samarbeid.
-      Fremgangen kan g&#229; fortere uten en trang flaskehals all 
+      Fremgangen kan g&#229; fortere uten en trang flaskehals som alle 
       forandringene m&#229; g&#229; gjennom.
       Og fordi arbeidet er versjonert, trenger du ikke frykte at 
       kvaliteten er noe du m&#229; gi avkall p&#229; n&#229;r du mister denne 
@@ -115,9 +115,10 @@
       --><foreignphrase>software configuration 
       management</foreignphrase>-systemer (SCM).
       Disse systemene er spesielt beregnet p&#229; &#229; vedlikeholde tr&#230;r av 
-      kildekode, og har mange funksjoner som er spesifikk til 
-      programutvikling &#8212; som en viss forst&#229;else av programmeringsspr&#229;k, 
-      eller de tilbyr verkt&#248;y for &#229; bygge programvare.
+      kildekode, og har mange funksjoner som er spesielt tilpasset 
+      programutvikling &#8212; de kan ha en viss forst&#229;else av 
+      programmeringsspr&#229;k, eller de tilbyr verkt&#248;y for &#229; bygge 
+      programvare.
       Subversion, derimot, er ikke et av disse systemene.
       Det er et generelt system som kan bli brukt til &#229; vedlikeholde en 
       <emphasis>hvilken som helst</emphasis> samling av filer.
@@ -155,7 +156,7 @@
     @ENGLISH }}} -->
     <para>Tidlig i &#229;r 2000 startet CollabNet, Inc. (<systemitem
       class="url">http://www.collab.net</systemitem>) letingen etter 
-      utviklere for &#229; skrive en erstatning for CVS.
+      utviklere for &#229; lage en erstatning for CVS.
       CollabNet tilbyr programvare for &#229; muliggj&#248;re samarbeid &#8212; 
       SourceCast &#8212; der en komponent er versjonskontroll.
       Selv om SourceCast brukte CVS som sitt f&#248;rste 
@@ -167,7 +168,7 @@
       <emphasis>ikke fantes</emphasis> noe bedre, ihvertfall ikke under 
       en fri lisens.
       S&#229; CollabNet gikk inn for &#229; skrive et nytt versjonskontrollsystem 
-      fra scratch, basert p&#229; de grunnleggende id&#233;ene fra CVS, men uten 
+      fra bunnen av, basert p&#229; de grunnleggende id&#233;ene fra CVS, men uten 
       feilene og manglende funksjoner.</para>
 
     <!-- @ENGLISH {{{
@@ -207,7 +208,7 @@
       Frustrasjonen deres over CVS hadde f&#229;tt Jim til &#229; tenke n&#248;ye over 
       bedre veier til &#229; behandle versjonerte data, og han hadde allerede 
       kommet opp med ikke bare navnet <quote>Subversion</quote>, men 
-      ogs&#229; med det grunnleggende designet av depotet for Subversion.
+      ogs&#229; med den grunnleggende designen av depotet for Subversion.
       Da foresp&#248;rselen kom fra CollabNet, gikk Karl &#248;yeblikket med p&#229; &#229; 
       arbeide med prosjektet, og Jim fikk sin arbeidsgiver, RedHat 
       Software, til &#229; hovedsaklig donere ham til prosjektet for en 
@@ -216,10 +217,10 @@
       designarbeid startet i mai.
       Med hjelp av noen velplasserte n&#229;lestikk fra Brian Behlendorf, 
       Jason Robbins fra CollabNet og Greg Stein (p&#229; den tiden en 
-      uavhengig utvikler aktiv innen spesifikasjonsprosessen for 
+      uavhengig utvikler aktiv innen spesifiseringsprosessen for 
       WebDAV/DeltaV), fikk Subversion raskt trukket til seg en samling 
       aktive utviklere.
-      Det viste seg at mange folk hadde hatt de samme frustrerende 
+      Det viste seg at mange hadde hatt de samme frustrerende 
       opplevelsene med CVS, og &#248;nsket sjansen til &#229; endelig f&#229; gjort noe 
       med dette velkommen.</para>
 
@@ -273,7 +274,7 @@
       fleste opensource-prosjekter, styrt av et l&#248;st sammensatt og 
       gjennomsiktig regelverk som oppmuntrer til elitestyre.
       CollabNets copyrightlisens er fullstendig i samsvar med Debians 
-      retningslinjer for fri software &#8212; <foreignphrase>Debian Free 
+      retningslinjer for fri programvare &#8212; <foreignphrase>Debian Free 
       Software Guidelines</foreignphrase>.
       Med andre ord, alle kan hente, modifisere og redistribuere 
       Subversion som de selv &#248;nsker; ingen tillatelse fra CollabNet 
@@ -360,7 +361,7 @@
         <term>Sann versjonshistorie</term>
         <listitem>
         <para>Siden CVS er begrenset til versjonering av filer, er ikke 
-          operasjoner som kopiering og navneskifte &#8212; som kan hende med 
+          operasjoner som kopiering og navneskifter &#8212; som kan hende med 
           filer, men som egentlig er forandringer i innholdet av 
           katalogen de ligger i &#8212; st&#248;ttet i CVS.
           I tillegg kan du ikke i CVS erstatte en versjonert fil med en 
@@ -410,7 +411,7 @@
         <term>Versjonerte metadata</term>
         <listitem>
           <para>Hver fil og katalog har et sett med egenskaper &#8212; 
-            egenskapsnavn og deres verdier &#8212; assosiert med seg.
+            egenskapsnavn og deres verdier &#8212; assossiert med seg.
             Du kan opprette og lagre ethvert vilk&#229;rlig 
             egenskapsnavn/verdi-par som du &#248;nsker.
             Egenskaper er versjonert over tid, akkurat som 
@@ -497,7 +498,7 @@
             Subversion lager forgreninger og merker ved &#229; rett og slett 
             kopiere prosjektet, ved hjelp av en mekanisme lik en hard 
             lenke.
-            Dermed tar disse operasjonene bare en liten, konstant 
+            Dermed tar disse operasjonene bare en liten, konstant mengde 
             tid.</para>
         </listitem>
       </varlistentry>
@@ -513,7 +514,7 @@
             languages.</para>
         </listitem>
         @ENGLISH }}} -->
-        <term><quote>Hackability</quote></term><!-- &#164; -->
+        <term><quote>Hackervennlighet</quote></term>
         <listitem>
           <para>Subversion har ingen historisk bagasje; den er 
             implementert som en samling av delte C-biblioteker med 
@@ -566,8 +567,8 @@
     @ENGLISH }}} -->
     <para>P&#229; den ene kanten er et Subversiondepot som inneholder alle 
       dine versjonerte data.
-      I den andre enden er Subversionklienten din, som styrer med lokale 
-      avspeilinger av deler av disse versjonerte dataene (kalt 
+      I den andre enden er Subversionklienten din, som holder rede p&#229; 
+      lokale avspeilinger av deler av disse versjonerte dataene (kalt 
       <quote>arbeidskopier</quote>).
       Mellom disse yttergrensene er det flere ruter gjennom diverse 
       tilgangslag &#8212; <foreignphrase>Repository Access 
@@ -650,7 +651,7 @@
       <filename>INSTALL</filename> for &#229; kompilere den.
       Merk at en offentliggjort kildekodepakke inneholder alt du trenger 
       for &#229; bygge en kommandolinjeklient i stand til &#229; kommunisere med 
-      et fjerntliggende depot (i s&#230;rdeleshet, bibliotekene apr, apr-util 
+      et fjerntliggende depot (mer spesifikt, bibliotekene apr, apr-util 
       og neon).
       Men valgfrie deler av Subversion har mange andre avhengigheter, 
       som Berkeley DB og muligens Apache httpd.
@@ -751,9 +752,9 @@
             make your repository available to others over a
             network.</para>
           @ENGLISH }}} -->
-          <para>En programtilleggsmodul for Apache HTTP-serveren, brukt 
-            til &#229; gj&#248;re depotet ditt tilgjengelig for andre over et 
-            nettverk.</para>
+          <para>En programtilleggsmodul for Apache HTTP-serveren, som 
+            brukes til &#229; gj&#248;re depotet ditt tilgjengelig for andre over 
+            et nettverk.</para>
         </listitem>
       </varlistentry>
 
@@ -815,7 +816,7 @@
       er ment &#229; gi personer som l&#230;rer <quote>nedenfra og opp</quote> en 
       sjanse.
       Hvis du er en av dem som liker &#229; l&#230;re gjennom eksperimentering, 
-      vil den f&#248;lgende demonstrasjonen f&#229; deg opp &#229; kj&#248;re.
+      vil den f&#248;lgende demonstrasjonen f&#229; deg i gang.
       Under gjennomgangen vil vi gi deg lenker til de relevante 
       kapitlene i denne boken.</para>
 
@@ -848,9 +849,9 @@
         til kj&#248;ring.
         Det forutsetter ogs&#229; at <command>svn</command>-klienten er 
         kompilert med st&#248;tte for Berkeley DB.
-        For &#229; sjekke dette, kj&#248;r <command>svn --version</command> og se 
-        at <literal>ra_local</literal>-modulen er tilgjengelig.
-        Uten denne modulen, kan ikke klienten f&#229; adgang til URLer av 
+        For &#229; kontrollere dette, kj&#248;r <command>svn --version</command> 
+        og sjekk at <literal>ra_local</literal>-modulen er tilgjengelig.
+        Uten denne modulen kan ikke klienten f&#229; adgang til URLer av 
         typen <literal>file://</literal>.</para>
     </note>
 
@@ -937,7 +938,7 @@ conf/  dav/  db/  format  hooks/  locks/  README.txt
       into the repository with the <command>svn import</command>
       command (see <xref linkend="svn-ch-3-sect-7.3"/>):</para>
     @ENGLISH }}} -->
-    <para>N&#229;r du har klart et tre med data, importer dataene inn i 
+    <para>N&#229;r du har klargjort et tre med data, importer dataene inn i 
       depotet med kommandoen  <command>svn import</command> (se <xref 
       linkend="svn-ch-3-sect-7.3"/>):</para>
 
@@ -1033,16 +1034,23 @@ Checked out revision 1.
       working copy <quote>up-to-date</quote> with the repository.
       </para></listitem>
       @ENGLISH }}} -->
-      <listitem><para>G&#229; inn i arbeidskopien og rediger innholdet av en 
-      fil.</para></listitem>
-      <listitem><para>Kj&#248;r kommandoen <command>svn diff</command> for &#229; 
-      se en <foreignphrase>unified diff</foreignphrase> (forskjellsfil) 
-      over forandringene dine.</para></listitem>
-      <listitem><para>Kj&#248;r <command>svn commit</command> for &#229; legge inn 
-      den nye versjonen av filen din til depotet.</para></listitem>
-      <listitem><para>Kj&#248;r <command>svn update</command> for &#229; gj&#248;re 
-      arbeidskopien din <quote>up-to-date</quote> med 
-      depotet.</para></listitem>
+      <listitem>
+        <para>G&#229; inn i arbeidskopien og rediger innholdet av en 
+          fil.</para>
+      </listitem>
+      <listitem>
+        <para>Kj&#248;r kommandoen <command>svn diff</command> for &#229; se en 
+          <foreignphrase>unified diff</foreignphrase> (forskjellsfil) 
+          over forandringene dine.</para>
+      </listitem>
+      <listitem>
+        <para>Kj&#248;r <command>svn commit</command> for &#229; legge inn den nye 
+          versjonen av filen din til depotet.</para>
+      </listitem>
+      <listitem>
+        <para>Kj&#248;r <command>svn update</command> for &#229; oppdatere 
+          arbeidskopien din i forhold til depotet.</para>
+      </listitem>
     </itemizedlist>
 
     <!-- @ENGLISH {{{

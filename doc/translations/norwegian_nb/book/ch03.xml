@@ -1849,7 +1849,7 @@ C      stuff/loot/lump.c   # denne filen inneholder en konflikt fra en
         @ENGLISH }}} -->
         <para>Den femte kolonnen vil bare vise blanktegn eller en 
           <computeroutput>S</computeroutput>.
-          Dette viser at filen eller katalogen er blitt svitsjet fra 
+          Dette viser at filen eller katalogen er blitt byttet om fra 
           stien som resten av arbeidskopien bruker (ved bruk av 
           <command>svn switch</command>) til en forgrening.</para>
         

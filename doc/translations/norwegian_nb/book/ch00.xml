@@ -60,8 +60,7 @@
       m&#229;ter:
       Ved &#229; lage et opensource-system med en design (og <!-- &#164; 
       --><quote>look and feel</quote>) som ligner p&#229; CVS, og samtidig 
-      pr&#248;ve &#229; fikse mesteparten av feilene som legges godt merke til i 
-      CVS.
+      pr&#248;ve &#229; fikse mesteparten av de &#229;penbare feilene i CVS.
       Selv om resultatet n&#248;dvendigvis ikke er det neste store steget 
       innen versjonskontrolldesign, <emphasis>er</emphasis> Subversion 
       meget kraftig, brukbart og veldig fleksibelt.</para>
@@ -153,7 +152,7 @@
       systemadministratorer som har behov for &#229; f&#248;lge forandringer i 
       kildekode.
       Dette er den vanligste bruken av Subversion, og derfor legges 
-      dette scenarioet til grunn for alle bokens eksempler.
+      dette scenariet til grunn for alle bokens eksempler.
       Men Subversion kan ogs&#229; brukes til &#229; holde rede p&#229; forandringer i 
       alle typer informasjon: Bilder, musikk, databaser, dokumentasjon 
       og s&#229; videre.
@@ -172,7 +171,7 @@
       gj&#248;re det lett for CVS-brukere &#229; foreta en smertefri overgang til 
       Subversion.
       Spesielle sidenotater kan diskutere CVS n&#229; og da, og et spesielt 
-      appendiks summerer opp mesteparten av forskjellene mellom CVS og 
+      tillegg summerer opp mesteparten av forskjellene mellom CVS og 
       Subversion.</para>
 
   </sect1>
@@ -223,7 +222,7 @@
             s&#229; fort som mulig.
             Kapittel 5 og 6 vil vise deg hvordan du lager ditt f&#248;rste 
             depot og gj&#248;r det tilgjengelig over nettverket.
-            Etter at det er gjort, er kapittel 3 og appendiks A den 
+            Etter at det er gjort, er kapittel 3 og tillegg A den 
             raskeste veien for &#229; bli kjent med Subversionklienten mens 
             du drar nytte av erfaringen du har fra CVS.</para>
         </listitem>
@@ -248,7 +247,7 @@
             Hvis du aldri har brukt et versjonskontrollsystem f&#248;r (som 
             CVS), er kapitlene 2 og 3 en vital introduksjon.
             Hvis du allerede er en gammel rev innen CVS, er kapittel 3 
-            og appendiks A de beste plassene &#229; starte.</para>
+            og tillegg A de beste plassene &#229; starte.</para>
         </listitem>
       </varlistentry>
 
@@ -308,8 +307,8 @@
       book.</para>
     @ENGLISH }}} -->
     <para>Boken slutter med referansemateriale &#8212; kapittel 9 er en 
-      referanseguide for alle Subversionkommandoer, og appendiksene 
-      dekker en rekke nyttige emner.
+      referanseguide for alle Subversionkommandoer, og tilleggene dekker 
+      en rekke nyttige emner.
       Dette er kapitlene du mest sannsynlig vil komme tilbake til n&#229;r du 
       er ferdig med boken.</para>
 
@@ -630,7 +629,7 @@
           <listitem>
             <para>Forklarer i stor detalj hver eneste delkommando i 
               <command>svn</command>, <command>svnadmin</command> og 
-              <command>svnlook</command> med nok eksempler til hele 
+              <command>svnlook</command> med nok eksempler for hele 
               familien!</para>
           </listitem>
         </varlistentry>
@@ -650,7 +649,7 @@
               conflict resolution, and authentication.</para>
           </listitem>
           @ENGLISH }}} -->
-          <term>Appendiks A, <emphasis>Subversion for 
+          <term>Tillegg A, <emphasis>Subversion for 
             CVS-brukere</emphasis></term>
           <listitem>
             <para>Dekker likheter og forskjeller mellom Subversion og 
@@ -673,7 +672,7 @@
               building Subversion.</para>
           </listitem>
           @ENGLISH }}} -->
-          <term>Appendiks B, <emphasis>Feils&#248;king</emphasis></term>
+          <term>Tillegg B, <emphasis>Feils&#248;king</emphasis></term>
           <listitem>
             <para>Adresserer vanlige problemer og vanskeligheter ved 
               bruk og kompilering av Subversion.</para>
@@ -690,7 +689,7 @@
               mounted read/write as a DAV share.</para>
           </listitem>
           @ENGLISH }}} -->
-          <term>Appendiks C, <emphasis>WebDAV og 
+          <term>Tillegg C, <emphasis>WebDAV og 
             autoversjonering</emphasis></term>
           <listitem>
             <para>Beskriver detaljene om WebDAV og DeltaV, og hvordan du 
@@ -708,7 +707,7 @@
               browser tools, and so on.</para>
           </listitem>
           @ENGLISH }}} -->
-          <term>Appendiks D, <emphasis>Tredjeparts 
+          <term>Tillegg D, <emphasis>Tredjeparts 
             verkt&#248;y</emphasis></term>
           <listitem>
             <para>Diskuterer verkt&#248;y som st&#248;tter eller bruker 
@@ -863,22 +862,22 @@
       korreksjoner:
       Selv om dette uten tvil ikke er en komplett liste, ville denne 
       boken v&#230;re ukomplett og ukorrekt uten hjelp fra:
-      Jani Averbach, Ryan Barrett, Francois Beausoleil, Jennifer Bevan, 
-      Matt Blais, Zack Brown, Martin Buchholz, Brane Cibej, John R. 
+      Jani Averbach, Ryan Barrett, Fran&#231;ois Beausoleil, Jennifer Bevan, 
+      Matt Blais, Zack Brown, Martin Buchholz, Brane &#268;ibej, John R. 
       Daily, Peter Davis, Olivier Davy, Robert P. J. Day, Mo DeJong, 
       Brian Denny, Joe Drew, Nick Duffek, Ben Elliston, Justin 
       Erenkrantz, Shlomi Fish, Julian Foad, Chris Foote, Martin Furter, 
       Dave Gilbert, Eric Gillespie, Matthew Gregan, Art Haas, Greg 
       Hudson, Alexis Huxley, Jens B. Jorgensen, Tez Kamihira, David 
-      Kimdon, Mark Benedetto King, Andreas J. Koenig, Nuutti Kotivuori, 
+      Kimdon, Mark Benedetto King, Andreas J. K&#246;nig, Nuutti Kotivuori, 
       Matt Kraai, Scott Lamb, Vincent Lefevre, Morten Ludvigsen, Paul 
-      Lussier, Bruce A. Mah, Philip Martin, Feliciano Matias, Patrick 
+      Lussier, Bruce A. Mah, Philip Martin, F&#233;liciano Matias, Patrick 
       Mayweg, Gareth McCaughan, Jon Middleton, Tim Moloney, Mats 
       Nilsson, Joe Orton, Amy Lyn Pilato, Kevin Pilch-Bisson, Dmitriy 
       Popkov, Michael Price, Mark Proctor, Steffen Prohaska, Daniel 
-      Rall, Tobias Ringstrom, Garrett Rooney, Joel Rosdahl, Christian 
+      Rall, Tobias Ringstr&#246;m, Garrett Rooney, Joel Rosdahl, Christian 
       Sauer, Larry Shatzer, Russell Steicke, Sander Striker, Erik 
-      Sjoelund, Johan Sundstroem, John Szakmeister, Mason Thomas, Eric 
+      Sj&#246;lund, Johan Sundstr&#246;m, John Szakmeister, Mason Thomas, Eric 
       Wadsworth, Colin Watson, Alex Waugh, Chad Whitacre, Josef Wolf, 
       Blair Zajac, og hele Subversion-fellesskapet.</para>
 
@@ -1151,9 +1150,10 @@
             Berkeley DB database.
             Istedenfor lagrer disse nye depotene data i det ordin&#230;re 
             filsystemet ved &#229; bruke et tilpasset format.
-            Disse depotene er ikke s&#229;rbare for <!-- &#164; 
-            --><quote>wedging</quote>, men er heller ikke s&#229; 
-            gjennomtestet som Berkeley DB-depot.
+            Disse depotene er ikke s&#229;rbare for <!-- &#164; wedge = kile 
+            (subst), kile fast (verb). Kanskje det g&#229;r an &#229; bruke en 
+            variasjon av det. &#171;Fastkilt&#187;? --><quote>wedging</quote>, men 
+            er heller ikke s&#229; gjennomtestet som Berkeley DB-depot.
             Se <xref linkend="svn-ch-5-sect-1.3"/>.</para>
         </listitem>
       </varlistentry>
@@ -1232,14 +1232,14 @@
             (<quote>escape</quote>) URL-er manuelt.
             Klienten aksepterte bare <quote>lovlige og korrekte</quote> 
             URL-er, som 
-            <literal>http://host/path%20with%20space/project/espa%F1a</literal>.
-            Kommandolinjeklienten for 1.1 ved n&#229; hvordan den skal gj&#248;re 
+            <literal>http://tjener/sti%20med%20mellomrom/prosjekt/espa%F1a</literal>.
+            Kommandolinjeklienten for 1.1 vet n&#229; hvordan den skal gj&#248;re 
             det som nettlesere har gjort i lang tid:
             Den autobeskytter tegn som mellomrom og bokstaver med 
             aksent, s&#229; lenge brukeren plasserer URL-en i hermetegn for &#229; 
             beskytte tegn fra skallet:
-            <literal>"http://host/sti med 
-            mellomrom/project/espa&#241;a"</literal></para>
+            <literal>"http://tjener/sti med 
+            mellomrom/prosjekt/espa&#241;a"</literal></para>
         </listitem>
       </varlistentry>
 
