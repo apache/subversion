@@ -852,17 +852,18 @@ derive_copyfrom_url (svn_stringbuf_t **copyfrom_url,
     {
       if (stackptr->next)
         {
-          char *dirname;
+          svn_stringbuf_t *dirname;
 
           /* Move up the stack */
           stackptr = stackptr->next;
 
-          /* Fetch the 'name' attribute of this parent directory. */
-          dirname = (char *) apr_hash_get (stackptr->this_dir->attributes,
-                                           SVN_WC_ENTRY_ATTR_NAME,
-                                           APR_HASH_KEY_STRING);         
+          /* Fetch the 'name' attribute of this parent directory from
+             its URL. */
+          dirname = svn_path_last_component (stackptr->this_dir->url,
+                                             svn_path_url_style, stack->pool);
+
           /* Add it to the url. */
-          svn_path_add_component_nts (root_copyfrom_url, dirname,
+          svn_path_add_component_nts (root_copyfrom_url, dirname->data,
                                       svn_path_url_style);
         }
       else 
@@ -2210,7 +2211,7 @@ crawl_as_copy (svn_stringbuf_t *parent,
       /* Crawl this directory in "copy mode".  This will push the
          stackframe with dir_baton, do some work, then close the
          directory and pop the stackframe for us. */
-      SVN_ERR (crawl_dir (parent, dir_baton, editor, edit_baton,
+      SVN_ERR (crawl_dir (fullpath, dir_baton, editor, edit_baton,
                           NULL, NULL, &youngest_rev, FALSE, 
                           TRUE /* copy mode! */, &stack,
                           affected_targets, locks, pool));
