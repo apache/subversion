@@ -1637,7 +1637,8 @@ svn_error_t *svn_wc_resolved_conflict (const char *path,
 
 /* Commits. */
 
-/** Bump a successfully committed absolute @a path to @a new_revnum after a
+/** @since New in 1.2.
+ * Bump a successfully committed absolute @a path to @a new_revnum after a
  * commit succeeds.  @a rev_date and @a rev_author are the (server-side)
  * date and author of the new revision; one or both may be @c NULL.
  * @a adm_access must hold a write lock appropriate for @a path.
@@ -1646,10 +1647,28 @@ svn_error_t *svn_wc_resolved_conflict (const char *path,
  * wc properties; if an @c svn_prop_t->value is null, then that property is
  * deleted.
  *
+ * If @a remove_lock is @c TRUE, any entryprops related to a repository
+ * lock will be removed.
+ *
  * If @a recurse is true and @a path is a directory, then bump every
  * versioned object at or under @a path.  This is usually done for
  * copied trees.
  */
+svn_error_t *svn_wc_process_committed2 (const char *path,
+                                        svn_wc_adm_access_t *adm_access,
+                                        svn_boolean_t recurse,
+                                        svn_revnum_t new_revnum,
+                                        const char *rev_date,
+                                        const char *rev_author,
+                                        apr_array_header_t *wcprop_changes,
+                                        svn_boolean_t remove_lock,
+                                        apr_pool_t *pool);
+
+
+/** @deprecated Provided for backwards compability with the 1.1 API.
+ *
+ * Similar to @c svn_wc_process_committed2, but with @a remove_lock set to
+ * @a FALSE. */
 svn_error_t *svn_wc_process_committed (const char *path,
                                        svn_wc_adm_access_t *adm_access,
                                        svn_boolean_t recurse,

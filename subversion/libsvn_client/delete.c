@@ -187,9 +187,11 @@ delete_urls (svn_client_commit_info_t **commit_info,
 
   /* Fetch RA commit editor */
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
-  SVN_ERR (ra_lib->get_commit_editor (session, &editor, &edit_baton,
-                                      log_msg, svn_client__commit_callback,
-                                      commit_baton, pool));
+  SVN_ERR (ra_lib->get_commit_editor2 (session, &editor, &edit_baton,
+                                       log_msg, svn_client__commit_callback,
+                                       commit_baton,
+                                       NULL, TRUE, /* No lock tokens */
+                                       pool));
 
   /* Call the path-based editor driver. */
   err = svn_delta_path_driver (editor, edit_baton, SVN_INVALID_REVNUM, 

@@ -581,6 +581,32 @@ log_do_modify_entry (struct log_runner *loggy,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+log_do_delete_lock (struct log_runner *loggy,
+                    const char *name)
+{
+  svn_error_t *err;
+  svn_wc_entry_t entry;
+
+  entry.lock_token = entry.lock_comment = entry.lock_owner = NULL;
+  entry.lock_crt_date = 0;
+
+  /* Now write the new entry out */
+  err = svn_wc__entry_modify (loggy->adm_access, name,
+                              &entry,
+                              SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
+                              | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
+                              | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
+                              | SVN_WC__ENTRY_MODIFY_LOCK_CRT_DATE,
+                              FALSE, loggy->pool);
+  if (err)
+    return svn_error_createf (pick_error_code (loggy), err,
+                              _("Error removing lock from entry for '%s'"),
+                              name);
+  loggy->entries_modified = TRUE;
+
+  return SVN_NO_ERROR;
+}
 
 /* Ben sez:  this log command is (at the moment) only executed by the
    update editor.  It attempts to forcefully remove working data. */
@@ -1206,6 +1232,9 @@ start_handler (void *userData, const char *eltname, const char **atts)
   /* Dispatch. */
   if (strcmp (eltname, SVN_WC__LOG_MODIFY_ENTRY) == 0) {
     err = log_do_modify_entry (loggy, name, atts);
+  }
+  else if (strcmp (eltname, SVN_WC__LOG_DELETE_LOCK) == 0) {
+    err = log_do_delete_lock (loggy, name);
   }
   else if (strcmp (eltname, SVN_WC__LOG_DELETE_ENTRY) == 0) {
     err = log_do_delete_entry (loggy, name);

@@ -144,6 +144,8 @@ const apr_getopt_option_t svn_cl__options[] =
                       "of 'LF', 'CR', 'CRLF'")},
     {"limit",         svn_cl__limit_opt, 1,
                       N_("maximum number of log entries")},
+    {"no-unlock",     svn_cl__no_unlock_opt, 0,
+                      N_("don't unlock the targets")},
     {0,               0, 0, 0}
   };
 
@@ -215,11 +217,13 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "commit", svn_cl__commit, {"ci"},
     N_("Send changes from your working copy to the repository.\n"
-     "usage: commit [PATH...]\n"
-     "\n"
-     "  A log message must be provided, but it can be empty.  If it is not\n"
-     "  given by a --message or --file option, an editor will be started.\n"),
-    {'q', 'N', svn_cl__targets_opt,
+       "usage: commit [PATH...]\n"
+       "\n"
+       "  A log message must be provided, but it can be empty.  If it is not\n"
+       "  given by a --message or --file option, an editor will be started.\n"
+       "  If any targets are (or contain) locked items, those will be\n"
+       "  unlocked after a successful commit.\n"),
+    {'q', 'N', svn_cl__targets_opt, svn_cl__no_unlock_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
   { "copy", svn_cl__copy, {"cp"},
@@ -1048,6 +1052,9 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
+      case svn_cl__no_unlock_opt:
+        opt_state.no_unlock = TRUE;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */

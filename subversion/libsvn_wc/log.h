@@ -48,6 +48,9 @@ extern "C" {
    attributes are unaffected. */
 #define SVN_WC__LOG_MODIFY_ENTRY        "modify-entry"
 
+/* Delete lock related fields from the entry SVN_WC__LOG_ATTR_NAME. */
+#define SVN_WC__LOG_DELETE_LOCK         "delete-lock"
+
 /* Delete the entry SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_DELETE_ENTRY        "delete-entry"
 

@@ -217,14 +217,15 @@ svn_wc__do_update_cleanup (const char *path,
 
 
 svn_error_t *
-svn_wc_process_committed (const char *path,
-                          svn_wc_adm_access_t *adm_access,
-                          svn_boolean_t recurse,
-                          svn_revnum_t new_revnum,
-                          const char *rev_date,
-                          const char *rev_author,
-                          apr_array_header_t *wcprop_changes,
-                          apr_pool_t *pool)
+svn_wc_process_committed2 (const char *path,
+                           svn_wc_adm_access_t *adm_access,
+                           svn_boolean_t recurse,
+                           svn_revnum_t new_revnum,
+                           const char *rev_date,
+                           const char *rev_author,
+                           apr_array_header_t *wcprop_changes,
+                           svn_boolean_t remove_lock,
+                           apr_pool_t *pool)
 {
   const char *base_name;
   svn_stringbuf_t *logtags;
@@ -341,6 +342,12 @@ svn_wc_process_committed (const char *path,
                            hex_digest,
                            NULL);
 
+  if (remove_lock)
+    svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
+                           SVN_WC__LOG_DELETE_LOCK,
+                           SVN_WC__LOG_ATTR_NAME, base_name,
+                           NULL);
+
   /* Regardless of whether it's a file or dir, the "main" logfile
      contains a command to bump the revision attribute (and
      timestamp.)  */
@@ -441,8 +448,20 @@ svn_wc_process_committed (const char *path,
   return SVN_NO_ERROR;
 }
 
-
-
+svn_error_t *
+svn_wc_process_committed (const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t recurse,
+                          svn_revnum_t new_revnum,
+                          const char *rev_date,
+                          const char *rev_author,
+                          apr_array_header_t *wcprop_changes,
+                          apr_pool_t *pool)
+{
+  return svn_wc_process_committed2 (path, adm_access, recurse, new_revnum,
+                                    rev_date, rev_author, wcprop_changes,
+                                    FALSE, pool);
+}
 
 /* Remove FILE if it exists and is a file.  If it does not exist, do
    nothing.  If it is not a file, error. */

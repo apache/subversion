@@ -65,6 +65,7 @@ typedef enum {
   svn_cl__no_autoprops_opt,
   svn_cl__no_diff_deleted,
   svn_cl__no_ignore_opt,
+  svn_cl__no_unlock_opt,
   svn_cl__non_interactive_opt,
   svn_cl__notice_ancestry_opt,
   svn_cl__old_cmd_opt,
@@ -97,6 +98,9 @@ typedef struct svn_cl__opt_state_t
      commandline.  For example, 'svn up' (with no options) will *not*
      set either of these flags, but will be recursive anyway */
   svn_boolean_t recursive, nonrecursive;
+
+  /* Was --no-unlock specified? */
+  svn_boolean_t no_unlock;
 
   const char *message;           /* log message */
   const char *ancestor_path;     /* ### todo: who sets this? */

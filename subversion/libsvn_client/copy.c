@@ -451,9 +451,11 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Fetch RA commit editor. */
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
-  SVN_ERR (ra_lib->get_commit_editor (sess, &editor, &edit_baton, message,
-                                      svn_client__commit_callback,
-                                      commit_baton, pool));
+  SVN_ERR (ra_lib->get_commit_editor2 (sess, &editor, &edit_baton, message,
+                                       svn_client__commit_callback,
+                                       commit_baton,
+                                       NULL, TRUE, /* No lock tokens */
+                                       pool));
 
   /* Setup our PATHS for the path-based editor drive. */
   APR_ARRAY_PUSH (paths, const char *) = dst_rel;
@@ -707,10 +709,12 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Fetch RA commit editor. */
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
-  if ((cmt_err = ra_lib->get_commit_editor (session, &editor, &edit_baton, 
-                                            message,
-                                            svn_client__commit_callback,
-                                            commit_baton, pool)))
+  if ((cmt_err = ra_lib->get_commit_editor2 (session, &editor, &edit_baton, 
+                                             message,
+                                             svn_client__commit_callback,
+                                             commit_baton,
+                                             NULL, TRUE, /* No lock tokens */
+                                             pool)))
     goto cleanup;
 
   /* Make a note that we have a commit-in-progress. */

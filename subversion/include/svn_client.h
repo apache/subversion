@@ -265,6 +265,8 @@ typedef struct svn_client_commit_info_t
 #define SVN_CLIENT_COMMIT_ITEM_TEXT_MODS   0x04
 #define SVN_CLIENT_COMMIT_ITEM_PROP_MODS   0x08
 #define SVN_CLIENT_COMMIT_ITEM_IS_COPY     0x10
+/** @since New in 1.2. */
+#define SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN  0x20
 /** @} */
 
 /** The commit candidate structure. */
@@ -650,7 +652,9 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
                                 apr_pool_t *pool);
 
 
-/** Commit file or directory @a path into repository, authenticating with
+/** @since New in 1.2.
+ *
+ * Commit files or directories into repository, authenticating with
  * the authentication baton cached in @a ctx, and using 
  * @a ctx->log_msg_func/@a ctx->log_msg_baton to obtain the log message. 
  * Set @a *commit_info to the results of the commit, allocated in @a pool.
@@ -660,20 +664,34 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
  * that.  If @a targets has zero elements, then do nothing and return
  * immediately without error.
  *
- * If @a notify_func is non-null, then call @a ctx->notify_func with 
+ * If @a ctx->notify_func is non-null, then call @a ctx->notify_func with 
  * @a ctx->notify_baton as the commit progresses, with any of the following 
  * actions: @c svn_wc_notify_commit_modified, @c svn_wc_notify_commit_added,
  * @c svn_wc_notify_commit_deleted, @c svn_wc_notify_commit_replaced,
  * @c svn_wc_notify_commit_postfix_txdelta.
  *
- * Use @a nonrecursive to indicate that subdirectories of directory
- * @a targets should be ignored.
+ * If @a nonrecursive is true, subdicrectories of directories in @a targets
+ * will be ignored.
  *
- * Use @a pool for any temporary allocation.
+ * Unlock paths in the repository, unless @a keep_locks is true.
+ *
+ * Use @a pool for any temporary allocations.
  *
  * If no error is returned and @a (*commit_info)->revision is set to
  * @c SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
  * be committed.
+ */
+svn_error_t *
+svn_client_commit2 (svn_client_commit_info_t **commit_info,
+                    const apr_array_header_t *targets,
+                    svn_boolean_t nonrecursive,
+                    svn_boolean_t keep_locks,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+/** @deprecated Provided for backwards compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_client_commit2, but with @a keep_locks set to true.
  */
 svn_error_t *
 svn_client_commit (svn_client_commit_info_t **commit_info,

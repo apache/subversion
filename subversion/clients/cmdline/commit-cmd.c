@@ -82,10 +82,11 @@ svn_cl__commit (apr_getopt_t *os,
 
   /* Commit. */
   SVN_ERR (svn_cl__cleanup_log_msg
-           (ctx->log_msg_baton, svn_client_commit (&commit_info,
-                                                   targets,
-                                                   opt_state->nonrecursive,
-                                                   ctx,
+           (ctx->log_msg_baton, svn_client_commit2 (&commit_info,
+                                                    targets,
+                                                    opt_state->nonrecursive,
+                                                    opt_state->no_unlock,
+                                                    ctx,
                                                    pool)));
   if (commit_info && ! opt_state->quiet)
     SVN_ERR (svn_cl__print_commit_info (commit_info, pool));
