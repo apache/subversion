@@ -108,7 +108,7 @@ local-clean: doc-clean
 	done
 	rm -f $(CLEAN_FILES)
 
-local-distclean: local-clean
+local-distclean: local-clean check-clean
 	rm -f Makefile config.cache config.log config.status libtool \
 		svn_private_config.h
 
@@ -132,6 +132,15 @@ check: $(TEST_DEPS) @FS_TEST_DEPS@
 	$(PYTHON) $(top_srcdir)/build/run_tests.py $$base_url \
 		'$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
 		$(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
+
+check-clean:
+	rm -rf subversion/tests/clients/cmdline/repositories \
+		subversion/tests/clients/cmdline/working_copies \
+		subversion/tests/clients/cmdline/local_tmp \
+		subversion/tests/libsvn_fs/test-repo-* \
+		subversion/tests/libsvn_repos/test-repo-* \
+		subversion/tests/libsvn_subr/z \
+		tests.log
 
 mkdir-init:
 	@list='$(BUILD_DIRS) $(DOC_DIRS)'; for i in $$list doc; do \
