@@ -925,30 +925,41 @@ svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
 
 
 /* Given full paths to three files, merge the differences between LEFT
-   and RIGHT into MERGE_TARGET.  MERGE_TARGET must be under version control.
+   and RIGHT into MERGE_TARGET.  (It may help to know that LEFT,
+   RIGHT, and MERGE_TARGET correspond to "OLDER", "YOURS", and "MINE",
+   respectively, in the diff3 documentation.)  Keywords and line
+   endings are untranslated during the merge.
 
-   LEFT and RIGHT will not be changed.  After the merge, MERGE_TARGET
-   may or may not contain conflict markers.
+   MERGE_TARGET must be under version control; if it is not, return
+   SVN_ERR_NO_SUCH_ENTRY.
 
-   If no conflicts resulted, then this function simply returns without
-   error.
+   If no conflict results from the merge, return without error.  If
+   there is a conflict, then
 
-   If conflict markers were inserted, then this function does much more:
-
-     * the conflict markers are labeled using LEFT_LABEL, RIGHT_LABEL,
-       and TARGET_LABEL.
+     * Put conflict markers around the conflicting regions in
+       MERGE_TARGET, labeled with LEFT_LABEL, RIGHT_LABEL, and
+       TARGET_LABEL.
  
-     * the original, unmodified MERGE_TARGET file is backed up into a
-       unique sibling file that ends with suffix '.TARGET_LABEL'.
+     * Copy the original MERGE_TARGET to a unique name ending with the
+       suffix '.TARGET_LABEL'.
 
-     * copies of LEFT and RIGHT are copied into unique sibling files
-       that end with suffixes '.LEFT_LABEL' and '.RIGHT_LABEL'.  
+     * Copy the text-base for MERGE_TARGET to a unique name based on
+       MERGE_TARGET and in the same directory, and ending with the
+       suffix '.rev-N', where N is the base revision of MERGE-TARGET.
+       (This is useful because the calling code is usually about to
+       replace the old text base with RIGHT anyway.)
 
-     * the entry for MERGE_TARGET is marked "conflicted", and the
-       three backup files are tracked in the entry as well.
+     * Copy LEFT likewise to a file ending with '.LEFT_LABEL'.  (RIGHT
+       is not copied because it is very likely about to become the new
+       text-base.  If not, the caller is still free to preserve it.) 
 
-    POOL is used for any memory needed to spawn processes, disk I/O, etc. 
- */
+     * Mark the entry for MERGE_TARGET as "conflicted", and track the
+       abovementioned backup files in the entry as well.
+
+     * Return the error SVN_ERR_WC_CONFLICT.
+
+   Use POOL for any temporary allocation. 
+*/
 svn_error_t *svn_wc_merge (const char *left,
                            const char *right,
                            const char *merge_target,
@@ -1116,8 +1127,9 @@ svn_error_t *svn_wc_copy_and_translate (const char *src,
  * This function is generally used to get a file that can be compared
  * meaningfully against VFILE's text base.
  *
- * If *XLATED_P is different from VFILE, allocate it in POOL; also use
- * POOL for any temporary allocation.
+ * If *XLATED_P is different from VFILE, then choose *XLATED_P's name
+ * using svn_io_open_unique_file() with SVN_WC__TMP_EXT, and allocate
+ * it in POOL.  Also use POOL for any temporary allocation.
  *
  * If an error is returned, the effect on *XLATED_P is undefined.
  */
