@@ -139,6 +139,10 @@ replace_text_base (svn_stringbuf_t *path,
     return SVN_NO_ERROR;  /* tolerate mop-up calls gracefully */
   else
     {
+      apr_status_t apr_err;
+      apr_file_t *ignored;
+      svn_boolean_t same;
+      svn_stringbuf_t *tmp_workingfile;
       enum svn_wc__eol_style eol_style;
       const char *eol_str;
 
@@ -147,34 +151,53 @@ replace_text_base (svn_stringbuf_t *path,
       SVN_ERR (svn_wc__get_keywords (&revision, &author, &date, &url,
                                      filepath->data, NULL, pool));
 
-      /* The tmpfile which we committed *may* have had keywords
-         contracted, and now the keyword values have changed in the
-         entries file.  Furthermore, the tmpfile *may* also have had
-         line-endings repaired (if eol-style==fixed) or set to LF (if
-         eol-style==native).
+      /* In the commit, newlines and keywords may have been
+       * canonicalized and/or contracted... Or they may not have
+       * been.  It's kind of hard to know.  Here's how we find out:
+       *
+       *    1. Make a translated tmp copy of the committed text base.
+       *    2. Compare it to the working file.
+       *    3. If different, rename the tmp file over working file;
+       *       else just remove the tmp file.
+       *
+       * This means we only rewrite the working file if we absolutely
+       * have to, which is good because it avoids changing the file's
+       * timestamp unless necessary, so editors aren't tempted to
+       * reread the file if they don't really need to.
+       */
+      tmp_workingfile = svn_wc__adm_path (filepath, TRUE, pool,
+                                          filepath->data, NULL); 
+      SVN_ERR (svn_io_open_unique_file (&ignored,
+                                        &tmp_workingfile,
+                                        tmp_workingfile,
+                                        SVN_WC__TMP_EXT,
+                                        FALSE,
+                                        pool));
 
-         Therefore, we copy the tmpfile back on top of the working
-         file, re-doing any EOL translation and keyword substitution
-         that the properties declare necessary.  The effect is to end
-         up with a working file identical to what we would get if we
-         had just checked it out.
+      apr_err = apr_file_close (ignored);
+      if (! (APR_STATUS_IS_SUCCESS (apr_err)))
+        return svn_error_createf
+          (apr_err, 0, NULL, pool,
+           "replace_text_base: error closing %s", tmp_workingfile->data);
 
-         Note: if both the eol and keyword props are completely turned
-         off, then this copy isn't strictly necessary.  But it doesn't
-         harm anything to do it anyway;  the copy just won't do any
-         translation at all. */
       SVN_ERR (svn_io_copy_and_translate (tmp_text_base->data,
-                                          filepath->data,
-                                          eol_str, TRUE /* repair */,
-                                          revision, author, date, url, 
+                                          tmp_workingfile->data,
+                                          eol_str,
+                                          FALSE, /* don't repair eol */
+                                          revision, author, date, url,
                                           TRUE, /* expand keywords */
                                           pool));
 
-      /* The commit is finished, */
+      SVN_ERR (svn_wc__files_contents_same_p
+               (&same, tmp_workingfile, filepath, pool));
 
+      if (! same)
+        SVN_ERR (svn_io_copy_file (tmp_workingfile, filepath, pool));
+
+      SVN_ERR (svn_io_remove_file (tmp_workingfile->data, pool));
 
       /* Move committed tmp/text-base to real text-base. */
-      SVN_ERR (svn_wc__sync_text_base (filepath, pool));     
+      SVN_ERR (svn_wc__sync_text_base (filepath, pool));
     }
 
   return SVN_NO_ERROR;
