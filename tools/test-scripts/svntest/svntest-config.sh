@@ -83,6 +83,7 @@ START() {
 # Test failed
 FAIL() {
     echo "FAIL: $TST" >> $LOG_FILE
+    test -n "$1" && eval "$1"   # Run cleanup code
     exit 1
 }
 
