@@ -372,18 +372,18 @@ wc_entry_revision (VALUE self)
 }
 
 static VALUE
-wc_entry_ancestor (VALUE self)
+wc_entry_url (VALUE self)
 {
   svn_ruby_wc_entry_t *entry;
-  svn_stringbuf_t *ancestor;
+  svn_stringbuf_t *url;
   Data_Get_Struct (self, svn_ruby_wc_entry_t, entry);
-  ancestor = entry->entry->ancestor;
+  url = entry->entry->url;
 
-  if (!ancestor)
+  if (!url)
     rb_raise (rb_eRuntimeError,
               "you need to create complete WcEntry object");
 
-  return rb_str_new (ancestor->data, ancestor->len);
+  return rb_str_new (url->data, url->len);
 }
 
 static VALUE
@@ -817,7 +817,7 @@ void svn_ruby_init_wc (void)
   define_prop (cSvnWcEntry, "ATTR_SCHEDULE",  SVN_WC_ENTRY_ATTR_SCHEDULE);
   define_prop (cSvnWcEntry, "ATTR_EXISTENCE",  SVN_WC_ENTRY_ATTR_EXISTENCE);
   define_prop (cSvnWcEntry, "ATTR_CONFLICTED",  SVN_WC_ENTRY_ATTR_CONFLICTED);
-  define_prop (cSvnWcEntry, "ATTR_ANCESTOR",  SVN_WC_ENTRY_ATTR_ANCESTOR);
+  define_prop (cSvnWcEntry, "ATTR_URL",  SVN_WC_ENTRY_ATTR_URL);
   define_prop (cSvnWcEntry, "ATTR_REJFILE",  SVN_WC_ENTRY_ATTR_REJFILE);
   define_prop (cSvnWcEntry, "ATTR_PREJFILE",  SVN_WC_ENTRY_ATTR_PREJFILE);
   define_prop (cSvnWcEntry, "VALUE_ADD",  SVN_WC_ENTRY_VALUE_ADD);
@@ -827,7 +827,7 @@ void svn_ruby_init_wc (void)
   define_prop (cSvnWcEntry, "VALUE_DELETED",  SVN_WC_ENTRY_VALUE_DELETED);
   define_prop (cSvnWcEntry, "THIS_DIR",  SVN_WC_ENTRY_THIS_DIR);
   rb_define_method (cSvnWcEntry, "revision", wc_entry_revision, 0);
-  rb_define_method (cSvnWcEntry, "ancestor", wc_entry_ancestor, 0);
+  rb_define_method (cSvnWcEntry, "url", wc_entry_url, 0);
   rb_define_method (cSvnWcEntry, "kind", wc_entry_node_kind, 0);
   rb_define_method (cSvnWcEntry, "schedule", wc_entry_schedule, 0);
   rb_define_method (cSvnWcEntry, "existence", wc_entry_existence, 0);
