@@ -145,7 +145,9 @@ svn_wc_delete_file (svn_string_t *file, apr_pool_t *pool)
 
   svn_path_split (file, &dir, &basename, svn_path_local_style, pool);
 
-  err = svn_wc__entry_merge (dir, basename, 0, svn_file_kind, pool,
+  err = svn_wc__entry_merge (dir, basename,
+                             SVN_INVALID_VERNUM, svn_file_kind,
+                             pool,
                              SVN_WC__ENTRIES_ATTR_DELETE,
                              svn_string_create ("true", pool),
                              NULL);
