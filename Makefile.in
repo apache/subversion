@@ -80,6 +80,7 @@ TEXI2DVI = texi2dvi
 DVIPS = dvips
 DVIPDF = dvipdf
 MSGFMT = @MSGFMT@
+XGETTEXT = @XGETTEXT@
 
 PACKAGE_NAME=@PACKAGE_NAME@
 PACKAGE_VERSION=@PACKAGE_VERSION@
@@ -256,6 +257,17 @@ install: external-install local-install revision-install
 @INCLUDE_OUTPUTS@
 
 local-all: @BUILD_RULES@ @SWIG_BUILD_RULES@
+
+locale-gnu-pot:
+	(cd $(abs_srcdir)/subversion/ ; \
+	 find . \
+	  -name .svn -prune -or \
+	  -name tests -prune -or \
+	  -name bindings -prune -or \
+	  -name "*.c" -print -or \
+	  -name "svn_error_codes.h" -print | \
+	 $(XGETTEXT) -F -k_ -kN_ -kSVN_ERRDEF:3 --files-from=- \
+	  -o po/subversion.pot )
 
 # clean everything but the bulky test output, returning the system back
 # to before 'make' was run.
