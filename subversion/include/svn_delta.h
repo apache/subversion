@@ -585,7 +585,20 @@ typedef struct svn_delta_edit_fns_t
 } svn_delta_edit_fns_t;
 
 
+
+/* An editor which outputs XML delta streams.  OUTPUT and OUTPUT_BATON
+   will be used to write the output.  On return, *EDITOR and
+   *EDITOR_BATON will be set to the editor and its associate baton.
+   The editor's memory will live in a sub-pool of POOL. */
+svn_error_t *
+svn_delta_get_xml_editor (svn_write_fn_t *output,
+                          void *output_baton,
+                          const svn_delta_edit_fns_t **editor,
+                          void **edit_baton,
+                          apr_pool_t *pool);
 
+
+
 /* An opaque object that represents a Subversion Delta XML parser. */
 
 typedef struct svn_delta_xml_parser_t svn_delta_xml_parser_t;

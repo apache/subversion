@@ -54,6 +54,7 @@
 #include "xmlparse.h"
 #include "svn_error.h"
 #include "svn_delta.h"
+#include "svn_string.h"
 
 
 #define SVN_XML_NAMESPACE "http://subversion.tigris.org/xmlns/"
@@ -65,6 +66,10 @@ enum svn_xml_tag_type {
   svn_xml_self_close_tag    /* <tag .../> */
 };
 
+
+/* A utility function to escape a string so that it may be used in XML
+   output as character data or as an attribute value */
+svn_string_t *svn_xml_escape_string (svn_string_t *string, apr_pool_t *pool);
 
 /*---------------------------------------------------------------*/
 
@@ -222,18 +227,6 @@ svn_error_t *svn_xml_write_tag_hash (apr_file_t *file,
                                      enum svn_xml_tag_type tagtype,
                                      const char *tagname,
                                      apr_hash_t *attributes);
-
-
-
-/*** Producing xml output. ***/
-
-/* Return an editor that will output xml to OUTFILE (which is already
-   opened, and which the caller is also responsible for closing). */
-svn_error_t *
-svn_xml_get_editor (apr_file_t *outfile,
-                    const svn_delta_edit_fns_t **editor,
-                    void **edit_baton,
-                    apr_pool_t *pool);
 
 
 #endif /* SVN_XML_H */
