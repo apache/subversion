@@ -964,9 +964,7 @@ static svn_error_t *
 make_empty_adm (const char *path, apr_pool_t *pool)
 {
   path = extend_with_adm_name (path, NULL, 0, pool, NULL);
-
   SVN_ERR (svn_io_dir_make_hidden (path, APR_OS_DEFAULT, pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -1098,9 +1096,8 @@ init_adm (const char *path,
   /* THIS FILE MUST BE CREATED LAST: 
      After this exists, the dir is considered complete. */
   SVN_ERR (svn_io_write_version_file 
-           (svn_path_join_many (pool, 
-                                path, SVN_WC_ADM_DIR_NAME, SVN_WC__ADM_FORMAT, 
-                                NULL),
+           (extend_with_adm_name (path, NULL, FALSE, pool,
+                                  SVN_WC__ADM_FORMAT, NULL),
             SVN_WC__VERSION, pool));
 
   /* Now unlock it.  It's now a valid working copy directory, that
@@ -1127,7 +1124,8 @@ svn_wc_ensure_adm (const char *path,
 
 
 svn_error_t *
-svn_wc__adm_destroy (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+svn_wc__adm_destroy (svn_wc_adm_access_t *adm_access, 
+                     apr_pool_t *pool)
 {
   const char *path;
 
@@ -1135,8 +1133,8 @@ svn_wc__adm_destroy (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 
   /* Well, the coast is clear for blowing away the administrative
      directory, which also removes the lock file */
-  path = svn_path_join (svn_wc_adm_access_path(adm_access),
-                        SVN_WC_ADM_DIR_NAME, pool);
+  path = extend_with_adm_name (svn_wc_adm_access_path (adm_access),
+                               NULL, FALSE, pool, NULL);
   SVN_ERR (svn_io_remove_dir (path, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
 
@@ -1145,14 +1143,15 @@ svn_wc__adm_destroy (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_wc__adm_cleanup_tmp_area (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+svn_wc__adm_cleanup_tmp_area (svn_wc_adm_access_t *adm_access, 
+                              apr_pool_t *pool)
 {
   const char *tmp_path;
 
   SVN_ERR (svn_wc_adm_write_check (adm_access));
 
   /* Get the path to the tmp area, and blow it away. */
-  tmp_path = extend_with_adm_name (svn_wc_adm_access_path(adm_access),
+  tmp_path = extend_with_adm_name (svn_wc_adm_access_path (adm_access),
                                    NULL, 0, pool, SVN_WC__ADM_TMP, NULL);
   SVN_ERR (svn_io_remove_dir (tmp_path, pool));
 
