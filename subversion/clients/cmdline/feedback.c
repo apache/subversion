@@ -95,10 +95,12 @@ notify (void *baton,
       break;
 
     case svn_wc_notify_update_update:
-      nb->received_some_change = TRUE;
-
       if (kind == svn_node_file)
         {
+          /* Do this only for files, not for dirs, since we don't want
+             to treat directory closings as "change" events. */
+          nb->received_some_change = TRUE;
+
           if (content_state == svn_wc_notify_state_conflicted)
             statchar_buf[0] = 'C';
           else if (content_state == svn_wc_notify_state_merged)
