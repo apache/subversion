@@ -595,38 +595,38 @@ typedef enum svn_wc_notify_lock_state_t {
  *
  * Structure used in the @c svn_wc_notify_func2_t function.
  *
- * @c path is either absolute or relative to the current working directory
- * (i.e., not relative to an anchor).  @c action describes what happened
- * to @c path.
+ * @a path is either absolute or relative to the current working directory
+ * (i.e., not relative to an anchor).  @a action describes what happened
+ * to @a path.
  *
- * @c kind, @c content_state @c prop_state and @c lock_state are from
+ * @a kind, @a content_state @a prop_state and @a lock_state are from
  * after
- * @c action, not before.  @c lock_state reflects the addition or
+ * @a action, not before.  @a lock_state reflects the addition or
  * removal of a lock token in the working copy.
  *
- * If @c mime_type is non-null, it indicates the mime-type of @c path.
+ * If @a mime_type is non-null, it indicates the mime-type of @a path.
  * It is always @c NULL for directories.
  *
- * If @c action is @c svn_wc_notify_update_completed, @c revision is the
+ * If @a action is @c svn_wc_notify_update_completed, @a revision is the
  * target revision of the update, or @c SVN_INVALID_REVNUM if not
- * available.  If @c action is @c svn_wc_notify_blame_revision, @c
- * revision is the processed revision.  In all other cases, @c
+ * available.  If @a action is @c svn_wc_notify_blame_revision, @a
+ * revision is the processed revision.  In all other cases, @a
  * revision is @c SVN_INVALID_REVNUM.
  *
- * For an @c action of svn_wc_notify_locked, @c lock is the lock
+ * For an @a action of @c svn_wc_notify_locked, @a lock is the lock
  * structure received from the repository.  For other actions, it is
  * @c NULL.
  *
- * @c err is @c NULL, except when @c action is @c
+ * @a err is @c NULL, except when @a action is @c
  * svn_wc_notify_failed_lock or @c svn_wc_notify_failed_unlock, in
  * which case it points to an error describing the reason for the failure.
  *
- * Note that if @c action is @c svn_wc_notify_update, then @c path has 
+ * Note that if @a action is @c svn_wc_notify_update, then @a path has 
  * already been installed, so it is legitimate for an implementation of
- * @c svn_wc_notify_func2_t to examine @c path in the working copy.
+ * @c svn_wc_notify_func2_t to examine @a path in the working copy.
  *
- * @note The purpose of the @c kind, @c mime_type, @c content_state, and
- * @c prop_state fields is to provide "for free" information that an
+ * @note The purpose of the @a kind, @a mime_type, @a content_state, and
+ * @a prop_state fields is to provide "for free" information that an
  * implementation is likely to want, and which it would otherwise be
  * forced to deduce via expensive operations such as reading entries
  * and properties.  However, if the caller does not have this
@@ -635,8 +635,9 @@ typedef enum svn_wc_notify_lock_state_t {
  * (i.e., whether or not to attempt deduction, or just to punt and
  * give a less informative notification).
  *
- * @note Callers of notification functions should use @c svn_wc_create_notify
- * to create structures of this type to allow for extensibility. */
+ * @note Callers of notification functions should use @c
+ * svn_wc_create_notify to create structures of this type to allow for
+ * extensibility. */
 typedef struct svn_wc_notify_t {
   const char *path;
   svn_wc_notify_action_t action;
