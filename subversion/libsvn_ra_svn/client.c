@@ -694,10 +694,9 @@ static svn_error_t *ra_svn_status(void *sess,
                                   void **report_baton,
                                   const char *target, svn_boolean_t recurse,
                                   const svn_delta_editor_t *status_editor,
-                                  void *status_baton)
+                                  void *status_baton, apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess;
-  apr_pool_t *pool = conn->pool;
 
   if (target == NULL)
     target = "";

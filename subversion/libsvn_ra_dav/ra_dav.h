@@ -154,7 +154,8 @@ svn_error_t * svn_ra_dav__do_status(
   const char *status_target,
   svn_boolean_t recurse,
   const svn_delta_editor_t *wc_status,
-  void *wc_status_baton);
+  void *wc_status_baton,
+  apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__do_switch(
   void *session_baton,
