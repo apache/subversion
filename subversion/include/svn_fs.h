@@ -1603,6 +1603,9 @@ svn_error_t *svn_fs_get_lock_from_path (svn_lock_t **lock,
  * The hashtable maps (const char *) absolute fs paths to (const
  * svn_lock_t *) structures.  The hashtable -- and all keys and
  * values -- are allocated in @a pool.
+ *
+ * If there are no locks on or below @a path, still set @a *locks to a
+ * hashtable, just one with zero items.
  */
 svn_error_t *svn_fs_get_locks (apr_hash_t **locks,
                                svn_fs_t *fs,
