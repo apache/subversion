@@ -250,10 +250,11 @@ int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
  * UTF-8.  Allocate @a *targets_p and its elements in @a pool.
  *
  * If @a extract_revisions is set, then this function will attempt to
- * look for trailing "@rev" syntax on the paths.  If one @rev is
- * found, it will overwrite the value of @a *start_revision.  If a second
- * one is found, it will overwrite @a *end_revision.  (Extra revisions
- * beyond that are ignored.)
+ * look for trailing "@rev" syntax on the paths.  If an @rev is found
+ * for the first target in *TARGETS_P, it will overwrite the value of
+ * @a *start_revision.  If an @rev is found for the second target in
+ * *TARGETS_P,  it will overwrite @a *end_revision.  (Extra revisions 
+ * beyond that are ignored.) 
  */
 svn_error_t *
 svn_opt_args_to_target_array (apr_array_header_t **targets_p,
