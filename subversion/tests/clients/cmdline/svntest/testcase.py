@@ -53,9 +53,8 @@ class _Predicate:
   def skip_text(self):
     return self.text[2]
 
-  def run_text(self, error):
-    if error: return self.text[1]
-    else: return self.text[0]
+  def run_text(self, error=0):
+    return self.text[error]
 
   def convert_error(self, error):
     return error
@@ -107,6 +106,8 @@ class TestCase:
         self._print_name()
         print ex.__doc__
         sys.exit(255)
+      except svntest.Skip, ex:
+        error = 2
       except svntest.Failure, ex:
         error = 1
         # We captured Failure and its subclasses. We don't want to print

@@ -19,6 +19,10 @@ class Failure(Exception):
   'Base class for exceptions that indicate test failure'
   pass
 
+class Skip(Exception):
+  'Base class for exceptions that indicate test was skipped'
+  pass
+
 class SVNAnyOutput:
   """This class should be used to represent that you require output
   (whether stdout or stderr) from your test--regardless of what the
