@@ -20,14 +20,6 @@ Candidate changes:
       +3: brane. That should be enough :-)
       +0: breser. Don't know enough about the Windows build to be +1
 
-  * r10410, r10450
-    Python bindings build fix. Explicitly link libpython to the python
-    bindings.  r10410 is a trivial usage message update, included to
-    avoid merge conflicts.
-    Votes:
-      +1: maxb, kfogel, cmpilato
-      +0: breser (don't fully understand the python code but looks okay to me)
-
   * r10379,r10380,r10384,r10469,r10470,r10487
     Support creation of zip archives for Windows.
     Justification:

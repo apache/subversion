@@ -151,6 +151,11 @@ AC_DEFUN(SVN_FIND_SWIG,
         ac_cv_python_link="`$PYTHON ${abs_srcdir}/build/get-py-info.py --link`"
       ])
       SWIG_PY_LINK="$ac_cv_python_link"
+
+      AC_CACHE_CHECK([for linking Python libraries], [ac_cv_python_libs],[
+        ac_cv_python_libs="`$PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
+      ])
+      SWIG_PY_LIBS="$ac_cv_python_libs"
     fi
 
     if test "$JDK" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_java" = "yes"; then
@@ -183,6 +188,7 @@ AC_DEFUN(SVN_FIND_SWIG,
   AC_SUBST(SWIG_PY_INCLUDES)
   AC_SUBST(SWIG_PY_COMPILE)
   AC_SUBST(SWIG_PY_LINK)
+  AC_SUBST(SWIG_PY_LIBS)
   AC_SUBST(SWIG_JAVA_INCLUDES)
   AC_SUBST(SWIG_JAVA_COMPILE)
   AC_SUBST(SWIG_JAVA_LINK)
