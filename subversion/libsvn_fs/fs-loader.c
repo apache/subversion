@@ -278,7 +278,12 @@ svn_fs_hotcopy (const char *src_path, const char *dest_path,
   fs_library_vtable_t *vtable;
 
   SVN_ERR (fs_library_vtable (&vtable, src_path, pool));
-  return vtable->hotcopy (src_path, dest_path, clean, pool);
+  SVN_ERR (vtable->hotcopy (src_path, dest_path, clean, pool));
+
+  /* Copy the fs-type file. */
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, FS_TYPE_FILENAME, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
