@@ -78,33 +78,15 @@ svn_client_ls (apr_hash_t **dirents,
                apr_pool_t *pool)
 {
   svn_ra_plugin_t *ra_lib;  
-  void *ra_baton, *session;
+  void *session;
   svn_revnum_t rev;
   svn_node_kind_t url_kind;
   const char *url;
 
-  SVN_ERR (svn_client_url_from_path (&url, path_or_url, pool));
-  if (! url)
-    return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                              "'%s' has no URL", path_or_url);
-
-  /* Get the RA library that handles URL. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, pool));
-
-  /* Open a repository session to the URL. */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url,
-                                        NULL,
-                                        NULL, NULL, FALSE, TRUE, 
-                                        ctx, pool));
-
-  /* Resolve REVISION into a real revnum. */
-  SVN_ERR (svn_client__get_revision_number
-           (&rev, ra_lib, session, revision, 
-            (path_or_url == url) ? NULL : path_or_url, pool));
-
-  if (! SVN_IS_VALID_REVNUM (rev))
-    SVN_ERR (ra_lib->get_latest_revnum (session, &rev, pool));
+  /* Get an RA plugin for this filesystem object. */
+  SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &rev,
+                                         &url, path_or_url, revision,
+                                         ctx, pool));
 
   /* Decide if the URL is a file or directory. */
   SVN_ERR (ra_lib->check_path (session, "", rev, &url_kind, pool));

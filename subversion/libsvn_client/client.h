@@ -155,6 +155,30 @@ svn_client__repos_locations (const char **start_url,
                              apr_pool_t *pool);
 
 
+/* Given PATH_OR_URL, which contains either a working copy path or an
+   absolute url and a revision REVISION, create an RA connection to
+   that object as it exists in that revision, following copy history
+   if necessary.
+
+   The resulting ra_plugin is stored in *RA_LIB_P along with its
+   session baton in *SESSION_P.  The actual revision number of the
+   object is stored in *REV_P and the final resulting url is stored in
+   *URL_P.
+
+   Use authentication baton cached in CTX to authenticate against the
+   repository.
+
+   Use POOL for all allocations. */
+svn_error_t *
+svn_client__ra_lib_from_path (svn_ra_plugin_t **ra_lib_p,
+                              void **session_p,
+                              svn_revnum_t *rev_p,
+                              const char **url_p,
+                              const char *path_or_url,
+                              const svn_opt_revision_t *revision,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *pool);
+
 
 /* ---------------------------------------------------------------- */
 

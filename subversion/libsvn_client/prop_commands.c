@@ -498,6 +498,7 @@ svn_client_propget (apr_hash_t **props,
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *node;
   const char *utarget;  /* target, or the url for target */
+  const char *url;
   svn_revnum_t revnum;
 
   *props = apr_hash_make (pool);
@@ -508,55 +509,18 @@ svn_client_propget (apr_hash_t **props,
      requested property information is not available locally. */
   if (svn_path_is_url (utarget))
     {
-      void *ra_baton, *session;
+      void *session;
       svn_ra_plugin_t *ra_lib;
       svn_node_kind_t kind;
-      svn_opt_revision_t new_revision;  /* only used in one case */
 
-      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, utarget, pool));
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, utarget,
-                                            NULL, NULL, NULL,
-                                            FALSE, FALSE, ctx, pool));
-
-      /* Default to HEAD. */
-      if (revision->kind == svn_opt_revision_unspecified)
-        {
-          new_revision.kind = svn_opt_revision_head;
-          revision = &new_revision;
-        }
-
-      /* Handle the various different kinds of revisions. */
-      if ((revision->kind == svn_opt_revision_head)
-          || (revision->kind == svn_opt_revision_date)
-          || (revision->kind == svn_opt_revision_number))
-        {
-          SVN_ERR (svn_client__get_revision_number
-                   (&revnum, ra_lib, session, revision, NULL, pool));
-        }
-      else if (revision->kind == svn_opt_revision_previous)
-        {
-          if (svn_path_is_url (target))
-            {
-              return svn_error_createf
-                (SVN_ERR_ILLEGAL_TARGET, NULL,
-                 _("'%s' is a URL, but revision kind requires a "
-                   "working copy"), target);
-            }
-
-          /* target is a working copy path */
-          SVN_ERR (svn_client__get_revision_number
-                   (&revnum, NULL, NULL, revision, target, pool));
-        }
-      else
-        {
-          return svn_error_create
-            (SVN_ERR_CLIENT_BAD_REVISION, NULL, _("Unknown revision kind"));
-        }
+      /* Get an RA plugin for this filesystem object. */
+      SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &revnum,
+                                             &url, target, revision,
+                                             ctx, pool));
 
       SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
 
-      SVN_ERR (remote_propget (*props, propname, utarget, "",
+      SVN_ERR (remote_propget (*props, propname, url, "",
                                kind, revnum, ra_lib, session,
                                recurse, pool));
     }
@@ -856,6 +820,7 @@ svn_client_proplist (apr_array_header_t **props,
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *node;
   const char *utarget;  /* target, or the url for target */
+  const char *url;
   svn_revnum_t revnum;
 
   *props = apr_array_make (pool, 5, sizeof (svn_client_proplist_item_t *));
@@ -866,55 +831,18 @@ svn_client_proplist (apr_array_header_t **props,
      requested property information is not available locally. */
   if (svn_path_is_url (utarget))
     {
-      void *ra_baton, *session;
+      void *session;
       svn_ra_plugin_t *ra_lib;
       svn_node_kind_t kind;
-      svn_opt_revision_t new_revision;  /* only used in one case */
 
-      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, utarget, pool));
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, utarget,
-                                            NULL, NULL, NULL,
-                                            FALSE, FALSE, ctx, pool));
-
-      /* Default to HEAD. */
-      if (revision->kind == svn_opt_revision_unspecified)
-        {
-          new_revision.kind = svn_opt_revision_head;
-          revision = &new_revision;
-        }
-
-      /* Handle the various different kinds of revisions. */
-      if ((revision->kind == svn_opt_revision_head)
-          || (revision->kind == svn_opt_revision_date)
-          || (revision->kind == svn_opt_revision_number))
-        {
-          SVN_ERR (svn_client__get_revision_number
-                   (&revnum, ra_lib, session, revision, NULL, pool));
-        }
-      else if (revision->kind == svn_opt_revision_previous)
-        {
-          if (svn_path_is_url (target))
-            {
-              return svn_error_createf
-                (SVN_ERR_ILLEGAL_TARGET, NULL,
-                 _("'%s' is a URL, but revision kind requires a "
-                   "working copy"), target);
-            }
-
-          /* target is a working copy path */
-          SVN_ERR (svn_client__get_revision_number
-                   (&revnum, NULL, NULL, revision, target, pool));
-        }
-      else
-        {
-          return svn_error_create
-            (SVN_ERR_CLIENT_BAD_REVISION, NULL, _("Unknown revision kind"));
-        }
-
+      /* Get an RA plugin for this filesystem object. */
+      SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &revnum,
+                                             &url, target, revision,
+                                             ctx, pool));
+      
       SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
 
-      SVN_ERR (remote_proplist (*props, utarget, "",
+      SVN_ERR (remote_proplist (*props, url, "",
                                 kind, revnum, ra_lib, session,
                                 recurse, pool));
     }
