@@ -65,15 +65,17 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_client_update (const svn_delta_edit_fns_t *passenger_editor,
-                   void *passenger_edit_baton,
+svn_client_update (const svn_delta_edit_fns_t *before_editor,
+                   void *before_edit_baton,
+                   const svn_delta_edit_fns_t *after_editor,
+                   void *after_edit_baton,
                    svn_string_t *path,
                    svn_string_t *xml_src,
                    svn_vernum_t version,
                    apr_pool_t *pool)
 {
-  return svn_client__update_internal (passenger_editor,
-                                      passenger_edit_baton,
+  return svn_client__update_internal (before_editor, before_edit_baton,
+                                      after_editor, after_edit_baton,
                                       path, xml_src, version, pool);
 }
 

@@ -275,7 +275,8 @@ main (int argc, char **argv)
         if (err)
           goto handle_error;
       }
-      err = svn_client_checkout (trace_editor,
+      err = svn_client_checkout (NULL, NULL,
+                                 trace_editor,
                                  trace_edit_baton,
                                  target, xml_file,
                                  ancestor_path, version, pool);
@@ -289,7 +290,8 @@ main (int argc, char **argv)
         if (err)
           goto handle_error;
       }
-      err = svn_client_update (trace_editor, trace_edit_baton,
+      err = svn_client_update (NULL, NULL,
+                               trace_editor, trace_edit_baton,
                                target, xml_file, version, pool);
       break;
     case add_command:

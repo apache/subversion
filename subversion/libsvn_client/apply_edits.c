@@ -85,8 +85,10 @@ generic_read (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
 
 
 static svn_error_t *
-apply_delta (const svn_delta_edit_fns_t *passenger_editor,
-             void *passenger_edit_baton,
+apply_delta (const svn_delta_edit_fns_t *before_editor,
+             void *before_edit_baton,
+             const svn_delta_edit_fns_t *after_editor,
+             void *after_edit_baton,
              void *delta_src,
              svn_read_fn_t *read_fn,
              svn_string_t *dest,
@@ -126,14 +128,15 @@ apply_delta (const svn_delta_edit_fns_t *passenger_editor,
   if (err)
     return err;
 
-  if (passenger_editor)
-    svn_delta_compose_editors (&editor,
-                               &edit_baton,
-                               passenger_editor,
-                               passenger_edit_baton,
-                               editor,
-                               edit_baton,
-                               pool);
+  svn_delta_wrap_editor (&editor,
+                         &edit_baton,
+                         before_editor,
+                         before_edit_baton,
+                         editor,
+                         edit_baton,
+                         after_editor,
+                         after_edit_baton,
+                         pool);
 
   return svn_delta_xml_auto_parse (read_fn,
                                    delta_src,
@@ -147,8 +150,10 @@ apply_delta (const svn_delta_edit_fns_t *passenger_editor,
 
 
 static svn_error_t *
-do_edits (const svn_delta_edit_fns_t *passenger_editor,
-          void *passenger_edit_baton,
+do_edits (const svn_delta_edit_fns_t *before_editor,
+          void *before_edit_baton,
+          const svn_delta_edit_fns_t *after_editor,
+          void *after_edit_baton,
           svn_string_t *path,
           svn_string_t *xml_src,
           svn_string_t *ancestor_path,    /* ignored if update */
@@ -176,8 +181,10 @@ do_edits (const svn_delta_edit_fns_t *passenger_editor,
                               "unable to open %s", xml_src->data);
 
   /* Check out the delta. */
-  err = apply_delta (passenger_editor,
-                     passenger_edit_baton,
+  err = apply_delta (before_editor,
+                     before_edit_baton,
+                     after_editor,
+                     after_edit_baton,
                      in,
                      generic_read,
                      path,
@@ -202,28 +209,34 @@ do_edits (const svn_delta_edit_fns_t *passenger_editor,
 /*** Public Interfaces. ***/
 
 svn_error_t *
-svn_client__checkout_internal (const svn_delta_edit_fns_t *passenger_editor,
-                               void *passenger_edit_baton,
+svn_client__checkout_internal (const svn_delta_edit_fns_t *before_editor,
+                               void *before_edit_baton,
+                               const svn_delta_edit_fns_t *after_editor,
+                               void *after_edit_baton,
                                svn_string_t *path,
                                svn_string_t *xml_src,
                                svn_string_t *ancestor_path,
                                svn_vernum_t ancestor_version,
                                apr_pool_t *pool)
 {
-  return do_edits (passenger_editor, passenger_edit_baton,
+  return do_edits (before_editor, before_edit_baton,
+                   after_editor, after_edit_baton,
                    path, xml_src, ancestor_path, ancestor_version, pool, 0);
 }
 
 
 svn_error_t *
-svn_client__update_internal (const svn_delta_edit_fns_t *passenger_editor,
-                             void *passenger_edit_baton,
+svn_client__update_internal (const svn_delta_edit_fns_t *before_editor,
+                             void *before_edit_baton,
+                             const svn_delta_edit_fns_t *after_editor,
+                             void *after_edit_baton,
                              svn_string_t *path,
                              svn_string_t *xml_src,
                              svn_vernum_t ancestor_version,
                              apr_pool_t *pool)
 {
-  return do_edits (passenger_editor, passenger_edit_baton,
+  return do_edits (before_editor, before_edit_baton,
+                   after_editor, after_edit_baton,
                    path, xml_src, NULL, ancestor_version, pool, 1);
 }
 

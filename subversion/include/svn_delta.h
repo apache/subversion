@@ -561,7 +561,7 @@ typedef struct svn_delta_edit_fns_t
  * If an editor function is null, it is simply never called, and this
  * is not an error.
  */
-svn_error_t *
+void
 svn_delta_compose_editors (const svn_delta_edit_fns_t **new_editor,
                            void **new_edit_baton,
                            const svn_delta_edit_fns_t *editor_1,
@@ -569,6 +569,31 @@ svn_delta_compose_editors (const svn_delta_edit_fns_t **new_editor,
                            const svn_delta_edit_fns_t *editor_2,
                            void *edit_baton_2,
                            apr_pool_t *pool);
+
+
+/* Compose BEFORE_EDITOR, BEFORE_EDIT_BATON with MIDDLE_EDITOR,
+ * MIDDLE_EDIT_BATON, then compose the result with AFTER_EDITOR,
+ * AFTER_EDIT_BATON, all according to the conventions of
+ * svn_delta_compose_editors().  Return the resulting editor in
+ * *NEW_EDITOR, *NEW_EDIT_BATON.
+ *
+ * If either BEFORE_EDITOR or AFTER_EDITOR is null, that editor will
+ * simply not be included in the composition.  It is advised, though
+ * not required, that a null editor pair with a null baton, and a
+ * non-null editor with a non-null baton.
+ *
+ * MIDDLE_EDITOR must not be null.  I'm not going to tell you what
+ * happens if it is.
+ */
+void svn_delta_wrap_editor (const svn_delta_edit_fns_t **new_editor,
+                            void **new_edit_baton,
+                            const svn_delta_edit_fns_t *before_editor,
+                            void *before_edit_baton,
+                            const svn_delta_edit_fns_t *middle_editor,
+                            void *middle_edit_baton,
+                            const svn_delta_edit_fns_t *after_editor,
+                            void *after_edit_baton,
+                            apr_pool_t *pool);
 
 
 
