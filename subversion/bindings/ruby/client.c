@@ -596,6 +596,105 @@ cl_copy (int argc, VALUE *argv, VALUE self)
   return Qnil;
 }
 
+static VALUE
+cl_propset (VALUE class, VALUE name, VALUE val, VALUE aTarget, VALUE recurse)
+{
+  svn_stringbuf_t *propname, *propval, *target;
+  apr_pool_t *pool;
+  svn_error_t *err;
+
+  Check_Type (name, T_STRING);
+  Check_Type (val, T_STRING);
+  Check_Type (aTarget, T_STRING);
+
+  pool = svn_pool_create (NULL);
+  propname = svn_stringbuf_ncreate (StringValuePtr (name),
+                                    RSTRING (name)->len, pool);
+  propval = svn_stringbuf_ncreate (StringValuePtr (val),
+                                   RSTRING (val)->len, pool);
+  target = svn_stringbuf_ncreate (StringValuePtr (aTarget),
+                                  RSTRING (aTarget)->len, pool);
+  err = svn_client_propset (propname, propval, target, RTEST (recurse), pool);
+
+  if (err)
+    {
+      apr_pool_destroy (pool);
+      svn_ruby_raise (err);
+    }
+
+  return Qnil;
+}
+
+static VALUE
+cl_propget (VALUE class, VALUE name, VALUE aTarget, VALUE recurse)
+{
+  apr_hash_t *props;
+  svn_stringbuf_t *propname, *target;
+  apr_pool_t *pool;
+  svn_error_t *err;
+  VALUE obj;
+
+  Check_Type (name, T_STRING);
+  Check_Type (aTarget, T_STRING);
+
+  pool = svn_pool_create (NULL);
+  propname = svn_stringbuf_ncreate (StringValuePtr (name),
+                                    RSTRING (name)->len, pool);
+  target = svn_stringbuf_ncreate (StringValuePtr (aTarget),
+                                  RSTRING (aTarget)->len, pool);
+  err = svn_client_propget (&props, propname, target, RTEST (recurse), pool);
+
+  if (err)
+    {
+      apr_pool_destroy (pool);
+      svn_ruby_raise (err);
+    }
+
+  obj = svn_ruby_strbuf_hash (props, pool);
+  apr_pool_destroy (pool);
+  return obj;
+}
+
+static VALUE
+cl_proplist (VALUE class, VALUE aTarget, VALUE recurse)
+{
+  apr_array_header_t *props;
+  svn_stringbuf_t *target;
+  apr_pool_t *pool;
+  svn_error_t *err;
+
+  Check_Type (aTarget, T_STRING);
+
+  pool = svn_pool_create (NULL);
+  target = svn_stringbuf_ncreate (StringValuePtr (aTarget),
+                                  RSTRING (aTarget)->len, pool);
+  err = svn_client_proplist (&props,target, RTEST (recurse), pool);
+
+  if (err)
+    {
+      apr_pool_destroy (pool);
+      svn_ruby_raise (err);
+    }
+
+  {
+    VALUE obj;
+    int i;
+
+    obj = rb_hash_new ();
+    for (i = 0; i < props->nelts; i++)
+      {
+        svn_client_proplist_item_t *item;
+        item = ((svn_client_proplist_item_t **) props->elts)[i];
+        rb_hash_aset (obj,
+                      rb_str_new (item->node_name->data,
+                                  item->node_name->len),
+                      svn_ruby_strbuf_hash (item->prop_hash, pool));
+      }
+    apr_pool_destroy (pool);
+    return obj;
+  }
+}
+
 void svn_ruby_init_client (void)
 {
   VALUE cSvnClient;
@@ -613,4 +712,7 @@ void svn_ruby_init_client (void)
   rb_define_singleton_method (cSvnClient, "cleanup", cl_cleanup, 1);
   rb_define_singleton_method (cSvnClient, "revert", cl_revert, 2);
   rb_define_method (cSvnClient, "copy", cl_copy, -1);
+  rb_define_singleton_method (cSvnClient, "propset", cl_propset, 4);
+  rb_define_singleton_method (cSvnClient, "propget", cl_propget, 3);
+  rb_define_singleton_method (cSvnClient, "proplist", cl_proplist, 2);
 }

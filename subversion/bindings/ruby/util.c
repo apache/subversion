@@ -99,6 +99,30 @@ svn_ruby_str_hash (apr_hash_t *hash, apr_pool_t *pool)
   return obj;
 }
 
+VALUE
+svn_ruby_strbuf_hash (apr_hash_t *hash, apr_pool_t *pool)
+{
+  VALUE obj;
+  apr_hash_index_t *hi;
+
+  obj = rb_hash_new ();
+
+  for (hi = apr_hash_first (pool, hash); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      apr_ssize_t key_len;
+      svn_stringbuf_t *value;
+
+      apr_hash_this (hi, &key, &key_len, &val);
+      value = (svn_stringbuf_t *) val;
+      rb_hash_aset (obj, rb_str_new (key, key_len),
+                    rb_str_new (value->data, value->len));
+    }
+
+  return obj;
+}
+
 void
 svn_ruby_init_apr (void)
 {
