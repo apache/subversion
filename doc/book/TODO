@@ -20,6 +20,19 @@ Put in best-practices doc:
 
 
 --------------------------------------------------------------
+
+To be added by someone:
+
+  - With svn 1.1, it's now possible to set up svn+ssh using just one
+    Unix account on the server.  You create an RSA key for each user,
+    and add a command directive to each .ssh/authorized_keys entry on
+    the server, which changes the command to "svnserve -t
+    --tunnel-user=whoever".  (The command directive can also be used
+    to add a -r invocation to svnserve, or to specify the path to
+    svnserve.)  The book should perhaps document this way of setting
+    up svn+ssh.
+
+--------------------------------------------------------------
 To be fixed by someone:
 
  - we seem to inconsistently assume repositories live either in
