@@ -66,7 +66,7 @@ AC_DEFUN(SVN_FIND_JDK,
   fi
   if test -f "$JDK/include/jni.h"; then
     dnl This *must* be fully expanded, or we'll have problems later in find.
-    JNI_INCLUDES="$JDK/include"
+    JNI_INCLUDEDIR="$JDK/include"
     JDK_SUITABLE=yes
   else
     AC_MSG_WARN([no JNI header files found.])
@@ -84,6 +84,13 @@ AC_DEFUN(SVN_FIND_JDK,
     JAVAC="$JAVA_BIN/javac"
     JAVAH="$JAVA_BIN/javah"
     JAR="$JAVA_BIN/jar"
+
+    JNI_INCLUDES="-I$JNI_INCLUDEDIR"
+    list="`find "$JNI_INCLUDEDIR" -type d -print`"
+    for dir in $list; do
+      JNI_INCLUDES="$JNI_INCLUDES -I$dir"
+    done
+
   fi
 
   dnl We use JDK in both the swig.m4 macros and the Makefile

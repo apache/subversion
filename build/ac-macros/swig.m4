@@ -152,14 +152,10 @@ AC_DEFUN(SVN_FIND_SWIG,
 #      SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-java-lib"
 #      SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-java-lib"
 
-      SWIG_JAVA_INCLUDES="-I$JNI_INCLUDES"
-      list="`find "$JNI_INCLUDES" -type d -print`"
-      for dir in $list; do
-        SWIG_JAVA_INCLUDES="$SWIG_JAVA_INCLUDES -I$dir"
-      done
       dnl For now, we'll cheat and just use the compile and link from python.
       SWIG_JAVA_COMPILE="$SWIG_PY_COMPILE"
       SWIG_JAVA_LINK="$SWIG_PY_LINK"
+      SWIG_JAVA_INCLUDES="$JNI_INCLUDES"
     fi
 
     if test "$PERL" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_perl" = "yes"; then
