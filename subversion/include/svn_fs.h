@@ -78,13 +78,13 @@ typedef struct svn_fs svn_fs_t;
 /* Create a new filesystem object in POOL.  It doesn't refer to any
    actual database yet; you need to invoke svn_fs_open or
    svn_fs_create on it for that to happen.  */
-extern svn_fs_t *svn_fs_new (apr_pool_t *pool);
+svn_fs_t *svn_fs_new (apr_pool_t *pool);
 
 
 /* Create a new, empty Subversion filesystem, stored in a Unix file or
    directory named PATH, and make FS refer to it.  FS provides the
    memory pool, warning function, etc.  */
-extern svn_error_t *svn_fs_newfs (svn_fs_t *fs, const char *path);
+svn_error_t *svn_fs_newfs (svn_fs_t *fs, const char *path);
 
 
 /* Make FS refer to the Subversion filesystem stored at the Unix file
@@ -94,12 +94,12 @@ extern svn_error_t *svn_fs_newfs (svn_fs_t *fs, const char *path);
    Only one thread may operate on any given filesystem object at once.
    Two threads may access the same filesystem simultaneously only if
    they open separate filesystem objects.  */
-extern svn_error_t *svn_fs_open (svn_fs_t *fs, const char *path);
+svn_error_t *svn_fs_open (svn_fs_t *fs, const char *path);
 
 
 /* Free the filesystem object FS.  This frees memory, closes files,
    frees database library structures, etc.  */
-extern svn_error_t *svn_fs_close (svn_fs_t *fs);
+svn_error_t *svn_fs_close (svn_fs_t *fs);
 
 
 /* The type of a warning callback function.  BATON is the value specified
@@ -122,15 +122,15 @@ typedef void (svn_fs_warning_callback_t) (void *baton, const char *fmt, ...);
    Dumping to stderr or /dev/tty is not acceptable default behavior
    for server processes, since those may both be equivalent to
    /dev/null.  */
-extern void svn_fs_set_warning_func (svn_fs_t *fs,
-				     svn_fs_warning_callback_t *warning,
-				     void *warning_baton);
+void svn_fs_set_warning_func (svn_fs_t *fs,
+			      svn_fs_warning_callback_t *warning,
+			      void *warning_baton);
 
 
 /* Create a new sub-pool of the pool used by the filesystem FS.  This
    pool will be freed whenever FS is closed, but could also be freed
    earlier, if you like.  */
-extern apr_pool_t *svn_fs_subpool (svn_fs_t *fs);
+apr_pool_t *svn_fs_subpool (svn_fs_t *fs);
 
 
 /* Special requirements of Berkeley DB-based filesystems.  */
@@ -158,8 +158,8 @@ extern apr_pool_t *svn_fs_subpool (svn_fs_t *fs);
    recovery when the server process starts, before it begins handling
    any requests.  */
 
-extern svn_error_t *svn_fs_berkeleydb_recover (const char *path,
-					       apr_pool_t *pool);
+svn_error_t *svn_fs_berkeleydb_recover (const char *path,
+					apr_pool_t *pool);
 
 
 
@@ -176,10 +176,10 @@ typedef struct svn_fs_dir_t svn_fs_dir_t;
    If POOL is zero, allocate DIR in FS's pool; it will be freed when
    the filesystem is closed.  If POOL is non-zero, it must be a pool
    returned by `svn_fs_subpool'; do allocation there.  */
-extern svn_error_t *svn_fs_open_root (svn_fs_dir_t **dir,
-				      svn_fs_t *fs,
-				      svn_vernum_t v,
-				      apr_pool_t *pool);
+svn_error_t *svn_fs_open_root (svn_fs_dir_t **dir,
+			       svn_fs_t *fs,
+			       svn_vernum_t v,
+			       apr_pool_t *pool);
 
 
 /* Set *CHILD_DIR to a pointer to the subdirectory of *PARENT_DIR
@@ -189,20 +189,20 @@ extern svn_error_t *svn_fs_open_root (svn_fs_dir_t **dir,
    will be freed when the filesystem is closed.  If POOL is non-zero,
    it must be a pool returned by `svn_fs_subpool'; do allocation
    there.  */
-extern svn_error_t *svn_fs_open_subdir (svn_fs_dir_t **child_dir,
-					svn_fs_dir_t *parent_dir,
-					svn_string_t *name,
-					apr_pool_t *pool);
+svn_error_t *svn_fs_open_subdir (svn_fs_dir_t **child_dir,
+				 svn_fs_dir_t *parent_dir,
+				 svn_string_t *name,
+				 apr_pool_t *pool);
 
 
 /* Create a new subpool of the pool used by the directory DIR.  This
    pool will be freed whenever DIR is closed, but could also be freed
    earlier, if you like.  */
-extern apr_pool_t *svn_dir_subpool (svn_fs_dir_t *dir);
+apr_pool_t *svn_dir_subpool (svn_fs_dir_t *dir);
 
 
 /* Free the directory object DIR.  */
-extern void svn_fs_close_dir (svn_fs_dir_t *dir);
+void svn_fs_close_dir (svn_fs_dir_t *dir);
 
 
 /* Return a list of DIR's contents.  Set *ENTRIES to point to a
@@ -211,9 +211,9 @@ extern void svn_fs_close_dir (svn_fs_dir_t *dir);
    If POOL is zero, allocate *ENTRIES in DIR's pool; it will be freed
    when the directory object is freed.  If POOL is non-zero, do
    allocation there.  */
-extern svn_error_t *svn_fs_dir_entries (svn_string_t ***entries,
-					svn_fs_dir_t *dir,
-					apr_pool_t *pool);
+svn_error_t *svn_fs_dir_entries (svn_string_t ***entries,
+				 svn_fs_dir_t *dir,
+				 apr_pool_t *pool);
 
 
 /* An enum for the different kinds of objects one might find in a
@@ -233,9 +233,9 @@ typedef enum svn_fs_node_kind_t {
 
 /* Set *KIND to the kind of the entry in DIR named NAME.  NAME must be
    a single path component.  */
-extern svn_error_t *svn_fs_type (svn_fs_node_kind_t *kind,
-				 svn_fs_dir_t *dir,
-				 svn_string_t *name);
+svn_error_t *svn_fs_type (svn_fs_node_kind_t *kind,
+			  svn_fs_dir_t *dir,
+			  svn_string_t *name);
 
 
 
@@ -251,32 +251,32 @@ typedef struct svn_fs_file_t svn_fs_file_t;
    If POOL is zero, allocate FILE in the filesystem's pool; it will be
    freed when the filesystem is closed.  If POOL is non-zero, it must
    be a pool returned by `svn_fs_subpool'; do allocation there.  */
-extern svn_error_t *svn_fs_open_file (svn_fs_file_t **file,
-				      svn_fs_dir_t *dir,
-				      svn_string_t *name);
+svn_error_t *svn_fs_open_file (svn_fs_file_t **file,
+			       svn_fs_dir_t *dir,
+			       svn_string_t *name);
 
 
 /* Create a new subpool of the pool used by FILE.  This pool will be
    freed when FILE is closed, but could also be freed earlier, if
    you like.  */
-extern apr_pool_t *svn_file_subpool (svn_fs_file_t *file);
+apr_pool_t *svn_file_subpool (svn_fs_file_t *file);
 
 
 /* Free the file object FILE.  */
-extern void svn_fs_close_file (svn_fs_file_t *file);
+void svn_fs_close_file (svn_fs_file_t *file);
 
 
 /* Set *LENGTH to the length of FILE, in bytes.  */
-extern svn_error_t *svn_fs_file_length (apr_off_t *length,
-					svn_fs_file_t *file);
+svn_error_t *svn_fs_file_length (apr_off_t *length,
+				 svn_fs_file_t *file);
 
 
 /* Set *CONTENTS to a `read'-like function which will return the
    contents of FILE; see the description of svn_read_fn_t in
    `svn_delta.h'.  Set *CONTENTS_BATON to a baton to pass to CONTENTS.  */
-extern svn_error_t *svn_fs_file_contents (svn_read_fn_t **contents,
-					  void **contents_baton,
-					  svn_fs_file_t *file);
+svn_error_t *svn_fs_file_contents (svn_read_fn_t **contents,
+				   void **contents_baton,
+				   svn_fs_file_t *file);
 
 
 
@@ -316,17 +316,17 @@ typedef struct svn_fs_proplist_t svn_fs_proplist_t;
 /* Return the property list of OBJECT.  The property list object will
    live exactly as long as OBJECT does; multiple calls to these functions
    on the same object may return the same property list object.  */
-extern svn_fs_proplist_t *svn_fs_dir_proplist (svn_fs_dir_t *object);
-extern svn_fs_proplist_t *svn_fs_file_proplist (svn_fs_file_t *object);
+svn_fs_proplist_t *svn_fs_dir_proplist (svn_fs_dir_t *object);
+svn_fs_proplist_t *svn_fs_file_proplist (svn_fs_file_t *object);
 
 
 /* Set *PROPLIST to a pointer to the property list of the entry of
    directory DIR named NAME.  NAME must be a single path component.
    Unlike the other property list retrieval functions, this one may
    return an error.  */
-extern svn_error_t *svn_fs_dirent_proplist (svn_fs_proplist_t **proplist,
-					    svn_fs_dir_t *dir,
-					    svn_string_t *name);
+svn_error_t *svn_fs_dirent_proplist (svn_fs_proplist_t **proplist,
+				     svn_fs_dir_t *dir,
+				     svn_string_t *name);
 
 
 /* Set *VALUE to the value of the property in PROPLIST named NAME.
@@ -335,10 +335,10 @@ extern svn_error_t *svn_fs_dirent_proplist (svn_fs_proplist_t **proplist,
    If POOL is zero, allocate *VALUE in pool of the object PROPLIST
    came from; it will be freed when the filesystem is closed.  If POOL
    is non-zero, do allocation there.  */
-extern svn_error_t *svn_fs_proplist_get (svn_string_t **value,
-					 svn_fs_proplist_t *proplist,
-					 svn_string_t *name,
-					 apr_pool_t *pool);
+svn_error_t *svn_fs_proplist_get (svn_string_t **value,
+				  svn_fs_proplist_t *proplist,
+				  svn_string_t *name,
+				  apr_pool_t *pool);
 
 
 /* Set *NAMES to point to a null-terminated array of pointers to
@@ -347,9 +347,9 @@ extern svn_error_t *svn_fs_proplist_get (svn_string_t **value,
    If POOL is zero, allocate *NAMES in the pool of the object PROPLIST
    came from; it will be freed when the filesystem is closed.  If POOL
    is non-zero, do allocation there.  */
-extern svn_error_t *svn_fs_proplist_names (svn_string_t ***names,
-					   svn_fs_proplist_t *proplist,
-					   apr_pool_t *pool);
+svn_error_t *svn_fs_proplist_names (svn_string_t ***names,
+				    svn_fs_proplist_t *proplist,
+				    apr_pool_t *pool);
 
 
 /* Set *TABLE to an APR hash table containing the property list of
@@ -359,9 +359,9 @@ extern svn_error_t *svn_fs_proplist_names (svn_string_t ***names,
    If POOL is zero, allocate *TABLE in the pool of the object PROPLIST
    came from; it will be freed when the filesystem is closed.  If POOL
    is non-zero, do allocation there.  */
-extern svn_error_t *svn_fs_proplist_table (apr_hash_t *table,
-					   svn_fs_proplist_t *proplist,
-					   apr_pool_t *pool);
+svn_error_t *svn_fs_proplist_table (apr_hash_t *table,
+				    svn_fs_proplist_t *proplist,
+				    apr_pool_t *pool);
 
 
 
@@ -467,7 +467,7 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
 /* Begin a new transaction on the filesystem FS; when committed, this
    transaction will create a new version.  Set *TXN_P to a pointer to
    an object representing the new transaction.  */
-extern svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **TXN_P, svn_fs_t *FS);
+svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **TXN_P, svn_fs_t *FS);
 
 
 /* Commit the transaction TXN.  If the transaction conflicts with
@@ -476,14 +476,14 @@ extern svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **TXN_P, svn_fs_t *FS);
    version containing the changes made in TXN, and return zero.
 
    This call frees TXN, and any temporary resources it holds.  */
-extern svn_error_t *svn_fs_commit_txn (svn_fs_txn_t *txn);
+svn_error_t *svn_fs_commit_txn (svn_fs_txn_t *txn);
 
 
 /* Abort the transaction TXN.  Any changes made in TXN are discarded,
    and the filesystem is left unchanged.
 
    This frees TXN, and any temporary resources it holds.  */
-extern svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn);
+svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn);
 
 
 /* Select the root directory of version VERSION as the base root
@@ -494,14 +494,14 @@ extern svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn);
    a mutable file or directory object, you need to have a mutable
    directory object for its parent --- this is the function that gives
    you the first mutable directory object.  */
-extern svn_error_t *svn_fs_replace_root (svn_fs_dir_t **root,
-					 svn_fs_txn_t *txn,
-					 svn_vernum_t version);
+svn_error_t *svn_fs_replace_root (svn_fs_dir_t **root,
+				  svn_fs_txn_t *txn,
+				  svn_vernum_t version);
 
 
 /* Delete the entry named NAME from the directory DIR.  DIR must be a
    mutable directory object.  */
-extern svn_error_t *svn_fs_delete (svn_fs_dir_t *dir, svn_string_t *name);
+svn_error_t *svn_fs_delete (svn_fs_dir_t *dir, svn_string_t *name);
 
 
 /* Create a new subdirectory of PARENT named NAME.  PARENT must be
@@ -511,11 +511,11 @@ extern svn_error_t *svn_fs_delete (svn_fs_dir_t *dir, svn_string_t *name);
    The new directory will be based on the directory named BASE_NAME in
    BASE_VERSION.  If BASE_NAME is zero, the directory is completely
    new.  */
-extern svn_error_t *svn_fs_add_dir (svn_fs_dir_t **child,
-				    svn_fs_dir_t *parent,
-				    svn_string_t *name,
-				    svn_string_t *base_name,
-				    svn_vernum_t base_version);
+svn_error_t *svn_fs_add_dir (svn_fs_dir_t **child,
+			     svn_fs_dir_t *parent,
+			     svn_string_t *name,
+			     svn_string_t *base_name,
+			     svn_vernum_t base_version);
 
 
 /* Change the subdirectory of PARENT named NAME.  PARENT must be
@@ -526,11 +526,11 @@ extern svn_error_t *svn_fs_add_dir (svn_fs_dir_t **child,
    BASE_VERSION.  If BASE_NAME is zero, the directory is completely
    new.  If BASE_NAME is `svn_fs_default_base', then the new directory
    is based on the existing directory named NAME in PARENT.  */
-extern svn_error_t *svn_fs_replace_dir (svn_fs_dir_t **child,
-					svn_fs_dir_t *parent,
-					svn_string_t *name,
-					svn_string_t *base_name,
-					svn_vernum_t base_version);
+svn_error_t *svn_fs_replace_dir (svn_fs_dir_t **child,
+				 svn_fs_dir_t *parent,
+				 svn_string_t *name,
+				 svn_string_t *base_name,
+				 svn_vernum_t base_version);
 
 
 /* Change a directory's property's value, or add/delete a property.
@@ -538,9 +538,9 @@ extern svn_error_t *svn_fs_replace_dir (svn_fs_dir_t **child,
    - NAME is the name of the property to change.
    - VALUE is the new value of the property, or zero if the property should
      be removed altogether.  */
-extern svn_error_t *svn_fs_change_dir_prop (svn_fs_dir_t *dir,
-					    svn_string_t *name,
-					    svn_string_t *value);
+svn_error_t *svn_fs_change_dir_prop (svn_fs_dir_t *dir,
+				     svn_string_t *name,
+				     svn_string_t *value);
 
 
 /* Change the value of a directory entry's property.
@@ -549,10 +549,10 @@ extern svn_error_t *svn_fs_change_dir_prop (svn_fs_dir_t *dir,
    - NAME is the name of the property to change.
    - VALUE is the new value of the property, or zero if the property
      should be removed altogether.  */
-extern svn_error_t *svn_fs_change_dirent_prop (svn_fs_dir_t *dir,
-					       svn_string_t *entry,
-					       svn_string_t *name,
-					       svn_string_t *value);
+svn_error_t *svn_fs_change_dirent_prop (svn_fs_dir_t *dir,
+					svn_string_t *entry,
+					svn_string_t *name,
+					svn_string_t *value);
 
 
 /* Create a new file named NAME in the directory DIR, and set *FILE to
@@ -562,11 +562,11 @@ extern svn_error_t *svn_fs_change_dirent_prop (svn_fs_dir_t *dir,
    The new file will be based on the file named BASE_NAME in
    BASE_VERSION.  If BASE_NAME is zero, the file is completely
    new.  */
-extern svn_error_t *svn_fs_add_file (svn_fs_file_t **file,
-				     svn_fs_dir_t *dir,
-				     svn_string_t *name,
-				     svn_string_t *base_name,
-				     svn_vernum_t base_version);
+svn_error_t *svn_fs_add_file (svn_fs_file_t **file,
+			      svn_fs_dir_t *dir,
+			      svn_string_t *name,
+			      svn_string_t *base_name,
+			      svn_vernum_t base_version);
 
 
 /* Replace the entry named NAME in the mutable directory DIR with a
@@ -577,11 +577,11 @@ extern svn_error_t *svn_fs_add_file (svn_fs_file_t **file,
    If BASE_NAME is zero, the file is completely new.  If BASE_NAME is
    `svn_fs_default_base', then the new file is based on the existing
    file named NAME in DIR.  */
-extern svn_error_t *svn_fs_replace_file (svn_fs_file_t **file,
-					 svn_fs_dir_t *dir,
-					 svn_string_t *name,
-					 svn_string_t *base_name,
-					 svn_vernum_t base_version);
+svn_error_t *svn_fs_replace_file (svn_fs_file_t **file,
+				  svn_fs_dir_t *dir,
+				  svn_string_t *name,
+				  svn_string_t *base_name,
+				  svn_vernum_t base_version);
 
 
 /* Apply a text delta to the mutable file FILE.
@@ -589,10 +589,10 @@ extern svn_error_t *svn_fs_replace_file (svn_fs_file_t **file,
    describing the new file's contents relative to the given base,
    or the empty file if BASE_NAME is zero.  The producer should
    pass CONTENTS_BATON to CONTENTS.  */
-extern svn_error_t *svn_fs_apply_textdelta (svn_fs_file_t *file,
-					    svn_txdelta_window_handler_t
-					      **contents,
-					    void **contents_baton);
+svn_error_t *svn_fs_apply_textdelta (svn_fs_file_t *file,
+				     svn_txdelta_window_handler_t
+				     **contents,
+				     void **contents_baton);
 
 
 /* Change a file's property's value, or add/delete a property.
@@ -600,16 +600,16 @@ extern svn_error_t *svn_fs_apply_textdelta (svn_fs_file_t *file,
    - NAME is the name of the property to change.
    - VALUE is the new value of the property, or zero if the property should
      be removed altogether.  */
-extern svn_error_t *svn_fs_change_file_prop (svn_fs_file_t *file,
-					     svn_string_t *name,
-					     svn_string_t *value);
+svn_error_t *svn_fs_change_file_prop (svn_fs_file_t *file,
+				      svn_string_t *name,
+				      svn_string_t *value);
 
 
 /* A magic string object.  If we pass a pointer to this object as the
    BASE_NAME argument to certain functions, that has a special
    meaning; search for mentions of `svn_fs_default_base' above to see
    what they mean.  */
-extern svn_string_t *svn_fs_default_base;
+svn_string_t *svn_fs_default_base;
 
 
 
