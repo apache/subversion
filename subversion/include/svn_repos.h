@@ -511,7 +511,8 @@ svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
 #define SVN_REPOS_DUMPFILE_NODE_PATH                 "Node-path"
 #define SVN_REPOS_DUMPFILE_NODE_KIND                 "Node-kind"
 #define SVN_REPOS_DUMPFILE_NODE_ACTION               "Node-action"
-#define SVN_REPOS_DUMPFILE_NODE_COPIED_FROM          "Node-copied-from"
+#define SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH        "Node-copyfrom-path"
+#define SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV         "Node-copyfrom-rev"
 #define SVN_REPOS_DUMPFILE_NODE_COPY_SOURCE_CHECKSUM "Node-copy-source-md5"
 #define SVN_REPOS_DUMPFILE_NODE_CONTENT_CHECKSUM     "Node-content-md5"
 

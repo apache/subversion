@@ -233,8 +233,10 @@ dump_node (svn_fs_root_t *fs_root,
       if (copyfrom_path != NULL)
         {
           SVN_ERR (svn_stream_printf (stream, pool,
-                                      SVN_REPOS_DUMPFILE_NODE_COPIED_FROM 
-                                      ": %" SVN_REVNUM_T_FMT ", %s\n",
+                                      SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV 
+                                      ": %" SVN_REVNUM_T_FMT "\n"
+                                      SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH
+                                      ": %s\n",                  
                                       copyfrom_rev, copyfrom_path));
           /* ### someday write a node-copyfrom-source-checksum. */
         }
