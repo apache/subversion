@@ -1583,17 +1583,17 @@ class SymbolicNameTracker:
     # nothing to do.
     #
     # We do one revision per branch or tag, for clarity to users, not
-    # for correctness.
-    #
-    ### FIXME: What we really need is a more formal inter-branch
-    ### dependency tracking, for branches or tags that are created
-    ### based on other branches.  That's not too hard, as long as
-    ### we're willing to punt on the bizarre and rare case of
-    ### mutually-interdependent branches, which I certainly am :-).
-    ###
-    ### In the meantime, doing all branches first, and then all tags,
-    ### and having (at least) one new revision between those stages,
-    ### takes care of tags that sprout from branches.
+    # for correctness.  In CVS, when you make a branch off a branch,
+    # the new branch will just root itself in the roots of the old
+    # branch *except* where the new branch sprouts from a revision
+    # that was actually committed on the old branch.  In the former
+    # cases, the source paths will be the same as the source paths
+    # from which the old branch was created and therefore will already
+    # exist; and in the latter case, the source paths will actually be
+    # on the old branch, but those paths will exist already because
+    # they were commits on that branch and therefore cvs2svn must have
+    # created it already (see the fill_branch call in Commit.commit).
+    # So either way, the source paths exist by the time we need them.
     for name in parent:
       if name[0] != '/':
         self.fill_branch(dumper, ctx, name, [1])
@@ -1695,18 +1695,7 @@ class Commit:
       print 'Try rerunning with (for example) \"--encoding=latin1\".'
       sys.exit(1)
 
-    ### FIXME: Until we handle branches and tags, there's a
-    ### possibility that none of the code below will get used.  For
-    ### example, if the CVS file was added on a branch, then its
-    ### revision 1.1 will start out in state "dead", and the RCS file
-    ### will be in the Attic/.  If that file is the only item in the
-    ### commit, then we won't hit the `self.changes' case at all, and
-    ### we won't do anything in the `self.deletes' case, since we
-    ### don't handle the branch right now, and we special-case
-    ### revision 1.1.
-    ###
-    ### So among other things, this variable tells us whether we
-    ### actually wrote anything to the dumpfile.
+    # Tells whether we actually wrote anything to the dumpfile.
     svn_rev = SVN_INVALID_REVNUM
 
     for rcs_file, cvs_rev, br, tags, branches in self.changes:
@@ -1998,8 +1987,6 @@ def pass4(ctx):
 
 def pass5(ctx):
   if (not ctx.dry_run) and (not ctx.dump_only):
-    # ### FIXME: Er, does this "<" stuff work under Windows?
-    # ### If not, then in general how do we load dumpfiles under Windows?
     print 'loading %s into %s' % (ctx.dumpfile, ctx.target)
     os.system('%s load --ignore-uuid %s < %s'
               % (ctx.svnadmin, ctx.target, ctx.dumpfile))
