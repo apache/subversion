@@ -19,6 +19,7 @@
 #include <svn_error.h>
 #include <svn_string.h>
 #include <svn_fs.h>
+#include <apr_tables.h>
 
 #include "svn_ruby.h"
 #include "fs.h"
@@ -401,7 +402,7 @@ fs_open_txn (VALUE self, VALUE aName)
 static VALUE
 fs_list_transactions (VALUE self)
 {
-  char **name;
+  apr_array_header_t **txns;
   svn_ruby_fs_t *fs;
   apr_pool_t *pool;
   svn_error_t *err;
@@ -410,7 +411,7 @@ fs_list_transactions (VALUE self)
   if (fs->closed)
     rb_raise (rb_eRuntimeError, "closed fs");
   pool = svn_pool_create (fs->pool);
-  err = svn_fs_list_transactions (&name, fs->fs, pool);
+  err = svn_fs_list_transactions (&txns, fs->fs, pool);
   if (err)
     {
       apr_pool_destroy (pool);
@@ -423,8 +424,8 @@ fs_list_transactions (VALUE self)
 
     obj = rb_ary_new ();
 
-    for (i = 0; name[i]; i++)
-      rb_ary_push (obj, rb_str_new2 (name[i]));
+    for (i = 0; txns->nelts; i++)
+      rb_ary_push (obj, rb_str_new2 (APR_ARRAY_IDX (txns, i, const char *)));
 
     apr_pool_destroy (pool);
     return obj;

@@ -436,10 +436,10 @@ svn_error_t *svn_fs_open_txn (svn_fs_txn_t **txn,
 svn_error_t *svn_fs_close_txn (svn_fs_txn_t *txn);
 
 
-/* Set *NAMES_P to a null-terminated array of pointers to strings,
-   containing the names of all the currently active transactions in
-   the filesystem FS.  Allocate the array in POOL.  */
-svn_error_t *svn_fs_list_transactions (char ***names_p,
+/* Set *NAMES_P to an array of const char * IDs which are the names of
+   all the currently active transactions in the filesystem FS.
+   Allocate the array in POOL.  */
+svn_error_t *svn_fs_list_transactions (apr_array_header_t **names_p,
                                        svn_fs_t *fs,
                                        apr_pool_t *pool);
 

@@ -309,7 +309,7 @@ svn_fs_open_txn (svn_fs_txn_t **txn_p,
 
 struct list_transactions_args
 {
-  char ***names_p;
+  apr_array_header_t **names_p;
   svn_fs_t *fs;
   apr_pool_t *pool;
 };
@@ -325,11 +325,11 @@ txn_body_list_transactions (void* baton,
 }
 
 svn_error_t *
-svn_fs_list_transactions (char ***names_p,
+svn_fs_list_transactions (apr_array_header_t **names_p,
                           svn_fs_t *fs,
                           apr_pool_t *pool)
 {
-  char **names;
+  apr_array_header_t *names;
   struct list_transactions_args args;
 
   SVN_ERR (svn_fs__check_fs (fs));

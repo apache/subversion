@@ -336,7 +336,7 @@ call_functions_with_unopened_fs (const char **msg,
   }
 
   {
-    char **ignored;
+    apr_array_header_t *ignored;
     err = svn_fs_list_transactions (&ignored, fs, pool);
     SVN_ERR (check_no_fs_error (err, pool));
   }
@@ -384,7 +384,7 @@ verify_txn_list (const char **msg,
   svn_fs_t *fs;
   svn_fs_txn_t *txn1, *txn2;
   const char *name1, *name2;
-  char **txn_list;
+  apr_array_header_t *txn_list;
 
   *msg = "create 2 txns, list them, and verify the list.";
 
@@ -407,19 +407,17 @@ verify_txn_list (const char **msg,
   SVN_ERR (svn_fs_list_transactions (&txn_list, fs, pool));
 
   /* Check the list. It should have *exactly* two entries. */
-  if ((txn_list[0] == NULL)
-      || (txn_list[1] == NULL)
-      || (txn_list[2] != NULL))
+  if (txn_list->nelts != 2)
     goto all_bad;
   
   /* We should be able to find our 2 txn names in the list, in some
      order. */
-  if ((! strcmp (txn_list[0], name1))
-      && (! strcmp (txn_list[1], name2)))
+  if ((! strcmp (name1, APR_ARRAY_IDX (txn_list, 0, const char *)))
+      && (! strcmp (name2, APR_ARRAY_IDX (txn_list, 1, const char *))))
     goto all_good;
   
-  else if ((! strcmp (txn_list[1], name1))
-           && (! strcmp (txn_list[0], name2)))
+  else if ((! strcmp (name2, APR_ARRAY_IDX (txn_list, 0, const char *)))
+           && (! strcmp (name1, APR_ARRAY_IDX (txn_list, 1, const char *))))
     goto all_good;
   
  all_bad:
