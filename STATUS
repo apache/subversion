@@ -30,14 +30,6 @@ Candidate changes:
     Votes:
       +1: jaa, sussman
 
-  * r11172
-    Fix encoding bug in svnlook log and author.
-    Justification:
-      Regression and annoying for people using non-ASCII chars in log messages.
-    Votes:
-      +1: lundblad, brane, bliss
-      +1 (concept): nori
-
   * r11202, r11243
     Fix eol-style translation error for propget.
     Justification:
