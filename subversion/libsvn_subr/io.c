@@ -668,7 +668,7 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
                               svn_path_local_style (dst_path, pool));
   
   /* Create the new directory. */
-  /* ### TODO: copy permissions? */
+  /* ### TODO: copy permissions (needs apr_file_attrs_get()) */
   SVN_ERR (svn_io_dir_make (dst_path, APR_OS_DEFAULT, pool));
 
   /* Loop over the dirents in SRC.  ('.' and '..' are auto-excluded) */
@@ -831,7 +831,6 @@ svn_io_set_file_affected_time (apr_time_t apr_time,
 
   return SVN_NO_ERROR;
 }
-
 
 
 svn_error_t *
