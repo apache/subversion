@@ -58,6 +58,9 @@ svnlook_binary = os.path.abspath('../../../svnlook/svnlook')
 general_repo_dir = "repositories"
 general_wc_dir = "working_copies"
 
+# A symlink that will always point to latest repository
+current_repo_dir = os.path.join(general_repo_dir, "current-repo")
+
 # temp directory in which we will create our 'pristine' local
 # repository and other scratch data.  This should be removed when we
 # quit and when we startup.
@@ -69,9 +72,6 @@ greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 
 # Global URL to testing area.  Default to ra_local, current working dir.
 test_area_url = "file://" + os.path.abspath(os.getcwd()) + "/"
-
-# Name of the .htaccess file used by DAV_mode:
-htaccess_file = os.path.join(general_repo_dir, '.htaccess')
 
 
 # Our pristine greek tree, used to assemble 'expected' trees.
@@ -152,6 +152,9 @@ def run_svn(*varargs):
   outfile.close()
   infile.close()
   errfile.close()
+
+  if stderr_lines:
+    print stderr_lines
 
   return stdout_lines, stderr_lines
 
