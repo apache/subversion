@@ -47,7 +47,7 @@
 DIST_SANDBOX=.dist_sandbox
 
 ### Estimated current version of your working copy
-WC_VERSION=`svn st -vn doc/README | awk '{print $2}'`
+WC_VERSION=`svn st -vN doc/README | awk '{print $2}'`
 
 ### The "REV" part of ${DISTNAME}-rREV.tar.gz
 if test -z "$1" || test "$1" = "HEAD"; then
@@ -115,7 +115,7 @@ echo "Removed and recreated ${DIST_SANDBOX}"
 echo "Checking out revision ${VERSION} of Subversion into sandbox..."
 (cd ${DIST_SANDBOX} && \
  svn co -q -r ${VERSION} http://svn.collab.net/repos/svn/$REPOS_PATH \
-        -d ${DISTNAME} --username none --password none)
+        ${DISTNAME} --username none --password none)
 echo "Removing all .svn/ dirs from the checkout..."
 rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name .svn -print`
 
