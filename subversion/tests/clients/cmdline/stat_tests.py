@@ -243,6 +243,33 @@ def status_with_new_files_pending(sbox):
   return 0
 
 
+def status_blank_for_ignored_file(sbox):
+  "status blank for ignored file"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  was_cwd = os.getcwd()
+
+  os.chdir(wc_dir)
+
+  svntest.main.file_append('newfile', 'this is a new file')
+  svntest.main.run_svn(None, 'propset', 'svn:ignore', 'newfile', '.')
+  stat_output, err_output = svntest.main.run_svn(None, 'status', '--no-ignore',
+                                                 '.')
+  if err_output:
+    return 1
+  status = 1
+  for line in stat_output:
+    if re.match("  +newfile", line):
+      status = 0
+  
+  os.chdir(was_cwd)
+
+  return status
+
+
 ########################################################################
 # Run the tests
 
@@ -255,6 +282,7 @@ test_list = [ None,
               status_missing_file,
               status_type_change,
               status_with_new_files_pending,
+              status_blank_for_ignored_file,
              ]
 
 if __name__ == '__main__':
