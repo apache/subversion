@@ -60,25 +60,76 @@
 #include <apr_strings.h>
 
 #include "svn_types.h"
+#include "svn_error.h"
+#include "svn_fs.h"
+
 #include "dav_svn.h"
 
 
+/* dav_svn_repos
+ *
+ * Record information about the repository that a resource belongs to.
+ * This structure will be shared between multiple resources so that we
+ * can optimized our FS access.
+ *
+ * Note that we do not refcount this structure. Presumably, we will need
+ * it throughout the life of the request. Therefore, we can just leave it
+ * for the request pool to cleanup/close.
+ *
+ * Also, note that it is possible that two resources may have distinct
+ * dav_svn_repos structures, yet refer to the same repository. This is
+ * allowed by the SVN FS interface.
+ *
+ * ### should we attempt to merge them when we detect this situation in
+ * ### places like is_same_resource, is_parent_resource, or copy/move?
+ * ### I say yes: the FS will certainly have an easier time if there is
+ * ### only a single FS open; otherwise, it will have to work a bit harder
+ * ### to keep the things in sync.
+ */
+typedef struct {
+  apr_pool_t *pool;     /* request_rec -> pool */
+
+  /* Remember the root URL path of this repository (just a path; no
+     scheme, host, or port).
+
+     Example: the URI is "http://host/repos/file", this will be "/repos".
+  */
+  const char *root_uri;
+
+  /* This records the filesystem path to the SVN FS */
+  const char *fs_path;
+
+  /* the open repository */
+  svn_fs_t *fs;
+
+} dav_svn_repos;
+
+/* internal structure to hold information about this resource */
 struct dav_resource_private {
-  apr_pool_t *pool;
+  apr_pool_t *pool;     /* request_rec -> pool */
 
-  /* Path from the SVN repository root to this resource. */
-  const char *path;
+  /* Path from the SVN repository root to this resource. This value has
+     a leading slash. It will never have a trailing slash, even if the
+     resource represents a collection.
 
-  /* Remember the root URI of this repository */
-  const char *root_dir;
+     For example: URI is http://host/repos/file -- path will be "/file".
+
+     Note that the SVN FS does not like absolute paths, so we
+     generally skip the first char when talking with the FS.
+  */
+  svn_string_t *path;
 
   /* resource-type-specific data */
   const char *object_name;
+
+  dav_svn_repos *repos;
 };
 
 struct dav_stream {
   const dav_resource *res;
-  int pos;
+  svn_fs_file_t *file;
+  svn_read_fn_t *readfn;
+  void *baton;
 };
 
 typedef struct {
@@ -90,7 +141,6 @@ typedef struct {
 static int dav_svn_setup_activity(dav_resource_combined *comb,
                                   const char *path)
 {
-  DBG1("ACTIVITY: %s", path);
   comb->res.type = DAV_RESOURCE_TYPE_ACTIVITY;
 
   /* ### parse path */
@@ -148,18 +198,31 @@ static const struct special_defn
 };
 
 static dav_resource * dav_svn_get_resource(request_rec *r,
-                                           const char *root_dir,
+                                           const char *root_uri,
                                            const char *workspace,
                                            const char *target,
                                            int is_label)
 {
+  const char *fs_path;
   dav_resource_combined *comb;
+  dav_svn_repos *repos;
   apr_size_t len1;
   apr_size_t len2;
   char *uri;
   const char *relative;
   const char *special_uri;
   char ch;
+  svn_error_t *err;
+
+  if ((fs_path = dav_svn_get_fs_path(r)) == NULL)
+    {
+      ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO,
+                    SVN_ERR_APMOD_MISSING_PATH_TO_FS, r,
+                    "The server is misconfigured: an SVNPath directive is "
+                    "required to specify the location of this resource's "
+                    "repository.");
+      return NULL;
+    }
 
   comb = apr_pcalloc(r->pool, sizeof(*comb));
   comb->res.info = &comb->priv;
@@ -181,24 +244,53 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
 
   /* The URL space defined by the SVN provider is always a virtual
      space. Construct the path relative to the configured Location
-     (root_dir). So... the relative location is simply the URL used,
-     skipping the root_dir. */
-  relative = ap_stripprefix(uri, root_dir);
+     (root_uri). So... the relative location is simply the URL used,
+     skipping the root_uri.
 
-  /* It is possible that some yin-yang used a trailing slash in their
-     Location directive (which was then removed as part of the
-     "prefix").  Back up a step if we don't have a leading slash. */
+     Note: mod_dav has canonialized root_uri. It will not have a trailing
+           slash (unless it is "/").
+
+     Note: given a URI of /something and a root of /some, then it is
+           impossible to be here (and end up with "thing"). This is simply
+           because we control /some and are dispatched to here for its
+           URIs. We do not control /something, so we don't get here. Or,
+           if we *do* control /something, then it is for THAT root.
+  */
+  relative = ap_stripprefix(uri, root_uri);
+
+  /* We want a leading slash on the path specified by <relative>. This
+     will almost always be the case since root_uri does not have a trailing
+     slash. However, if the root is "/", then the slash will be removed
+     from <relative>. Backing up a character will put the leading slash
+     back. */
   if (*relative != '/')
       --relative;
 
   /* "relative" is part of the "uri" string, so it has the proper
      lifetime to store here. */
-  comb->priv.path = relative;
+  comb->priv.path = svn_string_create(relative, r->pool);
 
-  /* We are assuming the root_dir will live at least as long as this
+  repos = apr_pcalloc(r->pool, sizeof(*repos));
+  comb->priv.repos = repos;
+
+  /* We are assuming the root_uri will live at least as long as this
      resource. Considering that it typically comes from the per-dir
      config in mod_dav, this is valid for now. */
-  comb->priv.root_dir = root_dir;
+  repos->root_uri = root_uri;
+
+  /* where is the SVN FS for this resource? */
+  repos->fs_path = fs_path;
+
+  /* open the SVN FS */
+  repos->fs = svn_fs_new(r->pool);
+  err = svn_fs_open_berkeley(repos->fs, fs_path);
+  if (err != NULL)
+    {
+      ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO, err->apr_err, r,
+                    "Could not open the SVN filesystem at %s", fs_path);
+      return NULL;
+    }
+
 
   /* Figure out the type of the resource */
 
@@ -208,7 +300,6 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
      not. Take particular care in this comparison. */
   len1 = strlen(relative);
   len2 = strlen(special_uri);
-  DBG3("len1=%d  len2=%d  rel=\"%s\"", len1, len2, relative);
   if (len1 > len2
       && memcmp(relative + 1, special_uri, len2) == 0
       && ((ch = relative[1 + len2]) == '/' || ch == '\0'))
@@ -255,6 +346,8 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
     }
   else
     {
+      /* ### open the FS */
+
       /* ### look up the resource in the SVN repository */
       comb->res.type = DAV_RESOURCE_TYPE_REGULAR;
 
@@ -281,7 +374,8 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
   /* A malformed URI error occurs when a URI indicates the "special" area,
      yet it has an improper construction. Generally, this is because some
      doofus typed it in manually or has a buggy client. */
-  ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO, 0, r,
+  ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO,
+                SVN_ERR_APMOD_MALFORMED_URI, r,
                 "The URI indicated a resource within Subversion's special "
                 "resource area, but does not exist. This is generally "
                 "caused by a problem in the client software.");
@@ -295,21 +389,28 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
 
 static dav_resource * dav_svn_get_parent_resource(const dav_resource *resource)
 {
+  svn_string_t *path = resource->info->path;
+
+  /* the root of the repository has no parent */
+  if (path->len == 1 && *path->data == '/')
+    return NULL;
+
   /* ### fill this in */
+  /* ### note: only needed for methods which modify the repository */
   return NULL;
 }
 
 static int dav_svn_is_same_resource(const dav_resource *res1,
                                     const dav_resource *res2)
 {
-  /* ### fill this in */
-  return 1;
+  return svn_string_compare(res1->info->path, res2->info->path);
 }
 
 static int dav_svn_is_parent_resource(const dav_resource *res1,
                                       const dav_resource *res2)
 {
   /* ### fill this in */
+  /* ### note: only needed by COPY/MOVE */
   return 1;
 }
 
@@ -317,32 +418,86 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                        dav_stream_mode mode,
                                        dav_stream **stream)
 {
-  *stream = apr_pcalloc(resource->info->pool, sizeof(*stream));
+  dav_resource_private *info = resource->info;
+  svn_error_t *err;
+  svn_vernum_t v;
+  svn_fs_dir_t *fsdir;
+  svn_fs_node_t *node;
+  svn_string_t relpath;
 
+  /* ### no way to ask for "head" */
+  /* ### note that we won't *always* go for the head... if this resource
+     ### corresponds to a Version Resource, then we have a specific version
+     ### to ask for. [and it should be in info->whatever]
+  */
+  v = 1;
+
+  /* get the root of the tree */
+  err = svn_fs_open_root(&fsdir, info->repos->fs, v);
+  if (err != NULL)
+    {
+      return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                                 "could not open the root of the repository");
+    }
+
+  /* assert: we are not opening a dir, thus we are not opening "/" */
+
+  /* open the requested resource. note that we skip the leading "/" */
+  relpath = *info->path;
+  ++relpath.data;
+  --relpath.len;
+  err = svn_fs_open_node(&node, fsdir, &relpath);
+  if (err != NULL)
+    {
+      return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                                 "could not open the resource");
+    }
+
+  /* done with the root dir */
+  svn_fs_close_dir(fsdir);
+
+  /* start building the stream structure */
+  *stream = apr_pcalloc(info->pool, sizeof(**stream));
   (*stream)->res = resource;
+
+  /* get an FS file object for the resource [from the node] */
+  (*stream)->file = svn_fs_node_to_file(node);
+  /* assert: file != NULL   (we shouldn't be here if node is a DIR) */
+
+  /* ### assuming mode == read for now */
+
+  err = svn_fs_file_contents(&(*stream)->readfn, &(*stream)->baton,
+                             (*stream)->file, info->pool);
+  if (err != NULL)
+    {
+      return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                                 "could not prepare to read the file");
+    }
 
   return NULL;
 }
 
 static dav_error * dav_svn_close_stream(dav_stream *stream, int commit)
 {
-  /* ### fill this in */
+  /* ### anything that needs to happen with stream->baton? */
+
+  svn_fs_close_file(stream->file);
+
   return NULL;
 }
 
 static dav_error * dav_svn_read_stream(dav_stream *stream, void *buf,
                                        apr_size_t *bufsize)
 {
-  if (stream->pos) {
-    /* EOF */
-    *bufsize = 0;
-    return NULL;
-  }
+  svn_error_t *err;
 
-  if (*bufsize > 10)
-    *bufsize = 10;
-  memcpy(buf, "123456789\n", *bufsize);
-  stream->pos = 1;
+  err = (*stream->readfn)(stream->baton, buf, bufsize,
+                          stream->res->info->pool);
+  if (err != NULL)
+    {
+      return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                                 "could not read the file contents");
+    }
 
   return NULL;
 }
@@ -433,6 +588,8 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
 static dav_error * dav_svn_walk(dav_walker_ctx *wctx, int depth)
 {
   /* ### fill this in */
+  /* ### see svn_fs_dir_entries() */
+
   return NULL;
 }
 
