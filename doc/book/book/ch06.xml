@@ -81,9 +81,15 @@
         the <filename>Application Data</filename> area of the user's
         profile directory.  However, on this platform the exact
         location differs from system to system, and is dictated by the
-        Windows registry.  We will refer to the per-user configuration
-        area using its Unix name,
-        <filename>.subversion</filename>.</para>
+        Windows registry.
+        <footnote>
+          <para>The <literal>APPDATA</literal> environment variable
+            points to the <filename>Application Data</filename> area,
+            so you can always refer to this folder as
+            <filename>%APPDATA%\Subversion</filename>.</para>
+        </footnote>
+        We will refer to the per-user configuration area using its Unix
+        name, <filename>.subversion</filename>.</para>
 
       <para>In addition to the per-user configuration area, Subversion
         also recognizes the existence of a system-wide configuration
