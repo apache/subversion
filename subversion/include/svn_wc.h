@@ -131,6 +131,7 @@ svn_error_t *svn_wc_apply_delta (void *delta_src,
                                  svn_delta_read_fn_t *delta_stream_reader,
                                  svn_string_t *dest,
                                  svn_string_t *repos,
+                                 svn_vernum_t version,
                                  apr_pool_t *pool);
 
 /*
