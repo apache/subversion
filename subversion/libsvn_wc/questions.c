@@ -422,13 +422,54 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
 
 
 
+/* Helper to optimize svn_wc_props_modified_p().
+
+   If PATH_TO_PROP_FILE is nonexistent, or is of size 4 bytes ("END"),
+   then set EMPTY_P to true.   Otherwise set EMPTY_P to false, which
+   means that the file must contain real properties.  */
+static svn_error_t *
+empty_props_p (svn_boolean_t *empty_p,
+               svn_stringbuf_t *path_to_prop_file,
+               apr_pool_t *pool)
+{
+  enum svn_node_kind kind;
+
+  SVN_ERR (svn_io_check_path (path_to_prop_file, &kind, pool));
+
+  if (kind == svn_node_none)
+    *empty_p = TRUE;
+
+  else 
+    {
+      apr_finfo_t finfo;
+      apr_status_t status;
+
+      status = apr_stat (&finfo, path_to_prop_file->data, APR_FINFO_MIN, pool);
+      if (status)
+        return svn_error_createf (status, 0, NULL, pool,
+                                  "couldn't stat '%s'...",
+                                  path_to_prop_file->data);
+
+      /* If we remove props from a propfile, eventually the file will
+         contain nothing but "END" */
+      if (finfo.size <= 4)  
+        *empty_p = TRUE;
+
+      else
+        *empty_p = FALSE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 
 svn_error_t *
 svn_wc_props_modified_p (svn_boolean_t *modified_p,
                          svn_stringbuf_t *path,
                          apr_pool_t *pool)
 {
-  enum svn_node_kind wkind, bkind;
+  svn_boolean_t bempty, wempty;
   svn_stringbuf_t *prop_path;
   svn_stringbuf_t *prop_base_path;
   svn_boolean_t different_filesizes, equal_timestamps;
@@ -438,32 +479,32 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, subpool));
   SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path, 0, subpool));
 
-  /* See if either of the paths exist. */
-  SVN_ERR (svn_io_check_path (prop_path, &wkind, subpool));
-  SVN_ERR (svn_io_check_path (prop_base_path, &bkind, subpool));
+  /* Decide if either path is "empty" of properties. */
+  SVN_ERR (empty_props_p (&wempty, prop_path, subpool));
+  SVN_ERR (empty_props_p (&bempty, prop_base_path, subpool));
 
-  /* Easy out:  if the base file is missing, we know the answer
+  /* Easy out:  if the base file is empty, we know the answer
      immediately. */
-  if (bkind != svn_node_file)
+  if (bempty)
     {
-      if (wkind == svn_node_file)
+      if (! wempty)
         {
-          /* base is missing, but working exists */
+          /* base is empty, but working is not */
           *modified_p = TRUE;
           goto cleanup;
         }
       else
         {
-          /* base and working are both missing */
+          /* base and working are both empty */
           *modified_p = FALSE;
           goto cleanup;
         }
     }
 
-  /* OK, so the base file exists.  One more easy out: */
-  if (wkind != svn_node_file)
+  /* OK, so the base file is non-empty.  One more easy out: */
+  if (wempty)
     {
-      /* base exists, working is missing */
+      /* base exists, working is empty */
       *modified_p = TRUE;
       goto cleanup;
     }
