@@ -1,3 +1,12 @@
+Version 0.28.0 (in-progress)
+
+ User-visible changes:
+ * fs schema change, see issue #1003 **NOTE: repos dump/load cycle required!**
+
+ Developer-visible changes:
+ * none
+
+
 Version 0.27.0 (released 12 August 2003, rev 6707, branches/release-0.27.0)
 
  User-visible changes:
