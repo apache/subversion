@@ -689,7 +689,7 @@ svn_client_export (svn_revnum_t *result_rev,
       SVN_ERR (ra_lib->do_update (session,
                                   &reporter, &report_baton,
                                   revnum,
-                                  NULL, /* no sub-target */
+                                  "", /* no sub-target */
                                   TRUE, /* recurse */
                                   export_editor, edit_baton, pool));
 

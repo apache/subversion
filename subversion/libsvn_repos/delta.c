@@ -227,22 +227,15 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
     return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, 0,
                              "svn_repos_dir_delta: invalid target path");
 
-  /* If SRC_ENTRY is supplied, it must not be empty. */
-  if (src_entry && svn_path_is_empty (src_entry))
-    return svn_error_create 
-      (SVN_ERR_FS_PATH_SYNTAX, 0,
-       "svn_repos_dir_delta: source entry may not be the empty string");
-
   /* Calculate the fs path implicitly used for editor->open_root, so
      we can do an authz check on that path first. */
-  if (src_entry)
+  if (*src_entry)
     authz_root_path = svn_path_dirname (tgt_fullpath, pool);
   else
     authz_root_path = tgt_fullpath;
 
-  /* Construct the full path of the source item (SRC_ENTRY may be
-     NULL, which is fine).  */
-  src_fullpath = svn_path_join_many (pool, src_parent_dir, src_entry, NULL);
+  /* Construct the full path of the source item. */
+  src_fullpath = svn_path_join (src_parent_dir, src_entry, pool);
 
   /* Get the node kinds for the source and target paths.  */
   SVN_ERR (svn_fs_check_path (&tgt_kind, tgt_root, tgt_fullpath, pool));
@@ -254,8 +247,8 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
 
   /* If either the source or the target is a non-directory, we
      require that a SRC_ENTRY be supplied. */
-  if ((! src_entry) && ((src_kind != svn_node_dir) 
-                        || tgt_kind != svn_node_dir))
+  if ((! *src_entry) && ((src_kind != svn_node_dir) 
+                         || tgt_kind != svn_node_dir))
     return svn_error_create 
       (SVN_ERR_FS_PATH_SYNTAX, 0,
        "svn_repos_dir_delta: invalid editor anchoring; at least one of the "
@@ -328,7 +321,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
       /* They are the same node!  No-op (you gotta love those). */
       goto cleanup;
     }
-  else if (src_entry)
+  else if (*src_entry)
     {
       /* If the nodes have different kinds, we must delete the one and
          add the other.  Also, if they are completely unrelated and

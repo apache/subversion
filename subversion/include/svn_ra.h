@@ -459,7 +459,7 @@ typedef struct svn_ra_plugin_t
    *
    * @a update_target is an optional single path component will restrict
    * the scope of things affected by the update to an entry in the
-   * directory represented by the @a session_baton's URL, or @c NULL if the
+   * directory represented by the @a session_baton's URL, or empty if the
    * entire directory is meant to be updated.
    *
    * The working copy will be updated to @a revision_to_update_to, or the
@@ -500,7 +500,7 @@ typedef struct svn_ra_plugin_t
    *
    * @a switch_target is an optional single path component will restrict
    * the scope of things affected by the switch to an entry in the
-   * directory represented by the @a session_baton's URL, or @c NULL if the
+   * directory represented by the @a session_baton's URL, or empty if the
    * entire directory is meant to be switched.
    *
    * The working copy will be switched to @a revision_to_switch_to, or the
@@ -543,7 +543,7 @@ typedef struct svn_ra_plugin_t
    * the working copy were the client to call @c do_update().
    * @a status_target is an optional single path component will restrict
    * the scope of the status report to an entry in the directory
-   * represented by the @a session_baton's URL, or @c NULL if the entire
+   * represented by the @a session_baton's URL, or empty if the entire
    * directory is meant to be examined.
    *
    * The caller may not perform any RA operations using
@@ -586,7 +586,7 @@ typedef struct svn_ra_plugin_t
    *
    * @a diff_target is an optional single path component will restrict
    * the scope of the diff to an entry in the directory represented by
-   * the @a session_baton's URL, or @c NULL if the entire directory is 
+   * the @a session_baton's URL, or empty if the entire directory is 
    * meant to be one of the diff paths.
    *
    * The working copy will be diffed against @a versus_url as it exists

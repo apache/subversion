@@ -923,7 +923,7 @@ adjust_rel_targets (const char **pbase_dir,
               
       SVN_ERR (svn_wc_get_actual_target (base_dir, &parent_dir, &name, pool));
 
-      if (name)
+      if (*name)
         {
           /* Our new "grandfather directory" is the parent directory
              of the former one. */
@@ -1005,7 +1005,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
       const char *parent_dir, *name;
 
       SVN_ERR (svn_wc_get_actual_target (base_dir, &parent_dir, &name, pool));
-      if (name)
+      if (*name)
         {
           svn_node_kind_t kind;
 
@@ -1055,7 +1055,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
           SVN_ERR (svn_wc_get_actual_target (target, &parent_dir, 
                                              &name, pool));
 
-          if (name)
+          if (*name)
             {
               svn_node_kind_t kind;
 

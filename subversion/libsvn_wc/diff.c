@@ -637,7 +637,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
      directory and if this is that directory the non-target entries must be
      skipped. */
   in_anchor_not_target =
-    (dir_baton->edit_baton->target
+    (*dir_baton->edit_baton->target
      && (! svn_path_compare_paths
          (dir_baton->path,
           svn_wc_adm_access_path (dir_baton->edit_baton->anchor))));
@@ -1363,11 +1363,8 @@ svn_wc_diff (svn_wc_adm_access_t *anchor,
   eb = make_editor_baton (anchor, target, callbacks, callback_baton,
                           recurse, FALSE, FALSE, pool);
 
-  if (target)
-    target_path = svn_path_join (svn_wc_adm_access_path (anchor), target,
-                                 eb->pool);
-  else
-    target_path = apr_pstrdup (eb->pool, svn_wc_adm_access_path (anchor));
+  target_path = svn_path_join (svn_wc_adm_access_path (anchor), target,
+                               eb->pool);
 
   SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, anchor, target_path,
                                       eb->pool));

@@ -267,18 +267,18 @@ svn_repos_set_path (void *report_baton,
       /* Create the transaction if we haven't yet done so. */
       if (! rbaton->txn)
         SVN_ERR (begin_txn (rbaton));
-        
+
       /* The path we are dealing with is the anchor (where the
          reporter is rooted) + target (the top-level thing being
          reported) + path (stuff relative to the target...this is the
          empty string in the file case since the target is the file
          itself, not a directory containing the file). */
-      from_path = svn_path_join_many (pool, 
+      from_path = svn_path_join_many (pool,
                                       rbaton->base_path,
-                                      rbaton->target ? rbaton->target : path,
-                                      rbaton->target ? path : NULL,
+                                      rbaton->target,
+                                      path,
                                       NULL);
-      
+
       /* However, the path may be the child of a linked thing, in
          which case we'll be linking from somewhere entirely
          different. */
@@ -346,12 +346,12 @@ svn_repos_link_path (void *report_baton,
      reported) + path (stuff relative to the target...this is the
      empty string in the file case since the target is the file
      itself, not a directory containing the file). */
-  from_path = svn_path_join_many (pool, 
+  from_path = svn_path_join_many (pool,
                                   rbaton->base_path,
-                                  rbaton->target ? rbaton->target : path,
-                                  rbaton->target ? path : NULL,
+                                  rbaton->target,
+                                  path,
                                   NULL);
-  
+
   /* Copy into our txn. */
   SVN_ERR (svn_fs_revision_root (&from_root, rbaton->repos->fs,
                                  revision, pool));
@@ -402,10 +402,10 @@ svn_repos_delete_path (void *report_baton,
      reported) + path (stuff relative to the target...this is the
      empty string in the file case since the target is the file
      itself, not a directory containing the file). */
-  delete_path = svn_path_join_many (pool, 
+  delete_path = svn_path_join_many (pool,
                                     rbaton->base_path,
-                                    rbaton->target ? rbaton->target : path,
-                                    rbaton->target ? path : NULL,
+                                    rbaton->target,
+                                    path,
                                     NULL);
 
   /* Remove the file or directory (recursively) from the txn. */
@@ -465,10 +465,7 @@ finish_report (void *report_baton,
   if (rbaton->tgt_path)
     tgt_path = rbaton->tgt_path;
   else
-    tgt_path = svn_path_join_many (rbaton->pool, 
-                                   rbaton->base_path,
-                                   rbaton->target ? rbaton->target : NULL, 
-                                   NULL);
+    tgt_path = svn_path_join (rbaton->base_path, rbaton->target, rbaton->pool);
 
   /* Drive the update-editor. */
   SVN_ERR (svn_repos_dir_delta (root1,
@@ -563,7 +560,7 @@ svn_repos_begin_report (void **report_baton,
      We don't know what the caller might do with them after we return... */
   rbaton->username = username ? apr_pstrdup (pool, username) : NULL;
   rbaton->base_path = apr_pstrdup (pool, fs_base);
-  rbaton->target = target ? apr_pstrdup (pool, target) : NULL;
+  rbaton->target = apr_pstrdup (pool, target);
   rbaton->tgt_path = tgt_path ? apr_pstrdup (pool, tgt_path) : NULL;
 
   /* Hand reporter back to client. */

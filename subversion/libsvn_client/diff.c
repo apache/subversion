@@ -1266,7 +1266,7 @@ do_merge (const char *URL1,
   SVN_ERR (ra_lib->do_diff (session,
                             &reporter, &report_baton,
                             end_revnum,
-                            NULL,
+                            "",
                             recurse,
                             ignore_ancestry,
                             URL2,
@@ -1477,9 +1477,9 @@ diff_wc_wc (const apr_array_header_t *options,
   SVN_ERR (svn_wc_get_actual_target (path1, &anchor, &target, pool));
   SVN_ERR (svn_io_check_path (path1, &kind, pool));
   SVN_ERR (svn_wc_adm_open (&adm_access, NULL, anchor, FALSE,
-                            (recurse && (! target)), pool));
+                            (recurse && (! *target)), pool));
 
-  if (target && (kind == svn_node_dir))
+  if (*target && (kind == svn_node_dir))
     {
       /* Associate a potentially tree-locked access baton for the
          target with the anchor's access baton.  Note that we don't
@@ -1575,8 +1575,8 @@ diff_repos_repos (const apr_array_header_t *options,
      that both sides of the diff exist.  */
   anchor1 = url1;
   anchor2 = url2;
-  target1 = NULL;
-  target2 = NULL;
+  target1 = "";
+  target2 = "";
   SVN_ERR (ra_lib->check_path (session1, "", rev1, &kind1, temppool));
   SVN_ERR (ra_lib->check_path (session2, "", rev2, &kind2, temppool));
   if (kind1 == svn_node_none)
@@ -1691,8 +1691,8 @@ diff_repos_wc (const apr_array_header_t *options,
      must split URL1 as well. */
   anchor1 = url1;
   anchor2 = path2;
-  target1 = NULL;
-  target2 = NULL;
+  target1 = "";
+  target2 = "";
   SVN_ERR (svn_io_check_path (path2, &kind, pool));
   if (kind == svn_node_file)
     {
@@ -1709,8 +1709,8 @@ diff_repos_wc (const apr_array_header_t *options,
       
   /* Set up diff editor according to path2's anchor/target. */
   SVN_ERR (svn_wc_adm_open (&adm_access, NULL, anchor2, FALSE,
-                            (recurse && (! target2)), pool));
-  if (target2 && (kind == svn_node_dir))
+                            (recurse && (! *target2)), pool));
+  if (*target2 && (kind == svn_node_dir))
     {
       /* Associate a potentially tree-locked access baton for the
          target with the anchor's access baton.  Note that we don't

@@ -883,9 +883,6 @@ static svn_error_t *ra_svn_update(void *baton,
   ra_svn_session_baton_t *sess = baton;
   svn_ra_svn_conn_t *conn = sess->conn;
 
-  if (target == NULL)
-    target = "";
-
   /* Tell the server we want to start an update. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "update", "(?r)cb", rev, target,
                                recurse));
@@ -909,9 +906,6 @@ static svn_error_t *ra_svn_switch(void *baton,
   ra_svn_session_baton_t *sess = baton;
   svn_ra_svn_conn_t *conn = sess->conn;
 
-  if (target == NULL)
-    target = "";
-
   /* Tell the server we want to start a switch. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "switch", "(?r)cbc", rev, target,
                                recurse, switch_url));
@@ -934,9 +928,6 @@ static svn_error_t *ra_svn_status(void *baton,
 {
   ra_svn_session_baton_t *sess = baton;
   svn_ra_svn_conn_t *conn = sess->conn;
-
-  if (target == NULL)
-    target = "";
 
   /* Tell the server we want to start a status operation. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "status", "cb(?r)",
@@ -962,9 +953,6 @@ static svn_error_t *ra_svn_diff(void *baton,
 {
   ra_svn_session_baton_t *sess = baton;
   svn_ra_svn_conn_t *conn = sess->conn;
-
-  if (target == NULL)
-    target = "";
 
   /* Tell the server we want to start a diff. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "diff", "(?r)cbbc", rev, target,

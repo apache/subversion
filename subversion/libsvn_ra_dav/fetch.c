@@ -173,7 +173,7 @@ typedef struct {
   svn_boolean_t is_switch;
 
   /* Named target, or NULL if none.  For example, in 'svn up wc/foo',
-     this is "wc/foo", but in 'svn up' it is NULL.  
+     this is "wc/foo", but in 'svn up' it is "".  
 
      The target helps us determine whether a response received from
      the server should be acted on.  Take 'svn up wc/foo': the server
@@ -1499,8 +1499,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
           if (rb->is_switch && rb->ras->callbacks->invalidate_wc_props)
             {
               CHKERR( rb->ras->callbacks->invalidate_wc_props
-                      (rb->ras->callback_baton,
-                       rb->target ? rb->target : "", 
+                      (rb->ras->callback_baton, rb->target, 
                        SVN_RA_DAV__LP_VSN_URL, rb->ras->pool) );
             }
 
@@ -1946,7 +1945,7 @@ static int end_element(void *userdata, int state,
 
       /* fetch node props, unless this is the top dir and the real
          target of the operation is not the top dir. */
-      if (! ((rb->dirs->nelts == 1) && rb->target))
+      if (! ((rb->dirs->nelts == 1) && *rb->target))
         CHKERR( add_node_props(rb, TOP_DIR(rb).pool));
 
       /* Close the directory on top of the stack, and pop it.  Also,
@@ -2095,7 +2094,7 @@ static int end_element(void *userdata, int state,
           /* Update the wcprop here, unless this is the top directory
              and the real target of this operation is something other
              than the top directory. */
-          if (! ((rb->dirs->nelts == 1) && rb->target))
+          if (! ((rb->dirs->nelts == 1) && *rb->target))
             {
               CHKERR( simple_store_vsn_url(rb->href->data, TOP_DIR(rb).baton,
                                            rb->editor->change_dir_prop,
@@ -2398,8 +2397,8 @@ make_reporter (void *session_baton,
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
 
-  /* A NULL target is no problem.  */
-  if (target)
+  /* Pre-0.36 servers don't like to see an empty target string.  */
+  if (*target)
     {
       s = apr_psprintf(pool, 
                        "<S:update-target>%s</S:update-target>",
