@@ -165,7 +165,7 @@ struct svn_fs {
 
      The APR pool cleanup functions can only return an apr_status_t
      value, not a full svn_error_t value.  This makes it difficult to
-     propage errors detected by fs_cleanup to someone who can handle
+     propagate errors detected by fs_cleanup to someone who can handle
      them.
 
      If FS->cleanup_error is non-zero, it points to a location where
