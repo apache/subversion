@@ -287,30 +287,26 @@ write_and_read_file (const char **msg)
   SVN_ERR (svn_fs_make_file (txn_root, "beer.txt", pool));
 
   /* And write some data into this file. */
-  string = svn_string_create ("Wicki wicki wild!", pool);
-  svn_txdelta_from_string (&dstream, string, pool);
+  string = svn_string_create ("Wicki wild, wicki wicki wild.", pool);
   SVN_ERR (svn_fs_apply_textdelta (&consumer_func, &consumer_baton,
                                    txn_root, "beer.txt", pool));
-  do 
-    {
-      SVN_ERR (svn_txdelta_next_window (&window, dstream));
-      SVN_ERR (consumer_func (window, consumer_baton));
-      
-    } while (window);
-
+  SVN_ERR (svn_txdelta_send_string (string, consumer_func,
+                                    consumer_baton, pool));
+  
   /* Now let's read the data back from the file. */
   SVN_ERR (svn_fs_file_contents (&rstream, txn_root, "beer.txt", pool));  
   do 
     {
-      SVN_ERR (svn_stream_read (rstream,(buf + i), &len));
+      SVN_ERR (svn_stream_read (rstream, (buf + i), &len));
       i += len;
+      len -= i;
 
-    } while (len);
+    } while (len && (i <= 50) );
 
   /* Compare the read to our original string. */
   if (strncmp (buf, string->data, 50))
     return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
-                             "Read back different data than I wrote.");    
+                             "data read != data written.");    
 
   /* Clean up. */
   SVN_ERR (svn_fs_close_txn (txn));
