@@ -588,17 +588,6 @@ call_functions_with_unopened_fs (const char **msg)
     SVN_ERR (check_no_fs_error (err));
   }
 
-  {
-    void *edit_baton, *hook_baton;
-    svn_delta_edit_fns_t *editor;
-    svn_string_t *base_path, *log_msg;
-    svn_fs_commit_hook_t *hook;
-
-    err = svn_fs_get_editor (&editor, &edit_baton, fs, base_path,
-                             log_msg, hook, hook_baton, pool);
-    SVN_ERR (check_no_fs_error (err));
-  }
-
   return SVN_NO_ERROR;
 }
 

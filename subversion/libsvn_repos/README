@@ -1,0 +1,32 @@
+
+This library contains pieces of functionality which are built on top
+of libsvn_fs (using the API in svn_fs.h).
+
+While these tools aren't strictly part of the filesystem, they are
+most often needed by users of the filesystem (the RA libraries in
+particular.)
+
+
+ -- For a list of all exported funcs, see 'svn_repos.h' --
+
+
+  delta.c:          code that compares two filesystem trees, and then
+                    describes a delta by driving an editor.  This is
+                    the "soul" of the update command.
+
+  commit-editor.c:  if you drive this editor, it will build a transaction
+                    for you, and close_edit() will commit it.
+
+  reporter.c:       code to build a transaction that 'mirrors' a
+                    working copy, so that svn_fs_dir_delta() can drive
+                    an update.
+
+  ?hooks.c:         hook system, called by "cooperative" users of the fs.
+
+  ?lock.c:          cross-process read/write lock manager, to temporarily
+                    suspend all db3 access when DB_RUN_RECOVERY is
+                    returned.
+
+
+
+

@@ -928,41 +928,6 @@ svn_error_t *svn_fs_file_delta (svn_txdelta_stream_t **stream_p,
                                 apr_pool_t *pool);
 
 
-
-/* Making changes to a filesystem, editor-style.  */
-
-/* Hook function type for commits.  When a filesystem commit happens,
- * one of these should be invoked on the NEW_REVISION that resulted
- * from the commit, and the BATON that was provided with the hook
- * originally.
- *
- * See svn_fs_get_editor for an example user.
- */
-typedef svn_error_t *svn_fs_commit_hook_t (svn_revnum_t new_revision,
-                                           void *baton);
-
-
-/* Return an EDITOR and EDIT_BATON to commit changes to FS, beginning
- * at location `rev:BASE_PATH', where "rev" is the argument given to
- * replace_root().  Store LOG_MSG as the commit message.
- *
- * FS is assumed to be a previously opened file system.
- *
- * Calling (*EDITOR)->close_edit completes the commit.  Before
- * close_edit returns, but after the commit has succeeded, it will
- * invoke HOOK with the new revision number and HOOK_BATON as
- * arguments.  If HOOK returns an error, that error will be returned
- * from close_edit, otherwise close_edit will return successfully
- * (unless it encountered an error before invoking HOOK).  */
-svn_error_t *svn_fs_get_editor (svn_delta_edit_fns_t **editor,
-                                void **edit_baton,
-                                svn_fs_t *fs,
-                                svn_string_t *base_path,
-                                svn_string_t *log_msg,
-                                svn_fs_commit_hook_t *hook,
-                                void *hook_baton,
-                                apr_pool_t *pool);
-
 
 
 

@@ -10,7 +10,6 @@ libsvn_fs_la_SOURCES =				\
 			dbt.c			\
                         dbt.h                   \
                         delta.c                 \
-                        editor.c                \
 			err.c			\
                         err.h                   \
 			fs.c			\
