@@ -59,6 +59,15 @@
 
 @c @finalout
 
+@ifinfo
+@format
+INFO-DIR-SECTION Development
+START-INFO-DIR-ENTRY
+* Subversion Handbook: (svn-handbook).   General guide to Subversion.
+END-INFO-DIR-ENTRY
+@end format
+@end ifinfo
+
 @c Browser defaults lose.  Let's go for black text on white background.
 @ifhtml
 @html
