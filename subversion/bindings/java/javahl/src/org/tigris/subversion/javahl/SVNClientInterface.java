@@ -98,7 +98,7 @@ public interface SVNClientInterface
      * @param recurse whether you want it to checkout files recursively.
      * @exception org.tigris.subversion.javahl.ClientException
      */
-    void checkout(String moduleName, String destPath, Revision revision, boolean recurse) throws ClientException;
+    long checkout(String moduleName, String destPath, Revision revision, boolean recurse) throws ClientException;
 
     /**
      * Sets the notification function and baton that the C library
@@ -136,7 +136,7 @@ public interface SVNClientInterface
      * @param recurse recursively update.
      * @exception org.tigris.subversion.javahl.ClientException
      */
-    void update(String path, Revision revision, boolean recurse) throws ClientException;
+    long update(String path, Revision revision, boolean recurse) throws ClientException;
 
     /**
      * Commits changes to the repository. This usually requires
@@ -192,14 +192,14 @@ public interface SVNClientInterface
      * @exception org.tigris.subversion.javahl.ClientException
      * @param destPath a destination path that must not already exist.
      */
-    void doExport(String srcPath, String destPath, Revision revision,boolean force) throws ClientException;
+    long doExport(String srcPath, String destPath, Revision revision,boolean force) throws ClientException;
 
     /**
      * Update local copy to mirror a new url. This excapsulates the
      * svn_client_switch() client method.
      * @exception org.tigris.subversion.javahl.ClientException
      */
-    void doSwitch(String path, String url, Revision revision, boolean recurse) throws ClientException;
+    long doSwitch(String path, String url, Revision revision, boolean recurse) throws ClientException;
 
     /**
      * Import file or directory PATH into repository directory URL at
@@ -245,5 +245,5 @@ public interface SVNClientInterface
 
     void relocate(String from, String to, String path, boolean recurse) throws ClientException;
 
-    byte[] blame(String path, Revision revisionStart, Revision revisionEnd, boolean strict) throws ClientException;
+    byte[] blame(String path, Revision revisionStart, Revision revisionEnd) throws ClientException;
 }

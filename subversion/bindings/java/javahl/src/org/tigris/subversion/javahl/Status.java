@@ -297,8 +297,8 @@ public class Status
         /** exists, but uninteresting. */
         public static final int normal = 1;
 
-		/** text or props have been modified */
-		public static final int modified = 2;
+	/** text or props have been modified */
+	public static final int modified = 2;
 
         /** is scheduled for additon */
         public static final int added = 3;
@@ -306,11 +306,11 @@ public class Status
         /** scheduled for deletion */
         public static final int deleted = 4;
 
-		/** is not a versioned thing in this wc */
-		public static final int unversioned = 5;
+	/** is not a versioned thing in this wc */
+	public static final int unversioned = 5;
 
-		/** under v.c., but is missing */
-		public static final int absent = 6;
+	/** under v.c., but is missing */
+	public static final int missing = 6;
 
         /** was deleted and then re-added */
         public static final int replaced = 7;
@@ -340,8 +340,8 @@ public class Status
               return "normal";
             case added:
               return "added";
-            case absent:
-              return "absent";
+            case missing:
+              return "missing";
             case deleted:
               return "deleted";
             case replaced:

@@ -163,11 +163,11 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param recurse whether you want it to checkout files recursively.
      * @exception ClientException
      */
-    public void checkout(String moduleName, String destPath, Revision revision, boolean recurse) throws ClientException
+    public long checkout(String moduleName, String destPath, Revision revision, boolean recurse) throws ClientException
     {
         synchronized(clazz)
         {
-            worker.checkout(moduleName, destPath, revision, recurse);
+            return worker.checkout(moduleName, destPath, revision, recurse);
         }
     }
 
@@ -231,11 +231,11 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param recurse recursively update.
      * @exception ClientException
      */
-    public void update(String path, Revision revision, boolean recurse) throws ClientException
+    public long update(String path, Revision revision, boolean recurse) throws ClientException
     {
         synchronized(clazz)
         {
-            worker.update(path, revision, recurse);
+            return worker.update(path, revision, recurse);
         }
     }
 
@@ -329,11 +329,11 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @exception ClientException
      * @param destPath a destination path that must not already exist.
      */
-    public void doExport(String srcPath, String destPath, Revision revision, boolean force) throws ClientException
+    public long doExport(String srcPath, String destPath, Revision revision, boolean force) throws ClientException
     {
         synchronized(clazz)
         {
-            worker.doExport(srcPath, destPath, revision, force);
+            return worker.doExport(srcPath, destPath, revision, force);
         }
     }
 
@@ -342,11 +342,11 @@ public class SVNClientSynchronized implements SVNClientInterface
      * svn_client_switch() client method.
      * @exception ClientException
      */
-    public void doSwitch(String path, String url, Revision revision, boolean recurse) throws ClientException
+    public long doSwitch(String path, String url, Revision revision, boolean recurse) throws ClientException
     {
         synchronized(clazz)
         {
-            worker.doSwitch(path, url, revision, recurse);
+            return worker.doSwitch(path, url, revision, recurse);
         }
     }
 
@@ -466,11 +466,11 @@ public class SVNClientSynchronized implements SVNClientInterface
         }
     }
 
-    public byte[] blame(String path, Revision revisionStart, Revision revisionEnd, boolean strict) throws ClientException
+    public byte[] blame(String path, Revision revisionStart, Revision revisionEnd) throws ClientException
     {
         synchronized(clazz)
         {
-            return worker.blame(path,revisionStart, revisionEnd, strict);
+            return worker.blame(path,revisionStart, revisionEnd);
         }
     }
 
