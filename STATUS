@@ -15,7 +15,7 @@ Candidate changes:
     Justification:
       Doc fixes are pretty safe, and not lying to users is good.
     Votes:
-      +1: ghudson
+      +1: ghudson, maxb
 
   * r10599
     Make the perl bindings testing work before the svn libs have been installed.
