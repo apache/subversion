@@ -130,7 +130,7 @@ svn_cl__diff (apr_getopt_t *os,
   else
     {
       apr_array_header_t *tmp, *tmp2;
-      svn_boolean_t working_copy_present = FALSE;
+      svn_boolean_t working_copy_present = FALSE, url_present = FALSE;
       
       /* The 'svn diff [-r M[:N]] [TARGET[@REV]...]' case matches. */
 
@@ -163,8 +163,15 @@ svn_cl__diff (apr_getopt_t *os,
           const char *path = APR_ARRAY_IDX (targets, i, const char *);
           if (! svn_path_is_url (path))
             working_copy_present = TRUE;
+          else
+            url_present = TRUE;
         }
-      
+
+      if (url_present && working_copy_present)
+        return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                  _("Target lists to diff may not contain "
+                                    "both working copy paths and URLs"));
+          
       if (opt_state->start_revision.kind == svn_opt_revision_unspecified
           && working_copy_present)
           opt_state->start_revision.kind = svn_opt_revision_base;
