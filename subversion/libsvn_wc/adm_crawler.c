@@ -54,6 +54,10 @@
 struct target_baton
 {
   svn_wc_entry_t *entry;
+
+  /* This is not an "edit_baton", it is a *file* baton belonging to
+     some editor, hence the name "editor_baton".  The compiler
+     complained when we tried "editor's_baton". :-) */
   void *editor_baton;
 
   svn_boolean_t text_modified_p;
@@ -404,9 +408,18 @@ do_dir_closures (svn_stringbuf_t *desired_path,
 
 
 
-/* Examine both the local and text-base copies of a file FILENAME, and
-   push a text-delta to EDITOR using the already-opened FILE_BATON.
-   (FILENAME is presumed to be a full path ending with a filename.) */
+/* Obtain a window handler by invoking EDITOR->apply_txdelta on
+   TB->editor_baton, then feed the handler windows from a txdelta
+   stream expressing the difference between FILENAME's text-base and
+   FILENAME.  FILENAME is an absolute or relative path ending in a
+   filename.
+
+   Caller must have prepared a copy of FILENAME in the appropriate
+   tmp text-base administrative area, i.e., the location obtained by
+   calling svn_wc__text_base_path(FILENAME).  This tmp file is what
+   will actually be used to generate the diff; any eol or keyword
+   untranslation should already have been done on the tmp file.
+*/
 static svn_error_t *
 do_apply_textdelta (svn_stringbuf_t *filename,
                     const svn_delta_edit_fns_t *editor,
@@ -496,89 +509,38 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
                         apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  svn_stringbuf_t *entrypath, *local_tmp_path;
+  svn_stringbuf_t *entrypath;
   struct target_baton *tb;
-  const void *key;
-  void *val;
-  apr_ssize_t keylen;
-  enum svn_wc__eol_style eol_style;
-  const char *eol_str;
-  char *revision, *date, *author, *url;
 
   for (hi = apr_hash_first (pool, affected_targets); 
        hi; 
        hi = apr_hash_next (hi))
     {
+      const void *key;
+      apr_ssize_t keylen;
+      void *val;
+      svn_stringbuf_t *tmp_wfile, *tmp_text_base;
+
       apr_hash_this (hi, &key, &keylen, &val);
+      entrypath = svn_stringbuf_create ((char *) key, pool);
       tb = val;
       
-      /* Copy the working file to .svn/tmp/text-base.  
-         We do this because:
-            - if sending a text-delta, need to make sure it doesn't change
-            - after the commit, it will become the "real" text-base. 
-      */
-      entrypath = svn_stringbuf_create ((char *) key, pool);
-      local_tmp_path = svn_wc__text_base_path (entrypath, TRUE, pool);
+      /* Make an untranslated copy of the working file in
+         .svn/tmp/text-base, because a) we want this to work even if
+         someone changes the working file while we're generating the
+         txdelta, b) we need to detranslate eol and keywords anyway,
+         and c) after the commit, we're going to copy the tmp file to
+         become the new text base anyway.  
 
-      /* The 'eol-style' and 'keywords' properties matter, because we
-         might need to make sure the file we commit is (de)translated
-         correctly. */
+         Note that since the translation routine doesn't let you
+         choose the filename, we have to do one extra copy.  But what
+         the heck, we're about to generate an svndiff anyway. */
 
-      /* ### NOTE:  Karl has written a general "de-translator" routine
-         that this function ('svn ci'), diff ('svn diff') and
-         svn_wc_text_modified_p() all need to share.  We will rewrite
-         this shortly to use that interface. */
-
-      SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
-                                      entrypath->data, pool));
-      SVN_ERR (svn_wc__get_keywords (&revision, &author, &date, &url,
-                                     entrypath->data, NULL, pool));
-
-      if (eol_style == svn_wc__eol_style_fixed)
-        {
-          /* Copy the file with the fixed eol, since that's what
-             text-base has.  Also if any keywords are currently
-             expanded, be sure to unexpand them. */
-          SVN_ERR (svn_io_copy_and_translate (entrypath->data,
-                                              local_tmp_path->data,
-                                              eol_str,
-                                              TRUE,  /* repair eol */
-                                              revision, author, date, url,
-                                              FALSE, /* contract keywords */
-                                              pool));
-        }
-      else if (eol_style == svn_wc__eol_style_native)
-        {
-          /* Copy the file with the default eol, since that's what
-             text-base has.  Also unexpand any keywords that may be
-             expanded. */
-          SVN_ERR (svn_io_copy_and_translate (entrypath->data,
-                                              local_tmp_path->data,
-                                              SVN_WC__DEFAULT_EOL_MARKER,
-                                              FALSE,  /* don't repair eol */
-                                              revision, author, date, url,
-                                              FALSE, /* contract keywords */
-                                              pool));
-        }
-      else if (eol_style == svn_wc__eol_style_none)
-        {
-          /* Don't translate any newlines, but still possibly unexpand
-             any expanded keywords. */
-          SVN_ERR (svn_io_copy_and_translate (entrypath->data,
-                                              local_tmp_path->data,
-                                              NULL, /* don't touch eol*/
-                                              FALSE,  /* don't repair eol */
-                                              revision, author, date, url,
-                                              FALSE, /* contract keywords */
-                                              pool));
-        }
-      else  /* unknown eol style */
-        {
-          return svn_error_createf
-            (SVN_ERR_IO_UNKNOWN_EOL, 0, NULL, pool,
-             "do_postfix_text_deltas: %s has unknown eol style property",
-             entrypath->data);
-        }
+      SVN_ERR (svn_wc_translated_file (&tmp_wfile, entrypath, pool));
+      tmp_text_base = svn_wc__text_base_path (entrypath, TRUE, pool);
+      SVN_ERR (svn_io_copy_file (tmp_wfile, tmp_text_base, pool));
+      if (tmp_wfile != entrypath)
+        SVN_ERR (svn_io_remove_file (tmp_wfile->data, pool));
 
       /* If there's a local mod, send a text-delta. */
       if (tb->text_modified_p)
