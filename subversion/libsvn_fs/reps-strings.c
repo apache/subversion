@@ -1532,10 +1532,10 @@ svn_fs__rep_deltify (svn_fs_t *fs,
 
         ww = ((window_write_t **)(windows->elts))[i-1];
 
-        offset_str = apr_psprintf (trail->pool, "%lu",
-                                   (unsigned long) ww->text_off);
-        size_str = apr_psprintf (trail->pool, "%lu",
-                                 (unsigned long) ww->text_len);
+        offset_str = apr_psprintf (trail->pool, "%" APR_SIZE_T_FMT,
+                                   ww->text_off);
+        size_str = apr_psprintf (trail->pool, "%" APR_SIZE_T_FMT,
+                                 ww->text_len);
 
         /* The diff. */
         svn_fs__prepend (svn_fs__str_atom (ww->key, trail->pool), diff);
