@@ -1224,12 +1224,12 @@ empty_props_p (svn_boolean_t *empty_p,
       else
         *empty_p = FALSE;
 
-      /* ### really, if the size is < 4, then something is corrupt.
+      /* If the size is < 4, then something is corrupt.
          If the size is between 4 and 16, then something is corrupt,
          because 16 is the -smallest- the file can possibly be if it
-         contained only one property.  someday we should check for
-         this. */
-
+         contained only one property.  So long as we say it is "not
+         empty", we will discover such corruption later when we try
+         to read the properties from the file. */
     }
 
   return SVN_NO_ERROR;
