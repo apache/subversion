@@ -200,7 +200,7 @@ svn_wc__parse_versions (svn_read_fn_t *source_fn,
                         apr_pool_t *pool)
 {
   char buf[BUFSIZ];
-  apr_off_t len;
+  apr_size_t len;
   int done;
   svn_error_t *err = NULL;
   XML_Parser expat_parser;

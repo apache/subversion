@@ -322,7 +322,7 @@ test_change_dirent_prop (void *edit_baton, void *parent_baton,
 /* An official subversion "read" routine, comforming to POSIX standards. 
    This one reads our XML filehandle, passed in as our baton.  */
 svn_error_t *
-my_read_func (void *baton, char *buffer, apr_off_t *len, apr_pool_t *pool)
+my_read_func (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t stat;

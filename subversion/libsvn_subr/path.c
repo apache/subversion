@@ -136,7 +136,7 @@ svn_path_last_component (svn_string_t *path, int style, apr_pool_t *pool)
 {
   /* kff todo: `style' ignored presently. */
 
-  apr_off_t i;
+  apr_size_t i;
 
   /* kff todo: is canonicalizing the source path lame?  This function
      forces its argument into canonical form, for local convenience.

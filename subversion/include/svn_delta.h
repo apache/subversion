@@ -262,7 +262,7 @@ extern svn_vcdiff_parser_t *svn_make_vcdiff_parser
    hasn't passed to HANDLER yet.  */
 extern svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
                                       const char *buffer,
-                                      apr_off_t len);
+                                      apr_size_t len);
 
 
 /*** Traversing tree deltas. ***/
@@ -557,7 +557,7 @@ void svn_free_xml_parser (svn_xml_parser_t *parser);
    and batons that were used to create the parser.)  If this is the
    final parser "push", ISFINAL must be set to true.  */
 svn_error_t *
-svn_xml_parsebytes (char *buffer, apr_off_t len, int isFinal, 
+svn_xml_parsebytes (char *buffer, apr_size_t len, int isFinal, 
                     svn_xml_parser_t *svn_xml_parser);
 
 

@@ -188,10 +188,10 @@ svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
 svn_error_t *
 svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
                   const char *buffer,
-                  apr_off_t len)
+                  apr_size_t len)
 {
   svn_error_t *err;
-  apr_off_t i = 0;  /* This is our offset into BUFFER */
+  apr_size_t i = 0;  /* This is our offset into BUFFER */
 
   if (len == 0)  
     {

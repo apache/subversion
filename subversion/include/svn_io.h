@@ -76,7 +76,7 @@
    stream.  */
 typedef svn_error_t *svn_read_fn_t (void *baton,
                                     char *buffer,
-                                    apr_off_t *len,
+                                    apr_size_t *len,
                                     apr_pool_t *pool);
 
 #endif /* SVN_IO_H */
