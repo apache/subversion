@@ -124,7 +124,7 @@ case $CHECK_TARGET in
             >> $LOG_FILE 2>&1
         test $? = 0 || FAIL
         PASS
-        CHECK_ARGS="$CHECK_ARGS '$RA_DAV_CHECK_ARGS'"
+        CHECK_ARGS="$CHECK_ARGS $RA_DAV_CHECK_ARGS"
         ;;
 esac
 
