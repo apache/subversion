@@ -105,6 +105,13 @@ section for approved changes.)
       Votes:
        +1: epg
 
+    * Issue #1705
+      Exorcise apr_off_t.
+      Justification: It's a big headache we want to get rid of
+      now.  Creates crashes with the perl bindings.
+      Notes: breser (I'd vote for this but I don't think my
+                     vote counts).
+      Votes:
 
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
