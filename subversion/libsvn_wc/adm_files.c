@@ -983,7 +983,7 @@ check_adm_exists (svn_boolean_t *exists,
           && !(entry->schedule == svn_wc_schedule_delete && revision == 0))
         return
           svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
-                             "revison %" SVN_REVNUM_T_FMT
+                             "revision %" SVN_REVNUM_T_FMT
                              " doesn't match existing revision %"
                              SVN_REVNUM_T_FMT " in '%s'",
                              revision, entry->revision, path);
