@@ -65,28 +65,6 @@ Chapter 6
 	    fails to explain that you most likely need to set the
 	    group set-ID bit on the directories for this to work.
 
-Chapter 7
-
-    Section svn-ch-7-sect-2
-
-         #1) naked
-
-             I really don't recall what eventually came out of it all,
-             but the encoding for properties eludes me. I do remember
-             that log messages are UTF8 natively, but does that mean:
-
-               1) log messages are special, only they use encoding
-               2) revision properties are special, only they use encoding
-               3) all properties use encoding
-
-             And at the moment, I would guess 3). What does that have
-             to do with the book then?
-
-             Well, the book talks constantly about how properties can
-             even contain binary data - which is not true in any sane
-             way if the files are converted from/to UTF8 based on
-             locale.
-
 Chapter 9
 
     Section svn-ch-9-sect-1.2
