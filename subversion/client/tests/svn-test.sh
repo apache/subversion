@@ -26,10 +26,10 @@ cp -R -p ${TEST_DIR_1} ${TEST_DIR_2}
 
 ### Modify some existing files.
 echo "Modifying ${TEST_DIR_1}/A/D/G/pi."
-echo "in t1, adding a second line to A/D/G/pi" >> ${TEST_DIR_1}/A/D/G/pi
+echo "for commit rev2, second line in A/D/G/pi" >> ${TEST_DIR_1}/A/D/G/pi
 
 echo "Modifying ${TEST_DIR_1}/A/mu."
-echo "in t1, adding a second line to A/mu" >> ${TEST_DIR_1}/A/mu
+echo "for commit rev2, second line in A/mu" >> ${TEST_DIR_1}/A/mu
 
 ### Add.
 echo "Adding ${TEST_DIR_1}/newfile1."
@@ -65,24 +65,24 @@ echo "Updating ${TEST_DIR_2} from changes in ${TEST_DIR_1}."
 
 ### Modify some more files.
 echo "Modifying ${TEST_DIR_2}/A/D/G/pi."
-echo "in t2, adding a third line to A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
-echo "in t2, adding a fourth line to A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
-echo "in t2, adding a fifth line to A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
-echo "in t2, adding a sixth line to A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
-echo "in t2, adding a seventh line to A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
-echo "in t2, adding a eighth line to A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
-echo "in t2, adding a ninth line to A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
-echo "in t2, adding a tenth line to A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
+echo "for commit rev2, third line in A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
+echo "for commit rev2, fourth line in A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
+echo "for commit rev2, fifth line in A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
+echo "for commit rev2, sixth line in A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
+echo "for commit rev2, seventh line in A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
+echo "for commit rev2, eighth line in A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
+echo "for commit rev2, ninth line in A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
+echo "for commit rev2, tenth line in A/D/G/pi" >> ${TEST_DIR_2}/A/D/G/pi
 
 echo "Modifying ${TEST_DIR_2}/A/mu."
-echo "in t2, adding a third line to A/mu" >> ${TEST_DIR_2}/A/mu
-echo "in t2, adding a fourth line to A/mu" >> ${TEST_DIR_2}/A/mu
-echo "in t2, adding a fifth line to A/mu" >> ${TEST_DIR_2}/A/mu
-echo "in t2, adding a sixth line to A/mu" >> ${TEST_DIR_2}/A/mu
-echo "in t2, adding a seventh line to A/mu" >> ${TEST_DIR_2}/A/mu
-echo "in t2, adding a eighth line to A/mu" >> ${TEST_DIR_2}/A/mu
-echo "in t2, adding a ninth line to A/mu" >> ${TEST_DIR_2}/A/mu
-echo "in t2, adding a tenth line to A/mu" >> ${TEST_DIR_2}/A/mu
+echo "for commit rev2, third line in A/mu" >> ${TEST_DIR_2}/A/mu
+echo "for commit rev2, fourth line in A/mu" >> ${TEST_DIR_2}/A/mu
+echo "for commit rev2, fifth line in A/mu" >> ${TEST_DIR_2}/A/mu
+echo "for commit rev2, sixth line in A/mu" >> ${TEST_DIR_2}/A/mu
+echo "for commit rev2, seventh line in A/mu" >> ${TEST_DIR_2}/A/mu
+echo "for commit rev2, eighth line in A/mu" >> ${TEST_DIR_2}/A/mu
+echo "for commit rev2, ninth line in A/mu" >> ${TEST_DIR_2}/A/mu
+echo "for commit rev2, tenth line in A/mu" >> ${TEST_DIR_2}/A/mu
 
 ### Commit.
 echo "Committing changes, this time in ${TEST_DIR_2}."
@@ -103,17 +103,17 @@ echo "Updating ${TEST_DIR_1} from changes in ${TEST_DIR_2}."
 ### Diff the two trees.  The only differences should be in timestamps
 ### and some of the revision numbers (see README), so ignore those.
 ### Also, the names of the .diff and .rej files will be different.
-echo "Comparing ${TEST_DIR_1} and ${TEST_DIR_2}."
-if [ "0" = "`diff .cvsignore .cvsignore -I % -x % 2>&1 >/dev/null; echo $?`" ]
-then
-  ### We've got a GNU-ish diff that understands -I and -x
-  diff -r ${TEST_DIR_1} ${TEST_DIR_2} \
-       -I timestamp -I revision -x '*.diff' -x '*.rej'
-else
-  ### We-ve got a stupid diff and must dig for results
-  diff -r ${TEST_DIR_1} ${TEST_DIR_2} |\
-       egrep -v '(timestamp|revision|\.diff$|\.rej$)'
-fi
+# echo "Comparing ${TEST_DIR_1} and ${TEST_DIR_2}."
+# if [ "0" = "`diff .cvsignore .cvsignore -I % -x % 2>&1 >/dev/null; echo $?`" ]
+# then
+#   ### We've got a GNU-ish diff that understands -I and -x
+#   diff -r ${TEST_DIR_1} ${TEST_DIR_2} \
+#        -I timestamp -I revision -x '*.diff' -x '*.rej'
+# else
+#   ### We-ve got a stupid diff and must dig for results
+#   diff -r ${TEST_DIR_1} ${TEST_DIR_2} |\
+#        egrep -v '(timestamp|revision|\.diff$|\.rej$)'
+# fi
 
 
 ### Make some non-overlapping changes in the same files, merge. ###
@@ -127,7 +127,7 @@ echo "Done sleeping."
 ### Make the changes.
 sed -e 's/sixth/SIXTH/' < ${TEST_DIR_1}/A/mu > mu.$$.tmp
 mv mu.$$.tmp ${TEST_DIR_1}/A/mu
-echo "A non-conflicting change." >> ${TEST_DIR_2}/A/mu
+echo "for commit rev4, a non-conflicting change" >> ${TEST_DIR_2}/A/mu
 
 
 ### Commit.
