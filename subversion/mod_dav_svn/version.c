@@ -17,9 +17,36 @@
 #include <httpd.h>
 #include <mod_dav.h>
 #include <apr_tables.h>
+#include <apr_buckets.h>
 
 #include "dav_svn.h"
 
+
+static dav_error *open_txn(svn_fs_txn_t **ptxn, svn_fs_t *fs,
+                           const char *txn_name, apr_pool_t *pool)
+{
+  svn_error_t *serr;
+
+  serr = svn_fs_open_txn(ptxn, fs, txn_name, pool);
+  if (serr != NULL)
+    {
+      if (serr->apr_err == SVN_ERR_FS_NO_SUCH_TRANSACTION)
+        {
+          /* ### correct HTTP error? */
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "The transaction specified by the "
+                                     "activity does not exist");
+        }
+
+      /* ### correct HTTP error? */
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "There was a problem opening the "
+                                 "transaction specified by this "
+                                 "activity.");
+    }
+
+  return NULL;
+}
 
 static void dav_svn_get_vsn_options(apr_pool_t *p, ap_text_header *phdr)
 {
@@ -175,27 +202,13 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
       svn_fs_id_t *res_id;
       svn_fs_txn_t *txn;
       svn_fs_root_t *txn_root;
+      dav_error *err;
 
       /* open the specified transaction so that we can verify this version
          resource corresponds to the current/latest in the transaction. */
-      serr = svn_fs_open_txn(&txn, resource->info->repos->fs, txn_name,
-                             resource->pool);
-      if (serr != NULL)
-        {
-          if (serr->apr_err == SVN_ERR_FS_NO_SUCH_TRANSACTION)
-            {
-              /* ### correct HTTP error? */
-              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "The transaction specified by the "
-                                         "activity does not exist");
-            }
-
-          /* ### correct HTTP error? */
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "There was a problem opening the "
-                                     "transaction specified by this "
-                                     "activity.");
-        }
+      if ((err = open_txn(&txn, resource->info->repos->fs, txn_name,
+                          resource->pool)) != NULL)
+        return err;
 
       serr = svn_fs_txn_root(&txn_root, txn, resource->pool);
       if (serr != NULL)
@@ -324,6 +337,72 @@ static dav_error *dav_svn_make_activity(dav_resource *resource)
   return NULL;
 }
 
+static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
+                                int no_auto_merge, int no_checkout,
+                                ap_xml_elem *prop_elem,
+                                ap_filter_t *output)
+{
+  apr_pool_t *pool;
+  dav_error *err;
+  svn_fs_txn_t *txn;
+  const char *conflict;
+  svn_error_t *serr;
+  svn_revnum_t new_rev;
+  apr_bucket_brigade *bb;
+
+  /* We'll use the target's pool for our operation. We happen to know that
+     it matches the request pool, which (should) have the proper lifetime. */
+  pool = target->pool;
+
+  /* ### what to verify on the target? */
+
+  /* ### anything else for the source? */
+  if (source->type != DAV_RESOURCE_TYPE_ACTIVITY)
+    {
+      return dav_new_error(pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                           "MERGE can only be performed using an activity "
+                           "as the source [at this time].");
+    }
+
+  /* We will ignore no_auto_merge and no_checkout. We can't do those, but the
+     client has no way to assert that we *should* do them. This should be fine
+     because, presumably, the client has no way to do the various checkouts
+     and things that would necessitate an auto-merge or checkout during the
+     MERGE processing. */
+
+  /* open the transaction that we're going to commit. */
+  if ((err = open_txn(&txn, source->info->repos->fs,
+                      source->info->root.txn_name, pool)) != NULL)
+    return err;
+
+  /* all righty... commit the bugger. */
+  serr = svn_fs_commit_txn(&conflict, &new_rev, txn);
+  if (serr != NULL)
+    {
+      const char *msg;
+
+      /* ### we need to convert the conflict path into a URI */
+      msg = apr_psprintf(pool,
+                         "A conflict occurred during the MERGE processing. "
+                         "The problem occurred with the \"%s\" resource.",
+                         conflict);
+      return dav_svn_convert_err(serr, HTTP_CONFLICT, msg);
+    }
+
+  bb = apr_brigade_create(pool);
+  ap_fputs(output, bb,
+           DAV_XML_HEADER DEBUG_CR
+           "<D:merge-response xmlns:D=\"DAV:\">" DEBUG_CR
+           "<D:merged-set>" DEBUG_CR);
+
+  /* ### more work here... */
+
+  ap_fputs(output, bb,
+           "</D:merged-set>" DEBUG_CR
+           "</D:merge-response>" DEBUG_CR);
+
+  return NULL;
+}
 
 const dav_hooks_vsn dav_svn_hooks_vsn = {
   dav_svn_get_vsn_options,
@@ -344,6 +423,7 @@ const dav_hooks_vsn dav_svn_hooks_vsn = {
   NULL,                 /* make_workspace */
   dav_svn_can_be_activity,
   dav_svn_make_activity,
+  dav_svn_merge,
 };
 
 
