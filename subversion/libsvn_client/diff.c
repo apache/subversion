@@ -890,8 +890,11 @@ convert_to_url (const char **url,
   if (! entry)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                               "convert_to_url: '%s' is not versioned", path);
-  
-  *url = apr_pstrdup (pool, entry->url);
+
+  if (entry->url)  
+    *url = apr_pstrdup (pool, entry->url);
+  else
+    *url = apr_pstrdup (pool, entry->copyfrom_url);
   return SVN_NO_ERROR;
 }
 

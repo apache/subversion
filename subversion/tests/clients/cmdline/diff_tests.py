@@ -832,6 +832,20 @@ def diff_nonextant_urls(sbox):
   else:
     raise svntest.Failure
 
+def diff_head_of_moved_file(sbox):
+  "diff against the head of a moved file"
+
+  sbox.build()
+  mu_path = os.path.join(sbox.wc_dir, 'A', 'mu')
+  new_mu_path = mu_path + '.new'
+
+  svntest.main.run_svn(None, 'mv', mu_path, new_mu_path)
+
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', 'HEAD',
+                                                 new_mu_path)
+  if diff_output == []:
+    raise svntest.Failure
+
 ########################################################################
 # Run the tests
 
@@ -850,6 +864,7 @@ test_list = [ None,
               diff_only_property_change,
               dont_diff_binary_file,
               diff_nonextant_urls,
+              diff_head_of_moved_file,
               ]
 
 if __name__ == '__main__':
