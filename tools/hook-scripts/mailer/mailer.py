@@ -431,11 +431,50 @@ class PropChange(Messenger):
       self.output.finish()
 
 
+class DiffSelections:
+  def __init__(self, cfg, group, params):
+    self.add = False
+    self.copy = False
+    self.delete = False
+    self.modify = False
+
+    gen_diffs = cfg.get('generate_diffs', group, params)
+
+    ### Do a little dance for deprecated options.  Note that even if you
+    ### don't have an option anywhere in your configuration file, it
+    ### still gets returned as non-None.
+    if len(gen_diffs):
+      list = string.split(gen_diffs, " ")
+      for item in list:
+        if item == 'add':
+          self.add = True
+        if item == 'copy':
+          self.copy = True
+        if item == 'delete':
+          self.delete = True
+        if item == 'modify':
+          self.modify = True
+    else:
+      self.add = True
+      self.copy = True
+      self.delete = True
+      self.modify = True
+      ### These options are deprecated
+      suppress = cfg.get('suppress_deletes', group, params)
+      if suppress == 'yes':
+        self.delete = False
+      suppress = cfg.get('suppress_adds', group, params)
+      if suppress == 'yes':
+        self.add = False
+
+
 def generate_content(output, cfg, repos, changelist, group, params, pool):
 
   svndate = repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE)
   ### pick a different date format?
   date = time.ctime(svn.core.secs_from_timestr(svndate, pool))
+
+  diffsels = DiffSelections(cfg, group, params)
 
   output.write('Author: %s\nDate: %s\nNew Revision: %s\n\n'
                % (repos.author, date, repos.rev))
@@ -450,7 +489,8 @@ def generate_content(output, cfg, repos, changelist, group, params, pool):
 
   # these are sorted by path already
   for path, change in changelist:
-    generate_diff(output, cfg, repos, date, change, group, params, pool)
+    generate_diff(output, cfg, repos, date, change, group, params,
+                  diffsels, pool)
 
 
 def _select_adds(change):
@@ -492,47 +532,15 @@ def generate_list(output, header, changelist, selection):
                      % (text, change.base_rev, change.base_path, is_dir))
 
 
-def generate_diff(output, cfg, repos, date, change, group, params, pool):
+def generate_diff(output, cfg, repos, date, change, group, params,
+                  diffsels, pool):
   if change.item_kind == svn.core.svn_node_dir:
     # all changes were printed in the summary. nothing to do.
     return
 
-  gen_diffs = cfg.get('generate_diffs', group, params)
-
-  ### Do a little dance for deprecated options.  Note that even if you
-  ### don't have an option anywhere in your configuration file, it
-  ### still gets returned as non-None.
-  if len(gen_diffs):
-    diff_add = False
-    diff_copy = False
-    diff_delete = False
-    diff_modify = False
-    list = string.split(gen_diffs, " ")
-    for item in list:
-      if item == 'add':
-        diff_add = True
-      if item == 'copy':
-        diff_copy = True
-      if item == 'delete':
-        diff_delete = True
-      if item == 'modify':
-        diff_modify = True
-  else:
-    diff_add = True
-    diff_copy = True
-    diff_delete = True
-    diff_modify = True
-    ### These options are deprecated
-    suppress = cfg.get('suppress_deletes', group, params)
-    if suppress == 'yes':
-      diff_delete = False
-    suppress = cfg.get('suppress_adds', group, params)
-    if suppress == 'yes':
-      diff_add = False
-
   if not change.path:
     ### params is a bit silly here
-    if diff_delete == False:
+    if not diffsels.delete:
       # a record of the deletion is in the summary. no need to write
       # anything further here.
       return
@@ -553,7 +561,7 @@ def generate_diff(output, cfg, repos, date, change, group, params, pool):
         # skip them here.
         return
 
-      if diff_copy == False:
+      if not diffsels.copy:
         # a record of the copy is in the summary, no need to write
         # anything further here.
 	return
@@ -569,7 +577,7 @@ def generate_diff(output, cfg, repos, date, change, group, params, pool):
       label2 = '%s\t%s' % (change.path, date)
       singular = False
     else:
-      if diff_add == False:
+      if not diffsels.add:
         # a record of the addition is in the summary. no need to write
         # anything further here.
         return
@@ -583,7 +591,7 @@ def generate_diff(output, cfg, repos, date, change, group, params, pool):
     # don't bother to show an empty diff. prolly just a prop change.
     return
   else:
-    if diff_modify == False:
+    if not diffsels.modify:
       # a record of the modification is in the summary, no need to write
       # anything further here.
       return
