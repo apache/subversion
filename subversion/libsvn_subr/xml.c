@@ -72,6 +72,32 @@ svn_xml_make_parser (void *userData,
 }
 
 
+svn_error_t *
+svn_xml_parse (svn_xml_parser_t *svn_parser,
+               const char *buf,
+               apr_ssize_t len,
+               svn_boolean_t is_final)
+{
+  svn_error_t *err;
+  int ret;
+
+  ret = XML_Parse (svn_parser->parser, buf, len, is_final);
+
+  if (ret)
+    {
+      err = svn_error_createf
+        (SVN_ERR_MALFORMED_XML, 0, NULL, pool, 
+         "%s at line %d",
+         XML_ErrorString (XML_GetErrorCode (parser)),
+         XML_GetCurrentLineNumber (parser));
+#if 0
+      /*kff todo: free which parser here?  Uh, how about this: */
+      *coding_baton = &Ben;
+#endif /* :-) */
+}
+
+
+
 
 
 /*** Attribute walking. ***/
