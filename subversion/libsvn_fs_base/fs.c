@@ -288,7 +288,7 @@ base_bdb_set_errcall (svn_fs_t *fs,
   base_fs_data_t *bfd = fs->fsap_data;
 
   SVN_ERR (svn_fs_base__check_fs (fs));
-  bfd->env->set_errcall(bfd->env, db_errcall_fcn);
+  bfd->errcall_baton->user_callback = db_errcall_fcn;
 
   return SVN_NO_ERROR;
 }
@@ -297,18 +297,50 @@ base_bdb_set_errcall (svn_fs_t *fs,
 
 /* Allocating an appropriate Berkeley DB environment object.  */
 
+/* BDB error callback.  See bdb_errcall_baton_t in fs.h for more info. */
+static void
+bdb_error_gatherer (const char *char_baton, char *msg)
+{
+  bdb_errcall_baton_t *ec_baton = (bdb_errcall_baton_t *) char_baton;
+
+  svn_error_t *new_err = svn_error_createf (SVN_NO_ERROR, NULL, "bdb: %s",
+                                            msg);
+
+  if (ec_baton->pending_errors)
+    svn_error_compose (ec_baton->pending_errors, new_err);
+  else
+    ec_baton->pending_errors = new_err;
+
+  if (ec_baton->user_callback)
+    ec_baton->user_callback (NULL, msg);
+}
+
+
 /* Create a Berkeley DB environment. */
 static int
-create_env (DB_ENV **envp)
+create_env (DB_ENV **envp, bdb_errcall_baton_t **ec_batonp, apr_pool_t *pool)
 {
   int db_err;
   db_err = db_env_create (envp, 0);
+
+  /* We must create this now, as our callers may assume their ec_baton
+     pointer is valid when checking for errors.  */
+  (*ec_batonp) = apr_pcalloc (pool, sizeof (**ec_batonp));
+  apr_cpystrn ((*ec_batonp)->errpfx_string,
+               BDB_ERRCALL_BATON_ERRPFX_STRING,
+               sizeof ((*ec_batonp)->errpfx_string));
   if (!db_err)
-    /* Needed on Windows in case Subversion and Berkeley DB are using
-       different C runtime libraries  */
-    db_err = (*envp)->set_alloc (*envp, malloc, realloc, free);
+    {
+      (*envp)->set_errpfx (*envp, (char *) (*ec_batonp));
+      (*envp)->set_errcall (*envp, bdb_error_gatherer);
+
+      /* Needed on Windows in case Subversion and Berkeley DB are using
+         different C runtime libraries  */
+      db_err = (*envp)->set_alloc (*envp, malloc, realloc, free);
+    }
   return db_err;
 }
+
 
 /* Allocate a Berkeley DB environment object for the filesystem FS,
    and set up its default parameters appropriately.  */
@@ -319,7 +351,7 @@ allocate_env (svn_fs_t *fs)
 
   /* Allocate a Berkeley DB environment object.  */
   SVN_ERR (BDB_WRAP (fs, "allocating environment object",
-                     create_env (&bfd->env)));
+                     create_env (&bfd->env, &bfd->errcall_baton, fs->pool)));
 
   /* If we detect a deadlock, select a transaction to abort at random
      from those participating in the deadlock.  */
@@ -662,8 +694,9 @@ base_bdb_recover (const char *path,
 {
   DB_ENV *env;
   const char *path_native;
+  bdb_errcall_baton_t *ec_baton;
 
-  SVN_BDB_ERR (create_env (&env));
+  SVN_BDB_ERR (ec_baton, create_env (&env, &ec_baton, pool));
 
   /* Here's the comment copied from db_recover.c:
 
@@ -677,12 +710,12 @@ base_bdb_recover (const char *path,
      incorrectly sized (and probably terribly small) caches.  */
 
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  SVN_BDB_ERR (env->open (env, path_native, (DB_RECOVER | DB_CREATE
-                                             | DB_INIT_LOCK | DB_INIT_LOG
-                                             | DB_INIT_MPOOL | DB_INIT_TXN
-                                             | DB_PRIVATE),
+  SVN_BDB_ERR (ec_baton, env->open (env, path_native,
+                                    (DB_RECOVER | DB_CREATE | DB_INIT_LOCK
+                                     | DB_INIT_LOG | DB_INIT_MPOOL
+                                     | DB_INIT_TXN | DB_PRIVATE),
                           0666));
-  SVN_BDB_ERR (env->close (env, 0));
+  SVN_BDB_ERR (ec_baton, env->close (env, 0));
 
   return SVN_NO_ERROR;
 }
@@ -696,15 +729,17 @@ bdb_catastrophic_recover (const char *path,
 {
   DB_ENV *env;
   const char *path_native;
+  bdb_errcall_baton_t *ec_baton;
 
-  SVN_BDB_ERR (create_env (&env));
+  SVN_BDB_ERR (ec_baton, create_env (&env, &ec_baton, pool));
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  SVN_BDB_ERR (env->open (env, path_native, (DB_RECOVER_FATAL | DB_CREATE
-                                             | DB_INIT_LOCK | DB_INIT_LOG
-                                             | DB_INIT_MPOOL | DB_INIT_TXN
-                                             | DB_PRIVATE),
+  SVN_BDB_ERR (ec_baton, env->open (env, path_native,
+                                    (DB_RECOVER_FATAL | DB_CREATE
+                                     | DB_INIT_LOCK | DB_INIT_LOG
+                                     | DB_INIT_MPOOL | DB_INIT_TXN
+                                     | DB_PRIVATE),
                           0666));
-  SVN_BDB_ERR (env->close (env, 0));
+  SVN_BDB_ERR (ec_baton, env->close (env, 0));
 
   return SVN_NO_ERROR;
 }
@@ -726,21 +761,22 @@ base_bdb_logfiles (apr_array_header_t **logfiles,
   const char *path_native;
   char **filelist;
   char **filename;
+  bdb_errcall_baton_t *ec_baton;
   u_int32_t flags = only_unused ? 0 : DB_ARCH_LOG;
 
   *logfiles = apr_array_make (pool, 4, sizeof (const char *));
 
-  SVN_BDB_ERR (create_env (&env));
+  SVN_BDB_ERR (ec_baton, create_env (&env, &ec_baton, pool));
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  SVN_BDB_ERR (env->open (env, path_native, (DB_CREATE
-                                             | DB_INIT_LOCK | DB_INIT_LOG
-                                             | DB_INIT_MPOOL | DB_INIT_TXN),
+  SVN_BDB_ERR (ec_baton, env->open (env, path_native,
+                                    (DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG
+                                     | DB_INIT_MPOOL | DB_INIT_TXN),
                           0666));
-  SVN_BDB_ERR (env->log_archive (env, &filelist, flags));
+  SVN_BDB_ERR (ec_baton, env->log_archive (env, &filelist, flags));
 
   if (filelist == NULL)
     {
-      SVN_BDB_ERR (env->close (env, 0));
+      SVN_BDB_ERR (ec_baton, env->close (env, 0));
       return SVN_NO_ERROR;
     }
 
@@ -751,7 +787,7 @@ base_bdb_logfiles (apr_array_header_t **logfiles,
 
   free (filelist);
 
-  SVN_BDB_ERR (env->close (env, 0));
+  SVN_BDB_ERR (ec_baton, env->close (env, 0));
 
   return SVN_NO_ERROR;
 }
@@ -841,17 +877,18 @@ check_env_flags (svn_boolean_t *match,
   DB_ENV *env;
   u_int32_t envflags;
   const char *path_native;
+  bdb_errcall_baton_t *ec_baton;
 
-  SVN_BDB_ERR (create_env (&env));
+  SVN_BDB_ERR (ec_baton, create_env (&env, &ec_baton, pool));
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
 
-  SVN_BDB_ERR (env->open (env, path_native, (DB_CREATE
-                                             | DB_INIT_LOCK | DB_INIT_LOG
-                                             | DB_INIT_MPOOL | DB_INIT_TXN),
+  SVN_BDB_ERR (ec_baton, env->open (env, path_native,
+                                    (DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG
+                                     | DB_INIT_MPOOL | DB_INIT_TXN),
                           0666));
 
-  SVN_BDB_ERR (env->get_flags (env, &envflags));
-  SVN_BDB_ERR (env->close (env, 0));
+  SVN_BDB_ERR (ec_baton, env->get_flags (env, &envflags));
+  SVN_BDB_ERR (ec_baton, env->close (env, 0));
 
   if (flags & envflags)
     *match = TRUE;
@@ -873,23 +910,25 @@ get_db_pagesize (u_int32_t *pagesize,
   DB_ENV *env;
   DB *nodes_table;
   const char *path_native;
+  bdb_errcall_baton_t *ec_baton;
 
-  SVN_BDB_ERR (create_env (&env));
+  SVN_BDB_ERR (ec_baton, create_env (&env, &ec_baton, pool));
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
 
-  SVN_BDB_ERR (env->open (env, path_native, (DB_CREATE
-                                             | DB_INIT_LOCK | DB_INIT_LOG
-                                             | DB_INIT_MPOOL | DB_INIT_TXN),
+  SVN_BDB_ERR (ec_baton, env->open (env, path_native,
+                                    (DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG
+                                     | DB_INIT_MPOOL | DB_INIT_TXN),
                           0666));
 
   /* ### We're only asking for the pagesize on the 'nodes' table.
          Is this enough?  We never call DB->set_pagesize() on any of
          our tables, so presumably BDB is using the same default
          pagesize for all our databases, right? */
-  SVN_BDB_ERR (svn_fs_bdb__open_nodes_table (&nodes_table, env, FALSE));
-  SVN_BDB_ERR (nodes_table->get_pagesize (nodes_table, pagesize));
-  SVN_BDB_ERR (nodes_table->close (nodes_table, 0));
-  SVN_BDB_ERR (env->close (env, 0));
+  SVN_BDB_ERR (ec_baton, svn_fs_bdb__open_nodes_table (&nodes_table, env,
+                                                       FALSE));
+  SVN_BDB_ERR (ec_baton, nodes_table->get_pagesize (nodes_table, pagesize));
+  SVN_BDB_ERR (ec_baton, nodes_table->close (nodes_table, 0));
+  SVN_BDB_ERR (ec_baton, env->close (env, 0));
 
   return SVN_NO_ERROR;
 }
@@ -1115,12 +1154,13 @@ base_delete_fs (const char *path,
 {
   DB_ENV *env;
   const char *path_native;
+  bdb_errcall_baton_t *ec_baton;
 
   /* First, use the Berkeley DB library function to remove any shared
      memory segments.  */
-  SVN_BDB_ERR (create_env (&env));
+  SVN_BDB_ERR (ec_baton, create_env (&env, &ec_baton, pool));
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  SVN_BDB_ERR (env->remove (env, path_native, DB_FORCE));
+  SVN_BDB_ERR (ec_baton, env->remove (env, path_native, DB_FORCE));
 
   /* Remove the environment directory. */
   SVN_ERR (svn_io_remove_dir (path, pool));
