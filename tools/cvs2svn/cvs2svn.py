@@ -546,7 +546,7 @@ class Commit:
       for f, r, br, tags, branches in self.changes:
         # compute a repository path, dropping the ,v from the file name
         svn_path = branch_path(ctx, br) + relative_name(ctx.cvsroot, f[:-2])
-        print '    changing %s : %s' % (r, svn_path)
+        print '    adding or changing %s : %s' % (r, svn_path)
       for f, r, br, tags, branches in self.deletes:
         # compute a repository path, dropping the ,v from the file name
         svn_path = branch_path(ctx, br) + relative_name(ctx.cvsroot, f[:-2])
@@ -556,24 +556,23 @@ class Commit:
 
     do_copies = [ ]
 
+    # get the metadata for this commit
+    author, log, date = self.get_metadata()
+    props = { 'svn:author' : unicode(author, ctx.encoding).encode('utf8'),
+              'svn:log' : unicode(log, ctx.encoding).encode('utf8'),
+              'svn:date' : date }
+    dump.start_revision(props)
+
     for rcs_file, cvs_rev, br, tags, branches in self.changes:
       # compute a repository path, dropping the ,v from the file name
       cvs_path = relative_name(ctx.cvsroot, rcs_file[:-2])
       svn_path = branch_path(ctx, br) + cvs_path
-
-      print '    changing %s : %s' % (cvs_rev, svn_path)
-
-      # get the metadata for this commit
-      author, log, date = self.get_metadata()
-      props = { 'svn:author' : unicode(author, ctx.encoding).encode('utf8'),
-                'svn:log' : unicode(log, ctx.encoding).encode('utf8'),
-                'svn:date' : date }
-      dump.start_revision(props)
-
+      print '    adding or changing %s : %s' % (cvs_rev, svn_path)
       dump.add_or_change_path(cvs_path, svn_path, cvs_rev, rcs_file)
 
-      previous_rev = dump.end_revision()
-      print '    new revision:', previous_rev
+    previous_rev = dump.end_revision()
+    print '    new revision:', previous_rev
+
 
 # ### This stuff left in temporarily, as a reference:
 #
