@@ -124,7 +124,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     # Find the right perl library name to link swig bindings with
     fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
-                  'print "$Config{revision}$Config{patchlevel}"'), 'r')
+                  'print "$Config{PERL_REVISION}$Config{PERL_VERSION}"'), 'r')
     try:
       num = fp.readline()
       if num:
