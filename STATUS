@@ -35,13 +35,6 @@ Candidate changes:
       +1: pmayweg
       +0: breser
 
-  * r10190
-    Allow properties with colons in their name to be read with propget
-    over DAV.
-    Justification: If you can set it you should be able to read it.
-    Votes:
-      +1: breser, sussman, kfogel
-
   * r10819, r10855
     Avoid repository corruption if executed with closed std{in,out,err}
     Justification:
