@@ -85,6 +85,7 @@
 
 ;; Overview over the implemented/not (yet) implemented svn sub-commands:
 ;; * add                       implemented
+;; * cat
 ;; * checkout (co)
 ;; * cleanup                   implemented
 ;; * commit (ci)               implemented
@@ -95,6 +96,7 @@
 ;; * help (?, h)
 ;; * import
 ;; * info                      implemented
+;; * list (ls)
 ;; * log                       implemented
 ;; * merge
 ;; * mkdir                     implemented
@@ -481,7 +483,9 @@
   (define-key svn-status-mode-map [?r] 'svn-status-revert-file)
   (define-key svn-status-mode-map [?l] 'svn-status-show-svn-log)
   (define-key svn-status-mode-map [?i] 'svn-status-info)
-  (define-key svn-status-mode-map [?=] 'svn-status-show-svn-diff))
+  (define-key svn-status-mode-map [?=] 'svn-status-show-svn-diff)
+  (define-key svn-status-mode-map [?~] 'svn-status-get-specific-revision)
+  (define-key svn-status-mode-map [?E] 'svn-status-ediff-with-revision))
 
 (when (not svn-status-mode-property-map)
   (setq svn-status-mode-property-map (make-sparse-keymap))
@@ -507,6 +511,8 @@
                     ["svn log" svn-status-show-svn-log t]
                     ["svn info" svn-status-info t]
                     ["svn diff" svn-status-show-svn-diff t]
+                    ["svn ediff" svn-status-ediff-with-revision t]
+                    ["svn cat ..." svn-status-get-specific-revision t]
                     ["svn add" svn-status-add-file t]
                     ["svn mkdir..." svn-status-make-directory t]
                     ["svn revert" svn-status-revert-file t]
@@ -556,6 +562,8 @@
   a     - svn-status-add-file              run 'svn add'
   +     - svn-status-make-directory        run 'svn mkdir'
   M-c   - svn-status-cleanup               run 'svn cleanup'
+  ~     - svn-status-get-specific-revision
+  E     - svn-status-ediff-with-revision
   s     - svn-status-show-process-buffer
   e     - svn-status-toggle-edit-cmd-flag
   ?     - svn-status-toggle-hide-unknown
@@ -1002,6 +1010,54 @@ Then move to that line."
           (svn-run-svn t t 'cleanup (append (list "cleanup") file-names)))
       (message "No valid file selected - No status cleanup possible"))))
 
+;; --------------------------------------------------------------------------------
+;; Getting older revisions
+;; --------------------------------------------------------------------------------
+
+(defun svn-status-get-specific-revision (&optional only-actual-file)
+  "Retrieve older revisions.
+The older revisions are stored in backup files named F.~REVISION~."
+  (interactive)
+  (let* ((file-names (if only-actual-file
+                         (list (svn-status-line-info->filename (svn-status-get-line-information)))
+                       (svn-status-marked-file-names)))
+         (revision (svn-status-read-revision-string "Get files for version: " "COMMITTED"))
+         (file-name)
+         (file-name-with-revision))
+    (message "Getting revision %s for %S" revision file-names)
+    (setq svn-status-get-specific-revision-file-info nil)
+    (while file-names
+      (setq file-name (car file-names))
+      (setq file-name-with-revision (concat file-name ".~" revision "~"))
+      (add-to-list 'svn-status-get-specific-revision-file-info
+                   (cons file-name file-name-with-revision) t)
+      (save-excursion
+        (find-file file-name-with-revision)
+        (setq buffer-read-only nil)
+        (delete-region (point-min) (point-max))
+        (svn-run-svn nil t 'cat (append (list "cat" "-r" revision) (list file-name)))
+        ;;todo: error processing
+        ;;svn: Filesystem has no item
+        ;;svn: file not found: revision `15', path `/trunk/file.txt'
+        (insert-buffer-substring "*svn-process*")
+        (save-buffer))
+      (setq file-names (cdr file-names)))
+    (message "svn-status-get-specific-revision-file-info: %S"
+             svn-status-get-specific-revision-file-info)))
+
+
+(defun svn-status-ediff-with-revision ()
+  "Run ediff on the actual file with a previous revision."
+  (interactive)
+  (svn-status-get-specific-revision t)
+  (ediff-files
+   (cdr (car svn-status-get-specific-revision-file-info))
+   (car (car svn-status-get-specific-revision-file-info))))
+
+(defun svn-status-read-revision-string (prompt &optional default-value)
+  "Prompt the user for a svn revision number."
+  (interactive)
+  (read-string prompt default-value))
 
 ;; --------------------------------------------------------------------------------
 ;; Svn process handling
