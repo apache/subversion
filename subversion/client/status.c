@@ -53,33 +53,33 @@
 
 /*** Includes. ***/
 #include <apr_hash.h>
+#include <apr_tables.h>
+#include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_string.h"
 #include "cl.h"
 
 
 void
-svn_cl__print_status (apr_hash_t *statushash)
+svn_cl__print_status (apr_hash_t *statushash, apr_pool_t *pool)
 {
+  size_t i;
   char statuschar;
-  apr_hash_index_t *hi;
+  apr_array_header_t *statusarray;
 
-  /* TODO: perhaps we should guarantee that the parent dir always
-     prints first?  Or perhaps we should sort these hash entries??
-     Sure wish we had perl or python here.  :) */
+  /* Convert the unordered hash to an ordered, sorted array */
+  statusarray = apr_get_sorted_keys (statushash, pool);
 
-  /* Loop over hash, printing each name/status-structure */
-  for (hi = apr_hash_first (statushash); hi; hi = apr_hash_next (hi))
+  /* Loop over array, printing each name/status-structure */
+  for (i = 0; i < statusarray->nelts; i++)
     {
-      const void *key;
-      apr_size_t keylen;
-      void *value;
+      apr_item_t *item;
       const char *path;
       svn_wc_status_t *status;
       
-      apr_hash_this (hi, &key, &keylen, &value);
-      path = (const char *) key;
-      status = (svn_wc_status_t *) value;
+      item = (((apr_item_t **)(statusarray)->elts)[i]);
+      path = (const char *) item->key;
+      status = (svn_wc_status_t *) item->data;
 
       switch (status->flag)
         {

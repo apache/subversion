@@ -62,7 +62,7 @@
 
 /* Print a hash that maps names to status-structs to stdout for human
    consumption. */
-void svn_cl__print_status (apr_hash_t *statushash);
+void svn_cl__print_status (apr_hash_t *statushash, apr_pool_t *pool);
 
 
 
