@@ -1785,23 +1785,8 @@ def dry_run_adds_file_with_prop(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1, # please check props too
-                                       0)
-
-  # Revert the local mods.
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', F_path)
-  os.unlink(os.path.join(F_path, 'zig'))
-
-  # Now do the same merge with --dry-run.
-  svntest.actions.run_and_verify_merge(F_path, '1', '2', E_url,
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip,
-                                       None, None, None, None, None,
-                                       1, # please check props too
-                                       0, '--dry-run')
-
+                                       1, # please check props
+                                       1) # and do a dry-run also)
 
 
 ########################################################################
@@ -1824,7 +1809,7 @@ test_list = [ None,
               merge_in_new_file_and_diff,
               merge_skips_obstructions,
               merge_into_missing,
-              XFail(dry_run_adds_file_with_prop),
+              dry_run_adds_file_with_prop,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.
