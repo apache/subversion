@@ -24,7 +24,7 @@ tests = ['subversion/tests/libsvn_subr/config-test.exe',
          'subversion/tests/libsvn_delta/random-test.exe',
          'subversion/tests/libsvn_subr/target-test.py']
 
-fs_tests = ['subversion/tests/libsvn_fs/run-fs-tests.py',
+fs_tests = ['subversion/tests/libsvn_fs_base/run-fs-tests.py',
             'subversion/tests/libsvn_repos/run-repos-tests.py']
 
 client_tests = ['subversion/tests/clients/cmdline/getopt_tests.py',
@@ -55,9 +55,9 @@ import os, sys, string, shutil, traceback
 import getopt
 import ConfigParser
 
-opts, args = getopt.getopt(sys.argv[1:], 'rdvcu:sS:',
+opts, args = getopt.getopt(sys.argv[1:], 'rdvcuf:sS:',
                            ['release', 'debug', 'verbose', 'cleanup', 'url=',
-                            'svnserve-args='])
+                            'svnserve-args=', 'fs-type='])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
@@ -71,6 +71,7 @@ objdir = 'Debug'
 log = 'tests.log'
 run_svnserve = None
 svnserve_args = None
+fs_type = None
 
 for opt,arg in opts:
   if opt in ['-r', '--release']:
@@ -97,6 +98,8 @@ for opt,arg in opts:
   elif opt == '--svnserve-args':
     svnserve_args = string.split(arg, ',')
     run_svnserve = 1
+  elif opt in ['-f', '--fs-type']:
+    fs_type = arg
 
 
 # Calculate the source and test directory names
@@ -201,7 +204,7 @@ sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
 th = run_tests.TestHarness(abs_srcdir, abs_builddir, sys.executable, None,
                            os.path.join(abs_builddir, log),
-                           base_url, 1, cleanup)
+                           base_url, fs_type, 1, cleanup)
 old_cwd = os.getcwd()
 try:
   os.chdir(abs_builddir)
