@@ -282,14 +282,6 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
     }
 }
 
-/* Declaration to fix circular dependency between two static funcs.
-   
-   Fill ENTRIES according to PATH's entries file. */
-static svn_error_t *
-read_entries (apr_hash_t *entries,
-              svn_string_t *path,
-              svn_boolean_t get_all_missing_info,
-              apr_pool_t *pool);
 
 /* Resolve any missing information in ENTRIES by deducing from the
    directory's own entry (which must already be present in ENTRIES). */
@@ -339,92 +331,23 @@ resolve_to_defaults (svn_string_t *path,
       entryname = svn_string_ncreate (key, keylen, pool);
 
       if (this_entry == default_entry) 
-        {
-          /* THIS_DIR already has all ancestry info.  But all -flag-
-             information is living in parent's entry.  Let's go fetch
-             it (assuming the parent exists!) */
-          if (svn_path_is_empty (path, svn_path_local_style))
-            {
-              /* If we have a path of ".", we're going to have a
-                 heckuva time trying to find this directory's entry in
-                 its parent.  Why?  Well, we don't exactly know it's
-                 name.  This is a *great* place to have an
-                 apr_realpath() function. */
-            }
-          else
-            {
-              svn_wc_entry_t *parent_entry;
-              apr_hash_t *parent_entries = apr_hash_make (pool);
-              svn_string_t *basename, *parent_path;
-          
-              svn_path_split (path, &parent_path, &basename, 
-                              svn_path_local_style, pool);
-              read_entries (parent_entries, parent_path, FALSE, pool);
-              parent_entry = 
-                (svn_wc_entry_t *) apr_hash_get (parent_entries,
-                                                 basename->data, 
-                                                 basename->len);
+        /* THIS_DIR already has all the information it can possibly
+           have.  */
+        continue;
 
-              if (parent_entry)
-                this_entry->state |= parent_entry->state;
-            }
-        }
+      if (this_entry->kind == svn_node_dir)
+        /* Entries that are directories have everything but their
+           name, kind, and state stored in the THIS_DIR entry of the
+           directory itself.  However, we are disallowing the perusing
+           of any entries outside of the current entries file.  If a
+           caller wants more info about a directory, it should look in
+           the entries file in the directory.  */
+        continue;
 
-      else if (this_entry->kind == svn_node_dir)
-        {
-          /* it's a dir, but not THIS_DIR.  Thus the ancestry must be
-             fetched from the directory's *own* THIS_DIR entry. */
-          svn_wc_entry_t *child_entry;
-          apr_hash_t *child_entries = apr_hash_make (pool);
-          svn_string_t *child_path = svn_string_dup (path, pool);
-          svn_path_add_component (child_path, entryname, svn_path_local_style);
-
-
-          SVN_ERR (read_entries (child_entries, child_path, FALSE, pool));
-          child_entry = 
-            (svn_wc_entry_t *) apr_hash_get (child_entries,
-                                             SVN_WC_ENTRY_THIS_DIR,
-                                             APR_HASH_KEY_STRING);
-          if (! child_entry)
-            return
-              svn_error_createf 
-              (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool, 
-              "Can't open default entry for %s", child_path->data);
-
-          /* Copy all info over *except* the flag state, which
-             this_entry should already have. */
-          this_entry->revision = child_entry->revision;
-          this_entry->ancestor = child_entry->ancestor;
-
-
-          /* TODO: Commenting out this line fixes the case whereby
-             modifying the entries file for A/B ends up putting an
-             extra prop-timestamp in the "E" subdir entry. 
-
-             The REAL issue here is that this whole routine needs to
-             stop digging into subdirs to find information.  We've
-             made a philosophical decision that svn_wc_get_entries()
-             will *only* return information in the particular entries
-             file;  it won't delve down or up to get info.  If a
-             caller wants full info about a subdir, it must open the
-             subdir's own entries file and look at THIS_DIR.
-
-             This is a big change to make; it means changing the
-             assumptions of *all* the callers of
-             svn_wc_get_entries(). */
-
-          /* this_entry->text_time = child_entry->text_time; */
-          /* this_entry->prop_time = child_entry->prop_time; */
-          /* this_entry->attributes = child_entry->attributes; */
-
-          /* and make sure the entry retains its name;  else it would
-             always be "". */
-          apr_hash_set (this_entry->attributes,
-                        SVN_WC_ENTRY_ATTR_NAME, APR_HASH_KEY_STRING,
-                        entryname);
-        }
-      
-      else /* it's a file, so inherit ancestry from THIS_DIR */
+      if (this_entry->kind == svn_node_file)
+        /* For file nodes that do not explicitly have their ancestry
+           stated, this can be derived from the default entry of the
+           directory in which those files reside.  */
         take_from_entry (default_entry, this_entry, pool);
     }
 
@@ -720,39 +643,55 @@ svn_wc__entries_write (apr_hash_t *entries,
       /* We only want to write out 'revision' and 'ancestor' for the
          following things:
          1. the current directory's "this dir" entry.
-         2. an entry marked for addition (which should have invalid
-            revnum and 
-         2. the revision or ancestor is valid and different than that of
-         the "this dir" entry.
-         3. the entry is a new addition
+         2. non-directory entries:
+            a. which are marked for addition (and consequently should
+               have an invalid revnum) 
+            b. whose revision or ancestor is valid and different than 
+               that of the "this dir" entry.
       */
       name = svn_string_ncreate ((const char *)key, keylen, pool);
       if (! svn_string_compare (this_dir_name, name))
         {
-          svn_string_t *this_path;
-
-          /* If this is not the "this dir" entry, and the revision is
-             the same as that of the "this dir" entry, don't write it
-             out at all. */
-          if (this_entry->revision == this_dir->revision)
-            apr_hash_set (this_entry->attributes, 
-                          SVN_WC_ENTRY_ATTR_REVISION,
-                          APR_HASH_KEY_STRING,
-                          NULL);
-
-          /* If this is not the "this dir" entry, and the revision is
-             the same as that of the "this dir" entry, don't write it
-             out at all. */
-          if (this_entry->ancestor)
+          if (this_entry->kind == svn_node_dir)
             {
-              this_path = svn_string_dup (this_dir->ancestor, pool);
-              svn_path_add_component (this_path, name,
-                                      svn_path_repos_style);
-              if (svn_string_compare (this_path, this_entry->ancestor))
+              /* We don't write ancestor or revision for subdir
+                 entries. */
+              apr_hash_set (this_entry->attributes, 
+                            SVN_WC_ENTRY_ATTR_REVISION,
+                            APR_HASH_KEY_STRING,
+                            NULL);
+              apr_hash_set (this_entry->attributes, 
+                            SVN_WC_ENTRY_ATTR_ANCESTOR,
+                            APR_HASH_KEY_STRING,
+                            NULL);
+            }
+          else
+            {
+              svn_string_t *this_path;
+
+              /* If this is not the "this dir" entry, and the revision is
+                 the same as that of the "this dir" entry, don't write it
+                 out at all. */
+              if (this_entry->revision == this_dir->revision)
                 apr_hash_set (this_entry->attributes, 
-                              SVN_WC_ENTRY_ATTR_ANCESTOR,
+                              SVN_WC_ENTRY_ATTR_REVISION,
                               APR_HASH_KEY_STRING,
                               NULL);
+
+              /* If this is not the "this dir" entry, and the revision is
+                 the same as that of the "this dir" entry, don't write it
+                 out at all. */
+              if (this_entry->ancestor)
+                {
+                  this_path = svn_string_dup (this_dir->ancestor, pool);
+                  svn_path_add_component (this_path, name,
+                                          svn_path_repos_style);
+                  if (svn_string_compare (this_path, this_entry->ancestor))
+                    apr_hash_set (this_entry->attributes, 
+                                  SVN_WC_ENTRY_ATTR_ANCESTOR,
+                                  APR_HASH_KEY_STRING,
+                                  NULL);
+                }
             }
         }
 

@@ -291,21 +291,38 @@ svn_wc_statuses (apr_hash_t *statushash,
              the path key twice. */
           if (! strcmp (basename, SVN_WC_ENTRY_THIS_DIR))
             {
-              svn_wc_entry_t *e = apr_hash_get (statushash,
-                                                fullpath->data,
-                                                fullpath->len);
-              if (! e)
+              svn_wc_status_t *s = apr_hash_get (statushash,
+                                                 fullpath->data,
+                                                 fullpath->len);
+              if (! s)
                 SVN_ERR (add_status_structure (statushash, fullpath,
                                                entry, pool));              
             }
           else
             {
-              /* Files and subdir entries *do* get stored. */
-              SVN_ERR (add_status_structure (statushash, fullpath,
-                                             entry, pool));
-              if ((kind == svn_node_dir) && descend)
-                SVN_ERR (svn_wc_statuses (statushash, fullpath,
-                                          descend, pool)); 
+              if (kind == svn_node_dir)
+                {
+                  /* Directory entries are incomplete.  We must get
+                     their full entry from their own THIS_DIR entry.
+                     svn_wc_entry does this for us if it can.  */
+                  svn_wc_entry_t *subdir;
+
+                  SVN_ERR (svn_wc_entry (&subdir, fullpath, pool));
+                  SVN_ERR (add_status_structure (statushash, fullpath,
+                                                 subdir, pool));
+                  if (descend)
+                    {
+                      /* If ask to descent, we do not contend. */
+                      SVN_ERR (svn_wc_statuses (statushash, fullpath,
+                                                descend, pool)); 
+                    }
+                }
+              else if (kind == svn_node_file)
+                {
+                  /* File entries are ... just fine! */
+                  SVN_ERR (add_status_structure (statushash, fullpath,
+                                                 entry, pool));
+                }
             }
         }
     }

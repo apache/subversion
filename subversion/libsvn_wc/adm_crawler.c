@@ -710,22 +710,31 @@ report_local_mods (svn_string_t *path,
           /* Adding a new directory: */
           if (current_entry->kind == svn_node_dir)
             {             
+              svn_string_t *copyfrom_URL = NULL;
+              svn_wc_entry_t *subdir_entry;
+
+
+              /* A directory's interesting information is stored in
+                 its own THIS_DIR entry, so read that to get the real
+                 data for this directory. */
+              SVN_ERR (svn_wc_entry (&subdir_entry, 
+                                     full_path_to_entry, subpool));
+              
               /* If the directory is completely new, the wc records
                  its pre-committed revision as "0", even though it may
                  have a "default" URL listed.  But the delta.h
                  docstring for add_directory() says that the copyfrom
                  args must be either both valid or both invalid. */
-              svn_string_t *copyfrom_URL = NULL;
-              if (current_entry->revision > 0)
-                copyfrom_URL = current_entry->ancestor;
+              if (subdir_entry->revision > 0)
+                copyfrom_URL = subdir_entry->ancestor;
+
               /* Add the new directory, getting a new dir baton.  */
-              err = editor->add_directory (current_entry_name,
-                                           dir_baton, /* current dir
-                                                         is parent */
-                                           copyfrom_URL,
-                                           current_entry->revision,
-                                           &new_dir_baton); /* get child */
-              if (err) return err;
+              SVN_ERR (editor->add_directory 
+                       (current_entry_name,
+                        dir_baton, /* current dir is parent */
+                        copyfrom_URL,
+                        subdir_entry->revision,
+                        &new_dir_baton)); /* get child */
             }
       
           /* Adding a new file: */

@@ -166,9 +166,10 @@ svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
    
    Important note: only the entry structures representing files and
    SVN_WC_ENTRY_THIS_DIR contain complete information.  The entry
-   structures representing subdirs have only the `kind' field filled
-   in.  If you want info on a subdir, you must use this routine to
-   open its PATH and read the SVN_WC_ENTRY_THIS_DIR structure. */
+   structures representing subdirs have only the `kind' and `state'
+   fields filled in.  If you want info on a subdir, you must use this
+   routine to open its PATH and read the SVN_WC_ENTRY_THIS_DIR
+   structure, or call svn_wc_get_entry on its PATH.  */
 svn_error_t *svn_wc_entries_read (apr_hash_t **entries,
                                   svn_string_t *path,
                                   apr_pool_t *pool);
