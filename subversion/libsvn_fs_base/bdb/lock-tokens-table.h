@@ -81,14 +81,6 @@ svn_fs_bdb__lock_tokens_get (apr_hash_t **lock_tokens_p,
                              trail_t *trail);
 
 
-/* If PATH exists as a key in the `lock-tokens' table in FS, then set
-   TOKEN_EXISTS to true.  Do all work in TRAIL. */
-svn_error_t *
-svn_fs_bdb__lock_token_exists (svn_boolean_t *token_exists,
-                               svn_fs_t *fs,
-                               const char *path,
-                               trail_t *trail);
-
 
 #ifdef __cplusplus
 }

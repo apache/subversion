@@ -106,6 +106,38 @@ svn_fs_base__unlock (svn_fs_t *fs,
 }
 
 
+svn_error_t *
+svn_fs_base__get_lock_from_path_helper (svn_lock_t **lock_p,
+                                        const char *path,
+                                        trail_t *trail)
+{
+  const char *lock_token;
+  svn_error_t *err;
+  
+  err = svn_fs_bdb__lock_token_get (&lock_token, trail->fs, path, trail);
+  if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK)
+    {
+      svn_error_clear (err);
+      *lock_p = NULL;
+      return SVN_NO_ERROR;
+    }
+  else
+    SVN_ERR (err);
+
+  SVN_ERR (svn_fs_bdb__lock_get (lock_p, trail->fs, lock_token, trail));
+
+  err = check_lock_expired (*lock_p, trail);
+  if (err && err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
+    {
+      svn_error_clear (err);
+      *lock_p = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  return err;
+}
+
+
 struct lock_token_get_args
 {
   svn_lock_t **lock_p;
@@ -116,33 +148,9 @@ struct lock_token_get_args
 static svn_error_t *
 txn_body_get_lock_from_path (void *baton, trail_t *trail)
 {
-  const char *lock_token;
   struct lock_token_get_args *args = baton;
-  svn_error_t *err;
-  
-  err = svn_fs_bdb__lock_token_get (&lock_token, trail->fs,
-                                    args->path, trail);
-  if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK)
-    {
-      svn_error_clear (err);
-      *args->lock_p = NULL;
-      return SVN_NO_ERROR;
-    }
-  else
-    SVN_ERR (err);
-
-  SVN_ERR (svn_fs_bdb__lock_get (args->lock_p, trail->fs,
-                                 lock_token, trail));
-
-  err = check_lock_expired (*args->lock_p, trail);
-  if (err && err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
-    {
-      svn_error_clear (err);
-      *args->lock_p = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  return err;
+  return svn_fs_base__get_lock_from_path_helper (args->lock_p, args->path,
+                                                 trail);
 }
 
 
@@ -201,23 +209,17 @@ svn_fs_base__get_lock_from_token (svn_lock_t **lock,
 }
 
 
-struct locks_get_args
-{
-  apr_hash_t **locks_p;
-  const char *path;
-};
 
-
-static svn_error_t *
-txn_body_get_locks (void *baton, trail_t *trail)
+svn_error_t *
+svn_fs_base__get_locks_helper (apr_hash_t **locks_p,
+                               const char *path,
+                               trail_t *trail)
 {
-  struct locks_get_args *args = baton;
   apr_hash_index_t *hi;
 
-  SVN_ERR (svn_fs_bdb__lock_tokens_get (args->locks_p, trail->fs,
-                                        args->path, trail));
+  SVN_ERR (svn_fs_bdb__lock_tokens_get (locks_p, trail->fs, path, trail));
 
-  hi = apr_hash_first (trail->pool, *args->locks_p);
+  hi = apr_hash_first (trail->pool, *locks_p);
   while (hi)
     {
       const void *key;
@@ -241,10 +243,25 @@ txn_body_get_locks (void *baton, trail_t *trail)
       else
         SVN_ERR (err);
 
-      apr_hash_set (*args->locks_p, key, keylen, lock);
+      apr_hash_set (*locks_p, key, keylen, lock);
     }
 
   return SVN_NO_ERROR;
+}
+
+
+struct locks_get_args
+{
+  apr_hash_t **locks_p;
+  const char *path;
+};
+
+
+static svn_error_t *
+txn_body_get_locks (void *baton, trail_t *trail)
+{
+  struct locks_get_args *args = baton;
+  return svn_fs_base__get_locks_helper (args->locks_p, args->path, trail);
 }
 
 
