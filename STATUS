@@ -52,3 +52,12 @@ Candidate changes:
       User complaint.  Simple fix in javahl binding only.
     Votes:
       +1: pmayweg
+
+  * r11490, r11501 (Issue #2011)
+    Fix UNC paths on Windows 
+    Justification:
+      It used to work.  It should work now.
+    Notes:
+      r11490 is just cleanups.  But makes it merge cleanly.
+    Votes:
+      +1: breser
