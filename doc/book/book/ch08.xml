@@ -209,7 +209,7 @@ rev 27: ...
               on the command line, following this switch. For
               example:</para>
             
-            <para><command>$ svn checkin -m "Initial
+            <para><command>$ svn commit -m "Initial
                 import."</command></para>
           </listitem>
         </varlistentry>
@@ -1749,64 +1749,274 @@ may want to use 'svn cat' (###TODO xref)
   <sect1 id="svn-ch-8-sect-2">
     <title><command>svnadmin</command></title>
     
-    <para>
-      ###TODO Write this
-    </para>
+    <para><command>svnadmin</command> is the administrative tool for
+      monitoring and repairing your Subversion repository.  For
+      detailed information, see <xref
+      linkend="svn-ch-5-sect-3.1.2"/></para>
 
-    <sect2 id="svn-ch-8-sect-2.1">
-      <title>svn create</title>
-      <para>###TODO Write this</para>
-    </sect2>
+    <screen>
+Switches:
 
-    <sect2 id="svn-ch-8-sect-2.2">
-      <title>svn createtxn</title>
-      <para>###TODO Write this</para>
-    </sect2>
+--copies
 
-    <sect2 id="svn-ch-8-sect-2.3">
-      <title>svn dump</title>
-      <para>###TODO Write this</para>
-    </sect2>
+Follow copy history when examining a path.
 
-    <sect2 id="svn-ch-8-sect-2.4">
-      <title>svn help</title>
-      <para>###TODO Write this</para>
-    </sect2>
+--in-repos-template ARG
 
-    <sect2 id="svn-ch-8-sect-2.5">
-      <title>svn load</title>
-      <para>###TODO Write this</para>
-    </sect2>
+Specify a template for the repository structure when creating a new
+repository. 
 
-    <sect2 id="svn-ch-8-sect-2.6">
-      <title>svn lscr</title>
-      <para>###TODO Write this</para>
-    </sect2>
+The "in-repository" templates specify the layout of the repository
+itself (which lives in Berkeley DB files inside the db/ directory)
+like /trunk, /branches, etc.  These templates can be used by an
+administrator or application to do an initial load of the repository
+(without invoking hooks). There is no default; the repository is built
+"empty" unless you tell it otherwise.
 
-    <sect2 id="svn-ch-8-sect-2.7">
-      <title>svn lstxns</title>
-      <para>###TODO Write this</para>
-    </sect2>
+--incremental
 
-    <sect2 id="svn-ch-8-sect-2.8">
-      <title>svn recover</title>
-      <para>###TODO Write this</para>
-    </sect2>
+Dump a revision only as a diff against the previous revision, instead
+of the usual fulltext.
 
-    <sect2 id="svn-ch-8-sect-2.9">
-      <title>svn rmtxns</title>
-      <para>###TODO Write this</para>
-    </sect2>
+--on-disk-template ARG
 
-    <sect2 id="svn-ch-8-sect-2.10">
-      <title>svn setlog</title>
-      <para>###TODO Write this</para>
-    </sect2>
+Specify a templete to use for the on-disk structure (i.e. conf/,
+hooks/, etc.) of the repository you want to create.
 
-    <sect2 id="svn-ch-8-sect-2.11">
-      <title></title>
-      <para>###TODO Write this</para>
-    </sect2>
+The "on-disk" templates describe the repository directory itself. Each
+of the templates have a name, and the "default" on-disk template
+contains:
+
+  default/
+    README
+    dav/
+    format
+    hooks/
+      post-commit.tmpl
+      post-revprop-change.tmpl
+      pre-commit.tmpl
+      pre-revprop-change.tmpl
+      start-commit.tmpl
+    locks/
+      db.lock
+
+The typical usage for the on-disk structures is to predefine the hook
+scripts that will be created. For example, you could prepopulate the
+'post-commit' script with a commit mailer and backup script. Then, each time
+the administrator creates a new repository, she can refer to this new
+template which automagically includes all of the hooks.
+
+--revision (-r) ARG
+
+Specify a particular revision to operate on.
+
+============================================================
+
+svn create
+
+svnadmin create REPOS_PATH
+
+Create a new, empty repository at REPOS_PATH.
+
+Switches:
+--on-disk-template arg
+--in-repos-template arg
+
+Examples
+
+$ svnadmin create /usr/local/svn/repos
+
+###TODO more examples with templates?
+
+============================================================
+
+svnadmin createtxn
+
+svnadmin createtxn REPOS_PATH -r REVISION
+
+Create a new transaction in the repository based on REVISION.
+
+Switches:
+--revision (-r)
+
+Examples
+
+$ svnadmin createtxn /usr/local/svn/repos -r 21
+
+============================================================
+
+svnadmin dump
+
+svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]
+
+Dump the contents of filesystem to stdout in a 'dumpfile'
+portable format, sending feedback to stderr.  Dump revisions
+LOWER rev through UPPER rev.  If no revisions are given, dump all
+revision trees.  If only LOWER is given, dump that one revision tree.
+
+Switches:
+--revision (-r)
+--incremental
+
+Examples
+
+Dump your whole repository:
+
+$ svnadmin dump /usr/local/svn/repos
+SVN-fs-dump-format-version: 1
+Revision-number: 0
+* Dumped revision 0.
+Prop-content-length: 56
+Content-length: 56
+...
+
+Incrementally dump a single transaction from your repository: 
+
+$ svnadmin dump /usr/local/svn/repos -r 21 --incremental 
+* Dumped revision 21.
+SVN-fs-dump-format-version: 1
+Revision-number: 21
+Prop-content-length: 101
+Content-length: 101
+...
+
+============================================================
+
+svnadmin help (?, h)
+
+svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]
+
+This is your best friend when you're using Subversion and this book
+isn't within reach!
+
+============================================================
+
+svnadmin load
+
+svnadmin load REPOS_PATH
+
+Read a 'dumpfile'-formatted stream from stdin, committing
+new revisions into the repository's filesystem.
+Send progress feedback to stdout.
+
+Example
+
+$ svnadmin load /usr/local/svn/restored &lt; repos-backup
+&lt;&lt;&lt; Started new txn, based on original revision 1
+     * adding path : test ... done.
+     * adding path : test/a ... done.
+...
+
+============================================================
+
+svnadmin lscr
+
+svnadmin lscr REPOS_PATH PATH [--copies]
+
+Print, one-per-line and youngest-to-eldest, the revisions in which
+PATH was modified.  Use the COPIES flag to allow this operation to
+cross copy history while searching for revisions.  PATH must exist in
+the HEAD of the repository).  It's not immediately obvious, but lscr
+stands for LiSt Changed Revisions.
+
+Switches:
+  --copies                 : follow copy history
+
+Examples
+
+List the revisions in which a path was modified:
+
+$ svnadmin lscr /usr/local/svn/repos/ test-moved-file
+34
+33
+
+List the revisions in which a path was modified including changes that
+occured before it was moved/copied:
+
+$ svnadmin lscr /usr/local/svn/repos/ test-moved-file --copies
+34
+33
+15
+14
+...
+
+============================================================
+
+svnadmin lstxns
+
+svnadmin lstxns REPOS_PATH
+
+Print the names of all uncommitted transactions.
+
+Examples
+
+$ svnadmin lstxns /usr/local/svn/repos/ 
+1w
+1x
+
+============================================================
+
+svnadmin recover
+
+svnadmin recover REPOS_PATH
+
+Run the Berkeley DB recovery procedure on a repository.  Do
+this if you've been getting errors indicating that recovery
+ought to be run.
+
+WARNING: only run this when you are SURE you're the only process
+accessing the repository.  Requires exclusive access.
+
+Examples
+
+$ svnadmin recover /usr/local/svn/repos/ 
+Acquiring exclusive lock on repository db.
+Recovery is running, please stand by...
+Recovery completed.
+The latest repos revision is 34.
+
+============================================================
+
+svnadmin rmtxns
+
+svnadmin rmtxns REPOS_PATH TXN_NAME [TXN_NAME2 ...]
+
+Delete the named transaction(s).
+
+Examples
+
+Remove named transactions:
+
+$ svnadmin rmtxns /usr/local/svn/repos/ 1w 1x
+
+Fortunately, the output of svn lstxns works great as the input for
+rmtxns:
+
+$ svnadmin rmtxns /usr/local/svn/repos/  `svnadmin lstxns /usr/local/svn/repos/`
+
+Which will remove all uncommitted transactions from your repository.
+
+============================================================
+
+svnadmin setlog
+
+svnadmin setlog REPOS_PATH -r REVISION FILE
+
+Set the log-message on revision REVISION to the contents of FILE.
+(Note that revision properties are not under version control, so this
+command will permanently overwrite the previous log message.)
+
+Switches:
+--revision (-r) ARG
+
+Examples
+
+Set the log message for revision 19 to the contents of the file 'msg':
+
+$ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
+
+============================================================
+    </screen>
 
   </sect1>
   
@@ -1816,59 +2026,182 @@ may want to use 'svn cat' (###TODO xref)
   <sect1 id="svn-ch-8-sect-3">
     <title><command>svnlook</command></title>
     
-    <para>### TODO Talk about how svnlook works in general:
-      std. command structure, revnums vs. tranny names, what the
-      default action is, etc.</para>
-    
-    <sect2 id="svn-ch-8-sect-3.1">
-      <title>svn author</title>
-      <para>###TODO Write this</para>
-    </sect2>
+    <para><command>svnlook</command> is a command line utility for
+    examining different aspects of a Subversion repository.</para>
 
-    <sect2 id="svn-ch-8-sect-3.2">
-      <title>svn changed</title>
-      <para>###TODO Write this</para>
-    </sect2>
+    <para><command>svnlook</command> is typically used by the
+      repository hooks, but a repository administrator might find it
+      useful for diagnostic purposes.  Since
+      <command>svnlook</command> can only be used on the machine that
+      holds the repository, it takes paths as targets and not
+      URLs.</para>
 
-    <sect2 id="svn-ch-8-sect-3.3">
-      <title>svn date</title>
-      <para>###TODO Write this</para>
-    </sect2>
+    <para>If no revision or transaction is specified, svnlook defaults
+    to the youngest (most recent) revision of the repository.</para>
 
-    <sect2 id="svn-ch-8-sect-3.4">
-      <title>svn diff</title>
-      <para>###TODO Write this</para>
-    </sect2>
+    <screen>
+Switches
 
-    <sect2 id="svn-ch-8-sect-3.5">
-      <title>svn dirs-changed</title>
-      <para>###TODO Write this</para>
-    </sect2>
+--no-diff-deleted
 
-    <sect2 id="svn-ch-8-sect-3.6">
-      <title>svn ids</title>
-      <para>###TODO Write this</para>
-    </sect2>
+Prevents svnlook from printing differences for deleted files.  The
+default behavior when a file is deleted in a transaction/revision is
+to print the same differences that you would see if you had left the
+file but removed all the content.
 
-    <sect2 id="svn-ch-8-sect-3.7">
-      <title>svn info</title>
-      <para>###TODO Write this</para>
-    </sect2>
+--revision (-r)
 
-    <sect2 id="svn-ch-8-sect-3.8">
-      <title>svn log</title>
-      <para>###TODO Write this</para>
-    </sect2>
+Specify a particular revision number that you wish to examine.
 
-    <sect2 id="svn-ch-8-sect-3.9">
-      <title>svn tree</title>
-      <para>###TODO Write this</para>
-    </sect2>
+--transaction (-t)
 
-    <sect2 id="svn-ch-8-sect-3.10">
-      <title></title>
-      <para>###TODO Write this</para>
-    </sect2>
+Specify a particular transaction id that you wish to examine. 
+
+--show-ids
+
+Show the filesystem node revision IDs for each path in the filesystem
+tree.
+
+Examples
+
+============================================================
+
+svnlook author
+
+svnlook author REPOS_PATH
+
+Print the author.
+
+Switches:
+--revision (-r)
+--transaction (-t)
+
+Examples
+
+============================================================
+
+svnlook changed
+
+svnlook changed REPOS_PATH
+
+Print the paths that were changed.
+
+Switches:
+--revision (-r)
+--transaction (-t)
+
+Examples
+
+============================================================
+
+svnlook date
+
+svnlook date REPOS_PATH
+
+Print the datestamp.
+
+Switches:
+--revision (-r)
+--transaction (-t)
+
+Examples
+
+============================================================
+
+svnlook diff
+
+ svnlook diff REPOS_PATH
+
+Print GNU-style diffs of changed files and properties.
+
+Switches:
+--revision (-r)
+--transaction (-t)
+--no-diff-deleted
+
+Examples
+
+============================================================
+
+svnlook dirs-changed
+
+svnlook dirs-changed REPOS_PATH
+
+Print the directories that were themselves changed (property edits)
+or whose file children were changed.
+
+Switches:
+--revision (-r)
+--transaction (-t)
+
+Examples
+
+============================================================
+
+svnlook help 
+
+Also svnlook -h and svnlook -?.
+
+Display the help message for svnlook.
+
+Examples
+
+============================================================
+
+svnlook info
+
+svnlook info REPOS_PATH
+
+Print the author, datestamp, log message size, and log message.
+
+Switches:
+--revision (-r)
+--transaction (-t)
+
+Examples
+
+============================================================
+
+svnlook log
+
+svnlook log REPOS_PATH
+
+Print the log message.
+
+Switches:
+--revision (-r)
+--transaction (-t)
+
+Examples
+
+============================================================
+
+svnlook tree
+
+svnlook tree REPOS_PATH
+
+Print the tree, optionally showing node revision ids.
+
+Switches:
+--revision (-r)
+--transaction (-t)
+--show-ids
+
+Examples
+
+============================================================
+
+svnlook youngest
+
+svnlook youngest REPOS_PATH
+
+Print the youngest revision number.
+
+Examples
+
+============================================================
+    </screen>
+
 
   </sect1>
   
