@@ -90,8 +90,21 @@ sub new {
     my $self = bless {}, $class;
     %$self = $#_ ? @_ : (url => $_[0]);
 
-    $self->{auth} ||= SVN::Core::auth_open
-	([ SVN::Client::get_username_provider() ]);
+    if (defined($self->{auth})) {
+        if (ref($self->{auth}) ne '_p_svn_auth_baton_t') {
+            # If the auth is already set to a auth_baton ignore it
+            # otherwise make an auth_baton and store the callbacks
+            my ($auth_baton,$auth_callbacks) = 
+                                SVN::Core::auth_open_helper($self->{auth});
+            $self->{auth} = $auth_baton;
+            $self->{auth_provider_callbacks} = $auth_callbacks;
+        }
+    } else {
+        # no callback to worry about with a username provider so just call
+        # auth_open directly
+        $self->{auth} = SVN::Core::auth_open(
+                             [SVN::Client::get_username_provider()]);
+    }
 
     my $pool = $self->{pool} ||= SVN::Core::pool_create(undef);
 

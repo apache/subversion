@@ -123,6 +123,46 @@ svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
 				   SV *perl_callbacks,
 				   apr_pool_t *pool);
 
+/* thunked simple_prompt callback function */
+svn_error_t *svn_swig_pl_thunk_simple_prompt (svn_auth_cred_simple_t **cred,
+                                              void *baton,
+                                              const char *realm,
+                                              const char *username,
+                                              svn_boolean_t may_save,
+                                              apr_pool_t *pool);
+
+/* thunked username_prompt callback function */
+svn_error_t *svn_swig_pl_thunk_username_prompt (svn_auth_cred_username_t **cred,
+                                                void *baton,
+                                                const char *realm,
+                                                svn_boolean_t may_save,
+                                                apr_pool_t *pool);
+
+/* thunked ssl_server_trust_prompt callback function */
+svn_error_t *svn_swig_pl_thunk_ssl_server_trust_prompt(
+                              svn_auth_cred_ssl_server_trust_t **cred,
+                              void *baton,
+                              const char *realm,
+                              apr_uint32_t failures,
+                              const svn_auth_ssl_server_cert_info_t *cert_info,
+                              svn_boolean_t may_save,
+                              apr_pool_t *pool);
+
+/* thunked ssl_client_cert callback function */
+svn_error_t *svn_swig_pl_thunk_ssl_client_cert_prompt (
+                                        svn_auth_cred_ssl_client_cert_t **cred,
+                                        void *baton,
+                                        const char *realm,
+                                        svn_boolean_t may_save,
+                                        apr_pool_t *pool);
+
+/* thunked ssl_client_cert_pw callback function */
+svn_error_t *svn_swig_pl_thunk_ssl_client_cert_pw_prompt (
+                                     svn_auth_cred_ssl_client_cert_pw_t **cred,
+                                     void *baton,
+                                     const char *realm,
+                                     svn_boolean_t may_save,
+                                     apr_pool_t *pool);
 
 /* thunked callback for svn_ra_get_wc_prop_func_t */
 svn_error_t *thunk_get_wc_prop (void *baton,

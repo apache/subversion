@@ -37,6 +37,10 @@ SVN::Core - Core module of the subversion perl bindings
 SVN::Core implements higher level functions of fundamental subversion
 functions.
 
+=head1 FUNCTIONS
+
+=over 4
+
 =cut
 
 BEGIN {
@@ -48,12 +52,54 @@ END {
     SVN::_Core::apr_terminate;
 }
 
+=item SVN::Core::auth_open([auth provider array]);
+
+Takes a reference to an array of authentication providers
+and returns an auth_baton.  If you use prompt providers
+you can not use this function, but need to use the 
+auth_open_helper.
+
+=item SVN::Core::auth_open_helper([auth provider array);
+
+Prompt providers return two values instead of one.  The
+2nd paramaeter is a reference to whatever was passed into
+them as the callback.  auth_open_helper splits up these
+arguments, passing the provider objects into auth_open
+which gives it an auth_baton and putting the other
+ones in an array.  The first return value of this
+function is the auth_baton, the second is a reference
+to an array containing the references to the callbacks.
+
+These callback arrays should be stored in the object
+the auth_baton is attached to.
+
+=cut
+
+sub auth_open_helper {
+    my $args = shift;
+    my (@auth_providers,@auth_callbacks);
+
+    foreach my $arg (@{$args}) {
+        if (ref($arg) eq '_p_svn_auth_provider_object_t') {
+            push @auth_providers, $arg;
+        } else {
+            push @auth_callbacks, $arg;
+        }
+    }
+    my $auth_baton = SVN::Core::auth_open(\@auth_providers);
+    return ($auth_baton,\@auth_callbacks);
+}
+
 package _p_svn_stream_t;
 use SVN::Base qw(Core svn_stream_);
 
 package SVN::Stream;
 use IO::Handle;
 our @ISA = qw(IO::Handle);
+
+=head1 OTHER OBJECTS
+
+=over 4
 
 =head2 svn_stream_t - SVN::Stream
 
@@ -218,6 +264,10 @@ sub DESTROY {
 
 package SVN::Pool;
 use SVN::Base qw/Core svn_pool_/;
+
+=back
+
+=over 4
 
 =head2 svn_pool_t - SVN::Pool
 

@@ -235,8 +235,72 @@
    any API, but svn_client_ls returns a hash of pointers to dirents. */
 %types(svn_dirent_t *);
 
+/* -----------------------------------------------------------------------
+  thunk the various authentication prompt functions and store
+  the inputed SV in _global_callback for use in the later argout
+  typemap
+*/
+%typemap(perl5, in) (svn_auth_simple_prompt_func_t prompt_func,
+                     void *prompt_baton) {
+    $1 = svn_swig_pl_thunk_simple_prompt;
+    _global_callback = $input;
+    $2 = (void *) _global_callback;
+}
+
+%typemap(perl5, in) (svn_auth_username_prompt_func_t prompt_func,
+                     void *prompt_baton) {
+    $1 = svn_swig_pl_thunk_username_prompt;
+    _global_callback = $input;
+    $2 = (void *) _global_callback;
+}
+
+%typemap(perl5, in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
+                     void *prompt_baton) {
+    $1 = svn_swig_pl_thunk_ssl_server_trust_prompt;
+    _global_callback = $input;
+    $2 = (void *) _global_callback;
+}
+
+%typemap(perl5, in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
+                      void *prompt_baton) {
+    $1 = svn_swig_pl_thunk_ssl_client_cert_prompt;
+    _global_callback = $input;
+    $2 = (void *) _global_callback;
+}
+
+%typemap(perl5, in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
+                      void *prompt_baton) {
+    $1 = svn_swig_pl_thunk_ssl_client_cert_pw_prompt;
+    _global_callback = $input;
+    $2 = (void *) _global_callback;
+}
+
+/* For all the prompt functions create a reference for the baton
+ * (which in this case is an SV pointing to the prompt callback)
+ * and make that a second return from the prompt function.  The
+ * auth_open_helper can then split these values up so they
+ * can be stored and the callback can stay valid until the 
+ * auth_baton is freed. */
+%typemap(perl5, argout) void *prompt_baton (SV * _global_callback) {
+  $result = sv_2mortal (newRV_inc (_global_callback));
+  argvi++;
+}
+
 /* ----------------------------------------------------------------------- */
 
+/* Convert perl hashes back into apr_hash_t * for setting the config
+ * member of the svn_client_ctx_t.   This is an ugly hack, it will
+ * always allocate the new apr_hash_t out of the global current_pool
+ * It would be better to make apr_hash_t's into magic variables in
+ * perl that are tied to the apr_hash_t interface.  This would
+ * remove the need to convert to and from perl hashs all the time.
+ */
+%typemap(perl5, in) apr_hash_t *config {
+  $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
+                                         svn_swig_pl_make_pool (NULL));
+}
+
+/* ----------------------------------------------------------------------- */
 
 %typemap(java, in) svn_stream_t *out %{
     $1 = svn_swig_java_outputstream_to_stream(jenv, $input, _global_pool);

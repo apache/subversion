@@ -24,6 +24,7 @@
 
 #include <apr.h>
 #include <apr_general.h>
+#include <apr_portable.h>
 
 #include "svn_pools.h"
 #include "svn_opt.h"
@@ -232,7 +233,7 @@ SV *svn_swig_pl_ints_to_list(const apr_array_header_t *array)
 
 typedef enum perl_func_invoker {
     CALL_METHOD,
-    CALL_SV,
+    CALL_SV
 } perl_func_invoker_t;
 
 /* put the va_arg in stack and invoke caller_func with func.
@@ -321,7 +322,6 @@ static svn_error_t *perl_callback_thunk (perl_func_invoker_t caller_func,
 
     return SVN_NO_ERROR;
 }
-
 
 /*** Editor Wrapping ***/
 
@@ -848,6 +848,148 @@ svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
     return SVN_NO_ERROR;
 }
 
+svn_error_t *svn_swig_pl_thunk_simple_prompt(svn_auth_cred_simple_t **cred,
+                                             void *baton,
+                                             const char *realm,
+                                             const char *username,
+                                             svn_boolean_t may_save,
+                                             apr_pool_t *pool)
+{
+    SV *result;
+    swig_type_info *poolinfo = SWIG_TypeQuery ("apr_pool_t *");
+    swig_type_info *credinfo = SWIG_TypeQuery ("svn_auth_cred_simple_t *");
+
+    /* Be nice and allocate the memory for the cred structure before passing it
+     * off to the perl space */
+    *cred = apr_pcalloc (pool, sizeof (**cred));
+    if (!*cred) {
+        croak ("Could not allocate memory for cred structure");
+    }
+    perl_callback_thunk (CALL_SV,
+                         baton, &result,
+                         "SssiS", *cred, credinfo,
+                         realm, username, may_save, pool, poolinfo);
+
+    return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_swig_pl_thunk_username_prompt(svn_auth_cred_username_t **cred,
+                                               void *baton,
+                                               const char *realm,
+                                               svn_boolean_t may_save,
+                                               apr_pool_t *pool)
+{
+    SV *result;
+    swig_type_info *poolinfo = SWIG_TypeQuery ("apr_pool_t *");
+    swig_type_info *credinfo = SWIG_TypeQuery ("svn_auth_cred_username_t *");
+
+    /* Be nice and allocate the memory for the cred structure before passing it
+     * off to the perl space */
+    *cred = apr_pcalloc (pool, sizeof (**cred));
+    if (!*cred) {
+        croak ("Could not allocate memory for cred structure");
+    }
+    perl_callback_thunk (CALL_SV,
+                         baton, &result,
+                         "SsiS", *cred, credinfo,
+                         realm, may_save, pool, poolinfo);
+
+    return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_swig_pl_thunk_ssl_server_trust_prompt(
+                              svn_auth_cred_ssl_server_trust_t **cred,
+                              void *baton,
+                              const char *realm,
+                              apr_uint32_t failures,
+                              const svn_auth_ssl_server_cert_info_t *cert_info,
+                              svn_boolean_t may_save,
+                              apr_pool_t *pool)
+{
+    SV *result;
+    swig_type_info *poolinfo = SWIG_TypeQuery ("apr_pool_t *");
+    swig_type_info *credinfo = SWIG_TypeQuery (
+                                 "svn_auth_cred_ssl_server_trust_t *");
+    swig_type_info *cert_info_info = SWIG_TypeQuery (
+                                 "svn_auth_ssl_server_cert_info_t *");
+
+    /* Be nice and allocate the memory for the cred structure before passing it
+     * off to the perl space */
+    *cred = apr_pcalloc (pool, sizeof (**cred));
+    if (!*cred) {
+        croak ("Could not allocate memory for cred structure");
+    }
+    perl_callback_thunk (CALL_SV,
+                         baton, &result,
+                         "SsiSiS", *cred, credinfo,
+                         realm, failures, 
+                         cert_info, cert_info_info,
+                         may_save, pool, poolinfo);
+
+    /* Allow the perl callback to indicate failure by setting all vars to 0 
+     * or by simply doing nothing.  While still allowing them to indicate
+     * failure by setting the cred strucutre's pointer to 0 via $$cred = 0 */
+    if (*cred) {
+        if ((*cred)->may_save == 0 && (*cred)->accepted_failures == 0) {
+            *cred = NULL;
+        }
+    }
+
+    return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_swig_pl_thunk_ssl_client_cert_prompt(
+                svn_auth_cred_ssl_client_cert_t **cred,
+                void *baton,
+                const char * realm,
+                svn_boolean_t may_save,
+                apr_pool_t *pool)
+{
+    SV *result;
+    swig_type_info *poolinfo = SWIG_TypeQuery ("apr_pool_t *");
+    swig_type_info *credinfo = SWIG_TypeQuery (
+                                 "svn_auth_cred_ssl_client_cert_t *");
+    
+    /* Be nice and allocate the memory for the cred structure before passing it
+     * off to the perl space */
+    *cred = apr_pcalloc (pool, sizeof (**cred));
+    if (!*cred) {
+        croak ("Could not allocate memory for cred structure");
+    }
+    perl_callback_thunk (CALL_SV,
+                         baton, &result,
+                         "SsiS", *cred, credinfo,
+                         realm, may_save, pool, poolinfo);
+
+    return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_swig_pl_thunk_ssl_client_cert_pw_prompt(
+                                     svn_auth_cred_ssl_client_cert_pw_t **cred,
+                                     void *baton,
+                                     const char *realm,
+                                     svn_boolean_t may_save,
+                                     apr_pool_t *pool)
+{
+    SV *result;
+    swig_type_info *poolinfo = SWIG_TypeQuery ("apr_pool_t *");
+    swig_type_info *credinfo = SWIG_TypeQuery (
+                                 "svn_auth_cred_ssl_client_cert_pw_t *");
+
+    /* Be nice and allocate the memory for the cred structure before passing it
+     * off to the perl space */
+    *cred = apr_pcalloc (pool, sizeof (**cred));
+    if (!*cred) {
+        croak ("Could not allocate memory for cred structure");
+    }
+    perl_callback_thunk (CALL_SV,
+                         baton, &result,
+                         "SsiS", *cred, credinfo,
+                         realm, may_save, pool, poolinfo);
+
+    return SVN_NO_ERROR;
+}
+
 /* default pool support */
 apr_pool_t *current_pool;
 
@@ -1005,10 +1147,12 @@ apr_file_t *svn_swig_pl_make_file (SV *file, apr_pool_t *pool)
                     APR_CREATE | APR_READ | APR_WRITE,
                     APR_OS_DEFAULT,
                     pool);
+    } else if (SvROK(file) && SvTYPE(SvRV(file)) == SVt_PVGV) {
+        apr_status_t status;
+        apr_os_file_t osfile = PerlIO_fileno(IoIFP(sv_2io(file)));
+        status = apr_os_file_put (&apr_file, &osfile, O_CREAT | O_WRONLY, pool);
+        if (status)
+            return NULL;
     }
-    else {
-	croak ("apr_file_t conversion from non-string not supported yet");
-    }
-
     return apr_file;
 }
