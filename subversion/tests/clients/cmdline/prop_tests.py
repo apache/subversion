@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path
+import stat, string, sys, re, os.path
 
 # Our testing module
 import svntest
@@ -667,6 +667,56 @@ def copy_should_use_copied_executable_and_mime_type_values(sbox):
   return status
 
 
+#----------------------------------------------------------------------
+
+# Issue 982.  When copying a file with svn:executable set, the copied
+# file should have it's executable permissions set.
+
+def copy_should_preserve_executable_bits(sbox):
+  "executable bits in copy of a svn:executable file should be set"
+
+  # Bootstrap
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Create two paths
+  new_path1 = os.path.join(wc_dir, 'new_file1.bin')
+  new_path2 = os.path.join(wc_dir, 'new_file2.bin')
+
+  # Create the first path as a binary file.  To have svn treat the
+  # file as binary, have a 0x00 in the file.
+  svntest.main.file_append(new_path1, "binary file\000")
+  svntest.main.run_svn(None, 'add', new_path1)
+
+  mode1 = os.stat(new_path1)[stat.ST_MODE]
+  
+  svntest.main.run_svn(None, 'propset', 'svn:executable', 'on', new_path1)
+
+  mode2 = os.stat(new_path1)[stat.ST_MODE]
+
+  if mode1 == mode2:
+    print "setting svn:executable did not change file's permissins"
+    return 1
+
+  # Commit the file
+  svntest.main.run_svn(None, 'ci', '-m', 'create file and set svn:executable',
+                       wc_dir)
+
+  # Copy the file
+  svntest.main.run_svn(None, 'cp', new_path1, new_path2)
+
+  mode3 = os.stat(new_path2)[stat.ST_MODE]
+
+  # The mode on the original and copied file should be identical
+  if mode2 != mode3:
+    print "permissions on the copied file are not identical to original file"
+    return 1
+
+  return 0
+
+
 ########################################################################
 # Run the tests
 
@@ -683,6 +733,7 @@ test_list = [ None,
               revert_replacement_props,
               inappropriate_props,
               copy_should_use_copied_executable_and_mime_type_values,
+              Skip(XFail(copy_should_preserve_executable_bits), (os.name != 'posix')),
              ]
 
 if __name__ == '__main__':
