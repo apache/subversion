@@ -95,7 +95,7 @@ section for approved changes.)
       Fix the SIGHUP typo.
       Justification: Handle SIGHUP as intended by r8222.
       Votes:
-       +1: bliss, ghudson
+       +1: bliss, ghudson, epg
 
     * Issue #1710
       The auth provider next/save functions need the realmstring.
