@@ -13,7 +13,6 @@ libsvn_fs_la_SOURCES =				\
                         dbt.h                   \
 			err.c			\
                         err.h                   \
-                        editor.c                \
 			fs.c			\
                         fs.h                    \
 			id.c			\
@@ -28,9 +27,7 @@ libsvn_fs_la_SOURCES =				\
 			skel.h			\
 			trail.c			\
 			trail.h			\
-			tree.c			\
 			tree.h			\
-			txn.c			\
 			txn.h			\
 			txn-table.c		\
 			txn-table.h		\
@@ -38,6 +35,9 @@ libsvn_fs_la_SOURCES =				\
 			validate.h
 
 # Set aside for the moment:
+#			txn.c			\
+#			tree.c			\
+#                      editor.c                \
 #		       delta.c			\
 #		       file.c			\
 #                      file.h                   \
