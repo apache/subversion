@@ -531,7 +531,10 @@ svn_error_t *svn_fs_change_txn_prop (svn_fs_txn_t *txn,
 
 /* Repository paths. */
 
-/* Return the path to FS's repository. */
+/* Return the path to FS's repository.
+   Note:
+   The path is just whatever was passed to svn_fs_create_berkeley() or
+   svn_fs_open_berkeley() -- might be absolute, might not.  */
 const char *svn_fs_repository (svn_fs_t *fs);
 
 /* Return the path to FS's configuration directory. */
