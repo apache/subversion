@@ -1039,21 +1039,6 @@ setup_copy (svn_client_commit_info_t **commit_info,
             (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
              _("No support for repos <--> working copy moves"));
         }
-
-      /* It doesn't make sense to specify revisions in a move. */
-
-      /* ### todo: this check could fail wrongly.  For example,
-         someone could pass in an svn_opt_revision_number that just
-         happens to be the HEAD.  It's fair enough to punt then, IMHO,
-         and just demand that the user not specify a revision at all;
-         beats mucking up this function with RA calls and such. */ 
-      if (src_revision->kind != svn_opt_revision_unspecified
-          && src_revision->kind != svn_opt_revision_head)
-        {
-          return svn_error_create
-            (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-             _("Cannot specify revisions with move operations"));
-        }
     }
   else
     {
@@ -1140,6 +1125,25 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
 
 
 svn_error_t *
+svn_client_move2 (svn_client_commit_info_t **commit_info,
+                  const char *src_path,
+                  const char *dst_path,
+                  svn_boolean_t force,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  const svn_opt_revision_t src_revision
+    = { svn_opt_revision_unspecified, { 0 } };
+
+  return setup_copy (commit_info,
+                     src_path, &src_revision, dst_path,
+                     TRUE /* is_move */,
+                     force,
+                     ctx,
+                     pool);
+}
+
+svn_error_t *
 svn_client_move (svn_client_commit_info_t **commit_info,
                  const char *src_path,
                  const svn_opt_revision_t *src_revision,
@@ -1148,6 +1152,21 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
+  /* It doesn't make sense to specify revisions in a move. */
+
+  /* ### todo: this check could fail wrongly.  For example,
+     someone could pass in an svn_opt_revision_number that just
+     happens to be the HEAD.  It's fair enough to punt then, IMHO,
+     and just demand that the user not specify a revision at all;
+     beats mucking up this function with RA calls and such. */ 
+  if (src_revision->kind != svn_opt_revision_unspecified
+      && src_revision->kind != svn_opt_revision_head)
+    {
+      return svn_error_create
+        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+         _("Cannot specify revisions (except HEAD) with move operations"));
+    }
+
   return setup_copy (commit_info,
                      src_path, src_revision, dst_path,
                      TRUE /* is_move */,
