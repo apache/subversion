@@ -61,6 +61,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_test.h"
 #include "svn_io.h"
 
 
@@ -77,7 +78,7 @@ svn_client_commit (svn_string_t *path,
   svn_error_t *err;
   apr_status_t apr_err;
   apr_file_t *dst = NULL; /* old habits die hard */
-  svn_delta_edit_fns_t *editor;
+  const svn_delta_edit_fns_t *editor;
   void *edit_baton;
   apr_hash_t *targets = NULL;
 
@@ -90,11 +91,19 @@ svn_client_commit (svn_string_t *path,
     return svn_error_createf (apr_err, 0, NULL, pool,
                               "error opening %s", xml_dst->data);
 
+#if 0
   err = svn_delta_get_xml_editor (svn_io_file_writer,
                                   dst,
-                                  (const svn_delta_edit_fns_t **) &editor,
+                                  &editor,
                                   &edit_baton,
                                   pool);
+#else 
+  err = svn_test_get_editor (&editor,
+                             &edit_baton,
+                             path,
+                             version,
+                             pool);
+#endif 
   if (err)
     return err;
 
