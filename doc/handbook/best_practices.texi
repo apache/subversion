@@ -117,26 +117,26 @@ In English, the procedure is:
 @subsection Ignoring whitespace differences
 
 When viewing differences between revisions, you can customize
-@command{svn diff} output to hide whitespace changes. The @samp{-x} argument
+@samp{svn diff} output to hide whitespace changes. The @option{-x} argument
 passes arguments through to GNU diff. Here are some useful arguments:
 
 @table @b
-@item @samp{-b}
+@item @option{-b}
 Ignore differences in whitespace only.
-@item @samp{-B}
+@item @option{-B}
 Ignore added/removed blank lines.
-@item @samp{-i}
+@item @option{-i}
 Ignore changes in case.
-@item @samp{-t}
+@item @option{-t}
 Expand tabs to spaces to preserve alignment.
-@item @samp{-T}
+@item @option{-T}
 Output a tab rather than a space at the beginning of each line to start on a
 tab stop.
 @end table
 
 The commit emails always show whitespace-only changes.
-@file{commit-email.pl} uses @command{svnlook diff} to get differences, which
-doesn't support the @samp{-x} option.
+@file{commit-email.pl} uses @samp{svnlook diff} to get differences, which
+doesn't support the @option{-x} option.
 
 @subsection Line endings
 
@@ -193,6 +193,11 @@ easily search through the logs with
 You may want to write the log entry as you go. It's common to create a file
 @file{changes} with your log entry in progress. When you commit, use
 @samp{svn ci -F changes}.
+
+If you do not write log entries as you go, you can generate an initial
+log entry file using the output of @samp{svn status} which contains a
+list of all modified files and directories and write a comment for each
+one.
 
 @subsection Binary files
 
