@@ -245,10 +245,7 @@ svn_fs_close_fs (svn_fs_t *fs)
 {
   svn_error_t *svn_err = 0;
 
-#if 0   /* Set to 1 for instrumenting; but note that this block will
-           probably have to be moved, because it turns out not to be
-           invoked for most regular commits.  Probably someone else is
-           destroying the pool instead of calling svn_fs_close_fs(). */
+#if 1   /* Set to 1 for instrumenting. */
   {
     DB_TXN_STAT *t;
     DB_LOCK_STAT *l;
