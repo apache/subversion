@@ -55,10 +55,10 @@ static apr_status_t wait_for_input_or_timeout(apr_file_t *f,
     pollset.desc.f = f;
     pollset.p = pool;
     pollset.reqevents = APR_POLLIN;
-    
+
     do
       {
-        srv = apr_poll(&pollset, 1, &n, 10);
+        srv = apr_poll(&pollset, 1, &n, timeout);
 
         if (n == 1 && pollset.rtnevents & APR_POLLIN)
           return APR_SUCCESS;
@@ -100,14 +100,16 @@ prompt (const char **result,
 
       while (1)
         {
-           /* Hack to allow us to not block for io on the prompt, so
-            * we can cancel. */
-           if (ctx)
-             SVN_ERR ( (*ctx->cancel_func) (ctx->cancel_baton));
-           status = wait_for_input_or_timeout(fp,10,pool);
-           if (status != APR_SUCCESS && status != APR_ENOTIMPL)
-             continue;
-
+          /* Hack to allow us to not block for io on the prompt, so
+           * we can cancel. */
+          if (ctx)
+            SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
+          status = wait_for_input_or_timeout (fp, 10, pool);
+          if (status == APR_TIMEUP)
+                continue;
+          else if (status && status != APR_ENOTIMPL)
+            return svn_error_wrap_apr (status, _("Can't read stdin"));
+             
           status = apr_file_getc (&c, fp);
           if (status && ! APR_STATUS_IS_EOF(status))
             return svn_error_wrap_apr (status, _("Can't read stdin"));
