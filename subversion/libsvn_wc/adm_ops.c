@@ -156,11 +156,12 @@ svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
 
       /* If the entry is a file or SVN_WC_ENTRY_THIS_DIR, and it has a
          different rev than REVISION, fix it.  (But ignore the entry
-         if it's scheduled for addition.) */
+         if it's scheduled for addition or replacement.) */
       else if (((current_entry->kind == svn_node_file)
                 || (! current_entry_name))
                && (current_entry->revision != revision)
-               && (current_entry->schedule != svn_wc_schedule_add))
+               && (current_entry->schedule != svn_wc_schedule_add)
+               && (current_entry->schedule != svn_wc_schedule_replace))
         SVN_ERR (svn_wc_set_revision (cbaton, full_entry_path, FALSE,
                                       revision));
       

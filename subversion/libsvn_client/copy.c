@@ -313,6 +313,8 @@ wc_to_repos_copy (svn_stringbuf_t *src_path,
 
   /* Split the SRC_PATH into a parent and basename. */
   svn_path_split (src_path, &parent, &basename, svn_path_local_style, pool);
+  if (svn_path_is_empty (parent, svn_path_local_style))
+    parent = svn_stringbuf_create (".", pool);
 
   /* Split the DST_URL into an anchor and target. */
   svn_path_split (dst_url, &anchor, &target, svn_path_url_style, pool);
@@ -323,7 +325,7 @@ wc_to_repos_copy (svn_stringbuf_t *src_path,
 
   /* Get the client callbacks for auth stuffs. */
   SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton, auth_baton, 
-                                         anchor, TRUE, TRUE, pool));
+                                         parent, TRUE, TRUE, pool));
   SVN_ERR (ra_lib->open (&sess, anchor, ra_callbacks, cb_baton, pool));
 
   /* Figure out the basename that will result from this operation. */
@@ -339,7 +341,7 @@ wc_to_repos_copy (svn_stringbuf_t *src_path,
       target = svn_stringbuf_dup (basename, pool);
       SVN_ERR (ra_lib->close (sess));
       SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton, 
-                                             auth_baton, anchor, TRUE, 
+                                             auth_baton, src_path, TRUE, 
                                              TRUE, pool));
       SVN_ERR (ra_lib->open (&sess, anchor, ra_callbacks, cb_baton, pool));
     }

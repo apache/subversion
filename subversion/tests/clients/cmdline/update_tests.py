@@ -390,7 +390,7 @@ def update_missing():
 #----------------------------------------------------------------------
 
 def update_ignores_added():
-  "ensure update is not reporting additions"
+  "ensure update is not munging additions or replacements"
 
   sbox = sandbox(update_ignores_added)
   wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
@@ -398,12 +398,26 @@ def update_ignores_added():
   if svntest.actions.make_repo_and_wc(sbox):
     return 1
 
+  # Commit something so there's actually a new revision to update to.
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.main.file_append(rho_path, "\nMore stuff in rho.")
+  svntest.main.run_svn(None, 'ci', rho_path)  
+
   # Create a new file, 'zeta', and schedule it for addition.
   zeta_path = os.path.join(wc_dir, 'A', 'B', 'zeta')
   svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
   svntest.main.run_svn(None, 'add', zeta_path)
 
-  # Now update.  "zeta at revision 0" should *not* be reported.
+  # Schedule another file, say, 'gamma', for replacement.
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  svntest.main.run_svn(None, 'delete', gamma_path)
+  svntest.main.file_append(gamma_path, "\nThis is a new 'gamma' now.")
+  svntest.main.run_svn(None, 'add', gamma_path)
+  
+  # Now update.  "zeta at revision 0" should *not* be reported at all,
+  # so it should remain scheduled for addition at revision 0.  gamma
+  # was scheduled for replacement, so it also should remain marked as
+  # such, and maintain its revision of 1.
 
   # Create expected output tree for an update of the wc_backup.
   output_list = []
@@ -412,14 +426,23 @@ def update_ignores_added():
   # Create expected disk tree for the update.
   my_greek_tree = svntest.main.copy_greek_tree()
   my_greek_tree.append(['A/B/zeta', "This is the file 'zeta'.", {}, {}])
+  for item in my_greek_tree:
+    if item[0] == 'A/D/gamma':
+      item[1] = "This is the file 'gamma'.\nThis is a new 'gamma' now."
+    if item[0] == 'A/D/G/rho':
+      item[1] = "This is the file 'rho'.\nMore stuff in rho."
   expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
 
   # Create expected status tree for the update.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '1')
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    if item[0] == gamma_path:
+      item[3]['wc_rev'] = '1'
+      item[3]['status'] = 'R '
   status_list.append([zeta_path, None, {},
                       {'status' : 'A ',
                        'wc_rev' : '0',
-                       'repos_rev' : '1'}])
+                       'repos_rev' : '2'}])
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
   
   # Do the update and check the results in three ways.
@@ -438,7 +461,7 @@ test_list = [ None,
               update_binary_file,
               update_binary_file_2,
               update_ignores_added,
-              # update_missing
+              # update_missing,
              ]
 
 if __name__ == '__main__':
