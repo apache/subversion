@@ -1,4 +1,4 @@
-Version 0.14.1 [Alpha Interim 1] (released ? August 2002, revision ?)
+Version 0.14.1 [Alpha Interim 1] (released 9 August 2002, revision 2927?)
 
  User-visible changes:
  * show copy-ancestry in 'svn log -v'
@@ -6,7 +6,6 @@ Version 0.14.1 [Alpha Interim 1] (released ? August 2002, revision ?)
  * new 'svn ls' command
  * new 'svn st --no-ignore' option
  * new 'svn --version --quiet' option
- * 'svn merge' preserves copy history when gaining added files (issue #838)
  * more conservative 'svn help' usage error-message
  * more graceful degredation from charset conversion failure
  * standardize policy of -q switch behavior
