@@ -302,14 +302,14 @@ log_message_receiver (void *baton,
  * <logentry
  *    revision="1648">
  * <author>david</author>
- * <date>Sat 6 Apr 2002 16:34:51.428043 (day 096, dst 0, gmt_off -21600)</date>
+ * <date>2002-04-06T16:34:51.428043Z</date>
  * <msg> * packages/rpm/subversion.spec : Now requires apache 2.0.36.
  * </msg>
  * </logentry>
  * <logentry
  *    revision="1649">
  * <author>cmpilato</author>
- * <date>Sat 6 Apr 2002 17:01:28.185136 (day 096, dst 0, gmt_off -21600)</date>
+ * <date>2002-04-06T17:01:28.185136Z</date>
  * <msg>Fix error handling when the $EDITOR is needed but unavailable.  Ah
  * ... now that&apos;s *much* nicer.
  * 

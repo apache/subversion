@@ -306,7 +306,7 @@ typedef struct svn_client_commit_item_t
  * from the caller.
  *  
  * Set @a *log_msg to the log message for the commit, allocated in @a 
- * pool, or @c NULL if wish to abort the commit process.  Set @a *tmpfile 
+ * pool, or @c NULL if wish to abort the commit process.  Set @a *tmp_file 
  * to the path of any temporary file which might be holding that log 
  * message, or @c NULL if no such file exists (though, if @a *log_msg is 
  * @c NULL, this value is undefined).  The log message MUST be a UTF8 
@@ -964,8 +964,7 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
  *
  * Produce diff output which describes the delta between the
  * filesystem object @a path in peg revision @a peg_revision, as it
- * changed between @a revision1 and @a revision2.  Print the output of
- * the diff to @a outfile, and any errors to @a errfile.  @a path can
+ * changed between @a start_revision and @a end_revision.  @a path can
  * be either a working-copy path or URL.
  *
  * All other options are handled identically to svn_client_diff2.
@@ -1242,7 +1241,7 @@ svn_client_move2 (svn_client_commit_info_t **commit_info,
                   apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.1.0 API.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  *
  * Similar to @c svn_client_move2, but an extra argument @a src_revision
  * must be passed.  This has no effect, but must be of kind

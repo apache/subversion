@@ -390,7 +390,7 @@ test_uri_from_iri (const char **msg,
   };
   int i;
 
-  *msg = "testing svn_uri_from_iri";
+  *msg = "test svn_path_uri_from_iri";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -401,7 +401,7 @@ test_uri_from_iri (const char **msg,
       if (strcmp (paths[i][1], uri) != 0)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
-           "svn_uri_from_iri on '%s' returned '%s' instead of '%s'",
+           "svn_path_uri_from_iri on '%s' returned '%s' instead of '%s'",
            paths[i][0], uri, paths[i][1]);
       if (strcmp (paths[i][0], uri) == 0
           && paths[i][0] != uri)

@@ -274,7 +274,7 @@ void svn_xml_make_open_tag_v (svn_stringbuf_t **str,
                               va_list ap);
 
 
-/** Like @c svn_xml_make_tag, but takes a hash table of attributes 
+/** Like @c svn_xml_make_open_tag, but takes a hash table of attributes 
  * (<tt>char *</tt> keys mapping to <tt>char *</tt> values).
  *
  * You might ask, why not just provide @c svn_xml_make_tag_atts()?
