@@ -215,6 +215,35 @@ static svn_error_t *store_vsn_url(const svn_ra_dav_resource_t *rsrc,
   return simple_store_vsn_url(vsn_url, baton, setter, vuh);
 }
 
+static void add_props(const svn_ra_dav_resource_t *r,
+                      prop_setter_t setter,
+                      void *baton,
+                      apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  
+  for (hi = apr_hash_first(r->propset); hi != NULL; hi = apr_hash_next(hi))
+    {
+      const char *key;
+      char *val;
+      
+      apr_hash_this(hi, (const void **)&key, NULL, (void *)&val);
+      
+#define NSLEN (strlen(SVN_RA_DAV__CUSTOM_NAMESPACE))
+      
+      if (strncmp(key, SVN_RA_DAV__CUSTOM_NAMESPACE, NSLEN) == 0)
+        {
+          svn_stringbuf_t *skey, *sval;
+          skey = svn_stringbuf_create(key + NSLEN, pool);
+          sval = svn_stringbuf_create(val, pool);
+          
+          (*setter)(baton, skey, sval);
+        }
+#undef NSLEN
+    }
+}
+                      
+
 static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
                                    const char *url,
                                    void *dir_baton,
@@ -228,8 +257,10 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
   struct uri parsed_url;
   apr_hash_index_t *hi;
 
+  /* Fetch all properties so we can snarf ones out of the SVN:custom
+   * namspace. */
   SVN_ERR( svn_ra_dav__get_props(&dirents, ras, url, NE_DEPTH_ONE, NULL,
-                                 fetch_props, pool) );
+                                 NULL /* allprop */, pool) );
 
   uri_parse(url, &parsed_url, NULL);
 
@@ -370,7 +401,8 @@ static svn_error_t *fetch_file(svn_ra_session_t *ras,
       goto error;
     }
 
-  /* ### fetch properties */
+  /* Add the properties. */
+  add_props(rsrc, editor->change_file_prop, file_baton, pool);
 
   /* store the version URL as a property */
   err = store_vsn_url(rsrc, file_baton, editor->change_file_prop, vuh);
