@@ -537,7 +537,8 @@ svn_cl__get_log_message (const char **log_msg,
       err = svn_cl__edit_externally (&msg_string, &lmb->tmpfile_left,
                                      lmb->editor_cmd, lmb->base_dir,
                                      msg_string, "svn-commit",
-                                     lmb->config, TRUE, NULL, pool);
+                                     lmb->config, TRUE, lmb->message_encoding,
+                                     pool);
 
       /* Dup the tmpfile path into its baton's pool. */
       *tmp_file = lmb->tmpfile_left = apr_pstrdup (lmb->pool, 
