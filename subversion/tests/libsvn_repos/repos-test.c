@@ -323,6 +323,8 @@ dir_deltas (const char **msg,
                                         "",
                                         editor,
                                         edit_baton,
+                                        NULL,
+                                        NULL,
                                         TRUE,
                                         TRUE,
                                         FALSE,
@@ -400,7 +402,8 @@ node_tree_delete_under_copy (const char **msg,
   SVN_ERR (svn_repos_node_editor (&editor, &edit_baton, repos,
                                   revision_root, revision_2_root, 
                                   pool, subpool));
-  SVN_ERR (svn_repos_replay (revision_2_root, editor, edit_baton, subpool));
+  SVN_ERR (svn_repos_replay (revision_2_root, editor, edit_baton,
+                             NULL, NULL, subpool));
   
   /* Get the root of the generated tree, and cleanup our mess. */
   tree = svn_repos_node_from_baton (edit_baton);

@@ -249,6 +249,8 @@ svn_error_t *
 svn_repos_replay (svn_fs_root_t *root,
                   const svn_delta_editor_t *editor,
                   void *edit_baton,
+                  svn_repos_authz_read_func_t authz_read_func,
+                  void *authz_read_baton,
                   apr_pool_t *pool)
 {
   apr_hash_t *fs_changes;

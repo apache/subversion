@@ -306,6 +306,25 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
 
 /* The magical dir_delta update routines. */
 
+/** Callback type for checking read authorization on paths produced by
+ * (at least) svn_repos_dir_delta() and svn_repos_replay().
+ *
+ * Set @a *allowed to TRUE to indicate that @a path in @a root is
+ * readable, or to FALSE to indicate unreadable (presumably according
+ * to authorization state stored in @a baton).
+ *
+ * Do not assume @a pool has any lifetime beyond this call.
+ *
+ * Note: If someday we want more sophisticated authorization states,
+ * @a allowed can become an enum type.
+ */
+typedef svn_error_t *(*svn_repos_authz_read_func_t) (svn_boolean_t *allowed,
+                                                     svn_fs_root_t *root,
+                                                     const char *path,
+                                                     void *baton,
+                                                     apr_pool_t *pool);
+
+
 /** Use the provided @a editor and @a edit_baton to describe the changes
  * necessary for making a given node (and its descendants, if it is a
  * directory) under @a src_root look exactly like @a tgt_path under
@@ -321,6 +340,21 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
  * roots.  If @a tgt_root is a revision, @a editor's @c set_target_revision()
  * will be called with the @a tgt_root's revision number, else it will
  * not be called at all.
+ *
+ * If @a authz_read_func is non-null, invoke it before any call to
+ *
+ *    @a editor->open_root
+ *    @a editor->add_directory
+ *    @a editor->open_directory
+ *    @a editor->add_file
+ *    @a editor->open_file
+ *
+ * passing @a tgt_root, the same path that would be passed to the
+ * editor function in question, and @a authz_read_baton.  If the
+ * @a *allowed parameter comes back TRUE, then proceed with the planned
+ * editor call; else if FALSE, then invoke @a editor->absent_file or
+ * @a editor->absent_directory as appropriate, except if the planned
+ * editor call was open_root, throw SVN_ERR_AUTHZ_ROOT_UNREADABLE.
  *
  * If @a text_deltas is @c FALSE, send a single @c NULL txdelta window to 
  * the window handler returned by @a editor->apply_textdelta().
@@ -349,6 +383,8 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      const char *tgt_path,
                      const svn_delta_editor_t *editor,
                      void *edit_baton,
+                     svn_repos_authz_read_func_t authz_read_func,
+                     void *authz_read_baton,
                      svn_boolean_t text_deltas,
                      svn_boolean_t recurse,
                      svn_boolean_t entry_props,
@@ -365,6 +401,21 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
  * merely serve as indications that properties or textual contents
  * were changed. 
  *
+ * If @a authz_read_func is non-null, invoke it before any call to
+ *
+ *    @a editor->open_root
+ *    @a editor->add_directory
+ *    @a editor->open_directory
+ *    @a editor->add_file
+ *    @a editor->open_file
+ *
+ * passing @a tgt_root, the same path that would be passed to the
+ * editor function in question, and @a authz_read_baton.  If the
+ * @a *allowed parameter comes back TRUE, then proceed with the planned
+ * editor call; else if FALSE, then invoke @a editor->absent_file or
+ * @a editor->absent_directory as appropriate, except if the planned
+ * editor call was open_root, throw SVN_ERR_AUTHZ_ROOT_UNREADABLE.
+ *
  * NOTE: this editor driver passes SVN_INVALID_REVNUM for all
  * revision parameters in the editor interface except the copyfrom
  * parameter of the add_file() and add_directory() editor functions.
@@ -373,6 +424,8 @@ svn_error_t *
 svn_repos_replay (svn_fs_root_t *root,
                   const svn_delta_editor_t *editor,
                   void *edit_baton,
+                  svn_repos_authz_read_func_t authz_read_func,
+                  void *authz_read_baton,
                   apr_pool_t *pool);
 
 

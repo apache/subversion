@@ -473,6 +473,8 @@ finish_report (void *report_baton)
                                 tgt_path,
                                 rbaton->update_editor,
                                 rbaton->update_edit_baton,
+                                NULL,
+                                NULL,
                                 rbaton->text_deltas,
                                 rbaton->recurse,
                                 TRUE,

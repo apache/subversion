@@ -1019,6 +1019,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      uc.rev_root, dst_path,
                                      /* re-use the editor */
                                      editor, &uc,
+                                     NULL,
+                                     NULL,
                                      FALSE, /* no text deltas */
                                      recurse,
                                      TRUE, /* send entryprops */
