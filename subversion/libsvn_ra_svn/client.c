@@ -100,30 +100,22 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   apr_sockaddr_t *sa;
   apr_status_t status;
   int family = APR_INET;
-#if APR_HAVE_IPV6
-  int ipv6_supported = APR_HAVE_IPV6;
-#endif
   
   /* Make sure we have IPV6 support first before giving apr_sockaddr_info_get
      APR_UNSPEC, because it may give us back an IPV6 address even if we can't
      create IPV6 sockets.  */  
 
 #if APR_HAVE_IPV6
-  if (ipv6_supported)
-    {
 #ifdef MAX_SECS_TO_LINGER
-      status = apr_socket_create(sock, APR_INET6, SOCK_STREAM, pool);
+  status = apr_socket_create(sock, APR_INET6, SOCK_STREAM, pool);
 #else
-      status = apr_socket_create(sock, APR_INET6, SOCK_STREAM,
-                                 APR_PROTO_TCP, pool);
+  status = apr_socket_create(sock, APR_INET6, SOCK_STREAM,
+                             APR_PROTO_TCP, pool);
 #endif
-      if (status != 0)
-        ipv6_supported = 0;
-      else 
-        {
-          apr_socket_close(*sock);
-          family = APR_UNSPEC;
-        }
+  if (status == 0)
+    {
+      apr_socket_close(*sock);
+      family = APR_UNSPEC;
     }
 #endif
 

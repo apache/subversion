@@ -257,7 +257,6 @@ int main(int argc, const char *const *argv)
   enum connection_handling_mode handling_mode = CONNECTION_DEFAULT;
   apr_uint16_t port = SVN_RA_SVN_PORT;
   const char *host = NULL;
-  int ipv6_supported = APR_HAVE_IPV6;
   int family = APR_INET;
 
   /* Initialize the app. */
@@ -396,7 +395,7 @@ int main(int argc, const char *const *argv)
     }
  
   /* Make sure we have IPV6 support first before giving apr_sockaddr_info_get
-     APR_UNSPEC, becuase it may give us back an IPV6 address even if we can't
+     APR_UNSPEC, because it may give us back an IPV6 address even if we can't
      create IPV6 sockets. */  
 
 #if APR_HAVE_IPV6
@@ -407,14 +406,12 @@ int main(int argc, const char *const *argv)
   status = apr_socket_create(&sock, APR_INET6, SOCK_STREAM, APR_PROTO_TCP,
                              pool);
 #endif
-  if (status != 0)   
-    ipv6_supported = 0;
-  else
-    apr_socket_close(sock);
+  if (status == 0)   
+    {
+      apr_socket_close(sock);
+      family = APR_UNSPEC;
+    }
 #endif
-
-  if (ipv6_supported)
-    family = APR_UNSPEC;
   
   status = apr_sockaddr_info_get(&sa, host, family, port, 0, pool);
   if (status)
