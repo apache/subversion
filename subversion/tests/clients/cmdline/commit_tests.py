@@ -1135,15 +1135,15 @@ def commit_uri_unsafe():
 
   output_list = []
   add_list = [hash_dir,
-              # nasty_dir, # not xml-safe
+              nasty_dir, # not xml-safe
               space_path,
               bang_path,
               bracket_path,
               brace_path,
-              # angle_path, # not xml-safe
+              angle_path, # not xml-safe
               paren_path,
               percent_path,
-              # nasty_path, # not xml-safe
+              nasty_path, # not xml-safe
               ]
   for item in add_list:
     svntest.main.run_svn(None, 'add', item)
@@ -1162,7 +1162,7 @@ def commit_uri_unsafe():
     item_list = [item, None, {}, {'wc_rev': '2', 'repos_rev': '2',
                                   'locked': ' ', 'status': '_ '}]
     status_list.append(item_list)
-          
+
   expected_status_tree = svntest.tree.build_generic_tree(status_list)
   if svntest.actions.run_and_verify_commit (wc_dir,
                                             expected_output_tree,

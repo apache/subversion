@@ -118,9 +118,11 @@ static void send_vsn_url(item_baton_t *baton)
   href = dav_svn_build_uri(baton->uc->resource->info->repos,
 			   DAV_SVN_BUILD_URI_VERSION,
 			   SVN_INVALID_REVNUM, stable_id->data,
-			   1 /* add_href */, baton->pool);
+			   0 /* add_href */, baton->pool);
 
-  send_xml(baton->uc, "<D:checked-in>%s</D:checked-in>" DEBUG_CR, href);
+  send_xml(baton->uc, 
+           "<D:checked-in><D:href>%s</D:href></D:checked-in>" DEBUG_CR, 
+           apr_xml_quote_string (baton->pool, href, 1));
 }
 
 static void add_helper(svn_boolean_t is_dir,
@@ -150,7 +152,7 @@ static void add_helper(svn_boolean_t is_dir,
 	       "<S:add-%s name=\"%s\" "
 	       "copyfrom-path=\"%s\" copyfrom-rev=\"%ld\"/>" DEBUG_CR,
                DIR_OR_FILE(is_dir),
-	       qname, copyfrom_path->data, copyfrom_revision);
+	       qname, qcopy, copyfrom_revision);
     }
 
   send_vsn_url(child);
@@ -181,16 +183,18 @@ static void replace_helper(svn_boolean_t is_dir,
 static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
 {
   int i;
-  svn_stringbuf_t *name;
   
   /* ### ack!  binary names won't float here! */
   if (baton->removed_props && (! baton->added))
     {
+      svn_stringbuf_t *qname;
+
       for (i = 0; i < baton->removed_props->nelts; i++)
         {
-          name = ((svn_stringbuf_t **)(baton->removed_props->elts))[i];
+          /* We already XML-escaped the property name in change_xxx_prop. */
+          qname = ((svn_stringbuf_t **)(baton->removed_props->elts))[i];
           send_xml(baton->uc, "<S:remove-prop name=\"%s\"/>" DEBUG_CR,
-                   name->data);
+                   qname->data);
         }
     }
   if (baton->changed_props && (! baton->added))
@@ -281,22 +285,23 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
 					 svn_stringbuf_t *value)
 {
   item_baton_t *b = baton;
+  svn_stringbuf_t *qname;
 
+  qname = svn_stringbuf_create (apr_xml_quote_string (b->pool, name->data, 1),
+                                b->pool);
   if (value)
     {
       if (! b->changed_props)
         b->changed_props = apr_array_make (b->pool, 1, sizeof (name));
 
-      (*((svn_stringbuf_t **)(apr_array_push (b->changed_props)))) = 
-        svn_stringbuf_dup (name, b->pool);
+      (*((svn_stringbuf_t **)(apr_array_push (b->changed_props)))) = qname;
     }
   else
     {
       if (! b->removed_props)
         b->removed_props = apr_array_make (b->pool, 1, sizeof (name));
 
-      (*((svn_stringbuf_t **)(apr_array_push (b->removed_props)))) = 
-        svn_stringbuf_dup (name, b->pool);
+      (*((svn_stringbuf_t **)(apr_array_push (b->removed_props)))) = qname;
     }
   return NULL;
 }
