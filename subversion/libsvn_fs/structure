@@ -178,6 +178,31 @@ does not allow this.
     * key to the new revision number.  Or maybe there's a better way?
     */
 
+    /* Oh, wait, I know.  We'll store REV in HEADER, as in
+     * 
+     *   (KIND REV FLAG ...)
+     * 
+     * While a transaction is being created, new nodes have an
+     * empty-string atom for REV.  When the transaction is ready to be
+     * committed, we get a lock on the new revision number.  Once we
+     * have it, our goal is to take as little time as possible to
+     * finish the commit, to avoid interfering with other committers.
+     * (In fact, until now, this stage has been essentially constant
+     * time; we're going to have to give up that, but we can still
+     * keep the locking to an acceptable minimum.)
+     * 
+     * The new plan is, once we *have* the new revision number, we do
+     * a walk down the transaction's nodes, setting the REV fields in
+     * the HEADERs.  This walk is proportional to the size of the
+     * change -- it touches the same number of nodes as a comparison
+     * between the transaction and the preceding revision would, since
+     * whenever we see a REV field that's already set, we don't have
+     * to descend there.
+     *
+     * However, _first_ we're going to get the strings/representations
+     * change done, _then_ make this change.  One thing at a time.
+     */
+
 PROP-KEY is a key into the `representations' table (which see), whose
 value is a PROPLIST skel.
 
