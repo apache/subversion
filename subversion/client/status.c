@@ -63,7 +63,7 @@
 void
 svn_cl__print_status (apr_hash_t *statushash, apr_pool_t *pool)
 {
-  size_t i;
+  int i;
   char statuschar;
   apr_array_header_t *statusarray;
 
