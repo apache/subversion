@@ -86,7 +86,7 @@ Candidate changes:
       step.
     Branch: 1.1.x-r12117
     Votes:
-      +1: breser
+      +1: breser, kfogel
 
  * r12184
    Fix crash in javahl binding, when trying to retrieve non-existing property
