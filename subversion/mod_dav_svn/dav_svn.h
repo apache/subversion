@@ -71,6 +71,9 @@ typedef struct {
   /* the open repository */
   svn_fs_t *fs;
 
+  /* the user operating against this repository */
+  const char *username;
+
 } dav_svn_repos;
 
 

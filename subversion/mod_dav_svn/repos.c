@@ -901,6 +901,10 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   repos->base_url = ap_construct_url(r->pool, "", r);
   repos->special_uri = dav_svn_get_special_uri(r);
 
+  /* Remember who is making this request */
+  if ((repos->username = r->user) == NULL)
+    repos->username = "anonymous";
+
   /* open the SVN FS */
   repos->fs = svn_fs_new(r->pool);
   serr = svn_fs_open_berkeley(repos->fs, fs_path);

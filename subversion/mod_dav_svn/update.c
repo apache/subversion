@@ -340,6 +340,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   int ns;
   svn_error_t *serr;
   svn_stringbuf_t *pathstr;
+  const dav_svn_repos *repos = resource->info->repos;
 
   if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
     {
@@ -367,8 +368,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       }
   if (revnum == SVN_INVALID_REVNUM)
     {
-      serr = svn_fs_youngest_rev(&revnum, resource->info->repos->fs,
-                                 resource->pool);
+      serr = svn_fs_youngest_rev(&revnum, repos->fs, resource->pool);
       if (serr != NULL)
         {
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -398,16 +398,14 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 
   /* Get the root of the revision we want to update to. This will be used
      to generated stable id values. */
-  serr = svn_fs_revision_root(&uc.rev_root, resource->info->repos->fs,
-			      revnum, resource->pool);
+  serr = svn_fs_revision_root(&uc.rev_root, repos->fs, revnum, resource->pool);
   if (serr != NULL)
     {
     }
 
   fs_base = svn_stringbuf_create(resource->info->repos_path, resource->pool);
-  serr = svn_repos_begin_report(&rbaton, revnum,
-				resource->info->repos->fs, fs_base,
-				editor, &uc, resource->pool);
+  serr = svn_repos_begin_report(&rbaton, revnum, repos->username, repos->fs,
+                                fs_base, editor, &uc, resource->pool);
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
