@@ -139,7 +139,7 @@ print_short_format (const char *path,
 }
 
 
-/* Print a single status structure in the short format */
+/* Print a single status structure in the long format */
 static void 
 print_long_format (const char *path,
                    svn_wc_status_t *status)
@@ -186,11 +186,98 @@ print_long_format (const char *path,
 }
 
 
+
+/* Print a single status structure in the long format */
+static void 
+print_really_long_format (const char *path,
+                          svn_wc_status_t *status)
+{
+  char str_status[5];
+  char str_rev[7], str_cr[7], last_author[9];
+  char update_char;
+  svn_revnum_t local_rev;
+  svn_revnum_t last_changed_rev;
+
+  if (! status)
+    return;
+
+  /* Create local-mod status code block. */
+  generate_status_codes (str_status,
+                         status->text_status,
+                         status->prop_status,
+                         status->locked,
+                         status->copied);
+
+  /* Get local revision number */
+  if (status->entry)
+    local_rev = status->entry->revision;
+  else
+    local_rev = SVN_INVALID_REVNUM;
+
+  /* Try to get the CR, if it's in the entry. */
+  last_changed_rev = SVN_INVALID_REVNUM;
+  if (status->entry)
+    {
+      svn_stringbuf_t *revstr = apr_hash_get (status->entry->attributes,
+                                              SVN_ENTRY_ATTR_COMMITTED_REV,
+                                              APR_HASH_KEY_STRING);
+      if (revstr)
+        last_changed_rev = (svn_revnum_t) atoi (revstr->data);
+    }
+
+  /* Try to get the last author, if it's in the entry. */
+  strcpy (last_author, "      ? ");
+  if (status->entry)
+    {
+      svn_stringbuf_t *s_author = apr_hash_get (status->entry->attributes,
+                                                SVN_ENTRY_ATTR_LAST_AUTHOR,
+                                                APR_HASH_KEY_STRING);
+      /* Truncate author's name to 8 characters, so output is
+         fixed-width and thus more readable. */
+      if (s_author)
+        strncpy (last_author, s_author->data, 8);
+    }
+
+  /* Set the update character. */
+  update_char = ' ';
+  if ((status->repos_text_status != svn_wc_status_none)
+      || (status->repos_prop_status != svn_wc_status_none))
+    update_char = '*';
+
+  /* Determine the appropriate local revision string. */
+  if (! status->entry)
+    strcpy (str_rev, "      ");
+  else if (local_rev == SVN_INVALID_REVNUM)
+    strcpy (str_rev, "  ?   ");
+  else if (status->copied)
+    strcpy (str_rev, "     -");
+  else
+    sprintf (str_rev, "%6ld", local_rev);
+
+  /* Determine the appropriate CR string. */
+  if (! status->entry)
+    strcpy (str_cr, "      ");
+  else if (last_changed_rev == SVN_INVALID_REVNUM)
+    strcpy (str_cr, "    ? ");
+  else if (status->copied)
+    strcpy (str_cr, "     -");
+  else
+    sprintf (str_cr, "%6ld", last_changed_rev);
+
+  /* One Printf to rule them all, one Printf to bind them..." */
+  printf ("%s   %c    %s    [%s : %8s]    %s\n", 
+          str_status, update_char, str_rev, str_cr, last_author, path);
+}
+
+
+
+
 /* Called by status-cmd.c */
 void
 svn_cl__print_status_list (apr_hash_t *statushash, 
                            svn_revnum_t youngest,
                            svn_boolean_t detailed,
+                           svn_boolean_t very_detailed,
                            svn_boolean_t skip_unrecognized,
                            apr_pool_t *pool)
 {
@@ -216,7 +303,9 @@ svn_cl__print_status_list (apr_hash_t *statushash,
       if ((skip_unrecognized) && (! status->entry))
         continue;
 
-      if (detailed)
+      if (very_detailed)
+        print_really_long_format (path, status);
+      else if (detailed)
         print_long_format (path, status);
       else
         print_short_format (path, status);
@@ -224,7 +313,7 @@ svn_cl__print_status_list (apr_hash_t *statushash,
 
   /* If printing in detailed format, we might have a head revision to
      print as well. */
-  if (detailed && (youngest != SVN_INVALID_REVNUM))
+  if ((detailed || very_detailed) && (youngest != SVN_INVALID_REVNUM))
     printf ("Head revision: %6ld\n", youngest);
 }
 
