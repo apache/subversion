@@ -180,14 +180,14 @@ endif
 
 # Predefined complete names
 ifeq ($(BLESSED),)
-BLESSED := \%undefine blessed
+BLESSDEF:= \%undefine blessed
 BLESS   :=
 NAMEVER  := $(VERSION)-$(RELEASE)
 RELVER   := $(RELEASE).$(MDK_RELEASE)
 FULLVER  := $(NAMEVER).$(MDK_RELEASE)
 else
 BLESS   := 1
-BLESSED := \%define blessed $(BLESSED)
+BLESSDEF:= \%define blessed $(BLESSED)
 NAMEVER  := $(VERSION)
 RELVER   := $(MDK_RELEASE)
 FULLVER  := $(NAMEVER)-$(MDK_RELEASE)
@@ -339,7 +339,7 @@ build_sources: $(TARBALL) $(RPMBITS)
 		-e 's/@REPOS_REV@/$(RELEASE)/' \
 		-e 's/@NAMEVER@/$(NAMEVER)/' \
 		-e 's/@RELVER@/$(RELVER)/' \
-		-e 's/@BLESSED@/$(BLESSED)/' \
+		-e 's/@BLESSED@/$(BLESSDEF)/' \
 		-e 's/@VERSION@/$(VERSION)/' \
 		-e 's/@RPMDIR@/$(SEDRPM)/' \
 		-e 's/@TMPDIR@/$(SEDTMP)/' \
