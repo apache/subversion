@@ -1125,15 +1125,6 @@ subcommand_youngest (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 /*** Main. ***/
 
-#define INT_ERR(expr)                                       \
-  do {                                                      \
-    svn_error_t *svnlook_err__temp = (expr);                \
-    if (svnlook_err__temp) {                                \
-      svn_handle_error (svnlook_err__temp, stderr, FALSE);  \
-      return EXIT_FAILURE; }                                \
-  } while (0)
-
-
 int
 main (int argc, const char * const *argv)
 {
@@ -1204,8 +1195,9 @@ main (int argc, const char * const *argv)
         case 'r':
           opt_state.rev = atoi (opt_arg);
           if (! SVN_IS_VALID_REVNUM (opt_state.rev))
-            INT_ERR (svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                       "Invalid revision number supplied."));
+            SVN_INT_ERR (svn_error_create
+                         (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                          "Invalid revision number supplied."));
           break;
 
         case 't':
@@ -1235,10 +1227,10 @@ main (int argc, const char * const *argv)
 
   /* The --transaction and --revision options may not co-exist. */
   if ((opt_state.rev != SVN_INVALID_REVNUM) && opt_state.txn)
-    INT_ERR (svn_error_create 
-             (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-              "The '--transaction' (-t) and '--revision' (-r) arguments "
-              "may no co-exist."));
+    SVN_INT_ERR (svn_error_create 
+                 (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                  "The '--transaction' (-t) and '--revision' (-r) arguments "
+                  "may no co-exist."));
 
   /* If the user asked for help, then the rest of the arguments are
      the names of subcommands to get help on (if any), or else they're
@@ -1281,8 +1273,9 @@ main (int argc, const char * const *argv)
 
       if (os->ind < os->argc)
         {
-          INT_ERR (svn_utf_cstring_to_utf8 (&repos_path, os->argv[os->ind++],
-                                            NULL, pool));
+          SVN_INT_ERR (svn_utf_cstring_to_utf8 (&repos_path,
+                                                os->argv[os->ind++],
+                                                NULL, pool));
           repos_path = svn_path_canonicalize (repos_path, pool);
         }
 

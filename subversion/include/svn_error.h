@@ -189,6 +189,20 @@ void svn_handle_warning (apr_pool_t *pool, void *data, const char *fmt, ...);
       return svn_error_quick_wrap(svn_err__temp, wrap_msg); \
   } while (0)
 
+
+/** A statement macro, similar to @c SVN_ERR, but returns an integer.
+ *
+ * Evaluate @a expr. If it yields an error, handle that error and
+ * return @c EXIT_FAILURE.
+ */
+#define SVN_INT_ERR(expr)                                   \
+  do {                                                      \
+    svn_error_t *svn_err__temp = (expr);                    \
+    if (svn_err__temp) {                                    \
+      svn_handle_error (svn_err__temp, stderr, FALSE);      \
+      return EXIT_FAILURE; }                                \
+  } while (0)
+
 /** @} */
 
 #ifdef __cplusplus

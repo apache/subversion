@@ -19,6 +19,7 @@
 
 #include <locale.h>
 #include <apr_file_io.h>
+#include "svn_error.h"
 #include "svn_opt.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
@@ -521,15 +522,6 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 /** Main. **/
 
-#define INT_ERR(expr)                                       \
-  do {                                                      \
-    svn_error_t *svnadmin_err__temp = (expr);               \
-    if (svnadmin_err__temp) {                               \
-      svn_handle_error (svnadmin_err__temp, stderr, FALSE); \
-      return EXIT_FAILURE; }                                \
-  } while (0)
-
-
 int
 main (int argc, const char * const *argv)
 {
@@ -695,9 +687,9 @@ main (int argc, const char * const *argv)
         {
           opt_state.repository_path = os->argv[os->ind++];
 
-          INT_ERR (svn_utf_cstring_to_utf8 (&(opt_state.repository_path),
-                                            opt_state.repository_path,
-                                            NULL, pool));
+          SVN_INT_ERR (svn_utf_cstring_to_utf8 (&(opt_state.repository_path),
+                                                opt_state.repository_path,
+                                                NULL, pool));
           repos_path 
             = svn_path_canonicalize (opt_state.repository_path, pool);
         }
