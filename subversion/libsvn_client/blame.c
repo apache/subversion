@@ -406,9 +406,6 @@ svn_client_blame (const char *target,
                             &lmb,
                             pool));
 
-  if (! lmb.eldest)
-    return SVN_NO_ERROR;
-
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, reposURL, NULL,
                                         NULL, NULL, FALSE, FALSE,
                                         ctx, pool));
@@ -417,10 +414,23 @@ svn_client_blame (const char *target,
   db.pool = pool;
 
   /* Inspect the first revision's change metadata; if there are any
-     prior revisions, compute a new starting revision/path.  A modified
+     prior revisions, compute a new starting revision/path.  If no
+     revisions were selected, no blame is assigned.  A modified
      item certainly has a prior revision.  It is reasonable for an
      added item to have none, but anything else is unexpected.  */
-  if (lmb.action == 'M' || SVN_IS_VALID_REVNUM (lmb.copyrev))
+  if (!lmb.eldest)
+    {
+      lmb.eldest = apr_palloc (pool, sizeof (*rev));
+      lmb.eldest->revision = end_revnum;
+      lmb.eldest->path = lmb.path;
+      lmb.eldest->next = NULL;
+      rev = apr_palloc (pool, sizeof (*rev));
+      rev->revision = SVN_INVALID_REVNUM;
+      rev->author = NULL;
+      rev->date = NULL;
+      db.blame = blame_create (&db, rev, 0);
+    }
+  else if (lmb.action == 'M' || SVN_IS_VALID_REVNUM (lmb.copyrev))
     {
       rev = apr_palloc (pool, sizeof (*rev));
       if (SVN_IS_VALID_REVNUM (lmb.copyrev))
