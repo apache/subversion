@@ -51,6 +51,12 @@ def guarantee_greek_repository(path):
     # import the greek tree.
     output, errput = main.run_svn("import", url, main.greek_dump_dir)
 
+    # check for any errors from the import
+    if len(errput):
+      print "Errors during initial 'svn import':"
+      print errput
+      sys.exit(1)
+
     # verify the printed output of 'svn import'.
     lastline = string.strip(output.pop())
     if lastline != 'Commit succeeded.':
@@ -69,7 +75,7 @@ def guarantee_greek_repository(path):
       
     if tree.compare_trees(output_tree, expected_output_tree):
       print "ERROR:  output of import command is unexpected."
-      exit(1)
+      sys.exit(1)
 
   # Now that the pristine repos exists, copy it to PATH.
   if os.path.exists(path):
