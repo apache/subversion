@@ -28,10 +28,13 @@ Candidate changes:
     Old votes (for just r8490,r8794):
       +1: cmpilato, kfogel, jszakmeister
 
-  * r8839,r8932,r8950,r8952
+  * r8839,r8876,r8932,r8950,r8952
     Finish Issue #1756 -- import doesn't handle svn:eol-style or svn:keywords
     Justification:  Allows malformed data into the repository.
+    Notes:  sussman has actually tested these 5 merges, and they pass tests.
     Votes:
+      +1: sussman
+    Old votes: (for r8839,r8932,r8950,r8952)
       +1: philip, sussman, cmpilato
       +0: julianfoad
     Old votes (for r8839,r8932,r8950):
@@ -70,3 +73,9 @@ Candidate changes:
     Justification: simple fix; very annoying when WC gets messed up.
     Votes:
        +1: julianfoad
+
+  * r8962
+    Followup to r8842 ('svn st -v' shows unwanted status of externals).
+    Justification:  we've already merged 8842, this is a followup fix.
+    Votes:
+      +1: cmpilato

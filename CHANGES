@@ -3,21 +3,27 @@ Version 1.0.1
 http://svn.collab.net/repos/svn/tags/XXX
 
  User-visible changes:
- * mod_authz_svn now works with SVNParentPath (issue #1588)
- * implement anonymous access checking in mod_authz_svn
- * fix potential segfault in mod_dav_svn. 
- * fix improper BDB cursor shutdown in libsvn_fs, which can wedge repos.
- * allow checkout of repository with space in path. (issue #1694)
- * make 'svn propget URL' work correctly over svn://. (issue #1752)
- * fix failed 'svn merge URL' when URL contains user@host. (issue #1759)
- * ensure 'svn blame' fails on files marked as binary. (issue #1733)
- * fixed invalid http REPORT response when updating a deleted wc. (issue #1721)
- * improve presentation of directory property conflicts.
- * make svnlook use apr_tempdir(), instead of writing in '.'
- * fix merge --dry-run bug on added-files with props. (issue #1738)
- * make failed direct-URL commits clean up their fs txns. (issue #1726)
- * fix obscure bugs in time/date string formatting. (issue #1692)
+ * allow anonymous access checking in mod_authz_svn
+ * fixed: mod_authz_svn now works with SVNParentPath (issue #1588)
+ * fixed: potential segfault in mod_dav_svn. 
+ * fixed: improper BDB cursor shutdown in libsvn_fs, which can wedge repos.
+ * fixed: allow checkout of repository with space in path. (issue #1694)
+ * fixed: make 'svn propget URL' work correctly over svn://. (issue #1752)
+ * fixed: failed 'svn merge URL' when URL contains user@host. (issue #1759)
+ * fixed: invalid REPORT response when updating a deleted wc. (issue #1721)
+ * fixed: allow deletes below copied wc dirs.
+ * fixed: merge --dry-run bug on added-files with props. (issue #1738)
+ * fixed: svnlook no longer requires write access to '.'
+ * fixed: ensure 'svn blame' fails on files marked as binary. (issue #1733)
+ * fixed: make failed direct-URL commits clean up their fs txns. (issue #1726)
+ * fixed: obscure bugs in time/date string formatting. (issue #1692)
+ * fixed: svn export doesn't export svn:externals. (issue #1750)
+ * fixed: svn status -v shows unwanted status of externals (issue #1741)
+ * fixed: svnserve segfault on invalid --listen-host argument.
  * detect invalid UTF8 filenames when native locale is UTF8.
+ * improve presentation of directory property conflicts.
+ * improve presentation of errors from svnadmin & svnlook.
+ * augment copyright notice to --version output.
  * more book updates.
 
  Developer-visible changes:
@@ -25,6 +31,7 @@ http://svn.collab.net/repos/svn/tags/XXX
  * prevent potential ra_dav commit race-condition.
  * fix svn_io_dir_walk 'dot-first' ordering required by 'svnadmin hotcopy'.
  * upgrade win32 innosettup tools and redhat RPMs.
+ * fix compile warning:  compressed streams on LP64 architecture.
  * fix bindings on win32.
  * fix perl bindings build on OS X.
  * fix perl bindings:  bug which rejects string revnums.
