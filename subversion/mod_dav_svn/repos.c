@@ -1015,7 +1015,7 @@ dav_error * dav_svn_split_uri (request_rec *r,
                         /* Skip past defn->numcomponents components,
                            return everything beyond that.*/
                         int j;
-                        const char *end, *start = relative + len3 + 1;
+                        const char *end = NULL, *start = relative + len3 + 1;
                         
                         for (j = 0; j < defn->numcomponents; j++)
                           {
