@@ -75,10 +75,20 @@ enum connection_handling_mode {
  * need more, increase that limit first. 
  *
  * The entire list must be terminated with an entry of nulls.
+ * 
+ * APR requires that options without abbreviations
+ * have codes greater than 255.
  */
+#define SVNSERVE_OPT_LISTEN_PORT 256
+#define SVNSERVE_OPT_LISTEN_HOST 257
+
 static const apr_getopt_option_t svnserve__options[] =
   {
     {"daemon",           'd', 0, "daemon mode"},
+    {"listen-port",       SVNSERVE_OPT_LISTEN_PORT, 1,
+     "listen port (for daemon mode)"},
+    {"listen-host",       SVNSERVE_OPT_LISTEN_HOST, 1,
+     "listen host (for daemon mode)"},
     {"help",             'h', 0, "display this help"},
     {"root",             'r', 1, "root of directory to serve"},
     {"read-only",        'R', 0, "deprecated; use repository config file"},
@@ -186,6 +196,8 @@ int main(int argc, const char *const *argv)
   struct serve_thread_t *thread_data;
 #endif
   enum connection_handling_mode handling_mode = CONNECTION_DEFAULT;
+  apr_uint16_t port = SVN_RA_SVN_PORT;
+  const char *host = NULL;
 
   /* Initialize the app. */
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
@@ -211,6 +223,14 @@ int main(int argc, const char *const *argv)
 
         case 'd':
           daemon_mode = TRUE;
+          break;
+
+        case SVNSERVE_OPT_LISTEN_PORT:
+          port = atoi(arg);
+          break;
+
+        case SVNSERVE_OPT_LISTEN_HOST:
+          host = arg;
           break;
 
         case 't':
@@ -290,7 +310,7 @@ int main(int argc, const char *const *argv)
    * restarted. */
   apr_socket_opt_set(sock, APR_SO_REUSEADDR, 1);
 
-  apr_sockaddr_info_get(&sa, NULL, APR_INET, SVN_RA_SVN_PORT, 0, pool);
+  apr_sockaddr_info_get(&sa, host, APR_INET, port, 0, pool);
   status = apr_socket_bind(sock, sa);
   if (status)
     {
