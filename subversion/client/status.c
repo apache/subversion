@@ -19,7 +19,7 @@
 /*** Includes. ***/
 #include <apr_hash.h>
 #include <apr_tables.h>
-#include "svn_hash.h"
+#include "svn_sorts.h"
 #include "svn_wc.h"
 #include "svn_string.h"
 #include "cl.h"
@@ -132,7 +132,7 @@ svn_cl__print_status_list (apr_hash_t *statushash, apr_pool_t *pool)
 
   /* Convert the unordered hash to an ordered, sorted array */
   statusarray = apr_hash_sorted_keys (statushash,
-                                      svn_sort_compare_as_paths,
+                                      svn_sort_compare_items_as_paths,
                                       pool);
 
   /* Loop over array, printing each name/status-structure */

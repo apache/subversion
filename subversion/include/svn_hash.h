@@ -82,29 +82,7 @@ apr_size_t svn_unpack_bytestring (char **returndata, void *value);
 void *svn_pack_bytestring (size_t len, const char *val, apr_pool_t *pool);
 
 
-/*----------------------------------------------------*/
-
-/*** Converting a hash into a sorted array ***/
-
-/* FIXME: this may go away in a moment, please ignore it for now. */
-int svn_sort_compare_as_paths (const void *obj1, const void *obj2);
-
-#ifndef apr_hash_sorted_keys
-
-/* Grab the keys (and values) in apr_hash HT and return them in an a
-   sorted apr_array_header_t ARRAY allocated from POOL.  The array
-   will contain pointers of type (apr_item_t *).  */
-apr_array_header_t *
-apr_hash_sorted_keys (apr_hash_t *ht,
-                      int (*comparison_func) (const void *, const void *),
-                      apr_pool_t *pool);
-#endif /* apr_hash_sorted_keys */
-
 #endif /* SVN_HASH_H */
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
 
 
 /* ----------------------------------------------------------------

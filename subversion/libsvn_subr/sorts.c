@@ -1,5 +1,5 @@
 /*
- * keysort.c:   convert a hash into a sorted array
+ * sorts.c:   all sorts of sorts
  *
  * ====================================================================
  * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
@@ -21,7 +21,7 @@
 #include <stdlib.h>       /* for qsort()   */
 #include "svn_string.h"
 #include "svn_path.h"
-#include "svn_hash.h"
+#include "svn_sorts.h"
 
 
 
@@ -53,28 +53,36 @@
 
 
 int
-svn_sort_compare_as_paths (const void *obj1, const void *obj2)
+svn_sort_compare_items_as_paths (const void *a, const void *b)
 {
-  svn_item_t *item1, *item2;
-  svn_string_t str1, str2;
+  const svn_item_t *item_a, *item_b;
+  svn_string_t str_a, str_b;
 
-  item1 = *((svn_item_t **) obj1);
-  item2 = *((svn_item_t **) obj2);
+  item_a = *((svn_item_t **) a);
+  item_b = *((svn_item_t **) b);
 
-  str1.data = item1->key;
-  str1.len = item1->size;
-  str1.pool = NULL;
-  str2.data = item2->key;
-  str2.len = item2->size;
-  str2.pool = NULL;
+  str_a.data = item_a->key;
+  str_a.len = item_a->size;
+  str_a.pool = NULL;
+  str_b.data = item_b->key;
+  str_b.len = item_b->size;
+  str_b.pool = NULL;
 
-  return svn_path_compare_paths (&str1, &str2, svn_path_local_style);
+  return svn_path_compare_paths (&str_a, &str_b, svn_path_local_style);
+}
+
+
+int
+svn_sort_compare_strings_as_paths (const void *a, const void *b)
+{
+  const svn_string_t *str_a = a, *str_b = b;
+  return svn_path_compare_paths (str_a, str_b, svn_path_local_style);
 }
 
 
 #ifndef apr_hash_sort_keys
 
-/* see svn_hash.h for documentation */
+/* see svn_sorts.h for documentation */
 apr_array_header_t *
 apr_hash_sorted_keys (apr_hash_t *ht,
                       int (*comparison_func) (const void *, const void *),
