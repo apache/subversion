@@ -22,7 +22,6 @@
 #include <assert.h>
 
 #include <apr_strings.h>
-#include <apr_getopt.h>
 #include <apr_tables.h>
 #include <apr_general.h>
 
@@ -52,89 +51,170 @@
  */
 const svn_cl__cmd_desc_t svn_cl__cmd_table[] = 
 {
-  { "add",        FALSE, svn_cl__add, 0,
+  { "add",        FALSE, svn_cl__add,
     "Add new files and directories to version control.\n"
     "usage: add [TARGETS]\n" },
-  { "ad",         TRUE, NULL, 0, NULL },
-  { "new",        TRUE, NULL, 0, NULL },
+  { "ad",         TRUE, NULL, NULL },
+  { "new",        TRUE, NULL, NULL },
 
-  { "checkout",   FALSE, svn_cl__checkout, -1,
+  { "checkout",   FALSE, svn_cl__checkout,
     "Check out a working directory from a repository.\n"
     "usage: checkout REPOSPATH1 [REPOSPATH2 REPOSPATH3...]\n" },
-  { "co",         TRUE, NULL, 0, NULL },
+  { "co",         TRUE, NULL, NULL },
 
-  { "commit",     FALSE, svn_cl__commit, 0,
+  { "commit",     FALSE, svn_cl__commit,
     "Commit changes from your working copy to the repository.\n"
     "usage: commit [TARGETS]\n" },
-  { "ci",         TRUE, NULL, 0, NULL },
+  { "ci",         TRUE, NULL, NULL },
 
-  { "delete",     FALSE, svn_cl__delete, 0,
+  { "delete",     FALSE, svn_cl__delete,
     "Remove files and directories from version control.\n"
     "usage: delete [TARGETS]\n" },
-  { "del",        TRUE, NULL, 0, NULL },
-  { "remove",     TRUE, NULL, 0, NULL },
-  { "rm",         TRUE, NULL, 0, NULL },
+  { "del",        TRUE, NULL, NULL },
+  { "remove",     TRUE, NULL, NULL },
+  { "rm",         TRUE, NULL, NULL },
 
-  { "help",       FALSE, svn_cl__help, 0,
+  { "help",       FALSE, svn_cl__help,
     "Display this usage message.\n"
     "usage: help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n" },
-  { "?",          TRUE, NULL, 0, NULL },
-  { "h",          TRUE, NULL, 0, NULL },
+  { "?",          TRUE, NULL, NULL },
+  { "h",          TRUE, NULL, NULL },
   /* We need to support "--help", "-?", and all that good stuff, of
      course.  But those options, since unknown, will result in the
      help message being printed out anyway, so there's no need to
      support them explicitly. */
 
-  { "proplist",   FALSE, svn_cl__proplist, 0,
+  { "proplist",   FALSE, svn_cl__proplist,
     "List all properties for given files and directories.\n"
     "usage: proplist [TARGETS]\n" },
-  { "plist",      TRUE, NULL, 0, NULL },
-  { "pl",         TRUE, NULL, 0, NULL },
+  { "plist",      TRUE, NULL, NULL },
+  { "pl",         TRUE, NULL, NULL },
 
-  { "propget",    FALSE, svn_cl__propget, 1,
+  { "propget",    FALSE, svn_cl__propget,
     "Get the value of property PROPNAME on files and directories.\n"
     "usage: propget PROPNAME [TARGETS]\n" },
-  { "pget",       TRUE, NULL, 1, NULL },
-  { "pg",         TRUE, NULL, 1, NULL },
+  { "pget",       TRUE, NULL, NULL },
+  { "pg",         TRUE, NULL, NULL },
 
-  { "propset",    FALSE, svn_cl__propset, 2, 
+  { "propset",    FALSE, svn_cl__propset, 
     "Set property PROPNAME to PROPVAL on files and directories.\n"
     "usage: propset PROPNAME [PROPVAL | --valfile VALFILE] "
     "[TARGETS]\n"},
-  { "pset",       TRUE, NULL, 2, NULL },
-  { "ps",         TRUE, NULL, 2, NULL },
+  { "pset",       TRUE, NULL, NULL },
+  { "ps",         TRUE, NULL, NULL },
 
-  { "status",     FALSE, svn_cl__status, 0,
+  { "status",     FALSE, svn_cl__status,
     "Print the status of working copy files and directories.\n"
     "usage: status [TARGETS]\n" },
-  { "stat",       TRUE, NULL, 0, NULL },
-  { "st",         TRUE, NULL, 0, NULL },
+  { "stat",       TRUE, NULL, NULL },
+  { "st",         TRUE, NULL, NULL },
 
-  { "diff",     FALSE, svn_cl__diff, 0,
+  { "diff",     FALSE, svn_cl__diff,
     "Display local file changes as contextual diffs.\n"
     "usage: diff [TARGETS]\n" },
-  { "df",         TRUE, NULL, 0, NULL },
+  { "df",         TRUE, NULL, NULL },
+  { "di",         TRUE, NULL, NULL },
 
-  { "update",     FALSE, svn_cl__update, 0,
+  { "update",     FALSE, svn_cl__update,
     "Bring changes from the repository into the working copy.\n"
     "usage: update [TARGETS]\n" },
-  { "up",         TRUE, NULL, 0, NULL },
-  { NULL,         FALSE, NULL, 0, NULL }
+  { "up",         TRUE, NULL, NULL },
+  { NULL,         FALSE, NULL, NULL }
 };
 
+/* Create a SVN string from the char* and add it to the array */
+void svn_cl__push_svn_string (apr_array_header_t *array,
+                              const char *str,
+                              apr_pool_t *pool)
+{
+  (*((svn_string_t **) apr_array_push (array)))
+    = svn_string_create (str, pool);
+}
 
 /* Some commands take an implicit "." string argument when invoked
  * with no arguments. Those commands make use of this function to
  * add "." to the target array if the user passes no args */
 void
-svn_cl__push_implicit_dot_target(apr_array_header_t *targets, apr_pool_t *pool)
+svn_cl__push_implicit_dot_target (apr_array_header_t *targets, apr_pool_t *pool)
 {
-  if (targets->nelts == 0) {
-    (*((svn_string_t **) apr_array_push (targets)))
-      = svn_string_create (".", pool);
-  }
-  assert(targets->nelts);
+  if (targets->nelts == 0)
+    svn_cl__push_svn_string (targets, ".", pool);
+  assert (targets->nelts);
 }
+
+/* Parse a given number of non-target arguments from the
+ * command line args passed in by the user. Put them
+ * into the opt_state args array */
+svn_error_t *
+svn_cl__parse_num_args (apr_getopt_t *os,
+                        svn_cl__opt_state_t *opt_state,
+                        const char *subcommand,
+                        int num_args,
+                        apr_pool_t *pool)
+{
+  int i;
+  
+  opt_state->args = apr_array_make (pool, 0, sizeof (svn_string_t *));
+
+  /* loop for num_args and add each arg to the args array */
+  for (i = 0; i < num_args; i++)
+    {
+      if (os->ind >= os->argc)
+        {
+          svn_cl__subcommand_help (subcommand, pool);
+          return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
+        }
+      svn_cl__push_svn_string (opt_state->args, os->argv[os->ind++], pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Parse all of the arguments from the command line args
+ * passed in by the user. Put them into the opt_state
+ * args array */
+svn_error_t *
+svn_cl__parse_all_args (apr_getopt_t *os,
+                        svn_cl__opt_state_t *opt_state,
+                        const char *subcommand,
+                        apr_pool_t *pool)
+{
+  opt_state->args = apr_array_make (pool, 0, sizeof (svn_string_t *));
+
+  if (os->ind >= os->argc)
+    {
+      svn_cl__subcommand_help (subcommand, pool);
+      return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
+    }
+
+  while (os->ind < os->argc)
+    {
+      svn_cl__push_svn_string (opt_state->args, os->argv[os->ind++], pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Create a targets array and add all the remaining arguments
+ * to it. */
+apr_array_header_t*
+svn_cl__args_to_target_array (apr_getopt_t *os,
+                              apr_pool_t *pool)
+{
+  apr_array_header_t *targets =
+    apr_array_make (pool, 0, sizeof (svn_string_t *));
+
+  for (; os->ind < os->argc; os->ind++)
+    {
+      svn_cl__push_svn_string (targets, os->argv[os->ind], pool);
+    }
+
+  /* kff todo: need to remove redundancies from targets before
+     passing it to the cmd_func. */
+     
+  return targets;
+}
+
 
 /* Return the entry in svn_cl__cmd_table whose name matches CMD_NAME,
  * or null if none.  CMD_NAME may be an alias, in which case the alias
@@ -190,7 +270,6 @@ main (int argc, const char * const *argv)
   apr_getopt_t *os;
   svn_cl__opt_state_t opt_state;
   const svn_cl__cmd_desc_t *subcommand = NULL;
-  apr_array_header_t *targets;  /* file/dir args from the command line */
 
   static const apr_getopt_option_t options[] =
   {
@@ -209,12 +288,10 @@ main (int argc, const char * const *argv)
   memset (&opt_state, 0, sizeof (opt_state));
   opt_state.revision = SVN_INVALID_REVNUM;
 
-  targets = apr_array_make (pool, 0, sizeof (svn_string_t *));
-
   /* No args?  Show usage. */
   if (argc <= 1)
     {
-      svn_cl__help (NULL, targets, pool);
+      svn_cl__help (NULL, NULL, pool);
       apr_pool_destroy (pool);
       return EXIT_FAILURE;
     }
@@ -230,7 +307,7 @@ main (int argc, const char * const *argv)
         break;
       else if (! APR_STATUS_IS_SUCCESS (apr_err))
         {
-          svn_cl__help (NULL, targets, pool);
+          svn_cl__help (NULL, NULL, pool);
           apr_pool_destroy (pool);
           return EXIT_FAILURE;
         }
@@ -292,7 +369,7 @@ main (int argc, const char * const *argv)
       if (os->ind >= os->argc)
         {
           fprintf (stderr, "subcommand argument required\n");
-          svn_cl__help (NULL, targets, pool);
+          svn_cl__help (NULL, NULL, pool);
           apr_pool_destroy (pool);
           return EXIT_FAILURE;
         }
@@ -302,76 +379,29 @@ main (int argc, const char * const *argv)
           subcommand = svn_cl__get_canonical_command (first_arg);
           if (subcommand == NULL)
             {
+              /* FIXME: should we print "unknown foo" ?? seems ok */
               fprintf (stderr, "unknown command: %s\n", first_arg);
-              svn_cl__help (NULL, targets, pool);
+              svn_cl__help (NULL, NULL, pool);
               apr_pool_destroy (pool);
               return EXIT_FAILURE;
             }
         }
     }
   
-  /* If we made it this far, then we definitely have the subcommand. */
+  /* If we made it this far, then we definitely have the subcommand, so call it. */
 
-  /* Below, we parse out some of the regular arguments, because
-   * certain subcommands consume them.  For example, both propget and
-   * propset need NAME, and propset needs VALUE in addition. */
-  opt_state.args = apr_array_make (pool, 0, sizeof (svn_string_t *));
-
-  if (subcommand->num_args > 0) {
-    const char *this_arg;
-    int i;
-    /* loop for num_args and add each arg to the args array */
-    for (i = 0; i < subcommand->num_args; i++) {
-      if (os->ind >= os->argc) {
-        const char *plural = "s"; 
-        fprintf (stderr, "ERROR: The %s command requires %i argument%s\n",
-                 subcommand->name, subcommand->num_args, 
-                 (subcommand->num_args == 1) ? "" : plural);
-        fprintf (stderr, "Help for %s:\n%s", subcommand->name, subcommand->help);
-        apr_pool_destroy (pool);
-        return EXIT_FAILURE;
-      }
-      this_arg = os->argv[os->ind++];
-      (*((svn_string_t **) apr_array_push (opt_state.args)))
-        = svn_string_create (this_arg, pool);
-
-    }
-  }
-  /* greedily suck up all args if num_args is a negative number. */
-  else if (subcommand->num_args == -1) {
-    if (os->ind >= os->argc) {
-      fprintf (stderr, "ERROR: The %s command requires at least one argument\n",
-               subcommand->name);
-      fprintf (stderr, "Help for %s:\n%s", subcommand->name, subcommand->help);
+  err = (*subcommand->cmd_func) (os, &opt_state, pool);
+  if (err)
+    {
+      svn_handle_error (err, stdout, 0);
       apr_pool_destroy (pool);
       return EXIT_FAILURE;
     }
-
-    while (os->ind < os->argc) {
-      const char *this_arg = os->argv[os->ind++];
-      (*((svn_string_t **) apr_array_push (opt_state.args)))
-        = svn_string_create (this_arg, pool);
-    }
-  }
-
-  /* Do the regular arguments (target files and target dirs). */
-  for (; os->ind < os->argc; os->ind++)
+  else
     {
-      const char *this_arg = os->argv[os->ind];
-      (*((svn_string_t **) apr_array_push (targets)))
-        = svn_string_create (this_arg, pool);
+      apr_pool_destroy (pool);
+      return EXIT_SUCCESS;
     }
-    
-  /* kff todo: need to remove redundancies from targets before
-     passing it to the cmd_func. */
-
-  /* Run the subcommand. */
-  err = (*subcommand->cmd_func) (&opt_state, targets, pool);
-  if (err)
-    svn_handle_error (err, stdout, 0);
-  
-  apr_pool_destroy (pool);
-  return EXIT_SUCCESS;
 }
 
 

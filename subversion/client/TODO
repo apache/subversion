@@ -10,15 +10,15 @@ standard flags that are dealt with by get_opts.
 COMMAND         # of non-file args      # of file args  
 annotate        0                       0, 1, or more (implicit dot) 
 commit          0                       0, 1, or more (implicit dot) 
-delete          0                       0, 1, or more (implicit dot) 
+delete          0                       1, or more
 status          0                       0, 1, or more (implicit dot) 
 update          0                       0, 1, or more (implicit dot) 
 log             0                       0, 1, or more (implicit dot) 
 diff            !                       0, 1, or more (implicit dot) 
-propget         1                       0, 1, or more (implicit dot?) 
-propset         2                       0, 1, or more (implicit dot?) 
-add             0                       1 or more               
-checkout        1 or more               0                       
+propget         1                       0, 1, or more (implicit dot) 
+propset         2                       0, 1, or more (implicit dot) 
+add             0                       1 or more
+checkout        1 or more               0
 import          3                       0
 
 So the mechanism that we currently have in place will handle
@@ -28,3 +28,4 @@ different external diff programs.
 
 
 
+

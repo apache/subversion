@@ -30,12 +30,15 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_cl__diff (svn_cl__opt_state_t *opt_state,
-              apr_array_header_t *targets,
+svn_cl__diff (apr_getopt_t *os,
+              svn_cl__opt_state_t *opt_state,
               apr_pool_t *pool)
 {
   svn_error_t *err;
+  apr_array_header_t *targets;
   int i;
+
+  targets = svn_cl__args_to_target_array (os, pool);
 
   /* Add "." if user passed 0 arguments */
   svn_cl__push_implicit_dot_target(targets, pool);
