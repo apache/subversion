@@ -96,12 +96,9 @@ svn_hash_write (apr_hash_t *hash,
       apr_hash_this (this, &key, &keylen, &val);
 
       /* Output name length, then name. */
-      SVN_ERR (svn_io_file_write_full (destfile, "K ", 2, NULL, iterpool));
-
-      buf = apr_psprintf (iterpool, "%" APR_SSIZE_T_FMT, keylen);
+      buf = apr_psprintf (iterpool, "K %" APR_SSIZE_T_FMT "\n", keylen);
       SVN_ERR (svn_io_file_write_full (destfile, 
                                        buf, strlen (buf), NULL, iterpool));
-      SVN_ERR (svn_io_file_write_full (destfile, "\n", 1, NULL, iterpool));
 
       SVN_ERR (svn_io_file_write_full (destfile, 
                                        (const char *) key, keylen, 
@@ -111,12 +108,9 @@ svn_hash_write (apr_hash_t *hash,
       /* Output value length, then value. */
       value = val;
 
-      SVN_ERR (svn_io_file_write_full (destfile, "V ", 2, NULL, pool));
-
-      buf = apr_psprintf (iterpool, "%" APR_SIZE_T_FMT, value->len);
+      buf = apr_psprintf (iterpool, "V %" APR_SIZE_T_FMT "\n", value->len);
       SVN_ERR (svn_io_file_write_full (destfile, buf, 
                                        strlen (buf), NULL, iterpool));
-      SVN_ERR (svn_io_file_write_full (destfile, "\n", 1, NULL, iterpool));
 
       SVN_ERR (svn_io_file_write_full (destfile, value->data, value->len, 
                                        NULL, iterpool));

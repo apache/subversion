@@ -659,7 +659,6 @@ read_entries (svn_wc_adm_access_t *adm_access,
     err = svn_io_file_read_full (infile, buf, sizeof(buf), &bytes_read, pool);
     if (err && !APR_STATUS_IS_EOF(err->apr_err))
       return err;
-    svn_error_clear (err);
     
     SVN_ERR_W (svn_xml_parse (svn_parser, buf, bytes_read, 
                               err && APR_STATUS_IS_EOF(err->apr_err)),
