@@ -174,6 +174,9 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
     entry->url
       = apr_hash_get (entry->attributes,
                       SVN_WC_ENTRY_ATTR_URL, APR_HASH_KEY_STRING);
+
+    if (entry->url)
+      *modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
   }
 
   /* Set up kind. */

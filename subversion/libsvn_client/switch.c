@@ -68,10 +68,10 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
   void *report_baton;
   svn_wc_entry_t *entry, *session_entry;
   svn_stringbuf_t *URL, *anchor, *target;
-  svn_error_t *err;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   svn_revnum_t revnum;
+  svn_error_t *err = NULL;
 
   /* Sanity check.  Without these, the switch is meaningless. */
   assert (path != NULL);
@@ -226,15 +226,11 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
       SVN_ERR (svn_wc_install_file (path->data, revnum,
                                     new_text_path->data,
                                     proparray, TRUE, /* is full proplist */
+                                    switch_url->data, /* new url */
                                     pool));
       
       /* ### shouldn't the user see a 'U' somehow?  we have no trace
          editor here!  Think about this... */
-
-      /* ### don't forget that copy.c:repos_to_wc_copy needs to filter
-         the props as well now.  ??? should it ignore entryprops and
-         wcprops? */
-
     }  
   
   /* Sleep for one second to ensure timestamp integrity. */
