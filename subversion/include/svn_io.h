@@ -362,7 +362,7 @@ svn_error_t *svn_io_file_create (const char *file,
                                  apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  *
  * Lock file at @a lock_file. If @exclusive is TRUE,
  * obtain exclusive lock, otherwise obtain shared lock.

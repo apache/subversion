@@ -647,7 +647,7 @@ typedef struct svn_ra_plugin_t
                            apr_pool_t *pool);
 
   /**
-   * @deprecated provided for compatibility with the 1.1.0 API
+   * @deprecated Provided for backward compatibility with the 1.1 API.
    *
    * Similar to get_log2, but with the @a limit parameter always set
    * to @c 0.
