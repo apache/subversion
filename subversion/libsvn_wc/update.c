@@ -97,12 +97,14 @@ update (ap_file_t *src, svn_string_t *dst, apr_pool_t *pool)
   char buf[BUFSIZ];
   int done;
   svn_delta_digger_t diggy;
-
-  XML_Parser parsimonious = svn_delta_make_xml_parser (&diggy);
+  XML_Parser parsimonious;
 
   diggy.pool = pool;
   diggy.data_handler = svn_update_data_handler;
   diggy.dir_handler = svn_update_dir_handler;
+
+  /* Make a parser with the usual shared handlers and diggy as userData. */
+  parsimonious = svn_delta_make_xml_parser (&diggy);
 
   do {
     /* Grab some stream. */
@@ -110,26 +112,25 @@ update (ap_file_t *src, svn_string_t *dst, apr_pool_t *pool)
     done = (len < sizeof (buf));
     
     /* Parse the chunk of stream. */
-    if (XML_Parse (parser, buf, len, done) != 0)
+    if (! XML_Parse (parsimonious, buf, len, done))
     {
       char *message
         = apr_psprintf (pool, 
                         "%s at line %d",
-                        XML_ErrorString (XML_GetErrorCode (parser)),
-                        XML_GetCurrentLineNumber (parser));
+                        XML_ErrorString (XML_GetErrorCode (parsimonious)),
+                        XML_GetCurrentLineNumber (parsimonious));
 
       svn_error_t *err
         = svn_create_error (SVN_ERR_MALFORMED_XML, 0, message, NULL, pool);
 
+      XML_ParserFree (parsimonious);
       return err;
     }
   } while (! done);
 
-  XML_ParserFree (parser);
+  XML_ParserFree (parsimonious);
   return 0;
 }
-
-
 
 
 
@@ -139,4 +140,3 @@ update (ap_file_t *src, svn_string_t *dst, apr_pool_t *pool)
  * eval: (load-file "../svn-dev.el")
  * end:
  */
-
