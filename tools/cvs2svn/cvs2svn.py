@@ -61,6 +61,7 @@ SVN_INVALID_REVNUM = -1
 
 COMMIT_THRESHOLD = 5 * 60	# flush a commit if a 5 minute gap occurs
 
+OP_ADD    = 'A'
 OP_DELETE = 'D'
 OP_CHANGE = 'C'
 
@@ -414,7 +415,12 @@ class RepositoryMirror:
 
   def change_path(self, path, tags, branches, intermediate_dir_func=None):
     """Record a change to PATH.  PATH may not have a leading slash.
-    Return None if PATH already existed, or 1 if created it.
+
+    Return a tuple (op, (closed_names)), where op is 'A' if the
+    path was added or 'C' if it already existed, and (closed_names) is
+    a tuple of symbolic names closed off by this change -- that is,
+    tags or branches which could be rooted in the previous revision of
+    PATH, but not in this revision, because this rev changes PATH.
 
     TAGS are any tags that sprout from this revision of PATH, BRANCHES
     are any branches that sprout from this revision of PATH.
@@ -476,27 +482,36 @@ class RepositoryMirror:
 
     # Now change the last node, the versioned file.  Just like at the
     # top of the above loop, parent_dir is already mutable.
-    retval = 1
+    op = OP_ADD
     last_component = components[-1]
     if parent_dir.has_key(last_component):
+      # Sanity check
       child = marshal.loads(self.nodes_db[parent_dir[last_component]])
       if child.has_key(self.mutable_flag):
         sys.stderr.write("'%s' has already been changed in revision %d;\n" \
                          "can't change it again in the same revision."     \
                          % (path, self.youngest))
         sys.exit(1)
-      retval = None  # Path already exists, so we'll return None.
+      # Okay, passed the sanity check
+      op = OP_CHANGE
 
     leaf_key = gen_key()
     parent_dir[last_component] = leaf_key
     self.nodes_db[parent_dir_key] = marshal.dumps(parent_dir)
     self.nodes_db[leaf_key] = marshal.dumps(self.empty_mutable_thang)
 
-    return retval
+    return (op, ()) # kff todo: empty tuple should be closed_names
 
   def delete_path(self, path, tags, branches, prune=None):
     """Delete PATH from the tree.  PATH may not have a leading slash.
-    Return the deleted path, or None if PATH does not exist.
+
+    Return a tuple (path_deleted, (closed_names)), where path_deleted
+    is the path actually deleted or None if PATH did not exist, and
+    (closed_names) is a tuple of symbolic names closed off by this
+    deletion -- that is, tags or branches which could be rooted in the
+    previous revision of PATH, but not in this revision, because this
+    rev changes PATH.  If path_deleted is None, then closed_names will
+    be empty.
 
     TAGS are any tags that sprout from this revision of PATH, BRANCHES
     are any branches that sprout from this revision of PATH.  (I can't
@@ -566,7 +581,7 @@ class RepositoryMirror:
 
       # If we can't reach the dest, then we don't need to do anything.
       if not parent_dir.has_key(component):
-        return None
+        return (None, ())
 
       # Otherwise continue downward, dropping breadcrumbs.
       this_entry_key = parent_dir[component]
@@ -578,7 +593,7 @@ class RepositoryMirror:
     # If the target is not present in its parent, then we're done.
     last_component = components[-1]
     if not parent_dir.has_key(last_component):
-      return None
+      return (None, ())
 
     # The target is present, so remove it and bubble up, making a new
     # mutable path and/or pruning as necessary.
@@ -631,9 +646,9 @@ class RepositoryMirror:
         # We never prune away the root directory, so back up one component.
         pruned_count = pruned_count - 1
       retpath = string.join(components[:0 - pruned_count], '/')
-      return retpath
+      return (retpath, ()) # kff todo: empty tuple should be closed_names
     else:
-      return path
+      return (path, ())    # kff todo: empty tuple should be closed_names
 
   def close(self):
     # Just stabilize the last revision.  This may or may not affect
@@ -771,7 +786,10 @@ class Dump:
     # to determine if this path exists in head yet.  But that wouldn't
     # be perfectly reliable, both because of 'cvs commit -r', and also
     # the possibility of file resurrection.
-    if self.repos_mirror.change_path(svn_path, tags, branches, self.add_dir):
+    op, closed_names = self.repos_mirror.change_path(svn_path,
+                                                     tags, branches,
+                                                     self.add_dir)
+    if op == OP_ADD:
       action = 'add'
     else:
       action = 'change'
@@ -827,20 +845,31 @@ class Dump:
 
     # This record is done.
     self.dumpfile.write('\n')
+    return closed_names
 
   def delete_path(self, svn_path, tags, branches, prune=None):
-    """If SVN_PATH exists in the head mirror, output its deletion and
-    return the path actually deleted; else return None.  (The path
-    deleted can differ from SVN_PATH because of pruning, but only if
-    PRUNE is true.)"""
-    deleted_path = self.repos_mirror.delete_path(svn_path, tags, branches,
-                                                 prune)
+    """If SVN_PATH exists in the head mirror, output the deletion to
+    the dumpfile, else output nothing to the dumpfile.
+
+    Return a tuple (path_deleted, (closed_names)), where path_deleted
+    is the path deleted if any or None if no deletion was necessary,
+    and (closed_names) is a tuple of symbolic names closed off by this
+    deletion -- that is, tags or branches which could be rooted in the
+    previous revision of PATH, but not in this revision, because this
+    rev changes PATH.  If path_deleted is None, then closed_names will
+    be empty.
+
+    Iff PRUNE is true, then the path deleted can be not None, yet
+    shorter than SVN_PATH because of pruning."""
+    deleted_path, closed_names = self.repos_mirror.delete_path(svn_path,
+                                                               tags, branches,
+                                                               prune)
     if deleted_path:
       print '    (deleted %s)' % deleted_path
       self.dumpfile.write('Node-path: %s\n'
                           'Node-action: delete\n'
                           '\n' % deleted_path)
-    return deleted_path
+    return (deleted_path, closed_names)
 
   def close(self):
     self.repos_mirror.close()
@@ -855,36 +884,74 @@ def format_date(date):
 
 class SymbolicNameTracker:
   """Track the Subversion path/revision ranges of CVS symbolic names.
-  This is done in .db files under DIR, where the name of the .db file
-  is based on the symbolic name being tracked.  The keys are svn
-  paths, and the values are revision range tuples like '(N M)'.
+  This is done in a .db file, representing a tree in the usual way.
+  In addition to directory entries, each object in the database stores
+  the earliest revision from which it could be copied, and the first
+  revision from which it could no longer be copied.  Intermediate
+  directories go one step farther: they record counts for the various
+  revisions from which items under them could have been copied, and
+  counts for the cutoff revisions.  For example:
+                                                                      
+                               .----------.                           
+                               |  sub1    | [(2, 1), (3, 3)]          
+                               |  /       | [(5, 1), (17, 2), (50, 1)]         
+                               | /        |                                    
+                               |/ sub2    |                           
+                               /    \     |                           
+                              /|_____\____|                           
+                             /        \                               
+                      ______/          \_________                     
+                     /                           \                    
+                    /                             \                   
+                   /                               \                  
+              .---------.                     .---------.             
+              |  file1  |                     |  file3  |             
+              |   /     | [(3, 2)]            |     \   | [(2, 1), (3, 1)] 
+              |  /      | [(17, 1), (50, 1)]  |      \  | [(5, 1), (10, 1)]
+              | /       |                     |       \ |                  
+              |/ file2  |                     |  file4 \|                  
+              /    \    |                     |    /    \                 
+             /|_____\___|                     |___/_____|\                
+            /        \                           /        \               
+           /          \                         /          \              
+          /            \                       /            \             
+         /              +                     /              +            
+    +======+            |                 +======+           |            
+    |      | [(3, 1)]   |                 |      | [(2, 1)]  |            
+    |      | [(17, 1)]  |                 |      | [(5, 1)]  |            
+    |      |            |                 |      |           |            
+    +======+            |                 +======+           |            
+                    +======+                             +======+         
+                    |      | [(3, 1)]                    |      | [(3, 1)]
+                    |      | [(50, 1)]                   |      | [(17, 1)]
+                    |      |                             |      |
+                    +======+                             +======+
+  
+  The two lists to the right of each node represent the 'opening' and
+  'closing' revisions respectively.  Each tuple in a list is of the
+  form (REV, COUNT).  For leaf nodes, COUNT is always 1, of course.
+  For intermediate nodes, the counts are the sums of the corresponding
+  counts of child nodes.
 
-  The svn path will most often be a trunk path, because the path/rev
-  range recorded here is that in which the given symbolic name could
-  be rooted, *not* the path/rev on which commits to that symbolic name
-  took place (which could only happen w/ branches anyway, of course)."""
+  These revision scores are used to determine the optimal copy
+  revisions for each tree/subtree at branch or tag creation time.
 
-  # Keys in both DB files are of the form:
-  #
-  #    SYMBOLIC_NAME/SVN_PATH
-  #
-  # (This is safe because CVS symbolic names never contain '/'.)
-  #
-  # In the open_db, the value is a single svn revision (the earliest
-  # revision from which that tag or branch could be copied).
-  #
-  # In the bound_db, the value is a tuple (start_rev, end_rev), giving
-  # the range of Subversion revisions from which that tag or branch
-  # could be copied.  The start_rev is always the same as the single
-  # revision from the open_db; once the end revision is known, the
-  # entry is removed from the open_db and a new entry is created in
-  # the bound_db.
+  The svn path input will most often be a trunk path, because the
+  path/rev information recorded here is about where and when the given
+  symbolic name could be rooted, *not* a path/rev for which commits
+  along that symbolic name take place (of course, commits only happen on
+  branches anyway)."""
 
   def __init__(self):
     self.db_file = SYMBOLIC_NAMES_DB
     self.db = anydbm.open(self.db_file, 'n')
     self.root_key = gen_key()
     self.db[self.root_key] = marshal.dumps({})
+    # The keys for the opening and closing revision lists attached to
+    # each directory or file.  Includes "/" so as never to conflict
+    # with any real entry.
+    self.opening_revs_key = "/opening"
+    self.closing_revs_key = "/closing"
 
   def probe_path(self, components):
     # Print information about a path in the sym name tree (for debugging).
@@ -915,18 +982,69 @@ class SymbolicNameTracker:
       print "  ",
     print "parent_dir_key: %s, val:" % parent_dir_key, parent_dir
 
+  def bump_rev_count(self, item_key, rev, revlist_key):
+    """Increment REV's count in opening or closing list under KEY.
+    REVLIST_KEY is self.opening_revs_key or self.closing_revs_key, and
+    indicates which rev list to increment REV's count in.
 
-  def track_names(self, svn_path, svn_rev, tags, branches):
-    """Track that for SVN_PATH, the copies in TAGS and BRANCHES can
-    earliest be copied from SVN_REV.  SVN_PATH does not start with '/'."""
+    For example, if REV is 7, REVLIST_KEY is self.opening_revs_key,
+    and the entry's opening revs list looks like this
+
+         [(2, 5), (7, 2), (10, 15)]
+
+    then afterwards it would look like this:
+
+         [(2, 5), (7, 3), (10, 15)]
+
+    But if no tuple for revision 7 were present, then one would be
+    added, for example
+
+         [(2, 5), (10, 15)]
+
+    would become
+
+         [(2, 5), (7, 1), (10, 15)]
+
+    The list is sorted by ascending revision both before and after."""
+
+    entry_val = marshal.loads(self.db[item_key])
+    
+    if not entry_val.has_key(revlist_key):
+      entry_val[revlist_key] = [(rev, 1)]
+    else:
+      rev_counts = entry_val[revlist_key]
+      done = None
+      for i in range(len(rev_counts)):
+        this_rev, this_count = rev_counts[i]
+        if rev == this_rev:
+          rev_counts[i] = (this_rev, this_count + 1)
+          done = 1
+          break
+        elif this_rev > rev:
+          if i > 0: i = i - 1
+          rev_counts.insert(i, (rev, 1))
+          done = 1
+          break
+      if not done: rev_counts.append((rev, 1))
+      entry_val[revlist_key] = rev_counts
+
+    self.db[item_key] = marshal.dumps(entry_val)
+
+  # The verb form of "root" is "root", but that would be misleading in
+  # this case; and the opposite of "uproot" is presumably "downroot",
+  # but that wouldn't exactly clarify either.  Hence, "enroot" :-).
+  def enroot_names(self, svn_path, svn_rev, tags, branches):
+    """Record SVN_PATH at SVN_REV as the earliest point from which the
+    symbolic names in TAGS and BRANCHES could be copied.  SVN_PATH
+    does not start with '/'."""
     if not (tags or branches): return  # early out
     for name in tags + branches:
       components = [name] + string.split(svn_path, '/')
 
       parent_dir_key = self.root_key
-      parent_dir = marshal.loads(self.db[parent_dir_key])
-
       for component in components:
+        self.bump_rev_count(parent_dir_key, svn_rev, self.opening_revs_key)
+        parent_dir = marshal.loads(self.db[parent_dir_key])
         if not parent_dir.has_key(component):
           new_child_key = gen_key()
           parent_dir[component] = new_child_key
@@ -938,6 +1056,8 @@ class SymbolicNameTracker:
         # Swaparoo.
         parent_dir_key = this_entry_key
         parent_dir = this_entry_val
+
+      self.bump_rev_count(parent_dir_key, svn_rev, self.opening_revs_key)
 
 
 class Commit:
@@ -1055,9 +1175,11 @@ class Commit:
       print '    adding or changing %s : %s' % (cvs_rev, svn_path)
       if svn_rev == SVN_INVALID_REVNUM:
         svn_rev = dump.start_revision(props)
-      sym_tracker.track_names(svn_path, svn_rev, tags, branches)
-      dump.add_or_change_path(cvs_path, svn_path, cvs_rev, rcs_file,
-                              tags, branches)
+      sym_tracker.enroot_names(svn_path, svn_rev, tags, branches)
+      closed_names = dump.add_or_change_path(cvs_path, svn_path,
+                                             cvs_rev, rcs_file,
+                                             tags, branches)
+      # kff todo: use closed_names to close off copy-source revisions.
 
     for rcs_file, cvs_rev, br, tags, branches in self.deletes:
       # compute a repository path, dropping the ,v from the file name
@@ -1067,20 +1189,28 @@ class Commit:
       if cvs_rev != '1.1':
         if svn_rev == SVN_INVALID_REVNUM:
           svn_rev = dump.start_revision(props)
-        ### FIXME: this will return None if no path was deleted.  But
-        ### we'll already have started the revision by then, so it's a
-        ### bit late to use the knowledge!  Need to reorganize things
-        ### so that starting the revision is a callback with its own
-        ### internal conditional, so anyone can just invoke when they
-        ### know they're really about to do something.
+        # Uh, can this even happen on a deleted path?  Hmmm.  If not,
+        # there's no risk, since tags and branches would just be empty
+        # and therefore enrooting would be a no-op.  Still, it would
+        # be clearer to know for sure and simply not call it. 
+        sym_tracker.enroot_names(svn_path, svn_rev, tags, branches)
+        ### FIXME: this will return path_delete == None if no path was
+        ### deleted.  But we'll already have started the revision by
+        ### then, so it's a bit late to use the knowledge!  Need to
+        ### reorganize things so that starting the revision is a
+        ### callback with its own internal conditional, so anyone can
+        ### just invoke when they know they're really about to do
+        ### something.
         ###
         ### Right now what happens is we get an empty revision
         ### (assuming nothing else happened in this revision), so it
         ### won't show up 'svn log' output, even when invoked on the
         ### root -- because no paths changed!  That needs to be fixed,
         ### regardless of whether cvs2svn creates such revisions.
-        sym_tracker.track_names(svn_path, svn_rev, tags, branches)
-        dump.delete_path(svn_path, tags, branches, ctx.prune)
+        path_deleted, closed_names = dump.delete_path(svn_path,
+                                                      tags, branches,
+                                                      ctx.prune)
+        # kff todo: use closed_names to close off copy-source revisions.
 
     if svn_rev != SVN_INVALID_REVNUM:
       print '    new revision:', svn_rev
