@@ -161,22 +161,8 @@ get_next_length (apr_size_t *length, DBC *cursor, DBT *query)
 }
 
 
-/* Read *LEN bytes into BUF from OFFSET in string KEY in FS, as part
- * of TRAIL.
- * 
- * On return, *LEN is set to the number of bytes read. This value may
- * be less than the number requested.
- *
- * If OFFSET is past the end of the string, then *LEN will be set to
- * zero. Callers which are advancing OFFSET as they read portions of
- * the string can terminate their loop when *LEN is returned as zero
- * (which will occur when OFFSET == length(the string)).
- * 
- * If string KEY does not exist, the error SVN_ERR_FS_NO_SUCH_STRING
- * is returned.
- */
-static svn_error_t *
-string_read (svn_fs_t *fs,
+svn_error_t *
+svn_fs__string_read (svn_fs_t *fs,
              const char *key,
              char *buf,
              apr_off_t offset,
@@ -186,7 +172,7 @@ string_read (svn_fs_t *fs,
   int db_err;
   DBT query, result;
   DBC *cursor;
-  apr_size_t length;
+  apr_size_t length, bytes_read = 0;
 
   svn_fs__str_to_dbt (&query, (char *) key);
 
@@ -213,59 +199,43 @@ string_read (svn_fs_t *fs,
 
   /* The current record contains OFFSET. Fetch the contents now. Note that
      OFFSET has been moved to be relative to this record. The length could
-     quite easily extend past this record, but no big deal. We also keep
-     the DB_DBT_PARTIAL to read little pieces at this location.  */
-  svn_fs__clear_dbt (&result);
-  result.data = buf;
-  result.ulen = *len;
-  result.doff = (u_int32_t)offset;
-  result.dlen = *len;
-  result.flags |= (DB_DBT_USERMEM | DB_DBT_PARTIAL);
-  db_err = cursor->c_get (cursor, &query, &result, DB_CURRENT);
-  if (db_err)
-    goto cursor_error;
-
-  /* Done with the cursor. */
-  SVN_ERR (DB_WRAP (fs, "closing string-reading cursor",
-                    cursor->c_close (cursor)));
-
-  *len = result.size;
-  return SVN_NO_ERROR;
-
-cursor_error:
-  /* An error occurred somewhere. Close the cursor and return the error. */
-  cursor->c_close (cursor);
-  return DB_WRAP (fs, "reading string", db_err);
-}
-
-
-svn_error_t *
-svn_fs__string_read (svn_fs_t *fs,
-                     const char *key,
-                     char *buf,
-                     apr_off_t offset,
-                     apr_size_t *len,
-                     trail_t *trail)
-{
-  apr_size_t amt_read = 0;
-
-  /* ### todo: See IZ issue #642.
-
-     Currently, the helper function for this, string_read() is having
-     to lookup keys and setup the cursor on each call.  Ideally, the
-     following looping concept would be inside that helper so would
-     only have to setup the cursor once. */
+     quite easily extend past this record, so we use DB_DBT_PARTIAL and
+     read successive records until we've filled the request.  */
   while (1)
     {
-      apr_size_t size = *len - amt_read;
-      SVN_ERR (string_read (fs, key, buf + amt_read, offset + amt_read, 
-                            &size, trail));
-      amt_read += size;
-      if ((size == 0) || (amt_read == *len))
+      svn_fs__clear_dbt (&result);
+      result.data = buf + bytes_read;
+      result.ulen = *len - bytes_read;
+      result.doff = (u_int32_t)offset;
+      result.dlen = *len - bytes_read;
+      result.flags |= (DB_DBT_USERMEM | DB_DBT_PARTIAL);
+      db_err = cursor->c_get (cursor, &query, &result, DB_CURRENT);
+      if (db_err)
+        {
+          cursor->c_close (cursor);
+          return DB_WRAP (fs, "reading string", db_err);
+        }
+
+      bytes_read += result.size;
+      if (bytes_read == *len)
+        {
+          /* Done with the cursor. */
+          SVN_ERR (DB_WRAP (fs, "closing string-reading cursor",
+                            cursor->c_close (cursor)));
+          break;
+        }
+
+      db_err = get_next_length (&length, cursor, &query);
+      if (db_err == DB_NOTFOUND)
         break;
+      if (db_err)
+        return DB_WRAP (fs, "reading string", db_err);
+
+      /* We'll be reading from the beginning of the next record */
+      offset = 0;
     }
-  
-  *len = amt_read;
+
+  *len = bytes_read;
   return SVN_NO_ERROR;
 }
 
