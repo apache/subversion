@@ -32,11 +32,29 @@
 #include "dav_svn.h"
 
 
+/* Every provider needs to define an opaque locktoken type. */
+struct dav_locktoken
+{
+  const char *uuid;
+
+};
+
+
 
 /* Return the supportedlock property for a resource */
 static const char *
 dav_svn_get_supportedlock(const dav_resource *resource)
 {
+  /* ### we only support locks of scope "exclusive" and of type
+     "write".  but what sort of string does mod_dav expect from us?
+     the docs don't say.  something like
+
+     <D:lockscope><D:exclusive/></D:lockscope>
+     <D:locktype><D:write/></D:locktype>
+
+     ??
+  */
+
   return "";  /* temporary: just to suppress compile warnings */
 }
 
@@ -50,6 +68,9 @@ dav_svn_parse_locktoken(apr_pool_t *pool,
                         const char *char_token,
                         dav_locktoken **locktoken_p)
 {
+  /* ### okay, so we need to be able convert a locktoken URI into just
+     a lock token.  this means just pulling the UUID out of the URI. */
+
   return 0;  /* temporary: just to suppress compile warnings */
 }
 
@@ -64,6 +85,8 @@ static const char *
 dav_svn_format_locktoken(apr_pool_t *p,
                          const dav_locktoken *locktoken)
 {
+  /* ### and do the reverse:  take a token UUID and embed it into a URI. */
+
   return "";  /* temporary: just to suppress compile warnings */
 }
 
@@ -79,6 +102,9 @@ static int
 dav_svn_compare_locktoken(const dav_locktoken *lt1,
                           const dav_locktoken *lt2)
 {
+  /* ### what on earth does it mean for a locktoken to be "greater"
+     than another?   ...maybe this is just for nice sorted output?? */
+
   return 0;  /* temporary: just to suppress compile warnings */
 }
 
@@ -107,6 +133,20 @@ dav_svn_open_lockdb(request_rec *r,
                     int force,
                     dav_lockdb **lockdb)
 {
+  /* ### mod_dav.h recommends this be a 'lazy' db open, that this call
+     should be a cheap no-op if possible.  we don't really have a
+     separate database to open anyway, other than the original opening
+     of the fs way back in get_resource().  */
+
+  /* ### and no, we don't need to pay attention to the httpd.conf
+     DAVLockDB directive.  our locks are stored in the repository. */
+
+  /* ### I think this function is going to do nothing but create a
+     lockdb structure as 'context' for other funcs in this vtable.
+     There's no dav_resource to verify here.  If you look at
+     deadprops.c, the only thing we might want to do is get the
+     authz_read callback 'ready to go' in the lockdb. */
+
   return 0;  /* temporary: just to suppress compile warnings */
 }
 
@@ -116,6 +156,8 @@ dav_svn_open_lockdb(request_rec *r,
 static void
 dav_svn_close_lockdb(dav_lockdb *lockdb)
 {
+  /* ### free the lockdb struct, that's it. */
+
   return;
 }
 
@@ -126,6 +168,9 @@ static dav_error *
 dav_svn_remove_locknull_state(dav_lockdb *lockdb,
                               const dav_resource *resource)
 {
+  /* ### need to read up in RFC 2518:  what are lock-null resources,
+     how do they work?  I forgot.  */
+
   return 0;  /* temporary: just to suppress compile warnings */
 }
 
@@ -142,6 +187,13 @@ dav_svn_create_lock(dav_lockdb *lockdb,
                     const dav_resource *resource,
                     dav_lock **lock)
 {
+  /* ### call svn_repos_fs_lock(), and build a dav_lock struct to return. */
+
+  /* ### my only concern is:  does mod_dav return "enough" fields in
+     its LOCK response for the client to recreate an svn_lock_t
+     structure?  I'm worried that there's no lock-creationdate field
+     in the returned dav_lock struct.  Need to check the RFC.  */
+
   return 0;  /* temporary: just to suppress compile warnings */
 }
 
@@ -167,6 +219,13 @@ dav_svn_get_locks(dav_lockdb *lockdb,
                   int calltype,
                   dav_lock **locks)
 {
+  /* ### verify that resource isn't a collection, then call
+         svn_fs_get_lock() and returned a linked list of exactly one
+         dav_lock (since we only support 1 exclusive lock per
+         resource).  return NULL if not locked.  we can pretty much
+         ignore the 'calltype' arg, since we don't have lockable
+         collections, and thus don't have indirect locks.  */
+
   return 0;  /* temporary: just to suppress compile warnings */
 }
 
@@ -191,6 +250,9 @@ dav_svn_find_lock(dav_lockdb *lockdb,
                   int partial_ok,
                   dav_lock **lock)
 {
+  /* ### since we don't support shared locks, this function can share
+     the same factorized code as dav_svn_get_locks, right? */
+  
   return 0;  /* temporary: just to suppress compile warnings */
 }
 
@@ -210,6 +272,10 @@ dav_svn_has_locks(dav_lockdb *lockdb,
                   const dav_resource *resource,
                   int *locks_present)
 {
+  /* ### again, this function can share the same factorized code as
+     the previous two.  even if a resource doesn't exist,
+     svn_fs_get_lock() will return a lock for a reserved name. */
+
   return 0;  /* temporary: just to suppress compile warnings */
 }
 
@@ -232,6 +298,9 @@ dav_svn_append_locks(dav_lockdb *lockdb,
                      int make_indirect,
                      const dav_lock *lock)
 {
+  /* ### need to return error if the resource is already locked.  we
+     don't support multiple shared locks on a resource. */
+
   return 0;  /* temporary: just to suppress compile warnings */
 }
 
@@ -247,6 +316,9 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
                     const dav_resource *resource,
                     const dav_locktoken *locktoken)
 {
+  /* ### call svn_repos_fs_unlock() on resource, using incoming
+         locktoken. */
+
   return 0;  /* temporary: just to suppress compile warnings */
 }
 
@@ -269,6 +341,12 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
                       time_t new_time,
                       dav_lock **locks)
 {
+  /* ### call svn_repos_fs_lock() using the incoming locktokens, with
+     an expiration of 'new_time'.   return a single new lock.  WORRY: 
+     does it matter that the returned lock will have a *new* token??
+     libsvn_fs never truly 'refreshes' a lock:  it just destroys and
+     creates a new one.  */
+
   return 0;  /* temporary: just to suppress compile warnings */
 }
 
@@ -296,6 +374,11 @@ dav_svn_lookup_resource(dav_lockdb *lockdb,
                         const dav_resource *start_resource,
                         const dav_resource **resource)
 {
+  /* ### call svn_fs_get_lock_from_token(), then
+     dav_svn_get_resource() on lock->path.   It looks like we can
+     pretty much ignore 'start_resource', since we don't have indirect
+     locks.  */
+
   return 0;  /* temporary: just to suppress compile warnings */
 }
 
