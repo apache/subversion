@@ -236,14 +236,16 @@ svn_error_t *svn_fs__get_txn_list (char ***names_p,
 {
   int const next_id_key_len = strlen (next_id_key);
 
+  char **names;
+  apr_size_t names_count = 0;
+  apr_size_t names_size = 4;
+
   DBC *cursor;
   DBT key, value;
-  db_recno_t names_count = 0;
-  db_recno_t names_size = 4;
   int db_err, db_c_err;
 
   /* Allocate the initial names array */
-  *names_p = apr_pcalloc (pool, names_size * sizeof (**names_p));
+  names = apr_pcalloc (pool, names_size * sizeof (*names));
 
   /* Create a database cursor to list the transaction names. */
   SVN_ERR (DB_WRAP (fs, "reading transaction list (opening cursor)",
@@ -271,19 +273,21 @@ svn_error_t *svn_fs__get_txn_list (char ***names_p,
       /* Make sure there's enough space in the names array. */
       if (names_count == names_size - 1)
         {
-          char **tmp = apr_pcalloc (pool, 2 * names_size * sizeof (*tmp));
-          memcpy (tmp, *names_p, names_size * sizeof (*tmp));
-          *names_p = tmp;
+          char **tmp;
+
           names_size *= 2;
+          tmp = apr_pcalloc (pool, names_size * sizeof (*tmp));
+          memcpy (tmp, names, names_count * sizeof (*tmp));
+          names = tmp;
         }
 
-      (*names_p)[names_count++] = apr_pstrndup (pool, key.data, key.size);
+      names[names_count++] = key.data;
     }
 
-  (*names_p)[names_count] = NULL;
+  names[names_count] = NULL;
 
   /* Check for errors, but close the cursor first. */
-  db_c_err = cursor->c_close(cursor);
+  db_c_err = cursor->c_close (cursor);
   if (db_err != DB_NOTFOUND)
     {
       SVN_ERR (DB_WRAP (fs, "reading transaction list (listing keys)",
@@ -292,6 +296,7 @@ svn_error_t *svn_fs__get_txn_list (char ***names_p,
   SVN_ERR (DB_WRAP (fs, "reading transaction list (closing cursor)",
                     db_c_err));
 
+  *names_p = names;
   return SVN_NO_ERROR;
 }
 
