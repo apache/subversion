@@ -131,10 +131,10 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
                For Perl, path to perl.h
                (for example, C:\Program Files\Perl\lib\CORE)
 
-               For Java, path to jni headers, for example,
+               For Java, path to JNI headers,
                (for example, C:\Program Files\j2sdk1.4.2\include)
 
-               Also for Java, path to jni windows headers, for example
+               Also for Java, path to JNI Windows headers,
                (for example, C:\Program Files\j2sdk1.4.2\include\win32)
 
    4.  If you haven't already built subversion, you should do so now.
