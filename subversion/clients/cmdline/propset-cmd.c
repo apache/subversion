@@ -56,7 +56,7 @@ svn_cl__propset (apr_getopt_t *os,
   SVN_ERR (svn_opt_parse_num_args (&args, os,
                                    opt_state->filedata ? 1 : 2, pool));
   pname = ((const char **) (args->elts))[0];
-  SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, NULL, pool));
+  SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, pool));
 
   /* Get the PROPVAL from either an external file, or from the command
      line. */

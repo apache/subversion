@@ -1053,7 +1053,7 @@ main (int argc, const char * const *argv)
               const char *prefix_utf8;
               SVN_INT_ERR (svn_utf_cstring_to_utf8 (&prefix_utf8,
                                                     os->argv[i],
-                                                    NULL,  pool));
+                                                    pool));
               *(const char **)apr_array_push (opt_state.prefixes)
                 = svn_path_internal_style (prefix_utf8, pool);
             }

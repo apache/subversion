@@ -658,7 +658,7 @@ main (int argc, const char * const *argv)
                                     &(opt_state.end_revision),
                                     opt_arg, pool) != 0)
           {
-            err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, NULL, pool);
+            err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, pool);
             if (err)
               svn_handle_error (err, stderr, FALSE);
             else
@@ -688,7 +688,7 @@ main (int argc, const char * const *argv)
         opt_state.incremental = TRUE;
         break;
       case 'F':
-        err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, NULL, pool);
+        err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, pool);
         if (!err)
           err = svn_stringbuf_from_file (&(opt_state.filedata),
                                          utf8_opt_arg, pool);
@@ -722,7 +722,7 @@ main (int argc, const char * const *argv)
              the targets into an array, because otherwise we wouldn't
              know what delimiter to use for svn_cstring_split().  */
 
-          err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, NULL, pool);
+          err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, pool);
 
           if (! err)
             err = svn_stringbuf_from_file (&buffer, utf8_opt_arg, pool);
@@ -762,7 +762,7 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__auth_username_opt:
         err = svn_utf_cstring_to_utf8 (&opt_state.auth_username,
-                                       opt_arg, NULL, pool);
+                                       opt_arg, pool);
         if (err)
           {
             svn_handle_error (err, stdout, FALSE);
@@ -772,7 +772,7 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__auth_password_opt:
         err = svn_utf_cstring_to_utf8 (&opt_state.auth_password,
-                                       opt_arg, NULL, pool);
+                                       opt_arg, pool);
         if (err)
           {
             svn_handle_error (err, stdout, FALSE);
@@ -809,7 +809,7 @@ main (int argc, const char * const *argv)
         break;
       case 'x':
         err = svn_utf_cstring_to_utf8 (&opt_state.extensions, opt_arg,
-                                       NULL, pool);
+                                       pool);
         if (err) {
           svn_handle_error (err, stderr, FALSE);
           svn_pool_destroy (pool);

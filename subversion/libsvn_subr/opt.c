@@ -540,7 +540,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
       const char *raw_target = os->argv[os->ind];
       SVN_ERR (svn_utf_cstring_to_utf8
                ((const char **) apr_array_push (input_targets),
-                raw_target, NULL, pool));
+                raw_target, pool));
     }
 
   if (known_targets)

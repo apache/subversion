@@ -89,7 +89,7 @@ svn_config__win_config_path (const char **folder, int system_path,
       if (S_OK != SHGetFolderPathA (NULL, csidl, NULL, SHGFP_TYPE_CURRENT,
                                     folder_ansi))
         goto no_folder_path;
-      SVN_ERR (svn_utf_cstring_to_utf8 (folder, folder_ansi, NULL, pool));
+      SVN_ERR (svn_utf_cstring_to_utf8 (folder, folder_ansi, pool));
     }
   else
     {

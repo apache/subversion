@@ -182,7 +182,7 @@ prompt_for_simple_creds (svn_auth_cred_simple_t **cred_p,
          
           if (! apr_uid_current (&uid, &gid, pool)
               && ! apr_uid_name_get (&un, uid, pool))
-            SVN_ERR (svn_utf_cstring_to_utf8 (&def_username, un, NULL, pool));
+            SVN_ERR (svn_utf_cstring_to_utf8 (&def_username, un, pool));
         }
 
       def_password = apr_hash_get (parameters, 
@@ -240,7 +240,7 @@ prompt_for_username_creds (svn_auth_cred_username_t **cred_p,
          
           if (! apr_uid_current (&uid, &gid, pool)
               && ! apr_uid_name_get (&un, uid, pool))
-            SVN_ERR (svn_utf_cstring_to_utf8 (&def_username, un, NULL, pool));
+            SVN_ERR (svn_utf_cstring_to_utf8 (&def_username, un, pool));
         }
     }    
 
