@@ -453,13 +453,9 @@ log_do_modify_entry (struct log_runner *loggy,
   apr_hash_t *ah = svn_xml_make_att_hash (atts, loggy->pool);
   svn_string_t *sname = svn_string_create (name, loggy->pool);
   svn_string_t *tfile = svn_string_dup (loggy->path, loggy->pool);
-  svn_string_t *pfile;
   svn_wc_entry_t *entry;
   apr_uint16_t modify_flags;
   svn_string_t *valuestr;
-  apr_time_t text_time;
-  apr_time_t prop_time;
-
 
   /* Convert the attributes into an entry structure. */
   SVN_ERR (svn_wc__atts_to_entry (&entry, &modify_flags, ah, loggy->pool));
@@ -476,6 +472,8 @@ log_do_modify_entry (struct log_runner *loggy,
       && (! strcmp (valuestr->data, SVN_WC_TIMESTAMP_WC)))
     {
       enum svn_node_kind tfile_kind;
+      apr_time_t text_time;
+
       if (strcmp (sname->data, SVN_WC_ENTRY_THIS_DIR))
         svn_path_add_component (tfile, sname, svn_path_local_style);
       
@@ -490,6 +488,8 @@ log_do_modify_entry (struct log_runner *loggy,
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
            "error getting file affected time on %s", tfile->data);
+
+      entry->text_time = text_time;
     }
 
   /* PROP_TIME: */
@@ -499,7 +499,10 @@ log_do_modify_entry (struct log_runner *loggy,
   if ((modify_flags & SVN_WC__ENTRY_MODIFY_PROP_TIME)
       && (! strcmp (valuestr->data, SVN_WC_TIMESTAMP_WC)))
     {
+      svn_string_t *pfile;
       enum svn_node_kind pfile_kind;
+      apr_time_t prop_time;
+
       err = svn_wc__prop_path (&pfile, tfile, 0, loggy->pool);
       if (err)
         signal_error (loggy, err);
@@ -515,6 +518,8 @@ log_do_modify_entry (struct log_runner *loggy,
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
            "error getting file affected time on %s", pfile->data);
+
+      entry->prop_time = prop_time;
     }
 
   /* Now write the new entry out */
@@ -926,6 +931,34 @@ log_do_committed (struct log_runner *loggy,
             return svn_error_createf
               (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
                "error merge_syncing %s", name);
+
+          /* Also, if this is a directory, don't forget to reset the
+             state in the parent's entry for this directory. */
+          if (is_this_dir)
+            {
+              svn_string_t *pdir, *basename;
+              
+              svn_path_split (loggy->path, &pdir, &basename,
+                              svn_path_local_style, loggy->pool);
+              if (! svn_path_is_empty (pdir, svn_path_local_style))
+                {
+                  err = svn_wc__entry_modify
+                    (pdir,
+                     basename,
+                     (SVN_WC__ENTRY_MODIFY_SCHEDULE 
+                      | SVN_WC__ENTRY_MODIFY_FORCE),
+                     SVN_INVALID_REVNUM,
+                     svn_node_dir,
+                     svn_wc_schedule_normal,
+                     svn_wc_existence_normal,
+                     FALSE,
+                     0,
+                     0,
+                     NULL,
+                     loggy->pool,
+                     NULL);
+                }
+            }
         }
     }
 

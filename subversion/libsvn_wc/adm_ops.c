@@ -173,7 +173,7 @@ svn_wc_set_revision (void *baton,
   else
     {
       /* PATH must be a dir */
-      svn_string_t *pdir, *bname;
+      svn_string_t *pdir;
 
       if (svn_path_is_empty (log_parent, svn_path_local_style))
         {
@@ -190,16 +190,13 @@ svn_wc_set_revision (void *baton,
           pdir = log_parent;
         }
 
-      bname = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
-
       SVN_ERR (svn_wc__entry_modify
                (pdir, 
-                bname, 
-                (SVN_WC__ENTRY_MODIFY_REVISION 
-                 | SVN_WC__ENTRY_MODIFY_SCHEDULE), 
+                basename,
+                SVN_WC__ENTRY_MODIFY_REVISION,
                 new_revnum,
                 svn_node_none, 
-                svn_wc_schedule_unadd,
+                svn_wc_schedule_normal,
                 svn_wc_existence_normal,
                 FALSE,
                 0, 
