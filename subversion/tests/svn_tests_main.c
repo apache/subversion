@@ -31,7 +31,7 @@
 #include "svn_test.h"
 #include "svn_io.h"
 #include "svn_path.h"
-#include "../svn_private_config.h"
+#include "svn_private_config.h"
 
 
 /* Some Subversion test programs may want to parse options in the
