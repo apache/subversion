@@ -51,13 +51,13 @@
       To make sure httpd.conf is properly set up for DAV access, see
       subversion/tests/clients/cmdline/README.
 
-   d. 
-
       Also, see sections 'Building the Latest Source under Unix' and
       'BUILDING A SUBVERSION SERVER' in the INSTALL file. for more
       detailed build information.
 
-   d. Run ./autogen.sh
+   d. Run './autogen.sh && ./configure' so the docs can get built in
+      the branch tree (in step 4, dist.sh will move the built docs
+      into the release sandbox).
 
 4. Run './dist.sh [ARGS ...]'    (see dist.sh for details about ARGS)
    Watch dist.sh's output to make sure everything goes smoothly; when
