@@ -105,6 +105,12 @@ static jobject convert_hash(JNIEnv* jenv, apr_hash_t *hash,
   return dict;
 }
 
+void svn_swig_java_add_to_list(JNIEnv* jenv, apr_array_header_t *array,
+                               jobject list)
+{
+  /* TODO: This impl will be much like svn_swig_java_add_to_map */
+}
+
 void svn_swig_java_add_to_map(JNIEnv* jenv, apr_hash_t *hash, jobject map)
 {
   apr_hash_index_t *hi;
