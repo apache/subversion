@@ -159,13 +159,13 @@ sub status_update_commit
         s/\r*$//;               # [Windows compat] Remove trailing \r's
         $acceptable_error = 1 if ( /^svn:[ ]
                                    (
-                                    Transaction[ ]is[ ]out[ ]of[ ]date
+                                    Out[ ]of[ ]date
                                     |
-                                    Merge[ ]conflict[ ]during[ ]commit
+                                    Conflict[ ]at
                                     |
                                     Baseline[ ]incorrect
                                    )
-                                   $/x );
+                                   /x );
       }
     close COMMIT_ERR_READ or die "close COMMIT_ERR_READ: $!\n";
     close COMMIT_WRITE or die "close COMMIT_WRITE: $!\n";
