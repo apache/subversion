@@ -298,7 +298,7 @@ free_file_baton (struct file_baton *fb)
 static svn_error_t *
 read_from_file (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
 {
-  apr_file_t *fp = (apr_file_t *) baton;
+  apr_file_t *fp = baton;
   apr_status_t status;
 
   if (fp == NULL)
@@ -317,10 +317,10 @@ static svn_error_t *
 write_to_file (void *baton, const char *data, apr_size_t *len,
                apr_pool_t *pool)
 {
-  apr_file_t *fp = (apr_file_t *) baton;
+  apr_file_t *fp = baton;
   apr_status_t status;
 
-  status = apr_full_write(fp, data, *len, len);
+  status = apr_full_write (fp, data, *len, len);
   if (status)
     return svn_error_create (status, 0, NULL, pool,
                              "Can't write new base file");
@@ -331,7 +331,7 @@ write_to_file (void *baton, const char *data, apr_size_t *len,
 static svn_error_t *
 window_handler (svn_txdelta_window_t *window, void *baton)
 {
-  struct handler_baton *hb = (struct handler_baton *) baton;
+  struct handler_baton *hb = baton;
   struct file_baton *fb = hb->fb;
   svn_error_t *err = NULL, *err2 = NULL;
 
@@ -423,7 +423,7 @@ static svn_error_t *
 replace_root (void *edit_baton,
               void **dir_baton)
 {
-  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct edit_baton *eb = edit_baton;
   struct dir_baton *d;
   svn_error_t *err;
   svn_string_t *ancestor_path;
@@ -453,7 +453,7 @@ replace_root (void *edit_baton,
 static svn_error_t *
 delete (svn_string_t *name, void *parent_baton)
 {
-  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
+  struct dir_baton *parent_dir_baton = parent_baton;
   
   return svn_wc__entry_merge (parent_dir_baton->path, 
                               name,
@@ -475,7 +475,7 @@ add_directory (svn_string_t *name,
                void **child_baton)
 {
   svn_error_t *err;
-  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
+  struct dir_baton *parent_dir_baton = parent_baton;
 
   struct dir_baton *this_dir_baton
     = make_dir_baton (name,
@@ -518,7 +518,7 @@ replace_directory (svn_string_t *name,
                    void **child_baton)
 {
 #if 0
-  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
+  struct dir_baton *parent_dir_baton = parent_baton;
 #endif /* 0 */
 
   /* kff todo */
@@ -532,7 +532,7 @@ change_dir_prop (void *dir_baton,
                  svn_string_t *name,
                  svn_string_t *value)
 {
-  struct dir_baton *this_dir_baton = (struct dir_baton *) dir_baton;
+  struct dir_baton *this_dir_baton = dir_baton;
 
   this_dir_baton->prop_changed = 1;
 
@@ -544,7 +544,7 @@ change_dir_prop (void *dir_baton,
 static svn_error_t *
 close_directory (void *dir_baton)
 {
-  struct dir_baton *this_dir_baton = (struct dir_baton *) dir_baton;
+  struct dir_baton *this_dir_baton = dir_baton;
   svn_error_t *err = NULL;
 
   err = decrement_ref_count (this_dir_baton);
@@ -571,7 +571,7 @@ add_or_replace_file (svn_string_t *name,
                      void **file_baton,
                      svn_boolean_t adding)  /* 0 if replacing */
 {
-  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
+  struct dir_baton *parent_dir_baton = parent_baton;
   struct file_baton *fb;
   svn_error_t *err;
 
@@ -650,7 +650,7 @@ apply_textdelta (void *file_baton,
                  svn_txdelta_window_handler_t **handler,
                  void **handler_baton)
 {
-  struct file_baton *fb = (struct file_baton *) file_baton;
+  struct file_baton *fb = file_baton;
   apr_pool_t *subpool = svn_pool_create (fb->pool);
   struct handler_baton *hb = apr_palloc (subpool, sizeof (*hb));
   svn_error_t *err;
@@ -699,7 +699,7 @@ change_file_prop (void *file_baton,
                   svn_string_t *name,
                   svn_string_t *value)
 {
-  struct file_baton *fb = (struct file_baton *) file_baton;
+  struct file_baton *fb = file_baton;
 
   /* kff todo */
 
@@ -712,7 +712,7 @@ change_file_prop (void *file_baton,
 static svn_error_t *
 close_file (void *file_baton)
 {
-  struct file_baton *fb = (struct file_baton *) file_baton;
+  struct file_baton *fb = file_baton;
   apr_file_t *log_fp = NULL;
   svn_error_t *err;
   apr_status_t apr_err;
@@ -927,7 +927,7 @@ close_file (void *file_baton)
 static svn_error_t *
 close_edit (void *edit_baton)
 {
-  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  struct edit_baton *eb = edit_baton;
 
   /* The edit is over, free its pool. */
   apr_destroy_pool (eb->pool);

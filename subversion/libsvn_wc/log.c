@@ -174,7 +174,7 @@ signal_error (struct log_runner *loggy, const char *fmt)
 static void
 start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
 {
-  struct log_runner *loggy = (struct log_runner *) userData;
+  struct log_runner *loggy = userData;
   svn_error_t *err = NULL;
 
   /* Most elements have a name attribute, so try to grab one now. */
