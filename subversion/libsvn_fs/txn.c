@@ -240,74 +240,118 @@ struct commit_txn_args
 {
   svn_fs_txn_t *txn;
   svn_revnum_t new_rev;
-  char *conflict;
+  const char *conflict;
 };
 
 
-/* ### kff todo: in progress */
 static svn_error_t *
 txn_body_commit_txn (void *baton, trail_t *trail)
 {
-#if 0
-  struct commit_txn_args *commit_args = baton;
+  struct commit_txn_args *args = baton;
 
-  while (1)
+  svn_fs_txn_t *txn = args->txn;
+  svn_revnum_t youngest_rev;
+  svn_fs_id_t *txn_root_id, *base_root_id, *youngest_root_id;
+  dag_node_t *txn_root_node;
+
+  /* ### kff todo:
+   *
+   * Completely punting on the question of committing an
+   * unmodified txn.  I'm not really sure what should happen in
+   * that case.  Consider this sequence of events:
+   * 
+   *    1.  Bill begins txn T, based on revision 3.
+   *    2.  Jane commits revisions 4, 5, and 6.
+   *    3.  Bill commits T, never having modified it.
+   *
+   * T can't conflict with Jane's changes, because Bill made no
+   * changes himself -- T is essentially a reversion from 6 to 3.
+   * But honestly: could Bill really have meant to revert 4, 5,
+   * and 6?  One doubts that he's ever even seen those changes.
+   *
+   * So should we...
+   *
+   *    a) Robotically do the merge, pointlessly committing
+   *       revision 7 with the same root as revision 6? 
+   *
+   *    b) Commit revision 7 with the same root as revision 3,
+   *       even though it's hard to believe the committer intended
+   *       to revert the intervening changes? 
+   *
+   *    c) Not commit 7 at all?
+   *
+   * Danged if I know.  Thoughts, anyone?  For now, I'm going with
+   * option (c), as it seems the least surprising result.
+   */
+  
+  SVN_ERR (svn_fs__get_txn (&txn_root_id, &base_root_id,
+                            txn->fs, txn->id, trail));
+  SVN_ERR (svn_fs__dag_get_node (&txn_root_node, txn->fs,
+                                 txn_root_id, trail));
+
+  /* See if we need to punt as promised above. */
   {
-    svn_error_t *err;
-
-    /* Merge any changes since base into the txn. */
-    {
-      svn_fs_root_t *base_root, *latest_root;
-      svn_revnum_t base, latest;
-      
-      /* Aha.  Houston, we have a problem.
-       *
-       * The interface to svn_fs_merge() uses svn_fs_root_t's and
-       * paths.  If we had the svn_fs_root_t for the base revision here,
-       * we'd be fine -- we could call svn_fs_merge() straight.
-       *
-       * Unfortunately, svn_fs_commit_txn takes just a txn.  The txn
-       * gets us a base_root_id and a txn_root_id, but it doesn't tell
-       * us what revision that base_root_id came from.  So we can't
-       * construct the right svn_fs_root_t to pass to svn_fs_merge()!
-       *
-       * But we _do_ have all the information we need to do a merge
-       * here, that's not at issue.  What is needed is an interface to
-       * merging that takes an txn and IDs instead of svn_fs_root_t's
-       * and paths.  Sigh.  A little bit of rewriting, but most of the
-       * work is (I think) done already.  
-       *
-       * Wish I had seen this coming. :-(
-       *
-       * This is not going to happen tonight.  I'll see y'all Monday.
-       */
-    }
-
-  /* Try to commit the next revision.  If someone already committed
-     it, re-merge and try again.  Else break outta here.  */
-
-    err = svn_fs__retry_txn (something here);
-
-    if (err && (err == whatever)) /* commit succeeded */
+    svn_boolean_t is_mutable;
+    SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, txn_root_node, trail));
+    if (! is_mutable)
       {
-        SVN_ERR (immutate_nodes (commit_args->txn));
-        SVN_ERR (unlock (the revisions table));
-        return SVN_NO_ERROR;
-      }
-    else if (err)
-      {
-        some other error, return it;
+        /* ### kff todo: not sure this is really what this error was
+           designed for, but don't want to create a new error for
+           behavior that may or may not change soon anyway. */
+        return svn_error_createf
+          (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
+           "Pointless attempt to commit unchanged txn `%s'", txn->id);
       }
   }
 
-#endif /* 0 */
+  SVN_ERR (svn_fs__youngest_rev (&youngest_rev, txn->fs, trail));
+  SVN_ERR (svn_fs__rev_get_root (&youngest_root_id, txn->fs,
+                                 youngest_rev, trail));
+  
+  if (! svn_fs_id_eq (base_root_id, youngest_root_id))
+    {
+      /* ### kff todo:
+       *
+       * We don't use svn_fs_merge here, because uses the
+       * root/path public interface, and we've got dag nodes and
+       * trails here.
+       */
+      
+      svn_error_t *err;
+      const char *conflict;
+      dag_node_t *base_root_node, *youngest_root_node;
+  
+      SVN_ERR (svn_fs__dag_get_node (&base_root_node, txn->fs,
+                                     base_root_id, trail));
+      SVN_ERR (svn_fs__dag_get_node (&youngest_root_node, txn->fs,
+                                     youngest_root_id, trail));
+
+      err = svn_fs__dag_merge (&conflict,
+                               "",
+                               youngest_root_node,
+                               txn_root_node,
+                               base_root_node,
+                               trail);
+
+      if (err && (err->apr_err == SVN_ERR_FS_CONFLICT))
+        {
+          args->conflict = conflict;
+          return err;
+        }
+      else if (err)
+        return err;
+    }
+
+  /* Any merging has been done.  Commit the txn. */
+  SVN_ERR (svn_fs__dag_commit_txn (&(args->new_rev), txn->fs, txn->id, trail));
 
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_fs_commit_txn (svn_revnum_t *new_rev, 
+svn_fs_commit_txn (const char **conflict_p,
+                   svn_revnum_t *new_rev, 
                    svn_fs_txn_t *txn)
 {
   /* How do commits work in Subversion?
@@ -327,9 +371,9 @@ svn_fs_commit_txn (svn_revnum_t *new_rev,
    * changes should not interfere with each other.
    *
    * The solution is to merge the changes between base and latest into
-   * the txn tree (see svn_fs_merge).  The txn tree is the only one of
-   * the three trees that is mutable, so it has to be the one to
-   * adjust.
+   * the txn tree (see svn_fs__dag_merge).  The txn tree is the only
+   * one of the three trees that is mutable, so it has to be the one
+   * to adjust.
    *
    * You might have to adjust it more than once, if a new latest
    * revision gets committed while you were merging in the previous
@@ -347,64 +391,42 @@ svn_fs_commit_txn (svn_revnum_t *new_rev,
    *    8. Jane commits T, creating revision 9, whose tree is exactly
    *       T's tree, except immutable now.
    *
-   * In steps 5 and 8, how did Jane know that she couldn't commit in
-   * the first case, and could in the second?  The answer is that she
-   * simply tried to commit a new revision latest + 1, using the
-   * latest revision number as of when she started the merge.  If
-   * Berkeley doesn't complain that latest + 1 already exists, then
-   * the commit succeeds.  If it does complain, then someone else must
-   * have committed during the merge, so Jane does another merge.
-   *
    * Lather, rinse, repeat.
-   *
-   * There are a couple of ways to handle the walk that changes
-   * mutable->immutable...
-   *
-   * Method A:
-   *
-   *   When the merge is done, but before attempting the commit, walk
-   *   the txn tree changing mutable nodes to immutable, and recording
-   *   these actions in the trail's undo list.  If the commit fails,
-   *   the undo list will be run.
-   *
-   * Method B:
-   *
-   *   Leave the nodes immutable when you commit, but make sure
-   *   successful commits leave the revision tree locked (the lock
-   *   must be created in the same Berkeley transaction that creates
-   *   the new revision number).
-   *
-   *   With this method, if the commit fails, there's no harm done --
-   *   your txn tree is still mutable.  If the commit succeeds, then
-   *   you have to walk a committed revision tree and make mutables
-   *   immutable (at the end of which, you remove that lock).  No one
-   *   else can commit a new revision until this is done.
-   *
-   *   Crash recovery is easier this way, because you can do a
-   *   constant-time inspection of the revisions table to know that
-   *   there's pending work.  The recovery algorithm is roughly: see
-   *   if the revisions table is locked, and if it is, do the
-   *   mutable->immutable walk in the latest revision tree, removing
-   *   the lock when done (in the same Berkeley transaction as the
-   *   mutability changes, of course).
-   *
-   * Now, method A has a problem: trail undo functions return void,
-   * because they're meant to revert in-memory data structures, not db
-   * stuff.
-   *
-   * Method B also has a problem, but maybe not as serious: it
-   * increases the amount of time writers wait for writers.  The
-   * revisions table would be locked while so-and-so walks her tree
-   * immutating nodes.  Big deal.  Let's go with it for now, unless
-   * there's a Method C...
    */
 
+  svn_error_t *err;
   struct commit_txn_args args;
+  svn_revnum_t youngest_rev, last_youngest_rev;
 
-  args.new_rev = SVN_INVALID_REVNUM;
-  args.txn = txn;
-  SVN_ERR (svn_fs__retry_txn (txn->fs, txn_body_commit_txn, &args, txn->pool));
-  *new_rev = args.new_rev;
+  /* Get the current youngest revision. */
+  SVN_ERR (svn_fs_youngest_rev (&youngest_rev, txn->fs, txn->pool));
+
+  do {
+    last_youngest_rev = youngest_rev;
+    
+    /* Try to commit. */
+    args.txn = txn;
+    err = svn_fs__retry_txn (txn->fs, txn_body_commit_txn,
+                             &args, txn->pool);
+    
+    if (! err)
+      {
+        *new_rev = args.new_rev;
+        break;
+      }
+    else if (err && (err->apr_err == SVN_ERR_FS_CONFLICT))
+      {
+        *conflict_p = args.conflict;
+        return err;
+      }
+    else if (err)
+      {
+        /* Another possibility is that someone finished committing a
+           new revision while we were in mid-commit.  If so, updating
+           youngest_rev here will cause the loop to run again. */  
+        SVN_ERR (svn_fs_youngest_rev (&youngest_rev, txn->fs, txn->pool));
+      }
+  } while (youngest_rev != last_youngest_rev);
 
   return SVN_NO_ERROR;
 }

@@ -161,24 +161,17 @@ svn_fs__rev_get_root (svn_fs_id_t **root_id_p,
 /* Getting the youngest revision.  */
 
 
-struct youngest_rev_args {
-  svn_revnum_t *youngest_p;
-  svn_fs_t *fs;
-};
-
-
-static svn_error_t *
-txn_body_youngest_rev (void *baton,
-                       trail_t *trail)
+svn_error_t *
+svn_fs__youngest_rev (svn_revnum_t *youngest_p,
+                      svn_fs_t *fs,
+                      trail_t *trail)
 {
-  struct youngest_rev_args *args = baton;
-
   int db_err;
   DBC *cursor = 0;
   DBT key, value;
   db_recno_t recno;
 
-  svn_fs_t *fs = args->fs;
+  SVN_ERR (svn_fs__check_fs (fs));
 
   /* Create a database cursor.  */
   SVN_ERR (DB_WRAP (fs, "getting youngest revision (creating cursor)",
@@ -221,7 +214,23 @@ txn_body_youngest_rev (void *baton,
   /* Turn the record number into a Subversion revision number.
      Revisions are numbered starting with zero; Berkeley DB record
      numbers begin with one.  */
-  *args->youngest_p = recno - 1;
+  *youngest_p = recno - 1;
+  return SVN_NO_ERROR;
+}
+
+
+struct youngest_rev_args {
+  svn_revnum_t youngest;
+  svn_fs_t *fs;
+};
+
+
+static svn_error_t *
+txn_body_youngest_rev (void *baton,
+                       trail_t *trail)
+{
+  struct youngest_rev_args *args = baton;
+  SVN_ERR (svn_fs__youngest_rev (&(args->youngest), args->fs, trail));
   return SVN_NO_ERROR;
 }
 
@@ -231,17 +240,14 @@ svn_fs_youngest_rev (svn_revnum_t *youngest_p,
                      svn_fs_t *fs,
                      apr_pool_t *pool)
 {
-  svn_revnum_t youngest;
   struct youngest_rev_args args;
 
   SVN_ERR (svn_fs__check_fs (fs));
 
-  args.youngest_p = &youngest;
   args.fs = fs;
-
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_youngest_rev, &args, pool));
 
-  *youngest_p = youngest;
+  *youngest_p = args.youngest;
   return SVN_NO_ERROR;
 }
 

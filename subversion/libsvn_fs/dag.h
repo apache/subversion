@@ -178,7 +178,8 @@ svn_error_t *svn_fs__dag_reroot_txn (svn_fs_t *fs,
                                      trail_t *trail);
 
 
-/* Commit the transaction SVN_TXN in FS, as part of TRAIL.  This entails:
+/* Commit the transaction SVN_TXN in FS, as part of TRAIL.  Store the
+   new revision number in *NEW_REV.  This entails:
    - marking the tree of mutable nodes at SVN_TXN's root as immutable,
      and marking all their contents as stable
    - creating a new revision, with SVN_TXN's root as its root directory
@@ -191,7 +192,8 @@ svn_error_t *svn_fs__dag_reroot_txn (svn_fs_t *fs,
    Do any necessary temporary allocation in a subpool of TRAIL->pool.
    Consume temporary space at most proportional to the maximum depth
    of SVN_TXN's tree of mutable nodes.  */
-svn_error_t *svn_fs__dag_commit_txn (svn_fs_t *fs,
+svn_error_t *svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
+                                     svn_fs_t *fs,
                                      const char *svn_txn,
                                      trail_t *trail);
 
@@ -420,6 +422,15 @@ svn_fs__dag_merge (const char **conflict_p,
                    dag_node_t *target,
                    dag_node_t *ancestor,
                    trail_t *trail);
+
+
+
+
+svn_error_t *
+svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
+                        svn_fs_t *fs,
+                        const char *svn_txn,
+                        trail_t *trail);
 
 
 #endif /* SVN_LIBSVN_FS_DAG_H */
