@@ -1219,6 +1219,45 @@ def update_to_deletion(sbox):
                                         wc_dir)
   
 
+#----------------------------------------------------------------------
+
+def update_deletion_inside_out(sbox):
+  "update child before parent of a deleted tree"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  parent_path = os.path.join(wc_dir, 'A', 'B')
+  child_path = os.path.join(parent_path, 'E')  # Could be a file, doesn't matter
+
+  # Delete the parent directory.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', parent_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', '', wc_dir)
+
+  # Update back to r1.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', '-r', '1', wc_dir)
+
+  # Update just the child to r2.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', '-r', '2', child_path)
+
+  # Now try a normal update.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B' : Item(status='D '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B', 'A/B/lambda', 'A/B/F',
+                       'A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        None)
+
+
 ########################################################################
 # Run the tests
 
@@ -1244,6 +1283,7 @@ test_list = [ None,
               non_recursive_update,
               checkout_empty_dir,
               update_to_deletion,
+              update_deletion_inside_out,
              ]
 
 if __name__ == '__main__':
