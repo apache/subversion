@@ -853,9 +853,13 @@ svn_fs_merge (const char **conflict_p,
 #if 0
 
   /* ancestor is dir, source is dir, target is dir */
-  if (svn_fs_is_dir (source_root, source_path)
-      && svn_fs_is_dir (target_root, target_path)
-      && svn_fs_is_dir (ancestor_root, ancestor_path))
+  if (svn_fs_id_eq (ancestor_id, target_id))
+    {
+      target takes source;
+    }
+  else if (svn_fs_is_dir (source_root, source_path)
+           && svn_fs_is_dir (target_root, target_path)
+           && svn_fs_is_dir (ancestor_root, ancestor_path))
     {
       /* ancestor is same as target, but different from source */
       if (svn_fs_id_eq (ancestor_id, target_id))
@@ -972,11 +976,7 @@ svn_fs_merge (const char **conflict_p,
        * In both cases, target stays the same.
        */
     }
-  else if (svn_fs_id_eq (ancestor_id, target_id))
-    {
-      target takes source;
-    }
-  else
+  else  /* they are distinct node revisions, and not all directories */
     {
       *conflict_p = target_path;
       return svn_error_createf
