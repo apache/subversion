@@ -33,19 +33,6 @@
 
 #include "../fs-helpers.h"
 
-#include "../../libsvn_fs/fs-loader.h"
-
-#include "../../libsvn_fs_base/fs.h"
-#include "../../libsvn_fs_base/dag.h"
-#include "../../libsvn_fs_base/node-rev.h"
-#include "../../libsvn_fs_base/trail.h"
-
-#include "../../libsvn_fs_base/bdb/rev-table.h"
-#include "../../libsvn_fs_base/bdb/txn-table.h"
-#include "../../libsvn_fs_base/bdb/nodes-table.h"
-
-#include "../../libsvn_delta/delta.h"
-
 #define SET_STR(ps, s) ((ps)->data = (s), (ps)->len = strlen(s))
 
 
