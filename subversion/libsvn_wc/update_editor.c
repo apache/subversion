@@ -489,10 +489,9 @@ delete_entry (const char *path,
   apr_status_t apr_err;
   apr_file_t *log_fp = NULL;
   const char *base_name;
-  svn_wc_adm_access_t *adm_access;
   svn_stringbuf_t *log_item = svn_stringbuf_create ("", pool);
 
-  SVN_ERR (svn_wc_adm_open (&adm_access, pb->path, TRUE, pool));
+  SVN_ERR (svn_wc_lock (pb->path, 0, pool));
   SVN_ERR (svn_wc__open_adm_file (&log_fp,
                                   pb->path,
                                   SVN_WC__ADM_LOG,
@@ -529,8 +528,8 @@ delete_entry (const char *path,
                                    TRUE, /* sync */
                                    pool));
     
-  SVN_ERR (svn_wc__run_log (adm_access, pool));
-  SVN_ERR (svn_wc_adm_close (adm_access));
+  SVN_ERR (svn_wc__run_log (pb->path, pool));
+  SVN_ERR (svn_wc_unlock (pb->path, pool));
 
   /* The passed-in `path' is relative to the anchor of the edit, so if
    * the operation was invoked on something other than ".", then
@@ -751,14 +750,13 @@ close_directory (void *dir_baton)
       svn_boolean_t prop_modified;
       apr_status_t apr_err;
       char *revision_str;
-      svn_wc_adm_access_t *adm_access;
       apr_file_t *log_fp = NULL;
 
       /* to hold log messages: */
       svn_stringbuf_t *entry_accum = svn_stringbuf_create ("", db->pool);
 
       /* Lock down the administrative area */
-      SVN_ERR (svn_wc_adm_open (&adm_access, db->path, TRUE, db->pool));
+      SVN_ERR (svn_wc_lock (db->path, 0, db->pool));
       
       /* Open log file */
       SVN_ERR (svn_wc__open_adm_file (&log_fp,
@@ -879,10 +877,10 @@ close_directory (void *dir_baton)
                                        db->pool));
 
       /* Run the log. */
-      SVN_ERR (svn_wc__run_log (adm_access, db->pool));
+      SVN_ERR (svn_wc__run_log (db->path, db->pool));
 
       /* Unlock, we're done modifying directory props. */
-      SVN_ERR (svn_wc_adm_close (adm_access));
+      SVN_ERR (svn_wc_unlock (db->path, db->pool));
     }
 
 
@@ -1176,7 +1174,6 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
   const char *parent_dir, *base_name;
   svn_stringbuf_t *log_accum;
   svn_boolean_t is_locally_modified;
-  svn_wc_adm_access_t *adm_access;
   svn_boolean_t magic_props_changed = FALSE, magic_props_caused_tweak = FALSE;
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
@@ -1192,7 +1189,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
   /* Lock the parent directory while we change things.  If for some
      reason the parent isn't under version control, this function will
      bomb out.  */
-  SVN_ERR (svn_wc_adm_open (&adm_access, parent_dir, TRUE, pool));
+  SVN_ERR (svn_wc_lock (parent_dir, 0, pool));
 
   /*
      When this function is called on file F, we assume the following
@@ -1661,7 +1658,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
   /* The log is ready to run.  Close it and run it! */
   SVN_ERR (svn_wc__close_adm_file (log_fp, parent_dir, SVN_WC__ADM_LOG,
                                    TRUE, /* sync */ pool));
-  SVN_ERR (svn_wc__run_log (adm_access, pool));
+  SVN_ERR (svn_wc__run_log (parent_dir, pool));
 
   /* Now that the file's text, props, and entries are fully installed,
      we dump any "wc" props.  ### This should be done *loggily*, see
@@ -1716,7 +1713,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
     }
 
   /* Unlock the parent dir, we're done with this file installation. */
-  SVN_ERR (svn_wc_adm_close (adm_access));
+  SVN_ERR (svn_wc_unlock (parent_dir, pool));
 
   return SVN_NO_ERROR;
 }

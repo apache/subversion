@@ -320,8 +320,8 @@ svn_client__get_diff_editor (const char *target,
    At the successful return of this function, COMMITTABLES will be an
    apr_hash_t * hash of apr_array_header_t * arrays (of
    svn_client_commit_item_t * structures), keyed on const char *
-   canonical repository URLs.  Also, LOCKED_DIRS will be an apr_hash_t *
-   hash of svn_wc_adm_access_t * keyed on const char * working copy path
+   canonical repository URLs.  Also, LOCKED_DIRS will be an apr_hash_t
+   * hash of meaningless data keyed on const char * working copy path
    directory names which were locked in the process of this crawl.
    These will need to be unlocked again post-commit.
 

@@ -375,12 +375,9 @@ unlock_dirs (apr_hash_t *locked_dirs,
   for (hi = apr_hash_first (pool, locked_dirs); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      void *val;
-      svn_wc_adm_access_t *adm_access;
 
-      apr_hash_this (hi, &key, NULL, &val);
-      adm_access = val;
-      SVN_ERR (svn_wc_adm_close (adm_access));
+      apr_hash_this (hi, &key, NULL, NULL);
+      SVN_ERR (svn_wc_unlock (key, pool));
     }
 
   return SVN_NO_ERROR;
@@ -579,7 +576,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                                               auth_baton, pool)))
     goto cleanup;
 
-  /* Fetch RA commit editor */
+  /* Fetch RA commit editor, giving it svn_wc_process_committed(). */
   if ((cmt_err = ra_lib->get_commit_editor (session, &editor, &edit_baton, 
                                             &committed_rev, &committed_date, 
                                             &committed_author, message)))
