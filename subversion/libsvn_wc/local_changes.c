@@ -1,5 +1,5 @@
 /*
- * lock.c:  routines for locking working copy subdirectories.
+ * local_changes.c:  preserving local mods across updates.
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -51,59 +51,87 @@
 
 #include <apr_pools.h>
 #include <apr_time.h>
+#include <apr_strings.h>
+#include "svn_wc.h"
 #include "wc.h"
 
 
 
 
-svn_error_t *
-svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
+struct svn_wc__diff_holder
 {
-  svn_error_t *err = NULL;
+  apr_pool_t *pool;
+};
 
-  /* kff todo: hmmm, feel kind of bad about this -- we're allocating
-     another error for every time we try and fail to get a lock.  But
-     it's not that much memory, and it happens rarely, and the number
-     of retries is likely to be very small.  Really cannot get used to
-     this pool stuff. :-) */
 
-  do {
-    err = svn_wc__make_adm_thing (path, SVN_WC__ADM_LOCK,
-                                  svn_file_kind, 0, pool);
-    if (err)
-      {
-        if (err->apr_err == APR_EEXIST)
-          {
-            /* kff todo: hey, apr_sleep() is broken. */
-            apr_sleep (1000);  /* micro-seconds */
-            wait--;
-          }
-        else
-          return err;
-      }
-    else
-      return SVN_NO_ERROR;
-  } while (wait > 0);
+svn_error_t *
+svn_wc__generic_differ (void *user_data,
+                        void **result,
+                        svn_string_t *src,
+                        svn_string_t *target)
+{
+  struct svn_wc__diff_holder *holder;
+  apr_pool_t *pool = (apr_pool_t *) user_data;
 
-  /* If haven't returned by now, then must have encountered a lock. */
-  {
-    svn_string_t *msg = svn_string_create ("working copy locked: ", pool);
-    svn_string_appendstr (msg, path, pool);
-    return svn_create_error (SVN_ERR_WC_LOCKED, 0, msg->data, NULL, pool);
-  }
+  /* kff todo: someday, do "diff -c SVN/text-base/foo ./foo" and store
+     the result in *RESULT. */
+  
+  holder = apr_pcalloc (pool, sizeof (*holder));
+  holder->pool = pool;
+  *result = holder;
+
+  return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_wc__unlock (svn_string_t *path, apr_pool_t *pool)
+svn_wc__generic_patcher (void *user_data,
+                         svn_string_t *src,
+                         svn_string_t *target)
 {
-  return svn_wc__remove_adm_thing (path, SVN_WC__ADM_LOCK, pool);
+  struct svn_wc__diff_holder *holder 
+    = (struct svn_wc__diff_holder *) user_data;
+  apr_pool_t *pool = holder->pool;
+  apr_status_t apr_err;
+
+  /* kff todo: someday, take CHANGES, which are the result of "diff -c
+     SVN/text-base/foo ./foo", and re-apply them to the 
+     file.  If any hunks fail, that's a conflict, do what CVS does. */
+
+  /* kff todo: "Patch?  We don't need no stinkin' patch."  Just
+     overwrite local mods for now. */
+
+  apr_err = apr_copy_file (src->data, target->data, pool);
+  if (apr_err)
+    {
+      /* kff todo: write svn_io_copy_file ? */
+      char *msg = apr_psprintf (pool, "copying %s to %s",
+                                src->data, target->data);
+      return svn_create_error (apr_err, 0, msg, NULL, pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
-
-/* 
- * local variables:
- * eval: (load-file "../svn-dev.el")
- * end:
- */
+svn_error_t *
+svn_wc__get_local_changes (svn_wc_diff_fn_t *diff_fn,
+                           void **result,
+                           svn_string_t *path,
+                           apr_pool_t *pool)
+{
+  return (*diff_fn) (pool, result, path, svn_wc__text_base_path (path, pool));
+}
+
+
+svn_error_t *
+svn_wc__merge_local_changes (svn_wc_patch_fn_t *patch_fn,
+                             void *changes,
+                             svn_string_t *path,
+                             apr_pool_t *pool)
+{
+  /* kff todo: this will be reworked.  for now, just reverse source
+     and dest to achieve desired effect. */
+  return (*patch_fn) (changes, svn_wc__text_base_path (path, pool), path);
+}
+

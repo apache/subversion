@@ -143,6 +143,37 @@ svn_error_t *svn_wc_get_update_editor (svn_string_t *dest,
                                        apr_pool_t *pool);
 
 
+
+/*** Generic diffing and patching (tentative). ***/
+
+/* Users of the working copy library can define custom diff/merge
+   functions to preserve local mods across updates.  The working copy
+   library itself only knows how to do GNU diff and patch on text
+   files. */
+
+/* kff todo: yes, ppl can define these, but it's not yet clear where
+   these functions will get plugged in.  For now, the wc library will
+   define one versatile pair of functions, one taking an actual system
+   command to produce the diff, and another the command to apply the
+   diff.  If that turns out to be sufficient, then the interface below
+   can become strictly internal to libsvn_wc. */
+
+/* Compute the diff between SRC and TARGET, store the result in
+ * *RESULT, which should be the USER_DATA for a matching call to
+ * svn_wc_patcher().
+ */
+typedef svn_error_t *svn_wc_diff_fn_t (void *user_data,
+                                       void **result,
+                                       svn_string_t *src,
+                                       svn_string_t *target);
+
+/* Apply the diff in USER_DATA to SRC to obtain TARGET. */
+typedef svn_error_t *svn_wc_patch_fn_t (void *user_data,
+                                        svn_string_t *src,
+                                        svn_string_t *target);
+
+
+
 #if 0
 /* kff: Will have to think about the interface here a bit more. */
 

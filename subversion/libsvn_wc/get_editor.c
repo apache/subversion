@@ -577,26 +577,49 @@ close_file (void *edit_baton, void *file_baton)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
   svn_error_t *err;
+  void *local_changes;
 
   err = svn_wc__lock (fb->dir_baton->path, 0, fb->dir_baton->pool);
   if (err)
     return err;
 
+  /* kff todo: if we return before unlocking, which is possible below,
+     that might be badness... */
+
   /* kff todo: here is where we would first write out the log file,
      and then loop over it doing the operations.  Below is mostly
      cheating. */
 
+  /* Save local mods. */
+  err = svn_wc__get_local_changes (svn_wc__generic_differ,
+                                   &local_changes,
+                                   fb->path,
+                                   fb->dir_baton->pool);
+  if (err)
+    return err;
+
+  /* Update the text-base copy. */
   if (fb->text_changed)
     {
       err = svn_wc__sync_text_base (fb->path, fb->dir_baton->pool);
-      if (err)  /* kff todo: unlock before erroring out here?  Hmmm... */
+      if (err)
         return (err);
     }
 
+  /* Restore from text-base, attempting to apply local_mods. */
+  err = svn_wc__merge_local_changes (svn_wc__generic_patcher,
+                                     local_changes,
+                                     fb->path,
+                                     fb->dir_baton->pool);
+  if (err)
+    return (err);
+
+  /* Unlock, we're done with this file. */
   err = svn_wc__unlock (fb->dir_baton->path, fb->dir_baton->pool);
   if (err)
     return err;
 
+  /* Tell the directory it has one less thing to worry about. */
   err = decrement_ref_count (fb->dir_baton);
   if (err)
     return err;

@@ -14,6 +14,7 @@ done
 
 # Check out all the deltas.
 for num in 1 2; do
+   echo ./checkout-test checkout-${num}.delta ${num}/this/is/a/test/dir
    ./checkout-test checkout-${num}.delta ${num}/this/is/a/test/dir
 done
 

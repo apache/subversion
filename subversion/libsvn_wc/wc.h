@@ -53,6 +53,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_wc.h"
 
 
 
@@ -196,6 +197,12 @@ svn_error_t *
 svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool);
 
 
+/* Return a path to PATH's text-base file.
+   kff todo: this exists only for the benefit of temporary diff/merge
+   code right now; not sure if it should really stay forever. */
+svn_string_t *svn_wc__text_base_path (svn_string_t *path, apr_pool_t *pool);
+
+
 /* Ensure that PATH is a locked working copy directory.
  *
  * (In practice, this means creating an adm area if none exists, in
@@ -237,6 +244,45 @@ svn_string_t *svn_wc__versions_init_contents (svn_vernum_t version,
 
 /*** General utilities that may get moved upstairs at some point. */
 svn_error_t *svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool);
+
+
+
+/*** This will go into APR eventually. ***/
+
+apr_status_t apr_copy_file (const char *src,
+                            const char *dst,
+                            apr_pool_t *pool);
+
+
+
+/*** Diffing and merging ***/
+
+/* Note: diffing and merging is about discovering local changes to a
+ * file and merging them back into an updated version of that file,
+ * not about txdeltas.
+ */
+
+/* Get local changes. */
+svn_error_t *svn_wc__get_local_changes (svn_wc_diff_fn_t *diff_fn,
+                                        void **result,
+                                        svn_string_t *path,
+                                        apr_pool_t *pool);
+
+/* An svn_wc_diff_fn_t for above. */
+svn_error_t *svn_wc__generic_differ (void *user_data,
+                                     void **result,
+                                     svn_string_t *src,
+                                     svn_string_t *target);
+
+/* Re-apply local changes to a copy that may have been updated. */
+svn_error_t *svn_wc__merge_local_changes (svn_wc_patch_fn_t *patch_fn,
+                                          void *changes,
+                                          svn_string_t *path,
+                                          apr_pool_t *pool);
+/* An svn_wc_patch_fn_t for above. */
+svn_error_t *svn_wc__generic_patcher (void *user_data,
+                                      svn_string_t *src,
+                                      svn_string_t *target);
 
 
 
