@@ -1969,7 +1969,7 @@ merging_commit (const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *revision_root;
   svn_revnum_t after_rev;
-  svn_revnum_t revisions[48];
+  svn_revnum_t revisions[24];
   int i;
   int revision_count;
 
@@ -2340,8 +2340,27 @@ merging_commit (const char **msg,
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
       SVN_ERR (svn_fs_delete_tree (txn_root, "A/D/H", pool));
       SVN_ERR (svn_fs_make_dir (txn_root, "A/D/H", pool));
-      SVN_ERR (test_commit_txn (&after_rev, txn, "/A/D/H", pool));
+      SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+      revisions[revision_count++] = after_rev;
 
+      /*********************************************************************/
+      /* REVISION 7 */
+      /*********************************************************************/
+      
+      /* Re-remove A/D/H because future tests expect it to be absent. */
+      {
+        SVN_ERR (svn_fs_begin_txn 
+                 (&txn, fs, revisions[revision_count - 1], pool));
+        SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+        SVN_ERR (svn_fs_delete_tree (txn_root, "A/D/H", pool));
+        SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+        revisions[revision_count++] = after_rev;
+      }
+
+      /*********************************************************************/
+      /* REVISION 8 (looks exactly like revision 6, we hope) */
+      /*********************************************************************/
+      
       /* (1) but refers to different revisions of the same node.
          Conflict. */
       SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
@@ -2359,7 +2378,7 @@ merging_commit (const char **msg,
       SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
 
       /*********************************************************************/
-      /* REVISION 7 */
+      /* REVISION 9 */
       /*********************************************************************/
       {
         svn_test__tree_entry_t expected_entries[] = {
@@ -2406,7 +2425,7 @@ merging_commit (const char **msg,
            (txn_root, "A/D/G/xi", "This is the file 'xi'.\n", pool));
   SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
   /*********************************************************************/
-  /* REVISION 8 */
+  /* REVISION 10 */
   /*********************************************************************/
   {
     svn_test__tree_entry_t expected_entries[] = {
@@ -2484,7 +2503,7 @@ merging_commit (const char **msg,
                (txn_root, "A/sigma", "This is the file 'sigma'.\n", pool));
       SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
       /*********************************************************************/
-      /* REVISION 9 */
+      /* REVISION 11 */
       /*********************************************************************/
       {
         svn_test__tree_entry_t expected_entries[] = {
@@ -2532,7 +2551,7 @@ merging_commit (const char **msg,
            (txn_root, "A/B/lambda", "Change to file 'lambda'.\n", pool));
   SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
   /*********************************************************************/
-  /* REVISION 10 */
+  /* REVISION 12 */
   /*********************************************************************/
   {
     svn_test__tree_entry_t expected_entries[] = {
@@ -2588,7 +2607,7 @@ merging_commit (const char **msg,
              (txn_root, "A/D/G/nu", "This is the file 'nu'.\n", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
     /*********************************************************************/
-    /* REVISION 11 */
+    /* REVISION 13 */
     /*********************************************************************/
     {
       svn_test__tree_entry_t expected_entries[] = {
@@ -2655,7 +2674,7 @@ merging_commit (const char **msg,
                 "This is an irrelevant change to 'rho'.\n", pool));
       SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
       /*********************************************************************/
-      /* REVISION 12 */
+      /* REVISION 14 */
       /*********************************************************************/
       {
         svn_test__tree_entry_t expected_entries[] = {
@@ -2703,16 +2722,6 @@ merging_commit (const char **msg,
     /* This has now been tested about fifty-four trillion times.  We
        don't need to test it again here. */
   }
-
-  /* E exists in ANCESTOR, but has been deleted from A.  E exists in
-     both ANCESTOR and B but refers to different nodes.  Conflict.  */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_fs_delete (txn_root, "iota", pool));
-  SVN_ERR (svn_fs_make_file (txn_root, "iota", pool));
-  SVN_ERR (svn_test__set_file_contents 
-           (txn_root, "iota", "New contents for 'iota'.\n", pool));
-  SVN_ERR (test_commit_txn (&after_rev, txn, "/iota", pool));
 
   /* E exists in ANCESTOR, but has been deleted from A.  E exists in
      both ANCESTOR and B but refers to different revisions of the same
