@@ -167,11 +167,14 @@
 %typemap(python,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
     "$1 = &temp;";
 
-%typemap(python,argout,fragment="t_output_helper") svn_filesize_t *
-    "$result = t_output_helper($result,PyInt_FromLong((long) (*$1)));";
-
 %typemap(perl5,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
     "$1 = &temp;";
+
+#ifdef SVN_FILESIZE_T_FMT == "lld"
+
+%typemap(python,argout,fragment="t_output_helper") svn_filesize_t *
+    "$result = t_output_helper($result,
+                               PyInt_FromLongLong((long long) (*$1)));";
 
 /* XXX: apply long long *OUTPUT doesn't track $1 correctly */
 %typemap(perl5,argout) svn_filesize_t * {
@@ -180,6 +183,15 @@
     ST(argvi) = sv_newmortal();
     sv_setpv((SV*)ST(argvi++), temp);
 };
+
+#elif SVN_FILESIZE_T_FMT == "ld"
+
+%typemap(python,argout,fragment="t_output_helper") svn_filesize_t *
+    "$result = t_output_helper($result,PyInt_FromLong((long) (*$1)));";
+
+%apply long *OUTPUT { svn_filesize_t * };
+
+#endif 
 
 /* -----------------------------------------------------------------------
    Define a general ptr/len typemap. This takes a single script argument
