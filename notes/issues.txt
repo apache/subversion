@@ -15,9 +15,9 @@ Here's a summary of my understanding of the status quo.
       We've agreed that replace_file() is only to be used for applying
       text or prop deltas.  If we're replacing the file with a
       completely new dirent, we treat is as a *directory* change by
-      doing a delete() and add().  In both cases, the ancestor path of
-      a replace_*() call is inferred from the parent directory baton.
-      Revision numbers are still needed, however.
+      doing a delete() and add().  For both files and directories, the
+      ancestor path of a replace_*() call is inferred from the parent
+      directory baton.  Revision numbers are still needed, however.
 
   * Description: allow multiple replace_root() calls within an edit.
 
@@ -30,6 +30,8 @@ Here's a summary of my understanding of the status quo.
       the problem of "multiple targets on the command line" much
       easier to deal with.
 
+   kff notes: actually, Greg Hudson is iffy about this and, on
+   reflection, so am I.
 
 
 * RA-Dav Issues
