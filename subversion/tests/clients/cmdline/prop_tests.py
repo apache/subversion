@@ -195,7 +195,7 @@ def update_props(sbox):
                                                expected_output_tree,
                                                expected_disk_tree,
                                                expected_status_tree,
-                                               None, None, None, None, 1)
+                                               None, None, None, None, None, 1)
 
 #----------------------------------------------------------------------
 
@@ -280,7 +280,7 @@ def downdate_props(sbox):
                                                expected_output_tree,
                                                expected_disk_tree,
                                                expected_status_tree,
-                                               None, None, None, None, 1,
+                                               None, None, None, None, None, 1,
                                                '-r1')
 
 #----------------------------------------------------------------------

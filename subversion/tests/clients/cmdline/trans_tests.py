@@ -341,7 +341,7 @@ This is the file 'rho'.>>>>>>> .r1
   return svntest.actions.run_and_verify_update(wc_dir,
                                                expected_output_tree,
                                                expected_disk_tree,
-                                               None,
+                                               None, None,
                                                do_nothing, None,
                                                None, None,
                                                0, '-r', '1')

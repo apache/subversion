@@ -678,9 +678,8 @@ def hudson_part_1(sbox):
   return svntest.actions.run_and_verify_update(wc_dir,
                                                expected_output_tree,
                                                expected_disk_tree,
-                                               expected_status_tree,
-                                               None, None, None, None,
-                                               0)
+                                               expected_status_tree)
+
 
 #----------------------------------------------------------------------
 
@@ -747,9 +746,7 @@ def hudson_part_1_variation_1(sbox):
   return svntest.actions.run_and_verify_update(wc_dir,
                                                expected_output_tree,
                                                expected_disk_tree,
-                                               expected_status_tree,
-                                               None, None, None, None,
-                                               0)
+                                               expected_status_tree)
 
 #----------------------------------------------------------------------
 
@@ -997,9 +994,7 @@ def merge_mixed_revisions(sbox):
   if svntest.actions.run_and_verify_update (H_path,
                                             expected_output_tree,
                                             expected_disk_tree,
-                                            expected_status_tree,
-                                            None, None, None, None,
-                                            0):
+                                            expected_status_tree):
     return 1
 
 
