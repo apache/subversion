@@ -32,8 +32,17 @@ command-line client - svn.
 
 =cut
 
+package _p_svn_client_commit_info_t;                                           
+use SVN::Base qw(Client svn_client_commit_info_t_);                            
+                                                                               
+package _p_svn_client_commit_item_t;                                           
+use SVN::Base qw(Client svn_client_commit_item_t_);                            
+
 package _p_svn_client_ctx_t;
 use SVN::Base qw(Client svn_client_ctx_t_);
+
+package _p_svn_client_proplist_item_t;                                         
+use SVN::Base qw(Client svn_client_proplist_item_t_);
 
 =head1 AUTHORS
 
