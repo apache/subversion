@@ -42,6 +42,7 @@ struct notify_baton
   svn_boolean_t is_export;
   svn_boolean_t suppress_final_line;
   svn_boolean_t sent_first_txdelta;
+  svn_boolean_t in_external;
   apr_pool_t *pool; /* this pool is cleared after every notification,
                        so don't keep anything here! */
 };
@@ -165,6 +166,9 @@ notify (void *baton,
       /* Currently this is used for checkouts and switches too.  If we
          want different output, we'll have to add new actions. */
       printf ("\nFetching external item into %s\n", path_stdout);
+
+      /* Remember that we're now "inside" an externals definition. */
+      nb->in_external = TRUE;
       break;
 
     case svn_wc_notify_update_completed:
@@ -174,33 +178,42 @@ notify (void *baton,
             if (SVN_IS_VALID_REVNUM (revision))
               {
                 if (nb->is_export)
-                  printf ("Exported revision %" SVN_REVNUM_T_FMT ".\n",
+                  printf ("Exported %srevision %" SVN_REVNUM_T_FMT ".\n",
+                          nb->in_external ? "external at " : "",
                           revision);
                 else if (nb->is_checkout)
-                  printf ("Checked out revision %" SVN_REVNUM_T_FMT ".\n",
+                  printf ("Checked out %srevision %" SVN_REVNUM_T_FMT ".\n",
+                          nb->in_external ? "external at " : "",
                           revision);
                 else
                   {
                     if (nb->received_some_change)
-                      printf ("Updated to revision %" SVN_REVNUM_T_FMT ".\n",
+                      printf ("Updated %sto revision %" SVN_REVNUM_T_FMT ".\n",
+                              nb->in_external ? "external " : "",
                               revision);
                     else
-                      printf ("At revision %" SVN_REVNUM_T_FMT ".\n",
+                      printf ("%st revision %" SVN_REVNUM_T_FMT ".\n",
+                              nb->in_external ? "External a" : "A",
                               revision);
                   }
               }
             else  /* no revision */
               {
                 if (nb->is_export)
-                  printf ("Export complete.\n");
+                  printf ("%sxport complete.\n",
+                          nb->in_external ? "External e" : "E");
                 else if (nb->is_checkout)
-                  printf ("Checkout complete.\n");
+                  printf ("%sheckout complete.\n",
+                          nb->in_external ? "External c" : "C");
                 else
-                  printf ("Update complete.\n");
+                  printf ("%spdate complete.\n", 
+                          nb->in_external ? "External u" : "U");
               }
           }
       }
-
+      if (nb->in_external)
+        printf ("\n");
+      nb->in_external = FALSE;
       break;
 
     case svn_wc_notify_status_external:
@@ -265,6 +278,7 @@ svn_cl__get_notifier (svn_wc_notify_func_t *notify_func_p,
   nb->is_checkout = is_checkout;
   nb->is_export = is_export;
   nb->suppress_final_line = suppress_final_line;
+  nb->in_external = FALSE;
   nb->pool = svn_pool_create (pool);
 
   *notify_func_p = notify;

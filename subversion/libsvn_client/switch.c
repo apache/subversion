@@ -166,9 +166,8 @@ svn_client_switch (const char *path,
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
-  SVN_ERR (svn_wc_get_switch_editor (adm_access, target,
-                                     revnum, switch_url,
-                                     use_commit_times, recurse,
+  SVN_ERR (svn_wc_get_switch_editor (&revnum, adm_access, target,
+                                     switch_url, use_commit_times, recurse,
                                      ctx->notify_func, ctx->notify_baton,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      diff3_cmd,
@@ -211,6 +210,17 @@ svn_client_switch (const char *path,
     return err;
 
   SVN_ERR (svn_wc_adm_close (adm_access));
+
+  /* Let everyone know we're finished here. */
+  if (ctx->notify_func)
+    (*ctx->notify_func) (ctx->notify_baton,
+                         anchor,
+                         svn_wc_notify_update_completed,
+                         svn_node_none,
+                         NULL,
+                         svn_wc_notify_state_inapplicable,
+                         svn_wc_notify_state_inapplicable,
+                         revnum);
 
   return SVN_NO_ERROR;
 }
