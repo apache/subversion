@@ -795,6 +795,20 @@ def tagged_branch_and_trunk():
     raise svntest.Failure
   
 
+def enroot_race():
+  "never use the rev-in-progress as a copy source"
+  # See issue #1427 and r8544.
+  repos, wc, logs = ensure_conversion('enroot-race')
+  if not ((logs[6].changed_paths.get('/branches') == 'A')
+          and (logs[6].changed_paths.get('/branches/mybranch (from /trunk:5)')
+               == 'A')
+          and (logs[6].changed_paths.get('/branches/mybranch/proj/c.txt')
+               == 'M')
+          and (logs[6].changed_paths.get('/trunk/proj/a.txt') == 'M')
+          and (logs[6].changed_paths.get('/trunk/proj/b.txt') == 'M')):
+    raise svntest.Failure
+
+
 #----------------------------------------------------------------------
 
 ########################################################################
@@ -823,6 +837,7 @@ test_list = [ None,
               split_branch,
               resync_misgroups,
               tagged_branch_and_trunk,
+              enroot_race,
              ]
 
 if __name__ == '__main__':
