@@ -1,6 +1,6 @@
 <h1>Subversion FAQ</h1>
 
-<p>
+<p/>
 
 <![CDATA[ Table of Contents ]]>
 <ol>
@@ -29,13 +29,14 @@
 <li><a href="#globalrev">Why does the entire repository share the 
     same revision number? I want each of my projects to have their
     own revision numbers.  </a></li>
-<li><a href="#changesets">Does Subversion have changesets?</li>
+<li><a href="#changesets">Does Subversion have changesets?</a></li>
 <li><a href="#release">When's the next release?</a></li>
 <li><a href="#symlinks">Does Subversion support symlinks?</a></li>
 <li><a href="#logo">I need a high resolution version of the Subversion logo,
     where can I get it?</a></li>
 <li><a href="#more-information">I have other questions.  Where can I
     get more information?</a></li>  
+
 <p>
 <strong>How-to:</strong>
 </p>
@@ -81,7 +82,6 @@ committed.  How can I make 'svn commit' ignore the file?</a></li>
 <li><a href="#ssh-auth-cache">When I access a repository using
 svn+ssh, my password is not cached in ~/.subversion/auth/.  How do
 I avoid having to type it so often?</a></li>
-</a></li>
 
 <p>
 <strong>Troubleshooting:</strong>
@@ -149,8 +149,6 @@ a <tt>file:</tt> URL?</a></li>
     module cannot be found, yet the mod_dav_svn.so file is right 
     there in <tt>\Apache\modules.</tt></a></li>
 
-
-
 <p>
 <strong>Developer questions:</strong>
 </p>
@@ -168,11 +166,11 @@ a <tt>file:</tt> URL?</a></li>
 
 <![CDATA[=========================================================]]>
 
-<p>
-<hr>
-<p>
+<p/>
+<hr/>
+<p/>
 <h2>General questions:</h2>
-<p>
+<p/>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -454,22 +452,21 @@ channel #svn on <a href="http://www.freenode.net">irc.freenode.net</a>.</p>
 
 <![CDATA[=========================================================]]>
 
-<p>
-<hr>
-<p>
+<p/>
+<hr/>
+<p/>
 <h2>How-to:</h2>
-<p>
+<p/>
 
 <![CDATA[-----------------------------------------------------------]]>
 
 <h3><a name="co-svn">How do I check out the Subversion code?</a></h3>
-<p>Use the subversion client:
+<p>Use the subversion client:</p>
 <pre>
 	$ svn co http://svn.collab.net/repos/svn/trunk subversion
 </pre>
-<p>
-That will check out a copy of the Subversion source tree into a
-directory named subversion on your local machine.
+<p>That will check out a copy of the Subversion source tree into a
+directory named subversion on your local machine.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -590,8 +587,8 @@ schema is supported by running <tt>svn --version</tt>.</p>
 
 <![CDATA[=========================================================]]>
 
-<h3><a name="paranoid"/>My admins don't want me to have a HTTP server for
-    Subversion.  What can I do if I still want remote usage?</h3>
+<h3><a name="paranoid">My admins don't want me to have a HTTP server for
+    Subversion.  What can I do if I still want remote usage?</a></h3>
 
 <p>A simple option is to use the <b>svnserve</b> server instead of
 Apache.  See <a
@@ -671,7 +668,7 @@ in MOVE and COPY requests, so you have to be a little careful here - a
 
 <p>It depends upon the projects involved.  If the projects are
 related, and are likely to share data, then it's best to create one
-repository with several subdirectories like this:
+repository with several subdirectories like this:</p>
 <pre>
 	$ svnadmin create /repo/svn
 	$ svn mkdir file:///repo/svn/projA
@@ -679,9 +676,9 @@ repository with several subdirectories like this:
 	$ svn mkdir file:///repo/svn/projC
 </pre>
 
-If the projects are completely unrelated, and not likely to share data
+<p>If the projects are completely unrelated, and not likely to share data
 between them, then it's probably best to create separate and unrelated
-repositories.
+repositories.</p>
 <pre>
 	$ mkdir /repo/svn
 	$ svnadmin create /repo/svn/projA
@@ -690,18 +687,15 @@ repositories.
 </pre>
 <p>
 The difference between these two approaches is this (as explained by
-Ben Collins-Sussman &lt;sussman@collab.net&gt;):
+Ben Collins-Sussman &lt;sussman@collab.net&gt;):</p>
 
 <ul>
   <li>
-    <pre>
      In the first case, code can easily be copied or moved around
      between projects, and the history is preserved.  ('svn cp/mv'
      currently only works within a single repository.)
-    </pre>
   </li>
   <li>
-    <pre>
      Because revision numbers are repository-wide, a commit to any
      project in the first case causes a global revision bump.  So it
      might seem a bit odd if somebody has 'projB' checked out, notices
@@ -709,17 +703,14 @@ Ben Collins-Sussman &lt;sussman@collab.net&gt;):
      all.  Not a big deal, really.  Just a little weird at first.
      This already happens to svn, everytime people commit to
      rapidsvn.  :-)
-    </pre>
   </li>
   <li>
-    <pre>
      The second case might be easier to secure; it's easier to insulate
      projects from each other (in terms of users and permissions)
      using Apache's access control.  In the 1st case, you'll need a
      fancy hook script in the repository that distinguishes projects
      ("is this user allowed to commit to this particular subdir?")  Of
      course, we already have such a script, ready for you to use.
-    </pre>
   </li>
 </ul>
 
@@ -729,32 +720,31 @@ Ben Collins-Sussman &lt;sussman@collab.net&gt;):
 
 <p>If you don't care about retaining all the history of one of the
 repositories, you can just create a new directory under one project's
-repository, then import the other.
+repository, then import the other.</p>
 
 <p>If you care about retaining the history of both, then you can use
 'svnadmin dump' to dump one repository, and 'svnadmin load' to load it into
 the other repository.  The revision numbers will be off, but you'll
-still have the history.
+still have the history.</p>
 
 <p>Peter Davis &lt;peter@pdavis.cx&gt; also explains a method using svn's
-equivalent to CVS modules:
+equivalent to CVS modules:</p>
 
-<p><blockquote>
-
+<blockquote>
 	<p>As long as the merging takes place in separate directory
-	trees, you can use svn's version of CVS modules.
+	trees, you can use svn's version of CVS modules.</p>
 
 	<p>Set the <em>svn:externals</em> property on a directory to checkout
 	directories from other repositories whenever the original
 	directory is checked out.  The repository remains separate,
 	but in the working copy it appears that they have been merged.
 	If you commit to the imported directory, it will affect the
-	external repository.
+	external repository.</p>
 
 	<p>The merge isn't completely clean: the import only affects
 	working copies, so you won't be able to use a URL in the first
 	repository to access modules imported from the second.  They
-	remain separate URLs.
+	remain separate URLs.</p>
 </blockquote>
 
 
@@ -780,7 +770,7 @@ how to disable subtree checking.</p>
 
 <![CDATA[=========================================================]]>
   
-<h3><a name="bdblogs">Why is my repository taking up so much disk space?</h3>
+<h3><a name="bdblogs">Why is my repository taking up so much disk space?</a></h3>
 
 <p>The repository stores all your data in a Berkeley DB "environment"
 in the repos/db/ subdirectory.  The environment contains a collection
@@ -792,7 +782,7 @@ href="#wedged-repos">more info</a>).</p>
 <p>The logfiles will grow forever, eating up disk space, unless you,
 (as the repository administrator) do something about it.  At any given
 moment, Berkeley DB is only using a few logfiles actively (see <a
-href="http://subversion.tigris.org/servlets/ReadMsg?list=users&msgNo=15194"
+href="http://subversion.tigris.org/servlets/ReadMsg?list=users&amp;msgNo=15194"
 >this post</a> and its associated thread); the rest can be safely
 deleted.  If you keep all the logfiles around forever, then in theory
 Berkeley DB can replay every change to your repository from the day it
@@ -946,27 +936,25 @@ systems that keep track of revision properties.</p>
 
 <h3><a name="patch">How do I submit a patch for Subversion?</a></h3>
 
-<p>FIRST, read the <a href="http://svn.collab.net/repos/svn/trunk/HACKING">HACKING</a> document.
+<p>FIRST, read the <a href="http://svn.collab.net/repos/svn/trunk/HACKING">HACKING</a> document.</p>
 
 <p>Once you've digested that, send a mail to the dev list with the
 word [PATCH] and a one-line description in the subject, and include
 the patch inline in your mail (unless your MUA munges it up
 totally). Then a committer will pick it up, apply it (making any
-formatting or content changes necessary), and check it in.
+formatting or content changes necessary), and check it in.</p>
 
-<p>The basic process looks like this:
-<pre>
-<blockquote>
+<p>The basic process looks like this:</p>
+<blockquote><pre>
 	$ svn co http://svn.collab.net/repos/svn/trunk subversion
 	$ cd subversion/www
 
 		[ make changes to project_faq.html ]
 	
-	$ svn diff project_faq.html > /tmp/foo
+	$ svn diff project_faq.html &gt; /tmp/foo
 
-	$ Mail -s "[PATCH] FAQ updates" < /tmp/foo
-</blockquote>
-</pre>
+	$ Mail -s "[PATCH] FAQ updates" &lt; /tmp/foo
+</pre></blockquote>
 
 Of course, the email you send should contain a nice long
 explanation about what the patch does, as per the
@@ -1020,7 +1008,6 @@ when upgrading.  If a schema change happens between Subversion
 releases X and Y, then repository administrators upgrading to Y must
 do the following: </p>
 
-<p>
 <ol>
  <li>Shut down svnserve, Apache, and anything else that might be
      accessing the repository.
@@ -1049,7 +1036,7 @@ do the following: </p>
 
  <li>
  <b>
- <tt>svnadmin&nbsp;load&nbsp;/path/to/repository&nbsp;<&nbsp;dumpfile.txt</tt>
+ <tt>svnadmin&nbsp;load&nbsp;/path/to/repository&nbsp;&lt;&nbsp;dumpfile.txt</tt>
  </b>,
    again using version Y of svnadmin.
  </li>
@@ -1060,7 +1047,6 @@ do the following: </p>
  <li>Restart svnserve, Apache, etc.
  </li>
 </ol>
-</p>
 
 <p> See
 <a href="http://svnbook.red-bean.com/html-chunk/ch05s03.html#svn-ch-5-sect-3.4"
@@ -1084,10 +1070,10 @@ document that describes setting up a Subversion server on Windows. Go to
 >http://tortoisesvn.tigris.org/docs/TortoiseSVN_en/ch03.html#tsvn-serversetup-apache-5</a>,
 to see the section on SSPI authentication.</p>
 
-<p>An earlier version of this document left out a line:
+<p>An earlier version of this document left out a line:</p>
 <pre>
    SSPIOfferBasic On
-</pre></p>
+</pre>
 
 <p>Without this line, a browser will prompt for the user's credentials,
 but Subversion clients will not. (The browser understands SSPI
@@ -1109,17 +1095,17 @@ clients other than the one you regularly use.  However, if you
 absolutely must, you can simply change this line in
 <tt>subversion/include/svn_wc.h</tt> from </p>
 
-<p><pre>
+<pre>
 #define SVN_WC_ADM_DIR_NAME   ".svn"
-</pre></p>
+</pre>
 
 <p>
 to
 </p>
 
-<p><pre>
+<pre>
 #define SVN_WC_ADM_DIR_NAME   "SVN"
-</pre></p>
+</pre>
 
 <p>
 then recompile your client.
@@ -1144,17 +1130,15 @@ the new case.  One way of fixing the problem is to delete your working
 copy and check out again.  If this is not possible, you must perform a
 two step update.</p>
 
-<p>
-For each file with the wrong the case, do:
+<p>For each file with the wrong the case, do:</p>
 <pre>svn mv svn://svnserver/path/to/file.java svn://svnserver/path/to/File.java</pre>
-</p>
 
-<p>
-Then for each working copy, change to the relevant directory and do:
+<p>Then for each working copy, change to the relevant directory and do:</p>
 <pre>
 svn update *
 svn update
 </pre>
+<p>
 The first update will remove <tt>file.java</tt> from your working copy, 
 the second update will add <tt>File.java</tt>, leaving you with a
 correct working copy.
@@ -1238,10 +1222,9 @@ information on the revision level of a working copy given a path (see
 You can incorporate it into your build or release process to get the
 information you need into the source itself.  For example, in a build
 environment based on <tt>make</tt>, add something like this to your
-<tt>Makefile</tt>:
+<tt>Makefile</tt>:</p>
 
 <pre>
-
 ##
 ## on every build, record the working copy revision string
 ##
@@ -1304,9 +1287,9 @@ OpenSSH keys and <b><tt>pageant</tt></b> to cache passphrases.</p>
 
 <p>Setting up <tt>ssh-agent</tt> is outside the scope of this
 document, but a <a
-href="http://www.google.com/search?hl=en&lr=&ie=UTF-8&q=%22ssh-agent%22"
+href="http://www.google.com/search?hl=en&amp;lr=&amp;ie=UTF-8&amp;q=%22ssh-agent%22"
 >Google search for "ssh-agent"</a> will quickly get you answers.  Or
-if you're <i>really</i> impatient, try one of these:
+if you're <i>really</i> impatient, try one of these:</p>
 
 <pre>
    <a href="http://www.csua.berkeley.edu/ssh-howto.html"
@@ -1317,20 +1300,17 @@ if you're <i>really</i> impatient, try one of these:
            >http://kimmo.suominen.com/docs/ssh/</a>
 </pre>
 
-</p>
-
-
 <![CDATA[=========================================================]]>
 
-<p>
-<hr>
-<p>
+<p/>
+<hr/>
+<p/>
 <h2>Troubleshooting:</h2>
-<p>
+<p/>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3><a name="permissions">
+<h3><a name="permissions"></a>
     <a name="stuck-bdb-repos">My repository seems to get stuck all the
 time, giving me errors about needing recovery (DB_RUNRECOVERY).  What
 could be the cause?</a></h3>
@@ -1366,7 +1346,7 @@ for our recommendations.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3><a name="wedged-repos">
+<h3><a name="wedged-repos"></a>
     <a name="bdb-recovery">Every time I try to access my repository, the
 process just hangs. Is my repository corrupt?</a></h3>
 
@@ -1573,7 +1553,6 @@ library with the following:
   $ ldd /usr/local/bin/svn | fgrep libdb
       libdb-4.2.so => /usr/local/BerkeleyDB.4.2/lib/libdb-4.2.so
 </pre>
-</ol>
 
 <p>
 If you install your libraries in locations other than the defaults, you would
@@ -1609,8 +1588,7 @@ Repository URLs</a> in the Subversion Book for more details.</p>
     operations to a Subversion repository over a network.</a></h3>
 
 <p>For example, one user reported that imports worked fine over local
-access:
-<ul>
+access:</p>
 <pre>
   $ mkdir test
   $ touch test/testfile
@@ -1619,19 +1597,15 @@ access:
   Transmitting file data .
   Committed revision 1.
 </pre>
-</ul>
 But not from a remote host:
-<ul>
 <pre>
   $ svn import http://svn.sabi.net/test testfile -m "import"
   nicholas's password: xxxxxxx
 
-  svn_error: #21110 : <Activity not found>
+  svn_error: #21110 : &lt;Activity not found&gt;
 
   The specified activity does not exist.
 </pre>
-</ul>
-</p>
 
 <p> We've seen this when the REPOS/dav/ directory is not writable by
 the httpd process.  Check the permissions to ensure Apache can write
@@ -1647,10 +1621,10 @@ to the <tt>dav/</tt> directory (and to <tt>db/</tt>, of course).  </p>
 <p>You need to install Window XP Service Pack 1.  You can get all
 sorts of information about that Service Pack here:</p>
 
-    <ul>
+    <ul><li>
     <a href="http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949"
     >http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949</a>
-    </ul>
+    </li></ul>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -1659,7 +1633,7 @@ sorts of information about that Service Pack here:</p>
     server?</a></h3>
 
 <p>Use <a href="http://ethereal.ntop.org/">Ethereal</a> to eavesdrop
-on the conversation:
+on the conversation:</p>
 
 <!-- TODO: Make these instructions less specific to ra_dav. -->
 <ol>
@@ -1676,7 +1650,7 @@ on the conversation:
     client's HTTP conversion.</li>
 </ol>
 
-The above instructions are specific to the graphical version of
+<p>The above instructions are specific to the graphical version of
 Ethereal, and may not apply to the commandline version (whose binary
 is usually named tethereal).</p>
 
@@ -1744,13 +1718,13 @@ support for NPTL (the Native Posix Threads Library).</p>
 
 <p>The kernels that RedHat provides have this support built in, but if you
 compile your own kernel, then you may well not have the NPTL support.  If that
-is the case, then you will see errors like this:
+is the case, then you will see errors like this:</p>
 <blockquote><pre>
 svn: Berkeley DB error
 svn: Berkeley DB error while creating environment for filesystem tester/db:
 Function not implemented
 </pre></blockquote>
-This can be fixed in one of several ways:
+<p>This can be fixed in one of several ways:</p>
 <ul>
 <li>Rebuild db4 for the kernel you're using.</li>
 <li>Use a RedHat 9 kernel.</li>
@@ -1761,7 +1735,6 @@ This can be fixed in one of several ways:
     Subversion (Apache). (You usually would set this variable to run
     Wine or Winex on RedHat 9)</li>
 </ul>
-</p>
 <p>To use the NPTL version of Berkeley DB you also need to use a glibc
 library with NPTL support, which probably means the i686 version. See
 <a
@@ -1963,11 +1936,11 @@ dependencies.</p>
 <![CDATA[=========================================================]]>
 
 
-<p>
-<hr>
-<p>
+<p/>
+<hr/>
+<p/>
 <h2>Developer questions:</h2>
-<p>
+<p/>
 
 <h3><a name="ramdisk-tests">How do I run the regression tests in a
     ram disk?</a></h3>
@@ -1981,11 +1954,11 @@ See
 <![CDATA[=========================================================]]>
 
 
-<p>
-<hr>
-<p>
+<p/>
+<hr/>
+<p/>
 <h2>References:</h2>
-<p>
+<p/>
 
 <h3><a name="http-methods">What are all the HTTP methods Subversion
     uses?</a></h3>
@@ -1995,7 +1968,6 @@ Subversion does not actually use all of these WebDAV/DeltaV methods
 yet, but it probably will someday, so if you're configuring a proxy,
 you might as well allow all of them:</p>
 
-<p>
 <blockquote>
 <pre>
 From: Nuutti Kotivuori &lt;naked@iki.fi&gt;
@@ -2042,8 +2014,6 @@ he can check the RFC's for further information.
 </pre>
 </blockquote>
 
-</p>
-
 <![CDATA[-----------------------------------------------------------]]>
 
 <h3><a name="bikeshed">What's a 'bikeshed'?</a></h3>
@@ -2056,9 +2026,8 @@ he can check the RFC's for further information.
 <h3><a name="baton">What's a 'baton'?</a></h3>
 
 <p>Throughout subversion's source code there are many references to
-'baton' objects.  These are just <pre>void *</pre> datastructures that
+'baton' objects.  These are just <tt>void *</tt> datastructures that
 provide context to a function.  In other APIs, they're often called
-<pre>void *ctx</pre> or <pre>void *userdata</pre>  Subversion
+<tt>void *ctx</tt> or <tt>void *userdata</tt>  Subversion
 developers call the structures "batons" because they're passed around
 quite a bit.</p>
-
