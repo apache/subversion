@@ -1,5 +1,10 @@
 @echo off
 @rem **************************************************************************
+@rem * From the neon directory in the Subversion source tree, run this 
+@rem * batch file like so:
+@rem * 
+@rem *    ..\build\win32\build_neon debug|release [rebuild]
+@rem **************************************************************************
 @rem * Support for OpenSSL and zlib
 @rem *
 @rem * Edit and uncomment the following lines to add zlib and OpenSSL
@@ -51,12 +56,12 @@ goto end
 
 @rem **************************************************************************
 :pIerr
-echo error: Second parameter should be "release" or "debug"
+echo error: First parameter should be "release" or "debug"
 goto err
 
 @rem **************************************************************************
 :pIIerr
-echo error: First parameter should be "rebuild" or empty
+echo error: Second parameter should be "rebuild" or empty
 goto err
 
 
