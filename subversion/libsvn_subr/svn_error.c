@@ -133,9 +133,8 @@ svn_error__make_error_pool (apr_pool_t *parent, apr_pool_t **error_pool)
 
   /* Create a subpool to hold all error allocations. We use a subpool rather
      than the parent itself, so that we can clear the error pool. */
-  apr_pool_create_ex (error_pool, parent, abort_on_pool_failure,
-                      APR_POOL_FDEFAULT);
-  
+  apr_pool_create_ex (error_pool, parent, abort_on_pool_failure, NULL);
+
   /* Set the error pool on itself. */
   apr_err = apr_pool_userdata_set (*error_pool, SVN_ERROR_POOL, 
                                    apr_pool_cleanup_null, *error_pool);
@@ -426,11 +425,10 @@ SVN_POOL_FUNC_DEFINE(apr_pool_t *, svn_pool_create)
   apr_pool_t *ret_pool;
 
 #if !APR_POOL_DEBUG
-  apr_pool_create_ex (&ret_pool, pool, abort_on_pool_failure,
-                      APR_POOL_FDEFAULT);
+  apr_pool_create_ex (&ret_pool, pool, abort_on_pool_failure, NULL);
 #else /* APR_POOL_DEBUG */
   apr_pool_create_ex_debug (&ret_pool, pool, abort_on_pool_failure,
-                            APR_POOL_FDEFAULT, file_line);
+                            NULL, file_line);
 #endif /* APR_POOL_DEBUG */
 
   /* If there is no parent, then initialize ret_pool as the "top". */
