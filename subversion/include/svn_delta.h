@@ -611,6 +611,8 @@ typedef struct svn_delta_xml_parser_t svn_delta_xml_parser_t;
 svn_error_t  *svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
                                          const svn_delta_edit_fns_t *editor,
                                          void *edit_baton,
+                                         svn_string_t *base_path, 
+                                         svn_vernum_t base_version,
                                          apr_pool_t *pool);
 
 
@@ -637,6 +639,8 @@ svn_error_t *svn_delta_xml_auto_parse (svn_read_fn_t *source_fn,
                                        void *source_baton,
                                        const svn_delta_edit_fns_t *editor,
                                        void *edit_baton,
+                                       svn_string_t *base_path,
+                                       svn_vernum_t base_version,
                                        apr_pool_t *pool);
 
 

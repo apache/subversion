@@ -88,21 +88,28 @@ apply_delta (void *delta_src,
              svn_read_fn_t *read_fn,
              svn_string_t *dest,
              svn_string_t *repos,
+             svn_string_t *ancestor_path,
+             svn_vernum_t ancestor_version,
              apr_pool_t *pool)
 {
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
   svn_error_t *err;
 
+  if (! ancestor_path)
+    ancestor_path = svn_string_create ("", pool);
+  if (ancestor_version == SVN_INVALID_VERNUM)
+    ancestor_version = 1;
+
   /* Get the editor and friends... */
-  err = svn_wc_get_checkout_editor (dest,
-                                    repos,
-                                    /* Assume we're checking out root. */
-                                    svn_string_create ("", pool),
-                                    1, /* fooo */
-                                    &editor,
-                                    &edit_baton,
-                                    pool);
+  err = svn_wc_get_checkout_editor
+    (dest,
+     repos,
+     ancestor_path,
+     ancestor_version,
+     &editor,
+     &edit_baton,
+     pool);
   if (err)
     return err;
 
@@ -111,18 +118,20 @@ apply_delta (void *delta_src,
                                    delta_src,
                                    editor,
                                    edit_baton,
+                                   ancestor_path,
+                                   ancestor_version,
                                    pool);
 }
 
 
-
-
-
-/*** Code. ***/
+
+/*** Public Interfaces. ***/
 
 svn_error_t *
 svn_client_checkout (svn_string_t *path,
                      svn_string_t *xml_src,
+                     svn_string_t *ancestor_path,
+                     svn_vernum_t ancestor_version,
                      apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -147,6 +156,8 @@ svn_client_checkout (svn_string_t *path,
                      generic_read,
                      path,
                      svn_string_create (repos, pool),
+                     ancestor_path,
+                     ancestor_version,
                      pool);
   if (err)
     {
