@@ -628,21 +628,21 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
     {
       SVN_ERR(svn_ra_svn_read_tuple(conn, subpool, "wl", &cmdname, &params));
       for (i = 0; commands[i].cmdname; i++)
-	{
-	  if (strcmp(cmdname, commands[i].cmdname) == 0)
-	    break;
-	}
+        {
+          if (strcmp(cmdname, commands[i].cmdname) == 0)
+            break;
+        }
       if (commands[i].cmdname)
-	{
-	  err = (*commands[i].handler)(conn, subpool, params, baton);
-	  if (err && err->apr_err == SVN_ERR_RA_SVN_CMD_ERR)
-	    err = err->child;
-	  else if (err)
-	    return err;
-	}
+        {
+          err = (*commands[i].handler)(conn, subpool, params, baton);
+          if (err && err->apr_err == SVN_ERR_RA_SVN_CMD_ERR)
+            err = err->child;
+          else if (err)
+            return err;
+        }
       else
-	err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
-				"Unknown command %s", cmdname);
+        err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
+                                "Unknown command %s", cmdname);
       if (err)
         {
           svn_ra_svn_write_cmd_failure(conn, subpool, err);

@@ -47,7 +47,7 @@ extern "C" {
     svn_error_t *svn_err__temp = (expr);                      \
     if (svn_err__temp)                                        \
       return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR,         \
-			      svn_err__temp, NULL);           \
+                              svn_err__temp, NULL);           \
   } while (0)
 
 /** an ra_svn connection. */

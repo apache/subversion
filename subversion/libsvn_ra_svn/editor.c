@@ -133,7 +133,7 @@ static svn_error_t *ra_svn_add_dir(const char *path, void *parent_baton,
   assert((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
          || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "add-dir", "cc(?cr)", path,
-			       b->token, copy_path, copy_rev));
+                               b->token, copy_path, copy_rev));
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, "c", &token));
   *child_baton = ra_svn_make_baton(b->conn, pool, token);
   return SVN_NO_ERROR;
@@ -187,7 +187,7 @@ static svn_error_t *ra_svn_add_file(const char *path,
   assert((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
          || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "add-file", "cc(?cr)", path,
-			       b->token, copy_path, copy_rev));
+                               b->token, copy_path, copy_rev));
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, "c", &token));
   *file_baton = ra_svn_make_baton(b->conn, pool, token);
   return SVN_NO_ERROR;
@@ -310,8 +310,8 @@ static svn_error_t *ra_svn_abort_edit(void *edit_baton, apr_pool_t *pool)
 }
 
 void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
-			   void **edit_baton, svn_ra_svn_conn_t *conn,
-			   apr_pool_t *pool, svn_ra_svn_edit_callback callback,
+                           void **edit_baton, svn_ra_svn_conn_t *conn,
+                           apr_pool_t *pool, svn_ra_svn_edit_callback callback,
                            void *callback_baton)
 {
   svn_delta_editor_t *ra_svn_editor = svn_delta_default_editor (pool);
@@ -461,7 +461,7 @@ static svn_error_t *ra_svn_handle_open_dir(svn_ra_svn_conn_t *conn,
   SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
   subpool = svn_pool_create(entry->pool);
   SVN_CMD_ERR(ds->editor->open_directory(path, entry->baton, rev, subpool,
-				     &child_baton));
+                                     &child_baton));
   child_token = make_token(ds, child_baton, 'd', subpool);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "c", child_token));
   return SVN_NO_ERROR;
@@ -594,8 +594,8 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
     {
       SVN_ERR(svn_ra_svn_read_item(conn, subpool, &item));
       if (item->kind != SVN_RA_SVN_STRING)
-	return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-				"Non-string as part of text delta");
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                "Non-string as part of text delta");
       if (item->u.string->len == 0)
         break;
       /* Maybe we should operate in lock-step, and send a response
@@ -604,7 +604,7 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
          processing.  But that could be a big performance penalty, so
          for now we won't operate that way. */
       SVN_ERR(svn_stream_write(stream, item->u.string->data,
-			       &item->u.string->len));
+                               &item->u.string->len));
       apr_pool_clear(subpool);
     }
   apr_pool_destroy(subpool);
