@@ -121,11 +121,15 @@ both directions between Subversion client and server, using a small,
 constant amount of memory on each side of the network.</p>
 
 <p>Of course, there are a number of practical issues to consider.
-Committing large files can take a tremendous amount of both time and
-space.  To begin with, remember that your Subversion working copy stores
+While there's no need to worry about files in the kilobyte-sized range
+(e.g. typical source-code files), committing larger files can take a
+tremendous amount of both time and space (e.g. files that are dozens
+or hundreds of megabytes large.)</p>
+
+<p>To begin with, remember that your Subversion working copy stores
 pristine copies of all version-controlled files in the
 <tt>.svn/text-base/</tt> area.  This means that your working copy
-takes up at least twice as much disk space as the dataset itself.
+takes up at least twice as much disk space as the original dataset.
 Beyond that, the Subversion client follows a (currently unadjustable)
 algorithm for committing files:</p>
                
@@ -206,6 +210,11 @@ changes.</li>
 
 <p><em>Cons:</em> Chaotic development, code could be unstable at any
         time.</p>
+
+<p>A side note: this sort of development is a bit less risky in
+Subversion than in CVS.  Because Subversion commits are atomic, it's
+not possible for a checkout or update to receive a "partial" commit
+while somebody else is in the process of committing.</p>
 
 
 <h3>The Always-Branch system</h3>
