@@ -36,6 +36,7 @@ class TestHarness:
       map(sys.stdout.write, filter(lambda x: x[:4] == 'FAIL',
                                    self.log.readlines()))
     self._close_log()
+    return failed
 
   def _open_log(self, mode):
     'Open the log file with the required MODE.'
@@ -130,26 +131,11 @@ def main():
 
   th = TestHarness(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4],
                    os.path.abspath('tests.log'))
-  th.run(sys.argv[5:])
+  failed = th.run(sys.argv[5:])
+  if failed:
+    sys.exit(1)
 
 
 # Run main if not imported as a module
 if __name__ == '__main__':
   main()
-
-
-
-#######################
-# Examples:
-
-# With srcdir==builddir, running from this directory:
-# th = TestHarness('', '', '/usr/local/python', '/bin/sh', 'tests.log')
-# th.run(['../subversion/tests/libsvn_delta/random-test',
-#         '../subversion/tests/libsvn_fs/skel-test'])
-
-# New 'check' target in Makefile.in:
-# check: $(TEST_DEPS) @FS_TEST_DEPS@
-#        @$(PYTHON) $(top_srcdir)/build/pycheck.py ; \
-#        $(PYTHON) $(top_srcdir)/build/run-tests.py \
-#             '$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
-#             $(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
