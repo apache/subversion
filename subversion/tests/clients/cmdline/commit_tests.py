@@ -790,6 +790,189 @@ def hook_test():
   return 0
 
 
+#----------------------------------------------------------------------
+
+# Regression test for bug #469, whereby merge() was once reporting
+# erroneous conflicts due to Ancestor < Target < Source, in terms of
+# node-rev-id parentage.
+
+def merge_mixed_revisions():
+  "commit mixed-rev wc (no erronous merge error)"
+
+  # Bootstrap:  make independent repo and working copy.
+  sbox = sandbox(merge_mixed_revisions)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
+
+  if svntest.actions.make_repo_and_wc(sbox): return 1
+
+  # Make some convenient paths.
+  iota_path = os.path.join(wc_dir, 'iota')
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+
+  # Here's the reproduction formula, in 5 parts.
+  # Hoo, what a buildup of state!
+  
+  # 1. echo "moo" >> iota; echo "moo" >> A/D/H/chi; svn ci
+  svntest.main.file_append(iota_path, "moo")
+  svntest.main.file_append(chi_path, "moo")
+  output_list = [ [iota_path, None, {}, {'verb' : 'Sending' }],
+                  [chi_path, None, {}, {'verb' : 'Sending' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    if not ((item[0] == iota_path) or (item[0] == chi_path)):
+      item[3]['wc_rev'] = '1'
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output_tree,
+                                            expected_status_tree,
+                                            None, None, None, None, None,
+                                            wc_dir):
+    return 1
+
+
+  # 2. svn up A/D/H
+  status_list = []
+  status_list.append([H_path, None, {},
+                      {'status' : '_ ', 'locked' : ' ',
+                       'wc_rev' : '2', 'repos_rev' : '2'}])
+  status_list.append([chi_path, None, {},
+                      {'status' : '_ ', 'locked' : ' ',
+                       'wc_rev' : '2', 'repos_rev' : '2'}])
+  status_list.append([omega_path, None, {},
+                      {'status' : '_ ', 'locked' : ' ',
+                       'wc_rev' : '2', 'repos_rev' : '2'}])
+  status_list.append([psi_path, None, {},
+                      {'status' : '_ ', 'locked' : ' ',
+                       'wc_rev' : '2', 'repos_rev' : '2'}])
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  my_greek_tree = [['omega', "This is the file 'omega'.", {}, {}],
+                   ['chi', "This is the file 'chi'.moo", {}, {}],
+                   ['psi', "This is the file 'psi'.", {}, {}]]
+  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_output_tree = svntest.tree.build_generic_tree([])
+  if svntest.actions.run_and_verify_update (H_path,
+                                            expected_output_tree,
+                                            expected_disk_tree,
+                                            expected_status_tree):
+    return 1
+
+
+  # 3. echo "moo" >> iota; svn ci iota
+  svntest.main.file_append(iota_path, "moo2")
+  output_list = [[iota_path, None, {}, {'verb' : 'Sending' }]]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '3')
+  for item in status_list:
+    if not (item[0] == iota_path):
+      item[3]['wc_rev'] = '1'
+    if ((item[0] == H_path) or (item[0] == omega_path)
+        or (item[0] == chi_path) or (item[0] == psi_path)):
+      item[3]['wc_rev'] = '2'    
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output_tree,
+                                            expected_status_tree,
+                                            None, None, None, None, None,
+                                            wc_dir):
+    return 1
+
+
+  # 4. echo "moo" >> A/D/H/chi; svn ci A/D/H/chi
+  svntest.main.file_append(chi_path, "moo3")
+  output_list = [[chi_path, None, {}, {'verb' : 'Sending' }]]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '4')
+  for item in status_list:
+    if not (item[0] == chi_path):
+      item[3]['wc_rev'] = '1'
+    if ((item[0] == H_path) or (item[0] == omega_path)
+        or (item[0] == psi_path)):
+      item[3]['wc_rev'] = '2'
+    if item[0] == iota_path:
+      item[3]['wc_rev'] = '3'
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output_tree,
+                                            expected_status_tree,
+                                            None, None, None, None, None,
+                                            wc_dir):
+    return 1
+
+  # 5. echo "moo" >> iota; svn ci iota
+  svntest.main.file_append(iota_path, "moomoo")
+  output_list = [[iota_path, None, {}, {'verb' : 'Sending' }]]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '5')
+  for item in status_list:
+    if not (item[0] == iota_path):
+      item[3]['wc_rev'] = '1'
+    if ((item[0] == H_path) or (item[0] == omega_path)
+        or (item[0] == psi_path)):
+      item[3]['wc_rev'] = '2'
+    if item[0] == chi_path:
+      item[3]['wc_rev'] = '4'
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output_tree,
+                                            expected_status_tree,
+                                            None, None, None, None, None,
+                                            wc_dir):
+    return 1
+
+  # At this point, here is what our tree should look like:
+  # _    1       (     5)  working_copies/commit_tests-10
+  # _    1       (     5)  working_copies/commit_tests-10/A
+  # _    1       (     5)  working_copies/commit_tests-10/A/B
+  # _    1       (     5)  working_copies/commit_tests-10/A/B/E
+  # _    1       (     5)  working_copies/commit_tests-10/A/B/E/alpha
+  # _    1       (     5)  working_copies/commit_tests-10/A/B/E/beta
+  # _    1       (     5)  working_copies/commit_tests-10/A/B/F
+  # _    1       (     5)  working_copies/commit_tests-10/A/B/lambda
+  # _    1       (     5)  working_copies/commit_tests-10/A/C
+  # _    1       (     5)  working_copies/commit_tests-10/A/D
+  # _    1       (     5)  working_copies/commit_tests-10/A/D/G
+  # _    1       (     5)  working_copies/commit_tests-10/A/D/G/pi
+  # _    1       (     5)  working_copies/commit_tests-10/A/D/G/rho
+  # _    1       (     5)  working_copies/commit_tests-10/A/D/G/tau
+  # _    2       (     5)  working_copies/commit_tests-10/A/D/H
+  # _    4       (     5)  working_copies/commit_tests-10/A/D/H/chi
+  # _    2       (     5)  working_copies/commit_tests-10/A/D/H/omega
+  # _    2       (     5)  working_copies/commit_tests-10/A/D/H/psi
+  # _    1       (     5)  working_copies/commit_tests-10/A/D/gamma
+  # _    1       (     5)  working_copies/commit_tests-10/A/mu
+  # _    5       (     5)  working_copies/commit_tests-10/iota
+
+  # At this point, we're ready to modify omega and iota, and commit
+  # from the top.  We should *not* get a conflict!
+
+  svntest.main.file_append(iota_path, "finalmoo")
+  svntest.main.file_append(omega_path, "finalmoo")
+  output_list = [ [iota_path, None, {}, {'verb' : 'Sending' }],
+                  [omega_path, None, {}, {'verb' : 'Sending' }] ]
+  expected_output_tree = svntest.tree.build_generic_tree(output_list)
+  status_list = svntest.actions.get_virginal_status_list(wc_dir, '6')
+  for item in status_list:
+    if not ((item[0] == iota_path) or (item[0] == omega_path)):
+      item[3]['wc_rev'] = '1'
+    if ((item[0] == H_path) or (item[0] == psi_path)):
+      item[3]['wc_rev'] = '2'
+    if item[0] == chi_path:
+      item[3]['wc_rev'] = '4'
+  expected_status_tree = svntest.tree.build_generic_tree(status_list)
+  if svntest.actions.run_and_verify_commit (wc_dir,
+                                            expected_output_tree,
+                                            expected_status_tree,
+                                            None, None, None, None, None,
+                                            wc_dir):
+    return 1
+
+  return 0
+
+
 ########################################################################
 # Run the tests
 
@@ -806,7 +989,8 @@ test_list = [ None,
               hudson_part_1_variation_2,
               hudson_part_2,
               ## ### todo: comment this back in when it's working
-              ## hook_test
+              ## hook_test,
+              merge_mixed_revisions
              ]
 
 if __name__ == '__main__':

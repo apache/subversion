@@ -1238,8 +1238,12 @@ merge (const char **conflict_p,
           /* If source entry has changed since ancestor entry... */
           if (! svn_fs_id_eq (a_entry->id, s_entry->id))
             {
-              /* ... and if target entry has not changed, then... */
-              if (svn_fs_id_eq (a_entry->id, t_entry->id))
+              /* ... and if target entry has not changed,
+                 - OR - if target descends from ancestor, and source
+                 descends from target... */
+              if ( (svn_fs_id_eq (a_entry->id, t_entry->id))
+                   || ( (svn_fs_id_is_ancestor(a_entry->id, t_entry->id)) 
+                        && (svn_fs_id_is_ancestor(t_entry->id, s_entry->id))) )
                 {
                   /* ### kff todo: what about svn_fs__dag_link()
                      instead of svn_fs__dag_set_entry()?  The cycle
