@@ -1537,10 +1537,10 @@ make_editor (svn_stringbuf_t *dest,
     }
   else
     {
-      SVN_ERR (svn_wc_get_actual_update_target (dest,
-                                                &eb->anchor,
-                                                &eb->target,
-                                                subpool));
+      SVN_ERR (svn_wc_get_actual_target (dest,
+                                         &eb->anchor,
+                                         &eb->target,
+                                         subpool));
     }
 
   /* Construct an editor. */
@@ -1677,11 +1677,16 @@ svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
    the above changed-type cases that might occur.
 
    These conditions apply whether X is a file or directory.  */
+
+/* As it turns out, commits need to have a similar check in place,
+   too, specifically for the case where a single directory is being
+   committed (we have to anchor at that directory's parent in case the
+   directory itself needs to be modified) */
 svn_error_t *
-svn_wc_get_actual_update_target (svn_stringbuf_t *path,
-                                 svn_stringbuf_t **parent_dir,
-                                 svn_stringbuf_t **entry,
-                                 apr_pool_t *pool)
+svn_wc_get_actual_target (svn_stringbuf_t *path,
+                          svn_stringbuf_t **parent_dir,
+                          svn_stringbuf_t **entry,
+                          apr_pool_t *pool)
 {
   svn_stringbuf_t *dirname, *basename;
   svn_boolean_t is_wc;
