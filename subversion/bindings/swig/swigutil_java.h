@@ -109,6 +109,18 @@ svn_error_t *svn_swig_java_log_message_receiver(void *baton,
       const char *message,
       apr_pool_t *pool);
 
+/* Create a callback baton */
+void *svn_swig_java_make_callback_baton(JNIEnv *jenv,
+                                        jobject callback,
+                                        apr_pool_t *pool);
+
+/* Prompt for username */
+svn_error_t *svn_swig_java_client_prompt_func(const char **info,
+                                              const char *prompt,
+                                              svn_boolean_t hide,
+                                              void *baton,
+                                              apr_pool_t *pool);
+
 /* Create write-only svn_stream_t from java.io.OutputStream */
 svn_stream_t *svn_swig_java_outputstream_to_stream(JNIEnv *jenv, 
                                                    jobject outputstream, 

@@ -136,6 +136,26 @@
     return $jnicall;
   }
 
+/* -----------------------------------------------------------------------
+   handle svn_client_prompt_t/baton pairs
+*/
+
+%typemap(java,memberin) (svn_client_prompt_t prompt_func, 
+                   void *prompt_baton) {
+  //$1 = svn_swig_java_client_prompt_func;
+  //$2 = svn_swig_java_make_callback_baton(jenv, $input, _global_pool);
+}
+
+%typemap(java,in) (svn_client_prompt_t prompt_func, 
+                   void *prompt_baton) {
+  $1 = svn_swig_java_client_prompt_func;
+  $2 = svn_swig_java_make_callback_baton(jenv, $input, _global_pool);
+}
+
+%typemap(java, jni) svn_client_prompt_t "jobject"
+%typemap(java, jtype) svn_client_prompt_t "org.tigris.subversion.client.ClientPrompt"
+%typemap(java, jstype) svn_client_prompt_t "org.tigris.subversion.client.ClientPrompt"
+%typemap(java, javain) svn_client_prompt_t "$javainput"
 
 /* -----------------------------------------------------------------------
    handle svn_client_get_commit_log_t/baton pairs
