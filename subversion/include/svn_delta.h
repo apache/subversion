@@ -326,12 +326,10 @@ typedef struct
      (consumer).
 
      At the start of traversal, the consumer provides EDIT_BATON, a
-     baton global to the entire delta edit.  In the case of
-     `svn_xml_parse', this would be the EDIT_BATON argument; other
-     producers will work differently.  If there is a target revision
-     that needs to be set for this operation, the producer should
-     called the 'set_target_revision' function at this point.  Next,
-     the producer should pass this EDIT_BATON to the `open_root'
+     baton global to the entire delta edit.  If there is a target
+     revision that needs to be set for this operation, the producer
+     should called the 'set_target_revision' function at this point.
+     Next, the producer should pass this EDIT_BATON to the `open_root'
      function, to get a baton representing root of the tree being
      edited.
 
@@ -432,12 +430,6 @@ typedef struct
      exception that the producer may keep file batons open in order to
      make apply_textdelta calls at the end.
 
-     These restrictions make it easier to write a consumer that
-     generates an XML-style tree delta.  An XML tree delta mentions
-     each directory once, and includes all the changes to that
-     directory within the <directory> element.  However, it does allow
-     text deltas to appear at the end.
-
 
      POOL USAGE
 
@@ -493,8 +485,7 @@ typedef struct
      allocate it in a pool of the appropriate lifetime (the DIR_POOL
      passed to open_directory and add_directory definitely does not
      have the proper lifetime). In general, it is recommended to simply
-     avoid keeping a parent directory baton in a file baton.
-  */
+     avoid keeping a parent directory baton in a file baton.  */
 
   /* Set the target revision for this edit to TARGET_REVISION.  This
      call, if used, should precede all other editor calls. */
@@ -798,67 +789,6 @@ void svn_delta_wrap_editor (const svn_delta_editor_t **new_editor,
                             const svn_delta_editor_t *after_editor,
                             void *after_edit_baton,
                             apr_pool_t *pool);
-
-
-
-
-
-/* Creates an editor which outputs XML delta streams to OUTPUT.  On
-   return, *EDITOR and *EDITOR_BATON will be set to the editor and its
-   associate baton.  The editor's memory will live in a sub-pool of
-   POOL. */
-svn_error_t *
-svn_delta_get_xml_editor (svn_stream_t *output,
-                          const svn_delta_editor_t **editor,
-                          void **edit_baton,
-                          apr_pool_t *pool);
-
-
-
-/* An opaque object that represents a Subversion Delta XML parser. */
-
-typedef struct svn_delta_xml_parser_t svn_delta_xml_parser_t;
-
-/* Given a precreated svn_delta_edit_fns_t EDITOR, return a custom xml
-   PARSER that will call into it (and feed EDIT_BATON to its
-   callbacks.)  Additionally, this XML parser will use BASE_PATH and
-   BASE_REVISION as default "context variables" when computing ancestry
-   within a tree-delta. */
-svn_error_t *svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
-                                        const svn_delta_edit_fns_t *editor,
-                                        void *edit_baton,
-                                        const char *base_path, 
-                                        svn_revnum_t base_revision,
-                                        apr_pool_t *pool);
-
-
-/* Destroy an svn_delta_xml_parser_t when finished with it. */
-void svn_delta_free_xml_parser (svn_delta_xml_parser_t *parser);
-
-
-/* Push LEN bytes of xml data in BUFFER at SVN_XML_PARSER.  As xml is
-   parsed, EDITOR callbacks will be executed (using context variables
-   and batons that were used to create the parser.)  If this is the
-   final parser "push", ISFINAL must be set to true (so that both
-   expat and local cleanup can occur). */
-svn_error_t *
-svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal, 
-                          svn_delta_xml_parser_t *svn_xml_parser);
-
-
-/* Reads an XML stream from SOURCE using expat internally, validating
-   the XML as it goes (according to Subversion's own tree-delta DTD).
-   Whenever an interesting event happens, it calls a caller-specified
-   callback routine from EDITOR.  
-   
-   Once called, it retains control and "pulls" data from SOURCE
-   until either the stream runs out or an error occurs. */
-svn_error_t *svn_delta_xml_auto_parse (svn_stream_t *source,
-                                       const svn_delta_edit_fns_t *editor,
-                                       void *edit_baton,
-                                       const char *base_path,
-                                       svn_revnum_t base_revision,
-                                       apr_pool_t *pool);
 
 
 
