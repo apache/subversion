@@ -259,7 +259,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         if quote_path and '-' in rsrc:
           rsrc = '"%s"' % rsrc
         sources.append(ProjectItem(path=rsrc, reldir=reldir,
-                                   swig_language=None, swig_output=None))
+                                   swig_language=None))
 
     if isinstance(target, gen_base.SWIGLibrary):
       for obj in self.graph.get_sources(gen_base.DT_LINK, target):
@@ -268,13 +268,19 @@ class WinGeneratorBase(gen_base.GeneratorBase):
             if isinstance(cobj, gen_base.SWIGObject):
               csrc = rootpath + '\\' + string.replace(cobj.fname, '/', '\\')
               sources.append(ProjectItem(path=csrc, reldir=None,
-                                         swig_language=None, swig_output=None))
+                                         swig_language=None))
+
+              # output path passed to swig has to use forward slashes,
+              # otherwise the generatated python files (for shadow
+              # classes) will be saved to the wrong directory
+              cout = string.replace(os.path.join(rootpath, cobj.fname),
+                                    os.sep, '/')
 
               for ifile in self.graph.get_sources(gen_base.DT_SWIG_C, cobj):
                 isrc = rootpath + '\\' + string.replace(ifile, '/', '\\')
                 sources.append(ProjectItem(path=isrc, reldir=None, 
                                            swig_language=target.lang,
-                                           swig_output=csrc))
+                                           swig_target=csrc, swig_output=cout))
         
     sources.sort(lambda x, y: cmp(x.path, y.path))
     return sources
@@ -408,7 +414,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     if isinstance(target, gen_base.SWIGLibrary):
       fakedefines.append("SWIG_GLOBAL")
-      fakedefines.append("STATIC_LINKED")
 
     if cfg == 'Debug':
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
