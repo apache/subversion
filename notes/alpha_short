@@ -1,0 +1,84 @@
+   -*- text -*-
+
+Master TODO list
+================
+
+This is a "compressed" list of things from 'alpha-checklist'.  For
+gritty details about the problems and solutions, look there.
+
+Meta-note:  we have defined M3 := "test suite and self-hosted".
+
+
+* finish M2: get commit/import/update working over DAV (Greg)
+
+* hunt down many memory bugs.
+
+* mulitple command-line targets.  (Chicago office)
+
+* 'svn cp' and friends: cp, mv, branch, tag. (Ben will start)
+
+* new 'libsvn_repos':  utils built on *top* of libsvn_fs
+
+   * cross-process read/write lock function for DB_RUN_RECOVERY. (Greg)
+   * hook system -- to fire off shell scripts.  (who?)
+   * new location of fs commit-editor (Ben)
+   * new location of delta_dirs and wrapper (Mike)
+   * new location of shared 'reporter' code for both RA layers (Ben)
+
+* Many filesystem improvements -- (Jim documents, Chicago implements)
+
+   * deltified storage
+   * strings table
+   * real file streaming
+   * dir_delta use 'copyfrom' args
+   * keep node-rev-id strings short
+   * copy properties
+
+* misc subcommands:  svn cleanup, log, export, diff, rdiff, blame, merge,
+                         revert, rollback, unadd, undel.  (Chicago office)
+
+* autodetection of text/binary file types, and default boolean values
+  for keyword substitution and newline translation. (who will do?)
+
+* change #6:  invert text-delta interface (Greg)
+
+* simple Apache-only authentication & authorization (Greg)
+
+* internalized diff/patch library:  (Ben will investigate)
+
+* user documentation (Karl will research/look for volunteers)
+
+* cvs2svn (Thom and Greg)
+
+* UTF-8 preparations (Jim)
+
+* general pool usage code-review (Greg and Fitz)
+
+* wc improvement:  deal with removing files when dir is *not*
+  up-to-date.  (Karl)
+
+* change ra_local commit-style (Ben & Greg discuss)
+
+
+
+POST-1.0
+========
+
+* a "real" internal ACL system
+
+* svn obliterate
+
+* genetic merging
+
+* GUI clients
+
+* i18n
+  
+* read-only repos mirrors
+
+* modules --- (still discussing) 
+
+
+
+ 
+
