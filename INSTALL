@@ -444,5 +444,19 @@ Hmmm, I had thought httpd 2.0 also had these options: -DONE_PROCESS
 and -DNO_DETACH.  How are they related to -X, and/or should they be
 used in combination with -X?  Anyone know?
 
+jerenkrantz clarifies:
+
+Yes, httpd-2.0 MPMs recognize -DONE_PROCESS and -DNO_DETACH as 
+command line arguments.  ONE_PROCESS inhibits multiple processes from 
+being spawned.  NO_DETACH ensures that httpd remains attached to the
+terminal (useful by itself for debugging multiple children logic).  
+-X has the same effect as setting both variables - so, doing
+
+./httpd -DONE_PROCESS -DNO_DETACH
+
+is identical to
+
+./httpd -X
+
 
 
