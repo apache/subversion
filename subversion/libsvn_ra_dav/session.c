@@ -187,6 +187,7 @@ svn_ra_dav__open (void **session_baton,
   /* Create and fill a session_baton. */
   ras = apr_pcalloc(pool, sizeof(*ras));
   ras->pool = pool;
+  ras->url = apr_pstrdup (pool, repos_URL->data);
   ras->root = uri;
   ras->sess = sess;
   ras->sess2 = sess2;  

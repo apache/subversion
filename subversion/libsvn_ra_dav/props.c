@@ -633,21 +633,18 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
 svn_error_t *
 svn_ra_dav__do_check_path(svn_node_kind_t *kind,
                           void *session_baton,
-                          svn_stringbuf_t *path,
+                          const char *path,
                           svn_revnum_t revision)
 {
   svn_ra_session_t *ras = session_baton;
-  const svn_string_t *propval;
-  ne_propname propname = { "DAV:", "resourcetype" };
-  const char *url = NULL, *label = NULL;
+  svn_stringbuf_t *url = svn_stringbuf_create (ras->url, ras->pool);
   svn_error_t *err;
+  svn_boolean_t is_dir;
 
-  /* ### todo:  understand that PATH is relative to the session
-     baton's URL, and make sure that we can properly query for
-     properties given this fact.
-
-     Greg Stein has this to say about accomplishing the goal of this
-     function:
+  /* ### For now, using svn_ra_dav__get_baseline_info() works because
+     we only have three possibilities: dir, file, or none.  When we
+     add symlinks, we will need to do something different.  Here's one
+     way described by Greg Stein:
 
        That is a PROPFIND (Depth:0) for the DAV:resourcetype property.
 
@@ -671,28 +668,50 @@ svn_ra_dav__do_check_path(svn_node_kind_t *kind,
        is to use apr_xml_* parsing functions on the returned string;
        get back a DOM-like thing, and look for the element).
   */
-  abort();
 
-  /* ### todo: We need to figure out the URL with which to fetch
-     props.  We know that session baton holds a portion of it, and
-     that PATH is the rest of it.  But we need to get the DAV-y URL
-     that takes into consideration the REVISION.  Not sure if LABEL
-     has anything to do with this or not. */
-  err = svn_ra_dav__get_one_prop(&propval, ras->sess, url, label,
-                                 &propname, ras->pool);
+  svn_path_add_component_nts(url, path, svn_path_url_style);
+
+  err = svn_ra_dav__get_baseline_info(&is_dir,
+                                      NULL,
+                                      NULL,
+                                      NULL,
+                                      ras->sess,
+                                      url->data,
+                                      revision,
+                                      ras->pool);
+
   if (err == SVN_NO_ERROR)
     {
-      *kind = svn_node_unknown; 
-      /* ### todo: parse the prop val here as described above. */
+      if (is_dir)
+        *kind = svn_node_dir;
+      else
+        *kind = svn_node_file;
     }
-  else if (err && (err->apr_err == SVN_ERR_RA_PROPS_NOT_FOUND))
+  else  /* some error, read the comment below */
     {
+      /* ### This is way too general.  We should only convert the
+       * error to `svn_node_none' if we're sure that's what the error
+       * means; for example, the test used to be this
+       *
+       *   (err && (err->apr_err == SVN_ERR_RA_PROPS_NOT_FOUND))
+       *
+       * which seemed reasonable...
+       *
+       * However, right now svn_ra_dav__get_props() returns a generic
+       * error when the entity doesn't exist.  It's APR_EGENERAL or
+       * something like that, and ne_get_status(req)->code == 500, not
+       * 404.  I don't know whether this is something that can be
+       * improved just in that function, or if the server will need to
+       * be more descriptive about the error.  Greg, thoughts?
+       */
+
       *kind = svn_node_none;
       return SVN_NO_ERROR;
     }
 
   return err;
 }
+
 
 
 /* 

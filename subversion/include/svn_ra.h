@@ -388,7 +388,7 @@ typedef struct svn_ra_plugin_t
    */
   svn_error_t *(*check_path) (svn_node_kind_t *kind,
                               void *session_baton,
-                              svn_stringbuf_t *path,
+                              const char *path,
                               svn_revnum_t revision);
 
   /* Yoshiki Hayashi <yoshiki@xemacs.org> points out that a more

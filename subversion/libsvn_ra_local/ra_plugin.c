@@ -399,7 +399,7 @@ get_log (void *session_baton,
 static svn_error_t *
 do_check_path (svn_node_kind_t *kind,
                void *session_baton,
-               svn_stringbuf_t *path,
+               const char *path,
                svn_revnum_t revision)
 {
   svn_ra_local__session_baton_t *sbaton = session_baton;
@@ -416,7 +416,7 @@ do_check_path (svn_node_kind_t *kind,
   if (abs_path->len == 0)
     svn_stringbuf_appendcstr (abs_path, "/");
 
-  svn_path_add_component (abs_path, path, svn_path_repos_style);
+  svn_path_add_component_nts (abs_path, path, svn_path_repos_style);
   SVN_ERR (svn_fs_revision_root (&root, sbaton->fs, revision, sbaton->pool));
   *kind = svn_fs_check_path (root, abs_path->data, sbaton->pool);
   return SVN_NO_ERROR;
