@@ -1090,6 +1090,37 @@ as well as the coding.  Every patch needs someone to shepherd it
 through the process, and the person best qualified to do that is the
 original submitter.
 
+The "Patch Manager" Role:
+-------------------------
+
+Subversion usually has a Patch Manager, whose job is to watch the dev@
+mailing list and make sure that no patches "slip through the cracks".
+
+This means watching every thread containing "[PATCH]" mails, and
+taking appropriate action based on the progress of the thread.  If the
+thread resolves on its own (because the patch gets committed, or
+because there is consensus that the patch doesn't need to be applied,
+or whatever) then no further action need be taken.  But if the thread
+fades out without any clear decision, then the patch needs to be saved
+in the issue tracker, by filing a new issue of type 'PATCH',
+summarizing the patch and the responses to it, and pointing to the
+relevant mailing list archive URLs.
+
+The Patch Manager needs a basic technical understanding of Subversion,
+and the ability to skim a thread and get a rough understanding of
+whether consensus has been reached, and if so, of what kind.  It does
+*not* require actual Subversion development experience or commit
+access.  Expertise in using one's mail reading software is optional,
+but recommended :-).
+
+This is an important role.  Having outstanding patches organized in
+the issue tracker makes them *much* more manageable; many changes are
+in Subversion today because they were caught by the Patch Manager.  We
+currently do not have a Patch Manager.  Sander Roobol, our first PM,
+did a great job for a long time, but he got swamped with some other
+stuff and had to step down.  We are now seeking a new Patch Manager.
+Please post to dev@subversion.tigris.org if you're interested.
+
 
 
 Filing bugs / issues
