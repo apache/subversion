@@ -72,13 +72,25 @@ Package=<4>
     Project_Dep_Name tests_libsvn_fs_skel
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name tests_libsvn_fs_key
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_fs_strings_reps
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name tests_libsvn_fs_fs
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name tests_libsvn_repos_repos
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name tests_libsvn_subr_subst
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name tests_libsvn_subr_hashdump
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_subr_path
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name tests_libsvn_subr_string
@@ -516,6 +528,30 @@ Package=<4>
 
 ###############################################################################
 
+Project: "tests_libsvn_fs_key"=.\subversion\tests\libsvn_fs\key_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_fs
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_repos
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_delta
+    End Project Dependency
+}}}
+
+###############################################################################
+
 Project: "tests_libsvn_fs_skel"=.\subversion\tests\libsvn_fs\skel_test.dsp - Package Owner=<4>
 
 Package=<5>
@@ -526,6 +562,30 @@ Package=<4>
 {{{
     Begin Project Dependency
     Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_fs_strings_reps"=.\subversion\tests\libsvn_fs\strings_reps_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_fs
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_repos
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_delta
     End Project Dependency
 }}}
 
@@ -558,6 +618,30 @@ Package=<4>
 
 ###############################################################################
 
+Project: "tests_libsvn_subr_subst"=.\subversion\tests\libsvn_subr\subst_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_tests_main
+    End Project Dependency
+}}}
+
+###############################################################################
+
 Project: "tests_libsvn_subr_hashdump"=.\subversion\tests\libsvn_subr\hashdump_test.dsp - Package Owner=<4>
 
 Package=<5>
@@ -568,6 +652,30 @@ Package=<4>
 {{{
     Begin Project Dependency
     Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_subr_path"=.\subversion\tests\libsvn_subr\path_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_tests_main
     End Project Dependency
 }}}
 
@@ -584,6 +692,12 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name __config__
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -597,10 +711,10 @@ Package=<5>
 Package=<4>
 {{{
     Begin Project Dependency
-    Project_Dep_Name libsvn_subr
+    Project_Dep_Name __config__
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name __config__
+    Project_Dep_Name libsvn_subr
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name apr
