@@ -86,6 +86,9 @@ struct dir_baton {
   /* The overall crawler editor baton. */
   struct edit_baton *edit_baton;
 
+  /* A cache of any property changes (svn_prop_t) received for this dir. */
+  apr_array_header_t *propchanges;
+
   /* The pool passed in by add_dir, open_dir, or open_root.
      Also, the pool this dir baton is allocated in. */
   apr_pool_t *pool;
@@ -118,6 +121,9 @@ struct file_baton {
 
   /* The overall crawler editor baton. */
   struct edit_baton *edit_baton;
+
+  /* A cache of any property changes (svn_prop_t) received for this file. */
+  apr_array_header_t *propchanges;
 
   /* The pool passed in by add_file or open_file.
      Also, the pool this file_baton is allocated in. */
@@ -152,6 +158,7 @@ make_dir_baton (const char *path,
   dir_baton->added = added;
   dir_baton->pool = pool;
   dir_baton->path = apr_pstrdup (pool, path);
+  dir_baton->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
 
   return dir_baton;
 }
@@ -173,6 +180,7 @@ make_file_baton (const char *path,
   file_baton->added = added;
   file_baton->pool = pool;
   file_baton->path = apr_pstrdup (pool, path);
+  file_baton->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
 
   return file_baton;
 }
@@ -330,6 +338,7 @@ open_root (void *edit_baton,
   dir_baton->added = FALSE;
   dir_baton->pool = pool;
   dir_baton->path = eb->target ? apr_pstrdup (pool, eb->target->data) : "";
+  dir_baton->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
 
   *root_baton = dir_baton;
 
@@ -557,11 +566,6 @@ close_file (void *file_baton)
   struct file_baton *b = file_baton;
   struct edit_baton *eb = b->edit_baton;
 
-  /* Maybe only the properties changed, not the text content.  In that
-     case, no difference is reported, and no need to run diff.
-     ### todo: of course, if some day we have an extended diff format
-     that shows property differences, then there will be appropriate
-     changes to the file_baton, and probably more code here.  */
   if (b->path_end_revision)
     {
       if (b->added)
@@ -580,8 +584,36 @@ close_file (void *file_baton)
                   b->edit_baton->diff_cmd_baton));
     }
 
+  if (b->propchanges->nelts > 0)
+    {
+      SVN_ERR (eb->diff_callbacks->props_changed
+               (b->path,
+                b->propchanges,
+                b->edit_baton->diff_cmd_baton));
+    }
+
   return SVN_NO_ERROR;
 }
+
+/* An svn_delta_edit_fns_t editor function.
+ */
+static svn_error_t *
+close_directory (void *dir_baton)
+{
+  struct dir_baton *b = dir_baton;
+  struct edit_baton *eb = b->edit_baton;
+
+  if (b->propchanges->nelts > 0)
+    {
+      SVN_ERR (eb->diff_callbacks->props_changed
+               (b->path,
+                b->propchanges,
+                b->edit_baton->diff_cmd_baton));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* An svn_delta_edit_fns_t editor function.
  */
@@ -592,11 +624,11 @@ change_file_prop (void *file_baton,
                   apr_pool_t *pool)
 {
   struct file_baton *b = file_baton;
-  struct edit_baton *eb = b->edit_baton;
+  svn_prop_t *propchange;
 
-  SVN_ERR (eb->diff_callbacks->prop_changed
-           (b->path, name, value,
-            eb->diff_cmd_baton));
+  propchange = apr_array_push (b->propchanges);
+  propchange->name = apr_pstrdup (b->pool, name);
+  propchange->value = value ? svn_string_dup (value, b->pool) : NULL;
   
   return SVN_NO_ERROR;
 }
@@ -610,12 +642,12 @@ change_dir_prop (void *dir_baton,
                  apr_pool_t *pool)
 {
   struct dir_baton *db = dir_baton;
-  struct edit_baton *eb = db->edit_baton;
+  svn_prop_t *propchange;
 
-  SVN_ERR (eb->diff_callbacks->prop_changed
-           (db->path, name, value,
-            eb->diff_cmd_baton));
-  
+  propchange = apr_array_push (db->propchanges);
+  propchange->name = apr_pstrdup (db->pool, name);
+  propchange->value = value ? svn_string_dup (value, db->pool) : NULL;
+
   return SVN_NO_ERROR;
 }
 
@@ -669,6 +701,7 @@ svn_client__get_diff_editor (svn_stringbuf_t *target,
   tree_editor->open_file = open_file;
   tree_editor->apply_textdelta = apply_textdelta;
   tree_editor->close_file = close_file;
+  tree_editor->close_directory = close_directory;
   tree_editor->change_file_prop = change_file_prop;
   tree_editor->change_dir_prop = change_dir_prop;
   tree_editor->close_edit = close_edit;

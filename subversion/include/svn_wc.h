@@ -908,6 +908,25 @@ svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
                           svn_boolean_t recurse,
                           apr_pool_t *pool);
 
+/* Given a PATH to a file or directory under version control, discover
+   any local changes made to properties.  Return these changes as an
+   array of (svn_prop_t *) structures stored in *PROPCHANGES.  The
+   structures and array will be allocated in POOL.
+
+   If there are no local property modifications on PATH, then set
+   *PROPCHANGES to NULL. 
+
+   If ORIGINAL_PROPS is non-NULL, then set *ORIGINAL_PROPS to
+   hashtable (const char *name -> svn_stringbuf_t *value) that
+   represents the 'pristine' property list of PATH.  This hashtable is
+   allocated in POOL, and can be used to compare old and new values of
+   properties.
+*/
+svn_error_t *svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
+                                    apr_hash_t **original_props,
+                                    const char *path,
+                                    apr_pool_t *pool);
+
 
 /* Given paths to three fulltexts, merge the differences between LEFT
    and RIGHT into MERGE_TARGET.  (It may help to know that LEFT,
@@ -958,6 +977,21 @@ svn_error_t *svn_wc_merge (const char *left,
                            const char *right_label,
                            const char *target_label,
                            apr_pool_t *pool);
+
+
+/* Given a PATH under version control, merge an array of PROPCHANGES
+   into the path's existing properties.  PROPCHANGES is an array of
+   svn_prop_t objects.
+
+   If conflicts are found when merging, they are described in a
+   temporary .prej file (or appended to an already-existing .prej
+   file), and the entry is marked "conflicted".
+*/
+svn_error_t *
+svn_wc_merge_prop_diffs (const char *path,
+                         const apr_array_header_t *propchanges,
+                         apr_pool_t *pool);
+
 
 
 /* Given a PATH to a wc file, return a PRISTINE_PATH which points to a
