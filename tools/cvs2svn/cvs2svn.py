@@ -39,7 +39,7 @@ vendor_tag = re.compile('^[0-9]+\\.[0-9]+\\.[0-9]+$')
 SVNADMIN = 'svnadmin'      # Location of the svnadmin binary.
 DATAFILE = 'cvs2svn-data'
 DUMPFILE = 'cvs2svn-dump'  # The "dumpfile" we create to load into the repos
-HEAD_MIRROR_FILE = 'cvs2svn-head-mirror.db'  # Mirror the head tree
+HEAD_MIRROR_DB = 'cvs2svn-head-mirror.db'  # Mirror the head tree
 TAGS_DIR = "cvs2svn-tags"
 BRANCHES_DIR = "cvs2svn-branches"
 REVS_SUFFIX = '.revs'
@@ -293,7 +293,7 @@ def gen_key():
 class TreeMirror:
   def __init__(self):
     'Open a db file to mirror the head tree.'
-    self.db_file = HEAD_MIRROR_FILE
+    self.db_file = HEAD_MIRROR_DB
     self.db = anydbm.open(self.db_file, 'n')
     self.root_key = gen_key()
     self.db[self.root_key] = marshal.dumps({}) # Init as a dir with no entries
