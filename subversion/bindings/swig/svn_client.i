@@ -292,6 +292,11 @@
     _global_callback = $input;
     $2 = (void *) _global_callback;
 }
+%typemap(python, in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
+                     void *prompt_baton) {
+    $1 = svn_swig_py_auth_ssl_server_trust_prompt_func;
+    $2 = $input;
+}
 
 %typemap(perl5, in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
                       void *prompt_baton) {
@@ -299,12 +304,22 @@
     _global_callback = $input;
     $2 = (void *) _global_callback;
 }
+%typemap(python, in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
+                      void *prompt_baton) {
+    $1 = svn_swig_py_auth_ssl_client_cert_prompt_func;
+    $2 = $input;
+}
 
 %typemap(perl5, in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
                       void *prompt_baton) {
     $1 = svn_swig_pl_thunk_ssl_client_cert_pw_prompt;
     _global_callback = $input;
     $2 = (void *) _global_callback;
+}
+%typemap(python, in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
+                      void *prompt_baton) {
+    $1 = svn_swig_py_auth_ssl_client_cert_pw_prompt_func;
+    $2 = $input;
 }
 
 /* -----------------------------------------------------------------------

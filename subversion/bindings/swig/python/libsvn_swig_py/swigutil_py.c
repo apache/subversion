@@ -172,30 +172,28 @@ static PyObject *make_pointer(const char *typename, void *ptr)
   return SWIG_NewPointerObj(ptr, SWIG_TypeQuery(typename), 0);
 }
 
-/* for use by the "O&" format specifier */
+/* Functions for use with the "O&" format specifier */
 static PyObject *make_ob_pool(void *ptr)
 {
   return make_pointer("apr_pool_t *", ptr);
 }
-
-/* for use by the "O&" format specifier */
 static PyObject *make_ob_window(void *ptr)
 {
   return make_pointer("svn_txdelta_window_t *", ptr);
 }
-
-/* for use by the "O&" format specifier */
 static PyObject *make_ob_status(void *ptr)
 {
   return make_pointer("svn_wc_status_t *", ptr);
 } 
-
-/* for use by the "O&" format specifier */
 static PyObject *make_ob_fs_root(void *ptr)
 {
   return make_pointer("svn_fs_root_t *", ptr);
 } 
-
+static PyObject *make_ob_server_cert_info(void *ptr)
+{
+  return make_pointer("svn_auth_ssl_server_cert_info_t *", ptr);
+} 
+/***/
 
 static PyObject *convert_hash(apr_hash_t *hash,
                               PyObject * (*converter_func)(void *value,
@@ -516,7 +514,7 @@ commit_item_array_to_list(const apr_array_header_t *array)
 
 
 
-/*** Callback Errors ***/
+/*** Errors ***/
 
 /* Return a Subversion error about a failed callback. */
 static svn_error_t *callback_exception_error(void)
@@ -532,6 +530,13 @@ static svn_error_t *callback_bad_return_error(const char *message)
   PyErr_SetString(PyExc_TypeError, message);
   return svn_error_create(APR_EGENERAL, NULL,
                           "Python callback returned an invalid object");
+}
+
+/* Return a generic error about not being able to map types. */
+static svn_error_t *type_conversion_error(const char *datatype)
+{
+  return svn_error_createf(APR_EGENERAL, NULL,
+                           "Error converting object of type '%s'", datatype);
 }
 
 
@@ -1415,29 +1420,23 @@ svn_swig_py_auth_simple_prompt_func (svn_auth_cred_simple_t **cred,
     }
   else
     {
-      if (! (PyTuple_Check(result) 
-             && (PyTuple_Size(result) == 3)
-             && PyString_Check(PyTuple_GetItem(result, 0))
-             && PyString_Check(PyTuple_GetItem(result, 1))
-             && (PyInt_Check(PyTuple_GetItem(result, 2))
-                 || PyLong_Check(PyTuple_GetItem(result, 2)))))
+      if (result != Py_None)
         {
-          err = callback_bad_return_error
-            ("Expected tuple: str(username), str(password), int(may_save)");
-        }
-      else
-        {
-          PyObject *item;
-          creds = apr_pcalloc(pool, sizeof (*creds));
-          creds->username = apr_pstrdup
-            (pool, PyString_AS_STRING(PyTuple_GetItem(result, 0)));
-          creds->password = apr_pstrdup
-            (pool, PyString_AS_STRING(PyTuple_GetItem(result, 1)));
-          item = PyTuple_GetItem(result, 2);
-          if (PyInt_Check(item))
-            creds->may_save = PyInt_AsLong(item);
+          svn_auth_cred_simple_t *tmp_creds = NULL;
+          if (SWIG_ConvertPtr(result, (void **)&tmp_creds, 
+                              SWIG_TypeQuery("svn_auth_cred_simple_t *"), 0))
+            {
+              err = type_conversion_error("svn_auth_cred_simple_t *");
+            }
           else
-            creds->may_save = PyLong_AsLong(item);
+            {
+              creds = apr_pcalloc(pool, sizeof (*creds));
+              creds->username = tmp_creds->username ? \
+                apr_pstrdup(pool, tmp_creds->username) : NULL;
+              creds->password = tmp_creds->password ? \
+                apr_pstrdup(pool, tmp_creds->password) : NULL;
+              creds->may_save = tmp_creds->may_save;
+            }
         }
       Py_DECREF(result);
     }
@@ -1472,26 +1471,178 @@ svn_swig_py_auth_username_prompt_func (svn_auth_cred_username_t **cred,
     }
   else
     {
-      if (! (PyTuple_Check(result) 
-             && (PyTuple_Size(result) == 2)
-             && PyString_Check(PyTuple_GetItem(result, 0))
-             && (PyInt_Check(PyTuple_GetItem(result, 1))
-                 || PyLong_Check(PyTuple_GetItem(result, 1)))))
+      if (result != Py_None)
         {
-          err = callback_bad_return_error
-            ("Expected tuple: str(username), int(may_save)");
-        }
-      else
-        {
-          PyObject *item;
-          creds = apr_pcalloc(pool, sizeof (*creds));
-          creds->username = apr_pstrdup
-            (pool, PyString_AS_STRING(PyTuple_GetItem(result, 0)));
-          item = PyTuple_GetItem(result, 1);
-          if (PyInt_Check(item))
-            creds->may_save = PyInt_AsLong(item);
+          svn_auth_cred_username_t *tmp_creds = NULL;
+          if (SWIG_ConvertPtr(result, (void **)&tmp_creds, 
+                              SWIG_TypeQuery("svn_auth_cred_username_t *"), 0))
+            {
+              err = type_conversion_error("svn_auth_cred_username_t *");
+            }
           else
-            creds->may_save = PyLong_AsLong(item);
+            {
+              creds = apr_pcalloc(pool, sizeof (*creds));
+              creds->username = tmp_creds->username ? \
+                apr_pstrdup(pool, tmp_creds->username) : NULL;
+              creds->may_save = tmp_creds->may_save;
+            }
+        }
+      Py_DECREF(result);
+    }
+  svn_swig_py_release_py_lock();
+  *cred = creds;
+  return err;
+}
+
+
+svn_error_t *
+svn_swig_py_auth_ssl_server_trust_prompt_func(
+    svn_auth_cred_ssl_server_trust_t **cred,
+    void *baton,
+    const char *realm,
+    apr_uint32_t failures,
+    const svn_auth_ssl_server_cert_info_t *cert_info,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_auth_cred_ssl_server_trust_t *creds = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if ((function == NULL) || (function == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(function, 
+                                      (char *)"slO&lO&", 
+                                      realm, failures, 
+                                      make_ob_server_cert_info, cert_info,
+                                      may_save, make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        {
+          svn_auth_cred_ssl_server_trust_t *tmp_creds = NULL;
+          if (SWIG_ConvertPtr
+              (result, (void **)&tmp_creds, 
+               SWIG_TypeQuery("svn_auth_cred_ssl_server_trust_t *"), 0))
+            {
+              err = type_conversion_error
+                ("svn_auth_cred_ssl_server_trust_t *");
+            }
+          else
+            {
+              creds = apr_pcalloc(pool, sizeof (*creds));
+              *creds = *tmp_creds;
+            }
+        }
+      Py_DECREF(result);
+    }
+  svn_swig_py_release_py_lock();
+  *cred = creds;
+  return err;
+}
+
+svn_error_t *
+svn_swig_py_auth_ssl_client_cert_prompt_func(
+    svn_auth_cred_ssl_client_cert_t **cred,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_auth_cred_ssl_client_cert_t *creds = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if ((function == NULL) || (function == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(function, 
+                                      (char *)"slO&", 
+                                      realm, may_save, 
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        {
+          svn_auth_cred_ssl_client_cert_t *tmp_creds = NULL;
+          if (SWIG_ConvertPtr
+              (result, (void **)&tmp_creds, 
+               SWIG_TypeQuery("svn_auth_cred_ssl_client_cert_t *"), 0))
+            {
+              err = type_conversion_error("svn_auth_cred_ssl_client_cert_t *");
+            }
+          else
+            {
+              creds = apr_pcalloc(pool, sizeof (*creds));
+              creds->cert_file = tmp_creds->cert_file ? \
+                apr_pstrdup(pool, tmp_creds->cert_file) : NULL;
+              creds->may_save = tmp_creds->may_save;
+            }
+        }
+      Py_DECREF(result);
+    }
+  svn_swig_py_release_py_lock();
+  *cred = creds;
+  return err;
+}
+
+svn_error_t *
+svn_swig_py_auth_ssl_client_cert_pw_prompt_func(
+    svn_auth_cred_ssl_client_cert_pw_t **cred,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_auth_cred_ssl_client_cert_pw_t *creds = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if ((function == NULL) || (function == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(function, 
+                                      (char *)"slO&", 
+                                      realm, may_save, 
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        {
+          svn_auth_cred_ssl_client_cert_pw_t *tmp_creds = NULL;
+          if (SWIG_ConvertPtr
+              (result, (void **)&tmp_creds, 
+               SWIG_TypeQuery("svn_auth_cred_ssl_client_cert_pw_t *"), 0))
+            {
+              err = type_conversion_error
+                ("svn_auth_cred_ssl_client_cert_pw_t *");
+            }
+          else
+            {
+              creds = apr_pcalloc(pool, sizeof (*creds));
+              creds->password = tmp_creds->password ? \
+                apr_pstrdup(pool, tmp_creds->password) : NULL;
+              creds->may_save = tmp_creds->may_save;
+            }
         }
       Py_DECREF(result);
     }
