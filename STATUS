@@ -66,8 +66,9 @@ Candidate changes:
       +1: maxb, ghudson
 
   * r10410, r10450
-    Python bindings build fix. Explicitly link libpython to the python bindings.
-    r10410 is a trivial usage message update, included to avoid merge conflicts.
+    Python bindings build fix. Explicitly link libpython to the python
+    bindings.  r10410 is a trivial usage message update, included to
+    avoid merge conflicts.
     Votes:
       +1: maxb
 
@@ -78,3 +79,10 @@ Candidate changes:
       Bindings only, wrapping completeness.
     Votes:
       +1: clkao
+
+  * r10465
+    Have mailer.py open repository via svn_repos.h, not svn_fs.h.
+    Justification:
+       Allows mailer.py to work with fsfs.
+    Votes:
+      +1: sussman, cmpilato
