@@ -28,12 +28,6 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 
-#ifdef SVN_HAVE_OLD_EXPAT
-#include "xmlparse.h"
-#else
-#include "expat.h"
-#endif
-
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_string.h"
@@ -89,25 +83,25 @@ void svn_xml_escape_cstring (svn_stringbuf_t **outstr,
 /* Generalized Subversion XML Parsing */
 
 /** A generalized Subversion XML parser object */
-typedef struct svn_xml_parser_t
-{
-  /** the expat parser */
-  XML_Parser parser;
+typedef struct svn_xml_parser_t svn_xml_parser_t;
 
-  /** if non-@c NULL, an error happened while parsing */
-  svn_error_t *error;
+typedef void (*svn_xml_start_elem)(void *baton,
+                                   const char *name,
+                                   const char **atts);
 
-  /** where this object is allocated, so we can free it easily */
-  apr_pool_t *pool;
+typedef void (*svn_xml_end_elem)(void *baton, const char *name);
 
-} svn_xml_parser_t;
+/* data is not NUL-terminated. */
+typedef void (*svn_xml_char_data)(void *baton,
+                                  const char *data,
+                                  apr_size_t len);
 
 
 /** Create a general Subversion XML parser */
-svn_xml_parser_t *svn_xml_make_parser (void *userData,
-                                       XML_StartElementHandler  start_handler,
-                                       XML_EndElementHandler    end_handler,
-                                       XML_CharacterDataHandler data_handler,
+svn_xml_parser_t *svn_xml_make_parser (void *baton,
+                                       svn_xml_start_elem start_handler,
+                                       svn_xml_end_elem end_handler,
+                                       svn_xml_char_data data_handler,
                                        apr_pool_t *pool);
 
 

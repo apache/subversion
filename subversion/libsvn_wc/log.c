@@ -305,7 +305,7 @@ signal_error (struct log_runner *loggy, svn_error_t *err)
 static svn_error_t *
 log_do_run_cmd (struct log_runner *loggy,
                 const char *name,
-                const XML_Char **atts)
+                const char **atts)
 {
   svn_error_t *err;
   const char
@@ -393,7 +393,7 @@ log_do_run_cmd (struct log_runner *loggy,
 static svn_error_t *
 log_do_merge (struct log_runner *loggy,
               const char *name,
-              const XML_Char **atts)
+              const char **atts)
 {
   const char *left, *right;
   const char *left_label, *right_label, *target_label;
@@ -445,7 +445,7 @@ static svn_error_t *
 log_do_file_xfer (struct log_runner *loggy,
                   const char *name,
                   enum svn_wc__xfer_action action,
-                  const XML_Char **atts)
+                  const char **atts)
 {
   svn_error_t *err;
   const char *dest = NULL;
@@ -470,7 +470,7 @@ static svn_error_t *
 log_do_file_readonly (struct log_runner *loggy,
                       const char *name,
                       enum svn_wc__xfer_action action,
-                      const XML_Char **atts)
+                      const char **atts)
 {
   const char *full_path
     = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
@@ -500,7 +500,7 @@ log_do_rm (struct log_runner *loggy, const char *name)
 static svn_error_t *
 log_do_modify_entry (struct log_runner *loggy,
                      const char *name,
-                     const XML_Char **atts)
+                     const char **atts)
 {
   svn_error_t *err;
   apr_hash_t *ah = svn_xml_make_att_hash (atts, loggy->pool);
@@ -644,7 +644,7 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
 static svn_error_t *
 log_do_committed (struct log_runner *loggy,
                   const char *name,
-                  const XML_Char **atts)
+                  const char **atts)
 {
   svn_error_t *err;
   apr_pool_t *pool = loggy->pool; 
@@ -1099,7 +1099,7 @@ log_do_committed (struct log_runner *loggy,
 static svn_error_t *
 log_do_modify_wcprop (struct log_runner *loggy,
                       const char *name,
-                      const XML_Char **atts)
+                      const char **atts)
 {
   svn_string_t value;
   const char *propname, *propval, *path; 
@@ -1125,7 +1125,7 @@ log_do_modify_wcprop (struct log_runner *loggy,
 
 
 static void
-start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
+start_handler (void *userData, const char *eltname, const char **atts)
 {
   svn_error_t *err = SVN_NO_ERROR;
   struct log_runner *loggy = userData;

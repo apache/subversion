@@ -19,8 +19,10 @@
 
 
 #include <string.h>
-#include <apr_strings.h>
 #include <assert.h>
+
+#include <apr_strings.h>
+
 #include "svn_xml.h"
 #include "svn_error.h"
 #include "svn_types.h"
