@@ -90,20 +90,6 @@ svn_node_kind_t svn_fs__dag_node_kind (dag_node_t *node)
 }
 
 
-svn_boolean_t
-svn_fs__dag_is_file (dag_node_t *node)
-{
-  return (node->kind == svn_node_file);
-}
-
-
-svn_boolean_t
-svn_fs__dag_is_directory (dag_node_t *node)
-{
-  return (node->kind == svn_node_dir);
-}
-
-
 const svn_fs_id_t *
 svn_fs__dag_get_id (dag_node_t *node)
 {
@@ -606,7 +592,7 @@ make_entry (dag_node_t **child_p,
        "Attempted to create a node with an illegal name '%s'", name);
 
   /* Make sure that parent is a directory */
-  if (! svn_fs__dag_is_directory (parent))
+  if (parent->kind != svn_node_dir)
     return svn_error_create
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
        "Attempted to create entry in non-directory parent");
@@ -667,7 +653,7 @@ svn_fs__dag_set_entry (dag_node_t *node,
                        trail_t *trail)
 {
   /* Check it's a directory. */
-  if (! svn_fs__dag_is_directory (node))
+  if (node->kind != svn_node_dir)
     return svn_error_create
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
        "Attempted to set entry in non-directory node.");
@@ -940,12 +926,11 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
 
    If return SVN_ERR_FS_NO_SUCH_ENTRY, then there is no entry NAME in
    PARENT.  */
-static svn_error_t *
-delete_entry (dag_node_t *parent,
-              const char *name,
-              svn_boolean_t require_empty,
-              const char *txn_id,
-              trail_t *trail)
+svn_error_t *
+svn_fs__dag_delete (dag_node_t *parent,
+                    const char *name,
+                    const char *txn_id,
+                    trail_t *trail)
 {
   svn_fs__node_revision_t *parent_noderev;
   const char *rep_key, *mutable_rep_key;
@@ -957,7 +942,7 @@ delete_entry (dag_node_t *parent,
   dag_node_t *node; 
 
   /* Make sure parent is a directory. */
-  if (! svn_fs__dag_is_directory (parent))
+  if (parent->kind != svn_node_dir)
     return svn_error_createf
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
        "Attempted to delete entry '%s' from *non*-directory node.", name);    
@@ -1022,20 +1007,9 @@ delete_entry (dag_node_t *parent,
       (SVN_ERR_FS_NO_SUCH_ENTRY, NULL,
        "Delete failed--directory has no entry '%s'", name);
 
-  /* Use the ID of this ENTRY to get the entry's node.  If the node we
-     get is a directory, make sure it meets up to our emptiness
-     standards (as determined by REQUIRE_EMPTY).  */
+  /* Use the ID of this ENTRY to get the entry's node.  */
   SVN_ERR (svn_fs__dag_get_node (&node, svn_fs__dag_get_fs (parent), 
                                  id, trail));
-  if (svn_fs__dag_is_directory (node))
-    {
-      apr_hash_t *entries_here;
-      SVN_ERR (svn_fs__dag_dir_entries (&entries_here, node, trail));
-      if (require_empty && entries_here && apr_hash_count (entries_here))
-        return svn_error_createf
-          (SVN_ERR_DIR_NOT_EMPTY, NULL,
-           "Attempt to delete non-empty directory '%s'.", name);
-    }
 
   /* If mutable, remove it and any mutable children from db. */
   SVN_ERR (svn_fs__dag_delete_if_mutable (parent->fs, id, txn_id, trail));
@@ -1065,26 +1039,6 @@ delete_entry (dag_node_t *parent,
 
 
 svn_error_t *
-svn_fs__dag_delete (dag_node_t *parent,
-                    const char *name,
-                    const char *txn_id,
-                    trail_t *trail)
-{
-  return delete_entry (parent, name, TRUE, txn_id, trail);
-}
-
-
-svn_error_t *
-svn_fs__dag_delete_tree (dag_node_t *parent,
-                         const char *name,
-                         const char *txn_id,
-                         trail_t *trail)
-{
-  return delete_entry (parent, name, FALSE, txn_id, trail);
-}
-
-
-svn_error_t *
 svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
                                const svn_fs_id_t *id,
                                const char *txn_id,
@@ -1100,7 +1054,7 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
     return SVN_NO_ERROR;
 
   /* Else it's mutable.  Recurse on directories... */
-  if (svn_fs__dag_is_directory (node))
+  if (node->kind == svn_node_dir)
     {
       apr_hash_t *entries;
       apr_hash_index_t *hi;
@@ -1179,57 +1133,6 @@ svn_fs__dag_make_dir (dag_node_t **child_p,
 }
 
 
-/* ### somebody todo: figure out why this *reaaaaaaally* exists.  It
-   has no callers (though kfogel has some speculation about a possible
-   use (see tree.c:merge) */
-svn_error_t *
-svn_fs__dag_link (dag_node_t *parent,
-                  dag_node_t *child,
-                  const char *name,
-                  const char *txn_id, 
-                  trail_t *trail)
-{
-  const svn_fs_id_t *entry_id;
-
-  /* Make sure that parent is a directory */
-  if (! svn_fs__dag_is_directory (parent))
-    return svn_error_createf 
-      (SVN_ERR_FS_NOT_DIRECTORY, NULL,
-       "Attempted to create entry in non-directory parent");
-    
-  /* Make sure parent is mutable */
-  if (! svn_fs__dag_check_mutable (parent, txn_id))
-    return svn_error_createf 
-      (SVN_ERR_FS_NOT_MUTABLE, NULL,
-       "Can't add a link from an immutable parent");
-
-  /* Make sure child is IMmutable */
-  if (svn_fs__dag_check_mutable (child, txn_id))
-    return svn_error_createf 
-      (SVN_ERR_FS_NOT_MUTABLE, NULL,
-       "Can't add a link to a mutable child");
-
-  /* Make sure that NAME is a single path component. */
-  if (! svn_path_is_single_path_component (name))
-    return svn_error_createf 
-      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, NULL,
-       "Attempted to link to a node with an illegal name '%s'", name);
-
-  /* Verify that this parent node does not already have an entry named NAME. */
-  SVN_ERR (dir_entry_id_from_node (&entry_id, parent, name, trail));
-  if (entry_id)
-    return svn_error_createf 
-      (SVN_ERR_FS_ALREADY_EXISTS, NULL,
-       "Attempted to create entry that already exists");
-
-  /* We can safely call set_entry because we already know that PARENT
-     is mutable, and we know that CHILD is immutable (since every
-     parent of a mutable node is mutable itself, we know that CHILD
-     can't be equal to, or a parent of, PARENT).  */
-  return set_entry (parent, name, svn_fs__dag_get_id (child), txn_id, trail);
-}
-
-
 svn_error_t *
 svn_fs__dag_get_contents (svn_stream_t **contents,
                           dag_node_t *file,
@@ -1239,7 +1142,7 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
   svn_fs__node_revision_t *noderev;
 
   /* Make sure our node is a file. */
-  if (! svn_fs__dag_is_file (file))
+  if (file->kind != svn_node_file)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FILE, NULL,
        "Attempted to get textual contents of a *non*-file node.");
@@ -1272,7 +1175,7 @@ svn_fs__dag_file_length (svn_filesize_t *length,
   svn_fs__node_revision_t *noderev;
 
   /* Make sure our node is a file. */
-  if (! svn_fs__dag_is_file (file))
+  if (file->kind != svn_node_file)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FILE, NULL,
        "Attempted to get length of a *non*-file node.");
@@ -1296,7 +1199,7 @@ svn_fs__dag_file_checksum (unsigned char digest[],
 { 
   svn_fs__node_revision_t *noderev;
 
-  if (! svn_fs__dag_is_file (file))
+  if (file->kind != svn_node_file)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FILE, NULL,
        "Attempted to get checksum of a *non*-file node.");
@@ -1325,7 +1228,7 @@ svn_fs__dag_get_edit_stream (svn_stream_t **contents,
   svn_stream_t *ws;
 
   /* Make sure our node is a file. */
-  if (! svn_fs__dag_is_file (file))
+  if (file->kind != svn_node_file)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FILE, NULL,
        "Attempted to set textual contents of a *non*-file node.");
@@ -1375,7 +1278,7 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
   const char *old_data_key;
   
   /* Make sure our node is a file. */
-  if (! svn_fs__dag_is_file (file))
+  if (file->kind != svn_node_file)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FILE, NULL,
        "Attempted to set textual contents of a *non*-file node.");

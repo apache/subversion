@@ -940,7 +940,7 @@ open_path (parent_path_t **parent_path_p,
         break;
       
       /* The path isn't finished yet; we'd better be in a directory.  */
-      if (! svn_fs__dag_is_directory (child))
+      if (svn_fs__dag_node_kind (child) != svn_node_dir)
         SVN_ERR_W (svn_fs__err_not_directory (fs, path_so_far),
                    apr_pstrcat (pool, "Failure opening '", path, "'", NULL));
       
@@ -2089,9 +2089,9 @@ merge (svn_stringbuf_t *conflict_p,
    * See the following message for the full details:
    * http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=166183 */
 
-  if ((! svn_fs__dag_is_directory (source))
-      || (! svn_fs__dag_is_directory (target))
-      || (! svn_fs__dag_is_directory (ancestor)))
+  if ((svn_fs__dag_node_kind (source) != svn_node_dir)
+      || (svn_fs__dag_node_kind (target) != svn_node_dir)
+      || (svn_fs__dag_node_kind (ancestor) != svn_node_dir))
     {
       return conflict_err (conflict_p, target_path);
     }
@@ -2214,16 +2214,6 @@ merge (svn_stringbuf_t *conflict_p,
                  from target... (Case 1) */
               if (logic_case == 1)
                 {
-                  /* ### kff todo: what about svn_fs__dag_link()
-                     instead of svn_fs__dag_set_entry()?  The cycle
-                     protection guaranteed by the former would be
-                     guaranteed "for free" anyway, if this function
-                     demanded that SOURCE and ANCESTOR always be
-                     immutable nodes.  But we don't demand that,
-                     although it happens to be true of our only caller
-                     right now, since merges are only done as part of
-                     commits. */
-
                   /* ... target takes source. */
                   if (! svn_fs__dag_check_mutable (target, txn_id))
                     return svn_error_createf
@@ -2250,9 +2240,9 @@ merge (svn_stringbuf_t *conflict_p,
                   SVN_ERR (svn_fs__dag_get_node (&a_ent_node, fs,
                                                  a_entry->id, trail));
                       
-                  if ((! svn_fs__dag_is_directory (s_ent_node))
-                      || (! svn_fs__dag_is_directory (t_ent_node))
-                      || (! svn_fs__dag_is_directory (a_ent_node)))
+                  if ((svn_fs__dag_node_kind (s_ent_node) != svn_node_dir)
+                      || (svn_fs__dag_node_kind (t_ent_node) != svn_node_dir)
+                      || (svn_fs__dag_node_kind (a_ent_node) != svn_node_dir))
                     {
                       /* Not all of these entries is a directory. Conflict. */
                       return conflict_err (conflict_p,
@@ -2318,8 +2308,8 @@ merge (svn_stringbuf_t *conflict_p,
                   (SVN_ERR_FS_NOT_MUTABLE, NULL,
                    "unexpected immutable node at \"%s\"", target_path);
               
-              SVN_ERR (svn_fs__dag_delete_tree (target, t_entry->name, 
-                                                txn_id, trail));
+              SVN_ERR (svn_fs__dag_delete (target, t_entry->name, 
+                                           txn_id, trail));
 
               /* Seems cleanest to remove it from the target entries
                  hash now, even though no code would break if we
@@ -2953,7 +2943,6 @@ struct delete_args
 {
   svn_fs_root_t *root;
   const char *path;
-  svn_boolean_t delete_tree;
 };
 
 
@@ -2970,31 +2959,21 @@ txn_body_delete (void *baton,
   parent_path_t *parent_path;
   const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
 
-  SVN_ERR (open_path (&parent_path, root, path, 0, txn_id, trail));
-
   if (! svn_fs_is_txn_root (root))
     return not_txn (root);
+
+  SVN_ERR (open_path (&parent_path, root, path, 0, txn_id, trail));
 
   /* We can't remove the root of the filesystem.  */
   if (! parent_path->parent)
     return svn_error_create (SVN_ERR_FS_ROOT_DIR, NULL,
                              "the root directory cannot be deleted");
 
-  /* Make the parent directory mutable.  */
+  /* Make the parent directory mutable, and do the deletion.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, trail));
-
-  if (args->delete_tree)
-    {
-      SVN_ERR (svn_fs__dag_delete_tree (parent_path->parent->node,
-                                        parent_path->entry,
-                                        txn_id, trail));
-    }
-  else
-    {
-      SVN_ERR (svn_fs__dag_delete (parent_path->parent->node,
-                                   parent_path->entry,
-                                   txn_id, trail));
-    }
+  SVN_ERR (svn_fs__dag_delete (parent_path->parent->node,
+                               parent_path->entry,
+                               txn_id, trail));
   
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
@@ -3014,32 +2993,7 @@ svn_fs_delete (svn_fs_root_t *root,
 
   args.root        = root;
   args.path        = path;
-  args.delete_tree = FALSE;
   return svn_fs__retry_txn (root->fs, txn_body_delete, &args, pool);
-}
-
-
-svn_error_t *
-svn_fs_delete_tree (svn_fs_root_t *root,
-                    const char *path,
-                    apr_pool_t *pool)
-{
-  struct delete_args args;
-
-  args.root        = root;
-  args.path        = path;
-  args.delete_tree = TRUE;
-  return svn_fs__retry_txn (root->fs, txn_body_delete, &args, pool);
-}
-
-
-svn_error_t *
-svn_fs_rename (svn_fs_root_t *root,
-               const char *from,
-               const char *to,
-               apr_pool_t *pool)
-{
-  abort ();
 }
 
 

@@ -2387,9 +2387,9 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
         }
     }
 
-  if ((serr = svn_fs_delete_tree(resource->info->root.root,
-                                 resource->info->repos_path,
-                                 resource->pool)) != NULL)
+  if ((serr = svn_fs_delete(resource->info->root.root,
+                            resource->info->repos_path,
+                            resource->pool)) != NULL)
     {
       /* ### need a better error */
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -2453,9 +2453,9 @@ static dav_error * dav_svn_move_resource(dav_resource *src,
                                "Unable to make a filesystem copy.");
 
   /* Notice: we're deleting the src repos path from the dst's txn_root. */
-  if ((serr = svn_fs_delete_tree(dst->info->root.root,
-                                 src->info->repos_path,
-                                 dst->pool)) != NULL)
+  if ((serr = svn_fs_delete(dst->info->root.root,
+                            src->info->repos_path,
+                            dst->pool)) != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Could not delete the src resource.");
 

@@ -149,11 +149,6 @@ svn_boolean_t svn_fs__dag_check_mutable (dag_node_t *node,
 /* Return the node kind of NODE. */
 svn_node_kind_t svn_fs__dag_node_kind (dag_node_t *node);
 
-/* Return true iff NODE is a file/directory. */
-svn_boolean_t svn_fs__dag_is_file (dag_node_t *node);
-svn_boolean_t svn_fs__dag_is_directory (dag_node_t *node);
-
-
 /* Set *PROPLIST_P to a PROPLIST hash representing the entire property
    list of NODE, as part of TRAIL.  The hash has const char * names
    (the property names) and svn_string_t * values (the property values).
@@ -307,37 +302,6 @@ svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
                                       trail_t *trail);
 
 
-/* Create a link to CHILD in PARENT named NAME, as part of TRAIL.
-   PARENT must be mutable.  CHILD must be immutable.  NAME must be a
-   single path component; it cannot be a slash-separated directory
-   path.  TXN_ID is the Subversion transaction under which this
-   occurs.
-
-   Note that it is impossible to use this function to create cyclic
-   directory structures.  Since PARENT is mutable, and every parent of
-   a mutable node is mutable itself, and CHILD is immutable, we know
-   that CHILD can't be equal to, or a parent of, PARENT.  */
-svn_error_t *svn_fs__dag_link (dag_node_t *parent,
-                               dag_node_t *child,
-                               const char *name,
-                               const char *txn_id, 
-                               trail_t *trail);
-
-
-/* Delete the directory entry named NAME from PARENT, as part of
-   TRAIL.  PARENT must be mutable.  NAME must be a single path
-   component; it cannot be a slash-separated directory path.  If the
-   node being deleted is a directory, it must be empty.  TXN_ID is the
-   Subversion transaction under which this occurs.
-
-   If return SVN_ERR_FS_NO_SUCH_ENTRY, then there is no entry NAME in
-   PARENT.  */
-svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
-                                 const char *name,
-                                 const char *txn_id, 
-                                 trail_t *trail);
-
-
 /* Delete the directory entry named NAME from PARENT, as part of
    TRAIL.  PARENT must be mutable.  NAME must be a single path
    component; it cannot be a slash-separated directory path.  If the
@@ -347,10 +311,10 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
 
    If return SVN_ERR_FS_NO_SUCH_ENTRY, then there is no entry NAME in
    PARENT.  */
-svn_error_t *svn_fs__dag_delete_tree (dag_node_t *parent,
-                                      const char *name,
-                                      const char *txn_id,
-                                      trail_t *trail);
+svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
+                                 const char *name,
+                                 const char *txn_id,
+                                 trail_t *trail);
 
 
 /* Delete all mutable node revisions reachable from node ID, including
