@@ -69,6 +69,16 @@ svn_error_t *svn_repos_delete (const char *path, apr_pool_t *pool);
 /* Return the filesystem associated with repository object REPOS. */
 svn_fs_t *svn_repos_fs (svn_repos_t *repos);
 
+/* Run database recovery procedures on the repository at PATH,
+   returning the database to a consistent state.  Use POOL for all
+   allocation.
+
+   Acquires an EXCLUSIVE lock on the repository, recovers the
+   database, and releases the lock.  If an exclusive lock can't be
+   acquired, returns error.  */
+svn_error_t *svn_repos_recover (const char *path, apr_pool_t *pool);
+
+
 
 /* Repository Paths */
 
