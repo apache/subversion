@@ -423,7 +423,6 @@ do_directory_callback (svn_delta__digger_t *digger,
                        svn_boolean_t replace_p)
 {
   svn_error_t *err;
-  void *child_baton;
   const char *ancestor, *ver;
   svn_string_t *dir_name = NULL;
 
@@ -459,7 +458,7 @@ do_directory_callback (svn_delta__digger_t *digger,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
        youngest_frame->ancestor_version,
-       &child_baton);
+       &(youngest_frame->baton));
   else
     err = (* (digger->walker->add_directory)) 
       (dir_name,
@@ -467,16 +466,13 @@ do_directory_callback (svn_delta__digger_t *digger,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
        youngest_frame->ancestor_version,
-       &child_baton);
+       &(youngest_frame->baton));
 
   if (err) 
     return err;
 
-  /* Use the new value of CHILD_BATON as our future parent baton. */
-  youngest_frame->baton = child_baton;
-
   /* Store CHILD_BATON in the digger, too, for safekeeping. */
-  digger->dir_baton = child_baton;
+  digger->dir_baton = youngest_frame->baton;
 
   return SVN_NO_ERROR;
 }
@@ -525,7 +521,6 @@ do_file_callback (svn_delta__digger_t *digger,
                   svn_boolean_t replace_p)
 {
   svn_error_t *err;
-  void *file_baton;
   const char *ancestor, *ver;
   svn_string_t *filename = NULL;
 
@@ -561,7 +556,7 @@ do_file_callback (svn_delta__digger_t *digger,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
        youngest_frame->ancestor_version,
-       &file_baton);
+       &(youngest_frame->file_baton));
   else
     err = (* (digger->walker->add_file)) 
       (filename,
@@ -569,13 +564,10 @@ do_file_callback (svn_delta__digger_t *digger,
        youngest_frame->baton,
        youngest_frame->ancestor_path,
        youngest_frame->ancestor_version,
-       &file_baton);
+       &(youngest_frame->file_baton));
   
   if (err)
     return err;
-
-  /* Store the new FILE_BATON in our stackframe */
-  youngest_frame->file_baton = file_baton;
 
   /* Store FILE_BATON in the digger, too, for safekeeping. */
   digger->file_baton = file_baton;
