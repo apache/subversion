@@ -1,2 +1,44 @@
-This code is still under development -- if you wish to install it,
-read the section "Building from a working copy" in the HACKING file.
+                    Subversion 0.1-xxx  Installation
+                    ================================
+
+   ********************************************************************
+   ***                                                              ***
+   ***  Note: this is PRE-ALPHA code.  Don't use it on real data,   ***
+   ***  except for Subversion itself, and that only because hordes  ***
+   ***  of selfless volunteers are standing by ready to help you    ***
+   ***  if you get yourself in a pickle.                            ***
+   ***                                                              ***
+   ********************************************************************
+
+Subversion installs using the usual GNU procedure:
+
+   $ ./configure
+   $ make
+   $ make check
+   # make install
+
+However, this is a development release, and therefore not as
+thoughtfully packaged as it might be.  So you'll need to do these
+things first:
+
+   1. Subversion depends on Berkeley DB 3.2.9.  Get it from
+      http://www.sleepycat.com and install it on your system.  Note
+      that 3.2.9 is not the latest release of Berkeley DB; Subversion
+      probably works just fine with 3.3.11 too, but that combination
+      hasn't been tested as thoroughly yet.  We recommend 3.2.9.
+
+   2. Subversion depends the Apache Portable Runtime (APR) library.
+      Get it from xxx and unpack it into a subdirectory named "apr/"
+      at the same level as this INSTALL file.  [todo: should we
+      recommend cvs checkout or should we provide a tarball?  Tarball
+      is the standard answer, so we can guarantee which version of APR
+      people use, but it might be better for testers to stay at the
+      bleeding edge too...]
+
+   3. Subversion depends on Neon 0.15.3, an HTTP and WebDAV client
+      library.  Get it from http://www.webdav.org/neon and unpack it
+      into a subdirectory named "neon/" at the same level as this
+      INSTALL file.
+
+Now you can run the GNU install procedure given previously.  Please
+mail dev@subversion.tigris.org if you have any problems.
