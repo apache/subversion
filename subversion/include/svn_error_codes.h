@@ -321,7 +321,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_WC_PATH_FOUND,
               SVN_ERR_WC_CATEGORY_START + 14,
-              "Found a working copy path.")
+              "Found a working copy path")
 
   SVN_ERRDEF (SVN_ERR_WC_FOUND_CONFLICT,
               SVN_ERR_WC_CATEGORY_START + 15,
@@ -447,11 +447,11 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_FS_REP_CHANGED,
               SVN_ERR_FS_CATEGORY_START + 25,
-              "A representation vanished or changed between reads.")
+              "A representation vanished or changed between reads")
 
   SVN_ERRDEF (SVN_ERR_FS_REP_NOT_MUTABLE,
               SVN_ERR_FS_CATEGORY_START + 26,
-              "Tried to change an immutable representation.")
+              "Tried to change an immutable representation")
 
   SVN_ERRDEF (SVN_ERR_FS_MALFORMED_SKEL,
               SVN_ERR_FS_CATEGORY_START + 27,
@@ -473,19 +473,19 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_REPOS_LOCKED,
               SVN_ERR_REPOS_CATEGORY_START + 0,
-              "The repository is locked, perhaps for db recovery.")
+              "The repository is locked, perhaps for db recovery")
 
   SVN_ERRDEF (SVN_ERR_REPOS_HOOK_FAILURE,
               SVN_ERR_REPOS_CATEGORY_START + 1,
-              "A repository hook failed.")
+              "A repository hook failed")
 
   SVN_ERRDEF (SVN_ERR_REPOS_BAD_ARGS,
               SVN_ERR_REPOS_CATEGORY_START + 2,
-              "Incorrect arguments supplied.")
+              "Incorrect arguments supplied")
 
   SVN_ERRDEF (SVN_ERR_REPOS_NO_DATA_FOR_REPORT,
               SVN_ERR_REPOS_CATEGORY_START + 3,
-              "A report cannot be generated because no data was supplied.")
+              "A report cannot be generated because no data was supplied")
 
   SVN_ERRDEF (SVN_ERR_REPOS_BAD_REVISION_REPORT,
               SVN_ERR_REPOS_CATEGORY_START + 4,
@@ -501,7 +501,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED,
               SVN_ERR_REPOS_CATEGORY_START + 7,
-              "Error running post-commit hook.")
+              "Error running post-commit hook")
 
   /* generic ra errors */
 
@@ -523,11 +523,11 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_RA_OUT_OF_DATE,
               SVN_ERR_RA_CATEGORY_START + 4,
-              "Item is out-of-date.")
+              "Item is out-of-date")
 
   SVN_ERRDEF (SVN_ERR_RA_NO_REPOS_UUID,
               SVN_ERR_RA_CATEGORY_START + 5,
-              "Repository has no UUID.")
+              "Repository has no UUID")
       
   /* ra_dav errors */
 
@@ -565,18 +565,18 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_RA_DAV_PROPPATCH_FAILED,
               SVN_ERR_RA_DAV_CATEGORY_START + 8,
-              "Failed to excute WebDAV PROPPATCH.")
+              "Failed to excute WebDAV PROPPATCH")
 
 
   /* ra_local errors */
   
   SVN_ERRDEF (SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND,
               SVN_ERR_RA_LOCAL_CATEGORY_START + 0,
-              "Couldn't find a repository.")
+              "Couldn't find a repository")
        
   SVN_ERRDEF (SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED,
               SVN_ERR_RA_LOCAL_CATEGORY_START + 1,
-              "Couldn't open a repository.")
+              "Couldn't open a repository")
   /* ra_svn errors */
 
   SVN_ERRDEF (SVN_ERR_RA_SVN_CMD_ERR,
@@ -691,7 +691,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION,
               SVN_ERR_CLIENT_CATEGORY_START + 5,
-              "Format of an " SVN_PROP_EXTERNALS " property was invalid.")
+              "Format of an " SVN_PROP_EXTERNALS " property was invalid")
 
   SVN_ERRDEF (SVN_ERR_CLIENT_MODIFIED,
               SVN_ERR_CLIENT_CATEGORY_START + 6,
@@ -711,7 +711,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_CLIENT_REVISION_AUTHOR_CONTAINS_NEWLINE,
               SVN_ERR_CLIENT_CATEGORY_START + 10,
-              SVN_PROP_REVISION_AUTHOR " contains a newline.")
+              SVN_PROP_REVISION_AUTHOR " contains a newline")
 
   /* misc errors */
 
@@ -803,7 +803,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS,
               SVN_ERR_CL_CATEGORY_START + 2,
-              "Mutually exclusive arguments specified.")                   
+              "Mutually exclusive arguments specified")
 
   SVN_ERRDEF (SVN_ERR_CL_ADM_DIR_RESERVED,
               SVN_ERR_CL_CATEGORY_START + 3,
@@ -827,7 +827,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_CL_BAD_LOG_MESSAGE,
               SVN_ERR_CL_CATEGORY_START + 8,
-              "Something is wrong with the log message's contents.")
+              "Something is wrong with the log message's contents")
 
 SVN_ERROR_END
 
