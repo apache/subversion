@@ -594,9 +594,3 @@ void svn_swig_java_make_editor(JNIEnv *jenv,
   *editor = &thunk_editor;
   *edit_baton = make_baton(pool, java_editor, NULL);
 }
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */

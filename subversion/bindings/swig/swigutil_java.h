@@ -94,10 +94,3 @@ void svn_swig_java_make_editor(JNIEnv *jenv,
 #endif /* __cplusplus */
 
 #endif  /* SVN_SWIG_SWIGUTIL_JAVA_H */
-
-
-/* ----------------------------------------------------------------
- * local variables:
- * eval: (load-file "../../../tools/dev/svn-dev.el")
- * end:
- */
