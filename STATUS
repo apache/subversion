@@ -66,6 +66,7 @@ section for approved changes.)
             endings in the repository.  See r8127 log msg for details.
      Votes:
       +1: kfogel, jszakmeister
+      +1 (concept): gstein (not reviewed)
 
    * Issue #408
      Date parser rewrite.
@@ -92,7 +93,7 @@ section for approved changes.)
         pages.  Also require correct apr/apr-util, and apache RPM versions.
      Justification: Packaging fixes and additions.
      Votes:
-      +1: gstein
+      +1 (concept): gstein
 
 
    * Issue #1681
@@ -122,7 +123,7 @@ the section for unapproved changes.)
             that change, so it needs to be listed separately for now.
      Votes:
       +1: rooneg, ghudson, dionisos
-      +1 (concept): jerenkrantz
+      +1 (concept): jerenkrantz, gstein
       +0: cmpilato
 
 
@@ -360,9 +361,9 @@ the section for unapproved changes.)
      Notes:  The codespeak repository is sufficient complex enough
              (history-wise) to trigger this bug (seen by the inability
              to run 'svn blame' on certain files in the repository).
-
      Votes:
       +1: cmpilato, jerenkrantz, jszakmeister
+      +1 (concept): gstein
 
 
    * r8167
@@ -370,6 +371,7 @@ the section for unapproved changes.)
      Justification: Obvious doc string typo, no risk.
      Votes:
       +1: kfogel, jerenkrantz, jszakmeister
+      +1 (concept): gstein
 
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
@@ -398,6 +400,7 @@ Bindings changes that affect the build system:
      Votes:
       +1: clkao, epg, jerenkrantz
 
+
 Bindings changes that don't affect the build system:
 
    * r8057 (depends on core changes r8053, r8054)
@@ -405,25 +408,32 @@ Bindings changes that don't affect the build system:
      Justification: Implementation of above API change in javahl bindings.
      Notes: this obviously assumes svn_client_ctx_t gets imp'd (see above)
      Votes:
-      +1: ghudson, rooneg, gstein
+      +1: ghudson, rooneg
+      +1 (concept): gstein
+
 
    * r8031  ('svn revert' performance fix, API change)
      Implementing API change of r8021 in javahl bindings.
      Justification: with 8021 and without 8031 javahl breaks. Local change.
      Votes:
-      +1: ghudson, gstein (assuming above)
+      +1: ghudson
+      +1 (concept): gstein (assuming base change imp'd)
+
 
    * r8012 (add retry-count to SSL auth providers)
      Implementing API change of r8006 in javahl bindings.
      Justification: with 8006 and without 8012 javahl breaks. Local change.
      Votes:
-      +1: ghudson, gstein (assuming above)
+      +1: ghudson
+      +1 (concept): gstein (assuming base change imp'd)
+
 
    * r8015,r8020  (add 'may_save' option to auth providers, for GUIs)
      Implementing API change of r8013 in javahl bindings.
      Justification: with 8013 and without 8015,8020 javahl breaks. Local change
      Votes:
-      +1: gstein (assuming base change is imp'd)
+      +1 (concept): gstein (assuming base change is imp'd)
+
 
    * r8022, r8024, r8038
      Improved interface for blame in javahl bindings.
@@ -431,11 +441,13 @@ Bindings changes that don't affect the build system:
      Votes:
       +0: gstein
 
+
    * r8039
      javahl bindings did not know status external.
      Justification: API stability; low risk because of bindings only change.
      Votes:
       +0: gstein
+
 
    * r7998, r8000, r8018, r8075, r8117, r8118, r8158
      Perl bindings fixes and enhacements to date.
