@@ -54,6 +54,7 @@ copy_file_administratively (svn_stringbuf_t *src_path,
                             apr_pool_t *pool)
 {
   enum svn_node_kind dst_kind;
+  svn_wc_entry_t *src_entry;
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   svn_stringbuf_t *dst_path = svn_stringbuf_dup (dst_parent, pool);
@@ -65,6 +66,18 @@ copy_file_administratively (svn_stringbuf_t *src_path,
     return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
                               "'%s' already exists and is in the way.",
                               dst_path->data);
+
+  /* Sanity check:  you cannot make a copy of something that's not
+     in the repository.  See comment at the bottom of this file for an
+     explanation. */
+  SVN_ERR (svn_wc_entry (&src_entry, src_path, pool));
+  if ((src_entry->schedule == svn_wc_schedule_add)
+      || (! src_entry->ancestor))
+    return svn_error_createf 
+      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+       "Not allowed to copy or move '%s' -- it's not in the repository yet.\n"
+       "Try committing first.",
+       src_path->data);
 
   /* Now, make an actual copy of the working file. */
   SVN_ERR (svn_io_copy_file (src_path, dst_path, pool));
@@ -187,6 +200,36 @@ svn_wc_copy (svn_stringbuf_t *src_path,
 
   return SVN_NO_ERROR;
 }
+
+
+
+/*
+  Rabbinic Commentary
+
+
+  Q:  Why can't we 'svn cp' something that we just copied?
+      i.e.  'svn cp foo foo2;  svn cp foo2 foo3"
+
+  A:  It leads to inconsistencies.
+
+      In the example above, foo2 has no associated repository URL,
+      because it hasn't been committed yet.  But suppose foo3 simply
+      inherited foo's URL (i.e. foo3 'pointed' to foo as a copy
+      ancestor by virtue of transitivity.)
+ 
+      For one, this is not what the user would expect.  That's
+      certainly not what the user typed!  Second, suppose that the
+      user did a commit between the two 'svn cp' commands.  Now foo3
+      really *would* point to foo2, but without that commit, it
+      pointed to foo.  Ugly inconsistency, and the user has no idea
+      that foo3's ancestor would be different in each case.
+
+      And even if somehow we *could* make foo3 point to foo2 before
+      foo2 existed in the repository... what's to prevent a user from
+      committing foo3 first?  That would break.
+
+*/
+
 
 
 
