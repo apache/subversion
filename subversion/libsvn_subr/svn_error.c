@@ -458,11 +458,11 @@ SVN_POOL_FUNC_DEFINE(apr_pool_t *, svn_pool_create)
         if (apr_err)
           abort_on_pool_failure (apr_err);
 
-        apr_allocator_set_mutex (allocator, mutex);
+        apr_allocator_mutex_set (allocator, mutex);
       }
 #endif /* APR_HAS_THREADS */
 
-      apr_allocator_set_owner (allocator, ret_pool);
+      apr_allocator_owner_set (allocator, ret_pool);
      
       apr_err = svn_error_init_pool (ret_pool);
       if (apr_err)
