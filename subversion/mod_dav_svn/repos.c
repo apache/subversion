@@ -149,6 +149,9 @@ static dav_resource * dav_svn_get_resource(request_rec *r,
   comb = apr_pcalloc(r->pool, sizeof(*comb));
   comb->res.info = &comb->priv;
   comb->res.hooks = &dav_svn_hooks_repos;
+  comb->res.pool = r->pool;
+
+  /* ### this should go away */
   comb->priv.pool = r->pool;
 
   /* make a copy so that we can do some work on it */
@@ -727,6 +730,9 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
   ctx.info = *ctx.res.info;
 
   ctx.res.info = &ctx.info;
+
+  /* operate within the proper pool */
+  ctx.res.pool = params->pool;
 
   /* Don't monkey with the path from params->root. Create a new one.
      This path will then be extended/shortened as necessary. */
