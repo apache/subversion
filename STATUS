@@ -65,3 +65,10 @@ Candidate changes:
     Votes:
       +1: dlr
       +0: breser
+
+  * r9089
+    Fix broken build of python swig bindings on win32. 
+    Justification: single line fix in bindings file which replaces the
+    non standard type "long long" with the matching apr type 
+    "apr_int64_t". The python bindings will not build without it.
+    Votes:
