@@ -151,15 +151,20 @@ svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
    and re-expand expanded keywords.  If EXPAND is FALSE, contract
    expanded keywords and ignore contracted ones.  NULL for any of the
    keyword value parameters (REVISION, e.g.) indicates that that
-   keyword should be ignored (not contracted or expanded).  Keywords
-   are detected only if they are no longer than SVN_IO_MAX_KEYWORD_LEN
+   keyword should be ignored (not contracted or expanded).
+
+   Detect only keywords that are no longer than SVN_IO_MAX_KEYWORD_LEN
    bytes, including the delimiters and the keyword itself.
 
-   Implication of above: If EOL_STR, REVISION, DATE, AUTHOR, and URL
-   are all NULL, just do a byte-for-byte copy.  
+   If anything goes wrong during the copy, attempt to delete DST (if
+   it exists).
 
-   Note that if anything goes wrong during the copy, this function
-   will attempt to delete DST (if it exists). */
+   Recommendation: if EXPAND is false, then you don't care about the
+   keyword values, so pass empty strings as non-null signifiers.
+
+   Note: If EOL_STR, REVISION, DATE, AUTHOR, and URL are all NULL, the
+   behavior is just a byte-for-byte copy.
+*/
 svn_error_t *svn_io_copy_and_translate (const char *src,
                                         const char *dst,
                                         const char *eol_str,

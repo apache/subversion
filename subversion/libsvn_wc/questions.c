@@ -355,43 +355,11 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
       goto cleanup;
     }
 
-  /* Get the full path of the textbase revision of filename */
-  textbase_filename = svn_wc__text_base_path (filename, 0, subpool);
-
-  /* Simple case:  if there's no text-base revision of the file, all we
-     can do is look at timestamps.  */
-  SVN_ERR (svn_io_check_path (textbase_filename, &kind, subpool));
-  if (kind != svn_node_file)
-    {
-      SVN_ERR (timestamps_equal_p (&equal_timestamps, filename,
-                                   svn_wc__text_time, subpool));
-      if (equal_timestamps)
-        *modified_p = FALSE;
-      else
-        *modified_p = TRUE;
-      goto cleanup;
-    }
-  
-  /* Better case:  we have a text-base revision of the file, so there
-     are at least three tests we can try in succession. */
-
-  /* Easy-answer attempt #1:  */
-      
-  /* Check if the the local and textbase file have *definitely*
-     different filesizes. */
-  SVN_ERR (filesizes_definitely_different_p (&different_filesizes,
-                                             filename, textbase_filename,
-                                             subpool));
-  if (different_filesizes) 
-    {
-      *modified_p = TRUE;
-      goto cleanup;
-    }
-      
-  /* Easy-answer attempt #2:  */
-      
   /* See if the local file's timestamp is the same as the one recorded
-     in the administrative directory.  */
+     in the administrative directory.  This could, theoretically, be
+     wrong in certain rare cases, but with the addition of a forced
+     delay after commits (see revision 419 and issue #542) it's highly
+     unlikely to be a problem. */
   SVN_ERR (timestamps_equal_p (&equal_timestamps, filename,
                                svn_wc__text_time, subpool));
   if (equal_timestamps)
@@ -400,21 +368,106 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
       goto cleanup;
     }
       
-  /* Last ditch attempt:  */
+  /* If there's no text-base file, we have to assume the working file
+     is modified.  For example, a file scheduled for addition but not
+     yet committed. */
+  textbase_filename = svn_wc__text_base_path (filename, 0, subpool);
+  SVN_ERR (svn_io_check_path (textbase_filename, &kind, subpool));
+  if (kind != svn_node_file)
+    {
+      *modified_p = TRUE;
+      goto cleanup;
+    }
+  
+  /* Otherwise, fall back on filesize and/or byte-for-byte comparison. */
 
-  /* If we get here, then we know that the filesizes are the same, but
-     the timestamps are different.  That's still not enough evidence
-     to make a correct decision.  So we just give up and get the
-     answer the hard way -- a brute force, byte-for-byte
-     comparison. */
-  SVN_ERR (contents_identical_p (&identical_p,
-                                 filename,
-                                 textbase_filename,
-                                 subpool));
-  if (identical_p)
-    *modified_p = FALSE;
-  else
-    *modified_p = TRUE;
+  /* ### todo: add keyword handling here too. */
+  {
+    enum svn_wc__eol_style style;
+    const char *eol;
+    
+    SVN_ERR (svn_wc__get_eol_style (&style, &eol, filename->data, subpool));
+    if ((style == svn_wc__eol_style_none)
+        || (style == svn_wc__eol_style_fixed))
+      {
+        /* Because text-base and working file use the same eol style, a
+           filesize check is possible. */
+        SVN_ERR (filesizes_definitely_different_p (&different_filesizes,
+                                                   filename, textbase_filename,
+                                                   subpool));
+        if (different_filesizes)
+          {
+            *modified_p = TRUE;
+            goto cleanup;
+          }
+        
+        /* Else the filesize check didn't answer the question, so
+           compare the files the hard way --  a brute force,
+           byte-for-byte comparison. */
+        SVN_ERR (contents_identical_p (&identical_p,
+                                       filename,
+                                       textbase_filename,
+                                       subpool));
+      }
+    else if (style == svn_wc__eol_style_native)
+      {
+        /* Because text-base and working file do not use the same eol
+           style, our only recourse is to convert one of them and do a
+           byte-for-byte comparison. */
+        svn_stringbuf_t *tmp_dir, *tmp_workingfile;
+        apr_file_t *ignored;
+        apr_status_t apr_err;
+
+        svn_path_split (filename, &tmp_dir, &tmp_workingfile,
+                        svn_path_local_style, subpool);
+
+        tmp_workingfile = svn_wc__adm_path (tmp_dir, 1, subpool,
+                                            tmp_workingfile, NULL);
+
+        SVN_ERR (svn_io_open_unique_file (&ignored,
+                                          &tmp_workingfile,
+                                          tmp_workingfile,
+                                          SVN_WC__TMP_EXT,
+                                          FALSE,
+                                          subpool));
+
+        /* Toss return value from this, it doesn't matter, we're not
+           writing to this handle anyway. */
+        apr_file_close (ignored);
+
+        SVN_ERR (svn_io_copy_and_translate (filename->data,
+                                            tmp_workingfile->data,
+                                            SVN_WC__DEFAULT_EOL_MARKER,
+                                            0,
+                                            "",
+                                            "",
+                                            "",
+                                            "",
+                                            0,
+                                            subpool));
+        
+        SVN_ERR (contents_identical_p (&identical_p,
+                                       tmp_workingfile,
+                                       textbase_filename,
+                                       subpool));
+
+        apr_err = apr_file_remove (tmp_workingfile->data, subpool);
+        if (apr_err)
+          return svn_error_createf 
+            (apr_err, 0, NULL, pool,
+             "svn_wc_text_modified_p: error removing %s.",
+             tmp_workingfile->data);
+      }
+    else
+      {
+        return svn_error_createf
+          (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL, pool,
+           "svn_wc_text_modified_p: %s has unknown eol style property",
+           filename->data);
+      }
+  }
+
+  *modified_p = (! identical_p);
 
  cleanup:
   svn_pool_destroy (subpool);
