@@ -45,7 +45,6 @@
 #include "dag.h"
 #include "tree.h"
 #include "proplist.h"
-#include "hooks.h"
 
 
 
@@ -1694,17 +1693,6 @@ svn_fs_commit_txn (const char **conflict_p,
   svn_fs_t *fs = svn_fs__txn_fs (txn);
   apr_pool_t *pool = svn_fs__txn_pool (txn);
 
-  /* Run pre-commit hooks. */
-  {
-    const char *txn_name;
-
-    SVN_ERR (svn_fs_txn_name (&txn_name, txn, pool));
-    SVN_ERR (svn_fs__run_pre_commit_hooks (fs, txn_name, pool));
-
-    /* ### todo: actually, if error want to abort the txn before
-       returning.  If it's a hook failure error, that is. */
-  }
-
   while (1729)
     {
       struct get_root_args get_root_args;
@@ -1774,9 +1762,6 @@ svn_fs_commit_txn (const char **conflict_p,
           break;
         }
     }
-
-  /* Run post-commit hooks. */
-  SVN_ERR (svn_fs__run_post_commit_hooks (fs, *new_rev, pool));
 
   return SVN_NO_ERROR;
 }

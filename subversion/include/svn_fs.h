@@ -409,6 +409,10 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
 
 /* Commit TXN.
 
+     >> Note: you usually don't want to call this directly.        <<
+     >> Instead, call svn_repos_fs_commit_txn(), which honors the  <<
+     >> repository's hook configurations.                          <<
+
    If the transaction conflicts with other changes committed to the
    repository, return an SVN_ERR_FS_CONFLICT error.  Otherwise, create
    a new filesystem revision containing the changes made in TXN,
@@ -452,6 +456,10 @@ svn_error_t *svn_fs_txn_name (const char **name_p,
 
 /* Return the filesystem to which TXN belongs.  */
 svn_fs_t *svn_fs_txn_fs (svn_fs_txn_t *txn);
+
+
+/* Return TXN's pool.  */
+apr_pool_t *svn_fs_txn_pool (svn_fs_txn_t *txn);
 
 
 /* Open the transaction named NAME in the filesystem FS.  Set *TXN to

@@ -164,6 +164,13 @@ svn_fs_txn_fs (svn_fs_txn_t *txn)
 }
 
 
+apr_pool_t *
+svn_fs_txn_pool (svn_fs_txn_t *txn)
+{
+  return txn->pool;
+}
+
+
 
 /* Closing transactions. */
 
