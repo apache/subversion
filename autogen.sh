@@ -12,5 +12,7 @@ autoconf
 # Produce config.h.in
 autoheader
 
-echo "Don't run configure yet!  Once we autoconfiscation is working, "
-echo "this message will go away."
+echo ""
+echo "Note: *Don't* run configure yet!  (Once autoconfiscation is complete, "
+echo "this message will go away.)"
+echo ""
