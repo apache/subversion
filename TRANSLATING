@@ -133,6 +133,65 @@ systems with GNU gettext run
 
 
 
+Maintenance on branches
+=======================
+
+Editing po files in trunk is pretty straightforward, but gets a bit more
+complicated when those changes are going to be transferred to a release
+branch.  The policy is to make no direct changes on release branches,
+everything that goes to the branch should be merged from trunk.  This is
+also the case with po files, but can lead to conflicts and fuzzy
+messages due to the changes in line numbers and string formatting done
+by gettext.  This means that "make locale-gnu-po-update" should not be
+done directly on the branch, in fact, this will make future merging
+almost impossible without conflicts, as lots of new changes that does
+not relate to trunk are generated.  If there have been any direct
+modifications on the branch so merging always creates conflicts, it is
+possible to clean this up by overwriting the po file on the branch with
+a fresh version from trunk, and perform future merges from there.
+
+When the time has come to merge the new changes to the branch, this
+suggests a way to perform the various steps:
+
+  1. Overwrite the po file on the branch with a unmodified version from
+     trunk, by using standard cp/copy or "svn cat [trunkfile] >xx.po".
+     This is the same as if all not-yet-merged revisions from trunk are
+     merged to the branch. 2. Run "make locale-gnu-po-update" on the
+     branch. 3. If no fuzzy messages are generated and no untranslated
+     messages occur, everything is fine.  This means that the po file
+     contains all the new messages and changes from trunk.  You can
+     safely repeat step 1 and commit this file. 4. If any fuzzy messages
+     shows up, it means some messages have been merged that should not
+     be part of the merge.  These messages have changed on trunk, but
+     the changes have not yet been merged into the branch. 5. Locate the
+     fuzzy messages and messages that shows up as untranslated.  Revert
+     these messages in the .po file on trunk so they match the version
+     on the branch. 6. Copy the locally modified trunk version to the
+     branch and run "make locale-gnu-po-update".  Repeat step 5 and 6
+     until all fuzzy and untranslated messages on the trunk are gone. 7.
+     Commit the trunk version. 8. Revert the commit done in step 7 and
+     do a new commit.  You now have two revisions, let's call them
+     revision A and B.  Revision A is the one committed in step 7.  This
+     is the revision which should be merged to the branch, and revision
+     B contains messages that have changed on trunk, but haven't been
+     merged into the branch yet. This will be merged to the branch later
+     when the new features on trunk are merged from trunk. 9. Merge
+     revision A from trunk to the branch and commit.
+
+A result of getting everything from trunk is that the po file on the
+branch will contain many messages which are not used, but this will have
+no impact on the execution of the program.  It can be tempting to run
+"make locale-gnu-po-update" on the branch to get a po file based on the
+branch revision, but this is bad for two reasons: it will drastically
+increase the potential for conflicts when merging from trunk due to all
+the unrelated changes this update creates, and the update will also
+remove unused messages which otherwise would have been used by new
+changes merged into branch.  If you _really_ want to run make
+locale-gnu-po-update, do this as a separate commit which can be reverted
+just before the next merge so any unrelated changes to trunk are gone.
+
+
+
 Requirements for po and mo files
 ================================
 
