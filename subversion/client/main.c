@@ -158,6 +158,7 @@ main (int argc, const char * const *argv)
     {"force",         svn_cl__force_opt, 0},
     {"help",          'h', 0},
     {"message",       'm', 1},
+    {"recursive",     svn_cl__recursive_opt, 0},
     {"revision",      'r', 1},
     {"version",       'v', 0},
     {"filedata",      'F', 1},
@@ -220,6 +221,9 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__force_opt:
         opt_state.force = TRUE;
+        break;
+      case svn_cl__recursive_opt:
+        opt_state.recursive = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

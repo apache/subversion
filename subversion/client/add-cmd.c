@@ -38,7 +38,7 @@ svn_cl__add (apr_getopt_t *os,
   svn_error_t *err;
   apr_array_header_t *targets;
   int i;
-  svn_boolean_t recursive = FALSE; /* todo:  get this from cmdline args */
+  svn_boolean_t recursive = opt_state->recursive;
 
   targets = svn_cl__args_to_target_array (os, pool);
 

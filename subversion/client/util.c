@@ -43,8 +43,8 @@
 /* Create a SVN string from the char* and add it to the array */
 static void 
 array_push_svn_string (apr_array_header_t *array,
-                              const char *str,
-                              apr_pool_t *pool)
+                       const char *str,
+                       apr_pool_t *pool)
 {
   (*((svn_string_t **) apr_array_push (array)))
     = svn_string_create (str, pool);
@@ -146,7 +146,18 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
 
   for (; os->ind < os->argc; os->ind++)
     {
-      array_push_svn_string (targets, os->argv[os->ind], pool);
+      svn_string_t *target = svn_string_create (os->argv[os->ind], pool);
+      svn_string_t *basename = svn_path_last_component (target,
+                                                        svn_path_local_style,
+                                                        pool);
+      /* If this target is not a Subversion administrative directory,
+         don't add it to the target list.  TODO:  Perhaps this check
+         should not call the target a SVN admin dir unless
+         svn_wc_check_wc passes on the target, too? */
+      if (! svn_string_compare 
+          (basename, 
+           svn_string_create (SVN_WC_ADM_DIR_NAME, pool)))
+        array_push_svn_string (targets, os->argv[os->ind], pool);
     }
 
   /* kff todo: need to remove redundancies from targets before
