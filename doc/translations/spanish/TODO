@@ -1,7 +1,5 @@
-Investigar tipo de carácteres MIME según
-http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=79794
-¿Quizás esto permita enviar diffs en emails con la codificación
-correcta?
+Mandar mensajes periódicos a la lista de correo indicando el estado
+de la traducción y buscando revisores.
 
 Estandarizar el uso de nombres como Harry o Sally. No me acuerdo
 cuáles se usaban en la literatura Española, pero no son esos. El
@@ -9,14 +7,25 @@ caso es que estos nombres van empotrados en las imágenes de ejemplo,
 así que va a ser problemático. Consultar en la lista de subversion
 sobre la traducción de imágenes.
 
-Documentar en alguna parte la forma en la que se contacta con los
-autores de http://svnbook.red-bean.com/ y cómo reciben parches.
+Revisar el uso indiscriminado de la palabra "commit" en la
+documentación que no es parte del libro. Simplemente va en contra
+de glosario_traducción.  El problema es que es tan sencillo decir
+commit...
 
-Mandar mensajes periódicos a la lista de correo indicando el estado
-de la traducción y buscando revisores... cuando el trabajo haya
-pasado al servidor principal.
+Investigar la traducción de imágenes del
+libro. En principio observar respuestas de
+http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=80015.
+Una solución es seguir el camino de la traducción a noruego del
+libro. Es decir, hacer nuestras propias imágenes. La más difícil
+sería crear un programa que añade textos en cualquier idioma a la
+imágen y que sea usado por todo el mundo.
 
-Licencias creative commons en español. ¿Merece la pena pegarse por esto?
+Documentar en alguna parte la forma en la que se contacta con
+los autores de http://svnbook.red-bean.com/ y cómo reciben
+parches. Aunque primero habría que ver si permiten traducir la web...
+
+Licencias creative commons en español. ¿Merece la pena pegarse
+por esto?
  http://creativecommons.org/license/results-one?lang=en&jurisdiction=es&license_code=by
  http://creativecommons.org/licenses/by/2.0/es/legalcode.es
 
