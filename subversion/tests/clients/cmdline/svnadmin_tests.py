@@ -175,7 +175,7 @@ def create_txn(sbox):
   repo_dir = sbox.repo_dir
 
   # Make a transaction based on revision 1.
-  output, errput = svntest.main.run_svnadmin("createtxn", repo_dir, "1")
+  output, errput = svntest.main.run_svnadmin("createtxn", repo_dir, "-r", "1")
 
   # Look for it by running 'lstxn'.
   tree_list = get_txns(repo_dir)
@@ -196,12 +196,12 @@ def remove_txn(sbox):
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
 
-  # Make three transactions based on revision 1.
-  svntest.main.run_svnadmin("createtxn", repo_dir, "1")
-  svntest.main.run_svnadmin("createtxn", repo_dir, "1")
-  svntest.main.run_svnadmin("createtxn", repo_dir, "1")
-  svntest.main.run_svnadmin("createtxn", repo_dir, "1")
-  svntest.main.run_svnadmin("createtxn", repo_dir, "1")
+  # Make several transactions based on revision 1.
+  svntest.main.run_svnadmin("createtxn", repo_dir, "-r", "1")
+  svntest.main.run_svnadmin("createtxn", repo_dir, "-r", "1")
+  svntest.main.run_svnadmin("createtxn", repo_dir, "-r", "1")
+  svntest.main.run_svnadmin("createtxn", repo_dir, "-r", "1")
+  svntest.main.run_svnadmin("createtxn", repo_dir, "-r", "1")
 
   # Look for them by running 'lstxn'.
   tree_list = get_txns(repo_dir)
