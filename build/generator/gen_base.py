@@ -68,7 +68,7 @@ class GeneratorBase:
 
       target_class = _build_types.get(type)
       if not target_class:
-        raise GenError('ERROR: unknown build type: ' + type)
+        raise GenError('ERROR: unknown build type for ' + section_name)
 
       section = target_class.Section(options, target_class)
 
@@ -95,7 +95,7 @@ class GeneratorBase:
 
     # collect all the test scripts
     self.scripts = _collect_paths(parser.get('test-scripts', 'paths'))
-    self.fs_scripts = _collect_paths(parser.get('fs-test-scripts', 'paths'))
+    self.bdb_scripts = _collect_paths(parser.get('bdb-test-scripts', 'paths'))
 
     self.swig_dirs = string.split(parser.get('swig-dirs', 'paths'))
 
@@ -223,7 +223,7 @@ class DependencyGraph:
 
 # dependency types
 dep_types = [
-  'DT_INSTALL',  # install areas. e.g. 'lib', 'base-lib', 'fs-lib'
+  'DT_INSTALL',  # install areas. e.g. 'lib', 'base-lib'
   'DT_OBJECT',   # an object filename, depending upon .c filenames
   'DT_SWIG_C',   # a swig-generated .c file, depending upon .i filename(s)
   'DT_LINK',     # a libtool-linked filename, depending upon object fnames
@@ -233,13 +233,13 @@ dep_types = [
   ]
 
 list_types = [
-  'LT_PROJECT',       # Visual C++ projects (TargetSpecial instances)
-  'LT_TEST_DEPS',     # Test programs to build
-  'LT_TEST_PROGS',    # Test programs to run (subset of LT_TEST_DEPS)
-  'LT_FS_TEST_DEPS',  # File system test programs to build
-  'LT_FS_TEST_PROGS', # File system test programs to run
-  'LT_TARGET_DIRS',   # directories where files are built
-  'LT_MANPAGES',      # manpages
+  'LT_PROJECT',        # Visual C++ projects (TargetSpecial instances)
+  'LT_TEST_DEPS',      # Test programs to build
+  'LT_TEST_PROGS',     # Test programs to run (subset of LT_TEST_DEPS)
+  'LT_BDB_TEST_DEPS',  # File system test programs to build
+  'LT_BDB_TEST_PROGS', # File system test programs to run
+  'LT_TARGET_DIRS',    # directories where files are built
+  'LT_MANPAGES',       # manpages
   ]
 
 # create some variables for these
@@ -444,10 +444,10 @@ class TargetExe(TargetLinked):
       graph.add(DT_LIST, LT_TEST_DEPS, self.filename)
       if self.testing != 'skip':
         graph.add(DT_LIST, LT_TEST_PROGS, self.filename)
-    elif self.install == 'fs-test':
-      graph.add(DT_LIST, LT_FS_TEST_DEPS, self.filename)
+    elif self.install == 'bdb-test':
+      graph.add(DT_LIST, LT_BDB_TEST_DEPS, self.filename)
       if self.testing != 'skip':
-        graph.add(DT_LIST, LT_FS_TEST_PROGS, self.filename)
+        graph.add(DT_LIST, LT_BDB_TEST_PROGS, self.filename)
 
     graph.bulk_add(DT_LIST, LT_MANPAGES, string.split(self.manpages))
 
@@ -489,6 +489,9 @@ class TargetApacheMod(TargetLib):
     self.link_cmd = '$(LINK_APACHE_MOD)'
 
 class TargetRaModule(TargetLib):
+  pass
+
+class TargetFsModule(TargetLib):
   pass
 
 class TargetDoc(Target):
@@ -813,6 +816,7 @@ _build_types = {
   'swig_lib' : TargetSWIGLib,
   'swig_project' : TargetSWIGProject,
   'ra-module': TargetRaModule,
+  'fs-module': TargetFsModule,
   'apache-mod': TargetApacheMod,
   'javah' : TargetJavaHeaders,
   'java' : TargetJavaClasses,
@@ -832,7 +836,7 @@ _predef_sections = [
   'options',
   'static-apache',
   'test-scripts',
-  'fs-test-scripts',
+  'bdb-test-scripts',
   'swig-dirs',
   ]
 

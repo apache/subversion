@@ -27,6 +27,7 @@ import copy    # for deepcopy()
 import time    # for time()
 
 from svntest import Failure
+from svntest import Skip
 from svntest import testcase
 from svntest import wc
 
@@ -108,6 +109,8 @@ test_area_url = file_schema_prefix + os.path.abspath(os.getcwd())
 if windows == 1:
   test_area_url = string.replace(test_area_url, '\\', '/')
 
+# Global variable indicating the FS type for repository creations.
+fs_type = "bdb"
 
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!
@@ -315,7 +318,15 @@ def create_repos(path):
 
   if not(os.path.exists(path)):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
-  run_svnadmin("create", path, "--bdb-txn-nosync")
+
+  stdout, stderr = run_command(svnadmin_binary, 1, 0, "create", path,
+                               "--bdb-txn-nosync", "--fs-type", fs_type)
+
+  # Skip tests if we can't create the repository (most likely, because
+  # Subversion was built without BDB and this is a default test run).
+  for line in stderr:
+    if line.find('Unknown FS type') != -1:
+      raise Skip
 
   # Allow unauthenticated users to write to the repos, for ra_svn testing.
   file_append(os.path.join(path, "conf", "svnserve.conf"),
@@ -531,6 +542,7 @@ def run_tests(test_list):
   """
 
   global test_area_url
+  global fs_type
   global verbose_mode
   global cleanup_mode
   testnum = None
@@ -540,6 +552,7 @@ def run_tests(test_list):
   os.environ['SVN_EDITOR'] = ''
 
   url_re = re.compile('^(?:--url|BASE_URL)=(.+)')
+  fstype_re = re.compile('^--fs-type=(.+)')
 
   for arg in sys.argv:
 
@@ -558,6 +571,10 @@ def run_tests(test_list):
       index = sys.argv.index(arg)
       test_area_url = sys.argv[index + 1]
 
+    elif arg == "--fs-type":
+      index = sys.argv.index(arg)
+      fs_type = sys.argv[index + 1]
+
     elif arg == "-v" or arg == "--verbose":
       verbose_mode = 1
 
@@ -568,6 +585,9 @@ def run_tests(test_list):
       match = url_re.search(arg)
       if match:
         test_area_url = match.group(1)
+      match = fstype_re.search(arg)
+      if match:
+        fs_type = match.group(1)
 
       else:
         try:

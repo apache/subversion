@@ -250,7 +250,7 @@ class Generator(gen_base.GeneratorBase):
                                          gen_base.LT_TARGET_DIRS)
 
     # get all the test scripts' directories
-    script_dirs = map(os.path.dirname, self.scripts + self.fs_scripts)
+    script_dirs = map(os.path.dirname, self.scripts + self.bdb_scripts)
 
     # remove duplicate directories between targets and tests
     build_dirs = gen_base.unique(target_dirs + script_dirs + self.swig_dirs)
@@ -264,16 +264,16 @@ class Generator(gen_base.GeneratorBase):
     test_deps = self.graph.get_sources(gen_base.DT_LIST,
                                        gen_base.LT_TEST_DEPS)
 
-    fs_test_progs = self.graph.get_sources(gen_base.DT_LIST,
-                                           gen_base.LT_FS_TEST_PROGS)
+    bdb_test_progs = self.graph.get_sources(gen_base.DT_LIST,
+       	                                    gen_base.LT_BDB_TEST_PROGS)
 
-    fs_test_deps = self.graph.get_sources(gen_base.DT_LIST,
-                                          gen_base.LT_FS_TEST_DEPS)
+    bdb_test_deps = self.graph.get_sources(gen_base.DT_LIST,
+                                           gen_base.LT_BDB_TEST_DEPS)
 
-    self.ofile.write('FS_TEST_DEPS = %s\n\n' %
-                     string.join(fs_test_deps + self.fs_scripts))
-    self.ofile.write('FS_TEST_PROGRAMS = %s\n\n' %
-                     string.join(fs_test_progs + self.fs_scripts))
+    self.ofile.write('BDB_TEST_DEPS = %s\n\n' %
+                     string.join(bdb_test_deps + self.bdb_scripts))
+    self.ofile.write('BDB_TEST_PROGRAMS = %s\n\n' %
+                     string.join(bdb_test_progs + self.bdb_scripts))
     self.ofile.write('TEST_DEPS = %s\n\n' %
                      string.join(test_deps + self.scripts))
     self.ofile.write('TEST_PROGRAMS = %s\n\n' %
@@ -306,8 +306,9 @@ class Generator(gen_base.GeneratorBase):
       wrappers[lang] = [ ]
 
     for target in self.graph.get_all_sources(gen_base.DT_INSTALL):
-      if isinstance(target, gen_base.TargetRaModule):
-        # name of the RA module: strip 'libsvn_' and upper-case it
+      if isinstance(target, gen_base.TargetRaModule) or \
+         isinstance(target, gen_base.TargetFsModule):
+        # name of the module: strip 'libsvn_' and upper-case it
         name = string.upper(target.name[7:])
 
         # construct a list of the other .la libs to link against

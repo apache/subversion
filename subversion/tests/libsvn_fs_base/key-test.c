@@ -24,7 +24,7 @@
 
 #include "svn_error.h"
 #include "svn_test.h"
-#include "../../libsvn_fs/key-gen.h"
+#include "../../libsvn_fs_base/key-gen.h"
 
 
 
@@ -53,7 +53,7 @@ key_test (const char **msg,
 
   for (i = 0; i < 9; i++)
     {
-      char gen_key[SVN_FS__MAX_KEY_SIZE];
+      char gen_key[MAX_KEY_SIZE];
       const char *orig_key = keys[i][0];
       const char *next_key = keys[i][1];
       apr_size_t len, olen;
@@ -61,7 +61,7 @@ key_test (const char **msg,
       len = strlen (orig_key);
       olen = len;
 
-      svn_fs__next_key (orig_key, &len, gen_key);
+      svn_fs_base__next_key (orig_key, &len, gen_key);
       if (! (((len == olen) || (len == (olen + 1)))
              && (strlen (next_key) == len)
              && (strcmp (next_key, gen_key) == 0)))

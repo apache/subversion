@@ -28,9 +28,8 @@
 /* Converting text to numbers.  */
 
 apr_size_t
-svn_fs__getsize (const char *data, apr_size_t len,
-                 const char **endptr,
-                 apr_size_t max)
+svn_fs_base__getsize (const char *data, apr_size_t len,
+                      const char **endptr, apr_size_t max)
 {
   /* We can't detect overflow by simply comparing value against max,
      since multiplying value by ten can overflow in strange ways if
@@ -85,12 +84,12 @@ svn_fs__getsize (const char *data, apr_size_t len,
 /* Converting numbers to text.  */
 
 int
-svn_fs__putsize (char *data, apr_size_t len, apr_size_t value)
+svn_fs_base__putsize (char *data, apr_size_t len, apr_size_t value)
 {
   apr_size_t i = 0;
 
   /* Generate the digits, least-significant first.  */
-  do 
+  do
     {
       if (i >= len)
         return 0;
@@ -120,11 +119,9 @@ svn_fs__putsize (char *data, apr_size_t len, apr_size_t value)
 
 /*** Keys for reps and strings. ***/
 
-const char svn_fs__next_key_key[] = "next-key";
-
 
 void
-svn_fs__next_key (const char *this, apr_size_t *len, char *next)
+svn_fs_base__next_key (const char *this, apr_size_t *len, char *next)
 {
   apr_size_t olen = *len;     /* remember the first length */
   int i = olen - 1;           /* initial index; we work backwards */
@@ -132,14 +129,14 @@ svn_fs__next_key (const char *this, apr_size_t *len, char *next)
   svn_boolean_t carry = TRUE; /* boolean: do we have a carry or not?
                                  We start with a carry, because we're
                                  incrementing the number, after all. */
-  
+
   /* Leading zeros are not allowed, except for the string "0". */
   if ((*len > 1) && (this[0] == '0'))
     {
       *len = 0;
       return;
     }
-  
+
   for (i = (olen - 1); i >= 0; i--)
     {
       c = this[i];
@@ -158,7 +155,7 @@ svn_fs__next_key (const char *this, apr_size_t *len, char *next)
           else
             {
               carry = FALSE;
-              
+
               if (c == '9')
                 next[i] = 'a';
               else
@@ -174,9 +171,9 @@ svn_fs__next_key (const char *this, apr_size_t *len, char *next)
   *len = olen + (carry ? 1 : 0);
 
   /* Ensure that we haven't overrun the (ludicrous) bound on key length.
-     Note that SVN_FS__MAX_KEY_SIZE is a bound on the size *including*
+     Note that MAX_KEY_SIZE is a bound on the size *including*
      the trailing null byte. */
-  assert (*len < SVN_FS__MAX_KEY_SIZE);
+  assert (*len < MAX_KEY_SIZE);
 
   /* Now we know it's safe to add the null terminator. */
   next[*len] = '\0';
@@ -191,7 +188,7 @@ svn_fs__next_key (const char *this, apr_size_t *len, char *next)
 
 
 int
-svn_fs__key_compare (const char *a, const char *b)
+svn_fs_base__key_compare (const char *a, const char *b)
 {
   int a_len = strlen (a);
   int b_len = strlen (b);
@@ -207,7 +204,7 @@ svn_fs__key_compare (const char *a, const char *b)
 
 
 svn_boolean_t
-svn_fs__same_keys (const char *a, const char *b)
+svn_fs_base__same_keys (const char *a, const char *b)
 {
   if (! (a || b))
     return TRUE;

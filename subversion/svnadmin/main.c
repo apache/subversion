@@ -158,6 +158,7 @@ enum
     svnadmin__deltas,
     svnadmin__ignore_uuid,
     svnadmin__force_uuid,
+    svnadmin__fs_type,
     svnadmin__parent_dir,
     svnadmin__bdb_txn_nosync,
     svnadmin__bdb_log_keep,
@@ -205,6 +206,9 @@ static const apr_getopt_option_t options_table[] =
     {"force-uuid", svnadmin__force_uuid, 0,
      N_("set repos UUID to that found in stream, if any")},
 
+    {"fs-type", svnadmin__fs_type, 1,
+     N_("type of repository: 'bdb' or 'fsfs'")},
+
     {"parent-dir", svnadmin__parent_dir, 1,
      N_("load at specified directory in repository")},
 
@@ -233,7 +237,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      N_("usage: svnadmin create REPOS_PATH\n\n"
      "Create a new, empty repository at REPOS_PATH.\n"),
      {svnadmin__bdb_txn_nosync, svnadmin__bdb_log_keep,
-      svnadmin__config_dir} },
+      svnadmin__config_dir, svnadmin__fs_type} },
 
     {"deltify", subcommand_deltify, {0}, N_
      ("usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
@@ -334,6 +338,7 @@ struct svnadmin_opt_state
 {
   const char *repository_path;
   const char *new_repository_path;                  /* hotcopy dest. path */
+  const char *fs_type;                              /* --fs-type */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
@@ -368,6 +373,11 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE,
                 APR_HASH_KEY_STRING,
                 (opt_state->bdb_log_keep ? "0" : "1"));
+
+  if (opt_state->fs_type)
+    apr_hash_set (fs_config, SVN_FS_CONFIG_FS_TYPE,
+                  APR_HASH_KEY_STRING,
+                  opt_state->fs_type);
 
   SVN_ERR (svn_config_get_config (&config, opt_state->config_dir, pool));
   SVN_ERR (svn_repos_create (&repos, opt_state->repository_path,
@@ -940,6 +950,16 @@ main (int argc, const char * const *argv)
         break;
       case svnadmin__force_uuid:
         opt_state.uuid_action = svn_repos_load_uuid_force;
+        break;
+      case svnadmin__fs_type:
+        err = svn_utf_cstring_to_utf8 (&opt_state.fs_type, opt_arg, pool);
+        if (err)
+          {
+            svn_handle_error (err, stderr, FALSE);
+            svn_error_clear (err);
+            svn_pool_destroy (pool);
+            return EXIT_FAILURE;
+          }
         break;
       case svnadmin__parent_dir:
         err = svn_utf_cstring_to_utf8 (&opt_state.parent_dir, opt_arg,

@@ -10,7 +10,7 @@ class TestHarness:
   '''
 
   def __init__(self, abs_srcdir, abs_builddir, python, shell, logfile,
-               base_url=None, verbose=None, cleanup=None):
+               base_url=None, fs_type=None, verbose=None, cleanup=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -18,6 +18,7 @@ class TestHarness:
     SHELL is the name of the shell.
     LOGFILE is the name of the log file.
     BASE_URL is the base url for DAV tests.
+    FS_TYPE is the FS type for repository creation.
     '''
     self.srcdir = abs_srcdir
     self.builddir = abs_builddir
@@ -25,6 +26,7 @@ class TestHarness:
     self.shell = shell
     self.logfile = logfile
     self.base_url = base_url
+    self.fs_type = fs_type
     self.verbose = verbose
     self.cleanup = cleanup
     self.log = None
@@ -84,6 +86,9 @@ class TestHarness:
       if self.base_url is not None:
         cmdline.append('--url')
         cmdline.append(quote(self.base_url))
+      if self.fs_type is not None:
+        cmdline.append('--fs-type')
+        cmdline.append(quote(self.fs_type))
     elif progbase[-3:] == '.sh':
       progname = self.shell
       cmdline = [quote(progname),
@@ -145,18 +150,19 @@ class TestHarness:
 
 
 def main():
-  '''Usage: run_tests.py [--url <base_url>] [--verbose] [--cleanup]
+  '''Usage: run_tests.py [--url <base-url>] [--fs-type <fs-type>]
+                      [--verbose] [--cleanup]
                       <abs_srcdir> <abs_builddir> <python> <shell>
                       <prog ...>
 
-  The optional base_url, verbose and cleanup options, and the first
-  four parameters are passed unchanged to the TestHarness constuctor.
-  All other parameters are names of test programs.
+  The optional base-url, fs-type, verbose, and cleanup options, and
+  the first four parameters are passed unchanged to the TestHarness
+  constuctor.  All other parameters are names of test programs.
   '''
 
   try:
     opts, args = getopt.getopt(sys.argv[1:], '',
-                               ['url=', 'verbose', 'cleanup'])
+                               ['url=', 'fs-type=', 'verbose', 'cleanup'])
   except getopt.GetoptError:
     args = []
 
@@ -164,10 +170,12 @@ def main():
     print __doc__
     sys.exit(2)
 
-  base_url, verbose, cleanup = None, None, None
+  base_url, fs_type, verbose, cleanup = None, None, None, None
   for opt, val in opts:
     if opt == '--url':
       base_url = val
+    elif opt == '--fs-type':
+      fs_type = val
     elif opt == '--verbose':
       verbose = 1
     elif opt == '--cleanup':
@@ -177,7 +185,7 @@ def main():
 
   th = TestHarness(args[0], args[1], args[2], args[3],
                    os.path.abspath('tests.log'),
-                   base_url, verbose, cleanup)
+                   base_url, fs_type, verbose, cleanup)
 
   failed = th.run(args[4:])
   if failed:

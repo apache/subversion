@@ -24,8 +24,28 @@ extern "C" {
 
 
 
-/* The functions you might have expected to find here are all part of
-   the libsvn_fs public interface; see ../include/svn_fs.h. */
+/* Set *ROOT_P to the root directory of revision REV in filesystem FS.
+   Allocate the structure in POOL. */
+svn_error_t *svn_fs_fs__revision_root (svn_fs_root_t **root_p, svn_fs_t *fs,
+                                       svn_revnum_t rev, apr_pool_t *pool);
+
+/* Does nothing, but included for Subversion 1.0.x compatability. */
+svn_error_t *svn_fs_fs__deltify (svn_fs_t *fs, svn_revnum_t rev,
+                                 apr_pool_t *pool);
+
+/* Commit the transaction TXN as a new revision.  Return the new
+   revision in *NEW_REV.  If the transaction conflicts with other
+   changes return SVN_ERR_FS_CONFLICT and set *CONFLICT_P to a string
+   that details the cause of the conflict.  Perform temporary
+   allocations in POOL. */
+svn_error_t *svn_fs_fs__commit_txn (const char **conflict_p,
+                                    svn_revnum_t *new_rev, svn_fs_txn_t *txn,
+                                    apr_pool_t *pool);
+
+/* Set ROOT_P to the root directory of transaction TXN.  Allocate the
+   structure in POOL. */
+svn_error_t *svn_fs_fs__txn_root (svn_fs_root_t **root_p, svn_fs_txn_t *txn,
+                                  apr_pool_t *pool);
 
 
 #ifdef __cplusplus

@@ -73,9 +73,9 @@ static skel_t *explicit_atom (const char *data, apr_size_t len,
 
 
 skel_t *
-svn_fs__parse_skel (const char *data,
-                    apr_size_t len,
-                    apr_pool_t *pool)
+svn_fs_base__parse_skel (const char *data,
+                         apr_size_t len,
+                         apr_pool_t *pool)
 {
   return parse (data, len, pool);
 }
@@ -104,7 +104,7 @@ parse (const char *data,
     return implicit_atom (data, len, pool);
 
   /* Otherwise, we assume it's a string with an explicit length;
-     svn_fs__getsize will catch the error.  */
+     svn_fs_base__getsize will catch the error.  */
   else
     return explicit_atom (data, len, pool);
 }
@@ -230,7 +230,7 @@ explicit_atom (const char *data,
   skel_t *s;
 
   /* Parse the length.  */
-  size = svn_fs__getsize (data, end - data, &next, end - data);
+  size = svn_fs_base__getsize (data, end - data, &next, end - data);
   data = next;
 
   /* Exit if we overflowed, or there wasn't a valid number there.  */
@@ -264,10 +264,10 @@ static svn_stringbuf_t *unparse (skel_t *, svn_stringbuf_t *, apr_pool_t *);
 
 
 svn_stringbuf_t *
-svn_fs__unparse_skel (skel_t *skel, apr_pool_t *pool)
+svn_fs_base__unparse_skel (skel_t *skel, apr_pool_t *pool)
 {
   svn_stringbuf_t *str;
-  
+
   /* Allocate a string to hold the data.  */
   str = apr_palloc (pool, sizeof (*str));
   str->pool = pool;
@@ -290,7 +290,7 @@ estimate_unparsed_size (skel_t *skel)
     {
       if (skel->len < 100)
         /* If we have to use the explicit-length form, that'll be
-           two bytes for the length, one byte for the space, and 
+           two bytes for the length, one byte for the space, and
            the contents.  */
         return skel->len + 3;
       else
@@ -312,7 +312,7 @@ estimate_unparsed_size (skel_t *skel)
 }
 
 
-/* Return non-zero iff we should use the implicit-length form for SKEL.  
+/* Return non-zero iff we should use the implicit-length form for SKEL.
    Assume that SKEL is an atom.  */
 static svn_boolean_t
 use_implicit (skel_t *skel)
@@ -360,7 +360,7 @@ unparse (skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
           char buf[200];
           int length_len;
 
-          length_len = svn_fs__putsize (buf, sizeof (buf), skel->len);
+          length_len = svn_fs_base__putsize (buf, sizeof (buf), skel->len);
           if (! length_len)
             abort ();
 
@@ -380,7 +380,7 @@ unparse (skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
       /* Emit an opening parenthesis.  */
       svn_stringbuf_ensure (str, str->len + 1);
       str->data[str->len++] = '(';
-      
+
       /* Append each element.  Emit a space between each pair of elements.  */
       for (child = skel->children; child; child = child->next)
         {
@@ -405,7 +405,7 @@ unparse (skel_t *skel, svn_stringbuf_t *str, apr_pool_t *pool)
 
 
 skel_t *
-svn_fs__str_atom (const char *str, apr_pool_t *pool)
+svn_fs_base__str_atom (const char *str, apr_pool_t *pool)
 {
   skel_t *skel = apr_pcalloc (pool, sizeof (*skel));
   skel->is_atom = TRUE;
@@ -417,9 +417,9 @@ svn_fs__str_atom (const char *str, apr_pool_t *pool)
 
 
 skel_t *
-svn_fs__mem_atom (const void *addr, 
-                  apr_size_t len,
-                  apr_pool_t *pool)
+svn_fs_base__mem_atom (const void *addr,
+                       apr_size_t len,
+                       apr_pool_t *pool)
 {
   skel_t *skel = apr_pcalloc (pool, sizeof (*skel));
   skel->is_atom = TRUE;
@@ -431,7 +431,7 @@ svn_fs__mem_atom (const void *addr,
 
 
 skel_t *
-svn_fs__make_empty_list (apr_pool_t *pool)
+svn_fs_base__make_empty_list (apr_pool_t *pool)
 {
   skel_t *skel = apr_pcalloc (pool, sizeof (*skel));
   return skel;
@@ -439,7 +439,7 @@ svn_fs__make_empty_list (apr_pool_t *pool)
 
 
 void
-svn_fs__prepend (skel_t *skel, skel_t *list_skel)
+svn_fs_base__prepend (skel_t *skel, skel_t *list_skel)
 {
   /* If list_skel isn't even a list, somebody's not using this
      function properly. */
@@ -452,7 +452,7 @@ svn_fs__prepend (skel_t *skel, skel_t *list_skel)
 
 
 void
-svn_fs__append (skel_t *skel, skel_t *list_skel)
+svn_fs_base__append (skel_t *skel, skel_t *list_skel)
 {
   /* If list_skel isn't even a list, somebody's not using this
      function properly. */
@@ -467,7 +467,7 @@ svn_fs__append (skel_t *skel, skel_t *list_skel)
   else
     {
       skel_t *tmp = list_skel->children;
-      
+
       /* Find the last child... */
       while (tmp->next)
         {
@@ -484,7 +484,7 @@ svn_fs__append (skel_t *skel, skel_t *list_skel)
 
 
 svn_boolean_t
-svn_fs__matches_atom (skel_t *skel, const char *str)
+svn_fs_base__matches_atom (skel_t *skel, const char *str)
 {
   if (skel && skel->is_atom)
     {
@@ -498,7 +498,7 @@ svn_fs__matches_atom (skel_t *skel, const char *str)
 
 
 int
-svn_fs__atom_matches_string (skel_t *skel, const svn_string_t *str)
+svn_fs_base__atom_matches_string (skel_t *skel, const svn_string_t *str)
 {
   if (skel && skel->is_atom)
     {
@@ -510,7 +510,7 @@ svn_fs__atom_matches_string (skel_t *skel, const svn_string_t *str)
 
 
 int
-svn_fs__list_length (skel_t *skel)
+svn_fs_base__list_length (skel_t *skel)
 {
   int len = 0;
   skel_t *child;
@@ -529,7 +529,7 @@ svn_fs__list_length (skel_t *skel)
 /* Comparing skels. */
 
 svn_boolean_t
-svn_fs__skels_are_equal (skel_t *skel1, skel_t *skel2)
+svn_fs_base__skels_are_equal (skel_t *skel1, skel_t *skel2)
 {
   if (skel1 == skel2)
     return TRUE;
@@ -545,14 +545,15 @@ svn_fs__skels_are_equal (skel_t *skel1, skel_t *skel2)
         return FALSE;
     }
   else if (((! skel1->is_atom) && (! skel2->is_atom))
-           && ((svn_fs__list_length (skel1)) == (svn_fs__list_length (skel2))))
+           && ((svn_fs_base__list_length (skel1))
+               == (svn_fs_base__list_length (skel2))))
     {
-      int len = svn_fs__list_length (skel1);
+      int len = svn_fs_base__list_length (skel1);
       int i;
-      
+
       for (i = 0; i < len; i++)
-        if (! svn_fs__skels_are_equal ((skel1->children) + i,
-                                       (skel2->children) + i))
+        if (! svn_fs_base__skels_are_equal ((skel1->children) + i,
+                                            (skel2->children) + i))
           return FALSE;
 
       return TRUE;
@@ -567,7 +568,7 @@ svn_fs__skels_are_equal (skel_t *skel1, skel_t *skel2)
 
 
 skel_t *
-svn_fs__copy_skel (skel_t *skel, apr_pool_t *pool)
+svn_fs_base__copy_skel (skel_t *skel, apr_pool_t *pool)
 {
   skel_t *copy = apr_pcalloc (pool, sizeof (*copy));
 
@@ -594,7 +595,7 @@ svn_fs__copy_skel (skel_t *skel, apr_pool_t *pool)
            skel_child;
            skel_child = skel_child->next)
         {
-          *copy_child_ptr = svn_fs__copy_skel (skel_child, pool);
+          *copy_child_ptr = svn_fs_base__copy_skel (skel_child, pool);
           copy_child_ptr = &(*copy_child_ptr)->next;
         }
       *copy_child_ptr = 0;

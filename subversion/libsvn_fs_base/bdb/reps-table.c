@@ -23,6 +23,7 @@
 #include "dbt.h"
 #include "../trail.h"
 #include "../key-gen.h"
+#include "../../libsvn_fs/fs-loader.h"
 #include "bdb-err.h"
 #include "reps-table.h"
 #include "strings-table.h"
@@ -32,14 +33,14 @@
 /*** Creating and opening the representations table. ***/
 
 int
-svn_fs__bdb_open_reps_table (DB **reps_p,
+svn_fs_bdb__open_reps_table (DB **reps_p,
                              DB_ENV *env,
                              svn_boolean_t create)
 {
   const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *reps;
 
-  BDB_ERR (svn_fs__bdb_check_version());
+  BDB_ERR (svn_fs_bdb__check_version());
   BDB_ERR (db_create (&reps, env, 0));
   BDB_ERR (reps->open (SVN_BDB_OPEN_PARAMS(reps, NULL),
                       "representations", 0, DB_BTREE,
@@ -53,8 +54,8 @@ svn_fs__bdb_open_reps_table (DB **reps_p,
 
     BDB_ERR (reps->put
             (reps, 0,
-             svn_fs__str_to_dbt (&key, svn_fs__next_key_key),
-             svn_fs__str_to_dbt (&value, "0"),
+             svn_fs_base__str_to_dbt (&key, NEXT_KEY_KEY),
+             svn_fs_base__str_to_dbt (&value, "0"),
              SVN_BDB_AUTO_COMMIT));
   }
 
@@ -67,23 +68,24 @@ svn_fs__bdb_open_reps_table (DB **reps_p,
 /*** Storing and retrieving reps.  ***/
 
 svn_error_t *
-svn_fs__bdb_read_rep (svn_fs__representation_t **rep_p,
+svn_fs_bdb__read_rep (representation_t **rep_p,
                       svn_fs_t *fs,
                       const char *key,
                       trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   skel_t *skel;
   int db_err;
   DBT query, result;
 
-  svn_fs__trail_debug (trail, "representations", "get");
-  db_err = fs->representations->get
-    (fs->representations,
+  svn_fs_base__trail_debug (trail, "representations", "get");
+  db_err = bfd->representations->get
+    (bfd->representations,
      trail->db_txn,
-     svn_fs__str_to_dbt (&query, key),
-     svn_fs__result_dbt (&result), 0);
+     svn_fs_base__str_to_dbt (&query, key),
+     svn_fs_base__result_dbt (&result), 0);
 
-  svn_fs__track_dbt (&result, trail->pool);
+  svn_fs_base__track_dbt (&result, trail->pool);
 
   /* If there's no such node, return an appropriately specific error.  */
   if (db_err == DB_NOTFOUND)
@@ -95,77 +97,78 @@ svn_fs__bdb_read_rep (svn_fs__representation_t **rep_p,
   SVN_ERR (BDB_WRAP (fs, "reading representation", db_err));
 
   /* Parse the REPRESENTATION skel.  */
-  skel = svn_fs__parse_skel (result.data, result.size, trail->pool);
+  skel = svn_fs_base__parse_skel (result.data, result.size, trail->pool);
 
   /* Convert to a native type.  */
-  SVN_ERR (svn_fs__parse_representation_skel (rep_p, skel, trail->pool));
+  SVN_ERR (svn_fs_base__parse_representation_skel (rep_p, skel, trail->pool));
 
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_fs__bdb_write_rep (svn_fs_t *fs,
+svn_fs_bdb__write_rep (svn_fs_t *fs,
                        const char *key,
-                       const svn_fs__representation_t *rep,
+                       const representation_t *rep,
                        trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   DBT query, result;
   skel_t *skel;
 
   /* Convert from native type to skel. */
-  SVN_ERR (svn_fs__unparse_representation_skel (&skel, rep, trail->pool));
+  SVN_ERR (svn_fs_base__unparse_representation_skel (&skel, rep, trail->pool));
 
   /* Now write the record. */
-  svn_fs__trail_debug (trail, "representations", "put");
+  svn_fs_base__trail_debug (trail, "representations", "put");
   SVN_ERR (BDB_WRAP (fs, "storing representation",
-                    fs->representations->put
-                    (fs->representations, trail->db_txn,
-                     svn_fs__str_to_dbt (&query, key),
-                     svn_fs__skel_to_dbt (&result, skel, trail->pool), 0)));
+                     bfd->representations->put
+                     (bfd->representations, trail->db_txn,
+                      svn_fs_base__str_to_dbt (&query, key),
+                      svn_fs_base__skel_to_dbt (&result, skel, trail->pool),
+                      0)));
 
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_fs__bdb_write_new_rep (const char **key,
+svn_fs_bdb__write_new_rep (const char **key,
                            svn_fs_t *fs,
-                           const svn_fs__representation_t *rep,
+                           const representation_t *rep,
                            trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   DBT query, result;
   int db_err;
   apr_size_t len;
-  char next_key[SVN_FS__MAX_KEY_SIZE];
-  
+  char next_key[MAX_KEY_SIZE];
+
   /* ### todo: see issue #409 for why bumping the key as part of this
      trail is problematic. */
 
   /* Get the current value associated with `next-key'.  */
-  svn_fs__str_to_dbt (&query, svn_fs__next_key_key);
-  svn_fs__trail_debug (trail, "representations", "get");
+  svn_fs_base__str_to_dbt (&query, NEXT_KEY_KEY);
+  svn_fs_base__trail_debug (trail, "representations", "get");
   SVN_ERR (BDB_WRAP (fs, "allocating new representation (getting next-key)",
-                    fs->representations->get (fs->representations,
-                                              trail->db_txn,
-                                              &query,
-                                              svn_fs__result_dbt (&result),
-                                              0)));
+                     bfd->representations->get
+                     (bfd->representations, trail->db_txn, &query,
+                      svn_fs_base__result_dbt (&result), 0)));
 
-  svn_fs__track_dbt (&result, trail->pool);
+  svn_fs_base__track_dbt (&result, trail->pool);
 
   /* Store the new rep. */
   *key = apr_pstrmemdup (trail->pool, result.data, result.size);
-  SVN_ERR (svn_fs__bdb_write_rep (fs, *key, rep, trail));
+  SVN_ERR (svn_fs_bdb__write_rep (fs, *key, rep, trail));
 
   /* Bump to future key. */
   len = result.size;
-  svn_fs__next_key (result.data, &len, next_key);
-  svn_fs__trail_debug (trail, "representations", "put");
-  db_err = fs->representations->put
-    (fs->representations, trail->db_txn,
-     svn_fs__str_to_dbt (&query, svn_fs__next_key_key),
-     svn_fs__str_to_dbt (&result, next_key),
+  svn_fs_base__next_key (result.data, &len, next_key);
+  svn_fs_base__trail_debug (trail, "representations", "put");
+  db_err = bfd->representations->put
+    (bfd->representations, trail->db_txn,
+     svn_fs_base__str_to_dbt (&query, NEXT_KEY_KEY),
+     svn_fs_base__str_to_dbt (&result, next_key),
      0);
 
   SVN_ERR (BDB_WRAP (fs, "bumping next representation key", db_err));
@@ -175,15 +178,16 @@ svn_fs__bdb_write_new_rep (const char **key,
 
 
 svn_error_t *
-svn_fs__bdb_delete_rep (svn_fs_t *fs, const char *key, trail_t *trail)
+svn_fs_bdb__delete_rep (svn_fs_t *fs, const char *key, trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
   DBT query;
 
-  svn_fs__trail_debug (trail, "representations", "del");
-  db_err = fs->representations->del
-    (fs->representations, trail->db_txn,
-     svn_fs__str_to_dbt (&query, key), 0);
+  svn_fs_base__trail_debug (trail, "representations", "del");
+  db_err = bfd->representations->del
+    (bfd->representations, trail->db_txn,
+     svn_fs_base__str_to_dbt (&query, key), 0);
 
   /* If there's no such node, return an appropriately specific error.  */
   if (db_err == DB_NOTFOUND)

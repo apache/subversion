@@ -1,4 +1,4 @@
-/* uuid.c : operations on repository uuids
+/* uuid.h : internal interface to uuid functions
  *
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
@@ -15,32 +15,27 @@
  * ====================================================================
  */
 
-#include <assert.h>
+#ifndef SVN_LIBSVN_FS_UUID_H
+#define SVN_LIBSVN_FS_UUID_H
 
-#include "fs.h"
-#include "fs_fs.h"
-#include "err.h"
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+
+
+/* These functions implement some of the calls in the FS loader
+   library's fs vtable. */
+
+svn_error_t *svn_fs_base__get_uuid (svn_fs_t *fs, const char **uuid,
+                                    apr_pool_t *pool);
+
+svn_error_t *svn_fs_base__set_uuid (svn_fs_t *fs, const char *uuid,
+                                    apr_pool_t *pool);
 
 
-svn_error_t *
-svn_fs_get_uuid (svn_fs_t *fs,
-                 const char **uuid,
-                 apr_pool_t *pool)
-{
-  SVN_ERR (svn_fs__check_fs (fs));
-
-  SVN_ERR (svn_fs__fs_get_uuid (uuid, fs, pool));
-
-  return SVN_NO_ERROR;
+#ifdef __cplusplus
 }
+#endif /* __cplusplus */
 
-svn_error_t *
-svn_fs_set_uuid (svn_fs_t *fs,
-                 const char *uuid,
-                 apr_pool_t *pool)
-{
-  SVN_ERR (svn_fs__fs_set_uuid (fs, uuid, pool));
-  
-  return SVN_NO_ERROR;
-}
-
+#endif /* SVN_LIBSVN_FS_UUID_H */

@@ -29,6 +29,7 @@
 #include "svn_fs.h"
 #include "../fs.h"
 #include "../err.h"
+#include "../../libsvn_fs/fs-loader.h"
 #include "bdb-err.h"
 
 
@@ -43,18 +44,18 @@ bdb_err_to_apr_err (int db_err)
   else
     return SVN_ERR_FS_BERKELEY_DB;
 }
- 
+
 
 svn_error_t *
-svn_fs__bdb_dberr (int db_err)
+svn_fs_bdb__dberr (int db_err)
 {
-  return svn_error_create (bdb_err_to_apr_err (db_err), 0, 
+  return svn_error_create (bdb_err_to_apr_err (db_err), 0,
                            db_strerror (db_err));
 }
 
 
 svn_error_t *
-svn_fs__bdb_dberrf (int db_err, const char *fmt, ...)
+svn_fs_bdb__dberrf (int db_err, const char *fmt, ...)
 {
   va_list ap;
   char *msg;
@@ -69,11 +70,11 @@ svn_fs__bdb_dberrf (int db_err, const char *fmt, ...)
 
 
 svn_error_t *
-svn_fs__bdb_wrap_db (svn_fs_t *fs, const char *operation, int db_err)
+svn_fs_bdb__wrap_db (svn_fs_t *fs, const char *operation, int db_err)
 {
   if (! db_err)
     return SVN_NO_ERROR;
-  return svn_fs__bdb_dberrf (db_err, 
+  return svn_fs_bdb__dberrf (db_err,
                              "Berkeley DB error while %s for filesystem %s:\n",
                              operation, fs->path ? fs->path : "(none)");
 }
