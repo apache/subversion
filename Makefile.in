@@ -309,16 +309,15 @@ install-swig-py-ext:
 swig-py-ext-clean:
 	rm -rf $(SWIG_BUILD_DIR)/python/build
 
-# FIXME: Replace inline Perl invocation with something cleaner.
 swig-java-ext: swig-assert-available mkdir-init
 	cd $(SWIG_SRC_DIR)/java/org/tigris/subversion/swig; \
     for source in $(SWIG_SRC_DIR)/*.i; do \
-        target="`echo -n $$source | perl -pe 's!^.*/(.+)\.i$$!$$1.c!'`"; \
+        target="`echo -n $$source | sed 's!^.*/\(.*\)\.i$$!\1.c!'`"; \
         $(SWIG) -c -java -noproxy -module 'Subversion' \
             -package 'org.tigris.subversion.swig' \
             -I$(SWIG_SRC_DIR) \
             -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
-            -o java/build/$$target $$source; \
+            -o $(SWIG_SRC_DIR)/java/build/$$target $$source; \
     done
 
 swig-java-ext-clean:
