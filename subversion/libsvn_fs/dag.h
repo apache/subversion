@@ -1,4 +1,4 @@
-/* dag.h : DAG-like interface filesystem, private to libsvn_fs
+* dag.h : DAG-like interface filesystem, private to libsvn_fs
  *
  * ====================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -182,8 +182,10 @@ svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
 
 
 /* Create a link to CHILD in PARENT named NAME, as part of TRAIL.
-   PARENT must be mutable.  NAME must be a single path component; it
-   cannot be a slash-separated directory path.  */
+   PARENT must be mutable.  CHILD must be immutable.  This function
+   ensures that CHILD is not equal to, or a parent of, PARENT.  NAME
+   must be a single path component; it cannot be a slash-separated
+   directory path.  */
 svn_error_t *svn_fs__dag_link (dag_node_t *parent,
                                dag_node_t *child,
                                const char *name,
