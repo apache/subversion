@@ -500,6 +500,10 @@ svn_error_t *svn_ra_get_dir (svn_ra_session_t *session,
  * empty string, the entire directory is updated.  @a update_target
  * may not be NULL.
  *
+ * If @a recurse is true and the target is a directory, update
+ * recursively; otherwise, update just the target and its immediate
+ * entries, but not its child directories (if any).
+ *
  * The working copy will be updated to @a revision_to_update_to, or the
  * "latest" revision if this arg is invalid.
  *
@@ -542,6 +546,10 @@ svn_error_t *svn_ra_do_update (svn_ra_session_t *session,
  * the scope of things affected by the switch to an entry in the
  * directory represented by the @a session's URL, or empty if the
  * entire directory is meant to be switched.
+ *
+ * If @a recurse is true and the target is a directory, switch
+ * recursively; otherwise, switch just the target and its immediate
+ * entries, but not its child directories (if any).
  *
  * The working copy will be switched to @a revision_to_switch_to, or the
  * "latest" revision if this arg is invalid.
@@ -587,6 +595,10 @@ svn_error_t *svn_ra_do_switch (svn_ra_session_t *session,
  * the scope of the status report to an entry in the directory
  * represented by the @a session_baton's URL, or empty if the entire
  * directory is meant to be examined.
+ *
+ * If @a recurse is true and the target is a directory, get status
+ * recursively; otherwise, get status for just the target and its
+ * immediate entries, but not its child directories (if any).
  *
  * The caller may not perform any RA operations using @a session
  * before finishing the report, and may not perform any RA operations
@@ -641,6 +653,10 @@ svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
  * are typically transmitted to the editor as a deletion of one thing
  * and the addition of another, but if this flag is @c TRUE,
  * unrelated items will be diffed as if they were related.
+ *
+ * If @a recurse is true and the target is a directory, diff
+ * recursively; otherwise, diff just target and its immediate entries,
+ * but not its child directories (if any).
  *
  * The caller may not perform any RA operations using @a session before
  * finishing the report, and may not perform any RA operations using
