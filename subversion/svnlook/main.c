@@ -44,6 +44,8 @@
 #include "svn_props.h"
 #include "svn_diff.h"
 
+#include "svn_private_config.h"
+
 
 /*** Some convenience macros and types. ***/
 
@@ -84,28 +86,28 @@ enum
 static const apr_getopt_option_t options_table[] =
   {
     {"help",          'h', 0,
-     "show help on a subcommand"},
+     N_("show help on a subcommand")},
 
     {NULL,            '?', 0,
-     "show help on a subcommand"},
+     N_("show help on a subcommand")},
 
     {"version",       svnlook__version, 0,
-     "show version information"},
+     N_("show version information")},
 
     {"revision",      'r', 1,
-     "specify revision number ARG"},
+     N_("specify revision number ARG")},
 
     {"transaction",  't', 1,
-     "specify transaction name ARG"},
+     N_("specify transaction name ARG")},
 
     {"verbose",  'v', 0,
-     "be verbose"},
+     N_("be verbose")},
 
     {"show-ids",      svnlook__show_ids, 0,
-     "show node revision ids for each path"},
+     N_("show node revision ids for each path")},
 
     {"no-diff-deleted", svnlook__no_diff_deleted, 0,
-     "do not print differences for deleted files"},
+     N_("do not print differences for deleted files")},
 
     {0,               0, 0, 0}
   };
@@ -117,82 +119,82 @@ static const apr_getopt_option_t options_table[] =
 static const svn_opt_subcommand_desc_t cmd_table[] =
   {
     {"author", subcommand_author, {0},
-     "usage: svnlook author REPOS_PATH\n\n"
-     "Print the author.\n",
+     N_("usage: svnlook author REPOS_PATH\n\n"
+     "Print the author.\n"),
      {'r', 't'} },
     
     {"cat", subcommand_cat, {0},
-     "usage: svnlook cat REPOS_PATH FILE_PATH\n\n"
-     "Print the contents of a file.  Leading '/' on FILE_PATH is optional.\n",
+     N_("usage: svnlook cat REPOS_PATH FILE_PATH\n\n"
+     "Print the contents of a file.  Leading '/' on FILE_PATH is optional.\n"),
      {'r', 't'} },
     
     {"changed", subcommand_changed, {0},
-     "usage: svnlook changed REPOS_PATH\n\n"
-     "Print the paths that were changed.\n",
+     N_("usage: svnlook changed REPOS_PATH\n\n"
+     "Print the paths that were changed.\n"),
      {'r', 't'} },
     
     {"date", subcommand_date, {0},
-     "usage: svnlook date REPOS_PATH\n\n"
-     "Print the datestamp.\n",
+     N_("usage: svnlook date REPOS_PATH\n\n"
+     "Print the datestamp.\n"),
      {'r', 't'} },
 
     {"diff", subcommand_diff, {0},
-     "usage: svnlook diff REPOS_PATH\n\n"
-     "Print GNU-style diffs of changed files and properties.\n",
+     N_("usage: svnlook diff REPOS_PATH\n\n"
+     "Print GNU-style diffs of changed files and properties.\n"),
      {'r', 't', svnlook__no_diff_deleted} },
 
     {"dirs-changed", subcommand_dirschanged, {0},
-     "usage: svnlook dirs-changed REPOS_PATH\n\n"
+     N_("usage: svnlook dirs-changed REPOS_PATH\n\n"
      "Print the directories that were themselves changed (property edits)\n"
-     "or whose file children were changed.\n",
+     "or whose file children were changed.\n"),
      {'r', 't'} },
     
     {"help", subcommand_help, {"?", "h"},
-     "usage: svnlook help [SUBCOMMAND...]\n\n"
-     "Describe the usage of this program or its subcommands.\n",
+     N_("usage: svnlook help [SUBCOMMAND...]\n\n"
+     "Describe the usage of this program or its subcommands.\n"),
      {svnlook__version} },
 
     {"history", subcommand_history, {0},
-     "usage: svnlook history REPOS_PATH [PATH_IN_REPOS]\n\n"
+     N_("usage: svnlook history REPOS_PATH [PATH_IN_REPOS]\n\n"
      "Print information about the history of a path in the repository (or\n"
-     "the root directory if no path is supplied).\n",
+     "the root directory if no path is supplied).\n"),
      {'r', svnlook__show_ids} },
 
     {"info", subcommand_info, {0},
-     "usage: svnlook info REPOS_PATH\n\n"
-     "Print the author, datestamp, log message size, and log message.\n",
+     N_("usage: svnlook info REPOS_PATH\n\n"
+     "Print the author, datestamp, log message size, and log message.\n"),
      {'r', 't'} },
 
     {"log", subcommand_log, {0},
-     "usage: svnlook log REPOS_PATH\n\n"
-     "Print the log message.\n",
+     N_("usage: svnlook log REPOS_PATH\n\n"
+     "Print the log message.\n"),
      {'r', 't'} },
 
     {"propget", subcommand_pget, {"pget", "pg"},
-     "usage: svnlook propget REPOS_PATH PROPNAME PATH_IN_REPOS\n\n"
-     "Print the raw value of a property on a path in the repository.\n",
+     N_("usage: svnlook propget REPOS_PATH PROPNAME PATH_IN_REPOS\n\n"
+     "Print the raw value of a property on a path in the repository.\n"),
      {'r', 't'} },
 
     {"proplist", subcommand_plist, {"plist", "pl"},
-     "usage: svnlook proplist REPOS_PATH PATH_IN_REPOS\n\n"
+     N_("usage: svnlook proplist REPOS_PATH PATH_IN_REPOS\n\n"
      "List the properties of a path in the repository.\n"
-     "With -v, show the property values too.\n",
+     "With -v, show the property values too.\n"),
      {'r', 't', 'v'} },
 
     {"tree", subcommand_tree, {0},
-     "usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n\n"
+     N_("usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n\n"
      "Print the tree, starting at PATH_IN_REPOS (if supplied, at the root\n"
-     "of the tree otherwise), optionally showing node revision ids.\n",
+     "of the tree otherwise), optionally showing node revision ids.\n"),
      {'r', 't', svnlook__show_ids} },
 
     {"uuid", subcommand_uuid, {0},
-     "usage: svnlook uuid REPOS_PATH\n\n"
-     "Print the repository's UUID.\n",
+     N_("usage: svnlook uuid REPOS_PATH\n\n"
+     "Print the repository's UUID.\n"),
      {0} },
 
     {"youngest", subcommand_youngest, {0},
-     "usage: svnlook youngest REPOS_PATH\n\n"
-     "Print the youngest revision number.\n",
+     N_("usage: svnlook youngest REPOS_PATH\n\n"
+     "Print the youngest revision number.\n"),
      {0} },
 
     { NULL, NULL, {0}, NULL, {0} }
@@ -711,7 +713,7 @@ display_prop_diffs (const apr_array_header_t *prop_diffs,
       else
         orig_value = NULL;
 
-      printf ("Name: %s\n", pc->name);
+      printf (_("Name: %s\n"), pc->name);
 
       /* For now, we have a rather simple heuristic: if this is an
          "svn:" property, then assume the value is UTF-8 and must
@@ -858,9 +860,9 @@ print_diff_tree (svn_fs_root_t *root,
     {
       if (! is_copy)
         printf ("%s: %s\n", 
-                ((node->action == 'A') ? "Added" : 
-                 ((node->action == 'D') ? "Deleted" :
-                  ((node->action == 'R') ? "Modified" : "Index"))),
+                ((node->action == 'A') ? _("Added") :
+                 ((node->action == 'D') ? _("Deleted") :
+                  ((node->action == 'R') ? _("Modified") : _("Index")))),
                 path_native);
 
       if ((! no_diff_deleted) || (node->action != 'D'))
@@ -872,7 +874,7 @@ print_diff_tree (svn_fs_root_t *root,
 
           if (binary)
             {
-              printf ("(Binary files differ)\n");
+              printf (_("(Binary files differ)\n"));
             }
           else
             {
@@ -1012,7 +1014,7 @@ print_tree (svn_fs_root_t *root,
       svn_string_t *unparsed_id = NULL;
       if (id)
         unparsed_id = svn_fs_unparse_id (id, pool);
-      printf (" <%s>", unparsed_id ? unparsed_id->data : "unknown");
+      printf (" <%s>", unparsed_id ? unparsed_id->data : _("unknown"));
     }
   printf ("\n");
 
@@ -1131,7 +1133,7 @@ do_dirs_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
   if (! SVN_IS_VALID_REVNUM (base_rev_id))
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       "Transaction '%s' is not based on a revision; how odd",
+       _("Transaction '%s' is not based on a revision; how odd"),
        c->txn_name);
   
   SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, 
@@ -1161,10 +1163,10 @@ verify_path (svn_node_kind_t *kind,
       if (svn_path_is_url (path))  /* check for a common mistake. */
         return svn_error_createf
           (SVN_ERR_FS_NOT_FOUND, NULL,
-           "'%s' is a URL, probably should be a path", path);
+           _("'%s' is a URL, probably should be a path"), path);
       else
         return svn_error_createf 
-          (SVN_ERR_FS_NOT_FOUND, NULL, "Path '%s' does not exist", path);
+          (SVN_ERR_FS_NOT_FOUND, NULL, _("Path '%s' does not exist"), path);
     }
 
   return SVN_NO_ERROR;
@@ -1188,7 +1190,7 @@ do_cat (svnlook_ctxt_t *c, const char *path, apr_pool_t *pool)
 
   if (kind != svn_node_file)
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_FILE, NULL, "Path '%s' is not a file", path);
+      (SVN_ERR_FS_NOT_FILE, NULL, _("Path '%s' is not a file"), path);
 
   /* Else. */
 
@@ -1222,7 +1224,7 @@ do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
   if (! SVN_IS_VALID_REVNUM (base_rev_id))
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       "Transaction '%s' is not based on a revision; how odd",
+       _("Transaction '%s' is not based on a revision; how odd"),
        c->txn_name);
   
   SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, 
@@ -1263,7 +1265,7 @@ create_unique_tmpdir (const char **name, apr_pool_t *pool)
       if (apr_err)
         {
           *name = NULL;
-          return svn_error_wrap_apr (apr_err, "Can't create directory '%s'",
+          return svn_error_wrap_apr (apr_err, _("Can't create directory '%s'"),
                                      unique_name);
         }
       else
@@ -1275,7 +1277,7 @@ create_unique_tmpdir (const char **name, apr_pool_t *pool)
 
   *name = NULL;
   return svn_error_createf (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
-                            NULL, "Can't create temporary directory");
+                            NULL, _("Can't create temporary directory"));
 }
 
 /* Print some diff-y stuff in a TBD way. :-) */
@@ -1295,7 +1297,7 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
   if (! SVN_IS_VALID_REVNUM (base_rev_id))
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       "Transaction '%s' is not based on a revision; how odd",
+       _("Transaction '%s' is not based on a revision; how odd"),
        c->txn_name);
   
   SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, 
@@ -1375,13 +1377,13 @@ do_history (svnlook_ctxt_t *c,
 
   if (show_ids)
     {
-      printf ("REVISION   PATH <ID>\n");
-      printf ("--------   ---------\n");
+      printf (_("REVISION   PATH <ID>\n"
+                "--------   ---------\n"));
     }
   else
     {
-      printf ("REVISION   PATH\n");
-      printf ("--------   ----\n");
+      printf (_("REVISION   PATH\n"
+                "--------   ----\n"));
     }
 
   /* Call our history crawler.  We want the whole lifetime of the path
@@ -1417,7 +1419,7 @@ do_pget (svnlook_ctxt_t *c,
   if (prop == NULL)
     return svn_error_createf
       (SVN_ERR_PROPERTY_NOT_FOUND, NULL,
-       "Property '%s' not found on path '%s'", propname, path);
+       _("Property '%s' not found on path '%s'"), propname, path);
 
   /* Else. */
 
@@ -1571,7 +1573,7 @@ subcommand_cat (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (opt_state->arg1 == NULL)
     return svn_error_createf
       (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-       "Missing repository path argument");
+       _("Missing repository path argument"));
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
   SVN_ERR (do_cat (c, opt_state->arg1, pool));
@@ -1632,13 +1634,13 @@ subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnlook_opt_state *opt_state = baton;
   const char *header =
-    "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
+    _("general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
     "Note: any subcommand which takes the '--revision' and '--transaction'\n"
     "      options will, if invoked without one of those options, act on\n"
     "      the repository's youngest revision.\n"
     "Type \"svnlook help <subcommand>\" for help on a specific subcommand.\n"
     "\n"
-    "Available subcommands:\n";
+    "Available subcommands:\n");
 
   SVN_ERR (svn_opt_print_help (os, "svnlook", 
                                opt_state ? opt_state->version : FALSE, 
@@ -1702,13 +1704,13 @@ subcommand_pget (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     {
       return svn_error_createf
         (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-         "Missing propname and repository path arguments");
+         _("Missing propname and repository path arguments"));
     }
   else if (opt_state->arg2 == NULL)
     {
       return svn_error_createf
         (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-         "Missing propname or repository path argument");
+         _("Missing propname or repository path argument"));
     }
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
@@ -1726,7 +1728,7 @@ subcommand_plist (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (opt_state->arg1 == NULL)
     return svn_error_createf
       (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-       "Missing repository path argument");
+       _("Missing repository path argument"));
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
   SVN_ERR (do_plist (c, opt_state->arg1, opt_state->verbose, pool));
@@ -1846,7 +1848,7 @@ main (int argc, const char * const *argv)
           if (! SVN_IS_VALID_REVNUM (opt_state.rev))
             SVN_INT_ERR (svn_error_create
                          (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                          "Invalid revision number supplied"));
+                          _("Invalid revision number supplied")));
           break;
 
         case 't':
@@ -1887,8 +1889,8 @@ main (int argc, const char * const *argv)
   if ((opt_state.rev != SVN_INVALID_REVNUM) && opt_state.txn)
     SVN_INT_ERR (svn_error_create 
                  (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                  "The '--transaction' (-t) and '--revision' (-r) arguments "
-                  "can not co-exist"));
+                  _("The '--transaction' (-t) and '--revision' (-r) arguments "
+                  "can not co-exist")));
 
   /* If the user asked for help, then the rest of the arguments are
      the names of subcommands to get help on (if any), or else they're
@@ -1903,7 +1905,7 @@ main (int argc, const char * const *argv)
     {
       if (os->ind >= os->argc)
         {
-          fprintf (stderr, "subcommand argument required\n");
+          fprintf (stderr, _("subcommand argument required\n"));
           subcommand_help (NULL, NULL, pool);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
@@ -1914,7 +1916,7 @@ main (int argc, const char * const *argv)
           subcommand = svn_opt_get_canonical_subcommand (cmd_table, first_arg);
           if (subcommand == NULL)
             {
-              fprintf (stderr, "unknown command: '%s'\n", first_arg);
+              fprintf (stderr, _("unknown command: '%s'\n"), first_arg);
               subcommand_help (NULL, NULL, pool);
               svn_pool_destroy (pool);
               return EXIT_FAILURE;
@@ -1944,7 +1946,7 @@ main (int argc, const char * const *argv)
 
       if (repos_path == NULL)
         {
-          fprintf (stderr, "repository argument required\n");
+          fprintf (stderr, _("repository argument required\n"));
           subcommand_help (NULL, NULL, pool);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
@@ -1952,7 +1954,7 @@ main (int argc, const char * const *argv)
       else if (svn_path_is_url (repos_path))
         {
           fprintf (stderr,
-                   "'%s' is a URL when it should be a path\n",
+                   _("'%s' is a URL when it should be a path\n"),
                    repos_path);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
@@ -1998,8 +2000,8 @@ main (int argc, const char * const *argv)
             svn_opt_get_option_from_code (opt_id, options_table);
           svn_opt_format_option (&optstr, badopt, FALSE, pool);
           fprintf (stderr,
-                   "subcommand '%s' doesn't accept option '%s'\n"
-                   "Type 'svnlook help %s' for usage.\n",
+                   _("subcommand '%s' doesn't accept option '%s'\n"
+                   "Type 'svnlook help %s' for usage.\n"),
                    subcommand->name, optstr, subcommand->name);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;

@@ -35,6 +35,8 @@
 #include "svn_config.h"
 #include "svn_version.h"
 #include "svn_path.h"
+#include "svn_private_config.h"
+
 #include "ra_dav.h"
 
 
@@ -421,15 +423,15 @@ static svn_error_t *get_server_settings(const char **proxy_host,
 
       if (*endstr)
         return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                "Invalid URL: illegal character in proxy "
-                                "port number");
+                                _("Invalid URL: illegal character in proxy "
+                                "port number"));
       if (port < 0)
         return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                "Invalid URL: negative proxy port number");
+                                _("Invalid URL: negative proxy port number"));
       if (port > 65535)
         return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                "Invalid URL: proxy port number greater than "
-                                "maximum TCP port number 65535");
+                                _("Invalid URL: proxy port number greater "
+                                  "than maximum TCP port number 65535"));
       *proxy_port = port;
     }
   else
@@ -442,11 +444,11 @@ static svn_error_t *get_server_settings(const char **proxy_host,
 
       if (*endstr)
         return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                                "Invalid config: illegal character in timeout "
-                                "value");
+                                _("Invalid config: illegal character in "
+                                  "timeout value"));
       if (timeout < 0)
         return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                                "Invalid config: negative timeout value");
+                                _("Invalid config: negative timeout value"));
       *timeout_seconds = timeout;
     }
   else
@@ -459,8 +461,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
 
       if (*endstr)
         return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                                "Invalid config: illegal character in "
-                                "debug mask value");
+                                _("Invalid config: illegal character in "
+                                "debug mask value"));
 
       *neon_debug = debug;
     }
@@ -549,7 +551,7 @@ svn_ra_dav__open (void **session_baton,
     {
       ne_uri_free(&uri);
       return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                              "Malformed URL for repository");
+                              _("Malformed URL for repository"));
     }
 
   /* Can we initialize network? */
@@ -557,7 +559,7 @@ svn_ra_dav__open (void **session_baton,
     {
       ne_uri_free(&uri);
       return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
-                              "Network socket initialization failed");
+                              _("Network socket initialization failed"));
     }
 
   /* we want to know if the repository is actually somewhere else */
@@ -570,7 +572,7 @@ svn_ra_dav__open (void **session_baton,
         {
           ne_uri_free(&uri);
           return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
-                                  "SSL is not supported");
+                                  _("SSL is not supported"));
         }
     }
   if (uri.port == 0)
@@ -717,7 +719,7 @@ svn_ra_dav__open (void **session_baton,
                 {
                   return svn_error_createf
                     (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                     "Invalid config: unable to load certificate file '%s'",
+                     _("Invalid config: unable to load certificate file '%s'"),
                      file);
                 }
               ne_ssl_trust_cert(sess, ca_cert);
@@ -778,7 +780,7 @@ static svn_error_t *svn_ra_dav__get_repos_root(void *session_baton,
       len = strlen(ras->url);
       if (len <= relative_len)
         return svn_error_create(APR_EGENERAL, NULL,
-                                "Impossibly long relative url.");
+                                _("Impossibly long relative url."));
 
       /* Don't strip off the extra '/' unless there is a relative path */
       if (relative_len)
@@ -813,14 +815,15 @@ static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
       if (uuid_propval == NULL)
         /* ### better error reporting... */
         return svn_error_create(APR_EGENERAL, NULL,
-                                "The UUID property was not found on the "
-                                "resource or any of its parents.");
+                                _("The UUID property was not found on the "
+                                "resource or any of its parents."));
 
       if (uuid_propval && (uuid_propval->len > 0))
         ras->uuid = apr_pstrdup(ras->pool, uuid_propval->data); /* cache */
       else
-        return svn_error_create(SVN_ERR_RA_NO_REPOS_UUID, NULL,
-                                "Please upgrade the server to 0.19 or later.");
+        return svn_error_create
+          (SVN_ERR_RA_NO_REPOS_UUID, NULL,
+           _("Please upgrade the server to 0.19 or later."));
     }
 
   *uuid = ras->uuid;
@@ -831,7 +834,7 @@ static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
 
 static const svn_ra_plugin_t dav_plugin = {
   "ra_dav",
-  "Module for accessing a repository via WebDAV (DeltaV) protocol.",
+  N_("Module for accessing a repository via WebDAV (DeltaV) protocol."),
   svn_ra_dav__open,
   svn_ra_dav__get_latest_revnum,
   svn_ra_dav__get_dated_revision,
@@ -858,8 +861,8 @@ svn_error_t *svn_ra_dav_init(int abi_version,
 {
   if (abi_version != 1)
     return svn_error_createf (SVN_ERR_RA_UNSUPPORTED_ABI_VERSION, NULL,
-                              "Unsupported RA plugin ABI version (%d) "
-                              "for ra_dav.", abi_version);
+                              _("Unsupported RA plugin ABI version (%d) "
+                              "for ra_dav."), abi_version);
 
   apr_hash_set (hash, "http", APR_HASH_KEY_STRING, &dav_plugin);
 

@@ -28,6 +28,7 @@
 #include "translate.h"
 #include "questions.h"
 
+#include "svn_private_config.h"
 
 
 
@@ -296,13 +297,13 @@ svn_wc_merge (const char *left,
       /* Don't forget to clean up tmp_target, result_target, tmp_left,
          tmp_right.  There are a lot of scratch files lying around. */
       SVN_ERR_W (svn_io_remove_file (tmp_target, pool),
-                 "Unable to delete temporary file");
+                 _("Unable to delete temporary file"));
       SVN_ERR_W (svn_io_remove_file (result_target, pool),
-                 "Unable to delete temporary file");
+                 _("Unable to delete temporary file"));
       SVN_ERR_W (svn_io_remove_file (tmp_left, pool),
-                 "Unable to delete temporary file");
+                 _("Unable to delete temporary file"));
       SVN_ERR_W (svn_io_remove_file (tmp_right, pool),
-                 "Unable to delete temporary file");
+                 _("Unable to delete temporary file"));
 
     } /* end of merging for text files */
 

@@ -44,6 +44,8 @@
 #include "translate.h"
 #include "entries.h"
 
+#include "svn_private_config.h"
+
 
 /* Helper for report_revisions().
    
@@ -353,8 +355,8 @@ report_revisions (svn_wc_adm_access_t *adm_access,
             {
               return svn_error_createf
                 (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                 "The entry '%s' is no longer a directory; "
-                 "remove the entry before updating",
+                 _("The entry '%s' is no longer a directory; "
+                 "remove the entry before updating"),
                  this_path);
             }
 
@@ -572,7 +574,7 @@ svn_wc_crawl_revisions (const char *path,
       svn_error_t *fserr;
       if ((fserr = reporter->abort_report (report_baton, pool)))
         {
-          fserr = svn_error_quick_wrap (fserr, "Error aborting report");
+          fserr = svn_error_quick_wrap (fserr, _("Error aborting report"));
           svn_error_compose (err, fserr);
         }
       return err;
@@ -669,8 +671,8 @@ svn_wc_transmit_text_deltas (const char *path,
                   
                   return svn_error_createf
                     (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-                     "Checksum mismatch for '%s': "
-                     "expected '%s', actual: '%s'",
+                     _("Checksum mismatch for '%s': "
+                     "expected '%s', actual: '%s'"),
                      tb, ent->checksum, base_digest_hex);
                 }
             }
@@ -694,7 +696,7 @@ svn_wc_transmit_text_deltas (const char *path,
   /* Open a filehandle for tmp text-base. */
   SVN_ERR_W (svn_io_file_open (&localfile, tmp_base,
                                APR_READ, APR_OS_DEFAULT, pool),
-             "Error opening local file");
+             _("Error opening local file"));
 
   /* Create a text-delta stream object that pulls data out of the two
      files. */

@@ -47,6 +47,8 @@
 #include "svn_dav.h"
 #include "svn_base64.h"
 
+#include "svn_private_config.h"
+
 #include "ra_dav.h"
 
 
@@ -145,7 +147,7 @@ static svn_error_t * simple_request(svn_ra_session_t *ras,
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                               "Could not create a request (%s '%s')",
+                               _("Could not create a request (%s '%s')"),
                                method, url);
     }
 
@@ -864,7 +866,8 @@ static svn_error_t * commit_add_file(const char *path,
         {
           /* If the PROPFIND succeeds the file already exists */
           return svn_error_createf(SVN_ERR_RA_DAV_ALREADY_EXISTS, NULL,
-                                   "File '%s' already exists", file->rsrc->url);
+                                   _("File '%s' already exists"), 
+                                   file->rsrc->url);
         }
       else if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
         {
@@ -977,7 +980,8 @@ static svn_error_t * commit_stream_write(void *baton,
   /* drop the data into our temp file */
   status = apr_file_write_full(pb->tmpfile, data, *len, NULL);
   if (status)
-    return svn_error_wrap_apr(status, "Could not write svndiff to temp file");
+    return svn_error_wrap_apr(status, 
+                              _("Could not write svndiff to temp file"));
 
   return SVN_NO_ERROR;
 }
@@ -1067,7 +1071,7 @@ static svn_error_t * commit_close_file(void *file_baton,
       if (req == NULL)
         {
           return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                                   "Could not create a PUT request (%s)",
+                                   _("Could not create a PUT request (%s)"),
                                    url);
         }
       
@@ -1214,7 +1218,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   rv = ne_proppatch(cc->ras->sess, baseline_rsrc.wr_url, po);
   if (rv != NE_OK)
     {
-      const char *msg = apr_psprintf(pool, "applying log message to %s",
+      const char *msg = apr_psprintf(pool, _("applying log message to %s"),
                                      baseline_rsrc.wr_url);
       return svn_ra_dav__convert_error(cc->ras->sess, msg, rv);
     }

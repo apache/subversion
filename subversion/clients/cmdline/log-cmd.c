@@ -39,6 +39,8 @@
 #include "svn_subst.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
+
 
 /*** Code. ***/
 
@@ -203,7 +205,7 @@ log_message_receiver (void *baton,
      for more on the fallback fuzzy conversions below. */
 
   if (author == NULL)
-    author = "(no author)";
+    author = _("(no author)");
 
   err = svn_cmdline_cstring_from_utf8 (&author_stdout, author, pool);
   if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
@@ -225,7 +227,7 @@ log_message_receiver (void *baton,
       SVN_ERR (svn_cmdline_cstring_from_utf8 (&date_stdout, date_utf8, pool));
     }
   else
-    date_stdout = "(no date)";
+    date_stdout = _("(no date)");
   
   if (! lb->omit_log_message)
     {

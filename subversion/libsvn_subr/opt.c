@@ -135,7 +135,7 @@ print_command_info (const svn_opt_subcommand_desc_t *cmd,
       const apr_getopt_option_t *option;
       svn_boolean_t have_options = FALSE;
 
-      fprintf (stream, ": %s", cmd->help);
+      fprintf (stream, ": %s", gettext (cmd->help));
 
       /* Loop over all valid option codes attached to the subcommand */
       for (i = 0; i < SVN_OPT_MAX_OPTIONS; i++)
@@ -144,7 +144,7 @@ print_command_info (const svn_opt_subcommand_desc_t *cmd,
             {
               if (have_options == FALSE)
                 {
-                  fprintf (stream, "\nValid options:\n");
+                  fprintf (stream, _("\nValid options:\n"));
                   have_options = TRUE;
                 }
 
@@ -221,7 +221,7 @@ svn_opt_format_option (const char **string,
     opts = apr_pstrcat (pool, opts, " arg", NULL);
 
   if (doc)
-    opts = apr_psprintf (pool, "%-24s : %s", opts, opt->description);
+    opts = apr_psprintf (pool, "%-24s : %s", opts, gettext (opt->description));
 
   *string = opts;
 }
@@ -239,7 +239,7 @@ svn_opt_subcommand_help (const char *subcommand,
   if (cmd)
     print_command_info (cmd, options_table, TRUE, pool, stdout);
   else
-    fprintf (stderr, "\"%s\": unknown command.\n\n", subcommand);
+    fprintf (stderr, _("\"%s\": unknown command.\n\n"), subcommand);
 }
 
 
@@ -424,7 +424,7 @@ svn_opt_parse_num_args (apr_array_header_t **args_p,
       if (os->ind >= os->argc)
         {
           return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 
-                                   0, "Too few arguments");
+                                   0, _("Too few arguments"));
         }
       array_push_str (args, os->argv[os->ind++], pool);
     }
@@ -495,7 +495,7 @@ parse_path (svn_opt_revision_t *rev,
                                       &end_revision,
                                       native_rev, subpool))
             return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                      "Syntax error parsing revision '%s'",
+                                      _("Syntax error parsing revision '%s'"),
                                       path + i + 1);
 
           *truepath = apr_pstrndup (pool, path, i);
@@ -569,7 +569,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
           /* No need to canonicalize a URL's case or path separators. */
           if (! svn_path_is_uri_safe (utf8_target))
             return svn_error_createf (SVN_ERR_BAD_URL, 0,
-                                      "URL '%s' is not properly URI-encoded",
+                                      _("URL '%s' is not properly URI-encoded"),
                                       utf8_target);
                                       
           /* strip any trailing '/' */
@@ -598,7 +598,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
             ;
           else
             return svn_error_createf (apr_err, NULL,
-                                      "Error resolving case of '%s'",
+                                      _("Error resolving case of '%s'"),
                                       utf8_target);
 
           /* convert back to UTF-8. */
@@ -670,21 +670,19 @@ print_version_info (const char *pgm_name,
                     svn_boolean_t quiet,
                     apr_pool_t *pool)
 {
-  static const char info[] =
-    "Copyright (C) 2000-2004 CollabNet.\n"
-    "Subversion is open source software, see http://subversion.tigris.org/\n"
-    "This product includes software developed by CollabNet "
-    "(http://www.Collab.Net/).\n";
-
   if (quiet)
     {
       printf ("%s\n", SVN_VER_NUMBER);
       return SVN_NO_ERROR;
     }
 
-  printf ("%s, version %s\n", pgm_name, SVN_VERSION);
-  printf ("   compiled %s, %s\n\n", __DATE__, __TIME__);
-  printf ("%s\n", info);
+  printf (_("%s, version %s\n"
+            "   compiled %s, %s\n\n"), pgm_name, SVN_VERSION,
+                                      __DATE__, __TIME__);
+  fputs (_("Copyright (C) 2000-2004 CollabNet.\n"
+    "Subversion is open source software, see http://subversion.tigris.org/\n"
+    "This product includes software developed by CollabNet "
+    "(http://www.Collab.Net/).\n\n"), stdout);
 
   if (footer)
     {

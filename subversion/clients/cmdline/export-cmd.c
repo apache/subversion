@@ -29,6 +29,8 @@
 #include "svn_path.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
+
 
 /*** Code. ***/
 
@@ -73,8 +75,8 @@ svn_cl__export (apr_getopt_t *os,
                            opt_state->force, ctx, pool);
   if (err && err->apr_err == SVN_ERR_WC_OBSTRUCTED_UPDATE && !opt_state->force)
     SVN_ERR_W (err,
-               "Destination directory exists; please remove "
-               "the directory or use --force to overwrite");
+               _("Destination directory exists; please remove "
+               "the directory or use --force to overwrite"));
   else
     SVN_ERR (err);
 

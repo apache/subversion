@@ -120,8 +120,8 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   if (! editor)
     return svn_error_create 
       (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
-       "None of the environment variables SVN_EDITOR, VISUAL or EDITOR is "
-       "set, and no 'editor-cmd' run-time configuration option was found");
+       _("None of the environment variables SVN_EDITOR, VISUAL or EDITOR is "
+       "set, and no 'editor-cmd' run-time configuration option was found"));
 
   /* Convert file contents from UTF-8 */
   SVN_ERR (svn_utf_cstring_from_utf8 (&contents_native, contents, pool));
@@ -130,7 +130,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
      into tmpfile_name */
   apr_err = apr_filepath_get (&old_cwd, APR_FILEPATH_NATIVE, pool);
   if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't get working directory");
+    return svn_error_wrap_apr (apr_err, _("Can't get working directory"));
 
   /* APR doesn't like "" directories */
   if (base_dir[0] == '\0')
@@ -141,7 +141,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   if (apr_err)
     {
       return svn_error_wrap_apr
-        (apr_err, "Can't change working directory to '%s'", base_dir);
+        (apr_err, _("Can't change working directory to '%s'"), base_dir);
     }
 
   /*** From here on, any problems that occur require us to cd back!! ***/
@@ -167,7 +167,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   /* Make sure the whole CONTENTS were written, else return an error. */
   if (apr_err)
     {
-      err = svn_error_wrap_apr (apr_err, "Can't write to '%s'", tmpfile_name);
+      err = svn_error_wrap_apr (apr_err, _("Can't write to '%s'"), tmpfile_name);
       goto cleanup;
     }
 
@@ -181,7 +181,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
                       APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
   if (apr_err)
     {
-      err = svn_error_wrap_apr (apr_err, "Can't stat '%s'", tmpfile_name);
+      err = svn_error_wrap_apr (apr_err, _("Can't stat '%s'"), tmpfile_name);
       goto cleanup;
     }
 
@@ -196,7 +196,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
       /* Extracting any meaning from sys_err is platform specific, so just
          use the raw value. */
       err =  svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                                "system('%s') returned %d", cmd, sys_err);
+                                _("system('%s') returned %d"), cmd, sys_err);
       goto cleanup;
     }
   
@@ -205,7 +205,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
                       APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
   if (apr_err)
     {
-      err = svn_error_wrap_apr (apr_err, "Can't stat '%s'", tmpfile_name);
+      err = svn_error_wrap_apr (apr_err, _("Can't stat '%s'"), tmpfile_name);
       goto cleanup;
     }
   
@@ -252,7 +252,7 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
   if (apr_err)
     {
       svn_handle_error (svn_error_wrap_apr
-                        (apr_err, "Can't restore working directory"),
+                        (apr_err, _("Can't restore working directory")),
                         stderr, TRUE /* fatal */);
     }
 
@@ -290,7 +290,7 @@ svn_cl__make_log_msg_baton (void **baton,
              a deliberate encoding, and even if it is, we still
              can't handle it. */
           return svn_error_create (SVN_ERR_CL_BAD_LOG_MESSAGE, NULL,
-                                   "Log message contains a zero byte");
+                                   _("Log message contains a zero byte"));
         }
       lmb->message = opt_state->filedata->data;
     }      
@@ -348,7 +348,7 @@ svn_cl__cleanup_log_msg (void *log_msg_baton,
      svn_error_create (commit_err->apr_err,
                        svn_error_createf (commit_err->apr_err, NULL,
                                           "   '%s'", lmb->tmpfile_left),
-                       "Your commit message was left in a temporary file:"));
+                       _("Your commit message was left in a temporary file:")));
   return commit_err;
 }
 
@@ -516,9 +516,9 @@ svn_cl__get_log_message (const char **log_msg,
         {
           if (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR)
             err = svn_error_quick_wrap 
-              (err, "Could not use external editor to fetch log message; "
+              (err, _("Could not use external editor to fetch log message; "
                "consider setting the $SVN_EDITOR environment variable "
-               "or using the --message (-m) or --file (-F) options");
+               "or using the --message (-m) or --file (-F) options"));
           return err;
         }
 
@@ -551,8 +551,8 @@ svn_cl__get_log_message (const char **log_msg,
         {
           const char *reply;
           svn_cl__prompt_user (&reply,
-                               "\nLog message unchanged or not specified\n"
-                               "a)bort, c)ontinue, e)dit\n", pool);
+                               _("\nLog message unchanged or not specified\n"
+                               "a)bort, c)ontinue, e)dit\n"), pool);
           if (reply)
             {
               char letter = apr_tolower (reply[0]);
