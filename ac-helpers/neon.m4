@@ -5,15 +5,17 @@ dnl   regular expression used in a Bourne shell switch/case statement
 dnl   to match versions of Neon that can be used.  latest_working_ver
 dnl   is the latest version of neon that can be used, which is not
 dnl   necessarily the latest released version of neon that exists.
-dnl   can be used.  url is the URL of the latest version of Neon.
+dnl   url is the URL of the latest version of Neon.
 dnl
-dnl   If there is a neon/ subdir we assume we want to use it.
-dnl   If the subdir is the wrong version we exit with a failure
-dnl   regardless if neon is installed somewhere else on the system.
+dnl   If a --with-neon=PREFIX option is passed search for a suitable
+dnl   neon installed on the system whose configuration can be found in
+dnl   PREFIX/bin/neon-config.  In this case ignore any neon/ subdir 
+dnl   within the source tree.
 dnl
-dnl   If there isn't a neon/ subdir then we look for 'neon-config'
-dnl   in PATH (or the location specified by a --with-neon=PATH 
-dnl   switch).  
+dnl   If no --with-neon option is passed look first for a neon/ subdir.
+dnl   If a neon/ subdir exists and is the wrong version exit with a 
+dnl   failure.  If no neon/ subdir is present search for a neon installed
+dnl   on the system.
 
 AC_DEFUN(SVN_LIB_NEON,
 [
@@ -30,18 +32,13 @@ AC_DEFUN(SVN_LIB_NEON,
 	      in a subdirectory of the top source directory and then to
 	      look for neon-config in $PATH.])],
   [
-    if test -d $abs_srcdir/neon ; then
-      AC_MSG_ERROR([--with-neon option but neon/ subdir exists.
-Please either remove that subdir or don't use the --with-neon option.])
+    if test "$withval" = "yes" ; then
+      AC_MSG_ERROR([--with-neon requires an argument.])
     else
-      if test "$withval" = "yes" ; then
-        AC_PATH_PROG(neon_config,neon-config)
-      else
-        neon_config="$withval/bin/neon-config"
-      fi
-
-      SVN_NEON_CONFIG()
+      neon_config="$withval/bin/neon-config"
     fi
+
+    SVN_NEON_CONFIG()
   ],
   [
     if test -d $abs_srcdir/neon ; then
