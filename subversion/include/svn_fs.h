@@ -107,7 +107,7 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
  * application.  Each Subversion filesystem lives in a single Berkeley
  * DB environment.
  *
- * @defgroup svn_fs_bdb berkeley bd filesystems
+ * @defgroup svn_fs_bdb berkeley db filesystems
  * @{
  */
 
