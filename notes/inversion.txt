@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.40 $ of this document.)
+              ($Revision: 1.41 $ of this document.)
 
 * Introduction
 
@@ -39,15 +39,14 @@ compelling reason to do otherwise.
 Naturally!
 
 By the way, rename support means you can trace through ancestry by
-name *or* by entity.  For example, if you say "Give me version 12
-of foo.c", you might mean version 12 of the file whose name is
-*now* foo.c (but perhaps it was named bar.c back at version 12),
-or you might mean the file whose name was foo.c in version 12 (perhaps
-that file no longer exists, or has a different name now).  Inversion
-offers a way to specify which interpretation you want, while
-defaulting to the most reasonable interpretation in context.  We
-haven't decided what "reasonable" means yet, but we're working on
-that.
+name *or* by entity.  For example, if you say "Give me version 12 of
+foo.c", do you mean version 12 of the file whose name is *now* foo.c
+(but perhaps it was named bar.c back at version 12), or the file whose
+name was foo.c in version 12 (perhaps that file no longer exists, or
+has a different name now)?  Inversion offers a way to specify which
+interpretation you want, while defaulting to the most reasonable
+interpretation in context.  We haven't decided what "reasonable" means
+yet, but we're working on that.
 
 ** Version numbers are project-wide and atomic.
 
@@ -129,11 +128,16 @@ are recorded like any other historical data (in practice, the type
 will probably be stored in the entity's property list, see
 implementation discussions farther down).
 
-** I18N/Multilingual support: non-ASCII encodings can be treated as text.
+** I18N/Multilingual support.
 
-It would be good for Inversion to understand all the UTF encodings, so
-it can treat such files like plain text.  How hard would this be?  If
-we can't do them all, can we do the most common ones?
+Inversion has I18N support -- commands, user messages, and errors can
+be customized to the appropriate human language at build-time.  Also,
+there will be I18N support for the *names* as well as the contents of
+versioned entities.
+
+For purposes of keyword expansion and line-end conversion, Inversion
+also understands the UTF-* encodings (but this may be after the first
+release).
 
 (It may be workable to just treat everything as UTF-8 at first; for
 non-UTF-8 text files with a few "meta" characters, this might at worst
@@ -164,11 +168,14 @@ CVS tag.
 
 If you start committing on the clone, then it's a branch.  Voila!
 
-By default, inversion uses per-project namespaces for clones, to avoid
-cross-project name conflicts.
-
 This should also get us CVS "vendor branching" (since we'll have real
 rename and directory support).
+
+(But note that it will be supported and normal to define the clone's
+name inside the original project's namespace, because people mentally
+think of tags and branches as being "inside" the project, not as being
+fully independent top-level objects themselves.  And we certainly
+don't want cross-project name conflicts in tags and branches!)
 
 [Thanks to Jim Blandy <jimb@red-bean.com> for pointing out that
 `clone' is a clean way to get both tagging and branching.]
@@ -192,6 +199,15 @@ This will require a more complete specification, of course, but
 above is the general idea.  Note that per-object merge records will
 need to be maintained on the server side, since people often need to
 merge project subsets.
+
+(There are some theoretical problems with remembering merge sources --
+knowing where the merged data came from implies some sort of universal
+repository registry.  However, our first goal is to make sure that
+multiple merges from branches made *in the same repository as the
+original project* compound gracefully.  Remembering merges from remote
+sources is more difficult, due to the difficulty of distinguishing
+remote sources, but there are good "90%" solutions that will work in
+practice).
 
 ** Inversion has flexible log message policy
 
@@ -260,9 +276,61 @@ Probably basic text diffing should be built into the client, but that
 doesn't obviate the need to for clients to be able to specify
 alternate (or additional) difference viewers even for text.
 
+** Multisite / Local Repository
+
+Two commonly requested enhancements for CVS are "multisite" and "local
+repositories".  Although the two terms are sometimes used
+interchangably, they refer to two different things (explained below).
+Inversion could eventually support both, but they are not priorities
+for the first release.  Nothing in the design prevents them from being
+added on later.
+
+*** Multisite
+
+This is like the ClearCase multisite feature.  Essentially, it is a
+redundant distributed repository.  The repository exists on two or
+more cooperatively mirroring servers (each one presumably being close,
+network-wise, to its intended users).  Commits on any server are
+visible on all of them.  I'm not sure how conflict resolution is
+handled when people at different mirrors change the same file at at
+the same time -- perhaps one of the commits is backed out and returned
+to that user?  Hmmm.
+
+Anyway, CVS has gotten away with simply assuming decent Net access for
+all users; this doesn't satisfy everyone, but for the first release of
+Inversion we should probably do the same.
+
+*** Local repository
+
+This is one that people request a lot: the ability to commit changes
+first to a local "working repository" (not visible to the rest of the
+world), and then commit what's in the working repository to the real
+repository (with the several commits being then folded into one
+commit, usually).
+
+Why do people want this?  I think mostly it's the psychological
+comfort of making a snapshot whenever one reaches a good stopping
+point, but not necessarily wanting all those "comfort points" to
+become publically-visible commits.  This is understandable, but of
+course the local repository will have to refuse to commit changes if
+any of the files turn out not to be up-to-date.  (There may also be a
+very cheap way to implement 90% of this feature by making skeleton
+duplicates of the working copy's directory tree and copying the
+changed files into that skeleton...)
+
+(Are there any other reasons people want this feature?  I remember
+seeing posts on info-cvs explaining what appeared to be other reasons,
+but frankly I could never understand them very well...)
+
+For now, similar effects are achievable without involving the version
+control system, so this feature is not a priority for the first
+release of Inversion.
+
 * Design
 
-** The basic repository structure
+** Repository
+
+*** The basic repository structure
 
 [This design is drawn from Jim Blandy's "Subversion" spec, but with
 some changes from Ben and Karl (i.e., Jim is not to be held
@@ -659,7 +727,7 @@ README was added to the project's top level directory:
      
 There, wasn't that pretty?  I knew you would.          
 
-** Crash-proof repository mutation and locking
+*** Crash-proof repository mutation and locking
 
 We want to make repository changes in a such way that the repository
 is in a "sane" (unambiguous and readable) state at every step.  
@@ -827,7 +895,7 @@ be preferable -- and I like the mellow approach where you just grab
 whatever version happens to be in line when you're ready for it.
 Thoughts?
 
-** How renames work, and what they imply
+*** How renames work, and what they imply
 
 Exactly how you think they do.
 
@@ -850,14 +918,72 @@ identity, which can result in two different retrieval scenarios
 These unique identitifiers, once assigned, are _never_ changed.  When
 an entity is renamed, only the name changes, not the id number.
 
-** How removals work.
+*** How removal works.
 
-Exactly how you think they do.
+Exactly how you think it does.
 
 You commit a new version of the parent node, which simply doesn't have
 an entry for the removed child.
 
-** How clones (tags and branches) work
+*** How resurrection works.
+
+Suppose you removed `foo' several versions ago and now you want it
+back.  When the user the working copy types
+
+       $ inv resurrect foo
+
+what happens?
+
+Well, in the repository, the server starts at the base version's node
+for the current directory (i.e., foo's parent directory).  Note that's
+"base" version, not "latest" version -- the base is the one on which
+the current working copy is based.
+
+Starting there, follow the backlinks, asking at each step whether
+there's a dir_entry for `foo'.  If there is, follows that link -- that
+gets you the most recent `foo'.
+
+Of course, there could have been several different entities in the
+history named `foo' in this directory.  Which is the one the user
+wants?
+
+By default, the server assumes the user meant the most recent foo.
+But the user could ask for one at a specific version:
+
+   $ inv resurrect foo:5
+
+In that case, the server follows backlinks until it gets to the
+directory belonging to version 5, and then looks for an dir_entry
+pointing to foo.
+
+Or, the user might first need to know how many different entities have
+been named `foo' here, before choosing one to resurrect:
+
+   $ inv resurrect -l foo
+   /* created    removed       versions    entity_name    entity_id  */
+   2000-08-01   2000-10-14       1-5           foo           1729
+   2000-12-15   2001-05-29       7-12          foo           1952
+   2001-11-29   2002-03-20       20-103        foo           1729
+
+From this we see that an entity named `foo' was created in this
+directory, later removed, then another entirely different entity named
+foo was added, then later removed, then the first foo was resurrected
+and lasted for 83 versions before being removed (had it never been
+removed, the third "removed" date would be an empty field).
+
+The procedure by which the server generates this list should be
+obvious.
+
+Now the user decides to resurrect the middle foo.  Usually she would
+want it at its latest revision, in this case 12:
+
+   $ inv resurrect foo:12
+
+Please note: the examples here were meant only to illustrate various
+resurrection scenarios, and should not be taken as client
+user-interface specifications.
+
+*** How clones (tags and branches) work
 
 Branches and tags are both implemented in terms of "clones".  Cloning
 a project is constant-time and constant-space -- you just make a new
@@ -984,7 +1110,7 @@ that we can use in all sorts of circumstances, like
 labels for the diffy chromosome chunks in partial merging... but more
 about that when we get to it. :-) )
 
-*** "Shallow" and "deep" clones (insurance against loss of trunk)
+**** "Shallow" and "deep" clones (insurance against loss of trunk)
 
 The cheapest kind of clone is constant-time and -space.  Call it a
 "surface" clone, because it includes by reference wherever possible.
@@ -1027,11 +1153,11 @@ fooo:
 Explain why remembering ancestry is important even for shallow and
 deep clones.
 
-*** Merging branches
+**** Merging branches
 
 whoax
 
-** How meta-data is stored
+*** How meta-data is stored
 
 Each node has a property list (key->value, key->value).  Among the
 things we can store in the property list are file permissions, data
@@ -1043,17 +1169,23 @@ It might be good to have two plists, actually: `inv_props', and
 a "store-and-ignore" policy for user_props.  And users should never
 store anything in inv_props, only Inversion handles that.
 
-** A closer look at the `node' data structure (and friends)
+*** A closer look at the `node' data structure (and friends)
 
    typedef struct dir_entry
    {
-      unsigned long int unique_id;   /* The unvarying id for this entity */
       char *name;                    /* Child's name, multi-lingual I hope */
-      node *child;                   /* The target node. */
+      node *child;                   /* The target node.  Given here
+                                        as a pointer, but it might be
+                                        a node_id in reality. */ 
    } dir_entry;
+
 
    typedef struct node
    {
+      unsigned long int entity_id;   /* Unvarying unique id for this entity */
+      unsigned long int node_id;     /* Unique id for this node 
+                                        (See struct dir_entry above
+                                        about pointer vs node_id.) */
       int type;                      /* File, directory, symlink, etc */
       BOOL diffy;                    /* Holds full text or diff? */
       plist *inv_props;              /* Properties managed by Inversion. */
@@ -1083,6 +1215,43 @@ represents a directory -- a special line-by-line texty format would
 list its dir entries, and that could make it easier for us to store
 directory changes in a diffy way.
 
+** Client
+
+There's not much to say about the client; it just has to speak the
+protocol and do the right thing.  However, the layout of working
+copies needs to be specified.
+
+*** Working copies
+
+The tentative plan is to use an IVN/ subdirectory, just like the CVS/
+subdirectory.  However, the IVN/ subdirectory will be at the top level
+of the checked-out portion of the project.
+
+The reason for this is that then an IVN/ administrative subdir in a
+subdirectory of the project signifies that this subtree comes from
+some other project (perhaps from a different repository).  This makes
+project "transclusion" easier.  If your project depends on a library
+that someone else is maintaining, you can include a working copy of
+their project inside yours, without taking over versioning in any
+way.
+
+The contents of the IVN/ subdir are still under consideration, but it
+should be possible to sketch generally what's in there:
+
+  A file indicating the base version of this working copy.
+
+  Something like a CVS/Entries file
+
+  A base tree of the project, for client->server diff transmission
+    (OR, rsync-like records in the Entries-like file :-) )
+
+Of course, the format of the so-called Entries file will be very
+different from CVS.
+
+This working copy administrative area has not been given much thought,
+because it will largely come out in the wash after the repository and
+protocol specifications are done.
+
 ** Other miscellaneous design goals
 
 *** Natively client/server.
@@ -1104,22 +1273,6 @@ more bandwidth than necessary).  Ivn accomplishes this either by
 keeping pristine copies locally, or using the rsync algorithm; which
 way we do it is an implementation detail that hasn't been decided yet.
 
-* Evaluating and improving the design
-
-I'm pretty confident that the above design is the right way to go; the
-main question is how to implement repository storage.  I am no longer
-so certain that a full database will be necessary, though at least
-some sort of DBM storage may be useful.
-
-Also, the network protocol is still unmentioned; WebDAV is something
-to look at.
-
-** Concerns
-
-There are certain properties which we would like any implementation to
-have.  I'm listing them here instead of in the "Requirements" section,
-because they aren't really features, they're more like principles.
-
 *** Minimize network turnarounds
 
 The CVS client/server protocol goes to great effort to make sure that
@@ -1129,7 +1282,7 @@ turnarounds (i.e., client asks server preliminary questions, server
 responds, client then does the real request, server responds), and
 most things can be done with just 1.
 
-*** Minimize database turnarounds
+*** Minimize database turnarounds (repository storage issues)
 
 [Note: we're no longer sure there will even be a database, but the
 concerns below apply to whatever static block of sludge the repository
@@ -1171,6 +1324,8 @@ scenario will probably reveal similar weaknesses in other designs.
 anything, then remove it -- it's not helpful if it only demonstrates
 the ease of implementing that operation well.  Currently this list is
 a brain dump; there's no reason it can't be shortened.)
+
+TODO: incorporate the WebDAV/DeltaV scenarios list here too.
 
   + Commit from an up-to-date wcopy
 
