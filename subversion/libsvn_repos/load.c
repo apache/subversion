@@ -935,10 +935,21 @@ close_revision (void *baton)
                                      rb->pool));
 
   if (pb->outstream)
-    svn_stream_printf (pb->outstream, rb->pool,
-                       "\n------- Committed new rev %" SVN_REVNUM_T_FMT
-                       " (loaded from original rev %" SVN_REVNUM_T_FMT
-                       ") >>>\n\n", new_rev, rb->rev);
+    {
+      if (new_rev == rb->rev)
+        {
+          svn_stream_printf (pb->outstream, rb->pool,
+                             "\n------- Committed revision %" SVN_REVNUM_T_FMT
+                             " >>>\n\n", new_rev);
+        }
+      else
+        {
+          svn_stream_printf (pb->outstream, rb->pool,
+                             "\n------- Committed new rev %" SVN_REVNUM_T_FMT
+                             " (loaded from original rev %" SVN_REVNUM_T_FMT
+                             ") >>>\n\n", new_rev, rb->rev);
+        }
+    }
 
   return SVN_NO_ERROR;
 }
