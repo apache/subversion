@@ -25,12 +25,13 @@ Candidate changes:
     Votes:
       +1: lundblad, maxb
 
-  * r13961
+  * r13961, r13981
     Make Ruby bindings install to the correct location.
     Justification:
-      Broken otherwise.
+      Broken otherwise. (and _still_ broken with only r13961).
     Votes:
-      +1: epg, maxb
+      +1: maxb
+      +1 (r13961 only): epg
 
   * r13978
     Make copy_tests 25 pass over DAV.
