@@ -96,7 +96,7 @@ Candidate changes:
     Backport r8551 to 1.0.X to cause blame to bail on binary files.
     Justification:  Nicer behavior to the end user. 
     Votes:
-      +1: dionisos
+      +1: sussman, cmpilato, dionisos
 
   * r8838
     Finish issue #1750 -- svn export [url] doesn't export any svn:externals
