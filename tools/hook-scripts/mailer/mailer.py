@@ -163,6 +163,8 @@ class MailedOutput:
     hdrs = 'From: %s\n'    \
            'To: %s\n'      \
            'Subject: %s\n' \
+           'MIME-Version: 1.0\n' \
+           'Content-Type: text/plain; charset=utf8\n' \
            % (self.from_addr, self.to_addr, subject)
     if self.reply_to:
       hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
