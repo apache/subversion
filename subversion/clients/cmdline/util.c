@@ -471,7 +471,7 @@ svn_cl__get_log_message (const char **log_msg,
       return SVN_NO_ERROR;
     }
 
-  if (! (commit_items || commit_items->nelts))
+  if (! commit_items->nelts)
     {
       *log_msg = "";
       return SVN_NO_ERROR;
