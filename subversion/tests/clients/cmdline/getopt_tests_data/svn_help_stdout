@@ -1,10 +1,10 @@
 usage: svn <subcommand> [options] [args]
+Subversion command-line client, version X.Y.Z.
 Type 'svn help <subcommand>' for help on a specific subcommand.
 
 Most subcommands take file and/or directory arguments, recursing
 on the directories.  If no arguments are supplied to such a
-command, it will recurse on the current directory (inclusive) by
-default.
+command, it recurses on the current directory (inclusive) by default.
 
 Available subcommands:
    add
@@ -39,4 +39,3 @@ Available subcommands:
 
 Subversion is a tool for version control.
 For additional information, see http://subversion.tigris.org/
-

@@ -73,6 +73,13 @@ rep_lines_res = [
                  # In 'svn --version --quiet', we print only the version
                  # number in a single line.
                  (re.compile(r'^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$'), 'X.Y.Z\n'),
+                 # 'svn --help' has a line with the version number.
+                 # It can vary, for example:
+                 # "Subversion command-line client, version 1.1.0."
+                 # "Subversion command-line client, version 1.1.0-dev."
+                 (re.compile(r'Subversion command-line client, '
+                             'version \d+\.\d+\.\d+(.|-[a-zA-Z0-9]+\.)$'),
+                  'Subversion command-line client, version X.Y.Z.'),
                 ]
 
 def process_lines(lines):
