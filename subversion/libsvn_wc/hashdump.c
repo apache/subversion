@@ -183,20 +183,93 @@ hash_write (ap_hash_t *hash,
       if (err) return err;
     }
 
+  err = ap_full_write (destfile, "END\n", 4, NULL);
+  if (err) return err;
+
   return SVN_NO_ERROR;
 }
 
 
-#if 0
+/* Read a line from FILE into BUF, but not exceeding *LIMIT bytes.
+ * Does not include newline.
+ * Length read is returned in *LIMIT.
+ * BUF should be pre-allocated.
+ * FILE should be already opened. 
+ *
+ * (This is meant for reading length lines from hashdump files.) 
+ */
+static ap_status_t
+read_length_line (ap_file_t *file, char *buf, size_t *limit)
+{
+  int i;
+  ap_status_t err;
+
+  for (i = 0; i < *limit; i++)
+  {
+    int num_bytes = 1;
+    err = ap_read (file, buf + i, &num_bytes);
+
+    if (err)
+      return err;
+    else if (num_bytes < 1)
+      return SVN_WARNING;  /* todo: not sure what to do here */
+    else if (buf[i] == '\n')
+      {
+        buf[i] = '\0';
+        *limit = i;
+        return SVN_NO_ERROR;
+      }
+  }
+
+  /* todo: make a custom error "SVN_LENGTH_TOO_LONG" or something? */
+  return SVN_WARNING;
+}
+
+
 /* Read a hash table from a file. */
 ap_status_t
 hash_read (ap_hash_t **h, 
            void *(*pack_value) (size_t len, const char *val),
-           ap_file_t *src)
+           ap_file_t *src,
+           ap_pool_t *pool)
 {
-  
+  ap_status_t err;
+  char buf[100];
+
+  while (1)
+    {
+      int len = 100;
+
+      /* Read a key length followed by a key.  Might be END, though.*/
+      err = read_length_line (src, buf, &len);
+      if (err) return err;
+
+      if (len < 3)
+        {
+          return SVN_WARNING;      /* todo: what kind of error here? */
+        }
+      if ((len == 3)
+          && (buf[0] == 'E')       /* We've reached the end of the  */
+          && (buf[1] == 'N')       /* dumped hash table, so leave.  */
+          && (buf[2] == 'D'))
+        {
+          break;
+        }
+      else if ((buf[0] == 'K') && (buf[0] == ' '))
+        {
+          len = atoi (buf + 2);
+          /* fooo working here: now read the key */
+          /* Read a val length followed by a val. */
+          /* in progress */
+        }
+      else
+        {
+          /* some random error, deal with best as can */
+        }
+    }
+
+  return SVN_NO_ERROR;
 }
-#endif /* 0 */
 
 
 
