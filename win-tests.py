@@ -14,8 +14,8 @@ tests = ['subversion/tests/libsvn_subr/path-test.exe',
          'subversion/tests/libsvn_subr/target-test.sh',
          'subversion/tests/libsvn_subr/time-test.exe']
 
-fs_tests = ['subversion/tests/libsvn_fs/run-fs-tests.sh',
-            'subversion/tests/libsvn_repos/run-repos-tests.sh']
+fs_tests = ['subversion/tests/libsvn_fs/run-fs-tests.py',
+            'subversion/tests/libsvn_repos/run-repos-tests.py']
 
 python_tests = ['subversion/tests/clients/cmdline/getopt_tests.py',
                 'subversion/tests/clients/cmdline/basic_tests.py',
@@ -28,7 +28,8 @@ python_tests = ['subversion/tests/clients/cmdline/getopt_tests.py',
                 'subversion/tests/clients/cmdline/diff_tests.py',
                 'subversion/tests/clients/cmdline/stat_tests.py',
                 'subversion/tests/clients/cmdline/trans_tests.py',
-                'subversion/tests/clients/cmdline/svnadmin_tests.py']
+                'subversion/tests/clients/cmdline/svnadmin_tests.py',
+                'subversion/tests/clients/cmdline/module_tests.py']
 
 all_tests = tests + fs_tests + python_tests
 
