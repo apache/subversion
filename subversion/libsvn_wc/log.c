@@ -1109,7 +1109,8 @@ log_do_modify_wcprop (struct log_runner *loggy,
       value.len = strlen (propval);
     }
 
-  return svn_wc__wcprop_set (name, propval ? &value : NULL, path, loggy->pool);
+  return svn_wc__wcprop_set (propname, propval ? &value : NULL,
+                             path, loggy->pool);
 }
 
 
