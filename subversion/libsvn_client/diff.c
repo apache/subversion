@@ -244,12 +244,23 @@ merge_file_added (const char *mine,
                                subpool));
         if (entry)
           {
-            svn_error_t *err;
-            err = svn_wc_merge (older, yours, mine,
-                                ".older", ".yours", ".working", /* ###? */
-                                subpool);
-            if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
-              return err;  
+            if (entry->schedule == svn_wc_schedule_delete)
+              {
+                /* If already scheduled for deletion, then carry out
+                   an add, which is really a (R)eplacement.  */
+                SVN_ERR (svn_io_copy_file (yours, mine, TRUE, subpool));
+                SVN_ERR (svn_client_add (svn_stringbuf_create (mine, subpool), 
+                                         FALSE, NULL, NULL, subpool));      
+              }
+            else
+              {
+                svn_error_t *err;
+                err = svn_wc_merge (older, yours, mine,
+                                    ".older", ".yours", ".working", /* ###? */
+                                    subpool);
+                if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
+                  return err;
+              }
           }
         else
           return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, 
@@ -382,10 +393,14 @@ merge_prop_changed (const char *path,
                     const svn_string_t *value,
                     void *baton)
 {
+  int len;
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
 
-  SVN_ERR (svn_client_propset (name, value, path, FALSE, subpool));
+  enum svn_prop_kind kind = svn_property_kind (&len, name);
+
+  if (kind == svn_prop_regular_kind)
+    SVN_ERR (svn_client_propset (name, value, path, FALSE, subpool));
   
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
