@@ -2,26 +2,39 @@ This tree is for reproducing
 
    http://subversion.tigris.org/issues/show_bug.cgi?id=1421
 
-The reproduction data was constructed using bits of the xiph.org
-repository, supplied by Jack Moffitt <jack@xiph.org>.
+There are two sets of reproduction data - 'src' and 'module'.
 
-The problem has to do with the creation of branch 'volsung_20010721',
-parts of which are copied from trunk, and other parts from branch
-'xiphophorus':
+'src' directory
 
-   src/ao_private.h,v:
-      volsung_20010721   ==> 1.1.0.2
+  The reproduction data was constructed using bits of the xiph.org
+  repository, supplied by Jack Moffitt <jack@xiph.org>.
 
-   src/audio_out.c,v:
-	volsung_20010721 ==> 1.15.0.2
-	xiphophorus      ==> 1.1.1
+  The problem has to do with the creation of branch 'volsung_20010721',
+  parts of which are copied from trunk, and other parts from branch
+  'xiphophorus':
 
-   src/COPYING,v
-	volsung_20010721 ==> 1.1.1.1.0.4
-	xiphophorus      ==> 1.1.1
+     src/ao_private.h,v:
+        volsung_20010721   ==> 1.1.0.2
 
-(These are actually from /ao/src/ in the xiphrepo; note that COPYING,v
-is actually /ao/COPYING,v in the original data, I just moved it to
-make the reproduction simpler.)
+     src/audio_out.c,v:
+          volsung_20010721 ==> 1.15.0.2
+          xiphophorus      ==> 1.1.1
+
+     src/COPYING,v
+          volsung_20010721 ==> 1.1.1.1.0.4
+          xiphophorus      ==> 1.1.1
+
+  (These are actually from /ao/src/ in the xiphrepo; note that COPYING,v
+  is actually /ao/COPYING,v in the original data, I just moved it to
+  make the reproduction simpler.)
+
+  This test began to pass after the fix in r6534. However, similar errors still
+  occurred with other data sets. The issue was reopened.
+
+'module' directory
+
+  This test is based on issue-1421-small-cvsrepos.tgz from Blair Zajac.
+
+  It continued to fail until the final fix in r7006.
 
 See the issue for more details.
