@@ -266,7 +266,7 @@ static const apr_getopt_option_t options_table[] =
      N_("remove redundant log files from source repository")},
 
     {"wait", svnadmin__wait, 0,
-     N_("wait instead of exit if the the repository is in\n"
+     N_("wait instead of exit if the repository is in\n"
         "                             use by another process")},
 
     {NULL}
