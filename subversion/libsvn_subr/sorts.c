@@ -73,6 +73,24 @@ svn_sort_compare_items_as_paths (const svn_sort__item_t *a,
 
 
 int
+svn_sort_compare_items_lexically (const svn_sort__item_t *a,
+                                  const svn_sort__item_t *b)
+{
+  int val;
+  apr_size_t len;
+
+  /* Compare bytes of a's key and b's key up to the common length. */
+  len = (a->klen < b->klen) ? a->klen : b->klen;
+  val = memcmp (a->key, b->key, len);
+  if (val != 0)
+    return val;
+
+  /* They match up until one of them ends; whichever is longer is greater. */
+  return (a->klen < b->klen) ? -1 : (a->klen > b->klen) ? 1 : 0;
+}
+
+
+int
 svn_sort_compare_revisions (const void *a, const void *b)
 {
   svn_revnum_t a_rev = *(const svn_revnum_t *)a;

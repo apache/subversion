@@ -28,6 +28,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_hash.h"
+#include "svn_sorts.h"
 #include "svn_io.h"
 #include "svn_pools.h"
 
@@ -175,28 +176,25 @@ static svn_error_t *
 hash_write (apr_hash_t *hash, apr_hash_t *oldhash, svn_stream_t *stream,
             const char *terminator, apr_pool_t *pool)
 {
-  apr_hash_index_t *this;
   apr_pool_t *subpool;
-  const void *key;
-  void *val;
-  apr_ssize_t keylen;
-  const svn_string_t *valstr;
   apr_size_t len;
+  apr_array_header_t *list;
+  int i;
 
   subpool = svn_pool_create (pool);
 
-  for (this = apr_hash_first (pool, hash); this; this = apr_hash_next (this))
+  list = svn_sort__hash (hash, svn_sort_compare_items_lexically, pool);
+  for (i = 0; i < list->nelts; i++)
     {
-      svn_pool_clear (subpool);
+      svn_sort__item_t *item = &APR_ARRAY_IDX (list, i, svn_sort__item_t);
+      svn_string_t *valstr = item->value;
 
-      /* Get this hash entry. */
-      apr_hash_this (this, &key, &keylen, &val);
-      valstr = val;
+      svn_pool_clear (subpool);
 
       /* Don't output entries equal to the ones in oldhash, if present. */
       if (oldhash)
         {
-          svn_string_t *oldstr = apr_hash_get (oldhash, key, keylen);
+          svn_string_t *oldstr = apr_hash_get (oldhash, item->key, item->klen);
 
           if (oldstr && svn_string_compare (valstr, oldstr))
             continue;
@@ -206,7 +204,8 @@ hash_write (apr_hash_t *hash, apr_hash_t *oldhash, svn_stream_t *stream,
       SVN_ERR (svn_stream_printf (stream, subpool,
                                   "K %" APR_SSIZE_T_FMT "\n%s\n"
                                   "V %" APR_SIZE_T_FMT "\n",
-                                  keylen, (char *) key, valstr->len));
+                                  item->klen, (const char *) item->key,
+                                  valstr->len));
       len = valstr->len;
       SVN_ERR (svn_stream_write (stream, valstr->data, &len));
       SVN_ERR (svn_stream_printf (stream, subpool, "\n"));
@@ -215,19 +214,19 @@ hash_write (apr_hash_t *hash, apr_hash_t *oldhash, svn_stream_t *stream,
   if (oldhash)
     {
       /* Output a deletion entry for each property in oldhash but not hash. */
-      for (this = apr_hash_first (pool, oldhash); this;
-           this = apr_hash_next (this))
+      list = svn_sort__hash (oldhash, svn_sort_compare_items_lexically,
+                             pool);
+      for (i = 0; i < list->nelts; i++)
         {
+          svn_sort__item_t *item = &APR_ARRAY_IDX (list, i, svn_sort__item_t);
+
           svn_pool_clear (subpool);
 
-          /* Get this hash entry. */
-          apr_hash_this (this, &key, &keylen, NULL);
-
           /* If it's not present in the new hash, write out a D entry. */
-          if (! apr_hash_get (hash, key, keylen))
+          if (! apr_hash_get (hash, item->key, item->klen))
             SVN_ERR (svn_stream_printf (stream, subpool,
                                         "D %" APR_SSIZE_T_FMT "\n%s\n",
-                                        keylen, (char *) key));
+                                        item->klen, (const char *) item->key));
         }
     }
 
