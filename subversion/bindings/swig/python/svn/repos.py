@@ -52,25 +52,33 @@ class RevisionChangeCollector(svn.delta.Editor):
 
   # BATON FORMAT: [path, base_path, base_rev]
   
-  def __init__(self, fs_ptr, rev):
+  def __init__(self, fs_ptr, rev, pool):
     self.fs_ptr = fs_ptr
     self.rev = rev
     self.changes = { } # path -> ChangedPathEntry()
     self.roots = { } # revision -> svn_fs_root_t
-
+    self.pool = pool
+    
   def _make_base_path(self, parent_path, path):
     idx = string.rfind(path, '/')
     if idx == -1:
       return parent_path + '/' + path
     return parent_path + path[idx:]
+
+  def _get_root(self, rev):
+    try:
+      return self.roots[rev]
+    except KeyError:
+      pass
+    root = self.roots[rev] = svn.fs.revision_root(self.fs_ptr, rev, self.pool)
+    return root
     
   def open_root(self, base_revision, dir_pool):
     return ('', '', self.rev - 1)  # dir_baton
 
   def delete_entry(self, path, revision, parent_baton, pool):
     base_path = self._make_base_path(parent_baton[1], path)
-    root = svn.fs.revision_root(self.fs_ptr, parent_baton[2], pool)
-    if svn.fs.is_dir(root, base_path, pool):
+    if svn.fs.is_dir(self._get_root(parent_baton[2]), base_path, pool):
       item_type = svn.core.svn_node_dir
     else:
       item_type = svn.core.svn_node_file
