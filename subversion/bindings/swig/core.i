@@ -36,6 +36,9 @@
    to actually generate wrappers, so manage svn_types.h right here.
 */
 
+/* We don't want to hear about supposedly bad constant values */
+#pragma SWIG nowarn=305
+
 /* ### for now, let's ignore this thing. */
 %ignore svn_prop_t;
 
