@@ -63,7 +63,7 @@ class SVNLook:
     else:
       date = self._get_property(util.SVN_PROP_REVISION_DATE)
       if date:
-        aprtime = util.svn_time_from_nts(date, self.pool)
+        aprtime = util.svn_time_from_cstring(date, self.pool)
         # ### convert to a time_t; this requires intimate knowledge of
         # ### the apr_time_t type
         secs = aprtime / 1000000  # aprtime is microseconds; make seconds
