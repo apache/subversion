@@ -798,10 +798,9 @@ joessh = $JOESSH /opt/alternate/ssh -p 29934
       writing&mdash;specifically, versioned
       writing&mdash;capabilities.  The result is a standardized,
       robust system that is conveniently packaged as part of the
-      Apache 2.0 software, is supported by numerous pieces of core
-      operating system and third-party products, and which doesn't
-      require network administrators to open up yet another custom
-      port. 
+      Apache 2.0 software, is supported by numerous operating systems
+      and third-party products, and which doesn't require network
+      administrators to open up yet another custom port.
       <footnote>
         <para>They really hate doing that.</para>
       </footnote>
