@@ -55,6 +55,7 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_file_io.h>
+#include <apr_time.h>
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -196,11 +197,11 @@ make_adm_subdir (svn_string_t *path, apr_pool_t *pool)
  */ 
 enum { file_type = 1, dir_type };
 static svn_error_t *
-init_adm_thing (svn_string_t *path,
-                char *thing,
-                int type,
-                apr_file_t **return_file,
-                apr_pool_t *pool)
+create_adm_thing (svn_string_t *path,
+                  char *thing,
+                  int type,
+                  apr_file_t **return_file,
+                  apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
   apr_file_t *f = NULL;
@@ -250,6 +251,27 @@ init_adm_thing (svn_string_t *path,
 }
                        
 
+/* Remove path/SVN/thing; really only used for lock files right now. */
+static svn_error_t *
+remove_adm_thing (svn_string_t *path,
+                  char *thing,
+                  apr_pool_t *pool)
+{
+  svn_error_t *err = NULL;
+  apr_status_t apr_err = 0;
+
+  extend_with_admin_name (path, thing, pool);
+
+  apr_err = apr_remove_file (path->data, pool);
+  if (apr_err)
+    err = svn_create_error (apr_err, 0, path->data, NULL, pool);
+
+  /* Restore path to its original state no matter what. */
+  chop_admin_name (path);
+
+  return err;
+}
+
 
 /* Initialize the `versions' file in the administrative subdir. */
 static svn_error_t *
@@ -261,7 +283,7 @@ adm_init_versions (svn_string_t *path,
   apr_file_t *v = NULL;
   apr_status_t apr_err = 0;
 
-  err = init_adm_thing (path, SVN_WC__ADM_VERSIONS, file_type, &v, pool);
+  err = create_adm_thing (path, SVN_WC__ADM_VERSIONS, file_type, &v, pool);
   if (err)
     return err;
 
@@ -300,6 +322,16 @@ svn_wc__set_up_new_dir (svn_string_t *path,
   if (err)
     return err;
 
+  /* And lock it immediately! */
+  err = svn_wc__lock (path, 0, pool);
+  if (err)
+    return err;
+
+  /* Make `SVN/versions'. */
+  err = adm_init_versions (path, ancestor_version, pool);
+  if (err)
+    return err;
+
   /* Make `SVN/versions'. */
   err = adm_init_versions (path, ancestor_version, pool);
   if (err)
@@ -313,8 +345,24 @@ svn_wc__set_up_new_dir (svn_string_t *path,
 
 
 svn_error_t *
-svn_wc__lock (svn_string_t *path, apr_pool_t *pool)
+svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
 {
+  svn_error_t *err = NULL;
+
+  /* kff todo: fooo, in progress */
+  err = create_adm_thing (path, SVN_WC__ADM_LOCK, file_type, NULL, pool);
+  if (err)
+    return err;
+
+  return 0;
+}
+
+
+svn_error_t *
+svn_wc__unlock (svn_string_t *path, apr_pool_t *pool)
+{
+  /* kff todo: in progress */
+
   return 0;
 }
 

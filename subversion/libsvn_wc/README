@@ -84,8 +84,7 @@ analogous to CVS/ sudirs:
        properties               /* Properties for this directory */
        tree-edits               /* Records changes to tree structure */
        prop-edits               /* Records changes to properties */
-       read-lock                /* Optional, you know what this is */
-       write-lock               /* Optional, you know what this is too */
+       lock                     /* Optional, you know what this is */
        tmp                      /* Local tmp space is preferable to /tmp */
        text-base/               /* Pristine repos versions of the files... */
             foo.c
