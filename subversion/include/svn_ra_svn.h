@@ -65,7 +65,12 @@ typedef struct {
 
 /* Memory representation of an on-the-wire data item. */
 typedef struct {
-  enum { NUMBER, STRING, WORD, LIST } kind;
+  enum {
+    SVN_RA_SVN_NUMBER,
+    SVN_RA_SVN_STRING,
+    SVN_RA_SVN_WORD,
+    SVN_RA_SVN_LIST
+  } kind;
   union {
     apr_uint64_t number;
     svn_string_t *string;

@@ -377,7 +377,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           strdata = apr_palloc(pool, val + 1);
           SVN_ERR(readbuf_read(conn, strdata, val));
           strdata[val] = '\0';
-          item->kind = STRING;
+          item->kind = SVN_RA_SVN_STRING;
           item->u.string = apr_palloc(pool, sizeof(*item->u.string));
           item->u.string->data = strdata;
           item->u.string->len = val;
@@ -386,7 +386,7 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       else
         {
           /* It's a number. */
-          item->kind = NUMBER;
+          item->kind = SVN_RA_SVN_NUMBER;
           item->u.number = val;
         }
       return SVN_NO_ERROR;
@@ -402,13 +402,13 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
             break;
           svn_stringbuf_appendbytes(str, &c, 1);
         }
-      item->kind = WORD;
+      item->kind = SVN_RA_SVN_WORD;
       item->u.word = str->data;
     }
   else if (c == '(')
     {
       /* Read in the list items. */
-      item->kind = LIST;
+      item->kind = SVN_RA_SVN_LIST;
       item->u.list = apr_array_make(pool, 0, sizeof(svn_ra_svn_item_t));
       while (1)
         {
@@ -499,17 +499,17 @@ static svn_error_t *vparse_tuple(apr_array_header_t *list, apr_pool_t *pool,
   for (count = 0; *fmt && count < list->nelts; fmt++, count++)
     {
       elt = &((svn_ra_svn_item_t *) list->elts)[count];
-      if (*fmt == 'n' && elt->kind == NUMBER)
+      if (*fmt == 'n' && elt->kind == SVN_RA_SVN_NUMBER)
         *va_arg(*ap, apr_uint64_t *) = elt->u.number;
-      else if (*fmt == 'r' && elt->kind == NUMBER)
+      else if (*fmt == 'r' && elt->kind == SVN_RA_SVN_NUMBER)
         *va_arg(*ap, svn_revnum_t *) = elt->u.number;
-      else if (*fmt == 's' && elt->kind == STRING)
+      else if (*fmt == 's' && elt->kind == SVN_RA_SVN_STRING)
         *va_arg(*ap, svn_string_t **) = elt->u.string;
-      else if (*fmt == 'c' && elt->kind == STRING)
+      else if (*fmt == 'c' && elt->kind == SVN_RA_SVN_STRING)
         *va_arg(*ap, const char **) = elt->u.string->data;
-      else if (*fmt == 'w' && elt->kind == WORD)
+      else if (*fmt == 'w' && elt->kind == SVN_RA_SVN_WORD)
         *va_arg(*ap, const char **) = elt->u.word;
-      else if (*fmt == 'b' && elt->kind == WORD)
+      else if (*fmt == 'b' && elt->kind == SVN_RA_SVN_WORD)
         {
           if (strcmp(elt->u.word, "true") == 0)
             *va_arg(*ap, svn_boolean_t *) = TRUE;
@@ -518,9 +518,9 @@ static svn_error_t *vparse_tuple(apr_array_header_t *list, apr_pool_t *pool,
           else
             break;
         }
-      else if (*fmt == 'l' && elt->kind == LIST)
+      else if (*fmt == 'l' && elt->kind == SVN_RA_SVN_LIST)
         *va_arg(*ap, apr_array_header_t **) = elt->u.list;
-      else if (*fmt == '[' && elt->kind == LIST)
+      else if (*fmt == '[' && elt->kind == SVN_RA_SVN_LIST)
         SVN_ERR(vparse_optional_tuple(elt->u.list, pool, &fmt, ap));
       else
         break;
@@ -552,7 +552,7 @@ svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_error_t *err;
 
   SVN_ERR(svn_ra_svn_read_item(conn, pool, &item));
-  if (item->kind != LIST)
+  if (item->kind != SVN_RA_SVN_LIST)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
                             "Malformed network data");
   va_start(ap, fmt);
@@ -593,7 +593,7 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
       for (i = params->nelts - 1; i >= 0; i--)
         {
           elt = &((svn_ra_svn_item_t *) params->elts)[i];
-          if (elt->kind != LIST)
+          if (elt->kind != SVN_RA_SVN_LIST)
             return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
                                      "Malformed error list", status);
           SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "nccn", &apr_err,

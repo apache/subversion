@@ -129,7 +129,7 @@ static svn_error_t *parse_proplist(apr_array_header_t *list, apr_pool_t *pool,
   for (i = 0; i < list->nelts; i++)
     {
       elt = &((svn_ra_svn_item_t *) list->elts)[i];
-      if (elt->kind != LIST)
+      if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
                                 "Proplist element not a list");
       SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cs", &name, &value));
@@ -248,7 +248,7 @@ static svn_boolean_t find_mech(apr_array_header_t *mechlist, const char *mech)
   for (i = 0; i < mechlist->nelts; i++)
     {
       elt = &((svn_ra_svn_item_t *) mechlist->elts)[i];
-      if (elt->kind == WORD && strcmp(elt->u.word, mech) == 0)
+      if (elt->kind == SVN_RA_SVN_WORD && strcmp(elt->u.word, mech) == 0)
         return TRUE;
     }
   return FALSE;
@@ -449,7 +449,7 @@ static svn_error_t *ra_svn_get_file(void *sess, const char *path,
   while (1)
     {
       SVN_ERR(svn_ra_svn_read_item(conn, pool, &item));
-      if (item->kind != STRING)
+      if (item->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
                                 "Non-string as part of file contents");
       if (item->u.string->len == 0)
@@ -497,7 +497,7 @@ static svn_error_t *ra_svn_get_dir(void *sess, const char *path,
   for (i = 0; i < dirlist->nelts; i++)
     {
       elt = &((svn_ra_svn_item_t *) dirlist->elts)[i];
-      if (elt->kind != LIST)
+      if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
                                 "Dirlist element not a list");
       SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cwnbr[c][c]",
@@ -693,9 +693,9 @@ static svn_error_t *ra_svn_log(void *sess, const apr_array_header_t *paths,
   while (1)
     {
       SVN_ERR(svn_ra_svn_read_item(conn, subpool, &item));
-      if (item->kind == WORD && strcmp(item->u.word, "done") == 0)
+      if (item->kind == SVN_RA_SVN_WORD && strcmp(item->u.word, "done") == 0)
         break;
-      if (item->kind != LIST)
+      if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
                                 "Log entry not a list");
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "lr[c][c][c]",
@@ -708,7 +708,7 @@ static svn_error_t *ra_svn_log(void *sess, const apr_array_header_t *paths,
           for (i = 0; i < cplist->nelts; i++)
             {
               elt = &((svn_ra_svn_item_t *) cplist->elts)[i];
-              if (elt->kind != LIST)
+              if (elt->kind != SVN_RA_SVN_LIST)
                 return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
                                         "Changed-path entry not a list");
               SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, subpool, "cw[cr]",

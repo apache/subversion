@@ -571,7 +571,7 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
   while (1)
     {
       SVN_ERR(svn_ra_svn_read_item(conn, subpool, &item));
-      if (item->kind != STRING)
+      if (item->kind != SVN_RA_SVN_STRING)
 	return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, 0, NULL,
 				"Non-string as part of text delta");
       if (item->u.string->len == 0)
