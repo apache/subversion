@@ -60,14 +60,14 @@ svn_error_t *svn_fs__set_rev_prop (svn_fs_t *fs,
 /*** Transactions ***/
 
 /* Convert the unfinished transaction in FS named TXN_NAME to a
-   committed on that refers to REVISION as part of TRAIL.  
+   committed transaction that refers to REVISION as part of TRAIL.  
 
    Returns SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
    transaction that has already been committed.  */
-svn_error_t *svn_fs__commit_txn (svn_fs_t *fs,
-                                 const char *txn_name,
-                                 svn_revnum_t revision,
-                                 trail_t *trail);
+svn_error_t *svn_fs__txn_make_committed (svn_fs_t *fs,
+                                         const char *txn_name,
+                                         svn_revnum_t revision,
+                                         trail_t *trail);
 
 
 /* Retrieve information about the Subversion transaction SVN_TXN from

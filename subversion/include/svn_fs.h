@@ -549,6 +549,41 @@ svn_revnum_t svn_fs_revision_root_revision (svn_fs_root_t *root);
 
 
 
+/* Determining what has changed under a ROOT. */
+
+/* The kind of change that occured on the path. */
+typedef enum
+{
+  svn_fs_path_change_modify = 0,  /* default value */
+  svn_fs_path_change_add,         /* path added in txn */
+  svn_fs_path_change_delete,      /* path removed in txn */
+  svn_fs_path_change_replace,     /* path removed and re-added in txn */
+  svn_fs_path_change_reset        /* ignore all previous change items for 
+                                     path (internal-use only) */
+
+} svn_fs_path_change_kind_t;
+
+/* Change descriptor. */
+typedef struct svn_fs_path_change_t
+{
+  const svn_fs_id_t *node_rev_id;   /* node revision id of changed path */
+  svn_fs_path_change_kind_t change_kind;   /* kind of change (see above) */
+  int text_mod;   /* were there text mods? */
+  int prop_mod;   /* were there property mods? */
+
+} svn_fs_path_change_t;
+
+
+/* Allocate and return a hash *CHANGED_PATHS_P containing descriptions
+   of the paths changed under ROOT.  The hash is keyed with const char * 
+   paths, and has svn_fs_path_change_t * values.  Use POOL for all
+   allocations, including the hash and its values. */
+svn_error_t *svn_fs_paths_changed (apr_hash_t **changed_paths_p,
+                                   svn_fs_root_t *root,
+                                   apr_pool_t *pool);
+
+
+
 /* Operations appropriate to all kinds of nodes.  */
 
 /* Return the type of node present at PATH under ROOT.  If PATH

@@ -483,6 +483,48 @@ The `transactions' table is a btree, with no particular sort order.
 
 
 
+Changes
+
+As modifications are made (files and dirs added or removed, text and
+properties changed, etc.) on Subversion transaction trees, the
+filesystem tracks the basic change made in the Berkeley DB `changes'
+table.  
+
+The `changes' table is a btree with Berkeley's "duplicate keys"
+functionality (and with no particular sort order), and maps the
+one-to-many relationship of a transaction ID to a "change" item.
+Change items are skels of the form:
+
+   ("change" PATH ID CHANGE-KIND TEXT-MOD PROP-MOD)
+
+where:
+
+   * PATH is the path that was operated on to enact this change.
+
+   * ID is the node revision ID of the node changed (may be a zero
+     atom, but only in the "reset" kind case).
+
+   * CHANGE-KIND is one of the following:
+
+     - "add"     : PATH/ID was added to the filesystem.
+     - "delete"  : PATH/ID was removed from the filesystem.
+     - "replace" : PATH/ID was removed, then re-added to the filesystem.
+     - "modify"  : PATH/ID was otherwise modified.
+     - "reset"   : Ignore any previous changes for PATH/ID in this txn.
+
+   * TEXT-MOD is a bit specifying whether or not the properties of
+     this node where modified.
+
+   * PROP-MOD is a bit specifying whether or not the properties of
+     this node where modified.
+
+In order to fully describe the changes made to any given path as part
+of a single transaction, one must read all the change items associated
+with the transaction's ID, and "collapse" multiple entries that refer
+to that path. 
+
+
+
 Copies
 
 Each time a filesystem copy operation is performed, Subversion records
@@ -496,10 +538,15 @@ form.
 The Berkeley DB `copies' table records all filesystem copies.  Every
 key in this table is copy ID, and every value is a skel of the form:
 
-   ("copy" DST-NODE-ID)
+   ("copy" SRC-PATH SRC-REV DST-NODE-ID)
 
-where DST-NODE-ID represents the new node revision created as a result
-of the copy.
+where:
+
+   * SRC-PATH and SRC-REV are the canonicalized absolute path and
+     revision, respectively, of the source of the copy.
+
+   * DST-NODE-ID represents the new node revision created as a result
+     of the copy.
 
 As the sole exception to the rule above, the `copies' table always has
 one entry whose key is `next-id', and whose value is the lowest copy ID
@@ -659,6 +706,7 @@ Berkeley DB tables
                 "nodes" : btree(ID -> NODE-REVISION)
             "revisions" : recno(REVISION)
          "transactions" : btree(TXN -> TRANSACTION, "next-id" -> TXN)
+              "changes" : btree(TXN -> CHANGE)
                "copies" : btree(CPY -> COPY, "next-id" -> CPY)
               "strings" : btree(STR -> STRING, "next-id" -> STR)
       "representations" : btree(REP -> REPRESENTATION, "next-id" -> REP)
@@ -689,11 +737,19 @@ Transactions:
 
             TRANSACTION ::= UNFINISHED-TXN | COMMITTED-TXN
          UNFINISHED-TXN ::= ("transaction" ROOT-ID BASE-ID PROPLIST COPIES) ;
-          COMMITTED-TXN ::= ("committed" REV ROOT-ID PROPLIST) ;
+          COMMITTED-TXN ::= ("committed" ROOT-ID REV PROPLIST COPIES) ;
                 ROOT-ID ::= NODE-REV-ID ;
                 BASE-ID ::= NODE-REV-ID ;
                  COPIES ::= (CPY ...) ;
                     REV ::= number ;
+
+
+Changes:
+
+                 CHANGE ::= ("change" PATH ID CHANGE-KIND TEXT-MOD PROP-MOD) ;
+            CHANGE-KIND ::= "add" | "delete" | "replace" | "modify" ;
+               TEXT-MOD ::= atom ;
+               PROP-MOD ::= atom ;
 
 
 Copies:
@@ -730,7 +786,8 @@ Representations:
                FULLTEXT ::= (HEADER STRING-KEY) ;
                   DELTA ::= (HEADER (OFFSET WINDOW) ...) ;
                  WINDOW ::= (DIFF SIZE CHECKSUM REP-KEY [REP-OFFSET]) ;
-                   DIFF ::= ("svndiff" STRING-KEY) ;
+                   DIFF ::= ("svndiff" VERSION STRING-KEY) ;
+                VERSION ::= number ;
                 REP-KEY ::= atom ;
              STRING-KEY ::= atom ;
                  OFFSET ::= number ;
