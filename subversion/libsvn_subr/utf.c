@@ -45,30 +45,17 @@ static svn_error_t *
 get_ntou_xlate_handle (apr_xlate_t **ret, apr_pool_t *pool)
 {
   void *old_handle = NULL;
-  apr_pool_t *parent, *global_pool;
   apr_status_t apr_err;
 
-  /* ### I'm worried about the performance implications of searching
-   * up the pool tree every time we call this function.  Leaving it in
-   * for now, but if this turns out to be a bottleneck, then we should
-   * store the xlation handles in some more quickly accessible place.
-   *
-   *    -kfogel,  7 July 2002
-   */
-  /* Find the global pool */
-  for (global_pool = pool;
-       (parent = apr_pool_get_parent (global_pool));
-       global_pool = parent) ;
-
   /* If we already have a handle, just return it. */
-  apr_pool_userdata_get (&old_handle, SVN_UTF_NTOU_XLATE_HANDLE, global_pool);
+  apr_pool_userdata_get (&old_handle, SVN_UTF_NTOU_XLATE_HANDLE, pool);
   if (old_handle != NULL) {
     *ret = old_handle;
     return SVN_NO_ERROR;
   }
 
   /* Try to create one. */
-  apr_err = apr_xlate_open (ret, "UTF-8", APR_LOCALE_CHARSET, global_pool);
+  apr_err = apr_xlate_open (ret, "UTF-8", APR_LOCALE_CHARSET, pool);
 
   if (APR_STATUS_IS_EINVAL (apr_err) || APR_STATUS_IS_ENOTIMPL (apr_err))
     {
@@ -81,7 +68,7 @@ get_ntou_xlate_handle (apr_xlate_t **ret, apr_pool_t *pool)
 
   /* Save it for later. */
   apr_pool_userdata_set (*ret, SVN_UTF_NTOU_XLATE_HANDLE,
-                         apr_pool_cleanup_null, global_pool);
+                         apr_pool_cleanup_null, pool);
 
   return SVN_NO_ERROR;
 }
@@ -96,30 +83,17 @@ static svn_error_t *
 get_uton_xlate_handle (apr_xlate_t **ret, apr_pool_t *pool)
 {
   void *old_handle = NULL;
-  apr_pool_t *parent, *global_pool;
   apr_status_t apr_err;
 
-  /* ### I'm worried about the performance implications of searching
-   * up the pool tree every time we call this function.  Leaving it in
-   * for now, but if this turns out to be a bottleneck, then we should
-   * store the xlation handles in some more quickly accessible place.
-   *
-   *    -kfogel,  7 July 2002
-   */
-  /* Find the global pool */
-  for (global_pool = pool;
-       (parent = apr_pool_get_parent (global_pool));
-       global_pool = parent) ;
-
   /* If we already have a handle, just return it. */
-  apr_pool_userdata_get (&old_handle, SVN_UTF_UTON_XLATE_HANDLE, global_pool);
+  apr_pool_userdata_get (&old_handle, SVN_UTF_UTON_XLATE_HANDLE, pool);
   if (old_handle != NULL) {
     *ret = old_handle;
     return SVN_NO_ERROR;
   }
 
   /* Try to create one. */
-  apr_err = apr_xlate_open (ret, APR_LOCALE_CHARSET, "UTF-8", global_pool);
+  apr_err = apr_xlate_open (ret, APR_LOCALE_CHARSET, "UTF-8", pool);
 
   if (APR_STATUS_IS_EINVAL (apr_err) || APR_STATUS_IS_ENOTIMPL (apr_err))
     {
@@ -132,7 +106,7 @@ get_uton_xlate_handle (apr_xlate_t **ret, apr_pool_t *pool)
 
   /* Save it for later. */
   apr_pool_userdata_set (*ret, SVN_UTF_UTON_XLATE_HANDLE,
-                         apr_pool_cleanup_null, global_pool);
+                         apr_pool_cleanup_null, pool);
 
   return SVN_NO_ERROR;
 }
