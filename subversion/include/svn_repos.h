@@ -211,9 +211,15 @@ svn_repos_dated_revision (svn_revnum_t *revision,
  * If PATHS is non-null and has one or more elements, then only show
  * revisions in which at least one of PATHS was changed (i.e., if
  * file, text or props changed; if dir, props changed or an entry was
- * added or deleted).  Each path is an svn_stringbuf_t *, relative to
- * the session's common parent.
- * ### todo: Above paragraph not yet implemented.
+ * added or deleted).  Each path is an (svn_stringbuf_t *)
+ * representing an absolute path in the repository.
+ *
+ * ### Path filtering doesn't work, because the callers of this
+ * function don't currently convert the path to absolute (by the way,
+ * is that with or without a leading "/"?  Should be with, to match
+ * the changed_paths hash, but could compensate internally if not.)
+ * Anyway, I'm not exactly sure how to do that conversion in the ra
+ * layers yet...  -kff
  *
  * If DISCOVER_CHANGED_PATHS, then each call to receiver passes a
  * `const apr_hash_t *' for the receiver's CHANGED_PATHS argument; the

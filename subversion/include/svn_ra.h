@@ -364,7 +364,9 @@ typedef struct svn_ra_plugin_t
    * file, text or props changed; if dir, props changed or an entry
    * was added or deleted).  Each path is an svn_stringbuf_t *,
    * relative to the session's common parent.
-   * ### todo: Above paragraph not yet implemented.
+   *
+   * ### todo: path filtering not finished yet, see documentation
+   * for svn_repos_get_logs() for more about this.
    *
    * If DISCOVER_CHANGED_PATHS, then each call to receiver passes a
    * `const apr_hash_t *' for the receiver's CHANGED_PATHS argument;

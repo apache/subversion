@@ -139,11 +139,11 @@ static svn_boolean_t okay_to_bump_path (const char *path,
   
   do {
     svn_path_remove_component (parent_path, svn_path_local_style);
-    if (r = (enum svn_recurse_kind) apr_hash_get (valid_targets,
-                                                  parent_path->data,
-                                                  APR_HASH_KEY_STRING))
-      if (r == svn_recursive)
-        return TRUE;
+    r = (enum svn_recurse_kind) apr_hash_get (valid_targets,
+                                              parent_path->data,
+                                              APR_HASH_KEY_STRING);
+    if (r == svn_recursive)
+      return TRUE;
 
   } while (! svn_path_is_empty (parent_path, svn_path_local_style));
 

@@ -29,6 +29,59 @@
 
 
 
+/* Store as keys in CHANGED the paths of all nodes at or below NODE
+ * that show a significant change.  "Significant" means that the text
+ * or properties of the node were changed, or that the node was added
+ * or deleted.  
+ *
+ * The key is allocated in POOL; the value is currently (void *) 1,
+ * but in the future may be a more informative value indicating the
+ * nature of the change.  ### todo: implement that sentence.
+ * 
+ * The paths are constructed by adding components to PATH in
+ * repository style.
+ * 
+ * Standard practice is to call this on the root node of delta tree
+ * generated from svn_repos_dir_delta() and its node accessor,
+ * svn_repos_node_from_baton(), with PATH representing "/".
+ */
+static void
+detect_changed (apr_hash_t *changed,
+                svn_repos_node_t *node,
+                svn_stringbuf_t *path,
+                apr_pool_t *pool)
+{
+  /* Recurse sideways first. */
+  if (node->sibling)
+    detect_changed (changed, node->sibling, path, pool);
+    
+  /* Then "enter" this node. */
+  svn_path_add_component_nts (path,
+                              node->name,
+                              svn_path_repos_style);
+
+  /* Recurse downward before processing this node. */
+  if (node->child)
+    detect_changed (changed, node->child, path, pool);
+    
+  /* Process this node.
+     We register all differences except for directory opens that don't
+     involve any prop mods, because those are the result from
+     bubble-up and don't belong in a change list. */
+  if (! ((node->kind == svn_node_dir)
+         && (node->action == 'R')
+         && (! node->prop_mod)))
+    {
+      apr_hash_set (changed,
+                    apr_pstrdup (pool, path->data), path->len,
+                    (void *) ((int) node->action));
+    }
+
+  /* "Leave" this node. */
+  svn_path_remove_component (path, svn_path_repos_style);
+}
+
+
 svn_error_t *
 svn_repos_get_logs (svn_fs_t *fs,
                     apr_array_header_t *paths,
@@ -49,9 +102,6 @@ svn_repos_get_logs (svn_fs_t *fs,
   if (end == SVN_INVALID_REVNUM)
     SVN_ERR (svn_fs_youngest_rev (&end, fs, pool));
 
-  /* ### todo: ignoring `paths' for now.  Probably want to convert
-     to a single hash containing absolute paths first.  */
-
   for (this_rev = start;
        ((start >= end) ? (this_rev >= end) : (this_rev <= end));
        ((start >= end) ? this_rev-- : this_rev++))
@@ -65,13 +115,29 @@ svn_repos_get_logs (svn_fs_t *fs,
       SVN_ERR (svn_fs_revision_prop
                (&message, fs, this_rev, SVN_PROP_REVISION_LOG, subpool));
 
-      if (discover_changed_paths && (this_rev > 0))
+      /* ### Below, we discover changed paths if the user requested
+         them (i.e., "svn log -v" means `discover_changed_paths' will
+         be non-zero here), OR if we're filtering on paths, in which
+         case we use changed_paths to determine whether or not to even
+         invoke the log receiver on this log item.
+
+         Note that there is another, more efficient way to filter by
+         path.  Instead of looking at every revision, and eliminating
+         those that didn't change any of the paths in question, you
+         start at `start', and grab the fs node for every path in
+         paths.  Check the created rev field; if any of them equal
+         `start', include this log item.  Then jump immediately to the
+         next highest/lowest created-rev field of any path in paths,
+         and do the same thing, until you jump to a rev that's beyond
+         `end'.  Premature optimization right now, however.
+      */
+
+      if ((this_rev > 0) && 
+          (discover_changed_paths || (paths && paths->nelts > 0)))
         {
           const svn_delta_edit_fns_t *editor;
           svn_fs_root_t *base_root, *this_root;
           void *edit_baton;
-          svn_repos_node_t *i, *j;
-          svn_stringbuf_t *this_path = svn_stringbuf_create ("", subpool);
 
           /* ### dir_delta wants these as non-const stringbufs; does
              it actually need them to be that?  It might telescope
@@ -107,37 +173,36 @@ svn_repos_get_logs (svn_fs_t *fs,
                                         1,
                                         subpool));
 
-          for (i = svn_repos_node_from_baton (edit_baton); i; i = i->child)
-            {
-              for (j = i; j; j = j->sibling)
-                {
-                  svn_path_add_component_nts (this_path,
-                                              i->name,
-                                              svn_path_repos_style);
-
-                  /* We register all differences except for
-                     directories without prop mods, because those must
-                     result from bubble-up and don't belong in a
-                     change list. */
-                  if (! ((j->kind == svn_node_dir) && (! j->prop_mod)))
-                    {
-                      /* ### this is kind of bogus, we're assuming we
-                         know something about the path style.  But the
-                         path library doesn't like a lone slash. */
-                      char *p = apr_pstrcat (subpool,
-                                             "/", this_path->data, NULL);
-                      
-                      apr_hash_set (changed_paths, p,
-                                    this_path->len + 1, (void *) 1);
-                    }
-
-                  svn_path_remove_component (this_path, svn_path_repos_style);
-                }
-            }
+          detect_changed (changed_paths,
+                          svn_repos_node_from_baton (edit_baton),
+                          svn_stringbuf_create ("/", subpool),
+                          subpool);
+          /* ### Feels slightly bogus to assume "/" as the right start
+             for repository style. */
         }
 
+#if 0
+      if (paths && paths->nelts > 0)
+        {
+          int i;
+
+          for (i = 0; i < paths->nelts; i++)
+            {
+              svn_stringbuf_t *this_path;
+              this_path = (((svn_stringbuf_t **)(paths)->elts)[i]);
+              
+              /* ### Okay, this is where the problem is.  This path is
+                 no good for filtering unless it's absolute, like the
+                 ones in changed_paths.  But it's just whatever the
+                 client passed in, because the RA layers aren't
+                 converting it to absolute yet.  Hmm, how to make them
+                 do that? */
+            }
+        }
+#endif /* 0 */
+
       SVN_ERR ((*receiver) (receiver_baton,
-                            changed_paths,
+                            (discover_changed_paths ? changed_paths : NULL),
                             this_rev,
                             author ? author->data : "",
                             date ? date->data : "",

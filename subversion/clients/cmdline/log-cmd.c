@@ -144,8 +144,12 @@ log_message_receiver (void *baton,
            hi != NULL;
            hi = apr_hash_next(hi))
         {
-          apr_hash_this(hi, (void *) &path, NULL, NULL);
-          printf ("   %s\n", path);
+          void *val;
+          char action;
+
+          apr_hash_this(hi, (void *) &path, NULL, &val);
+          action = (char) ((int) val);
+          printf ("   %c %s\n", (action == 'R' ? 'U' : action), path);
         }
     }
   printf ("\n");  /* A blank line always precedes the log message. */

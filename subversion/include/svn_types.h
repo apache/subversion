@@ -162,16 +162,19 @@ enum svn_recurse_kind
  * converted to apr_time_t with svn_time_from_string().  
  *
  * If CHANGED_PATHS is non-null, then it contains as keys every path
- * committed in REVISION.  Whether it is null or not is determined by
- * the calling context.
+ * committed in REVISION; the values are (void *) 'A' or 'D' or 'R',
+ * for added, deleted, or replaced (text or property mod),
+ * respectively.  Note to developers: there is no compelling reason
+ * for these particular values -- they were chosen to match
+ * `svn_repos_node_t.action', but if more information were desired, we
+ * could switch to a different convention.
  *
- * ### Note: the only reason CHANGED_PATHS is not qualified with
- * `const' is that we usually want to loop over it, and
- * apr_hash_first() doesn't take a const hash, for various reasons.
- * I'm not sure that those "various reasons" are actually ever
- * relevant anymore, and if they're not, it might be nice to change
- * apr_hash_first() so read-only uses of hashes can be protected via
- * the type system.
+ * ### The only reason CHANGED_PATHS is not qualified with `const' is
+ * that we usually want to loop over it, and apr_hash_first() doesn't
+ * take a const hash, for various reasons.  I'm not sure that those
+ * "various reasons" are actually ever relevant anymore, and if
+ * they're not, it might be nice to change apr_hash_first() so
+ * read-only uses of hashes can be protected via the type system.
  *
  * On the final call for a given set of log messages, LAST_CALL is
  * set.
