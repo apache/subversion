@@ -500,7 +500,7 @@ svn_error_t *svn_ra_lock (svn_ra_session_t *session,
                           void *lock_baton,
                           apr_pool_t *pool)
 {
-  if (! svn_xml_is_xml_safe(comment, strlen(comment)))
+  if (comment && ! svn_xml_is_xml_safe(comment, strlen(comment)))
     return svn_error_create
       (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
        _("Lock comment has illegal characters"));
