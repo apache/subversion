@@ -111,6 +111,8 @@ svn_pipe_close(svn_pipe_t *pipe, apr_pool_t *pool)
 
   if (pipe->proc)
     apr_err3 = apr_proc_wait(pipe->proc, NULL, NULL, APR_WAIT);
+  else
+    apr_err3 = APR_SUCCESS;
 
   if (apr_err1 != APR_SUCCESS)
     return close_error(apr_err1, pool);
