@@ -478,7 +478,7 @@ main (int argc, const char * const *argv)
             return EXIT_FAILURE;
           }
 
-        INT_ERR (svn_repos_dump_fs (fs, outfile, lower, upper, pool));
+        INT_ERR (svn_repos_dump_fs (repos, outfile, lower, upper, pool));
 
         fflush(stdout);                                   
       }

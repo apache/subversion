@@ -306,6 +306,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_REPOS_HOOK_FAILURE,
               "A repository hook failed.")
 
+  SVN_ERRDEF (SVN_ERR_REPOS_BAD_ARGS,
+              "Incorrect arguments supplied.")
+
   SVN_ERRDEF (SVN_ERR_REPOS_NO_DATA_FOR_REPORT,
               "A report cannot be generated because no data was supplied.")
 
