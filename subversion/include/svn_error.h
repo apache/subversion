@@ -222,7 +222,7 @@ void svn_handle_warning (FILE *stream, svn_error_t *error);
 
 /** @} */
 
-/* 
+/**
  * @since New in 1.2.  
  *
  * Return TRUE if @a err is an error specifically related to locking a
@@ -231,7 +231,7 @@ void svn_handle_warning (FILE *stream, svn_error_t *error);
   (err->apr_err == SVN_ERR_FS_PATH_LOCKED ||                \
    err->apr_err == SVN_ERR_FS_OUT_OF_DATE)                  \
 
-/* 
+/**
  * @since New in 1.2.  
  *
  * Return TRUE if @a err is an error specifically related to unlocking

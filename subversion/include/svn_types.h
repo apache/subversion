@@ -428,13 +428,13 @@ typedef svn_error_t *(*svn_cancel_func_t) (void *cancel_baton);
  */
 typedef struct svn_lock_t
 {
-  const char *path;             /* the path this lock applies to */
-  const char *token;            /* universally unique URI representing lock */
-  const char *owner;            /* the username which owns the lock */
-  const char *comment;          /* (optional) description of lock  */
-  svn_boolean_t xml_comment;    /* whether comment is packaged in XML by DAV */
-  apr_time_t creation_date;     /* when lock was made */
-  apr_time_t expiration_date;   /* (optional) when lock will expire;
+  const char *path;           /**< the path this lock applies to */
+  const char *token;          /**< universally unique URI representing lock */
+  const char *owner;          /**< the username which owns the lock */
+  const char *comment;        /**< (optional) description of lock  */
+  svn_boolean_t xml_comment;  /**< whether comment is packaged in XML by DAV */
+  apr_time_t creation_date;   /**< when lock was made */
+  apr_time_t expiration_date; /**< (optional) when lock will expire;
                                    If value is 0, lock will never expire. */
 } svn_lock_t;
 
@@ -443,7 +443,7 @@ typedef struct svn_lock_t
  * Returns an @c svn_lock_t, allocated in @a pool with all fields initialized
  * to null values.
  *
- * To allow for extending the @c svn_lock_t structure in the future
+ * @note To allow for extending the @c svn_lock_t structure in the future
  * releases, this function should always be used to allocate the structure.
  */
 svn_lock_t *

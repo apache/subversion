@@ -1181,6 +1181,7 @@ svn_client_cleanup (const char *dir,
  * @param from Original URL
  * @param to New URL
  * @param recurse Whether to recurse
+ * @param ctx svn_client_ctx_t
  * @param pool The pool from which to perform memory allocations
  */
 svn_error_t *
@@ -1842,40 +1843,41 @@ svn_client_unlock (const apr_array_header_t *targets,
  */
 typedef struct svn_info_t
 {
-  /* Where the item lives in the repository. */
+  /** Where the item lives in the repository. */
   const char *URL;
 
-  /* The revision of the object.  If path_or_url is a working-copy
-     path, then this is its current working revnum.  If path_or_url
-     is a URL, then this is the repos revision that path_or_url lives in. */
+  /** The revision of the object.  If path_or_url is a working-copy
+   * path, then this is its current working revnum.  If path_or_url
+   * is a URL, then this is the repos revision that path_or_url lives in. */
   svn_revnum_t rev;
 
-  /* The node's kind. */
+  /** The node's kind. */
   svn_node_kind_t kind;
 
-  /* The root URL of the repository. */
+  /** The root URL of the repository. */
   const char *repos_root_URL;
   
-  /* The repository's UUID. */
+  /** The repository's UUID. */
   const char *repos_UUID;
 
-  /* The last revision in which this object changed. */
+  /** The last revision in which this object changed. */
   svn_revnum_t last_changed_rev;
   
-  /* The date of the last_changed_rev. */
+  /** The date of the last_changed_rev. */
   apr_time_t last_changed_date;
   
-  /* The author of the last_changed_rev. */
+  /** The author of the last_changed_rev. */
   const char *last_changed_author;
 
-  /* An exclusive lock, if present.  Could be either local or remote. */
+  /** An exclusive lock, if present.  Could be either local or remote. */
   svn_lock_t *lock;
 
-  /* Whether or not to ignore the next 10 wc-specific fields. */
+  /** Whether or not to ignore the next 10 wc-specific fields. */
   svn_boolean_t has_wc_info;
 
-  /* The following things only apply to a working-copy path.  See
-     svn_wc_entry_t explanations. */
+  /** @{ */
+  /** These things only apply to a working-copy path.
+   * See svn_wc_entry_t for explanations. */
   svn_wc_schedule_t schedule;
   const char *copyfrom_url;
   svn_revnum_t copyfrom_rev;
@@ -1886,6 +1888,7 @@ typedef struct svn_info_t
   const char *conflict_new;
   const char *conflict_wrk;
   const char *prejfile;
+  /** @} */
 
 } svn_info_t;
 

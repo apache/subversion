@@ -48,8 +48,8 @@ extern "C" {
  */
 typedef struct svn_prop_t
 {
-  const char *name;
-  const svn_string_t *value;
+  const char *name;           /**< Property name */
+  const svn_string_t *value;  /**< Property value */
 } svn_prop_t;
 
 
@@ -299,7 +299,7 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
  */
 #define SVN_PROP_REVISION_AUTOVERSIONED  SVN_PROP_PREFIX "autoversioned"
 
-/*
+/**
  * This is a list of all revision properties.
  */ 
 #define SVN_PROP_REVISION_ALL_PROPS SVN_PROP_REVISION_AUTHOR, \
