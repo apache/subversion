@@ -1,4 +1,4 @@
-Version 0.19.1 (released 12 Mar 2003, revision 5301)
+Version 0.19.1 (released 12 Mar 2003, revision 5303, branches/release-0.19.1)
 
  User-visible changes:
  * fix svnserve tunnel mode pipe close bug
@@ -7,7 +7,7 @@ Version 0.19.1 (released 12 Mar 2003, revision 5301)
  * none
 
 
-Version 0.19.0 (released 10 Mar 2003, revision 5240)
+Version 0.19.0 (released 10 Mar 2003, revision 5262, branches/release-0.19)
 
  User-visible changes:
  * svn ls works on wc paths (#1130)
@@ -32,7 +32,7 @@ Version 0.19.0 (released 10 Mar 2003, revision 5240)
    (#1158), RA->close RIP (#1164), config-test non-source (#1172)
 
 
-Version 0.18.1 (released 26 Feb 2003, revision 5118)
+Version 0.18.1 (released 26 Feb 2003, revision 5118, branches/release-0.18.1)
 
  User-visible changes:
  * editor environment variables no longer incorrectly required
@@ -46,7 +46,7 @@ Version 0.18.1 (released 26 Feb 2003, revision 5118)
  * various rpm package fixes
 
 
-Version 0.18.0 (released 19 Feb 2003, revision 4959)
+Version 0.18.0 (released 19 Feb 2003, revision 4968, branches/release-0.18)
 
  User-visible changes:
  * renamed the [default] section to [global] in the servers config file
@@ -78,7 +78,7 @@ Version 0.18.0 (released 19 Feb 2003, revision 4959)
    split XML cdata/attribute encoding (#1118)
 
 
-Version 0.17.1 (released 22 Jan 2003, revision 4503)
+Version 0.17.1 (released 22 Jan 2003, revision 4503, branches/0.17.1)
 
  User-visible changes:
  * changed non-baseline build version number display.
@@ -92,7 +92,7 @@ Version 0.17.1 (released 22 Jan 2003, revision 4503)
    better checksum error reporting, 
 
 
-Version 0.17.0 (released 20 Jan 2003, branches/0.17 @ revision 4468)
+Version 0.17.0 (released 20 Jan 2003, revision 4468, branches/0.17)
 
  User-visible changes:
  * 'svn add' is now recursive by default, -N to disable (#1073)
@@ -307,6 +307,7 @@ Version 0.14.3 [Alpha Interim 3] (released 20 Sept 2002, revision 3200)
  * new 'fast-clean' vs. 'clean' Makefile targets
  * various bugfixes, tweaks, cleanups.
 
+
 Version 0.14.2 [Alpha Interim 2] (released 22 Aug 2002, revision 3033)
 
  User-visible changes:
@@ -329,6 +330,7 @@ Version 0.14.2 [Alpha Interim 2] (released 22 Aug 2002, revision 3033)
  * more use of access batons in libsvn_wc, see issue #749
  * working props now stored with ".svn-work" extension, see issue #618
  * the usual round of bug fixes, new regression tests, etc
+
 
 Version 0.14.1 [Alpha Interim 1] (released 9 August 2002, revision 2927)
 
@@ -404,6 +406,7 @@ Version 0.14.0 [Alpha] (released 23 July 2002, revision 2667)
  * numerous bugfixes: 'svn merge .' bug (#748), bug #764, two new
    ghudson-dirversioning bugs, #756, #675, #783, #796, wc-root bugs,
    #799, #800, #797, directory-removal bugs (#611, #687)
+
 
 Version 0.13.2 [Pre-Alpha] (released 28 June 2002, revision 2376)
 
@@ -519,7 +522,7 @@ Version 0.12.0 (released 3 May 2002, revision 1868)
  * many bugfixes: issues 644, 646, 691, 693, 694, 543, 684
 
 
-Version 0.11.1 (released 12 April 2002, revision 1682)
+Version 0.11.1 (released 12 April 2002, revision 1692, branches/0.11.0)
 
  User-visible changes:
  * completion of 'svn merge' (issue 504)
@@ -535,6 +538,9 @@ Version 0.11.1 (released 12 April 2002, revision 1682)
  * new getopt_tests.py to test commandline option processing
  * 'make check' now more portable -- tests invoked via python, not sh
  * miscellaneous bugfixes in imports, svndiff, db linkage.
+
+
+Version 0.11.0 (unreleased)
 
 
 Version 0.10.2 (released 25 Mar 2002, revision 1587)
