@@ -48,13 +48,6 @@ Candidate changes:
       +0: sussman (not yet reviewed)
       +1: breser
 
-  * r10186
-    Allow COPY method on repositories with space in their name. (#1837)
-    Justification: Embarrassing bug;  a one-line fix to mod_auth_svn.
-                   (We weren't unescaping a URI).
-    Votes:
-      +1: sussman, lundblad, breser
-
   * r10185, r10192
     Fix crash when deleting revprop over ra_svn.
     Justification: Don't ever crash.

@@ -325,6 +325,7 @@ static int req_check_access(request_rec *r,
         apr_uri_parse(r->pool, dest_uri, &parsed_dest_uri);
 
         dest_uri = parsed_dest_uri.path;
+        ap_unescape_url(dest_uri);
         if (strncmp(dest_uri, conf->base_path, strlen(conf->base_path))) {
             /* If it is not the same location, then we don't allow it.
              * XXX: Instead we could compare repository uuids, but that
