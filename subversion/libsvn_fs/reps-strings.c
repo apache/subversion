@@ -47,9 +47,24 @@ static int rep_is_mutable (svn_fs__representation_t *rep, const char *txn_id)
 
 
 /* The MD5 digest for the empty string. */
+#if 0  /* ### (see else case) */
+
 static const char empty_digest[] = {
   212, 29, 140, 217, 143, 0, 178, 4, 233, 128, 9, 152, 236, 248, 66, 126
 };
+
+#else /* !0 */
+
+/* ### Until we are correctly updating the stored checksum when we
+   write new (non-empty) data to a rep, we need to store all zeroes
+   for the empty rep's checksum.  This always succeeds in a checksum
+   comparison, so it's equivalent to not having checksumming at all --
+   which is the state we're in until issues #649 and #689 are done! */ 
+static const char empty_digest[] = {
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
+#endif /* 0/1 */
 
 
 /* Compare digests D1 and D2, each MD5_DIGESTSIZE bytes long.  If
@@ -60,6 +75,15 @@ static svn_boolean_t
 checksums_match (unsigned const char d1[], unsigned const char d2[])
 {
   auto unsigned char zeros[MD5_DIGESTSIZE] = { 0 };
+
+#if 0  /* ### for debugging */
+  printf ("   checksums_match: %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x \n"
+          "                    %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x \n",
+          d1[0], d1[1], d1[2], d1[3], d1[4], d1[5], d1[6], d1[7], 
+          d1[8], d1[9], d1[10], d1[11], d1[12], d1[13], d1[14], d1[15],
+          d2[0], d2[1], d2[2], d2[3], d2[4], d2[5], d2[6], d2[7], 
+          d2[8], d2[9], d2[10], d2[11], d2[12], d2[13], d2[14], d2[15]);
+#endif /* 0 */
 
   return ((memcmp (d1, zeros, MD5_DIGESTSIZE) == 0)
           || (memcmp (d2, zeros, MD5_DIGESTSIZE) == 0)
@@ -1425,7 +1449,7 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
   apr_md5_final (digest, &context);
 
   if (! checksums_match (rep->checksum, digest))
-    svn_error_createf
+    return svn_error_createf
       (SVN_ERR_FS_CORRUPT, NULL,
        "svn_fs__rep_undeltify: checksum mismatch");
 
