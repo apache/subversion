@@ -1070,6 +1070,7 @@ rep_contents_clear (svn_fs_t *fs,
     {
       SVN_ERR (svn_fs__bdb_string_clear (fs, str_key, trail));
       memcpy (rep->checksum, empty_digest, MD5_DIGESTSIZE);
+      SVN_ERR (svn_fs__bdb_write_rep (fs, rep_key, rep, trail));
     }
   return SVN_NO_ERROR;
 }
