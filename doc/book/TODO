@@ -38,6 +38,8 @@ To be fixed by fitz:
 
 To be fixed by sussman:
 
+* document 'svn log -v --stop-on-copy branchURL' as the easiest way to
+  discover when a branch was created.  This is a major FAQ.
 
 
 
