@@ -32,16 +32,6 @@
 
 #include "../libsvn_delta/delta.h"
 
-
-/*** Local prototypes. ***/
-
-static svn_error_t *rep_read_range (svn_fs_t *fs,
-                                    const char *rep_key,
-                                    char *buf,
-                                    apr_size_t offset,
-                                    apr_size_t *len,
-                                    trail_t *trail);
-
 
 
 /*** Helper Functions ***/
