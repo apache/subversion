@@ -157,21 +157,41 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       /* ### whoops. also defined for a VCC. deal with it later. */
       if (resource->type != DAV_RESOURCE_TYPE_VERSION || !resource->baselined)
         return DAV_PROP_INSERT_NOTSUPP;
-      value = dav_svn_build_uri(resource,
-                                DAV_SVN_BUILD_URI_BC,
-                                resource->info->root.rev,
-                                NULL,
-                                p);
+      value = dav_svn_build_uri(resource, DAV_SVN_BUILD_URI_BC,
+                                resource->info->root.rev, NULL, p);
       break;
 
     case DAV_PROPID_checked_in:
       /* only defined for VCRs */
       /* ### VCRs within the BC should not have this property! */
       /* ### note that a VCC (a special VCR) is defined as _PRIVATE for now */
-      if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
-        return DAV_PROP_INSERT_NOTSUPP;
-      /* ### need to fetch the resource's ID */
-      return DAV_PROP_INSERT_NOTSUPP;
+      if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
+          && resource->info->restype == DAV_SVN_RESTYPE_VCC)
+        {
+          svn_revnum_t revnum;
+          svn_error_t *serr;
+
+          serr = svn_fs_youngest_rev(&revnum, resource->info->repos->fs, p);
+          if (serr != NULL)
+            {
+              /* ### what to do? */
+              value = "###error###";
+              break;
+            }
+          value = dav_svn_build_uri(resource, DAV_SVN_BUILD_URI_BASELINE,
+                                    revnum, NULL, p);
+                                    
+        }
+      else if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
+        {
+          /* not defined for this resource type */
+          return DAV_PROP_INSERT_NOTSUPP;
+        }
+      else
+        {
+          /* ### need to fetch the resource's ID */
+          return DAV_PROP_INSERT_NOTSUPP;
+        }
       break;
 
     case DAV_PROPID_version_controlled_configuration:
@@ -180,11 +200,8 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       /* ### note that a VCC (a special VCR) is defined as _PRIVATE for now */
       if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
         return DAV_PROP_INSERT_NOTSUPP;
-      value = dav_svn_build_uri(resource,
-                                DAV_SVN_BUILD_URI_VCC,
-                                SVN_IGNORED_REVNUM,
-                                NULL,
-                                p);
+      value = dav_svn_build_uri(resource, DAV_SVN_BUILD_URI_VCC,
+                                SVN_IGNORED_REVNUM, NULL, p);
       break;
 
     case DAV_PROPID_version_name:
