@@ -392,6 +392,8 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
 #endif /* 0 */
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
+  void *storage_baton;
+  svn_client_auth_storage_callback_t storage_callback;
   svn_boolean_t is_import;
   struct svn_wc_close_commit_baton ccb = {base_dir, pool};
   apr_array_header_t *tgt_array
@@ -474,7 +476,9 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url->data, pool));
       
       /* Open an RA session to URL */
-      SVN_ERR (svn_client_authenticate (&session, ra_lib, url, 
+      SVN_ERR (svn_client_authenticate (&session, 
+                                        &storage_callback, &storage_baton,
+                                        ra_lib, url, base_dir,
                                         callback, callback_baton, pool));
       
       /* Fetch RA commit editor, giving it svn_wc_set_revision(). */
@@ -556,8 +560,14 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
                                   "error closing %s", xml_dst->data);      
     }
   else  /* We were committing to RA, so close the session. */
-    SVN_ERR (ra_lib->close (session));
-  
+    {
+      SVN_ERR (ra_lib->close (session));
+
+      /* Possibly store any authentication info from the RA session. */
+      if (storage_callback)
+        SVN_ERR (storage_callback (storage_baton));      
+    }
+
   return SVN_NO_ERROR;
 }
 

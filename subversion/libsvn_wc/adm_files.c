@@ -1080,6 +1080,11 @@ init_adm_tmp_area (svn_stringbuf_t *path,
   SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_WCPROPS,
                                    svn_node_dir, 1, pool));
 
+  /* SVN_WC__ADM_TMP/SVN_WC__ADM_AUTH_DIR */
+  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_AUTH_DIR,
+                                   svn_node_dir, 1, pool));
+
+
   return SVN_NO_ERROR;
 }
 
@@ -1122,6 +1127,10 @@ init_adm (svn_stringbuf_t *path,
 
   /* SVN_WC__ADM_WCPROPS */
   SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_WCPROPS,
+                                   svn_node_dir, 0, pool));
+
+  /* SVN_WC__ADM_AUTH_DIR */
+  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_AUTH_DIR,
                                    svn_node_dir, 0, pool));
 
   /** Init the tmp area. ***/
