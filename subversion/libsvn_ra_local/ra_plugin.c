@@ -40,7 +40,7 @@ cleanup_commit (svn_revnum_t *new_revision,
 
 /*----------------------------------------------------------------*/
 
-/** The reporter routines **/
+/** The reporter routines (for updates) **/
 
 
 static svn_error_t *
@@ -48,6 +48,8 @@ set_directory (void *report_baton,
                svn_string_t *dir_path,
                svn_revnum_t revision)
 {
+  /* TODO:  someday when we try to get updates working */
+
   return SVN_NO_ERROR;
 }
   
@@ -57,6 +59,8 @@ set_file (void *report_baton,
           svn_string_t *file_path,
           svn_revnum_t revision)
 {
+  /* TODO:  someday when we try to get updates working */
+
   return SVN_NO_ERROR;
 }
   
@@ -65,6 +69,8 @@ set_file (void *report_baton,
 static svn_error_t *
 finish_report (void *report_baton)
 {
+  /* TODO:  someday when we try to get updates working */
+
   return SVN_NO_ERROR;
 }
 
@@ -96,7 +102,7 @@ open (void **session_baton,
   /* And let all other session_baton data use the same subpool */
   baton->pool = subpool;
   baton->repository_URL = repository_URL;
-  baton->fs = apr_pcalloc (subpool, sizeof(*(baton->fs)));
+  baton->fs = svn_fs_new (subpool);
 
   /* Look through the URL, figure out which part points to the
      repository, and which part is the path *within* the
@@ -107,12 +113,9 @@ open (void **session_baton,
                                  subpool);
   if (err) return err;
 
-  /* Open the filesystem at `repos_path' */
+  /* Open the filesystem at located at environment `repos_path' */
   err = svn_fs_open_berkeley (baton->fs, baton->repos_path->data);
   if (err) return err;
-
-  
-
 
   /* Return the session baton */
   *session_baton = baton;
@@ -145,8 +148,15 @@ static svn_error_t *
 get_latest_revnum (void *session_baton,
                    svn_revnum_t *latest_revnum)
 {
+  svn_error_t *err;
+
+  err = svn_fs_youngest_rev (session_baton->fs, latest_revnum);
+  if (err) return err;
+
   return SVN_NO_ERROR;
 }
+
+
 
 
 static svn_error_t *
@@ -160,10 +170,10 @@ get_commit_editor (void *session_baton,
                    void *close_baton)
 {
   svn_error_t *err;
-  svn_delta_edit_fns_t *commit_editor, *tracking_editor;
-  void *commit_editor_baton, *tracking_editor_baton;
+  svn_delta_edit_fns_t *commit_editor, *tracking_editor, *composed_editor;
+  void *commit_editor_baton, *tracking_editor_baton, *composed_editor_baton;
 
-  /* Construct a commit-hook baton */
+  /* Construct a Magick commit-hook baton */
   svn_ra_local__commit_hook_baton_t *hook_baton
     = apr_pcalloc (session_baton->pool, sizeof(*hook_baton));
 
@@ -174,24 +184,38 @@ get_commit_editor (void *session_baton,
   hook_baton->target_array = apr_pcalloc (hook_baton->pool,
                                           sizeof(*(hook_baton->target_array)));
 
-  /* Get the filesystem editor */     
+  /* Get the filesystem commit-editor */     
   err = svn_fs_get_editor (&commit_editor,
                            &commit_editor_baton,
                            session_baton->fs,
-                           session_baton->revision,
+                           base_revision,
                            log_msg,
                            cleanup_commit, /* our post-commit hook */
                            hook_baton,
                            session_baton->pool);
   if (err) return err;
 
-  /* Get the commit `tracking' editor, telling it store committed
+  /* Get the commit `tracking' editor, telling it to store committed
      targets in our hook_baton */
+  err = svn_ra_local__get_commit_track_editor (&tracking_editor,
+                                               &tracking_editor_baton,
+                                               session_baton->pool,
+                                               hook_baton);
+  if (err) return err;
 
   /* Compose the two editors */
+  err = svn_delta_compose_editors (&composed_editor,
+                                   &composed_editor_baton,
+                                   commit_editor,
+                                   commit_editor_baton,
+                                   tracking_editor,
+                                   tracking_editor_baton,
+                                   session_baton->pool);
+  if (err) return err;
 
   /* Give the magic composed-editor thingie back to the client */
-
+  *editor = composed_editor;
+  *edit_baton = composed_edit_baton;
 
   return SVN_NO_ERROR;
 }
@@ -203,6 +227,8 @@ do_checkout (void *session_baton,
              const svn_delta_edit_fns_t *editor,
              void *edit_baton)
 {
+  /* TODO:  someday */
+
   return SVN_NO_ERROR;
 }
 
@@ -216,6 +242,8 @@ do_update (void *session_baton,
            const svn_delta_edit_fns_t *update_editor,
            void *update_baton)
 {
+  /* TODO:  someday */
+
   return SVN_NO_ERROR;
 }
 
