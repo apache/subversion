@@ -105,14 +105,14 @@ enum svn_wc_schedule_t
   svn_wc_schedule_delete,       /* Slated for deletion */
   svn_wc_schedule_replace,      /* Slated for replacement (delete + add) */
   svn_wc_schedule_unadd,        /* Slated for un-addition */
-  svn_wc_schedule_undelete,     /* Slated for un-deletion */
+  svn_wc_schedule_undelete      /* Slated for un-deletion */
 };
 
 enum svn_wc_existence_t
 {
   svn_wc_existence_normal = 0,  /* Nothing unusual here */
   svn_wc_existence_added,       /* Added to revision control */  
-  svn_wc_existence_deleted,     /* Deleted from revision control */
+  svn_wc_existence_deleted      /* Deleted from revision control */
 };
 
 /* A working copy entry -- that is, revision control information about
