@@ -186,6 +186,7 @@ svn_cl__parse_options (int argc,
   if ((! *xml_file)
       && (command != ADD_COMMAND)
       && (command != STATUS_COMMAND)
+      && (command != PROPFIND_COMMAND)
       && (command != DELETE_COMMAND))
     {
       fprintf (stderr, "%s: need \"--xml-file FILE.XML\"\n", s);
