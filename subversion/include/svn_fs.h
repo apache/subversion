@@ -94,19 +94,20 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
 
 
 /* Create a new, empty Subversion filesystem, stored in a Berkeley DB
-   environment named ENV.  Make FS refer to this new filesystem.
-   FS provides the memory pool, warning function, etc.  */
-svn_error_t *svn_fs_create_berkeley (svn_fs_t *fs, const char *env);
+   environment under PATH.  Make FS refer to this new filesystem.
+   FS provides the memory pool, warning function, etc.  If PATH
+   exists, it must be an empty directory.  */
+svn_error_t *svn_fs_create_berkeley (svn_fs_t *fs, const char *path);
 
 
-/* Make FS refer to the Subversion filesystem stored in the Berkeley
-   DB environment ENV.  ENV must refer to a file or directory created
-   by `svn_fs_create_berkeley'.
+/* Make FS refer to the Berkeley DB-based Subversion filesystem at
+   PATH.  PATH must refer to a file or directory created by
+   `svn_fs_create_berkeley'.
 
    Only one thread may operate on any given filesystem object at once.
    Two threads may access the same filesystem simultaneously only if
    they open separate filesystem objects.  */
-svn_error_t *svn_fs_open_berkeley (svn_fs_t *fs, const char *env);
+svn_error_t *svn_fs_open_berkeley (svn_fs_t *fs, const char *path);
 
 
 /* Register an error handling function for Berkeley DB error messages.
@@ -134,7 +135,7 @@ svn_error_t *svn_fs_delete_berkeley (const char *PATH, apr_pool_t *pool);
 
 
 /* Perform any necessary non-catastrophic recovery on a Berkeley
-   DB-based Subversion filesystem, stored in the environment ENV.  Do
+   DB-based Subversion filesystem, stored in the environment PATH.  Do
    any necessary allocation within POOL.
 
    After an unexpected server exit, due to a server crash or a system

@@ -20,7 +20,20 @@
 #include "svn_fs.h"
 
 
-/* The filesystem structure.  */
+/*** Repository layout. ***/
+
+/* The top-level repository dir contains a README and a subdirectory.
+ * The subdirectory holds the Berkeley DB environment.  In the future,
+ * there may be other subdirectories, for example to hold large object
+ * files that are farmed out to disk instead of being stored in the
+ * DB.
+ */
+#define SVN_FS__REPOS_README "README"    /* Explanation for trespassers. */
+#define SVN_FS__REPOS_DB_DIR "db"        /* Where Berkeley lives. */
+
+
+
+/*** The filesystem structure.  ***/
 
 struct svn_fs_t {
 
@@ -29,8 +42,11 @@ struct svn_fs_t {
      or system resources it holds.  */
   apr_pool_t *pool;
 
-  /* The filename of the Berkeley DB environment, for use in error
-     messages.  */
+  /* The path to the Berkeley DB environment, for use in error
+     messages.  Although the repository is officially the parent of
+     this dir, the path we're always needing is the one to Berkeley,
+     so that's what we record here.  The rest of the repository
+     doesn't do much right now anyway.  */
   char *env_path;
 
   /* A Berkeley DB environment for all the filesystem's databases.
