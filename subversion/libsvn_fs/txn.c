@@ -236,6 +236,85 @@ svn_error_t *
 svn_fs_commit_txn (svn_revnum_t *new_rev, 
                    svn_fs_txn_t *txn)
 {
+  /* How do commits work in Subversion?
+   *
+   * When you're ready to commit, here's what you have:
+   *
+   *    1. A transaction, with a mutable tree hanging off it.
+   *    2. A base revision, against which TXN_TREE was made.
+   *    3. A latest revision, which may be newer than the base rev.
+   *
+   * The problem is that if latest != base, then one can't simply
+   * attach the txn root as the root of the new revision, because that
+   * would lose all the changes between base and latest.  It is also
+   * not acceptable to insist that base == latest; in a busy
+   * repository, commits happen too fast to insist that everyone keep
+   * their entire tree up-to-date at all times.  Non-overlapping
+   * changes should not interfere with each other.
+   *
+   * The solution is to merge the changes between base and latest into
+   * the txn tree (see svn_fs_merge).  The txn tree is the only one of
+   * the three trees that is mutable, so it has to be the one to
+   * adjust.
+   *
+   * You might have to adjust it more than once, if a new latest
+   * revision gets committed while you were merging in the previous
+   * one.  For example:
+   *
+   *    1. Jane starts txn T, based at revision 6.
+   *    2. Someone commits (or already committed) revision 7.
+   *    3. Jane's starts merging the changes between 6 and 7 into T.
+   *    4. Meanwhile, someone commits revision 8.
+   *    5. Jane finishes the 6-->7 merge.  T could now be committed
+   *       against a latest revision of 7, if only that were still the
+   *       latest.  Unfortunately, 8 is now the latest, so... 
+   *    6. Jane starts merging the changes between 7 and 8 into T.
+   *    7. Meanwhile, no one commits any new revisions.  Whew.
+   *    8. Jane commits T, creating revision 9, whose tree is exactly
+   *       T's tree, except immutable now.
+   *
+   * In steps 5 and 8, how did Jane know that she couldn't commit in
+   * the first case, and could in the second?  The answer is that she
+   * simply tried to commit a new revision latest + 1, using the
+   * latest revision number as of when she started the merge.  If
+   * Berkeley doesn't complain that latest + 1 already exists, then
+   * the commit succeeds.  If it does complain, then someone else must
+   * have committed during the merge, so Jane does another merge.
+   *
+   * Lather, rinse, repeat.
+   *
+   * TBD:
+   *
+   * I haven't completely thought out the timing of the walk that
+   * changes mutable->immutable.  One possibility is:
+   *
+   *   When the merge is done, but before attempting the commit, walk
+   *   the txn tree changing mutable nodes to immutable, and recording
+   *   these actions in the trail's undo list.  If the commit fails,
+   *   the undo list will be run.
+   *
+   * But another way, which I think I like more, is:
+   *
+   *   Leave the nodes immutable when you commit, but make sure
+   *   successful commits leave the revision tree locked (the lock
+   *   must be created in the same Berkeley transaction that creates
+   *   the new revision number).
+   *
+   *   With this method, if the commit fails, there's no harm done --
+   *   your txn tree is still mutable.  If the commit succeeds, then
+   *   you have to walk a committed revision tree and make mutables
+   *   immutable (at the end of which, you remove that lock).  No one
+   *   else can commit a new revision until this is done.
+   *
+   *   Crash recovery is easier this way, because you can do a
+   *   constant-time inspection of the revisions table to know that
+   *   there's pending work.  The recovery algorithm is roughly: see
+   *   if the revisions table is locked, and if it is, do the
+   *   mutable->immutable walk in the latest revision tree, removing
+   *   the lock when done (in the same Berkeley transaction as the
+   *   mutability changes, of course).
+   */
+
   *new_rev = SVN_INVALID_REVNUM;
   abort();
   return SVN_NO_ERROR;
