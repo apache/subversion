@@ -1012,7 +1012,7 @@ $ svn status
 A  +   real.c
 
 $ svn commit -m "Resurrected real.c from revision 807, /trunk/calc/real.c."
-Adding    integer.c
+Adding    real.c
 Transmitting file data .
 Committed revision 1390.
 </screen>
