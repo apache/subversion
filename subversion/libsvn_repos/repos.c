@@ -566,6 +566,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "if [ \"$PROPNAME\" = \"svn:log\" ]; then exit 0; fi"
       APR_EOL_STR
+      "    echo \"Changing revision properties other than svn:log is "
+      "prohibited\" >&2"
+      APR_EOL_STR
       "exit 1"
       APR_EOL_STR;
     
