@@ -3002,7 +3002,7 @@ delete_mutables (const char **msg,
     SVN_ERR (check_id_present (fs, G_id, pool));
     err = svn_fs_delete (txn_root, "A/D/G", pool);            /* fail */
 
-    if (err && (err->apr_err != SVN_ERR_FS_DIR_NOT_EMPTY))
+    if (err && (err->apr_err != SVN_ERR_DIR_NOT_EMPTY))
       {
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, 0, NULL, pool,
@@ -3091,7 +3091,7 @@ delete_mutables (const char **msg,
 
     err = svn_fs_delete (txn_root, "A/D", pool);
 
-    if (err && (err->apr_err != SVN_ERR_FS_DIR_NOT_EMPTY))
+    if (err && (err->apr_err != SVN_ERR_DIR_NOT_EMPTY))
       {
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, 0, NULL, pool,
@@ -3283,7 +3283,7 @@ delete (const char **msg,
 
     /* Try an unsuccessful delete of a non-empty dir. */
     err = svn_fs_delete (txn_root, "A", pool);
-    if (err && (err->apr_err != SVN_ERR_FS_DIR_NOT_EMPTY))
+    if (err && (err->apr_err != SVN_ERR_DIR_NOT_EMPTY))
       {
         return svn_error_create
           (SVN_ERR_FS_GENERAL, 0, NULL, pool,
@@ -3403,7 +3403,7 @@ delete (const char **msg,
 
     /* First try an unsuccessful delete. */
     err = svn_fs_delete (txn_root, "A", pool);
-    if (err && (err->apr_err != SVN_ERR_FS_DIR_NOT_EMPTY))
+    if (err && (err->apr_err != SVN_ERR_DIR_NOT_EMPTY))
       {
         return svn_error_create
           (SVN_ERR_FS_GENERAL, 0, NULL, pool,
@@ -3565,7 +3565,7 @@ delete (const char **msg,
 
     /* First try an unsuccessful delete. */
     err = svn_fs_delete (txn_root, "A", pool);
-    if (err && (err->apr_err != SVN_ERR_FS_DIR_NOT_EMPTY))
+    if (err && (err->apr_err != SVN_ERR_DIR_NOT_EMPTY))
       {
         return svn_error_create
           (SVN_ERR_FS_GENERAL, 0, NULL, pool,

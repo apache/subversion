@@ -523,31 +523,26 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
 {
   svn_repos_t *repos;
   apr_status_t apr_err;
+  svn_error_t *err;
 
   /* Allocate a repository object. */
   repos = apr_pcalloc (pool, sizeof (*repos));
   repos->pool = pool;
 
   /* Create the top-level repository directory. */
-  apr_err = apr_dir_make (path, APR_OS_DEFAULT, pool);
-  if (apr_err)
+  err = svn_io_dir_make (path, APR_OS_DEFAULT, pool);
+  if (err && (APR_STATUS_IS_EEXIST (err->apr_err)))
     {
-      if (APR_STATUS_IS_EEXIST (apr_err))
-        {
-          apr_status_t empty = apr_check_dir_empty (path, pool);
-          if (empty)
-            return svn_error_createf
-              (apr_err, 0, 0, pool,
-               "`%s' exists and is non-empty, repository creation failed",
-               path);
-        }
-      else
-        {
-          return svn_error_createf
-            (apr_err, 0, 0, pool, "unable to create repository `%s'",
-             path);
-        }
+      svn_boolean_t is_empty;
+      SVN_ERR (svn_io_dir_empty (&is_empty, path, pool));
+      if (! is_empty)
+        return svn_error_createf
+          (SVN_ERR_DIR_NOT_EMPTY, 0, 0, pool,
+           "`%s' exists and is non-empty, repository creation failed",
+           path);
     }
+  else if (err)
+    return err;
 
   /* Initialize the repository paths. */
   repos->path = apr_pstrdup (pool, path);
