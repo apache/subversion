@@ -214,10 +214,10 @@ I.    BUILD REQUIREMENTS
       8.  Python 2.0
 
       If you want to run "make check" or build from the latest source
-      under Unix as described in section II.B, install Python 2.0 or
-      higher on your system. The majority of the test suite is written
-      in Python, as is part of Subversion's build system.  Get it from
-      http://www.python.org/.
+      under Unix as described in section II.B and III.D, install
+      Python 2.0 or higher on your system. The majority of the test
+      suite is written in Python, as is part of Subversion's build
+      system.  Get it from http://www.python.org/.
 
 
       9.  Visual C++ 6.0 or newer (Windows Only)
@@ -855,9 +855,10 @@ III.  BUILDING A SUBVERSION SERVER
       The most common reason this might fail is permission problems
       reading the repository db files.  If the checkout fails, make
       sure that the httpd process has permission to read and write to
-      the repository.
+      the repository.  You can see all of mod_dav_svn's complaints in
+      the Apache error logfile, /usr/local/apache2/logs/error_log.
 
-      You can see all of mod_dav_svn's complaints in the Apache
-      error logfile, /usr/local/apache2/logs/error_log.  For more
-      information about tracing problems, see "Debugging the server"
-      in the HACKING file.
+      To run the regression test suite for networked Subversion, see
+      the instructions in subversion/tests/clients/cmdline/README.
+      For advice about tracing problems, see "Debugging the server" in
+      the HACKING file.
