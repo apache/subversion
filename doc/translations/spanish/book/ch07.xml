@@ -75,44 +75,53 @@
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-7-sect-1.1">
-      <title>Configuration Area Layout</title>
+      <title>Estructura del área de configuración</title>
 
-      <para>The first time that the <command>svn</command>
-        command-line client is executed, it creates a per-user
-        configuration area.  On Unix-like systems, this area appears
-        as a directory named <filename>.subversion</filename> in the
-        user's home directory.  On Win32 systems, Subversion creates a
-        folder named <filename>Subversion</filename>, typically inside
-        the <filename>Application Data</filename> area of the user's
-        profile directory (which, by the way, is usually a hidden
-        directory).  However, on this platform the exact location
-        differs from system to system, and is dictated by the Windows
-        registry.
+      <para>La primera vez que el cliente de línea de comando
+        <command>svn</command> es ejecutado, crea un área
+        de configuración para el usuario. En sistemas
+        tipo Unix, este área aparece como el directorio
+        <filename>.subversion</filename> en el directorio home <!--
+        TODO quizás deberíamos usar la etiqueta filename, dado
+        que en inglés la palabra home vale como palabra y como
+        término informático, pero no en español --> del usuario.
+        En sistemas Win32, Subversion crea un directorio llamado
+        <filename>Subversion</filename>, típicamente dentro del
+        área <filename>Application Data</filename> del directorio
+        de perfil del usuario (el cual, por cierto, suele ser un
+        directorio oculto).  No obstante, en esta plataforma la
+        localización exácta difiere de sistema a sistema, y es
+        dicatada por el registro de Windows.
         <footnote>
-          <para>The <literal>APPDATA</literal> environment variable
-            points to the <filename>Application Data</filename> area,
-            so you can always refer to this folder as
+          <para>La variable de entorno <literal>APPDATA</literal>
+            apunta al área <filename>Application Data</filename>,
+            así que siempre puede referirse a este directorio como
             <filename>%APPDATA%\Subversion</filename>.</para>
         </footnote>
-        We will refer to the per-user configuration area using its Unix
-        name, <filename>.subversion</filename>.</para>
+        A lo largo del libro nos referiremos al área de
+        configuración de cada usuario usando su nombre Unix,
+        <filename>.subversion</filename>.</para>
 
-      <para>In addition to the per-user configuration area, Subversion
-        also recognizes the existence of a system-wide configuration
-        area.  This gives system administrators the ability to
-        establish defaults for all users on a given machine.  Note
-        that the system-wide configuration area does not alone dictate
-        mandatory policy&mdash;the settings in the per-user
-        configuration area override those in the system-wide one, and
-        command-line arguments supplied to the <command>svn</command>
-        program have the final word on behavior.  On Unix-like
-        platforms, the system-wide configuration area is expected to be
-        the <filename>/etc/subversion</filename> directory; on Windows
-        machines, it looks for a <filename>Subversion</filename>
-        directory inside the common Application Data location (again,
-        as specified by the Windows Registry).  Unlike the per-user
-        case, the <command>svn</command> program does not attempt to
-        create the system-wide configuration area.</para>
+      <para>Además del área de configuración de cada usuario,
+        Subversion también reconoce la existencia de un área
+        de configuración global de sistema.  Ésta le permite al
+        administrador de sistema establecer valores por defecto para
+        todos los usuarios en una máquina determinada. Tenga en
+        cuenta que el área de configuración global de sistema por
+        sí sola no dicta reglas obligatorias&mdash;los parámetros
+        del área de configuración de cada usuario tienen prioridad
+        a los globales, y los parámetros proporcionados en la
+        línea de comando al programa <command>svn</command>
+        tienen la palabra final sobre el comportamiento. En
+        plataformas tipo Unix, el área de configuración
+        global de sistema estará posiblemente en el directorio
+        <filename>/etc/subversion</filename>; en máquinas Windows,
+        se busca el directorio <filename>Subversion</filename>
+        dentro de la localización común <filename>Application
+        Data</filename> (de nuevo, especificada por el registro
+        de Windows).  A diferencia del caso específico de cada
+        usuario, el programa <command>svn</command> no intentan
+        crear un área de configuración global de sistema.</para>
 
       <para>The configuration area currently contains three
         files&mdash;two configuration files (<filename>config</filename> and
