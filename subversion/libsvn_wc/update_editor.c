@@ -233,14 +233,14 @@ make_dir_baton (const char *path,
       /* for checkouts, telescope the new_URL normally.  no such thing as
          disjoint urls.   */
       if (pb)
-        d->new_URL = svn_path_join (pb->new_URL, d->name, pool);
+        d->new_URL = svn_path_url_add_component (pb->new_URL, d->name, pool);
       else
         d->new_URL = apr_pstrdup (pool, eb->ancestor_url);
     }
   else if (eb->switch_url)
     {
       if (pb)
-        d->new_URL = svn_path_join (pb->new_URL, d->name, pool);
+        d->new_URL = svn_path_url_add_component (pb->new_URL, d->name, pool);
       else
         d->new_URL = apr_pstrdup (pool, eb->switch_url);
     }
@@ -401,7 +401,7 @@ make_file_baton (struct dir_baton *pb,
   /* Figure out the new_URL for this file. */
   if (pb->edit_baton->is_checkout || pb->edit_baton->switch_url)
     {
-      f->new_URL = svn_path_join (pb->new_URL, f->name, pool);
+      f->new_URL = svn_path_url_add_component (pb->new_URL, f->name, pool);
     }
   else 
     {
