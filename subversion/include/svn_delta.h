@@ -707,8 +707,11 @@ typedef struct svn_delta_edit_fns_t
    ### into the old-form svn_delta_edit_fns_t interface. this wrapping
    ### function enables an old-style editor driver to drive a new-style
    ### editor. */
-svn_delta_edit_fns_t *svn_delta_compat_wrap (const svn_delta_editor_t *editor,
-                                             apr_pool_t *pool);
+void svn_delta_compat_wrap (const svn_delta_edit_fns_t **wrapper_editor,
+                            void **wrapper_baton,
+                            const svn_delta_editor_t *editor,
+                            void *edit_baton,
+                            apr_pool_t *pool);
 
 
 /* Return a default delta editor template, allocated in POOL.
