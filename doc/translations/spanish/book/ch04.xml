@@ -1178,28 +1178,30 @@ Committed revision 350.
         <filename>calc</filename> entre las revisiones 303 y 349,
         seguirán viendo todavía el cambio malo, ¿verdad?</para>
 
-      <para>Yes, that's true.  When we talk about
-        <quote>removing</quote> a change, we're really talking about
-        removing it from <literal>HEAD</literal>.  The original change
-        still exists in the repository's history.  For most
-        situations, this is good enough.  Most people are only
-        interested in tracking the <literal>HEAD</literal> of a
-        project anyway.  There are special cases, however, where you
-        really might want to destroy all evidence of the commit.
-        (Perhaps somebody accidentally committed a confidential
-        document.)  This isn't so easy, it turns out, because
-        Subversion was deliberately designed to never lose
-        information.  Revisions are immutable trees which build upon
-        one another.  Removing a revision from history would cause a
-        domino effect, creating chaos in all subsequent revisions and
-        possibly invalidating all working copies.
+      <para>Si, en efecto. Cuando hablamos sobre
+        <quote>eliminar</quote> un cambio, estamos hablando sobre
+        eliminarlo de <literal>HEAD</literal>. El cambio original
+        todavía existe en la historia del repositorio. En la
+        mayoría de las situaciones, esto es suficiente. De todos
+        modos la mayoría de las personas sólo están interesadas en
+        seguir la versión <literal>HEAD</literal> de un proyecto.
+        No obstante, hay casos especiales en los que realmente
+        desearía destruir toda evidencia de un cambio. (Quizás
+        alguien puso accidentalmente en el repositorio un documento
+        confidencial.) Esto, tal y como verá, no es tan fácil porque
+        Subversion fue diseñado deliberadamente para nunca perder
+        información. Las revisiones son árboles inmutables que se
+        construyen unos sobre otros. Eliminar una revisión de la
+        historia podría causar un efecto dominó, creando caos en
+        todas las revisiones siguientes y posiblemente invalidando
+        todas las copias locales de trabajo.
         <footnote>
-          <para>The Subversion project has plans, however, to someday
-            implement an <command>svnadmin obliterate</command>
-            command that would accomplish the task of permanently
-            deleting information.  In the meantime, see <xref
-            linkend="svn-ch-5-sect-3.1.3"/> for a possible
-            workaround.</para>
+          <para>Sin embargo, el proyecto Subversion tiene planes
+            para implementar algún día un comando <command>svnadmin
+            obliterate</command> que realizaría la tarea de borrar
+            información permanentemente. Mientras tanto, lea <xref
+            linkend="svn-ch-5-sect-3.1.3"/> para una posible solución
+            alternativa.</para>
         </footnote>
       </para>
 
