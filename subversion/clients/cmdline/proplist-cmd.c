@@ -28,6 +28,7 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -59,11 +60,15 @@ svn_cl__proplist (apr_getopt_t *os,
         {
           svn_client_proplist_item_t *item 
               = ((svn_client_proplist_item_t **)props->elts)[j];
-          printf("Properties on '%s':\n", item->node_name->data);
+          const char *node_name_native;
+          SVN_ERR (svn_utf_cstring_from_utf8_stringbuf (item->node_name,
+                                                        &node_name_native,
+                                                        pool));
+          printf("Properties on '%s':\n", node_name_native);
           if (opt_state->verbose)
-            svn_cl__print_prop_hash (item->prop_hash, pool);
+            SVN_ERR (svn_cl__print_prop_hash (item->prop_hash, pool));
           else
-            svn_cl__print_prop_names (item->prop_hash, pool);
+            SVN_ERR (svn_cl__print_prop_names (item->prop_hash, pool));
         }
     }
 

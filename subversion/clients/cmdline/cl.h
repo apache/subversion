@@ -70,9 +70,9 @@ typedef struct svn_cl__opt_state_t
 
   const char *message;  /* log message */
 
-  const char *xml_file;  /* F in "svn blah --xml-file F" */
+  const char *xml_file;  /* F in "svn blah --xml-file F" */ /* UTF-8! */
 
-  const char *target;  /* Target dir, T in "svn co -d T" */
+  const char *target;  /* Target dir, T in "svn co -d T" */ /* UTF-8! */
 
   const char *ancestor_path;  /* ### todo: who sets this? */
 
@@ -90,13 +90,13 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t very_verbose;
   svn_boolean_t update;
   svn_boolean_t strict;
-  apr_array_header_t *args;
+  apr_array_header_t *args;      /* UTF-8! */
   svn_stringbuf_t *filedata;
   svn_boolean_t help;
-  const char *auth_username;
-  const char *auth_password;
-  const char *extensions;        /* for extension args to subprocesses */
-  apr_array_header_t *targets;   /* when target list supplied from file */
+  const char *auth_username;     /* UTF-8! */
+  const char *auth_password;     /* UTF-8! */
+  const char *extensions;        /* for extension args to subprocesses */ /* UTF-8! */
+  apr_array_header_t *targets;   /* when target list supplied from file */ /* UTF-8! */
   svn_boolean_t xml;             /* output in xml, e.g., "svn log --xml" */
 } svn_cl__opt_state_t;
 
@@ -180,6 +180,8 @@ void svn_cl__push_svn_string (apr_array_header_t *array,
   found, it will overwrite the value of opt_state->start_revision.  If
   a second one is found, it will overwrite opt_state->end_revision.
   (Extra revisions beyond that are ignored.)
+
+   The array of targets will be in UTF-8 format.
   */
 apr_array_header_t*
 svn_cl__args_to_target_array (apr_getopt_t *os,
@@ -259,12 +261,13 @@ void svn_cl__print_status_list (apr_hash_t *statushash,
 
 /* Print a hash that maps property names (char *) to property values
    (svn_stringbuf_t *). */
-void svn_cl__print_prop_hash (apr_hash_t *prop_hash, apr_pool_t *pool);
+svn_error_t *
+svn_cl__print_prop_hash (apr_hash_t *prop_hash, apr_pool_t *pool);
 
 /* Print out the property names in a hash that maps property names (char *) 
    to property values (svn_stringbuf_t *). */
-void svn_cl__print_prop_names (apr_hash_t *prop_hash, apr_pool_t *pool);
-
+svn_error_t *
+svn_cl__print_prop_names (apr_hash_t *prop_hash, apr_pool_t *pool);
 
 /* Search for a text editor command in standard environment variables,
    and invoke it to edit CONTENTS (using a temporary file created in

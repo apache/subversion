@@ -26,6 +26,7 @@
 #include "svn_sorts.h"
 #include "svn_wc.h"
 #include "svn_string.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -241,6 +242,8 @@ svn_cl__print_status_list (apr_hash_t *statushash,
   for (i = 0; i < statusarray->nelts; i++)
     {
       const svn_item_t *item;
+      const char *path;
+      svn_error_t *err;
 
       item = &APR_ARRAY_IDX(statusarray, i, const svn_item_t);
       status = item->value;
@@ -248,10 +251,14 @@ svn_cl__print_status_list (apr_hash_t *statushash,
       if ((skip_unrecognized) && (! status->entry))
         continue;
 
+      err = svn_utf_cstring_from_utf8 (item->key, &path, pool);
+      if (err)
+        svn_handle_error (err, stderr, FALSE);
+
       if (detailed)
-        print_long_format (item->key, show_last_committed, status);
+        print_long_format (path, show_last_committed, status);
       else
-        print_short_format (item->key, status);
+        print_short_format (path, status);
     }
 
   /* If printing in detailed format, we might have a head revision to

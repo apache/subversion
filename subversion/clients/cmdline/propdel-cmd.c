@@ -28,6 +28,7 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -60,10 +61,14 @@ svn_cl__propdel (apr_getopt_t *os,
       SVN_ERR (svn_client_propset (pname, NULL, target,
                                    opt_state->recursive, pool));
 
-      if (! opt_state->quiet)
-        printf ("property `%s' deleted %s from '%s'.\n", pname,
+      if (! opt_state->quiet) {
+        const char *pname_native, *target_native;
+        SVN_ERR (svn_utf_cstring_from_utf8 (pname, &pname_native, pool));
+        SVN_ERR (svn_utf_cstring_from_utf8 (target, &target_native, pool));
+        printf ("property `%s' deleted %s from '%s'.\n", pname_native,
                 opt_state->recursive ? "(recursively)" : "",
-                target);
+                target_native);
+      }
     }
 
   return SVN_NO_ERROR;
