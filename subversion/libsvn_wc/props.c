@@ -1041,6 +1041,28 @@ svn_wc_prop_set (const char *name,
   /* ### argh */
   svn_stringbuf_t *valuebuf;
 
+  if (! strcmp (name, SVN_PROP_EXECUTABLE))
+    {
+      enum svn_node_kind kind;
+      SVN_ERR (svn_io_check_path (path, &kind, pool));
+
+      if (kind == svn_node_dir)
+        /* Setting the executable bit doesn't make sense for dirs. (And
+           don't try and tell me Unix does it...) */
+        return svn_error_create (SVN_ERR_ILLEGAL_TARGET, 0, NULL, pool,
+                                 "Cannot set svn:executable on a directory");
+      else
+        {
+          /* If the svn:executable property was set, then chmod +x.
+             If the svn:executable property was deleted (NULL value passed
+             in), then chmod -x. */
+          if (value == NULL)
+            SVN_ERR (svn_io_set_file_executable (path, FALSE, TRUE, pool));
+          else
+            SVN_ERR (svn_io_set_file_executable (path, TRUE, TRUE, pool));
+        }
+    }
+
   err = svn_wc_prop_list (&prophash, path, pool);
   if (err)
     return
@@ -1103,17 +1125,6 @@ svn_wc_prop_set (const char *name,
                                          SVN_WC__ENTRY_MODIFY_TEXT_TIME,
                                          pool));
         }
-    }
-
-  /* Addendum: if the svn:executable property was set, then chmod +x.
-     If the svn:executable property was deleted (NULL value passed
-     in), then chmod -x. */
-  if (! strcmp (name, SVN_PROP_EXECUTABLE))
-    {
-      if (value == NULL)
-        SVN_ERR (svn_io_set_file_executable (path, FALSE, TRUE, pool));
-      else
-        SVN_ERR (svn_io_set_file_executable (path, TRUE, TRUE, pool));
     }
 
   return SVN_NO_ERROR;

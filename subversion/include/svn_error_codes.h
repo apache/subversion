@@ -138,7 +138,7 @@ SVN_ERROR_START
               "Unknown svn_prop_kind")
 
   SVN_ERRDEF (SVN_ERR_ILLEGAL_TARGET,
-              "Illegal target for the requestion operation")
+              "Illegal target for the requested operation")
 
   SVN_ERRDEF (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT,
               "MD5 checksum is missing")
