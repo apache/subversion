@@ -136,7 +136,6 @@ static void *create_private(void *userdata, const char *url)
   char *url_path;
   svn_ra_dav_resource_t *r = apr_pcalloc(pc->pool, sizeof(*r));
   apr_size_t len;
-  const char *decoded_url = svn_path_uri_decode(url, pc->pool);
 
   r->pool = pc->pool;
 
@@ -145,7 +144,7 @@ static void *create_private(void *userdata, const char *url)
      Note: mod_dav does not (currently) use an absolute URL, but simply a
      server-relative path (i.e. this uri_parse is effectively a no-op).
   */
-  (void) ne_uri_parse(decoded_url, &parsed_url);
+  (void) ne_uri_parse(url, &parsed_url);
   url_path = apr_pstrdup(pc->pool, parsed_url.path);
   ne_uri_free(&parsed_url);
 
