@@ -1052,7 +1052,7 @@ revert_error (svn_error_t *err,
 }
 
 
-/* Revert ENTRY for NAME in directory PARENT_DIR, altering
+/* Revert ENTRY for NAME in directory represented by ADM_ACCESS, altering
    *MODIFY_FLAGS to indicate what parts of the entry were reverted
    (for example, if property changes were reverted, then set the
    SVN_WC__ENTRY_MODIFY_PROP_TIME bit in MODIFY_FLAGS).
@@ -1252,6 +1252,30 @@ svn_wc_revert (const char *path,
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
        "Cannot revert '%s' -- not a versioned resource", path);
 
+  /* Safeguard 1.5: is this a missing versioned directory? */
+  if (entry->kind == svn_node_dir)
+    {
+      svn_node_kind_t disk_kind;
+      SVN_ERR (svn_io_check_path (path, &disk_kind, pool));
+      if (disk_kind != svn_node_dir)
+        {
+          /* When the directory itself is missing, we can't revert
+             without hitting the network.  Someday a '--force' option
+             will make this happen.  For now, send notification of the
+             failure. */
+          if (notify_func != NULL)
+            (*notify_func) (notify_baton, path,
+                            svn_wc_notify_failed_revert,
+                            svn_node_unknown,
+                            NULL,
+                            svn_wc_notify_state_unknown,
+                            svn_wc_notify_state_unknown,
+                            SVN_INVALID_REVNUM);
+
+          return SVN_NO_ERROR;
+        }
+    }
+  
   /* Safeguard 2:  can we handle this node kind? */
   if ((entry->kind != svn_node_file) && (entry->kind != svn_node_dir))
     return svn_error_createf 
@@ -1434,7 +1458,7 @@ svn_wc_revert (const char *path,
           const void *key;
           const char *keystring;
           const char *full_entry_path;
-          
+
           /* Get the next entry */
           apr_hash_this (hi, &key, NULL, NULL);
           keystring = key;
@@ -1452,7 +1476,7 @@ svn_wc_revert (const char *path,
 
           svn_pool_clear (subpool);
         }
-
+      
         svn_pool_destroy (subpool);
     }
   

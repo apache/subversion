@@ -99,6 +99,10 @@ notify (void *baton,
       printf ("Reverted %s\n", path_native);
       break;
 
+    case svn_wc_notify_failed_revert:
+      printf ("Failed to revert %s -- try updating instead.\n", path_native);
+      break;
+
     case svn_wc_notify_resolve:
       printf ("Resolved conflicted state of %s\n", path_native);
       break;
