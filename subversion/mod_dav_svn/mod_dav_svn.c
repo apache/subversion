@@ -62,7 +62,7 @@ extern module AP_MODULE_DECLARE_DATA dav_svn_module;
 static int dav_svn_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp,
                         server_rec *s)
 {
-    ap_add_version_component(p, "SVN/" SVN_VERSION);
+    ap_add_version_component(p, "SVN/" SVN_VER_NUMBER);
     return OK;
 }
 
