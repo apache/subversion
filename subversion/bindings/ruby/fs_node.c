@@ -18,6 +18,7 @@
 #include <svn_pools.h>
 #include <svn_fs.h>
 #include <svn_repos.h>
+#include <svn_client.h>
 
 #include "svn_ruby.h"
 #include "fs_root.h"
