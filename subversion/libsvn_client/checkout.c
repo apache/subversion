@@ -32,6 +32,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_io.h"
 #include "client.h"
 
 
@@ -124,17 +125,14 @@ svn_client_checkout (svn_wc_notify_func_t notify_func,
   /* else we're checking out from xml */
   else
     {
-      apr_status_t apr_err;
       apr_file_t *in = NULL;
       void *wrap_edit_baton;
       const svn_delta_edit_fns_t *wrap_editor;
 
       /* Open xml file. */
-      apr_err = apr_file_open (&in, xml_src, (APR_READ | APR_CREATE),
-                               APR_OS_DEFAULT, pool);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, pool,
-                                  "unable to open %s", xml_src);
+      SVN_ERR (svn_io_file_open (&in, xml_src,
+                                 (APR_READ | APR_CREATE),
+                                 APR_OS_DEFAULT, pool));
 
       /* ### todo:  This is a TEMPORARY wrapper around our editor so we
          can use it with an old driver. */

@@ -29,6 +29,7 @@
 #include "svn_string.h"
 #include "svn_xml.h"
 #include "svn_pools.h"
+#include "svn_io.h"
 
 #include "wc.h"
 #include "log.h"
@@ -79,7 +80,7 @@ file_xfer_under_path (const char *path,
                       enum svn_wc__xfer_action action,
                       apr_pool_t *pool)
 {
-  apr_status_t status;
+  svn_error_t *err;
   const char *full_from_path, *full_dest_path;
 
   full_from_path = svn_path_join (path, name, pool);
@@ -144,16 +145,15 @@ file_xfer_under_path (const char *path,
       /* Remove read-only flag on destination. */
       SVN_ERR (svn_io_set_file_read_write (full_dest_path, TRUE, pool));
 
-      status = apr_file_rename (full_from_path,
-                              full_dest_path, pool);
+      err = svn_io_file_rename (full_from_path,
+                                full_dest_path, pool);
 
       /* If we got an ENOENT, that's ok;  the move has probably
          already completed in an earlier run of this log.  */
-      if (status && (! APR_STATUS_IS_ENOENT(status)))
-        return svn_error_createf (status, 0, NULL, pool,
-                                  "file_xfer_under_path: "
-                                  "can't move %s to %s",
-                                  name, dest);
+      if (err && (! APR_STATUS_IS_ENOENT(err->apr_err)))
+        return svn_error_quick_wrap (err,
+                                     "file_xfer_under_path: "
+                                     "can't move from to dest");
   }
 
   return SVN_NO_ERROR;
@@ -306,7 +306,6 @@ log_do_run_cmd (struct log_runner *loggy,
                 const XML_Char **atts)
 {
   svn_error_t *err;
-  apr_status_t apr_err;
   const char
     *infile_name,
     *outfile_name,
@@ -340,11 +339,9 @@ log_do_run_cmd (struct log_runner *loggy,
       const char *infile_path
         = svn_path_join (loggy->path, infile_name, loggy->pool);
       
-      apr_err = apr_file_open (&infile, infile_path, APR_READ,
-                          APR_OS_DEFAULT, loggy->pool);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, loggy->pool,
-                                  "error opening %s", infile_path);
+      SVN_ERR_W (svn_io_file_open (&infile, infile_path, APR_READ,
+                                   APR_OS_DEFAULT, loggy->pool),
+                 "error opening infile");
     }
   
   if (outfile_name)
@@ -354,12 +351,10 @@ log_do_run_cmd (struct log_runner *loggy,
       
       /* kff todo: always creates and overwrites, currently.
          Could append if file exists... ?  Consider. */
-      apr_err = apr_file_open (&outfile, outfile_path, 
-                          (APR_WRITE | APR_CREATE),
-                          APR_OS_DEFAULT, loggy->pool);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, loggy->pool,
-                                  "error opening %s", outfile_path);
+      SVN_ERR_W (svn_io_file_open (&outfile, outfile_path,
+                                   (APR_WRITE | APR_CREATE),
+                                   APR_OS_DEFAULT, loggy->pool),
+                 "error opening outfile");
     }
   
   if (errfile_name)
@@ -369,12 +364,10 @@ log_do_run_cmd (struct log_runner *loggy,
       
       /* kff todo: always creates and overwrites, currently.
          Could append if file exists... ?  Consider. */
-      apr_err = apr_file_open (&errfile, errfile_path, 
-                          (APR_WRITE | APR_CREATE),
-                          APR_OS_DEFAULT, loggy->pool);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, loggy->pool,
-                                  "error opening %s", errfile_path);
+       SVN_ERR_W (svn_io_file_open (&errfile, errfile_path,
+                                    (APR_WRITE | APR_CREATE),
+                                    APR_OS_DEFAULT, loggy->pool),
+                  "error opening errfile");
     }
   
   err = svn_io_run_cmd (loggy->path, name, args, NULL, NULL, FALSE,
@@ -477,13 +470,9 @@ log_do_file_readonly (struct log_runner *loggy,
 static svn_error_t *
 log_do_rm (struct log_runner *loggy, const char *name)
 {
-  apr_status_t apr_err;
   const char *full_path = svn_path_join (loggy->path, name, loggy->pool);
 
-  apr_err = apr_file_remove (full_path, loggy->pool);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, loggy->pool,
-                              "apr_file_remove couldn't remove %s", name);
+  SVN_ERR (svn_io_remove_file (full_path, loggy->pool));
 
   return SVN_NO_ERROR;
 }
@@ -874,7 +863,6 @@ log_do_committed (struct log_runner *loggy,
     if (kind == svn_node_file)
       {
         svn_boolean_t same;
-        apr_status_t status;
         const char *chosen;
         
         /* We need to decide which prop-timestamp to use, just like we
@@ -921,10 +909,7 @@ log_do_committed (struct log_runner *loggy,
         /* Make the tmp prop file the new pristine one.  Note that we
            have to temporarily set the file permissions for writability. */
         SVN_ERR (svn_io_set_file_read_write (basef, TRUE, pool));
-        if ((status = apr_file_rename (tmpf, basef, pool)))
-          return svn_error_createf (status, 0, NULL, pool, 
-                                    "error renaming `%s' to `%s'",
-                                    tmpf, basef);
+        SVN_ERR (svn_io_file_rename (tmpf, basef, pool));
         SVN_ERR (svn_io_set_file_read_only (basef, FALSE, pool));
       }
   }   

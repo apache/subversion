@@ -97,18 +97,11 @@ copy_versioned_files (const char *from,
   if (entry)
     {
       apr_hash_index_t *hi;
-      apr_status_t apr_err;
       apr_finfo_t finfo;
 
-      apr_err = apr_stat (&finfo, from, APR_FINFO_PROT, subpool);
-      if (apr_err)
-        return svn_error_createf
-          (apr_err, 0, NULL, subpool, "error stating dir `%s'", to);
+      SVN_ERR (svn_io_stat (&finfo, from, APR_FINFO_PROT, subpool));
 
-      apr_err = apr_dir_make (to, finfo.protection, subpool);
-      if (apr_err)
-        return svn_error_createf
-          (apr_err, 0, NULL, subpool, "error creating dir `%s'", to);
+      SVN_ERR (svn_io_dir_make (to, finfo.protection, subpool));
 
       SVN_ERR (svn_io_get_dirents (&dirents, from, pool));
 

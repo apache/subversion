@@ -1439,6 +1439,139 @@ svn_io_detect_mimetype (const char **mimetype,
 }
 
 
+svn_error_t *
+svn_io_file_open (apr_file_t **new_file, const char *fname,
+                  apr_int32_t flag, apr_fileperms_t perm,
+                  apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  status = apr_file_open (new_file, fname, flag, perm, pool);
+
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool,
+                              "can't open `%s'", fname);
+  else
+    return SVN_NO_ERROR;  
+}
+
+
+svn_error_t *
+svn_io_stat (apr_finfo_t *finfo, const char *fname,
+             apr_int32_t wanted, apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  status = apr_stat (finfo, fname, wanted, pool);
+
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool,
+                              "couldn't stat '%s'...", fname);
+  else
+    return SVN_NO_ERROR;  
+}
+
+
+svn_error_t *
+svn_io_file_rename (const char *from_path, const char *to_path,
+                    apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  status = apr_file_rename (from_path, to_path, pool);
+
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool,
+                              "can't move '%s' to '%s'", from_path, to_path);
+  else
+    return SVN_NO_ERROR;  
+}
+
+
+svn_error_t *
+svn_io_dir_make (const char *path, apr_fileperms_t perm, apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  status = apr_dir_make (path, perm, pool);
+
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool,
+                              "can't create directory '%s'", path);
+  else
+    return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_io_dir_open (apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  status = apr_dir_open (new_dir, dirname, pool);
+
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool,
+                              "unable to open directory '%s'", dirname);
+  else
+    return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_io_dir_remove_nonrecursive (const char *dirname, apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  status = apr_dir_remove (dirname, pool);
+
+  if (status)
+    return svn_error_createf (status, 0, NULL, pool,
+                              "unable to remove directory '%s'", dirname);
+  else
+    return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_io_dir_read (apr_finfo_t *finfo,
+                 apr_int32_t wanted,
+                 apr_dir_t *thedir,
+                 apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  status = apr_dir_read (finfo, wanted, thedir);
+
+  if (status)
+    return svn_error_create (status, 0, NULL, pool,
+                             "error reading directory");
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_io_file_printf (apr_file_t *fptr, const char *format, ...)
+{
+  apr_status_t status;
+  va_list ap;
+  const char *buf;
+
+  va_start (ap, format);
+  buf = apr_pvsprintf (apr_file_pool_get (fptr), format, ap); 
+  va_end(ap);
+
+  status = apr_file_puts(buf, fptr);
+  if (status)
+    return svn_error_create (status, 0, NULL, apr_file_pool_get (fptr),
+                             "unable to print to file");
+  else
+    return SVN_NO_ERROR;
+}
+ 
+
+
 
 /* FIXME: Dirty, ugly, abominable, but works. Beauty comes second for now. */
 #include "svn_private_config.h"

@@ -53,18 +53,17 @@ svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
     {
       /* The dir doesn't exist, and it's our job to change that. */
 
-      apr_status_t apr_err =
-        apr_dir_make (path, APR_OS_DEFAULT, pool);
+      err = svn_io_dir_make (path, APR_OS_DEFAULT, pool);
 
-      if (apr_err && !APR_STATUS_IS_ENOENT(apr_err))
+      if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
         {
           /* Tried to create the dir, and encountered some problem
              other than non-existence of intermediate dirs.  We can't
              ensure the desired directory's existence, so just return
              the error. */ 
-          return svn_error_create (apr_err, 0, NULL, pool, path);
+          return err;
         }
-      else if (APR_STATUS_IS_ENOENT(apr_err))
+      else if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         /* (redundant conditional and comment) */
         {
           /* Okay, so the problem is a missing intermediate
@@ -89,8 +88,8 @@ svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
             }
         }
 
-      if (apr_err)
-        return svn_error_create (apr_err, 0, NULL, pool, path);
+      if (err)
+        return err;
     }
   else  /* No problem, the dir already existed, so just leave. */
     assert (kind == svn_node_dir);
