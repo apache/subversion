@@ -19,6 +19,7 @@
 /*** Includes. ***/
 
 #include <string.h>
+#include <assert.h>
 
 #include <apr_strings.h>
 #include <apr_getopt.h>
@@ -120,6 +121,18 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { NULL,         FALSE,  0, NULL, 0, NULL }
 };
 
+
+/* Some commands take an implicit "." string argument when invoked
+ * with no arguments. Those commands make use of this function to
+ * add "." to the target array if the user passes no args */
+void push_implicit_dot_target(apr_array_header_t *targets, apr_pool_t *pool)
+{
+  if (targets->nelts == 0) {
+    (*((svn_string_t **) apr_array_push (targets)))
+      = svn_string_create (".", pool);
+  }
+  assert(targets->nelts);
+}
 
 /* Return the entry in svn_cl__cmd_table whose name matches CMD_NAME,
  * or null if none.  CMD_NAME may be an alias, in which case the alias
@@ -397,24 +410,9 @@ main (int argc, const char * const *argv)
       (*((svn_string_t **) apr_array_push (targets)))
         = svn_string_create (this_arg, pool);
     }
-
-  /* Certain commands have an implied `.' as argument, if nothing else
-     is specified. */
-  if ((targets->nelts == 0) 
-      && (   (subcommand->cmd_code == svn_cl__commit_command)
-          || (subcommand->cmd_code == svn_cl__proplist_command)
-          || (subcommand->cmd_code == svn_cl__propget_command)
-          || (subcommand->cmd_code == svn_cl__status_command)
-          || (subcommand->cmd_code == svn_cl__update_command)))
-    {
-      (*((svn_string_t **) apr_array_push (targets)))
-        = svn_string_create (".", pool);
-    }
-  else
-    {
-      /* kff todo: need to remove redundancies from targets before
-         passing it to the cmd_func. */
-    }
+    
+  /* kff todo: need to remove redundancies from targets before
+     passing it to the cmd_func. */
 
   /* Run the subcommand. */
   err = (*subcommand->cmd_func) (&opt_state, targets, pool);

@@ -38,7 +38,11 @@ svn_cl__status (svn_cl__opt_state_t *opt_state,
   apr_hash_t *statushash;
   int i;
 
-  if (targets->nelts)
+  /* Add "." if user passed 0 arguments */
+  push_implicit_dot_target(targets, pool);
+
+  /* FIXME: reformat block to remove extra spaces */
+
     for (i = 0; i < targets->nelts; i++)
       {
         svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
@@ -54,14 +58,6 @@ svn_cl__status (svn_cl__opt_state_t *opt_state,
 
         svn_cl__print_status_list (statushash, pool);
       }
-  else
-    {
-      fprintf (stderr, "svn status: arguments required\n");
-      err = svn_cl__help (opt_state, targets, pool);
-      if (err)
-        return err;
-    }
-
 
   return SVN_NO_ERROR;
 }

@@ -134,6 +134,7 @@ svn_cl__cmd_proc_t
   svn_cl__diff,
   svn_cl__update;
 
+void push_implicit_dot_target(apr_array_header_t *targets, apr_pool_t *pool);
 
 
 /*** Command-line output functions -- printing to the user. ***/

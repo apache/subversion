@@ -37,7 +37,11 @@ svn_cl__proplist (svn_cl__opt_state_t *opt_state,
   svn_error_t *err;
   int i;
 
-  if (targets->nelts)
+  /* Add "." if user passed 0 arguments */
+  push_implicit_dot_target(targets, pool);
+
+  /* FIXME: reformat block to remove extra spaces */
+
     for (i = 0; i < targets->nelts; i++)
       {
         svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
@@ -49,13 +53,6 @@ svn_cl__proplist (svn_cl__opt_state_t *opt_state,
 
         svn_cl__print_prop_hash (prop_hash, pool);
       }
-  else
-    {
-      fprintf (stderr, "svn proplist: arguments required\n");
-      err = svn_cl__help (opt_state, targets, pool);
-      if (err)
-        return err;
-    }
 
   return SVN_NO_ERROR;
 }
