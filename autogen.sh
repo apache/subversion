@@ -21,7 +21,20 @@ automake --add-missing --verbose
 
 # Produce aclocal.m4, so autoconf gets the automake macros it needs
 echo "Creating aclocal.m4..."
+if [ -r aclocal.m4 ]; then
+  # save to the side in case it doesn't change
+  mv -f aclocal.m4 aclocal.m4.save
+fi
 aclocal -I ac-helpers
+if [ -r aclocal.m4.save ]; then
+  if cmp aclocal.m4 aclocal.m4.save 2>&1 > /dev/null; then
+    echo "aclocal.m4 did not change"
+    # this restores the timestamp
+    mv -f aclocal.m4.save aclocal.m4
+  else
+    rm aclocal.m4.save
+  fi
+fi
 
 # If there's a config.cache file, we may need to delete it.  
 # If we have an existing configure script, save a copy for comparison.
