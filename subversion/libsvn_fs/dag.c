@@ -160,6 +160,9 @@ find_dir_entry (dag_node_t *node, const char *name)
 static int
 node_is_kind_p (dag_node_t *node, const char *kindstr)
 {
+  /* ben todo: once dag_node_t no longer has a `contents' field, call
+     into node-rev.c to get the "fresh" content skel for our trail. */
+
   /* No gratutitous syntax (or null-value) checks in here, because
      we're assuming that lower layers have already scanned the content
      skel for validity. */
@@ -172,10 +175,7 @@ node_is_kind_p (dag_node_t *node, const char *kindstr)
      node kind. */
   skel_t *kind = header->children;
 
-  apr_size_t kindstr_len = strlen(kindstr);
-  
-  if ((kind->len == kindstr_len)
-      && (! memcmp (kind->data, kindstr, kindstr_len)))
+  if (svn_fs__matches_atom (kind, kindstr))  
     return TRUE;
   else
     return FALSE;
@@ -199,6 +199,9 @@ int svn_fs__dag_is_copy (dag_node_t *node)
 
 int svn_fs__dag_is_mutable (dag_node_t *node)
 {
+  /* ben todo: once dag_node_t no longer has a `contents' field, call
+     into node-rev.c to get the "fresh" content skel for our trail. */
+
   /* The node "header" is the first element of a node-revision skel,
      itself a list. */
   skel_t *header = node->contents->children;
@@ -226,6 +229,9 @@ svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
                                        dag_node_t *node,
                                        trail_t *trail)
 {
+  /* ben todo: once dag_node_t no longer has a `contents' field, call
+     into node-rev.c to get the "fresh" content skel for our trail. */
+
   /* The node "header" is the first element of a node-revision skel,
      itself a list. */
   skel_t *header = node->contents->children;
@@ -242,14 +248,73 @@ svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
 }
 
 
+/* Helper for svn_fs__dag_set_proplist */
+static svn_error_t *
+malformed_proplist_error (dag_node_t *node)
+{
+  svn_string_t *idstr = svn_fs_unparse_id (node->id, node->pool);
+  return 
+    svn_error_createf 
+    (SVN_ERR_FS_MALFORMED_SKEL, 0, NULL, node->pool,
+     "Attempted to commit *malformed* proplist on node-revision %s",
+     idstr->data);
+}
+
+
 svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
                                        skel_t *proplist,
                                        trail_t *trail)
 {
-  abort();
-  /* NOTREACHED */
-  return NULL;
+  skel_t *content_skel;
+
+  /* Sanity check: this node better be mutable! */
+  if (! svn_fs__dag_is_mutable (node))
+    {
+      svn_string_t *idstr = svn_fs_unparse_id (node->id, node->pool);
+      return 
+        svn_error_createf 
+        (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
+         "Can't set_proplist on *immutable* node-revision %s", idstr->data);
+    }
+
+  /* Well-formed tests:  make sure the incoming proplist is of the
+     form 
+               PROPLIST ::= (PROP ...) ;
+                   PROP ::= atom atom ;                     */
+  {
+    skel_t *this;
+    int len = svn_fs__list_length (proplist);
+
+    /* Does proplist contain an even number of elements? (If proplist
+       isn't a list in the first place, list_length will return -1,
+       which will still fail the test.) */
+    if (len % 2 != 0)
+      return malformed_proplist_error (node);
+    
+    /* Is each element an atom? */
+    for (this = proplist->children; this; this = this->next)
+      {
+        if (! this->is_atom)
+          return malformed_proplist_error (node);
+      }
+  }
+  
+  /* ben todo: once dag_node_t no longer has a `contents' field, call
+     into node-rev.c to get the "fresh" content skel for our trail. */
+  content_skel = node->contents;
+  
+  /* Insert the new proplist into the content_skel.  */
+  content_skel->children->children->next = proplist;
+  
+  /* Commit the new content_skel, within the given trail. */
+  SVN_ERR (svn_fs__put_node_revision (node->fs,
+                                      node->id,
+                                      content_skel,
+                                      trail));
+
+  return SVN_NO_ERROR;
 }
+
 
 svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
                                       dag_node_t *parent,
