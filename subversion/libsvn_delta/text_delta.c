@@ -72,6 +72,30 @@ struct svn_txdelta_stream_t {
 };
 
 
+/* Text delta applicator.  */
+
+struct svn_txdelta_applicator_t {
+  /* These are copied from parameters passed to
+     svn_txdelta_applicator_create.  */
+  svn_read_fn_t *source_fn;
+  void *source_baton;
+  svn_write_fn_t *target_fn;
+  void *target_baton;
+
+  /* Private data.  Between calls, SBUF contains the data from the
+   * last window's source view, as specified by SBUF_OFFSET and
+   * SBUF_LEN.  The contents of TBUF are not interesting between
+   * calls.  */
+  apr_pool_t *pool;             /* Pool to allocate data from */
+  char *sbuf;                   /* Source buffer */
+  apr_size_t sbuf_size;         /* Allocated source buffer space */
+  apr_off_t sbuf_offset;        /* Offset of SBUF data in source stream */
+  apr_size_t sbuf_len;          /* Length of SBUF data */
+  char *tbuf;                   /* Target buffer */
+  apr_size_t tbuf_size;         /* Allocated target buffer space */
+};
+
+
 
 /* Allocate a delta window. */
 
@@ -253,10 +277,37 @@ svn_txdelta_free_window (svn_txdelta_window_t *window)
 
 
 
-/* Reallocate a */
+svn_error_t *
+svn_txdelta_applicator_create (svn_txdelta_applicator_t **appl,
+                               svn_read_fn_t *source_fn,
+                               void *source_baton,
+                               svn_write_fn_t *target_fn,
+                               void *target_baton,
+                               apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create (pool, NULL);
+  assert (pool != NULL);
+
+  (*appl) = apr_palloc (subpool, sizeof (**appl));
+  (*appl)->source_fn = source_fn;
+  (*appl)->source_baton = source_baton;
+  (*appl)->target_fn = target_fn;
+  (*appl)->target_baton = target_baton;
+  (*appl)->pool = subpool;
+  (*appl)->sbuf = NULL;
+  (*appl)->sbuf_size = 0;
+  (*appl)->sbuf_offset = 0;
+  (*appl)->sbuf_len = 0;
+  (*appl)->tbuf = NULL;
+  (*appl)->tbuf_size = 0;
+  return SVN_NO_ERROR;
+}
+
+
+/* Ensure that BUF has enough space for VIEW_LEN bytes.  */
 static APR_INLINE void
 size_buffer (char **buf, apr_size_t *buf_size,
-             apr_off_t view_len, apr_pool_t *pool)
+             apr_size_t view_len, apr_pool_t *pool)
 {
   if (view_len > *buf_size)
     {
@@ -267,17 +318,18 @@ size_buffer (char **buf, apr_size_t *buf_size,
     }
 }
 
-/* Apply WINDOW to a source view SBUF to produce a target view TBUF.
- * SBUF is assumed to have window->sview_len bytes of data and TBUF is
- * assumed to have room for window->tview_len bytes of output.  This
- * is purely a memory operation; nothing can go wrong as long as we
- * have a valid window.  */
+
+/* Apply the instructions from WINDOW to a source view SBUF to produce
+ * a target view TBUF.  SBUF is assumed to have WINDOW->sview_len
+ * bytes of data and TBUF is assumed to have room for
+ * WINDOW->tview_len bytes of output.  This is purely a memory
+ * operation; nothing can go wrong as long as we have a valid window.  */
 
 static void
-apply_window (svn_txdelta_window_t *window, const char *sbuf, char *tbuf)
+apply_instructions (svn_txdelta_window_t *window, const char *sbuf, char *tbuf)
 {
   svn_txdelta_op_t *op;
-  apr_off_t i, tpos = 0;
+  apr_size_t i, tpos = 0;
 
   for (op = window->ops; op < window->ops + window->num_ops; op++)
     {
@@ -321,84 +373,76 @@ apply_window (svn_txdelta_window_t *window, const char *sbuf, char *tbuf)
 }
 
 
-/* Apply a text delta to an input stream.  */
-
+/* Apply WINDOW to the streams given by APPL.  */
 svn_error_t *
-svn_txdelta_apply (svn_txdelta_stream_t *delta,
-                   svn_read_fn_t *source_fn,
-                   void *source_baton,
-                   svn_write_fn_t *target_fn,
-                   void *target_baton)
+svn_txdelta_apply_window (svn_txdelta_window_t *window,
+                          svn_txdelta_applicator_t *appl)
 {
-  apr_pool_t *temp_pool = svn_pool_create (delta->pool, NULL);
-  char *sbuf = NULL, *tbuf = NULL;
-  apr_size_t sbuf_size = 0, tbuf_size = 0, len;
-  apr_off_t sbuf_offset = 0, sbuf_len = 0;
+  apr_size_t len;
   svn_error_t *err;
-  svn_txdelta_window_t *window = NULL, *oldwin;
 
-  while (1)
+  /* Make sure the source view didn't slide backwards.  */
+  assert (window->sview_offset >= appl->sbuf_offset
+          && (window->sview_offset + window->sview_len
+              >= appl->sbuf_offset + appl->sbuf_len));
+
+  /* Make sure there's enough room in the target buffer.  */
+  size_buffer (&appl->tbuf, &appl->tbuf_size, window->tview_len, appl->pool);
+
+  /* Prepare the source buffer for reading from the input stream.  */
+  if (window->sview_offset != appl->sbuf_offset
+      || window->sview_len > appl->sbuf_size)
     {
-      /* Get a new window.  */
-      oldwin = window;
-      err = svn_txdelta_next_window (&window, delta);
-      if (err != SVN_NO_ERROR || window == NULL)
-        break;
+      char *old_sbuf = appl->sbuf;
 
-      /* Make sure the source view didn't slide backwards.  */
-      assert (window->sview_offset >= sbuf_offset
-              && (window->sview_offset + window->sview_len
-                  >= sbuf_offset + sbuf_len));
+      /* Make sure there's enough room.  */
+      size_buffer (&appl->sbuf, &appl->sbuf_size, window->sview_len,
+                   appl->pool);
 
-      /* Make sure there's enough room in the target buffer.  */
-      size_buffer (&tbuf, &tbuf_size, window->tview_len, temp_pool);
-
-      /* Prepare the source buffer for reading from the input stream.  */
-      if (window->sview_offset != sbuf_offset || window->sview_len > sbuf_size)
+      /* If the existing view overlaps with the new view, copy the
+       * overlap to the beginning of the new buffer.  */
+      if (appl->sbuf_offset + appl->sbuf_len > window->sview_offset)
         {
-          char *old_sbuf = sbuf;
-
-          /* Make sure there's enough room.  */
-          size_buffer (&sbuf, &sbuf_size, window->sview_len, temp_pool);
-
-          /* If the existing view overlaps with the new view, copy the
-           * overlap to the beginning of the new buffer.  */
-          if (sbuf_offset + sbuf_len > window->sview_offset)
-            {
-              apr_size_t start = window->sview_offset - sbuf_offset;
-              memmove (sbuf, old_sbuf + start, sbuf_len - start);
-              sbuf_len -= start;
-            }
-          else
-            sbuf_len = 0;
-          sbuf_offset = window->sview_offset;
+          apr_size_t start = window->sview_offset - appl->sbuf_offset;
+          memmove (appl->sbuf, old_sbuf + start, appl->sbuf_len - start);
+          appl->sbuf_len -= start;
         }
-
-      /* Read the remainder of the source view into the buffer.  */
-      if (sbuf_len < window->sview_len)
-        {
-          len = window->sview_len - sbuf_len;
-          err = source_fn (source_baton, sbuf + sbuf_len, &len, temp_pool);
-          if (err == SVN_NO_ERROR && len != window->sview_len - sbuf_len)
-            err = svn_error_create (SVN_ERR_INCOMPLETE_DATA, 0,
-                                    NULL, delta->pool,
-                                    "Delta source ended unexpectedly");
-          sbuf_len = window->sview_len;
-        }
-
-      /* Apply the window instructions to the source view to generate
-         the target view.  */
-      apply_window (window, sbuf, tbuf);
-
-      /* Write out the output. */
-      len = window->tview_len;
-      err = target_fn (target_baton, tbuf, &len, temp_pool);
-      if (err != SVN_NO_ERROR)
-          break;
+      else
+        appl->sbuf_len = 0;
+      appl->sbuf_offset = window->sview_offset;
     }
 
-  apr_destroy_pool (temp_pool);
+  /* Read the remainder of the source view into the buffer.  */
+  if (appl->sbuf_len < window->sview_len)
+    {
+      len = window->sview_len - appl->sbuf_len;
+      err = appl->source_fn (appl->source_baton, appl->sbuf + appl->sbuf_len,
+                             &len, appl->pool);
+      if (err == SVN_NO_ERROR && len != window->sview_len - appl->sbuf_len)
+        err = svn_error_create (SVN_ERR_INCOMPLETE_DATA, 0,
+                                NULL, appl->pool,
+                                "Delta source ended unexpectedly");
+      if (err != SVN_NO_ERROR)
+        return err;
+      appl->sbuf_len = window->sview_len;
+    }
+
+  /* Apply the window instructions to the source view to generate
+     the target view.  */
+  apply_instructions (window, appl->sbuf, appl->tbuf);
+
+  /* Write out the output. */
+  len = window->tview_len;
+  err = appl->target_fn (appl->target_baton, appl->tbuf, &len, appl->pool);
   return err;
+}
+
+
+void
+svn_txdelta_applicator_free (svn_txdelta_applicator_t *appl)
+{
+  if (appl)
+    apr_destroy_pool (appl->pool);
 }
 
 
