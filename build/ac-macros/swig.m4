@@ -7,6 +7,29 @@ dnl python bindings.
 
 AC_DEFUN(SVN_CHECK_SWIG,
 [
+  AC_ARG_ENABLE(swig-bindings,
+                AC_HELP_STRING([--enable-swig-bindings=LIST],
+                               [Build swig bindings for LIST targets only. 
+                                LIST is a comma separated list of targets
+                                or 'all' for all available targets; currently
+                                (java,) perl and python are supported
+                                (default=all)]),
+  [
+    case "$enableval" in
+      "yes")
+         SWIG_BINDINGS_ENABLE(all)
+      ;;
+      "no")
+      ;;
+      *)
+         SWIG_BINDINGS_ENABLE($enableval)
+      ;;
+    esac
+  ],
+  [
+    SWIG_BINDINGS_ENABLE(all)
+  ])
+
   AC_ARG_WITH(swig,
               AC_HELP_STRING([--with-swig=PATH],
                              [Try to use 'PATH/bin/swig' to build the
@@ -28,6 +51,20 @@ AC_DEFUN(SVN_CHECK_SWIG,
   [
     SVN_FIND_SWIG(check)
   ])
+])
+
+AC_DEFUN(SWIG_BINDINGS_ENABLE,
+[
+  bindings=$1
+
+  if test "$bindings" = "all"; then
+    bindings="perl,python,java"
+  fi
+
+  for binding in `echo "$bindings" | sed -e "s/,/ /g"`; do
+    eval "svn_swig_bindings_enable_$binding='yes'"
+    AC_MSG_NOTICE([Enabled swig binding: $binding])
+  done
 ])
 
 AC_DEFUN(SVN_FIND_SWIG,
@@ -59,8 +96,8 @@ AC_DEFUN(SVN_FIND_SWIG,
           AC_MSG_WARN([swig bindings require 1.3.19.])
           ;;
     esac
-    if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes"; then
-      ### TODO: When it's ready, add the swig-java-lib rule here.
+    if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_python" = "yes"; then
+      AC_MSG_NOTICE("Configuring python swig binding")
       SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-py-lib"
       SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-py-lib"
 
@@ -99,7 +136,11 @@ AC_DEFUN(SVN_FIND_SWIG,
       SWIG_PY_LINK="$ac_cv_python_link"
     fi
 
-    if test "$JDK" != "none" -a "$SWIG_SUITABLE" = "yes"; then
+    if test "$JDK" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_java" = "yes"; then
+      ### TODO: enable when functional
+#      SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-java-lib"
+#      SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-java-lib"
+
       SWIG_JAVA_INCLUDES='-I$(JDK)/include'
       list="`find "$JDK/include" -type d -print`"
       for dir in $list; do
@@ -110,7 +151,10 @@ AC_DEFUN(SVN_FIND_SWIG,
       SWIG_JAVA_LINK="$SWIG_PY_LINK"
     fi
 
-    if test "$PERL" != "none" -a "$SWIG_SUITABLE" = "yes"; then
+    if test "$PERL" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_perl" = "yes"; then
+      ### TODO: enable when the target is implemented correctly
+#      SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-pl-lib"
+#      SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-pl-lib"
       SWIG_PL_INCLUDES="`$PERL -MExtUtils::Embed -e ccopts`"
       SWIG_PL_COMPILE="`$PERL -MConfig -e 'print $Config{cc}'` \$(SWIG_PL_INCLUDES)"
       SWIG_PL_LINK="`$PERL -MConfig -e 'print $Config{ld}'` `$PERL -MConfig -e 'print $Config{lddlflags}'` `$PERL -MExtUtils::Embed -e ldopts`"
