@@ -1,0 +1,299 @@
+
+HOW-TO:  svn repository upgrade procedure
+=========================================
+ $LastChangedDate$
+
+
+PROBLEM:
+
+In revision 2093 [June 5, 2002], the underlying schema for subversion
+repositories (libsvn_fs) was changed.  This means you can potentially
+see two different errors when accessing a repository:
+
+  1. if your client or server is r2093 or newer, you'll see this error
+     when trying to open an "old" repository:
+
+         Berkeley DB error while opening `copies' table
+
+  2. if your client or server is r2092 or younger, you'll see this
+     error when trying to open a "new" repository:
+
+         Malformed revision skeleton
+
+
+SOLUTION:
+
+Here's the procedure for upgrading your old repository to a new one.
+
+If your repository is very large, it may have quite a bit of
+"deltified" data in it; you might notice very slow checkout times on
+old revisions, and if so, you're probably a victim of inefficient
+undeltification.  In these cases, we recommend running 'svnadmin
+undeltify' on every Nth revision... it will drastically speed up the
+repository export/import later on.  If you plan to do this, we labeled
+relevant steps below as [OPTIONAL].
+
+
+1. Obtain a working copy of r2092.  (This can be done by passing
+   -r2092 to either 'svn update' or 'svn checkout'.)
+
+2. [OPTIONAL] Apply a patch to this tree, which fixes svnadmin's
+   ability to run the 'undeltify' command.  [patch is at the bottom of
+   this document].
+
+3. Build r2092 statically (pass --disable-shared to ./configure), and
+   then copy the large svnadmin-r2092 binary to a safe place.
+
+4. [OPTIONAL] Run 'svnadmin-r2092 undeltify' on every Nth revision in
+   your repository.  A perl script at the bottom of this document can
+   help with that.
+
+5. Update your working copy up to HEAD again.  ([OPTIONAL] Don't
+   forget to 'svn revert' the patch on svnadmin/main.c first!)
+   Re-build however you normally do.
+
+6. Create a brand new repository using the new fs schema:
+
+       svnadmin create newrepos
+
+7. Create a 'dump' of your repository using the older svnadmin binary
+   like so:
+
+       svnadmin-r2092 dump oldrepos > dumpfile
+
+   Then load the dumpfile into the new repository with the new
+   svnadmin binary.  This effectively replays all of your commits:
+
+       svnadmin load newrepos < dumpfile
+
+   OR, if you're feeling saucy, you can do it all at once:
+
+       svnadmin-r2092 dump oldrepos | svnadmin load newrepos
+
+
+Congratulations, you now have a newly upgraded repository.  For
+starters, 'svn log' actually traces back through copy/rename history
+now.  :-)
+
+
+----------------------------------------------------------------------
+
+PATCH to apply to r2092, to fix 'svnadmin undeltify':
+
+
+
+Index: ./subversion/svnadmin/main.c
+===================================================================
+--- ./subversion/svnadmin/main.c
++++ ./subversion/svnadmin/main.c	Thu Jun  6 12:02:25 2002
+@@ -102,6 +102,56 @@
+ }
+ 
+ 
++static svn_error_t *
++do_deltify_undeltify (svn_fs_root_t *root,
++                      const char *path,
++                      int is_deltify,
++                      apr_pool_t *pool)
++{
++  /* do the (un-)deltification */
++  printf ("%seltifying `%s'...", is_deltify ? "D" : "Und", path);
++  if (is_deltify)
++    SVN_ERR (svn_fs_deltify (root, path, 0, pool));
++  else
++    SVN_ERR (svn_fs_undeltify (root, path, 0, pool));
++  printf ("done.\n");
++  return SVN_NO_ERROR;
++}
++
++
++static svn_error_t *
++deltify_undeltify (svn_fs_root_t *root,
++                   const char *path,
++                   int is_deltify,
++                   apr_pool_t *pool)
++{
++  apr_hash_t *entries;
++  apr_pool_t *subpool;
++  apr_hash_index_t *hi;
++  int is_dir;
++
++  /* (Un)deltify PATH. */
++  SVN_ERR (do_deltify_undeltify (root, path, is_deltify, pool));
++
++  /* If PATH is not a directory, we're done. */
++  SVN_ERR (svn_fs_is_dir (&is_dir, root, path, pool));
++  if (! is_dir)
++    return SVN_NO_ERROR;
++
++  /* Else, read PATH's entries and recurse. */
++  subpool = svn_pool_create (pool);
++  SVN_ERR (svn_fs_dir_entries (&entries, root, path, pool));
++  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
++    {
++      const void *key;
++      apr_hash_this (hi, &key, NULL, NULL);
++      deltify_undeltify (root, svn_path_join (path, key, subpool),
++                         is_deltify, subpool);
++      svn_pool_clear (subpool);
++    }
++  svn_pool_destroy (subpool);
++  return SVN_NO_ERROR;
++}
+ 
+ 
+ /*** Argument parsing and usage. ***/
+@@ -577,7 +627,6 @@
+     case svnadmin_cmd_undeltify:
+       {
+         svn_revnum_t the_rev;
+-        int is_dir = 0;
+         svn_fs_root_t *rev_root;
+         const char *node;
+         int is_deltify = (command == svnadmin_cmd_deltify);
+@@ -599,22 +648,8 @@
+         /* open the revision root */
+         INT_ERR (svn_fs_revision_root (&rev_root, fs, the_rev, pool));
+ 
+-        /* see if PATH represents a directory (this doubles as an
+-           existence check!) */
+-        INT_ERR (svn_fs_is_dir (&is_dir, rev_root, node, pool));
+-
+         /* do the (un-)deltification */
+-        printf ("%seltifying `%s' in revision %" SVN_REVNUM_T_FMT "...", 
+-                is_deltify ? "D" : "Und", node, the_rev);
+-        if (is_deltify)
+-          {
+-            INT_ERR (svn_fs_deltify (rev_root, node, is_dir ? 1 : 0, pool));
+-          }
+-        else
+-          {
+-            INT_ERR (svn_fs_undeltify (rev_root, node, is_dir ? 1 : 0, pool));
+-          }
+-        printf ("done.\n");
++        INT_ERR (deltify_undeltify (rev_root, node, is_deltify, pool));
+       }
+       break;
+ 
+----------------------------------------------------------------------
+
+Perl script to undeltify every Nth revision in your repository.
+Run it like so:  ./undeltify.pl REPOS-PATH [START-REV:END_REV] [INCREMENT]
+
+
+
+#!/usr/bin/perl
+
+use strict;
+
+#############################################################################
+#  SETUP 
+
+my $svnadmin_cmd = '/home/cmpilato/bin/svnadmin-2092b';
+
+#
+#############################################################################
+
+sub do_usage
+{
+    print "ERROR: usage: $0 REPOS [START-REV:END-REV] [INCREMENT]]\n\n";
+    exit;
+}
+
+sub do_undeltify # ($repos, $start_rev, $end_rev, $increment)
+{
+    my $repos     = shift @_;
+    my $start_rev = shift @_;
+    my $end_rev   = shift @_;
+    my $increment = shift @_;
+    my $i = $start_rev;
+    while (1)
+    {
+        print "--- Undeltifying revision $i...";
+        `$svnadmin_cmd undeltify $repos $i /`;
+        print "done.\n";
+        if ($start_rev > $end_rev)
+        {
+            $i = $i - $increment;
+            last if ($i < $end_rev);
+        }
+        else
+        {
+            $i = $i + $increment;
+            last if ($i > $end_rev);
+        }
+    }
+}
+
+my $next_arg;
+my $repos;
+my $start_rev;
+my $end_rev;
+my $increment;
+my $youngest;
+
+# REPOS argument is required.
+$next_arg = shift @ARGV;
+if ($next_arg eq '')
+{
+    &do_usage();
+}
+
+# Use the REPOS argument to first figure out the youngest revision in
+# the repository.
+$repos = $next_arg;
+$youngest = `$svnadmin_cmd youngest $repos`;
+chomp $youngest;
+
+# Setup the default argument list, a backwards walk of all revisions
+# in the repository.
+$start_rev = $youngest - 1;
+$end_rev = 1;
+$increment = 1;
+
+# Parse the remaining arguments.
+$next_arg = shift @ARGV;
+if ($next_arg ne '')
+{
+    if ($next_arg =~ /^(\d+)\:(\d+)$/)
+    {
+        $start_rev = $1;
+        $end_rev = $2;
+        $next_arg = shift @ARGV;
+        if ($next_arg ne '')
+        {
+            if ($next_arg =~ /^\d+$/)
+            {
+                $increment = $next_arg;
+            }
+            else
+            {
+                &do_usage();
+            }
+        }
+    }
+    elsif ($next_arg =~ /^\d+$/)
+    {
+        $increment = $next_arg;
+    }
+    else
+    {
+        &do_usage();
+    }
+}
+
+# Validate the input.
+if (($start_rev > $youngest) 
+    or ($end_rev > $youngest)
+    or ($start_rev < 1)
+    or ($end_rev < 1))
+{
+    print "ERROR: You've specified an invalid revision.\n";
+    print "ERROR: Valid revisions are those between 1 and $youngest.\n\n";
+    exit;
+}
+
+print "Undeltifying `$repos', revs $start_rev - $end_rev (by $increment).\n";
+&do_undeltify ($repos, $start_rev, $end_rev, $increment);
+print "Finished.  Happy computing!\n\n";
+exit;
