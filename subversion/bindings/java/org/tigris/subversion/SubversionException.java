@@ -34,7 +34,7 @@ public class SubversionException extends Exception {
     private long line;
 
     /**
-     * Constructor.
+     * Creates a new instance.
      * @param message
      */
     public SubversionException(String message) {
@@ -42,14 +42,15 @@ public class SubversionException extends Exception {
     }
 
     /**
-     * Constructor.
+     * Creates a new instance.
      * @param message
      * @param cause
      * @param status
      * @param file
      * @param line
      */
-    public SubversionException(String message, Throwable cause, long status, String file, long line) {
+    public SubversionException(String message, Throwable cause, long status,
+                               String file, long line) {
         super(message);
         this.cause = cause;
         this.status = status;
@@ -72,30 +73,27 @@ public class SubversionException extends Exception {
     public String getMessage() {
         String msg = super.getMessage();
         if (getFile() != null) {
-            msg = getFile() + ":" + getLine() + "(" + getStatus() + ") " + msg;
+            msg = getFile() + ':' + getLine() + '(' + getStatus() + ") " + msg;
         }
         return msg;
     }
 
     /**
-     * Returns the source file where the error originated.
-     * @return String
+     * @return The source file where the error originated.
      */
     public String getFile() {
         return file;
     }
 
     /**
-     * Returns the source line where the error originated.
-     * @return long
+     * @return The source line where the error originated.
      */
     public long getLine() {
         return line;
     }
 
     /**
-     * Returns APR error value, possibly SVN_ custom err.
-     * @return long
+     * @return APR error value, possibly SVN_ custom err.
      */
     public long getStatus() {
         return status;
