@@ -2,31 +2,51 @@
 
 ### Show log messages matching a certain pattern.  Usage:
 ###
-###    search-svnlog.pl REGEXP
+###    search-svnlog.pl REGEXP [ -f LOGFILE ]
 ###
-### It will print only log messages matching REGEXP.
+### It will print only log messages matching REGEXP.  If -f LOGFILE is
+### passed, then instead of running "svn log", the log data will be
+### read from LOGFILE (which should be in the same format as the
+### output of "svn log").
 ### 
 ### Note:
 ### In the future, this may take pathnames and/or revision numbers as
-### arguments.  Then it will need to do real argument parsing, if
-### nothing else to separate the REGEXP from the other arguments.
+### arguments.  Then it will need to do real argument parsing.
 ### Personally, I'm not going to bother with that right now; it's
 ### useful enough as is.
 
 use strict;
 
 my $filter = shift || die ("Usage: $0 REGEXP\n");
+
+# ### Could do real option parsing here...
+my $dash_f = shift;
+my $logfile;
+if (defined ($dash_f) && ($dash_f eq "-f")) {
+  $logfile = shift;
+  die ("-f option needs argument") if (! $logfile);
+}
+elsif (defined ($dash_f)) {
+  die ("unknown option ${dash_f}");
+}
+    
+
 my $log_cmd = "svn log";
 
 my $log_separator =
   "------------------------------------------------------------------------\n";
 
-open (LOG_OUT, "$log_cmd |") or die ("Unable to run \"$log_cmd\".\n");
+if ($logfile) {
+  open (LOGDATA, "<$logfile") or die ("Unable to open \"$logfile\".\n");
+}
+else {
+  open (LOGDATA, "$log_cmd |") or die ("Unable to run \"$log_cmd\".\n");
+}
 
 my $this_entry_accum = "";
 my $this_rev = -1;
 my $this_lines = 0;
-while (<LOG_OUT>)
+while (<LOGDATA>)
 {
   if (/^rev ([0-9]+):  [^\|]+ \| [^\|]+ \| ([0-9]+) (line|lines)$/)
   {
