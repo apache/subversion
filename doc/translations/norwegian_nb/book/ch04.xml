@@ -1671,7 +1671,7 @@ $
           that an update produces files named
           <filename>filename.mine</filename>,
           <filename>filename.rOLDREV</filename>, and
-          <filename>filename.NEWREV</filename>.  When <command>svn
+          <filename>filename.rNEWREV</filename>.  When <command>svn
           merge</command> produces a conflict, though, it creates
           three files named <filename>filename.working</filename>,
           <filename>filename.left</filename>, and
@@ -1679,7 +1679,7 @@ $
           terms <quote>left</quote> and <quote>right</quote> are
           describing which side of the double-tree comparison the file
           came from.  In any case, these differing names will help you
-          distnguish between conflicts that happened as a result of an
+          distinguish between conflicts that happened as a result of an
           update versus ones that happened as a result of a
           merge.</para>
         @ENGLISH }}} -->
@@ -2821,7 +2821,7 @@ Committed revision 1390.
           when the 2.0 work is complete, a new 2.0 release branch is
           created, tested, tagged, and eventually released.  After
           some years, the repository ends up with a number of release
-          branches in <quote>maintenance</quote> mode , and a number
+          branches in <quote>maintenance</quote> mode, and a number
           of tags representing final shipped versions.</para>
         @ENGLISH }}} -->
         <para>Hele denne prosessen repeteres mens programvaren modnes:
@@ -2875,10 +2875,10 @@ Committed revision 1390.
           projects use branches to an extreme: no change is
           <emphasis>ever</emphasis> committed to the trunk directly.
           Even the most trivial changes are created on a short-lived
-          branch, carefully reviewed, then merged to the trunk and
-          deleted.  This system guarantees an exceptionally stable and
-          usable trunk at all times, but at the cost of tremendous
-          process overhead.</para>
+          branch, carefully reviewed and merged to the trunk.  Then
+          the branch is deleted.  This system guarantees an
+          exceptionally stable and usable trunk at all times, but at
+          the cost of tremendous process overhead.</para>
         @ENGLISH }}} -->
         <para>Igjen, prosjekt-policy varierer veldig n&#229;r det gjelder 
           n&#248;yaktig n&#229;r det passer &#229; opprette en funksjonalitetsgren.
@@ -2893,8 +2893,8 @@ Committed revision 1390.
           forandringer blir <emphasis>noen gang</emphasis> lagt direkte 
           inn p&#229; trunk.
           Til og med de enkleste forandringer blir laget p&#229; en gren med 
-          kort levetid, n&#248;ye kontrollert, deretter flettet til trunk og 
-          slettet.
+          kort levetid, n&#248;ye kontrollert og deretter flettet til trunk.  
+          S&#229; blir grenen slettet.
           Dette systemet garanterer en eksepsjonelt stabil og brukbar 
           trunk til enhver tid, men til en pris i form av mer arbeid i 
           prosessen.</para>
@@ -2957,7 +2957,7 @@ Committed revision 1390.
           described in <xref linkend="svn-ch-4-sect-3.2.1"/>).  You'll
           need to write careful log messages detailing exactly which
           revision ranges have been been merged already (as
-          demonstrated in <xref linkend="svn-ch-4-sect-4.1"/>.)  It
+          demonstrated in <xref linkend="svn-ch-4-sect-4.1"/>).  It
           may sound intimidating, but it's actually pretty easy to
           do.</para>
         @ENGLISH }}} -->
