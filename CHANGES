@@ -1,3 +1,40 @@
+Version 0.36.0 [Beta Interim 1] 
+(branching 13 January 2004, from /branches/1.0-stabilization)
+http://svn.collab.net/repos/svn/tags/0.36.0
+
+ User-visible changes:
+ * add cancellation suport to svnadmin and svnlook (r8222)
+ * runtime 'store-password' option renamed to 'store-auth-creds' (r8014)
+ * 'svn blame' changes:
+    - now shows correct revision info (r8035-6)
+    - responds to cancellation better (r8129)
+ * svnserve changes:
+    - added '--inetd' option;  now required to speak with stdin/stdout (r8205)
+    - added '--listen-port' and '--listen-host' options  (r8001-2)
+    - removed '-u' option (r8003)
+    - ignore SIGPIPE (no more repos lockups when you terminate a pipe) (r8140)
+ * lots of Book work (many newly-documented Apache and svnserve topics)
+
+ Developer-visible changes:
+ * bugfix: svnserve network crash (r8142)
+ * bugfix: return result_rev from svn_client_checkout correctly (r8096)
+ * bugfix: fs history harvesting code (r8154)
+ * bugfix: memory leak in mod_dav_svn (r8223)
+ * bugfixes in edge-cases of status and update (r8114-5)
+ * make 'svn blame' work with 18n and uri-escaped filenames (r8023, 8030, 8040)
+ * small bugfixes to authentication system (r8006, r8235)
+ * standardize error message formatting (r8218)
+ * load RA modules as foo.so.0, not foo.so  (r8098)
+ * various core API changes:
+    - use constructor for svn_client_cxt_t (r8053-4)
+    - anchor/target may use NULL for target (r8216)
+    - stop using apr_ symbols (r8219)
+    - rename to 'svn_repos_authz_func_t' (r8213)
+    - add pool parameter to finish_report and abort_report (r8215)
+ * numerous changes to Perl and Java bindings, to keep up with C API.
+
+
+
 Version 0.35.1 [Beta] (branching 19 December 2003, from /tags/0.35.0)
 http://svn.collab.net/repos/svn/tags/0.35.1
 
