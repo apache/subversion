@@ -108,6 +108,7 @@ struct authz_read_baton
 };
 
 
+#if 0   /* #if'd out only to avoid and 'unused function' warning for now. */
 /* This implements 'svn_repos_authz_read_func_t'. */
 static svn_error_t *authz_read(svn_boolean_t *allowed,
                                svn_fs_root_t *root,
@@ -176,6 +177,7 @@ static svn_error_t *authz_read(svn_boolean_t *allowed,
 
   return SVN_NO_ERROR;
 }
+#endif /* 0 */
 
 
 /* add PATH to the pathmap HASH with a repository path of LINKPATH.
