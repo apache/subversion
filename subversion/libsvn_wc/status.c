@@ -164,6 +164,13 @@ svn_wc_statuses (apr_hash_t *statushash,
   err = svn_io_check_path (path, &kind, pool);
   if (err) return err;
   
+  /* kff todo: this has to deal with the case of a type-changing edit,
+     i.e., someone removed a file under vc and replaced it with a dir,
+     or vice versa.  In such a case, when you ask for the status, you
+     should get mostly information about the now-vanished entity, plus
+     some information about what happened to it.  The same situation
+     is handled in entries.c:svn_wc_entry. */
+
   /* Read the appropriate entries file */
   
   /* If path points to only one file, return just one status structure
@@ -221,25 +228,22 @@ svn_wc_statuses (apr_hash_t *statushash,
                                       svn_path_local_style);
           entry = (svn_wc_entry_t *) val;
 
-          /* Recurse on the dirent, provided it's not "."  */
-          if (strcmp (basename, SVN_WC_ENTRY_THIS_DIR))
-            {
-              err = svn_wc_statuses (statushash, fullpath, pool);
-              if (err) return err;
-            }
+          err = svn_io_check_path (fullpath, &kind, pool);
+          if (err) return err;
+
+          if ((kind == svn_node_dir)
+              && (strcmp (basename, SVN_WC_ENTRY_THIS_DIR) != 0))
+            svn_wc_statuses (statushash, fullpath, pool);
           else
             {
-              /* This must be the "." dir;  store it instead of
-                 recursing. */
               err = add_status_structure (statushash, fullpath, entry, pool);
               if (err) return err;              
             }
-        }      
+        }
     }
   
   return SVN_NO_ERROR;
 }
-
 
 
 
