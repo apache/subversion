@@ -1,3 +1,13 @@
+Version 0.22.1 (released 9 May 2003, revision 5874, branches/release-0.22.1)
+
+ User-visible changes:
+ * fix shared library installation problem
+ * update cvs2svn.py script
+
+ Developer-visible changes:
+ * none
+
+
 Version 0.22.0 (released 7 May 2003, revision 5842, branches/release-0.22)
 
  User-visible changes:
