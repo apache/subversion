@@ -271,7 +271,7 @@ svn_fs__dag_check_mutable (svn_boolean_t *is_mutable,
 svn_error_t *
 svn_fs__dag_get_node (dag_node_t **node,
                       svn_fs_t *fs,
-                      svn_fs_id_t *id,
+                      const svn_fs_id_t *id,
                       trail_t *trail)
 {
   dag_node_t *new_node;
@@ -528,7 +528,7 @@ make_entry (dag_node_t **child_p,
             svn_boolean_t is_dir,
             trail_t *trail)
 {
-  svn_fs_id_t *new_node_id;
+  const svn_fs_id_t *new_node_id;
   svn_fs__node_revision_t new_noderev;
   svn_boolean_t is_mutable;
 
@@ -717,7 +717,7 @@ svn_fs__dag_revision_root (dag_node_t **node_p,
                            svn_revnum_t rev,
                            trail_t *trail)
 {
-  svn_fs_id_t *root_id;
+  const svn_fs_id_t *root_id;
 
   SVN_ERR (svn_fs__rev_get_root (&root_id, fs, rev, trail));
   return svn_fs__dag_get_node (node_p, fs, root_id, trail);
@@ -730,7 +730,7 @@ svn_fs__dag_txn_root (dag_node_t **node_p,
                       const char *txn,
                       trail_t *trail)
 {
-  svn_fs_id_t *root_id, *ignored;
+  const svn_fs_id_t *root_id, *ignored;
   
   SVN_ERR (svn_fs__get_txn_ids (&root_id, &ignored, fs, txn, trail));
   return svn_fs__dag_get_node (node_p, fs, root_id, trail);
@@ -743,7 +743,7 @@ svn_fs__dag_txn_base_root (dag_node_t **node_p,
                            const char *txn,
                            trail_t *trail)
 {
-  svn_fs_id_t *base_root_id, *ignored;
+  const svn_fs_id_t *base_root_id, *ignored;
   
   SVN_ERR (svn_fs__get_txn_ids (&ignored, &base_root_id, fs, txn, trail));
   return svn_fs__dag_get_node (node_p, fs, base_root_id, trail);
@@ -757,7 +757,7 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
                          trail_t *trail)
 {
   dag_node_t *cur_entry; /* parent's current entry named NAME */
-  svn_fs_id_t *new_node_id; /* node id we'll put into NEW_NODE */
+  const svn_fs_id_t *new_node_id; /* node id we'll put into NEW_NODE */
   svn_boolean_t is_mutable;
   svn_fs_t *fs = svn_fs__dag_get_fs (parent);
 
@@ -816,7 +816,7 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
                         const char *svn_txn,
                         trail_t *trail)
 {
-  svn_fs_id_t *base_root_id, *root_id;
+  const svn_fs_id_t *base_root_id, *root_id;
   svn_fs__node_revision_t *noderev;
   
   /* Get the node ID's of the root directories of the transaction and
@@ -1009,7 +1009,7 @@ svn_fs__dag_delete_tree (dag_node_t *parent,
 
 svn_error_t *
 svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
-                               svn_fs_id_t *id,
+                               const svn_fs_id_t *id,
                                trail_t *trail)
 {
   svn_boolean_t is_mutable;
@@ -1388,8 +1388,7 @@ svn_fs__dag_copy (dag_node_t *to_node,
          copy of it.  Since for copies, all the ancestry information
          we care about is recorded in the copy options, there is no
          reason to make the id's be related.  */
-      SVN_ERR (svn_fs__create_node ((svn_fs_id_t **) &id,
-                                    to_node->fs, to_noderev, trail));
+      SVN_ERR (svn_fs__create_node (&id, to_node->fs, to_noderev, trail));
     }
   else  /* don't preserve history */
     {
