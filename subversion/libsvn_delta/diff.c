@@ -190,7 +190,7 @@ svn_diff__lcs_reverse(svn_diff__lcs_t *lcs)
 
 
 /*
- * Get all tokens from a datasource.  Return a the
+ * Get all tokens from a datasource.  Return the
  * last item in the (circular) list.
  */
 static
