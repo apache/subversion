@@ -2,7 +2,8 @@
                                 DAV SETUP
                                 =========
                                    or, 
-   how Subversion developers can set up Apache/mod_dav/mod_dav_svn locally.
+   how Subversion developers can create a Subversion server on UNIX,
+               by setting up Apache/mod_dav/mod_dav_svn.
 
 
 1.  Checkout the "httpd-2.0" cvs module from apache.org.  Put it
@@ -19,10 +20,11 @@
       cvs -d :pserver:anoncvs@apache.org:/home/cvspublic co apr
       cvs -d :pserver:anoncvs@apache.org:/home/cvspublic co apr-util
 
-3.  At the top of the httpd-2.0 tree, run "buildconf".
+3.  At the top of the httpd-2.0 tree:
 
-4.  ./configure --enable-dav --enable-so --prefix=/usr/local/apache2 \
-		--with-mpm=prefork
+   ./buildconf
+   ./configure --enable-dav --enable-so --prefix=/usr/local/apache2 \
+	       --with-mpm=prefork
 
      The first arg says to build mod_dav.
      The second arg says to enable (and build everything) as shared libs.
@@ -45,9 +47,9 @@
      under /usr/local/apache2/; substitute appropriately if you chose
      some other location.
 
-5.  make && make clean && make depend && make install
+4.  make depend && make clean && make && make install
 
-6.  Go back into your subversion working copy and run ./autogen.sh if
+5.  Go back into your subversion working copy and run ./autogen.sh if
     you need to.  Then run
  
       ./configure --with-apxs=/usr/local/apache2/bin/apxs
@@ -56,20 +58,24 @@
     find the required information to do so.
 
     Note: do *not* configure subversion with "--disable-shared"!
-    mod_dav_svn *must* be built as a shared library.
+    mod_dav_svn *must* be built as a shared library, and it will look
+    for other libsvn_*.so libraries on your system.
 
     Note: it *is* possible to build mod_dav_svn as a static library
     and link it directly into Apache. Possible, but painful. Stick
     with the shared library for now; if you can't, then ask.
 
+6. rm /usr/local/lib/libsvn*
+
+   If you have old subversion libraries sitting on your system,
+   libtool will link them instead of the `fresh' ones in your tree.
+   Remove them before building subversion.
+
 7. make clean && make && make install
 
-   To be extra safe, you may want to `rm /usr/local/lib/libsvn*'
-   before making Subversion, to avoid accidentally linking in any
-   shared libraries leftover from a previous install of Subversion.
-
    After the make install, the Subversion shared libraries are in
-   /usr/local/lib/.
+   /usr/local/lib/.  libmod_dav_svn.so should be installed in
+   /usr/local/apache2/modules/.
 
 8.  Add this to the *bottom* of /usr/local/apache2/conf/httpd.conf:
 
@@ -94,5 +100,8 @@
           svn co http://localhost/svn/repos -d wc
 
     The most common reason this might fail is permission problems
-    reading the repository.  If the checkout fails, chmod 777 and try
-    again. :-)
+    reading the repository db files.  If the checkout fails, chmod 777
+    and try again.
+
+    You can see all of mod_dav_svn's complaints in the Apache logfile.
+    Look in /usr/local/apache2/logs/error_log.
