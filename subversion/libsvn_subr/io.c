@@ -41,6 +41,38 @@
 #include "svn_config.h"
 
 
+/*
+  Windows is 'aided' by a number of types of applications that
+  follow other applications around and open up files they have
+  changed for various reasons (the most intrusive are virus
+  scanners).  So, if one of these other apps has glommed onto
+  our file we may get an 'access denied' error.
+
+  This retry loop does not completely solve the problem (who
+  knows how long the other app is going to hold onto it for), but
+  goes a long way towards minimizing it.  It is not an infinite
+  loop because there might really be an error.
+*/
+#ifdef WIN32
+#define WIN32_RETRY_LOOP(err, expr)                                        \
+  {                                                                        \
+    int retries = 0;                                                       \
+    int sleep_count = 1000;                                                \
+                                                                           \
+    for ( retries = 0;                                                     \
+          APR_TO_OS_ERROR (err) == ERROR_ACCESS_DENIED && retries < 100;   \
+          ++retries )                                                      \
+    {                                                                      \
+      apr_sleep (sleep_count);                                             \
+      if (sleep_count < 128000)                                            \
+        sleep_count *= 2;                                                  \
+      err = expr;                                                          \
+    }                                                                      \
+  }
+#else
+#define WIN32_RETRY_LOOP(err, expr)
+#endif
+
 /* Helper for svn_io_check_path() and svn_io_check_resolved_path();
    essentially the same semantics as those two, with the obvious
    interpretation for RESOLVE_SYMLINKS. */
@@ -998,35 +1030,7 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
   SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
 
   apr_err = apr_file_remove (path_apr, pool);
-
-#ifdef WIN32
-  /*
-    Windows is 'aided' by a number of types of applications that
-    follow other applications around and open up files they have
-    changed for various reasons (the most intrusive are virus
-    scanners).  So, if one of these other apps has glommed onto
-    our file we may get an 'access denied' error.
-    
-    This retry loop does not completely solve the problem (who
-    knows how long the other app is going to hold onto it for), but
-    goes a long way towards minimizing it.  It is not an infinite
-    loop because there might really be an error.
-  */
-  {
-    int retries = 0;
-    int sleep_count = 1000;
-
-    for ( retries = 0;
-          APR_TO_OS_ERROR (apr_err) == ERROR_ACCESS_DENIED && retries < 100;
-          ++retries )
-    {
-      apr_sleep (sleep_count);
-      if (sleep_count < 128000)
-        sleep_count *= 2;
-      apr_err = apr_file_remove (path_apr, pool);
-    }
-  }
-#endif /* WIN32 */
+  WIN32_RETRY_LOOP (apr_err, apr_file_remove (path_apr, pool));
 
   if (apr_err)
     return svn_error_wrap_apr (apr_err, "Can't remove file '%s'", path);
@@ -1109,6 +1113,7 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
     return svn_error_wrap_apr (status, "Error closing directory '%s'", path);
 
   status = apr_dir_remove (path_apr, subpool);
+  WIN32_RETRY_LOOP (status, apr_dir_remove (path_apr, subpool));
   if (status)
     return svn_error_wrap_apr (status, "Can't remove '%s'", path);
 
@@ -1746,35 +1751,8 @@ svn_io_file_rename (const char *from_path, const char *to_path,
   SVN_ERR (svn_path_cstring_from_utf8 (&to_path_apr, to_path, pool));
 
   status = apr_file_rename (from_path_apr, to_path_apr, pool);
-
-#ifdef WIN32
-  /*
-    Windows is 'aided' by a number of types of applications that
-    follow other applications around and open up files they have
-    changed for various reasons (the most intrusive are virus
-    scanners).  So, if one of these other apps has glommed onto
-    our file we may get an 'access denied' error.
-    
-    This retry loop does not completely solve the problem (who
-    knows how long the other app is going to hold onto it for), but
-    goes a long way towards minimizing it.  It is not an infinite
-    loop because there might really be an error.
-  */
-  {
-    int retries = 0;
-    int sleep_count = 1000;
-
-    for ( retries = 0;
-          APR_TO_OS_ERROR (status) == ERROR_ACCESS_DENIED && retries < 100;
-          ++retries )
-    {
-      apr_sleep (sleep_count);
-      if (sleep_count < 128000)
-        sleep_count *= 2;
-      status = apr_file_rename (from_path_apr, to_path_apr, pool);
-    }
-  }
-#endif /* WIN32 */
+  WIN32_RETRY_LOOP (status,
+                    apr_file_rename (from_path_apr, to_path_apr, pool));
 
   if (status)
     return svn_error_wrap_apr (status, "Can't move '%s' to '%s'",
@@ -1859,6 +1837,7 @@ svn_io_dir_remove_nonrecursive (const char *dirname, apr_pool_t *pool)
   SVN_ERR (svn_path_cstring_from_utf8 (&dirname_apr, dirname, pool));
 
   status = apr_dir_remove (dirname_apr, pool);
+  WIN32_RETRY_LOOP (status, apr_dir_remove (dirname_apr, pool));
   if (status)
     return svn_error_wrap_apr (status, "Can't remove directory '%s'", dirname);
 
