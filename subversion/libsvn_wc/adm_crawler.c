@@ -893,6 +893,7 @@ crawl_dir (svn_stringbuf_t *path,
            void *rev_baton,
            svn_revnum_t *youngest_rev,
            svn_boolean_t adds_only,
+           svn_boolean_t copy_mode,
            struct stack_object **stack,
            apr_hash_t *affected_targets,
            apr_hash_t *locks,
@@ -984,6 +985,9 @@ MAIN LOGIC:
    If ADDS_ONLY is set, this function will only pay attention to files
    and directories scheduled for addition.
 
+   If COPY_MODE is set, this function will behave as though the entry
+   is marked with the "copied" flag.
+
    Perform all temporary allocation in STACK->pool, and any allocation
    that must outlive the reporting process in TOP_POOL. 
 
@@ -1002,6 +1006,7 @@ report_single_mod (const char *name,
                    svn_revnum_t *youngest_rev,
                    void **dir_baton,
                    svn_boolean_t adds_only,
+                   svn_boolean_t copy_mode,
                    apr_pool_t *top_pool)
 {
   svn_stringbuf_t *full_path;
@@ -1058,7 +1063,7 @@ report_single_mod (const char *name,
      for addition or deletion, we -might- need to do an
      add-with-history if it has a different working rev than its
      parent. */
-  if ((entry->copied)
+  if ((entry->copied || copy_mode)
       && (entry->schedule == svn_wc_schedule_normal)
       && (entry->revision != (*stack)->this_dir->revision))
     {
@@ -1312,6 +1317,7 @@ report_single_mod (const char *name,
                           rev_baton,
                           youngest_rev,
                           copyfrom_url ? FALSE : adds_only,
+                          copy_mode,
                           stack,
                           affected_targets, 
                           locks, 
@@ -1345,6 +1351,9 @@ report_single_mod (const char *name,
    proceeds.  When this function returns, the top of stack will be
    exactly where it was.
 
+   ADDS_ONLY and COPY_MODE are simply passed through this function to
+   report_single_mod().
+
    Temporary: use REVNUM_FN/REV_BATON/YOUNGEST_REV to determine if a
    dir is up-to-date when it has a propchange. */
 static svn_error_t *
@@ -1356,6 +1365,7 @@ crawl_dir (svn_stringbuf_t *path,
            void *rev_baton,
            svn_revnum_t *youngest_rev,
            svn_boolean_t adds_only,
+           svn_boolean_t copy_mode,
            struct stack_object **stack,
            apr_hash_t *affected_targets,
            apr_hash_t *locks,
@@ -1480,6 +1490,7 @@ crawl_dir (svn_stringbuf_t *path,
                                   youngest_rev,
                                   &dir_baton,
                                   adds_only,
+                                  copy_mode,
                                   top_pool));
       
     }
@@ -1555,6 +1566,7 @@ crawl_local_mods (svn_stringbuf_t *parent_dir,
                        revnum_fn,
                        rev_baton,
                        &youngest_rev,
+                       FALSE,
                        FALSE,
                        &stack, 
                        affected_targets, 
@@ -1708,6 +1720,7 @@ crawl_local_mods (svn_stringbuf_t *parent_dir,
                                        rev_baton,
                                        &youngest_rev,
                                        &dir_baton,
+                                       FALSE,
                                        FALSE,
                                        pool);
               
@@ -2051,6 +2064,175 @@ report_revisions (svn_stringbuf_t *wc_path,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+merge_commit_errors (svn_error_t *commit_err, svn_error_t *cleanup_err)
+{
+  /* Now deal with the errors that may have occurred. */
+  if (commit_err && cleanup_err)
+    {
+      svn_error_t *scan;
+
+      /* This is tricky... wrap the two errors and concatenate them. */
+      commit_err = svn_error_quick_wrap 
+        (commit_err, "---- commit error follows:");
+      
+      cleanup_err = svn_error_quick_wrap
+        (cleanup_err, "commit failed (see below), and commit cleanup failed:");
+
+      /* Hook the commit error to the end of the unlock error. */
+      for (scan = cleanup_err; scan->child != NULL; scan = scan->child)
+        continue;
+      scan->child = commit_err;
+
+      /* Return the unlock error; the commit error is at the end. */
+      return cleanup_err;
+    }
+
+  if (commit_err)
+    return svn_error_quick_wrap 
+      (commit_err, "commit failed: wc locks and tmpfiles have been removed.");
+
+  if (cleanup_err)
+    return svn_error_quick_wrap
+      (cleanup_err, "commit succeeded, but cleanup failed");
+  
+  return SVN_NO_ERROR;
+}
+
+
+/* Perform a commit crawl of a single working copy path (which is a
+   PARENT directory plus a NAME'd entry in that directory) as if that
+   path was scheduled to be added to the repository as a copy of
+   PARENT+NAME's URL (with a new name of COPY_NAME).
+
+   Use EDITOR/EDIT_BATON to accomplish this task, tracking all
+   committed things in the AFFECTED_TARGETS hash, and all locked
+   directories in the LOCKS hash.
+
+   Use POOL for all necessary allocations.
+ */
+static svn_error_t *
+crawl_as_copy (svn_stringbuf_t *parent,
+               svn_stringbuf_t *name,
+               svn_stringbuf_t *copy_name,
+               const svn_delta_edit_fns_t *editor,
+               void *edit_baton,
+               apr_hash_t *affected_targets,
+               apr_hash_t *locks,
+               apr_pool_t *pool)
+{
+  struct stack_object *stack = NULL;
+  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
+  void *dir_baton = NULL, *root_baton = NULL;
+  svn_wc_entry_t *entry = NULL, *p_entry = NULL;
+  svn_stringbuf_t *fullpath = svn_stringbuf_dup (parent, pool);
+  svn_error_t *err;
+
+  /* Assemble the full path of the commit target. */
+  svn_path_add_component (fullpath, name, svn_path_local_style);
+
+  /* Get the entry for the parent of the commit target.  This needs to
+     have a valid URL so we will know where to copy from. */
+  SVN_ERR (svn_wc_entry (&p_entry, parent, pool));
+  if (! p_entry)
+    return svn_error_create 
+      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool, parent->data);
+  if (! p_entry->url)
+    return svn_error_create 
+      (SVN_ERR_WC_ENTRY_MISSING_URL, 0, NULL, pool, parent->data);
+
+  /* Get the entry for the commit target. */
+  SVN_ERR (svn_wc_entry (&entry, fullpath, pool));
+  if (! entry)
+    return svn_error_create 
+      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool, parent->data);
+
+  /* Get the root baton. */
+  SVN_ERR (editor->open_root (edit_baton, p_entry->revision, &root_baton));
+
+  /* Make our entry look like it's slated to be copied. */
+  {
+    svn_stringbuf_t *revstr = 
+      svn_stringbuf_createf (pool, "%ld", p_entry->revision);
+    
+    apr_hash_set (p_entry->attributes, SVN_WC_ENTRY_ATTR_COPYFROM_URL,
+                  APR_HASH_KEY_STRING, p_entry->url);
+    apr_hash_set (p_entry->attributes, SVN_WC_ENTRY_ATTR_COPYFROM_REV,
+                  APR_HASH_KEY_STRING, revstr);
+  }
+
+  /* Push the anchor's stackframe onto the stack. */
+  push_stack (&stack, parent, root_baton, p_entry, pool);
+  
+  if (entry->kind == svn_node_file)
+    {
+      void *file_baton;
+      struct target_baton *tb = apr_pcalloc (pool, sizeof (*tb));
+
+      /* Add our target with copyfrom history. */
+      SVN_ERR (editor->add_file (copy_name,
+                                 root_baton, 
+                                 entry->url,
+                                 entry->revision, 
+                                 &file_baton));
+
+      /* Populate our target baton, and shove it into the
+         AFFECTED_TARGETS hash. */
+      tb->entry = entry;
+      tb->editor_baton = file_baton;
+      SVN_ERR (svn_wc_text_modified_p (&(tb->text_modified_p), 
+                                       fullpath, pool));
+      apr_hash_set (affected_targets, fullpath->data, fullpath->len, tb);
+    }
+  else if (entry->kind == svn_node_dir)
+    {
+      /* Add our target with copyfrom history. */
+      SVN_ERR (editor->add_directory (copy_name,
+                                      root_baton, 
+                                      entry->url,
+                                      entry->revision, 
+                                      &dir_baton));
+
+      /* Crawl this directory in "copy mode".  This will push the
+         stackframe with dir_baton, do some work, then close the
+         directory and pop the stackframe for us. */
+      SVN_ERR (crawl_dir (parent, dir_baton, editor, edit_baton,
+                          NULL, NULL, &youngest_rev, FALSE, 
+                          TRUE /* copy mode! */, &stack,
+                          affected_targets, locks, pool));
+    }
+  else
+    return svn_error_create 
+      (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool, fullpath->data);
+
+  /* All crawls are completed, so affected_targets potentially has
+     some still-open file batons. Loop through affected_targets, and
+     fire off any postfix text-deltas that need to be sent. */
+  err = do_postfix_text_deltas (affected_targets, editor, pool);
+  if (err)
+    return svn_error_quick_wrap 
+      (err, "commit failed:  while sending postfix text-deltas.");
+
+  /* Close the root directory. */
+  err = editor->close_directory (root_baton);
+  pop_stack (&stack);
+
+  /* Close the edit. */
+  err = editor->close_edit (edit_baton);
+  if (err)
+    /* Commit failure, though not *necessarily* from the
+       repository.  close_edit() does a LOT of things, including
+       bumping all working copy revision numbers.  Again, see
+       earlier comment.
+       
+       The interesting thing here is that the commit might have
+       succeeded in the repository, but the WC lib returned a
+       revision-bumping or wcprop error. */
+    return svn_error_quick_wrap
+      (err, "commit failed: while calling close_edit()");
+
+  return SVN_NO_ERROR;
+}
 
 
 
@@ -2130,35 +2312,8 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
   /* Cleanup after the commit. */
   err2 = cleanup_commit (locked_dirs, affected_targets, pool);
 
-  /* Now deal with the errors that may have occurred. */
-  if (err && err2)
-    {
-      svn_error_t *scan;
-
-      /* This is tricky... wrap the two errors and concatenate them. */
-      err = svn_error_quick_wrap (err, "---- commit error follows:");
-      
-      err2 = svn_error_quick_wrap
-        (err2, "commit failed (see below), and commit cleanup failed:");
-
-      /* Hook the commit error to the end of the unlock error. */
-      for (scan = err2; scan->child != NULL; scan = scan->child)
-        continue;
-      scan->child = err;
-
-      /* Return the unlock error; the commit error is at the end. */
-      return err2;
-    }
-
-  if (err)
-    return svn_error_quick_wrap 
-      (err, "commit failed: wc locks and tmpfiles have been removed.");
-
-  if (err2)
-    return svn_error_quick_wrap
-      (err2, "commit succeeded, but cleanup failed");
-
-  return SVN_NO_ERROR;
+  /* Return the merged commit errors. */
+  return merge_commit_errors (err, err2);
 }
 
 
@@ -2305,28 +2460,30 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
 }
 
 
+svn_error_t *
+svn_wc_crawl_as_copy (svn_stringbuf_t *parent,
+                      svn_stringbuf_t *name,
+                      svn_stringbuf_t *copy_name,
+                      const svn_delta_edit_fns_t *editor,
+                      void *edit_baton,
+                      apr_pool_t *pool)
+{
+  apr_hash_t *affected_targets = apr_hash_make (pool);
+  apr_hash_t *locks = apr_hash_make (pool);
+  svn_error_t *err, *err2;
+
+  /* Do the actual work of this commit. */
+  err = crawl_as_copy (parent, name, copy_name, editor, edit_baton,
+                       affected_targets, locks, pool);
+
+  /* Cleanup after the commit. */
+  err2 = cleanup_commit (locks, affected_targets, pool);
+
+  /* Return the merged commit errors. */
+  return merge_commit_errors (err, err2);
+}
 
 
-
-/* 
-
-   Status of multi-arg commits:
-   
-   TODO:
-
-   * the "path analysis" phase needs to happen at a high level in the
-   client, along with the alphabetization.  Specifically, when the
-   client must open an RA session to the *grandparent* dir of all
-   commit targets, and use that ra session to fetch the commit
-   editor.  It then needs to pass the canonicalized paths to
-   crawl_local_mods.
-
-   * must write some python tests for multi-args.
-
-   * secret worry:  do all the new path routines work -- both Kevin
-   P-B's as well as my own?
- 
- */
 
 
 /* 

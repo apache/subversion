@@ -41,10 +41,12 @@ svn_cl__copy (apr_getopt_t *os,
 {
   apr_array_header_t *targets;
   svn_stringbuf_t *src_path, *dst_path;
+  svn_string_t path_str;
   svn_client_auth_baton_t *auth_baton = NULL;
   svn_stringbuf_t *message = NULL;
   const svn_delta_edit_fns_t *trace_editor;
   void *trace_edit_baton;
+  svn_boolean_t src_is_url, dst_is_url;
 
   targets = svn_cl__args_to_target_array (os, pool);
 
@@ -65,11 +67,33 @@ svn_cl__copy (apr_getopt_t *os,
 
   src_path = ((svn_stringbuf_t **) (targets->elts))[0];
   dst_path = ((svn_stringbuf_t **) (targets->elts))[1];
-  
-  SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,
-                                            &trace_edit_baton,
-                                            dst_path,
-                                            pool));
+
+  /* Figure out which type of trace editor to use. */
+  path_str.data = src_path->data;
+  path_str.len = src_path->len;
+  src_is_url = svn_path_is_url (&path_str);
+  path_str.data = dst_path->data;
+  path_str.len = dst_path->len;
+  dst_is_url = svn_path_is_url (&path_str);
+
+  if ((! src_is_url) && (! dst_is_url))
+    /* WC->WC : No trace editor needed. */
+    ;
+  else if ((! src_is_url) && (dst_is_url))
+    /* WC->URL : Use commit trace editor. */
+    SVN_ERR (svn_cl__get_trace_commit_editor (&trace_editor,
+                                              &trace_edit_baton,
+                                              dst_path,
+                                              pool));
+  else if ((src_is_url) && (! dst_is_url))
+    /* URL->WC : Use checkout trace editor. */
+    SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,
+                                              &trace_edit_baton,
+                                              dst_path,
+                                              pool));
+  else
+    /* URL->URL : No trace editor needed. */
+    ;
 
   SVN_ERR (svn_client_copy 
            (src_path, opt_state->start_revision, dst_path, auth_baton, 

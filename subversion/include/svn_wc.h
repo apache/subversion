@@ -518,6 +518,21 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
                          apr_pool_t *pool);
 
 
+/* Perform a commit crawl of a single working copy path (which is a
+   PARENT directory plus a NAME'd entry in that directory) as if that
+   path was scheduled to be added to the repository as a copy of
+   PARENT+NAME's URL (with a new name of COPY_NAME).
+
+   Use EDITOR/EDIT_BATON to accomplish this task, and POOL for all
+   necessary allocations.  */
+svn_error_t *
+svn_wc_crawl_as_copy (svn_stringbuf_t *parent,
+                      svn_stringbuf_t *name,
+                      svn_stringbuf_t *copy_name,
+                      const svn_delta_edit_fns_t *editor,
+                      void *edit_baton,
+                      apr_pool_t *pool);
+
 /* Do a depth-first crawl in a working copy, beginning at PATH.
    Communicate the `state' of the working copy's revisions to
    REPORTER/REPORT_BATON.  Obviously, if PATH is a file instead of a

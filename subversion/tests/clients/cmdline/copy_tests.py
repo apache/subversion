@@ -75,21 +75,41 @@ path_index = svntest.actions.path_index
 
 
 # TESTS THAT NEED TO BE WRITTEN
-
-#  Use Case A
-
+#
+#  Use Cases A & C
+#
 #   -- single files, with/without local mods, as both 'cp' and 'mv'.
 #        (need to verify commit worked by updating a 2nd working copy
 #        to see the local mods)
-
+#
 #   -- dir copy, has mixed revisions
-
+#
 #   -- dir copy, has local mods (an edit, an add, a delete, and a replace)
-
+#
 #   -- dir copy, has mixed revisions AND local mods
-
+#
 #   -- dir copy, has mixed revisions AND another previously-made copy!
 #      (perhaps done as two nested 'mv' commands!)
+#
+#  Use Case D
+#
+
+#   By the time the copy setup algorithm is complete, the copy
+#   operation will have four parts: SRC-DIR, SRC-BASENAME, DST-DIR,
+#   DST-BASENAME.  In all cases, SRC-DIR/SRC-BASENAME and DST_DIR must
+#   already exist before the operation, but DST_DIR/DST_BASENAME must
+#   NOT exist.
+#
+#   Besides testing things that don't meet the above criteria, we want to
+#   also test valid cases:
+#
+#   - where SRC-DIR/SRC-BASENAME is a file or a dir.
+#   - where SRC-DIR (or SRC-DIR/SRC-BASENAME) is a parent/grandparent
+#     directory of DST-DIR
+#   - where SRC-DIR (or SRC-DIR/SRC-BASENAME) is a child/grandchild
+#     directory of DST-DIR
+#   - where SRC-DIR (or SRC-DIR/SRC-BASENAME) is not in the lineage
+#     of DST-DIR at all
 
 
 
