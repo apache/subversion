@@ -12,60 +12,68 @@ command-line client.  It has no access to code internals; it never
 looks inside the .svn/ directory; it only performs actions that a
 human user would do.
 
-Python is the chosen scripting language.  Python 2.0 or later is
-required.
-
+These tests require Python 2.0 or later.
 
   [ For more general information on Subversion's testing system,
     please read the README in subversion/tests/. ]
 
 
-How to Run the Scripts
-======================
+How To Run The Tests
+====================
 
->>> Running a test script
+To run a test script over ra_local, just invoke it from this
+directory.  Invoke the script with no arguments to run all the tests
+in that script:
 
-   *  Just run the script, and all of its tests will execute:
+   $ ./basic_tests.py
 
-              ./basic_tests.py
+Invoke with one numeric argument to run that particular test:
 
-   *  To see a list of tests within a script:
+   $ ./basic_tests.py 7
 
-              ./basic_tests.py list
+And invoke with the "list" argument to show a list of all tests in
+that script:
 
-   *  To run a specific test within a script, specify its number:
+   $ ./basic_tests.py list
 
-              ./basic_tests.py 7
+Running a script over ra_dav is basically the same, but you have to
+set up httpd 2.0 first (on the same machine, since the tests create
+repositories on the fly), and pass a URL argument to the test scripts.
 
+Assuming you have httpd 2.0 installed in /usr/local/apache2, just add
+two Location directives to /usr/local/apache2/conf/httpd.conf, with
+paths adjusted appropriately:
 
->>> To make a script run over ra_dav instead of ra_local: 
+   <Location /repositories>
+     DAV svn
+     SVNParentPath /home/jrandom/projects/svn/subversion/tests/clients/cmdline/repositories
+   </Location>
+     
+   <Location /local_tmp/repos>
+     DAV svn
+     SVNPath /home/jrandom/projects/svn/subversion/tests/clients/cmdline/local_tmp/repos
+   </Location>
 
-   * Because repositories are still created on-the-fly (which httpd
-     must read), the client and server must still running on the
-     SAME machine.
+Httpd should be running on port 80.  You may also need to ensure that
+it's running as you, so it has read/write access to the repositories
+that are probably living in your Subversion working copy.  To do this,
+set the User and Group directives in httpd.conf, something like this:
 
-   * Use global switch to python test scripts:  '--url'
+   User jrandom
+   Group users
 
-               ./basic_tests.py --url http://localhost
-               ./basic_tests.py 3 --url http://newton.collab.net
+Now you can run a test script over ra_dav:
 
-     pass the URL to 'make check' from the top of the build dir
+   $ ./basic_tests.py --url http://localhost
+   $ ./basic_tests.py 3 --url http://localhost
 
-               make check BASE_URL=http://localhost
+If you run httpd on a port other than 80, you can specify the port in
+the URL: "http://localhost:15835" for example.
 
+To run all tests over ra_dav, pass BASE_URL when running 'make check'
+from the top of the build dir:
 
-     ASSUMPTIONS MADE BY THIS MODE:
-
-       - an svn-aware httpd is running locally on port 80.
-
-       - httpd.conf has a DAV Location '/repositories' that maps (with
-         SVNParentPath) to the 'repositories' directory right below
-         these tests.
-
-       - httpd.conf has a DAV Location '/local_tmp/repos' that maps
-         (with SVNPath) to the master 'local_tmp/repos' right below
-         these tests.
-
+   $ make check BASE_URL=http://localhost
 
 
 Directory Contents
