@@ -415,10 +415,11 @@ add_file (svn_string_t *name,
   struct dir_baton *db = (struct dir_baton *) parent_baton;
   struct edit_baton *eb = db->edit_baton;
 
+  SVN_ERR(output_addreplace (eb, elem_add, elem_file, name,
+                             ancestor_path, ancestor_revision));
   *file_baton = make_file_baton (eb, elem_add);
   eb->curfile = *file_baton;
-  return output_addreplace (eb, elem_add, elem_file, name,
-                            ancestor_path, ancestor_revision);
+  return SVN_NO_ERROR;
 }
 
 
@@ -432,10 +433,11 @@ replace_file (svn_string_t *name,
   struct dir_baton *db = (struct dir_baton *) parent_baton;
   struct edit_baton *eb = db->edit_baton;
 
+  SVN_ERR(output_addreplace (eb, elem_replace, elem_file, name,
+                             ancestor_path, ancestor_revision));
   *file_baton = make_file_baton (eb, elem_replace);
   eb->curfile = *file_baton;
-  return output_addreplace (eb, elem_replace, elem_file, name,
-                            ancestor_path, ancestor_revision);
+  return SVN_NO_ERROR;
 }
 
 
