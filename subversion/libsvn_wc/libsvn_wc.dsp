@@ -103,6 +103,10 @@ SOURCE=.\copy.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\diff.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\entries.c
 # End Source File
 # Begin Source File
