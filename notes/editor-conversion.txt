@@ -24,8 +24,8 @@ DONE    tests/libsvn_test_editor.c
 
 Conversion of old DRIVERS to the new editor interface
 =====================================================
-        libsvn_ra_dav/fetch.c           [svn update]
-        libsvn_ra_dav/fetch.c           [svn checkout]
+DONE    libsvn_ra_dav/fetch.c           [svn update]
+DONE    libsvn_ra_dav/fetch.c           [svn checkout]
 DONE    libsvn_delta/compose_editors.c
 DONE    libsvn_client/delete.c          [being re-written as new commit system]
 DONE    libsvn_client/add.c             [being re-written as new commit system]

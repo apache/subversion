@@ -90,15 +90,10 @@ typedef struct {
 #define POP_SUBDIR(sds) (((subdir_t **)(sds)->elts)[--(sds)->nelts])
 #define PUSH_SUBDIR(sds,s) (*(subdir_t **)apr_array_push(sds) = (s))
 
-/* setting properties requires svn_stringbuf_t; this helps out */
-typedef struct {
-  svn_stringbuf_t *name;
-  svn_stringbuf_t *value;
-} vsn_url_helper;
-
 typedef svn_error_t * (*prop_setter_t)(void *baton,
-                                       svn_stringbuf_t *name,
-                                       svn_stringbuf_t *value);
+                                       const char *name,
+                                       const svn_string_t *value,
+                                       apr_pool_t *pool);
 
 typedef struct {
   /* The baton returned by the editor's open_root/open_dir */
@@ -112,7 +107,7 @@ typedef struct {
   const char *vsn_url;
 
   /* A buffer which stores the relative directory name. We also use this
-     for temporary construction relative file names. */
+     for temporary construction of relative file names. */
   svn_stringbuf_t *pathbuf;
 
 } dir_item_t;
@@ -125,7 +120,7 @@ typedef struct {
   svn_boolean_t fetch_content;
   svn_boolean_t fetch_props;
 
-  const svn_delta_edit_fns_t *editor;
+  const svn_delta_editor_t *editor;
   void *edit_baton;
 
   apr_array_header_t *dirs;	/* stack of directory batons/vsn_urls */
@@ -136,8 +131,6 @@ typedef struct {
   svn_stringbuf_t *namestr;
   svn_stringbuf_t *cpathstr;
   svn_stringbuf_t *href;
-
-  vsn_url_helper vuh;
 
   const char *current_wcprop_path;
 
@@ -188,50 +181,21 @@ static const struct ne_xml_elm drev_report_elements[] =
   { NULL }
 };
 
-static svn_stringbuf_t *my_basename(const char *url, apr_pool_t *pool)
-{
-  /* ### be nice to lose the stringbuf portion */
-  const char *bname = svn_path_basename(url, pool);
-  bname = svn_path_uri_decode(bname, pool);
-  return svn_stringbuf_create(bname, pool);
-}
-
-/* ### fold this function into store_vsn_url; not really needed */
-static const char *get_vsn_url(const svn_ra_dav_resource_t *rsrc)
-{
-  return apr_hash_get(rsrc->propset,
-                      SVN_RA_DAV__PROP_CHECKED_IN, APR_HASH_KEY_STRING);
-}
-
 static svn_error_t *simple_store_vsn_url(const char *vsn_url,
                                          void *baton,
                                          prop_setter_t setter,
-                                         vsn_url_helper *vuh,
                                          apr_pool_t *pool)
 {
-  svn_error_t *err;
-
-  if (strcmp (vuh->name->data, SVN_RA_DAV__LP_VSN_URL) == 0)
-    {
-      /* ### Sigh.  This stringbuf creation is the only reason this
-         function needs to take a pool outside the baton. */
-      svn_stringbuf_t *vsn_url_rev_strbuf
-        = svn_stringbuf_create(SVN_RA_DAV__LP_VSN_URL_REV, pool);
-
-      err = (*setter)(baton, vsn_url_rev_strbuf, NULL);
-      if (err)
-        return svn_error_quick_wrap(err,
-                                    "could not remove the vsn url rev of the "
-                                    "version resource");
-    }
+  /* if we are storing the version url, blow away the version url
+     revision property. */
+  SVN_ERR_W( (*setter)(baton, SVN_RA_DAV__LP_VSN_URL_REV, NULL, pool),
+             "could not remove the vsn url rev of the "
+             "version resource" );
 
   /* store the version URL as a property */
-  svn_stringbuf_set(vuh->value, vsn_url);
-  err = (*setter)(baton, vuh->name, vuh->value);
-  if (err)
-    return svn_error_quick_wrap(err,
-                                "could not save the URL of the "
-                                "version resource");
+  SVN_ERR_W( (*setter)(baton, SVN_RA_DAV__LP_VSN_URL, 
+                       svn_string_create(vsn_url, pool), pool),
+             "could not save the URL of the version resource" );
 
   return NULL;
 }
@@ -239,16 +203,15 @@ static svn_error_t *simple_store_vsn_url(const char *vsn_url,
 static svn_error_t *store_vsn_url(const svn_ra_dav_resource_t *rsrc,
                                   void *baton,
                                   prop_setter_t setter,
-                                  vsn_url_helper *vuh,
                                   apr_pool_t *pool)
 {
-  const char *vsn_url;
-
-  vsn_url = get_vsn_url(rsrc);
+  const char *vsn_url = apr_hash_get(rsrc->propset, 
+                                     SVN_RA_DAV__PROP_CHECKED_IN, 
+                                     APR_HASH_KEY_STRING);
   if (vsn_url == NULL)
     return NULL;
 
-  return simple_store_vsn_url(vsn_url, baton, setter, vuh, pool);
+  return simple_store_vsn_url(vsn_url, baton, setter, pool);
 }
 
 static svn_error_t *get_delta_base(const char **delta_base,
@@ -337,26 +300,20 @@ static svn_error_t *set_special_wc_prop (const char *key,
                                          void *baton,
                                          apr_pool_t *pool)
 {  
-  svn_stringbuf_t *skey = svn_stringbuf_create("", pool);
-  svn_stringbuf_t *sval = svn_stringbuf_create("", pool);
-
   if (strcmp(key, SVN_RA_DAV__PROP_VERSION_NAME) == 0)
     {
-      svn_stringbuf_set(skey, SVN_PROP_ENTRY_COMMITTED_REV);
-      svn_stringbuf_set(sval, val);
-      SVN_ERR( (*setter)(baton, skey, sval) );
+      SVN_ERR( (*setter)(baton, SVN_PROP_ENTRY_COMMITTED_REV, 
+                         svn_string_create(val, pool), pool) );
     }
   else if (strcmp(key, SVN_RA_DAV__PROP_CREATIONDATE) == 0)
     {
-      svn_stringbuf_set(skey, SVN_PROP_ENTRY_COMMITTED_DATE);
-      svn_stringbuf_set(sval, val);
-      SVN_ERR( (*setter)(baton, skey, sval) );
+      SVN_ERR( (*setter)(baton, SVN_PROP_ENTRY_COMMITTED_DATE, 
+                         svn_string_create(val, pool), pool) );
     }
   else if (strcmp(key, SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME) == 0)
     {
-      svn_stringbuf_set(skey, SVN_PROP_ENTRY_LAST_AUTHOR);
-      svn_stringbuf_set(sval, val);
-      SVN_ERR( (*setter)(baton, skey, sval) );
+      SVN_ERR( (*setter)(baton, SVN_PROP_ENTRY_LAST_AUTHOR,
+                         svn_string_create(val, pool), pool) );
     }
 
   return SVN_NO_ERROR;
@@ -369,11 +326,6 @@ static void add_props(const svn_ra_dav_resource_t *r,
                       apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  svn_stringbuf_t *skey;
-  svn_stringbuf_t *sval;
-
-  skey = svn_stringbuf_create("", pool);
-  sval = svn_stringbuf_create("", pool);
 
   for (hi = apr_hash_first(pool, r->propset); hi; hi = apr_hash_next(hi))
     {
@@ -388,13 +340,8 @@ static void add_props(const svn_ra_dav_resource_t *r,
           /* for props in the 'custom' namespace, we strip the
              namespace and just use whatever name the user gave the
              property. */
-
-          svn_stringbuf_set(skey, key + NSLEN);
-
           /* ### urk. this value isn't binary-safe... */
-          svn_stringbuf_set(sval, val);
-
-          (*setter)(baton, skey, sval);
+          (*setter)(baton, key + NSLEN, svn_string_create (val, pool), pool);
           continue;
         }
 #undef NSLEN
@@ -406,12 +353,8 @@ static void add_props(const svn_ra_dav_resource_t *r,
           /* ### Backwards compatibility: look for old 'svn:custom:'
              namespace and strip it away, instead of the good URI
              namespace.  REMOVE this block someday! */
-          svn_stringbuf_set(skey, key + NSLEN);
-
           /* ### urk. this value isn't binary-safe... */
-          svn_stringbuf_set(sval, val);
-
-          (*setter)(baton, skey, sval);
+          (*setter)(baton, key + NSLEN, svn_string_create (val, pool), pool);
           continue;
         }
 #undef NSLEN
@@ -423,13 +366,9 @@ static void add_props(const svn_ra_dav_resource_t *r,
           /* This property is an 'svn:' prop, recognized by client, or
              server, or both.  Convert the URI namespace into normal
              'svn:' prefix again before pushing it at the wc.*/
-          svn_stringbuf_set(skey, "svn:");
-          svn_stringbuf_appendcstr (skey, key + NSLEN);
-
           /* ### urk. this value isn't binary-safe... */
-          svn_stringbuf_set(sval, val);
-
-          (*setter)(baton, skey, sval);
+          (*setter)(baton, apr_pstrcat(pool, "svn:", key + NSLEN, NULL), 
+                    svn_string_create (val, pool), pool);
         }
 #undef NSLEN
 
@@ -445,12 +384,9 @@ static void add_props(const svn_ra_dav_resource_t *r,
           if (strcmp(key + NSLEN, "baseline-relative-path") == 0)
             continue;
 
-          svn_stringbuf_set(skey, key);
-
           /* ### urk. this value isn't binary-safe... */
-          svn_stringbuf_set(sval, val);
-
-          (*setter)(baton, skey, sval);
+          (*setter)(baton, key, svn_string_create (val, pool), pool);
+          continue;
         }
 #undef NSLEN
 #endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
@@ -476,7 +412,6 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
                                    apr_array_header_t *subdirs,
                                    apr_array_header_t *files,
                                    prop_setter_t setter,
-                                   vsn_url_helper *vuh,
                                    apr_pool_t *pool)
 {
   apr_hash_t *dirents;
@@ -528,7 +463,7 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
               /* don't insert "this dir" into the set of subdirs */
 
               /* store the version URL for this resource */
-              SVN_ERR( store_vsn_url(r, dir_baton, setter, vuh, pool) );
+              SVN_ERR( store_vsn_url(r, dir_baton, setter, pool) );
             }
           else
             {
@@ -741,7 +676,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
                                       const char *relpath,
                                       svn_boolean_t text_deltas,
                                       void *file_baton,
-                                      const svn_delta_edit_fns_t *editor,
+                                      const svn_delta_editor_t *editor,
                                       svn_ra_get_committed_rev_func_t get_rev,
                                       svn_ra_get_wc_prop_func_t get_wc_prop,
                                       void *cb_baton,
@@ -753,6 +688,10 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
                                         &frc.handler,
                                         &frc.handler_baton),
              "could not save file");
+
+  /* If we have to handler for the windows, we can do nothing here. */
+  if (! frc.handler)
+    return SVN_NO_ERROR;
 
   /* Only bother with text-deltas if our caller cares. */
   if (! text_deltas)
@@ -776,20 +715,18 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 static svn_error_t *fetch_file(ne_session *sess,
                                const svn_ra_dav_resource_t *rsrc,
                                void *dir_baton,
-                               vsn_url_helper *vuh,
-                               const svn_delta_edit_fns_t *editor,
+                               const svn_delta_editor_t *editor,
+                               const char *edit_path,
                                apr_pool_t *pool)
 {
   const char *bc_url = rsrc->url;    /* url in the Baseline Collection */
   svn_error_t *err;
   svn_error_t *err2;
-  svn_stringbuf_t *name;
   void *file_baton;
 
-  name = my_basename(bc_url, pool);
-  SVN_ERR_W( (*editor->add_file)(name, dir_baton,
+  SVN_ERR_W( (*editor->add_file)(edit_path, dir_baton,
                                  NULL, SVN_INVALID_REVNUM,
-                                 &file_baton),
+                                 pool, &file_baton),
              "could not add a file");
 
   /* fetch_file() is only used for checkout, so we just pass NULL for the
@@ -807,7 +744,7 @@ static svn_error_t *fetch_file(ne_session *sess,
   add_props(rsrc, editor->change_file_prop, file_baton, pool);
 
   /* store the version URL as a property */
-  err = store_vsn_url(rsrc, file_baton, editor->change_file_prop, vuh, pool);
+  err = store_vsn_url(rsrc, file_baton, editor->change_file_prop, pool);
 
  error:
   err2 = (*editor->close_file)(file_baton);
@@ -894,25 +831,12 @@ static void get_file_reader(void *userdata, const char *buf, size_t len)
 /* minor helper for svn_ra_dav__get_file, of type prop_setter_t */
 static svn_error_t * 
 add_prop_to_hash (void *baton,
-                  svn_stringbuf_t *name,
-                  svn_stringbuf_t *value)
+                  const char *name,
+                  const svn_string_t *value,
+                  apr_pool_t *pool)
 {
   apr_hash_t *ht = (apr_hash_t *) baton;
-
-  if (value)
-    {
-      /* Create this string structure in the same pool as its original
-         stringbuf value. */
-      svn_string_t *string = apr_palloc(value->pool, sizeof(*string));
-      string->data = value->data;
-      string->len = value->len;
-      apr_hash_set(ht, name->data, name->len, string);
-    }
-  else
-    {
-      apr_hash_set(ht, name->data, name->len, NULL);
-    }
-
+  apr_hash_set(ht, name, APR_HASH_KEY_STRING, value);
   return SVN_NO_ERROR;
 }
 
@@ -1265,28 +1189,19 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
                                       void *edit_baton)
 {
   svn_ra_session_t *ras = session_baton;
-
   svn_error_t *err;
   void *root_baton;
-  svn_stringbuf_t *act_coll_name;
-  svn_stringbuf_t *act_coll_value;
-  vsn_url_helper vuh;
   const svn_string_t *activity_coll;
   svn_revnum_t target_rev;
   const char *bc_root;
   subdir_t *subdir;
   apr_array_header_t *subdirs;  /* subdirs to scan (subdir_t *) */
   apr_array_header_t *files;    /* files to grab (svn_ra_dav_resource_t *) */
+  svn_stringbuf_t *edit_path 
+    = svn_stringbuf_create ("", ras->pool); /* telescopic path */
   apr_pool_t *subpool;
-  const svn_delta_edit_fns_t *wrap_editor;
-  void *wrap_edit_baton;
 
   /* ### use quick_wrap rather than SVN_ERR on some of these? */
-
-  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
-     can use it with an old driver. */
-  svn_delta_compat_wrap(&wrap_editor, &wrap_edit_baton, 
-                        editor, edit_baton, ras->pool);
 
   /* this subpool will be used during various iteration loops, and cleared
      each time. long-lived stuff should go into ras->pool. */
@@ -1297,12 +1212,12 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
                           &bc_root) );
 
   /* all the files we checkout will have TARGET_REV for the revision */
-  SVN_ERR( (*wrap_editor->set_target_revision)(wrap_edit_baton, target_rev) );
+  SVN_ERR( (*editor->set_target_revision)(edit_baton, target_rev) );
 
   /* In the checkout case, we don't really have a base revision, so
      pass SVN_IGNORED_REVNUM. */
-  SVN_ERR( (*wrap_editor->open_root)(wrap_edit_baton, SVN_IGNORED_REVNUM,
-                                     &root_baton) );
+  SVN_ERR( (*editor->open_root)(edit_baton, SVN_IGNORED_REVNUM,
+                                ras->pool, &root_baton) );
 
   /* store the subdirs into an array for processing, rather than recursing */
   subdirs = apr_array_make(ras->pool, 5, sizeof(subdir_t *));
@@ -1317,16 +1232,6 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
   subdir->rsrc->url = bc_root;
 
   PUSH_SUBDIR(subdirs, subdir);
-
-  /* ### damn. gotta build a string. */
-  act_coll_name = svn_stringbuf_create(SVN_RA_DAV__LP_ACTIVITY_COLL,
-                                       ras->pool);
-  act_coll_value = svn_stringbuf_create_from_string(activity_coll, ras->pool);
-
-  /* prep the helper */
-  vuh.name = svn_stringbuf_create(SVN_RA_DAV__LP_VSN_URL, ras->pool);
-  vuh.value = MAKE_BUFFER(ras->pool);
-
   do
     {
       const char *url;
@@ -1347,15 +1252,15 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
               break;
             }
           /* sentinel reached. close the dir. possibly done! */
-
-          err = (*wrap_editor->close_directory) (parent_baton);
+          svn_path_remove_component(edit_path);
+          err = (*editor->close_directory) (parent_baton);
           if (err)
             return svn_error_quick_wrap(err, "could not finish directory");
 
           if (subdirs->nelts == 0)
             {
               /* Finish the edit */
-              SVN_ERR( ((*wrap_editor->close_edit) (wrap_edit_baton)) );
+              SVN_ERR( ((*editor->close_edit) (edit_baton)) );
 
               /* Store auth info if necessary */
               SVN_ERR( (svn_ra_dav__maybe_store_auth_info (ras)) );
@@ -1366,14 +1271,11 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
 
       if (strlen(url) > strlen(bc_root))
         {
-          svn_stringbuf_t *name;
-
-          /* We're not in the root, add a directory */
-          name = my_basename(url, subpool);
-
-          SVN_ERR_W( (*wrap_editor->add_directory) (name, parent_baton,
-                                                    NULL, SVN_INVALID_REVNUM,
-                                                    &this_baton),
+          svn_path_add_component_nts(edit_path, 
+                                     svn_path_basename(url, ras->pool));
+          SVN_ERR_W( (*editor->add_directory) (edit_path->data, parent_baton,
+                                               NULL, SVN_INVALID_REVNUM,
+                                               ras->pool, &this_baton),
                      "could not add directory");
         }
       else 
@@ -1388,7 +1290,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
                                               NULL,
                                               NULL,
                                               subpool));
-      add_props(rsrc, wrap_editor->change_dir_prop, this_baton, subpool);
+      add_props(rsrc, editor->change_dir_prop, this_baton, subpool);
 
       /* finished processing the directory. clear out the gunk. */
       svn_pool_clear(subpool);
@@ -1400,7 +1302,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
       PUSH_SUBDIR(subdirs, subdir);
 
       err = fetch_dirents(ras, url, this_baton, recurse, subdirs, files,
-                          wrap_editor->change_dir_prop, &vuh, ras->pool);
+                          editor->change_dir_prop, ras->pool);
       if (err)
         return svn_error_quick_wrap(err, "could not fetch directory entries");
 
@@ -1408,20 +1310,25 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
 
       /* store the activity URL as a property */
       /* ### should we close the dir batons before returning?? */
-      SVN_ERR_W( (*wrap_editor->change_dir_prop)(this_baton, act_coll_name,
-                                                 act_coll_value),
+      SVN_ERR_W( (*editor->change_dir_prop)(this_baton, 
+                                            SVN_RA_DAV__LP_ACTIVITY_COLL,
+                                            activity_coll, ras->pool),
                  "could not save the URL to indicate "
                  "where to create activities");
 
       /* process each of the files that were found */
       for (i = files->nelts; i--; )
         {
+          apr_size_t edit_len = edit_path->len;
           rsrc = ((svn_ra_dav_resource_t **)files->elts)[i];
+          svn_path_add_component_nts(edit_path, 
+                                     svn_path_basename (rsrc->url, subpool));
 
           /* ### should we close the dir batons first? */
-          SVN_ERR_W( fetch_file(ras->sess, rsrc, this_baton, &vuh, wrap_editor,
-                                subpool),
+          SVN_ERR_W( fetch_file(ras->sess, rsrc, this_baton, editor,
+                                edit_path->data, subpool),
                      "could not checkout a file");
+          svn_stringbuf_chop(edit_path, edit_path->len - edit_len);
 
           /* trash the per-file stuff. */
           svn_pool_clear(subpool);
@@ -1435,7 +1342,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
   /* ### should never reach??? */
 
   /* Finish the edit */
-  SVN_ERR( ((*wrap_editor->close_edit) (wrap_edit_baton)) );
+  SVN_ERR( ((*editor->close_edit) (edit_baton)) );
 
   /* Store auth info if necessary */
   SVN_ERR( (svn_ra_dav__maybe_store_auth_info (ras)) );
@@ -1878,7 +1785,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
         {
           pathbuf = svn_stringbuf_create("", rb->ras->pool);
           CHKERR( (*rb->editor->open_root)(rb->edit_baton, base,
-                                         &new_dir_baton) );
+                                           rb->ras->pool, &new_dir_baton) );
         }
       else
         {
@@ -1891,9 +1798,10 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
           pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, rb->ras->pool);
           svn_path_add_component(pathbuf, rb->namestr);
 
-          CHKERR( (*rb->editor->open_directory)(rb->namestr,
-                                              parent_dir->baton, base,
-                                              &new_dir_baton) );
+          CHKERR( (*rb->editor->open_directory)(pathbuf->data,
+                                                parent_dir->baton, base,
+                                                rb->ras->pool, 
+                                                &new_dir_baton) );
         }
 
       /* push the new baton onto the directory baton stack */
@@ -1924,8 +1832,10 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, rb->ras->pool);
       svn_path_add_component(pathbuf, rb->namestr);
 
-      CHKERR( (*rb->editor->add_directory)(rb->namestr, parent_dir->baton,
-                                           cpath, crev, &new_dir_baton) );
+      CHKERR( (*rb->editor->add_directory)(pathbuf->data, parent_dir->baton,
+                                           cpath ? cpath->data : NULL, 
+                                           crev, rb->ras->pool,
+                                           &new_dir_baton) );
 
       /* push the new baton onto the directory baton stack */
       push_dir(rb, new_dir_baton, pathbuf);
@@ -1944,15 +1854,19 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       svn_stringbuf_set(rb->namestr, name);
 
       parent_dir = &TOP_DIR(rb);
-      CHKERR( (*rb->editor->open_file)(rb->namestr, parent_dir->baton, base,
+
+      /* Add this file's name into the directory's path buffer. It will be
+         removed in end_element() */
+      svn_path_add_component(parent_dir->pathbuf, rb->namestr);
+
+      CHKERR( (*rb->editor->open_file)(parent_dir->pathbuf->data, 
+                                       parent_dir->baton, base,
+                                       rb->ras->pool,
                                        &rb->file_baton) );
 
       /* Property fetching is NOT implied in replacement. */
       rb->fetch_props = FALSE;
 
-      /* Add this file's name into the directory's path buffer. It will be
-         removed in end_element() */
-      svn_path_add_component(parent_dir->pathbuf, rb->namestr);
       break;
 
     case ELEM_add_file:
@@ -1972,15 +1886,20 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
         }
 
       parent_dir = &TOP_DIR(rb);
-      CHKERR( (*rb->editor->add_file)(rb->namestr, parent_dir->baton,
-                                      cpath, crev, &rb->file_baton) );
-
-      /* Property fetching is implied in addition. */
-      rb->fetch_props = TRUE;
 
       /* Add this file's name into the directory's path buffer. It will be
          removed in end_element() */
       svn_path_add_component(parent_dir->pathbuf, rb->namestr);
+
+      CHKERR( (*rb->editor->add_file)(parent_dir->pathbuf->data,
+                                      parent_dir->baton,
+                                      cpath ? cpath->data : NULL, 
+                                      crev, rb->ras->pool,
+                                      &rb->file_baton) );
+
+      /* Property fetching is implied in addition. */
+      rb->fetch_props = TRUE;
+
       break;
 
     case ELEM_remove_prop:
@@ -1990,9 +1909,11 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
       /* Removing a prop.  */
       if (rb->file_baton == NULL)
-        rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr, NULL);
+        rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr->data, 
+                                    NULL, rb->ras->pool);
       else
-        rb->editor->change_file_prop(rb->file_baton, rb->namestr, NULL);
+        rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
+                                     NULL, rb->ras->pool);
       break;
       
     case ELEM_fetch_props:
@@ -2005,9 +1926,11 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
           svn_stringbuf_set(rb->namestr, SVN_PROP_PREFIX "BOGOSITY");
 
           if (rb->file_baton == NULL)
-            rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr, NULL);
+            rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr->data, 
+                                        NULL, rb->ras->pool);
           else
-            rb->editor->change_file_prop(rb->file_baton, rb->namestr, NULL);
+            rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
+                                         NULL, rb->ras->pool);
         }
       else
         {
@@ -2036,9 +1959,14 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       /* ### verify we got it. punt on error. */
       svn_stringbuf_set(rb->namestr, name);
 
-      CHKERR( (*rb->editor->delete_entry)(rb->namestr, 
+      parent_dir = &TOP_DIR(rb);
+      pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, rb->ras->pool);
+      svn_path_add_component(pathbuf, rb->namestr);
+
+      CHKERR( (*rb->editor->delete_entry)(pathbuf->data,
                                           SVN_INVALID_REVNUM,
-                                          TOP_DIR(rb).baton) );
+                                          TOP_DIR(rb).baton,
+                                          rb->ras->pool) );
       break;
 
     default:
@@ -2194,7 +2122,7 @@ static int end_element(void *userdata,
         {
           CHKERR( simple_store_vsn_url(rb->href->data, TOP_DIR(rb).baton,
                                        rb->editor->change_dir_prop,
-                                       &rb->vuh, rb->ras->pool) );
+                                       rb->ras->pool) );
 
           /* save away the URL in case a fetch-props arrives after all of
              the subdir processing. we will need this copy of the URL to
@@ -2206,7 +2134,7 @@ static int end_element(void *userdata,
         {
           CHKERR( simple_store_vsn_url(rb->href->data, rb->file_baton,
                                        rb->editor->change_file_prop,
-                                       &rb->vuh, rb->ras->pool) );
+                                       rb->ras->pool) );
         }
       break;
 
@@ -2368,9 +2296,6 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   rb->cpathstr = MAKE_BUFFER(rb->ras->pool);
   rb->href = MAKE_BUFFER(rb->ras->pool);
 
-  rb->vuh.name = svn_stringbuf_create(SVN_RA_DAV__LP_VSN_URL, rb->ras->pool);
-  rb->vuh.value = MAKE_BUFFER(rb->ras->pool);
-
   /* Rewind the tmpfile. */
   status = apr_file_seek(rb->tmpfile, APR_SET, &offset);
   if (status)
@@ -2432,7 +2357,7 @@ make_reporter (void *session_baton,
                const char *dst_path,
                svn_boolean_t recurse,
                svn_boolean_t resource_walk,
-               const svn_delta_edit_fns_t *editor,
+               const svn_delta_editor_t *editor,
                void *edit_baton,
                svn_boolean_t fetch_content)
 {
@@ -2570,13 +2495,6 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                                     const svn_delta_editor_t *wc_update,
                                     void *wc_update_baton)
 {
-  svn_ra_session_t *ras = session_baton;
-  const svn_delta_edit_fns_t *compat_editor;
-  void *compat_baton;
-
-  svn_delta_compat_wrap (&compat_editor, &compat_baton, wc_update,
-                         wc_update_baton, ras->pool);
-
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -2585,8 +2503,8 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                         NULL,
                         recurse,
                         FALSE,
-                        compat_editor,
-                        compat_baton,
+                        wc_update,
+                        wc_update_baton,
                         TRUE); /* fetch_content */
 }
 
@@ -2599,13 +2517,6 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                                     const svn_delta_editor_t *wc_status,
                                     void *wc_status_baton)
 {
-  svn_ra_session_t *ras = session_baton;
-  const svn_delta_edit_fns_t *compat_editor;
-  void *compat_baton;
-
-  svn_delta_compat_wrap (&compat_editor, &compat_baton, wc_status,
-                         wc_status_baton, ras->pool);
-
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -2614,8 +2525,8 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                         NULL,
                         recurse,
                         FALSE,
-                        compat_editor,
-                        compat_baton,
+                        wc_status,
+                        wc_status_baton,
                         FALSE); /* fetch_content */
 }
 
@@ -2630,13 +2541,6 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                                     const svn_delta_editor_t *wc_update,
                                     void *wc_update_baton)
 {
-  svn_ra_session_t *ras = session_baton;
-  const svn_delta_edit_fns_t *compat_editor;
-  void *compat_baton;
-
-  svn_delta_compat_wrap (&compat_editor, &compat_baton, wc_update,
-                         wc_update_baton, ras->pool);
-
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -2645,8 +2549,8 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                         switch_url,
                         recurse,
                         TRUE,
-                        compat_editor,
-                        compat_baton,
+                        wc_update,
+                        wc_update_baton,
                         TRUE); /* fetch_content */
 }
 
@@ -2661,13 +2565,6 @@ svn_error_t * svn_ra_dav__do_diff(void *session_baton,
                                   const svn_delta_editor_t *wc_diff,
                                   void *wc_diff_baton)
 {
-  svn_ra_session_t *ras = session_baton;
-  const svn_delta_edit_fns_t *compat_editor;
-  void *compat_baton;
-
-  svn_delta_compat_wrap (&compat_editor, &compat_baton, wc_diff,
-                         wc_diff_baton, ras->pool);
-
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -2676,8 +2573,8 @@ svn_error_t * svn_ra_dav__do_diff(void *session_baton,
                         versus_url,
                         recurse,
                         FALSE,
-                        compat_editor,
-                        compat_baton,
+                        wc_diff,
+                        wc_diff_baton,
                         TRUE); /* fetch_content */
 }
 
