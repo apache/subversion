@@ -97,8 +97,20 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
 /* Subversion's config subdir in the user's home directory. */
 #define SVN_CONFIG__USR_DIRECTORY     ".subversion"
 
-/* The config file in SVN_CONFIG__DIRECTORY. */
-#define SVN_CONFIG__USR_PROXY_PATH    "proxies"
+/* The description/instructions file in the config directory. */
+#define SVN_CONFIG__USR_README_FILE    "README"
+
+/* The proxy config file in SVN_CONFIG__DIRECTORY. */
+#define SVN_CONFIG__USR_PROXY_FILE    "proxies"
+
+
+/* Set *PATH_P to the path to config file FNAME in the user's personal
+   configuration area; if FNAME is NULL, set *PATH_P to the directory
+   name of the user's config area.  Allocate *PATH_P in POOL.  */
+svn_error_t *
+svn_config__user_config_path (const char **path_p,
+                              const char *fname,
+                              apr_pool_t *pool);
 
 
 #endif /* SVN_CONFIG_IMPL_H */

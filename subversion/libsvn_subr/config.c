@@ -105,50 +105,6 @@ svn_config_read (svn_config_t **cfgp, const char *file,
 
 
 
-/* Set *PATH_P to the path to config file FNAME in the user's personal
-   configuration area.  Allocated *PATH_P in POOL.  */
-static svn_error_t *
-user_config_path (const char **path_p, const char *fname, apr_pool_t *pool)
-{
-  apr_status_t apr_err;
-  
-  /* ### Are there any platforms where APR_HAS_USER is not defined?
-     This code won't compile without it.  */
-  
-  apr_uid_t uid;
-  apr_gid_t gid;
-  char *username;
-  char *homedir;
-  
-  /* ### Will these calls fail under Windows sometimes?  If so, maybe
-     we shouldn't error, since the caller just falls back to registry. */
-  
-  apr_err = apr_current_userid (&uid, &gid, pool);
-  if (apr_err)
-    return svn_error_create
-      (apr_err, 0, NULL, pool,
-       "svn_config_read_all: unable to get current userid.");
-  
-  apr_err = apr_get_username (&username, uid, pool);
-  if (apr_err)
-    return svn_error_create
-      (apr_err, 0, NULL, pool,
-       "svn_config_read_all: unable to get username.");
-  
-  apr_err = apr_get_home_directory (&homedir, username, pool);
-  if (apr_err)
-    return svn_error_createf
-      (apr_err, 0, NULL, pool,
-       "svn_config_read_all: unable to get home dir for user %s.", username);
-  
-  /* ### No compelling reason to use svn's path lib here. */
-  *path_p = apr_psprintf
-    (pool, "%s/%s/%s", homedir, SVN_CONFIG__USR_DIRECTORY, fname);
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Read various configuration sources into *CFGP, in this order, so
  * that later reads overriding the results of earlier ones:
  *
@@ -193,7 +149,9 @@ svn_config_read_proxies (svn_config_t **cfgp, apr_pool_t *pool)
   svn_error_t *err;
   const char *usr_cfg_path;
 
-  SVN_ERR (user_config_path (&usr_cfg_path, SVN_CONFIG__USR_PROXY_PATH, pool));
+  SVN_ERR (svn_config__user_config_path (&usr_cfg_path,
+                                         SVN_CONFIG__USR_PROXY_FILE,
+                                         pool));
 
   /* Can't use #ifdefs inside SVN_ERR, so catch error manually */
   err = read_all (cfgp,
@@ -350,44 +308,36 @@ find_option (svn_config_t *cfg, const char *section, const char *option,
 }
 
 
-/* Set VALUEP according to the OPT's value. */
+/* Set *VALUEP according to the OPT's value. */
 static void
-make_string_from_option (svn_string_t *valuep,
+make_string_from_option (const char **valuep,
                          svn_config_t *cfg, cfg_option_t *opt)
 {
-  /* TODO: Expand the option's value */
+  /* ### TODO: Expand the option's value */
   (void)(cfg);
 
+  /* For legacy reasons, the cfg is still using counted-length strings
+     internally.  But the public interfaces just use null-terminated
+     C strings now, so below we ignore length and use only data. */ 
+
   if (opt->x_value)
-    {
-      valuep->data = opt->x_value->data;
-      valuep->len = opt->x_value->len;
-    }
+    *valuep = opt->x_value->data;
   else
-    {
-      valuep->data = opt->value->data;
-      valuep->len = opt->value->len;
-    }
+    *valuep = opt->value->data;
 }
 
 
 
 void
-svn_config_get (svn_config_t *cfg, svn_string_t *valuep,
+svn_config_get (svn_config_t *cfg, const char **valuep,
                 const char *section, const char *option,
                 const char *default_value)
 {
   cfg_option_t *opt = find_option (cfg, section, option, NULL);
   if (opt != NULL)
-    {
-      make_string_from_option (valuep, cfg, opt);
-    }
+    make_string_from_option (valuep, cfg, opt);
   else
-    {
-      /* TODO: Expand default_value */
-      valuep->data = default_value;
-      valuep->len = strlen (default_value);
-    }
+    *valuep = default_value;   /* ### TODO: Expand default_value */
 }
 
 
@@ -454,14 +404,14 @@ svn_config_enumerate (svn_config_t *cfg, const char *section,
     {
       void *opt_ptr;
       cfg_option_t *opt;
-      svn_string_t temp_value;
+      const char *temp_value;
 
       apr_hash_this (opt_ndx, NULL, NULL, &opt_ptr);
       opt = opt_ptr;
 
       ++count;
       make_string_from_option (&temp_value, cfg, opt);
-      if (!callback (opt->name, temp_value.data, baton))
+      if (!callback (opt->name, temp_value, baton))
         break;
     }
 

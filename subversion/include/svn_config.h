@@ -23,7 +23,6 @@
 #include <apr_pools.h>
 
 #include <svn_types.h>
-#include <svn_string.h>
 #include <svn_error.h>
 
 
@@ -31,106 +30,14 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/*
-   Subversion configuration files
-   ==============================
 
-   The syntax of Subversion's configuration files is the same as
-   that recognised by Python's ConfigParser module:
-
-      - Empty lines, and lines starting with '#', are ignored.
-        The first significant line in a file must be a section header.
-
-      - A section starts with a section header, which must start in
-        the first column:
-
-          [section-name]
-
-      - An option, which must always appear within a section, is a pair
-        (name, value).  There are two valid forms for defining an
-        option, both of which must start in the first column:
-
-          name: value
-          name = value
-
-        Whitespace around the separator (:, =) is optional.
-
-      - Section and option names are case-insensitive, but case is
-        preserved.
-
-      - An option's value may be broken into several lines.  The value
-        continuation lines must start with at least one whitespace.
-        Trailing whitespace in the previous line, the newline character
-        and the leading whitespace in the continuation line is compressed
-        into a single space character.
-
-      - All leading and trailing whitespace around a value is trimmed,
-        but the whitespace within a value is preserved, with the
-        exception of whitespace around line continuations, as
-        described above.
-
-      - Option values may be expanded within a value by enclosing the
-        option name in parentheses, preceded by a percent sign:
-
-          %(name)
-
-        The expansion is performed recursively and on demand, during
-        svn_option_get.  The name is first searched for in the same
-        section, then in the special [DEFAULTS] section. If the name
-        is not found, the whole %(name) placeholder is left
-        unchanged.
-
-        Any modifications to the configuration data invalidate all
-        previously expanded values, so that the next svn_option_get
-        will take the modifications into account.
-
-
-   Configuration data in the Windows registry
-   ==========================================
-
-   On Windows, configuration data may be stored in the registry. The
-   functions svn_config_read and svn_config_merge will read from the
-   registry when passed file names of the form:
-
-      REGISTRY:<hive>/path/to/config-key
-
-   The REGISTRY: prefix must be in upper case. The <hive> part must be
-   one of:
-
-      HKLM for HKEY_LOCAL_MACHINE
-      HKCU for HKEY_CURRENT_USER
-
-   The values in config-key represent the options in the [DEFAULTS] section.
-   The keys below config-key represent other sections, and their values
-   represent the options. Only values of type REG_SZ will be used; other
-   values, as well as the keys' default values, will be ignored.
-
-
-   File locations
-   ==============
-
-   Typically, Subversion will use two config directories, one for
-   site-wide configuration,
-
-     /etc/subversion/proxies
-     /etc/subversion/config
-     /etc/subversion/hairstyles
-        -- or --
-     REGISTRY:HKLM\Software\Tigris.org\Subversion\Proxies
-     REGISTRY:HKLM\Software\Tigris.org\Subversion\Config
-     REGISTRY:HKLM\Software\Tigris.org\Subversion\Hairstyles
-
-   and one for per-user configuration:
-
-     ~/.subversion/proxies
-     ~/.subversion/config
-     ~/.subversion/hairstyles
-        -- or --
-     REGISTRY:HKCU\Software\Tigris.org\Subversion\Proxies
-     REGISTRY:HKCU\Software\Tigris.org\Subversion\Config
-     REGISTRY:HKCU\Software\Tigris.org\Subversion\Hairstyles
-
-*/
+/**************************************************************************
+ ***                                                                    ***
+ ***  For a description of the SVN configuration file syntax, see       ***
+ ***  your ~/.subversion/README, which is written out automatically by  ***
+ ***  svn_config_ensure().                                              ***
+ ***                                                                    ***
+ **************************************************************************/
 
 
 /* Opaque structure describing a set of configuration options. */
@@ -181,15 +88,16 @@ svn_error_t *svn_config_merge (svn_config_t *cfg,
                                svn_boolean_t must_exist);
 
 
-/* Find the value of a (SECTION, OPTION) pair in CFG, and set
-   VALUEP->data to the value and VALUEP->len to the value's length.
+/* Find the value of a (SECTION, OPTION) pair in CFG, set *VALUEP to
+   the value.
 
    If the value does not exist, return DEFAULT_VALUE.  Otherwise, the
    value returned in VALUEP remains valid at least until the next
-   operation that invalidates variable expansions.
+   operation that invalidates variable expansions.  DEFAULT_VALUE may
+   be the same as *VALUEP.
 
    This function may change CFG by expanding option values. */
-void svn_config_get (svn_config_t *cfg, svn_string_t *valuep,
+void svn_config_get (svn_config_t *cfg, const char **valuep,
                      const char *section, const char *option,
                      const char *default_value);
 
@@ -221,6 +129,15 @@ typedef svn_boolean_t (*svn_config_enumerator_t)
 
 int svn_config_enumerate (svn_config_t *cfg, const char *section,
                           svn_config_enumerator_t callback, void *baton);
+
+
+
+/*** Setting up an initial configuration area. ***/
+
+/* Ensure that the user's ~/.subversion/ area exists, and create no-op
+   template files for any absent config files.  Use POOL for any
+   temporary allocation.  */
+svn_error_t *svn_config_ensure (apr_pool_t *pool);
 
 
 #ifdef __cplusplus

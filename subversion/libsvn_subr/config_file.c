@@ -23,7 +23,8 @@
 
 #include <apr_lib.h>
 #include "config_impl.h"
-
+#include "svn_io.h"
+#include "svn_types.h"
 
 
 /* File parsing context */
@@ -249,8 +250,61 @@ parse_section_name (int *pch, parse_context_t *ctx)
 }
 
 
+svn_error_t *
+svn_config__user_config_path (const char **path_p,
+                              const char *fname,
+                              apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  
+  /* ### Are there any platforms where APR_HAS_USER is not defined?
+     This code won't compile without it.  */
+  
+  apr_uid_t uid;
+  apr_gid_t gid;
+  char *username;
+  char *homedir;
+  
+  /* ### Will these calls fail under Windows sometimes?  If so, maybe
+     we shouldn't error, since the caller may not care (it can often
+     just fall back to registry). */
+  
+  apr_err = apr_current_userid (&uid, &gid, pool);
+  if (apr_err)
+    return svn_error_create
+      (apr_err, 0, NULL, pool,
+       "svn_config_read_all: unable to get current userid.");
+  
+  apr_err = apr_get_username (&username, uid, pool);
+  if (apr_err)
+    return svn_error_create
+      (apr_err, 0, NULL, pool,
+       "svn_config_read_all: unable to get username.");
+  
+  apr_err = apr_get_home_directory (&homedir, username, pool);
+  if (apr_err)
+    return svn_error_createf
+      (apr_err, 0, NULL, pool,
+       "svn_config_read_all: unable to get home dir for user %s.", username);
+  
+  /* ### No compelling reason to use svn's path lib here? */
+  if (fname)
+    {
+      *path_p = apr_psprintf
+        (pool, "%s/%s/%s", homedir, SVN_CONFIG__USR_DIRECTORY, fname);
+    }
+  else
+    {
+      *path_p = apr_psprintf
+        (pool, "%s/%s", homedir, SVN_CONFIG__USR_DIRECTORY);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 
-/*** Exported interface. ***/
+/*** Exported interfaces. ***/
 
 svn_error_t *
 svn_config__parse_file (svn_config_t *cfg, const char *file,
@@ -363,6 +417,240 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
   svn_pool_destroy (ctx.pool);
   fclose (fd);
   return err;
+}
+
+
+svn_error_t *
+svn_config_ensure (apr_pool_t *pool)
+{
+  const char *path;
+  enum svn_node_kind kind;
+  apr_status_t apr_err;
+
+  /* ### We don't error if something exists but is the wrong kind
+   * (for example, ~/.subversion exists but is a file, or
+   * ~/.subversion/proxies exists but is a directory).  Not sure what
+   * a caller would do with such an error.  If we can think of
+   * something, we should make SVN_ERR_CONFIG_OBSTRUCTED etc, though.
+   */
+
+  /* Ensure that the config directory exists.  */
+  SVN_ERR (svn_config__user_config_path (&path, NULL, pool));
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (kind == svn_node_none)
+    {
+      apr_err = apr_dir_make (path, APR_OS_DEFAULT, pool);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_createf
+          (apr_err, 0, 0, pool, "creating config directory `%s'", path);
+    }
+
+  /* Ensure that the `README' file exists. */
+  SVN_ERR (svn_config__user_config_path
+           (&path, SVN_CONFIG__USR_README_FILE, pool));
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (kind == svn_node_none)
+    {
+      apr_file_t *f;
+      const char *contents =
+   "This directory holds run-time configuration information for Subversion\n"
+   "clients.  The configuration files all share the same syntax, but you\n"
+   "should examine a particular file to learn what configuration\n"
+   "directives are valid for that file.\n"
+   "\n"
+   "The syntax is the same as that recognised by Python's ConfigParser module:"
+   "\n"
+   "\n"
+   "   - Empty lines, and lines starting with '#', are ignored.\n"
+   "     The first significant line in a file must be a section header.\n"
+   "\n"
+   "   - A section starts with a section header, which must start in\n"
+   "     the first column:\n"
+   "\n"
+   "       [section-name]\n"
+   "\n"
+   "   - An option, which must always appear within a section, is a pair\n"
+   "     (name, value).  There are two valid forms for defining an\n"
+   "     option, both of which must start in the first column:\n"
+   "\n"
+   "       name: value\n"
+   "       name = value\n"
+   "\n"
+   "     Whitespace around the separator (:, =) is optional.\n"
+   "\n"
+   "   - Section and option names are case-insensitive, but case is\n"
+   "     preserved.\n"
+   "\n"
+   "   - An option's value may be broken into several lines.  The value\n"
+   "     continuation lines must start with at least one whitespace.\n"
+   "     Trailing whitespace in the previous line, the newline character\n"
+   "     and the leading whitespace in the continuation line is compressed\n"
+   "     into a single space character.\n"
+   "\n"
+   "   - All leading and trailing whitespace around a value is trimmed,\n"
+   "     but the whitespace within a value is preserved, with the\n"
+   "     exception of whitespace around line continuations, as\n"
+   "     described above.\n"
+   "\n"
+   "   - When a value is a list, it is comma-separated.  Again, the\n"
+   "     whitespace around each element of the list is trimmed.\n"
+   "\n"
+#if 0   /* expansion not implemented yet */
+   "   - Option values may be expanded within a value by enclosing the\n"
+   "     option name in parentheses, preceded by a percent sign:\n"
+   "\n"
+   "       %(name)\n"
+   "\n"
+   "     The expansion is performed recursively and on demand, during\n"
+   "     svn_option_get.  The name is first searched for in the same\n"
+   "     section, then in the special [DEFAULTS] section. If the name\n"
+   "     is not found, the whole %(name) placeholder is left\n"
+   "     unchanged.\n"
+   "\n"
+   "     Any modifications to the configuration data invalidate all\n"
+   "     previously expanded values, so that the next svn_option_get\n"
+   "     will take the modifications into account.\n"
+   "\n"
+#endif /* 0 */
+   "\n"
+   "Configuration data in the Windows registry\n"
+   "==========================================\n"
+   "\n"
+   "On Windows, configuration data may also be stored in the registry.  The\n"
+   "functions svn_config_read and svn_config_merge will read from the\n"
+   "registry when passed file names of the form:\n"
+   "\n"
+   "   REGISTRY:<hive>/path/to/config-key\n"
+   "\n"
+   "The REGISTRY: prefix must be in upper case. The <hive> part must be\n"
+   "one of:\n"
+   "\n"
+   "   HKLM for HKEY_LOCAL_MACHINE\n"
+   "   HKCU for HKEY_CURRENT_USER\n"
+   "\n"
+   "The values in config-key represent the options in the [DEFAULTS] section."
+   "\n"
+   "The keys below config-key represent other sections, and their values\n"
+   "represent the options. Only values of type REG_SZ will be used; other\n"
+   "values, as well as the keys' default values, will be ignored.\n"
+   "\n"
+   "\n"
+   "File locations\n"
+   "==============\n"
+   "\n"
+   "Typically, Subversion uses two config directories, one for site-wide\n"
+   "configuration,\n"
+   "\n"
+   "  /etc/subversion/proxies\n"
+   "  /etc/subversion/config\n"
+   "  /etc/subversion/hairstyles\n"
+   "     -- or --\n"
+   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Proxies\n"
+   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Config\n"
+   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Hairstyles\n"
+   "\n"
+   "and one for per-user configuration:\n"
+   "\n"
+   "  ~/.subversion/proxies\n"
+   "  ~/.subversion/config\n"
+   "  ~/.subversion/hairstyles\n"
+   "     -- or --\n"
+   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Proxies\n"
+   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Config\n"
+   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Hairstyles\n"
+   "\n";
+
+      apr_err = apr_file_open (&f, path,
+                               (APR_WRITE | APR_CREATE | APR_EXCL),
+                               APR_OS_DEFAULT,
+                               pool);
+
+      if (apr_err)
+        return svn_error_createf
+          (apr_err, 0, NULL, pool, "creating config file `%s'", path);
+      
+      apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
+      if (apr_err)
+        return svn_error_createf (apr_err, 0, NULL, pool, 
+                                  "writing config file `%s'", path);
+      
+      apr_err = apr_file_close (f);
+      if (apr_err)
+        return svn_error_createf (apr_err, 0, NULL, pool, 
+                                  "closing config file `%s'", path);
+    }
+
+  /* Ensure that the `proxies' file exists. */
+  SVN_ERR (svn_config__user_config_path
+           (&path, SVN_CONFIG__USR_PROXY_FILE, pool));
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (kind == svn_node_none)
+    {
+      apr_file_t *f;
+      const char *contents =
+        "### This file determines which proxy servers to use, if\n"
+        "### any, when contacting a remote repository.\n"
+        "###\n"
+        "### The commented-out examples below are intended only to\n"
+        "### demonstrate how to use this file; any resemblance to\n"
+        "### actual servers, living or dead, is entirely\n"
+        "### coincidental.\n"
+        "\n"
+        "### In this section, the URL of the repository you're\n"
+        "### trying to access is matched against the patterns on\n"
+        "### the right.  If a match is found, the proxy info is\n"
+        "### taken from the section with the corresponding name.\n"
+        "# [groups]\n"
+        "# group1 = *.collab.net\n"
+        "# othergroup = repository.blarggitywhoomph.com\n"
+        "\n"
+        "### Information for the first group:\n"
+        "# [group1]\n"
+        "# host = proxy1.some-domain-name.com\n"
+        "# port = 80\n"
+        "# username = blah\n"
+        "# password = doubleblah\n"
+        "\n"
+        "### Information for the second group:\n"
+        "# [othergroup]\n"
+        "# host = proxy2.some-domain-name.com\n"
+        "# port = 9000\n"
+        "# No username and password, so use the defaults below.\n"
+        "\n"
+        "### If there is a `default' section, then anything not set\n"
+        "### by a specifically matched group is taken from the\n"
+        "### defaults.  Thus, if you go through the same proxy\n"
+        "### server to reach every site on the Internet, you\n"
+        "### probably just want to put that server's information in\n"
+        "### the `default' section and not bother with `groups' or\n"
+        "### any other sections.\n"
+        "# [default]\n"
+        "# host = defaultproxy.whatever.com\n"
+        "# port = 7000\n"
+        "# username = defaultusername\n"
+        "# password = defaultpassword\n";
+
+      apr_err = apr_file_open (&f, path,
+                               (APR_WRITE | APR_CREATE | APR_EXCL),
+                               APR_OS_DEFAULT,
+                               pool);
+
+      if (apr_err)
+        return svn_error_createf
+          (apr_err, 0, NULL, pool, "creating config file `%s'", path);
+      
+      apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
+      if (apr_err)
+        return svn_error_createf (apr_err, 0, NULL, pool, 
+                                  "writing config file `%s'", path);
+      
+      apr_err = apr_file_close (f);
+      if (apr_err)
+        return svn_error_createf (apr_err, 0, NULL, pool, 
+                                  "closing config file `%s'", path);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
