@@ -33,7 +33,7 @@ SVN_VERSION_MINOR := $(shell grep 'define SVN_VER_MINOR' < $(VERSION_FILE) | (re
 SVN_VERSION_MICRO := $(shell grep 'define SVN_VER_MICRO' < $(VERSION_FILE) | (read one two three; echo $$three) )
 VERSION := $(SVN_VERSION_MAJOR).$(SVN_VERSION_MINOR).$(SVN_VERSION_MICRO)
 
-RELEASE := $(shell svn st -v $(SPECFILE) | ( read one two three ; echo $$two ) )
+RELEASE := $(shell svn st -v $(SPECFILE) | cut -b 10- | ( read one two ; echo $$one ) )
 MDK_RELEASE := 1
 
 SPECS_RPM_DIR := $(HOME)/$(RPMDIR)/SPECS
@@ -49,7 +49,7 @@ SRC_DIR := $(TMPDIR)/$(NAME)-$(VERSION)
 
 RPMBITS := $(HOME)/$(RPMDIR) $(HOME)/.rpmmacros $(HOME)/.rpmrc
 
-.PHONY: all rpm check_release build_sources build_rpm_files
+.PHONY: all subversion rpm check_release build_rpm_files build_sources
 
 all : rpm
 
