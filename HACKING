@@ -517,8 +517,8 @@ In summary:
      function's memory usage.
 
      For example, the caller might know that the app will exit upon
-     the function's return. thus, the function would be created extra
-     work if it built/destroyed a pool. instead, it should use the
+     the function's return. Thus, the function would create extra
+     work if it built/destroyed a pool. Instead, it should use the
      passed-in pool, which the caller is going to be tossing as part
      of app-exit anyway.
 
