@@ -432,7 +432,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     elif isinstance(target, gen_base.TargetSWIG):
       fakeincludes = self.map_rootpath(["subversion/bindings/swig",
                                         "subversion/include",
-                                        "apr/include"], rootpath)  
+                                        "apr/include",
+                                        "apr-util/include"], rootpath)
     else:
       fakeincludes = self.map_rootpath(["subversion/include",
                                         "apr/include",
