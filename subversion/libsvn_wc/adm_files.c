@@ -837,10 +837,6 @@ init_adm_file (svn_string_t *path,
 }
 
 
-/** kff todo: I think everything below here is ignorant of actual adm
-    locations, and could be moved to adm_ops.c or some other place.
-    But wait on that for a bit. **/
-
 /* Set up a new adm area, with appropriate ancestry. 
    The adm area starts out locked; remember to unlock it when done. */
 static svn_error_t *
