@@ -538,10 +538,15 @@ form.
 The Berkeley DB `copies' table records all filesystem copies.  Every
 key in this table is copy ID, and every value is a skel of the form:
 
-   ("copy" DST-NODE-ID)
+   ("copy" SRC-PATH SRC-REV DST-NODE-ID)
 
-where DST-NODE-ID represents the new node revision created as a result
-of the copy.
+where:
+
+   * SRC-PATH and SRC-REV are the canonicalized absolute path and
+     revision, respectively, of the source of the copy.
+
+   * DST-NODE-ID represents the new node revision created as a result
+     of the copy.
 
 As the sole exception to the rule above, the `copies' table always has
 one entry whose key is `next-id', and whose value is the lowest copy ID
