@@ -1,0 +1,66 @@
+#!/usr/bin/make
+
+# $URL$
+# $Id$
+
+BOOKFILES=appa.xml appb.xml appc.xml appd.xml book.xml ch00.xml \
+          ch01.xml ch02.xml ch03.xml ch04.xml ch05.xml ch06.xml \
+          ch07.xml ch08.xml ch09.xml colo.xml copyright.xml \
+          foreword.xml glossary.xml
+
+all:
+	@echo "Syntax:"
+	@echo "    make editmode"
+	@echo "    make commitmode"
+	@echo "    make build"
+	@echo "    make htmlbook"
+
+build: htmlbook copytobuild
+
+clean:
+	cd svn/trunk/doc/book && $(MAKE) clean
+
+editmode:
+	for _prc in $(BOOKFILES); do \
+		echo -n "$$_prc: convert..."; \
+		dest=book/book/$$_prc; \
+		swp=book/book/.$$_prc.swp; \
+		if [ -e $$swp ]; then \
+			echo "$$swp: Swap file found. Is the file being edited?" >&2; \
+			exit 1; \
+		fi; \
+		bin/clean_files -e $$dest >$$dest.tmp || exit 1; \
+		echo -n "move..."; \
+		mv $$dest.tmp $$dest; \
+		echo "OK."; \
+	done
+
+commitmode:
+	for _prc in $(BOOKFILES); do \
+		echo -n "$$_prc: clean..."; \
+		dest=book/book/$$_prc; \
+		swp=book/book/.$$_prc.swp; \
+		if [ -e $$swp ]; then \
+			echo "$$swp: Swap file found. Is the file being edited?" >&2; \
+			exit 1; \
+		fi; \
+		bin/clean_files $$dest >$$dest.tmp || exit 1; \
+		echo -n "move..."; \
+		mv $$dest.tmp $$dest; \
+		echo "OK."; \
+	done
+
+htmlbook:
+	cd svn/trunk/doc/book && $(MAKE) clean && $(MAKE) all-html
+
+copytobuild:
+	mkdir build.tmp
+	rmdir build.tmp
+	svn co http://svn.sunbase.org/repos/svnbook_nb/build build.tmp
+	find build.tmp -type f | grep -v '/\.svn/' | xargs rm
+	cp -a svn/trunk/doc/book/book/html-chunk build.tmp/
+	cp -p svn/trunk/doc/book/book/svn-book.html build.tmp/
+	cp -a svn/trunk/doc/book/book/html-chunk/images build.tmp/
+	cp -a svn/trunk/doc/book/book/styles.css build.tmp/
+
+# vim: set ts=4 sw=4 sts=4 noet :

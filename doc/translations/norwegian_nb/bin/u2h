@@ -1,0 +1,96 @@
+#!/usr/bin/perl
+
+#==============================================================================
+# $Id$
+# Converts from UTF-8 charset to HTML numeric entities (&#x263A; and &#9786;).
+#
+# Options:
+#   -a  convert Ampersand into entity
+#   -d  use Decimal values
+#   -i  accept Invalid sequences (overlong sequences and surrogates)
+#   -l  convert U+0080 through U+00FF to Latin-1 instead of entities
+#   -s  also convert Standard ascii U+0020 through U+007F
+#
+# License: GNU General Public License
+#==============================================================================
+
+use strict;
+require 'getopts.pl'; # FIXME: Generates a warning when command line option is used and -w is specified in the shebang.
+
+$| = 1;
+
+($main::opt_a, $main::opt_d, $main::opt_i, $main::opt_l, $main::opt_s) = (0, 0, 0, 0, 0);
+&Getopts('adils');
+
+my $amp_ent = $main::opt_d ? "&#38;" : "&#x26;";
+
+while (<>) {
+	$main::opt_a && s/&/$amp_ent/g;
+	$main::opt_s && s/([\x20-\x7F])/decode_char($1)/ge;
+	s/([\xFC-\xFD][\x80-\xBF][\x80-\xBF][\x80-\xBF][\x80-\xBF][\x80-\xBF])/decode_char($1)/ge;
+	s/([\xF8-\xFB][\x80-\xBF][\x80-\xBF][\x80-\xBF][\x80-\xBF])/decode_char($1)/ge;
+	s/([\xF0-\xF7][\x80-\xBF][\x80-\xBF][\x80-\xBF])/decode_char($1)/ge;
+	s/([\xE0-\xEF][\x80-\xBF][\x80-\xBF])/decode_char($1)/ge;
+	s/([\xC0-\xDF][\x80-\xBF])/decode_char($1)/ge;
+	print;
+}
+
+sub decode_char {
+	my $Msg = shift;
+	my $Val = "";
+	if ($Msg =~ /^([\x20-\x7F])$/) {
+		$Val = ord($1);
+	} elsif ($Msg =~ /^([\xC0-\xDF])([\x80-\xBF])/) {
+		if (!$main::opt_i && $Msg =~ /^[\xC0-\xC1]/) {
+			$Val = 0xFFFD;
+		} else {
+			$Val = ((ord($1) & 0x1F) << 6) | (ord($2) & 0x3F);
+		}
+	} elsif ($Msg =~ /^([\xE0-\xEF])([\x80-\xBF])([\x80-\xBF])/) {
+		if (!$main::opt_i && $Msg =~ /^\xE0[\x80-\x9F]/) {
+			$Val = 0xFFFD;
+		} else {
+			$Val = ((ord($1) & 0x0F) << 12) |
+			       ((ord($2) & 0x3F) <<  6) |
+			       ( ord($3) & 0x3F);
+		}
+	} elsif ($Msg =~ /^([\xF0-\xF7])([\x80-\xBF])([\x80-\xBF])([\x80-\xBF])/) {
+		if (!$main::opt_i && $Msg =~ /^\xF0[\x80-\x8F]/) {
+			$Val = 0xFFFD;
+		} else {
+			$Val = ((ord($1) & 0x07) << 18) |
+			       ((ord($2) & 0x3F) << 12) |
+			       ((ord($3) & 0x3F) <<  6) |
+			       ( ord($4) & 0x3F);
+		}
+	} elsif ($Msg =~ /^([\xF8-\xFB])([\x80-\xBF])([\x80-\xBF])([\x80-\xBF])([\x80-\xBF])/) {
+		if (!$main::opt_i && $Msg =~ /^\xF8[\x80-\x87]/) {
+			$Val = 0xFFFD;
+		} else {
+			$Val = ((ord($1) & 0x03) << 24) |
+			       ((ord($2) & 0x3F) << 18) |
+			       ((ord($3) & 0x3F) << 12) |
+			       ((ord($4) & 0x3F) <<  6) |
+			       ( ord($5) & 0x3F);
+		}
+	} elsif ($Msg =~ /^([\xFC-\xFD])([\x80-\xBF])([\x80-\xBF])([\x80-\xBF])([\x80-\xBF])([\x80-\xBF])/) {
+		if (!$main::opt_i && $Msg =~ /^\xFC[\x80-\x83]/) {
+			$Val = 0xFFFD;
+		} else {
+			$Val = ((ord($1) & 0x01) << 30) |
+			       ((ord($2) & 0x3F) << 24) |
+			       ((ord($3) & 0x3F) << 18) |
+			       ((ord($4) & 0x3F) << 12) |
+			       ((ord($5) & 0x3F) <<  6) |
+			       ( ord($6) & 0x3F);
+		}
+	}
+	unless ($main::opt_i) {
+		if (($Val >= 0xD800 && $Val <= 0xDFFF) || ($Val eq 0xFFFE) || ($Val eq 0xFFFF)) {
+			$Val = 0xFFFD;
+		}
+	}
+	return ($main::opt_l && ($Val <= 0xFF)) ? chr($Val) : sprintf(($main::opt_d ? "&#%u;" : "&#x%X;"), $Val);
+} # decode_char()
+
+__END__

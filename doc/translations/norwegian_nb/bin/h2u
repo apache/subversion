@@ -1,0 +1,67 @@
+#!/usr/bin/perl
+
+#==============================================================================
+# $Id$
+# Converts from numeric entities in HTML/SGML (&#x263A; and &#9786;) to UTF-8.
+#
+# Options:
+#   -i  allow Invalid character range U+D800 through U+DFFF, U+FFFE and U+FFFF.
+#   -l  also convert Latin-1 characters.
+#
+# License: GNU General Public License
+#==============================================================================
+
+use strict;
+require 'getopts.pl'; # FIXME: Generates a warning when command line option is used and -w is specified in the shebang.
+
+($main::opt_i, $main::opt_l) = (0, 0);
+
+&Getopts('il');
+
+while (<>) {
+	$main::opt_l && s/([\x80-\xFF])/widechar(ord($1))/ge;
+	s/&#(\d{1,10});/widechar($1)/ge;
+	s/&#x([0-9a-f]{1,8});/widechar(hex($1))/gei;
+	print;
+}
+
+sub widechar {
+	my $Val = shift;
+	if ($Val < 0x80) {
+		return sprintf("%c", $Val);
+	} elsif ($Val < 0x800) {
+		return sprintf("%c%c", 0xC0 | ($Val >> 6),
+		                       0x80 | ($Val & 0x3F));
+	} elsif ($Val < 0x10000) {
+		unless ($main::opt_i) {
+			if  (($Val >= 0xD800 && $Val <= 0xDFFF) || ($Val eq 0xFFFE) || ($Val eq 0xFFFF)) {
+				$Val = 0xFFFD;
+			}
+		}
+		return sprintf("%c%c%c", 0xE0 |  ($Val >> 12),
+		                         0x80 | (($Val >>  6) & 0x3F),
+		                         0x80 |  ($Val        & 0x3F));
+	} elsif ($Val < 0x200000) {
+		return sprintf("%c%c%c%c", 0xF0 |  ($Val >> 18),
+		                           0x80 | (($Val >> 12) & 0x3F),
+		                           0x80 | (($Val >>  6) & 0x3F),
+		                           0x80 |  ($Val        & 0x3F));
+	} elsif ($Val < 0x4000000) {
+		return sprintf("%c%c%c%c%c", 0xF8 |  ($Val >> 24),
+		                             0x80 | (($Val >> 18) & 0x3F),
+		                             0x80 | (($Val >> 12) & 0x3F),
+		                             0x80 | (($Val >>  6) & 0x3F),
+		                             0x80 | ( $Val        & 0x3F));
+	} elsif ($Val < 0x80000000) {
+		return sprintf("%c%c%c%c%c%c", 0xFC |  ($Val >> 30),
+		                               0x80 | (($Val >> 24) & 0x3F),
+		                               0x80 | (($Val >> 18) & 0x3F),
+		                               0x80 | (($Val >> 12) & 0x3F),
+		                               0x80 | (($Val >>  6) & 0x3F),
+		                               0x80 | ( $Val        & 0x3F));
+	} else {
+		return widechar(0xFFFD);
+	}
+} # widechar()
+
+__END__
