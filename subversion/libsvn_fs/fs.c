@@ -706,18 +706,18 @@ svn_fs_hotcopy_berkeley (const char *src_path,
   SVN_ERR (check_bdb_version (pool));
 
   /* Copy the DB_CONFIG file. */
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"DB_CONFIG", pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "DB_CONFIG", pool));
   
   /* Copy the databases.  */
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"nodes", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"revisions", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"transactions", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"copies", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"changes", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"representations", 
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "nodes", pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "revisions", pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "transactions", pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "copies", pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "changes", pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "representations", 
                                  pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"strings", pool));
-  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, &"uuids", pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "strings", pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "uuids", pool));
 
   {
     apr_array_header_t *logfiles;
