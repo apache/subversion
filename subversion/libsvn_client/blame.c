@@ -349,7 +349,7 @@ svn_client_blame (const char *target,
   if (end_revnum < start_revnum)
     return svn_error_create
       (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-       "svn_client_blame: start revision must preceed end revision");
+       "svn_client_blame: start revision must precede end revision");
 
   SVN_ERR (ra_lib->check_path (session, "", end_revnum, &kind, pool));
 
