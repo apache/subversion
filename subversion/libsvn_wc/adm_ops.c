@@ -71,14 +71,22 @@ svn_error_t *
 svn_wc__ensure_prepare_wc (svn_string_t *path,
                            svn_string_t *repository,
                            svn_vernum_t version,
-                           const char *initial_unwind,
                            apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
+  int existed_already;
 
-  err = svn_wc__ensure_adm (path, repository, version, initial_unwind, pool);
+  err = svn_wc__ensure_adm (path, repository, version, &existed_already, pool);
   if (err)
     return err;
+
+  if (existed_already)
+    {
+      /* kff todo: wait for zero seconds here, or more? */
+      err = svn_wc__lock (path, 0, pool);
+      if (err)
+        return err;
+    }
 
   return err;
 }
@@ -86,7 +94,7 @@ svn_wc__ensure_prepare_wc (svn_string_t *path,
 
 
 
-/*** The unwind stack. ***/
+/*** The log file. ***/
 
 svn_error_t *
 svn_wc__push_unwind (svn_string_t *path,

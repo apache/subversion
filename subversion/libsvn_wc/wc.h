@@ -148,33 +148,35 @@ svn_error_t *svn_wc__remove_adm_thing (svn_string_t *path,
                                        apr_pool_t *pool);
 
 
-/* Ensure that PATH is a working copy directory.
- * (In practice, this means creating an adm area.)
+/* Ensure that PATH is a locked working copy directory.
+ *
+ * (In practice, this means creating an adm area if none exists, in
+ * which case it is locked from birth, or else locking an adm area
+ * that's already there.)
  * 
  * REPOSITORY is a repository string for initializing the adm area.
  *
  * VERSION is the version for this directory.  kff todo: ancestor_path?
- *
- * INITIAL_UNWIND is an unwind marker to push for this directory, or
- * null if none is needed.  If INITIAL_UNWIND non-null, and an adm
- * area is being created, the unwind marker will be set _before_ the
- * adm area is completed, so there is no point at which this working
- * copy dir appears both complete and also up-to-date.  
  */
 svn_error_t *svn_wc__ensure_prepare_wc (svn_string_t *path,
                                         svn_string_t *repository,
                                         svn_vernum_t version,
-                                        const char *initial_unwind,
                                         apr_pool_t *pool);
 
 
-/* Ensure that an administrative area exists for PATH.
-   Does not ensure existence of PATH itself; if PATH does not exist,
-   an error will result. */
+/* Ensure that an administrative area exists for PATH, so that PATH is
+ * a working copy subdir.
+ *
+ * Sets *EXISTS_ALREADY to non-zero iff PATH was already a working
+ * copy (i.e., it had an adm area).
+ *
+ * Does not ensure existence of PATH itself; if PATH does not exist,
+ * an error will result. 
+ */
 svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
                                  svn_string_t *repository,
                                  svn_vernum_t version,
-                                 const char *initial_unwind,
+                                 int *exists_already,
                                  apr_pool_t *pool);
 
 
