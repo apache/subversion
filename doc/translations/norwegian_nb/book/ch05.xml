@@ -3840,8 +3840,12 @@ $
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-3.3">
+      <!-- @ENGLISH {{{
       <title>Managing Disk Space</title>
+      @ENGLISH }}} -->
+      <title>Passe p&#229; diskplassen</title>
 
+        <!-- @ENGLISH {{{
         <para>While the cost of storage has dropped incredibly in the
           past few years, disk usage is still a valid concern for
           administrators seeking to version large amounts of data.
@@ -3854,7 +3858,24 @@ $
           backed up, and which can be safely removed.  This section is
           specific to Berkeley DB;  FSFS repositories have no extra
           data that be cleaned up or reclaimed.</para>
+        @ENGLISH }}} -->
+        <para>Selv om prisen p&#229; datalagring har stupt de siste &#229;rene, er 
+          bruken av diskplass fortsatt noe administratorer m&#229; tenke p&#229; 
+          hvis de vil versjonere store mengder data.
+          Hver eneste ekstra byte konsumert av det aktive depotet er en 
+          byte som m&#229; tas backup av utenfor maskinen, kanskje flere 
+          ganger som del av roterende backuper.
+          Hvis du bruker et Berkeley DB-depot, er den prim&#230;re 
+          lagringsmekanismen et komplekst databasesystem og det er 
+          nyttig &#229; vite hvilke deler av dataene som m&#229; forbli p&#229; den 
+          aktive <!-- &#164; Ja, hallo, vi er da ikke ekstremister. -->siten, 
+          hvilke som det m&#229; tas sikkerhetskopi av, og hva som trygt kan 
+          fjernes.
+          Denne seksjonen er spesifikk til Berkeley DB, FSFS-depot har 
+          ingen ekstra data som kan ryddes opp i eller <!-- &#164; -->brukes 
+          om igjen.</para>
 
+        <!-- @ENGLISH {{{
         <para>Until recently, the largest offender of disk space usage
           with respect to Subversion repositories was the log files to
           which Berkeley DB performs its pre-writes before modifying
@@ -3864,7 +3885,19 @@ $
           at any given time some state, the log files contain all the
           many changes along the way between states.  As such, they
           can start to accumulate quite rapidly.</para>
+        @ENGLISH }}} -->
+        <para>Inntil nylig var de st&#248;rste synderene n&#229;r det gjelder 
+          diskplass brukt av Subversiondepot <!-- &#164; Sm&#229;tung setning? 
+          -->loggfilene der Berkeley DB utf&#248;rer sine forh&#229;ndsskrivinger 
+          f&#248;r de aktuelle databasefilene modifiseres.
+          Disse filene inneholder alle operasjonene som blir utf&#248;rt 
+          langs ruten &#229; forandre databasen fra en tilstand til en annen 
+          &#8212; mens databasefilene avspeiler til enhver tid en viss 
+          tilstand, inneholder loggfilene alle de mange sm&#229;forandringene 
+          langs veien mellom tilstander.
+          Og derfor kan disse &#248;ke i omfang ganske fort.</para>
 
+        <!-- @ENGLISH {{{
         <para>Fortunately, beginning with the 4.2 release of Berkeley
           DB, the database environment has the ability to remove its
           own unused log files without any external procedures.  Any
@@ -3872,7 +3905,7 @@ $
           which is compiled against Berkeley DB version 4.2 or greater
           will be configured for this automatic log file removal.  If
           you don't want this feature enabled, simply pass the
-          <option>--bdb-log-keep</option> option to the
+          <option>-&#64738;-bdb-log-keep</option> option to the
           <command>svnadmin create</command> command.  If you forget
           to do this, or change your mind at a later time, simple edit
           the <filename>DB_CONFIG</filename> file found in your
@@ -3883,7 +3916,28 @@ $
           force the configuration changes to take effect.  See <xref
           linkend="svn-ch-5-sect-2.2"/> for more information about
           database configuration.</para>
+        @ENGLISH }}} -->
+        <para>Heldigvis, fra og med 4.2-versjonen av Berkeley DB har 
+          databasemilj&#248;et muligheten til &#229; fjerne sine egne ubrukte 
+          loggfiler uten eksterne prosedyrer.
+          Ethvert depot som er laget med en <command>svnadmin</command> 
+          som er kompilert mot Berkeley DB 4.2 eller st&#248;rre vil bli 
+          konfigurert for denne automatiske slettingen av loggfiler.
+          Hvis du ikke vil ha denne funksjonaliteten aktivisert, kan du 
+          ganske enkelt angi valget <option>--bdb-log-keep</option> til 
+          <command>svnadmin create</command>-kommandoen.
+          Hvis du glemmer &#229; gj&#248;re dette, eller forandrer mening p&#229; et 
+          senere tidspunkt, kan du redigere filen 
+          <filename>DB_CONFIG</filename> som ligger i katalogen 
+          <filename>db</filename> i depotet.
+          Du kommenterer bort linjen som inneholder direktivet 
+          <literal>set_flags DB_LOG_AUTOREMOVE</literal> og kj&#248;rer 
+          deretter <command>svnadmin recover</command> p&#229; depotet ditt 
+          for &#229; aktivisere forandringene i konfigrasjonen.
+          Se <xref linkend="svn-ch-5-sect-2.2"/> for mer informasjon om 
+          databasekonfigurasjon.</para>
 
+        <!-- @ENGLISH {{{
         <para>Without some sort of automatic log file removal in
           place, log files will accumulate as you use your repository.
           This is actually somewhat of a feature of the database
@@ -3895,7 +3949,21 @@ $
           to conserve space.  Use the <command>svnadmin
           list-unused-dblogs</command> command to list the unused
           log files:</para>
+        @ENGLISH }}} -->
+        <para>Uten noen form for automatisk sletting av loggfiler p&#229; 
+          plass, vil loggfilene samle seg opp etterhvert som du bruker 
+          depotet.
+          Dette er faktisk en form for God Ting i databasesystemet &#8212; du 
+          vil v&#230;re i stand til &#229; gjenopprette hele databasen ved bruk av 
+          loggfilene alene, s&#229; disse filene kan v&#230;re nyttige for 
+          gjenoppretting etter en katastrofe.
+          Men vanligvis vil du arkivere loggfilene som ikke lenger er i 
+          bruk av Berkeley DB og deretter fjerne dem fra disken for &#229; 
+          spare plass.
+          Bruk kommandoen <command>svnadmin list-unused-dblogs</command> 
+          for &#229; liste ut de ubrukte loggfilene:</para>
 
+      <!-- @ENGLISH {{{
       <screen>
 $ svnadmin list-unused-dblogs /path/to/repos
 /path/to/repos/log.0000000031
@@ -3905,7 +3973,18 @@ $ svnadmin list-unused-dblogs /path/to/repos
 $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
 ## disk space reclaimed!
 </screen>
+      @ENGLISH }}} -->
+      <screen>
+$ svnadmin list-unused-dblogs /sti/til/depot
+/sti/til/depot//log.0000000031
+/sti/til/depot//log.0000000032
+/sti/til/depot//log.0000000033
 
+$ svnadmin list-unused-dblogs /sti/til/depot | xargs rm
+## diskplassen er frigjort!
+</screen>
+
+        <!-- @ENGLISH {{{
         <para>To keep the size of the repository as small as possible,
           Subversion uses <firstterm>deltification</firstterm> (or,
           <quote>deltified storage</quote>) within the repository
@@ -3925,8 +4004,29 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
           the contents of versioned files&mdash;is stored at a much
           smaller size than the original <quote>fulltext</quote>
           representation of that data.</para>
+        @ENGLISH }}} -->
+        <para>For &#229; holde st&#248;rrelsen p&#229; depotet s&#229; liten som mulig, 
+          bruker Subversion <firstterm>deltifisering</firstterm> (eller 
+          <quote>deltifisert lagring</quote>) inne i selve depotet.
+          Deltifisering involverer &#229; kode representasjonen av en porsjon 
+          data som en samling av forskjeller mot en annen porsjon data.
+          Hvis de to delene med data er veldig like, resulterer denne 
+          deltifiseringen i sparing av lagringsplass for den 
+          deltifiserte porsjonen &#8212; istedenfor &#229; ta opp plass lik 
+          st&#248;rrelsen av de originale dataene, brukes n&#229; nok plass for &#229; 
+          si: <quote>Jeg ser ut akkurat som de dataene der borte, 
+          unntatt de f&#248;lgende forandringene</quote>.
+          Mer spesifikt, hver gang en ny versjon av en fil blir lagt inn 
+          i depotet, koder Subversion den forrige versjonen (egentlig 
+          flere tidligere versjoner) som en delta mot den nye versjonen.
+          Resultatet er at mesteparten av depotdataene som har en 
+          tendens til &#229; forandre seg i st&#248;rrelse &#8212; innholdet av 
+          versjonerte filer &#8212; blir lagret med en mye mindre datamengde 
+          enn den originale <quote>fulltekst</quote>-representasjonen av 
+          disse dataene.</para>
 
         <note>
+          <!-- @ENGLISH {{{
           <para>Because all of the Subversion repository data that is
             subject to deltification is stored in a single Berkeley DB
             database file, reducing the size of the stored values will
@@ -3937,20 +4037,43 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
             while deltification doesn't produce immediate space
             savings, it can drastically slow future growth of the
             database.</para>
+          @ENGLISH }}} -->
+          <para>Fordi alle Subversions depotdata som blir deltifisert 
+            blir lagret i en enkelt Berkeley DB-databasefil, vil ikke 
+            n&#248;dvendigvis det &#229; redusere st&#248;rrelsen p&#229; de lagrede 
+            verdiene n&#248;dvendigvis redusere st&#248;rrelsen p&#229; selve 
+            databasefilen.
+            Berkeley DB vil imidlertid ha interne poster med ubrukte 
+            omr&#229;der i databasefilen, og vil bruke disse omr&#229;dene f&#248;rst 
+            f&#248;r den &#248;ker st&#248;rrelsen p&#229; databasefilen.
+            S&#229; selv om deltifisering ikke medf&#248;rer &#248;yeblikkelig sparing 
+            av diskplass, kan det redusere fremtidig &#248;kning i 
+            databasest&#248;rrelsen ganske drastisk.</para>
         </note>
 
     </sect2>
         
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-3.4">
+      <!-- @ENGLISH {{{
       <title>Repository Recovery</title>
+      @ENGLISH }}} -->
+      <title>Depotgjenoppretting</title>
 
+      <!-- @ENGLISH {{{
       <para>As mentioned in <xref linkend="svn-ch-5-sect-1.3.1"/>, a
         Berkeley DB repository can sometimes be left in frozen state
         if not closed properly.  When this happens, an administrator
         needs to rewind the database back into a consistent
         state.</para>
+      @ENGLISH }}} -->
+      <para>Som nevnt i <xref linkend="svn-ch-5-sect-1.3.1"/>, kan et 
+        Berkeley DB-depot noen ganger bli etterlatt i en frosset 
+        tilstand hvis den ikke blir skikkelig lukket.
+        N&#229;r dette skjer, m&#229; en administrator rulle databasen tilbake i 
+        funksjonell stand.</para>
 
+      <!-- @ENGLISH {{{
       <para>In order to protect the data in your repository, Berkeley
         DB uses a locking mechanism.  This mechanism ensures that
         portions of the database are not simultaneously modified by
@@ -3963,7 +4086,23 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
         data.  Other processes are forced to wait until that lock is
         removed before they are permitted to continue accessing that
         section of the database.</para>
+      @ENGLISH }}} -->
+      <para>For &#229; beskytte dataene i depotet ditt, bruker Berkeley DB en 
+        l&#229;semekanisme.
+        Denne mekanismen forsikrer at deler av databasen ikke blir 
+        oppdatert samtidig av flere sin aksesserer databasen, og at hver 
+        prosess ser dataene i den korrekte tilstanden som da disse 
+        dataene ble lest fra databasen.
+        N&#229;r en prosess m&#229; forandre noe i databasem sjekker den f&#248;rst om 
+        det eksisterer en l&#229;s p&#229; m&#229;ldataene.
+        Hvis dataene ikke er l&#229;st, l&#229;ser denne prosessen dataene, gj&#248;r 
+        forandringene som den &#248;nsker &#229; gj&#248;re, og l&#229;ser deretter opp 
+        dataene.
+        Andre prosesser blir tvunget til &#229; vente inntil denne l&#229;sen er 
+        fjernet f&#248;r de f&#229;r lov til &#229; fortsette med tilgangen til denne 
+        seksjonen av databasen.</para>
 
+      <!-- @ENGLISH {{{
       <para>In the course of using your Subversion repository, fatal
         errors (such as running out of disk space or available memory)
         or interruptions can prevent a process from having the chance to
@@ -3972,7 +4111,18 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
         When this happens, any attempts to access the repository hang
         indefinitely (since each new accessor is waiting for a lock to
         go away&mdash;which isn't going to happen).</para>
+      @ENGLISH }}} -->
+      <para>Under bruk av Subversiondepotet kan fatale feil (som &#229; g&#229; 
+        tom for diskplass eller tilgjengelig hukommelse) eller 
+        avbrytelser forhindre en prosess fra &#229; fjerne l&#229;sene som den har 
+        plassert i databasen.
+        Resultatet er at det bakenforliggende databasesystemet blir 
+        <quote>fastkilt</quote>.
+        N&#229;r dette skjer, vil ethvert fors&#248;k p&#229; &#229; aksessere depotet henge 
+        til evig tid (siden hver ny tilgang vil vente p&#229; at en l&#229;s skal 
+        forsvinne &#8212; noe som ikke kommer til &#229; skje).</para>
 
+      <!-- @ENGLISH {{{
       <para>First, if this happens to your repository, don't panic.
         The Berkeley DB filesystem takes advantage of database
         transactions and checkpoints and pre-write journaling to
@@ -3985,30 +4135,66 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
         off-site backups of the repository data in some fashion, but
         don't call your system administrator to restore a backup tape
         just yet.</para>
+      @ENGLISH }}} -->
+      <para>For det f&#248;rste, hvis dette skjer med depotet ditt, ingen 
+        panikk.
+        Berkeley DB-filsystemet benytter seg av databasetransaksjoner og 
+        sjekkpunkter og forh&#229;ndsskriver journaler for &#229; forsikre at bare 
+        de mest katastrofale hendelser<footnote>
+        <para>Som for eksempel:
+          Harddisk + kjempemagnet = krise.</para></footnote>
+        kan &#248;delegge databasen permanent.
+        En tilstrekkelig paranoid depotadministrator vil ta 
+        sikkerhetskopier av depotet til en annen maskin p&#229; en eller 
+        annen m&#229;te, men ikke f&#229; systemadministratoren din til &#229; hente 
+        tilbake det som er p&#229; backuptapen helt enda.</para>
 
+      <!-- @ENGLISH {{{
       <para>Secondly, use the following recipe to attempt to
         <quote>unwedge</quote> your repository:</para>
+      @ENGLISH }}} -->
+      <para>For det andre, bruk den f&#248;lgende oppskriften for &#229; fors&#248;ke &#229; 
+        <!-- &#164; --><quote>fjerne fastkilingen</quote> av depotet:</para>
    
       <orderedlist>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Make sure that there are no processes accessing (or
             attempting to access) the repository.  For networked
             repositories, this means shutting down the Apache HTTP
             Server, too.</para>
+          @ENGLISH }}} -->
+          <para>Sjekk at det ikker er noen prosesser som aksesserer 
+            (eller fors&#248;ker &#229; f&#229; tilgang) til depotet.
+            For depot p&#229; nettverket betyr dette at Apache HTTP ogs&#229; m&#229; 
+            kj&#248;res ned.</para>
         </listitem>
         <listitem> 
+          <!-- @ENGLISH {{{
           <para>Become the user who owns and manages the repository.
             This is important, as recovering a repository while
             running as the wrong user can tweak the permissions of the
             repository's files in such a way that your repository will
             still be inaccessible even after it is 
             <quote>unwedged</quote>.</para>
+          @ENGLISH }}} -->
+          <para>Bli brukeren som eier og vedlikeholder depotet.
+            Dette er viktig fordi en gjenoppretting av depotet med gal 
+            bruker kan forandre rettighetene p&#229; filene i depotet s&#229; det 
+            fortsatt vil v&#230;re utilgjengelig etter at det er 
+            <quote>reparert</quote>.</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Run the command <command>svnadmin recover
             /path/to/repos</command>.  You should see output like
             this:</para>
+          @ENGLISH }}} -->
+          <para>Kj&#248;r kommandoen <command>svnadmin recover 
+            /sti/til/depot</command>.
+            Du vil n&#229; se noe i likhet med dette:</para>
               
+          <!-- &#164; Bruke norske meldinger en gang i tida? -->
           <screen>
 Repository lock acquired.
 Please wait; recovering the repository may take some time...
@@ -4016,13 +4202,21 @@ Please wait; recovering the repository may take some time...
 Recovery completed.
 The latest repos revision is 19.
 </screen>
+          <!-- @ENGLISH {{{
           <para>This command may take many minutes to complete.</para>
+          @ENGLISH }}} -->
+          <para>Denne kommandoen kan ta flere minutter &#229; 
+            fullf&#248;re.</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Restart the Subversion server.</para>
+          @ENGLISH }}} -->
+          <para>Start Subversiontjeneren p&#229; nytt.</para>
         </listitem>
       </orderedlist>
             
+      <!-- @ENGLISH {{{
       <para>This procedure fixes almost every case of repository
         lock-up.  Make sure that you run this command as the user that
         owns and manages the database, not just as
@@ -4033,7 +4227,21 @@ The latest repos revision is 19.
         are owned by <literal>root</literal>, which means that even
         after you restore connectivity to your repository, regular
         users will be unable to access it.</para>
+      @ENGLISH }}} -->
+      <para>Denne prosedyren reparerer nesten ethvert tilfelle av l&#229;ste 
+        databaser.
+        V&#230;r sikker p&#229; at du kj&#248;rer denne kommandoen som brukeren som 
+        eier og vedlikeholder databasen, ikke bare som 
+        <literal>root</literal>.
+        Deler av gjenopprettingsprosessen kan f&#248;re til at diverse 
+        databasefiler blir opprettet p&#229; nytt (delte omr&#229;der av 
+        hukommelsen, for eksempel).
+        Gjenoppretting som <literal>root</literal> vil lage disse filene 
+        som om de er eid av <literal>root</literal>, noe som betyr at 
+        til og med etter at du setter opp forbindelsen til databasen 
+        igjen, klarer ikke vanlige brukere &#229; f&#229; tilgang til den.</para>
 
+      <!-- @ENGLISH {{{
       <para>If the previous procedure, for some reason, does not
         successfully unwedge your repository, you should do two
         things.  First, move your broken repository out of the way and
@@ -4042,13 +4250,27 @@ The latest repos revision is 19.
         <email>users@subversion.tigris.org</email>) describing your
         problem in detail.  Data integrity is an extremely high
         priority to the Subversion developers.</para>
+      @ENGLISH }}} -->
+      <para>Hvis den nevnte prosedyren av en eller annen grunn ikke 
+        klarer &#229; reparere depotet ditt, skal du gj&#248;re to ting.
+        F&#248;rst flytter du det &#248;delagte depotet ut av veien og legger inn 
+        den siste sikkerhetskopien av den.
+        Deretter, send en email til Subversionbrukerlisten (p&#229; 
+        <email>users@subversion.tigris.org</email>) der du beskriver 
+        problemet i detalj.
+        Dataintegritet har ekstremt h&#248;y prioritet for 
+        Subversionutviklerne.</para>
 
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-3.5">
+      <!-- @ENGLISH {{{
       <title>Migrating a Repository</title>
+      @ENGLISH }}} -->
+      <title>Flytte et depot</title>
     
+      <!-- @ENGLISH {{{
       <para>A Subversion filesystem has its data spread throughout
         various database tables in a fashion generally understood by
         (and of interest to) only the Subversion developers
@@ -4058,7 +4280,17 @@ The latest repos revision is 19.
         a mechanism, implemented in a pair of
         <command>svnadmin</command> subcommands:
         <literal>dump</literal> and <literal>load</literal>.</para>
+      @ENGLISH }}} -->
+      <para>Et Subversionfilsystem har dataene sine spredt over flere 
+        databasetabeller p&#229; en m&#229;te generelt bare forst&#229;tt av (og av 
+        interesse for) selve Subversionutviklerne.
+        Ting kan imidlertid skje som gj&#248;r at alt eller litt av disse 
+        dataene m&#229; samles i et enkeltst&#229;ende, portabelt flatt filformat.
+        Subversion har en slik mekanisme, implementert som et par 
+        <command>svnadmin</command>-delkommandoer:
+        <literal>dump</literal> og <literal>load</literal>.</para>
 
+      <!-- @ENGLISH {{{
       <para>The most common reason to dump and load a Subversion
         repository is due to changes in Subversion itself.  As
         Subversion matures, there are times when certain changes made
@@ -4068,27 +4300,58 @@ The latest repos revision is 19.
         DB repository to a new OS or CPU architecture, or to switch
         between Berkeley DB and FSFS back-ends.  The recommended
         course of action is relatively simple:</para>
+      @ENGLISH }}} -->
+      <para>Den vanligste grunnen til &#229; dumpe og laste et 
+        Subversiondepot er p&#229; grunn av forandringer i selve Subversion.
+        Etterhvert som Subversion modnes, skjer det noen ganger at det 
+        blir gjort forandringer i det bakenforliggende databaseoppsettet 
+        som f&#248;rer til at Subversion blir inkompatibel med tidligere 
+        versjoner av depotet.
+        Andre grunner for dumping og lasting kan v&#230;re &#229; flytte et 
+        Berkeley DB-depot til et annet operativsystem eller 
+        CPU-arkitektur, eller for &#229; bytte mellom Berkeley DB- og 
+        FSFS-lagringsformat.
+        Den anbefalte m&#229;ten &#229; gj&#248;re dette p&#229; er relativt enkel:</para>
   
       <orderedlist>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Using your <emphasis>current</emphasis> version of
             <command>svnadmin</command>, dump your repositories to
             dump files.</para>
+          @ENGLISH }}} -->
+          <para>Bruk din <emphasis>n&#229;v&#230;rende</emphasis> versjon av 
+            <command>svnadmin</command>, dump depotene dine til 
+            dumpfiler.</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Upgrade to the new version of Subversion.</para>
+          @ENGLISH }}} -->
+          <para>Oppgrader til den nye versjonen av Subversion.</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Move your old repositories out of the way, and create
             new empty ones in their place using your
             <emphasis>new</emphasis> <command>svnadmin</command>.</para>
+          @ENGLISH }}} -->
+          <para>Flytt de gamle depotene ut av veien, og opprett nye p&#229; 
+            plassen deres ved &#229; bruke den <emphasis>nye</emphasis> 
+            versjonen av <command>svnadmin</command>.</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Again using your <emphasis>new</emphasis>
             <command>svnadmin</command>, load your dump files into
             their respective, just-created repositories.</para>
+          @ENGLISH }}} -->
+          <para>S&#229; laster du dumpfilene inn i de respektive nyopprettede 
+            depotene ved &#229; bruke den <emphasis>nye</emphasis> versjonen 
+            av <command>svnadmin</command>.</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>Be sure to copy any customizations from your old
             repositories to the new ones, including
             <filename>DB_CONFIG</filename> files and hook scripts.
@@ -4096,15 +4359,31 @@ The latest repos revision is 19.
             new release of Subversion to see if any changes since your
             last upgrade affect those hooks or configuration
             options.</para>
+          @ENGLISH }}} -->
+          <para>Pass p&#229; &#229; kopiere alle egne tilpasninger fra de gamle 
+            depotene til de nye, inkludert 
+            <filename>DB_CONFIG</filename>-filer og p&#229;hakningsskript.
+            Det kan v&#230;re lurt &#229; lese hva som er forandret i den nye 
+            versjonen av Subversjon for &#229; se om noen forandringer siden 
+            din siste oppgradering forandrer disse p&#229;hakningsskriptene 
+            eller valg i oppsettet.</para>
         </listitem>
         <listitem>
+          <!-- @ENGLISH {{{
           <para>If the migration process made your repository
             accessible at a different URL (e.g. moved to a different
             computer, or is being accessed via a different schema),
             then you'll probably want to tell your users to run
-            <command>svn switch --relocate</command> on their existing
+            <command>svn switch -&#64738;-relocate</command> on their existing
             working copies.  See <xref
             linkend="svn-ch-9-sect-1.2-re-switch"/>.</para>
+          @ENGLISH }}} -->
+          <para>Hvis flytteprosessen gj&#248;r depotet ditt tilgjengelig p&#229; 
+            en annen URL (for eksempel flyttet til en annen maskin eller 
+            blir aksessert p&#229; en annen m&#229;te), b&#248;r du be alle brukerne 
+            dine om &#229; kj&#248;re <command>svn switch --relocate</command> p&#229; 
+            sine eksisterende arbeidskopier.
+            Se <xref linkend="svn-ch-9-sect-1.2-re-switch"/>.</para>
         </listitem>
       </orderedlist>
 
