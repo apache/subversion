@@ -58,5 +58,5 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../svn-dev.el")
  * end: */
