@@ -30,6 +30,9 @@
 #include "svn_opt.h"
 
 #if SVN_SWIG_VERSION >= 103024
+#if SVN_SWIG_VERSION >= 103025
+#include <swiglabels.swg>
+#endif
 #include <swigrun.swg>
 #include <perl5/perlrun.swg>
 #include <runtime.swg>
