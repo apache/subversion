@@ -354,6 +354,17 @@ AC_SUBST(SVN_RA_LIB_DEPS)
 AC_SUBST(SVN_RA_LIB_LINK)
 
 
+dnl Decide whether to enable real UTF-8 translations.
+dnl If disabled, only 7-bit ASCII is allowed in strings.
+AC_ARG_ENABLE(utf8,
+[  --enable-utf8             Turn on real UTF-8 strings],
+[
+    if test "$enableval" = "yes"; then
+      enable_utf8=yes
+      CFLAGS="$CFLAGS -DSVN_UTF8";
+    fi
+])
+
 dnl Pass some config data ----------------------------
 
 AC_SUBST(abs_builddir)
