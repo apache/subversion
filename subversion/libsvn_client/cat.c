@@ -70,7 +70,7 @@ svn_client_cat (svn_stream_t *out,
   if (svn_path_is_url (path_or_url))
     {
       /* If an explicit URL was passed in, just use it. */
-      *good_rev = *revision;
+      good_rev = revision;
       url = initial_url;
     }
   else
