@@ -124,29 +124,32 @@
       comienza a enviar cambios al repositorio poco a poco,
       seguramente fastidiará la tarea de Sally.</para>
 
-    <para>One strategy is to crawl into a hole: you and Sally can stop
-      sharing information for a week or two.  That is, start gutting
-      and reorganizing all the files in your working copy, but don't
-      commit or update until you're completely finished with the task.
-      There are a number of problems with this, though.  First, it's
-      not very safe.  Most people like to save their work to the
-      repository frequently, should something bad accidentally happen
-      to their working copy.  Second, it's not very flexible.  If you
-      do your work on different computers (perhaps you have a working
-      copy of <filename>/calc/trunk</filename> on two different
-      machines), you'll need to manually copy your changes back and
-      forth, or just do all the work on a single computer.  By that
-      same token, it's difficult to share your changes-in-progress
-      with anyone else.  A common software development <quote>best
-      practice</quote> is to allow your peers to review your work as you
-      go.  If nobody sees your intermediate commits, you lose
-      potential feedback.  Finally, when you're finished with all your
-      changes, you might find it very difficult to re-merge your final
-      work with the rest of the company's main body of code.  Sally
-      (or others) may have made many other changes in the repository
-      that are difficult to incorporate into your working
-      copy&mdash;especially if you run <command>svn update</command>
-      after weeks of isolation.</para>
+    <para>Una estrategia es esconderse en un agujero: usted y
+      Sally pueden dejar de compartir información durante una o
+      dos semanas. Es decir, comienza a reorganizar los ficheros
+      en su copia local, pero no envía los cambios al servidor o
+      actualiza su copia hasta que ha completado la tarea. Sin
+      embargo, hay varios problemas con esto. En primer lugar,
+      no es muy seguro. La mayoría de las personas prefieren
+      guardar sus cambios en el repositorio con frecuencia,
+      por si algo malo pudiera suceder de forma accidental a su
+      copia local. Segundo, no es muy flexible.  Si realiza su
+      trabajo en diferentes ordenadores (quizás tiene una copia de
+      <filename>/calc/trunk</filename> en dos máquinas diferentes),
+      necesitará copiar manualmente sus cambios de un lado a otro,
+      o realizar todo el trabajo en un solo ordenador. Del mismo
+      modo, es dificil compartir sus cambios a mitad del desarrollo
+      con otras personas. Una <quote>práctica ideal</quote> común
+      en el desarrollo de software es permitir que sus compañeros
+      puedan revisar su trabajo a medida que progresa. Si nadie
+      ve los cambios que realiza poco a poco, pierde críticas
+      potenciales. Finalmente, si ha finalizado con su tarea,
+      puede encontrarse con que es muy difícil fusionar su trabajo
+      final con el cuerpo principal del repositorio usado por el
+      resto de la compañía. Sally (y otros) puede haber realizado
+      cambios en el repositorio que son difíciles de incorporar en
+      su copia local&mdash;especialmente si ejecuta <command>svn
+      update</command> semanas tras el aislamiento.</para>
 
     <para>The better solution is to create your own branch, or line of
       development, in the repository.  This allows you to save your
