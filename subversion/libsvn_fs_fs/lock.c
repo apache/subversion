@@ -487,8 +487,26 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
   if (!fs->access_ctx || !fs->access_ctx->username)
     return svn_fs_fs__err_no_user (fs);
 
-  /* ### FITZ TODO:  if vaild, use current_rev here to do an
-     out-of-dateness check.  See how fs_base is doing it. */
+  /* Is the caller attempting to lock an out-of-date working file? */
+  if (SVN_IS_VALID_REVNUM(current_rev))
+    {
+      svn_revnum_t created_rev;
+      SVN_ERR (svn_fs_fs__node_created_rev (&created_rev, root, path, pool));
+
+      /* SVN_INVALID_REVNUM means the path doesn't exist.  So
+         apparently somebody is trying to lock something in their
+         working copy, but somebody else has deleted the thing
+         from HEAD.  That counts as being 'out of date'. */     
+      if (! SVN_IS_VALID_REVNUM(created_rev))
+        return svn_error_createf (SVN_ERR_FS_OUT_OF_DATE, NULL,
+                                  "Path '%s' doesn't exist in HEAD revision.",
+                                  path);
+
+      if (current_rev < created_rev)
+        return svn_error_createf (SVN_ERR_FS_OUT_OF_DATE, NULL,
+                                  "Lock failed: newer version of '%s' exists.",
+                                  path);
+    }
 
   /* Is the path already locked?   
 
