@@ -5,7 +5,7 @@ from distutils import core
 from distutils.command import build_ext
 from distutils import dir_util
 
-INC_DIRS=['../include', '../../apr/include']
+INC_DIRS=['.', '../../include', '../../../apr/include']
 LIB_DIRS=['/usr/local/svn/lib']
 
 class build_swig(build_ext.build_ext):
@@ -47,26 +47,31 @@ core.setup(name="Subversion",
            include_dirs=INC_DIRS,
 
            ext_package="svn",
-           ext_modules=[#core.Extension("_client",
-                        #              ["svn_client.i"]),
-                        #core.Extension("_delta",
-                        #              ["svn_delta.i"]),
-                        #core.Extension("_fs",
-                        #              ["svn_fs.i"]),
-                        core.Extension("_ra",
-                                       ["svn_ra.i"],
-                                       libraries=['svn_ra'],
-                                       library_dirs=LIB_DIRS,
-#                                       library_dirs=['../libsvn_ra/.libs'],
-#                                       runtime_library_dirs=LIB_DIRS,
-                                       ),
-                        core.Extension("_repos",
-                                      ["svn_repos.i"]),
-                        core.Extension("_wc",
-                                      ["svn_wc.i"]),
-                        core.Extension("_util",
-                                      ["util.i"]),
-                        ],
+           ext_modules=[
+             #core.Extension("_client",
+             #              ["svn_client.i"]),
+             #core.Extension("_delta",
+             #              ["svn_delta.i"]),
+             core.Extension("_fs",
+                            ["svn_fs.i"],
+                            libraries=['svn_fs', 'svn_swig_py', 'swigpy'],
+                            library_dirs=LIB_DIRS,
+                            ),
+             core.Extension("_ra",
+                            ["svn_ra.i"],
+                            libraries=['svn_ra', 'swigpy'],
+                            library_dirs=LIB_DIRS,
+                            ),
+#             core.Extension("_repos",
+#                            ["svn_repos.i"]),
+             #core.Extension("_wc",
+             #               ["svn_wc.i"]),
+             core.Extension("_util",
+                            ["util.i"],
+                            libraries=['svn_ra', 'swigpy'],
+                            library_dirs=LIB_DIRS,
+                            ),
+             ],
 
            cmdclass={'build_ext' : build_swig},
            )

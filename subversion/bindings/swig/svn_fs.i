@@ -25,6 +25,14 @@
 %import svn_delta.i
 
 /* -----------------------------------------------------------------------
+   do not generate any constructors or destructors (of structures) -- all
+   structures are going to come /out/ of the FS (so we don't need to
+   construct the things) and will live in a pool (so we don't need to
+   destroy the things).
+*/
+%nodefault
+
+/* -----------------------------------------------------------------------
    these types (as 'type **') will always be an OUT param
 */
 OUT_PARAM(svn_fs_txn_t);
@@ -70,7 +78,7 @@ OUT_PARAM(svn_stream_t);
     $target = &temp;
 }
 %typemap(python, argout) char *** {
-    $target = t_output_helper($target, c_strings_to_list(*$source));
+    $target = t_output_helper($target, svn_swig_c_strings_to_list(*$source));
 }
 
 /* -----------------------------------------------------------------------
@@ -80,34 +88,33 @@ OUT_PARAM(svn_stream_t);
 %typemap(ignore) apr_hash_t ** = apr_hash_t **PROPHASH;
 %typemap(argout) apr_hash_t ** = apr_hash_t **PROPHASH;
 
+/* -----------------------------------------------------------------------
+   except for svn_fs_dir_entries, which returns svn_fs_dirent_t structures
+*/
+
+%typemap(ignore) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
+%typemap(python,argout) apr_hash_t **entries_p {
+    $target = t_output_helper(
+        $target,
+        svn_swig_convert_hash(*$source, SWIGTYPE_p_svn_fs_dirent_t));
+}
+
+/* -----------------------------------------------------------------------
+   this is a hack to create some needed SWIGTYPE_* values
+*/
+
+MAKE_TYPE(svn_stream_t);
+MAKE_TYPE(svn_txdelta_stream_t);
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_fs.h
 
-// ### how do we make this code Python only? #ifdef SWIGPYTHON ??
 %header %{
 #include "svn_fs.h"
+#include "swigutil.h"
 
-/* helper function to convert a 'char ***' into a Python list of string
-   objects */
-static PyObject *c_strings_to_list(char **strings)
-{
-    PyObject *list = PyList_New(0);
-    char *s;
-
-    while ((s = *strings++) != NULL) {
-        PyObject *ob = PyString_FromString(s);
-
-        if (ob == NULL)
-            goto error;
-        if (PyList_Append(list, ob) == -1)
-            goto error;
-    }
-
-    return list;
-
-  error:
-    Py_DECREF(list);
-    return NULL;
-}
+/* implement the hack for the types */
+MAKE_TYPE_IMPL(svn_stream_t)
+MAKE_TYPE_IMPL(svn_txdelta_stream_t)
 %}

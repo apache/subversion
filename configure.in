@@ -255,7 +255,6 @@ AC_DEFINE_UNQUOTED(SVN_PATH_STRIP_TRAILING_SLASHDOT, 0,
         [Non-zero if the trailing /. in paths should be stripped])
 
 dnl Find a python 2.X binary, test cases will not run with Python 1.X
-
 AC_PATH_PROG(PYTHON2, python2, none)
 if test "$PYTHON2" = "none"; then
 	AC_PATH_PROG(PYTHON, python, none)
@@ -267,6 +266,24 @@ if test "$PYTHON" != "none"; then
   ${PYTHON} ${abs_srcdir}/pycheck.py
 fi
 
+dnl try to find "swig" to build the SWIG bindings
+AC_PATH_PROG(SWIG, swig, none)
+if test "$SWIG" != "none"; then
+  if test "$PYTHON" != "none"; then
+    SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-py-lib"
+    SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-py-lib"
+
+    AC_CACHE_CHECK([for Python includes], [ac_cv_python_includes],[
+	ac_cv_python_includes="`$PYTHON ac-helpers/get-py-info.py --includes`"
+    ])
+    SWIG_PY_INCLUDES="-I$ac_cv_python_includes"
+  fi
+fi
+AC_SUBST(SWIG_BUILD_RULES)
+AC_SUBST(SWIG_INSTALL_RULES)
+AC_SUBST(SWIG_PY_INCLUDES)
+
+dnl try to find the "makeinfo" program
 AC_PATH_PROG(MAKEINFO, makeinfo, [echo cannot run makeinfo])
 if test "MAKEINFO" = "echo cannot run makeinfo"; then
         dnl we won't install/make any info pages then

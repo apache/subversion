@@ -71,21 +71,31 @@ typedef apr_int64_t apr_time_t;
    create some INOUT typemaps for apr_size_t
 */
 
-%typemap(in) apr_size_t *INOUT = unsigned long *INOUT;
+%typemap(python,in) apr_size_t *INOUT (apr_size_t temp) {
+    temp = (apr_size_t) PyInt_AsLong($source);
+    $target = &temp;
+}
+
 %typemap(argout) apr_size_t *INOUT = unsigned long *INOUT;
+
+/* -----------------------------------------------------------------------
+   create an OUTPUT argument typemap for an apr_hash_t **
+*/
+
+%typemap(ignore) apr_hash_t **OUTPUT (apr_hash_t *temp) {
+    $target = &temp;
+}
 
 /* -----------------------------------------------------------------------
    create an OUTPUT argument defn for an apr_hash_t ** which is storing
    property values
 */
 
-%typemap(ignore) apr_hash_t **PROPHASH (apr_hash_t *temp) {
-    $target = &temp;
-}
+%typemap(ignore) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
 %typemap(python,argout) apr_hash_t **PROPHASH {
     /* toss prior result, get new result from the hash */
     Py_DECREF($target);
-    $target = prophash_to_dict(*$source);
+    $target = svn_swig_prophash_to_dict(*$source);
 }
 
 /* -----------------------------------------------------------------------
@@ -96,56 +106,10 @@ typedef apr_int64_t apr_time_t;
     $target = &temp;
 }
 %typemap(python,argout) apr_file_t ** {
-    $target = t_output_helper($target,
-                              SWIG_NewPointerObj(*$source,
-                                                 SWIGTYPE_p_apr_file_t));
+    $target = t_output_helper(
+        $target,
+        SWIG_NewPointerObj(*$source,
+                           SWIG_TypeQuery("apr_file_t *")));
 }
 
-/* -----------------------------------------------------------------------
-   Implement some various utility functions
-
-   prophash_to_dict: convert an apr_hash_t * into a Python dict
-*/
-
-#ifdef SWIGPYTHON
-%header %{
-/* helper function to convert an apr_hash_t* (char* -> svnstring_t*) to
-   a Python dict */
-static PyObject *prophash_to_dict(apr_hash_t *hash)
-{
-    apr_hash_index_t *hi;
-    PyObject *item;
-    PyObject *result = PyDict_New();
-
-    if (result == NULL)
-        return NULL;
-
-    for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi)) {
-        const void *key;
-        void *val;
-        const svn_string_t *propval;
-
-        apr_hash_this(hi, &key, NULL, &val);
-        propval = val;
-        /* ### borrowing from value in the pool. or should we copy? note
-           ### that copying is "safest" */
-        item = PyBuffer_FromMemory(propval->data, propval->len);
-        /* item = PyString_FromStringAndSize(propval->data, propval->len); */
-        if (item == NULL)
-            goto error2;
-        if (PyDict_SetItemString(result, key, item) == -1)
-            goto error1;
-        /* ### correct? or does SetItemString take this? */
-        Py_DECREF(item);
-    }
-
-    return result;
-
-  error1:
-    Py_DECREF(item);
-  error2:
-    Py_DECREF(result);
-    return NULL;
-}
-%}
-#endif /* SWIGPYTHON */
+/* ----------------------------------------------------------------------- */

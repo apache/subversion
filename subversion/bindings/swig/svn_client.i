@@ -59,7 +59,7 @@
         PyObject *item = PyTuple_New(2);
         PyObject *name = PyString_FromStringAndSize((*ppitem)->node_name->data,
                                                     (*ppitem)->node_name->len);
-        PyObject *hash = prophash_to_dict((*ppitem)->prop_hash);
+        PyObject *hash = svn_swig_prophash_to_dict((*ppitem)->prop_hash);
 
         if (item == NULL || name == NULL || hash == NULL) {
             Py_XDECREF(item);
@@ -85,38 +85,11 @@
 /* -----------------------------------------------------------------------
    handle the "statushash" OUTPUT param for svn_client_status()
 */
-%typemap(ignore) apr_hash_t **statushash (apr_hash_t *temp) {
-    $target = &temp;
-}
+%typemap(ignore) apr_hash_t **statushash = apr_hash_t **OUTPUT;
 %typemap(python,argout) apr_hash_t **statushash {
-    apr_hash_index_t *hi;
-    PyObject *dict = PyDict_New();
-
-    if (dict == NULL)
-        return NULL;
-
-    for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi)) {
-        const void *key;
-        void *val;
-        PyObject *value;
-
-        apr_hash_this(hi, &key, NULL, &val);
-        /* ### how to ensure this type is registered? */
-        value = SWIG_NewPointerObj(val, SWIGTYPE_p_svn_wc_status_t);
-        if (value == NULL) {
-            Py_DECREF(dict);
-            return NULL;
-        }
-        if (PyDict_SetItemString(dict, key, value) == -1) {
-            Py_DECREF(value);
-            Py_DECREF(dict);
-            return NULL;
-        }
-        /* ### correct? or does SetItemString take this? */
-        Py_DECREF(value);
-    }
-
-    $target = t_output_helper($target, list);
+    $target = t_output_helper(
+        $target,
+        svn_swig_convert_hash(*$source, SWIGTYPE_p_svn_wc_status_t));
 }
 
 /* ----------------------------------------------------------------------- */
