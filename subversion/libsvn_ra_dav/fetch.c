@@ -1579,7 +1579,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
     case ELEM_resource:
       att = svn_xml_get_attr_value("path", atts);
       /* ### verify we got it. punt on error. */
-      rb->current_wcprop_path = svn_path_join(rb->target, att, rb->ras->pool);
+      rb->current_wcprop_path = apr_pstrdup(rb->ras->pool, att);
       break;
 
     case ELEM_open_directory:
