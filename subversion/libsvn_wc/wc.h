@@ -342,6 +342,9 @@ svn_error_t *svn_wc__entry_merge (svn_string_t *path,
 
    If any of the return-by-reference arguments is NULL, that argument
    will simply not be used.
+
+   If the entry is not found, the error SVN_ERR_WC_ENTRY_NOT_FOUND
+   will be returned.
 */
 svn_error_t *svn_wc__entry_get (svn_string_t *path,
                                 svn_string_t *entryname, 

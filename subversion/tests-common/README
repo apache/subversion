@@ -1,6 +1,7 @@
 
 This directory contains a standardized main() that is linked into all
-Subversion automated test-programs.
+Subversion automated test-programs, and a subdirectory `xml'
+containing shared test data.
 
 Here's a detailed description of Subversion's automated test-suite:
 

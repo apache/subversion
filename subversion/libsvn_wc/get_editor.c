@@ -584,18 +584,35 @@ close_directory (void *dir_baton)
 }
 
 
+/* Common code for add_file() and replace_file(). */
 static svn_error_t *
-add_file (svn_string_t *name,
-          void *parent_baton,
-          svn_string_t *ancestor_path,
-          svn_vernum_t ancestor_version,
-          void **file_baton)
+add_or_replace_file (svn_string_t *name,
+                     void *parent_baton,
+                     svn_string_t *ancestor_path,
+                     svn_vernum_t ancestor_version,
+                     void **file_baton,
+                     svn_boolean_t adding)  /* 0 if replacing */
 {
   struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
   struct file_baton *fb;
   svn_error_t *err;
 
+  err = svn_wc__entry_get (parent_dir_baton->path,
+                           name,
+                           NULL,
+                           NULL,
+                           parent_dir_baton->pool,
+                           NULL);
+
+  if (err && (err->apr_err != SVN_ERR_WC_ENTRY_NOT_FOUND))
+    return err;
+  else if ((! adding) && (err->apr_err == SVN_ERR_WC_ENTRY_NOT_FOUND))
+    return svn_error_quick_wrap (err, "trying to replace non-versioned file");
+  else if (adding && (! err))
+    return svn_error_quick_wrap (err, "trying to add versioned file");
+
   /* Make sure we've got a working copy to put the file in. */
+  /* kff todo: need stricter logic here */
   err = svn_wc__check_wc (parent_dir_baton->path, parent_dir_baton->pool);
   if (err)
     return err;
@@ -609,28 +626,26 @@ add_file (svn_string_t *name,
 
 
 static svn_error_t *
+add_file (svn_string_t *name,
+          void *parent_baton,
+          svn_string_t *ancestor_path,
+          svn_vernum_t ancestor_version,
+          void **file_baton)
+{
+  return add_or_replace_file
+    (name, parent_baton, ancestor_path, ancestor_version, file_baton, 1);
+}
+
+
+static svn_error_t *
 replace_file (svn_string_t *name,
               void *parent_baton,
               svn_string_t *ancestor_path,
               svn_vernum_t ancestor_version,
               void **file_baton)
 {
-  struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
-  svn_error_t *err = NULL;
-
-  /* Replacing is mostly like adding... */
-  err = add_file (name,
-                  parent_dir_baton,
-                  ancestor_path,
-                  ancestor_version, 
-                  file_baton);
-
-  /* ... except that you must check that the file existed already, and
-     was under version control */
-
-  /* kff todo: HERE, do what above says */
-
-  return err;
+  return add_or_replace_file
+    (name, parent_baton, ancestor_path, ancestor_version, file_baton, 1);
 }
 
 
