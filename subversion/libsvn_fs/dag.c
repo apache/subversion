@@ -103,12 +103,14 @@ void svn_fs__dag_close (dag_node_t *node)
 {
   abort();
 }
+
+
 const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node)
 {
-  abort();
-  /* NOTREACHED */
-  return NULL;
+  return node->id;
 }
+
+
 svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
                                        dag_node_t *node,
                                        trail_t *trail)
