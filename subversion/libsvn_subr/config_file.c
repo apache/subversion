@@ -49,7 +49,10 @@ typedef struct parse_context_t
 } parse_context_t;
 
 
-/* Skip and count spaces */
+/* Eat chars from FD until encounter non-whitespace, newline, or EOF.
+   Set *PCOUNT to the number of characters eaten, not counting the
+   last one, and return the last char read (the one that caused the
+   break).  */
 static APR_INLINE int
 skip_whitespace (FILE* fd, int *pcount)
 {
@@ -125,7 +128,7 @@ parse_value (int *pch, parse_context_t *ctx)
               /* The next line was empty. Ergo, it can't be a
                  continuation line. */
               ++ctx->line;
-              ch = getc(ctx->fd);
+              /* ch = getc(ctx->fd); kff fooo */
               end_of_val = TRUE;
               continue;
 
@@ -205,9 +208,16 @@ parse_option (int *pch, parse_context_t *ctx)
 }
 
 
-/* Parse a single section */
+/* Read chars until enounter ']', then skip everything to the end of
+ * the line.  Set *PCH to the character that ended the line (either
+ * newline or EOF), and set CTX->section to the string of characters
+ * seen before ']'.
+ * 
+ * This is meant to be called immediately after reading the '[' that
+ * starts a section name.
+ */
 static svn_error_t *
-parse_section (int *pch, parse_context_t *ctx)
+parse_section_name (int *pch, parse_context_t *ctx)
 {
   svn_error_t *err = SVN_NO_ERROR;
   int ch;
@@ -289,7 +299,7 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
         {
         case '[':               /* Start of section header */
           if (count == 0)
-            err = parse_section (&ch, &ctx);
+            err = parse_section_name (&ch, &ctx);
           else
             {
               ch = EOF;
