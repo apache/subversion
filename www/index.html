@@ -64,7 +64,8 @@ This system will have the following features:
     <p>
     Inversion will have I18N support -- commands, user messages, and
     errors can be customized to the appropriate human language at
-    build-time.
+    build-time.  Also, there will be I18N support for the <i>names</i>
+    as well as the contents of versioned entities.
 </li>
 
 <p>
@@ -90,13 +91,14 @@ This system will have the following features:
     aren't.
     <p>
     Branches and tags will both be implemented in terms of an
-    underlying "clone" operation.  A clone is just an alias pointing
-    at a specific revision of an existing project, so it takes up a
-    small, constant amount of space.  All clones are tags; if you
-    start committing on one, then it's a branch as well.
+    underlying "clone" operation.  A clone is just an alias,
+    optionally within the project's namespace, pointing at a specific
+    revision of an existing project.  An clone takes up a small,
+    constant amount of space.  All clones are tags; if you start
+    committing on one, then it's a branch as well.
     <p>
-    (This obviates the need for "branch-point tags" in CVS, by doing
-    away with the artificial distinction that made them necessary in
+    (This does away with CVS's "branch-point tagging", by removing the
+    artificial distinction that made branch-point tags necessary in
     the first place.)
 </li>
 
@@ -108,6 +110,15 @@ This system will have the following features:
     that repeated merges from the same source do not require careful
     human calculation to avoid spurious conflicts (anyone who's done
     repeated CVS merges knows what we're talking about).
+    <p>
+    (There are some theoretical problems with remembering merge
+    sources -- knowing where the merged data came from implies some
+    sort of universal repository registry.  However, our first goal is
+    to make sure that multiple merges from branches made <i>in the
+    same repository as the original project</i> compound gracefully.
+    Remembering merges from remote sources is more difficult, due to
+    the difficulty of distinguishing remote sources, but there are
+    good "90%" solutions that will work in practice).
 </li>
 
 <p>
@@ -117,9 +128,9 @@ This system will have the following features:
     Inversion knows how to show diffs for text files, and also gives
     the user the option to plug in external diff programs for any kind
     of file.  The external program need merely conform to some simple
-    interface (i.e., "<tt>diffprog file1 file2 [file3...]</tt>", where
-    the various files might be different revisions of the same file)
-    for Inversion to invoke it.
+    invocation interface (i.e., "<tt>diffprog file1 file2
+    [file3...]</tt>", where the various files might be different
+    revisions of the same file).
 </li>
 
 <p>
@@ -127,8 +138,7 @@ This system will have the following features:
 <li><strong>Natively client/server</strong>
     <p>
     Inversion is designed to be client/server from the beginning; thus
-    it will avoid some of the maintenance problems which have plagued
-    CVS.
+    avoiding some of the maintenance problems which have plagued CVS.
 </li>
 
 <p>
@@ -172,9 +182,23 @@ Project Status
 <TD WIDTH="100%" HEIGHT="100" BGCOLOR="#f0f0f0">
 
 <p>
-Many people have expressed interest in doing a new version control
-system, and doing it right.  Inversion aims to be that system.
+
+The basic design is fairly solidified, particularly the repository
+model.  Several important things remain to be worked out -- most
+significantly the client/server protocol; we're looking at
+WebDAV+versioning as one possibility, but not the only possibility.
+
+<p>
+
+A core programming team has been chosen; they should be ready to start
+by May 1st.  Volunteer help is also welcome (and indeed will
+eventually be necessary, but we're not asking for heavy community
+involvement until we have some running code to show).
+
+<p>
+
 Mailing lists, CVS repositories, and bugzilla are set up.
+
 </p>
 
 <p>
