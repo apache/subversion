@@ -209,6 +209,153 @@ svn_client__get_diff_editor (svn_stringbuf_t *target,
                              void **edit_baton,
                              apr_pool_t *pool);
 
+
+/* ---------------------------------------------------------------- */
+
+/*** Commit Stuff ***/
+
+/* WARNING: This is all new, untested, un-peer-reviewed conceptual
+   stuff.
+
+   The day that `svn switch' came into existence, our old commit
+   crawler (svn_wc_crawl_local_mods) became obsolete.  It relied far
+   too heavily on the on-disk heirarchy of files and directories, and
+   simply had no way to support disjoint working copy trees or nest
+   working copies.  The primary reason for this is that commit
+   process, in order to guarantee atomicity, is a single drive of a
+   commit editor which is based not on working copy paths, but on
+   URLs.  With the completion of `svn switch', it became all too
+   likely that the on-disk working copy heirarchy would no longer be
+   guaranteed to map to a similar in-repository heirarchy.
+
+   Aside from this new brokenness of the old system, an unrelated
+   feature request had cropped up -- the ability to know in advance of
+   your commit, exactly what would be committed (so that log messages
+   could be initially populated with this information).  Since the old
+   crawler discovered commit candidates while in the process of
+   committing, it was impossible to harvest this information upfront.
+   As a workaround, svn_wc_statuses() was used to stat the whole
+   working copy for changes before the commit started...and then the
+   commit would again stat the whole tree for changes.
+
+   Enter the new system.
+
+   The primary goal of this system is very straightforward: harvest
+   all commit candidate information up front, and cache enough info in
+   the process to use this to drive a URL-sorted commit.
+
+   *** END-OF-KNOWLEDGE ***
+
+   The prototypes below are still in development.  In general, the
+   idea is that commit-y processes (`svn mkdir URL`, `svn delete URL`,
+   `svn commit`, `svn copy WC_PATH URL`, `svn copy URL1 URL2`, `svn
+   move URL1 URL2`, others??) generate the cached commit candidate
+   information, and hand this information off to a consumer which is
+   responsible for driving the RA layer's commit editor in a
+   URL-depth-first fashion and reporting back the post-commit
+   information.
+
+*/
+
+
+/* The commit candidate structure. */
+typedef struct svn_client_commit_item_t
+{
+  svn_stringbuf_t *path;      /* absolute working-copy path of item */
+  svn_wc_entry_t *entry;      /* entry for this item (sorta) */
+  svn_boolean_t text_mods;    /* does this item have textual mods? */
+  svn_boolean_t prop_mods;    /* does this item have property mods? */
+
+} svn_client_commit_item_t; /* ### This should probably be
+                               svn_client__commit_item_t, but the
+                               final location for this structure has
+                               not yet been decided.  It will probably
+                               move to svn_client.h, now that I think
+                               about it, so it can be used with client
+                               binaries as they generate initial
+                               commit log messages. */
+
+
+/* ### This is TEMPORARY! Until we can find out the canonical
+   repository URL of a given entry, we'll just use this bogus value in
+   for our single committables hash key.  By the time we support
+   multiple repositories we will have to be storing the canonical
+   repository URLs anyway, so this will go away and the real URLs will
+   be the keys of the committables hash. */
+#define SVN_CLIENT__SINGLE_REPOS_NAME "svn:single-repos"
+
+
+/* Recursively crawl a set of working copy paths (PARENT_DIR + each
+   item in the TARGETS array) looking for commit candidates, locking
+   working copy directories as the crawl progresses.  For each
+   candidate found:
+
+     - create svn_client_commit_item_t for the candidate.
+
+     - add the structure to an apr_array_header_t array of commit
+       items that are in the same repository, creating a new array if
+       necessary.
+
+     - add (or update) a reference to this array to the COMMITTABLES
+       hash, keyed on the canonical repository name.  ### todo, until
+       multi-repository support actually exists, the single key here
+       will actually be some arbitrary thing to be ignored.  
+
+   Therefore, at the successful return of this function, COMMITTABLES
+   will be an apr_hash_t * hash of apr_array_header_t * arrays (of
+   svn_client_commit_item_t * structures), keyed on const char *
+   canonical repository URLs.  
+
+   ### this will one day replace svn_wc_crawl_local_mods,
+   crawl_local_mods, crawl_dir, and report_single_entry.  
+
+   ### needed: a committables generator to replace
+   svn_wc_crawl_as_copy and crawl_as_copy.
+*/
+svn_error_t *
+svn_client__harvest_committables (apr_hash_t **committables,
+                                  svn_stringbuf_t *parent_dir,
+                                  apr_array_header_t *targets,
+                                  apr_pool_t *pool);
+
+
+/* A qsort()-compatible sort routine for sorting an array of
+   svn_client_commit_item_t's by their URL member. */
+int svn_client__sort_commit_item_urls (const void *a, const void *b);
+
+
+/* Rewrite the COMMITTABLES array to be sorted by URL.  Also, discover
+   a common *BASE_URL for the items in the array, and rewrite those
+   items' URLs to be relative to that *BASE_URL.  */
+svn_error_t *
+svn_client__condense_committables (svn_stringbuf_t **base_url,
+                                   apr_array_header_t *commit_items,
+                                   apr_pool_t *pool);
+
+
+/* Commit the items in the COMMIT_ITEMS array using EDITOR/EDIT_BATON
+   to describe the committed local mods.
+
+   WC_COMMIT tells the RA layer whether or not this is a commit of the
+   working copy.  That is, whether the working copy is expected to be
+   modified as a result of the commit.
+
+   REVNUM_FN/REV_BATON allows this routine to query the repository for
+   the latest revision.  It is used (temporarily) for checking that
+   directories are "up-to-date" when a dir-propchange is discovered.
+   We don't expect it to be here forever.  :-)  */
+svn_error_t *
+svn_client__do_commit (apr_array_header_t *commit_items,
+                       const svn_delta_editor_t *editor,
+                       void *edit_baton,
+                       svn_boolean_t wc_commit,
+                       const svn_ra_get_latest_revnum_func_t *revnum_fn,
+                       void *rev_baton,
+                       apr_pool_t *pool);
+
+               
+
+
 #endif /* CLIENT_H */
 
 
