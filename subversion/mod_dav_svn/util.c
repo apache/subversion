@@ -87,7 +87,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
                                       const char *uri,
                                       apr_pool_t *pool)
 {
-  apr_uri_components comp;
+  apr_uri_t comp;
   char *path;
   apr_size_t len1;
   apr_size_t len2;
