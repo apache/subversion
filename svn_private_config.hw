@@ -25,8 +25,8 @@
 
 /* The version of Berkely DB we want */
 #define SVN_FS_WANT_DB_MAJOR	3
-#define SVN_FS_WANT_DB_MINOR	2
-#define SVN_FS_WANT_DB_PATCH	9
+#define SVN_FS_WANT_DB_MINOR	3
+#define SVN_FS_WANT_DB_PATCH	11
 
 
 /* Paths to configuration files */

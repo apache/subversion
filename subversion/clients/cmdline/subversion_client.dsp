@@ -51,7 +51,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
-# ADD LINK32 ..\..\libsvn_client\Release\libsvn_client.lib ..\..\libsvn_delta\Release\libsvn_delta.lib ..\..\libsvn_subr\Release\libsvn_subr.lib ..\..\libsvn_wc\Release\libsvn_wc.lib ..\..\..\apr\LibR\apr.lib ..\..\..\expat-lite\Release\libexpat.lib libdb33.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /machine:I386 /out:"Release/svn.exe"
+# ADD LINK32 ..\..\libsvn_client\Release\libsvn_client.lib ..\..\libsvn_delta\Release\libsvn_delta.lib ..\..\libsvn_subr\Release\libsvn_subr.lib ..\..\libsvn_wc\Release\libsvn_wc.lib ..\..\..\apr\LibR\apr.lib ..\..\..\expat-lite\Release\libexpat.lib ..\..\..\db3-win32\lib\libdb33.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /machine:I386 /out:"Release/svn.exe"
 
 !ELSEIF  "$(CFG)" == "subversion_client - Win32 Debug"
 
@@ -76,7 +76,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 ..\..\libsvn_client\Debug\libsvn_client.lib ..\..\libsvn_delta\Debug\libsvn_delta.lib ..\..\libsvn_subr\Debug\libsvn_subr.lib ..\..\libsvn_wc\Debug\libsvn_wc.lib ..\..\..\apr\LibD\apr.lib ..\..\..\expat-lite\Debug\libexpat.lib libdb33d.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /debug /machine:I386 /out:"Debug/svn.exe" /pdbtype:sept
+# ADD LINK32 ..\..\libsvn_client\Debug\libsvn_client.lib ..\..\libsvn_delta\Debug\libsvn_delta.lib ..\..\libsvn_subr\Debug\libsvn_subr.lib ..\..\libsvn_wc\Debug\libsvn_wc.lib ..\..\..\apr\LibD\apr.lib ..\..\..\expat-lite\Debug\libexpat.lib ..\..\..\db3-win32\lib\libdb33d.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /debug /machine:I386 /out:"Debug/svn.exe" /pdbtype:sept
 # SUBTRACT LINK32 /incremental:no
 
 !ENDIF 

@@ -7,7 +7,7 @@ this first.
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
 
-              Last updated:  $Date: 2001-08-27 00:02:59 $
+              Last updated:  $Date: 2001-08-27 23:49:57 $
 
 
 TABLE OF CONTENTS
@@ -290,19 +290,15 @@ http://www.sleepycat.com. There is a binary distibution at
 
     http://www.xbc.nu/svn/db-3.3.11-win32.zip
 
-Unpack the distribution, and add <path/to/berkeley-db>/include/ and
-<path/to/berkeley-db>/lib/ to Include and Link files respectively
-under Tools->Options->Directories.
+Unpack the distribution into the root directory of the Subversion
+source tree and rename the directory db-3.3.11-win32 to db3-win32.
+It's a good idea to add <SVN>\db3-win32\bin to your PATH, so that
+Subversion can find the Berkeley DB DLLs.
 
-If you build Berkeley DB from the source, these will be
-
-    <path/to/berkeley-db>/include/
-
-and
-
-    <path/to/berkeley-db>/build_win32/release
-
-respectively.
+If you build Berkeley DB from the source, you will have to copy the
+file <DB3>\build_win32\db.h to <SVN>\db3-win32\include, and all
+the import libraries to <SVN>\db3-win32\lib. Again, the DLLs
+should be somewhere in your path.
 
 The workspace `subversion.dsw' at the top of the source tree includes
 all the necessary projects. Right now, only static libraries are
