@@ -929,9 +929,9 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
           <varlistentry>
             <term><computeroutput>A      file_or_dir</computeroutput></term>
             <listitem>
-              <para>The file or directory
-                <filename>file_or_dir</filename> has been scheduled for
-                addition into the repository.
+              <para>El fichero o directorio
+                <filename>file_or_dir</filename> ha sido programado para
+                la adición<!--TODO:for addition--> en el repositorio.
               </para>
             </listitem>
           </varlistentry>
@@ -939,53 +939,57 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
           <varlistentry>
             <term><computeroutput>C     file</computeroutput></term>
             <listitem>
-              <para>The file <filename>file</filename> is in a state of
-                conflict.  That is, changes received from the server
-                during an update overlap with local changes that you
-                have in your working copy.  You must resolve this
-                conflict before committing your changes to the
-                repository.</para>
+              <para>El fichero <filename>file</filename> está en un estado
+                de conflicto. Esto es, los cambios recibidos del servidor
+                durante una actualización se solapan con cambios locales
+                que usted tiene en su copia de trabajo. Debe resolver
+                este conflicto antes de enviar sus cambios al repositorio.
+              </para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><computeroutput>D      file_or_dir</computeroutput></term>
             <listitem>
-              <para>The file or directory
-                <filename>file_or_dir</filename> has been scheduled for
-                deletion from the repository.</para>
+              <para>El fichero o directorio
+                <filename>file_or_dir</filename> ha sido programado para
+                la supresión <!--TODO:for deletion...estaría mejor "para
+                ser suprimido"?-->del repositorio.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><computeroutput>M      file</computeroutput></term>
             <listitem>
-              <para>The contents of the file <filename>file</filename> have
-                been modified.</para>
+              <para>El contenido del fichero <filename>file</filename> ha
+                sido modificado.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><computeroutput>X      dir</computeroutput></term>
             <listitem>
-              <para>The directory <filename>dir</filename> is
-                unversioned, but is related to a Subversion externals
-                definition.  To find out more about externals
-                definitions, see <xref linkend="svn-ch-7-sect-3"/>.</para>
+              <para>El directorio <filename>dir</filename> está sin
+                versionar<!--TODO:unversioned-->, pero está relacionado
+                con una definición externa<!--TODO:is related to a
+                Subversion externals definition--> de Subversion. Para
+                descubrir más acerca de definiciones externas, vea
+                <xref linkend="svn-ch-7-sect-3"/>.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><computeroutput>?      file_or_dir</computeroutput></term>
             <listitem>
-              <para>The file or directory
-                <filename>file_or_dir</filename> is not under version
-                control.  You can silence the question marks by either
-                passing the <option>--quiet</option>
-                (<option>-q</option>) switch to <command>svn
-                status</command>, or by setting the
-                <literal>svn:ignore</literal> property on the parent
-                directory.  For more information on ignored files, see
+              <para>El fichero o directorio
+                <filename>file_or_dir</filename> no está bajo control de
+                versiones. Puede silenciar la marca de pregunta<!--TODO:
+                the question marks...mejor "la marca de interrogante"?-->
+                pasando la opción<!--TODO:switch--> <option>--quiet</option>
+                (<option>-q</option>) a <command>svn status</command>, o
+                o poniendo<!--TODO:or by setting--> la característica
+                <literal>svn:ignore</literal> en el directorio padre.
+                Para más información sobre ficheros ignorados, vea
                 <xref linkend="svn-ch-7-sect-2.3.3" />.</para>
 
             </listitem>
