@@ -1125,6 +1125,17 @@ $ svn status foo
 ?      foo
         </screen>
 
+        <note>
+          <para><command>svn revert</command>
+          <replaceable>ITEM</replaceable> has exactly the same effect as
+          deleting <replaceable>ITEM</replaceable> from your working
+          copy and then running <command>svn update</command>
+          <replaceable>ITEM</replaceable>.  However, if you're reverting
+          a file, <command>svn revert</command> has one very noticeable
+          difference&mdash;it doesn't have to communicate with the
+          repository to restore your file.</para>
+        </note>
+
         <para>Or perhaps you mistakenly removed a file from version
           control:</para>
 
