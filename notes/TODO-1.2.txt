@@ -17,6 +17,9 @@ CODING TASKS:
    - subversion/libsvn_wc/status.c:982
       /* ### lundblad TODO: Make sure lock info is added. */ (lundblad)
 
+   - ??? port the fs-merge-algorithm-rewrite (r13222, 13223, 133232)
+     from fs_fs to fs_base ?
+
    - build system:
 
         - any changes maxb wants to make?
@@ -37,6 +40,9 @@ CODING TASKS:
 
 BUGS:
 
+   - ra_dav: fix DELETE to send multiple tokens for a directory.
+     (lock_tests.py #11)
+
    - Fix pool lifetime issue in mod_dav_svn when attempting to lock
      multiple files at once (fitz).
 
@@ -44,6 +50,8 @@ BUGS:
 
 
 QUESTIONS:
+
+   - revisit auto-repos-upgrading strategy;  see list discussion.
 
    - Determine what to do about the fact that if someone schedules a
      file for deletion, and then commits it with the --no-unlock
