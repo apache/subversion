@@ -39,8 +39,6 @@ Item = svntest.wc.StateItem
 #
 ######################################################################
 # Tests
-#
-#   Each test must return 0 on success or non-zero on failure.
 
 
 #----------------------------------------------------------------------
@@ -48,8 +46,7 @@ Item = svntest.wc.StateItem
 def test_youngest(sbox):
   "test 'svnlook youngest' subcommand"
 
-  if sbox.build():
-    return 1
+  sbox.build()
 
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
@@ -79,15 +76,13 @@ def test_youngest(sbox):
                                             None, None,
                                             None, None,
                                             wc_dir):
-    return 1
+    raise svntest.Failure
 
   # Youngest revision should now be 2.  Let's verify that.
   output, errput = svntest.main.run_svnlook("youngest", repo_dir)
 
   if output[0] != "2\n":
-    return 1
-
-  return 0  # success
+    raise svntest.Failure
 
 
 #----------------------------------------------------------------------
@@ -95,7 +90,7 @@ def test_youngest(sbox):
 def delete_file_in_moved_dir(sbox):
   "delete file in moved dir"
 
-  if sbox.build(): return 1
+  sbox.build()
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
 
@@ -103,10 +98,10 @@ def delete_file_in_moved_dir(sbox):
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   E2_path = os.path.join(wc_dir, 'A', 'B', 'E2')
   output, errput = svntest.main.run_svn(None, 'mv', E_path, E2_path)
-  if errput: return 1
+  if errput: raise svntest.Failure
   alpha_path = os.path.join(E2_path, 'alpha')
   output, errput = svntest.main.run_svn(None, 'rm', alpha_path)
-  if errput: return 1
+  if errput: raise svntest.Failure
 
   # commit
   expected_output = svntest.wc.State(wc_dir, {
@@ -128,11 +123,11 @@ def delete_file_in_moved_dir(sbox):
                                             None, None,
                                             None, None,
                                             wc_dir):
-    return 1
+    raise svntest.Failure
 
   output, errput = svntest.main.run_svnlook("dirs-changed", repo_dir)
   if errput:
-    return 1
+    raise svntest.Failure
   ### FIXME: Once 1089 is fixed need to verify the output is correct
 
 ########################################################################
