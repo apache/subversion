@@ -154,6 +154,10 @@ simple_save_creds (svn_boolean_t *saved,
   apr_hash_t *creds_hash = NULL;
   const char *config_dir;
   svn_error_t *err;
+  const char *dont_store_passwords =
+    apr_hash_get (parameters,
+                  SVN_AUTH_PARAM_DONT_STORE_PASSWORDS,
+                  APR_HASH_KEY_STRING);
 
   *saved = FALSE;
 
@@ -169,9 +173,10 @@ simple_save_creds (svn_boolean_t *saved,
   apr_hash_set (creds_hash, SVN_CLIENT__AUTHFILE_USERNAME_KEY,
                 APR_HASH_KEY_STRING,
                 svn_string_create (creds->username, pool));
-  apr_hash_set (creds_hash, SVN_CLIENT__AUTHFILE_PASSWORD_KEY,
-                APR_HASH_KEY_STRING,
-                svn_string_create (creds->password, pool));
+  if (! dont_store_passwords)
+    apr_hash_set (creds_hash, SVN_CLIENT__AUTHFILE_PASSWORD_KEY,
+                  APR_HASH_KEY_STRING,
+                  svn_string_create (creds->password, pool));
   err = svn_config_write_auth_data (creds_hash, SVN_AUTH_CRED_SIMPLE,
                                     realmstring, config_dir, pool);
   svn_error_clear (err);
@@ -247,7 +252,30 @@ prompt_for_simple_creds (svn_auth_cred_simple_t **cred_p,
                                    SVN_AUTH_PARAM_DEFAULT_USERNAME,
                                    APR_HASH_KEY_STRING);
 
-      /* No default username?  Try the UID. */
+      /* No default username?  Try the auth cache. */
+      if (! def_username)
+        {
+          const char *config_dir = apr_hash_get (parameters,
+                                                 SVN_AUTH_PARAM_CONFIG_DIR,
+                                                 APR_HASH_KEY_STRING);
+          apr_hash_t *creds_hash = NULL;
+          svn_string_t *str;
+          svn_error_t *err;
+
+          err = svn_config_read_auth_data (&creds_hash, SVN_AUTH_CRED_SIMPLE,
+                                           realmstring, config_dir, pool);
+          svn_error_clear (err);
+          if (! err && creds_hash)
+            {
+              str = apr_hash_get (creds_hash,
+                                  SVN_CLIENT__AUTHFILE_USERNAME_KEY,
+                                  APR_HASH_KEY_STRING);
+              if (str && str->data)
+                def_username = str->data;
+            }
+        }
+
+      /* Still no default username?  Try the UID. */
       if (! def_username)
         def_username = get_os_username (pool);
 

@@ -505,6 +505,12 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
  * matters. */
 #define SVN_AUTH_PARAM_NON_INTERACTIVE  SVN_AUTH_PARAM_PREFIX "non-interactive"
 
+/** @brief The application doesn't want any providers to save passwords
+ * to disk. Property value is irrelevant; only property's existence
+ * matters. */
+#define SVN_AUTH_PARAM_DONT_STORE_PASSWORDS  SVN_AUTH_PARAM_PREFIX \
+                                                 "dont-store-passwords"
+
 /** @brief The application doesn't want any providers to save credentials
  * to disk. Property value is irrelevant; only property's existence
  * matters. */

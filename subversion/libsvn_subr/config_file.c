@@ -1030,7 +1030,21 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "### Section for authentication and authorization customizations."
         APR_EOL_STR
-        "### Set store-auth-creds to 'no' to avoid storing your subversion"
+        "# [auth]"
+        APR_EOL_STR
+        "### Set store-passwords to 'no' to avoid storing passwords in the"
+        APR_EOL_STR
+        "### auth/ area of your config directory.  It defaults to 'yes'."
+        APR_EOL_STR
+        "### Note that this option only prevents saving of *new* passwords;"
+        APR_EOL_STR
+        "### it doesn't invalidate existing passwords.  (To do that, remove"
+        APR_EOL_STR
+        "### the cache files by hand as described in the Subversion book.)"
+        APR_EOL_STR
+        "# store-passwords = no"
+        APR_EOL_STR
+        "### Set store-auth-creds to 'no' to avoid storing any subversion"
         APR_EOL_STR
         "### credentials in the auth/ area of your config directory."
         APR_EOL_STR
@@ -1039,8 +1053,6 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "### saving of *new* credentials;  it doesn't invalidate existing"
         APR_EOL_STR
         "### caches.  (To do that, remove the cache files by hand.)"
-        APR_EOL_STR
-        "# [auth]"
         APR_EOL_STR
         "# store-auth-creds = no"
         APR_EOL_STR

@@ -1293,6 +1293,14 @@ main (int argc, const char * const *argv)
       svn_auth_set_parameter(ab, SVN_AUTH_PARAM_CONFIG_DIR,
                              opt_state.config_dir);
 
+    if ((err = svn_config_get_bool (cfg, &store_password_val,
+                                    SVN_CONFIG_SECTION_AUTH,
+                                    SVN_CONFIG_OPTION_STORE_PASSWORDS,
+                                    TRUE)))
+      svn_handle_error (err, stderr, TRUE);
+    if (! store_password_val)
+      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
+
     /* There are two different ways the user can disable disk caching
        of credentials:  either via --no-auth-cache, or in the config
        file ('store-auth-creds = no'). */
@@ -1301,7 +1309,7 @@ main (int argc, const char * const *argv)
                                     SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
                                     TRUE)))
       svn_handle_error (err, stderr, TRUE);
-    if (opt_state.no_auth_cache || !store_password_val)
+    if (opt_state.no_auth_cache || ! store_password_val)
       svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
   }
 
