@@ -645,6 +645,9 @@ svn_ra_local__get_file (void *session_baton,
   svn_ra_local__session_baton_t *sbaton = session_baton;
   const char *abs_path = sbaton->fs_path;
 
+  if ((! stream) && (! props))
+    return SVN_NO_ERROR;
+
   /* ### Not sure if this counts as a workaround or not.  The
      session baton uses the empty string to mean root, and not
      sure that should change.  However, it would be better to use
@@ -671,38 +674,41 @@ svn_ra_local__get_file (void *session_baton,
     SVN_ERR (svn_fs_revision_root (&root, sbaton->fs,
                                    revision, sbaton->pool));
 
-  /* Get a stream representing the file's contents. */
-  SVN_ERR (svn_fs_file_contents (&contents, root,
-                                 abs_path, sbaton->pool));
-
-  /* Now push data from the fs stream back at the caller's stream. */
-  while (1)
+  if (stream)
     {
-      /* read a maximum number of bytes from the file, please. */
-      rlen = SVN_STREAM_CHUNK_SIZE; 
-      SVN_ERR (svn_stream_read (contents, buf, &rlen));
-
-      /* write however many bytes you read, please. */
-      wlen = rlen;
-      SVN_ERR (svn_stream_write (stream, buf, &wlen));
-      if (wlen != rlen)
-        {
-          /* Uh oh, didn't write as many bytes as we read, and no
-             error was returned.  According to the docstring, this
-             should never happen. */
-          return 
-            svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, 0, NULL, "Error writing to svn_stream.");
-        }
+      /* Get a stream representing the file's contents. */
+      SVN_ERR (svn_fs_file_contents (&contents, root,
+                                     abs_path, sbaton->pool));
       
-      if (rlen != SVN_STREAM_CHUNK_SIZE)
+      /* Now push data from the fs stream back at the caller's stream. */
+      while (1)
         {
-          /* svn_stream_read didn't throw an error, yet it didn't read
-             all the bytes requested.  According to the docstring,
-             this means a plain old EOF happened, so we're done. */
-          break;
+          /* read a maximum number of bytes from the file, please. */
+          rlen = SVN_STREAM_CHUNK_SIZE; 
+          SVN_ERR (svn_stream_read (contents, buf, &rlen));
+          
+          /* write however many bytes you read, please. */
+          wlen = rlen;
+          SVN_ERR (svn_stream_write (stream, buf, &wlen));
+          if (wlen != rlen)
+            {
+              /* Uh oh, didn't write as many bytes as we read, and no
+                 error was returned.  According to the docstring, this
+                 should never happen. */
+              return svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, 0, NULL,
+                                       "Error writing to svn_stream.");
+            }
+          
+          if (rlen != SVN_STREAM_CHUNK_SIZE)
+            {
+              /* svn_stream_read didn't throw an error, yet it didn't read
+                 all the bytes requested.  According to the docstring,
+                 this means a plain old EOF happened, so we're done. */
+              break;
+            }
         }
     }
-
+      
   if (props)
     {
       svn_revnum_t committed_rev;
@@ -745,6 +751,7 @@ svn_ra_local__get_file (void *session_baton,
             
       /* We have no 'wcprops' in ra_local, but might someday. */
     }
+
   return SVN_NO_ERROR;
 }
 

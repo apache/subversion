@@ -399,13 +399,15 @@ typedef struct svn_ra_plugin_t
                                      const char **committed_author,
                                      const char *log_msg);
 
-  /* Push the contents of file PATH at REVISION into an existing
-     STREAM; PATH is interpreted relative to the url in SESSION_BATON.
+  /* Fetch the contents and properties of file PATH at REVISION.
+     Interpret PATH relative to the url in SESSION_BATON.
 
      If REVISION is SVN_INVALID_REVNUM (meaning 'head') and
      *FETCHED_REV is not NULL, then this function will set
      *FETCHED_REV to the actual revision that was retrieved.  (Some
      callers want to know, and some don't.) 
+
+     If STREAM is non-null, push the contents of the file at STREAM.
 
      If PROPS is non NULL, set *PROPS to contain the properties of the
      file.  This means *all* properties: not just ones controlled by
