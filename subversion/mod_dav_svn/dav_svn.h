@@ -177,13 +177,6 @@ struct dav_resource_private {
   /* what FS root this resource occurs within */
   dav_svn_root root;
 
-  /* for VERSION resources: the node ID. may be NULL if the resource was
-     fetched via a Baseline Collection (so use root.rev and repos_path). if
-     the VERSION refers to a Baseline (.baselined==1), then node_id and
-     repos_path will be NULL. */
-  const svn_fs_id_t *node_id;
-  const char *node_id_str;
-
   /* for PRIVATE resources: the private resource type */
   enum dav_svn_private_restype restype;
 
@@ -194,16 +187,6 @@ struct dav_resource_private {
   const char *delta_base;
 };
 
-
-/*
-  For a given resource, return the path that should be used when talking
-  to the FS. If a NODE_ID is present, then we must have opened an ID root,
-  and that NODE_ID should be used. Otherwise, we opened a revision or txn
-  root and should use a normal REPOS_PATH.
-*/
-#define DAV_SVN_REPOS_PATH(res) ((res)->info->node_id_str != NULL \
-                                 ? (res)->info->node_id_str \
-                                 : (res)->info->repos_path)
 
 /*
   LIVE PROPERTY HOOKS
@@ -327,12 +310,13 @@ enum dav_svn_build_what {
   BASELINE:       REVISION should be specified
   BC:             REVISION should be specified
   PUBLIC:         PATH should be specified with a leading slash
-  VERSION:        PATH should be specified as a STABLE_ID ("/ID/PATH")
+  VERSION:        REV_ROOT and PATH should be specified
   VCC:            no additional params required
 */
 const char *dav_svn_build_uri(const dav_svn_repos *repos,
                               enum dav_svn_build_what what,
                               svn_revnum_t revision,
+                              svn_fs_root_t *rev_root,
                               const char *path,
                               int add_href,
                               apr_pool_t *pool);
@@ -352,7 +336,6 @@ typedef struct {
   svn_revnum_t rev;
   const char *repos_path;
   const char *activity_id;
-  svn_fs_id_t *node_id;
 } dav_svn_uri_info;
 
 svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,

@@ -65,6 +65,7 @@ dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
 const char *dav_svn_build_uri(const dav_svn_repos *repos,
                               enum dav_svn_build_what what,
                               svn_revnum_t revision,
+                              svn_fs_root_t *rev_root,
                               const char *path,
                               int add_href,
                               apr_pool_t *pool)
@@ -93,9 +94,21 @@ const char *dav_svn_build_uri(const dav_svn_repos *repos,
                           href1, root_path, path, href2);
 
     case DAV_SVN_BUILD_URI_VERSION:
-      /* path is the STABLE_ID */
-      return apr_psprintf(pool, "%s%s/%s/ver/%s%s",
-                          href1, root_path, special_uri, path, href2);
+      {
+        svn_error_t *serr;
+        svn_revnum_t created_rev;
+
+        if ((serr = svn_fs_node_created_rev(&created_rev, rev_root,
+                                            path, pool)))
+          {
+            abort();
+            return NULL;
+          }
+
+        return apr_psprintf(pool, "%s%s/%s/ver/%" SVN_REVNUM_T_FMT "%s%s",
+                            href1, root_path, special_uri,
+                            created_rev, path, href2);
+      }
 
     case DAV_SVN_BUILD_URI_VCC:
       return apr_psprintf(pool, "%s%s/%s/vcc/" DAV_SVN_DEFAULT_VCC_NAME "%s",
@@ -120,6 +133,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
   apr_size_t len1;
   apr_size_t len2;
   const char *slash;
+  const char *created_rev_str;
 
   /* parse the input URI, in case it is more than just a path */
   if (apr_uri_parse(pool, uri, &comp) != APR_SUCCESS)
@@ -201,22 +215,24 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
       info->activity_id = path + 5;
     }
   else if (len2 == 4 && memcmp(path, "/ver/", 5) == 0)
-    {
+    {      
       /* a version resource */
       path += 5;
       len1 -= 5;
       slash = ap_strchr_c(path, '/');
       if (slash == NULL)
         {
-          info->node_id = svn_fs_parse_id(path, len1, pool);
+          created_rev_str = apr_pstrndup(pool, path, len1);
+          info->rev = SVN_STR_TO_REV(created_rev_str);
           info->repos_path = "/";
         }
       else
         {
-          info->node_id = svn_fs_parse_id(path, slash - path, pool);
+          created_rev_str = apr_pstrndup(pool, path, slash - path);
+          info->rev = SVN_STR_TO_REV(created_rev_str);
           info->repos_path = slash;
         }
-      if (info->node_id == NULL)
+      if (info->rev == SVN_INVALID_REVNUM)
         goto malformed_uri;
     }
   else
