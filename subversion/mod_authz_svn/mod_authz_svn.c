@@ -214,10 +214,10 @@ static svn_boolean_t find_sections_matching_prefix(const char* sec_name,
 
 
 /* Check whether @cfg allows access to all subtrees of a @a repos_path in the
- * repository @a repos_name for the user @user.  The required access (read or
- * write) is specified by @a required_access.  The resulting access (1 if
- * granted, 0 if denied) is returned as @a *access.  Use @a pool for
- * allocation.
+ * repository @a repos_name for the user @user.  @a required_access specifies
+ * whether read or write access is required (AUTHZ_SVN_READ or
+ * AUTHZ_SVN_WRITE, respectively).  Set *access to 1 if access is allowed, 0
+ * otherwise.  Use @a pool for allocation.
  *
  * This function does *NOT* check access to @a repos_path itself or any of its
  * parent directories.  It assumes that access to @a repos_path is allowed,
