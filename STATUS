@@ -115,3 +115,17 @@ Candidate changes:
      small fix.
     Votes:
       +1: ghudson, cmpilato
+
+  * r10418, r10426, r10468, r10483
+    New po file for Japanese, ja.po, reviewed by some Japanese users.
+    Justification:
+      Support for those who use Japanese as their mother language is added
+      by this change.
+    Notes:
+      Translations are reviewed by some of the Subversion-jp list members
+      <subversion-jp@m.bluegate.org>.
+      Statistics are as follows:
+      "892 translated messages, 15 untranslated messages." (in trunk) or,
+      "854 translated messages, 14 untranslated messages." (in 1.1.x).
+    Votes:
+      +1: nori
