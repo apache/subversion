@@ -13,6 +13,9 @@
 .Op Fl -trunk Ns = Ns Ar path
 .Op Fl -branches Ns = Ns Ar path
 .Op Fl -tags Ns = Ns Ar path
+.Op Fl -dumpfile Ar name
+.Op Fl -encoding Ar encoding
+.Op Fl -svnadmin Ar path
 .Ar cvs-repos-path
 .Sh DESCRIPTION
 .Nm
@@ -56,10 +59,24 @@ Put tag copies under the subdirectory
 of the Subversion
 repository. (But see
 .Sx LIMITATIONS . )
+.It Fl -dumpfile Ar name
+Set the
+.Ar name
+of the dumpfile. The default is
+.Pa cvs2svn-dump
+in the current directory.
+.It Fl -encoding Ar encoding
+Set the
+.Ar encoding
+of the CVS archive.
+.It Fl -svnadmin Ar path
+Path to the the
+.Ar svnadmin
+program.
 .It Fl p Ar n
 Start the program at pass
 .Ar n ,
-which may range from 1 (the default) to 4.
+which may range from 1 (the default) to 5.
 For this to work the earlier passes must have been completed before on
 the same CVS repository, and the generated data files must be in the
 current directory.
@@ -67,6 +84,8 @@ current directory.
 .Sh FILES
 The current directory is used as scratch space for data files of the form
 .Pa cvs2svn-data.*
+and a dumpfile named
+.Pa cvs2svn-dump
 .Sh LIMITATIONS
 .Nm
 currently does not handle tags or branches.
