@@ -91,9 +91,14 @@ usage (const char *progname, int exit_code)
      "usage: %s COMMAND REPOS_PATH [LOWER_REV [UPPER_REV]]\n"
      "\n"
      "Commands are: \n"
+     "\n"
      "  - create   REPOS_PATH\n"
+     "\n"
      "  - youngest REPOS_PATH\n"
+     "\n"
      "  - lstxn    REPOS_PATH\n"
+     "      Print all txns and their trees.\n"
+     "\n"
      "  - lsrevs   REPOS_PATH [LOWER_REV [UPPER_REV]]\n"
      "      If no revision is given, all revision trees are printed.\n"
      "      If just LOWER_REV is given, that revision trees is printed.\n"
@@ -153,19 +158,6 @@ main (int argc, const char * const *argv)
       err = svn_fs_create_berkeley(fs, path);
       if (err) goto error;
     }
-  else if (is_lstxn)
-    {
-      char **txns;
-
-      err = svn_fs_open_berkeley(fs, path);
-      if (err) goto error;
-
-      err = svn_fs_list_transactions(&txns, fs, pool);
-      if (err) goto error;
-
-      while (*txns != NULL)
-        printf("%s\n", *txns++);
-    }
   else if (is_youngest)
     {
       svn_revnum_t youngest_rev;
@@ -176,7 +168,39 @@ main (int argc, const char * const *argv)
       svn_fs_youngest_rev (&youngest_rev, fs, pool);
       printf ("%ld\n", (long int) youngest_rev);
     }
-  else if (is_lsrevs)
+  else if (is_lstxn)
+    {
+      char **txns;
+      char *txn_name;
+
+      err = svn_fs_open_berkeley(fs, path);
+      if (err) goto error;
+
+      err = svn_fs_list_transactions(&txns, fs, pool);
+      if (err) goto error;
+
+      /* Loop, printing revisions. */
+      while ((txn_name = *txns++))
+        {
+          svn_fs_txn_t *txn;
+          svn_fs_root_t *this_root;
+          apr_pool_t *this_pool = svn_pool_create (pool);
+
+          err = svn_fs_open_txn (&txn, fs, txn_name, this_pool);
+          if (err) goto error;
+
+          err = svn_fs_txn_root (&this_root, txn, this_pool);
+          if (err) goto error;
+
+          printf ("Txn %s:\n", txn_name);
+          printf ("===============\n");
+          print_tree (this_root, "", 1, this_pool);
+          printf ("\n");
+
+          apr_pool_destroy (this_pool);
+        }
+    }
+  else if (is_lsrevs || is_lstxn)
     {
       svn_revnum_t
         lower = SVN_INVALID_REVNUM,
