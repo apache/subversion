@@ -10,6 +10,9 @@
    ***                                                              ***
    ********************************************************************
 
+(Please read the HACKING file if you're installing from a working copy
+rather than an unpacked distribution.)
+
 Subversion installs using the usual GNU procedure:
 
    $ ./configure --enable-maintainer-mode --disable-shared
