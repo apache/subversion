@@ -211,7 +211,7 @@ with the CVS log entries.  But ChangeLog is an easier format to
 browse, so it's often handy to generate a ChangeLog from the cvs log
 data.  You can do so with the script `cvs2cl.pl', from:
 
-   http://www.red-bean.com/kfogel/cvs2cl.shtml
+   http://www.red-bean.com/cvs2cl/
 
 If you've never used it before, try invoking it like this:
 
@@ -244,7 +244,7 @@ In addition to the GNU standards, Subversion uses these conventions:
      then use two underscores following the module prefix.  For
      example:
 
-        svn_fs_get_ver_prop ()       /* Part of published API. */
+        svn_fs_get_rev_prop ()       /* Part of published API. */
         svn_fs__parse_props ()       /* For internal use only. */
 
    * Put this comment at the bottom of new source files to make Emacs
@@ -252,12 +252,12 @@ In addition to the GNU standards, Subversion uses these conventions:
 
         /* 
          * local variables:
-         * eval: (load-file "svn-dev.el")
+         * eval: (load-file "../svn-dev.el")
          * end:
          */
 
-     (This assumes the C file is located in subversion/subversion/,
-     where svn-dev.el is.)
+     (This assumes the C file is located in a subdirectory of
+     subversion/subversion/, which most are.)
 
 
 
