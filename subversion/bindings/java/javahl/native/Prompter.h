@@ -29,33 +29,57 @@
 #include <jni.h>
 #include <svn_auth.h>
 #include <string>
-class Prompter  
+/**
+ * This class requests username/password and informations about 
+ * ssl-certificates from the user. There are 3 java interfaces for that.
+ * PromptUserPassword, PromptUserPassword2 and PromptUserPassword3
+ * each following interface extends the previous interface. 
+ */
+class Prompter
 {
 private:
-	bool m_version2;
-	bool m_version3;
-	jobject m_prompter;
-	Prompter(jobject jprompter, bool v2, bool v3);
-	bool prompt(const char *realm, const char *username, bool maySave);
-	bool askYesNo(const char *realm, const char *question, bool yesIsDefault);
-	const char *askQuestion(const char *realm, const char *question,
+    /**
+     * the java callback object
+     */
+    jobject m_prompter;
+    /**
+     * the callback objects implements PromptUserPassword2
+     */
+    bool m_version2;
+    /**
+     * the callback objects implements PromptUserPassword3
+     */
+    bool m_version3;
+    /**
+     * intermediate storage for an answer. 
+     */
+    std::string m_answer;
+    /**
+     * flag is the user allowed, that the last answer is stored in 
+     * the configuration
+     */
+    bool m_maySave;
+
+    Prompter(jobject jprompter, bool v2, bool v3);
+    bool prompt(const char *realm, const char *username, bool maySave);
+    bool askYesNo(const char *realm, const char *question, bool yesIsDefault);
+    const char *askQuestion(const char *realm, const char *question,
                                 bool showAnswer, bool maySave);
-	int askTrust(const char *question, bool maySave);
-	jstring password();
-	jstring username();
-	static 
-          svn_error_t *simple_prompt(svn_auth_cred_simple_t **cred_p,
-                                     void *baton, const char *realm,
-                                     const char *username, 
-                                     svn_boolean_t may_save,
-                                     apr_pool_t *pool);
-	static svn_error_t *username_prompt
+    int askTrust(const char *question, bool maySave);
+    jstring password();
+    jstring username();
+    static svn_error_t *simple_prompt(svn_auth_cred_simple_t **cred_p,
+                                      void *baton, const char *realm,
+                                      const char *username,
+                                      svn_boolean_t may_save,
+                                      apr_pool_t *pool);
+    static svn_error_t *username_prompt
           (svn_auth_cred_username_t **cred_p,
            void *baton,
            const char *realm,
            svn_boolean_t may_save,
            apr_pool_t *pool);
-	static svn_error_t *ssl_server_trust_prompt
+    static svn_error_t *ssl_server_trust_prompt
           (svn_auth_cred_ssl_server_trust_t **cred_p,
            void *baton,
            const char *realm,
@@ -63,28 +87,26 @@ private:
            const svn_auth_ssl_server_cert_info_t *cert_info,
            svn_boolean_t may_save,
            apr_pool_t *pool);
-	static svn_error_t *ssl_client_cert_prompt
+    static svn_error_t *ssl_client_cert_prompt
           (svn_auth_cred_ssl_client_cert_t **cred_p,
            void *baton,
            const char *realm,
            svn_boolean_t may_save,
            apr_pool_t *pool);
-	static svn_error_t *ssl_client_cert_pw_prompt
+    static svn_error_t *ssl_client_cert_pw_prompt
           (svn_auth_cred_ssl_client_cert_pw_t **cred_p,
-           void *baton, 
+           void *baton,
            const char *realm,
            svn_boolean_t may_save,
            apr_pool_t *pool);
-	std::string m_answer;
-	bool m_maySave;
 public:
-	static Prompter *makeCPrompter(jobject jpromper);
-	~Prompter();
-	svn_auth_provider_object_t *getProviderUsername();
-	svn_auth_provider_object_t *getProviderSimple();
-	svn_auth_provider_object_t *getProviderServerSSLTrust();
-	svn_auth_provider_object_t *getProviderClientSSL();
-	svn_auth_provider_object_t *getProviderClientSSLPassword();
+    static Prompter *makeCPrompter(jobject jprompter);
+    ~Prompter();
+    svn_auth_provider_object_t *getProviderUsername();
+    svn_auth_provider_object_t *getProviderSimple();
+    svn_auth_provider_object_t *getProviderServerSSLTrust();
+    svn_auth_provider_object_t *getProviderClientSSL();
+    svn_auth_provider_object_t *getProviderClientSSLPassword();
 };
 
 #endif

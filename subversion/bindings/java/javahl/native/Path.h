@@ -27,12 +27,13 @@
 #endif // _MSC_VER > 1000
 #include <string>
 
-  /**
-   * Encapsulation for Subversion Path handling
-   */
+/**
+ * Encapsulation for Subversion Path handling
+ */
 class Path  
 {
-  private:
+private:
+    // the path to be stored
     std::string m_path;
 
     /**
@@ -84,4 +85,5 @@ public:
     c_str() const;
 };
 
-#endif // !defined(AFX_PATH_H__A143CB2A_1115_4770_8CD5_AA33CCD285FA__INCLUDED_)
+// !defined(AFX_PATH_H__A143CB2A_1115_4770_8CD5_AA33CCD285FA__INCLUDED_)
+#endif 

@@ -29,67 +29,87 @@
 
 apr_threadkey_t *JNIThreadData::g_key;
 
-//////////////////////////////////////////////////////////////////////
-// Construction/Destruction
-//////////////////////////////////////////////////////////////////////
-
+/**
+ * create and initialize a new object
+ */
 JNIThreadData::JNIThreadData()
 {
-	m_env = NULL;
-	m_exceptionThrown = false;
-	m_bInCatchEveryThing = false;
+    m_env = NULL;
+    m_exceptionThrown = false;
     m_requestPool = NULL;
 }
-
+/**
+ * destroy an object
+ */
 JNIThreadData::~JNIThreadData()
 {
 
 }
-
+/**
+ * initialize the thread local storage
+ * @return success or failure
+ */
 bool JNIThreadData::initThreadData()
 {
-	if(g_key != NULL) 
-	{
-		return false;
-	}
+    // if already initialized -> nothing to do
+    if(g_key != NULL)
+    {
+        return false;
+    }
 
-	apr_status_t apr_err = apr_threadkey_private_create  ( &g_key, del, JNIUtil::getPool()); 
-	if(apr_err)
-	{
-		JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_create");
-		return false;
-	}
+    // request a key for the thread local storage from the global pool and
+    // register a callback function called, when the thread is deleted
+    apr_status_t apr_err = apr_threadkey_private_create  ( &g_key, del, 
+        JNIUtil::getPool());
+    if(apr_err)
+    {
+        JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_create");
+        return false;
+    }
 
-	return true;
+    return true;
 }
-
+/**
+ * Get the thread local storage for this thread
+ * @return thread local storage
+ */
 JNIThreadData * JNIThreadData::getThreadData()
 {
-	if(g_key == NULL) 
-	{
-		return NULL;
-	}
-	JNIThreadData *data = NULL;
-	apr_status_t apr_err = apr_threadkey_private_get (reinterpret_cast<void**>(&data), g_key);
-	if(apr_err)
-	{
-		JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_get");
-		return NULL;
-	}
-	if(data == NULL)
-	{
-		data = new JNIThreadData;
-		apr_err = apr_threadkey_private_set (data, g_key);
-		if(apr_err)
-		{
-			JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_set");
-			return NULL;
-		}
-	}
-	return data;
-}
+    // we should never be called before initThreadData
+    if(g_key == NULL)
+    {
+        return NULL;
+    }
 
+    // retrieve the thread local storage from apr
+    JNIThreadData *data = NULL;
+    apr_status_t apr_err = apr_threadkey_private_get 
+        (reinterpret_cast<void**>(&data), g_key);
+    if(apr_err)
+    {
+        JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_get");
+        return NULL;
+    }
+
+    // not already allocated
+    if(data == NULL)
+    {
+        // allocate and store to apr
+        data = new JNIThreadData;
+        apr_err = apr_threadkey_private_set (data, g_key);
+        if(apr_err)
+        {
+            JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_set");
+            return NULL;
+        }
+    }
+    return data;
+}
+/**
+ * callback called by apr, when the thread dies. Deletes the thread local 
+ * storage
+ */
 void JNIThreadData::del(void *p)
 {
-	delete reinterpret_cast<JNIThreadData*>(p);
+    delete reinterpret_cast<JNIThreadData*>(p);
 }

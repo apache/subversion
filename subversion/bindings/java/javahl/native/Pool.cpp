@@ -25,35 +25,34 @@
 #include "JNICriticalSection.h"
 #include <svn_pools.h>
 
-
-//////////////////////////////////////////////////////////////////////
-// Construction/Destruction
-//////////////////////////////////////////////////////////////////////
-
-Pool::Pool(bool exclusive)
+/**
+ * Constructor to create one apr pool as the subpool of the global pool
+ * store this pool as the request pool.
+ */
+Pool::Pool()
 {
     JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
-	m_pool = svn_pool_create(JNIUtil::getPool());
-	if(!exclusive)
-	{
-		JNIUtil::setRequestPool(this);
-	}
+    m_pool = svn_pool_create(JNIUtil::getPool());
+    JNIUtil::setRequestPool(this);
 }
 
+/**
+ * Destructor to destroy the apr pool and to clear the request pool pointer
+ */
 Pool::~Pool()
 {
     JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
-	if(JNIUtil::getRequestPool() == this)
-	{
-		JNIUtil::setRequestPool(NULL);
-	}
-	if(m_pool)
-	{
-		svn_pool_destroy (m_pool);
-	}
+    JNIUtil::setRequestPool(NULL);
+    if(m_pool)
+    {
+        svn_pool_destroy (m_pool);
+    }
 
 }
-
+/**
+ * Returns the apr pool.
+ * @return the apr pool
+ */
 apr_pool_t * Pool::pool () const
 {
     return m_pool;

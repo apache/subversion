@@ -36,7 +36,7 @@ Inputer::Inputer(jobject jthis)
 Inputer::~Inputer()
 {
     // the m_jthis does not need to be destroyed, because it is the passed
-    // in parameter to the java SVNClient.blame method.
+    // in parameter to the java method.
 
 }
 /**

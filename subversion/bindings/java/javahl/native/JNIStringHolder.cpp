@@ -27,19 +27,19 @@
 
 JNIStringHolder::JNIStringHolder(jstring jtext)
 {
-	if(jtext == NULL)
-	{
-		m_str = NULL;
-		m_jtext = NULL;
-		return;
-	}
-	m_str = JNIUtil::getEnv()->GetStringUTFChars(jtext, NULL);
-	m_jtext = jtext;
-	m_env = JNIUtil::getEnv();
+    if(jtext == NULL)
+    {
+        m_str = NULL;
+        m_jtext = NULL;
+        return;
+    }
+    m_str = JNIUtil::getEnv()->GetStringUTFChars(jtext, NULL);
+    m_jtext = jtext;
+    m_env = JNIUtil::getEnv();
 }
 
 JNIStringHolder::~JNIStringHolder()
 {
-	if(m_jtext && m_str)
-		m_env->ReleaseStringUTFChars(m_jtext, m_str);
+    if(m_jtext && m_str)
+        m_env->ReleaseStringUTFChars(m_jtext, m_str);
 }
