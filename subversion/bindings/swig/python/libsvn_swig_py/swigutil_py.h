@@ -36,6 +36,9 @@
 
 #if SVN_SWIG_VERSION >= 103020
 #include "python/precommon.swg"
+#ifndef SWIG_ConvertPtr
+#define SWIG_ConvertPtr SWIG_Python_ConvertPtr
+#endif
 #ifndef SWIG_NewPointerObj
 #define SWIG_NewPointerObj SWIG_Python_NewPointerObj
 #endif
