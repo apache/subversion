@@ -551,7 +551,7 @@ svn_cl__get_log_message (const char **log_msg,
              white space as we will consider white space only as empty */
           int len;
 
-          for (len = message->len; len >= 0; len--)
+          for (len = message->len - 1; len >= 0; len--)
             {
               /* FIXME: should really use an UTF-8 whitespace test
                  rather than apr_isspace, which is locale dependant */
