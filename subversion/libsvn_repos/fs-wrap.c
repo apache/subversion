@@ -512,15 +512,13 @@ svn_repos_fs_get_locks (apr_hash_t **locks,
       const void *key;
       void *val;
       apr_ssize_t keylen;
-      const char *locked_path;
       svn_boolean_t readable;
 
       svn_pool_clear (subpool);
 
       apr_hash_this (hi, &key, &keylen, &val);
-      locked_path = (const char *) key;
 
-      SVN_ERR (authz_read_func (&readable, head_root, locked_path,
+      SVN_ERR (authz_read_func (&readable, head_root, key,
                                 authz_read_baton, subpool));
       if (! readable)
         apr_hash_set (all_locks, key, keylen, NULL);
