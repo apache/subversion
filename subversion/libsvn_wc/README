@@ -292,6 +292,14 @@ analogous to CVS/ sudirs:
 
               When done, remove the pending file.
 
+   The recovery algorithm above is pretty general, actually.  The
+   algorithm for creating the pending file is also going to be pretty
+   simple; each code path as it goes keeps a growing stack of the
+   unwind operations, and then at the end it dumps that stack to the
+   pending file, and then runs the common execute_pending_file()
+   routine.  Viola!  (Er, pardon my French.)
+
+
 `tmp'
 
    Use this instead of /tmp, for debuggability, recovery, easy
