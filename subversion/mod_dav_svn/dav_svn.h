@@ -82,6 +82,8 @@ typedef struct {
 ** but merely that mod_dav doesn't have a standard name for them.
 */
 enum dav_svn_private_restype {
+  DAV_SVN_RESTYPE_UNSET,
+
   DAV_SVN_RESTYPE_ROOT_COLLECTION,      /* .../$svn/     */
   DAV_SVN_RESTYPE_VER_COLLECTION,       /* .../$svn/ver/ */
   DAV_SVN_RESTYPE_HIS_COLLECTION,       /* .../$svn/his/ */
@@ -216,11 +218,12 @@ dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
                                 const char *message);
 
 /* activity functions for looking up and storing ACTIVITY->TXN mappings */
-const char *dav_svn_get_txn(dav_svn_repos *repos, const char *activity_id);
-dav_error *dav_svn_store_activity(dav_svn_repos *repos,
+const char *dav_svn_get_txn(const dav_svn_repos *repos,
+                            const char *activity_id);
+dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
                                   const char *activity_id,
                                   const char *txn_name);
-dav_error *dav_svn_create_activity(dav_svn_repos *repos,
+dav_error *dav_svn_create_activity(const dav_svn_repos *repos,
                                    const char **ptxn_name,
                                    apr_pool_t *pool);
 
