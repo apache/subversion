@@ -38,15 +38,13 @@ BuildPreReq: libtool >= 1.4.2
 BuildPreReq: libxslt >= 1.0.27
 BuildPreReq: neon-devel >= %{neon_version}
 BuildPreReq: openssl-devel
+BuildPreReq: perl
 BuildPreReq: python
 BuildPreReq: python-devel
 BuildPreReq: swig >= %{swig_version}
 BuildPreReq: zlib-devel
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Prefix: /usr
-
-%define __perl_requires %{SOURCE3}
-
 %description
 Subversion is a concurrent version control system which enables one or more
 users to collaborate in developing and maintaining a hierarchy of files and
@@ -86,7 +84,7 @@ the Apache directories and configuration.
 %package perl
 Group: Utilities/System
 Summary: Allows Perl scripts to directly use Subversion repositories.
-Requires: swig-runtime >= %{swig_version}
+Requires: swig >= %{swig_version}
 Requires: perl
 %description perl
 Provides Perl (SWIG) support for Subversion.
@@ -94,7 +92,7 @@ Provides Perl (SWIG) support for Subversion.
 %package python
 Group: Utilities/System
 Summary: Allows Python scripts to directly use Subversion repositories.
-Requires: swig-runtime >= %{swig_version}
+Requires: swig >= %{swig_version}
 Requires: python >= 2
 Obsoletes: subversion-cvs2svn
 %description python
@@ -108,6 +106,8 @@ Tools for Subversion.
 
 %changelog
 * Sun Jan 18 2004 David Summers <david@summersoft.fay.ar.us> 0.36.0-8372
+- Switched to the Redhat way of doing the "swig" package where it is not
+  separated into "swig" and "swig-runtime".
 - Added subversion-perl package to support Perl (SWIG) bindings.
 
 * Sat Jan 17 2004 David Summers <david@summersoft.fay.ar.us> 0.36.0-8362
@@ -300,6 +300,10 @@ Tools for Subversion.
 * Thu Sep 27 2001 David Summers <david@summersoft.fay.ar.us>
 - Release M3-r117: Initial Version.
 
+%define __perl_requires %{SOURCE3}
+%define perl_vendorarch %(eval "`perl -V:installvendorarch`"; echo $installvendorarch)
+%define perl_version %(eval "`perl -V:version`"; echo $version)
+
 %prep
 %setup -q
 
@@ -427,6 +431,8 @@ make install-swig-pl-lib DESTDIR=$RPM_BUILD_ROOT
 (cd subversion/bindings/swig/perl
 make PREFIX=$RPM_BUILD_ROOT/%{_prefix} install
 )
+# Clean up unneeded files for package installation
+rm -rf $RPM_BUILD_ROOT/%{_prefix}/lib/perl5/%{perl_version}
 
 # Copy svnadmin.static to destination
 cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static
@@ -518,8 +524,8 @@ rm -rf $RPM_BUILD_ROOT
 
 %files perl
 %defattr(-,root,root)
-/usr/lib/perl5/vendor_perl/5.8.0/i386-linux-thread-multi/SVN
-/usr/lib/perl5/vendor_perl/5.8.0/i386-linux-thread-multi/auto/SVN
+%{perl_vendorarch}/SVN
+%{perl_vendorarch}/auto/SVN
 /usr/lib/libsvn_swig_perl*so*
 /usr/share/man/man3/SVN*
 
