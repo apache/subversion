@@ -41,8 +41,8 @@
         <para>Your repository is not corrupt, nor is your data
           lost. If your process accesses the repository directly
           (mod_dav_svn, svnlook, svnadmin, or if you access a
-          `file://' URL), then it's using Berkeley DB to access your
-          data.  Berkeley DB is journaling system, meaning that it
+          <literal>file://</literal> URL), then it's using Berkeley DB to
+          access your data.  Berkeley DB is journaling system, meaning that it
           logs everything it is about to do before it does so.  If
           your process is interrupted (kill signal or segfault), then
           a lockfile is left behind, along with a logfile describing
@@ -241,8 +241,8 @@ svn_error: &hellip; The specified activity does not exist.
           local or remote access via the svnserve server.  When you
           attempt to perform an operation in subversion, the program
           tries to dynamically load a plugin based on the URL scheme.
-          A `file://' URL will try to load ra_local, and an `http://'
-          URL will try to load ra_dav.</para>
+          A <literal>file://</literal> URL will try to load ra_local,
+          and an <literal>http://</literal> URL will try to load ra_dav.</para>
 
         <para>The error you are seeing means that the dynamic
           linker/loader can't find the plugins to load.  This normally

@@ -201,7 +201,7 @@ A  +   branches/my-calc-branch
 
 <screen>
 $ svn commit -m "Creating a private branch of /calc/trunk."
-Adding      branches/my-calc-branch
+Adding         branches/my-calc-branch
 Committed revision 341.
 </screen>
 
@@ -590,7 +590,7 @@ M  integer.c
 
 <screen>
 $ svn commit -m "integer.c: ported r344 (spelling fixes) from trunk."
-Sending      integer.c
+Sending        integer.c
 Transmitting file data .
 Committed revision 360.
 </screen>
@@ -883,9 +883,9 @@ M   Makefile
 # ...examine the diffs, compile, test, etc...
 
 $ svn commit -m "Merged my-calc-branch changes r341:405 into the trunk."
-Sending      integer.c
-Sending      button.c
-Sending      Makefile
+Sending        integer.c
+Sending        button.c
+Sending        Makefile
 Transmitting file data ...
 Committed revision 406.
 </screen>
@@ -918,7 +918,6 @@ $ svn log
 r406 | user | 2004-02-08 11:17:26 -0600 (Sun, 08 Feb 2004) | 1 line
 
 Merged my-calc-branch changes r341:405 into the trunk.
-
 ------------------------------------------------------------------------
 &hellip;
 </screen>
@@ -939,9 +938,9 @@ U   button.c
 U   Makefile
 
 $ svn commit -m "Merged my-calc-branch changes r406:480 into the trunk."
-Sending      integer.c
-Sending      button.c
-Sending      Makefile
+Sending        integer.c
+Sending        button.c
+Sending        Makefile
 Transmitting file data ...
 Committed revision 481.
 </screen>
@@ -983,7 +982,7 @@ $ svn diff
 &hellip;
 
 $ svn commit -m "Undoing change committed in r303."
-Sending    integer.c
+Sending        integer.c
 Transmitting file data .
 Committed revision 350.
 </screen>
@@ -1136,7 +1135,7 @@ $ svn status
 A  +   real.c
 
 $ svn commit -m "Resurrected real.c from revision 807, /calc/trunk/real.c."
-Adding    real.c
+Adding         real.c
 Transmitting file data .
 Committed revision 1390.
 </screen>

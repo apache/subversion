@@ -1117,7 +1117,7 @@ $ svn diff > patchfile
            
         <screen>
 $ svn revert README
-Reverted ./README
+Reverted 'README'
 </screen>
         
         <para>Subversion reverts the file to its pre-modified state by
@@ -1136,7 +1136,7 @@ $ svn add foo
 A         foo
 
 $ svn revert foo
-Reverted foo
+Reverted 'foo'
 
 $ svn status foo
 ?      foo
@@ -1164,7 +1164,7 @@ $ svn delete README
 D         README
 
 $ svn revert README
-Reverted README
+Reverted 'README'
 
 $ svn status README
        README
@@ -1328,9 +1328,8 @@ sandwich.txt.r2
 
       <screen>
 $ svn commit --message "Add a few more things"
-svn: A conflict in the working copy obstructs the current operation
 svn: Commit failed (details follow):
-svn: Aborting commit: '/home/sally/svn-work/sandwich.txt' remains in conflict.
+svn: Aborting commit: '/home/sally/svn-work/sandwich.txt' remains in conflict
 </screen>
 
       <para>If you get a conflict, you need to do one of three
@@ -1369,7 +1368,7 @@ svn: Aborting commit: '/home/sally/svn-work/sandwich.txt' remains in conflict.
 
       <screen>
 $ svn resolved sandwich.txt
-Resolved conflicted state of sandwich.txt
+Resolved conflicted state of 'sandwich.txt'
 </screen>
 
       <sect3 id="svn-ch-3-sect-4.4.1">
@@ -1502,7 +1501,7 @@ $ svn resolved sandwich.txt
 
         <screen>
 $ svn revert sandwich.txt
-Reverted sandwich.txt
+Reverted 'sandwich.txt'
 $ ls sandwich.*
 sandwich.txt
 </screen>
@@ -1552,7 +1551,7 @@ Committed revision 3.
         <option>--file</option> switch:</para>
 
       <screen>
-svn commit --file logmsg 
+$ svn commit --file logmsg 
 Sending        sandwich
 Transmitting file data .
 Committed revision 4.
@@ -1594,10 +1593,8 @@ $
 <screen>
 $ svn commit --message "Add another rule"
 Sending        rules.txt
-svn: Transaction is out of date
 svn: Commit failed (details follow):
-svn: out of date: `rules.txt' in txn `g'
-$
+svn: Out of date: 'rules.txt' in transaction 'g'
 </screen>
 
       <para>At this point, you need to run <command>svn
@@ -1696,7 +1693,7 @@ r2 | harry | Mon, 15 Jul 2002 17:47:57 -0500 | 1 line
 
 Added main() methods.
 ------------------------------------------------------------------------
-r1 | sally | Mon, 15 Jul 2002 17:40:08 -0500 | 2 lines
+r1 | sally | Mon, 15 Jul 2002 17:40:08 -0500 | 1 line
 
 Initial import
 ------------------------------------------------------------------------
@@ -2061,11 +2058,11 @@ M      ./somedir/foo.c
       <screen>
 $ svnadmin create /usr/local/svn/newrepos
 $ svn import mytree file:///usr/local/svn/newrepos/fooproject
-Adding  mytree/foo.c
-Adding  mytree/bar.c
-Adding  mytree/subdir
-Adding  mytree/subdir/quux.h
-Transmitting file data....
+Adding         mytree/foo.c
+Adding         mytree/bar.c
+Adding         mytree/subdir
+Adding         mytree/subdir/quux.h
+
 Committed revision 1.
 </screen>
 

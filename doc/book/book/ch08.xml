@@ -1563,7 +1563,7 @@ A  INSTALL
 A  README
 A  autogen.sh
 A  build.conf
-...
+&hellip;
 </screen>
 
       <para>The above command will checkout the bleeding-edge, latest
