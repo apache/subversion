@@ -528,7 +528,7 @@ Note: any subcommand which takes the '--revision' and '--transaction'
       options will, if invoked without one of those options, act on
       the repository's youngest revision.
 Type "svnlook help &lt;subcommand&gt;" for help on a specific subcommand.
-...
+&hellip;
 </screen>
 
         <para>Nearly every one of <command>svnlook</command>'s
@@ -752,7 +752,7 @@ Available subcommands:
    create
    createtxn
    dump
-...
+&hellip;
 </screen>
 
         <para>We've already mentioned <command>svnadmin</command>'s
@@ -839,17 +839,6 @@ Available subcommands:
                 new value.</para>
             </listitem>
           </varlistentry>
-
-          <varlistentry>
-            <term><literal>undeltify</literal></term>
-            <listitem>
-              <para>Force the repository to use fulltext storage for
-                the contents of a file at a given revision (as opposed
-                to a smaller, compressed "delta" format), or perhaps
-                for all files under a given directory in that
-                revision.</para>
-            </listitem>
-          </varlistentry>
         </variablelist>
 
       </sect3>
@@ -910,23 +899,23 @@ Available commands:
 &lt;rev: 2 /&gt;$ ls
    REV   AUTHOR  NODE-REV-ID     SIZE         DATE NAME
 ----------------------------------------------------------------------------
-     1          &lt;     2.0.1&gt;          Nov 15 11:50 A/
-     2 cmpilato &lt;     1.0.2&gt;       56 Nov 19 08:19 iota
+     1    sally &lt;     2.0.1&gt;          Nov 15 11:50 A/
+     2    harry &lt;     1.0.2&gt;       56 Nov 19 08:19 iota
 &lt;rev: 2 /&gt;$ cd A
 &lt;rev: 2 /A&gt;$ ls
    REV   AUTHOR  NODE-REV-ID     SIZE         DATE NAME
 ----------------------------------------------------------------------------
-     1          &lt;     4.0.1&gt;          Nov 15 11:50 B/
-     1          &lt;     a.0.1&gt;          Nov 15 11:50 C/
-     1          &lt;     b.0.1&gt;          Nov 15 11:50 D/
-     1          &lt;     3.0.1&gt;       23 Nov 15 11:50 mu
+     1    sally &lt;     4.0.1&gt;          Nov 15 11:50 B/
+     1    sally &lt;     a.0.1&gt;          Nov 15 11:50 C/
+     1    sally &lt;     b.0.1&gt;          Nov 15 11:50 D/
+     1    sally &lt;     3.0.1&gt;       23 Nov 15 11:50 mu
 &lt;rev: 2 /A&gt;$ cd D/G 
 &lt;rev: 2 /A/D/G&gt;$ ls
    REV   AUTHOR  NODE-REV-ID     SIZE         DATE NAME
 ----------------------------------------------------------------------------
-     1          &lt;     e.0.1&gt;       23 Nov 15 11:50 pi
-     1          &lt;     f.0.1&gt;       24 Nov 15 11:50 rho
-     1          &lt;     g.0.1&gt;       24 Nov 15 11:50 tau
+     1    sally &lt;     e.0.1&gt;       23 Nov 15 11:50 pi
+     1    sally &lt;     f.0.1&gt;       24 Nov 15 11:50 rho
+     1    sally &lt;     g.0.1&gt;       24 Nov 15 11:50 tau
 &lt;rev: 2 /A&gt;$ cd ../..
 &lt;rev: 2 /&gt;$ cat iota
 This is the file 'iota'.
@@ -976,7 +965,7 @@ $
              the svnadmin stuff out to another section.  -->
             
         <para>Currently, the Subversion repository has only one
-          database back-end: Berkeley DB.  All of your filesystem's
+          database back-end&mdash;Berkeley DB.  All of your filesystem's
           structure and data live in a set of tables within the
           <filename>db</filename> subdirectory of your repository.
           This subdirectory is a regular Berkeley DB environment
@@ -984,248 +973,420 @@ $
           of Berkeley's database tools (you can see the documentation
           for these tools at SleepyCat's website, <systemitem
           class="url">http://www.sleepycat.com/</systemitem>).  For
-          day-to-day Subversion use, these tools should be
-          unnecessary, however, they do provide some important
-          functionality that is currently not provided by Subversion
-          itself.</para>
+          day-to-day Subversion use, these tools are unnecessary,
+          however, they do provide some important functionality that
+          is currently not provided by Subversion itself.</para>
   
-        <para>Remember that Berkeley DB has genuine transactions.
-          Every attempt to change the DB is first logged.  If anything
-          ever goes wrong, the DB can back itself up to a previous
-          <literal>checkpoint</literal> and replay transactions to get
-          the data back into a sane state.</para>
-              
-        <para>In our experience, we have seen situations where a bug
-          in Subversion (which causes a crash) can sometimes have a
-          side-effect of leaving the DB environment in a
-          <quote>locked</quote> state.  When the repository is in this
-          state, any attempts to read or write to the repository stall
-          indefinitely as Subversion awaits the release of a lock that
-          cannot be released.  Fortunately, Berkeley DB has genuine
-          support for transactions, and Subversion takes advantage of
-          that.  This means that every change to the database is first
-          logged, and then exacted, so that if anyone goes wrong, the
-          database can revert back to a previous
-          <quote>checkpoint</quote> and replay the transactions to get
-          back into a sane state.</para>
+        <para>For example, because Subversion uses Berkeley DB's
+          logging facilities, the database first write out a
+          description of any modifications it is about to make, and
+          then makes the modification itself.  This is to ensure that
+          if something goes wrong, the database system can back up to
+          a previous <firstterm>checkpoint</firstterm>&mdash;a
+          location in the log files known not to be corrupt&mdash;and
+          replay transactions until the data is restored to a usable
+          state.  This functionality is one of the main reasons why
+          Berkeley DB was chosen as Subversion's initial database
+          back-end.</para>
+
+        <para>Over time, these log files can accumulate in mass
+          quantities.  That is by design, of course.  You should be
+          able to recreate your entire database using nothing but the
+          log files, so these files are important for catastrophic
+          database recovery.  But typically, you'll want to archive
+          the log files that are no longer in use by Berkeley DB, and
+          then remove them from disk to conserve space.  Berkeley DB
+          provide a <command>db_archive</command> utility for, among
+          other things, listing the log files that are associated with
+          a given database and which are no longer in use.  That way,
+          you know which files to archive and remove.</para>
+
+        <para>Subversion's own repository uses a
+          <literal>post-commit</literal> hook script, which, after
+          performing a <quote>hot backup</quote> of the repository,
+          removes these excess logfiles.  In the Subversion source
+          tree, the script
+          <filename>tools/backup/hot-backup.py</filename> illustrates
+          the safe way to perform a backup of a Berkeley DB database
+          environment while it's being actively accessed:  recursively
+          copy the entire repository directory, then re-copy the
+          logfiles listed by <command>db_archive -l</command>.</para>
             
-        <para>To <quote>unwedge</quote> the repository:</para>
+        <para>Generally speaking, only the truly paranoid would need
+          to backup their entire repository every time a commit
+          occured.  Subversion's repository is truly paranoid for what
+          should be obvious reasons!  However, assuming that a given
+          repository has some other redundancy mechanism in place with
+          relatively fine granularity (per-commit, for example), a hot
+          backup of the database might be something that a repository
+          administrator would want to include as part of a system-wide
+          nightly backup.  For more repositories, archived commit
+          emails alone are sufficient restoration sources, at least
+          for the last few commits.  But it's your data; protect it as
+          much as you'd like.</para>
+            
+        <para>Berkeley DB also comes with a pair of utilities for
+          converting the database tables into flat ASCII text files,
+          suitable for transferring from machine to machine,
+          irrespective of architecture or operating system.  The
+          <command>db_dump</command> and <command>db_load</command>
+          programs write and read, respectively, a custom file format
+          which describes the keys and values in a Berkeley DB
+          database.</para>            
+        
+      </sect3>
+    </sect2>
+
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-5-sect-2.3">
+      <title>Repository Cleanup</title>
+            
+      <para>Your Subversion repository will generally require very
+        little attention once it is configured to your liking.
+        However, there are times when some manual assistance from an
+        administrator might be in order.  The
+        <command>svnadmin</command> utility provides some helpful
+        functionality to assist you in performing such tasks as</para>
+
+      <itemizedlist>
+        <listitem>
+          <para>modifying commit log messages,</para>
+        </listitem>
+        <listitem>
+          <para>removing dead transactions, and</para>
+        </listitem>
+        <listitem>
+          <para>optimizing the access time of popular revisions.</para>
+        </listitem>
+      </itemizedlist>
+
+      <para>Perhaps the most commonly used of
+        <command>svnadmin</command>'s subcommands is
+        <literal>setlog</literal>.  When a transaction is committed to
+        the repository and promoted to a revision, the descriptive log
+        message associated with that new revision (and provided by the
+        user) is stored as an unversioned property attached to the
+        revision itself.  In other words, the repository remembers
+        only the latest value of the property, and discards previous
+        ones.</para>
+
+      <para>Sometimes a user will have an error in her log message (a
+        misspelling or some misinformation, perhaps).  If the
+        repository is configured (using the
+        <literal>pre-revprop-change</literal> and
+        <literal>post-revprop-change</literal> hooks; see <xref
+        linkend=""/>) to accept changes to this log message after the
+        commit is finished, then the user can <quote>fix</quote> her
+        log message remotely using the <command>svn</command> client
+        program.  However, because of the potential to lose
+        information forever, Subversion repositories are not, by
+        default, configured to allow changes to unversioned properties&mdash;
+        except by an administrator.</para>
+
+      <para>If a log message needs to be changed by an administrator,
+        this can be done using <command>svnadmin setlog</command>.
+        This command changes the log message (the
+        <literal>svn:log</literal> property) on a given revision of a
+        repository, reading the new value from a provided file.</para>
+          
+      <screen>
+$ echo "Here is the new, correct log message" > newlog.txt
+$ svnadmin setlog myrepos newlog.txt -r 388
+</screen>
+      
+      <sidebar>
+        <title>Don't Lose That Log Message!</title>
+        
+        <para>Administrators should be aware that using
+          <command>svnadmin setlog</command> bypasses any revision
+          property hook scripts that might be active for the
+          repository.  Be extremely careful with this subcommand,
+          ensuring that you are providing the correct revision number
+          for the change.</para>
+      </sidebar>
+
+      <para>Another common use of <command>svnadmin</command> is to
+        query the repository for outstanding&mdash;possibly
+        dead&mdash;Subversion transactions.  In the event that commit
+        should fail, the transaction is usually cleaned up.  That is,
+        the transaction itself is removed from the repository, and any
+        data associated with (and only with) that transaction is
+        removed as well.  Occasionally, though, a failure occurs in
+        such a way that the cleanup of the transaction never happens.
+        This could happen for several reasons: perhaps the client
+        operation was inelegantly terminated by the user, or a network
+        failure might have occured in the middle of an operation, etc.
+        Regardless of the reason, these dead transactions serve only
+        to clutter the repository and consume resources.</para>
+
+      <para>You can use <command>svnadmin</command>'s
+        <literal>lstxns</literal> command to list the names of the
+        currently outstanding transactions.</para>
+
+      <screen>
+$ svnadmin lstxns myrepos
+19
+3a1
+a45
+$
+</screen>
+
+      <para>Each item in the resultant output can then be used with
+        <command>svnlook</command> (and its
+        <option>--transaction</option> option) to determine who
+        created the transaction, when it was created, what types of
+        changes were made in the transaction&mdash;in other words,
+        whether or not the transaction is a safe candidate for
+        removal!  If so, the transaction's name can be passed to
+        <command>svndamin rmtxns</command>, which will perform the
+        cleanup of the transaction.  In fact, the
+        <literal>rmtxns</literal> subcommand can take its input
+        directly from the output of <literal>lstxns</literal>!</para>
+
+      <screen>
+$ svnadmin lstxns myrepos | svnadmin rmtxns myrepos
+$
+</screen>
+
+      <para>Of course, if you use these two subcommands like this, you
+        should consider disabling client access to your repository in
+        case someone begins a legitimate transaction before your start
+        your cleanup.  The following is a little bit of
+        shell-scripting that can quickly generate information about
+        each outstanding transaction in your repository:</para>
+
+      <example id="svn-ch-5-sect-2.3-ex-1">
+        <title>Reporting outstanding transactions</title>
+
+        <programlisting>
+#!/bin/sh
+
+### Generate informational output for all outstanding transactions in
+### a Subverersion repository
+
+SVNADMIN=/usr/local/bin/svnadmin
+SVNLOOK=/usr/local/bin/svnlook
+
+REPOS=${1}
+if [ x$REPOS = x ] ; then
+  echo "usage: $0 REPOS_PATH"
+  exit
+fi
+
+for TXN in `${SVNADMIN} lstxns ${REPOS}`; do 
+  echo "---[ Transaction ${TXN} ]-------------------------------------------"
+  ${SVNLOOK} info ${REPOS} --transaction ${TXN}
+done
+</programlisting>
+      </example>
+
+      <para>You can run the previous script using
+        <command>/path/to/script /path/to/repos</command>.  The output
+        is basically a concatenation of several chunks of
+        <command>svnlook info</command> output (see <xref
+        linkend="svn-ch-5-sect-2.2.1"/>), and will look something
+        like:</para>
+
+      <screen>
+$ txn-info.sh myrepos
+---[ Transaction 19 ]-------------------------------------------
+sally
+2001-09-04 11:57:19 -0500 (Tue, 04 Sep 2001)
+0
+---[ Transaction 3a1 ]-------------------------------------------
+harry
+2001-09-10 16:50:30 -0500 (Mon, 10 Sep 2001)
+39
+Trying to commit over a faulty network.
+---[ Transaction a45 ]-------------------------------------------
+sally
+2001-09-12 11:09:28 -0500 (Wed, 12 Sep 2001)
+0
+$
+</screen>
+
+      <para>Usually, if you see a dead transaction that has no log
+        message attached to it, this is the result of a failed update
+        (or update-like) operation.  These operations use Subversion
+        transactions under the hood to mimic working copy state.
+        Since they are never intended to be committed, Subversion
+        doesn't require a log message for those transactions.
+        Transactions that do have log messages attached are almost
+        certainly failed commits of some sort.  Also, a transaction's
+        datestamp can be very telling&mdash;for example, how likely is
+        it that an operation begun nine months ago is still active?</para>
+
+      <para>In short, transaction cleanup decisions need not be made
+        unwisely.  Various sources of information&mdash;including
+        Apache's error and access logs, the logs of successful
+        Subversion commits, and so on&mdash;can be employed in the
+        decision-making process.  Finally, an administrator can often
+        simply communicate with a seemingly dead transaction's owner
+        (via email, for example) to verify that the transaction is, in
+        fact, in a zombie state.</para>
+
+    </sect2>
+
+    <!-- ***************************************************************** -->
+    <sect2 id="svn-ch-5-sect-2.4">
+      <title>Repository recovery</title>
+
+      <para>In the course of using your Subversion repository, bugs in
+        Subversion itself, or certain fatal errors that occur (such as
+        running of disk space or available memory) can result in the
+        back-end database system getting <quote>wedged</quote>.  When
+        this happens, any attempts to access the repository hang
+        indefinitely.  Obviously, this isn't a very productive state
+        for a repository to be in.</para>
+
+      <para>First, if this happens to your repository, don't panic.
+        Subversion's filesystem takes advantage of database
+        transactions and checkpoints and pre-write journaling to
+        ensure that only the most catastrophic of events
+        <footnote>
+          <para>e.g.: hard drive + huge electromagnet = disaster</para>
+        </footnote>
+        can permanently destroy a database environment.  A
+        sufficiently paranoid repository administrator will be making
+        off-site backups of the repository data in some fashion, but
+        don't call the head of IT to line up a tape backup restoration
+        just yet.</para>
+
+      <para>Secondly, use the following recipe to attempt to
+        <quote>unwedge</quote> your repository:</para>
    
-        <orderedlist>
-          <listitem>
-            <para>Make sure that there are no processes accessing (or
-              attempting to access) the repository.  For networked
-              repositories, this means shutting down the Apache HTTP
-              Server, too.</para>
-          </listitem>
-          <listitem> 
-            <para>Become the user who owns and manages the repository.</para>
-          </listitem>
-          <listitem>
-            <para>Run the command <command>svnadmin recover
-              /path/to/repos</command>.  You should see output like
-              this:</para>
-                
-            <screen>
+      <orderedlist>
+        <listitem>
+          <para>Make sure that there are no processes accessing (or
+            attempting to access) the repository.  For networked
+            repositories, this means shutting down the Apache HTTP
+            Server, too.</para>
+        </listitem>
+        <listitem> 
+          <para>Become the user who owns and manages the repository.</para>
+        </listitem>
+        <listitem>
+          <para>Run the command <command>svnadmin recover
+            /path/to/repos</command>.  You should see output like
+            this:</para>
+              
+          <screen>
 Acquiring exclusive lock on repository db, and running recovery procedures.
 Please stand by...
 Recovery completed.
 The latest repos revision is 19.
 </screen>
-          </listitem>
-          <listitem>
-            <para>Restart the Subversion server.</para>
-          </listitem>
-        </orderedlist>
-              
-        <para>Make sure you run this command as the user that owns and
-          manages the database&mdash;typically your Apache
-          process&mdash;and <emphasis>not</emphasis> as root.  Running
-          <command>db_recover</command> as root leaves files owned by
-          root in the <filename>db</filename> directory, which the
-          non-root user that manages the database cannot open.  If you
-          do this, you'll get <quote>permission denied</quote> error
-          messages when you try to access the repository.</para><!--
-          ###TODO Make this a warning block? -Fitz -->
-        
-        <para>Second, a repository administrator may need to manage
-          the growth of logfiles.  At any given time, the DB
-          environment is using at least one logfile to log
-          transactions; when the <quote>current</quote> logfile grows
-          to 10 megabytes, a new logfile is started, and the old one
-          continues to exist.</para>
+        </listitem>
+        <listitem>
+          <para>Restart the Subversion server.</para>
+        </listitem>
+      </orderedlist>
             
-        <para>Thus, after a while, you may see a whole group of 1MB
-          logfiles lying around the environment.  At this point, you
-          can make a choice: if you leave every single logfile behind,
-          it's guaranteed that <command>db_recover</command> will
-          always be able to replay every single DB transaction, all
-          the way back to the first commit.  (This is the
-          <quote>safe</quote>, or perhaps paranoid, route.)  On the
-          other hand, you can ask Berkeley DB to tell you which
-          logfiles are no longer being actively written to:</para>
-            
-        <screen>
-$ db_archive -a -h repos/db
-log.0000000023
-log.0000000024
-log.0000000029
-</screen>
-            
-        <para>Subversion's own repository uses a
-          <literal>post-commit</literal> hook script, which, after
-          performing a <quote>hot-backup</quote> of the repository,
-          removes these excess logfiles.  (In the Subversion source
-          tree, see
-          <filename>tools/backup/hot-backup.py</filename>).</para>
-            
-        <para>This script also illustrates the safe way to perform a
-          backup of the repository while it's still up and running:
-          recursively copy the entire repository directory, then
-          re-copy the logfiles listed by <command>db_archive
-          -l</command>.</para>
-            
-        <para>To start using a repository backup that you've restored,
-          be sure to run <command>db_recover -v</command> command in
-          the <filename>db</filename> area first.  This guarantees
-          that any unfinished log transactions are fully played before
-          the repository goes live again.  (The
-          <command>hot-backup.py</command> script does that for you
-          during backup, so you can skip this step if you decide to
-          use it.)</para>
-            
-        <para>Finally, note that Berkeley DB has a whole locking
-          subsystem; in extremely intensive svn operations, we have
-          seen situations where the DB environment runs out of locks.
-          The maximum number of locks can be adjusted by changing the
-          values in the <filename>repos/db/DB_CONFIG</filename> file.
-          Don't change the default values unless you know what you're
-          doing; be sure to read <systemitem
-          class="url">http://www.sleepycat.com/docs/ref/lock/max.html</systemitem>
-          first.</para>
+      <para>This procedure succeeds in almost every case of repository
+        lock-up.  Make sure that you run this command as the user that
+        owns and manages the database, not just as
+        <literal>root</literal>.  Part of the recovery process might
+        involve recreating from scratch various database files (shared
+        memory regions, for example).  Recovering as
+        <literal>root</literal> will create those files such that they
+        are owned by root, and therefore cannot be accessed correctly
+        by regular users.</para>
 
-      </sect3>       
+      <para>If the previous procedure, for some reason, does not
+        successfully unwedge your repository, you should do two
+        things.  First, move your broken repository out of the way and
+        go restore your latest backup of it.  Secondly, send email to
+        Subversion developer's list describing your problem, and watch
+        how those developers jump on your problems as if you paid
+        their salaries!  No greater tragedy exists in the minds of the
+        Subversion developers than the permanent loss of user's
+        data.</para>
+
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-2.3">
-      <title>Tweaking with Svnadmin</title>
-            
-      <para>The <command>svnadmin</command> tool has some
-        subcommands that are specifically useful to repository
-        administrators.  Be careful with the
-        <command>svnadmin</command>!  Unlike
-        <command>svnlook</command>, which is read-only,
-        <command>svnadmin</command> has the ability to modify the
-        repository.</para>
-          
-      <para>The most-used feature is probably <literal>svnadmin
-        setlog</literal>.  A commit's log message is an unversioned
-        property directly attached to the revision object; there's
-        only one log message per revision.  Sometimes a user screws
-        up the message, and it needs to be replaced:</para>
-          
-      <screen>
-$ echo "Here is the new, correct log message" > newlog.txt
-$ svnadmin setlog myrepos 388 newlog.txt
-</screen>
-            
-      <para>There's a nice CGI script in
-        <filename>tools/cgi/</filename> that allows people (with
-        commit-access passwords) to tweak existing log messages via
-        web browser.</para>
-          
-      <para>Another common use of <command>svnadmin</command> is to
-        inspect and clean up old, dead transactions.  Commits and
-        updates both create transaction trees, but occasionally a
-        bug or crash can leave them lying around.  By inspecting the
-        datestamp on a transaction, an administrator can make a
-        judgment call and remove it:</para>
-          
-      <screen>
-$ svnadmin lstxns myrepos
-319
-321
-$ svnadmin lstxns --long myrepos
-Transaction 319
-Created: 2002-07-14T12:57:22.748388Z
-&hellip;
-$ svnadmin rmtxns myrepos 319 321
-</screen>
-            
-      <!-- ###TODO Hey guys, are going to continue to support
-          svnadmin undeltify? -Ben -->
-          
-      <para>Another useful subcommand: <command>svnadmin
-        undeltify</command>.  Remember that the latest version of
-        each file is stored as fulltext in the repository, but that
-        earlier revisions of files are stored as
-        <quote>deltas</quote> against each next-most-recent
-        revisions.  When a user attempts to access an earlier
-        revision, the repository must apply a sequence of
-        backwards-deltas to the newest fulltexts in order to derive
-        the older data.</para>
-          
-      <para>If a particular revision tree is extremely popular, the
-        administrator can speed up the access time to this tree by
-        <quote>undeltifying</quote> any path within the
-        revision&mdash; that is, by converting every file to
-        fulltext:</para>
-          
-      <screen>
-$ svnadmin undeltify myrepos 230 /project/tags/release-1.3
-Undeltifying `/project/tags/release-1.3' in revision 230...done.
-</screen>
-            
-    </sect2>
-
-    <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-2.4">
+    <sect2 id="svn-ch-5-sect-2.5">
       <title>Migrating a repository</title>
     
-      <para>Sometimes special situations arise where you need to move
-        all of your filesystem data from one repository to another.
-        Perhaps the internal fs database schema has changed in some way
-        in a new release of Subversion, or perhaps you'd like to start
-        using a different database <quote>back end</quote>.</para>
+      <para>A Subversion filesystem has its data spread throughout
+        various database tables in a fashion generally understood by
+        (and of interest to) only the Subversion developers
+        themselves.  However, circumstances may arise that call for
+        all, or some subset, of that data to be collected into a
+        single, portable, flat format.  Subversion provides such a
+        mechanism, implemented in a pair of
+        <command>svnadmin</command> subcommands:
+        <literal>dump</literal>, and <literal>load</literal>.</para>
+
+      <para>The most common reason to dump and load a Subversion
+        repository is due to changes in Subversion itself.  As
+        Subversion matures, there are times when certain changes made
+        to the back-end database schema cause Subversion to be
+        incompatible with previous versions of the repository.  The
+        recommended course of action when you are upgrading across one
+        of those compatibility boundaries is a relatively simple
+        process:</para>
   
-      <para>Either way, your data needs to be migrated to a new
-        repository.  To do this, we have the <command>svnadmin dump</command> and
-        <command>svnadmin load</command> commands.</para>
-  
-      <para><command>svnadmin dump</command> writes a stream of your
-        repository's data to stdout:</para>
-  
+      <orderedlist>
+        <listitem>
+          <para>Using your current version of
+            <command>svnadmin</command>, dump your repositories to
+            dumpfiles.</para>
+        </listitem>
+        <listitem>
+          <para>Upgrade to the new version of Subversion.</para>
+        </listitem>
+        <listitem>
+          <para>Move your old repositories out of the way, and create
+            new empty ones in their place using your new
+            <command>svnadmin</command>'s <literal>create</literal>
+            command.</para>
+        </listitem>
+        <listitem>
+          <para>Again using your new <command>svnadmin</command>, load
+            your dumpfiles into their respective, just-created
+            repositories.</para>
+        </listitem>
+        <listitem>
+          <para>Finally, be sure to copy any customizations from your
+            old repositories to the new ones, including
+            <filename>DB_CONFIG</filename> files and hook scripts.
+            You'll want to pay attention to the release notes for the
+            new release of Subversion to see if any changes since your
+            last upgrade affect those hooks or configuration
+            options.</para>
+        </listitem>
+      </orderedlist>
+
+      <para><command>svnadmin dump</command> will output a range of
+        repository revisions that are formatted using Subversion's
+        custom filesystem dump format.  The dump format is printed to
+        the standard output stream, while informative messages are
+        printed to the stardard error stream.  This allows you to
+        redirect the output stream to a file while watching the status
+        output in your terminal window.  For example:</para>
+
       <screen>
-$ svnadmin dump myrepos > dumpfile
+$ svnadmin dump myrepos &gt; dumpfile
 * Dumped revision 0.
 * Dumped revision 1.
 * Dumped revision 2.
 &hellip;
 </screen>
 
-      <para>This stream describes every revision in your repository as a
-        list of changes to nodes.  It's mostly human-readable text; but
-        when a file's contents change, the entire fulltext is dumped
-        into the stream.  If you have binary files or binary
-        property-values in your repository, those parts of the stream
-        may be unfriendly to human readers.</para>
-  
-      <para>After dumping your data, you would then move the file to a
-        different system (or somehow alter the environment to use a
-        different version of <command>svnadmin</command> and/or
-        <filename>libsvn_fs.so</filename>), and create a
-        <quote>new</quote>-style repository that has a new schema or DB
-        back-end:</para>
-  
-      <screen>
-$ svnadmin create newrepos
-</screen>
-    
-      <para>The <command>svnadmin load</command> command attempts to
-        read a dumpstream from stdin, and effectively replays each
-        commit:</para>
-  
+      <para>At the end of the process, you will have a single file
+        that contains all the data stored in your repository in the
+        requested range of revisions.</para>
+
+<!-- ### TODO: describe the format here -->
+
+      <para>The other subcommand in the pair, <command>svnadmin
+        load</command>, parses the standard input stream as a
+        Subversion repository dump file, and effectively replays those
+        dumped revisions into the target repository for that
+        operation.  It also gives informative feedback, this time
+        using the standard output stream.</para>
+
       <screen>
 $ svnadmin load newrepos &lt; dumpfile
 &lt;&lt;&lt; Started new txn, based on original revision 1
@@ -1239,40 +1400,45 @@ $ svnadmin load newrepos &lt; dumpfile
      * editing path : A/D/G/rho ... done.
 
 ------- Committed new rev 2 (loaded from original rev 2) &gt;&gt;&gt;
+&hellip;
 </screen>
 
-      <para>Voila, your revisions have been recommitted into the new
-        repository.</para>
-      
-      <para>And because <command>svnadmin</command> uses standard input
-        and output streams for the repository dump and load process,
-        people who are feeling saucy with Unix can try things like
-        this:</para>
+      <para>Note that because <command>svnadmin</command> uses
+        standard input and output streams for the repository dump and
+        load process, people who are feeling especially saucy can try
+        things like this:</para>
   
       <screen>
 $ svnadmin create newrepos
 $ svnadmin dump myrepos | svnadmin load newrepos
 </screen>
 
-      <para>You can also create a dumpfile that represents a specific
-        range of revisions.  <command>svnadmin dump</command> takes
-        optional starting and ending revisions to accomplish just that
-        task.</para>
+      <para>We mentioned previously that <command>svnadmin
+        dump</command> outputs a range of revisions.  If none are
+        supplied, the program simply dumps all the revisions in the
+        repository.  However, you can use the
+        <option>--revision</option> option to specify a single
+        revision to dump, or a range of revisions.</para>
 
       <screen>
-$ svnadmin dump myrepos 23 > rev-23.dumpfile
-$ svnadmin dump myrepos 100 200 > revs-100-200.dumpfile
+$ svnadmin dump myrepos --revision 23 > rev-23.dumpfile
+$ svnadmin dump myrepos --revision 100:200 > revs-100-200.dumpfile
 </screen>
+
+<!-- ### TODO: de-gunkify this -->
 
       <para>Now, regardless of the range of revisions used when
         dumping the repository, the default behavior is for the first
         revision dumped to always be compared against revision 0,
-        which is just the empty root directory <filename>/</filename>.
-        This means that the first revision in any dumpfile will always
-        look like a gigantic list of <quote>added</quote> nodes.  We
-        do this so that a file like
+        which is just the empty root (<filename>/</filename>)
+        directory.  This means that the first revision in any dumpfile
+        will always look like a gigantic list of <quote>added</quote>
+        paths.  We do this so that a file like
         <filename>revs-100-200.dumpfile</filename> can be directly
-        loaded into an empty repository.</para>
+        loaded into an empty repository without concern that something
+        in the dumped range of revisions (100-200 in this example) is
+        dependent on the existance of something not in the dumped
+        range (pre-100).</para>
 
       <para>However, if you add the <option>--incremental</option>
         option when you dump your repository, this tells
@@ -1300,15 +1466,18 @@ $ svnadmin load newrepos &lt; dumpfile3
 
       <para>Another neat trick you can perform with this
         <option>--incremental</option> option involves appending to an
-        existing dumpfile a new range of revisions.  For example, you
-        might have a post-commit hook that simply appends the
-        repository dump of the single revision that triggered the
-        hook.  Or you might have a script like the following that runs
-        nightly to append dumpfile data for all the revisions that
-        were added to the repository since the last time the script
-        ran.</para>
+        existing dumpfile a new range of dumped revisions.  For
+        example, you might have a <literal>post-commit</literal> hook
+        that simply appends the repository dump of the single revision
+        that triggered the hook.  Or you might have a script like the
+        following that runs nightly to append dumpfile data for all
+        the revisions that were added to the repository since the last
+        time the script ran.</para>
 
-      <screen>
+      <example id="svn-ch-5-sect-2.4-ex-1">
+        <title>Nightly repository incremental dumps</title>
+
+        <programlisting>
 #!/usr/bin/perl
 
 $repos_path  = '/path/to/repos';
@@ -1337,18 +1506,32 @@ chomp $youngest;
 `svnadmin dump $repos_path $new_start $youngest --incremental >> $dumpfile`;
 
 # Store a new last-dumped revision
-open LASTDUMPED, "> $last_dumped" or die;
+open LASTDUMPED, "&gt; $last_dumped" or die;
 print LASTDUMPED "$youngest\n";
 close LASTDUMPED;
 
 # All done!
-</screen>
+</programlisting>
+      </example>
 
       <para>As you can see, the Subversion repository dumpfile format,
         and specifically <command>svnadmin</command>'s use of that
         format, can be a valuable means by which to backup changes to
         your repository over time in case of a system crash or some
         other catastrophic event.</para>
+
+      <para>Finally, another possible use of the Subversion repository
+        dump file format is conversion from a different storage
+        mechanism or version control system altogether.  Because the
+        dump file format is, for the most part, human readable,
+        <footnote>
+          <para>The Subversion repository dump file format resembles
+            an RFC-822 format, the same type of format used for most
+            email.</para>
+        </footnote>
+        it should be relatively easy to describe generic sets of
+        changes&mdash;each of which should be treated as a new
+        revision&mdash;using this file format.</para>
 
     </sect2>
   </sect1>
@@ -1438,8 +1621,8 @@ close LASTDUMPED;
         by installing pre-built binary packages of them on your
         system.</para>
   
-      <!-- Need lots more detail here.  This fuzzy hand-waving ain't
-          gonna cut it. -->
+<!-- ### TODO: Need lots more detail here.  This fuzzy hand-waving
+     ain't gonna cut it. -->
 
     </sect2>  
 
@@ -1730,8 +1913,7 @@ ServerName svn.red-bean.com
 
     </sect2> 
 
-    <!-- ### TODO: talk about SSL, mod_deflate, using different ports,
-         etc. -->
+<!-- ### TODO: talk about SSL, mod_deflate, using different ports, etc. -->
 
   </sect1>
 
@@ -1765,16 +1947,16 @@ ServerName svn.red-bean.com
         the contents of your repository in an effective manner the
         first time, you can prevent a load of future headaches.</para>
 
-        <!-- Put some wisdom here later.  I have none tonight.
-             Specifically, the following section on 'svn import' is a
-             joke.  It's no more about 'svn import' than it is about
-             'svn mkdir' or 'svn smackdown -cage-match'.  -->
+<!-- ### TODO: I mean it.  This section sucks.  Fix it! -->
+
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-4.2">
       <title>Examples of 'svn import'</title>
           
+<!-- ### TODO: And fix this crap, too. -->
+
       <para>You may want to give your repository an initial directory
         structure that reflects the trunk, branches, and tags of your
         project(s) (See <xref linkend="svn-ch-4"/>.)  You can do this
