@@ -342,6 +342,9 @@ main (int argc, const char * const *argv)
             if (show_extra)
               {
                 apr_pool_t *this_pool = svn_pool_create (pool);
+                svn_fs_id_t *root_id;
+                svn_string_t *id_str;
+                
                 INT_ERR (svn_fs_open_txn (&txn, fs, txn_name, this_pool));
                 INT_ERR (svn_fs_txn_root (&this_root, txn, this_pool));
                 INT_ERR (svn_fs_txn_prop (&datestamp, txn,
@@ -366,6 +369,9 @@ main (int argc, const char * const *argv)
                 printf ("Log (%" APR_SIZE_T_FMT " bytes):\n%s\n",
                         log->len, log->data);
                 printf ("==========================================\n");
+                INT_ERR (svn_fs_node_id (&root_id, this_root, "", pool));
+                id_str = svn_fs_unparse_id (root_id, pool);
+                printf ("/ <%s>\n", id_str->data);
                 print_tree (this_root, "", 1, this_pool);
                 printf ("\n");
                 svn_pool_destroy (this_pool);
@@ -411,7 +417,9 @@ main (int argc, const char * const *argv)
             svn_string_t *author;
             svn_string_t *log;
             apr_pool_t *this_pool = svn_pool_create (pool);
-            
+            svn_fs_id_t *root_id;
+            svn_string_t *id_str;
+
             INT_ERR (svn_fs_revision_root (&this_root, fs, this, this_pool));
             INT_ERR (svn_fs_revision_prop (&datestamp, fs, this, 
                                            SVN_PROP_REVISION_DATE, this_pool));
@@ -432,6 +440,9 @@ main (int argc, const char * const *argv)
             printf ("Log (%" APR_SIZE_T_FMT " bytes):\n%s\n",
                     log->len, log->data);
             printf ("==========================================\n");
+            INT_ERR (svn_fs_node_id (&root_id, this_root, "", pool));
+            id_str = svn_fs_unparse_id (root_id, pool);
+            printf ("/ <%s>\n", id_str->data);
             print_tree (this_root, "", 1, this_pool);
             printf ("\n");
             
