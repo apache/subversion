@@ -76,11 +76,11 @@ def basic_checkout(sbox):
   extra_files = ['lambda']
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_output.tweak_one('A/mu', status='M ')
-  expected_output.tweak_one('A/B/lambda', status='! ')
-  expected_output.tweak_one('A/D/G/pi', status='D ')
-  expected_output.tweak_one('A/D/G/rho', status='D ')
-  expected_output.tweak_one('A/D/G/tau', status='D ')
+  expected_output.tweak('A/mu', status='M ')
+  expected_output.tweak('A/B/lambda', status='! ')
+  expected_output.tweak('A/D/G/pi',
+                        'A/D/G/rho',
+                        'A/D/G/tau', status='D ')
 
   if (svntest.actions.run_and_verify_status(wc_dir, expected_output,
                                             None, None,
@@ -99,7 +99,7 @@ def basic_checkout(sbox):
 
   # lambda is restored, modifications remain, deletes remain scheduled
   # for deletion although files are restored to the filesystem
-  expected_output.tweak_one('A/B/lambda', status='_ ')
+  expected_output.tweak('A/B/lambda', status='_ ')
   if svntest.actions.run_and_verify_status (wc_dir, expected_output):
     print "Status check 2 failed"
     return 1
@@ -145,8 +145,7 @@ def basic_commit(sbox):
   # but mu and rho should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak_one('A/mu', wc_rev=2)
-  expected_status.tweak_one('A/D/G/rho', wc_rev=2)
+  expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
 
   return svntest.actions.run_and_verify_commit (wc_dir,
                                                 expected_output,
@@ -187,8 +186,7 @@ def basic_update(sbox):
   # but mu and rho should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak_one('A/mu', wc_rev=2)
-  expected_status.tweak_one('A/D/G/rho', wc_rev=2)
+  expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
 
   # Commit.
   if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
@@ -258,7 +256,7 @@ def basic_corruption(sbox):
   # but mu should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak_one('A/mu', wc_rev=2)
+  expected_status.tweak('A/mu', wc_rev=2)
 
   # Modify mu's text-base, so we get a checksum failure the first time
   # we try to commit.
@@ -373,8 +371,7 @@ def basic_merge(sbox):
   # but mu and rho should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak_one('A/mu', wc_rev=2)
-  expected_status.tweak_one('A/D/G/rho', wc_rev=2)
+  expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
   
   # Initial commit.
   if svntest.actions.run_and_verify_commit (wc_dir,
@@ -403,8 +400,7 @@ def basic_merge(sbox):
   # but mu and rho should be at revision 3.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak_one('A/mu', wc_rev=3)
-  expected_status.tweak_one('A/D/G/rho', wc_rev=3)
+  expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=3)
 
   # Commit.
   if svntest.actions.run_and_verify_commit (wc_dir,
@@ -454,8 +450,7 @@ def basic_merge(sbox):
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
-  expected_status.tweak_one('A/mu', status='M ')
-  expected_status.tweak_one('A/D/G/rho', status='M ')
+  expected_status.tweak('A/mu', 'A/D/G/rho', status='M ')
 
   # Do the update and check the results in three ways.
   return svntest.actions.run_and_verify_update(wc_backup,
@@ -503,8 +498,7 @@ def basic_conflict(sbox):
   # but mu and rho should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak_one('A/mu', wc_rev=2)
-  expected_status.tweak_one('A/D/G/rho', wc_rev=2)
+  expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
 
   # Commit.
   if svntest.actions.run_and_verify_commit (wc_dir, expected_output,
@@ -536,8 +530,7 @@ Original appended text for rho>>>>>>> .r2
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, '2')
-  expected_status.tweak_one('A/mu', status='C ')
-  expected_status.tweak_one('A/D/G/rho', status='C ')
+  expected_status.tweak('A/mu', 'A/D/G/rho', status='C ')
 
   # "Extra" files that we expect to result from the conflicts.
   # These are expressed as list of regexps.  What a cool system!  :-)
@@ -577,8 +570,7 @@ Original appended text for rho>>>>>>> .r2
     return 1
 
   # See if they've changed back to plain old 'M' state.
-  expected_status.tweak_one('A/mu', status='M ')
-  expected_status.tweak_one('A/D/G/rho', status='M ')
+  expected_status.tweak('A/mu', 'A/D/G/rho', status='M ')
 
   # There should be *no* extra backup files lying around the working
   # copy after resolving the conflict; thus we're not passing a custom
@@ -606,9 +598,7 @@ def basic_cleanup(sbox):
   
   # Verify locked status.
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_output.tweak_one('A/B', locked='L')
-  expected_output.tweak_one('A/D/G', locked='L')
-  expected_output.tweak_one('A/C', locked='L')
+  expected_output.tweak('A/B', 'A/D/G', 'A/C', locked='L')
 
   if svntest.actions.run_and_verify_status (wc_dir, expected_output):
     return 1
@@ -646,9 +636,7 @@ def basic_revert(sbox):
 
   # Verify modified status.
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_output.tweak_one('A/B/E/beta', status='M ')
-  expected_output.tweak_one('iota', status='M ')
-  expected_output.tweak_one('A/D/G/rho', status='M ')
+  expected_output.tweak('A/B/E/beta', 'iota', 'A/D/G/rho', status='M ')
 
   if svntest.actions.run_and_verify_status (wc_dir, expected_output):
     return 1
@@ -778,9 +766,9 @@ def basic_switch(sbox):
 
   # Create expected status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.remove('A/D/H/chi')
-  expected_status.remove('A/D/H/omega')
-  expected_status.remove('A/D/H/psi')
+  expected_status.remove('A/D/H/chi',
+                         'A/D/H/omega',
+                         'A/D/H/psi')
   expected_status.add({
     'A/D/H/pi'  : Item(status='_ ', wc_rev=1, repos_rev=1),
     'A/D/H/rho' : Item(status='_ ', wc_rev=1, repos_rev=1),
@@ -851,10 +839,9 @@ def basic_delete(sbox):
 
   # check status
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_output.tweak_one('A/D/H/chi', status='M ')
-  expected_output.tweak_one('A/D/G/rho', status='_M')
-  expected_output.tweak_one('A/B/F', status='_M')
-#  expected_output.tweak_one('A/C/sigma', status='? ')
+  expected_output.tweak('A/D/H/chi', status='M ')
+  expected_output.tweak('A/D/G/rho', 'A/B/F', status='_M')
+#  expected_output.tweak('A/C/sigma', status='? ')
   expected_output.add({
     'A/B/X' : Item(status='A ', wc_rev=0, repos_rev=1),
     'A/B/X/xi' : Item(status='A ', wc_rev=0, repos_rev=1),
@@ -974,21 +961,21 @@ def basic_delete(sbox):
 
   # check status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak_one('A/D/H', status='D ')
-  expected_status.tweak_one('A/D/H/chi', status='D ')
-  expected_status.tweak_one('A/D/H/omega', status='D ')
-  expected_status.tweak_one('A/D/H/psi', status='D ')
-  expected_status.tweak_one('A/D/G', status='D ')
-  expected_status.tweak_one('A/D/G/rho', status='D ')
-  expected_status.tweak_one('A/D/G/pi', status='D ')
-  expected_status.tweak_one('A/D/G/tau', status='D ')
-  expected_status.tweak_one('A/B/E', status='D ')
-  expected_status.tweak_one('A/B/E/alpha', status='D ')
-  expected_status.tweak_one('A/B/E/beta', status='D ')
-  expected_status.tweak_one('A/B/F', status='D ')
-  expected_status.tweak_one('A/C', status='D ')
-  expected_status.tweak_one('iota', status='D ')
-  expected_status.tweak_one('A/D/gamma', status='D ')
+  expected_status.tweak('A/D/H',
+                        'A/D/H/chi',
+                        'A/D/H/omega',
+                        'A/D/H/psi',
+                        'A/D/G',
+                        'A/D/G/rho',
+                        'A/D/G/pi',
+                        'A/D/G/tau',
+                        'A/B/E',
+                        'A/B/E/alpha',
+                        'A/B/E/beta',
+                        'A/B/F',
+                        'A/C',
+                        'iota',
+                        'A/D/gamma', status='D ')
 
   if svntest.actions.run_and_verify_status(wc_dir, expected_status):
     print "Status check 3 failed"
