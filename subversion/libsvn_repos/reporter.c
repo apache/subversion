@@ -149,6 +149,13 @@ svn_repos_finish_report (void *report_baton)
 {
   svn_fs_root_t *rev_root;
   svn_repos_report_baton_t *rbaton = (svn_repos_report_baton_t *) report_baton;
+  svn_stringbuf_t *rev_path;
+
+  /* Construct the target path.  For our purposes, it's the same as
+     the full source path.  */
+  rev_path = svn_stringbuf_dup (rbaton->base_path, rbaton->pool);
+  if (rbaton->target)
+    svn_path_add_component (rev_path, rbaton->target, svn_path_repos_style);
 
   /* Get the root of the revision we want to update to. */
   SVN_ERR (svn_fs_revision_root (&rev_root, rbaton->fs,
@@ -156,12 +163,15 @@ svn_repos_finish_report (void *report_baton)
                                  rbaton->pool));
   
   /* Ah!  The good stuff!  svn_repos_update does all the hard work. */
-  SVN_ERR (svn_repos_update (rev_root, rbaton->txn_root, 
-                             rbaton->base_path, rbaton->target,
-                             rbaton->path_rev_hash,
-                             rbaton->update_editor,
-                             rbaton->update_edit_baton,
-                             rbaton->pool));
+  SVN_ERR (svn_repos_dir_delta (rbaton->txn_root, 
+                                rbaton->base_path, 
+                                rbaton->target,
+                                rbaton->path_rev_hash,
+                                rev_root, 
+                                rev_path,
+                                rbaton->update_editor,
+                                rbaton->update_edit_baton,
+                                rbaton->pool));
                            
   /* Still here?  Great!  Throw out the transaction. */
   SVN_ERR (svn_fs_abort_txn (rbaton->txn));

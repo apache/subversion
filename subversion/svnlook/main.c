@@ -304,8 +304,11 @@ do_dirs_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
   SVN_ERR (svnlook_rev_changes_editor (&editor, &edit_baton, c->fs,
                                        root1, pool));
   
-  SVN_ERR (svn_repos_update (root1, root2, svn_stringbuf_create ("", pool), 
-                             NULL, src_revs, editor, edit_baton, pool));
+  SVN_ERR (svn_repos_dir_delta (root2, 
+                                svn_stringbuf_create ("", pool), 
+                                NULL, src_revs, root1, 
+                                svn_stringbuf_create ("", pool), 
+                                editor, edit_baton, pool));
 
   tree = svnlook_edit_baton_tree (edit_baton);
   if (tree)
@@ -373,8 +376,11 @@ do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
   SVN_ERR (svnlook_rev_changes_editor (&editor, &edit_baton, c->fs,
                                        root1, pool));
   
-  SVN_ERR (svn_repos_update (root1, root2, svn_stringbuf_create ("", pool), 
-                             NULL, src_revs, editor, edit_baton, pool));
+  SVN_ERR (svn_repos_dir_delta (root2, 
+                                svn_stringbuf_create ("", pool), 
+                                NULL, src_revs, root1, 
+                                svn_stringbuf_create ("", pool), 
+                                editor, edit_baton, pool));
 
   tree = svnlook_edit_baton_tree (edit_baton);
   if (tree)
@@ -449,8 +455,11 @@ do_tree (svnlook_ctxt_t *c, apr_pool_t *pool)
   SVN_ERR (svnlook_rev_changes_editor (&editor, &edit_baton, c->fs,
                                        root1, pool));
   
-  SVN_ERR (svn_repos_update (root1, root2, svn_stringbuf_create ("", pool), 
-                             NULL, src_revs, editor, edit_baton, pool));
+  SVN_ERR (svn_repos_dir_delta (root2, 
+                                svn_stringbuf_create ("", pool), 
+                                NULL, src_revs, root1, 
+                                svn_stringbuf_create ("", pool), 
+                                editor, edit_baton, pool));
 
   tree = svnlook_edit_baton_tree (edit_baton);
   if (tree)
