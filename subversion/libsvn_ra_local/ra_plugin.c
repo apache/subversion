@@ -147,8 +147,8 @@ svn_ra_local__get_file_revs (void *session_baton,
   /* Concatenate paths */
   abs_path = svn_path_join (abs_path, path, pool);
 
-  return svn_repos_get_file_revs (sbaton->repos, abs_path, start, end,
-                                  handler, handler_baton, pool);
+  return svn_repos_get_file_revs (sbaton->repos, abs_path, start, end, NULL,
+                                  NULL, handler, handler_baton, pool);
 }
 
 static svn_error_t *

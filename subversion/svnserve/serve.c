@@ -1095,8 +1095,8 @@ static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   frb.conn = conn;
   frb.pool = NULL;
 
-  err = svn_repos_get_file_revs(b->repos, full_path, start_rev, end_rev,
-                                file_rev_handler, &frb, pool);
+  err = svn_repos_get_file_revs(b->repos, full_path, start_rev, end_rev, NULL,
+                                NULL, file_rev_handler, &frb, pool);
   write_err = svn_ra_svn_write_word(conn, pool, "done");
   if (write_err)
     {

@@ -460,6 +460,8 @@ svn_repos_get_file_revs (svn_repos_t *repos,
                          const char *path,
                          svn_revnum_t start,
                          svn_revnum_t end,
+                         svn_repos_authz_func_t authz_read_func,
+                         void *authz_read_baton,
                          svn_repos_file_rev_handler_t handler,
                          void *handler_baton,
                          apr_pool_t *pool)
@@ -500,6 +502,19 @@ svn_repos_get_file_revs (svn_repos_t *repos,
       if (!history)
         break;
       SVN_ERR (svn_fs_history_location (&rev_path, &rev, history, iter_pool));
+      if (authz_read_func)
+        {
+          svn_boolean_t readable;
+          svn_fs_root_t *tmp_root;
+
+          SVN_ERR (svn_fs_revision_root (&tmp_root, repos->fs, rev, iter_pool));
+          SVN_ERR (authz_read_func (&readable, tmp_root, rev_path,
+                                    authz_read_baton, iter_pool));
+          if (! readable)
+            {
+              break;
+            }
+        }
       *(svn_revnum_t*) apr_array_push (revnums) = rev;
       *(char **) apr_array_push (paths) = apr_pstrdup (pool, rev_path);
       if (rev <= start)
