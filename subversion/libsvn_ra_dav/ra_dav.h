@@ -660,10 +660,11 @@ svn_ra_dav__maybe_store_auth_info (svn_ra_session_t *ras);
 
 /* Create an error object for an error from neon in the given session,
    where the return code from neon was RETCODE, and CONTEXT describes
-   what was being attempted. */
+   what was being attempted.  Do temporary allocations in POOL. */
 svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
                                        const char *context,
-                                       int retcode);
+                                       int retcode,
+                                       apr_pool_t *pool);
 
 
 /* Given a neon REQUEST and SESSION, run the request; if CODE_P is

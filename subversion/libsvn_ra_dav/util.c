@@ -26,6 +26,7 @@
 #include <ne_compress.h>
 
 #include "svn_string.h"
+#include "svn_utf.h"
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_config.h"
@@ -257,10 +258,12 @@ void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src)
 
 svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
                                        const char *context,
-                                       int retcode)
+                                       int retcode,
+                                       apr_pool_t *pool)
 {
   int errcode = SVN_ERR_RA_DAV_REQUEST_FAILED;
   const char *msg;
+  const char *hostport;
 
   /* Convert the return codes. */
   switch (retcode) 
@@ -279,15 +282,18 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
       break;
 
     default:
-      /* Get the error string from neon. */
-      msg = ne_get_error (sess);
+      /* Get the error string from neon and convert to UTF-8. */
+      SVN_ERR (svn_utf_cstring_to_utf8 (&msg, ne_get_error (sess), pool));
       break;
     }
 
+  /* The hostname may contain non-ASCII characters, so convert it to UTF-8. */
+  SVN_ERR (svn_utf_cstring_to_utf8 (&hostport, ne_get_server_hostport(sess),
+                                    pool));
+
   return svn_error_createf (errcode, NULL, "%s: %s (%s://%s)", 
                             context, msg, ne_get_scheme(sess), 
-                            ne_get_server_hostport(sess));
-  
+                            hostport);
 }
 
 
@@ -638,7 +644,7 @@ parsed_request(ne_session *sess,
       else
       {
         msg = apr_psprintf(pool, _("%s of '%s'"), method, url);
-        err = svn_ra_dav__convert_error(sess, msg, rv);
+        err = svn_ra_dav__convert_error(sess, msg, rv, pool);
       }
       goto cleanup;
     }
@@ -781,5 +787,5 @@ svn_ra_dav__request_dispatch(int *code_p,
   /* We either have a neon error, or some other error
      that we didn't expect. */
   msg = apr_psprintf(pool, _("%s of '%s'"), method, url);
-  return svn_ra_dav__convert_error(session, msg, rv);
+  return svn_ra_dav__convert_error(session, msg, rv, pool);
 }
