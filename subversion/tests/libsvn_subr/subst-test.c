@@ -78,7 +78,7 @@ const char *lines[] =
     "Line 29: Valid $LastChangedRevision: 1729 $, started expanded.",
     "Line 30: Valid $Rev: 1729 $, started expanded.",
     "Line 31: fairly boring subst test data... blah blah.",
-    "Line 32: fairly boring subst test data... blah blah."
+    "Line 32: fairly boring subst test data... blah blah.",
     "Line 33: Valid $LastChangedDate: 2002-01-01 $, started expanded.",
     "Line 34: Valid $Date: 2002-01-01 $, started expanded.",
     "Line 35: fairly boring subst test data... blah blah.",
@@ -418,12 +418,12 @@ substitute_and_verify (const char *test_name,
       if (contents->len < idx)
         return svn_error_createf
           (SVN_ERR_MALFORMED_FILE, 0, NULL, pool,
-           "%s has short contents", dst_fname);
+           "%s has short contents at line %d", dst_fname, i + 1);
 
       if (strncmp (contents->data + idx, expect[i], strlen (expect[i])) != 0)
         return svn_error_createf
           (SVN_ERR_MALFORMED_FILE, 0, NULL, pool, 
-           "%s has wrong contents", dst_fname);
+           "%s has wrong contents at line %d", dst_fname, i + 1);
 
       /* Else, the data is correct, at least up to the next eol. */
 
@@ -434,7 +434,7 @@ substitute_and_verify (const char *test_name,
           if (strncmp (contents->data + idx, dst_eol, strlen (dst_eol)) != 0)
             return svn_error_createf
               (SVN_ERR_IO_CORRUPT_EOL, 0, NULL, pool, 
-               "%s has wrong eol style", dst_fname);
+               "%s has wrong eol style at line %d", dst_fname, i + 1);
           else
             idx += strlen (dst_eol);
         }
