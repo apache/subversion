@@ -217,3 +217,58 @@ svn_cmdline_path_local_style_from_utf8 (const char **dest,
                                         svn_path_local_style (src, pool),
                                         pool);
 }
+
+svn_error_t *
+svn_cmdline_printf (apr_pool_t *pool, const char *fmt, ...)
+{
+  const char *message;
+  va_list ap;
+
+  /* A note about encoding issues:
+   * APR uses the execution character set, but here we give it UTF-8 strings,
+   * both the fmt argument and any other string arguments.  Since apr_pvsprintf
+   * only cares about and produces ASCII characters, this works under the
+   * assumption that all supported platforms use an execution character set
+   * with ASCII as a subset.
+   */
+
+  va_start (ap, fmt);
+  message = apr_pvsprintf (pool, fmt, ap);
+  va_end (ap);
+
+  return svn_cmdline_fputs(message, stdout, pool);
+}
+
+svn_error_t *
+svn_cmdline_fprintf (FILE *stream, apr_pool_t *pool, const char *fmt, ...)
+{
+  const char *message;
+  va_list ap;
+
+  /* See svn_cmdline_printf () for a note about character encoding issues. */
+
+  va_start (ap, fmt);
+  message = apr_pvsprintf (pool, fmt, ap);
+  va_end (ap);
+
+  return svn_cmdline_fputs(message, stream, pool);
+}
+
+svn_error_t *
+svn_cmdline_fputs (const char *string, FILE* stream, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  const char *out;
+
+  err = svn_cmdline_cstring_from_utf8 (&out, string, pool);
+
+  if (err)
+    {
+      svn_error_clear (err);
+      out = svn_cmdline_cstring_from_utf8_fuzzy (string, pool);
+    }
+
+  fputs (out, stream);
+
+  return SVN_NO_ERROR;
+}
