@@ -218,8 +218,8 @@ svn_repos_begin_report (void **report_baton,
  * (useful when creating a txn, for example).
  *
  * If @a start_empty is set and @a path is a directory, then remove
- * all children of the freshly-linked directory.  This is for 'low
- * confidence' client reporting.
+ * all children and props of the freshly-linked directory.  This is
+ * for 'low confidence' client reporting.
  * 
  * All temporary allocations are done in @a pool.
  */
@@ -237,8 +237,8 @@ svn_error_t *svn_repos_set_path (void *report_baton,
  * is an absolute filesystem path!
  *
  * If @a start_empty is set and @a path is a directory, then remove
- * all children of the freshly-linked directory.  This is for 'low
- * confidence' client reporting.
+ * all children and props of the freshly-linked directory.  This is
+ * for 'low confidence' client reporting.
  *
  * All temporary allocations are done in @a pool.
  */
