@@ -6,7 +6,7 @@ this first.
                      ============================
                      HACKER'S GUIDE TO SUBVERSION
                      ============================
-              Last updated:  $Date: 2000-12-19 04:01:07 $
+              Last updated:  $Date: 2000-12-21 21:38:14 $
 
 
 TABLE OF CONTENTS
@@ -50,7 +50,7 @@ repository:
 
 What to read
 ============
-x
+
 Before you can contribute code, you'll need to familiarize yourself
 with the existing codebase and interfaces.
 
