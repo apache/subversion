@@ -1683,6 +1683,9 @@ const char * dav_svn_getetag(const dav_resource *resource, apr_pool_t *pool)
       return "";
     }
 
+  /* Use the "weak" format of the etag for collections because our GET
+     requests on collections include dynamic data (the HEAD revision,
+     the build version of Subversion, etc.). */
   return apr_psprintf(pool, "%s\"%" SVN_REVNUM_T_FMT "/%s\"",
                       resource->collection ? "W/" : "",
                       created_rev,
