@@ -15,3 +15,11 @@ Candidate changes:
       Shallow silly bug.
     Votes:
       +1: bliss
+
+  * r11143
+    Fix broken RPM build caused by changes to book Makefile right before
+    1.0.7 was released.
+    Justification: Broken builds are bad.
+    Votes:
+      +1: david
+
