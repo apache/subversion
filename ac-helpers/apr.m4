@@ -70,7 +70,7 @@ Please either remove that subdir or don't use the --with-apr option.])
     APR_LIBS='$(abs_srcdir)/apr'
     APRVARS=$abs_builddir/apr/APRVARS
     echo "Creating config files for APR..."
-    (cd apr; ./buildconf)  # this is apr's equivalent of autogen.sh
+    (cd $abs_srcdir/apr; ./buildconf)  # this is apr's equivalent of autogen.sh
     SVN_SUBDIR_CONFIG(apr)
     APR_SUBDIR=apr
   else
