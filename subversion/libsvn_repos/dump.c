@@ -1041,8 +1041,10 @@ svn_repos_dump_fs2 (svn_repos_t *repos,
 
     loop_end:
       SVN_ERR (svn_stream_printf (feedback_stream, pool,
-                                  _("* %s revision %ld.\n"),
-                                  dumping ? "Dumped" : "Verified", to_rev));
+                                  dumping
+                                  ? _("* Dumped revision %ld.\n")
+                                  : _("* Verified revision %ld.\n"),
+                                  to_rev));
     }
 
   svn_pool_destroy (subpool);

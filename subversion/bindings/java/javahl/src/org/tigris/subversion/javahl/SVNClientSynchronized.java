@@ -579,19 +579,21 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param pegRevision     the revision to interpret srcPath
      * @param force           set if it is ok to overwrite local files
      * @param ignoreExternals ignore external during export
+     * @param recurse   recurse to subdirectories
      * @param nativeEOL       which EOL characters to use during export
      * @throws ClientException
      *
      */
     public long doExport(String srcPath, String destPath, Revision revision,
                          Revision pegRevision, boolean force,
-                         boolean ignoreExternals, String nativeEOL)
+                         boolean ignoreExternals, boolean recurse,
+                         String nativeEOL)
             throws ClientException
     {
         synchronized(clazz)
         {
             return worker.doExport(srcPath, destPath, revision, pegRevision,
-                    force, ignoreExternals, nativeEOL);
+                    force, ignoreExternals, recurse, nativeEOL);
         }
     }
 

@@ -79,7 +79,8 @@ public:
                        bool recurse);
     jlong doExport(const char *srcPath, const char *destPath, 
                        Revision &revision, Revision &pegRevision, bool force,
-                       bool ignoreExternals, const char *nativeEOL);
+                       bool ignoreExternals, bool recurse, 
+                       const char *nativeEOL);
     void resolved(const char *path, bool recurse);
     void cleanup(const char *path);
     void mkdir(Targets &targets, const char *message);

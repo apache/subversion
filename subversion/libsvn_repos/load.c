@@ -992,14 +992,14 @@ new_node_record (void **node_baton,
     case svn_node_action_change:
       {
         SVN_ERR (svn_stream_printf (pb->outstream, pool,
-                                    "     * editing path : %s ...",
+                                    _("     * editing path : %s ..."),
                                     nb->path));
         break;
       }
     case svn_node_action_delete:
       {
         SVN_ERR (svn_stream_printf (pb->outstream, pool,
-                                    "     * deleting path : %s ...",
+                                    _("     * deleting path : %s ..."),
                                     nb->path));
         SVN_ERR (svn_fs_delete (rb->txn_root, nb->path, pool));
         break;
@@ -1007,7 +1007,7 @@ new_node_record (void **node_baton,
     case svn_node_action_add:
       {
         SVN_ERR (svn_stream_printf (pb->outstream, pool,
-                                    "     * adding path : %s ...",
+                                    _("     * adding path : %s ..."),
                                     nb->path));
 
         SVN_ERR (maybe_add_with_history (nb, rb, pool));
@@ -1016,7 +1016,7 @@ new_node_record (void **node_baton,
     case svn_node_action_replace:
       {
         SVN_ERR (svn_stream_printf (pb->outstream, pool,
-                                    "     * replacing path : %s ...",
+                                    _("     * replacing path : %s ..."),
                                     nb->path));
 
         SVN_ERR (svn_fs_delete (rb->txn_root, nb->path, pool));
@@ -1162,7 +1162,7 @@ close_node (void *baton)
   struct parse_baton *pb = rb->pb;
   apr_size_t len = 7;
 
-  SVN_ERR (svn_stream_write (pb->outstream, " done.\n", &len));
+  SVN_ERR (svn_stream_write (pb->outstream, _(" done.\n"), &len));
   
   return SVN_NO_ERROR;
 }

@@ -89,7 +89,8 @@ svn_fs_bdb__open_uuids_table (DB **uuids_p,
 svn_error_t *svn_fs_bdb__get_uuid (svn_fs_t *fs,
                                    int idx,
                                    const char **uuid,
-                                   trail_t *trail)
+                                   trail_t *trail,
+                                   apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   char buffer[APR_UUID_FORMATTED_LENGTH + 1];
@@ -109,7 +110,7 @@ svn_error_t *svn_fs_bdb__get_uuid (svn_fs_t *fs,
   SVN_ERR (BDB_WRAP (fs, "get repository uuid",
                      uuids->get (uuids, trail->db_txn, &key, &value, 0)));
 
-  *uuid = apr_pstrmemdup (trail->pool, value.data, value.size);
+  *uuid = apr_pstrmemdup (pool, value.data, value.size);
 
   return SVN_NO_ERROR;
 }
@@ -117,7 +118,8 @@ svn_error_t *svn_fs_bdb__get_uuid (svn_fs_t *fs,
 svn_error_t *svn_fs_bdb__set_uuid (svn_fs_t *fs,
                                    int idx,
                                    const char *uuid,
-                                   trail_t *trail)
+                                   trail_t *trail,
+                                   apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DB *uuids = bfd->uuids;
@@ -130,7 +132,7 @@ svn_error_t *svn_fs_bdb__set_uuid (svn_fs_t *fs,
 
   svn_fs_base__clear_dbt (&value);
   value.size = strlen (uuid);
-  value.data = apr_pstrmemdup (trail->pool, uuid, value.size + 1);
+  value.data = apr_pstrmemdup (pool, uuid, value.size + 1);
 
   svn_fs_base__trail_debug (trail, "uuids", "put");
   SVN_ERR (BDB_WRAP (fs, "set repository uuid",

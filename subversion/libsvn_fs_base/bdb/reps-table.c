@@ -71,7 +71,8 @@ svn_error_t *
 svn_fs_bdb__read_rep (representation_t **rep_p,
                       svn_fs_t *fs,
                       const char *key,
-                      trail_t *trail)
+                      trail_t *trail,
+                      apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   skel_t *skel;
@@ -79,13 +80,11 @@ svn_fs_bdb__read_rep (representation_t **rep_p,
   DBT query, result;
 
   svn_fs_base__trail_debug (trail, "representations", "get");
-  db_err = bfd->representations->get
-    (bfd->representations,
-     trail->db_txn,
-     svn_fs_base__str_to_dbt (&query, key),
-     svn_fs_base__result_dbt (&result), 0);
-
-  svn_fs_base__track_dbt (&result, trail->pool);
+  db_err = bfd->representations->get (bfd->representations,
+                                      trail->db_txn,
+                                      svn_fs_base__str_to_dbt (&query, key),
+                                      svn_fs_base__result_dbt (&result), 0);
+  svn_fs_base__track_dbt (&result, pool);
 
   /* If there's no such node, return an appropriately specific error.  */
   if (db_err == DB_NOTFOUND)
@@ -97,10 +96,10 @@ svn_fs_bdb__read_rep (representation_t **rep_p,
   SVN_ERR (BDB_WRAP (fs, "reading representation", db_err));
 
   /* Parse the REPRESENTATION skel.  */
-  skel = svn_fs_base__parse_skel (result.data, result.size, trail->pool);
+  skel = svn_fs_base__parse_skel (result.data, result.size, pool);
 
   /* Convert to a native type.  */
-  SVN_ERR (svn_fs_base__parse_representation_skel (rep_p, skel, trail->pool));
+  SVN_ERR (svn_fs_base__parse_representation_skel (rep_p, skel, pool));
 
   return SVN_NO_ERROR;
 }
@@ -110,14 +109,15 @@ svn_error_t *
 svn_fs_bdb__write_rep (svn_fs_t *fs,
                        const char *key,
                        const representation_t *rep,
-                       trail_t *trail)
+                       trail_t *trail,
+                       apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT query, result;
   skel_t *skel;
 
   /* Convert from native type to skel. */
-  SVN_ERR (svn_fs_base__unparse_representation_skel (&skel, rep, trail->pool));
+  SVN_ERR (svn_fs_base__unparse_representation_skel (&skel, rep, pool));
 
   /* Now write the record. */
   svn_fs_base__trail_debug (trail, "representations", "put");
@@ -125,7 +125,7 @@ svn_fs_bdb__write_rep (svn_fs_t *fs,
                      bfd->representations->put
                      (bfd->representations, trail->db_txn,
                       svn_fs_base__str_to_dbt (&query, key),
-                      svn_fs_base__skel_to_dbt (&result, skel, trail->pool),
+                      svn_fs_base__skel_to_dbt (&result, skel, pool),
                       0)));
 
   return SVN_NO_ERROR;
@@ -136,7 +136,8 @@ svn_error_t *
 svn_fs_bdb__write_new_rep (const char **key,
                            svn_fs_t *fs,
                            const representation_t *rep,
-                           trail_t *trail)
+                           trail_t *trail,
+                           apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT query, result;
@@ -155,11 +156,11 @@ svn_fs_bdb__write_new_rep (const char **key,
                      (bfd->representations, trail->db_txn, &query,
                       svn_fs_base__result_dbt (&result), 0)));
 
-  svn_fs_base__track_dbt (&result, trail->pool);
+  svn_fs_base__track_dbt (&result, pool);
 
   /* Store the new rep. */
-  *key = apr_pstrmemdup (trail->pool, result.data, result.size);
-  SVN_ERR (svn_fs_bdb__write_rep (fs, *key, rep, trail));
+  *key = apr_pstrmemdup (pool, result.data, result.size);
+  SVN_ERR (svn_fs_bdb__write_rep (fs, *key, rep, trail, pool));
 
   /* Bump to future key. */
   len = result.size;
@@ -178,7 +179,10 @@ svn_fs_bdb__write_new_rep (const char **key,
 
 
 svn_error_t *
-svn_fs_bdb__delete_rep (svn_fs_t *fs, const char *key, trail_t *trail)
+svn_fs_bdb__delete_rep (svn_fs_t *fs, 
+                        const char *key, 
+                        trail_t *trail,
+                        apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   int db_err;

@@ -101,8 +101,10 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
    a target view TBUF.  SBUF is assumed to have WINDOW->sview_len
    bytes of data and TBUF is assumed to have room for TLEN bytes of
    output.  TLEN may be more than WINDOW->tview_len, so return the
-   actual number of bytes written.  This is purely a memory operation;
-   nothing can go wrong as long as we have a valid window.  */
+   actual number of bytes written.  SBUF is not touched and may be
+   NULL if WINDOW contains no source-copy operations. This is purely a
+   memory operation; nothing can go wrong as long as we have a valid
+   window.  */
 void
 svn_txdelta__apply_instructions (svn_txdelta_window_t *window,
                                  const char *sbuf, char *tbuf,

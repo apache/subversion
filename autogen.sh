@@ -61,10 +61,6 @@ fi
 echo "Copying libtool helper: $ltfile"
 cp $ltfile ac-helpers/libtool.m4
 
-# This is just temporary until people's workspaces are cleared -- remove
-# any old aclocal.m4 left over from prior build so it doesn't cause errors.
-rm -f aclocal.m4
-
 # Create the file detailing all of the build outputs for SVN.
 #
 # Note: this dependency on Python is fine: only SVN developers use autogen.sh
@@ -105,9 +101,6 @@ if test -n "$gen_failed"; then
 fi
 
 # Produce config.h.in
-# Do this before the automake (automake barfs if the header isn't available).
-# Do it after the aclocal command -- automake sets up the header to depend
-# on aclocal.m4
 echo "Creating svn_private_config.h.in..."
 ${AUTOHEADER:-autoheader}
 

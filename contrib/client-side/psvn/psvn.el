@@ -60,6 +60,7 @@
 ;; m     - svn-status-set-user-mark
 ;; u     - svn-status-unset-user-mark
 ;; $     - svn-status-toggle-elide
+;; w     - svn-status-copy-filename-as-kill
 ;; DEL   - svn-status-unset-user-mark-backwards
 ;; * !   - svn-status-unset-all-usermarks
 ;; * ?   - svn-status-mark-unknown
@@ -817,6 +818,7 @@ A and B must be line-info's."
                 (kbd "DEL"))            ; GNU Emacs
               'svn-status-unset-user-mark-backwards)
   (define-key svn-status-mode-map (kbd "$") 'svn-status-toggle-elide)
+  (define-key svn-status-mode-map (kbd "w") 'svn-status-copy-filename-as-kill)
   (define-key svn-status-mode-map (kbd ".") 'svn-status-goto-root-or-return)
   (define-key svn-status-mode-map (kbd "I") 'svn-status-parse-info)
   (define-key svn-status-mode-map (kbd "V") 'svn-status-svnversion)
@@ -1170,6 +1172,16 @@ The result will be nil or \"S\"."
 
 (defun svn-status-line-info->set-lastchangerev (line-info value)
   (setcar (nthcdr 5 line-info) value))
+
+(defun svn-status-copy-filename-as-kill (arg)
+  "Copy the actual file name to the kill-ring.
+When called with the prefix argument 0, use the full path name."
+  (interactive "P")
+  (let ((str (if (eq arg 0)
+                 (svn-status-line-info->full-path (svn-status-get-line-information))
+               (svn-status-line-info->filename (svn-status-get-line-information)))))
+    (kill-new str)
+    (message "Copied %s" str)))
 
 (defun svn-status-toggle-elide ()
   (interactive)
@@ -2135,7 +2147,7 @@ See `svn-status-marked-files' for what counts as selected."
         (full-path (svn-status-line-info->full-path (svn-status-get-line-information)))
         (version))
     (unless (file-directory-p simple-path)
-      (setq simple-path (file-name-directory simple-path))
+      (setq simple-path (or (file-name-directory simple-path) "."))
       (setq full-path (file-name-directory full-path)))
     (setq version (shell-command-to-string (concat "svnversion -n " full-path)))
     (message (format "svnversion for '%s': %s" simple-path version))

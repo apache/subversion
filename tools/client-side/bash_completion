@@ -87,7 +87,7 @@ _svn()
 		         $nOpts $pOpts --force --old --new --notice-ancestry"
 		;;
 	export)
-		cmdOpts="$rOpts $qOpts $pOpts --force --native-eol \
+		cmdOpts="$rOpts $qOpts $pOpts $nOpts --force --native-eol \
                          --ignore-externals"
 		;;
 	help|h|\?)

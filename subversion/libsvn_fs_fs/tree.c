@@ -306,7 +306,7 @@ not_found (svn_fs_root_t *root, const char *path)
     return
       svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, 0,
-       "File not found: transaction '%s', path '%s'",
+       _("File not found: transaction '%s', path '%s'"),
        root->txn, path);
   else
     return
@@ -327,7 +327,7 @@ already_exists (svn_fs_root_t *root, const char *path)
     return
       svn_error_createf
       (SVN_ERR_FS_ALREADY_EXISTS, 0,
-       "File already exists: filesystem '%s', transaction '%s', path '%s'",
+       _("File already exists: filesystem '%s', transaction '%s', path '%s'"),
        fs->path, root->txn, path);
   else
     return
@@ -343,7 +343,7 @@ not_txn (svn_fs_root_t *root)
 {
   return svn_error_create
     (SVN_ERR_FS_NOT_TXN_ROOT, NULL,
-     "Root object must be a transaction root");
+     _("Root object must be a transaction root"));
 }
 
 
@@ -752,7 +752,7 @@ open_path (parent_path_t **parent_path_p,
       /* The path isn't finished yet; we'd better be in a directory.  */
       if (svn_fs_fs__dag_node_kind (child) != svn_node_dir)
         SVN_ERR_W (svn_fs_fs__err_not_directory (fs, path_so_far),
-                   apr_pstrcat (pool, "Failure opening '", path, "'", NULL));
+                   apr_psprintf (pool, _("Failure opening '%s'"), path));
       
       rest = next;
       here = child;
@@ -1152,7 +1152,7 @@ fs_props_changed (svn_boolean_t *changed_p,
   if (root1->fs != root2->fs)
     return svn_error_create
       (SVN_ERR_FS_GENERAL, NULL,
-       "Asking props changed in two different filesystems");
+       _("Asking props changed in two different filesystems"));
   
   SVN_ERR (get_dag (&node1, root1, path1, pool));
   SVN_ERR (get_dag (&node2, root2, path2, pool));
@@ -1210,7 +1210,7 @@ update_ancestry (svn_fs_t *fs,
   if (svn_fs_fs__id_txn_id (target_id) == NULL)
     return svn_error_createf
       (SVN_ERR_FS_NOT_MUTABLE, NULL,
-       "Unexpected immutable node at '%s'", target_path);
+       _("Unexpected immutable node at '%s'"), target_path);
 
   SVN_ERR (svn_fs_fs__get_node_revision (&noderev, fs, target_id, pool));
   noderev->predecessor_id = source_id;
@@ -1263,8 +1263,8 @@ undelete_change (svn_fs_t *fs,
          as we expected it to be in the changes table. */
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
-         "No deletion changes for path '%s' "
-         "in transaction '%s' of filesystem '%s'",
+         _("No deletion changes for path '%s' "
+           "in transaction '%s' of filesystem '%s'"),
          path, txn_id, fs->path);
     }
   
@@ -1282,7 +1282,7 @@ conflict_err (svn_stringbuf_t *conflict_path,
 {
   svn_stringbuf_set (conflict_path, path);
   return svn_error_createf (SVN_ERR_FS_CONFLICT, NULL,
-                            "Conflict at '%s'", path);
+                            _("Conflict at '%s'"), path);
 }
 
 
@@ -1321,6 +1321,7 @@ merge (svn_stringbuf_t *conflict_p,
   apr_hash_t *s_entries, *t_entries, *a_entries;
   apr_hash_index_t *hi;
   svn_fs_t *fs;
+  apr_pool_t *iterpool;
 
   /* Make sure everyone comes from the same filesystem. */
   fs = svn_fs_fs__dag_get_fs (ancestor);
@@ -1329,7 +1330,7 @@ merge (svn_stringbuf_t *conflict_p,
     {
       return svn_error_create
         (SVN_ERR_FS_CORRUPT, NULL,
-         "Bad merge; ancestor, source, and target not all in same fs");
+         _("Bad merge; ancestor, source, and target not all in same fs"));
     }
 
   /* We have the same fs, now check it. */
@@ -1345,7 +1346,7 @@ merge (svn_stringbuf_t *conflict_p,
       svn_string_t *id_str = svn_fs_fs__id_unparse (target_id, pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL,
-         "Bad merge; target '%s' has id '%s', same as ancestor",
+         _("Bad merge; target '%s' has id '%s', same as ancestor"),
          target_path, id_str->data);
     }
 
@@ -1509,6 +1510,7 @@ merge (svn_stringbuf_t *conflict_p,
   a_entries = svn_fs_fs__copy_dir_entries (a_entries, pool);
 
   /* for each entry E in a_entries... */
+  iterpool = svn_pool_create (pool);
   for (hi = apr_hash_first (pool, a_entries); 
        hi; 
        hi = apr_hash_next (hi))
@@ -1519,6 +1521,8 @@ merge (svn_stringbuf_t *conflict_p,
       void *val;
       apr_ssize_t klen;
           
+      svn_pool_clear (iterpool);
+
       /* KEY will be the entry name in ancestor, VAL the dirent */
       apr_hash_this (hi, &key, &klen, &val);
       a_entry = val;
@@ -1553,13 +1557,13 @@ merge (svn_stringbuf_t *conflict_p,
               else
                 {
                   SVN_ERR (id_check_ancestor (&a_ancestorof_t, fs, a_entry->id,
-                                              t_entry->id, pool));
+                                              t_entry->id, iterpool));
                   if (a_ancestorof_t)
                     {
                       /* this is an &&, so we need both ancestor checks. */
                       SVN_ERR (id_check_ancestor (&t_ancestorof_s, fs, 
                                                   t_entry->id, s_entry->id, 
-                                                  pool));
+                                                  iterpool));
                       if (t_ancestorof_s)
                         {
                           /* This is Case 1.  */
@@ -1573,7 +1577,7 @@ merge (svn_stringbuf_t *conflict_p,
                 {
                   SVN_ERR (id_check_ancestor (&s_ancestorof_t, fs, 
                                               s_entry->id, t_entry->id, 
-                                              pool));
+                                              iterpool));
                   if (! s_ancestorof_t)
                     {
                       /* This is Case 2. */
@@ -1592,11 +1596,11 @@ merge (svn_stringbuf_t *conflict_p,
                   if (! svn_fs_fs__dag_check_mutable (target, txn_id))
                     return svn_error_createf
                       (SVN_ERR_FS_NOT_MUTABLE, NULL,
-                       "Unexpected immutable node at '%s'", target_path);
+                       _("Unexpected immutable node at '%s'"), target_path);
 
                   SVN_ERR (svn_fs_fs__dag_set_entry
                            (target, t_entry->name, s_entry->id, s_entry->kind,
-                            txn_id, pool));
+                            txn_id, iterpool));
                 }
               /* or if target entry is different from both and
                  unrelated to source, and all three entries are
@@ -1609,11 +1613,11 @@ merge (svn_stringbuf_t *conflict_p,
                   svn_node_kind_t s_kind, t_kind, a_kind;
                       
                   SVN_ERR (svn_fs_fs__dag_get_node (&s_ent_node, fs,
-                                                    s_entry->id, pool));
+                                                    s_entry->id, iterpool));
                   SVN_ERR (svn_fs_fs__dag_get_node (&t_ent_node, fs,
-                                                    t_entry->id, pool));
+                                                    t_entry->id, iterpool));
                   SVN_ERR (svn_fs_fs__dag_get_node (&a_ent_node, fs,
-                                                    a_entry->id, pool));
+                                                    a_entry->id, iterpool));
 
                   s_kind = svn_fs_fs__dag_node_kind (s_ent_node);
                   t_kind = svn_fs_fs__dag_node_kind (t_ent_node);
@@ -1626,19 +1630,19 @@ merge (svn_stringbuf_t *conflict_p,
                       return conflict_err (conflict_p,
                                            svn_path_join (target_path,
                                                           a_entry->name,
-                                                          pool));
+                                                          iterpool));
                     }
 
                   /* ... just recurse. */
                   new_tpath = svn_path_join (target_path, t_entry->name,
-                                             pool);
+                                             iterpool);
                   SVN_ERR (merge (conflict_p, new_tpath,
                                   t_ent_node, s_ent_node, a_ent_node,
-                                  txn_id, pool));
+                                  txn_id, iterpool));
 
                   SVN_ERR (svn_fs_fs__dag_get_predecessor_count (&pred_count,
                                                                  s_ent_node,
-                                                                 pool));
+                                                                 iterpool));
 
                   /* If target is an immediate descendant of ancestor,
                      and source is also a descendant of ancestor, we
@@ -1646,7 +1650,7 @@ merge (svn_stringbuf_t *conflict_p,
                      source. */
                   SVN_ERR (update_ancestry (fs, s_entry->id,
                                             t_entry->id, txn_id, 
-                                            new_tpath, pred_count, pool));
+                                            new_tpath, pred_count, iterpool));
                 }
               /* Else target entry has changed since ancestor entry,
                  but it changed either to source entry or to a
@@ -1664,7 +1668,7 @@ merge (svn_stringbuf_t *conflict_p,
               return conflict_err (conflict_p,
                                    svn_path_join (target_path,
                                                   a_entry->name,
-                                                  pool));
+                                                  iterpool));
             }
 
           /* Else if E did not change between ancestor and source,
@@ -1684,10 +1688,10 @@ merge (svn_stringbuf_t *conflict_p,
               if (! svn_fs_fs__dag_check_mutable (target, txn_id))
                 return svn_error_createf
                   (SVN_ERR_FS_NOT_MUTABLE, NULL,
-                   "Unexpected immutable node at '%s'", target_path);
+                   _("Unexpected immutable node at '%s'"), target_path);
               
               SVN_ERR (svn_fs_fs__dag_delete (target, t_entry->name, 
-                                              txn_id, pool));
+                                              txn_id, iterpool));
 
               /* Seems cleanest to remove it from the target entries
                  hash now, even though no code would break if we
@@ -1709,7 +1713,7 @@ merge (svn_stringbuf_t *conflict_p,
               return conflict_err (conflict_p,
                                    svn_path_join (target_path,
                                                   t_entry->name,
-                                                  pool));
+                                                  iterpool));
             }
           else
             {
@@ -1719,8 +1723,8 @@ merge (svn_stringbuf_t *conflict_p,
                  this change. */
               SVN_ERR (undelete_change (fs, svn_path_join (target_path, 
                                                            t_entry->name, 
-                                                           pool),
-                                        txn_id, pool));
+                                                           iterpool),
+                                        txn_id, iterpool));
             }
         }
       /* E exists in neither target nor source */
@@ -1731,8 +1735,8 @@ merge (svn_stringbuf_t *conflict_p,
              for that change. */
           SVN_ERR (undelete_change (fs, svn_path_join (target_path, 
                                                        a_entry->name, 
-                                                       pool),
-                                    txn_id, pool));
+                                                       iterpool),
+                                    txn_id, iterpool));
 
           /* ### kff todo: what about the rename case? */
         }
@@ -1755,6 +1759,8 @@ merge (svn_stringbuf_t *conflict_p,
       apr_ssize_t klen;
       svn_boolean_t s_ancestorof_t = FALSE;
 
+      svn_pool_clear (iterpool);
+
       apr_hash_this (hi, &key, &klen, &val);
       s_entry = val;
       t_entry = apr_hash_get (t_entries, key, klen);
@@ -1768,7 +1774,7 @@ merge (svn_stringbuf_t *conflict_p,
       if (t_entry)
         {
           SVN_ERR (id_check_ancestor (&s_ancestorof_t, fs, s_entry->id,
-                                      t_entry->id, pool));
+                                      t_entry->id, iterpool));
         }
 
       /* E does not exist in target */
@@ -1778,11 +1784,11 @@ merge (svn_stringbuf_t *conflict_p,
           if (! svn_fs_fs__dag_check_mutable (target, txn_id))
             return svn_error_createf
               (SVN_ERR_FS_NOT_MUTABLE, NULL,
-               "Unexpected immutable node at '%s'", target_path);
+               _("Unexpected immutable node at '%s'"), target_path);
               
           SVN_ERR (svn_fs_fs__dag_set_entry
                    (target, s_entry->name, s_entry->id, s_entry->kind,
-                    txn_id, pool));
+                    txn_id, iterpool));
         }
       /* E exists in target but is different from E in source */
       else if (! s_ancestorof_t)
@@ -1790,7 +1796,7 @@ merge (svn_stringbuf_t *conflict_p,
           return conflict_err (conflict_p,
                                svn_path_join (target_path,
                                               t_entry->name,
-                                              pool));
+                                              iterpool));
 
           /* The remaining case would be: E exists in target and is
            * same as in source.  This implies a twin add, so target
@@ -1798,7 +1804,8 @@ merge (svn_stringbuf_t *conflict_p,
            */
         }
     }
-      
+  apr_pool_destroy (iterpool);
+
   /* All entries in ancestor and source have been accounted for.
    *
    * Any entry E in target that does not exist in ancestor or source
@@ -2033,7 +2040,7 @@ fs_merge (const char **conflict_p,
     {
       return svn_error_create
         (SVN_ERR_FS_CORRUPT, NULL,
-         "Bad merge; ancestor, source, and target not all in same fs");
+         _("Bad merge; ancestor, source, and target not all in same fs"));
     }
 
   /* ### kff todo: is there any compelling reason to get the nodes in
@@ -2174,7 +2181,7 @@ fs_delete_node (svn_fs_root_t *root,
   /* We can't remove the root of the filesystem.  */
   if (! parent_path->parent)
     return svn_error_create (SVN_ERR_FS_ROOT_DIR, NULL,
-                             "The root directory cannot be deleted");
+                             _("The root directory cannot be deleted"));
 
   /* Check to see if path (or any child thereof) is locked; if so,
      check that we can use the existing lock(s). */
@@ -2221,8 +2228,9 @@ copy_helper (svn_fs_root_t *from_root,
   assert (from_root->fs == to_root->fs);
 
   if (from_root->is_txn_root)
-    return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                             "Copy from mutable tree not currently supported");
+    return svn_error_create
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       _("Copy from mutable tree not currently supported"));
 
   /* Get the NODE for FROM_PATH in FROM_ROOT.*/
   SVN_ERR (get_dag (&from_node, from_root, from_path, pool));
@@ -2647,9 +2655,9 @@ apply_textdelta (void *baton, apr_pool_t *pool)
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH, 
            NULL,
-           "Base checksum mismatch on '%s':\n"
-           "   expected:  %s\n"
-           "     actual:  %s\n",
+           _("Base checksum mismatch on '%s':\n"
+             "   expected:  %s\n"
+             "     actual:  %s\n"),
            tb->path, tb->base_checksum, hex);
     }
 
@@ -2885,7 +2893,7 @@ fs_contents_changed (svn_boolean_t *changed_p,
   if (root1->fs != root2->fs)
     return svn_error_create
       (SVN_ERR_FS_GENERAL, NULL,
-       "Asking contents changed in two different filesystems");
+       _("Asking contents changed in two different filesystems"));
   
   /* Check that both paths are files. */
   {
@@ -2894,12 +2902,12 @@ fs_contents_changed (svn_boolean_t *changed_p,
     SVN_ERR (svn_fs_fs__check_path (&kind, root1, path1, pool));
     if (kind != svn_node_file)
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL, "'%s' is not a file", path1);
+        (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path1);
       
     SVN_ERR (svn_fs_fs__check_path (&kind, root2, path2, pool));
     if (kind != svn_node_file)
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL, "'%s' is not a file", path2);
+        (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path2);
   }
 
   SVN_ERR (get_dag (&node1, root1, path1, pool));

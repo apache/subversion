@@ -78,7 +78,8 @@ locate_key (apr_size_t *length,
             DBC **cursor,
             DBT *query,
             svn_fs_t *fs,
-            trail_t *trail)
+            trail_t *trail,
+            apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
@@ -189,7 +190,8 @@ svn_fs_bdb__string_read (svn_fs_t *fs,
                          char *buf,
                          svn_filesize_t offset,
                          apr_size_t *len,
-                         trail_t *trail)
+                         trail_t *trail,
+                         apr_pool_t *pool)
 {
   int db_err;
   DBT query, result;
@@ -198,7 +200,7 @@ svn_fs_bdb__string_read (svn_fs_t *fs,
 
   svn_fs_base__str_to_dbt (&query, key);
 
-  SVN_ERR (locate_key (&length, &cursor, &query, fs, trail));
+  SVN_ERR (locate_key (&length, &cursor, &query, fs, trail, pool));
 
   /* Seek through the records for this key, trying to find the record that
      includes OFFSET. Note that we don't require reading from more than
@@ -268,7 +270,10 @@ svn_fs_bdb__string_read (svn_fs_t *fs,
 
 /* Get the current 'next-key' value and bump the record. */
 static svn_error_t *
-get_key_and_bump (svn_fs_t *fs, const char **key, trail_t *trail)
+get_key_and_bump (svn_fs_t *fs, 
+                  const char **key, 
+                  trail_t *trail,
+                  apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBC *cursor;
@@ -303,8 +308,8 @@ get_key_and_bump (svn_fs_t *fs, const char **key, trail_t *trail)
       return BDB_WRAP (fs, "getting next-key value", db_err);
     }
 
-  svn_fs_base__track_dbt (&result, trail->pool);
-  *key = apr_pstrmemdup (trail->pool, result.data, result.size);
+  svn_fs_base__track_dbt (&result, pool);
+  *key = apr_pstrmemdup (pool, result.data, result.size);
 
   /* Bump to future key. */
   key_len = result.size;
@@ -330,7 +335,8 @@ svn_fs_bdb__string_append (svn_fs_t *fs,
                            const char **key,
                            apr_size_t len,
                            const char *buf,
-                           trail_t *trail)
+                           trail_t *trail,
+                           apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT query, result;
@@ -339,7 +345,7 @@ svn_fs_bdb__string_append (svn_fs_t *fs,
      using the value of the `next-key' record in the strings table. */
   if (*key == NULL)
     {
-      SVN_ERR (get_key_and_bump (fs, key, trail));
+      SVN_ERR (get_key_and_bump (fs, key, trail, pool));
     }
 
   /* Store a new record into the database. */
@@ -358,7 +364,8 @@ svn_fs_bdb__string_append (svn_fs_t *fs,
 svn_error_t *
 svn_fs_bdb__string_clear (svn_fs_t *fs,
                           const char *key,
-                          trail_t *trail)
+                          trail_t *trail,
+                          apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
@@ -396,7 +403,8 @@ svn_error_t *
 svn_fs_bdb__string_size (svn_filesize_t *size,
                          svn_fs_t *fs,
                          const char *key,
-                         trail_t *trail)
+                         trail_t *trail,
+                         apr_pool_t *pool)
 {
   int db_err;
   DBT query;
@@ -406,7 +414,7 @@ svn_fs_bdb__string_size (svn_filesize_t *size,
 
   svn_fs_base__str_to_dbt (&query, key);
 
-  SVN_ERR (locate_key (&length, &cursor, &query, fs, trail));
+  SVN_ERR (locate_key (&length, &cursor, &query, fs, trail, pool));
 
   total = length;
   while (1)
@@ -434,7 +442,8 @@ svn_fs_bdb__string_size (svn_filesize_t *size,
 svn_error_t *
 svn_fs_bdb__string_delete (svn_fs_t *fs,
                            const char *key,
-                           trail_t *trail)
+                           trail_t *trail,
+                           apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
@@ -461,7 +470,8 @@ svn_error_t *
 svn_fs_bdb__string_copy (svn_fs_t *fs,
                          const char **new_key,
                          const char *key,
-                         trail_t *trail)
+                         trail_t *trail,
+                         apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT query;
@@ -472,9 +482,9 @@ svn_fs_bdb__string_copy (svn_fs_t *fs,
 
   /* Copy off the old key in case the caller is sharing storage
      between the old and new keys. */
-  const char *old_key = apr_pstrdup (trail->pool, key);
+  const char *old_key = apr_pstrdup (pool, key);
 
-  SVN_ERR (get_key_and_bump (fs, new_key, trail));
+  SVN_ERR (get_key_and_bump (fs, new_key, trail, pool));
 
   svn_fs_base__trail_debug (trail, "strings", "cursor");
   SVN_ERR (BDB_WRAP (fs, "creating cursor for reading a string",

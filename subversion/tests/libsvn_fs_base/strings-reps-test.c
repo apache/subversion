@@ -49,7 +49,7 @@ txn_body_write_new_rep (void *baton, trail_t *trail)
   representation_t *rep;
   SVN_ERR (svn_fs_base__parse_representation_skel (&rep, b->skel,
                                                    trail->pool));
-  return svn_fs_bdb__write_new_rep (&(b->key), b->fs, rep, trail);
+  return svn_fs_bdb__write_new_rep (&(b->key), b->fs, rep, trail, trail->pool);
 }
 
 
@@ -60,7 +60,7 @@ txn_body_write_rep (void *baton, trail_t *trail)
   representation_t *rep;
   SVN_ERR (svn_fs_base__parse_representation_skel (&rep, b->skel,
                                                    trail->pool));
-  return svn_fs_bdb__write_rep (b->fs, b->key, rep, trail);
+  return svn_fs_bdb__write_rep (b->fs, b->key, rep, trail, trail->pool);
 }
 
 
@@ -69,7 +69,7 @@ txn_body_read_rep (void *baton, trail_t *trail)
 {
   struct rep_args *b = (struct rep_args *) baton;
   representation_t *rep;
-  SVN_ERR (svn_fs_bdb__read_rep (&rep, b->fs, b->key, trail));
+  SVN_ERR (svn_fs_bdb__read_rep (&rep, b->fs, b->key, trail, trail->pool));
   return svn_fs_base__unparse_representation_skel (&(b->skel), rep,
                                                    trail->pool);
 }
@@ -79,7 +79,7 @@ static svn_error_t *
 txn_body_delete_rep (void *baton, trail_t *trail)
 {
   struct rep_args *b = (struct rep_args *) baton;
-  return svn_fs_bdb__delete_rep (b->fs, b->key, trail);
+  return svn_fs_bdb__delete_rep (b->fs, b->key, trail, trail->pool);
 }
 
 
@@ -358,7 +358,8 @@ verify_expected_record (svn_fs_t *fs,
   svn_filesize_t string_size;
 
   /* Check the string size. */
-  SVN_ERR (svn_fs_bdb__string_size (&string_size, fs, key, trail));
+  SVN_ERR (svn_fs_bdb__string_size (&string_size, fs, key, 
+                                    trail, trail->pool));
   if (string_size > SVN_MAX_OBJECT_SIZE)
     return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
                               "record size is too large "
@@ -378,7 +379,8 @@ verify_expected_record (svn_fs_t *fs,
   while (1)
     {
       size = sizeof (buf);
-      SVN_ERR (svn_fs_bdb__string_read (fs, key, buf, offset, &size, trail));
+      SVN_ERR (svn_fs_bdb__string_read (fs, key, buf, offset, &size, 
+                                        trail, trail->pool));
       if (size == 0)
         break;
       svn_stringbuf_appendbytes (text, buf, size);
@@ -422,7 +424,7 @@ txn_body_string_append (void *baton, trail_t *trail)
 {
   struct string_args *b = (struct string_args *) baton;
   return svn_fs_bdb__string_append (b->fs, &(b->key), b->len, 
-                                    b->text, trail);
+                                    b->text, trail, trail->pool);
 }
 
 
@@ -430,7 +432,7 @@ static svn_error_t *
 txn_body_string_clear (void *baton, trail_t *trail)
 {
   struct string_args *b = (struct string_args *) baton;
-  return svn_fs_bdb__string_clear (b->fs, b->key, trail);
+  return svn_fs_bdb__string_clear (b->fs, b->key, trail, trail->pool);
 }
 
 
@@ -438,7 +440,7 @@ static svn_error_t *
 txn_body_string_delete (void *baton, trail_t *trail)
 {
   struct string_args *b = (struct string_args *) baton;
-  return svn_fs_bdb__string_delete (b->fs, b->key, trail);
+  return svn_fs_bdb__string_delete (b->fs, b->key, trail, trail->pool);
 }
 
 
@@ -447,7 +449,8 @@ txn_body_string_size (void *baton, trail_t *trail)
 {
   struct string_args *b = (struct string_args *) baton;
   svn_filesize_t string_size;
-  SVN_ERR (svn_fs_bdb__string_size (&string_size, b->fs, b->key, trail));
+  SVN_ERR (svn_fs_bdb__string_size (&string_size, b->fs, b->key, 
+                                    trail, trail->pool));
   if (string_size > SVN_MAX_OBJECT_SIZE)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
@@ -464,7 +467,7 @@ txn_body_string_append_fail (void *baton, trail_t *trail)
 {
   struct string_args *b = (struct string_args *) baton;
   SVN_ERR (svn_fs_bdb__string_append (b->fs, &(b->key), b->len, 
-                                      b->text, trail));
+                                      b->text, trail, trail->pool));
   return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                            "la dee dah, la dee day...");
 }
@@ -473,7 +476,8 @@ static svn_error_t *
 txn_body_string_copy (void *baton, trail_t *trail)
 {
   struct string_args *b = (struct string_args *) baton;
-  return svn_fs_bdb__string_copy (b->fs, &(b->key), b->key, trail);
+  return svn_fs_bdb__string_copy (b->fs, &(b->key), b->key, 
+                                  trail, trail->pool);
 }
 
 
