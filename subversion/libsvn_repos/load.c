@@ -353,21 +353,21 @@ parse_format_version (const char *versionstring, int *version)
 {
   /* parse string and verify that we support the dumpfile format
      version number, setting *version appropriately. */
-  static int magic_len = sizeof(SVN_REPOS_DUMPFILE_MAGIC_HEADER) - 1;
+  static const int magic_len = sizeof(SVN_REPOS_DUMPFILE_MAGIC_HEADER) - 1;
   const char *p = strchr(versionstring, ':');
   int value;
 
-  if (p == NULL ||
-      p != (versionstring + magic_len) ||
-      strncmp (versionstring,
-               SVN_REPOS_DUMPFILE_MAGIC_HEADER,
-               magic_len))
+  if (p == NULL
+      || p != (versionstring + magic_len)
+      || strncmp (versionstring,
+                  SVN_REPOS_DUMPFILE_MAGIC_HEADER,
+                  magic_len))
     return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
                              "malformed dumpfile header.");
 
   value = atoi (p+1);
 
-  if (atoi(p+1) > SVN_REPOS_DUMPFILE_FORMAT_VERSION)
+  if (value > SVN_REPOS_DUMPFILE_FORMAT_VERSION)
     return svn_error_createf (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
                               "unsupported dumpfile version: %d",
                               value);
