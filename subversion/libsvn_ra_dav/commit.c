@@ -66,6 +66,10 @@ typedef struct
   /* ### resources may not be needed */
   apr_hash_t *resources;        /* URL (const char *) -> RESOURCE_T */
 
+  /* items that have been deleted */
+  /* ### not sure if this "deleted" thing is Goodness */
+  apr_array_header_t *deleted;
+
   /* name of local prop to hold the version resource's URL */
   svn_string_t *vsn_url_name;
 
@@ -363,8 +367,8 @@ static svn_error_t * commit_replace_root(void *edit_baton,
   rsrc = apr_pcalloc(cc->ras->pool, sizeof(*rsrc));
   rsrc->url = cc->ras->root.path;
 
-  /* ### or use empty string? */
-  rsrc->local_path = svn_string_create(".", cc->ras->pool);
+  /* ### should we use the WC symbol? (SVN_WC_ENTRY_THIS_DIR) */
+  rsrc->local_path = svn_string_create("", cc->ras->pool);
 
   SVN_ERR( (*cc->get_func)(cc->close_baton,
                            rsrc->local_path,
@@ -407,12 +411,17 @@ static svn_error_t * commit_delete_entry(svn_string_t *name,
 
   /* delete the child resource */
   SVN_ERR( simple_request(parent->cc->ras, "DELETE", child, &code) );
-  if (code != 200)
+
+  /* ### be more flexible with the response? */
+  if (code != 204)
     {
       /* ### need to be more sophisticated with reporting the failure */
       return svn_error_createf(SVN_ERR_RA_DELETE_FAILED, 0, NULL, pool,
                                "Could not DELETE %s", child);
     }
+
+  *(const char **)apr_array_push(parent->cc->deleted) =
+    apr_pstrcat(pool, parent->rsrc->local_path->data, "/", name->data, NULL);
 
   printf("[delete] DELETE: %s\n", child);
 
@@ -453,6 +462,7 @@ static svn_error_t * commit_add_dir(svn_string_t *name,
   printf("[add_dir] MKCOL: %s\n", child->rsrc->url);
 
   *child_baton = child;
+  printf("[add_dir] child=0x%08lx\n", (long)child);
   return NULL;
 }
 
@@ -479,6 +489,7 @@ static svn_error_t * commit_rep_dir(svn_string_t *name,
   */
 
   *child_baton = child;
+  printf("[replace_dir] child=0x%08lx\n", (long)child);
   return NULL;
 }
 
@@ -505,9 +516,10 @@ static svn_error_t * commit_close_dir(void *dir_baton)
 {
   resource_baton_t *dir = dir_baton;
 
+  printf("[close_dir] baton=0x%08lx\n", (long)dir);
+
   /* Perform all of the property changes on the directory. Note that we
      checked out the directory when the first prop change was noted. */
-  printf("[close_dir] ");
   SVN_ERR( do_proppatch(dir->cc->ras, dir->rsrc, dir->prop_changes) );
 
   return NULL;
@@ -537,7 +549,7 @@ static svn_error_t * commit_add_file(svn_string_t *name,
   /* ### ancestor_path is ignored for now */
 
   /* do the CHECKOUT now. we'll PUT the new file later on. */
-  printf("[add_file] ");
+  printf("[add_file] parent=0x%08lx ", (long)parent);
   SVN_ERR( checkout_resource(parent->cc, parent->rsrc) );
 
   file = apr_pcalloc(pool, sizeof(*file));
@@ -753,12 +765,8 @@ static svn_error_t * commit_close_edit(void *edit_baton)
                                       cc->set_func,
                                       cc->close_func,
                                       cc->close_baton,
+                                      cc->deleted,
                                       cc->ras->pool) );
-
-  /* ### set new_revision according to response from server */
-  /* ### get the new version URLs for all affected resources */
-
-  /* ### invoke close_func, set_func */
 
   return NULL;
 }
@@ -787,6 +795,8 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   cc->close_func = close_func;
   cc->close_baton = close_baton;
   cc->log_msg = log_msg;
+
+  cc->deleted = apr_array_make(ras->pool, 10, sizeof(const char *));
 
   SVN_ERR( create_activity(cc) );
 
