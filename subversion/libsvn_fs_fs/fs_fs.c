@@ -2119,9 +2119,10 @@ create_txn_dir (const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
   const char *unique_path, *name, *prefix;
 
   /* Try to create directories named "<txndir>/<rev>-<uniquifier>.txn". */
-  subpool = svn_pool_create (pool);
-  prefix = svn_path_join_many (subpool, fs->path, PATH_TXNS_DIR,
+  prefix = svn_path_join_many (pool, fs->path, PATH_TXNS_DIR,
                                apr_psprintf (pool, "%ld", rev), NULL);
+
+  subpool = svn_pool_create (pool);
   for (i = 1; i <= 99999; i++)
     {
       svn_error_t *err;
