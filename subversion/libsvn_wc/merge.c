@@ -244,7 +244,7 @@ svn_wc_merge (const char *left,
                     SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
                     | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
                     | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
-                    pool));
+                    TRUE, pool));
 
           *merge_outcome = svn_wc_merge_conflict;
 
@@ -343,7 +343,7 @@ svn_wc_merge (const char *left,
                 SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
                 | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
                 | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
-                pool));
+                TRUE, pool));
 
       *merge_outcome = svn_wc_merge_conflict; /* a conflict happened */
 

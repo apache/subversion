@@ -45,6 +45,7 @@ struct log_runner
 {
   apr_pool_t *pool;
   svn_xml_parser_t *parser;
+  svn_boolean_t entries_modified;
   svn_wc_adm_access_t *adm_access;  /* the dir in which this is all happening */
 };
 
@@ -570,10 +571,11 @@ log_do_modify_entry (struct log_runner *loggy,
 
   /* Now write the new entry out */
   err = svn_wc__entry_modify (loggy->adm_access, name,
-                              entry, modify_flags, loggy->pool);
+                              entry, modify_flags, FALSE, loggy->pool);
   if (err)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err,
                               "error merge_syncing entry `%s'", name);
+  loggy->entries_modified = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -706,7 +708,8 @@ log_do_committed (struct log_runner *loggy,
           SVN_ERR (svn_wc__entry_modify
                    (loggy->adm_access, NULL, &tmpentry,
                     SVN_WC__ENTRY_MODIFY_REVISION | SVN_WC__ENTRY_MODIFY_KIND,
-                    pool));
+                    FALSE, pool));
+          loggy->entries_modified = TRUE;
 
           /* Drop the 'killme' file. */
           return svn_wc__make_adm_thing (loggy->adm_access, SVN_WC__ADM_KILLME,
@@ -744,7 +747,8 @@ log_do_committed (struct log_runner *loggy,
                         SVN_WC__ENTRY_MODIFY_REVISION
                         | SVN_WC__ENTRY_MODIFY_KIND
                         | SVN_WC__ENTRY_MODIFY_DELETED,
-                        pool));
+                        FALSE, pool));
+              loggy->entries_modified = TRUE;
             }
 
           return SVN_NO_ERROR;
@@ -969,10 +973,12 @@ log_do_committed (struct log_runner *loggy,
       entry->schedule = svn_wc_schedule_normal;
       if ((err = svn_wc__entry_modify
            (loggy->adm_access, name, entry,
-            SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_FORCE, pool)))
+            SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_FORCE,
+            FALSE, pool)))
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, 0, err,
            "error modifying entry: %s", name);
+      loggy->entries_modified = TRUE;
 
       /* Okay, NOW install the new file, which may involve expanding
          keywords. */
@@ -1032,10 +1038,11 @@ log_do_committed (struct log_runner *loggy,
                                     | SVN_WC__ENTRY_MODIFY_TEXT_TIME
                                     | SVN_WC__ENTRY_MODIFY_PROP_TIME
                                     | SVN_WC__ENTRY_MODIFY_FORCE),
-                                   pool)))
+                                   FALSE, pool)))
     return svn_error_createf
       (SVN_ERR_WC_BAD_ADM_LOG, 0, err,
        "error modifying entry: %s", name);
+  loggy->entries_modified = TRUE;
 
   /* If we aren't looking at "this dir" (meaning we are looking at a
      file), we are finished.  From here on out, it's all about a
@@ -1070,7 +1077,7 @@ log_do_committed (struct log_runner *loggy,
                                         | SVN_WC__ENTRY_MODIFY_COPIED
                                         | SVN_WC__ENTRY_MODIFY_DELETED
                                         | SVN_WC__ENTRY_MODIFY_FORCE),
-                                       pool)))
+                                       TRUE, pool)))
         return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err,
                                   "error merge_syncing %s", name);
     }
@@ -1216,6 +1223,7 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
   loggy->adm_access = adm_access;
   loggy->pool = pool;
   loggy->parser = parser;
+  loggy->entries_modified = FALSE;
   
   /* Expat wants everything wrapped in a top-level form, so start with
      a ghost open tag. */
@@ -1259,6 +1267,13 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 
   svn_xml_free_parser (parser);
 
+  if (loggy->entries_modified == TRUE)
+    {
+      apr_hash_t *entries;
+      SVN_ERR (svn_wc_entries_read (&entries, loggy->adm_access, TRUE, pool));
+      SVN_ERR(svn_wc__entries_write (entries, loggy->adm_access, pool));
+    }
+
   /* Check for a 'killme' file in the administrative area. */
   if (svn_wc__adm_path_exists (svn_wc_adm_access_path (adm_access), 0, pool,
                                SVN_WC__ADM_KILLME, NULL))
@@ -1296,7 +1311,7 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
                                            SVN_WC__ENTRY_MODIFY_REVISION
                                            | SVN_WC__ENTRY_MODIFY_KIND
                                            | SVN_WC__ENTRY_MODIFY_DELETED,
-                                           pool));            
+                                           TRUE, pool));            
           }
       }
     }
