@@ -12,6 +12,7 @@ while (my $s = shift) {
     my $n = uc($s); $n =~ s/_T$//; $n =~ s/.*_//;
     my $prefix = $s; chop $prefix;
     my ($rv, $func, $args);
+    my (@args);
 
     open FILE, $file or die $!;
     my $temp = join('', <FILE>);
@@ -24,17 +25,24 @@ while (my $s = shift) {
 	next if m{^\s*/\*} .. m{\*/\s*$};
 	last if /^\s*}\s+/;
 	$lines .= $_;
-	next unless /^\s*$/;
-	(($lines = ''), next) unless $lines =~ /\s*(\w+)\s*\W+(\w+)\W+\(([^)]+)/; # only care about functions
+	next unless /;\s*$/;
+	(($lines = ''), next) unless $lines =~ /\s*((?:const\s*)?\w+)\s*\W+(\w+)\W+\(([^)]+)/; # only care about functions
 	($rv, $func, $args) = ($1, $2, $3);
 
+	if ($args eq 'void') {
+		# No paramters
+		$args = '';
+		@args = ();
+	} else {
+		@args = split(/\s*,\s*/, $args);
+	}
+	
 	print "$rv *${prefix}invoke_$func (\n";
-	print "    $s *\L$n\E,\n";
-	print join(",\n", map "    $_", split(/\s*,\s*/, $args));
+	print join(",\n", "    $s *\L$n\E", map "    $_", @args);
 	print "\n);\n\n";
 
 	$out .= "$rv *
-${prefix}invoke_${func} (const $s *\L$n\E, ${args})
+${prefix}invoke_${func} (" . join (' ,',"const $s *\L$n\E",@args) . ")
 ";
 
 	$args = join(
