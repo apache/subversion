@@ -633,7 +633,7 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
           svn_opt_revision_t temprev; 
           const char *path = ((const char **) (output_targets->elts))[i];
 
-          parse_path (&temprev, &truepath, path, pool);
+          SVN_ERR (parse_path (&temprev, &truepath, path, pool));
 
           if (temprev.kind != svn_opt_revision_unspecified)
             {
