@@ -47,7 +47,6 @@ class GeneratorBase:
     self.fs_test_deps = [ ]
     self.target_dirs = { }
     self.manpages = [ ]
-    self.infopages = [ ]
     self.graph = DependencyGraph()
 
     if not hasattr(self, 'skip_targets'):
@@ -104,7 +103,6 @@ class GeneratorBase:
       target_ob.add_dependencies(parser.get(target, 'sources'), self.graph)
 
       self.manpages.extend(string.split(parser.get(target, 'manpages')))
-      self.infopages.extend(string.split(parser.get(target, 'infopages')))
 
       if type not in ('script', 'project', 'external', 'utility'):
         # collect test programs
@@ -565,7 +563,6 @@ _cfg_defaults = {
   'sources' : '',
   'libs' : '',
   'manpages' : '',
-  'infopages' : '',
   'custom' : '',
   'install' : '',
   'testing' : '',

@@ -205,7 +205,6 @@ class Generator(gen_base.GeneratorBase):
                      string.join(self.test_progs + self.scripts))
 
     self.ofile.write('MANPAGES = %s\n\n' % string.join(self.manpages))
-    self.ofile.write('INFOPAGES = %s\n\n' % string.join(self.infopages))
 
     for objname, sources in self.graph.get_deps(gen_base.DT_SWIG_C):
       deps = string.join(sources)
