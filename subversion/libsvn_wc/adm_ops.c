@@ -112,14 +112,51 @@ svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
         svn_path_add_component (full_entry_path, current_entry_name,
                                 svn_path_url_style);
 
+      /* If the entry's existence is `deleted', remove the entry
+         altogether.  (If, during the update, the repository didn't
+         re-add this entry, then it must not exist in the new
+         revision!) */
+      if (current_entry->existence == svn_wc_existence_deleted)
+        {
+          svn_stringbuf_t *thisdir_str = 
+            svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, subpool);
+
+          /* THIS_DIR is deleted. */
+          if (! current_entry_name)
+            {
+              SVN_ERR(svn_wc_remove_from_revision_control
+                      (dir_path, thisdir_str, TRUE, subpool));
+
+              /* don't bother to finish this entries loop... the whole
+                 directory is blasted! */
+              break;
+            }
+
+          /* a child subdirectory is deleted. */
+          if ((current_entry->kind == svn_node_dir) && current_entry_name)
+            {
+              SVN_ERR(svn_wc_remove_from_revision_control
+                      (full_entry_path, thisdir_str, TRUE, subpool));
+            }
+          
+          /* a child file is deleted */
+          if (current_entry->kind == svn_node_file)
+            {
+              SVN_ERR(svn_wc_remove_from_revision_control
+                      (dir_path, current_entry_name, TRUE, subpool));
+            }
+        }
+
+
       /* If the entry is a file or SVN_WC_ENTRY_THIS_DIR, and it has a
          different rev than REVISION, fix it. */
-      if (((current_entry->kind == svn_node_file) || (! current_entry_name))
-          && (current_entry->revision != revision))
+      else if (((current_entry->kind == svn_node_file)
+                || (! current_entry_name))
+               && (current_entry->revision != revision))
         SVN_ERR (svn_wc_set_revision (cbaton, full_entry_path, revision));
       
       /* If entry is a dir (and not `.'), recurse. */
-      if ((current_entry->kind == svn_node_dir) && current_entry_name)
+      else if ((current_entry->kind == svn_node_dir) && current_entry_name)
         SVN_ERR (svn_wc__ensure_uniform_revision (full_entry_path,
                                                   revision, subpool));
     }
@@ -340,6 +377,10 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
       entry = (svn_wc_entry_t *) val;
       basename = svn_stringbuf_create ((const char *) key, subpool);
 
+      /* If the entry's existence is `deleted', skip it. */
+      if (entry->existence == svn_wc_existence_deleted)
+        continue;
+
       if (entry->kind == svn_node_dir)
         {
           if (strcmp (basename->data, SVN_WC_ENTRY_THIS_DIR) != 0)
@@ -405,6 +446,11 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
 
   /* Get the entry for the path we are deleting. */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
+  if (entry->existence == svn_wc_existence_deleted)
+    return svn_error_createf
+      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+       "entry '%s' has already been deleted", path->data);
+
   if (entry->kind == svn_node_dir)
     {
       /* Recursively mark a whole tree for deletion. */
@@ -443,11 +489,14 @@ svn_wc_add_directory (svn_stringbuf_t *dir, apr_pool_t *pool)
     orig_entry = NULL;
 
   /* You can only add something that is a) not in revision control, or
-     b) slated for deletion from revision control. */
-  if (orig_entry && orig_entry->schedule != svn_wc_schedule_delete)
+     b) slated for deletion from revision control, or c) already
+     `deleted' from revision control.  */
+  if (orig_entry && 
+      ((orig_entry->schedule != svn_wc_schedule_delete)
+       && (orig_entry->existence != svn_wc_existence_deleted)))
     return svn_error_createf 
       (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
-       "Directory '%s' has already been added to revision control",
+       "Directory '%s' is already under revision control",
        dir->data);
 
   /* Get the entry for this directory's parent.  We need to snatch the
@@ -506,11 +555,14 @@ svn_wc_add_file (svn_stringbuf_t *file, apr_pool_t *pool)
   SVN_ERR (svn_wc_entry (&orig_entry, file, pool));
 
   /* You can only add something that is a) not in revision control, or
-     b) slated for deletion from revision control. */
-  if (orig_entry && orig_entry->schedule != svn_wc_schedule_delete)
+     b) slated for deletion from revision control, or c) already
+     `deleted' from revision control.  */
+  if (orig_entry && 
+      ((orig_entry->schedule != svn_wc_schedule_delete)
+       && (orig_entry->existence != svn_wc_existence_deleted)))
     return svn_error_createf 
       (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
-       "File '%s' has already been added to revision control",
+       "File '%s' is already under revision control",
        file->data);
 
   svn_path_split (file, &dir, &basename, svn_path_local_style, pool);

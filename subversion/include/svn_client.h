@@ -234,6 +234,11 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                    apr_pool_t *pool);
 
 
+/* Given PATH to a working copy directory or file, allocate and return
+   a STATUSHASH structure containing the stati of all entries.  If
+   DESCEND is non-zero, recurse fully, else do only immediate
+   children.  (See svn_wc.h:svn_wc_statuses() for more verbiage on
+   this). */
 svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_stringbuf_t *path,

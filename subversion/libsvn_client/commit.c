@@ -454,6 +454,10 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
         {
           /* Construct full URL from PATH. */
           SVN_ERR (svn_wc_entry (&entry, base_dir, pool));
+          if (entry->existence == svn_wc_existence_deleted)
+            return svn_error_createf
+              (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+               "entry '%s' has already been deleted", base_dir->data);
           url = entry->ancestor;
         }
       

@@ -350,6 +350,12 @@ svn_wc__get_existing_prop_reject_file (svn_stringbuf_t **reject_file,
 
   the_entry = 
     (svn_wc_entry_t *) apr_hash_get (entries, name->data, name->len);
+
+  if (the_entry->existence == svn_wc_existence_deleted)
+    return svn_error_createf
+      (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+       "get_existing_reject_prop_reject_file: entry '%s' in '%s' is deleted",
+       name->data, path->data);
   
   if (the_entry == NULL)
     return svn_error_createf
@@ -361,7 +367,7 @@ svn_wc__get_existing_prop_reject_file (svn_stringbuf_t **reject_file,
   
   *reject_file = 
     (svn_stringbuf_t *) apr_hash_get (atts, SVN_WC_ENTRY_ATTR_PREJFILE,
-                                   APR_HASH_KEY_STRING);
+                                      APR_HASH_KEY_STRING);
 
   return SVN_NO_ERROR;
 }

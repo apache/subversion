@@ -241,11 +241,11 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
     if (existencestr)
       {
         if (! strcmp (existencestr->data, SVN_WC_ENTRY_VALUE_ADDED))
-          entry->schedule = svn_wc_existence_added;
+          entry->existence = svn_wc_existence_added;
         else if (! strcmp (existencestr->data, SVN_WC_ENTRY_VALUE_DELETED))
-          entry->schedule = svn_wc_existence_deleted;
+          entry->existence = svn_wc_existence_deleted;
         else if (! strcmp (existencestr->data, ""))
-          entry->schedule = svn_wc_existence_normal;
+          entry->existence = svn_wc_existence_normal;
         else
           return svn_error_createf 
             (SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID, 0, NULL, pool,
