@@ -37,7 +37,7 @@ extern "C" {
 /* Minor version number.
    Modify when new functionality is added or new interfaces are
    defined, but all changes are backward compatible. */
-#define SVN_VER_MINOR      8
+#define SVN_VER_MINOR      9
 
 /* Patch number.
    Modify for every released patch. */
@@ -52,11 +52,11 @@ extern "C" {
 
 
 /* Version tag: A string describing the of the version.
-   Typical values are "alpha", "beta", "prerelease", ...
+   Typical values are "alpha", "beta", or "rcN", for release candidate N.
    This symbol may be #undef'd for major releases; for development
    snapshots, it should be the number of the snapshot's revision. */
-#undef SVN_VER_TAG
-/* #define SVN_VER_TAG        "r196" */
+/* #undef SVN_VER_TAG */
+#define SVN_VER_TAG        "rc1"
 
 
 
