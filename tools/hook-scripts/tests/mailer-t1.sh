@@ -12,6 +12,11 @@
 # USAGE: ./mailer-t1.sh REPOS MAILER-SCRIPT
 #
 
+if test "$#" != 2; then
+    echo "USAGE: ./mailer-t1.sh REPOS MAILER-SCRIPT"
+    exit 1
+fi
+
 glom=mailer-t1.current
 rm -f $glom
 
@@ -23,4 +28,4 @@ done
 echo "current mailer.py output in: $glom"
 
 echo diff -q mailer-t1.output $glom
-diff -q mailer-t1.output $glom
+diff -q mailer-t1.output $glom && echo "SUCCESS: no differences detected"
