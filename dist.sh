@@ -165,8 +165,8 @@ else
   REPOS_PATH="`echo $REPOS_PATH | sed 's/^\/*//'`"
 fi
 
-type pax &> /dev/null
-if [ ! $? ] && [ -z "$ZIP" ]; then
+type pax > /dev/null 2>&1
+if [ $? -ne 0 ] && [ -z "$ZIP" ]; then
   echo "ERROR: pax could not be found"
   exit 1
 fi
