@@ -51,6 +51,7 @@ sinclude(ac-helpers/find_apr.m4)
 sinclude(ac-helpers/apr.m4)
 sinclude(ac-helpers/find_apu.m4)
 sinclude(ac-helpers/aprutil.m4)
+sinclude(ac-helpers/java.m4)
 sinclude(ac-helpers/swig.m4)
 
 dnl Grab the libtool macros
@@ -350,6 +351,8 @@ if test "$PYTHON" != "none"; then
   echo "checking for Python 2.0 or newer"
   ${PYTHON} ${abs_srcdir}/build/pycheck.py
 fi
+
+SVN_CHECK_JDK
 
 SVN_CHECK_SWIG
 
