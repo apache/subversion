@@ -23,7 +23,9 @@ my @ldpaths = ("$swig_builddir/perl/libsvn_swig_perl/.libs",
                map {"$svnlib_builddir/libsvn_$_/.libs"} (@modules, qw/diff subr
                                                                       ra_local
                                                                       ra_svn
-                                                                      ra_dav/));
+                                                                      ra_dav
+                                                                      fs_base
+                                                                      fs_fs/));
 my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 
 my $apr_shlib_path_var = '@SVN_APR_SHLIB_PATH_VAR@';
