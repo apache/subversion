@@ -110,6 +110,10 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
    and dirs, and are visible (and tweakable) by svn client programs
    and users.  Adding these properties causes specific effects.  */
 
+/* NOTE: the values of these properties are always UTF8-encoded with
+   LF line-endings.  It is the burden of svn library users to enforce
+   this.  */
+
 /* The mime-type of a given file. */
 #define SVN_PROP_MIME_TYPE  SVN_PROP_PREFIX "mime-type"
 

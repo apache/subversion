@@ -113,7 +113,7 @@ log_message_receiver (void *baton,
                       const char *msg,
                       apr_pool_t *pool)
 {
-  const char *author_native, *date_native, *msg_native, *msg_native_eol;
+  const char *author_native, *date_native, *msg_native;
   svn_error_t *err;
 
   /* Number of lines in the msg. */
@@ -157,22 +157,16 @@ log_message_receiver (void *baton,
   if (msg == NULL)
     msg = "";
 
-  err = svn_utf_cstring_from_utf8 (&msg_native, msg, pool);
-  if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
-    msg_native = svn_utf_cstring_from_utf8_fuzzy (msg, pool);
-  else if (err)
-    return err;
-
-  SVN_ERR (svn_subst_translate_cstring (msg_native, &msg_native_eol,
-                                        APR_EOL_STR, /* the 'native' eol */
-                                        FALSE,       /* no need to repair */
-                                        NULL,        /* no keywords */
-                                        FALSE,       /* no expansion */
-                                        pool));
+  {
+    /* Convert log message from UTF8/LF to native locale and eol-style. */
+    svn_string_t *logmsg = svn_string_create (msg, pool);
+    svn_cl__detranslate_string (&logmsg, logmsg, pool);
+    msg_native = logmsg->data;
+  }
 
   printf (SEP_STRING);
 
-  lines = num_lines (msg_native_eol);
+  lines = num_lines (msg_native);
   printf ("rev %" SVN_REVNUM_T_FMT ":  %s | %s | %d line%s\n",
           rev, author_native, date_native, lines, (lines > 1) ? "s" : "");
 
@@ -223,7 +217,7 @@ log_message_receiver (void *baton,
         }
     }
   printf ("\n");  /* A blank line always precedes the log message. */
-  printf ("%s\n", msg_native_eol);
+  printf ("%s\n", msg_native);
 
   return SVN_NO_ERROR;
 }

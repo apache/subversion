@@ -43,7 +43,6 @@ svn_cl__propget (apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = baton;
   const char *pname, *pname_utf8;
   apr_array_header_t *args, *targets;
-  svn_boolean_t is_svn_prop;
   int i;
 
   /* PNAME is first argument (and PNAME_UTF8 will be a UTF-8 version
@@ -51,7 +50,6 @@ svn_cl__propget (apr_getopt_t *os,
   SVN_ERR (svn_opt_parse_num_args (&args, os, 1, pool));
   pname = ((const char **) (args->elts))[0];
   SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, NULL, pool));
-  is_svn_prop = svn_prop_is_svn_prop (pname_utf8);
   
   /* suck up all the remaining arguments into a targets array */
   SVN_ERR (svn_opt_args_to_target_array (&targets, os,
@@ -97,13 +95,14 @@ svn_cl__propget (apr_getopt_t *os,
 
       if (propval != NULL)
         {
-          const svn_string_t *printable_val = propval;
+          svn_string_t *printable_val = propval;
 
           /* If this is a special Subversion property, it is stored as
-             UTF8, so convert to the native format. */
-          if (is_svn_prop)
-            SVN_ERR (svn_utf_string_from_utf8 (&printable_val,
-                                               propval, pool));
+             UTF8 and LF, so convert to the native locale and eol-style. */
+          
+          if (svn_cl__prop_needs_translation (pname_utf8))
+            SVN_ERR (svn_cl__detranslate_string (&printable_val, propval,
+                                                 pool));
           
           printf ("%s\n", printable_val->data);
         }
@@ -136,7 +135,7 @@ svn_cl__propget (apr_getopt_t *os,
               const void *key;
               void *val;
               const char *filename; 
-              const svn_string_t *propval;
+              svn_string_t *propval;
               const char *filename_native;
               
               apr_hash_this (hi, &key, NULL, &val);
@@ -145,9 +144,9 @@ svn_cl__propget (apr_getopt_t *os,
               
               /* If this is a special Subversion property, it is stored as
                  UTF8, so convert to the native format. */
-              if (is_svn_prop)
-                SVN_ERR (svn_utf_string_from_utf8 (&propval, propval, pool));
-              
+              if (svn_cl__prop_needs_translation (pname_utf8))
+                SVN_ERR (svn_cl__detranslate_string (&propval, propval, pool));
+
               /* ### this won't handle binary property values */
               if (print_filenames) 
                 {

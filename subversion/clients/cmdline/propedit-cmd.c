@@ -108,6 +108,12 @@ svn_cl__propedit (apr_getopt_t *os,
         {
           propval->data = new_propval;
           propval->len = strlen (new_propval);
+
+          /* Possibly clean up the new propval before giving it to
+             svn_client_revprop_set. */
+          if (svn_cl__prop_needs_translation (pname_utf8))
+            SVN_ERR (svn_cl__translate_string (&propval, propval, pool));
+
           SVN_ERR (svn_client_revprop_set (pname_utf8, propval,
                                            URL, &(opt_state->start_revision),
                                            auth_baton, &rev, pool));
@@ -192,12 +198,19 @@ svn_cl__propedit (apr_getopt_t *os,
                                             pool));
           
           SVN_ERR (svn_utf_cstring_from_utf8 (&target_native, target, pool));
-          
+
           /* ...and re-set the property's value accordingly. */
           if (new_propval)
             {
               propval->data = new_propval;
               propval->len = strlen (new_propval);
+
+              /* Possibly clean up the new propval before giving it to
+                 svn_client_propset. */
+              if (svn_cl__prop_needs_translation (pname_utf8))
+                SVN_ERR (svn_cl__translate_string (&propval, propval,
+                                                   pool));
+
               SVN_ERR (svn_client_propset (pname_utf8, propval, target, 
                                            FALSE, pool));
               printf ("Set new value for property `%s' on `%s'\n",

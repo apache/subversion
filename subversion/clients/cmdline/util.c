@@ -205,28 +205,10 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
     {
       svn_stringbuf_t *edited_contents_s;
       err = svn_stringbuf_from_file (&edited_contents_s, tmpfile_name, pool);
-      if (! err)
-        {
-          /* Convert file contents to UTF8 and "repos normal" LF eol
-             endings */
-          const char *edited_utf8_contents;
-          err = svn_utf_cstring_to_utf8 (&edited_utf8_contents,
-                                         edited_contents_s->data, NULL, pool);
-          if (err)
-            goto cleanup;
+      if (err)
+        goto cleanup;
 
-          err = svn_subst_translate_cstring (edited_utf8_contents,
-                                             edited_contents,
-                                             "\n",  /* translate to LF */
-                                             FALSE, /* no repair */
-                                             NULL,  /* no keywords */
-                                             FALSE, /* no expansion */
-                                             pool);
-          if (err)
-            goto cleanup;
-        }
-      else
-        goto cleanup; /* In case more code gets added before cleanup... */
+      *edited_contents = edited_contents_s->data;
     }
   else
     {
@@ -483,9 +465,18 @@ svn_cl__get_log_message (const char **log_msg,
                                      lmb->base_dir, tmp_message->data, 
                                      "svn-commit", pool);
 
+      /* Clean up the log message into UTF8/LF before giving it to
+         libsvn_client. */
+      if (msg2)
+        {
+          svn_string_t *new_logval = svn_string_create (msg2, pool);
+          SVN_ERR (svn_cl__translate_string (&new_logval, new_logval, pool));
+          msg2 = new_logval->data;
+        }        
+
       /* Dup the tmpfile path into its baton's pool. */
       *tmp_file = lmb->tmpfile_left = apr_pstrdup (lmb->pool, 
-                                                  lmb->tmpfile_left);
+                                                   lmb->tmpfile_left);
 
       /* If the edit returned an error, handle it. */
       if (err)
@@ -587,6 +578,81 @@ svn_cl__get_url_from_target (const char **URL,
       
       *URL = entry ? entry->url : NULL;
     }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_boolean_t
+svn_cl__prop_needs_translation (const char *propname)
+{
+  /* ### Someday, we may want to be picky and choosy about which
+     properties require UTF8 and EOL conversion.  For now, all "svn:"
+     props need it.  */
+
+  return svn_prop_is_svn_prop (propname);
+}
+
+
+svn_error_t *
+svn_cl__translate_string (svn_string_t **new_value,
+                          const svn_string_t *value,
+                          apr_pool_t *pool)
+{
+  const char *val_utf8;
+  const char *val_utf8_lf;
+
+  if (value == NULL)
+    {
+      *new_value = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR (svn_utf_cstring_to_utf8 (&val_utf8, value->data, NULL, pool));
+  SVN_ERR (svn_subst_translate_cstring (val_utf8,
+                                        &val_utf8_lf,
+                                        "\n",  /* translate to LF */
+                                        FALSE, /* no repair */
+                                        NULL,  /* no keywords */
+                                        FALSE, /* no expansion */
+                                        pool));
+  
+  *new_value = svn_string_create (val_utf8_lf, pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_cl__detranslate_string (svn_string_t **new_value,
+                            const svn_string_t *value,
+                            apr_pool_t *pool)
+{
+  svn_error_t *err;
+  const char *val_nlocale;
+  const char *val_nlocale_neol;
+
+  if (value == NULL)
+    {
+      *new_value = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  err = svn_utf_cstring_from_utf8 (&val_nlocale, value->data, pool);
+  if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
+    val_nlocale = svn_utf_cstring_from_utf8_fuzzy (value->data, pool);
+  else if (err)
+    return err;
+
+  SVN_ERR (svn_subst_translate_cstring (val_nlocale,
+                                        &val_nlocale_neol,
+                                        APR_EOL_STR,  /* 'native' eol */
+                                        FALSE, /* no repair */
+                                        NULL,  /* no keywords */
+                                        FALSE, /* no expansion */
+                                        pool));
+  
+  *new_value = svn_string_create (val_nlocale_neol, pool);
 
   return SVN_NO_ERROR;
 }

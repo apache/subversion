@@ -42,7 +42,7 @@ svn_cl__propset (apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = baton;
   const char *pname, *pname_utf8;
-  const svn_string_t *propval = NULL;
+  svn_string_t *propval = NULL;
   svn_boolean_t propval_came_from_cmdline;
   apr_array_header_t *args, *targets;
   int i;
@@ -68,12 +68,11 @@ svn_cl__propset (apr_getopt_t *os,
       propval_came_from_cmdline = TRUE;
     }
   
-  /* We only want special Subversion properties to be in UTF-8.  All
-     others should remain in binary format.  ### todo: make this
-     happen. */
-  if (svn_prop_is_svn_prop (pname_utf8))
-    SVN_ERR (svn_utf_string_to_utf8 (&propval, propval, pool));
-
+  /* We only want special Subversion property values to be in UTF-8
+     and LF line endings.  All other propvals are taken literally. */
+  if (svn_cl__prop_needs_translation (pname_utf8))
+    SVN_ERR (svn_cl__translate_string (&propval, propval, pool));
+    
   /* Suck up all the remaining arguments into a targets array */
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
