@@ -1,6 +1,3 @@
-<!-- This is currently being roughed out.  Suggestions and comments
-are more than welcome, but patches are probably a bit premature at
-this point. -->
 <chapter id="svn-ch-8">
   <title>Subversion Complete Reference</title>
   
@@ -606,9 +603,8 @@ working-copies
               locks resuming unfinished operations.  If you ever get a
               <quote>working copy locked</quote> error, run this
               command to remove stale locks and get your working copy
-              into a useable state again.</para> <!-- ###TODO Add xref
-              to FAQ on change journals when you add it to the
-              appendices -->
+              into a useable state again.  See <xref
+              linkend="svn-ap-c"/>.</para>
           </refsect1>
 
           <refsect1>
@@ -1714,8 +1710,7 @@ $ svn log http://svn.red-bean.com/repos/test/foo.c \
               beginning of a log message, after each subsequent log
               message, and following the final log message.  If you
               ran svn log on a range of two revisions, you would get
-              this:</para> <!-- ###TODO move this to svn log's
-              section. -->
+              this:</para>
             <screen>
 $ svn log -r 14:15
 ------------------------------------------------------------------------
@@ -3055,13 +3050,44 @@ Updated to revision 31.
               character reporting the action taken.  These characters
               have the following meaning:</para>
 
-            <screen>###TODO Reformat all of this
-  A  Added
-  D  Deleted
-  U  Updated
-  C  Conflict
-  G  Merged
-            </screen>
+            <variablelist>
+
+              <varlistentry>
+                <term>A</term>
+                <listitem>
+                  <para>Added</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term>D</term>
+                <listitem>
+                  <para>Deleted</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term>U</term>
+                <listitem>
+                  <para>Updated</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term>C</term>
+                <listitem>
+                  <para>Conflict</para>
+                </listitem>
+              </varlistentry>
+
+              <varlistentry>
+                <term>M</term>
+                <listitem>
+                  <para>Merged</para>
+                </listitem>
+              </varlistentry>
+
+            </variablelist>
 
             <para>A character in the first column signifies an update
               to the actual file, while updates to the file's
@@ -3129,8 +3155,8 @@ Updated to revision 30.
 
             <tip>
               <para>If you want to examine an older revision of a
-                single file, you may want to use 'svn cat' (###TODO
-                xref)</para>
+                single file, you may want to use <command>svn
+                cat</command>.</para>
             </tip>
             
           </refsect1>
@@ -3149,68 +3175,106 @@ Updated to revision 30.
         monitoring and repairing your Subversion repository.  For
         detailed information, see <xref
           linkend="svn-ch-5-sect-3.1.2"/></para>
-      
+
+      <warning>
+        <para>Unlike <command>svn</command>,
+        <command>svnadmin</command> (as well as other repository
+        administration tools) operates on <emphasis>paths</emphasis>
+        not <emphasis>URLs</emphasis>.</para>
+      </warning>
+        
+      <sect2 id="svn-ch-8-sect-2.1">
+        <title>Switches</title> 
+        
+        <variablelist>
+          
+          <varlistentry>
+            <term><option>--copies</option></term>
+            <listitem>
+              <para>Follow copy history when examining a path.</para>
+            </listitem>
+          </varlistentry>
+          
+          <varlistentry>
+            <term><option>--in-repos-template ARG</option></term>
+            <listitem>
+              <para>Specify a template for the repository structure when
+                creating a new repository.</para>
+              
+              <para>The <quote>in-repository</quote> templates specify
+                the layout of the repository itself (which lives in
+                Berkeley DB files inside the db/ directory) like
+                /trunk, /branches, etc.  These templates can be used
+                by an administrator or application to do an initial
+                load of the repository (without invoking hooks). There
+                is no default; the repository is built
+                <quote>empty</quote> unless you tell it otherwise.
+              </para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term><option>--incremental</option></term>
+            <listitem>
+              <para>Dump a revision only as a diff against the
+                previous revision, instead of the usual
+                fulltext.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term><option>--on-disk-template <replaceable>ARG</replaceable></option></term>
+            <listitem>
+
+              <para>Specify a templete to use for the on-disk
+                structure (i.e. <filename>conf/</filename>,
+                <filename>hooks/</filename>, etc.) of the repository
+                you want to create.</para>
+
+              <para>The <quote>on-disk</quote> templates describe the
+          repository directory itself. Each of the templates have a
+          name, and the <quote>default</quote> on-disk template
+          contains:</para>
+
+              <itemizedlist>
+                <listitem><para>default/</para></listitem>
+                <listitem><para>README</para></listitem>
+                <listitem><para>dav/</para></listitem>
+                <listitem><para>format</para></listitem>
+                <listitem><para>hooks/</para></listitem>
+                <listitem><para>post-commit.tmpl</para></listitem>
+                <listitem><para>post-revprop-change.tmpl</para></listitem>
+                <listitem><para>pre-commit.tmpl</para></listitem>
+                <listitem><para>pre-revprop-change.tmpl</para></listitem>
+                <listitem><para>start-commit.tmpl</para></listitem>
+                <listitem><para>locks/</para></listitem>
+                <listitem><para>db.lock</para></listitem>
+              </itemizedlist>
+
+              <para>The typical usage for the on-disk structures is to
+                predefine the hook scripts that will be created. For
+                example, you could prepopulate the
+                <literal>post-commit</literal> script with a commit
+                mailer and backup script. Then, each time the
+                administrator creates a new repository, she can refer
+                to this new template which automagically includes all
+                of the hooks.</para>
+
+            </listitem>
+          </varlistentry>
 
 
-          <screen>
-###TODO Mark this up.
+          <varlistentry>
+            <term><option>--revision</option> (<option>-r</option>)
+            <replaceable>ARG</replaceable></term>
+            <listitem>
+              <para>Specify a particular revision to operate
+                on.</para>
+            </listitem>
+          </varlistentry>
+        </variablelist>
+      </sect2>
 
-Switches
-
---copies
-
-Follow copy history when examining a path.
-
---in-repos-template ARG
-
-Specify a template for the repository structure when creating a new
-repository. 
-
-The "in-repository" templates specify the layout of the repository
-itself (which lives in Berkeley DB files inside the db/ directory)
-like /trunk, /branches, etc.  These templates can be used by an
-administrator or application to do an initial load of the repository
-(without invoking hooks). There is no default; the repository is built
-"empty" unless you tell it otherwise.
-
---incremental
-
-Dump a revision only as a diff against the previous revision, instead
-of the usual fulltext.
-
---on-disk-template ARG
-
-Specify a templete to use for the on-disk structure (i.e. conf/,
-hooks/, etc.) of the repository you want to create.
-
-The "on-disk" templates describe the repository directory itself. Each
-of the templates have a name, and the "default" on-disk template
-contains:
-
-  default/
-    README
-    dav/
-    format
-    hooks/
-      post-commit.tmpl
-      post-revprop-change.tmpl
-      pre-commit.tmpl
-      pre-revprop-change.tmpl
-      start-commit.tmpl
-    locks/
-      db.lock
-
-The typical usage for the on-disk structures is to predefine the hook
-scripts that will be created. For example, you could prepopulate the
-'post-commit' script with a commit mailer and backup script. Then, each time
-the administrator creates a new repository, she can refer to this new
-template which automagically includes all of the hooks.
-
---revision (-r) ARG
-
-Specify a particular revision to operate on.
-      </screen>
-      
       <!-- ================================================================= -->
       <refentry>
         <refnamediv>
@@ -3224,8 +3288,10 @@ Specify a particular revision to operate on.
         <refsect1>
           <title>Description</title>
 
-          <para>Create a new, empty repository at REPOS_PATH.</para>
-        </refsect1>
+            <para>Create a new, empty repository at the path provided.
+              If the provided directory does not exist, it will be
+              created for you.</para>
+          </refsect1>
 
         <refsect1>
           <title>Switches</title>
@@ -3239,53 +3305,12 @@ Specify a particular revision to operate on.
         <refsect1>
           <title>Examples</title>
 
-          <para>###TODO need description here?</para>
+          <para>Creating a new repository is just this easy:</para>
 
           <screen>
 $ svnadmin create /usr/local/svn/repos
           </screen>
-
-          <para>###TODO more examples with templates?</para>
           
-        </refsect1>
-      </refentry>
-
-      <!-- ================================================================= -->
-      <refentry>
-        <refnamediv>
-          <refname>svnadmin createtxn</refname>
-          <refpurpose>Create a new transaction.</refpurpose>
-        </refnamediv>
-        <refsect1>
-          <title>Synopsis</title>
-          <programlisting>svnadmin createtxn REPOS_PATH -r REVISION</programlisting>
-        </refsect1>
-        <refsect1>
-          <title>Description</title>
-
-          <para>Create a new transaction in the repository based on
-            REVISION.</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Switches</title>
-
-          <screen>
---revision (-r)
-          </screen>
-        </refsect1>
-        
-        <refsect1>
-          <title>Examples</title>
-          
-          <para>###TODO need description here?</para>
-
-          <screen>
-$ svnadmin createtxn /usr/local/svn/repos -r 21
-          </screen>
-
-          <para>###TODO more examples with templates?</para>
-
         </refsect1>
       </refentry>
 
@@ -3306,9 +3331,9 @@ $ svnadmin createtxn /usr/local/svn/repos -r 21
             'dumpfile' portable format, sending feedback to stderr.
             Dump revisions LOWER rev through UPPER rev.  If no
             revisions are given, dump all revision trees.  If only
-            LOWER is given, dump that one revision tree.</para>
-        </refsect1>
-
+            LOWER is given, dump that one revision tree.  See <xref
+            linkend="svn-ch-5-sect-3.4"/> for a practical use. </para>
+            </refsect1>
         <refsect1>
           <title>Switches</title>
           
@@ -3361,8 +3386,9 @@ Content-length: 101
         <refsect1>
           <title>Description</title>
 
-          <para>This is another good friend when you're using
-            Subversion and this book isn't within reach!</para>
+          <para>This subcommand is useful when you're trapped on a
+            desert island with neither a net connection nor a copy of
+            this book.</para>
 
         </refsect1>
       </refentry>
@@ -3370,8 +3396,9 @@ Content-length: 101
       <!-- ================================================================= -->
       <refentry>
         <refnamediv>
-          <refname>svnadmin load</refname>
-          <refpurpose>Read a 'dumpfile'-formatted stream from STDIN.</refpurpose>
+          <refname>svnadmin load</refname> <refpurpose>Read a
+            <quote>dumpfile-formatted</quote> stream from
+            STDIN.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -3388,7 +3415,9 @@ Content-length: 101
         <refsect1>
           <title>Example</title>
 
-          <para>###TODO need description here?</para>
+          <para>This shows the beginning of loading a repository from
+            a backup file (made, of course, with <command>svn
+            dump</command>):</para>
 
           <screen>
 $ svnadmin load /usr/local/svn/restored &lt; repos-backup
@@ -3415,12 +3444,20 @@ $ svnadmin load /usr/local/svn/restored &lt; repos-backup
         <refsect1>
           <title>Description</title>
 
-          <para>Print, one-per-line and youngest-to-eldest, the
-            revisions in which PATH was modified.  Use the COPIES flag
-            to allow this operation to cross copy history while
-            searching for revisions.  PATH must exist in the HEAD of
-            the repository).  It's not immediately obvious, but lscr
-            stands for LiSt Changed Revisions.</para>
+          <para><command>lscr</command>
+            <footnote>
+              <para>It's not immediately obvious, but lscr stands for
+                <emphasis>L</emphasis>i<emphasis>S</emphasis>t
+                <emphasis>C</emphasis>hanged
+                <emphasis>R</emphasis>evisions.  That's what happens
+                when you let programmers come up with names for
+                commands.</para>
+            </footnote>
+            prints, one-per-line and youngest-to-eldest, the revisions
+            in which PATH was modified.  Use the COPIES flag to allow
+            this operation to cross copy history while searching for
+            revisions.  PATH must exist in the HEAD of the
+            repository).</para>
         </refsect1>
 
         <refsect1>
@@ -3472,14 +3509,17 @@ $ svnadmin lscr /usr/local/svn/repos/ test-moved-file --copies
         <refsect1>
           <title>Description</title>
 
-          <para>Print the names of all uncommitted
-            transactions. ###TODO Tell more here.</para>
+          <para>Print the names of all uncommitted transactions.  See
+            <xref linkend="svn-ch-5-sect-3.2"/> for information on how
+            uncommitted transactions are created and what you should
+            do with them.</para>
         </refsect1>
 
         <refsect1>
           <title>Examples</title>
 
-          <para>###TODO need description here?</para>
+          <para>List all outstanding transactions in a
+            repository.</para>
 
           <screen>
 $ svnadmin lstxns /usr/local/svn/repos/ 
@@ -3494,7 +3534,7 @@ $ svnadmin lstxns /usr/local/svn/repos/
       <refentry>
         <refnamediv>
           <refname>svnadmin recover</refname>
-          <refpurpose>Run the Berkeley DB recovery procedure on a repository.</refpurpose>
+          <refpurpose>Recovers any lost state in a repository.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -3503,21 +3543,22 @@ $ svnadmin lstxns /usr/local/svn/repos/
         <refsect1>
           <title>Description</title>
 
-          <para>Run the Berkeley DB recovery procedure on a
-            repository.  Do this if you've been getting errors
-            indicating that recovery ought to be run.</para>
+          <para>Run this command if you get an error indicating that
+            your repository needs to be recovered.</para>
 
           <warning>
-            <para>Only run this when you are SURE you're the only
-              process accessing the repository.  Requires exclusive
-              access.</para>
+            <para>Only run this when you are <emphasis>absolutely
+              certain</emphasis> you're the only process accessing the
+              repository&mdash;it requires exclusive access.  See
+              <xref linkend="svn-ch-5-sect-3.3"/> for a detailed
+              explanation of repository recovery.</para>
           </warning>
         </refsect1>
 
         <refsect1>
           <title>Examples</title>
           
-          <para>###TODO need description here?</para>
+          <para>Recover a hung repository:</para>
 
           <screen>
 $ svnadmin recover /usr/local/svn/repos/ 
@@ -3535,17 +3576,18 @@ The latest repos revision is 34.
       <refentry>
         <refnamediv>
           <refname>svnadmin rmtxns</refname>
-          <refpurpose>Delete the named transaction(s).</refpurpose>
+          <refpurpose>Deletes transactions from a repository.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svnadmin rmtxns REPOS_PATH TXN_NAME [TXN_NAME2 ...]TODO</programlisting>
+          <programlisting>svnadmin rmtxns REPOS_PATH TXN_NAME [TXN_NAME2 ...]</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
 
-          <para>Delete the named transaction(s). ###TODO Tell more
-            here.</para>
+          <para>Deletes outstanding transactions from a repository.
+            This is covered in detail in <xref
+            linkend="svn-ch-5-sect-3.2"/></para>
         </refsect1>
 
         <refsect1>
@@ -3587,10 +3629,18 @@ $ svnadmin rmtxns /usr/local/svn/repos/  `svnadmin lstxns /usr/local/svn/repos/`
           <para>Set the log-message on revision REVISION to the
             contents of FILE.</para>
 
+          <para>You might think that this sounds remarkably like the
+            kind of thing that you can do by using <command>svn
+            propset --revprop</command> to set the
+            <literal>svn:log</literal> property on a revision.  While
+            it does, in fact, accomplish the same end result (changing
+            the log message), <command>setlog</command> does not run
+            any pre or post-commit hooks.</para>
+
           <warning>
             <para>Revision properties are not under version control,
               so this command will permanently overwrite the previous
-              log message.)</para>
+              log message.</para>
           </warning>
 
         </refsect1>
@@ -3625,7 +3675,9 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
       <title><command>svnlook</command></title>
       
       <para><command>svnlook</command> is a command line utility for
-        examining different aspects of a Subversion repository.</para>
+        examining different aspects of a Subversion repository.  It
+        does not make any changes to the repository&mdash;it's just
+        used for <quote>peeking</quote>.</para>
 
       <para><command>svnlook</command> is typically used by the
         repository hooks, but a repository administrator might find it
@@ -3639,36 +3691,60 @@ $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
       
       <sect2 id="svn-ch-8-sect-3.1">
         <title>Switches</title>
-
-<screen>
-###TODO Mark this up.
---no-diff-deleted
-
-Prevents svnlook from printing differences for deleted files.  The
-default behavior when a file is deleted in a transaction/revision is
-to print the same differences that you would see if you had left the
-file but removed all the content.
-
---revision (-r)
-
-Specify a particular revision number that you wish to examine.
-
---transaction (-t)
-
-Specify a particular transaction id that you wish to examine. 
-
---show-ids
-
-Show the filesystem node revision IDs for each path in the filesystem
-tree.
-        </screen>
-
         
+        <para>Switches in <command>svnlook</command> are global, just
+          like in <command>svn</command> and
+          <command>svnadmin</command>, however, most switches only
+          apply to one subcommand since the functionality of
+          <command>svnlook</command> is (intentionally) limited in
+          scope.</para>
+
+        <variablelist>
+
+          <varlistentry>
+            <term><option>--no-diff-deleted</option></term>
+            <listitem>
+              <para>Prevents svnlook from printing differences for
+                deleted files.  The default behavior when a file is
+                deleted in a transaction/revision is to print the same
+                differences that you would see if you had left the
+                file but removed all the content.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term><option>--revision</option>
+              (<option>-r</option>)</term>
+            <listitem>
+              <para>Specify a particular revision number that you wish
+                to examine.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term><option>--transaction</option>
+              (<option>-t</option>)</term>
+            <listitem>
+              <para>Specify a particular transaction id that you wish to
+                examine. </para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term><option>--show-ids</option></term>
+            <listitem>
+              <para>Show the filesystem node revision IDs for each path in the filesystem
+                tree.</para>
+            </listitem>
+          </varlistentry>
+
+        </variablelist>
+
         <!-- ================================================================= -->
         <refentry>
           <refnamediv>
             <refname>svnlook author</refname>
-            <refpurpose>Print the author.</refpurpose>
+            <refpurpose>Prints the author.</refpurpose>
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
@@ -3677,8 +3753,8 @@ tree.
           <refsect1>
             <title>Description</title>
 
-            <para>Print the author of a path in the
-            repository. ###TODO Tell more here.</para>
+            <para>Prints the author of a revision or transaction in
+              the repository.</para>
           </refsect1>
 
           <refsect1>
@@ -3693,8 +3769,14 @@ tree.
           <refsect1>
             <title>Examples</title>
 
-          <para>###TODO need examples</para>
-            
+          <para><command>svnlook author</command> is handy, but not
+              very exciting:</para>
+
+            <screen>
+$ svnlook author -r 40 /usr/local/svn/repos 
+sally
+            </screen>            
+
           </refsect1>
         </refentry>
 
@@ -3711,8 +3793,12 @@ tree.
           <refsect1>
             <title>Description</title>
 
-            <para>Print the paths that were changed. ###TODO Tell more
-              here.</para>
+            <para>Print the paths that were changed in a particular
+              revision or transaction, as well as an <quote>svn
+              update-style</quote> status letter in the first column:
+              <literal>A</literal> for added, <literal>D</literal> for
+              deleted, and <literal>U</literal> for updated
+              (modified).</para>
 
             </refsect1>
 
@@ -3728,7 +3814,16 @@ tree.
           <refsect1>
             <title>Examples</title>
 
-            <para>###TODO need examples</para>
+            <para>This shows a list of all the changed files in
+              revision 39 of a test repository:</para>
+
+            <screen>
+$ svnlook changed -r 39 /usr/local/svn/repos
+A   trunk/vendors/deli/
+A   trunk/vendors/deli/chips.txt
+A   trunk/vendors/deli/sandwich.txt
+A   trunk/vendors/deli/pickle.txt
+            </screen>
             
           </refsect1>
         </refentry>
@@ -3746,7 +3841,8 @@ tree.
           <refsect1>
             <title>Description</title>
 
-            <para>Print the datestamp. ###TODO tell more here.</para>
+            <para>Print the datestamp of a revision or transaction in
+              a repository.</para>
           </refsect1>
 
           <refsect1>
@@ -3761,8 +3857,14 @@ tree.
           <refsect1>
             <title>Examples</title>
             
-            <para>###TODO need examples</para>
-            
+            <para>This shows the date of revision 40 of a test
+              repository:</para>
+
+            <screen>            
+$ svnlook date -r 40 /tmp/repos/
+2003-02-22 17:44:49 -0600 (Sat, 22 Feb 2003)
+            </screen>
+
           </refsect1>
         </refentry>
 
@@ -3770,7 +3872,7 @@ tree.
         <refentry>
           <refnamediv>
             <refname>svnlook diff</refname>
-            <refpurpose>Print differences of changed files and properties.</refpurpose>
+            <refpurpose>Prints differences of changed files and properties.</refpurpose>
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
@@ -3779,8 +3881,8 @@ tree.
           <refsect1>
             <title>Description</title>
 
-            <para>Print GNU-style differences of changed files and
-              properties. ###TODO Tell more here.</para>
+            <para>Prints GNU-style differences of changed files and
+              properties in a repository.</para>
           </refsect1>
 
           <refsect1>
@@ -3796,7 +3898,29 @@ tree.
           <refsect1>
             <title>Examples</title>
             
-            <para>###TODO need examples</para>
+            <para>This shows a newly added (empty) file, a deleted
+            file, and a copied file:</para>
+
+            <screen>
+$ svnlook diff -r 40 /usr/local/svn/repos/
+Copied: egg.txt (from rev 39, trunk/vendors/deli/pickle.txt)
+
+Added: trunk/vendors/deli/soda.txt
+==============================================================================
+
+Modified: trunk/vendors/deli/sandwich.txt
+==============================================================================
+--- trunk/vendors/deli/sandwich.txt	(original)
++++ trunk/vendors/deli/sandwich.txt	2003-02-22 17:45:04.000000000 -0600
+@@ -0,0 +1 @@
++Don't forget the mayo!
+
+Deleted: trunk/vendors/deli/chips.txt
+==============================================================================
+
+Deleted: trunk/vendors/deli/pickle.txt
+==============================================================================
+            </screen>
             
           </refsect1>
         </refentry>
@@ -3831,7 +3955,13 @@ tree.
           <refsect1>
             <title>Examples</title>
 
-            <para>###TODO need examples</para>
+            <para>This shows the directories that changed in
+              revision 40 in our sample repository:</para>
+
+            <screen>
+$ svnlook dirs-changed -r 40 /usr/local/svn/repos
+trunk/vendors/deli/
+            </screen>
             
           </refsect1>
         </refentry>
@@ -3848,9 +3978,10 @@ tree.
           <refsect1>
             <title>Description</title>
 
-            <para>Display the help message for svnlook.  This command
-            is still your friend, even though you never call it
-            anymore.</para>
+            <para>Displays the help message for svnlook.  This
+              command, like it's brother <command>svn</command>, is
+              also your friend, even though you never call it anymore
+              and forgot to invite it to your last party.</para>
           </refsect1>
 
         </refentry>
@@ -3869,7 +4000,7 @@ tree.
             <title>Description</title>
 
             <para>Print the author, datestamp, log message size, and
-              log message. ###TODO Tell more here.</para>
+              log message.</para>
           </refsect1>
 
           <refsect1>
@@ -3884,7 +4015,15 @@ tree.
           <refsect1>
             <title>Examples</title>
 
-            <para>###TODO need examples</para>
+            <para>This shows the info output for revision 40 in our sample repository.</para>
+
+            <screen>
+$ svnlook info -r 40 /usr/local/svn/repos
+sally
+2003-02-22 17:44:49 -0600 (Sat, 22 Feb 2003)
+15
+Rearrange lunch.
+            </screen>
             
           </refsect1>
         </refentry>
@@ -3902,8 +4041,7 @@ tree.
           <refsect1>
             <title>Description</title>
 
-            <para>Print the log message. ###TODO Tell more
-              here.</para>
+            <para>Print the log message.</para>
           </refsect1>
 
           <refsect1>
@@ -3918,7 +4056,13 @@ tree.
           <refsect1>
             <title>Examples</title>
             
-            <para>###TODO need examples</para>
+            <para>This shows the log output for revision 40 in our sample
+            repository:</para>
+
+            <screen>
+$ svnlook log /tmp/repos/
+Rearrange lunch.
+            </screen>
             
           </refsect1>
         </refentry>
@@ -3937,7 +4081,7 @@ tree.
             <title>Description</title>
 
             <para>Print the tree, optionally showing node revision
-              ids. ###TODO Tell more here.</para>
+              ids.</para>
           </refsect1>
 
           <refsect1>
@@ -3953,7 +4097,19 @@ tree.
           <refsect1>
             <title>Examples</title>
             
-            <para>###TODO need examples</para>
+            <para>This shows the tree output (with node-IDs) for revision
+              40 in our sample repository:</para>
+
+            <screen>
+$ svnlook tree -r 40 /usr/local/svn/repos --show-ids
+/ &lt;0.0.2j&gt;
+ trunk/ &lt;p.0.2j&gt;
+  vendors/ &lt;q.0.2j&gt;
+   deli/ &lt;1g.0.2j&gt;
+    egg.txt &lt;1i.e.2j&gt;
+    soda.txt &lt;1k.0.2j&gt;
+    sandwich.txt &lt;1j.0.2j&gt;
+            </screen>
             
           </refsect1>
         </refentry>
@@ -3971,15 +4127,19 @@ tree.
           <refsect1>
             <title>Description</title>
 
-            <para>Print the youngest revision number. ###TODO Tell
-              more here.</para>
+            <para>Print the youngest revision number of a repository.</para>
           </refsect1>
 
           <refsect1>
             <title>Examples</title>
 
-          <para>###TODO need examples</para>
-            
+          <para>This shows the youngest revision of our sample
+              repository:</para>
+  
+            <screen>          
+$ svnlook youngest /tmp/repos/ 
+42
+            </screen>
 
           </refsect1>
         </refentry>
