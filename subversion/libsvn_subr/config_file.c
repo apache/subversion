@@ -313,13 +313,13 @@ svn_config__user_config_path (const char *config_dir,
 
 #else  /* ! WIN32 */
   {
+    apr_status_t apr_err;
     char *homedir;
     const char *homedir_utf8;
 
-    homedir = getenv ("HOME");
-    if (! homedir)
+    apr_err = apr_env_get (&homedir, "HOME", pool);
+    if ( apr_err || ! homedir )
       {
-        apr_status_t apr_err;
         apr_uid_t uid;
         apr_gid_t gid;
         char *username;
