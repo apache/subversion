@@ -69,7 +69,9 @@ if [ ! -d neon ]; then
   echo "directory from ./neon-${NEON_VER}/ to ./neon/"
   echo ""
   exit 1
-elif ! grep NEON_VERSION=${NEON_VER} neon/configure.in > /dev/null; then
+fi
+grep NEON_VERSION=${NEON_VER} neon/configure.in > /dev/null
+if [ $? -ne 0 ]; then
   echo ""
   echo "...Uh oh, there is a problem."
   echo "You have a neon/ subdir, but it is not neon ${NEON_VER}."
