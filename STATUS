@@ -36,6 +36,11 @@ Candidate changes:
     Votes:
       +1: kfogel, sussman, dlr
 
+  * r8698
+    Fix to make svn_repos_dir_delta in python bindings.
+    Justification: Fix svnlook.py example.
+    Votes:
+
 Status of 1.0.1:
 ================
 
