@@ -2,7 +2,7 @@
  * io.c:   shared file reading, writing, and probing code.
  *
  * ====================================================================
- * Copyright (c) 2000-2001 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1516,7 +1516,7 @@ svn_io_run_cmd (const char *path,
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf
       (apr_err, 0, NULL, pool,
-       "run_cmd_in_directory: error creating %s process attributes",
+       "svn_io_run_cmd: error creating %s process attributes",
        cmd);
 
   /* Make sure we invoke cmd directly, not through a shell. */
@@ -1524,7 +1524,7 @@ svn_io_run_cmd (const char *path,
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf 
       (apr_err, 0, NULL, pool,
-       "run_cmd_in_directory: error setting %s process cmdtype",
+       "svn_io_run_cmd: error setting %s process cmdtype",
        cmd);
 
   /* Set the process's working directory. */
@@ -1534,27 +1534,22 @@ svn_io_run_cmd (const char *path,
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
-           "run_cmd_in_directory: error setting %s process directory",
+           "svn_io_run_cmd: error setting %s process directory",
            cmd);
     }
 
-  /* Set io style. */
-  apr_err = apr_procattr_io_set (cmdproc_attr, APR_FULL_BLOCK, 
-                                APR_CHILD_BLOCK, APR_CHILD_BLOCK);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    return svn_error_createf
-      (apr_err, 0, NULL, pool,
-       "run_cmd_in_directory: error setting %s process io attributes",
-       cmd);
+  /* Use requested inputs and outputs.
 
-  /* Use requested inputs and outputs. */
+     ### Unfortunately each of these apr functions creates a pipe and then
+     overwrites the pipe file descriptor with the descriptor we pass
+     in. The pipes can then never be closed. This is an APR bug. */
   if (infile)
     {
       apr_err = apr_procattr_child_in_set (cmdproc_attr, infile, NULL);
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
-           "run_cmd_in_directory: error setting %s process child input",
+           "svn_io_run_cmd: error setting %s process child input",
            cmd);
     }
   if (outfile)
@@ -1563,7 +1558,7 @@ svn_io_run_cmd (const char *path,
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
-           "run_cmd_in_directory: error setting %s process child outfile",
+           "svn_io_run_cmd: error setting %s process child outfile",
            cmd);
     }
   if (errfile)
@@ -1572,7 +1567,7 @@ svn_io_run_cmd (const char *path,
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf 
           (apr_err, 0, NULL, pool,
-           "run_cmd_in_directory: error setting %s process child errfile",
+           "svn_io_run_cmd: error setting %s process child errfile",
            cmd);
     }
 
@@ -1581,7 +1576,7 @@ svn_io_run_cmd (const char *path,
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf 
       (apr_err, 0, NULL, pool,
-       "run_cmd_in_directory: error starting %s process",
+       "svn_io_run_cmd: error starting %s process",
        cmd);
 
   /* Wait for the cmd command to finish. */
@@ -1589,7 +1584,7 @@ svn_io_run_cmd (const char *path,
   if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
     return svn_error_createf
       (apr_err, 0, NULL, pool,
-       "run_cmd_in_directory: error waiting for %s process",
+       "svn_io_run_cmd: error waiting for %s process",
        cmd);
 
   return SVN_NO_ERROR;
