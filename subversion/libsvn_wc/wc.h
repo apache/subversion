@@ -313,11 +313,9 @@ typedef struct svn_wc__entry_t
      hash key for which this is the value. */
 
   svn_vernum_t version;        /* Base version.  (Required) */
-  svn_string_t *path;          /* Full path to this entry.  (Required) */
+  svn_string_t *ancestor;      /* Base path.  (Required) */
   enum svn_node_kind kind;     /* Is it a file, a dir, or... ? (Required) */
 
-  svn_string_t *ancestor_path; /* Full path of entry's ancestor.  (Required) */
-  
   int flags;                   /* Is entry marked for addition, deletion? */
 
   apr_time_t timestamp;        /* When the entries file thinks the
