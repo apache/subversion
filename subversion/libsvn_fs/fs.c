@@ -465,7 +465,7 @@ svn_fs_delete_berkeley (const char *path,
         apr_finfo_t finfo;
 
         status = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
-        if (status == APR_ENOENT)
+        if (APR_STATUS_IS_ENOENT(status))
           break;
         SVN_ERR (check_apr (status, pool));
 
