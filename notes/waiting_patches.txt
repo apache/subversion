@@ -1,20 +1,46 @@
 
-* Active Coding:
+* Fixed Bugs:
 
-  * rewriting authentication system (#456):  sussman working on
+  * updates over dav now work.
 
-  * redesigning anchor/target (#?):  cmpilato working on
+  * dav can now checkout arbitrary revisions.
 
-  * rewriting mod_dav props (#382):  gstein working on
+  * python tests run over dav.
+
+  * mod_dav cleaning up txns properly
+
+  * log messages are being escaped
+
+  * automated database maintenance/backup
+
+  * 'svnadmin setlog'
+
+  * dist.sh works with svn now.
+
+  * trailing url slashes no longer a problem.
+
+  * 'svn diff' is now recursive
 
 
-* Debates in Progress:
+* Almost Completed:
+
+  * rewriting authentication system (#456):  sussman
+
+  * rewriting anchor/target (dav's "BIG HACK", #442):  cmpilato
+
+  * rewriting mod_dav prop system (and mod_dav_svn) (#382):  gstein
+
+
+* Dev-list Debates (that may turn into tasks):
 
   * SVN vs .svn
 
   * behaviors of 'svn status'
 
-  * solution to anchor/target problems
+  * 'svn revert' can replace 'unadd' and 'undelete'
+
+  * anchor/target issues.
+
 
   
 * Backlogged patches to evaluate/discuss/commit:
@@ -39,6 +65,8 @@
   * ?:  examine FreeBSD port
 
   * Dale:  ra_dav enhancement:  http proxy support
+
+  * Garrett:  svn_path_canonicalize operation with urls
 
 
 

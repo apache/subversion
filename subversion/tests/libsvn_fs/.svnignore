@@ -9,4 +9,4 @@ strings-reps-test
 *.o
 *~
 .*~
-.*.ra_dav
+

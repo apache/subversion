@@ -8,4 +8,4 @@ getdate.c
 *.o
 *~
 .*~
-.*.ra_dav
+

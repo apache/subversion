@@ -9,4 +9,4 @@ svndiff-test
 *.o
 *~
 .*~
-.*.ra_dav
+

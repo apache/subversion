@@ -8,4 +8,4 @@ svn_wc_wrap.c
 *.o
 *~
 .*~
-.*.ra_dav
+
