@@ -767,12 +767,11 @@ close_directory (void *dir_baton)
         return err;
       
       /* Open log file */
-      err = svn_wc__open_adm_file (&log_fp,
-                                   db->path,
-                                   SVN_WC__ADM_LOG,
-                                   (APR_WRITE | APR_CREATE), /* not excl */
-                                   db->pool);
-      if (err) return err;
+      SVN_ERR (svn_wc__open_adm_file (&log_fp,
+                                      db->path,
+                                      SVN_WC__ADM_LOG,
+                                      (APR_WRITE | APR_CREATE), /* not excl */
+                                      db->pool));
 
       /* Merge pending properties into temporary files and detect
          conflicts. */
@@ -802,10 +801,9 @@ close_directory (void *dir_baton)
 
 
       /* Are the directory's props locally modified? */
-      err = svn_wc_props_modified_p (&prop_modified,
-                                     db->path,
-                                     db->pool);
-      if (err) return err;
+      SVN_ERR (svn_wc_props_modified_p (&prop_modified,
+                                        db->path,
+                                        db->pool));
 
       /* Log entry which sets a new property timestamp, but *only* if
          there are no local changes to the props. */
@@ -836,20 +834,17 @@ close_directory (void *dir_baton)
         }
       
       /* The log is ready to run, close it. */
-      err = svn_wc__close_adm_file (log_fp,
-                                    db->path,
-                                    SVN_WC__ADM_LOG,
-                                    1, /* sync */
-                                    db->pool);
-      if (err) return err;
+      SVN_ERR (svn_wc__close_adm_file (log_fp,
+                                       db->path,
+                                       SVN_WC__ADM_LOG,
+                                       1, /* sync */
+                                       db->pool));
 
       /* Run the log. */
-      err = svn_wc__run_log (db->path, db->pool);
-      if (err) return err;
+      SVN_ERR (svn_wc__run_log (db->path, db->pool));
 
       /* Unlock, we're done modifying directory props. */
-      err = svn_wc__unlock (db->path, db->pool);
-      if (err) return err;            
+      SVN_ERR (svn_wc__unlock (db->path, db->pool));
     }
 
 
@@ -1951,10 +1946,9 @@ close_file (void *file_baton)
       svn_boolean_t prop_modified;
 
       /* Are the working file's props locally modified? */
-      err = svn_wc_props_modified_p (&prop_modified,
-                                     fb->path,
-                                     fb->pool);
-      if (err) return err;
+      SVN_ERR (svn_wc_props_modified_p (&prop_modified,
+                                        fb->path,
+                                        fb->pool));
 
       /* Log entry which sets a new property timestamp, but only if
          there are no local changes to the props. */

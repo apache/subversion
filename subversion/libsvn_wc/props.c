@@ -235,14 +235,12 @@ svn_wc__load_prop_file (const char *propfile_path,
                         apr_hash_t *hash,
                         apr_pool_t *pool)
 {
-  svn_error_t *err;
   enum svn_node_kind kind;
 
   /* ### be nice to remove this... */
   svn_stringbuf_t *pathbuf = svn_stringbuf_create (propfile_path, pool);
 
-  err = svn_io_check_path (pathbuf, &kind, pool);
-  if (err) return err;
+  SVN_ERR (svn_io_check_path (pathbuf, &kind, pool));
 
   if (kind == svn_node_file)
     {
@@ -389,7 +387,6 @@ svn_wc__do_property_merge (const char *path,
                            apr_hash_t **conflicts)
 {
   int i;
-  svn_error_t *err;
   svn_boolean_t is_dir;
   const char * str;
   apr_off_t len;
@@ -435,29 +432,22 @@ svn_wc__do_property_merge (const char *path,
     }
 
   /* Get paths to the local and pristine property files. */
-  err = svn_wc__prop_path (&local_propfile_path, full_path, 0, pool);
-  if (err) return err;
+  SVN_ERR (svn_wc__prop_path (&local_propfile_path, full_path, 0, pool));
   
-  err = svn_wc__prop_base_path (&base_propfile_path, full_path, 0, pool);
-  if (err) return err;
+  SVN_ERR (svn_wc__prop_base_path (&base_propfile_path, full_path, 0, pool));
 
   /* Load the base & working property files into hashes */
   localhash = apr_hash_make (pool);
   basehash = apr_hash_make (pool);
   
-  err = svn_wc__load_prop_file (base_propfile_path->data,
-                                basehash, pool);
-  if (err) return err;
+  SVN_ERR (svn_wc__load_prop_file (base_propfile_path->data, basehash, pool));
   
-  err = svn_wc__load_prop_file (local_propfile_path->data,
-                                localhash, pool);
-  if (err) return err;
+  SVN_ERR (svn_wc__load_prop_file (local_propfile_path->data, localhash, pool));
   
   /* Deduce any local propchanges the user has made since the last
      update.  */
-  err = svn_wc__get_local_propchanges (&local_propchanges,
-                                       localhash, basehash, pool);
-  if (err) return err;
+  SVN_ERR (svn_wc__get_local_propchanges (&local_propchanges,
+                                          localhash, basehash, pool));
   
   /* Looping over the array of `update' propchanges we want to apply: */
   for (i = 0; i < propchanges->nelts; i++)
@@ -530,17 +520,15 @@ svn_wc__do_property_merge (const char *path,
                 svn_stringbuf_t *tmpname;
 
                 /* Get path to /temporary/ local prop file */
-                err = svn_wc__prop_path (&tmppath, full_path, 1, pool);
-                if (err) return err;
+                SVN_ERR (svn_wc__prop_path (&tmppath, full_path, 1, pool));
 
                 /* Reserve a .prej file based on it.  */
-                err = svn_io_open_unique_file (&reject_tmp_fp,
-                                               &reject_tmp_path,
-                                               tmppath,
-                                               SVN_WC__PROP_REJ_EXT,
-                                               FALSE,
-                                               pool);
-                if (err) return err;
+                SVN_ERR (svn_io_open_unique_file (&reject_tmp_fp,
+                                                  &reject_tmp_path,
+                                                  tmppath,
+                                                  SVN_WC__PROP_REJ_EXT,
+                                                  FALSE,
+                                                  pool));
 
                 /* reject_tmp_path is an absolute path at this point,
                    but that's no good for us.  We need to convert this
@@ -571,10 +559,9 @@ svn_wc__do_property_merge (const char *path,
               }
 
             /* Append the conflict to the open tmp/PROPS/---.prej file */
-            err = append_prop_conflict (reject_tmp_fp,
-                                        conflict_description,
-                                        pool);
-            if (err) return err;
+            SVN_ERR (append_prop_conflict (reject_tmp_fp,
+                                           conflict_description,
+                                           pool));
 
             continue;  /* skip to the next update_change */
           }
@@ -592,21 +579,17 @@ svn_wc__do_property_merge (const char *path,
   paths computed are ABSOLUTE pathnames, which is what our disk
   routines require.*/
 
-  err = svn_wc__prop_base_path (&base_prop_tmp_path, full_path, 1, pool);
-  if (err) return err;
+  SVN_ERR (svn_wc__prop_base_path (&base_prop_tmp_path, full_path, 1, pool));
 
-  err = svn_wc__prop_path (&local_prop_tmp_path, full_path, 1, pool);
-  if (err) return err;
+  SVN_ERR (svn_wc__prop_path (&local_prop_tmp_path, full_path, 1, pool));
   
   /* Write the merged pristine prop hash to either
      path/.svn/tmp/prop-base/name or path/.svn/tmp/dir-prop-base */
-  err = svn_wc__save_prop_file (base_prop_tmp_path->data, basehash, pool);
-  if (err) return err;
+  SVN_ERR (svn_wc__save_prop_file (base_prop_tmp_path->data, basehash, pool));
   
   /* Write the merged local prop hash to path/.svn/tmp/props/name or
      path/.svn/tmp/dir-props */
-  err = svn_wc__save_prop_file (local_prop_tmp_path->data, localhash, pool);
-  if (err) return err;
+  SVN_ERR (svn_wc__save_prop_file (local_prop_tmp_path->data, localhash, pool));
   
   /* Compute pathnames for the "mv" log entries.  Notice that these
      paths are RELATIVE pathnames (each beginning with ".svn/"), so
@@ -667,11 +650,10 @@ svn_wc__do_property_merge (const char *path,
                                   
       /* Now try to get the name of a pre-existing .prej file from the
          entries file */
-      err = svn_wc__get_existing_prop_reject_file (&reject_path,
-                                                   path,
-                                                   entryname,
-                                                   pool);
-      if (err) return err;
+      SVN_ERR (svn_wc__get_existing_prop_reject_file (&reject_path,
+                                                      path,
+                                                      entryname,
+                                                      pool));
 
       /* ### it would be nice if the XML funcs too an svn_string_t */
       if (reject_path != NULL)
@@ -693,13 +675,12 @@ svn_wc__do_property_merge (const char *path,
           else
             svn_path_add_component_nts (full_reject_path, name);
 
-          err = svn_io_open_unique_file (&reject_fp,
-                                         &reserved_path,
-                                         full_reject_path,
-                                         SVN_WC__PROP_REJ_EXT,
-                                         FALSE,
-                                         pool);
-          if (err) return err;
+          SVN_ERR (svn_io_open_unique_file (&reject_fp,
+                                            &reserved_path,
+                                            full_reject_path,
+                                            SVN_WC__PROP_REJ_EXT,
+                                            FALSE,
+                                            pool));
 
           status = apr_file_close (reject_fp);
           if (status)
@@ -903,7 +884,6 @@ svn_wc_prop_list (apr_hash_t **props,
                   const char *path,
                   apr_pool_t *pool)
 {
-  svn_error_t *err;
   enum svn_node_kind pkind;
   svn_stringbuf_t *prop_path;
 
@@ -913,12 +893,10 @@ svn_wc_prop_list (apr_hash_t **props,
   *props = apr_hash_make (pool);
 
   /* Construct a path to the relevant property file */
-  err = svn_wc__prop_path (&prop_path, pathbuf, 0, pool);
-  if (err) return err;
+  SVN_ERR (svn_wc__prop_path (&prop_path, pathbuf, 0, pool));
 
   /* Does the property file exist? */
-  err = svn_io_check_path (prop_path, &pkind, pool);
-  if (err) return err;
+  SVN_ERR (svn_io_check_path (prop_path, &pkind, pool));
   
   if (pkind == svn_node_none)
     /* No property file exists.  Just go home, with an empty hash. */
@@ -926,8 +904,7 @@ svn_wc_prop_list (apr_hash_t **props,
   
   /* else... */
 
-  err = svn_wc__load_prop_file (prop_path->data, *props, pool);
-  if (err) return err;
+  SVN_ERR (svn_wc__load_prop_file (prop_path->data, *props, pool));
 
   return SVN_NO_ERROR;
 }

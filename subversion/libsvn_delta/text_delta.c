@@ -506,12 +506,10 @@ svn_txdelta_send_string (svn_stringbuf_t *string,
   window.pool = pool;
 
   /* Push the one window at the handler. */
-  err = (*handler) (&window, handler_baton);
-  if (err) return err;
+  SVN_ERR ((*handler) (&window, handler_baton));
   
   /* Push a NULL at the handler, because we're done. */
-  err = (*handler) (NULL, handler_baton);
-  if (err) return err;
+  SVN_ERR ((*handler) (NULL, handler_baton));
   
   return SVN_NO_ERROR;
 }
