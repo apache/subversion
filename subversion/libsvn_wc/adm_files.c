@@ -1056,6 +1056,34 @@ init_adm_file (svn_stringbuf_t *path,
 }
 
 
+static svn_error_t *
+init_adm_tmp_area (svn_stringbuf_t *path,
+                   apr_pool_t *pool)
+{
+  /* SVN_WC__ADM_TMP */
+  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_TMP,
+                                   svn_node_dir, 0, pool));
+  
+  /* SVN_WC__ADM_TMP/SVN_WC__ADM_TEXT_BASE */
+  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_TEXT_BASE,
+                                   svn_node_dir, 1, pool));
+
+  /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROP_BASE */
+  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_PROP_BASE,
+                                   svn_node_dir, 1, pool));
+
+  /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROPS */
+  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_PROPS,
+                                   svn_node_dir, 1, pool));
+
+  /* SVN_WC__ADM_TMP/SVN_WC__ADM_WCPROPS */
+  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_WCPROPS,
+                                   svn_node_dir, 1, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Set up a new adm area, with appropriate ancestry. 
    The adm area starts out locked; remember to unlock it when done. */
 static svn_error_t *
@@ -1063,8 +1091,6 @@ init_adm (svn_stringbuf_t *path,
           svn_stringbuf_t *ancestor_path,
           apr_pool_t *pool)
 {
-  svn_error_t *err;
-
   /* Initial contents for certain adm files. */
   const char *format_contents = "1\n";
   const char *readme_contents =
@@ -1072,131 +1098,65 @@ init_adm (svn_stringbuf_t *path,
     "Visit http://subversion.tigris.org/ for more information.\n";
 
   /* First, make an empty administrative area. */
-  err = make_empty_adm (path, pool);
+  make_empty_adm (path, pool);
 
   /* Lock it immediately.  Theoretically, no compliant wc library
      would ever consider this an adm area until a README file were
      present... but locking it is still appropriately paranoid. */
-  err = svn_wc__lock (path, 0, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc__lock (path, 0, pool));
 
 
   /** Make subdirectories. ***/
 
-  /* SVN_WC__ADM_TMP */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_TMP,
-                                svn_node_dir, 0, pool);
-  if (err)
-    return err;
-  
   /* SVN_WC__ADM_TEXT_BASE */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_TEXT_BASE,
-                                svn_node_dir, 0, pool);
-  if (err)
-    return err;
-
+  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_TEXT_BASE,
+                                   svn_node_dir, 0, pool));
 
   /* SVN_WC__ADM_PROP_BASE */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_PROP_BASE,
-                                svn_node_dir, 0, pool);
-  if (err)
-    return err;
-
+  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_PROP_BASE,
+                                   svn_node_dir, 0, pool));
 
   /* SVN_WC__ADM_PROPS */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_PROPS,
-                                svn_node_dir, 0, pool);
-  if (err)
-    return err;
-
+  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_PROPS,
+                                   svn_node_dir, 0, pool));
 
   /* SVN_WC__ADM_WCPROPS */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_WCPROPS,
-                                svn_node_dir, 0, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_WCPROPS,
+                                   svn_node_dir, 0, pool));
 
-
-  /** Make sub-subdirectories. ***/
-
-  /* SVN_WC__ADM_TMP/SVN_WC__ADM_TEXT_BASE */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_TEXT_BASE,
-                                svn_node_dir, 1, pool);
-  if (err)
-    return err;
-
-
-  /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROP_BASE */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_PROP_BASE,
-                                svn_node_dir, 1, pool);
-  if (err)
-    return err;
-
-
-  /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROPS */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_PROPS,
-                                svn_node_dir, 1, pool);
-  if (err)
-    return err;
-
-  /* SVN_WC__ADM_TMP/SVN_WC__ADM_WCPROPS */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_WCPROPS,
-                                svn_node_dir, 1, pool);
-  if (err)
-    return err;
-
-
+  /** Init the tmp area. ***/
+  SVN_ERR (init_adm_tmp_area (path, pool));
+  
   /** Initialize each administrative file. */
 
   /* SVN_WC__ADM_FORMAT */
-  err = init_adm_file (path, SVN_WC__ADM_FORMAT,
-                       svn_stringbuf_create (format_contents, pool), pool);
-  if (err)
-    return err;
-
+  SVN_ERR (init_adm_file (path, SVN_WC__ADM_FORMAT,
+                          svn_stringbuf_create (format_contents, pool), pool));
 
   /* SVN_WC__ADM_ENTRIES */
-  err = svn_wc__entries_init (path, ancestor_path, pool);
-  if (err)
-    return err;
-
+  SVN_ERR (svn_wc__entries_init (path, ancestor_path, pool));
 
   /* SVN_WC__ADM_DIR_PROPS */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_PROPS,
-                                svn_node_file, 0, pool);
-  if (err)
-    return err;
-
+  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_PROPS,
+                                   svn_node_file, 0, pool));
 
   /* SVN_WC__ADM_DIR_PROP_BASE */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_PROP_BASE,
-                                svn_node_file, 0, pool);
-  if (err)
-    return err;
-
+  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_PROP_BASE,
+                                   svn_node_file, 0, pool));
 
   /* SVN_WC__ADM_DIR_WCPROPS */
-  err = svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_WCPROPS,
-                                svn_node_file, 0, pool);
-  if (err)
-    return err;
-
+  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_WCPROPS,
+                                   svn_node_file, 0, pool));
 
   /* THIS FILE MUST BE CREATED LAST: 
      After this exists, the dir is considered complete. */
-  err = init_adm_file (path, SVN_WC__ADM_README,
-                       svn_stringbuf_create (readme_contents, pool),
-                       pool);
-  if (err)
-    return err;
-
+  SVN_ERR (init_adm_file (path, SVN_WC__ADM_README,
+                          svn_stringbuf_create (readme_contents, pool),
+                          pool));
 
   /* Now unlock it.  It's now a valid working copy directory, that
      just happens to be at revision 0. */
-  err = svn_wc__unlock (path, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc__unlock (path, pool));
 
   /* Else no problems, we're outta here. */
   return SVN_NO_ERROR;
@@ -1264,6 +1224,40 @@ svn_wc__adm_destroy (svn_stringbuf_t *path, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__adm_cleanup_tmp_area (svn_stringbuf_t *path, apr_pool_t *pool)
+{
+  svn_boolean_t was_locked;
+  svn_stringbuf_t *tmp_path;
+  apr_status_t apr_err;
+
+  /* Lock the admin area if it's not already locked. */
+  SVN_ERR (svn_wc__locked (&was_locked, path, pool));
+  if (! was_locked)
+    SVN_ERR (svn_wc__lock (path, 0, pool));
+
+  /* Get the path to the tmp area, and blow it away. */
+  tmp_path = svn_stringbuf_dup (path, pool);
+  extend_with_adm_name (tmp_path, 0, pool, SVN_WC__ADM_TMP, NULL);
+  apr_err = apr_dir_remove_recursively (tmp_path->data, pool);
+  if (apr_err)
+    return svn_error_createf 
+      (apr_err, 0, NULL, pool,
+       "error removing tmp area in administrative directory for %s",
+       path->data);
+
+  /* Now, rebuild the tmp area. */
+  SVN_ERR (init_adm_tmp_area (path, pool));
+
+  /* Unlock the admin area if it wasn't locked when we entered this
+     function. */
+  if (! was_locked)
+    SVN_ERR (svn_wc__unlock (path, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* 
