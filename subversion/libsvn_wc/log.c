@@ -163,40 +163,45 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
 {
   struct log_runner *loggy = (struct log_runner *) userData;
   svn_error_t *err = NULL;
+
+  /* Most elements have a name attribute, so try to grab one now. */
   const char *name = svn_xml_get_attr_value ("name", atts);
 
-  if (! name)
+  if (strcmp (eltname, "merge-text") == 0)
     {
-      /* Everything has a name attribute, so check for that first. */
-      signal_error (loggy, "missing name attr in %s");
-    }
-  else
-    {
-      if (strcmp (eltname, "merge-text") == 0)
-        {
-          const char *saved_mods = svn_xml_get_attr_value ("saved-mods", atts);
-          /* Note that saved_mods is allowed to be null. */
-          err = merge_text (loggy->path, name, saved_mods, loggy->pool);
-        }
-      else if (strcmp (eltname, "replace-text-base") == 0)
-        {
-          err = replace_text_base (loggy->path, name, loggy->pool);
-        }
-      else if (strcmp (eltname, "set-version") == 0)
-        {
-          const char *verstr = svn_xml_get_attr_value ("version", atts);
-          
-          if (! verstr)
-            signal_error (loggy, "missing version attr in %s");
-          else
-            err = set_version (loggy->path, name, atoi (verstr), loggy->pool);
-        }
+      const char *saved_mods = svn_xml_get_attr_value ("saved-mods", atts);
+
+      if (! name)
+        signal_error (loggy, "missing name attr in %s");
       else
-        signal_error (loggy, "unrecognized element in %s");
+        /* Note that saved_mods is allowed to be null. */
+        err = merge_text (loggy->path, name, saved_mods, loggy->pool);
     }
+  else if (strcmp (eltname, "replace-text-base") == 0)
+    {
+      if (! name)
+        signal_error (loggy, "missing name attr in %s");
+      else
+        err = replace_text_base (loggy->path, name, loggy->pool);
+    }
+  else if (strcmp (eltname, "set-version") == 0)
+    {
+      const char *verstr = svn_xml_get_attr_value ("version", atts);
       
- if (err)
-   svn_xml_signal_bailout (err, loggy->parser);
+      if (! name)
+        signal_error (loggy, "missing name attr in %s");
+      else if (! verstr)
+        signal_error (loggy, "missing version attr in %s");
+      else
+        err = set_version (loggy->path, name, atoi (verstr), loggy->pool);
+    }
+  else if (strcmp (eltname, "wc-log") == 0)
+    /* ignore the expat pacifier */ ;
+  else
+    signal_error (loggy, "unrecognized element in %s");
+
+  if (err)
+    svn_xml_signal_bailout (err, loggy->parser);
 }
 
 
@@ -209,20 +214,20 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
   svn_error_t *err;
   apr_status_t apr_err;
   svn_xml_parser_t *parser;
-  struct log_runner *logress = apr_palloc (pool, sizeof (*logress));
+  struct log_runner *loggy = apr_palloc (pool, sizeof (*loggy));
   char buf[BUFSIZ];
   apr_ssize_t buf_len;
   apr_file_t *f = NULL;
 
   const char *log_start
-    = "<svn-wc-log xmlns=\"http://subversion.tigris.org/xmlns\">\n";
+    = "<wc-log xmlns=\"http://subversion.tigris.org/xmlns\">\n";
   const char *log_end
-    = "</svn-wc-log>\n";
+    = "</wc-log>\n";
 
-  logress->path = path;
-  logress->pool = pool;
-
-  parser = svn_xml_make_parser (logress, start_handler, NULL, NULL, pool);
+  parser = svn_xml_make_parser (loggy, start_handler, NULL, NULL, pool);
+  loggy->path   = path;
+  loggy->pool   = pool;
+  loggy->parser = parser;
   
   /* Expat wants everything wrapped in a top-level form, so start with
      a ghost open tag. */
@@ -263,11 +268,7 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
   } while (apr_err == APR_SUCCESS);
 
   /* Pacify Expat with a pointless closing element tag. */
-  err = svn_xml_parse (parser, log_end, sizeof (log_end), 0);
-  if (err)
-    return err;
-
-  err = svn_xml_parse (parser, NULL, 0, 1);
+  err = svn_xml_parse (parser, log_end, strlen (log_end), 1);
   if (err)
     return err;
 
