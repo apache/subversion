@@ -763,7 +763,7 @@ $ svn status
 M      ./bar.c               # the content in bar.c has local modifications
  M     ./baz.c               # baz.c has property but no content modifications
 ?      ./foo.o               # svn doesn't manage foo.o
-!      ./foo.c               # svn knows foo.c but a non-svn program deleted it
+!      ./some_dir            # svn manages this, but it's either missing or incomplete
 ~      ./qux                 # versioned as dir, but is file, or vice versa
 A  +   ./moved_dir           # added with history of where it came from
 M  +   ./moved_dir/README    # added with history and has local modifications
@@ -830,12 +830,14 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
             <listitem>
               <para>The file or directory
                 <filename>file_or_dir</filename> is under version
-                control but is missing from the working copy.  This
-                happens if the file or directory is removed using a
-                non-Subversion command.  A quick <command>svn
-                update</command> or <command>svn revert
-                file_or_dir</command> will restore the missing file or
-                directory.</para>
+                control but is missing or somehow incomplete.  The
+                item can be missing if it's removed using a
+                non-Subversion command.  In the case of a directory,
+                it can be incomplete if you happened to interrupt a
+                checkout or update.  A quick <command>svn
+                update</command> will refetch the file or directory
+                from the repository, or <command>svn revert
+                file</command> will restore a missing file.</para>
             </listitem>
           </varlistentry>
 

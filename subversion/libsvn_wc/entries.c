@@ -88,21 +88,29 @@ svn_wc__entries_init (const char *path,
                          NULL);
 
   /* Add an entry for the dir itself -- name is absent, only the
-     revision and default ancestry are present as xml attributes. */
-  svn_xml_make_open_tag 
-    (&accum,
-     pool,
-     svn_xml_self_closing,
-     SVN_WC__ENTRIES_ENTRY,
-     SVN_WC__ENTRY_ATTR_KIND,
-     SVN_WC__ENTRIES_ATTR_DIR_STR,
-     SVN_WC__ENTRY_ATTR_REVISION,
-     initial_revstr,
-     SVN_WC__ENTRY_ATTR_URL,
-     url,
-     SVN_WC__ENTRY_ATTR_INCOMPLETE,
-     "true",
-     NULL);
+     revision and default ancestry are present as xml attributes, and
+     possibly an 'incomplete' flag if  the revnum is > 0. */
+  if ((initial_rev == 0) || (! SVN_IS_VALID_REVNUM(initial_rev)))
+    svn_xml_make_open_tag 
+      (&accum,
+       pool,
+       svn_xml_self_closing,
+       SVN_WC__ENTRIES_ENTRY,
+       SVN_WC__ENTRY_ATTR_KIND, SVN_WC__ENTRIES_ATTR_DIR_STR,
+       SVN_WC__ENTRY_ATTR_REVISION, initial_revstr,
+       SVN_WC__ENTRY_ATTR_URL, url,
+       NULL);    
+  else
+    svn_xml_make_open_tag 
+      (&accum,
+       pool,
+       svn_xml_self_closing,
+       SVN_WC__ENTRIES_ENTRY,
+       SVN_WC__ENTRY_ATTR_KIND, SVN_WC__ENTRIES_ATTR_DIR_STR,
+       SVN_WC__ENTRY_ATTR_REVISION, initial_revstr,
+       SVN_WC__ENTRY_ATTR_URL, url,
+       SVN_WC__ENTRY_ATTR_INCOMPLETE, "true",
+       NULL);
 
   /* Close the top-level form. */
   svn_xml_make_close_tag (&accum,
