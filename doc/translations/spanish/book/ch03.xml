@@ -998,83 +998,98 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
           <varlistentry>
             <term><computeroutput>!      file_or_dir</computeroutput></term>
             <listitem>
-              <para>The file or directory
-                <filename>file_or_dir</filename> is under version
-                control but is missing or somehow incomplete.  The
-                item can be missing if it's removed using a
-                non-Subversion command.  In the case of a directory,
-                it can be incomplete if you happened to interrupt a
-                checkout or update.  A quick <command>svn
-                update</command> will refetch the file or directory
-                from the repository, or <command>svn revert
-                file</command> will restore a missing file.</para>
+              <para>El fichero o directorio
+                <filename>file_or_dir</filename> está bajo el control de
+                versiones pero falta o está de alguna manera incompleto.
+                El objecto puede faltar si se ha borrado usando un comando
+                ajeno<!--TODO:non-Subversion command--> a Subversion. En
+                el caso de un directorio, puede estar incompleto si ha
+                interrumpido una descarga o una actualización.
+                Un rápido <command>svn update</command> repondrá <!--TODO:
+                refetch-->el fichero o el directorio desde el repositorio,
+                o <command>svn revert file</command> restaurará un
+                archivo que falta.</para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><computeroutput>~     file_or_dir</computeroutput></term>
             <listitem>
-              <para>The file or directory
-                <filename>file_or_dir</filename> is in the repository as
-                one kind of object, but what's actually in your working
-                copy is some other kind.  For example, Subversion might
-                have a file in the repository, but you removed the file
-                and created a directory in its place, without using the
-                <command>svn delete</command> or <command>svn add</command>
-                commands.</para>
+              <para>El fichero o directorio
+                <filename>file_or_dir</filename> está en el repositorio
+                como un tipo<!--TODO: as one kind of object--> de objeto,
+                pero actualmente está en su copia de trabajo como otro
+                tipo. Por ejemplo, Subversion pudo tener un fichero en
+                el repositorio, pero usted borró el fichero y creó un
+                directorio en su lugar, sin usar los comandos
+                <command>svn delete</command> o <command>svn add</command>.
+              </para>
             </listitem>
           </varlistentry>
 
           <varlistentry>
             <term><computeroutput>I      file_or_dir</computeroutput></term>
             <listitem>
-              <para>Subversion is <quote>ignoring</quote> the file or
-                directory <filename>file_or_dir</filename>, probably
-                because you told it to.  For more information on ignored
-                files, see <xref linkend="svn-ch-7-sect-2.3.3"/>.
-                Note that this symbol only shows up if you pass the
-                <option>--no-ignore</option> option to <command>svn
-                status</command>.</para>
+              <para>Subversion está <quote>ignorando</quote> el fichero o
+                directorio <filename>file_or_dir</filename>, probablemente
+                porque usted se lo dijo. Para más información sobre
+                ficheros ignorados, vea <xref
+                linkend="svn-ch-7-sect-2.3.3"/>. Observe que este simbolo
+                solo aparece si le pasa la opción
+                <option>--no-ignore</option> a <command>svn status</command>.
+              </para>
             </listitem>
           </varlistentry>
 
         </variablelist>
 
-        <para>The second column tells the status of a file or
-          directory's properties (see <xref
-          linkend="svn-ch-7-sect-2"></xref> for more information on
-          properties).  If an <computeroutput>M</computeroutput>
-          appears in the second column, then the properties have been
-          modified, otherwise a whitespace will be printed.</para>
+        <para>La segunda columna dice el estado de las propiedades de un
+          fichero o un directorio (vea <xref
+          linkend="svn-ch-7-sect-2"></xref> para más información sobre
+          propiedades). Si aparece una <computeroutput>M</computeroutput>
+          en la segunda columna, entonces las propiedades han sido
+          modificadas, si no un espacio en blanco <!--TODO:whitespace-->
+          será impreso.</para>
         
-        <para>The third column will only show whitespace or an
-          <computeroutput>L</computeroutput> which means that
-          Subversion has locked the item in
-          the <filename>.svn</filename> working area.  You will see an
-          <computeroutput>L</computeroutput> if you run <command>svn
-          status</command> in a directory where an <command>svn
-          commit</command> is in progress&mdash;perhaps when you are
-          editing the log message.  If Subversion is not running, then
-          presumably Subversion was interrupted and the lock needs to
-          be cleaned up by running <command>svn cleanup</command>
-          (more about that later in this chapter).</para>
+        <para>La tercera columna solo mostrará un espacio en blanco
+          o una <computeroutput>L</computeroutput>
+          la cual significa que Subversion ha bloqueado <!--TODO:locked-->
+          el objeto en el area de trabajo <filename>.svn</filename>. Usted
+          verá una <computeroutput>L</computeroutput> si ejecuta
+          <command>svn status</command> en un directorio donde un
+          <command>svn commit</command> esté en progreso&mdash;quizás
+          cuando esté editando el informe de cambios. Si Subversion
+          no se está ejecutando, entonces probablemente Subversion
+          fue interrumpido y el bloqueo necesita ser eliminado
+          <!--TODO:the lock needs to be cleaned up--> ejecutando
+          <command>svn cleanup</command> (más sobre eso más adelante
+          en este capítulo).</para>
         
-        <para>The fourth column will only show whitespace or a
-          <computeroutput>+</computeroutput> which means that the file
-          or directory is scheduled to be added or modified with
-          additional attached history.  This typically happens when you
-          <command>svn move</command> or <command>svn copy</command> a file
-          or directory.  If you see
-          <computeroutput>A&nbsp;&nbsp;+</computeroutput>, this means
-          the item is scheduled for addition-with-history.  It could be
-          a file, or the root of a copied directory.
-          <computeroutput>+</computeroutput>
-          means the item is part of a subtree scheduled for
-          addition-with-history, i.e. some parent got copied, and it's
-          just coming along for the ride.
-          <computeroutput>M&nbsp;&nbsp;+</computeroutput> means the item
-          is part of a subtree scheduled for addition-with-history,
-          <emphasis>and</emphasis> it has local modifications.  When you
+        <para>La cuarta columna solo mostrará un espacio blanco o un
+          <computeroutput>+</computeroutput> el cual significa
+          que el fichero o directorio está programado <!--TODO:
+          is scheduled-->para ser añadido o modificado con historial
+          adicional adjunto<!--TODO:with additional attached history-->.
+          Esto ocurre típicamente cuando usted <command>svn move</command>
+          o <command>svn copy</command> un fichero o directorio. Si usted
+          ve <computeroutput>A&nbsp;&nbsp;+</computeroutput>, esto
+          significa que el objeto está programado para la
+          adición-con-historial<!--TODO:for addition-with-history-->.
+          Este puede ser un fichero, o la raiz de un directorio copiado.
+          <computeroutput>+</computeroutput> significa que el objeto
+          es parte de un subárbol programado para la
+          adición-con-historial, p.e.<!--TODO:i.e.-->algún padre fue
+          copiado,and it's just coming along for the ride<!--TODO:
+          i.e. some parent got copied, and it's just coming along for
+          the ride....demasiado dificil :-(-->.
+          <computeroutput>M&nbsp;&nbsp;+</computeroutput> significa que
+          el objeto es parte de un subárbol programado para la
+          adición-con-historial, <emphasis>y</emphasis> este tiene
+          modificaciones locales. Cuando envie los cambios<!--TODO:commit-->
+          ,
+
+
+ When you
           commit, first the parent will be added-with-history (copied),
           which means this file will automatically exist in the copy.
           Then the local modifications will be uploaded into the
