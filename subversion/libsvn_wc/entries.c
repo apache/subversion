@@ -601,7 +601,7 @@ svn_wc_entries_read (apr_hash_t **entries,
 static svn_error_t *
 write_entry (svn_string_t **output,
              svn_wc_entry_t *this_entry,
-             svn_string_t *this_entry_name,
+             const char *this_entry_name,
              svn_wc_entry_t *this_dir,
              apr_pool_t *pool)
 {
@@ -614,10 +614,10 @@ write_entry (svn_string_t **output,
         b. whose revision or ancestor is valid and different than 
            that of the "this dir" entry.
   */
-  if (strcmp (this_entry_name->data, SVN_WC_ENTRY_THIS_DIR))
+  if (strcmp (this_entry_name, SVN_WC_ENTRY_THIS_DIR))
     {
       /* This is NOT the "this dir" entry */
-      if (! strcmp (this_entry_name->data, "."))
+      if (! strcmp (this_entry_name, "."))
         {
           /* By golly, if this isn't recognized as the "this dir"
              entry, and it looks like '.', we're just asking for an
@@ -657,8 +657,8 @@ write_entry (svn_string_t **output,
           if (this_entry->ancestor)
             {
               this_path = svn_string_dup (this_dir->ancestor, pool);
-              svn_path_add_component (this_path, this_entry_name,
-                                      svn_path_repos_style);
+              svn_path_add_component_nts (this_path, this_entry_name,
+                                          svn_path_repos_style);
               if (svn_string_compare (this_path, this_entry->ancestor))
                 apr_hash_set (this_entry->attributes, 
                               SVN_WC_ENTRY_ATTR_ANCESTOR,
@@ -689,8 +689,6 @@ svn_wc__entries_write (apr_hash_t *entries,
   apr_status_t apr_err;
   apr_hash_index_t *hi;
   svn_wc_entry_t *this_dir;
-  svn_string_t *this_dir_name = 
-    svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
 
   /* Open entries file for writing. */
   err = svn_wc__open_adm_file (&outfile, path, SVN_WC__ADM_ENTRIES,
@@ -711,7 +709,8 @@ svn_wc__entries_write (apr_hash_t *entries,
                            APR_HASH_KEY_STRING);
 
   /* Write out "this dir" */
-  SVN_ERR (write_entry (&bigstr, this_dir, this_dir_name, this_dir, pool));
+  SVN_ERR (write_entry (&bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR, 
+                        this_dir, pool));
 
   for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
     {
@@ -719,24 +718,20 @@ svn_wc__entries_write (apr_hash_t *entries,
       apr_size_t keylen;
       void *val;
       svn_wc_entry_t *this_entry;
-      svn_string_t *name;
 
       /* Get the entry and make sure its attributes are up-to-date. */
       apr_hash_this (hi, &key, &keylen, &val);
       this_entry = val;
 
-      /* Get the entry's name. */
-      name = svn_string_ncreate (key, keylen, pool);
-
       /* Don't rewrite the "this dir" entry! */
-      if (svn_string_compare (name, this_dir_name))
+      if (! strcmp ((const char *)key, SVN_WC_ENTRY_THIS_DIR ))
         continue;
 
       /* Normalize this entry */
       normalize_entry (this_entry, pool);
 
       /* Append the entry to BIGSTR */
-      write_entry (&bigstr, this_entry, name, this_dir, pool);
+      write_entry (&bigstr, this_entry, (const char *)key, this_dir, pool);
     }
 
   svn_xml_make_close_tag (&bigstr, pool, SVN_WC__ENTRIES_TOPLEVEL);
