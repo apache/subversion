@@ -9,7 +9,7 @@ $LastChangedDate$
 
 "Is Subversion stable enough for me to use for my own projects?"
 
-We think so!  Read the full FAQ answer on the website:  
+We think so!  Read the full FAQ answer on the website:
   http://subversion.tigris.org/project_faq.html#stable
 
 
@@ -311,7 +311,7 @@ I.    BUILD REQUIREMENTS
 
 
       11. Building The Documentation
-  
+
       The master source format for Subversion's documentation is
       Docbook Lite.  See doc/book/README for instructions how to
       compile the book into a useful format.
@@ -639,25 +639,25 @@ II.   INSTALLATION
       top-level Subversion directory.
 
       Set the HTTPD environment variable to point to your Apache source.
-      For example, if you unzipped apache in C:\Projects\apache\, set 
+      For example, if you unzipped apache in C:\Projects\apache\, set
       HTTPD to C:\Projects\apache\httpd-2.0.45.
 
 
       Open the Apache.dsw file and build the Apache source.
-      If you don't build this, mod_dav_svn will not build, and you will 
-      need to build each project individually since mod_dav_svn is the first 
+      If you don't build this, mod_dav_svn will not build, and you will
+      need to build each project individually since mod_dav_svn is the first
       project in the generated __ALL__ target.
 
       Run "python gen-make.py -t dsp" to generate the Visual C++ 6.x
-      project files.  Run "python gen-make.py -help" for alternative 
+      project files.  Run "python gen-make.py -help" for alternative
       (experimental) makefile formats.
 
       Open the subversion_msvc.dsw file gen-make creates in the top-level
-      directory. Compile the __ALL__ target to compile everything, or 
+      directory. Compile the __ALL__ target to compile everything, or
       select individual targets.
 
       The following is a sample script.
-      gunzip, tar, and unzip are native win32 apps taken from 
+      gunzip, tar, and unzip are native win32 apps taken from
           http://unxutils.sourceforge.net/
 
       c:\Projects> svn co http://svn.collab.net/repos/svn/trunk subversion
@@ -780,7 +780,7 @@ III.  BUILDING A SUBVERSION SERVER
       to locate the apxs script:
 
           $ ./configure --with-apxs=/home/fred/apache2/bin/apxs
- 
+
 
       Note: it *is* possible to build mod_dav_svn as a static library
       and link it directly into Apache. Possible, but painful. Stick
@@ -843,7 +843,7 @@ III.  BUILDING A SUBVERSION SERVER
       line for you.  But if apache gives you an error like "Unknown
       DAV provider: svn", then you may want to verify that this line
       exists in your httpd.conf:
-  
+
          LoadModule dav_svn_module     modules/mod_dav_svn.so
 
       Next, add this to the *bottom* of your httpd.conf:
