@@ -15,7 +15,9 @@
  *
  */
 import java.util.Vector;
+import java.util.Hashtable;
 import java.util.Date;
+import org.tigris.subversion.lib.*;
 
 /**
  * This classed is used for the unit tests. All of the C helper
@@ -56,6 +58,51 @@ public class NativeWrapper
      * @param date milliseconds since Januar 1, 1970 00:00
      */
     public static native Date dateCreate(long date);
+
+    /**
+     * setter for "url" in Entry class
+     */
+    public static native void entrySetUrl(Entry entry, String url);
+
+    /**
+     * setter for "revision" in Entry class
+     */
+    public static native void entrySetRevision(Entry entry, long revision);
+    
+    /**
+     * setter for "nodekind" in Entry class
+     */
+     public static native void entrySetNodekind(Entry entry, int nodekind);
+
+    /**
+     * setter for "schedule" in Entry class
+     */
+    public static native void entrySetSchedule(Entry entry, int schedule);
+    
+    /**
+     * setter for "conflicted" in Entry class
+     */
+    public static native void entrySetConflicted(Entry entry, boolean conflicted);
+       
+    /**
+     * setter for "copied" in Entry class
+     */
+    public static native void entrySetCopied(Entry entry, boolean copied);
+
+    /**
+     * setter for "texttime" in Entry class
+     */
+    public static native void entrySetTexttime(Entry entry, Date texttime);
+    
+    /**
+     * setter for "proptime" in Entry class
+     */
+    public static native void entrySetProptime(Entry entry, Date proptime);
+
+    /**
+     * setter for "attributes" in Entry class
+     */
+    public static native void entrySetAttributes(Entry entry, Hashtable attributes);
 }
 
 /* 

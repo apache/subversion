@@ -36,6 +36,7 @@ public class AllTests {
 	    //example:
 	    //suite.addTest( new StatusTest() );
 	    suite.addTestSuite( DateTests.class );
+	    suite.addTestSuite( EntryTests.class );
 	    suite.addTestSuite( VectorTests.class );
 
 	    return suite;
