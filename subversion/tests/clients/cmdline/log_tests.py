@@ -67,45 +67,93 @@ repos_path = None   # Where is the repos
 wc_path = None      # Where is the working copy
 
 def guarantee_repos_and_wc():
-  "Make a repository and working copy, commit to max_revision."
-  if (wc_dir != None): return
+  "Make a repository and working copy, commit max_revision revisions."
+  global wc_path
+
+  if (wc_path != None): return
 
   sbox = "log_tests"
-  if svntest.actions.make_repo_and_wc(sbox): return 1
-  
-  repos_path = os.path.join(svntest.main.general_repo_dir, sbox)
-  wc_path    = os.path.join(svntest.main.general_wc_dir, sbox)
 
-  # Now we have a repos and wc at revision 1.  Do a varied bunch of
-  # commits.  No copies yet, we'll wait till Ben is done.
+  if svntest.actions.make_repo_and_wc (sbox): return 1
 
-  # Revision 1: edit iota
+  # Now we have a repos and wc at revision 1.
+
+  repos_path = os.path.join (svntest.main.general_repo_dir, sbox)
+  wc_path    = os.path.join (svntest.main.general_wc_dir, sbox)
+  was_cwd = os.getcwd ()
+  os.chdir (wc_path)
+
+  # Set up the paths we'll be using most often.
+  iota_path = os.path.join ('iota')
+  mu_path = os.path.join ('A', 'mu')
+  B_path = os.path.join ('A', 'B')
+  omega_path = os.path.join ('A', 'D', 'H', 'omega')
+  pi_path = os.path.join ('A', 'D', 'G', 'pi')
+  rho_path = os.path.join ('A', 'D', 'G', 'rho')
+  alpha_path = os.path.join ('A', 'B', 'E', 'alpha')
+  beta_path = os.path.join ('A', 'B', 'E', 'beta')
+  psi_path = os.path.join ('A', 'D', 'H', 'psi')
+  epsilon_path = os.path.join ('A', 'C', 'epsilon')
+
+  # Do a varied bunch of commits.  No copies yet, we'll wait till Ben
+  # is done for that.
+
+  # Revision 2: edit iota
+  svntest.main.file_append (iota_path, "2")
+
+  # Revision 3: edit A/D/H/omega, A/D/G/pi, A/D/G/rho, and A/B/E/alpha
+  svntest.main.file_append (omega_path, "3")
+  svntest.main.file_append (pi_path, "3")
+  svntest.main.file_append (rho_path, "3")
+  svntest.main.file_append (alpha_path, "3")
+
+  # Revision 4: edit iota again, add A/C/epsilon
+  svntest.main.file_append (iota_path, "4")
+  svntest.main.file_append (epsilon_path, "4")
+  svntest.main.run_svn (None, 'add', epsilon_path)
+
+  # Revision 5: edit A/C/epsilon, delete A/D/G/rho
+  svntest.main.file_append (epsilon_path, "5")
+  svntest.main.run_svn (None, 'rm', rho_path)
+
+  # Revision 6: prop change on A/B, edit A/D/H/psi
+  svntest.main.run_svn (None, 'ps', 'blue', 'azul', B_path)  
+  svntest.main.file_append (psi_path, "6")
+
+  # Revision 7: edit A/mu, prop change on A/mu
+  svntest.main.file_append (mu_path, "7")
+  svntest.main.run_svn (None, 'ps', 'red', 'burgundy', mu_path)
+
+  # Revision 8: edit iota yet again, re-add A/D/G/rho
+  svntest.main.file_append (iota_path, "8")
+  svntest.main.file_append (rho_path, "8")
+  svntest.main.run_svn (None, 'add', rho_path)
+
+  # Revision 9: edit A/B/E/beta, delete A/B/E/alpha
+  svntest.main.file_append (beta_path, "9")
+  svntest.main.run_svn (None, 'rm', alpha_path)
 
 
-  # Revision 2: edit A/D/H/omega, A/D/G/pi, A/D/G/rho, and A/B/E/alpha
+  fooo
+  status_list = svntest.actions.get_virginal_status_list (wc_path, '2')
+  for item in status_list:
+    item[3]['repos_rev'] = '2'
+    if (item[0] == iota_path):
+      item[3]['wc_rev'] = '2'
+      item[3]['status'] = '__'
+  expected_status_tree = svntest.tree.build_generic_tree (status_list)
+  return svntest.actions.run_and_verify_commit (wc_path,
+                                                expected_output_tree,
+                                                expected_status_tree,
+                                                None,
+                                                None, None,
+                                                None, None,
+                                                omega_path)
 
 
-  # Revision 3: edit iota again, add A/C/epsilon
 
-
-  # Revision 4: edit A/C/epsilon, delete A/D/G/rho
-
-
-  # Revision 5: prop change on A/B, edit A/D/H/psi
-
-
-  # Revision 6: edit A/mu, prop change on A/mu
-
-
-  # Revision 7: edit iota yet again, re-add A/D/G/rho
-
-
-  # Revision 8: edit A/B/E/beta, delete A/B/E/alpha
-
-
-  # Revision 9: edit A/D/G/rho, edit iota one last time
-
-
+  # Restore.
+  os.chdir (was_cwd)
 
 
 ######################################################################

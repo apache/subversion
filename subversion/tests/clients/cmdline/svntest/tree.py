@@ -84,25 +84,7 @@ class SVNTreeNode:
       print "    Children: is a file."
 
 # reserved name of the root of the tree
-
 root_node_name = "__SVN_ROOT_NODE" 
-
-# Exception raised if you screw up in this module.
-
-class SVNTreeError(Exception): pass
-
-# Exception raised if two trees are unequal
-
-class SVNTreeUnequal(Exception): pass
-
-# Exception raised if one node is file and other is dir
-
-class SVNTypeMismatch(Exception): pass
-
-# Exception raised if get_child is passed a file.
-
-class SVNTreeIsNotDirectory(Exception): pass
-
 
 # Some attributes 'stack' on each other if the same node is added
 # twice to a tree.  Place all such special cases in here.

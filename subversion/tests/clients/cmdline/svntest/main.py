@@ -47,6 +47,19 @@ import copy    # for deepcopy()
 # Global stuff
 
 
+# Exception raised if you screw up in the tree module.
+class SVNTreeError(Exception): pass
+
+# Exception raised if two trees are unequal
+class SVNTreeUnequal(Exception): pass
+
+# Exception raised if one node is file and other is dir
+class SVNTypeMismatch(Exception): pass
+
+# Exception raised if get_child is passed a file.
+class SVNTreeIsNotDirectory(Exception): pass
+
+
 # The locations of the svn, svnadmin and svnlook binaries, relative to
 # the only scripts that import this file right now (they live in ../).
 svn_binary = os.path.abspath('../../../clients/cmdline/svn')
@@ -251,8 +264,8 @@ def run_one_test(n, test_list):
   # Run the test.
   try:
     error = test_list[n]()
-  except:
-    print "caught an exception, returning error instead"
+  except SVNTreeUnequal:
+    print "caught an SVNTreeUnequal exception, returning error instead"
     error = 1
   if error:
     print "FAIL:",
