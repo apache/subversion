@@ -73,10 +73,6 @@ typedef struct svn_xml_parser_t
 } svn_xml_parser_t;
 
 
-
-
-
-
 
 /*** Setting up a parser. ***/
 
@@ -95,6 +91,12 @@ svn_xml_make_parser (void *userData,
                      XML_EndElementHandler    end_handler,
                      XML_CharacterDataHandler data_handler);
 #endif
+
+
+svn_error_t *svn_xml_parse (svn_xml_parser_t *parser,
+                            const char *buf,
+                            apr_ssize_t len,
+                            svn_boolean_t is_final);
 
 
 
