@@ -681,20 +681,6 @@ error_exit (svn_error_t *err, FILE *stream, svn_boolean_t fatal,
 
 /* Version compatibility check */
 static svn_error_t *
-version_mismatch_error (const char *libname, const svn_version_t *versioninfo,
-                        svn_error_t *child)
-{
-  return svn_error_createf (SVN_ERR_VERSION_MISMATCH, child,
-                            _("The '%s' library is not compatible"
-                              " with this program; found version %d.%d.%d%s,"
-                              " expected version %s"),
-                            libname,
-                            versioninfo->major, versioninfo->minor,
-                            versioninfo->micro, versioninfo->tag,
-                            SVN_VER_NUMBER);
-}
-
-static svn_error_t *
 check_lib_versions (void)
 {
   static const svn_version_checklist_t checklist[] =
@@ -704,8 +690,8 @@ check_lib_versions (void)
       { NULL, NULL }
     };
 
-  SVN_VERSION_DEFINE (my_version);
-  return svn_ver_check_list (&my_version, checklist, version_mismatch_error);
+   SVN_VERSION_DEFINE (my_version);
+   return svn_ver_check_list (&my_version, checklist);
 }
 
 

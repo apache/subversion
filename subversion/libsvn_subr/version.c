@@ -21,6 +21,8 @@
 #include "svn_error.h"
 #include "svn_version.h"
 
+#include "svn_private_config.h"
+
 const svn_version_t *
 svn_subr_version (void)
 {
@@ -52,8 +54,7 @@ svn_boolean_t svn_ver_compatible (const svn_version_t *my_version,
 
 svn_error_t *
 svn_ver_check_list (const svn_version_t *my_version,
-                    const svn_version_checklist_t *checklist,
-                    svn_ver_error_generator_t mismatch_error)
+                    const svn_version_checklist_t *checklist)
 {
   svn_error_t *err = SVN_NO_ERROR;
   int i;
@@ -62,7 +63,15 @@ svn_ver_check_list (const svn_version_t *my_version,
     {
       const svn_version_t *lib_version = checklist[i].version_query();
       if (!svn_ver_compatible (my_version, lib_version))
-        err = mismatch_error (checklist[i].label, lib_version, err);
+        err = svn_error_createf (SVN_ERR_VERSION_MISMATCH, err,
+                                 _("Version mismatch in '%s':"
+                                   " found %d.%d.%d%s,"
+                                   " expected %d.%d.%d%s"),
+                                 checklist[i].label,
+                                 lib_version->major, lib_version->minor,
+                                 lib_version->micro, lib_version->tag,
+                                 my_version->major, my_version->minor,
+                                 my_version->micro, my_version->tag);
     }
 
   return err;
