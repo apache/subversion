@@ -431,6 +431,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
                                              &lb,
                                              NULL, 
                                              NULL,
+                                             FALSE,
                                              ras->pool) );
 
   if (lb.err)

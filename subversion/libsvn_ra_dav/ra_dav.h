@@ -522,6 +522,9 @@ svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
  * STATUS_CODE is an optional 'out' parameter; if non-NULL, then set
  * *STATUS_CODE to the http status code returned by the server.
  *
+ * If SPOOL_RESPONSE is set, the request response will be cached to
+ * disk in a tmpfile (in full), then read back and parsed.
+ *
  * Use POOL for any temporary allocation.
  */
 svn_error_t *
@@ -538,6 +541,7 @@ svn_ra_dav__parsed_request(ne_session *sess,
                            void *baton,
                            apr_hash_t *extra_headers,
                            int *status_code,
+                           svn_boolean_t spool_response,
                            apr_pool_t *pool);
   
 
@@ -563,6 +567,7 @@ svn_ra_dav__parsed_request_compat(ne_session *sess,
                                   void *baton,
                                   apr_hash_t *extra_headers,
                                   int *status_code,
+                                  svn_boolean_t spool_response,
                                   apr_pool_t *pool);
 
 
