@@ -83,6 +83,10 @@ def guarantee_greek_repository(path):
 
     if tree.compare_trees(output_tree, expected_output_tree):
       print "ERROR:  output of import command is unexpected."
+      print "EXPECTED OUTPUT TREE:"
+      tree.dump_tree(expected_output_tree)
+      print "ACTUAL OUTPUT TREE:"
+      tree.dump_tree(output_tree)
       sys.exit(1)
 
   # Now that the pristine repos exists, copy it to PATH.
