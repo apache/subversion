@@ -24,8 +24,6 @@ Candidate changes:
     Make dav_svn_convert_err() consume its svn_error_t * input.
     Justification:  Fixes svn_error_t leaks.
     Votes:
-      +1: cmpilato, kfogel
-    Old votes (for just r8490,r8794):
       +1: cmpilato, kfogel, jszakmeister
 
   * r8846
