@@ -185,9 +185,13 @@ public repository.
 @node SQL Back-End
 @subsection SQL Back-End
 
-The Subversion filesystem will probably use Berkeley DB to store data on
-disk; however, a real SQL database provides much more reliable
-transactions.  Someone can rewrite the filesystem back-end to speak SQL.
+The initial release of the Subversion filesystem will use Berkeley DB to
+store data on disk. However, in the future, a SQL database may be used
+to add sophisticated query support across the filesystem (e.g. "what
+revisions of what files has property @code{xyz}?").
+
+To support this feature, Someone could rewrite the filesystem back-end
+to speak SQL, in addition to the default Berkeley DB support.
 
 
 @node Digital Signatures
