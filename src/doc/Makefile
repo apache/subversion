@@ -8,7 +8,7 @@ txt:
 	makeinfo --no-headers --no-validate svn-design.texi > svn-design.txt
 
 info: 
-	makeinfo svn-design.texi
+	makeinfo --no-validate svn-design.texi
 
 html: 
 	makeinfo --no-headers --no-validate --html svn-design.texi \
