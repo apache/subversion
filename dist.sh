@@ -195,15 +195,21 @@ EOF
 ### Give this release a unique name, to help us interpret bug reports;
 ### and change the number tag, to indicate that it is baselined
 vsn_file="${DIST_SANDBOX}/${DISTNAME}/subversion/include/svn_version.h"
+
 sed -e \
  "/#define *SVN_VER_TAG/s/dev build/${RELEASE_NAME}/" \
   < "$vsn_file" > "${vsn_file}.tmp"
 
 sed -e \
  "/#define *SVN_VER_NUMTAG/s/\+//" \
-  < "${vsn_file}.tmp" > "$vsn_file"
+  < "${vsn_file}.tmp" > "${vsn_file}.unq"
+
+sed -e \
+ "/#define *SVN_VER_REVISION/s/0/${WC_VERSION}/" \
+  < "${vsn_file}.unq" > "$vsn_file"
 
 rm -f "${vsn_file}.tmp"
+rm -f "${vsn_file}.unq"
 
 
 ### Make the tarball.
