@@ -227,7 +227,8 @@ static const dav_provider dav_svn_provider =
     &dav_svn_hooks_propdb,
     NULL,                       /* locks */
     &dav_svn_hooks_vsn,
-    NULL                        /* binding */
+    NULL,                       /* binding */
+    NULL                        /* search */
 };
 
 static void register_hooks(apr_pool_t *pconf)
