@@ -18,6 +18,8 @@
 
 
 
+#include <limits.h> /* for UINT_MAX */
+
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <apr_general.h>
