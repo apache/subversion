@@ -2,8 +2,11 @@
 # gen_make.py -- generate makefiles and dependencies
 #
 
-import os, sys
-import string, glob
+import os
+import sys
+import string
+import glob
+
 import gen_base
 
 
@@ -133,7 +136,7 @@ class MakefileGenerator(gen_base.GeneratorBase):
         cfiles.append(target.output)
     self.ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
 
-    for area, inst_targets in self.install.items():
+    for area, inst_targets in self.graph.get_deps(gen_base.DT_INSTALL):
       # get the output files for these targets, sorted in dependency order
       files = gen_base._sorted_files(inst_targets)
 
