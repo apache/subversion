@@ -341,8 +341,9 @@ svn_pool_create_debug (apr_pool_t *parent_pool,
 #ifdef SVN_POOL_DEBUG
   {
     fprintf (stderr, 
+             "PDEBUG: + "
              "                     " /* 10/10 here */
-             " : pool 0x%08X created   at %s:%d (parent=0x%08X)\n", 
+             " 0x%08X (%s:%d) parent=0x%08X\n", 
              (unsigned int)ret_pool, file, line, (unsigned int)parent_pool);
   }
 #endif /* SVN_POOL_DEBUG */
@@ -372,7 +373,7 @@ svn_pool_clear_debug (apr_pool_t *p,
     apr_size_t global_num_bytes = 
       apr_pool_num_bytes (find_oldest_pool_ancestor (p), 1);
     
-    fprintf (stderr, "%10lu/%10lu : pool 0x%08X cleared   at %s:%d\n", 
+    fprintf (stderr, "PDEBUG: 0 %10lu %10lu 0x%08X (%s:%d)\n", 
              (unsigned long)num_bytes, (unsigned long)global_num_bytes,
              (unsigned int)p, file, line);
   }
@@ -451,7 +452,7 @@ svn_pool_destroy_debug (apr_pool_t *p,
     apr_size_t global_num_bytes = 
       apr_pool_num_bytes (find_oldest_pool_ancestor (p), 1);
     
-    fprintf (stderr, "%10lu/%10lu : pool 0x%08X destroyed at %s:%d\n", 
+    fprintf (stderr, "PDEBUG: - %10lu %10lu 0x%08X (%s:%d)\n", 
              (unsigned long)num_bytes, (unsigned long)global_num_bytes,
              (unsigned int)p, file, line);
   }
