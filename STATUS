@@ -19,8 +19,7 @@ Candidate changes:
   * r13939, r13940
     Doxygen tweaks.
     Votes:
-      +1: maxb
-      +0: dlr
+      +1: maxb, dlr
 
   * r13945
     Revert r13369 (svn:keywords canonicalization).
