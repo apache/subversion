@@ -162,10 +162,10 @@ typedef enum svn_errno_t {
   SVN_ERR_BERKELEY_DB,
 
   /* a bad URL was passed to the repository access layer */
-  SVN_ERR_ILLEGAL_URL,
+  SVN_ERR_RA_ILLEGAL_URL,
 
   /* the repository access layer could not initialize the socket layer */
-  SVN_ERR_SOCK_INIT,
+  SVN_ERR_RA_SOCK_INIT,
 
   /* the repository access layer could not lookup the hostname */
   SVN_ERR_RA_HOSTNAME_LOOKUP,

@@ -87,12 +87,12 @@ svn_ra_open (svn_ra_session_t **p_ras,
   if (uri_parse(repository, &uri, NULL) 
       || uri.path == NULL || uri.path == NULL)
     {
-      return svn_error_create(SVN_ERR_ILLEGAL_URL, 0, NULL, pool,
+      return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool,
                               "illegal URL for repository");
     }
 
   if (sock_init() != 0) {
-    return svn_error_create(SVN_ERR_SOCK_INIT, 0, NULL, pool,
+    return svn_error_create(SVN_ERR_RA_SOCK_INIT, 0, NULL, pool,
                             "network socket initialization failed");
   }
 
@@ -115,7 +115,7 @@ svn_ra_open (svn_ra_session_t **p_ras,
       if (http_set_secure(sess, 1) || 
           http_set_accept_secure_upgrade(sess, 1))
         {
-          return svn_error_create(SVN_ERR_SOCK_INIT, 0, NULL, pool,
+          return svn_error_create(SVN_ERR_RA_SOCK_INIT, 0, NULL, pool,
                                   "SSL is not supported");
         }
     }
