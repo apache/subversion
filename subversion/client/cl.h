@@ -73,12 +73,12 @@ typedef struct svn_cl__cmd_desc_t
      "commit", or a short name, such as "ci". */
   const char *cmd_name;
 
-  /* If cmd_name is a short synonym, such as "ci", then full_name
+  /* If cmd_name is a short synonym, such as "ci", then short_for
      would be what it abbreviates, "commit", else if cmd_name is not an
-     abbreviation, then full_name is NULL.  This allows us to identify
+     abbreviation, then short_for is NULL.  This allows us to identify
      groups of `the same' command automatically, and list them all
      under one canonical name when appropriate. */
-  const char *full_name;
+  const char *short_for;
 
   /* Bruce: you can document this more accurately than I.  -kff */
   svn_boolean_t fork_first;
