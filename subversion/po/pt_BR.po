@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-01-27 12:55-0200\n"
+"POT-Creation-Date: 2005-02-08 21:47-0200\n"
 "PO-Revision-Date: 2004-07-26 19:19-300\n"
 "Last-Translator: dev@subversion.tigris.org\n"
 "Language-Team: Brazilian Portuguese <dev@subversion.tigris.org>\n"
@@ -2978,7 +2978,7 @@ msgid "'%s' already exists"
 msgstr "'%s' já existe"
 
 #: libsvn_client/export.c:679 libsvn_wc/update_editor.c:1592
-#: libsvn_wc/update_editor.c:2339
+#: libsvn_wc/update_editor.c:2338
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "Checksum não bate para '%s'; esperado: '%s', obtido: '%s'"
@@ -3013,6 +3013,7 @@ msgid "Revision property '%s' not allowed in this context"
 msgstr "Propriedade de revisão '%s' não permitida neste contexto"
 
 #: libsvn_client/prop_commands.c:198
+#, c-format
 msgid "Setting property on non-local target '%s' is not supported"
 msgstr "Setar propriedade em alvo não local '%s' ainda não é suportado"
 
@@ -3326,7 +3327,7 @@ msgstr "copyroot mal formada em linha node-rev"
 msgid "Malformed copyfrom line in node-rev"
 msgstr "copyfrom mal formada em linha node-rev"
 
-#: libsvn_fs_fs/fs_fs.c:778 libsvn_fs_fs/fs_fs.c:3002
+#: libsvn_fs_fs/fs_fs.c:778 libsvn_fs_fs/fs_fs.c:3006
 msgid "Attempted to write to non-transaction"
 msgstr "Tentativa de escrever em não transacional"
 
@@ -3425,37 +3426,39 @@ msgstr "Flag prop-mod inválida em rev-file"
 msgid "Copying from transactions not allowed"
 msgstr "Não é permitido copiar de transações"
 
-#: libsvn_fs_fs/fs_fs.c:2473 libsvn_fs_fs/fs_fs.c:2480
+#: libsvn_fs_fs/fs_fs.c:2476 libsvn_fs_fs/fs_fs.c:2483
 msgid "next-id file corrupt"
 msgstr "Arquivo next-id corrompido"
 
-#: libsvn_fs_fs/fs_fs.c:2706
+#: libsvn_fs_fs/fs_fs.c:2709
 msgid "Invalid change type"
 msgstr "Tipo de mudança inválido"
 
-#: libsvn_fs_fs/fs_fs.c:3021
+#: libsvn_fs_fs/fs_fs.c:3025
 msgid "Can't set text contents of a directory"
 msgstr "Não pode setar conteúdo de texto de um diretório"
 
-#: libsvn_fs_fs/fs_fs.c:3111 libsvn_fs_fs/fs_fs.c:3116
-#: libsvn_fs_fs/fs_fs.c:3123
+#: libsvn_fs_fs/fs_fs.c:3115 libsvn_fs_fs/fs_fs.c:3120
+#: libsvn_fs_fs/fs_fs.c:3127
 msgid "Corrupt current file"
 msgstr "Arquivo corrente corrompido"
 
-#: libsvn_fs_fs/fs_fs.c:3491
+#: libsvn_fs_fs/fs_fs.c:3495
 msgid "Transaction out of date"
 msgstr "Transação desatualizada"
 
-#: libsvn_fs_fs/fs_fs.c:3731
+#: libsvn_fs_fs/fs_fs.c:3735
 msgid "No such transaction"
 msgstr "Não existe tal transação"
 
 #: libsvn_ra/ra_loader.c:232
+#, c-format
 msgid "Mismatched RA version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
-msgstr "Versão de RA não bate para '%s': encontrado %d.%d.%d%s, esperado "
-"%d.%d.%d%s"
+msgstr ""
+"Versão de RA não bate para '%s': encontrado %d.%d.%d%s, esperado %d.%d.%d%s"
 
 #: libsvn_ra/ra_loader.c:246
+#, c-format
 msgid "Unrecognized URL scheme for '%s'"
 msgstr "Esquema URL não reconhecido para '%s'"
 
@@ -3626,32 +3629,37 @@ msgstr "Falhou ao procurar pela etiqueta '%s' para URL '%s'"
 msgid "'%s' was not present on the resource"
 msgstr "'%s' não estava presente no recurso"
 
-#: libsvn_ra_dav/props.c:674
+#: libsvn_ra_dav/props.c:651
+#, c-format
+msgid "Neon was unable to parse URL '%s'"
+msgstr "Neon não conseguir fazer parse de URL '%s'"
+
+#: libsvn_ra_dav/props.c:680
 msgid "The path was not part of a repository"
 msgstr "O caminho não era parte de um repositório"
 
-#: libsvn_ra_dav/props.c:685
+#: libsvn_ra_dav/props.c:691
 #, c-format
 msgid "No part of path '%s' was found in repository HEAD"
 msgstr "Nenhuma parte do caminho '%s' foi encontrada no repositório HEAD"
 
-#: libsvn_ra_dav/props.c:719 libsvn_ra_dav/props.c:774
+#: libsvn_ra_dav/props.c:725 libsvn_ra_dav/props.c:780
 msgid "The VCC property was not found on the resource"
 msgstr "A propriedade VCC não foi encontrada no recurso"
 
-#: libsvn_ra_dav/props.c:787
+#: libsvn_ra_dav/props.c:793
 msgid "The relative-path property was not found on the resource"
 msgstr "A propriedade relative-path não foi encontrada no recurso"
 
-#: libsvn_ra_dav/props.c:908
+#: libsvn_ra_dav/props.c:914
 msgid "'DAV:baseline-collection' was not present on the baseline resource"
 msgstr "'DAV:baseline-collection' não estava presente no recurso baseline"
 
-#: libsvn_ra_dav/props.c:927
+#: libsvn_ra_dav/props.c:933
 msgid "'DAV:version-name' was not present on the baseline resource"
 msgstr "'DAV:version-name' não estava presente no recurso baseline"
 
-#: libsvn_ra_dav/props.c:1080
+#: libsvn_ra_dav/props.c:1086
 msgid "At least one property change failed; repository is unchanged"
 msgstr "Ao menos uma troca de propriedades falhou; repositório é imutável"
 
@@ -3714,6 +3722,7 @@ msgid "Please upgrade the server to 0.19 or later"
 msgstr "Por favor atualize o servidor para 0.19 ou superior"
 
 #: libsvn_ra_dav/session.c:896
+#, c-format
 msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr "Versão de loader RA (%d) não suportada para ra_dav"
 
@@ -3777,6 +3786,7 @@ msgid "Unable to open an ra_local session to URL"
 msgstr "Não foi possível abrir uma sessão ra_local para URL"
 
 #: libsvn_ra_local/ra_plugin.c:989
+#, c-format
 msgid "Unsupported RA loader version (%d) for ra_local"
 msgstr "Versão de loader RA (%d) não suportada para ra_local"
 
@@ -3928,6 +3938,7 @@ msgid "The get-file-revs command didn't return any revisions"
 msgstr "O comando get-file-revs não retornou nenhuma revisão"
 
 #: libsvn_ra_svn/client.c:1356
+#, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Versão (%d) de RA loader não suportada para ra_svn"
 
@@ -4801,21 +4812,21 @@ msgstr ""
 msgid "Type '%s help' for usage.\n"
 msgstr "Digite '%s help' para uso.\n"
 
-#: libsvn_subr/path.c:1070
+#: libsvn_subr/path.c:1065
 #, c-format
 msgid "Couldn't determine absolute path of '%s'"
 msgstr "Não foi possível determinar o caminho absoluto de '%s'"
 
-#: libsvn_subr/path.c:1109
+#: libsvn_subr/path.c:1104
 #, c-format
 msgid "'%s' is neither a file nor a directory name"
 msgstr "'%s' não é o nome de um arquivo ou de um diretório"
 
-#: libsvn_subr/path.c:1215
+#: libsvn_subr/path.c:1210
 msgid "Can't determine the native path encoding"
 msgstr "Não foi possível determinar a codificação do caminho nativo"
 
-#: libsvn_subr/path.c:1269
+#: libsvn_subr/path.c:1264
 #, c-format
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "Caracter de controle '0x%02x' inválido no caminho '%s'"
@@ -4825,31 +4836,43 @@ msgstr "Caracter de controle '0x%02x' inválido no caminho '%s'"
 msgid "File '%s' has inconsistent newlines"
 msgstr "Arquivo '%s' possui newlines inconsistentes"
 
-#: libsvn_subr/utf.c:147
+#: libsvn_subr/utf.c:149
 msgid "Can't lock charset translation mutex"
 msgstr "Não foi possível travar o mutex de tradução do conjunto de caracteres"
 
-#: libsvn_subr/utf.c:165 libsvn_subr/utf.c:215
+#: libsvn_subr/utf.c:167 libsvn_subr/utf.c:226
 msgid "Can't unlock charset translation mutex"
 msgstr ""
 "Não foi possível destravar o mutex de tradução do conjunto de caracteres"
 
-#: libsvn_subr/utf.c:228
-#, c-format
-msgid "Can't create a converter from '%s' to '%s'"
-msgstr "Não foi possível criar conversor de '%s' para '%s'"
+#: libsvn_subr/utf.c:242
+msgid "Can't create a character converter from native encoding to '%s'"
+msgstr "Não foi possível criar conversor de caracteres de codificação "
+"nativa para '%s'"
 
-#: libsvn_subr/utf.c:229 libsvn_subr/utf.c:230
-msgid "native"
-msgstr "nativo"
+#: libsvn_subr/utf.c:246
+msgid "Can't create a character converter from '%s' to native encoding"
+msgstr "Não foi possível criar um conversor de caracteres de '%s' para "
+"codificação nativa"
 
-#. Can't use svn_error_wrap_apr here because it calls functions in
-#. this file, leading to infinite recursion.
-#: libsvn_subr/utf.c:361
-msgid "Can't recode string"
-msgstr "Não foi possível recodificar a string"
+#: libsvn_subr/utf.c:250
+msgid "Can't create a character converter from '%s' to '%s'"
+msgstr "Não foi possível criar um conversor de caracteres de '%s' para "
+"'%s'"
 
-#: libsvn_subr/utf.c:401
+#: libsvn_subr/utf.c:441
+msgid "Can't convert string from native encoding to '%s':"
+msgstr "Não foi possível converter string de codificação nativa para '%s':"
+
+#: libsvn_subr/utf.c:445
+msgid "Can't convert string from '%s' to native encoding:"
+msgstr "Não foi possível converter string de '%s' para codificação nativa:"
+
+#: libsvn_subr/utf.c:449
+msgid "Can't convert string from '%s' to '%s':"
+msgstr "Não foi possível converter string de '%s' para '%s'"
+
+#: libsvn_subr/utf.c:493
 #, c-format
 msgid ""
 "Safe data:\n"
@@ -4865,7 +4888,7 @@ msgstr ""
 "Caracter não-ASCII detectado (veja acima), e não foi possível convertê-lo de/"
 "para UTF-8"
 
-#: libsvn_subr/utf.c:413
+#: libsvn_subr/utf.c:505
 #, c-format
 msgid ""
 "Non-ASCII character (code %d) detected, and unable to convert to/from UTF-8"
@@ -4873,7 +4896,7 @@ msgstr ""
 "Caracter não-ASCII (código %d) detectado, e não é possível convertê-lo de/"
 "para UTF-8"
 
-#: libsvn_subr/utf.c:455
+#: libsvn_subr/utf.c:547
 #, c-format
 msgid ""
 "Valid UTF-8 data\n"
@@ -4906,7 +4929,7 @@ msgstr "Tipo MIME '%s' termina com caracter não alfanumérico"
 msgid "Version mismatch in '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
 msgstr "Versão não bate em '%s': encontrado %d.%d.%d%s, esperado %d.%d.%d%s"
 
-#: libsvn_subr/xml.c:367
+#: libsvn_subr/xml.c:420
 #, c-format
 msgid "Malformed XML: %s at line %d"
 msgstr "XML mal formado: %s na linha %d"
@@ -5442,7 +5465,7 @@ msgstr "Não é possível escrever hash de propriedade para '%s'"
 msgid "Can't find entry '%s' in '%s'"
 msgstr "Não é possível encontrar entrada '%s' em '%s'"
 
-#: libsvn_wc/props.c:318 libsvn_wc/update_editor.c:2275
+#: libsvn_wc/props.c:318 libsvn_wc/update_editor.c:2274
 #, c-format
 msgid "Error writing log for '%s'"
 msgstr "Erro escrevendo log para '%s'"
@@ -5615,7 +5638,7 @@ msgstr "Checksum não bate para '%s'; gravado: '%s', obtido: '%s'"
 msgid "Move failed"
 msgstr "Mudança falhou"
 
-#: libsvn_wc/update_editor.c:2751
+#: libsvn_wc/update_editor.c:2750
 #, c-format
 msgid "'%s' has no ancestry information"
 msgstr "'%s' não possui informação de ancestral"
@@ -6611,17 +6634,23 @@ msgstr "exportado%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' não versionado, e não exportado\n"
 
-#~ msgid "No commit for revision 0.\n"
-#~ msgstr "Sem commit para revisão 0.\n"
-
-#~ msgid "Cannot cleanup '%s': not a directory"
-#~ msgstr "Não é possível limpar '%s': não é um diretório"
-
-#~ msgid "No get_dir() available for URL schema"
-#~ msgstr "Não há get_dir() disponível para esquema URL"
+#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
+#~ msgstr "Versão ABI de plugin RA (%d) não suportada para ra_svn."
 
 #~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
 #~ msgstr "Versão ABI de plugin RA (%d) não suportada para ra_dav"
 
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
-#~ msgstr "Versão ABI de plugin RA (%d) não suportada para ra_svn."
+#~ msgid "No get_dir() available for URL schema"
+#~ msgstr "Não há get_dir() disponível para esquema URL"
+
+#~ msgid "Cannot cleanup '%s': not a directory"
+#~ msgstr "Não é possível limpar '%s': não é um diretório"
+
+#~ msgid "No commit for revision 0.\n"
+#~ msgstr "Sem commit para revisão 0.\n"
+
+#~ msgid "Can't recode string"
+#~ msgstr "Não foi possível recodificar a string"
+
+#~ msgid "native"
+#~ msgstr "nativo"
