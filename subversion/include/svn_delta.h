@@ -379,6 +379,12 @@ typedef struct svn_delta_walk_t
                                    svn_prop_change_chunk_handler_t **handler,
                                    void **handler_baton);
 
+  
+  /* Define these if you wish to clean up after receiving a text-delta
+     or prop-delta in a streamy way. */
+  svn_error_t *(*finish_textdelta) (void *walk_baton, void *parent_baton);
+  svn_error_t *(*finish_propdelta) (void *walk_baton, void *parent_baton);
+
 
   /* We are going to add a new file named NAME.    */
   svn_error_t *(*add_file) (svn_string_t *name,

@@ -363,7 +363,6 @@ do_directory_callback (svn_delta_digger_t *digger,
      wonder if it's such a good idea to use svn_string_t in situations
      where (char *) is so much more natural, though... */
   const char *ancestor, *ver;
-  svn_pdelta_t *pdelta = NULL;
   svn_string_t *base_path = NULL;
   svn_version_t base_version = 0;
   svn_string_t *dir_name = NULL;
@@ -399,7 +398,6 @@ do_directory_callback (svn_delta_digger_t *digger,
                                                    youngest_frame->baton,
                                                    base_path,
                                                    base_version,
-                                                   pdelta,
                                                    &child_baton);
   else
     err = (* (digger->walker->add_directory)) (dir_name,
@@ -407,7 +405,6 @@ do_directory_callback (svn_delta_digger_t *digger,
                                                youngest_frame->baton,
                                                base_path,
                                                base_version,
-                                               pdelta,
                                                &child_baton);
   if (err) 
     return err;
@@ -457,10 +454,9 @@ do_delete_dirent (svn_delta_digger_t *digger,
 
 
 
-/* Called when we get <new> followed by <file>: the walker callback
-   returns to us a vcdiff-window-consumption routine that we use to
-   create a unique vcdiff parser for this file.  (The vcdiff parser
-   knows how to "push" windows of vcdata to the consumption routine.)  */
+/* Called when we get <new> followed by <file>: the caller wants to know, call appropriate callback in our walk structure. */
+
+
 static svn_error_t *
 do_file_callback (svn_delta_digger_t *digger,
                   svn_delta_stackframe_t *youngest_frame,
@@ -469,9 +465,6 @@ do_file_callback (svn_delta_digger_t *digger,
 {
   svn_error_t *err;
   const char *ancestor, *ver;
-  svn_text_delta_window_handler_t *window_consumer;
-  void *consumer_baton = NULL;
-  svn_pdelta_t *pdelta = NULL;
   svn_string_t *base_path = NULL;
   svn_version_t base_version = 0;
   svn_string_t *dir_name = NULL;
@@ -506,35 +499,17 @@ do_file_callback (svn_delta_digger_t *digger,
                                               digger->walk_baton,
                                               youngest_frame->baton,
                                               base_path,
-                                              base_version,
-                                              pdelta,
-                                              &window_consumer,
-                                              &consumer_baton);
+                                              base_version);
   else
     err = (* (digger->walker->add_file)) (dir_name,
                                           digger->walk_baton,
                                           youngest_frame->baton,
                                           base_path,
-                                          base_version,
-                                          pdelta,
-                                          &window_consumer,
-                                          &consumer_baton);
+                                          base_version);
+
   if (err)
     return err;
   
-  /* Now create a vcdiff parser that sends windows of data to the
-     window handler.  Store the new parser in digger.  This vcdiff
-     parser is good *only* for the immediate file we're about to
-     receive. */
-  if (window_consumer == NULL)
-    return svn_create_error (SVN_ERR_INCOMPLETE_DATA, 0,
-                             "do_add_file: didn't get back a delta_handler_t",
-                             NULL, digger->pool);
-
-  digger->vcdiff_parser = svn_make_vcdiff_parser (window_consumer,
-                                                  consumer_baton,
-                                                  digger->pool);
-
   return SVN_NO_ERROR;
 }
 
@@ -588,6 +563,115 @@ do_finish_file (svn_delta_digger_t *digger)
 
   return SVN_NO_ERROR;
 }
+
+
+
+/* When we find a new text-delta, a walker callback returns to us a
+   vcdiff-window-consumption routine that we use to create a unique
+   vcdiff parser.  (The vcdiff parser knows how to "push" windows of
+   vcdata to the consumption routine.)  */
+static svn_error_t *
+do_begin_textdelta (svn_delta_digger_t *digger)
+{
+  svn_error_t *err;
+  svn_text_delta_window_handler_t *window_consumer;
+  void *consumer_baton = NULL;
+
+  if (digger->walker->begin_textdelta == NULL)
+    return SVN_NO_ERROR;
+
+  /* Get a window consumer & baton! */
+  err = (* (digger->walker->begin_textdelta)) (digger->walk_baton,
+                                               digger->dir_baton,
+                                               &window_consumer,
+                                               &consumer_baton);
+
+  /* Now create a vcdiff parser based on the consumer/baton we got. */  
+  digger->vcdiff_parser = svn_make_vcdiff_parser (window_consumer,
+                                                  consumer_baton,
+                                                  digger->pool);
+  return SVN_NO_ERROR;
+}
+
+
+
+/* When we find a new prop-delta, a walker callback returns to us a
+   pdelta-chunk-consumption routine that we use to create a unique
+   pdelta-chunk parser. */
+static svn_error_t *
+do_begin_propdelta (svn_delta_digger_t *digger)
+{
+  svn_error_t *err;
+  svn_prop_change_chunk_handler_t *chunk_consumer;
+  void *consumer_baton = NULL;
+
+  if (digger->walker->begin_propdelta == NULL)
+    return SVN_NO_ERROR;
+
+  /* Get a chunk consumer & baton! */
+  err = (* (digger->walker->begin_propdelta)) (digger->walk_baton,
+                                               digger->dir_baton,
+                                               &chunk_consumer,
+                                               &consumer_baton);
+
+  /* Now create a pdelta_chunk parser based on the consumer/baton we
+     got. */
+  digger->chunk_parser = svn_make_pdelta_chunk_parser (chunk_consumer,
+                                                       consumer_baton,
+                                                       digger->pool);
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Clean up after finishing receiving a text-delta */
+static svn_error_t *
+do_finish_textdelta (svn_delta_digger_t *digger)
+{
+  svn_error_t *err;
+
+  /* First, don't forget to flush out any remaining bytes sitting in
+     the buffer of our vcdiff parser!  */
+  err = svn_vcdiff_flush_buffer (digger->vcdiff_parser);
+
+  /* Now call the walker callback, if it exists */
+  if (digger->walker->finish_textdelta)
+    {
+      err = digger->walker->finish_textdelta (digger->walk_baton,
+                                              digger->dir_baton);
+      if (err)
+        return err;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Clean up after finishing receiving a prop-delta */
+static svn_error_t *
+do_finish_propdelta (svn_delta_digger_t *digger)
+{
+  svn_error_t *err;
+
+  /* First, don't forget to flush out any remaining bytes sitting in
+     the buffer of our prop-chunk parser!  */
+  /* err = svn_prop_chunk_flush_buffer (my_digger->chunk_parser); */
+
+  /* Now call the walker callback, if it exists */
+  if (digger->walker->finish_propdelta)
+    {
+      err = digger->walker->finish_propdelta (digger->walk_baton,
+                                              digger->dir_baton);
+      if (err)
+        return err;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 
 
 
@@ -692,6 +776,25 @@ xml_handle_start (void *userData, const char *name, const char **atts)
         return;
       }
 
+  /* EVENT:  Are we starting a new text-delta?  */
+  if (new_frame->tag == svn_XML_textdelta) 
+    {
+      err = do_begin_textdelta (my_digger);
+      if (err)
+        signal_expat_bailout (err, my_digger);
+      return;
+    }
+
+  /* EVENT:  Are we starting a new prop-delta?  */
+  if (new_frame->tag == svn_XML_propdelta) 
+    {
+      err = do_begin_propdelta (my_digger);
+      if (err)
+        signal_expat_bailout (err, my_digger);
+      return;
+    }
+
+
 
   /* This is a void expat callback, don't return anything. */
 }
@@ -739,12 +842,18 @@ xml_handle_end (void *userData, const char *name)
       return;
     }
 
-  /* INTERNAL EVENT: when we get a </text-delta>, tell the
-     vcdiff-parser to send off any remaining bytes it may still have
-     buffered.  */
+  /* EVENT: when we get a </text-delta> */
   if (strcmp (name, "text-delta") == 0)
     {
-      err = svn_vcdiff_flush_buffer (my_digger->vcdiff_parser);
+      err = do_finish_textdelta (my_digger);
+      if (err)
+        signal_expat_bailout (err, my_digger);
+    }
+
+  /* EVENT: when we get a </prop-delta> */
+  if (strcmp (name, "prop-delta") == 0)
+    {
+      err = do_finish_propdelta (my_digger);
       if (err)
         signal_expat_bailout (err, my_digger);
     }

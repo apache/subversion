@@ -193,6 +193,9 @@ typedef struct svn_delta_digger_t
      added or replaced.*/
   svn_vcdiff_parser_t *vcdiff_parser;
 
+  /* A similar parser, used to break up large pdelta changes into
+     chunks. */
+  svn_pdelta_chunk_parser_t *chunk_parser;
 
 } svn_delta_digger_t;
 
