@@ -59,3 +59,5 @@ Greg:
       - commit editor
 
    - APR: move apr_copy_file() from SVN
+
+   - security checks (e.g. system() usage in wc/get_editor)
