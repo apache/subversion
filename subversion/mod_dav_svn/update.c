@@ -57,6 +57,9 @@ typedef struct {
   /* where do these editor paths *really* point to? */
   apr_hash_t *pathmap;
 
+  /* are we doing a resource walk? */
+  svn_boolean_t resource_walk;
+
 } update_ctx_t;
 
 typedef struct {
@@ -64,6 +67,8 @@ typedef struct {
   update_ctx_t *uc;
   const char *path;    /* a telescoping extension of uc->anchor */
   const char *path2;   /* a telescoping extension of uc->dst_path */
+  const char *path3;   /* a telescoping extension of uc->dst_path
+                            without dst_path as prefix. */
   svn_boolean_t added;
   apr_array_header_t *changed_props;
   apr_array_header_t *removed_props;
@@ -167,6 +172,12 @@ static item_baton_t *make_child_baton(item_baton_t *parent, const char *name,
   else
     baton->path2 = apr_pstrcat(pool, parent->path2, "/", name, NULL);
 
+  /* Telescope the third path:  it's relative, not absolute, to dst_path. */
+  if (parent->path3[0] == '\0')
+    baton->path3 = apr_pstrdup(pool, name);
+  else
+    baton->path3 = apr_pstrcat(pool, parent->path3, "/", name, NULL);
+
   return baton;
 }
 
@@ -222,29 +233,43 @@ static void add_helper(svn_boolean_t is_dir,
 {
   item_baton_t *child;
   const char *qname;
+  const char *qpath;
+  update_ctx_t *uc = parent->uc;
 
   child = make_child_baton(parent, name, is_dir);
   child->added = TRUE;
 
-  qname = apr_xml_quote_string(child->pool, name, 1);
+  if (uc->resource_walk)
+    {
+      qpath = apr_xml_quote_string(child->pool, child->path3, 1);
 
-  if (copyfrom_path == NULL)
-    send_xml(child->uc, "<S:add-%s name=\"%s\">" DEBUG_CR,
-             DIR_OR_FILE(is_dir), qname);
+      send_xml(child->uc, "<S:resource path=\"%s\">" DEBUG_CR, qpath);      
+    }
   else
     {
-      const char *qcopy;
-
-      qcopy = apr_xml_quote_string(child->pool, copyfrom_path->data, 1);
-      send_xml(child->uc,
-	       "<S:add-%s name=\"%s\" "
-	       "copyfrom-path=\"%s\" copyfrom-rev=\"%"
-               SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
-               DIR_OR_FILE(is_dir),
-	       qname, qcopy, copyfrom_revision);
+      qname = apr_xml_quote_string(child->pool, name, 1);
+      
+      if (copyfrom_path == NULL)
+        send_xml(child->uc, "<S:add-%s name=\"%s\">" DEBUG_CR,
+                 DIR_OR_FILE(is_dir), qname);
+      else
+        {
+          const char *qcopy;
+          
+          qcopy = apr_xml_quote_string(child->pool, copyfrom_path->data, 1);
+          send_xml(child->uc,
+                   "<S:add-%s name=\"%s\" "
+                   "copyfrom-path=\"%s\" copyfrom-rev=\"%"
+                   SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
+                   DIR_OR_FILE(is_dir),
+                   qname, qcopy, copyfrom_revision);
+        }
     }
 
   send_vsn_url(child);
+
+  if (uc->resource_walk)
+    send_xml(child->uc, "</S:resource>" DEBUG_CR);
 
   *child_baton = child;
 }
@@ -276,6 +301,9 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
 {
   int i;
   
+  if (baton->uc->resource_walk)
+    return;
+
   /* ### ack!  binary names won't float here! */
   if (baton->removed_props && (! baton->added))
     {
@@ -296,7 +324,7 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
       send_xml(baton->uc, "<S:fetch-props/>" DEBUG_CR);
     }
 
-  /* Unconditionally output the 3 CR-related properties right here.
+  /* Output the 3 CR-related properties right here.
      ### later on, compress via the 'scattered table' solution as
      discussed with gstein.  -bmcs */
   {
@@ -312,7 +340,7 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
     if (baton->committed_rev)
       send_xml(baton->uc, "<D:version-name>%s</D:version-name>",
                baton->committed_rev);
-      
+    
     if (baton->committed_date)
       send_xml(baton->uc, "<D:creationdate>%s</D:creationdate>",
                baton->committed_date);
@@ -323,7 +351,7 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
     
     send_xml(baton->uc, "</S:prop>\n");
   }
-
+    
   if (baton->added)
     send_xml(baton->uc, "</S:add-%s>" DEBUG_CR, DIR_OR_FILE(is_dir));
   else
@@ -337,12 +365,13 @@ static svn_error_t * upd_set_target_revision(void *edit_baton,
 {
   update_ctx_t *uc = edit_baton;
 
-  send_xml(uc,
-           DAV_XML_HEADER DEBUG_CR
-	   "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-           "xmlns:D=\"DAV:\">" DEBUG_CR
-	   "<S:target-revision rev=\"%" SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
-           target_revision);
+  if (! uc->resource_walk)
+    send_xml(uc,
+             DAV_XML_HEADER DEBUG_CR
+             "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+             "xmlns:D=\"DAV:\">" DEBUG_CR
+             "<S:target-revision rev=\"%" SVN_REVNUM_T_FMT "\"/>" DEBUG_CR,
+             target_revision);
 
   return NULL;
 }
@@ -362,14 +391,25 @@ static svn_error_t * upd_open_root(void *edit_baton,
   b->pool = pool;
   b->path = uc->anchor;
   b->path2 = uc->dst_path;
+  b->path3 = "";
 
   *root_baton = b;
 
-  /* ### Sat 24 Nov 2001: leaving this as "replace-" while clients get
-     upgraded.  Will change to "open-" soon.  -kff */
-  send_xml(uc, "<S:replace-directory rev=\"%" SVN_REVNUM_T_FMT "\">" DEBUG_CR,
-           base_revision);
+  if (uc->resource_walk)
+    {
+      const char *qpath = apr_xml_quote_string(pool, b->path3, 1);
+      send_xml(uc, "<S:resource path=\"%s\">" DEBUG_CR, qpath);
+    }
+  else    
+    /* ### Sat 24 Nov 2001: leaving this as "replace-" while clients get
+       upgraded.  Will change to "open-" soon.  -kff */
+    send_xml(uc, "<S:replace-directory rev=\"%" SVN_REVNUM_T_FMT "\">"
+             DEBUG_CR, base_revision);
+
   send_vsn_url(b);
+
+  if (uc->resource_walk)
+    send_xml(uc, "</S:resource>" DEBUG_CR);
 
   return NULL;
 }
@@ -394,8 +434,8 @@ static svn_error_t * upd_add_directory(svn_stringbuf_t *name,
 				       void **child_baton)
 {
   add_helper(TRUE /* is_dir */,
-	     name->data, parent_baton, copyfrom_path, copyfrom_revision,
-	     child_baton);
+             name->data, parent_baton, copyfrom_path, copyfrom_revision,
+             child_baton);
   return NULL;
 }
 
@@ -511,15 +551,6 @@ static svn_error_t * upd_close_file(void *file_baton)
   return NULL;
 }
 
-static svn_error_t * upd_close_edit(void *edit_baton)
-{
-  update_ctx_t *uc = edit_baton;
-
-  send_xml(uc, "</S:update-report>" DEBUG_CR);
-
-  return NULL;
-}
-
 
 dav_error * dav_svn__update_report(const dav_resource *resource,
 				   const apr_xml_doc *doc,
@@ -616,7 +647,6 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   editor->apply_textdelta = upd_apply_textdelta;
   editor->change_file_prop = upd_change_xxx_prop;
   editor->close_file = upd_close_file;
-  editor->close_edit = upd_close_edit;
 
   uc.resource = resource;
   uc.output = output;
@@ -746,9 +776,44 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
      the response to the client. */
   serr = svn_repos_finish_report(rbaton);
 
+  if (dst_path)  /* this was a 'switch' operation */
+    {
+      /* send a second embedded <S:resource-walk> tree that contains
+         the new vsn-rsc-urls for the switched dir.  this walk
+         contains essentially nothing but <add> tags. */
+      svn_fs_root_t *zero_root;
+      svn_fs_revision_root(&zero_root, repos->fs, 0, resource->pool);
+
+      send_xml(&uc, "<S:resource-walk>" DEBUG_CR);
+
+      uc.resource_walk = TRUE;
+
+      /* Compare subtree DST_PATH within a pristine revision to
+         revision 0.  This should result in nothing but 'add' calls
+         to the editor. */
+      serr = svn_repos_dir_delta(/* source is revision 0: */
+                                 zero_root, "", NULL,
+                                 /* target is 'switch' location: */
+                                 uc.rev_root, dst_path,
+                                 /* re-use the editor */
+                                 editor, &uc,
+                                 FALSE, /* no text deltas */
+                                 recurse,
+                                 TRUE, /* send entryprops */
+                                 FALSE, /* no copy history */
+                                 resource->pool);
+
+      send_xml(&uc, "</S:resource-walk>" DEBUG_CR);
+    }
+
+  /* Now close the report body completely. */
+  send_xml(&uc, "</S:update-report>" DEBUG_CR);
+
   /* flush the contents of the brigade */
   ap_fflush(output, uc.bb);
 
+  /* if an error was produced EITHER by the dir_delta drive or the
+     resource-walker... */
   if (serr != NULL)
     {
       /* ### This removes the fs txn.  todo: check error. */
