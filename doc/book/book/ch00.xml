@@ -592,8 +592,8 @@
             <literal>http://host/path%20with%20space/project/espa%F1a</literal>.
             The 1.1 commandline client now knows how to do what
             web-browsers have been doing for long time: it
-            auto-escapes characters like spaces and other upper-ascii
-            international characters, as long as the user places the
+            auto-escapes characters like spaces and accented letters,
+            as long as the user places the
             URL in quotes to protect characters from the shell:
             <literal>"http://host/path with
             space/project/espa&ntilde;a"</literal></para>
