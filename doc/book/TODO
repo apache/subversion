@@ -67,27 +67,7 @@ To be fixed by fitz:
   - some folks want a glossary.  that's good, since we have a
     glossary.xml anyway.  :-)  probably something we do at the last minute.
 
-  - document how to use 'svn co' to restart an interrupted checkout.
-
-  - document new 'svn st' symbol for incomplete directories ("!")
-
-  - mention that killing $EDITOR without saving changes gives the
-    option to abort a commit.
-
-  - 'svn rm URL URL URL [...]' is now a single commit.  Same with 'svn
-    mkdir dir1 dir2 dir3 [...]'
-
-  - clarify that 'svn copy/move' *only* works within a single
-    repository.  cross-repository copying is a post-1.0 feature.
-
-  - document 'svn switch --relocate'.
-
-  - 'svn import' syntax changed... right?  it's not updated everywhere.
-
-  - clarify that 'svn st -u' only adds an asterisk;  it does *not*
-    make the entire record reflect the repository's version of the
-    file.
-
+  - Check all commands for flags in ch08
 
 --------------------------------------------------------------
 

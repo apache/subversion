@@ -200,7 +200,7 @@ $ svn status -v myfile
               example:</para>
             
             <screen>
-$ svn commit -m "Initial import."
+$ svn commit -m "They don't make Sunday."
             </screen>
           </listitem>
         </varlistentry>
@@ -297,6 +297,20 @@ $ svn commit -m "Initial import."
           <listitem>
             <para>Makes a subcommand recurse into subdirectories.
               Most subcommands recurse by default.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
+          <term><option>--relocate</option> <replaceable>FROM TO
+          [PATH...]</replaceable></term>
+          <listitem>
+            <para>Used with the <command>svn switch</command>
+              subcommand, changes the location of the repository that
+              your working copy references.  This is useful if the
+              location of your repository changes and you have an
+              existing working copy that you'd like to continue to
+              use.  See <command>svn switch</command> for an
+              example.</para>
           </listitem>
         </varlistentry>
         
@@ -587,6 +601,7 @@ Latest revision fresh from the repository!
             checked out into a sub-directory of PATH, with the
             name of the sub-directory being the basename of the
             URL.</para>
+
         </refsect1>
 
         <refsect1>
@@ -663,6 +678,37 @@ Checked out revision 2.
 $ ls
 working-copies
           </screen>
+
+          <para>If you interrupt a checkout (or something else
+            interrupts your checkout like loss of connectivity, etc.),
+            you can restart it by using either by issuing the
+            identical checkout command again, or by updating the
+            incomplete working copy:</para>
+
+          <screen>
+$ svn checkout file:///tmp/repos/test test
+A  test/a
+A  test/b
+^C
+subversion/clients/cmdline/main.c:550: (apr_err=200015)
+svn: The operation was interrupted
+svn: caught SIGINT
+
+$ svn checkout file:///tmp/repos/test test
+A  test/c
+A  test/d
+^C
+subversion/clients/cmdline/main.c:550: (apr_err=200015)
+svn: The operation was interrupted
+svn: caught SIGINT
+
+$ cd test
+$ svn up
+A  test/e
+A  test/f
+Updated to revision 3.
+          </screen>
+
         </refsect1>
       </refentry>
 
@@ -745,7 +791,20 @@ $ svn cleanup /path/to/working-copy
             to compose a commit message.  See the
             <literal>editor-cmd</literal> section in <xref
             linkend="svn-ch-6-sect-1.3.2"/>.</para>
+
+          <tip>
+            <para>If you begin a commit and Subversion launches your
+            editor to compose the commit message, you can still abort
+            without committing your changes.  If you want to cancel
+            your commit, just quit your editor without saving your
+            commit message and Subversion will prompt you to either
+            abort the commit, continue with no message, or edit the
+            message again.</para>
+          </tip>
+
         </refsect1>
+
+
         
         <refsect1>
           <title>Alternate Names</title>
@@ -890,6 +949,12 @@ Committed revision 7.
               </varlistentry>
 
             </variablelist>
+
+          <warning>
+            <para>You can only copy files within a single repository.
+              Subversion does not support cross-repository copying.</para>
+          </warning>
+
         </refsect1>
 
         <refsect1>
@@ -1014,8 +1079,9 @@ Committed revision 13.
             the <option>--force</option> switch to override this
             behavior.</para>
 
-          <para>If run on an URL, the item is deleted from
-            the repository via an immediate commit.</para>
+          <para>If run on one or more URLs, the item is deleted from
+            the repository via an immediate commit (multiple URLs are
+            committed atomically).</para>
         </refsect1>
 
         <refsect1>
@@ -1993,12 +2059,12 @@ U  thhgttg.txt
           <title>Description</title>
 
           <para>Create a directory with a name given by the final
-            component of TARGET.  If TARGET is a working copy path
-            the directory is scheduled for addition in the working
-            copy.  If TARGET is a URL the directory is created in
-            the repository via an immediate commit.  In both cases
-            all the intermediate directories must already
-            exist.</para>
+            component of TARGET.  If TARGET is a working copy path the
+            directory is scheduled for addition in the working copy.
+            If TARGET is one or more URLs, the directory is created in
+            the repository via an immediate commit (multiple directory
+            URLs are committed atomically).  In both cases all the
+            intermediate directories must already exist.</para>
         </refsect1>
 
         <refsect1>
@@ -2078,7 +2144,9 @@ Committed revision 26.
 
           <warning>
             <para>Subversion does not support moving between working
-            copies and URLs.</para>
+            copies and URLs.  In addition, you can only move files
+            within a single repository&mdash;Subversion does not
+            support cross-repository moving.</para>
           </warning>
 
           <variablelist>
@@ -2823,8 +2891,9 @@ $ svn status
               <term>'!'</term>
               <listitem>
                 <para>Item is missing (e.g. you moved or deleted it
-                without using <command>svn</command>), or incomplete
-                (a checkout or update was interrupted).</para>
+                without using <command>svn</command>).  This also
+                indicates that a directory is incomplete (a checkout
+                or update was interrupted).</para>
               </listitem>
             </varlistentry>
 
@@ -3030,6 +3099,16 @@ A  +         965    wc/qax.c
 Head revision:   981
           </screen>
 
+          <warning>
+            <para><option>--show-updates</option>
+            <emphasis>only</emphasis> places an asterisk next to items
+            that are out of date (that is, items that will be updated
+            from the repository if you run <command>svn
+            update</command>).  <option>--show-updates</option> does
+            <emphasis>not</emphasis> cause the status listing to
+            reflect the repository's version of the item.</para>
+          </warning>
+
           <para>And finally, the most information you can get out of
             the status subcommand:</para>
 
@@ -3092,6 +3171,8 @@ Head revision:   981
 --revision (-r) REV
 --non-recursive (-N)
 --quiet (-q)
+--diff3-cmd CMD
+--relocate
 --username USER
 --password PASS
 --no-auth-cache
@@ -3133,6 +3214,33 @@ Updated to revision 31.
               branch if you don't want to switch your entire working
               copy.</para>
           </tip>
+
+          <para>If the location of your repository changes and you
+             have an existing working copy that you'd like to continue
+             to use, you can use <command>svn switch
+             --relocate</command> to change your working copy from one
+             URL to another:</para>
+
+          <screen>
+$ svn checkout file:///tmp/repos test
+A  test/a
+A  test/b
+&hellip;
+
+$ mv repos newlocation
+$ cd test/
+
+$ svn up
+subversion/libsvn_ra_local/ra_plugin.c:225: (apr_err=180001)
+svn: Couldn't open a repository.
+svn: Unable to open an ra_local session to URL
+subversion/libsvn_ra_local/split_url.c:105: (apr_err=180001)
+svn: Unable to open repository 'file:///tmp/repos'
+
+$ svn switch --relocate file:///tmp/repos file:///tmp/newlocation .
+$ svn up
+At revision 3.
+          </screen>
 
         </refsect1>
       </refentry>
