@@ -7,7 +7,7 @@
 # checkout - hente ut, uthenting
 # client - klient
 # commit - sende inn, innsending
-# daemon - daemon, demon(?)
+# daemon - tjeneste
 # deprecated - avlegs
 # destination - mål
 # directory - katalog
@@ -6392,15 +6392,15 @@ msgstr ""
 
 #: svnserve/main.c:102
 msgid "daemon mode"
-msgstr "daemon-modus"
+msgstr "tjenestemodus"
 
 #: svnserve/main.c:104
 msgid "listen port (for daemon mode)"
-msgstr "lytteport (for daemon-modus)"
+msgstr "lytteport (for tjenestemodus)"
 
 #: svnserve/main.c:106
 msgid "listen hostname or IP address (for daemon mode)"
-msgstr "tjenernavn eller IP-adresse for lytting (for daemon-modus)"
+msgstr "tjenernavn eller IP-adresse for lytting (for tjenestemodus)"
 
 #: svnserve/main.c:108
 msgid "run in foreground (useful for debugging)"
