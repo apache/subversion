@@ -103,8 +103,6 @@ static void *create_private(void *userdata, const char *url)
   svn_ra_dav_resource_t *r = apr_pcalloc(pc->pool, sizeof(*r));
   apr_size_t len;
 
-  r->pool = pc->pool;
-
   /* parse the PATH element out of the URL
 
      Note: mod_dav does not (currently) use an absolute URL, but simply a
@@ -123,48 +121,26 @@ static void *create_private(void *userdata, const char *url)
   /* the properties for this resource */
   r->propset = apr_hash_make(pc->pool);
 
-  fprintf(stderr, "svn: added hash for %s\n", url_path);
-
   /* store this resource into the top-level hash table */
   apr_hash_set(pc->props, url_path, APR_HASH_KEY_STRING, r);
 
   return r;
 }
 
-static int add_to_hash(void *userdata, const ne_propname *pname,
-                       const char *value, const ne_status *status)
-{
-  svn_ra_dav_resource_t *r = userdata;
-  const char *name;
-  
-  /* ### it's non-compliant to treat property names as a flat string,
-   * they should be a (namespace, name) pair as per ne_propname.
-   * Could hash using the popular "{namespace}name" convention. */
-  name = apr_pstrcat(r->pool, pname->nspace, pname->name, NULL);
-
-  value = apr_pstrdup(r->pool, value);
-
-  NE_DEBUG(NE_DBG_HTTP, "added hash for %s -> %s\n", name, value);
-
-  apr_hash_set(r->propset, name, APR_HASH_KEY_STRING, 
-               apr_pstrdup(r->pool, value));
-
-  return 0;
-}
-
 static void process_results(void *userdata, const char *uri,
                             const ne_prop_result_set *rset)
 {
+#if 0
   prop_ctx_t *pc = userdata;
   svn_ra_dav_resource_t *r = ne_propset_private(rset);
-
-  NE_DEBUG(NE_DBG_HTTP, "process_results for %s\n", uri);
+#endif
 
   /* ### should use ne_propset_status(rset) to determine whether the
    * ### PROPFIND failed for the properties we're interested in. */
-  /* ### maybe we need a special namespace for user props? */
-  ne_propset_iterate(rset, add_to_hash, r);
 
+  /* ### use ne_propset_iterate(rset) to copy unhandled properties into
+     ### the resource's hash table of props.
+     ### maybe we need a special namespace for user props? */
 }
 
 static int validate_element(ne_xml_elmid parent, ne_xml_elmid child)
@@ -263,12 +239,9 @@ static int end_element(void *userdata, const struct ne_xml_elm *elm,
       name = defn->name;
     }
 
-  if (name != NULL) {
-      fprintf(stderr, "Adding property %s -> %s\n", name, cdata);
-      apr_hash_set(r->propset, name, APR_HASH_KEY_STRING,
-                   apr_pstrdup(pc->pool, cdata));
-  }
-              
+  if (name != NULL)
+    apr_hash_set(r->propset, name, APR_HASH_KEY_STRING,
+                 apr_pstrdup(pc->pool, cdata));
 
   return 0;
 }
