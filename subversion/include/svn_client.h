@@ -39,6 +39,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_opt.h"
+#include "svn_version.h"
 
 
 #ifdef __cplusplus
@@ -58,6 +59,8 @@ extern "C" {
     implementation, and allows for the possibility that different
     targets may come from different repositories.  */
 
+
+SVN_VER_GEN_PROTO(client);
 
 
 /*** Authentication stuff ***/

@@ -674,6 +674,39 @@ error_exit (svn_error_t *err, FILE *stream, svn_boolean_t fatal,
 }
 
 
+/* Version compatibility check */
+static svn_error_t *
+version_mismatch_error (const char *libname, const svn_version_t *versioninfo,
+                        svn_error_t *child)
+{
+  return svn_error_createf (SVN_ERR_VERSION_MISMATCH, child,
+                            _("The '%s' library is not compatible"
+                              " with this program; found version %d.%d.%d%s,"
+                              " expected version %d.%d.%d%s"),
+                            libname,
+                            versioninfo->major, versioninfo->minor,
+                            versioninfo->micro, versioninfo->tag,
+                            SVN_VER_MAJOR, SVN_VER_MINOR, SVN_VER_MICRO,
+                            SVN_VER_NUMTAG);
+}
+
+static svn_error_t *
+check_lib_versions (void)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+
+  /* libsvn_subr */
+  if (!SVN_VER_COMPATIBLE (subr) || !SVN_VER_CALLBACK_COMPATIBLE (subr))
+    err = version_mismatch_error("svn_subr", svn_subr_version(), err);
+
+  /* libsvn_client */
+  if (!SVN_VER_COMPATIBLE (client) || !SVN_VER_CALLBACK_COMPATIBLE (client))
+    err = version_mismatch_error("svn_client", svn_client_version(), err);
+
+  return err;
+}
+
+
 /* A flag to see if we've been cancelled by the client or not. */
 static volatile sig_atomic_t cancelled = FALSE;
 
@@ -732,6 +765,11 @@ main (int argc, const char * const *argv)
 
   pool = svn_pool_create_ex (NULL, allocator);
   apr_allocator_owner_set (allocator, pool);
+
+  /* Check library versions */
+  err = check_lib_versions ();
+  if (err)
+    return error_exit (err, stderr, FALSE, pool);
 
   /* Begin processing arguments. */
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
