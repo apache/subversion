@@ -1090,7 +1090,7 @@ def commit_uri_unsafe(sbox):
     '#hash#' : Item(verb='Adding'),
     nasty_name : Item(verb='Adding'),
     'A/D/space path' : Item(verb='Adding'),
-    "A/D/G/tab\tpath" : Item(verb='Adding'),
+    'A/D/G/' + tab_name : Item(verb='Adding'),
     'A/D/H/bang!' : Item(verb='Adding'),
     'A/D/H/bra[ket' : Item(verb='Adding'),
     'A/D/H/bra{e' : Item(verb='Adding'),
