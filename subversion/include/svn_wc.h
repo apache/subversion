@@ -274,6 +274,9 @@ typedef enum svn_wc_notify_state_t
   /** The state did not change. */
   svn_wc_notify_state_unchanged,
 
+  /** The item wasn't present. */
+  svn_wc_notify_state_missing,
+
   /** Pristine state was modified. */
   svn_wc_notify_state_changed,
 
