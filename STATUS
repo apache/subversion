@@ -100,14 +100,6 @@ Candidate changes:
     Votes:
       +1: sussman, kfogel, cmpilato
 
-  * r9293
-    Fix assertion failure on errors without error message when using an 
-    svnserve connection.
-    Justification: Leaves working copy locked.
-    Notes:  This bug manifests itself on obstructed updates.
-    Votes:
-      +1: dionisos, ghudson, kfogel
-
   * r9315
     Change the formating codes used in svn_swig_pl_callback_thunk.
     Justification: The old ones weren't portable and caused problems on Win32.
