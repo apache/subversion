@@ -194,13 +194,14 @@ main (int argc, const char * const *argv)
 
   static const apr_getopt_option_t options[] =
   {
-    {"xml-file",      svn_cl__xml_file_opt, 1},
-    {"target-dir",    svn_cl__target_dir_opt, 1}, /* README: --destination */
     {"ancestor-path", svn_cl__ancestor_path_opt, 1}, /* !doc'ed in README */
-    {"revision",      'r', 1},
-    {"valfile",       svn_cl__valfile_opt, 1},       /* !doc'ed in README */
     {"force",         svn_cl__force_opt, 0},
     {"help",          'h', 0},
+    {"message",       'm', 1},
+    {"revision",      'r', 1},
+    {"target-dir",    svn_cl__target_dir_opt, 1}, /* README: --destination */
+    {"valfile",       svn_cl__valfile_opt, 1},       /* !doc'ed in README */
+    {"xml-file",      svn_cl__xml_file_opt, 1},
     {0,               0, 0}
   };
 
@@ -236,6 +237,9 @@ main (int argc, const char * const *argv)
         }
 
       switch (opt_id) {
+      case 'm':
+        opt_state.message = svn_string_create (optarg, pool);
+        break;
       case 'r':
         opt_state.revision = (svn_revnum_t) atoi (optarg);
         break;

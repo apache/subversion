@@ -44,6 +44,7 @@ typedef enum {
 typedef struct svn_cl__opt_state_t
 {
   svn_revnum_t revision;
+  svn_string_t *message;
   svn_string_t *xml_file;
   svn_string_t *target;
   svn_string_t *ancestor_path;
