@@ -1,4 +1,22 @@
-It would be nice to organize this file somehow.
+It would be nice to organize this file somehow (is this a recursive
+todo?).
+
+Add `kind' member dag_node_t structure as a means of caching for quick
+access, independent of transactions and such, the node's kind (dir,
+file, copy, etc.)  This will eliminate the need to have trails passed
+thru the question functions related to node kinds.  Note that the
+mutability question function still needs a trail argument, as
+mutability is not a permanent attribute of a node.
+
+Make a neat-O constructor function for dag_node_t's.
+
+Rename get_node_revision_cached and set_node_revision_cached to just
+get_node_revision and set_node_revision, respectively.
+
+The filesystem needs some path validation stuffs independent of the
+SVN path utilities.  A filesystem path is a well-defined Thing that
+should be held a safe distance away from future changes to SVN's
+general path library.
 
 Add `public name' member to filesystem structure, to use to identify
 the filesystem in error messages.  When driven by DAV, this could be a
