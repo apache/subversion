@@ -1042,6 +1042,12 @@ class Dumper:
                                            svn_src_path, svn_src_rev,
                                            entries)
     if change.op == 'A':
+      if change.copyfrom_rev >= self.revision:
+        sys.stderr.write("%s: invalid copyfrom revision %d used while\n"
+                         "creating revision %d in dumpfile.\n"
+                         % (error_prefix, change.copyfrom_rev, self.revision))
+        sys.exit(1)
+        
       # We don't need to include "Node-kind:" for copies; the loader
       # ignores it anyway and just uses the source kind instead.
       self.dumpfile.write('Node-path: %s\n'
@@ -1537,13 +1543,13 @@ class SymbolicNameTracker:
           min = j + 1
     return scores
   
-  def best_rev(self, scores):
-    """Return the revision with the highest score from SCORES, a list
-    returned by score_revisions()."""
+  def best_rev(self, scores, limit_rev):
+    """Return the revision older than LIMIT_REV with the highest score
+    from SCORES, a list returned by score_revisions()."""
     max_score = 0
     rev = SVN_INVALID_REVNUM
     for pair in scores:
-      if pair[1] > max_score:
+      if pair[1] > max_score and pair[0] < limit_rev:
         max_score = pair[1]
         rev = pair[0]
     return rev
@@ -1586,7 +1592,7 @@ class SymbolicNameTracker:
       # If not already copied this subdir, calculate its "best rev"
       # and see if it differs from parent's best rev.
       scores = self.score_revisions(val.get(opening_key), val.get(closing_key))
-      rev = self.best_rev(scores)
+      rev = self.best_rev(scores, dumper.revision)
 
       if rev == SVN_INVALID_REVNUM:
         return  # name is a branch, but we're doing a tag, or vice versa
