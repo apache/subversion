@@ -116,7 +116,7 @@ open_berkeley_filesystem (const char **msg)
   {
     svn_revnum_t rev;
 
-    if (SVN_NO_ERROR != svn_fs_youngest_rev (&rev, fs))
+    if (SVN_NO_ERROR != svn_fs_youngest_rev (&rev, fs, pool))
       return fail();
 
     if (rev != 0)
