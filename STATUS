@@ -19,8 +19,8 @@ Candidate changes:
     Votes:
       +1: maxb, dionisos
       (r12075 only) +1: ghudson
-      -0: bliss (because the patch is non-trivial and there is only a
-                 single known pre-0.14 user)
+      -0: ringstrom (because the patch is non-trivial and there is only a
+                     single known pre-0.14 user)
       +0: kfogel
 
   * r11050
@@ -135,6 +135,13 @@ Candidate changes:
       currently dumps core on our 27k rev / 70k files tree
     Votes:
       +1: epg
+
+  * r12325
+    Fix segfault or infinite memory consumption loop.
+    Justification:
+      Obvious bug, dire consequences, and an obvious one-line fix.
+    Votes:
+      +1: ringstrom
 
 Approved changes (further review is welcome, but not required):
 
