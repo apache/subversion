@@ -738,6 +738,9 @@ do_close (svn_wc_adm_access_t *adm_access,
       assert (! adm_access->set_owner || apr_hash_count (adm_access->set) == 0);
     }
 
+  /* Invalidate the baton so that attempts to use it will be caught. */
+  memset (adm_access, 0, sizeof(*adm_access));
+
   return SVN_NO_ERROR;
 }
 

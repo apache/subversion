@@ -393,8 +393,9 @@ svn_wc_process_committed (const char *path,
 
   /* Run the log file we just created. */
   SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
-            
-  if (recurse)
+
+  /* Recurse if required, unless we have just removed the entire directory. */
+  if (recurse && svn_wc_adm_locked (adm_access))
     {
       apr_hash_t *entries;
       apr_hash_index_t *hi;
@@ -1721,6 +1722,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
       apr_pool_t *subpool = svn_pool_create (pool);
       apr_hash_index_t *hi;
       svn_wc_entry_t incomplete_entry;
+      const char *adm_access_path = svn_wc_adm_access_path (adm_access);
 
       /* ### sanity check:  check 2 places for DELETED flag? */
             
@@ -1861,8 +1863,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
              *non*-recursive dir_remove should work.  If it doesn't,
              no big deal.  Just assume there are unversioned items in
              there and set "left_something" */
-          err = svn_io_dir_remove_nonrecursive
-            (svn_wc_adm_access_path (adm_access), subpool);
+          err = svn_io_dir_remove_nonrecursive (adm_access_path, subpool);
           if (err)
             {
               left_something = TRUE;
