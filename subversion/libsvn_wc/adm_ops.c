@@ -2016,14 +2016,14 @@ resolve_walk_callbacks =
 
 /* The public function */
 svn_error_t *
-svn_wc_resolve_conflict (const char *path,
-                         svn_wc_adm_access_t *adm_access,
-                         svn_boolean_t resolve_text,
-                         svn_boolean_t resolve_props,
-                         svn_boolean_t recursive,
-                         svn_wc_notify_func_t notify_func,
-                         void *notify_baton,                         
-                         apr_pool_t *pool)
+svn_wc_resolved_conflict (const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t resolve_text,
+                          svn_boolean_t resolve_props,
+                          svn_boolean_t recursive,
+                          svn_wc_notify_func_t notify_func,
+                          void *notify_baton,                         
+                          apr_pool_t *pool)
 {
   struct resolve_callback_baton *baton = apr_pcalloc (pool, sizeof(*baton));
 

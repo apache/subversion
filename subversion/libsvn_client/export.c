@@ -44,6 +44,7 @@
 static svn_error_t *
 copy_versioned_files (const char *from,
                       const char *to,
+                      svn_boolean_t force,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
@@ -53,14 +54,19 @@ copy_versioned_files (const char *from,
   const svn_wc_entry_t *entry;
   svn_error_t *err;
 
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, from, FALSE, FALSE, pool));
+  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, from, FALSE, 
+                                  FALSE, pool));
   err = svn_wc_entry (&entry, from, adm_access, FALSE, subpool);
   SVN_ERR (svn_wc_adm_close (adm_access));
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+        return err;
+      else
+        svn_error_clear (err);
+    }
 
-  if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
-    return err;
-
-  /* we don't want to copy some random non-versioned directory. */
+  /* We don't want to copy some random non-versioned directory. */
   if (entry)
     {
       apr_hash_index_t *hi;
@@ -68,7 +74,21 @@ copy_versioned_files (const char *from,
 
       SVN_ERR (svn_io_stat (&finfo, from, APR_FINFO_PROT, subpool));
 
-      SVN_ERR (svn_io_dir_make (to, finfo.protection, subpool));
+      /* Try to make the new directory.  If this fails because the
+         directory already exists, check our FORCE flag to see if we
+         care. */
+      err = svn_io_dir_make (to, finfo.protection, subpool);
+      if (err)
+        {
+          if (! APR_STATUS_IS_EEXIST (err->apr_err))
+            return err;
+          if (! force)
+            SVN_ERR_W (err,
+                       "Destination directory exists.  Please remove the "
+                       "directory, or use --force to override this error.");
+          else
+            svn_error_clear (err);
+        }
 
       SVN_ERR (svn_io_get_dirents (&dirents, from, pool));
 
@@ -101,7 +121,7 @@ copy_versioned_files (const char *from,
                   const char *new_from = svn_path_join (from, key, subpool);
                   const char *new_to = svn_path_join (to, key, subpool);
 
-                  SVN_ERR (copy_versioned_files (new_from, new_to,
+                  SVN_ERR (copy_versioned_files (new_from, new_to, force,
                                                  ctx, subpool));
                 }
             }
@@ -136,6 +156,49 @@ copy_versioned_files (const char *from,
 
   return SVN_NO_ERROR;
 }
+
+
+/* Abstraction of open_root.
+ *
+ * Create PATH if it does not exist and is not obstructed, and invoke
+ * NOTIFY_FUNC with NOTIFY_BATON on PATH.
+ *
+ * If PATH exists but is a file, then error with SVN_ERR_WC_NOT_DIRECTORY.
+ *
+ * If PATH is a already a directory, then error with
+ * SVN_ERR_WC_OBSTRUCTED_UPDATE, unless FORCE, in which case just
+ * export into PATH with no error.
+ */
+static svn_error_t *
+open_root_internal (const char *path,
+                    svn_boolean_t force,
+                    svn_wc_notify_func_t notify_func,
+                    void *notify_baton,
+                    apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (kind == svn_node_none)
+    SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
+  else if (kind == svn_node_file)
+    return svn_error_create (SVN_ERR_WC_NOT_DIRECTORY, NULL, path);
+  else if ((kind != svn_node_dir) || (! force))
+    return svn_error_create (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL, path);
+
+  if (notify_func)
+    (*notify_func) (notify_baton,
+                    path,
+                    svn_wc_notify_update_add,
+                    svn_node_dir,
+                    NULL,
+                    svn_wc_notify_state_unknown,
+                    svn_wc_notify_state_unknown,
+                    SVN_INVALID_REVNUM);
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_client_export (const char *from,
@@ -188,11 +251,29 @@ svn_client_export (const char *from,
                                    pool));
 
       SVN_ERR (reporter->finish_report (report_baton));               
+
+      /* Special case: Due to our sly export/checkout method of
+       * updating an empty directory, no target will have been created
+       * if the exported item is itself an empty directory
+       * (export_editor->open_root never gets called, because there
+       * are no "changes" to make to the empty dir we reported to the
+       * repository).
+       *
+       * So we just create the empty dir manually; but we do it via
+       * open_root_internal(), in order to get proper notification.
+       */
+      {
+        svn_node_kind_t kind;
+        SVN_ERR (svn_io_check_path (to, &kind, pool));
+        if (kind == svn_node_none)
+          SVN_ERR (open_root_internal
+                   (to, force, ctx->notify_func, ctx->notify_baton, pool));
+      }
     }
   else
     {
       /* just copy the contents of the working copy into the target path. */
-      SVN_ERR (copy_versioned_files (from, to, ctx, pool));
+      SVN_ERR (copy_versioned_files (from, to, force, ctx, pool));
     }
 
   return SVN_NO_ERROR;
@@ -263,27 +344,9 @@ open_root (void *edit_baton,
            void **root_baton)
 {
   struct edit_baton *eb = edit_baton;  
-  svn_node_kind_t kind;
-  
-  SVN_ERR (svn_io_check_path (eb->root_path, &kind, pool));
-  if ( kind == svn_node_none )
-      SVN_ERR (svn_io_dir_make (eb->root_path, APR_OS_DEFAULT, pool));
-  else if (kind == svn_node_file)
-      return svn_error_create (SVN_ERR_WC_NOT_DIRECTORY,
-                               NULL, eb->root_path);
-  else if ( (! (kind == svn_node_dir && eb->force)) || kind != svn_node_dir)
-      return svn_error_create (SVN_ERR_WC_OBSTRUCTED_UPDATE,
-                               NULL, eb->root_path);
 
-  if (eb->notify_func)
-    (*eb->notify_func) (eb->notify_baton,
-                        eb->root_path,
-                        svn_wc_notify_update_add,
-                        svn_node_dir,
-                        NULL,
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        SVN_INVALID_REVNUM);
+  SVN_ERR (open_root_internal (eb->root_path, eb->force,
+                               eb->notify_func, eb->notify_baton, pool));
 
   *root_baton = eb;
   return SVN_NO_ERROR;

@@ -256,7 +256,7 @@ M     ./foo.c
 M     ./bar/baz.c
     </screen>
 
-    <para>If you specify the <option>--update</option>
+    <para>If you specify the <option>--show-updates</option>
       (<option>-u</option>) switch, a longer output format is
       used:</para>
 
@@ -285,20 +285,25 @@ Head revision:   1066
     than -v, and the example following that paragraph *is* about -u,
     not -v, my patch concentrated on that. -->
 
-    <para>Lastly, here's a quick summary of status codes that you may
-    see:</para>
+    <para>Lastly, here's a quick summary of the most common status codes that
+      you may see:</para>
 
     <screen>
-A    Add
-D    Delete
-R    Replace  (delete, then re-add)
-M    local Modification
-U    Updated
-G    merGed
-C    Conflict
-X    eXternal
+A    Resource is scheduled for Addition
+D    Resource is scheduled for Deletion
+M    Resource has local modifications
+C    Resource has conflicts (changes have not been completely merged
+       between the repository and working copy version)
+X    Resource is external to this working copy (comes from another
+       repository.  See <xref linkend="svn-ch-6-sect-2.3.6" />)
+?    Resource is not under revision control
+!    Resource is missing or incomplete (removed by another tool than
+       Subversion)
     </screen>
 
+    <!-- ###TODO:  This paragraph should be moved elsewhere.  We are
+                   talking about status codes here, and not update.
+                   Although CVS uses update as a form of status... -->
     <para>Subversion has combined the CVS <command>P</command> and
       <command>U</command> codes into just <command>U</command>.  When
       a merge or conflict occurs, Subversion simply prints
@@ -365,7 +370,7 @@ X    eXternal
     <para>Subversion solves this problem by making conflicts more
       tangible.  It remembers that a file is in a state of conflict,
       and won't allow you to commit your changes until you run
-      <command>svn resolve</command>.  See <xref
+      <command>svn resolved</command>.  See <xref
       linkend="svn-ch-3-sect-4.4"/> for more details.</para>
   </sect1>
 
@@ -409,7 +414,7 @@ X    eXternal
       Subversion examines the <literal>svn:mime-type</literal>
       property.  If the file has no <literal>svn:mime-type</literal>
       property, or has a mime-type that is textual (e.g. text/*),
-      Subversion assumes it is text.  Otherwise, Subversion it assumes
+      Subversion assumes it is text.  Otherwise, Subversion assumes
       the file is binary.  Subversion also helps users by running a
       binary-detection algorithm in the <command>svn import</command>
       and <command>svn add</command> commands.  These commands will

@@ -312,7 +312,7 @@ def do_nothing(x, y):
   return 0
 
 def update_modified_with_translation(sbox):
-  "update locally modified file with eol-style 'native'"
+  "update modified file with eol-style 'native'"
 
   sbox.build()
 
@@ -410,7 +410,7 @@ This is the file 'rho'.>>>>>>> .r1
 # have the new line-ending style.
 
 def eol_change_is_text_mod(sbox):
-  "commit eol-style change which should force a text transmission"
+  "committing eol-style change forces text send"
   
   sbox.build()
 
@@ -468,7 +468,7 @@ def eol_change_is_text_mod(sbox):
 # didn't get keywords expanded on checkout.
 
 def keyword_expanded_on_checkout(sbox):
-  "keyword expanded on checkout for only file in a directory"
+  "keyword expansion for lone file in directory"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -495,7 +495,8 @@ def keyword_expanded_on_checkout(sbox):
                                       svntest.main.current_repo_url,
                                       other_wc_dir)
 
-  # Check keyword got expanded (and thus the mkdir, add, ps, commit etc. worked)
+  # Check keyword got expanded (and thus the mkdir, add, ps, commit
+  # etc. worked)
   fp = open(other_url_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)

@@ -1,31 +1,31 @@
 #!/usr/bin/env python2
 #
-# USAGE: blame.py [-r REV] [-h DBHOME] repos-path
+# USAGE: blame.py [-r REV] repos-path file
 #
 
 import sys
 import os
 import getopt
 import difflib
-from svn import fs, core
+from svn import fs, core, repos
 
 CHUNK_SIZE = 100000
 
-def getfile(pool, path, rev=None, home='.'):
+def getfile(pool, path, filename, rev=None):
   
-  db_path = os.path.join(home, 'db')
-  if not os.path.exists(db_path):
-    db_path = home
   annotresult = {}
-  fsob = fs.new(pool)
-  fs.open_berkeley(fsob, db_path)
-  
+  if path[-1] == "/":
+     path = path[:-1]
+
+  repos_ptr = repos.svn_repos_open(path, pool)
+  fsob = repos.svn_repos_fs(repos_ptr)
+ 
   if rev is None:
     rev = fs.youngest_rev(fsob, pool)
   filedata = '' 
   for i in xrange(0, rev+1):
     root = fs.revision_root(fsob, i, pool)
-    if fs.check_path(root, path, pool) != core.svn_node_none:
+    if fs.check_path(root, filename, pool) != core.svn_node_none:
       first = i
       break
   print "First revision is %d" % first
@@ -34,10 +34,10 @@ def getfile(pool, path, rev=None, home='.'):
     previousroot = root
     root = fs.revision_root(fsob, i, pool)
     if i != first:
-      if not fs.contents_changed(root, path, previousroot, path, pool):
+      if not fs.contents_changed(root, filename, previousroot, filename, pool):
         continue
       
-    file = fs.file_contents(root, path, pool)
+    file = fs.file_contents(root, filename, pool)
     previousdata = filedata
     filedata = ''
     while 1:
@@ -73,21 +73,18 @@ def getfile(pool, path, rev=None, home='.'):
                                                annotresult[x][1]))
 
 def usage():
-  print "USAGE: blame.py [-r REV] [-h DBHOME] repos-path"
+  print "USAGE: blame.py [-r REV] repos-path file"
   sys.exit(1)
 
 def main():
-  opts, args = getopt.getopt(sys.argv[1:], 'r:h:')
-  if len(args) != 1:
+  opts, args = getopt.getopt(sys.argv[1:], 'r:')
+  if len(args) != 2:
     usage()
   rev = None
-  home = '.'
   for name, value in opts:
     if name == '-r':
       rev = int(value)
-    elif name == '-h':
-      home = value
-  core.run_app(getfile, args[0], rev, home)
+  core.run_app(getfile, args[0], args[1], rev)
 
 if __name__ == '__main__':
   main()

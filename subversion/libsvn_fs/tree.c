@@ -3661,6 +3661,40 @@ svn_fs_revisions_changed (apr_array_header_t **revs,
   apr_hash_t *all_revs = apr_hash_make (subpool);
   apr_hash_index_t *hi;
 
+  /* SPECIAL CASE: If the path is the root directory, we know already
+     that it has been modified in every revision between 0 and the
+     revision on which ROOT is based.  No need to walk predecessors on
+     this one!  */
+  if (svn_path_is_empty (path))
+    {
+      svn_revnum_t rootrev;
+      svn_revnum_t revision;
+
+      /* Get the revision associated with ROOT. */
+      if (root->kind == revision_root)
+        {
+          rootrev = root->rev;
+        }
+      else
+        {
+          const char *txn_name = root->txn;
+          svn_fs_txn_t *txn;
+
+          SVN_ERR (svn_fs_open_txn (&txn, root->fs, txn_name, pool));
+          rootrev = svn_fs_txn_base_revision (txn);
+          SVN_ERR (svn_fs_close_txn (txn));
+        }
+
+      /* Now, just add all the revisions to the array. */
+      for (revision = 0; revision <= rootrev; revision++)
+        {
+          (*((svn_revnum_t *) apr_array_push (*revs))) = revision;
+        }
+      
+      /* All done. */
+      return SVN_NO_ERROR;
+    }
+
   /* Populate the common baton members. */
   args.revs = all_revs;
   args.fs = fs;

@@ -37,7 +37,7 @@ Item = svntest.wc.StateItem
 #----------------------------------------------------------------------
 
 def status_unversioned_file_in_current_dir(sbox):
-  "run status on an unversioned file in the current directory"
+  "status on unversioned file in current directory"
 
   if sbox.build():
     return 1
@@ -63,8 +63,7 @@ def status_unversioned_file_in_current_dir(sbox):
     os.chdir(was_cwd)
 
 #----------------------------------------------------------------------
-
-# regression for issue #590
+# Regression for issue #590
 
 def status_update_with_nested_adds(sbox):
   "run 'status -u' when nested additions are pending"
@@ -132,7 +131,7 @@ def status_update_with_nested_adds(sbox):
 
 # svn status -vN should include all entries in a directory
 def status_shows_all_in_current_dir(sbox):
-  "status -vN and test if all items in the current directory show up"
+  "status -vN shows all items in current directory"
 
   if sbox.build():
     return 1
@@ -155,6 +154,8 @@ def status_shows_all_in_current_dir(sbox):
 
   return 0
 
+
+#----------------------------------------------------------------------
 
 def status_missing_file(sbox):
   "status with a versioned file missing"
@@ -181,8 +182,10 @@ def status_missing_file(sbox):
   return 0
 
 
+#----------------------------------------------------------------------
+
 def status_type_change(sbox):
-  "status with versioned items whose working type has changed"
+  "status on versioned items whose type has changed"
 
   if sbox.build():
     return 1
@@ -235,8 +238,10 @@ def status_type_change(sbox):
 
   return 0
 
+#----------------------------------------------------------------------
+
 def status_type_change_to_symlink(sbox):
-  "status with versioned items replaced by symbolic links"
+  "status on versioned items replaced by symlinks"
 
   if sbox.build():
     return 1
@@ -279,8 +284,11 @@ def status_type_change_to_symlink(sbox):
   return 0
 
 
+#----------------------------------------------------------------------
+# Regression test for revision 3686.
+
 def status_with_new_files_pending(sbox):
-  "status -u with new files pending in the repository (tests rev 3686)"
+  "status -u with new files in the repository"
 
   if sbox.build():
     return 1
@@ -317,8 +325,10 @@ def status_with_new_files_pending(sbox):
   return 0
 
 
+#----------------------------------------------------------------------
+
 def status_for_unignored_file(sbox):
-  "status for unignored file"
+  "status for unignored file and directory"
 
   sbox.build()
 
@@ -329,40 +339,32 @@ def status_for_unignored_file(sbox):
 
   try:
     svntest.main.file_append('newfile', 'this is a new file')
-    svntest.main.run_svn(None, 'propset', 'svn:ignore', 'newfile', '.')
+    os.makedirs('newdir')
+    svntest.main.run_svn(None, 'propset', 'svn:ignore', 'new*', '.')
 
     # status on the directory with --no-ignore
-    stat_output, err_output = svntest.main.run_svn(None, 'status', 
-                                                   '--no-ignore', '.')
-    if err_output:
-      raise svntest.Failure
-    status = 1
-    for line in stat_output:
-      if re.match("I +newfile", line):
-        status = 0
-
-    if (status == 1):
-      raise svntest.Failure
+    svntest.actions.run_and_verify_svn(None,
+                                       [' M     .\n',
+                                        'I      newdir\n',
+                                        'I      newfile\n'],
+                                       [],
+                                       'status', '--no-ignore', '.')
 
     # status specifying the file explicitly on the command line
-    stat_output, err_output = svntest.main.run_svn(None, 'status', 'newfile')
-
-    if err_output:
-      raise svntest.Failure
-    status = 1
-    for line in stat_output:
-      if re.match("I +newfile", line):
-        status = 0
-
-    if (status == 1):
-      raise svntest.Failure
+    svntest.actions.run_and_verify_svn(None,
+                                       ['I      newdir\n',
+                                        'I      newfile\n'],
+                                       [],
+                                       'status', 'newdir', 'newfile')
   
   finally:
     os.chdir(was_cwd)
 
 
+#----------------------------------------------------------------------
+
 def status_for_nonexistent_file(sbox):
-  "status for a file neither on disk nor under version control"
+  "status on missing and unversioned file"
 
   sbox.build()
 
@@ -386,8 +388,10 @@ def status_for_nonexistent_file(sbox):
     os.chdir(was_cwd)
 
 
+#----------------------------------------------------------------------
+
 def status_file_needs_update(sbox):
-  "status -u should show that outdated file needs update"
+  "status -u indicates out-of-dateness"
 
   # See this thread:
   #
@@ -453,8 +457,10 @@ def status_file_needs_update(sbox):
   return not saw_it
 
 
+#----------------------------------------------------------------------
+
 def status_uninvited_parent_directory(sbox):
-  "status -u wc/added-and-outdated-file should show only that status"
+  "status -u on outdated, added file shows only that"
 
   # To reproduce, check out working copies wc1 and wc2, then do:
   #
@@ -518,6 +524,54 @@ def status_uninvited_parent_directory(sbox):
   return saw_uninvited_parent_dir
 
 
+def status_on_forward_deletion(sbox):
+  "status -u on working copy deleted in HEAD"
+  # See issue #1289.
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  top_url = svntest.main.current_repo_url
+  A_url = top_url + '/A'
+
+  svntest.main.run_svn(None, 'rm', '-m', 'Remove A.', A_url)
+
+  svntest.main.safe_rmtree(wc_dir)
+  os.mkdir(wc_dir)
+  saved_cwd = os.getcwd()
+  os.chdir(wc_dir)
+  try:
+    svntest.main.run_svn(None, 'co', '-r1', top_url, 'wc')
+    # If the bug is present, this will error with
+    #
+    #    subversion/libsvn_wc/lock.c:513: (apr_err=155005)
+    #    svn: Working copy not locked
+    #    svn: directory '' not locked
+    #
+    out, err = svntest.main.run_svn(None, 'st', '-u', 'wc')
+    if err:
+      raise svntest.Failure
+
+    # Try again another way; the error would look like this:
+    #
+    #    subversion/libsvn_repos/delta.c:207: (apr_err=160005)
+    #    svn: Invalid filesystem path syntax
+    #    svn: svn_repos_dir_delta: invalid editor anchoring; at least \
+    #       one of the input paths is not a directory and there was   \
+    #       no source entry.
+    #
+    # (Dang!  Hope a user never has to see that :-) ).
+    #
+    svntest.main.safe_rmtree('wc')
+    svntest.main.run_svn(None, 'co', '-r1', A_url, 'wc')
+    out, err = svntest.main.run_svn(None, 'st', '-u', 'wc')
+    if err:
+      raise svntest.Failure
+    
+  finally:
+    os.chdir(saved_cwd)
+
+
 ########################################################################
 # Run the tests
 
@@ -535,6 +589,7 @@ test_list = [ None,
               status_for_nonexistent_file,
               status_file_needs_update,
               status_uninvited_parent_directory,
+              status_on_forward_deletion,
              ]
 
 if __name__ == '__main__':

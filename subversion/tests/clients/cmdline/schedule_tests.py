@@ -564,7 +564,7 @@ def commit_delete_dirs(sbox):
 # entry is simply removed from the entries file.
 
 def unschedule_missing_added(sbox):
-  "schedule: unschedule addition on missing items"
+  "unschedule addition on missing items"
 
   wc_dir = sbox.wc_dir
 
@@ -618,7 +618,7 @@ def unschedule_missing_added(sbox):
 # Also make sure that the deletion is committable.
 
 def delete_missing(sbox):
-  "schedule: schedule (& commit) deletion on missing items"
+  "schedule and commit deletion on missing items"
 
   wc_dir = sbox.wc_dir
 

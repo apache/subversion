@@ -152,8 +152,20 @@ svn_repos_get_logs (svn_repos_t *repos,
 
   /* If paths were specified, then we only really care about revisions
      in which those paths were changed.  So we ask the filesystem for
-     all the revisions in which any of the paths was changed.  */
-  if (paths && paths->nelts)
+     all the revisions in which any of the paths was changed.
+
+     SPECIAL CASE: If we were given only path, and that path is empty,
+     then the results are the same as if we were passed no paths at
+     all.  Why?  Because the answer to the question "In which
+     revisions was the root of the filesystem changed?" is always
+     "Every single one of them."  And since this section of code is
+     only about answering that question, and we already know the
+     answer ... well, you get the picture.
+  */
+  if (paths 
+      && (((paths->nelts == 1) 
+           && (! svn_path_is_empty (APR_ARRAY_IDX (paths, 0, const char *))))
+          || (paths->nelts > 1)))
     {
       svn_fs_root_t *rev_root;
 

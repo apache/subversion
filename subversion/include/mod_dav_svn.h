@@ -516,6 +516,27 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
 int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri);
 
 
+enum dav_svn_time_format {
+  dav_svn_time_format_iso8601,
+  dav_svn_time_format_rfc1123
+};
+
+/* Given a mod_dav_svn @a resource, set @a *timeval and @a *datestring
+   to the last-modified-time of the resource.  The datestring will be
+   formatted according to @a format.  Use @a pool for both
+   scratchwork, and to allocate @a *datestring. 
+
+   If @a timeval or @a datestring is NULL, don't touch it.
+
+   Return zero on success, non-zero if an error occurs. */
+int dav_svn_get_last_modified_time (const char **datestring,
+                                    apr_time_t *timeval,
+                                    const dav_resource *resource,
+                                    enum dav_svn_time_format format,
+                                    apr_pool_t *pool);
+
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

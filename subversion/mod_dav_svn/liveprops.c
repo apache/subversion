@@ -145,94 +145,28 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
            svn_fs_revisions_changed.  gstein, is it a bad thing that
            we're currently using 'creationdate' to mean the same thing
            as 'last modified date'?  */
-        svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
-        svn_string_t *committed_date = NULL;
-
-        if (resource->baselined && resource->type == DAV_RESOURCE_TYPE_VERSION)
-          {
-            /* A baseline URI. */
-            committed_rev = resource->info->root.rev;
-          }
-        else if (resource->type == DAV_RESOURCE_TYPE_REGULAR
-                 || resource->type == DAV_RESOURCE_TYPE_WORKING
-                 || resource->type == DAV_RESOURCE_TYPE_VERSION)
-          {
-            /* Get the CR field out of the node's skel.  Notice that the
-               root object might be an ID root -or- a revision root. */
-            serr = svn_fs_node_created_rev(&committed_rev,
-                                           resource->info->root.root,
-                                           resource->info->repos_path, p);
-            if (serr != NULL)
-              {
-                /* ### what to do? */
-                value = "###error###";
-                break;
-              }
-          }        
-        else
-          {
-            return DAV_PROP_INSERT_NOTSUPP;
-          }
-        
-        /* Get the date property of the created revision. */
-        serr = svn_fs_revision_prop(&committed_date,
-                                    resource->info->repos->fs,
-                                    committed_rev,
-                                    SVN_PROP_REVISION_DATE, p);
-        if (serr != NULL)
-          {
-            /* ### what to do? */
-            value = "###error###";
-            break;
-          }
-        
-        if (committed_date == NULL)
-          return DAV_PROP_INSERT_NOTDEF;
-
+        const char *datestring;
+        apr_time_t timeval;
+        enum dav_svn_time_format format;
+       
         if (propid == DAV_PROPID_creationdate)
           {
             /* Return an ISO8601 date; this is what the svn client
                expects, and rfc2518 demands it. */
-
-            /* Revision datestamps are already ISO8601 format. */
-            value = apr_xml_quote_string(p, committed_date->data, 1);
+            format = dav_svn_time_format_iso8601;
           }
-
         else if (propid == DAV_PROPID_getlastmodified)
           {
-            /* Return an rfc1123 date string, as rfc2518 demands an
-               'http date' for this property.  */
-            apr_time_t timeval;
-            apr_time_exp_t tms;
-            apr_status_t status;
-            const char *nicedate;
-
-            /* convert the ISO8601 date into an apr_time_t */
-            serr = svn_time_from_cstring(&timeval, committed_date->data, p);
-            if (serr != NULL)
-              {
-                value = "###error###";
-                break;
-              }
-            
-            /* convert the apr_time_t into a apr_time_exp_t */
-            status = apr_time_exp_gmt(&tms, timeval);
-            if (status != APR_SUCCESS)
-              {
-                value = "###error###";
-                break;
-              }
-              
-            /* stolen from dav/fs/repos.c   :-)  */
-            nicedate = apr_psprintf(p, "%s, %.2d %s %d %.2d:%.2d:%.2d GMT",
-                                    apr_day_snames[tms.tm_wday],
-                                    tms.tm_mday, apr_month_snames[tms.tm_mon],
-                                    tms.tm_year + 1900,
-                                    tms.tm_hour, tms.tm_min, tms.tm_sec);
-
-            value = apr_xml_quote_string(p, nicedate, 1);
+            format = dav_svn_time_format_rfc1123;
           }
 
+        if (0 != dav_svn_get_last_modified_time (&datestring, &timeval,
+                                                 resource, format, p))
+          {
+            return DAV_PROP_INSERT_NOTDEF;
+          }
+
+        value = apr_xml_quote_string(p, datestring, 1);
         break;
       }
 
@@ -671,3 +605,90 @@ void dav_svn_register_uris(apr_pool_t *p)
     /* register the namespace URIs */
     dav_register_liveprop_group(p, &dav_svn_liveprop_group);
 }
+
+
+int dav_svn_get_last_modified_time (const char **datestring,
+                                    apr_time_t *timeval,
+                                    const dav_resource *resource,
+                                    enum dav_svn_time_format format,
+                                    apr_pool_t *pool)
+{
+  svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
+  svn_string_t *committed_date = NULL;
+  svn_error_t *serr;
+  apr_time_t timeval_tmp;
+  
+  if ((datestring == NULL) && (timeval == NULL))
+    return 0;
+
+  if (resource->baselined && resource->type == DAV_RESOURCE_TYPE_VERSION)
+    {
+      /* A baseline URI. */
+      committed_rev = resource->info->root.rev;
+    }
+  else if (resource->type == DAV_RESOURCE_TYPE_REGULAR
+           || resource->type == DAV_RESOURCE_TYPE_WORKING
+           || resource->type == DAV_RESOURCE_TYPE_VERSION)
+    {
+      serr = svn_fs_node_created_rev(&committed_rev,
+                                     resource->info->root.root,
+                                     resource->info->repos_path, pool);
+      if (serr != NULL)
+        return 1;
+    }
+  else
+    {
+      /* unsupported resource kind -- has no mod-time */
+      return 1;
+    }
+
+  /* Get the svn:date property of the CR */
+  serr = svn_fs_revision_prop(&committed_date,
+                              resource->info->repos->fs,
+                              committed_rev,
+                              SVN_PROP_REVISION_DATE, pool);
+  if (serr != NULL)
+    return 1;
+  
+  if (committed_date == NULL)
+    return 1;
+
+  /* return the ISO8601 date as an apr_time_t */
+  serr = svn_time_from_cstring(&timeval_tmp, committed_date->data, pool);
+  if (serr != NULL)
+    return 1;
+
+  if (timeval)
+    memcpy(timeval, &timeval_tmp, sizeof(*timeval));
+
+  if (! datestring)
+    return 0;
+
+  if (format == dav_svn_time_format_iso8601)
+    {
+      *datestring = committed_date->data;
+    }
+  else if (format == dav_svn_time_format_rfc1123)
+    {
+      apr_time_exp_t tms;
+      apr_status_t status;
+      
+      /* convert the apr_time_t into a apr_time_exp_t */
+      status = apr_time_exp_gmt(&tms, timeval_tmp);
+      if (status != APR_SUCCESS)
+        return 1;
+              
+      /* stolen from dav/fs/repos.c   :-)  */
+      *datestring = apr_psprintf(pool, "%s, %.2d %s %d %.2d:%.2d:%.2d GMT",
+                                 apr_day_snames[tms.tm_wday],
+                                 tms.tm_mday, apr_month_snames[tms.tm_mon],
+                                 tms.tm_year + 1900,
+                                 tms.tm_hour, tms.tm_min, tms.tm_sec);      
+    }
+  else /* unknown time format */
+    {
+      return 1;
+    }
+
+  return 0;
+}                                              

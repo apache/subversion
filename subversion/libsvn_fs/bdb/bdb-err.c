@@ -45,8 +45,7 @@ bdb_err_to_apr_err (int db_err)
 svn_error_t *
 svn_fs__bdb_dberr (int db_err)
 {
-  return svn_error_create (bdb_err_to_apr_err(db_err),
-                           0,
+  return svn_error_create (bdb_err_to_apr_err (db_err), 0, 
                            db_strerror (db_err));
 }
 
@@ -56,9 +55,7 @@ svn_fs__bdb_dberrf (int db_err, const char *fmt, ...)
 {
   va_list ap;
   char *msg;
-  svn_error_t *err;
-
-  err = svn_error_create (bdb_err_to_apr_err(db_err), 0, "");
+  svn_error_t *err = svn_error_create (bdb_err_to_apr_err (db_err), 0, "");
 
   va_start (ap, fmt);
   msg = apr_pvsprintf (err->pool, fmt, ap);
@@ -73,9 +70,7 @@ svn_fs__bdb_wrap_db (svn_fs_t *fs, const char *operation, int db_err)
 {
   if (! db_err)
     return SVN_NO_ERROR;
-  else
-    return svn_fs__bdb_dberrf (db_err,
-                           "Berkeley DB error while %s for "
-                           "filesystem %s:\n", operation,
-                           fs->path ? fs->path : "(none)");
+  return svn_fs__bdb_dberrf (db_err, 
+                             "Berkeley DB error while %s for filesystem %s:\n",
+                             operation, fs->path ? fs->path : "(none)");
 }

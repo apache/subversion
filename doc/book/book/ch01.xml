@@ -21,7 +21,7 @@
       
     <para>Subversion is a free/open-source version control system.
       That is, Subversion manages files and directories over time.
-      The tree of files are placed into a central
+      A tree of files is placed into a central
       <firstterm>repository</firstterm>.  The repository is much like
       an ordinary file server, except that it remembers every change
       ever made to your files and directories.  This allows you to
@@ -40,7 +40,7 @@
       understanding programming languages, or supplying tools for
       building software.  Subversion, however, is not one of these
       systems; it is a general system that can be used to manage
-      <emphasis>any</emphasis> sort of collection of files, including
+      <emphasis>any</emphasis> collection of files, including
       source code.</para>
 
   </sect1>
@@ -56,7 +56,7 @@
       a company for commercially supporting and improving the
       Concurrent Versions System (CVS).  Cyclic made the first public
       release of a network-enabled CVS (contributed by Cygnus
-      software.)  In 1999, Karl Fogel published a book about CVS and
+      software).  In 1999, Karl Fogel published a book about CVS and
       the open-source development model it enables.  Karl and Jim had
       long talked about writing a replacement for CVS; Jim had even
       drafted a new, theoretical repository design, and had come up
@@ -68,11 +68,11 @@
       developed openly under a free license, it quickly attracted a
       community of developers.</para>
 
-    <para>The original design team settled on some simple goals.  It
-      was decided that Subversion should be a functional replacement
-      for CVS; it should match CVS's features, preserve the same
+    <para>The original design team settled on some simple goals.  They
+      decided that Subversion should be a functional replacement
+      for CVS: it should match CVS's features, preserve the same
       development model, but still fix the most obvious flaws.  And
-      Subversion should be similar enough to CVS such that any CVS
+      Subversion should be similar enough to CVS that any CVS
       user could start using it with little effort.</para>
 
     <para>After fourteen months of coding, Subversion became
@@ -84,11 +84,12 @@
       very large chunk of the work (it pays the salaries of a few
       full-time Subversion developers), the project is still a typical
       open-source project, governed by the usual meritocratic rules.
-      CollabNet owns the copyright on the code, but that copyright is
-      an Apache/BSD-style license which is fully compliant with the
-      Debian Free Software Guidelines. In other words, anyone is free
-      to download, modify, and redistribute Subversion as he pleases;
-      no permission from CollabNet or anyone else is required.</para>
+      CollabNet owns the copyright on the code, but the code is
+      available under an Apache/BSD-style license which is fully
+      compliant with the Debian Free Software Guidelines. In other
+      words, anyone is free to download, modify, and redistribute
+      Subversion as he pleases; no permission from CollabNet or
+      anyone else is required.</para>
 
   </sect1>
 
@@ -109,8 +110,8 @@
       <varlistentry>
         <term>Directory versioning</term>
         <listitem>
-          <para>The Subversion repository doesn't only track the
-            history of individual files; instead, it implements a
+          <para>CVS only tracks the history of individual files,
+            but Subversion implements a
             <quote>virtual</quote> versioned filesystem that tracks
             changes to whole directory trees over time.  Files
             <emphasis>and</emphasis> directories are versioned.  As a
@@ -124,7 +125,7 @@
         <term>Atomic commits</term>
         <listitem>
           <para>A commit either goes into the repository completely,
-            or not all.  This allows developers to construct and
+            or not at all.  This allows developers to construct and
             commit changes as logical chunks.</para>
         </listitem>
       </varlistentry>
@@ -223,14 +224,14 @@
 
     <para>Alternately, you can build Subversion directly from source
       code.  From the website, you can download the latest source-code
-      release.  After unpacking it, follow the instructions in INSTALL
-      to build it.  Note that a released source package contains
+      release.  After unpacking it, follow the instructions in the INSTALL
+      file to build it.  Note that a released source package contains
       everything you need to build a command-line client capable of
       talking to a remote repository (in particular, the apr,
-      apr-util, and neon libraries.)  But Subversion has many other
+      apr-util, and neon libraries).  But Subversion has many other
       dependencies, such as Berkeley DB and possibly Apache httpd.
       If you want to do a <quote>full</quote> build, make sure you
-      have all of packages documented in the INSTALL file.  If you
+      have all of the packages documented in the INSTALL file.  If you
       plan to work on Subversion itself, you can use your client
       program to grab the latest, bleeding-edge source code.  This is
       documented in <xref linkend="svn-ch-7-sect-6.2" />.</para>

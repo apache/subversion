@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl -w
 
 # ====================================================================
 # commit-email.pl: send a commit email for commit REVISION in

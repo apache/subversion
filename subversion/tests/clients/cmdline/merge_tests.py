@@ -258,7 +258,7 @@ def textual_merges_galore(sbox):
     if (not re.match("tau.*\.(r\d+|working)", a.name)):
       print "Merge got unexpected singleton", a.name
       raise svntest.main.SVNTreeUnequal
-
+  return 0
   svntest.actions.run_and_verify_merge(other_wc, '1', '3',
                                        svntest.main.current_repo_url,
                                        expected_output,
@@ -837,7 +837,7 @@ def merge_catches_nonexistent_target(sbox):
 #----------------------------------------------------------------------
 
 def merge_tree_deleted_in_target(sbox):
-  "merge should not fail on deleted directory in target"
+  "merge on deleted directory in target"
   
   sbox.build()
 
@@ -939,9 +939,7 @@ def merge_similar_unrelated_trees(sbox):
 
 #----------------------------------------------------------------------
 def merge_one_file(sbox):
-  "merge one file, receive a specific error"
-
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=1150. ##
+  "merge one file (issue #1150)"
 
   sbox.build()
 
@@ -990,15 +988,8 @@ def merge_one_file(sbox):
   if err:
     raise svntest.Failure
 
-  ### Okay, this is the part that issue #1150 is about.  This fails on
-  ### all RA layers right now, though I think for different reasons in
-  ### each one.  In ra_local it seems to have something to do with
-  ### delta_dirs; in ra_dav and ra_svn, something different may be
-  ### going on.
-
   # Cd into the directory and run merge with no targets.
-  # Ideally, it would still merge into rho, since the diff applies
-  # only to rho... ### But it's broken right now :-).
+  # It should still merge into rho.
   saved_cwd = os.getcwd()
   try:
     os.chdir(G_path)
@@ -1014,77 +1005,12 @@ def merge_one_file(sbox):
   finally:
     os.chdir(saved_cwd)
 
-  # At one time (see revision 4622), the error over ra_dav looked like
-  # this:
-  #
-  #    $ cd subversion/tests/clients/cmdline/working_copies/merge_tests-5
-  #    $ svn merge -r1:2 http://localhost/repositories/merge_tests-5/A/D/G/rho
-  #    subversion/libsvn_ra_dav/util.c:350: (apr_err=175002)
-  #    svn: RA layer request failed
-  #    svn: REPORT request failed on /repositories/merge_tests-5/A/D/G/rho
-  #    subversion/libsvn_ra_dav/util.c:335: (apr_err=175002)
-  #    svn: The REPORT request returned invalid XML in the response: \
-  #    Unknown XML element `error (in DAV:)'. \
-  #    (/repositories/merge_tests-5/A/D/G/rho)
-  #    $
-  #
-  # For debugging, I suggest starting httpd -X, then ^C, then set a
-  # breakpoint in ap_process_request().  Here's the code from
-  # httpd-2.0.44/modules/http/http_request.c, minus a few comments
-  # that would only be distracting here:
-  # 
-  #    void ap_process_request(request_rec *r)
-  #    {
-  #        int access_status;
-  #    
-  #        /* (Long-ish comment omitted) */
-  #        access_status = ap_run_quick_handler(r, 0);
-  #        if (access_status == DECLINED) {
-  #            access_status = ap_process_request_internal(r);
-  #            if (access_status == OK) {
-  #                access_status = ap_invoke_handler(r);
-  #            }
-  #        }
-  #    
-  #        if (access_status == DONE) {
-  #            /* e.g., something not in storage like TRACE */
-  #            access_status = OK;
-  #        }
-  #    
-  #        if (access_status == OK) {
-  #            ap_finalize_request_protocol(r);
-  #        }
-  #        else {
-  #            ap_die(access_status, r);
-  #        }
-  #
-  #      ...
-  #   }
-  #
-  # Step through from the top.  Every time access_status is set or
-  # compared, print out its value before and after the assignment or
-  # comparison.  I mean *every time*, even if you think it couldn't
-  # possibly have been affected :-).  You'll see some pretty weird
-  # stuff -- looks like there's a stack smasher somewhere that's
-  # affecting this variable.  But even that doesn't fully explain what
-  # Ben and I were seeing.  Will have to take a look again with fresh
-  # eyes.
-  #
-  # Anyway, the result is that access_status has the wrong value
-  # coming out, so the client receives a 200 OK response when it
-  # should have received an error.  Thus svn_ra_dav__parsed_request()
-  # in libsvn_ra_dav/util.c thinks it got a successful response, but
-  # when it goes to parse that response, the response body XML is that
-  # of an error.  The success-expecting parser is not prepared for
-  # that, and that's why we see that "Unknown XML element" error from
-  # the client.
-
 
 #----------------------------------------------------------------------
 # This is a regression for the enhancement added in issue #785.
 
 def merge_with_implicit_target (sbox):
-  "merging a file with no explicitly target path"
+  "merging a file with no explicit target path"
 
   sbox.build()
 
@@ -1209,8 +1135,7 @@ def merge_with_prev (sbox):
     os.chdir(os.path.join(other_wc, 'A'))
 
     # Try to revert the last change to mu via svn merge
-    out, err = svntest.main.run_svn(0, 'merge', '-r', 'HEAD:PREV',
-                                    'mu')
+    out, err = svntest.main.run_svn(0, 'merge', '-r', 'HEAD:PREV', 'mu')
     if err:
       raise svntest.Failure
 
@@ -1244,7 +1169,8 @@ def merge_with_prev (sbox):
     
 #----------------------------------------------------------------------
 # Regression test for issue #1319: 'svn merge' should *not* 'C' when
-# merging a change into a binary file, unless it has local mods.
+# merging a change into a binary file, unless it has local mods, or has
+# different contents from the left side of the merge.
 
 def merge_binary_file (sbox):
   "merge change into unchanged binary file"
@@ -1253,7 +1179,7 @@ def merge_binary_file (sbox):
 
   wc_dir = sbox.wc_dir
 
-  # Add a binary file to the project, 'theata.bin'
+  # Add a binary file to the project
   fp = open(os.path.join(sys.path[0], "theta.bin"))
   theta_contents = fp.read()  # suck up contents of a test .png file
   fp.close()
@@ -1308,14 +1234,56 @@ def merge_binary_file (sbox):
                      props={'svn:mime-type' : 'application/octet-stream'}),
     })
   expected_status = svntest.actions.get_virginal_state(other_wc, 3)
+  expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'A/theta' : Item(status='M ', wc_rev=3, repos_rev=3),
+    'A/theta' : Item(status='M ', wc_rev=2, repos_rev=3),
     })
   svntest.actions.run_and_verify_merge(other_wc, '2', '3',
                                        svntest.main.current_repo_url,
                                        expected_output,
                                        expected_disk,
-                                       expected_status)
+                                       expected_status,
+                                       None, None, None, None, None,
+                                       1)
+
+#----------------------------------------------------------------------
+# Regression test for Issue #1297:
+# A merge that creates a new file followed by an immediate diff
+# The diff should succeed.
+
+def merge_in_new_file_and_diff(sbox):
+  "diff after merge that creates a new file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  trunk_url = svntest.main.current_repo_url + '/A/B/E';
+
+  # Create a branch
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', 
+                                     trunk_url,
+                                     svntest.main.current_repo_url + '/branch',
+                                     '-m', "Creating the Branch")
+ 
+  # Update to revision 2.
+  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+  
+  new_file_path = os.path.join(wc_dir, 'A', 'B', 'E', 'newfile');
+  fp = open(new_file_path, 'w')
+  fp.write("newfile")
+  fp.close()
+
+  # Add the new file, and commit revision 3.
+  svntest.actions.run_and_verify_svn(None, None, [], "add", new_file_path);
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     "Changing the trunk.", wc_dir)
+
+  # Merge our addition into the branch.
+  branch_path = os.path.join(wc_dir, "branch")
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-r', '1:HEAD', 
+                                     trunk_url, branch_path)
+
+  # Finally, run diff.
+  svntest.actions.run_and_verify_svn(None, None, [], 'diff', branch_path)
 
 
 ########################################################################
@@ -1333,8 +1301,9 @@ test_list = [ None,
               merge_tree_deleted_in_target,
               merge_similar_unrelated_trees,
               merge_with_prev,
-              XFail(merge_binary_file),
-              # merge_one_file,          # See issue #1150.
+              merge_binary_file,
+              merge_one_file,
+              merge_in_new_file_and_diff,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.

@@ -193,19 +193,22 @@ svn_error_t *svn_fs_berkeley_recover (const char *path,
                                       apr_pool_t *pool);
 
 
-/** Return a NULL-terminated array of absolute paths to @a logfiles
- * that are no longer is use by the DB-based Subversion filesystem,
- * stored in the environment @a path.  Do any necessary allocation
- * within @a pool.
+/** Set @a *logfiles to array of <tt>const char *</tt> log file names
+ * of Berkeley DB-based Subversion filesystem.
  *
- * This function wraps the same Berkeley DB 'log_archive' function
+ * If @a only_unused is used is @c TRUE, @a *logfiles will contain
+ * only the names of Berkeley DB log files still in use by the
+ * filesystem.  Otherwise, all log files (used and unused) are returned.
+ *
+ * This function wraps the Berkeley DB 'log_archive' function
  * called by the db_archive binary.  Repository administrators may
  * want to run this function periodically and delete the unused log
  * files, as a way of reclaiming disk space.
  */
-svn_error_t *svn_fs_berkeley_archive (char ***logfiles,
-                                      const char *path,
-                                      apr_pool_t *pool);
+svn_error_t *svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
+                                       const char *path,
+                                       svn_boolean_t only_unused,
+                                       apr_pool_t *pool);
 
 
 /** @} */

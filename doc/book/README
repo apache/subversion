@@ -96,7 +96,7 @@ II. COMPILING THE DOCS
 
         http://xml.apache.org/fop/index.html
 
-     There are approximately 17576 ways to install FOP.  Rather than
+     There are approximately 17577 ways to install FOP.  Rather than
      describe them all, we will recommend one way.  If you've already
      installed FOP some other way, that's fine, then you can ignore
      the following recipe:

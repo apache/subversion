@@ -131,7 +131,7 @@ def make_standard_slew_of_changes(wc_dir):
 #----------------------------------------------------------------------
 
 def commit_one_file(sbox):
-  "commit one file."
+  "commit one file"
 
   if sbox.build():
     return 1
@@ -166,7 +166,7 @@ def commit_one_file(sbox):
 #----------------------------------------------------------------------
 
 def commit_one_new_file(sbox):
-  "commit one newly added file."
+  "commit one newly added file"
 
   if sbox.build():
     return 1
@@ -201,7 +201,7 @@ def commit_one_new_file(sbox):
 #----------------------------------------------------------------------
 
 def commit_one_new_binary_file(sbox):
-  "commit one newly added binary file."
+  "commit one newly added binary file"
 
   if sbox.build():
     return 1
@@ -765,7 +765,7 @@ def hudson_part_1_variation_2(sbox):
 # on an out-of-date directory.
 
 def hudson_part_2(sbox):
-  "hudson prob 2.0:  prop commit on old dir fails."
+  "hudson prob 2.0:  prop commit on old dir fails"
 
   if sbox.build():
     return 1
@@ -893,7 +893,7 @@ def hudson_part_2_1(sbox):
 #----------------------------------------------------------------------
 
 def hook_test(sbox):
-  "hook testing."
+  "hook testing"
 
   if sbox.build():
     return 1
@@ -1198,7 +1198,7 @@ def commit_uri_unsafe(sbox):
 #----------------------------------------------------------------------
 
 def commit_deleted_edited(sbox):
-  "commit files that have been deleted, but also edited"
+  "commit deleted yet edited files"
 
   if sbox.build():
     return 1
@@ -1813,7 +1813,7 @@ def commit_nonrecursive(sbox):
 
 
 def commit_out_of_date_deletions(sbox):
-  "commit deletion of out-of-date file or dir."
+  "commit deletion of out-of-date file or dir"
 
   if sbox.build():
     return 1
@@ -1881,7 +1881,7 @@ def commit_out_of_date_deletions(sbox):
 
 
 def commit_with_bad_log_message(sbox):
-  "commit with a log message containing bad data."
+  "commit with a log message containing bad data"
 
   if sbox.build():
     return 1
@@ -1908,7 +1908,7 @@ def commit_with_bad_log_message(sbox):
 
 
 def from_wc_top_with_bad_editor(sbox):
-  "commit from top of a wc, with invalid external editor cmd"
+  "commit with invalid external editor cmd"
 
   # Shortly after revision 5407, Vladimir Prus posted this bug recipe:
   #

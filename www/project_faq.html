@@ -51,6 +51,9 @@
 <li><a href="#readonly">Why do read-only operations still need repository write access?</a></li>
 <li><a href="#removal">How do I completely remove a file from the repository's history?</a></li>
 <li><a href="#patch">How do I submit a patch for Subversion?</a></li>
+<li><a href="#in-place-import">How can I do an in-place 'import'
+    (i.e. add a tree to subversion without moving or deleting the
+    original working copy)?</a></li> 
 <p>
 <strong>Troubleshooting:</strong>
 </p>
@@ -87,8 +90,16 @@
     db-4.X.</a></li>
 <li><a href="#redhat-db">I'm getting "Function not implemented" errors on
     RedHat 9, and nothing works.  How do I fix this?</a></li>
-<p>
+<li><a href="#no-author">Why does SVN log say "(no author)" for files
+    committed or imported via Apache (ra_dav)?</a></li>
 
+<p>
+<strong>Developer questions:</strong>
+</p>
+<li><a href="#ramdisk-tests">How do I run the regression tests in a
+    ram disk?</a></li>
+
+<p>
 <strong>References:</strong>
 </p>
 <li><a href="#http-methods">What are all the HTTP methods Subversion 
@@ -741,6 +752,37 @@ understood it <em>before</em> actually hacking the code, right? :)
 
 <![CDATA[=========================================================]]>
 
+<h3><a name="in-place-import">How can I do an in-place 'import'
+    (i.e. add a tree to subversion without moving or deleting the
+    original working copy)?</a></h3> 
+
+<p>Suppose, for example, that you wanted to put some of /etc under
+version control inside a brand-new repository you created using:
+</p>
+
+<pre>
+     # svnadmin create /root/svn
+</pre>
+
+<p>To do this you would:
+</p>
+
+<pre>
+     # cd /
+     # svn co file:///root/svn etc
+     # cd etc
+     # svn add apache samba alsa X11 
+     # svn commit -m "configury"
+</pre>
+
+<p>This takes advantage of the a hidden feature of add which allows it
+to create working copies for directories which do not yet exist in the
+repository.
+</p>
+
+
+<![CDATA[=========================================================]]>
+
 <p>
 <hr>
 <p>
@@ -763,18 +805,32 @@ along with a logfile describing unfinished business.  Any other
 process that attempts to access the database will just hang, waiting
 for the lockfile to disappear.  To awaken your repository, you need to
 ask Berkeley DB to either finish the work, or rewind the database to a
-previous state that is known to be consistent.  Simply run:</p>
+previous state that is known to be consistent.</p>
+
+<p><b><font color="red">WARNING:</font> you can seriously corrupt your
+repository if you run recover and another process accesses the repository.
+</b></p>
+
+<p>Make absolutely sure you disable all access to the repository before
+doing this (by shutting down Apache, removing executable permissions from
+'svn').  Make sure you run this command as the user that owns and manages
+the database, and not as root, else it will leave root-owned files in the
+db directory which cannot be opened by the non-root user that manages the
+database, which is typically either you or your Apache process.  Also be
+sure to have the correct umask set when you run recover, since failing to
+do so will lock out users that are in the group allowed to access the
+repository.</p>
+
+<p>
+Simply run:</p>
 
 <pre>
 svnadmin recover /path/to/repos
 </pre>
 
-<p>Make sure you disable all access to the repository before doing
-this (by shutting down Apache).  Make sure you run this command as the
-user that owns and manages the database, and not as root, else it will
-leave root-owned files in the db directory which cannot be opened by
-the non-root user that manages the database, which is typically either
-you or your Apache process.</p>
+<p>Once the command has completed, check the permissions in the
+<code>db</code> directory of the repository.</p>
+
 <![CDATA[-----------------------------------------------------------]]>
 
 <h3>What the heck! Every time I try to run a svn command, it says my
@@ -1030,6 +1086,47 @@ This can be fixed in one of several ways:
 </p>
 
 <![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="no-author">Why does SVN log say "(no author)" for files
+    committed or imported via Apache (ra_dav)?</a></h3>
+
+<p>If you allow anonymous write access to the repository via Apache,
+the Apache server never challenges the SVN client for a username, and
+instead permits the write operation without authentication.  Since
+Subversion has no idea who did the operation, this results in a log
+like this:</p>
+
+<blockquote><pre>
+$ svn log
+------------------------------------------------------------------------
+rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
+</pre></blockquote>
+
+<p>See the Subversion Book (<a
+href="http://svnbook.red-bean.com/book.html#svn-ch-5-sect-4"
+>"Networking a Repository"</a>)
+to learn about configuring access restrictions in Apache.</p>
+
+
+<![CDATA[=========================================================]]>
+
+
+<p>
+<hr>
+<p>
+<h2>Developer questions:</h2>
+<p>
+
+<h3><a name="ramdisk-tests">How do I run the regression tests in a
+    ram disk?</a></h3>
+
+<p>
+See
+<a href="http://www.contactor.se/~dast/svn/archive-2003-02/0068.shtml"
+>http://www.contactor.se/~dast/svn/archive-2003-02/0068.shtml</a>.
+</p>
+
+<![CDATA[=========================================================]]>
 
 
 <p>

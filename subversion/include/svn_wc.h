@@ -1262,14 +1262,14 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
  * property conflict resolution was requested, and it was successful, then 
  * success gets reported.
  */
-svn_error_t *svn_wc_resolve_conflict (const char *path,
-                                      svn_wc_adm_access_t *adm_access,
-                                      svn_boolean_t resolve_text,
-                                      svn_boolean_t resolve_props,
-                                      svn_boolean_t recursive,
-                                      svn_wc_notify_func_t notify_func,
-                                      void *notify_baton,
-                                      apr_pool_t *pool);
+svn_error_t *svn_wc_resolved_conflict (const char *path,
+                                       svn_wc_adm_access_t *adm_access,
+                                       svn_boolean_t resolve_text,
+                                       svn_boolean_t resolve_props,
+                                       svn_boolean_t recursive,
+                                       svn_wc_notify_func_t notify_func,
+                                       void *notify_baton,
+                                       apr_pool_t *pool);
 
 
 /* Commits. */
@@ -1416,42 +1416,7 @@ svn_error_t *svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                                        apr_pool_t *pool);
 
 
-/** Like @c svn_wc_get_update_editor(), except that:
- *
- * @a dest will be created as a working copy, if it does not exist
- * already.  It is not an error for it to exist; if it does, checkout
- * just behaves like update.
- *
- * It is the caller's job to make sure that @a dest is not some other
- * working copy, or that if it is, it will not be damaged by the
- * application of this delta.  The wc library tries to detect
- * such a case and do as little damage as possible, but makes no
- * promises.
- *
- * The editor invokes @a notify_func with @a notify_baton as the checkout
- * progresses, if @a notify_func is non-null.
- *
- * If @a cancel_func is non-null, it gets called, with @a cancel_baton as 
- * the checkout progresses, to determine if it should continue.
- *
- * @a ancestor_url is the repository string to be recorded in this
- * working copy.
- */
-svn_error_t *svn_wc_get_checkout_editor (const char *dest,
-                                         const char *ancestor_url,
-                                         svn_revnum_t target_revision,
-                                         svn_boolean_t recurse,
-                                         svn_wc_notify_func_t notify_func,
-                                         void *notify_baton,
-                                         svn_cancel_func_t cancel_func,
-                                         void *cancel_baton,
-                                         const svn_delta_editor_t **editor,
-                                         void **edit_baton,
-                                         svn_wc_traversal_info_t *ti,
-                                         apr_pool_t *pool);
-
-
-/** Another variant of @c svn_wc_get_update_editor().
+/** A variant of @c svn_wc_get_update_editor().
  *
  * Set @a *editor and @a *edit_baton to an editor and baton for "switching"
  * a working copy to a new @a switch_url.  (Right now, this URL must be
@@ -1563,6 +1528,24 @@ svn_error_t *svn_wc_install_file (svn_wc_notify_state_t *content_state,
                                   const char *diff3_cmd,
                                   apr_pool_t *pool);
 
+typedef svn_error_t * (*svn_wc_add_repos_file_helper_t)
+  (svn_stream_t *fstream, apr_hash_t **props, void *baton);
+
+/*
+ * Copies a single file from the repository in the working copy.
+ * @a dst_path is the destination path.
+ * @a adm_access is the adm_access.
+ * @a helper is a callback that accepts a file stream, a pointer to 
+ * a property hash, and @a helper_baton, and actually retrieves the
+ * file from the back end.
+ * @a pool is the memory pool associated with the calling context.
+ * */
+svn_error_t *
+svn_wc_add_repos_file (const char *dst_path,
+                       svn_wc_adm_access_t *adm_access,
+                       svn_wc_add_repos_file_helper_t helper,
+                       void *helper_baton,
+                       apr_pool_t *pool);
 
 
 /* A word about the implementation of working copy property storage:

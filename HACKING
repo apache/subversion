@@ -911,8 +911,15 @@ This pretty much says it all:
 Commit access
 =============
 
+There are two types of commit access: full and partial.  Full means
+anywhere in the tree, partial means only in that committer's specific
+area(s) of expertise.  The COMMITTERS file lists all committers, both
+full and partial, and says the domains for each partial committer.
+
+How full commit access is granted:
+
 After someone has successfully contributed a few non-trivial patches,
-some committer, usually whoever has reviewed and applied the most
+some full committer, usually whoever has reviewed and applied the most
 patches from that contributor, proposes them for commit access.  This
 proposal is sent only to the other full committers -- the ensuing
 discussion is private, so that everyone can feel comfortable speaking
@@ -928,12 +935,20 @@ rules of coding (code should readable, robust, maintainable, etc), and
 that the person respects the "Hippocratic Principle": first, do no
 harm.  In other words, what is significant is not the size or quantity
 of patches submitted, but the degree of care shown in avoiding bugs
-and minimizing unnecessary impact on the rest of the code.  Many
+and minimizing unnecessary impact on the rest of the code.  Many full
 committers are people who have not made major code contributions, but
 rather lots of small, clean fixes, each of which was an unambiguous
 improvement to the code.
 
-See the COMMITTERS file for a complete list of committers.
+How partial commit access is granted:
+
+A full committer sponsors the partial committer.  Usually this means
+the full committer has applied several patches to the same area from
+the proposed partial committer, and realizes things would be easier if
+the person were just committing directly.  Approval is not required
+from the full committers; it is assumed that sponsors know what
+they're doing and will watch the partial committer's first few commits
+to make sure everything's going smoothly.
 
 
 

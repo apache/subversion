@@ -85,6 +85,12 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
 
 
+/*** Configuration Default Values ***/
+
+#define SVN_CONFIG_DEFAULT_GLOBAL_IGNORES \
+   "*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*"
+
+
 /** Read configuration information from the standard sources and merge
  * it into the hash @a *cfg_hash.  That is, first read any system-wide
  * configurations (from a file or from the registry), then merge in

@@ -288,6 +288,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   const char *auth_dir;
   svn_boolean_t resurrection = FALSE;
   struct path_driver_cb_baton cb_baton;
+  svn_error_t *err;
 
   /* We have to open our session to the longest path common to both
      SRC_URL and DST_URL in the repository so we can do existence
@@ -321,7 +322,39 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, top_url, pool));
+  err = svn_ra_get_ra_library (&ra_lib, ra_baton, top_url, pool);
+
+  /* If the two URLs appear not to be in the same repository, then
+   * top_url will be empty and the call to svn_ra_get_ra_library()
+   * above will have failed.  Below we check for that, and propagate a
+   * descriptive error back to the user.
+   *
+   * Ideally, we'd contact the repositories and compare their UUIDs to
+   * determine whether or not src and dst are in the same repository,
+   * instead of depending on an essentially textual comparison.
+   * However, it is simpler to assume that if someone is using the
+   * same repository, then they will use the same hostname/path to
+   * refer to it both times.  Conversely, if the repositories are
+   * different, then they can't share a non-empty prefix, so top_url
+   * would still be "" and svn_ra_get_library() would still error.
+   * Thus we can get this check without extra network turnarounds to
+   * fetch the UUIDs.
+   */
+  if (err)
+    {
+      if ((err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
+          && ((top_url == NULL) || (top_url[0] == '\0')))
+        {
+          return svn_error_createf
+            (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+             "Source and dest appear not to be in the same repository:\n"
+             "   src is '%s'\n"
+             "   dst is '%s'",
+             src_url, dst_url);
+        }
+      else
+        return err;
+    }
 
   /* Get the auth dir. */
   SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
@@ -332,7 +365,6 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                                         auth_dir,
                                         NULL, NULL, FALSE, TRUE, 
                                         ctx, pool));
-
   /* Pass NULL for the path, to ensure error if trying to get a
      revision based on the working copy. */
   SVN_ERR (svn_client__get_revision_number
@@ -672,6 +704,28 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   return reconcile_errors (cmt_err, unlock_err, cleanup_err, pool);
 }
 
+typedef struct 
+{
+  svn_ra_plugin_t *ra_lib;
+  void *sess;
+  svn_revnum_t src_revnum;
+  svn_revnum_t *fetched_rev;
+  apr_pool_t *pool;
+} add_repos_file_baton_t;
+
+static svn_error_t * 
+add_repos_file_helper (svn_stream_t *fstream,
+                       apr_hash_t **props,
+                       void *helper_baton)
+{
+  add_repos_file_baton_t *baton = helper_baton;
+  
+  SVN_ERR (baton->ra_lib->get_file (baton->sess, "", baton->src_revnum,
+                                    fstream, baton->fetched_rev,
+                                    props, baton->pool));
+
+  return SVN_NO_ERROR;
+}
 
 /*
    ### 838 OPTIONAL_ADM_ACCESS is an access baton with a write lock for the
@@ -691,12 +745,10 @@ repos_to_wc_copy (const char *src_url,
   svn_node_kind_t src_kind, dst_kind;
   svn_revnum_t src_revnum;
   svn_wc_adm_access_t *adm_access;
-  apr_hash_t *props = NULL;
-  apr_hash_index_t *hi;
   const char *src_uuid = NULL, *dst_uuid = NULL;
   svn_boolean_t same_repositories;
   const char *auth_dir;
-  svn_opt_revision_t *revision = apr_pcalloc (pool, sizeof(*revision));
+  svn_opt_revision_t revision;
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -716,13 +768,13 @@ repos_to_wc_copy (const char *src_url,
      revision based on the working copy.  And additionally, we can't
      pass an 'unspecified' revnum to the update reporter;  assume HEAD
      if not specified. */
-  revision->kind = src_revision->kind;
-  revision->value = src_revision->value;
-  if (revision->kind == svn_opt_revision_unspecified)
-    revision->kind = svn_opt_revision_head;
+  revision.kind = src_revision->kind;
+  revision.value = src_revision->value;
+  if (revision.kind == svn_opt_revision_unspecified)
+    revision.kind = svn_opt_revision_head;
 
   SVN_ERR (svn_client__get_revision_number
-           (&src_revnum, ra_lib, sess, revision, NULL, pool));
+           (&src_revnum, ra_lib, sess, &revision, NULL, pool));
 
   /* Verify that SRC_URL exists in the repository. */
   SVN_ERR (ra_lib->check_path (&src_kind, sess, "", src_revnum, pool));
@@ -821,35 +873,10 @@ repos_to_wc_copy (const char *src_url,
 
   if (src_kind == svn_node_dir)
     {    
-      const svn_delta_editor_t *editor;
-      void *edit_baton;
-      const svn_ra_reporter_t *reporter;
-      void *report_baton;
+      SVN_ERR (svn_client__checkout_internal
+               (src_url, dst_path, &revision, TRUE, NULL, ctx, pool));
 
-      /* Get a checkout editor and wrap it. */
-      SVN_ERR (svn_wc_get_checkout_editor (dst_path, src_url, src_revnum, 1,
-                                           ctx->notify_func, ctx->notify_baton,
-                                           ctx->cancel_func, ctx->cancel_baton,
-                                           &editor, &edit_baton,
-                                           NULL, pool));
-      
-      /* Check out the new tree.  The parent dir will get no entry, so
-         it will be as if the new tree isn't really there yet. */
-      SVN_ERR (ra_lib->do_update (sess,
-                                  &reporter, &report_baton,
-                                  src_revnum,
-                                  NULL, /* no sub-target */
-                                  TRUE, /* recurse */
-                                  editor, edit_baton, pool));
-
-      SVN_ERR (reporter->set_path (report_baton, "", src_revnum,
-                                   TRUE, /* "help, my dir is empty!" */
-                                   pool));
-
-      SVN_ERR (reporter->finish_report (report_baton));               
-
-      if ((! SVN_IS_VALID_REVNUM (src_revnum))
-          && same_repositories)
+      if ((revision.kind == svn_opt_revision_head) && same_repositories)
         {
           /* If we just checked out from the "head" revision, that's fine,
              but we don't want to pass a '-1' as a copyfrom_rev to
@@ -878,33 +905,19 @@ repos_to_wc_copy (const char *src_url,
 
   else if (src_kind == svn_node_file)
     {
-      apr_status_t status;
-      svn_stream_t *fstream;
-      apr_file_t *fp;
-      svn_revnum_t fetched_rev = 0;
-      
-      /* Open DST_PATH for writing. */
-      SVN_ERR_W (svn_io_file_open (&fp, dst_path,
-                                   (APR_CREATE | APR_WRITE),
-                                   APR_OS_DEFAULT, pool),
-                 "failed to open file for writing.");
+      svn_revnum_t fetched_rev;
+      add_repos_file_baton_t add_repos_file_baton;
+      add_repos_file_baton.ra_lib = ra_lib;
+      add_repos_file_baton.sess = sess;
+      add_repos_file_baton.src_revnum = src_revnum;
+      add_repos_file_baton.fetched_rev = &fetched_rev;
+      add_repos_file_baton.pool = pool;
+        
+      SVN_ERR (svn_wc_add_repos_file (dst_path, adm_access,
+                                      add_repos_file_helper,
+                                      &add_repos_file_baton,
+                                      pool));
 
-      /* Create a generic stream that operates on this file.  */
-      fstream = svn_stream_from_aprfile (fp, pool);
-      
-      /* Have the RA layer 'push' data at this stream.  We pass a
-         relative path of "", because we opened SRC_URL, which is
-         already the full URL to the file. */         
-      SVN_ERR (ra_lib->get_file (sess, "", src_revnum, fstream, 
-                                 &fetched_rev, &props, pool));
-
-      /* Close the file. */
-      status = apr_file_close (fp);
-      if (status)
-        return svn_error_createf (status, NULL,
-                                  "failed to close file '%s'.",
-                                  dst_path);   
-     
       /* Also, if SRC_REVNUM is invalid ('head'), then FETCHED_REV is now
          equal to the revision that was actually retrieved.  This is
          the value we want to use as 'copyfrom_rev' in the call to
@@ -948,29 +961,6 @@ repos_to_wc_copy (const char *src_url,
       /* Recursively schedule unversioned tree for addition, sans history. */
       SVN_ERR (svn_client__add (dst_path, TRUE /* recursive */,
                                 adm_access, ctx, pool));
-    }
-
-  /* If any properties were fetched (in the file case), apply those
-     changes now. */
-  if (props)
-    {
-      for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi)) 
-        {
-          const void *key;
-          void *val;
-          enum svn_prop_kind kind;
-          
-          apr_hash_this (hi, &key, NULL, &val);
-          
-          /* We only want to set 'normal' props.  For now, we're
-             ignoring any wc props (they're not needed when we commit
-             an addition), and we're ignoring entry props (they're
-             written to the entries file as part of the post-commit
-             processing).  */
-          kind = svn_property_kind (NULL, key);
-          if (kind == svn_prop_regular_kind)
-            SVN_ERR (svn_wc_prop_set (key, val, dst_path, adm_access, pool));
-        }
     }
 
   if (! optional_adm_access)
