@@ -43,9 +43,8 @@ What's left to do:
 
 * DB_RUN_RECOVERY:  (kfogel, with gstein on guru duty)
 
-   Still need to write cross-process locking function so that the
-   repository can repair itself when this error is returned.  We
-   believe APR now has the means to help us with this.
+  In progress; see "Karl M3 stack" in STACK for details.
+
 
 * Hooks: finished.
 
