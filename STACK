@@ -26,6 +26,44 @@ Ben todo:
 
 Karl wc todo:
 
+   - From Bill Tutt:
+     This is just more an FYI, as it isn't preventing me from doing
+     any work atm, but the paths returned from svn_wc_statuses are
+     looking like: "C:\SVN\subversion\subversion\client\tests\t1\/iota"
+
+   - From Bill Tutt:
+     > > * ${SVN_PROG} delete-force ${TEST_DIR_1}\A\D\H\omega
+     > > 
+     > > Registers the delete in $(TEST_DIR_1)/SVN/entries with a filename of
+     > > "A\D\H\omega" and an ancestor of: "anni/A\D\H\omega"
+     > > Doesn't touch ANYTHING in $(TEST_DIR_1)/A/D/H/SVN/entries
+     >
+     > Okay; working on, thanks for noticing this!  (Time to get that path
+     > library fleshed out. :-) ).
+     
+     That wasn't the problem. A\D\H\omega was indeed deleted when I passed in
+     the -force option.
+     The problem was that the "omega" entry still existed in
+     A\D\H\SVN\entries after the delete was finished.
+     (Well, that and a deleted marker showed up in
+     $(TEST_DIR_1)/SVN/entries.)
+     I haven't run into any actual problems because of the silly paths we're
+     currently generating.
+
+   - From Bill Tutt:
+     Well, the scenario I'm talking about is the "add, delete"
+     sequence for a file without an intervening commit.
+     It sounds like your suggesting keeping the else, and moving the
+     bugfix into someplace in the delete handling logic.
+       i.e.:
+       * When deleting a file in the WC state:
+         If the file has already been marked as an add, hard delete
+         the meta-data for the entry, since the user never wanted
+         to commit the data in the first place.
+
+    I think that makes sense, I'll leave fixing up the delete stuff in
+    someone else's more capable hands.
+
    - Propagate changes down into libsvn_client.  Currently, the client
      usually takes a `targets' list and iterates over it, invoking
      some libsvn_client routine each time.  There are cases where the
@@ -90,27 +128,26 @@ Filesystem:
   (Branko and Karl have made this list here to keep straight the order in
   which they're doing stuff in the fs.)
 
-  Let's get these working and tested in fs-test.c:
+  JimB's got svn_fs_begin_txn() working.  Let's do:
 
-    1.  svn_fs_begin_txn()
-    2.  svn_fs_abort_txn()
-    3.  svn_fs_close_txn()
-    4.  svn_fs_txn_name()
-    5.  svn_fs_open_txn()
-    6.  svn_fs_list_transactions()
+    1.  svn_fs_abort_txn()
+    2.  svn_fs_close_txn()
+    3.  svn_fs_txn_name()
+    4.  svn_fs_open_txn()
+    5.  svn_fs_list_transactions()
 
   These don't do anything useful by themselves, of course, but they're
   prerequisites for:
 
-    7.  Begin, open a txn
-    8.  Make a change to some node in that txn
-    9.  Get txn's name
-    10. close the txn
-    11. re-open the same txn, by name
-    12. check that our change is still there!
+    6.  Begin, open a txn
+    7.  Make a change to some node in that txn
+    8.  Get txn's name
+    9.  close the txn
+    10. re-open the same txn, by name
+    11. check that our change is still there!
 
   I'm not sure yet what specific functions are required to implement
-  steps 7-12; we'll first establish the concrete list of functions,
+  steps 6-11; we'll first establish the concrete list of functions,
   then implement them.
 
   Once that's working, we can do the Big One: svn_fs_commit_txn(). :-)
