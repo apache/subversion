@@ -17,7 +17,7 @@ flexibility to make commits work without write access to existing
 revisions.  Skip-deltas and delta combination mitigate the checkout
 cost.
 
-In-progress transactions are represented with a prototype rev flie
+In-progress transactions are represented with a prototype rev file
 containing only the new text representations of files (appended to as
 changed file contents come in), along with a separate file for each
 node-revision, directory representation, or property representation
