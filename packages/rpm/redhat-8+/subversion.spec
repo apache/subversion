@@ -5,9 +5,9 @@
 %define apache_dir /usr
 # If you don't have 360+ MB of free disk space or don't want to run checks then
 # set make_*_check to 0.
-%define make_ra_local_check 0
-%define make_ra_svn_check 0
-%define make_ra_dav_check 0
+%define make_ra_local_check 1
+%define make_ra_svn_check 1
+%define make_ra_dav_check 1
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@

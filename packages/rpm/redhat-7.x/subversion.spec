@@ -4,9 +4,9 @@
 %define apache_dir /usr/local/apache2
 # If you don't have 360+ MB of free disk space or don't want to run checks then
 # set make_*_check to 0.
-%define make_ra_local_check 0
-%define make_ra_svn_check 0
-%define make_ra_dav_check 0
+%define make_ra_local_check 1
+%define make_ra_svn_check 1
+%define make_ra_dav_check 1
 # If you want the perl bindings, you'll have to install perl-5.8.0 or higher.
 %define perl_bindings 0
 Summary: A Concurrent Versioning system similar to but better than CVS.
