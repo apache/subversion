@@ -130,6 +130,12 @@ svn_error_t *svn_wc__make_adm_thing (svn_stringbuf_t *path,
                                      svn_boolean_t tmp,
                                      apr_pool_t *pool);
 
+/* Cleanup the temporary storage area of the administrative
+   directory. */
+svn_error_t *svn_wc__adm_cleanup_tmp_area (svn_stringbuf_t *path, 
+                                           apr_pool_t *pool);
+
+
 
 
 /*** Opening all kinds of adm files ***/

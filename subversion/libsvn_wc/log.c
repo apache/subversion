@@ -1328,7 +1328,7 @@ svn_wc_cleanup (svn_stringbuf_t *path,
   if (! locked)
     SVN_ERR (svn_wc__lock (path, 0, pool));
 
-  /* Is there a log?  If so, run it and then remove it. */
+  /* Is there a log?  If so, run it. */
   err = svn_io_check_path (log_path, &kind, pool);
   if (err)
     {
@@ -1338,6 +1338,19 @@ svn_wc_cleanup (svn_stringbuf_t *path,
   else if (kind == svn_node_file)
     SVN_ERR (svn_wc__run_log (path, pool));
 
+  /* Cleanup the tmp area of the admin subdir.  The logs have been
+     run, so anything left here has no hope of being useful. */
+  SVN_ERR (svn_wc__adm_cleanup_tmp_area (path, pool));
+
+  /* Is there a "killme" file?  Remove this directory from revision
+     control.  If so, blow away the entire administrative dir, and all
+     those below it too.  Don't remove any working files, though. */
+  if (svn_wc__adm_path_exists (path, 0, pool, SVN_WC__ADM_KILLME, NULL))
+    SVN_ERR (svn_wc_remove_from_revision_control 
+             (path, 
+              svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool), 
+              FALSE, pool));
+  
   /* Remove the lock here, making sure that the administrative
      directory still exists after running the log! */
   if (svn_wc__adm_path_exists (path, 0, pool))
