@@ -194,10 +194,12 @@ svn_error_t *svn_io_set_file_read_only (const char *path,
                                         apr_pool_t *pool);
 
 
-/** Make a file as writable as the operating system allows.  This function
- * has no effect on Unix style operating systems.  
+/** Make a file as writable as the operating system allows.
  * @a path is the utf8-encoded path to the file.  If @a ignore_enoent is
  * @c TRUE, don't fail if the target file doesn't exist.
+ * @warning On Unix this function will do the equivlanet of chmod a+w path.
+ * If this is not what you want you should not use this function, but rather
+ * use apr_file_perms_set().
  */
 svn_error_t *svn_io_set_file_read_write (const char *path,
                                          svn_boolean_t ignore_enoent,
