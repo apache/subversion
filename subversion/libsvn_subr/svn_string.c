@@ -577,7 +577,7 @@ svn_cstring_split (const char *input,
                    svn_boolean_t chop_whitespace,
                    apr_pool_t *pool)
 {
-  apr_array_header_t *a = apr_array_make (pool, 1, sizeof (input));
+  apr_array_header_t *a = apr_array_make (pool, 5, sizeof (input));
   svn_cstring_split_append (a, input, sep_chars, chop_whitespace, pool);
   return a;
 }
