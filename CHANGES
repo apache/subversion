@@ -1,13 +1,25 @@
 Version 0.14.3 [Alpha Interim 3] (released ?? ??? ????, revision ????)
 
  User-visible changes:
+ * new ~/.subversion/config file
+ * new $Id$ keyword
+ * new client --no-auth-cache option
  * empty values in the Windows Registry are no longer ignored (issue #671)
  * report details of repository start-commit or pre-commit hook errors
  * fix locking behaviour when using current directory as a target
- * add --no-auth-cache option to client
+ * new python commit-mailer script
+ * updated man page
+ * new front-page logo.  :-)
 
  Developer-visible changes:
+ * continuing work on python SWIG bindings
+ * continuing work on new access-baton system for libsvn_wc
  * upgrade to neon 0.23.4 to fix Windows build issues and seg faults
+ * add XFAIL to the C testing framework
+ * prevent setting of certain svn: props on incorrect file types
+ * cleanup libsvn_subr's path library behavior
+ * new 'fast-clean' vs. 'clean' Makefile targets
+ * various bugfixes, tweaks, cleanups.
 
 Version 0.14.2 [Alpha Interim 2] (released 22 Aug 2002, revision 3033)
 

@@ -335,13 +335,12 @@ II.   INSTALLATION
 
       Unpack it, and use the standard GNU procedure to compile:
 
-          $ ./configure --enable-maintainer-mode --disable-shared
+          $ ./configure --enable-maintainer-mode
           $ make
 
-      (The first switch to ./configure turns on debugging, and the
-       second switch builds a statically-linked client binary.)
+      (The switch to ./configure turns on debugging.)
 
-      After compiling, you will have a large 'svn' binary sitting in
+      After compiling, you will have an 'svn' binary sitting in
       the tree.  Use it to check out a real Subversion working copy:
 
           $ subversion-rXXXX/subversion/clients/cmdline/svn checkout \
@@ -419,26 +418,19 @@ II.   INSTALLATION
 
       After all components are in place, follow the usual procedure:
 
-          $ ./configure --enable-maintainer-mode --disable-shared
+          $ ./configure --enable-maintainer-mode
           $ make
-          $ make check    (optional)
           # make install
 
-      The flags to `configure' are highly recommended for developers,
-      as they build a statically-linked binary.  If you don't use
-      those flags, then you must reverse the order of the "make check"
-      and "make install" steps, because the shared libraries must be
-      installed before "make check" will work.
-
-      Additionally, with shared library builds, the destination
-      library directory must be identified in your operating system's
-      library search path. That is in either /etc/ld.so.conf or
-      $LD_LIBRARY_PATH for linux systems and in /etc/rc.conf for
-      FreeBSD, followed by a run of the 'ldconfig' program. Check your
-      system documentation for details. By identifying the destination
-      directory, Subversion will be able to dynamically load repository
-      access plugins.  If you try to do a checkout and see an error
-      like:
+      Since the resulting binary depends on shared libraries, the
+      destination library directory must be identified in your
+      operating system's library search path. That is in either
+      /etc/ld.so.conf or $LD_LIBRARY_PATH for linux systems and in
+      /etc/rc.conf for FreeBSD, followed by a run of the 'ldconfig'
+      program. Check your system documentation for details. By
+      identifying the destination directory, Subversion will be able
+      to dynamically load repository access plugins.  If you try to do
+      a checkout and see an error like:
 
       svn_error: #21068 : <Bad URL passed to RA layer>
          Unrecognized URL scheme: http://svn.collab.net/repos/svn/trunk
