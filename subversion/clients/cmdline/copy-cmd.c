@@ -63,8 +63,12 @@ svn_cl__copy (apr_getopt_t *os,
   dst_is_url = svn_path_is_url (dst_path);
 
   if ((! src_is_url) && (! dst_is_url))
-    /* WC->WC : No notification needed. */
-    ;
+    {
+      /* WC->WC */
+      if (! opt_state->quiet)
+        svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, 
+                              FALSE, FALSE, FALSE, pool);
+    }
   else if ((! src_is_url) && (dst_is_url))
     {
       /* WC->URL : Use notification. */
