@@ -53,20 +53,20 @@
 */
 
 
-
-
 
 #include <stdio.h>
 #include "svn_string.h"   /* This includes <apr_*.h> */
 
 
-/* Some global variables, for simplicity.  Yes, simplicity. */
-
+/* Required global, initialized by included main() */
 apr_pool_t *pool;
 
+/* Some of our own global variables, for simplicity.  Yes,
+   simplicity. */
 svn_string_t *a = NULL, *b = NULL, *c = NULL;
 const char *phrase_1 = "hello, ";
 const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
+
 
 
 
@@ -272,11 +272,11 @@ test10()
 
 
 
-
 /*
    ====================================================================
    If you add a new test to this file, update these two arrays.
 
+   (These globals are required by our included main())
 */
 
 /* An array of all test functions */
@@ -292,121 +292,27 @@ int (*test_funcs[])() =
   test7,
   test8,
   test9,
-  test10
+  test10,
+  NULL
 };
+
 
 /* Descriptions of each test we can run */
-static char *descriptions[] = 
+char *descriptions[] = 
 {
   NULL,
-  "test 1: make svn_string_t from cstring",
-  "test 2: make svn_string_t from substring of cstring",
-  "test 3: append svn_string_t to svn_string_t",
-  "test 4: append bytes, then compare two strings",
-  "test 5: dup two strings, then compare",
-  "test 6: chopping a string",
-  "test 7: emptying a string",
-  "test 8: fill string with hashmarks",
-  "test 9: chop_back_to_char",
-  "test 10: block initialization and growth"
+  "1: make svn_string_t from cstring",
+  "2: make svn_string_t from substring of cstring",
+  "3: append svn_string_t to svn_string_t",
+  "4: append bytes, then compare two strings",
+  "5: dup two strings, then compare",
+  "6: chopping a string",
+  "7: emptying a string",
+  "8: fill string with hashmarks",
+  "9: chop_back_to_char",
+  "10: block initialization and growth",
+  NULL
 };
-
-/* ================================================================= */
-
-
-
-/* Execute a test number TEST_NUM.  Pretty-print test name and dots
-   according to our test-suite spec, and return the result code. */
-static int
-do_test_num (const char *progname, int test_num)
-{
-  int retval;
-  int numdots, i;
-  int (*func)();
-  int array_size = sizeof(test_funcs)/sizeof(int (*)()) - 1;
-
-  /* Check our array bounds! */
-  if ((test_num > array_size) 
-      || (test_num <= 0))
-    {
-      char *msg = (char *) apr_psprintf (pool, "%s test %d: NO SUCH TEST",
-                                         progname, test_num);
-      printf ("%s", msg);
-      numdots = 75 - strlen (msg);
-      if (numdots > 0)
-        for (i = 0; i < numdots; i++)
-          printf (".");
-      else
-        printf ("...");
-      printf ("FAIL\n");
-
-      return 1;  /* BAIL, this test number doesn't exist. */
-    }
-
-  /* Do test */
-  func = test_funcs[test_num];
-  retval = (*func)();
-
-  /* Pretty print results */
-  printf ("%s %s", progname, descriptions[test_num]);
-
-  /* (some cute trailing dots) */
-  numdots = 74 - (strlen (progname) + strlen (descriptions[test_num]));
-  if (numdots > 0)
-    for (i = 0; i < numdots; i++)
-      printf (".");
-  else
-    printf ("...");
-
-  if (! retval)
-    printf ("PASS\n");
-  else
-    printf ("FAIL\n");
-
-  return retval;
-}
-
-
-
-int
-main (int argc, char *argv[])
-{
-  int test_num;
-  int i;
-  int got_error = 0;
-
-  /* How many tests are there? */
-  int array_size = sizeof(test_funcs)/sizeof(int (*)()) - 1;
-  
-  /* Initialize APR (Apache pools) */
-  if (apr_initialize () != APR_SUCCESS)
-    {
-      printf ("apr_initialize() failed.\n");
-      exit (1);
-    }
-  if (apr_create_pool (&pool, NULL) != APR_SUCCESS)
-    {
-      printf ("apr_create_pool() failed.\n");
-      exit (1);
-    }
-
-  /* Notice if there's a command-line argument */
-  if (argc >= 2) 
-    {
-      test_num = atoi (argv[1]);
-      got_error = do_test_num (argv[0], test_num);
-    }
-  else /* just run all tests */
-    for (i = 1; i <= array_size; i++)
-      if (do_test_num (argv[0], i))
-        got_error = 1;
-
-  /* Clean up APR */
-  apr_destroy_pool (pool);
-  apr_terminate();
-
-  return got_error;
-}
 
 
 

@@ -60,9 +60,11 @@
 #include "svn_hash.h"
 
 
-/* Global variables */
-
+/* Global variables required by included main() */
 apr_pool_t *pool = NULL;
+
+
+/* Our own global variables */
 apr_hash_t *proplist, *new_proplist;
 svn_string_t *key;
 apr_file_t *f = NULL;     /* init to NULL very important! */
@@ -202,120 +204,20 @@ int (*test_funcs[])() =
   NULL,
   test1,
   test2,
-  test3
+  test3,
+  NULL
 };
 
+
 /* Descriptions of each test we can run */
-static char *descriptions[] = 
+char *descriptions[] = 
 {
   NULL,
   "test 1: write a hash to a file",
   "test 2: read a file into a hash",
-  "test 3: write hash out, read back in, compare"
+  "test 3: write hash out, read back in, compare",
+  NULL
 };
-
-/* ================================================================= */
-
-
-
-/* Execute a test number TEST_NUM.  Pretty-print test name and dots
-   according to our test-suite spec, and return the result code. */
-static int
-do_test_num (const char *progname, int test_num)
-{
-  int retval;
-  int numdots, i;
-  int (*func)();
-  int array_size = sizeof(test_funcs)/sizeof(int (*)()) - 1;
-
-  /* Check our array bounds! */
-  if ((test_num > array_size) 
-      || (test_num <= 0))
-    {
-      char *msg = (char *) apr_psprintf (pool, "%s test %d: NO SUCH TEST",
-                                         progname, test_num);
-      printf ("%s", msg);
-      numdots = 75 - strlen (msg);
-      if (numdots > 0)
-        for (i = 0; i < numdots; i++)
-          printf (".");
-      else
-        printf ("...");
-      printf ("FAIL\n");
-
-      return 1;  /* BAIL, this test number doesn't exist. */
-    }
-
-  /* Do test */
-  func = test_funcs[test_num];
-  retval = (*func)();
-
-  /* Pretty print results */
-  printf ("%s %s", progname, descriptions[test_num]);
-
-  /* (some cute trailing dots) */
-  numdots = 74 - (strlen (progname) + strlen (descriptions[test_num]));
-  if (numdots > 0)
-    for (i = 0; i < numdots; i++)
-      printf (".");
-  else
-    printf ("...");
-
-  if (! retval)
-    printf ("PASS\n");
-  else
-    printf ("FAIL\n");
-
-  return retval;
-}
-
-
-
-int
-main (int argc, char *argv[])
-{
-  int test_num;
-  int i;
-  int got_error = 0;
-
-  /* How many tests are there? */
-  int array_size = sizeof(test_funcs)/sizeof(int (*)()) - 1;
-  
-  /* Initialize APR (Apache pools) */
-  if (apr_initialize () != APR_SUCCESS)
-    {
-      printf ("apr_initialize() failed.\n");
-      exit (1);
-    }
-  if (apr_create_pool (&pool, NULL) != APR_SUCCESS)
-    {
-      printf ("apr_create_pool() failed.\n");
-      exit (1);
-    }
-
-  /* Notice if there's a command-line argument */
-  if (argc >= 2) 
-    {
-      test_num = atoi (argv[1]);
-      got_error = do_test_num (argv[0], test_num);
-    }
-  else /* just run all tests */
-    for (i = 1; i <= array_size; i++)
-      if (do_test_num (argv[0], i))
-        got_error = 1;
-
-  /* Clean up APR */
-  apr_destroy_pool (pool);
-  apr_terminate();
-
-  return got_error;
-}
-
-
-
-
-
-
 
 
 

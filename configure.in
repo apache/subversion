@@ -106,6 +106,7 @@ dnl Final step:  create all Makefiles ----------------------------
 AC_OUTPUT([Makefile                                           \
            doc/Makefile                                       \
            subversion/Makefile                                \
+           subversion/tests-common/Makefile                   \
            subversion/libsvn_string/Makefile                  \
            subversion/libsvn_string/tests/Makefile            \
            subversion/libsvn_subr/Makefile                    \
