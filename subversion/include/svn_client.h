@@ -791,6 +791,8 @@ svn_client_move (svn_client_commit_info_t **commit_info,
    will be set on recursively on TARGET and all children.  If RECURSE is false,
    and TARGET is a directory, PROPNAME will be set on _only_ TARGET.
  
+   A PROPVAL of NULL will delete the property.
+
    Use POOL for all memory allocation. */
 svn_error_t *
 svn_client_propset (const char *propname,
@@ -802,6 +804,7 @@ svn_client_propset (const char *propname,
 /* Set PROPNAME to PROPVAL on revision REVISION in the repository
    represented by URL.  Use AUTH_BATON for authentication, and POOL
    for all memory allocation.  Return the actual rev affected in *SET_REV.
+   A PROPVAL of NULL will delete the property.
 
    Note that unlike its cousin svn_client_propset(), this routine
    doesn't affect the working copy at all;  it's a pure network
