@@ -1,14 +1,58 @@
 <h1>Subversion FAQ</h1>
 
+<p>
 
-<h2>Why does this project exist?</h2>
+<!-- Table of Contents -->
+<ol>
+<li><a href="#why">Why does this project exist?</a></li>
+<li><a href="#collab">Is Subversion proprietary?  I heard that it
+    belongs to CollabNet.</a></li> 
+<li><a href="#stable">Is Subversion stable enough for me to use for my
+    own projects?</a></li> 
+<li><a href="#portability">What operating systems does Subversion run
+    on?</a></li> 
+<li><a href="#filesystem">What's all this about a new filesystem?  Is
+    it like ext2?</a></li> 
+<li><a href="#apache-extension">I heard that Subversion is an Apache
+    extension?</a></li> 
+<li><a href="#need-apache">Does this mean I have to set up Apache to
+    use Subversion?</a></li> 
+<li><a href="#feature-x">Why don't you do X, just like SCM system Y?</a></li>
+<li><a href="#release">When's the next release?</a></li>
+<li><a href="#unrecognized-url-error">I just built the distribution
+    binary, and when I try to check out Subversion, I get an error
+    about an "Unrecognized URL scheme."  What's up with that?</a></li>
+<li><a href="#repository">How do I create a repository?  How do I
+    import data into it?</a></li> 
+<li><a href="#configure-sed-error">When I run `<tt>configure</tt>', I
+    get errors <tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.  What's wrong?</a></li>
+<li><a href="#windows-repository">I'm running Subversion under windows
+    and I can create a repository fine, but I get errors trying to
+    import or check out from it.  What's wrong?</a></li>
+<li><a href="#proxy">How do I access a repository through a proxy?</a></li>
+<li><a href="#bikeshed">What's a 'bikeshed'?</a></li> 
+<li><a href="#more-information">I have other problems or questions
+    about Subversion.  Where can I get more information?</a></li>
+</ol>
+
+<!-- ========================================================= -->
+
+<p>
+<hr>
+<p>
+
+<!-- ----------------------------------------------------------- -->
+
+<h2><a name="why">Why does this project exist?</a></h2>
 
 <p>To take over the CVS user base.  Specifically, we're writing a new
 revision control system that is very similar to CVS, but fixes many
 things that are broken.  See our front page.</p>
 
+<!-- ----------------------------------------------------------- -->
 
-<h2>Is Subversion proprietary?  I heard that it belongs to CollabNet.</h2>
+<h2><a name="collab">Is Subversion proprietary?  I heard that it
+belongs to CollabNet.</a></h2>
 
 <p>No, Subversion is open source / free software.  CollabNet pays the
 salaries of several full-time developers, and holds the copyright on
@@ -21,9 +65,10 @@ Software Guidelines</a>.  In other words, you are free to download,
 modify, and redistribute Subversion as you please; no permission from
 CollabNet or anyone else is required.</p>
 
+<!-- ----------------------------------------------------------- -->
 
-
-<h2>Is Subversion stable enough for me to use for my own projects?</h2>
+<h2><a name="stable">Is Subversion stable enough for me to use for my
+own projects?</a></h2>
 
 <p>Yes and No.</p>
 
@@ -45,18 +90,32 @@ shipping conversion utilities.</p>
 <p>So, as long as you're willing to take those risks, then go right ahead
 and use Subversion.</p>
 
+<!-- ----------------------------------------------------------- -->
 
+<h2><a name="portability">What operating systems does Subversion run
+    on?</a></h2>
 
-<h2>Will Subversion run on my operating system?</h2>
+<p>All modern flavors of Unix, Win32, BeOS, OS/2, MacOS X.</p>
 
-<p>Subversion is written in ANSI C and uses the <a
-href="http://apr.apache.org">Apache Portable Runtime</a> library as a
-portability layer.  This means that Subversion will compile anywhere
-Apache httpd does.  (Right now, this list includes all flavors of
-Unix, Win32, BeOS, OS/2, MacOS X.)</p>
+<p>See <a href="http://svn.collab.net/repos/svn/trunk/PORTING">
+http://svn.collab.net/repos/svn/trunk/PORTING</a> for details about
+individual platforms.</p>
 
+<p>Subversion is written in ANSI C and uses APR, the <a
+href="http://apr.apache.org">Apache Portable Runtime</a> library, as a
+portability layer.  Although the Subversion client will compile
+anywhere APR does, the Subversion server depends on <a
+href="http://www.sleepycat.com">Berkeley DB</a> (as well as Apache
+2.X, but Apache is as portable as APR).  In theory Berkeley DB is
+portable to most of those platforms as well (except Win95/Win98, where
+it's known not to work due to shared-memory segment problems).  In
+practice, it's difficult to get the Subversion repository running on
+non-Unix platforms; if you succeed, we'd like to hear about it.</p>
 
-<h2>What's all this about a new filesystem?  Is it like ext2?</h2>
+<!-- ----------------------------------------------------------- -->
+
+<h2><a name="filesystem">What's all this about a new filesystem?  Is
+it like ext2?</a></h2>
 
 <p>No.  The "Subversion Filesystem" is not a kernel-level filesystem that
 one would install in an operating system.  Instead, it refers to the
@@ -68,8 +127,10 @@ is like writing against other filesystem APIs.  The main difference is
 that this particular filesystem doesn't lose data when written to; old
 versions of files and directories are saved.</p>
 
+<!-- ----------------------------------------------------------- -->
 
-<h2>I heard that Subversion is an Apache extension?</h2>
+<h2><a name="apache-extension">I heard that Subversion is an Apache
+extension?</a></h2>
 
 <p>No.  Subversion is a set of libraries.  It comes with a command-line
 client that uses them.  The Subversion <i>server</i> is Apache + <a
@@ -79,8 +140,10 @@ repository.  For more information about how Subversion uses WebDAV as
 its network protocol, see our <a
 href="http://subversion.tigris.org/servlets/ProjectDocumentList">docs.</a></p>
 
+<!-- ----------------------------------------------------------- -->
 
-<h2>Does this mean I have to set up Apache to use Subversion?</h2>
+<h2><a name="need-apache">Does this mean I have to set up Apache to
+use Subversion?</a></h2>
 
 <p>If you want to <b>host</b> a networked repository: yes.</p>
 <p>If you just want to <b>access</b> a repository with your client: no.</p>
@@ -89,23 +152,27 @@ href="http://subversion.tigris.org/servlets/ProjectDocumentList">docs.</a></p>
 server, please see <a
 href="http://subversion.tigris.org/server_setup.html">Server Setup</a>.</p>
 
+<!-- ----------------------------------------------------------- -->
 
-<h2>Why don't you do X, just like SCM system Y?</h2>
+<h2><a name="feature-x">Why don't you do X, just like SCM system Y?</a></h2>
 
 <p>We aren't attempting to break new ground in SCM systems, nor are we
 attempting to imitate all the best features of every SCM system out
 there.  We're trying to replace CVS.  See the first question.</p>
 
+<!-- ----------------------------------------------------------- -->
 
-<h2>When's the next release?</h2>
+<h2><a name="release">When's the next release?</a></h2>
 
-<p>See our <a
-href="http://subversion.tigris.org/project_status.html">status
-page</a>.</p>
+<p>See our status page, <a
+href="http://subversion.tigris.org/project_status.html">
+http://subversion.tigris.org/project_status.html</a>.</p>
+
+<!-- ----------------------------------------------------------- -->
 
 <h2>I just built the distribution binary, and when I try to check out
 Subversion, I get an error about an "Unrecognized URL scheme."  What's up
-with that?</h2>
+with<a name="unrecognized-url-error"> that?</a></h2>
 
 <p>Subversion uses a plugin system to allow access to repositories.  Currently
 there are two of these plugins: ra_local allows access to a local
@@ -126,17 +193,22 @@ ldconfig.  If you don't wish to do this, or you don't have root access, you
 can also specify the library directory in the LD_LIBRARY_PATH environment
 variable.</p>
 
-<h2>How do I create a repository?  How do I import data into it?</h2>
+<!-- ----------------------------------------------------------- -->
 
-<p>See the latest <a
-href="http://svn.collab.net/repos/svn/trunk/README">README</a>
-document;  specifically, look at section IV, the "Quickstart Guide".</p>
+<h2><a name="repository">How do I create a repository?  How do I
+import data into it?</a></h2>
+
+<p>See <a
+href="http://svn.collab.net/repos/svn/trunk/README">
+http://svn.collab.net/repos/svn/trunk/README</a>;  specifically, look
+at section IV, the "Quickstart Guide".</p>
+
+<!-- ----------------------------------------------------------- -->
 
 <h2>I'm getting strange errors in my httpd error log, and Subversion
 operations aren't working.</h2>
 
-<p>
-Sometimes you need to run Berkeley DB's recovery procedure.  Shut
+<p>Sometimes you need to run Berkeley DB's recovery procedure.  Shut
 down apache, cd into the relevant repository's `<tt>db</tt>'
 subdirectory, and run
 "<tt>/usr/local/BerkeleyDB.<i>X</i>.<i>Y</i>/bin/db_recover&nbsp;-ve</tt>".
@@ -150,9 +222,11 @@ maintenance.  However, until we get all the bugs worked out, the above
 will sometimes be necessary.
 </p>
 
+<!-- ----------------------------------------------------------- -->
+
 <h2>When I run `<tt>configure</tt>', I get errors about
 <tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.
-What's wrong?</h2>
+What<a name="configure-sed-error">'s wrong?</a></h2>
 
 <p>
 You probably have old copies of
@@ -162,8 +236,11 @@ sure the <tt>apr/</tt> and <tt>apr-util/</tt> that you're
 building with are completely up-to-date, and try again.
 </p>
 
-<h2>I'm running Subversion under windows and I can create a repository fine,
-but I get errors trying to import or check out from it.  What's wrong?</h2>
+<!-- ----------------------------------------------------------- -->
+
+<h2>I'm running Subversion under windows and I can create a repository
+fine, but <a name="windows-repository">I get errors trying to import
+or check out from it.  What's wrong?</a></h2>
 
 <p>If the error looks something like:
 <pre>
@@ -178,17 +255,49 @@ d:
 svn import file:///some/path/to/repos/on/d/drive e:\file\to\be\imported
 </pre>
 
+<!-- ----------------------------------------------------------- -->
+
+<h2><a name="proxy">How do I access a repository through a proxy?</a></h2>
+
+<p>First, edit your ~/.subversion/proxies configuration file to
+indicate which proxy to use.  There are comments in the file
+explaining how to do this.  If you don't have that file, get the
+latest Subversion client and run any command; this will cause the
+configuration directory and template files to be created.</p>
+
+<p>Next, you need to make sure the proxy server itself supports all
+the HTTP methods Subversion uses.  Some proxy servers do not support
+these methods by default: PROPFIND, REPORT, MERGE, MKACTIVITY,
+CHECKOUT.  In general, solving this depends on the particular proxy
+software.  For Squid, the config option is
+
+<pre>
+   #  TAG: extension_methods
+   #       Squid only knows about standardized HTTP request methods.
+   #       You can add up to 20 additional "extension" methods here.
+   #
+   #Default:
+   # none
+   extension_methods REPORT MERGE MKACTIVITY CHECKOUT
+</pre>
+
+(Squid 2.4 and later already knows about PROPFIND.)
+</p>
+
+<!-- ----------------------------------------------------------- -->
+
+<h2><a name="bikeshed">What's a 'bikeshed'?</a></h2>
+
+<p>See Poul-Henning Kamp's post to freebsd-hackers: <a href="http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING">http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING</a>.
+</p>
+
+<!-- ----------------------------------------------------------- -->
+
 <h2>I have other problems or questions about Subversion.  Where can I get
-more information?</h2>
+more<a name="more-information"> information?</a></h2>
 
 <p>Please send your questions or concerns to the Subversion Development <a
 href="mailto:dev@subversion.tigris.org">mailing list</a>.  Alternatively,
 several Subversion users and developers can usually be contacted via IRC on
 channel #svn on <a
 href="http://www.openprojects.net">irc.openprojects.net</a>.</p>
-
-<h2>Why do you guys keep talking about 'bikesheds'?</h2>
-
-<p><a href="http://www.spectechnologies.net/FAQ/misc.html#BIKESHED-PAINTING">
-Read the mail</a> written by Poul-Henning Kamp.
-</p>
