@@ -1152,6 +1152,8 @@ def merge_with_implicit_target (sbox):
   finally:
     os.chdir(was_cwd)
 
+#----------------------------------------------------------------------
+
 def merge_with_prev (sbox):
   "merge operations using PREV revision"
 
@@ -1241,6 +1243,80 @@ def merge_with_prev (sbox):
     os.chdir(was_cwd)
     
 #----------------------------------------------------------------------
+# Regression test for issue #1319: 'svn merge' should *not* 'C' when
+# merging a change into a binary file, unless it has local mods.
+
+def merge_binary_file (sbox):
+  "merge change into unchanged binary file"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # Add a binary file to the project, 'theata.bin'
+  fp = open(os.path.join(sys.path[0], "theta.bin"))
+  theta_contents = fp.read()  # suck up contents of a test .png file
+  fp.close()
+
+  theta_path = os.path.join(wc_dir, 'A', 'theta')
+  fp = open(theta_path, 'w')
+  fp.write(theta_contents)    # write png filedata into 'A/theta'
+  fp.close()
+  
+  svntest.main.run_svn(None, 'add', theta_path)  
+
+  # Commit the new binary file, creating revision 2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(verb='Adding  (bin)'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+  
+  # Make the "other" working copy
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  # Change the binary file in first working copy, commit revision 3.
+  svntest.main.file_append(theta_path, "some extra junk")
+  expected_output = wc.State(wc_dir, {
+    'A/theta' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=3, repos_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # In second working copy, attempt to 'svn merge -r 2:3'.
+  # We should *not* see a conflict during the update, but a 'U'.
+  # And after the merge, the status should be 'M'.
+  expected_output = wc.State(other_wc, {
+    'A/theta' : Item(status='U '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/theta' : Item(theta_contents + "some extra junk",
+                     props={'svn:mime-type' : 'application/octet-stream'}),
+    })
+  expected_status = svntest.actions.get_virginal_state(other_wc, 3)
+  expected_status.add({
+    'A/theta' : Item(status='M ', wc_rev=3, repos_rev=3),
+    })
+  svntest.actions.run_and_verify_merge(other_wc, '2', '3',
+                                       svntest.main.current_repo_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -1257,6 +1333,7 @@ test_list = [ None,
               merge_tree_deleted_in_target,
               XFail(merge_similar_unrelated_trees),
               merge_with_prev,
+              XFail(merge_binary_file),
               # merge_one_file,          # See issue #1150.
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
