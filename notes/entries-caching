@@ -32,9 +32,54 @@ file any changes are accumulated in the access baton and only finally
 written when the log file completes.  There is scope to use the same
 mechanism in other places, although it may be best to refrain from
 doing this until the interface changes (see section 2) are resolved.
-There is also an alternative approach, which would be to write changes
-to separate files and at some point combine these separate files into
-a single file.
+A more substantial enhancement is described below.
+
+1.1 Write Caching Enhancement
+
+An overview of the update process
+
+   1. Lock the directory
+   2. Read the entries file and cache in memory
+   3. Start the wc update
+      3.1. Receive an update to a file
+      3.2. Write a log file
+      3.3. Start running log file
+         3.3.1. Modify entries in memory
+      3.4  Finish log file
+      3.5. Flush entries to disk
+      3.6. Remove log file
+   4. Finish update
+   5. Unlock directory
+
+Each log file may make multiple modifications to the entries file
+(step 3.3.1 above), and each wc update may contain updates for
+multiple files (step 3 above).  Multiple modifications during a log
+file are cached in memory and so are not a problem, but multiple files
+result in multiple writes of the entries file (step 3.5 above).
+Writing the entries file is a non-trivial operation, and doing it
+repeatedly means that the run-time increases is non-linearly as the
+number of entries in the directory increases.
+
+Simply caching the entries modifications in memory for the complete
+update is not possible, it would break the atomic guarantees provided
+by the log file system.  When the log file is removed all entries
+modifications need to be present on disk, otherwise an interrupt will
+result in an inconsistent working copy.
+
+One solution is to track which entries get changed while running a log
+file, and write a temporary, partial, entries file instead of the
+complete file at the end of each log file (step 3.5 above). Then there
+would need to be a write of the complete file only once at the end of
+the update (step 4 above).  With this system, if the update is
+interrupted the cleanup mechanism would recognise the partial entries
+files and combine them with the out-of-date entries file on disk.  The
+temporary, partial entries files need to be written atomically to
+avoid problems with incomplete writes, and they need to be ordered so
+that they can be read in the order they were written.  They also need
+to be cleaned up before removing the lock.  The mechanism to track
+modified entries would mark them all unmodified as each temporary,
+partial, entries file is written.  Note: during a normal update the
+temporary, partial, entries files do not need to be read.
 
 
 2. Interface Enhancements
@@ -112,6 +157,18 @@ doesn't currently trigger.  If it turns out that this needs to be
 supported it should be possible to transfer the hash information to
 another baton.
 
+The function that opens access batons takes a flag that indicates
+whether to open a single directory, or the complete tree.  When a
+single directory is opened only partial entry information is available
+for sub-directories, since getting full information requires reading
+the sub-directory's entry file.  An enhancement would be to replace
+the boolean with a tristate, to open just the one directory, the whole
+tree, or the one directory and it's immediate sub-directories.  This
+may be useful for the non-recursive operations, some of which have to
+open the entire tree because they need full entry information for the
+sub-directories.  The recursive/non-recursive stuff really needs to be
+revisited in most of the client and wc libraries (an issue exists).
+
 
 4. Access Baton Conversion
    -----------------------
@@ -162,7 +219,7 @@ identify those places that are failing to use the log file mechanism.
    ------
 
 Entries caching has been implemented.  Write performance has been
-addressed, but could possibly be improved (section 1).
+addressed, but could be improved further (section 1).
 
 The interface changes (section 2) have not been started.
 
