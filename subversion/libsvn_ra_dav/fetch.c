@@ -1239,24 +1239,6 @@ svn_ra_dav__get_locations(void *session_baton,
   return err;
 }
 
-/* Populate the members of ne_propname structure *PROP for the
-   Subversion property NAME.  */
-static void
-make_ne_propname (ne_propname *prop,
-                  const char *name)
-{
-  if (strncmp(name, SVN_PROP_PREFIX, (sizeof(SVN_PROP_PREFIX) - 1)) == 0)
-    {
-      prop->nspace = SVN_DAV_PROP_NS_SVN;
-      prop->name = name + sizeof(SVN_PROP_PREFIX) - 1;
-    }
-  else
-    {
-      prop->nspace = SVN_DAV_PROP_NS_CUSTOM;
-      prop->name = name;
-    }
-}
-
 svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
                                           svn_revnum_t rev,
                                           const char *name,
@@ -1361,36 +1343,16 @@ svn_error_t *svn_ra_dav__rev_prop (void *session_baton,
                                    svn_string_t **value,
                                    apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
-  svn_ra_dav_resource_t *baseline;
-  apr_hash_t *filtered_props;
+  apr_hash_t *props;
 
-  /* E-Z initialization */
-  ne_propname wanted_props[] =
-    {
-      { "", "" },
-      { NULL }
-    };
+  /* We just call svn_ra_dav__rev_proplist() and filter its results here
+   * because sending the property name to the server may create an error
+   * if it has a colon in its name.  While more costly this allows DAV
+   * clients to still gain access to all the allowed property names.
+   * See Issue #1807 for more details. */
+  SVN_ERR (svn_ra_dav__rev_proplist (session_baton, rev, &props, pool));
 
-  /* Decide on the namespace and propname for XML marshalling. */
-  make_ne_propname(&(wanted_props[0]), name);
-
-  /* Main objective: do a PROPFIND (allprops) on a baseline object */  
-  SVN_ERR (svn_ra_dav__get_baseline_props(NULL, &baseline,
-                                          ras->sess, 
-                                          ras->url,
-                                          rev,
-                                          wanted_props,
-                                          pool));
-
-  /* Build a new property hash, based on the one in the baseline
-     resource.  In particular, convert the xml-property-namespaces
-     into ones that the client understands.  Strip away the DAV:
-     liveprops as well. */
-  filtered_props = apr_hash_make(pool);
-  SVN_ERR (filter_props (filtered_props, baseline, FALSE, pool));
-
-  *value = apr_hash_get(filtered_props, name, APR_HASH_KEY_STRING);
+  *value = apr_hash_get (props, name, APR_HASH_KEY_STRING);
 
   return SVN_NO_ERROR;
 }
