@@ -29,7 +29,7 @@
 
 //DO YOU WANT TO DEBUG THIS CODE?
 //JUST UNCOMMENT THE FOLLOWING LINE
-#define SVN_JNI_REVISION__DEBUG
+//#define SVN_JNI_REVISION__DEBUG
 
 jobject 
 revision__create(JNIEnv *env, jboolean *hasException, jlong revision)
