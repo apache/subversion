@@ -300,6 +300,11 @@ add_dir_recursive (const char *dirname,
     {
       const char *fullpath;
 
+      /* Check cancellation so you can cancel during an 
+       * add of a directory with lots of files. */
+      if (ctx->cancel_func)
+        SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
+      
       /* Skip over SVN admin directories. */
       if (strcmp (this_entry.name, SVN_WC_ADM_DIR_NAME) == 0)
         continue;
