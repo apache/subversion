@@ -65,6 +65,7 @@ APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_TARGET = @APACHE_TARGET@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
 
+SWIG = @SWIG@
 SWIG_PY_INCLUDES = @SWIG_PY_INCLUDES@
 
 SVN_APR_INCLUDES = @SVN_APR_INCLUDES@
@@ -260,13 +261,20 @@ doc-clean:
         done
 
 swig-py-ext:
-	(cd $(SWIG_SRC_DIR)/python;                                \
-         $(PYTHON) setup.py                                        \
+	if test -n "$(SWIG)"; then                                 \
+	    cd $(SWIG_SRC_DIR)/python;                             \
+        $(PYTHON) setup.py                                         \
             -I$(SWIG_SRC_DIR)                                      \
             -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
             -S$(SWIG_SRC_DIR)                                      \
             -L$(DESTDIR)$(prefix)/lib -L$(SVN_APR_PREFIX)/lib      \
-            build --build-base=$(SWIG_BUILD_DIR)/python/build)
+            -s"$(SWIG)"                                            \
+            build --build-base=$(SWIG_BUILD_DIR)/python/build;     \
+	else                                                       \
+	    echo 'SWIG variable is not defined; this rule is unavailable' >&2; \
+	    echo 'Re-run configure --with-swig' >&2;               \
+	    exit 1;                                                \
+	fi
 
 install-swig-py-ext:
 	(cd $(SWIG_BUILD_DIR)/python;                       \
