@@ -1,7 +1,7 @@
                        How cvs2svn.py Works
                       =====================
 
-A cvs2svn run consists of 4 passes.  Every pass but the last saves its
+A cvs2svn run consists of 5 passes.  Every pass but the last saves its
 data to a file on disk, so that a) we don't hold huge amounts of state
 in memory, and b) the conversion process is resumable.  The final pass
 makes the actual Subversion commits.
@@ -161,18 +161,99 @@ this causes commits with the same digest (that is, the same author and
 log message) to be grouped together.  Poof!  We now have the CVS
 changes grouped by logical commit.
 
+In some cases, the changes in a given commit may be interleaved with
+other commits that went on at the same time, because the sort gives
+precedence to date before log digest.  However, Pass 4 detects this by
+seeing that the log digest is different, and reseparates the commits.
+
 Pass 4:
 =======
 
-Output the commits to a Subversion dumpfile, that is, a file intended
-for 'svnadmin load'.  The dumpfile is the data's last static stage:
-last chance to check over the data, run it through svndumpfilter, or
-move the dumpfile to another machine.
+Walk through cvs2svn-data.s-revs and print the commits to a Subversion
+dumpfile (a file intended for 'svnadmin load').  The dumpfile is the
+data's last static stage: last chance to check over the data, run it
+through svndumpfilter, move the dumpfile to another machine, etc.
 
-It's pretty self-explanatory code, and is probably where most flux is
-about to happen (particularly with regards to tags and branches), so I
-won't bother to describe it here.  But if you understand how passes
-1-3 work, you should have no trouble understanding the code of pass 4.
+                  ===============================
+                      Branches and Tags Plan.
+                  ===============================
+
+This pass is also where tag and branch creation is done.  Since
+subversion does tags and branches by copying from existing revisions
+(then maybe editing the copy, making subcopies underneath, etc), the
+big question for cvs2svn is how to achieve the minimum number of
+operations per creation.  For example, if it's possible to get the
+right tag by just copying revision 53, then it's better to do that
+than, say, copying revision 51 and then sub-copying in bits of
+revision 52 and 53.
+
+Also, since CVS does not version symbolic names, there is the
+secondary question of *when* to create a particular tag or branch.
+For example, a tag might have been made at any time after the youngest
+commit included in it, or might even have been made piecemeal; and the
+same is true for a branch, with the added constraint that for any
+particular file, the branch must have been created before the first
+commit on the branch.
+
+Answering the second question first: cvs2svn creates tags and branches
+as late as possible.  For branches, this is "just in time" creation --
+the moment it sees the first commit on a branch, it snaps the entire
+branch into existence (or as much of it as possible), and then outputs
+the branch commit.
+
+The reason we say "as much of it as possible" is that it's possible to
+have a branch where some files have branch commits occuring earlier
+than the other files even have the source revisions from which the
+branch sprouts (this can happen if the branch was created piecemeal,
+for example).  In this case, we create as much of the branch as we
+can, that is, as much of it as there are source revisions available to
+copy, and leave the rest for later.  "Later" might mean just until
+other branch commits come in, or else during a cleanup stage that
+happens at the end of this pass (about which more later).
+
+All tags are created during the cleanup stage, after all regular
+commits have been made.  That way there's no need to worry whether all
+the required revisions for a particular tag have been committed yet,
+and it's as correct as any other time, since no one can tell when a
+tag was made anyway.
+
+How just-in-time branch creation works:
+
+In order to make the "best" set of copies/deletes when creating a
+branch, cvs2svn keeps track of two sets of trees while it's making
+commits:
+
+   1. A skeleton mirror of the subversion repository, that is, an
+      array of revisions, with a tree hanging off each revision.  (The
+      "array" is actually implemented as an anydbm database itself,
+      mapping string representations of numbers to root keys.)
+
+   2. A tree for each CVS symbolic name, and the svn file/directory
+      revisions from which various parts of that tree could be copied.
+
+Both tree sets live in anydbm databases, using the same basic schema:
+unique keys map to marshal.dumps() representations of dictionaries,
+which in turn map entry names to other unique keys:
+
+   root_key  ==> { entryname1 : entrykey1, entryname2 : entrykey2, ... }
+   entrykey1 ==> { entrynameX : entrykeyX, ... }
+   entrykey2 ==> { entrynameY : entrykeyY, ... }
+   entrykeyX ==> { etc, etc ...}
+   entrykeyY ==> { etc, etc ...}
+
+(The leaf nodes -- files -- are also dictionaries, for simplicity.)
+
+Both file and directory dictionaries store metadata under special keys
+whose names start with "/", so they can always be distinguished from
+entries.  For example, search for "//mutable" and "//sym_names" in
+cvs2svn.py (the double slash is just for easily readable debugging
+output).
+
+The repository mirror allows cvs2svn to remember what paths exist in
+what revisions.  For each path, it records what tags and branches can
+sprout from that revision...
+
+[todo: writing here]
 
 
 Pass 5:
@@ -181,86 +262,6 @@ Pass 5:
 Load the dumpfile into Subversion.  Voilà.
 
 
-                 ===============================
-                     Branches and Tags Plan.
-                 ===============================
-
-[This is written somewhat hastily, mainly to serve as notes to myself
-to remind me of what I'm doing.  The full description will be worked
-into the pass documentation above later.  Much thanks to Mike Pilato
-for in-depth discussion about the problem.]
-
-Some background for this branches/tags solution can be found at
-
-   http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=32809
-
-We're not going to write a dumpfile in pass4.  Instead, we're going to
-write to a commits file; it'll record the same stuff the dumpfile
-does, minus the file contents.  The reason to do this is that we'll
-need to make several passes through that commits file in order to get
-branch creation times right.  Then when we've got them all lined up,
-we can write the dumpfile in a later pass.
-
-So the first thing we do is convert 
-
-   cvs2svn-data.s-revs  ==>  cvs2svn-data.commits
-
-Let's say the format of cvs2svn-data.commits is the same line-based
-format as cvs2svn-data.s-revs, without the interleaving, and there's
-new prefix slot to indicate revision numbers, something like this:
-
-   1
-     3ecd5b32 <hash> C 1.1 * 0 0 <path>
-     3ecd5b32 <hash> C 1.1 * 0 0 <path>
-     3ecd5b32 <hash> C 1.1 * 0 0 <path>
-     3ecd5b32 <hash> C 1.1 * 1 T_MIXED 1 B_MIXED <path>
-   2
-     ...
-
-That is, first we indicate the upcoming revision, then all the files
-in that revision (indented by two spaces).
-
-So now we have a file listing every trunk commit, and we know the
-actual Subversion revision number of that commit.  We make a pass
-over the .commits file, and for each line do this
-
-   for each branch:
-     Look up the subversionized <path> in branches/<branchname>.db
-       If not present, then initialize with list `(this-rev)'.
-       Else if present, error -- branches can't be created twice.
-
-     Then bubble up up subversionized <path>'s parents:
-       If present, adjust the range of possible revisions
-       Else if not present, add, with revision `(this-rev)'.
-       (We could keep scores for different ranges, but that vastly
-       complicates things... Let's get the simpler algorithm working
-       first, since it's really a subset of the score-keeping one
-       anyway.)
-
-     Look up the subversionized <path> in every other branches/*.db:
-       If present, set range endpoint, so we have `(revA revB)'.
-       Else if not present, do nothing.
-
-Similar deal for tags.
-
-Now we can make a second pass over the commits file, this time looking
-up tags and branches in their DBs.  For each one we can find a decent
-set of mkdirs and copies -- not always the ideal minimal set, but in
-most cases it should be close.  It will tend to do copies of whole
-directories or directory trees the farther down it goes, so the danger
-lessens as we approach leaf nodes, which is good.
-
-We'll have to make N passes total, in order to handle branches off of
-branches (N being the max branching depth).
-
-Oh, one other thing: the head mirror will have to become a full
-history mirror -- just the skeletal tree, not the file contents.  The
-reason is that when we create a branch by copying, it could
-accidentally capture some files that aren't actually on the branch.
-The solution is to be able to iterate over all the children of the
-branch source directory *at a given revision*, checking which ones
-have keys in the tags/foo.db or branches/foo.db file.  Those that
-don't get `delete's outputted.
 
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
