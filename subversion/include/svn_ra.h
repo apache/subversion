@@ -36,17 +36,17 @@ extern "C" {
    supplies this routine to an RA layer.  RA calls this routine on
    each PATH that was committed, allowing the client to bump revision
    numbers. */
-typedef svn_error_t *svn_ra_close_commit_func_t (void *close_baton,
-                                                 svn_string_t *path,
-                                                 svn_revnum_t new_rev);
+typedef svn_error_t *(*svn_ra_close_commit_func_t) (void *close_baton,
+                                                    svn_string_t *path,
+                                                    svn_revnum_t new_rev);
 
 
 /* A function type which allows the RA layer to store WC properties
    after a commit.  */
-typedef svn_error_t *svn_ra_set_wc_prop_func_t (void *close_baton,
-                                                svn_string_t *path,
-                                                svn_string_t *name,
-                                                svn_string_t *value);
+typedef svn_error_t *(*svn_ra_set_wc_prop_func_t) (void *close_baton,
+                                                   svn_string_t *path,
+                                                   svn_string_t *name,
+                                                   svn_string_t *value);
 
 
 /* A vtable structure which allows a working copy to describe a
@@ -196,10 +196,10 @@ typedef struct svn_ra_plugin_t
 
    ### need to force this to be __cdecl on Windows... how??
 */
-typedef svn_error_t *svn_ra_init_func_t (int abi_version,
-                                         apr_pool_t *pool,
-                                         const char **url_scheme,
-                                         const svn_ra_plugin_t **plugin);
+typedef svn_error_t *(*svn_ra_init_func_t) (int abi_version,
+                                            apr_pool_t *pool,
+                                            const char **url_scheme,
+                                            const svn_ra_plugin_t **plugin);
 
 /* The current ABI (Application Binary Interface) version for the
    RA plugin model. This version number will change when the ABI
@@ -223,8 +223,14 @@ typedef svn_error_t *svn_ra_init_func_t (int abi_version,
 
 /** Public RA implementations: ADD MORE HERE as necessary. **/
 
-svn_ra_init_func_t svn_ra_dav_init;
-svn_ra_init_func_t svn_ra_local_init;
+svn_error_t * svn_ra_dav_init (int abi_version,
+                               apr_pool_t *pool,
+                               const char **url_scheme,
+                               const svn_ra_plugin_t **plugin);
+svn_error_t * svn_ra_local_init (int abi_version,
+                                 apr_pool_t *pool,
+                                 const char **url_scheme,
+                                 const svn_ra_plugin_t **plugin);
 
 
 

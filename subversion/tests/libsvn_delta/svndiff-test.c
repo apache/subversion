@@ -28,7 +28,7 @@ main (int argc, char **argv)
   FILE *target_file;
   svn_txdelta_stream_t *txdelta_stream;
   svn_txdelta_window_t *window;
-  svn_txdelta_window_handler_t *svndiff_handler;
+  svn_txdelta_window_handler_t svndiff_handler;
   svn_stream_t *encoder;
   void *svndiff_baton;
 

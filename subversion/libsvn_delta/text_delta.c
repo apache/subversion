@@ -411,7 +411,7 @@ void
 svn_txdelta_apply (svn_stream_t *source,
                    svn_stream_t *target,
                    apr_pool_t *pool,
-                   svn_txdelta_window_handler_t **handler,
+                   svn_txdelta_window_handler_t *handler,
                    void **handler_baton)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -438,7 +438,7 @@ svn_txdelta_apply (svn_stream_t *source,
 
 svn_error_t * 
 svn_txdelta_send_string (svn_string_t *string,
-                         svn_txdelta_window_handler_t *handler,
+                         svn_txdelta_window_handler_t handler,
                          void *handler_baton,
                          apr_pool_t *pool)
 {

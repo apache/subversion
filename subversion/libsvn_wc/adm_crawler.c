@@ -296,7 +296,7 @@ do_apply_textdelta (svn_string_t *filename,
   svn_error_t *err;
   apr_status_t status;
 
-  svn_txdelta_window_handler_t *window_handler;
+  svn_txdelta_window_handler_t window_handler;
   void *window_handler_baton;
 
   svn_txdelta_stream_t *txdelta_stream;

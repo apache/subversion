@@ -98,7 +98,7 @@ main (int argc, const char * const *argv)
   int c1, c2, i;
   svn_txdelta_stream_t *txdelta_stream;
   svn_txdelta_window_t *window;
-  svn_txdelta_window_handler_t *handler;
+  svn_txdelta_window_handler_t handler;
   void *handler_baton;
   svn_stream_t *stream;
   svn_error_t *err = SVN_NO_ERROR;

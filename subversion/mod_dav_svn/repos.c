@@ -37,7 +37,7 @@ struct dav_stream {
   svn_stream_t *rstream;
 
   /* for writing to the FS */
-  svn_txdelta_window_handler_t *delta_handler;
+  svn_txdelta_window_handler_t delta_handler;
   void *delta_baton;
 };
 

@@ -96,7 +96,7 @@ struct handler_baton
 {
   apr_file_t *source;
   apr_file_t *dest;
-  svn_txdelta_window_handler_t *apply_handler;
+  svn_txdelta_window_handler_t apply_handler;
   void *apply_baton;
   apr_pool_t *pool;
   struct file_baton *fb;
@@ -794,7 +794,7 @@ replace_file (svn_string_t *name,
 
 static svn_error_t *
 apply_textdelta (void *file_baton, 
-                 svn_txdelta_window_handler_t **handler,
+                 svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
   struct file_baton *fb = file_baton;
