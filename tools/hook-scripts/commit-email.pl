@@ -8,8 +8,7 @@
 #
 # Options:
 #    -h hostname       :  Hostname to append to author for 'From:'
-#    -l logfile        :  File to while mail contents should be 
-#                         appended
+#    -l logfile        :  File to which mail contents should be appended
 #    -s subject_prefix :  Subject line prefix
 #    
 # ====================================================================
@@ -101,7 +100,7 @@ chomp $date;
 
 # figure out what directories have changed (using svnlook)
 open (INPUT, "$svnlook $repos rev $rev dirs-changed |")
-    or die ("Error running svnlook (changed)");
+    or die ("Error running svnlook (dirs-changed)");
 my @dirschanged = <INPUT>;
 my $rootchanged = 0;
 close (INPUT);
@@ -126,16 +125,24 @@ my @dels = ();
 my @mods = ();
 foreach $line (@svnlooklines)
 {
-    my ($code, $path) = split ('   ', $line);
+    my $path;
+    my $code;
+
+    # split the line up into the modification code (ignore propmods) and path
+    if ($line =~ /^(.).  (.*)$/)
+    {
+        $code = $1;
+        $path = $2;
+    }
 
     if ($code eq 'A') {
-        push (@adds, "   $path");
+        push (@adds, "   $path\n");
     }
     elsif ($code eq 'D') {
-        push (@dels, "   $path");
+        push (@dels, "   $path\n");
     }
     else {
-        push (@mods, "   $path");
+        push (@mods, "   $path\n");
     }
 }
 
@@ -185,7 +192,7 @@ my $dirlist = join (' ', @dirschanged);
 
 
 my $userlist = join (' ', @email_addrs); 
-my $subject;
+my $subject = '';
 if ($commondir ne '')
 {
     $subject = "rev $rev - in $commondir: $dirlist";
