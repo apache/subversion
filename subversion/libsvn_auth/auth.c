@@ -248,34 +248,27 @@ svn_error_t *
 svn_auth_save_credentials (svn_auth_iterstate_t *state,
                            apr_pool_t *pool)
 {
-  int i;
-  provider_set_t *table;
   provider_t *provider;
   svn_boolean_t save_succeeded = FALSE;
 
   if (! (state && state->last_creds))
     return SVN_NO_ERROR;
 
-  table = state->table;
 
-  /* Find a provider that can save the credentials. */
-  for (i = 0; i < table->providers->nelts; i++)
-    {
-      provider = APR_ARRAY_IDX(table->providers, i, provider_t *);
-      if (provider->vtable->save_credentials)
-        SVN_ERR (provider->vtable->save_credentials 
-                 (&save_succeeded, state->last_creds,
-                  provider->provider_baton, pool));
+  /* Save the credentials using the provider that provided them. */
+  provider = APR_ARRAY_IDX (state->table->providers, 
+                            state->provider_idx, 
+                            provider_t *);
+  if (provider->vtable->save_credentials)
+    SVN_ERR (provider->vtable->save_credentials (&save_succeeded, 
+                                                 state->last_creds,
+                                                 provider->provider_baton, 
+                                                 pool));
 
-      if (save_succeeded)
-        break;
-    }
-
-  /* If all providers failed to save, throw an error. */
+  /* If provider failed to save, throw an error. */
   if (! save_succeeded)                  
-    return svn_error_createf (SVN_ERR_AUTH_PROVIDERS_EXHAUSTED, NULL,
-                              "%d provider(s) failed to save credentials.",
-                              i);
+    return svn_error_create (SVN_ERR_AUTH_CREDS_NOT_SAVED, NULL,
+                             "Provider failed to save credentials.");
 
   return SVN_NO_ERROR;
 }

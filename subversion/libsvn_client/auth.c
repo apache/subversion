@@ -560,21 +560,13 @@ simple_prompt_save_creds (svn_boolean_t *saved,
 {
   svn_auth_cred_simple_t *creds = credentials;
   simple_prompt_provider_baton_t *pb = provider_baton;
-
-  return svn_wc_save_simple_creds (saved, pb->base_dir, pb->base_access, 
-                                   creds, pool);
+  
+  *saved = FALSE;
+  if (pb->base_dir)
+    SVN_ERR (svn_wc_save_simple_creds (saved, pb->base_dir, pb->base_access, 
+                                       creds, pool));
+  return SVN_NO_ERROR;
 }
-
-
-
-/* The provider. */
-static const svn_auth_provider_t simple_prompt_provider = 
-  {
-    SVN_AUTH_CRED_SIMPLE,  /* username/passwd creds */
-    simple_prompt_first_creds,
-    simple_prompt_next_creds,
-    simple_prompt_save_creds,
-  };
 
 
 /* Public API */
@@ -591,6 +583,13 @@ svn_client__get_simple_prompt_provider (const svn_auth_provider_t **provider,
                                         apr_pool_t *pool)
 {
   simple_prompt_provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
+  svn_auth_provider_t *prov = apr_palloc (pool, sizeof (*prov));
+
+  prov->cred_kind = SVN_AUTH_CRED_SIMPLE;
+  prov->first_credentials = simple_prompt_first_creds;
+  prov->next_credentials = simple_prompt_next_creds;
+  prov->save_credentials = base_dir ? simple_prompt_save_creds : NULL;
+
   pb->prompt_func = prompt_func;
   pb->prompt_baton = prompt_baton;
   pb->retry_limit = retry_limit;
@@ -605,6 +604,6 @@ svn_client__get_simple_prompt_provider (const svn_auth_provider_t **provider,
       if (base_access)
         pb->base_access = base_access;
     }
-  *provider = &simple_prompt_provider;
+  *provider = prov;
   *provider_baton = pb;
 }
