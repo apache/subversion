@@ -131,7 +131,9 @@ typedef struct svn_txdelta_op_t {
 
     /* Append the LEN bytes at OFFSET in the window's NEW string to
        the target.  It must be the case that 0 <= OFFSET < OFFSET +
-       LEN <= length of NEW.  */
+       LEN <= length of NEW.  Windows MUST use new data in ascending
+       order with no overlap at the moment; svn_txdelta_to_svndiff
+       depends on this.  */
     svn_txdelta_new
   } action_code;
   
