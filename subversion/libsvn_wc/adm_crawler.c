@@ -52,12 +52,10 @@
 
 #include <apr_pools.h>
 #include <apr_file_io.h>
-#include "svn_types.h"
-#include "svn_string.h"
-#include "svn_error.h"
-#include "svn_path.h"
-#include "svn_wc.h"
 #include "wc.h"
+#include "svn_wc.h"
+#include "svn_delta.h"
+
 
 
 
@@ -279,22 +277,26 @@ do_crawl (svn_string_t *current_dir,
 /* Public interface.
 
    Do a depth-first crawl of the local changes in a working copy,
-   beginning at ROOT_DIRECTORY (absolute path).  Push synthesized xml
-   (representing a coherent tree-delta) at XML_PARSER.
+   beginning at ROOT_DIRECTORY (absolute path).  Communicate local
+   changes to the supplied EDIT_FNS object.
 
-   Presumably, the client library will grab a "walker" from libsvn_ra,
-   build an svn_xml_parser_t around it, and then pass the parser to
-   this routine.  This is how local changes in the working copy are
-   ultimately translated into network requests.  */
+   (Presumably, the client library will someday grab EDIT_FNS from
+   libsvn_ra, and then pass it to this routine.  This is how local
+   changes in the working copy are ultimately translated into network
+   requests.)  */
 
 svn_error_t *
 svn_wc_crawl_local_mods (svn_string_t *root_directory,
-                         svn_xml_parser_t *xml_parser,
+                         svn_delta_edit_fns_t *edit_fns,
                          apr_pool_t *pool)
 {
   svn_error_t *err;
-  
-  svn_string_t *xml_buffer = svn_string_create ("", pool);
+  svn_xml_parser_t *xml_parser;
+  svn_string_t *xml_buffer;
+
+  xml_parser = svn_make_xml_parser (edit_fns, NULL, NULL, pool);
+  xml_buffer = svn_string_create ("", pool);
+
 
   /* Always begin with a lone "<text-delta"> */
   svn_string_appendbytes (xml_buffer, "<text-delta>", 12, pool);

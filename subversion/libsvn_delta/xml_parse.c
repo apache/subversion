@@ -1222,11 +1222,15 @@ xml_handle_data (void *userData, const char *data, int len)
 /* Public interfaces (see svn_delta.h)  */
 
 
-
-/* Return an expat parser object which knows to make calls into EDITOR
-   using EDIT_BATON and DIR_BATON */
+/* Given a precreated svn_delta_edit_fns_t EDITOR, return an XML
+   parser that will use it (and feed EDIT_BATON and DIR_BATON to its
+   callbacks.)  Additionally, this XML parser will use BASE_PATH and
+   BASE_VERSION as general "context variables" when evaluating a
+   tree-delta. */
 svn_xml_parser_t *
 svn_make_xml_parser (const svn_delta_edit_fns_t *editor,
+                     svn_string_t *base_path, 
+                     svn_vernum_t base_version,
                      void *edit_baton,
                      void *dir_baton,
                      apr_pool_t *pool)
@@ -1234,13 +1238,19 @@ svn_make_xml_parser (const svn_delta_edit_fns_t *editor,
   svn_xml_parser_t *xmlparser;
   XML_Parser expat_parser;
   svn_xml__digger_t *digger;
+  apr_pool_t *main_subpool;
+
+  /* Create a subpool to contain *everything*  */
+  main_subpool = apr_make_sub_pool (pool, NULL);
 
   /* Create a new digger structure and fill it out*/
-  digger = apr_pcalloc (pool, sizeof (svn_xml__digger_t));
+  digger = apr_pcalloc (main_subpool, sizeof (svn_xml__digger_t));
 
-  digger->pool             = pool;
+  digger->pool             = main_subpool;
   digger->stack            = NULL;
   digger->editor           = editor;
+  digger->base_path        = base_path;
+  digger->base_version     = base_version;
   digger->edit_baton       = edit_baton;
   digger->dir_baton        = dir_baton;
   digger->validation_error = SVN_NO_ERROR;
@@ -1263,8 +1273,9 @@ svn_make_xml_parser (const svn_delta_edit_fns_t *editor,
   digger->expat_parser = expat_parser;
 
   /* Create a new subversion xml parser and put everything inside it. */
-  xmlparser = apr_pcalloc (pool, sizeof (svn_xml_parser_t));
+  xmlparser = apr_pcalloc (main_subpool, sizeof (svn_xml_parser_t));
   
+  xmlparser->my_pool      = main_subpool;
   xmlparser->expat_parser = expat_parser;
   xmlparser->digger       = digger;
 
@@ -1273,10 +1284,20 @@ svn_make_xml_parser (const svn_delta_edit_fns_t *editor,
 
 
 
+/* Destroy an svn_xml_parser_t when finished with it. */
+void 
+svn_free_xml_parser (svn_xml_parser_t *parser)
+{
+  apr_destroy_pool (parser->my_pool);
+}
+
+
+
 /* Parse LEN bytes of xml data in BUFFER at SVN_XML_PARSER.  As xml is
    parsed, EDITOR callbacks will be executed with EDIT_BATON and
-   DIR_BATON.  If this is the final parser "push", ISFINAL must be set
-   to true.  */
+   DIR_BATON, with BASE_PATH and BASE_VERSION as the assumed "context"
+   variables for the tree-delta.  If this is the final parser "push",
+   ISFINAL must be set to true.  */
 svn_error_t *
 svn_xml_parsebytes (char *buffer, apr_off_t len, int isFinal, 
                     svn_xml_parser_t *svn_xml_parser)
@@ -1322,6 +1343,8 @@ svn_error_t *
 svn_xml_auto_parse (svn_read_fn_t *source_fn,
                     void *source_baton,
                     const svn_delta_edit_fns_t *editor,
+                    svn_string_t *base_path,
+                    svn_vernum_t base_version,
                     void *edit_baton,
                     void *dir_baton,
                     apr_pool_t *pool)
@@ -1333,6 +1356,8 @@ svn_xml_auto_parse (svn_read_fn_t *source_fn,
 
   /* Create a Subversion XML parser */
   svn_xml_parser_t *xmlparser = svn_make_xml_parser (editor,
+                                                     base_path,
+                                                     base_version,
                                                      edit_baton,
                                                      dir_baton,
                                                      pool);
@@ -1359,6 +1384,7 @@ svn_xml_auto_parse (svn_read_fn_t *source_fn,
 
   } while (! done);
 
+  svn_free_xml_parser (xmlparser);
   return err;
 }
 

@@ -171,6 +171,10 @@ typedef struct svn_xml__digger_t
   /* Callbacks to use when we discover interesting XML events */
   const svn_delta_edit_fns_t *editor;
 
+  /* General "context variables" used when evaluating a tree-delta */
+  svn_string_t *base_path;
+  svn_vernum_t base_version;
+
   /* Userdata structures that we need to keep track of while we parse,
      given to us by either the SVN filesystem or the SVN client */
   void *edit_baton;  /* (global data from our caller) */
@@ -237,8 +241,9 @@ typedef struct svn_propdelta_t
 
 struct svn_xml_parser_t
 {
-  XML_Parser expat_parser;
-  svn_xml__digger_t *digger;
+  apr_pool_t *my_pool;            /* the pool which contains the parser */
+  XML_Parser expat_parser;        /* custom-built Expat parser */
+  svn_xml__digger_t *digger;      /* maintains stack state, etc. */
 };
 
 
