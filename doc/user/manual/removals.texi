@@ -26,8 +26,8 @@ until you run @code{svn commit}.
 Also, please notice that there two different ways to interpret the
 phrase "remove an item".  In the simplest case, the item is removed from
 revision control (i.e. no longer tracked by the client), but not from
-your working copy.  In the more severe case, the item is removed
-both from revision control and disk.
+your working copy.  In the more severe case, the item is removed both
+from revision control and disk.  
 
 Normally, @code{svn rm} only removes an item from revision control.
 However, the @code{-f} flag (@code{--force}) can be given, which will
