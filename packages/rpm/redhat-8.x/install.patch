@@ -1,0 +1,11 @@
+--- subversion-0.14.3/build-outputs.mk	2002/10/02 02:27:45	1.1
++++ subversion-0.14.3/build-outputs.mk	2002/10/02 02:28:39
+@@ -248,7 +248,7 @@
+ 	cd subversion/svnlook ; $(INSTALL_FS_BIN) svnlook $(DESTDIR)$(fs_bindir)/svnlook
+ 
+ install-mods-shared: subversion/mod_dav_svn/mod_dav_svn.la
+-	cd subversion/mod_dav_svn ; $(MKDIR) "$(APACHE_LIBEXECDIR)" ; $(INSTALL_MOD_SHARED) -n dav_svn mod_dav_svn.la
++	cd subversion/mod_dav_svn ; mkdir -p $(RPM_BUILD_ROOT)/usr/lib/httpd/modules; cp ./.libs/mod_dav_svn.so ./mod_dav_svn.la $(RPM_BUILD_ROOT)/usr/lib/httpd/modules/
+ 
+ install-mods-static: subversion/libsvn_subr/libsvn_subr-1.la-a subversion/libsvn_delta/libsvn_delta-1.la-a subversion/mod_dav_svn/mod_dav_svn.la-a subversion/libsvn_repos/libsvn_repos-1.la-a subversion/libsvn_fs/libsvn_fs-1.la-a subversion/mod_dav_svn/static/config.m4 subversion/mod_dav_svn/static/Makefile.in
+ 	$(MKDIR) $(DESTDIR)$(APACHE_TARGET)/.libs
