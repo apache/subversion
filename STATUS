@@ -108,14 +108,14 @@ section for approved changes.)
              to run 'svn blame' on certain files in the repository).
 
      Votes:
-      +1: cmpilato
+      +1: cmpilato, jerenkrantz
 
 
    * r8167
      Fix a doc bug in svn_client.h.
      Justification: Obvious doc string typo, no risk.
      Votes:
-      +1: kfogel
+      +1: kfogel, jerenkrantz
 
 
 Core changes that already have three +1 votes and no vetos.  (If you
@@ -386,7 +386,7 @@ Bindings changes that affect the build system:
              because it touches the core build system.
 
      Votes:
-      +1: clkao, epg
+      +1: clkao, epg, jerenkrantz
 
 Bindings changes that don't affect the build system:
 
@@ -435,3 +435,4 @@ Bindings changes that don't affect the build system:
                     latest version in order to provide better supports.
      Votes:
       +1: clkao, epg
+      +0: jerenkrantz
