@@ -231,6 +231,7 @@ dav_resource *dav_svn_create_working_resource(const dav_resource *base,
 
 
 enum dav_svn_build_what {
+  DAV_SVN_BUILD_URI_ACT_COLLECTION, /* the collection of activities */
   DAV_SVN_BUILD_URI_BC,         /* a Baseline Collection */
   DAV_SVN_BUILD_URI_VERSION,    /* a Version Resource */
   DAV_SVN_BUILD_URI_BASELINE,   /* a Baseline */
