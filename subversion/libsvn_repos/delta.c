@@ -202,6 +202,10 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   SVN_ERR (svn_fs_check_path (&tgt_kind, tgt_root, tgt_fullpath, pool));
   SVN_ERR (svn_fs_check_path (&src_kind, src_root, src_fullpath, pool));
 
+  /* If neither of our paths exists, we don't really have anything to do. */
+  if ((tgt_kind == svn_node_none) && (src_kind == svn_node_none))
+    goto cleanup;
+
   /* If either the source or the target is a non-directory, we
      require that a SRC_ENTRY be supplied. */
   if ((! src_entry) && ((src_kind != svn_node_dir) 

@@ -1062,7 +1062,7 @@ def another_hudson_problem(sbox):
   # of issue 919 as far as I can tell)
   svntest.actions.run_and_verify_svn(None,
                                      ['D  '+G_path+'\n',
-                                      'Updated to revision 3.\n'], None,
+                                      'Update complete.\n'], None,
                                      'up', G_path)
 
   # Both G and gamma should be 'deleted', update should produce no output
