@@ -64,9 +64,11 @@ const dav_hooks_liveprop dav_svn_hooks_liveprop = { 0 };
 
 void dav_svn_gather_propsets(apr_array_header_t *uris)
 {
-#ifndef WIN32
+  /* ### what should we use for a URL to describe the available prop set? */
+  /* ### for now... nothing. we will *only* have DAV properties */
+#if 0
     *(const char **)apr_push_array(uris) =
-        "<http://apache.org/dav/propset/fs/1>";
+        "<http://subversion.tigris.org/dav/propset/svn/1>";
 #endif
 }
 
