@@ -214,6 +214,15 @@ txn_body_attach_lock (void *baton, trail_t *trail)
   if (kind == svn_node_none)
     kind = svn_node_file;    /* pretend, so the name can be reserved */
 
+  /* There better be a username in the incoming lock. */
+  if (! lock->owner)
+    {
+      if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
+        return svn_fs_base__err_no_user (trail->fs);
+      else
+        lock->owner = trail->fs->access_ctx->username;
+    }
+
   /* Is the caller attempting to lock an out-of-date working file? */
   if (SVN_IS_VALID_REVNUM(args->current_rev))
     {

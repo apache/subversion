@@ -1522,7 +1522,11 @@ svn_error_t *svn_fs_lock (svn_lock_t **lock,
  *
  * The caller is responsible for creating and initializing all fields
  * in @a lock before invoking this routine, including the generation
- * of a string representation of an apr_uuid_t in @a lock->token.
+ * of a string representation of an apr_uuid_t in @a lock->token.  @a
+ * lock->owner must be filled in with an authenticated username.  If
+ * not, then the username associated with @a fs will be used to fill
+ * it in.  If neither username is available, return
+ * SVN_ERR_FS_NO_USER.
  *
  * If path is already locked, then check to see whether @a lock->token
  * and @a lock->owner match the existing lock.  If not, return

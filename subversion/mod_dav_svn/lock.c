@@ -479,7 +479,13 @@ dav_svn_append_locks(dav_lockdb *lockdb,
                                   resource->info->repos->repos,
                                   SVN_INVALID_REVNUM, /* ### CHANGE ME */
                                   resource->pool);
-  if (serr)
+
+  /* dav_svn_get_resource() should have filled in r->user already. */
+  if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
+    return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
+                         DAV_ERR_LOCK_SAVE_LOCK,
+                         "Anonymous lock creation is not allowed.");    
+  else if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Failed to create new lock.",
                                resource->pool);
@@ -501,19 +507,58 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
 {
   svn_error_t *serr;
 
+  /* ### TODO:  marshall the RA->unlock() 'force' flag in here?? */
+
   if (locktoken == NULL)
-    return dav_new_error(resource->pool, HTTP_BAD_REQUEST,
-                         DAV_ERR_IF_ABSENT,
-                         "Cannot unlock a resource without a token.");
-  
-  serr = svn_repos_fs_unlock(resource->info->repos->repos,
-                             locktoken->uuid_str,
-                             0, /* don't forcibly break the lock */
-                             resource->pool);
-  if (serr)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Failed to remove a lock.",
-                               resource->pool);
+    {
+      /* Check to see if the path has a lock at all;  if so, forcibly
+         break it. */
+      svn_lock_t *slock;
+      serr = svn_fs_get_lock_from_path(&slock,
+                                       resource->info->repos->fs,
+                                       resource->info->repos_path,
+                                       resource->pool);
+      if (serr)
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "Failed to check path for a lock.",
+                                   resource->pool);
+      if (slock)
+        {
+          serr = svn_repos_fs_unlock(resource->info->repos->repos,
+                                     slock->token,
+                                     FALSE, /* don't forcibly break */
+                                     resource->pool);
+
+          /* dav_svn_get_resource() should have filled in r->user already. */
+          if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
+            return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
+                                 DAV_ERR_LOCK_SAVE_LOCK,
+                                 "Anonymous lock removal is not allowed.");
+          else if (serr)
+            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                       "Failed to remove a lock.",
+                                       resource->pool);
+        }
+    }
+  else
+    {
+      /* We have a passed-in token, so use it to unlock. */
+      serr = svn_repos_fs_unlock(resource->info->repos->repos,
+                                 locktoken->uuid_str,
+                                 FALSE, /* don't forcibly break */
+                                 resource->pool);
+
+      /* dav_svn_get_resource() should have filled in r->user already. */
+      if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
+        return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
+                             DAV_ERR_LOCK_SAVE_LOCK,
+                             "Anonymous lock removal is not allowed.");
+      else if (serr)
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "Failed to remove a lock.",
+                                   resource->pool);
+    }
+
   return 0;
 }
 
@@ -566,7 +611,12 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
                                   resource->info->repos->repos,
                                   SVN_INVALID_REVNUM,
                                   resource->pool);
-  if (serr)
+
+  if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
+    return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
+                         DAV_ERR_LOCK_SAVE_LOCK,
+                         "Anonymous lock refreshing is not allowed.");    
+  else if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Failed to refresh existing lock.",
                                resource->pool);

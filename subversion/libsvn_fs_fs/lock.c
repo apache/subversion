@@ -553,9 +553,14 @@ svn_fs_fs__attach_lock (svn_lock_t *lock,
   if (kind == svn_node_dir)
     return svn_fs_fs__err_not_file (fs, lock->path);
 
-  /* We need to have a username attached to the fs. */
-  if (!fs->access_ctx || !fs->access_ctx->username)
-    return svn_fs_fs__err_no_user (fs);
+  /* There better be a username in the incoming lock. */
+  if (! lock->owner)
+    {
+      if (!fs->access_ctx || !fs->access_ctx->username)
+        return svn_fs_fs__err_no_user (fs);
+      else
+        lock->owner = fs->access_ctx->username;
+    }
 
   /* ### FITZ TODO:  if vaild, use current_rev here to do an
      out-of-dateness check.  See how fs_base is doing it. */
