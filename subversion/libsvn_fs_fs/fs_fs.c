@@ -3013,7 +3013,7 @@ write_hash_handler (void *baton,
    md5 digest in CHECKSUM.  Perform temporary allocations in POOL. */
 static svn_error_t *
 write_hash_rep (apr_size_t *size,
-                char checksum[APR_MD5_DIGESTSIZE],
+                unsigned char checksum[APR_MD5_DIGESTSIZE],
                 apr_file_t *file,
                 apr_hash_t *hash,
                 apr_pool_t *pool)

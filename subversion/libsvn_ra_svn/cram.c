@@ -64,7 +64,7 @@ static svn_boolean_t hex_decode(unsigned char *hashval, const char *hexval)
   return TRUE;
 }
 
-static void hex_encode(char *hexval, const char *hashval)
+static void hex_encode(char *hexval, const unsigned char *hashval)
 {
   int i;
 
@@ -180,7 +180,8 @@ svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      const char **message)
 {
   const char *status, *str, *reply;
-  char digest[APR_MD5_DIGESTSIZE], hex[2 * APR_MD5_DIGESTSIZE + 1];
+  unsigned char digest[APR_MD5_DIGESTSIZE];
+  char hex[2 * APR_MD5_DIGESTSIZE + 1];
 
   /* Read the server challenge. */
   SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "w(?c)", &status, &str));
