@@ -20,7 +20,7 @@ If you cast a veto (i.e. -1), then please include a link to a mailing
 list thread explaining your veto.  You can go back and add the link
 later if the thread isn't available at the time you commit the veto.
 
-Voting +1 on a change doesn't just mean you approve of it in principle.  
+Voting +1 on a change doesn't just mean you approve of it in principle.
 It means you have thoroughly reviewed the change, and find it correct
 and as nondisruptive as possible.  When it is committed to the release
 branch, the log message will include the names of all who voted for
@@ -40,7 +40,7 @@ already know about.)
      Justification: Why have copyright notices at all unless legally proper?
      Votes:
       +1 (concept): jerenkrantz
-      +1: rooneg
+      +1: rooneg, ghudson
 
 
    * r8053, r8054
@@ -48,12 +48,15 @@ already know about.)
      Justification: Constructor helps with backward compatibility.
      Votes:
       +0: jerenkrantz
-      +1: rooneg
+      +1: rooneg, ghudson
+
 
    * r8057
      Constructor for svn_client_ctx_t used in javahl bindings.
      Justification: Implementation of above API change in javahl bindings.
      Votes:
+      +1: ghudson
+
 
    * Issue #999
      Anchor/target split may use NULL for target.
@@ -63,42 +66,43 @@ already know about.)
             http://www.contactor.se/~dast/svn/archive-2003-12/0736.shtml.
      Votes:
       +0: jerenkrantz
+      +1: ghudson
 
 
    * r8003
      Remove svnserve -u client and server code.
-     Justification: Fixes arguably privacy leak in client.
+     Justification: Fixes arguable privacy leak in client.
      Notes: svnserve -u (believe usernames) was deprecated in 0.34.
      Votes:
-      +1: jerenkrantz, rooneg
+      +1: jerenkrantz, rooneg, ghudson
 
 
    * Issue #1644
      apr_ and APR_ namespace symbols in Subversion
      Justification: API stability, non-interference w/ APR's namespace
      Votes:
-      +1: jerenkrantz (per what was in IZ)
+      +1: jerenkrantz, ghudson (#1644 attachment Dec 19 17:03:00)
 
 
    * r8023, r8030, r8040
      Fixes to make 'svn blame' work with i18n and uri-escaped filenames.
-     Justification: Correctness.  [feel free to extend this, anyone.]
+     Justification: Fixes a bug several people have independently noticed.
      Votes:
-      +1: jerenkrantz, rooneg, jszakmeister
+      +1: jerenkrantz, rooneg, jszakmeister, ghudson
 
 
    * r8048
      Fix a handle leak that caused a test failure on Windows.
      Justification: Windows correctness, test failure, and went into 0.35.1.
      Votes:
-       +1 brane, jerenkrantz
+      +1: brane, jerenkrantz, ghudson
 
 
    * r8052, r8062  (issue #1660)
      Make svn_config__parse_file do charset conversion.
      Justification: Correctness, and went into 0.35.1.
      Votes:
-       +1 brane, jerenkrantz
+      +1: brane, jerenkrantz
 
 
    * r8021
@@ -109,9 +113,10 @@ already know about.)
 
 
    * r8031
-     Implementing API change of r8021 in javahl bindings. 
+     Implementing API change of r8021 in javahl bindings.
      Justification: with 8021 and without 8031 javahl breaks. Local change.
      Votes:
+
 
    * r8006
      Add prompting and retry count (at most 2) to SSL auth providers
@@ -119,10 +124,12 @@ already know about.)
      Votes:
       +1: jerenkrantz
 
+
    * r8012
      Implementing API change of r8006 in javahl bindings.
      Justification: with 8006 and without 8012 javahl breaks. Local change.
      Votes:
+
 
    * r8013
      Add may_save option to the auth prompt functions and credentials.
@@ -130,11 +137,12 @@ already know about.)
      Votes:
       +1: jerenkrantz
 
+
    * r8015,r8020
-     Implementing API change of r8013 in javahl bindings. 
+     Implementing API change of r8013 in javahl bindings.
      Justification: with 8013 and without 8015,8020 javahl breaks. Local change
      Votes:
-     
+
 
    * r8065
      Update references to BDB version in documentation.
@@ -168,7 +176,7 @@ already know about.)
      Add a pool parameter to finish_abort and abort_report.
      Justification: API stability; low risk
      Votes:
-      +1: jerenkrantz
+      +1: jerenkrantz, ghudson
 
 
    * r8096
@@ -182,6 +190,7 @@ already know about.)
      Load RA modules as foo-MAJOR.so.0 instead of foo-MAJOR.so.
      Justification: Low risk; we should be nice to binary packagers.
      Votes:
+      +1: ghudson
 
 
    * Issue #8014 (r8014)
@@ -193,17 +202,45 @@ already know about.)
 
    * r8101
      Improved authentication system documentation.
-     Justification: Better external API documentation, ultra-low
-     risk.
+     Justification: Better external API documentation, ultra-low risk.
      Votes:
+
 
    * r8022, r8024, r8038
      Improved interface for blame in javahl bindings.
      Justification: API stability; low risk because of bindings only change.
      Votes:
-     
+
+
    * r8039
      javahl bindings did not know status external.
      Justification: API stability; low risk because of bindings only change.
      Votes:
-     
+
+
+   * Issue #1677
+     Constify two svn_fs_dirent_t fields
+     Justification: API stability; essentially zero risk
+     Votes:
+      +1: ghudson
+
+
+   * r8114
+     Fix bug in unexercised part of status editor
+     Justification: Low risk, makes client robust in face of server changes.
+     Votes:
+      +1: ghudson
+
+
+   * r8115
+     Fix bugs in update with specified target
+     Justification: Fixes embarassing #1676, makes client more robust.
+     Votes:
+      +1: ghudson
+
+
+   * Issue #1678
+     Document reporter requirements and require depth-first.
+     Justification: API change; allow better report processing; no risk.
+     Votes:
+      +1: ghudson
