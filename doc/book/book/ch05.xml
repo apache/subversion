@@ -426,107 +426,182 @@ pre-commit.tmpl           start-commit.tmpl
       <title>Examining a Repository</title>
             
       <sect3 id="svn-ch-5-sect-2.1.1">
-        <title>Transactions and Revisions</title>
+        <title>Understanding Transactions and Revisions</title>
         
         <para>A Subversion repository is essentially a sequence of
-          trees; each tree is called a <literal>revision</literal>.
-          (If this is news to you, it might be good for you to see
-          <xref linkend="svn-ch-2"/><!-- ###TODO make this more
-          specific -->.)</para>
-            
+          directory trees, each tree a snapshot of how the file and
+          directories versioned in your repository looked at various
+          points in time.  These snapshots are created as a result of
+          client operations, and are called
+          <literal>revisions</literal>.</para>
+
         <para>Every revision begins life as a
           <literal>transaction</literal> tree.  When doing a commit, a
-          client builds a transaction that mirrors their local
-          changes, and when the commit succeeds, the transaction is
-          effectively <quote>promoted</quote> into a new revision
-          tree, and is assigned a new revision number.</para>
+          client builds a Subversion transaction that mirrors their
+          local changes, and then instructs the repository to store
+          that tree as the next snapshot in the sequence.  If the
+          commit succeeds, the transaction is effectively
+          <quote>promoted</quote> into a new revision tree, and is
+          assigned a new revision number.  If the commit fails for
+          some reason, the transaction is destroyed and the client
+          informed of the failure.</para>
             
         <para>At the moment, updates work in a similar way: the client
-          builds a transaction tree that is a <quote>mirror</quote> of
-          their working copy.  The repository then compares the
-          transaction tree with some revision tree, and sends back a
-          tree-delta.  After the update completes, the transaction is
-          deleted.</para>
+          builds a temporary transaction tree that mimics the state of
+          their working copy.  The repository then compares that
+          transaction tree with some revision tree (usually the most
+          recent, or <quote>youngest</quote> tree, but the client may
+          have requested otherwise), and sends back information that
+          informs the client about what changes are needed to
+          transform their working copy into a replica of the requested
+          revision tree.  After the update completes, the temporary
+          transaction is deleted.</para>
             
-        <para>Transaction trees are the only way to
-          <quote>write</quote> to the repository's versioned
-          filesystem; all users of libsvn_fs will do this.  However,
-          it's important to understand that the lifetime of a
+        <para>The use of transaction tree are the only way to make
+          permanent changes to repository's versioned filesystem.
+          However, it's important to understand that the lifetime of a
           transaction is completely flexible.  In the case of updates,
           transactions are temporary trees that are immediately
           destroyed.  In the case of commits, transactions are
           transformed into permanent revisions (or aborted if the
-          commit fails.)  In the case of an error or bug, it's
+          commit fails).  In the case of an error or bug, it's
           possible that a transaction can be accidentally left lying
-          around -- the libsvn_fs caller might die before deleting it.
-          And in theory, someday whole workflow applications might
-          revolve around the creation of transactions; they might be
-          examined in turn by different managers before being deleted
-          or promoted to revisions.</para>
+          around in the repository (not really affecting anything, but
+          still taking up space).</para>
+
+        <para>In theory, someday whole workflow applications might
+          revolve around more fine-grained control of transaction
+          lifetime.  It is feasible to imagine a system whereby each
+          transaction slated to become a revision is left in statis
+          well after the client finishes describing its changes to
+          repository.  This would enable each new commit to be
+          reviewed by someone else, perhaps a manager or engineering
+          QA team, who can choose to promote the transaction into a
+          revision, or abort it.</para>
             
-        <para>The point is: if you're administering a Subversion
-          repository, you're going to have to examine revisions and
-          transactions.  It's part of monitoring the health of the
-          repository.</para>
+        <para>You might at this point be wondering what all of this
+          has to do with repository administration.  The answer is
+          simple: if you're administering a Subversion repository,
+          you're going to have to examine revisions and transactions.
+          It's part of monitoring the health of, and tracking changes
+          to, your repository.</para>
             
       </sect3>
 
       <sect3 id="svn-ch-5-sect-2.1.2">
         <title>svnlook</title>
             
-        <para><command>svnlook</command> is a read-only
-          <footnote>
-            <para>Why read-only?  Because if a pre-commit hook script
-              changed the transaction before commit, the working copy
-              would have no way of knowing what happened, and would
-              therefore be out of sync and not know it.  Subversion
-              currently has no way to handle this situation, and maybe
-              never will.</para>
-          </footnote>
-          tool that can be used to examine the revision and
-          transaction trees within a repository.  Its useful for
-          system administrators, and can be used by the
-          <literal>pre-commit</literal> and
-          <literal>post-commit</literal> hook scripts as well.</para>
+        <para><command>svnlook</command> is a tool provided by
+          Subversion for examining the various revisions and
+          transaction in a repository.  No part of this program
+          attempts to change the repository&mdash;it a
+          <quote>read-only</quote> tool.  <command>svnlook</command>
+          is the typically used by the repository hooks for reporting
+          the changes that are about to be committed (in the case of
+          the <command>pre-commit</command> hook) or that were just
+          committed (in the case of the <command>post-commit</command>
+          hook) to the repository.  Also, a repository administrator
+          may find himself using this tool for diagnostic
+          purposes.</para>
             
-        <para>The simplest usage is</para>
+        <para>The simplest usage of <command>svnlook</command> is:</para>
             
         <screen>
-$ svnlook repos
+$ svnlook path/to/repos
 </screen>
             
-        <para>This will print information about the
-          <literal>HEAD</literal> revision in the repository
-          <quote>repos</quote>.  In particular, it will show the log
-          message, author, date, and a diagram of the tree.</para>
+        <para>This will print information about the youngest (or
+          <quote>HEAD</quote>) revision in the repository
+          <quote>repos</quote>.  Specifically, it will show the log
+          message, author and date associated with that revision, as
+          well as a diagram of the tree as it looks in that
+          revision.</para>
             
-        <para>To look at a particular revision or transaction:</para>
+        <para>To look at a particular revision or transaction, you can
+          append the <literal>rev</literal> or <literal>txn</literal>
+          arguments.  Note that while revision numbers appear as
+          natural numbers, transaction names are alphanumeric strings.
+          The following commands will generate the same kind of
+          information as the previous one, except the information will
+          be based on the revision or transaction supplied to
+          <command>svnlook</command> instead of the default
+          <literal>HEAD</literal> revision:</para>
             
         <screen>
-$ svnlook repos rev 522
-$ svnlook repos txn 340
+$ svnlook path/to/repos rev 522
+$ svnlook path/to/repos txn 3f7
 </screen>
             
-        <para>Or, if you only want to see certain types of
-          information, <command>svnlook</command> accepts a number of
-          subcommands.  For example,</para>
-            
+        <para>Output from <command>svnlook</command> is designed to be
+          both human- and machine-parsable.  For example, the output
+          of the usages we have covered thus far is defined to
+          be:</para>
+
+        <orderedlist>
+          <listitem>
+            <para>The author, followed by a newline.</para>
+          </listitem>
+          <listitem>
+            <para>The date, followed by a newline.</para>
+          </listitem>
+          <listitem>
+            <para>The number of characters in the log message,
+              followed by a newline.</para>
+          </listitem>
+          <listitem>
+            <para>The log message itself, followed by a newline.</para>
+          </listitem>
+          <listitem>
+            <para>The directory tree, one directory or file per line,
+              with each level of the heirachy indented by one column
+              more than the previous level, and with directory names
+              ending with a trailing slash (<literal>/</literal>)
+              character.</para>
+          </listitem>
+        </orderedlist>
+
+        <para>Here is an example of that output:</para>
+
         <screen>
-$ svnlook repos rev 522 log
-$ svnlook repos rev 559 diff
+$ svnlook path/to/repos rev 1
+sally
+2002-11-04 09:29:13 -0600 (Mon, 04 Nov 2002)
+27
+Added the usual Greek tree.
+/
+ A/
+  B/
+   lambda
+   E/
+    alpha
+    beta
+   F/
+  mu
+  C/
+  D/
+   gamma
+   G/
+    pi
+    rho
+    tau
+   H/
+    chi
+    omega
+    psi
+ iota
 </screen>
-               
-        <para>Available subcommands are:</para>
-               
+
+        <para>The <command>svnlook</command> can perform a variety of
+          other queries, and accepts an optional subcommand argument
+          to specify what information you actually wish the program to
+          retrieve.  This subcommand argument is the last argument on
+          the command-line, following even the revision and
+          transaction specifier arguments.  The following is a brief
+          description of the current list of subcommands accepted by
+          <command>svnlook</command>, and the output of those
+          subcommands:</para>
+
         <variablelist>
-
-          <varlistentry>
-            <term><literal>log</literal></term>
-            <listitem>
-              <para>Print the tree's log message.</para>
-            </listitem>
-          </varlistentry>
-
           <varlistentry>
             <term><literal>author</literal></term>
             <listitem>
@@ -538,14 +613,6 @@ $ svnlook repos rev 559 diff
             <term><literal>date</literal></term>
             <listitem>
               <para>Print the tree's datestamp.</para>
-            </listitem>
-          </varlistentry>
-          
-          <varlistentry>
-            <term><literal>dirs-changed</literal></term>
-            <listitem>
-              <para>List the directories that changed in the
-                  tree.</para>
             </listitem>
           </varlistentry>
           
@@ -563,8 +630,58 @@ $ svnlook repos rev 559 diff
               <para>Print unified diffs of changed files.</para>
             </listitem>
           </varlistentry>
+          
+          <varlistentry>
+            <term><literal>dirs-changed</literal></term>
+            <listitem>
+              <para>List the directories that changed in the tree.</para>
+            </listitem>
+          </varlistentry>
 
+          <varlistentry>
+            <term><literal>ids</literal></term>
+            <listitem>
+              <para>Print the tree listing, each directory and file
+                annotated with its filesystem node revision ID.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term><literal>info</literal></term>
+            <listitem>
+              <para>Print the tree's author, datestamp, log message
+                character count, and log message.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term><literal>log</literal></term>
+            <listitem>
+              <para>Print the tree's log message.</para>
+            </listitem>
+          </varlistentry>
+
+          <varlistentry>
+            <term><literal>tree</literal></term>
+            <listitem>
+              <para>Print the tree listing.</para>
+            </listitem>
+          </varlistentry>
         </variablelist>
+
+        <para>You might have noticed that our description of the
+          output from <command>svnlook</command> with no subcommand
+          supplied does not fully match the descriptions of any one of
+          the available subcommands.  That's because the default
+          output is actually the concatenation of two of the
+          subcommand's output, that of <literal>info</literal> and
+          <literal>tree</literal>.  In fact, the following two
+          commands should yeild exactly the same result:</para>
+
+      <screen>
+$ svnlook /path/to/repos
+$ svnlook /path/to/repos info; svnlook /path/to/repos tree
+</screen>
 
       </sect3>
 
