@@ -129,8 +129,6 @@ extern svn_error_t *svn_vcdiff_flush_buffer (svn_vcdiff_parser_t *parser);
  * callback to be invoked, to figure out what to do next.
  */
 
-typedef size_t svn_version_t;   /* Would they ever need to be signed? */
-
 typedef enum svn_XML_t
 {
   svn_XML_treedelta = 1,
@@ -151,6 +149,9 @@ typedef struct svn_delta_stackframe_t
   void *baton;        /* holds caller data for a particular subdirectory */
   svn_string_t *name; /* if the tag had a "name" attribute attached */
   
+  svn_string_t *ancestor_path;     /* Explicit, else inherited from parent */ 
+  svn_vernum_t ancestor_version;   /* Explicit, else inherited from parent */ 
+
   struct svn_delta_stackframe_t *next;
   struct svn_delta_stackframe_t *previous;
   
