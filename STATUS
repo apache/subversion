@@ -60,6 +60,13 @@ Candidate changes:
     Notes: These changes plus a tweak: change SVN_VER_MINOR to 0, of course!
     Votes:
       +1: brane, kfogel, striker
+      -1: kfogel (until r8768 is approved)
+
+  * r8768
+    Fix test suite to adjust for r8731, r8754 above.
+    Notes: We should all be embarrassed in front of Philip Martin.
+    Votes:
+      +1: kfogel
 
   * r8756
     Turn off warnings for bad constant values in SWIG bindings.
