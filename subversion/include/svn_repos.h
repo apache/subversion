@@ -53,8 +53,8 @@ svn_error_t *svn_repos_open (svn_repos_t **repos_p,
 
 /* Create a new Subversion repository at PATH, building the necessary
    directory structure, creating the Berkeley DB filesystem
-   environment, and so on.  Return the repository object in *REPOS_P,
-   allocated in POOL. */
+   environment, and so on.  Return the (open) repository object in
+   *REPOS_P, allocated in POOL. */
 svn_error_t *svn_repos_create (svn_repos_t **repos_p, 
                                const char *path, 
                                apr_pool_t *pool);
