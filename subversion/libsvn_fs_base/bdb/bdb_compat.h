@@ -51,6 +51,16 @@ extern "C" {
 #endif
 
 
+/* In BDB 4.3, "buffer too small" errors come back with
+   DB_BUFFER_SMALL (instead of ENOMEM, which is now fatal). */
+#if (DB_VERSION_MAJOR > 4) \
+    || (DB_VERSION_MAJOR == 4) && (DB_VERSION_MINOR >= 3)
+#define SVN_BDB_DB_BUFFER_SMALL DB_BUFFER_SMALL
+#else
+#define SVN_BDB_DB_BUFFER_SMALL ENOMEM
+#endif
+
+
 /* Before calling db_create, we must check that the version of the BDB
    libraries we're linking with is the same as the one we compiled
    against, because the DB->open call is not binary compatible between
