@@ -5,7 +5,13 @@
 
 $LastChangedDate$
 
-   *** Note: Subversion is ALPHA code.  Don't use it on real data. ***
+            *** Subversion is alpha code right now. ***
+
+"Is Subversion stable enough for me to use for my own projects?"
+
+We think so!  Read the full FAQ answer on the website:  
+  http://subversion.tigris.org/project_faq.html#stable
+
 
 Contents:
 
