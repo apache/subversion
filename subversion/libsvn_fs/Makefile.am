@@ -3,18 +3,19 @@
 
 lib_LTLIBRARIES = libsvn_fs.la
 libsvn_fs_la_SOURCES = convert-size.c		\
-		       dbt.c			\
-		       dir.c			\
-		       err.c			\
-		       fs.c			\
-		       id.c			\
-		       node.c			\
-		       skel.c			\
-		       txn.c			\
-		       revision.c
+		       skel.c
 # Set aside for the moment:
-# 		       file.c			\
 #		       delta.c			\
+#		       dbt.c			\
+#		       dir.c			\
+#		       err.c			\
+#		       file.c			\
+#		       fs.c			\
+#		       id.c			\
+#		       node.c			\
+#		       rep.c			\
+#		       txn.c			\
+#		       revision.c
 
 libsvn_fs_la_LIBADD = -ldb
 
