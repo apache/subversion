@@ -251,7 +251,7 @@ static svn_error_t * convert_java_error(JNIEnv *jenv, apr_pool_t *pool)
        ### ... use something like the (relatively) new
        ### SVN_ERR_SWIG_PY_EXCEPTION_SET */
 
-  return svn_error_create(APR_EGENERAL, NULL, pool,
+  return svn_error_create(APR_EGENERAL, NULL,
                           "the Java callback raised an exception");
 }
 
@@ -554,6 +554,8 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
 
 static svn_error_t * thunk_apply_textdelta(
     void *file_baton,
+    const char *base_checksum,
+    const char *result_checksum,
     apr_pool_t *pool,
     svn_txdelta_window_handler_t *handler,
     void **h_baton)
@@ -591,6 +593,18 @@ static svn_error_t * thunk_apply_textdelta(
       *h_baton = hb;
     }
 
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t * thunk_apply_text(void *file_baton, 
+                                      const char *base_checksum,
+                                      const char *result_checksum,
+                                      svn_stream_t *base,
+                                      svn_stream_t *target,
+                                      const struct svn_delta_editor_t *editor,
+                                      apr_pool_t *pool)
+{
+  /* TODO */
   return SVN_NO_ERROR;
 }
 
@@ -644,6 +658,7 @@ static const svn_delta_editor_t thunk_editor = {
   thunk_add_file,
   thunk_open_file,
   thunk_apply_textdelta,
+  thunk_apply_text,
   thunk_change_file_prop,
   thunk_close_file,
   thunk_close_edit,
