@@ -2,7 +2,10 @@
 
 FAILED="no"
 
-CURRENT_DIR=`pwd`
+case `uname -s` in
+    CYGWIN*) CURRENT_DIR=`pwd | sed -e 's@^/cygdrive/\([a-z]\)@\1:@'` ;;
+    *)       CURRENT_DIR=`pwd` ;;
+esac
 
 if test -d "z"; then
     :
