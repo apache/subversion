@@ -294,14 +294,7 @@ svn_wc_process_committed (const char *path,
   else
     {
       /* PATH must be a dir */
-      svn_wc_entry_t tmp_entry;
-
       base_name = SVN_WC_ENTRY_THIS_DIR;
-      tmp_entry.kind = svn_node_dir;
-      tmp_entry.revision = new_revnum;
-      SVN_ERR (svn_wc__entry_modify (adm_access, base_name, &tmp_entry, 
-                                     SVN_WC__ENTRY_MODIFY_REVISION, TRUE,
-                                     pool));
     }
 
   logtags = svn_stringbuf_create ("", pool);
