@@ -1,6 +1,6 @@
 /*
- * wc_adm_ops.c:  routines for doing things in the administrative
- *                subdirectory.
+ * adm_ops.c:  routines for doing things in the administrative
+ *             subdirectory.
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.

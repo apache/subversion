@@ -56,6 +56,10 @@
 
 
 
+/* kff todo: hey, it looks like APR may handle some parts of path
+   portability for us, and we just get to use `/' everywhere.  Check
+   up on this. */
+
 #define SVN_PATH_REPOS_SEPARATOR '/'
 
 /* Pass this when you want a component added using the local
@@ -82,5 +86,8 @@ void svn_path_add_component (svn_string_t *path,
 /* Remove one component off the end of PATH. */
 void svn_path_remove_component (svn_string_t *path, int style);
 
+
+/* Duplicate and return PATH's last component, w/o separator. */
+svn_string_t *svn_path_last_component (svn_string_t *path, apr_pool_t *pool);
 
 #endif /* SVN_PATHS_H */

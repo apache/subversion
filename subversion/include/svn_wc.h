@@ -83,6 +83,7 @@
  * on any random set of files and directories.
  */
 
+/* kff todo: these do nothing and return SVN_NO_ERROR right now. */
 svn_error_t *svn_wc_rename (svn_string_t *src, svn_string_t *dst);
 svn_error_t *svn_wc_copy   (svn_string_t *src, svn_string_t *dst);
 svn_error_t *svn_wc_add    (apr_array_header_t *paths);
@@ -91,33 +92,45 @@ svn_error_t *svn_wc_delete (apr_array_header_t *paths);
 
 /* Apply a delta to a working copy, or to create a working copy.
  * 
- * If ENCASING_DIR exists and is a working copy, then it must be a
- * working copy for the delta we're applying.  If it is, it gets
- * massaged into the updated state, else just error out.
+ * If DEST is non-null, its existence as a directory is ensured (i.e.,
+ * it is created if it does not already exist), and it will be
+ * prepended to every path the delta causes to be touched.
  *
- * If ENCASING_DIR does not exist, a working copy is created there.
+ * It is the caller's job to make sure that DEST is not some other
+ * working copy, or that if it is, it will not be damaged by the
+ * application of this delta.  svn_wc_apply_delta() tries to detect
+ * such a case and do as little damage as possible, but makes no
+ * promises.
  *
- * If ENCASING_DIR exists but is not a working copy, return error.
+ * REPOS is the repository string to be recorded by this working
+ * copy.
  *
- * ENCASING_DIR may not be NULL; we need to know where to put this
- * working copy.
+ * kff todo: Actually, REPOS is one of several possible non-delta-ish
+ * things that may need to get passed to svn_wc_apply_delta() so it
+ * can create new administrative subdirs.  Other things might be
+ * username and/or auth info, which aren't necessarily included in the
+ * repository string.
  *
- * ENCASING_DIR can be ".", of course.
+ * Another way might have been to first call svn_wc_create(), or
+ * somesuch, and then run apply_delta() on the resulting fresh working
+ * copy skeleton -- in other words, apply_delta() wouldn't know
+ * anything about where the delta came from, it would just re-use
+ * information already present in the working copy, and it would never
+ * be applied to anything but a working copy.  But then all sorts of
+ * sanity checks would get harder, because apply_delta() couldn't
+ * easily check that the delta it is applying is really right for the
+ * working copy, and conversely, it would be more difficult to check
+ * out a subdir from one repository into the working copy of another.
+ * Also, when what's being checked out is a directory, it's nice to
+ * make that be the tip-top of the working copy (assuming no loose
+ * top-level files are encountered in the delta), and we can't do that
+ * if we always have to apply to an existing working copy.
  *
- * (The reason for these rules is that a tree delta might include
- * loose files in its top level -- tree deltas are not always nicely
- * packaged single directories.  So we want an interface that insists
- * on being told where to put this potentially messy delta.)
- *
- * (kff todo: thinking on this whole question of checkouts vs updates.
- * It sounds nice in theory to treat them identically, but it may not
- * be working out that way... anyway, ignore the documentation above
- * and what you see in libsvn_wc, things may change when I get back
- * from lunch.)
- */
+ * Thinking out loud here, as you can see.  */
 svn_error_t *svn_wc_apply_delta (void *delta_src,
                                  svn_delta_read_fn_t *delta_stream_reader,
-                                 svn_string_t *encasing_dir,
+                                 svn_string_t *dest,
+                                 svn_string_t *repos,
                                  apr_pool_t *pool);
 
 
@@ -152,11 +165,13 @@ svn_error_t *svn_wc_make_delta (void *delta_src,
  * difference.
  */
 
+/* kff todo: does nothing and returns SVN_NO_ERROR, currently. */
 /* Return local value of PROPNAME for the file or directory PATH. */
 svn_error_t *svn_wc_get_path_prop (svn_string_t **value,
                                    svn_string_t *propname,
                                    svn_string_t *path);
 
+/* kff todo: does nothing and returns SVN_NO_ERROR, currently. */
 /* Return local value of PROPNAME for the directory entry PATH. */
 svn_error_t *svn_wc_get_dirent_prop (svn_string_t **value,
                                      svn_string_t *propname,
