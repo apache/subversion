@@ -216,6 +216,6 @@ for.
 
 Write a totally independent Network Layer which is an SMTP server on one
 end, and speaks to the Subversion server library on the back end.  It
-would neat to be able to "mail in" commits, or receive working-copy
+would be neat to be able to "mail in" commits, or receive working-copy
 updates through e-mail.
 

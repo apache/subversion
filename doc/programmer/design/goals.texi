@@ -1,7 +1,7 @@
 @node Goals
 @chapter Goals
 
-The goal of the Subversion project is write a version control system
+The goal of the Subversion project is to write a version control system
 that takes over CVS's current and future user base @footnote{If you're
 not familiar with CVS or its shortcomings, then skip to
 @ref{Model}}. The first release has all the major features of CVS, plus

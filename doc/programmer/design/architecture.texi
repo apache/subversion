@@ -113,7 +113,7 @@ Our suspicion is that any attempt to write a dedicated "Subversion
 server" (with a "Subversion protocol") would inevitably end up evolving
 towards Apache's already-existing feature set.  (However, Subversion's
 layered architecture certainly doesn't @emph{prevent} anyone from
-writing a totally new network 
+writing a totally new network access implementation.)
 
 An appropriate Apache module will translate the DAV requests into API
 calls against a particular repository.

@@ -24,7 +24,7 @@ as actually removing them in the repository: the repository is
 @emph{never} modified until you run @samp{svn commit} (or @samp{svn
 import} for new data).
 
-Also, note that there two different ways to interpret the phrase "remove
+Also, note that there are two different ways to interpret the phrase "remove
 an item".  In the less destructive case, the item is removed from
 revision control (i.e. no longer tracked by Subversion), but it is not
 removed from your working copy.  In the more destructive case, the item
