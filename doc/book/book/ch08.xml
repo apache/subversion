@@ -3301,7 +3301,7 @@ Updated to revision 30.
       <!-- ================================================================= -->
       <refentry>
         <refnamediv>
-          <refname>svn create</refname>
+          <refname>svnadmin create</refname>
           <refpurpose>Create a new, empty repository at REPOS_PATH.</refpurpose>
         </refnamediv>
         <refsect1>
