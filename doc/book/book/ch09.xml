@@ -1510,8 +1510,8 @@ Index: COMMITTERS
             at <literal>HEAD</literal>, into
             <replaceable>PATH</replaceable>. If
             <replaceable>PATH</replaceable> is omitted, the last
-            component of the <replaceURL is used for the local directory
-            name.</para>
+            component of the <replaceable>URL</replaceable> is used
+            for the local directory name.</para>
 
           <para>The second form exports a clean directory tree from
             the working copy specified by
