@@ -23,9 +23,10 @@
 # log          Log, des Logs
 # log-message  Log-Meldung
 # merge        zusammenführen
+# note         Hinweis
 # obstruct(ed) behindern / behindert
-# PROPNAME     EIGNAME
-# PROPVAL      EIGWERT
+# PROPNAME     PROPNAME
+# PROPVAL      PROPWERT
 # relocate     umplazieren
 # REPOS        PA
 # REPOS_PATH   ARCHIV_PFAD
@@ -56,7 +57,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-30 09:48+0200\n"
-"PO-Revision-Date: 2004-11-29 09:56+0100\n"
+"PO-Revision-Date: 2004-12-02 09:50+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -512,7 +513,7 @@ msgid ""
 msgstr ""
 "Dateien und Verzeichnisse unter Versionskontrolle stellen und\n"
 "zur Übertragung ins Projektarchiv einplanen.\n"
-"Die Übertragung findet erst beim nächsten Commit statt.\n"
+"Das tatsächliche Hinzufüfen findet erst beim nächsten Übertragen statt.\n"
 "Aufruf: add PFAD...\n"
 
 #: clients/cmdline/main.c:184
@@ -631,11 +632,11 @@ msgstr ""
 "  1. Jeder PFAD wird zum Löschen bei der nächsten Übertragung\n"
 "    markiert.  Dateien und Verzeichnisse, die noch nicht übertragen\n"
 "    wurden, werden sofort aus der Arbeitskopie entfernt.\n"
-"    PFADe, die selbst nicht versioniert oder geändert sind, bzw.\n"
+"    PFAD(e), die selbst nicht versioniert oder geändert sind, bzw.\n"
 "    entsprechende Einträge enthalten, werden nur gelöscht wenn\n"
 "    die '--force' Option angegeben wird.\n"
 "\n"
-"  2. Jede URL wird sofort mittels einer Übertragung aus dem\n"
+"  2. Jede URL wird mittels einer sofortigen Übertragung aus dem\n"
 "    Projektarchiv entfernt.\n"
 
 #: clients/cmdline/main.c:255
@@ -749,8 +750,8 @@ msgstr ""
 "Aufruf: import [PFAD] URL\n"
 "\n"
 "  Überträgt rekursiv eine Kopie des PFADes zur URL.\n"
-"  Ohne Angabe wird '.' als PFAD angenommen. Übergeordnete Verzeichnisse werden\n"
-"  soweit erforderlich im Projektarchiv angelegt.\n"
+"  Ohne Angabe wird '.' als PFAD angenommen. Übergeordnete Verzeichnisse\n"
+"  werden soweit erforderlich im Projektarchiv angelegt.\n"
 
 #: clients/cmdline/main.c:342
 msgid ""
@@ -1068,15 +1069,15 @@ msgid ""
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
 msgstr ""
-"Setze EIGNAME auf EIGWERT bei Dateien, Verzeichnissen oder Revisionen\n"
-"Aufruf: 1. propset EIGNAME [EIGWERT | -F WERTDATEI] PFAD\n"
-"        2. propset EIGNAME --revprop -r REV [EIGWERT | -F WERTDATEI] [URL]\n"
+"Setze PROPNAME auf PROPWERT bei Dateien, Verzeichnissen oder Revisionen\n"
+"Aufruf: 1. propset PROPNAME [PROPWERT | -F WERTDATEI] PFAD\n"
+"        2. propset PROPNAME --revprop -r REV [PROPWERT | -F WERTDATEI] [URL]\n"
 "\n"
 "  1. Erstellt eine versionierte, lokale Eigenschaftsänderung in der Arbeitskopie\n"
 "  2. Erstellt eine unversionierte, Eigenschaftsänderung in der Revision des\n"
 "     Projektarchivs. \n"
 "\n"
-"  Notiz: svn erkennt die folgenden speziellen, versionierten Eigenschaften,\n"
+"  Hinweis: svn erkennt die folgenden speziellen, versionierten Eigenschaften,\n"
 "  wird aber jede gewünschte Eigenschaft speichern:\n"
 "    svn:ignore    - Eine durch Zeilenumbruch getrennte Liste von zu\n"
 "      ignorierenden Dateimustern.\n"
@@ -1295,8 +1296,8 @@ msgstr ""
 "\n"
 "  1. Stelle die Arbeitskopie so um, das sie eine neue URL im Projektarchiv\n"
 "     spiegelt. Dieses Verhalten ist ähnlich 'svn update' und wird verwendet,\n"
-"     um eine Arbeitskopie auf einen Ast oder Tag im selben Projektarchiv\n"
-"     umzustellen.\n"
+"     um eine Arbeitskopie auf einen Zweig oder eine Marke im selben Projekt-\n"
+"     archiv umzustellen.\n"
 "\n"
 "  2. Schreibe Metadaten der URL der Arbeitskopie um, um nur einen syntaktischen\n"
 "     Wechsel anzudeuten. Dies wird verwendet, wenn sich die Basis-URL eines\n"
@@ -1323,7 +1324,7 @@ msgid ""
 "  A character in the first column signifies an update to the actual file,\n"
 "  while updates to the file's properties are shown in the second column.\n"
 msgstr ""
-"Übertrage Änderungen vom Projektarchiv in die Arbeitskopie.\n"
+"Aktualisiere die Arbeitskopie mit Änderungen aus dem Projektarchiv.\n"
 "Aufruf: update [PFAD...]\n"
 "\n"
 "  Falls keine Revision angegeben, aktualisiere Arbeitskopie auf die HEAD-\n"
@@ -2755,8 +2756,8 @@ msgid ""
 "for addition.  Perhaps you're committing a target that is\n"
 "inside an unversioned (or not-yet-versioned) directory?"
 msgstr ""
-"Eintrag für '%s' ist als 'copied' markiert aber ist selbst nicht\n"
-"als Hinzufügung geplant.  Vielleicht übertragen Sie ein Ziel, das\n"
+"Eintrag für '%s' ist als 'kopiert' markiert, aber ist selbst nicht\n"
+"zum Hinzufügen geplant.  Vielleicht übertragen Sie ein Ziel, das\n"
 "sich in einem nicht versionierten (oder noch-nicht-versionierten)\n"
 "Verzeichnis befindet?"
 
@@ -3057,8 +3058,8 @@ msgstr "'%s' hat einen unbekannten Knotentyp"
 #, c-format
 msgid "Attempt to set wc property '%s' on '%s' in a non-commit operation"
 msgstr ""
-"Versuch, die Arbeitskopieeigenschaft '%s' während einer Nicht-Übertragungs-\n"
-"Operation auf '%s' zu setzen"
+"Versuch, die Eigenschaft '%s' der Arbeitskopie während einer\n"
+"Nicht-Übertragungs-Operation auf '%s' zu setzen"
 
 #: libsvn_client/ra.c:330
 #, c-format
@@ -4495,9 +4496,9 @@ msgstr "'%s' befindet sich bereits unter Versionskontrolle"
 #, c-format
 msgid "Can't replace '%s' with a node of a differing type; commit the deletion, update the parent, and then add '%s'"
 msgstr ""
-"Kann '%s' nicht mit einem Knoten eines unterschiedlichen Typs ersetzen;\n"
-"Übertragen Sie die Löschung, aktualisieren Sie das Elternverzeichnis und fügen\n"
-"Sie erst dann '%s' hinzu"
+"Kann '%s' nicht durch einen Knoten eines anderen Typs ersetzen;\n"
+"Übertragen Sie die Löschung, aktualisieren Sie das Elternverzeichnis\n"
+"und fügen Sie erst dann '%s' hinzu"
 
 #: libsvn_wc/adm_ops.c:949
 #, c-format
@@ -4900,7 +4901,7 @@ msgstr "Kann Temporärdatei nicht löschen"
 #: libsvn_wc/props.c:100
 #, c-format
 msgid "Property '%s' locally changed to '%s', but update deletes it\n"
-msgstr "Eigenschaft '%s' lokal auf '%s' geändert, das Update löscht sie allerdings\n"
+msgstr "Eigenschaft '%s' lokal auf '%s' geändert, die Aktualisierung löscht sie allerdings\n"
 
 #: libsvn_wc/props.c:109
 #, c-format
@@ -4911,7 +4912,7 @@ msgstr "Eigenschaft '%s' wurde lokal gelöscht, die Aktualisierung setzt sie all
 #, c-format
 msgid "Property '%s' locally changed to '%s', but update sets it to '%s'\n"
 msgstr ""
-"Eigenschaft '%s' wurde lokal auf '%s' verändert, das Update würde sie\n"
+"Eigenschaft '%s' wurde lokal auf '%s' verändert, die Aktualisierung würde sie\n"
 "allerdings auf '%s' setzen\n"
 
 #: libsvn_wc/props.c:168
@@ -5012,7 +5013,7 @@ msgid ""
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Nicht übereinstimmende Checksumme ist Anzeichen für beschädigte Textbasis: '%s'\n"
+"Prüfsummenfehler ist Anzeichen für beschädigte Textbasis: '%s'\n"
 "      erwartet:  %s\n"
 "   tatsächlich:  %s\n"
 
@@ -5728,7 +5729,7 @@ msgid ""
 "\n"
 "Print the raw value of a property on a path in the repository.\n"
 msgstr ""
-"Aufruf: svnlook propget ARCHIV_PFAD EIGENSCHAFT PFAD_IN_PROJ\n"
+"Aufruf: svnlook propget ARCHIV_PFAD PROPNAME PFAD_IN_PROJ\n"
 "\n"
 "Gib den Rohwert einer Eigenschaft eines Pfades im Projektarchiv aus.\n"
 
@@ -5873,11 +5874,11 @@ msgstr ""
 
 #: svnlook/main.c:1725
 msgid "Missing propname and repository path arguments"
-msgstr "Fehlender Eigenschaftsname und Parameter für Pfad im Projektarchiv"
+msgstr "Eigenschaftsname und Pfad im Projektarchiv nicht angegeben"
 
 #: svnlook/main.c:1731
 msgid "Missing propname or repository path argument"
-msgstr "Fehlender Eigenschaftsname oder Parameter für Pfad im Projektarchiv"
+msgstr "Eigenschaftsname oder Pfad im Projektarchiv nicht angegeben"
 
 #: svnlook/main.c:1883
 msgid "Invalid revision number supplied"
