@@ -141,7 +141,7 @@ typedef struct svn_delta_window_t {
    svn_delta_window_t objects, which, taken in order, describe the
    entire target string.  This type is defined within libsvn_delta, and
    opaque outside that library.  */
-typedef struct svn_delta_stream_t *svn_delta_stream_t;
+typedef struct svn_delta_stream_t svn_delta_stream_t;
 
 
 /* Set *WINDOW to a pointer to the next window from the delta stream
@@ -155,27 +155,27 @@ extern void svn_free_delta_window (svn_delta_window_t *window);
 
 /* A function resembling the POSIX `read' system call --- DATA is some
    opaque structure indicating what we're reading, BUFFER is a buffer
-   to hold the data, and LEN indicates how many bytes to read.  */
-typedef svn_error_t *(*svn_delta_read_fn_t) (void *data,
-                                             char *buffer,
-                                             ap_off_t len);
+   to hold the data, and *LEN indicates how many bytes to read.  Upon
+   return, the function should set *LEN to the number of bytes
+   actually read, or zero at the end of the data stream.  */
+typedef svn_error_t *svn_delta_read_fn_t (void *data,
+                                          char *buffer,
+                                          ap_off_t *len);
 
 /* Set *STREAM to a pointer to a delta stream that will turn the text
    from SOURCE into the text from TARGET.
 
-   SOURCE and TARGET are both functions which act like the Unix `read'
-   system call, given SOURCE_DATA or TARGET_DATA as their first
+   SOURCE_FN and TARGET_FN are both functions which act like the Unix
+   `read' system call, given SOURCE_DATA or TARGET_DATA as their first
    argument.  We will need to compute deltas for text drawn from
    files, memory, sockets, and so on; the data may be huge --- too
    large to read into memory at one time.  Using `read'-like functions
    allows us to process the data as we go.  When we call
    `svn_next_delta_window' on STREAM, it will call upon its SOURCE and
    TARGET `read'-like functions to gather as much data as it needs.  */
-/* kff todo: shouln't we remove one star from all the "_fn_t"
-   parameters below, since that's already a pointer type? */
-extern svn_error_t *svn_text_delta (svn_delta_read_fn_t *source,
+extern svn_error_t *svn_text_delta (svn_delta_read_fn_t *source_fn,
                                     void *source_data,
-                                    svn_delta_read_fn_t *target,
+                                    svn_delta_read_fn_t *target_fn,
                                     void *target_data,
                                     svn_delta_stream_t **stream);
 
