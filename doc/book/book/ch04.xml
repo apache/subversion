@@ -867,7 +867,7 @@ $ svn status
 
 <screen>
 $ cd calc/trunk
-$ svn up
+$ svn update
 At revision 405.
 
 $ svn merge -r 341:HEAD http://svn.example.com/repos/calc/branches/my-calc-branch
@@ -929,7 +929,7 @@ Merged my-calc-branch changes r341:405 into the trunk.
 
 <screen>
 $ cd calc/trunk
-$ svn up
+$ svn update
 At revision 480.
 
 $ svn merge -r 406:480 http://svn.example.com/repos/calc/branches/my-calc-branch
@@ -1086,6 +1086,8 @@ Changed paths:
    D /calc/trunk/real.c
    M /calc/trunk/integer.c
 
+Added fast fourier transform functions to integer.c.
+Removed real.c because code now in double.c.
 &hellip;
 </screen>
 
@@ -1527,10 +1529,10 @@ Committed revision 375.
       <para>And now your branch is gone.  Of course it's not really
         gone: the directory is simply missing from the
         <literal>HEAD</literal> revision, no longer distracting
-        anyone.  If you look at an earlier revision (by means of
-        <command>svn checkout -r</command>, <command>svn switch
-        -r</command>, or <command>svn list -r</command>), you'll still
-        be able to see your old branch.</para>
+        anyone.  If you use <command>svn checkout</command>,
+        <command>svn switch</command>, or <command>svn list</command>
+        to examine an earlier revision, you'll still be able to see
+        your old branch.</para>
 
       <para>If browsing your deleted directory isn't enough, you can
         always bring it back.  Resurrecting data is very easy in
