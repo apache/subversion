@@ -1,6 +1,6 @@
 %define apache_version 2.0.48-0.1
 %define apr_version 0.9.5
-%define neon_version 0.24.6
+%define neon_version 0.24.7
 %define swig_version 1.3.19
 %define apache_dir /usr
 # If you don't have 360+ MB of free disk space or don't want to run checks then
@@ -101,6 +101,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Wed Jul 07 2004 David Summers <david@summersoft.fay.ar.us> 1.1.0-10174
+- Require neon-0.24.7 to fix invalid XML (compression) bug.
+
 * Thu May 20 2004 Ben Reser <ben@reser.org> 1.1.0-9807
 - Require neon 0.24.6 to fix a security bug.  (CAN-2004-0398).
 

@@ -40,18 +40,6 @@ Candidate changes:
     Votes:
       +1: maxb, breser
 
-  * r10159, r10176
-    Require neon-0.24.7.  Fixes some nasty zlib bugs.
-    Justification:  fixes malformed XML errors from large
-                    ra_dav checkouts/updates/etc.  
-    Notes: This really should permit 0.24.7 and newer in
-    the 0.24 line.  But it doesn't.  We should figure this
-    out before releasing 1.1.0 but I'm not going to bother for
-    1.0.6.
-    Votes:
-      +1: sussman, david, lundblad, kfogel
-      +0: breser
-
   * r10148
     Fixes crash when deleting a revprop.
     Justification:  it's a crash.  we shouldn't ever crash.

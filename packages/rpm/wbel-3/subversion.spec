@@ -1,6 +1,6 @@
 %define apache_version 2.0.48-0.1
 %define apr_version 0.9.5
-%define neon_version 0.24.4
+%define neon_version 0.24.7
 %define swig_version 1.3.19
 %define apache_dir /usr
 # If you don't have 360+ MB of free disk space or don't want to run checks then
@@ -101,6 +101,13 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Wed Jul 07 2004 David Summers <david@summersoft.fay.ar.us> 1.0.6-10174
+- Require neon-0.24.7 to fix invalid XML (compression) bug.
+
+* Wed May 05 2004 David Summers <david@summersoft.fay.ar.us> 1.0.6-9628
+- Track changes to perl binding compile and install.
+- Locale files now installed.
+
 * Wed Mar 10 2004 David Summers <david@summersoft.fay.ar.us> 1.0.0-8983
 - Fedora-1 and WBEL-3 require db42-4.2.52 or greater.
 
