@@ -10,7 +10,7 @@ Status of 1.1.0:
 Candidate changes:
 
   * r10599
-    Make the perl bindings testing work before the svn libs have been installed.
+    Make the perl bindings tests work before the svn libs have been installed.
     Justification:
       Trivial, obviously correct fix.
     Votes:
@@ -41,7 +41,7 @@ Candidate changes:
       a simple propset, rather than text changes to every affected file.
       Patch has been filed in the issue for more than a year!
     Votes:
-      +1: maxb
+      +1: maxb, cmpilato
 
   * r10652, r10673
     Fix missing UTF-8 -> native recoding in 'svn log' output.
@@ -50,7 +50,7 @@ Candidate changes:
     Backporting result:
       Merge without conflicts (at r10652).
     Votes:
-      +1: dionisos
+      +1: dionisos, cmpilato
 
   * r10674
     Make ./configure behave nicer in the presence of old Apache.
