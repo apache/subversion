@@ -51,7 +51,9 @@ extern "C" {
 
 /** Specific options that can appear in the options-header: */
 #define SVN_DAV_OPTION_NO_MERGE_RESPONSE "no-merge-response"
-#define SVN_DAV_OPTION_FORCE             "force"
+#define SVN_DAV_OPTION_LOCK_BREAK        "lock-break"
+#define SVN_DAV_OPTION_LOCK_STEAL        "lock-steal"
+
 
 /** This header is used when an svn client wants to tell mod_dav_svn
  * exactly what revision of a resource it thinks it's operating on.

@@ -38,7 +38,8 @@
 struct dav_lockdb_private
 {
   /* These represent 'custom' request hearders only sent by svn clients: */
-  svn_boolean_t force;
+  svn_boolean_t lock_steal;
+  svn_boolean_t lock_break;
   svn_revnum_t working_revnum;
 
   /* The original request, so we can set 'custom' output headers. */
@@ -48,10 +49,13 @@ struct dav_lockdb_private
 
 /* Helper func:  convert an svn_lock_t to a dav_lock, allocated in
    pool.  EXISTS_P indicates whether slock->path actually exists or not.
+   If HIDE_AUTH_USER is set, then do not return the svn lock's 'owner'
+   as dlock->auth_user.
  */
 static void
 svn_lock_to_dav_lock(dav_lock **dlock,
                      const svn_lock_t *slock,
+                     svn_boolean_t hide_auth_user,
                      svn_boolean_t exists_p,
                      apr_pool_t *pool)
 {
@@ -72,7 +76,12 @@ svn_lock_to_dav_lock(dav_lock **dlock,
   lock->owner = apr_pstrdup(pool, slock->comment);
 
   /* the svn_lock_t 'owner' is the actual authenticated owner of the lock. */
-  lock->auth_user = apr_pstrdup(pool, slock->owner);
+
+  /* (If the client ran 'svn unlock --force', then we don't want to
+     return lock->auth_user.  Otherwise mod_dav will throw an error
+     when lock->auth_user and r->user don't match.) */
+  if (! hide_auth_user)
+    lock->auth_user = apr_pstrdup(pool, slock->owner);
 
   /* ### This is absurd.  apr_time.h has an apr_time_t->time_t func,
      but not the reverse?? */
@@ -80,10 +89,6 @@ svn_lock_to_dav_lock(dav_lock **dlock,
     lock->timeout = (time_t)slock->expiration_date / APR_USEC_PER_SEC;
   else
     lock->timeout = DAV_TIMEOUT_INFINITE;
-
-  /* ### uhoh.  There's no concept of a lock creation-time in DAV.
-         How do we get that value over to the client?  Maybe we should
-         just get rid of that field in svn_lock_t?  */
 
   *dlock = lock;
 }
@@ -281,8 +286,11 @@ dav_svn_open_lockdb(request_rec *r,
   if (svn_client_options)
     {
       /* 'svn [lock | unlock] --force' */
-      if (ap_strstr_c(svn_client_options, SVN_DAV_OPTION_FORCE))
-        info->force = TRUE;
+      if (ap_strstr_c(svn_client_options, SVN_DAV_OPTION_LOCK_BREAK))
+        info->lock_break = TRUE;
+      if (ap_strstr_c(svn_client_options, SVN_DAV_OPTION_LOCK_STEAL))
+        info->lock_steal = TRUE;
+
     }
 
   /* 'svn lock' wants to make svn_fs_lock() do an out-of-dateness check. */
@@ -406,11 +414,11 @@ dav_svn_get_locks(dav_lockdb *lockdb,
       return 0;
     }
 
-  /* The Big Lie:  if an svn client passed a 'force' flag to 'svn
-     lock', then we want to pretend that there's no existing lock no
-     matter what.  Otherwise mod_dav will throw '403 Locked' without
-     even attempting to create a new lock.  */
-  if (info->force)
+  /* The Big Lie: if the client ran 'svn lock --force', then we have
+     to pretend that there's no existing lock.  Otherwise mod_dav will
+     throw '403 Locked' without even attempting to create a new
+     lock.  */
+  if (info->lock_steal)
     {
       *locks = NULL;
       return 0;
@@ -438,7 +446,8 @@ dav_svn_get_locks(dav_lockdb *lockdb,
                                resource->pool);
 
   if (slock != NULL)
-    svn_lock_to_dav_lock(&lock, slock, resource->exists, resource->pool);
+    svn_lock_to_dav_lock(&lock, slock, info->lock_break,
+                         resource->exists, resource->pool);
 
   *locks = lock;
   return 0;  
@@ -500,7 +509,8 @@ dav_svn_find_lock(dav_lockdb *lockdb,
                                "Incoming token doesn't match existing lock.",
                                resource->pool);
 
-      svn_lock_to_dav_lock(&dlock, slock, resource->exists, resource->pool);
+      svn_lock_to_dav_lock(&dlock, slock, FALSE,
+                           resource->exists, resource->pool);
     }
 
   *lock = dlock;
@@ -537,11 +547,11 @@ dav_svn_has_locks(dav_lockdb *lockdb,
       return 0;
     }
 
-  /* The Big Lie:  if an svn client passed a 'force' flag to 'svn
-     lock', then we want to pretend that there's no existing lock no
-     matter what.  Otherwise mod_dav will throw '403 Locked' without
-     even attempting to create a new lock.  */
-  if (info->force)
+  /* The Big Lie: if the client ran 'svn lock --force', then we have
+     to pretend that there's no existing lock.  Otherwise mod_dav will
+     throw '403 Locked' without even attempting to create a new
+     lock.  */
+  if (info->lock_steal)
     {
       *locks_present = 0;
       return 0;
@@ -623,7 +633,7 @@ dav_svn_append_locks(dav_lockdb *lockdb,
   /* Now use the svn_lock_t to actually perform the lock. */
   serr = svn_repos_fs_attach_lock(slock,
                                   resource->info->repos->repos,
-                                  info->force,
+                                  info->lock_steal,
                                   info->working_revnum,
                                   resource->pool);
 
@@ -705,12 +715,12 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
   if (token)
     {
       /* Notice that a generic DAV client is unable to forcibly
-         'break' a lock, because info->force will always be FALSE.  An
-         svn client, however, can request a 'forced' break.*/
+         'break' a lock, because info->lock_break will always be
+         FALSE.  An svn client, however, can request a 'forced' break.*/
       serr = svn_repos_fs_unlock(resource->info->repos->repos,
                                  resource->info->repos_path,
                                  token,
-                                 info->force,
+                                 info->lock_break,
                                  resource->pool);
 
       if (serr && serr->apr_err == SVN_ERR_FS_NO_USER)
@@ -804,7 +814,7 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
                                resource->pool);
 
   /* Convert the refreshed lock into a dav_lock and return it. */
-  svn_lock_to_dav_lock(&dlock, slock, resource->exists, resource->pool);
+  svn_lock_to_dav_lock(&dlock, slock, FALSE, resource->exists, resource->pool);
   *locks = dlock;
 
   return 0;

@@ -915,26 +915,23 @@ pre_send_hook(ne_request *req,
   if (! lrb->method)
     return;
 
-  if ((strcmp(lrb->method, "LOCK") == 0)
-      || (strcmp(lrb->method, "UNLOCK") == 0))
-    {
-      if (lrb->force)
-        {
-          char *buf = apr_psprintf(lrb->pool, "%s: %s\r\n",
-                                   SVN_DAV_OPTIONS_HEADER,
-                                   SVN_DAV_OPTION_FORCE);
-          ne_buffer_zappend(header, buf);
-        }
-    }
+  /* Possibly attach some custom headers to the request. */
 
   if (strcmp(lrb->method, "LOCK") == 0)
     {
-      /* If possible, add custom 'current_rev' header to LOCK request. */
       if (SVN_IS_VALID_REVNUM(lrb->current_rev))
         {
           char *buf = apr_psprintf(lrb->pool, "%s: %ld\r\n",
                                    SVN_DAV_VERSION_NAME_HEADER,
                                    lrb->current_rev);
+          ne_buffer_zappend(header, buf);
+        }
+
+      if (lrb->force)
+        {
+          char *buf = apr_psprintf(lrb->pool, "%s: %s\r\n",
+                                   SVN_DAV_OPTIONS_HEADER,
+                                   SVN_DAV_OPTION_LOCK_STEAL);
           ne_buffer_zappend(header, buf);
         }
     }
@@ -945,6 +942,17 @@ pre_send_hook(ne_request *req,
       /* Register a callback for custom 'creationdate' response header. */
       ne_add_response_header_handler(req, SVN_DAV_CREATIONDATE_HEADER,
                                      handle_creationdate_header, lrb);
+    }
+
+  if (strcmp(lrb->method, "UNLOCK") == 0)
+    {
+      if (lrb->force)
+        {
+          char *buf = apr_psprintf(lrb->pool, "%s: %s\r\n",
+                                   SVN_DAV_OPTIONS_HEADER,
+                                   SVN_DAV_OPTION_LOCK_BREAK);
+          ne_buffer_zappend(header, buf);
+        }
     }
 
   /* Register a response handler capable of parsing <D:error> */
