@@ -138,7 +138,7 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
                                     traversal_info, pool);
       
       /* Sleep for one second to ensure timestamp integrity. */
-      apr_sleep (APR_USEC_PER_SEC * 1);
+      apr_sleep (apr_time_from_sec(1));
 
       if (err)
         return err;

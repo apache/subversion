@@ -481,7 +481,7 @@ ra_get_dated_revision (VALUE self, VALUE aDate)
     sec = NUM2LONG (rb_funcall (aDate, rb_intern ("tv_sec"), 0));
     usec = NUM2LONG (rb_funcall (aDate, rb_intern ("tv_usec"), 0));
     err = ra->plugin->get_dated_revision (ra->session_baton, &revision,
-                                          sec * APR_USEC_PER_SEC + usec);
+                                          apr_time_make(sec, usec));
   }
 
   if (err)

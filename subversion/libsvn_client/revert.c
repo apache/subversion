@@ -82,7 +82,7 @@ svn_client_revert (const char *path,
   SVN_ERR (svn_wc_adm_close (adm_access));
 
   /* Sleep for one second to ensure timestamp integrity. */
-  apr_sleep (APR_USEC_PER_SEC * 1);
+  apr_sleep (apr_time_from_sec(1));
 
   return err;
 }

@@ -642,7 +642,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   commit_in_progress = FALSE;
 
   /* Sleep for one second to ensure timestamp integrity. */
-  apr_sleep (APR_USEC_PER_SEC * 1);
+  apr_sleep (apr_time_from_sec(1));
 
  cleanup:
   /* Abort the commit if it is still in progress. */

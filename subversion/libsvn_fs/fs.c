@@ -168,7 +168,7 @@ cleanup_fs (svn_fs_t *fs)
 #if SVN_BDB_HAS_DB_INCOMPLETE
     while (db_err == DB_INCOMPLETE)
       {
-        apr_sleep (APR_USEC_PER_SEC * 1);
+        apr_sleep (apr_time_from_sec(1));
         db_err = env->txn_checkpoint (env, 0, 0, 0);
       }
 #endif /* SVN_BDB_HAS_DB_INCOMPLETE */
