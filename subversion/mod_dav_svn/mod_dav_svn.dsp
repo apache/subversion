@@ -165,7 +165,7 @@ SOURCE=..\libsvn_subr\getdate.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\libsvn_subr\hashdump.c
+SOURCE=..\libsvn_subr\hash.c
 # End Source File
 # Begin Source File
 
