@@ -65,12 +65,6 @@ svn_error_t *svn_repos_get_editor (svn_delta_edit_fns_t **editor,
                                    void *hook_baton,
                                    apr_pool_t *pool);
 
-
-/* Return the fs transaction being edited within EDIT_BATON.
-   This allows the editor-driver to abort the transaction. */
-svn_fs_txn_t *svn_repos_get_commit_txn (void *edit_baton);
-
-
 /* ---------------------------------------------------------------*/
 
 

@@ -873,13 +873,6 @@ svn_error_t * svn_ra_dav__get_commit_editor(
 
 
 
-/* ### dummy func right now. */
-svn_error_t * svn_ra_dav__abort_commit (void *session_baton,
-                                        void *edit_baton)
-{  
-  return SVN_NO_ERROR;
-}
-
 
 
 

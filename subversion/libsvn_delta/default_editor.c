@@ -144,9 +144,20 @@ close_edit (void *edit_baton)
 }
 
 
+static svn_error_t *
+abort_edit (void *edit_baton)
+{
+  return SVN_NO_ERROR;
+}
+
+
 
 /* As new editor functions are created, they should be given skeleton
    implementions above, and added here. */
+
+/* NOTE:  also, if a new editor function is added, don't forget to
+   write a 'composing' version of the function in compose_editors.c! */
+
 static const svn_delta_edit_fns_t default_editor =
 {
   set_target_revision,
@@ -161,7 +172,8 @@ static const svn_delta_edit_fns_t default_editor =
   apply_textdelta,
   change_file_prop,
   close_file,
-  close_edit
+  close_edit,
+  abort_edit
 };
 
 

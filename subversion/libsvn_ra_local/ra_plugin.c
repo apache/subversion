@@ -203,25 +203,6 @@ get_commit_editor (void *session_baton,
 
 
 
-static svn_error_t *
-abort_commit (void *session_baton,
-              void *edit_baton)
-{
-  svn_fs_txn_t *txn = svn_repos_get_commit_txn (edit_baton);
-
-  /* ### not using the session_baton at all here; but maybe ra_dav
-     needs it for its version of this routine?  gstein?  */
-
-  if (txn)
-    return svn_fs_abort_txn (txn);
-
-  else
-    return SVN_NO_ERROR;
-}
-
-
-
-
 /* todo: the fs_path inside session_baton is currently in
    svn_path_url_style.  To be *formally* correct, this routine needs
    to dup that path and convert it to svn_path_repos_style.  That's
@@ -295,7 +276,6 @@ static const svn_ra_plugin_t ra_local_plugin =
   close,
   get_latest_revnum,
   get_commit_editor,
-  abort_commit,
   do_checkout,
   do_update
 };
