@@ -189,6 +189,7 @@ compose_handler (svn_txdelta_window_t *window, void *baton)
       svn_pool_destroy (cb->window_pool);
       cb->window = composite;
       cb->window_pool = composite_pool;
+      cb->done = (composite->sview_len == 0 || composite->src_ops == 0);
     }
   else if (window)
     {
@@ -197,9 +198,7 @@ compose_handler (svn_txdelta_window_t *window, void *baton)
       assert (cb->window_pool == NULL);
       cb->window = svn_txdelta__copy_window(window, window_pool);
       cb->window_pool = window_pool;
-      cb->done = ((window->sview_len == 0 || window->src_ops == 0) 
-                    ? TRUE 
-                    : FALSE);
+      cb->done = (window->sview_len == 0 || window->src_ops == 0);
     }
   else
     cb->done = TRUE;
