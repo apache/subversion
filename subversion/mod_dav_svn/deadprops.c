@@ -23,11 +23,13 @@
 
 #include <apr_hash.h>
 
-#include "mod_dav_svn.h"
+#include "dav_svn.h"
+
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
+
 
 struct dav_db {
   const dav_resource *resource;

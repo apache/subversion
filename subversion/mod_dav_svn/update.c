@@ -33,7 +33,7 @@
 #include "svn_path.h"
 #include "svn_dav.h"
 
-#include "mod_dav_svn.h"
+#include "dav_svn.h"
 #include <http_request.h>
 #include <http_log.h>
 
