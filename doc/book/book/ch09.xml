@@ -1998,9 +1998,9 @@ examples/
 &hellip;
 </screen>
 
-          <para>Like UNIX <command>ls</command>, you can also pass
-            the <option>--verbose</option> switch for additional
-            information:</para>
+          <para>You can pass the <option>--verbose</option> switch for
+            additional information, rather like the UNIX command
+            <command>ls -l</command>:</para>
 
           <screen>
 $ svn list --verbose file:///tmp/repos
