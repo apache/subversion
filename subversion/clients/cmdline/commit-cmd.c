@@ -544,8 +544,10 @@ svn_cl__commit (apr_getopt_t *os,
   svn_stringbuf_t *cur_dir;
   svn_stringbuf_t *remainder;
   svn_stringbuf_t *trace_dir;
-  const svn_delta_edit_fns_t *trace_editor;
+  const svn_delta_editor_t *trace_editor;
   void *trace_edit_baton;
+  const svn_delta_edit_fns_t *wrap_editor;
+  void *wrap_edit_baton;
   svn_client_auth_baton_t *auth_baton;
   svn_client_commit_info_t *commit_info = NULL;
   svn_error_t *err;
@@ -663,12 +665,16 @@ svn_cl__commit (apr_getopt_t *os,
         }
     }
 
-  SVN_ERR (svn_cl__get_trace_commit_editor 
-           (&trace_editor,
-            &trace_edit_baton,
-            trace_dir,
-            pool));
+  SVN_ERR (svn_cl__get_trace_commit_editor (&trace_editor,
+                                            &trace_edit_baton,
+                                            trace_dir,
+                                            pool));
 
+  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
+     can use it with an old driver. */
+  svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
+                         trace_editor, trace_edit_baton, pool);
+  
   /* Get revnum set to something meaningful, to cover the xml case. */
   if (opt_state->start_revision.kind == svn_client_revision_number)
     revnum = opt_state->start_revision.value.number;
@@ -678,8 +684,8 @@ svn_cl__commit (apr_getopt_t *os,
   /* Commit. */
   err = svn_client_commit (&commit_info,
                            NULL, NULL,
-                           opt_state->quiet ? NULL : trace_editor, 
-                           opt_state->quiet ? NULL : trace_edit_baton,
+                           opt_state->quiet ? NULL : wrap_editor, 
+                           opt_state->quiet ? NULL : wrap_edit_baton,
                            auth_baton,
                            targets,
                            message,

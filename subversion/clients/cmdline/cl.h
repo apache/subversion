@@ -231,7 +231,7 @@ svn_cl__get_trace_update_editor (const svn_delta_edit_fns_t **editor,
 
 /* Returns an editor that prints out events in a commit. */
 svn_error_t *
-svn_cl__get_trace_commit_editor (const svn_delta_edit_fns_t **editor,
+svn_cl__get_trace_commit_editor (const svn_delta_editor_t **editor,
                                  void **edit_baton,
                                  svn_stringbuf_t *initial_path,
                                  apr_pool_t *pool);
