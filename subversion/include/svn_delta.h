@@ -552,18 +552,42 @@ typedef struct svn_delta_walk_t
 
 } svn_delta_walk_t;
 
-/* Create a delta parser that consumes XML data from SOURCE_FN and
+
+
+/* An opaque object that represents a Subversion XML parser. */
+
+typedef struct svn_xml_parser_t svn_xml_parser_t;
+
+/* Given a precreated svn_delta_walk_t WALKER, return an XML parser
+   that will use it (and feed WALK_BATON and DIR_BATON to its
+   callbacks.) */
+svn_xml_parser_t *svn_make_xml_parser (const svn_delta_walk_t *walker,
+                                       void *walk_baton,
+                                       void *dir_baton,
+                                       apr_pool_t *pool);
+
+
+/* Push LEN bytes of xml data in BUFFER at SVN_XML_PARSER.  As xml is
+   parsed, WALKER callbacks will be executed with WALK_BATON and
+   DIR_BATON.  If this is the final parser "push", ISFINAL must be set
+   to true.  */
+svn_error_t *
+svn_xml_parsebytes (char *buffer, apr_off_t len, int isFinal, 
+                    svn_xml_parser_t *svn_xml_parser);
+
+
+/* Create a internal parser that consumes XML data from SOURCE_FN and
    SOURCE_BATON, and invokes the callback functions in WALKER as
    appropriate.  WALK_BATON is a data passthrough for the entire
    traversal.  DIR_BATON is a data passthrough for the root directory;
    the callbacks can establish new DIR_BATON values for
    subdirectories.  Use POOL for allocations.  */
-extern svn_error_t *svn_xml_parse (svn_delta_read_fn_t *source_fn,
-                                   void *source_baton,
-                                   const svn_delta_walk_t *walker,
-                                   void *walk_baton,
-                                   void *dir_baton,
-                                   apr_pool_t *pool);
+extern svn_error_t *svn_xml_auto_parse (svn_delta_read_fn_t *source_fn,
+                                        void *source_baton,
+                                        const svn_delta_walk_t *walker,
+                                        void *walk_baton,
+                                        void *dir_baton,
+                                        apr_pool_t *pool);
 
 
 #endif  /* SVN_DELTA_H */

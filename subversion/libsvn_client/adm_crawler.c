@@ -1,5 +1,5 @@
 /*
- * adm_crawler.c:  depth-first search `SVN/versions' & output XML stream
+ * adm_crawler.c:  depth-first search `SVN/delta-here' & output XML stream
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -50,7 +50,70 @@
 /* ==================================================================== */
 
 
+#include <svn_types.h>         /* defines svn_read_fn_t */
 
+
+
+typedef struct svn_client__crawl_baton
+{
+  svn_string_t *xml_buffer;
+  apr_off_t *last_byte_sent;
+
+  svn_string_t *current_directory;
+
+  stack;
+
+} svn_client__crawl_baton_t;
+
+
+
+
+/* The public interface, a `svn_delta_read_fn_t' routine.
+
+   (This routine reads LEN bytes of data from BATON and stores them in
+   BUFFER; POOL is used for any allocations needed.)
+
+   In particular, this routine does a depth-first "crawl" of the local
+   changes in a working copy, and outputs a coherent XML stream (in
+   our tree-delta format).
+
+   Eventually libsvn_client will grab this routine along with an
+   svn_delta_walk_t structure from libsvn_ra, and "plug them together"
+   by feeding them into svn_xml_parse().  As a result, local changes
+   in the working copy are translated into network requests.  */
+
+svn_error_t *
+svn_cl_crawl_adm_dirs (void *baton,
+                           char *buffer,
+                           apr_off_t *len,
+                           apr_pool_t *pool)
+{
+  svn_client__crawl_baton_t crawl_baton = (svn_client__crawl_baton_t *) baton;
+
+  if (crawl_baton->xml_buffer->len >= len)
+    {
+      /* memcpy LEN bytes from xml_buffer into BUFFER, specifically starting at  */
+      
+    }
+
+}
+
+
+
+/* Depth-first search beginning at DIRECTORY.  Pass NULL for value of
+   STACK; STACK will be built-up internally during recursion.  */
+
+static void
+search_tree (directory, stack)
+{
+  if (stack == NULL)
+    {
+      /* We're at the beginning of our recursion */
+    }
+
+
+
+}
 
 
 
