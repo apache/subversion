@@ -678,12 +678,11 @@ option to serve a single connection:
 Then run the offending client command.  From there, it's just like
 debugging the client.
 
-There's no good way to debug the server in tunnel mode, so if you see
-a "Connection closed unexpectedly" in tunnel mode, and can't reproduce
-it in daemon mode, debug the client to figure out which protocol
-exchange is failing and then pore over the server code.  If necessary,
-add debugging statements to the server code which send output to
-stderr.
+Debugging the server in tunnel mode is more of a pain.  You'll need to
+stick something like "{ int x = 1; while (x); }" near the top of
+svnserve's main() and put the resulting svnserve in the user path on
+the server.  Then start an operation, gdb attach the process on the
+server, "set x = 0", and step through the code as desired.
 
 
 
