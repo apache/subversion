@@ -767,7 +767,7 @@ svn_config_ensure (apr_pool_t *pool)
 #endif
         "\n"
         "### Section for configuring miscelleneous Subversion options.\n"
-        "[miscellany]\n"
+        "# [miscellany]\n"
         "### Set global-ignores to a set of whitespace-delimited globs\n"
         "###   which Subversion will ignore in its `status' output.\n"
         "# global-ignores = *.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*"
