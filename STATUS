@@ -81,3 +81,13 @@ Candidate changes:
     repo URLS.
     Votes:
       +1: breser
+
+  * r9077
+    Fix issue #1786: mod_dav_svn accepts multiple authors, only records one.
+    Justification: without this fix, the author will be set to whomever was
+    authenticated on the MKACTIVITY request, which includes anonymous.
+    This would lead to (no author) commits, while most of the commit may
+    actually have an authenticated user associated with it.  Also, changes
+    of author during a single commit is prevented.
+    Votes:
+      +1: striker
