@@ -458,6 +458,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
   svn_ra_dav_resource_t *rsrc;
   const char *vcc;
   struct uri parsed_url;
+  const char *lopped_path = "";
 
   /* ### we may be able to replace some/all of this code with an
      ### expand-property REPORT when that is available on the server. */
@@ -477,15 +478,48 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
         is a collection or not.
   */
 
-  /* Split the copyfrom url into it's component pieces (schema,
-     host, path, etc).  We want the path part. */
+  /* Split the url into it's component pieces (schema, host, path,
+     etc).  We want the path part. */
   uri_parse (url, &parsed_url, NULL);
 
   /* ### do we want to optimize the props we fetch, based on what the
      ### user has requested? i.e. omit resourcetype when is_dir is NULL
      ### and omit relpath when bc_relative is NULL. */
-  SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, parsed_url.path,
-                                          NULL, starting_props, pool) );
+
+  {
+    /* Try to get the starting_props from the public url.  If the
+       resource no longer exists in HEAD, we'll get a failure.  That's
+       fine: just keep removing components and trying to get the
+       starting_props from parent directories. */
+    svn_error_t *err;
+    svn_stringbuf_t *path_s = svn_stringbuf_create (parsed_url.path, pool);
+
+    while (! svn_path_is_empty (path_s))
+      {
+        err = svn_ra_dav__get_props_resource(&rsrc, sess, path_s->data,
+                                             NULL, starting_props, pool);
+        if (! err)
+          break;   /* found an existing parent! */
+
+        if (err->apr_err != SVN_ERR_RA_REQUEST_FAILED)
+          return err;  /* found a _real_ error */
+
+        /* else... lop off the basename and try again. */
+        lopped_path = svn_path_join (lopped_path,
+                                     svn_path_basename (path_s->data, pool),
+                                     pool);
+        svn_path_remove_component (path_s);
+
+      }
+
+    if (svn_path_is_empty (path_s))
+      /* entire URL was bogus;  not a single part of it exists in
+         the repository!  */
+      return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool,
+                               "No part of path '%s' was found in"
+                               "repository HEAD.", parsed_url.path);
+  }
+
   uri_free(&parsed_url);
 
   if (is_dir != NULL)
@@ -506,10 +540,12 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
      the baseline collection), then return it */
   if (bc_relative != NULL)
     {
-      bc_relative->data = apr_hash_get(rsrc->propset,
-                                       SVN_RA_DAV__PROP_BASELINE_RELPATH,
-                                       APR_HASH_KEY_STRING);
-      if (bc_relative->data == NULL)
+      const char *relative_path;
+
+      relative_path = apr_hash_get(rsrc->propset,
+                                   SVN_RA_DAV__PROP_BASELINE_RELPATH,
+                                   APR_HASH_KEY_STRING);
+      if (relative_path == NULL)
         {
           /* ### better error reporting... */
 
@@ -519,6 +555,9 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
                                   "found on the resource.");
         }
 
+      /* don't forget to tack on the parts we lopped off in order
+         to find the VCC... */
+      bc_relative->data = svn_path_join (relative_path, lopped_path, pool);
       bc_relative->len = strlen(bc_relative->data);
     }
 
@@ -529,7 +568,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
   /* -------------------------------------------------------------------
      STEP 2
 
-     We have the Version Controlled Configuration (BCC). From here, we
+     We have the Version Controlled Configuration (VCC). From here, we
      need to reach the Baseline for specified revision.
 
      If the revision is SVN_INVALID_REVNUM, then we're talking about
@@ -541,7 +580,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
      fetching props from the VCC. This will direct us to the Baseline
      with that label (in this case, the label == the revision number).
 
-     From the Baseline, we fetch the followig properties:
+     From the Baseline, we fetch the following properties:
 
      *) DAV:baseline-collection, which is a complete tree of the Baseline
         (in SVN terms, this tree is rooted at a specific revision)
