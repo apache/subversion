@@ -1751,7 +1751,7 @@ deltify_mutable (svn_fs_t *fs,
 
             if (pred_id == NULL)
               return svn_error_create (SVN_ERR_FS_CORRUPT, 0,
-                                       "faulty predecessor count");
+                                       "Corrupt DB: faulty predecessor count");
 
             count++;
           }

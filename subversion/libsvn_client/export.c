@@ -268,9 +268,11 @@ open_root_internal (const char *path,
   if (kind == svn_node_none)
     SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
   else if (kind == svn_node_file)
-    return svn_error_create (SVN_ERR_WC_NOT_DIRECTORY, NULL, path);
+    return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                              "'%s' exists and is not a directory", path);
   else if ((kind != svn_node_dir) || (! force))
-    return svn_error_create (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL, path);
+    return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                              "'%s' already exists", path);
 
   if (notify_func)
     (*notify_func) (notify_baton,
@@ -392,11 +394,11 @@ add_directory (const char *path,
   if ( kind == svn_node_none )
       SVN_ERR (svn_io_dir_make (full_path, APR_OS_DEFAULT, pool));
   else if (kind == svn_node_file)
-      return svn_error_create (SVN_ERR_WC_NOT_DIRECTORY,
-                               NULL, full_path);
+    return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                              "'%s' exists and is not a directory", full_path);
   else if (! (kind == svn_node_dir && eb->force))
-      return svn_error_create (SVN_ERR_WC_OBSTRUCTED_UPDATE,
-                               NULL, full_path);
+    return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                              "'%s' already exists", full_path);
 
   if (eb->notify_func)
     (*eb->notify_func) (eb->notify_baton,

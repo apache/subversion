@@ -212,7 +212,9 @@ svn_cl__propedit (apr_getopt_t *os,
                                           FALSE, FALSE, subpool));
           SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, subpool));
           if (! entry)
-            return svn_error_create (SVN_ERR_ENTRY_NOT_FOUND, NULL, target);
+            return svn_error_createf
+              (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
+               "'%s' does not appear to be a working copy path", target);
           if (entry->kind == svn_node_file)
             svn_path_split (target, &base_dir, NULL, subpool);
           

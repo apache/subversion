@@ -630,7 +630,7 @@ static void get_file_reader(void *userdata, const char *buf, size_t len)
       /* Uh oh, didn't write as many bytes as neon gave us. */
       return 
         svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                         "Error writing to svn_stream.");
+                         "Error writing to svn_stream: unexpected EOF");
     }
 #endif
       
@@ -1170,8 +1170,8 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
     return 
       svn_error_create
       (SVN_ERR_RA_DAV_REQUEST_FAILED, err,
-       "It's possible that the repository's pre-revprop-change hook\n"
-       "either failed or is non-existent.");
+       "DAV request failed; it's possible that the repository's "
+       "pre-revprop-change hook either failed or is non-existent");
 
   return SVN_NO_ERROR;
 }
@@ -1905,7 +1905,7 @@ static int cdata_handler(void *userdata, int state,
           {
             /* Short write without associated error?  "Can't happen." */
             CHKERR( svn_error_createf(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                                      "error writing to '%s'",
+                                      "Error writing to '%s': unexpected EOF",
                                       rb->namestr->data) );
           }
       }
@@ -2042,7 +2042,8 @@ static int end_element(void *userdata, int state,
         else
           {
             CHKERR( svn_error_createf(SVN_ERR_XML_UNKNOWN_ENCODING, NULL,
-                                      "'%s'", rb->encoding->data) );
+                                      "Unknown XML encoding: '%s'",
+                                      rb->encoding->data) );
             abort(); /* Not reached. */
           }
 

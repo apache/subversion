@@ -59,10 +59,10 @@ get_txn (svn_fs__transaction_t **txn_p,
   SVN_ERR (svn_fs__bdb_get_txn (&txn, fs, txn_id, trail));
   if (expect_dead && (txn->kind != svn_fs__transaction_kind_dead))
     return svn_error_createf (SVN_ERR_FS_TRANSACTION_NOT_DEAD, 0,
-                              "'%s'", txn_id);
+                              "Transaction is not dead: '%s'", txn_id);
   if ((! expect_dead) && (txn->kind == svn_fs__transaction_kind_dead))
     return svn_error_createf (SVN_ERR_FS_TRANSACTION_DEAD, 0,
-                              "'%s'", txn_id);
+                              "Transaction is dead: '%s'", txn_id);
   *txn_p = txn;
   return SVN_NO_ERROR;
 }

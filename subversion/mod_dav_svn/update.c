@@ -1276,7 +1276,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
               {
                 svn_error_clear(svn_repos_abort_report(rbaton));
                 serr = svn_error_create (SVN_ERR_XML_ATTRIB_NOT_FOUND, 
-                                         NULL, "rev");
+                                         NULL, "Missing XML attribute: rev");
                 return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                            "A failure occurred while "
                                            "recording one of the items of "

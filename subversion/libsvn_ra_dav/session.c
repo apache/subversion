@@ -392,14 +392,15 @@ static svn_error_t *get_server_settings(const char **proxy_host,
 
       if (*endstr)
         return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                "illegal character in proxy port number");
+                                "Invalid URL: illegal character in proxy "
+                                "port number");
       if (port < 0)
         return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                "negative proxy port number");
+                                "Invalid URL: negative proxy port number");
       if (port > 65535)
         return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                "proxy port number greater than maximum TCP "
-                                "port number 65535");
+                                "Invalid URL: proxy port number greater than "
+                                "maximum TCP port number 65535");
       *proxy_port = port;
     }
   else
@@ -412,10 +413,11 @@ static svn_error_t *get_server_settings(const char **proxy_host,
 
       if (*endstr)
         return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                                "illegal character in timeout value");
+                                "Invalid config: illegal character in timeout "
+                                "value");
       if (timeout < 0)
         return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                                "negative timeout value");
+                                "Invalid config: negative timeout value");
       *timeout_seconds = timeout;
     }
   else
@@ -428,7 +430,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
 
       if (*endstr)
         return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                                "illegal character in debug mask value");
+                                "Invalid config: illegal character in "
+                                "debug mask value");
 
       *neon_debug = debug;
     }
@@ -517,7 +520,7 @@ svn_ra_dav__open (void **session_baton,
     {
       ne_uri_free(&uri);
       return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                              "illegal URL for repository");
+                              "Malformed URL for repository");
     }
 
   /* Can we initialize network? */
@@ -685,7 +688,7 @@ svn_ra_dav__open (void **session_baton,
                 {
                   return svn_error_create
                     (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                     "unable to load certificate file");
+                     "Invalid config: unable to load certificate file");
                 }
               ne_ssl_trust_cert(sess, ca_cert);
               ne_ssl_trust_cert(sess2, ca_cert);

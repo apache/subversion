@@ -364,14 +364,15 @@ txn_body_dag_init_fs (void *baton, trail_t *trail)
   if (strcmp (txn_id, "0"))
     return svn_error_createf 
       (SVN_ERR_FS_CORRUPT, 0,
-       "initial transaction id not '0' in filesystem '%s'", fs->path);
+       "Corrupt DB: initial transaction id not '0' in filesystem '%s'",
+       fs->path);
 
   /* Create a default copy (better have an id of "0") */
   SVN_ERR (svn_fs__bdb_reserve_copy_id (&copy_id, fs, trail));
   if (strcmp (copy_id, "0"))
     return svn_error_createf 
       (SVN_ERR_FS_CORRUPT, 0,
-       "initial copy id not '0' in filesystem '%s'", fs->path);
+       "Corrupt DB: initial copy id not '0' in filesystem '%s'", fs->path);
   SVN_ERR (svn_fs__bdb_create_copy (fs, copy_id, NULL, NULL, root_id, 
                                     svn_fs__copy_kind_real, trail));
 
@@ -380,7 +381,7 @@ txn_body_dag_init_fs (void *baton, trail_t *trail)
   SVN_ERR (svn_fs__bdb_put_rev (&rev, fs, &revision, trail));
   if (rev != 0)
     return svn_error_createf (SVN_ERR_FS_CORRUPT, 0,
-                              "initial revision number is not '0'"
+                              "Corrupt DB: initial revision number is not '0'"
                               " in filesystem '%s'", fs->path);
 
   /* Promote our transaction to a "committed" transaction. */
