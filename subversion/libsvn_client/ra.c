@@ -449,6 +449,7 @@ svn_client__prev_log_path (const char **prev_path_p,
   return SVN_NO_ERROR;
 }
 
+/* ### This is to support 1.0 servers. */
 struct log_receiver_baton
 {
   /* The kind of the path we're tracing. */
@@ -460,9 +461,9 @@ struct log_receiver_baton
 
   /* Input revisions and output paths; the whole point of this little game. */
   svn_revnum_t start_revision;
-  const char *start_path;
+  const char **start_path_p;
   svn_revnum_t end_revision;
-  const char *end_path;
+  const char **end_path_p;
   svn_revnum_t peg_revision;
   const char *peg_path;
   
@@ -475,7 +476,7 @@ struct log_receiver_baton
 
 
 /* Implements svn_log_message_receiver_t; helper for
-   svn_client__repos_locations.  As input, takes log_receiver_baton
+   slow_get_locations.  As input, takes log_receiver_baton
    (defined above) and attempts to "fill in" all three paths in the
    baton over the course of many iterations. */
 static svn_error_t *
@@ -497,15 +498,15 @@ log_receiver (void *baton,
 
   /* If we've already determined all of our paths, then frankly, why
      are we here?  Oh well, just do nothing. */
-  if (lrb->start_path && lrb->peg_path && lrb->end_path)
+  if (*lrb->start_path_p && lrb->peg_path && *lrb->end_path_p)
     return SVN_NO_ERROR;
 
   /* Determine the paths for any of the revisions for which we haven't
      gotten paths already. */
-  if ((! lrb->start_path) && (revision <= lrb->start_revision))
-    lrb->start_path = apr_pstrdup (lrb->pool, current_path);
-  if ((! lrb->end_path) && (revision <= lrb->end_revision))
-    lrb->end_path = apr_pstrdup (lrb->pool, current_path);
+  if ((! *lrb->start_path_p) && (revision <= lrb->start_revision))
+    *lrb->start_path_p = apr_pstrdup (lrb->pool, current_path);
+  if ((! *lrb->end_path_p) && (revision <= lrb->end_revision))
+    *lrb->end_path_p = apr_pstrdup (lrb->pool, current_path);
   if ((! lrb->peg_path) && (revision <= lrb->peg_revision))
     lrb->peg_path = apr_pstrdup (lrb->pool, current_path);
 
@@ -526,6 +527,111 @@ log_receiver (void *baton,
 }
 
 
+/* Use the RA layer get_log() function to get the locations at START_REVNUM
+   and END_REVNUM.
+   The locations are put in START_PATH and END_PATH, respectively.  ABS_PATH
+   is the path as seen in PEG_REVISION for which to get the locations.
+   ORIG_PATH is only used for error messages.
+   ### This is needed for 1.0.x servers, which don't have the get_locations
+   RA layer function. */
+static svn_error_t *
+slow_locations (const char **start_path, const char** end_path,
+                const char *abs_path, svn_revnum_t peg_revnum,
+                svn_revnum_t start_revnum, svn_revnum_t end_revnum,
+                const char *orig_path,
+                svn_ra_plugin_t *ra_lib, void *ra_session,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  struct log_receiver_baton lrb = { 0 };
+  apr_array_header_t *targets;
+  svn_revnum_t youngest;
+  svn_boolean_t pegrev_is_youngest = FALSE;
+
+  /* Sanity check:  verify that the peg-object exists in repos. */
+  SVN_ERR (ra_lib->check_path (ra_session, "", peg_revnum, &(lrb.kind), pool));
+  if (lrb.kind == svn_node_none)
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_FOUND, NULL,
+       _("path '%s' doesn't exist in revision %ld"),
+       orig_path, peg_revnum);
+
+  /* Populate most of our log receiver baton structure. */
+  lrb.last_path = abs_path;
+  lrb.start_revision = start_revnum;
+  lrb.end_revision = end_revnum;
+  lrb.peg_revision = peg_revnum;
+  lrb.start_path_p = start_path;
+  lrb.end_path_p = end_path;
+  lrb.ctx = ctx;
+  lrb.pool = pool;
+
+  /* Figure out the youngest rev, and start to populate our baton. */
+  if ((peg_revnum >= start_revnum) && (peg_revnum >= end_revnum))
+    {
+      youngest = peg_revnum;
+      lrb.peg_path = lrb.last_path;
+      pegrev_is_youngest = TRUE;      
+    }
+  else if (end_revnum > peg_revnum)
+    {
+      if (end_revnum >= start_revnum)
+        {        
+          youngest = end_revnum;
+          *end_path = lrb.last_path;
+        }
+      else
+        {
+          youngest = start_revnum;
+          *start_path = lrb.last_path;
+        }
+    }
+  else /* start_revnum > peg_revnum */
+    {
+      if (start_revnum >= end_revnum)
+        {
+          youngest = start_revnum;
+          *start_path = lrb.last_path;
+        }
+      else
+        {
+          youngest = end_revnum;
+          *end_path = lrb.last_path;
+        }
+    }
+    
+  /* Build a one-item TARGETS array, as input to ra->get_log() */
+  targets = apr_array_make (pool, 1, sizeof (const char *));
+  APR_ARRAY_PUSH (targets, const char *) = "";
+
+  /* Let the RA layer drive our log information handler, which will do
+     the work of finding the actual locations for our resource.
+     Notice that we always run on the youngest rev of the 3 inputs. */
+  SVN_ERR (ra_lib->get_log (ra_session, targets, youngest, 1,
+                            TRUE, FALSE, log_receiver, &lrb, pool));
+
+  /* Check that we got the peg path. */
+  if (! lrb.peg_path)
+    return svn_error_createf 
+      (APR_EGENERAL, NULL,
+       _("Unable to find repository location for '%s' in revision %ld"),
+       orig_path, peg_revnum);
+
+  /* If our peg revision was smaller than either of our range
+     revisions, we need to make sure that our calculated peg path is
+     the same as what we expected it to be. */
+  if (! pegrev_is_youngest)
+    {
+      if (strcmp (abs_path, lrb.peg_path) != 0)
+        return svn_error_createf
+          (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
+           _("'%s' in revision %ld is an unrelated object"),
+           orig_path, youngest);
+    }
+
+  return SVN_NO_ERROR;
+}
+                
 svn_error_t *
 svn_client__repos_locations (const char **start_url,
                              svn_opt_revision_t **start_revision,
@@ -540,14 +646,16 @@ svn_client__repos_locations (const char **start_url,
                              apr_pool_t *pool)
 {
   const char *repos_url;
-  struct log_receiver_baton lrb = { 0 };
-  apr_array_header_t *targets;
   const char *url;
+  const char *start_path = NULL;
+  const char *end_path = NULL;
   svn_revnum_t peg_revnum = SVN_INVALID_REVNUM;
-  svn_revnum_t start_revnum, end_revnum, youngest;
-  svn_boolean_t pegrev_is_youngest = FALSE;
+  svn_revnum_t start_revnum, end_revnum;
+  apr_array_header_t *revs;
+  apr_hash_t *rev_locs;
   void *ra_session;
   apr_pool_t *subpool = svn_pool_create (pool);
+  svn_error_t *err;
 
   /* Ensure that we are given some real revision data to work with.
      (It's okay if the END is unspecified -- in that case, we'll just
@@ -579,7 +687,7 @@ svn_client__repos_locations (const char **start_url,
       else
         {
           return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                    "'%s' has no URL", path);
+                                    _("'%s' has no URL"), path);
         }
     }
   else
@@ -587,12 +695,16 @@ svn_client__repos_locations (const char **start_url,
       url = path;
     }
 
+  /* ### We should be smarter here.  If the callers just asks for BASE and
+     WORKING revisions, we should already have the correct URL:s, so we
+     don't need to do anything more here in that case. */
+
   /* Open a RA session to this URL. */
   SVN_ERR (svn_client__open_ra_session (&ra_session, ra_lib, url, NULL,
                                         NULL, NULL, FALSE, TRUE,
                                         ctx, subpool));
 
-  /* Resolve the opt_revision_t's. */
+  /* Resolve the opt_revision_ts. */
   if (peg_revnum == SVN_INVALID_REVNUM)
     SVN_ERR (svn_client__get_revision_number (&peg_revnum, ra_lib, 
                                               ra_session, revision, path,
@@ -606,126 +718,72 @@ svn_client__repos_locations (const char **start_url,
     SVN_ERR (svn_client__get_revision_number (&end_revnum, ra_lib, 
                                               ra_session, end, path, pool));
 
-  /* Sanity check:  verify the that the peg-object exists in repos. */
-  SVN_ERR (ra_lib->check_path (ra_session, "", peg_revnum, &(lrb.kind), pool));
-  if (lrb.kind == svn_node_none)
-    return svn_error_createf
-      (SVN_ERR_FS_NOT_FOUND, NULL,
-       _("path '%s' doesn't exist in revision %ld"),
-       path, peg_revnum);
+  SVN_ERR (ra_lib->get_repos_root (ra_session, &repos_url, subpool));
 
-  /* Populate most of our log receiver baton structure. */
-  SVN_ERR (ra_lib->get_repos_root (ra_session, &repos_url, pool));
-  lrb.last_path = svn_path_uri_decode (url + strlen (repos_url), pool);
-  lrb.start_revision = start_revnum;
-  lrb.end_revision = end_revnum;
-  lrb.peg_revision = peg_revnum;
-  lrb.ctx = ctx;
-  lrb.pool = pool;
+  revs = apr_array_make (subpool, 2, sizeof (svn_revnum_t));
+  APR_ARRAY_PUSH (revs, svn_revnum_t) = start_revnum;
+  if (end_revnum != start_revnum)
+    APR_ARRAY_PUSH (revs, svn_revnum_t) = end_revnum;
 
-  /* Figure out the youngest rev, and start to populate our baton. */
-  if ((peg_revnum >= start_revnum) && (peg_revnum >= end_revnum))
+  if (! (err = ra_lib->get_locations (ra_session, &rev_locs, "", peg_revnum,
+                                      revs, subpool)))
     {
-      youngest = peg_revnum;
-      lrb.peg_path = lrb.last_path;
-      pegrev_is_youngest = TRUE;      
+      start_path = apr_hash_get (rev_locs, &start_revnum,
+                                 sizeof (svn_revnum_t));
+      end_path = apr_hash_get (rev_locs, &end_revnum, sizeof (svn_revnum_t));
     }
-  else if (end_revnum > peg_revnum)
+  else if (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
     {
-      if (end_revnum >= start_revnum)
-        {        
-          youngest = end_revnum;
-          lrb.end_path = lrb.last_path;
-        }
-      else
-        {
-          youngest = start_revnum;
-          lrb.start_path = lrb.last_path;
-        }
+      svn_error_clear (err);
+      /* Do it the slow way for 1.0.x servers. */
+      SVN_ERR (slow_locations (&start_path, &end_path,
+                               svn_path_uri_decode (url + strlen (repos_url),
+                                                    subpool),
+                               peg_revnum, start_revnum, end_revnum,
+                               path, ra_lib, ra_session, ctx, subpool));
     }
-  else /* start_revnum > peg_revnum */
-    {
-      if (start_revnum >= end_revnum)
-        {
-          youngest = start_revnum;
-          lrb.start_path = lrb.last_path;
-        }
-      else
-        {
-          youngest = end_revnum;
-          lrb.end_path = lrb.last_path;
-        }
-    }
-    
-  /* Build a one-item TARGETS array, as input to ra->get_log() */
-  targets = apr_array_make (pool, 1, sizeof (const char *));
-  APR_ARRAY_PUSH (targets, const char *) = "";
-
-  /* Let the RA layer drive our log information handler, which will do
-     the work of finding the actual locations for our resource.
-     Notice that we always run on the youngest rev of the 3 inputs. */
-  SVN_ERR (ra_lib->get_log (ra_session, targets, youngest, 1,
-                            TRUE, FALSE, log_receiver, &lrb, pool));
+  else
+    return err;
 
   /* We'd better have all the paths we were looking for! */
-  if (! lrb.start_path)
+  if (! start_path)
     return svn_error_createf 
       (APR_EGENERAL, NULL,
        _("Unable to find repository location for '%s' in revision %ld"),
        path, start_revnum);
-  if (! lrb.end_path)
+  if (! end_path)
     return svn_error_createf 
       (APR_EGENERAL, NULL,
-       _("Unable to find repository location for '%s' in revision %ld"),
+       _("The location for '%s' for revision %ld does not exist in the "
+         "repository or refers to an unrelated object"),
        path, end_revnum);
-  if (! lrb.peg_path)
-    return svn_error_createf 
-      (APR_EGENERAL, NULL,
-       _("Unable to find repository location for '%s' in revision %ld"),
-       path, peg_revnum);
     
   /* Repository paths might be absolute, but we want to treat them as
-     relative. */
-  if (lrb.start_path[0] == '/')
-    lrb.start_path = lrb.start_path + 1;
-  if (lrb.end_path[0] == '/')
-    lrb.end_path = lrb.end_path + 1;
-  if (lrb.peg_path[0] == '/')
-    lrb.peg_path = lrb.peg_path + 1;
-
-  /* If our peg revision was smaller than either of our range
-     revisions, we need to make sure that our calculated peg path is
-     the same as what we expected it to be. */
-  if (! pegrev_is_youngest)
-    {
-      if (strcmp (url, svn_path_join (repos_url, lrb.peg_path, pool)) != 0)
-        return svn_error_createf
-          (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
-           _("'%s' in revision %ld is an unrelated object"),
-           path, youngest);
-    }
+     relative.
+     ### Aren't they always absolute? */
+  if (start_path[0] == '/')
+    start_path = start_path + 1;
+  if (end_path[0] == '/')
+    end_path = end_path + 1;
 
   /* Set our return variables */
-  *start_url = svn_path_join (repos_url, svn_path_uri_encode (lrb.start_path,
-                                                              pool),
-                              pool);
+  *start_url = svn_path_join (repos_url, svn_path_uri_encode (start_path,
+                                                              pool), pool);
   *start_revision = apr_pcalloc (pool, sizeof (**start_revision));
   (*start_revision)->kind = svn_opt_revision_number;
-  (*start_revision)->value.number = lrb.start_revision;
+  (*start_revision)->value.number = start_revnum;
   if (end->kind != svn_opt_revision_unspecified)
     {
-      *end_url = svn_path_join (repos_url, svn_path_uri_encode (lrb.end_path,
-                                                                pool),
-                                pool);
+      *end_url = svn_path_join (repos_url, svn_path_uri_encode (end_path,
+                                                                pool), pool);
       *end_revision = apr_pcalloc (pool, sizeof (**end_revision));
       (*end_revision)->kind = svn_opt_revision_number;
-      (*end_revision)->value.number = lrb.end_revision;
+      (*end_revision)->value.number = end_revnum;
     }
   
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
-
 
 
 
