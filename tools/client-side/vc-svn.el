@@ -365,8 +365,8 @@ workfile contents as the newer version.
 This function returns a status of either 0 (no differences found), or
 1 (either non-empty diff or the diff is run asynchronously)."
   (let* ((diff-switches-list
-          ;; In Emacs 21.2, the `vc-diff-switches-list' macro started
-          ;; requiring its symbol argument to be quoted.
+          ;; In Emacs 21.3.50 or so, the `vc-diff-switches-list' macro
+          ;; started requiring its symbol argument to be quoted.
           (condition-case ignored
               (vc-diff-switches-list svn)
             ('void-variable (vc-diff-switches-list 'SVN))))
