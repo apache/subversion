@@ -3,6 +3,8 @@
 # cvs2svn: ...
 #
 
+# $LastChangedRevision$
+
 import rcsparse
 import os
 import sys
