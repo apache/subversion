@@ -32,7 +32,7 @@ DVIPDF = dvipdf
 ### See `dist' rule.
 DIST_SANDBOX = .dist_sandbox
 DISTNAME = subversion
-VERSION = `grep SVN_VERSION svn_private_config.h | cut -f 3 -d ' ' | sed -e 's/"//g'`
+VERSION = `grep SVN_VERSION configure.in | cut -f 2 -d ' ' | sed -e 's/"//g' | sed -e 's/,//g'`
 
 
 CC = @CC@
@@ -180,38 +180,112 @@ doc-pdf: doc/programmer/design/svn-design.pdf doc/user/manual/svn-manual.pdf
 ### Build a tarball.
 #
 # Notes:
-# 
+#
 # Creating a distribution is only half-automated at the moment -- it
 # requires a lot of hand-holding from a knowledgable developer.  Once
 # we go self-hosting and get the first distribution tarball released,
 # this will be totally rewritten to take advantage of the eminently
 # parseable `svn status' command output.
 # 
-# Although `make distclean' should clean up apr and neon, in reality
-# neon/src/ still has .o files afterwards.  So we clean them up by
-# hand below.  Better to patch Neon, of course; but the fix wasn't
-# obvious to me -- something to do with @NEONOBJS@ in
-# neon/src/Makefile.in?
+# You should run this from a working copy at HEAD, already configured
+# and able to run "make doc".  Although the distribution is built from
+# a freshly exported tree, we must build the docs in the previously
+# existing working copy and copy them into the dist tree, since we
+# can't run "make doc" in the dist tree itself.
 #
-dist: ChangeLog
+dist: 
+	@# Clean up the old docs so we're guaranteed the latest ones.
+	@# This is necessary only because "make clean" doesn't appear
+	@# to clean up docs at the moment.
+	@rm -f doc/programmer/design/svn-design.info
+	@rm -f doc/programmer/design/svn-design.info-*
+	@rm -f doc/programmer/design/svn-design.html
+	@rm -f doc/programmer/design/svn-design.txt
+	@rm -f doc/programmer/design/svn-design.dvi
+	@rm -f doc/programmer/design/svn-design.ps
+	@rm -f doc/programmer/design/svn-design.pdf
+	@rm -f doc/user/manual/svn-manual.info
+	@rm -f doc/user/manual/svn-manual.info-*
+	@rm -f doc/user/manual/svn-manual.html
+	@rm -f doc/user/manual/svn-manual.txt
+	@rm -f doc/user/manual/svn-manual.dvi
+	@rm -f doc/user/manual/svn-manual.ps
+	@rm -f doc/user/manual/svn-manual.pdf
+
+	@# Build new docs.
+	@make doc
+
+	@# Prepare an area for constructing the dist tree.
 	@rm -rf ${DIST_SANDBOX}
 	@mkdir ${DIST_SANDBOX}
-	@mkdir ${DIST_SANDBOX}/subversion
-	@cp -v -d -r * ${DIST_SANDBOX}/subversion
-	@rm -rf `find ${DIST_SANDBOX}/subversion -name CVS -print`
-	@rm -rf `find ${DIST_SANDBOX}/subversion -name .cvsignore -print`
-	@(cd ${DIST_SANDBOX}/subversion;                                 \
-         make distclean;                                                 \
-         ./autogen.sh;                                                   \
-         rm -f neon/src/*.o;                                             \
-         cd ..;                                                          \
-         cp ../svn_private_config.h .;                                   \
-         echo "Rolling ${DISTNAME}-${VERSION}.tar.gz ...";               \
-         tar zcvpf ${DISTNAME}-${VERSION}.tar.gz subversion;             \
-        )
-	@cp ${DIST_SANDBOX}/*.tar.gz .
+
+	@# Export the dist tree, clean it up.
+	@(cd ${DIST_SANDBOX}; cvs -d :pserver:guest@cvs.tigris.org:/cvs  \
+                                export -D tomorrow -d ${DISTNAME} subversion)
+	@rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name .cvsignore -print`
+
+	@# Ship with (relatively) clean APR and neon working copies
+	@# inside the tarball, just to make people's lives easier.
+	@cp -r apr ${DIST_SANDBOX}/${DISTNAME}
+	@(cd ${DIST_SANDBOX}/${DISTNAME}/apr; make distclean)
+	@cp -r neon ${DIST_SANDBOX}/${DISTNAME}
+	@(cd ${DIST_SANDBOX}/${DISTNAME}/neon; make distclean)
+	@# Do some extra cleaning in neon, since its `make distclean'
+	@# rule still leaves some .o files lying around.  Better to
+	@# patch Neon, of course; but the fix wasn't obvious to me --
+	@# something to do with @NEONOBJS@ in neon/src/Makefile.in?
+	@rm -f ${DIST_SANDBOX}/${DISTNAME}/neon/src/*.o
+
+	@# Run autogen.sh in the dist, so we ship with a configure script.
+	@(cd ${DIST_SANDBOX}/${DISTNAME}; ./autogen.sh)
+
+	@# Copy all the pre-built docs, so we ship with ready documentation.
+	@(for name in doc/programmer/design/svn-design.info    \
+                      doc/programmer/design/svn-design.info-*  \
+                      doc/programmer/design/svn-design.html    \
+                      doc/programmer/design/svn-design.txt     \
+                      doc/programmer/design/svn-design.dvi     \
+                      doc/programmer/design/svn-design.ps      \
+                      doc/programmer/design/svn-design.pdf     \
+                      doc/user/manual/svn-manual.info          \
+                      doc/user/manual/svn-manual.info-*        \
+                      doc/user/manual/svn-manual.html          \
+                      doc/user/manual/svn-manual.txt           \
+                      doc/user/manual/svn-manual.dvi           \
+                      doc/user/manual/svn-manual.ps            \
+                      doc/user/manual/svn-manual.pdf;          \
+          do                                                   \
+          cp -f $${name} ${DIST_SANDBOX}/${DISTNAME}/$${name};    \
+          done)
+
+	@# Tell people where to find old information.
+	echo "The old CVS ChangeLog is kept at " \
+            >> ${DIST_SANDBOX}/${DISTNAME}/ChangeLog.CVS
+	echo "" \
+            >> ${DIST_SANDBOX}/${DISTNAME}/ChangeLog.CVS
+	echo "     http://subversion.tigris.org" \
+            >> ${DIST_SANDBOX}/${DISTNAME}/ChangeLog.CVS
+	echo "" \
+            >> ${DIST_SANDBOX}/${DISTNAME}/ChangeLog.CVS
+	echo "If you want to see changes since Subversion went self-hosting," \
+            >> ${DIST_SANDBOX}/${DISTNAME}/ChangeLog.CVS
+	echo "you probably want to use the svn log command -- and if it " \
+            >> ${DIST_SANDBOX}/${DISTNAME}/ChangeLog.CVS
+	echo "doesn't do what you need, please send in a patch!" \
+            >> ${DIST_SANDBOX}/${DISTNAME}/ChangeLog.CVS
+
+	@# kff tmp testing to make sure that worked right
+	@cat ${DIST_SANDBOX}/${DISTNAME}/ChangeLog.CVS
+
+	@# Make the tarball.
+	@(cd ${DIST_SANDBOX};                                     \
+          echo "Rolling ${DISTNAME}-${VERSION}.tar.gz ...";       \
+          tar zcvpf ${DISTNAME}-${VERSION}.tar.gz ${DISTNAME})
+
+	@# Copy it upstairs and clean up.
+	@cp ${DIST_SANDBOX}/${DISTNAME}-${VERSION}*.tar.gz .
 	@rm -rf ${DIST_SANDBOX}
-	@echo "Done; see `ls -1 subversion-*.tar.gz`."
+	@echo "Done; see ${DISTNAME}-${VERSION}.tar.gz`."
 
 
 #
