@@ -18,7 +18,7 @@
 # deprecated - avlegs
 # destination - mål
 # directory - katalog
-# entry - post¹
+# entry - post
 # hook - påhakning
 # item - element
 # lock token - låsnøkkel
@@ -32,7 +32,7 @@
 # parse - tolke
 # plugin - programtillegg
 # property - egenskap
-# record - post¹
+# record - post
 # relocation - relokalisering, forflytning(?)
 # remote - fjerntliggende
 # repository - depot
@@ -50,11 +50,6 @@
 # uuid - uuid
 # WC (“working copy”) - AK («arbeidskopi»)
 # working copy - arbeidskopi
-#
-# ¹: Er det et problem at de to betegnelsene på engelsk — «entry» og 
-#    «record» — blir redusert til ett ord på norsk? Det er vel ikke så 
-#    mange andre forståelige begreper for dem på norsk, og _er_ det 
-#    egentlig nevneverdig forskjell på en entry og record?
 #
 msgid ""
 msgstr ""
@@ -7709,9 +7704,3 @@ msgstr "eksportert%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "«%s» er verken versjonert eller eksportert\n"
-
-#~ msgid "'get-file-revs' request not implemented"
-#~ msgstr "«get-file-revs»-forespørsel ikke implementert"
-
-#~ msgid "'get-locations' request not implemented"
-#~ msgstr "«get-locations»-forespørsel ikke implementert"
