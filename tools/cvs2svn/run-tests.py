@@ -377,6 +377,11 @@ def ctrl_char_in_log():
   repos, wc, logs = ensure_conversion('ctrl-char-in-log')
 
 
+def overdead():
+  "handle branches rooted in a redeleted revision"
+  repos, wc, logs = ensure_conversion('overdead')
+
+
 def phoenix_branch():
   "convert a branch file rooted in a 'dead' revision"
   repos, wc, logs = ensure_conversion('phoenix')
@@ -725,6 +730,7 @@ test_list = [ None,
               attr_exec,
               space_fname,
               ctrl_char_in_log,
+              XFail(overdead),
               two_quick,
               prune_with_care,
               double_delete,
