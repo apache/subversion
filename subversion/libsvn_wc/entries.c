@@ -74,7 +74,9 @@
 /*** Initialization of the entries file. ***/
 
 svn_error_t *
-svn_wc__entries_init (svn_string_t *path, apr_pool_t *pool)
+svn_wc__entries_init (svn_string_t *path,
+                      svn_string_t *ancestor_path,
+                      apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t apr_err;
@@ -101,13 +103,15 @@ svn_wc__entries_init (svn_string_t *path, apr_pool_t *pool)
                       NULL);
 
   /* Add an entry for the dir itself -- name is absent, only the
-     version is present in the dir entry. */
+     version and default ancestry are present as xml attributes. */
   svn_xml_append_tag (accum,
                       pool,
                       svn_xml_self_close_tag,
                       SVN_WC__ENTRIES_ENTRY,
                       SVN_WC__ENTRIES_ATTR_VERSION,
                       svn_string_create (initial_verstr, pool),
+                      SVN_WC__ENTRIES_ATTR_ANCESTOR,
+                      ancestor_path,
                       NULL);
 
   /* Close the top-level form. */
@@ -654,6 +658,8 @@ do_entry (svn_string_t *path,
 }
 
 
+
+
 svn_error_t *
 svn_wc__entry_set (svn_string_t *path,
                    svn_string_t *entryname,
@@ -680,6 +686,61 @@ svn_wc__entry_set (svn_string_t *path,
 
   return err;
 }
+
+
+
+
+
+svn_error_t *
+svn_wc__entry_merge (svn_string_t *path,
+                     svn_string_t *entryname,
+                     svn_vernum_t version,
+                     enum svn_node_kind kind,
+                     apr_pool_t *pool,
+                     ...)
+{
+  svn_error_t *err;
+  va_list ap;
+  const char *key;
+
+  svn_vernum_t *existing_version;
+  enum svn_node_kind *existing_kind;
+  apr_hash_t *existing_hash;
+
+  /* First be sure to GET all information about the entry (assuming it
+     already exists) */
+  err = svn_wc__entry_get (path, entryname,
+                           existing_version, existing_kind,
+                           pool,
+                           &existing_hash);
+  if (err) return err;
+
+  if (! version)
+    version = *existing_version;
+  if (! kind)
+    kind = *existing_kind;
+
+  /* Walk the va_list, storing attributes into the existing hash */
+  va_start (ap, pool);
+  while ((key = va_arg (ap, char *)) != NULL)
+    {
+      svn_string_t *val = va_arg (ap, svn_string_t *);
+      apr_hash_set (existing_hash, key, strlen (key), val);
+    }
+  va_end (ap);
+
+  err = do_entry (path, pool, entryname,
+                  version, NULL,
+                  kind, NULL,
+                  0, /* not removing */
+                  1, /* setting */
+                  existing_hash);
+
+  return err;
+}
+
+
+
 
 
 
