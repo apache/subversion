@@ -15,8 +15,6 @@ Ben & Karl todo:
      (This may happen automatically as the Win32 and Gnome clients are
       developed after-hours!)
 
-   - trace editor:  trace commits.
-
 Ben todo:
 
    - make a new mini-crawler (lots of shared code with adm_crawler.c)
