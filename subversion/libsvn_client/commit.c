@@ -525,7 +525,7 @@ send_to_repos (svn_client_commit_info_t **commit_info,
       /* (Notice that in the case of import, we do NOT want the RA
          layer to attempt to store auth info in the wc.) */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, base_dir,
-                                            !is_import, !is_import, FALSE,
+                                            !is_import, !is_import,
                                             auth_baton, pool));
 
       

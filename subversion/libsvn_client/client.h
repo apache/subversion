@@ -51,11 +51,6 @@ typedef struct
   /* Record whether we should store the user/pass into the WC */
   svn_boolean_t do_store;
 
-  /* If set indicates that the working copy revision may have no relation
-     to that of the data requested from the server. This is the case for
-     the diff command. */
-  svn_boolean_t arbitrary_wc;
-
   /* The pool to use for session-related items. */
   apr_pool_t *pool;
 
@@ -88,7 +83,6 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
                                            svn_stringbuf_t *base_dir,
                                            svn_boolean_t do_store,
                                            svn_boolean_t use_admin,
-                                           svn_boolean_t arbitrary_wc,
                                            void *auth_baton,
                                            apr_pool_t *pool);
 

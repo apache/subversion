@@ -83,7 +83,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
 
   /* Open a repository session to the URL. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, basename,
-                                        TRUE, TRUE, FALSE, auth_baton, pool));
+                                        TRUE, TRUE, auth_baton, pool));
 
   SVN_ERR (ra_lib->get_log (session,
                             condensed_targets,  /* ### todo: or `targets'? */
