@@ -103,7 +103,7 @@ Candidate changes:
       be done to fix some small issues with 1.1.2.  Don't want to break
       translations.
     Votes:
-      +1: breser, lundblad
+      +1: breser, lundblad, maxb
 
   * r12904
     Fix some assertions that were killing Apache children due to non-
