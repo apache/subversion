@@ -1131,13 +1131,11 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
              missing altogether), copy the text-base out into
              the working copy, and update the timestamp in the entries
              file. */
-          svn_boolean_t toggled;
           svn_wc_keywords_t *keywords;
-          enum svn_wc__eol_style eol_style;
           const char *eol;
           base_thing = svn_wc__text_base_path (fullpath, 0, pool);
 
-          SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol, fullpath, pool));
+          SVN_ERR (svn_wc__get_eol_style (NULL, &eol, fullpath, pool));
           SVN_ERR (svn_wc__get_keywords (&keywords, fullpath, adm_access, NULL,
                                          pool));
 
@@ -1154,8 +1152,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
             return revert_error (err, fullpath, "restoring text", pool);
 
           /* If necessary, tweak the new working file's executable bit. */
-          SVN_ERR (svn_wc__maybe_toggle_working_executable_bit 
-                   (&toggled, fullpath, pool));
+          SVN_ERR (svn_wc__maybe_set_executable (NULL, fullpath, pool));
 
           /* Modify our entry structure. */
           SVN_ERR (svn_io_file_affected_time (&tstamp, fullpath, pool));

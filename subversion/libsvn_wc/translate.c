@@ -811,8 +811,8 @@ svn_wc__get_eol_style (enum svn_wc__eol_style *style,
   /* Get the property value. */
   SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_EOL_STYLE, path, pool));
 
-  /* Convert it. */
-  svn_wc__eol_style_from_value (style, eol, propval ? propval->data : NULL);
+  if (style)  /* Convert it. */
+    svn_wc__eol_style_from_value (style, eol, propval ? propval->data : NULL);
 
   return SVN_NO_ERROR;
 }
@@ -1090,9 +1090,9 @@ svn_wc__get_keywords (svn_wc_keywords_t **keywords,
 
 
 svn_error_t *
-svn_wc__maybe_toggle_working_executable_bit (svn_boolean_t *toggled,
-                                             const char *path,
-                                             apr_pool_t *pool)
+svn_wc__maybe_set_executable (svn_boolean_t *did_set,
+                              const char *path,
+                              apr_pool_t *pool)
 {
   const svn_string_t *propval;
   SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_EXECUTABLE, path, pool));
@@ -1100,10 +1100,11 @@ svn_wc__maybe_toggle_working_executable_bit (svn_boolean_t *toggled,
   if (propval != NULL)
     {
       SVN_ERR (svn_io_set_file_executable (path, TRUE, FALSE, pool));
-      *toggled = TRUE;
+      if (did_set)
+        *did_set = TRUE;
     }
-  else
-    *toggled = FALSE;
+  else if (did_set)
+    *did_set = FALSE;
 
   return SVN_NO_ERROR;
 }
