@@ -61,6 +61,10 @@ ch04:
 
 ch06:  
 
+    svnserve->set access controls->last paragraph:
+       Don't just mention svnserve for path-based access;
+       mention the pre-commit hooks for at controlling path-based write.
+
 appA:
 
    - explain why 'svn commit; svn log' won't show the commit.

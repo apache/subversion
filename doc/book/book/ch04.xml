@@ -1522,8 +1522,8 @@ $ cd trunk-working-copy
 $ svn update
 At revision 1910.
 
-$ svn merge http://svn.example.com/repos/calc/mybranch@1910 \
-            http://svn.example.com/repos/calc/trunk@1910 \
+$ svn merge http://svn.example.com/repos/calc/trunk@1910 \
+            http://svn.example.com/repos/calc/branches/mybranch@1910 \
 U  real.c
 U  integer.c
 A  newdirectory
@@ -1532,8 +1532,8 @@ A  newdirectory/newfile
 </screen>
 
         <para>By comparing the <literal>HEAD</literal> revision of the
-          branch with the <literal>HEAD</literal> revision of the
-          trunk, you're defining a delta that describes only the
+          trunk with the <literal>HEAD</literal> revision of the
+          branch, you're defining a delta that describes only the
           changes you made to the branch; both lines of development
           already have all of the trunk changes.</para>
 
