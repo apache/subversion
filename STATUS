@@ -68,12 +68,16 @@ section for approved changes.)
 
 
     * Issue #1705 (patch 291)
-      Change blame receivers line_no argument from apr_off_t to
-        apr_int64_t.
+      Change blame receiver's line_no argument from apr_off_t to apr_int64_t.
       Justification:  Fixes the most user visible problem from the
         apr_off_t issue.
+      Notes: kfogel would even prefer to change to svn_filesize_t
+             instead of apr_int64_t, assuming that issue #1713 is
+             approved.  Suspect same is true of ghudson, but ask him.
+             If also same is true of you, and you vote for this, then
+             please note it here so the merger can do it.
       Votes:
-       +1: ghudson
+       +1: ghudson, kfogel
 
     * Issue #1713
       Change svn_filesize_t to a signed value.
