@@ -164,22 +164,23 @@ svn_error_t *svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
  * for getting the status of exactly one thing, and another for
  * getting the statuses of (potentially) multiple things.
  * 
- * Here's the reasoning behind this: Ben pointed out that WebDAV has a
- * useful "levels" concept.  So if we're taking status of a directory,
- * then
+ * The WebDAV concept of "depth" may be useful in understanding the
+ * motivation behind this.  Suppose we're getting the status of
+ * directory D.  The three depth levels would mean
  * 
- *    Level 0 means the thing itself, just the named directory
- *    Level 1 means the thing and its immediate children (dir + its entries)
- *    Level 2 means the thing and all its descendants (full recursion)
+ *    depth 0:         D itself (just the named directory)
+ *    depth 1:         D and its immediate children (D + its entries)
+ *    depth Infinity:  D and all its descendants (full recursion)
  * 
- * We could have one unified function, taking a `level' parameter.
- * Unfortunately, because this function would have to handle multiple
- * return values as well as a single return value, getting the status
- * of just one entity would become cumbersome: you'd have to roll
- * through a hash to find the lone returned status.
+ * To offer all three levels, we could have one unified function,
+ * taking a `depth' parameter.  Unfortunately, because this function
+ * would have to handle multiple return values as well as the single
+ * return value case, getting the status of just one entity would
+ * become cumbersome: you'd have to roll through a hash to find one
+ * lone status.
  * 
- * So we have svn_wc_status() for level 0, and svn_wc_statuses() for
- * levels 1 and 2, since those levels both involve multiple return
+ * So we have svn_wc_status() for depth 0, and svn_wc_statuses() for
+ * depths 1 and 2, since the latter two involve multiple return
  * values.
  */
 
