@@ -56,7 +56,9 @@ will return an error.
 @item To undo a deletion before committing:  @samp{svn undel item}
 
 This subcommand will "unmark" a file or directory that is scheduled for
-removal.
+removal.  In the directory case, it does not recurse by default (like
+the way @samp{svn rm} does.)  To recurse, use the @code{--recursive}
+flag. 
 
 @end table
 
