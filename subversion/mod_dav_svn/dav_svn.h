@@ -310,17 +310,30 @@ enum dav_svn_build_what {
   BASELINE:       REVISION should be specified
   BC:             REVISION should be specified
   PUBLIC:         PATH should be specified with a leading slash
-  VERSION:        REV_ROOT and PATH should be specified
+  VERSION:        REVISION and PATH should be specified
   VCC:            no additional params required
 */
 const char *dav_svn_build_uri(const dav_svn_repos *repos,
                               enum dav_svn_build_what what,
                               svn_revnum_t revision,
-                              svn_fs_root_t *rev_root,
                               const char *path,
                               int add_href,
                               apr_pool_t *pool);
 
+
+/* Compare (PATH in ROOT) to (PATH in ROOT/PATH's created_rev).
+   
+   If these nodes are identical, then return the created_rev.
+
+   If the nodes aren't identical, or if PATH simply doesn't exist in
+   the created_rev, then return the revision represented by ROOT.
+
+   (This is a helper to functions that want to build version-urls and
+    use the CR if possible.)
+*/
+svn_revnum_t dav_svn_get_safe_cr(svn_fs_root_t *root,
+                                 const char *path,
+                                 apr_pool_t *pool);
 
 /*
 ** Simple parsing of a URI. This is used for URIs which appear within a
