@@ -1110,6 +1110,270 @@ crawl_dir (svn_stringbuf_t *path,
 
 
 
+/* The main logic of svn_wc_crawl_local_mods(), which is not much more
+   than a public wrapper for this routine.  See its docstring.
+
+   The differences between this routine and the public wrapper:
+
+      - assumes that CONDENSED_TARGETS has been sorted (critical!)
+      - takes an initialized LOCKED_DIRS hash for storing locked wc dirs.
+            
+*/
+static svn_error_t *
+svn_wc__crawl_local_mods (svn_stringbuf_t *parent_dir,
+                          apr_array_header_t *condensed_targets,
+                          const svn_delta_edit_fns_t *editor,
+                          void *edit_baton,
+                          apr_hash_t *locked_dirs,
+                          apr_pool_t *pool)
+{
+  svn_error_t *err;
+  void *dir_baton = NULL;
+
+  /* A stack that will store all paths and dir_batons as we drive the
+     editor depth-first. */
+  struct stack_object *stack = NULL;
+
+  /* All the locally modified files which are waiting to be sent as
+     postfix-textdeltas. */
+  apr_hash_t *affected_targets = apr_hash_make (pool);
+
+  /* No targets at all?  This means we are committing the entries in a
+     single directory. */
+  if (condensed_targets->nelts == 0)
+    {
+      /* Do a single crawl from parent_dir, that's it.  Parent_dir
+         will be automatically pushed to the empty stack, but not
+         removed.  This way we can examine the frame to see if there's
+         a root_dir_baton, and thus whether we need to call
+         close_edit(). */
+      err = crawl_dir (parent_dir,
+                       NULL,
+                       editor, 
+                       edit_baton,
+                       FALSE,
+                       &stack, 
+                       affected_targets, 
+                       locked_dirs,
+                       pool);
+
+      if (err)        
+        return svn_error_quick_wrap 
+          (err, "commit failed: while sending tree-delta to repos.");
+    }
+
+  /* This is the "multi-arg" commit processing branch.  That's not to
+     say that there is necessarily more than one commit target, but
+     whatever..." */
+  else 
+    {
+      svn_wc_entry_t *parent_entry, *tgt_entry;
+      int i;
+
+      /* To begin, put the grandaddy parent_dir at the base of the stack. */
+      SVN_ERR (svn_wc_entry (&parent_entry, parent_dir, pool));
+      push_stack (&stack, parent_dir, NULL, parent_entry, pool);
+
+      /* For each target in our CONDENSED_TARGETS list (which are
+         given as paths relative to the PARENT_DIR 'grandaddy
+         directory'), we pop or push stackframes until the stack is
+         pointing to the immediate parent of the target.  From there,
+         we can crawl the target for mods. */
+      for (i = 0; i < condensed_targets->nelts; i++)
+        {
+          svn_stringbuf_t *ptarget;
+          svn_stringbuf_t *remainder;
+          svn_stringbuf_t *target, *subparent;
+          svn_stringbuf_t *tgt_name =
+            (((svn_stringbuf_t **) condensed_targets->elts)[i]);
+
+          /* Get the full path of the target. */
+          target = svn_stringbuf_dup (parent_dir, pool);
+          svn_path_add_component (target, tgt_name, svn_path_local_style);
+          
+          /* Examine top of stack and target, and get a nearer common
+             'subparent'. */
+
+          subparent = svn_path_get_longest_ancestor 
+            (target, stack->path, svn_path_local_style, pool);
+          
+          /* If the current stack path is NOT equal to the subparent,
+             it must logically be a child of the subparent.  So... */
+          if (svn_path_compare_paths (stack->path, subparent,
+                                      svn_path_local_style))
+            {
+              /* ...close directories and remove stackframes until the
+                 stack reaches the common parent. */
+              err = do_dir_closures (subparent, &stack, editor);         
+              if (err)
+                return svn_error_quick_wrap 
+                  (err, "commit failed: error traversing working copy.");
+
+              /* Reset the dir_baton to NULL; it is of no use to our
+                 target (which is not a sibling, or a child of a
+                 sibling, to any previous targets we may have
+                 processed. */
+              dir_baton = NULL;
+            }
+
+          /* Push new stackframes to get down to the immediate parent
+             of the target PTARGET, which must also be a child of the
+             subparent. */
+          svn_path_split (target, &ptarget, NULL,
+                          svn_path_local_style, pool);
+          remainder = svn_path_is_child (stack->path, ptarget, 
+                                         svn_path_local_style,
+                                         pool);
+          
+          /* If PTARGET is below the current stackframe, we have to
+             push a new stack frame for each directory level between
+             them. */
+          if (remainder)  
+            {
+              apr_array_header_t *components;
+              int j;
+              
+              /* Invalidate the dir_baton, because it no longer
+                 represents target's immediate parent directory. */
+              dir_baton = NULL;
+
+              /* split the remainder into path components. */
+              components = svn_path_decompose (remainder,
+                                               svn_path_local_style,
+                                               pool);
+              
+              for (j = 0; j < components->nelts; j++)
+                {
+                  svn_stringbuf_t *new_path;
+                  svn_wc_entry_t *new_entry;
+                  svn_stringbuf_t *component = 
+                    (((svn_stringbuf_t **) components->elts)[j]);
+
+                  new_path = svn_stringbuf_dup (stack->path, pool);
+                  svn_path_add_component (new_path, component,
+                                          svn_path_local_style);
+                  err = svn_wc_entry (&new_entry, new_path, pool);
+                  if (err)
+                    return svn_error_quick_wrap 
+                      (err, "commit failed: looking for next commit target");
+
+                  push_stack (&stack, new_path, NULL, new_entry, pool);
+                }
+            }
+          
+
+          /* NOTE: At this point of processing, the topmost stackframe
+           * is GUARANTEED to be the parent of TARGET, regardless of
+           * whether TARGET is a file or a directory. 
+           */
+          
+
+          /* Get the entry for TARGET. */
+          err = svn_wc_entry (&tgt_entry, target, pool);
+          if (err)
+            return svn_error_quick_wrap 
+              (err, "commit failed: getting entry of commit target");
+
+          if (tgt_entry)
+            {
+              apr_pool_t *subpool = svn_pool_create (pool);
+              svn_stringbuf_t *basename;
+              
+              if (tgt_entry->existence == svn_wc_existence_deleted)
+                return svn_error_createf
+                  (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+                   "entry '%s' has already been deleted", target->data);
+
+              basename = svn_path_last_component (target,
+                                                  svn_path_local_style, 
+                                                  pool);
+              
+              /* If TARGET is a file, we check that file for mods.  No
+                 stackframes will be pushed or popped, since (the file's
+                 parent is already on the stack).  No batons will be
+                 closed at all (in case we need to commit more files in
+                 this parent). */
+              err = report_single_mod (basename->data,
+                                       tgt_entry,
+                                       &stack,
+                                       affected_targets,
+                                       locked_dirs,
+                                       editor,
+                                       edit_baton,
+                                       &dir_baton,
+                                       FALSE,
+                                       pool);
+              
+              svn_pool_destroy (subpool);
+              
+              if (err)
+                return svn_error_quick_wrap 
+                  (err, "commit failed: while sending tree-delta.");
+            }
+          else
+            return svn_error_createf
+              (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
+               "svn_wc_crawl_local_mods: '%s' is not a versioned resource",
+               target->data);
+
+        } /*  -- End of main target loop -- */
+      
+      /* To finish, pop the stack all the way back to the grandaddy
+         parent_dir, and call close_dir() on all batons we find. */
+      err = do_dir_closures (parent_dir, &stack, editor);
+      if (err)
+        return svn_error_quick_wrap 
+          (err, "commit failed: finishing the crawl");
+
+      /* Don't forget to close the root-dir baton on the bottom
+         stackframe, if one exists. */
+      if (stack->baton)        
+        {
+          err = editor->close_directory (stack->baton);
+          if (err)
+            return svn_error_quick_wrap 
+              (err, "commit failed: closing editor's root directory");
+        }
+
+    }  /* End of multi-target section */
+
+
+  /* All crawls are completed, so affected_targets potentially has
+     some still-open file batons. Loop through affected_targets, and
+     fire off any postfix text-deltas that need to be sent. */
+  err = do_postfix_text_deltas (affected_targets, editor, pool);
+  if (err)
+    return svn_error_quick_wrap 
+      (err, "commit failed:  while sending postfix text-deltas.");
+
+  /* Have *any* edits been made at all?  We can tell by looking at the
+     foundation stackframe; it might still contain a root-dir baton.
+     If so, close the entire edit. */
+  if (stack->baton)
+    {
+      err = editor->close_edit (edit_baton);
+      if (err)
+        {
+          /* Commit failure, though not *necessarily* from the
+             repository.  close_edit() does a LOT of things, including
+             bumping all working copy revision numbers.  Again, see
+             earlier comment.
+
+             The interesting thing here is that the commit might have
+             succeeded in the repository, but the WC lib returned a
+             revision-bumping or wcprop error. */
+          return svn_error_quick_wrap
+            (err, "commit failed: while calling close_edit()");
+        }
+    }
+
+  /* The commit is complete, and revisions have been bumped. */  
+  return SVN_NO_ERROR;
+}
+
+
+
+
 
 /* The recursive crawler that describes a mixed-revision working
    copy to an RA layer.  Used to initiate updates.
@@ -1323,16 +1587,7 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
                          void *edit_baton,
                          apr_pool_t *pool)
 {
-  svn_error_t *err;
-  void *dir_baton = NULL;
-
-  /* A stack that will store all paths and dir_batons as we drive the
-     editor depth-first. */
-  struct stack_object *stack = NULL;
-
-  /* All the locally modified files which are waiting to be sent as
-     postfix-textdeltas. */
-  apr_hash_t *affected_targets = apr_hash_make (pool);
+  svn_error_t *err, *err2;
 
   /* All the wc directories that are "locked" as we commit local
      changes. */
@@ -1351,271 +1606,34 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
          svn_sort_compare_strings_as_paths);
 
 
-  /* No targets at all?  This means we are committing the entries in a
-     single directory. */
-  if (condensed_targets->nelts == 0)
-    {
-      /* Do a single crawl from parent_dir, that's it.  Parent_dir
-         will be automatically pushed to the empty stack, but not
-         removed.  This way we can examine the frame to see if there's
-         a root_dir_baton, and thus whether we need to call
-         close_edit(). */
-      err = crawl_dir (parent_dir,
-                       NULL,
-                       editor, 
-                       edit_baton,
-                       FALSE,
-                       &stack, 
-                       affected_targets, 
-                       locked_dirs,
-                       pool);
+  /* Now pass the locked_dirs hash into the *real* routine that does
+     the work. */
+  err = svn_wc__crawl_local_mods (parent_dir,
+                                  condensed_targets,
+                                  editor, edit_baton,
+                                  locked_dirs,
+                                  pool);
 
-      if (err)
-        {
-          remove_all_locks (locked_dirs, pool);
-          return svn_error_quick_wrap 
-            (err, "commit failed: while sending tree-delta to repos.");
-        }
-    }
-
-  /* This is the "multi-arg" commit processing branch.  That's not to
-     say that there is necessarily more than one commit target, but
-     whatever..." */
-  else 
-    {
-      svn_wc_entry_t *parent_entry, *tgt_entry;
-      int i;
-
-      /* To begin, put the grandaddy parent_dir at the base of the stack. */
-      SVN_ERR (svn_wc_entry (&parent_entry, parent_dir, pool));
-      push_stack (&stack, parent_dir, NULL, parent_entry, pool);
-
-      /* For each target in our CONDENSED_TARGETS list (which are
-         given as paths relative to the PARENT_DIR 'grandaddy
-         directory'), we pop or push stackframes until the stack is
-         pointing to the immediate parent of the target.  From there,
-         we can crawl the target for mods. */
-      for (i = 0; i < condensed_targets->nelts; i++)
-        {
-          svn_stringbuf_t *ptarget;
-          svn_stringbuf_t *remainder;
-          svn_stringbuf_t *target, *subparent;
-          svn_stringbuf_t *tgt_name =
-            (((svn_stringbuf_t **) condensed_targets->elts)[i]);
-
-          /* Get the full path of the target. */
-          target = svn_stringbuf_dup (parent_dir, pool);
-          svn_path_add_component (target, tgt_name, svn_path_local_style);
-          
-          /* Examine top of stack and target, and get a nearer common
-             'subparent'. */
-
-          subparent = svn_path_get_longest_ancestor 
-            (target, stack->path, svn_path_local_style, pool);
-          
-          /* If the current stack path is NOT equal to the subparent,
-             it must logically be a child of the subparent.  So... */
-          if (svn_path_compare_paths (stack->path, subparent,
-                                      svn_path_local_style))
-            {
-              /* ...close directories and remove stackframes until the
-                 stack reaches the common parent. */
-              err = do_dir_closures (subparent, &stack, editor);         
-              if (err)
-                {
-                  remove_all_locks (locked_dirs, pool);
-                  return svn_error_quick_wrap 
-                    (err, "commit failed: error traversing working copy.");
-                }
-
-              /* Reset the dir_baton to NULL; it is of no use to our
-                 target (which is not a sibling, or a child of a
-                 sibling, to any previous targets we may have
-                 processed. */
-              dir_baton = NULL;
-            }
-
-          /* Push new stackframes to get down to the immediate parent
-             of the target PTARGET, which must also be a child of the
-             subparent. */
-          svn_path_split (target, &ptarget, NULL,
-                          svn_path_local_style, pool);
-          remainder = svn_path_is_child (stack->path, ptarget, 
-                                         svn_path_local_style,
-                                         pool);
-          
-          /* If PTARGET is below the current stackframe, we have to
-             push a new stack frame for each directory level between
-             them. */
-          if (remainder)  
-            {
-              apr_array_header_t *components;
-              int j;
-              
-              /* Invalidate the dir_baton, because it no longer
-                 represents target's immediate parent directory. */
-              dir_baton = NULL;
-
-              /* split the remainder into path components. */
-              components = svn_path_decompose (remainder,
-                                               svn_path_local_style,
-                                               pool);
-              
-              for (j = 0; j < components->nelts; j++)
-                {
-                  svn_stringbuf_t *new_path;
-                  svn_wc_entry_t *new_entry;
-                  svn_stringbuf_t *component = 
-                    (((svn_stringbuf_t **) components->elts)[j]);
-
-                  new_path = svn_stringbuf_dup (stack->path, pool);
-                  svn_path_add_component (new_path, component,
-                                          svn_path_local_style);
-                  err = svn_wc_entry (&new_entry, new_path, pool);
-                  if (err)
-                    {
-                      remove_all_locks (locked_dirs, pool);
-                      return svn_error_quick_wrap 
-                        (err, "commit failed: looking for next commit target");
-                    }
-
-                  push_stack (&stack, new_path, NULL, new_entry, pool);
-                }
-            }
-          
-
-          /* NOTE: At this point of processing, the topmost stackframe
-           * is GUARANTEED to be the parent of TARGET, regardless of
-           * whether TARGET is a file or a directory. 
-           */
-          
-
-          /* Get the entry for TARGET. */
-          err = svn_wc_entry (&tgt_entry, target, pool);
-          if (err)
-            {
-              remove_all_locks (locked_dirs, pool);
-              return svn_error_quick_wrap 
-                (err, "commit failed: getting entry of commit target");
-            }
-
-          if (tgt_entry)
-            {
-              apr_pool_t *subpool = svn_pool_create (pool);
-              svn_stringbuf_t *basename;
-              
-              if (tgt_entry->existence == svn_wc_existence_deleted)
-                {
-                  remove_all_locks (locked_dirs, pool);
-                  return svn_error_createf
-                    (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-                     "entry '%s' has already been deleted", target->data);
-                }
-
-              basename = svn_path_last_component (target,
-                                                  svn_path_local_style, 
-                                                  pool);
-              
-              /* If TARGET is a file, we check that file for mods.  No
-                 stackframes will be pushed or popped, since (the file's
-                 parent is already on the stack).  No batons will be
-                 closed at all (in case we need to commit more files in
-                 this parent). */
-              err = report_single_mod (basename->data,
-                                       tgt_entry,
-                                       &stack,
-                                       affected_targets,
-                                       locked_dirs,
-                                       editor,
-                                       edit_baton,
-                                       &dir_baton,
-                                       FALSE,
-                                       pool);
-              
-              svn_pool_destroy (subpool);
-              
-              if (err)
-                {
-                  remove_all_locks (locked_dirs, pool);
-                  return svn_error_quick_wrap 
-                    (err, "commit failed: while sending tree-delta.");
-                }
-            }
-          else
-            {
-              remove_all_locks (locked_dirs, pool);
-              return svn_error_createf
-                (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
-                 "svn_wc_crawl_local_mods: '%s' is not a versioned resource",
-                 target->data);
-            }
-
-        } /*  -- End of main target loop -- */
-      
-      /* To finish, pop the stack all the way back to the grandaddy
-         parent_dir, and call close_dir() on all batons we find. */
-      err = do_dir_closures (parent_dir, &stack, editor);
-      if (err)
-        {
-          remove_all_locks (locked_dirs, pool);
-          return svn_error_quick_wrap 
-            (err, "commit failed: finishing the crawl");
-        }
-
-      /* Don't forget to close the root-dir baton on the bottom
-         stackframe, if one exists. */
-      if (stack->baton)        
-        {
-          err = editor->close_directory (stack->baton);
-          if (err)
-            {
-              remove_all_locks (locked_dirs, pool);
-              return svn_error_quick_wrap 
-                (err, "commit failed: closing editor's root directory");
-            }
-        }
-
-    }  /* End of multi-target section */
-
-
-  /* All crawls are completed, so affected_targets potentially has
-     some still-open file batons. Loop through affected_targets, and
-     fire off any postfix text-deltas that need to be sent. */
-  err = do_postfix_text_deltas (affected_targets, editor, pool);
+  /* Catch -any- error that happened during a commit-crawl.
+     Be sure to unlock any working-copy directories that may have
+     become locked during the crawl. */
   if (err)
     {
-      remove_all_locks (locked_dirs, pool);
-      return svn_error_quick_wrap 
-        (err, "commit failed:  while sending postfix text-deltas.");
+      err2 = remove_all_locks (locked_dirs, pool);
+      if (err2)
+        return svn_error_quick_wrap 
+          (err, "commit failed:  uhoh, unable to remove all wc locks.");
+      else
+        return svn_error_quick_wrap 
+          (err, "commit failed: wc locks have been removed.");
     }
 
-  /* Have *any* edits been made at all?  We can tell by looking at the
-     foundation stackframe; it might still contain a root-dir baton.
-     If so, close the entire edit. */
-  if (stack->baton)
-    {
-      err = editor->close_edit (edit_baton);
-      if (err)
-        {
-          /* Commit failure, though not *necessarily* from the
-             repository.  close_edit() does a LOT of things, including
-             bumping all working copy revision numbers.  Again, see
-             earlier comment.
+  /* Successful crawl:  remove all the lockfiles in this case too. */
+  err = remove_all_locks (locked_dirs, pool);
+  if (err)
+    return svn_error_quick_wrap
+      (err, "commit succeeded, but unable to remove all wc locks!");
 
-             The interesting thing here is that the commit might have
-             succeeded in the repository, but the WC lib returned a
-             revision-bumping or wcprop error. */
-          remove_all_locks (locked_dirs, pool);
-          return svn_error_quick_wrap
-            (err, "commit failed: while calling close_edit()");
-        }
-    }
-
-  /* The commit is complete, and revisions have been bumped. */
-
-  /* Successful cleanup:  remove all the lockfiles. */
-  SVN_ERR (remove_all_locks (locked_dirs, pool));
-  
   return SVN_NO_ERROR;
 }
 
