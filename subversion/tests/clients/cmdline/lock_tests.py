@@ -290,7 +290,43 @@ def examine_lock(sbox):
 # well as via commit.
 def handle_defunct_lock(sbox):
   "verify behavior when a lock in a wc is defunct"
-  raise svntest.Failure
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+
+  # set up our expected status
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # lock the file
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', file_path)
+
+  # Make a second copy of the working copy
+  wc_b = sbox.add_wc_path('_b')
+  svntest.actions.duplicate_dir(wc_dir, wc_b)
+  file_path_b = os.path.join(wc_b, fname)
+
+  # --- Meanwhile, in our other working copy... ---
+
+  # Try unlocking the file in the second wc.
+  svntest.actions.run_and_verify_svn(None, None, None, 'unlock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', file_path_b)
+
+
+  # update the 1st wc, which should clear the lock there
+  svntest.main.run_svn(None, 'update', wc_dir)
+
+  # Make sure the file is unlocked
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 
 #----------------------------------------------------------------------
@@ -313,7 +349,7 @@ test_list = [ None,
               XFail(break_lock),
               steal_lock,
               examine_lock,
-              Skip(handle_defunct_lock, 1),
+              XFail(handle_defunct_lock),
               Skip(enforce_lock, 1),
              ]
 
