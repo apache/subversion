@@ -1772,8 +1772,8 @@ restore_file (svn_stringbuf_t *file_path,
   enum svn_wc__eol_style eol_style;
   const char *eol;
 
-  text_base_path = svn_wc__text_base_path (file_path, TRUE, pool);
-  tmp_text_base_path = svn_wc__text_base_path (file_path, FALSE, pool);
+  text_base_path = svn_wc__text_base_path (file_path, FALSE, pool);
+  tmp_text_base_path = svn_wc__text_base_path (file_path, TRUE, pool);
 
   SVN_ERR (svn_io_copy_file (text_base_path->data, tmp_text_base_path->data,
                              pool));
