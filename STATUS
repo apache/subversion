@@ -60,7 +60,7 @@ Candidate changes:
     Justification: Needed for r9254 to merge cleanly and stops us from
                    doing a+x.
     Votes:
-      +1: breser
+      +1: breser, sussman
 
   * r9254
     Fix for updates to svn:executable files in shared working copies.
