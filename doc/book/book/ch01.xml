@@ -268,10 +268,11 @@
 
     <title>Subversion's Architecture</title>
 
-    <para>Figure 1.1 illustrates what one might call a
-      <quote>mile-high</quote> view of Subversion's design.</para>
+    <para><xref linkend="svn-ch-1-dia-1"/> illustrates what one might
+      call a <quote>mile-high</quote> view of Subversion's
+      design.</para>
     
-    <figure id="svn-ch-1-dia1">
+    <figure id="svn-ch-1-dia-1">
       <title>Subversion's Architecture</title>
       <graphic fileref="images/ch01dia1.png"/>
     </figure>

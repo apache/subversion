@@ -25,7 +25,7 @@
       understanding WebDAV compatibility issues between clients and
       servers.</para>
 
-    <sect2 id="svn-ap-c-sect1.1">
+    <sect2 id="svn-ap-c-sect-1.1">
       <title>Just Plain WebDAV</title>
 
       <para>RFC 2518 defines a set of concepts and accompanying
@@ -112,7 +112,7 @@
 
     </sect2>
 
-    <sect2 id="svn-ap-c-sect1.2">
+    <sect2 id="svn-ap-c-sect-1.2">
       <title>DeltaV Extensions</title>
   
       <para>Because RFC 2518 left out versioning concepts, another
@@ -263,7 +263,7 @@
       development team plans to address general WebDAV
       interoperability in a future release of Subversion.</para>
 
-    <sect2 id="svn-ap-c-sect2.1">
+    <sect2 id="svn-ap-c-sect-2.1">
       <title>Mapping Subversion to DeltaV</title>
       
       <para>Here is a very <quote>high-level</quote> description of
@@ -324,7 +324,7 @@
       
     </sect2>
     
-    <sect2 id="svn-ap-c-sect2.2">
+    <sect2 id="svn-ap-c-sect-2.2">
       <title>Autoversioning Support</title>
       
       <para>At the time of writing, the truth is that there are very
@@ -387,7 +387,7 @@
 
     </sect2>
 
-    <sect2 id="svn-ap-c-sect2.3">
+    <sect2 id="svn-ap-c-sect-2.3">
       <title>The mod_dav_lock Alternative</title>
       
       <para>The mod_dav Apache module is a complex beast:  it

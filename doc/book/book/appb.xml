@@ -115,7 +115,7 @@ $ svn cleanup working-copy
         <title>How can I specify a Windows drive letter in a
           <literal>file://</literal> URL?</title>
         
-        <para>See <xref linkend="svn-ch-02-sidebar-1"/>.</para>
+        <para>See <xref linkend="svn-ch-2-sidebar-1"/>.</para>
       </sect3>
       
       <sect3 id="svn-ap-b-sect-1.2.5">
