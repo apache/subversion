@@ -41,29 +41,37 @@ extern "C" {
 
 
 
-/*** Milestone 1 Interfaces ***/
+/*** Milestone 2 Interfaces ***/
 
-/* These interfaces are very basic for milestone 1.  They will
-   probably be changed significantly soon. */
 
-/* Perform a checkout, providing pre- and post-checkout hook editors
-   and batons (BEFORE_EDITOR, BEFORE_EDIT_BATON / AFTER_EDITOR,
-   AFTER_EDIT_BATON), the target PATH that will be the root directory
-   of your checked out working copy, an XML_SRC file to use instead of
-   an honest-to-goodness fs repository (hey, we're working on it!),
-   the ANCESTOR_PATH which describes what is being checked out
-   (relative to the repository), and the ANCESTOR_REVISION that you
-   would like to check out.  This operation will use the provided
-   memory POOL. */
+/* Perform a checkout from URL, providing pre- and post-checkout hook
+   editors and batons (BEFORE_EDITOR, BEFORE_EDIT_BATON /
+   AFTER_EDITOR, AFTER_EDIT_BATON).
+
+   PATH will be the root directory of your checked out working copy.
+
+   If XML_SRC is NULL, then the checkout will come from the repository
+   and subdir specified by URL.  An invalid REVISION will cause the
+   "latest" tree to be fetched, while a valid REVISION will fetch a
+   specific tree.
+
+   If XML_SRC is non-NULL, it is an xml file to check out from; in
+   this case, the working copy will record the URL as artificial
+   ancestry information.  An invalid REVISION implies that the
+   revision *must* be present in the <delta-pkg> tag, while a valid
+   REVISION will be simply be stored in the wc. (Note:  a <delta-pkg>
+   revision will *always* override the one passed in.)
+
+   This operation will use the provided memory POOL. */
 svn_error_t *
 svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      void *before_edit_baton,
                      const svn_delta_edit_fns_t *after_editor,
                      void *after_edit_baton,
+                     svn_string_t *URL,
                      svn_string_t *path,
+                     svn_revnum_t revision,
                      svn_string_t *xml_src,
-                     svn_string_t *ancestor_path,
-                     svn_revnum_t ancestor_revision,
                      apr_pool_t *pool);
 
 

@@ -47,12 +47,11 @@ svn_cl__checkout (svn_cl__opt_state_t *opt_state,
 
 
   err = svn_client_checkout (NULL, NULL,
-                             trace_editor,
-                             trace_edit_baton,
-                             opt_state->target,
-                             opt_state->xml_file,
+                             trace_editor, trace_edit_baton,
                              opt_state->ancestor_path,
+                             opt_state->target,
                              opt_state->revision,
+                             opt_state->xml_file,
                              pool);
   if (err)
     return err;

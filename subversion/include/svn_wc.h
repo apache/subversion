@@ -396,7 +396,6 @@ svn_error_t *svn_wc_get_update_editor (svn_string_t *dest,
  * Thinking more on this question...
  */
 svn_error_t *svn_wc_get_checkout_editor (svn_string_t *dest,
-                                         svn_string_t *repos,
                                          svn_string_t *ancestor_path,
                                          svn_revnum_t target_revision,
                                          const svn_delta_edit_fns_t **editor,

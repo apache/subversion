@@ -84,7 +84,6 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
 /** The files within the administrative subdir. **/
 #define SVN_WC__ADM_FORMAT              "format"
 #define SVN_WC__ADM_README              "README"
-#define SVN_WC__ADM_REPOSITORY          "repository"
 #define SVN_WC__ADM_ENTRIES             "entries"
 #define SVN_WC__ADM_DIR_PROPS           "dir-props"
 #define SVN_WC__ADM_PROPS               "props"
@@ -226,7 +225,6 @@ svn_error_t *svn_wc__prop_base_path (svn_string_t **prop_path,
  * REVISION is the revision for this directory.  kff todo: ancestor_path?
  */
 svn_error_t *svn_wc__ensure_wc (svn_string_t *path,
-                                svn_string_t *repository,
                                 svn_string_t *ancestor_path,
                                 svn_revnum_t ancestor_revision,
                                 apr_pool_t *pool);
@@ -241,7 +239,6 @@ svn_error_t *svn_wc__ensure_wc (svn_string_t *path,
  * an error will result. 
  */
 svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
-                                 svn_string_t *repository,
                                  svn_string_t *ancestor_path,
                                  svn_revnum_t ancestor_revision,
                                  apr_pool_t *pool);
