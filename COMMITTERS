@@ -37,6 +37,7 @@ Blanket commit access:
     julianfoad   Julian Foad <julianfoad@btopenworld.com>
          bliss   Tobias Ringstrom <tobias@ringstrom.mine.nu>
        jpieper   Josh Pieper <jpieper@andrew.cmu.edu>
+  jszakmeister   John Szakmiester <john@szakmeister.net>
 
 Commit access for specific areas:
 
@@ -71,4 +72,3 @@ Commit access for specific areas:
       lonestar   Martin MAURER <martin.maurer@email.de>      (svnshow)
           maxb   Max Bowsher <maxb@ukf.net>                  (cvs2svn)
        shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
-
