@@ -720,6 +720,78 @@ def modify_and_update_receive_new_external(sbox):
     print "Probing for", exdir_Z_path, "failed."
     return 1
 
+#----------------------------------------------------------------------
+
+def disallow_parent_directory_reference(sbox):
+  "error if external target dir refers to '..'"
+  if sbox.build():
+    return 1
+
+  wc_dir         = sbox.wc_dir
+  wc_other       = sbox.wc_dir + '.other'
+  repo_dir       = sbox.repo_dir
+  repo_url       = sbox.repo_url
+
+  # Checkout the 'other' working copy, at revision 1.
+  svntest.main.safe_rmtree(wc_other)
+  out_lines, err_lines = svntest.main.run_svn(None, 'checkout',
+                                              '--username',
+                                              svntest.main.wc_author,
+                                              '--password',
+                                              svntest.main.wc_passwd,
+                                              repo_url, wc_other)
+  if err_lines:
+    return 1
+
+  # Set up some illegal externals in the original WC.
+  def set_externals_for_path(path, val, dir):
+    tmp_f = os.tempnam(dir, 'tmp')
+    svntest.main.file_append(tmp_f, val)
+    out_lines, err_lines = svntest.main.run_svn \
+                           (None, 'pset', '-F', tmp_f, 'svn:externals', path)
+    if err_lines:
+      return 1
+    os.remove(tmp_f)
+
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  externals_1 = "../foo  "         + repo_url + "/A/B/E" + "\n"
+  externals_2 = "foo/bar/../baz  " + repo_url + "/A/B/E" + "\n"
+  externals_3 = "foo/..  "         + repo_url + "/A/B/E" + "\n"
+
+  set_externals_for_path(B_path, externals_1, wc_dir)
+  set_externals_for_path(G_path, externals_2, wc_dir)
+  set_externals_for_path(H_path, externals_3, wc_dir)
+
+  out_lines, err_lines = svntest.main.run_svn \
+                         (None, 'ci', '-m', 'log msg', '--quiet', wc_dir)
+  if (err_lines):
+    return 1
+
+  # Update the corresponding parts of the  other working copy,
+  # expecting errors.
+  other_B_path = os.path.join(wc_other, 'A', 'B')
+  other_G_path = os.path.join(wc_other, 'A', 'D', 'G')
+  other_H_path = os.path.join(wc_other, 'A', 'D', 'H')
+
+  def test_update(path, expected_err):
+    out_lines, err_lines = svntest.main.run_svn (1, 'up', path)
+    if (err_lines):
+      m = re.compile(expected_err)
+      found_it = 0
+      for line in err_lines:
+        if m.match(line):
+          found_it = 1
+          break
+      if not found_it:
+        raise svntest.Failure
+
+  test_update(other_B_path, "Target dir '../foo' references '..'")
+  test_update(other_G_path, "Target dir 'foo/bar/../baz' references '..'")
+  test_update(other_H_path, "Target dir 'foo/..' references '..'")
+
+
 ########################################################################
 # Run the tests
 
@@ -733,6 +805,7 @@ test_list = [ None,
               update_change_modified_external,
               update_receive_change_under_external,
               modify_and_update_receive_new_external,
+              disallow_parent_directory_reference,
              ]
 
 if __name__ == '__main__':

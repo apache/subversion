@@ -163,6 +163,30 @@ parse_externals_description (apr_hash_t **externals_p,
              "Invalid line: '%s'", parent_directory, line);
         }
 
+      /* Make sure we don't have a reference to "../" in the tgt dir.
+       *
+       * ### Ideally, we'd prevent this at propset time, not when the
+       * client receives the external.  But that's a much larger
+       * change.  For now, the important thing is to make sure such
+       * references error and are not used, since they are a security
+       * risk (they could clobber things outside the working copy).
+       */
+      {
+        apr_ssize_t target_dir_len = strlen (item->target_dir);
+
+        if ((target_dir_len > 3)
+            && ((strncmp (item->target_dir, "../", 3) == 0)
+                || (strstr (item->target_dir, "/../") != NULL)
+                || (strncmp ((item->target_dir + target_dir_len - 3),
+                             "/..", 3) == 0)))
+        return svn_error_createf
+          (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+           "error parsing " SVN_PROP_EXTERNALS " property on '%s':\n"
+           "Invalid line: '%s'\n"
+           "Target dir '%s' references '..', which is not allowed.",
+           parent_directory, line, item->target_dir);
+      }
+
       item->target_dir = svn_path_canonicalize (item->target_dir, pool);
       item->url = svn_path_canonicalize (item->url, pool);
 
