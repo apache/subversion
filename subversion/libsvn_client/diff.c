@@ -278,8 +278,9 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
   apr_file_t *errfile = diff_cmd_baton->errfile;
   apr_pool_t *subpool = svn_pool_create (diff_cmd_baton->pool);
   const char *label1, *label2;
+  svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
 
-  /* Execute local diff command on these two paths, print to stdout. */
+  /* Assemble any option args. */
   nargs = diff_cmd_baton->options->nelts;
   if (nargs)
     {
@@ -293,6 +294,7 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
       assert (i == nargs);
     }
 
+  /* Generate the diff headers. */
   if (rev1 == rev2)
     {
       /* ### Holy cow.  Due to anchor/target weirdness, we can't
@@ -340,6 +342,55 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
       label2 = diff_label (path, rev2, subpool);
     }
 
+
+  /* Possible easy-out: if either mime-type is binary, don't attempt
+     to generate a viewable diff at all.   Print a warning and exit. */
+  if (mimetype1)
+    mt1_binary = svn_mime_type_is_binary (mimetype1);
+  if (mimetype2)
+    mt2_binary = svn_mime_type_is_binary (mimetype2);
+
+  if (mt1_binary || mt2_binary)
+    {
+      /* Print out the diff header. */
+      SVN_ERR (svn_io_file_printf (outfile, "Index: %s" APR_EOL_STR
+                                   "%s" APR_EOL_STR, path, equal_string));
+
+      SVN_ERR (svn_io_file_printf
+               (outfile,
+                "Cannot display: file marked as a binary type."
+                APR_EOL_STR));
+      
+      if (mt1_binary && !mt2_binary)
+        SVN_ERR (svn_io_file_printf (outfile,
+                                     "svn:mime-type = %s" APR_EOL_STR,
+                                     mimetype1));
+      else if (mt2_binary && !mt1_binary)
+        SVN_ERR (svn_io_file_printf (outfile,
+                                     "svn:mime-type = %s" APR_EOL_STR,
+                                     mimetype2));
+      else if (mt1_binary && mt2_binary)
+        {
+          if (strcmp (mimetype1, mimetype2) == 0)
+            SVN_ERR (svn_io_file_printf
+                     (outfile,
+                      "svn:mime-type = %s" APR_EOL_STR,
+                      mimetype1));
+          else
+            SVN_ERR (svn_io_file_printf
+                     (outfile,
+                      "svn:mime-type = (%s, %s)" APR_EOL_STR,
+                      mimetype1, mimetype2));
+        }
+
+      /* Exit early. */
+      if (state)
+        *state = svn_wc_notify_state_unknown;
+      svn_pool_destroy (subpool);
+      return SVN_NO_ERROR;
+    }
+
+
   /* Find out if we need to run an external diff */
   if (diff_cmd_baton->config)
     {
@@ -361,7 +412,7 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
                                 &exitcode, outfile, errfile,
                                 diff_cmd, subpool));
     }
-  else
+  else   /* use libsvn_diff to generate the diff  */
     {
       svn_diff_t *diff;
 
@@ -386,58 +437,18 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
         }
 
       SVN_ERR (svn_diff_file_diff (&diff, tmpfile1, tmpfile2, subpool));
+
       if (svn_diff_contains_diffs (diff) || diff_cmd_baton->force_diff_output)
         {
-          svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
-
           /* Print out the diff header. */
           SVN_ERR (svn_io_file_printf (outfile, "Index: %s" APR_EOL_STR
                                        "%s" APR_EOL_STR, path, equal_string));
 
-          /* If either file is marked as a known binary type, just
-             print a warning. */
-          if (mimetype1)
-            mt1_binary = svn_mime_type_is_binary (mimetype1);
-          if (mimetype2)
-            mt2_binary = svn_mime_type_is_binary (mimetype2);
-
-          if (mt1_binary || mt2_binary)
-            {
-              SVN_ERR (svn_io_file_printf 
-                       (outfile,
-                        "Cannot display: file marked as a binary type."
-                        APR_EOL_STR));
-              
-              if (mt1_binary && !mt2_binary)
-                SVN_ERR (svn_io_file_printf (outfile,
-                                             "svn:mime-type = %s" APR_EOL_STR,
-                                             mimetype1));
-              else if (mt2_binary && !mt1_binary)
-                SVN_ERR (svn_io_file_printf (outfile,
-                                             "svn:mime-type = %s" APR_EOL_STR,
-                                             mimetype2));
-              else if (mt1_binary && mt2_binary)
-                {
-                  if (strcmp (mimetype1, mimetype2) == 0)
-                    SVN_ERR (svn_io_file_printf
-                             (outfile,
-                              "svn:mime-type = %s" APR_EOL_STR,
-                              mimetype1));
-                  else
-                    SVN_ERR (svn_io_file_printf
-                             (outfile,
-                              "svn:mime-type = (%s, %s)" APR_EOL_STR,
-                              mimetype1, mimetype2));
-                }
-            }
-          else
-            {
-              /* Output the actual diff */
-              SVN_ERR (svn_diff_file_output_unified (outfile, diff,
-                                                     tmpfile1, tmpfile2,
-                                                     label1, label2,
-                                                     subpool));
-            }
+          /* Output the actual diff */
+          SVN_ERR (svn_diff_file_output_unified (outfile, diff,
+                                                 tmpfile1, tmpfile2,
+                                                 label1, label2,
+                                                 subpool));
         }
     }
 
