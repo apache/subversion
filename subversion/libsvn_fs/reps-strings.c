@@ -47,24 +47,9 @@ static int rep_is_mutable (svn_fs__representation_t *rep, const char *txn_id)
 
 
 /* The MD5 digest for the empty string. */
-#if 0  /* ### (see else case) */
-
 static const char empty_digest[] = {
   212, 29, 140, 217, 143, 0, 178, 4, 233, 128, 9, 152, 236, 248, 66, 126
 };
-
-#else /* !0 */
-
-/* ### Until we are correctly updating the stored checksum when we
-   write new (non-empty) data to a rep, we need to store all zeroes
-   for the empty rep's checksum.  This always succeeds in a checksum
-   comparison, so it's equivalent to not having checksumming at all --
-   which is the state we're in until issues #649 and #689 are done! */ 
-static const char empty_digest[] = {
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-#endif /* 0/1 */
 
 
 /* Return a string showing the octal representation of DIGEST, which
@@ -643,15 +628,32 @@ struct rep_read_baton
      we read data, and finalized when the stream is closed. */ 
   struct apr_md5_ctx_t md5_context;
 
+  /* The length of the rep's contents (as fulltext, that is,
+     independent of how the rep actually stores the data.)  This is
+     retrieved when the baton is created, and used to determine when
+     we have read the last byte, at which point we compare checksums.
+
+     Getting this at baton creation time makes interleaved reads and
+     writes on the same rep in the same trail impossible.  But we're
+     not doing that, and probably no one ever should.  And anyway if
+     they do, they should see problems immediately. */
+  apr_size_t size;
+
+  /* Set to FALSE when the baton is created, TRUE when the md5_context
+     is digestified. */
+  svn_boolean_t checksum_finalized;
+
   /* Used for temporary allocations, iff `trail' (above) is null.  */
   apr_pool_t *pool;
 
 };
 
 
-static struct rep_read_baton *
-rep_read_get_baton (svn_fs_t *fs,
+static svn_error_t *
+rep_read_get_baton (struct rep_read_baton **rb_p,
+                    svn_fs_t *fs,
                     const char *rep_key,
+                    svn_boolean_t use_trail_for_reads,
                     trail_t *trail,
                     apr_pool_t *pool)
 {
@@ -659,13 +661,22 @@ rep_read_get_baton (svn_fs_t *fs,
 
   b = apr_pcalloc (pool, sizeof (*b));
   apr_md5_init (&(b->md5_context));
+
+  if (rep_key)
+    SVN_ERR (svn_fs__rep_contents_size (&(b->size), fs, rep_key, trail));
+  else
+    b->size = 0;
+
+  b->checksum_finalized = FALSE;
   b->fs = fs;
-  b->trail = trail;
+  b->trail = use_trail_for_reads ? trail : NULL;
   b->pool = pool;
   b->rep_key = rep_key;
   b->offset = 0;
 
-  return b;
+  *rb_p = b;
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -785,8 +796,6 @@ txn_body_read_rep (void *baton, trail_t *trail)
 
   if (args->rb->rep_key)
     {
-      apr_size_t len_requested = *(args->len);
-
       SVN_ERR (rep_read_range (args->rb->fs,
                                args->rb->rep_key,
                                args->rb->offset,
@@ -795,25 +804,48 @@ txn_body_read_rep (void *baton, trail_t *trail)
                                trail));
 
       args->rb->offset += *(args->len);
-      apr_md5_update (&(args->rb->md5_context), args->buf, *(args->len));
 
-      /* If just saw the last byte of data, then compare checksums. */
-      if (*(args->len) < len_requested)
+      /* We calculate the checksum just once, the moment we see the
+       * last byte of data.  But we can't assume there was a short
+       * read.  The caller may have known the length of the data and
+       * requested exactly that amount, so there would never be a
+       * short read.  (That's why the read baton has to know the
+       * length of the data in advance.)
+       *
+       * On the other hand, some callers invoke the stream reader in a
+       * loop whose termination condition is that the read returned
+       * zero bytes of data -- which usually results in the read
+       * function being called one more time *after* the call that got
+       * a short read (indicating end-of-stream).
+       *
+       * The conditions below ensure that we compare checksums even
+       * when there is no short read associated with the last byte of
+       * data, while also ensuring that it's harmless to repeatedly
+       * read 0 bytes from the stream.
+       */
+      if (! args->rb->checksum_finalized)
         {
-          svn_fs__representation_t *rep;
-          unsigned char checksum[MD5_DIGESTSIZE];
+          apr_md5_update (&(args->rb->md5_context), args->buf, *(args->len));
 
-          apr_md5_final (checksum, &(args->rb->md5_context));
-          SVN_ERR (svn_fs__bdb_read_rep (&rep, args->rb->fs,
-                                         args->rb->rep_key, trail));
-          if (! checksums_match (checksum, rep->checksum))
-            return svn_error_createf
-              (SVN_ERR_FS_CORRUPT, NULL,
-               "txn_body_read_rep: checksum mismatch on rep \"%s\":\n"
-               "   expected:  %s\n"
-               "     actual:  %s\n", args->rb->rep_key,
-               digest_to_cstring (rep->checksum, trail->pool),
-               digest_to_cstring (checksum, trail->pool));
+          if (args->rb->offset == args->rb->size)
+            {
+              svn_fs__representation_t *rep;
+              unsigned char checksum[MD5_DIGESTSIZE];
+              
+              apr_md5_final (checksum, &(args->rb->md5_context));
+              args->rb->checksum_finalized = TRUE;
+
+              SVN_ERR (svn_fs__bdb_read_rep (&rep, args->rb->fs,
+                                             args->rb->rep_key, trail));
+              if (! checksums_match (checksum, rep->checksum))
+                return svn_error_createf
+                  (SVN_ERR_FS_CORRUPT, NULL,
+                   "txn_body_read_rep: checksum mismatch on rep \"%s\":\n"
+                   "   expected:  %s\n"
+                   "     actual:  %s\n", args->rb->rep_key,
+                   digest_to_cstring (rep->checksum, trail->pool),
+                   digest_to_cstring (checksum, trail->pool));
+            }
         }
     }
   else if (args->rb->offset > 0)
@@ -913,11 +945,9 @@ rep_write_get_baton (svn_fs_t *fs,
 
 
 
-/* Write LEN bytes from BUF into the string represented via REP_KEY
-   in FS, starting at OFFSET in that string, as part of TRAIL.
-
-   If the representation is not mutable, return the error
-   SVN_FS_REP_NOT_MUTABLE. */
+/* Write LEN bytes from BUF into the end of the string represented via
+   REP_KEY in FS, as part of TRAIL.  If the representation is not
+   mutable, return the error SVN_FS_REP_NOT_MUTABLE. */
 static svn_error_t *
 rep_write (svn_fs_t *fs,
            const char *rep_key,
@@ -932,14 +962,13 @@ rep_write (svn_fs_t *fs,
 
   if (! rep_is_mutable (rep, txn_id))
     svn_error_createf
-      (SVN_ERR_FS_REP_CHANGED, NULL,
+      (SVN_ERR_FS_REP_NOT_MUTABLE, NULL,
        "rep_write: rep \"%s\" is not mutable", rep_key);
 
   if (rep->kind == svn_fs__rep_kind_fulltext)
     {
-      SVN_ERR (svn_fs__bdb_string_append (fs, 
-                                          &(rep->contents.fulltext.string_key), 
-                                          len, buf, trail));
+      SVN_ERR (svn_fs__bdb_string_append
+               (fs, &(rep->contents.fulltext.string_key), len, buf, trail));
     }
   else if (rep->kind == svn_fs__rep_kind_delta)
     {
@@ -1047,10 +1076,6 @@ txn_body_write_close_rep (void *baton, trail_t *trail)
 
   apr_md5_final (digest, &(wb->md5_context));
 
-  /* ### Temporarily set the digest to all zeros; this code is still
-     in testing, so we don't want to store real checksums yet. */
-  memset (digest, 0, MD5_DIGESTSIZE);
-
   SVN_ERR (svn_fs__bdb_read_rep (&rep, wb->fs, wb->rep_key, trail));
   memcpy (rep->checksum, digest, MD5_DIGESTSIZE);
   SVN_ERR (svn_fs__bdb_write_rep (wb->fs, wb->rep_key, rep, trail));
@@ -1088,21 +1113,22 @@ rep_write_close_contents (void *baton)
 
 /** Public read and write stream constructors. **/
 
-svn_stream_t *
-svn_fs__rep_contents_read_stream (svn_fs_t *fs,
+svn_error_t *
+svn_fs__rep_contents_read_stream (svn_stream_t **rs_p,
+                                  svn_fs_t *fs,
                                   const char *rep_key,
                                   svn_boolean_t use_trail_for_reads,
                                   trail_t *trail,
                                   apr_pool_t *pool)
 {
-  struct rep_read_baton *rb
-    = rep_read_get_baton (fs, rep_key,
-                          use_trail_for_reads ? trail : NULL, pool);
+  struct rep_read_baton *rb;
 
-  svn_stream_t *rs = svn_stream_create (rb, pool);
-  svn_stream_set_read (rs, rep_read_contents);
+  SVN_ERR (rep_read_get_baton (&rb, fs, rep_key, use_trail_for_reads,
+                               trail, pool));
+  *rs_p = svn_stream_create (rb, pool);
+  svn_stream_set_read (*rs_p, rep_read_contents);
 
-  return rs;
+  return SVN_NO_ERROR;
 }
 
 
@@ -1360,10 +1386,10 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   svn_stream_set_write (new_target_stream, write_svndiff_strings);
 
   /* Get streams to our source and target text data. */
-  source_stream = svn_fs__rep_contents_read_stream (fs, source,
-                                                    TRUE, trail, pool);
-  target_stream = svn_fs__rep_contents_read_stream (fs, target,
-                                                    TRUE, trail, pool);
+  SVN_ERR (svn_fs__rep_contents_read_stream (&source_stream, fs, source,
+                                             TRUE, trail, pool));
+  SVN_ERR (svn_fs__rep_contents_read_stream (&target_stream, fs, target,
+                                             TRUE, trail, pool));
 
   /* Setup a stream to convert the textdelta data into svndiff windows. */
   svn_txdelta (&txdelta_stream, source_stream, target_stream, pool);
@@ -1550,8 +1576,8 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
   svn_stream_set_write (target_stream, write_string);
 
   /* Set up the source stream. */
-  source_stream = svn_fs__rep_contents_read_stream (fs, rep_key,
-                                                    TRUE, trail, trail->pool);
+  SVN_ERR (svn_fs__rep_contents_read_stream (&source_stream, fs, rep_key,
+                                             TRUE, trail, trail->pool));
 
   apr_md5_init (&context);
   subpool = svn_pool_create (trail->pool);

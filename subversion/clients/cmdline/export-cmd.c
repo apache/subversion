@@ -65,7 +65,8 @@ svn_cl__export (apr_getopt_t *os,
     to = ((const char **) (targets->elts))[1];
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, TRUE, FALSE, pool);
+    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, TRUE, FALSE,
+			  pool);
 
   /* Do the export. */
   SVN_ERR (svn_client_export (from,

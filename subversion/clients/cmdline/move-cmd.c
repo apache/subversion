@@ -66,7 +66,8 @@ svn_cl__move (apr_getopt_t *os,
   dst_path = ((const char **) (targets->elts))[1];
   
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool); 
+    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
+			  pool);
 
   log_msg_baton = svn_cl__make_log_msg_baton (opt_state, NULL, pool);
   err = svn_client_move 

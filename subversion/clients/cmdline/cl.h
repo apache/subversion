@@ -247,12 +247,17 @@ svn_cl__make_auth_baton (svn_cl__opt_state_t *opt_state,
  * notifier will print the appropriate summary line at the end of the
  * output.
  * 
+ * If this is an export, set IS_EXPORT to true, so that the
+ * notifier will print the appropriate summary line at the end of the
+ * output.
+ * 
  * If don't want a summary line at the end of notifications, set
  * SUPPRESS_FINAL_LINE.
  */
 void svn_cl__get_notifier (svn_wc_notify_func_t *notify_func_p,
                            void **notify_baton_p,
                            svn_boolean_t is_checkout,
+                           svn_boolean_t is_export,
                            svn_boolean_t suppress_final_line,
                            apr_pool_t *pool);
 

@@ -148,7 +148,8 @@ svn_cl__merge (apr_getopt_t *os,
   */
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
+    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
+			  pool);
 
   err = svn_client_merge (notify_func, notify_baton,
                           auth_baton,

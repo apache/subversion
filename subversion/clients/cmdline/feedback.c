@@ -38,6 +38,7 @@ struct notify_baton
 {
   svn_boolean_t received_some_change;
   svn_boolean_t is_checkout;
+  svn_boolean_t is_export;
   svn_boolean_t suppress_final_line;
   svn_boolean_t sent_first_txdelta;
   apr_pool_t *pool;
@@ -168,7 +169,10 @@ notify (void *baton,
           {
             if (SVN_IS_VALID_REVNUM (revision))
               {
-                if (nb->is_checkout)
+		if (nb->is_export)
+		  printf ("Exported revision %" SVN_REVNUM_T_FMT ".\n",
+			  revision);
+                else if (nb->is_checkout)
                   printf ("Checked out revision %" SVN_REVNUM_T_FMT ".\n",
                           revision);
                 else
@@ -183,7 +187,9 @@ notify (void *baton,
               }
             else  /* no revision */
               {
-                if (nb->is_checkout)
+		if (nb->is_export)
+		  printf ("Export complete.\n");
+                else if (nb->is_checkout)
                   printf ("Checkout complete.\n");
                 else
                   printf ("Update complete\n");
@@ -237,6 +243,7 @@ void
 svn_cl__get_notifier (svn_wc_notify_func_t *notify_func_p,
                       void **notify_baton_p,
                       svn_boolean_t is_checkout,
+                      svn_boolean_t is_export,
                       svn_boolean_t suppress_final_line,
                       apr_pool_t *pool)
 {
@@ -245,6 +252,7 @@ svn_cl__get_notifier (svn_wc_notify_func_t *notify_func_p,
   nb->received_some_change = FALSE;
   nb->sent_first_txdelta = FALSE;
   nb->is_checkout = is_checkout;
+  nb->is_export = is_export;
   nb->suppress_final_line = suppress_final_line;
   nb->pool = pool;
 
