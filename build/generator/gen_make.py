@@ -38,7 +38,7 @@ class Generator(gen_base.GeneratorBase):
       sources = self.graph.get_sources(gen_base.DT_LINK, target_ob.name)
 
       if isinstance(target_ob, gen_base.TargetI18N):
-        sources += self.graph.get_sources(gen_base.DT_NONLIB, target_ob.name)
+        sources = sources + self.graph.get_sources(gen_base.DT_NONLIB, target_ob.name)
 
       target = target_ob.name
       if isinstance(target_ob, gen_base.TargetJava):
