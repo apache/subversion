@@ -3,6 +3,10 @@
 
 How to make a lovely gumbo with your Subversion client, in 11 easy steps.
 
+This chapter goes into more of the gritty details of client commands.
+For a first conversational overview of the the client's CVS-like
+``copy-modify-merge'' model of development, @xref{Basics}.
+
 @menu
 * Checkout::                    
 * Basic Work Cycle::            
@@ -14,11 +18,6 @@ How to make a lovely gumbo with your Subversion client, in 11 easy steps.
 @end menu
 
 @c ------------------------------------------------------------------
-
-@node Overview
-@section Overview
-
-Hmm. It just occurred to me that we need an overview of the client.
 
 @node Checkout
 @section Checkout
