@@ -461,11 +461,20 @@ static int req_check_access(request_rec *r,
     apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
     access_conf = user_data;
     if (access_conf == NULL) {
-        svn_err = svn_config_read(&access_conf, conf->access_file, FALSE,
+        svn_err = svn_config_read(&access_conf, conf->access_file, TRUE,
                                   r->connection->pool);
         if (svn_err) {
-            ap_log_rerror(APLOG_MARK, APLOG_ERR, svn_err->apr_err, r,
-                          "%s", svn_err->message);
+            ap_log_rerror(APLOG_MARK, APLOG_ERR,
+                          /* If it is an error code that APR can make sense
+                             of, then show it, otherwise, pass zero to avoid
+                             putting "APR does not understand this error code"
+                             in the error log. */
+                          ((svn_err->apr_err >= APR_OS_START_USERERR &&
+                            svn_err->apr_err < APR_OS_START_CANONERR) ?
+                           0 : svn_err->apr_err),
+                          r, "Failed to load the AuthzSVNAccessFile: %s",
+                          svn_err->message);
+            svn_error_clear(svn_err);
 
             return DECLINED;
         }
