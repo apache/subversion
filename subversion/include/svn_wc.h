@@ -649,11 +649,8 @@ typedef struct svn_wc_diff_callbacks2_t
                               void *diff_baton);
   
   /** A file @a path was deleted.  The [loss of] contents can be seen by
-   * comparing @a tmpfile1 and @a tmpfile2.  Similarly, the [loss of]
-   * properties is provided in @a originalprops.  (The list of property changes
-   * is not provided, since it would just be a list of all properties in
-   * @a originalprops with @c NULL values.  ### This is inconsistent, what
-   * ### about dropping the file that will always be empty?)
+   * comparing @a tmpfile1 and @a tmpfile2.  @a originalprops provides
+   * the properties of the file.
    *
    * If known, the @c svn:mime-type value of each file is passed into
    * @a mimetype1 and @a mimetype2;  either or both of the values can
