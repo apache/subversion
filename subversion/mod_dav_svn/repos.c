@@ -654,10 +654,13 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
   if (serr != NULL)
     {
       if (serr->apr_err == SVN_ERR_FS_NO_SUCH_TRANSACTION)
-        return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                             "An activity was specified and found, but the "
-                             "corresponding SVN FS transaction was not "
-                             "found.");
+        {
+          svn_error_clear(serr);
+          return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                               "An activity was specified and found, but the "
+                               "corresponding SVN FS transaction was not "
+                               "found.");
+        }
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "Could not open the SVN FS transaction "
                                  "corresponding to the specified activity.",
@@ -1259,6 +1262,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                         "%s", serr->message);
 
           /* Return a slightly less informative error to dav. */
+          svn_error_clear(serr);
           return dav_svn_convert_err (sanitized_error,
                                       HTTP_INTERNAL_SERVER_ERROR,
                                       apr_psprintf(r->pool, new_msg),
@@ -1773,6 +1777,7 @@ const char * dav_svn_getetag(const dav_resource *resource, apr_pool_t *pool)
                                       pool)))
     {
       /* ### what to do? */
+      svn_error_clear(serr);
       return "";
     }
 
@@ -1847,6 +1852,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
         {
           mimetype = SVN_SVNDIFF_MIME_TYPE;
         }
+      svn_error_clear(serr);
     }
 
   if ((mimetype == NULL)
@@ -1876,6 +1882,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
              error is, we can't derive the mime type from the
              svn:mime-type property.  So we resort to the infamous
              "mime type of last resort." */
+          svn_error_clear(serr);
           mimetype = "application/octet-stream";
         }
 
@@ -2214,6 +2221,10 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 
 
           return NULL;
+        }
+      else
+        {
+          svn_error_clear(serr);
         }
     }
 

@@ -408,6 +408,7 @@ static int dav_svn_db_exists(dav_db *db, const dav_prop_name *name)
   const char *propname;
   svn_string_t *propval;
   svn_error_t *serr;
+  int retval;
 
   /* get the repos-local name */
   get_repos_propname(db, name, &propname);
@@ -435,7 +436,9 @@ static int dav_svn_db_exists(dav_db *db, const dav_prop_name *name)
 
   /* ### try and dispose of the value? */
 
-  return serr == NULL && propval != NULL;
+  retval = (serr == NULL && propval != NULL);
+  svn_error_clear(serr);
+  return retval;
 }
 
 static void get_name(dav_db *db, dav_prop_name *pname)
