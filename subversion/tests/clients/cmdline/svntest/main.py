@@ -391,7 +391,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
   load_out.close()
   load_err.close()
 
-  dump_re = re.compile(r'^\* Dumped revision (\d+)\.$')
+  dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
   expect_revision = 0
   for dump_line in dump_lines:
     match = dump_re.match(dump_line)
@@ -403,7 +403,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
     print 'ERROR:  dump failed; did not see revision', head_revision
     raise SVNRepositoryCopyFailure
 
-  load_re = re.compile(r'^------- Committed revision (\d+) >>>$')
+  load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
   expect_revision = 1
   for load_line in load_lines:
     match = load_re.match(load_line)
