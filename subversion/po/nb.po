@@ -3486,12 +3486,12 @@ msgstr "Kunne ikke lagre adressen på den versjonerte ressursen"
 #: libsvn_ra_dav/fetch.c:407
 #, c-format
 msgid "Could not create a GET request for '%s'"
-msgstr "Kunne ikke lage GET-forespørsel for %s"
+msgstr "Kunne ikke lage GET-forespørsel for '%s'"
 
 #: libsvn_ra_dav/fetch.c:471
 #, c-format
 msgid "GET request failed for '%s'"
-msgstr "GET-forespørsel feilet for %s"
+msgstr "GET-forespørsel feilet for '%s'"
 
 #: libsvn_ra_dav/fetch.c:594
 msgid "Could not save file"
@@ -5459,7 +5459,7 @@ msgstr "Filen '%s' har en binær MIME-type-egenskap"
 #: libsvn_wc/props.c:1553
 #, c-format
 msgid "Error parsing %s property on '%s': '%s'"
-msgstr "Feil mens egenskapen %s ble behandlet på '%s': '%s"
+msgstr "Feil mens egenskapen %s ble behandlet på '%s': '%s'"
 
 #: libsvn_wc/props.c:1566
 #, c-format
