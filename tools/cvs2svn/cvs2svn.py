@@ -914,6 +914,7 @@ class Dumper:
     self.target = ctx.target
     self.dump_only = ctx.dump_only
     self.dumpfile = None
+    self.path_encoding = ctx.encoding
     
     # If all we're doing here is dumping, we can go ahead and
     # initialize our single dumpfile.  Else, if we're suppose to
@@ -1032,7 +1033,21 @@ class Dumper:
                         "\n"
                         "PROPS-END\n"
                         "\n"
-                        "\n" % path)
+                        "\n" % self.utf8_path(path))
+
+  def utf8_path(self, path):
+    """Return UTF-8 encoded 'path' based on ctx.path_encoding."""
+    try:
+      ### Log messages can be converted with 'replace' strategy.
+      ### We can't afford that here.
+      unicode_path = unicode(path, self.path_encoding, 'strict')
+      return unicode_path.encode('utf-8')
+    
+    except UnicodeError:
+      print "Unable to convert a path '%s' to internal encoding." % path
+      print "Consider rerunning with (for example) '--encoding=latin1'"
+      sys.exit(1)
+
 
   def probe_path(self, path):
     """Return true if PATH exists in the youngest tree of the svn
@@ -1075,12 +1090,14 @@ class Dumper:
                           'Node-copyfrom-rev: %d\n'
                           'Node-copyfrom-path: /%s\n'
                           '\n'
-                          % (svn_dst_path, change.copyfrom_rev, svn_src_path))
+                          % (self.utf8_path(svn_dst_path),
+                             change.copyfrom_rev,
+                             self.utf8_path(svn_src_path)))
 
       for ent in change.deleted_entries:
         self.dumpfile.write('Node-path: %s\n'
                             'Node-action: delete\n'
-                            '\n' % (svn_dst_path + '/' + ent))
+                            '\n' % (self.utf8_path(svn_dst_path + '/' + ent)))
       return 1
     return None
     
@@ -1096,7 +1113,7 @@ class Dumper:
     for ent in change.deleted_entries:
       self.dumpfile.write('Node-path: %s\n'
                           'Node-action: delete\n'
-                          '\n' % (path + '/' + ent))
+                          '\n' % (self.utf8_path(path + '/' + ent)))
 
   def add_or_change_path(self, cvs_path, svn_path, cvs_rev, rcs_file,
                          tags, branches, cvs_revnums):
@@ -1150,7 +1167,7 @@ class Dumper:
                         'Node-action: %s\n'
                         'Prop-content-length: %d\n'
                         'Text-content-length: '
-                        % (svn_path, action, props_len))
+                        % (self.utf8_path(svn_path), action, props_len))
 
     pos = self.dumpfile.tell()
 
@@ -1213,7 +1230,7 @@ class Dumper:
       print "    (deleted '%s')" % deleted_path
       self.dumpfile.write('Node-path: %s\n'
                           'Node-action: delete\n'
-                          '\n' % deleted_path)
+                          '\n' % self.utf8_path(deleted_path))
     return deleted_path, closed_tags, closed_branches
 
   def close(self):

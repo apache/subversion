@@ -892,7 +892,7 @@ test_list = [ None,
               tagged_branch_and_trunk,
               enroot_race,
               branch_delete_first,
-              XFail(nonascii_filenames),
+              nonascii_filenames,
              ]
 
 if __name__ == '__main__':
