@@ -129,7 +129,7 @@ Candidate changes:
 
   * r11708
     Fix a bug which caused certain unfinished switch operations to leave
-    the working copy in a busticated state if interrupted.
+    the working copy in a busticated state.
     Justification:
       Did you miss the part where I said "working copy ... busticated state"?
     Votes:
