@@ -910,6 +910,12 @@ svn_ra_local__get_locations (void *session_baton,
 
 /*----------------------------------------------------------------*/
 
+static const svn_version_t *
+ra_local_version (void)
+{
+  SVN_VERSION_BODY;
+}
+
 /** The ra_plugin **/
 
 static const svn_ra_plugin_t ra_local_plugin = 
@@ -934,7 +940,8 @@ static const svn_ra_plugin_t ra_local_plugin =
   svn_ra_local__get_uuid,
   svn_ra_local__get_repos_root,
   svn_ra_local__get_locations,
-  svn_ra_local__get_file_revs
+  svn_ra_local__get_file_revs,
+  ra_local_version
 };
 
 
@@ -947,11 +954,21 @@ svn_ra_local_init (int abi_version,
                    apr_pool_t *pool,
                    apr_hash_t *hash)
 {
+  static const svn_version_checklist_t checklist[] =
+    {
+      { "svn_subr",  svn_subr_version },
+      { "svn_delta", svn_delta_version },
+      { "svn_repos", svn_repos_version },
+      { "svn_fs",    svn_fs_version },
+      { NULL, NULL }
+    };
+
   if (abi_version < 1
       || abi_version > SVN_RA_ABI_VERSION)
     return svn_error_createf (SVN_ERR_RA_UNSUPPORTED_ABI_VERSION, NULL,
                               _("Unsupported RA plugin ABI version (%d) "
                                 "for ra_local"), abi_version);
+  SVN_ERR (svn_ver_check_list (ra_local_version(), checklist));
 
   apr_hash_set (hash, "file", APR_HASH_KEY_STRING, &ra_local_plugin);
 

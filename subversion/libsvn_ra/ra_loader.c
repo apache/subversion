@@ -199,8 +199,23 @@ svn_ra_get_ra_library (svn_ra_plugin_t **library,
        if (strncasecmp (keystr, URL, keylen) == 0 &&
            (URL[keylen] == ':' || URL[keylen] == '+'))
         {
-          *library = (svn_ra_plugin_t *) val;          
-          return SVN_NO_ERROR; 
+          const svn_version_t *my_version = svn_ra_version();
+          const svn_version_t *ra_version;
+
+          *library = (svn_ra_plugin_t *) val;
+          ra_version = (*library)->get_version();
+          if (!svn_ver_compatible (my_version, ra_version))
+            return svn_error_createf (SVN_ERR_VERSION_MISMATCH, NULL,
+                                      _("Mismatched RA plugin version"
+                                        " for '%s':"
+                                        " found %d.%d.%d%s,"
+                                        " expected %d.%d.%d%s"),
+                                      keystr,
+                                      my_version->major, my_version->minor,
+                                      my_version->patch, my_version->tag,
+                                      ra_version->major, ra_version->minor,
+                                      ra_version->patch, ra_version->tag);
+          return SVN_NO_ERROR;
         }
     }
     

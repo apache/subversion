@@ -788,6 +788,17 @@ typedef struct svn_ra_plugin_t
                                  void *handler_baton,
                                  apr_pool_t *pool);
 
+  /** @since New in 1.1.
+   * Return the plugin's version information.
+   */
+  /* FIXME: This is broken. The get_version function should be at the
+     beginning of the vtable, just after the description, and should
+     not move even between major releases (see, e.g., the FS library
+     vtable). That's the only safe way for the RA loader to retreive
+     the plugin's version regardless of ABI changes. Obviously we
+     can't fix this before 2.0, and the fix will cause undetectable
+     ABI breakage. */
+  const svn_version_t *(*get_version) (void);
 } svn_ra_plugin_t;
 
 
@@ -830,6 +841,8 @@ typedef svn_error_t *(*svn_ra_init_func_t) (int abi_version,
  *   1  2001-02-17  Initial revision.
  *   2  2004-06-29  Preparing for svn 1.1, which adds new RA vtable funcs.
  * </pre>
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 #define SVN_RA_ABI_VERSION      2
 
