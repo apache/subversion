@@ -458,7 +458,7 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
                                            callbacks->auth_baton, pool);
           if (err)
             svn_error_clear(err);
-          else
+          else if (creds)
             user = ((svn_auth_cred_username_t *) creds)->username;
         }
 
