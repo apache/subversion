@@ -22,6 +22,7 @@
 #include "svn_delta.h"
 #include "svn_repos.h"
 #include "svn_pools.h"
+#include "svn_time.h"
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -702,6 +703,144 @@ svn_ra_local__get_file (void *session_baton,
 }
 
 
+
+
+/* Getting a directory's entries */
+static svn_error_t *
+svn_ra_local__get_dir (void *session_baton,
+                       const char *path,
+                       svn_revnum_t revision,
+                       apr_hash_t **dirents,
+                       svn_revnum_t *fetched_rev,
+                       apr_hash_t **props)
+{
+  svn_fs_root_t *root;
+  svn_revnum_t youngest_rev;
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  svn_ra_local__session_baton_t *sbaton = session_baton;
+  const char *abs_path = sbaton->fs_path;
+  apr_pool_t *subpool, *pool = sbaton->pool;
+
+  /* ### Not sure if this counts as a workaround or not.  The
+     session baton uses the empty string to mean root, and not
+     sure that should change.  However, it would be better to use
+     a path library function to add this separator -- hardcoding
+     it is totally bogus.  See issue #559, though it may be only
+     tangentially related. */
+  if (abs_path[0] == '\0')
+    abs_path = "/";
+
+  /* If we were given a relative path to append, append it. */
+  if (path)
+    abs_path = svn_path_join (abs_path, path, pool);
+
+  /* Open the revision's root. */
+  if (! SVN_IS_VALID_REVNUM (revision))
+    {
+      SVN_ERR (svn_fs_youngest_rev (&youngest_rev, sbaton->fs, pool));
+      SVN_ERR (svn_fs_revision_root (&root, sbaton->fs, youngest_rev, pool));
+      if (fetched_rev != NULL)
+        *fetched_rev = youngest_rev;
+    }
+  else
+    SVN_ERR (svn_fs_revision_root (&root, sbaton->fs, revision, pool));
+
+  /* Get the dir's entries. */
+  SVN_ERR (svn_fs_dir_entries (&entries, root, abs_path, pool));
+
+  /* Loop over the fs dirents, and build a hash of general svn_dirent_t's. */
+  *dirents = apr_hash_make (pool);
+  subpool = svn_pool_create (pool);
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      svn_boolean_t is_dir;
+      apr_hash_t *prophash;
+      const char *datestring, *entryname, *fullpath;
+      svn_fs_dirent_t *fs_entry;
+      svn_dirent_t *entry = apr_pcalloc (pool, sizeof(*entry));
+
+
+      apr_hash_this (hi, &key, NULL, &val);
+      entryname = (const char *) key;
+      fs_entry = (svn_fs_dirent_t *) val;
+  
+      /* node kind */
+      fullpath = svn_path_join (abs_path, entryname, subpool);
+      SVN_ERR (svn_fs_is_dir (&is_dir, root, fullpath, subpool));
+      entry->kind = is_dir ? svn_node_dir : svn_node_file;
+
+      /* size  */
+      if (is_dir)
+        entry->size = 0;
+      else
+        SVN_ERR (svn_fs_file_length (&(entry->size), root, fullpath, subpool));
+      
+      /* has_props? */
+      SVN_ERR (svn_fs_node_proplist (&prophash, root, fullpath, subpool));
+      entry->has_props = (apr_hash_count (prophash)) ? TRUE : FALSE;
+      
+      /* created_rev & friends */
+      SVN_ERR (svn_repos_get_committed_info (&(entry->created_rev),
+                                             &datestring,
+                                             &(entry->last_author),
+                                             root, fullpath, pool));
+      if (datestring)
+        SVN_ERR (svn_time_from_nts(&(entry->time), datestring, subpool));
+
+      /* Store. */
+      apr_hash_set (*dirents, entryname, APR_HASH_KEY_STRING, entry);
+      
+      svn_pool_clear (subpool);
+    }
+
+  /* Get the dir's properties too, if requested. */
+  if (props)
+    {
+      svn_revnum_t committed_rev;
+      const char *committed_date, *last_author;
+      svn_string_t *value;
+      char *revision_str = NULL;
+
+      /* Create a hash with props attached to the fs node. */
+      SVN_ERR (svn_fs_node_proplist (props, root, abs_path, pool));
+      
+      /* Now add some non-tweakable metadata to the hash as well... */
+    
+      /* The so-called 'entryprops' with info about CR & friends. */
+      SVN_ERR (svn_repos_get_committed_info (&committed_rev,
+                                             &committed_date,
+                                             &last_author,
+                                             root, abs_path,
+                                             pool));
+
+      revision_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
+                                   committed_rev);
+      value = svn_string_create (revision_str, sbaton->pool);
+      apr_hash_set (*props, SVN_PROP_ENTRY_COMMITTED_REV, 
+                    APR_HASH_KEY_STRING, value);
+
+      value = (committed_date) ? 
+        svn_string_create (committed_date, pool) : NULL;
+
+      apr_hash_set (*props, SVN_PROP_ENTRY_COMMITTED_DATE, 
+                    APR_HASH_KEY_STRING, value);
+
+      value = (last_author) ? 
+        svn_string_create (last_author, pool) : NULL;
+
+      apr_hash_set (*props, SVN_PROP_ENTRY_LAST_AUTHOR, 
+                    APR_HASH_KEY_STRING, value);
+            
+      /* We have no 'wcprops' in ra_local, but might someday. */
+    }
+  return SVN_NO_ERROR;
+}
+
+
+
 /*----------------------------------------------------------------*/
 
 /** The ra_plugin **/
@@ -716,6 +855,7 @@ static const svn_ra_plugin_t ra_local_plugin =
   svn_ra_local__get_dated_revision,
   svn_ra_local__get_commit_editor,
   svn_ra_local__get_file,
+  svn_ra_local__get_dir,
   svn_ra_local__do_checkout,
   svn_ra_local__do_update,
   svn_ra_local__do_switch,

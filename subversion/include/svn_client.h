@@ -868,6 +868,26 @@ svn_client_export (const char *from,
                    void *notify_baton,
                    apr_pool_t *pool);
 
+
+/* Set *DIRENTS to a newly allocated hash of entries for URL at
+   REVISION.
+
+   If URL is a directory, return all dirents in the hash.  If URL is a
+   file, return only the dirent for the file.  If URL is non-existent,
+   return SVN_ERR_FS_NOT_FOUND.
+
+   The hash maps entrynames (const char *) to svn_dirent_t *'s.  Do
+   all allocation in POOL.
+
+   Use AUTH_BATON to authenticate against the repository.  */
+svn_error_t *
+svn_client_ls (apr_hash_t **dirents,
+               const char *url,
+               svn_client_revision_t *revision,
+               svn_client_auth_baton_t *auth_baton,               
+               apr_pool_t *pool);
+
+
 
 /* Cancellation. */
 

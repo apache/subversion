@@ -352,6 +352,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_RA_UNKNOWN_AUTH,
               "Unknown authorization method")
 
+  SVN_ERRDEF (SVN_ERR_RA_NOT_IMPLEMENTED,
+              "Repository access method not implemented")
+       
   /* These RA errors are specific to ra_dav */
 
     SVN_ERRDEF (SVN_ERR_RA_SOCK_INIT,
