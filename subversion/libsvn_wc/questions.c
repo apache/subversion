@@ -130,6 +130,15 @@ timestamps_equal_p (svn_boolean_t *equal_p,
                   SVN_WC__ENTRIES_ATTR_TIMESTAMP,
                   strlen(SVN_WC__ENTRIES_ATTR_TIMESTAMP));
 
+  if (! timestr)
+    {
+      /* This entry has no timestamp, so the only the safe thing to do
+         is return FALSE, i.e. "different" timestamps.  This will
+         force our caller to do a brute-force file comparison. */
+      *equal_p = FALSE;
+      return SVN_NO_ERROR;
+    }
+
   /* Convert the timestamp string back into a big number */
   entry_time = svn_wc__string_to_time (timestr);
 
