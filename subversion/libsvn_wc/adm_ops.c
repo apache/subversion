@@ -2112,9 +2112,9 @@ svn_wc_resolved_conflict (const char *path,
     }
   else
     {
-      SVN_ERR (svn_wc_walk_entries (path, adm_access,
-                                    &resolve_walk_callbacks, baton,
-                                    FALSE, pool));
+      SVN_ERR (svn_wc_walk_entries2 (path, adm_access,
+                                     &resolve_walk_callbacks, baton,
+                                     FALSE, NULL, NULL, pool));
 
     }
 
