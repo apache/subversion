@@ -73,7 +73,17 @@ AC_DEFUN(APR_FIND_APR, [
 build directory, or an apr-config file.])
     fi
   ],[
-    if test -n "$3" && test "$3" = "1"; then
+    dnl if we have a bundled source directory, use it
+    if test -d "$1"; then
+      apr_temp_abs_srcdir="`cd $1 && pwd`"
+      apr_found="reconfig"
+      if test -n "$2"; then
+        apr_config="$2/apr-config"
+      else
+        apr_config="$1/apr-config"
+      fi
+    fi
+    if test "$apr_found" = "no" && test -n "$3" && test "$3" = "1"; then
       if apr-config --help > /dev/null 2>&1 ; then
         apr_found="yes"
         apr_config="apr-config"
@@ -86,25 +96,6 @@ build directory, or an apr-config file.])
             break
           fi
         done
-      fi
-    fi
-    dnl if we have a bundled source directory, then we may have more work
-    if test -d "$1"; then
-      apr_temp_abs_srcdir="`cd $1 && pwd`"
-      if test "$apr_found" = "yes" \
-         && test "`$apr_config --srcdir`" = "$apr_temp_abs_srcdir"; then
-        dnl the installed apr-config represents our source directory, so
-        dnl pretend we didn't see it and just use our bundled source
-        apr_found="no"
-      fi
-      dnl We could not find an apr-config; use the bundled one
-      if test "$apr_found" = "no"; then
-        apr_found="reconfig"
-        if test -n "$2"; then
-          apr_config="$2/apr-config"
-        else
-          apr_config="$1/apr-config"
-        fi
       fi
     fi
   ])

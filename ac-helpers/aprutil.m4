@@ -14,7 +14,7 @@ AC_DEFUN(SVN_LIB_APRUTIL,
 [
   AC_MSG_NOTICE([Apache Portable Runtime Utility (APRUTIL) library configuration])
 
-  APR_FIND_APU("$srcdir/apr-util", "./apr-util")
+  APR_FIND_APU("$srcdir/apr-util", "./apr-util", 1)
 
   if test $apu_found = "no"; then
     AC_MSG_WARN([APRUTIL not found])
