@@ -290,7 +290,7 @@ def get_props(path):
   # respecting the black-box paradigm.
 
   props = {}
-  output, errput = main.run_svn(1, "proplist", path)
+  output, errput = main.run_svn(1, "proplist", path, "--verbose")
 
   for line in output:
     if line.startswith('Properties on '):
