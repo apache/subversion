@@ -101,7 +101,7 @@ typedef struct svn_diff_fns_t
                                    svn_diff_datasource_e datasource);
 
   /** Get the next "token" from the datasource of type @a datasource. */
-  svn_error_t *(*datasource_get_next_token)(void **token,
+  svn_error_t *(*datasource_get_next_token)(apr_uint32_t *hash, void **token,
                                             void *diff_baton,
                                             svn_diff_datasource_e datasource);
 
