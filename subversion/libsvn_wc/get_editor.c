@@ -1,5 +1,5 @@
 /*
- * make_walker.c :  routines for update and checkout
+ * get_editor.c :  routines for update and checkout
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -68,7 +68,7 @@
 
 
 
-struct w_baton
+struct e_baton
 {
   svn_string_t *dest_dir;
   svn_string_t *repository;
@@ -78,16 +78,16 @@ struct w_baton
 
 
 
-/*** Helpers for the walker callbacks. ***/
+/*** Helpers for the editor callbacks. ***/
 
-/* Prepend WB->dest_dir to *PATH, iff PATH is an empty path or null. 
+/* Prepend EB->dest_dir to *PATH, iff PATH is an empty path or null. 
    Return non-zero iff prepended something. */
 static void
-maybe_prepend_dest (svn_string_t **path, struct w_baton *wb)
+maybe_prepend_dest (svn_string_t **path, struct e_baton *eb)
 {
   /* kff todo: this whole thing is questionable, hrmm. */
 
-  /* This is a bit funky.  We need to prepend wb->dest_dir to every
+  /* This is a bit funky.  We need to prepend eb->dest_dir to every
      path the delta will touch, but due to the way parent/child batons
      are passed, we only need to do it once at the top of the delta,
      as it will will get passed along automatically underneath that.
@@ -96,10 +96,10 @@ maybe_prepend_dest (svn_string_t **path, struct w_baton *wb)
   /* kff todo: or, write svn_string_prepend_str(), obviating the need
      to pass by reference. */
 
-  if (wb->dest_dir && (svn_path_isempty (*path, SVN_PATH_LOCAL_STYLE)))
+  if (eb->dest_dir && (svn_path_isempty (*path, SVN_PATH_LOCAL_STYLE)))
     {
-      svn_string_t *new = svn_string_dup (wb->dest_dir, wb->pool);
-      svn_path_add_component (new, *path, SVN_PATH_LOCAL_STYLE, wb->pool);
+      svn_string_t *new = svn_string_dup (eb->dest_dir, eb->pool);
+      svn_path_add_component (new, *path, SVN_PATH_LOCAL_STYLE, eb->pool);
       *path = new;
     }
 }
@@ -164,15 +164,15 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 
 
 
-/*** The callbacks we'll plug into an svn_delta_walk_t structure. ***/
+/*** The callbacks we'll plug into an svn_delta_edit_fns_t structure. ***/
 
 static svn_error_t *
-delete (svn_string_t *name, void *walk_baton, void *parent_baton)
+delete (svn_string_t *name, void *edit_baton, void *parent_baton)
 {
-  struct w_baton *wb = (struct w_baton *) walk_baton;
+  struct e_baton *eb = (struct e_baton *) edit_baton;
   svn_string_t *path_so_far = (svn_string_t *) parent_baton;
 
-  maybe_prepend_dest (&path_so_far, wb);
+  maybe_prepend_dest (&path_so_far, eb);
 
   return SVN_NO_ERROR;
 }
@@ -180,42 +180,42 @@ delete (svn_string_t *name, void *walk_baton, void *parent_baton)
 
 static svn_error_t *
 add_directory (svn_string_t *name,
-               void *walk_baton,
+               void *edit_baton,
                void *parent_baton,
                svn_string_t *ancestor_path,
                svn_vernum_t ancestor_version,
                void **child_baton)
 {
   svn_error_t *err;
-  struct w_baton *wb = (struct w_baton *) walk_baton;
+  struct e_baton *eb = (struct e_baton *) edit_baton;
   svn_string_t *path_so_far = (svn_string_t *) parent_baton;
   svn_string_t *npath;
 
-  maybe_prepend_dest (&path_so_far, wb);
+  maybe_prepend_dest (&path_so_far, eb);
   svn_wc__ensure_prepare_wc (path_so_far,
-                             wb->repository,
-                             wb->version,
+                             eb->repository,
+                             eb->version,
                              SVN_WC__UNWIND_UPDATE,
-                             wb->pool);
+                             eb->pool);
 
-  npath = svn_string_dup (path_so_far, wb->pool);
-  svn_path_add_component (npath, name, SVN_PATH_LOCAL_STYLE, wb->pool);
+  npath = svn_string_dup (path_so_far, eb->pool);
+  svn_path_add_component (npath, name, SVN_PATH_LOCAL_STYLE, eb->pool);
 
   /* kff todo: how about a sanity check that it's not a dir of the
      same name from a different repository or something? 
      Well, that will be later on down the line... */
 
   /* Make the new directory exist. */
-  err = svn_wc__ensure_directory (npath, wb->pool);
+  err = svn_wc__ensure_directory (npath, eb->pool);
   if (err)
     return err;
 
   /* Prep it. */
   err = svn_wc__ensure_prepare_wc (npath,
-                                   wb->repository,
-                                   wb->version,
+                                   eb->repository,
+                                   eb->version,
                                    SVN_WC__UNWIND_UPDATE,
-                                   wb->pool);
+                                   eb->pool);
   if (err)
     return err;
 
@@ -230,7 +230,7 @@ add_directory (svn_string_t *name,
   err = svn_wc__blah_blah_blah (npath,
                                 ancestor_path,
                                 ancestor_version,
-                                wb->pool);
+                                eb->pool);
   if (err)
     return err;
 #endif /* 0 */
@@ -244,25 +244,25 @@ add_directory (svn_string_t *name,
 
 static svn_error_t *
 replace_directory (svn_string_t *name,
-                   void *walk_baton,
+                   void *edit_baton,
                    void *parent_baton,
                    svn_string_t *ancestor_path,
                    svn_vernum_t ancestor_version,
                    void **child_baton)
 {
-  struct w_baton *wb = (struct w_baton *) walk_baton;
+  struct e_baton *eb = (struct e_baton *) edit_baton;
   svn_string_t *path_so_far = (svn_string_t *) parent_baton;
 
   /* kff todo */
 
-  maybe_prepend_dest (&path_so_far, wb);
+  maybe_prepend_dest (&path_so_far, eb);
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-change_dir_prop (void *walk_baton,
+change_dir_prop (void *edit_baton,
                  void *dir_baton,
                  svn_string_t *name,
                  svn_string_t *value)
@@ -273,7 +273,7 @@ change_dir_prop (void *walk_baton,
 
 
 static svn_error_t *
-change_dirent_prop (void *walk_baton,
+change_dirent_prop (void *edit_baton,
                     void *dir_baton,
                     svn_string_t *entry,
                     svn_string_t *name,
@@ -285,10 +285,10 @@ change_dirent_prop (void *walk_baton,
 
 
 static svn_error_t *
-finish_directory (void *walk_baton, void *child_baton)
+finish_directory (void *edit_baton, void *child_baton)
 {
   svn_error_t *err;
-  struct w_baton *wb = (struct w_baton *) walk_baton;
+  struct e_baton *eb = (struct e_baton *) edit_baton;
   svn_string_t *path = (svn_string_t *) child_baton;
   int stack_empty;
 
@@ -297,12 +297,12 @@ finish_directory (void *walk_baton, void *child_baton)
                             SVN_WC__UNWIND_UPDATE,
                             0,
                             &stack_empty,
-                            wb->pool);
+                            eb->pool);
   if (err)
     return err;
 
   /* And remove the lock, so others can work here. */
-  err = svn_wc__unlock (path, wb->pool);
+  err = svn_wc__unlock (path, eb->pool);
   if (err)
     return err;
 
@@ -314,25 +314,25 @@ finish_directory (void *walk_baton, void *child_baton)
 
 static svn_error_t *
 add_file (svn_string_t *name,
-          void *walk_baton,
+          void *edit_baton,
           void *parent_baton,
           svn_string_t *ancestor_path,
           svn_vernum_t ancestor_version,
           void **file_baton)
 {
-  struct w_baton *wb = (struct w_baton *) walk_baton;
+  struct e_baton *eb = (struct e_baton *) edit_baton;
   svn_string_t *path_so_far = (svn_string_t *) parent_baton;
   svn_string_t *npath;
 
-  maybe_prepend_dest (&path_so_far, wb);
+  maybe_prepend_dest (&path_so_far, eb);
   svn_wc__ensure_prepare_wc (path_so_far,
-                             wb->repository,
-                             wb->version,
+                             eb->repository,
+                             eb->version,
                              SVN_WC__UNWIND_UPDATE,
-                             wb->pool);
+                             eb->pool);
 
-  npath = svn_string_dup (path_so_far, wb->pool);
-  svn_path_add_component (npath, name, SVN_PATH_LOCAL_STYLE, wb->pool);
+  npath = svn_string_dup (path_so_far, eb->pool);
+  svn_path_add_component (npath, name, SVN_PATH_LOCAL_STYLE, eb->pool);
   printf ("%s\n   ", npath->data);
 
   *file_baton = npath;
@@ -343,16 +343,16 @@ add_file (svn_string_t *name,
 
 static svn_error_t *
 replace_file (svn_string_t *name,
-              void *walk_baton,
+              void *edit_baton,
               void *parent_baton,
               svn_string_t *ancestor_path,
               svn_vernum_t ancestor_version,
               void **file_baton)
 {
   svn_string_t *path_so_far = (svn_string_t *) parent_baton;
-  struct w_baton *wb = (struct w_baton *) walk_baton;
+  struct e_baton *eb = (struct e_baton *) edit_baton;
 
-  maybe_prepend_dest (&path_so_far, wb);
+  maybe_prepend_dest (&path_so_far, eb);
 
   /* kff todo: don't forget to set *file_baton! */
 
@@ -363,7 +363,7 @@ replace_file (svn_string_t *name,
 
 
 static svn_error_t *
-apply_textdelta (void *walk_baton,
+apply_textdelta (void *edit_baton,
                  void *parent_baton,
                  void *file_baton, 
                  svn_txdelta_window_handler_t **handler,
@@ -380,7 +380,7 @@ apply_textdelta (void *walk_baton,
 
 
 static svn_error_t *
-change_file_prop (void *walk_baton,
+change_file_prop (void *edit_baton,
                   void *parent_baton,
                   void *file_baton,
                   svn_string_t *name,
@@ -392,7 +392,7 @@ change_file_prop (void *walk_baton,
 
 
 static svn_error_t *
-finish_file (void *walk_baton, void *child_baton)
+finish_file (void *edit_baton, void *child_baton)
 {
   /* kff todo */
 
@@ -402,9 +402,9 @@ finish_file (void *walk_baton, void *child_baton)
 
 
 static svn_error_t *
-finish_walk (void *walk_baton, void *dir_baton)
+finish_edit (void *edit_baton, void *dir_baton)
 {
-  struct w_baton *wb = (struct w_baton *) walk_baton;
+  struct e_baton *eb = (struct e_baton *) edit_baton;
   svn_string_t *path = (svn_string_t *) dir_baton;
   svn_error_t *err;
   int stack_empty;
@@ -414,7 +414,7 @@ finish_walk (void *walk_baton, void *dir_baton)
                             SVN_WC__UNWIND_UPDATE,
                             0,
                             &stack_empty,
-                            wb->pool);
+                            eb->pool);
   if (err)
     return (err);
   if (! stack_empty)
@@ -422,15 +422,15 @@ finish_walk (void *walk_baton, void *dir_baton)
                              0,
                              path->data,
                              NULL,
-                             wb->pool);
+                             eb->pool);
 
   /* And remove the lock, so others can work here. */
-  err = svn_wc__unlock (path, wb->pool);
+  err = svn_wc__unlock (path, eb->pool);
   if (err)
     return err;
 
-  /* The walk is over, free its pool. */
-  apr_destroy_pool (wb->pool);
+  /* The edit is over, free its pool. */
+  apr_destroy_pool (eb->pool);
 
   printf ("\n");
   return SVN_NO_ERROR;
@@ -438,7 +438,7 @@ finish_walk (void *walk_baton, void *dir_baton)
 
 
 
-static const svn_delta_walk_t change_walker =
+static const svn_delta_edit_fns_t tree_editor =
 {
   delete,
   add_directory,
@@ -451,21 +451,21 @@ static const svn_delta_walk_t change_walker =
   apply_textdelta,
   change_file_prop,
   finish_file,
-  finish_walk
+  finish_edit
 };
 
 
 svn_error_t *
-svn_wc_get_change_walker (svn_string_t *dest,
+svn_wc_get_update_editor (svn_string_t *dest,
                           svn_string_t *repos,
                           svn_vernum_t version,
-                          const svn_delta_walk_t **walker,
-                          void **walk_baton,
+                          const svn_delta_edit_fns_t **editor,
+                          void **edit_baton,
                           void **dir_baton,
                           apr_pool_t *pool)
 {
   svn_error_t *err;
-  struct w_baton *w_baton;
+  struct e_baton *e_baton;
   apr_pool_t *subpool;
 
   subpool = apr_make_sub_pool (pool, NULL);
@@ -491,14 +491,14 @@ svn_wc_get_change_walker (svn_string_t *dest,
 
   /* Else nothing in the way, so continue. */
 
-  *walker = &change_walker;
+  *editor = &tree_editor;
 
-  w_baton = apr_pcalloc (subpool, sizeof (*w_baton));
-  w_baton->dest_dir   = dest;   /* Remember, DEST might be null. */
-  w_baton->repository = repos;
-  w_baton->pool       = subpool;
-  w_baton->version    = version;
-  *walk_baton = w_baton;
+  e_baton = apr_pcalloc (subpool, sizeof (*e_baton));
+  e_baton->dest_dir   = dest;   /* Remember, DEST might be null. */
+  e_baton->repository = repos;
+  e_baton->pool       = subpool;
+  e_baton->version    = version;
+  *edit_baton = e_baton;
 
   *dir_baton = svn_string_create ("", subpool);
 
