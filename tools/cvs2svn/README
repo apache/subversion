@@ -7,26 +7,26 @@ It works by:
 
   * creating a bunch of temporary scratchwork on disk,
 
-  * replaying all of the commits into a new SVN repository.
+  * replaying all of the commits into an SVN dumpfile,
+
+  * loading the dumpfile into an SVN repository.
 
 Most of the script was written by Greg Stein (gstein@lyra.org) and
 Daniel Berlin (dberlin@dberlin.org), with tweaks from Marko Macek
-(Marko.Macek@gmx.net).
+(Marko.Macek@gmx.net) and Karl Fogel (kfogel@collab.net).
 
+The script works reasonably well, with two big caveats:
 
-** The script works reasonably well, with two big caveats:
+  - it doesn't do branches or tags yet
 
-     - it doesn't do branches or tags very well yet
+  - there may be tiny bugs in the way it deduces CVS commits.
 
-     - there may be tiny bugs in the way it deduces CVS commits.
+That said, the script has been used on straightforward CVS
+repositories with no real problems.  As an example, the whole first
+year of Subversion's own history was converted from CVS into a 3000+
+revision svn repository.  It took about 30 minutes.
 
-   That said, the script has been used on straightforward CVS
-   repositories with no real problems.  As an example, the whole first
-   year of Subversion's own history was converted from CVS into a
-   3000+ revision svn repository.  It took about 30 minutes.
-
-
-** To use this script:
+* To use this script:
 
      - Install RCS.  cvs2svn uses the "co" command.
 
@@ -35,10 +35,6 @@ Daniel Berlin (dberlin@dberlin.org), with tweaks from Marko Macek
      - Make sure you have GNU 'sort' installed, or some other sort
        program that handles large files other than by reading them
        entirely into memory.
-
-     - Install the python swig bindings, so that python can directly
-       invoke libsvn_fs routines.  See the INSTALL file in
-       subversion/bindings/swig/.
 
      - If you're not running cvs2svn.py from this directory, then make
        sure to install the rcsparse/ tree somewhere where Python can
