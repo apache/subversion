@@ -65,7 +65,7 @@ extern "C" {
 
 /* In the repository conf directory, look for these files. */
 #define SVN_REPOS__CONF_SVNSERVE_CONF "svnserve.conf"
-
+#define SVN_REPOS__CONF_PASSWD "passwd"
 
 /* The Repository object, created by svn_repos_open() and
    svn_repos_create(), allocated in POOL. */
