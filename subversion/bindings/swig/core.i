@@ -1,5 +1,5 @@
 /*
- * util.i :  SWIG interface file for various SVN and APR utilities
+ * core.i :  SWIG interface file for various core SVN and APR components
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -16,7 +16,7 @@
  * ====================================================================
  */
 
-%module _util
+%module core
 
 %include typemaps.i
 

@@ -16,7 +16,7 @@
  * ====================================================================
  */
 
-%module _fs
+%module fs
 %include typemaps.i
 
 %import apr.i

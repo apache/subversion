@@ -20,19 +20,21 @@
 import tempfile
 import os
 import popen2
-
-import _fs
-import _util
 import string
+
+import libsvn.fs
+import core
 
 # copy the wrapper functions out of the extension module, dropping the
 # 'svn_fs_' prefix.
-for name in dir(_fs):
+# XXX this might change in the future once we have a consistent naming
+# scheme
+for name in dir(libsvn.fs):
   if name[:7] == 'svn_fs_':
-    vars()[name[7:]] = getattr(_fs, name)
+    vars()[name[7:]] = getattr(libsvn.fs, name)
 
 # we don't want these symbols exported
-del name, _fs
+del name, libsvn
 
 def entries(root, path, pool):
   "Call dir_entries returning a dictionary mappings names to IDs."
@@ -57,19 +59,19 @@ class FileDiff:
 
     # the caller can't manage this pool very well given our indirect use
     # of it. so we'll create a subpool and clear it at "proper" times.
-    self.pool = _util.svn_pool_create(pool)
+    self.pool = core.svn_pool_create(pool)
 
   def either_binary(self):
     "Return true if either of the files are binary."
     if self.path1 is not None:
-      prop = node_prop(self.root1, self.path1, _util.SVN_PROP_MIME_TYPE,
+      prop = node_prop(self.root1, self.path1, core.SVN_PROP_MIME_TYPE,
                        self.pool)
-      if prop and _util.svn_mime_type_is_binary(prop):
+      if prop and core.svn_mime_type_is_binary(prop):
         return 1
     if self.path2 is not None:
-      prop = node_prop(self.root2, self.path2, _util.SVN_PROP_MIME_TYPE,
+      prop = node_prop(self.root2, self.path2, core.SVN_PROP_MIME_TYPE,
                        self.pool)
-      if prop and _util.svn_mime_type_is_binary(prop):
+      if prop and core.svn_mime_type_is_binary(prop):
         return 1
     return 0
 
@@ -83,7 +85,7 @@ class FileDiff:
     if self.path1 is not None:
       len = file_length(self.root1, self.path1, self.pool)
       stream = file_contents(self.root1, self.path1, self.pool)
-      contents = _util.svn_stream_read(stream, len)
+      contents = core.svn_stream_read(stream, len)
     open(self.tempfile1, 'w+').write(contents)
 
     self.tempfile2 = tempfile.mktemp()
@@ -91,11 +93,11 @@ class FileDiff:
     if self.path2 is not None:
       len = file_length(self.root2, self.path2, self.pool)
       stream = file_contents(self.root2, self.path2, self.pool)
-      contents = _util.svn_stream_read(stream, len)
+      contents = core.svn_stream_read(stream, len)
     open(self.tempfile2, 'w+').write(contents)
 
     # get rid of anything we put into our subpool
-    _util.svn_pool_clear(self.pool)
+    core.svn_pool_clear(self.pool)
 
     return self.tempfile1, self.tempfile2
 

@@ -20,15 +20,15 @@ import string
 import time
 import os
 
-from svn import fs, util, delta, _repos
+from svn import core, fs, delta, repos
 
 
 class SVNLook:
   def __init__(self, pool, path, cmd, rev, txn):
     self.pool = pool
 
-    repos = _repos.svn_repos_open(path, pool)
-    self.fs_ptr = _repos.svn_repos_fs(repos)
+    repos = repos.svn_repos_open(path, pool)
+    self.fs_ptr = repos.svn_repos_fs(repos)
 
     if txn:
       self.txn_ptr = fs.open_txn(self.fs_ptr, txn, pool)
@@ -50,7 +50,7 @@ class SVNLook:
 
   def cmd_author(self):
     # get the author property, or empty string if the property is not present
-    author = self._get_property(util.SVN_PROP_REVISION_AUTHOR) or ''
+    author = self._get_property(core.SVN_PROP_REVISION_AUTHOR) or ''
     print author
 
   def cmd_changed(self):
@@ -60,9 +60,9 @@ class SVNLook:
     if self.txn_ptr:
       print
     else:
-      date = self._get_property(util.SVN_PROP_REVISION_DATE)
+      date = self._get_property(core.SVN_PROP_REVISION_DATE)
       if date:
-        aprtime = util.svn_time_from_cstring(date, self.pool)
+        aprtime = core.svn_time_from_cstring(date, self.pool)
         # ### convert to a time_t; this requires intimate knowledge of
         # ### the apr_time_t type
         secs = aprtime / 1000000  # aprtime is microseconds; make seconds
@@ -89,7 +89,7 @@ class SVNLook:
 
   def cmd_log(self, print_size=0):
     # get the log property, or empty string if the property is not present
-    log = self._get_property(util.SVN_PROP_REVISION_LOG) or ''
+    log = self._get_property(core.SVN_PROP_REVISION_LOG) or ''
     if print_size:
       print len(log)
     print log
@@ -129,8 +129,8 @@ class SVNLook:
     e_ptr, e_baton = delta.make_editor(editor, self.pool)
 
     # compute the delta, printing as we go
-    _repos.svn_repos_dir_delta(base_root, '', None, root, '',
-                               e_ptr, e_baton, 0, 1, 0, 1, 0, self.pool)
+    repos.svn_repos_dir_delta(base_root, '', None, root, '',
+                              e_ptr, e_baton, 0, 1, 0, 1, 0, self.pool)
 
 
 class Editor(delta.Editor):
@@ -385,7 +385,7 @@ def main():
   if not hasattr(SVNLook, 'cmd_' + cmd):
     usage(1)
 
-  util.run_app(SVNLook, sys.argv[1], cmd, rev, txn)
+  core.run_app(SVNLook, sys.argv[1], cmd, rev, txn)
 
 if __name__ == '__main__':
   main()

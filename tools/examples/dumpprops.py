@@ -10,7 +10,7 @@ import os
 import getopt
 import pprint
 
-from svn import fs, util
+from svn import fs, core
 
 
 def dumpprops(pool, path='', rev=None, home='.'):
@@ -41,16 +41,16 @@ def print_props(root, path, pool):
   pprint.pprint(props)
 
 def walk_tree(root, path, pool):
-  subpool = util.svn_pool_create(pool)
+  subpool = core.svn_pool_create(pool)
   try:
     for name in fs.entries(root, path, subpool).keys():
       full = path + '/' + name
       print_props(root, full, subpool)
       if fs.is_dir(root, full, subpool):
         walk_tree(root, full, subpool)
-      util.svn_pool_clear(subpool)
+      core.svn_pool_clear(subpool)
   finally:
-    util.svn_pool_destroy(subpool)
+    core.svn_pool_destroy(subpool)
 
 def usage():
   print "USAGE: dumpprops.py [-r REV] [-h DBHOME] repos-path"
@@ -67,7 +67,7 @@ def main():
       rev = int(value)
     elif name == '-h':
       home = value
-  util.run_app(dumpprops, args[0], rev, home)
+  core.run_app(dumpprops, args[0], rev, home)
 
 if __name__ == '__main__':
   main()

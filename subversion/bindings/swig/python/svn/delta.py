@@ -14,7 +14,7 @@
 ######################################################################
 #
 
-from _delta import *
+from libsvn.delta import *
 
 class Editor:
 
