@@ -79,4 +79,4 @@ Candidate changes:
     Fix issue #1752 - 'svn propget url' doesn't work over ra_svn.
     Justification: Simple one-line fix to a shallow bug.
     Votes:
-      +1: bliss
+      +1: bliss, rooneg
