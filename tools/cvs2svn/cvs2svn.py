@@ -55,7 +55,6 @@ CLEAN_REVS_SUFFIX = '.c-revs'
 SORTED_REVS_SUFFIX = '.s-revs'
 RESYNC_SUFFIX = '.resync'
 
-SVNROOT = 'svnroot'
 ATTIC = os.sep + 'Attic'
 
 SVN_INVALID_REVNUM = -1
@@ -1912,7 +1911,7 @@ def pass4(ctx):
 
 
 def pass5(ctx):
-  if not ctx.dry_run:
+  if (not ctx.dry_run) and (not ctx.dump_only):
     # ### FIXME: Er, does this "<" stuff work under Windows?
     # ### If not, then in general how do we load dumpfiles under Windows?
     print 'loading %s into %s' % (ctx.dumpfile, ctx.target)
@@ -1964,6 +1963,7 @@ def usage(ctx):
   # print '  --branches=PATH  path for branches (default: %s)' % ctx.branches_base
   # print '  --tags=PATH      path for tags (default: %s)' % ctx.tags_base
   print '  --no-prune       don\'t prune empty directories'
+  print '  --dump-only      just produce a dumpfile, don\'t commit to a repos'
   print '  --encoding=ENC   encoding of log messages in CVS repos (default: %s)' % ctx.encoding
   sys.exit(1)
 
@@ -1972,13 +1972,14 @@ def main():
   # prepare the operation context
   ctx = _ctx()
   ctx.cvsroot = None
-  ctx.target = SVNROOT
+  ctx.target = None
   ctx.log_fname_base = DATAFILE
   ctx.dumpfile = DUMPFILE
   ctx.verbose = 0
   ctx.dry_run = 0
   ctx.prune = 1
   ctx.create_repos = 0
+  ctx.dump_only = 0
   ctx.trunk_base = "trunk"
   ctx.tags_base = "tags"
   ctx.branches_base = "branches"
@@ -1989,7 +1990,7 @@ def main():
     opts, args = getopt.getopt(sys.argv[1:], 'p:s:vn',
                                [ "create", "trunk=",
                                  "branches=", "tags=", "encoding=",
-                                 "no-prune"])
+                                 "no-prune", "dump-only"])
   except getopt.GetoptError:
     usage(ctx)
   if len(args) != 1:
@@ -2025,8 +2026,23 @@ def main():
       ctx.tags_base = value
     elif opt == '--no-prune':
       ctx.prune = None
+    elif opt == '--dump-only':
+      ctx.dump_only = 1
     elif opt == '--encoding':
       ctx.encoding = value
+
+  # Consistency check for options.
+  if (not ctx.target) and (not ctx.dump_only):
+    sys.stderr.write("Error: must pass one of '-s' or '--dump-only'.\n")
+    sys.exit(1)
+
+  if ctx.target and ctx.dump_only:
+    sys.stderr.write("Error: cannot pass both '-s' and '--dump-only'.\n")
+    sys.exit(1)
+
+  if ctx.create_repos and ctx.dump_only:
+    sys.stderr.write("Error: cannot pass both '--create' and '--dump-only'.\n")
+    sys.exit(1)
 
   convert(ctx, start_pass=start_pass)
 
