@@ -91,18 +91,14 @@ Candidate changes:
     Votes:
       +1: philip
 
-  * r8949, r9032
+  * r8949, r9084
     Use subpools when processing multiple update and commit targets. (#1635)
     Justification:  Embarrassing scalability bugs; extremely simple patches.
     Notes:  Users (on TSVN in particular) have reported skyrocketing
             memory when dealing with many targets.  One user has already
             verified that /trunk fixes the problems.
     Votes:
-      +1: sussman
-      +1: kfogel (for 8949 only)
-      -1: kfogel (for r9032, as it was reverted in r9084 :-).  Maybe
-                  we want r9084 instead?)
-
+      +1: sussman, kfogel, cmpilato
 
   * r9293
     Fix assertion failure on errors without error message when using an 
