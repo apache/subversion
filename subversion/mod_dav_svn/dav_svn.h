@@ -144,6 +144,8 @@ void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
                                   int insvalue, ap_text_header *phdr);
 void dav_svn_register_uris(apr_pool_t *p);
 
+const char * dav_svn_getetag(const dav_resource *resource);
+
 /* our hooks structures; these are gathered into a dav_provider */
 extern const dav_hooks_repository dav_svn_hooks_repos;
 extern const dav_hooks_propdb dav_svn_hooks_propdb;

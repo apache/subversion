@@ -530,7 +530,7 @@ static dav_error * dav_svn_seek_stream(dav_stream *stream,
   return NULL;
 }
 
-static const char * dav_svn_getetag(const dav_resource *resource)
+const char * dav_svn_getetag(const dav_resource *resource)
 {
   const svn_fs_id_t id[] = { 1, 1, -1 }; /* ### temp, until we can fetch */
   svn_string_t *idstr;
