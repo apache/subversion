@@ -66,7 +66,7 @@
 
 
 apr_status_t
-svn__my_readline (apr_file_t *FILE, svn_string_t *line, apr_pool_t *pool)
+svn__my_readline (apr_file_t *file, svn_string_t *line, apr_pool_t *pool)
 {
   char c;
   apr_status_t result;
@@ -75,7 +75,7 @@ svn__my_readline (apr_file_t *FILE, svn_string_t *line, apr_pool_t *pool)
 
   while (1)
     {
-      result = apr_getc (&c, FILE);  /* read a byte from the file */
+      result = apr_getc (&c, file);  /* read a byte from the file */
 
       if (result == APR_EOF)  /* file is finished. */
         {
@@ -183,13 +183,13 @@ svn_parse (apr_hash_t **uberhash, const char *filename, apr_pool_t *pool)
   apr_pool_t *scratchpool;
   svn_string_t *currentline;
   apr_status_t result;     
-  apr_file_t *FILE = NULL;
+  apr_file_t *file = NULL;
 
   /* Create our uberhash */
   *uberhash = apr_make_hash (pool);
 
   /* Open the config file */
-  result = apr_open (&FILE,
+  result = apr_open (&file,
                     filename,
                     APR_READ,
                     APR_OS_DEFAULT, /*TODO: WHAT IS THIS? */
@@ -217,13 +217,13 @@ svn_parse (apr_hash_t **uberhash, const char *filename, apr_pool_t *pool)
     }
 
 
-  /* Create a bytestring to hold the current line of FILE */
+  /* Create a bytestring to hold the current line of file */
   currentline = svn_string_create ("<nobody home>", scratchpool);
 
 
   /* Now start scanning our file, one line at a time */
 
-  while (svn__my_readline (FILE, currentline, scratchpool) != APR_EOF)
+  while (svn__my_readline (file, currentline, scratchpool) != APR_EOF)
     {
       char c;
       size_t offset = svn_string_first_non_whitespace (currentline);
@@ -341,7 +341,7 @@ svn_parse (apr_hash_t **uberhash, const char *filename, apr_pool_t *pool)
      
   /* Close the file and free our scratchpool */
 
-  result = apr_close (FILE);
+  result = apr_close (file);
   if (result != APR_SUCCESS)
     {
       policy->warning 
@@ -366,7 +366,7 @@ svn_parse (apr_hash_t **uberhash, const char *filename, apr_pool_t *pool)
 */
 
 void
-svn_hash_print (apr_hash_t *hash, FILE *stream)
+svn_hash_print (apr_hash_t *hash, file *stream)
 {
   apr_hash_index_t *hash_index;   /* this represents a hash entry */
   void *key, *val;
@@ -412,7 +412,7 @@ svn_hash_print (apr_hash_t *hash, FILE *stream)
 
 
 void
-svn_uberhash_print (apr_hash_t *uberhash, FILE *stream)
+svn_uberhash_print (apr_hash_t *uberhash, file *stream)
 {
   apr_hash_index_t *hash_index;   /* this represents a hash entry */
   void *key, *val;
