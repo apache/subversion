@@ -28,6 +28,9 @@ MUST HAVE
 
 * chat with jorton about neon 0.25/svn1.2 coordination.
 
+* Fix svn_xml_is_xml_safe.  Currently, it allows invaid UTF8!  (lundblad?)
+
+* Scan the whole patch for TODO items introduced on the branch. (all, please)
 
 
 NICE TO HAVE
