@@ -1,7 +1,43 @@
 package SVN::Core;
 use SVN::Base qw(Core svn_);
-
 $VERSION = "$VER_MAJOR.$VER_MINOR.$VER_MICRO";
+use strict;
+
+=head1 NAME
+
+SVN::Core - Core module of the subversion perl bindings
+
+=head1 SYNOPSIS
+
+    require SVN::Core; # does apr_initialize and cleanup for you
+
+    # create a root pool and set it as default pool for later use
+    my $pool = SVN::Pool->new_default;
+
+    sub something {
+        # create a subpool of the current default pool
+        my $pool = SVN::Pool->new_default_sub;
+	# some svn operations...
+
+	# $pool gets destroyed and the previous default pool
+	# is restored when $pool's lexical scope ends
+    }
+
+    # svn_stream_t as native perl io handle
+    my $stream = $txn->root->apply_text('trunk/filea', undef);
+    print $stream $text;
+    close $stream;
+
+    # native perl io handle as svn_stream_t
+    SVN::Repos::dump_fs($repos, \*STDOUT, \*STDERR,
+                        0, $repos->fs->youngest_rev, 0);
+
+=head1 DESCRIPTION
+
+SVN::Core implements higher level functions of fundamental subversion
+functions.
+
+=cut
 
 BEGIN {
     SVN::_Core::apr_initialize;
@@ -18,7 +54,15 @@ use SVN::Base qw(Core svn_stream_);
 package SVN::Stream;
 use IO::Handle;
 our @ISA = qw(IO::Handle);
-use strict;
+
+=head2 svn_stream_t - SVN::Stream
+
+You can use native perl io handles (including io globs) as
+svn_stream_t in subversion functions. Returned svn_stream_t are also
+translated into perl io handles, so you could access them with regular
+print, read, etc.
+
+=cut
 
 use Symbol ();
 
@@ -168,6 +212,51 @@ sub DESTROY {
 
 package SVN::Pool;
 use SVN::Base qw/Core svn_pool_/;
+
+=head2 svn_pool_t - SVN::Pool
+
+The perl bindings significantly simplify the usage of pools, without
+making them not manually adjustable.
+
+Functions requiring pool as the last argument (which are, almost all
+of the subversion functions), the pool is optionally. the default pool
+is used if it is omitted. If default pool is not set, a new root pool
+will be created and set as default automatically when the first
+function requiring a default pool is called.
+
+=head3 Methods
+
+=over
+
+=item new ([$parent])
+
+Create a new pool. The pool is a root pool if $parent is not supplied.
+
+=item new_default ([$parent])
+
+Create a new pool. The pool is a root pool if $parent is not supplied.
+Set the new pool as default pool.
+
+=item new_default_sub
+
+Create a new subpool of the current default pool, and set the
+resulting pool as new default pool.
+
+=item clear
+
+Clear the pool.
+
+=item destroy
+
+Destroy the pool. if the pool is the default pool, restore the
+previous default pool as default. This is normally called
+automatically when the SVN::Pool object is no longer used and
+destroyed by the perl garbage collector.
+
+=back
+
+=cut
+
 no strict 'refs';
 *{"apr_pool_$_"} = *{"SVN::_Core::apr_pool_$_"}
     for qw/clear destroy/;
@@ -220,16 +309,55 @@ sub DESTROY {
     apr_pool_destroy ($$self);
 }
 
+package _p_svn_log_changed_path_t;
+use SVN::Base qw(Core svn_log_changed_path_t_);
+
+=head2 svn_log_changed_path_t
+
+=cut
+
 package SVN::Node;
 use SVN::Base qw(Core svn_node_);
 
+=head2 svn_node_kind_t - SVN::Node
+
+=cut
+
 package _p_svn_opt_revision_t;
 use SVN::Base qw(Core svn_opt_revision_t_);
+
+=head2 svn_opt_revision_t
+
+=cut
 
 package _p_svn_opt_revision_t_value;
 use SVN::Base qw(Core svn_opt_revision_t_value_);
 
 package _p_svn_config_t;
 use SVN::Base qw(Core svn_config_);
+
+=head2 svn_config_t
+
+=cut
+
+=head1 AUTHORS
+
+Chia-liang Kao E<lt>clkao@clkao.orgE<gt>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2003 CollabNet.  All rights reserved.
+
+This software is licensed as described in the file COPYING, which you
+should have received as part of this distribution.  The terms are also
+available at http://subversion.tigris.org/license-1.html.  If newer
+versions of this license are posted there, you may use a newer version
+instead, at your option.
+
+This software consists of voluntary contributions made by many
+individuals.  For exact contribution history, see the revision history
+and logs, available at http://subversion.tigris.org/.
+
+=cut
 
 1;
