@@ -179,16 +179,11 @@ client_ssl_keypw_callback(void *userdata, char *pwbuf, size_t len)
   return (pw_creds == NULL);
 }
 
-#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
-static void
-client_ssl_callback(void *userdata, ne_session *sess,
-                    const ne_ssl_dname *server)
-#else
+
 static void
 client_ssl_callback(void *userdata, ne_session *sess,
                     const ne_ssl_dname *const *dnames,
                     int dncount)
-#endif
 {
   svn_ra_session_t *ras = userdata;
   void *creds;
@@ -211,9 +206,6 @@ client_ssl_callback(void *userdata, ne_session *sess,
       client_creds = creds;
       if (client_creds)
         {
-#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
-          ne_ssl_load_pkcs12(sess, client_creds->cert_file);
-#else
           ne_ssl_client_cert *clicert =
             ne_ssl_clicert_read(client_creds->cert_file);
           if ((clicert != NULL) &&
@@ -227,7 +219,6 @@ client_ssl_callback(void *userdata, ne_session *sess,
               ne_ssl_clicert_decrypt(clicert, pw);
               ne_ssl_set_clicert(sess, clicert);
             }
-#endif
         }
     }
   apr_pool_destroy(pool);
@@ -602,7 +593,7 @@ svn_ra_dav__open (void **session_baton,
 
   if (is_ssl_session)
     {
-      const char *authorities;
+      const char *authorities, *trust_default_ca;
       authorities = svn_config_get_server_setting(
             cfg, server_group,
             SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES,
@@ -617,46 +608,18 @@ svn_ra_dav__open (void **session_baton,
             {
               ne_ssl_certificate *ca_cert;
               files = NULL;
-#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
-
-              if (ne_ssl_load_ca(sess, file) ||
-                  ne_ssl_load_ca(sess2, file))
-                {
-                  return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE,
-                                          NULL,
-                                          "unable to load CA certificate file");
-                }
-#else
-
               ca_cert = ne_ssl_cert_read(file);
               if (ca_cert == NULL)
                 {
-                  return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                                          "unable to load certificate file");
+                  return svn_error_create
+                    (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                     "unable to load certificate file");
                 }
               ne_ssl_trust_cert(sess, ca_cert);
               ne_ssl_trust_cert(sess2, ca_cert);
-
-#endif
             }
         }
 
-#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
-
-      /* When the CA certificate or server certificate has
-         verification problems, neon will call our verify function before
-         outright rejection of the connection.*/
-      ne_ssl_set_verify(sess, server_ssl_callback, ras);
-      ne_ssl_set_verify(sess2, server_ssl_callback, ras);
-      /* For client connections, we register a callback for if the server
-         wants to authenticate the client via client certificate. */
-      ne_ssl_provide_ccert(sess, client_ssl_callback, ras);
-      ne_ssl_provide_ccert(sess2, client_ssl_callback, ras);
-      /* For the certificate certificate, register a callback in case
-         a password is needed for the key. */
-      ne_ssl_keypw_prompt(sess, client_ssl_keypw_callback, ras);
-      ne_ssl_keypw_prompt(sess2, client_ssl_keypw_callback, ras);
-#else
       /* When the CA certificate or server certificate has
          verification problems, neon will call our verify function before
          outright rejection of the connection.*/
@@ -667,9 +630,19 @@ svn_ra_dav__open (void **session_baton,
 
       ne_ssl_provide_clicert(sess, client_ssl_callback, ras);
       ne_ssl_provide_clicert(sess2, client_ssl_callback, ras);
-#endif
-    }
 
+      /* See if the user wants us to trust "default" openssl CAs. */
+      trust_default_ca = svn_config_get_server_setting(
+               cfg, server_group,
+               SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA,
+               "true");
+
+      if (strcasecmp(trust_default_ca, "true") == 0)
+        {
+          ne_ssl_trust_default_ca(sess);
+          ne_ssl_trust_default_ca(sess2);
+        }
+    }
 
   *session_baton = ras;
 

@@ -62,6 +62,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_HTTP_COMPRESSION          "http-compression"
 #define SVN_CONFIG_OPTION_NEON_DEBUG_MASK           "neon-debug-mask"
 #define SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES       "ssl-authority-files"
+#define SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA      "ssl-trust-default-ca"
 #define SVN_CONFIG_OPTION_SSL_IGNORE_UNKNOWN_CA     "ssl-ignore-unknown-ca"
 #define SVN_CONFIG_OPTION_SSL_IGNORE_INVALID_DATE   "ssl-ignore-invalid-date"
 #define SVN_CONFIG_OPTION_SSL_IGNORE_HOST_MISMATCH  "ssl-ignore-host-mismatch"
