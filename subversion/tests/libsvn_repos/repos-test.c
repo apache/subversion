@@ -68,7 +68,8 @@ dir_deltas (const char **msg,
      S is identical to T when it is all said and done.  */
 
   /* Create a filesystem and repository. */
-  SVN_ERR (svn_test__create_repos (&repos, "test-repo-dir-deltas", pool));
+  SVN_ERR (svn_test__create_repos (&repos, "test-repo-dir-deltas", 
+                                   opts->fs_type, pool));
   fs = svn_repos_fs (repos);
   expected_trees[revision_count].num_entries = 0;
   expected_trees[revision_count++].entries = 0;
@@ -374,7 +375,8 @@ node_tree_delete_under_copy (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
-  SVN_ERR (svn_test__create_repos (&repos, "test-repo-del-under-copy", pool));
+  SVN_ERR (svn_test__create_repos (&repos, "test-repo-del-under-copy", 
+                                   opts->fs_type, pool));
   fs = svn_repos_fs (repos);
 
   /* Prepare a txn to receive the greek tree. */
@@ -513,7 +515,7 @@ revisions_changed (const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_repos (&repos, "test-repo-revisions-changed", 
-                                   pool));
+                                   opts->fs_type, pool));
   fs = svn_repos_fs (repos);
 
   /*** Testing Algorithm ***
@@ -771,7 +773,8 @@ node_locations (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create the repository with a Greek tree. */
-  SVN_ERR (svn_test__create_repos (&repos, "test-repo-node-locations", pool));
+  SVN_ERR (svn_test__create_repos (&repos, "test-repo-node-locations", 
+                                   opts->fs_type, pool));
   fs = svn_repos_fs (repos);
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
@@ -964,7 +967,8 @@ rmlocks (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a filesystem and repository. */
-  SVN_ERR (svn_test__create_repos (&repos, "test-repo-rmlocks", pool));
+  SVN_ERR (svn_test__create_repos (&repos, "test-repo-rmlocks", 
+                                   opts->fs_type, pool));
   fs = svn_repos_fs (repos);
 
   /* Prepare a txn to receive the greek tree. */

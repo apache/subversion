@@ -172,7 +172,8 @@ changes_add (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-changes-add", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-changes-add",
+                                "bdb", pool));
 
   /* Add the standard slew of changes. */
   SVN_ERR (add_standard_changes (fs, pool));
@@ -199,7 +200,8 @@ changes_fetch_raw (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-changes-fetch", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-changes-fetch",
+                                "bdb", pool));
 
   /* First, verify that we can request changes for an arbitrary key
      without error. */
@@ -306,7 +308,8 @@ changes_delete (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-changes-delete", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-changes-delete",
+                                "bdb", pool));
 
   /* Add the standard slew of changes. */
   SVN_ERR (add_standard_changes (fs, pool));
@@ -501,7 +504,8 @@ changes_fetch (const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-changes-fetch", pool));
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-changes-fetch",
+                                "bdb", pool));
 
   /* First, verify that we can request changes for an arbitrary key
      without error. */
@@ -571,7 +575,8 @@ changes_fetch_ordering (const char **msg,
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs 
-           (&fs, "test-repo-changes-fetch-ordering", pool));
+           (&fs, "test-repo-changes-fetch-ordering",
+            "bdb", pool));
 
   /*** REVISION 1: Make some files and dirs. ***/
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
