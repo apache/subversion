@@ -45,7 +45,7 @@ typedef struct {
   ne_session *sess;           /* HTTP session to server */
   ne_session *sess2;
   
-  svn_ra_callbacks_t *callbacks;  /* callbacks to get auth data */
+  const svn_ra_callbacks_t *callbacks;  /* callbacks to get auth data */
   void *callback_baton;
 
 } svn_ra_session_t;

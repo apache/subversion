@@ -164,7 +164,7 @@ static const svn_ra_reporter_t ra_local_reporter =
 static svn_error_t *
 open (void **session_baton,
       svn_stringbuf_t *repos_URL,
-      svn_ra_callbacks_t *callbacks,
+      const svn_ra_callbacks_t *callbacks,
       void *callback_baton,
       apr_pool_t *pool)
 {

@@ -90,7 +90,7 @@ static int request_auth(void *userdata, const char *realm, int attempt,
 static svn_error_t *
 svn_ra_dav__open (void **session_baton,
                   svn_stringbuf_t *repos_URL,
-                  svn_ra_callbacks_t *callbacks,
+                  const svn_ra_callbacks_t *callbacks,
                   void *callback_baton,
                   apr_pool_t *pool)
 {
