@@ -339,7 +339,6 @@ svn_wc__files_contents_same_p (svn_boolean_t *same,
 svn_error_t *
 svn_wc_text_modified_p (svn_boolean_t *modified_p,
                         svn_stringbuf_t *filename,
-                        svn_boolean_t use_timestamp,
                         apr_pool_t *pool)
 {
   svn_boolean_t identical_p;
@@ -356,44 +355,37 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
       goto cleanup;
     }
 
-  /* Fetch the timestamp unconditionally, because if FILENAME isn't
-     under revision control, we want the error this would return. */
+  /* See if the local file's timestamp is the same as the one recorded
+     in the administrative directory.  This could, theoretically, be
+     wrong in certain rare cases, but with the addition of a forced
+     delay after commits (see revision 419 and issue #542) it's highly
+     unlikely to be a problem. */
   SVN_ERR (timestamps_equal_p (&equal_timestamps, filename,
                                svn_wc__text_time, subpool));
-  if (use_timestamp)
+  if (equal_timestamps)
     {
-      /* If the working file's timestamp is the same as the one
-         recorded in the administrative directory, assume the working
-         file is unmodified.  This could, theoretically, be wrong in
-         certain rare cases, but with the addition of a forced delay
-         after commits (see revision 419 and issue #542) it's highly
-         unlikely to be a problem. */
-      if (equal_timestamps)
-        {
-          *modified_p = FALSE;
-          goto cleanup;
-        }
+      *modified_p = FALSE;
+      goto cleanup;
     }
-
-  /* Start using text-base. */
+      
+  /* If there's no text-base file, we have to assume the working file
+     is modified.  For example, a file scheduled for addition but not
+     yet committed. */
   textbase_filename = svn_wc__text_base_path (filename, 0, subpool);
   SVN_ERR (svn_io_check_path (textbase_filename, &kind, subpool));
   if (kind != svn_node_file)
     {
-      /* If there's no text-base file, we have to assume the working
-         file is modified.  It might be, for example, a file scheduled
-         for addition but not yet committed. */
       *modified_p = TRUE;
       goto cleanup;
     }
   
-  /* Fall back on filesize and/or byte-for-byte comparison. */
+  /* Otherwise, fall back on filesize and/or byte-for-byte comparison. */
+
+  /* ### todo: add keyword handling here too. */
   {
     enum svn_wc__eol_style style;
     const char *eol;
     
-    /* ### todo: add keyword handling here too. */
-
     SVN_ERR (svn_wc__get_eol_style (&style, &eol, filename->data, subpool));
     if ((style == svn_wc__eol_style_none)
         || (style == svn_wc__eol_style_fixed))

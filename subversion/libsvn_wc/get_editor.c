@@ -1224,7 +1224,7 @@ close_file (void *file_baton)
       /* Local textual mods?  (We can ignore local prop-mods;  those will
          be automagically merged later on in this routine.) */
       SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
-                                       fb->path, 1, fb->pool));
+                                       fb->path, fb->pool));
 
       /* Decide which value of eol-style to use.  This is complex! */
       {
