@@ -1477,7 +1477,8 @@ svn_fs__dag_set_contents (dag_node_t *file,
   SVN_ERR (get_node_revision (&content_skel, file, trail));
   
   /* ...aaaaaaaaand then swap 'em out with some new ones! */
-  content_skel->children->next = svn_fs__str_atom (contents->data,
+  content_skel->children->next = svn_fs__mem_atom (contents->data,
+                                                   contents->len,
                                                    trail->pool);
 
   /* Stash the file's new contents in the db. */
@@ -1663,11 +1664,10 @@ svn_fs__dag_make_copy (dag_node_t **child_p,
     skel_t *flag_skel;
     skel_t *base_path_skel;
     svn_string_t *id_str;
-    svn_string_t *rev;
+    const char *rev;
 
     /* Create a string containing the SOURCE_REVISION */
-    rev = svn_string_createf (trail->pool, "%lu", 
-                              (unsigned long) source_revision);
+    rev = apr_psprintf (trail->pool, "%lu", (unsigned long) source_revision);
 
     /* Get a string representation of the PARENT's node ID */
     id_str = svn_fs_unparse_id (parent->id, trail->pool);
@@ -1681,10 +1681,8 @@ svn_fs__dag_make_copy (dag_node_t **child_p,
     
     /* Step 1: create the FLAG skel. */
     flag_skel = svn_fs__make_empty_list (trail->pool);
-    svn_fs__prepend (svn_fs__str_atom (id_str->data, trail->pool),
-                     flag_skel);
-    svn_fs__prepend (svn_fs__str_atom ("mutable", trail->pool), 
-                     flag_skel);
+    svn_fs__prepend (svn_fs__str_atom (id_str->data, trail->pool), flag_skel);
+    svn_fs__prepend (svn_fs__str_atom ("mutable", trail->pool), flag_skel);
     /* Now we have a FLAG skel: (`mutable' PARENT-ID) */
     
     /* Step 2: create the HEADER skel. */
@@ -1692,10 +1690,8 @@ svn_fs__dag_make_copy (dag_node_t **child_p,
     svn_fs__prepend (flag_skel, header_skel);
     /* cmpilato todo:  Find out of this is supposed to be an empty
        PROPLIST, or a copy of the PROPLIST from the source file. */
-    svn_fs__prepend (svn_fs__make_empty_list (trail->pool),
-                     header_skel);
-    svn_fs__prepend (svn_fs__str_atom ("copy", trail->pool),
-                     header_skel);
+    svn_fs__prepend (svn_fs__make_empty_list (trail->pool), header_skel);
+    svn_fs__prepend (svn_fs__str_atom ("copy", trail->pool), header_skel);
     /* Now we have a HEADER skel: (`copy' () FLAG) */
 
     /* Step 3: assemble the source path list. */
@@ -1708,8 +1704,7 @@ svn_fs__dag_make_copy (dag_node_t **child_p,
     /* Step 4: assemble the NODE-REVISION skel. */
     new_node_skel = svn_fs__make_empty_list (trail->pool);
     svn_fs__prepend (base_path_skel, new_node_skel);
-    svn_fs__prepend (svn_fs__str_atom (rev->data, trail->pool), 
-                     new_node_skel);
+    svn_fs__prepend (svn_fs__str_atom (rev, trail->pool), new_node_skel);
     svn_fs__prepend (header_skel, new_node_skel);
     /* All done, skel-wise.  We have a NODE-REVISION skel as described
        far above. */
