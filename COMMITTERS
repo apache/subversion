@@ -109,6 +109,7 @@ Commit access for specific areas:
   gerhardoettl   Gerhard Oettl <gerhard.oettl.ml@oesoft.at>  (doc: de)
   
   Subprojects that are complete or inactive:
+
        yoshiki   Yoshiki Hayashi <yoshiki@xemacs.org>        (Non-SWIG Ruby b.)
         mmacek   Marko Maček <Marko.Macek@gmx.net>           (cvs2svn branch)
           mass   David Waite <mass@akuma.org>                (certs branch)
