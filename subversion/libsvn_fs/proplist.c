@@ -150,7 +150,7 @@ svn_fs__set_prop (skel_t *proplist,
             }
           else
             {
-              this_value->data = (char *)value->data;
+              this_value->data = value->data;
               this_value->len = value->len;
             }
 
@@ -169,11 +169,11 @@ svn_fs__set_prop (skel_t *proplist,
       /* The property we were seeking to change is not currently in
          the property list, so well add its name and desired value to
          the beginning of the property list. */
-      svn_fs__prepend (svn_fs__mem_atom ((char *)value->data,
+      svn_fs__prepend (svn_fs__mem_atom (value->data,
                                          value->len,
                                          pool),
                        proplist);
-      svn_fs__prepend (svn_fs__mem_atom ((char *)name->data,
+      svn_fs__prepend (svn_fs__mem_atom (name->data,
                                          name->len,
                                          pool),
                        proplist);
