@@ -91,8 +91,9 @@ main (int argc, char **argv)
     }
 
   repos = svn_string_create(url, pool);
-  err = svn_wc_get_update_editor(NULL, repos, 1,
-                                 &editor, &edit_baton, pool);
+  err = svn_wc_get_checkout_editor(NULL,
+                                   repos, svn_string_create ("", pool), 1,
+                                   &editor, &edit_baton, pool);
   if (err)
     {
       svn_handle_error (err, stdout);
