@@ -43,6 +43,7 @@
 #include "svn_wc.h"
 #include "svn_path.h"
 #include "svn_xml.h"
+#include "svn_dav.h"
 
 #include "ra_dav.h"
 
@@ -926,7 +927,7 @@ static svn_error_t * commit_stream_close(void *baton)
     }
 
   /* ### use a symbolic name somewhere for this MIME type? */
-  ne_add_request_header(req, "Content-Type", "application/vnd.svn-svndiff");
+  ne_add_request_header(req, "Content-Type", SVN_SVNDIFF_MIME_TYPE);
 
   /* Rewind the tmpfile. */
   status = apr_file_seek(pb->tmpfile, APR_SET, &offset);
