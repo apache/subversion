@@ -3,14 +3,20 @@
 noinst_PROGRAMS = ra-local-test 
 ra_local_test_SOURCES = ra-local-test.c
 
-## Flags needed when compiling:
-INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@
+COMMON_LIBS = @SVN_TESTS_MAIN_LIBS@ \
+              @SVN_TESTS_EDITOR_LIBS@ \
+              @SVN_LIBSVN_RA_LOCAL_LIBS@ \
+              @SVN_LIBSVN_FS_LIBS@ \
+              @SVN_LIBSVN_DELTA_LIBS@ \
+              @SVN_LIBSVN_SUBR_LIBS@ \
+              @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@ -ldb
+              ## Shouldn't -ldb be added automatically by the autoconf script?
 
-## Libraries this binary depends upon:
-ra_local_test_LDADD = @SVN_LIBSVN_RA_LOCAL_LIBS@  @SVN_LIBSVN_FS_LIBS@ \
-                      @SVN_LIBSVN_WC_LIBS@ @SVN_LIBSVN_SUBR_LIBS@      \
-                      @SVN_LIBSVN_DELTA_LIBS@ @SVN_EXPAT_LIBS@         \
-                      @SVN_NEON_LIBS@ @SVN_APR_LIBS@
+ra_local_test_LDADD = ${COMMON_LIBS}
+
+## Flags needed when compiling:
+INCLUDES = -I$(srcdir)/.. @SVN_INCLUDES@ @SVN_APR_INCLUDES@
+
 
 ## Make libtool be quiet
 LIBTOOL = @LIBTOOL@ --silent
@@ -18,7 +24,7 @@ LIBTOOL = @LIBTOOL@ --silent
 ## Automatic tests run by `make check` -----------------------------
 
 ## A list of test-programs to run.  (Each program contains sub-tests.)
-SVN_TESTS = 
+SVN_TESTS = ra-local-test
 
 ## We're overriding automake's own `check' rule, because it's extremely
 ## inflexible;  we want better control over automated-test output. 
