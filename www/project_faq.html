@@ -196,15 +196,22 @@ href="http://www.webdav.org/mod_dav">mod_dav</a> + mod_dav_svn, and
 the last module uses the Subversion libraries to speak to a
 repository.  For more information about how Subversion uses WebDAV as
 its network protocol, see our <a
-href="http://subversion.tigris.org/servlets/ProjectDocumentList">docs.</a></p>
+href="http://subversion.tigris.org/servlets/ProjectDocumentList">docs.</a>
+Also, as an alternative to Apache, you can use a small standalone
+Subversion server process.  This will allow you to tunnel a custom
+protocol over ssh.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
 <h3><a name="need-apache">Does this mean I have to set up Apache to
 use Subversion?</a></h3>
 
-<p>If you want to <b>host</b> a networked repository: yes.</p>
-<p>If you just want to <b>access</b> a repository with your client: no.</p>
+<p>The short answer:  no.</p>
+
+<p>The long answer:  if you just want to access a repository, then you
+ only need to build a Subversion client.  If you want to <b>host</b> a
+ networked repository, then you either need to set up Apache2 or use
+ our standalone server process over ssh.</p>
 
 <p>For more details about setting up a network accessible Subversion
 server, please read our <a
