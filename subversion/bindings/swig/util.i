@@ -56,13 +56,23 @@
 %typemap(ignore) const char ** = const char **OUTPUT;
 %typemap(argout) const char ** = const char **OUTPUT;
 
+/* -----------------------------------------------------------------------
+   wrap some specific APR functionality
+*/
+
+apr_status_t apr_initialize(void);
+void apr_terminate(void);
+
 /* ----------------------------------------------------------------------- */
 
 %include svn_io.h
 %include svn_pools.h
 %include svn_version.h
 %{
+#include <apr.h>
+#include <apr_general.h>
 #include "svn_io.h"
 #include "svn_pools.h"
 #include "svn_version.h"
+#include "swigutil.h"
 %}

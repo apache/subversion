@@ -39,12 +39,17 @@
 	    $target = t_output_helper($target, SWIG_NewPointerObj(*$source, \
                            SWIGTYPE_p_##stype)); }
 
+/* -----------------------------------------------------------------------
+   Define a macro for forcing a type to appear in a wrapper file.
+*/
+#define MAKE_TYPE(type) void _ignore_##type(struct type *arg)
+
 /* ----------------------------------------------------------------------- */
 
 %typemap(python,except) svn_error_t * {
     $function
     if ($source != NULL) {
-        PyExc_SetString(PyExc_RuntimeError,
+        PyErr_SetString(PyExc_RuntimeError,
                         $source->message ? $source->message : "unknown error");
         return NULL;
     }

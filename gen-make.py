@@ -145,6 +145,13 @@ def main(fname, oname=None, skip_depends=0):
           ofile.write('%s%s: %s\n\t$(COMPILE_APACHE_MOD)\n'
                       % (src[:-2], objext, src))
       ofile.write('\n')
+    elif custom == 'swig-py':
+      ofile.write('# build this with -DSWIGPYTHON\n')
+      for src in sources:
+        if src[-2:] == '.c':
+          ofile.write('%s%s: %s\n\t$(COMPILE_SWIG_PY)\n'
+                      % (src[:-2], objext, src))
+      ofile.write('\n')
 
   for g_name, g_targets in install.items():
     target_names = [ ]

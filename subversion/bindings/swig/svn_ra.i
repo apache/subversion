@@ -17,6 +17,7 @@
  */
 
 %module _ra
+%include typemaps.i
 
 %import apr.i
 %import svn_types.i

@@ -31,6 +31,8 @@ mandir = @mandir@
 srcdir = @srcdir@
 infodir = @infodir@
 
+swig_py_libdir= @libdir@
+
 ### should search for these...
 MAKEINFO = @MAKEINFO@
 TEXI2DVI = texi2dvi
@@ -56,6 +58,8 @@ INCLUDES = @SVN_EXTRA_INCLUDES@ @SVN_NEON_INCLUDES@ \
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_TARGET = @APACHE_TARGET@
 
+SWIG_PY_INCLUDES = @SWIG_PY_INCLUDES@
+
 MKDIR = @MKDIR@
 
 # the EXTRA_ exist so that extra flags can be passed at 'make' time
@@ -64,9 +68,12 @@ CPPFLAGS = @CPPFLAGS@ $(EXTRA_CPPFLAGS)
 LDFLAGS = @LDFLAGS@ $(EXTRA_LDFLAGS)
 
 COMPILE = $(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES)
-LT_COMPILE = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE) -o $@ -c $<
+LT_COMPILE = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE)
 
-COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CFLAGS) $(APACHE_INCLUDES) $(INCLUDES) -o $@ -c $<
+COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(APACHE_INCLUDES) $(INCLUDES) -o $@ -c $<
+
+# special SWIG compilation
+COMPILE_SWIG_PY = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) -DSWIGPYTHON $(CFLAGS) $(SWIG_PY_INCLUDES) $(INCLUDES) -o $@ -c $<
 
 LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(LT_LDFLAGS) $(COMPILE) $(LDFLAGS) -rpath $(libdir)
 
@@ -81,6 +88,8 @@ INSTALL_MOD_SHARED = @APXS@ -i -a
 INSTALL_MOD_STATIC = $(INSTALL) -m 644
 INSTALL_DATA = $(INSTALL) -m 644
 
+INSTALL_SWIG_PY_LIB = $(INSTALL_LIB)
+
 PYTHON = @PYTHON@
 
 all: external-all local-all
@@ -91,7 +100,7 @@ install: external-install local-install
 
 @INCLUDE_OUTPUTS@
 
-local-all: @BUILD_RULES@
+local-all: @BUILD_RULES@ @SWIG_BUILD_RULES@
 
 local-clean: doc-clean
 	@list='$(BUILD_DIRS)'; for i in $$list; do \
@@ -110,7 +119,7 @@ local-extraclean: local-distclean
 		ac-helpers/libtool.m4 ac-helpers/ltconfig \
 		ac-helpers/ltmain.sh
 
-local-install: @INSTALL_RULES@
+local-install: @INSTALL_RULES@ @SWIG_INSTALL_RULES@
 
 check: $(TEST_DEPS) @FS_TEST_DEPS@
 	@logfile=`pwd`/tests.log ; \
@@ -222,7 +231,7 @@ dist:
 	$(COMPILE) -o $@ -c $<
 
 .c.lo:
-	$(LT_COMPILE)
+	$(LT_COMPILE) -o $@ -c $<
 
 .la.la-a:
 	sed "/library_names/s/'.*'/''/" $< > $@

@@ -60,7 +60,9 @@ svn_error_t *svn_fs_close_fs (svn_fs_t *fs);
    in the call to `svn_fs_set_warning_func'; the filesystem passes it through
    to the callback.  FMT is a printf-style format string, which tells us
    how to interpret any successive arguments.  */
+#ifndef SWIG
 typedef void (*svn_fs_warning_callback_t) (void *baton, const char *fmt, ...);
+#endif
 
 
 /* Provide a callback function, WARNING, that FS should use to report
@@ -909,7 +911,7 @@ typedef struct svn_fs_dirent_t {
    are entry names, as byte strings, excluding the final null
    character; the table's values are pointers to svn_fs_dirent_t
    structures.  Allocate the table and its contents in POOL.  */
-svn_error_t *svn_fs_dir_entries (apr_hash_t **table_p,
+svn_error_t *svn_fs_dir_entries (apr_hash_t **entries_p,
                                  svn_fs_root_t *root,
                                  const char *path,
                                  apr_pool_t *pool);
