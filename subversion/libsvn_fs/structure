@@ -116,7 +116,7 @@ on what kind of node this is --- file, directory, etc.
 
 HEADER has the form:
 
-    (KIND CREATED-PATH PREDECESSOR-ID PREDECESSOR-COUNT)
+    (KIND CREATED-PATH PRED-ID PRED-COUNT)
 
 where:
 
@@ -128,11 +128,11 @@ where:
    * CREATED-PATH is the canonicalized absolute filesystem path at
      which this node was created.
 
-   * PREDECESSOR-ID, if present, indicates the node revision which is
-     the immediate ancestor of this node.
+   * PRED-ID, if present, indicates the node revision which is the
+     immediate ancestor of this node.
 
-   * PREDECESSOR-COUNT, if present, indicates the number of
-     predecessors the node revision has (recursively).
+   * PRED-COUNT, if present, indicates the number of predecessors the
+     node revision has (recursively).
 
 Note that a node cannot change its kind from one revision to the next.
 A directory node is always a directory; a file node is always a file;
@@ -793,10 +793,10 @@ Node revisions:
                    FILE ::= (HEADER PROP-KEY DATA-KEY [EDIT-DATA-KEY]) ;
                     DIR ::= (HEADER PROP-KEY ENTRIES-KEY) ;
 
-                 HEADER ::= (KIND CREATED-PATH [PREDECESSOR-ID [PREDECESSOR-COUNT]]) ;
+                 HEADER ::= (KIND CREATED-PATH [PRED-ID [PRED-COUNT]]) ;
                    KIND ::= "file" | "dir" ;
-         PREDECESSOR-ID ::= NODE-REV-ID ;
-      PREDECESSOR-COUNT ::= number ;
+                PRED-ID ::= NODE-REV-ID ;
+             PRED-COUNT ::= number ;
            CREATED-PATH ::= atom ;
                PROP-KEY ::= atom ;
                 REP-KEY ::= atom ;
