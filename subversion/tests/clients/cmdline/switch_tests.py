@@ -112,11 +112,10 @@ def do_routine_switching(wc_dir, verify):
     expected_status.tweak('iota', switched='S')
   
     # Do the switch and check the results in three ways.
-    if svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
-                                             expected_output,
-                                             expected_disk,
-                                             expected_status):
-      return 1
+    svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status)
   else:
     svntest.main.run_svn(None, 'switch',
                          '--username', svntest.main.wc_author,
@@ -147,17 +146,15 @@ def do_routine_switching(wc_dir, verify):
     # Create expected status
     expected_status = get_routine_status_state(wc_dir)
     expected_status.tweak('iota', 'A/B', switched='S')
-  
+
     # Do the switch and check the results in three ways.
-    if svntest.actions.run_and_verify_switch(wc_dir, AB_path, ADG_url,
-                                             expected_output,
-                                             expected_disk,
-                                             expected_status):
-      return 1
+    svntest.actions.run_and_verify_switch(wc_dir, AB_path, ADG_url,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status)
   else:
     svntest.main.run_svn(None, 'switch', ADG_url, AB_path)
 
-  return 0
 
 #----------------------------------------------------------------------
 
@@ -181,11 +178,10 @@ def commit_routine_switching(wc_dir, verify):
   # Try to commit.  We expect this to fail because, if all the
   # switching went as expected, A/B/pi and A/D/G/pi point to the
   # same URL.  We don't allow this.
-  if svntest.actions.run_and_verify_commit (wc_dir, None, None,
-                                            "commit to a URL more than once",
-                                            None, None, None, None,
-                                            wc_dir):
-    return 1
+  svntest.actions.run_and_verify_commit(wc_dir, None, None,
+                                        "commit to a URL more than once",
+                                        None, None, None, None,
+                                        wc_dir)
 
   # Okay, that all taken care of, let's revert the A/D/G/pi path and
   # move along.  Afterward, we should be okay to commit.  (Sorry,
@@ -212,74 +208,62 @@ def commit_routine_switching(wc_dir, verify):
 
   # Commit should succeed
   if verify:
-    if svntest.actions.run_and_verify_commit(wc_dir,
-                                             expected_output,
-                                             expected_status,
-                                             None, None, None, None, None,
-                                             wc_dir):
-      return 1
+    svntest.actions.run_and_verify_commit(wc_dir,
+                                          expected_output,
+                                          expected_status,
+                                          None, None, None, None, None,
+                                          wc_dir)
   else:
     svntest.main.run_svn(None, 'ci', '-m', 'log msg', wc_dir)
 
-  return 0
 
 ######################################################################
 # Tests
 #
-#   Each test must return 0 on success or non-zero on failure.
 
 #----------------------------------------------------------------------
 
 def routine_switching(sbox):
   "test some basic switching operations"
     
-  if sbox.build():
-    return 1
+  sbox.build()
 
   # Setup (and verify) some switched things
-  return do_routine_switching(sbox.wc_dir, 1)
+  do_routine_switching(sbox.wc_dir, 1)
+
 
 #----------------------------------------------------------------------
 
 def commit_switched_things(sbox):
   "commits after some basic switching operations"
 
-  if sbox.build():
-    return 1
-
+  sbox.build()
   wc_dir = sbox.wc_dir
   
   # Setup some switched things (don't bother verifying)
-  if do_routine_switching(wc_dir, 0):
-    return 1
+  do_routine_switching(wc_dir, 0)
 
   # Commit some stuff (and verify)
-  if commit_routine_switching(wc_dir, 1):
-    return 1
+  commit_routine_switching(wc_dir, 1)
 
-  return 0
     
 #----------------------------------------------------------------------
 
 def full_update(sbox):
   "update wc that contains switched things"
 
-  if sbox.build():
-    return 1
-
+  sbox.build()
   wc_dir = sbox.wc_dir
   
   # Setup some switched things (don't bother verifying)
-  if do_routine_switching(wc_dir, 0):
-    return 1
+  do_routine_switching(wc_dir, 0)
 
   # Copy wc_dir to a backup location
   wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
   
   # Commit some stuff (don't bother verifying)
-  if commit_routine_switching(wc_backup, 0):
-    return 1
+  commit_routine_switching(wc_backup, 0)
 
   # Some convenient path variables
   iota_path = os.path.join(wc_dir, 'iota')
@@ -327,28 +311,24 @@ def full_update(sbox):
     })
   expected_status.tweak('iota', 'A/B', switched='S')
 
-  return svntest.actions.run_and_verify_update(wc_dir,
-                                               expected_output,
-                                               expected_disk,
-                                               expected_status)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
 
 #----------------------------------------------------------------------
 
 def full_rev_update(sbox):
   "reverse update wc that contains switched things"
 
-  if sbox.build():
-    return 1
-
+  sbox.build()
   wc_dir = sbox.wc_dir
   
   # Setup some switched things (don't bother verifying)
-  if do_routine_switching(wc_dir, 0):
-    return 1
+  do_routine_switching(wc_dir, 0)
 
   # Commit some stuff (don't bother verifying)
-  if commit_routine_switching(wc_dir, 0):
-    return 1
+  commit_routine_switching(wc_dir, 0)
 
   # Update to HEAD (tested elsewhere)
   svntest.main.run_svn (None, 'up', wc_dir)
@@ -379,35 +359,31 @@ def full_rev_update(sbox):
   expected_status.tweak(repos_rev=2)
   expected_status.tweak('iota', 'A/B', switched='S')
 
-  return svntest.actions.run_and_verify_update(wc_dir,
-                                               expected_output,
-                                               expected_disk,
-                                               expected_status,
-                                               None, None, None,
-                                               None, None, 1,
-                                               '-r', '1', wc_dir)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '-r', '1', wc_dir)
 
 #----------------------------------------------------------------------
 
 def update_switched_things(sbox):
   "update switched wc things to HEAD"
 
-  if sbox.build():
-    return 1
-
+  sbox.build()
   wc_dir = sbox.wc_dir
   
   # Setup some switched things (don't bother verifying)
-  if do_routine_switching(wc_dir, 0):
-    return 1
+  do_routine_switching(wc_dir, 0)
 
   # Copy wc_dir to a backup location
   wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
   
   # Commit some stuff (don't bother verifying)
-  if commit_routine_switching(wc_backup, 0):
-    return 1
+  commit_routine_switching(wc_backup, 0)
 
   # Some convenient path variables
   iota_path = os.path.join(wc_dir, 'iota')
@@ -442,33 +418,29 @@ def update_switched_things(sbox):
     'A/B/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
     })
 
-  return svntest.actions.run_and_verify_update(wc_dir,
-                                               expected_output,
-                                               expected_disk,
-                                               expected_status,
-                                               None, None, None,
-                                               None, None, 0,
-                                               B_path,
-                                               iota_path,
-                                               )
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 0,
+                                        B_path,
+                                        iota_path)
+
 
 #----------------------------------------------------------------------
 
 def rev_update_switched_things(sbox):
   "reverse update switched wc things to an older rev"
 
-  if sbox.build():
-    return 1
-
+  sbox.build()
   wc_dir = sbox.wc_dir
   
   # Setup some switched things (don't bother verifying)
-  if do_routine_switching(wc_dir, 0):
-    return 1
+  do_routine_switching(wc_dir, 0)
 
   # Commit some stuff (don't bother verifying)
-  if commit_routine_switching(wc_dir, 0):
-    return 1
+  commit_routine_switching(wc_dir, 0)
 
   # Some convenient path variables
   iota_path = os.path.join(wc_dir, 'iota')
@@ -504,16 +476,15 @@ def rev_update_switched_things(sbox):
     'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
     })
 
-  return svntest.actions.run_and_verify_update(wc_dir,
-                                               expected_output,
-                                               expected_disk,
-                                               expected_status,
-                                               None, None, None,
-                                               None, None, 1,
-                                               '-r', '1',
-                                               B_path,
-                                               iota_path
-                                               )
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1,
+                                        '-r', '1',
+                                        B_path,
+                                        iota_path)
 
 
 #----------------------------------------------------------------------
@@ -525,8 +496,7 @@ def log_switched_file(sbox):
   wc_dir = sbox.wc_dir
   
   # Setup some switched things (don't bother verifying)
-  if do_routine_switching(wc_dir, 0):
-    raise svntest.Failure  # really, do_routine_switching should raise this
+  do_routine_switching(wc_dir, 0)
 
   # edit and commit switched file 'iota'
   iota_path = os.path.join(wc_dir, 'iota')
