@@ -1,4 +1,4 @@
-%define apache_version 2.0.32-0.2
+%define apache_version 2.0.32-0.3
 %define neon_version 0.18.5
 %define apr_date 2002.02.11
 Summary: A Concurrent Versioning system similar to but better than CVS.
