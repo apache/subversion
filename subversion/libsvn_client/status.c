@@ -237,13 +237,13 @@ svn_client_status (svn_revnum_t *youngest,
                         svn_wc_notify_state_unknown,
                         *youngest);
 
-  /* Close the access baton here, as svn_client__recognize_externals()
-     calls back into this function (and thus will be re-opening the
+  /* Close the access baton here, as svn_client__do_external_status()
+     calls back into this function and thus will be re-opening the
      working copy. */
   SVN_ERR (svn_wc_adm_close (adm_access));
 
   /* If there are svn:externals set, we don't want those to show up as
-     unversioned or unrecognized, so patchup the hash.  If callers wants
+     unversioned or unrecognized, so patch up the hash.  If caller wants
      all the statuses, we will change unversioned status items that
      are interesting to an svn:externals property to
      svn_wc_status_unversioned, otherwise we'll just remove the status

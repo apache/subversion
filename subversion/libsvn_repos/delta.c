@@ -194,7 +194,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
       (SVN_ERR_FS_PATH_SYNTAX, 0,
        "svn_repos_dir_delta: source entry may not be the empty string");
 
-  /* Construct the full path of the source item (SRC_ENTRY may by
+  /* Construct the full path of the source item (SRC_ENTRY may be
      NULL, which is fine).  */
   src_fullpath = svn_path_join_many (pool, src_parent_dir, src_entry, NULL);
 
@@ -203,7 +203,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   SVN_ERR (svn_fs_check_path (&src_kind, src_root, src_fullpath, pool));
 
   /* If either the source or the target is a non-directory, we
-     required that a SRC_ENTRY be supplied. */
+     require that a SRC_ENTRY be supplied. */
   if ((! src_entry) && ((src_kind != svn_node_dir) 
                         || tgt_kind != svn_node_dir))
     return svn_error_create 
@@ -497,7 +497,7 @@ delta_proplists (struct context *c,
 
 
 
-/* Constructing deltas for file constents.  */
+/* Constructing deltas for file contents.  */
 
 
 /* Change the contents of FILE_BATON in C->editor, according to the

@@ -600,7 +600,7 @@ static svn_error_t *ra_svn_commit(void *sess,
 
   /* Fetch an editor for the caller to drive.  The editor will call
    * ra_svn_end_commit() upon close_edit(), at which point we'll fill
-   * in the new_rev, committed_date, and commited_author values. */
+   * in the new_rev, committed_date, and committed_author values. */
   svn_ra_svn_get_editor(editor, edit_baton, conn, pool,
                         ra_svn_end_commit, ccb);
   return SVN_NO_ERROR;

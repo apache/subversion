@@ -414,8 +414,8 @@ typedef struct svn_client_ctx_t
  * the root directory of the newly checked out working copy, and 
  * authenticating with the authentication baton cached in @a ctx.
  *
- * @a revision must be of kind @c svn_client_revision_number,
- * @c svn_client_revision_head, or @c svn_client_revision_date.  If
+ * @a revision must be of kind @c svn_opt_revision_number,
+ * @c svn_opt_revision_head, or @c svn_opt_revision_date.  If
  * @c revision does not meet these requirements, return the error
  * @c SVN_ERR_CLIENT_BAD_REVISION.
  *
@@ -436,8 +436,8 @@ svn_client_checkout (const char *URL,
 /** Update working tree @a path to @a revision, authenticating with
  * the authentication baton cached in @a ctx.
  *
- * @a revision must be of kind @c svn_client_revision_number,
- * @c svn_client_revision_head, or @c svn_client_revision_date.  If @a 
+ * @a revision must be of kind @c svn_opt_revision_number,
+ * @c svn_opt_revision_head, or @c svn_opt_revision_date.  If @a 
  * revision does not meet these requirements, return the error
  * @c SVN_ERR_CLIENT_BAD_REVISION.
  *
@@ -465,8 +465,8 @@ svn_client_update (const char *path,
  * a tag.  Switching an existing working directory is more efficient
  * than checking out @a url from scratch.
  *
- * @a revision must be of kind @c svn_client_revision_number,
- * @c svn_client_revision_head, or @c svn_client_revision_date; otherwise,
+ * @a revision must be of kind @c svn_opt_revision_number,
+ * @c svn_opt_revision_head, or @c svn_opt_revision_date; otherwise,
  * return @c SVN_ERR_CLIENT_BAD_REVISION.
  *
  * If @a ctx->notify_func is non-null, invoke it with @a ctx->notify_baton 

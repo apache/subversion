@@ -154,8 +154,8 @@ copy_file_administratively (const char *src_path,
     {
       if (dst_entry->schedule == svn_wc_schedule_delete)
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                                  "'%s' is scheduled for deletion, it must"
-                                  " be commited before being overwritten",
+                                  "'%s' is scheduled for deletion; it must"
+                                  " be committed before being overwritten",
                                   dst_path);
       else
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
@@ -311,7 +311,7 @@ copy_dir_administratively (const char *src_path,
 
   /* If this is part of a move, the copied directory will be locked,
      because the source directory was locked.  Running cleanup will remove
-     the locks, even though this directory is not yet been added to the
+     the locks, even though this directory has not yet been added to the
      parent. */
   SVN_ERR (svn_wc_cleanup (dst_path, NULL, NULL, cancel_func, cancel_baton,
                            pool));
