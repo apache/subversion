@@ -326,7 +326,19 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
                                  SVN_PROP_MIME_TYPE, p);
 
         if ((serr != NULL) || (pval == NULL))
-          value = "text/plain"; /* assume default */        
+          {
+            if (resource->collection) /* defaults for directories */
+              {
+                if (resource->info->repos->xslt_uri)
+                  value = "text/xml";
+                else
+                  value = "text/html";
+              }
+            else
+              {
+                value = "text/plain"; /* default for file */
+              }
+          }            
         else
           {
             serr = svn_mime_type_validate (pval->data, p);
