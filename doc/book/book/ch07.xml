@@ -108,23 +108,22 @@
         case, the <command>svn</command> program does not attempt to
         create the system-wide configuration area.</para>
 
-      <para>The <filename>.subversion</filename> directory currently
-        contains three files&mdash;two configuration files
-        (<filename>config</filename> and
-        <filename>servers</filename>), and a
-        <filename>README.txt</filename> file which describes the INI
-        format.  At the time of their creation, the files contain
-        default values for each of the supported Subversion options,
-        mostly commented out and grouped with textual descriptions
-        about how the values for the key affect Subversion's behavior.
-        To change a certain behavior, you need only to load the
-        appropriate configuration file into a text editor, and modify
-        the desired option value.  If at any time you wish to have the
-        default settings restored to one or more of the configuration
-        files, you can simply delete the file, and run some innocuous
-        <command>svn</command> command, such as <command>svn
-        --version</command>, and the missing file will be recreated in
-        its default state.</para>
+      <para>The configuration area currently contains three
+        files&mdash;two configuration files (<filename>config</filename> and
+        <filename>servers</filename>), and a <filename>README.txt</filename> 
+        file which describes the INI format.  At the time of their
+        creation, the files contain default values for each of the
+        supported Subversion options, mostly commented out and grouped
+        with textual descriptions about how the values for the key
+        affect Subversion's behavior.  To change a certain behavior,
+        you need only to load the appropriate configuration file into
+        a text editor, and modify the desired option's value.  If at
+        any time you wish to have the default configuration settings
+        restored, you can simply remove (or rename) your configuration
+        directory, and then run some innocuous <command>svn</command>
+        command, such as <command>svn --version</command>.  A new
+        configuration directory with the default contents will be
+        created.</para>
 
       <para>The per-user configuration area also contains a cache of
         authentication data.  The <filename>auth</filename> directory
