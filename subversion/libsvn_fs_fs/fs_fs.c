@@ -1011,18 +1011,10 @@ svn_fs_fs__set_revision_proplist (svn_fs_t *fs,
                                   apr_pool_t *pool)
 {
   apr_file_t *revprop_file;
-  svn_error_t *err;
 
-  err = svn_io_file_open (&revprop_file, path_revprops (fs, rev, pool),
-                          APR_WRITE | APR_TRUNCATE, APR_OS_DEFAULT, pool);
-  if (err && APR_STATUS_IS_ENOENT (err->apr_err))
-    {
-      svn_error_clear (err);
-      return svn_error_createf (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                _("No such revision %ld"), rev);
-    }
-  else if (err)
-    return err;
+  SVN_ERR (svn_io_file_open (&revprop_file, path_revprops (fs, rev, pool),
+                             APR_WRITE | APR_TRUNCATE | APR_CREATE,
+                             APR_OS_DEFAULT, pool));
   
   SVN_ERR (svn_hash_write (proplist, revprop_file, pool));
 
@@ -3659,8 +3651,6 @@ svn_fs_fs__write_revision_zero (svn_fs_t *fs)
                                "2d2977d1c96f487abe4a1e202dd03b4e\n"
                                "cpath: /\n"
                                "\n\n17 107\n", pool));
-
-  SVN_ERR (svn_io_file_create (path_revprops (fs, 0, pool), "", pool));
 
   return SVN_NO_ERROR;
 }
