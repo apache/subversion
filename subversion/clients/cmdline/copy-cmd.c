@@ -80,11 +80,32 @@ svn_cl__copy (apr_getopt_t *os,
     /* WC->WC : No trace editor needed. */
     ;
   else if ((! src_is_url) && (dst_is_url))
-    /* WC->URL : Use commit trace editor. */
-    SVN_ERR (svn_cl__get_trace_commit_editor (&trace_editor,
-                                              &trace_edit_baton,
-                                              dst_path,
-                                              pool));
+    {
+      /* WC->URL : Use commit trace editor. */
+      /* ### todo:
+         
+         We'd like to use the trace commit editor, but we have a
+         couple of problems with that:
+         
+         1) We don't know where the commit editor for this case will
+            be anchored with respect to the repository, so we can't
+            use the DST_URL.
+
+         2) While we do know where the commit editor will be driven
+            from with respect to our working copy, we don't know what
+            basenames will be chosen for our committed things.  So a
+            copy of dir1/foo.c to http://.../dir2/foo-copy-c would
+            display like: "Adding   dir1/foo-copy.c", which could be a
+            bogus path. 
+      */
+      /*
+      svn_stringbuf_t *src_parent = svn_stringbuf_dup (src_path, pool);
+      svn_path_remove_component (src_parent, svn_path_local_style);
+      SVN_ERR (svn_cl__get_trace_commit_editor (&trace_editor,
+                                                &trace_edit_baton,
+                                                src_parent, pool));
+      */
+    }
   else if ((src_is_url) && (! dst_is_url))
     /* URL->WC : Use checkout trace editor. */
     SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,

@@ -332,7 +332,17 @@ wc_to_repos_copy (svn_stringbuf_t *src_path,
   if (dst_kind == svn_node_none)
     /* use target */;
   else if (dst_kind == svn_node_dir)
-    target = svn_stringbuf_dup (basename, pool);
+    {
+      /* We need to re-open the RA session from DST_URL instead of its
+         parent directory. */
+      anchor = dst_url;
+      target = svn_stringbuf_dup (basename, pool);
+      SVN_ERR (ra_lib->close (sess));
+      SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton, 
+                                             auth_baton, anchor, TRUE, 
+                                             TRUE, pool));
+      SVN_ERR (ra_lib->open (&sess, anchor, ra_callbacks, cb_baton, pool));
+    }
   else
     return svn_error_createf (SVN_ERR_FS_ALREADY_EXISTS, 0, NULL, pool,
                               "file `%s' already exists.", dst_url->data);
