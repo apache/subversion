@@ -492,7 +492,8 @@ svn_fs__dag_clone_child (dag_node_t **child_p,
       entry_skel = find_dir_entry (parent, name);
       entry_skel->children->next = svn_fs__str_atom (id_str->data,
                                                      trail->pool);
-
+      /* jimb: don't forget to write the changed directory back into
+         the database!  */
     }
   {
     /* Initialize the youngster. */
