@@ -4286,13 +4286,14 @@ get_file_digest (unsigned char digest[MD5_DIGESTSIZE],
 {
   svn_stream_t *stream;
   apr_size_t len;
+  const apr_size_t buf_size = 100000;
   apr_md5_ctx_t context;
 
   /* ### todo:  Pool usage in svndiff is currently really, really
      crappy.  We need to keep this buffer fairly large so we don't run
      out of memory doing undeltification of large files into tiny
      buffers.  Issue #465.  */
-  char *buf = apr_palloc (pool, 100000);
+  char *buf = apr_palloc (pool, buf_size);
 
   /* Get a stream for the file contents. */
   SVN_ERR (svn_fs_file_contents (&stream, root, path, pool));  
@@ -4303,13 +4304,13 @@ get_file_digest (unsigned char digest[MD5_DIGESTSIZE],
   do 
     {
       /* "please fill the buf with bytes" */
-      len = sizeof (buf);
+      len = buf_size;
       SVN_ERR (svn_stream_read (stream, buf, &len));
       
       /* Update the MD5 calculation with the data we just read.  */
       apr_md5_update (&context, buf, len);
       
-    } while (len == sizeof (buf));  /* Continue until a short read. */
+    } while (len == buf_size);  /* Continue until a short read. */
 
   /* Finalize MD5 calculation. */
   apr_md5_final (digest, &context);
