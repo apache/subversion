@@ -289,10 +289,23 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
  * added or deleted).  Each path is an (svn_stringbuf_t *)
  * representing an absolute path in the repository.
  *
- * If DISCOVER_CHANGED_PATHS, then each call to receiver passes a
+ * ### todo: need to consider whether the above directory behavior is
+ * most useful, or if we should actually treat _any_ node change in a
+ * directory as a visible change for purposes of log... i.e., show
+ * bubble-up.  The reason this might be useful is so that running log
+ * on a directory would give a msg for every change under that dir,
+ * no matter how far down.  See the thread started on the dev list by
+ * Lars Kellogg-Stedman <lars@larsshack.org> with the subject
+ * "Single repository, multiple projects?" for more.  We may simple
+ * need to offer a few different semantics for PATHS.
+ *
+ * ### Of course, right now the PATHS argument is ignored anyway, see
+ * http://subversion.tigris.org/issues/show_bug.cgi?id=562 for why.
+ *
+ * If DISCOVER_CHANGED_PATHS, then each call to RECEIVER passes a
  * `const apr_hash_t *' for the receiver's CHANGED_PATHS argument; the
  * hash's keys are all the paths committed in that revision.
- * Otherwise, each call to receiver passes null for CHANGED_PATHS.
+ * Otherwise, each call to RECEIVER passes null for CHANGED_PATHS.
  *
  * If any invocation of RECEIVER returns error, return that error
  * immediately and without wrapping it.
