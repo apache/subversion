@@ -105,15 +105,6 @@ Outline Mode:
   STATUS: Mike and Karl working on right now, see
           subversion/libsvn_repos/hooks.txt.
 
-** cvs2svn (gstein?  Thom Wood?  Someone else)
-
-  This does not have to be written using SWIG, although that would be
-  nice.  Writing it in C against the native SVN library interfaces
-  would be fine too.
-
-  ESTIMATE: 4 programmer weeks, because it needs to be tested out the
-            wazoo.
-
 ** change #6:  invert text-delta interface (gstein)
 
    Answer: driver will provide editor with a struct that contains a
@@ -199,6 +190,15 @@ subdirs, or hide them under a cvs-like interface?
 
 
 * POST-1.0
+
+** cvs2svn (gstein?  Thom Wood?  Someone else)
+
+  This does not have to be written using SWIG, although that would be
+  nice.  Writing it in C against the native SVN library interfaces
+  would be fine too.
+
+  ESTIMATE: 4 programmer weeks, because it needs to be tested out the
+            wazoo.
 
 ** a "real" internal ACL system
 
