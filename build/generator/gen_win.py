@@ -3,8 +3,9 @@
 #
 
 import os
-import glob
 import sys
+import string
+
 import gen_base
 
 
@@ -79,21 +80,24 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     #We translate all slashes to windows format later on
     db41 = self.search_for("libdb41.lib", ["db4-win32/lib"])
     if db41:
-      print>>sys.stderr, "Found libdb41.lib in %s" % db41
+      sys.stderr.write("Found libdb41.lib in %s\n" % db41)
       self.dblibname = "libdb41"
       self.dblibpath = db41
     else:
       db40 = self.search_for("libdb40.lib", ["db4-win32/lib"])
       if db40:
-        print>>sys.stderr, "Found libdb40.lib in %s" % db40
+        sys.stderr.write("Found libdb40.lib in %s\n" % db40)
         self.dblibname = "libdb40"
         self.dblibpath = db40
       else:
-        print>>sys.stderr, "DB not found assuming db-4.0.X in db4-win32 by default"
+        sys.stderr.write("DB not found; assuming db-4.0.X in db4-win32 "
+                         "by default\n")
         self.dblibname = "libdb40"
         self.dblibpath = os.path.join("db4-win32","lib")
-    self.dbincpath = self.dblibpath.replace("lib", "include")
-    self.dbbindll = "%s//%s.dll" % (self.dblibpath.replace("lib", "bin"), self.dblibname)
+    self.dbincpath = string.replace(self.dblibpath, "lib", "include")
+    self.dbbindll = "%s//%s.dll" % (string.replace(self.dblibpath,
+                                                   "lib", "bin"),
+                                    self.dblibname)
     self.envvars["$(SVN_DB_LIBS)"] = [self.dblibname]
 
     #Make some files for the installer so that we don't need to require sed or some other command to do it
@@ -130,14 +134,14 @@ class WinGeneratorBase(gen_base.GeneratorBase):
   def search_for(self, name, paths):
     "Search for the existence of name in paths & return the first path it was found under"
     for x in paths:
-      x = x.replace("/", os.sep)
+      x = string.replace(x, "/", os.sep)
       if os.path.exists(os.path.join(x, name)):
         return x
 
   def subst_win_env(self, s):
     "Substitute s with a value from envvars if a match was found"
 
-    if s not in self.envvars:
+    if not self.envvars.has_key(s):
       return [s]
 
     a=self.envvars[s]
@@ -149,18 +153,21 @@ class WinGeneratorBase(gen_base.GeneratorBase):
   def map_rootpath(self, list, rootpath):
     "Return a list with rootpath prepended"
 
-    return map(lambda x:"%s\\%s" % (rootpath,x), list)
+    result = [ ]
+    for item in list:
+      result.append(rootpath + '\\' + item)
+    return result
 
   def make_windirs(self, list):
     "Return a list with all the current os slashes replaced with windows slashes"
 
-    return map(lambda x:x.replace(os.sep,'\\'), list)
+    return map(lambda x:string.replace(x, os.sep, '\\'), list)
 
   def _find_libs(self, libs_option):
     "Override the parents _find_libs function so that environment substitution happens first"
 
     libs = [ ]
-    for x in libs_option.split():
+    for x in string.split(libs_option):
       for libname in self.subst_win_env(x):
         if self.targets.has_key(libname):
           libs.append(self.targets[libname])
@@ -186,7 +193,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         ret.append(obj)
 
       if recurse:
-        ret += self.get_win_depends(obj, 1)
+        ret = ret + self.get_win_depends(obj, 1)
 
     ret = unique(ret)
     ret.sort()
@@ -221,30 +228,52 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       fakedefines = ["WIN32","_WINDOWS","APR_DECLARE_STATIC","APU_DECLARE_STATIC","alloca=_alloca"]
 
     if cfg == 'Debug':
-      fakedefines+=["_DEBUG","SVN_DEBUG"]
+      fakedefines.extend(["_DEBUG","SVN_DEBUG"])
     elif cfg == 'Release':
-      fakedefines+=["NDEBUG"]
+      fakedefines.append("NDEBUG")
     return fakedefines
 
   def get_win_includes(self, target, rootpath):
     "Return the list of include directories for target"
 
     if target.name == 'mod_dav_svn':
-      fakeincludes = self.map_rootpath(["subversion/include", self.dbincpath, ""], rootpath)
-      fakeincludes += ["$(HTTPD)/srclib/apr/include", "$(HTTPD)/srclib/apr-util/include", "$(HTTPD)/srclib/apr-util/xml/expat/lib", "$(HTTPD)/include"]
+      fakeincludes = self.map_rootpath(["subversion/include",
+                                        self.dbincpath,
+                                        ""],
+                                       rootpath)
+      fakeincludes.extend([
+        "$(HTTPD)/srclib/apr/include",
+        "$(HTTPD)/srclib/apr-util/include",
+        "$(HTTPD)/srclib/apr-util/xml/expat/lib",
+        "$(HTTPD)/include"
+        ])
     else:
-      fakeincludes = self.map_rootpath(["subversion/include","apr/include","apr-util/include","apr-util/xml/expat/lib","neon/src",self.dbincpath,""], rootpath)
+      fakeincludes = self.map_rootpath(["subversion/include",
+                                        "apr/include",
+                                        "apr-util/include",
+                                        "apr-util/xml/expat/lib",
+                                        "neon/src",
+                                        self.dbincpath,
+                                        ""],
+                                       rootpath)
 
     return self.make_windirs(fakeincludes)
 
   def get_win_lib_dirs(self, target, rootpath, cfg):
     "Return the list of library directories for target"
 
-    libcfg = cfg.replace("Debug","LibD").replace("Release","LibR")
+    libcfg = string.replace(string.replace(cfg, "Debug", "LibD"),
+                            "Release", "LibR")
 
     if target.name == 'mod_dav_svn':
       fakelibdirs = self.map_rootpath([self.dblibpath], rootpath)
-      fakelibdirs += ["$(HTTPD)/%s" % cfg, "$(HTTPD)/modules/dav/main/%s" % cfg, "$(HTTPD)/srclib/apr/%s" % cfg, "$(HTTPD)/srclib/apr-util/%s" % cfg, "$(HTTPD)/srclib/apr-util/xml/expat/lib/%s" % libcfg]
+      fakelibdirs.extend([
+        "$(HTTPD)/%s" % cfg,
+        "$(HTTPD)/modules/dav/main/%s" % cfg,
+        "$(HTTPD)/srclib/apr/%s" % cfg,
+        "$(HTTPD)/srclib/apr-util/%s" % cfg,
+        "$(HTTPD)/srclib/apr-util/xml/expat/lib/%s" % libcfg
+        ])
     else:
       fakelibdirs = self.map_rootpath([self.dblibpath], rootpath)
 
@@ -254,7 +283,17 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     "Return the list of external libraries needed for target"
     
     if target.name == 'mod_dav_svn':
-      return [self.dblibname+'.lib', 'xml.lib', 'libapr.lib', 'libaprutil.lib', 'libhttpd.lib', 'mod_dav.lib', 'mswsock.lib', 'ws2_32.lib', 'advapi32.lib', 'rpcrt4.lib', 'shfolder.lib']
+      return [ self.dblibname+'.lib',
+               'xml.lib',
+               'libapr.lib',
+               'libaprutil.lib',
+               'libhttpd.lib',
+               'mod_dav.lib',
+               'mswsock.lib',
+               'ws2_32.lib',
+               'advapi32.lib',
+               'rpcrt4.lib',
+               'shfolder.lib' ]
 
     if not isinstance(target, gen_base.TargetExe):
       return []
