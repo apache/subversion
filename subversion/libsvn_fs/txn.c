@@ -32,6 +32,7 @@
 #include "trail.h"
 #include "rev-table.h"
 #include "txn-table.h"
+#include "copies-table.h"
 #include "tree.h"
 
 
@@ -215,12 +216,28 @@ txn_body_abort_txn (void *baton, trail_t *trail)
   struct abort_txn_args *args = baton;
   svn_fs_txn_t *txn = args->txn;
   const char *txn_name;
-  const svn_fs_id_t *root_id, *ignored_id;
+  svn_fs__transaction_t *fstxn;
 
+  /* Get the transaction by its id. */
   SVN_ERR (svn_fs_txn_name (&txn_name, txn, txn->pool));
-  SVN_ERR (svn_fs__get_txn_ids (&root_id, &ignored_id, txn->fs, 
-                                txn_name, trail));
-  SVN_ERR (svn_fs__dag_delete_if_mutable (txn->fs, root_id, trail));
+  SVN_ERR (svn_fs__get_txn (&fstxn, txn->fs, txn_name, trail));
+
+  /* Delete the mutable portion of the tree hanging from the
+     transaction. */
+  SVN_ERR (svn_fs__dag_delete_if_mutable (txn->fs, fstxn->root_id, trail));
+
+  /* If any copies were made in this transaction, remove those. */
+  if (fstxn->copies && fstxn->copies->nelts)
+    {
+      int i;
+      for (i = 0; i < fstxn->copies->nelts; i++)
+        {
+          const char *copy_id = APR_ARRAY_IDX (fstxn->copies, i, const char *);
+          SVN_ERR (svn_fs__delete_copy (txn->fs, copy_id, trail));
+        }
+    }
+    
+  /* Finally, delete the transaction itself. */
   SVN_ERR (svn_fs__delete_txn (txn->fs, txn->id, trail));
 
   return SVN_NO_ERROR;

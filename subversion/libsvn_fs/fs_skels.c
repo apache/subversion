@@ -63,18 +63,12 @@ is_valid_revision_skel (skel_t *skel)
 {
   int len = svn_fs__list_length (skel);
 
-  if (len == 3)
-    {
-      if (svn_fs__matches_atom (skel->children, "revision")
-          && skel->children->next != NULL
-          && is_valid_proplist_skel (skel->children->next->next))
-        {
-          skel_t *id = skel->children->next;
-          if (id->is_atom
-              && 0 == (1 & svn_fs__count_id_components (id->data, id->len)))
-            return 1;
-        }
-    }
+  if ((len == 4)
+      && svn_fs__matches_atom (skel->children, "revision")
+      && skel->children->next->is_atom
+      && skel->children->next->next->is_atom
+      && is_valid_proplist_skel (skel->children->next->next->next))
+    return 1;
 
   return 0;
 }
@@ -85,11 +79,17 @@ is_valid_transaction_skel (skel_t *skel)
 {
   int len = svn_fs__list_length (skel);
 
-  if (len == 4
+  if (len == 5
       && svn_fs__matches_atom (skel->children, "transaction")
       && skel->children->next->is_atom
       && skel->children->next->next->is_atom
-      && is_valid_proplist_skel (skel->children->next->next->next))
+      && is_valid_proplist_skel (skel->children->next->next->next)
+      && (! skel->children->next->next->next->next->is_atom))
+    return 1;
+
+  if (len == 2
+      && svn_fs__matches_atom (skel->children, "committed")
+      && skel->children->next->is_atom)
     return 1;
 
   return 0;
@@ -236,17 +236,19 @@ svn_fs__parse_revision_skel (svn_fs__revision_t **revision_p,
                              apr_pool_t *pool)
 {
   svn_fs__revision_t *revision;
-  skel_t *id, *proplist;
+  skel_t *id, *txn, *proplist;
 
   /* Validate the skel. */
   if (! is_valid_revision_skel (skel))
     return skel_err ("revision", pool);
   id = skel->children->next;
-  proplist = skel->children->next->next;
+  txn = skel->children->next->next;
+  proplist = skel->children->next->next->next;
 
   /* Create the returned structure */
   revision = apr_pcalloc (pool, sizeof (*revision));
   revision->id = svn_fs_parse_id (id->data, id->len, pool);
+  revision->txn = apr_pstrmemdup (pool, txn->data, txn->len);
   SVN_ERR (svn_fs__parse_proplist_skel (&(revision->proplist), 
                                         proplist, pool));
   
@@ -262,23 +264,67 @@ svn_fs__parse_transaction_skel (svn_fs__transaction_t **transaction_p,
                                 apr_pool_t *pool)
 {
   svn_fs__transaction_t *transaction;
-  skel_t *root_id, *base_root_id, *proplist;
   
   /* Validate the skel. */
   if (! is_valid_transaction_skel (skel))
     return skel_err ("transaction", pool);
-  root_id = skel->children->next;
-  base_root_id = skel->children->next->next;
-  proplist = skel->children->next->next->next;
 
   /* Create the returned structure */
   transaction = apr_pcalloc (pool, sizeof (*transaction));
-  transaction->root_id = svn_fs_parse_id (root_id->data, root_id->len, pool);
-  transaction->base_root_id = svn_fs_parse_id (base_root_id->data,
-                                               base_root_id->len, pool);
-  SVN_ERR (svn_fs__parse_proplist_skel (&(transaction->proplist), 
-                                        proplist, pool));
-  
+
+  /* Handle committed transactions */
+  if (svn_fs__matches_atom (skel->children, "committed"))
+    {
+      /* REV */
+      transaction->revision = atoi (apr_pstrmemdup 
+                                    (pool, skel->children->next->data,
+                                     skel->children->next->len));
+      if (! SVN_IS_VALID_REVNUM (transaction->revision))
+        return skel_err ("tranaction", pool);
+    }
+  /* Handle unfinished transaction */
+  else
+    {
+      skel_t *root_id, *base_id, *proplist, *copies;
+      int len;
+
+      root_id = skel->children->next;
+      base_id = skel->children->next->next;
+      proplist = skel->children->next->next->next;
+      copies = skel->children->next->next->next->next;
+
+      transaction->revision = SVN_INVALID_REVNUM;
+
+      /* ROOT-ID */
+      transaction->root_id = svn_fs_parse_id (root_id->data, 
+                                              root_id->len, pool);
+
+      /* BASE-ID */
+      transaction->base_id = svn_fs_parse_id (base_id->data,
+                                              base_id->len, pool);
+
+      /* PROPLIST */
+      SVN_ERR (svn_fs__parse_proplist_skel (&(transaction->proplist), 
+                                            proplist, pool));
+      
+      /* COPIES */
+      if ((len = svn_fs__list_length (copies)))
+        {
+          const char *copy_id;
+          apr_array_header_t *txncopies;
+          skel_t *cpy = copies->children;
+
+          txncopies = apr_array_make (pool, len, sizeof (copy_id));
+          while (cpy)
+            {
+              copy_id = apr_pstrmemdup (pool, cpy->data, cpy->len);
+              (*((const char **)(apr_array_push (txncopies)))) = copy_id;
+              cpy = cpy->next;
+            }
+          transaction->copies = txncopies;
+        }
+    }
+
   /* Return the structure. */
   *transaction_p = transaction;
   return SVN_NO_ERROR;
@@ -593,6 +639,9 @@ svn_fs__unparse_revision_skel (skel_t **skel_p,
   svn_fs__unparse_proplist_skel (&proplist_skel, revision->proplist, pool);
   svn_fs__prepend (proplist_skel, skel);
 
+  /* TXN */
+  svn_fs__prepend (svn_fs__str_atom (revision->txn, pool), skel);
+
   /* ID */
   id_str = svn_fs_unparse_id (revision->id, pool);
   svn_fs__prepend (svn_fs__mem_atom (id_str->data, id_str->len, pool), skel);
@@ -614,26 +663,63 @@ svn_fs__unparse_transaction_skel (skel_t **skel_p,
                                   apr_pool_t *pool)
 {
   skel_t *skel;
-  skel_t *proplist_skel;
-  svn_stringbuf_t *id_str;
 
   /* Create the skel. */
   skel = svn_fs__make_empty_list (pool);
 
-  /* PROPLIST */
-  svn_fs__unparse_proplist_skel (&proplist_skel, transaction->proplist, pool);
-  svn_fs__prepend (proplist_skel, skel);
+  /* Handle committed transactions. */
+  if (SVN_IS_VALID_REVNUM (transaction->revision))
+    {
+      svn_stringbuf_t *rev_str;
+      
+      /* REV */
+      rev_str = svn_stringbuf_createf (pool, "%" SVN_REVNUM_T_FMT,
+                                       transaction->revision);
+      svn_fs__prepend (svn_fs__mem_atom (rev_str->data, rev_str->len, pool), 
+                       skel);
+      
+      /* "committed" */
+      svn_fs__prepend (svn_fs__str_atom ("committed", pool), skel);
+    }
+  /* Handle unfinished transactions. */
+  else
+    {
+      skel_t *proplist_skel, *copies_skel;
+      svn_stringbuf_t *id_str;
 
-  /* BASE-ROOT-ID */
-  id_str = svn_fs_unparse_id (transaction->base_root_id, pool);
-  svn_fs__prepend (svn_fs__mem_atom (id_str->data, id_str->len, pool), skel);
+      /* COPIES */
+      copies_skel = svn_fs__make_empty_list (pool);
+      if (transaction->copies && transaction->copies->nelts) 
+        {
+          int i;
+          for (i = transaction->copies->nelts - 1; i > 0; i--)
+            {
+              const char *copy_id = APR_ARRAY_IDX (transaction->copies, i, 
+                                                   const char *);
+              
+              svn_fs__prepend (svn_fs__str_atom (copy_id, pool), copies_skel);
+            }
+        }
+      svn_fs__prepend (copies_skel, skel);
 
-  /* ROOT-ID */
-  id_str = svn_fs_unparse_id (transaction->root_id, pool);
-  svn_fs__prepend (svn_fs__mem_atom (id_str->data, id_str->len, pool), skel);
+      /* PROPLIST */
+      svn_fs__unparse_proplist_skel (&proplist_skel, 
+                                     transaction->proplist, pool);
+      svn_fs__prepend (proplist_skel, skel);
 
-  /* "transaction" */
-  svn_fs__prepend (svn_fs__str_atom ("transaction", pool), skel);
+      /* BASE-ID */
+      id_str = svn_fs_unparse_id (transaction->base_id, pool);
+      svn_fs__prepend (svn_fs__mem_atom (id_str->data, id_str->len, pool), 
+                       skel);
+
+      /* ROOT-ID */
+      id_str = svn_fs_unparse_id (transaction->root_id, pool);
+      svn_fs__prepend (svn_fs__mem_atom (id_str->data, id_str->len, pool), 
+                       skel);
+
+      /* "transaction" */
+      svn_fs__prepend (svn_fs__str_atom ("transaction", pool), skel);
+    }
 
   /* Validate and return the skel. */
   if (! is_valid_transaction_skel (skel))

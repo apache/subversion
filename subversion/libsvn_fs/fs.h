@@ -81,8 +81,12 @@ struct svn_fs_t
 /*** Filesystem Revision ***/
 typedef struct
 {
-  /* id of the root node. */
+  /* node revsion id of the root node. */
   const svn_fs_id_t *id;
+
+  /* id of the transaction that was committed to create this
+     revision. */
+  const char *txn;
 
   /* property list (const char * name, svn_string_t * value) 
      may be NULL if there are no properies.  */
@@ -94,15 +98,25 @@ typedef struct
 /*** Filesystem Transaction ***/
 typedef struct
 {
-  /* id of the root node */
+  /* revision which this transaction was committed to create, or an
+     invalid revision number to indicate that this is a transaction
+     still unfinished. */
+  svn_revnum_t revision;
+
+  /* node revision id of the root node.  (unfinished only) */
   const svn_fs_id_t *root_id;
 
-  /* id of the revision root node upon which this txn is base */
-  const svn_fs_id_t *base_root_id;
+  /* node revision id of the node which is the root of the revision
+     upon which this txn is base.  (unfinished only) */
+  const svn_fs_id_t *base_id;
 
   /* property list (const char * name, svn_string_t * value).
-     may be NULL if there are no properties.  */
+     may be NULL if there are no properties.  (unfinished only) */
   apr_hash_t *proplist;
+
+  /* copies list (const char * copy_ids), or NULL if there have been
+     no copies in this transaction.  (unfinished only) */
+  apr_array_header_t *copies;
 
 } svn_fs__transaction_t;
 

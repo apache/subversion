@@ -255,6 +255,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_FS_NO_SUCH_COPY,
               "Filesystem has no such copy")
 
+  SVN_ERRDEF (SVN_ERR_FS_TRANSACTION_NOT_MUTABLE,
+              "Filesystem has no such file")
+
   SVN_ERRDEF (SVN_ERR_FS_NOT_FOUND,
               "Filesystem has no such file")
 

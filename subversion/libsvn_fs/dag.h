@@ -181,7 +181,7 @@ svn_error_t *svn_fs__dag_clone_root (dag_node_t **root_p,
    - marking the tree of mutable nodes at SVN_TXN's root as immutable,
      and marking all their contents as stable
    - creating a new revision, with SVN_TXN's root as its root directory
-   - deleting SVN_TXN from `transactions'
+   - promoting SVN_TXN to a "committed" transaction.
 
    Beware!  This does not make sure that SVN_TXN is based on the very
    latest revision in FS.  If the caller doesn't take care of this,

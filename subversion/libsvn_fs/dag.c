@@ -318,6 +318,7 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
   svn_revnum_t rev;
   svn_fs_t *fs = fs_baton;
   svn_string_t date;
+  char *txn_id;
   svn_fs_id_t *root_id = svn_fs_parse_id ("0.0", 3, trail->pool);
 
   /* Create empty root directory with node revision 0.0. */
@@ -328,14 +329,25 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
   SVN_ERR (svn_fs__put_node_revision (fs, root_id, &noderev, trail));
   SVN_ERR (svn_fs__stable_node (fs, root_id, trail));
 
+  /* Create a new transaction (better have an id of "0") */
+  SVN_ERR (svn_fs__create_txn (&txn_id, fs, root_id, trail));
+  if (strcmp (txn_id, "0"))
+    return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+                              "initial transaction id `0' in filesystem `%s'",
+                              fs->path);
+    
   /* Link it into filesystem revision 0. */
   revision.id = root_id;
   revision.proplist = NULL;
+  revision.txn = txn_id;
   SVN_ERR (svn_fs__put_rev (&rev, fs, &revision, trail));
   if (rev != 0)
     return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
                               "initial revision number is not `0'"
                               " in filesystem `%s'", fs->path);
+
+  /* Promote our transaction to a "committed" transaction. */
+  SVN_ERR (svn_fs__commit_txn (fs, txn_id, rev, trail));
 
   /* Set a date on revision 0. */
   date.data = svn_time_to_nts (apr_time_now(), trail->pool);
@@ -1548,6 +1560,7 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
   SVN_ERR (svn_fs__get_txn (&transaction, fs, svn_txn, trail));
   revision.id = root->id;
   revision.proplist = transaction->proplist;
+  revision.txn = svn_txn;
   SVN_ERR (svn_fs__put_rev (new_rev, fs, &revision, trail));
 
   /* Set a date on the commit.  We wait until now to fetch the date,
@@ -1560,8 +1573,8 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
   /* Recursively stabilize from ROOT using the new revision.  */
   SVN_ERR (stabilize_node (root, *new_rev, trail));
 
-  /* Delete transaction from `transactions' table.  */
-  SVN_ERR (svn_fs__delete_txn (fs, svn_txn, trail));
+  /* Promote the unfinished transaction to a committed one. */
+  SVN_ERR (svn_fs__commit_txn (fs, svn_txn, *new_rev, trail));
 
   return SVN_NO_ERROR;
 }
