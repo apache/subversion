@@ -62,42 +62,10 @@ dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
     return derr;
 }
 
-
-svn_revnum_t dav_svn_get_safe_cr(svn_fs_root_t *root,
-                                 const char *path,
-                                 apr_pool_t *pool)
-{
-  svn_revnum_t revision = svn_fs_revision_root_revision(root);    
-  svn_revnum_t created_rev;
-  svn_fs_root_t *other_root;
-  svn_fs_id_t *id, *other_id;
-
-  if (svn_fs_node_id(&id, root, path, pool))
-    return revision;   /* couldn't get id of root/path */
-
-  if (svn_fs_node_created_rev(&created_rev, root, path, pool))
-    return revision;   /* couldn't find created_rev */
-  
-  if (svn_fs_revision_root(&other_root, svn_fs_root_fs(root),
-                           created_rev, pool))
-    return revision;   /* couldn't open the created rev */
-
-  if (svn_fs_node_id(&other_id, other_root, path, pool))
-    return revision;   /* couldn't get id of other_root/path */
-
-  if (svn_fs_compare_ids(id, other_id) == 0)
-    return created_rev;  /* the created_rev is safe!  the same node
-                            exists at the same path in both revisions. */    
-
-  /* default */
-  return revision;
-}
-                                   
-
-
 const char *dav_svn_build_uri(const dav_svn_repos *repos,
                               enum dav_svn_build_what what,
                               svn_revnum_t revision,
+                              svn_fs_root_t *rev_root,
                               const char *path,
                               int add_href,
                               apr_pool_t *pool)
@@ -126,9 +94,21 @@ const char *dav_svn_build_uri(const dav_svn_repos *repos,
                           href1, root_path, path, href2);
 
     case DAV_SVN_BUILD_URI_VERSION:
-      return apr_psprintf(pool, "%s%s/%s/ver/%" SVN_REVNUM_T_FMT "%s%s",
-                          href1, root_path, special_uri,
-                          revision, path, href2);
+      {
+        svn_error_t *serr;
+        svn_revnum_t created_rev;
+
+        if ((serr = svn_fs_node_created_rev(&created_rev, rev_root,
+                                            path, pool)))
+          {
+            abort();
+            return NULL;
+          }
+
+        return apr_psprintf(pool, "%s%s/%s/ver/%" SVN_REVNUM_T_FMT "%s%s",
+                            href1, root_path, special_uri,
+                            created_rev, path, href2);
+      }
 
     case DAV_SVN_BUILD_URI_VCC:
       return apr_psprintf(pool, "%s%s/%s/vcc/" DAV_SVN_DEFAULT_VCC_NAME "%s",

@@ -56,7 +56,7 @@ typedef enum svnlook_cmd_t
   svnlook_cmd_ids,
   svnlook_cmd_info,
   svnlook_cmd_log,
-  svnlook_cmd_tree
+  svnlook_cmd_tree,
   
 } svnlook_cmd_t;
 
@@ -366,7 +366,7 @@ dump_contents (apr_file_t *fh,
   apr_status_t apr_err;
   apr_size_t len, len2;
   svn_stream_t *stream;
-  char buffer[1024];
+  unsigned char buffer[1024];
 
   /* Get a stream to the current file's contents. */
   SVN_ERR (svn_fs_file_contents (&stream, root, path, pool));
@@ -603,7 +603,7 @@ print_ids_tree (svn_repos_node_t *node,
   svn_repos_node_t *tmp_node;
   int i;
   svn_fs_id_t *id;
-  svn_string_t *unparsed_id = NULL;
+  svn_stringbuf_t *unparsed_id = NULL;
   apr_pool_t *subpool;
 
   if (! node)

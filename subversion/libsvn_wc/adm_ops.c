@@ -455,11 +455,7 @@ mark_tree (const char *dir,
 
       /* Tell someone what we've done. */
       if (schedule == svn_wc_schedule_delete && notify_func != NULL)
-        (*notify_func) (notify_baton, fullpath, svn_wc_notify_delete,
-                        svn_node_unknown,
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        SVN_INVALID_REVNUM);
+        (*notify_func) (notify_baton, svn_wc_notify_delete, fullpath);
 
       /* Clear our per-iteration pool. */
       svn_pool_clear (subpool);
@@ -655,11 +651,7 @@ svn_wc_delete (const char *path,
 
   /* Report the deletion to the caller. */
   if (notify_func != NULL)
-    (*notify_func) (notify_baton, path, svn_wc_notify_delete,
-                    svn_node_unknown,
-                    svn_wc_notify_state_unknown,
-                    svn_wc_notify_state_unknown,
-                    SVN_INVALID_REVNUM);
+    (*notify_func) (notify_baton, svn_wc_notify_delete, path);
 
   /* By the time we get here, anything that was scheduled to be added has
      become unversioned */
@@ -883,11 +875,7 @@ svn_wc_add (const char *path,
 
   /* Report the addition to the caller. */
   if (notify_func != NULL)
-    (*notify_func) (notify_baton, path, svn_wc_notify_add,
-                    svn_node_unknown,
-                    svn_wc_notify_state_unknown,
-                    svn_wc_notify_state_unknown,
-                    SVN_INVALID_REVNUM);
+    (*notify_func) (notify_baton, svn_wc_notify_add, path);
 
   return SVN_NO_ERROR;
 }
@@ -1265,11 +1253,7 @@ svn_wc_revert (const char *path,
 
   /* If PATH was reverted, tell our client that. */
   if ((notify_func != NULL) && reverted)
-    (*notify_func) (notify_baton, path, svn_wc_notify_revert,
-                    svn_node_unknown,
-                    svn_wc_notify_state_unknown,
-                    svn_wc_notify_state_unknown,
-                    SVN_INVALID_REVNUM);
+    (*notify_func) (notify_baton, svn_wc_notify_revert, path);
 
   /* Finally, recurse if requested. */
   if (recursive && (entry->kind == svn_node_dir))
@@ -1572,11 +1556,7 @@ svn_wc_resolve_conflict (const char *path,
       SVN_ERR (svn_wc_conflicted_p (&text_conflict, &prop_conflict,
                                     conflict_dir, entry, pool));
       if (!(resolve_text && text_conflict) && !(resolve_props && prop_conflict))
-        (*notify_func) (notify_baton, path, svn_wc_notify_resolve,
-                        svn_node_unknown,
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        SVN_INVALID_REVNUM);
+        (*notify_func) (notify_baton, svn_wc_notify_resolve, path);
     }
           
   return SVN_NO_ERROR;

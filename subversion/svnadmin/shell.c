@@ -223,8 +223,9 @@ print_dirent (svn_stringbuf_t *abs_path,
   int is_dir;
   apr_off_t size;
   svn_revnum_t created_rev;
-  svn_string_t *id_str;
+  svn_stringbuf_t *id_str;
   svn_boolean_t has_props;
+
   apr_hash_t *props;
 
   /* directory or file? */

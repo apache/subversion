@@ -51,7 +51,7 @@ typedef enum {
   svn_cl__auth_username_opt,
   svn_cl__auth_password_opt,
   svn_cl__targets_opt,
-  svn_cl__xml_opt
+  svn_cl__xml_opt,
 } svn_cl__longopt_t;
 
 
@@ -284,11 +284,9 @@ svn_cl__get_trace_commit_editor (const svn_delta_editor_t **editor,
 
 /* Search for a text editor command in standard environment variables,
    and invoke it to edit CONTENTS (using a temporary file created in
-   directory BASE_DIR).  Return the new contents in *EDITED_CONTENTS,
-   or set *EDITED_CONTENTS to NULL if no edit was performed.  Use POOL
-   for all allocations. 
-
-   If return error, *EDITED_CONTENTS is not touched. */
+   directory BASE_DIR).  Return the new contents in EDITED_CONTENTS,
+   or set EDITED_CONTENTS to NULL if no edit was performed.  Use POOL
+   for all allocations. */
 svn_error_t *
 svn_cl__edit_externally (const char **edited_contents,
                          const char *base_dir,
@@ -331,27 +329,10 @@ svn_cl__generate_status_codes (char *str_status,
 
 /*** Notification functions to display results on the terminal. */
 
-/* This implements `svn_wc_notify_func_t'. 
-   A notifier for non-update operations, and its baton. */
 void svn_cl__notify_func (void *baton, 
-                          const char *path,
                           svn_wc_notify_action_t action,
-                          svn_node_kind_t kind,
-                          svn_wc_notify_state_t text_state,
-                          svn_wc_notify_state_t prop_state,
-                          svn_revnum_t revision);
-
+                          const char *path);
 void *svn_cl__make_notify_baton (apr_pool_t *pool);
-
-/* Set *NOTIFY_FUNC_P and *NOTIFY_BATON_P to a notifier/baton for
-   checkouts, updates, and switches.  The notifier will use POOL for
-   temporary allocations. */
-void svn_cl__get_checkout_notifier (svn_wc_notify_func_t *notify_func_p,
-                                    void **notify_baton_p,
-                                    svn_boolean_t is_checkout,
-                                    svn_boolean_t suppress_final_line,
-                                    apr_pool_t *pool);
-
 
 /* This macro is used to specify a notification function, or NULL if the
    user has requested "quiet" mode. */

@@ -1,0 +1,320 @@
+These are all the functions in the public svn_fs.h interface that will
+lead to code affected by the strings/reps changes:
+
+svn_fs_node_id                (svn_fs_id_t **id_p, svn_fs_root_t *root, const char *path, apr_pool_t *pool);
+svn_fs_node_prop              (svn_stringbuf_t **value_p, svn_fs_root_t *root, const char *path, const svn_string_t *propname, apr_pool_t *pool);
+svn_fs_node_proplist          (apr_hash_t **table_p, svn_fs_root_t *root, const char *path, apr_pool_t *pool);
+svn_fs_change_node_prop       (svn_fs_root_t *root, const char *path, const svn_string_t *name, const svn_string_t *value, apr_pool_t *pool);
+svn_fs_merge                  (const char **conflict_p, svn_fs_root_t *source_root, const char *source_path, svn_fs_root_t *target_root, const char *target_path, svn_fs_root_t *ancestor_root, const char *ancestor_path, apr_pool_t *pool);
+svn_fs_is_different           (int *is_different, svn_fs_root_t *root1, const char *path1, svn_fs_root_t *root2, const char *path2, apr_pool_t *pool);
+svn_fs_dir_entries            (apr_hash_t **table_p, svn_fs_root_t *root, const char *path, apr_pool_t *pool);
+svn_fs_make_dir               (svn_fs_root_t *root, const char *path, apr_pool_t *pool);
+svn_fs_delete                 (svn_fs_root_t *root, const char *path, apr_pool_t *pool);
+svn_fs_delete_tree            (svn_fs_root_t *root, const char *path, apr_pool_t *pool);
+svn_fs_rename                 (svn_fs_root_t *root, const char *from, const char *to, apr_pool_t *pool);
+svn_fs_copy                   (svn_fs_root_t *from_root, const char *from_path, svn_fs_root_t *to_root, const char *to_path, apr_pool_t *pool);
+svn_fs_file_length            (apr_off_t *length_p, svn_fs_root_t *root, const char *path, apr_pool_t *pool);
+svn_fs_file_contents          (svn_stream_t **contents, svn_fs_root_t *root, const char *path, apr_pool_t *pool);
+svn_fs_make_file              (svn_fs_root_t *root, const char *path, apr_pool_t *pool);
+svn_fs_apply_textdelta        (svn_txdelta_window_handler_t *contents_p, void **contents_baton_p, svn_fs_root_t *root, const char *path, apr_pool_t *pool);
+svn_fs_get_file_delta_stream  (svn_txdelta_stream_t **stream_p, svn_fs_root_t *source_root, const char *source_path, svn_fs_root_t *target_root, const char *target_path, apr_pool_t *pool);
+
+And these are all the exported functions implemented in dag.c:
+
+   DONE:
+      svn_fs__dag_check_mutable
+      svn_fs__dag_get_node
+      svn_fs__dag_init_fs
+      svn_fs__dag_dir_entries_skel
+      svn_fs__dag_dir_entries_hash
+      svn_fs__dag_is_file
+      svn_fs__dag_is_directory
+      svn_fs__dag_is_copy
+      svn_fs__dag_get_id
+      svn_fs__dag_get_fs
+      svn_fs__dag_get_proplist
+      svn_fs__dag_revision_root
+      svn_fs__dag_txn_root
+      svn_fs__dag_txn_base_root
+      svn_fs__dag_clone_root
+      svn_fs__dag_file_length
+      svn_fs__dag_dup
+      svn_fs__dag_open
+      svn_fs__dag_make_copy (needs some ### tweakits, warnings, alarms...)
+      svn_fs__dag_commit_txn
+      svn_fs__dag_set_entry
+      svn_fs__dag_clone_child
+      svn_fs__dag_make_file
+      svn_fs__dag_make_dir
+      svn_fs__dag_link
+      svn_fs__dag_delete
+      svn_fs__dag_delete_tree
+      svn_fs__dag_delete_if_mutable
+      svn_fs__dag_get_contents
+      svn_fs__dag_set_proplist
+      svn_fs__dag_set_contents
+
+      
+-*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- 
+
+
+/* Set *ID_P to the node revision ID of PATH in ROOT, allocated in POOL.
+
+   If ROOT is the root of a transaction, keep in mind that other
+   changes to the transaction can change which node PATH refers to,
+   and even whether the path exists at all.  */
+svn_error_t *svn_fs_node_id (svn_fs_id_t **id_p,
+                             svn_fs_root_t *root,
+                             const char *path,
+                             apr_pool_t *pool);
+
+
+/* Set *VALUE_P to the value of the property named PROPNAME of PATH in
+   ROOT.  If the node has no property by that name, set *VALUE_P to
+   zero.  Allocate the result in POOL.  */
+svn_error_t *svn_fs_node_prop (svn_stringbuf_t **value_p,
+                               svn_fs_root_t *root,
+                               const char *path,
+                               const svn_string_t *propname,
+                               apr_pool_t *pool);
+   
+
+/* Set *TABLE_P to the entire property list of PATH in ROOT, as an APR
+   hash table allocated in POOL.  The resulting table maps property
+   names to pointers to svn_string_t objects containing the property
+   value.  */
+svn_error_t *svn_fs_node_proplist (apr_hash_t **table_p,
+                                   svn_fs_root_t *root,
+                                   const char *path,
+                                   apr_pool_t *pool);
+
+
+/* Change a node's property's value, or add/delete a property.
+   - ROOT and PATH indicate the node whose property should change.
+     ROOT must be the root of a transaction, not the root of a revision.
+   - NAME is the name of the property to change.
+   - VALUE is the new value of the property, or zero if the property should
+     be removed altogether.
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_change_node_prop (svn_fs_root_t *root,
+                                      const char *path,
+                                      const svn_string_t *name,
+                                      const svn_string_t *value,
+                                      apr_pool_t *pool);
+
+
+/* Given nodes SOURCE and TARGET, and a common ancestor ANCESTOR,
+   modify TARGET to contain all the changes made between ANCESTOR and
+   SOURCE, as well as the changes made between ANCESTOR and TARGET.
+   TARGET_ROOT must be the root of a transaction, not a revision.
+
+   SOURCE, TARGET, and ANCESTOR are generally directories; this
+   function recursively merges the directories' contents.  If they are
+   files, this function simply returns an error whenever SOURCE,
+   TARGET, and ANCESTOR are all distinct node revisions.
+
+   If there are differences between ANCESTOR and SOURCE that conflict
+   with changes between ANCESTOR and TARGET, this function returns an
+   SVN_ERR_FS_CONFLICT error.
+
+   If the merge is successful, TARGET is left in the merged state, and
+   the base root of TARGET's txn is set to the root node of SOURCE.
+   If an error is returned (whether for conflict or otherwise), TARGET
+   is left unaffected.
+
+   If CONFLICT_P is non-null, then: a conflict error sets *CONFLICT_P
+   to the name of the node in TARGET which couldn't be merged,
+   otherwise, success sets *CONFLICT_P to null.
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_merge (const char **conflict_p,
+                           svn_fs_root_t *source_root,
+                           const char *source_path,
+                           svn_fs_root_t *target_root,
+                           const char *target_path,
+                           svn_fs_root_t *ancestor_root,
+                           const char *ancestor_path,
+                           apr_pool_t *pool);
+
+
+
+/* Compare the nodes ROOT1:PATH1 and ROOT2:PATH2, and determine if
+   they are "different".  Return the answer in IS_DIFFERENT.
+
+   We define two nodes to be "different" if:
+
+       - they are different node types, or
+
+       - if both files, they have different node-revision-ids, or 
+ 
+       - if both dirs, they have different entry lists.
+
+   (Note that there is a small chance of getting a false positive: two
+   different node-rev-ids don't *necessarily* have different contents.
+   But right now it's not worth doing byte-for-byte comparisons.  This
+   problem will go away when we have deltified storage.) */
+svn_error_t *svn_fs_is_different (int *is_different,
+                                  svn_fs_root_t *root1,
+                                  const char *path1,
+                                  svn_fs_root_t *root2,
+                                  const char *path2,
+                                  apr_pool_t *pool);
+                                  
+
+/* Set *TABLE_P to a newly allocated APR hash table containing the
+   entries of the directory at PATH in ROOT.  The keys of the table
+   are entry names, as byte strings, excluding the final null
+   character; the table's values are pointers to svn_fs_dirent_t
+   structures.  Allocate the table and its contents in POOL.  */
+svn_error_t *svn_fs_dir_entries (apr_hash_t **table_p,
+                                 svn_fs_root_t *root,
+                                 const char *path,
+                                 apr_pool_t *pool);
+
+
+/* Create a new directory named PATH in ROOT.  The new directory has
+   no entries, and no properties.  ROOT must be the root of a
+   transaction, not a revision.
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_make_dir (svn_fs_root_t *root,
+                              const char *path,
+                              apr_pool_t *pool);
+                              
+
+/* Delete the node named PATH in ROOT.  ROOT must be the root of a
+   transaction, not a revision.  Do any necessary temporary allocation
+   in POOL.
+
+   If the node being deleted is a directory, it must be empty, else
+   the error SVN_ERR_FS_DIR_NOT_EMPTY is returned.
+
+   Attempting to remove the root dir also results in an error,
+   SVN_ERR_FS_ROOT_DIR, even if the dir is empty.  */
+svn_error_t *svn_fs_delete (svn_fs_root_t *root,
+                            const char *path,
+                            apr_pool_t *pool);
+
+
+/* Delete the node named PATH in ROOT.  If the node being deleted is a
+   directory, its contents will be deleted recursively.  ROOT must be
+   the root of a transaction, not of a revision.
+
+   This function may be more efficient than making the equivalent
+   series of calls to svn_fs_delete, because it takes advantage of the
+   fact that, to delete an immutable subtree, shared with some
+   committed revision, you need only remove the directory entry.  The
+   dumb algorithm would recurse into the subtree and end up cloning
+   each non-empty directory it contains, only to delete it later.
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_delete_tree (svn_fs_root_t *root,
+                                 const char *path,
+                                 apr_pool_t *pool);
+
+
+/* Move the node named FROM to TO, both in ROOT.  ROOT must be the
+   root of a transaction, not a revision.
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_rename (svn_fs_root_t *root,
+                            const char *from,
+                            const char *to,
+                            apr_pool_t *pool);
+
+
+/* Create a copy of FROM_PATH in FROM_ROOT named TO_PATH in TO_ROOT.
+   If FROM_PATH in FROM_ROOT is a directory, copy the tree it refers
+   to recursively.
+
+   TO_ROOT must be the root of a transaction; FROM_PATH must be the
+   root of a revision.  (Requiring FROM_PATH to be the root of a
+   revision makes the implementation trivial: there is no detectable
+   difference (modulo node revision ID's) between copying FROM and
+   simply adding a reference to it.  So the operation takes place in
+   constant time.  However, there's no reason not to extend this to
+   mutable nodes --- it's just more code.)
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_copy (svn_fs_root_t *from_root,
+                          const char *from_path,
+                          svn_fs_root_t *to_root,
+                          const char *to_path,
+                          apr_pool_t *pool);
+
+
+
+
+
+/* Files.  */
+
+/* Set *LENGTH_P to the length of the file PATH in ROOT, in bytes.  Do
+   any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_file_length (apr_off_t *length_p,
+                                 svn_fs_root_t *root,
+                                 const char *path,
+                                 apr_pool_t *pool);
+
+
+/* Set *CONTENTS to a readable generic stream will yield the contents
+   of the file PATH in ROOT.  Allocate the stream in POOL.  You can
+   only use *CONTENTS for as long as the underlying filesystem is
+   open.  */
+svn_error_t *svn_fs_file_contents (svn_stream_t **contents,
+                                   svn_fs_root_t *root,
+                                   const char *path,
+                                   apr_pool_t *pool);
+
+
+/* Create a new file named PATH in ROOT.  The file's initial contents
+   are the empty string, and it has no properties.  ROOT must be the
+   root of a transaction, not a revision.
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_make_file (svn_fs_root_t *root,
+                               const char *path,
+                               apr_pool_t *pool);
+
+
+/* Apply a text delta to the file PATH in ROOT.  ROOT must be the root
+   of a transaction, not a revision.
+
+   Set *CONTENTS_P to a function ready to receive text delta windows
+   describing how to change the file's contents, relative to its
+   current contents.  Set *CONTENTS_BATON_P to a baton to pass to
+   *CONTENTS_P.
+
+   If PATH does not exist in ROOT, return an error.  (You cannot use
+   this routine to create new files;  use svn_fs_make_file to create
+   an empty file first.)
+
+   Do any necessary temporary allocation in POOL.  */
+svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
+                                     void **contents_baton_p,
+                                     svn_fs_root_t *root,
+                                     const char *path,
+                                     apr_pool_t *pool);
+
+
+/* Set *STREAM_P to a pointer to a delta stream that will turn the
+   contents of the file SOURCE into the contents of the file TARGET.
+   If SOURCE_ROOT is zero, use a file with zero length as the source.
+
+   This function does not compare the two files' properties.
+
+   Allocate *STREAM_P, and do any necessary temporary allocation, in
+   POOL.  */
+svn_error_t *
+svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
+                              svn_fs_root_t *source_root,
+                              const char *source_path,
+                              svn_fs_root_t *target_root,
+                              const char *target_path,
+                              apr_pool_t *pool);
+
+
+/* 
+ * local variables:
+ * truncate-lines: t
+ * end:
+ */

@@ -68,14 +68,6 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
                                  const char *path,
                                  apr_pool_t *pool);
 
-/* Return true if REVISION1 and REVISION2 would result in the same
-   revision number if interpreted in the context of the same working
-   copy and path and repository, or if both are of kind
-   svn_client_revision_unspecified.  Otherwise, return false. */
-svn_boolean_t
-svn_client__compare_revisions (svn_client_revision_t *revision1,
-                               svn_client_revision_t *revision2);
-
 
 /* ---------------------------------------------------------------- */
 
@@ -406,7 +398,10 @@ svn_client__do_commit (const char *base_url,
    subdir, or call svn_wc_remove_from_revision_control() on an
    existing one, or both.
 
-   Pass NOTIFY_FUNC with NOTIFY_BATON along to svn_client_checkout().
+   BEFORE_EDITOR/BEFORE_EDIT_BATON and AFTER_EDITOR/AFTER_EDIT_BATON,
+   along with AUTH_BATON, are passed along to svn_client_checkout() to
+   check out the external items.  (### This notification system will
+   soon be replaced by callbacks.)
 
    ### todo: AUTH_BATON may not be so useful.  It's almost like we
        need access to the original auth-obtaining callbacks that
@@ -414,9 +409,11 @@ svn_client__do_commit (const char *base_url,
 
    Use POOL for temporary allocation. */
 svn_error_t *svn_client__handle_externals_changes
-   (svn_wc_traversal_info_t *traversal_info,
-    svn_wc_notify_func_t notify_func,
-    void *notify_baton,
+   (void *traversal_info,
+    const svn_delta_editor_t *before_editor,
+    void *before_edit_baton,
+    const svn_delta_editor_t *after_editor,
+    void *after_edit_baton,
     svn_client_auth_baton_t *auth_baton,
     apr_pool_t *pool);
 

@@ -40,36 +40,34 @@ from the directory.
 
 ID's
 
-Within the database, we refer to nodes and node revisions using a
-string of three unique identifiers (the "node ID", the "copy ID", and
-the "txn ID"), separated by periods.
+Within the database, we refer to nodes and node revisions using strings
+of numbers separated by periods that look a lot like RCS revision
+numbers.
 
-    node_revision_id ::= node_id '.' copy_id '.' txn_id
+  node_id ::= number | node_revision_id "." number
+  node_revision_id ::= node_id "." number
 
-The node ID is unique to a particular node in the filesystem across
-all of revision history.  That is, two node revisions who share
-revision history (perhaps because they are different revisions of the
-same node, or because one is a copy of the other, e.g.) have the same
-node ID, whereas two node revisions who have no common revision
-history will not have the same node ID.
+So: 
+- "100" is a node id.
+- "100.10" is a node revision id, referring to revision 10 of node 100.
+- "100.10.3" is a node id, referring to the third branch based on
+  revision 10 of node 100.
+- "100.10.3.4" is a node revision id, referring to revision 4 of
+  of the third branch from revision 10 of node 100.
+And so on.
 
-The copy ID is a key into the `copies' table (see `Copies' below), and
-identifies that a given node revision, or one of its ancestors,
-resulted from a unique filesystem copy operation.
+Node revision numbers start with 1.  Thus, N.1 is the first revision
+of node N.
 
-The txn ID is just an identifier that is unique to a single filesystem
-commit.  All node revisions created as part of a commit share this txn
-ID (which, incidentally, gets its name from the fact that this id is
-the same id used as the primary key of Subversion transactions; see
-`Transactions' below).
+Node / branch numbers start with 1.  Thus, N.M.1 is the first
+branch off of N.M.
 
 A directory entry identifies the file or subdirectory it refers to
-using a node revision ID --- not a node ID.  This means that a change
-to a file far down in a directory hierarchy requires the parent
-directory of the changed node to be updated, to hold the new node
-revision ID.  Now, since that parent directory has changed, its parent
-needs to be updated, and so on to the root.  We call this process
-"bubble-up".
+using a node revision number --- not a node number.  This means that
+a change to a file far down in a directory hierarchy requires the
+parent directory of the changed node to be updated, to hold the new
+node revision ID.  Now, since that parent directory has changed, its
+parent needs to be updated, and so on to the root.
 
 If a particular subtree was unaffected by a given commit, the node
 revision ID that appears in its parent will be unchanged.  When
@@ -77,23 +75,37 @@ doing an update, we can notice this, and ignore that entire
 subtree.  This makes it efficient to find localized changes in
 large trees.
 
+Note that the number specifying a particular revision of a node is
+unrelated to the global filesystem revision when that node revision
+was created.  So 100.10 may have been created in filesystem revision
+1218; 100.10.3.2 may have been created any time after 100.10; it
+doesn't matter.
 
-
-A Word About Keys
+Since nodal revision numbers increase by one each time a delta is added,
+we can compute how many deltas separate two related node revisions
+simply by comparing their ID's.  For example, the distance between
+100.10.3.2 and 100.12 is the distance from 100.10.3.2 to their
+common ancestor, 100.10 (two deltas), plus the distance from 100.10
+to 100.12 (two deltas).
 
-Some of the Subversion database tables use base-36 numbers as their
-keys.  Some debate exists about whether the use of base-36 (as opposed
-to, say, regular decimal values) is either necessary or good.  It is
-outside the scope of this document to make a claim for or against this
-usage.  As such, the reader will please note that for the majority of
-the document, the use of the term "number" when referring to keys of
-database tables should be interpreted to mean "a monotonically
-increasing unique key whose order with respect to other keys in the
-table is irrelevant".  :-)
+However, this is kind of a kludge, since the number of deltas is
+not necessarily an accurate indicator of how different two files
+are --- a single delta could be a minor change, or a complete
+replacement.  Furthermore, the filesystem may decide arbitrary to
+store a given node revision as a delta or as full text --- perhaps
+depending on how recently the node was used --- so revision id
+distance isn't necessarily an accurate predictor of retrieval time.
 
-To determine the actual type currently in use for the keys of a given
-table, you are invited to check out the "Appendix: Filesystem
-structure summary" section of this document.
+If you have insights about how this stuff could work better, let me
+know.  I've read some of Josh MacDonald's stuff on this; his
+discussion seems to be mostly about how to retrieve things quickly,
+which is important, but only part of the issue.  I'd like to find
+better ways to recognize renames, and find appropriate ancestors in
+a source tree for changed files.
+
+When we need to treat a node or node revision ID as a string of bytes,
+we use the forms shown here --- a series of unsigned ASCII decimal
+numbers, separated by dots.
 
 
 
@@ -106,13 +118,14 @@ has the form:
     (HEADER PROP-KEY KIND-SPECIFIC ...)
 
 where HEADER is a header skel, whose structure is common to all nodes,
-PROP-KEY is the key of the representation that contains this node's
-properties list, and the KIND-SPECIFIC elements carry data dependent
-on what kind of node this is --- file, directory, etc.
+PROP-KEY identifies the representation for the property list of this
+node (see discussion of representations later), and the KIND-SPECIFIC
+elements carry data dependent on what kind of node this is --- file,
+directory, etc.
 
 HEADER has the form:
 
-    (KIND PREDECESSOR)
+    (KIND REV [COPY])
 
 where:
 
@@ -121,15 +134,24 @@ where:
        - "file", indicating that the node is a file (see FILE below).
        - "dir", indicating that the node is a directory (see DIR below).
 
-   * PREDECESSOR-ID, if present, indicates the node revision which is
-     the immediate ancestor of this node.
+   * REV indicates the revision in which this node first appeared.  An
+     empty string atom here means this node was created in a
+     transaction that is yet to be committed.  Once committed, REV is
+     an atom indicating the revision number.
+
+   * COPY, if present, indicates the node from which this node was
+     copied.  It is a list skel: ("copy" ANCESOR-REV ANCESTOR-PATH)
+     The word "copy" appears first because there may someday be other
+     options in the header, and we'll want to distinguish among them.
+
 
 Note that a node cannot change its kind from one revision to the next.
 A directory node is always a directory; a file node is always a file;
 etc.  The fact that the node's kind is stored in each node revision,
-rather than in some revision-independent place, might suggest that
-it's possible for a node change kinds from revision to revision, but
-Subversion does not allow this.
+rather than in some revision-independent place, might suggest that it's
+possible for a node change kinds from revision to revision --- 10.3
+could be a directory, while 10.4 could be a file --- but Subversion
+does not allow this.
 
 PROP-KEY is a key into the `representations' table (which see), whose
 value is a representation pointing to a string (see `strings' table)
@@ -371,8 +393,8 @@ The Berkeley DB "nodes" table
 
 The database contains a table called "nodes", which is a btree indexed
 by node revision ID's, mapping them onto REPRESENTATION skels.  Node 0
-is always the root directory, and node revision 0.0.0 is always the
-empty directory.
+is always the root directory, and node revision 0.0 is always the empty
+directory.
 
 Since the "nodes" table is a btree, it's efficent to walk over the
 entries in order of increasing or decreasing node ID's.  In fact,
@@ -381,15 +403,48 @@ arrange the nodes for quick traversal, given our access patterns.
 
 Here's the sort order we use:
 
-- Nodes are sorted by their node ID.
-- All the revisions of a given node come together, ordered first by
-  their copy ID, and then by their txn ID.
+- Nodes are sorted by their node number.
+- All the revisions of a given node come together, in order of 
+  increasing revision number.
+- All branches off any revision of a node come immediately after that
+  node, ordered by increasing revision number.
+
+For example, the "nodes" table might have the following sequence of
+keys:
+
+13.1     ; the original node, with four revisions
+13.2
+13.3
+13.4
+13.2.1.1   ; a branch from the second revision of 13, with three revisions
+13.2.1.2
+13.2.1.3
+13.2.2.1   ; another branch off the same revision of 13, with four revisions
+13.2.2.2
+13.2.2.3
+13.2.2.4
+13.4.1.1   ; another branch off a later revision of 13, with two revisions
+13.4.1.2
+14.1     ; another node
+14.2
+14.3
+
+We can find the latest revision of node N by searching the `nodes'
+table for the last entry before N.1.1.1, the first branch off the
+node's first revision.  According to the sort order, this node
+immediately follows the last revision of node N.
+
+Similarly, we can find the last branch off a given node revision N.V by
+searching the `nodes' table for the last entry before N.(V+1).1.1.
+According to the sort order, this node immediately follows the last
+descendant of N.V.  This last descendent could be a branch off a
+branch off a branch ..., but by truncating the node revision ID
+appropriately, we can find the last branch off of N.V.
 
 Assuming that we store the most recent revision on every branch as
 fulltext, and all other revisions as deltas, we can retrieve any node
-revision by searching for the last revision of the node, and then
-walking backwards to specific revision we desire, applying deltas as
-we go.
+revision NODE.REVISION by searching for the last revision of NODE, and
+then walking backwards to NODE.REVISION, applying deltas as we go.
 
 Since we don't want to corrupt our btree, even if we accidentally
 insert garbage keys into the table, we extend our ordering to handle
@@ -401,20 +456,18 @@ ID, and two mis-formed IDs are compared byte-by-byte.
 REVISION: filesystem revisions, and the Berkeley DB "revisions" table
 
 We represent a filesystem revision using a skel of the form:
-    ("revision" ROOT-ID TXN PROPLIST)
+    ("revision" ID PROPLIST)
 where:
-- ROOT-ID is the node revision ID of this revision's root directory,
-- TXN is the key into the `transactions' table (which see) whose
-  value is the transaction that was committed to create this revision, and
-- PROPLIST is the revision's property list
+- ID is the node revision ID of this revision's root directory, and
+- PROPLIST is the revision's property list.
 
 The database contains a table called "revisions", which is a
 record-number table mapping revision numbers onto REVISION skels.
 Since Berkeley DB record numbers start with 1, whereas Subversion
 filesystem revision numbers start at zero, revision V is stored as
 record number V+1 in the `revisions' table.  Filesystem revision zero
-always has node revision 0.0.0 as its root directory; that node
-revision is guaranteed to be an empty directory.
+always has node revision 0.0 as its root directory; that node revision
+is guaranteed to be an empty directory.
 
 
 
@@ -424,38 +477,20 @@ Every transaction ends when it is either successfully committed, or
 aborted.  We call a transaction which has been either committed or
 aborted "finished", and one which hasn't "unfinished".  
 
-Transactions are identified by unique numbers, called transaction
-ID's.  Currently, transaction ID's are never reused, though this is
-not mandated by the schema.  In the database, we always represent a
-transaction ID in its shortest ASCII form.
+Transactions are identified by positive decimal numbers, called
+transaction ID's.  To help clients detect when a transaction has been
+finished, transaction ID's are never reused.  In the database, we
+always represent a tranasction ID in its shortest ASCII decimal form.
 
-The Berkeley DB `transactions' table records both unfinished and
-committed transactions.  Every key in this table is a transaction ID.
-Unfinished transactions have values that are skels of the form:
+The Berkeley DB `transactions' table records unfinished transactions.
+Every key in this table is a transaction ID, and every value is a skel
+of the form:
 
-   ("transaction" ROOT-ID BASE-ID PROPLIST COPIES)
+    ("transaction" ROOT-ID BASE-ROOT-ID)
 
-where:
-
-   * ROOT-ID is the node revision ID of the transaction's root
-     directory.
-
-   * BASE-ID is the node revision ID of the root of the transaction's
-     base revision.
-
-   * PROPLIST is the transaction's property list.
-
-   * COPIES contains a list of keys into the `copies' table,
-     referencing all the filesystem copies created
-     inside of this transaction.  If the transaction is aborted, these
-     copies get removed from the `copies' table.
-
-Committed transaction, however, have values that are skels of the form:
-
-   ("committed" REVISION)
-
-where REVISION represents the revision that was created when the
-transaction was committed.
+where ROOT-ID is the node revision ID of the transaction's root
+directory, and BASE-ROOT-ID is the node revision ID of the root of the
+transaction's base revision.
 
 As the sole exception to the rule above, the `transactions' table
 always has one entry whose key is `next-id', and whose value is the
@@ -463,33 +498,6 @@ lowest transaction ID that has never yet been used.  We use this entry
 to allocate ID's for new transactions.
 
 The `transactions' table is a btree, with no particular sort order.
-
-
-
-Copies
-
-Each time a filesystem copy operation is performed, Subversion records
-meta-data about that copy.  
-
-Copies are identified by unique numbers called copy ID's.  Currently,
-copy ID's are never reused, though this is not mandated by the schema.
-In the database, we always represent a copy ID in its shortest ASCII
-form.
-
-The Berkeley DB `copies' table records all filesystem copies.  Every
-key in this table is copy ID, and every value is a skel of the form:
-
-   ("copy" DST-NODE-ID)
-
-where DST-NODE-ID represents the new node revision created as a result
-of the copy.
-
-As the sole exception to the rule above, the `copies' table always has
-one entry whose key is `next-id', and whose value is the lowest copy ID
-that has never yet been used.  We use this entry to allocate new
-copy ID's.
-
-The `copies' table is a btree, with no particular sort order.
 
 
 
@@ -601,8 +609,6 @@ skel.c, id.c, dbt.c, convert-size.c
 
                 Low-level utility functions.
 
-fs_skels.c      Routines for marshaling between skels and native FS types.
-
 fs.c            Creating and destroying filesystem objects.
 
 err.c           Error handling.
@@ -641,68 +647,52 @@ Berkeley DB tables
 
                 "nodes" : btree(ID -> NODE-REVISION)
             "revisions" : recno(REVISION)
-         "transactions" : btree(TXN -> TRANSACTION, "next-id" -> TXN)
-               "copies" : btree(CPY -> COPY, "next-id" -> CPY)
-              "strings" : btree(STR -> STRING, "next-id" -> STR)
-      "representations" : btree(REP -> REPRESENTATION, "next-id" -> REP)
+         "transactions" : btree(TXN -> TRANSACTION,
+                                "next-id" -> TXN)
+
 
 Syntactic elements
 ------------------
 
 Table keys:
 
-                     ID ::= NODE-REV-ID ;
-                    TXN ::= number-36 ;
-                    CPY ::= number-36 ;
-                    STR ::= number-36 ;
-                    REP ::= number-36 ;
-
-Property lists:
-
-               PROPLIST ::= (PROP ...) ;
-                   PROP ::= atom atom ;
+                     ID ::= node.revision-id ;
+                    TXN ::= number ;
 
 
 Filesystem revisions:
 
-               REVISION ::= ("revision" ROOT-ID TXN PROPLIST) ;
+               REVISION ::= ("revision" ID PROPLIST) ;
+               PROPLIST ::= (PROP ...) ;
+                   PROP ::= atom atom ;
 
 
 Transactions:
 
-            TRANSACTION ::= UNFINISHED-TXN | COMMITTED-TXN
-         UNFINISHED-TXN ::= ("transaction" ROOT-ID BASE-ID PROPLIST COPIES) ;
-          COMMITTED-TXN ::= ("committed" REV) ;
-                ROOT-ID ::= NODE-REV-ID ;
-                BASE-ID ::= NODE-REV-ID ;
-                 COPIES ::= (CPY ...) ;
-                    REV ::= number ;
-
-
-Copies:
-
-                   COPY ::= ("copy" SRC-PATH SRC-REV DST-NODE-ID)
-               SRC-PATH ::= atom ;
-                SRC-REV ::= number ;
-            DST-NODE-ID ::= NODE-REV-ID ;
-
-
-Entries lists:
-
-                ENTRIES ::= (ENTRY ...) ;
-                  ENTRY ::= (NAME ID) ;
-                   NAME ::= atom ;
+            TRANSACTION ::= ("transaction" ROOT-ID BASE-ROOT-ID PROPLIST) ;
+                ROOT-ID ::= node.revision-id ;
+           BASE-ROOT-ID ::= node.revision-id ;
 
 
 Node revisions:
 
+
           NODE-REVISION ::= FILE | DIR ;
                    FILE ::= (HEADER PROP-KEY DATA-KEY [EDIT-DATA-KEY]) ;
                     DIR ::= (HEADER PROP-KEY ENTRIES-KEY) ;
+                  ENTRY ::= (NAME ID) ;
+                   NAME ::= atom ;
 
-                 HEADER ::= (KIND [PREDECESSOR-ID]) ;
+                 HEADER ::= (KIND REV [COPY]) ;
                    KIND ::= "file" | "dir" ;
-         PREDECESSOR-ID ::= NODE-REV-ID ;
+                    REV ::= "" | number ;
+
+                   COPY ::= ("copy" ANCESTOR-REV ANCESTOR-PATH)
+           ANCESTOR-REV ::= number ;
+          ANCESTOR-PATH ::= atom ;
+
+        SOURCE-REVISION ::= number ;
+
                PROP-KEY ::= atom ;
                 REP-KEY ::= atom ;
 
@@ -719,13 +709,13 @@ Representations:
                  OFFSET ::= number ;
              REP-OFFSET ::= number ;
 
-                 HEADER ::= (KIND TXN) ;
+                 HEADER ::= (KIND FLAG ...)
                    KIND ::= "fulltext" | "delta" ;
+                   FLAG ::= "mutable" | ;
              
                    SIZE ::= number ;
                CHECKSUM ::= ("md5" BYTES) ;
                   BYTES ::= atom ;
-
 
 Strings:
 
@@ -735,19 +725,14 @@ Strings:
                DIFFTEXT ::= /{anything.class}*/ ;
 
 
-Node revision IDs:
-
-            NODE-REV-ID ::= NODE-ID '.' CPY '.' TXN ;
-                NODE-ID ::= number ;
-
-
 Lexical elements
 ----------------
 
-Numbers:
+Node & revision IDs:
 
+                node.id ::= number | node.revision-id '.' number ;
+       node.revision-id ::= node.id '.' number ;
                  number ::= /{digit.class}+/ ;
-              number-36 ::= /{base36.class}+/ ;
 
 
 (Note: the following are described in skel.h)
@@ -773,5 +758,4 @@ Character classes:
                ws.class ::= [\t\n\f\r\ ] ;
             digit.class ::= [0-9] ;
              name.class ::= [A-Za-z] ;
-           base36.class ::= [a-z0-9]
          anything.class ::= anything at all ;

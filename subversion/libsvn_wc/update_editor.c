@@ -52,7 +52,7 @@
 
 /*** batons ***/
 
-struct svn_wc_traversal_info_t
+struct traversal_info
 {
   /* The pool in which this structure and everything inside it is
      allocated. */
@@ -94,11 +94,7 @@ struct edit_baton
 
   /* Object for gathering info to be accessed after the edit is
      complete. */
-  svn_wc_traversal_info_t *traversal_info;
-
-  /* This editor sends back notifications as it edits. */
-  svn_wc_notify_func_t notify_func;
-  void *notify_baton;
+  struct traversal_info *traversal_info;
 
   apr_pool_t *pool;
 };
@@ -343,9 +339,6 @@ struct file_baton
   /* The repository URL this directory corresponds to. */
   const char *URL;
 
-  /* Set if this file is new. */
-  svn_boolean_t added;
-
   /* Gets set iff this directory has a "disjoint url", i.e. its URL is
      not its [parent's URL + name].
 
@@ -377,7 +370,6 @@ struct file_baton
 static struct file_baton *
 make_file_baton (struct dir_baton *pb,
                  const char *path,
-                 svn_boolean_t adding,
                  apr_pool_t *pool)
 {
   struct file_baton *f = apr_pcalloc (pool, sizeof (*f));
@@ -427,7 +419,6 @@ make_file_baton (struct dir_baton *pb,
   f->URL          = URL;
   f->disjoint_url = disjoint_url;
   f->bump_info    = pb->bump_info;
-  f->added        = adding;
 
   /* the directory's bump info has one more referer now */
   ++f->bump_info->ref_count;
@@ -588,16 +579,6 @@ delete_entry (const char *path,
     
   SVN_ERR (svn_wc__run_log (pb->path, pool));
   SVN_ERR (svn_wc_unlock (pb->path, pool));
-
-  if (pb->edit_baton->notify_func)
-    (pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
-                                   pb->path,
-                                   svn_wc_notify_delete,
-                                   svn_node_unknown,
-                                   svn_wc_notify_state_unknown,
-                                   svn_wc_notify_state_unknown,
-                                   SVN_INVALID_REVNUM);
-
   return SVN_NO_ERROR;
 }
 
@@ -663,15 +644,6 @@ add_directory (const char *path,
                            TRUE, db->pool));
 
   *child_baton = db;
-
-  if (db->edit_baton->notify_func)
-    (db->edit_baton->notify_func) (db->edit_baton->notify_baton,
-                                   db->path,
-                                   svn_wc_notify_add,
-                                   svn_node_dir,
-                                   svn_wc_notify_state_unknown,
-                                   svn_wc_notify_state_unknown,
-                                   SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
 }
@@ -790,14 +762,13 @@ static svn_error_t *
 close_directory (void *dir_baton)
 {
   struct dir_baton *db = dir_baton;
-  svn_boolean_t props_merged;
-  apr_hash_t *prop_conflicts;
 
   /* If this directory has property changes stored up, now is the time
      to deal with them. */
   if (db->prop_changed)
     {
       svn_boolean_t prop_modified;
+      apr_hash_t *conflicts;
       apr_status_t apr_err;
       char *revision_str;
       apr_file_t *log_fp = NULL;
@@ -836,8 +807,7 @@ close_directory (void *dir_baton)
               ; /* Value did not change... so do nothing. */
             else
               {
-                svn_wc_traversal_info_t *ti
-                  = db->edit_baton->traversal_info;
+                struct traversal_info *ti = db->edit_baton->traversal_info;
 
                 if (old_val_s)
                     apr_hash_set (ti->externals_old,
@@ -858,10 +828,9 @@ close_directory (void *dir_baton)
 
       /* Merge pending properties into temporary files and detect
          conflicts. */
-      SVN_ERR_W (svn_wc__merge_prop_diffs (&props_merged, &prop_conflicts,
-                                           db->path, NULL,
+      SVN_ERR_W (svn_wc__merge_prop_diffs (db->path, NULL,
                                            db->propchanges, db->pool,
-                                           &entry_accum),
+                                           &entry_accum, &conflicts),
                  "close_dir: couldn't do prop merge.");
 
       /* Set revision. */
@@ -932,32 +901,6 @@ close_directory (void *dir_baton)
      maybe_bump_dir_revision() for more information.  */
   SVN_ERR (maybe_bump_dir_revision (db->edit_baton, db->bump_info, db->pool));
 
-  /* Notify of any prop changes on this directory -- but do nothing
-     if it's an added directory, because notification has already
-     happened in that case. */
-  if ((! db->added) && (db->edit_baton->notify_func))
-    {
-      svn_wc_notify_state_t prop_state = svn_wc_notify_state_unchanged;
-      
-      if (db->prop_changed)
-        {
-          if (apr_hash_count (prop_conflicts))
-            prop_state = svn_wc_notify_state_conflicted;
-          else if (props_merged)
-            prop_state = svn_wc_notify_state_merged;
-          else
-            prop_state = svn_wc_notify_state_modified;
-        }
-      
-      (db->edit_baton->notify_func) (db->edit_baton->notify_baton,
-                                     db->path,
-                                     svn_wc_notify_update,
-                                     svn_node_dir,
-                                     svn_wc_notify_state_unknown,
-                                     prop_state,
-                                     SVN_INVALID_REVNUM);
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -987,7 +930,7 @@ add_or_open_file (const char *path,
      conflict in the entry and proceed.  Similarly if it has changed
      kind.  see issuezilla task #398. */
 
-  fb = make_file_baton (pb, path, adding, pool);
+  fb = make_file_baton (pb, path, pool);
 
   /* It is interesting to note: everything below is just validation. We
      aren't actually doing any "work" or fetching any persistent data. */
@@ -1214,9 +1157,7 @@ change_file_prop (void *file_baton,
    used extensively by the update-editor, as well as by
    svn_client_switch(), when switching a single file in-place. */
 svn_error_t *
-svn_wc_install_file (svn_wc_notify_state_t *text_state,
-                     svn_wc_notify_state_t *prop_state,
-                     const char *file_path,
+svn_wc_install_file (const char *file_path,
                      svn_revnum_t new_revision,
                      const char *new_text_path,
                      const apr_array_header_t *props,
@@ -1232,6 +1173,7 @@ svn_wc_install_file (svn_wc_notify_state_t *text_state,
   svn_stringbuf_t *log_accum;
   svn_boolean_t is_locally_modified;
   svn_boolean_t magic_props_changed = FALSE, magic_props_caused_tweak = FALSE;
+  apr_hash_t *prop_conflicts;
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
 
@@ -1310,10 +1252,6 @@ svn_wc_install_file (svn_wc_notify_state_t *text_state,
                                    &entry_props, &wc_props, &regular_props,
                                    pool));
 
-  /* Always initialize to unknown state. */
-  if (prop_state)
-    *prop_state = svn_wc_notify_state_unknown;
-
   /* Merge the 'regular' props into the existing working proplist. */
   if (regular_props)
     {
@@ -1380,25 +1318,9 @@ svn_wc_install_file (svn_wc_notify_state_t *text_state,
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props.  */
-      {
-        svn_boolean_t props_merged;
-        apr_hash_t *prop_conflicts;
-
-        SVN_ERR (svn_wc__merge_prop_diffs (&props_merged, &prop_conflicts,
-                                           parent_dir, base_name,
-                                           propchanges, pool,
-                                           &log_accum));
-
-        if (prop_state)
-          {
-            if (apr_hash_count (prop_conflicts))
-              *prop_state = svn_wc_notify_state_conflicted;
-            else if (props_merged)
-              *prop_state = svn_wc_notify_state_merged;
-            else if (propchanges->nelts > 0)
-              *prop_state = svn_wc_notify_state_modified;
-          }
-      }
+      SVN_ERR (svn_wc__merge_prop_diffs (parent_dir, base_name,
+                                         propchanges, pool,
+                                         &log_accum, &prop_conflicts));
     }
   
   /* If there are any ENTRY PROPS, make sure those get appended to the
@@ -1736,39 +1658,6 @@ svn_wc_install_file (svn_wc_notify_state_t *text_state,
         }
     }
 
-  if (text_state)
-    {
-      svn_wc_entry_t *entry;
-      svn_boolean_t tc, pc;
-      
-      /* ### There should be a more efficient way of finding out whether
-         or not the file is modified|merged|conflicted.  If the
-         svn_wc__run_log() call above could return a special error code
-         in case of a conflict or something, that would work. */
-
-      SVN_ERR (svn_wc_entry (&entry, file_path, TRUE, pool));
-      SVN_ERR (svn_wc_conflicted_p (&tc, &pc, parent_dir, entry, pool));
-      
-      /* This is kind of interesting.  Even if no new text was
-         installed (i.e., new_text_path was null), we could still
-         report a pre-existing conflict state.  Say a file, already
-         in a state of textual conflict, receives prop mods during an
-         update.  Then we'll notify that it has text conflicts.  This
-         seems okay to me.  I guess.  I dunno.  You? */
-
-      if (tc)
-        *text_state = svn_wc_notify_state_conflicted;
-      else if (new_text_path)
-        {
-          if (is_locally_modified)
-            *text_state = svn_wc_notify_state_merged;
-          else
-            *text_state = svn_wc_notify_state_modified;
-        }
-      else
-        *text_state = svn_wc_notify_state_unknown;
-    }
-
   /* Unlock the parent dir, we're done with this file installation. */
   SVN_ERR (svn_wc_unlock (parent_dir, pool));
 
@@ -1784,7 +1673,6 @@ close_file (void *file_baton)
   struct file_baton *fb = file_baton;
   const char *new_text_path = NULL;
   apr_array_header_t *propchanges = NULL;
-  svn_wc_notify_state_t text_state, prop_state;
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (fb->text_changed)
@@ -1793,9 +1681,7 @@ close_file (void *file_baton)
   if (fb->prop_changed)
     propchanges = fb->propchanges;
 
-  SVN_ERR (svn_wc_install_file (&text_state,
-                                &prop_state,
-                                fb->path,
+  SVN_ERR (svn_wc_install_file (fb->path,
                                 fb->edit_baton->target_revision,
                                 new_text_path,
                                 propchanges,
@@ -1807,16 +1693,6 @@ close_file (void *file_baton)
   SVN_ERR (maybe_bump_dir_revision (fb->edit_baton,
                                     fb->bump_info,
                                     fb->pool));
-
-  if (fb->edit_baton->notify_func)
-    (fb->edit_baton->notify_func)
-      (fb->edit_baton->notify_baton,
-       fb->path,
-       fb->added ? svn_wc_notify_add : svn_wc_notify_update,
-       svn_node_file,
-       text_state,
-       prop_state,
-       SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;  
 }
@@ -1859,23 +1735,8 @@ close_edit (void *edit_baton)
                 eb->pool));
     }
 
-  if (eb->notify_func)
-    (eb->notify_func) (eb->notify_baton,
-                       eb->anchor,
-                       svn_wc_notify_update_completed,
-                       svn_node_unknown,
-                       svn_wc_notify_state_unknown,
-                       svn_wc_notify_state_unknown,
-                       eb->target_revision);
-
-  /* The edit is over, free its pool.
-     ### No, this is wrong.  Who says this editor/baton won't be used
-     again?  But the change is not merely to remove this call.  We
-     should also make eb->pool not be a subpool (see make_editor),
-     and change callers of svn_client_{checkout,update,switch} to do
-     better pool management. ### */
+  /* The edit is over, free its pool. */
   svn_pool_destroy (eb->pool);
-  
   return SVN_NO_ERROR;
 }
 
@@ -1892,11 +1753,9 @@ make_editor (const char *anchor,
              const char *ancestor_url,
              const char *switch_url,
              svn_boolean_t recurse,
-             svn_wc_notify_func_t notify_func,
-             void *notify_baton,
              const svn_delta_editor_t **editor,
              void **edit_baton,
-             svn_wc_traversal_info_t **traversal_info,
+             void **traversal_info,
              apr_pool_t *pool)
 {
   struct edit_baton *eb;
@@ -1916,13 +1775,11 @@ make_editor (const char *anchor,
   eb->anchor          = anchor;
   eb->target          = target;
   eb->recurse         = recurse;
-  eb->notify_func     = notify_func;
-  eb->notify_baton    = notify_baton;
 
   if (traversal_info)
     {
       /* Use the highest pool for the traversal info. */
-      svn_wc_traversal_info_t *ti = apr_palloc (pool, sizeof (*ti));
+      struct traversal_info *ti = apr_palloc (pool, sizeof (*ti));
       
       ti->pool           = pool;
       ti->externals_old  = apr_hash_make (ti->pool);
@@ -1960,13 +1817,12 @@ svn_wc_get_update_editor (const char *anchor,
                           svn_boolean_t recurse,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
-                          svn_wc_traversal_info_t **traversal_info,
+                          void **traversal_info,
                           apr_pool_t *pool)
 {
   return make_editor (anchor, target, target_revision, 
                       FALSE, NULL, NULL,
-                      recurse, NULL, NULL,
-                      editor, edit_baton, traversal_info, pool);
+                      recurse, editor, edit_baton, traversal_info, pool);
 }
 
 
@@ -1975,18 +1831,14 @@ svn_wc_get_checkout_editor (const char *dest,
                             const char *ancestor_url,
                             svn_revnum_t target_revision,
                             svn_boolean_t recurse,
-                            svn_wc_notify_func_t notify_func,
-                            void *notify_baton,
                             const svn_delta_editor_t **editor,
                             void **edit_baton,
-                            svn_wc_traversal_info_t **traversal_info,
+                            void **traversal_info,
                             apr_pool_t *pool)
 {
   return make_editor (dest, NULL, target_revision, 
                       TRUE, ancestor_url, NULL,
-                      recurse, notify_func, notify_baton,
-                      editor, edit_baton,
-                      traversal_info, pool);
+                      recurse, editor, edit_baton, traversal_info, pool);
 }
 
 
@@ -1998,26 +1850,26 @@ svn_wc_get_switch_editor (const char *anchor,
                           svn_boolean_t recurse,
                           const svn_delta_editor_t **editor,
                           void **edit_baton,
-                          svn_wc_traversal_info_t **traversal_info,
+                          void **traversal_info,
                           apr_pool_t *pool)
 {
   assert (switch_url);
 
   return make_editor (anchor, target, target_revision,
                       FALSE, NULL, switch_url,
-                      recurse, NULL, NULL,
-                      editor, edit_baton,
-                      traversal_info, pool);
+                      recurse, editor, edit_baton, traversal_info, pool);
 }
 
 
 void
-svn_wc_edited_externals (apr_hash_t **externals_old,
-                         apr_hash_t **externals_new,
-                         svn_wc_traversal_info_t *traversal_info)
+svn_wc_edited_externals (apr_hash_t **externals_new,
+                         apr_hash_t **externals_old,
+                         void *traversal_info)
 {
-  *externals_old = traversal_info->externals_old;
-  *externals_new = traversal_info->externals_new;
+  struct traversal_info *ti = traversal_info;
+
+  *externals_new = ti->externals_new;
+  *externals_old = ti->externals_old;
 }
 
 

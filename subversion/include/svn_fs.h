@@ -212,38 +212,40 @@ svn_error_t *svn_fs_berkeley_recover (const char *path,
 typedef struct svn_fs_id_t svn_fs_id_t;
 
 
-/* Return -1, 0, or 1 if node revisions A and B are unrelated,
-   equivalent, or otherwise related (respectively).  */
-int svn_fs_compare_ids (const svn_fs_id_t *a, const svn_fs_id_t *b);
+/* Return the distance between node revisions A and B.  Return -1 if
+   they are completely unrelated.  */
+int svn_fs_id_distance (const svn_fs_id_t *a, const svn_fs_id_t *b);
 
 
 
-/* Return non-zero IFF the nodes associated with ID1 and ID2 are
-   related, else return zero.  
+/* Perform an exhaustive traversal through node-id and copy-from
+   history to determine if the nodes associated with ID1 and ID2, and
+   found in filesystem FS, are related.  If so, set *RELATED to 1,
+   else to 0.  Use POOL for allocations.  */
+svn_error_t *svn_fs_check_related (int *related, 
+                                   svn_fs_t *fs,
+                                   const svn_fs_id_t *id1,
+                                   const svn_fs_id_t *id2,
+                                   apr_pool_t *pool);
 
-   NOTE: While this might seem redundent in the presence of
-   svn_fs_compare_ids (looking for a return value != -1), it is
-   slightly faster to run if the equality case is not interesting to
-   you. */
-int svn_fs_check_related (const svn_fs_id_t *id1,
-                          const svn_fs_id_t *id2);
 
+/* Parse the LEN bytes at DATA as a node or node revision ID.  Return
+   zero if the bytes are not a properly-formed ID.  A properly formed
+   ID matches the regexp:
 
-/* Parse the LEN bytes at DATA as a node revision ID.  Return zero if
-   the bytes are not a properly-formed ID.  Allocate the parsed ID in
-   POOL.  If POOL is zero, malloc the ID; we need this in certain
-   cases where we can't pass in a pool, but it's generally best to use
-   a pool whenever possible.  */
-svn_fs_id_t *svn_fs_parse_id (const char *data, 
-                              apr_size_t len,
+       [0-9]+(\.[0-9]+)*
+
+   Allocate the parsed ID in POOL.  If POOL is zero, malloc the ID; we
+   need this in certain cases where we can't pass in a pool, but it's
+   generally best to use a pool whenever possible.  */
+svn_fs_id_t *svn_fs_parse_id (const char *data, apr_size_t len,
                               apr_pool_t *pool);
 
 
-/* Return a Subversion string containing the unparsed form of the
-   node or node revision id ID.  Allocate the string containing the
+/* Return a Subversion string containing the unparsed form of the node
+   or node revision id ID.  Allocate the string containing the
    unparsed form in POOL.  */
-svn_string_t *svn_fs_unparse_id (const svn_fs_id_t *id, 
-                                 apr_pool_t *pool);
+svn_stringbuf_t *svn_fs_unparse_id (const svn_fs_id_t *id, apr_pool_t *pool);
 
 
 
@@ -943,17 +945,17 @@ svn_error_t *svn_fs_copy (svn_fs_root_t *from_root,
                           apr_pool_t *pool);
 
 
-/* Like svn_fs_copy(), but doesn't record copy history, and preserves
-   the PATH.  You cannot use svn_fs_copied_from() later to find out
-   where this copy came from.
+/* Like svn_fs_copy(), but doesn't record copy history.  I.e., you
+   cannot use svn_fs_copied_from() later to find out where this copy
+   came from.
 
    Use svn_fs_link() in situations where you don't care about the copy
-   history, and where TO_PATH and FROM_PATH are the same, because it
-   is cheaper than svn_fs_copy().  */
-svn_error_t *svn_fs_revision_link (svn_fs_root_t *from_root,
-                                   svn_fs_root_t *to_root,
-                                   const char *path,
-                                   apr_pool_t *pool);
+   history, because it is slightly cheaper than svn_fs_copy().  */
+svn_error_t *svn_fs_link (svn_fs_root_t *from_root,
+                          const char *from_path,
+                          svn_fs_root_t *to_root,
+                          const char *to_path,
+                          apr_pool_t *pool);
 
 /* Files.  */
 

@@ -381,6 +381,7 @@ close_edit (void *edit_baton)
         }
     }
 
+  svn_pool_destroy (eb->pool);
   return SVN_NO_ERROR;
 }
 

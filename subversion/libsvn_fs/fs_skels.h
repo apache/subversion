@@ -71,12 +71,6 @@ svn_fs__parse_node_revision_skel (svn_fs__node_revision_t **noderev_p,
                                   skel_t *skel,
                                   apr_pool_t *pool);
 
-/* Parse a `COPY' SKEL into *COPY_P.  Use POOL for all allocations. */
-svn_error_t *
-svn_fs__parse_copy_skel (svn_fs__copy_t **copy_p,
-                         skel_t *skel,
-                         apr_pool_t *pool);
-
 /* Parse an `ENTRIES' SKEL into *ENTRIES_P, which is a hash with const
    char * names (the directory entry name) and svn_fs_id_t * values
    (the node-id of the entry), or NULL if SKEL contains no entries.  
@@ -91,28 +85,28 @@ svn_fs__parse_entries_skel (apr_hash_t **entries_p,
 
 
 /* Unparse a PROPLIST hash (which has const char * property names and
-   svn_stringbuf_t * values) into a `PROPLIST' skel *SKEL_P.  Use POOL
-   for all allocations.  */
+   svn_stringbuf_t * values) into a `PROPLIST' *SKEL_P.  Use POOL for
+   all allocations.  */
 svn_error_t *
 svn_fs__unparse_proplist_skel (skel_t **skel_p,
                                apr_hash_t *proplist,
                                apr_pool_t *pool);
 
-/* Unparse REVISION into a `REVISION' skel *SKEL_P.  Use POOL for all
+/* Unparse REVISION into a `REVISION' *SKEL_P.  Use POOL for all
    allocations.  */
 svn_error_t *
 svn_fs__unparse_revision_skel (skel_t **skel_p,
                                const svn_fs__revision_t *revision,
                                apr_pool_t *pool);
 
-/* Unparse TRANSACTION into a `TRANSACTION' skel *SKEL_P.  Use POOL
-   for all allocations.  */
+/* Unparse TRANSACTION into a `TRANSACTION' *SKEL_P.  Use POOL for all
+   allocations.  */
 svn_error_t *
 svn_fs__unparse_transaction_skel (skel_t **skel_p,
                                   const svn_fs__transaction_t *transaction,
                                   apr_pool_t *pool);
 
-/* Unparse REP into a `REPRESENTATION' skel *SKEL_P.  Use POOL for all
+/* Unparse REP into a `REPRESENTATION' *SKEL_P.  Use POOL for all
    allocations.  */
 svn_error_t *
 svn_fs__unparse_representation_skel (skel_t **skel_p,
@@ -120,23 +114,16 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
                                      apr_pool_t *pool);
 
 
-/* Unparse NODEREV into a `NODE-REVISION' skel *SKEL_P.  Use POOL for
-   all allocations.  */
+/* Unparse NODEREV into a `NODE-REVISION' *SKEL_P.  Use POOL for all
+   allocations.  */
 svn_error_t *
 svn_fs__unparse_node_revision_skel (skel_t **skel_p,
                                     const svn_fs__node_revision_t *noderev,
                                     apr_pool_t *pool);
 
-/* Unparse COPY into a `COPY' skel *SKEL_P.  Use POOL for all
-   allocations.  */
-svn_error_t *
-svn_fs__unparse_copy_skel (skel_t **skel_p,
-                           const svn_fs__copy_t *copy,
-                           apr_pool_t *pool);
-
 /* Unparse an ENTRIES hash, which has const char * names (the entry
    name) and svn_fs_id_t * values (the node-id of the entry) into an
-   `ENTRIES' skel *SKEL_P.  Use POOL for all allocations.  */
+   `ENTRIES' *SKEL_P.  Use POOL for all allocations.  */
 svn_error_t *
 svn_fs__unparse_entries_skel (skel_t **skel_p,
                               apr_hash_t *entries,

@@ -194,10 +194,8 @@ def basic_copy_and_move_files(sbox):
                                                 None, None,
                                                 wc_dir)
 
-#----------------------------------------------------------------------
-
 def mv_unversioned_file(sbox):
-  "test fix for 'svn mv unversioned_file some_dst'"
+  "Test fix for 'svn mv unversioned_file some_dst'"
 
   ##################### Here is the bug Lars saw ######################
   #
@@ -265,122 +263,6 @@ def mv_unversioned_file(sbox):
       return 0
   return 1
 
-#----------------------------------------------------------------------
-
-# This test passes over ra_local certainly; we're adding it because at
-# one time it failed over ra_dav.  Specifically, it failed when
-# mod_dav_svn first started sending vsn-rsc-urls as "CR/path", and was
-# sending bogus CR/paths for items within copied subtrees.
-
-def receive_copy_in_update(sbox):
-  "receive a copied directory during update"
-
-  if sbox.build():
-    return 1
-
-  wc_dir = sbox.wc_dir
-
-  # Make a backup copy of the working copy.
-  wc_backup = wc_dir + 'backup'
-  svntest.actions.duplicate_dir(wc_dir, wc_backup)
-
-  # Define a zillion paths in both working copies.
-  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
-  newG_path = os.path.join(wc_dir, 'A', 'B', 'newG')
-  newGpi_path = os.path.join(wc_dir, 'A', 'B', 'newG', 'pi')
-  newGrho_path = os.path.join(wc_dir, 'A', 'B', 'newG', 'rho')
-  newGtau_path = os.path.join(wc_dir, 'A', 'B', 'newG', 'tau')
-  b_newG_path = os.path.join(wc_backup, 'A', 'B', 'newG')
-  b_newGpi_path = os.path.join(wc_backup, 'A', 'B', 'newG', 'pi')
-  b_newGrho_path = os.path.join(wc_backup, 'A', 'B', 'newG', 'rho')
-  b_newGtau_path = os.path.join(wc_backup, 'A', 'B', 'newG', 'tau')
-
-  # Copy directory A/D to A/B/newG  
-  svntest.main.run_svn(None, 'cp', G_path, newG_path)
-
-  # Created expected output tree for 'svn ci':
-  output_list = [ [newG_path, None, {}, {'verb' : 'Adding' }] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
-
-  # Create expected status tree.
-  status_list = svntest.actions.get_virginal_status_list(wc_dir, '2')
-  for item in status_list:
-    item[3]['wc_rev'] = '1'
-  # New items in the status tree:
-  status_list.append([newG_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([newGpi_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([newGrho_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([newGtau_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
-
-  if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output_tree,
-                                            expected_status_tree,
-                                            None,
-                                            None, None,
-                                            None, None,
-                                            wc_dir):
-    return 1
-
-  # Now update the other working copy; it should receive a full add of
-  # the newG directory and its contents.
-
-  # Expected output of update
-  output_list = [[b_newG_path,
-                  None, {}, {'status' : 'A '}],
-                 [b_newGpi_path,
-                   None, {}, {'status' : 'A '}],
-                 [b_newGrho_path,
-                   None, {}, {'status' : 'A '}],
-                 [b_newGtau_path,
-                   None, {}, {'status' : 'A '}] ]
-  expected_output_tree = svntest.tree.build_generic_tree(output_list)
-
-  # Create expected disk tree for the update.
-  my_greek_tree = svntest.main.copy_greek_tree()
-  my_greek_tree.append(['A/B/newG', None, {}, {}])
-  my_greek_tree.append(['A/B/newG/pi', "This is the file 'pi'.", {}, {}])
-  my_greek_tree.append(['A/B/newG/rho', "This is the file 'rho'.", {}, {}])
-  my_greek_tree.append(['A/B/newG/tau', "This is the file 'tau'.", {}, {}])  
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
-
-  # Create expected status tree for the update.
-  status_list = svntest.actions.get_virginal_status_list(wc_backup, '2')
-  status_list.append([b_newG_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([b_newGpi_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([b_newGrho_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  status_list.append([b_newGtau_path, None, {},
-                      {'status' : '_ ',
-                       'wc_rev' : '2',
-                       'repos_rev' : '2'}])
-  expected_status_tree = svntest.tree.build_generic_tree(status_list)
-  
-  # Do the update and check the results in three ways.
-  return svntest.actions.run_and_verify_update(wc_backup,
-                                               expected_output_tree,
-                                               expected_disk_tree,
-                                               expected_status_tree)
 
 
 ########################################################################
@@ -391,7 +273,6 @@ def receive_copy_in_update(sbox):
 test_list = [ None,
               basic_copy_and_move_files,
               mv_unversioned_file,
-              receive_copy_in_update,
              ]
 
 if __name__ == '__main__':

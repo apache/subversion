@@ -40,11 +40,10 @@ int svn_fs__open_nodes_table (DB **nodes_p,
 
 /* Check FS's `nodes' table to find an unused node number, and set
    *ID_P to the ID of the first revision of an entirely new node in
-   FS, created in transaction TXN_ID, as part of TRAIL.  Allocate the
-   new ID, and do all temporary allocation, in TRAIL->pool.  */
+   FS, as part of TRAIL.  Allocate the new ID, and do all temporary
+   allocation, in TRAIL->pool.  */
 svn_error_t *svn_fs__new_node_id (svn_fs_id_t **id_p,
                                   svn_fs_t *fs,
-                                  const char *txn_id,
                                   trail_t *trail);
 
 
@@ -67,21 +66,17 @@ svn_error_t *svn_fs__delete_nodes_entry (svn_fs_t *fs,
    revision ID in FS that does not exist yet, as part of TRAIL.
    Allocate *SUCCESSOR_P in TRAIL->pool.
 
-   Use the current Subversion transaction name TXN_ID, and optionally
-   a copy id COPY_ID, in the determination of the new node revision
-   ID.  */
+   If ID is the youngest revision of its node, then the successor is
+   simply ID with its rightmost revision number increased; otherwise,
+   the successor is a new branch from ID.  */
 svn_error_t *svn_fs__new_successor_id (svn_fs_id_t **successor_p,
                                        svn_fs_t *fs,
                                        const svn_fs_id_t *id,
-                                       const char *copy_id,
-                                       const char *txn_id,
                                        trail_t *trail);
 
 
 /* Set *NODEREV_P to the node-revision for the node ID in FS, as
-   part of TRAIL.  Do any allocations in TRAIL->pool.  Allow NODEREV_P
-   to be NULL, in which case it is not used, and this function acts as
-   an existence check for ID in FS. */
+   part of TRAIL.  Do any allocations in TRAIL->pool.  */
 svn_error_t *svn_fs__get_node_revision (svn_fs__node_revision_t **noderev_p,
                                         svn_fs_t *fs,
                                         const svn_fs_id_t *id,

@@ -127,17 +127,6 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
                                           apr_pool_t *pool);
 
 
-
-/* Create directory PATH on the file system, creating intermediate
- * directories as required, like 'mkdir -p'.  Report no error if PATH
- * already exists.
- *
- * This is essentially a wrapper for apr_dir_make_recursive(), passing
- * APR_OS_DEFAULT as the permissions.
- */
-svn_error_t *svn_io_make_dir_recursively (const char *path, apr_pool_t *pool);
-
-
 /* Return APR_SUCCESS if directory PATH is an empty directory,
    APR_EGENERAL if it is not empty, or the associated apr error if
    there was any trouble finding out whether or not it's empty.  */

@@ -698,9 +698,7 @@ repos_to_wc_copy (const char *src_url,
 
       /* Get a checkout editor and wrap it. */
       SVN_ERR (svn_wc_get_checkout_editor (dst_path, src_url, src_revnum, 1,
-                                           NULL, NULL,
-                                           &editor, &edit_baton,
-                                           NULL, pool));
+                                           &editor, &edit_baton, NULL, pool));
       
       svn_delta_wrap_editor (&editor, &edit_baton,
                              before_editor, before_edit_baton,

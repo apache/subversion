@@ -46,28 +46,18 @@ static svn_error_t *rep_read_range (svn_fs_t *fs,
 /*** Helper Functions ***/
 
 
-/* Return non-zero iff REP is mutable under transaction TXN_ID. */
-static int rep_is_mutable (svn_fs__representation_t *rep, const char *txn_id)
-{
-  if (! rep->txn_id)
-    return 0;
-  return (! strcmp (rep->txn_id, txn_id));
-}
-
-
 /* Return a `fulltext' representation which references the string
-   STR_KEY, performing allocations in POOL.  If TXN_ID is non-zero and
-   non-NULL, make the representation mutable under that TXN_ID.  If
-   non-NULL, STR_KEY will be copied into an allocation of POOL.  */
+   STR_KEY, performing allocations in POOL.  If MUTABLE is non-zero,
+   make the representation mutable.  If non-NULL, STR_KEY will be
+   copied into an allocation of POOL.  */
 static svn_fs__representation_t *
 make_fulltext_rep (const char *str_key, 
-                   const char *txn_id,
+                   int mutable,
                    apr_pool_t *pool)
 
 {
-  svn_fs__representation_t *rep = apr_pcalloc (pool, sizeof (*rep));
-  if (txn_id && *txn_id)
-    rep->txn_id = apr_pstrdup (pool, txn_id);
+  svn_fs__representation_t *rep = apr_palloc (pool, sizeof (*rep));
+  rep->is_mutable = mutable;
   rep->kind = svn_fs__rep_kind_fulltext;
   rep->contents.fulltext.string_key 
     = str_key ? apr_pstrdup (pool, str_key) : NULL;
@@ -573,8 +563,7 @@ rep_read_range (svn_fs_t *fs,
 svn_error_t *
 svn_fs__get_mutable_rep (const char **new_rep_key,
                          const char *rep_key,
-                         svn_fs_t *fs,
-                         const char *txn_id,
+                         svn_fs_t *fs, 
                          trail_t *trail)
 {
   svn_fs__representation_t *rep;
@@ -584,7 +573,7 @@ svn_fs__get_mutable_rep (const char **new_rep_key,
       /* We were passed an existing REP_KEY, so examine it. */
       SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
 
-      if (rep_is_mutable (rep, txn_id)) /* rep already mutable, so return it */
+      if (rep->is_mutable) /* rep already mutable, so return it */
         {
           *new_rep_key = rep_key;
           return SVN_NO_ERROR;
@@ -603,7 +592,7 @@ svn_fs__get_mutable_rep (const char **new_rep_key,
                                         &(rep->contents.fulltext.string_key), 
                                         rep->contents.fulltext.string_key, 
                                         trail));
-          rep->txn_id = txn_id;
+          rep->is_mutable = 1;
         }
       else if (rep->kind == svn_fs__rep_kind_delta)
         {
@@ -639,7 +628,7 @@ svn_fs__get_mutable_rep (const char **new_rep_key,
                                               trail));
             }
           
-          rep = make_fulltext_rep (new_str, txn_id, trail->pool);
+          rep = make_fulltext_rep (new_str, 1, trail->pool);
         }
       else /* unknown kind */
         abort ();
@@ -648,7 +637,7 @@ svn_fs__get_mutable_rep (const char **new_rep_key,
     {
       const char *new_str = NULL;
       SVN_ERR (svn_fs__string_append (fs, &new_str, 0, NULL, trail));
-      rep = make_fulltext_rep (new_str, txn_id, trail->pool);
+      rep = make_fulltext_rep (new_str, 1, trail->pool);
     }
 
   /* If we made it here, there's a new rep to store in the fs. */
@@ -659,15 +648,27 @@ svn_fs__get_mutable_rep (const char **new_rep_key,
 
 
 svn_error_t *
+svn_fs__make_rep_immutable (svn_fs_t *fs,
+                            const char *rep_key,
+                            trail_t *trail)
+{
+  svn_fs__representation_t *rep;
+
+  SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
+  rep->is_mutable = 0;
+  return svn_fs__write_rep (fs, rep_key, rep, trail);
+}
+
+
+svn_error_t *
 svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
                                const char *rep_key,
-                               const char *txn_id,
                                trail_t *trail)
 {
   svn_fs__representation_t *rep;
 
   SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
-  if (! rep_is_mutable (rep, txn_id))
+  if (! rep->is_mutable)
     return SVN_NO_ERROR;
 
   if (rep->kind == svn_fs__rep_kind_fulltext)
@@ -700,7 +701,7 @@ struct rep_read_baton
   svn_fs_t *fs;
 
   /* The representation skel whose contents we want to read.  If this
-     is NULL, the rep has never had any contents, so all reads fetch 0
+     is null, the rep has never had any contents, so all reads fetch 0
      bytes.
 
      Formerly, we cached the entire rep skel here, not just the key.
@@ -896,10 +897,6 @@ struct rep_write_baton
   /* The representation skel whose contents we want to write. */
   const char *rep_key;
   
-  /* The transaction id under which this write action will take
-     place. */
-  const char *txn_id;
-
   /* If present, do the write as part of this trail, and use trail's
      pool.  Otherwise, see `pool' below.  */ 
   trail_t *trail;
@@ -913,7 +910,6 @@ struct rep_write_baton
 static struct rep_write_baton *
 rep_write_get_baton (svn_fs_t *fs,
                      const char *rep_key,
-                     const char *txn_id,
                      trail_t *trail,
                      apr_pool_t *pool)
 {
@@ -924,7 +920,7 @@ rep_write_get_baton (svn_fs_t *fs,
   b->trail = trail;
   b->pool = pool;
   b->rep_key = rep_key;
-  b->txn_id = txn_id;
+
   return b;
 }
 
@@ -940,14 +936,13 @@ rep_write (svn_fs_t *fs,
            const char *rep_key,
            const char *buf,
            apr_size_t len,
-           const char *txn_id,
            trail_t *trail)
 {
   svn_fs__representation_t *rep;
         
   SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
 
-  if (! rep_is_mutable (rep, txn_id))
+  if (! rep->is_mutable)
     svn_error_createf
       (SVN_ERR_FS_REP_CHANGED, 0, NULL, trail->pool,
        "rep_write: rep \"%s\" is not mutable", rep_key);
@@ -977,9 +972,8 @@ rep_write (svn_fs_t *fs,
 struct write_rep_args
 {
   struct rep_write_baton *wb;   /* Destination.       */
-  const char *buf;              /* Data.              */
-  apr_size_t len;               /* How much to write. */
-  const char *txn_id;           /* Transaction ID.    */  
+  const char *buf;                 /* Data.              */
+  apr_size_t len;                  /* How much to write. */
 };
 
 
@@ -998,7 +992,6 @@ txn_body_write_rep (void *baton, trail_t *trail)
                       args->wb->rep_key,
                       args->buf,
                       args->len,
-                      args->wb->txn_id,
                       trail));
 
   return SVN_NO_ERROR;
@@ -1006,9 +999,7 @@ txn_body_write_rep (void *baton, trail_t *trail)
 
 
 static svn_error_t *
-rep_write_contents (void *baton, 
-                    const char *buf, 
-                    apr_size_t *len)
+rep_write_contents (void *baton, const char *buf, apr_size_t *len)
 {
   struct rep_write_baton *wb = baton;
   struct write_rep_args args;
@@ -1055,12 +1046,11 @@ svn_fs__rep_contents_read_stream (svn_fs_t *fs,
 svn_stream_t *
 svn_fs__rep_contents_write_stream (svn_fs_t *fs,
                                    const char *rep_key,
-                                   const char *txn_id,
                                    trail_t *trail,
                                    apr_pool_t *pool)
 {
   struct rep_write_baton *wb
-    = rep_write_get_baton (fs, rep_key, txn_id, trail, pool);
+    = rep_write_get_baton (fs, rep_key, trail, pool);
 
   svn_stream_t *ws = svn_stream_create (wb, pool);
   svn_stream_set_write (ws, rep_write_contents);
@@ -1072,7 +1062,6 @@ svn_fs__rep_contents_write_stream (svn_fs_t *fs,
 svn_error_t *
 svn_fs__rep_contents_clear (svn_fs_t *fs,
                             const char *rep_key,
-                            const char *txn_id,
                             trail_t *trail)
 {
   svn_fs__representation_t *rep;
@@ -1081,7 +1070,7 @@ svn_fs__rep_contents_clear (svn_fs_t *fs,
   SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
 
   /* Make sure it's mutable. */
-  if (! rep_is_mutable (rep, txn_id))
+  if (! rep->is_mutable)
     return svn_error_createf
       (SVN_ERR_FS_REP_NOT_MUTABLE, 0, NULL, trail->pool,
        "svn_fs__rep_contents_clear: rep \"%s\" is not mutable", rep_key);
@@ -1110,7 +1099,7 @@ svn_fs__rep_contents_clear (svn_fs_t *fs,
          behind it, and replace it in the filesystem. */
       str_key = NULL;
       SVN_ERR (svn_fs__string_append (fs, &str_key, 0, NULL, trail));
-      rep = make_fulltext_rep (str_key, txn_id, trail->pool);
+      rep = make_fulltext_rep (str_key, 1, trail->pool);
       SVN_ERR (svn_fs__write_rep (fs, rep_key, rep, trail));
 
       /* Now delete those old strings. */
@@ -1433,7 +1422,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
     int i;
 
     new_rep.kind = svn_fs__rep_kind_delta;
-    new_rep.txn_id = NULL;
+    new_rep.is_mutable = 0;
     chunks = apr_array_make (pool, windows->nelts, sizeof (chunk));
 
     /* Loop through the windows we wrote, creating and adding new
@@ -1481,10 +1470,8 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
   svn_stream_t *target_stream; /* stream to write the fulltext */
   struct write_string_baton target_baton;
   apr_array_header_t *orig_keys;
+  unsigned char buf[65536];
   apr_size_t len;
-
-  /* ### crap. this shouldn't be on the stack. way too big! */
-  char buf[65536];
 
   /* Read the rep skel. */
   SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
@@ -1527,7 +1514,7 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
   /* Now `target_baton.key' has the key of the new string.  We
      should hook it into the representation.  So we make a new rep,
      write it out... */
-  rep = make_fulltext_rep (target_baton.key, NULL, trail->pool);
+  rep = make_fulltext_rep (target_baton.key, 0, trail->pool);
   SVN_ERR (svn_fs__write_rep (fs, rep_key, rep, trail));
 
   /* ...then we delete our original strings. */

@@ -428,6 +428,7 @@ close_edit (void *edit_baton)
       printf ("\n");
       fflush (stdout);
     }
+  svn_pool_destroy (eb->pool);
 
   return SVN_NO_ERROR;
 }

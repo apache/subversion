@@ -35,6 +35,24 @@
 
 /*** Code. ***/
 
+/* Perform an update of PATH (part of a working copy), providing pre-
+   and post-checkout hook editors and batons (BEFORE_EDITOR,
+   BEFORE_EDIT_BATON / AFTER_EDITOR, AFTER_EDIT_BATON).
+
+   If XML_SRC is NULL, then the update will come from the repository
+   that PATH was originally checked-out from.  An invalid REVISION
+   will cause the PATH to be updated to the "latest" revision, while a
+   valid REVISION will update to a specific tree.  Alternatively, a
+   time TM can be used to implicitly select a revision.  TM cannot be
+   used at the same time as REVISION.
+
+   If XML_SRC is non-NULL, it is an xml file to update from.  An
+   invalid REVISION implies that the revision *must* be present in the
+   <delta-pkg> tag, while a valid REVISION will be simply be stored in
+   the wc. (Note: a <delta-pkg> revision will *always* override the
+   one passed in.)
+
+   This operation will use the provided memory POOL. */
 svn_error_t *
 svn_client_update (const svn_delta_editor_t *before_editor,
                    void *before_edit_baton,
@@ -61,7 +79,6 @@ svn_client_update (const svn_delta_editor_t *before_editor,
   const char *URL, *anchor, *target;
   svn_error_t *err;
   svn_revnum_t revnum;
-  svn_wc_traversal_info_t *traversal_info;
 
   /* Sanity check.  Without this, the update is meaningless. */
   assert (path && (path[0] != '\0'));
@@ -97,7 +114,7 @@ svn_client_update (const svn_delta_editor_t *before_editor,
                                      recurse,
                                      &update_editor,
                                      &update_edit_baton,
-                                     &traversal_info,
+                                     NULL,
                                      pool));
 
 
@@ -191,19 +208,6 @@ svn_client_update (const svn_delta_editor_t *before_editor,
       /* Close XML file. */
       apr_file_close (in);
     }
-
-#if 0 /* Waiting for resolution of issue #662 before activating this. */
-
-  /* We handle externals after the initial checkout is complete, so
-     that fetching external items (and any errors therefrom) doesn't
-     delay the primary checkout.  */
-  SVN_ERR (svn_client__handle_externals_changes
-           (traversal_info,
-            notify_func, notify_baton,
-            auth_baton,
-            pool));
-
-#endif /* 0 */
 
   return SVN_NO_ERROR;
 }

@@ -397,13 +397,12 @@ svn_wc_merge_prop_diffs (const char *path,
   
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
-  SVN_ERR (svn_wc__merge_prop_diffs (NULL,
-                                     &ignored_conflicts,
-                                     parent,
+  SVN_ERR (svn_wc__merge_prop_diffs (parent,
                                      base_name,
                                      propchanges,
                                      pool,
-                                     &log_accum));
+                                     &log_accum,
+                                     &ignored_conflicts));
 
   apr_err = apr_file_write_full (log_fp, log_accum->data, 
                                  log_accum->len, NULL);
@@ -426,13 +425,12 @@ svn_wc_merge_prop_diffs (const char *path,
 
 
 svn_error_t *
-svn_wc__merge_prop_diffs (svn_boolean_t *merged,
-                          apr_hash_t **conflicts,
-                          const char *path,
+svn_wc__merge_prop_diffs (const char *path,
                           const char *name,
                           const apr_array_header_t *propchanges,
                           apr_pool_t *pool,
-                          svn_stringbuf_t **entry_accum)
+                          svn_stringbuf_t **entry_accum,
+                          apr_hash_t **conflicts)
 {
   int i;
   svn_boolean_t is_dir;
@@ -495,11 +493,6 @@ svn_wc__merge_prop_diffs (svn_boolean_t *merged,
   SVN_ERR (svn_wc_get_local_propchanges (&local_propchanges,
                                          localhash, basehash, pool));
   
-  if ((local_propchanges->nelts > 0) && merged)
-    *merged = TRUE;
-  else
-    *merged = FALSE;
-
   /* Looping over the array of `update' propchanges we want to apply: */
   for (i = 0; i < propchanges->nelts; i++)
     {

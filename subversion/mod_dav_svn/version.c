@@ -92,7 +92,7 @@ static dav_error *dav_svn_get_option(const dav_resource *resource,
           ap_text_append(resource->pool, option,
                          dav_svn_build_uri(resource->info->repos,
                                            DAV_SVN_BUILD_URI_ACT_COLLECTION,
-                                           SVN_INVALID_REVNUM, NULL,
+                                           SVN_INVALID_REVNUM, NULL, NULL,
                                            1 /* add_href */, resource->pool));
           ap_text_append(resource->pool, option,
                          "</D:activity-collection-set>");

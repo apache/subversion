@@ -22,6 +22,38 @@
 
 
 
+/* Validating node and node revision IDs. */
+
+int
+svn_fs__count_id_components (const char *data, apr_size_t data_len)
+{
+  apr_size_t i;
+  int id_len = 1;
+  apr_size_t last_start = 0;
+
+  for (i = 0; i < data_len; i++)
+    if (data[i] == '.')
+      {
+        /* There must be at least one digit before and after each dot.  */
+        if (i == last_start)
+          return 0;
+        last_start = i + 1;
+        id_len++;
+      }
+    else if ('0' <= data[i] && data[i] <= '9')
+      ;
+    else
+      return 0;
+
+  /* Make sure there was at least one digit in the last number.  */
+  if (i == last_start)
+    return 0;
+
+  return id_len;
+}
+
+
+
 /* Validating paths. */
 
 int 

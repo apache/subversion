@@ -37,27 +37,14 @@ int svn_fs__open_transactions_table (DB **transactions_p,
 /* Create a new transaction in FS as part of TRAIL, with an initial
    root and base root ID of ROOT_ID.  Set *TXN_NAME_P to the name of the
    new transaction, allocated in TRAIL->pool.  */
-svn_error_t *svn_fs__create_txn (const char **txn_name_p,
+svn_error_t *svn_fs__create_txn (char **txn_name_p,
                                  svn_fs_t *fs,
                                  const svn_fs_id_t *root_id,
                                  trail_t *trail);
 
 
-/* Convert the unfinished transaction in FS named TXN_NAME to a
-   committed on that refers to REVISION as part of TRAIL.  
-
-   Returns SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
-   transaction that has already been committed.  */
-svn_error_t *svn_fs__commit_txn (svn_fs_t *fs,
-                                 const char *txn_name,
-                                 svn_revnum_t revision,
-                                 trail_t *trail);
-
 /* Remove the transaction whose name is TXN_NAME from the `transactions'
-   table of FS, as part of TRAIL.  
-
-   Returns SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
-   transaction that has already been committed.  */
+   table of FS, as part of TRAIL.  */
 svn_error_t *svn_fs__delete_txn (svn_fs_t *fs,
                                  const char *txn_name,
                                  trail_t *trail);
@@ -83,45 +70,25 @@ svn_error_t *svn_fs__get_txn (svn_fs__transaction_t **txn_p,
    If there is no such transaction, SVN_ERR_FS_NO_SUCH_TRANSACTION is
    the error returned.
 
-   Returns SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
-   transaction that has already been committed.
-
    Allocate *ROOT_ID_P and *BASE_ROOT_ID_P in TRAIL->pool.  */
 svn_error_t *svn_fs__get_txn_ids (const svn_fs_id_t **root_id_p,
                                   const svn_fs_id_t **base_root_id_p,
                                   svn_fs_t *fs,
-                                  const char *txn_name,
+                                  const char *svn_txn,
                                   trail_t *trail);
 
 
 /* Set the root directory of the Subversion transaction TXN_NAME in FS
    to ROOT_ID, as part of TRAIL.  Do any necessary temporary
-   allocation in TRAIL->pool. 
-
-   Returns SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
-   transaction that has already been committed.  */
+   allocation in TRAIL->pool.  */
 svn_error_t *svn_fs__set_txn_root (svn_fs_t *fs,
                                    const char *txn_name,
                                    const svn_fs_id_t *root_id,
                                    trail_t *trail);
 
 
-/* Add COPY_ID to the list of copies made under the Subversion
-   transaction TXN_NAME in FS as part of TRAIL.
-
-   Returns SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
-   transaction that has already been committed.  */
-svn_error_t *svn_fs__add_txn_copy (svn_fs_t *fs,
-                                   const char *txn_name,
-                                   const char *copy_id,
-                                   trail_t *trail);
-
-
 /* Set the base root directory of TXN_NAME in FS to NEW_ID, as part of
-   TRAIL.  Do any necessary temporary allocation in TRAIL->pool. 
-
-   Returns SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
-   transaction that has already been committed.  */
+   TRAIL.  Do any necessary temporary allocation in TRAIL->pool.  */
 svn_error_t *
 svn_fs__set_txn_base (svn_fs_t *fs,
                       const char *txn_name,
@@ -130,10 +97,7 @@ svn_fs__set_txn_base (svn_fs_t *fs,
 
 
 /* Set a property NAME to VALUE on transaction TXN_NAME in FS as part
-   of TRAIL.  Use TRAIL->pool for any necessary allocations.  
-
-   Returns SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
-   transaction that has already been committed.  */
+   of TRAIL.  Use TRAIL->pool for any necessary allocations.  */
 svn_error_t *svn_fs__set_txn_prop (svn_fs_t *fs,
                                    const char *txn_name,
                                    const char *name,
@@ -142,9 +106,8 @@ svn_error_t *svn_fs__set_txn_prop (svn_fs_t *fs,
 
 
 /* Set *NAMES_P to a null-terminated array of strings, giving the
-   names of all currently unfinished transactions in FS, as part of
-   TRAIL.  Allocate the array and the names in POOL, and use
-   TRAIL->pool for any temporary allocations.  */
+   names of all currently active transactions in FS, as part of TRAIL.
+   Allocate the array and the names in TRAIL->pool.  */
 svn_error_t *svn_fs__get_txn_list (char ***names_p,
                                    svn_fs_t *fs,
                                    apr_pool_t *pool,

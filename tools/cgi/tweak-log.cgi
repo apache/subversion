@@ -35,7 +35,6 @@ my $gReposPath = '/usr/www/repositories/svn';
 my $gActionURL = './tweak-log.cgi';
 my $gTempfilePrefix = '/tmp/tweak-cgi';
 my $gHistoryFile = './TWEAKLOG';
-my $gNumRecentCommits = 10;  # number of recent commits to show on init form
 ###############################################################################
 
 my %gCGIValues = &doCGI( );
@@ -102,40 +101,13 @@ sub doInitialForm
 # (void)
 #-----------------------------------------------------------------------------#
 {
-    my $youngest = `$gSvnadminCmd youngest $gReposPath`;
-    my $i;
-
     print "<html>\n<head>\n<title>Tweak Log</title>\n</head>\n";
     print "<body>\n<form action=\"$gActionURL\" method=\"post\">\n";
-    print "<a name=\"__top__\"></a>\n";
     print "<p>\n";
     print "Boy, I sure would like to modify that log message for \n";
     print "revision <input type=\"text\" name=\"rev\" value\"\">\n";
     print "<input type=\"submit\" name=\"action\" value=\"Fetch Log\">\n";
-    print "</p></form>\n";
-    print "<p>\n";
-    print "For convenience, here are the most recent $gNumRecentCommits\n";
-    print "commits (click the revision number to edit that revision's log):\n";
-    print "</p>\n";
-    chomp $youngest;
-    for( $i = 0; $i < $gNumRecentCommits; $i++ )
-    {
-        my $rev = $youngest - $i;
-        my @infolines = `$gSvnlookCmd $gReposPath rev $rev info`;
-        my $author = shift @infolines;
-        my $date = shift @infolines;
-        my $log_size = shift @infolines;
-
-        print "<hr />\n";
-        print "<a href=\"$gActionURL?action=Fetch+Log&rev=$rev\">Revision $rev</a>:<br />\n";
-        print "<i>Author: $author</i><br />\n";
-        print "<i>Date: $date</i><br />\n";
-        print "<i>Log: </i><br /><pre>\n";
-	print @infolines;
-	print "</pre><br />\n";
-	print "<a href=\"#__top__\">(back to top)</a>\n";
-    }
-    print "</body></html>\n";
+    print "</p></form></body></html>\n";
     return;
 }
 

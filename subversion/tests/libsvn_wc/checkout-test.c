@@ -53,8 +53,6 @@ apply_delta (svn_stream_t *delta,
                                        "",
                                        revision,
                                        TRUE, /* Recurse */
-                                       NULL,
-                                       NULL,
                                        &editor,
                                        &edit_baton,
                                        NULL,

@@ -32,7 +32,6 @@
 #include "nodes-table.h"
 #include "rev-table.h"
 #include "txn-table.h"
-#include "copies-table.h"
 #include "reps-table.h"
 #include "strings-table.h"
 #include "dag.h"
@@ -128,7 +127,6 @@ cleanup_fs (svn_fs_t *fs)
   SVN_ERR (cleanup_fs_db (fs, &fs->nodes, "nodes"));
   SVN_ERR (cleanup_fs_db (fs, &fs->revisions, "revisions"));
   SVN_ERR (cleanup_fs_db (fs, &fs->transactions, "transactions"));
-  SVN_ERR (cleanup_fs_db (fs, &fs->copies, "copies"));
   SVN_ERR (cleanup_fs_db (fs, &fs->representations, "representations"));
   SVN_ERR (cleanup_fs_db (fs, &fs->strings, "strings"));
 
@@ -335,6 +333,7 @@ svn_fs_close_fs (svn_fs_t *fs)
      pool, so just freeing the pool should shut everything down
      nicely.  But do catch an error, if one occurs.  */
   fs->cleanup_error = &svn_err;
+  svn_pool_destroy (fs->pool); 
 
   return svn_err;
 }
@@ -467,10 +466,6 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
                      svn_fs__open_transactions_table (&fs->transactions,
                                                       fs->env, 1));
   if (svn_err) goto error;
-  svn_err = DB_WRAP (fs, "creating `copies' table",
-                     svn_fs__open_copies_table (&fs->copies,
-                                                fs->env, 1));
-  if (svn_err) goto error;
   svn_err = DB_WRAP (fs, "creating `representations' table",
                      svn_fs__open_reps_table (&fs->representations,
                                               fs->env, 1));
@@ -529,10 +524,6 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   svn_err = DB_WRAP (fs, "opening `transactions' table",
                      svn_fs__open_transactions_table (&fs->transactions,
                                                       fs->env, 0));
-  if (svn_err) goto error;
-  svn_err = DB_WRAP (fs, "opening `copies' table",
-                     svn_fs__open_copies_table (&fs->copies,
-                                                fs->env, 0));
   if (svn_err) goto error;
   svn_err = DB_WRAP (fs, "creating `representations' table",
                      svn_fs__open_reps_table (&fs->representations,

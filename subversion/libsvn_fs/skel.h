@@ -127,7 +127,7 @@ skel_t *svn_fs__str_atom (const char *str, apr_pool_t *pool);
 
 /* Create an atom skel whose contents are the LEN bytes at ADDR,
    allocated from POOL.  */
-skel_t *svn_fs__mem_atom (const void *addr, apr_size_t len, apr_pool_t *pool);
+skel_t *svn_fs__mem_atom (const char *addr, apr_size_t len, apr_pool_t *pool);
 
 
 /* Create an empty list skel, allocated from POOL.  */

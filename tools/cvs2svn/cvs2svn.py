@@ -311,20 +311,6 @@ class Commit:
     print 'committing: %s, over %d seconds' % (time.ctime(self.t_min),
                                                self.t_max - self.t_min)
 
-    if ctx.dry_run:
-      for f, r in self.changes:
-        # compute a repository path. ensure we have a leading "/" and drop
-        # the ,v from the file name
-        repos_path = '/' + relative_name(ctx.cvsroot, f[:-2])
-        print '    changing %s : %s' % (r, repos_path)
-      for f, r in self.deletes:
-        # compute a repository path. ensure we have a leading "/" and drop
-        # the ,v from the file name
-        repos_path = '/' + relative_name(ctx.cvsroot, f[:-2])
-        print '    deleting %s : %s' % (r, repos_path)
-      print '    (skipped; dry run enabled)'
-      return
-
     # create a pool for the entire commit
     c_pool = util.svn_pool_create(ctx.pool)
 
@@ -548,11 +534,8 @@ def pass3(ctx):
 
 def pass4(ctx):
   # create the target repository
-  if not ctx.dry_run:
-    t_repos = _repos.svn_repos_create(ctx.target, ctx.pool)
-    t_fs = _repos.svn_repos_fs(t_repos)
-  else:
-    t_fs = t_repos = None
+  t_repos = _repos.svn_repos_create(ctx.target, ctx.pool)
+  t_fs = _repos.svn_repos_fs(t_repos)
 
   # process the logfiles, creating the target
   commits = { }
@@ -567,6 +550,12 @@ def pass4(ctx):
       ### don't worry about it; the next item will handle it
       continue
 
+    if commits.has_key(id):
+      c = commits[id]
+    else:
+      c = commits[id] = Commit()
+    c.add(timestamp, op, fname, rev)
+
     # scan for commits to process
     process = [ ]
     for id, c in commits.items():
@@ -574,18 +563,10 @@ def pass4(ctx):
         process.append((c.t_max, c))
         del commits[id]
 
-    # sort the commits into time-order, then commit 'em
     process.sort()
     for t_max, c in process:
       c.commit(t_fs, ctx)
     count = count + len(process)
-
-    # add this item into the set of commits we're assembling
-    if commits.has_key(id):
-      c = commits[id]
-    else:
-      c = commits[id] = Commit()
-    c.add(timestamp, op, fname, rev)
 
   # if there are any pending commits left, then flush them
   if commits:
@@ -610,10 +591,17 @@ _passes = [
 class _ctx:
   pass
 
-def convert(pool, ctx, start_pass=1):
+def convert(pool, cvsroot,
+            target=SVNROOT, log_fname_base=DATAFILE, start_pass=1, verbose=0):
   "Convert a CVS repository to an SVN repository."
 
+  # prepare the operation context
+  ctx = _ctx()
   ctx.pool = pool
+  ctx.cvsroot = cvsroot
+  ctx.target = target
+  ctx.log_fname_base = log_fname_base
+  ctx.verbose = verbose
 
   times = [ None ] * len(_passes)
   for i in range(start_pass - 1, len(_passes)):
@@ -629,31 +617,18 @@ def convert(pool, ctx, start_pass=1):
     print ' total:', int(times[len(_passes)] - times[start_pass-1]), 'seconds'
 
 def usage():
-  print 'USAGE: %s [-n] [-v] [-s svn-repos-path] [-p pass] cvs-repos-path' \
-        % os.path.basename(sys.argv[0])
-  print '  -n       dry run. parse CVS repos, but do not construct SVN repos.'
-  print '  -v       verbose.'
-  print '  -s PATH  path for new SVN repos.'
-  print '  -p NUM   start at pass NUM of %d.' % len(_passes)
+  print 'USAGE: %s [-v] [-s svn-repos-path] [-p pass] repository-path' \
+        % sys.argv[0]
   sys.exit(1)
 
 def main():
-  try:
-    opts, args = getopt.getopt(sys.argv[1:], 'p:s:vn')
-  except getopt.GetoptError:
-    usage()
+  opts, args = getopt.getopt(sys.argv[1:], 'p:s:v')
   if len(args) != 1:
     usage()
 
-  # prepare the operation context
-  ctx = _ctx()
-  ctx.cvsroot = args[0]
-  ctx.target = SVNROOT
-  ctx.log_fname_base = DATAFILE
-  ctx.verbose = 0
-  ctx.dry_run = 0
-
+  verbose = 0
   start_pass = 1
+  target = SVNROOT
 
   for opt, value in opts:
     if opt == '-p':
@@ -663,13 +638,12 @@ def main():
               'must be 1 through %d.' % (start_pass, len(_passes))
         sys.exit(1)
     elif opt == '-v':
-      ctx.verbose = 1
-    elif opt == '-n':
-      ctx.dry_run = 1
+      verbose = 1
     elif opt == '-s':
-      ctx.target = value
+      target = value
 
-  util.run_app(convert, ctx, start_pass=start_pass)
+  util.run_app(convert, args[0],
+               start_pass=start_pass, verbose=verbose, target=target)
 
 if __name__ == '__main__':
   main()

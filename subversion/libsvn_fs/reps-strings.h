@@ -35,8 +35,6 @@ extern "C" {
 /* Get or create a mutable representation in FS, store the new rep's
    key in *NEW_REP_KEY.
 
-   TXN_ID is the id of the Subversion transaction under which this occurs.
-
    If REP_KEY is already a mutable representation, set *NEW_REP_KEY to REP_KEY,
    else set *NEW_REP_KEY to a new rep key allocated in TRAIL->pool.
 
@@ -52,19 +50,23 @@ extern "C" {
 svn_error_t *svn_fs__get_mutable_rep (const char **new_rep_key,
                                       const char *rep_key,
                                       svn_fs_t *fs, 
-                                      const char *txn_id,
                                       trail_t *trail);
 
 
-/* Delete REP_KEY from FS if REP_KEY is mutable, as part of trail, or
-   do nothing if REP_KEY is immutable.  If a mutable rep is deleted,
-   the string it refers to is deleted as well.  TXN_ID is the id of
-   the Subversion transaction under which this occurs.
+/* Make REP_KEY in FS immutable, if it isn't already, as part of TRAIL.
+   If no such rep, return SVN_ERR_FS_NO_SUCH_REPRESENTATION.  */
+svn_error_t *svn_fs__make_rep_immutable (svn_fs_t *fs,
+                                         const char *rep_key,
+                                         trail_t *trail);
+
+
+/* Delete REP_KEY from FS if REP_KEY is mutable, as part of trail, or do
+   nothing if REP_KEY is immutable.  If a mutable rep is deleted, the
+   string it refers to is deleted as well.
 
    If no such rep, return SVN_ERR_FS_NO_SUCH_REPRESENTATION.  */ 
 svn_error_t *svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
                                             const char *rep_key,
-                                            const char *txn_id,
                                             trail_t *trail);
 
 
@@ -107,9 +109,8 @@ svn_stream_t *svn_fs__rep_contents_read_stream (svn_fs_t *fs,
                                                 apr_pool_t *pool);
 
                                        
-/* Return a stream to write the contents of REP_KEY.  Allocate the
-   stream in POOL.  TXN_ID is the id of the Subversion transaction
-   under which this occurs.
+/* Return a stream to write the contents of REP_KEY.  Allocate the stream
+   in POOL.
 
    If the rep already has contents, the stream will append.  You can
    use svn_fs__rep_contents_clear() to clear the contents first.
@@ -122,18 +123,15 @@ svn_stream_t *svn_fs__rep_contents_read_stream (svn_fs_t *fs,
    SVN_ERR_FS_REP_NOT_MUTABLE.  */
 svn_stream_t *svn_fs__rep_contents_write_stream (svn_fs_t *fs,
                                                  const char *rep_key,
-                                                 const char *txn_id,
                                                  trail_t *trail,
                                                  apr_pool_t *pool);
 
 
-/* Clear the contents of REP_KEY, so that it represents the empty
-   string, as part of TRAIL.  TXN_ID is the id of the Subversion
-   transaction under which this occurs.  If REP_KEY is not mutable,
-   return the error SVN_ERR_FS_REP_NOT_MUTABLE.  */
+/* Clear the contents of REP_KEY, so that it represents the empty string,
+   as part of TRAIL.  If REP_KEY is not mutable, return the error
+   SVN_ERR_FS_REP_NOT_MUTABLE.  */  
 svn_error_t *svn_fs__rep_contents_clear (svn_fs_t *fs,
                                          const char *rep_key,
-                                         const char *txn_id,
                                          trail_t *trail);
 
 

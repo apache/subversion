@@ -45,11 +45,11 @@ DBT *svn_fs__nodata_dbt (DBT *dbt)
 
 
 DBT *
-svn_fs__set_dbt (DBT *dbt, const void *data, u_int32_t size)
+svn_fs__set_dbt (DBT *dbt, void *data, u_int32_t size)
 {
   svn_fs__clear_dbt (dbt);
 
-  dbt->data = (void *) data;
+  dbt->data = data;
   dbt->size = size;
 
   return dbt;
@@ -122,8 +122,8 @@ svn_fs__id_to_dbt (DBT *dbt,
                    const svn_fs_id_t *id,
                    apr_pool_t *pool)
 {
-  svn_string_t *unparsed_id = svn_fs_unparse_id (id, pool);
-  svn_fs__set_dbt (dbt, (char *) unparsed_id->data, unparsed_id->len);
+  svn_stringbuf_t *unparsed_id = svn_fs_unparse_id (id, pool);
+  svn_fs__set_dbt (dbt, unparsed_id->data, unparsed_id->len);
   return dbt;
 }
 

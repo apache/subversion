@@ -84,7 +84,7 @@ sub init_repo
       {
 	rmtree([$repo]) if -e $repo;
 	my $svnadmin_cmd = "svnadmin create $repo";
-	system( $svnadmin_cmd) and die "$svnadmin_cmd: failed: $?\n";
+	system( $svnadmin_cmd) and die "$svnadmin_cmd: failed\n";
       }
     else
       {
@@ -103,7 +103,7 @@ sub check_out
     my $wc_dir = "wcstress.$$";
     mkdir "$wc_dir", 0755 or die "mkdir wcstress.$$: $!\n";
     my $svn_cmd = "svn co $url -d $wc_dir";
-    system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+    system( $svn_cmd ) and die "$svn_cmd: failed\n";
     return $wc_dir;
   }
 
@@ -113,12 +113,12 @@ sub status_update
     my ( $wc_dir, $wait_for_key ) = @_;
     my $svn_cmd = "svn st -u $wc_dir";
     print "Status:\n";
-    system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+    system( $svn_cmd ) and die "$svn_cmd: failed\n";
     print "Press return to update/commit\n" if $wait_for_key;
     read STDIN, $wait_for_key, 1 if $wait_for_key;
     print "Updating:\n";
     $svn_cmd = "svn up $wc_dir";
-    system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+    system( $svn_cmd ) and die "$svn_cmd: failed\n";
   }
 
 # Print status, update and commit. The update is to do any required merges.
@@ -130,10 +130,7 @@ sub status_update_commit
     # Use current time as log message
     my $now_time = localtime;
     my $svn_cmd = "svn ci $wc_dir -m '$now_time'";
-    my $val = system( $svn_cmd );
-    # abort on anything other than success or "normal" fail
-    die "$svn_cmd: failed: $val" if $val != 0 and $val != 256;
-    return $val;
+    return system( $svn_cmd );
   }
 
 # Get a list of all versioned files in the working copy
@@ -172,7 +169,7 @@ sub populate
 	close FOO or die "close $filename:: $!\n";
 
 	my $svn_cmd = "svn add $filename";
-	system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+	system( $svn_cmd ) and die "$svn_cmd: failed\n";
       }
 
     if ( $depth )
@@ -183,7 +180,7 @@ sub populate
 	    mkdir "$dirname", 0755 or die "mkdir $dirname: $!\n";
 
 	    my $svn_cmd = "svn add $dirname";
-	    system( $svn_cmd ) and die "$svn_cmd: failed: $?\n";
+	    system( $svn_cmd ) and die "$svn_cmd: failed\n";
 
 	    populate( "$dirname", $dir_width, $file_width, $depth );
 	  }

@@ -67,15 +67,6 @@ svn_error_t *svn_fs__rev_get_root (const svn_fs_id_t **root_id_p,
                                    trail_t *trail);
 
 
-/* Set *TXN_ID_P to the ID of the transaction that was committed to
-   create REV in FS, as part of TRAIL.  Allocate the ID in
-   TRAIL->pool.  */
-svn_error_t *svn_fs__rev_get_txn_id (const char **txn_id_p,
-                                     svn_fs_t *fs,
-                                     svn_revnum_t rev,
-                                     trail_t *trail);
-
-
 /* Set *YOUNGEST_P to the youngest revision in filesystem FS,
    as part of TRAIL.  Use TRAIL->pool for all temporary allocation. */
 svn_error_t *svn_fs__youngest_rev (svn_revnum_t *youngest_p,

@@ -102,9 +102,6 @@ typedef svn_error_t *(*svn_hash_diff_func_t)
  * If DIFF_FUNC returns error, return that error immediately, without
  * applying DIFF_FUNC to anything else.
  *
- * HASH_A or HASH_B or both may be null; treat a null table as though
- * empty.
- *
  * Use POOL for temporary allocation.
  */
 svn_error_t *svn_hash_diff (apr_hash_t *hash_a,
