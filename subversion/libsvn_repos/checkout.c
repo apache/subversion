@@ -147,7 +147,6 @@ walk_tree (svn_fs_root_t *root,
            void *dir_baton,
            const svn_delta_editor_t *editor, 
            void *edit_baton,
-           const char *URL,
            svn_boolean_t recurse,
            apr_pool_t *pool)
 {
@@ -166,7 +165,7 @@ walk_tree (svn_fs_root_t *root,
       int is_dir, is_file;
       void *val;
       svn_fs_dirent_t *dirent;
-      const char *URL_path, *dirent_path, *this_edit_path;
+      const char *dirent_path, *this_edit_path;
 
       /* Hmmm, we could get the name from the key (NULL below), or
          from dirent->name.  No point getting both, though.  */
@@ -175,7 +174,6 @@ walk_tree (svn_fs_root_t *root,
       dirent = val;
 
       /* Extend our various paths by DIRENT->name. */
-      URL_path = svn_path_join (URL, dirent->name, subpool);
       dirent_path = svn_path_join (dir_path, dirent->name, subpool);
       this_edit_path = svn_path_join (edit_path, dirent->name, subpool);
 
@@ -199,7 +197,7 @@ walk_tree (svn_fs_root_t *root,
           /* Recurse */
           SVN_ERR (walk_tree (root, dirent_path, this_edit_path,
                               new_dir_baton, editor, edit_baton, 
-                              URL_path, recurse, subpool));
+                              recurse, subpool));
         }
         
       else if (is_file)
@@ -207,7 +205,7 @@ walk_tree (svn_fs_root_t *root,
           void *file_baton;
 
           SVN_ERR (editor->add_file (this_edit_path, dir_baton,
-                                     URL_path, SVN_INVALID_REVNUM, 
+                                     NULL, SVN_INVALID_REVNUM, 
                                      subpool, &file_baton));          
           SVN_ERR (set_any_props (root, dirent_path, file_baton,
                                   editor, 0, subpool));
@@ -242,7 +240,6 @@ svn_error_t *
 svn_repos_checkout (svn_fs_t *fs, 
                     svn_revnum_t revnum, 
                     svn_boolean_t recurse,
-                    const char *URL,
                     const char *fs_path,
                     const svn_delta_editor_t *editor, 
                     void *edit_baton,
@@ -261,7 +258,7 @@ svn_repos_checkout (svn_fs_t *fs,
 
   /* Walk the tree. */
   SVN_ERR (walk_tree (root, fs_path, NULL, baton, editor, edit_baton, 
-                      URL, recurse, pool));
+                      recurse, pool));
 
   /* Finalize the edit drive. */
   SVN_ERR (editor->close_edit (edit_baton, pool));
