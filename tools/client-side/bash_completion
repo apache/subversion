@@ -204,7 +204,7 @@ _svnadmin ()
 	COMPREPLY=()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
-	cmds='archive create createtxn dump help h ? load lscr lstxns \
+	cmds='create createtxn dump help h ? load lscr lsdblogs lstxns \
 	      recover rmtxns setlog'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
@@ -246,6 +246,9 @@ _svnadmin ()
 		;;
 	lscr)
 		cmdOpts="--copies"
+		;;
+	lsdblogs)
+		cmdOpts="--only-unused"
 		;;
 	setlog)
 		cmdOpts="-r --revision"
