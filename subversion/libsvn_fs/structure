@@ -535,12 +535,14 @@ Non-Historical Properties
 
 Layers
 
-I'm having trouble keeping track of exactly who has implemented which
-promises, based on which other promises from whom.  I hope this will
-help me keep the arrangement straight, and make the code more
-reliable.  The files are arranged in order from low-level to
-high-level: each file depends only on services provided by the files
-before it.
+In previous structurings of the code, I had trouble keeping track of
+exactly who has implemented which promises, based on which other
+promises from whom.
+
+I hope the arrangement below will help me keep things straight, and
+make the code more reliable.  The files are arranged in order from
+low-level to high-level: each file depends only on services provided
+by the files before it.
 
 skel.c, id.c, dbt.c, convert-size.c
 
