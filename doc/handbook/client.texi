@@ -486,14 +486,27 @@ Whenever a conflict occurs:
 
 @itemize @bullet
 @item
-a @samp{C} is printed during the update, and Subversion remembers that the
-file is ``conflicted''.
+A @samp{C} is printed during the update, and Subversion remembers that the
+file is ``conflicted.''
+
 @item
-three fulltext files starting with @file{tmp} are created; these files
-are the original three files that could not be merged together.
-@item
-conflict markers are placed into the file, to visibly demonstrate the
+Conflict markers are placed into the file, to visibly demonstrate the
 overlapping areas.
+
+@item
+Three fulltext files are created; these files are the original three
+files that could not be merged together.  Given the a file named
+@file{ORIG_NAME}, the three new fulltext files have filenames of the
+form @file{ORIG_NAME.*.mine}, @file{ORIG_NAME.*.rOLD_REV} and
+@file{ORIG_NAME.*.rNEW_REV}.  Here @file{*} represents some random
+digits that SVN chooses, @file{ORIG_NAME.*.mine} is a copy of the file
+that existed in your local working copy before the merge and without any
+conflict markers, @file{ORIG_NAME.*.rOLD_REV} is the original version of
+@file{ORIG_NAME} at the revision that your working copy is based off of
+with @file{OLD_REV} replaced with the specific revision number, and
+@file{ORIG_NAME.*.rNEW_REV} is the original version of @file{ORIG_NAME}
+that the file is being merged to, again with @file{NEW_REV} replaced
+with the specific revision number.
 @end itemize
 
 At this point, Subversion will @emph{not} allow you to commit the file
