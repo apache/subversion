@@ -60,7 +60,7 @@ print_trail_debug (trail_t *trail)
   fprintf (stderr, "\n");
 }
 #else
-#define print_trail_debug (trail)
+#define print_trail_debug(trail)
 #endif /* defined(SVN_FS__TRAIL_DEBUG) */
 
 
