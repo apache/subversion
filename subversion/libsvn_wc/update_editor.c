@@ -2172,24 +2172,7 @@ install_file (svn_wc_notify_state_t *content_state,
         } /* end: working file has mods */
     }  /* end:  "textual" merging process */
 
-  /* Possibly write log commands to tweak text/prop entry timestamps: */
-  if ((new_text_path) || (magic_props_changed))
-    {
-      /* Log entry which sets a new textual timestamp, but only if
-         there are no local changes to the text. */
-      if (! is_locally_modified)
-        svn_xml_make_open_tag (&log_accum,
-                               pool,
-                               svn_xml_self_closing,
-                               SVN_WC__LOG_MODIFY_ENTRY,
-                               SVN_WC__LOG_ATTR_NAME,
-                               base_name,
-                               SVN_WC__ENTRY_ATTR_TEXT_TIME,
-                               /* use wfile time */
-                               SVN_WC_TIMESTAMP_WC,
-                               NULL);
-    }
-
+  /* Possibly write log commands to tweak prop entry timestamp */
   if (props)
     {
       svn_boolean_t prop_modified;
@@ -2256,18 +2239,34 @@ install_file (svn_wc_notify_state_t *content_state,
   if (wc_props)
     accumulate_wcprops (log_accum, base_name, wc_props, pool);
 
-  /* Possibly write a log command to set timestamp on the final
-     working file.  This command should be LAST in the logfile! */
-  if (timestamp_string)
-    svn_xml_make_open_tag (&log_accum,
-                           pool,
-                           svn_xml_self_closing,
-                           SVN_WC__LOG_SET_TIMESTAMP,
-                           SVN_WC__LOG_ATTR_NAME,
-                           base_name,
-                           SVN_WC__LOG_ATTR_TIMESTAMP,
-                           timestamp_string,
-                           NULL);
+  /* Log commands to handle text-timestamp */
+  if (!is_locally_modified)
+    {
+      if (timestamp_string)
+        /* Adjust working copy file */
+        svn_xml_make_open_tag (&log_accum,
+                               pool,
+                               svn_xml_self_closing,
+                               SVN_WC__LOG_SET_TIMESTAMP,
+                               SVN_WC__LOG_ATTR_NAME,
+                               base_name,
+                               SVN_WC__LOG_ATTR_TIMESTAMP,
+                               timestamp_string,
+                               NULL);
+
+      if (new_text_path || magic_props_changed)
+        /* Adjust entries file to match working file */
+        svn_xml_make_open_tag (&log_accum,
+                               pool,
+                               svn_xml_self_closing,
+                               SVN_WC__LOG_MODIFY_ENTRY,
+                               SVN_WC__LOG_ATTR_NAME,
+                               base_name,
+                               SVN_WC__ENTRY_ATTR_TEXT_TIME,
+                               SVN_WC_TIMESTAMP_WC,
+                               NULL);
+    }
+
 
   /* Write our accumulation of log entries into a log file */
   SVN_ERR_W (svn_io_file_write_full (log_fp, log_accum->data, 
