@@ -18,7 +18,16 @@ altered by options.  \fBsvnserve\FP accepts the following options:
 \fB\-d\fP, \fB\-\-daemon\fP
 Causes \fBsvnserve\fP to run in daemon mode.  \fBsvnserve\fP
 backgrounds itself and accepts and serves connections on the svn port
-(3690).
+(3690, by default).
+.PP
+.TP 5
+\fB\-\-listen-port\fP=\fIport\fP
+Causes \fBsvnserve\fP to listen on \fIport\fP when run in daemon mode.
+.PP
+.TP 5
+\fB\-\-listen-host\fP=\fIhost\fP
+Causes \fBsvnserve\fP to listen on the interface specified by \fIhost\fP,
+which may be either a hostname or an IP address.
 .PP
 .TP 5
 \fB\-h\fP, \fB\-\-help\fP
