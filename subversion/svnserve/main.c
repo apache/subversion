@@ -87,7 +87,7 @@ static const apr_getopt_option_t svnserve__options[] =
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     {"threads",          'T', 0, "use threads instead of fork"},
 #endif
-    {"believe-username", 'u', 0, "believe unauthenticated username"},
+    {"believe-username", 'u', 0, "deprecated; use password authentication"},
     {0,                  0,   0, 0}
   };
 
@@ -244,6 +244,16 @@ int main(int argc, const char *const *argv)
 
         case 'u':
           believe_username = TRUE;
+          fprintf(stderr, "Warning: -u is deprecated and will go away.\n");
+          fprintf(stderr, "svnserve now supports password authentication.\n");
+          fprintf(stderr, "To configure, create svnserve.conf in repos:\n");
+          fprintf(stderr, "  [general]\n");
+          fprintf(stderr, "  password-db = FILENAME\n");
+          fprintf(stderr, "In FILENAME (may be relative to repos dir) put:\n");
+          fprintf(stderr, "  [users]\n");
+          fprintf(stderr, "  USERNAME = PASSWORD\n");
+          fprintf(stderr, "  ...\n");
+          fprintf(stderr, "Clients must be 0.33 (or r7604) or newer.\n");
           break;
         }
     }
