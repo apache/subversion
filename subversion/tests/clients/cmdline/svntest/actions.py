@@ -19,8 +19,32 @@
 import os.path, shutil, string, re, sys
 
 import main, tree, wc  # general svntest routines in this module.
-from svntest import Failure
+from svntest import Failure, SVNAnyOutput
 
+class SVNUnexpectedOutput(Failure):
+  """Exception raised if an invocation of svn results in unexpected
+  output of any kind."""
+  pass
+
+class SVNUnexpectedStdout(SVNUnexpectedOutput):
+  """Exception raised if an invocation of svn results in unexpected
+  output on STDOUT."""
+  pass
+
+class SVNUnexpectedStderr(SVNUnexpectedOutput):
+  """Exception raised if an invocation of svn results in unexpected
+  output on STDERR."""
+  pass
+
+class SVNExpectedStdout(SVNUnexpectedOutput):
+  """Exception raised if an invocation of svn results in no output on
+  STDOUT when output was expected."""
+  pass
+
+class SVNExpectedStderr(SVNUnexpectedOutput):
+  """Exception raised if an invocation of svn results in no output on
+  STDERR when output was expected."""
+  pass
 
 ######################################################################
 # Used by every test, so that they can run independently of
@@ -98,6 +122,34 @@ def guarantee_greek_repository(path):
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   main.chmod_tree(path, 0666, 0666)
+
+
+def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
+  """Invokes main.run_svn with *VARARGS.  If EXPECTED_STDOUT or
+  EXPECTED_STDERR is not 'None', invokes compare_and_display_lines
+  with MESSAGE and the expected output.  If the comparison fails,
+  compare_and_display_lines will raise."""
+  ### TODO catch and throw particular exceptions from above
+  want_err = None
+  if expected_stderr is not None and expected_stderr is not []:
+    want_err = 1
+
+  out, err = main.run_svn(want_err, *varargs)
+
+  if type(expected_stdout) is type([]):
+    compare_and_display_lines(message, 'STDOUT', expected_stdout, out)
+  if expected_stdout == SVNAnyOutput:
+    if len(out) == 0:
+      if message is not None: print message
+      raise SVNExpectedStdout
+
+  if type(expected_stderr) is type([]):
+    compare_and_display_lines(message, 'STDERR', expected_stderr, err)
+  if expected_stderr == SVNAnyOutput:
+    if len(err) == 0:
+      if message is not None: print message
+      raise SVNExpectedStderr
+  return out, err
 
 
 ######################################################################
