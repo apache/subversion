@@ -240,7 +240,7 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
       return err;
     }
 
-  err = svn_wc__remove_adm_thing (path, SVN_WC__ADM_LOG, pool);
+  err = svn_wc__remove_adm_file (path, pool, SVN_WC__ADM_LOG, NULL);
 
   XML_ParserFree (parser);
 

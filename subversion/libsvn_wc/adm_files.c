@@ -657,18 +657,17 @@ svn_wc__close_text_base (apr_file_t *fp,
 }
 
 
-/* Remove path/SVN/thing. 
-   kff todo: not variadic yet, maybe never needs to be */
 svn_error_t *
-svn_wc__remove_adm_thing (svn_string_t *path,
-                          const char *thing,
-                          apr_pool_t *pool)
+svn_wc__remove_adm_file (svn_string_t *path, apr_pool_t *pool, ...)
 {
   svn_error_t *err = NULL;
   apr_status_t apr_err = 0;
   int components_added;
+  va_list ap;
 
-  components_added = extend_with_adm_name (path, 0, pool, thing, NULL);
+  va_start (ap, pool);
+  components_added = v_extend_with_adm_name (path, 0, pool, ap);
+  va_end (ap);
 
   apr_err = apr_remove_file (path->data, pool);
   if (apr_err)
