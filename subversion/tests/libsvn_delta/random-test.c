@@ -103,7 +103,7 @@ generate_random_file (int maxlen, unsigned long subseed_base,
       len -= seqlen;
       r = subseed_base + myrand (seed) % SEEDS;
       while (seqlen-- > 0)
-        {
+        { 
           putc (r % 256, fp);
           r = r * 1103515245 + 12345;
         }
@@ -232,6 +232,127 @@ random_test (const char **msg,
 }
 
 
+
+#include "../../libsvn_delta/compose_delta.c"
+
+
+static range_index_node_t *prev_node, *prev_prev_node;
+static apr_off_t
+walk_range_index (range_index_node_t *node, const char **msg)
+{
+  apr_off_t ret;
+
+  if (node == NULL)
+    return 0;
+
+  ret = walk_range_index (node->left, msg);
+  if (ret > 0)
+    return ret;
+
+  if (prev_node != NULL
+      && node->target_offset > 0
+      && (prev_node->offset >= node->offset
+          || (prev_node->limit >= node->limit)))
+    {
+      ret = node->target_offset;
+      node->target_offset = -node->target_offset;
+      *msg = "Oops, the previous node ate me.";
+      return ret;
+    }
+  if (prev_prev_node != NULL
+      && prev_node->target_offset > 0
+      && prev_prev_node->limit >= node->offset)
+    {
+      ret = prev_node->target_offset;
+      prev_node->target_offset = -prev_node->target_offset;
+      *msg = "Arrgh, my neighbours are conspiring against me.";
+      return ret;
+    }
+  prev_prev_node = prev_node;
+  prev_node = node;
+
+  return walk_range_index (node->right, msg);
+}
+
+static void
+print_range_index (range_index_node_t *node, const char *msg, apr_off_t ndx)
+{
+  if (node == NULL)
+    return;
+
+  print_range_index (node->left, msg, ndx);
+  if (-node->target_offset == ndx)
+    {
+      printf ("   * Node: [%3"APR_OFF_T_FMT
+              ", %3"APR_OFF_T_FMT
+              ") = %-5"APR_OFF_T_FMT"%s\n",
+              node->offset, node->limit, -node->target_offset, msg);
+    }
+  else
+    {
+      printf ("     Node: [%3"APR_OFF_T_FMT
+              ", %3"APR_OFF_T_FMT
+              ") = %"APR_OFF_T_FMT"\n",
+              node->offset, node->limit,
+              (node->target_offset < 0
+               ? -node->target_offset : node->target_offset));
+    }
+  print_range_index (node->right, msg, ndx);
+}
+
+
+static svn_error_t *
+random_range_index_test (const char **msg,
+                         svn_boolean_t msg_only,
+                         apr_pool_t *pool)
+{
+  static char msg_buff[256];
+
+  unsigned long seed;
+  int i, maxlen, iterations;
+  range_index_t *ndx;
+
+  /* Initialize parameters and print out the seed in case we dump core
+     or something. */
+  init_params(&seed, &maxlen, &iterations, pool);
+  sprintf(msg_buff, "random range index test, seed = %lu", seed);
+  *msg = msg_buff;
+
+  /* ### This test is expected to fail randomly at the moment, so don't
+     enable it by default. --xbc */
+  if (msg_only /*REMOVE*/|| 1)
+    return SVN_NO_ERROR;
+  else
+    printf("SEED: %s\n", msg_buff);
+
+  ndx = create_range_index (pool);
+  for (i = 1; i <= iterations; ++i)
+    {
+      apr_off_t offset = myrand (&seed) % 47;
+      apr_off_t limit = offset + myrand (&seed) % 16 + 1;
+      apr_off_t ret;
+      const char *msg;
+
+      printf ("%3d: Inserting [%3"APR_OFF_T_FMT", %3"APR_OFF_T_FMT") ...... ",
+              i, offset, limit);
+      insert_range (offset, limit, i, ndx);
+      prev_prev_node = prev_node = NULL;
+      ret = walk_range_index (ndx->tree, &msg);
+      if (ret == 0)
+        {
+          printf (" OK\n");
+        }
+      else
+        {
+          printf (" Ooops!\n");
+          print_range_index (ndx->tree, msg, ret);
+          return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                   "insert_range");
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
 
 
 /* The test table.  */
@@ -241,6 +362,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
                                apr_pool_t *pool) = {
   0,
   random_test,
+  random_range_index_test,
   0
 };
 
