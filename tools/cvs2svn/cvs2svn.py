@@ -25,7 +25,7 @@ vendor_tag = re.compile('^[0-9]+\\.[0-9]+\\.[0-9]+$')
 
 SVNADMIN = 'svnadmin'      # Location of the svnadmin binary.
 DATAFILE = 'cvs2svn-data'
-DUMPFILE = 'cvs2svn-load'  # The "dumpfile" we create to load into the repos
+DUMPFILE = 'cvs2svn-dump'  # The "dumpfile" we create to load into the repos
 REVS_SUFFIX = '.revs'
 CLEAN_REVS_SUFFIX = '.c-revs'
 SORTED_REVS_SUFFIX = '.s-revs'
@@ -267,59 +267,92 @@ class RevInfoParser(rcsparse.Sink):
     rcsparse.Parser().parse(rcsfile, self)
 
 
-def make_revision(dumpfile, props, revision):
-  'Write a revision, with properties, to the dumpfile.'
-  # A revision typically looks like this:
-  # 
-  #   Revision-number: 1
-  #   Prop-content-length: 129
-  #   Content-length: 129
-  #   
-  #   K 7
-  #   svn:log
-  #   V 27
-  #   Log message for revision 1.
-  #   K 10
-  #   svn:author
-  #   V 7
-  #   jrandom
-  #   K 8
-  #   svn:date
-  #   V 27
-  #   2003-04-22T22:57:58.132837Z
-  #   PROPS-END
-  #
-  # Notice that the length headers count everything -- not just the
-  # length of the data but also the lengths of the lengths, including
-  # the 'K ' or 'V ' prefixes.
-  #
-  # The reason there are both Prop-content-length and Content-length
-  # is that the former includes just props, while the latter includes
-  # everything.  That's the generic header form for any entity in a
-  # dumpfile.  But since revisions only have props, the two lengths
-  # are always the same for revisions.
+class Dump:
+  def __init__(self, dumpfile_path, revision):
+    'Open DUMPFILE_PATH, and initialize revision to REVISION.'
+    self.dumpfile_path = dumpfile_path
+    self.revision = revision
+    self.dumpfile = open(dumpfile_path, 'w')
 
-  # Calculate the total length of the props section.
-  total_len = 0
-  for pname in props.keys():
-    klen = len(pname) + 1
-    klen_len = int(math.ceil(math.log10(klen))) + 1
-    plen = len(props[pname]) + 1
-    plen_len = int(math.ceil(math.log10(plen))) + 1
-    total_len += (klen + klen_len + plen + plen_len)
+    # Initialize the dumpfile with the standard headers:
+    ### (The source cvs repository doesn't have a UUID, hmm, what to do?)
+    self.dumpfile.write('SVN-fs-dump-format-version: 2\n')
+    self.dumpfile.write('\n')
+    self.dumpfile.write('UUID: ????????-????-????-????-????????????\n')
+    self.dumpfile.write('\n')
 
-  # Print the revision header and props
-  dumpfile.write('Revision-number: %d\n' % revision)
-  dumpfile.write('Prop-content-length: %d\n' % total_len)
-  dumpfile.write('Content-length: %d\n' % total_len)
-  dumpfile.write('\n')
-  for pname in props.keys():
-    dumpfile.write('K %d\n' % len(pname))
-    dumpfile.write('%s\n' % pname)
-    dumpfile.write('V %d\n' % len(props[pname]))
-    dumpfile.write('%s\n' % props[pname])
-  dumpfile.write('PROPS-END\n')
-  dumpfile.write('\n')
+    # A dictionary of paths known to exist in HEAD at a given moment.
+    # When a path is added to the dumpfile, it is added here too; when
+    # a path is deleted from the dumpfile, it is deleted here too.
+    #
+    # This dictionary tells us whether to output a 'change' or 'add'
+    # fooo
+    # 
+    # ### FIXME: Of course, an in-memory dictionary is temporary.
+    # Ultimately, this will live in a dbm file or something.
+    self.paths = { }
+
+  def start_revision(self, props):
+    'Write a revision, with properties, to the dumpfile.'
+    # A revision typically looks like this:
+    # 
+    #   Revision-number: 1
+    #   Prop-content-length: 129
+    #   Content-length: 129
+    #   
+    #   K 7
+    #   svn:log
+    #   V 27
+    #   Log message for revision 1.
+    #   K 10
+    #   svn:author
+    #   V 7
+    #   jrandom
+    #   K 8
+    #   svn:date
+    #   V 27
+    #   2003-04-22T22:57:58.132837Z
+    #   PROPS-END
+    #
+    # Notice that the length headers count everything -- not just the
+    # length of the data but also the lengths of the lengths, including
+    # the 'K ' or 'V ' prefixes.
+    #
+    # The reason there are both Prop-content-length and Content-length
+    # is that the former includes just props, while the latter includes
+    # everything.  That's the generic header form for any entity in a
+    # dumpfile.  But since revisions only have props, the two lengths
+    # are always the same for revisions.
+    
+    # Calculate the total length of the props section.
+    total_len = 0
+    for pname in props.keys():
+      klen = len(pname) + 1
+      klen_len = int(math.ceil(math.log10(klen))) + 1
+      plen = len(props[pname]) + 1
+      plen_len = int(math.ceil(math.log10(plen))) + 1
+      total_len += (klen + klen_len + plen + plen_len)
+        
+    # Print the revision header and props
+    self.dumpfile.write('Revision-number: %d\n' % self.revision)
+    self.dumpfile.write('Prop-content-length: %d\n' % total_len)
+    self.dumpfile.write('Content-length: %d\n' % total_len)
+    self.dumpfile.write('\n')
+    for pname in props.keys():
+      self.dumpfile.write('K %d\n' % len(pname))
+      self.dumpfile.write('%s\n' % pname)
+      self.dumpfile.write('V %d\n' % len(props[pname]))
+      self.dumpfile.write('%s\n' % props[pname])
+      self.dumpfile.write('PROPS-END\n')
+      self.dumpfile.write('\n')
+
+  def end_revision(self):
+    old_rev = self.revision
+    self.revision += 1
+    return old_rev
+
+  def close(self):
+    self.dumpfile.close()
 
 
 class Commit:
@@ -376,7 +409,7 @@ class Commit:
 
     return author, log, date
 
-  def commit(self, dumpfile, ctx):
+  def commit(self, dump, ctx):
     # commit this transaction
     seconds = self.t_max - self.t_min
     print 'committing: %s, over %d seconds' % (time.ctime(self.t_min), seconds)
@@ -424,13 +457,16 @@ class Commit:
       props = { 'svn:author' : unicode(author, ctx.encoding).encode('utf8'),
                 'svn:log' : unicode(log, ctx.encoding).encode('utf8'),
                 'svn:date' : date }
-      make_revision(dumpfile, props, ctx.revision + 1)
+      dump.start_revision(props)
 
-      print '    new revision:', ctx.revision
+      ### TODO: add, delete, and change paths here.
 
-      dumpfile.write('ABOUT TO CHANGE:\n')
-      dumpfile.write('rel_name: %s\nrepos_path: %s\n\n'
-                      % (rel_name, repos_path))
+      last_rev = dump.end_revision()
+      print '    new revision:', last_rev
+
+#      dumpfile.write('ABOUT TO CHANGE:\n')
+#      dumpfile.write('rel_name: %s\nrepos_path: %s\n\n'
+#                      % (rel_name, repos_path))
 
 #      make_path(fs, root, repos_path, f_pool)
 #
@@ -557,15 +593,6 @@ class Commit:
     # done with the commit and file pools
     util.svn_pool_destroy(c_pool)
 
-def start_dumpfile(dumpfile):
-  "Initialize a dumpfile with the standard headers, return the open file."
-  f = open(dumpfile, 'w')
-  f.write('SVN-fs-dump-format-version: 2\n')
-  f.write('\n')
-  # The source cvs repository doesn't have a UUID, hmm, what to do?
-  f.write('UUID: ????????-????-????-????-????????????\n')
-  f.write('\n')
-  return f
 
 def read_resync(fname):
   "Read the .resync file into memory."
@@ -713,8 +740,8 @@ def pass4(ctx):
   # results in the repository.
   count = 0
 
-  # Get the dumpfile handle.
-  dumpfile = start_dumpfile(ctx.dumpfile)
+  # Start the dumpfile object.
+  dump = Dump(ctx.dumpfile, ctx.initial_revision)
 
   # process the logfiles, creating the target
   for line in fileinput.FileInput(ctx.log_fname_base + SORTED_REVS_SUFFIX):
@@ -748,7 +775,7 @@ def pass4(ctx):
     # part of any of them.  Sort them into time-order, then commit 'em.
     process.sort()
     for t_max, c in process:
-      c.commit(dumpfile, ctx)
+      c.commit(dump, ctx)
     count = count + len(process)
 
     # Add this item into the set of still-available commits.
@@ -765,10 +792,10 @@ def pass4(ctx):
       process.append((c.t_max, c))
     process.sort()
     for t_max, c in process:
-      c.commit(dumpfile, ctx)
+      c.commit(dump, ctx)
     count = count + len(process)
 
-  dumpfile.close()
+  dump.close()
 
   if ctx.verbose:
     print count, 'commits processed.'
@@ -824,7 +851,7 @@ def main():
   ctx.target = SVNROOT
   ctx.log_fname_base = DATAFILE
   ctx.dumpfile = DUMPFILE
-  ctx.revision = 0   ### later we make take a --start-revision option
+  ctx.initial_revision = 1  ### Should we take a --initial-revision option?
   ctx.verbose = 0
   ctx.dry_run = 0
   ctx.create_repos = 0
