@@ -82,3 +82,10 @@ Candidate changes:
       they explicitly asked for SWIG but we are unable to find it. 
     Votes:
       +1: breser
+
+  * r10894
+    Allow cancelation during recursive addition of a dir without subdirs.
+    Justification:
+      Simple usability fix.
+    Votes:
+      +1: breser
