@@ -330,10 +330,12 @@ open_root_internal (const char *path,
     SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
   else if (kind == svn_node_file)
     return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-                              _("'%s' exists and is not a directory"), path);
+                              _("'%s' exists and is not a directory"),
+                              svn_path_local_style (path, pool));
   else if ((kind != svn_node_dir) || (! force))
     return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                              _("'%s' already exists"), path);
+                              _("'%s' already exists"),
+                              svn_path_local_style (path, pool));
 
   if (notify_func)
     (*notify_func) (notify_baton,
@@ -473,10 +475,11 @@ add_directory (const char *path,
   else if (kind == svn_node_file)
     return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
                               _("'%s' exists and is not a directory"),
-                              full_path);
+                              svn_path_local_style (full_path, pool));
   else if (! (kind == svn_node_dir && eb->force))
     return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                              _("'%s' already exists"), full_path);
+                              _("'%s' already exists"),
+                              svn_path_local_style (full_path, pool));
 
   if (eb->notify_func)
     (*eb->notify_func) (eb->notify_baton,
@@ -648,7 +651,8 @@ close_file (void *file_baton,
           return svn_error_createf
             (SVN_ERR_CHECKSUM_MISMATCH, NULL,
              _("Checksum mismatch for '%s'; expected: '%s', actual: '%s'"),
-             fb->path, text_checksum, actual_checksum);
+             svn_path_local_style (fb->path, pool),
+             text_checksum, actual_checksum);
         }
     }
 

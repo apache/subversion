@@ -77,7 +77,8 @@ wc_to_wc_copy (const char *src_path,
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   if (src_kind == svn_node_none)
     return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                              _("Path '%s' does not exist"), src_path);
+                              _("Path '%s' does not exist"),
+                              svn_path_local_style (src_path, pool));
 
   /* If DST_PATH does not exist, then its basename will become a new
      file or dir added to its parent (possibly an implicit '.').  If
@@ -96,7 +97,8 @@ wc_to_wc_copy (const char *src_path,
     }
   else
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                              _("File '%s' already exists"), dst_path);
+                              _("File '%s' already exists"),
+                              svn_path_local_style (dst_path, pool));
 
   if (is_move)
     {
@@ -828,7 +830,8 @@ repos_to_wc_copy (const char *src_url,
   else if (dst_kind != svn_node_none)  /* must be a file */
     {
       return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                                _("File '%s' already exists"), dst_path);
+                                _("File '%s' already exists"),
+                                svn_path_local_style (dst_path, pool));
     }
 
   /* Now that dst_path has possibly been reset, check that there's
@@ -836,7 +839,8 @@ repos_to_wc_copy (const char *src_url,
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind != svn_node_none)
     return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                              _("'%s' is in the way"), dst_path);
+                              _("'%s' is in the way"),
+                              svn_path_local_style (dst_path, pool));
 
   SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, dst_path, TRUE,
                                    0, pool));
@@ -852,7 +856,7 @@ repos_to_wc_copy (const char *src_url,
       return svn_error_createf
         (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
          _("Entry for '%s' exists (though the working file is missing)"),
-         dst_path);
+         svn_path_local_style (dst_path, pool));
   }
 
   /* Decide whether the two repositories are the same or not. */
@@ -1017,7 +1021,8 @@ setup_copy (svn_client_commit_info_t **commit_info,
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy path '%s' into its own child '%s'"),
-       src_path, dst_path);
+       svn_path_local_style (src_path, pool),
+       svn_path_local_style (dst_path, pool));
 
   if (is_move)
     {
@@ -1027,7 +1032,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
             return svn_error_createf
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                _("Cannot move path '%s' into itself"),
-               src_path);
+               svn_path_local_style (src_path, pool));
         }
       else
         {
@@ -1058,13 +1063,14 @@ setup_copy (svn_client_commit_info_t **commit_info,
               if (! entry)
                 return svn_error_createf
                   (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                   _("'%s' is not under version control"), src_path);
+                   _("'%s' is not under version control"),
+                   svn_path_local_style (src_path, pool));
 
               if (! entry->url)
                 return svn_error_createf
                   (SVN_ERR_ENTRY_MISSING_URL, NULL,
                    _("'%s' does not seem to have a URL associated with it"),
-                   src_path);
+                   svn_path_local_style (src_path, pool));
 
               src_path = entry->url;
               src_is_url = TRUE;

@@ -90,7 +90,9 @@ display_prop_diffs (const apr_array_header_t *propchanges,
 
   SVN_ERR (file_printf_from_utf8 (file,
                                   _("%sProperty changes on: %s%s"),
-                                  APR_EOL_STR, path, APR_EOL_STR));
+                                  APR_EOL_STR,
+                                  svn_path_local_style (path, pool),
+                                  APR_EOL_STR));
 
   /* ### todo [issue #1533]: Use file_printf_from_utf8() to convert this
      line of dashes to native encoding, at least conditionally?  Or is
@@ -256,7 +258,8 @@ struct diff_cmd_baton {
 
 /* Generate a label for the diff output for file PATH at revision REVNUM.
    If REVNUM is invalid then it is assumed to be the current working
-   copy. */
+   copy.  Assumes the paths are already in the desired style (local
+   vs internal). */
 static const char *
 diff_label (const char *path,
             svn_revnum_t revnum,
@@ -264,8 +267,7 @@ diff_label (const char *path,
 {
   const char *label;
   if (revnum != SVN_INVALID_REVNUM)
-    label = apr_psprintf (pool, _("%s\t(revision %ld)"),
-                          path, revnum);
+    label = apr_psprintf (pool, _("%s\t(revision %ld)"), path, revnum);
   else
     label = apr_psprintf (pool, _("%s\t(working copy)"), path);
 
@@ -346,6 +348,10 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
   path1 = path1 + i;
   path2 = path2 + i;
   
+  /* ### Should diff labels print paths in local style?  Is there
+     already a standard for this?  In any case, this code depends on
+     a particular style, so not calling svn_path_local_style() on the
+     paths below.*/
   if (path1[0] == '\0')
     path1 = apr_psprintf (subpool, "%s", path);
   else if (path1[0] == '/')
@@ -1228,7 +1234,8 @@ convert_to_url (const char **url,
   SVN_ERR (svn_wc_adm_close (adm_access));
   if (! entry)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              _("'%s' is not under version control"), path);
+                              _("'%s' is not under version control"),
+                              svn_path_local_style (path, pool));
 
   if (entry->url)  
     *url = apr_pstrdup (pool, entry->url);
@@ -1846,10 +1853,12 @@ diff_repos_wc (const apr_array_header_t *options,
   SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));
   if (! entry)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              _("'%s' is not under version control"), anchor);
+                              _("'%s' is not under version control"),
+                              svn_path_local_style (anchor, pool));
   if (! entry->url)
     return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                              _("Directory '%s' has no URL"), anchor);
+                              _("Directory '%s' has no URL"),
+                              svn_path_local_style (anchor, pool));
   anchor_url = apr_pstrdup (pool, entry->url);
         
   /* Establish RA session to path2's anchor */
@@ -2252,12 +2261,14 @@ svn_client_merge (const char *source1,
   SVN_ERR (svn_client_url_from_path (&URL1, source1, pool));
   if (! URL1)
     return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                              _("'%s' has no URL"), source1);
+                              _("'%s' has no URL"),
+                              svn_path_local_style (source1, pool));
 
   SVN_ERR (svn_client_url_from_path (&URL2, source2, pool));
   if (! URL2)
     return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL, 
-                              _("'%s' has no URL"), source2);
+                              _("'%s' has no URL"),
+                              svn_path_local_style (source2, pool));
 
   if (URL1 == source1)
     path1 = NULL;
@@ -2276,7 +2287,7 @@ svn_client_merge (const char *source1,
   if (entry == NULL)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                               _("'%s' is not under version control"), 
-                              target_wcpath);
+                              svn_path_local_style (target_wcpath, pool));
 
   merge_cmd_baton.force = force;
   merge_cmd_baton.dry_run = dry_run;
@@ -2369,7 +2380,8 @@ svn_client_merge_peg (const char *source,
   SVN_ERR (svn_client_url_from_path (&URL, source, pool));
   if (! URL)
     return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                              _("'%s' has no URL"), source);
+                              _("'%s' has no URL"),
+                              svn_path_local_style (source, pool));
   if (URL == source)
     path = NULL;
   else
@@ -2382,7 +2394,7 @@ svn_client_merge_peg (const char *source,
   if (entry == NULL)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                               _("'%s' is not under version control"), 
-                              target_wcpath);
+                              svn_path_local_style (target_wcpath, pool));
 
   merge_cmd_baton.force = force;
   merge_cmd_baton.dry_run = dry_run;

@@ -28,6 +28,7 @@
 #include "client.h"
 
 #include "svn_wc.h"
+#include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_client.h"
 #include "svn_error.h"
@@ -124,11 +125,13 @@ svn_client_status (svn_revnum_t *result_rev,
       if (! entry)
         return svn_error_createf
           (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-           _("'%s' is not under version control"), anchor);
+           _("'%s' is not under version control"),
+           svn_path_local_style (anchor, pool));
       if (! entry->url)
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, NULL,
-           _("Entry '%s' has no URL"), anchor);
+           _("Entry '%s' has no URL"),
+           svn_path_local_style (anchor, pool));
       URL = apr_pstrdup (pool, entry->url);
 
       /* Get the RA library that handles URL. */
