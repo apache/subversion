@@ -13,7 +13,7 @@ Candidate changes:
     Stop unrelated errors being logged in the Apache error log.
     Justification: Clarity; trivial fix.
     Votes:
-      +1: dionisos, kfogel
+      +1: dionisos, kfogel, breser
 
 
   * r8867, r8868, r8902
@@ -49,7 +49,7 @@ Candidate changes:
     Fix a bug which prevents svnlook from creating its temporary directory
     inside a symlinked TMPDIR.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, breser
 
   * r8027
     Passing a Revision.DateSpec in javahl failed with 
@@ -65,14 +65,19 @@ Candidate changes:
     Justification: Trivial change, correctness, needed to allow build of
     bindings on platforms with stricter linking requirements.
     Votes:
-      +1: maxb
+      +1: maxb, breser
 
   * r10159, r10176
     Require neon-0.24.7.  Fixes some nasty zlib bugs.
     Justification:  fixes malformed XML errors from large
                     ra_dav checkouts/updates/etc.  
+    Notes: This really should permit 0.24.7 and newer in
+    the 0.24 line.  But it doesn't.  We should figure this
+    out before releasing 1.1.0 but I'm not going to bother for
+    1.0.6.
     Votes:
       +1: sussman, david, lundblad, kfogel
+      +0: breser
 
   * r10148
     Fixes crash when deleting a revprop.
@@ -83,7 +88,7 @@ Candidate changes:
       be better to use a patch that *just* fixes the crash, and leave
       all the other goodies for 1.1.
     Votes:
-      +1: sussman, lundblad
+      +1: sussman, lundblad, breser
 
   * r10132, r10136, 10138, 10139
     Allow user to interrupt between auth prompts.
@@ -98,14 +103,14 @@ Candidate changes:
     Justification: Don't ever crash.  Requested by the TSVN folks
                    because the crash kills the whole Windows desktop.
     Votes:
-      +1: bliss, kfogel
+      +1: bliss, kfogel, breser
 
   * r10186
     Allow COPY method on repositories with space in their name. (#1837)
     Justification: Embarrassing bug;  a one-line fix to mod_auth_svn.
                    (We weren't unescaping a URI).
     Votes:
-      +1: sussman, lundblad
+      +1: sussman, lundblad, breser
 
   * r10185, r10192
     Fix crash when deleting revprop over ra_svn.
@@ -113,4 +118,4 @@ Candidate changes:
     Notes: Makes earlier servers close the connection immediately, still
            better than a crashing client.
     Votes:
-      +1: lundblad, kfogel
+      +1: lundblad, kfogel, breser
