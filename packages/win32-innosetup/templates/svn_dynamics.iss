@@ -28,7 +28,7 @@
 #define VC7
 
 ; Apache Server: The minimum required version
-#define apache_ver_min "2.0.48"
+#define apache_ver_min "2.0.49"
 
 ; You should edit the paths below the examples according to your system
 
@@ -40,6 +40,12 @@
 #define path_svnserve "C:\work\Subversion\binaries_svn\svn-win32\bin"
 #define path_svnversion "C:\work\Subversion\binaries_svn\svn-win32\bin"
 #define path_svndumpfilter "C:\work\Subversion\binaries_svn\svn-win32\bin"
+; APR
+#define path_libapr_dll "C:\work\Subversion\binaries_svn\svn-win32\bin"
+#define path_libaprutil_dll "C:\work\Subversion\binaries_svn\svn-win32\bin"
+#define path_libapriconv_dll "C:\work\Subversion\binaries_svn\svn-win32\bin"
+#define path_iconv_dll "C:\work\Subversion\binaries_svn\svn-win32\bin"
+#define path_intl_dll "C:\work\Subversion\binaries_svn\svn-win32\bin"
 ; httpd
 #define path_davsvn "C:\work\Subversion\binaries_svn\svn-win32\httpd"
 #define path_authzsvn "C:\work\Subversion\binaries_svn\svn-win32\httpd"
