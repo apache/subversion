@@ -21,6 +21,8 @@
 #include "svn_ra.h"
 
 
+
+/** Structures **/
 
 /* A baton which represents a single ra_local session. */
 typedef struct svn_ra_local__session_baton_t
@@ -72,6 +74,8 @@ typedef struct svn_ra_local__commit_hook_baton_t
 
 
 
+
+/** Private routines **/
 
 /* Allocate and return an EDITOR (in POOL) whose only purpose is to
    `track' commits by storing committed targets in HOOK_BATON. */
@@ -95,10 +99,13 @@ svn_ra_local__split_URL (svn_string_t **repos_path,
                          apr_pool_t *pool);
 
 
+
+/** The One Public Function **/
 
-
-
-
+svn_error_t *
+svn_ra_local_init (int abi_version,
+                   apr_pool_t *pool,
+                   const svn_ra_plugin_t **plugin);
 
 
 

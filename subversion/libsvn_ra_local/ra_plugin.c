@@ -274,6 +274,29 @@ static const svn_ra_plugin_t ra_local_plugin =
 };
 
 
+/*----------------------------------------------------------------*/
+
+/** The One Public Routine, called by libsvn_client **/
+
+svn_error_t *
+svn_ra_local_init (int abi_version,
+                   apr_pool_t *pool,
+                   const svn_ra_plugin_t **plugin)
+{
+  *plugin = ra_local_plugin;
+
+  /* are we ever going to care about abi_version? */
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
+
+
+
+
 /* ----------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")
