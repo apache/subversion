@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.27 $ of this document.)
+              ($Revision: 1.28 $ of this document.)
 
 * Introduction
 
@@ -599,18 +599,10 @@ should ever lock out readers, no read-only operation should ever lock
 out anyone, and write operations should lock out other writers for as
 little time as possible.
 
-Although these two issues are not directly related, they both affect
-the order in which things happen in the repository, so we'll address
-them together.
-
-Below, a "lock" is a cookie consisting of user:num, where num is the
-same for all locks in this commit, and different from any other
-current locks (even ones with the same user).  Locks persist through
-server crashes (todo: can we implement such a thing efficiently?)
-
-Let's take the commit of foo:2 as an example:
-
-  Step A: Put a lock on foo:1.
+These two issues are not directly related, but they must be
+synchronized with each other.  This is complex, so instead of
+specifying the sequence of events formally right away, let's run
+through an example.  Here's how to commit a new version of foo.
 
   Step 1: Create the new node for foo:2.
 
@@ -623,7 +615,7 @@ Let's take the commit of foo:2 as an example:
   Nothing is attached to this new node, therefore the repository is in a
   sane state.  If the server crashes at this moment, there will be no
   problem (except that a cleanup thread might, at its leisure, delete
-  the unreachable node, and remove the lock on the reachable node).
+  the unreachable node).
 
   The new node has the full contents of foo:2.
 
@@ -642,8 +634,6 @@ Let's take the commit of foo:2 as an example:
 
   Both nodes have the full contents of their respective version; no
   diffs have been made yet.
-
-  Step B: Lock foo's parent node.
 
   Step 3: Change the link in the parent node to point to the new foo:2
   node (which in turn points to foo:1).
@@ -676,8 +666,6 @@ Let's take the commit of foo:2 as an example:
   2 of the project does not exist yet, therefore you can't ask for it;
   if you ask for the head version, you'll get version 1.
 
-  Step C: Put a lock version on 2 in the version array.
-
   Step 3: Hook up version 2 to the root node.
 
             ____________________________
@@ -694,17 +682,75 @@ Let's take the commit of foo:2 as an example:
              /     \
             |       \
 
-  Step D: Remove all locks (starting from the most recent), the commit
-  is complete.
-
 You'll notice that nowhere in there did we give foo:1 diffy contents.
 A separate thread gambols about the repository, taking care of such
-mundane tasks.  There's no reason to slow up commits with that kind of
-bookkeeping.  (Of course, there's a "diff-bit" on each node, saying
-whether its contents are stored full-text or as a diff against the
-node that back-links to this one.)
+mundane tasks.  There's no reason to slow up commits with it.  (Of
+course, there's a "diff-bit" on each node, saying whether its contents
+are stored full-text or as a diff against the node that back-links to
+this one.)
 
-fooo
+Now let's generalize that procedure, and add locking...
+
+The important thing to realize is that someone else may initiate a
+commit before or during our commit, and their commit might finish
+before or after ours.  We don't want to make their commit wait
+unnecessarily, so we're not actually trying for a particular version
+number -- we just want the next available version number at the time
+our commit finishes.
+
+Below, a "lock" is a cookie consisting of user:num, where num is the
+same for all locks in this commit, and different from any other
+current locks (even ones with the same user).  Locks persist through
+server crashes (todo: can we implement that efficiently?)
+
+  1. Lock the nodes you're committing new versions for (if you're
+     adding a new file then there's no node to lock, though).  These
+     primary locks will last throughout the commit.  Wait for all
+     locks while you wait for any, so your commit will be atomic.
+
+  2. Create the new, unattached nodes that will hold the new versions.
+     Fill them up with the new contents.  Create the back-links.
+
+  3. Lock the parents of the nodes you're committing (call these
+     "secondary locks").  Again, wait for all while you wait for any.
+
+  4. Set dir_entries in the locked parents to point at the newly
+     created child nodes.  Although this cannot be atomic if there are
+     multiple parents, it is safe because the server knows that a node
+     doesn't really exist if its parent is locked.  (Amend the
+     node-finding algorithm given earlier to always follow back-links
+     from a node whose parent is locked, until you find a node with
+     the same lock as that parent).
+
+  5. Okay, very quickly now: lock the next available version number!
+
+     (It is very important that this lock have the same id number as
+     all the other locks in this commit.  For one thing, if the
+     machine crashes now, a cleanup bot later can realize that this 
+     commit was basically done, and finish the job.  Also, if we want
+     to be *really* sophisticated, we can consider the existence of
+     this lock enough to invalidate all the locks below it, as far as
+     foreign locks are concerned.  I.e., if you are about to block in
+     favor of a lock with id num NUM, first check to see if there is a
+     version locked with id NUM -- if there is, you don't have to
+     block, because all the important parts of that commit are done,
+     and it's just removing its locks.  In fact, had there been some
+     way to know in advance what the version number would be, we would
+     have used that as NUM.)
+
+  6. Remove all the other locks.
+
+  7. Unlock that version number!
+
+Voila.
+
+That explanation could probably be worked over for clarity, but I
+believe it is accurate in all formal ways.
+
+There may be an "optimization" whereby we actually _do_ reserve the
+version number at the outset of the commit, since with non-interfering
+commits it probably doesn't matter what order the version numbers end
+up in.  Want to sleep on that one though.
 
 
 ** How renames work
