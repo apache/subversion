@@ -125,7 +125,7 @@ typedef struct svn_cl__opt_state_t
    The error result will generally be that returned by the
    command implementation procedures.  */
 typedef svn_error_t *(svn_cl__cmd_proc_t) \
-  (int argc, char **argv, apr_pool_t*, svn_cl__opt_state_t*);
+  (int argc, const char **argv, apr_pool_t*, svn_cl__opt_state_t*);
 
 
 /* One element of the command dispatch table. */

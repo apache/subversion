@@ -638,7 +638,8 @@ log_do_modify_entry (struct log_runner *loggy,
                                   text_time,
                                   prop_time,
                                   loggy->pool,
-                                  ah);
+                                  ah,
+                                  NULL);
   if (err)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
                               "error merge_syncing entry %s", name);
@@ -668,14 +669,14 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
  *
  * If REJFILE does not exist, do nothing.
  *
- * CONFLICT_TYPE is either SVN_WC__LOG_ATTR_TEXT_REJFILE or
+ * REJFILE_TYPE is either SVN_WC__LOG_ATTR_TEXT_REJFILE or
  * SVN_WC__LOG_ATTR_PROP_REJFILE.
  */
 static svn_error_t *
 conflict_if_rejfile (svn_string_t *parent_dir,
                      const char *rejfile,
                      const char *entry,
-                     const char *conflict_type,
+                     const char *rejfile_type,
                      apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -719,9 +720,6 @@ conflict_if_rejfile (svn_string_t *parent_dir,
                "conflict_if_rejfile: trouble removing %s",
                rejfile_full_path->data);
 
-          /* kff todo: still need to clear rejfile attributes!  Do
-             this by extending merge_sync(). */
-
           err = svn_wc__entry_merge_sync
             (parent_dir,
              svn_string_create (entry, pool),
@@ -731,6 +729,8 @@ conflict_if_rejfile (svn_string_t *parent_dir,
              0,
              0,
              pool,
+             NULL,
+             rejfile_type,
              NULL);
           if (err)
             return err;
@@ -740,7 +740,7 @@ conflict_if_rejfile (svn_string_t *parent_dir,
           apr_hash_t *att_overlay = apr_make_hash (pool);
 
           apr_hash_set (att_overlay,
-                        conflict_type, APR_HASH_KEY_STRING,
+                        rejfile_type, APR_HASH_KEY_STRING,
                         svn_string_create (rejfile, pool));
 
           err = svn_wc__entry_merge_sync 
@@ -752,7 +752,8 @@ conflict_if_rejfile (svn_string_t *parent_dir,
              0,
              0,
              pool,
-             att_overlay);
+             att_overlay,
+             NULL);
           if (err)
             return err;
         } 
@@ -876,11 +877,12 @@ log_do_committed (struct log_runner *loggy,
                                           svn_node_file,
                                           SVN_WC_ENTRY_CLEAR_ALL,
                                           timestamp,
-                                          0, /* FIX THIS.  Is this
+                                          0, /* todo: FIX THIS.  Is this
                                                 code aware of
                                                 properties at all
                                                 yet? */
                                           loggy->pool,
+                                          NULL,
                                           NULL);
           if (err)
             return svn_error_createf
