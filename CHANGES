@@ -1,4 +1,4 @@
-Version 0.14.4 [Alpha Interim 4] (released 29 Oct 2002, revision r3551)
+Version 0.14.4 [Alpha Interim 4] (released 29 Oct 2002, revision r3553)
 
  User-visible changes:
  * new working-copy entry-caching: speeds many ops up to 5x (#749)
