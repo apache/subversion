@@ -120,10 +120,12 @@ static void add_ignored(merge_ctx_t *mc, const char *cdata)
   /* ### remember the file and issue a report/warning later */
 }
 
-static svn_error_t *bump_resource(merge_ctx_t *mc, char *path, char *vsn_url)
+static svn_error_t *bump_resource(merge_ctx_t *mc,
+                                  const char *path,
+                                  char *vsn_url)
 {
-  svn_stringbuf_t path_str = { 0 };
-  svn_stringbuf_t vsn_url_str = { 0 };
+  svn_stringbuf_t *path_str;
+  svn_stringbuf_t *vsn_url_str;
 
   /* import case. just punt for now. */
   if (mc->close_commit == NULL)
@@ -136,30 +138,21 @@ static svn_error_t *bump_resource(merge_ctx_t *mc, char *path, char *vsn_url)
   if (! apr_hash_get (mc->valid_targets, path, APR_HASH_KEY_STRING))
     return NULL;
 
-  /* ### damned callbacks take svn_stringbuf_t even though they don't plan
-     ### to change the values whatsoever... */
   /* set up two svn_stringbuf_t values around the path and vsn_url. */
-  path_str.data = path;
-  path_str.len = strlen(path);
-  path_str.blocksize = path_str.len + 1;
-  path_str.pool = mc->pool;
-      
-  vsn_url_str.data = vsn_url;
-  vsn_url_str.len = strlen(vsn_url);
-  vsn_url_str.blocksize = vsn_url_str.len + 1;
-  vsn_url_str.pool = mc->pool;
-      
+  path_str = svn_stringbuf_create (path, mc->pool);
+  vsn_url_str = svn_stringbuf_create (vsn_url, mc->pool);
+ 
       /* store the version URL */
-  SVN_ERR( (*mc->set_prop)(mc->close_baton, &path_str,
-                           mc->vsn_url_name, &vsn_url_str) );
+  SVN_ERR( (*mc->set_prop)(mc->close_baton, path_str,
+                           mc->vsn_url_name, vsn_url_str) );
       
   /* bump the revision and commit the file */
-  return (*mc->close_commit)(mc->close_baton, &path_str, mc->rev);
+  return (*mc->close_commit)(mc->close_baton, path_str, mc->rev);
 }
 
 static svn_error_t * handle_resource(merge_ctx_t *mc)
 {
-  char *relative;
+  const char *relative;
 
   if (mc->response_has_error)
     {
@@ -247,7 +240,10 @@ static svn_error_t * handle_resource(merge_ctx_t *mc)
     }
 
   /* given HREF of the form: BASE "/" RELATIVE, extract the relative portion */
-  relative = mc->href->data + mc->base_len + 1;
+  if (mc->base_len == mc->href->len)
+    relative = "";
+  else
+    relative = mc->href->data + mc->base_len + 1;
 
   if (mc->rev == SVN_INVALID_REVNUM)
     {
@@ -573,6 +569,7 @@ svn_error_t * svn_ra_dav__merge_activity(
     {
       svn_stringbuf_set(path_str,
                      APR_ARRAY_IDX(deleted_entries, i, const char *));
+
       SVN_ERR( (*close_commit)(close_baton, path_str, mc.rev) );
     }
 
