@@ -57,6 +57,7 @@ static svn_error_t *
 print_status (const char *path,
               svn_boolean_t detailed,
               svn_boolean_t show_last_committed,
+              svn_boolean_t repos_locks,
               svn_wc_status_t *status,
               apr_pool_t *pool)
 {
@@ -80,23 +81,28 @@ print_status (const char *path,
       else
         ood_status = ' ';
 
-      if (status->repos_lock)
+      if (repos_locks)
         {
-          if (status->entry && status->entry->lock_token)
+          if (status->repos_lock)
             {
-              if (strcmp (status->repos_lock->token, status->entry->lock_token)
-                  == 0)
-                lock_status = 'K';
+              if (status->entry && status->entry->lock_token)
+                {
+                  if (strcmp (status->repos_lock->token, status->entry->lock_token)
+                      == 0)
+                    lock_status = 'K';
+                  else
+                    lock_status = 'T';
+                }
               else
-                lock_status = 'T';
+                lock_status = 'O';
             }
+          else if (status->entry && status->entry->lock_token)
+            lock_status = 'B';
           else
-            lock_status = 'O';
+            lock_status = ' ';
         }
-      else if (status->entry && status->entry->lock_token)
-        lock_status = 'B';
       else
-        lock_status = ' ';
+        lock_status = (status->entry && status->entry->lock_token) ? 'K' : ' ';
 
       if (show_last_committed)
         {
@@ -167,6 +173,7 @@ svn_cl__print_status (const char *path,
                       svn_boolean_t detailed,
                       svn_boolean_t show_last_committed,
                       svn_boolean_t skip_unrecognized,
+                      svn_boolean_t repos_locks,
                       apr_pool_t *pool)
 {
   if (! status 
@@ -176,5 +183,6 @@ svn_cl__print_status (const char *path,
     return SVN_NO_ERROR;
 
   return print_status (svn_path_local_style (path, pool),
-                       detailed, show_last_committed, status, pool);
+                       detailed, show_last_committed, repos_locks, status,
+                       pool);
 }
