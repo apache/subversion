@@ -18,7 +18,7 @@
  * @file org_tigris_subversion_javahl_SVNClient.cpp
  * @brief Implementation of the native methods in the java class SVNClient
  */
-#include "org_tigris_subversion_javahl_SVNAdmin.h"
+#include "../include/org_tigris_subversion_javahl_SVNAdmin.h"
 #include "JNIUtil.h"
 #include "JNIStackElement.h"
 #include "JNIStringHolder.h"

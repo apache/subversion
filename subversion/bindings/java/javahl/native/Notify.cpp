@@ -21,9 +21,9 @@
 
 #include "Notify.h"
 #include "JNIUtil.h"
-#include "org_tigris_subversion_javahl_NotifyAction.h"
-#include "org_tigris_subversion_javahl_NotifyStatus.h"
-#include "org_tigris_subversion_javahl_NodeKind.h"
+#include "../include/org_tigris_subversion_javahl_NotifyAction.h"
+#include "../include/org_tigris_subversion_javahl_NotifyStatus.h"
+#include "../include/org_tigris_subversion_javahl_NodeKind.h"
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
