@@ -32,7 +32,7 @@
  * Do you want to debug code in this file?
  * Just uncomment the following define.
  */
-//#define SVN_JNI__DEBUG_VECTOR
+//#define SVN_JNI_VECTOR__DEBUG
 
 /*** Code ***/
 jobject
@@ -41,7 +41,7 @@ vector__create(JNIEnv *env, jboolean *hasException)
   jobject vector = NULL;
   jboolean _hasException = JNI_FALSE;
 
-#ifdef SVN_JNI__DEBUG_VECTOR
+#ifdef SVN_JNI_VECTOR__DEBUG
   fprintf(stderr, ">>>vector__create\n");
 #endif
   
@@ -82,7 +82,7 @@ vector__create(JNIEnv *env, jboolean *hasException)
 	  _hasException = JNI_TRUE;
 	}
 
-#ifdef SVN_JNI__DEBUG_VECTOR
+#ifdef SVN_JNI_VECTOR__DEBUG
       SVN_JNI__DEBUG_PTR(vectorClass);
       SVN_JNI__DEBUG_PTR(vectorConstructor);
       SVN_JNI__DEBUG_PTR(vector);
@@ -93,7 +93,7 @@ vector__create(JNIEnv *env, jboolean *hasException)
     }
 
 
-#ifdef SVN_JNI__DEBUG_VECTOR
+#ifdef SVN_JNI_VECTOR__DEBUG
   SVN_JNI__DEBUG_BOOL(_hasException);
   fprintf(stderr, "\n<<<vector__create\n");
 #endif
@@ -113,7 +113,7 @@ vector__add(JNIEnv *env, jobject vector, jobject value,
 {
   jboolean _hasException = JNI_FALSE;
 
-#ifdef SVN_JNI__DEBUG_VECTOR
+#ifdef SVN_JNI_VECTOR__DEBUG
   fprintf(stderr, ">>>vector__add(");
   SVN_JNI__DEBUG_PTR(vector);
   SVN_JNI__DEBUG_PTR(value);
@@ -142,7 +142,7 @@ vector__add(JNIEnv *env, jobject vector, jobject value,
 
       if( !_hasException )
         {
-#ifdef SVN_JNI__DEBUG_VECTOR
+#ifdef SVN_JNI_VECTOR__DEBUG
           fprintf(stderr, ">>>CallBooleanMethod(");
           SVN_JNI__DEBUG_PTR(vector);
           SVN_JNI__DEBUG_PTR(vectorAdd);
@@ -152,7 +152,7 @@ vector__add(JNIEnv *env, jobject vector, jobject value,
 
 	  (*env)->CallVoidMethod(env, vector, vectorAdd, value);
           _hasException = (*env)->ExceptionCheck(env);
-#ifdef SVN_JNI__DEBUG_VECTOR
+#ifdef SVN_JNI_VECTOR__DEBUG
           fprintf(stderr, "<<<CallBooleanMethod(");
           SVN_JNI__DEBUG_BOOL(_hasException);
           fprintf(stderr, ")\n");
@@ -163,7 +163,7 @@ vector__add(JNIEnv *env, jobject vector, jobject value,
       (*env)->PopLocalFrame(env, NULL);
     }
 
-#ifdef SVN_JNI__DEBUG_VECTOR
+#ifdef SVN_JNI_VECTOR__DEBUG
   fprintf(stderr, "\n<<<vector__add(");
   SVN_JNI__DEBUG_BOOL(_hasException);
   fprintf(stderr, ")\n");

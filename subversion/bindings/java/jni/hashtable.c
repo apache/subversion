@@ -33,7 +33,7 @@
  * Do you want to debug code in this file?
  * Just uncomment the following define.
  */
-//#define SVN_JNI__DEBUG_HASHTABLE
+//#define SVN_JNI_HASHTABLE__DEBUG
 
 /*** Code ***/
 jobject
@@ -42,7 +42,7 @@ hashtable__create(JNIEnv *env, jboolean *hasException)
   jobject hashtable = NULL;
   jboolean _hasException = JNI_FALSE;
 
-#ifdef SVN_JNI__DEBUG_HASHTABLE
+#ifdef SVN_JNI_HASHTABLE__DEBUG
   fprintf(stderr, ">>>hashtable__create\n");
 #endif
   
@@ -83,7 +83,7 @@ hashtable__create(JNIEnv *env, jboolean *hasException)
 	  _hasException = JNI_TRUE;
 	}
 
-#ifdef SVN_JNI__DEBUG_HASHTABLE
+#ifdef SVN_JNI_HASHTABLE__DEBUG
       SVN_JNI__DEBUG_PTR(hashtableClass);
       SVN_JNI__DEBUG_PTR(hashtableConstructor);
       SVN_JNI__DEBUG_PTR(hashtable);
@@ -94,7 +94,7 @@ hashtable__create(JNIEnv *env, jboolean *hasException)
     }
 
 
-#ifdef SVN_JNI__DEBUG_HASHTABLE
+#ifdef SVN_JNI_HASHTABLE__DEBUG
   SVN_JNI__DEBUG_BOOL(_hasException);
   fprintf(stderr, "\n<<<hashtable__create\n");
 #endif
@@ -115,7 +115,7 @@ hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
   jboolean _hasException = JNI_FALSE;
   jobject result = NULL;
 
-#ifdef SVN_JNI__DEBUG_HASHTABLE
+#ifdef SVN_JNI_HASHTABLE__DEBUG
   fprintf(stderr, ">>>hashtable__put(");
   SVN_JNI__DEBUG_PTR(hashtable);
   SVN_JNI__DEBUG_PTR(key);
@@ -145,7 +145,7 @@ hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
 
       if( !_hasException )
         {
-#ifdef SVN_JNI__DEBUG_HASHTABLE
+#ifdef SVN_JNI_HASHTABLE__DEBUG
           fprintf(stderr, ">>>CallObjectMethod(");
           SVN_JNI__DEBUG_PTR(hashtable);
           SVN_JNI__DEBUG_PTR(hashtablePut);
@@ -157,7 +157,7 @@ hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
 	  result = (*env)->CallObjectMethod(env, hashtable, hashtablePut,
                                             key, value);
 	  _hasException = (*env)->ExceptionCheck(env);
-#ifdef SVN_JNI__DEBUG_HASHTABLE
+#ifdef SVN_JNI_HASHTABLE__DEBUG
           fprintf(stderr, "<<<CallObjectMethod(");
           SVN_JNI__DEBUG_PTR(result);
           SVN_JNI__DEBUG_BOOL(_hasException);
@@ -169,7 +169,7 @@ hashtable__put(JNIEnv *env, jobject hashtable, jobject key,
       (*env)->PopLocalFrame(env, result);
     }
 
-#ifdef SVN_JNI__DEBUG_HASHTABLE
+#ifdef SVN_JNI_HASHTABLE__DEBUG
   fprintf(stderr, "\n<<<hashtable__put(");
   SVN_JNI__DEBUG_BOOL(_hasException);
   fprintf(stderr, ")\n");
