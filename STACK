@@ -10,8 +10,13 @@ short-term tasks to it, if that's helpful.
 ------------------------------------------------------------------------
 
 Ben todo:
-   - UPDATE the SPEC!!!
-   - finish implementing properties.  it's 95% done already.  :)
+   - timestamp code:  track *both* text and property timestamps independently. 
+   - split modified_p() into two versions -- one for text, one for props
+   - get_editor.c (close_file):  new logic to anywhere from 0 to 2 timestamps,
+     depending on whether local mods are detected.
+   - props.c:  output conflict values too
+   - adm_crawler.c: finish emitting properties and doing proper
+     conflict detection
 
 Karl working copy todo:
    - use apr process api instead of system(), don't use redirection
