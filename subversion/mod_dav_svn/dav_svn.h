@@ -69,18 +69,36 @@ typedef struct {
   /* the open repository */
   svn_fs_t *fs;
 
-  /* NOTE: root_rev and root_dir may be 0/NULL if we don't open the root
-     of the repository (e.g. we're dealing with activity resources) */
-  /* ### these fields may make better sense elsewhere; a repository may
-     ### need two roots open for some operations(?) */
-
-  /* what revision did we open for the root? */
-  svn_revnum_t root_rev;
-
-  /* the root of the revision tree */
-  svn_fs_node_t *root_dir;
-  
 } dav_svn_repos;
+
+/* store info about a root in a repository */
+typedef struct {
+  /* If a root within the FS has been opened, the value is stored here.
+     Otherwise, this field is NULL. */
+  svn_fs_root_t *root;
+
+  /* If the root has been opened, and it was opened for a specific revision,
+     then it is contained in REV. If the root is unopened or corresponds to
+     a transaction, then REV will be SVN_INVALID_REVNUM. */
+  svn_revnum_t rev;
+
+  /* If this resource is an activity or part of an activity, this specifies
+     the ID of that activity. It may not (yet) correspond to a transaction
+     in the FS.
+
+     WORKING and ACTIVITY resources use this field.
+  */
+  const char *activity_id;
+
+  /* If the root is part of a transaction, this contains the FS's tranaction
+     name. It may be NULL if this root corresponds to a specific revision.
+     It may also be NULL if we have not opened the root yet.
+
+     WORKING and ACTIVITY resources use this field.
+  */
+  const char *txn_name;
+
+} dav_svn_root;
 
 /* internal structure to hold information about this resource */
 struct dav_resource_private {
@@ -98,26 +116,15 @@ struct dav_resource_private {
   */
   svn_string_t *uri_path;
 
-  /* the repository this resource is associated with */
+  /* The FS repository path to this resource. No leading "/". Note that
+     this is the empty string for the root. */
+  const char *repos_path;
+
+  /* the FS repository this resource is associated with */
   dav_svn_repos *repos;
 
-  /* resource-type-specific data
-   *
-   * REGULAR: unused
-   * VERSION: repository path (no leading "/")
-   * HISTORY: ???
-   * WORKING: repository path (no leading "/")
-   * ACTIVITY: unused
-   * PRIVATE: ???
-   */
-  const char *object_name;
-
-  /* for REGULAR resources: an open node for the revision */
-  svn_fs_node_t *node;
-
-  /* for WORKING, ACTIVITY resources: the activity, and the FS txn name */
-  const char *activity_id;
-  const char *txn_name;
+  /* what FS root this resource occurs within */
+  dav_svn_root root;
 
   /* for VERSION resources: the node ID */
   const svn_fs_id_t *node_id;
