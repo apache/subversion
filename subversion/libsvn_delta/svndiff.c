@@ -382,99 +382,135 @@ write_handler (void *baton,
   /* Concatenate the old with the new.  */
   svn_stringbuf_appendbytes (db->buffer, buffer, *len);
 
-  /* Read the header, if we have enough bytes for that.  */
-  p = (const unsigned char *) db->buffer->data;
-  end = (const unsigned char *) db->buffer->data + db->buffer->len;
+  /* We have a buffer of svndiff data that might be good for:
 
-  p = decode_int (&val, p, end);
-  if (p == NULL)
-    return SVN_NO_ERROR;
-  sview_offset = val;
+     a) an integral number of windows' worth of data - this is a
+        trivial case.  Make windows from our data and ship them off.
 
-  p = decode_int (&val, p, end);
-  if (p == NULL)
-    return SVN_NO_ERROR;
-  sview_len = val;
+     b) a non-integral number of windows' worth of data - we shall
+        consume the integral portion of the window data, and then
+        somewhere in the following loop the decoding of the svndiff
+        data will run out of stuff to decode, and will simply return
+        SVN_NO_ERROR, anxiously awaiting more data.
+  */
 
-  p = decode_int (&val, p, end);
-  if (p == NULL)
-    return SVN_NO_ERROR;
-  tview_len = val;
-
-  p = decode_int (&val, p, end);
-  if (p == NULL)
-    return SVN_NO_ERROR;
-  inslen = val;
-
-  p = decode_int (&val, p, end);
-  if (p == NULL)
-    return SVN_NO_ERROR;
-  newlen = val;
-
-  /* Check for integer overflow (don't want to let the input trick us
-     into invalid pointer games using negative numbers).  */
-  if (sview_offset < 0 || sview_len < 0 || tview_len < 0 || inslen < 0
-      || newlen < 0 || inslen + newlen < 0 || sview_offset + sview_len < 0)
-    return svn_error_create (SVN_ERR_SVNDIFF_CORRUPT_WINDOW, 0, NULL, db->pool,
-                             "svndiff contains corrupt window header");
-
-  /* Check for source windows which slide backwards.  */
-  if (sview_offset < db->last_sview_offset
-      || (sview_offset + sview_len
-          < db->last_sview_offset + db->last_sview_len))
-    return svn_error_create (SVN_ERR_SVNDIFF_BACKWARD_VIEW, 0, NULL, db->pool,
-                             "svndiff has backwards-sliding source views");
-
-  /* Wait for more data if we don't have enough bytes for the whole window.  */
-  if (end - p < inslen + newlen)
-    return SVN_NO_ERROR;
-
-  /* Count the instructions and make sure they are all valid.  */
-  end = p + inslen;
-  ninst = count_and_verify_instructions (p, end, sview_len, tview_len, newlen);
-  if (ninst == -1)
-    return svn_error_create (SVN_ERR_SVNDIFF_INVALID_OPS, 0, NULL, db->pool,
-                             "svndiff contains invalid instructions");
-
-  /* Build the window structure.  */
-  window = apr_palloc (db->subpool, sizeof (*window));
-  window->sview_offset = sview_offset;
-  window->sview_len = sview_len;
-  window->tview_len = tview_len;
-  window->num_ops = ninst;
-  window->ops_size = ninst;
-  window->ops = apr_palloc (db->subpool, ninst * sizeof (*window->ops));
-  npos = 0;
-  for (op = window->ops; op < window->ops + ninst; op++)
+  while (1)
     {
-      p = decode_instruction (op, p, end);
-      if (op->action_code == svn_txdelta_new)
-        {
-          op->offset = npos;
-          npos += op->length;
-        }
+      /* Read the header, if we have enough bytes for that.  */
+      p = (const unsigned char *) db->buffer->data;
+      end = (const unsigned char *) db->buffer->data + db->buffer->len;
+
+      p = decode_int (&val, p, end);
+      if (p == NULL)
+	return SVN_NO_ERROR;
+      printf ("got sview_offset\n");
+      sview_offset = val;
+
+      p = decode_int (&val, p, end);
+      if (p == NULL)
+	return SVN_NO_ERROR;
+      printf ("got sview_len\n");
+      sview_len = val;
+
+      p = decode_int (&val, p, end);
+      if (p == NULL)
+	return SVN_NO_ERROR;
+      printf ("got tview_len\n");
+      tview_len = val;
+
+      p = decode_int (&val, p, end);
+      if (p == NULL)
+	return SVN_NO_ERROR;
+      printf ("got inslen\n");
+      inslen = val;
+
+      p = decode_int (&val, p, end);
+      if (p == NULL)
+	return SVN_NO_ERROR;
+      printf ("got newlen\n");
+      newlen = val;
+
+      /* Check for integer overflow (don't want to let the input trick
+         us into invalid pointer games using negative numbers).  */
+      if (sview_offset < 0 || sview_len < 0 || tview_len < 0 || inslen < 0
+	  || newlen < 0 || inslen + newlen < 0 || sview_offset + sview_len < 0)
+	return svn_error_create (SVN_ERR_SVNDIFF_CORRUPT_WINDOW, 0, NULL, 
+				 db->pool,
+				 "svndiff contains corrupt window header");
+
+      /* Check for source windows which slide backwards.  */
+      if (sview_offset < db->last_sview_offset
+	  || (sview_offset + sview_len
+	      < db->last_sview_offset + db->last_sview_len))
+	return svn_error_create (SVN_ERR_SVNDIFF_BACKWARD_VIEW, 0, NULL, 
+				 db->pool,
+				 "svndiff has backwards-sliding source views");
+
+      /* Wait for more data if we don't have enough bytes for the
+         whole window.  */
+      if (end - p < inslen + newlen)
+	return SVN_NO_ERROR;
+      printf ("got enough data for a window\n");
+
+      /* Count the instructions and make sure they are all valid.  */
+      end = p + inslen;
+      ninst = count_and_verify_instructions (p, end, sview_len, 
+					     tview_len, newlen);
+      if (ninst == -1)
+	return svn_error_create (SVN_ERR_SVNDIFF_INVALID_OPS, 0, NULL, 
+				 db->pool, 
+				 "svndiff contains invalid instructions");
+
+      /* Build the window structure.  */
+      window = apr_palloc (db->subpool, sizeof (*window));
+      window->sview_offset = sview_offset;
+      window->sview_len = sview_len;
+      window->tview_len = tview_len;
+      window->num_ops = ninst;
+      window->ops_size = ninst;
+      window->ops = apr_palloc (db->subpool, ninst * sizeof (*window->ops));
+      npos = 0;
+      for (op = window->ops; op < window->ops + ninst; op++)
+	{
+	  p = decode_instruction (op, p, end);
+	  if (op->action_code == svn_txdelta_new)
+	    {
+	      op->offset = npos;
+	      npos += op->length;
+	    }
+	}
+      window->new_data
+	= svn_stringbuf_ncreate ((const char *) p, newlen, db->subpool);
+      window->pool = db->subpool;
+
+      printf ("soff %d, slen %d, tlen %d, inslen %d, newlen %d\n",
+              sview_offset, sview_len, tview_len, inslen, newlen);
+
+      /* Send it off.  */
+      err = db->consumer_func (window, db->consumer_baton);
+
+      /* Make a new subpool and buffer, saving aside the remaining
+         data in the old buffer.  */
+      db->subpool = svn_pool_create (db->pool);
+      p += newlen;
+      remaining = db->buffer->data + db->buffer->len - (const char *) p;
+      db->buffer = 
+	svn_stringbuf_ncreate ((const char *) p, remaining, db->subpool);
+
+      {
+        char *printthing;
+
+        printthing = apr_pstrndup (db->subpool, (const char *)p, remaining);
+        printf ("remaining (len %d) = %s\n", remaining, printthing);
+      }
+
+      /* Remember the offset and length of the source view for next time.  */
+      db->last_sview_offset = sview_offset;
+      db->last_sview_len = sview_len;
+
+      /* Free the window; this will also free up our old buffer.  */
+      svn_txdelta_free_window (window);
     }
-  window->new_data
-    = svn_stringbuf_ncreate ((const char *) p, newlen, db->subpool);
-  window->pool = db->subpool;
-
-  /* Send it off.  */
-  err = db->consumer_func (window, db->consumer_baton);
-
-  /* Make a new subpool and buffer, saving aside the remaining data in
-     the old buffer.  */
-  db->subpool = svn_pool_create (db->pool);
-  p += newlen;
-  remaining = db->buffer->data + db->buffer->len - (const char *) p;
-  db->buffer = 
-    svn_stringbuf_ncreate ((const char *) p, remaining, db->subpool);
-
-  /* Remember the offset and length of the source view for next time.  */
-  db->last_sview_offset = sview_offset;
-  db->last_sview_len = sview_len;
-
-  /* Free the window; this will also free up our old buffer.  */
-  svn_txdelta_free_window (window);
 
   return err;
 }
