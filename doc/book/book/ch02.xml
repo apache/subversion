@@ -320,7 +320,49 @@ Makefile  integer.c  button.c  .svn/
         entry&mdash;<filename>.svn</filename>&mdash;which holds the
         extra information needed by Subversion, as mentioned
         earlier.</para>
-      
+
+      <sidebar>
+        <title>Repository URLs</title>
+
+        <para>Subversion repositories can be accessed through many
+          different methods: on local disk, or through various network
+          protocols.  A repository location, however, is always a URL.
+          The URL schema indicates the access method:</para>
+
+        <table id="svn-ch-02-table-1">
+          <title>Repository Access URLs</title>
+          <tgroup cols="2">
+            <thead>
+              <row>
+                <entry>Schema</entry>
+                <entry>Access Method</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry>file:///</entry>
+                <entry>direct repository access (on local disk)</entry>
+              </row>
+              <row>
+                <entry>svn://</entry>
+                <entry>access via custom TCP/IP protocol to an
+                  <quote>svnserve</quote> server</entry>
+              </row>
+              <row>
+                <entry>http://</entry>
+                <entry>access via WebDAV protocol to Subversion-aware
+                  Apache server</entry>
+              </row>
+              <row>
+                <entry>https://</entry>
+                <entry>same as http://, but with SSL encryption.</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+
+      </sidebar>
+
       <para>Suppose you make changes to <filename>button.c</filename>.
         Since the <filename>.svn</filename> directory remembers the
         file's modification date and original contents, Subversion can
