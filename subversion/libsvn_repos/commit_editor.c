@@ -138,7 +138,12 @@ replace_root (void *edit_baton,
 
   /* Begin a subversion transaction, cache its name, and get its
      root object. */
-  SVN_ERR (svn_fs_begin_txn (&(eb->txn), eb->fs, base_revision, eb->pool));
+  SVN_ERR (svn_repos_fs_begin_txn_for_commit (&(eb->txn), 
+                                              eb->fs, 
+                                              base_revision, 
+                                              eb->user, 
+                                              &(eb->log_msg),
+                                              eb->pool));
   SVN_ERR (svn_fs_txn_root (&(eb->txn_root), eb->txn, eb->pool));
   
   /* Finish filling out the root dir baton.  The `base_path' field is
@@ -482,28 +487,6 @@ close_edit (void *edit_baton)
   svn_revnum_t new_revision = SVN_INVALID_REVNUM;
   svn_error_t *err;
   const char *conflict;
-  svn_string_t log_prop_name = { SVN_PROP_REVISION_LOG,
-                                 sizeof(SVN_PROP_REVISION_LOG) - 1};
-  svn_string_t author_prop_name = { SVN_PROP_REVISION_AUTHOR,
-                                    sizeof(SVN_PROP_REVISION_AUTHOR) - 1};
-
-  /* We pass the author and log message to the filesystem by adding
-     them as properties on the txn.  Later, when we commit the txn,
-     these properties will be copied into the newly created revision. */
-
-  /* User (author). */
-  {
-    svn_string_t val;
-    val.data = eb->user;
-    val.len = strlen (eb->user);
-
-    SVN_ERR (svn_fs_change_txn_prop (eb->txn, &author_prop_name,
-                                     &val, eb->pool));
-  }
-
-  /* Log message. */
-  SVN_ERR (svn_fs_change_txn_prop (eb->txn, &log_prop_name,
-                                   &eb->log_msg, eb->pool));
 
   /* Commit. */
   err = svn_repos_fs_commit_txn (&conflict, &new_revision, eb->txn);

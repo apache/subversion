@@ -271,7 +271,16 @@ svn_error_t *svn_repos_fs_commit_txn (const char **conflict_p,
                                       svn_revnum_t *new_rev,
                                       svn_fs_txn_t *txn);
 
-
+/* Like svn_fs_begin_txn(), but use AUTHOR and LOG_MSG to set the
+ * corresponding properties on transaction *TXN_P.  FS, REV, *TXN_P,
+ * and POOL are as in svn_fs_begin_txn().  
+*/
+svn_error_t *svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
+                                                svn_fs_t *fs,
+                                                svn_revnum_t rev,
+                                                const char *author,
+                                                svn_string_t *log_msg,
+                                                apr_pool_t *pool);
 
 
 #endif /* SVN_REPOS_H */
