@@ -293,9 +293,12 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'R'} },
   
   { "proplist", svn_cl__proplist, {"plist", "pl"},
-    "List all properties attached to files or directories.\n"
-    "usage: proplist [TARGETS]\n",
-    {'v', 'R'} },
+    "List all properties attached to files, dirs, or revisions.\n"
+    "usage: 1. proplist [WC_TARGETS]\n"
+    "       2. proplist -r REV [URL]\n\n"
+    "First usage lists versioned props in working copy.\n"
+    "Second usage lists unversioned remote props on repos revision.\n\n",
+    {'v', 'R', 'r'} },
   
   { "propset", svn_cl__propset, {"pset", "ps"},
     "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n\n"

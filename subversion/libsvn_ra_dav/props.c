@@ -465,19 +465,19 @@ svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav_resource_t **rsrc,
                                         pool);
 }
 
-svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
-                                           svn_string_t *bc_url,
-                                           svn_string_t *bc_relative,
-                                           svn_revnum_t *latest_rev,
-                                           ne_session *sess,
-                                           const char *url,
-                                           svn_revnum_t revision,
-                                           apr_pool_t *pool)
+
+svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
+                                            svn_ra_dav_resource_t **bln_rsrc,
+                                            ne_session *sess,
+                                            const char *url,
+                                            svn_revnum_t revision,
+                                            const ne_propname *which_props,
+                                            apr_pool_t *pool)
 {
   svn_ra_dav_resource_t *rsrc;
   const char *vcc;
   ne_uri parsed_url;
-  const char *my_bc_url, *my_bc_relative;
+  const char *my_bc_relative;
   const char *lopped_path = "";
 
   /* ### we may be able to replace some/all of this code with an
@@ -632,10 +632,6 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
       bc_relative->len = strlen(my_bc_relative);     
     }
 
-  /* shortcut: no need to do more work if the data isn't needed. */
-  if (bc_url == NULL && latest_rev == NULL && is_dir == NULL)
-    return SVN_NO_ERROR;
-
   /* -------------------------------------------------------------------
      STEP 2
 
@@ -676,7 +672,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
          ### user asked for? i.e. omit version-name if latest_rev is NULL */
       SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, 
                                               baseline->data, NULL,
-                                              baseline_props, pool) );
+                                              which_props, pool) );
     }
   else
     {
@@ -691,16 +687,47 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
       /* ### do we want to optimize the props we fetch, based on what the
          ### user asked for? i.e. omit version-name if latest_rev is NULL */
       SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, vcc, label,
-                                              baseline_props, pool) );
+                                              which_props, pool) );
     }
+  
+  /* Return the baseline rsrc, which now contains whatever set of
+     props the caller wanted. */
+  *bln_rsrc = rsrc;
+  return SVN_NO_ERROR;
+}
 
-  /* rsrc now points at the Baseline. We will checkout from the
-     DAV:baseline-collection.  The revision we are checking out is in
-     DAV:version-name */
+
+svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
+                                           svn_string_t *bc_url,
+                                           svn_string_t *bc_relative,
+                                           svn_revnum_t *latest_rev,
+                                           ne_session *sess,
+                                           const char *url,
+                                           svn_revnum_t revision,
+                                           apr_pool_t *pool)
+{
+  svn_ra_dav_resource_t *baseline_rsrc, *rsrc;
+  const char *my_bc_url;
+  svn_string_t my_bc_relative;
+
+  /* Go fetch a BASELINE_RSRC that contains specific properties we
+     want.  This routine will also fill in BC_RELATIVE as best it
+     can. */
+  SVN_ERR (svn_ra_dav__get_baseline_props(&my_bc_relative,
+                                          &baseline_rsrc,
+                                          sess,
+                                          url,
+                                          revision,
+                                          baseline_props, /* specific props */
+                                          pool));
+
+  /* baseline_rsrc now points at the Baseline. We will checkout from
+     the DAV:baseline-collection.  The revision we are checking out is
+     in DAV:version-name */
   
   /* Allocate our own copy of bc_url regardless. */
   my_bc_url = "";
-  my_bc_url = apr_hash_get(rsrc->propset,
+  my_bc_url = apr_hash_get(baseline_rsrc->propset,
                            SVN_RA_DAV__PROP_BASELINE_COLLECTION,
                            APR_HASH_KEY_STRING);
   if (my_bc_url == NULL)
@@ -723,7 +750,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
     {
       const char *vsn_name;
 
-      vsn_name = apr_hash_get(rsrc->propset,
+      vsn_name = apr_hash_get(baseline_rsrc->propset,
                               SVN_RA_DAV__PROP_VERSION_NAME,
                               APR_HASH_KEY_STRING);
       if (vsn_name == NULL)
@@ -742,10 +769,15 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
     {
       /* query the DAV:resourcetype of the full, assembled URL. */
       const char *full_bc_url 
-        = svn_path_url_add_component(my_bc_url, my_bc_relative, pool);
+        = svn_path_url_add_component(my_bc_url, my_bc_relative.data, pool);
       SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, sess, full_bc_url,
                                               NULL, starting_props, pool) );
       *is_dir = rsrc->is_collection;
+    }
+
+  if (bc_relative != NULL)
+    {
+      *bc_relative = my_bc_relative;
     }
 
   return SVN_NO_ERROR;

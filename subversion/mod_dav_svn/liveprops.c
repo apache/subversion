@@ -158,17 +158,31 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
            as 'last modified date'?  */
         svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
         svn_string_t *committed_date = NULL;
-        
-        /* Get the CR field out of the node's skel.  Notice that the
-           root object might be an ID root -or- a revision root. */
-        serr = svn_fs_node_created_rev(&committed_rev,
-                                       resource->info->root.root,
-                                       resource->info->repos_path, p);
-        if (serr != NULL)
+
+        if (resource->baselined && resource->type == DAV_RESOURCE_TYPE_VERSION)
           {
-            /* ### what to do? */
-            value = "###error###";
-            break;
+            /* A baseline URI. */
+            committed_rev = resource->info->root.rev;
+          }
+        else if (resource->type == DAV_RESOURCE_TYPE_REGULAR
+                 || resource->type == DAV_RESOURCE_TYPE_WORKING
+                 || resource->type == DAV_RESOURCE_TYPE_VERSION)
+          {
+            /* Get the CR field out of the node's skel.  Notice that the
+               root object might be an ID root -or- a revision root. */
+            serr = svn_fs_node_created_rev(&committed_rev,
+                                           resource->info->root.root,
+                                           resource->info->repos_path, p);
+            if (serr != NULL)
+              {
+                /* ### what to do? */
+                value = "###error###";
+                break;
+              }
+          }        
+        else
+          {
+            return DAV_PROP_INSERT_NOTSUPP;
           }
         
         /* Get the date property of the created revision. */
@@ -237,17 +251,31 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       {        
         svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
         svn_string_t *last_author = NULL;
-        
-        /* Get the CR field out of the node's skel.  Notice that the
-           root object might be an ID root -or- a revision root. */
-        serr = svn_fs_node_created_rev(&committed_rev,
-                                       resource->info->root.root,
-                                       resource->info->repos_path, p);
-        if (serr != NULL)
+
+        if (resource->baselined && resource->type == DAV_RESOURCE_TYPE_VERSION)
           {
-            /* ### what to do? */
-            value = "###error###";
-            break;
+            /* A baseline URI. */
+            committed_rev = resource->info->root.rev;
+          }
+        else if (resource->type == DAV_RESOURCE_TYPE_REGULAR
+                 || resource->type == DAV_RESOURCE_TYPE_WORKING
+                 || resource->type == DAV_RESOURCE_TYPE_VERSION)
+          {
+            /* Get the CR field out of the node's skel.  Notice that the
+               root object might be an ID root -or- a revision root. */
+            serr = svn_fs_node_created_rev(&committed_rev,
+                                           resource->info->root.root,
+                                           resource->info->repos_path, p);
+            if (serr != NULL)
+              {
+                /* ### what to do? */
+                value = "###error###";
+                break;
+              }
+          }        
+        else
+          {
+            return DAV_PROP_INSERT_NOTSUPP;
           }
         
         /* Get the date property of the created revision. */
@@ -279,9 +307,9 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         apr_off_t len = 0;
         
         /* our property, but not defined on collection resources */
-        if (resource->collection)
+        if (resource->collection || resource->baselined)
           return DAV_PROP_INSERT_NOTSUPP;
-        
+
         serr = svn_fs_file_length(&len, resource->info->root.root,
                                   resource->info->repos_path, p);
         if (serr != NULL)
@@ -300,6 +328,10 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
            svn:mime-type property is of type text/plain.  So it seems
            safe (and consistent) to assume the same on the server.  */
         svn_string_t *pval;
+
+        if (resource->baselined && resource->type == DAV_RESOURCE_TYPE_VERSION)
+          return DAV_PROP_INSERT_NOTSUPP;
+
         serr = svn_fs_node_prop (&pval, resource->info->root.root,
                                  resource->info->repos_path,
                                  SVN_PROP_MIME_TYPE, p);

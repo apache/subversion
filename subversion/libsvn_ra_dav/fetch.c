@@ -898,16 +898,21 @@ add_prop_to_hash (void *baton,
 }
 
 
-/* Helper for svn_ra_dav__get_file() and svn_ra_dav__get_dir().
+/* Helper for svn_ra_dav__get_file(), svn_ra_dav__get_dir(), and
+   svn_ra_dav__rev_proplist().
+
    Loop over the properties in RSRC->propset, examining namespaces and
    such to filter Subversion, custom, etc. properties.  
 
    User-visible props get added to the PROPS hash (alloced in POOL).
-   Special working copy props get forward to set_special_wc_prop().
+
+   If ADD_ENTRY_PROPS is true, then "special" working copy entry-props
+   are added to the hash by set_special_wc_prop().
 */
 static svn_error_t *
 filter_props (apr_hash_t *props,
               svn_ra_dav_resource_t *rsrc,
+              svn_boolean_t add_entry_props,
               apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
@@ -924,9 +929,12 @@ filter_props (apr_hash_t *props,
          strip off this prefix and add to the hash. */
 #define NSLEN (sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1)
       if (strncmp(key, SVN_DAV_PROP_NS_CUSTOM, NSLEN) == 0)
-        apr_hash_set(props, &((const char *)key)[NSLEN], 
-                     APR_HASH_KEY_STRING, 
-                     svn_string_create(val, pool));    
+        {
+          apr_hash_set(props, &((const char *)key)[NSLEN], 
+                       APR_HASH_KEY_STRING, 
+                       svn_string_create(val, pool));
+          continue;
+        }
 #undef NSLEN
 
 #ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
@@ -935,9 +943,12 @@ filter_props (apr_hash_t *props,
          namespace.  REMOVE this block someday! */
 #define NSLEN (sizeof(SVN_PROP_CUSTOM_PREFIX) - 1)
       if (strncmp(key, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
-        apr_hash_set(props, &((const char *)key)[NSLEN], 
-                     APR_HASH_KEY_STRING, 
-                     svn_string_create(val, pool));    
+        {
+          apr_hash_set(props, &((const char *)key)[NSLEN], 
+                       APR_HASH_KEY_STRING, 
+                       svn_string_create(val, pool));
+          continue;
+        }
 #undef NSLEN
 #endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
 
@@ -953,7 +964,8 @@ filter_props (apr_hash_t *props,
                                            NULL);
           apr_hash_set(props, newkey, 
                        APR_HASH_KEY_STRING, 
-                       svn_string_create(val, pool));    
+                       svn_string_create(val, pool));
+          continue;
         }
 #undef NSLEN
 
@@ -968,7 +980,7 @@ filter_props (apr_hash_t *props,
                      "baseline-relative-path") != 0)
             apr_hash_set(props, key,
                          APR_HASH_KEY_STRING, 
-                         svn_string_create(val, pool));    
+                         svn_string_create(val, pool));
         }
 #undef NSLEN
 #endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
@@ -1007,8 +1019,9 @@ filter_props (apr_hash_t *props,
         /* If it's one of the 'entry' props, this func will
            recognize the DAV: name & add it to the hash mapped to a
            new name recognized by libsvn_wc. */
-        SVN_ERR( set_special_wc_prop (key, val, add_prop_to_hash, props, 
-                                      pool) );
+        if (add_entry_props)
+          SVN_ERR( set_special_wc_prop (key, val, add_prop_to_hash, props, 
+                                        pool) );
     }
 
   return SVN_NO_ERROR;
@@ -1063,7 +1076,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
                                               NULL, NULL /* all props */, 
                                               ras->pool) ); 
       *props = apr_hash_make(ras->pool);
-      SVN_ERR (filter_props (*props, rsrc, ras->pool));
+      SVN_ERR (filter_props (*props, rsrc, TRUE, ras->pool));
     }
 
   return SVN_NO_ERROR;
@@ -1218,7 +1231,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
                                               ras->pool) ); 
 
       *props = apr_hash_make(ras->pool);
-      SVN_ERR (filter_props (*props, rsrc, ras->pool));
+      SVN_ERR (filter_props (*props, rsrc, TRUE, ras->pool));
     }
 
   return SVN_NO_ERROR;
@@ -1473,6 +1486,35 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
     (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, ras->pool,
      "ra_dav does not currently support changing revision properties.  ");
 }
+
+
+svn_error_t *svn_ra_dav__rev_proplist (void *session_baton,
+                                       svn_revnum_t rev,
+                                       apr_hash_t **props)
+{
+  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav_resource_t *baseline;
+
+  *props = apr_hash_make (ras->pool);
+
+  /* Main objective: do a PROPFIND (allprops) on a baseline object */  
+  SVN_ERR (svn_ra_dav__get_baseline_props(NULL, &baseline,
+                                          ras->sess, 
+                                          ras->url,
+                                          rev,
+                                          NULL, /* get ALL properties */
+                                          ras->pool));
+
+  /* Build a new property hash, based on the one in the baseline
+     resource.  In particular, convert the xml-property-namespaces
+     into ones that the client understands.  Strip away the DAV:
+     liveprops as well. */
+  SVN_ERR (filter_props (*props, baseline, FALSE, ras->pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* -------------------------------------------------------------------------
 **
