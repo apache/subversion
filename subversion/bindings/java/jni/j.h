@@ -47,6 +47,25 @@ j__get_method(JNIEnv *env, jboolean *hasException,
               jclass class,
               char *methodName, char *methodSignature);
 
+
+
+void j__set_boolean(JNIEnv *env, jboolean *hasException,
+                    char *className, char *methodName,
+                    jobject obj, jboolean value);
+
+void j__set_int(JNIEnv *env, jboolean *hasException,
+                char *className, char *methodName,
+                jobject obj, jint value);
+
+void j__set_long(JNIEnv *env, jboolean *hasException,
+                 char *className, char *methodName,
+                 jobject obj, jlong value);
+
+oid j__set_object(JNIEnv *env, jboolean *hasException,
+                   char *className, char *methodName,
+                   char *methodSig,
+                   jobject obj, jobject value);
+
 #endif
 
 /* 
