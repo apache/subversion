@@ -42,10 +42,20 @@ Ben todo:
 
 Mike Pilato wc todo:
 
+   - There seems to be a problem with timestamps in Windows98.  Doing 
+     a simple 'co' followed immediately with a 'diff' still falls 
+     through to a byte-by-byte comparison.  This is inefficient, and
+     is likely to be an indicator of something going wrong in APR.
+     Rhetorikinda question:  why does a query of the "atime" stat 
+     attribute look at the mtime and ctime attrs instead of the atime
+     attr? 
    - From Bill Tutt:
      This is just more an FYI, as it isn't preventing me from doing
      any work atm, but the paths returned from svn_wc_statuses are
      looking like: "C:\SVN\subversion\subversion\client\tests\t1\/iota"
+     Seemingly fixed by Mike's changes to apr_subr/path.c, but Bill
+     sez he too will verify this at some point in the near future.
+         
 
 Karl wc todo:
 
