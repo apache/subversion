@@ -503,9 +503,9 @@ svn_error_t *svn_io_run_cmd (const char *path,
                              apr_file_t *errfile,
                              apr_pool_t *pool);
 
-/** Invoke @c the configured diff program, or @c SVN_CLIENT_DIFF, with @a
- * user_args (an array of utf8-encoded @a num_user_args arguments), if
- * they are specified, or "-u" if they are not.
+/** Invoke @c the configured diff program, with @a user_args (an array
+ * of utf8-encoded @a num_user_args arguments), if they are specified,
+ * or "-u" if they are not.
  *
  * Diff runs in utf8-encoded @a dir, and its exit status is stored in
  * @a exitcode, if it is not @c NULL.  
@@ -517,8 +517,7 @@ svn_error_t *svn_io_run_cmd (const char *path,
  * @a from is the first file passed to diff, and @a to is the second.  The
  * stdout of diff will be sent to @a outfile, and the stderr to @a errfile.
  *
- * If @a diff_cmd is non-null, it is the diff command to use;
- * otherwise a default built-in diff command is used.
+ * @a diff_cmd must be non-null.
  *
  * Do all allocation in @a pool. 
  */
@@ -536,8 +535,8 @@ svn_error_t *svn_io_run_diff (const char *dir,
                               apr_pool_t *pool);
 
 
-/** Invoke @c the configured diff3 program, or @c SVN_CLIENT_DIFF3, in
- * utf8-encoded @a dir like this:
+/** Invoke @c the configured diff3 program, in utf8-encoded @a dir
+ * like this:
  *
  *          diff3 -Em @a mine @a older @a yours > @a merged
  *
@@ -560,8 +559,7 @@ svn_error_t *svn_io_run_diff (const char *dir,
  * `diff3' was successful, 1 means some conflicts were found, and 2
  * means trouble.") 
  *
- * If @a diff_cmd is non-null, it is the diff command to use;
- * otherwise a default built-in diff command is used.
+ * @a diff3_cmd must be non-null.
  *
  * Do all allocation in @a pool. 
  */

@@ -925,13 +925,9 @@ svn_config_ensure (apr_pool_t *pool)
         "###   program accepts the `--diff-program' option.\n"
         "# [helpers]\n"
         "# editor-cmd = editor (vi, emacs, notepad, etc.)\n"
-        "# diff-cmd = " SVN_CLIENT_DIFF "\n"
-        "# diff3-cmd = " SVN_CLIENT_DIFF3 "\n"
-#ifdef SVN_DIFF3_HAS_DIFF_PROGRAM_ARG
-        "# diff3-has-program-arg = true\n"
-#else
-        "# diff3-has-program-arg = false\n"
-#endif
+        "# diff-cmd = diff_program (diff, gdiff, etc.)\n"
+        "# diff3-cmd = diff3_program (diff3, gdiff3, etc.)\n"
+        "# diff3-has-program-arg = [true | false]\n"
         "\n"
         "### Section for configuring tunnel agents.\n"
         "# [tunnels]\n"

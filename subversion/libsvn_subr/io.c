@@ -39,7 +39,7 @@
 #include "svn_pools.h"
 #include "svn_utf.h"
 #include "svn_config.h"
-#include "svn_private_config.h" /* for SVN_CLIENT_DIFF */
+
 
 
 
@@ -1146,9 +1146,6 @@ svn_io_run_diff (const char *dir,
   const char *diff_utf8;
   apr_pool_t *subpool = svn_pool_create (pool);
 
-  if (diff_cmd == NULL)
-    diff_cmd = SVN_CLIENT_DIFF;
-
   SVN_ERR (svn_path_cstring_to_utf8 (&diff_utf8, diff_cmd, pool));
 
   if (pexitcode == NULL)
@@ -1235,9 +1232,6 @@ svn_io_run_diff3 (const char *dir,
   const char *args[14];
   const char *diff3_utf8;
   int nargs = 13, i = 0;
-
-  if (diff3_cmd == NULL)
-    diff3_cmd = SVN_CLIENT_DIFF3;
 
   SVN_ERR (svn_path_cstring_to_utf8 (&diff3_utf8, diff3_cmd, pool));
 
