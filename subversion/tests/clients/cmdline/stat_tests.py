@@ -125,7 +125,29 @@ def status_update_with_nested_adds(sbox):
   return svntest.actions.run_and_verify_unquiet_status(wc_backup,
                                                        expected_status)
 
+#----------------------------------------------------------------------
 
+# svn status -vN should include all entries in a directory
+def status_shows_all_in_current_dir(sbox):
+  "stat -vN and test if all items in the current directory show up"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  was_cwd = os.getcwd()
+
+  os.chdir(wc_dir)
+
+  stat_output, err_output = svntest.main.run_svn(None, 'stat', '-vN')
+  entries_in_wc = len(os.listdir("."))
+
+  os.chdir(was_cwd)
+
+  if (len(stat_output) != entries_in_wc):
+    return 1
+
+  return 0
 
 
 
@@ -137,6 +159,7 @@ def status_update_with_nested_adds(sbox):
 test_list = [ None,
               stat_unversioned_file_in_current_dir,
               status_update_with_nested_adds,
+              status_shows_all_in_current_dir,
              ]
 
 if __name__ == '__main__':
