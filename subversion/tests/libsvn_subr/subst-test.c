@@ -147,14 +147,17 @@ create_file (const char *fname, const char *eol_str, apr_pool_t *pool)
 }
 
 
-/* Verify that file FNAME contains the eol test data and uses EOL_STR
- * as its eol marker consistently.  If the test data itself appears to
- * be wrong, return SVN_ERR_MALFORMED_FILE, or if the eol marker is
- * wrong return SVN_ERR_CORRUPT_EOL.  Otherwise, return SVN_NO_ERROR.
- * Use pool for any temporary allocation.
+/* Verify that file FNAME contains the test data `lines', with no
+ * keywords expanded or contracted, and uses EOL_STR as its eol marker
+ * consistently.  If the test data itself appears to be wrong, return
+ * SVN_ERR_MALFORMED_FILE, or if the eol marker is wrong return
+ * SVN_ERR_CORRUPT_EOL.  Otherwise, return SVN_NO_ERROR.  Use pool for
+ * any temporary allocation.
  */
 static svn_error_t *
-verify_file (const char *fname, const char *eol_str, apr_pool_t *pool)
+verify_unexpanded_file (const char *fname,
+                        const char *eol_str,
+                        apr_pool_t *pool)
 {
   svn_stringbuf_t *contents;
   int idx = 0;
@@ -231,10 +234,10 @@ crlf_to_crlf (const char **msg,
 
   SVN_ERR (remove_file (src, pool));
   SVN_ERR (create_file (src, "\r\n", pool));
-  SVN_ERR (verify_file (src, "\r\n", pool));
+  SVN_ERR (verify_unexpanded_file (src, "\r\n", pool));
   SVN_ERR (svn_io_copy_and_translate
            (src, dst, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_file (dst, "\r\n", pool));
+  SVN_ERR (verify_unexpanded_file (dst, "\r\n", pool));
 
   return SVN_NO_ERROR;
 }
@@ -255,10 +258,10 @@ lf_to_crlf (const char **msg,
 
   SVN_ERR (remove_file (src, pool));
   SVN_ERR (create_file (src, "\n", pool));
-  SVN_ERR (verify_file (src, "\n", pool));
+  SVN_ERR (verify_unexpanded_file (src, "\n", pool));
   SVN_ERR (svn_io_copy_and_translate
            (src, dst, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_file (dst, "\r\n", pool));
+  SVN_ERR (verify_unexpanded_file (dst, "\r\n", pool));
 
   return SVN_NO_ERROR;
 }
@@ -279,10 +282,10 @@ cr_to_crlf (const char **msg,
 
   SVN_ERR (remove_file (src, pool));
   SVN_ERR (create_file (src, "\r", pool));
-  SVN_ERR (verify_file (src, "\r", pool));
+  SVN_ERR (verify_unexpanded_file (src, "\r", pool));
   SVN_ERR (svn_io_copy_and_translate
            (src, dst, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_file (dst, "\r\n", pool));
+  SVN_ERR (verify_unexpanded_file (dst, "\r\n", pool));
 
   return SVN_NO_ERROR;
 }
@@ -305,7 +308,7 @@ mixed_to_crlf (const char **msg,
   SVN_ERR (create_file (src, NULL, pool));
   SVN_ERR (svn_io_copy_and_translate
            (src, dst, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_file (dst, "\r\n", pool));
+  SVN_ERR (verify_unexpanded_file (dst, "\r\n", pool));
 
   return SVN_NO_ERROR;
 }
@@ -326,10 +329,10 @@ lf_to_lf (const char **msg,
 
   SVN_ERR (remove_file (src, pool));
   SVN_ERR (create_file (src, "\n", pool));
-  SVN_ERR (verify_file (src, "\n", pool));
+  SVN_ERR (verify_unexpanded_file (src, "\n", pool));
   SVN_ERR (svn_io_copy_and_translate
            (src, dst, "\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_file (dst, "\n", pool));
+  SVN_ERR (verify_unexpanded_file (dst, "\n", pool));
 
   return SVN_NO_ERROR;
 }
@@ -350,10 +353,10 @@ crlf_to_lf (const char **msg,
 
   SVN_ERR (remove_file (src, pool));
   SVN_ERR (create_file (src, "\r\n", pool));
-  SVN_ERR (verify_file (src, "\r\n", pool));
+  SVN_ERR (verify_unexpanded_file (src, "\r\n", pool));
   SVN_ERR (svn_io_copy_and_translate
            (src, dst, "\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_file (dst, "\n", pool));
+  SVN_ERR (verify_unexpanded_file (dst, "\n", pool));
 
   return SVN_NO_ERROR;
 }
@@ -374,10 +377,10 @@ cr_to_lf (const char **msg,
 
   SVN_ERR (remove_file (src, pool));
   SVN_ERR (create_file (src, "\r", pool));
-  SVN_ERR (verify_file (src, "\r", pool));
+  SVN_ERR (verify_unexpanded_file (src, "\r", pool));
   SVN_ERR (svn_io_copy_and_translate
            (src, dst, "\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_file (dst, "\n", pool));
+  SVN_ERR (verify_unexpanded_file (dst, "\n", pool));
 
   return SVN_NO_ERROR;
 }
@@ -400,7 +403,7 @@ mixed_to_lf (const char **msg,
   SVN_ERR (create_file (src, NULL, pool));
   SVN_ERR (svn_io_copy_and_translate
            (src, dst, "\n", 0, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR (verify_file (dst, "\n", pool));
+  SVN_ERR (verify_unexpanded_file (dst, "\n", pool));
 
   return SVN_NO_ERROR;
 }
