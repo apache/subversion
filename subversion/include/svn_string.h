@@ -1,6 +1,6 @@
 /*
- * svn_string.h :  counted_length strings for Subversion
- *                 (using apr's memory pools)
+ * svn_string.h :  counted-length strings for Subversion, plus 
+ *                 some C string goodies
  *
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
@@ -22,6 +22,7 @@
 #define SVN_STRING_H
 
 #include <apr.h>
+#include <apr_tables.h>
 #include <apr_pools.h>       /* APR memory pools for everyone. */
 #include <apr_strings.h>
 
@@ -229,6 +230,25 @@ apr_size_t svn_stringbuf_chop_back_to_char (svn_stringbuf_t *str, char ch);
 svn_boolean_t svn_string_compare_stringbuf (const svn_string_t *str1,
                                             const svn_stringbuf_t *str2);
 
+
+
+/*** C strings. ***/
+
+/* Divide INPUT into substrings along SEP_CHAR boundaries, return an
+ * array of copies of the substrings, all allocated in POOL.
+ *
+ * No element of the array contains SEP_CHAR, but some elements may
+ * be empty.  If there are N occurrences of SEP_CHAR in INPUT, then
+ * return N+1 elements; thus, the minimum number ofelements returned
+ * is 1.
+ *
+ * If CHOP_WHITESPACE is true, then remove leading and trailing
+ * whitespace from the returned strings.
+ */
+apr_array_header_t *svn_cstring_split (const char *input,
+                                       char sep_char,
+                                       svn_boolean_t chop_whitespace,
+                                       apr_pool_t *pool);
 
 
 

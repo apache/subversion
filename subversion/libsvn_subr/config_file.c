@@ -90,9 +90,7 @@ parse_value (int *pch, parse_context_t *ctx)
 
   /* Read the first line of the value */
   svn_stringbuf_setempty (ctx->value);
-  for (ch = getc (ctx->fd);   /* ### kff: huh, not gotten first char yet? */
-                              /* ### that's right, last char we saw was
-                                     ':' or '=' in parse_option. --xbc */
+  for (ch = getc (ctx->fd); /* last ch seen was ':' or '=' in parse_option. */
        ch != EOF && ch != '\n';
        ch = getc (ctx->fd))
     {
@@ -128,7 +126,6 @@ parse_value (int *pch, parse_context_t *ctx)
               /* The next line was empty. Ergo, it can't be a
                  continuation line. */
               ++ctx->line;
-              /* ch = getc(ctx->fd); kff fooo */
               end_of_val = TRUE;
               continue;
 
