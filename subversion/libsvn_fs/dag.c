@@ -1398,6 +1398,12 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
   baton->pool = trail->pool;
   baton->fs = file->fs;
   baton->offset = 0;
+
+  /* This function's job is to _return_ a stream on the file's
+     contents, so the stream has to be trail-independent.  Here, we
+     tell the stream that we're not providing it a trail that lives
+     across reads.  This means the stream will do each read in a
+     one-off, temporary trail.  */
   baton->trail = NULL;
 
   /* Go get a fresh node-revision for FILE. */
