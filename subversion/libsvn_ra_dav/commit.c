@@ -88,7 +88,8 @@ typedef struct
 {
   commit_ctx_t *cc;
   resource_t *rsrc;
-  apr_hash_t *prop_changes;
+  apr_table_t *prop_changes; /* name/values pairs of changed (or new) properties. */
+  apr_array_header_t *prop_deletes; /* names of properties to delete. */
 } resource_baton_t;
 
 typedef struct
@@ -393,41 +394,100 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
 }
 
 static void record_prop_change(apr_pool_t *pool,
-                               apr_hash_t **prop_changes,
+                               resource_baton_t *r,
                                const svn_stringbuf_t *name,
                                const svn_stringbuf_t *value)
 {
-  if (*prop_changes == NULL)
-    *prop_changes = apr_hash_make(pool);
-
-  /* ### need to copy name/value into POOL */
-
-  /* ### put the name/value into dir->prop_changes hash */
-  if (value == NULL)
+  if (value)
     {
-      /* ### put name/DELETE_THIS_PROP into the hash */
+      /* changed/new property */
+      if (r->prop_changes == NULL)
+        r->prop_changes = apr_table_make(pool, 5);
+
+      apr_table_set(r->prop_changes, name->data, value->data);
     }
   else
     {
-      /* ### put the name/value into the hash */
+      /* deleted property. */
+      const char **elt;
+
+      if (r->prop_deletes == NULL)
+        r->prop_deletes = apr_array_make(pool, 5, sizeof(char *));
+  
+      elt = apr_array_push(r->prop_deletes);
+      *elt = apr_pstrdup(pool, name->data);
     }
+}
+
+/* Callback iterator for apr_table_do below. */
+static int do_setprop(void *rec, const char *name, const char *value)
+{
+  ne_buffer *body = rec;
+  ne_buffer_concat(body, "<S:", name, ">", value, "</S:", name, ">", NULL);
+  return 1;
 }
 
 static svn_error_t * do_proppatch(svn_ra_session_t *ras,
                                   const resource_t *rsrc,
-                                  apr_hash_t *changes)
+                                  resource_baton_t *rb)
 {
+  ne_request *req;
+  int rv, code;
+  ne_buffer *body; /* ### using an ne_buffer because it can realloc */
+
   /* just punt if there are no changes to make. */
-  if (changes == NULL || apr_hash_count(changes) == 0)
+  if ((rb->prop_changes == NULL || apr_is_empty_table(rb->prop_changes))
+      && (rb->prop_deletes == NULL || rb->prop_deletes->nelts == 0))
     return NULL;
 
-  /* ### the hash contains the FINAL state, so the ordering of the items
-     ### in the PROPPATCH is no big deal.
-     ###
-     ### iterate twice: once for all the SET items, once for the DELETE */
+  /* easier to roll our own PROPPATCH here than use ne_proppatch(), which 
+   * doesn't really do anything clever. */
+  body = ne_buffer_create();
 
-  /* ### we should have res->wr_url */
-  /* ### maybe pass wr_url rather than resource_t* */
+  ne_buffer_zappend(body, "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" EOL
+                    "<D:propertyupdate xmlns:D=\"DAV:\" xmlns:S=\"SVN:custom\">");
+
+  if (rb->prop_changes != NULL)
+    {
+      ne_buffer_zappend(body, "<D:set><D:prop>");
+      apr_table_do(do_setprop, body, rb->prop_changes, NULL);      
+      ne_buffer_zappend(body, "</D:prop></D:set>");
+    }
+  
+  if (rb->prop_deletes != NULL)
+    {
+      int n;
+
+      ne_buffer_zappend(body, "<D:remove><D:prop>");
+      
+      for (n = 0; n < rb->prop_deletes->nelts; n++) 
+        {
+          ne_buffer_concat(body, "<S:", ((const char **)rb->prop_deletes->elts)[n],
+                           "/>", NULL);
+        }
+
+      ne_buffer_zappend(body, "</D:prop></D:remove>");
+
+    }
+
+  ne_buffer_zappend(body, "</D:propertyupdate>");
+
+  req = ne_request_create(ras->sess, "PROPPATCH", rsrc->wr_url);
+
+  ne_set_request_body_buffer(req, body->data, ne_buffer_size(body));
+  ne_add_request_header(req, "Content-Type", "text/xml; charset=UTF-8");
+
+  rv = ne_request_dispatch(req);
+  code = ne_get_status(req)->code;
+  ne_request_destroy(req);
+  ne_buffer_destroy(body);
+
+  if (rv != NE_OK || code != 207) {
+      return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
+                               ras->pool,
+                               "The PROPPATCH request failed (neon: %d) (%s)",
+                               rv, rsrc->wr_url);
+  }
 
   return NULL;
 }
@@ -564,7 +624,7 @@ static svn_error_t * commit_change_dir_prop(void *dir_baton,
   resource_baton_t *dir = dir_baton;
 
   /* record the change. it will be applied at close_dir time. */
-  record_prop_change(dir->cc->ras->pool, &dir->prop_changes, name, value);
+  record_prop_change(dir->cc->ras->pool, dir, name, value);
 
   /* do the CHECKOUT sooner rather than later */
   SVN_ERR( checkout_resource(dir->cc, dir->rsrc) );
@@ -578,7 +638,7 @@ static svn_error_t * commit_close_dir(void *dir_baton)
 
   /* Perform all of the property changes on the directory. Note that we
      checked out the directory when the first prop change was noted. */
-  SVN_ERR( do_proppatch(dir->cc->ras, dir->rsrc, dir->prop_changes) );
+  SVN_ERR( do_proppatch(dir->cc->ras, dir->rsrc, dir) );
 
   return NULL;
 }
@@ -777,7 +837,7 @@ static svn_error_t * commit_change_file_prop(
   resource_baton_t *file = file_baton;
 
   /* record the change. it will be applied at close_file time. */
-  record_prop_change(file->cc->ras->pool, &file->prop_changes, name, value);
+  record_prop_change(file->cc->ras->pool, file, name, value);
 
   /* do the CHECKOUT sooner rather than later */
   SVN_ERR( checkout_resource(file->cc, file->rsrc) );
@@ -791,7 +851,7 @@ static svn_error_t * commit_close_file(void *file_baton)
 
   /* Perform all of the property changes on the file. Note that we
      checked out the file when the first prop change was noted. */
-  SVN_ERR( do_proppatch(file->cc->ras, file->rsrc, file->prop_changes) );
+  SVN_ERR( do_proppatch(file->cc->ras, file->rsrc, file) );
 
   return NULL;
 }
