@@ -146,6 +146,9 @@ def branch_path(ctx, branch_name = None):
   else:
      return ctx.trunk_base + '/'
 
+def get_tag_path(ctx, tag_name):
+  return ctx.tags_base + '/' + tag_name + '/'
+
 def relative_name(cvsroot, fname):
   l = len(cvsroot)
   if fname[:l] == cvsroot:
@@ -153,6 +156,19 @@ def relative_name(cvsroot, fname):
       return fname[l+1:]
     return fname[l:]
   return l
+
+def make_path(fs, root, repos_path, f_pool):
+  ### hmm. need to clarify OS path separators vs FS path separators
+  dirname = os.path.dirname(repos_path)
+  if dirname != '/':
+    # get the components of the path (skipping the leading '/')
+    parts = string.split(dirname[1:], os.sep)
+    for i in range(1, len(parts) + 1):
+      # reassemble the pieces, adding a leading slash
+      parent_dir = '/' + string.join(parts[:i], '/')
+      if fs.check_path(root, parent_dir, f_pool) == svn_node_none:
+        print '    making dir:', parent_dir
+        fs.make_dir(root, parent_dir, f_pool)
 
 def visit_file(arg, dirname, files):
   cd, p, stats = arg
@@ -351,17 +367,7 @@ class Commit:
 
       print '    changing %s : %s' % (r, repos_path)
 
-      ### hmm. need to clarify OS path separators vs FS path separators
-      dirname = os.path.dirname(repos_path)
-      if dirname != '/':
-        # get the components of the path (skipping the leading '/')
-        parts = string.split(dirname[1:], os.sep)
-        for i in range(1, len(parts) + 1):
-          # reassemble the pieces, adding a leading slash
-          parent_dir = '/' + string.join(parts[:i], '/')
-          if fs.check_path(root, parent_dir, f_pool) == svn_node_none:
-            print '    making dir:', parent_dir
-            fs.make_dir(root, parent_dir, f_pool)
+      make_path(fs, root, repos_path, f_pool)
 
       if fs.check_path(root, repos_path, f_pool) == svn_node_none:
         created_file = 1
