@@ -34,13 +34,13 @@ Candidate changes:
     Add documentation of working directory to hook templates.
     Justification: Hook writers need to know, and experimenting is no fun.
     Votes:
-      +1: kfogel
+      +1: kfogel, sussman
 
   * r8660
     Update status documentation to add missing flags and alphabetize.
     Justification: Documentation correctness.
     Votes:
-      +1: bliss
+      +1: bliss, sussman
 
 Status of 1.0.1:
 ================
