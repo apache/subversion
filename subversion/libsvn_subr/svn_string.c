@@ -200,6 +200,10 @@ svn_string_strip_whitespace (svn_string_t *str)
   
   /* Mmm, waste some more RAM */
   str->len = i + 1;
+
+  /* ### In svn_stringbuf_strip_whitespace, we reset the null
+     terminator here.  But svn_string_t can have const data, so I
+     don't think we can do that, unfortunately.  */
 }
 
 
@@ -470,6 +474,7 @@ svn_stringbuf_strip_whitespace (svn_stringbuf_t *str)
   
   /* Mmm, waste some more RAM */
   str->len = i + 1;
+  str->data[str->len] = '\0';
 }
 
 
