@@ -85,3 +85,8 @@ Candidate changes:
       Crashes bad.
     Votes:
       +1: ghudson
+
+  * r10860
+    Trivial message fixes.
+    Votes:
+      +1: lundblad
