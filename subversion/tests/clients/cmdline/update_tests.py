@@ -1146,6 +1146,42 @@ def another_hudson_problem(sbox):
                                         expected_disk,
                                         expected_status)  
 
+#----------------------------------------------------------------------
+
+def new_dir_with_spaces(sbox):
+  "receive new dir with spaces in its name"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a new directory ("spacey dir") directly in repository
+  out, err = svntest.main.run_svn(None, 'mkdir',
+                                  '-m', 'log msg',
+                                  svntest.main.current_repo_url
+                                  + '/A/spacey%20dir')
+  if out != ['\n', 'Committed revision 2.\n']:
+    raise svntest.Failure
+
+  # Update, and make sure ra_dav doesn't choke on the space.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/spacey dir'       : Item(status='A '),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/spacey dir'       : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/spacey dir' : Item(),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)  
+
+
+
 ########################################################################
 # Run the tests
 
@@ -1167,6 +1203,7 @@ test_list = [ None,
               update_receive_illegal_name,
               update_deleted_missing_dir,
               XFail(another_hudson_problem),
+              new_dir_with_spaces,
              ]
 
 if __name__ == '__main__':
