@@ -143,11 +143,11 @@ svn_error_t *svn_io_file_affected_time (apr_time_t *apr_time,
    containing data associated with the stream.  If a caller attempts
    to invoke a handler which has not been set, it will generate a
    runtime assertion failure.  The creator can also set a handler for
-   close requests so it can clean up data associated with the baton;
+   close requests so that it can flush buffered data or whatever;
    if a close handler is not specified, a close request on the stream
    will simply be ignored.  Note that svn_stream_close() does not
-   deallocate the memory associated with the stream; destroy the pool
-   you created the stream in to do that.
+   deallocate the memory used to allocate the stream structure; free
+   the pool you created the stream in to free that memory.
 
    The read and write handlers accept length arguments via pointer.
    On entry to the handler, the pointed-to value should be the amount
