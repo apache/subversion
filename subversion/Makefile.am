@@ -10,8 +10,8 @@ SUBDIRS = tests-common               \
           libsvn_ra_dav              \
           libsvn_client              \
           client                     \
-          svnadmin                   \
           @LIBSVN_FS@                \
+          svnadmin                   \
           @APACHE_MODULES@
 
 ## Include these extra files when building `dist' target
