@@ -19,30 +19,84 @@ II. Client Implementation
 
       1. Lock Tokens
 
+          Stored as 'entryprops'.  That is, just like
+          last-changed-rev, last-author, etc., tokens come into the
+          client with an svn:wc:entry: prefix, are filtered by libsvn_wc,
+          and stored in .svn/entries.   We'll probably call the new
+          entryprop "svn:wc:entry:lock-token".  (In DAV parlance, what
+          we call 'entryprops' are called 'live props'.)
+
+          libsvn_wc also stores the other fields of a lock (owner, comment,
+          creation-date, expiration-date) in the entries file, so that
+          they are available for the info command.  Note that this
+          information is only stored if the current WC has a lock on
+          the file.
+
       2. New client subcommands
           
          a. Creating a lock
+
+             'svn lock' calls new RA->lock() function, which marshalls
+             BASE rev of file to svn_fs_lock().  FS does a
+             complimentary out-of-dateness check before creating the
+             lock.  The lock is marshalled back to client, stored in
+             .svn/entries file.
 
          b. Using a lock
 
             1. Using a lock to Commit
 
+               A new RA layer get_commit_editor2() function will be created.
+               It takes a has of path -> lock token from the working
+               copy.  This will be used by the server to check that
+               the WC locks match the current locks on the paths.  A
+               flag keep_locks will also be added, specifying whether
+               the committables should be unlocked after a successful commit.
+
             2. Releasing a lock
- 
+
+               svn unlock uses the lock token stored in the WC and
+               issues an ra->unlock command to the server.
+
+
          c. Breaking a lock
 
+            svn unlock --force will first ask the server for a lock
+            token and use it in the ra->unlock command to break the
+            lock.
+
          d. Stealing a lock
+
+            svn lock --force uses ra->lock with the force argument set
+            to TRUE to steal a lock.
 
          e. Discovering/examining locks
 
             1. seeing lock tokens in a working copy
 
-            2. seeing locks in a repository.
+               The client uses the lock information stored in the
+               entries file to show lock information with svn info.
+
+            2. seeing locks in a repository
 
             3.  svn info [wcpath | URL]
 
             4. 'svn update' behavior
 
+                A.  At the start of an update, a new version of the
+                'reporter' vtable is used to describe not only mixed
+                revnums to the server, but also existing locktokens.
+                We need to be careful with protocols when marshalling
+                this new information to older or newer servers.
+
+                In ra_svn a new command will be added to the report
+                command set for this purpose.
+
+                B.  If a locktoken is defunct (expired, broken,
+                whatever), then the server sends a 'deletion' of the
+                locktoken entryprop, through normal means: the prop
+                deletion comes into the update_editor, and thus is
+                removed from .svn/entries.
 
 
 III. Server Implementation
@@ -55,6 +109,7 @@ III. Server Implementation
  
             UUID
             owner
+            comment [optional]
             creation-date
             expiration-date [optional]
 

@@ -234,8 +234,8 @@ svn_error: &hellip; The specified activity does not exist.
 
       <sect3 id="svn-ap-b-sect-1.2.8">
         <title>I just built the distribution binary, and when I try to
-          check out Subversion, I get an error about an "Unrecognized
-          URL scheme."</title>
+          check out Subversion, I get an error about an <quote>Unrecognized
+          URL scheme.</quote></title>
         
         <para>Subversion uses a plugin system to allow access to
           repositories.  Currently there are three of these plugins:
@@ -264,9 +264,10 @@ svn_error: &hellip; The specified activity does not exist.
 
 
       <sect3 id="svn-ap-b-sect-1.2.9">
-        <title>Why does the 'svn revert' command require an explicit
-          target? Why is it not recursive by default? This behavior
-          differs from almost all the other subcommands.</title>
+        <title>Why does the <command>svn revert</command> command
+          require an explicit target? Why is it not recursive by
+          default? This behavior differs from almost all the other
+          subcommands.</title>
 
         <para>The short answer: it's for your own good.</para>
 
@@ -306,8 +307,9 @@ svn_error: &hellip; The specified activity does not exist.
 
 
       <sect3 id="svn-ap-b-sect-1.2.11">
-        <title>I'm getting "Function not implemented" errors on RedHat
-          9, and nothing works. How do I fix this?</title>
+        <title>I'm getting <quote>Function not implemented</quote>
+          errors on RedHat 9, and nothing works. How do I fix
+          this?</title>
 
         <para>This is not really a problem with Subversion, but it often
           affects Subversion users.</para>
@@ -371,8 +373,8 @@ rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
 
 
       <sect3 id="svn-ap-b-sect-1.2.13">
-        <title>I'm getting occasional "Access Denied" errors on
-          Windows.  They seem to happen at random.</title>
+        <title>I'm getting occasional <quote>Access Denied</quote>
+          errors on Windows.  They seem to happen at random.</title>
 
         <para>These appear to be due to the various Windows services
           that monitor the filesystem for changes (anti-virus
@@ -406,9 +408,9 @@ rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
 
 
       <sect3 id="svn-ap-b-sect-1.2.15">
-        <title>I can see my repository in a web browser, but 'svn
-          checkout' gives me an error about "301 Moved
-          Permanently".</title> 
+        <title>I can see my repository in a web browser, but
+          <command>svn checkout</command> gives me an error about
+          <literal>301 Moved Permanently</literal>.</title>
 
         <para>It means your httpd.conf is misconfigured.  Usually this
           error happens when you've defined the Subversion virtual

@@ -239,7 +239,7 @@ remove_file (const char *fname, apr_pool_t *pool)
  * If the verification fails, leave the files for post-mortem.  If the
  * failure is due to non-eol data being wrong, return
  * SVN_ERR_MALFORMED_FILE.  If the problem is an incorrect eol marker,
- * return SVN_ERR_CORRUPT_EOL.  If the problem is that a mixed eol
+ * return SVN_ERR_IO_UNKNOWN_EOL.  If the problem is that a mixed eol
  * style was repaired even though no repair flag was passed, return
  * SVN_ERR_TEST_FAILED.
  *
@@ -635,7 +635,7 @@ substitute_and_verify (const char *test_name,
         {
           if (strncmp (contents->data + idx, dst_eol, strlen (dst_eol)) != 0)
             return svn_error_createf
-              (SVN_ERR_IO_CORRUPT_EOL, NULL, 
+              (SVN_ERR_IO_UNKNOWN_EOL, NULL, 
                "'%s' has wrong eol style at line %" APR_SIZE_T_FMT, dst_fname,
                i + 1);
           else

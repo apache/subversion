@@ -61,8 +61,9 @@ extern "C" {
 
 
 /**
- * Get libsvn_client version information.
  * @since New in 1.1.
+ *
+ * Get libsvn_client version information.
  */
 const svn_version_t *svn_client_version (void);
 
@@ -837,7 +838,9 @@ svn_client_blame (const char *path_or_url,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
-/** @since New in 1.2.
+/**
+ * @since New in 1.2.
+ *
  * Produce diff output which describes the delta between
  * @a path1/@a revision1 and @a path2/@a revision2.  Print the output 
  * of the diff to @a outfile, and any errors to @a errfile.  @a path1 

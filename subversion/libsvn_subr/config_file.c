@@ -29,6 +29,7 @@
 #include "svn_utf.h"
 #include "svn_pools.h"
 
+#include "svn_private_config.h"
 
 
 /* File parsing context */
@@ -389,11 +390,11 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
     {
       if (errno != ENOENT)
         return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  "Can't open config file '%s'",
+                                  _("Can't open config file '%s'"),
                                   svn_path_local_style (file, pool));
       else if (must_exist && errno == ENOENT)
         return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  "Can't find config file '%s'",
+                                  _("Can't find config file '%s'"),
                                   svn_path_local_style (file, pool));
       else
         return SVN_NO_ERROR;

@@ -22,7 +22,7 @@
 ;;; Commentary
 
 ;; psvn.el is tested with GNU Emacs 21.3 on windows, debian linux,
-;; freebsd5 with svn 1.05
+;; freebsd5, red hat el3 with svn 1.1.1
 
 ;; psvn.el is an interface for the revision control tool subversion
 ;; (see http://subversion.tigris.org)
@@ -436,7 +436,7 @@ for  example: '(\"revert\" \"file1\"\)"
         (goto-char (point-min))
         (while (search-forward "\\" nil t)
           (replace-match "/")))))
-    
+
 (defun svn-process-sentinel (process event)
   ;;(princ (format "Process: %s had the event `%s'" process event)))
   ;;(save-excursion
@@ -482,10 +482,10 @@ for  example: '(\"revert\" \"file1\"\)"
                   (svn-status-show-process-buffer-internal t)
                   (message "svn blame finished"))
                  ((eq svn-process-cmd 'commit)
+                  (svn-process-sentinel-fixup-path-seperators)
                   (svn-status-remove-temp-file-maybe)
                   (when (member 'commit svn-status-unmark-files-after-list)
                     (svn-status-unset-all-usermarks))
-                  (svn-process-sentinel-fixup-path-seperators)
                   (svn-status-update-with-command-list (svn-status-parse-commit-output))
                   (message "svn commit finished"))
                  ((eq svn-process-cmd 'update)
@@ -1210,7 +1210,7 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
                (setq action 'deleted))
               ((looking-at "Transmitting file data")
                (setq skip t))
-              ((looking-at "Committed revision \([0-9]+\)")
+              ((looking-at "Committed revision \\([0-9]+\\)")
                (setq svn-status-commit-rev-number
                      (string-to-number (match-string-no-properties 1)))
                (setq skip t))
@@ -2281,7 +2281,7 @@ When called with a prefix argument, it is possible to enter a new property."
 (defun svn-status-property-set-property (file-info-list prop-name prop-value)
   "Set a property on a given file list."
   (save-excursion
-    (set-buffer (get-buffer "*svn-property-edit*"))
+    (set-buffer (get-buffer-create "*svn-property-edit*"))
     (delete-region (point-min) (point-max))
     (insert prop-value))
   (setq svn-status-propedit-file-list (svn-status-marked-files))
@@ -2450,7 +2450,8 @@ Commands:
                  "--targets" svn-status-temp-arg-file
                  "-F" (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix))
     (unless async (svn-status-remove-temp-file-maybe)))
-  (set-window-configuration svn-status-pre-propedit-window-configuration))
+  (when svn-status-pre-propedit-window-configuration
+    (set-window-configuration svn-status-pre-propedit-window-configuration)))
 
 (defun svn-prop-edit-svn-diff (arg)
   (interactive "P")

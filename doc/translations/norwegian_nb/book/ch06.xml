@@ -252,7 +252,7 @@ Committed revision 2324.
 
 # password was not cached, so a second commit still prompts us
 
-$ svn rm newfile
+$ svn delete newfile
 $ svn commit -F new_msg.txt
 Authentication realm: &lt;svn://host.example.com:3690&gt; example realm
 Username:  joe
@@ -741,7 +741,7 @@ baz
         <command>svnserve</command> process on the remote machine,
         running as the user <literal>harry</literal>.  The
         <command>svnserve</command> command is being invoked in tunnel
-        mode (<option>-t</option>) and all network protocol is being
+        mode (<option>-t</option>) and its network protocol is being
         <quote>tunneled</quote> over the encrypted connection by
         <command>ssh</command>, the tunnel-agent.
         <command>svnserve</command> is aware that it's running as the user

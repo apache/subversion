@@ -199,6 +199,7 @@ SVN_ERROR_START
               SVN_ERR_IO_CATEGORY_START + 1,
               "Unrecognized line ending style")
 
+  /* @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_IO_CORRUPT_EOL,
               SVN_ERR_IO_CATEGORY_START + 2,
               "Line endings other than expected")
@@ -207,10 +208,12 @@ SVN_ERROR_START
               SVN_ERR_IO_CATEGORY_START + 3,
               "Ran out of unique names")
 
+  /* @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_IO_PIPE_FRAME_ERROR,
               SVN_ERR_IO_CATEGORY_START + 4,
               "Framing error in pipe protocol")
 
+  /* @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_IO_PIPE_READ_ERROR,
               SVN_ERR_IO_CATEGORY_START + 5,
               "Read error in pipe")
@@ -273,14 +276,17 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 0,
               "Obstructed update")
 
+  /* @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_WC_UNWIND_MISMATCH,
               SVN_ERR_WC_CATEGORY_START + 1,
               "Mismatch popping the WC unwind stack")
 
+  /* @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_WC_UNWIND_EMPTY,
               SVN_ERR_WC_CATEGORY_START + 2,
               "Attempt to pop empty WC unwind stack")
 
+  /* @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_WC_UNWIND_NOT_EMPTY,
               SVN_ERR_WC_CATEGORY_START + 3,
               "Attempt to unlock with non-empty unwind stack")
@@ -293,6 +299,7 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 5,
               "Working copy not locked")
 
+  /* @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_WC_INVALID_LOCK,
               SVN_ERR_WC_CATEGORY_START + 6,
               "Invalid lock")

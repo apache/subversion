@@ -93,6 +93,8 @@
   keyword do what I want?  It expands to the file's last-changed
   revision, but I want something that will expand to the file's
   current revision.</a></li>
+<li><a href="#log-in-source">Does Subversion have a keyword which behaves
+  like $Log$ in CVS?</a></li>
 <li><a href="#ignore-commit">I have a file in my project that every
 developer must change, but I don't want those local mods to ever be
 committed.  How can I make 'svn commit' ignore the file?</a></li>
@@ -883,6 +885,29 @@ section in chapter 6</a>, and pay particular attention to the
 "checklist" sidebar at the bottom.  It outlines a number of steps to
 make this scenario safer.</p>
 
+<b>Note for SELinux / Fedora Core 3+ / RedHat Enterprise users:</b>
+
+<p>In addition to regular Unix permissions, under SELinux every file,
+directory, process, etc. has a 'security context'.  When a process
+attempts to access a file, besides checking the Unix permissions the
+system also checks to see if the security context of the process is
+compatible with the security context of the file.</p>
+
+<p>Fedora Core 3, among other systems, comes with SELinux installed by
+default, configured so that Apache runs in a fairly restricted
+security context.  To run Subversion under Apache, you have to set the
+security context of the repository to allow Apache access (or turn off
+the restrictions on Apache, if you think all this is overkill).  The
+<tt>chcon</tt> command is used to set the security context of files
+(similarly to how the <tt>chmod</tt> sets the traditional Unix
+permissions).  For example, one user had to issue this command</p>
+
+<pre>   $ chcon -R -h -t httpd_sys_content_t <i>PATH_TO_REPOSITORY</i></pre>
+
+<p>to set the security context to be able to successfully
+access the repository.</p>
+
+
 <![CDATA[=========================================================]]>
 
 <h3><a name="readonly">Why do read-only operations still need repository
@@ -1315,6 +1340,38 @@ href='http://tortoisesvn.tigris.org/download.html'>TortoiseSVN
 download page</a>; it replaces all <tt>$WCREV$</tt> tags in a given
 file with the current working copy revision.
 </p>
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="log-in-source">Does Subversion have a keyword which
+behaves like $Log$ in CVS?</a></h3>
+
+<p>No.  There is no equivalent for the $Log$ keyword in CVS.  If you
+want to retrieve a log for a specific file, you can run
+'svn log your-file-name' or 'svn log url-to-your-file'.
+From the mailing list some explanations why $Log$ is bad:</p>
+
+<pre>"$Log$ is a total horror the moment you start merging changes
+between branches. You're practically guaranteed to get conflicts there,
+which -- because of the nature of this keyword -- simply cannot be
+resolved automatically."</pre>
+
+<p>And:</p>
+
+<pre>Subversion log messages are mutable, they can be changed by setting
+the svn:log revision property. So the expansion of $Log:$ in any
+given file could be out of date. Update may well need to retrieve the
+appropriate log message for each occurrence of the $Log:$ keyword,
+even if the file that contained it was not otherwise updated.</pre>
+
+<p><i>I don't care about that.  I want to use it anyway.
+Will you implement it?</i></p>
+
+<p>No.  There are no plans to implement it ourselves or accept patches
+which implement this feature.  If you want to distribute your files
+with some kind of changelog included, you might be able to work
+around this limitation in your build system.</p>
+
 
 <![CDATA[=========================================================]]>
 

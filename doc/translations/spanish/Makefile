@@ -61,6 +61,7 @@ aspell_add_words:
 
 aspell_check:
 	@for file in $(BOOK_ASPELL_FILES); do \
+		touch book/$$file.xml.aspell_ignore;\
 		aspell -H --lang=es create master ./book/.aspell.$$file < book/$$file.xml.aspell_ignore;\
 		aspell check book/$$file.xml -H --lang=es --add-extra-dicts ./book/.aspell.$$file;\
 	done

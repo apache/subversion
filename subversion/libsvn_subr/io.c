@@ -514,7 +514,7 @@ svn_io_temp_dir (const char **dir,
     }
 
   return svn_error_create
-           (APR_EGENERAL, NULL, "Can't find a temporary directory");
+           (APR_EGENERAL, NULL, _("Can't find a temporary directory"));
 
 end:
   *dir = svn_path_canonicalize(temp_dir, pool);
@@ -524,7 +524,7 @@ end:
   apr_status_t apr_err = apr_temp_dir_get (dir, pool);
 
   if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't find a temporary directory");
+    return svn_error_wrap_apr (apr_err, _("Can't find a temporary directory"));
 
   *dir = svn_path_canonicalize (*dir, pool);
 
@@ -561,7 +561,7 @@ svn_io_copy_file (const char *src,
   apr_err = apr_file_copy (src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_wrap_apr
-      (apr_err, "Can't copy '%s' to '%s'",
+      (apr_err, _("Can't copy '%s' to '%s'"),
        svn_path_local_style (src, pool),
        svn_path_local_style (dst_tmp, pool));
 
@@ -594,7 +594,7 @@ svn_io_copy_file (const char *src,
           && (apr_err != APR_ENOTIMPL))
         {
           return svn_error_wrap_apr
-            (apr_err, "Can't set permissions on '%s'",
+            (apr_err, _("Can't set permissions on '%s'"),
              svn_path_local_style (dst_tmp, pool));
         }
     }
@@ -616,7 +616,7 @@ svn_io_append_file (const char *src, const char *dst, apr_pool_t *pool)
   apr_err = apr_file_append (src_apr, dst_apr, APR_OS_DEFAULT, pool);
 
   if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't append '%s' to '%s'",
+    return svn_error_wrap_apr (apr_err, _("Can't append '%s' to '%s'"),
                                svn_path_local_style (src, pool),
                                svn_path_local_style (dst, pool));
   
@@ -650,19 +650,19 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
   SVN_ERR (svn_io_check_path (src, &kind, subpool));
   if (kind != svn_node_dir)
     return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                              "Source '%s' is not a directory",
+                              _("Source '%s' is not a directory"),
                               svn_path_local_style (src, pool));
 
   SVN_ERR (svn_io_check_path (dst_parent, &kind, subpool));
   if (kind != svn_node_dir)
     return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                              "Destination '%s' is not a directory",
+                              _("Destination '%s' is not a directory"),
                               svn_path_local_style (dst_parent, pool));
 
   SVN_ERR (svn_io_check_path (dst_path, &kind, subpool));
   if (kind != svn_node_none)
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
-                              "Destination '%s' already exists",
+                              _("Destination '%s' already exists"),
                               svn_path_local_style (dst_path, pool));
   
   /* Create the new directory. */
@@ -735,12 +735,12 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
     }
 
   if (! (APR_STATUS_IS_ENOENT (status)))
-    return svn_error_wrap_apr (status, "Can't read directory '%s'",
+    return svn_error_wrap_apr (status, _("Can't read directory '%s'"),
                                svn_path_local_style (src, pool));
 
   status = apr_dir_close (this_dir);
   if (status)
-    return svn_error_wrap_apr (status, "Error closing directory '%s'",
+    return svn_error_wrap_apr (status, _("Error closing directory '%s'"),
                                svn_path_local_style (src, pool));
 
   /* Free any memory used by recursion */
@@ -766,7 +766,7 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
   apr_err = apr_dir_make_recursive (path_apr, APR_OS_DEFAULT, pool);
 
   if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't make directory '%s'", 
+    return svn_error_wrap_apr (apr_err, _("Can't make directory '%s'"), 
                                svn_path_local_style (path, pool));
 
   return SVN_NO_ERROR;
@@ -834,7 +834,7 @@ svn_io_set_file_affected_time (apr_time_t apr_time,
   status = apr_file_mtime_set (native_path, apr_time, pool);
   if (status)
     return svn_error_wrap_apr
-      (status, "Can't set access time of '%s'",
+      (status, _("Can't set access time of '%s'"),
        svn_path_local_style (path, pool));
 
   return SVN_NO_ERROR;
@@ -950,7 +950,7 @@ svn_io_set_file_read_only (const char *path,
   if (status && status != APR_ENOTIMPL)
     if (!ignore_enoent || !APR_STATUS_IS_ENOENT(status))
       return svn_error_wrap_apr (status,
-                                 "Can't set file '%s' read-only",
+                                 _("Can't set file '%s' read-only"),
                                  svn_path_local_style (path, pool));
 
   return SVN_NO_ERROR;
@@ -975,7 +975,7 @@ svn_io_set_file_read_write (const char *path,
   if (status && status != APR_ENOTIMPL)
     if (!ignore_enoent || !APR_STATUS_IS_ENOENT(status))
       return svn_error_wrap_apr (status,
-                                 "Can't set file '%s' read-write",
+                                 _("Can't set file '%s' read-write"),
                                  svn_path_local_style (path, pool));
 
   return SVN_NO_ERROR;
@@ -1030,8 +1030,8 @@ svn_io_set_file_executable (const char *path,
             return SVN_NO_ERROR;
           else if (status != APR_ENOTIMPL)
             return svn_error_wrap_apr (status,
-                                       "Can't change executability of "
-                                       "file '%s'",
+                                       _("Can't change executability of "
+                                         "file '%s'"),
                                        svn_path_local_style (path, pool));
         } 
       else
@@ -1074,7 +1074,7 @@ svn_io_set_file_executable (const char *path,
                     return SVN_NO_ERROR;
                   else if (status != APR_ENOTIMPL)
                     return svn_error_wrap_apr
-                      (status, "Can't change executability of file '%s'",
+                      (status, _("Can't change executability of file '%s'"),
                        svn_path_local_style (path, pool));
                 }
               else
@@ -1098,7 +1098,7 @@ svn_io_set_file_executable (const char *path,
   if (status && status != APR_ENOTIMPL)
     if (!ignore_enoent || !APR_STATUS_IS_ENOENT(status))
       return svn_error_wrap_apr (status,
-                                 "Can't change executability of file '%s'",
+                                 _("Can't change executability of file '%s'"),
                                  svn_path_local_style (path, pool));
   
   return SVN_NO_ERROR;
@@ -1125,7 +1125,7 @@ svn_io_is_file_executable(svn_boolean_t *executable,
   apr_err = apr_uid_current (&uid, &gid, pool);
 
   if (apr_err)
-    return svn_error_wrap_apr(apr_err, "Error getting UID of process");
+    return svn_error_wrap_apr(apr_err, _("Error getting UID of process"));
     
   /* Check executable bit for current user. */
   if (apr_uid_compare(uid, file_info.user) == APR_SUCCESS)

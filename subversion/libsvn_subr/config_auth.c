@@ -27,6 +27,7 @@
 
 #include "config_impl.h"
 
+#include "svn_private_config.h"
 
 /* Helper for svn_config_{read|write}_auth_data.  Return a path to a
    file within ~/.subversion/auth/ that holds CRED_KIND credentials
@@ -90,12 +91,12 @@ svn_config_read_auth_data (apr_hash_t **hash,
       SVN_ERR_W (svn_io_file_open (&authfile, auth_path,
                                    APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
                                    pool),
-                 "Unable to open auth file for reading");
+                 _("Unable to open auth file for reading"));
       
       *hash = apr_hash_make (pool);
 
       SVN_ERR_W (svn_hash_read (*hash, authfile, pool),
-                 apr_psprintf (pool, "Error parsing '%s'",
+                 apr_psprintf (pool, _("Error parsing '%s'"),
                                svn_path_local_style (auth_path, pool)));
       
       SVN_ERR (svn_io_file_close (authfile, pool));
@@ -119,7 +120,7 @@ svn_config_write_auth_data (apr_hash_t *hash,
                            pool));
   if (! auth_path)
     return svn_error_create (SVN_ERR_NO_AUTH_FILE_PATH, NULL,
-                             "Unable to locate auth file");
+                             _("Unable to locate auth file"));
 
   /* Add the realmstring to the hash, so programs (or users) can
      verify exactly which set of credentials this file holds.  */
@@ -130,10 +131,10 @@ svn_config_write_auth_data (apr_hash_t *hash,
                                (APR_WRITE | APR_CREATE | APR_TRUNCATE
                                 | APR_BUFFERED),
                                APR_OS_DEFAULT, pool),
-             "Unable to open auth file for writing");
+             _("Unable to open auth file for writing"));
   
   SVN_ERR_W (svn_hash_write (hash, authfile, pool),
-             apr_psprintf (pool, "Error writing hash to '%s'",
+             apr_psprintf (pool, _("Error writing hash to '%s'"),
                            svn_path_local_style (auth_path, pool)));
 
   SVN_ERR (svn_io_file_close (authfile, pool));

@@ -51,8 +51,9 @@ extern "C" {
 
 
 /**
- * Get libsvn_wc version information.
  * @since New in 1.1.
+ *
+ * Get libsvn_wc version information.
  */
 const svn_version_t *svn_wc_version (void);
 
@@ -560,7 +561,9 @@ typedef void (*svn_wc_notify_func_t) (void *baton,
 
 
 
-/** @since New in 1.2.
+/**
+ * @since New in 1.2.
+ *
  * A callback vtable invoked by our diff-editors, as they receive
  * diffs from the server.  'svn diff' and 'svn merge' both implement
  * their own versions of this table.
@@ -733,7 +736,8 @@ typedef struct svn_wc_diff_callbacks2_t
 
 } svn_wc_diff_callbacks2_t;
 
-/** @deprecated Provided for backward compatibility with the 1.1 API.
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  *
  * Similar to @c svn_wc_callbakcs2_t, but with file additions/content
  * changes and property changes split into different functions.
@@ -1149,19 +1153,17 @@ svn_error_t *svn_wc_mark_missing_deleted (const char *path,
 
 /** Ensure that an administrative area exists for @a path, so that @a
  * path is a working copy subdir based on @a url at @a revision, and
- * with repository UUID @a uuid.
+ * with repository UUID @a uuid.  @a uuid may be @c NULL.
  *
- * If the administrative area does not exist then it will be created and
- * initialized to an unlocked state.
+ * If the administrative area does not exist, then create it and
+ * initialize it to an unlocked state.
  *
- * If the administrative area already exists then the given @a url
- * must match the URL in the administrative area and the given
- * @a revision must match the BASE of the working copy dir unless
- * the admin directory is scheduled for deletion or the
- * SVN_ERR_WC_OBSTRUCTED_UPDATE error will be returned.
+ * If the administrative area already exists, and does not say this
+ * working directory is scheduled for deletion, then @a url must match
+ * the URL in the administrative area and @a revision must match the
+ * BASE of the working copy dir, otherwise return the error
+ * SVN_ERR_WC_OBSTRUCTED_UPDATE.
  *
- * @a uuid may be @c NULL.
-
  * Do not ensure existence of @a path itself; if @a path does not
  * exist, return error.
  */
@@ -1996,7 +1998,8 @@ svn_error_t *svn_wc_get_diff_editor3 (svn_wc_adm_access_t *anchor,
                                       apr_pool_t *pool);
 
 
-/** @deprecated Provided for backward compatibility with the 1.1 API.
+/**
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  *
  * Similar to @c svn_wc_get_diff_editor3(), but with an
  * @c svn_wc_diff_callbacks_t instead of @c svn_wc_diff_callbacks2_t. */

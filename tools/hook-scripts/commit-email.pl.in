@@ -321,7 +321,7 @@ if (!$rootchanged and @dirschanged > 1)
               }
             else
               {
-                $dir =~ s#^$commondir/##;
+                $dir =~ s#^\Q$commondir/\E##;
               }
             push(@new_dirschanged, $dir);
           }

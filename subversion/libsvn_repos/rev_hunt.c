@@ -520,6 +520,7 @@ svn_repos_get_file_revs (svn_repos_t *repos,
   svn_fs_root_t *root, *last_root;
   const char *last_path;
   int i;
+  svn_node_kind_t kind;
 
   /* We switch betwwen two pools while looping, since we need information from
      the last iteration to be available. */
@@ -530,6 +531,12 @@ svn_repos_get_file_revs (svn_repos_t *repos,
   /* ### Can we use last_pool for this? How long does the history
      object need the root? */
   SVN_ERR (svn_fs_revision_root (&root, repos->fs, end, pool));
+
+  /* The path had better be a file in this revision. This avoids calling
+     the callback before reporting an uglier error below. */
+  SVN_ERR (svn_fs_check_path (&kind, root, path, pool));
+  if (kind != svn_node_file)
+    return svn_error_create (SVN_ERR_FS_NOT_FILE, NULL, NULL);
 
   /* Open a history object. */
   SVN_ERR (svn_fs_node_history (&history, root, path, last_pool));

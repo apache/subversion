@@ -18,7 +18,7 @@ Where To Report A Bug:
 ======================
 
    * If the bug is in Subversion itself, send mail to
-     dev@subversion.tigris.org.  Once it's confirmed as a bug,
+     users@subversion.tigris.org.  Once it's confirmed as a bug,
      someone, possibly you, can enter it into the issue tracker at
      http://subversion.tigris.org/servlets/ProjectIssues
 

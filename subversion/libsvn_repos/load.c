@@ -24,6 +24,7 @@
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_props.h"
+#include "svn_private_config.h"
 
 #include <apr_lib.h>
 
@@ -151,8 +152,8 @@ read_header_block (svn_stream_t *stream,
         {
           if (header_str->data[i] == '\0')
             return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                                     "Found malformed header block "
-                                     "in dumpfile stream");
+                                     _("Found malformed header block "
+                                       "in dumpfile stream"));
           i++;
         }
       /* Create a 'name' string and point to it. */
@@ -163,8 +164,8 @@ read_header_block (svn_stream_t *stream,
       i += 2;
       if (i > header_str->len)
         return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                                 "Found malformed header block "
-                                 "in dumpfile stream");
+                                 _("Found malformed header block "
+                                   "in dumpfile stream"));
 
       /* Point to the 'value' string. */
       value = header_str->data + i;
@@ -181,14 +182,14 @@ static svn_error_t *
 stream_ran_dry (void)
 {
   return svn_error_create (SVN_ERR_INCOMPLETE_DATA, NULL,
-                           "Premature end of content data in dumpstream");
+                           _("Premature end of content data in dumpstream"));
 }
 
 static svn_error_t *
 stream_malformed (void)
 {
   return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                           "Dumpstream data appears to be malformed");
+                           _("Dumpstream data appears to be malformed"));
 }
 
 /* Read CONTENT_LENGTH bytes from STREAM, parsing the bytes as an
@@ -223,7 +224,7 @@ parse_property_block (svn_stream_t *stream,
              but better to give a non-generic property block error. */ 
           return svn_error_create
             (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-             "Incomplete or unterminated property block");
+             _("Incomplete or unterminated property block"));
         }
 
       *actual_length += (strbuf->len + 1); /* +1 because we read a \n too. */
@@ -416,7 +417,7 @@ parse_text_block (svn_stream_t *stream,
             {
               /* Uh oh, didn't write as many bytes as we read. */
               return svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                                       "Unexpected EOF writing contents");
+                                       _("Unexpected EOF writing contents"));
             }
         }
     }
@@ -445,13 +446,13 @@ parse_format_version (const char *versionstring, int *version)
                   SVN_REPOS_DUMPFILE_MAGIC_HEADER,
                   magic_len))
     return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                             "Malformed dumpfile header");
+                             _("Malformed dumpfile header"));
 
   value = atoi (p+1);
 
   if (value > SVN_REPOS_DUMPFILE_FORMAT_VERSION)
     return svn_error_createf (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                              "Unsupported dumpfile version: %d",
+                              _("Unsupported dumpfile version: %d"),
                               value);
 
   *version = value;
@@ -493,7 +494,7 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
   if (version == SVN_REPOS_DUMPFILE_FORMAT_VERSION
       && (!parse_fns->delete_node_property || !parse_fns->apply_textdelta))
     return svn_error_createf (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                              "Unsupported dumpfile version: %d", version);
+                              _("Unsupported dumpfile version: %d"), version);
 
   /* A dumpfile "record" is defined to be a header-block of
      rfc822-style headers, possibly followed by a content-block.
@@ -591,7 +592,7 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
         {
           /* What the heck is this record?!? */
           return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                                   "Unrecognized record type in stream");
+                                   _("Unrecognized record type in stream"));
         }
 
       /* Need 3 values below to determine v1 dump type
@@ -917,8 +918,8 @@ new_node_record (void **node_baton,
   
   if (rb->rev == 0)
     return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                             "Malformed dumpstream: "
-                             "Revision 0 must not contain node records");
+                             _("Malformed dumpstream: "
+                               "Revision 0 must not contain node records"));
 
   nb = make_node_baton (headers, rb, pool);
 
@@ -961,7 +962,7 @@ new_node_record (void **node_baton,
       }
     default:
       return svn_error_createf (SVN_ERR_STREAM_UNRECOGNIZED_DATA, NULL,
-                                "Unrecognized node-action on node '%s'",
+                                _("Unrecognized node-action on node '%s'"),
                                 nb->path);
     }
 

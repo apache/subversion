@@ -62,14 +62,14 @@ run_hook_cmd (const char *name,
   apr_err = apr_file_pipe_create(&read_errhandle, &write_errhandle, pool);
   if (apr_err)
     return svn_error_wrap_apr
-      (apr_err, "Can't create pipe for hook '%s'", cmd);
+      (apr_err, _("Can't create pipe for hook '%s'"), cmd);
 
   /* Redirect stdout to the null device */
   apr_err = apr_file_open (&null_handle, SVN_NULL_DEVICE_NAME, APR_WRITE,
                            APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_wrap_apr
-      (apr_err, "Can't create null stdout for hook '%s'", cmd);
+      (apr_err, _("Can't create null stdout for hook '%s'"), cmd);
 
   err = svn_io_run_cmd (".", cmd, args, &exitcode, &exitwhy, FALSE,
                         stdin_handle, null_handle, write_errhandle, pool);
@@ -81,13 +81,13 @@ run_hook_cmd (const char *name,
   apr_err = apr_file_close (write_errhandle);
   if (!err && apr_err)
     return svn_error_wrap_apr
-      (apr_err, "Error closing write end of stderr pipe");
+      (apr_err, _("Error closing write end of stderr pipe"));
 
   /* Function failed. */
   if (err)
     {
       err = svn_error_createf
-        (SVN_ERR_REPOS_HOOK_FAILURE, err, "Failed to run '%s' hook", cmd);
+        (SVN_ERR_REPOS_HOOK_FAILURE, err, _("Failed to run '%s' hook"), cmd);
     }
 
   if (!err && check_exitcode)
@@ -102,7 +102,7 @@ run_hook_cmd (const char *name,
 
           err = svn_error_createf
               (SVN_ERR_REPOS_HOOK_FAILURE, err,
-               "'%s' hook failed with error output:\n%s",
+               _("'%s' hook failed with error output:\n%s"),
                name, error->data);
         }
     }
@@ -113,11 +113,11 @@ run_hook_cmd (const char *name,
   apr_err = apr_file_close (read_errhandle);
   if (!err && apr_err)
     return svn_error_wrap_apr
-      (apr_err, "Error closing read end of stderr pipe");
+      (apr_err, _("Error closing read end of stderr pipe"));
 
   apr_err = apr_file_close (null_handle);
   if (!err && apr_err)
-    return svn_error_wrap_apr (apr_err, "Error closing null file");
+    return svn_error_wrap_apr (apr_err, _("Error closing null file"));
 
   return err;
 }
@@ -199,7 +199,7 @@ hook_symlink_error (const char *hook)
 {
   return svn_error_createf
     (SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-     "Failed to run '%s' hook; broken symlink", hook);
+     _("Failed to run '%s' hook; broken symlink"), hook);
 }
 
 svn_error_t *
@@ -292,6 +292,7 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
                                      const char *author,
                                      const char *name,
                                      const svn_string_t *new_value,
+                                     char action,
                                      apr_pool_t *pool)
 {
   const char *hook = svn_repos_pre_revprop_change_hook (repos, pool);
@@ -303,25 +304,32 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
     }
   else if (hook)
     {
-      const char *args[6];
+      const char *args[7];
       apr_file_t *stdin_handle = NULL;
+      char action_string[2];
 
       /* Pass the new value as stdin to hook */
       if (new_value)
         SVN_ERR (create_temp_file (&stdin_handle, new_value, pool));
+      else
+        SVN_ERR (svn_io_file_open (&stdin_handle, SVN_NULL_DEVICE_NAME,
+                                   APR_READ, APR_OS_DEFAULT, pool));
+
+      action_string[0] = action;
+      action_string[1] = '\0';
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
       args[2] = apr_psprintf (pool, "%ld", rev);
       args[3] = author ? author : "";
       args[4] = name;
-      args[5] = NULL;
+      args[5] = action_string;
+      args[6] = NULL;
 
       SVN_ERR (run_hook_cmd ("pre-revprop-change", hook, args, TRUE,
                              stdin_handle, pool));
 
-      if (stdin_handle)
-        SVN_ERR (svn_io_file_close (stdin_handle, pool));
+      SVN_ERR (svn_io_file_close (stdin_handle, pool));
     }
   else
     {
@@ -332,8 +340,8 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
       return 
         svn_error_create 
         (SVN_ERR_REPOS_DISABLED_FEATURE, NULL,
-         "Repository has not been enabled to accept revision propchanges;\n"
-         "ask the administrator to create a pre-revprop-change hook");
+         _("Repository has not been enabled to accept revision propchanges;\n"
+           "ask the administrator to create a pre-revprop-change hook"));
     }
 
   return SVN_NO_ERROR;
@@ -346,6 +354,7 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
                                       const char *author,
                                       const char *name,
                                       svn_string_t *old_value,
+                                      char action,
                                       apr_pool_t *pool)
 {
   const char *hook = svn_repos_post_revprop_change_hook (repos, pool);
@@ -357,25 +366,32 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
     }
   else if (hook)
     {
-      const char *args[6];
+      const char *args[7];
       apr_file_t *stdin_handle = NULL;
+      char action_string[2];
 
-      /* Pass the new value as stdin to hook */
+      /* Pass the old value as stdin to hook */
       if (old_value)
         SVN_ERR (create_temp_file (&stdin_handle, old_value, pool));
+      else
+        SVN_ERR (svn_io_file_open (&stdin_handle, SVN_NULL_DEVICE_NAME,
+                                   APR_READ, APR_OS_DEFAULT, pool));
+
+      action_string[0] = action;
+      action_string[1] = '\0';
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
       args[2] = apr_psprintf (pool, "%ld", rev);
       args[3] = author ? author : "";
       args[4] = name;
-      args[5] = NULL;
+      args[5] = action_string;
+      args[6] = NULL;
 
       SVN_ERR (run_hook_cmd ("post-revprop-change", hook, args, FALSE,
                              stdin_handle, pool));
       
-      if (stdin_handle)
-        SVN_ERR (svn_io_file_close (stdin_handle, pool));
+      SVN_ERR (svn_io_file_close (stdin_handle, pool));
     }
 
   return SVN_NO_ERROR;

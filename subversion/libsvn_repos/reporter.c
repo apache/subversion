@@ -23,6 +23,7 @@
 #include "svn_md5.h"
 #include "svn_props.h"
 #include "repos.h"
+#include "svn_private_config.h"
 
 #define NUM_CACHED_SOURCE_ROOTS 4
 
@@ -620,8 +621,8 @@ update_entry (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   /* Don't let the report carry us somewhere nonexistent. */
   if (s_path && !s_entry)
     return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
-                              "Working copy path '%s' does not exist in "
-                              "repository", e_path);
+                              _("Working copy path '%s' does not exist in "
+                                "repository"), e_path);
 
   if (!recurse && ((s_entry && s_entry->kind == svn_node_dir)
                    || (t_entry && t_entry->kind == svn_node_dir)))
@@ -821,8 +822,9 @@ drive (report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
   t_anchor = *b->s_operand ? svn_path_dirname (b->t_path, pool) : b->t_path;
   SVN_ERR (check_auth (b, &allowed, t_anchor, pool));
   if (!allowed)
-    return svn_error_create (SVN_ERR_AUTHZ_ROOT_UNREADABLE, NULL,
-                             "Not authorized to open root of edit operation.");
+    return svn_error_create
+      (SVN_ERR_AUTHZ_ROOT_UNREADABLE, NULL,
+       _("Not authorized to open root of edit operation"));
 
   SVN_ERR (b->editor->set_target_revision (b->edit_baton, b->t_rev, pool));
 
@@ -843,7 +845,7 @@ drive (report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
   if (!*b->s_operand && (!s_entry || s_entry->kind != svn_node_dir
                          || !t_entry || t_entry->kind != svn_node_dir))
     return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, NULL,
-                             "Cannot replace a directory from within");
+                             _("Cannot replace a directory from within"));
 
   SVN_ERR (b->editor->open_root (b->edit_baton, s_rev, pool, &root_baton));
 
@@ -886,7 +888,7 @@ finish_report (report_baton_t *b, apr_pool_t *pool)
   if (!info || strcmp (info->path, b->s_operand) != 0
       || info->link_path || !SVN_IS_VALID_REVNUM(info->rev))
     return svn_error_create (SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
-                             "Invalid report for top level of working copy");
+                             _("Invalid report for top level of working copy"));
   s_rev = info->rev;
 
   /* Initialize the lookahead pathinfo. */
@@ -901,7 +903,7 @@ finish_report (report_baton_t *b, apr_pool_t *pool)
          The next pathinfo actually describes the target. */
       if (!*b->s_operand)
         return svn_error_create (SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
-                                 "Two top-level reports with no target");
+                                 _("Two top-level reports with no target"));
       info = b->lookahead;
       SVN_ERR (read_path_info (&b->lookahead, b->tempfile, subpool));
     }

@@ -49,7 +49,9 @@ extern "C" {
  * @{
  */
 
-/** @since New in 1.1.
+/**
+ * @since New in 1.1.
+ *
  * The conventional terminator for hash dumps. */
 #define SVN_HASH_TERMINATOR "END"
 
@@ -108,7 +110,9 @@ svn_error_t *svn_hash_write_incremental (apr_hash_t *hash,
                                          const char *terminator,
                                          apr_pool_t *pool);
 
-/** @deprecated Provided for backward compatibility with the 1.0 API.
+/**
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ *
  * This function behaves like svn_hash_read2, but it only works
  * on an apr_file_t input, empty files are accepted, and the hash is
  * expected to be terminated with a line containing "END" or
@@ -118,7 +122,9 @@ svn_error_t *svn_hash_read (apr_hash_t *hash,
                             apr_file_t *srcfile,
                             apr_pool_t *pool);
 
-/** @deprecated Provided for backward compatibility with the 1.0 API.
+/**
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ *
  * This function behaves like svn_hash_write2, but it only works
  * on an apr_file_t output, and the terminator is always "END". */
 svn_error_t *svn_hash_write (apr_hash_t *hash, 

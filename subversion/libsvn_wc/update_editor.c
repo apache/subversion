@@ -297,8 +297,8 @@ make_dir_baton (const char *path,
           else
             d->new_URL = svn_path_dirname (eb->switch_url, pool);
         }
-      /* If this directory is *not* the root (has a parent), but it is
-         the target (there is a target, and this directory has no
+      /* Else this directory is *not* the root (has a parent).  If it
+         is the target (there is a target, and this directory has no
          grandparent), then it gets the SWITCH_URL for its own.
          Otherwise, it gets a child of its parent's URL. */
       else

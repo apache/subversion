@@ -1227,7 +1227,7 @@ calc/Makefile:6
           <listitem>
             <para>The file is unchanged in the working directory, and
               no changes to that file have been committed to the
-              repository since its working revision.  A <command>svn
+              repository since its working revision.  An <command>svn
               commit</command> of the file will do nothing, and an
               <command>svn update</command> of the file will do
               nothing.</para>

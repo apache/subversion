@@ -1280,30 +1280,32 @@ Removed real.c because code now in double.c.
         que sabe lo que quiere recuperar, tiene dos posibles
         opciones.</para>
       
-      <para>One option is to use <command>svn merge</command> to apply
-        revision 808 <quote>in reverse</quote>.  (We've already
-        discussed how to undo changes, see <xref
-        linkend="svn-ch-4-sect-4.2"/>.)  This would have the effect of
-        re-adding <filename>real.c</filename> as a local modification.
-        The file would be scheduled for addition, and after a commit,
-        the file would again exist in <literal>HEAD</literal>.</para>
+      <para>Una de las opciones es usar el comando <command>svn
+        merge</command> para aplicar la revisión 808 <quote>al
+        revés</quote>.  (Ya hemos discutido cómo deshacer cambios,
+        lea <xref linkend="svn-ch-4-sect-4.2"/>.) Esto tendría
+        el efecto de reañadir <filename>real.c</filename> como
+        modificación local.  El fichero se programaría para ser
+        añadido, y tras enviar los cambios, el fichero existiría
+        de nuevo en <literal>HEAD</literal>.</para>
 
-      <para>In this particular example, however, this is probably not
-        the best strategy.  Reverse-applying revision 808 would not
-        only schedule <filename>real.c</filename> for addition, but
-        the log message indicates that it would also undo certain
-        changes to <filename>integer.c</filename>, which you don't
-        want.  Certainly, you could reverse-merge revision 808 and
-        then <command>svn revert</command> the local modifications to
-        <filename>integer.c</filename>, but this technique doesn't
-        scale well.  What if there were 90 files changed in revision
-        808?</para>
+      <para>No obstante, en este ejemplo particular, ésta
+        probablemente no es la mejor estrategia. Aplicar al revés
+        la revisión 808 no solamente programaría la adición
+        de <filename>real.c</filename>, ya que el mensaje de
+        cambios indica que también se deshacerían ciertos cambios
+        a <filename>integer.c</filename>, cosa que no desea.
+        Ciertamente, podría fusionar al revés la revisión 808
+        y entonces ejecutar <command>svn revert</command> sobre
+        la modificación local de <filename>integer.c</filename>,
+        pero esta técnica no es muy escalable. ¿Qué pasa si hay 90
+        ficheros modificados en la revisión 808?</para>
 
-      <para>A second, more targeted strategy is not to use
-        <command>svn merge</command> at all, but rather the
-        <command>svn copy</command> command.  Simply copy the exact
-        revision and path <quote>coordinate pair</quote> from the
-        repository to your working copy:</para>
+      <para>Otra estrategia más precisa es usar <command>svn
+        copy</command> en lugar de <command>svn
+        merge</command>. Simplemente copie la <quote>pareja
+        de coordenadas</quote> exactas de revisión y ruta del
+        repositorio a su copia de trabajo local:</para>
 
       <screen>
 $ svn copy --revision 807 \
@@ -1318,19 +1320,21 @@ Transmitting file data .
 Committed revision 1390.
 </screen>
 
-      <para>The plus sign in the status output indicates that the item
-        isn't merely scheduled for addition, but scheduled for
-        addition <quote>with history.</quote> Subversion remembers
-        where it was copied from.  In the future, running <command>svn
-        log</command> on this file will traverse back through the
-        file's resurrection and through all the history it had prior
-        to revision 807.  In other words, this new
-        <filename>real.c</filename> isn't really new; it's a direct
-        descendant of the original, deleted file.</para>
+      <para>El símbolo de suma en la salida del comando indica que
+        el elemento no sólo se ha programado para ser añadido, sino
+        para ser añadido <quote>con historia.</quote> Subversion
+        recuerda de dónde fue copiado. En el futuro, ejecutar
+        <command>svn log</command> sobre este fichero recorrerá
+        su historia hasta la resurrección y continuará también con
+        la que tenía antes de la revisión 807. En otras palabras,
+        este nuevo <filename>real.c</filename> no es realmente
+        nuevo; es un descendiente directo del fichero original que
+        fue borrado.</para>
 
-      <para>Although our example shows us resurrecting a file, note
-        that these same techniques work just as well for resurrecting
-        deleted directories.</para>
+      <para>A pesar de que nuestro ejemplo muestra cómo resucitar
+        un fichero, tenga en cuenta que esta misma técnica
+        proporciona los mismos resultados al resucitar directorios
+        borrados.</para>
 
     </sect2>
 
@@ -1340,17 +1344,17 @@ Committed revision 1390.
   <!-- ======================== SECTION 5 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-5">
-    <title>Switching a Working Copy</title>
+    <title>Cambiando la copia local de trabajo</title>
 
-    <para> The <command>svn switch</command> command transforms an
-      existing working copy into a different branch.  While this
-      command isn't strictly necessary for working with branches, it
-      provides a nice shortcut to users.  In our earlier example,
-      after creating your private branch, you checked out a fresh
-      working copy of the new repository directory.  Instead, you can
-      simply ask Subversion to change your working copy of
-      <filename>/calc/trunk</filename> to mirror the new branch
-      location:</para>
+    <para>El comando <command>svn switch</command> transforma una
+      copia local de trabajo existente en una rama diferente. Aunque
+      este comando no es estrictamente necesario para trabajar con
+      ramas, representa un buen atajo para los usuarios. En nuestro
+      ejemplo anterior, tras crear su rama privada, obtuvo una
+      nueva copia local del nuevo directorio del repositorio. En
+      su lugar, puede pedirle a Subversion que cambie su copia
+      local de <filename>/calc/trunk</filename> para que refleje
+      la localización de la nueva rama</para>
 
 <screen>
 $ cd calc
@@ -1368,65 +1372,69 @@ $ svn info | grep URL
 URL: http://svn.example.com/repos/calc/branches/my-calc-branch
 </screen>
 
-    <para>After <quote>switching</quote> to the branch, your working
-      copy is no different than what you would get from doing a fresh
-      checkout of the directory.  And it's usually more efficient to
-      use this command, because often branches only differ by a small
-      degree.  The server sends only the minimal set of changes
-      necessary to make your working copy reflect the branch
-      directory.</para>
+    <para>Tras <quote>cambiar</quote> a la rama, su copia local
+      no diferirá en nada a una copia local nueva obtenida del mismo
+      directorio. Y normalmente es más eficiente usar este comando,
+      dado que a menudo las ramas sólo difieren entre sí en pocas
+      cosas. El servidor manda únicamente el conjunto mínimo de
+      cambios necesarios para hacer que su copia local de trabajo
+      refleje el directorio de la rama.</para>
 
-    <para>The <command>svn switch</command> command also takes a
-      <option>--revision</option> (<option>-r</option>) option, so you
-      need not always move your working copy to the <quote>tip</quote>
-      of the branch.</para>
+    <para>El comando <command>svn switch</command> también permite
+      usar la opción <option>--revision</option>
+      (<option>-r</option>), por lo que no siempre tendrá que
+      cambiar su copia local a la <quote>punta</quote> <!-- TODO
+      tip != punta? --> de la rama.</para>
 
-    <para>Of course, most projects are more complicated than our
-      <filename>calc</filename> example, containing multiple
-      subdirectories.  Subversion users often follow a specific
-      algorithm when using branches:</para>
+    <para>Por supuesto, la mayoría de los proyectos son más
+      complicados que nuestro ejemplo <filename>calc</filename>,
+      y contienen múltiples subdirectorios. Los usuarios de
+      Subversion frecuentemente siguen un algoritmo específico al
+      usar ramas:</para>
 
       <orderedlist>
-        <listitem> <para>Copy the project's entire 'trunk' to a new
-        branch directory.</para>
+        <listitem> <para>Copiar el 'tronco' entero a un nuevo
+        directorio rama.</para>
         </listitem>
         <listitem>
-          <para>Switch only <emphasis>part</emphasis> of the trunk
-          working copy to mirror the branch.</para>
+          <para>Cambiar sólo <emphasis>parte</emphasis> de la copia
+          de trabajo del tronco para que refleje esa rama.</para>
         </listitem>
       </orderedlist>
     
-    <para>In other words, if a user knows that the branch-work only
-      needs to happen on a specific subdirectory, they use
-      <command>svn switch</command> to move only that subdirectory to
-      the branch.  (Or sometimes users will switch just a single
-      working file to the branch!)  That way, they can continue to
-      receive normal 'trunk' updates to most of their working copy,
-      but the switched portions will remain immune (unless someone
-      commits a change to their branch).  This feature adds a whole
-      new dimension to the concept of a <quote>mixed working
-      copy</quote>&mdash;not only can working copies contain a mixture
-      of working revisions, but a mixture of repository locations as
-      well.</para>
+    <para>En otras palabras, si un usuario sabe que el trabajo
+      que quiere realizar sólo ocurrirá en un subdirectorio
+      específico, usará <command>svn switch</command> para mover sólo
+      ese subdirectorio a la rama. (¡A veces los usuarios cambian
+      un único fichero de su copia local a la rama!) De ese modo,
+      sigue pudiendo recibir modificaciones normales del 'tronco'
+      en su copia local, pero las porciones que cambió a otra rama
+      quedarán inmunes (a no ser que alguien envie un cambio a
+      esa rama).  Esta característica añade una nueva dimensión al
+      concepto de <quote>copia local mezclada</quote>&mdash;no sólo
+      pueden tener las copias locales una mezcla de revisiones,
+      sino también una mezcla de rutas de repositorio.</para>
     
-    <para>If your working copy contains a number of switched subtrees
-      from different repository locations, it continues to function as
-      normal.  When you update, you'll receive patches to each subtree
-      as appropriate.  When you commit, your local changes will still
-      be applied as a single, atomic change to the repository.</para>
+    <para>Si su copia local contiene un número de sub árboles
+      cambiados a otras localizaciones del repositorio, sigue
+      funcionando de forma normal. Cuando la actualice, recibirá
+      los parches propios de cada sub árbol.  Cuando envíe cambios,
+      sus cambios locales seguirán siendo aplicados como un cambio
+      atómico único al repositorio.</para>
 
-    <para>Note that while it's okay for your working copy to reflect a
-      mixture of repository locations, these locations must all be
-      within the <emphasis>same</emphasis> repository.  Subversion
-      repositories aren't yet able to communicate with one another;
-      that's a feature planned beyond Subversion
-      1.0.<footnote><para>You <emphasis>can</emphasis>, however, use
-      <command>svn switch</command> with the
-      <option>--relocate</option> switch if the URL of your server
-      changes and you don't want to abandon an existing working copy.
-      See the <command>svn switch</command> section in <xref
-      linkend="svn-ch-9"/> for more information and an example.</para>
-      </footnote></para>
+    <para>Tenga en cuenta que a pesar de que su copia local
+      de trabajo puede reflejar una mezcla de lugares de
+      repositorio, todos estos lugares deben estar dentro del
+      <emphasis>mismo</emphasis> repositorio.  Los repositorios de
+      Subversion todavía no son capaces de comunicarse unos con
+      otros; esta característica está planeada para una versión
+      de Subversion posterior a la 1.0.<footnote><para>Usted
+      <emphasis>puede</emphasis>, no obstante, usar <command>svn
+      switch</command> con el parámetro <option>--relocate</option>
+      si la URL de su servidor cambia y no desea abandonar su
+      copia de trabajo existente. Vea la sección <command>svn
+      switch</command> en <xref linkend="svn-ch-9"/> para obtener
+      más información y un ejemplo.</para> </footnote></para>
     
     <sidebar>
       <title>Switches and Updates</title>
