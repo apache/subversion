@@ -20,8 +20,8 @@ def main():
   for db_file in sys.argv[1:]:
     print '*** ' + db_file + ' ***'
     print ''
-    db_file = anydbm.open(sys.argv[1], 'r')
-    keys = db_file.keys()
+    db = anydbm.open(db_file, 'r')
+    keys = db.keys()
     keys.sort()
     longest_len = 0
     for key in keys:
@@ -30,7 +30,7 @@ def main():
         longest_len = this_len
     for key in keys:
       this_len = len(key)
-      value = str(marshal.loads(db_file[key]))
+      value = str(marshal.loads(db[key]))
       print ' ' * (longest_len - this_len) + key + ' : ' + value
     print ''
 
