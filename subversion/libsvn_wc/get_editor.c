@@ -1138,7 +1138,7 @@ close_file (void *file_baton)
   apr_hash_t *prop_conflicts;
   enum svn_wc__eol_style eol_style;
   const char *eol_str;
-  char *revision, *date, *author, *url;
+  svn_io_keywords_t *keywords = NULL;
   svn_stringbuf_t *s_revision, *s_date, *s_author, *s_url, *s_true;
 
   s_true = svn_stringbuf_create ("true", fb->pool);
@@ -1326,7 +1326,7 @@ close_file (void *file_baton)
         /* Did we get a new keywords value during this update?
            If not, use whatever value is currently in our props. */        
         if (! fb->got_new_keywords_value)
-          SVN_ERR (svn_wc__get_keywords (&revision, &date, &author, &url,
+          SVN_ERR (svn_wc__get_keywords (&keywords,
                                          fb->path->data, NULL, fb->pool));
 
         else  /* got a new keywords value from the server */
@@ -1338,7 +1338,7 @@ close_file (void *file_baton)
 
             if (conflict)
               /* Use our current locally-modified style. */
-              SVN_ERR (svn_wc__get_keywords (&revision, &date, &author, &url,
+              SVN_ERR (svn_wc__get_keywords (&keywords,
                                              fb->path->data, NULL, fb->pool));
             else
               {
@@ -1346,7 +1346,7 @@ close_file (void *file_baton)
                    NOTICE: we're passing an explicit value to parse
                    here, because the 'latest' value isn't yet in the
                    props. */
-                SVN_ERR (svn_wc__get_keywords (&revision, &date, &author, &url,
+                SVN_ERR (svn_wc__get_keywords (&keywords,
                                                fb->path->data, 
                                                fb->new_keywords_value->data,
                                                fb->pool));
@@ -1362,14 +1362,22 @@ close_file (void *file_baton)
               }
           }
 
-        s_revision = 
-          revision ? svn_stringbuf_create (revision, fb->pool) : NULL;
-        s_date = 
-          date ? svn_stringbuf_create (date, fb->pool) : NULL;
-        s_author = 
-          author ? svn_stringbuf_create (author, fb->pool) : NULL;
-        s_url = 
-          url ? svn_stringbuf_create (url, fb->pool) : NULL;
+        s_revision = s_date = s_author = s_url = NULL;
+        if (keywords)
+          {
+            if (keywords->revision)
+              s_revision = svn_stringbuf_create_from_string (keywords->revision,
+                                                             fb->pool);
+            if (keywords->author)
+              s_author = svn_stringbuf_create_from_string (keywords->author, 
+                                                           fb->pool);
+            if (keywords->date)
+              s_date = svn_stringbuf_create_from_string (keywords->date, 
+                                                         fb->pool);
+            if (keywords->url)
+              s_url = svn_stringbuf_create_from_string (keywords->url, 
+                                                        fb->pool);
+          }
       }
 
 
@@ -1503,21 +1511,19 @@ close_file (void *file_baton)
 
                   /* Copy *LF-translated* text-base files to these
                      reserved locations. */
-
-                  /* ### use NULL keyword structures in the future.. */
                   SVN_ERR (svn_io_copy_and_translate (txtb_full_path->data,
                                                       tr_txtb->data,
                                                       SVN_WC__DEFAULT_EOL_MARKER,
-                                                      1, NULL, NULL, 
-                                                      NULL, NULL, 
+                                                      TRUE, /* repair */
+                                                      keywords,
                                                       FALSE,
                                                       fb->pool));
                   
                   SVN_ERR (svn_io_copy_and_translate (tmp_txtb_full_path->data,
                                                       tr_tmp_txtb->data,
                                                       SVN_WC__DEFAULT_EOL_MARKER,
-                                                      1, NULL, NULL,
-                                                      NULL, NULL, 
+                                                      TRUE, /* repair */ 
+                                                      keywords,
                                                       FALSE,
                                                       fb->pool));
 
@@ -1602,9 +1608,7 @@ close_file (void *file_baton)
                      - fb->dir_baton->path->len - 1,
                      fb->pool);
 
-                  /* ### check for NULL keyword structure in future: */
-                  if ((eol_style == svn_wc__eol_style_none)
-                      && (! (revision || date || author || url)))
+                  if ((eol_style == svn_wc__eol_style_none) && (! keywords))
                     {
                       /* If the eol property is turned off, and we're
                          not doing keyword translation, then just

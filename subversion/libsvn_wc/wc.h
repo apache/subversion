@@ -812,25 +812,18 @@ void svn_wc__eol_style_from_value (enum svn_wc__eol_style *style,
 
 
 /* Expand keywords for the file at PATH, by parsing some
-   SVN_PROP_KEYWORDS value.  
+   SVN_PROP_KEYWORDS value.  If any keywords are found, allocate
+   *KEYWORDS from POOL, and then populate its entries with the related
+   keyword values (also allocated in POOL).
 
    If the caller provides OPTIONAL_VALUE, parse it.  Else if the
    caller sets OPTIONAL_PATH to NULL, then query the SVN_PROP_KEYWORDS
    property attached to PATH.  In either case, use PATH to expand
    necessary keyword values.
 
-   For each of *REVISION, *DATE, *AUTHOR, *URL: if present in the
-   value's list, set the pointer to an expanded value allocated in
-   POOL.  Else, if the keyword is not present, set the pointer to
-   NULL.
-
    (If the property is not present at all, the value is considered
-   NULL, an thus all pointers will be set to NULL.)
-*/
-svn_error_t *svn_wc__get_keywords (char **revision,
-                                   char **date,
-                                   char **author,
-                                   char **url,
+   NULL, an thus all pointers will be set to NULL.)  */
+svn_error_t *svn_wc__get_keywords (svn_io_keywords_t **keywords,
                                    char *path,
                                    char *optional_value,
                                    apr_pool_t *pool);

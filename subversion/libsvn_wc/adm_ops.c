@@ -863,14 +863,14 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
              missing altogether), copy the text-base out into
              the working copy, and update the timestamp in the entries
              file. */
-          char *revision, *date, *author, *url;
+          svn_io_keywords_t *keywords;
           enum svn_wc__eol_style eol_style;
           const char *eol;
           pristine_thing = svn_wc__text_base_path (full_path, 0, pool);
 
           SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol,
                                           full_path->data, pool));
-          SVN_ERR (svn_wc__get_keywords (&revision, &author, &date, &url,
+          SVN_ERR (svn_wc__get_keywords (&keywords,
                                          full_path->data, NULL, pool));
 
           /* When copying the text-base out to the working copy, make
@@ -880,7 +880,7 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
           err = svn_io_copy_and_translate (pristine_thing->data,
                                            full_path->data,
                                            eol, FALSE, /* don't repair */
-                                           revision, date, author, url,
+                                           keywords,
                                            TRUE, /* expand keywords */
                                            pool);
           if (err)

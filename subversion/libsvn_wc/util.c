@@ -111,14 +111,13 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
 {
   enum svn_wc__eol_style style;
   const char *eol;
-  char *revision, *author, *date, *url;
+  svn_io_keywords_t *keywords;
   
   SVN_ERR (svn_wc__get_eol_style (&style, &eol, vfile->data, pool));
-  SVN_ERR (svn_wc__get_keywords (&revision, &author, &date, &url,
+  SVN_ERR (svn_wc__get_keywords (&keywords,
                                  vfile->data, NULL, pool));
 
-  if ((style == svn_wc__eol_style_none)
-      && (! revision) && (! author) && (! date) && (! url))
+  if ((style == svn_wc__eol_style_none) && (! keywords))
     {
       /* Translation would be a no-op, so return the original file. */
       *xlated_p = vfile;
@@ -135,7 +134,7 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
                       svn_path_local_style, pool);
       
       tmp_vfile = svn_wc__adm_path (tmp_dir, 1, pool,
-                                    tmp_vfile, NULL);
+                                    tmp_vfile->data, NULL);
       
       SVN_ERR (svn_io_open_unique_file (&ignored,
                                         &tmp_vfile,
@@ -158,7 +157,7 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
                                               tmp_vfile->data,
                                               eol,
                                               TRUE,
-                                              revision, author, date, url,
+                                              keywords,
                                               FALSE,
                                               pool));
         }
@@ -168,7 +167,17 @@ svn_wc_translated_file (svn_stringbuf_t **xlated_p,
                                               tmp_vfile->data,
                                               SVN_WC__DEFAULT_EOL_MARKER,
                                               FALSE,
-                                              revision, author, date, url,
+                                              keywords,
+                                              FALSE,
+                                              pool));
+        }
+      else if (style == svn_wc__eol_style_none)
+        {
+          SVN_ERR (svn_io_copy_and_translate (vfile->data,
+                                              tmp_vfile->data,
+                                              NULL,
+                                              FALSE,
+                                              keywords,
                                               FALSE,
                                               pool));
         }

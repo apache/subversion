@@ -56,11 +56,17 @@ enum svn_wc__xfer_action {
 /* Copy (or rename, if RENAME is non-zero) NAME to DEST, assuming that
    PATH is the common parent of both locations. 
 
-   If ACTION is 'cp', then do translation IFF any of EOL_STR,
-   REVISION, DATE, AUTHOR, or URL are non-NULL.  When doing
-   translation, setting REPAIR indicates that inconsistent line
-   endings in SRC are translated to EOL_STR; else error is returned.
-   (For more info, read the docstring of svn_io_copy_and_translate).
+   If ACTION is 'cp', then do translation IFF either EOL_STR or
+   KEYWORDS is non-NULL.  
+
+   When doing translation:
+
+     - setting REPAIR indicates that inconsistent line endings in SRC
+       are translated to EOL_STR; else error is returned.  (For more
+       info, read the docstring of svn_io_copy_and_translate).  
+
+     - setting EXPAND indicates a desire to expand keywords, else you
+       wish to contract them.  
 */
 static svn_error_t *
 file_xfer_under_path (svn_stringbuf_t *path,
@@ -69,10 +75,8 @@ file_xfer_under_path (svn_stringbuf_t *path,
                       enum svn_wc__xfer_action action,
                       const char *eol_str,
                       svn_boolean_t repair,
-                      const char *revision,
-                      const char *date,
-                      const char *author,
-                      const char *url,                      
+                      svn_io_keywords_t *keywords,
+                      svn_boolean_t expand,
                       apr_pool_t *pool)
 {
   apr_status_t status;
@@ -94,11 +98,8 @@ file_xfer_under_path (svn_stringbuf_t *path,
                                         full_dest_path->data,
                                         eol_str,
                                         repair,
-                                        revision,
-                                        date,
-                                        author,
-                                        url,
-                                        TRUE, /* ### todo: expand? */
+                                        keywords,
+                                        expand,
                                         pool);
 
     case svn_wc__xfer_mv:
@@ -125,7 +126,7 @@ replace_text_base (svn_stringbuf_t *path,
   svn_stringbuf_t *tmp_text_base;
   svn_error_t *err;
   enum svn_node_kind kind;
-  char *revision, *date, *author, *url;
+  svn_io_keywords_t *keywords;
 
   filepath = svn_stringbuf_dup (path, pool);
   svn_path_add_component_nts (filepath, name, svn_path_local_style);
@@ -142,13 +143,13 @@ replace_text_base (svn_stringbuf_t *path,
       apr_status_t apr_err;
       apr_file_t *ignored;
       svn_boolean_t same;
-      svn_stringbuf_t *tmp_workingfile;
+      svn_stringbuf_t *tmp_workingfile, *pdir, *bname;
       enum svn_wc__eol_style eol_style;
       const char *eol_str;
 
       SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
                                       filepath->data, pool));
-      SVN_ERR (svn_wc__get_keywords (&revision, &author, &date, &url,
+      SVN_ERR (svn_wc__get_keywords (&keywords,
                                      filepath->data, NULL, pool));
 
       /* In the commit, newlines and keywords may have been
@@ -165,8 +166,9 @@ replace_text_base (svn_stringbuf_t *path,
        * timestamp unless necessary, so editors aren't tempted to
        * reread the file if they don't really need to.
        */
-      tmp_workingfile = svn_wc__adm_path (filepath, TRUE, pool,
-                                          filepath->data, NULL); 
+      svn_path_split (filepath, &pdir, &bname, svn_path_local_style, pool);
+      tmp_workingfile = svn_wc__adm_path (pdir, TRUE, pool, bname->data, NULL);
+      
       SVN_ERR (svn_io_open_unique_file (&ignored,
                                         &tmp_workingfile,
                                         tmp_workingfile,
@@ -184,7 +186,7 @@ replace_text_base (svn_stringbuf_t *path,
                                           tmp_workingfile->data,
                                           eol_str,
                                           FALSE, /* don't repair eol */
-                                          revision, author, date, url,
+                                          keywords,
                                           TRUE, /* expand keywords */
                                           pool));
 
@@ -325,9 +327,10 @@ log_do_file_xfer (struct log_runner *loggy,
                   const XML_Char **atts)
 {
   svn_error_t *err;
-  svn_boolean_t repair = FALSE;
   const char *dest = NULL, *eol_str = NULL, *revision = NULL;
   const char *date = NULL, *author = NULL, *url = NULL;
+  const char *repair = NULL, *expand = NULL;
+  svn_io_keywords_t *keywords = NULL;
 
   /* We have the name (src), and the destination is absolutely required. */
   dest = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DEST, atts);
@@ -341,12 +344,30 @@ log_do_file_xfer (struct log_runner *loggy,
   date = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DATE, atts);
   author = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_AUTHOR, atts);
   url = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_URL, atts);
+  repair = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REPAIR, atts);
+  expand = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_EXPAND, atts);
 
-  if (svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REPAIR, atts))
-    repair = TRUE;
-
-  err = file_xfer_under_path (loggy->path, name, dest, action, 
-                              eol_str, repair, revision, date, author, url,
+  /* Conditionally build a keywords structure. */
+  if (revision || date || author || url)
+    {
+      keywords = apr_palloc (loggy->pool, sizeof (*keywords));
+      keywords->revision = revision ? 
+        svn_string_create (revision, loggy->pool) :
+        NULL;
+      keywords->date = date ? 
+        svn_string_create (date, loggy->pool) :
+        NULL;
+      keywords->author = author ?
+        svn_string_create (author, loggy->pool) :
+        NULL;
+      keywords->url = url ? 
+        svn_string_create (url, loggy->pool) :
+        NULL;
+    }
+  err = file_xfer_under_path (loggy->path, name, dest, action, eol_str, 
+                              repair ? TRUE : FALSE, 
+                              keywords, 
+                              expand ? TRUE : FALSE,
                               loggy->pool);
   if (err)
     signal_error (loggy, err);
@@ -736,7 +757,7 @@ log_do_committed (struct log_runner *loggy,
               err = svn_io_check_path (tmp_base, &kind, loggy->pool);
               if (err)
                 return svn_error_createf
-                  (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                  (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
                    "error checking existence of %s", name);
               
               if (kind == svn_node_file)
@@ -749,7 +770,7 @@ log_do_committed (struct log_runner *loggy,
                                                          loggy->pool);
                   if (err)
                     return svn_error_createf 
-                      (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                      (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
                        "error comparing %s and %s",
                        working_file->data, tmp_base->data);
                   
@@ -767,14 +788,14 @@ log_do_committed (struct log_runner *loggy,
                     (&text_time, same ? working_file : tmp_base, loggy->pool);
                   if (err)
                     return svn_error_createf 
-                      (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                      (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
                        "error getting file_affected_time on %s",
                        same ? working_file->data : tmp_base->data);
                   
                   err = replace_text_base (loggy->path, name, loggy->pool);
                   if (err)
                     return svn_error_createf 
-                      (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                      (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
                        "error replacing text base for %s", name);
                 }
             }
@@ -803,7 +824,7 @@ log_do_committed (struct log_runner *loggy,
           err = svn_io_check_path (tmp_prop_path, &kind, loggy->pool);
           if (err)
             return svn_error_createf
-              (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+              (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
                "error checking existence of %s", name);
           
           if (kind == svn_node_file)
@@ -822,7 +843,7 @@ log_do_committed (struct log_runner *loggy,
                                                    loggy->pool);
               if (err)
                 return svn_error_createf 
-                  (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                  (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
                    "error comparing %s and %s",
                    prop_path->data, tmp_prop_path->data);
 
@@ -830,7 +851,7 @@ log_do_committed (struct log_runner *loggy,
                 (&prop_time, same ? prop_path : tmp_prop_path, loggy->pool);
               if (err)
                 return svn_error_createf 
-                  (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                  (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
                    "error getting file_affected_time on %s",
                    same ? prop_path->data : tmp_prop_path->data);
 
@@ -876,7 +897,7 @@ log_do_committed (struct log_runner *loggy,
              NULL);
           if (err)
             return svn_error_createf
-              (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+              (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
                "error merge_syncing %s", name);
 
           /* Also, if this is a directory, don't forget to reset the
@@ -923,7 +944,7 @@ log_do_committed (struct log_runner *loggy,
                      NULL);
                   if (err)
                     return svn_error_createf
-                      (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+                      (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
                        "error merge_syncing %s", name);
                 }
             }

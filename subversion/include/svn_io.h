@@ -136,6 +136,15 @@ svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
                                  apr_pool_t *pool);
 
 
+/* Values used in keyword expansion. */
+typedef struct svn_io_keywords_t
+{
+  svn_string_t *revision;
+  svn_string_t *date;
+  svn_string_t *author;
+  svn_string_t *url;
+} svn_io_keywords_t;
+
 /* Copy the contents of SRC to DST, overwriting DST if it exists,
    possibly performing line ending and keyword translations.
 
@@ -146,12 +155,14 @@ svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
    convert any line ending in SRC to EOL_STR in DST.  Recognized line
    endings are: "\n", "\r", and "\r\n".
 
-   Expand and contract keywords using REVISION, DATE, AUTHOR, and URL
-   as the new values.  If EXPAND is TRUE, expand contracted keywords
-   and re-expand expanded keywords.  If EXPAND is FALSE, contract
-   expanded keywords and ignore contracted ones.  NULL for any of the
-   keyword value parameters (REVISION, e.g.) indicates that that
-   keyword should be ignored (not contracted or expanded).
+   Expand and contract keywords using the contents of KEYWORDS as the
+   new values.  If EXPAND is TRUE, expand contracted keywords and
+   re-expand expanded keywords.  If EXPAND is FALSE, contract expanded
+   keywords and ignore contracted ones.  NULL for any of the keyword
+   values (KEYWORDS->revision, e.g.) indicates that that keyword
+   should be ignored (not contracted or expanded).  If the
+   KEYWORDS structure itself is NULL, keyword substition will be
+   altogether ignored.
 
    Detect only keywords that are no longer than SVN_IO_MAX_KEYWORD_LEN
    bytes, including the delimiters and the keyword itself.
@@ -162,17 +173,13 @@ svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
    Recommendation: if EXPAND is false, then you don't care about the
    keyword values, so pass empty strings as non-null signifiers.
 
-   Note: If EOL_STR, REVISION, DATE, AUTHOR, and URL are all NULL, the
-   behavior is just a byte-for-byte copy.
-*/
+   Note: If EOL_STR and KEYWORDS are NULL, behavior is just a
+   byte-for-byte copy.  */
 svn_error_t *svn_io_copy_and_translate (const char *src,
                                         const char *dst,
                                         const char *eol_str,
                                         svn_boolean_t repair,
-                                        const char *revision,
-                                        const char *date,
-                                        const char *author,
-                                        const char *url,
+                                        svn_io_keywords_t *keywords,
                                         svn_boolean_t expand,
                                         apr_pool_t *pool);
 

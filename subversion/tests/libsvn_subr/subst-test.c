@@ -254,6 +254,7 @@ substitute_and_verify (const char *test_name,
 {
   svn_error_t *err;
   svn_stringbuf_t *contents;
+  svn_io_keywords_t keywords;
   int idx = 0;
   int i;
   const char *expect[(sizeof (lines) / sizeof (*lines))];
@@ -265,9 +266,13 @@ substitute_and_verify (const char *test_name,
   SVN_ERR (remove_file (dst_fname, pool));
   SVN_ERR (create_file (src_fname, src_eol, pool));
 
+  keywords.revision = rev    ? svn_string_create (rev, pool)    : NULL;
+  keywords.date     = date   ? svn_string_create (date, pool)   : NULL;
+  keywords.author   = author ? svn_string_create (author, pool) : NULL;
+  keywords.url      = url    ? svn_string_create (url, pool)    : NULL;
 
   err = svn_io_copy_and_translate (src_fname, dst_fname, dst_eol, repair,
-                                   rev, date, author, url, expand, pool);
+                                   &keywords, expand, pool);
 
 
   /* Conversion should have failed, if src has mixed eol, and the
