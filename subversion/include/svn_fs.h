@@ -719,7 +719,6 @@ svn_error_t *svn_fs_change_node_prop (svn_fs_root_t *root,
                                       apr_pool_t *pool);
 
 
-/* fooo */
 /* Set *CHANGED_P to 1 if the properties at PATH differ under ROOT1
    versus ROOT2, or set it to 0 if they are the same.  Both roots must
    be in the same filesystem, and PATH must exist in both. */
