@@ -75,6 +75,9 @@ Package=<4>
     Project_Dep_Name tests_libsvn_fs_fs
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name tests_libsvn_repos_repos
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name tests_libsvn_subr_hashdump
     End Project Dependency
     Begin Project Dependency
@@ -516,7 +519,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "tests_libsvn_repos_test"=.\SUBVERSION\TESTS\LIBSVN_REPOS\tests_libsvn_repos_test.dsp - Package Owner=<4>
+Project: "tests_libsvn_repos_repos"=.\SUBVERSION\TESTS\LIBSVN_REPOS\repos_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{

@@ -4018,8 +4018,8 @@ check_old_revisions (const char **msg,
 
     /* Reassure iota that it will live for quite some time. */
     const char *iota_contents_6
-      = "Matthew 5:18 (Revised Standard Version) --
-For truly, I say to you, till heaven and earth pass away, not an iota,
+      = "Matthew 5:18 (Revised Standard Version) --\n\
+For truly, I say to you, till heaven and earth pass away, not an iota,\n\
 not a dot, will pass from the law until all is accomplished.";
 
     /* Revert to the original contents. */
