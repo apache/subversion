@@ -184,7 +184,7 @@ def externals_test_setup(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_init_dir, 5)
   expected_status.tweak(repos_rev=6)
-  expected_status.tweak('A/B', 'A/D', wc_rev=6)
+  expected_status.tweak('A/B', 'A/D', wc_rev=6, status='__')
 
   return svntest.actions.run_and_verify_commit(wc_init_dir,
                                                expected_output,
