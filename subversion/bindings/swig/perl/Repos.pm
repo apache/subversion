@@ -41,7 +41,7 @@ could be used as methods of the object returned by open or create.
 package _p_svn_repos_t;
 
 my @methods = qw/fs get_logs get_commit_editor path db_env lock_dir
-		 db_lock_file hook_dir start_commit_hook
+		 db_lockfile hook_dir start_commit_hook
 		 pre_commit_hook post_commit_hook
 		 pre_revprop_change_hook post_revprop_change_hook
 		 dated_revision fs_commit_txn fs_begin_txn_for_commit
