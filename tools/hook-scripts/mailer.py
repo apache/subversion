@@ -36,16 +36,10 @@ def main(pool, config_fname, repos_dir, rev):
 
   cfg = Config(config_fname, repos)
 
-  editor = ChangeCollector(repos.root_prev)
+  editor = ChangeCollector(repos, rev-1)
 
   e_ptr, e_baton = svn.delta.make_editor(editor, pool)
-  svn.repos.svn_repos_dir_delta(repos.root_prev, '', None, repos.root_this, '',
-                                e_ptr, e_baton,
-                                0,  # text_deltas
-                                1,  # recurse
-                                0,  # entry_props
-                                0,  # ignore_ancestry
-                                pool)
+  svn.repos.svn_repos_replay(repos.root_this, e_ptr, e_baton, pool)
 
   # get all the changes and sort by path
   changelist = editor.changes.items()
@@ -388,13 +382,14 @@ def generate_diff(output, cfg, repos, date, change, group, params, pool):
       return
 
     output.write('\nDeleted: %s\n' % change.base_path)
-    diff = svn.fs.FileDiff(repos.root_prev, change.base_path, None, None, pool)
+    diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
+                           change.base_path, None, None, pool)
 
     label1 = '%s\t%s' % (change.base_path, date)
     label2 = '(empty file)'
     singular = True
   elif change.added:
-    if change.base_path:
+    if change.base_path and (change.base_rev != -1):
       # this file was copied.
 
       # copies with no changes are reported in the header, so we can just
@@ -423,7 +418,8 @@ def generate_diff(output, cfg, repos, date, change, group, params, pool):
     return
   else:
     output.write('\nModified: %s\n' % change.path)
-    diff = svn.fs.FileDiff(repos.get_root(change.base_rev), change.base_path[1:],
+    diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
+                           change.base_path[1:],
                            repos.root_this, change.path,
                            pool)
     label1 = change.base_path[1:] + '\t(original)'
@@ -468,7 +464,6 @@ class Repository:
 
     self.roots = { }
 
-    self.root_prev = self.get_root(rev-1)
     self.root_this = self.get_root(rev)
 
     self.author = self.get_rev_prop(svn.util.SVN_PROP_REVISION_AUTHOR)
@@ -489,25 +484,28 @@ class ChangeCollector(svn.delta.Editor):
   DIR = 'DIR'
   FILE = 'FILE'
 
-  def __init__(self, root_prev):
-    self.root_prev = root_prev
+  # BATON FORMAT: [path, base_path, base_rev]
+  
+  def __init__(self, repos, rev_prev):
+    self.repos = repos
+    self.rev_prev = rev_prev
 
     # path -> _change()
     self.changes = { }
 
   def open_root(self, base_revision, dir_pool):
-    return ('', '', base_revision)  # dir_baton
+    return ('', '', self.rev_prev)  # dir_baton
 
   def delete_entry(self, path, revision, parent_baton, pool):
-    if svn.fs.is_dir(self.root_prev, '/' + path, pool):
+    base_path = _svn_join(parent_baton[1], _svn_basename(path))
+    if svn.fs.is_dir(self.repos.get_root(parent_baton[2]), base_path, pool):
       item_type = ChangeCollector.DIR
     else:
       item_type = ChangeCollector.FILE
-    # base_path is the specified path. revision is the parent's.
     self.changes[path] = _change(item_type,
                                  False,
                                  False,
-                                 path,            # base_path
+                                 base_path,
                                  parent_baton[2], # base_rev
                                  None,            # (new) path
                                  False,           # added
@@ -523,14 +521,16 @@ class ChangeCollector(svn.delta.Editor):
                                  path,              # path
                                  True,              # added
                                  )
-
-    return (path, copyfrom_path, copyfrom_revision)  # dir_baton
+    if copyfrom_path and (copyfrom_revision != -1):
+      base_path = copyfrom_path
+    else:
+      base_path = path
+    base_rev = copyfrom_revision
+    return (path, base_path, base_rev)  # dir_baton
 
   def open_directory(self, path, parent_baton, base_revision, dir_pool):
-    assert parent_baton[2] == base_revision
-
     base_path = _svn_join(parent_baton[1], _svn_basename(path))
-    return (path, base_path, base_revision)  # dir_baton
+    return (path, base_path, parent_baton[2])  # dir_baton
 
   def change_dir_prop(self, dir_baton, name, value, pool):
     dir_path = dir_baton[0]
@@ -557,14 +557,16 @@ class ChangeCollector(svn.delta.Editor):
                                  path,              # path
                                  True,              # added
                                  )
-
-    return (path, copyfrom_path, copyfrom_revision)  # file_baton
+    if copyfrom_path and (copyfrom_revision != -1):
+      base_path = copyfrom_path
+    else:
+      base_path = path
+    base_rev = copyfrom_revision
+    return (path, base_path, base_rev)  # file_baton
 
   def open_file(self, path, parent_baton, base_revision, file_pool):
-    assert parent_baton[2] == base_revision
-
     base_path = _svn_join(parent_baton[1], _svn_basename(path))
-    return (path, base_path, base_revision)  # file_baton
+    return (path, base_path, parent_baton[2])  # file_baton
 
   def apply_textdelta(self, file_baton, base_checksum):
     file_path = file_baton[0]
@@ -624,7 +626,7 @@ class _change:
     ### but the same path could be a change to the previous rev or a restore
     ### of an older version. when it is "change to previous", I'm not sure
     ### if the rev is always repos.rev - 1, or whether it represents the
-    ### created or time-of-checkou rev. so... we use a flag (for now)
+    ### created or time-of-checkout rev. so... we use a flag (for now)
     self.added = added
 
 
