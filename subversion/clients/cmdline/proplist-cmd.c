@@ -42,6 +42,7 @@ svn_cl__proplist (apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = baton;
   apr_array_header_t *targets;
+  svn_client_auth_baton_t *auth_baton;
   int i;
 
   /* Suck up all remaining args in the target array. */
@@ -51,6 +52,8 @@ svn_cl__proplist (apr_getopt_t *os,
                                          &(opt_state->end_revision),
                                          FALSE, pool));
 
+  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
+
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target (targets, pool);
 
@@ -59,7 +62,6 @@ svn_cl__proplist (apr_getopt_t *os,
     {
       svn_revnum_t rev;
       const char *URL, *target;
-      svn_client_auth_baton_t *auth_baton;
       apr_hash_t *proplist;
 
       /* All property commands insist on a specific revision when
@@ -68,8 +70,6 @@ svn_cl__proplist (apr_getopt_t *os,
         return svn_cl__revprop_no_rev_error (pool);
 
       /* Else some revision was specified, so proceed. */
-
-      auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
       /* Either we have a URL target, or an implicit wc-path ('.')
          which needs to be converted to a URL. */
@@ -96,13 +96,6 @@ svn_cl__proplist (apr_getopt_t *os,
     }
   else  /* operate on normal, versioned properties (not revprops) */
     {
-      /* ### This check will go away when svn_client_proplist takes
-         a revision arg and can access the repository, see issue #943. */ 
-      if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
-        return svn_error_create
-          (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
-           "Revision argument to proplist not yet supported (see issue #943)");
-
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
@@ -111,6 +104,7 @@ svn_cl__proplist (apr_getopt_t *os,
           
           SVN_ERR (svn_client_proplist (&props, target, 
                                         &(opt_state->start_revision),
+                                        auth_baton,
                                         opt_state->recursive, pool));
           
           for (j = 0; j < props->nelts; ++j)
