@@ -187,10 +187,10 @@ typedef enum svn_errno_t {
 
   /* ### need to come up with a mechanism for RA-specific errors */
 
-  /* These RA errors are specific to ra_dav */
+  /* a bad URL was passed to the repository access layer */
+  SVN_ERR_RA_ILLEGAL_URL,
 
-    /* a bad URL was passed to the repository access layer */
-    SVN_ERR_RA_ILLEGAL_URL,
+  /* These RA errors are specific to ra_dav */
 
     /* the repository access layer could not initialize the socket layer */
     SVN_ERR_RA_SOCK_INIT,
@@ -209,6 +209,11 @@ typedef enum svn_errno_t {
 
     /* could not delete a resource on the server */
     SVN_ERR_RA_DELETE_FAILED,
+
+  /* These RA errors are specific to ra_local */
+  
+    /* the given URL does not seem to point to a versioned resource */
+    SVN_ERR_RA_NOT_VERSIONED_RESOURCE,
 
   /* End of ra_dav errors */
 

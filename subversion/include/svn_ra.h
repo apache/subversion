@@ -239,7 +239,24 @@ svn_client_init_ra_libs (void **ra_baton,
 
 /* Return an ra vtable-LIBRARY (already within RA_BATON) which can
    handle URL.  A number of svn_client_* routines will call this
-   internally, but client apps might use it too. */
+   internally, but client apps might use it too.  
+
+   For reference, note that according to W3 RFC 1738, a valid URL is
+   of the following form:
+
+     scheme://<user>:<password>@<host>:<port>/<url-path> 
+
+   Common URLs are as follows:
+
+     http://subversion.tigris.org/index.html
+     file:///home/joeuser/documents/resume.txt
+
+   Of interest is the file URL schema, which takes the form
+   file://<host>/<path>, where <host> and <path> are optional.  The `/'
+   between <host> and <path> is NOT part of path, yet the RFC doesn't
+   specify how <path> should be formatted.  SVN will count on the
+   portability layer to be able to handle the specific formatting of
+   the <path> on a per-system basis. */
 svn_error_t *
 svn_client_get_ra_library (svn_ra_plugin_t **library,
                            void *ra_baton,
