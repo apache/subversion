@@ -24,7 +24,6 @@
 
 #include <string.h>
 #include <assert.h>
-#include <locale.h>
 
 #include <apr_strings.h>
 #include <apr_tables.h>
@@ -43,6 +42,7 @@
 #include "svn_opt.h"
 #include "svn_time.h"
 #include "svn_utf.h"
+#include "svn_auth.h"
 #include "cl.h"
 
 
@@ -509,44 +509,30 @@ main (int argc, const char * const *argv)
 {
   svn_error_t *err;
   apr_pool_t *pool;
-  int opt_id, err2;
+  int opt_id;
   apr_getopt_t *os;  
-  svn_cl__opt_state_t opt_state;
+  svn_cl__opt_state_t opt_state = { { 0 } };
+  svn_client_ctx_t ctx = { 0 };
   int received_opts[SVN_OPT_MAX_OPTIONS];
   int i, num_opts = 0;
   const svn_opt_subcommand_desc_t *subcommand = NULL;
   svn_boolean_t log_under_version_control = FALSE;
   svn_boolean_t log_is_pathname = FALSE;
   apr_status_t apr_err;
+  svn_cl__cmd_baton_t command_baton;
+  svn_auth_baton_t *ab;
 
-  /* C programs default to the "C" locale by default.  But because svn
-     is supposed to be i18n-aware, it should inherit the default
-     locale of its environment.  */
-  setlocale (LC_ALL, "");
-
-  /* Initialize the APR subsystem, and register an atexit() function
-     to Uninitialize that subsystem at program exit. */
-  apr_err = apr_initialize ();
-  if (apr_err)
-    {
-      fprintf (stderr, "error: apr_initialize\n");
-      return EXIT_FAILURE;
-    }
-  err2 = atexit (apr_terminate);
-  if (err2)
-    {
-      fprintf (stderr, "error: atexit returned %d\n", err2);
-      return EXIT_FAILURE;
-    }
+  /* Initialize the app. */
+  if (svn_cmdline_init ("svn", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
 
   /* Create our top-level pool. */
   pool = svn_pool_create (NULL);
 
   /* Begin processing arguments. */
-  memset (&opt_state, 0, sizeof (opt_state));
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
-  
+ 
   /* No args?  Show usage. */
   if (argc <= 1)
     {
@@ -875,7 +861,65 @@ main (int argc, const char * const *argv)
         }
     }
 
-  err = (*subcommand->cmd_func) (os, &opt_state, pool);
+  /* Authentication set-up. */
+  {
+    apr_array_header_t *providers
+      = apr_array_make (pool, 1, sizeof (svn_auth_provider_object_t *));
+
+    svn_auth_provider_object_t *wc_provider 
+      = apr_pcalloc (pool, sizeof(*wc_provider));
+    
+    svn_auth_provider_object_t *prompt_provider 
+      = apr_pcalloc (pool, sizeof(*prompt_provider));
+
+    /* Fetch our two existing authentication providers, and order them
+       in an array. */
+    svn_wc_get_simple_wc_provider (&(wc_provider->vtable),
+                                   &(wc_provider->provider_baton), pool);
+
+    svn_client_get_simple_prompt_provider (&(prompt_provider->vtable),
+                                           &(prompt_provider->provider_baton),
+                                           svn_cl__prompt_user, NULL,
+                                           2, /* retry limit */ pool);
+
+    *(svn_auth_provider_object_t **)apr_array_push (providers) = wc_provider;
+    *(svn_auth_provider_object_t **)apr_array_push (providers) = prompt_provider;
+
+    /* Build an authentication baton to give to libsvn_client. */
+    svn_auth_open (&ab, providers, pool);
+
+    /* Place any default --username or --password credentials into the
+       auth_baton's run-time parameter hash.  ### Same with --no-auth-cache? */
+    if (opt_state.auth_username)
+      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_USERNAME,
+                             opt_state.auth_username);
+    if (opt_state.auth_password)
+      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
+                             opt_state.auth_password);
+  }
+
+  /* Create a client context object. */
+  command_baton.opt_state = &opt_state;
+  command_baton.ctx = &ctx;
+
+  ctx.old_auth_baton = svn_cl__make_auth_baton (&opt_state, pool);
+  ctx.auth_baton = ab;
+
+  ctx.prompt_func = svn_cl__prompt_user; 
+  ctx.prompt_baton = NULL;
+
+  if ((err = svn_config_get_config (&(ctx.config), pool)))
+    {
+      svn_handle_error (err, stderr, 0);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
+
+  ctx.log_msg_func = svn_cl__get_log_message;
+  ctx.log_msg_baton = svn_cl__make_log_msg_baton (&opt_state, NULL, 
+                                                  ctx.config, pool);
+
+  err = (*subcommand->cmd_func) (os, &command_baton, pool);
   if (err)
     {
       svn_error_t *tmp_err;

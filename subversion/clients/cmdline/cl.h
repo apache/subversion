@@ -31,6 +31,7 @@
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_opt.h"
+#include "svn_auth.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -103,6 +104,13 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t dry_run;         /* try operation but make no changes */
   svn_boolean_t revprop;         /* operate on a revision property */
 } svn_cl__opt_state_t;
+
+
+typedef struct
+{
+  svn_cl__opt_state_t *opt_state;
+  svn_client_ctx_t *ctx;
+} svn_cl__cmd_baton_t;
 
 
 /* Declare all the command procedures */
@@ -200,6 +208,9 @@ svn_error_t *svn_cl__revprop_no_rev_error (apr_pool_t *pool);
    Else, the file will be left on disk, and its path returned in
    *TMPFILE_LEFT.
 
+   CONFIG is a hash of svn_config_t * items keyed on a configuration
+   category (SVN_CONFIG_CATEGORY_CONFIG et al), and may be NULL.
+
    Use POOL for all allocations.  Use PREFIX as the prefix for the
    temporary file used by the editor.
 
@@ -210,6 +221,7 @@ svn_cl__edit_externally (const char **edited_contents,
                          const char *base_dir,
                          const char *contents,
                          const char *prefix,
+                         apr_hash_t *config,
                          apr_pool_t *pool);
 
 
@@ -225,7 +237,7 @@ svn_cl__edit_externally (const char **edited_contents,
    reply will not be echoed to the screen.  BATON is ignored (but
    required by the definition of svn_client_prompt_t.)  */
 svn_error_t *
-svn_cl__prompt_user (char **result,
+svn_cl__prompt_user (const char **result,
                      const char *prompt,
                      svn_boolean_t hide,
                      void *baton,
@@ -236,6 +248,7 @@ svn_cl__prompt_user (char **result,
 svn_client_auth_baton_t *
 svn_cl__make_auth_baton (svn_cl__opt_state_t *opt_state,
                          apr_pool_t *pool);
+
 
 
 /*** Notification functions to display results on the terminal. */
@@ -277,10 +290,14 @@ void svn_cl__get_notifier (svn_wc_notify_func_t *notify_func_p,
    on Unix and C:\Windows\Temp on Win32 or something), and use it.
    But APR doesn't yet have that capability.
    
+   CONFIG is a client configuration hash of svn_config_t * items keyed
+   on config categories, and may be NULL.
+
    NOTE: While the baton itself will be allocated from POOL, the items
    add to it are added by reference, not duped into POOL!*/
 void *svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
                                   const char *base_dir,
+                                  apr_hash_t *config,
                                   apr_pool_t *pool);
 
 /* A function of type svn_client_get_commit_log_t. */
@@ -305,17 +322,6 @@ svn_error_t *svn_cl__cleanup_log_msg (void *log_msg_baton,
 /* Add a message about --force if appropriate */
 svn_error_t *svn_cl__may_need_force (svn_error_t *err);
 
-
-/*** Argument processing. ***/
-
-/* Given some TARGET from the command line, set *URL to an associated url.
-   If TARGET is already a url, set *URL to TARGET.  If TARGET is a
-   versioned item, set *URL to TARGET's entry's URL.  If TARGET is
-   unversioned (has no entry), set *URL to NULL. */
-svn_error_t *
-svn_cl__get_url_from_target (const char **URL,
-                             const char *target,
-                             apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
