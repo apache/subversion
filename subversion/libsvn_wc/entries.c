@@ -53,6 +53,7 @@
 
 svn_error_t *
 svn_wc__entries_init (const char *path,
+                      const char *uuid,
                       const char *url,
                       svn_revnum_t initial_rev,
                       apr_pool_t *pool)
@@ -60,6 +61,7 @@ svn_wc__entries_init (const char *path,
   apr_status_t apr_err;
   apr_file_t *f = NULL;
   svn_stringbuf_t *accum = NULL;
+  apr_hash_t *atts = apr_hash_make (pool);
   char *initial_revstr =  apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
                                         initial_rev);
 
@@ -79,30 +81,33 @@ svn_wc__entries_init (const char *path,
                          SVN_XML_NAMESPACE,
                          NULL);
 
-  /* Add an entry for the dir itself -- name is absent, only the
-     revision and default ancestry are present as xml attributes, and
-     possibly an 'incomplete' flag if  the revnum is > 0. */
-  if ((initial_rev == 0) || (! SVN_IS_VALID_REVNUM(initial_rev)))
-    svn_xml_make_open_tag 
-      (&accum,
-       pool,
-       svn_xml_self_closing,
-       SVN_WC__ENTRIES_ENTRY,
-       SVN_WC__ENTRY_ATTR_KIND, SVN_WC__ENTRIES_ATTR_DIR_STR,
-       SVN_WC__ENTRY_ATTR_REVISION, initial_revstr,
-       SVN_WC__ENTRY_ATTR_URL, url,
-       NULL);    
-  else
-    svn_xml_make_open_tag 
-      (&accum,
-       pool,
-       svn_xml_self_closing,
-       SVN_WC__ENTRIES_ENTRY,
-       SVN_WC__ENTRY_ATTR_KIND, SVN_WC__ENTRIES_ATTR_DIR_STR,
-       SVN_WC__ENTRY_ATTR_REVISION, initial_revstr,
-       SVN_WC__ENTRY_ATTR_URL, url,
-       SVN_WC__ENTRY_ATTR_INCOMPLETE, "true",
-       NULL);
+  /* Add an entry for the dir itself.  The directory has no name.  It
+     might have a UUID, but otherwise only the revision and default
+     ancestry are present as xml attributes, and possibly an
+     'incomplete' flag if the revnum is > 0. */
+
+  apr_hash_set (atts, SVN_WC__ENTRY_ATTR_KIND, 
+                sizeof (SVN_WC__ENTRY_ATTR_KIND) - 1,
+                SVN_WC__ENTRIES_ATTR_DIR_STR);
+  apr_hash_set (atts, SVN_WC__ENTRY_ATTR_URL,
+                sizeof (SVN_WC__ENTRY_ATTR_URL) - 1,
+                url);
+  apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REVISION,
+                sizeof (SVN_WC__ENTRY_ATTR_REVISION) - 1,
+                initial_revstr);
+
+  if (uuid)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_UUID,
+                  sizeof (SVN_WC__ENTRY_ATTR_UUID) - 1,
+                  uuid);
+    
+  if (initial_rev > 0)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_INCOMPLETE,
+                  sizeof (SVN_WC__ENTRY_ATTR_INCOMPLETE) - 1,
+                  "true");
+  
+  svn_xml_make_open_tag_hash (&accum, pool, svn_xml_self_closing,
+                              SVN_WC__ENTRIES_ENTRY, atts);
 
   /* Close the top-level form. */
   svn_xml_make_close_tag (&accum,
