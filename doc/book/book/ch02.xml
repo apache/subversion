@@ -157,7 +157,7 @@
             powerless to prevent the problem&mdash;yet it somehow
             provided a false sense of security.  It's easy for Harry and
             Sally to imagine that by locking files, each is beginning a
-            safe, insulated task, and thus inhibits them from
+            safe, insulated task, and thus not bother
             discussing their incompatible changes early
             on.</para></listitem>
       </itemizedlist>
@@ -378,7 +378,7 @@ Makefile  integer.c  button.c  .svn/
           syntax, allowing for server names and port numbers to be
           specified as part of the URL.  Remember that the
           <literal>file:</literal> access method is valid only for
-          locations on the same server as the client&mdash;in fact, in
+          local repositories&mdash;in fact, in
           accordance with convention, the server name portion of the
           URL is required to be either absent or
           <literal>localhost</literal>:</para>
@@ -503,7 +503,7 @@ U button.c
         numbers, starting at 0, stretching from left to right.  Each
         revision number has a filesystem tree hanging below it, and
         each tree is a <quote>snapshot</quote> of the way the
-        repository looked after each commit. </para>
+        repository looked after a commit.</para>
       
       <figure id="svn-ch-2-dia-7">
         <title>The repository</title>
@@ -565,7 +565,7 @@ calc/Makefile:6
      button.c:6
 </screen>
 
-      <para>Sally's changes to <filename>integer.c</filename> will
+      <para>Sally's change to <filename>integer.c</filename> will
         appear in your working copy, and your change will still be
         present in <filename>button.c</filename>.  In this example,
         the text of <filename>Makefile</filename> is identical in

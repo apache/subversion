@@ -3580,7 +3580,7 @@ Updated to revision 31.
           </tip>
 
           <para>Sometimes an administrator might change the "base
-             location" of your repository &mdash; in other words,
+             location" of your repository&mdash;in other words,
              the contents of the repository doesn't change, but the
              main URL used to reach the root of the repository does.
              For example, the hostname may change, or the URL schema,
