@@ -689,6 +689,11 @@ svn_revnum_t svn_fs_revision_root_revision (svn_fs_root_t *root);
 
 /* Operations appropriate to all kinds of nodes.  */
 
+/* Return the type of node present at PATH under ROOT.  If PATH
+   does not exist under ROOT, set *KIND to svn_node_none. */
+svn_node_kind_t svn_fs_check_path (svn_fs_root_t *root,
+                                   const char *path,
+                                   apr_pool_t *pool);
 
 /* Set *IS_DIR to non-zero iff PATH in ROOT is a directory.
    Do any necessary temporary allocation in POOL.  */

@@ -53,13 +53,13 @@ typedef struct svn_error
 /* index into an apr_array_header_t */
 #define APR_ARRAY_IDX(ary,i,type) (((type *)(ary)->elts)[i])
 
-enum svn_node_kind
+typedef enum svn_node_kind
 {
   svn_node_none,        /* absent */
   svn_node_file,        /* regular file */
   svn_node_dir,         /* directory */
   svn_node_unknown      /* something's here, but we don't know what */
-};
+} svn_node_kind_t;
 
 /* This type exists because apr_item_t was removed from apr, and
    libsvn_subr/keysort.c needs structures like this to sort hashes. */

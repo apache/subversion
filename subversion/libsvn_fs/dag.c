@@ -39,15 +39,6 @@
 
 /* Initializing a filesystem.  */
 
-/* Node types */
-typedef enum dag_node_kind_t
-{
-  dag_node_kind_file = 1, /* Purposely reserving 0 for error */
-  dag_node_kind_dir,
-}
-dag_node_kind_t;
-
-
 struct dag_node_t
 {
   /* The filesystem this dag node came from. */
@@ -63,7 +54,7 @@ struct dag_node_t
   svn_fs_id_t *id;
 
   /* The node's type (file, dir, copy, etc.) */
-  dag_node_kind_t kind;
+  svn_node_kind_t kind;
 
   /* The node's NODE-REVISION skel, or zero if we haven't read it in
      yet.  This is allocated either in this node's POOL, if the node
@@ -83,17 +74,23 @@ struct dag_node_t
 
 
 /* Trivial helper/accessor functions. */
+svn_node_kind_t svn_fs__dag_node_kind (dag_node_t *node)
+{
+  return node->kind;
+}
+
+
 int 
 svn_fs__dag_is_file (dag_node_t *node)
 {
-  return (node->kind == dag_node_kind_file ? TRUE : FALSE);
+  return (node->kind == svn_node_file);
 }
 
 
 int 
 svn_fs__dag_is_directory (dag_node_t *node)
 {
-  return (node->kind == dag_node_kind_dir ? TRUE : FALSE);
+  return (node->kind == svn_node_dir);
 }
 
 
@@ -269,9 +266,9 @@ svn_fs__dag_get_node (dag_node_t **node,
 
   /* Initialize the KIND attribute */
   if (node_is_kind_p (contents, "file"))
-    new_node->kind = dag_node_kind_file;
+    new_node->kind = svn_node_file;
   else if (node_is_kind_p (contents, "dir"))
-    new_node->kind = dag_node_kind_dir;
+    new_node->kind = svn_node_dir;
   else
     return svn_error_create (SVN_ERR_FS_GENERAL, 0, 0, fs->pool,
                              "Attempt to create unknown kind of node");

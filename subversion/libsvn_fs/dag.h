@@ -103,7 +103,10 @@ svn_error_t *svn_fs__dag_check_mutable (svn_boolean_t *is_mutable,
                                         dag_node_t *node,
                                         trail_t *trail);
 
-/* Return true iff NODE is a file/directory/copy.  */
+/* Return the node kind of NODE. */
+svn_node_kind_t svn_fs__dag_node_kind (dag_node_t *node);
+
+/* Return true iff NODE is a file/directory. */
 int svn_fs__dag_is_file (dag_node_t *node);
 int svn_fs__dag_is_directory (dag_node_t *node);
 
