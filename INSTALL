@@ -65,66 +65,57 @@ I.    BUILD REQUIREMENTS
       1.  Apache Portable Runtime 0.9.5 (http://apr.apache.org/)
 
       Whenever you want to build any part of Subversion, you need the
-      Apache Portable Runtime (APR) and the APR Utility (APRUTIL)
-      libraries. At the time of this writing, there were no official
-      release versions of APR/APRUTIL available, but Subversion tries
-      to stay compatible with the versions bundled within the latest
-      httpd-2.0 release.
+      Apache Portable Runtime (APR) and the APR Utility (APR-util)
+      libraries. These are included in Subversion source tarball releases -
+      if you are building from a source tarball, and wish to use the
+      included versions, you may skip ahead to the next requirement.
 
-      Therefore, the easiest way to get apr/apr-util is to download
-      the latest release of the httpd source, and use the apr/apr-util
-      trees contained within.
+      If you are not building from a tarball, you will need to get these
+      yourself. Visit this page, and be sure to download the 0.9.x version:
 
-        $ tar zxvf httpd-2.X.YY.tar.gz
-        $ cd httpd-2.X.YY/srclib
-        $ cp -a apr apr-util /path/to/svn_wc
+          http://apr.apache.org/download.cgi
 
-      If you already have the APR libraries compiled and do not wish to
-      regenerate them from source code, then Subversion needs to be
-      able to find them.
+      On Unix systems, if you already have the APR libraries compiled and do
+      not wish to regenerate them from source code, then Subversion needs to
+      be able to find them.
 
       There are a couple of options to "./configure" that tell it where
-      to look for the APR and APRUTIL libraries. By default, it will look
-      for and use the apr-config and apu-config scripts. These scripts
-      provide all the relevant information for the APR and APRUTIL
-      installations.
+      to look for the APR and APR-util libraries. By default, it will first
+      look for bundled versions of APR and APR-util, and then try to locate
+      already installed versions of the libraries using the apr-config and
+      apu-config scripts. These scripts provide all the relevant information
+      for the APR and APR-util installations.
 
       If you want to specify the location of the APR library, you can use
       the "--with-apr=" option of "./configure". It should be able to find
       the apr-config script in the standard location under that directory
       (e.g. ${prefix}/bin).
 
-      Similarly, you can specify the location of APRUTIL using the
+      Similarly, you can specify the location of APR-util using the
       "--with-apr-util=" option to "./configure". It will look for the
       apu-config script relative to that directory.
 
       For example, if you want to use the APR libraries you built
-      with the Apache HTTP 2.0 server, you could run:
+      with the Apache httpd 2.0 server, you could run:
 
           $ ./configure --with-apr=/usr/local/apache2 \
             --with-apr-util=/usr/local/apache2  ...
 
       If you want Subversion to build the APR libraries from source
       code as part of the Subversion build process, you can put their
-      source code into the "./apr" and "./apr-util" directories. The
-      Subversion tarball comes with copies of the libraries' source
-      code stored in these subdirectories which you could copy or link
-      to.
+      source code into the "./apr" and "./apr-util" directories.
 
-      You probably don't need the latest development versions, since Subversion
-      is only guaranteed to compile against the latest released httpd-2.0
-      or APR and APRUTIL.  However, just in case, you can use the
-      following two commands. If you run them from the directory where
-      you've checked out Subversion, then the APR source code will be
-      in "./apr" and "./apr-util", where Subversion wants it:
+      You don't need the latest development versions, since Subversion is
+      guaranteed to compile against the latest released APR and APR-util.
+      However, if you really want to, you can use the following two
+      commands. If you run them from the directory where you've checked out
+      Subversion, then the APR source code will be in "./apr" and
+      "./apr-util", where Subversion wants it:
 
       $ svn co \
         http://svn.apache.org/repos/asf/apr/apr/branches/0.9.x apr
       $ svn co \
         http://svn.apache.org/repos/asf/apr/apr-util/branches/0.9.x apr-util
-
-      The "./apr" and "./apr-util" directories will not be considered
-      if the search for apr-config and apu-config scripts is successful.
 
       NOTE: On Windows you will also need apr-iconv.  Check it out next to
       the apr and apr-util directories:
@@ -141,15 +132,13 @@ I.    BUILD REQUIREMENTS
       2.  autoconf 2.50 or newer (Unix only)
 
       This is required only if you plan to build from the latest source
-      (see section II.B). Generally only developers would be doing this,
-      but at this stage in Subversion's development you'll probably
-      want to do this as well.
+      (see section II.B). Generally only developers would be doing this.
 
 
       3.  libtool 1.4 or newer (Unix only)
 
       This is required only if you plan to build from the latest source
-      (see section II.B), which you probably want to do. See above.
+      (see section II.B).
 
       Note: Some systems (Solaris, for example) require libtool 1.4.3 or
       newer. The autogen.sh script knows about that.
@@ -163,8 +152,9 @@ I.    BUILD REQUIREMENTS
       http:// or https:// url), you will require Neon.  
 
       The Neon library source code can be installed in "./neon" if you
-      want Subversion to build it. The source code is included with the
-      latest Subversion tarball, and it can also be obtained from:
+      want Subversion to build it as part of the Subversion build process.
+      The source code is included with the latest Subversion tarball, and it
+      can also be obtained from:
 
           http://www.webdav.org/neon/neon-0.24.7.tar.gz
 
@@ -189,17 +179,17 @@ I.    BUILD REQUIREMENTS
       or if you are building a Subversion client that will only speak
       to remote (networked) repositories, you don't need it.
 
-      You should try to use the latest version of BerkeleyDB 4.X.  At
-      the time of writing, 4.2.52 is the latest version; we *strongly*
-      recommend using it over 4.1 or 4.0.  Not only is the fastest and
-      most stable version we've seen, but it also enables Subversion
-      repositories to automatically clean up database journal files to
-      save disk space.
+      The current recommended version is 4.2.52. Version 4.3 has been
+      recently released, but APR-util 0.9.x has not been updated to support
+      it. We *strongly* recommend using 4.2 over 4.1 or 4.0.  Not only is
+      the fastest and most stable version we've seen, but it also enables
+      Subversion repositories to automatically clean up database journal
+      files to save disk space.
 
       You'll need Berkeley DB installed on your system.  You can
       get it from:
 
-          http://www.sleepycat.com/download/patchlogs.shtml
+          http://www.sleepycat.com/download/index.shtml
 
       If you have Berkeley DB installed in a place not searched by default
       for includes and libraries, add something like this:
@@ -220,12 +210,13 @@ I.    BUILD REQUIREMENTS
       6.  Apache Web Server 2.0.49 or newer
           (http://httpd.apache.org/download.cgi)
 
-      The Apache HTTP server is required if you wish to offer your
-      Subversion repository over the Internet. Building Subversion, the
-      Apache server, and the modules that Apache needs to communicate
-      with Subversion are complicated enough that there is a whole
-      section at the end of this document that describes how it is
-      done: See section III for details.
+      The Apache httpd server is one of two methods to make your Subversion
+      repository available over a network - the other is a custom server
+      program called svnserve, which requires no extra software packages.
+      Building Subversion, the Apache server, and the modules that Apache
+      needs to communicate with Subversion are complicated enough that there
+      is a whole section at the end of this document that describes how it
+      is done: See section III for details.
 
 
       7.  Python 2.0 (http://www.python.org/)
@@ -265,28 +256,27 @@ I.    BUILD REQUIREMENTS
       using the zlib library which a Subversion client can take
       advantage of.
 
-      With Unix-based systems, you can enable support for SSL from the
-      Subversion build provided that you are building Neon in the
-      "./neon/" directory as described above in section I.4.  You also
-      need OpenSSL installed on your system.  Just add "--with-ssl" as
-      a parameter when you run Subversion's "./configure", and it will
-      be passed on to the Neon build system.  If your OpenSSL
+      On Unix systems, if you are building neon as part of the Subversion
+      build process (as described in section I.4 above), you can pass flags
+      to Subversion's "./configure", and they will be passed on to neon's
+      "./configure".  You need OpenSSL installed on your system, and you
+      must add "--with-ssl" as a "./configure" parameter.  If your OpenSSL
       installation is hard for Neon to find, you may need to use
       "--with-libs=/path/to/lib" in addition.  In particular, on Red Hat
       (but not Fedora Core) it is necessary to specify
-      "--with-libs=/usr/kerberos" for OpenSSL to be found.  The zlib
-      library is included in Neon by default, but you can also specify a
-      path to the library using "--with-libs".  Consult the Neon
-      documentation for more information on how to use these parameters
-      and versions of libraries you need.
+      "--with-libs=/usr/kerberos" for OpenSSL to be found.  The zlib library
+      is included in Neon by default, but you can also specify a path to the
+      library using "--with-libs".  Consult the Neon documentation for more
+      information on how to use these parameters and versions of libraries
+      you need.
 
       Under Windows, you can specify the paths to these libraries by
       passing the options --with-zlib and --with-openssl to gen-make.py.
 
-      You can also add support for these features to a Subversion server
-      and you can even use the same support libraries.  The Subversion
-      build system will not provide them, however.  You add them by
-      specifying parameters to the "./configure" script of the Apache
+      You can also add support for these features to an Apache httpd server
+      to be used for Subversion using the same support libraries.  The
+      Subversion build system will not provide them, however.  You add them
+      by specifying parameters to the "./configure" script of the Apache
       Server instead.
 
       For getting SSL on your server, you would add the "--enable-ssl"
@@ -337,10 +327,10 @@ I.    BUILD REQUIREMENTS
          * the `texi2dvi' or `texi2html' programs
 
          * the `dvipdf' script from Ghostscript (pipes dvi | ps |
-      Ghostscript)
+                                                 Ghostscript)
 
       If `makeinfo' is not installed before `configure' is run, then
-      the documentation will not be created and installed.
+      the documentation which requires it will not be created and installed.
 
 
 
@@ -699,7 +689,7 @@ II.   INSTALLATION
       * If you are building from a checkout of Subversion, and you are NOT
         building Apache, then you will need the APR libraries.  Depending
         on how you got your version of APR, either:
-          - Extract the APR, APRUTIL and APR-ICONV source distributions into
+          - Extract the APR, APR-util and APR-iconv source distributions into
             SVN\apr, SVN\apr-util, and SVN\apr-iconv respectively.
         Or:
           - Extract the apr, apr-util and apr-iconv directories from the
@@ -951,11 +941,12 @@ III.  BUILDING A SUBVERSION SERVER
 
       Alternately, if you'd rather use the latest SVN versions of
       everything, checkout the "httpd 2.0.x"  branch from apache.org.
-      If you have questions about the Apache 2.0 build, please consult
-      the HTTPD install documentation:
+      If you have questions about the Apache httpd 2.0 build, please consult
+      the httpd install documentation:
 
-      http://httpd.apache.org/docs-2.0/install.html.  Place this
-      module wherever you wish; it's an independent project.
+          http://httpd.apache.org/docs-2.0/install.html
+
+      Place this module wherever you wish; it's an independent project.
       
       $ svn co \
         http://svn.apache.org/repos/asf/httpd/httpd/branches/2.0.x httpd-2.0 
@@ -1012,7 +1003,7 @@ III.  BUILDING A SUBVERSION SERVER
       -------------------------------------------
 
       Go back into your subversion working copy and run ./autogen.sh if
-      you need to.  Then, assuming Apache HTTP 2.0 is installed in the
+      you need to.  Then, assuming Apache httpd 2.0 is installed in the
       standard location, run:
 
           $ ./configure
@@ -1022,7 +1013,7 @@ III.  BUILDING A SUBVERSION SERVER
       look for other libsvn_*.so libraries on your system.
 
       If you see a warning message that the build of mod_dav_svn is being
-      skipped, this may be because you have Apache HTTP 2.0 installed
+      skipped, this may be because you have Apache httpd 2.0 installed
       in a non-standard location.  You can use the "--with-apxs=" option
       to locate the apxs script:
 
