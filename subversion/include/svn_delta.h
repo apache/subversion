@@ -282,12 +282,10 @@ typedef struct svn_delta_edit_fns_t
      caller (producer) is pushing tree delta data at the callee
      (consumer).
 
-     At the start of traversal, the consumer provides EDIT_BATON, a
-     baton global to the entire delta edit.  In the case of
-     `svn_xml_parse', this would be the EDIT_BATON argument; other
-     producers will work differently.  The producer should pass this
-     value as the EDIT_BATON argument to the `replace_root' function,
-     to get a baton representing root of the tree being edited.
+     At the start of traversal, the consumer provides ROOT_DIR_BATON,
+     a baton for the root directory of the entire delta edit.  The
+     producer should pass this value as the DIR_BATON argument to the
+     `replace_dir' function that starts the edit.
 
      Most of the callbacks work in the obvious way:
 
@@ -301,14 +299,7 @@ typedef struct svn_delta_edit_fns_t
      (NAME is always a single path component, never a full directory
      path.)
 
-     Since every call requires a parent directory baton, including
-     add_directory and replace_directory, where do we ever get our
-     initial directory baton, to get things started?  The
-     `replace_root' function returns a baton for the top directory of
-     the change.  In general, the producer needs to invoke the
-     editor's `replace_root' function before it can get anything done.
-
-     While `replace_root' provides a directory baton for the root of
+     Just as the consumer provided a ROOT_DIR_BATON for the root of
      the tree being changed, the `add_directory' and
      `replace_directory' callbacks provide batons for other
      directories.  Like the callbacks above, they take a PARENT_BATON
@@ -320,14 +311,15 @@ typedef struct svn_delta_edit_fns_t
      So, if we already have subdirectories named `foo' and `foo/bar',
      then the producer can create a new file named `foo/bar/baz.c' by
      calling:
-        replace_root () --- yielding a baton ROOT for the top directory
         replace_directory (ROOT, "foo") --- yielding a baton F for `foo'
         replace_directory (F, "bar") --- yielding a baton B for `foo/bar'
         add_file (B, "baz.c")
      
      When the producer is finished making changes to a directory, it
      should call `close_directory'.  This lets the consumer do any
-     necessary cleanup, and free the baton's storage.
+     necessary cleanup, and free the baton's storage.  Calling
+     close_directory() on the ROOT_DIR_BATON signifies the end of
+     editing.
 
      The `add_file' and `replace_file' callbacks each return a baton
      for the file being created or changed.  This baton can then be
@@ -390,17 +382,8 @@ typedef struct svn_delta_edit_fns_t
      text deltas to appear at the end.  */
 
 
-  /* Set *ROOT_BATON to a baton for the top directory of the change.
-     (This is the top of the subtree being changed, not necessarily
-     the root of the filesystem.)  Like any other directory baton, the
-     producer should call `close_directory' on ROOT_BATON when they're
-     done.  */
-  svn_error_t *(*replace_root) (void *edit_baton,
-                                void **root_baton);
-
-
   /* Deleting things.  */
-       
+
   /* Remove the directory entry named NAME.  */
   /* FIXME: this used to be just delete(), but was changed to avoid
    * gratuitous incompatibility with C++, where `delete' is a reserved
@@ -507,14 +490,11 @@ typedef struct svn_delta_edit_fns_t
      more, so whatever resources it refers to may now be freed.  */
   svn_error_t *(*close_file) (void *file_baton);
 
-  /* All delta processing is done.  Call this, with the EDIT_BATON for
-     the entire edit. */
-  svn_error_t *(*close_edit) (void *edit_baton);
-
 } svn_delta_edit_fns_t;
 
 
-/* Compose EDITOR_1 and its baton with EDITOR_2 and its baton. 
+/* Compose EDITOR_1 and its baton with EDITOR_2 and its root dir
+ * baton.
  *
  * Returns a new editor in E which each function FUN calls
  * EDITOR_1->FUN and then EDITOR_2->FUN, with the corresponding batons.
@@ -528,19 +508,19 @@ typedef struct svn_delta_edit_fns_t
  */
 void
 svn_delta_compose_editors (const svn_delta_edit_fns_t **new_editor,
-                           void **new_edit_baton,
+                           void **new_root_dir_baton,
                            const svn_delta_edit_fns_t *editor_1,
-                           void *edit_baton_1,
+                           void *root_dir_baton_1,
                            const svn_delta_edit_fns_t *editor_2,
-                           void *edit_baton_2,
+                           void *root_dir_baton_2,
                            apr_pool_t *pool);
 
 
-/* Compose BEFORE_EDITOR, BEFORE_EDIT_BATON with MIDDLE_EDITOR,
- * MIDDLE_EDIT_BATON, then compose the result with AFTER_EDITOR,
- * AFTER_EDIT_BATON, all according to the conventions of
+/* Compose BEFORE_EDITOR, BEFORE_ROOT_DIR_BATON with MIDDLE_EDITOR,
+ * MIDDLE_ROOT_DIR_BATON, then compose the result with AFTER_EDITOR,
+ * AFTER_ROOT_DIR_BATON, all according to the conventions of
  * svn_delta_compose_editors().  Return the resulting editor in
- * *NEW_EDITOR, *NEW_EDIT_BATON.
+ * *NEW_EDITOR, *NEW_ROOT_DIR_BATON.
  *
  * If either BEFORE_EDITOR or AFTER_EDITOR is null, that editor will
  * simply not be included in the composition.  It is advised, though
@@ -551,25 +531,25 @@ svn_delta_compose_editors (const svn_delta_edit_fns_t **new_editor,
  * happens if it is.
  */
 void svn_delta_wrap_editor (const svn_delta_edit_fns_t **new_editor,
-                            void **new_edit_baton,
+                            void **new_root_dir_baton,
                             const svn_delta_edit_fns_t *before_editor,
-                            void *before_edit_baton,
+                            void *before_root_dir_baton,
                             const svn_delta_edit_fns_t *middle_editor,
-                            void *middle_edit_baton,
+                            void *middle_root_dir_baton,
                             const svn_delta_edit_fns_t *after_editor,
-                            void *after_edit_baton,
+                            void *after_root_dir_baton,
                             apr_pool_t *pool);
 
 
 
 /* Creates an editor which outputs XML delta streams to OUTPUT.  On
-   return, *EDITOR and *EDITOR_BATON will be set to the editor and its
-   associate baton.  The editor's memory will live in a sub-pool of
-   POOL. */
+   return, *EDITOR and *ROOT_DIR_BATON will be set to the editor and
+   its associated baton.  The editor's memory will live in a sub-pool
+   of POOL. */
 svn_error_t *
 svn_delta_get_xml_editor (svn_stream_t *output,
                           const svn_delta_edit_fns_t **editor,
-                          void **edit_baton,
+                          void **root_dir_baton,
                           apr_pool_t *pool);
 
 
@@ -579,13 +559,13 @@ svn_delta_get_xml_editor (svn_stream_t *output,
 typedef struct svn_delta_xml_parser_t svn_delta_xml_parser_t;
 
 /* Given a precreated svn_delta_edit_fns_t EDITOR, return a custom xml
-   PARSER that will call into it (and feed EDIT_BATON to its
+   PARSER that will call into it (and feed ROOT_DIR_BATON to its
    callbacks.)  Additionally, this XML parser will use BASE_PATH and
    BASE_REVISION as default "context variables" when computing ancestry
    within a tree-delta. */
 svn_error_t  *svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
                                          const svn_delta_edit_fns_t *editor,
-                                         void *edit_baton,
+                                         void *root_dir_baton,
                                          svn_string_t *base_path, 
                                          svn_revnum_t base_revision,
                                          apr_pool_t *pool);
@@ -614,7 +594,7 @@ svn_delta_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal,
    until either the stream runs out or an error occurs. */
 svn_error_t *svn_delta_xml_auto_parse (svn_stream_t *source,
                                        const svn_delta_edit_fns_t *editor,
-                                       void *edit_baton,
+                                       void *root_dir_baton,
                                        svn_string_t *base_path,
                                        svn_revnum_t base_revision,
                                        apr_pool_t *pool);

@@ -42,16 +42,16 @@ svn_cl__update (svn_cl__opt_state_t *opt_state,
       {
         svn_string_t *target = ((svn_string_t **) (targets->elts))[i];
         const svn_delta_edit_fns_t *trace_editor;
-        void *trace_edit_baton;
+        void *trace_root_dir_baton;
 
         err = svn_cl__get_trace_update_editor (&trace_editor,
-                                               &trace_edit_baton,
+                                               &trace_root_dir_baton,
                                                target, pool);
         if (err)
           return err;
 
         err = svn_client_update (NULL, NULL,
-                                 trace_editor, trace_edit_baton,
+                                 trace_editor, trace_root_dir_baton,
                                  target,
                                  opt_state->xml_file,
                                  opt_state->revision,

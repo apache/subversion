@@ -196,7 +196,7 @@ static svn_error_t *
 do_dir_replaces (void **newest_baton,
                  struct stack_object *stack,
                  const svn_delta_edit_fns_t *editor,
-                 void *edit_baton,
+                 void *root_dir_baton,
                  apr_hash_t *locks,
                  apr_pool_t *top_pool,
                  apr_pool_t *pool)
@@ -216,18 +216,11 @@ do_dir_replaces (void **newest_baton,
       
       if (stackptr->previous)  
         stackptr = stackptr->previous;  /* descend. */
-
       else
         {
           /* Can't descend?  We must be at stack bottom, fetch the
              root baton. */
-          void *root_baton;
-
-          err = editor->replace_root (edit_baton, &root_baton);  
-          if (err) return err;
-          
-          /* Store it */
-          stackptr->baton = root_baton;
+          stackptr->baton = root_dir_baton;
           break;
         }
     }
@@ -610,7 +603,7 @@ static svn_error_t *
 report_local_mods (svn_string_t *path,
                    void *dir_baton,
                    const svn_delta_edit_fns_t *editor,
-                   void *edit_baton,
+                   void *root_dir_baton,
                    struct stack_object **stack,
                    apr_hash_t *affected_targets,
                    apr_hash_t *locks,
@@ -699,7 +692,7 @@ report_local_mods (svn_string_t *path,
           if (! dir_baton)
             {
               err = do_dir_replaces (&dir_baton,
-                                     *stack, editor, edit_baton,
+                                     *stack, editor, root_dir_baton,
                                      locks, top_pool, subpool);
               if (err) return err;
             }
@@ -735,7 +728,7 @@ report_local_mods (svn_string_t *path,
           if (! dir_baton)
             {
               err = do_dir_replaces (&dir_baton,
-                                     *stack, editor, edit_baton,
+                                     *stack, editor, root_dir_baton,
                                      locks, top_pool, subpool);
               if (err) return err;
             }
@@ -858,7 +851,7 @@ report_local_mods (svn_string_t *path,
               if (! dir_baton)
                 {
                   err = do_dir_replaces (&dir_baton,
-                                         *stack, editor, edit_baton,
+                                         *stack, editor, root_dir_baton,
                                          locks, top_pool, subpool);
                   if (err) return err;
                 }
@@ -913,7 +906,7 @@ report_local_mods (svn_string_t *path,
              do_dir_replaces() and get the _correct_ dir baton for the
              child directory. */
           err = report_local_mods (full_path_to_entry, new_dir_baton,
-                                      editor, edit_baton,
+                                      editor, root_dir_baton,
                                       stack, affected_targets, locks,
                                       top_pool);
           if (err) return err;
@@ -964,7 +957,7 @@ svn_error_t *
 svn_wc_crawl_local_mods (apr_hash_t **targets,
                          svn_string_t *root_directory,
                          const svn_delta_edit_fns_t *edit_fns,
-                         void *edit_baton,
+                         void *root_dir_baton,
                          apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -978,7 +971,7 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
      Note that the first thing the crawler will do is push a new stack
      object onto the stack with PATH="root_directory" and BATON=NULL.  */
   err = report_local_mods (root_directory, NULL,
-                           edit_fns, edit_baton,
+                           edit_fns, root_dir_baton,
                            &stack, affected_targets, locks,
                            pool);
   if (err) return err;
@@ -990,15 +983,6 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
      may be needed. */
   err = do_postfix_text_deltas (affected_targets, edit_fns, pool);
   if (err) return err;
-
-  /* Have any edits been made at all?  We can tell by looking at the
-     top-level stackframe left over from the crawl; it might still
-     contain the root-dir baton.  If so, close the editor. */
-  if (stack->baton)
-    {
-      err = edit_fns->close_edit (edit_baton);
-      if (err) return err;
-    }
 
   *targets = affected_targets;
 
@@ -1012,7 +996,7 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
 svn_error_t *
 svn_wc_crawl_revisions (svn_string_t *root_directory,
                         const svn_delta_edit_fns_t *edit_fns,
-                        void *edit_baton,
+                        void *root_dir_baton,
                         apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -1032,19 +1016,13 @@ svn_wc_crawl_revisions (svn_string_t *root_directory,
   master_revnum = root_entry->revision;
 
   /* Next, call replace_root() and push as first item on stack...? */
-
+  /* kff todo: Well, no, maybe replace_directory() now?  Dunno. */
 
   /* Start the mini-crawler. 
      err = report_revisions (root_directory, NULL,
-     edit_fns, edit_baton,
+     edit_fns, root_dir_baton,
      &stack, master_revnum,
      pool); */
-  if (err) return err;
-
-
-  /* Close the edit, causing the update_editor to be driven. */
-  err = edit_fns->close_edit (edit_baton);
-  if (err) return err; /* pay attention to this return value!! */
 
   return SVN_NO_ERROR;
 

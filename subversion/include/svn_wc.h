@@ -292,7 +292,7 @@ svn_wc_close_commit (svn_string_t *path,
    Do a depth-first crawl of the local changes in a working copy,
    beginning at ROOT_DIRECTORY.  Communicate all local changes (both
    textual and tree) to the supplied EDIT_FNS object (coupled with the
-   supplied EDIT_BATON).
+   supplied ROOT_DIR_BATON).
 
    Any items that were found to be modified, and were therefore
    committed, are stored in TARGETS as full paths, so caller can clean
@@ -301,7 +301,7 @@ svn_error_t *
 svn_wc_crawl_local_mods (apr_hash_t **targets,
                          svn_string_t *root_directory,
                          const svn_delta_edit_fns_t *edit_fns,
-                         void *edit_baton,
+                         void *root_dir_baton,
                          apr_pool_t *pool);
 
 
@@ -322,7 +322,7 @@ svn_wc_crawl_local_mods (apr_hash_t **targets,
 svn_error_t *
 svn_wc_crawl_revisions (svn_string_t *root_directory,
                         const svn_delta_edit_fns_t *edit_fns,
-                        void *edit_baton,
+                        void *root_dir_baton,
                         apr_pool_t *pool);
 
 
@@ -338,14 +338,12 @@ svn_wc_crawl_revisions (svn_string_t *root_directory,
  * TARGET_REVISION is the repository revision that results from this set
  * of changes.
  *
- * EDITOR, EDIT_BATON, and DIR_BATON are all returned by reference,
- * and the latter two should be used as parameters to editor
- * functions.
+ * EDITOR and ROOT_DIR_BATON are returned by reference.
  */
 svn_error_t *svn_wc_get_update_editor (svn_string_t *dest,
                                        svn_revnum_t target_revision,
                                        const svn_delta_edit_fns_t **editor,
-                                       void **edit_baton,
+                                       void **root_dir_baton,
                                        apr_pool_t *pool);
 
 
@@ -364,6 +362,9 @@ svn_error_t *svn_wc_get_update_editor (svn_string_t *dest,
  * REPOS is the repository string to be recorded in this working
  * copy.
  *
+ *
+ * EDITOR and ROOT_DIR_BATON are returned by reference.
+ *
  * kff todo: Actually, REPOS is one of several possible non-delta-ish
  * things that may be needed by a editor when creating new
  * administrative subdirs.  Other things might be username and/or auth
@@ -375,7 +376,7 @@ svn_error_t *svn_wc_get_checkout_editor (svn_string_t *dest,
                                          svn_string_t *ancestor_path,
                                          svn_revnum_t target_revision,
                                          const svn_delta_edit_fns_t **editor,
-                                         void **edit_baton,
+                                         void **root_dir_baton,
                                          apr_pool_t *pool);
 
 

@@ -39,7 +39,7 @@ apply_delta (svn_stream_t *delta,
              apr_pool_t *pool)
 {
   const svn_delta_edit_fns_t *editor;
-  void *edit_baton;
+  void *root_dir_baton;
   svn_error_t *err;
 
   /* Get the editor and friends... */
@@ -49,7 +49,7 @@ apply_delta (svn_stream_t *delta,
                                     svn_string_create ("", pool),
                                     revision,
                                     &editor,
-                                    &edit_baton,
+                                    &root_dir_baton,
                                     pool);
   if (err)
     return err;
@@ -57,7 +57,7 @@ apply_delta (svn_stream_t *delta,
   /* ... and edit! */
   return svn_delta_xml_auto_parse (delta,
                                    editor,
-                                   edit_baton,
+                                   root_dir_baton,
                                    svn_string_create ("", pool),
                                    revision,
                                    pool);

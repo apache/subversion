@@ -95,7 +95,7 @@ typedef struct {
   apr_array_header_t *files;    /* files to checkout (resource_t *) */
 
   const svn_delta_edit_fns_t *editor;
-  void *edit_baton;
+  void *root_dir_baton;
 
   apr_pool_t *pool;
 
@@ -496,7 +496,7 @@ fetch_file (svn_ra_session_t *ras,
 
 svn_error_t * svn_ra_dav__checkout (void *session_baton,
                                     const svn_delta_edit_fns_t *editor,
-                                    void *edit_baton)
+                                    void *root_dir_baton)
 {
   svn_ra_session_t *ras = session_baton;
   int recurse = 1;      /* ### until it gets passed to us */
@@ -505,17 +505,12 @@ svn_error_t * svn_ra_dav__checkout (void *session_baton,
   fetch_ctx_t fc = { 0 };
   svn_string_t *ancestor_path;
   svn_revnum_t ancestor_revision;
-  void *root_baton;
   svn_string_t *act_url_name;
   resource_t *rsrc;
   resource_t **prsrc;
 
-  err = (*editor->replace_root)(edit_baton, &root_baton);
-  if (err != SVN_NO_ERROR)
-    return err;
-
   fc.editor = editor;
-  fc.edit_baton = edit_baton;
+  fc.root_dir_baton = root_dir_baton;
   fc.pool = ras->pool;
   fc.subdirs = apr_make_array(ras->pool, 5, sizeof(resource_t *));
   fc.files = apr_make_array(ras->pool, 10, sizeof(resource_t *));
@@ -524,7 +519,7 @@ svn_error_t * svn_ra_dav__checkout (void *session_baton,
   /* Build a directory resource for the root. We'll pop this off and fetch
      the information for it. */
   rsrc = apr_pcalloc(ras->pool, sizeof(*rsrc));
-  rsrc->parent_baton = root_baton;
+  rsrc->parent_baton = root_dir_baton;
 
   /* ### verify this the right place to start... */
   rsrc->url = ras->root.path;
@@ -583,7 +578,7 @@ svn_error_t * svn_ra_dav__checkout (void *session_baton,
       else 
         {
           /* We are operating in the root of the repository */
-          this_baton = root_baton;
+          this_baton = root_dir_baton;
         }
       fc.cur_baton = this_baton;
 
@@ -729,7 +724,6 @@ update_close_file (void *file_baton)
 ** the client to a specific version/latest/label/etc.
 */
 static const svn_delta_edit_fns_t update_editor = {
-  NULL,  /* update_replace_root */
   update_delete_item,
   update_add_dir,
   update_rep_dir,
@@ -740,14 +734,13 @@ static const svn_delta_edit_fns_t update_editor = {
   update_apply_txdelta,
   update_change_file_prop,
   update_close_file,
-  NULL   /* update_close_edit */
 };
 
 #if 0
 svn_error_t *
 svn_ra_dav__get_update_editor(void *session_baton,
                               const svn_delta_edit_fns_t **editor,
-                              void **edit_baton,
+                              void **root_dir_baton,
                               const svn_delta_edit_fns_t *wc_update,
                               void *wc_update_baton,
                               svn_string_t *URL)
@@ -755,7 +748,7 @@ svn_ra_dav__get_update_editor(void *session_baton,
   /* shove the session and wc_* values into our baton */
 
   *editor = &update_editor;
-  *edit_baton = NULL;
+  *root_dir_baton = NULL;
   return SVN_NO_ERROR;
 }
 #endif

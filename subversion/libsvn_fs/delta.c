@@ -85,7 +85,7 @@ svn_error_t *
 svn_fs_dir_delta (svn_fs_dir_t *source,
 		  svn_fs_dir_t *target,
 		  svn_delta_edit_fns_t *editor,
-		  void *edit_baton,
+		  void *root_dir_baton,
 		  apr_pool_t *parent_pool)
 {
   svn_error_t *svn_err = 0;
@@ -96,16 +96,18 @@ svn_fs_dir_delta (svn_fs_dir_t *source,
 
   source_path.len = 0;
 
-  svn_err = editor->replace_root (edit_baton, &root_baton);
-  if (svn_err) goto error;
-
   c.editor = editor;
   c.pool = pool;
 
-  svn_err = delta_dirs (&c, root_baton, source, &source_path, target);
+  svn_err = delta_dirs (&c, root_dir_baton, source, &source_path, target);
   if (svn_err) goto error;
 
-  svn_err = editor->close_directory (root_baton);
+  /* kff todo: We could move this out to caller, who does have the
+   * root_dir_baton and who used to be responsible for calling
+   * close_edit().
+   * (By the way, this is the tie-in comment referred to in svn_fs.h.)
+   */
+  svn_err = editor->close_directory (root_dir_baton);
   if (svn_err) goto error;
 
  error:

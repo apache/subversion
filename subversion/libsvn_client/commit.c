@@ -36,9 +36,9 @@
 
 svn_error_t *
 svn_client_commit (const svn_delta_edit_fns_t *before_editor,
-                   void *before_edit_baton,
+                   void *before_root_dir_baton,
                    const svn_delta_edit_fns_t *after_editor,
-                   void *after_edit_baton,                   
+                   void *after_root_dir_baton,                   
                    svn_string_t *path,
                    svn_string_t *xml_dst,
                    svn_revnum_t revision,  /* this param is temporary */
@@ -48,7 +48,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
   apr_status_t apr_err;
   apr_file_t *dst = NULL; /* old habits die hard */
   const svn_delta_edit_fns_t *editor;
-  void *edit_baton;
+  void *root_dir_baton;
   apr_hash_t *targets = NULL;
 
   /* Step 1: look for local mods and send 'em out. */
@@ -66,20 +66,20 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
      module. */
   err = svn_delta_get_xml_editor (svn_stream_from_aprfile (dst, pool),
                                   &editor,
-                                  &edit_baton,
+                                  &root_dir_baton,
                                   pool);
   if (err)
     return err;
 
   /* Compose the commit-editor with any other editors passed in */
   svn_delta_wrap_editor (&editor,
-                         &edit_baton,
+                         &root_dir_baton,
                          before_editor,
-                         before_edit_baton,
+                         before_root_dir_baton,
                          editor,
-                         edit_baton,
+                         root_dir_baton,
                          after_editor,
-                         after_edit_baton,
+                         after_root_dir_baton,
                          pool);
 
 
@@ -87,7 +87,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
   err = svn_wc_crawl_local_mods (&targets,
                                  path,
                                  editor,
-                                 edit_baton,
+                                 root_dir_baton,
                                  pool);
   if (err)
     return err;

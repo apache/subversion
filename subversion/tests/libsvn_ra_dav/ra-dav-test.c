@@ -36,7 +36,7 @@ main (int argc, char **argv)
   svn_string_t *url;
   const char *dir;
   const svn_delta_edit_fns_t *editor;
-  void *edit_baton;
+  void *root_dir_baton;
   svn_string_t *repos;
   svn_string_t *anc_path;
   svn_string_t *root_path;
@@ -74,18 +74,13 @@ main (int argc, char **argv)
 
   err = svn_wc_get_checkout_editor(svn_string_create(dir, pool),
                                    repos, anc_path, revision,
-                                   &editor, &edit_baton, pool);
+                                   &editor, &root_dir_baton, pool);
   if (err)
     goto error;
 
   /* ### what is this path? */
   root_path = svn_string_create("", pool);
-  err = (*plugin->do_checkout)(session_baton, editor, edit_baton);
-  if (err)
-    goto error;
-
-  /* ### this should probably be inside of do_checkout */
-  err = (*editor->close_edit)(edit_baton);
+  err = (*plugin->do_checkout)(session_baton, editor, root_dir_baton);
   if (err)
     goto error;
 

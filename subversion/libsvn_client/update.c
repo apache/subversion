@@ -31,16 +31,16 @@
 
 svn_error_t *
 svn_client_update (const svn_delta_edit_fns_t *before_editor,
-                   void *before_edit_baton,
+                   void *before_root_dir_baton,
                    const svn_delta_edit_fns_t *after_editor,
-                   void *after_edit_baton,
+                   void *after_root_dir_baton,
                    svn_string_t *path,
                    svn_string_t *xml_src,
                    svn_revnum_t revision,
                    apr_pool_t *pool)
 {
-  return svn_client__update_internal (before_editor, before_edit_baton,
-                                      after_editor, after_edit_baton,
+  return svn_client__update_internal (before_editor, before_root_dir_baton,
+                                      after_editor, after_root_dir_baton,
                                       path, xml_src, revision, pool);
 }
 
