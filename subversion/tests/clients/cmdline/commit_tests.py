@@ -1585,21 +1585,19 @@ def commit_nonrecursive(sbox):
     # file4_path   : Item(status='A ', repos_rev=2, wc_rev=0),
     })
 
-  if svntest.actions.run_and_verify_commit(wc_dir,
-                                           expected_output,
-                                           expected_status,
-                                           None,
-                                           None, None,
-                                           None, None,
-                                           '-N',
-                                           os.path.join(wc_dir, file1_path),
-                                           os.path.join(wc_dir, dir1_path),
-                                           os.path.join(wc_dir, file2_path),
-                                           os.path.join(wc_dir, file3_path),
-                                           os.path.join(wc_dir, dir2_path),
-                                           os.path.join(wc_dir, file4_path)):
-    raise svntest.Failure
-  
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        '-N',
+                                        os.path.join(wc_dir, file1_path),
+                                        os.path.join(wc_dir, dir1_path),
+                                        os.path.join(wc_dir, file2_path),
+                                        os.path.join(wc_dir, file3_path),
+                                        os.path.join(wc_dir, dir2_path),
+                                        os.path.join(wc_dir, file4_path))
 
 #----------------------------------------------------------------------
 # Regression for #1017: ra_dav was allowing the deletion of out-of-date
