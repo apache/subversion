@@ -225,7 +225,7 @@ class Generator(gen_base.GeneratorBase):
       wrappers[lang] = [ ]
 
     for target in self.graph.get_all_sources(gen_base.DT_INSTALL):
-      if getattr(target, 'is_ra_module', 0):
+      if isinstance(target, gen_base.TargetRaModule):
         # name of the RA module: strip 'libsvn_' and upper-case it
         name = string.upper(target.name[7:])
 

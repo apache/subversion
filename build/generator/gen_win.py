@@ -339,7 +339,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     else:
       depends = [self.targets['__CONFIG__']]
 
-    if target.is_apache_mod:
+    if isinstance(target, gen_base.TargetApacheMod):
       if target.name == 'mod_authz_svn':
         depends.append(self.targets['mod_dav_svn'])
       pass
@@ -427,7 +427,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     "Return the list of defines for target"
 
     fakedefines = ["WIN32","_WINDOWS","alloca=_alloca"]
-    if target.is_apache_mod:
+    if isinstance(target, gen_base.TargetApacheMod):
       if target.name == 'mod_dav_svn':
         fakedefines.extend(["AP_DECLARE_EXPORT"])
       pass
@@ -446,7 +446,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
   def get_win_includes(self, target, rootpath):
     "Return the list of include directories for target"
 
-    if target.is_apache_mod:
+    if isinstance(target, gen_base.TargetApacheMod):
       fakeincludes = self.map_rootpath(["subversion/include",
                                         self.dbincpath,
                                         ""],
@@ -480,7 +480,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                             "Release", "LibR")
 
     fakelibdirs = self.map_rootpath([self.dblibpath], rootpath)
-    if target.is_apache_mod:
+    if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.extend([
         self.httpd_path + "/%s" % cfg,
         self.httpd_path + "/srclib/apr/%s" % cfg,
@@ -495,7 +495,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
   def get_win_libs(self, target, cfg):
     "Return the list of external libraries needed for target"
 
-    if target.is_apache_mod:
+    if isinstance(target, gen_base.TargetApacheMod):
       if target.name == 'mod_dav_svn':
         libs = [ self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib'),
                  'mod_dav.lib' ]
@@ -545,7 +545,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     sources = { }
 
-    if target.is_apache_mod:
+    if isinstance(target, gen_base.TargetApacheMod):
       # get (fname, reldir) pairs for dependent libs
       for dep_tgt in self.get_win_depends(target, 1):
         if not isinstance(dep_tgt, gen_base.TargetLib):

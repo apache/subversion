@@ -260,10 +260,10 @@ class DependencyNode:
     return hash(self.fname)
 
 class ObjectFile(DependencyNode):
-  pass
-class ApacheObject(ObjectFile):
-  ### hmm. this is Makefile-specific
-  build_cmd = '$(COMPILE_APACHE_MOD)'
+  def __init__(self, fname, build_cmd = None):
+    DependencyNode.__init__(self, fname)
+    self.build_cmd = build_cmd
+
 class SWIGObject(ObjectFile):
   def __init__(self, fname, lang):
     ObjectFile.__init__(self, fname)
@@ -281,24 +281,6 @@ class SWIGSource(SourceFile):
   def __init__(self, fname):
     SourceFile.__init__(self, fname, os.path.dirname(fname))
   pass
-
-# the SWIG utility libraries
-class SWIGUtilPython(ObjectFile):
-  ### hmm. this is Makefile-specific
-  build_cmd = '$(COMPILE_SWIG_PY)'
-class SWIGUtilJava(ObjectFile):
-  ### hmm. this is Makefile-specific
-  build_cmd = '$(COMPILE_SWIG_JAVA)'
-class SWIGUtilPerl(ObjectFile):
-  ### hmm. this is Makefile-specific
-  build_cmd = '$(COMPILE_SWIG_PL)'
-
-_custom_build = {
-  'apache-mod' : ApacheObject,
-  'swig-py' : SWIGUtilPython,
-  'swig-java' : SWIGUtilJava,
-  'swig-pl' : SWIGUtilPerl,
-  }
 
 class SWIGLibrary(DependencyNode):
   ### stupid Target vs DependencyNode
@@ -358,11 +340,6 @@ class Target:
     # with SWIG bindings.
     self.shared_dir = None
 
-    ### eek. this is pretty ugly. we should have a new Target subclass.
-    # These values may be changed by TargetLinked constructor
-    self.is_ra_module = 0
-    self.is_apache_mod = 0
-
   def add_dependencies(self, src_patterns, graph):
     # subclasses should override to provide behavior, as appropriate
     pass
@@ -381,19 +358,10 @@ class TargetLinked(Target):
   def __init__(self, name, options, cfg, extmap):
     Target.__init__(self, name, options, cfg, extmap)
     self.install = options.get('install')
+    self.compile_cmd = options.get('compile-cmd')
 
     # default output name; subclasses can/should change this
     self.output = os.path.join(self.path, name)    
-
-    custom = options.get('custom')
-
-    ### this should be a class attr and we should use different Target
-    ### classes based on the "custom" value.
-    self.object_cls = _custom_build.get(custom, ObjectFile)
-    if custom == 'ra-module':
-      self.is_ra_module = 1
-    elif custom == 'apache-mod':
-      self.is_apache_mod = 1
 
   ### hmm. this is Makefile-specific
   link_cmd = '$(LINK)'
@@ -408,7 +376,7 @@ class TargetLinked(Target):
 
       objname = src[:-2] + self.objext
 
-      ofile = self.object_cls(objname)
+      ofile = ObjectFile(objname, self.compile_cmd)
 
       # object depends upon source
       graph.add(DT_OBJECT, ofile, SourceFile(src, reldir))
@@ -442,18 +410,25 @@ class TargetLib(TargetLinked):
 
     self.objext = extmap['lib', 'object']
 
-    if not self.is_apache_mod:
-      # the target file is the name, version, and appropriate extension
-      tfile = '%s-%s%s' % (name, cfg.version, extmap['lib', 'target'])
-    else:
-      tfile = name + extmap['lib', 'target']
-
-      # we have a custom linking rule
-      ### hmm. this is Makefile-specific
-      ### kind of hacky anyways. we should use a different Target subclass
-      self.link_cmd = '$(LINK_APACHE_MOD)'
-
+    # the target file is the name, version, and appropriate extension
+    tfile = '%s-%s%s' % (name, cfg.version, extmap['lib', 'target'])
     self.output = os.path.join(self.path, tfile)
+
+class TargetApacheMod(TargetLib):
+
+  def __init__(self, name, options, cfg, extmap):
+    TargetLib.__init__(self, name, options, cfg, extmap)
+
+    tfile = name + extmap['lib', 'target']
+    self.output = os.path.join(self.path, tfile)
+
+    # we have a custom linking rule
+    ### hmm. this is Makefile-specific
+    self.compile_cmd = '$(COMPILE_APACHE_MOD)'
+    self.link_cmd = '$(LINK_APACHE_MOD)'
+
+class TargetRaModule(TargetLib):
+  pass
 
 class TargetDoc(Target):
   pass
@@ -590,6 +565,8 @@ _build_types = {
   'utility' : TargetUtility,
   'swig_runtime' : TargetSWIGRuntime,
   'swig_utility' : TargetSWIGUtility,
+  'ra-module': TargetRaModule,
+  'apache-mod': TargetApacheMod,
   }
 
 

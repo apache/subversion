@@ -29,7 +29,7 @@ class Generator(gen_win.WinGeneratorBase):
       config_type=1
       target.output_name = target.name + '.exe'
     elif isinstance(target, gen_base.TargetLib):
-      if target.is_apache_mod:
+      if isinstance(target, gen_base.TargetApacheMod):
         #DLL
         target.output_name = target.name + '.so'
         config_type=2
@@ -43,7 +43,6 @@ class Generator(gen_win.WinGeneratorBase):
     elif isinstance(target, gen_base.SWIGLibrary):
       config_type=2
       target.output_name = os.path.basename(target.fname)
-      target.is_apache_mod = 0
     else:
       raise gen_base.GenError("Cannot create project for %s" % target.name)
 
@@ -67,7 +66,6 @@ class Generator(gen_win.WinGeneratorBase):
                                              gen_base.TargetExternal)),
       'is_utility' : ezt.boolean(isinstance(target,
                                             gen_base.TargetUtility)),
-      'is_apache_mod' : ezt.boolean(target.is_apache_mod),
       'instrument_apr_pools' : self.instrument_apr_pools,
       'instrument_purify_quantify' : self.instrument_purify_quantify,
       }
