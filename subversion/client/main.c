@@ -145,7 +145,7 @@ main (int argc, const char * const *argv)
     {"help",          'h', 0},
     {"message",       'm', 1},
     {"revision",      'r', 1},
-    {"valfile",       svn_cl__valfile_opt, 1},       /* !doc'ed in README */
+    {"filedata",      'F', 1},
     {"xml-file",      svn_cl__xml_file_opt, 1},
     {0,               0, 0}
   };
@@ -196,21 +196,10 @@ main (int argc, const char * const *argv)
       case 'd':
         opt_state.target = svn_string_create (optarg, pool);
         break;
-      case svn_cl__valfile_opt:
-        /* TODO This needs a little thought before being implemented
-           properly. I'm putting the non-file args into an array now,
-           so how to best get this to the commands without special
-           casing myself into a corner? For example, propset takes 2
-           non-file args: name and value. name is (effectively, since
-           I'm using an apr_array) args[0] and value is
-           args[1]. Suggestions? Greg[SH]? I'll get to it this week
-           -Fitz 14-Mar-2001*/
-#if 0
-        err = svn_string_from_file (&(opt_state.value), optarg, pool);
+      case 'F':
+        err = svn_string_from_file (&(opt_state.filedata), optarg, pool);
         if (err)
           svn_handle_error (err, stdout, TRUE);
-#endif
-        fprintf (stderr, "TODO fixme\n");
         break;
       case svn_cl__force_opt:
         opt_state.force = TRUE;

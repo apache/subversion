@@ -60,6 +60,9 @@ echo "Properties on t1/iota:"
 ${SVN_PROG} proplist ${TEST_DIR_1}/iota
 check_status 5
 
+# TODO Fixme: Did you realize that we're only checking the return of
+# the last propset here? Spose it doesn't matter as we're redoing the
+# test suite -Fitz
 ### Locally change properties
 echo "Making local changes to these properties."
 ${SVN_PROG} propset ninja moo ${TEST_DIR_1}/A
@@ -68,7 +71,12 @@ ${SVN_PROG} propset window moo3 ${TEST_DIR_1}/A
 ${SVN_PROG} propset door moo4 ${TEST_DIR_1}/A
 ${SVN_PROG} propset bat bandersnatch ${TEST_DIR_1}/iota
 ${SVN_PROG} propset lexicon cryptonalysis ${TEST_DIR_1}/iota
+
+echo "This is a string in a file. Wow." > .testFile
+${SVN_PROG} propset yowza -F .testFile ${TEST_DIR_1}/A
 check_status 6
+
+rm .testFile
 
 ### Make local changes to pi's and rho's text, too.
 echo "Making local text changes on pi and rho."

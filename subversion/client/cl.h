@@ -35,7 +35,6 @@
 typedef enum {
   svn_cl__xml_file_opt = 256,
   svn_cl__ancestor_path_opt,
-  svn_cl__valfile_opt,
   svn_cl__force_opt
 } svn_cl__longopt_t;
 
@@ -53,7 +52,8 @@ typedef struct svn_cl__opt_state_t
   svn_string_t *ancestor_path;
   svn_boolean_t force;
   apr_array_header_t *args;
-  svn_string_t *valfile;
+  /* TODO fixme. This still doesn't handly binary data from a file! */
+  svn_string_t *filedata;
   svn_boolean_t help;
 } svn_cl__opt_state_t;
 
