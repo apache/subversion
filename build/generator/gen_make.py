@@ -306,8 +306,9 @@ class Generator(gen_base.GeneratorBase):
       wrappers[lang] = [ ]
 
     for target in self.graph.get_all_sources(gen_base.DT_INSTALL):
-      if isinstance(target, gen_base.TargetRaModule):
-        # name of the RA module: strip 'libsvn_' and upper-case it
+      if isinstance(target, gen_base.TargetRaModule) or \
+         isinstance(target, gen_base.TargetFsModule):
+        # name of the module: strip 'libsvn_' and upper-case it
         name = string.upper(target.name[7:])
 
         # construct a list of the other .la libs to link against

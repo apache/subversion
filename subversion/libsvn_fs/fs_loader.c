@@ -17,7 +17,13 @@
  */
 
 
+#include <string.h>
+#include <apr.h>
+#include <apr_hash.h>
+#include <apr_dso.h>
+
 #include "svn_types.h"
+#include "svn_version.h"
 #include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_path.h"
@@ -40,19 +46,90 @@
 extern fs_library_vtable_t svn_fs_base__vtable;
 extern fs_library_vtable_t svn_fs_fs__vtable;
 
+static const struct fs_type_defn {
+  const char *fs_type;
+  const char *fsap_name;
+  fs_library_vtable_t *vtable;
+} fs_modules[] = {
+  {
+    SVN_FS_TYPE_BDB, "base",
+#ifdef SVN_LIBSVN_FS_LINKS_FS_BASE
+    &svn_fs_base__vtable
+#endif
+  },
+
+  {
+    SVN_FS_TYPE_FSFS, "fsfs",
+#ifdef SVN_LIBSVN_FS_LINKS_FS_FS
+    &svn_fs_fs__vtable
+#endif
+  },
+
+  { NULL }
+};
+
+static svn_error_t *
+load_vtable (fs_library_vtable_t **vtable, const char *name, apr_pool_t *pool)
+{
+  *vtable = NULL;
+
+#if APR_HAS_DSO
+  {
+    apr_dso_handle_t *dso;
+    apr_dso_handle_sym_t symbol;
+    const char *libname;
+    const char *funcname;
+    apr_status_t status;
+
+    libname = apr_psprintf (pool, "libsvn_fs_%s-%d.so.0",
+                            name, SVN_VER_LIBRARY);
+    funcname = apr_psprintf (pool, "svn_fs_%s__vtable", name);
+
+    /* Find/load the specified library.  If we get an error, assume
+       the library doesn't exist.  The library will be unloaded when
+       pool is destroyed. */
+    status = apr_dso_load (&dso, libname, pool);
+    if (status)
+      return SVN_NO_ERROR;
+
+    /* find the initialization routine */
+    status = apr_dso_sym (&symbol, dso, funcname);
+    if (status)
+      return svn_error_wrap_apr (status, _("'%s' does not define '%s()'"),
+                                 libname, funcname);
+
+    *vtable = (fs_library_vtable_t *) symbol;
+  }
+#endif /* APR_HAS_DSO */
+
+  return SVN_NO_ERROR;
+}
+
 /* Fetch a library vtable by FS type. */
 static svn_error_t *
 get_library_vtable (fs_library_vtable_t **vtable, const char *fs_type,
                     apr_pool_t *pool)
 {
-  /* XXX Placeholder implementation.  The real implementation should
-     support DSO-loading of back-end libraries and should return an
-     error rather than aborting if fs_type is unrecognized. */
-  if (strcmp(fs_type, SVN_FS_TYPE_BDB) == 0)
-    *vtable = &svn_fs_base__vtable;
-  else if (strcmp(fs_type, SVN_FS_TYPE_FSFS) == 0)
-    *vtable = &svn_fs_fs__vtable;
-  else
+  const struct fs_type_defn *fst;
+  const char *fsap_name;
+
+  *vtable = NULL;
+
+  for (fst = fs_modules; fst->fs_type; fst++)
+    {
+      if (strcmp (fs_type, fst->fs_type) == 0)
+        break;
+    }
+
+  if (fst->fs_type)
+    {
+      fsap_name = fst->fsap_name;
+      *vtable = fst->vtable;
+      if (! *vtable)
+        SVN_ERR (load_vtable (vtable, fsap_name, pool));
+    }
+
+  if (! *vtable)
     return svn_error_createf (SVN_ERR_FS_UNKNOWN_FS_TYPE, NULL,
                               _("Unknown FS type '%s'"), fs_type);
   return SVN_NO_ERROR;
