@@ -259,8 +259,16 @@ svn_auth_save_credentials (svn_auth_iterstate_t *state,
   int i;
   svn_auth_provider_object_t *provider;
   svn_boolean_t save_succeeded = FALSE;
+  const char *no_auth_cache;
 
   if (! (state && state->last_creds))
+    return SVN_NO_ERROR;
+
+  /* Do not save the creds id SVN_AUTH_PARAM_NO_AUTH_CACHE is set */
+  no_auth_cache = apr_hash_get (state->parameters, 
+                                SVN_AUTH_PARAM_NO_AUTH_CACHE,
+                                APR_HASH_KEY_STRING);
+  if (no_auth_cache)
     return SVN_NO_ERROR;
 
   /* First, try to save the creds using the provider that produced them. */
