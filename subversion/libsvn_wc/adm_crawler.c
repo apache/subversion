@@ -1,5 +1,5 @@
 /*
- * adm_crawler.c:  report local WC mods to an xml parser.
+ * adm_crawler.c:  report local WC mods to an Editor.
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.

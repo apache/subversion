@@ -85,14 +85,18 @@ void svn_string_chop (svn_string_t *str, apr_size_t bytes);
 
 void svn_string_fillchar (svn_string_t *str, const unsigned char c);
 
-/* Append either a string of bytes or an svn_string_t onto a
-   svn_string_t.  reallocs() if necessary. */
+/* Append either a string of bytes, an svn_string_t, or a C-string
+   onto a svn_string_t.  reallocs() if necessary. */
 
 void svn_string_appendbytes (svn_string_t *str, const char *bytes, 
                              const size_t count, apr_pool_t *pool);
 void svn_string_appendstr (svn_string_t *targetstr, 
                            const svn_string_t *appendstr,
                            apr_pool_t *pool);
+void svn_string_appendcstr (svn_string_t *targetstr,
+                            const char *cstr,
+                            apr_pool_t *pool);
+
 
 /* Duplicate a bytestring;  returns freshly malloc'd copy.  */
 

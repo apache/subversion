@@ -81,6 +81,9 @@ typedef enum svn_errno_t {
   /* A working copy "descent" crawl came up empty */
   SVN_ERR_UNFRUITFUL_DESCENT,
 
+  /* A bogus filename was passed to a routine */
+  SVN_ERR_BAD_FILENAME,
+
   /* There's no such xml tag attribute */
   SVN_ERR_XML_ATTRIB_NOT_FOUND,
 

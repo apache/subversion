@@ -217,6 +217,17 @@ svn_string_appendstr (svn_string_t *targetstr, const svn_string_t *appendstr,
 }
 
 
+/* Append CSTR onto TARGETSTR. */
+void
+svn_string_appendcstr (svn_string_t *targetstr,
+                       const char *cstr,
+                       apr_pool_t *pool)
+{
+  svn_string_appendbytes (targetstr, cstr, strlen(cstr), pool);
+}
+
+
+
 
 /* Return a duplicate of ORIGNAL_STRING. */
 svn_string_t *
