@@ -40,8 +40,9 @@ module AP_MODULE_DECLARE_DATA authz_svn_module;
 
 enum {
     AUTHZ_SVN_NONE = 0,
-    AUTHZ_SVN_READ,
-    AUTHZ_SVN_WRITE
+    AUTHZ_SVN_READ = 1,
+    AUTHZ_SVN_WRITE = 2,
+    AUTHZ_SVN_READ_TREE = 4
 };
 
 typedef struct {
@@ -59,6 +60,12 @@ struct parse_authz_line_baton {
     int deny;
 };
 
+struct sections_matching_prefix_baton {
+    apr_pool_t *pool;
+    svn_config_t *config;
+    const char *prefix;
+    apr_array_header_t *sections;
+};
 
 /*
  * Configuration
@@ -178,7 +185,7 @@ static int parse_authz_lines(svn_config_t *cfg,
     svn_config_enumerate(cfg, qualified_repos_path,
                          parse_authz_line, &baton);
     *access = !(baton.deny & required_access)
-              || (baton.allow & required_access) != 0;
+              || ((baton.allow & required_access) != 0);
 
     if ((baton.deny & required_access)
         || (baton.allow & required_access))
@@ -187,18 +194,112 @@ static int parse_authz_lines(svn_config_t *cfg,
     svn_config_enumerate(cfg, repos_path,
                          parse_authz_line, &baton);
     *access = !(baton.deny & required_access)
-              || (baton.allow & required_access) != 0;
+              || ((baton.allow & required_access) != 0);
 
     return (baton.deny & required_access)
            || (baton.allow & required_access);
 }
 
-static int check_access(svn_config_t *cfg,
-                        const char *repos_name, const char *repos_path,
-                        const char *user, int required_access,
-                        apr_pool_t *pool)
+
+static svn_boolean_t find_sections_matching_prefix(const char* sec_name,
+                                                   void *baton)
+{
+  struct sections_matching_prefix_baton *b = baton;
+
+  if (strncmp(sec_name, b->prefix, strlen(b->prefix)) == 0)
+    (*((const char **)(apr_array_push(b->sections)))) = sec_name;
+
+  return TRUE;
+}
+
+
+/* Check whether @cfg allows access to all subtrees of a @a repos_path in the
+ * repository @a repos_name for the user @user.  The required access (read or
+ * write) is specified by @a required_access.  The resulting access (1 if
+ * granted, 0 if denied) is returned as @a *access.  Use @a pool for
+ * allocation.
+ *
+ * This function does *NOT* check access to @a repos_path itself or any of its
+ * parent directories.  It assumes that access to @a repos_path is allowed,
+ * and that access to the subtree is only disallowed if restricted by a
+ * configuration option in the subtree.
+ *
+ * This function also does not check to see whether each portion of the
+ * subtree actually exists in the repository.  If access is denied to a
+ * directory beneath @a repos_path, then access will be denied whether that
+ * directory actually exists or not.
+ */
+static int check_access_subtree(svn_config_t *cfg, const char *repos_name,
+                                const char *repos_path, const char *user,
+                                int required_access, int *access,
+                                apr_pool_t *pool)
+{
+    const char *qualified_repos_path;
+    const char *section;
+    apr_array_header_t *list;
+    int i;
+
+    struct sections_matching_prefix_baton sec_baton = { 0 };
+    struct parse_authz_line_baton authz_baton = { 0 };
+
+    sec_baton.pool = pool;
+    sec_baton.config = cfg;
+    sec_baton.sections = apr_array_make(pool, 0, sizeof(const char *));
+
+    /* First try repos specific */
+    qualified_repos_path = apr_pstrcat(pool, repos_name, ":", repos_path,
+                                       NULL);
+
+    sec_baton.prefix = qualified_repos_path;
+    svn_config_enumerate_sections(cfg, find_sections_matching_prefix,
+                                  &sec_baton);
+
+    authz_baton.pool = pool;
+    authz_baton.config = cfg;
+    authz_baton.user = user;
+
+    list = sec_baton.sections;
+    for (i = 0; i < list->nelts; ++i) {
+        section = ((const char **) list->elts)[i];
+        authz_baton.allow = authz_baton.deny = 0;
+
+        svn_config_enumerate(cfg, section, parse_authz_line, &authz_baton);
+        *access = !(authz_baton.deny & required_access)
+                  || ((authz_baton.allow & required_access) != 0);
+
+        if (!*access)
+          return TRUE;
+    }
+
+    /* Now try with no repos specified */
+    sec_baton.prefix = repos_path;
+    svn_config_enumerate_sections(cfg, find_sections_matching_prefix,
+                                  &sec_baton);
+
+    list = sec_baton.sections;
+    for (i = 0; i < list->nelts; ++i) {
+        section = ((const char **) list->elts)[i];
+        authz_baton.allow = authz_baton.deny = 0;
+
+        svn_config_enumerate(cfg, section, parse_authz_line, &authz_baton);
+        *access = !(authz_baton.deny & required_access)
+                  || ((authz_baton.allow & required_access) != 0);
+
+        if (!*access)
+          return TRUE;
+    }
+
+    return TRUE;
+}
+
+
+static int check_access(svn_config_t *cfg, const char *repos_name,
+                        const char *repos_path, const char *user,
+                        int required_access, apr_pool_t *pool)
 {
     const char *base_name;
+    const char *orig_repos_path;
+    int require_subtree = FALSE;
     int access;
 
     if (!repos_path) {
@@ -209,13 +310,17 @@ static int check_access(svn_config_t *cfg,
         return 1;
     }
 
-    if (parse_authz_lines(cfg, repos_name, repos_path,
-                          user, required_access, &access,
-                          pool))
-        return access;
+    /* Check regular access first, check subtree access after that */
+    if (required_access == AUTHZ_SVN_READ_TREE) {
+        require_subtree = TRUE;
+        required_access = AUTHZ_SVN_READ;
+    }
 
     base_name = repos_path;
-    do {
+    orig_repos_path = repos_path;
+    while (!parse_authz_lines(cfg, repos_name, repos_path,
+                              user, required_access, &access,
+                              pool)) {
         if (base_name[0] == '/' && base_name[1] == '\0') {
             /* By default, deny access */
             return 0;
@@ -223,9 +328,12 @@ static int check_access(svn_config_t *cfg,
 
         svn_path_split(repos_path, &repos_path, &base_name, pool);
     }
-    while (!parse_authz_lines(cfg, repos_name, repos_path,
-                              user, required_access, &access,
-                              pool));
+
+    /* Access is OK for this directory and parent directories, now see whether
+     * access is OK for subdirectories */
+    if (access && require_subtree)
+      check_access_subtree(cfg, repos_name, orig_repos_path, user,
+                           required_access, &access, pool);
 
     return access;
 }
@@ -262,10 +370,14 @@ static int req_check_access(request_rec *r,
     /* All methods requiring read access to r->uri */
     case M_OPTIONS:
     case M_GET:
-    case M_COPY:
     case M_PROPFIND:
     case M_REPORT:
         authz_svn_type = AUTHZ_SVN_READ;
+        break;
+
+    /* All methods requiring read access to all subtrees of r->uri */
+    case M_COPY:
+        authz_svn_type = AUTHZ_SVN_READ_TREE;
         break;
 
     /* All methods requiring write access to r->uri */
