@@ -208,6 +208,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       const char *new_text_path;
       svn_stream_t *file_stream;
       svn_revnum_t fetched_rev = 1; /* this will be set by get_file() */
+      apr_status_t apr_err;
 
       /* Create a unique file */
       SVN_ERR (svn_io_open_unique_file (&fp, &new_text_path,
@@ -239,6 +240,10 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       SVN_ERR (ra_lib->get_file (session, "", revnum, file_stream,
                                  &fetched_rev, &prophash));
       SVN_ERR (svn_stream_close (file_stream));
+      apr_err = apr_file_close (fp); 
+      if (apr_err)
+        return svn_error_createf (apr_err, NULL,
+                                  "closing temporary file '%s'", new_text_path);
 
       /* Convert the prophash into an array, which is what
          svn_wc_install_file (and its helpers) want.  */

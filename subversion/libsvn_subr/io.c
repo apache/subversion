@@ -213,7 +213,8 @@ svn_io_open_unique_file (apr_file_t **f,
   for (i = 1; i <= 99999; i++)
     {
       apr_status_t apr_err;
-      apr_int32_t flag = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL);
+      apr_int32_t flag = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL
+                          | APR_BUFFERED);
 
       if (delete_on_close)
         flag |= APR_DELONCLOSE;
