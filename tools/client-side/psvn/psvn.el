@@ -507,7 +507,8 @@
   (setq major-mode 'svn-status-mode)
   (setq mode-name "svn-status")
   (setq mode-line-process 'svn-status-mode-line-process)
-  (toggle-read-only 1))
+  (let ((view-read-only nil))
+    (toggle-read-only 1)))
 
 (defun svn-status-update-mode-line ()
   (setq svn-status-mode-line-process
