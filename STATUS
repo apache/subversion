@@ -116,4 +116,4 @@ Candidate changes:
   * r9358
     Make mod_authz_svn less restrictive per issue #1821.
     Votes:
-      +1: striker
+      +1: striker, dlr
