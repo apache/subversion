@@ -110,7 +110,7 @@ Candidate changes:
     Votes:
       +1: lundblad
  
-  * r11862 (part of issue #1997)
+  * r11862, r11921 (part of issue #1997)
     Fix encoding bug in svnserve -h.
     Justification:
       Encoding bugs look ugly.
