@@ -81,3 +81,22 @@ Candidate changes:
     externals in particular cases.
     Votes:
       +1: cmpilato
+
+  * r8966
+    Use cpio to generate tarballs.
+    Justification: Tarballs built with GNU tar will not extract on platforms
+    without GNU tar due to filename length.
+    Votes:
+
+  * r8969
+    Do not copy doc/book/book/images into sandbox.
+    Justification: We end up with duplicate images dir and the files are
+    already there.
+    Votes:
+
+  * Issue #1775
+    Allow reverting a replaced file with no properties.
+    Justification: It's a bug.
+    Notes: Patch on issue will require the regression test be moved to a
+    different file, because we don't have that file.
+    Votes:
