@@ -52,8 +52,10 @@ foreach (@ARGV) {
                 print "$file\n";
             }
             else {
-                rmtree( $file, !$quiet, !$force )
-                  or warn "Could not remove $file: $!; check permissions\n";
+                rmtree( $file, !$quiet, !$force );
+                if ( -e $file ) {
+                    warn "Could not remove $file: $!\n";
+                }
             }
         }
     }
