@@ -768,8 +768,14 @@ add_directory (const char *path,
          Note that the parent must already be either added or opened, and
          thus it's in an 'incomplete' state just like the new dir.  */      
       tmp_entry.kind = svn_node_dir;
+      /* (Note that there may already exist a 'ghost' entry in the
+         parent with the same name, in a 'deleted' state.  If so, it's
+         fine to overwrite it... but we need to make sure we get rid
+         of the 'deleted' flag when doing so: */
+      tmp_entry.deleted = FALSE;
       SVN_ERR (svn_wc__entry_modify (adm_access, db->name, &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_KIND,
+                                     SVN_WC__ENTRY_MODIFY_KIND |
+                                     SVN_WC__ENTRY_MODIFY_DELETED,
                                      TRUE /* immediate write */, pool));
     }
 
