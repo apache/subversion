@@ -81,6 +81,10 @@ subdirs, or hide them under a cvs-like interface?
 
 ** UTF-8 preparations (jimb?)
 
+** svnadmin:  new features (sussman)
+
+    * ability to edit revision props (use case: log messages)
+
 ** change ra_local commit-style (sussman & gstein will discuss)
 
 
@@ -132,6 +136,11 @@ subdirs, or hide them under a cvs-like interface?
         above is all post-1.0 chattering. For now we will use authorization
         schemes provided by Apache. ACLs are post-1.0. Repeat after me: ACLs...
 
+
+** svnadmin:  new features
+
+    * ability to edit txn props ??? (use case??)
+    * ability to commit a txn.  ??? (use case: manager has approved it?)
 
 ** svn obliterate
 
