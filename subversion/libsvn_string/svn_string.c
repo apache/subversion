@@ -70,7 +70,7 @@ my__realloc (char *data, const apr_size_t oldsize, const apr_size_t request,
      already. */
 
   /* malloc new area */
-  new_area = apr_pcalloc (pool, request);
+  new_area = apr_palloc (pool, request);
 
   /* copy data to new area */
   memcpy (new_area, data, oldsize);
