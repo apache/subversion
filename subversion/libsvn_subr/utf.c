@@ -23,6 +23,7 @@
 #include <assert.h>
 
 #include <apr_strings.h>
+#include <apr_lib.h>
 #include <apr_xlate.h>
 
 #include "svn_string.h"
@@ -187,22 +188,23 @@ convert_to_stringbuf (apr_xlate_t *convset,
 
 #else /* ! SVN_UTF8 */
 
-/* Return an SVN_ERR_UNSUPPORTED_FEATURE error allocated from POOL if
-   the first LEN bytes of DATA contain any characters with the eighth
-   bit set, or any escape (ascii 27) characters.  Otherwise, return
-   SVN_NO_ERROR.  */
+/* Return SVN_ERR_UNSUPPORTED_FEATURE if the first LEN bytes of DATA
+   contain anything other than seven-bit, non-control (except for
+   whitespace) ascii characters, finding the error pool from POOL.
+   Otherwise, return SVN_NO_ERROR. */
 static svn_error_t *
 check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
 {
   for (; len > 0; --len, data++)
     {
-      if (/* Check if eighth bit set: */
-          ((*(unsigned char *)data) & 128)
-          /* Look for ESC, to detect ISO-2022 etc: */
-          || *(unsigned char *)data == 27)
-        return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
-                                 "non-ascii characters detected, "
-                                 "please recompile with --enable-utf8");
+      if ((! apr_isascii (*((unsigned char *) data)))
+          || ((! apr_isspace (*((unsigned char *) data)))
+              && apr_iscntrl (*((unsigned char *) data))))
+        {
+          return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+                                   "non-ascii characters detected, "
+                                   "please recompile with --enable-utf8");
+        }
     }
 
   return SVN_NO_ERROR;
