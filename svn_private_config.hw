@@ -24,7 +24,7 @@
 #ifndef CONFIG_HW
 #define CONFIG_HW
 
-/* The version of Berkely DB we want */
+/* The version of Berkeley DB we want */
 #define SVN_FS_WANT_DB_MAJOR	4
 #define SVN_FS_WANT_DB_MINOR	0
 #define SVN_FS_WANT_DB_PATCH	14
@@ -47,5 +47,9 @@
 
 /* Defined to be the path to the installed binaries */
 #define SVN_BINARY_DIR "/usr/local/bin"
+
+/* Until Win32 gets gettext functionality, leave these disabled. */
+#define N_(x) (x)
+#define _(x) (x)
 
 #endif /* CONFIG_HW */

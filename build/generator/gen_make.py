@@ -37,6 +37,9 @@ class Generator(gen_base.GeneratorBase):
 
       sources = self.graph.get_sources(gen_base.DT_LINK, target_ob.name)
 
+      if isinstance(target_ob, gen_base.TargetI18N):
+        sources += self.graph.get_sources(gen_base.DT_NONLIB, target_ob.name)
+
       target = target_ob.name
       if isinstance(target_ob, gen_base.TargetJava):
         path = target_ob.classes
@@ -104,6 +107,12 @@ class Generator(gen_base.GeneratorBase):
                             string.join(target_ob.packages, ' ')))
 
         self.ofile.write('\n\n')
+      elif isinstance(target_ob, gen_base.TargetI18N):
+        self.ofile.write(
+          '%s_DEPS = %s %s\n'
+          '%s: $(%s_DEPS)\n'
+          % (targ_varname, target_ob.add_deps, string.join(objects + deps),
+             target_ob.name, targ_varname))
       else:
         self.ofile.write(
           '%s_DEPS = %s %s\n'
@@ -133,6 +142,7 @@ class Generator(gen_base.GeneratorBase):
       # other targets
       if not isinstance(target, gen_base.TargetScript) \
          and not isinstance(target, gen_base.TargetProject) \
+         and not isinstance(target, gen_base.TargetI18N) \
          and not target.external_lib \
          and target.filename[-3:] != '.la':
         cfiles.append(target.filename)
@@ -199,15 +209,19 @@ class Generator(gen_base.GeneratorBase):
                          '\t$(MKDIR) $(DESTDIR)$(%sdir)\n'
                          % (area, string.join(files), area_var))
         for file in files:
-          if file == '':
-            continue
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = os.path.split(file)
-          self.ofile.write('\tcd %s ; $(INSTALL_%s) %s $(DESTDIR)%s\n'
-                           % (dirname,
-                              upper_var,
-                              fname,
-                              os.path.join('$(%sdir)' % area_var, fname)))
+          if area == 'locale':
+            lang, objext = os.path.splitext(fname)
+            self.ofile.write('\tcd %s ; $(INSTALL_%s) %s '
+                             '$(DESTDIR)%s/%s/LC_MESSAGES/$(PACKAGE_NAME)%s\n'
+                             % (dirname, upper_var, fname,
+                                os.path.join('$(%sdir)' % area_var), lang,
+                                objext))
+          else:
+            self.ofile.write('\tcd %s ; $(INSTALL_%s) %s $(DESTDIR)%s\n'
+                             % (dirname, upper_var, fname,
+                                os.path.join('$(%sdir)' % area_var, fname)))
         ### we should turn AREA into an object, then test it instead of this
         if area[:5] == 'swig-' and area[-4:] != '-lib' or \
            area[:7] == 'javahl-':

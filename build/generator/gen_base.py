@@ -482,6 +482,41 @@ class TargetRaModule(TargetLib):
 class TargetDoc(Target):
   pass
 
+class TargetI18N(Target):
+  "The target is a collection of .po files to be compiled by msgfmt."
+
+  def __init__(self, name, options, cfg, extmap):
+    Target.__init__(self, name, options, cfg, extmap)
+    self.install = options.get('install')
+    self.sources = options.get('sources')
+    self.filename = ''
+    # Let the Makefile determine this via .SUFFIXES
+    self.compile_cmd = None
+    self.objext = '.mo'
+
+  def add_dependencies(self, graph, cfg, extmap):
+    graph.add(DT_INSTALL, self.install, self)
+
+    sources = _collect_paths(self.sources or '*.po', self.path)
+    sources.sort()
+
+    for src, reldir in sources:
+      if src[-3:] == '.po':
+        objname = src[:-3] + self.objext
+      else:
+        raise GenError('ERROR: unknown file extension on ' + src)
+
+      ofile = ObjectFile(objname, self.compile_cmd)
+
+      # object depends upon source
+      graph.add(DT_OBJECT, ofile, SourceFile(src, reldir))
+
+      # target depends upon object
+      graph.add(DT_NONLIB, self.name, ofile)
+
+    # Add us to the list of target dirs, so we're created in mkdir-init.
+    graph.add(DT_LIST, LT_TARGET_DIRS, self.path)
+
 class TargetSWIG(TargetLib):
   def __init__(self, name, options, cfg, extmap, lang):
     TargetLib.__init__(self, name, options, cfg, extmap)
@@ -767,6 +802,7 @@ _build_types = {
   'apache-mod': TargetApacheMod,
   'javah' : TargetJavaHeaders,
   'java' : TargetJavaClasses,
+  'i18n' : TargetI18N,
   }
 
 
@@ -970,7 +1006,15 @@ def _sorted_files(graph, area):
       else:
         # no dependencies found in the targets list. this is a good "base"
         # to add to the files list now.
-        files.append(t.filename)
+        # If the filename is blank, see if there are any NONLIB dependencies
+        # rather than adding a blank filename to the list.
+        if t.filename != '':
+          files.append(t.filename)
+        else:
+          s = graph.get_sources(DT_NONLIB, t.name)
+          for d in s:
+            if d not in targets:
+              files.append(d.filename)
 
         # don't consider this target any more
         targets.remove(t)

@@ -18,7 +18,6 @@
 
 
 #include <stdlib.h>             /* for atexit() */
-#include <locale.h>             /* for setlocale() */
 
 #include <apr_errno.h>          /* for apr_strerror */
 #include <apr_general.h>        /* for apr_initialize/apr_terminate */
@@ -28,6 +27,7 @@
 #include "svn_path.h"
 #include "utf_impl.h"
 
+#include "svn_private_config.h"
 
 #define SVN_UTF_CONTOU_XLATE_HANDLE "svn-utf-contou-xlate-handle"
 #define SVN_UTF_UTOCON_XLATE_HANDLE "svn-utf-utocon-xlate-handle"
@@ -63,7 +63,7 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
   /* C programs default to the "C" locale. But because svn is supposed
      to be i18n-aware, it should inherit the default locale of its
      environment.  */
-  if (!setlocale(LC_CTYPE, ""))
+  if (!setlocale(LC_ALL, ""))
     {
       if (error_stream)
         {
@@ -85,12 +85,17 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
             }
 
           fprintf(error_stream,
-                  "%s: error: cannot set LC_CTYPE locale\n"
-                  "%s: error: environment variable %s is %s\n",
-                  progname, progname, *env_var, env_val);
+                  "%s: error: cannot set LC_ALL locale\n"
+                  "%s: error: environment variable %s is %s\n"
+                  "%s: error: please check that your locale name is correct\n",
+                  progname, progname, *env_var, env_val, progname);
         }
       return EXIT_FAILURE;
     }
+#ifdef ENABLE_NLS
+  bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
+  textdomain(PACKAGE_NAME);
+#endif
 
   /* Initialize the APR subsystem, and register an atexit() function
      to Uninitialize that subsystem at program exit. */
