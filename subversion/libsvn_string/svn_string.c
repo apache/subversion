@@ -166,6 +166,7 @@ ensure_block_capacity (svn_string_t *str,
                        size_t minimum_size,
                        apr_pool_t *pool)
 {
+  /* Keep doubling capacity until have enough. */
   while (str->blocksize < minimum_size)
     str->blocksize *= 2;
 
@@ -185,9 +186,6 @@ svn_string_appendbytes (svn_string_t *str, const char *bytes,
   void *start_address;
 
   total_len = str->len + count;  /* total size needed */
-
-  /* if we need to realloc our first buffer to hold the concatenation,
-     then make it twice the total size we need. */
 
   /* +1 for null terminator. */
   ensure_block_capacity (str, (total_len + 1), pool);
