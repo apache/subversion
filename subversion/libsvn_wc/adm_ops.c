@@ -1275,7 +1275,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
 
           /* Possibly set the timestamp to last-commit-time, rather
              than the 'now' time that already exists. */
-          if (use_commit_times)
+          if (use_commit_times && (! special))
             {
               SVN_ERR (svn_io_set_file_affected_time (entry->cmt_date,
                                                       fullpath, pool));
