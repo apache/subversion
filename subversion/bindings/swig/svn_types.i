@@ -85,7 +85,7 @@
 %typemap(jstype) svn_error_t * "int"
 %typemap(javain) svn_error_t * "@javainput"
 %typemap(javaout) svn_error_t * {
-	$jnicall;
+	return $jnicall;
 }
 
 /* -----------------------------------------------------------------------
@@ -122,6 +122,19 @@
 	_global_pool = (apr_pool_t *)j$1;
 	$1 = 0;
 }
+
+/* -----------------------------------------------------------------------
+   Special boolean mapping for java.
+*/
+%typemap(java, jni) svn_boolean_t "jboolean";
+%typemap(java, jtype) svn_boolean_t "boolean";
+%typemap(java, jstype) svn_boolean_t "boolean";
+%typemap(java, in) svn_boolean_t %{
+    $1 = $input ? TRUE : FALSE;
+%}
+%typemap(java, out) svn_boolean_t %{
+    $result = $1 ? JNI_TRUE : JNI_FALSE;
+%}
 
 /* -----------------------------------------------------------------------
    Handle python thread locking.
