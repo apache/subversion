@@ -215,20 +215,34 @@ svn_error_t *svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0.0 API.
- *
  * The following functions are similar to their generic counterparts,
  * but only work on Berkeley DB filesystems.
+ *
+ * @defgroup svn_fs_bdb_deprecated berkeley db filesystem compatibility
+ * @{
  */
+
+/** @deprecated Provided for backward compatibility with the 1.0.0 API. */
 svn_fs_t *svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool);
+
+/** @deprecated Provided for backward compatibility with the 1.0.0 API. */
 svn_error_t *svn_fs_create_berkeley (svn_fs_t *fs, const char *path);
+
+/** @deprecated Provided for backward compatibility with the 1.0.0 API. */
 svn_error_t *svn_fs_open_berkeley (svn_fs_t *fs, const char *path);
+
+/** @deprecated Provided for backward compatibility with the 1.0.0 API. */
 const char *svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool);
+
+/** @deprecated Provided for backward compatibility with the 1.0.0 API. */
 svn_error_t *svn_fs_delete_berkeley (const char *path, apr_pool_t *pool);
+
+/** @deprecated Provided for backward compatibility with the 1.0.0 API. */
 svn_error_t *svn_fs_hotcopy_berkeley (const char *src_path, 
                                       const char *dest_path, 
                                       svn_boolean_t clean_logs,
                                       apr_pool_t *pool);
+/** @} */
 
 /** @} */
 
