@@ -224,7 +224,7 @@ void svn_cl__print_prop_names (apr_hash_t *prop_hash, apr_pool_t *pool);
 
 /* Returns an editor that prints out events in an update or checkout. */
 svn_error_t *
-svn_cl__get_trace_update_editor (const svn_delta_edit_fns_t **editor,
+svn_cl__get_trace_update_editor (const svn_delta_editor_t **editor,
                                  void **edit_baton,
                                  svn_stringbuf_t *initial_path,
                                  apr_pool_t *pool);

@@ -38,8 +38,10 @@ svn_cl__checkout (apr_getopt_t *os,
                   svn_cl__opt_state_t *opt_state,
                   apr_pool_t *pool)
 {
-  const svn_delta_edit_fns_t *trace_editor;
+  const svn_delta_editor_t *trace_editor;
   void *trace_edit_baton;
+  const svn_delta_edit_fns_t *wrap_editor;
+  void *wrap_edit_baton;
   int i;
   svn_client_auth_baton_t *auth_baton;
   
@@ -120,9 +122,14 @@ svn_cl__checkout (apr_getopt_t *os,
                                                 local_dir,
                                                 pool));
       
+      /* ### todo: This is a TEMPORARY wrapper around our editor so we
+         can use it with an old driver. */
+      svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
+                             trace_editor, trace_edit_baton, pool);
+  
       SVN_ERR (svn_client_checkout (NULL, NULL,
-                                    opt_state->quiet ? NULL : trace_editor, 
-                                    opt_state->quiet ? NULL : trace_edit_baton,
+                                    opt_state->quiet ? NULL : wrap_editor, 
+                                    opt_state->quiet ? NULL : wrap_edit_baton,
                                     auth_baton,
                                     repos_url,
                                     local_dir,

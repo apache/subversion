@@ -60,8 +60,10 @@ svn_cl__update (apr_getopt_t *os,
     {
       svn_stringbuf_t *target = 
         ((svn_stringbuf_t **) (condensed_targets->elts))[i];
-      const svn_delta_edit_fns_t *trace_editor;
+      const svn_delta_editor_t *trace_editor;
       void *trace_edit_baton;
+      const svn_delta_edit_fns_t *wrap_editor;
+      void *wrap_edit_baton;
       svn_stringbuf_t *parent_dir, *entry;
 
       SVN_ERR (svn_wc_get_actual_target (target,
@@ -73,9 +75,14 @@ svn_cl__update (apr_getopt_t *os,
                                                 &trace_edit_baton,
                                                 parent_dir, pool));
 
+      /* ### todo: This is a TEMPORARY wrapper around our editor so we
+         can use it with an old driver. */
+      svn_delta_compat_wrap (&wrap_editor, &wrap_edit_baton, 
+                             trace_editor, trace_edit_baton, pool);
+
       SVN_ERR (svn_client_update
                (NULL, NULL,
-                trace_editor, trace_edit_baton,
+                wrap_editor, wrap_edit_baton,
                 auth_baton,
                 target,
                 opt_state->xml_file,
