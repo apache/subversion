@@ -92,6 +92,7 @@ struct dir_baton
   struct edit_baton *edit_baton;
   struct dir_baton *parent;
   const char *path; /* the -absolute- path to this dir in the fs */
+  svn_boolean_t was_copied; /* was this directory added with history? */
   apr_pool_t *pool; /* my personal pool, in which I am allocated. */
 };
 
@@ -148,6 +149,7 @@ open_root (void *edit_baton,
   dirb->edit_baton = edit_baton;
   dirb->parent = NULL;
   dirb->pool = pool;
+  dirb->was_copied = FALSE;
   dirb->path = apr_pstrdup (pool, eb->base_path);
 
   *root_baton = dirb;
@@ -204,6 +206,7 @@ add_directory (const char *path,
   struct edit_baton *eb = pb->edit_baton;
   const char *full_path = svn_path_join (eb->base_path, path, pool);
   apr_pool_t *subpool = svn_pool_create (pool);
+  svn_boolean_t was_copied = FALSE;
 
   /* Sanity check. */  
   if (copy_path && (! SVN_IS_VALID_REVNUM (copy_revision)))
@@ -218,10 +221,12 @@ add_directory (const char *path,
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
 
-      /* Check PATH in our transaction.  Make sure it does not exist,
-         else return an out-of-dateness error. */
+      /* Check PATH in our transaction.  Make sure it does not exist
+         unless its parent directory was copied (in which case, the
+         thing might have been copied in as well), else return an
+         out-of-dateness error. */
       kind = svn_fs_check_path (eb->txn_root, full_path, subpool);
-      if (kind != svn_node_none)
+      if ((kind != svn_node_none) && (! pb->was_copied))
         return out_of_date (full_path, eb->txn_name, subpool);
 
       /* This add has history.  Let's split the copy_url. */
@@ -241,6 +246,7 @@ add_directory (const char *path,
                                      copy_revision, subpool));
       SVN_ERR (svn_fs_copy (copy_root, fs_path,
                             eb->txn_root, full_path, subpool));
+      was_copied = TRUE;
     }
   else
     {
@@ -259,7 +265,8 @@ add_directory (const char *path,
   new_dirb->parent = pb;
   new_dirb->pool = pool;
   new_dirb->path = full_path;
-  
+  new_dirb->was_copied = was_copied;
+
   *child_baton = new_dirb;
   return SVN_NO_ERROR;
 }
@@ -291,6 +298,7 @@ open_directory (const char *path,
   new_dirb->parent = pb;
   new_dirb->pool = pool;
   new_dirb->path = full_path;
+  new_dirb->was_copied = FALSE;
 
   *child_baton = new_dirb;
   return SVN_NO_ERROR;
@@ -338,10 +346,12 @@ add_file (const char *path,
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
 
-      /* Check PATH in our transaction.  It had better not exist, or
-         our transaction is out of date. */
+      /* Check PATH in our transaction.  Make sure it does not exist
+         unless its parent directory was copied (in which case, the
+         thing might have been copied in as well), else return an
+         out-of-dateness error. */
       kind = svn_fs_check_path (eb->txn_root, full_path, subpool);
-      if (kind != svn_node_none)
+      if ((kind != svn_node_none) && (! pb->was_copied))
         return out_of_date (full_path, eb->txn_name, subpool);
 
       /* This add has history.  Let's split the copyfrom_url. */
