@@ -58,6 +58,7 @@ Candidate changes:
     Finish Issue #1741 - svn status -v shows unwanted status of externals.
     Votes:
       +1: cmpilato, jszakmeister
+      +0: dlr
 
   * r8846
     Add an example wrapper to help svn+ssh users using setgid svnserve.
