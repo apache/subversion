@@ -788,9 +788,12 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
                                 "found on the resource"));
     }
     
-  /* don't forget to tack on the parts we lopped off in order
-     to find the VCC... */
-  my_bc_relative = svn_path_join(relative_path->data, lopped_path, pool);
+  /* don't forget to tack on the parts we lopped off in order to find
+     the VCC...  We are expected to return a URI decoded relative
+     path, so decode the lopped path first. */
+  my_bc_relative = svn_path_join(relative_path->data,
+                                 svn_path_uri_decode (lopped_path, pool),
+                                 pool);
  
   /* if they want the relative path (could be, they're just trying to find
      the baseline collection), then return it */
