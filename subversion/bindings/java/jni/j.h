@@ -22,6 +22,10 @@
 /* includes */
 #include <jni.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* functions */
 
 /* returns a JNI class reference matching 
@@ -78,6 +82,10 @@ j__get_object(JNIEnv *env, jboolean *hasException,
               char *className, char *methodName,
               char *methodSig,
               jobject obj);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif
 

@@ -20,6 +20,11 @@
 
 #include "skel.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+
 /* Validating node and node revision IDs. */
 
 /* Count the number of components in the ID, and check its syntax.
@@ -41,8 +46,12 @@ int svn_fs__is_valid_proplist (skel_t *skel);
    at this time. */
 int svn_fs__is_single_path_component (const char *name);
 
-#endif /* SVN_LIBSVN_FS_VALIDATE_H */
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_FS_VALIDATE_H */
 
 
 /* 

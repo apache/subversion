@@ -24,6 +24,11 @@
 #include "db.h"
 #include "skel.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+
 /* Set all fields of DBT to zero.  Return DBT.  */
 DBT *svn_fs__clear_dbt (DBT *dbt);
 
@@ -96,8 +101,11 @@ DBT *svn_fs__skel_to_dbt (DBT *dbt, skel_t *skel, apr_pool_t *pool);
 DBT *svn_fs__str_to_dbt (DBT *dbt, char *str);
 
 
-#endif /* SVN_LIBSVN_FS_DBT_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
+#endif /* SVN_LIBSVN_FS_DBT_H */
 
 
 /* 

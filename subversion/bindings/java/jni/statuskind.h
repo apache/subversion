@@ -24,6 +24,10 @@
 #include <jni.h>
 #include <svn_wc.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* functions */
 
 /**
@@ -43,6 +47,10 @@ statuskind__create(JNIEnv *env, jboolean *hasException, jint statuskind);
 jobject
 statuskind__create_from_svn_wc_status_kind(JNIEnv *env, jboolean *hasException,
                                    enum svn_wc_status_kind statuskind);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif
 /* 

@@ -19,6 +19,10 @@
 #ifndef SVN_JNI_GLOBAL_H
 #define SVN_JNI_GLOBAL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /*** Defines ***/
 #define SVN_JNI__SUBVERSION_EXCEPTION \
 "org/tigris/subversion/SubversionException"
@@ -45,6 +49,10 @@ else { fprintf(stderr, "'%s';", (char*)str); } \
 { fprintf(stderr, #dec "=%d;", dec); }
 #define SVN_JNI__DEBUG_LONG(dec) \
 { fprintf(stderr, #dec "=%ld;", dec); }
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif
 

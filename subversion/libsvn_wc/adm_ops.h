@@ -21,11 +21,17 @@
  */
 
 
+#ifndef SVN_LIBSVN_WC_ADM_OPS_H
+#define SVN_LIBSVN_WC_ADM_OPS_H
+
 #include <apr_pools.h>
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /* Modify the entry of working copy PATH, presumably after an update
@@ -49,6 +55,12 @@ svn_error_t *svn_wc__do_update_cleanup (svn_stringbuf_t *path,
                                         const svn_revnum_t new_revision,
                                         apr_pool_t *pool);
 
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_WC_ADM_OPS_H */
 
 
 /* 

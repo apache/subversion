@@ -23,6 +23,9 @@
 #include "apr_hash.h"
 #include "svn_fs.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /*** The filesystem structure.  ***/
@@ -74,8 +77,11 @@ struct svn_fs_t {
 };
 
 
-#endif /* SVN_LIBSVN_FS_FS_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
+#endif /* SVN_LIBSVN_FS_FS_H */
 
 
 /* 

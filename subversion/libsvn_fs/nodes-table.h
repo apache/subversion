@@ -23,7 +23,11 @@
 #include "skel.h"
 #include "trail.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
+
 /* Creating and opening the `nodes' table.  */
 
 
@@ -98,8 +102,11 @@ svn_error_t *svn_fs__put_node_revision (svn_fs_t *fs,
                                         trail_t *trail);
 
 
-#endif /* SVN_LIBSVN_FS_NODES_TABLE_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
+#endif /* SVN_LIBSVN_FS_NODES_TABLE_H */
 
 
 /* 

@@ -1,5 +1,5 @@
 /*
- * svn_jni_util.h header for all of the java binding utility functions
+ * svn_jni_global.h header for all of the java binding utility functions
  *
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
@@ -16,8 +16,12 @@
  * ====================================================================
  */
 
-#ifndef SVN_JNI_UTIL_H
-#define SVN_JNI_UTIL_H
+#ifndef SVN_JNI_GLOBAL_H
+#define SVN_JNI_GLOBAL_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 /* svn_jni_hashtable */
 jobject
@@ -62,6 +66,10 @@ svn_client_auth_baton_t *
 svn_jni_misc__make_auth_baton(JNIEnv *env, jobject jobj);
 
 
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif
 

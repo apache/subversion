@@ -18,11 +18,21 @@
 #ifndef SVN_LIBSVN_FS_TREE_H
 #define SVN_LIBSVN_FS_TREE_H
 
-/* Many of the functions you might have expected to find in tree.h are
-   part of the libsvn_fs public interface; see ../include/svn_fs.h. */
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+
+
+/* The functions you might have expected to find here are all part of
+   the libsvn_fs public interface; see ../include/svn_fs.h. */
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* SVN_LIBSVN_FS_TREE_H */
-
 
 
 /* 

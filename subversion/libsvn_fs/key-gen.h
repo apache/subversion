@@ -20,6 +20,11 @@
 
 #include "apr.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+
 /* Return the value of the string of digits at DATA as an ASCII
    decimal number.  The string is at most LEN bytes long.  The value
    of the number is at most MAX.  Set *END to the address of the first
@@ -66,8 +71,11 @@ extern const char svn_fs__next_key_key[];
 void svn_fs__next_key (const char *this, apr_size_t *len, char *next);
 
 
-#endif /* SVN_LIBSVN_FS_KEY_GEN_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
+#endif /* SVN_LIBSVN_FS_KEY_GEN_H */
 
 
 /* 

@@ -13,9 +13,17 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
-#ifndef WC_H
-#define WC_H
+#ifndef SVN_RUBY__WC_H
+#define SVN_RUBY__WC_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 VALUE svn_ruby_wc_to_statuses (apr_hash_t *statushash, apr_pool_t *pool);
 
-#endif /* WC_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_RUBY__WC_H */

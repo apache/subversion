@@ -17,8 +17,8 @@
  */
 
 
-#ifndef SWIGUTIL_H
-#define SWIGUTIL_H
+#ifndef SVN_SWIG_SWIGUTIL_H
+#define SVN_SWIG_SWIGUTIL_H
 
 #include <apr.h>
 #include <apr_pools.h>
@@ -77,13 +77,13 @@ const apr_array_header_t *svn_swig_strings_to_array(PyObject *source,
 #endif /* SWIGPYTHON */
 
 
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif  /* SWIGUTIL_H */
+#endif  /* SVN_SWIG_SWIGUTIL_H */
 
+
 /* ----------------------------------------------------------------
  * local variables:
  * eval: (load-file "../../../tools/dev/svn-dev.el")

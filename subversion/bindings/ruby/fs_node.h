@@ -13,10 +13,18 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
-#ifndef FS_NODE_H
-#define FS_NODE_H
+#ifndef SVN_RUBY__FS_NODE_H
+#define SVN_RUBY__FS_NODE_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 VALUE svn_ruby_fs_file_new (VALUE fsRoot, VALUE path);
 VALUE svn_ruby_fs_dir_new (VALUE fsRoot, VALUE path);
 
-#endif /* FS_NODE_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_RUBY__FS_NODE_H */

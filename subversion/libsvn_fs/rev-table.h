@@ -23,7 +23,11 @@
 #include "skel.h"
 #include "trail.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
+
 /* Creating and opening the `revisions' table.  */
 
 /* Open a `revisions' table in ENV.  If CREATE is non-zero, create one
@@ -82,8 +86,11 @@ svn_error_t *svn_fs__set_rev_prop (svn_fs_t *fs,
                                    trail_t *trail);
 
 
-#endif /* SVN_LIBSVN_FS_REV_TABLE_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
+#endif /* SVN_LIBSVN_FS_REV_TABLE_H */
 
 
 /* 

@@ -18,8 +18,8 @@
 
 
 
-#ifndef SVN_CONFIG_IMPL_H
-#define SVN_CONFIG_IMPL_H
+#ifndef SVN_LIBSVN_SUBR_CONFIG_IMPL_H
+#define SVN_LIBSVN_SUBR_CONFIG_IMPL_H
 
 
 #include <apr_hash.h>
@@ -29,7 +29,11 @@
 #include "svn_config.h"
 #include "svn_private_config.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
+
 /* The configuration data. This is a superhash of sections and options. */
 struct svn_config_t
 {
@@ -134,7 +138,11 @@ svn_config__user_config_path (const char **path_p,
                               apr_pool_t *pool);
 
 
-#endif /* SVN_CONFIG_IMPL_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_SUBR_CONFIG_IMPL_H */
 
 
 /*

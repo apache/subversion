@@ -13,10 +13,20 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
-#ifndef FS_ROOT_H
-#define FS_ROOT_H
+#ifndef SVN_RUBY__FS_ROOT_H
+#define SVN_RUBY__FS_ROOT_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 VALUE svn_ruby_fs_rev_root_new (svn_fs_root_t *root, apr_pool_t *pool);
 VALUE svn_ruby_fs_txn_root_new (svn_fs_root_t *root, apr_pool_t *pool);
 svn_fs_root_t *svn_ruby_fs_root (VALUE aRoot);
 svn_boolean_t svn_ruby_is_fs_root (VALUE obj);
-#endif /* FS_ROOT_H */
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_RUBY__FS_ROOT_H */

@@ -20,10 +20,17 @@
  */
 
 
+#ifndef SVN_LIBSVN_WC_ADM_FILES_H
+#define SVN_LIBSVN_WC_ADM_FILES_H
+
 #include <apr_pools.h>
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 
@@ -263,6 +270,12 @@ svn_error_t *svn_wc__adm_destroy (svn_stringbuf_t *path,
 svn_error_t *svn_wc__adm_cleanup_tmp_area (svn_stringbuf_t *path, 
                                            apr_pool_t *pool);
 
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_WC_ADM_FILES_H */
 
 
 /* 

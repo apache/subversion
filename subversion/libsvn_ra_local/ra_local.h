@@ -16,6 +16,9 @@
  * ====================================================================
  */
 
+#ifndef SVN_LIBSVN_RA_LOCAL_H
+#define SVN_LIBSVN_RA_LOCAL_H
+
 #include <apr_pools.h>
 #include <apr_tables.h>
 
@@ -27,6 +30,9 @@
 #include "svn_repos.h"
 #include "svn_ra.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /** Structures **/
@@ -173,10 +179,13 @@ svn_ra_local__get_update_pipe_editor (svn_delta_edit_fns_t **editor,
                                       apr_pool_t *pool);
 
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_RA_LOCAL_H */
+
 
-
-
-
 /* ----------------------------------------------------------------
  * local variables:
  * eval: (load-file "../../tools/dev/svn-dev.el")

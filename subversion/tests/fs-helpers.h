@@ -15,8 +15,8 @@
  * ====================================================================
  */
 
-#ifndef FS_HELPERS_H
-#define FS_HELPERS_H
+#ifndef SVN_TEST__FS_HELPERS_H
+#define SVN_TEST__FS_HELPERS_H
 
 #include <apr_pools.h>
 #include "svn_error.h"
@@ -25,6 +25,9 @@
 #include "svn_delta.h"
 #include "svn_test.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /*-------------------------------------------------------------------*/
@@ -150,12 +153,15 @@ svn_test__create_greek_tree (svn_fs_root_t *txn_root,
                              apr_pool_t *pool);
 
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
-#endif  /* FS_HELPERS_H */
+#endif  /* SVN_TEST__FS_HELPERS_H */
 
+
 /* ----------------------------------------------------------------
  * local variables:
  * eval: (load-file "../../tools/dev/svn-dev.el")
  * end:
  */
-

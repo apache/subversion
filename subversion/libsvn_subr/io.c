@@ -350,10 +350,10 @@ svn_io_file_affected_time (apr_time_t *apr_time,
 
 
 svn_error_t *
-svn_io__filesizes_different_p (svn_boolean_t *different_p,
-                               const char *file1,
-                               const char *file2,
-                               apr_pool_t *pool)
+svn_io_filesizes_different_p (svn_boolean_t *different_p,
+                              const char *file1,
+                              const char *file2,
+                              apr_pool_t *pool)
 {
   apr_finfo_t finfo1;
   apr_finfo_t finfo2;

@@ -1290,10 +1290,10 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   
   /* Check if the the local and prop-base file have *definitely*
      different filesizes. */
-  SVN_ERR (svn_io__filesizes_different_p (&different_filesizes,
-                                          prop_path->data,
-                                          prop_base_path->data,
-                                          subpool));
+  SVN_ERR (svn_io_filesizes_different_p (&different_filesizes,
+                                         prop_path->data,
+                                         prop_base_path->data,
+                                         subpool));
   if (different_filesizes) 
     {
       *modified_p = TRUE;

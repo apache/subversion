@@ -17,11 +17,17 @@
  */
 
 
+#ifndef SVN_LIBSVN_WC_ENTRIES_H
+#define SVN_LIBSVN_WC_ENTRIES_H
+
 #include <apr_pools.h>
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 #define SVN_WC__ENTRIES_TOPLEVEL       "wc-entries"
@@ -152,6 +158,12 @@ svn_wc__tweak_entry (apr_hash_t *entries,
                      const svn_revnum_t new_rev,
                      apr_pool_t *pool);
 
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_WC_ENTRIES_H */
 
 
 /* 

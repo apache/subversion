@@ -20,13 +20,20 @@
 
 
 
+#ifndef SVN_TEST__DIR_DELTA_EDITOR_H
+#define SVN_TEST__DIR_DELTA_EDITOR_H
+
 #include <stdio.h>
 #include "apr_pools.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_delta.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
+
 svn_error_t *
 dir_delta_get_editor (const svn_delta_edit_fns_t **editor,
                       void **edit_baton,
@@ -35,6 +42,12 @@ dir_delta_get_editor (const svn_delta_edit_fns_t **editor,
                       svn_stringbuf_t *path,
                       apr_pool_t *pool);
 
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_TEST__DIR_DELTA_EDITOR_H */
 
 
 /* 

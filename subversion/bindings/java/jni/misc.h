@@ -23,6 +23,10 @@
 #include <jni.h>
 #include <svn_client.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* functions */
 
 /*
@@ -34,6 +38,10 @@ misc__throw_exception_by_name(JNIEnv *env,
 			      const char *msg);
 svn_client_auth_baton_t *
 misc__make_auth_baton(JNIEnv *env, jobject jobj);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif
 

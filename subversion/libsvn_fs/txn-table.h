@@ -21,7 +21,11 @@
 #include "svn_fs.h"
 #include "trail.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
+
 /* Open a `transactions' table in ENV.  If CREATE is non-zero, create
    one if it doesn't exist.  Set *TRANSACTIONS_P to the new table.
    Return a Berkeley DB error code.  */
@@ -101,8 +105,12 @@ svn_error_t *svn_fs__get_txn_list (char ***names_p,
                                    apr_pool_t *pool,
                                    trail_t *trail);
 
-#endif /* SVN_LIBSVN_FS_TXN_TABLE_H */
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_FS_TXN_TABLE_H */
 
 
 /* 

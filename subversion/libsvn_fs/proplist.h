@@ -21,6 +21,10 @@
 #include "svn_fs.h"
 #include "skel.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 
 /* General PROPLIST skel manipulation functions. */
 
@@ -50,8 +54,13 @@ svn_error_t *svn_fs__set_prop (skel_t *proplist,
                                apr_pool_t *pool);
 
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
 #endif /* SVN_LIBSVN_FS_PROPLIST_H */
 
+
 /* ----------------------------------------------------------------
  * local variables:
  * eval: (load-file "../../tools/dev/svn-dev.el")

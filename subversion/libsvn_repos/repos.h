@@ -15,12 +15,16 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_REPOS_REPOS_H
-#define SVN_LIBSVN_REPOS_REPOS_H
+#ifndef SVN_LIBSVN_REPOS_H
+#define SVN_LIBSVN_REPOS_H
 
 #include "apr_pools.h"
 #include "apr_hash.h"
 #include "svn_fs.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /*** Repository layout. ***/
@@ -78,8 +82,12 @@ struct svn_repos_t
   apr_pool_t *pool;
 };
 
-#endif /* SVN_LIBSVN_REPOS_REPOS_H */
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_REPOS_H */
 
 
 /* 

@@ -17,11 +17,17 @@
  */
 
 
+#ifndef SVN_LIBSVN_WC_QUESTIONS_H
+#define SVN_LIBSVN_WC_QUESTIONS_H
+
 #include <apr_pools.h>
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /* Indicates which kind of timestamp to pay attention to.
@@ -74,6 +80,12 @@ svn_error_t *svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
                                               svn_stringbuf_t *base_file,
                                               apr_pool_t *pool);
 
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_WC_QUESTIONS_H */
 
 
 /* 

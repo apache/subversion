@@ -18,7 +18,11 @@
 #ifndef SVN_LIBSVN_FS_TXN_H
 #define SVN_LIBSVN_FS_TXN_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
+
 /* Return a pointer to the ID of TXN.  The return value is live for as
    long as TXN is.  */
 const char *svn_fs__txn_id (svn_fs_txn_t *txn);
@@ -34,8 +38,11 @@ svn_fs_t *svn_fs__txn_fs (svn_fs_txn_t *txn);
 apr_pool_t *svn_fs__txn_pool (svn_fs_txn_t *txn);
 
 
-#endif /* SVN_LIBSVN_FS_TXN_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
+#endif /* SVN_LIBSVN_FS_TXN_H */
 
 
 /* 

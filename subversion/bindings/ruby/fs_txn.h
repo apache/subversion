@@ -13,9 +13,17 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
-#ifndef FS_TXN_H
-#define FS_TXN_H
+#ifndef SVN_RUBY__FS_TXN_H
+#define SVN_RUBY__FS_TXN_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 VALUE svn_ruby_fs_txn_new (svn_fs_txn_t *txn, apr_pool_t *pool);
 
-#endif /* FS_TXN_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_RUBY__FS_TXN_H */

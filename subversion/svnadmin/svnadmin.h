@@ -17,6 +17,8 @@
  */
 
 
+#ifndef SVN_SVNADMIN_H
+#define SVN_SVNADMIN_H
 
 #include <apr_general.h>
 #include <apr_pools.h>
@@ -35,6 +37,10 @@
 #include "svn_repos.h"
 
 #include "db.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 
@@ -65,8 +71,11 @@ typedef struct shcxt_t
 } shcxt_t;
 
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
-
+#endif /* SVN_SVNADMIN_H */
 
 
 /* 

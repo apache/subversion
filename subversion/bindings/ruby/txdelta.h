@@ -13,8 +13,13 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
-#ifndef TXDELTA_H
-#define TXDELTA_H
+#ifndef SVN_RUBY__TXDELTA_H
+#define SVN_RUBY__TXDELTA_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 VALUE svn_ruby_txdelta_new (svn_txdelta_window_handler_t handler,
                             void *handler_baton,
                             apr_pool_t *pool);
@@ -22,5 +27,10 @@ VALUE svn_ruby_txdelta_new (svn_txdelta_window_handler_t handler,
 void svn_ruby_txdelta (VALUE txdelta,
                        svn_txdelta_window_handler_t *handler,
                        void **baton);
-#endif /* TXDELTA_H */
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_RUBY__TXDELTA_H */
 

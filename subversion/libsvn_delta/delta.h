@@ -23,9 +23,13 @@
 #include "apr_hash.h"
 #include "svn_xml.h"
 
-#ifndef DELTA_H
-#define DELTA_H
+#ifndef SVN_LIBSVN_DELTA_H
+#define SVN_LIBSVN_DELTA_H
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /* Private interface for text deltas. */
@@ -262,12 +266,11 @@ struct svn_delta_xml_parser_t
 };
 
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
-
-
-
-
-#endif  /* DELTA_H */
+#endif  /* SVN_LIBSVN_DELTA_H */
 
 
 

@@ -23,6 +23,11 @@
 #include "skel.h"
 #include "trail.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+
 /* The interface in this file provides all the essential filesystem
    operations, but exposes the filesystem's DAG structure.  This makes
    it simpler to implement than the public interface, since a client
@@ -441,9 +446,6 @@ svn_error_t *svn_fs__dag_copied_from (svn_revnum_t *rev_p,
                                       trail_t *trail);
 
 
-#endif /* SVN_LIBSVN_FS_DAG_H */
-
-
 /* Find out what is the same between two nodes.
  *
  * If PROPS_CHANGED is non-null, set *PROPS_CHANGED to 1 if the two
@@ -468,6 +470,12 @@ svn_error_t *svn_fs__things_different (int *props_changed,
                                        dag_node_t *node2,
                                        trail_t *trail);
 
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_FS_DAG_H */
 
 
 /* 

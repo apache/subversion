@@ -13,10 +13,18 @@
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
  */
-#ifndef ERROR_H
-#define ERROR_H
+#ifndef SVN_RUBY__ERROR_H
+#define SVN_RUBY__ERROR_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 svn_error_t *svn_ruby_error (const char *msg, apr_pool_t *pool);
 void svn_ruby_raise (svn_error_t *err);
 
-#endif /* ERROR_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_RUBY__ERROR_H */

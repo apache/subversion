@@ -24,6 +24,9 @@
 #include "skel.h"
 #include "trail.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 
 /*** Creating the `representations' table. ***/
@@ -72,8 +75,11 @@ svn_error_t *svn_fs__delete_rep (svn_fs_t *fs,
                                  trail_t *trail);
 
 
-#endif /* SVN_LIBSVN_FS_REPS_TABLE_H */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
+#endif /* SVN_LIBSVN_FS_REPS_TABLE_H */
 
 
 /* 

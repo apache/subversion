@@ -22,6 +22,10 @@
 /* includes */
 #include <jni.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /* functions */
 jobject
 vector__create(JNIEnv *env, jboolean *hasException);
@@ -29,6 +33,10 @@ vector__create(JNIEnv *env, jboolean *hasException);
 void
 vector__add(JNIEnv *env, jobject vector, jobject value, 
             jboolean *hasException);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif
 
