@@ -288,25 +288,35 @@ revision_from_word (svn_opt_revision_t *revision, const char *word)
 
 /* Parse one revision specification.  Return pointer to character
    after revision, or NULL if the revision is invalid.  Modifies
-   str, so make sure to pass a copy of anything precious. */
-static char *parse_one_rev (svn_opt_revision_t *revision, char *str)
+   str, so make sure to pass a copy of anything precious.  Uses
+   POOL for temporary allocation. */
+static char *parse_one_rev (svn_opt_revision_t *revision, char *str,
+                            apr_pool_t *pool)
 {
   char *end, save;
-  time_t tm;
 
   if (*str == '{')
     {
+      svn_boolean_t matched;
+      apr_time_t tm;
+      svn_error_t *err;
+
       /* Brackets denote a date. */
       str++;
       end = strchr (str, '}');
       if (!end)
         return NULL;
       *end = '\0';
-      tm = svn_parse_date (str, NULL);
-      if (tm == -1)
-        return NULL;
+      err = svn_parse_date (&matched, &tm, str, apr_time_now (), pool);
+      if (err)
+        {
+          svn_error_clear (err);
+          return NULL;
+        }
+      if (!matched)
+        return NULL; 
       revision->kind = svn_opt_revision_date;
-      apr_time_ansi_put (&(revision->value.date), tm);
+      revision->value.date = tm;
       return end + 1;
     }
   else if (apr_isdigit (*str))
@@ -350,11 +360,11 @@ svn_opt_parse_revision (svn_opt_revision_t *start_revision,
   /* Operate on a copy of the argument. */
   left_rev = apr_pstrdup (pool, arg);
 
-  right_rev = parse_one_rev (start_revision, left_rev);
+  right_rev = parse_one_rev (start_revision, left_rev, pool);
   if (right_rev && *right_rev == ':')
     {
       right_rev++;
-      end = parse_one_rev (end_revision, right_rev);
+      end = parse_one_rev (end_revision, right_rev, pool);
       if (!end || *end != '\0')
         return -1;
     }

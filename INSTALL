@@ -154,24 +154,7 @@ I.    BUILD REQUIREMENTS
       newer. The autogen.sh script knows about that.
 
 
-      4.  bison or yacc (Unix only)
-
-      This is required only if you plan to build from the latest source
-      (see section II.B), which you probably want to do. See above.
-
-      The reason one of these programs is required is that it will
-      generate the code which parses complex date formats, so that
-      Subversion can work with dates like "yesterday" and "last month"
-      and "four hours ago". Note that most modern Unices come with one
-      or the other of these programs, and only one is required.
-
-      The reason you don't need one of these programs on a Windows
-      platform is that the date parsing file has been pregenerated
-      and will automatically be copied into place by the Windows
-      Build.
-
-
-      5.  Neon library 0.24.4 (http://www.webdav.org/neon/)
+      4.  Neon library 0.24.4 (http://www.webdav.org/neon/)
 
       The Neon library allows a Subversion client to interact with remote
       repositories over the Internet via a WebDAV based protocol.  If you 
@@ -197,7 +180,7 @@ I.    BUILD REQUIREMENTS
       subdirectory beneath wherever "--with-neon" is pointed.
 
 
-      6.  Berkeley DB 4.2.52
+      5.  Berkeley DB 4.2.52
 
       Berkeley DB is needed to build a Subversion server, or to access
       a repository on local disk.  If you are only interested in
@@ -225,7 +208,7 @@ I.    BUILD REQUIREMENTS
           http://subversion.tigris.org/servlets/ProjectDocumentList
 
 
-      7.  Apache Web Server 2.0.48 or newer
+      6.  Apache Web Server 2.0.48 or newer
           (http://httpd.apache.org/download.cgi)
 
       The Apache HTTP server is required if you wish to offer your
@@ -236,7 +219,7 @@ I.    BUILD REQUIREMENTS
       done: See section III for details.
 
 
-      8.  Python 2.0 (http://www.python.org/)
+      7.  Python 2.0 (http://www.python.org/)
 
       If you want to run "make check" or build from the latest source
       under Unix as described in section II.B and III.D, install
@@ -245,21 +228,21 @@ I.    BUILD REQUIREMENTS
       system.
 
 
-      9.  Visual C++ 6.0 or newer (Windows Only)
+      8.  Visual C++ 6.0 or newer (Windows Only)
 
       To build Subversion under any of the MS Windows platforms, you
       will need a copy of Microsoft Visual C++.  You can generate the
       project files using the gen-make.py script.
 
 
-      10. Perl 5.8 or newer (Windows only)
+      9. Perl 5.8 or newer (Windows only)
 
       To build Subversion under any of the MS Windows platforms, you
       will also need Perl 5.8 or newer to run apr-util's w32locatedb.pl
       script.
 
 
-      11. Libraries for our libraries
+      10. Libraries for our libraries
 
       Some of the libraries that Subversion depends on themselves have
       optional dependencies that can add features to what Subversion
@@ -321,7 +304,7 @@ I.    BUILD REQUIREMENTS
       libraries.
 
 
-      12. Building The Documentation
+      11. Building The Documentation
 
       The master source format for Subversion's documentation is
       Docbook Lite.  See doc/book/README for instructions how to
