@@ -414,9 +414,10 @@ do_apply_textdelta (svn_stringbuf_t *filename,
                                     &window_handler,
                                     &window_handler_baton));
 
-  /* Copy the local file to the administrative temp area. */
+  /* Get the path to the administrative temp text-base file.
+     Presumably the working file has been copied here by our caller,
+     do_postfix_text_deltas(). */
   local_tmp_path = svn_wc__text_base_path (filename, TRUE, pool);
-  SVN_ERR (svn_io_copy_file (filename, local_tmp_path, pool));
 
   /* Open a filehandle for tmp local file, and one for text-base if
      applicable. */
@@ -480,7 +481,7 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
                         apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  svn_stringbuf_t *entrypath;
+  svn_stringbuf_t *entrypath, *local_tmp_path;
   struct target_baton *tb;
   const void *key;
   void *val;
@@ -492,10 +493,19 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
     {
       apr_hash_this (hi, &key, &keylen, &val);
       tb = val;
+      
+      /* Copy the working file to .svn/tmp/text-base.  
+         We do this because:
+            - if sending a text-delta, need to make sure it doesn't change
+            - after the commit, it will become the "real" text-base. 
+      */
+      entrypath = svn_stringbuf_create ((char *) key, pool);
+      local_tmp_path = svn_wc__text_base_path (entrypath, TRUE, pool);
+      SVN_ERR (svn_io_copy_file (entrypath, local_tmp_path, pool));
 
+      /* If there's a local mod, send a text-delta. */
       if (tb->text_modified_p)
         {
-          entrypath = svn_stringbuf_create ((char *) key, pool);
           SVN_ERR (do_apply_textdelta (entrypath, editor, tb, pool));
         }
 
