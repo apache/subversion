@@ -813,8 +813,8 @@ svn_error_t *svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
   SVN_BDB_ERR (env->open (env, path_native, (DB_CREATE
                                              | DB_INIT_LOCK | DB_INIT_LOG
-                                             | DB_INIT_MPOOL | DB_INIT_TXN
-                                             | DB_PRIVATE), 0666));
+                                             | DB_INIT_MPOOL | DB_INIT_TXN),
+                          0666));
   SVN_BDB_ERR (env->log_archive (env, &filelist, flags));
 
   if (filelist == NULL)
