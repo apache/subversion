@@ -277,6 +277,7 @@ maybe_bump_dir_revision (struct edit_baton *eb,
 
       tmp_entry.revision = eb->target_revision;
       tmp_entry.kind = svn_node_dir;
+      tmp_entry.deleted = FALSE;
 
       if (--bdi->ref_count > 0)
         return SVN_NO_ERROR;    /* directory isn't done yet */
@@ -291,14 +292,17 @@ maybe_bump_dir_revision (struct edit_baton *eb,
                                          SVN_WC__ENTRY_MODIFY_REVISION, pool));
         }
 
-      /* If this directory is newly added it doesn't have an entry in the
-         parent's list of entries. The directory is now complete, and can be
-         added. */
+      /* If this directory is newly added, then it probably doesn't
+         have an entry in the parent's list of entries (unless the
+         parent contains a phantom "deleted" entry). The directory is
+         now complete, and can be added. */
       if (bdi->added && bdi->parent)
         {
           const char *name = svn_path_basename (bdi->path, pool);
           SVN_ERR (svn_wc__entry_modify (bdi->parent->path, name, &tmp_entry,
-                                         SVN_WC__ENTRY_MODIFY_KIND, pool));
+                                         (SVN_WC__ENTRY_MODIFY_KIND
+                                          | SVN_WC__ENTRY_MODIFY_DELETED),
+                                         pool));
         }
     }
   /* we exited the for loop because there are no more parents */
@@ -1590,7 +1594,9 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
                              NULL);
     }
 
-  /* Write log entry which will bump the revision number:  */
+  /* Write log entry which will bump the revision number.  Also, just
+     in case we're overwriting an existing phantom 'deleted' entry, be
+     sure to remove the deleted-ness. */
   revision_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, new_revision);
   svn_xml_make_open_tag (&log_accum,
                          pool,
@@ -1602,6 +1608,8 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
                          SVN_WC__ENTRIES_ATTR_FILE_STR,
                          SVN_WC__ENTRY_ATTR_REVISION,
                          revision_str,
+                         SVN_WC__ENTRY_ATTR_DELETED,
+                         "false",
                          NULL);
 
 

@@ -348,7 +348,12 @@ def receive_copy_in_update(sbox):
 
 # Regression test for issue #683.  In particular, this bug prevented
 # us from running 'svn cp -rN src_URL dst_URL' as a means of
-# resurrecting a deleted directory.
+# resurrecting a deleted directory.  Also, the final 'update' at the
+# end of this test was uncovering a ghudson 'deleted' edge-case bug.
+# (In particular, re-adding G to D, when D already had a 'deleted'
+# entry for G.  The entry-merge wasn't overwriting the 'deleted'
+# attribute, and thus the newly-added G was ending up disconnected
+# from D.)
 
 def resurrect_deleted_dir(sbox):
   "resurrect a deleted directory"
@@ -396,8 +401,6 @@ def resurrect_deleted_dir(sbox):
   if errlines:
     return 1
 
-  return 0
-
   # For completeness' sake, update to HEAD, and verify we have a full
   # greek tree again, all at revision 3.
 
@@ -408,14 +411,13 @@ def resurrect_deleted_dir(sbox):
     'A/D/G/tau' : Item(status='A '),
     })
 
-  my_greek_tree = svntest.main.copy_greek_tree()
-  expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
+  expected_disk = svntest.main.greek_state.copy()
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   
   return svntest.actions.run_and_verify_update(wc_dir,
                                                expected_output,
-                                               expected_disk_tree,
+                                               expected_disk,
                                                expected_status)
 
 
