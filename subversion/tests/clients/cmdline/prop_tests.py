@@ -29,6 +29,18 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 
+# Helper functions
+def check_prop(name, path, exp_out):
+  """Verify that property NAME on PATH has a value of EXP_OUT"""
+  out, err = svntest.main.run_command(svntest.main.svn_binary, None, 1,
+                                      'pg', '--strict', name, path)
+  if out != exp_out:
+    print "svn pg --strict", name, "output does not match expected."
+    print "Expected standard output: ", exp_out, "\n"
+    print "Actual standard output: ", out, "\n"
+    raise svntest.Failure
+
+
 ######################################################################
 # Tests
 
@@ -704,6 +716,7 @@ def copy_should_use_copied_executable_and_mime_type_values(sbox):
       print "Actual standard output: ", actual_stdout, "\n"
       raise svntest.Failure
 
+#----------------------------------------------------------------------
 
 def revprop_change(sbox):
   "set and get a revprop change"
@@ -797,52 +810,91 @@ def prop_value_conversions(sbox):
   # plain '\n'. The _last_ \n is also from the client, but it's not
   # part of the prop value and it doesn't get converted in the pipe.
 
-  def check_prop(name, path, exp_out):
-    out, err = svntest.main.run_svn(None, 'pg', name, path)
-    if out != exp_out:
-      print "svn pg", name, "output does not match expected."
-      print "Expected standard output: ", exp_out, "\n"
-      print "Actual standard output: ", out, "\n"
-      raise svntest.Failure
-
   # Check svn:mime-type
-  check_prop('svn:mime-type', iota_path, ['text/html\n'])
-  check_prop('svn:mime-type', mu_path, ['text/html\n'])
+  check_prop('svn:mime-type', iota_path, ['text/html'])
+  check_prop('svn:mime-type', mu_path, ['text/html'])
 
   # Check svn:eol-style
-  check_prop('svn:eol-style', iota_path, ['native\n'])
-  check_prop('svn:eol-style', mu_path, ['native\n'])
+  check_prop('svn:eol-style', iota_path, ['native'])
+  check_prop('svn:eol-style', mu_path, ['native'])
 
   # Check svn:ignore
   check_prop('svn:ignore', A_path,
-             ['*.o'+os.linesep, 'foo.c'+os.linesep, '\n'])
+             ['*.o'+os.linesep, 'foo.c'+os.linesep])
   check_prop('svn:ignore', B_path,
-             ['*.o'+os.linesep, 'foo.c'+os.linesep, '\n'])
+             ['*.o'+os.linesep, 'foo.c'+os.linesep])
 
   # Check svn:externals
   check_prop('svn:externals', A_path,
-             ['foo http://foo.com/repos'+os.linesep, '\n'])
+             ['foo http://foo.com/repos'+os.linesep])
   check_prop('svn:externals', B_path,
-             ['foo http://foo.com/repos'+os.linesep, '\n'])
+             ['foo http://foo.com/repos'+os.linesep])
 
   # Check svn:keywords
-  check_prop('svn:keywords', iota_path, ['Rev Date\n'])
-  check_prop('svn:keywords', mu_path, ['Rev  Date\n'])
+  check_prop('svn:keywords', iota_path, ['Rev Date'])
+  check_prop('svn:keywords', mu_path, ['Rev  Date'])
 
   # Check svn:executable
-  check_prop('svn:executable', iota_path, ['*\n'])
-  check_prop('svn:executable', lambda_path, ['*\n'])
-  check_prop('svn:executable', mu_path, ['*\n'])
+  check_prop('svn:executable', iota_path, ['*'])
+  check_prop('svn:executable', lambda_path, ['*'])
+  check_prop('svn:executable', mu_path, ['*'])
 
   # Check other props
-  check_prop('svn:some-prop', lambda_path, ['bar\n'])
-  check_prop('svn:some-prop', mu_path, [' bar baz\n'])
-  check_prop('svn:some-prop', iota_path, ['bar'+os.linesep, '\n'])
-  check_prop('some-prop', lambda_path, ['bar\n'])
-  check_prop('some-prop', mu_path,[' bar baz\n'])
-  check_prop('some-prop', iota_path, ['bar\n', '\n'])
+  check_prop('svn:some-prop', lambda_path, ['bar'])
+  check_prop('svn:some-prop', mu_path, [' bar baz'])
+  check_prop('svn:some-prop', iota_path, ['bar'+os.linesep])
+  check_prop('some-prop', lambda_path, ['bar'])
+  check_prop('some-prop', mu_path,[' bar baz'])
+  check_prop('some-prop', iota_path, ['bar\n'])
 
 
+#----------------------------------------------------------------------
+
+def binary_props(sbox):
+  "test binary property support"
+
+  # Bootstrap
+  sbox.build()
+
+  # Some path convenience vars.
+  wc_dir = sbox.wc_dir
+  A_path = os.path.join(wc_dir, 'A')
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  iota_path = os.path.join(wc_dir, 'iota')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Property value convenience vars.
+  prop_zb   = "This property has a zer\000 byte."
+  prop_ff   = "This property has a form\014feed."
+  prop_xml  = "This property has an <xml> tag."
+  prop_binx = "This property has an <xml> tag and a zer\000 byte."
+  
+  # Set some binary properties.
+  propval_path = os.path.join(wc_dir, 'propval.tmp')
+  propval_file = open(propval_path, 'wb')
+
+  def set_prop(name, value, path, valf=propval_file, valp=propval_path):
+    valf.seek(0)
+    valf.truncate(0)
+    valf.write(value)
+    valf.flush()
+    svntest.main.run_svn(None, 'propset', '-F', valp, name, path)
+
+  set_prop('prop_zb', prop_zb, B_path)
+  set_prop('prop_ff', prop_ff, iota_path)
+  set_prop('prop_xml', prop_xml, lambda_path)
+  set_prop('prop_binx', prop_binx, mu_path)
+  set_prop('prop_binx', prop_binx, A_path)
+
+  # Now, check those properties.
+  check_prop('prop_zb', B_path, [prop_zb])
+  check_prop('prop_ff', iota_path, [prop_ff])
+  check_prop('prop_xml', lambda_path, [prop_xml])
+  check_prop('prop_binx', mu_path, [prop_binx])
+  check_prop('prop_binx', A_path, [prop_binx])
+
+  
 ########################################################################
 # Run the tests
 
@@ -863,6 +915,13 @@ test_list = [ None,
               # non-Posix platforms, we won't have to skip here:
               Skip(revprop_change, (os.name != 'posix')),
               prop_value_conversions,
+              # This stuff currently fails over DAV, but I can't seem to
+              # make a conditional for that (e.g., svntest.main.test_area_url
+              # has not yet been populated at this point, so I can't check
+              # whether or not it starts with 'http').  So, skip for all
+              # RA layers until we turn on binary property support in
+              # libsvn_ra_dav (see issue #1015).
+              Skip(binary_props, 1),
              ]
 
 if __name__ == '__main__':
