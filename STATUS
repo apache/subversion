@@ -147,3 +147,11 @@ Don't yet have three +1 votes:
      Justification: API stability; low risk because of bindings only change.
      Votes:
       +0: gstein
+
+   * r8270
+     Perl bindings fixes and enhancements.
+     Justification: More changes to try and get the bindings in
+                1.0 state.  In particular this implements most
+                of the client library support.
+     Votes:
+      +1: breser
