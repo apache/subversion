@@ -263,14 +263,19 @@ typedef struct svn_diff_output_fns_t
    * @a latest_start, @a latest_length in the "latest" datasource conflicts 
    * with the range @a original_start, @a original_length in the "original" 
    * datasource, and also conflicts with the range @a modified_start, 
-   * @a modified_length in the "modified" datasource.  */
+   * @a modified_length in the "modified" datasource.
+   * If there are common ranges in the "modified" and "latest" datasources
+   * in this conflicting range, @a resolved_diff will contain a diff
+   * which can be used to retrieve the common and conflicting ranges.
+   */
   svn_error_t *(*output_conflict) (void *output_baton,
                                    apr_off_t original_start,
                                    apr_off_t original_length,
                                    apr_off_t modified_start,
                                    apr_off_t modified_length,
                                    apr_off_t latest_start,
-                                   apr_off_t latest_length);
+                                   apr_off_t latest_length,
+                                   svn_diff_t *resolved_diff);
 } svn_diff_output_fns_t;
 
 
