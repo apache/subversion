@@ -445,59 +445,99 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
     return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
                               "`%s' is in the way", dst_path->data);
 
-  /* ### todo: We won't always punt on non-dir src like this. */
-  if (src_kind != svn_node_dir)
-    return svn_error_createf
-      (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
-       "can't copy non-directory `%s' to a wc yet", src_url->data);
-    
-  /* Get a checkout editor and wrap it. */
-  SVN_ERR (svn_wc_get_checkout_editor (dst_path,
-                                       src_url,
-                                       src_rev,
-                                       1,
-                                       &editor,
-                                       &edit_baton,
-                                       pool));
+  if (src_kind == svn_node_dir)
+    {    
+      /* Get a checkout editor and wrap it. */
+      SVN_ERR (svn_wc_get_checkout_editor (dst_path,
+                                           src_url,
+                                           src_rev,
+                                           1,
+                                           &editor,
+                                           &edit_baton,
+                                           pool));
+      
+      svn_delta_wrap_editor (&editor, &edit_baton,
+                             before_editor, before_edit_baton,
+                             editor, edit_baton,
+                             after_editor, after_edit_baton, pool);
+      
+      /* Check out the new tree.  The parent dir will get no entry, so
+         it will be as if the new tree isn't really there yet. */
+      SVN_ERR (ra_lib->do_checkout (sess, src_rev, 1, editor, edit_baton));
 
-  svn_delta_wrap_editor (&editor, &edit_baton,
-                         before_editor, before_edit_baton,
-                         editor, edit_baton,
-                         after_editor, after_edit_baton, pool);
+      if (! SVN_IS_VALID_REVNUM(src_rev))
+        {
+          /* If we just checked out from the "head" revision, that's fine,
+             but we don't want to pass a '-1' as a copyfrom_rev to
+             svn_wc_add().  That function will dump it right into the
+             entry, and when we try to commit later on, the
+             'add-dir-with-history' step will be -very- unhappy; it only
+             accepts specific revisions.
+             
+             On the other hand, we *could* say that -1 is a legitimate
+             copyfrom_rev, but I think that's bogus.  Somebody made a copy
+             from a particular revision;  if they wait a long time to
+             commit, it would be terrible if the copied happened from a
+             newer revision!! */
+          
+          /* We just did a checkout; whatever revision we just got, that
+             should be the copyfrom_revision when we commit later. */
+          svn_wc_entry_t *d_entry;
+          SVN_ERR (svn_wc_entry (&d_entry, dst_path, pool));
+          src_rev = d_entry->revision;
+        }
 
-  /* Check out the new tree.  The parent dir will get no entry, so
-     it will be as if the new tree isn't really there yet. */
-  SVN_ERR (ra_lib->do_checkout (sess, src_rev, 1, editor, edit_baton));
+    } /* end directory case */
 
-  if (! SVN_IS_VALID_REVNUM(src_rev))
+  else if (src_kind == svn_node_file)
     {
-      /* If we just checked out from the "head" revision, that's fine,
-         but we don't want to pass a '-1' as a copyfrom_rev to
-         svn_wc_add().  That function will dump it right into the
-         entry, and when we try to commit later on, the
-         'add-dir-with-history' step will be -very- unhappy; it only
-         accepts specific revisions.
+      apr_status_t status;
+      svn_stream_t *fstream;
+      apr_file_t *fp;
+      svn_revnum_t fetched_rev = 0;
+      
+      /* Open DST_PATH for writing. */
+      status = apr_file_open (&fp, dst_path->data, (APR_CREATE | APR_WRITE),
+                              APR_OS_DEFAULT, pool);
+      if (status)
+        return svn_error_createf (status, 0, NULL, pool,
+                                  "failed to open file '%s' for writing.",
+                                  dst_path->data);
 
-         On the other hand, we *could* say that -1 is a legitimate
-         copyfrom_rev, but I think that's bogus.  Somebody made a copy
-         from a particular revision;  if they wait a long time to
-         commit, it would be terrible if the copied happened from a
-         newer revision!! */
+      /* Create a generic stream that operates on this file.  */
+      fstream = svn_stream_from_aprfile (fp, pool);
+      
+      /* Have the RA layer 'push' data at this stream.  We pass a
+         relative path of "", because we opened SRC_URL, which is
+         already the full URL to the file. */         
+      SVN_ERR (ra_lib->get_file (sess, "", src_rev, fstream, &fetched_rev));
 
-      /* We just did a checkout; whatever revision we just got, that
-         should be the copyfrom_revision when we commit later. */
-      svn_wc_entry_t *d_entry;
-      SVN_ERR (svn_wc_entry (&d_entry, dst_path, pool));
-      src_rev = d_entry->revision;
+      /* Close the file. */
+      status = apr_file_close (fp);
+      if (status)
+        return svn_error_createf (status, 0, NULL, pool,
+                                  "failed to close file '%s'.",
+                                  dst_path->data);   
+     
+      /* Also, if SRC_REV is invalid ('head'), then FETCHED_REV is now
+         equal to the revision that was actually retrieved.  This is
+         the value we want to use as 'copyfrom_rev' in the call to
+         svn_wc_add() below. */
+      if (! SVN_IS_VALID_REVNUM (src_rev))
+        src_rev = fetched_rev;
     }
-
-  /* Switch the tree over to the new ancestry, incidentally adding an
-     entry in parent.  See long comment in svn_wc_add()'s doc string
-     about whether svn_wc_add() is appropriate for this. */
-  SVN_ERR (svn_wc_add (dst_path, src_url, src_rev, pool));
 
   /* Free the RA session. */
   SVN_ERR (ra_lib->close (sess));
+      
+  /* Schedule the new item for addition-with-history.
+
+     If the new item is a directory, the URLs will be recursively
+     rewritten, wcprops removed, and everything marked as 'copied'.
+     See comment in svn_wc_add()'s doc about whether svn_wc_add is the
+     appropriate place for this. */
+  SVN_ERR (svn_wc_add (dst_path, src_url, src_rev, pool));
+
 
   return SVN_NO_ERROR;
 }

@@ -19,6 +19,7 @@
 #include "ra_local.h"
 #include "svn_ra.h"
 #include "svn_fs.h"
+#include "svn_delta.h"
 #include "svn_repos.h"
 #include "svn_pools.h"
 
@@ -430,25 +431,82 @@ do_check_path (svn_node_kind_t *kind,
 
 
 /* Getting just one file. */
-
 static svn_error_t *
 get_file (void *session_baton,
-          svn_stringbuf_t *path,
+          const char *path,
           svn_revnum_t revision,
-          svn_stream_t *stream)
+          svn_stream_t *stream,
+          svn_revnum_t *fetched_rev)
 {
-
-#if 0
+  svn_fs_root_t *root;
   svn_stream_t *contents;
+  svn_revnum_t youngest_rev;
+  char buf[SVN_STREAM_CHUNK_SIZE];
+  apr_size_t rlen, wlen;
+  svn_ra_local__session_baton_t *sbaton = session_baton;
 
-  SVN_ERR (svn_fs_file_contents (&contents
-                                 svn_fs_root_t *root,
-                                 const char *path,
-                                 apr_pool_t *pool);
+  svn_stringbuf_t *abs_path 
+    = svn_stringbuf_dup (sbaton->fs_path, sbaton->pool);
 
-#endif /* 0 */
+  /* ### Not sure if this counts as a workaround or not.  The
+     session baton uses the empty string to mean root, and not
+     sure that should change.  However, it would be better to use
+     a path library function to add this separator -- hardcoding
+     it is totally bogus.  See issue #559, though it may be only
+     tangentially related. */
+  if (abs_path->len == 0)
+    svn_stringbuf_appendcstr (abs_path, "/");
 
-  abort ();
+  /* If we were given a relative path to append, append it. */
+  if (path)
+    svn_path_add_component_nts (abs_path, path, svn_path_repos_style);
+
+  /* Open the revision's root. */
+  if (! SVN_IS_VALID_REVNUM (revision))
+    {
+      SVN_ERR (svn_fs_youngest_rev (&youngest_rev, sbaton->fs, sbaton->pool));
+      SVN_ERR (svn_fs_revision_root (&root, sbaton->fs,
+                                     youngest_rev, sbaton->pool));
+      if (fetched_rev != NULL)
+        *fetched_rev = youngest_rev;
+    }
+  else
+    SVN_ERR (svn_fs_revision_root (&root, sbaton->fs,
+                                   revision, sbaton->pool));
+
+  /* Get a stream representing the file's contents. */
+  SVN_ERR (svn_fs_file_contents (&contents, root,
+                                 abs_path->data, sbaton->pool));
+
+  /* Now push data from the fs stream back at the caller's stream. */
+  while (1)
+    {
+      /* read a maximum number of bytes from the file, please. */
+      rlen = SVN_STREAM_CHUNK_SIZE; 
+      SVN_ERR (svn_stream_read (contents, buf, &rlen));
+
+      /* write however many bytes you read, please. */
+      wlen = rlen;
+      SVN_ERR (svn_stream_write (stream, buf, &wlen));
+      if (wlen != rlen)
+        {
+          /* Uh oh, didn't write as many bytes as we read, and no
+             error was returned.  According to the docstring, this
+             should never happen. */
+          return 
+            svn_error_create (SVN_ERR_UNEXPECTED_EOF, 0, NULL,
+                              sbaton->pool, "Error writing to svn_stream.");
+        }
+      
+      if (rlen != SVN_STREAM_CHUNK_SIZE)
+        {
+          /* svn_stream_read didn't throw an error, yet it didn't read
+             all the bytes requested.  According to the docstring,
+             this means a plain old EOF happened, so we're done. */
+          break;
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 
