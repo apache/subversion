@@ -626,15 +626,21 @@ close_file (void *file_baton)
     }
 
 
+  /* ### Is b->path the repos path?  Probably.  This doesn't really
+     matter while issue #748 (svn merge only happens in ".") is
+     outstanding.  But when we take a wc_path as an argument to
+     merge, then we'll need to pass around a wc path somehow. */
+
   if (eb->notify_func)
-    (*eb->notify_func) (eb->notify_baton,
-                        b->path, /* ### is this repos path?  wrong if so */
-                        svn_wc_notify_update_update,
-                        svn_node_file,
-                        NULL,
-                        content_state,
-                        prop_state,
-                        SVN_INVALID_REVNUM);
+    (*eb->notify_func)
+      (eb->notify_baton,
+       b->path,
+       b->added ? svn_wc_notify_update_add : svn_wc_notify_update_update,
+       svn_node_file,
+       NULL,
+       content_state,
+       prop_state,
+       SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
 }
