@@ -179,7 +179,8 @@ print_long_format (const char *path,
 
   /* Set the update character. */
   update_char = ' ';
-  if (status->repos_text_status == svn_wc_status_added)
+  if ((status->repos_text_status != svn_wc_status_normal)
+      || (status->repos_prop_status != svn_wc_status_normal))
     update_char = '*';
 
   /* Determine the appropriate local revision string. */
