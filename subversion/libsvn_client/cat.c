@@ -81,7 +81,7 @@ svn_client_cat (svn_stream_t* out,
 
   /* Grab some properties we need to know in order to figure out if anything 
      special needs to be done with this file. */
-  SVN_ERR (ra_lib->get_file (session, "", rev, NULL, NULL, &props));
+  SVN_ERR (ra_lib->get_file (session, "", rev, NULL, NULL, &props, pool));
 
   mime_type = apr_hash_get (props, SVN_PROP_MIME_TYPE, APR_HASH_KEY_STRING);
   eol_style = apr_hash_get (props, SVN_PROP_EOL_STYLE, APR_HASH_KEY_STRING);
@@ -94,7 +94,7 @@ svn_client_cat (svn_stream_t* out,
     {
       /* Either it's a binary file, or it's a text file with no special eol 
          style. */
-      SVN_ERR (ra_lib->get_file(session, "", rev, out, NULL, NULL));
+      SVN_ERR (ra_lib->get_file (session, "", rev, out, NULL, NULL, pool));
     }
   else
     {
@@ -113,7 +113,8 @@ svn_client_cat (svn_stream_t* out,
 
       tmp_stream = svn_stream_from_aprfile (tmp_file, pool);
 
-      SVN_ERR (ra_lib->get_file(session, "", rev, tmp_stream, NULL, NULL));
+      SVN_ERR (ra_lib->get_file (session, "", rev, tmp_stream, 
+                                 NULL, NULL, pool));
 
       /* rewind our stream. */
       apr_err = apr_file_seek (tmp_file, APR_SET, &off);

@@ -509,10 +509,10 @@ static svn_error_t *ra_svn_commit(void *sess,
 static svn_error_t *ra_svn_get_file(void *sess, const char *path,
                                     svn_revnum_t rev, svn_stream_t *stream,
                                     svn_revnum_t *fetched_rev,
-                                    apr_hash_t **props)
+                                    apr_hash_t **props,
+                                    apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess;
-  apr_pool_t *pool = conn->pool;
   svn_ra_svn_item_t *item;
   apr_array_header_t *proplist;
   unsigned char digest[MD5_DIGESTSIZE];

@@ -106,7 +106,8 @@ svn_error_t * svn_ra_dav__get_file(
   svn_revnum_t revision,
   svn_stream_t *stream,
   svn_revnum_t *fetched_rev,
-  apr_hash_t **props);
+  apr_hash_t **props,
+  apr_pool_t *pool);
 
 svn_error_t *svn_ra_dav__get_dir(
   void *session_baton,

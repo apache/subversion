@@ -955,12 +955,13 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
                                   svn_revnum_t revision,
                                   svn_stream_t *stream,
                                   svn_revnum_t *fetched_rev,
-                                  apr_hash_t **props)
+                                  apr_hash_t **props,
+                                  apr_pool_t *pool)
 {
   svn_ra_dav_resource_t *rsrc;
   const char *final_url;
   svn_ra_session_t *ras = (svn_ra_session_t *) session_baton;
-  const char *url = svn_path_url_add_component (ras->url, path, ras->pool);
+  const char *url = svn_path_url_add_component (ras->url, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
      the public URL, because that will always get HEAD. */
@@ -978,10 +979,10 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
                                              &got_rev,
                                              ras->sess,
                                              url, revision,
-                                             ras->pool));
+                                             pool));
       final_url = svn_path_url_add_component(bc_url.data,
                                              bc_relative.data,
-                                             ras->pool);
+                                             pool);
       if (fetched_rev != NULL)
         *fetched_rev = got_rev;
     }
@@ -1004,7 +1005,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
                                      final_url,
                                      NULL,
                                      &md5_propname,
-                                     ras->pool);
+                                     pool);
 
       /* Older servers don't serve this prop, but that's okay. */
       /* ### temporary hack for 0.17. if the server doesn't have the prop,
@@ -1030,12 +1031,12 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
                                   get_file_reader, &fwc,
                                   ras->callbacks->get_wc_prop,
                                   ras->callback_baton,
-                                  ras->compression, ras->pool) );
+                                  ras->compression, pool) );
 
       if (fwc.do_checksum)
         {
           apr_md5_final(digest, &(fwc.md5_context));
-          hex_digest = svn_md5_digest_to_cstring(digest, ras->pool);
+          hex_digest = svn_md5_digest_to_cstring(digest, pool);
 
           if (strcmp (hex_digest, expected_checksum->data) != 0)
             return svn_error_createf
@@ -1051,9 +1052,9 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
     {
       SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras->sess, final_url, 
                                               NULL, NULL /* all props */, 
-                                              ras->pool) ); 
-      *props = apr_hash_make(ras->pool);
-      SVN_ERR (filter_props (*props, rsrc, TRUE, ras->pool));
+                                              pool) ); 
+      *props = apr_hash_make(pool);
+      SVN_ERR (filter_props (*props, rsrc, TRUE, pool));
     }
 
   return SVN_NO_ERROR;

@@ -910,7 +910,8 @@ do_single_file_merge (const char *URL1,
                                         merge_b->ctx, pool));
   SVN_ERR (svn_client__get_revision_number
            (&rev1, ra_lib, session1, revision1, NULL, pool));
-  SVN_ERR (ra_lib->get_file (session1, "", rev1, fstream1, NULL, &props1));
+  SVN_ERR (ra_lib->get_file (session1, "", rev1, fstream1, 
+                             NULL, &props1, pool));
 
   /* ### heh, funny.  we could be fetching two fulltexts from two
      *totally* different repositories here.  :-) */
@@ -921,7 +922,8 @@ do_single_file_merge (const char *URL1,
                                         TRUE, merge_b->ctx, pool));
   SVN_ERR (svn_client__get_revision_number
            (&rev2, ra_lib, session2, merge_b->revision, NULL, pool));
-  SVN_ERR (ra_lib->get_file (session2, "", rev2, fstream2, NULL, &props2));
+  SVN_ERR (ra_lib->get_file (session2, "", rev2, fstream2, NULL,
+                             &props2, pool));
 
   status = apr_file_close (fp1);
   if (status)
