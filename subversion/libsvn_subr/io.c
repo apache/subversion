@@ -94,7 +94,8 @@ svn_io_check_path (svn_string_t *path,
 
 
 svn_error_t *
-svn_io_tmp_name (svn_string_t **tmp_name,
+svn_io_tmp_file (apr_file_t **f,
+                 svn_string_t **tmp_name,
                  const svn_string_t *path,
                  const char *suffix,
                  apr_pool_t *pool)
@@ -104,10 +105,13 @@ svn_io_tmp_name (svn_string_t **tmp_name,
   apr_size_t iterating_portion_idx;
 
   /* Would be nice to use process ID for the random portion, but
-     that's not portable.  So instead we use the pointer as an
-     unsigned int. */
+     that's not portable.  APR uuids are great, but they're kind of
+     long, and I'm not sure how random any given substring of one is.
+     So we just use the pointer as an unsigned short int (of course,
+     the same charge leveled at uuids might apply to the pointer as
+     well, but heck, we already have the pointer for free). */
   int random_portion_width;
-  char *random_portion = apr_psprintf (pool, "%u%n",
+  char *random_portion = apr_psprintf (pool, "%hu%n",
                                        tmp_name,
                                        &random_portion_width);
 
@@ -119,7 +123,7 @@ svn_io_tmp_name (svn_string_t **tmp_name,
     {
       int chop_amt = ((*tmp_name)->len - 255)
                       + random_portion_width
-                      + 3  /* 3 dots */
+                      + 3  /* 2 dots */
                       + 5  /* 5 digits of iteration portion */
                       + strlen (suffix);
       svn_string_chop (*tmp_name, chop_amt);
@@ -127,13 +131,12 @@ svn_io_tmp_name (svn_string_t **tmp_name,
 
   iterating_portion_idx = (*tmp_name)->len + random_portion_width + 2;
   svn_string_appendcstr (*tmp_name,
-                         apr_psprintf (pool, ".%s.00000.%s",
+                         apr_psprintf (pool, ".%s.00000%s",
                                        random_portion, suffix));
 
-  for (i = 1; i < 99999; i++)
+  for (i = 1; i <= 99999; i++)
     {
-      svn_error_t *err;
-      enum svn_node_kind kind;
+      apr_status_t apr_err;
 
       /* Tweak last attempted name to get the next one. */
       sprintf (number_buf, "%05d", i);
@@ -143,15 +146,30 @@ svn_io_tmp_name (svn_string_t **tmp_name,
       (*tmp_name)->data[iterating_portion_idx + 3] = number_buf[3];
       (*tmp_name)->data[iterating_portion_idx + 4] = number_buf[4];
 
-      err = svn_io_check_path (*tmp_name, &kind, pool);
-      if (err)
-        return svn_error_quick_wrap (err, "svn_io_tmp_name: ");
-      else if (kind == svn_node_none)
+      apr_err = apr_open (f, (*tmp_name)->data,
+                          (APR_WRITE | APR_CREATE | APR_EXCL),
+                          APR_OS_DEFAULT, pool);
+
+      if (apr_err == APR_EEXIST)
+        continue;
+      else if (apr_err)
+        {
+          *f = NULL;
+          *tmp_name = NULL;
+          return svn_error_createf (apr_err,
+                                    0,
+                                    NULL,
+                                    pool,
+                                    "svn_io_tmp_name: "
+                                    "error attempting %s", (*tmp_name)->data);
+        }
+      else
         return SVN_NO_ERROR;
     }
 
+  *f = NULL;
   *tmp_name = NULL;
-  return svn_error_createf (SVN_ERR_WC_UNIQUE_TMP_NAME_UNAVAILABLE,
+  return svn_error_createf (SVN_ERR_IO_TMP_NAMES_EXHAUSTED,
                             0,
                             NULL,
                             pool,

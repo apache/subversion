@@ -128,7 +128,7 @@ typedef enum svn_errno_t {
   SVN_ERR_WC_NOT_UP_TO_DATE,
 
   /* No names available for tmp files. */
-  SVN_ERR_WC_UNIQUE_TMP_NAME_UNAVAILABLE,
+  SVN_ERR_IO_TMP_NAMES_EXHAUSTED,
 
   /* A general filesystem error.  */
   SVN_ERR_FS_GENERAL,
