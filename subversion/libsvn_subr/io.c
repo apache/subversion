@@ -1053,16 +1053,12 @@ svn_io_run_cmd (const char *path,
   args_native[num_args] = NULL;
   while (num_args--)
     {
-      /* ### Whups, this one almost slipped through the cracks. The
-         arguments to an external program must _not_ remain in UTF-8
-         on Windows, regardless of what APR's internal encoding
-         is. And anyway, this is probably wrong, because there's no
-         guarantee that we'll only have filename arguments. I suspect
-         that the *caller* of svn_io_run_cmd should be responsible for
-         recoding the arguments. Urgh, blech. */
-      SVN_ERR (svn_utf_cstring_from_utf8 (&args_native[num_args],
-                                          args[num_args],
-                                          pool));
+      /* ### Well, it turns out that on APR on Windows expects all
+             program args to be in UTF-8. Callers of svn_io_run_cmd
+             should be aware of that. */
+      SVN_ERR (svn_path_cstring_from_utf8 (&args_native[num_args],
+                                           args[num_args],
+                                           pool));
     }
 
 
@@ -1131,6 +1127,7 @@ svn_io_run_diff (const char *dir,
   const char *diff_cmd;
   SVN_ERR (svn_config_read_config (&cfg, subpool));
   svn_config_get (cfg, &diff_cmd, "helpers", "diff-cmd", SVN_CLIENT_DIFF);
+  SVN_ERR (svn_path_cstring_to_utf8 (&diff_utf8, diff_cmd, pool));
 
   if (pexitcode == NULL)
     pexitcode = &exitcode;
@@ -1148,7 +1145,7 @@ svn_io_run_diff (const char *dir,
   args = apr_palloc (subpool, nargs * sizeof(char *));
 
   i = 0;
-  args[i++] = diff_cmd;
+  args[i++] = diff_utf8;
 
   if (user_args != NULL)
     {
@@ -1176,8 +1173,6 @@ svn_io_run_diff (const char *dir,
 
   assert (i == nargs);
 
-  SVN_ERR (svn_path_cstring_to_utf8 (&diff_utf8, diff_cmd, pool));
-  
   SVN_ERR (svn_io_run_cmd (dir, diff_utf8, args, pexitcode, NULL, FALSE, 
                            NULL, outfile, errfile, subpool));
 
@@ -1193,7 +1188,7 @@ svn_io_run_diff (const char *dir,
    */
   if (*pexitcode != 0 && *pexitcode != 1)
     return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, NULL, 
-                              "%s returned %d", diff_cmd, *pexitcode);
+                              "%s returned %d", diff_utf8, *pexitcode);
 
   svn_pool_destroy (subpool);
 
@@ -1222,6 +1217,7 @@ svn_io_run_diff3 (const char *dir,
   const char *diff3_cmd;
   SVN_ERR (svn_config_read_config (&cfg, pool));
   svn_config_get (cfg, &diff3_cmd, "helpers", "diff3-cmd", SVN_CLIENT_DIFF3);
+  SVN_ERR (svn_path_cstring_to_utf8 (&diff3_utf8, diff3_cmd, pool));
 
   /* Labels fall back to sensible defaults if not specified. */
   if (mine_label == NULL)
@@ -1232,7 +1228,7 @@ svn_io_run_diff3 (const char *dir,
     yours_label = ".new";
   
   /* Set up diff3 command line. */
-  args[i++] = diff3_cmd;
+  args[i++] = diff3_utf8;
   args[i++] = "-E";             /* We tried "-A" here, but that caused
                                    overlapping identical changes to
                                    conflict.  See issue #682. */
@@ -1252,10 +1248,11 @@ svn_io_run_diff3 (const char *dir,
     if (0 == strcasecmp(has_arg, "yes")
         || 0 == strcasecmp(has_arg, "true"))
       {
-        const char *diff_cmd;
+        const char *diff_cmd, *diff_utf8;
         svn_config_get (cfg, &diff_cmd,
                         "helpers", "diff-cmd", SVN_CLIENT_DIFF);
-        args[i++] = apr_pstrcat(pool, "--diff-program=", diff_cmd, NULL);
+        SVN_ERR (svn_path_cstring_to_utf8 (&diff_utf8, diff_cmd, pool));
+        args[i++] = apr_pstrcat(pool, "--diff-program=", diff_utf8, NULL);
         ++nargs;
       }
   }
@@ -1265,8 +1262,6 @@ svn_io_run_diff3 (const char *dir,
   args[i++] = yours;
   args[i++] = NULL;
   assert (i == nargs);
-
-  SVN_ERR (svn_path_cstring_to_utf8 (&diff3_utf8, diff3_cmd, pool));
 
   /* Run diff3, output the merged text into the scratch file. */
   SVN_ERR (svn_io_run_cmd (dir, diff3_utf8, args, 
@@ -1283,7 +1278,7 @@ svn_io_run_diff3 (const char *dir,
                               "svn_io_run_diff3: "
                               "Error running %s:  exitcode was %d, args were:"
                               "\nin directory %s, basenames:\n%s\n%s\n%s",
-                              diff3_cmd, *exitcode,
+                              diff3_utf8, *exitcode,
                               dir, mine, older, yours);
 
   return SVN_NO_ERROR;

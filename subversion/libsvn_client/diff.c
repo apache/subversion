@@ -188,7 +188,7 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
   apr_file_t *outfile = diff_cmd_baton->outfile;
   apr_file_t *errfile = diff_cmd_baton->errfile;
   apr_pool_t *subpool = svn_pool_create (diff_cmd_baton->pool);
-  const char *label1, *label2;
+  const char *label1, *label2, *path_native;
 
   /* Execute local diff command on these two paths, print to stdout. */
   nargs = diff_cmd_baton->options->nelts;
@@ -205,8 +205,9 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
     }
 
   /* Print out the diff header. */
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, subpool));
   SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n%s\n",
-                               path, equal_string));
+                               path_native, equal_string));
 
   if (rev1 == rev2)
     {
