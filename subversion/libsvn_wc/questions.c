@@ -141,7 +141,7 @@ timestamps_equal_p (apr_finfo_t *finfo1, apr_finfo_t *finfo2)
 static svn_boolean_t
 filesizes_equal_p (apr_finfo_t *finfo1, apr_finfo_t *finfo2)
 {
-  if (finfo->size == finfo2->size)
+  if (finfo1->size == finfo2->size)
     return TRUE;
   else
     return FALSE;
@@ -221,7 +221,7 @@ svn_wc__file_modified_p (svn_boolean_t *modified_p,
       char *msg =
         apr_psprintf
         ("svn_wc__file_modified_p:  failed to open text-base copy of `%s'",
-         filename->data);
+         (char *) filename->data);
       return svn_quick_wrap_error (err, msg);
     }
 
