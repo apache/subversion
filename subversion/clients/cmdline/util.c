@@ -185,61 +185,114 @@ svn_cl__args_to_target_array (apr_array_header_t **targets_p,
                               svn_boolean_t extract_revisions,
                               apr_pool_t *pool)
 {
+  int i;
   svn_client_revision_t *firstrev = NULL, *secondrev = NULL;
-  apr_array_header_t *targets =
+   apr_array_header_t *input_targets =
     apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (const char *));
+  apr_array_header_t *output_targets =
+    apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (const char *));
+
+  /* Step 1:  create a master array of targets that are in -native-
+     encoding, and come from concatenating the targets left by apr_getopt,
+     plus any extra targets in opt_state (from the --targets switch.) */
  
-  /* Command line args take precedence.  */
   for (; os->ind < os->argc; os->ind++)
     {
-      const char *target;
-
-      /* FIXME: need to handle errors here... */
-      svn_utf_cstring_to_utf8 (&target, os->argv[os->ind], NULL, pool);
-
-      /* If this path looks like it would work as a URL in one of the
-         currently available RA libraries, we add it unconditionally
-         to the target array. */
-      if (! svn_path_is_url (target))
+      /* The apr_getopt targets are still in native encoding. */
+      const char *raw_target = os->argv[os->ind];
+      (*((const char **) apr_array_push (input_targets))) = raw_target;
+    }
+  
+  if (opt_state->targets)
+    {
+      for (i = 0; i < opt_state->targets->nelts; i++)
         {
-          const char *base_name = svn_path_basename (target, pool);
+          /* The --targets array have already been converted to UTF-8,
+             because we needed to split up the list with svn_cstring_split. */
+          const char *raw_target;
+          const char *utf8_target = APR_ARRAY_IDX(opt_state->targets,
+                                                  i, const char *);
+          /* Convert each back to native encoding.  */
+          SVN_ERR (svn_utf_cstring_from_utf8 (&raw_target, utf8_target, pool));
+          
+          (*((const char **) apr_array_push (input_targets))) = raw_target;
+        }
+    }
 
+  /* Step 2:  process each target.  */
+
+  for (i = 0; i < input_targets->nelts; i++)
+    {
+      const char *raw_target = APR_ARRAY_IDX(input_targets, i, const char *);
+      const char *target;      /* after all processing is finished */
+
+      /* URLs and wc-paths get treated differently. */
+      if (svn_path_is_url (raw_target))
+        {
+          /* No need to canonicalize a URL's case or path separators. */
+
+          /* convert it to UTF-8 */
+          const char *utf8_url;
+          SVN_ERR (svn_utf_cstring_to_utf8 (&utf8_url, raw_target,
+                                            NULL, pool));
+
+          /* strip any trailing '/' */
+          target = svn_path_canonicalize_nts (utf8_url, pool);
+        }
+      else  /* not a url, so treat as a path */
+        {
+          const char *base_name = svn_path_basename (raw_target, pool);
+          char *truenamed_target;
+          apr_status_t apr_err;
+          
           /* If this target is a Subversion administrative directory,
              skip it.  TODO: Perhaps this check should not call the
              target a SVN admin dir unless svn_wc_check_wc passes on
              the target, too? */
           if (! strcmp (base_name, SVN_WC_ADM_DIR_NAME))
             continue;
-        }
-      else
-        {
-          target = svn_path_canonicalize_nts (target, pool);
+          
+          /* canonicalize case, and change all separators to '/'. */
+          apr_err = apr_filepath_merge (&truenamed_target, "", raw_target,
+                                        APR_FILEPATH_TRUENAME, pool);
+
+          /* It's okay for the file to not exist, that just means we have
+             to accept the case given to the client. */
+          if (APR_STATUS_IS_ENOENT (apr_err))
+            /* ### Disagreeable to cast, but it's only a tmp var and we're
+               casting it back a bit later on. */
+            truenamed_target = (char *) raw_target;
+          else if (apr_err)
+            return svn_error_createf (apr_err, 0, NULL, pool,
+                                      "Error resolving case of %s.",
+                                      raw_target);
+
+          /* convert to UTF-8. */
+          SVN_ERR (svn_utf_cstring_to_utf8 (&target,
+                                            (const char *) truenamed_target,
+                                            NULL, pool));
         }
 
-      (*((const char **) apr_array_push (targets))) = target;
+      (*((const char **) apr_array_push (output_targets))) = target;
     }
 
-  /* Now args from --targets, if any */
-  if (NULL != opt_state->targets)
-    apr_array_cat (targets, opt_state->targets);
 
   /* kff todo: need to remove redundancies from targets before
      passing it to the cmd_func. */
 
   if (extract_revisions)
     {
-      int i;
-      for (i = 0; i < targets->nelts; i++)
+      for (i = 0; i < output_targets->nelts; i++)
         {
           const char *truepath;
           svn_client_revision_t temprev; 
-          const char *path = ((const char **) (targets->elts))[i];
+          const char *path = ((const char **) (output_targets->elts))[i];
 
           parse_path (&temprev, &truepath, path, pool);
 
           if (temprev.kind != svn_client_revision_unspecified)
             {
-              ((const char **) (targets->elts))[i] = truepath;
+              ((const char **) (output_targets->elts))[i] = truepath;
 
               if (! firstrev)
                 {
@@ -271,7 +324,7 @@ svn_cl__args_to_target_array (apr_array_header_t **targets_p,
         }
     }
   
-  *targets_p = targets;
+  *targets_p = output_targets;
   return SVN_NO_ERROR;
 }
 

@@ -168,6 +168,7 @@ void svn_cl__push_svn_string (apr_array_header_t *array,
 /* Pull remaining target arguments from OS into *TARGETS_P, including
    targets stored in OPT_STATE->targets (that is, passed via the
    "--targets" command line option), converting them to UTF-8.
+   Allocate *TARGETS_P and its elements in POOL.
 
    If EXTRACT_REVISIONS is set, then this function will attempt to
    look for trailing "@rev" syntax on the paths.  If one @rev is
