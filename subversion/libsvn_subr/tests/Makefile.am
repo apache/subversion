@@ -11,11 +11,13 @@ INCLUDES = -I../../include -I../../../apr/include
 ## Libraries this binary depends upon:
 hashdump_test_LDADD = ../../tests-common/libsvn_tests_main.la   \
                       ../libsvn_subr.la                         \
-                      ../../../apr/libapr.a
+                      ../../../apr/libapr.a                     \
+                      ../../../expat-lite/libexpat.la
 
 stringtest_LDADD = ../../tests-common/libsvn_tests_main.la   \
                    ../libsvn_subr.la                         \
-                   ../../../apr/libapr.a
+                   ../../../apr/libapr.a                     \
+                   ../../../expat-lite/libexpat.la
 
 
 ## Make libtool be quiet
