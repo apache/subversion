@@ -159,7 +159,8 @@ public interface Client {
    * children.  (See svn_wc.h:svn_wc_statuses() for more verbiage on
    * this).
    */
-  public Hashtable status(String path, boolean descend)
+  public Hashtable status(String path, boolean descend,
+    boolean get_all, boolean update )
     throws SubversionException;
 
   /**
@@ -175,4 +176,24 @@ public interface Client {
    * incomplete operations, removing lockfiles, etc.
    */
   public void cleanup(String dir) throws SubversionException;
+
+  /**
+   * Set Username
+   */
+  public void setUsername(String username);
+
+  /**
+   * Get Username
+   */
+   public String getUsername();
+
+   /**
+    * Set Password 
+    */
+   public void setPassword(String password);
+
+   /**
+    * Get Password
+    */
+    public String getPassword();
 }
