@@ -1,3 +1,13 @@
+Version X.X.X (unreleased)
+
+ User-visible changes:
+ * 'svn diff' can now compare two arbitrary URLs (issue 674)
+
+ Developer-visible changes:
+ * updates can deal with disjoint urls.
+ * python tests now run on Win32.
+ * svn_cl__diff/svn_client_diff gutted and rewritten
+
 Version 0.11.1 (released 12 April 2002, revision 1682)
 
  User-visible changes:

@@ -595,6 +595,9 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
    to OUTFILE, and any errors to ERRFILE.  PATH1 and PATH can be
    either working-copy paths or URLs.
 
+   If either REVISION1 or REVISION2 has an `unspecified' or
+   unrecognized `kind', return SVN_ERR_CLIENT_BAD_REVISION.
+
    PATH1 and PATH2 must both represent the same node kind -- that is,
    if PATH1 is a directory, PATH2 must also be, and if PATH1 is a
    file, PATH2 must also be.  (Currently, PATH1 and PATH2 must be the
@@ -629,8 +632,7 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
 
    PATH1 and PATH2 must both represent the same node kind -- that is,
    if PATH1 is a directory, PATH2 must also be, and if PATH1 is a
-   file, PATH2 must also be.  (Currently, PATH1 and PATH2 must be the
-   exact same path.  ### Also true for merge, initially?)
+   file, PATH2 must also be.
 
    If either REVISION1 or REVlISION2 has an `unspecified' or
    unrecognized `kind', return SVN_ERR_CLIENT_BAD_REVISION.
