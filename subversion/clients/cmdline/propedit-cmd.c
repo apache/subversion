@@ -142,7 +142,7 @@ svn_cl__propedit (apr_getopt_t *os,
       else
         {
           SVN_ERR (svn_cmdline_printf
-                   (pool, _("No changes to property '%s' on revision %ld"),
+                   (pool, _("No changes to property '%s' on revision %ld\n"),
                     pname_utf8, rev));
         }
     }
