@@ -94,8 +94,14 @@ apply_delta (void *delta_src,
   svn_error_t *err;
 
   /* Get the editor and friends... */
-  err = svn_wc_get_update_editor (dest, repos, version,
-                                  &editor, &edit_baton, pool);
+  err = svn_wc_get_checkout_editor (dest,
+                                    repos,
+                                    /* Assume we're checking out root. */
+                                    svn_string_create ("", pool),
+                                    version,
+                                    &editor,
+                                    &edit_baton,
+                                    pool);
   if (err)
     return err;
 
