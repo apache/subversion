@@ -56,11 +56,19 @@
 svn_string_t *
 svn_string_create (char *cstring)
 {
-  svn_string_t new_string;  /* MALLOC THIS, and do what follows  */
+  svn_string_t *new_string;
+  
+  new_string = xmalloc (sizeof(svn_string_t)); /* TODO:  xmalloc */
+  new_string->data = NULL;
+  new_string->len = 0;
+  new_string->blocksize = 0;
 
-  svn_string_appendbytes (&new_string, cstring, sizeof(cstring));
+  /* This routine will actually call realloc(); realloc() behaves like
+     malloc() as long as data == NULL */
 
-  return &new_string;
+  svn_string_appendbytes (new_string, cstring, sizeof(cstring));
+
+  return new_string;
 }
 
 
@@ -68,13 +76,27 @@ svn_string_create (char *cstring)
    (NOT null-terminated!) */
 
 svn_string_t *
-svn_string_ncreate (char *cstring, size_t size)
+svn_string_ncreate (char *bytes, size_t size)
 {
-  svn_string_t new_string;  /* MALLOC THIS, and do what follows */
+  svn_string_t *new_string;
 
-  svn_string_appendbytes (&new_string, cstring, size);
+  new_string = xmalloc (sizeof(svn_string_t)); /* TODO:  xmalloc */
+  new_string->data = NULL;
+  new_string->len = 0;
+  new_string->blocksize = 0;
 
-  return &new_string;
+  svn_string_appendbytes (new_string, bytes, size);
+
+  return new_string;
+}
+
+
+/* free a bytestring structure */
+
+void svn_string_free (svn_string_t *str)
+{
+  free (str->data);
+  free (str);
 }
 
 
@@ -90,27 +112,51 @@ svn_string_setnull (svn_string_t *str)
 }
 
 
-/* ask if a bytestring is null */
+/* overwrite bytestring with a character */
+
+void 
+svn_string_fillchar (svn_string_t *str, unsigned char c)
+{
+  int i;
+  
+  if (c == 0) 
+    {
+      bzero (str->data, str->len);  /* for speed */
+    }
+  else
+    { 
+      /* not using memset(), because it wants an int */
+      for (i = 0; i < str->len; i++)
+        {
+          str->data[i] = c;
+        }
+    }
+}
+
+
+
+/* Ask if a bytestring is null */
 
 svn_boolean_t
 svn_string_isnull (svn_string_t *str)
 {
-  if ((str->data == NULL) || (str->len <= 0))
+  if (str->data == NULL)
     return TRUE;
   else
     return FALSE;
 }
 
 
+/* Ask if a bytestring is empty */
 
-/* append one bytestring type onto another */
-
-void
-svn_string_appendstr (svn_string_t *targetstr, svn_string_t *appendstr)
+svn_boolean_t
+svn_string_isempty (svn_string_t *str)
 {
-  svn_string_appendbytes (targetstr, appendstr->data, appendstr->len);
+  if (str->len <= 0)
+    return TRUE;
+  else
+    return FALSE;
 }
-
 
 
 /* append a number of bytes onto a bytestring */
@@ -119,7 +165,7 @@ void
 svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count)
 {
   size_t total_len;
-  size_t i, position;
+  void *start_address;
 
   total_len = str->len + count;  /* total size needed */
 
@@ -129,18 +175,23 @@ svn_string_appendbytes (svn_string_t *str, char *bytes, size_t count)
   if (total_len >= str->blocksize)
     {
       str->blocksize = total_len * 2;
-      str->data = xrealloc (str->data, str->blocksize); /* TODO */
+      str->data = xrealloc (str->data, str->blocksize); /* TODO: xrealloc */
     }
 
-  /* copy one byte at a time */
+  /* get address 1 byte beyond end of original bytestring */
+  start_address = str->data[str->len];
 
-  position = str->len;   /* memcpy TODO here! */
-
-  for (i = 0; i < count; i++)
-    {
-      str->data[position + i] = bytes[i];
-    }
+  memcpy (start_address, (void *) bytes, count);
   str->len = total_len;
+}
+
+
+/* append one bytestring type onto another */
+
+void
+svn_string_appendstr (svn_string_t *targetstr, svn_string_t *appendstr)
+{
+  svn_string_appendbytes (targetstr, appendstr->data, appendstr->len);
 }
 
 
@@ -168,13 +219,12 @@ svn_string_compare (svn_string_t *str1, svn_string_t *str2)
   if (str1->len != str2->len)
     return FALSE;
 
-  for (i = 0; i < str1->len ; i++)   /* TODO: use memcmp */
-    {
-      if (str1->data[i] != str2->data[i])
-        return FALSE;
-    }
-
-  return TRUE;
+  /* now that we know they have identical lengths... */
+  
+  if (memcmp (str1->data, str2->data, str1->len))
+    return FALSE;
+  else
+    return TRUE;
 }
 
 
