@@ -39,6 +39,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_opt.h"
+#include "svn_cancel.h"
 
 
 #ifdef __cplusplus
@@ -291,6 +292,13 @@ typedef struct svn_client_ctx_t
    * contents should have the key "config".
    */
   apr_hash_t *config;
+
+  /** a callback to be used to see if the client wishes to cancel the running 
+   * operation. */
+  svn_cancel_func_t cancel_func;
+
+  /** a baton to pass to the cancellation callback. */
+  void *cancel_baton;
 
 } svn_client_ctx_t;
 

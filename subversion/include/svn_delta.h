@@ -34,6 +34,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_cancel.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -794,6 +795,24 @@ typedef struct
  * safely do nothing of consequence.
  */
 svn_delta_editor_t *svn_delta_default_editor (apr_pool_t *pool);
+
+/** Return a cancellation editor that wraps @a wrapped_editor.
+ *
+ * The @a editor will call @a cancel_func with @a cancel_baton when each of 
+ * it's functions are called, continuing on to call the corresponding wrapped 
+ * function if it returns @c SVN_NO_ERROR.
+ *
+ * If @a cancel_func is @c NULL, @a *editor is set to @a wrapped_editor and 
+ * @a *edit_baton is set to @a wrapped_baton.
+ */
+svn_error_t *
+svn_delta_get_cancellation_editor (svn_cancel_func_t cancel_func,
+                                   void *cancel_baton,
+                                   const svn_delta_editor_t *wrapped_editor,
+                                   void *wrapped_baton,
+                                   const svn_delta_editor_t **editor,
+                                   void **edit_baton,
+                                   apr_pool_t *pool);
 
 /** @} */
 

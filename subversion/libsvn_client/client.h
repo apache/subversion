@@ -285,6 +285,8 @@ svn_client__get_diff_editor (const char *target,
                              svn_revnum_t revision,
                              svn_wc_notify_func_t notify_func,
                              void *notify_baton,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
                              const svn_delta_editor_t **editor,
                              void **edit_baton,
                              apr_pool_t *pool);
