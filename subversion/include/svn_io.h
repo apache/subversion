@@ -368,8 +368,11 @@ svn_error_t *svn_io_get_dirents (apr_hash_t **dirents,
    Connect CMD's stdin, stdout, and stderr to INFILE, OUTFILE, and
    ERRFILE, except where they are null.
 
-   EXITCODE will contain the exit code of the process upon return, and
-   EXITWHY will indicate why the process terminated.
+   If set, EXITCODE will contain the exit code of the process upon return,
+   and EXITWHY will indicate why the process terminated. If EXITWHY is not
+   set and the exit reason is not APR_PROC_CHECK_EXIT(), or if EXITCODE is
+   not set and the exit code is non-zero, then an SVN_ERR_EXTERNAL_PROGRAM
+   error will be returned.
 
    ARGS is a list of (const char *)'s, terminated by NULL.  ARGS[0] is
    the name of the program, though it need not be the same as CMD.
