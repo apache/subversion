@@ -79,10 +79,22 @@ svn_cl__create_auth_baton (svn_cl__opt_state_t *opt_state,
                            apr_pool_t *pool)
 {
   svn_auth_baton_t *ab;
+  const svn_auth_provider_t *prompt_provider;
+  void *prompt_prov_baton;
 
   svn_auth_open (&ab, pool);
 
-  /* ### register providers here!!!  */
+  /* A cmdline-app provider which prompts the user. */
+  svn_auth_get_simple_prompt_provider (&prompt_provider, &prompt_prov_baton,
+                                       &svn_cl__prompt_user, NULL, 
+                                       2 , /* number of retries */
+                                       /* default --username or --password */
+                                       opt_state->auth_username,
+                                       opt_state->auth_password,
+                                       pool);
+  
+  svn_auth_register_provider (ab, 0 /* ignored */,
+                              prompt_provider, prompt_prov_baton, pool);
 
   return ab;
 }

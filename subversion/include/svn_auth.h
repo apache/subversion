@@ -160,11 +160,11 @@ svn_error_t * svn_auth_open(svn_auth_baton_t **auth_baton,
  * provider_baton) with @a auth_baton, in the order specified by
  * @a order.  Use @a pool for any temporary allocation.
  */
-svn_error_t * svn_auth_register_provider(svn_auth_baton_t *auth_baton,
-                                         int order,
-                                         const svn_auth_provider_t *vtable,
-                                         void *provider_baton,
-                                         apr_pool_t *pool);
+void svn_auth_register_provider(svn_auth_baton_t *auth_baton,
+                                int order,
+                                const svn_auth_provider_t *vtable,
+                                void *provider_baton,
+                                apr_pool_t *pool);
 
 /** Get an initial set of credentials.
  *

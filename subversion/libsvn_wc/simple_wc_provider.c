@@ -34,6 +34,10 @@ typedef struct
   const char *base_dir;
   svn_wc_adm_access_t *base_access;
   
+  /* any creds possibly passed in by the application (e.g. --username) */
+  const char *default_username;
+  const char *default_password;
+
 } simple_wc_provider_baton_t;
 
 
@@ -46,13 +50,16 @@ simple_wc_first_creds (void **credentials,
   simple_wc_provider_baton_t *pb
     = (simple_wc_provider_baton_t *) provider_baton;
   svn_auth_cred_simple_t *creds = apr_pcalloc (pool, sizeof(*creds));
-  svn_error_t *err;
+  svn_error_t *err = NULL;
   svn_stringbuf_t *susername, *spassword;
 
-  err = svn_wc_get_auth_file (pb->base_dir, SVN_AUTH_SIMPLE_WC_USERNAME,
-                              &susername, pool);
-  err = svn_wc_get_auth_file (pb->base_dir, SVN_AUTH_SIMPLE_WC_PASSWORD,
-                              &spassword, pool);  
+  if (! pb->default_username)
+    err = svn_wc_get_auth_file (pb->base_dir, SVN_AUTH_SIMPLE_WC_USERNAME,
+                                &susername, pool);
+
+  if (! pb->default_password)
+    err = svn_wc_get_auth_file (pb->base_dir, SVN_AUTH_SIMPLE_WC_PASSWORD,
+                                &spassword, pool);  
   if (err)
     {
       /* for now, let's not try to distinguish "real" errors from
@@ -63,8 +70,10 @@ simple_wc_first_creds (void **credentials,
       return SVN_NO_ERROR;
     }
 
-  creds->username = susername->data;
-  creds->password = spassword->data;
+  creds->username = pb->default_username ? 
+                      pb->default_username : susername->data;
+  creds->password = pb->default_password ? 
+                      pb->default_password : spassword->data;
   *credentials = creds;
   *iter_baton = NULL;
   return SVN_NO_ERROR;
@@ -149,11 +158,15 @@ svn_wc_get_simple_wc_provider (const svn_auth_provider_t **provider,
                                void **provider_baton,
                                const char *wc_dir,
                                svn_wc_adm_access_t *wc_dir_access,
+                               const char *default_username,
+                               const char *default_password,
                                apr_pool_t *pool)
 {
   simple_wc_provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
   pb->base_dir = apr_pstrdup (pool, wc_dir);
   pb->base_access = wc_dir_access;
+  pb->default_username = apr_pstrdup (pool, default_username);
+  pb->default_password = apr_pstrdup (pool, default_password);
 
   *provider = &simple_wc_provider;
   *provider_baton = pb;

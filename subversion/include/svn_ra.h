@@ -30,6 +30,7 @@
 
 #include "svn_error.h"
 #include "svn_delta.h"
+#include "svn_auth.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -317,6 +318,10 @@ typedef struct svn_ra_callbacks_t
                                      enum svn_ra_auth_method method,
                                      void *callback_baton,
                                      apr_pool_t *pool);
+
+  /* An authentication baton, created by the application, which is
+     capable of retrieving all known types of credentials.  */
+  svn_auth_baton_t *auth_baton;
 
   /*** The following items may be set to NULL to disallow the RA layer
        to perform the respective operations of the vtable functions.

@@ -117,9 +117,25 @@ svn_client_ctx_set_auth_baton (svn_client_ctx_t *ctx,
                                svn_client_auth_baton_t *old_auth_baton,
                                svn_auth_baton_t *auth_baton);
 
-/** Return the cached auth baton in @a ctx, or @c NULL if there is none. */
+/** Return the old-style cached auth baton in @a ctx, or @c NULL if
+    there is none. */
 svn_client_auth_baton_t *
 svn_client_ctx_get_old_auth_baton (svn_client_ctx_t *ctx);
+
+/** Return the cached auth baton in @a ctx, or @c NULL if there is none. */
+svn_auth_baton_t *
+svn_client_ctx_get_auth_baton (svn_client_ctx_t *ctx);
+
+/** Set the cached default simple credentials in @a ctx to @a creds. */
+void
+svn_client_ctx_set_default_simple_creds (svn_client_ctx_t *ctx,
+                                         svn_auth_cred_simple_t *creds);
+
+/** Return the default simple credentials in @ ctx, or @c NULL if
+    there is none. */
+svn_auth_cred_simple_t *
+svn_client_ctx_get_default_simple_creds (svn_client_ctx_t *ctx);
+
 
 /** This is a structure which stores a filename and a hash of property
  * names and values.
