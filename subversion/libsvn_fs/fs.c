@@ -132,12 +132,12 @@ cleanup_fs (svn_fs_t *fs)
 
   /* Checkpoint any changes.  */
   {
-    int db_err = txn_checkpoint (env, 0, 0, 0);
+    int db_err = env->txn_checkpoint (env, 0, 0, 0);
 
     while (db_err == DB_INCOMPLETE)
       {
         apr_sleep (1000000L); /* microseconds, so 1000000L == 1 second */
-        db_err = txn_checkpoint (env, 0, 0, 0);
+        db_err = env->txn_checkpoint (env, 0, 0, 0);
       }
 
     /* If the environment was not (properly) opened, then txn_checkpoint
@@ -269,8 +269,9 @@ svn_fs_close_fs (svn_fs_t *fs)
     int db_err;
 
     /* Print transaction statistics for this DB env. */
-    if ((db_err = txn_stat (fs->env, &t)) != 0)
-      fprintf (stderr, "Error running txn_stat(): %s", db_strerror (db_err));
+    if ((db_err = fs->env->txn_stat (fs->env, &t, 0)) != 0)
+      fprintf (stderr, "Error running fs->env->txn_stat(): %s",
+               db_strerror (db_err));
     else
       {
         printf ("*** DB txn stats, right before closing env:\n");
@@ -292,8 +293,9 @@ svn_fs_close_fs (svn_fs_t *fs)
       }
 
     /* Print transaction statistics for this DB env. */
-    if ((db_err = lock_stat (fs->env, &l)) != 0)
-      fprintf (stderr, "Error running lock_stat(): %s", db_strerror (db_err));
+    if ((db_err = fs->env->lock_stat (fs->env, &l, 0)) != 0)
+      fprintf (stderr, "Error running fs->env->lock_stat(): %s",
+               db_strerror (db_err));
     else
       {
         printf ("*** DB lock stats, right before closing env:\n");

@@ -148,17 +148,17 @@ III.  INSTALLATION
       building a Subversion client that speaks to a remote (networked)
       repository, you don't need it.  
 
-      You'll need Berkeley DB 3.3.11 installed on your system.  You can
+      You'll need Berkeley DB 4.0.14 installed on your system.  You can
       get it from http://www.sleepycat.com/.
 
       If you already have another version of Berkeley DB installed and
-      don't want to downgrade, you can unpack the Berkeley 3.3.11
+      don't want to downgrade, you can unpack the Berkeley 4.0.14
       distribution into a subdir named `db' in the top-level of the
       Subversion source tree.  Then Subversion will ignore the system
       DB and use the one it found in its own source tree.
       Alternatively, you can add this flag
 
-         --with-berkeley-db=/usr/local/BerkeleyDB.3.3
+         --with-berkeley-db=/usr/local/BerkeleyDB.4.0
 
       to your `configure' switches, and the build process will use the
       named Berkeley.  You may need to use a different path, of
@@ -354,11 +354,11 @@ V.  BUILDING A SUBVERSION SERVER
        this from happening, you have to tell Apache where to find the
        version of db subversion uses.  Right before configure: 
        
-       export LDFLAGS=-L/usr/local/BerkeleyDB.3.3/lib
-       export CPPFLAGS=-I/usr/local/BerkeleyDB.3.3/include
+       export LDFLAGS=-L/usr/local/BerkeleyDB.4.0/lib
+       export CPPFLAGS=-I/usr/local/BerkeleyDB.4.0/include
 
-       Add --with-dbm=db3 to the configure line.  This note assumes
-       you have installed Berkeley DB 3.3.11 at its default locations.
+       Add --with-dbm=db4 to the configure line.  This note assumes
+       you have installed Berkeley DB 4.0.14 at its default locations.
        For more info about the db requirement, see section III.C.1. 
 
   All instructions below assume you configured Apache to install

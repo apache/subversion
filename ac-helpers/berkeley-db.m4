@@ -97,13 +97,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
     dbdir=`cd db/dist ; pwd`
     SVN_DB_INCLUDES="-I$dbdir"
     svn_lib_berkeley_db=yes
-    # Linking directly to the .la is broken with --disable-shared
-    # because Berkeley db does not seem to generate a .la library.
-    if test "$enable_shared" = "yes"; then
-        SVN_DB_LIBS="$dbdir/libdb-3.3.la"
-    else
-        SVN_DB_LIBS="-L$dbdir -ldb"
-    fi
+    SVN_DB_LIBS="$dbdir/libdb-4.0.la"
   elif test "$status" = "skip"; then
     svn_lib_berkeley_db=no
   else
@@ -115,9 +109,11 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
       # database library in /usr/local/lib, as libdb.a.  There is no
       # /usr/local/include/db.h.  So if you check for /usr/local first, you'll
       # get the old header file from /usr/include, and the new library from
-      # /usr/local/lib --- disaster.  Check for that bogosity first.
-      places="std /usr/local/include/db3:/usr/local/lib /usr/local
-              /usr/local/BerkeleyDB.$1.$2 /usr/include/db3:/usr/lib"
+      # /usr/local/lib.  Disaster.  We check for that bogosity first,
+      # and assume that the bogosity has carried over to the Berkeley
+      # 4.0.x series -- if it hasn't, someone please make a noise.
+      places="std /usr/local/include/db4:/usr/local/lib /usr/local
+              /usr/local/BerkeleyDB.$1.$2 /usr/include/db4:/usr/lib"
     fi
     # Now `places' is guaranteed to be a list of place specs we should
     # search, no matter what flags the user passed.
