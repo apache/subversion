@@ -114,6 +114,45 @@ public class NativeWrapper
      */
     public static native void hashtablePut(Hashtable hashtable, Object key, Object value);
 
+    /**
+     * wrapper for function "misc__throw_exception_by_name" (misc.h)
+     */
+    public static native void miscThrowExceptionByName(String name, String msg);
+    
+    /**
+     * wrapper for function "status__create" (status.h)
+     */
+    public static native Status statusCreate();
+
+    /**
+     * wrapper for function "status__set_entry" (status.h)
+     */
+    public static native void statusSetEntry(Status status, Entry entry);
+
+    /**
+     * wrapper for function "status__set_text_status" (status.h)
+     */
+    public static native void statusSetTextStatus(Status status, int text_status);
+
+    /**
+     * wrapper for function "status__set_prop_status" (status.h)
+     */
+    public static native void statusSetPropStatus(Status status, int prop_status);
+
+    /**
+     * wrapper for function "status__set_locked" (status.h)
+     */
+    public static native void statusSetLocked(Status status, boolean locked);
+    
+    /**
+     * wrapper for function "status__set_repos_text_status" (status.h)
+     */
+    public static native void statusSetReposTextStatus(Status status, int repos_text_status);
+
+    /**
+     * wrapper for function "status__set_repos_prop_status" (status.h)
+     */
+    public static native void statusSetReposPropStatus(Status status, int repos_prop_status);
 }
 
 /* 

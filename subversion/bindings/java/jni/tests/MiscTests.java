@@ -18,28 +18,37 @@
 import junit.framework.*;
 
 /**
- * JUnits tests for the Java subversion binding helper functions
+ * Testcases for the native functions with prefix "misc" 
+ * in the class NativeWrapper
+ *
+ * @see NativeWrapper
  */
-public class AllTests {
-
-    public static void main( String [] args )
+public class MiscTests extends TestCase
+{
+    public MiscTests(String name)
 	{
-	    junit.textui.TestRunner.run( suite() );
+	    super(name);
 	}
 
-    public static Test suite( )
+    public void testMiscThrowExceptionByName()
 	{
-	    TestSuite suite = new TestSuite(
-		"All JUnit tests for the Java Subversion binding");
+	    String name="org.tigris.subversion.SubversionException";
+	    String message="the answer is 42";
 
-	    //add tests here
-	    suite.addTestSuite( DateTests.class );
-	    suite.addTestSuite( EntryTests.class );
-	    suite.addTestSuite( VectorTests.class );
-	    suite.addTestSuite( HashtableTests.class );
-	    suite.addTestSuite( MiscTests.class );
-	    suite.addTestSuite( StatusTests.class );
+	    try
+	    {
+		NativeWrapper.miscThrowExceptionByName(name, message);
+		
+		// code isnt supposed to reach this point...
+		assertTrue(false);
+	    }
+	    catch( Exception e )
+	    {
+		// is this the exception we wanted?
+		assertTrue( e.getClass().getName().equals( name ) );
 
-	    return suite;
+		// does the message fit the one we stated?
+		assertTrue( e.getMessage().equals( message ) );
+	    }
 	}
 }
