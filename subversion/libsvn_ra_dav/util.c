@@ -503,6 +503,14 @@ svn_ra_dav__parsed_request(ne_session *sess,
                                validate_cb, startelm_cb, endelm_cb,
                                baton, pool);
 
+  /* ### HACK: Set the parser's error to the empty string.  Someday we
+     hope neon will let us have an easy way to tell the difference
+     between XML parsing errors, and errors that occur while handling
+     the XML tags that we get.  Until then, trust that whenever neon
+     has an error somewhere below the API, it sets its own error to
+     something non-empty (the API promises non-NULL, at least). */
+  ne_xml_set_error(success_parser, "");
+
   /* if our caller is interested in having access to this parser, call
      the SET_PARSER callback with BATON. */
   if (set_parser != NULL)
