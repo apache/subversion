@@ -47,15 +47,14 @@ dir_deltas (const char **msg,
 
   /* The Test Plan
      
-     The filesystem function svn_fs_dir_delta exists to drive an
+     The filesystem function svn_repos_dir_delta exists to drive an
      editor in such a way that given a source tree S and a target tree
      T, that editor manipulation will transform S into T, insomuch as
      directories and files, and their contents and properties, go.
      The general notion of the test plan will be to create pairs of
      trees (S, T), and an editor that edits a copy of tree S, run them
      through svn_fs_dir_delta, and then verify that the edited copy of
-     S is identical to T when it is all said and done.
-  */
+     S is identical to T when it is all said and done.  */
 
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs_and_repos 
@@ -302,7 +301,7 @@ dir_deltas (const char **msg,
           apr_hash_set (rev_diffs, "", APR_HASH_KEY_STRING, revision);
 
           /* Prepare a txn that will receive the changes from
-             svn_fs_dir_delta */
+             svn_repos_dir_delta */
           SVN_ERR (svn_fs_begin_txn (&txn, fs, i, subpool));
           SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
 
@@ -318,6 +317,7 @@ dir_deltas (const char **msg,
           SVN_ERR (svn_fs_revision_root (&revision_root, fs, j, subpool)); 
           SVN_ERR (svn_repos_dir_delta (txn_root,
                                         svn_stringbuf_create ("", subpool),
+                                        NULL,
                                         rev_diffs,
                                         revision_root,
                                         svn_stringbuf_create ("", subpool),

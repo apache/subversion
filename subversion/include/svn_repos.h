@@ -136,104 +136,48 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
 
 /*** The magical dir_delta update routines. */
 
+/* Use the provided EDITOR and EDIT_BATON to describe the changes
+   necessary for making a given node (and its descendants, if it a
+   directory) under SRC_ROOT look exactly like TGT_PATH under
+   TGT_ROOT.  SRC_ENTRY is the node to update, and is either NULL or a
+   single path component.  If SRC_ENTRY is NULL, then compute the
+   difference between the entire tree anchored at SRC_PARENT_DIR under
+   SRC_ROOT and TGT_PATH under TARGET_ROOT.  Else, describe the
+   changes needed to update only that entry in SRC_PARENT_DIR.
+   Typically, callers of this function will use a TGT_PATH that is the
+   concatenation of SRC_PARENT_DIR and SRC_ENTRY.
 
-/* Compute the differences between directories SOURCE_PATH in
-   SOURCE_ROOT and TARGET in TARGET_ROOT, and make calls describing
-   those differences on EDITOR, using the provided EDIT_BATON.  Due to
-   constraints of the editor architecture, the setting of the target
-   revision via the editor will only occur if TARGET_ROOT is a
-   revision root (which has a single global revision value).  So,
-   currently, TARGET_ROOT is required to be a revision root.
+   SRC_ROOT and TGT_ROOT can both be either revision or transaction
+   roots.  If TGT_ROOT is a revision, EDITOR's set_target_revision()
+   will be called with the TGT_ROOT's revision number, else it will
+   not be called at all.
 
-   SOURCE_REV_DIFFS is a hash (whose keys are character string paths,
-   and whose values are pointers to svn_revnum_t's) which describes
-   the base revisions of the items in the SOURCE_PATH tree.  This hash
-   need only contain the base revision for the top of the tree, and
-   then those paths that have a base revision that differs from that
-   of their parent directory.
+   SRC_REVS is a hash whose keys are character string paths, and whose
+   values are pointers to svn_revnum_t's, which describes the base
+   revisions of the items in the SRC_PARENT tree.  This hash need only
+   contain the base revision for the top of that tree, and then those
+   paths that have a base revision that differs from that of their
+   parent directory.
 
-   Before completing successfully, this function calls
-   EDITOR->close_edit(), so the caller should expect its EDIT_BATON to
-   be invalid after its use with this function.
+   Before completing successfully, this function calls EDITOR's
+   close_edit(), so the caller should expect its EDIT_BATON to be
+   invalid after its use with this function.
 
    Do any allocation necessary for the delta computation in POOL.
    This function's maximum memory consumption is at most roughly
-   proportional to the greatest depth of TARGET_PATH, not the total
-   size of the delta.  */
+   proportional to the greatest depth of the tree under TGT_ROOT, not
+   the total size of the delta.
+*/
 svn_error_t *
-svn_repos_dir_delta (svn_fs_root_t *source_root,
-                     svn_stringbuf_t *source_path,
-                     apr_hash_t *source_rev_diffs,
-                     svn_fs_root_t *target_root,
-                     svn_stringbuf_t *target_path,
+svn_repos_dir_delta (svn_fs_root_t *src_root,
+                     svn_stringbuf_t *src_parent_dir,
+                     svn_stringbuf_t *src_entry,
+                     apr_hash_t *src_revs,
+                     svn_fs_root_t *tgt_root,
+                     svn_stringbuf_t *tgt_path,
                      const svn_delta_edit_fns_t *editor,
                      void *edit_baton,
                      apr_pool_t *pool);
-
-
-/* Use the provided EDITOR and EDIT_BATON to describe the changes
-   necessary for making a given node (and its descendants, if it a
-   directory) under SOURCE_ROOT look exactly as it does under
-   TARGET_ROOT.  ENTRY is the node to update, and is either NULL or a
-   single path component.  If ENTRY is NULL, then compute the
-   difference between the entire tree anchored at PARENT_DIR under
-   SOURCE_ROOT and TARGET_ROOT.  Else, describe the changes needed to
-   update only that entry in PARENT_DIR.  TARGET_ROOT is a revision
-   root.
-
-   SOURCE_REV_DIFFS is a hash (whose keys are character string paths,
-   and whose values are pointers to svn_revnum_t's) which describes
-   the base revisions of the items in the SOURCE_PARENT tree.  This hash
-   need only contain the base revision for the top of that tree, and
-   then those paths that have a base revision that differs from that
-   of their parent directory.
-
-   Before completing successfully, this function calls
-   EDITOR->close_edit(), so the caller should expect its EDIT_BATON to
-   be invalid after its use with this function.
-
-   Do any allocation necessary for the delta computation in POOL.
-   This function's maximum memory consumption is at most roughly
-   proportional to the greatest depth of SOURCE_PATH under
-   TARGET_ROOT, not the total size of the delta. 
-
-   What's the difference between svn_repos_update and
-   svn_repos_dir_delta?
-
-   Say I have a Greek Tree at revision 1 in my working copy.  I type
-   `svn up A/mu'.  svn_repos_dir_delta doesn't know what to do with
-   files--it only takes directory args.  svn_repos_update, on the
-   other hand, can handle this.
-
-   Now, take the dir case.  Let's say that someone has removed the
-   directory A/D/G and added a new file A/D/G.  I type `svn up A/D/G.'
-   Once again, svn_repos_dir_delta would croak because it isn't
-   looking at two directories.
-
-   "So, why don't you just do the delta from one level higher," you
-   might be tempted to say.
-
-   "Fine," I reply, "but that means that everthing in A/D gets
-   updated...this is NOT what I requested."
-   
-   So, what I really need is a way to say, "Mr. Update Editor Driver,
-   I want you to have full knowledge of the directory A/D, but I need
-   you promise to only pay attention to the entry G in that
-   directory."
-   
-   And svn_repos_update complies. 
-
-   TODO:  It is entirely likely that these two functions will become
-   one in the near future, at least that is cmpilato's hope.  */
-svn_error_t *
-svn_repos_update (svn_fs_root_t *target_root,
-                  svn_fs_root_t *source_root,
-                  svn_stringbuf_t *parent_dir,
-                  svn_stringbuf_t *entry,
-                  apr_hash_t *source_rev_diffs,
-                  const svn_delta_edit_fns_t *editor,
-                  void *edit_baton,
-                  apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------*/
