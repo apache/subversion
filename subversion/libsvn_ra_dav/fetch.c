@@ -1476,18 +1476,75 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
                                           const svn_string_t *value)
 {
   svn_ra_session_t *ras = session_baton;
+  svn_ra_dav_resource_t *baseline;
+  svn_boolean_t is_svn_prop;
+  const char *dav_propname;
+  int rv;
+  static ne_propname propname_struct = {0, 0};
+  ne_proppatch_operation po[2] = { { 0 } };
+  ne_propname wanted_props[] =
+    {
+      { "DAV:", "auto-version" },
+      { NULL }
+    };
 
-  /* ### need to do a PROPPATCH on a baseline-collection.  (don't
-     forget to escape the binary value someday too!)  that's easy.
-     the harder part is teaching mod_dav_svn how to handle the
-     PROPPATCH on a bc.. */
+  /* Main objective: do a PROPPATCH (allprops) on a baseline object */  
 
-  /* ### also, don't forget to marshall/demarshall the propname.  see
-     svn_ra_dav__rev_prop below for an example. */
+  /* ### A Word From Our Sponsor:  see issue #916.
+
+     Be it heretofore known that this Subversion behavior is
+     officially in violation of WebDAV/DeltaV.  DeltaV has *no*
+     concept of unversioned properties, anywhere.  If you proppatch
+     something, some new version of *something* is created.
+
+     In particular, we've decided that a 'baseline' maps to an svn
+     revision; if we attempted to proppatch a baseline, a *normal*
+     DeltaV server would do an auto-checkout, patch the working
+     baseline, auto-checkin, and create a new baseline.  But
+     mod_dav_svn just changes the baseline destructively.
+  */
+
+  /* Get the baseline resource. */
+  SVN_ERR (svn_ra_dav__get_baseline_props(NULL, &baseline,
+                                          ras->sess, 
+                                          ras->url,
+                                          rev,
+                                          wanted_props, /* DAV:auto-version */
+                                          ras->pool));
+
+  /* ### TODO: if we got back some value for the baseline's
+         'DAV:auto-version' property, interpret it.  We *don't* want
+         to attempt the PROPPATCH if the deltaV server is going to do
+         auto-versioning and create a new baseline! */
+
+  /* Possibly strip off the 'svn:' prefix for DAV transport.  The
+     namespace will be used instead to convey the same meaning. */
+  is_svn_prop = svn_prop_is_svn_prop (name);
+  dav_propname = is_svn_prop ? (name + sizeof(SVN_PROP_PREFIX) - 1) : name;
+  propname_struct.name = dav_propname;
+
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+  propname_struct.nspace = is_svn_prop ? 
+    SVN_PROP_PREFIX : SVN_PROP_CUSTOM_PREFIX;
+#else /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+  propname_struct.nspace = is_svn_prop ?
+    SVN_DAV_PROP_NS_SVN : SVN_DAV_PROP_NS_CUSTOM;
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+
+  po[0].name = &propname_struct;
+  po[0].type = ne_propset;
+  po[0].value = value->data; /* ### This binary value should be ESCAPED! */
   
-  return svn_error_create
-    (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, ras->pool,
-     "ra_dav does not currently support changing revision properties.  ");
+  rv = ne_proppatch(ras->sess, baseline->url, po);
+  if (rv != NE_OK)
+    {
+      const char *msg = apr_psprintf(ras->pool,
+                                     "applying property change to to %s",
+                                     baseline->url);
+      return svn_ra_dav__convert_error(ras->sess, msg, rv, ras->pool);
+    }
+  
+  return SVN_NO_ERROR;
 }
 
 

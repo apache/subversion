@@ -2133,6 +2133,8 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
                                          int depth,
                                          dav_response **response)
 {
+  svn_error_t *serr;
+
   /* ### source must be from a collection under baseline control. the
      ### baseline will (implicitly) indicate the source revision, and the
      ### path will be derived simply from the URL path */
@@ -2148,7 +2150,14 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
       return dav_new_error(src->pool, HTTP_NOT_IMPLEMENTED, 0, msg);
   */
 
-  svn_error_t *serr;
+  /* ### Safeguard: see issue #916, whereby we're allowing an
+     auto-checkout of a baseline for PROPPATCHing, *without* creating
+     a new baseline afterwards.  We need to safeguard here that nobody
+     is calling COPY with the baseline as a Destination! */
+  if (dst->baselined && dst->type == DAV_RESOURCE_TYPE_VERSION)
+    return dav_new_error(src->pool, HTTP_PRECONDITION_FAILED, 0,
+                         "Illegal: COPY Destination is a baseline.");
+
   
   serr = svn_fs_copy (src->info->root.root,  /* the root object of src rev*/
                       src->info->repos_path, /* the relative path of src */
