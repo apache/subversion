@@ -1,7 +1,7 @@
+#!/usr/bin/env python
 #
 # getversion.py - Parse version numbers from C header files.
 #
-
 
 import re
 
@@ -36,18 +36,15 @@ class Parser:
 
 
 if __name__ == '__main__':
-  # Example: Get the version number from svn_version.h
+  # Extract and print the version number
   p = Parser()
   p.search('SVN_VER_MAJOR', 'major')
   p.search('SVN_VER_MINOR', 'minor')
   p.search('SVN_VER_MICRO', 'patch')
-  p.search('SVN_VER_LIBRARY', 'libver')
 
   import os, sys
-  r = p.parse(os.path.join(os.path.dirname(sys.argv[0]),
-                           '../subversion/include/svn_version.h'))
-  print "Subversion %d.%d.%d" % (r.major, r.minor, r.patch)
-  print "Library version %d" % r.libver
+  r = p.parse(sys.argv[1])
+  sys.stdout.write("%d.%d.%d" % (r.major, r.minor, r.patch))
 
 
 ### End of file.
