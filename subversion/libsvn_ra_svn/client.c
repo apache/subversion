@@ -295,6 +295,7 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              "Illegal svn repository URL %s", url);
 
+  tunnel_agent = NULL;
   SVN_ERR( find_tunnel_agent(hostname, &tunnel_agent, pool) );
   if (tunnel_agent)
     {
