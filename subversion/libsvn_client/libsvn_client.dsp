@@ -99,6 +99,10 @@ SOURCE=.\checkout.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\cleanup.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\commit.c
 # End Source File
 # Begin Source File

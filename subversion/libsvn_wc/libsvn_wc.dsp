@@ -107,10 +107,6 @@ SOURCE=.\get_editor.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\local_changes.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\lock.c
 # End Source File
 # Begin Source File

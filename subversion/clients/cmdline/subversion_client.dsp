@@ -98,6 +98,10 @@ SOURCE=".\checkout-cmd.c"
 # End Source File
 # Begin Source File
 
+SOURCE=".\cleanup-cmd.c"
+# End Source File
+# Begin Source File
+
 SOURCE=".\commit-cmd.c"
 # End Source File
 # Begin Source File
@@ -123,6 +127,10 @@ SOURCE=".\import-cmd.c"
 # Begin Source File
 
 SOURCE=.\main.c
+# End Source File
+# Begin Source File
+
+SOURCE=".\propdel-cmd.c"
 # End Source File
 # Begin Source File
 
