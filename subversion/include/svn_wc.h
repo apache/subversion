@@ -190,7 +190,7 @@ svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
 
 
 /* Parse the `entries' file for PATH and return a hash ENTRIES, whose
-   keys are entry names and values are (svn_wc_entry_t *). 
+   keys are (const char *) entry names and values are (svn_wc_entry_t *). 
    
    Important note: only the entry structures representing files and
    SVN_WC_ENTRY_THIS_DIR contain complete information.  The entry
