@@ -360,10 +360,17 @@ svn_error_t *svn_wc_set_wc_prop (void *baton,
                                  svn_string_t *value);
 
 
-/* Crawl a tree depth-first, committing changes.
-   Start the crawl at ROOT_DIRECTORY, communicate all local changes (both
-   textual and tree) to EDIT_FNS and EDIT_BATON.  */
-svn_error_t *svn_wc_crawl_local_mods (svn_string_t *root_directory,
+/* Crawl a working copy tree depth-first, describing all local mods to
+   EDIT_FNS/EDIT_BATON.  
+
+   Start the crawl at PARENT_DIR, and only report changes found within
+   CONDENSED_TARGETS.  As the name implies, the targets must be
+   non-overlapping children of the parent dir, either files or
+   directories. (Use svn_path_condense_targets to create the target
+   list).  If the target list is NULL or contains no elements, then a
+   single crawl will be made from PARENT_DIR. */
+svn_error_t *svn_wc_crawl_local_mods (svn_string_t *parent_dir,
+                                      apr_array_header_t *condensed_targets,
                                       const svn_delta_edit_fns_t *edit_fns,
                                       void *edit_baton,
                                       apr_pool_t *pool);

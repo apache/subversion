@@ -158,6 +158,25 @@ svn_path_condense_targets(svn_string_t **pbasedir,
                           const apr_array_header_t *targets,
                           apr_pool_t *pool);
 
+/* Decompose PATH into an array of svn_string_t components, allocated
+   in POOL.  STYLE indicates the dir separator to split the string on.
+   If PATH is absolute, the first component will be a lone dir
+   separator (the root directory). */
+apr_array_header_t *svn_path_decompose (const svn_string_t *path,
+                                        enum svn_path_style style,
+                                        apr_pool_t *pool);
+
+
+
+/* Test if PATH2 is a child of PATH1.
+   If not, return NULL.
+   If so, return the "remainder" path.  (The substring which, when
+   appended to PATH1, yields PATH2 -- minus the dirseparator. ) */
+svn_string_t * svn_path_is_child (const svn_string_t *path1,
+                                  const svn_string_t *path2,
+                                  apr_pool_t *pool);
+
+
 #endif /* SVN_PATHS_H */
 
 #ifdef __cplusplus
