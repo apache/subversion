@@ -499,8 +499,9 @@ class RepositoryMirror:
 
     # Init a root directory with no entries at revision 0.
     self.youngest = 0
-    self.revs_db[str(self.youngest)] = gen_key()
-    self.nodes_db[self.revs_db[str(self.youngest)]] = marshal.dumps({})
+    youngest_key = gen_key()
+    self.revs_db[str(self.youngest)] = marshal.dumps(youngest_key)
+    self.nodes_db[youngest_key] = marshal.dumps({})
 
   def new_revision(self):
     """Stabilize the current revision, then start the next one.
@@ -524,7 +525,7 @@ class RepositoryMirror:
 
   def stabilize_youngest(self):
     """Stabilize the current revision by removing mutable flags."""
-    root_key = self.revs_db[str(self.youngest)]
+    root_key = marshal.loads(self.revs_db[str(self.youngest)])
     self._stabilize_directory(root_key)
 
   def probe_path(self, path, revision=-1, debugging=None):
@@ -539,7 +540,7 @@ class RepositoryMirror:
     if debugging:
       print "PROBING path: '%s' in %d" % (path, revision)
 
-    parent_key = self.revs_db[str(revision)]
+    parent_key = marshal.loads(self.revs_db[str(revision)])
     parent = marshal.loads(self.nodes_db[parent_key])
     previous_component = "/"
 
@@ -623,13 +624,13 @@ class RepositoryMirror:
     if expected_entries:
       deletions = []
 
-    parent_key = self.revs_db[str(self.youngest)]
+    parent_key = marshal.loads(self.revs_db[str(self.youngest)])
     parent = marshal.loads(self.nodes_db[parent_key])
     if not parent.has_key(self.mutable_flag):
       parent_key = gen_key()
       parent[self.mutable_flag] = 1
       self.nodes_db[parent_key] = marshal.dumps(parent)
-      self.revs_db[str(self.youngest)] = parent_key
+      self.revs_db[str(self.youngest)] = marshal.dumps(parent_key)
 
     for component in components[:-1]:
       # parent is always mutable at the top of the loop
@@ -750,7 +751,7 @@ class RepositoryMirror:
     components = string.split(path, '/')
     path_so_far = None
 
-    parent_key = self.revs_db[str(self.youngest)]
+    parent_key = marshal.loads(self.revs_db[str(self.youngest)])
     parent = marshal.loads(self.nodes_db[parent_key])
 
     # As we walk down to find the dest, we remember each parent
@@ -853,7 +854,7 @@ class RepositoryMirror:
       self.nodes_db[new_key] = marshal.dumps(self.empty_mutable_thang)
 
     # Install the new root entry.
-    self.revs_db[str(self.youngest)] = new_key
+    self.revs_db[str(self.youngest)] = marshal.dumps(new_key)
 
     # Sanity check -- this should be a "can't happen".
     if pruned_count > len(components):
