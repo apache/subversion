@@ -350,8 +350,10 @@ diff_file_deleted_no_diff (svn_wc_adm_access_t *adm_access,
                            const char *tmpfile2,
                            void *diff_baton)
 {
-  printf("Index: %s (deleted)\n%s\n", path, equal_string);
-  fflush(stdout);
+  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+
+  svn_io_file_printf(diff_cmd_baton->outfile, "Index: %s (deleted)\n%s\n", 
+                     path, equal_string);
 
   return SVN_NO_ERROR;
 }
