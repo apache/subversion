@@ -78,15 +78,26 @@ typedef struct svn_ra_plugin_t
                                       svn_string_t *URL);
 
 
-  /* Ask the network layer to update from URL, using EDITOR and
-     EDIT_BATON to edit the working copy. */
+  /* Ask the network layer to update a working copy from URL.
+
+     The network layer returns a COMMIT_EDITOR and COMMIT_BATON to the
+     client; the client then uses it to transmit an empty tree-delta
+     to the repository which describes all revision numbers in the
+     working copy.
+
+     There is one special property of the COMMIT_EDITOR: its
+     close_edit() function.  When the client calls close_edit(), the
+     network layer then talks the repository and proceeds to use
+     UPDATE_EDITOR and UPDATE_BATON to patch the working copy!  
+
+     When the update_editor->close_edit() returns, then
+     commit_editor->close_edit() returns too.  */
   svn_error_t *(*svn_ra_do_update) (void *session_baton,
-                                    svn_delta_edit_fns_t *editor,
-                                    void *edit_baton,
+                                    svn_delta_edit_fns_t **commit_editor,
+                                    void **commit__baton,
+                                    svn_delta_edit_fns_t *update_editor,
+                                    void *update_baton,
                                     svn_string_t *URL);
-  /* TODO:  the working copy needs to send a description of its
-     version numbers to the repository *before* receiving an update.
-     How will this work in terms of control-flow? */
 
 } svn_ra_plugin_t;
 
