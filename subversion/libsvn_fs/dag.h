@@ -102,11 +102,10 @@ svn_error_t *svn_fs__dag_get_revision (svn_revnum_t *rev,
 const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node);
 
 
-/* Set IS_MUTABLE to a non-zero value if NODE is currently mutable
-   under Subversion transaction TXN_ID.  */
-svn_error_t *svn_fs__dag_check_mutable (svn_boolean_t *is_mutable,
-                                        dag_node_t *node,
-                                        const char *txn_id);
+/* Return non-zero IFF NODE is currently mutable under Subversion
+   transaction TXN_ID.  */
+int svn_fs__dag_check_mutable (dag_node_t *node,
+                               const char *txn_id);
 
 /* Return the node kind of NODE. */
 svn_node_kind_t svn_fs__dag_node_kind (dag_node_t *node);

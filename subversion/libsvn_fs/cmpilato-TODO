@@ -112,10 +112,6 @@ immutable.
 
 --
 
-svn_fs__dag_check_mutable still has dumb arguments.  Fix it.
-
---
-
 Still need to do `copy_id' inheritence walk in open_path or
 make_path_mutable or something...
 

@@ -549,15 +549,9 @@ make_path_mutable (svn_fs_root_t *root,
   const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
   const char *copy_id = NULL; /* ### this will get passed in */
 
-  {
-    svn_boolean_t is_mutable;
-
-    /* Is the node mutable already?  */
-    SVN_ERR (svn_fs__dag_check_mutable (&is_mutable,
-                                        parent_path->node, txn_id));
-    if (is_mutable)
-      return SVN_NO_ERROR;
-  }
+  /* Is the node mutable already?  */
+  if (svn_fs__dag_check_mutable (parent_path->node, txn_id))
+    return SVN_NO_ERROR;
 
   /* Are we trying to clone the root, or somebody's child node?  */
   if (parent_path->parent)
@@ -1340,10 +1334,7 @@ merge (svn_stringbuf_t *conflict_p,
                      commits. */
 
                   /* ... target takes source. */
-                  svn_boolean_t is_mutable;
-                  SVN_ERR (svn_fs__dag_check_mutable (&is_mutable,
-                                                      target, txn_id));
-                  if (! is_mutable)
+                  if (! svn_fs__dag_check_mutable (target, txn_id))
                     return svn_error_createf
                       (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
                        "unexpected immutable node at \"%s\"", target_path);
@@ -1419,10 +1410,7 @@ merge (svn_stringbuf_t *conflict_p,
               /* If E is same in target as ancestor, then it has not
                  changed, and the deletion in source should be
                  honored. */
-              svn_boolean_t is_mutable;
-              SVN_ERR (svn_fs__dag_check_mutable (&is_mutable,
-                                                  target, txn_id));
-              if (! is_mutable)
+              if (! svn_fs__dag_check_mutable (target, txn_id))
                 return svn_error_createf
                   (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
                    "unexpected immutable node at \"%s\"", target_path);
@@ -1487,9 +1475,7 @@ merge (svn_stringbuf_t *conflict_p,
       if (! t_entry)
         {
           /* target takes source */
-          svn_boolean_t is_mutable;
-          SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, target, txn_id));
-          if (! is_mutable)
+          if (! svn_fs__dag_check_mutable (target, txn_id))
             return svn_error_createf
               (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
                "unexpected immutable node at \"%s\"", target_path);
