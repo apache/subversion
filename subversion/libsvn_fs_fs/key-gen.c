@@ -123,8 +123,8 @@ svn_fs__putsize (char *data, apr_size_t len, apr_size_t value)
 void
 svn_fs__add_keys (const char *key1, const char *key2, char *result)
 {
-  int i1 = strlen (key1);
-  int i2 = strlen (key2);
+  int i1 = strlen (key1) - 1;
+  int i2 = strlen (key2) - 1;
   int i3 = 0;
   int val;
   int carry = 0;
@@ -139,9 +139,7 @@ svn_fs__add_keys (const char *key1, const char *key2, char *result)
       if (i2>=0)
         val += (key2[i2] <= '9') ? (key2[i2] - '0') : (key2[i2] - 'a' + 10);
 
-      if (val > 35)
-        carry = val / 36;
-
+      carry = val / 36;
       val = val % 36;
       
       buf[i3++] = (val <= 9) ? (val + '0') : (val - 10 + 'a');
@@ -156,7 +154,7 @@ svn_fs__add_keys (const char *key1, const char *key2, char *result)
   for (i1 = 0; i1 < i3; i1++)
     result[i1] = buf[i3 - i1 - 1];
 
-  result[i1 - 1] = '\0';
+  result[i1] = '\0';
 }
       
 
