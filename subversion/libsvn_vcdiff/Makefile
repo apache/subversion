@@ -9,10 +9,16 @@ vdelta: hash.c vdelta.c
 	gcc -c vdelta.c
 	gcc -o vdelta vdelta.o hash.o alloc.o
 
-
 check: test
 
 test: 
+	@echo "First testing empty-source delta (compression):"
+	@echo "Text:"
+	@cat tests/target0.txt
+	@echo ""
+	@echo "Delta:"
+	./vdelta tests/target0.txt
+	@echo ""
 	@for num in 1 2 3 4 5; do                                     \
           echo "Test #$${num}:";                                      \
           echo "Texts:";                                              \
@@ -25,7 +31,6 @@ test:
           ./vdelta tests/source.txt tests/target$${num}.txt;          \
 	  echo "";                                                    \
 	done
-
 
 clean:
 	rm -f *~ *.o vdelta

@@ -1,3 +1,6 @@
+Test 0:
+    The example text in the vdelta paper.  Use target only, no source.
+
 Test 1:
     The insertion of "xxxx" in between `l' and `m' in the alphabet.
 

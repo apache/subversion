@@ -1,5 +1,7 @@
 /* A VDelta implementation for Subversion.
  *
+ * (See comments in make_vdelta() for algorithm details.)
+ *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
  * 
@@ -114,17 +116,73 @@ file_into_buffer (char *file, size_t len, char *buf)
 
 
 void
-take_delta (char *data, size_t source_len, size_t target_len)
+make_vdelta (char *data, size_t source_len, size_t target_len)
 {
   /*
-   * PSEUDOCODE:
-   *   read file1 into buf1;
-   *   read file2 into buf2;
+   * This implements an approximation of the vdelta algorithm as
+   * described in Appendix B of
+   *
+   *    "Delta Algorithms: An Empirical Analysis"
+   *     Hunt, J. J., Vo, K.-P., and Tichy, W. F.
+   *     An empirical study of delta algorithms.
+   *     Lecture Notes in Computer Science 1167 (July 1996), 49-66.
+   *
+   * The plan is to coax this to output vcdiff format, as described in
    * 
-   *   slide along buf1 a char at a time, recording 4-byte strings in hash;
-   *   slide along buf2 a char at a time, checking for matches against buf1;
-   *      if no match, output an INSERT and record in hash
-   *      if match, extend it as far as can, then output a COPY and bump pos
+   *    http://www.ietf.org/internet-drafts/draft-korn-vcdiff-01.txt
+   * 
+   * and write a `patch' program that takes vcdiff input.  Once that's
+   * done, the delta generator will be improved, adding windowing, the
+   * use of the vdelta matching technique, and whatever else is called
+   * for.
+   * 
+   * Here's how it works right now.  Step 1 all happened before this
+   * function, Step 2 is what this function does: 
+   * 
+   *   1. Read source_text and target_text into buf, concatenated.
+   *      (And know where the dividing point between them is, of
+   *      course.) 
+   * 
+   *   2. Slide along buf a byte at a time.  At each location, look up
+   *      the current position in a hash table, using the 4-byte chunk
+   *      starting here as key.
+   *
+   *        a) If lookup succeeds, go back in the source text to the
+   *           matching position, make sure it's a real match and not
+   *           just a hash collision.  If real, extend it as far as
+   *           possible with the current text, and if already into the
+   *           target data, then output a COPY instruction with the
+   *           old position and the length of the match as parameters.
+   *           (Also, store the last three positions of the match in
+   *           the hash table.)
+   *
+   *        b) If lookup fails, store the current position, output an
+   *           INSERT for the current byte if we're already into
+   *           target data, and move on.
+   *
+   * Some things to notice:
+   * 
+   * This differencing algorithm is really a compression algorithm in
+   * disguise -- one that happens not to generate any output until
+   * it's in the target data.
+   * 
+   * Hash collisions are just ignored -- the older data wins.  This
+   * strategy simply means that some matches won't be noticed.  One
+   * could also overwrite it (that's XDelta's answer), or keep a
+   * bucket chain so as not to lose data (vdelta's answer), or store
+   * the last N matches (for some constant N, probably 4), or keep
+   * scores and try not to toss ones which have matched well in the
+   * past, or... you get the idea.  For now, oldest wins.
+   *
+   * It holds the source and target data together in memory.  This
+   * loses, of course; it will be changed to one of the various
+   * sliding window techniques.  Doing so is not trivial, but not
+   * hugely difficult either, and if one maintains the requirement
+   * that the source be seekable, that helps somewhat.  The big thing
+   * you lose is the ability to go back and directly compare against
+   * buf, but you can fake that by storing the 4-byte chunks along
+   * with the positions in the hash table, and doing hash compares
+   * where formerly did direct byte compares.
    */
   
   size_t pos = 0;       /* current position in DATA */
@@ -134,7 +192,9 @@ take_delta (char *data, size_t source_len, size_t target_len)
   total_len = source_len + target_len;
   table = make_hash_table (1511);
   
-  while (pos < total_len)
+  /* todo: fix o-b-o-e, see test 0 */
+
+  while (pos < (total_len - (MIN_MATCH_LEN - 1)))
     {
       hash_entry_t *e;
       
@@ -181,49 +241,68 @@ take_delta (char *data, size_t source_len, size_t target_len)
 
       pos++;
     }
+
+  /* Cleanup the last (MIN_MATCH_LEN - 1) characters if necessary. */
+  while (pos < total_len)
+    {
+      if (pos >= source_len)
+        printf ("INSERT %c\n", data[pos]);
+      pos++;
+    }
 }
 
 
-/* todo: this initial implementation just reads the source and target
- * files into memory, and works on them there.  Once that's working,
- * we move to sliding window technique.
- */
-
-/* First we're implementing a standalone binary diff and patch.
-   Then we'll librarize. */
-
 main (int argc, char **argv)
 {
-  char *source_file;
-  char *target_file;
-  char *data;           /* concatenation of source data and target data */
-  size_t source_len;    /* data[source_len] is the start of target data */
-  size_t target_len;    /* source_len + target_len == length of data    */
+  /* Curious what's going on here?
+   *
+   * Read the comment at the top of make_vdelta(), above, and
+   * understand all.
+   */
 
-  if (argc < 3)
+  char *source_file = NULL;
+  char *target_file = NULL;
+  char *data        = NULL; /* concatenation of source data and target data */
+  size_t source_len = 0;    /* data[source_len] is the start of target data */
+  size_t target_len = 0;    /* source_len + target_len == length of data    */
+
+  if (argc == 2)
     {
-      fprintf (stderr, "Need at least two arguments.\n");
+      target_file = argv[1];
+    }
+  else if (argc == 3)
+    {
+      source_file = argv[1];
+      target_file = argv[2];
+    }
+  else
+    {
+      fprintf (stderr, "Need two or three arguments.\n");
       exit (1);
     }
 
-  /* todo: need sfio-like buffered seekable somethings */
+  if (source_file)
+    source_len = file_size (source_file);
 
-  source_file = argv[1];
-  target_file = argv[2];
-
-  source_len = file_size (source_file);
   target_len = file_size (target_file);
 
-  /* todo: for now, window_size is just the summed sizes of the two
-     files. */
   data = svn_malloc (source_len + target_len + 1);
 
-  file_into_buffer (source_file, source_len, data);
+  if (source_file)
+    file_into_buffer (source_file, source_len, data);
   file_into_buffer (target_file, target_len, data + source_len);
   data[source_len + target_len] = '\0'; /* todo: just for now */
 
-  take_delta (data, source_len, target_len);
+  make_vdelta (data, source_len, target_len);
 
   free (data);
   exit (0);
 }
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */
