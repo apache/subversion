@@ -142,6 +142,10 @@ typedef struct
      for this node revision */
   const svn_fs_id_t *predecessor_id;
 
+  /* number of predecessors this node revision has (recursively), or
+     -1 if not known (for backward compatibility). */
+  int predecessor_count;
+
   /* representation key for this node's properties.  may be NULL if
      there are no properties.  */
   const char *prop_key;

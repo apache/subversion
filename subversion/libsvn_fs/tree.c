@@ -1129,6 +1129,76 @@ struct deltify_committed_args
 };
 
 
+/* Redeltify predecessor node-revisions of the one we added.  The idea
+   is to require at most 2*lg(N) deltas to be applied to get to any
+   node-revision in a chain of N predecessors.  We do this using a
+   technique derived from skip lists:
+
+     Always redeltify the immediate parent
+     If the number of predecessors is divisible by 2, deltify
+      the revision two predecessors back
+     If the number of predecessors is divisible by 4, deltify
+      the revision four predecessors back
+     etc.
+
+   That's the theory, anyway.  Unfortunately, if we strictly follow
+   that theory we get a bunch of overhead up front and no great
+   benefit until the number of predecessors gets large.  So, stop at
+   redeltifying the parent if the number of predecessors is less than
+   32, and also skip the second level (redeltifying two predecessors
+   back), since that doesn't help much. */
+static svn_error_t *
+txn_deltify (dag_node_t *node, int pred_count, int props_only, trail_t *trail)
+{
+  int nlevels, lev, count;
+  dag_node_t *prednode;
+  svn_fs_t *fs;
+
+  /* Decide how many predecessors to redeltify.  To save overhead,
+     don't redeltify anything but the immediate parent if there are
+     less than 32 predecessors. */
+  nlevels = 1;
+  if (pred_count >= 32)
+    {
+      while (pred_count % 2 == 0)
+        {
+          pred_count /= 2;
+          nlevels++;
+        }
+    }
+
+  /* Redeltify the desired number of predecessors. */
+  count = 0;
+  prednode = node;
+  fs = svn_fs__dag_get_fs (node);
+  for (lev = 0; lev < nlevels; lev++)
+    {
+      /* To save overhead, skip the second level (that is, never
+         redeltify the node-revision two predecessors back). */
+      if (lev == 1)
+        continue;
+
+      /* Note that COUNT is not reset between levels, and neither is
+         PREDNODE; we just keep counting from where we were up to
+         where we're supposed to get. */
+      while (count < (1 << lev))
+        {
+          const svn_fs_id_t *pred_id;
+
+          SVN_ERR (svn_fs__dag_get_predecessor_id (&pred_id, prednode, trail));
+          if (pred_id == NULL)
+            return svn_error_create (SVN_ERR_FS_CORRUPT, 0, 0, trail->pool,
+                                     "faulty predecessor count");
+          SVN_ERR (svn_fs__dag_get_node (&prednode, fs, pred_id, trail));
+          count++;
+        }
+      SVN_ERR (svn_fs__dag_deltify (prednode, node, props_only, trail));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Deltify ID's predecessor iff ID is mutable under TXN_ID in FS.  If
    ID is a mutable directory, recurse.  Do this as part of TRAIL. */
 static svn_error_t *
@@ -1141,7 +1211,6 @@ deltify_if_mutable_under_txn_id (svn_fs_t *fs,
   dag_node_t *node;
   apr_hash_t *entries;
   int is_dir;
-  const svn_fs_id_t *pred_id;
 
   /* Not mutable?  Go no further.  This is safe to do because for
      items in the tree to be mutable, their parent dirs must also be
@@ -1180,14 +1249,8 @@ deltify_if_mutable_under_txn_id (svn_fs_t *fs,
         }
     }
 
-  /* If we have a predecessor, deltify it against the current node
-     revision. */
-  if ((pred_id = noderev->predecessor_id))
-    {
-      dag_node_t *pred_node;
-      SVN_ERR (svn_fs__dag_get_node (&pred_node, fs, pred_id, trail));
-      SVN_ERR (svn_fs__dag_deltify (pred_node, node, is_dir, trail));
-    }
+  if (noderev->predecessor_id)
+    SVN_ERR (txn_deltify (node, noderev->predecessor_count, is_dir, trail));
 
   return SVN_NO_ERROR;
 }
@@ -1252,6 +1315,7 @@ update_ancestry (svn_fs_t *fs,
                  const svn_fs_id_t *target_id,
                  const char *txn_id,
                  const char *target_path,
+                 int source_pred_count,
                  trail_t *trail)
 {
   svn_fs__node_revision_t *noderev;
@@ -1263,6 +1327,9 @@ update_ancestry (svn_fs_t *fs,
        "unexpected immutable node at \"%s\"", target_path);
   SVN_ERR (svn_fs__get_node_revision (&noderev, fs, target_id, trail));
   noderev->predecessor_id = source_id;
+  noderev->predecessor_count = source_pred_count;
+  if (noderev->predecessor_count != -1)
+    noderev->predecessor_count++;
   return svn_fs__put_node_revision (fs, target_id, noderev, trail);
 }
 
@@ -1662,6 +1729,7 @@ merge (svn_stringbuf_t *conflict_p,
                 {
                   dag_node_t *s_ent_node, *t_ent_node, *a_ent_node;
                   const char *new_tpath;
+                  int pred_count;
                       
                   SVN_ERR (svn_fs__dag_get_node (&s_ent_node, fs,
                                                  s_entry->id, trail));
@@ -1689,13 +1757,17 @@ merge (svn_stringbuf_t *conflict_p,
                                   t_ent_node, s_ent_node, a_ent_node,
                                   txn_id, trail));
 
+                  SVN_ERR (svn_fs__dag_get_predecessor_count (&pred_count,
+                                                              s_ent_node,
+                                                              trail));
+
                   /* If target is an immediate descendant of ancestor,
                      and source is also a descendant of ancestor, we
                      need to point target's predecessor-id to
                      source. */
                   SVN_ERR (update_ancestry (fs, s_entry->id,
                                             t_entry->id, txn_id, 
-                                            new_tpath, trail));
+                                            new_tpath, pred_count, trail));
                 }
               /* Else target entry has changed since ancestor entry,
                  but it changed either to source entry or to a
@@ -1928,8 +2000,13 @@ txn_body_merge (void *baton, trail_t *trail)
     }
   else
     {
+      int pred_count;
+
       SVN_ERR (merge (args->conflict, "/", txn_root_node,
                       source_node, ancestor_node, txn_id, trail));
+
+      SVN_ERR (svn_fs__dag_get_predecessor_count (&pred_count, source_node,
+                                                  trail));
 
       /* After the merge, txn's new "ancestor" is now really the node
          at source_id, so record that fact.  Think of this as
@@ -1937,7 +2014,7 @@ txn_body_merge (void *baton, trail_t *trail)
          forget the merging work that's already been done. */
       SVN_ERR (update_ancestry (fs, source_id, 
                                 svn_fs__dag_get_id (txn_root_node),
-                                txn_id, "/", trail));
+                                txn_id, "/", pred_count, trail));
       SVN_ERR (svn_fs__set_txn_base (fs, txn_id, source_id, trail));
     }
   

@@ -109,6 +109,13 @@ svn_error_t *svn_fs__dag_get_predecessor_id (const svn_fs_id_t **id_p,
                                              trail_t *trail);
 
 
+/* Set *COUNT to the number of predecessors NODE has (recursively), or
+   -1 if not known, as part of TRAIL.  */
+svn_error_t *svn_fs__dag_get_predecessor_count (int *count,
+                                                dag_node_t *node,
+                                                trail_t *trail);
+
+
 /* Callback function type for svn_fs__dag_walk_predecessors() */
 typedef svn_error_t *(*svn_fs__dag_pred_func_t) (void *baton,
                                                  dag_node_t *node,
