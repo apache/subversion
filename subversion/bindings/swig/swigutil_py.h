@@ -61,6 +61,19 @@ void svn_swig_py_release_py_lock(void);
 void svn_swig_py_acquire_py_lock(void);
 
 
+/*** Functions to expose a custom SubversionException ***/
+
+/* register a new subversion exception class */
+PyObject *svn_swig_py_register_exception(void);
+
+/* get the object which represents the subversion exception class */
+PyObject *svn_swig_py_exception_type(void);
+
+/* raise a subversion exception, created from a normal subversion error */
+void svn_swig_py_svn_exception(svn_error_t *err);
+
+
+
 /* helper function to convert an apr_hash_t* (char* -> svnstring_t*) to
    a Python dict */
 PyObject *svn_swig_py_prophash_to_dict(apr_hash_t *hash);
