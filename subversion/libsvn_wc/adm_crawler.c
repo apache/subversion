@@ -50,232 +50,380 @@
 /* ==================================================================== */
 
 
-#include <apr_pools.h>
-#include <apr_file_io.h>
+#include "apr_pools.h"
+#include "apr_file_io.h"
+#include "apr_hash.h"
 #include "wc.h"
 #include "svn_wc.h"
+#include "svn_io.h"
 #include "svn_delta.h"
 
 
 
 
-/* Send the entire contents of XML_BUFFER to be parsed by XML_PARSER;
-   then clear the buffer and return. */
-static svn_error_t *
-flush_xml_buffer (svn_string_t *xml_buffer,
-                  svn_delta_xml_parser_t *xml_parser)
+/* Local stack used by the crawler */
+struct stack_object
 {
-  svn_error_t *err = svn_delta_xml_parsebytes (xml_buffer->data,
-                                               xml_buffer->len,
-                                               0,
-                                               xml_parser);
-  if (err)
-    return err;
+  svn_string_t *path;   /* A working copy directory */
+  void *baton;          /* An associated editor baton, if any exists yet. */
 
-  svn_string_setempty (xml_buffer);
+  struct stack_object *next;
+  struct stack_object *previous;
+}
+
+
+/* Put a new stack object containing PATH and BATON on top of STACK. */
+static void
+append_stack (struct stack_object **stack,
+              svn_string_t *path,
+              void *baton,
+              apr_pool_t *pool)
+{
+  struct stack_object *new_top =
+    apr_pcalloc (pool, sizeof(struct stack_object));
+
+  new_top->path = svn_string_dup (path, pool);
+  new_top->baton = baton;
+
+  *stack->next = new_top;
+  new_top->previous = *stack;
+
+  *stack = new_top;
+}
+
+
+/* Remove youngest stack object from STACK. */
+static void
+remove_stack (struct stack_object **stack)
+{
+  struct stack_object *new_top = *stack->previous;
+
+  *stack = new_top;
+}
+
+
+/* A posix-like read function of type svn_read_fn_t.
+
+   Given an open APR FILEHANDLE, read LEN bytes into BUFFER.
+*/
+static svn_error_t *
+posix_file_reader (void *filehandle,
+                   char *buffer,
+                   apr_size_t *len,
+                   apr_pool_t *pool)
+{
+  apr_status_t stat;
+
+  /* Recover our filehandle */
+  apr_file_t *xmlfile = (apr_file_t *) baton;
+
+  stat = apr_full_read (xmlfile, buffer,
+                        (apr_size_t) *len,
+                        (apr_size_t *) len);
+  
+  if (stat && (stat != APR_EOF)) 
+    return
+      svn_error_create (stat, 0, NULL, pool,
+                        "my_read_func: error reading xmlfile");
+  
+  return SVN_NO_ERROR;  
+}
+
+
+
+/* Decide the entry has been added, deleted, or modified by setting
+   the value of NEW_P, MODIFIED_P, or DELETE_P. */
+static svn_error_t *
+set_entry_flags (svn_string_t *current_entry_name,
+                 int current_entry_type,
+                 apr_hash_t *current_entry_hash,
+                 apr_pool_t *pool,
+                 svn_boolean_t *new_p,
+                 svn_boolean_t *modified_p, 
+                 svn_boolean_t *delete_p)
+{
+  void *value;
+
+  /* Examine the hash for a "new" xml attribute */
+  value = apr_hash_get (current_entry_hash, "new", 3);
+  *new_p = value ? TRUE : FALSE;
+
+  /* Examine the hash for a  "delete" xml attribute */
+  value = apr_hash_get (current_entry_hash, "delete", 6);
+  *delete_p = value ? TRUE : FALSE;
+
+  /* Call external routine to decide if this file has been locally
+     modified.   The routine is called svn_wc__file_modified_p().  */
+  svn_wc__file_modified_p (modified_p, current_entry_name, pool);
 
   return SVN_NO_ERROR;
 }
 
 
 
-
-
-/* Return the NAME of the next child subdir of DIRHANDLE.  DIRHANDLE
-   is assumed to be already open.  If there are no more subdir
-   children, return NULL.  */
-static svn_error_t *
-get_next_child_subdir (svn_string_t **name,
-                       apr_dir_t *dirhandle,
-                       apr_pool_t *pool)
+/* Given a PATH, return an editor-supplied baton which allows one to
+   edit entries there. */
+static void *
+do_dir_replaces (svn_string_t *path, struct stack_object *stack)
 {
-  apr_status_t status;
-  char *entryname;
-  apr_filetype_e entrytype;
+  /* Logic:
 
-  do {
-    /* Read the next entry from dirhandle, get its name and type, too. */
-    status = apr_readdir (dirhandle);
-    if (status == APR_ENOENT) /* no more entries */
-      {
-        *name = NULL;
-        return SVN_NO_ERROR;
-      }
-    else if (status)
-      return svn_error_create (status, 0, NULL, pool, "apr_readdir choked.");
+     1.  Walk down the stack until you find a non-NULL baton.  (If you
+         reach the bottom of the stack and still can't find one, then
+         call replace_root() and store the root baton in the stack
+         bottom.)
 
-    status = apr_get_dir_filename (&entryname, dirhandle);
-    if (status)
-      return svn_error_create (status, 0, NULL, pool,
-                               "apr_get_dir_filename choked.");
+     2.  Walk *up* the stack now from this non-NULL position, issuing
+         multiple "replace_directory()" calls and storing batons in
+         the stack.  Stop when you fill in the top of the stack.
 
-    status = apr_dir_entry_ftype (&entrytype, dirhandle);
-    if (status)
-      return svn_error_create (status, 0, NULL, pool,
-                               "apr_dir_entry_ftype choked.");
+     3.  Return the final directory baton at the top of the stack.  */
 
-    /* Exit the loop if the entry is a subdir AND isn't "." or ".." */
-    if ( (entrytype == APR_DIR)
-         && (strcmp (entryname, "."))
-         && (strcmp (entryname, "..")) )
-      {
-        *name = svn_string_create (entryname, pool);
-        return SVN_NO_ERROR;
-      }
-
-  } while (1);
-  
+  return 0;
 }
 
 
 
-
-
-/* Return a bytestring STR containing the contents of
-   `DIR/SVN/delta_here', using whatever abstraction methods libsvn_wc
-   implements.  If the file is empty, set STR to NULL instead.  */
+/* Examine both the local and text-base copies of a file FILENAME, and
+   push a text-delta to EDITOR using the supplied FILE_BATON. */
 static svn_error_t *
-get_delta_here_contents (svn_string_t **str,
-                         svn_string_t *dir,
-                         apr_pool_t *pool)
+do_apply_textdelta (svn_string_t *filename,
+                    svn_delta_edit_fns_t *editor,
+                    void *file_baton)
 {
-  char buf[BUFSIZ];
-  svn_error_t *err;
-  apr_size_t bytes_read;
-  apr_status_t status = 0;
-  apr_file_t *filehandle = NULL;
-  svn_string_t *localmod_buffer = svn_string_create ("", pool);
-
-  /* Have libsvn_wc return a filehandle to `delta_here' using its
-     abstract methods to search DIR */
-  err = svn_wc__open_adm_file (&filehandle, dir,
-                               SVN_WC__ADM_DELTA_HERE,
-                               APR_READ, pool);
-  if (err)
-    return err;
-
-  /* Copy the contents of the file into a bytestring */
-  while (status != APR_EOF)
-    {
-      status = apr_full_read (filehandle, buf, BUFSIZ, &bytes_read);
-      if (status && (status != APR_EOF))
-        return svn_error_create (status, 0, NULL, pool,
-                                 "apr_full_read choked");
-      svn_string_appendbytes (localmod_buffer, buf, bytes_read, pool);
-    }
-  err = svn_wc__close_adm_file (filehandle, dir,
-                                SVN_WC__ADM_DELTA_HERE, 0, pool);
-  if (err)
-    return err;
-
-  if (svn_string_isempty (localmod_buffer))
-    *str = NULL;
-
-  else
-    *str = localmod_buffer;
-
-  return SVN_NO_ERROR;
-}
-
-
-
-
-
-/* The recursive working-copy crawler. Push xml out to parser when
-   appropriate. */
-static svn_error_t *
-do_crawl (svn_string_t *current_dir,
-          svn_string_t *xml_buffer,
-          svn_delta_xml_parser_t *xml_parser,
-          apr_pool_t *pool)
-
-{
-  svn_error_t *err;
+  svn_txdelta_window_handler_t *window_handler;
+  void *window_handler_baton;
+  svn_txdelta_stream_t *txdelta_stream;
+  svn_txdelta_window_t *txdelta_window;
   apr_status_t status;
-  apr_dir_t *thisdir;
-  svn_string_t *child = NULL;
-  int fruitful = 0;
-  svn_string_t *localmod_buffer = NULL;
+  apr_file_t *localfile = NULL;
+  apr_file_t *textbasefile = NULL;
 
-  /* Grab contents of current `delta-here' file, place into
-     localmod_buffer. */
-  err = get_delta_here_contents (&localmod_buffer, current_dir, pool);
-  if (err)
-    return err;
+  /* Apply a textdelta to the file baton, getting a window
+     consumer routine and baton */
+  err = (* (editor->apply_textdelta)) (file_baton,
+                                       &window_handler,
+                                       &window_handler_baton);
+  if (err) return err;
+
+  /* Open two filehandles, one for local file and one for text-base file. */
+  /* TODO, using *filename and svn_wc__open_ routines. */
+
+  /* Create a text-delta stream object that pulls data out of the two
+     files. */
+  err= svn_txdelta (&txdelta_stream, 
+                    posix_file_reader, (void *) localfile,
+                    posix_file_reader, (void *) textbasefile,
+                    pool);
+  if (err) return err;
   
-  /* If non-NULL, append to our xml_buffer and send everything to parser */
-  if (localmod_buffer)
+  /* Grab a window from the stream, "push" it at the consumer routine,
+     then free it.  Repeat until there are no more windows. */
+  while (txdelta_window)
     {
-      svn_string_appendstr (xml_buffer, localmod_buffer, pool);
-      err = flush_xml_buffer (xml_buffer, xml_parser);
-      if (err)
-        return err;
-      fruitful = 1;
-    }
-
-  /* Open the current directory */
-  status = apr_opendir (&thisdir, current_dir->data, pool);
-  if (status)
-    return svn_error_create (status, 0, NULL, pool, "apr_opendir choked.");
-
-  /* Get the first subdir child */
-  err = get_next_child_subdir (&child, thisdir, pool);
-  if (err)
-    return err;
-
-  /* Recurse depth-first: */
-  while (child)
-    { 
-      /* write 3 "down" tags into xml_buffer */
-      size_t remember_this_offset = xml_buffer->len;  /* backup */
-      svn_string_appendbytes (xml_buffer, " <replace name=\"", 16, pool);
-      svn_string_appendstr (xml_buffer, current_dir, pool);
-      svn_string_appendbytes (xml_buffer,
-                              "\"> <dir> <tree-delta> ", 22, pool);
-
-      err = do_crawl (child, xml_buffer, xml_parser, pool);
+      err = svn_txdelta_next_window (&txdelta_window, txdelta_stream);
+      if (err) return err;
       
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_UNFRUITFUL_DESCENT)
-            /* remove 3 "down" tags from xml_buffer */
-            xml_buffer->len = remember_this_offset;  /* restore */
+      err = (* (window_handler)) (txdelta_window, window_handler_baton);
+      if (err) return err;
+      
+      svn_txdelta_free_window (txdelta_window);
+    }
 
-          else
-            return err;  /* uh-oh, a _real_ error */
+  /* Free the stream */
+  svn_txdelta_free (txdelta_stream);
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
+
+/* Recursive working-copy crawler.
+   
+   Examine each entry in the `entries' file in PATH.  Communicate all
+   local changes to EDITOR.  Use DIR_BATON as the editor-supplied
+   baton for this directory; if this value is NULL, that's okay: it
+   will be automatically set when necessary.  
+
+   STACK is used to keep track of paths and associated directory
+   batons, and always represents the top (youngest) stackframe.  
+*/
+static svn_error_t *
+process_subdirectory (svn_string_t *path,
+                      void *dir_baton,
+                      svn_delta_edit_fns_t *editor,
+                      struct stack_object  *stack,
+                      apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_wc__entries_index *index;
+  
+  /* Vars that we automatically get when fetching a directory entry */
+  svn_string_t *current_entry_name;
+  svn_vernum_t current_entry_version;
+  int current_entry_type;
+  apr_hash_t *current_entry_hash;
+
+  /* Vars that we will deduce ourselves. */
+  svn_boolean_t new_p;
+  svn_boolean_t modified_p;
+  svn_boolean_t delete_p;
+
+  /* Add the current path and baton to the top of the stack. */
+  append_stack (&stack, path, dir_baton, pool);
+
+  /* Start looping over each entry in this directory */
+  err = svn_wc__entries_start (&index, path, pool);
+  if (err) return err;
+
+  /* Continue looping over each entry, examining each. */
+  do
+    {
+      /* Get the next entry in current directory. */
+      err = svn_wc__entries_next (index, &current_entry_name,
+                                  &current_entry_version, &current_entry_type,
+                                  &current_entry_hash);
+      if (err) return err;
+      
+      /* Decide the entry has been added, deleted, or modified. */
+      err = set_entry_flags (current_entry_name,
+                             current_entry_type,
+                             current_entry_hash,
+                             pool,
+                             &new_p, &modified_p, &delete_p);
+      if (err) return err;
+      
+      if (new_p)
+        {
+          if (current_entry_type == svn_dir_kind)
+            {
+              void *new_dir_baton;
+
+              /* Do what's necesary to get a baton for current directory */
+              if (! dir_baton)
+                dir_baton = do_dir_replaces (path);
+
+              /* Add the new directory, getting a new dir baton.  */
+              err = (* (editor->add_directory)) (current_entry_name,
+                                                 dir_baton,
+                                                 ancestor_path,
+                                                 ancestor_version,
+                                                 &new_dir_baton);
+              if (err) return err;
+
+              /* Recurse into it, using the new dir_baton. */
+              err = process_subdirectory (current_entry_name, new_dir_baton,
+                                          editor, stack, pool);
+              if (err) return err;
+            }
+
+          else if (current_entry_type == svn_file_kind)
+            {
+              void *file_baton;
+              svn_string_t *ancestor_path;
+              svn_vernum_t ancestor_ver;
+              
+              /* Do what's necesary to get a baton for current directory */
+              if (! dir_baton)
+                dir_baton = do_dir_replaces (path);
+              
+              /* Add a new file, getting a file baton */
+              err = (* (editor->add_file)) (current_entry_name,
+                                            dir_baton,
+                                            ancestor_path,
+                                            ancestor_ver,
+                                            &file_baton);
+              if (err) return err;
+              
+              /* Send the text-delta to this file baton */
+              err = do_apply_textdelta (current_entry_name,
+                                        editor,
+                                        file_baton);
+              
+              /* Close the file baton. */
+              err = (* (editor->close_file)) (file_baton);
+              if (err) return err;
+            }
         }
       
-      else  /* err->apr_err == SVN_NO_ERROR */
-        fruitful = 1;
-      
-      /* Get the next subdir child */
-      err = get_next_child_subdir (&child, thisdir, pool);
-      if (err)
-        return err;
-  } 
-    
-  if (fruitful) 
+      else if (delete_p)
+        {
+          /* Do what's necesary to get a baton for current directory */
+          if (! dir_baton)
+            dir_baton = do_dir_replaces (path);
+
+          /* Delete the entry */
+          err = (* (editor->delete)) (current_entry_name, dir_baton);
+          if (err) return err;
+        }
+
+      else if (modified_p)
+        {
+          void *file_baton;
+          svn_string_t *ancestor_path;
+          svn_vernum_t ancestor_ver;
+
+          /* Do what's necesary to get a baton for current directory */
+          if (! dir_baton)
+            dir_baton = do_dir_replaces (path);
+          
+          /* Replace the file, getting a file baton */
+          err = (* (editor->replace_file)) (current_entry_name,
+                                            dir_baton,
+                                            ancestor_path,
+                                            ancestor_ver,
+                                            &file_baton);
+          if (err) return err;
+
+          /* Send the text-delta to this file baton */
+          err = do_apply_textdelta (current_entry_name, editor, file_baton);
+
+          /* Close the file baton. */
+          err = (* (editor->close_file)) (file_baton);
+          if (err) return err;
+        }
+
+      else if (current_entry_type == svn_dir_kind)
+        {
+          /* Recurse, using a NULL dir_baton.  Why NULL?  Because that
+             will force a call to do_dir_replaces() and get the
+             _correct_ dir baton for the child directory.  */
+          err = process_subdirectory (current_entry_name, NULL,
+                                      editor, stack, pool);
+        }
+
+    } while (current_entry_name)
+  
+  /* If the current stackframe has a real directory baton, then we
+  must have issued an add_dir() or replace_dir() call already.  Since
+  we're now done looping through this directory's entries, we're going
+  to pop "up" our tree and thus need to close the current
+  directory. */
+  if (stack->baton)
     {
-      /* write 3 "up" tags into xml_buffer */
-      svn_string_appendbytes 
-        (xml_buffer, " </tree-delta> </dir> </replace> ", 33, pool);
-      
-      return SVN_NO_ERROR;
+      err = (* (editor->close_dir)) (stack->baton);
+      if (err) return err;
     }
 
-  else
-    return svn_error_create
-      (SVN_ERR_UNFRUITFUL_DESCENT, 0, NULL, pool,
-       "kff todo: Ben, what string do you want here?");
+  /* Discard top of stack*/
+  remove_stack (&stack);
+
+  return SVN_NO_ERROR;
 }
+
+
+
+
 
 
 /*------------------------------------------------------------------*/
 /* Public interface.
 
    Do a depth-first crawl of the local changes in a working copy,
-   beginning at ROOT_DIRECTORY (absolute path).  Communicate local
-   changes to the supplied EDIT_FNS object.
+   beginning at ROOT_DIRECTORY (absolute path).  Communicate all local
+   changes (both textual and tree) to the supplied EDIT_FNS object.
 
    (Presumably, the client library will someday grab EDIT_FNS from
    libsvn_ra, and then pass it to this routine.  This is how local
@@ -288,52 +436,27 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
                          apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_delta_xml_parser_t *xml_parser;
-  svn_string_t *xml_buffer;
+  struct stack_object stack_bottom;
 
-  /* kff todo: I've fooled around with the arguments below to get rid
-     of compilation warnings, but that doesn't mean that the call is
-     correct.  Take it away, Ben... :-) */
-  err = svn_delta_make_xml_parser (&xml_parser,
-                                   edit_fns,
-                                   NULL,
-                                   0,
-                                   NULL,
-                                   pool);
-  if (err)
-    return (err);
+  stack_bottom.path = NULL;
+  stack_bottom.baton = NULL;
+  
+  /* Start the crawler! */
+  err = process_subdirectory (svn_string_t *root_directory,
+                              NULL,             /* No baton to start with. */
+                              edit_fns,
+                              &stack_bottom,
+                              pool);
 
-  xml_buffer = svn_string_create ("", pool);
+  if (err) return err;
 
 
-  /* Always begin with a lone "<text-delta"> */
-  svn_string_appendbytes (xml_buffer, "<text-delta>", 12, pool);
+  /* TODO: if (stack_bottom.baton), that means the editor was actually
+     used, and we're looking at the remaining "root" baton.
+     Therefore, we must call the editor's `close_edit()' with this
+     baton. */
 
-  /* Do the recursive crawl, starting at the root directory.  */
-  err = do_crawl (root_directory, xml_buffer, xml_parser, pool);
-
-  if (err->apr_err == SVN_NO_ERROR)
-    {
-      /* The descent was fruitful. */
-
-      /* Always finish with a lone "</text-delta>" */
-      svn_string_appendbytes (xml_buffer, "</text-delta>", 13, pool);
-      
-      /* Send whatever xml is left in the buffer. */
-      err = flush_xml_buffer (xml_buffer, xml_parser);
-      if (err)
-        return err;
-
-      return SVN_NO_ERROR;
-    }
-
-  if (err->apr_err == SVN_ERR_UNFRUITFUL_DESCENT)
-    /* There were *no* local mods *anywhere* in the tree!  That's
-       okay.  The parser gets no xml data from us.  Just return. */
-    return SVN_NO_ERROR;
-
-  else /* uh-oh, a _real_ error was passed back. */
-    return err;
+  return SVN_NO_ERROR;
 }
 
 
@@ -346,5 +469,4 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
- * end:
- */
+ * end: */
