@@ -171,11 +171,11 @@ try_split_url (const char *url, apr_pool_t *pool)
 
 
 static svn_error_t *
-split_url_test_1 (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+split_url_syntax (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
 {
   apr_status_t apr_err;
-  
-  *msg = "test svn_ra_local__split_URL's URL validation (1)";
+
+  *msg = "svn_ra_local__split_URL: syntax validation";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -186,23 +186,36 @@ split_url_test_1 (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
   /* Use `blah' for scheme instead of `file' */
   apr_err = try_split_url ("blah:///bin/svn", pool);
   if (apr_err != SVN_ERR_RA_ILLEGAL_URL)
-    return svn_error_create 
+    return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
        "svn_ra_local__split_URL failed to catch bad URL (scheme)");
 
   /* Use only single slash after scheme */
   apr_err = try_split_url ("file:/path/to/repos", pool);
   if (apr_err != SVN_ERR_RA_ILLEGAL_URL)
-    return svn_error_create 
+    return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
        "svn_ra_local__split_URL failed to catch bad URL (slashes)");
-  
-  /* Use only a hostname, with no path */  
+
+  /* Use only a hostname, with no path */
   apr_err = try_split_url ("file://hostname", pool);
   if (apr_err != SVN_ERR_RA_ILLEGAL_URL)
-    return svn_error_create 
+    return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
        "svn_ra_local__split_URL failed to catch bad URL (no path)");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+split_url_bad_host (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+
+  *msg = "svn_ra_local__split_URL: invalid host names";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Give a hostname other than `' or `localhost' */
   apr_err = try_split_url ("file://myhost/repos/path", pool);
@@ -211,17 +224,30 @@ split_url_test_1 (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
       (SVN_ERR_TEST_FAILED, NULL,
        "svn_ra_local__split_URL failed to catch bad URL (hostname)");
 
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+split_url_host (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+
+  *msg = "svn_ra_local__split_URL: valid host names";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
   /* Make sure we *don't* fuss about a good URL (note that this URL
      still doesn't point to an existing versioned resource) */
   apr_err = try_split_url ("file:///repos/path", pool);
   if (apr_err == SVN_ERR_RA_ILLEGAL_URL)
-    return svn_error_create 
+    return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
        "svn_ra_local__split_URL cried foul about a good URL (no hostname)");
 
   apr_err = try_split_url ("file://localhost/repos/path", pool);
   if (apr_err == SVN_ERR_RA_ILLEGAL_URL)
-    return svn_error_create 
+    return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
        "svn_ra_local__split_URL cried foul about a good URL (localhost)");
 
@@ -264,9 +290,9 @@ check_split_url (const char *repos_path,
 
 
 static svn_error_t *
-split_url_test_2 (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+split_url_test (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
 {
-  *msg = "test svn_ra_local__split_URL's URL validation (2)";
+  *msg = "test svn_ra_local__split_URL correctness";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -288,12 +314,20 @@ split_url_test_2 (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
 
 /* The test table.  */
 
+#ifdef WIN32
+#define HAS_UNC_HOST 1
+#else
+#define HAS_UNC_HOST 0
+#endif
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS (open_ra_session),
     SVN_TEST_PASS (get_youngest_rev),
-    SVN_TEST_PASS (split_url_test_1),
-    SVN_TEST_PASS (split_url_test_2),
+    SVN_TEST_PASS (split_url_syntax),
+    SVN_TEST_SKIP (split_url_bad_host, HAS_UNC_HOST),
+    SVN_TEST_PASS (split_url_host),
+    SVN_TEST_PASS (split_url_test),
     SVN_TEST_NULL
   };
