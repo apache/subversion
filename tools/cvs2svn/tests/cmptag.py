@@ -35,27 +35,40 @@ def svn_checkout(repo, branch, target):
     if rc != 0:
         raise "svn co failed"
 
-def get_exec_flag(arg, dirname, fnames):
-    i = 0
-    while i < len(fnames):
-        fn = fnames[i]
-        if fn == "CVS" or fn == ".svn":
-           del fnames[i]
-           continue
-        f = os.path.join(dirname, fn)
-        mode = os.stat(f)[0]
-        arg.append((fn, mode & stat.S_IXUSR))
-        i = i + 1 
-        
-    
+def get_exec_flag((results, base_dir), dirname, fnames):
+    """os.path.walk() callback to build a list of files.
+
+    walker arg is (result_list, base_directory)
+
+    We append 2-tuples to result_list: relative_path, attributes
+    """
+    relative_dir = dirname[len(base_dir):]
+
+    # don't recurse into CVS or .svn
+    try:
+        fnames.remove('CVS')
+    except ValueError:
+        pass
+    try:
+        fnames.remove('.svn')
+    except ValueError:
+        pass
+
+    # accumulate the data
+    for fn in fnames:
+        mode = os.stat(os.path.join(dirname, fn))[stat.ST_MODE]
+        results.append((os.path.join(relative_dir, fn),
+                        mode & stat.S_IXUSR))
 
 def cmp_attr(dir1, dir2):
     attr1 = []
     attr2 = []
-    os.path.walk(dir1, get_exec_flag, attr1)
-    os.path.walk(dir2, get_exec_flag, attr2)
+    os.path.walk(dir1, get_exec_flag, (attr1, dir1))
+    os.path.walk(dir2, get_exec_flag, (attr2, dir2))
+    attr1.sort()
+    attr2.sort()
     if attr1 != attr2:
-       print repr(attr1), attr(2)
+       print repr(attr1), repr(attr2)
        raise "mismatch in file attributes"
 
 def check_tag(cvs_repo, module, tag, svn_repo, path):
