@@ -28,7 +28,8 @@
 # directory: directory
 # display: mostra
 # drop: eliminare, scartare, abbandonare
-# dump: scaricare
+# dump: scaricare, esportare
+# dumpfile: esportazione
 # entry: voce, elemento, oggetto, riga (a seconda del contesto)
 # external: esterno/a
 # filesystem: filesystem
@@ -74,7 +75,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-03-06 10:12+0100\n"
-"PO-Revision-Date: 2005-03-16 19:28+0100\n"
+"PO-Revision-Date: 2005-04-01 17:46+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3225,14 +3226,13 @@ msgid "Svndiff has invalid header"
 msgstr "Svndiff ha un header non valido"
 
 #: libsvn_delta/svndiff.c:526 libsvn_delta/svndiff.c:681
-#, fuzzy
 msgid "Svndiff contains corrupt window header"
 msgstr "Svndiff contiene un header di finestra corrotto"
 
 #: libsvn_delta/svndiff.c:535
 #, fuzzy
 msgid "Svndiff has backwards-sliding source views"
-msgstr "Svndiff ha delle viste sul sorgente"
+msgstr "Svndiff ha delle viste sul sorgente non strettamente crescenti"
 
 #: libsvn_delta/svndiff.c:583 libsvn_delta/svndiff.c:630
 #: libsvn_delta/svndiff.c:703
@@ -3279,7 +3279,6 @@ msgid "Corrupt DB: initial revision number is not '0' in filesystem '%s'"
 msgstr "DB corrotta: il numero iniziale di revisione non è '0' nel filesystem '%s'"
 
 #: libsvn_fs_base/dag.c:454 libsvn_fs_base/dag.c:631 libsvn_fs_fs/dag.c:385
-#, fuzzy
 msgid "Attempted to create entry in non-directory parent"
 msgstr "Tentativo di creare una voce in un genitore che non è una directory"
 
@@ -3297,7 +3296,6 @@ msgid "Attempted to create entry that already exists"
 msgstr "Tentativo di creare una voce già esistente"
 
 #: libsvn_fs_base/dag.c:696 libsvn_fs_fs/dag.c:453
-#, fuzzy
 msgid "Attempted to set entry in non-directory node"
 msgstr "Tentativo di scrivere una voce in un nodo non di directory"
 
@@ -3500,7 +3498,6 @@ msgid "Can't close file '%s'"
 msgstr "Non riesco a chiudere il file '%s'"
 
 #: libsvn_fs_base/fs.c:1127
-#, fuzzy
 msgid ""
 "Error copying logfile;  the DB_LOG_AUTOREMOVE feature \n"
 "may be interfering with the hotcopy algorithm.  If \n"
@@ -3512,17 +3509,16 @@ msgstr ""
 "problema persiste, prova a disattivare tale opzione in DB_CONFIG."
 
 #: libsvn_fs_base/fs.c:1146
-#, fuzzy
 msgid ""
 "Error running catastrophic recovery on hotcopy;  the \n"
 "DB_LOG_AUTOREMOVE feature may be interfering with the \n"
 "hotcopy algorithm.  If the problem persists, try deactivating \n"
 "this feature in DB_CONFIG"
 msgstr ""
-"Errore nella recupero catastrofico sulla copia a caldo; l'opzione "
-"DB_LOG_AUTOREMOVE\n"
-"potrebbe interferire con l'algoritmo di copia a caldo. Se il\n"
-"problema persiste, prova a disattivare tale opzione in DB_CONFIG."
+"Errore nel recupero catastrofico sulla copia a caldo; l'opzione\n"
+"DB_LOG_AUTOREMOVE potrebbe interferire con l'algoritmo di copia\n"
+"a caldo. Se il problema persiste, prova a disattivare tale \n"
+"opzione in DB_CONFIG."
 
 #: libsvn_fs_base/fs.c:1283
 #, c-format
@@ -3544,12 +3540,12 @@ msgid "Rep contents are too large: got %s, limit is %s"
 msgstr ""
 
 #: libsvn_fs_base/reps-strings.c:774
-#, fuzzy, c-format
+#, c-format
 msgid "Failure reading rep '%s'"
 msgstr "Lettura di '%s' fallita"
 
 #: libsvn_fs_base/reps-strings.c:790 libsvn_fs_base/reps-strings.c:876
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Checksum mismatch on rep '%s':\n"
 "   expected:  %s\n"
@@ -3564,7 +3560,7 @@ msgid "Null rep, but offset past zero already"
 msgstr ""
 
 #: libsvn_fs_base/reps-strings.c:1002 libsvn_fs_base/reps-strings.c:1198
-#, fuzzy, c-format
+#, c-format
 msgid "Rep '%s' is not mutable"
 msgstr "'%s' non è modificabile"
 
@@ -3667,7 +3663,7 @@ msgid "Bad merge; target '%s' has id '%s', same as ancestor"
 msgstr ""
 
 #: libsvn_fs_base/tree.c:2546
-#, fuzzy, c-format
+#, c-format
 msgid "Transaction '%s' out of date with respect to revision '%s'"
 msgstr "La transazione '%s' non è sincronizzata con la transazione '%s' "
 
@@ -4234,7 +4230,7 @@ msgid "Unable to open an ra_local session to URL"
 msgstr "Non posso aprire una sessione ra_local su una URL"
 
 #: libsvn_ra_local/ra_plugin.c:1019
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported RA loader version (%d) for ra_local"
 msgstr "Versione del lettore (%d) per ra_local non supportata"
 
@@ -4389,7 +4385,7 @@ msgid "The get-file-revs command didn't return any revisions"
 msgstr "Il comando get-file-revs non ha restituito nessuna revisione"
 
 #: libsvn_ra_svn/client.c:1381
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Versione %d del lettore per ra_svn non supportata"
 
@@ -4470,33 +4466,29 @@ msgid "Got source path but no source revision for '%s'"
 msgstr ""
 
 #: libsvn_repos/commit.c:248 libsvn_repos/commit.c:380
-#, fuzzy, c-format
+#, c-format
 msgid "Source url '%s' is from different repository"
-msgstr ""
-"L'URL sorgente '%s' è di un altro repository; la lascio come copia locale "
-"disgiunta"
+msgstr "L'URL sorgente '%s' proviene da un altro repository"
 
 #: libsvn_repos/commit.c:486
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Checksum mismatch for resulting fulltext\n"
 "(%s):\n"
 "   expected checksum:  %s\n"
 "   actual checksum:    %s\n"
 msgstr ""
-"Errore di checksum per '%s':\n"
+"Errore di checksum per il testo completo risultante '%s':\n"
 "   checksum atteso:   %s\n"
 "   checksum effettivo:  %s\n"
 
 #: libsvn_repos/delta.c:179
-#, fuzzy
 msgid "Unable to open root of edit"
-msgstr "Non riesco ad aprire il repository '%s'"
+msgstr "Non riesco ad aprire la radice della modifica"
 
 #: libsvn_repos/delta.c:230
-#, fuzzy
 msgid "Invalid target path"
-msgstr "Tipo di cambiamento non valido"
+msgstr "Percorso non valido"
 
 #: libsvn_repos/delta.c:256
 msgid ""
@@ -4527,19 +4519,20 @@ msgid "End revision %ld is invalid (youngest revision is %ld)"
 msgstr "La revisione finale %ld non è valida (la revisione più recente è %ld)"
 
 #: libsvn_repos/dump.c:1045
-#, fuzzy, c-format
+#, c-format
 msgid "* Dumped revision %ld.\n"
-msgstr "* %s revisione %ld.\n"
+msgstr "* Scaricato la revisione %ld.\n"
 
 #: libsvn_repos/dump.c:1046
-#, fuzzy, c-format
+#, c-format
 msgid "* Verified revision %ld.\n"
-msgstr "* %s revisione %ld.\n"
+msgstr "* Verificato la revisione %ld.\n"
 
 #: libsvn_repos/fs-wrap.c:56 libsvn_repos/load.c:1218
-#, fuzzy
 msgid "Commit succeeded, but post-commit hook failed"
-msgstr "Commit eseguito, ma seguono altri errori:"
+msgstr ""
+"Commit eseguito, ma gli agganci in post-commit\n"
+"hanno fallito l'esecuzione:"
 
 #: libsvn_repos/fs-wrap.c:155
 #, c-format
@@ -4554,19 +4547,18 @@ msgid "Write denied:  not authorized to read all of revision %ld."
 msgstr ""
 
 #: libsvn_repos/hooks.c:65
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create pipe for hook '%s'"
-msgstr "Non riesco a creare la directory '%s'"
+msgstr "Non riesco ad aprire una pipe per l'aggancio '%s'"
 
 #: libsvn_repos/hooks.c:72
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create null stdout for hook '%s'"
-msgstr "Non riesco a creare la directory '%s'"
+msgstr "Non riesco a creare uno stdout nullo per l'aggancio '%s'"
 
 #: libsvn_repos/hooks.c:84
-#, fuzzy
 msgid "Error closing write end of stderr pipe"
-msgstr "Errore nella chiusura del filesystem"
+msgstr "Errore nella chiusura del lato in scrittura per la pipe di stderr"
 
 #: libsvn_repos/hooks.c:90
 #, c-format
@@ -4590,9 +4582,8 @@ msgid "Error closing read end of stderr pipe"
 msgstr ""
 
 #: libsvn_repos/hooks.c:130
-#, fuzzy
 msgid "Error closing null file"
-msgstr "Errore nella chiusura del filesystem"
+msgstr "Errore nella chiusura del file nullo"
 
 #: libsvn_repos/hooks.c:212
 #, c-format
@@ -4606,9 +4597,8 @@ msgid ""
 msgstr ""
 
 #: libsvn_repos/load.c:157 libsvn_repos/load.c:169
-#, fuzzy
 msgid "Found malformed header block in dumpfile stream"
-msgstr "Trovato header non conforme nel file di revisione"
+msgstr "Trovato header non conforme nell'esportazione"
 
 #: libsvn_repos/load.c:187
 msgid "Premature end of content data in dumpstream"
@@ -4619,29 +4609,25 @@ msgid "Dumpstream data appears to be malformed"
 msgstr ""
 
 #: libsvn_repos/load.c:232
-#, fuzzy
 msgid "Incomplete or unterminated property block"
-msgstr "Tipo di proprietà inatteso o sconosciuto"
+msgstr "Proprietà inattesa o incompleta"
 
 #: libsvn_repos/load.c:425
-#, fuzzy
 msgid "Unexpected EOF writing contents"
-msgstr "EOF inatteso su un flusso"
+msgstr "EOF inatteso durante la scrittura"
 
 #: libsvn_repos/load.c:454
-#, fuzzy
 msgid "Malformed dumpfile header"
-msgstr "File non conforme"
+msgstr "Intestazione dell'esportazione non conforme"
 
 #: libsvn_repos/load.c:460 libsvn_repos/load.c:502
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported dumpfile version: %d"
-msgstr "Versione del repository non supportata"
+msgstr "Versione dell'esportazione non supportata: %d"
 
 #: libsvn_repos/load.c:600
-#, fuzzy
 msgid "Unrecognized record type in stream"
-msgstr "Terminazione linea non riconosciuta"
+msgstr "Tipo di record sconosciuto nel flusso"
 
 #: libsvn_repos/load.c:712
 msgid "Sum of subblock sizes larger than total block content length"
@@ -4683,12 +4669,11 @@ msgid "     * replacing path : %s ..."
 msgstr ""
 
 #: libsvn_repos/load.c:1029
-#, fuzzy, c-format
+#, c-format
 msgid "Unrecognized node-action on node '%s'"
-msgstr "Tipo di nodo non riconosciuto per '%s'"
+msgstr "Azione sul nodo sconosciuta per il nodo '%s'"
 
 #: libsvn_repos/load.c:1165
-#, fuzzy
 msgid " done.\n"
 msgstr "fatto.\n"
 
@@ -4716,79 +4701,72 @@ msgstr ""
 "\n"
 
 #: libsvn_repos/node_tree.c:238
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' not found in filesystem"
-msgstr "'%s' non è una directory nel filesystem '%s'"
+msgstr "'%s' non trovato nel filesystem"
 
 #: libsvn_repos/replay.c:159
-#, fuzzy, c-format
+#, c-format
 msgid "Filesystem path '%s' is neither a file nor a directory"
-msgstr "'%s' non è un file o una directory"
+msgstr "Il percorso di filesystem '%s' non è un file o una directory"
 
 #: libsvn_repos/reporter.c:639
-#, fuzzy, c-format
+#, c-format
 msgid "Working copy path '%s' does not exist in repository"
-msgstr "Il percorso '%s' non esiste nella revisione %ld"
+msgstr "Il percorso '%s' della copia di lavoro non esiste nel repository"
 
 #: libsvn_repos/reporter.c:857
 msgid "Not authorized to open root of edit operation"
 msgstr ""
 
 #: libsvn_repos/reporter.c:878
-#, fuzzy
 msgid "Cannot replace a directory from within"
-msgstr "Non riesco a creare la directory '%s'"
+msgstr "Non posso sostituire la directory dall'interno della stessa"
 
 #: libsvn_repos/reporter.c:921
-#, fuzzy
 msgid "Invalid report for top level of working copy"
-msgstr "Operazione non valida sulla copia locale corrente"
+msgstr "Rapporto non valido per il primo livello della copia di lavoro"
 
 #: libsvn_repos/reporter.c:936
 msgid "Two top-level reports with no target"
 msgstr ""
 
 #: libsvn_repos/repos.c:149
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' exists and is non-empty"
-msgstr "'%s' esiste e non è una directory"
+msgstr "'%s' esiste e non è vuoto"
 
 #: libsvn_repos/repos.c:173
 msgid "Creating db logs lock file"
 msgstr ""
 
 #: libsvn_repos/repos.c:198
-#, fuzzy
 msgid "Creating db lock file"
-msgstr "Errore nell'apertura di un file locale"
+msgstr "Sto creando il file di lock per il database"
 
 #: libsvn_repos/repos.c:208
 msgid "Creating lock dir"
 msgstr ""
 
 #: libsvn_repos/repos.c:238
-#, fuzzy
 msgid "Creating hook directory"
-msgstr "Non riesco a rilevare la directory di lavoro"
+msgstr "Sto creando la directory per gli agganci"
 
 #: libsvn_repos/repos.c:342
-#, fuzzy
 msgid "Creating start-commit hook"
-msgstr "Errore nell'esecuzione dell'hook dopo il commit"
+msgstr "Sto creando l'aggancio start-commit"
 
 #: libsvn_repos/repos.c:477
-#, fuzzy
 msgid "Creating pre-commit hook"
-msgstr "Errore nell'esecuzione dell'hook dopo il commit"
+msgstr "Sto creando l'aggancio start-commit"
 
 #: libsvn_repos/repos.c:607
 msgid "Creating pre-revprop-change hook"
 msgstr ""
 
 #: libsvn_repos/repos.c:706
-#, fuzzy
 msgid "Creating post-commit hook"
-msgstr "Errore nell'esecuzione dell'hook dopo il commit"
+msgstr "Sto creando l'aggancio post-commit"
 
 #: libsvn_repos/repos.c:816
 msgid "Creating post-revprop-change hook"
