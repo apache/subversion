@@ -62,7 +62,7 @@ The questions
     cvs2svn.
 
     Both projects have anonymous svnserve access aswell as viewcvs.
-    Developer access if via svnserve via ssh-tunnel.
+    Developer access is via svnserve over ssh-tunnel.
 
 <hr><a name="bz">
     [Received 2002-10-04]
@@ -109,6 +109,39 @@ The questions
 10. Any
 11. source code, documentation
 12. I love Subversion!
+
+<hr><a name="kernel">
+    [Received 2003-6-29]
+1.  Ben Collins
+2.  bcollins@debian.org
+3.  Public
+4.  svn://svn.kernel.org/linux-2.4/
+    svn://svn.kernel.org/linux-2.5/
+5.  323 MB and 664 MB
+6.  Jun 14, 2003.
+7.  3353 and 11383
+8.  Unknown
+9.  Dual 1.8ghz, Redi Hat Linux 7.3, 2.4.18-3smp
+10. Linux, on varied architectures.
+11. Source code.
+12. This repo is continuously updated from a CVS repo that mirrors the
+    Linux kernel BitKeeper repo. The bkCVS repo, provided by BitMover, or
+    updated hourly to provide a non-bk interface to the metadata and
+    source from the BitKeeper respository maintained by the primary kernel
+    maintainers (Linus for 2.5, and Marcelo for 2.4).
+
+    The bkcvs2svn script was specially designed from the stock cvs2svn
+    python script provided by the Subversion tools. This script is
+    specific to the bkCVS repo, and cannot be used to incrementally update
+    other CVS repo's.
+
+    bkcvs2svn is run hourly opposite the bkCVS scripts to provide
+    Subversion users with a better mirror of the BitKeeper kernel repo's.
+    Since Subversion provides better access to the metadata involved in
+    the kernel revision history, users can get more out of the
+    information.
+
+    The server that bkSVN runs on is hosted by BitMover themselves.
 
 <hr><a name="kf">
     [Received 2002-10-04]
