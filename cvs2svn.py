@@ -512,8 +512,14 @@ class Commit:
 
     # get the metadata for this commit
     author, log, date = self.get_metadata(c_pool)
-    fs.change_txn_prop(txn, 'svn:author', author, c_pool)
-    fs.change_txn_prop(txn, 'svn:log', log, c_pool)
+
+    # convert locale encoded strings to unicode objects
+    l = unicode(log, ctx.encoding)
+    a = unicode(author, ctx.encoding)
+
+    # put UTF-8 encoded unicode-"strings" into svn filesystem
+    fs.change_txn_prop(txn, 'svn:author', a.encode('utf8'), c_pool)
+    fs.change_txn_prop(txn, 'svn:log', l.encode('utf8'), c_pool)
 
     conflicts, new_rev = fs.commit_txn(txn)
 
@@ -775,6 +781,7 @@ def usage(ctx):
   print '  --trunk=PATH     path for trunk (default: %s)' % ctx.trunk_base
   print '  --branches=PATH  path for branches (default: %s)' % ctx.branches_base
   print '  --tags=PATH      path for tags (default: %s)' % ctx.tags_base
+  print '  --encoding=ENC   encoding of log messages in CVS repos (default: %s)' % ctx.encoding
   sys.exit(1)
 
 def main():
@@ -789,10 +796,11 @@ def main():
   ctx.trunk_base = "/trunk"
   ctx.tags_base = "/tags"
   ctx.branches_base = "/branches"
+  ctx.encoding = "ascii"
 
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'p:s:vn',
-                               [ "create", "trunk=", "branches=", "tags=" ])
+                               [ "create", "trunk=", "branches=", "tags=", "encoding=" ])
   except getopt.GetoptError:
     usage(ctx)
   if len(args) != 1:
@@ -822,6 +830,8 @@ def main():
       ctx.branches_base = value
     elif opt == '--tags':
       ctx.tags_base = value
+    elif opt == '--encoding':
+      ctx.encoding = value
 
   util.run_app(convert, ctx, start_pass=start_pass)
 
