@@ -438,26 +438,6 @@ svn_repos__hooks_pre_lock (svn_repos_t *repos,
   return SVN_NO_ERROR;
 }
 
-/* Return a string which is the concatenation of STRINGS.  The
-   separator between elements is SEPARATOR. */
-/* TODO Shouldn't this find its way into libsvn_subr? */
-static svn_string_t *
-array_join (apr_array_header_t *strings,
-            const char *separator,
-            apr_pool_t *pool)
-{
-  const char *new_str = "";
-  int i;
-  
-  for (i = 0; i < strings->nelts; i++)
-    {
-      const char *string = ((const char **) (strings->elts))[i];
-      /* TODO This is rather inefficient. */ 
-      new_str = apr_pstrcat (pool, new_str, string, separator, NULL);
-    }
-  return svn_string_create (new_str, pool);
-}
-
 
 svn_error_t  *
 svn_repos__hooks_post_lock (svn_repos_t *repos,
@@ -476,7 +456,9 @@ svn_repos__hooks_post_lock (svn_repos_t *repos,
     {
       const char *args[5];
       apr_file_t *stdin_handle = NULL;
-      svn_string_t *paths_str = array_join (paths, "\n", pool);
+      svn_string_t *paths_str = svn_string_create (svn_cstring_join
+                                                   (paths, "\n", pool), 
+                                                   pool);
 
       SVN_ERR (create_temp_file (&stdin_handle, paths_str, pool));
 
@@ -543,7 +525,9 @@ svn_repos__hooks_post_unlock (svn_repos_t *repos,
     {
       const char *args[5];
       apr_file_t *stdin_handle = NULL;
-      svn_string_t *paths_str = array_join (paths, "\n", pool);
+      svn_string_t *paths_str = svn_string_create (svn_cstring_join
+                                                   (paths, "\n", pool), 
+                                                   pool);
 
       SVN_ERR (create_temp_file (&stdin_handle, paths_str, pool));
 

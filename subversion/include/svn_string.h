@@ -327,6 +327,16 @@ svn_boolean_t svn_cstring_match_glob_list (const char *str,
  */
 int svn_cstring_count_newlines (const char *msg);
 
+/** @since New in 1.2.
+ *
+ * Return a cstring which is the concatenation of @a strings (an array
+ * of char *) each separated by @a separator.  The returned string is
+ * allocated from @a pool. */
+char *
+svn_cstring_join (apr_array_header_t *strings,
+                  const char *separator,
+                  apr_pool_t *pool);
+
 /** @} */
 
 

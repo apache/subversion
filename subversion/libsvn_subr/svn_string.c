@@ -556,3 +556,21 @@ int svn_cstring_count_newlines (const char *msg)
 
   return count;
 }
+
+char *
+svn_cstring_join (apr_array_header_t *strings,
+                  const char *separator,
+                  apr_pool_t *pool)
+{
+  svn_stringbuf_t *new_str = svn_stringbuf_create ("", pool);
+  int sep_len = strlen(separator);
+  int i;
+  
+  for (i = 0; i < strings->nelts; i++)
+    {
+      const char *string = ((const char **) (strings->elts))[i];
+      svn_stringbuf_appendbytes (new_str, string, strlen(string));
+      svn_stringbuf_appendbytes (new_str, separator, sep_len);
+    }
+  return new_str->data;
+}

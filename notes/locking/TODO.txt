@@ -56,11 +56,9 @@ These are in the format of
        ### avoid a race.  We don't want the write lock grabbed just
        ### to get a lock. */ (cmpilato)
 
-* subversion/libsvn_repos/hooks.c:443
-    /* TODO Shouldn't this find its way into libsvn_subr? */ (fitz)
-      (Yes, it should.  It can be improved later.)
-
 * svn_err_is_(un)lock_error should be converted to macros.
+
+* in svn_wc_entry_t, rename lock_crt_date to lock_creation_date.
 
 NICE TO HAVE
 ------------
