@@ -54,7 +54,15 @@
 #include "apr_strings.h"
 
 
-/* All Subversion test programs include two global arrays: */
+/* All Subversion test programs have a single global memory pool that
+   main() initializes.  Individual sub-test routines can make subpools
+   from it, should they wish.  */
+
+extern apr_pool_t *pool;
+
+
+/* All Subversion test programs include two global arrays that both
+   begin and end with NULL: */
 
 /* An array of function pointers (all of our sub-tests) */
 extern int (*test_funcs[])();
@@ -65,14 +73,30 @@ extern char *descriptions[];
 
 /* ================================================================= */
 
+
+/* Determine the array size of test_funcs[], the inelegant way.  :)  */
+static int
+get_array_size ()
+{
+  int i;
+
+  for (i = 1; test_funcs[i]; i++)
+    {
+    }
+
+  return (i - 1);
+}
+
+
+
 /* Execute a test number TEST_NUM.  Pretty-print test name and dots
    according to our test-suite spec, and return the result code. */
 static int
-do_test_num (const char *progname, int test_num, apr_pool_t *pool)
+do_test_num (const char *progname, int test_num)
 {
   int retval;
   int (*func)();
-  int array_size = sizeof(test_funcs)/sizeof(int (*)()) - 1;
+  int array_size = get_array_size();
 
   /* Check our array bounds! */
   if ((test_num > array_size) || (test_num <= 0))
@@ -80,7 +104,7 @@ do_test_num (const char *progname, int test_num, apr_pool_t *pool)
       char *msg = (char *) apr_psprintf (pool, "%s %d: NO SUCH TEST",
                                          progname, test_num);
       printf ("FAIL: ");
-      printf ("%s", msg);
+      printf ("%s\n", msg);
 
       return 1;  /* BAIL, this test number doesn't exist. */
     }
@@ -95,7 +119,7 @@ do_test_num (const char *progname, int test_num, apr_pool_t *pool)
     printf ("FAIL: ");
 
   /* Pretty print results */
-  printf ("%s %s", progname, descriptions[test_num]);
+  printf ("%s %s\n", progname, descriptions[test_num]);
 
   return retval;
 }
@@ -108,12 +132,11 @@ main (int argc, char *argv[])
 {
   int test_num;
   int i;
-  apr_pool_t *pool;
   int got_error = 0;
 
 
   /* How many tests are there? */
-  int array_size = sizeof(test_funcs)/sizeof(int (*)()) - 1;
+  int array_size = get_array_size();
   
   /* Initialize APR (Apache pools) */
   if (apr_initialize () != APR_SUCCESS)
@@ -131,11 +154,11 @@ main (int argc, char *argv[])
   if (argc >= 2) 
     {
       test_num = atoi (argv[1]);
-      got_error = do_test_num (argv[0], test_num, pool);
+      got_error = do_test_num (argv[0], test_num);
     }
   else /* just run all tests */
     for (i = 1; i <= array_size; i++)
-      if (do_test_num (argv[0], i, pool))
+      if (do_test_num (argv[0], i))
         got_error = 1;
 
   /* Clean up APR */

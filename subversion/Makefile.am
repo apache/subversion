@@ -1,12 +1,14 @@
 ## Makefile.in is generated from this by automake.
 
-## SUBDIRS = libsvn_subr      \
-##         libsvn_string               \
-##         libsvn_vcdiff               \
-##         libsvn_svr                  \
-##         libsvn_wc
 
-SUBDIRS = libsvn_string libsvn_subr libsvn_delta libsvn_wc libsvn_fs
+## List of directories in which Makefile.in's should be generated:
+
+SUBDIRS = tests-common               \
+          libsvn_string              \
+          libsvn_subr                \
+          libsvn_delta               \
+          libsvn_wc                  \
+          libsvn_fs
 
 ## Include these extra files when building `dist' target
 

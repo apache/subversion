@@ -8,21 +8,22 @@ CFLAGS = -pthread
 INCLUDES = -I../../include -I../../../apr/include
 
 ## Libraries this binary depends upon:
-hashdump_test_LDADD = ../libsvn_subr.la \
-                      ../../libsvn_string/libsvn_string.la \
+hashdump_test_LDADD = ../libsvn_subr.la                         \
+                      ../../tests-common/libsvn_tests_main.la   \
+                      ../../libsvn_string/libsvn_string.la      \
                       ../../../apr/libapr.a
 
 
 ## Automatic tests run by `make check` -----------------------------
 
 ## A list of test-programs to run.  (Each program contains sub-tests.)
-SVN_TEST_PROGRAMS = hashdump-test
+SVN_TESTS = hashdump-test
 
 ## We're overriding automake's own `check' rule, because it's extremely
 ## inflexible;  we want better control over automated-test output. 
 check:
 	@echo > tests.log
-	@for prog in $(SVN_TEST_PROGRAMS); do \
+	@for prog in $(SVN_TESTS); do \
 	  echo; \
 	  echo -n "Running all sub-tests in $$prog..."; \
 	  ./$$prog >> tests.log; \
