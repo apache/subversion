@@ -226,10 +226,15 @@ compare_external_items (struct external_item *new_item,
  * empty afterwards, remove it, else rename it to a unique name in the
  * same parent directory.
  *
+ * Pass CANCEL_FUNC, CANCEL_BATON to svn_wc_remove_from_revision_control.
+ *
  * Use POOL for all temporary allocation.
  */
 static svn_error_t *
-relegate_external (const char *path, apr_pool_t *pool)
+relegate_external (const char *path,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
 {
   svn_error_t *err;
   svn_wc_adm_access_t *adm_access;
@@ -238,6 +243,8 @@ relegate_external (const char *path, apr_pool_t *pool)
   err = svn_wc_remove_from_revision_control (adm_access,
                                              SVN_WC_ENTRY_THIS_DIR,
                                              TRUE,
+                                             cancel_func,
+                                             cancel_baton,
                                              pool);
 
   /* ### Ugly. Unlock only if not going to return an error. Revisit */
@@ -393,7 +400,8 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
          going to need this directory, and therefore it's better to
          leave stuff where the user expects it. */
       err = svn_wc_remove_from_revision_control
-        (adm_access, SVN_WC_ENTRY_THIS_DIR, TRUE, ib->pool);
+        (adm_access, SVN_WC_ENTRY_THIS_DIR, TRUE,
+         ib->ctx->cancel_func, ib->ctx->cancel_baton, ib->pool);
 
       /* ### Ugly. Unlock only if not going to return an error. Revisit */
       if (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
@@ -412,7 +420,10 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
          in the "-r REV" portion, for example, we could do an update
          here instead of a relegation followed by full checkout. */
 
-      SVN_ERR (relegate_external (path, ib->pool));
+      SVN_ERR (relegate_external (path,
+                                  ib->ctx->cancel_func,
+                                  ib->ctx->cancel_baton,
+                                  ib->pool));
       
       /* First notify that we're about to handle an external. */
       if (ib->ctx->notify_func)

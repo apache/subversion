@@ -166,6 +166,7 @@ wc_to_wc_copy (const char *src_path,
   if (is_move)
     {
       SVN_ERR (svn_wc_delete (src_path, src_access,
+                              ctx->cancel_func, ctx->cancel_baton,
                               ctx->notify_func, ctx->notify_baton, pool));
 
       if (adm_access != src_access)

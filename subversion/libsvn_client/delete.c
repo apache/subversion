@@ -212,8 +212,9 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
     }
 
   /* Mark the entry for commit deletion and perform wc deletion */
-  SVN_ERR (svn_wc_delete (path, adm_access, ctx->notify_func,
-                          ctx->notify_baton, pool));
+  SVN_ERR (svn_wc_delete (path, adm_access,
+                          ctx->cancel_func, ctx->cancel_baton,
+                          ctx->notify_func, ctx->notify_baton, pool));
 
   if (! optional_adm_access)
     SVN_ERR (svn_wc_adm_close (adm_access));
