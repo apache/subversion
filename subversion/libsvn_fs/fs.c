@@ -278,6 +278,44 @@ allocate_env (svn_fs_t *fs)
 
 /* Creating a new Berkeley DB-based filesystem.  */
 
+/* Return APR_SUCCESS if directory PATH is an empty directory,
+   APR_EGENERAL if it is not empty, or the associated apr error if
+   there was any trouble finding out whether or not it's empty.  */
+static apr_status_t
+dir_empty (const char *path, apr_pool_t *pool)
+{
+  apr_status_t apr_err, retval;
+  apr_dir_t *dir;
+  apr_finfo_t finfo;
+  
+  apr_err = apr_dir_open (&dir, path, pool);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return apr_err;
+      
+  /* All systems return "." and ".." as the first two files, so read
+     past them unconditionally. */
+  apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
+  if (! APR_STATUS_IS_SUCCESS (apr_err)) return apr_err;
+  apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
+  if (! APR_STATUS_IS_SUCCESS (apr_err)) return apr_err;
+
+  /* Now, there should be nothing left.  If there is something left,
+     return EGENERAL. */
+  apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
+  if (APR_STATUS_IS_ENOENT (apr_err))
+    retval = APR_SUCCESS;
+  else if (APR_STATUS_IS_SUCCESS (apr_err))
+    retval = APR_EGENERAL;
+  else
+    retval = apr_err;
+
+  apr_err = apr_dir_close (dir);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return apr_err;
+
+  return retval;
+}
+
 
 svn_error_t *
 svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
@@ -287,21 +325,41 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 
   SVN_ERR (check_already_open (fs));
 
-  fs->env_path = apr_pstrdup (fs->pool, path);
-
-  /* Create the directory for the new environment (if needed).  */
+  /* Create the repository directory. */
   apr_err = apr_dir_make (path, APR_OS_DEFAULT, fs->pool);
-  if (apr_err != 0 && !APR_STATUS_IS_EEXIST(apr_err))
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    {
+      if (APR_STATUS_IS_EEXIST (apr_err))
+        {
+          apr_status_t empty = dir_empty (path, fs->pool);
+          if (! APR_STATUS_IS_SUCCESS (empty))
+            return svn_error_createf
+              (apr_err, 0, 0, fs->pool,
+               "`%s' exists and is non-empty, repository creation failed",
+               path);
+        }
+      else
+        {
+          return svn_error_createf
+            (apr_err, 0, 0, fs->pool, "unable to create repository `%s'",
+             path);
+        }
+    }
+
+  /* Create the directory for the new Berkeley DB environment.  */
+  fs->env_path = apr_psprintf (fs->pool, "%s/%s", path, SVN_FS__REPOS_DB_DIR);
+  apr_err = apr_dir_make (fs->env_path, APR_OS_DEFAULT, fs->pool);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf (apr_err, 0, 0, fs->pool,
                               "creating Berkeley DB environment dir `%s'",
-                              path);
+                              fs->env_path);
 
   svn_err = allocate_env (fs);
   if (svn_err) goto error;
 
   /* Create the Berkeley DB environment.  */
   svn_err = DB_WRAP (fs, "creating environment",
-                     fs->env->open (fs->env, path,
+                     fs->env->open (fs->env, fs->env_path,
                                     (DB_CREATE
                                      | DB_INIT_LOCK 
                                      | DB_INIT_LOG
@@ -333,6 +391,44 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   svn_err = svn_fs__dag_init_fs (fs);
   if (svn_err) goto error;
 
+  /* Write the top-level README file. */
+  {
+    const char *readme_contents =
+      "This is a Subversion repository; use the `svnadmin' tool to examine\n"
+      "it.  Do not add, delete, or modify files here unless you know how\n"
+      "to avoid corrupting the repository.\n"
+      "\n"
+      "The directory \""
+      SVN_FS__REPOS_DB_DIR
+      "\" contains a Berkeley DB environment.\n"
+      "\n"
+      "Visit http://subversion.tigris.org/ for more information.\n";
+
+    const char *readme_file_name
+      = apr_psprintf (fs->pool, "%s/%s", path, SVN_FS__REPOS_README);
+
+    apr_file_t *readme_file = NULL;
+    apr_size_t written = 0;
+
+    apr_err = apr_file_open (&readme_file, readme_file_name,
+                             APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
+                             fs->pool);
+    if (! APR_STATUS_IS_SUCCESS (apr_err))
+      return svn_error_createf (apr_err, 0, 0, fs->pool,
+                                "opening `%s' for writing", readme_file_name);
+
+    apr_err = apr_file_write_full (readme_file, readme_contents,
+                                   strlen (readme_contents), &written);
+    if (! APR_STATUS_IS_SUCCESS (apr_err))
+      return svn_error_createf (apr_err, 0, 0, fs->pool,
+                                "writing to `%s'", readme_file_name);
+    
+    apr_err = apr_file_close (readme_file);
+    if (! APR_STATUS_IS_SUCCESS (apr_err))
+      return svn_error_createf (apr_err, 0, 0, fs->pool,
+                                "closing `%s'", readme_file_name);
+  }
+
   return SVN_NO_ERROR;
 
 error:
@@ -351,14 +447,14 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 
   SVN_ERR (check_already_open (fs));
 
-  fs->env_path = apr_pstrdup (fs->pool, path);
+  fs->env_path = apr_psprintf (fs->pool, "%s/%s", path, SVN_FS__REPOS_DB_DIR);
 
   svn_err = allocate_env (fs);
   if (svn_err) goto error;
 
   /* Open the Berkeley DB environment.  */
   svn_err = DB_WRAP (fs, "opening environment",
-                     fs->env->open (fs->env, path,
+                     fs->env->open (fs->env, fs->env_path,
                                     (DB_INIT_LOCK
                                      | DB_INIT_LOG
                                      | DB_INIT_MPOOL
@@ -397,6 +493,8 @@ svn_fs_berkeley_recover (const char *path,
 {
   int db_err;
   DB_ENV *env;
+  const char *db_path
+    = apr_psprintf (pool, "%s/%s", path, SVN_FS__REPOS_DB_DIR);
 
   db_err = db_env_create (&env, 0);
   if (db_err)
@@ -412,10 +510,10 @@ svn_fs_berkeley_recover (const char *path,
      we leave the region around, the application that should create
      it will simply join it instead, and will then be running with
      incorrectly sized (and probably terribly small) caches.  */
-  db_err = env->open (env, path, (DB_RECOVER | DB_CREATE
-                                  | DB_INIT_LOCK | DB_INIT_LOG
-                                  | DB_INIT_MPOOL | DB_INIT_TXN
-                                  | DB_PRIVATE),
+  db_err = env->open (env, db_path, (DB_RECOVER | DB_CREATE
+                                     | DB_INIT_LOCK | DB_INIT_LOG
+                                     | DB_INIT_MPOOL | DB_INIT_TXN
+                                     | DB_PRIVATE),
                       0666);
   if (db_err)
     return svn_fs__dberr (pool, db_err);
@@ -432,64 +530,30 @@ svn_fs_berkeley_recover (const char *path,
 /* Deleting a Berkeley DB-based filesystem.  */
 
 
-/* Return zero if STATUS is APR_SUCCESS.  Otherwise, return a
-   Subversion error wrapping STATUS.  */
-static svn_error_t *
-check_apr (apr_status_t status, apr_pool_t *pool)
-{
-  if (status == APR_SUCCESS)
-    return SVN_NO_ERROR;
-  else
-    return svn_error_create (status, 0, 0, pool, "");
-}
-
-
 svn_error_t *
 svn_fs_delete_berkeley (const char *path,
                         apr_pool_t *pool)
 {
+  apr_status_t apr_err;
+  const char *db_path;
   int db_err;
   DB_ENV *env;
 
   /* First, use the Berkeley DB library function to remove any shared
      memory segments.  */
+  db_path = apr_psprintf (pool, "%s/%s", path, SVN_FS__REPOS_DB_DIR);
   db_err = db_env_create (&env, 0);
   if (db_err)
     return svn_fs__dberr (pool, db_err);
-  db_err = env->remove (env, path, DB_FORCE);
+  db_err = env->remove (env, db_path, DB_FORCE);
   if (db_err)
     return svn_fs__dberr (pool, db_err);
   
-  /* Now, delete all the files in the directory.  */
-  {
-    apr_dir_t *dir;
-
-    SVN_ERR (check_apr (apr_dir_open (&dir, path, pool), pool));
-    for (;;)
-      {
-        apr_status_t status;
-        apr_finfo_t finfo;
-
-        status = apr_dir_read (&finfo, APR_FINFO_NAME, dir);
-        if (APR_STATUS_IS_ENOENT(status))
-          break;
-        SVN_ERR (check_apr (status, pool));
-
-        /* Delete every file, except the `.' and `..' links.  */
-        if (strcmp (finfo.name, ".")
-            && strcmp (finfo.name, ".."))
-          {
-            /* Of course, APR has already done this concatenation for us,
-               and thrown away the result.  */
-            char *fullname = apr_pstrcat (pool, path, "/", finfo.name, 0);
-            SVN_ERR (check_apr (apr_file_remove (fullname, pool), pool));
-          }
-      }
-    SVN_ERR (check_apr (apr_dir_close (dir), pool));
-  }
-
-  /* Now, delete the directory itself.  */
-  SVN_ERR (check_apr (apr_dir_remove (path, pool), pool));
+  /* Remove the repository. */
+  apr_err = apr_dir_remove_recursively (path, pool);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return svn_error_createf (apr_err, 0, 0, pool,
+                              "recursively removing `%s'", path);
 
   return SVN_NO_ERROR;
 }
