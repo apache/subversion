@@ -680,6 +680,73 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   set_externals_for_path_expect_error(F_path, externals_value_5, wc_dir)
 
 
+#----------------------------------------------------------------------
+
+def export_with_externals(sbox):
+  "test exports with externals"
+
+  externals_test_setup(sbox)
+
+  wc_dir         = sbox.wc_dir
+  repo_dir       = sbox.repo_dir
+  repo_url       = sbox.repo_url
+
+  # Create a working copy.
+  svntest.actions.run_and_verify_svn("", None, [],
+                                     'export',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     repo_url, wc_dir)
+
+  # Probe the working copy a bit, see if it's as expected.
+  exdir_G_path    = os.path.join(wc_dir, "A/B/exdir_G")
+  exdir_G_pi_path = os.path.join(exdir_G_path, "pi")
+  exdir_H_path       = os.path.join(wc_dir, "A/B/exdir_H")
+  exdir_H_omega_path = os.path.join(exdir_H_path, "omega")
+  x_path     = os.path.join(wc_dir, "A/D/x")
+  y_path     = os.path.join(x_path, "y")
+  z_path     = os.path.join(y_path, "z")
+  blah_path  = os.path.join(z_path, "blah")
+  alpha_path = os.path.join(blah_path, "alpha")
+  beta_path  = os.path.join(blah_path, "beta")
+
+  if (not os.path.exists(exdir_G_path)):
+    raise svntest.Failure("Probing for " + exdir_G_path + " failed.")
+  if (not os.path.exists(exdir_G_pi_path)):
+    raise svntest.Failure("Probing for " + exdir_G_pi_path + " failed.")
+  if (not os.path.exists(exdir_H_path)):
+    raise svntest.Failure("Probing for " + exdir_H_path + " failed.")
+  if (not os.path.exists(exdir_H_omega_path)):
+    raise svntest.Failure("Probing for " + exdir_H_omega_path + " failed.")
+  if (not os.path.exists(x_path)):
+    raise svntest.Failure("Probing for " + x_path + " failed.")
+  if (not os.path.exists(y_path)):
+    raise svntest.Failure("Probing for " + y_path + " failed.")
+  if (not os.path.exists(z_path)):
+    raise svntest.Failure("Probing for " + z_path + " failed.")
+  if (not os.path.exists(z_path)):
+    raise svntest.Failure("Probing for " + z_path + " failed.")
+  if (not os.path.exists(alpha_path)):
+    raise svntest.Failure("Probing for " + alpha_path + " failed.")
+  if (not os.path.exists(beta_path)):
+    raise svntest.Failure("Probing for " + beta_path + " failed.")
+
+  # Pick some files, make sure their contents are as expected.
+  fp = open(exdir_G_pi_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 2) \
+          and (lines[0] == "This is the file 'pi'.\n") \
+          and (lines[1] == "Added to pi in revision 3.\n")):
+    raise svntest.Failure("Unexpected contents for rev 1 of " +
+                          exdir_G_pi_path)
+  fp = open(exdir_H_omega_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.")):
+    raise svntest.Failure("Unexpected contents for rev 1 of " +
+                          exdir_H_omega_path)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -694,6 +761,7 @@ test_list = [ None,
               update_receive_change_under_external,
               modify_and_update_receive_new_external,
               disallow_dot_or_dotdot_directory_reference,
+              export_with_externals,
              ]
 
 if __name__ == '__main__':

@@ -493,12 +493,30 @@ svn_client__do_commit (const char *base_url,
    is required.
 
    Use POOL for temporary allocation. */
-svn_error_t *svn_client__handle_externals
-   (svn_wc_traversal_info_t *traversal_info,
-    svn_boolean_t update_unchanged,
-    svn_boolean_t *timestamp_sleep,
-    svn_client_ctx_t *ctx,
-    apr_pool_t *pool);
+svn_error_t *
+svn_client__handle_externals (svn_wc_traversal_info_t *traversal_info,
+                              svn_boolean_t update_unchanged,
+                              svn_boolean_t *timestamp_sleep,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *pool);
+
+
+/* Fetch externals definitions described by EXTERNALS, a hash of the
+   form returned by svn_wc_edited_externals() (which see).  If
+   IS_EXPORT is set, the external items will be exported instead of
+   checked out -- they will have no administrative subdirectories.
+
+   *TIMESTAMP_SLEEP will be set TRUE if a sleep is required to ensure
+   timestamp integrity, *TIMESTAMP_SLEEP will be unchanged if no sleep
+   is required.
+
+   Use POOL for temporary allocation. */
+svn_error_t *
+svn_client__fetch_externals (apr_hash_t *externals,
+                             svn_boolean_t is_export,
+                             svn_boolean_t *timestamp_sleep,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool);
 
 
 /* Perform status operations on each external in TRAVERSAL_INFO.  All
