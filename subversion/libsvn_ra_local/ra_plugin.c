@@ -56,8 +56,7 @@ cleanup_commit (svn_revnum_t new_rev, void *baton)
 
 static const svn_ra_reporter_t ra_local_reporter = 
 {
-  svn_ra_local__set_directory,
-  svn_ra_local__set_file,
+  svn_ra_local__set_path,
   svn_ra_local__finish_report
 };
 

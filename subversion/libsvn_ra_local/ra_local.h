@@ -143,14 +143,8 @@ svn_ra_local__checkout (svn_fs_t *fs,
    updates). */
 
 svn_error_t *
-svn_ra_local__set_directory (void *report_baton,
-                            svn_string_t *dir_path,
-                            svn_revnum_t revision);
-  
-
-svn_error_t *
-svn_ra_local__set_file (void *report_baton,
-                        svn_string_t *file_path,
+svn_ra_local__set_path (void *report_baton,
+                        svn_string_t *path,
                         svn_revnum_t revision);
 
 
