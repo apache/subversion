@@ -27,7 +27,6 @@ ${SVN_PROG} add this/newfile1
 echo
 echo "Adding another file."
 touch this/A/B/E/newfile2
-# kff todo: comment next line and enter it in the debugger...
 ${SVN_PROG} add this/A/B/E/newfile2
 
 ### Updating.
@@ -42,13 +41,13 @@ ${SVN_PROG} add this/A/B/E/newfile2
 #              --xml-file ../../../tests-common/xml/up1b-inline.xml)
                       
 ### Deleting.
-# echo
-# echo "Deleting a versioned file, with --force."
-# ${SVN_PROG} delete --force this/A/D/H/omega
-# 
-# echo
-# echo "Deleting one of the added files, without --force."
-# ${SVN_PROG} delete this/A/B/E/newfile2
+echo
+echo "Deleting a versioned file, with --force."
+${SVN_PROG} delete --force this/A/D/H/omega
+
+echo
+echo "Deleting one of the added files, without --force."
+${SVN_PROG} delete this/A/B/E/newfile2
  
 ### Committing.
 ## Disable commits until they're working.

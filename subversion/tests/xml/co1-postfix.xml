@@ -106,16 +106,16 @@
       </dir>
     </add>
   </tree-delta>
-<text-delta id="iota">This is the file 'iota'.</text-delta>
-<text-delta id="mu">This is the file 'mu'.</text-delta>
-<text-delta id="lambda">This is the file 'lambda'.</text-delta>
-<text-delta id="alpha">This is the file 'alpha'.</text-delta>
-<text-delta id="beta">This is the file 'beta'.</text-delta>
-<text-delta id="gamma">This is the file 'gamma'.</text-delta>
-<text-delta id="pi">This is the file 'pi'.</text-delta>
-<text-delta id="rho">This is the file 'rho'.</text-delta>
-<text-delta id="tau">This is the file 'tau'.</text-delta>
-<text-delta id="chi">This is the file 'chi'.</text-delta>
-<text-delta id="psi">This is the file 'psi'.</text-delta>
-<text-delta id="omega">This is the file 'omega'.</text-delta>
+<text-delta id="iota">W3bOAAAAGAEaoFRqcZMicZMifGjnIGbrdGWiJ4nxfGEpLi==</text-delta>
+<text-delta id="mu">W3bOAAAAFiEYnnRqcZMicZMifGjnIGbrdGWiJ433J06=</text-delta>
+<text-delta id="lambda">W3bOAAAAGiEconRqcZMicZMifGjnIGbrdGWiJ4zjdYJmaSew</text-delta>
+<text-delta id="alpha">W3bOAAAAGQEboXRqcZMicZMifGjnIGbrdGWiJ4FueGjjJ06=</text-delta>
+<text-delta id="beta">W3bOAAAAGAEaoFRqcZMicZMifGjnIGbrdGWiJ4JnfGEpLi==</text-delta>
+<text-delta id="gamma">W3bOAAAAGQEboXRqcZMicZMifGjnIGbrdGWiJ4fjdY3jJ06=</text-delta>
+<text-delta id="pi">W3bOAAAAFiEYnnRqcZMicZMifGjnIGbrdGWiJ5BrJ06=</text-delta>
+<text-delta id="rho">W3bOAAAAFyEZn3RqcZMicZMifGjnIGbrdGWiJ5Jqd0ew</text-delta>
+<text-delta id="tau">W3bOAAAAFyEZn3RqcZMicZMifGjnIGbrdGWiJ5RjfSew</text-delta>
+<text-delta id="chi">W3bOAAAAFyEZn3RqcZMicZMifGjnIGbrdGWiJ4NqcSew</text-delta>
+<text-delta id="psi">W3bOAAAAFyEZn3RqcZMicZMifGjnIGbrdGWiJ5B1cSew</text-delta>
+<text-delta id="omega">W3bOAAAAGQEboXRqcZMicZMifGjnIGbrdGWiJ4/vbYfjJ06=</text-delta>
 </delta-pkg>
