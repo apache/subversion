@@ -284,7 +284,7 @@ struct svn_wc_bump_baton
   
   /* Pool to use for all logging, running of logs, etc. */
   apr_pool_t *pool;
-}
+};
 
 /* This is the "new" callback that the RA layer uses to bump each
    committed target, one-at-a-time.  It's a function of type
