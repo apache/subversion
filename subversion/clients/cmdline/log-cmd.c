@@ -112,7 +112,7 @@ log_message_receiver (void *baton,
                       const char *msg,
                       apr_pool_t *pool)
 {
-  const char *author_native, *date_native, *msg_native;
+  const char *author_native, *date_native, *msg_native, *msg_native_eol;
   svn_error_t *err;
 
   /* Number of lines in the msg. */
@@ -162,9 +162,16 @@ log_message_receiver (void *baton,
   else if (err)
     return err;
 
+  SVN_ERR (svn_wc_translate_cstring (msg_native, &msg_native_eol,
+                                     APR_EOL_STR, /* the 'native' eol */
+                                     FALSE,       /* no need to repair */
+                                     NULL,        /* no keywords */
+                                     FALSE,       /* no expansion */
+                                     pool));
+
   printf (SEP_STRING);
 
-  lines = num_lines (msg_native);
+  lines = num_lines (msg_native_eol);
   printf ("rev %" SVN_REVNUM_T_FMT ":  %s | %s | %d line%s\n",
           rev, author_native, date_native, lines, (lines > 1) ? "s" : "");
 
@@ -215,7 +222,7 @@ log_message_receiver (void *baton,
         }
     }
   printf ("\n");  /* A blank line always precedes the log message. */
-  printf ("%s\n", msg_native);
+  printf ("%s\n", msg_native_eol);
 
   return SVN_NO_ERROR;
 }
@@ -267,7 +274,7 @@ log_message_receiver_xml (void *baton,
 {
   /* Collate whole log message into sb before printing. */
   svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
-  char *revstr;
+  char *revstr, *msg_native_eol;  
 
   if (rev == 0)
     return SVN_NO_ERROR;
@@ -351,7 +358,13 @@ log_message_receiver_xml (void *baton,
 
   /* <msg>xxx</msg> */
   svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "msg", NULL);
-  svn_xml_escape_nts (&sb, msg, pool);
+  SVN_ERR (svn_wc_translate_cstring (msg, &msg_native_eol,
+                                     APR_EOL_STR, /* the 'native' eol */
+                                     FALSE,       /* no need to repair */
+                                     NULL,        /* no keywords */
+                                     FALSE,       /* no expansion */
+                                     pool));
+  svn_xml_escape_nts (&sb, msg_native_eol, pool);
   svn_xml_make_close_tag (&sb, pool, "msg");
   
   /* </logentry> */
