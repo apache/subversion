@@ -289,7 +289,7 @@ svn_client_info (const char *path_or_url,
   /* svn_ra_stat() will work against old versions of mod_dav_svn, but
      not old versions of svnserve.  In the case of a pre-1.2 svnserve,
      catch the specific error it throws:*/
-  if (err && err->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD)
+  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
     {
       /* Fall back to pre-1.2 strategy for fetching dirent's URL. */
       svn_error_clear (err);

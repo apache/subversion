@@ -1154,9 +1154,16 @@ static svn_error_t *ra_svn_stat(svn_ra_session_t *session,
   svn_boolean_t has_props;
   apr_uint64_t size;
   svn_dirent_t *the_dirent;
+  svn_error_t *err;
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "stat", "c(?r)", path, rev));
-  SVN_ERR(handle_auth_request(sess_baton, pool));
+  err = handle_auth_request(sess_baton, pool);
+
+  if (err && err->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD)
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                             _("stat not implemented"));
+  SVN_ERR(err);
+
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?l)", &list));
 
   if (! list)
