@@ -584,11 +584,79 @@ close_file (void *edit_baton, void *file_baton)
     return err;
 
   /* kff todo: if we return before unlocking, which is possible below,
-     that might be badness... */
+     that is probably badness... */
 
-  /* kff todo: here is where we would first write out the log file,
-     and then loop over it doing the operations.  Below is mostly
-     cheating. */
+  /* kff todo:
+     
+     Okay, let's plan this whole diff/log/update/merge thing a bit
+     better, in the cold light of morning, as it were (actually, it's
+     early afternoon, but I'm told that's hacker virtual morning).
+
+     When we reach close_file() for file `blah', the following are
+     true:
+
+         - The new pristine text of blah, if any, is present in
+           SVN/tmp/text-base/blah; and the file_baton is appropriately
+           marked if so.
+
+         - The new pristine props for blah, if any, are present in
+           SVN/tmp/prop-base/blah; and the file_baton is appropriately
+           marked if so.
+
+         - The SVN/versions file still reflects the old blah.
+
+         - And SVN/text-base/blah is the old pristine blah, too.
+
+      The goal is to update the local working copy of blah to reflect
+      the changes received from the repository, preserving any local
+      modifications, in an interrupt-safe way.  So we first write our
+      intentions to SVN/log, then run over the log file doing each
+      operation in turn.  For a given operation, you can always tell
+      whether or not it has already been done; thus, those that have
+      already been done are ignored, and when we reach the end of the
+      log file, we remove it.
+
+      Because we must preserve local changes, the actual order of
+      operations is this:
+
+         1. Discover and save local mods (right now, this means do a
+            GNU diff -c on ./SVN/text-base/blah vs ./blah, and save
+            the result somewhere).
+
+         2. Write out the following SVN/log entries, omitting any that
+            aren't applicable of course:
+
+              <merge-text name="blah" saved-local-mods="..."/>
+                 <!-- Will attempt to merge local changes into the new
+                      text.  When done, ./blah will reflect the new
+                      state, either by having the changes folded in,
+                      having them folded in with conflict markers, or
+                      not having them folded in (in which case the
+                      user is told that no merge was possible). -->
+              <replace-text-base name="blah"/>
+                  <!-- Now that the merge step is done, it's safe to
+                       replace the old pristine copy with the new,
+                       updated one, copying `./SVN/tmp/text-base/blah'
+                       to `./SVN/text-base/blah' -->
+              <merge-props name="blah">
+                  <!-- This really just detects and warns about
+                       conflicts between local prop changes and
+                       received prop changes.  I'm not sure merging is
+                       really applicable here. -->
+              <replace-prop-base name="blah"/>
+                  <!-- You know what to do. -->
+              <set-version name="blah" version="N"/>
+                  <!-- Once everything else is done, we can set blah's
+                       version to N, changing the ./SVN/versions
+                       file. -->
+         
+         3. Now run over the log file, doing each operation.  Note
+            that if an operation appears to have already been done,
+            that means it _was_ done, so just count it and move on.
+            When all entries have been done, the operation is
+            complete, so remove SVN/log.
+            
+  */
 
   /* Save local mods. */
   err = svn_wc__get_local_changes (svn_wc__generic_differ,
