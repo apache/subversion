@@ -997,7 +997,7 @@ main (int argc, const char * const *argv)
     *(svn_auth_provider_object_t **)apr_array_push (providers)
       = ssl_client_cred_file_provider;
 
-    svn_ra_dav_get_ssl_client_password_file_provider
+    svn_ra_dav_get_ssl_pw_file_provider
       (&ssl_client_pw_file_provider->vtable,
        &ssl_client_pw_file_provider->provider_baton,
        pool);

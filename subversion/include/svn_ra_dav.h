@@ -16,29 +16,62 @@
  * @endcopyright
  *
  * @file svn_ra_dav.h
- * @brief libsvn_ra_dav functions used by the server
+ * @brief libsvn_ra_dav functions for use by clients
  */
 
-/** Retrieve a new ssl server certificate @a provider based around the
- *  server configuration.
+/** Set @a *provider and @ *provider_baton to an authentication
+ *  provider for type @c svn_auth_cred_server_ssl_t gets information from the
+ *  configuration mechanism. This credential is used to override SSL security
+ *  on an error.
+ *  
+ *   This provider requires certain run-time parameters be present in
+ *   the auth_baton:
+ *
+ *    - a loaded @c svn_config_t object
+ *             (@c SVN_AUTH_PARAM_CONFIG)
+ *
+ *    - the name of the server-specific settings group if available
+ *             (@c SVN_AUTH_PARAM_SERVER_GROUP)
  */
 void 
 svn_ra_dav_get_ssl_server_file_provider (const svn_auth_provider_t **provider,
-					 void **provider_baton,
-					 apr_pool_t *pool);
+                                         void **provider_baton,
+                                         apr_pool_t *pool);
 
-/** Retrieve a new ssl client certificate @a provider based around the
- *  server configuration.
+/** Set @a *provider and @ *provider_baton to an authentication
+ *  provider for type @c svn_auth_cred_client_ssl_t gets information from the
+ *  configuration mechanism. This credential is used to load the appropriate
+ *  client certificate for authentication, if requested by the server.
+ *  
+ *   This provider requires certain run-time parameters be present in
+ *   the auth_baton:
+ *
+ *    - a loaded @c svn_config_t object
+ *             (@c SVN_AUTH_PARAM_CONFIG)
+ *
+ *    - the name of the server-specific settings group if available
+ *             (@c SVN_AUTH_PARAM_SERVER_GROUP)
  */
 void 
 svn_ra_dav_get_ssl_client_file_provider (const svn_auth_provider_t **provider,
-					 void **provider_baton,
-					 apr_pool_t *pool);
+                                         void **provider_baton,
+                                         apr_pool_t *pool);
 
-/** Retrieve a new ssl client certificate password @a provider based
- *  around the server configuration.
+/** Set @a *provider and @ *provider_baton to an authentication
+ *  provider for type @c svn_auth_cred_client_ssl_pass_t gets information
+ *  from the configuration mechanism. This credential is used to decode
+ *  a client certificate if a passphrase is required.
+ *  
+ *   This provider requires certain run-time parameters be present in
+ *   the auth_baton:
+ *
+ *    - a loaded @c svn_config_t object
+ *             (@c SVN_AUTH_PARAM_CONFIG)
+ *
+ *    - the name of the server-specific settings group if available
+ *             (@c SVN_AUTH_PARAM_SERVER_GROUP)
  */
 void
-svn_ra_dav_get_ssl_client_password_file_provider (const svn_auth_provider_t **provider,
-						  void **provider_baton,
-						  apr_pool_t *pool);
+svn_ra_dav_get_ssl_pw_file_provider (const svn_auth_provider_t **provider,
+                                     void **provider_baton,
+                                     apr_pool_t *pool);

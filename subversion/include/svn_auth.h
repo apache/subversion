@@ -166,8 +166,9 @@ typedef struct
 } svn_auth_cred_username_t;
 
 /** SSL client authentication - this provides @a cert_file and
-    optionally @a key_file (if the private key is separate), and sets
-    @a cert_type for the type of certificate file to load */
+    optionally @a key_file (if the private key is separate) as the
+    full paths to the files, and sets @a cert_type for the type of
+    certificate file to load */
 #define SVN_AUTH_CRED_CLIENT_SSL "svn:ssl:client-cert"
 typedef struct
 {

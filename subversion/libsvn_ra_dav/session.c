@@ -151,8 +151,12 @@ server_ssl_file_first_credentials(void **credentials,
                                   apr_pool_t *pool)
 {
   const char *temp_setting;
-  svn_config_t *cfg = apr_hash_get(parameters, SVN_AUTH_PARAM_CONFIG, APR_HASH_KEY_STRING);
-  const char *server_group = apr_hash_get(parameters, SVN_AUTH_PARAM_SERVER_GROUP, APR_HASH_KEY_STRING);
+  svn_config_t *cfg = apr_hash_get(parameters,
+                                   SVN_AUTH_PARAM_CONFIG,
+                                   APR_HASH_KEY_STRING);
+  const char *server_group = apr_hash_get(parameters,
+                                          SVN_AUTH_PARAM_SERVER_GROUP,
+                                          APR_HASH_KEY_STRING);
 
   svn_auth_cred_server_ssl_t *cred =
     apr_palloc(pool, sizeof(svn_auth_cred_server_ssl_t));
@@ -166,7 +170,8 @@ server_ssl_file_first_credentials(void **credentials,
   cred->failures_allow |= temp_setting ? NE_SSL_CNMISMATCH : 0;
   temp_setting = get_server_setting(cfg, server_group, 
                                     "ssl-ignore-invalid-date", NULL);
-  cred->failures_allow |= temp_setting ? (NE_SSL_NOTYETVALID|NE_SSL_EXPIRED) : 0;
+  cred->failures_allow |=
+    temp_setting ? (NE_SSL_NOTYETVALID|NE_SSL_EXPIRED) : 0;
   return NULL;
 }
 
@@ -179,26 +184,30 @@ client_ssl_cert_file_first_credentials(void **credentials,
                                        apr_hash_t *parameters,
                                        apr_pool_t *pool)
 {
-  svn_config_t *cfg = apr_hash_get(parameters, SVN_AUTH_PARAM_CONFIG, APR_HASH_KEY_STRING);
-  const char *server_group = apr_hash_get(parameters, SVN_AUTH_PARAM_SERVER_GROUP, APR_HASH_KEY_STRING);
+  svn_config_t *cfg = apr_hash_get(parameters, 
+                                   SVN_AUTH_PARAM_CONFIG,
+                                   APR_HASH_KEY_STRING);
+  const char *server_group = apr_hash_get(parameters,
+                                          SVN_AUTH_PARAM_SERVER_GROUP,
+                                          APR_HASH_KEY_STRING);
   svn_auth_cred_client_ssl_t *cred =
     apr_palloc(pool, sizeof(svn_auth_cred_client_ssl_t));
   
   const char* cert_type;
 
   cred->cert_file = get_server_setting(cfg, server_group,
-				 "ssl-client-cert-file", NULL);
+                                 "ssl-client-cert-file", NULL);
   cred->key_file = get_server_setting(cfg, server_group,
-				"ssl-client-key-file", NULL);
+                                "ssl-client-key-file", NULL);
   cert_type = get_server_setting(cfg, server_group,
-				"ssl-client-cert-type", "pem");
+                                "ssl-client-cert-type", "pem");
   if ((strcmp(cert_type, "pem") == 0) ||
       (strcmp(cert_type, "PEM") == 0))
     {
       cred->cert_type = svn_auth_ssl_pem_cert_type;
     }
   else if ((strcmp(cert_type, "pkcs12") == 0) ||
-	   (strcmp(cert_type, "PKCS12") == 0))
+           (strcmp(cert_type, "PKCS12") == 0))
     {
       cred->cert_type = svn_auth_ssl_pkcs12_cert_type;
     }
@@ -219,15 +228,19 @@ client_ssl_pw_file_first_credentials(void **credentials,
                                      apr_hash_t *parameters,
                                      apr_pool_t *pool)
 {
-  svn_config_t *cfg = apr_hash_get(parameters, SVN_AUTH_PARAM_CONFIG, APR_HASH_KEY_STRING);
-  const char *server_group = apr_hash_get(parameters, SVN_AUTH_PARAM_SERVER_GROUP, APR_HASH_KEY_STRING);
+  svn_config_t *cfg = apr_hash_get(parameters,
+                                   SVN_AUTH_PARAM_CONFIG,
+                                   APR_HASH_KEY_STRING);
+  const char *server_group = apr_hash_get(parameters,
+                                          SVN_AUTH_PARAM_SERVER_GROUP,
+                                          APR_HASH_KEY_STRING);
 
   const char *password = get_server_setting(cfg, server_group,
-					    "ssl-client-cert-password", NULL);
+                                            "ssl-client-cert-password", NULL);
   if (password)
     {
       svn_auth_cred_client_ssl_pass_t *cred =
-	apr_palloc(pool, sizeof(svn_auth_cred_client_ssl_pass_t));
+        apr_palloc(pool, sizeof(svn_auth_cred_client_ssl_pass_t));
       
       /* does nothing so far */
       *credentials = cred;
@@ -278,9 +291,9 @@ svn_ra_dav_get_ssl_client_file_provider (const svn_auth_provider_t **provider,
 }
 
 void
-svn_ra_dav_get_ssl_client_password_file_provider (const svn_auth_provider_t **provider,
-                                                  void **provider_baton,
-                                                  apr_pool_t *pool)
+svn_ra_dav_get_ssl_pw_file_provider (const svn_auth_provider_t **provider,
+                                     void **provider_baton,
+                                     apr_pool_t *pool)
 {
   *provider = &client_ssl_pw_file_provider;
 }
@@ -299,11 +312,14 @@ server_ssl_callback(void *userdata,
   apr_pool_t *pool;
   svn_error_t *error;
   int failures_allowed;
-  // int failures_mask;
   
-  svn_auth_set_parameter(ras->callbacks->auth_baton, SVN_AUTH_PARAM_SSL_SERVER_CERTIFICATE, cert);
-  svn_auth_set_parameter(ras->callbacks->auth_baton, SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN, (void*)failures);
-  svn_auth_set_parameter(ras->callbacks->auth_baton, SVN_AUTH_PARAM_SSL_SERVER_FAILURES_MASKED, (void*)0);
+  svn_auth_set_parameter(ras->callbacks->auth_baton,
+                         SVN_AUTH_PARAM_SSL_SERVER_CERTIFICATE, cert);
+  svn_auth_set_parameter(ras->callbacks->auth_baton,
+                         SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN,
+                         (void*)failures);
+  svn_auth_set_parameter(ras->callbacks->auth_baton,
+                         SVN_AUTH_PARAM_SSL_SERVER_FAILURES_MASKED, (void*)0);
 
   apr_pool_create(&pool, ras->pool);
   error = svn_auth_first_credentials((void**)&credentials, &state,
@@ -382,8 +398,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                                         const char *requested_host,
                                         apr_pool_t *pool)
 {
-  const char *exceptions;
-  const char *port_str, *timeout_str, *server_group, *debug_str, *compress_str;
+  const char *exceptions, *port_str, *timeout_str, *server_group;
+  const char *debug_str, *compress_str;
   svn_boolean_t is_exception = FALSE;
   /* If we find nothing, default to nulls. */
   *proxy_host     = NULL;
@@ -697,8 +713,10 @@ svn_ra_dav__open (void **session_baton,
 #endif
 
   /* make sure we will eventually destroy the session */
-  apr_pool_cleanup_register(pool, sess, cleanup_session, apr_pool_cleanup_null);
-  apr_pool_cleanup_register(pool, sess2, cleanup_session, apr_pool_cleanup_null);
+  apr_pool_cleanup_register(pool, sess, cleanup_session,
+                            apr_pool_cleanup_null);
+  apr_pool_cleanup_register(pool, sess2, cleanup_session,
+                            apr_pool_cleanup_null);
 
   ne_set_useragent(sess, "SVN/" SVN_VERSION);
   ne_set_useragent(sess2, "SVN/" SVN_VERSION);
@@ -712,15 +730,18 @@ svn_ra_dav__open (void **session_baton,
   ras = apr_pcalloc(pool, sizeof(*ras));
   ras->pool = pool;
   ras->url = apr_pstrdup (pool, repos_URL);
-  ras->root = uri; /* copies uri pointer members, they get free'd in __close. */
+  /* copies uri pointer members, they get free'd in __close. */
+  ras->root = uri; 
   ras->sess = sess;
   ras->sess2 = sess2;  
   ras->callbacks = callbacks;
   ras->callback_baton = callback_baton;
   ras->compression = compression;
   /* save config and server group in the auth parameter hash */
-  svn_auth_set_parameter(ras->callbacks->auth_baton, SVN_AUTH_PARAM_CONFIG, cfg);
-  svn_auth_set_parameter(ras->callbacks->auth_baton, SVN_AUTH_PARAM_SERVER_GROUP, server_group);
+  svn_auth_set_parameter(ras->callbacks->auth_baton,
+                         SVN_AUTH_PARAM_CONFIG, cfg);
+  svn_auth_set_parameter(ras->callbacks->auth_baton,
+                         SVN_AUTH_PARAM_SERVER_GROUP, server_group);
 
   /* note that ras->username and ras->password are still NULL at this
      point. */
