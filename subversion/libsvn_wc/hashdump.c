@@ -49,6 +49,7 @@
 
 
 
+#include <stdio.h>       /* for sprintf() */
 #include <stdlib.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
@@ -91,22 +92,6 @@
 
 
 
-
-
-/* BEN SEZ: size_t_into_string() is no longer needed, I think, because
-   I'm solving this problem with ap_psprintf() now.  Pools are safer
-   than dumping into a fixed-size buffer. */
-
-/* Returns the number of bytes used in the result. */
-int
-size_t_into_string (char *buf, size_t num)
-{
-  int used;
-  sprintf (buf, "%ld%n", (long int) num, &used);
-  return used;
-}
-
-
 /* svn_unpack_bytestring():  for use as helper with hash_write().
  *
  *  Input:  a hash value which points to an svn_string_t
@@ -130,7 +115,7 @@ svn_unpack_bytestring (char **returndata, void *value)
 
 /* hash_write():  dump a hash table to a file.
  * 
- *  Input:  a hash, a file pointer, pool, and an "unpack" function (see above)
+ *  Input:  a hash, an "unpack" function (see above), an opened file pointer
  * 
  *  Returns:  error status
  *
@@ -142,26 +127,11 @@ svn_unpack_bytestring (char **returndata, void *value)
 ap_status_t
 hash_write (ap_hash_t *hash, 
             ap_size_t (*unpack_func) (char **unpacked_data, void *val),
-            ap_file_t *destfile,
-            ap_pool_t *pool)
+            ap_file_t *destfile)
 {
   ap_hash_index_t *this;      /* current hash entry */
-  svn_string_t *destbuf;      /* main buffer we write to */
-
-  ap_status_t *status;
-  ap_size_t bytes_written;
-
-
-  /* Assuming that the file pointer already points to a file open for
-     writing. */
-
-  /* Strategy: we're going to write everything into a svn_string_t,
-     and then do an ap_full_write() of the whole bytestring when we're
-     done. */
-
-  /* Malloc the buffer, then clear it */
-  destbuf = svn_string_create ("<nobody home>", pool);
-  svn_string_setempty (destbuf);
+  ap_status_t status;
+  char buf[100];
 
   for (this = ap_hash_first (hash); this; this = ap_hash_next (this))
     {
@@ -169,55 +139,55 @@ hash_write (ap_hash_t *hash,
       void *val;
       size_t keylen;
       size_t vallen;
-
-      char *valstring;
-
-      char *numstring;
       int bytes_used;
+      char *valstring;
 
       /* Get this key and val. */
       ap_hash_this (this, &key, &keylen, &val);
 
-      /* Output the name's length, then the name itself. */
-      svn_string_appendbytes (destbuf, "K ", 2, pool);
-      
-      numstring = ap_psprintf (pool, "%ld%n", (long int) keylen, &bytes_used);
-      svn_string_appendbytes (destbuf, numstring, bytes_used, pool);
+      /* Output name length, then name. */
 
-      svn_string_appendbytes (destbuf, "\n", 1, pool);
+      status = ap_full_write (destfile, "K ", 2, NULL);
+      if (status != SVN_NO_ERROR) return status;
 
-      svn_string_appendbytes (destbuf, (char *) key, keylen, pool);
-      svn_string_appendbytes (destbuf, "\n", 1, pool);
+      sprintf (buf, "%ld%n", (long int) keylen, &bytes_used);
+      status = ap_full_write (destfile, buf, bytes_used, NULL);
+      if (status != SVN_NO_ERROR) return status;
 
-      /* Output the value's length, then the value itself. */
+      status = ap_full_write (destfile, "\n", 1, NULL);
+      if (status != SVN_NO_ERROR) return status;
+
+      status = ap_full_write (destfile, (char *) key, keylen, NULL);
+      if (status != SVN_NO_ERROR) return status;
+
+      status = ap_full_write (destfile, "\n", 1, NULL);
+      if (status != SVN_NO_ERROR) return status;
+
+      /* Output value length, then value. */
+
       vallen = (size_t) (*unpack_func) (&valstring, val); /* secret decoder! */
+      status = ap_full_write (destfile, "V ", 2, NULL);
+      if (status != SVN_NO_ERROR) return status;
 
-      svn_string_appendbytes (destbuf, "V ", 2, pool);
-      
-      numstring = ap_psprintf (pool, "%ld%n", (long int) vallen, &bytes_used);
-      svn_string_appendbytes (destbuf, numstring, bytes_used, pool);
-      svn_string_appendbytes (destbuf, "\n", 1, pool);
+      sprintf (buf, "%ld%n", (long int) vallen, &bytes_used);
+      status = ap_full_write (destfile, buf, bytes_used, NULL);
+      if (status != SVN_NO_ERROR) return status;
 
-      svn_string_appendbytes (destbuf, valstring, vallen, pool);
-      svn_string_appendbytes (destbuf, "\n", 1, pool);
+      status = ap_full_write (destfile, "\n", 1, NULL);
+      if (status != SVN_NO_ERROR) return status;
+
+      status = ap_full_write (destfile, valstring, vallen, NULL);
+      if (status != SVN_NO_ERROR) return status;
+
+      status = ap_full_write (destfile, "\n", 1, NULL);
+      if (status != SVN_NO_ERROR) return status;
     }
 
-  /* Now write the whole bytestring buffer to a file. */
-
-  status = ap_full_write (destfile, 
-                          destbuf->data, 
-                          destbuf->len, 
-                          &bytes_written);
-
-  /* For now, don't deal with any error you get, just pass it up. */
-
-  return status;
+  return SVN_NO_ERROR;
 }
 
 
-
-
-
+#if 0
 /* Read a hash table from a file. */
 ap_status_t
 hash_read (ap_hash_t **h, 
@@ -225,116 +195,6 @@ hash_read (ap_hash_t **h,
            ap_file_t *src)
 {
   
-}
-
-
-
-
-
-/* kff todo: should it return ap_status_t? */
-void
-svn_wc_proplist_write (ap_hash_t *proplist, 
-                       svn_string_t *destfile_name)
-{
-  ap_file_t *destfile = NULL;   /* this init to NULL is actually important */
-  ap_status_t res;
-  ap_pool_t *pool = NULL;
-  ap_hash_index_t *this;      /* current hash entry */
-  const char *dest_fname;
-  
-  res = ap_create_pool (&pool, NULL);
-  if (res != APR_SUCCESS)
-    {
-      /* kff todo: need to copy CVS's error-handling better, or something.
-       * 
-       * Example: here we have a mem allocation error, probably, so
-       * our exit plan must include more allocation! :-)
-       * 
-       * Go through code of svn_handle_error, look for stuff like
-       * this.
-       */
-      exit (1);
-    }
-
-  dest_fname = svn_string_2cstring (destfile_name, pool);
-
-  /* kff todo: maybe this whole file-opening thing wants to be
-     abstracted?  We jump through these same hoops in svn_parse.c as
-     well, after all... */
-
-  res = ap_open (&destfile,
-                 dest_fname,
-                 (APR_WRITE | APR_CREATE),
-                 APR_OS_DEFAULT,  /* kff todo: what's this about? */
-                 pool);
-
-  if (res != APR_SUCCESS)
-    {
-      const char *msg;
-
-      msg = ap_pstrcat(pool,
-                       "svn_wc_proplist_write(): "
-                       "can't open for writing, file ",
-                       dest_fname, NULL);
-
-      /* Declare this a fatal error! */
-      svn_handle_error (svn_create_error (res, msg, NULL, pool), stderr);
-    }
-
-  /* Else file successfully opened.  Continue. */
-
-  for (this = ap_hash_first (proplist); this; this = ap_hash_next (this))
-    {
-      const void *key;
-      void *val;
-      size_t keylen;
-      size_t num_len;
-      char buf[100];   /* Only holds lengths expressed in decimal digits. */
-
-      /* Get this key and val. */
-      ap_hash_this (this, &key, &keylen, &val);
-
-      /* Output the name's length, then the name itself. */
-      guaranteed_ap_write (destfile, "N ", 2);
-      num_len = size_t_into_string (buf, keylen);
-      guaranteed_ap_write (destfile, buf, num_len);
-      guaranteed_ap_write (destfile, "\n", 1);
-      guaranteed_ap_write (destfile, key, keylen);
-      guaranteed_ap_write (destfile, "\n", 1);
-
-      /* Output the value's length, then the value itself. */
-      guaranteed_ap_write (destfile, "V ", 2);
-      num_len = size_t_into_string (buf, ((svn_string_t *) val)->len);
-      guaranteed_ap_write (destfile, buf, num_len);
-      guaranteed_ap_write (destfile, "\n", 1);
-      guaranteed_ap_write (destfile,
-                           ((svn_string_t *) val)->data,
-                           ((svn_string_t *) val)->len);
-      guaranteed_ap_write (destfile, "\n", 1);
-    }
-
-  res = ap_close (destfile);
-  if (res != APR_SUCCESS)
-    {
-      const char *msg;
-
-      msg = ap_pstrcat(pool, 
-                       "svn_parse(): warning: can't close file ",
-                       dest_fname, NULL);
-      
-      /* Not fatal, just annoying */
-      svn_handle_error (svn_create_error (res, msg, NULL, pool), stderr);
-    }
-  
-  ap_destroy_pool (pool);
-}
-
-
-#if 0
-ap_hash_t *
-svn_wc_proplist_read (svn_string_t *propfile, apr_pool_t *pool)
-{
-  /* kff todo: fooo in progress */
 }
 #endif /* 0 */
 
@@ -348,6 +208,7 @@ main (void)
   ap_pool_t *pool = NULL;
   ap_hash_t *proplist;
   svn_string_t *key;
+  ap_file_t *f = NULL;     /* init to NULL very important! */
 
   /* Our longest piece of test data. */
   char *review =
@@ -384,10 +245,11 @@ main (void)
   ap_hash_set (proplist, key->data, key->len,
                svn_string_create ("This is the SECOND value.", pool));
 
-  /* Dump it. */
-  svn_wc_proplist_write
-    (proplist, svn_string_create ("propdump.out", pool));
 
+  /* Dump it. */
+  ap_open (&f, "hashdump.out", (APR_WRITE | APR_CREATE), APR_OS_DEFAULT, pool);
+  hash_write (proplist, svn_unpack_bytestring, f);
+  ap_close (f);
   ap_destroy_pool (pool);
 
   return 0;

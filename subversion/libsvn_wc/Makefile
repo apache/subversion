@@ -11,16 +11,16 @@ SVN_ERROR_LIB = ../libsvn_subr
 APR_INCLUDE = ../../apr/include
 APR_LIB = ../../apr
 
-default: propdump-test
+default: hashdump-test
 
-svn_error.o: ../libsvn_subr/svn_error.c ../libsvn_subr/svn_error.h
+svn_error.o: ../libsvn_subr/svn_error.c ../include/svn_error.h
 	cc -c ../libsvn_subr/svn_error.c -g -Wall       \
 	                     -I$(SVN_INCLUDE)         \
 		             -I$(APR_INCLUDE)         \
                              -I$(SVN_ERROR_INCLUDE)
 
-propdump: propdump.c svn_error.o
-	cc -o propdump propdump.c svn_error.o                        \
+hashdump: hashdump.c svn_error.o
+	cc -o hashdump hashdump.c svn_error.o                        \
                                     -g -Wall -pthread                 \
                                     -I$(SVN_INCLUDE)                  \
                                     -I$(SVN_ERROR_INCLUDE)            \
@@ -31,8 +31,8 @@ propdump: propdump.c svn_error.o
                                     -lsvn_string -lapr
 
 # The only difference from above is the "-DSVN_TEST" line
-propdump-test: propdump.c svn_error.o
-	cc -o propdump-test propdump.c svn_error.o                   \
+hashdump-test: hashdump.c svn_error.o
+	cc -o hashdump-test hashdump.c svn_error.o                   \
                                     -DSVN_TEST                        \
                                     -g -Wall -pthread                 \
                                     -I$(SVN_INCLUDE)                  \
@@ -45,8 +45,8 @@ propdump-test: propdump.c svn_error.o
 
 
 clean:
-	rm -f *.o *~ propdump
+	rm -f *.o *~ hashdump
 
-test: propdump-test
-	./propdump-test
-	cat propdump.out
+test: hashdump-test
+	./hashdump-test
+	cat hashdump.out
