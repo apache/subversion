@@ -37,7 +37,7 @@ Candidate changes:
            installer used.  The 0.37.0 version is also the only one so
            far without any bugreports or complains. 
     Votes:
-      +1: josander
+      +1: josander, dlr
 
 
   * r8561
@@ -47,7 +47,7 @@ Candidate changes:
     Notes:  the book should help this common confusion, but 'svn help switch'
             should also help prevent the confusion as much as it can.
     Votes:
-      +1: sussman
+      +1: sussman, dlr
 
 
 Status of 1.0.1:
@@ -60,14 +60,14 @@ Candidate changes:
     Justification:  users have noticed extra fs txns lying around.
     Notes:  just add 3 calls to abort_edit() to cleanup the sloppiness.
     Votes:
-      +1: sussman
+      +1: sussman, dlr
 
   * r8553
     Fix invalid REPORT response when updating a deleted wc. (issue #1721)
     Justification:  users have noticed unintelligible XML parse error.
     Notes:  one-line change to mod_dav_svn allows a real error to get through.
     Votes:
-      +1: sussman
+      +1: sussman, dlr
 
   * r8253
     Make svnlook use apr_tempdir(), instead of trying to write in '.'
@@ -81,21 +81,21 @@ Candidate changes:
     Justification: users (especially on win32) have reported this.
     Notes:  whoops, we forgot to uri-encode the root_path.  duh.
     Votes:
-      +1: sussman
+      +1: sussman, dlr
 
   * r8562
     Allow 'svnadmin setlog' to use propchange hooks correctly.
     Justification:  user reported that this command can't run the hook at all.
     Notes:  one line change, use "svnadmin" as username instead of NULL.
     Votes:
-      +1: sussman
+      +1: sussman, dlr
 
   * r8431
     Bugfix to commits: allow deletions below schedule-add-with-history dirs.
     Justification:  reported by a user, an unnecessary restriction.
     Notes:  change just sets a flag differently for this case.
     Votes:
-      +1: sussman
+      +1: sussman, dlr
 
   * r8256
     Improve presentation of directory property conflicts.
@@ -109,10 +109,10 @@ Candidate changes:
     Justification:  They won't run at all!
     Notes: 
     Votes:
-      +1: sussman, blair
+      +1: sussman, blair, dlr
 
   * r8564
     Adjust contrib/client-side/search-svnlog.pl for new 'svn log' output.
     Justification: script is broken without this obvious fix
     Votes:
-      +1: kfogel
+      +1: kfogel, dlr
