@@ -119,7 +119,7 @@ my__readline (ap_file_t *FILE, svn_string_t *line, ap_pool_t *pool)
 
 size_t
 slurp__to (const svn_string_t *searchstr,
-           svn_string_t *substr,
+           svn_string_t **substr,
            const size_t start, 
            const char sc,
            ap_pool_t *pool)
@@ -127,18 +127,21 @@ slurp__to (const svn_string_t *searchstr,
   size_t i;
 
   /* Create a new bytestring */
-  substr = ap_palloc (pool, sizeof(svn_string_t));
+  *substr = svn_string_create ("<nobody home>", pool);
+  svn_string_setempty (*substr);
 
   for (i = start; i < searchstr->len; i++)
     {
       if (searchstr->data[i] == sc)
         {
-          svn_string_appendbytes (substr,                 /* new substring */
-                                  searchstr->data + start,/* start copy here */
-                                  (i - start - 1),        /* number to copy */
+          /*          printf ("found character '%c' at offset %d\n", sc, i);*/
+
+          svn_string_appendbytes (*substr,               /* new substring */
+                                  searchstr->data + start,/* start copy */
+                                  (i - start),        /* number to copy */
                                   pool);
           
-          svn_string_strip_whitespace (substr);
+          svn_string_strip_whitespace (*substr);
 
           return i;
         }
@@ -147,7 +150,7 @@ slurp__to (const svn_string_t *searchstr,
   /* If we get here, then the bytestring doesn't contain our search
      character.  This is bogus. */
   
-  substr = NULL;
+  *substr = NULL;
   return NULL;
 
 }
@@ -258,8 +261,8 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
             svn_string_t *new_section;
 
             slurp__to (currentline,  /* search current line */
-                       new_section,  /* place new substring here */
-                       offset,       /* start searching at latest offset */
+                       &new_section,  /* place new substring here */
+                       offset + 1,    /* start searching past the '[' */
                        ']',          /* look for this ending character */
                        pool);        /* build our substring in this pool */
            
@@ -275,8 +278,11 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
                 break;
               }
                                         
+            /* printf ("Found new section: `");
+               svn_string_print (new_section, stdout, FALSE, FALSE);
+               printf ("'\n"); */
 
-            /* make this the "active" hash */
+            /* make this new hash the "active" hash for new keys/vals */
             current_hash = new_section_hash;  
 
             /* store this new hash in our uberhash */
@@ -298,7 +304,7 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
             size_t local_offset;
 
             local_offset = slurp__to (currentline, /* search current line */
-                                      new_key,     /* put substring here */
+                                      &new_key,     /* put substring here */
                                       offset,      /* start at this offset */
                                       ':',         /* look for a colon */
                                       pool);       /* build substr here */
@@ -318,10 +324,17 @@ svn_parse (svn_string_t *filename, ap_pool_t *pool)
             /* Now slurp up the value, starting just past the colon */
 
             slurp__to (currentline,
-                       new_val,
+                       &new_val,
                        local_offset + 1,
                        '\n',
                        pool);
+
+            /*  printf ("Key: `");
+                svn_string_print (new_key, stdout, FALSE, FALSE);
+                printf ("'\n");
+                printf ("Val: `");
+                svn_string_print (new_val, stdout, FALSE, FALSE);
+                printf ("'\n"); */
 
             /* Should we check for a NULL result from slurp__to?
                What are the chances it's not going to find a newline? :)
@@ -377,7 +390,7 @@ svn_hash_print (ap_hash_t *hash, FILE *stream)
   size_t keylen;
   svn_string_t *keystring, *valstring;
 
-  fprintf (stream, "\n--> Printing hash:\n");
+  fprintf (stream, "\n-----> Printing hash:\n");
 
   for (hash_index = ap_hash_first (hash);      /* get first hash entry */
        hash_index;                             /* NULL if out of entries */
@@ -421,7 +434,7 @@ svn_uberhash_print (ap_hash_t *uberhash, FILE *stream)
   svn_string_t *keystring;
   ap_hash_t *valhash;
 
-  fprintf (stream, "\n--> Printing Uberhash:\n");
+  fprintf (stream, "\n-> Printing Uberhash:\n");
 
   for (hash_index = ap_hash_first (uberhash);  /* get first hash entry */
        hash_index;                             /* NULL if out of entries */
@@ -435,8 +448,8 @@ svn_uberhash_print (ap_hash_t *uberhash, FILE *stream)
       valhash = val;
 
       /* Print them out nicely */
-      fprintf (stream, "Hashname: `");
-      svn_string_print (keystring, stream, TRUE, FALSE);
+      fprintf (stream, "---> Hashname: `");
+      svn_string_print (keystring, stream, FALSE, FALSE);
       fprintf (stream, "'\n");
 
       svn_hash_print (valhash, stream);
