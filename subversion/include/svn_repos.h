@@ -519,6 +519,7 @@ svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
 #define SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV         "Node-copyfrom-rev"
 #define SVN_REPOS_DUMPFILE_NODE_COPY_SOURCE_CHECKSUM "Node-copy-source-md5"
 #define SVN_REPOS_DUMPFILE_NODE_CONTENT_CHECKSUM     "Node-content-md5"
+#define SVN_REPOS_DUMPFILE_NODE_NOTICE               "Node-notice"
 
 
 /* The different "actions" attached to nodes in the dumpfile. */
@@ -532,7 +533,7 @@ enum svn_node_action
 
 
 /* Dump the contents of the filesystem within already-open REPOS into
-   writable DEMPSTREAM.  Begin at revision START_REV, and dump every
+   writable DUMPSTREAM.  Begin at revision START_REV, and dump every
    revision up through END_REV.  Use POOL for all allocation.  If
    non-NULL, send feedback to FEEDBACK_STREAM.
 

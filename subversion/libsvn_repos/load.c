@@ -65,6 +65,9 @@ struct node_baton
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
 
+  svn_boolean_t notice_text;
+  svn_boolean_t notice_props;
+  
   struct revision_baton *rb;
   apr_pool_t *pool;
 };
@@ -247,11 +250,15 @@ parse_content_block (svn_stream_t *stream,
               propstring.data = valbuf;
               propstring.len = vallen;
 
-              /* Now send the property pair to the vtable! */
+              /* Now, send the property pair to the vtable! */
               if (is_node)
-                SVN_ERR (parse_fns->set_node_property (record_baton,
-                                                       keybuf,
-                                                       &propstring));
+                {
+                  struct node_baton *nb = record_baton;
+                  if (nb->notice_props)
+                    SVN_ERR (parse_fns->set_node_property (record_baton,
+                                                           keybuf,
+                                                           &propstring));
+                }
               else
                 SVN_ERR (parse_fns->set_revision_property (record_baton,
                                                            keybuf,
@@ -272,13 +279,19 @@ parse_content_block (svn_stream_t *stream,
   if (content_length > 0) 
     {
       apr_size_t num_to_read, rlen, wlen;
-      svn_stream_t *text_stream;
+      svn_stream_t *text_stream = NULL;
+      struct node_baton *nb = record_baton;
 
       if (! is_node)
         goto stream_malformed;  /* revisions don't have text! */
       
-      SVN_ERR (parse_fns->set_fulltext (&text_stream, record_baton));
+      /* If we are told to notice the text, then do so, else leave
+         TEXT_STREAM set to NULL. */
+      if (nb->notice_text)
+        SVN_ERR (parse_fns->set_fulltext (&text_stream, record_baton));
 
+      /* Regardless of whether or not we have a sink for our data, we
+         need to read it. */
       while (content_length > 0)
         {
           if (content_length >= buflen)
@@ -312,11 +325,13 @@ parse_content_block (svn_stream_t *stream,
     } /* done slurping all the fulltext */
 
   /* Special case:  we have zero data content bytes, but this is
-     file.  Files *always* have contents, even if they are empty. */
+     file.  Files *always* have contents, even if they are empty.  If
+     we have no data bytes, and we are told to notice the contents, we
+    just need to reset the node's contents to the empty string. */
   else if (is_node)
     {
       struct node_baton *nb = record_baton;
-      if (nb->kind == svn_node_file)
+      if ((nb->kind == svn_node_file) && (nb->notice_text))
         {
           apr_size_t wlen = 0;
           svn_stream_t *text_stream;
@@ -547,7 +562,32 @@ make_node_baton (apr_hash_t *headers,
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
                            APR_HASH_KEY_STRING)))
       nb->copyfrom_path = apr_pstrdup (pool, val);
-  
+
+  if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_NOTICE,
+                           APR_HASH_KEY_STRING)))
+    {
+      if (! strcmp (val, "all"))
+        {
+          nb->notice_text = TRUE;
+          nb->notice_props = TRUE;
+        }
+      else if (! strcmp (val, "none"))
+        {
+          nb->notice_text = FALSE;
+          nb->notice_props = FALSE;
+        }
+      else if (! strcmp (val, "text"))
+        {
+          nb->notice_text = TRUE;
+          nb->notice_props = FALSE;
+        }
+      else if (! strcmp (val, "props"))
+        {
+          nb->notice_text = FALSE;
+          nb->notice_props = TRUE;
+        }
+    }
+
   /* What's cool about this dump format is that the parser just
      ignores any unrecognized headers.  :-)  */
 
