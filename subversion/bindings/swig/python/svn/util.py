@@ -38,3 +38,26 @@ def run_app(func, *args, **kw):
 
 # some minor patchups
 svn_pool_destroy = apr_pool_destroy
+
+
+class Stream:
+  def __init__(self, stream):
+    self._stream = stream
+
+  def read(self, amt=None):
+    if amt is None:
+      # read the rest of the stream
+      chunks = [ ]
+      while 1:
+        data = util.svn_stream_read(self._stream, util.SVN_STREAM_CHUNK_SIZE)
+        if not data:
+          break
+        chunks.append(data)
+      return string.join(chunks, '')
+
+    # read the amount specified
+    return util.svn_stream_read(self._stream, int(amt))
+
+  def write(self, buf):
+    ### what to do with the amount written? (the result value)
+    util.svn_stream_write(self._stream, buf)
