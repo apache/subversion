@@ -1208,14 +1208,16 @@ Committed revision 350.
     </sect2>
 
     <sect2 id="svn-ch-4-sect-4.3">
-      <title>Resurrecting Deleted Items</title>
+      <title>Resucitando elementos borrados</title>
 
-      <para>The great thing about version control systems is that
-        information is never lost.  Even when you delete a file or
-        directory, it may be gone from the <literal>HEAD</literal>
-        revision, but the object still exists in earlier revisions.
-        One of the most common questions new users ask is, <quote>How
-        do I get my old file or directory back?</quote></para>
+      <para>La mejor característica de los sistemas de control
+        de versiones es que la información nunca se pierde. Incluso
+        cuando borra un fichero o un directorio, puede haberse
+        esfumado de la revisión <literal>HEAD</literal>, pero el
+        objeto todavía existe en revisiones anteriores. Una de
+        las preguntas más comunes realizadas por nuevos usuarios
+        es, <quote>¿Cómo puedo recuperar mi fichero o directorio
+        antiguo?</quote></para>
 
       <para>The first step is to define exactly <emphasis
         role="bold">which</emphasis> item you're trying to resurrect.
