@@ -907,7 +907,7 @@ test_list = [ None,
               nonrecursive_switching,
               failed_anchor_is_target,
               bad_intermediate_urls,
-              XFail(obstructed_switch),
+              obstructed_switch,
              ]
 
 if __name__ == '__main__':
