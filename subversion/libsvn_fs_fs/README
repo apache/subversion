@@ -75,6 +75,7 @@ Workplan
      important to get it right on the first try, but it should be
      something that we think can efficiently support the libsvn_fs
      read APIs, including the ones related to node history.
+     (Status: Done.)
 
   2. Write code to turn a (standard, not diffy) svn dump into the
      proposed file format.  This code will not survive the project,
@@ -83,11 +84,13 @@ Workplan
      base, and it can do stupid things like hold the entire directory
      structure of the head revision in memory.  It doesn't need to
      work incrementally.
+     (Status: Done.)
 
   3. Write FS code to read, but not write, the file format, under the
      assumption that node-revs contain only deltas against the empty
      base.  Use the tool from (2) to generate test cases to ensure
      that the code works.
+     (Status: Substantial progress.)
 
   4. Develop a format for the directory part of mutable transactions.
 
