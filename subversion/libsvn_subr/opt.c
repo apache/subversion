@@ -36,6 +36,8 @@
 #include "svn_utf.h"
 #include "svn_time.h"
 
+#include "svn_private_config.h"
+
 
 /*** Code. ***/
 
@@ -735,7 +737,7 @@ svn_opt_print_help (apr_getopt_t *os,
                                 pool,
                                 stdout);
   else                                       /* unknown option or cmd */
-    fprintf (stderr, "Type '%s help' for usage.\n", pgm_name);
+    fprintf (stderr, _("Type '%s help' for usage.\n"), pgm_name);
 
   return SVN_NO_ERROR;
 }

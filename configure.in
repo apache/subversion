@@ -73,11 +73,6 @@ dnl AC_CONFIG_HEADER causes `autoheader' to produce svn_private_config.h.in for 
 dnl   (We can add custom defines by creating ./acconfig.h if we wish.)
 AC_CONFIG_HEADER(svn_private_config.h)
 
-dnl Todo: we're English-only now, but GNU Gettext eventually?
-dnl Set of available languages.
-dnl ALL_LINGUAS="de fr es ko nl no pl pt sl sv"
-dnl                 I volunteer for this ^^ translation :-)  -xbc
-
 dnl Check for programs ---------------------
 
 dnl Look for a C compiler (before anything can set CFLAGS)
@@ -255,6 +250,49 @@ esac
 SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
                     $SVN_FS_WANT_DB_PATCH, [db4 db])
 
+dnl I18n -------------------
+
+dnl This purposely does *not* allow for multiple parallel installs.
+dnl However, it is compatible with most gettext usages.
+localedir='${datadir}/locale'
+AC_SUBST(localedir)
+
+AC_ARG_ENABLE(nls,
+  AC_HELP_STRING([--disable-nls],[Disable gettext functionality]),
+  [enable_nls=$enableval],[enable_nls=yes])
+
+USE_NLS="no"
+if test "$enable_nls" = "yes"; then
+  dnl First, check to see if there is a working msgfmt.
+  AC_PATH_PROG(MSGFMT, msgfmt, none)
+  if test "$MSGFMT" != "none"; then
+    AC_SEARCH_LIBS(bindtextdomain, [intl], [],
+                   [
+                    AC_MSG_WARN([bindtextdomain() not found.  Disabling NLS.])
+                    enable_nls="no"
+                   ])
+    if test "$enable_nls" = "yes"; then
+      AC_DEFINE(ENABLE_NLS, 1,
+                [Define to 1 if translation of program messages to the user's
+                 native language is requested.])
+      SVN_EXPAND_VAR(svn_localedir, "${localedir}")
+      AC_DEFINE_UNQUOTED(SVN_LOCALE_DIR, "${svn_localedir}",
+                         [Defined to be the path to the installed locale dirs])
+      USE_NLS="yes"
+    fi
+  fi
+fi
+
+AH_BOTTOM(
+#define N_(x) (x)
+#ifdef ENABLE_NLS
+#include <locale.h>
+#include <libintl.h>
+#define _(x) dgettext(PACKAGE_NAME, x)
+#else
+#define _(x) (x)
+#endif
+)
 
 # Only add *_APACHE_RULE if we also have db, since mod_dav_svn depends on it.
 INSTALL_STATIC_RULES="install-bin install-docs"
@@ -272,6 +310,11 @@ if test "$svn_lib_neon" = "yes"; then
   BUILD_RULES="$BUILD_RULES dav-lib"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-dav-lib"
   INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-lib/install-dav-lib install-lib/'`"
+fi
+
+if test "$USE_NLS" = "yes"; then
+  BUILD_RULES="$BUILD_RULES locale"
+  INSTALL_RULES="$INSTALL_RULES install-locale"
 fi
 
 AC_SUBST(BUILD_RULES)

@@ -1,0 +1,509 @@
+# Spanish translations for subversion package
+# Traducciones al español para el paquete subversion.
+# Copyright (C) 2004 Collab Net.
+# This file is distributed under the same license as the subversion package.
+# Nicolás Lichtmaier <nick@reloco.com.ar>, 2004.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: subversion 1.1.0\n"
+"Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
+"POT-Creation-Date: 2004-03-29 23:55-0300\n"
+"PO-Revision-Date: 2004-03-28 17:32-0300\n"
+"Last-Translator: Nicolás Lichtmaier <nick@reloco.com.ar>\n"
+"Language-Team: Spanish <translation-es-AR@lists.sourceforge.net>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ISO-8859-1\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: subversion/clients/cmdline/blame-cmd.c:145
+#, c-format
+msgid "Skipping binary file: '%s'\n"
+msgstr "Omitiendo el archivo binario: '%s'\n"
+
+#: subversion/clients/cmdline/delete-cmd.c:52
+msgid "Use --force to override this restriction"
+msgstr ""
+
+#: subversion/clients/cmdline/info-cmd.c:66
+#, c-format
+msgid "Path: %s\n"
+msgstr "Ruta: %s\n"
+
+#: subversion/clients/cmdline/info-cmd.c:76
+#, c-format
+msgid "Name: %s\n"
+msgstr "Nombre: %s\n"
+
+#: subversion/clients/cmdline/info-cmd.c:82
+#, c-format
+msgid "URL: %s\n"
+msgstr ""
+
+#: subversion/clients/cmdline/info-cmd.c:89
+#, c-format
+msgid "Repository: %s\n"
+msgstr "Repositorio: %s\n"
+
+#: subversion/clients/cmdline/info-cmd.c:94
+#, c-format
+msgid "Repository UUID: %s\n"
+msgstr "UUID del repositorio: %s\n"
+
+#: subversion/clients/cmdline/info-cmd.c:103
+#, c-format
+msgid "Node Kind: file\n"
+msgstr "Tipo de nodo: archivo\n"
+
+#: subversion/clients/cmdline/info-cmd.c:113
+#, c-format
+msgid "Node Kind: directory\n"
+msgstr "Tipo de nodo: directorio\n"
+
+#: subversion/clients/cmdline/info-cmd.c:119
+#, c-format
+msgid "Node Kind: none\n"
+msgstr "Tipo de nodo: ninguno\n"
+
+#: subversion/clients/cmdline/info-cmd.c:124
+#, c-format
+msgid "Node Kind: unknown\n"
+msgstr "Tipo de nodo: desconocido\n"
+
+#: subversion/clients/cmdline/info-cmd.c:131
+#, c-format
+msgid "Schedule: normal\n"
+msgstr "Agendado: normal\n"
+
+#: subversion/clients/cmdline/info-cmd.c:135
+#, c-format
+msgid "Schedule: add\n"
+msgstr "Agendado: añadido\n"
+
+#: subversion/clients/cmdline/info-cmd.c:139
+#, c-format
+msgid "Schedule: delete\n"
+msgstr "Agendado: borrado\n"
+
+#: subversion/clients/cmdline/info-cmd.c:143
+#, c-format
+msgid "Schedule: replace\n"
+msgstr "Agendado: reemplazar\n"
+
+#: subversion/clients/cmdline/info-cmd.c:157
+#, c-format
+msgid "Copied From URL: %s\n"
+msgstr "Copiado desde el URL: %s\n"
+
+#: subversion/clients/cmdline/info-cmd.c:169
+#, c-format
+msgid "Last Changed Author: %s\n"
+msgstr "Autor del último cambio: %s\n"
+
+#: subversion/clients/cmdline/info-cmd.c:177
+msgid "Last Changed Date"
+msgstr "Fecha de último cambio"
+
+#: subversion/clients/cmdline/info-cmd.c:181
+msgid "Text Last Updated"
+msgstr ""
+
+#: subversion/clients/cmdline/info-cmd.c:185
+msgid "Properties Last Updated"
+msgstr ""
+
+#: subversion/clients/cmdline/info-cmd.c:191
+#, c-format
+msgid "Checksum: %s\n"
+msgstr "Suma de verificación: %s\n"
+
+#: subversion/clients/cmdline/info-cmd.c:198
+#, c-format
+msgid "Conflict Previous Base File: %s\n"
+msgstr ""
+
+#: subversion/clients/cmdline/info-cmd.c:205
+#, c-format
+msgid "Conflict Previous Working File: %s\n"
+msgstr ""
+
+#: subversion/clients/cmdline/info-cmd.c:212
+#, c-format
+msgid "Conflict Current Base File: %s\n"
+msgstr ""
+
+#: subversion/clients/cmdline/info-cmd.c:219
+#, c-format
+msgid "Conflict Properties File: %s\n"
+msgstr ""
+
+#: subversion/clients/cmdline/info-cmd.c:296
+#, c-format
+msgid ""
+"%s:  (Not a versioned resource)\n"
+"\n"
+msgstr ""
+"%s:  (No es un recurso versionado)\n"
+"\n"
+
+#: subversion/clients/cmdline/log-cmd.c:210
+msgid "(no author)"
+msgstr "(sin autor)"
+
+#: subversion/clients/cmdline/log-cmd.c:232
+msgid "(no date)"
+msgstr "(sin fecha)"
+
+#: subversion/clients/cmdline/main.c:636
+msgid "Caught signal"
+msgstr "Se atrapó señal"
+
+#: subversion/clients/cmdline/main.c:731
+msgid ""
+"Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
+msgstr ""
+
+#: subversion/clients/cmdline/main.c:746
+#, c-format
+msgid "Syntax error in revision argument '%s'"
+msgstr ""
+
+#: subversion/clients/cmdline/main.c:920 subversion/clients/cmdline/main.c:933
+msgid "--auto-props and --no-auto-props are mutually exclusive"
+msgstr "--auto-props y --no-auto-props son mutuamente excluyentes"
+
+#: subversion/clients/cmdline/main.c:981
+#, c-format
+msgid "subcommand argument required\n"
+msgstr "el subcomando requiere un argumento\n"
+
+#: subversion/clients/cmdline/main.c:993
+#, c-format
+msgid "unknown command: '%s'\n"
+msgstr "comando desconocido: '%s'\n"
+
+#: subversion/clients/cmdline/main.c:1020
+#, c-format
+msgid ""
+"subcommand '%s' doesn't accept option '%s'\n"
+"Type 'svn help %s' for usage.\n"
+msgstr ""
+"el subcomando '%s' no acepta la opción '%s'\n"
+"Tipee 'svn help %s' para ver modo de uso.\n"
+
+#: subversion/clients/cmdline/main.c:1054
+msgid "Log message file is a versioned file; use '--force-log' to override"
+msgstr ""
+
+#: subversion/clients/cmdline/main.c:1074
+msgid ""
+"The log message is a pathname (was -F intended?); use '--force-log' to "
+"override"
+msgstr ""
+
+#: subversion/clients/cmdline/main.c:1283
+msgid ""
+"svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
+"details)\n"
+msgstr ""
+
+#: subversion/clients/cmdline/mkdir-cmd.c:77
+msgid "Try 'svn add' or 'svn add --non-recursive' instead?"
+msgstr "Quizá deba usar 'svn add' o 'svn add --non-recursive'."
+
+#: subversion/clients/cmdline/notify.c:73
+#, c-format
+msgid "WARNING: error decoding UTF-8 for ?\n"
+msgstr "AVISO: error decodificando UTF-8 para ?\n"
+
+#: subversion/clients/cmdline/notify.c:82
+#, c-format
+msgid "Skipped missing target: '%s'\n"
+msgstr "Omitiendo objetivo faltante: '%s'\n"
+
+#: subversion/clients/cmdline/notify.c:84
+#, c-format
+msgid "Skipped '%s'\n"
+msgstr "Omitiendo '%s'\n"
+
+#: subversion/clients/cmdline/notify.c:98
+#, fuzzy, c-format
+msgid "Restored '%s'\n"
+msgstr "Repositorio: %s\n"
+
+#: subversion/clients/cmdline/notify.c:102
+#, c-format
+msgid "Reverted '%s'\n"
+msgstr "Se revirtió '%s'\n"
+
+#: subversion/clients/cmdline/notify.c:106
+#, c-format
+msgid "Failed to revert '%s' -- try updating instead.\n"
+msgstr ""
+
+#: subversion/clients/cmdline/notify.c:110
+#, c-format
+msgid "Resolved conflicted state of '%s'\n"
+msgstr "Se resolvió el conflicto de '%s'\n"
+
+#: subversion/clients/cmdline/notify.c:169
+#, c-format
+msgid ""
+"\n"
+"Fetching external item into '%s'\n"
+msgstr ""
+"\n"
+"Obteniendo ítem externo en '%s'\n"
+
+#: subversion/clients/cmdline/notify.c:204
+#, c-format
+msgid "External export complete.\n"
+msgstr "Exportación externa completa.\n"
+
+#: subversion/clients/cmdline/notify.c:204
+#, c-format
+msgid "Export complete.\n"
+msgstr "Exportación completa.\n"
+
+#: subversion/clients/cmdline/notify.c:220
+#, c-format
+msgid ""
+"\n"
+"Performing status on external item at '%s'\n"
+msgstr ""
+
+#: subversion/clients/cmdline/notify.c:229
+#, c-format
+msgid "Sending        %s\n"
+msgstr "Enviando       %s\n"
+
+#: subversion/clients/cmdline/notify.c:244
+#, c-format
+msgid "Replacing      %s\n"
+msgstr "Reemplazando   %s\n"
+
+#: subversion/clients/cmdline/notify.c:250
+#, c-format
+msgid "Transmitting file data "
+msgstr "Transmitiendo contenido de archivos "
+
+#: subversion/libsvn_wc/copy.c:149
+#, c-format
+msgid "'%s' already exists and is in the way"
+msgstr ""
+
+#: subversion/libsvn_wc/copy.c:161
+#, c-format
+msgid ""
+"'%s' is scheduled for deletion; it must be committed before being overwritten"
+msgstr ""
+
+#: subversion/libsvn_wc/copy.c:166
+#, c-format
+msgid "There is already a versioned item '%s'"
+msgstr ""
+
+#: subversion/libsvn_wc/copy.c:177
+#, c-format
+msgid "Cannot copy or move '%s': it's not under version control"
+msgstr ""
+
+#: subversion/libsvn_wc/copy.c:184
+#, c-format
+msgid ""
+"Cannot copy or move '%s': it's not in the repository yet; try committing "
+"first"
+msgstr ""
+
+#: subversion/libsvn_wc/copy.c:293 subversion/libsvn_wc/entries.c:1378
+#: subversion/libsvn_wc/entries.c:1780
+#, c-format
+msgid "'%s' is not under version control"
+msgstr "'%s' no está bajo control de versiones"
+
+#: subversion/libsvn_wc/copy.c:299
+#, c-format
+msgid ""
+"Not allowed to copy or move '%s': it is not in the repository yet; try "
+"committing first"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:121
+#, c-format
+msgid "Error writing entries file for '%s'"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:222
+#, c-format
+msgid "Entry '%s' has invalid node kind"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:247 subversion/libsvn_wc/entries.c:297
+#: subversion/libsvn_wc/entries.c:337 subversion/libsvn_wc/entries.c:364
+#: subversion/libsvn_wc/entries.c:391
+#, c-format
+msgid "Entry '%s' has invalid '%s' value"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:572
+msgid "Missing default entry"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:577
+msgid "Default entry has no revision number"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:582
+msgid "Default entry is missing URL"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:670
+#, c-format
+msgid "XML parser failed in '%s'"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:759
+#, c-format
+msgid "Corrupt working copy: '%s' has no default entry"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:775
+#, c-format
+msgid "Corrupt working copy: directory '%s' has an invalid schedule"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:809
+#, c-format
+msgid "Corrupt working copy: '%s' in directory '%s' has an invalid schedule"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:818
+#, c-format
+msgid ""
+"Corrupt working copy: '%s' in directory '%s' (which is scheduled for "
+"addition) is not itself scheduled for addition"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:826
+#, c-format
+msgid ""
+"Corrupt working copy: '%s' in directory '%s' (which is scheduled for "
+"deletion) is not itself scheduled for deletion"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:834
+#, c-format
+msgid ""
+"Corrupt working copy: '%s' in directory '%s' (which is scheduled for "
+"replacement) has in invalid schedule"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:1113
+#, fuzzy, c-format
+msgid "No default entry in directory '%s'"
+msgstr "Tipo de nodo: directorio\n"
+
+#: subversion/libsvn_wc/entries.c:1166
+#, c-format
+msgid "Error writing to '%s'"
+msgstr "Error escribiendo en '%s'"
+
+#: subversion/libsvn_wc/entries.c:1405
+#, c-format
+msgid ""
+"Can't add '%s' to deleted directory; try undeleting its parent directory "
+"first"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:1411
+#, c-format
+msgid ""
+"Can't replace '%s' in deleted directory; try undeleting its parent directory "
+"first"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:1420
+#, c-format
+msgid "'%s' is marked as absent, so it cannot be scheduled for addition"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:1449
+#, c-format
+msgid "Entry '%s' is already under version control"
+msgstr "La entrada '%s' ya está bajo control de versiones"
+
+#: subversion/libsvn_wc/entries.c:1541
+#, c-format
+msgid "Entry '%s' has illegal schedule"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:1657
+#, c-format
+msgid "No such entry: '%s'"
+msgstr "No hay una entrada '%s'"
+
+#: subversion/libsvn_wc/entries.c:1723
+#, c-format
+msgid "Directory '%s' has no THIS_DIR entry"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:1791
+#, c-format
+msgid "'%s' has an unrecognized node kind"
+msgstr ""
+
+#: subversion/libsvn_wc/entries.c:1826
+#, c-format
+msgid "Unexpectedly found '%s': path is marked 'missing'"
+msgstr ""
+
+#: subversion/libsvn_wc/lock.c:160 subversion/libsvn_wc/lock.c:357
+#, c-format
+msgid "Working copy '%s' locked"
+msgstr "La copia de trabajo '%s' está lockeada"
+
+#: subversion/libsvn_wc/lock.c:280
+#, c-format
+msgid "Path '%s' ends in '%s', which is unsupported for this operation"
+msgstr ""
+
+#: subversion/libsvn_wc/lock.c:375 subversion/libsvn_wc/lock.c:600
+#, c-format
+msgid "'%s' is not a working copy"
+msgstr ""
+
+#: subversion/libsvn_wc/lock.c:648
+#, c-format
+msgid "Working copy '%s' not locked"
+msgstr ""
+
+#: subversion/libsvn_wc/lock.c:842
+#, c-format
+msgid "Write-lock stolen in '%s'"
+msgstr ""
+
+#: subversion/libsvn_wc/lock.c:849
+#, c-format
+msgid "No write-lock in '%s'"
+msgstr ""
+
+#: subversion/libsvn_wc/lock.c:869
+#, c-format
+msgid "Lock file '%s' is not a regular file"
+msgstr ""
+
+#: subversion/libsvn_wc/relocate.c:69
+#, c-format
+msgid "Entry '%s' has no URL"
+msgstr "La entrada '%s' no tiene URL"
+
+#: subversion/libsvn_wc/translate.c:130
+#, c-format
+msgid "'%s' has unknown value for svn:eol-style property"
+msgstr "'%s' tiene un valor desconocido para la propiedad svn:eol-style"
+
+#: subversion/libsvn_subr/opt.c:740
+#, c-format
+msgid "Type '%s help' for usage.\n"
+msgstr "Tipee '%s help' para ver modo de uso.\n"

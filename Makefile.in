@@ -57,6 +57,7 @@ srcdir = @srcdir@
 infodir = @infodir@
 datadir = @datadir@
 docdir = @docdir@
+localedir = @localedir@
 
 # where to install libsvn_swig_*
 swig_py_libdir = @libdir@
@@ -78,7 +79,10 @@ MAKEINFO = @MAKEINFO@
 TEXI2DVI = texi2dvi
 DVIPS = dvips
 DVIPDF = dvipdf
+MSGFMT = @MSGFMT@
 
+PACKAGE_NAME=@PACKAGE_NAME@
+PACKAGE_VERSION=@PACKAGE_VERSION@
 
 CC = @CC@
 CXX = @CXX@
@@ -181,6 +185,7 @@ INSTALL_INCLUDE = $(INSTALL) -m 644
 INSTALL_MOD_SHARED = @APXS@ -i -S LIBEXECDIR="$(APACHE_LIBEXECDIR)" @MOD_ACTIVATION@
 INSTALL_MOD_STATIC = $(INSTALL) -m 644
 INSTALL_DATA = $(INSTALL) -m 644
+INSTALL_LOCALE = $(INSTALL_DATA)
 
 ### this isn't correct yet
 INSTALL_SWIG_PY = $(INSTALL_LIB)
@@ -454,7 +459,7 @@ doc-clean:
 # Implicit rules for creating outputs from input files
 #
 .SUFFIXES:
-.SUFFIXES: .c .lo .o .la-a .la .texi .info .dvi .txt .html .ps .pdf
+.SUFFIXES: .c .lo .o .la-a .la .texi .info .dvi .txt .html .ps .pdf .po .mo
 
 .c.o:
 	$(COMPILE) -o $@ -c $<
@@ -483,6 +488,9 @@ doc-clean:
 
 .dvi.pdf:
 	$(DVIPDF) $< $@
+
+.po.mo:
+	$(MSGFMT) -o $@ $<
 
 install-docs: install-man @INSTALL_INFO@
 
