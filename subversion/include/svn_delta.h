@@ -62,7 +62,7 @@
 
 
 
-/* Stuff used throughout the delta interface.  */
+/*** Stuff used throughout the delta interface.  ***/
 
 /* A typedef for functions resembling the POSIX `read' system call,
    representing a incoming stream of bytes, in caller-pulls form.
@@ -88,7 +88,7 @@ typedef svn_error_t *svn_delta_read_fn_t (void *baton,
 
 
 
-/* Text deltas.  */
+/*** Text deltas.  ***/
 
 /* A text delta represents the difference between two strings of
    bytes, the `source' string and the `target' string.  Given a source
@@ -288,9 +288,7 @@ extern svn_error_t *svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
                                       apr_off_t len);
 
 
-/* -----------------------------------------------------------------------
-           Traversing tree deltas.  
-*/
+/*** Traversing tree deltas. ***/
 
 
 /* In Subversion, we've got various producers and consumers of tree
@@ -565,8 +563,7 @@ extern svn_error_t *svn_delta_parse (svn_delta_read_fn_t *source_fn,
 
 
 
-/* 
- * local variables:
+/* local variables:
  * eval: (load-file "../svn-dev.el")
  * end:
  */
