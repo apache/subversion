@@ -194,6 +194,7 @@ free_dir_baton (struct dir_baton *dir_baton)
                 0,
                 0,
                 NULL,
+                NULL,
                 dir_baton->pool,
                 NULL));
     }
@@ -596,7 +597,7 @@ add_directory (svn_stringbuf_t *name,
                               FALSE,
                               0,
                               0,
-                              NULL,
+                              NULL, NULL,
                               parent_dir_baton->pool,
                               NULL);
   if (err)

@@ -536,7 +536,8 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_CONFLICTED    0x0010
 #define SVN_WC__ENTRY_MODIFY_TEXT_TIME     0x0020
 #define SVN_WC__ENTRY_MODIFY_PROP_TIME     0x0040
-#define SVN_WC__ENTRY_MODIFY_ATTRIBUTES    0x0080
+#define SVN_WC__ENTRY_MODIFY_ANCESTOR      0x0080
+#define SVN_WC__ENTRY_MODIFY_ATTRIBUTES    0x0160
 
 /* or perhaps this to mean all of those above... */
 #define SVN_WC__ENTRY_MODIFY_ALL           0x7FFF
@@ -555,6 +556,7 @@ svn_error_t *svn_wc__entry_modify (svn_stringbuf_t *path,
                                    svn_boolean_t conflicted,
                                    apr_time_t text_time,
                                    apr_time_t prop_time,
+                                   svn_stringbuf_t *ancestor,
                                    apr_hash_t *attributes,
                                    apr_pool_t *pool,
                                    ...);

@@ -331,6 +331,7 @@ log_do_detect_conflict (struct log_runner *loggy,
          TRUE,
          0,
          0,
+         NULL,
          atthash, /* contains SVN_WC_ATTR_REJFILE */
          loggy->pool,
          NULL);
@@ -431,6 +432,7 @@ log_do_modify_entry (struct log_runner *loggy,
                               entry->conflicted,
                               entry->text_time,
                               entry->prop_time,
+                              entry->ancestor,
                               entry->attributes,
                               loggy->pool,
                               NULL);
@@ -557,7 +559,7 @@ conflict_if_rejfile (svn_stringbuf_t *parent_dir,
                     FALSE,
                     0,
                     0,
-                    NULL,
+                    NULL, NULL,
                     pool,
                     rejfile_type,
                     NULL));
@@ -581,6 +583,7 @@ conflict_if_rejfile (svn_stringbuf_t *parent_dir,
                     TRUE,
                     0,
                     0,
+                    NULL,
                     att_overlay,
                     pool,
                     NULL));
@@ -707,7 +710,7 @@ log_do_committed (struct log_runner *loggy,
                             svn_node_none, /* ignored */
                             svn_wc_schedule_normal,
                             svn_wc_existence_deleted,
-                            0, 0, 0, NULL, /* ignored */
+                            0, 0, 0, NULL, NULL, /* ignored */
                             loggy->pool, NULL));
 
                   SVN_ERR (svn_wc__entry_modify 
@@ -722,7 +725,7 @@ log_do_committed (struct log_runner *loggy,
                             svn_node_none, /* ignored */
                             svn_wc_schedule_normal,
                             svn_wc_existence_deleted,
-                            0, 0, 0, NULL, /* ignored */
+                            0, 0, 0, NULL, NULL, /* ignored */
                             loggy->pool, NULL));
                 }
               else
@@ -736,7 +739,7 @@ log_do_committed (struct log_runner *loggy,
                           svn_node_none, /* ignored */
                           svn_wc_schedule_normal,
                           svn_wc_existence_deleted,
-                          0, 0, 0, NULL, /* ignored */
+                          0, 0, 0, NULL, NULL, /* ignored */
                           loggy->pool, NULL));
             }
           else  
@@ -977,7 +980,7 @@ log_do_committed (struct log_runner *loggy,
              FALSE,
              text_time,
              prop_time,
-             NULL,
+             NULL, NULL,
              loggy->pool,
              /* Remove all attributes below this comment... */
              SVN_WC_ENTRY_ATTR_REJFILE,
@@ -1025,7 +1028,7 @@ log_do_committed (struct log_runner *loggy,
                      FALSE,
                      0,
                      0,
-                     NULL,
+                     NULL, NULL,
                      loggy->pool,
                      NULL);
                   if (err)

@@ -1015,7 +1015,7 @@ svn_wc__entries_write (apr_hash_t *entries,
 
 
 /* Update an entry NAME in ENTRIES, according to a set of changes
-   {REVISION, KIND, STATE, TEXT_TIME, PROP_TIME, ATTS}.  ATTS may be
+   {REVISION, KIND, STATE, TEXT_TIME, PROP_TIME, ANCESTOR, ATTS}.  ATTS may be
    null.
 
    If the entry already exists, the requested changes will be folded
@@ -1034,6 +1034,7 @@ fold_entry (apr_hash_t *entries,
             svn_boolean_t conflicted,
             apr_time_t text_time,
             apr_time_t prop_time,
+            svn_stringbuf_t *ancestor,
             apr_hash_t *atts,
             apr_pool_t *pool,
             va_list ap)
@@ -1073,6 +1074,10 @@ fold_entry (apr_hash_t *entries,
   /* Property modification time */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_PROP_TIME)
     entry->prop_time = prop_time;
+
+  /* Ancestral URL in repository */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_ANCESTOR)
+    entry->ancestor = svn_stringbuf_dup (ancestor, pool);
 
   /* Attributes */
   if (atts)
@@ -1374,6 +1379,7 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
                       svn_boolean_t conflicted,
                       apr_time_t text_time,
                       apr_time_t prop_time,
+                      svn_stringbuf_t *ancestor,
                       apr_hash_t *attributes,
                       apr_pool_t *pool,
                       ...)
@@ -1414,7 +1420,7 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
   if (! entry_was_deleted_p)
     fold_entry (entries, name, modify_flags, revision, kind, 
                 schedule, existence, conflicted, text_time,
-                prop_time, attributes, pool, ap);
+                prop_time, ancestor, attributes, pool, ap);
 
   SVN_ERR (svn_wc__entries_write (entries, path, pool));
 
