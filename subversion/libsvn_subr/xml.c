@@ -107,7 +107,7 @@ svn_xml_free_parser (svn_xml_parser_t *svn_parser)
   XML_ParserFree (svn_parser->parser);        
 
   /* Free the subversion parser */
-  apr_pool_destroy (svn_parser->pool);
+  svn_pool_destroy (svn_parser->pool);
 }
 
 
@@ -332,7 +332,7 @@ svn_xml_make_open_tag_v (svn_string_t **str,
   apr_hash_t *ht = svn_xml_ap_to_hash (ap, subpool);
 
   svn_xml_make_open_tag_hash (str, pool, style, tagname, ht);
-  apr_pool_destroy (subpool);
+  svn_pool_destroy (subpool);
 }
 
 

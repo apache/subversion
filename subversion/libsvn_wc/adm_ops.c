@@ -124,7 +124,7 @@ svn_wc__ensure_uniform_revision (svn_string_t *dir_path,
     }
 
   /* We're done examining this dir's entries, so free them. */
-  apr_pool_destroy (subpool);
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }

@@ -1449,7 +1449,7 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
 void 
 svn_delta_free_xml_parser (svn_delta_xml_parser_t *parser)
 {
-  apr_pool_destroy (parser->my_pool);
+  svn_pool_destroy (parser->my_pool);
 }
 
 

@@ -168,7 +168,7 @@ free_dir_baton (struct dir_baton *dir_baton)
      return err;
 
   /* After we destroy DIR_BATON->pool, DIR_BATON itself is lost. */
-  apr_pool_destroy (dir_baton->pool);
+  svn_pool_destroy (dir_baton->pool);
 
   /* We've declared this directory done, so decrement its parent's ref
      count too. */ 
@@ -270,7 +270,7 @@ static svn_error_t *
 free_file_baton (struct file_baton *fb)
 {
   struct dir_baton *parent = fb->dir_baton;
-  apr_pool_destroy (fb->pool);
+  svn_pool_destroy (fb->pool);
   return decrement_ref_count (parent);
 }
 
@@ -301,7 +301,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   err2 = svn_wc__close_text_base (hb->dest, fb->path, 0, fb->pool);
   if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
     err = err2;
-  apr_pool_destroy (hb->pool);
+  svn_pool_destroy (hb->pool);
 
   if (err != SVN_NO_ERROR)
     {
@@ -310,7 +310,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
       svn_string_t *tmppath = svn_wc__text_base_path (fb->path, TRUE, pool);
 
       apr_file_remove (tmppath->data, pool);
-      apr_pool_destroy (pool);
+      svn_pool_destroy (pool);
     }
   else
     {
@@ -884,7 +884,7 @@ apply_textdelta (void *file_baton,
         {
           if (hb->source)
             svn_wc__close_text_base (hb->source, fb->path, 0, subpool);
-          apr_pool_destroy (subpool);
+          svn_pool_destroy (subpool);
           return err;
         }
       else if (err)
@@ -900,7 +900,7 @@ apply_textdelta (void *file_baton,
     {
       if (hb->dest)
         svn_wc__close_text_base (hb->dest, fb->path, 0, subpool);
-      apr_pool_destroy (subpool);
+      svn_pool_destroy (subpool);
       return err;
     }
   
@@ -1396,7 +1396,7 @@ close_edit (void *edit_baton)
                                               eb->pool));
 
   /* The edit is over, free its pool. */
-  apr_pool_destroy (eb->pool);
+  svn_pool_destroy (eb->pool);
     
   return SVN_NO_ERROR;
 }

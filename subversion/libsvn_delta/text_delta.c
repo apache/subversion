@@ -164,7 +164,7 @@ void
 svn_txdelta_free (svn_txdelta_stream_t *stream)
 {
   if (stream)
-    apr_pool_destroy (stream->pool);
+    svn_pool_destroy (stream->pool);
 }
 
 
@@ -259,7 +259,7 @@ void
 svn_txdelta_free_window (svn_txdelta_window_t *window)
 {
   if (window)
-    apr_pool_destroy (window->pool);
+    svn_pool_destroy (window->pool);
 }
 
 
@@ -349,7 +349,7 @@ apply_window (svn_txdelta_window_t *window, void *baton)
     {
       /* We're done; just clean up.  */
       svn_stream_close (ab->target);
-      apr_pool_destroy (ab->pool);
+      svn_pool_destroy (ab->pool);
       return SVN_NO_ERROR;
     }
 

@@ -273,7 +273,7 @@ output_addreplace (struct edit_baton *eb, enum elemtype addreplace,
 
   len = str->len;
   err = svn_stream_write (eb->output, str->data, &len);
-  apr_pool_destroy (pool);
+  svn_pool_destroy (pool);
   return err;
 }
 
@@ -306,7 +306,7 @@ output_propset (struct edit_baton *eb, enum elemtype elem,
 
   len = str->len;
   err = svn_stream_write (eb->output, str->data, &len);
-  apr_pool_destroy (pool);
+  svn_pool_destroy (pool);
   return err;
 }
 
@@ -363,7 +363,7 @@ replace_root (void *edit_baton, svn_revnum_t base_revision, void **dir_baton)
 
   len = str->len;
   err = svn_stream_write (eb->output, str->data, &len);
-  apr_pool_destroy (pool);
+  svn_pool_destroy (pool);
   return err;
 }
 
@@ -385,7 +385,7 @@ delete_entry (svn_string_t *name, void *parent_baton)
 
   len = str->len;
   err = svn_stream_write (eb->output, str->data, &len);
-  apr_pool_destroy (pool);
+  svn_pool_destroy (pool);
   return err;
 }
 
@@ -457,7 +457,7 @@ close_directory (void *dir_baton)
 
   len = str->len;
   err = svn_stream_write (eb->output, str->data, &len);
-  apr_pool_destroy (db->pool);
+  svn_pool_destroy (db->pool);
   return err;
 }
 
@@ -521,7 +521,7 @@ finish_svndiff_data (void *baton)
   svn_xml_make_close_tag (&str, subpool, SVN_DELTA__XML_TAG_TEXT_DELTA);
   slen = str->len;
   err = svn_stream_write (eb->output, str->data, &slen);
-  apr_pool_destroy (subpool);
+  svn_pool_destroy (subpool);
   return err;
 }
 
@@ -569,7 +569,7 @@ apply_textdelta (void *file_baton,
 
   len = str->len;
   err = svn_stream_write (eb->output, str->data, &len);
-  apr_pool_destroy (pool);
+  svn_pool_destroy (pool);
 
   /* Set up a handler which will write base64-encoded svndiff data to
      the editor's output stream.  */
@@ -622,7 +622,7 @@ close_file (void *file_baton)
       eb->curfile = NULL;
       eb->elem = elem_tree_delta;
     }
-  apr_pool_destroy (fb->pool);
+  svn_pool_destroy (fb->pool);
   return err;
 }
 
@@ -640,7 +640,7 @@ close_edit (void *edit_baton)
   err = svn_stream_write (eb->output, str->data, &len);
   if (err == SVN_NO_ERROR)
     err = svn_stream_close (eb->output);
-  apr_pool_destroy (eb->pool);
+  svn_pool_destroy (eb->pool);
   return err;
 }
 

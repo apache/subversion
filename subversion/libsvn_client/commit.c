@@ -103,7 +103,7 @@ import_file (const svn_delta_edit_fns_t *editor,
              apr_pool_t *pool)
 {
   void *file_baton;
-  
+
   SVN_ERR (editor->add_file (name, dir_baton,
                              NULL, SVN_INVALID_REVNUM, 
                              &file_baton));          
@@ -202,7 +202,7 @@ import_dir (const svn_delta_edit_fns_t *editor,
           (apr_err, 0, NULL, subpool, "error closing dir `%s'", path->data);
     }
       
-  apr_pool_destroy (subpool);
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 

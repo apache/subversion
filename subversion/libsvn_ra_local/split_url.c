@@ -100,7 +100,7 @@ svn_ra_local__split_URL (svn_string_t **repos_path,
   *fs_path = svn_string_create (path + url->len, pool);
 
   /* Destroy our temporary memory pool. */
-  apr_pool_destroy (subpool);
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }

@@ -99,7 +99,7 @@ decrement_dir_ref_count (struct dir_baton *db)
 
       /* Destroy all memory used by this baton, including the baton
          itself! */
-      apr_pool_destroy (db->subpool);
+      svn_pool_destroy (db->subpool);
       
       /* Tell your parent that you're gone. */
       SVN_ERR (decrement_dir_ref_count (dbparent));
@@ -295,7 +295,7 @@ close_file (void *file_baton)
 
   /* Destroy all memory used by this baton, including the baton
      itself! */
-  apr_pool_destroy (fb->subpool);
+  svn_pool_destroy (fb->subpool);
 
   /* Tell the parent that one less subpool depends on its own pool. */
   SVN_ERR (decrement_dir_ref_count (parent_baton));

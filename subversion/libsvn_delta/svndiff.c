@@ -119,7 +119,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
     {
       /* We're done; clean up.  */
       err = svn_stream_close (eb->output);
-      apr_pool_destroy (eb->pool);
+      svn_pool_destroy (eb->pool);
       return err;
     }
 
@@ -164,7 +164,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
       err = svn_stream_write (eb->output, window->new_data->data, &len);
     }
 
-  apr_pool_destroy (pool);
+  svn_pool_destroy (pool);
   return err;
 }
 
@@ -471,7 +471,7 @@ close_handler (void *baton)
 
   /* Tell the window consumer that we're done, and clean up.  */
   err = db->consumer_func (NULL, db->consumer_baton);
-  apr_pool_destroy (db->pool);
+  svn_pool_destroy (db->pool);
   return err;
 }
 
