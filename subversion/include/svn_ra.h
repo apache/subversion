@@ -565,6 +565,8 @@ typedef struct svn_ra_plugin_t
    * the scope of the status report to an entry in the directory
    * represented by the @a session_baton's URL, or @c NULL if the entire
    * directory is meant to be examined.
+   *
+   * Use @a pool for memory allocation.
    */
   svn_error_t *(*do_status) (void *session_baton,
                              const svn_ra_reporter_t **reporter,
@@ -572,7 +574,8 @@ typedef struct svn_ra_plugin_t
                              const char *status_target,
                              svn_boolean_t recurse,
                              const svn_delta_editor_t *status_editor,
-                             void *status_baton);
+                             void *status_baton,
+                             apr_pool_t *pool);
 
 
   /** Ask the network layer to 'diff' a working copy against @a versus_url.

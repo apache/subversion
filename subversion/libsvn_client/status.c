@@ -117,7 +117,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   SVN_ERR (ra_lib->do_status (session,
                               &reporter, &report_baton,
                               target, descend,
-                              status_editor, status_edit_baton));
+                              status_editor, status_edit_baton, pool));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the

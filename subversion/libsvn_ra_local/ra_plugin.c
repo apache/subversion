@@ -536,10 +536,9 @@ svn_ra_local__do_status (void *session_baton,
                          const char *status_target,
                          svn_boolean_t recurse,
                          const svn_delta_editor_t *status_editor,
-                         void *status_baton)
+                         void *status_baton,
+                         apr_pool_t *pool)
 {
-  svn_ra_local__session_baton_t *sbaton = session_baton;
-
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -550,7 +549,7 @@ svn_ra_local__do_status (void *session_baton,
                         recurse,
                         status_editor,
                         status_baton,
-                        sbaton->pool);
+                        pool);
 }
 
 

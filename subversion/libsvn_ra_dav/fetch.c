@@ -2621,10 +2621,9 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                                     const char *status_target,
                                     svn_boolean_t recurse,
                                     const svn_delta_editor_t *wc_status,
-                                    void *wc_status_baton)
+                                    void *wc_status_baton,
+                                    apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
-
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -2636,7 +2635,7 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                         wc_status,
                         wc_status_baton,
                         FALSE, /* fetch_content */
-                        ras->pool);
+                        pool);
 }
 
 
