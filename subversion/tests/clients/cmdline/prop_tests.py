@@ -33,6 +33,7 @@ Item = svntest.wc.StateItem
 def check_prop(name, path, exp_out):
   """Verify that property NAME on PATH has a value of EXP_OUT"""
   out, err = svntest.main.run_command(svntest.main.svn_binary, None, 1,
+                                      '--config-dir', 'config',
                                       'pg', '--strict', name, path)
   if out != exp_out:
     print "svn pg --strict", name, "output does not match expected."
