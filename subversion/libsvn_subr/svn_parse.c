@@ -198,13 +198,13 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
   
   if (result != APR_SUCCESS)
     {
-      char *finalmsg;
+      char *finalmsg;  /* TODO:  use apr's sprintf() thingie here */
       svn_string_t *msg = svn_string_create 
         ("svn_parse(): can't open for reading, file ", pool);
       svn_string_appendstr (msg, filename, pool);
 
       finalmsg = svn_string_2cstring (msg, pool);
-      return (svn_create_error (result, finalmsg, NULL, pool));
+      return (svn_create_error (result, NULL, finalmsg, NULL, pool));
     }
 
   /* Create a scratch memory pool for buffering our file as we read it */
@@ -212,7 +212,8 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
     {
       return
         (svn_create_error 
-         (result, "svn_parse(): fatal: can't create scratchpool in parser",
+         (result, NULL,
+          "svn_parse(): can't create sub-pool for parser use",
           NULL, pool));
     }
 
@@ -271,7 +272,7 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
                 /* Instead of returning an error, just print warning */
                 finalmsg = svn_string_2cstring (msg, pool);
                 svn_handle_error (svn_create_error 
-                                  (SVN_ERR_MALFORMED_LINE, finalmsg, 
+                                  (SVN_ERR_MALFORMED_LINE, NULL, finalmsg, 
                                    NULL, pool), stderr);
                 break;
               }
@@ -318,7 +319,7 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
                 /* Instead of returning an error, just print warning */
                 finalmsg = svn_string_2cstring (msg, pool);                
                 svn_handle_error (svn_create_error 
-                                  (SVN_ERR_MALFORMED_LINE, finalmsg,
+                                  (SVN_ERR_MALFORMED_LINE, NULL, finalmsg,
                                    NULL, pool), stderr);
                 break;
               }
@@ -365,7 +366,7 @@ svn_parse (ap_hash_t **uberhash, const char *filename, ap_pool_t *pool)
       
       /* Not fatal, just annoying.  Send a warning instead returning error. */
       finalmsg = svn_string_2cstring (msg, pool);
-      svn_handle_error (svn_create_error (result, finalmsg, NULL, pool),
+      svn_handle_error (svn_create_error (result, NULL, finalmsg, NULL, pool),
                         stderr);
     }
   

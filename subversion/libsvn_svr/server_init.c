@@ -58,7 +58,7 @@
    svn_svr_load_plugin() : Utility to load/register a server plugin
 
    Input:    * a policy in which to register the plugin
-             * a path to the shared library
+             * pathname of the shared library to load
              * name of the initialization routine in the plugin
             
    Returns:  error structure or SVN_SUCCESS
@@ -70,9 +70,10 @@
 svn_error_t *
 svn_svr_load_plugin (svn_svr_policies_t *policy,
                      svn_string_t *path,
-                     (svn_error_t *) (* ) ())
+                     svn_string_t *init_routine)
 {
-
+  
+  return SVN_SUCCESS;
 }
 
 
@@ -99,7 +100,7 @@ svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
   if (result != APR_SUCCESS)
     {
       char *msg = "svr__load_plugins(): fatal: can't ap_dso_init() ";
-      return (svn_create_error (result, msg, NULL, policy->pool));
+      return (svn_create_error (result, NULL, msg, NULL, policy->pool));
     }
 
   /* Loop through the hash of plugins from configdata */
@@ -108,7 +109,14 @@ svn__svr_load_all_plugins (ap_hash_t *plugins, svn_svr_policies_t *policy)
        hash_index;                              /* NULL if out of entries */
        hash_index = ap_hash_next (hash_index))  /* get next hash entry */
     {
-      /* call */
+      void *key, *val;
+      size_t keylen;
+
+      ap_hash_this (hash_index, &key, &keylen, &val);
+            
+      svn_error_t *err = svn_svr_load_plugin (policy,
+                                              
+                                              
     }
 }
 
@@ -151,7 +159,7 @@ svn_svr_init (svn_svr_policies_t **policy,
   if (result != APR_SUCCESS)
     {
       char *msg = "svr_init(): can't create sub-pool within policy struct";
-      return (svn_create_error (result, msg, NULL, pool));
+      return (svn_create_error (result, NULL, msg, NULL, pool));
     }
 
   return SVN_SUCCESS;
@@ -238,7 +246,7 @@ svn_svr_load_policy (svn_svr_policies_t *policy,
                                  pool);
             svn_string_appendstr (msg, (svn_string_t *) key, pool);
             svn_handle_error (svn_create_error 
-                              (SVN_ERR_UNRECOGNIZED_SECTION, 
+                              (SVN_ERR_UNRECOGNIZED_SECTION, NULL,
                                svn_string_2cstring (msg, pool),
                                NULL, pool), stderr);            
           }
