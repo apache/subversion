@@ -252,7 +252,7 @@ public interface TreeDeltaEditor {
      * - VALUE is the new value of the property, or zero if the property
      *   should be removed altogether.
      */
-    public void changeDirProp(Baton dirBaton, String name, String value)
+    public void changeDirProp(Object dirBaton, String name, String value)
       throws SubversionException;
 
     /**
@@ -272,8 +272,8 @@ public interface TreeDeltaEditor {
      * alias was COPYFROM_PATH, which was at version
      * COPYFROM_REVISION.
      */
-    public void addFile(String name, Baton parentBaton, String copyPath,
-      Revision copyRevision, Baton fileBaton) throws SubversionException;
+    public void addFile(String name, Object parentBaton, String copyPath,
+      Revision copyRevision, Object fileBaton) throws SubversionException;
 
     /**
      * We are going to change the directory entry named NAME to a file.
