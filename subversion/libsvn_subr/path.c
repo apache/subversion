@@ -940,7 +940,7 @@ svn_path_get_absolute(const char **pabsolute,
                              "Couldn't determine absolute path of %s.", 
                              relative);
 
-  return svn_utf_cstring_to_utf8 (buffer, pabsolute, pool);
+  return svn_utf_cstring_to_utf8 (buffer, pabsolute, NULL, pool);
 }
 
 

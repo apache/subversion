@@ -144,7 +144,7 @@ cd (char *path,
       svn_stringbuf_t *new_path;
       const char *path_utf8;
 
-      SVN_ERR (svn_utf_cstring_to_utf8 (path, &path_utf8, pool));
+      SVN_ERR (svn_utf_cstring_to_utf8 (path, &path_utf8, NULL, pool));
 
       SVN_ERR (compute_new_path (&new_path, shcxt->cwd, path_utf8,
                                  shcxt, shcxt->pool));
@@ -289,7 +289,7 @@ ls (shcxt_t *shcxt,
       svn_stringbuf_t *new_path;
       const char *path_utf8;
 
-      SVN_ERR (svn_utf_cstring_to_utf8 (path, &path_utf8, pool));
+      SVN_ERR (svn_utf_cstring_to_utf8 (path, &path_utf8, NULL, pool));
 
       SVN_ERR (compute_new_path (&new_path, shcxt->cwd, path_utf8,
                                  shcxt, pool));

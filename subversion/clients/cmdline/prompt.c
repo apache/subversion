@@ -133,7 +133,7 @@ svn_cl__prompt_user (char **result,
     }
 
   SVN_ERR (svn_utf_cstring_to_utf8 (strbuf->data, (const char **)result,
-                                    pool));
+                                    NULL, pool));
 
   return SVN_NO_ERROR;
 }

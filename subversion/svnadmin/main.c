@@ -301,7 +301,7 @@ main (int argc, const char * const *argv)
   apr_initialize ();
   pool = svn_pool_create (NULL);
 
-  INT_ERR (svn_utf_cstring_to_utf8 (argv[2], &path, pool));
+  INT_ERR (svn_utf_cstring_to_utf8 (argv[2], &path, NULL, pool));
 
   command = parse_command (argv[1]);
   switch (command)
@@ -356,7 +356,7 @@ main (int argc, const char * const *argv)
         paths = apr_array_make (pool, 1, sizeof (const char *));
         INT_ERR (svn_utf_cstring_to_utf8 (argv[3],
                                           (const char **)apr_array_push(paths),
-                                          pool));
+                                          NULL, pool));
 
         INT_ERR (svn_repos_open (&repos, path, pool));
         fs = svn_repos_fs (repos);
@@ -387,7 +387,7 @@ main (int argc, const char * const *argv)
                 /* NOTREACHED */
               }
             show_extra = TRUE;
-            INT_ERR (svn_utf_cstring_to_utf8 (argv[3], &path, pool));
+            INT_ERR (svn_utf_cstring_to_utf8 (argv[3], &path, NULL, pool));
           }
 
         INT_ERR (svn_repos_open (&repos, path, pool));
@@ -612,7 +612,8 @@ main (int argc, const char * const *argv)
         for (i = 3; i < argc; i++)
           {
             const char *txn_name_utf8;
-            INT_ERR (svn_utf_cstring_to_utf8 (argv[i], &txn_name_utf8, pool));
+            INT_ERR (svn_utf_cstring_to_utf8 (argv[i], &txn_name_utf8,
+                                              NULL, pool));
             INT_ERR (svn_fs_open_txn (&txn, fs, txn_name_utf8, pool));
             INT_ERR (svn_fs_abort_txn (txn));
           }
@@ -651,7 +652,8 @@ main (int argc, const char * const *argv)
       
         /* get revision and file from argv[] */
         the_rev = SVN_STR_TO_REV (argv[3]);
-        INT_ERR (svn_utf_cstring_to_utf8 (argv[4], &filename_utf8, pool));
+        INT_ERR (svn_utf_cstring_to_utf8 (argv[4], &filename_utf8,
+                                          NULL, pool));
         INT_ERR (svn_string_from_file (&file_contents, filename_utf8, pool)); 
         INT_ERR (svn_utf_stringbuf_to_utf8 (file_contents, &file_contents_utf8,
                                             pool));
@@ -685,7 +687,7 @@ main (int argc, const char * const *argv)
 
         /* get revision and path from argv[] */
         the_rev = SVN_STR_TO_REV (argv[3]);
-        INT_ERR (svn_utf_cstring_to_utf8 (argv[4], &node, pool));
+        INT_ERR (svn_utf_cstring_to_utf8 (argv[4], &node, NULL, pool));
 
         /* open the filesystem */
         INT_ERR (svn_repos_open (&repos, path, pool));      
@@ -726,7 +728,8 @@ main (int argc, const char * const *argv)
         svn_error_t *err;
         const char *progname_utf8;
 
-        INT_ERR (svn_utf_cstring_to_utf8 (argv[0], &progname_urf8, pool));
+        INT_ERR (svn_utf_cstring_to_utf8 (argv[0], &progname_urf8,
+                                          NULL, pool));
 
         /* Don't use svn_repos_open() here, because we don't want the
            usual locking behavior. */

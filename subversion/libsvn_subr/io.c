@@ -993,7 +993,7 @@ svn_string_from_aprfile (svn_stringbuf_t **result,
     {
       const char *fname_utf8;
       
-      SVN_ERR (svn_utf_cstring_to_utf8 (fname, &fname_utf8, pool));
+      SVN_ERR (svn_utf_cstring_to_utf8 (fname, &fname_utf8, NULL, pool));
       
       return svn_error_createf 
         (apr_err, 0, NULL, pool,
@@ -1077,7 +1077,7 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
           const char *fullpath, *entry_utf8;
 
           SVN_ERR (svn_utf_cstring_to_utf8 (this_entry.name,
-                                            &entry_utf8, subpool));
+                                            &entry_utf8, NULL, subpool));
           
           fullpath = svn_path_join (path, entry_utf8, pool);
           
@@ -1151,7 +1151,8 @@ svn_io_get_dirents (apr_hash_t **dirents,
         {
           const char *name;
 
-          SVN_ERR (svn_utf_cstring_to_utf8 (this_entry.name, &name, pool));
+          SVN_ERR (svn_utf_cstring_to_utf8 (this_entry.name, &name,
+                                            NULL, pool));
           
           if (this_entry.filetype == APR_REG)
             apr_hash_set (*dirents, name, APR_HASH_KEY_STRING,
@@ -1382,7 +1383,7 @@ svn_io_run_diff (const char *dir,
 
   assert (i == nargs);
 
-  SVN_ERR (svn_utf_cstring_to_utf8 (SVN_CLIENT_DIFF, &diff_utf8, pool));
+  SVN_ERR (svn_utf_cstring_to_utf8 (SVN_CLIENT_DIFF, &diff_utf8, NULL, pool));
   
   SVN_ERR (svn_io_run_cmd (dir, diff_utf8, args, pexitcode, NULL, FALSE, 
                            NULL, outfile, errfile, subpool));
@@ -1449,7 +1450,8 @@ svn_io_run_diff3 (const char *dir,
   args[12] = NULL;
 #endif
 
-  SVN_ERR (svn_utf_cstring_to_utf8 (SVN_CLIENT_DIFF3, &diff3_utf8, pool));
+  SVN_ERR (svn_utf_cstring_to_utf8 (SVN_CLIENT_DIFF3, &diff3_utf8,
+                                    NULL, pool));
 
   /* Run diff3, output the merged text into the scratch file. */
   SVN_ERR (svn_io_run_cmd (dir, diff3_utf8, args, 
@@ -1683,11 +1685,11 @@ svn_io_dir_read (apr_finfo_t *finfo,
 
   if (finfo->fname)
     SVN_ERR (svn_utf_cstring_to_utf8 (finfo->fname, &finfo->fname,
-                                      pool));
+                                      NULL, pool));
 
   if (finfo->name)
     SVN_ERR (svn_utf_cstring_to_utf8 (finfo->name, &finfo->name,
-                                      pool));
+                                      NULL, pool));
 
   return SVN_NO_ERROR;
 }

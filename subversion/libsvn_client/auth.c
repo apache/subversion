@@ -115,7 +115,7 @@ get_username (char **username,
           /* ### Be nice to avoid this cast... */
           SVN_ERR (svn_utf_cstring_to_utf8 (un,
                                             (const char **)username,
-                                            pool));
+                                            NULL, pool));
         }
 
       /* Store a copy of the username in the auth_baton too. */

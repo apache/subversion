@@ -22,6 +22,7 @@
 
 #include "svn_error.h"
 #include "svn_delta.h"
+#include <apr_xlate.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,16 +44,20 @@ svn_error_t *svn_utf_string_to_utf8 (const svn_string_t *src,
 
 
 /* Set *DEST to a utf8-encoded stringbuf from native C string SRC;
-   allocate *DEST in POOL. */
+   allocate *DEST in POOL.   Use XLATOR to do the conversion;  if
+   NULL, then use the environment's default locale. */
 svn_error_t *svn_utf_cstring_to_utf8_stringbuf (const char *src,
                                                 svn_stringbuf_t **dest,
+                                                apr_xlate_t *xlator,
                                                 apr_pool_t *pool);
 
 
 /* Set *DEST to a utf8-encoded C string from native C string SRC;
-   allocate *DEST in POOL. */
+   allocate *DEST in POOL.  Use XLATOR to do the conversion; if NULL,
+   then use the environment's default locale. */
 svn_error_t *svn_utf_cstring_to_utf8 (const char *src,
                                       const char **dest,
+                                      apr_xlate_t *xlator,
                                       apr_pool_t *pool);
 
 
