@@ -234,6 +234,9 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
 
   /* ### APR bug? apr_file_info_get won't always return the correct
          size for buffered files. */
+  /* FIXME: This APR bug has been fixed on both Unix and Win32 for the
+     0.9.2 release. Remove this flush once that is part of a released
+     httpd (presumably 2.0.45). */
   status = apr_file_flush(body_file);
   if (!status)
     status = apr_file_info_get(&finfo, APR_FINFO_SIZE, body_file);
