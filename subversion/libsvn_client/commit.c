@@ -252,7 +252,7 @@ import (svn_string_t *path,
        "new entry name may not be the empty string when importing");
 
   /* The repository doesn't know about the reserved. */
-  if (strcmp (new_entry->data, SVN_WC_ADM_DIR_NAME) == 0)
+  if (new_entry && strcmp (new_entry->data, SVN_WC_ADM_DIR_NAME) == 0)
     return svn_error_createf
       (SVN_ERR_CL_ADM_DIR_RESERVED, 0, NULL, pool,
        "the name \"%s\" is reserved and cannot be imported",
