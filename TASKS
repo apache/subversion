@@ -31,11 +31,9 @@ to take something on.
    kfogel@collab.net if you want a copy).
 
 
-2. CVS->SVN repository conversion program (or script, whatever)
-
-   This probably can't be started until the versioning filesystem is
-   substantially complete, but is completely parallelizable then.
-   Remember to get branches right. :-)
+2. CVS->SVN repository conversion program (or script, whatever).
+   Bob Miller <kbob@jogger-egg.com> is working on this, see
+   tools/cvs2svn/.
 
 
 3. Autoconf Robustifying
