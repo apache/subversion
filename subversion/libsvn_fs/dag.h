@@ -238,4 +238,22 @@ svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
 				    trail_t *trail);
 
 
+
+/* Copies */
+
+/* Create a copy of the node SOURCE_PATH in SOURCE_REVISION, named
+   NAME in PARENT, as part of TRAIL.  Set *CHILD_P to a reference to
+   the new node, allocated in TRAIL->pool.  PARENT must be
+   mutable. NAME must be a single path component; it cannot be a
+   slash-separated directory path.  The source of the copy must be
+   immutable. */
+svn_error_t *svn_fs__dag_make_copy (dag_node_t **child_p,
+				    dag_node_t *parent,
+				    const char *name,
+                                    svn_revnum_t source_revision,
+                                    const char *source_path,
+				    trail_t *trail);
+
+
+
 #endif /* SVN_LIBSVN_FS_DAG_H */
