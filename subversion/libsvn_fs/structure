@@ -141,9 +141,9 @@ rather than in some revision-independent place, might suggest that
 it's possible for a node change kinds from revision to revision, but
 Subversion does not allow this.
 
-PROP-KEY is a key into the `representations' table (which see), whose
-value is a representation pointing to a string (see `strings' table)
-that is a PROPLIST skel.
+PROP-KEY is a key into the `representations' table (see REPRESENTATIONS 
+below), whose value is a representation pointing to a string 
+(see `strings' table) that is a PROPLIST skel.
 
 The KIND-SPECIFIC portions are discussed below.
 
@@ -422,8 +422,8 @@ We represent a filesystem revision using a skel of the form:
 
     ("revision" TXN)
 
-where TXN is the key into the `transactions' table (which see) whose
-value is the transaction that was committed to create this revision.
+where TXN is the key into the `transactions' table (see 'Transactions' below)
+whose value is the transaction that was committed to create this revision.
 
 The database contains a table called "revisions", which is a
 record-number table mapping revision numbers onto REVISION skels.
@@ -526,8 +526,8 @@ where:
      - "modify"  : PATH/ID was otherwise modified.
      - "reset"   : Ignore any previous changes for PATH/ID in this txn.
 
-   * TEXT-MOD is a bit specifying whether or not the properties of
-     this node where modified.
+   * TEXT-MOD is a bit specifying whether or not the contents of
+     this node was modified.
 
    * PROP-MOD is a bit specifying whether or not the properties of
      this node where modified.
