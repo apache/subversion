@@ -165,6 +165,13 @@ svn_repos_finish_report (void *report_baton)
   svn_repos_report_baton_t *rbaton = (svn_repos_report_baton_t *) report_baton;
   svn_stringbuf_t *rev_path;
 
+  /* If nothing was described, then we have an error */
+  if (rbaton->txn == NULL)
+    return svn_error_create(SVN_ERR_REPOS_NO_DATA_FOR_REPORT, 0, NULL,
+                            rbaton->pool,
+                            "svn_repos_finish_report: no transaction was "
+                            "present, meaning no data was provided.");
+
   /* Construct the target path.  For our purposes, it's the same as
      the full source path.  */
   rev_path = svn_stringbuf_dup (rbaton->base_path, rbaton->pool);
@@ -202,7 +209,11 @@ svn_repos_abort_report (void *report_baton)
 {
   svn_repos_report_baton_t *rbaton = (svn_repos_report_baton_t *) report_baton;
 
-  SVN_ERR (svn_fs_abort_txn (rbaton->txn));
+  /* if we have a transaction, then abort it */
+  if (rbaton->txn != NULL)
+    {
+      SVN_ERR (svn_fs_abort_txn (rbaton->txn));
+    }
 
   return SVN_NO_ERROR;
 }
