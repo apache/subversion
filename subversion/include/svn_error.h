@@ -77,6 +77,9 @@ typedef enum svn_errno_t {
   /* The xml delta we got was not valid. */
   SVN_ERR_MALFORMED_XML,
 
+  /* There's no such xml tag attribute */
+  SVN_ERR_XML_ATTRIB_NOT_FOUND,
+
   /* Can't do this update or checkout, because something was in the way. */
   SVN_ERR_OBSTRUCTED_UPDATE,
 

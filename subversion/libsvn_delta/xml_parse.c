@@ -74,6 +74,21 @@
 
 
 
+
+/* Search for NAME in expat ATTS array, place into VALUE.
+   If NAME does not exist in ATTS, return simple error. */
+static svn_error_t *
+get_attribute_value (const char **atts, char *name, char **value)
+{
+  /* TODO */
+
+  return SVN_ERR_XML_ATTRIB_NOT_FOUND;
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Return the newest frame of an XML stack. (The "top" of the stack.) */
 static svn_delta_stackframe_t *
 find_stack_newest (svn_delta_stackframe_t *frame)
@@ -126,7 +141,20 @@ XML_type_error (apr_pool_t *pool, const char *name, svn_boolean_t destroy_p)
 }
 
 
+/* A validation note.  
 
+   The strategy for validating our XML stream is simple:
+
+   1. When we find a new "open" tag, make sure it logically follows
+   the previous tag.  This is handled in do_stack_append().
+
+   2. When we find a "close" tag, make sure the newest item on the
+   stack is of the identical type.  This is handled by
+   do_stack_remove().
+
+   When these functions find invalid XML, they call signal_expat_bailout().
+
+*/
 
 
 /* Decide if it's valid XML to append NEW_FRAME to DIGGER's stack.  If
@@ -193,7 +221,7 @@ do_stack_append (svn_delta_digger_t *digger,
   youngest_frame->next = new_frame;
   new_frame->previous = youngest_frame;
 
-  /* Child inherits parent's baton by default */
+  /* Child inherits parent's baton.  */
   new_frame->baton = youngest_frame->baton;
 
   return SVN_NO_ERROR;
@@ -253,7 +281,7 @@ do_stack_remove (svn_delta_digger_t *digger, const char *tagname)
     return XML_type_error (pool, tagname, TRUE);
 
 
-  /* Passed validity check, do the actual removal */
+  /* Passed validity check, do the removal. */
 
   /* Lose the pointer to the youngest frame. */
   if (youngest_frame->previous)
@@ -292,6 +320,96 @@ set_tag_type (svn_delta_stackframe_t *frame, char *name);
 
   return SVN_NO_ERROR;
 }
+
+
+
+
+/* Called when we get a <dir> tag preceeded by either a <new> or
+   <replace> tag; calls the appropriate callback inside
+   DIGGER->WALKER, depending on the value of REPLACE_P. */
+static svn_error_t *
+do_directory_callback (svn_delta_digger_t *digger, 
+                       svn_delta_stackframe_t *youngest_frame,
+                       const char **atts,
+                       svn_boolean_t replace_p)
+{
+  svn_error_t *err;
+  void *child_baton;
+  char *ancestor, *ver;
+  svn_pdelta_t *pdelta = NULL;
+  svn_string_t *base_path = NULL;
+  svn_version_t base_version = 0;
+
+  /* Retrieve the "name" field from the previous <new> or <replace> tag */
+  svn_string_t *dir_name = youngest_frame->previous->name;
+  if (dir_name == NULL)
+    return 
+      svn_create_error 
+      (SVN_ERR_MALFORMED_XML, 0,
+       "do_directory_callback: <dir>'s parent tag has no 'name' field."
+       NULL, digger->pool);
+                             
+  /* Search through ATTS, looking for any "ancestor" or "ver"
+     attributes of the current <dir> tag. */
+  err = get_attribute_value (atts, "ancestor", &ancestor);
+  if (! err)
+    base_path = svn_string_create (ancestor, digger->pool);
+  err = get_attribute_value (atts, "ver", &ver);
+  if (! err)
+    base_version = atoi (ver);
+
+  /* Call our walker's callback. */
+  if (replace_p)
+    err = (* (digger->walker->replace_directory)) (dir_name,
+                                                   digger->walk_baton,
+                                                   youngest_frame->baton,
+                                                   base_path,
+                                                   base_version,
+                                                   pdelta,
+                                                   &child_baton);
+  else
+    err = (* (digger->walker->add_directory)) (dir_name,
+                                               digger->walk_baton,
+                                               youngest_frame->baton,
+                                               base_path,
+                                               base_version,
+                                               pdelta,
+                                               &child_baton);
+  if (err) 
+    return err;
+
+  /* Use the new value of CHILD_BATON as our future parent baton. */
+  youngest_frame->baton = child_baton;
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Called when we find a <delete> tag */
+static svn_error_t *
+do_delete_dirent (svn_delta_digger_t *digger, 
+                  svn_delta_stackframe_t *youngest_frame)
+{
+  /* Retrieve the "name" field from the current <delete> tag */
+  svn_string_t *dir_name = youngest_frame->previous->name;
+  if (dir_name == NULL)
+    return 
+      svn_create_error 
+      (SVN_ERR_MALFORMED_XML, 0,
+       "do_delete_dirent: <delete> tag has no 'name' field."
+       NULL, digger->pool);
+
+  /* Call our walker's callback */
+  err = (* (digger->walker->delete)) (dir_name, 
+                                      digger->walk_baton,
+                                      youngest_frame->baton);
+  if (err)
+    return err;
+
+  return SVN_NO_ERROR;
+}
+
 
 
 
@@ -337,6 +455,7 @@ static void
 xml_handle_start (void *userData, const char *name, const char **atts)
 {
   svn_error_t *err;
+  char *value;
 
   /* Resurrect our digger structure */
   svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
@@ -354,9 +473,11 @@ xml_handle_start (void *userData, const char *name, const char **atts)
       return;
     }
 
-  /* TODO:  set "name" attribute in frame, if there's any in **atts */
-
-
+  /* Set "name" field in frame, if there's any such attribute in ATTS */
+  err = get_attribute_value (atts, "name", &value);
+  if (! err)
+    frame->name = svn_string_create (value, digger->pool);
+  
   /*  Append new frame to stack, validating in the process. 
       If successful, new frame will automatically inherit parent's baton. */
   err = do_stack_append (my_digger, new_frame, name);
@@ -366,9 +487,6 @@ xml_handle_start (void *userData, const char *name, const char **atts)
     return;
   }
 
-  /* TODO: Remove this line! */
-  printf ("Got tag: <%s>\n", name);
-
   /* Now look for special events that the uber-caller (of
      svn_delta_parse()) might want to know about.  */
 
@@ -376,13 +494,23 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   if (new_frame->previous)
     if ((new_frame->previous->tag == svn_XML_new) 
         & (new_frame->tag == svn_XML_dir))
-      do_add_directory (my_digger, new_frame);
+      {
+        err = do_directory_callback (my_digger, new_frame, atts, FALSE);
+        if (err)
+          signal_expat_bailout (err, my_digger);
+        return;
+      }
 
   /* EVENT:  Are we replacing a directory?  */
   if (new_frame->previous)
     if ((new_frame->previous->tag == svn_XML_replace) 
         & (new_frame->tag == svn_XML_dir))
-      do_replace_directory (my_digger, new_frame);
+      {
+        err = do_directory_callback (my_digger, new_frame, atts, TRUE);
+        if (err)
+          signal_expat_bailout (err, my_digger);
+        return;
+      }
 
   /* EVENT:  Are we adding a new file?  */
   if (new_frame->previous)
@@ -396,10 +524,15 @@ xml_handle_start (void *userData, const char *name, const char **atts)
         & (new_frame->tag == svn_XML_file))
       do_replace_file (my_digger, new_frame);
   
+
   /* EVENT:  Are we deleting a directory entry?  */
   if (new_frame->tag == svn_XML_delete)
-    do_delete_dirent (my_digger, new_frame);
-
+    {
+      err = do_delete_dirent (my_digger, new_frame);
+      if (err)
+        signal_expat_bailout (err, my_digger);
+      return;
+    }
 
 
   /* This is a void expat callback, don't return anything. */
