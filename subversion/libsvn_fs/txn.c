@@ -190,7 +190,7 @@ svn_fs_open_txn (svn_fs_txn_t **txn_p,
 
 struct open_txn_root_args
 {
-  svn_fs_node_t **dir_p;
+  svn_fs_root_t **root_p;
   svn_fs_txn_t *txn;
 };
 
@@ -200,28 +200,28 @@ txn_body_open_txn_root (void *baton,
                         trail_t *trail)
 {
   struct open_txn_root_args *args = baton;
-  svn_fs_node_t *root;
+  svn_fs_root_t *root;
 
   SVN_ERR (svn_fs__txn_root_node (&root, args->txn->fs, args->txn->id, trail));
 
-  *args->dir_p = root;
+  *args->root_p = root;
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_fs_open_txn_root (svn_fs_node_t **dir_p,
+svn_fs_open_txn_root (svn_fs_root_t **root_p,
                       svn_fs_txn_t *txn,
                       apr_pool_t *pool)
 {
-  svn_fs_node_t *dir;
+  svn_fs_root_t *root;
   struct open_txn_root_args args;
 
-  args.dir_p = &dir;
-  args.txn   = txn;
+  args.root_p = &root;
+  args.txn    = txn;
   SVN_ERR (svn_fs__retry_txn (txn->fs, txn_body_open_txn_root, &args, pool));
 
-  *dir_p = dir;
+  *root_p = root;
   return SVN_NO_ERROR;
 }
 
