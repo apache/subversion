@@ -53,35 +53,35 @@ svn_fs__bdb_open_uuids_table (DB **uuids_p,
   /* This is a temporary compatibility check; it creates the
      UUIDs table if one does not already exist. */
   if (error == ENOENT && create == 0)
-  {
-    BDB_ERR (uuids->close (uuids, 0));
-    return svn_fs__bdb_open_uuids_table (uuids_p, env, 1);
-  }
+    {
+      BDB_ERR (uuids->close (uuids, 0));
+      return svn_fs__bdb_open_uuids_table (uuids_p, env, 1);
+    }
 
   BDB_ERR (error);    
 
   if (create)
-  {
-    DBT key, value;
-    apr_uuid_t uuid;
-    int recno = 0;
+    {
+      DBT key, value;
+      apr_uuid_t uuid;
+      int recno = 0;
 
-    svn_fs__clear_dbt (&key);
-    key.data = &recno;
-    key.size = sizeof(recno);
+      svn_fs__clear_dbt (&key);
+      key.data = &recno;
+      key.size = sizeof(recno);
 
-    svn_fs__clear_dbt (&value);
-    value.data = buffer;
-    value.size = sizeof(buffer);
+      svn_fs__clear_dbt (&value);
+      value.data = buffer;
+      value.size = sizeof(buffer);
 
-    apr_uuid_get (&uuid);
-    apr_uuid_format (buffer, &uuid);
+      apr_uuid_get (&uuid);
+      apr_uuid_format (buffer, &uuid);
 
-    BDB_ERR (uuids->put
-            (uuids, 0,
-             &key, &value,
-             DB_APPEND | SVN_BDB_AUTO_COMMIT));
-  }
+      BDB_ERR (uuids->put
+              (uuids, 0,
+               &key, &value,
+               DB_APPEND | SVN_BDB_AUTO_COMMIT));
+    }
   
   *uuids_p = uuids;
   return 0;
