@@ -18,17 +18,15 @@ Patch0: install.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: apache-libapr >= %{apache_version}
-Requires: apache-libapr-utils >= %{apache_version}
-Requires: db >= 4.0.14
+Requires: db4 >= 4.0.14
 Requires: expat
 Requires: neon >= %{neon_version}
 #Requires: /sbin/install-info
 BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
 BuildPreReq: apache-libapr-devel >= %{apache_version}
-BuildPreReq: apache-libapr-utils-devel >= %{apache_version}
 BuildPreReq: autoconf253 >= 2.53
-BuildPreReq: db-devel >= 4.0.14
+BuildPreReq: db4-devel >= 4.0.14
 BuildPreReq: expat-devel
 BuildPreReq: gdbm-devel
 BuildPreReq: libtool >= 1.4.2
@@ -71,7 +69,6 @@ Group: Utilities/System
 Summary: Apache server module for Subversion server.
 Requires: apache >= %{apache_version}
 Requires: apache-libapr >= 0.%{apache_version}
-Requires: apache-libapr-utils >= 0.%{apache_version}
 Requires: subversion = %{version}-%{release}
 BuildPreReq: apache-devel >= %{apache_version}
 %description server
@@ -88,6 +85,11 @@ Converts CVS repositories to Subversion repositories.
 See /usr/share/doc/subversion*/tools/cvs2svn directory for more information.
 
 %changelog
+* Sun Dec 29 2002 David Summers <david@summersoft.fay.ar.us> 0.16.0-4206
+- Switched to new db4 package to be more like RedHat 8.0.
+- Switched to new version of apache that combines APR and APRUTILS into one
+  package.
+
 * Sat Dec 14 2002 David Summers <david@summersoft.fay.ar.us> 0.16.0-4128
 - SWIG now builds so we can use cvs2svn.
 
