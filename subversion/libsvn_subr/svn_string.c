@@ -82,9 +82,6 @@ my__realloc (char *data, const apr_size_t oldsize, const apr_size_t request,
 }
 
 
-
-/* Create a new bytestring by copying SIZE bytes from BYTES; requires a
-   memory POOL to allocate from. */
 svn_string_t *
 svn_string_ncreate (const char *bytes, const apr_size_t size, 
                     apr_pool_t *pool)
@@ -110,8 +107,6 @@ svn_string_ncreate (const char *bytes, const apr_size_t size,
 }
 
 
-/* Create a new bytestring by copying CSTRING (null-terminated);
-   requires a POOL to allocate from.  */
 svn_string_t *
 svn_string_create (const char *cstring, apr_pool_t *pool)
 {
@@ -119,7 +114,31 @@ svn_string_create (const char *cstring, apr_pool_t *pool)
 }
 
 
-/* Overwrite bytestring STR with a character C. */
+svn_string_t *
+svn_string_createv (apr_pool_t *pool, const char *fmt, va_list ap)
+{
+  /* fixme: annoying to dup the storage like this.  Need to split
+     svn_string_ncreate() into an allocator and a constructor, then
+     this could share the constructor. */
+  char *src_str = apr_pvsprintf (pool, fmt, ap);
+  return svn_string_create (src_str, pool);
+}
+
+
+svn_string_t *
+svn_string_createf (apr_pool_t *pool, const char *fmt, ...)
+{
+  svn_string_t *str;
+
+  va_list ap;
+  va_start (ap, fmt);
+  str = svn_string_createv (pool, fmt, ap);
+  va_end (ap);
+
+  return str;
+}
+
+
 void 
 svn_string_fillchar (svn_string_t *str, const unsigned char c)
 {
@@ -128,7 +147,6 @@ svn_string_fillchar (svn_string_t *str, const unsigned char c)
 
 
 
-/* Set a bytestring STR to empty (0 length). */
 void
 svn_string_setempty (svn_string_t *str)
 {
@@ -139,7 +157,6 @@ svn_string_setempty (svn_string_t *str)
 }
 
 
-/* Chop NBYTES bytes off end of STR, but not more than STR->len. */
 void
 svn_string_chop (svn_string_t *str, apr_size_t nbytes)
 {
@@ -152,7 +169,6 @@ svn_string_chop (svn_string_t *str, apr_size_t nbytes)
 }
 
 
-/* Ask if a bytestring STR is empty (0 length) */
 svn_boolean_t
 svn_string_isempty (const svn_string_t *str)
 {
@@ -181,7 +197,6 @@ svn_string_ensure (svn_string_t *str,
 }
 
 
-/* Copy COUNT bytes from BYTES onto the end of bytestring STR. */
 void
 svn_string_appendbytes (svn_string_t *str, const char *bytes, 
                         const apr_size_t count)
@@ -206,7 +221,6 @@ svn_string_appendbytes (svn_string_t *str, const char *bytes,
 }
 
 
-/* Append APPENDSTR onto TARGETSTR. */
 void
 svn_string_appendstr (svn_string_t *targetstr, const svn_string_t *appendstr)
 {
@@ -214,7 +228,6 @@ svn_string_appendstr (svn_string_t *targetstr, const svn_string_t *appendstr)
 }
 
 
-/* Append CSTR onto TARGETSTR. */
 void
 svn_string_appendcstr (svn_string_t *targetstr, const char *cstr)
 {
@@ -224,7 +237,6 @@ svn_string_appendcstr (svn_string_t *targetstr, const char *cstr)
 
 
 
-/* Return a duplicate of ORIGNAL_STRING. */
 svn_string_t *
 svn_string_dup (const svn_string_t *original_string, apr_pool_t *pool)
 {
@@ -234,7 +246,6 @@ svn_string_dup (const svn_string_t *original_string, apr_pool_t *pool)
 
 
 
-/* Return true if STR1 and STR2 have identical length and data. */
 svn_boolean_t
 svn_string_compare (const svn_string_t *str1, const svn_string_t *str2)
 {
@@ -252,7 +263,6 @@ svn_string_compare (const svn_string_t *str1, const svn_string_t *str2)
 
 
 
-/* Return offset of first non-whitespace character in STR, or -1 if none.  */
 apr_size_t
 svn_string_first_non_whitespace (const svn_string_t *str)
 {
@@ -271,7 +281,6 @@ svn_string_first_non_whitespace (const svn_string_t *str)
 }
 
 
-/* Strips whitespace from both sides of STR (modified in place). */
 void
 svn_string_strip_whitespace (svn_string_t *str)
 {
@@ -300,8 +309,6 @@ svn_string_strip_whitespace (svn_string_t *str)
 }
 
 
-/* Return position of last occurrence of CHAR in STR, or return
-   STR->len if no occurrence. */ 
 apr_size_t
 svn_string_find_char_backward (svn_string_t *str, char ch)
 {
@@ -317,8 +324,6 @@ svn_string_find_char_backward (svn_string_t *str, char ch)
 }
 
 
-/* Chop STR back to CHAR, inclusive.  Returns number of chars
-   chopped, so if no such CHAR in STR, chops nothing and returns 0. */
 apr_size_t
 svn_string_chop_back_to_char (svn_string_t *str, char ch)
 {
