@@ -96,7 +96,7 @@ svn_wc__entries_init (svn_string_t *path, apr_pool_t *pool)
   /* Open the file's top-level form. */
   err = svn_xml_write_tag (f,
                            pool,
-                           svn_xml__open_tag,
+                           svn_xml_open_tag,
                            SVN_WC__ENTRIES_START,
                            "xmlns",
                            svn_string_create (SVN_XML_NAMESPACE, pool),
@@ -113,7 +113,7 @@ svn_wc__entries_init (svn_string_t *path, apr_pool_t *pool)
     char *verstr = apr_psprintf (pool, "%ld", 0);
     err = svn_xml_write_tag (f, 
                              pool,
-                             svn_xml__self_close_tag,
+                             svn_xml_self_close_tag,
                              SVN_WC__ENTRIES_ENTRY,
                              SVN_WC__ENTRIES_ATTR_VERSION,
                              svn_string_create (verstr, pool),
@@ -128,7 +128,7 @@ svn_wc__entries_init (svn_string_t *path, apr_pool_t *pool)
   /* Close the top-level form. */
   err = svn_xml_write_tag (f,
                            pool,
-                           svn_xml__close_tag,
+                           svn_xml_close_tag,
                            SVN_WC__ENTRIES_END,
                            NULL);
   if (err)
@@ -333,7 +333,7 @@ write_entry (apr_file_t *outfile,
   
   return svn_xml_write_tag_hash (outfile,
                                  pool,
-                                 svn_xml__self_close_tag,
+                                 svn_xml_self_close_tag,
                                  SVN_WC__ENTRIES_ENTRY,
                                  attributes);
 }
@@ -390,7 +390,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
               err = svn_xml_write_tag_hash 
                 (baton->outfile,
                  baton->pool,
-                 svn_xml__self_close_tag,
+                 svn_xml_self_close_tag,
                  SVN_WC__ENTRIES_ENTRY,
                  svn_xml_make_att_hash (atts, baton->pool));
                                             
@@ -409,7 +409,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
           err = svn_xml_write_tag_hash
             (baton->outfile, 
              baton->pool,
-             svn_xml__open_tag,
+             svn_xml_open_tag,
              tagname,
              svn_xml_make_att_hash (atts, baton->pool));
           if (err)
@@ -449,7 +449,7 @@ handle_end_tag (void *userData, const char *tagname)
           /* Now close off the file. */
           err = svn_xml_write_tag (baton->outfile,
                                    baton->pool,
-                                   svn_xml__close_tag,
+                                   svn_xml_close_tag,
                                    tagname,
                                    NULL);
           if (err)

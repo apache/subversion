@@ -59,10 +59,10 @@
 #define SVN_XML_NAMESPACE "http://subversion.tigris.org/xmlns/"
 
 /* Used as type argument to svn_xml_write_tag() */
-enum {
-  svn_xml__open_tag,         /* write <tag ...>                    */
-  svn_xml__close_tag,        /* write </tag>                       */
-  svn_xml__self_close_tag    /* write <tag .../>                   */
+enum svn_xml_tag_type {
+  svn_xml_open_tag = 1,     /* <tag ...>  */
+  svn_xml_close_tag,        /* </tag>     */
+  svn_xml_self_close_tag    /* <tag .../> */
 };
 
 
@@ -181,17 +181,13 @@ svn_error_t *svn_xml_write_header (apr_file_t *file, apr_pool_t *pool);
    specify a NULL-terminated list of alternating const char *Key
    and svn_string_t *Val.
 
-   TAGTYPE must be one of 
-
-              svn_xml__open_tag         ... <tagname>
-              svn_xml__close_tag        ... </tagname>
-              svn_xml__self_close_tag   ... <tagname/>
+   TAGTYPE must be one of the enumerated types in svn_xml_tag_type.
 
    FILE is assumed to be already open for writing.
 */
 svn_error_t *svn_xml_write_tag (apr_file_t *file,
                                 apr_pool_t *pool,
-                                int tagtype,
+                                enum svn_xml_tag_type tagtype,
                                 const char *tagname,
                                 ...);
 
@@ -199,7 +195,7 @@ svn_error_t *svn_xml_write_tag (apr_file_t *file,
 /* Like svn_xml_write_tag, but takes a va_list instead of being variadic. */
 svn_error_t *svn_xml_write_tag_v (apr_file_t *file,
                                   apr_pool_t *pool,
-                                  const int tagtype,
+                                  enum svn_xml_tag_type tagtype,
                                   const char *tagname,
                                   va_list ap);
 
@@ -223,7 +219,7 @@ svn_error_t *svn_xml_write_tag_v (apr_file_t *file,
  */
 svn_error_t *svn_xml_write_tag_hash (apr_file_t *file,
                                      apr_pool_t *pool,
-                                     const int tagtype,
+                                     enum svn_xml_tag_type tagtype,
                                      const char *tagname,
                                      apr_hash_t *attributes);
 
