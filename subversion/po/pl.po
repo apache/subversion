@@ -34,8 +34,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-08-18 11:18+0200\n"
-"PO-Revision-Date: 2004-08-24 11:15+0200\n"
+"POT-Creation-Date: 2004-08-24 11:36+0200\n"
+"PO-Revision-Date: 2004-08-24 11:37+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -293,7 +293,8 @@ msgid "force validity of log message source"
 msgstr "wymuś uznanie opisu zmian za poprawny"
 
 #: clients/cmdline/main.c:67 clients/cmdline/main.c:68 svnadmin/main.c:199
-#: svnadmin/main.c:202 svnlook/main.c:89 svnlook/main.c:92
+#: svnadmin/main.c:202 svndumpfilter/main.c:699 svndumpfilter/main.c:702
+#: svnlook/main.c:89 svnlook/main.c:92
 msgid "show help on a subcommand"
 msgstr "wyświetl tekst pomocy dla polecenia"
 
@@ -3238,7 +3239,7 @@ msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:863
 msgid "Malformed representation header"
-msgstr "Błędny nagłówek tablicy reprezentacji\n"
+msgstr "Błędny nagłówek tablicy reprezentacji"
 
 #: libsvn_fs_fs/fs_fs.c:887
 msgid "Missing node-id in node-rev"
@@ -3929,8 +3930,8 @@ msgstr "<<< Nowa transakcja, na bazie oryginalnej wersji %ld\n"
 #: libsvn_repos/load.c:845
 #, c-format
 msgid "Relative source revision %ld is not available in current repository"
-msgstr "Odpowiednia źródłowa wersja %ld nie jest dostępna w bieżącym "
-"repozytorium"
+msgstr ""
+"Odpowiednia źródłowa wersja %ld nie jest dostępna w bieżącym repozytorium"
 
 #: libsvn_repos/load.c:1117
 #, c-format
@@ -4685,7 +4686,7 @@ msgstr ""
 "Ten klient jest zbyt stary by obsługiwać kopię roboczą '%s';\n"
 "zainstaluj nowszego klienta Subversion"
 
-#: libsvn_wc/questions.c:348
+#: libsvn_wc/questions.c:351
 #, c-format
 msgid ""
 "Checksum mismatch indicates corrupt text base: '%s'\n"
@@ -4791,7 +4792,7 @@ msgstr "Brak informacji o pochodzeniu '%s'"
 msgid "Unable to make any directories"
 msgstr "Nieudane tworzenie jakichkolwiek katalogów"
 
-#: svnadmin/main.c:72
+#: svnadmin/main.c:72 svndumpfilter/main.c:62
 msgid "Can't open stdio file"
 msgstr "Błąd otwierania pliku"
 
@@ -4804,7 +4805,8 @@ msgstr "Parametr podający repozytorium jest wymagany"
 msgid "'%s' is an URL when it should be a path"
 msgstr "'%s' jest URLem a powinien być ścieżką"
 
-#: svnadmin/main.c:205 svnlook/main.c:95 svnversion/main.c:201
+#: svnadmin/main.c:205 svndumpfilter/main.c:705 svnlook/main.c:95
+#: svnversion/main.c:201
 msgid "show version information"
 msgstr "podaj informację o wersji"
 
@@ -5086,7 +5088,8 @@ msgstr "Proszę czekać; odtwarzanie repozytorium może trwać długo...\n"
 
 #: svnadmin/main.c:641
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
-msgstr "Oczekiwanie na blokadę repozytorium; możliwe, że inny proces blokuje dostęp\n"
+msgstr ""
+"Oczekiwanie na blokadę repozytorium; możliwe, że inny proces blokuje dostęp\n"
 
 #: svnadmin/main.c:647
 msgid ""
@@ -5118,7 +5121,7 @@ msgstr "Tylko jedna wersja jest dozwolona"
 msgid "Exactly one file argument required"
 msgstr "Wymagany dokładnie jeden parametr - plik"
 
-#: svnadmin/main.c:1065 svnlook/main.c:1939
+#: svnadmin/main.c:1065 svndumpfilter/main.c:1103 svnlook/main.c:1939
 msgid "subcommand argument required\n"
 msgstr "polecenie wymaga parametrów\n"
 
@@ -5131,6 +5134,19 @@ msgstr ""
 "polecenie '%s' nie obsługuje opcji '%s'\n"
 "Użyj 'svnadmin help %s' by uzyskać więcej informacji..\n"
 
+#: svndumpfilter/main.c:363
+#, fuzzy, c-format
+msgid "Invalid copy source path '%s'"
+msgstr "Błędna składnia ścieżki"
+
+#: svndumpfilter/main.c:414
+msgid "Node with dropped parent sneaked in"
+msgstr ""
+
+#: svndumpfilter/main.c:586
+msgid "This is an empty revision for padding."
+msgstr ""
+
 #: svndumpfilter/main.c:641
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
@@ -5141,7 +5157,75 @@ msgstr "Wersja %ld zatwierdzona jako %ld.\n"
 msgid "Revision %ld skipped.\n"
 msgstr "Pominięto wersję %ld.\n"
 
-#: svndumpfilter/main.c:883
+#: svndumpfilter/main.c:707
+msgid "Do not display filtering statistics."
+msgstr ""
+
+#: svndumpfilter/main.c:709
+msgid "Remove revisions emptied by filtering."
+msgstr ""
+
+#: svndumpfilter/main.c:711
+msgid "Renumber revisions left after filtering."
+msgstr ""
+
+#: svndumpfilter/main.c:713
+msgid "Don't filter revision properties."
+msgstr ""
+
+#: svndumpfilter/main.c:724
+msgid ""
+"Filter out nodes with given prefixes from dumpstream.\n"
+"usage: svndumpfilter exclude PATH_PREFIX...\n"
+msgstr ""
+
+#: svndumpfilter/main.c:730
+msgid ""
+"Filter out nodes without given prefixes from dumpstream.\n"
+"usage: svndumpfilter include PATH_PREFIX...\n"
+msgstr ""
+
+#: svndumpfilter/main.c:736
+#, fuzzy
+msgid ""
+"Describe the usage of this program or its subcommands.\n"
+"usage: svndumpfilter help [SUBCOMMAND...]\n"
+msgstr ""
+"Opisz sposób używania tego programu lub jednego z jego poleceń.\n"
+"Wykorzystanie: help [POLECENIE...]\n"
+
+#: svndumpfilter/main.c:799
+#, fuzzy
+msgid ""
+"general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
+"Type \"svndumpfilter help <subcommand>\" for help on a specific subcommand.\n"
+"\n"
+"Available subcommands:\n"
+msgstr ""
+"ogólne wykorzystanie: svnadmin POLECENIE KATALOG_REP  [PARAMETRY i "
+"OPCJE...]\n"
+"Komenda \"svnadmin help <polecenie>\" prezentuje tekst pomocy dla podanego\n"
+"polecenia.\n"
+"\n"
+"Dostępne polecenia:\n"
+
+#: svndumpfilter/main.c:854
+msgid "Excluding (and dropping empty revisions for) prefixes:\n"
+msgstr ""
+
+#: svndumpfilter/main.c:856
+msgid "Excluding prefixes:\n"
+msgstr ""
+
+#: svndumpfilter/main.c:858
+msgid "Including (and dropping empty revisions for) prefixes:\n"
+msgstr ""
+
+#: svndumpfilter/main.c:860
+msgid "Including prefixes:\n"
+msgstr ""
+
+#: svndumpfilter/main.c:887
 #, c-format
 msgid ""
 "Dropped %d revision(s).\n"
@@ -5150,26 +5234,31 @@ msgstr ""
 "Opuszczono %d wersji.\n"
 "\n"
 
-#: svndumpfilter/main.c:889
+#: svndumpfilter/main.c:893
 msgid "Revisions renumbered as follows:\n"
 msgstr "Wersje przenumerowano następująco:\n"
 
-#: svndumpfilter/main.c:917
+#: svndumpfilter/main.c:921
 #, c-format
 msgid "   %ld => (dropped)\n"
 msgstr "   %ld => (opuszczono)\n"
 
-#: svndumpfilter/main.c:921
+#: svndumpfilter/main.c:925
 #, c-format
 msgid "   %ld => %ld\n"
 msgstr "   %ld => %ld\n"
 
-#: svndumpfilter/main.c:932
+#: svndumpfilter/main.c:936
 #, c-format
 msgid "Dropped %d node(s):\n"
 msgstr "Opuszczono %d obiekt(y):\n"
 
-#: svndumpfilter/main.c:1140
+#: svndumpfilter/main.c:1125
+#, fuzzy, c-format
+msgid "unknown command: '%s'\n"
+msgstr "Nieznane polecenie: '%s'\n"
+
+#: svndumpfilter/main.c:1144
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
@@ -5177,7 +5266,7 @@ msgstr ""
 "\n"
 "Błąd: nie dostarczono prefiksów.\n"
 
-#: svndumpfilter/main.c:1183
+#: svndumpfilter/main.c:1187
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -5566,29 +5655,14 @@ msgstr "wyeksportowano\n"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "%s' nie podlegające zarządzaniu wersjami i nie eksportowane\n"
 
-#~ msgid "file"
-#~ msgstr "plik"
+#~ msgid "Can't create directory '%s'"
+#~ msgstr "Nie można stworzyć katalogu '%s'"
 
-#~ msgid "directory"
-#~ msgstr "katalog"
+#~ msgid "Unknown revision kind"
+#~ msgstr "Nieznany rodzaj wersji"
 
-#~ msgid "restoring text"
-#~ msgstr "odtwarzanie treści"
-
-#~ msgid "removing props"
-#~ msgstr "usuwanie atrybutów"
-
-#~ msgid "restoring props"
-#~ msgstr "odtwarzanie atrybutów"
-
-#~ msgid "Error '%s' for '%s'"
-#~ msgstr "Błąd '%s' dla '%s'"
-
-#~ msgid "Impossibly long relative URL"
-#~ msgstr "Względny URL jest zbyt długi"
-
-#~ msgid "WARNING: error decoding UTF-8 for ?\n"
-#~ msgstr "OSTRZEŻENIE: błąd odczytu UTF-8 dla ?\n"
+#~ msgid "'%s' is a URL, but revision kind requires a working copy"
+#~ msgstr "'%s' jest URLem, tymczasem rodzaj wersji wymaga kopii roboczej"
 
 #~ msgid ""
 #~ "Display the differences between two paths.\n"
@@ -5644,11 +5718,26 @@ msgstr "%s' nie podlegające zarządzaniu wersjami i nie eksportowane\n"
 #~ "  wprowadzone w kopii roboczej w stosunku do wersji pobranej z\n"
 #~ "  repozytorium (zmiany do zatwierdzenia).\n"
 
-#~ msgid "'%s' is a URL, but revision kind requires a working copy"
-#~ msgstr "'%s' jest URLem, tymczasem rodzaj wersji wymaga kopii roboczej"
+#~ msgid "WARNING: error decoding UTF-8 for ?\n"
+#~ msgstr "OSTRZEŻENIE: błąd odczytu UTF-8 dla ?\n"
 
-#~ msgid "Unknown revision kind"
-#~ msgstr "Nieznany rodzaj wersji"
+#~ msgid "Impossibly long relative URL"
+#~ msgstr "Względny URL jest zbyt długi"
 
-#~ msgid "Can't create directory '%s'"
-#~ msgstr "Nie można stworzyć katalogu '%s'"
+#~ msgid "Error '%s' for '%s'"
+#~ msgstr "Błąd '%s' dla '%s'"
+
+#~ msgid "restoring props"
+#~ msgstr "odtwarzanie atrybutów"
+
+#~ msgid "removing props"
+#~ msgstr "usuwanie atrybutów"
+
+#~ msgid "restoring text"
+#~ msgstr "odtwarzanie treści"
+
+#~ msgid "directory"
+#~ msgstr "katalog"
+
+#~ msgid "file"
+#~ msgstr "plik"
