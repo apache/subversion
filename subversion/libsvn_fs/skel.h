@@ -51,14 +51,16 @@
      character, followed by N bytes, where N is the value of the digit
      bytes as a decimal number (`explicit-length form').
 
-   In the first case, the `contents' of the atom are everything except
-   the final whitespace character.  In the second case, the contents
-   of the atom are the N bytes after the count and whitespace.
+   In the first case, the `contents' of the atom are the entire string
+   of characters.  In the second case, the contents of the atom are
+   the N bytes after the count and whitespace.
 
    A list consists of a byte 40 (ASCII '('), followed by a series of
-   atoms or lists, followed by a byte 41 (ASCII ')').  There
-   may be zero or more whitespace characters after the '(' and before
-   the ')', and between any pair of elements.  */
+   atoms or lists, followed by a byte 41 (ASCII ')').  There may be
+   zero or more whitespace characters after the '(' and before the
+   ')', and between any pair of elements.  If two consecutive elements
+   are atoms, they must be separated by at least one whitespace
+   character.  */
 
 
 /* The `skel' structure.  */

@@ -256,8 +256,8 @@ explicit_atom (char *data,
 
 /* Unparsing skeletons.  */
 
-static apr_size_t estimate_unparsed_size (skel_t *, int);
-static svn_string_t *unparse (skel_t *, svn_string_t *, int,
+static apr_size_t estimate_unparsed_size (skel_t *);
+static svn_string_t *unparse (skel_t *, svn_string_t *,
                               apr_pool_t *);
 
 
@@ -268,20 +268,20 @@ svn_fs__unparse_skel (skel_t *skel, apr_pool_t *pool)
   
   /* Allocate a string to hold the data.  */
   str = apr_palloc (pool, sizeof (*str));
-  str->blocksize = estimate_unparsed_size (skel, 0) + 200;
+  str->blocksize = estimate_unparsed_size (skel) + 200;
   str->data = apr_palloc (pool, str->blocksize);
   str->len = 0;
 
-  return unparse (skel, str, 0, pool);
+  return unparse (skel, str, pool);
 }
 
 
 /* Return an estimate of the number of bytes that the external
-   representation of SKEL will occupy.  DEPTH is the number of lists
-   we're inside at the moment, to account for space used by
-   indentation.  */
+   representation of SKEL will occupy.  Since reallocing is expensive
+   in pools, it's worth trying to get the buffer size right the first
+   time.  */
 static apr_size_t
-estimate_unparsed_size (skel_t *skel, int depth)
+estimate_unparsed_size (skel_t *skel)
 {
   if (skel->is_atom)
     {
@@ -298,16 +298,11 @@ estimate_unparsed_size (skel_t *skel, int depth)
       int total_len;
       skel_t *child;
 
-      /* Allow space for an indented opening and closing paren, with
-         a newline after the opening paren.  */
-      total_len = depth * 2 + 2 + depth * 2 + 1;
-
-      depth++;
-
-      /* For each element, allow for some indentation, and a following
-         newline.  */
+      /* Allow space for opening and closing parens, and a space
+         between each pair of elements.  */
+      total_len = 2;
       for (child = skel->children; child; child = child->next)
-        total_len += estimate_unparsed_size (child, depth) + (depth * 2) + 1;
+        total_len += estimate_unparsed_size (child) + 1;
 
       return total_len;
     }
@@ -347,19 +342,15 @@ use_implicit (skel_t *skel)
 
 
 /* Append the concrete representation of SKEL to the string STR.
-   DEPTH indicates how many lists we're inside; we use it for
-   indentation.  Grow S with new space from POOL as necessary.  */
+   Grow S with new space from POOL as necessary.  */
 static svn_string_t *
-unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
+unparse (skel_t *skel, svn_string_t *str, apr_pool_t *pool)
 {
   if (skel->is_atom)
     {
       /* Append an atom to STR.  */
       if (use_implicit (skel))
-        {
-          svn_string_appendbytes (str, skel->data, skel->len);
-          svn_string_appendbytes (str, " ", 1);
-        }
+        svn_string_appendbytes (str, skel->data, skel->len);
       else
         {
           /* Append the length to STR.  */
@@ -375,7 +366,7 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
           svn_string_ensure (str,
                              str->len + length_len + 1 + skel->len);
           svn_string_appendbytes (str, buf, length_len);
-          str->data[str->len++] = '\n';
+          str->data[str->len++] = ' ';
           svn_string_appendbytes (str, skel->data, skel->len);
         }
     }
@@ -383,36 +374,24 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
     {
       /* Append a list to STR.  */
       skel_t *child;
-      int i;
 
-      /* The opening paren has been indented by the parent, if necessary.  */
+      /* Emit an opening parenthesis.  */
       svn_string_ensure (str, str->len + 1);
       str->data[str->len++] = '(';
       
-      depth++;
-
-      /* Append each element.  */
+      /* Append each element.  Emit a space between each pair of elements.  */
       for (child = skel->children; child; child = child->next)
         {
-          /* Add a newline, and indentation.  */
-          svn_string_ensure (str, str->len + 1 + depth * 2);
-          str->data[str->len++] = '\n';
-          for (i = 0; i < depth * 2; i++)
-            str->data[str->len++] = ' ';
-          unparse (child, str, depth, pool);
+          unparse (child, str, pool);
+          if (child->next)
+            {
+              svn_string_ensure (str, str->len + 1);
+              str->data[str->len++] = ' ';
+            }
         }
 
-      depth--;
-      
-      /* Add a newline, indentation, and a closing paren.
-
-         There should be no newline after a closing paren; a skel must
-         entirely fill its string.  If we're part of a parent list,
-         the parent will take care of adding that.  */
-      svn_string_ensure (str, str->len + 1 + depth * 2 + 1);
-      str->data[str->len++] = '\n';
-      for (i = 0; i < depth * 2; i++)
-        str->data[str->len++] = ' ';
+      /* Emit a closing parenthesis.  */
+      svn_string_ensure (str, str->len + 1);
       str->data[str->len++] = ')';
     }
 
