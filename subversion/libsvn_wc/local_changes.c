@@ -226,7 +226,7 @@ svn_wc__gnudiff_patcher (void *user_data,
                          apr_pool_t *pool)
 {
 #if 0
-  struct svn_wc__diff_holder *dh = (struct svn_wc__diff_holder *) user_data;
+  struct svn_wc__diff_holder *dh = user_data;
 #endif
   apr_status_t apr_err;
 

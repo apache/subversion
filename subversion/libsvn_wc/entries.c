@@ -145,13 +145,6 @@ svn_wc__entries_init (svn_string_t *path,
 
 /*** reading and writing the entries file ***/
 
-/* 
-   typedef struct svn_wc__entry_t
-   #define SVN_WC__ENTRY_ADD     1
-   #define SVN_WC__ENTRY_DELETE  2
-*/
-
-
 struct entries_accumulator
 {
   /* Keys are entry names, vals are (struct svn_wc__entry_t *)'s. */
@@ -163,7 +156,7 @@ struct entries_accumulator
   /* The parser that's parsing it, for signal_expat_bailout(). */
   svn_xml_parser_t *parser;
 
-  /* Don't leave home without it. */
+  /* Don't leave home without one. */
   apr_pool_t *pool;
 };
 
@@ -172,7 +165,7 @@ struct entries_accumulator
 static void
 handle_start_tag (void *userData, const char *tagname, const char **atts)
 {
-  struct entries_accumulator *accum = (struct entries_accumulator *) userData;
+  struct entries_accumulator *accum = userData;
   svn_error_t *err;
 
   /* We only care about the `entry' tag; all other tags, such as `xml'
@@ -807,7 +800,7 @@ write_entry (apr_file_t *outfile,
 static void
 handle_start_tag (void *userData, const char *tagname, const char **atts)
 {
-  svn_wc__entry_baton_t *baton = (svn_wc__entry_baton_t *) userData;
+  svn_wc__entry_baton_t *baton = userData;
   svn_error_t *err;
 
   /* We only care about the `entry' tag; all other tags, such as `xml'
@@ -947,7 +940,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
 static void
 handle_end_tag (void *userData, const char *tagname)
 {
-  svn_wc__entry_baton_t *baton = (svn_wc__entry_baton_t *) userData;
+  svn_wc__entry_baton_t *baton = userData;
   svn_error_t *err;
 
   if ((strcmp (tagname, SVN_WC__ENTRIES_TOPLEVEL)) == 0)
