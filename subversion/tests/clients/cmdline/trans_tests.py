@@ -21,6 +21,7 @@ import string, sys, os.path, re
 
 # Our testing module
 import svntest
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -518,6 +519,53 @@ def keyword_expanded_on_checkout(sbox):
     return 1
   fp.close()
 
+
+#----------------------------------------------------------------------
+def cat_keyword_expansion(sbox):
+  "keyword expanded on cat"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+
+  # Set up A/mu to do $Rev$ keyword expansion
+  svntest.main.file_append (mu_path , "\n$Rev$")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:keywords', 'Rev', mu_path)
+
+  expected_output = wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/mu', wc_rev=2)
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output, expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
+  # Make another commit so that the last changed revision for A/mu is
+  # not HEAD.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'bar', lambda_path)
+  expected_output = wc.State(wc_dir, {
+    'A/B/lambda' : Item(verb='Sending'),
+    })
+  expected_status.tweak(repos_rev=3)
+  expected_status.tweak('A/B/lambda', wc_rev=3)
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output, expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
+  # At one stage the keywords were expanded to values for the requested
+  # revision, not to those committed revision
+  out, err = svntest.main.run_svn (None, 'cat', '-r', 'HEAD', mu_path)
+  if err or out[1] != "$Rev: 2 $":
+    raise svntest.Failure
+  
+
 ########################################################################
 # Run the tests
 
@@ -531,6 +579,7 @@ test_list = [ None,
               update_modified_with_translation,
               eol_change_is_text_mod,
               keyword_expanded_on_checkout,
+              cat_keyword_expansion,
              ]
 
 if __name__ == '__main__':
