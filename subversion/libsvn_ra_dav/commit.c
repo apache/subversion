@@ -474,7 +474,7 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
   ne_buffer_zappend(body,
                     "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" DEBUG_CR
                     "<D:propertyupdate xmlns:D=\"DAV:\" xmlns:C=\""
-                    SVN_RA_DAV__CUSTOM_NAMESPACE "\" xmlns:S=\"svn:\">");
+                    SVN_PROP_CUSTOM_PREFIX "\" xmlns:S=\"svn:\">");
 
   if (rb->prop_changes != NULL)
     {
