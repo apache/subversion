@@ -1,5 +1,8 @@
 Version 0.14.3 [Alpha Interim 3] (released ?? ??? ????, revision ????)
 
+ User-visible changes:
+ * empty values in the Windows Registry are no longer ignored (issue #671)
+
  Developer-visible changes:
  * upgrade to neon 0.23.3 to fix Windows build issues
 

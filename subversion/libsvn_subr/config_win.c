@@ -44,54 +44,56 @@ svn_config__win_config_path (char *folder, int system_path)
 
 
 #include "config_impl.h"
+#define SVN_REG_DEFAULT_NAME_SIZE  2048
+#define SVN_REG_DEFAULT_VALUE_SIZE 8192
 
 static svn_error_t *
-parse_section (svn_config_t *cfg, HKEY hkey, const char *section)
+parse_section (svn_config_t *cfg, HKEY hkey, const char *section,
+               svn_stringbuf_t *option, svn_stringbuf_t *value)
 {
-  char option[4096];            /* FIXME: Allocate this! */
   DWORD option_len, type, index;
   LONG err;
 
+  /* Start with a reasonable size for the buffers. */
+  svn_stringbuf_ensure (option, SVN_REG_DEFAULT_NAME_SIZE);
+  svn_stringbuf_ensure (value, SVN_REG_DEFAULT_VALUE_SIZE);
   for (index = 0; ; ++index)
     {
-      option_len = sizeof (option) / sizeof (option[0]);
-      err = RegEnumValue (hkey, index, option, &option_len,
+      option_len = option->blocksize;
+      err = RegEnumValue (hkey, index, option->data, &option_len,
                           NULL, &type, NULL, NULL);
       if (err == ERROR_NO_MORE_ITEMS)
           break;
-      if (err == ERROR_MORE_DATA)
-        return svn_error_create (-1, /* FIXME: Resize buffer and retry */
-                                 APR_FROM_OS_ERROR(err), NULL, cfg->pool,
-                                 "Option buffer too small");
+      if (err == ERROR_INSUFFICIENT_BUFFER)
+        {
+          svn_stringbuf_ensure (option, option_len);
+          err = RegEnumValue (hkey, index, option->data, &option_len,
+                              NULL, &type, NULL, NULL);
+        }
       if (err != ERROR_SUCCESS)
         return svn_error_create (SVN_ERR_MALFORMED_FILE,
                                  APR_FROM_OS_ERROR(err), NULL, cfg->pool,
                                  "Can't enumerate registry values");
 
-      if (type == REG_SZ)
+      /* Ignore option names that start with '#', see
+         http://subversion.tigris.org/issues/show_bug.cgi?id=671 */
+      if (type == REG_SZ && option->data[0] != '#')
         {
-          char value[8192];     /* FIXME: Allocate this! */
-          DWORD value_len = sizeof (value);
-          err = RegQueryValueEx (hkey, option, NULL, NULL,
-                                 value, &value_len);
+          DWORD value_len = value->blocksize;
+          err = RegQueryValueEx (hkey, option->data, NULL, NULL,
+                                 value->data, &value_len);
           if (err == ERROR_MORE_DATA)
-            return svn_error_create (-1, /* FIXME: Resize buffer and retry */
-                                     APR_FROM_OS_ERROR(err), NULL, cfg->pool,
-                                     "Value buffer too small");
-          else if (err != ERROR_SUCCESS)
+            {
+              svn_stringbuf_ensure (value, value_len);
+              err = RegQueryValueEx (hkey, option->data, NULL, NULL,
+                                     value->data, &value_len);
+            }
+          if (err != ERROR_SUCCESS)
             return svn_error_create (SVN_ERR_MALFORMED_FILE,
                                      APR_FROM_OS_ERROR(err), NULL, cfg->pool,
                                      "Can't read registry value data");
 
-          /* By ignoring empty values here, we allow people to keep
-             keys in their registry as reminders of what to tweak
-             later on.  This is sort of the registry equivalent of
-             commented-out lines in a ~/.subversion/foo file.
-
-             See http://subversion.tigris.org/issues/show_bug.cgi?id=671
-             for more on this. */
-          if ((value_len > 0) && (value[0] != '\0'))
-            svn_config_set (cfg, section, option, value);
+          svn_config_set (cfg, section, option->data, value->data);
         }
     }
 
@@ -106,6 +108,8 @@ svn_error_t *
 svn_config__parse_registry (svn_config_t *cfg, const char *file,
                             svn_boolean_t must_exist)
 {
+  apr_pool_t *subpool;
+  svn_stringbuf_t *section, *option, *value;
   svn_error_t *svn_err = SVN_NO_ERROR;
   HKEY base_hkey, hkey;
   DWORD index;
@@ -146,27 +150,35 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
         return SVN_NO_ERROR;
     }
 
+
+  subpool = svn_pool_create (cfg->pool);
+  section = svn_stringbuf_create ("", subpool);
+  option = svn_stringbuf_create ("", subpool);
+  value = svn_stringbuf_create ("", subpool);
+
   /* The top-level values belong to the [DEFAULTS] section */
-  svn_err = parse_section (cfg, hkey, "DEFAULTS");
+  svn_err = parse_section (cfg, hkey, "DEFAULTS", option, value);
   if (svn_err)
     goto cleanup;
 
   /* Now enumerate the rest of the keys. */
+  svn_stringbuf_ensure (section, SVN_REG_DEFAULT_NAME_SIZE);
   for (index = 0; ; ++index)
     {
-      char section[4096];        /* FIXME: Allocate this! */
-      DWORD section_len = sizeof (section);
+      DWORD section_len = section->blocksize;
       FILETIME last_write_time;
       HKEY sub_hkey;
 
-      err = RegEnumKeyEx (hkey, index, section, &section_len,
+      err = RegEnumKeyEx (hkey, index, section->data, &section_len,
                           NULL, NULL, NULL, &last_write_time);
       if (err == ERROR_NO_MORE_ITEMS)
           break;
       if (err == ERROR_MORE_DATA)
-        return svn_error_create (-1, /* FIXME: Resize buffer and retry */
-                                 APR_FROM_OS_ERROR(err), NULL, cfg->pool,
-                                 "Key buffer too small");
+        {
+          svn_stringbuf_ensure (section, section_len);
+          err = RegEnumKeyEx (hkey, index, section->data, &section_len,
+                              NULL, NULL, NULL, &last_write_time);
+        }
       if (err != ERROR_SUCCESS)
         {
           svn_err =  svn_error_create (SVN_ERR_MALFORMED_FILE,
@@ -176,7 +188,7 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
           goto cleanup;
         }
 
-      err = RegOpenKeyEx (hkey, section, 0,
+      err = RegOpenKeyEx (hkey, section->data, 0,
                           KEY_ENUMERATE_SUB_KEYS | KEY_QUERY_VALUE,
                           &sub_hkey);
       if (err != ERROR_SUCCESS)
@@ -188,7 +200,7 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
           goto cleanup;
         }
 
-      svn_err = parse_section (cfg, sub_hkey, section);
+      svn_err = parse_section (cfg, sub_hkey, section->data, option, value);
       RegCloseKey (sub_hkey);
       if (svn_err)
         goto cleanup;
@@ -196,6 +208,7 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
 
  cleanup:
   RegCloseKey (hkey);
+  svn_pool_destroy (subpool);
   return svn_err;
 }
 
