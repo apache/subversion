@@ -42,6 +42,14 @@ class SVNShell(Cmd):
     self._setup_prompt()
     self.cmdloop()
     
+  def precmd(self, line):
+    if line == "EOF":
+      # Ctrl-D is a command without a newline.  Print a newline, so the next
+      # shell prompt is not on the same line as the last svnshell prompt.
+      print
+      return "exit"
+    return line
+
   def postcmd(self, stop, line):
     self._setup_prompt()
 
@@ -296,7 +304,7 @@ def usage(exit):
   sys.exit(exit)
 
 def main():
-  if len(sys.argv) < 2:
+  if len(sys.argv) != 2:
     usage(1)
 
   core.run_app(SVNShell, sys.argv[1])
