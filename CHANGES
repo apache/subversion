@@ -1,3 +1,40 @@
+Version 0.16 (released ? Dec 2002, revision ?)
+
+ User-visible changes:
+ * new 'svn cat' subcommand
+ * new --revprop flag to access revision props, -r for versioned props (#943)
+ * new "compression" runtime option in ~/.subversion/config
+ * svnadmin/svnlook now use help system, and some subcommands deleted or moved.
+ * tool changes:
+    - new svnshell.py tool
+    - new mirror_dir_through_svn.cgi script
+    - new svn_load_dirs.pl features
+ * --message-encoding is now just --encoding, and affects svn: propvals too.
+ * major rewrites of chapters 3, 4, 5 of the Subversion Book.
+
+ Developer-visible changes:
+ * all svn_error_t's now allocated in subpool of global pool.
+ * reorganize svnlook/svnadmin subcommands & option-parsing (#540, #915, #910)
+ * all log messages and svn: props now stored as UTF8/LF endings (#896)
+ * huge cleanup/reorg of all svn_path_* routines
+ * svn_client_status sends feedback, distinguishes unversioned vs. ignored
+ * improvements to swig-build process
+ * fixes to pool cleanup handlers
+ * begin abstraction of gen_make.py 
+ * entry-caching improvements
+ * stop using global apr_xlate objects
+ * win32-innosetup code added to packages/
+ * new work on ruby bindings and swig-java bindings
+ * many, many bug fixes: various small coredumps, svn_error_t leaks,
+   copy props correctly (#976), copy executable bits correctly (#982),
+   test-system fix (#882), accidentally imported tmpfile (#964),
+   ra_local checkout memleak (#985), accidental wc deletion (#988),
+   better text vs. binary detection (#994), dav log-report error
+   handling, bad 'svn switch' dav caching (#1000), don't call NULL
+   callbacks (#1005), bogus switch feedback (#1007), eol-style file
+   corruption (#920), getdate.y fix (#1009), ra_local error reporting (#900)
+
+
 Version 0.15 (released 7 Nov 2002, revision 3687)
 
  User-visible changes:
