@@ -1,7 +1,7 @@
 [Setup]
 ;# Version parameters #########################################################
-#define svn_version "0.18.0"
-#define svn_release "4973"
+#define svn_version "0.18.1"
+#define svn_release "5118"
 #define svn_cpr "Copyright ©2000-2003 CollabNet"
 
 ;# paths_inno_src.iss ##########################################################
