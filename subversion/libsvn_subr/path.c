@@ -747,7 +747,7 @@ svn_path_uri_decode (const svn_string_t *path, apr_pool_t *pool)
     return NULL;
 
   retstr = svn_stringbuf_create ("", pool);
-  svn_stringbuf_ensure (retstr, path->len);
+  svn_stringbuf_ensure (retstr, path->len + 1);
   retstr->len = 0;
   for (i = 0; i < path->len; i++)
     {
