@@ -482,7 +482,15 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
         UPDATE is set).  This directly corresponds to the "-u"
         (--show-updates) flag in the commandline client app.
 
-  */
+   If NOTIFY_FUNC is non-null, then call NOTIFY_FUNC with NOTIFY_BATON
+   as the status progresses.  Specifically, every time a status
+   structure is added (or tweaked) in the hash, this routine will pass
+   the pathname with action svn_wc_notify_status.  (Note: callers
+   should *not* attempt to look up the pathname in the hash for the
+   purposes of parsing the status structure; a status structure is
+   created in multiple passes, and is not guaranteed to be completely
+   correct until svn_client_status completely finishes.)
+*/
 svn_error_t *
 svn_client_status (apr_hash_t **statushash,
                    svn_revnum_t *youngest,  /* only touched if `update' set */
@@ -492,6 +500,8 @@ svn_client_status (apr_hash_t **statushash,
                    svn_boolean_t get_all,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
+                   svn_wc_notify_func_t notify_func,
+                   void *notify_baton,
                    apr_pool_t *pool);
 
 

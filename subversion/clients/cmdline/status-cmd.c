@@ -45,6 +45,8 @@ svn_cl__status (apr_getopt_t *os,
   int i;
   svn_client_auth_baton_t *auth_baton;
   svn_revnum_t youngest = SVN_INVALID_REVNUM;
+  svn_wc_notify_func_t notify_func = NULL;
+  void *notify_baton = NULL;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -54,6 +56,9 @@ svn_cl__status (apr_getopt_t *os,
 
   /* Build an authentication object to give to libsvn_client. */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
+
+  /* The notification callback. */
+  svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -73,6 +78,7 @@ svn_cl__status (apr_getopt_t *os,
                                   opt_state->verbose,
                                   opt_state->update,
                                   opt_state->no_ignore,
+                                  notify_func, notify_baton,
                                   pool));
 
       /* Now print the structures to the screen.
