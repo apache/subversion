@@ -1232,11 +1232,7 @@ svn_io_run_diff3 (const char *dir,
                   int *exitcode,
                   apr_pool_t *pool)
 {
-#ifdef SVN_DIFF3_HAS_DIFF_PROGRAM_ARG
   const char *args[14];
-#else 
-  const char *args[13];
-#endif
 
   /* Labels fall back to sensible defaults if not specified. */
   if (mine_label == NULL)
