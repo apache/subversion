@@ -29,19 +29,6 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 
-# FIXME: Someday we'll create expected output with the right kind
-#        of path separator; but the client doesn't consistently
-#        use local style in output yet.
-def _tweak_paths(list):
-  if os.sep != "/":
-    tweaked_list = []
-    for line in list:
-      tweaked_list.append(string.replace(line, os.sep, "/"))
-    return tweaked_list
-  else:
-    return list
-
-
 ######################################################################
 # THINGS TO TEST
 #
@@ -439,8 +426,6 @@ def eol_change_is_text_mod(sbox):
   expected_output = ["Sending        " + foo_path + "\n",
                      "Transmitting file data .\n",
                      "Committed revision 3.\n"]
-  # FIXME: see commend at _tweak_paths
-  expected_output = _tweak_paths(expected_output) 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'ci', '-m', 'log msg', foo_path)
 

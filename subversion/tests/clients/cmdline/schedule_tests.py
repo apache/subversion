@@ -30,19 +30,6 @@ XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 
-# FIXME: Someday we'll create expected output with the right kind
-#        of path separator; but the client doesn't consistently
-#        use local style in output yet.
-def _tweak_paths(list):
-  if os.sep != "/":
-    tweaked_list = []
-    for line in list:
-      tweaked_list.append(string.replace(line, os.sep, "/"))
-    return tweaked_list
-  else:
-    return list
-
-
 ######################################################################
 # Tests
 #
@@ -281,7 +268,6 @@ def revert_add_files(sbox):
                                                    '--recursive', wc_dir)
 
   ### do we really need to sort these?
-  output = _tweak_paths(output) # FIXME: see comment at _tweak_paths
   output.sort()
   expected_output.sort()
   if output != expected_output:
@@ -307,7 +293,6 @@ def revert_add_directories(sbox):
                                                    '--recursive', wc_dir)
 
   ### do we really need to sort these?
-  output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
   output.sort()
   expected_output.sort()
   if output != expected_output:
@@ -332,7 +317,6 @@ def revert_nested_adds(sbox):
                                                    'revert',
                                                    '--recursive', wc_dir)
   ### do we really need to sort these?
-  output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
   output.sort()
   expected_output.sort()
   if output != expected_output:
@@ -363,7 +347,6 @@ def revert_add_executable(sbox):
                                                    '--recursive', wc_dir)
 
   ### do we really need to sort these?
-  expected_output = _tweak_paths(expected_output)
   output.sort()
   expected_output.sort()
   if output != expected_output:
@@ -390,7 +373,6 @@ def revert_delete_files(sbox):
                                                    'revert',
                                                    '--recursive', wc_dir)
   ### do we really need to sort these?
-  output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
   output.sort()
   expected_output.sort()
   if output != expected_output:
@@ -425,7 +407,6 @@ def revert_delete_dirs(sbox):
                                                    'revert',
                                                    '--recursive', wc_dir)
   ### do we really need to sort these?
-  output = _tweak_paths(output) # FIXME: see commend at _tweak_paths
   output.sort()
   expected_output.sort()
   if output != expected_output:

@@ -81,32 +81,6 @@ if sys.platform == 'win32':
   windows = 1
   file_schema_prefix = 'file:///'
   _exe = '.exe'
-
-  # svn on windows doesn't support backslashes in path names
-  _os_path_abspath_orig = os.path.abspath
-  def _os_path_abspath(arg):
-    path = _os_path_abspath_orig(arg)
-    return path.replace('\\', '/')
-  os.path.abspath = _os_path_abspath
-
-  _os_path_join_orig = os.path.join
-  def _os_path_join(*args):
-    path = apply(_os_path_join_orig, args)
-    return path.replace('\\', '/')
-  os.path.join = _os_path_join
-
-  _os_path_normpath_orig = os.path.normpath
-  def _os_path_normpath(arg):
-    path = _os_path_normpath_orig(arg)
-    return path.replace('\\', '/')
-  os.path.normpath = _os_path_normpath
-
-  _os_path_dirname_orig = os.path.dirname
-  def _os_path_dirname(arg):
-    path = _os_path_dirname_orig(arg)
-    return path.replace('\\', '/')
-  os.path.dirname = _os_path_dirname
-
 else:
   windows = 0
   file_schema_prefix = 'file://'
@@ -131,6 +105,9 @@ cleanup_mode = 0
 
 # Global URL to testing area.  Default to ra_local, current working dir.
 test_area_url = file_schema_prefix + os.path.abspath(os.getcwd())
+if windows == 1:
+  test_area_url = string.replace(test_area_url, '\\', '/')
+
 
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!
@@ -382,6 +359,8 @@ def set_repos_paths(repo_dir):
   global current_repo_dir, current_repo_url
   current_repo_dir = repo_dir
   current_repo_url = test_area_url + '/' + repo_dir
+  if windows == 1:
+    current_repo_url = string.replace(current_repo_url, '\\', '/')
 
 
 ######################################################################
@@ -395,6 +374,8 @@ class Sandbox:
     self.wc_dir = os.path.join(general_wc_dir, self.name)
     self.repo_dir = os.path.join(general_repo_dir, self.name)
     self.repo_url = test_area_url + '/' + self.repo_dir
+    if windows == 1:
+      self.repo_url = string.replace(self.repo_url, '\\', '/')
     self.test_paths = [self.wc_dir, self.repo_dir]
 
   def build(self):

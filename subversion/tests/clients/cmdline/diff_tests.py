@@ -38,6 +38,9 @@ Item = svntest.wc.StateItem
 def check_diff_output(diff_output, name, diff_type):
   "check diff output"
 
+# On Windows, diffs still display / rather than \ in paths
+  if svntest.main.windows == 1:
+    name = string.replace(name, '\\', '/')
   i_re = re.compile('^Index:')
   d_re = re.compile('^Index: (\\./)?' + name)
   p_re = re.compile('^--- (\\./)?' + name)
