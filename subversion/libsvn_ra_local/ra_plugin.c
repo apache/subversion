@@ -327,12 +327,13 @@ svn_ra_local__get_uuid (void *session_baton,
 static svn_error_t *
 svn_ra_local__rev_proplist (void *session_baton,
                             svn_revnum_t rev,
-                            apr_hash_t **props)
+                            apr_hash_t **props,
+                            apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  SVN_ERR (svn_fs_revision_proplist (props, baton->fs, rev, baton->pool));
+  SVN_ERR (svn_fs_revision_proplist (props, baton->fs, rev, pool));
 
   return SVN_NO_ERROR;
 }

@@ -447,10 +447,9 @@ static svn_error_t *ra_svn_get_uuid(void *sess, const char **uuid)
 }
 
 static svn_error_t *ra_svn_rev_proplist(void *sess, svn_revnum_t rev,
-                                        apr_hash_t **props)
+                                        apr_hash_t **props, apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess;
-  apr_pool_t *pool = conn->pool;
   apr_array_header_t *proplist;
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "rev-proplist", "r", rev));
