@@ -687,6 +687,12 @@ svn_error_t *svn_wc_get_actual_target (const char *path,
 
 /* Set *EDITOR and *EDIT_BATON to an editor and baton for updating a
  * working copy.
+ *
+ * If TRAVERSAL_INFO is non-null, set *TRAVERSAL_INFO to an object
+ * suitable for use by post-update accessor functions, such as
+ * svn_wc_edited_externals().  The traversal info has the same
+ * lifetime as POOL, but is useable only after (*EDITOR)->close_edit
+ * has been called.
  * 
  * ANCHOR is the local path to the working copy which will be used as
  * the root of our editor.  TARGET is the entry in ANCHOR that will
@@ -701,6 +707,7 @@ svn_error_t *svn_wc_get_update_editor (const char *anchor,
                                        svn_boolean_t recurse,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
+                                       void **traversal_info,
                                        apr_pool_t *pool);
 
 
@@ -725,6 +732,7 @@ svn_error_t *svn_wc_get_checkout_editor (const char *dest,
                                          svn_boolean_t recurse,
                                          const svn_delta_editor_t **editor,
                                          void **edit_baton,
+                                         void **traversal_info,
                                          apr_pool_t *pool);
 
 
@@ -734,6 +742,12 @@ svn_error_t *svn_wc_get_checkout_editor (const char *dest,
  * a working copy to a new SWITCH_URL.  (Right now, this URL must be
  * within the same repository that the working copy already comes
  * from.)  SWITCH_URL must not be NULL.
+ *
+ * If TRAVERSAL_INFO is non-null, set *TRAVERSAL_INFO to an object
+ * suitable for use by post-update accessor functions, such as
+ * svn_wc_edited_externals().  The traversal info has the same
+ * lifetime as POOL, but is useable only after (*EDITOR)->close_edit
+ * has been called.
  * 
  * ANCHOR is the local path to the working copy which will be used as
  * the root of our editor.  TARGET is the entry in ANCHOR that will
@@ -749,14 +763,15 @@ svn_error_t *svn_wc_get_switch_editor (const char *anchor,
                                        svn_boolean_t recurse,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
+                                       void **traversal_info,
                                        apr_pool_t *pool);
 
 
 /* Set *EXTERNALS_NEW and *EXTERNALS_OLD to hash tables representing
  * changes to values of the svn:externals property on directories
- * traversed by EDIT_BATON.
+ * traversed by TRAVERSAL_INFO.
  *
- * EDIT_BATON must be obtained from svn_wc_get_update_editor(),
+ * TRAVERSAL_INFO is obtained from svn_wc_get_update_editor(),
  * svn_wc_get_checkout_editor(), or svn_wc_get_switch_editor().
  *
  * Each hash maps `const char *' directory names onto `const char *'
@@ -767,22 +782,11 @@ svn_error_t *svn_wc_get_switch_editor (const char *anchor,
  * simply omitted from the appropriate table.  Directories whose value
  * of the property did not change are not included in either hash.
  *
- * The hashes, keys, and values have the same lifetime as EDIT_BATON.
- *
- * ### Ben and I were talking about whether it's tasteful to have a
- * public function that acts on the editor baton like this.  I think
- * he persuaded me that it's fine, as long as the doc string says
- * which kinds of edit_baton are acceptable.  My alternative was not
- * to add a new editor function, but instead to add a new
- * `**function_pointer' return-by-reference parameter to the three
- * functions that return this kind of editor and baton.  So when you
- * get the editor and edit_baton, you'd also get an anonymous function
- * that knows how to retrieve certain information from the baton.
- * But that's overkill, right?  -kff
+ * The hashes, keys, and values have the same lifetime as TRAVERSAL_INFO.
  */
 void svn_wc_edited_externals (apr_hash_t **externals_new,
                               apr_hash_t **externals_old,
-                              void *edit_baton);
+                              void *traversal_info);
 
 
 /* Given a FILE_PATH already under version control, fully "install" a

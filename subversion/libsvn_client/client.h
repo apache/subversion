@@ -389,66 +389,27 @@ svn_client__do_commit (const char *base_url,
 
 /*** Externals (Modules) ***/
 
-/* One external item.  This usually represents one line from an
-   svn:externals description. 
+/* Handle changes to the svn:externals property in the tree traversed
+   by TRAVERSAL_INFO (obtained from svn_wc_get_checkout_editor,
+   svn_wc_get_update_editor, svn_wc_get_switch_editor, for example).
 
-   ### 
-*/
-typedef struct svn_client__external_item_t
-{
-  /* The name of the subdirectory into which this external should be
-     checked out.  (But note that these structs are often stored in
-     hash tables with the target dirs as keys, so this field will
-     often be redundant.) */
-  const char *target_dir;
-
-  /* Where to check out from. */
-  const char *url;
-
-  /* What revision to check out.  Only svn_client_revision_number,
-     svn_client_revision_date, and svn_client_revision_head are
-     valid.  ### Any reason to make this inline instead of pointer? */
-  svn_client_revision_t *revision;
-
-} svn_client__external_item_t;
-
-
-/* Set *EXTERNALS_P to a hash table whose keys are target subdir
- * names, and values are `svn_client__external_item_t *' objects,
- * based on DESC.
- *
- * The format of EXTERNALS is the same as for values of the directory
- * property SVN_PROP_EXTERNALS, which see.
- *
- * Allocate the table, keys, and values in POOL.
- *
- * If the format of DESC is invalid, don't touch *EXTERNALS_P and
- * return SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION.
- */
-svn_error_t *svn_client__parse_externals_description
-   (apr_hash_t **externals_p,
-    const char *desc,
-    apr_pool_t *pool);
-
-
-/* Walk newly checked-out tree PATH looking for directories that have
-   the "svn:externals" property set.  For each one, read the external
-   items from in the property value, and check them out as subdirs
-   of the directory that had the property.
+   For each changed value of the property, discover the nature of the
+   change and behave appropriately -- either check a new "external"
+   subdir, or call svn_wc_remove_from_revision_control() on an
+   existing one, or both.
 
    BEFORE_EDITOR/BEFORE_EDIT_BATON and AFTER_EDITOR/AFTER_EDIT_BATON,
    along with AUTH_BATON, are passed along to svn_client_checkout() to
-   check out the external items.   ### This is a lousy notification
-   system, soon it will be notification callbacks instead, that will
-   be nice! ###
+   check out the external items.  (### This notification system will
+   soon be replaced by callbacks.)
 
    ### todo: AUTH_BATON may not be so useful.  It's almost like we
        need access to the original auth-obtaining callbacks that
        produced auth baton in the first place.  Hmmm. ###
 
-   Use POOL for temporary allocation.  */
-svn_error_t *svn_client__checkout_externals
-   (const char *path, 
+   Use POOL for temporary allocation. */
+svn_error_t *svn_client__handle_externals_changes
+   (void *traversal_info,
     const svn_delta_editor_t *before_editor,
     void *before_edit_baton,
     const svn_delta_editor_t *after_editor,

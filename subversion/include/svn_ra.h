@@ -353,7 +353,9 @@ typedef struct svn_ra_plugin_t
   /* Check out revision REVISION of the url specified in
      SESSION_BATON, using EDITOR and EDIT_BATON to create the working
      copy.  If RECURSE is non-zero, create the full working tree, else
-     just its topmost directory. */
+     just its topmost directory. 
+
+     Do a complete drive of EDITOR, ending with a call to close_edit(). */
   svn_error_t *(*do_checkout) (void *session_baton,
                                svn_revnum_t revision,
                                svn_boolean_t recurse,
@@ -372,8 +374,10 @@ typedef struct svn_ra_plugin_t
      calls into the REPORTER structure; the RA layer assumes that all
      paths are relative to the URL used to create SESSION_BATON.
 
-     When finished, the client calls REPORTER->finish_report(). The RA
-     layer then drives UPDATE_EDITOR to update the working copy.
+     When finished, the client calls REPORTER->finish_report().  The
+     RA layer then does a complete drive of UPDATE_EDITOR, ending with
+     close_edit(), to update the working copy.
+
      UPDATE_TARGET is an optional single path component will restrict
      the scope of things affected by the update to an entry in the
      directory represented by the SESSION_BATON's URL, or NULL if the
@@ -407,8 +411,10 @@ typedef struct svn_ra_plugin_t
      calls into the REPORTER structure; the RA layer assumes that all
      paths are relative to the URL used to create SESSION_BATON.
 
-     When finished, the client calls REPORTER->finish_report(). The RA
-     layer then drives UPDATE_EDITOR to update the working copy.
+     When finished, the client calls REPORTER->finish_report().  The
+     RA layer then does a complete drive of UPDATE_EDITOR, ending with
+     close_edit(), to switch the working copy.
+
      UPDATE_TARGET is an optional single path component will restrict
      the scope of things affected by the update to an entry in the
      directory represented by the SESSION_BATON's URL, or NULL if the
@@ -439,12 +445,13 @@ typedef struct svn_ra_plugin_t
      paths are relative to the URL used to create SESSION_BATON.
 
      When finished, the client calls REPORTER->finish_report(). The RA
-     layer then drives STATUS_EDITOR to report, essentially, what
-     would would be modified in the working copy were the client to
-     call do_update().  STATUS_TARGET is an optional single path
-     component will restrict the scope of the status report to an
-     entry in the directory represented by the SESSION_BATON's URL, or
-     NULL if the entire directory is meant to be examined. */
+     layer then does a complete drive of STATUS_EDITOR, ending with
+     close_edit(), to report, essentially, what would would be
+     modified in the working copy were the client to call do_update().
+     STATUS_TARGET is an optional single path component will restrict
+     the scope of the status report to an entry in the directory
+     represented by the SESSION_BATON's URL, or NULL if the entire
+     directory is meant to be examined. */
   svn_error_t *(*do_status) (void *session_baton,
                              const svn_ra_reporter_t **reporter,
                              void **report_baton,

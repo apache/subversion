@@ -55,6 +55,7 @@ apply_delta (svn_stream_t *delta,
                                        TRUE, /* Recurse */
                                        &editor,
                                        &edit_baton,
+                                       NULL,
                                        pool));
 
   /* ### todo:  This is a TEMPORARY wrapper around our editor so we
