@@ -38,7 +38,8 @@
 */
 %apply SWIGTYPE **OUTPARAM {
     svn_wc_entry_t **,
-    svn_wc_adm_access_t **
+    svn_wc_adm_access_t **,
+    svn_boolean_t *
 };
 
 /* ----------------------------------------------------------------------- */
