@@ -92,7 +92,18 @@ static const struct ne_xml_elm neon_descriptions[] =
  
   /* Unknown things (we use this so that Neon let's us examine custom
      properties). */
+#if 0
+  /* ### if we do this, then Neon will not recognize and parse any of the
+     ### properties. that means that process_results will not be called,
+     ### which means that some properties won't be added to the propset
+     ### hash. we could do all that in end_element, but since we're
+     ### disabling Neon's property processing, it also means that we're
+     ### losing Neon's propstatus checks.
+     ###
+     ### disabling for now...
+  */
   { "", "", NE_ELM_unknown, NE_XML_COLLECT },
+#endif
 
   { NULL }
 };
