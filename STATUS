@@ -114,6 +114,13 @@ Bindings changes that affect the build system:
      Breaks bindings if base is applied, javahl local change, low risk.
      Votes:
       +1: patrick (if above is applied)
+
+    * Issue #1690
+     Support SWIG 1.3.20 and newer.
+     Justification: An increasingly common version of SWIG that we need
+                    to support.
+     Votes:
+      +1: breser
      
 Bindings changes that don't affect the build system:
 Already have three +1 votes:
