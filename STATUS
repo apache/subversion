@@ -60,7 +60,7 @@ Candidate changes:
     Justification:
       Leak introduced in 1.1.1.
     Votes:
-      +1: lundblad, dionisos
+      +1: lundblad, dionisos, epg
 
   * r11047 (Issue #2032)
     Always call mkdir-init, even if we're not in a VPATH setup.
@@ -116,7 +116,7 @@ Candidate changes:
     Justification:
       Reduce memory leaks in Perl bindings.
     Votes:
-      +1: clkao
+      +1: clkao, epg
 
   * r11708
     Fix a bug which caused certain unfinished switch operations to leave
