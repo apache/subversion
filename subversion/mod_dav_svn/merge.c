@@ -164,14 +164,20 @@ static svn_error_t *mr_replace_root(void *edit_baton,
                                     void **root_baton)
 {
   merge_response_ctx *mrc = edit_baton;
-  apr_pool_t *pool = svn_pool_create(mrc->pool);
-  mr_baton *b = apr_pcalloc(pool, sizeof(*b));
+  mr_baton *b;
 
   /* note that we create a subpool; the root_baton is passed to the
-     close_directory callback, where we will destroy the pool. */
+     close_directory callback, where we will destroy the pool.
 
+     HOWEVER: we do not place the baton itself into the subpool. It
+     needs to exist past the close_directory, so that we can inspect
+     it and use it after the editor sequencing is done.
+
+     Therefore, the subpool is only used for further children.
+  */
+  b = apr_pcalloc(mrc->pool, sizeof(*b));
   b->mrc = mrc;
-  b->pool = pool;
+  b->pool = svn_pool_create(mrc->pool);
   b->path = "/";
 
   mrc->root_baton = b;
