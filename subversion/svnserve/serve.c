@@ -136,18 +136,52 @@ static svn_error_t *send_mechs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-/* Set the user of B to USER.  Create an svn_fs_access_t for the user and
-   associate it with the batons filesystem. */
+/* Context for cleanup handler. */
+struct cleanup_fs_access_baton
+{
+  svn_fs_t *fs;
+  apr_pool_t *pool;
+};
+
+/* Pool cleanup handler.  Make sure fs's access_t points to NULL when
+   the command pool is destroyed. */
+static apr_status_t cleanup_fs_access(void *data)
+{
+  svn_error_t *serr;
+  struct cleanup_fs_access_baton *baton = data;
+
+  serr = svn_fs_set_access (baton->fs, NULL);
+  if (serr)
+    {
+      apr_status_t apr_err = serr->apr_err;
+      svn_error_clear(serr);
+      return apr_err;
+    }
+
+  return APR_SUCCESS;
+}
+
+
+/* Create an svn_fs_access_t in POOL for USER and associate it with
+   B's filesystem.  Also, register a cleanup handler with POOL which
+   de-associates the svn_fs_access_t from B's filesystem. */
 static svn_error_t *
-set_user(server_baton_t *b, const char *user)
+create_fs_access(server_baton_t *b, apr_pool_t *pool)
 {
   svn_fs_access_t *fs_access;
+  struct cleanup_fs_access_baton *cleanup_baton;
 
-  SVN_ERR(svn_fs_create_access(&fs_access, user, b->pool));
+  if (!b->user)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_fs_create_access(&fs_access, b->user, pool));
   SVN_ERR(svn_fs_set_access(b->fs, fs_access));
-  /* Store a poitner to the access's username, which got copied into
-     b->pool. */
-  SVN_ERR(svn_fs_access_get_username(&b->user, fs_access));
+
+  cleanup_baton = apr_pcalloc(pool, sizeof(*cleanup_baton));
+  cleanup_baton->pool = pool;
+  cleanup_baton->fs = b->fs;
+  apr_pool_cleanup_register(pool, cleanup_baton, cleanup_fs_access,
+                            apr_pool_cleanup_null);
 
   return SVN_NO_ERROR;
 }
@@ -173,7 +207,7 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       if (*mecharg && strcmp(mecharg, b->tunnel_user) != 0)
         return svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure",
                                       "Requested username does not match");
-      SVN_ERR(set_user(b, b->tunnel_user));
+      b->user = b->tunnel_user;
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w()", "success"));
       *success = TRUE;
       return SVN_NO_ERROR;
@@ -191,7 +225,8 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       && b->pwdb && strcmp(mech, "CRAM-MD5") == 0)
     {
       SVN_ERR(svn_ra_svn_cram_server(conn, pool, b->pwdb, &user, success));
-      return set_user(b, user);
+      b->user = apr_pstrdup (b->pool, user);
+      return SVN_NO_ERROR;
     }
 
   return svn_ra_svn_write_tuple(conn, pool, "w(c)", "failure",
@@ -243,7 +278,10 @@ static svn_error_t *must_have_write_access(svn_ra_svn_conn_t *conn,
 {
   if (current_access(b) == WRITE_ACCESS
       && (! needs_username || b->user))
-    return trivial_auth_request(conn, pool, b);
+    {
+      SVN_ERR(create_fs_access(b, pool));
+      return trivial_auth_request(conn, pool, b);
+    }
 
   /* If we can get write access by authenticating, try that. */
   if (b->user == NULL && get_access(b, AUTHENTICATED) == WRITE_ACCESS
@@ -254,6 +292,8 @@ static svn_error_t *must_have_write_access(svn_ra_svn_conn_t *conn,
     return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR,
                             svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                              "Connection is read-only"), NULL);
+
+  SVN_ERR(create_fs_access(b, pool));
 
   return SVN_NO_ERROR;
 }
