@@ -9,14 +9,6 @@ Status of 1.1.0:
 
 Candidate changes:
 
-  * r10310
-    When building without BDB, say that repository type will default
-     to FSFS, instead of saying that --fs-type=fsfs is required.
-    Justification:
-      Doc fixes are pretty safe, and not lying to users is good.
-    Votes:
-      +1: ghudson, maxb, lundblad
-
   * r10599
     Make the perl bindings testing work before the svn libs have been installed.
     Justification:
