@@ -80,7 +80,7 @@ def svnversion_test(sbox):
     raise svntest.Failure
 
   iota_path = os.path.join(wc_dir, 'iota')
-  gamma_url = os.path.join(svntest.main.current_repo_url, 'A', 'D', 'gamma')
+  gamma_url = svntest.main.current_repo_url + '/A/D/gamma'
   expected_output = wc.State(wc_dir, {'iota' : Item(status='U ')})
   expected_status.tweak('A/mu', status=' M')
   expected_status.tweak('iota', switched='S', wc_rev=2)

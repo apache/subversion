@@ -1002,8 +1002,7 @@ def update_receive_illegal_name(sbox):
 
   # This tests the revision 4334 fix for issue #1068.
   wc_dir = sbox.wc_dir
-  illegal_url = os.path.join(svntest.main.current_repo_url,
-                             'A', 'D', 'G', '.svn')
+  illegal_url = svntest.main.current_repo_url + '/A/D/G/.svn'
   outlines, errlines = svntest.main.run_svn(None, 'mkdir', '-m', 'log msg',
                                             illegal_url)
   out, err = svntest.main.run_svn(1, 'up', wc_dir)

@@ -94,7 +94,7 @@ def do_routine_switching(wc_dir, verify):
 
   # Construct some paths for convenience
   iota_path = os.path.join(wc_dir, 'iota')
-  gamma_url = os.path.join(svntest.main.current_repo_url, 'A', 'D', 'gamma')
+  gamma_url = svntest.main.current_repo_url + '/A/D/gamma'
 
   if verify:
     # Create expected output tree
@@ -127,7 +127,7 @@ def do_routine_switching(wc_dir, verify):
 
   # Construct some paths for convenience
   AB_path = os.path.join(wc_dir, 'A', 'B')
-  ADG_url = os.path.join(svntest.main.current_repo_url, 'A', 'D', 'G')
+  ADG_url = svntest.main.current_repo_url + '/A/D/G'
 
   if verify:
     # Create expected output tree
