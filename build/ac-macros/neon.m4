@@ -53,6 +53,8 @@ AC_DEFUN(SVN_LIB_NEON,
           echo "Using neon found in source directory."
           SVN_NEON_INCLUDES=-'I$(abs_srcdir)/neon/src'
           NEON_LIBS="\$(abs_builddir)/neon/src/libneon.la"
+          SVN_NEON_INCLUDES_SVN_CONFIG="-I$abs_srcdir/neon/src"
+          NEON_LIBS_SVN_CONFIG="$abs_builddir/neon/src/libneon.la"
 
 dnl Configure neon --------------------------
           # The arguments passed to this configure script are passed down to
@@ -85,8 +87,11 @@ dnl Configure neon --------------------------
             changequote(<<, >>)dnl
             CFLAGS="$CFLAGS `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e 's/-I[^ ]*//g'`"
             SVN_NEON_INCLUDES="$SVN_NEON_INCLUDES `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e 's/-D[^ ]*//g'`"
-            changequote([, ])dnl
             svn_lib_neon="yes"
+            NEON_LIBS_SVN_CONFIG="$NEON_LIBS_SVN_CONFIG $NEON_LIBS_NEW"
+            SVN_NEON_INCLUDES_SVN_CONFIG="$SVN_NEON_INCLUDES_SVN_CONFIG `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e 's/-D[^ ]*//g'`"
+            changequote([, ])dnl
+	
           fi
 
           SVN_SUBDIRS="$SVN_SUBDIRS neon"
@@ -108,6 +113,8 @@ dnl Configure neon --------------------------
   
   AC_SUBST(SVN_NEON_INCLUDES)
   AC_SUBST(NEON_LIBS)
+  AC_SUBST(SVN_NEON_INCLUDES_SVN_CONFIG)
+  AC_SUBST(NEON_LIBS_SVN_CONFIG)
 ])
 
 dnl SVN_NEON_CONFIG()
