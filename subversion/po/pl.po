@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-07-26 21:06+0200\n"
-"PO-Revision-Date: 2004-08-16 22:25+0200\n"
+"PO-Revision-Date: 2004-08-17 10:06+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -4040,7 +4040,7 @@ msgstr "Użyj '%s help' by otrzymać podstawowe instrukcje.\n"
 #: libsvn_subr/validate.c:51
 #, c-format
 msgid "MIME type '%s' has empty media type"
-msgstr ""
+msgstr "Typ MIME '%s' zawiera pusty typ mediów"
 
 #: libsvn_subr/validate.c:56
 #, c-format
@@ -4180,7 +4180,7 @@ msgstr "Błąd podczas odtwarzania atrybutów '%s'"
 #: libsvn_wc/adm_ops.c:1222
 #, c-format
 msgid "Error removing props for '%s'"
-msgstr "Bład podczas usuwania atrybutów '%s'"
+msgstr "Błąd podczas usuwania atrybutów '%s'"
 
 #: libsvn_wc/adm_ops.c:1294
 #, c-format
@@ -4195,7 +4195,7 @@ msgstr "Nie można wycofać zmian: '%s' nie podlega zarządzaniu wersjami"
 #: libsvn_wc/adm_ops.c:1426
 #, c-format
 msgid "Cannot revert '%s': unsupported entry node kind"
-msgstr "NIe można wycofać zmian w '%s': nie znany rodzaj obiektu"
+msgstr "Nie można wycofać zmian w '%s': nie znany rodzaj obiektu"
 
 #: libsvn_wc/adm_ops.c:1436
 #, c-format
@@ -4233,12 +4233,12 @@ msgid ""
 "'%s' is scheduled for deletion; it must be committed before being overwritten"
 msgstr ""
 "'%s' ma zostać skasowany; operacja ta musi zostać zatwierdzona zanim\n"
-"zostanie nadmazany"
+"zostanie nadpisany"
 
 #: libsvn_wc/copy.c:166
 #, c-format
 msgid "There is already a versioned item '%s'"
-msgstr "Już istnieje podlegajacy zarządzaniu wersjami element '%s'"
+msgstr "Już istnieje podlegający zarządzaniu wersjami element '%s'"
 
 #: libsvn_wc/copy.c:177
 #, c-format
