@@ -201,7 +201,7 @@ void svn_txdelta_free_window (svn_txdelta_window_t *window);
    string from SOURCE into the byte stream from TARGET.
 
    SOURCE_FN and TARGET_FN are both `read'-like functions; see the
-   description of `svn_read_fn_t' above.  When we call
+   description of `svn_read_fn_t'.  When we call
    `svn_txdelta_next_window' on *STREAM, it will call upon SOURCE_FN
    and TARGET_FN to gather as much data as it needs.
 
