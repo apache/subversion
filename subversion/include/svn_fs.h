@@ -488,8 +488,9 @@ apr_pool_t *svn_fs_txn_subpool (svn_fs_txn_t *txn);
    version containing the changes made in TXN, and return zero.
 
    This call frees TXN, and any temporary resources it holds.
-   [[Would it be useful to have transactions live on if the commit
-   fails?  You could tweak things and try again.]]  */
+
+   Would it be useful to have transactions live on if the commit
+   fails?  You could tweak things and try again.  */
 svn_error_t *svn_fs_commit_txn (svn_fs_txn_t *txn);
 
 
