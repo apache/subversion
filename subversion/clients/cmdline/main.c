@@ -214,7 +214,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "help", svn_cl__help, {"?", "h"},
     "Display this usage message.\n"
     "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n",
-    {svn_cl__version_opt} },
+    {svn_cl__version_opt, 'q'} },
   /* We need to support "--help", "-?", and all that good stuff, of
      course.  But those options, since unknown, will result in the
      help message being printed out anyway, so there's no need to
