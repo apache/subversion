@@ -88,16 +88,26 @@ static svn_error_t * log_receiver(void *baton,
 
   send_xml(lrb,
            "<S:log-item>" DEBUG_CR
-           "<D:version-name>%" SVN_REVNUM_T_FMT "</D:version-name>" DEBUG_CR
-           "<D:creator-displayname>%s</D:creator-displayname>" DEBUG_CR
-           /* ### this should be DAV:creation-date, but we need to format
-              ### that date a bit differently */
-           "<S:date>%s</S:date>" DEBUG_CR
-           "<D:comment>%s</D:comment>" DEBUG_CR,
-           rev,
-           apr_xml_quote_string(pool, (author ? author : ""), 0),
-           apr_xml_quote_string(pool, (date ? date : ""), 0),
-           apr_xml_quote_string(pool, (msg ? msg : ""), 0));
+           "<D:version-name>%" SVN_REVNUM_T_FMT "</D:version-name>" DEBUG_CR,
+           rev);
+
+  if (author)
+    send_xml(lrb,
+             "<D:creator-displayname>%s</D:creator-displayname>" DEBUG_CR,
+             apr_xml_quote_string(pool, author, 0));
+
+  /* ### this should be DAV:creation-date, but we need to format
+     ### that date a bit differently */
+  if (date)
+    send_xml(lrb,
+             "<S:date>%s</S:date>" DEBUG_CR,
+             apr_xml_quote_string(pool, date, 0));
+
+  if (msg)
+    send_xml(lrb,
+             "<D:comment>%s</D:comment>" DEBUG_CR,
+             apr_xml_quote_string(pool, msg, 0));
+
 
   if (changed_paths)
     {

@@ -422,7 +422,7 @@ svn_repos_begin_report (void **report_baton,
 
   /* Copy these since we're keeping them past the end of this function call.
      We don't know what the caller might do with them after we return... */
-  rbaton->username = apr_pstrdup (pool, username);
+  rbaton->username = username ? apr_pstrdup (pool, username) : NULL;
   rbaton->base_path = apr_pstrdup (pool, fs_base);
   rbaton->target = target ? apr_pstrdup (pool, target) : NULL;
   rbaton->tgt_path = tgt_path ? apr_pstrdup (pool, tgt_path) : NULL;

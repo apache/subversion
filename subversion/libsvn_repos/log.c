@@ -211,9 +211,9 @@ svn_repos_get_logs (svn_repos_t *repos,
       SVN_ERR ((*receiver) (receiver_baton,
                             (discover_changed_paths ? changed_paths : NULL),
                             this_rev,
-                            author ? author->data : "",
-                            date ? date->data : "",
-                            message ? message->data : "",
+                            author ? author->data : NULL,
+                            date ? date->data : NULL,
+                            message ? message->data : NULL,
                             subpool));
       
       svn_pool_clear (subpool);

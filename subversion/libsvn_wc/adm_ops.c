@@ -279,7 +279,7 @@ svn_wc_process_committed (const char *path,
      Note: it's important that this log command come *before* the
      LOG_COMMITTED command, because log_do_committed() might actually
      remove the entry! */
-  if (rev_date && rev_author)
+  if (rev_date)
     svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
                            SVN_WC__LOG_MODIFY_ENTRY,
                            SVN_WC__LOG_ATTR_NAME, base_name,
@@ -287,9 +287,19 @@ svn_wc_process_committed (const char *path,
                            revstr,
                            SVN_WC__ENTRY_ATTR_CMT_DATE,
                            rev_date,
+                           rev_author ? SVN_WC__ENTRY_ATTR_CMT_AUTHOR : NULL,
+                           rev_author ? rev_author : NULL,
+                           NULL);
+  else if (rev_author)
+    svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
+                           SVN_WC__LOG_MODIFY_ENTRY,
+                           SVN_WC__LOG_ATTR_NAME, base_name,
+                           SVN_WC__ENTRY_ATTR_CMT_REV,
+                           revstr,
                            SVN_WC__ENTRY_ATTR_CMT_AUTHOR,
                            rev_author,
                            NULL);
+    
 
   if (hex_digest)
     svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
