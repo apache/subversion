@@ -122,10 +122,11 @@ svn_fs_id_distance (const svn_fs_id_t *a, const svn_fs_id_t *b)
     return -1;
 
   /* Skip any common prefix.  */
-  for (i = 0; a[i] == b[i] && a[i+1] == b[i+1]; i += 2)
-    /* If they're completely identical, then the distance is zero.  */
-    if (a[i] == -1)
-      return 0;
+  for (i = 0; a[i] == b[i] && a[i+1] == b[i+1] && a[i] != -1; i+=2);
+
+  /* If they're completely identical, then the distance is zero.  */
+  if (a[i] == -1 && b[i] == -1)
+    return 0;
 
   /* Are they (branches off) different revisions of the same node?
      Account for the distance between the two revisions.  */
