@@ -2806,7 +2806,6 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
         {
           svn_revnum_t revision;
           dag_node_t *node;
-          int len = svn_fs__id_length (tmp_id);
 
           /* Get the dag node for this id. */
           SVN_ERR (svn_fs__dag_get_node (&node, args->fs, tmp_id, trail));
