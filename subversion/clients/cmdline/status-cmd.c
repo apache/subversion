@@ -58,7 +58,7 @@ svn_cl__status (apr_getopt_t *os,
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   /* The notification callback. */
-  svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
+  svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE, pool);
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);

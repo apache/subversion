@@ -96,7 +96,8 @@ svn_cl__copy (apr_getopt_t *os,
     {
       /* URL->WC : Use checkout-style notification. */
       if (! opt_state->quiet)
-        svn_cl__get_notifier (&notify_func, &notify_baton, TRUE, FALSE, pool);
+        svn_cl__get_notifier (&notify_func, &notify_baton, TRUE, FALSE, FALSE,
+			      pool);
     }
   else
     /* URL->URL : No notification needed. */

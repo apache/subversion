@@ -62,7 +62,8 @@ svn_cl__add (apr_getopt_t *os,
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
       
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
+    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
+			  pool);
 
   subpool = svn_pool_create (pool);
   for (i = 0; i < targets->nelts; i++)

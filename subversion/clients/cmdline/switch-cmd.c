@@ -102,7 +102,8 @@ svn_cl__switch (apr_getopt_t *os,
     parent_dir = target;
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
+    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
+			  pool);
 
   /* Do the 'switch' update. */
   SVN_ERR (svn_client_switch
