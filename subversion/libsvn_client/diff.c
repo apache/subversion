@@ -44,11 +44,15 @@ struct diff_cmd_baton {
   apr_file_t *errfile;
 };
 
-/* This is an svn_diff_cmd_t callback */
+/* This is an svn_diff_cmd_t callback, used by 'svn diff' */
 static svn_error_t *
 diff_cmd (const char *path1,
           const char *path2,
+          const char *path3,
           const char *label,
+          enum svn_diff_action_t action,
+          svn_revnum_t path1_rev,
+          svn_revnum_t path2_rev,
           void *baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = baton;
@@ -57,6 +61,12 @@ diff_cmd (const char *path1,
   apr_file_t *outfile = diff_cmd_baton->outfile;
   apr_file_t *errfile = diff_cmd_baton->errfile;
   apr_pool_t *subpool = svn_pool_create (diff_cmd_baton->pool);
+
+  /* ### In the case of adds or deletes, the diff editor is already
+     guaranteeing that either PATH1 or PATH2 is an empty file.
+     However, perhaps someday this callback might want to look at
+     ACTION and print something more informative:  "file was deleted"
+     or somesuch, instead of printing all '-' or '+' signs.  Dunno.  */
 
   /* Execute local diff command on these two paths, print to stdout. */
   nargs = diff_cmd_baton->options->nelts;
@@ -94,32 +104,81 @@ diff_cmd (const char *path1,
 }
 
 
-#if 0  /* avoid "unused function" warning */
-/* This is not really an svn_diff_cmd_t callback yet, but may be soon.
- * 
- * ### Explanation:
- * 
- * The issue is that `svn_diff_cmd_t' does not currently have any
- * need to take three paths, as for diff3, but this merge callback
- * does; since we'd like it to be driven by the same editors as
- * diff_cmd is, it would be nice if they could share a prototype.
- *
- * The solution I have in mind is to move generalize svn_diff_cmd_t to
- * handle 3-way  diffs, by taking three paths instead of two.  Whether
- * the regular "svn diff" should just pass NULL for one of the paths
- * is an open question; probably it should, I don't see any point
- * showing conflicts in "svn diff".
- */
+
+struct merge_cmd_baton {
+  apr_pool_t *pool;
+};
+
+
+/* This is an svn_diff_cmd_t callback, used by 'svn merge' */
 static svn_error_t *
-merge_cmd (const char *path1,
-           const char *path2,
+merge_cmd (const char *older,
+           const char *yours,
+           const char *mine,
            const char *label,
+           enum svn_diff_action_t action,
+           svn_revnum_t older_rev,
+           svn_revnum_t yours_rev,
            void *baton)
 {
-  abort ();
+  struct merge_cmd_baton *merge_b = baton;
+  apr_pool_t *subpool = svn_pool_create (merge_b->pool);
+  const char *target_label = ".working";
+  const char *left_label = apr_psprintf (subpool, ".r%ld", older_rev);
+  const char *right_label = apr_psprintf (subpool, ".r%ld", yours_rev);
+
+  /* This callback is essentially no more than a wrapper around
+     svn_wc_merge().  Thank goodness that all the
+     diff-editor-mechanisms are doing the hard work of getting the
+     fulltexts! */
+
+  /* ### <REMOVE ME> */
+  const char *act = "NONE";
+  switch (action)
+    {
+    case svn_diff_action_delete:
+      act = "delete";
+      break;
+    case svn_diff_action_add:
+      act = "add";
+      break;
+    case svn_diff_action_modify:
+      act = "modify";
+      break;
+    }
+  printf ("------------------------\n");
+  printf ("Hello, world!\n");
+  printf ("Action is: %s\n", act);
+  printf ("Older = %s, revision %d\n", older, (int) older_rev);
+  printf ("Yours = %s, revision %d\n", yours, (int) yours_rev);
+  printf ("Mine  = %s\n", mine);
+  /* ### </REMOVE ME> */
+
+  switch (action)
+    {
+    case svn_diff_action_modify:
+      /* ### dammit, we don't have a common parent for the 3 fulltexts!!! */
+      SVN_ERR (svn_wc_merge (".",
+                             older, yours, mine,
+                             left_label, right_label, target_label,
+                             subpool));
+      /* ### shouldn't diff_or_merge take a trace-editor option?  */
+      break;
+      
+    case svn_diff_action_add:
+      /* copy yours to mine */
+      /* svn_client_add(mine) */
+      break;
+      
+    case svn_diff_action_delete:
+      /* svn_client_delete(mine) */
+      break;
+    }
+  
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
-#endif /* 0, avoiding "unused function" warning */
+
 
 
 /* Hi!  I'm a soon-to-be-out-of-date comment regarding a
@@ -144,7 +203,9 @@ merge_cmd (const char *path1,
    Case 4 is not as stupid as it looks, for example it may occur if
    the user specifies two dates that resolve to the same revision.  */
 static svn_error_t *
-diff_or_merge (const apr_array_header_t *options,
+diff_or_merge (const svn_delta_editor_t *after_editor, /* ### still unused */
+               void *after_edit_baton,
+               const apr_array_header_t *options,
                svn_client_auth_baton_t *auth_baton,
                svn_stringbuf_t *path1,
                const svn_client_revision_t *revision1,
@@ -240,6 +301,10 @@ diff_or_merge (const apr_array_header_t *options,
                                        recurse,
                                        &diff_editor, &diff_edit_baton,
                                        pool));
+      if (after_editor)
+        {
+          
+        }
 
       SVN_ERR (ra_lib->do_update (session,
                                   &reporter, &report_baton,
@@ -365,7 +430,8 @@ svn_client_diff (const apr_array_header_t *options,
   diff_cmd_baton.outfile = outfile;
   diff_cmd_baton.errfile = errfile;
 
-  return diff_or_merge (options,
+  return diff_or_merge (NULL, NULL, /* no trace editor */
+                        options,
                         auth_baton,
                         path1,
                         revision1,
@@ -379,7 +445,9 @@ svn_client_diff (const apr_array_header_t *options,
 
 
 svn_error_t *
-svn_client_merge (const apr_array_header_t *options,  /* ### ??? */
+svn_client_merge (const svn_delta_editor_t *after_editor,
+                  void *after_edit_baton,
+                  const apr_array_header_t *options,  /* ### ??? */
                   svn_client_auth_baton_t *auth_baton,
                   svn_stringbuf_t *path1,
                   const svn_client_revision_t *revision1,
@@ -388,13 +456,12 @@ svn_client_merge (const apr_array_header_t *options,  /* ### ??? */
                   svn_boolean_t recurse,
                   apr_pool_t *pool)
 {
-  return svn_error_create
-    (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool, "merge not supported yet");
+  struct merge_cmd_baton merge_cmd_baton;
 
-#if 0
-  /* ### Baton will be different for merge. */
-
-  return diff_or_merge (options,
+  merge_cmd_baton.pool = pool;
+  
+  return diff_or_merge (after_editor, after_edit_baton,
+                        options,
                         auth_baton,
                         path1,
                         revision1,
@@ -402,9 +469,8 @@ svn_client_merge (const apr_array_header_t *options,  /* ### ??? */
                         revision2,
                         recurse,
                         merge_cmd,
-                        NULL,  /* no baton for now */
+                        &merge_cmd_baton,
                         pool);
-#endif /* 0 */
 }
 
 

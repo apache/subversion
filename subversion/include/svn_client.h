@@ -571,9 +571,14 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
    MERGE_OPTIONS (an array of svn_stringbuf_t * items) is used to pass
    additional command line options to diff3.  ### good idea?  bad?
   
+   AFTER_EDITOR/BATON are optional.  If non-NULL, they represent some
+   sort of "trace" editor to be used during the merging.
+
    AUTH_BATON is used to communicate with the repository.  */
 svn_error_t *
-svn_client_merge (const apr_array_header_t *options,  /* ### ??? */
+svn_client_merge (const svn_delta_editor_t *after_editor,
+                  void *after_edit_baton,
+                  const apr_array_header_t *options,  /* ### ??? */
                   svn_client_auth_baton_t *auth_baton,
                   svn_stringbuf_t *path1,
                   const svn_client_revision_t *revision1,

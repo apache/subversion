@@ -284,7 +284,11 @@ file_diff (struct dir_baton *dir_baton,
       pristine_copy = svn_wc__text_base_path (path, FALSE, dir_baton->pool);
       empty_file = svn_wc__empty_file_path (path, dir_baton->pool);
 
-      SVN_ERR (diff_cmd (pristine_copy->data, empty_file->data, path->data,
+      SVN_ERR (diff_cmd (pristine_copy->data, empty_file->data,
+                         path->data, path->data,
+                         svn_diff_action_delete,
+                         entry->revision,
+                         0,     /* non-existent revision of file?  :-) */
                          dir_baton->edit_baton->diff_cmd_baton));
 
       /* Replace will fallthrough! */
@@ -294,7 +298,11 @@ file_diff (struct dir_baton *dir_baton,
     case svn_wc_schedule_add:
       empty_file = svn_wc__empty_file_path (path, dir_baton->pool);
 
-      SVN_ERR (diff_cmd (empty_file->data, path->data, path->data,
+      SVN_ERR (diff_cmd (empty_file->data, path->data,
+                         path->data, path->data,
+                         svn_diff_action_add,
+                         0,     /* non-existent revision of file */
+                         entry->revision,
                          dir_baton->edit_baton->diff_cmd_baton));
       break;
 
@@ -316,7 +324,11 @@ file_diff (struct dir_baton *dir_baton,
           SVN_ERR (svn_wc_translated_file (&translated, path,
                                            dir_baton->pool));
 
-          err = diff_cmd (pristine_copy->data, translated->data, path->data,
+          err = diff_cmd (pristine_copy->data, translated->data,
+                          path->data, path->data,
+                          svn_diff_action_modify,
+                          entry->revision,
+                          entry->revision,
                           dir_baton->edit_baton->diff_cmd_baton);
           
           if (translated != path)
@@ -489,6 +501,10 @@ delete_entry (svn_stringbuf_t *name,
                ((svn_wc__empty_file_path (path, pool))->data,
                 path->data,
                 path->data,
+                path->data,
+                svn_diff_action_add,
+                0,              /* non-existent revision */
+                entry->revision,
                 pb->edit_baton->diff_cmd_baton));
       break;
 
@@ -725,10 +741,12 @@ close_file (void *file_baton)
 {
   struct file_baton *b = file_baton;
   svn_diff_cmd_t diff_cmd = b->edit_baton->diff_cmd;
+  svn_wc_entry_t *entry;
 
   /* The path to the temporary copy of the pristine repository version. */
   svn_stringbuf_t *temp_file_path
     = svn_wc__text_base_path (b->wc_path, TRUE, b->pool);
+  SVN_ERR (svn_wc_entry (&entry, b->wc_path, b->pool));
 
   if (b->added)
     {
@@ -738,6 +756,10 @@ close_file (void *file_baton)
       SVN_ERR (diff_cmd (temp_file_path->data,
                          (svn_wc__empty_file_path (b->wc_path, b->pool))->data,
                          b->path->data,
+                         b->path->data,
+                         svn_diff_action_delete,
+                         0,     /* non-existent revision */
+                         entry ? entry->revision : SVN_INVALID_REVNUM,
                          b->edit_baton->diff_cmd_baton));
     }
   else
@@ -749,7 +771,11 @@ close_file (void *file_baton)
       
       SVN_ERR (svn_wc_translated_file (&translated, b->path, b->pool));
       
-      err1 = diff_cmd (temp_file_path->data, translated->data, b->path->data,
+      err1 = diff_cmd (temp_file_path->data, translated->data, 
+                       b->path->data, b->path->data,
+                       svn_diff_action_modify,
+                       0,       /* non-existent revision */
+                       entry ? entry->revision : SVN_INVALID_REVNUM,
                        b->edit_baton->diff_cmd_baton);
       
       if (translated != b->path)

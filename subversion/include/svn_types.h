@@ -269,19 +269,41 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 
 /*** Shared function types ***/
 
-/* The function type called by the diff editor when it has determined the
- * two files that are to be diffed.
+/* An enum to indicate an action to a diff callback. */
+enum svn_diff_action_t
+{
+  svn_diff_action_modify = 1,
+  svn_diff_action_add,
+  svn_diff_action_delete
+};
+
+
+/* The function type called by the diff editor when it has determined
+ * the two files that are to be diffed.  The diff editor is shared by
+ * 'svn diff' and 'svn merge' functionality, which differ by their own
+ * implementations of this callback.
  *
  * PATH1 and PATH2 are the two files to be compared, these files
  * exist. Since the PATH1 file may be temporary, it is possible that it is
  * not in the "correct" location in the working copy, if this is the case
  * then LABEL will be non-null and will contain the "correct" location.
  *
+ * PATH3 is ignored by 'svn diff', but required for 'svn merge'.  It
+ * is needed for svn_wc_merge() to perform 3-way diffs; it specifies
+ * the 'mine' file, as PATH1 and PATH2 represent 'older' and 'yours'.
+ * Similarly, ACTION tells 'merge' how to modify the working copy, and
+ * PATH1_REV and PATH2_REV are the revisions of PATH1 and PATH2.  All
+ * of these arguments are probably ignored by the 'svn diff' use case.
+ *
  * BATON is passed through by the diff editor.
  */
 typedef svn_error_t *(*svn_diff_cmd_t)(const char *path1,
                                        const char *path2,
+                                       const char *path3,
                                        const char *label,
+                                       enum svn_diff_action_t action,
+                                       svn_revnum_t path1_rev,
+                                       svn_revnum_t path2_rev,
                                        void *baton);
 
 

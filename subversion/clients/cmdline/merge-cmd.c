@@ -57,11 +57,24 @@ svn_cl__merge (apr_getopt_t *os,
 
   for (i = 0; i < condensed_targets->nelts; ++i)
     {
+      const svn_delta_editor_t *trace_editor;
+      void *trace_edit_baton;
+      svn_stringbuf_t *parent_dir, *entry;
       svn_stringbuf_t *target
         = ((svn_stringbuf_t **) (condensed_targets->elts))[i];
 
+      SVN_ERR (svn_wc_get_actual_target (target,
+                                         &parent_dir,
+                                         &entry,
+                                         pool));
+
+      SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,
+                                                &trace_edit_baton,
+                                                parent_dir, pool));
+
       /* ### Enforcing same target, for now. */
-      SVN_ERR (svn_client_merge (options,
+      SVN_ERR (svn_client_merge (trace_editor, trace_edit_baton,
+                                 options,
                                  auth_baton,
                                  target,
                                  &(opt_state->start_revision),

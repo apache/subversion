@@ -58,6 +58,10 @@ struct edit_baton {
   /* The rev1 from the '-r Rev1:Rev2' command line option */
   svn_revnum_t revision;
 
+  /* The rev2 from the '-r Rev1:Rev2' option, specifically set by
+     set_target_revision(). */
+  svn_revnum_t target_revision;
+
   /* A temporary empty file. Used for add/delete differences. This is
      cached here so that it can be reused, all empty files are the same. */
   svn_stringbuf_t *empty_file;
@@ -312,16 +316,22 @@ get_empty_file (struct edit_baton *b,
 }
 
 /* Runs the diff callback to display the difference for a single file. At
- * this stage both versions of the file exist as temporary files. 
+ * this stage both versions of the file exist as temporary files.
+ * ACTION describes the action to be passed to the diff-callback.
  */
 static svn_error_t *
-run_diff_cmd (struct file_baton *b)
+run_diff_cmd (struct file_baton *b,
+              enum svn_diff_action_t action)
 {
   svn_diff_cmd_t diff_cmd = b->edit_baton->diff_cmd;
 
   SVN_ERR (diff_cmd (b->path_start_revision->data,
                      b->path_end_revision->data,
                      b->path->data,
+                     b->path->data,
+                     action,
+                     b->edit_baton->revision,
+                     b->edit_baton->target_revision,
                      b->edit_baton->diff_cmd_baton));
 
   return SVN_NO_ERROR;
@@ -333,6 +343,9 @@ run_diff_cmd (struct file_baton *b)
 static svn_error_t *
 set_target_revision (void *edit_baton, svn_revnum_t target_revision)
 {
+  struct edit_baton *eb = edit_baton;
+  
+  eb->target_revision = target_revision;
   return SVN_NO_ERROR;
 }
 
@@ -381,7 +394,7 @@ delete_entry (svn_stringbuf_t *name,
         struct file_baton *b = make_file_baton (name, FALSE, pb);
         SVN_ERR (get_file_from_ra (b));
         SVN_ERR (get_empty_file(b->edit_baton, &b->path_end_revision));
-        SVN_ERR (run_diff_cmd (b));
+        SVN_ERR (run_diff_cmd (b, svn_diff_action_delete));
         svn_pool_destroy (b->pool);
       }
       break;
@@ -577,7 +590,12 @@ close_file (void *file_baton)
      that shows property differences, then there will be appropriate
      changes to the file_baton, and probably more code here.  */
   if (b->path_end_revision)
-    SVN_ERR (run_diff_cmd (b));
+    {
+      if (b->added)
+        SVN_ERR (run_diff_cmd (b, svn_diff_action_add));
+      else
+        SVN_ERR (run_diff_cmd (b, svn_diff_action_modify));
+    }
 
   svn_pool_destroy (b->pool);
 
