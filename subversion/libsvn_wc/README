@@ -116,16 +116,23 @@ or something equally ridiculous, it is rejected out of hand.
 
 Assuming the snapshot is consistent, the server checks whether each
 entity in it has changed in the repository since the given base
-version.  Direct changes mean the pre-commit check fails
-automatically.  Indirect changes cause failure iff they mention the
-same child name.
+version.  A direct change would make the pre-commit check fail
+definitely; indirect changes cause failure iff they mention the same
+child name as some change mentioned in the snapshot.
 
-(See the section "Conflict/Merge Tables" farther down for a more
-formal accounting of these rules.)
+The same check is looped across all commits in the pending pool.
 
-When a pre-commit check fails, the server doesn't just send back a
-terse denial; it tells the client exactly which entities are out of
-date, so the client can update efficiently.
+The server *never* accepts a commit based on a working copy state that
+conflicts with the repository.  The client is always responsible for
+sending non-conflicting deltas.  Therefore, the client may need to
+update and resolve any conflicts before committing.
+
+(See the section "Conflict/Merge Tables" farther down for a formal
+accounting of these rules.)
+
+Of course, when a pre-commit check fails, the server doesn't just send
+back a terse denial.  It tells the client exactly which entities are
+out of date, so the client can update efficiently.
 
 If the check succeeds, the server sends back a token (unique among all
 other pending commits), which the client will use to complete the
@@ -146,36 +153,136 @@ the commit are, for that instant at least, up-to-date.
 How the server uses the snapshot to generate an update delta.
 =============================================================
 
+This question is interesting if you're implementing the repository
+filesystem, but it's too complex to go into here and it's not part of
+libsvn_wc. :-) Suffice it to say that the server sends back a tree
+delta describing what the working copy must do to become up-to-date,
+according to the base revisions in the snapshot the working copy sent.
 
+How the working copy *uses* that tree delta is much more relevant to
+libsvn_wc, and is the subject of the next section...
 
+[JimB: hopefully the first section, "How the server uses the snapshot
+to perform a pre-commit check", resolves the issues about filesystem
+implementation.  Basically, if there's any doubt about the
+commitability of a delta, then reject it and tell the client to
+update.  See also "Conflict/Merge Tables" below.]
 
 
 How the client applies an update delta.
 ---------------------------------------
 
+Updating is more than bringing changes down from the repository; it's
+also about folding those changes into the working copy.  Bringing the
+right changes down is the easy part -- folding them in is hard.
+
+Before we examine how Subversion handles this, let's look at what CVS
+does:
+
+   1. Unmodified portions of the working copy are simply brought
+      up-to-date.
+
+   2. Locally modified portions are "merged", where possible.  That
+      is, the changes from the repository are incorporated into the
+      local changes in an intelligent way.
+
+   3. Where merging is not possible, a conflict is flagged, and *both*
+      sides of the conflict are folded into the local file in such a
+      way that it's easy for the developer to figure out what
+      happened.  (And the un-updated locally-modified file is saved
+      under a tmp name, just in case.)
+
+It would be nice for Subversion to do things this way too;
+unfortunately, that's not possible in every case.
+
+CVS has a wonderfully simplifying limitation: because it doesn't
+version directories, it never has tree-structure conflicts.  Since
+only textual conflicts are possible, there is always a natural way to
+express both sides of a conflict -- just include the opposing texts
+inside the file, delimited with conflict markers.  (Or for binary
+files, make both versions available under temporary names.)
+
+While Subversion can do the same thing for file conflicts, the
+situation is more complex for trees.  There is often no way to reflect
+both sides of a tree conflict in the working copy without being more
+confusing than helpful.  How does one put "conflict markers" into a
+directory, especially when what was a directory might now be a file,
+or vice-versa?
+
+Therefore, while Subversion does everything it can to fold conflicts
+intelligently (at least as well as CVS does), it is acceptable for the
+Subversion client to punt, saying in effect "Your working copy is too
+out of whack; please move it aside, check out a fresh one, redo your
+changes in the fresh copy as much as you can, and commit from that."
+(This response may apply to subtrees of the working copy, of course).
+
+Usually it includes more detail than that, of course.  In addition to
+the overall out-of-whackness message, it can say "Directory foo was
+renamed to bar, conflicting with your new file bar; file blah was
+deleted, conflicting with your local change to file blah, ..." and so
+on.  The important thing is that these are informational only -- they
+tell the user what's wrong, but they don't try to fix it
+automatically.
+
+Note that this is purely a matter of *client-side* intelligence.
+Nothing in the repository logic or protocol affects the client's
+ability to fold conflicts.  So as we get smarter, and/or as there is
+demand for more informative conflicting updates, the client's behavior
+can improve and punting can become a rare event.  We should start out
+with a _simple_ conflict-folding algorithm initially, though.
 
 
 Conflict/Merge Tables.
 ======================
 
 The tables below describe how client and server behave in various
-change scenarios.  Each intersection describes what happens when one
-type of change meets another change on the same entity.  Fortunately,
-the principles involved are symmetrical, so it doesn't matter which
-side is the working copy and which is the repository.
+potential conflict scenarios.  Each intersection describes what
+happens when one change meets another on the same entity.
 
    Table 1:   Direct changes   <==>   Indirect changes
    Table 2:   Indirect changes  <==>  Indirect changes
    Table 3:   Direct changes   <==>   Direct changes
 
-In each cell, "C" means "Conflict" and "M" means "Mergeable".  
+In each cell
+
+   C   means    "Conflict, unfoldable"
+   M   means    "Mergable"
+   F   means    "Conflict for server, possibly a conflict for client
+                 but might be foldable (either via straight merge, or
+                 folding conflict)" 
+
+Fortunately the principles involved are symmetrical, so it doesn't
+matter which side is the working copy and which is the
+repository.  
+
+For example, Table 1 says that an entity-rename (a direct change) and
+a child-rename (an indirect change) conflict in a commit, and a
+mergeable in an update.  Let's see how that plays out in real life:
+
+   Scenario 1: Working copy renames foo/bar.c to foo/baz.c.
+   Meanwhile, in the repository, someone has renamed foo to qux.  If
+   the working copy tries to commit, the server treats this as a
+   conflict and tells the working copy to update.  If update, then
+   it's fine: baz.c remains where it is, and foo is renamed to qux
+   (assuming the update included foo).
+
+   Scenario 2: Working copy renames foo to qux.  Meanwhile, in the
+   repository, someone has renamed foo/bar.c to foo/baz.c.  If the
+   working copy tries to commit, the server treats this as a conflict
+   and tells the working copy to update.  If update, then qux/bar.c is
+   renamed to qux/baz.c.
+
 
 todo: run through a couple of cells from both sides, to show how these
 scenarios play out in real-life.
 
-todo: hmmm, vet for things listed as "merge" below that really mean "a
-conflict, both sides of which can be displayed conveniently in the
-working copy".  There are a few of these.
+   [todo: what if you are at version 3, trying to commit an add of
+   foo/bar.c.  Meanwhile, in 5, someone changed name of foo to baz,
+   then in 6 someone added baz/bar.c.  Will this be detected?
+
+   Yes, not because of the add, but because of the direct change
+   against indirect 
+    
 
 
           Table 1: Direct changes against indirect changes
@@ -213,23 +320,24 @@ working copy".  There are a few of these.
    tories]    |    child add        child remove      child rename
   ------------|----------------.-------------------.-----------------.
   i           |                .                   .                 .
-  n     child |    C, if name  .    C, if name     .  C, if name     .
-  d      add  |    conflicts   .    conflicts      .  conflicts      .
-  i           |                .                   .                 .
+  n     child |    C if name   .    C if name      .  C if name      .
+  d      add  |    conflicts,  .    conflicts,     .  conflicts,     .
+  i           |    else M      .    else M         .  else M         .
   r           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
-  e           |                . commit: C, if name.                 .
-  c     child |    C, if name  .         conflicts .  C, if name     .
-  t    remove |    conflicts   . update: M         .  conflicts      .
-              |                .                   .                 .
+  e           |                . commit: C if name .                 .
+  c     child |    C if name   .         conflicts,.  C if name      .
+  t    remove |    conflicts,  .         else M    .  conflicts,     .
+              |    else M      . update: M         .  else M         .
   c           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
   h           |                .                   .                 .
-  a     child |    C, if name  .    C, if name     .  C, if name     .
-  n    rename |    conflicts   .    conflicts      .  conflicts      .
-  g           |                .                   .                 .
+  a     child |    C if name   .    C if name      .  C if name      .
+  n    rename |    conflicts,  .    conflicts,     .  conflicts,     .
+  g           |    else M      .    else M         .  else M         .
   e           |                .                   .                 .
   s           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
 
+fooo
 
            Table 3: Direct changes against direct changes
            **********************************************
@@ -336,51 +444,6 @@ together here:
              conflicts, before it can successfully commit.
 
          - update case:
-             Well, this is where all the hardship happens. :-)
-
-             First, a definition: "conflict-to-date" is when a working
-             copy is up-to-date wherever there are no conflicts, but
-             reflects both sides of the conflict wherever there *are*
-             conflicts.
-
-             The Subversion server tries, but is not required, to
-             compute a delta that will bring the working copy
-             conflict-to-date.  When it can do so, it sends this delta
-             to the client, which then makes its working copy be
-             conflict-to-date and leaves resolution to the user (same
-             as CVS).
-
-             However, for complex tree-structure conflicts, there is
-             often no way to reflect both sides of the conflict in the
-             working copy without being more confusing than helpful
-             anyway.  How does one put "conflict markers" into a
-             directory, especially when what was a directory might now
-             be a file, or vice-versa?  For purely textual conflicts,
-             CVS found a useful way to overlay the conflicting areas
-             in all cases; if there is a similar overlay method for
-             arbitrarily changed directory trees, I don't know what it
-             is. :-)
-
-             Therefore, an acceptable response from the Subversion
-             server is: "Your working copy is too out of whack; please
-             move it aside, check out a fresh one, redo your changes
-             in the fresh copy, and commit from that."  (This response
-             may apply to subtrees of the working copy, of course).
-
-             The response will probably include more detail than that,
-             of course.  In addition to the general out-of-whackness
-             message, it can say "Directory foo was renamed to bar,
-             conflicting with your new file bar; file blah was
-             deleted, conflicting with your local change to file blah,
-             ..." and so on.  The important thing is that these are
-             informational only -- they're not changing the working
-             copy, they're just telling the user what to examine when
-             she syncs up two working trees manually.
-
-             Subversion implements a _simple_ conflict-to-date delta
-             generation algorithm initially.  It can improve as we get
-             smarter and/or as there is demand for more informative
-             conflicting updates.
 
 --------------------------- Footnotes -----------------------------------
 
