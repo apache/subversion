@@ -146,15 +146,6 @@ struct dir_baton
   /* Basename of this directory. */
   svn_stringbuf_t *name;
 
-  /* The number of other changes associated with this directory in the
-     delta (typically, the number of files being changed here, plus
-     this dir itself).  BATON->ref_count starts at 1, is incremented
-     for each entity being changed, and decremented for each
-     completion of one entity's changes.  When the ref_count is 0, the
-     directory may be safely set to the target revision, and this baton
-     freed. */
-  int ref_count;
-
   /* The global edit baton. */
   struct edit_baton *edit_baton;
 
@@ -182,102 +173,42 @@ struct dir_baton
 
 
 
-/* Create a new dir_baton for subdir NAME in PARENT_PATH with
- * EDIT_BATON, using a new subpool of POOL.
- *
- * The new baton's ref_count is 1.
- *
- * NAME and PARENT_BATON can be null, meaning this is the root baton.
- */
+/* Create a new dir_baton for subdir PATH. */
 static struct dir_baton *
-make_dir_baton (svn_stringbuf_t *name,
+make_dir_baton (const char *path,
                 struct edit_baton *edit_baton,
                 struct dir_baton *parent_baton,
                 apr_pool_t *pool)
 {
+  struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = edit_baton;
-  apr_pool_t *subpool = svn_pool_create (pool);
-  struct dir_baton *d = apr_pcalloc (subpool, sizeof (*d));
-  svn_stringbuf_t *path;
+  struct dir_baton *d = apr_pcalloc (pool, sizeof (*d));
+  svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->path, pool);
 
-  if (parent_baton)
-    {
-      /* I, the baton-in-creation, have a parent, so base my path on
-         that of my parent. */
-      path = svn_stringbuf_dup (parent_baton->path, subpool);
-    }
-  else
-    {
-      /* I am Adam.  All my base are belong to me. */
-      path = svn_stringbuf_dup (eb->path, subpool);
-    }
+  /* Don't do this.  Just do NOT do this to me. */
+  if (pb && (! path))
+    abort();
 
-  if (name)
-    {
-      d->name = svn_stringbuf_dup (name, subpool);
-      svn_path_add_component (path, name);
-    }
+  /* Construct the full path of this directory. */
+  if (pb)
+    svn_path_add_component_nts (full_path, path);
 
-  d->path         = path;
+  /* Finish populating the baton members. */
+  d->path         = full_path;
+  d->name         = pb ? svn_path_last_component (full_path, pool) : NULL;
   d->edit_baton   = edit_baton;
   d->parent_baton = parent_baton;
-  d->ref_count    = 1;
-  d->pool         = subpool;
-
-  if (parent_baton)
-    parent_baton->ref_count++;
+  d->pool         = pool;
 
   return d;
 }
 
 
-/* Avoid the circular prototypes problem. */
-static svn_error_t *decrement_ref_count (struct dir_baton *d);
-
-
-static svn_error_t *
-free_dir_baton (struct dir_baton *dir_baton)
-{
-  svn_error_t *err;
-  struct dir_baton *parent = dir_baton->parent_baton;
-
-  /* After we destroy DIR_BATON->pool, DIR_BATON itself is lost. */
-  svn_pool_destroy (dir_baton->pool);
-
-  /* We've declared this directory done, so decrement its parent's ref
-     count too. */ 
-  if (parent)
-    {
-      err = decrement_ref_count (parent);
-      if (err)
-        return err;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Decrement DIR_BATON's ref count, and if the count hits 0, call
- * free_dir_baton().
- *
- * Note: There is no corresponding function for incrementing the
- * ref_count.  As far as we know, nothing special depends on that, so
- * it's always done inline.
- */
-static svn_error_t *
-decrement_ref_count (struct dir_baton *d)
-{
-  d->ref_count--;
-
-  if (d->ref_count == 0)
-    return free_dir_baton (d);
-
-  return SVN_NO_ERROR;
-}
-
-
 struct file_baton
 {
+  /* The global edit baton. */
+  struct edit_baton *edit_baton;
+
   /* Baton for this file's parent directory. */
   struct dir_baton *dir_baton;
 
@@ -310,101 +241,94 @@ struct file_baton
 /* Make a file baton, using a new subpool of PARENT_DIR_BATON's pool.
    NAME is just one component, not a path. */
 static struct file_baton *
-make_file_baton (struct dir_baton *parent_dir_baton, svn_stringbuf_t *name)
+make_file_baton (struct dir_baton *parent_dir_baton, 
+                 const char *path,
+                 apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create (parent_dir_baton->pool);
-  struct file_baton *f = apr_pcalloc (subpool, sizeof (*f));
-  svn_stringbuf_t *path = svn_stringbuf_dup (parent_dir_baton->path,
-                                       subpool);
+  struct dir_baton *pb = parent_dir_baton;
+  struct edit_baton *eb = pb->edit_baton;
+  struct file_baton *f = apr_pcalloc (pool, sizeof (*f));
+  svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->path, pool);
+ 
+  /* Construct the full path of this directory. */
+  if (pb)
+    svn_path_add_component_nts (full_path, path);
 
-  svn_path_add_component (path, name);
-
-  f->pool       = subpool;
-  f->dir_baton  = parent_dir_baton;
-  f->name       = name;
-  f->path       = path;
-
-  parent_dir_baton->ref_count++;
+  /* Finish populating the baton members. */
+  f->path       = full_path;
+  f->name       = svn_path_last_component (full_path, pool);
+  f->pool       = pool;
+  f->dir_baton  = pb;
+  f->edit_baton = eb;
 
   return f;
 }
 
-
-static svn_error_t *
-free_file_baton (struct file_baton *fb)
-{
-  struct dir_baton *parent = fb->dir_baton;
-  svn_pool_destroy (fb->pool);
-  return decrement_ref_count (parent);
-}
-
-
-
-/*** Helpers for the editor callbacks. ***/
-
-static svn_error_t *
-window_handler (svn_txdelta_window_t *window, void *baton)
-{
-  /* This is a deliberate no-op.  In theory, this function should only
-     receive a single empty window from svn_repos_dir_delta. */
-  return SVN_NO_ERROR;
-}
 
 /*----------------------------------------------------------------------*/
 
 /*** The callbacks we'll plug into an svn_delta_edit_fns_t structure. ***/
 
 static svn_error_t *
-set_target_revision (void *edit_baton, svn_revnum_t target_revision)
+window_handler (svn_txdelta_window_t *window, 
+                void *baton)
+{
+  /* This is a deliberate no-op.  In theory, this function should only
+     receive a single empty window from svn_repos_dir_delta. */
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+set_target_revision (void *edit_baton, 
+                     svn_revnum_t target_revision)
 {
   struct edit_baton *eb = edit_baton;
-
   *(eb->youngest_revision) = target_revision;
-
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
 open_root (void *edit_baton,
-           svn_revnum_t base_revision, /* This is ignored in co */
+           svn_revnum_t base_revision,
+           apr_pool_t *pool,
            void **dir_baton)
 {
   struct edit_baton *eb = edit_baton;
-  struct dir_baton *d;
-
-  *dir_baton = d = make_dir_baton (NULL, eb, NULL, eb->pool);
-
+  *dir_baton = make_dir_baton (NULL, eb, NULL, pool);
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-delete_entry (svn_stringbuf_t *name, svn_revnum_t revision, void *parent_baton)
+delete_entry (const char *path,
+              svn_revnum_t revision,
+              void *parent_baton,
+              apr_pool_t *pool)
 {
   struct dir_baton *db = parent_baton;
+  struct edit_baton *eb = db->edit_baton;
   apr_hash_t *entries;
+  svn_stringbuf_t *full_path = svn_stringbuf_dup (eb->path, pool);
+  svn_stringbuf_t *name;
+
+  svn_path_add_component_nts (full_path, path);
+  name = svn_path_last_component (full_path, pool);
 
   /* Note:  when something is deleted, it's okay to tweak the
      statushash immediately.  No need to wait until close_file or
      close_dir, because there's no risk of having to honor the 'added'
      flag.  We already know this item exists in the working copy. */
 
-  /* Mark the deleted object as such. */
-  svn_stringbuf_t *deleted_path = svn_stringbuf_dup (db->path, db->pool);
-  svn_path_add_component (deleted_path, name);
-
   /* Read the parent's entries file.  If the deleted thing is not
      versioned in this working copy, it was probably deleted via this
      working copy.  No need to report such a thing. */
-  SVN_ERR (svn_wc_entries_read (&entries, db->path, db->pool));
+  SVN_ERR (svn_wc_entries_read (&entries, db->path, pool));
   if (apr_hash_get (entries, name->data, name->len))
-    {
-      SVN_ERR (tweak_statushash (db->edit_baton,
-                                 deleted_path->data,
-                                 svn_wc_status_deleted, 0));
-
-    }
+    SVN_ERR (tweak_statushash (db->edit_baton,
+                               full_path->data,
+                               svn_wc_status_deleted, 0));
 
   /* Mark the parent dir regardless -- it lost an entry. */
   SVN_ERR (tweak_statushash (db->edit_baton,
@@ -416,63 +340,51 @@ delete_entry (svn_stringbuf_t *name, svn_revnum_t revision, void *parent_baton)
 
 
 static svn_error_t *
-add_directory (svn_stringbuf_t *name,
+add_directory (const char *path,
                void *parent_baton,
-               svn_stringbuf_t *copyfrom_path,
+               const char *copyfrom_path,
                svn_revnum_t copyfrom_revision,
+               apr_pool_t *pool,
                void **child_baton)
 {
-  struct dir_baton *parent_dir_baton = parent_baton;
+  struct dir_baton *pb = parent_baton;
+  struct dir_baton *new_db;
 
-  /* Make a new dir baton for the new directory. */
-  struct dir_baton *this_dir_baton
-    = make_dir_baton (name,
-                      parent_dir_baton->edit_baton,
-                      parent_dir_baton,
-                      parent_dir_baton->pool);
+  new_db = make_dir_baton (path, pb->edit_baton, pb, pool);
 
-  /* Mark the new directory as "added" */
-  this_dir_baton->added = 1;
+  /* Make this dir as added. */
+  new_db->added = TRUE;
 
-  /* Mark the parent as changed however;  it gained an entry. */
-  parent_dir_baton->text_changed = 1;
+  /* Mark the parent as changed;  it gained an entry. */
+  pb->text_changed = TRUE;
 
-  *child_baton = this_dir_baton;
-
+  *child_baton = new_db;
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-open_directory (svn_stringbuf_t *name,
+open_directory (const char *path,
                 void *parent_baton,
                 svn_revnum_t base_revision,
+                apr_pool_t *pool,
                 void **child_baton)
 {
-  struct dir_baton *parent_dir_baton = parent_baton;
-
-  struct dir_baton *this_dir_baton
-    = make_dir_baton (name,
-                      parent_dir_baton->edit_baton,
-                      parent_dir_baton,
-                      parent_dir_baton->pool);
-
-  *child_baton = this_dir_baton;
-
+  struct dir_baton *pb = parent_baton;
+  *child_baton = make_dir_baton (path, pb->edit_baton, pb, pool);
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
 change_dir_prop (void *dir_baton,
-                 svn_stringbuf_t *name,
-                 svn_stringbuf_t *value)
+                 const char *name,
+                 const svn_string_t *value,
+                 apr_pool_t *pool)
 {
   struct dir_baton *db = dir_baton;
-
-  if (svn_wc_is_normal_prop (name->data))    
-    db->prop_changed = 1;
-
+  if (svn_wc_is_normal_prop (name))    
+    db->prop_changed = TRUE;
   return SVN_NO_ERROR;
 }
 
@@ -482,85 +394,67 @@ static svn_error_t *
 close_directory (void *dir_baton)
 {
   struct dir_baton *db = dir_baton;
-  svn_error_t *err = NULL;
 
-  if (db->added 
-      || db->prop_changed
-      || db->text_changed)
-    {
-      if (db->added)
-        /* add the directory to the status hash */
-        SVN_ERR (tweak_statushash (db->edit_baton,
-                                   db->path->data,
-                                   svn_wc_status_added,
-                                   db->prop_changed ? svn_wc_status_added : 0));
-      else
-        /* mark the existing directory in the statushash */    
-        SVN_ERR (tweak_statushash (db->edit_baton,
-                                   db->path->data,
-                                   db->text_changed ? svn_wc_status_modified : 0,
-                                   db->prop_changed ? svn_wc_status_modified : 0));
+  /* If nothing has changed, return. */
+  if (! (db->added || db->prop_changed || db->text_changed))
+    return SVN_NO_ERROR;
 
-    }
+  /* If this directory was added, add the directory to the status hash. */
+  if (db->added)
+    SVN_ERR (tweak_statushash (db->edit_baton,
+                               db->path->data,
+                               svn_wc_status_added,
+                               db->prop_changed ? svn_wc_status_added : 0));
 
-  /* We're truly done with this directory now.  decrement_ref_count
-  will actually destroy dir_baton if the ref count reaches zero, so we
-  call this LAST. */
-  err = decrement_ref_count (db);
-  if (err)
-    return err;
-
+  /* Else, mark the existing directory in the statushash. */
+  else
+    SVN_ERR (tweak_statushash (db->edit_baton,
+                               db->path->data,
+                               db->text_changed ? svn_wc_status_modified : 0,
+                               db->prop_changed ? svn_wc_status_modified : 0));
+  
   return SVN_NO_ERROR;
 }
 
 
 
-/* Common code for add_file() and open_file(). */
 static svn_error_t *
-add_or_open_file (svn_stringbuf_t *name,
-                  void *parent_baton,
-                  svn_stringbuf_t *ancestor_path,
-                  svn_revnum_t ancestor_revision,
-                  void **file_baton,
-                  svn_boolean_t adding)  /* 0 if replacing */
-{
-  struct file_baton *this_file_baton
-    = make_file_baton (parent_baton, name);
-
-  if (adding)
-    this_file_baton->added = 1;
-    
-  *file_baton = this_file_baton;
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-add_file (svn_stringbuf_t *name,
+add_file (const char *path,
           void *parent_baton,
-          svn_stringbuf_t *copyfrom_path,
+          const char *copyfrom_path,
           svn_revnum_t copyfrom_revision,
+          apr_pool_t *pool,
           void **file_baton)
 {
-  struct dir_baton *parent_dir_baton = parent_baton;
+  struct dir_baton *pb = parent_baton;
+  struct file_baton *new_fb = make_file_baton (pb, path, pool);
 
   /* Mark parent dir as changed */  
-  parent_dir_baton->text_changed = 1;
+  pb->text_changed = TRUE;
 
-  return add_or_open_file
-    (name, parent_baton, copyfrom_path, copyfrom_revision, file_baton, 1);
+  /* Make this file as added. */
+  new_fb->added = TRUE;
+
+  *file_baton = new_fb;
+  return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-open_file (svn_stringbuf_t *name,
+open_file (const char *path,
            void *parent_baton,
            svn_revnum_t base_revision,
+           apr_pool_t *pool,
            void **file_baton)
 {
-  return add_or_open_file
-    (name, parent_baton, NULL, base_revision, file_baton, 0);
+  struct dir_baton *pb = parent_baton;
+  struct file_baton *new_fb = make_file_baton (pb, path, pool);
+
+  /* Mark parent dir as changed */  
+  pb->text_changed = TRUE;
+
+  *file_baton = new_fb;
+  return SVN_NO_ERROR;
 }
 
 
@@ -571,7 +465,8 @@ apply_textdelta (void *file_baton,
 {
   struct file_baton *fb = file_baton;
   
-  fb->text_changed = 1;
+  /* Mark file as having textual mods. */
+  fb->text_changed = TRUE;
 
   /* Send back a no-op window handler. */
   *handler_baton = NULL;
@@ -583,14 +478,13 @@ apply_textdelta (void *file_baton,
 
 static svn_error_t *
 change_file_prop (void *file_baton,
-                  svn_stringbuf_t *name,
-                  svn_stringbuf_t *value)
+                  const char *name,
+                  const svn_string_t *value,
+                  apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
-
-  if (svn_wc_is_normal_prop (name->data))    
-    fb->prop_changed = 1;
-
+  if (svn_wc_is_normal_prop (name))
+    fb->prop_changed = TRUE;
   return SVN_NO_ERROR;
 }
 
@@ -600,37 +494,23 @@ close_file (void *file_baton)
 {
   struct file_baton *fb = file_baton;
 
-  if (fb->added 
-      || fb->prop_changed
-      || fb->text_changed)
-    {
-      if (fb->added)
-        /* add file to the hash */
-        SVN_ERR (tweak_statushash (fb->dir_baton->edit_baton,
-                                   fb->path->data,
-                                   svn_wc_status_added, 
-                                   fb->prop_changed ? svn_wc_status_added : 0));
-      else
-        /* mark the file in the statushash */
-        SVN_ERR (tweak_statushash (fb->dir_baton->edit_baton,
-                                   fb->path->data,
-                                   fb->text_changed ? svn_wc_status_modified : 0,
-                                   fb->prop_changed ? svn_wc_status_modified : 0));
-    }
+  /* If nothing has changed, return. */
+  if (! (fb->added || fb->prop_changed || fb->text_changed))
+    return SVN_NO_ERROR;
 
-  /* Tell the directory it has one less thing to worry about. */
-  SVN_ERR (free_file_baton (fb));
+  /* If this is a new file, add it to the statushash. */
+  if (fb->added)
+    SVN_ERR (tweak_statushash (fb->edit_baton,
+                               fb->path->data,
+                               svn_wc_status_added, 
+                               fb->prop_changed ? svn_wc_status_added : 0));
+  /* Else, mark the existing file in the statushash. */
+  else
+    SVN_ERR (tweak_statushash (fb->edit_baton,
+                               fb->path->data,
+                               fb->text_changed ? svn_wc_status_modified : 0,
+                               fb->prop_changed ? svn_wc_status_modified : 0));
 
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-close_edit (void *edit_baton)
-{
-  /* The edit is over, free its pool. */
-  svn_pool_destroy (((struct edit_baton *) edit_baton)->pool);
-    
   return SVN_NO_ERROR;
 }
 
@@ -642,7 +522,7 @@ close_edit (void *edit_baton)
 /*** Public API ***/
 
 svn_error_t *
-svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
+svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                           void **edit_baton,
                           svn_stringbuf_t *path,
                           svn_boolean_t descend,
@@ -653,7 +533,7 @@ svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
   struct edit_baton *eb;
   svn_stringbuf_t *anchor, *target, *tempbuf;
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_delta_edit_fns_t *tree_editor = svn_delta_old_default_editor (pool);
+  svn_delta_editor_t *tree_editor = svn_delta_default_editor (pool);
 
   /* Construct an edit baton. */
   eb = apr_palloc (subpool, sizeof (*eb));
@@ -689,7 +569,6 @@ svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
   tree_editor->apply_textdelta = apply_textdelta;
   tree_editor->change_file_prop = change_file_prop;
   tree_editor->close_file = close_file;
-  tree_editor->close_edit = close_edit;
 
   *edit_baton = eb;
   *editor = tree_editor;
