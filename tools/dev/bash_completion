@@ -5,7 +5,9 @@
 
 # Doesn't do --xml-file and its associated options, that's intentional :)
 
-# Known to work with bash 2.05a with programmable completion enabled.
+# Known to work with bash 2.05a with programmable completion and extended
+# pattern matching enabled (use 'shopt -s extglob progcomp' to enable
+# these if they are not already enabled).
 
 _svn()
 {
