@@ -162,6 +162,7 @@ dnl Check for header files ----------------
 dnl Standard C headers
 AC_HEADER_STDC
 
+CPPFLAGS="$CPPFLAGS -D_POSIX_SOURCE=1"
 
 dnl Check for typedefs, structures, and compiler characteristics ----------
 
