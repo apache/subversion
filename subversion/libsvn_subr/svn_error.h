@@ -92,8 +92,8 @@ typedef struct svn_error_t
   char *message;               /* details from producer of error */
   struct svn_error_t *child;   /* ptr to next error below this one */
 
-  int canonical_errno;         /* "canonicalized" errno from APR */ 
-  char *description;           /* generic description from ap_strerror() */
+  int apr_errno;               /* "canonicalized" errno from APR */ 
+  char *apr_description;       /* generic description from ap_strerror() */
 
   ap_pool_t *pool;             /* place to generate message strings from */
 
