@@ -133,7 +133,7 @@ svn_fs__get_node_revision (skel_t **skel_p,
      When we add diffy representations, we'll need to start caching
      the expanded contents of immutable nodes.  */
   if (svn_fs__list_length (skel) != 2
-      || ! svn_fs__is_atom (skel->children, "fulltext"))
+      || ! svn_fs__matches_atom (skel->children, "fulltext"))
     return svn_fs__err_corrupt_representation (fs, id);
 
   *skel_p = skel->children->next;

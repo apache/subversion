@@ -104,7 +104,7 @@ svn_fs__revision_root (svn_fs_id_t **id_p,
 
   SVN_ERR (get_revision_skel (&revision, fs, v, subpool));
   if (svn_fs__list_length (revision) != 3
-      || ! svn_fs__is_atom (revision->children, "revision"))
+      || ! svn_fs__matches_atom (revision->children, "revision"))
     goto corrupt;
 
   id_skel = revision->children->next;
