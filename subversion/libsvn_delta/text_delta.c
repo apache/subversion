@@ -30,11 +30,6 @@
 #include "delta.h"
 
 
-/* The standard size of one svndiff window. */
-
-#define SVN_DELTA_WINDOW_SIZE 102400
-
-
 /* Text delta stream descriptor. */
 
 struct svn_txdelta_stream_t {
