@@ -58,6 +58,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "client.h"
 
 
 
@@ -66,11 +67,18 @@
 svn_error_t *
 svn_client_update (svn_string_t *path,
                    svn_string_t *xml_src,
+                   svn_vernum_t version,
                    apr_pool_t *pool)
 {
-  /* kff todo */
+#if 1
   printf ("libsvn_client: update %s (xml_src == %s)\n",
           path->data, xml_src->data);
+#else
+  return svn_client__checkout_internal (path,
+                                        xml_src,
+                                        version,
+                                        pool);
+#endif /* 0 */
 
   return SVN_NO_ERROR;
 }

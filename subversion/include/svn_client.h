@@ -84,6 +84,7 @@ svn_client_checkout (svn_string_t *path,
 svn_error_t *
 svn_client_update (svn_string_t *path,
                    svn_string_t *xml_src,
+                   svn_vernum_t ancestor_version,
                    apr_pool_t *pool);
 
 

@@ -27,26 +27,29 @@ ${SVN_PROG} add this/newfile1
 echo
 echo "Adding another file."
 touch this/A/B/E/newfile2
+# kff todo: comment next line and enter it in the debugger...
 ${SVN_PROG} add this/A/B/E/newfile2
 
 ### Updating.
 # echo
 # echo "Updating one file."
-# (cd this; ${SVN_PROG} update --xml-file ../../tests-common/xml/up1a-inline.xml)
-#                       
+# (cd this; ../${SVN_PROG} update \
+#              --xml-file ../../../tests-common/xml/up1a-inline.xml)
+
 # echo
 # echo "Updating many files."
-# (cd this; ${SVN_PROG} update --xml-file ../../tests-common/xml/up1b-inline.xml)
+# (cd this; ../${SVN_PROG} update \
+#              --xml-file ../../../tests-common/xml/up1b-inline.xml)
                       
 ### Deleting.
-echo
-echo "Deleting a versioned file, with --force."
-${SVN_PROG} delete --force this/A/D/H/omega
-
-echo
-echo "Deleting one of the added files, without --force."
-${SVN_PROG} delete this/A/B/E/newfile2
-
+# echo
+# echo "Deleting a versioned file, with --force."
+# ${SVN_PROG} delete --force this/A/D/H/omega
+# 
+# echo
+# echo "Deleting one of the added files, without --force."
+# ${SVN_PROG} delete this/A/B/E/newfile2
+ 
 ### Committing.
 ## Disable commits until they're working.
 # echo
