@@ -103,20 +103,13 @@ static APR_INLINE
 svn_error_t *
 read_chunk(apr_file_t *file, const char *path,
            char *buffer, apr_size_t length,
-           apr_off_t offset)
+           apr_off_t offset, apr_pool_t *pool)
 {
-  apr_status_t apr_err;
-
   /* XXX: The final offset may not be the one we asked for.
    * XXX: Check.
    */
-  apr_err = apr_file_seek(file, APR_SET, &offset);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr(apr_err, "Can't seek in file '%s'", path);
-
-  apr_err = apr_file_read_full(file, buffer, length, NULL);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr(apr_err, "Failed to read file '%s'", path);
+  SVN_ERR (svn_io_file_seek (file, APR_SET, &offset, pool));
+  SVN_ERR (svn_io_file_read_full (file, buffer, length, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -147,11 +140,8 @@ map_or_read_file(apr_file_t **file,
 
   *buffer = NULL;
 
-  SVN_ERR(svn_io_file_open(file, path, APR_READ, APR_OS_DEFAULT, pool));
-
-  rv = apr_file_info_get(&finfo, APR_FINFO_SIZE, *file);
-  if (rv != APR_SUCCESS)
-    return svn_error_wrap_apr(rv, "Can't get file info for '%s'", path);
+  SVN_ERR (svn_io_file_open (file, path, APR_READ, APR_OS_DEFAULT, pool));
+  SVN_ERR (svn_io_file_info_get (&finfo, APR_FINFO_SIZE, *file, pool));
 
 #if APR_HAS_MMAP
   if (finfo.size > APR_MMAP_THRESHOLD)
@@ -172,7 +162,7 @@ map_or_read_file(apr_file_t **file,
     {
       *buffer = apr_palloc(pool, finfo.size);
 
-      SVN_ERR (svn_io_file_read_full(*file, *buffer, finfo.size, NULL, pool));
+      SVN_ERR (svn_io_file_read_full (*file, *buffer, finfo.size, NULL, pool));
 
       /* Since we have the entire contents of the file we can
        * close it now.
@@ -203,15 +193,11 @@ svn_diff__file_datasource_open(void *baton,
 
   idx = svn_diff__file_datasource_to_index(datasource);
 
-  SVN_ERR(svn_io_file_open(&file_baton->file[idx], file_baton->path[idx],
-                           APR_READ, APR_OS_DEFAULT, file_baton->pool));
+  SVN_ERR( svn_io_file_open (&file_baton->file[idx], file_baton->path[idx],
+                             APR_READ, APR_OS_DEFAULT, file_baton->pool));
 
-  apr_err = apr_file_info_get(&finfo, APR_FINFO_SIZE, file_baton->file[idx]);
-  if (apr_err != APR_SUCCESS)
-    {
-      return svn_error_wrap_apr(apr_err, "Can't get file info for '%s'",
-                                file_baton->path[idx]);
-    }
+  SVN_ERR (svn_io_file_info_get (&finfo, APR_FINFO_SIZE, 
+                                 file_baton->file[idx], file_baton->pool));
 
   file_baton->size[idx] = finfo.size;
   length = finfo.size > CHUNK_SIZE ? CHUNK_SIZE : finfo.size;
@@ -225,8 +211,8 @@ svn_diff__file_datasource_open(void *baton,
   file_baton->buffer[idx] = file_baton->curp[idx] = curp;
   file_baton->endp[idx] = endp;
 
-  SVN_ERR(read_chunk(file_baton->file[idx], file_baton->path[idx],
-                     curp, length, 0));
+  SVN_ERR (read_chunk (file_baton->file[idx], file_baton->path[idx],
+                       curp, length, 0, file_baton->pool));
 
   return SVN_NO_ERROR;
 }
@@ -321,7 +307,9 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
       file_baton->endp[idx] = endp;
 
       SVN_ERR(read_chunk(file_baton->file[idx], file_baton->path[idx],
-                         curp, length, chunk_to_offset(file_baton->chunk[idx])));
+                         curp, length, 
+                         chunk_to_offset(file_baton->chunk[idx]),
+                         file_baton->pool));
     }
 
   length = eol - curp;
@@ -404,7 +392,8 @@ svn_diff__file_token_compare(void *baton,
 
               SVN_ERR(read_chunk(file_baton->file[idx[i]],
                                  file_baton->path[idx[i]],
-                                 bufp[i], length[i], offset[i]));
+                                 bufp[i], length[i], offset[i],
+                                 file_baton->pool));
             }
         }
 
@@ -568,7 +557,7 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
   char *curp;
   char *eol;
   apr_size_t length;
-  apr_status_t rv;
+  svn_error_t *err;
   svn_boolean_t bytes_processed = FALSE;
 
   length = baton->length[idx];
@@ -631,7 +620,7 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
               baton->curp[idx] = eol;
               baton->length[idx] = length;
 
-              rv = APR_SUCCESS;
+              err = SVN_NO_ERROR;
 
               break;
             }
@@ -647,15 +636,16 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
       curp = baton->buffer[idx];
       length = sizeof(baton->buffer[idx]);
 
-      rv = apr_file_read(baton->file[idx], curp, &length);
+      err = svn_io_file_read(baton->file[idx], curp, &length, baton->pool);
     }
-  while (rv == APR_SUCCESS);
+  while (! err);
 
-  if (rv != APR_SUCCESS && ! APR_STATUS_IS_EOF(rv))
-    return svn_error_wrap_apr(rv, "Can't read from '%s'", baton->path[idx]);
+  if (err && ! APR_STATUS_IS_EOF(err->apr_err))
+    return err;
 
-  if (APR_STATUS_IS_EOF(rv))
+  if (err && APR_STATUS_IS_EOF(err->apr_err))
     {
+      svn_error_clear (err);
       /* Special case if we reach the end of file AND the last line is in the
          changed range AND the file doesn't end with a newline */
       if (bytes_processed && (type != svn_diff__file_output_unified_skip))
@@ -863,8 +853,8 @@ svn_diff_file_output_unified(svn_stream_t *output_stream,
 
       for (i = 0; i < 2; i++)
         {
-          SVN_ERR( svn_io_file_open(&baton.file[i], baton.path[i],
-                                    APR_READ, APR_OS_DEFAULT, pool) );
+          SVN_ERR (svn_io_file_open (&baton.file[i], baton.path[i],
+                                     APR_READ, APR_OS_DEFAULT, pool) );
         }
 
       if (original_header == NULL)
@@ -890,7 +880,7 @@ svn_diff_file_output_unified(svn_stream_t *output_stream,
 
       for (i = 0; i < 2; i++)
         {
-	  SVN_ERR (svn_io_file_close(baton.file[i], pool));
+	  SVN_ERR (svn_io_file_close (baton.file[i], pool));
         }
     }
 
@@ -1182,7 +1172,7 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
 
       if (file[idx])
         {
-          SVN_ERR (svn_io_file_close(file[idx], pool));
+          SVN_ERR (svn_io_file_close (file[idx], pool));
         }
     }
 
