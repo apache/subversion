@@ -670,7 +670,9 @@ print_version_info (const char *pgm_name,
 {
   static const char info[] =
     "Copyright (C) 2000-2004 CollabNet.\n"
-    "Subversion is open source software, see http://subversion.tigris.org/\n";
+    "Subversion is open source software, see http://subversion.tigris.org/\n"
+    "This product includes software developed by CollabNet "
+    "(http://www.Collab.Net/).\n";
 
   if (quiet)
     {
