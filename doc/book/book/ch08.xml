@@ -1065,12 +1065,13 @@ Committed revision 13.
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn delete [TARGET...]</programlisting>
+          <programlisting>svn delete PATH...</programlisting>
+          <programlisting>svn delete URL...</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
 
-          <para>Items specified on the command line are scheduled
+          <para>Items specified by PATH are scheduled
             for deletion upon the next commit.  Files (and
             directories that have not been committed) are
             immediately removed from the working copy.  The command
@@ -1078,9 +1079,9 @@ Committed revision 13.
             the <option>--force</option> switch to override this
             behavior.</para>
 
-          <para>If run on one or more URLs, the item is deleted from
-            the repository via an immediate commit (multiple URLs are
-            committed atomically).</para>
+          <para>Items specified by URL are deleted from
+            the repository via an immediate commit.  Multiple URLs are
+            committed atomically.</para>
         </refsect1>
 
         <refsect1>
@@ -2060,17 +2061,18 @@ U  thhgttg.txt
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn mkdir TARGET...</programlisting>
+          <programlisting>svn mkdir PATH...</programlisting>
+          <programlisting>svn mkdir URL...</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
 
-          <para>Create a directory with a name given by the final
-            component of TARGET.  If TARGET is a working copy path the
-            directory is scheduled for addition in the working copy.
-            If TARGET is one or more URLs, the directory is created in
-            the repository via an immediate commit (multiple directory
-            URLs are committed atomically).  In both cases all the
+          <para>Create a directory with a name given by the final component
+            of the PATH or URL.  A directory specified by a working copy PATH
+            is scheduled for addition in the working copy.
+            A directory specified by a URL is created in
+            the repository via an immediate commit.  Multiple directory
+            URLs are committed atomically.  In both cases all the
             intermediate directories must already exist.</para>
         </refsect1>
 

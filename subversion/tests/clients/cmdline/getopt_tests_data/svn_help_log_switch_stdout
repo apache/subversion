@@ -2,9 +2,10 @@ log: Show the log messages for a set of revision(s) and/or file(s).
 usage: 1. log [PATH]
        2. log URL [PATH...]
 
-  1. Print the log messages for a local PATH (default: ".").
+  1. Print the log messages for a local PATH (default: '.').
      The default revision range is BASE:1.
-  2. Print the log messages for the PATHs (default: ".") under URL.
+
+  2. Print the log messages for the PATHs (default: '.') under URL.
      The default revision range is HEAD:1.
 
   With -v, also print all affected paths with each log message.
@@ -23,11 +24,12 @@ usage: 1. log [PATH]
 
 Valid options:
   -r [--revision] arg      : revision X or X:Y range.  X or Y can be one of:
-                             {DATE}      date instead of revision number
-                             "HEAD"      latest in repository
-                             "BASE"      base revision of item's working copy
-                             "COMMITTED" revision of item's last commit
-                             "PREV"      revision before item's last commit
+                             NUMBER       revision number
+                             "{" DATE "}" revision at start of the date
+                             "HEAD"       latest in repository
+                             "BASE"       base revision of item's working copy
+                             "COMMITTED"  last commit at or before BASE
+                             "PREV"       revision just before COMMITTED
   -q [--quiet]             : print as little as possible
   -v [--verbose]           : print extra information
   --targets arg            : pass contents of file ARG as additional args
@@ -45,18 +47,19 @@ usage: 1. switch URL [PATH]
        2. switch --relocate FROM TO [PATH...]
 
   1. Update the working copy to mirror a new URL.  This behaviour is a
-     superset of "svn update".
+     superset of 'svn update'.
      Note:  this is the way to move a working copy to a new branch.
 
   2. Reconnect the working copy when the repository URL has changed.
 
 Valid options:
   -r [--revision] arg      : revision X or X:Y range.  X or Y can be one of:
-                             {DATE}      date instead of revision number
-                             "HEAD"      latest in repository
-                             "BASE"      base revision of item's working copy
-                             "COMMITTED" revision of item's last commit
-                             "PREV"      revision before item's last commit
+                             NUMBER       revision number
+                             "{" DATE "}" revision at start of the date
+                             "HEAD"       latest in repository
+                             "BASE"       base revision of item's working copy
+                             "COMMITTED"  last commit at or before BASE
+                             "PREV"       revision just before COMMITTED
   -N [--non-recursive]     : operate on single directory only
   -q [--quiet]             : print as little as possible
   --diff3-cmd arg          : use ARG as merge command

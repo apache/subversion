@@ -139,7 +139,8 @@ Committed revision 3.
         <varlistentry>
           <term>COMMITTED</term>
           <listitem>
-            <para>The last revision in which an item changed.</para>
+            <para>The last revision in which an item changed before (or
+              at) BASE.</para>
           </listitem>
         </varlistentry>
         
