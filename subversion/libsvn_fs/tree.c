@@ -2408,12 +2408,12 @@ svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
 /* Public interface to computing file text deltas.  */
 
 svn_error_t *
-svn_fs_file_delta (svn_txdelta_stream_t **stream_p,
-                   svn_fs_root_t *source_root,
-                   const char *source_path,
-                   svn_fs_root_t *target_root,
-                   const char *target_path,
-                   apr_pool_t *pool)
+svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
+                              svn_fs_root_t *source_root,
+                              const char *source_path,
+                              svn_fs_root_t *target_root,
+                              const char *target_path,
+                              apr_pool_t *pool)
 {
   svn_stream_t *source, *target;
   svn_txdelta_stream_t *delta_stream;

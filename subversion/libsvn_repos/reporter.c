@@ -85,12 +85,12 @@ svn_repos_finish_report (void *report_baton)
                                  rbaton->pool));
   
   /* Ah!  The good stuff!  dir_delta does all the hard work. */  
-  SVN_ERR (svn_fs_dir_delta (rbaton->txn_root, rbaton->base_path->data,
-                             rbaton->path_rev_hash,
-                             rev_root, rbaton->base_path->data,
-                             rbaton->update_editor,             
-                             rbaton->update_edit_baton,
-                             rbaton->pool));
+  SVN_ERR (svn_repos_dir_delta (rbaton->txn_root, rbaton->base_path->data,
+                                rbaton->path_rev_hash,
+                                rev_root, rbaton->base_path->data,
+                                rbaton->update_editor,             
+                                rbaton->update_edit_baton,
+                                rbaton->pool));
   
   /* Still here?  Great!  Throw out the transaction. */
   SVN_ERR (svn_fs_abort_txn (rbaton->txn));

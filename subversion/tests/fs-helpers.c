@@ -340,6 +340,100 @@ svn_test__txn_script_exec (svn_fs_root_t *txn_root,
 }
 
 
+svn_error_t *
+svn_test__check_greek_tree (svn_fs_root_t *root,
+                            apr_pool_t *pool)
+{
+  svn_stream_t *rstream;
+  svn_string_t *rstring;
+  svn_string_t *content;
+  int i;
+
+  const char *file_contents[12][2] =
+  {
+    { "iota", "This is the file 'iota'.\n" },
+    { "A/mu", "This is the file 'mu'.\n" },
+    { "A/B/lambda", "This is the file 'lambda'.\n" },
+    { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+    { "A/B/E/beta", "This is the file 'beta'.\n" },
+    { "A/D/gamma", "This is the file 'gamma'.\n" },
+    { "A/D/G/pi", "This is the file 'pi'.\n" },
+    { "A/D/G/rho", "This is the file 'rho'.\n" },
+    { "A/D/G/tau", "This is the file 'tau'.\n" },
+    { "A/D/H/chi", "This is the file 'chi'.\n" },
+    { "A/D/H/psi", "This is the file 'psi'.\n" },
+    { "A/D/H/omega", "This is the file 'omega'.\n" }
+  };
+
+  /* Loop through the list of files, checking for matching content. */
+  for (i = 0; i < 12; i++)
+    {
+      SVN_ERR (svn_fs_file_contents (&rstream, root, 
+                                     file_contents[i][0], pool));
+      SVN_ERR (svn_test__stream_to_string (&rstring, rstream, pool));
+      content = svn_string_create (file_contents[i][1], pool);
+      if (! svn_string_compare (rstring, content))
+        return svn_error_createf (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                                 "data read != data written in file `%s'.",
+                                 file_contents[i][0]);
+    }
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_test__create_greek_tree (svn_fs_root_t *txn_root,
+                             apr_pool_t *pool)
+{
+  SVN_ERR (svn_fs_make_file (txn_root, "iota", pool));
+  SVN_ERR (svn_test__set_file_contents 
+           (txn_root, "iota", "This is the file 'iota'.\n", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/mu", pool));
+  SVN_ERR (svn_test__set_file_contents 
+           (txn_root, "A/mu", "This is the file 'mu'.\n", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/B/lambda", pool));
+  SVN_ERR (svn_test__set_file_contents 
+           (txn_root, "A/B/lambda", "This is the file 'lambda'.\n", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/E", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/B/E/alpha", pool));
+  SVN_ERR (svn_test__set_file_contents 
+           (txn_root, "A/B/E/alpha", "This is the file 'alpha'.\n", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/B/E/beta", pool));
+  SVN_ERR (svn_test__set_file_contents 
+           (txn_root, "A/B/E/beta", "This is the file 'beta'.\n", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/B/F", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/C", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/D", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/gamma", pool));
+  SVN_ERR (svn_test__set_file_contents 
+           (txn_root, "A/D/gamma", "This is the file 'gamma'.\n", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/D/G", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/pi", pool));
+  SVN_ERR (svn_test__set_file_contents 
+           (txn_root, "A/D/G/pi", "This is the file 'pi'.\n", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/rho", pool));
+  SVN_ERR (svn_test__set_file_contents 
+           (txn_root, "A/D/G/rho", "This is the file 'rho'.\n", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/tau", pool));
+  SVN_ERR (svn_test__set_file_contents 
+           (txn_root, "A/D/G/tau", "This is the file 'tau'.\n", pool));
+  SVN_ERR (svn_fs_make_dir  (txn_root, "A/D/H", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/chi", pool));
+  SVN_ERR (svn_test__set_file_contents 
+           (txn_root, "A/D/H/chi", "This is the file 'chi'.\n", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/psi", pool));
+  SVN_ERR (svn_test__set_file_contents 
+           (txn_root, "A/D/H/psi", "This is the file 'psi'.\n", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/H/omega", pool));
+  SVN_ERR (svn_test__set_file_contents 
+           (txn_root, "A/D/H/omega", "This is the file 'omega'.\n", pool));
+  return SVN_NO_ERROR;
+}
+
+
 
 
 

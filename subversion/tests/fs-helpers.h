@@ -118,6 +118,20 @@ svn_test__txn_script_exec (svn_fs_root_t *txn_root,
                            int num_edits, 
                            apr_pool_t *pool);
 
+/* Verify that the tree that exists under ROOT is exactly the Greek
+   Tree. */
+svn_error_t *
+svn_test__check_greek_tree (svn_fs_root_t *root,
+                            apr_pool_t *pool);
+
+
+/* Create the Greek Tree under TXN_ROOT.  See ./greek-tree.txt.  */
+svn_error_t *
+svn_test__create_greek_tree (svn_fs_root_t *txn_root,
+                             apr_pool_t *pool);
+
+
+
 #endif  /* FS_HELPERS_H */
 
 /* ----------------------------------------------------------------

@@ -128,7 +128,7 @@ AM_CONDITIONAL(BUILD_FS_STUFF, test "$svn_lib_berkeley_db" = "yes")
 
 if test "$svn_lib_berkeley_db" = "yes"; then
   FS_BASED_DIRS="libsvn_fs libsvn_repos libsvn_ra_local svnadmin"
-  FS_BASED_TESTS="libsvn_fs libsvn_ra_local"
+  FS_BASED_TESTS="libsvn_fs libsvn_repos libsvn_ra_local"
 fi
 AC_SUBST(FS_BASED_DIRS)
 AC_SUBST(FS_BASED_TESTS)
@@ -253,6 +253,7 @@ AC_OUTPUT([Makefile                                           \
            subversion/tests/Makefile                          \
            subversion/tests/libsvn_delta/Makefile             \
            subversion/tests/libsvn_fs/Makefile                \
+           subversion/tests/libsvn_repos/Makefile             \
            subversion/tests/libsvn_ra_local/Makefile          \
            subversion/tests/libsvn_subr/Makefile              \
            subversion/tests/libsvn_wc/Makefile                \
