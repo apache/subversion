@@ -319,7 +319,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "\n"
       "# Make sure that the log message contains some text.\n"
       "SVNLOOK=/usr/local/bin/svnlook\n"
-      "LOG=`$SVNLOOK \"$REPOS\" txn \"$TXN\" log`\n"
+      "LOG=`$SVNLOOK log -t \"$TXN\" \"$REPOS\"`\n"
       "echo \"$LOG\" | grep \"[a-zA-Z0-9]\" > /dev/null || exit 1\n"
       "\n"
       "# Check that the author of this commit has the rights to perform\n"
