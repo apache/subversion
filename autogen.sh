@@ -57,29 +57,30 @@ else
 fi
 
 # Handle the neon/ subdir
-NEON_VER=0.8.1
+NEON_WANTED=0.8.1
 if [ ! -d neon ]; then
   echo ""
   echo "...Uh oh, there is a problem."
   echo "You don't have a neon/ subdirectory here."
-  echo "Please get neon ${NEON_VER} from:"
-  echo "       http://www.webdav.org/neon/neon-${NEON_VER}.tar.gz"
+  echo "Please get neon ${NEON_WANTED} from:"
+  echo "       http://www.webdav.org/neon/neon-${NEON_WANTED}.tar.gz"
   echo ""
   echo "Unpack the archive using tar/gunzip and rename the resulting"
-  echo "directory from ./neon-${NEON_VER}/ to ./neon/"
+  echo "directory from ./neon-${NEON_WANTED}/ to ./neon/"
   echo ""
   exit 1
 fi
-grep NEON_VERSION=${NEON_VER} neon/configure.in > /dev/null
-if [ $? -ne 0 ]; then
+NEON_VERSION=`ac-helpers/get-neon-ver.sh neon`
+if test "$NEON_WANTED" != "$NEON_VERSION"; then
   echo ""
   echo "...Uh oh, there is a problem."
-  echo "You have a neon/ subdir, but it is not neon ${NEON_VER}."
-  echo "Please get neon ${NEON_VER} from:"
-  echo "       http://www.webdav.org/neon/neon-${NEON_VER}.tar.gz"
+  echo "You have a neon/ subdir containing version $NEON_VERSION,"
+  echo "but Subversion needs neon ${NEON_WANTED}."
+  echo "Please get neon ${NEON_WANTED} from:"
+  echo "       http://www.webdav.org/neon/neon-${NEON_WANTED}.tar.gz"
   echo ""
   echo "Unpack the archive using tar/gunzip and rename the resulting"
-  echo "directory from ./neon-${NEON_VER}/ to ./neon/"
+  echo "directory from ./neon-${NEON_WANTED}/ to ./neon/"
   echo ""
   exit 1
 fi
