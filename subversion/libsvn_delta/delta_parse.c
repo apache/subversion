@@ -70,6 +70,16 @@
 
 
 
+/* Constructor, for factorizing code */
+svn_edit_t * 
+svn_create_edit (apr_pool_t *pool, svn_XML_elt_t action, char **atts)
+{
+  /* TODO:  fill in fields from atts */
+  svn_edit_t *new_edit = apr_pcalloc (pool, sizeof (svn_edit_t *));
+  
+}
+
+
 
 /* Recursively walk down delta D.  (PARENT is used for recursion purposes.)
 
@@ -313,6 +323,8 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
   /* Retrieve our digger structure */
   svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
 
+  /* Match the new tag's name to one of Subversion's XML tags... */
+
   if (strcmp (name, "tree-delta") == 0)
     {
       /* Found a new tree-delta element */
@@ -335,14 +347,14 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
         {
           /* This is a nested tree-delta, below a <dir>.  Hook it in. */
           svn_error_t *err = 
-            svn_append_to_delta (my_digger->delta, 
-                                 new_delta,
-                                 svn_XML_treedelta);
+            svn_starpend_delta (my_digger, new_delta, 
+                                svn_XML_treedelta, FALSE);
 
           /* TODO: we're inside an event-driven callback.  What do we
              do if we get an error?  Just Punt?  Call a warning
              callback?  Perhaps we should have an error_handler()
-             inside our digger structure! */
+             inside our digger structure!  Does Expat have a
+             mechanism, or do we need to longjump out? */
         }
     }
 
@@ -350,28 +362,17 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
     {
       /* Found a new text-delta element */
       /* No need to create a text-delta structure... */
-      /* ...just mark flag in edit_content structure (should be the
+      /* TODO: ...just mark flag in edit_content structure (should be the
          last structure on our growing delta) */
-      
-      svn_error_t *err = svn_append_to_delta (my_digger->delta,
-                                              NULL,
-                                              svn_XML_textdelta);
 
-      /* TODO: check error */
     }
 
   else if (strcmp (name, "prop-delta") == 0)
     {
       /* Found a new prop-delta element */
       /* No need to create a prop-delta structure... */
-      /* ...just mark flag in edit_content structure (should be the
+      /* TODO: ...just mark flag in edit_content structure (should be the
          last structure on our growing delta) */
-
-      svn_error_t *err = svn_append_to_delta (my_digger->delta,
-                                              NULL,
-                                              svn_XML_propdelta);
-
-      /* TODO: check error */
     }
 
   else if (strcmp (name, "new") == 0)
@@ -379,22 +380,13 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
       svn_error_t *err;
       /* Found a new svn_edit_t */
       /* Build a new edit struct */
-      svn_edit_t *new_edit = apr_pcalloc (my_digger->pool, 
-                                          sizeof (svn_edit_t *));
-      new_edit->kind = action_new;
 
-      /* Our three edit tags currently only have one attribute: "name" */
-      if (strcmp (*atts, "name") == 0) {
-        new_edit->name = svn_string_create (++*atts, my_digger->pool);
-      }
-      else {
-        /* TODO: return error if we have some other attribute */
-      }
+      svn_edit_t *new_edit = svn_create_edit (my_digger->pool,
+                                              action_new, 
+                                              atts);
 
-      /* Now drop this edit at the end of our delta */
-      err = svn_append_to_delta (my_digger->delta,
-                                 new_edit,
-                                 svn_XML_edit);
+      err = svn_starpend_delta (my_digger, new_edit, svn_XML_edit, FALSE);
+
       /* TODO: check error */
     }
 
