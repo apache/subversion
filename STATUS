@@ -9,13 +9,6 @@ Status of 1.2.0:
 
 Candidate changes:
 
-  * r13936
-    Doxygen tweaks.
-    Justification:
-      API documentation correctness.
-    Votes:
-      +1: lundblad, dlr
-
   * r13945
     Revert r13369 (svn:keywords canonicalization).
     Justification:
