@@ -112,3 +112,8 @@ Candidate changes:
     Make RPMs build again after cvs2svn was taken out.
     Votes:
       +1: david
+
+  * r8846
+    Add an example wrapper to help svn+ssh users using setgid svnserve.
+    Votes:
+      +1: epg
