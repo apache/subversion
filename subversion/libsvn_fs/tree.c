@@ -389,7 +389,7 @@ clone_path (dag_node_t **clone_p,
 	{
 	  /* According to the `clones' table, this node hasn't been
 	     cloned yet.  Recursively clone the parent, then clone
-	     the node itself.  */
+	     this node.  */
 	  dag_node_t *parent_clone, *child_clone;
 	    
 	  SVN_ERR (clone_path (&parent_clone, fs, svn_txn, path->parent,
@@ -406,6 +406,8 @@ clone_path (dag_node_t **clone_p,
 	}
       else if (svn_fs__is_cloned (&clone_id_skel, clone_info))
 	{
+	  /* This node has already been cloned.  Open it, using the
+             node revision ID that appears in the `clones' table.  */
 	  svn_fs_id_t *clone_id = svn_fs_parse_id (clone_id_skel->data,
 						   clone_id_skel->len,
 						   trail->pool);
@@ -423,6 +425,8 @@ clone_path (dag_node_t **clone_p,
       else if (svn_fs__is_renamed (&parent_clone_id_skel, &entry_name_skel,
 				   clone_info))
 	{
+	  /* This node has been renamed, so the parent directory entry
+	     we need to fix up when we clone this node is elsewhere.  */
 	  svn_fs_id_t *parent_clone_id
 	    = svn_fs_parse_id (parent_clone_id_skel->data,
 			       parent_clone_id_skel->len,
@@ -446,6 +450,7 @@ clone_path (dag_node_t **clone_p,
 	  return 0;
 	}
       else
+	/* Those are the only kinds of `clones' records we know about.  */
 	abort ();
     }
   else
