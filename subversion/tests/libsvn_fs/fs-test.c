@@ -3665,6 +3665,13 @@ commit_date (const char **msg,
 
   SVN_ERR (svn_time_from_nts (&at_commit, datestamp->data, pool));
 
+#if 0 /* Debugging code, for those who care. */
+  printf ("before: %" APR_TIME_T_FMT "\n"
+          "during: %" APR_TIME_T_FMT "\n"
+          "after : %" APR_TIME_T_FMT "\n",
+          before_commit, after_commit, at_commit); 
+#endif /* 0 */
+
   if (at_commit < before_commit)
     return svn_error_create
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
@@ -4511,17 +4518,13 @@ medium_file_integrity (const char **msg,
                        svn_boolean_t msg_only,
                        apr_pool_t *pool)
 {
-  char msg_buf[256];
   apr_uint32_t seed = (apr_uint32_t) apr_time_now();
-  sprintf (msg_buf,
-           "create and modify a medium file,"
-           " verifying its integrity, seed = %lu", (unsigned long) seed);
-  *msg = msg_buf;
+  *msg = apr_psprintf (pool,
+                       "create, modify, and verify a medium file (seed=%lu)", 
+                       (unsigned long) seed);
 
   if (msg_only)
     return SVN_NO_ERROR;
-  else
-    printf ("SEED: %s\n", msg_buf);
 
   /* Being no larger than the standard delta window size affects
      deltification internally, so test that. */
@@ -4534,17 +4537,13 @@ large_file_integrity (const char **msg,
                        svn_boolean_t msg_only,
                        apr_pool_t *pool)
 {
-  char msg_buf[256];
   apr_uint32_t seed = (apr_uint32_t) apr_time_now();
-  sprintf (msg_buf,
-           "create and modify a large file,"
-           " verifying its integrity, seed = %lu", (unsigned long) seed);
-  *msg = msg_buf;
+  *msg = apr_psprintf (pool,
+                       "create, modify, and verify a large file (seed=%lu)", 
+                       (unsigned long) seed);
 
   if (msg_only)
     return SVN_NO_ERROR;
-  else
-    printf ("SEED: %s\n", msg_buf);
 
   /* Being larger than the standard delta window size affects
      deltification internally, so test that. */
@@ -4641,17 +4640,13 @@ undeltify_deltify (const char **msg,
     { "A/D/H/omega", 0 }
   };
   
-  char msg_buf[256];
   apr_uint32_t seed = (apr_uint32_t) apr_time_now();
-  sprintf (msg_buf,
-           "pound on the filesystem's explicit"
-           " (un-)deltification codem seed = %lu", (unsigned long) seed);
-  *msg = msg_buf;
+  *msg = apr_psprintf (pool,
+                       "pound on explicit undeltification code (seed=%lu)", 
+                       (unsigned long) seed);
 
   if (msg_only)
     return SVN_NO_ERROR;
-  else
-    printf ("SEED: %s\n", msg_buf);
 
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-undeltify-deltify", pool));
@@ -5515,6 +5510,142 @@ canonicalize_abspath (const char **msg,
 }
 
 
+#if 0
+static svn_error_t *
+branch_test (const char **msg,
+             svn_boolean_t msg_only,
+             apr_pool_t *pool)
+{ 
+  apr_pool_t *spool = svn_pool_create (pool);
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t youngest_rev = 0;
+  
+  *msg = "test complex copies (branches)";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-branch-test", pool));
+
+  /*** Revision 1:  Create the greek tree in revision.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+  
+  /*** Revision 2:  Copy A/D/G/rho to A/D/G/rho2.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D/G/rho", txn_root, "A/D/G/rho2", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  {
+    const svn_fs_id_t *rho_id, *rho2_id, *G_id;
+
+    /* Now, A/D/G/rho and A/D/G/rho2 should have the same NodeId, but
+       A/D/G/rho2 should have earned a new CopyId. */
+    SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+    SVN_ERR (svn_fs_node_id (&G_id, rev_root, "A/D/G", spool));
+    SVN_ERR (svn_fs_node_id (&rho_id, rev_root, "A/D/G/rho", spool));
+    SVN_ERR (svn_fs_node_id (&rho2_id, rev_root, "A/D/G/rho2", spool));
+    if (strcmp (svn_fs__id_node_id (rho_id),
+                svn_fs__id_node_id (rho2_id)) != 0)
+      return svn_error_createf 
+        (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+         "Expected matching node ids for 'A/D/G/rho' and 'A/D/G/rho2'");
+    if (strcmp (svn_fs__id_copy_id (rho_id),
+                svn_fs__id_copy_id (G_id)) != 0)
+      return svn_error_createf 
+        (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+         "Expected matching copy ids for 'A/D/G' and 'A/D/G/rho'");
+    if (strcmp (svn_fs__id_copy_id (rho_id),
+                svn_fs__id_copy_id (rho2_id)) == 0)
+      return svn_error_createf 
+        (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+         "Expected differing copy ids for 'A/D/G/rho' and 'A/D/G/rho2'");
+  }
+  svn_pool_clear (spool);
+
+  /*** Revision 3:  Copy A/D/G to A/D/G2.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D/G", txn_root, "A/D/G2", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  {
+    const svn_fs_id_t *G_rho_id, *G_rho2_id, 
+                      *G2_rho_id, *G2_rho2_id, 
+                      *G_id, *G2_id;
+
+    /* Now, A/D/G and A/D/G2 should have the same NodeId, but A/D/G2
+       should have earned a new CopyId.  Also, A/D/G/rho and
+       A/D/G/rho2 should be the same nodes as A/D/G2/rho and
+       A/D/G2/rho2, respectively.  */
+    SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+    SVN_ERR (svn_fs_node_id (&G_id, rev_root, "A/D/G", spool));
+    SVN_ERR (svn_fs_node_id (&G2_id, rev_root, "A/D/G2", spool));
+    SVN_ERR (svn_fs_node_id (&G_rho_id, rev_root, "A/D/G/rho", spool));
+    SVN_ERR (svn_fs_node_id (&G_rho2_id, rev_root, "A/D/G/rho2", spool));
+    SVN_ERR (svn_fs_node_id (&G2_rho_id, rev_root, "A/D/G2/rho", spool));
+    SVN_ERR (svn_fs_node_id (&G2_rho2_id, rev_root, "A/D/G2/rho2", spool));
+    if (strcmp (svn_fs__id_node_id (G_id),
+                svn_fs__id_node_id (G2_id)) != 0)
+      return svn_error_createf 
+        (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+         "Expected matching node ids for 'A/D/G' and 'A/D/G2'");
+    if (strcmp (svn_fs__id_copy_id (G_id),
+                svn_fs__id_copy_id (G2_id)) == 0)
+      return svn_error_createf 
+        (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+         "Expected differing copy ids for 'A/D/G' and 'A/D/G2'");
+    if (svn_fs_compare_ids (G_rho_id, G2_rho_id) != 0)
+      return svn_error_createf 
+        (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+         "Expected equivalent ids for 'A/D/G/rho' and 'A/D/G2/rho'");
+    if (svn_fs_compare_ids (G_rho2_id, G2_rho2_id) != 0)
+      return svn_error_createf 
+        (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
+         "Expected equivalent ids for 'A/D/G/rho2' and 'A/D/G2/rho2'");
+  }
+  svn_pool_clear (spool);
+
+  /*** Revision 4:  Edit A/D/G2/rho and A/D/G2/rho2.  ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/G2/rho", 
+                                        "New contents.", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/G2/rho2", 
+                                        "New contents.", spool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  {
+    const svn_fs_id_t *G2_id, *G2_rho_id, *G2_rho2_id;
+
+    /* Now, A/D/G and A/D/G2 should have the same NodeId, but A/D/G2
+       should have earned a new CopyId.  Also, A/D/G/rho and
+       A/D/G/rho2 should be the same nodes as A/D/G2/rho and
+       A/D/G2/rho2, respectively.  */
+    SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+    SVN_ERR (svn_fs_node_id (&G2_id, rev_root, "A/D/G2", spool));
+    SVN_ERR (svn_fs_node_id (&G2_rho_id, rev_root, "A/D/G2/rho", spool));
+    SVN_ERR (svn_fs_node_id (&G2_rho2_id, rev_root, "A/D/G2/rho2", spool));
+  }
+  svn_pool_clear (spool);
+
+  svn_pool_destroy (spool);
+  svn_fs_close_fs (fs);
+  return SVN_NO_ERROR;
+}
+#endif /* 0 */
+
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -5557,6 +5688,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   check_related,
   revisions_changed,
   canonicalize_abspath,
+  /* branch_test, */
   0
 };
 
