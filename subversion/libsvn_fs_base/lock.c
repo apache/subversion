@@ -138,7 +138,7 @@ txn_body_lock (void *baton, trail_t *trail)
              that as a 'refresh' request. */
 
           if ((! args->current_token)
-              || (strcmp(args->current_token, existing_lock->token) == 0))
+              || (strcmp(args->current_token, existing_lock->token) != 0))
             {
               /* Whoops, you may own the existing lock, but you gotta
                  show me the right token for it. */
