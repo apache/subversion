@@ -187,7 +187,7 @@ copy_versioned_files (const char *from,
           svn_subst_eol_style_t style;
           apr_hash_t *props;
           const char *base;
-          svn_string_t *eol_style, *keywords, *executable, *externals;
+          svn_string_t *eol_style, *keywords, *executable, *externals, *special;
           const char *eol = NULL;
           svn_boolean_t local_mod = FALSE;
           apr_time_t tm;
@@ -232,11 +232,13 @@ copy_versioned_files (const char *from,
                                      APR_HASH_KEY_STRING);
           externals = apr_hash_get (props, SVN_PROP_EXTERNALS,
                                     APR_HASH_KEY_STRING);
+          special = apr_hash_get (props, SVN_PROP_SPECIAL,
+                                  APR_HASH_KEY_STRING);
           
           if (eol_style)
             SVN_ERR (get_eol_style (&style, &eol, eol_style->data, native_eol));
           
-          if (local_mod)
+          if (local_mod && (! special))
             {
               /* Use the modified time from the working copy if
                  the file */
@@ -272,14 +274,17 @@ copy_versioned_files (const char *from,
                         apr_psprintf (iterpool, fmt, entry->cmt_rev),
                         entry->url, tm, author, iterpool));
             }
-          
-          SVN_ERR (svn_subst_copy_and_translate (base, copy_to, eol, FALSE,
-                                                 &kw, TRUE, iterpool));
+
+          SVN_ERR (svn_subst_copy_and_translate2 (base, copy_to, eol, FALSE,
+                                                  &kw, TRUE,
+                                                  special ? TRUE : FALSE,
+                                                  iterpool));
           if (executable)
             SVN_ERR (svn_io_set_file_executable (copy_to, TRUE, 
                                                  FALSE, iterpool));
-                
-          SVN_ERR (svn_io_set_file_affected_time (tm, copy_to, iterpool));
+
+          if (! special)
+            SVN_ERR (svn_io_set_file_affected_time (tm, copy_to, iterpool));
         }
     }
   svn_pool_destroy (iterpool);
@@ -378,6 +383,7 @@ struct file_baton
   const svn_string_t *eol_style_val;
   const svn_string_t *keywords_val;
   const svn_string_t *executable_val;
+  svn_boolean_t special;
 
   /* Any keyword vals to be substituted */
   const char *revision;
@@ -583,6 +589,9 @@ change_file_prop (void *file_baton,
   else if (strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR) == 0)
     fb->author = apr_pstrdup (fb->pool, value->data);
 
+  else if (strcmp (name, SVN_PROP_SPECIAL) == 0)
+    fb->special = TRUE;
+
   return SVN_NO_ERROR;
 }
 
@@ -632,7 +641,7 @@ close_file (void *file_baton,
         }
     }
 
-  if ((! fb->eol_style_val) && (! fb->keywords_val))
+  if ((! fb->eol_style_val) && (! fb->keywords_val) && (! fb->special))
     {
       SVN_ERR (svn_io_file_rename (fb->tmppath, fb->path, pool));
     }
@@ -651,12 +660,13 @@ close_file (void *file_baton,
                                            fb->revision, fb->url, fb->date, 
                                            fb->author, pool));
 
-      SVN_ERR (svn_subst_copy_and_translate
+      SVN_ERR (svn_subst_copy_and_translate2
                (fb->tmppath, fb->path,
                 fb->eol_style_val ? eol : NULL,
                 fb->eol_style_val ? TRUE : FALSE, /* repair */
                 fb->keywords_val ? &final_kw : NULL,
-                fb->keywords_val ? TRUE : FALSE, /* expand */
+                TRUE, /* expand */
+                fb->special,
                 pool));
 
       SVN_ERR (svn_io_remove_file (fb->tmppath, pool));

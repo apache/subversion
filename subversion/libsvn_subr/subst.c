@@ -717,6 +717,61 @@ svn_subst_copy_and_translate (const char *src,
                                         expand, FALSE, pool);
 }
 
+
+/* Given a special file at SRC, generate a textual representation of
+   it in a normal file at DST.  Perform all allocations in POOL. */
+static svn_error_t *
+detranslate_special_file (const char *src,
+                          const char *dst,
+                          apr_pool_t *pool)
+{
+  const char *dst_tmp;
+  svn_string_t *buf;
+  apr_file_t *s, *d;
+  svn_stream_t *src_stream, *dst_stream;
+  apr_finfo_t finfo;
+  
+  /* First determine what type of special file we are
+     detranslating. */
+  SVN_ERR (svn_io_stat (&finfo, src, APR_FINFO_MIN | APR_FINFO_LINK, pool));
+
+  /* Open a temporary destination that we will eventually atomically
+     rename into place. */
+  SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst,
+                                    ".tmp", FALSE, pool));
+
+  dst_stream = svn_stream_from_aprfile (d, pool);
+  
+  switch (finfo.filetype) {
+  case APR_REG:
+    /* Nothing special to do here, just copy the original file's
+       contents. */
+    SVN_ERR (svn_io_file_open (&s, src, APR_READ | APR_BUFFERED,
+                               APR_OS_DEFAULT, pool));
+    src_stream = svn_stream_from_aprfile (d, pool);
+
+    SVN_ERR (svn_stream_copy (src_stream, dst_stream, pool));
+    break;
+  case APR_LNK:
+    /* Determine the destination of the link. */
+    SVN_ERR (svn_io_read_link (&buf, src, pool));
+
+    SVN_ERR (svn_stream_printf (dst_stream, pool, "link %s",
+                                buf->data));
+    break;
+  default:
+    abort ();
+  }
+
+  SVN_ERR (svn_io_file_close (d, pool));
+
+  /* Do the atomic rename from our temporary location. */
+  SVN_ERR (svn_io_file_rename (dst_tmp, dst, pool));
+  
+  return SVN_NO_ERROR;
+}
+
+
 /* Given a file containing a repository representation of a special
    file in SRC, create the appropriate special file at location DST.
    Perform all allocations in POOL. */
@@ -727,12 +782,33 @@ create_special_file (const char *src,
 {
   svn_stringbuf_t *contents;
   char *identifier, *remainder;
-  const char *dst_tmp;
+  const char *dst_tmp, *src_tmp = NULL;
   svn_error_t *err;
+  svn_node_kind_t kind;
 
+  /* Check to see if we are being asked to create a special file from
+     a special file.  If so, do a temporary detranslation and work
+     from there. */
+  SVN_ERR (svn_io_check_special_path (src, &kind, pool));
+
+  if (kind == svn_node_special)
+    {
+      apr_file_t *fp;
+      
+      SVN_ERR (svn_io_open_unique_file (&fp, &src_tmp, dst, ".tmp", FALSE,
+                                        pool));
+      SVN_ERR (svn_io_file_close (fp, pool));
+      SVN_ERR (detranslate_special_file (src, src_tmp, pool));
+      src = src_tmp;
+    }
+  
   /* Read in the detranslated file. */
   SVN_ERR (svn_stringbuf_from_file (&contents, src, pool));
 
+  /* If there was just a temporary detranslation, remove it now. */
+  if (src_tmp)
+    SVN_ERR (svn_io_remove_file (src_tmp, pool));
+      
   /* Separate off the identifier.  The first space character delimits
      the identifier, after which any remaining characters are specific
      to the actual special device being created. */
@@ -783,61 +859,7 @@ create_special_file (const char *src,
 
   /* Do the atomic rename from our temporary location. */
   SVN_ERR (svn_io_file_rename (dst_tmp, dst, pool));
-  
-  return SVN_NO_ERROR;
-}
 
-
-/* Given a special file at SRC, generate a textual representation of
-   it in a normal file at DST.  Perform all allocations in POOL. */
-static svn_error_t *
-detranslate_special_file (const char *src,
-                          const char *dst,
-                          apr_pool_t *pool)
-{
-  const char *dst_tmp;
-  svn_string_t *buf;
-  apr_file_t *s, *d;
-  svn_stream_t *src_stream, *dst_stream;
-  apr_finfo_t finfo;
-  
-  /* First determine what type of special file we are
-     detranslating. */
-  SVN_ERR (svn_io_stat (&finfo, src, APR_FINFO_MIN | APR_FINFO_LINK, pool));
-
-  /* Open a temporary destination that we will eventually atomically
-     rename into place. */
-  SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst,
-                                    ".tmp", FALSE, pool));
-
-  dst_stream = svn_stream_from_aprfile (d, pool);
-  
-  switch (finfo.filetype) {
-  case APR_REG:
-    /* Nothing special to do here, just copy the original file's
-       contents. */
-    SVN_ERR (svn_io_file_open (&s, src, APR_READ | APR_BUFFERED,
-                               APR_OS_DEFAULT, pool));
-    src_stream = svn_stream_from_aprfile (s, pool);
-
-    SVN_ERR (svn_stream_copy (src_stream, dst_stream, pool));
-    break;
-  case APR_LNK:
-    /* Determine the destination of the link. */
-    SVN_ERR (svn_io_read_link (&buf, src, pool));
-
-    SVN_ERR (svn_stream_printf (dst_stream, pool, "link %s",
-                                buf->data));
-    break;
-  default:
-    abort ();
-  }
-
-  SVN_ERR (svn_io_file_close (d, pool));
-
-  /* Do the atomic rename from our temporary location. */
-  SVN_ERR (svn_io_file_rename (dst_tmp, dst, pool));
-  
   return SVN_NO_ERROR;
 }
 

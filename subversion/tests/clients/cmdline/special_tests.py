@@ -141,7 +141,59 @@ def replace_file_with_symlink(sbox):
     raise svntest.Failure
 
 
+def import_export_symlink(sbox):
+  "import and export a symlink"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # create a new symlink to import
+  new_path = os.path.join(wc_dir, 'new_file')
+
+  os.symlink('linktarget', new_path)
+
+  # import this symlink into the repository
+  url = svntest.main.current_repo_url + "/dirA/dirB/new_link"
+  output, errput = svntest.actions.run_and_verify_svn(
+    'Import a symlink', None, [], 'import',
+    '-m', 'log msg', new_path, url)
+
+  regex = "(Committed|Imported) revision [0-9]+."
+  for line in output:
+    if re.match(regex, line):
+      break
+  else:
+    raise svntest.Failure
   
+  # remove the unversioned link
+  os.remove(new_path)
+
+  # run update and verify that the symlink is put back into place
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', wc_dir)
+  
+  # Is the symlink back?
+  link_path = wc_dir + "/dirA/dirB/new_link"
+  new_target = os.readlink(link_path)
+  if new_target != 'linktarget':
+    raise svntest.Failure
+
+  ## Now we will try exporting from both the working copy and the
+  ## repository directly, verifying that the symlink is created in
+  ## both cases.
+
+  # do the working copy case first
+  export_target = sbox.add_wc_path('export')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'export', sbox.wc_dir, export_target) 
+  
+  # is the link at the correct place?
+  link_path = sbox.wc_dir + ".export/dirA/dirB/new_link"
+  new_target = os.readlink(link_path)
+  if new_target != 'linktarget':
+    raise svntest.Failure
+
+
 ########################################################################
 # Run the tests
 
@@ -150,6 +202,7 @@ def replace_file_with_symlink(sbox):
 test_list = [ None,
               Skip(general_symlink, (os.name != 'posix')),
               Skip(replace_file_with_symlink, (os.name != 'posix')),
+              Skip(import_export_symlink, (os.name != 'posix'))
              ]
 
 if __name__ == '__main__':
