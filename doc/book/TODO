@@ -23,8 +23,8 @@ To be fixed by someone:
 
 To be fixed by cmpilato:
 
-  - define a 'project root', recommend 'standard' repos layout beneath
-    such roots.
+  - Figures 5.1 and 5.2 need to be replaced.  5.1 needs to grow "tags"
+    directories, and 5.2 needs to be changed to show grouped project roots.
 
   - svndumpfilter.  in particular, show how to "migrate" a subdir in
     one repos to a subdir in another one.  Wherever this ends up
