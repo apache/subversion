@@ -407,7 +407,7 @@ merge_callbacks =
 
 /*-----------------------------------------------------------------------*/
 
-/** The shared logic behind 'svn diff' and 'svn merge'.  */
+/** The logic behind 'svn diff' and 'svn merge'.  */
 
 
 /* Hi!  I'm a soon-to-be-out-of-date comment regarding a
@@ -431,19 +431,146 @@ merge_callbacks =
 
    Case 4 is not as stupid as it looks, for example it may occur if
    the user specifies two dates that resolve to the same revision.  */
+
+
+
+/* PATH1, PATH2, and TARGET_WCPATH all better be directories.   For
+   the single file case, the caller do the merging manually. */
 static svn_error_t *
-diff_or_merge (const svn_delta_editor_t *after_editor,
-               void *after_edit_baton,
-               const apr_array_header_t *options,
-               svn_client_auth_baton_t *auth_baton,
-               svn_stringbuf_t *path1,
-               const svn_client_revision_t *revision1,
-               svn_stringbuf_t *path2,
-               const svn_client_revision_t *revision2,
-               svn_boolean_t recurse,
-               const svn_diff_callbacks_t *callbacks,
-               void *callback_baton,
-               apr_pool_t *pool)
+do_merge (const svn_delta_editor_t *after_editor,
+          void *after_edit_baton,
+          const apr_array_header_t *options,
+          svn_client_auth_baton_t *auth_baton,
+          svn_stringbuf_t *path1,
+          const svn_client_revision_t *revision1,
+          svn_stringbuf_t *path2,
+          const svn_client_revision_t *revision2,
+          svn_stringbuf_t *target_wcpath,
+          svn_boolean_t recurse,
+          const svn_diff_callbacks_t *callbacks,
+          void *callback_baton,
+          apr_pool_t *pool)
+{
+  svn_revnum_t start_revnum, end_revnum;
+  svn_string_t path_str1, path_str2;
+  svn_boolean_t path1_is_url, path2_is_url;
+  svn_wc_entry_t *entry1, *entry2;
+  svn_stringbuf_t *URL1, *URL2;
+  void *ra_baton, *session, *session2;
+  svn_ra_plugin_t *ra_lib;
+  const svn_ra_reporter_t *reporter;
+  void *report_baton;
+  const svn_delta_edit_fns_t *diff_editor;
+  const svn_delta_editor_t *composed_editor, *new_diff_editor;
+  void *diff_edit_baton, *composed_edit_baton, *new_diff_edit_baton;
+
+  /* Sanity check -- ensure that we have valid revisions to look at. */
+  if ((revision1->kind == svn_client_revision_unspecified)
+      || (revision2->kind == svn_client_revision_unspecified))
+    {
+      return svn_error_create
+        (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, pool,
+         "do_merge: caller failed to specify all revisions");
+    }
+
+  /* Make sure we have two URLs ready to go.*/
+  URL1 = path1;
+  path_str1.data = path1->data;
+  path_str1.len = path1->len;
+  if (! ((path1_is_url = svn_path_is_url (&path_str1))))
+    {
+      SVN_ERR (svn_wc_entry (&entry1, path1, pool));
+      URL1 = svn_stringbuf_create (entry1->url->data, pool);
+    }
+
+  URL2 = path2;
+  path_str2.data = path2->data;
+  path_str2.len = path2->len;
+  if (! ((path2_is_url = svn_path_is_url (&path_str2))))
+    {
+      SVN_ERR (svn_wc_entry (&entry2, path2, pool));
+      URL2 = svn_stringbuf_create (entry2->url->data, pool);
+    }
+
+  /* Establish first RA session to URL1. */
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL1->data, pool));
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL1, NULL,
+                                        NULL, FALSE, FALSE, TRUE, 
+                                        auth_baton, pool));
+  /* Resolve the revision numbers. */
+  SVN_ERR (svn_client__get_revision_number
+           (&start_revnum, ra_lib, session, revision1, path1->data, pool));
+  SVN_ERR (svn_client__get_revision_number
+           (&end_revnum, ra_lib, session, revision2, path2->data, pool));
+
+  /* Open a second session used to request individual file
+     contents. Although a session can be used for multiple requests, it
+     appears that they must be sequential. Since the first request, for
+     the diff, is still being processed the first session cannot be
+     reused. This applies to ra_dav, ra_local does not appears to have
+     this limitation. */
+  SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL1, NULL,
+                                        NULL, FALSE, FALSE, TRUE,
+                                        auth_baton, pool));
+  
+  SVN_ERR (svn_client__get_diff_editor (target_wcpath,
+                                        callbacks,
+                                        callback_baton,
+                                        recurse,
+                                        ra_lib, session2,
+                                        start_revnum,
+                                        &new_diff_editor,
+                                        &new_diff_edit_baton,
+                                        pool));
+
+  if (after_editor)
+    {
+      svn_delta_compose_editors (&composed_editor, &composed_edit_baton,
+                                 new_diff_editor, new_diff_edit_baton,
+                                 after_editor, after_edit_baton, pool);
+    }
+  else
+    {
+      composed_editor = new_diff_editor;
+      composed_edit_baton = new_diff_edit_baton;
+    }
+  
+  /* ### Make composed editor look "old" style.  Remove someday. */
+  svn_delta_compat_wrap (&diff_editor, &diff_edit_baton,
+                         composed_editor, composed_edit_baton, pool);
+  
+  SVN_ERR (ra_lib->do_switch (session,
+                              &reporter, &report_baton,
+                              end_revnum,
+                              NULL,
+                              recurse,
+                              URL2,
+                              diff_editor, diff_edit_baton));
+  
+  SVN_ERR (reporter->set_path (report_baton, "", start_revnum));
+  
+  SVN_ERR (reporter->finish_report (report_baton));
+  
+  SVN_ERR (ra_lib->close (session2));
+
+  SVN_ERR (ra_lib->close (session));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+do_diff (const apr_array_header_t *options,
+         svn_client_auth_baton_t *auth_baton,
+         svn_stringbuf_t *path1,
+         const svn_client_revision_t *revision1,
+         svn_stringbuf_t *path2,
+         const svn_client_revision_t *revision2,
+         svn_boolean_t recurse,
+         const svn_diff_callbacks_t *callbacks,
+         void *callback_baton,
+         apr_pool_t *pool)
 {
   svn_revnum_t start_revnum, end_revnum;
   svn_string_t path_str;
@@ -469,7 +596,7 @@ diff_or_merge (const svn_delta_editor_t *after_editor,
     {
       return svn_error_create
         (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, pool,
-         "svn_client_diff: caller failed to specify any revisions");
+         "do_diff: caller failed to specify any revisions");
     }
 
   /* Determine if the target we have been given is a path or an URL.
@@ -532,10 +659,6 @@ diff_or_merge (const svn_delta_editor_t *after_editor,
                                        recurse,
                                        &diff_editor, &diff_edit_baton,
                                        pool));
-      if (after_editor)
-        {
-          
-        }
 
       SVN_ERR (ra_lib->do_update (session,
                                   &reporter, &report_baton,
@@ -552,8 +675,8 @@ diff_or_merge (const svn_delta_editor_t *after_editor,
   else   /* ### todo: there may be uncovered cases remaining */
     {
       /* Pure repository comparison. */
-      const svn_delta_editor_t  *composed_editor, *new_diff_editor;
-      void *composed_edit_baton, *new_diff_edit_baton;
+      const svn_delta_editor_t *new_diff_editor;
+      void *new_diff_edit_baton;
 
       /* Open a second session used to request individual file
          contents. Although a session can be used for multiple requests, it
@@ -581,22 +704,9 @@ diff_or_merge (const svn_delta_editor_t *after_editor,
                                             &new_diff_edit_baton,
                                             pool));
 
-      /* If we were given some kind of "after" trace editor, compose it. */
-      if (after_editor)
-        {
-          svn_delta_compose_editors (&composed_editor, &composed_edit_baton,
-                                     new_diff_editor, new_diff_edit_baton,
-                                     after_editor, after_edit_baton, pool);
-        }
-      else
-        {
-          composed_editor = new_diff_editor;
-          composed_edit_baton = new_diff_edit_baton;
-        }
-
-      /* ### Make composed editor look "old" style.  Remove someday. */
+      /* ### Make diff editor look "old" style.  Remove someday. */
       svn_delta_compat_wrap (&diff_editor, &diff_edit_baton,
-                             composed_editor, composed_edit_baton, pool);
+                             new_diff_editor, new_diff_edit_baton, pool);
 
       SVN_ERR (ra_lib->do_update (session,
                                   &reporter, &report_baton,
@@ -616,6 +726,9 @@ diff_or_merge (const svn_delta_editor_t *after_editor,
 
   return SVN_NO_ERROR;
 }
+
+
+
 
 /*----------------------------------------------------------------------- */
 
@@ -681,17 +794,13 @@ svn_client_diff (const apr_array_header_t *options,
   diff_cmd_baton.outfile = outfile;
   diff_cmd_baton.errfile = errfile;
 
-  return diff_or_merge (NULL, NULL, /* no trace editor */
-                        options,
-                        auth_baton,
-                        path1,
-                        revision1,
-                        path2,
-                        revision2,
-                        recurse,
-                        &diff_callbacks,
-                        &diff_cmd_baton,
-                        pool);
+  return do_diff (options,
+                  auth_baton,
+                  path1, revision1,
+                  path2, revision2,
+                  recurse,
+                  &diff_callbacks, &diff_cmd_baton,
+                  pool);
 }
 
 
@@ -704,6 +813,7 @@ svn_client_merge (const svn_delta_editor_t *after_editor,
                   const svn_client_revision_t *revision1,
                   svn_stringbuf_t *path2,
                   const svn_client_revision_t *revision2,
+                  svn_stringbuf_t *target_wcpath,
                   svn_boolean_t recurse,
                   apr_pool_t *pool)
 {
@@ -711,17 +821,25 @@ svn_client_merge (const svn_delta_editor_t *after_editor,
 
   merge_cmd_baton.pool = pool;
   
-  return diff_or_merge (after_editor, after_edit_baton,
-                        options,
-                        auth_baton,
-                        path1,
-                        revision1,
-                        path2,
-                        revision2,
-                        recurse,
-                        &merge_callbacks,
-                        &merge_cmd_baton,
-                        pool);
+  /* ### TODO:  when PATH1 and PATH2 represent -files- instead of
+     directories, we can fetch fulltexts manually and run
+     svn_wc_merge() by itself.
+
+     In PATH1 and PATH2 are directories, then we do the fancy
+     diff-editor thing:*/
+
+  return do_merge (after_editor, after_edit_baton,
+                   options,
+                   auth_baton,
+                   path1,
+                   revision1,
+                   path2,
+                   revision2,
+                   target_wcpath,
+                   recurse,
+                   &merge_callbacks,
+                   &merge_cmd_baton,
+                   pool);
 }
 
 

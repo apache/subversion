@@ -190,8 +190,8 @@ svn_client__update_internal (const svn_delta_editor_t *before_editor,
 /* Create an editor for a pure repository comparison, i.e. comparing one
  * repository version against the other. 
  *
- * TARGET represents the base of the hierarchy to be compared. TARGET can
- * be a working copy path, or an URL.
+ * TARGET is a working-copy path, the base of the hierarchy to be
+ * compared.  It corresponds to the URL opened in RA_SESSION below.
  *
  * DIFF_CMD/DIFF_CMD_BATON represent the callback and calback argument that
  * implement the file comparison function

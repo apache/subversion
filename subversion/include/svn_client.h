@@ -621,7 +621,11 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
 
 
 /* Merge changes from PATH1/REVISION1 to PATH2/REVISION2 into the
-   working copy.
+   working-copy path TARGET_WCPATH.  PATH1 and PATH2 can be either
+   working-copy paths or URLs.
+
+   By "merging", we mean:  apply file differences using
+   svn_wc_merge(), and schedule additions & deletions when appopriate.
 
    PATH1 and PATH2 must both represent the same node kind -- that is,
    if PATH1 is a directory, PATH2 must also be, and if PATH1 is a
@@ -651,6 +655,7 @@ svn_client_merge (const svn_delta_editor_t *after_editor,
                   const svn_client_revision_t *revision1,
                   svn_stringbuf_t *path2,
                   const svn_client_revision_t *revision2,
+                  svn_stringbuf_t *target_wcpath,
                   svn_boolean_t recurse,
                   apr_pool_t *pool);
 

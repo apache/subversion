@@ -80,6 +80,7 @@ svn_cl__merge (apr_getopt_t *os,
                                  &(opt_state->start_revision),
                                  target,
                                  &(opt_state->end_revision),
+                                 target,
                                  opt_state->nonrecursive ? FALSE : TRUE,
                                  pool));
     }
