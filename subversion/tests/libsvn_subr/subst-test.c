@@ -31,38 +31,58 @@
 /* All the tests share the same test data. */
 const char *lines[] =
   {
-    "This is line 1 of the eol test data.",
-    "This is line 2 of the eol test data.",
-    "This is line 3 of the eol test data.",
-    "This is line 4 of the eol test data.",
-    "This is line 5 of the eol test data.",
-    "This is line 6 of the eol test data.",
-    "This is line 7 of the eol test data.",
-    "This is line 8 of the eol test data.",
-    "This is line 9 of the eol test data.",
-    "This is line 10 of the eol test data.",
-    "This is line 11 of the eol test data.",
-    "This is line 12 of the eol test data.",
-    "This is line 13 of the eol test data.",
-    "This is line 14 of the eol test data.",
-    "This is line 15 of the eol test data.",
-    "This is line 16 of the eol test data.",
-    "This is line 17 of the eol test data.",
-    "This is line 18 of the eol test data.",
-    "This is line 19 of the eol test data.",
-    "This is line 20 of the eol test data.",
-    "This is line 21 of the eol test data.",
-    "This is line 22 of the eol test data.",
-    "This is line 23 of the eol test data.",
-    "This is line 24 of the eol test data.",
-    "This is line 25 of the eol test data.",
-    "This is line 26 of the eol test data.",
-    "This is line 27 of the eol test data.",
-    "This is line 28 of the eol test data.",
-    "This is line 29 of the eol test data.",
-    "This is line 30 of the eol test data.",
-    "This is line 31 of the eol test data.",
-    "This is line 32 of the eol test data."
+    "Line 1: fairly boring subst test data... blah blah",
+    "Line 2: fairly boring subst test data... blah blah.",
+    "Line 3: Valid $" "LastChangedRevision$, started unexpanded.",
+    "Line 4: fairly boring subst test data... blah blah.",
+    "Line 5: Valid $" "Rev$, started unexpanded.",
+    "Line 6: fairly boring subst test data... blah blah.",
+    "Line 7: fairly boring subst test data... blah blah.",
+    "Line 8: Valid $" "LastChangedBy$, started unexpanded.",
+    "Line 9: Valid $" "Author$, started unexpanded.",
+    "Line 10: fairly boring subst test data... blah blah.",
+    "Line 11: fairly boring subst test data... blah blah.",
+    "Line 12: Valid $" "LastChangedDate$, started unexpanded.",
+    "Line 13: Valid $" "Date$, started unexpanded.",
+    "Line 14: fairly boring subst test data... blah blah.",
+    "Line 15: fairly boring subst test data... blah blah.",
+    "Line 16: Valid $" "HeadURL$, started unexpanded.",
+    "Line 17: Valid $" "URL$, started unexpanded.",
+    "Line 18: fairly boring subst test data... blah blah.",
+    "Line 19: Invalid expanded keyword spanning two lines: $Author: ",
+    "jrandom$ Line 20: remainder of invalid keyword spanning two lines.",
+    "Line 21: fairly boring subst test data... blah blah.",
+    "Line 22: an unknown keyword $LastChangedSocks$.",
+    "Line 23: fairly boring subst test data... blah blah.",
+    /* In line 24, the third dollar sign terminates the first, and the
+       fourth should therefore remain a literal dollar sign. */
+    "Line 24: keyword in a keyword: $" "Author: $" "Date$ $",
+    "Line 25: fairly boring subst test data... blah blah.",
+    "Line 26: Emptily expanded keyword $" "Rev:$.",
+    "Line 27: fairly boring subst test data... blah blah.",
+    "Line 28: fairly boring subst test data... blah blah.",
+    "Line 29: Valid $" "LastChangedRevision: 1729 $, started expanded.",
+    "Line 30: Valid $" "Rev: 1729$, started expanded.",
+    "Line 31: fairly boring subst test data... blah blah.",
+    "Line 32: fairly boring subst test data... blah blah."
+    "Line 33: Valid $" "LastChangedDate: 2002-01-01 $, started expanded.",
+    "Line 34: Valid $" "Date: 2002-01-01 $, started expanded.",
+    "Line 35: fairly boring subst test data... blah blah.",
+    "Line 36: fairly boring subst test data... blah blah.",
+    "Line 37: Valid $" "LastChangedBy: jrandom$ , started expanded.",
+    "Line 38: Valid $" "Author: jrandom $, started expanded.",
+    "Line 39: fairly boring subst test data... blah blah.",
+    "Line 40: fairly boring subst test data... blah blah.",
+    "Line 41: Valid $" "HeadURL: http://tomato/mauve $, started expanded.",
+    "Line 42: Valid $" "URL: http://tomato/mauve $, started expanded.",
+    "Line 43: fairly boring subst test data... blah blah.",
+    "Line 44: fairly boring subst test data... blah blah.",
+    "Line 45: Valid $" "Rev$ fooo, started expanded.",
+    "Line 46: Valid $" "Rev$ fooo, started expanded.",
+    "Line 47: fairly boring subst test data... blah blah.",
+    "Line 48: Two keywords back to back: $" "Author$$" "Rev$.",
+    "Line 49: One keyword, one not, back to back: $" "Author$" "Rev$.",
+    "Line 50: end of subst test data."
   };
 
 
@@ -197,7 +217,7 @@ remove_file (const char *fname, apr_pool_t *pool)
 /*** Tests ***/
 
 static svn_error_t *
-test_crlf_crlf (const char **msg,
+crlf_to_crlf (const char **msg,
                 svn_boolean_t msg_only,
                 apr_pool_t *pool)
 {
@@ -221,7 +241,7 @@ test_crlf_crlf (const char **msg,
 
 
 static svn_error_t *
-test_lf_crlf (const char **msg,
+lf_to_crlf (const char **msg,
               svn_boolean_t msg_only,
               apr_pool_t *pool)
 {
@@ -245,7 +265,7 @@ test_lf_crlf (const char **msg,
 
 
 static svn_error_t *
-test_cr_crlf (const char **msg,
+cr_to_crlf (const char **msg,
               svn_boolean_t msg_only,
               apr_pool_t *pool)
 {
@@ -269,7 +289,7 @@ test_cr_crlf (const char **msg,
 
 
 static svn_error_t *
-test_mixed_to_crlf (const char **msg,
+mixed_to_crlf (const char **msg,
                      svn_boolean_t msg_only,
                      apr_pool_t *pool)
 {
@@ -292,7 +312,7 @@ test_mixed_to_crlf (const char **msg,
 
 
 static svn_error_t *
-test_lf_lf (const char **msg,
+lf_to_lf (const char **msg,
             svn_boolean_t msg_only,
             apr_pool_t *pool)
 {
@@ -316,7 +336,7 @@ test_lf_lf (const char **msg,
 
 
 static svn_error_t *
-test_crlf_lf (const char **msg,
+crlf_to_lf (const char **msg,
               svn_boolean_t msg_only,
               apr_pool_t *pool)
 {
@@ -340,7 +360,7 @@ test_crlf_lf (const char **msg,
 
 
 static svn_error_t *
-test_cr_lf (const char **msg,
+cr_to_lf (const char **msg,
             svn_boolean_t msg_only,
             apr_pool_t *pool)
 {
@@ -364,7 +384,7 @@ test_cr_lf (const char **msg,
 
 
 static svn_error_t *
-test_mixed_to_lf (const char **msg,
+mixed_to_lf (const char **msg,
                    svn_boolean_t msg_only,
                    apr_pool_t *pool)
 {
@@ -394,15 +414,15 @@ svn_error_t * (*test_funcs[]) (const char **msg,
                                apr_pool_t *pool) = {
   0,
   /* Conversions resulting in crlf. */
-  test_crlf_crlf,
-  test_lf_crlf,
-  test_cr_crlf,
-  test_mixed_to_crlf,
+  crlf_to_crlf,
+  lf_to_crlf,
+  cr_to_crlf,
+  mixed_to_crlf,
   /* Conversions resulting in lf. */
-  test_lf_lf,
-  test_crlf_lf,
-  test_cr_lf,
-  test_mixed_to_lf,
+  lf_to_lf,
+  crlf_to_lf,
+  cr_to_lf,
+  mixed_to_lf,
   /* ### Is there any compelling reason to test CR or LFCR? */
   0
 };
