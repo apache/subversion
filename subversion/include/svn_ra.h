@@ -382,7 +382,15 @@ typedef struct svn_ra_plugin_t
                            svn_boolean_t discover_changed_paths,
                            svn_log_message_receiver_t receiver,
                            void *receiver_baton);
-  
+
+  /* Set *KIND to node kind associated with PATH at REVISION.  If PATH
+   * does not exist under REVISION, set *KIND to svn_node_none. 
+   */
+  svn_error_t *(*check_path) (svn_node_kind_t *kind,
+                              void *session_baton,
+                              svn_stringbuf_t *path,
+                              svn_revnum_t revision);
+
   /* Yoshiki Hayashi <yoshiki@xemacs.org> points out that a more
    * generic way to support the above would be to have these two
    * functions:

@@ -44,7 +44,6 @@ const ne_propname svn_ra_dav__checked_in_prop = {
   "DAV:", "checked-in"
 };
 
-
 typedef struct {
   ne_xml_elmid id;
   const char *name;
@@ -308,6 +307,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   prop_ctx_t pc = { 0 };
   svn_string_t my_url = { url, strlen(url) };
   svn_stringbuf_t *url_str = svn_path_uri_encode(&my_url, pool);
+  ne_request *req;
 
   pc.pool = pool;
   pc.props = apr_hash_make(pc.pool);
@@ -317,11 +317,11 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   hip = ne_propfind_get_parser(pc.dph);
   ne_xml_push_handler(hip, neon_descriptions,
                       validate_element, start_element, end_element, &pc);
+  req = ne_propfind_get_request(pc.dph);
 
   if (label != NULL)
     {
       /* get the request pointer and add a Label header */
-      ne_request *req = ne_propfind_get_request(pc.dph);
       ne_add_request_header(req, "Label", label);
     }
   
@@ -355,6 +355,10 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                   ne_get_error(sess));
         }
     }
+
+  if (404 == ne_get_status(req)->code)
+    return svn_error_createf(SVN_ERR_RA_PROPS_NOT_FOUND, 0, NULL, pool,
+                             "Failed to fetch props for '%s'", url_str->data);
 
   *results = pc.props;
 
@@ -625,9 +629,73 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_ra_dav__do_check_path(svn_node_kind_t *kind,
+                          void *session_baton,
+                          svn_stringbuf_t *path,
+                          svn_revnum_t revision)
+{
+  svn_ra_session_t *ras = session_baton;
+  const svn_string_t *propval;
+  ne_propname propname = { "DAV:", "resourcetype" };
+  const char *url = NULL, *label = NULL;
+  svn_error_t *err;
+
+  /* ### todo:  understand that PATH is relative to the session
+     baton's URL, and make sure that we can properly query for
+     properties given this fact.
+
+     Greg Stein has this to say about accomplishing the goal of this
+     function:
+
+       That is a PROPFIND (Depth:0) for the DAV:resourcetype property.
+
+       You can use the svn_ra_dav__get_one_prop() function to fetch
+       it. If the PROPFIND fails with a 404, then you have
+       svn_node_none. If the resulting property looks like:
+
+           <D:resourcetype>
+             <D:collection/>
+           </D:resourcetype>
+
+       Then it is a collection (directory; svn_node_dir). Otherwise,
+       it is a regular resource (svn_node_file).
+
+       The harder part is parsing the resourcetype property. "Proper"
+       parsing means treating it as an XML property and looking for
+       the DAV:collection element in there. To do that, however, means
+       that get_one_prop() can't be used. I think there may be some
+       Neon functions for parsing XML properties; we'd need to
+       look. That would probably be the best approach. (an alternative
+       is to use apr_xml_* parsing functions on the returned string;
+       get back a DOM-like thing, and look for the element).
+  */
+  abort();
+
+  /* ### todo: We need to figure out the URL with which to fetch
+     props.  We know that session baton holds a portion of it, and
+     that PATH is the rest of it.  But we need to get the DAV-y URL
+     that takes into consideration the REVISION.  Not sure if LABEL
+     has anything to do with this or not. */
+  err = svn_ra_dav__get_one_prop(&propval, ras->sess, url, label,
+                                 &propname, ras->pool);
+  if (err == SVN_NO_ERROR)
+    {
+      *kind = svn_node_unknown; 
+      /* ### todo: parse the prop val here as described above. */
+    }
+  else if (err && (err->apr_err == SVN_ERR_RA_PROPS_NOT_FOUND))
+    {
+      *kind = svn_node_none;
+      return SVN_NO_ERROR;
+    }
+
+  return err;
+}
+
 
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
- * end:
- */
+ * end: */
