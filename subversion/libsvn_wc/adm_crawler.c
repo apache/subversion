@@ -402,8 +402,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
 
   /* Grab the entry representing "." */
   this_dir = (svn_wc__entry_t *) 
-    apr_hash_get (entries, SVN_WC__ENTRIES_THIS_DIR,
-                  sizeof(SVN_WC__ENTRIES_THIS_DIR));
+    apr_hash_get (entries, SVN_WC__ENTRIES_THIS_DIR, APR_HASH_KEY_STRING);
   if (! this_dir)
     return
       svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, subpool,
@@ -656,7 +655,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
           /* Recurse, using a NULL dir_baton.  Why NULL?  Because that
              will later force a call to do_dir_replaces() and get the
              _correct_ dir baton for the child directory. */
-          err = process_subdirectory (path, NULL,
+          err = process_subdirectory (full_path_to_entry, NULL,
                                       editor, edit_baton,
                                       stack, filehash, subpool);
           if (err) return err;
