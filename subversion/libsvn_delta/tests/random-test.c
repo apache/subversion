@@ -106,7 +106,7 @@ write_to_file (void *baton, const char *data, apr_size_t *len,
 }
 
 int
-main (int argc, char **argv)
+main (int argc, const char * const *argv)
 {
   FILE *source, *source_copy, *target, *target_regen;
   apr_getopt_t *opt;

@@ -304,7 +304,7 @@ read_from_file (svn_string_t **result, const char *filename, apr_pool_t *pool)
 /*** Main. ***/
 
 int
-main (int argc, char **argv)
+main (int argc, const char * const *argv)
 {
   apr_status_t apr_err;
   svn_error_t *err;
@@ -316,7 +316,7 @@ main (int argc, char **argv)
   const svn_cl__cmd_desc_t *subcommand;
   apr_array_header_t *targets;  /* file/dir args from the command line */
 
-  apr_getopt_option_t options[] =
+  static const apr_getopt_option_t options[] =
   {
     {"xml-file",      svn_cl__xml_file_opt, 1},
     {"target-dir",    svn_cl__target_dir_opt, 1}, /* README: --destination */
