@@ -41,32 +41,26 @@ enum {
     /* ### SVN-specific */
 };
 
+#define SVN_RO_DAV_PROP(name) { DAV_SVN_URI_DAV, #name, DAV_PROPID_##name, 0 }
+#define SVN_RW_DAV_PROP(name) { DAV_SVN_URI_DAV, #name, DAV_PROPID_##name, 1 }
+
 static const dav_liveprop_spec dav_svn_props[] =
 {
-  {
-    DAV_SVN_URI_DAV,
-    "creationdate",
-    DAV_PROPID_creationdate,
-    0
-  },
-  {
-    DAV_SVN_URI_DAV,
-    "getcontentlength",
-    DAV_PROPID_getcontentlength,
-    0
-  },
-  {
-    DAV_SVN_URI_DAV,
-    "getetag",
-    DAV_PROPID_getetag,
-    0
-  },
-  {
-    DAV_SVN_URI_DAV,
-    "getlastmodified",
-    DAV_PROPID_getlastmodified,
-    0
-  },
+  /* ### don't worry about these for a bit */
+#if 0
+  /* WebDAV properties */
+  SVN_RO_DAV_PROP(creationdate),
+  SVN_RO_DAV_PROP(getcontentlanguage),  /* ### make this r/w? */
+  SVN_RO_DAV_PROP(getcontentlength),
+  SVN_RO_DAV_PROP(getcontenttype),      /* ### make this r/w? */
+#endif
+  SVN_RO_DAV_PROP(getetag),
+#if 0
+  SVN_RO_DAV_PROP(getlastmodified),
+#endif
+
+  /* DeltaV properties */
+  SVN_RO_DAV_PROP(target),
 
   { 0 } /* sentinel */
 };
@@ -108,6 +102,11 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       return DAV_PROP_INSERT_NOTDEF;
       break;
 
+    case DAV_PROPID_getcontentlanguage:
+      /* ### need something here */
+      return DAV_PROP_INSERT_NOTDEF;
+      break;
+
     case DAV_PROPID_getcontentlength:
       /* our property, but not defined on collection resources */
       if (resource->collection)
@@ -117,12 +116,23 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       value = "0";
       break;
 
+    case DAV_PROPID_getcontenttype:
+      /* ### need something here */
+      /* ### maybe application/octet-stream and text/plain? */
+      return DAV_PROP_INSERT_NOTDEF;
+      break;
+
     case DAV_PROPID_getetag:
       value = dav_svn_getetag(resource);
       break;
 
     case DAV_PROPID_getlastmodified:
       /* ### need a modified date */
+      return DAV_PROP_INSERT_NOTDEF;
+      break;
+
+    case DAV_PROPID_target:
+      /* ### need the target... */
       return DAV_PROP_INSERT_NOTDEF;
       break;
 
@@ -166,6 +176,8 @@ static dav_error * dav_svn_patch_validate(const dav_resource *resource,
                                           int operation, void **context,
                                           int *defer_to_dead)
 {
+  /* NOTE: this function will not be called unless/until we have
+     modifiable (writable) live properties. */
   return NULL;
 }
 
@@ -174,6 +186,8 @@ static dav_error * dav_svn_patch_exec(dav_resource *resource,
                                       int operation, void *context,
                                       dav_liveprop_rollback **rollback_ctx)
 {
+  /* NOTE: this function will not be called unless/until we have
+     modifiable (writable) live properties. */
   return NULL;
 }
 
@@ -181,12 +195,16 @@ static void dav_svn_patch_commit(dav_resource *resource,
                                  int operation, void *context,
                                  dav_liveprop_rollback *rollback_ctx)
 {
+  /* NOTE: this function will not be called unless/until we have
+     modifiable (writable) live properties. */
 }
 
 static dav_error * dav_svn_patch_rollback(dav_resource *resource,
                                           int operation, void *context,
                                           dav_liveprop_rollback *rollback_ctx)
 {
+  /* NOTE: this function will not be called unless/until we have
+     modifiable (writable) live properties. */
   return NULL;
 }
 
