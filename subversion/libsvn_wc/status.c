@@ -160,7 +160,7 @@ assemble_status (svn_wc_status_t **status,
   
   /* If the entry is a file, check for textual modifications */
   if (entry->kind == svn_node_file)
-    SVN_ERR (svn_wc_text_modified_p (&text_modified_p, path, pool));
+    SVN_ERR (svn_wc_text_modified_p (&text_modified_p, path, 1, pool));
   
   if (text_modified_p)
     final_text_status = svn_wc_status_modified;

@@ -303,7 +303,7 @@ file_diff (struct dir_baton *dir_baton,
       break;
 
     default:
-      SVN_ERR (svn_wc_text_modified_p (&modified, path, dir_baton->pool));
+      SVN_ERR (svn_wc_text_modified_p (&modified, path, 1, dir_baton->pool));
       if (modified)
         {
           pristine_copy = svn_wc__text_base_path (path, FALSE, dir_baton->pool);

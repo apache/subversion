@@ -98,7 +98,7 @@ text_modified_p (VALUE self, VALUE aFilename)
   Check_Type (aFilename, T_STRING);
   pool = svn_pool_create (NULL);
   filename = svn_stringbuf_create (StringValuePtr (aFilename), pool);
-  err = svn_wc_text_modified_p (&modified_p, filename, pool);
+  err = svn_wc_text_modified_p (&modified_p, filename, 1, pool);
   if (err)
     {
       apr_pool_destroy (pool);
