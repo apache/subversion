@@ -124,7 +124,7 @@ io_check_path (const char *path,
   else if (APR_STATUS_IS_ENOTDIR (apr_err))
     *kind = svn_node_none;
   else if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't check path '%s'", path);
+    return svn_error_wrap_apr (apr_err, _("Can't check path '%s'"), path);
   else if (finfo.filetype == APR_NOFILE)
     *kind = svn_node_unknown;
   else if (finfo.filetype == APR_REG)
@@ -242,7 +242,8 @@ svn_io_open_unique_file (apr_file_t **f,
 
           *f = NULL;
           *unique_name_p = NULL;
-          return svn_error_wrap_apr (apr_err, "Can't open '%s'", unique_name);
+          return svn_error_wrap_apr (apr_err, _("Can't open '%s'"),
+                                     unique_name);
         }
       else
         {
@@ -255,7 +256,7 @@ svn_io_open_unique_file (apr_file_t **f,
   *unique_name_p = NULL;
   return svn_error_createf (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
                             NULL,
-                            "Unable to make name for '%s'", path);
+                            _("Unable to make name for '%s'"), path);
 }
 
 svn_error_t *
@@ -326,7 +327,8 @@ svn_io_create_unique_link (const char **unique_name_p,
             }
 
           *unique_name_p = NULL;
-          return svn_error_wrap_apr (apr_err, "Can't open '%s'", unique_name);
+          return svn_error_wrap_apr (apr_err, _("Can't open '%s'"),
+                                     unique_name);
         }
       else
         {
@@ -338,12 +340,12 @@ svn_io_create_unique_link (const char **unique_name_p,
   *unique_name_p = NULL;
   return svn_error_createf (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
                             NULL,
-                            "Unable to make name for '%s'", path);
+                            _("Unable to make name for '%s'"), path);
 #else
   return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                           "Symbolic links are not supported on this "
-                           "platform");
-#endif  
+                           _("Symbolic links are not supported on this "
+                             "platform"));
+#endif
 }
 
 svn_error_t *
@@ -361,16 +363,16 @@ svn_io_read_link (svn_string_t **dest,
 
   if (rv == -1)
     return svn_error_wrap_apr
-      (apr_get_os_error (), "Can't read contents of link");
+      (apr_get_os_error (), _("Can't read contents of link"));
 
   *dest = svn_string_ncreate (buf, rv, pool);
   
   return SVN_NO_ERROR;
 #else
   return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                           "Symbolic links are not supported on this "
-                           "platform");
-#endif  
+                           _("Symbolic links are not supported on this "
+                             "platform"));
+#endif
 }
 
 
@@ -396,8 +398,8 @@ svn_io_copy_link (const char *src,
 
 #else
   return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                           "Symbolic links are not supported on this "
-                           "platform");
+                           _("Symbolic links are not supported on this "
+                             "platform"));
 #endif
 }
 
@@ -1195,14 +1197,18 @@ svn_error_t *svn_io_file_lock2 (const char *lock_file,
   apr_err = apr_file_lock (lockfile_handle, locktype);
   if (apr_err)
     {
-      const char *lockname = "unknown";
-      if (locktype == APR_FLOCK_SHARED)
-        lockname = "shared";
-      if (locktype == APR_FLOCK_EXCLUSIVE)
-        lockname = "exclusive";
-    
-      return svn_error_wrap_apr
-        (apr_err, "Can't get %s lock on file '%s'", lockname, lock_file);
+      switch (locktype & ~APR_FLOCK_NONBLOCK)
+        {
+        case APR_FLOCK_SHARED:
+          return svn_error_wrap_apr
+            (apr_err, _("Can't get shared lock on file '%s'"), lock_file);
+        case APR_FLOCK_EXCLUSIVE:
+          return svn_error_wrap_apr
+            (apr_err, _("Can't get exclusive lock on file '%s'"), lock_file);
+        default:
+          /* Cannot happen. */
+          abort ();
+        }
     }
   
   apr_pool_cleanup_register (pool, lockfile_handle, 
@@ -1218,7 +1224,8 @@ svn_error_t *svn_io_file_lock2 (const char *lock_file,
 
 static svn_error_t *
 do_io_file_wrapper_cleanup (apr_file_t *file, apr_status_t status, 
-                            const char *op, apr_pool_t *pool);
+                            const char *msg, const char *msg_no_name,
+                            apr_pool_t *pool);
 
 svn_error_t *svn_io_file_flush_to_disk (apr_file_t *file,
                                         apr_pool_t *pool)
@@ -1227,7 +1234,9 @@ svn_error_t *svn_io_file_flush_to_disk (apr_file_t *file,
 
   /* First make sure that any user-space buffered data is flushed. */
   SVN_ERR (do_io_file_wrapper_cleanup (file, apr_file_flush (file),
-                                       "flush", pool));
+                                       N_("Can't flush file '%s'"),
+                                       N_("Can't flush stream"),
+                                       pool));
 
   apr_os_file_get (&filehand, file);
     
@@ -1238,7 +1247,7 @@ svn_error_t *svn_io_file_flush_to_disk (apr_file_t *file,
       
       if (! FlushFileBuffers (filehand))
         return svn_error_wrap_apr
-          (apr_get_os_error (), "Can't flush file to disk.");
+          (apr_get_os_error (), _("Can't flush file to disk")));
       
 #else
       int rv;
@@ -1255,7 +1264,7 @@ svn_error_t *svn_io_file_flush_to_disk (apr_file_t *file,
 
       if (rv == -1)
         return svn_error_wrap_apr
-          (apr_get_os_error (), "Can't flush file to disk.");
+          (apr_get_os_error (), _("Can't flush file to disk"));
 
 #endif
   }
@@ -1276,7 +1285,7 @@ svn_stringbuf_from_file (svn_stringbuf_t **result,
   if (filename[0] == '-' && filename[1] == '\0')
     return svn_error_create
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         "Reading from stdin is currently broken, so disabled");
+         _("Reading from stdin is currently broken, so disabled"));
 
   SVN_ERR (svn_io_file_open (&f, filename, APR_READ, APR_OS_DEFAULT, pool));
 
@@ -1297,7 +1306,7 @@ file_name_get (const char **fname_utf8, apr_file_t *file, apr_pool_t *pool)
 
   apr_err = apr_file_name_get (&fname, file);
   if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't get file name");
+    return svn_error_wrap_apr (apr_err, _("Can't get file name"));
 
   if (fname)
     SVN_ERR (svn_path_cstring_to_utf8 (fname_utf8, fname, pool));
@@ -1365,7 +1374,7 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
   WIN32_RETRY_LOOP (apr_err, apr_file_remove (path_apr, pool));
 
   if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't remove file '%s'", path);
+    return svn_error_wrap_apr (apr_err, _("Can't remove file '%s'"), path);
 
   return SVN_NO_ERROR;
 }
@@ -1388,14 +1397,14 @@ svn_io_remove_file (const char *path, apr_pool_t *pool)
  discussion.
 */
 #if defined(__APPLE__) && defined(__MACH__)
-#define MACOSX_REWINDDIR_HACK(dir, path)                                   \
-  do                                                                       \
-    {                                                                      \
-      apr_status_t apr_err  = apr_dir_rewind (dir);                        \
-      if (apr_err)                                                         \
-        return svn_error_wrap_apr (apr_err, "Can't rewind directory '%s'", \
-                                   path);                                  \
-    }                                                                      \
+#define MACOSX_REWINDDIR_HACK(dir, path)                                      \
+  do                                                                          \
+    {                                                                         \
+      apr_status_t apr_err  = apr_dir_rewind (dir);                           \
+      if (apr_err)                                                            \
+        return svn_error_wrap_apr (apr_err, _("Can't rewind directory '%s'"), \
+                                   path);                                     \
+    }                                                                         \
   while (0)
 #else
 #define MACOSX_REWINDDIR_HACK(dir, path) do {} while (0)
@@ -1428,7 +1437,7 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
 
   status = apr_dir_open (&this_dir, path_apr, subpool);
   if (status)
-    return svn_error_wrap_apr (status, "Can't open directory '%s'", path);
+    return svn_error_wrap_apr (status, _("Can't open directory '%s'"), path);
 
   for (status = apr_dir_read (&this_entry, flags, this_dir);
        status == APR_SUCCESS;
@@ -1464,7 +1473,7 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
               svn_error_t *err = svn_io_remove_file (fullpath, subpool);
               if (err)
                 return svn_error_createf (err->apr_err, err,
-                                          "Can't remove '%s'", fullpath);
+                                          _("Can't remove '%s'"), fullpath);
 
               MACOSX_REWINDDIR_HACK (this_dir, path);
             }
@@ -1472,16 +1481,16 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
     }
 
   if (!APR_STATUS_IS_ENOENT (status))
-    return svn_error_wrap_apr (status, "Can't read directory '%s'", path);
+    return svn_error_wrap_apr (status, _("Can't read directory '%s'"), path);
 
   status = apr_dir_close (this_dir);
   if (status)
-    return svn_error_wrap_apr (status, "Error closing directory '%s'", path);
+    return svn_error_wrap_apr (status, _("Error closing directory '%s'"), path);
 
   status = apr_dir_remove (path_apr, subpool);
   WIN32_RETRY_LOOP (status, apr_dir_remove (path_apr, subpool));
   if (status)
-    return svn_error_wrap_apr (status, "Can't remove '%s'", path);
+    return svn_error_wrap_apr (status, _("Can't remove '%s'"), path);
 
   apr_pool_destroy (subpool);
 
@@ -1540,11 +1549,11 @@ svn_io_get_dirents (apr_hash_t **dirents,
     }
 
   if (! (APR_STATUS_IS_ENOENT (status)))
-    return svn_error_wrap_apr (status, "Can't read directory '%s'", path);
+    return svn_error_wrap_apr (status, _("Can't read directory '%s'"), path);
 
   status = apr_dir_close (this_dir);
   if (status)
-    return svn_error_wrap_apr (status, "Error closing directory '%s'", path);
+    return svn_error_wrap_apr (status, _("Error closing directory '%s'"), path);
   
   return SVN_NO_ERROR;
 }
@@ -1574,13 +1583,14 @@ svn_io_run_cmd (const char *path,
   apr_err = apr_procattr_create (&cmdproc_attr, pool); 
   if (apr_err)
     return svn_error_wrap_apr
-      (apr_err, "Can't create process '%s' attributes", cmd);
+      (apr_err, _("Can't create process '%s' attributes"), cmd);
 
   /* Make sure we invoke cmd directly, not through a shell. */
   apr_err = apr_procattr_cmdtype_set (cmdproc_attr,
                                       inherit?APR_PROGRAM_PATH:APR_PROGRAM);
   if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't set process '%s' cmdtype", cmd);
+    return svn_error_wrap_apr (apr_err, _("Can't set process '%s' cmdtype"),
+                               cmd);
 
   /* Set the process's working directory. */
   if (path)
@@ -1591,7 +1601,7 @@ svn_io_run_cmd (const char *path,
       apr_err = apr_procattr_dir_set (cmdproc_attr, path_apr);
       if (apr_err)
         return svn_error_wrap_apr
-          (apr_err, "Can't set process '%s' directory", cmd);
+          (apr_err, _("Can't set process '%s' directory"), cmd);
     }
 
   /* Use requested inputs and outputs.
@@ -1604,21 +1614,21 @@ svn_io_run_cmd (const char *path,
       apr_err = apr_procattr_child_in_set (cmdproc_attr, infile, NULL);
       if (apr_err)
         return svn_error_wrap_apr
-          (apr_err, "Can't set process '%s' child input", cmd);
+          (apr_err, _("Can't set process '%s' child input"), cmd);
     }
   if (outfile)
     {
       apr_err = apr_procattr_child_out_set (cmdproc_attr, outfile, NULL);
       if (apr_err)
         return svn_error_wrap_apr
-          (apr_err, "Can't set process '%s' child outfile", cmd);
+          (apr_err, _("Can't set process '%s' child outfile"), cmd);
     }
   if (errfile)
     {
       apr_err = apr_procattr_child_err_set (cmdproc_attr, errfile, NULL);
       if (apr_err)
         return svn_error_wrap_apr
-          (apr_err, "Can't set process '%s' child errfile", cmd);
+          (apr_err, _("Can't set process '%s' child errfile"), cmd);
     }
 
   /* Convert cmd and args from UTF-8 */
@@ -1642,7 +1652,7 @@ svn_io_run_cmd (const char *path,
   apr_err = apr_proc_create (&cmd_proc, cmd_apr, args_native, NULL,
                              cmdproc_attr, pool);
   if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't start process '%s'", cmd);
+    return svn_error_wrap_apr (apr_err, _("Can't start process '%s'"), cmd);
 
   /* The Win32 apr_proc_wait doesn't set this... */
   exitwhy_val = APR_PROC_EXIT;
@@ -1650,21 +1660,22 @@ svn_io_run_cmd (const char *path,
   /* Wait for the cmd command to finish. */
   apr_err = apr_proc_wait (&cmd_proc, &exitcode_val, &exitwhy_val, APR_WAIT);
   if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
-    return svn_error_wrap_apr (apr_err, "Error waiting for process '%s'", cmd);
+    return svn_error_wrap_apr (apr_err, _("Error waiting for process '%s'"),
+                               cmd);
 
   if (exitwhy)
     *exitwhy = exitwhy_val;
   else if (! APR_PROC_CHECK_EXIT(exitwhy_val))
     return svn_error_createf
       (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-       "Process '%s' failed (exitwhy %d)", cmd, exitwhy_val);
+       _("Process '%s' failed (exitwhy %d)"), cmd, exitwhy_val);
 
   if (exitcode)
     *exitcode = exitcode_val;
   else if (exitcode_val != 0)
     return svn_error_createf
       (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-       "Process '%s' returned error exitcode %d", cmd, exitcode_val);
+       _("Process '%s' returned error exitcode %d"), cmd, exitcode_val);
 
   return SVN_NO_ERROR;
 }
@@ -1752,7 +1763,7 @@ svn_io_run_diff (const char *dir,
    */
   if (*pexitcode != 0 && *pexitcode != 1)
     return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, NULL, 
-                              "'%s' returned %d", diff_utf8, *pexitcode);
+                              _("'%s' returned %d"), diff_utf8, *pexitcode);
 
   svn_pool_destroy (subpool);
 
@@ -1853,8 +1864,9 @@ svn_io_run_diff3 (const char *dir,
      error. */
   if ((*exitcode != 0) && (*exitcode != 1))
     return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, NULL, 
-                              "Error running '%s':  exitcode was %d, args were:"
-                              "\nin directory '%s', basenames:\n%s\n%s\n%s",
+                              _("Error running '%s':  exitcode was %d, "
+                                "args were:"
+                                "\nin directory '%s', basenames:\n%s\n%s\n%s"),
                               diff3_utf8, *exitcode,
                               dir, mine, older, yours);
 
@@ -1882,7 +1894,7 @@ svn_io_detect_mimetype (const char **mimetype,
   SVN_ERR (svn_io_check_path (file, &kind, pool));
   if (kind != svn_node_file)
     return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                              "Can't detect MIME type of non-file '%s'",
+                              _("Can't detect MIME type of non-file '%s'"),
                               file);
 
   SVN_ERR (svn_io_file_open (&fh, file, APR_READ, 0, pool));
@@ -1949,7 +1961,7 @@ svn_io_file_open (apr_file_t **new_file, const char *fname,
   status = apr_file_open (new_file, fname_apr, flag, perm, pool);
 
   if (status)
-    return svn_error_wrap_apr (status, "Can't open file '%s'", fname);
+    return svn_error_wrap_apr (status, _("Can't open file '%s'"), fname);
   else
     return SVN_NO_ERROR;  
 }
@@ -1957,7 +1969,8 @@ svn_io_file_open (apr_file_t **new_file, const char *fname,
 
 static svn_error_t *
 do_io_file_wrapper_cleanup (apr_file_t *file, apr_status_t status, 
-                            const char *op, apr_pool_t *pool)
+                            const char *msg, const char *msg_no_name,
+                            apr_pool_t *pool)
 {
   const char *name;
   svn_error_t *err;
@@ -1966,10 +1979,14 @@ do_io_file_wrapper_cleanup (apr_file_t *file, apr_status_t status,
     return SVN_NO_ERROR;
 
   err = file_name_get (&name, file, pool);
-  name = (! err && name) ? apr_psprintf (pool, "file '%s'", name) : "stream";
+  if (err)
+    name = NULL;
   svn_error_clear (err);
 
-  return svn_error_wrap_apr (status, "Can't %s %s", op, name);
+  if (name)
+    return svn_error_wrap_apr (status, gettext(msg), name);
+  else
+    return svn_error_wrap_apr (status, gettext(msg_no_name));
 }
 
 
@@ -1978,7 +1995,9 @@ svn_io_file_close (apr_file_t *file, apr_pool_t *pool)
 {
   return do_io_file_wrapper_cleanup
     (file, apr_file_close (file),
-      "close", pool);
+     N_("Can't close file '%s'"),
+     N_("Can't close stream"),
+      pool);
 }
 
 
@@ -1987,7 +2006,9 @@ svn_io_file_getc (char *ch, apr_file_t *file, apr_pool_t *pool)
 {
   return do_io_file_wrapper_cleanup
     (file, apr_file_getc (ch, file),
-     "read", pool);
+     N_("Can't read file '%s'"),
+     N_("Can't read stream"),
+     pool);
 }
 
 
@@ -1997,7 +2018,9 @@ svn_io_file_info_get (apr_finfo_t *finfo, apr_int32_t wanted,
 {
   return do_io_file_wrapper_cleanup
     (file, apr_file_info_get (finfo, wanted, file),
-     "get attribute information from", pool);
+     N_("Can't get attribute information from file '%s'"),
+     N_("Can't get attribute information from stream"),
+     pool);
 }
 
 
@@ -2007,7 +2030,9 @@ svn_io_file_read (apr_file_t *file, void *buf,
 {
   return do_io_file_wrapper_cleanup
     (file, apr_file_read (file, buf, nbytes),
-     "read", pool);
+     N_("Can't read file '%s'"),
+     N_("Can't read stream"),
+     pool);
 }
 
 
@@ -2018,7 +2043,9 @@ svn_io_file_read_full (apr_file_t *file, void *buf,
 {
   return do_io_file_wrapper_cleanup
     (file, apr_file_read_full (file, buf, nbytes, bytes_read),
-     "read", pool);
+     N_("Can't read file '%s'"),
+     N_("Can't read stream"),
+     pool);
 }
 
 
@@ -2028,7 +2055,9 @@ svn_io_file_seek (apr_file_t *file, apr_seek_where_t where,
 {
   return do_io_file_wrapper_cleanup
     (file, apr_file_seek (file, where, offset),
-     "set position pointer in", pool);
+     N_("Can't set position pointer in file '%s'"),
+     N_("Can't set position pointer in stream"),
+     pool);
 }
 
 
@@ -2038,7 +2067,9 @@ svn_io_file_write (apr_file_t *file, const void *buf,
 {
   return do_io_file_wrapper_cleanup
     (file, apr_file_write (file, buf, nbytes),
-     "write to", pool);
+     N_("Can't write to file '%s'"),
+     N_("Can't write to stream"),
+     pool);
 }
 
 
@@ -2049,7 +2080,9 @@ svn_io_file_write_full (apr_file_t *file, const void *buf,
 {
   return do_io_file_wrapper_cleanup
     (file, apr_file_write_full (file, buf, nbytes, bytes_written),
-     "write to", pool);
+     N_("Can't write to file '%s'"),
+     N_("Can't write to stream"),
+     pool);
 }
 
 
@@ -2099,7 +2132,7 @@ svn_io_stat (apr_finfo_t *finfo, const char *fname,
 
   status = apr_stat (finfo, fname_apr, wanted, pool);
   if (status)
-    return svn_error_wrap_apr (status, "Can't stat '%s'", fname);
+    return svn_error_wrap_apr (status, _("Can't stat '%s'"), fname);
 
   return SVN_NO_ERROR;  
 }
@@ -2120,7 +2153,7 @@ svn_io_file_rename (const char *from_path, const char *to_path,
                     apr_file_rename (from_path_apr, to_path_apr, pool));
 
   if (status)
-    return svn_error_wrap_apr (status, "Can't move '%s' to '%s'",
+    return svn_error_wrap_apr (status, _("Can't move '%s' to '%s'"),
                                from_path, to_path);
 
   return SVN_NO_ERROR;  
@@ -2159,7 +2192,7 @@ dir_make (const char *path, apr_fileperms_t perm,
   status = apr_dir_make (path_apr, perm, pool);
 
   if (status)
-    return svn_error_wrap_apr (status, "Can't create directory '%s'", path);
+    return svn_error_wrap_apr (status, _("Can't create directory '%s'"), path);
 
 #ifdef APR_FILE_ATTR_HIDDEN
   if (hidden)
@@ -2169,7 +2202,8 @@ dir_make (const char *path, apr_fileperms_t perm,
                                    APR_FILE_ATTR_HIDDEN,
                                    pool);
       if (status)
-        return svn_error_wrap_apr (status, "Can't hide directory '%s'", path);
+        return svn_error_wrap_apr (status, _("Can't hide directory '%s'"),
+                                   path);
     }
 #endif
 
@@ -2181,7 +2215,8 @@ dir_make (const char *path, apr_fileperms_t perm,
       status = apr_stat (&finfo, path_apr, APR_FINFO_PROT, pool);
 
       if (status)
-        return svn_error_wrap_apr (status, "Can't stat directory '%s'", path);
+        return svn_error_wrap_apr (status, _("Can't stat directory '%s'"),
+                                   path);
 
       /* Per our contract, don't do error-checking.  Some filesystems
        * don't support the sgid bit, and that's okay. */
@@ -2196,7 +2231,7 @@ dir_make (const char *path, apr_fileperms_t perm,
 
     if (stat (path_apr, &st) != 0)
       return svn_error_wrap_apr (APR_FROM_OS_ERROR (errno),
-                                 "Can't stat new directory '%s'", path);
+                                 _("Can't stat new directory '%s'"), path);
     chmod (path_apr, (st.st_mode & ~S_IFMT) | S_ISGID);
   }
 #endif
@@ -2239,7 +2274,7 @@ svn_io_dir_open (apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool)
 
   status = apr_dir_open (new_dir, dirname_apr, pool);
   if (status)
-    return svn_error_wrap_apr (status, "Can't open directory '%s'", dirname);
+    return svn_error_wrap_apr (status, _("Can't open directory '%s'"), dirname);
 
   return SVN_NO_ERROR;
 }
@@ -2256,7 +2291,8 @@ svn_io_dir_remove_nonrecursive (const char *dirname, apr_pool_t *pool)
   status = apr_dir_remove (dirname_apr, pool);
   WIN32_RETRY_LOOP (status, apr_dir_remove (dirname_apr, pool));
   if (status)
-    return svn_error_wrap_apr (status, "Can't remove directory '%s'", dirname);
+    return svn_error_wrap_apr (status, _("Can't remove directory '%s'"),
+                               dirname);
 
   return SVN_NO_ERROR;
 }
@@ -2273,7 +2309,7 @@ svn_io_dir_read (apr_finfo_t *finfo,
   status = apr_dir_read (finfo, wanted, thedir);
 
   if (status)
-    return svn_error_wrap_apr (status, "Can't read directory");
+    return svn_error_wrap_apr (status, _("Can't read directory"));
 
   if (finfo->fname)
     SVN_ERR (svn_path_cstring_to_utf8 (&finfo->fname, finfo->fname, pool));
@@ -2325,7 +2361,8 @@ svn_io_dir_walk (const char *dirname,
 
   apr_err = apr_dir_open (&handle, dirname_apr, pool);
   if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't open directory '%s'", dirname);
+    return svn_error_wrap_apr (apr_err, _("Can't open directory '%s'"),
+                               dirname);
 
   /* iteration subpool */
   subpool = svn_pool_create (pool);
@@ -2341,7 +2378,7 @@ svn_io_dir_walk (const char *dirname,
       else if (apr_err)
         {
           return svn_error_wrap_apr
-            (apr_err, "Can't read directory entry in '%s'", dirname);
+            (apr_err, _("Can't read directory entry in '%s'"), dirname);
         }
 
       if (finfo.filetype == APR_DIR)
@@ -2384,7 +2421,7 @@ svn_io_dir_walk (const char *dirname,
 
   apr_err = apr_dir_close (handle);
   if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Error closing directory '%s'",
+    return svn_error_wrap_apr (apr_err, _("Error closing directory '%s'"),
                                dirname);
 
   return SVN_NO_ERROR;
@@ -2465,7 +2502,7 @@ svn_io_dir_empty (svn_boolean_t *is_empty_p,
   else if (APR_STATUS_IS_ENOTEMPTY (status))
     *is_empty_p = FALSE;
   else
-    return svn_error_wrap_apr (status, "Can't check directory '%s'", path);
+    return svn_error_wrap_apr (status, _("Can't check directory '%s'"), path);
 
   return SVN_NO_ERROR;
 }
@@ -2486,7 +2523,7 @@ svn_io_write_version_file (const char *path,
   /* We only promise to handle non-negative integers. */
   if (version < 0)
     return svn_error_createf (SVN_ERR_INCORRECT_PARAMS, NULL,
-                              "Version %d is not non-negative", version);
+                              _("Version %d is not non-negative"), version);
 
   /* Create a temporary file to write the data to */
   SVN_ERR (svn_io_open_unique_file (&format_file, &path_tmp, path, ".tmp",
@@ -2533,7 +2570,7 @@ svn_io_read_version_file (int *version,
   /* If there was no data in PATH, return an error. */
   if (len == 0)
     return svn_error_createf (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                              "Reading '%s'", path);
+                              _("Reading '%s'"), path);
 
   /* Check that the first line contains only digits. */
   {
@@ -2548,7 +2585,7 @@ svn_io_read_version_file (int *version,
         if (! apr_isdigit (c))
           return svn_error_createf
             (SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
-             "First line of '%s' contains non-digit", path);
+             _("First line of '%s' contains non-digit"), path);
       }
   }
 
