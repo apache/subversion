@@ -430,9 +430,6 @@ make_new_directory (const char *repos_path,
               new_directory, repos_path);
     }
 
-  /* "Disconnect" from the repository.  */
-  (void) svn_repos_close (repos);
-
   /* Return the result of the attempted commit to our caller.  */
   return err;
 } 
@@ -526,14 +523,14 @@ make_new_directory (const char *repos_path,
      
       <screen>
 $ svn --version
-svn, version 0.17.1 (dev build)
-   compiled Feb 13 2003, 21:30:46
-
+svn, version 0.25.0 (dev build)
+   compiled Jul 18 2003, 16:25:59
+ 
 Copyright (C) 2000-2003 CollabNet.
 Subversion is open source software, see http://subversion.tigris.org/
-
+ 
 The following repository access (RA) modules are available:
-
+ 
 * ra_dav : Module for accessing a repository via WebDAV (DeltaV) protocol.
   - handles 'http' schema
 * ra_local : Module for accessing a repository on local disk.
@@ -659,11 +656,13 @@ The following repository access (RA) modules are available:
           Apache mentioned in the previous section; however, it may be
           appealing to some sysadmins nonetheless.  It is dramatically
           easier to configure and run; setting up an
-          <filename>svnserve</filename> process is nearly instantaneous.
-          Furthermore, some sysadmins may already have an SSH security
-          infrastructure in place, and want Subversion to use it.
-          Clients using ra_svn can easily tunnel the protocol over
-          SSH.</para>
+          <filename>svnserve</filename> process is nearly
+          instantaneous.  It is also much smaller (in terms of lines
+          of code) than Apache, making it much easier to audit, for
+          security reasons or otherwise.  Furthermore, some sysadmins
+          may already have an SSH security infrastructure in place,
+          and want Subversion to use it.  Clients using ra_svn can
+          easily tunnel the protocol over SSH.</para>
 
       </sect3>
 
@@ -865,14 +864,20 @@ The following repository access (RA) modules are available:
         perhaps the most pervasive APR datatype, found in nearly every
         Subversion API prototype, is the apr_pool_t&mdash;the APR
         memory pool.  Subversion uses pools internally for all its
-        memory allocation needs, and while a person coding against the
-        Subversion APIs is not required to do the same, they are
-        required to provide pools to the API functions that need them.
-        This means that users of the Subversion API must also link
-        against APR, must call <function>apr_initialize()</function>
-        to initialize the APR subsystem, and then must acquire a pool
-        for use with Subversion API calls.  See <xref
-        linkend="svn-ch-7-sect-5"/> for more information.</para>
+        memory allocation needs (unless an external library requires a
+        different memory management schema for data passed through its
+        API),
+        <footnote>
+          <para>Neon and Berkeley DB are examples of such libraries.</para>
+        </footnote>
+        and while a person coding against the Subversion APIs is
+        not required to do the same, they are required to provide
+        pools to the API functions that need them.  This means that
+        users of the Subversion API must also link against APR, must
+        call <function>apr_initialize()</function> to initialize the
+        APR subsystem, and then must acquire a pool for use with
+        Subversion API calls.  See <xref linkend="svn-ch-7-sect-5"/>
+        for more information.</para>
 
     </sect2>
 
@@ -1291,9 +1296,11 @@ if __name__ == '__main__':
     </para>
 
     <para>For a more thorough discussion of WebDAV, how it works, and
-      how Subversion uses it, see <xref linkend="svn-ap-d"/>.  That
-      appendix also discusses the degree to which generic WebDAV
-      clients operate against mod_dav_svn.</para>
+      how Subversion uses it, see <xref linkend="svn-ap-d"/>.  Among
+      other things, that appendix discusses the degree to which
+      Subversion adheres to the generic WebDAV specification, and how
+      that affects interoperability with generic WebDAV
+      clients.</para>
   </sect1>
 
   <!-- ******************************************************************* -->
@@ -1316,7 +1323,7 @@ if __name__ == '__main__':
     <para>A memory pool is an abstract representation of a chunk of
       memory allocated for use by a program.  Rather than requesting
       memory directly from the OS using the standard
-      <function>alloc()</function> and friends, programs that link
+      <function>malloc()</function> and friends, programs that link
       against APR can simply request that a pool of memory be created
       (using the <function>apr_pool_create()</function> function).
       APR will allocate a moderately sized chunk of memory from the
@@ -1636,6 +1643,8 @@ A  build.conf
         way to get your code contributions rejected (other than
         failing to supply a good log message) is to submit changes
         that cause failure in the test suite.</para>
+
+      <!-- TODO: Describe building and testing on Windows. -->
 
       <para>In the best-case scenario, you will have actually added
         appropriate tests to that test suite which verify that your

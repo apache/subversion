@@ -66,15 +66,15 @@
         the transaction is destroyed and the client is informed of the
         failure.</para>
             
-      <para>At the moment, updates work in a similar way.  The client
-        builds a temporary transaction tree that mirrors the state of
-        the working copy.  The repository then compares that
-        transaction tree with the revision tree at the requested
-        revision (usually the most recent, or <quote>youngest</quote>
-        tree), and sends back information that informs the client
-        about what changes are needed to transform their working copy
-        into a replica of that revision tree.  After the update
-        completes, the temporary transaction is deleted.</para>
+      <para>Updates work in a similar way.  The client builds a
+        temporary transaction tree that mirrors the state of the
+        working copy.  The repository then compares that transaction
+        tree with the revision tree at the requested revision (usually
+        the most recent, or <quote>youngest</quote> tree), and sends
+        back information that informs the client about what changes
+        are needed to transform their working copy into a replica of
+        that revision tree.  After the update completes, the temporary
+        transaction is deleted.</para>
           
       <para>The use of transaction trees is the only way to make
         permanent changes to a repository's versioned filesystem.
@@ -478,10 +478,9 @@ pre-commit.tmpl
         environment directory, and parses the options found in that
         file for use with that particular Berkeley environment.</para>
 
-     <para>The Berkeley configuration file for your
-        repository is located in the <filename>db</filename>
-        environment directory, at
-        <filename>repos/db/DB_CONFIG</filename>.  Subversion itself
+     <para>The Berkeley configuration file for your repository is
+        located in the <filename>db</filename> environment directory,
+        at <filename>repos/db/DB_CONFIG</filename>.  Subversion itself
         creates this file when it creates the rest of the repository.
         The file initially contains some default options, as well as
         pointers to the Berkeley DB online documentation so you can
@@ -492,7 +491,10 @@ pre-commit.tmpl
         the file, and makes no use of the option settings in it,
         you'll want to avoid any configuration changes that may cause
         Berkeley DB to behave in a fashion that is unexpected by the
-        rest of the Subversion code.</para>
+        rest of the Subversion code.  Also, changes made to
+        <filename>DB_CONFIG</filename> won't take effect until you
+        recover the database environment (using <command>svnadmin
+        recover</command>).</para>
     </sect2>
   </sect1>
 
@@ -1033,11 +1035,10 @@ $ svnadmin archive /path/to/repos | xargs rm
             
         <para>Generally speaking, only the truly paranoid would need
           to backup their entire repository every time a commit
-          occurred.  Subversion's repository is truly paranoid for what
-          should be obvious reasons!  However, assuming that a given
-          repository has some other redundancy mechanism in place with
-          relatively fine granularity (per-commit, for example), a hot
-          backup of the database might be something that a repository
+          occurred.  However, assuming that a given repository has
+          some other redundancy mechanism in place with relatively
+          fine granularity (like per-commit emails), a hot backup of
+          the database might be something that a repository
           administrator would want to include as part of a system-wide
           nightly backup.  For more repositories, archived commit
           emails alone are sufficient restoration sources, at least
@@ -2499,6 +2500,12 @@ ssh = ssh -l username
                 <para>Ability to use caching HTTP proxies.</para>
               </listitem>
               <listitem>
+                <para>Time-tested scalability&mdash;Apache is the web
+                  server of choice for countless large-volume
+                  corporate websites.  It takes a lickin' and keeps
+                  traffickin'.</para>
+              </listitem>
+              <listitem>
                 <para>Vastly expandable: access to numerous existing
                   authentication and authorization methods,
                   encryption, compression, etc.</para>
@@ -2518,6 +2525,10 @@ ssh = ssh -l username
               <listitem>
                 <para>Authorization: via shared ownership/permissions
                 on repository DB files.</para>
+              </listitem>
+              <listitem>
+                <para>Significantly more lightweight than Apache, and
+                  faster for most operations.</para>
               </listitem>
               <listitem>
                 <para>Much easier to configure and run than Apache.</para>
@@ -2591,6 +2602,8 @@ ssh = ssh -l username
       <command>svnserve</command> program, and add a <command>umask
       002</command> command to Apache's own startup script,
       <filename>apachectl</filename>.</para>
+
+    <!-- TODO: example of such a wrapper script? -->
 
     <para>Once you've jumped through these hoops, your repository
       should be accessible by all the necessary processes.  It may
