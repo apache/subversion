@@ -62,3 +62,11 @@ Candidate changes:
     Votes:
       (nominated by): Steve King
 
+  * r11665
+    Make FSFS commits work with insert-only perms on db/revs.
+    Justification:
+      This is a pretty straightforward order-of-operations change, is
+      how I (Greg) always intended FSFS to work, and fulfills what has
+      been a secondary goal of FSFS from the beginning.
+    Votes:
+      +1: ghudson
