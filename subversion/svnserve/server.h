@@ -27,7 +27,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
-svn_error_t *serve(apr_socket_t *sock, const char *root, apr_pool_t *pool);
+svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
+                   svn_boolean_t tunnel, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

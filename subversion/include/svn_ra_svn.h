@@ -81,8 +81,12 @@ typedef struct {
 
 typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
 
-/* Initialize a connection structure for the given socket. */
+/* Initialize a connection structure for the given socket or
+ * input/output files.  Either SOCK or IN_FILE/OUT_FILE must be set,
+ * not both. */
 svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
+                                          apr_file_t *in_file,
+                                          apr_file_t *out_file,
                                           apr_pool_t *pool);
 
 /* Write simple data items over the net.  Writes will be buffered until

@@ -25,10 +25,17 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* This structure is opaque to the server; the client needs to get at
- * the pool element because the ra interface doesn't pass pools. */
+#include <apr_network_io.h>
+#include <apr_file_io.h>
+#include <apr_thread_proc.h>
+
+/* This structure is opaque to the server.  The client pokes at the
+ * first few fields during setup and cleanup, and also uses the pool. */
 struct svn_ra_svn_conn_st {
-  apr_socket_t *sock;
+  apr_socket_t *sock;     /* NULL if using in_file/out_file */
+  apr_file_t *in_file;
+  apr_file_t *out_file;
+  apr_proc_t *proc;       /* Used by client.c when sock is NULL */
   char read_buf[4096];
   char *read_ptr;
   char *read_end;
