@@ -570,6 +570,7 @@ enum {
   ELEM_merge_response,
   ELEM_merged_set,
   ELEM_options_response,
+  ELEM_set_prop,
   ELEM_remove_prop,
   ELEM_resourcetype,
   ELEM_get_content_length,

@@ -153,6 +153,9 @@ typedef struct {
   svn_stringbuf_t *cpathstr;
   svn_stringbuf_t *href;
 
+  /* Empty string means no encoding, "base64" means base64. */
+  svn_stringbuf_t *encoding;
+
   const char *current_wcprop_path;
   svn_boolean_t is_switch;
 
@@ -198,6 +201,7 @@ static const svn_ra_dav__xml_elm_t report_elements[] =
   { SVN_XML_NAMESPACE, "absent-file", ELEM_absent_file, 0 },
   { SVN_XML_NAMESPACE, "delete-entry", ELEM_delete_entry, 0 },
   { SVN_XML_NAMESPACE, "fetch-props", ELEM_fetch_props, 0 },
+  { SVN_XML_NAMESPACE, "set-prop", ELEM_set_prop, 0 },
   { SVN_XML_NAMESPACE, "remove-prop", ELEM_remove_prop, 0 },
   { SVN_XML_NAMESPACE, "fetch-file", ELEM_fetch_file, 0 },
   { SVN_XML_NAMESPACE, "prop", ELEM_SVN_prop, 0 },
@@ -1289,6 +1293,7 @@ static int validate_element(void *userdata,
           || child == ELEM_open_file
           || child == ELEM_add_file
           || child == ELEM_fetch_props
+          || child == ELEM_set_prop
           || child == ELEM_remove_prop
           || child == ELEM_delete_entry
           || child == ELEM_SVN_prop
@@ -1302,6 +1307,7 @@ static int validate_element(void *userdata,
           || child == ELEM_add_directory
           || child == ELEM_absent_file
           || child == ELEM_add_file
+          || child == ELEM_set_prop
           || child == ELEM_SVN_prop
           || child == ELEM_checked_in)
         return SVN_RA_DAV__XML_VALID;
@@ -1314,6 +1320,7 @@ static int validate_element(void *userdata,
           || child == ELEM_SVN_prop
           || child == ELEM_txdelta
           || child == ELEM_fetch_props
+          || child == ELEM_set_prop
           || child == ELEM_remove_prop)
         return SVN_RA_DAV__XML_VALID;
       else
@@ -1322,6 +1329,7 @@ static int validate_element(void *userdata,
     case ELEM_add_file:
       if (child == ELEM_checked_in
           || child == ELEM_txdelta
+          || child == ELEM_set_prop
           || child == ELEM_SVN_prop)
         return SVN_RA_DAV__XML_VALID;
       else
@@ -1332,6 +1340,10 @@ static int validate_element(void *userdata,
         return SVN_RA_DAV__XML_VALID;
       else
         return SVN_RA_DAV__XML_INVALID;
+
+    case ELEM_set_prop:
+      /* Prop name is an attribute, prop value is CDATA, so no child elts. */
+      return SVN_RA_DAV__XML_VALID;
 
     case ELEM_SVN_prop:
       /*      if (child == ELEM_version_name
@@ -1527,16 +1539,21 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       /* push the new baton onto the directory baton stack */
       push_dir(rb, new_dir_baton, pathbuf, subpool);
 
-      /* Property fetching is implied in addition. */
-      /* ### kff speeeeeed: this too will go away soon */
+      /* Property fetching is implied in addition.  This flag is only
+         for parsing old-style reports; it is ignored when talking to
+         a modern server. */
       TOP_DIR(rb).fetch_props = TRUE;
 
       bc_url = get_attr(atts, "bc-url");
-      if (0 && bc_url)  /* ### kff speeeeeed */
+
+      /* In non-modern report responses, we're just told to fetch the
+         props later.  In that case, we can at least do a pre-emptive
+         depth-1 propfind on the directory right now; this prevents
+         individual propfinds on added-files later on, thus reducing
+         the number of network turnarounds (though not by as much as
+         simply getting a modern report response!).  */
+      if ((! rb->receiving_all) && bc_url)
         {
-          /* Cool, we can do a pre-emptive depth-1 propfind on the
-             directory; this prevents us from doing individual
-             propfinds on added-files later on.  */
           apr_hash_t *bc_children;
           CHKERR( svn_ra_dav__get_props(&bc_children,
                                         rb->ras->sess2,
@@ -1634,10 +1651,25 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                                       crev, rb->file_pool,
                                       &rb->file_baton) );
 
-      /* Property fetching is implied in addition. */
-      /* ### kff speeeeeed: this will go away soon. */
+      /* Property fetching is implied in addition.  This flag is only
+         for parsing old-style reports; it is ignored when talking to
+         a modern server. */
       rb->fetch_props = TRUE;
 
+      break;
+
+    case ELEM_set_prop:
+      {
+        const char *encoding = get_attr(atts, "encoding");
+        name = get_attr(atts, "name");
+        /* ### verify we got it. punt on error. */
+        svn_stringbuf_set(rb->namestr, name);
+        if (encoding)
+          svn_stringbuf_set(rb->encoding, encoding);
+        else
+          svn_stringbuf_setempty(rb->encoding);
+      }
+      
       break;
 
     case ELEM_remove_prop:
@@ -1728,6 +1760,11 @@ add_node_props (report_baton_t *rb, apr_pool_t *pool)
   svn_ra_dav_resource_t *rsrc = NULL;
   apr_hash_t *props = NULL;
 
+  /* Do nothing if parsing a modern report, because the properties
+     already come inline. */
+  if (rb->receiving_all)
+    return SVN_NO_ERROR;
+
   /* Do nothing if we aren't fetching content.  */
   if (!rb->fetch_content)
     return SVN_NO_ERROR;
@@ -1814,10 +1851,8 @@ static int end_element(void *userdata,
 
       /* fetch node props, unless this is the top dir and the real
          target of the operation is not the top dir. */
-#if 0  /* ### kff speeeeeed */
       if (! ((rb->dirs->nelts == 1) && rb->target))
         CHKERR( add_node_props(rb, TOP_DIR(rb).pool));
-#endif /* 0 */
 
       /* Close the directory on top of the stack, and pop it.  Also,
          destroy the subpool used exclusive by this directory and its
@@ -1833,21 +1868,22 @@ static int end_element(void *userdata,
          retrieve the href before fetching. */
 
       /* fetch file */
-#if 0 /* ### kff speeeeeed: hack. */
-      CHKERR( simple_fetch_file(rb->ras->sess2,
-                                rb->href->data,
-                                TOP_DIR(rb).pathbuf->data,
-                                rb->fetch_content,
-                                rb->file_baton,
-                                NULL,  /* no base checksum in an add */
-                                rb->editor,
-                                rb->ras->callbacks->get_wc_prop,
-                                rb->ras->callback_baton,
-                                rb->file_pool) );
+      if (! rb->receiving_all)
+        {
+          CHKERR( simple_fetch_file(rb->ras->sess2,
+                                    rb->href->data,
+                                    TOP_DIR(rb).pathbuf->data,
+                                    rb->fetch_content,
+                                    rb->file_baton,
+                                    NULL,  /* no base checksum in an add */
+                                    rb->editor,
+                                    rb->ras->callbacks->get_wc_prop,
+                                    rb->ras->callback_baton,
+                                    rb->file_pool) );
 
-      /* fetch node props as necessary. */
-      CHKERR( add_node_props(rb, rb->file_pool) );
-#endif /* 0 */
+          /* fetch node props as necessary. */
+          CHKERR( add_node_props(rb, rb->file_pool) );
+        }
 
       /* close the file and mark that we are no longer operating on a file */
       CHKERR( (*rb->editor->close_file)(rb->file_baton,
@@ -1902,11 +1938,56 @@ static int end_element(void *userdata,
       rb->file_pool = NULL;
       break;
 
+    case ELEM_set_prop:
+      {
+        svn_string_t decoded_value;
+        const svn_string_t *decoded_value_p;
+        apr_pool_t *pool;
+        
+        if (rb->file_baton)
+          pool = rb->file_pool;
+        else
+          pool = TOP_DIR(rb).pool;
+
+        decoded_value.data = cdata;
+        decoded_value.len = strlen(cdata);
+
+        /* Determine the cdata encoding, if any. */
+        if (svn_stringbuf_isempty(rb->encoding))
+          {
+            decoded_value_p = &decoded_value;
+          }
+        else if (strcmp(rb->encoding->data, "base64") == 0)
+          {
+            decoded_value_p = svn_base64_decode_string(&decoded_value, pool);
+            svn_stringbuf_setempty(rb->encoding);
+          }
+        else
+          {
+            CHKERR( svn_error_createf(SVN_ERR_XML_UNKNOWN_ENCODING, NULL,
+                                      "'%s'", rb->encoding->data) );
+            svn_stringbuf_setempty(rb->encoding);  /* probably pointless */
+          }
+
+        /* Set the prop. */
+        if (rb->file_baton)
+          {
+            rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
+                                         &decoded_value, pool);
+          }
+        else
+          {
+            rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr->data, 
+                                        &decoded_value, pool);
+          }
+      }
+      break;
+      
     case ELEM_href:
       /* do nothing if we aren't fetching content. */
       if (!rb->fetch_content)
         break;
-
+      
       /* record the href that we just found */
       svn_ra_dav__copy_href(rb->href, cdata);
       
@@ -2134,6 +2215,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   rb->dirs = apr_array_make(rb->ras->pool, 5, sizeof(dir_item_t));
   rb->namestr = MAKE_BUFFER(rb->ras->pool);
   rb->cpathstr = MAKE_BUFFER(rb->ras->pool);
+  rb->encoding = MAKE_BUFFER(rb->ras->pool);
   rb->href = MAKE_BUFFER(rb->ras->pool);
 
   /* get the VCC.  if this doesn't work out for us, don't forget to

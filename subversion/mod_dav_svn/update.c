@@ -529,51 +529,53 @@ static void close_helper(svn_boolean_t is_dir, item_baton_t *baton)
           send_xml(baton->uc, "<S:remove-prop name=\"%s\"/>" DEBUG_CR, qname);
         }
     }
-  if (baton->changed_props)
+
+  if ((! baton->uc->send_all) && baton->changed_props && (! baton->added))
     {
-      if (baton->uc->send_all)
-        {
-          fooo;
-        }
-      else if (! baton->added)
-        {
-          /* ### for now, we will simply tell the client to fetch all the
-             props */
-          send_xml(baton->uc, "<S:fetch-props/>" DEBUG_CR);
-        }
+      /* Tell the client to fetch all the props */
+      send_xml(baton->uc, "<S:fetch-props/>" DEBUG_CR);
     }
 
-  /* Output the 3 CR-related properties right here.
-     ### later on, compress via the 'scattered table' solution as
-     discussed with gstein.  -bmcs */
-  {
-    /* ### grrr, these DAV: property names are already #defined in
-       ra_dav.h, and statically defined in liveprops.c.  And now
-       they're hardcoded here.  Isn't there some header file that both
-       sides of the network can share?? */
-    
-    send_xml(baton->uc, "<S:prop>");
-    
-    /* ### special knowledge: svn_repos_dir_delta will never send
-     *removals* of the commit-info "entry props". */
-    if (baton->committed_rev)
-      send_xml(baton->uc, "<D:version-name>%s</D:version-name>",
-               baton->committed_rev);
-    
-    if (baton->committed_date)
-      send_xml(baton->uc, "<D:creationdate>%s</D:creationdate>",
-               baton->committed_date);
-    
-    if (baton->last_author)
-      send_xml(baton->uc, "<D:creator-displayname>%s</D:creator-displayname>",
-               baton->last_author);
+  send_xml(baton->uc, "<S:prop>");
 
-    if (baton->text_checksum)
+  /* Both modern and non-modern clients need the checksum... */
+  if (baton->text_checksum)
+    {
       send_xml(baton->uc, "<V:md5-checksum>%s</V:md5-checksum>", 
                baton->text_checksum);
+    }
 
-    send_xml(baton->uc, "</S:prop>\n");
-  }
+  /* ...but only non-modern clients want the 3 CR-related properties
+     sent like here, because they can't handle receiving these special
+     props inline like any other prop.
+     ### later on, compress via the 'scattered table' solution as
+     discussed with gstein.  -bmcs */
+  if (! baton->uc->send_all)
+    {
+      /* ### grrr, these DAV: property names are already #defined in
+         ra_dav.h, and statically defined in liveprops.c.  And now
+         they're hardcoded here.  Isn't there some header file that both
+         sides of the network can share?? */
+      
+      /* ### special knowledge: svn_repos_dir_delta will never send
+       *removals* of the commit-info "entry props". */
+      if (baton->committed_rev)
+        send_xml(baton->uc, "<D:version-name>%s</D:version-name>",
+                 baton->committed_rev);
+      
+      if (baton->committed_date)
+        send_xml(baton->uc, "<D:creationdate>%s</D:creationdate>",
+                 baton->committed_date);
+      
+      if (baton->last_author)
+        send_xml(baton->uc,
+                 "<D:creator-displayname>%s</D:creator-displayname>",
+                 baton->last_author);
+
+    }
+
+  /* Close unconditionally, because we sent checksum unconditionally. */
+  send_xml(baton->uc, "</S:prop>\n");
     
   if (baton->added)
     send_xml(baton->uc, "</S:add-%s>" DEBUG_CR, DIR_OR_FILE(is_dir));
@@ -597,7 +599,7 @@ static svn_error_t * maybe_start_update_report(update_ctx_t *uc)
                "<S:update-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
                "xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\" "
                "xmlns:D=\"DAV:\" %s>" DEBUG_CR,
-               uc.send_all ? "send-all=\"true\"" : "");
+               uc->send_all ? "send-all=\"true\"" : "");
 
       uc->started_update = TRUE;
     }
@@ -706,45 +708,84 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
                                          apr_pool_t *pool)
 {
   item_baton_t *b = baton;
-  const char *qname;
+  const char *qname = apr_xml_quote_string (b->pool, name, 1);
 
-  /* For now, specially handle entry props that come through (using
-     the ones we care about, discarding the rest).  ### this should go
-     away and we should just tunnel those props on through for the
-     client to deal with. */
-#define NSLEN (sizeof(SVN_PROP_ENTRY_PREFIX) - 1)
-  if (! strncmp(name, SVN_PROP_ENTRY_PREFIX, NSLEN))
-    {
-      if (! strcmp(name, SVN_PROP_ENTRY_COMMITTED_REV))
-        b->committed_rev = value ? apr_pstrdup(b->pool, value->data) : NULL;
-      else if (! strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE))
-        b->committed_date = value ? apr_pstrdup(b->pool, value->data) : NULL;
-      else if (! strcmp(name, SVN_PROP_ENTRY_LAST_AUTHOR))
-        b->last_author = value ? apr_pstrdup(b->pool, value->data) : NULL;
-      
-      return SVN_NO_ERROR;
-    }
-#undef NSLEN
-                
-  qname = apr_xml_quote_string (b->pool, name, 1);
   /* apr_xml_quote_string doesn't realloc if there is nothing to
      quote, so dup the name, but only if necessary. */
   if (qname == name)
     qname = apr_pstrdup (b->pool, name);
-  if (value)
-    {
-      if (! b->changed_props)
-        b->changed_props = apr_array_make (b->pool, 1, sizeof (name));
 
-      (*((const char **)(apr_array_push (b->changed_props)))) = qname;
-    }
-  else
+  if (b->uc->send_all)
     {
-      if (! b->removed_props)
-        b->removed_props = apr_array_make (b->pool, 1, sizeof (name));
-
-      (*((const char **)(apr_array_push (b->removed_props)))) = qname;
+      if (value)
+        {
+          const svn_string_t *qval = value;
+          
+          if (svn_xml_is_xml_safe(value->data, value->len))
+            {
+              send_xml(b->uc, "<S:set-prop name=\"%s\">", qname);
+            }
+          else
+            {
+              qval = svn_base64_encode_string(value, pool);
+              send_xml(b->uc,
+                       "<S:set-prop name=\"%s\" encoding=\"base64\">" DEBUG_CR,
+                       qname);
+            }
+          
+          send_xml(b->uc, "%s", qval->data);
+          send_xml(b->uc, "</S:set-prop>" DEBUG_CR);
+        }
+      else  /* value is null, so this is a prop removal */
+        {
+          send_xml(b->uc, "<S:remove-prop name=\"%s\"/>" DEBUG_CR, qname);
+        }
     }
+  else  /* don't do inline response, just cache prop names for close_helper */
+    {
+      /* For now, store certain entry props, because we'll need to send
+         them later as standard DAV ("D:") props.  ### this should go
+         away and we should just tunnel those props on through for the
+         client to deal with. */
+#define NSLEN (sizeof(SVN_PROP_ENTRY_PREFIX) - 1)
+      if (! strncmp(name, SVN_PROP_ENTRY_PREFIX, NSLEN))
+        {
+          if (! strcmp(name, SVN_PROP_ENTRY_COMMITTED_REV))
+            {
+              b->committed_rev = value ?
+                apr_pstrdup(b->pool, value->data) : NULL;
+            }
+          else if (! strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE))
+            {
+              b->committed_date = value ?
+                apr_pstrdup(b->pool, value->data) : NULL;
+            }
+          else if (! strcmp(name, SVN_PROP_ENTRY_LAST_AUTHOR))
+            {
+              b->last_author = value ?
+                apr_pstrdup(b->pool, value->data) : NULL;
+            }
+      
+          return SVN_NO_ERROR;
+        }
+#undef NSLEN
+
+      if (value)
+        {
+          if (! b->changed_props)
+            b->changed_props = apr_array_make (b->pool, 1, sizeof (name));
+          
+          (*((const char **)(apr_array_push (b->changed_props)))) = qname;
+        }
+      else
+        {
+          if (! b->removed_props)
+            b->removed_props = apr_array_make (b->pool, 1, sizeof (name));
+          
+          (*((const char **)(apr_array_push (b->removed_props)))) = qname;
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 
