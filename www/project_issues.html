@@ -68,22 +68,27 @@
 <h2>What the Fields Mean</h2>
 
 <p>When an issue is first filed, it automatically goes in the
-<b>"---"</b> milestone, meaning it is unscheduled.  A developer will
-examine it and maybe talk to other developers, then estimate the bug's
-severity, the effort required to fix it, and schedule it in a numbered
-milestone, for example <b><a
+<b>"---"</b> target milestone, which indicates that the issue has not
+yet been processed.  A developer will examine it and maybe talk to
+other developers, then estimate the bug's severity, the effort
+required to fix it, and schedule it in a numbered milestone, for
+example <b><a
 href="http://subversion.tigris.org/issues/buglist.cgi?target_milestone=1.1"
 >1.1</a></b>.  (Or they may put it the <b><a
-href="http://subversion.tigris.org/issues/buglist.cgi?target_milestone=future"
->future</a></b> or <b><a
-href="http://subversion.tigris.org/issues/buglist.cgi?target_milestone=no%20milestone"
->no&nbsp;milestone</a></b> milestones, if they consider it tolerable for all currently planned releases.)
-</p>
+href="http://subversion.tigris.org/issues/buglist.cgi?target_milestone=unmilestoned"
+>unmilestoned</a></b> or <b><a
+href="http://subversion.tigris.org/issues/buglist.cgi?target_milestone=nonblocking"
+>nonblocking</a></b> milestone, if they consider it tolerable for all
+currently planned releases.)  </p>
 
-<p> An issue filed in <b>future</b> might still get fixed soon, if
-some committer decides they want it done.  Putting it in <b>future</b>
-merely means we're not planning to block any particular release on
-that issue. </p>
+<p> An issue filed in <b>unmilestoned</b> might still get fixed soon,
+if some committer decides they want it done.  Putting it in
+<b>unmilestoned</b> merely means it hasn't been scheduled for any
+particular release yet.  The <b>nonblocking</b> milestone, on the
+other hand, means that we do not anticipate ever scheduling the issue
+for a particular release.  This also does not mean the issue will
+never be fixed; it merely means that we don't plan to block any
+release on it.</p>
 
 <p>
 Severity is represented in the <b>Priority</b> field.  Here is how
