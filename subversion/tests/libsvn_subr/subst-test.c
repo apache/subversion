@@ -301,7 +301,7 @@ substitute_and_verify (const char *test_name,
                          " $, started expanded.",
                          NULL);
         }
-      else  /* contract */
+      else  /* unexpand */
         {
           /* Lines 3 and 5 remain unchanged. */
           expect[26 - 1] = "Line 26: Emptily expanded keyword $Rev$.";
@@ -345,7 +345,7 @@ substitute_and_verify (const char *test_name,
                          "$$$$$$Date: ", date, " $$$$$$.",
                          NULL);
         }
-      else  /* contract */
+      else  /* unexpand */
         {
           /* Lines 12 and 13 remain unchanged. */
           expect[33 - 1] =
@@ -382,7 +382,7 @@ substitute_and_verify (const char *test_name,
                          "Valid $Author: ", author, " $, started expanded.",
                          NULL);
         }
-      else  /* contract */
+      else  /* unexpand */
         {
           /* Lines 8 and 9 remain unchanged. */
           expect[37 - 1] =
@@ -413,7 +413,7 @@ substitute_and_verify (const char *test_name,
                          "Valid $URL: ", url, " $, started expanded.",
                          NULL);
         }
-      else  /* contract */
+      else  /* unexpand */
         {
           /* Lines 16 and 17 and remain unchanged. */
           expect[41 - 1] =
@@ -491,7 +491,7 @@ substitute_and_verify (const char *test_name,
                          " $Date$ $",
                          NULL);
         }
-      else  /* contract */
+      else  /* unexpand */
         {
           expect[24 - 1] =
             apr_pstrcat (pool, "Line 24: ",
@@ -523,7 +523,7 @@ substitute_and_verify (const char *test_name,
                          " $Date$ $",
                          NULL);
         }
-      else  /* contract */
+      else  /* unexpand */
         {
           expect[24 - 1] =
             apr_pstrcat (pool, "Line 24: ",
@@ -913,9 +913,9 @@ mixed_no_repair (const char **msg,
 /** Keyword substitution alone. **/
 
 static svn_error_t *
-author (const char **msg,
-        svn_boolean_t msg_only,
-        apr_pool_t *pool)
+expand_author (const char **msg,
+               svn_boolean_t msg_only,
+               apr_pool_t *pool)
 {
   *msg = "expand author keyword";
 
@@ -933,7 +933,7 @@ author (const char **msg,
 
 
 static svn_error_t *
-author_date (const char **msg,
+expand_author_date (const char **msg,
              svn_boolean_t msg_only,
              apr_pool_t *pool)
 {
@@ -955,9 +955,9 @@ author_date (const char **msg,
 
 
 static svn_error_t *
-author_rev (const char **msg,
-            svn_boolean_t msg_only,
-            apr_pool_t *pool)
+expand_author_rev (const char **msg,
+                   svn_boolean_t msg_only,
+                   apr_pool_t *pool)
 {
   *msg = "expand author and rev keywords";
 
@@ -977,9 +977,9 @@ author_rev (const char **msg,
 
 
 static svn_error_t *
-rev (const char **msg,
-     svn_boolean_t msg_only,
-     apr_pool_t *pool)
+expand_rev (const char **msg,
+            svn_boolean_t msg_only,
+            apr_pool_t *pool)
 {
   *msg = "expand rev keyword";
 
@@ -999,9 +999,9 @@ rev (const char **msg,
 
 
 static svn_error_t *
-rev_url (const char **msg,
-         svn_boolean_t msg_only,
-         apr_pool_t *pool)
+expand_rev_url (const char **msg,
+                svn_boolean_t msg_only,
+                apr_pool_t *pool)
 {
   *msg = "expand rev and url keywords";
 
@@ -1021,9 +1021,9 @@ rev_url (const char **msg,
 
 
 static svn_error_t *
-author_date_rev_url (const char **msg,
-                     svn_boolean_t msg_only,
-                     apr_pool_t *pool)
+expand_author_date_rev_url (const char **msg,
+                            svn_boolean_t msg_only,
+                            apr_pool_t *pool)
 {
   *msg = "expand author, date, rev, and url keywords";
 
@@ -1054,9 +1054,9 @@ author_date_rev_url (const char **msg,
 /** Keyword substitution and EOL conversion together. **/
 
 static svn_error_t *
-lf_to_crlf_author (const char **msg,
-                   svn_boolean_t msg_only,
-                   apr_pool_t *pool)
+lf_to_crlf_expand_author (const char **msg,
+                          svn_boolean_t msg_only,
+                          apr_pool_t *pool)
 {
   *msg = "lf_to_crlf, plus expand author keyword";
 
@@ -1073,9 +1073,9 @@ lf_to_crlf_author (const char **msg,
 
 
 static svn_error_t *
-mixed_to_lf_author_date (const char **msg,
-                         svn_boolean_t msg_only,
-                         apr_pool_t *pool)
+mixed_to_lf_expand_author_date (const char **msg,
+                                svn_boolean_t msg_only,
+                                apr_pool_t *pool)
 {
   *msg = "mixed_to_lf, plus expand author and date keywords";
 
@@ -1091,9 +1091,9 @@ mixed_to_lf_author_date (const char **msg,
 
 
 static svn_error_t *
-crlf_to_cr_author_rev (const char **msg,
-                       svn_boolean_t msg_only,
-                       apr_pool_t *pool)
+crlf_to_cr_expand_author_rev (const char **msg,
+                              svn_boolean_t msg_only,
+                              apr_pool_t *pool)
 {
   *msg = "crlf_to_cr, plus expand author and rev keywords";
 
@@ -1109,9 +1109,9 @@ crlf_to_cr_author_rev (const char **msg,
 
 
 static svn_error_t *
-cr_to_crlf_rev (const char **msg,
-                svn_boolean_t msg_only,
-                apr_pool_t *pool)
+cr_to_crlf_expand_rev (const char **msg,
+                       svn_boolean_t msg_only,
+                       apr_pool_t *pool)
 {
   *msg = "cr_to_crlf, plus expand rev keyword";
 
@@ -1127,9 +1127,9 @@ cr_to_crlf_rev (const char **msg,
 
 
 static svn_error_t *
-cr_to_lfcr_rev_url (const char **msg,
-                    svn_boolean_t msg_only,
-                    apr_pool_t *pool)
+cr_to_lfcr_expand_rev_url (const char **msg,
+                           svn_boolean_t msg_only,
+                           apr_pool_t *pool)
 {
   *msg = "cr_to_lfcr, plus expand rev and url keywords";
 
@@ -1145,9 +1145,9 @@ cr_to_lfcr_rev_url (const char **msg,
 
 
 static svn_error_t *
-mixed_to_crlf_author_date_rev_url (const char **msg,
-                                   svn_boolean_t msg_only,
-                                   apr_pool_t *pool)
+mixed_to_crlf_expand_author_date_rev_url (const char **msg,
+                                          svn_boolean_t msg_only,
+                                          apr_pool_t *pool)
 {
   *msg = "mixed_to_crlf, plus expand author, date, rev, and url keywords";
 
@@ -1198,20 +1198,20 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   mixed_to_lfcr,
   /* Random eol stuff. */
   mixed_no_repair,
-  /* Keywords alone, no eol conversion involved. */
-  author,
-  author_date,
-  author_rev,
-  rev,
-  rev_url,
-  author_date_rev_url,
-  /* Keywords and eol conversion together. */
-  lf_to_crlf_author,
-  mixed_to_lf_author_date,
-  crlf_to_cr_author_rev,
-  cr_to_crlf_rev,
-  cr_to_lfcr_rev_url,
-  mixed_to_crlf_author_date_rev_url,
+  /* Keyword expansion alone, no eol conversion involved. */
+  expand_author,
+  expand_author_date,
+  expand_author_rev,
+  expand_rev,
+  expand_rev_url,
+  expand_author_date_rev_url,
+  /* Keyword expansion and eol conversion together. */
+  lf_to_crlf_expand_author,
+  mixed_to_lf_expand_author_date,
+  crlf_to_cr_expand_author_rev,
+  cr_to_crlf_expand_rev,
+  cr_to_lfcr_expand_rev_url,
+  mixed_to_crlf_expand_author_date_rev_url,
   0
 };
 
