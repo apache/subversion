@@ -55,13 +55,6 @@ Candidate changes:
     Votes:
       +1: david
 
-  * r11673
-    Fix leak in UTF-8 routines.
-    Justification:
-      Leak introduced in 1.1.1.
-    Votes:
-      +1: lundblad, dionisos, epg
-
   * r11047 (Issue #2032)
     Always call mkdir-init, even if we're not in a VPATH setup.
     Justification:

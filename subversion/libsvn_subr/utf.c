@@ -55,6 +55,15 @@ typedef struct xlate_handle_node_t {
   apr_xlate_t *handle;
   struct xlate_handle_node_t *next;
 } xlate_handle_node_t;
+
+/* This maps userdata_key strings to pointers to pointers to the first entry
+   in the linked list of xlate handles.
+   We don't store the pointer to the list head directly in the hash table,
+   since we remove/insert entries at the head in the list in the code below,
+   and we can't use apr_hash_set() in each character translation because that
+   function allocates memory in each call where the value is non-NULL.
+   Since these allocations take place in a global pool, this would be a
+   memory leak. */
 static apr_hash_t *xlate_handle_hash = NULL;
 
 /* Clean up the xlate handle cache. */
@@ -122,7 +131,8 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
                        const char *topage, const char *frompage,
                        const char *userdata_key, apr_pool_t *pool)
 {
-  void *old_handle = NULL;
+  xlate_handle_node_t **old_handle_p;
+  xlate_handle_node_t *old_handle = NULL;
   apr_status_t apr_err;
 
   /* If we already have a handle, just return it. */
@@ -137,18 +147,18 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
                                      "Can't lock charset translation "
                                      "mutex");
 #endif
-          old_handle = apr_hash_get (xlate_handle_hash, userdata_key,
-                                     APR_HASH_KEY_STRING);
+          old_handle_p = apr_hash_get (xlate_handle_hash, userdata_key,
+                                       APR_HASH_KEY_STRING);
+          if (old_handle_p)
+            old_handle = *old_handle_p;
           if (old_handle)
             {
-              *ret = old_handle;
               /* Ensure that the handle is still valid. */
-              if ((*ret)->handle)
+              if (old_handle->handle)
                 {
-                  /* Remove from the hash table. */
-                  apr_hash_set (xlate_handle_hash, userdata_key,
-                                APR_HASH_KEY_STRING, (*ret)->next);
-                  (*ret)->next = NULL;
+                  /* Remove from the list. */
+                  *old_handle_p = old_handle->next;
+                  old_handle->next = NULL;
 #if APR_HAS_THREADS
                   apr_err = apr_thread_mutex_unlock (xlate_handle_mutex);
                   if (apr_err != APR_SUCCESS)
@@ -156,20 +166,22 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
                                              "Can't unlock charset "
                                              "translation mutex");
 #endif
+                  *ret = old_handle;
                   return SVN_NO_ERROR;
                 }
             }
         }
       else
         {
+          void *p;
           /* We fall back on a per-pool cache instead. */
-          apr_pool_userdata_get (&old_handle, userdata_key, pool);
-          if (old_handle)
+          apr_pool_userdata_get (&p, userdata_key, pool);
+          old_handle = p;
+          /* Ensure that the handle is still valid. */
+          if (old_handle && old_handle->handle)
             {
               *ret = old_handle;
-              /* Ensure that the handle is still valid. */
-              if ((*ret)->handle)
-                return SVN_NO_ERROR;
+              return SVN_NO_ERROR;
             }
         }
     }
@@ -237,14 +249,23 @@ put_xlate_handle_node (xlate_handle_node_t *node,
     return;
   if (xlate_handle_hash)
     {
+      xlate_handle_node_t **node_p;
 #if APR_HAS_THREADS
       if (apr_thread_mutex_lock (xlate_handle_mutex) != APR_SUCCESS)
         abort ();
 #endif
-      node->next = apr_hash_get (xlate_handle_hash, userdata_key,
-                                 APR_HASH_KEY_STRING);
-      apr_hash_set (xlate_handle_hash, userdata_key, APR_HASH_KEY_STRING,
-                    node);
+      node_p = apr_hash_get (xlate_handle_hash, userdata_key,
+                             APR_HASH_KEY_STRING);
+      if (node_p == NULL)
+        {
+          node_p = apr_palloc (apr_hash_pool_get (xlate_handle_hash),
+                               sizeof (*node_p));
+          *node_p = NULL;
+          apr_hash_set (xlate_handle_hash, userdata_key,
+                        APR_HASH_KEY_STRING, node_p);
+        }
+      node->next = *node_p;
+      *node_p = node;
 #if APR_HAS_THREADS
       if (apr_thread_mutex_unlock (xlate_handle_mutex) != APR_SUCCESS)
         abort ();
