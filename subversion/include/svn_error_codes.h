@@ -460,7 +460,7 @@ SVN_ERROR_START
               "Bogus revision report")
  
   SVN_ERRDEF (SVN_ERR_REPOS_UNSUPPORTED_VERSION,
-              SVN_ERR_REPOS_CATEGORY_START + 4,
+              SVN_ERR_REPOS_CATEGORY_START + 5,
               "Unsupported repository version")
 
   /* generic ra errors */
