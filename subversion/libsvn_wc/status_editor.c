@@ -443,9 +443,6 @@ open_file (const char *path,
   struct dir_baton *pb = parent_baton;
   struct file_baton *new_fb = make_file_baton (pb, path, pool);
 
-  /* Mark parent dir as changed */  
-  pb->text_changed = TRUE;
-
   *file_baton = new_fb;
   return SVN_NO_ERROR;
 }
