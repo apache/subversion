@@ -58,7 +58,11 @@ typedef struct svn_cl__opt_state_t
   svn_stringbuf_t *target;
   svn_stringbuf_t *ancestor_path;
   svn_boolean_t force;
+  /* Note: these next two flags only reflect switches given on the
+     commandline.  For example, 'svn up' (with no options) will *not*
+     set either of these flags, but will be recursive anyway */
   svn_boolean_t recursive;
+  svn_boolean_t nonrecursive;
   svn_boolean_t quiet;
   svn_boolean_t version;
   apr_array_header_t *args;

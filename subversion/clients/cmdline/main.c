@@ -178,6 +178,7 @@ main (int argc, const char * const *argv)
     {"message",       'm', 1},
     {"quiet",         'q', 0},
     {"recursive",     svn_cl__recursive_opt, 0},
+    {"nonrecursive",  'n', 0},
     {"revision",      'r', 1},
     {"date",          'D', 1},
     {"version",       'v', 0},
@@ -275,6 +276,9 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__recursive_opt:
         opt_state.recursive = TRUE;
+        break;
+      case 'n':
+        opt_state.nonrecursive = TRUE;
         break;
       case svn_cl__auth_username_opt:
         opt_state.auth_username = svn_stringbuf_create (opt_arg, pool);

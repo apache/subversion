@@ -52,12 +52,12 @@ svn_cl__status (apr_getopt_t *os,
     {
       svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
 
-      /* kff todo: eventually, the hard-coded 1 as the DESCEND
-         parameter below should be replaced with a pass-thru DESCEND
-         received from caller, which in turn would set it according
-         to a command-line argument telling svn whether to recurse
-         fully or just do immediate children. */
-      err = svn_client_status (&statushash, target, 1, auth_obj, pool);
+      /* Recursion is the default, unless the nonrecursive option was
+         specified on the command-line. */
+      if (opt_state->nonrecursive)
+        err = svn_client_status (&statushash, target, 0, auth_obj, pool);
+      else
+        err = svn_client_status (&statushash, target, 1, auth_obj, pool);
 
       if (err)
         return err;
