@@ -2676,8 +2676,14 @@ svn_fs_base__commit_txn (const char **conflict_p,
              commit again.  Or if that's not what happened, then just
              return the error. */
           svn_revnum_t youngest_rev;
-          SVN_ERR (svn_fs_base__youngest_rev (&youngest_rev, fs, subpool));
-          if (youngest_rev == youngish_rev)
+          svn_error_t *err2 = svn_fs_base__youngest_rev (&youngest_rev, fs,
+                                                         subpool);
+          if (err2)
+            {
+              svn_error_clear (err);
+              return err2;  /* err2 is bad, it should not occur */
+            }
+          else if (youngest_rev == youngish_rev)
             return err;
           else
             svn_error_clear (err);
