@@ -299,8 +299,12 @@ void svn_handle_warning (void *data, char *fmt, ...);
 
    would not mean what they appear to.  */
 
-#define SVN_ERR(expr) \
-  do { svn_error_t *svn_err = (expr); if (svn_err) return svn_err; } while (0)
+#define SVN_ERR(expr)                           \
+  do {                                          \
+    svn_error_t *svn_err__temp = (expr);        \
+    if (svn_err__temp)                          \
+      return svn_err__temp;                     \
+  } while (0)
 
 
 #endif   /* SVN_ERROR_H */
