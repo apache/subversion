@@ -121,13 +121,6 @@ svn_error_t *svn_config__parse_registry (svn_config_t *cfg,
 /* The description/instructions file in the config directory. */
 #define SVN_CONFIG__USR_README_FILE    "README"
 
-/* The main configuration file in SVN_CONFIG__DIRECTORY. */
-#define SVN_CONFIG__USR_CONFIG_FILE    "config"
-
-/* The servers config file in SVN_CONFIG__DIRECTORY. */
-#define SVN_CONFIG__USR_SERVERS_FILE   "servers"
-
-
 /* Set *PATH_P to the path to config file FNAME in the system
    configuration area, allocated in POOL.  If FNAME is NULL, set
    *PATH_P to the directory name of the system config area, either

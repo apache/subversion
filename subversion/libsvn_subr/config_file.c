@@ -616,7 +616,7 @@ svn_config_ensure (apr_pool_t *pool)
 
   /** Ensure that the `servers' file exists. **/
   SVN_ERR (svn_config__user_config_path
-           (&path, SVN_CONFIG__USR_SERVERS_FILE, pool));
+           (&path, SVN_CONFIG_CATEGORY_SERVERS, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
@@ -719,7 +719,7 @@ svn_config_ensure (apr_pool_t *pool)
 
   /** Ensure that the `config' file exists. **/
   SVN_ERR (svn_config__user_config_path
-           (&path, SVN_CONFIG__USR_CONFIG_FILE, pool));
+           (&path, SVN_CONFIG_CATEGORY_CONFIG, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
