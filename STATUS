@@ -57,10 +57,3 @@ Candidate changes:
       -0: kfogel  (Reviewed the change; it's not *so* trivial, and I'm
                    not sure an optimization like this belongs in a
                    patch release.)
-
-  * r8933
-    Comply with our license per clause 3.
-    Justification: Avoids any problems with downstream packagers having to
-    work to comply with our license.
-    Votes:
-      +1: kfogel, sussman, philip, julianfoad
