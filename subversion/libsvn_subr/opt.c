@@ -637,7 +637,8 @@ svn_opt_args_to_target_array (apr_array_header_t **targets_p,
 
           if (temprev.kind != svn_opt_revision_unspecified)
             {
-              ((const char **) (output_targets->elts))[i] = truepath;
+              ((const char **) (output_targets->elts))[i] = 
+                svn_path_canonicalize (truepath, pool);
 
               if (! firstrev)
                 {
