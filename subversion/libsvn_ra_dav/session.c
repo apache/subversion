@@ -127,13 +127,14 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                                         const char **proxy_password,
                                         int *timeout_seconds,
                                         int *neon_debug,
+                                        apr_hash_t *config,
                                         const char *requested_host,
                                         apr_pool_t *pool)
 {
-  svn_config_t *cfg;
   const char *exceptions;
   const char *port_str, *timeout_str, *server_group, *debug_str;
   svn_boolean_t is_exception = FALSE;
+  svn_config_t *cfg = apr_hash_get (config, "servers", APR_HASH_KEY_STRING);
 
   /* If we find nothing, default to nulls. */
   *proxy_host     = NULL;
@@ -143,8 +144,6 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   port_str        = NULL;
   timeout_str     = NULL;
   debug_str       = NULL;
-
-  SVN_ERR( svn_config_read_servers(&cfg, pool) );
 
   /* If there are defaults, use them, but only if the requested host
      is not one of the exceptions to the defaults. */
@@ -298,6 +297,7 @@ svn_ra_dav__open (void **session_baton,
                   const char *repos_URL,
                   const svn_ra_callbacks_t *callbacks,
                   void *callback_baton,
+                  apr_hash_t *config,
                   apr_pool_t *pool)
 {
   apr_size_t len;
@@ -370,6 +370,7 @@ svn_ra_dav__open (void **session_baton,
                               &proxy_password,
                               &timeout,
                               &debug,
+                              config,
                               uri.host,
                               pool);
     if (err)
@@ -444,6 +445,7 @@ svn_ra_dav__open (void **session_baton,
   ras->sess2 = sess2;  
   ras->callbacks = callbacks;
   ras->callback_baton = callback_baton;
+  ras->config = config;
 
   /* note that ras->username and ras->password are still NULL at this
      point. */

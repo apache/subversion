@@ -406,11 +406,16 @@ svn_config_get (svn_config_t *cfg, const char **valuep,
                 const char *section, const char *option,
                 const char *default_value)
 {
-  cfg_option_t *opt = find_option (cfg, section, option, NULL);
-  if (opt != NULL)
-    make_string_from_option (valuep, cfg, opt);
+  if (cfg)
+    {
+      cfg_option_t *opt = find_option (cfg, section, option, NULL);
+      if (opt != NULL)
+        make_string_from_option (valuep, cfg, opt);
+      else
+        *valuep = default_value;   /* ### TODO: Expand default_value */
+    }
   else
-    *valuep = default_value;   /* ### TODO: Expand default_value */
+    *valuep = default_value;
 }
 
 

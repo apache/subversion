@@ -244,12 +244,10 @@ static void ra_svn_get_reporter(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 /* --- RA LAYER IMPLEMENTATION --- */
 
 static svn_error_t *find_tunnel_agent(const char *hostname, const char **agent,
-                                      apr_pool_t *pool)
+                                      apr_hash_t *config, apr_pool_t *pool)
 {
-  svn_config_t *cfg;
+  svn_config_t *cfg = apr_hash_get (config, "servers", APR_HASH_KEY_STRING);
   const char *server_group;
-
-  SVN_ERR(svn_config_read_servers(&cfg, pool));
 
   server_group = svn_config_find_group(cfg, hostname, "groups", pool);
   if (server_group)
@@ -283,6 +281,7 @@ static apr_status_t cleanup_file(void *arg)
 static svn_error_t *ra_svn_open(void **sess, const char *url,
                                 const svn_ra_callbacks_t *callbacks,
                                 void *callback_baton,
+                                apr_hash_t *config,
                                 apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn;
@@ -298,7 +297,7 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              "Illegal svn repository URL '%s'", url);
 
-  SVN_ERR(find_tunnel_agent(hostname, &tunnel_agent, pool));
+  SVN_ERR(find_tunnel_agent(hostname, &tunnel_agent, config, pool));
   if (tunnel_agent)
     {
       /* ### It would be nice if tunnel_agent could contain flags. */
