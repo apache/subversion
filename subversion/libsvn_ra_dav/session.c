@@ -504,6 +504,7 @@ static const svn_ra_plugin_t dav_plugin = {
   svn_ra_dav__get_dated_revision,
   svn_ra_dav__change_rev_prop,
   svn_ra_dav__rev_proplist,
+  svn_ra_dav__rev_prop,
   svn_ra_dav__get_commit_editor,
   svn_ra_dav__get_file,
   svn_ra_dav__get_dir,

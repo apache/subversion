@@ -325,6 +325,14 @@ typedef struct svn_ra_plugin_t
   svn_error_t *(*rev_proplist) (void *session_baton,
                                 svn_revnum_t rev,
                                 apr_hash_t **props);
+
+  /* Set *VALUE to the value of unversioned property NAME attached to
+     revision REV.  If REV has no property by that name, set *VALUE to
+     NULL. */
+  svn_error_t *(*rev_prop) (void *session_baton,
+                            svn_revnum_t rev,
+                            const char *name,
+                            svn_string_t **value);
                                    
   /* Set *EDITOR and *EDIT_BATON to an editor for committing changes
      to the repository, using LOG_MSG as the log message.  The
