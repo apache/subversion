@@ -34,7 +34,7 @@
 /* This is defined by configure on platforms which use configure, but
    we need to define a fallback for Windows. */
 #ifndef DEFAULT_FS_TYPE
-#define DEFAULT_FS_TYPE "bdb"
+#define DEFAULT_FS_TYPE "fsfs"
 #endif
 
 #define FS_TYPE_FILENAME "fs-type"

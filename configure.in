@@ -342,10 +342,9 @@ if test "$svn_lib_berkeley_db" = "yes"; then
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-bdb-lib"
   BDB_TEST_DEPS="\$(BDB_TEST_DEPS)"
   BDB_TEST_PROGRAMS="\$(BDB_TEST_PROGRAMS)"
-  DEFAULT_FS_TYPE="bdb"
-else
-  DEFAULT_FS_TYPE="fsfs"
 fi
+  
+DEFAULT_FS_TYPE="fsfs"
 
 if test "$svn_lib_neon" = "yes"; then
   BUILD_RULES="$BUILD_RULES dav-lib"

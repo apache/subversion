@@ -57,7 +57,7 @@
 
 
 /* The default FS back-end type */
-#define DEFAULT_FS_TYPE "bdb"
+#define DEFAULT_FS_TYPE "fsfs"
 
 
 /* Define to the Python/C API format character suitable for apr_int64_t */
