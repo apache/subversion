@@ -388,10 +388,11 @@ AC_HELP_STRING([--enable-maintainer-mode],
         AC_MSG_ERROR(Can't have --disable-debug and --enable-maintainer-mode)
       fi
       enable_debugging=yes
+      dnl SVN_DEBUG enables specific features for developer builds
+      dnl AP_DEBUG enables specific (Apache) features for developer builds
+      CFLAGS="$CFLAGS -DSVN_DEBUG -DAP_DEBUG"
       if test "$GCC" = "yes"; then
-        dnl SVN_DEBUG enables specific features for developer builds
-        dnl AP_DEBUG enables specific (Apache) features for developer builds
-        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow -DSVN_DEBUG -DAP_DEBUG";
+        CFLAGS="$CFLAGS -Wpointer-arith -Wwrite-strings -Wshadow"
         case "$host" in
         *freebsd*|*linux*)
           CFLAGS="$CFLAGS -std=c89"
