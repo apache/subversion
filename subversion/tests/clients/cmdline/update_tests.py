@@ -723,7 +723,8 @@ def update_delete_modified_files(sbox):
     return 1
 
   # Commit
-  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'ci', wc_dir)
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'ci', '-m', 'foo',
+                                                    wc_dir)
   if len(stderr_lines) != 0:
     print "commiting deletes failed"
     return 1
