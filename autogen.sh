@@ -1,7 +1,8 @@
 ### Run this to produce everything needed for configuration. ###
 
-# Produce all the `Makefile.in's
-automake --add-missing
+# Produce all the `Makefile.in's, verbosely, and create neat missing things
+# like `libtool', `install-sh', etc.
+automake --add-missing --verbose
 
 # Produce aclocal.m4, so autoconf gets the automake macros it needs
 aclocal
