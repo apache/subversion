@@ -502,7 +502,9 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
                                  m_lastPath.c_str (),
                                  revision.revision (),
                                  revision.revision (),
-                                 recurse, ctx,
+                                 recurse, 
+                                 FALSE, // ignore externals
+                                 ctx,
                                  apr_pool);
 
     if(Err != NULL)
