@@ -234,6 +234,10 @@ typedef svn_error_t *(svn_txdelta_window_handler_t)
                      (svn_txdelta_window_t *window, void *baton);
 
 
+/* ### temporary: allows us to compile */
+typedef struct svn_vcdiff_parser_t svn_vcdiff_parser_t;
+typedef struct svn_text_delta_window_handler_t svn_text_delta_window_handler_t;
+
 /* Return a vcdiff parser object, PARSER, in caller-pushes form.  If
    we're receiving a vcdiff-format byte stream, one block of bytes at
    a time, we can pass each block in succession to `svn_vcdiff_parse',
