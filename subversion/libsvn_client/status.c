@@ -42,20 +42,19 @@
 /*** Getting update information ***/
 
 
-/* Open an RA session to URL, providing PATH/AUTH_BATON for
-   authentication callbacks.
+/* Update STATUSHASH with update information for the versioned items
+   underneath PATH / ADM_ACCESS, obtaining an auth baton from CTX.
+   Set *YOUNGEST to the youngest revision in PATH's repository.
 
-   STATUSHASH has presumably been filled with status structures that
-   contain only local-mod information.  Ask RA->do_status() to drive a
-   custom editor that will add update information to this collection
-   of structures.  Also, use the RA session to fill in the "youngest
-   revnum" field in each structure.
+   If DESCEND is false, operate only on immediate children of PATH;
+   otherwise, be fully recursive.
 
-   Set *YOUNGEST to the youngest revision in the repository.
+   Use POOL for all temporary allocation.
 
-   If DESCEND is zero, only immediate children of PATH will be edited
-   or added to the hash.  Else, the dry-run update will be fully
-   recursive. */
+   Note: The incoming STATUSHASH already contains `svn_wc_status_t *'
+   structures containing local-mod information.  This function just
+   runs ra_lib->do_status() to drive an editor that adds update
+   information to the structures. */
 static svn_error_t *
 add_update_info_to_status_hash (apr_hash_t *statushash,
                                 svn_revnum_t *youngest,
