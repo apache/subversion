@@ -84,7 +84,7 @@ analogous to CVS/ sudirs:
        repository               /* Where this stuff came from. */
        versions                 /* Version numbers for this directory */
        properties               /* Properties for this directory */
-       changes                  /* Uncommitted prop and tree changes */
+       delta-here               /* Uncommitted changes logged here */
        lock                     /* Optional, tells others this dir is busy */
        doing/                   /* What this dir is doing right now */
           action                    /* Tells the action in progress */
@@ -128,11 +128,11 @@ analogous to CVS/ sudirs:
         <entry name="baz.c" version="6"/>
       </svn-wc-versions>
 
-   (names escaped appropriately, of course).  The directory's own
-   VersionNumber is implicit for every child of the directory, so only
-   the exceptions need to be recorded.  If an entry does not appear in
-   the versions file, but is present in the text-base/ tree,  then it
-   is assumed to have the same version as the parent directory.
+   The directory's own VersionNumber is implicit for every child of
+   the directory, so only the exceptions need to be recorded.  If an
+   entry does not appear in the versions file, but is present in the
+   text-base/ tree, then it is assumed to have the same version as the
+   parent directory.
 
    Child directories do not get entries, because they will have their
    own `SVN/versions' files, and recording the same information in two
@@ -144,9 +144,9 @@ analogous to CVS/ sudirs:
       svn rename foo.c qux.c
 
    the versions file will still claim that foo.c is at version 17 (the
-   local rename is recorded in the `tree-changes' file, described
-   later).  Only after the rename is committed does the line for foo.c
-   change to something like:
+   local rename is recorded in the `delta-here' file, described
+   later).  Only *after* the rename is committed does the `versions'
+   entry for foo.c change to something like:
 
       <entry name="qux.c" version="21"/>
 
@@ -156,92 +156,89 @@ analogous to CVS/ sudirs:
 
    For now, this file is in svn hashdump format, because it's
    convenient and its performance is good enough for now.  May move to
-   Berkeley DB if properties ever get that demanding.
+   Berkeley DB if properties ever get that demanding.  XML is another
+   possibility -- it's less efficient, disk-wise, but on the other
+   hand its easy to parse it streamily, unlike hashdump format, which
+   generally results in a complete data structure in memory before you
+   can do anything at all.
 
-`changes'
+`delta-here'
 
    Records adds, renames, and deletes involving this directory's
    immediate children, using tree-delta syntax:
 
-      <tree-delta>
-         <new name="qux.c">
-           <file ancestor="/full/path/to/foo.c" version="17"/>
-         <delete name="foo.c"/>
-      </tree-delta>
+      <new name="qux.c">
+        <file ancestor="/full/path/to/foo.c" version="17"/>
+      </new>
+      <delete name="foo.c"/>
 
-   Note that to edit this structure, the entire thing has to be read
-   into memory and the pending change checked against it for
-   consistency.  For example, imagine the following sequence of
-   operations:
+   (The "<tree-delta>" and "</tree-delta>" tags themselves are
+   omitted, for reasons that will become clear later.) 
+
+   When new changes are recorded, they have to be checked against
+   existing ones for consistency.  For example, imagine the following
+   sequence of operations:
 
       svn rename foo.c qux.c
       svn rename bar.c qux.c
 
    After the first command, the tree-edits file might look like this:
 
-      <tree-delta>
-         <new name="qux.c">
-           <file ancestor="/full/path/to/foo.c" version="17"/>
-         <delete name="foo.c"/>
-      </tree-delta>
+      <new name="qux.c">
+        <file ancestor="/full/path/to/foo.c" version="17"/>
+      </new>
+      <delete name="foo.c"/>
 
    But after the second command, it should *not* look like this:
    
-      <tree-delta>
-         <new name="qux.c">
-           <file ancestor="/full/path/to/foo.c" version="17"/>
-         <new name="qux.c">
-           <file ancestor="/full/path/to/bar.c" version="17"/>
-         <delete name="foo.c"/>
-         <delete name="bar.c"/>
-      </tree-delta>
+      <new name="qux.c">
+        <file ancestor="/full/path/to/foo.c" version="17"/>
+      </new>
+      <new name="qux.c">
+        <file ancestor="/full/path/to/bar.c" version="12"/>
+      </new>
+      <delete name="foo.c"/>
+      <delete name="bar.c"/>
 
-   ...because that would leave two entries for qux.c, with conflicting
-   ancestry.  Instead, the old qux.c entry should be replaced with a
-   new one, leaving:
+   because that would leave two entries for qux.c, with conflicting
+   ancestries.  Instead, the old qux.c entry should be *replaced* with
+   a new one, leaving:
 
-      <tree-delta>
-         <new name="qux.c">
-           <file ancestor="/full/path/to/bar.c" version="17"/>
-         <delete name="foo.c"/>
-         <delete name="bar.c"/>
-      </tree-delta>
+      <new name="qux.c">
+        <file ancestor="/full/path/to/bar.c" version="12"/>
+      </new>
+      <delete name="foo.c"/>
+      <delete name="bar.c"/>
 
-   This means we're going to have to read the whole tree delta into
-   some structure, make changes to the structure, and write it back
-   out.  (With the usual tmp file indirection, of course.)
+   (And remember that the parent directory, bar.c, and foo.c might all
+   have different versions.)
 
-   kff todo: there is no way in that <delete> tag to know that the
-   foo.c being deleted is based in version 17, not the parent
-   directory's version (which could be different).  Is this okay?  If
-   not, we should just add the tag -- there's no reason, other than
-   Occam's Razor, to make these tree deltas exactly like the ones
-   described in client.texi.  Or maybe client.texi should be updated
-   if we end up changing the wc adm internal tree delta format.
-
-   Another example of a new need: when a file or dir gets moved out of
-   here, it would be nice to include a `local-destination' attribute
-   in the <delete> tag, so the working copy can find it easily.
+   kff todo: explain the internal walk interface here, & how it
+   connects with the xml outputter.
 
 `lock'
 
    Present iff some client is using this SVN/ subdir for anything.
+   kff todo: I think we don't need read vs write types, nor
+   race-condition protection, due to the way locking is called.  We'll
+   see, though.
 
 `doing'
 
    This directory records the start and end of every action, for
    interrupt-safe operations.  The `action' files says what exactly is
-   happening now (for example, not only that this is a checkout, but
-   that the text-base is being written).  Before the wc library starts
-   doing an action, it always announces what it's about to do in this
-   directory; when it's done, it then creates a `finished' file, then
-   cleans up the other files, including the `started' file, and only
-   *then* removes the `finished' file.
+   happening now (just enough information to know how inconsistent the
+   local state is, for example, that text-base is being updated, and
+   how).  Before the wc library starts doing an action, it always
+   announces what it's about to do in this directory; when it's done,
+   it then creates a `finished' file, then cleans up the other files,
+   including the `started' file, and only *then* removes the
+   `finished' file.
 
    A lock always exists on the adm subdir during the entire time of
    activity in doing/.
 
-   More details to come, naturally. :-)
+   More details to come.  kff todo: xml format?
 
 `tmp'
 
@@ -267,6 +264,9 @@ analogous to CVS/ sudirs:
    props.  Or may store them some other way; think this will be best
    answered after having the rest of the library working.
 
+`dprop-base/'
+
+   Same, but for dirent properties.  [maybe not implemented initially]
 
 
 
