@@ -112,7 +112,8 @@ enum svn_wc_existence_t
 {
   svn_wc_existence_normal = 0,  /* Nothing unusual here */
   svn_wc_existence_added,       /* Added to revision control */  
-  svn_wc_existence_deleted      /* Deleted from revision control */
+  svn_wc_existence_deleted,     /* Deleted from revision control */
+  svn_wc_existence_copied       /* Added -with history- to revision control */
 };
 
 /* A working copy entry -- that is, revision control information about
@@ -167,6 +168,7 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_VALUE_REPLACE    "replace"
 #define SVN_WC_ENTRY_VALUE_ADDED      "added"
 #define SVN_WC_ENTRY_VALUE_DELETED    "deleted"
+#define SVN_WC_ENTRY_VALUE_COPIED     "copied"
 
 /* How an entries file's owner dir is named in the entries file. */
 #define SVN_WC_ENTRY_THIS_DIR  "svn:this_dir"

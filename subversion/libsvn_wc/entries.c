@@ -250,6 +250,8 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
           entry->existence = svn_wc_existence_added;
         else if (! strcmp (existencestr->data, SVN_WC_ENTRY_VALUE_DELETED))
           entry->existence = svn_wc_existence_deleted;
+        else if (! strcmp (existencestr->data, SVN_WC_ENTRY_VALUE_COPIED))
+          entry->existence = svn_wc_existence_copied;
         else if (! strcmp (existencestr->data, ""))
           entry->existence = svn_wc_existence_normal;
         else
@@ -548,6 +550,10 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
 
     case svn_wc_existence_deleted:
       valuestr = svn_stringbuf_create (SVN_WC_ENTRY_VALUE_DELETED, pool);
+      break;
+
+    case svn_wc_existence_copied:
+      valuestr = svn_stringbuf_create (SVN_WC_ENTRY_VALUE_COPIED, pool);
       break;
 
     case svn_wc_existence_normal:

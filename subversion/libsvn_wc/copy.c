@@ -35,6 +35,70 @@
 
 /*** Code. ***/
 
+static svn_error_t *
+recursively_remove_all_wcprops (svn_stringbuf_t *dirpath,
+                                apr_pool_t *pool)
+{
+  apr_status_t status;
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  svn_wc_entry_t *this_dir;
+  svn_stringbuf_t *wcprop_path;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  
+  /* Read DIRPATH's entries. */
+  SVN_ERR (svn_wc_entries_read (&entries, dirpath, subpool));
+
+  /* Remove this_dir's wcprops */
+  SVN_ERR (svn_wc__wcprop_path (&wcprop_path, dirpath, 0, subpool));
+  (void) apr_file_remove (wcprop_path->data, subpool);
+
+  /* Recursively loop over all children. */
+  for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_size_t keylen;
+      void *val;
+      const char *name;
+      svn_wc_entry_t *current_entry;
+      svn_stringbuf_t *child_path;
+
+      apr_hash_this (hi, &key, &keylen, &val);
+      name = (const char *) key;
+      current_entry = (svn_wc_entry_t *) val;
+
+      /* Ignore the "this dir" entry. */
+      if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
+        continue;
+
+      child_path = svn_stringbuf_dup (dirpath, subpool);
+      svn_path_add_component_nts (child_path, name, svn_path_local_style);
+
+      /* If a file, remove it from wcprops. */
+      if (current_entry->kind == svn_node_file)
+        {
+          SVN_ERR (svn_wc__wcprop_path (&wcprop_path, child_path, 0, subpool));
+          (void) apr_file_remove (wcprop_path->data, subpool);
+          /* ignoring any error value from the removal; most likely,
+             apr_file_remove will complain about trying to a remove a
+             file that's not there.  But this more efficient than
+             doing an independant stat for each file's existence
+             before trying to remove it, no? */
+        }        
+
+      /* If a dir, recurse. */
+      else if (current_entry->kind == svn_node_dir)
+          SVN_ERR (recursively_remove_all_wcprops (child_path, subpool));
+    }
+
+  /* Cleanup */
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+
 
 /* This function effectively creates and schedules a file for
    addition, but does extra administrative things to allow it to
@@ -162,6 +226,11 @@ copy_dir_administratively (svn_stringbuf_t *src_path,
       local mods, schedulings, existences, etc.) */
   SVN_ERR (svn_io_copy_dir_recursively (src_path, dst_parent, dst_basename,
                                         pool));
+
+  /* Remove all wcprops in the directory, because they're all bogus
+     now.  After the commit, ra_dav should regenerate them and
+     re-store them as an optimization. */
+  SVN_ERR (recursively_remove_all_wcprops (dst_path, pool));
 
   /* Schedule the directory for addition in both its parent and itself
      (this_dir) -- WITH HISTORY.  This function should leave the
