@@ -73,95 +73,6 @@ xml_escape (svn_stringbuf_t **outstr,
 }
 
 
-static void
-xml_unescape (svn_stringbuf_t **outstr,
-              const char *data,
-              apr_size_t len,
-              apr_pool_t *pool)
-{
-  const char *end = data + len;
-  const char *p = data, *q;
-
-  if (*outstr == NULL)
-    *outstr = svn_stringbuf_create ("", pool);
-
-  while (1)
-    {
-      /* Search for magical, mystical escaped xml characters, and
-         replace them with their single-byte equivalents.  Currently,
-         apr_xml_quote_string only escape `<', `>', `&', and
-         optionally `"'.  We'll add `'' to this because
-         svn_xml_escape_*() escapes it.  */
-      q = p;
-
-      /* Advance to the next '&'.  */
-      while (q < end && *q != '&')
-        q++;
-      svn_stringbuf_appendbytes (*outstr, p, q - p);
-
-      /* We may already be a winner.  */
-      if (q == end)
-        break;
-
-      /* Append the entity reference for the character.  */
-      if (((end - q) >= 5)
-          && (q[0] == '&')
-          && (q[1] == 'a')
-          && (q[2] == 'm')
-          && (q[3] == 'p')
-          && (q[4] == ';'))
-        {
-          svn_stringbuf_appendcstr (*outstr, "&");
-          p = q + 5;
-        }
-      else if (((end - q) >= 4)
-          && (q[0] == '&')
-          && (q[1] == 'l')
-          && (q[2] == 't')
-          && (q[3] == ';'))
-        {
-          svn_stringbuf_appendcstr (*outstr, "<");
-          p = q + 4;
-        }
-      else if (((end - q) >= 4)
-          && (q[0] == '&')
-          && (q[1] == 'g')
-          && (q[2] == 't')
-          && (q[3] == ';'))
-        {
-          svn_stringbuf_appendcstr (*outstr, ">");
-          p = q + 4;
-        }
-      else if (((end - q) >= 6)
-          && (q[0] == '&')
-          && (q[1] == 'q')
-          && (q[2] == 'u')
-          && (q[3] == 'o')
-          && (q[4] == 't')
-          && (q[5] == ';'))
-        {
-          svn_stringbuf_appendcstr (*outstr, "\"");
-          p = q + 6;
-        }
-      else if (((end - q) >= 6)
-          && (q[0] == '&')
-          && (q[1] == 'a')
-          && (q[2] == 'p')
-          && (q[3] == 'o')
-          && (q[4] == 's')
-          && (q[5] == ';'))
-        {
-          svn_stringbuf_appendcstr (*outstr, "'");
-          p = q + 6;
-        }
-      else
-        {
-          p = q + 1;
-        }
-    }
-}
-
-
 void
 svn_xml_escape_stringbuf (svn_stringbuf_t **outstr,
                           const svn_stringbuf_t *string,
@@ -186,33 +97,6 @@ svn_xml_escape_cstring (svn_stringbuf_t **outstr,
                         apr_pool_t *pool)
 {
   xml_escape (outstr, string, (apr_size_t) strlen (string), pool);
-}
-
-
-void
-svn_xml_unescape_stringbuf (svn_stringbuf_t **outstr,
-                            const svn_stringbuf_t *string,
-                            apr_pool_t *pool)
-{
-  xml_unescape (outstr, string->data, string->len, pool);
-}
-
-
-void
-svn_xml_unescape_string (svn_stringbuf_t **outstr,
-                         const svn_string_t *string,
-                         apr_pool_t *pool)
-{
-  xml_unescape (outstr, string->data, string->len, pool);
-}
-
-
-void
-svn_xml_unescape_cstring (svn_stringbuf_t **outstr,
-                          const char *string,
-                          apr_pool_t *pool)
-{
-  xml_unescape (outstr, string, (apr_size_t) strlen (string), pool);
 }
 
 

@@ -83,40 +83,6 @@ void svn_xml_escape_cstring (svn_stringbuf_t **outstr,
                              apr_pool_t *pool);
 
 
-/** Create or append in @a *outstr the unescaped version of the
- * xml-escaped string @a string.
- *
- * Create or append in @a *outstr the unescaped version of the
- * xml-escaped string @a string.  If @a *outstr is @c NULL, store 
- * a new stringbuf, else append to the existing stringbuf there.
- *
- * NOTE:  This function recognizes only the following XML escapes:
- *
- *    - \&amp;    - \&
- *    - \&apos;   - '
- *    - \&gt;     - \>
- *    - \&lt;     - \<
- *    - \&quot;   - "
- */
-void svn_xml_unescape_stringbuf (svn_stringbuf_t **outstr,
-                                 const svn_stringbuf_t *string,
-                                 apr_pool_t *pool);
-
-/** Same as @c svn_xml_unescape_stringbuf', but @a string is an 
- * @c svn_string_t.
- */
-void svn_xml_unescape_string (svn_stringbuf_t **outstr,
-                              const svn_string_t *string,
-                              apr_pool_t *pool);
-
-/** Same as @c svn_xml_unescape_stringbuf, but @a string is a
- * null-terminated C string.
- */
-void svn_xml_unescape_cstring (svn_stringbuf_t **outstr,
-                               const char *string,
-                               apr_pool_t *pool);
-
-
 
 /*---------------------------------------------------------------*/
 
