@@ -1383,7 +1383,7 @@ svn_client_revprop_list (apr_hash_t **props,
 
 
 /**
- * @since New in 1.1.
+ * @since New in 1.2.
  *
  * Export the contents of either a subversion repository or a
  * subversion working copy into a 'clean' directory (meaning a
@@ -1397,6 +1397,9 @@ svn_client_revprop_list (apr_hash_t **props,
  *
  * @a to is the path to the directory where you wish to create the exported
  * tree.
+ *
+ * @a peg_revision is the revision where the path is first looked up
+ * when exporting from a repository.
  *
  * @a revision is the revision that should be exported, which is only used 
  * when exporting from a repository.
@@ -1416,6 +1419,25 @@ svn_client_revprop_list (apr_hash_t **props,
  *
  * All allocations are done in @a pool.
  */ 
+svn_error_t *
+svn_client_export3 (svn_revnum_t *result_rev,
+                    const char *from,
+                    const char *to,
+                    svn_opt_revision_t *peg_revision,
+                    svn_opt_revision_t *revision,
+                    svn_boolean_t force, 
+                    const char *native_eol,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+
+/**
+ * @since New in 1.1.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to svn_client_export3, but with the @a peg_revision
+ * parameter always set to @c svn_opt_revision_unspecified.
+ */
 svn_error_t *
 svn_client_export2 (svn_revnum_t *result_rev,
                     const char *from,

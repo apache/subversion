@@ -706,9 +706,10 @@ close_file (void *file_baton,
 /*** Public Interfaces ***/
 
 svn_error_t *
-svn_client_export2 (svn_revnum_t *result_rev,
+svn_client_export3 (svn_revnum_t *result_rev,
                     const char *from,
                     const char *to,
+                    svn_opt_revision_t *peg_revision,
                     svn_opt_revision_t *revision,
                     svn_boolean_t force, 
                     const char *native_eol,
@@ -716,38 +717,16 @@ svn_client_export2 (svn_revnum_t *result_rev,
                     apr_pool_t *pool)
 {
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
-  svn_boolean_t use_ra = FALSE;
-  const char *URL;
+  const char *url;
 
-  if (! svn_path_is_url (from) &&
-      (revision->kind != svn_opt_revision_base) &&
-      (revision->kind != svn_opt_revision_committed) &&
-      (revision->kind != svn_opt_revision_working))
-    {
-      if (revision->kind == svn_opt_revision_unspecified)
-        {
-          /* Default to WORKING in the case that we have
-             been given a working copy path */
-          revision->kind = svn_opt_revision_working;
-        }
-      else
-        {
-          use_ra = TRUE;
-          SVN_ERR (svn_client_url_from_path (&URL, from, pool));
-          if (! URL)
-            return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                      _("'%s' has no URL"), from);
-        }
-    }
-  else
-    {
-      URL = svn_path_canonicalize (from, pool);
-    }
-
-  if (svn_path_is_url (from) || use_ra)
+  if (svn_path_is_url (from) ||
+      ! (revision->kind == svn_opt_revision_base ||
+         revision->kind == svn_opt_revision_committed ||
+         revision->kind == svn_opt_revision_working ||
+         revision->kind == svn_opt_revision_unspecified))
     {
       svn_revnum_t revnum;
-      void *ra_baton, *session;
+      void *session;
       svn_ra_plugin_t *ra_lib;
       void *edit_baton;
       svn_node_kind_t kind;
@@ -759,7 +738,6 @@ svn_client_export2 (svn_revnum_t *result_rev,
       svn_boolean_t use_sleep = FALSE;
 
       eb->root_path = to;
-      eb->root_url = URL;
       eb->force = force;
       eb->target_revision = &edit_revision;
       eb->notify_func = ctx->notify_func;
@@ -784,20 +762,13 @@ svn_client_export2 (svn_revnum_t *result_rev,
                                                   &edit_baton,
                                                   pool));
   
-      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
-                                            NULL, NULL, FALSE, TRUE,
-                                            ctx, pool));
-
-      /* Unfortunately, it's not kosher to pass an invalid revnum into
-         set_path(), so we actually need to convert it to HEAD. */
-      if (revision->kind == svn_opt_revision_unspecified)
-        revision->kind = svn_opt_revision_head;
-      SVN_ERR (svn_client__get_revision_number
-               (&revnum, ra_lib, session, revision, from, pool));
-
+      /* Get the RA connection. */
+      SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &revnum,
+                                             &url, from, peg_revision,
+                                             revision, ctx, pool));
+      
+      eb->root_url = url;
+      
       /* Manufacture a basic 'report' to the update reporter. */
       SVN_ERR (ra_lib->do_update (session,
                                   &reporter, &report_baton,
@@ -832,10 +803,19 @@ svn_client_export2 (svn_revnum_t *result_rev,
     }
   else
     {
+      /* This is a working copy export. */
+      if (revision->kind == svn_opt_revision_unspecified)
+        {
+          /* Default to WORKING in the case that we have
+             been given a working copy path */
+          revision->kind = svn_opt_revision_working;
+        }
+      
       /* just copy the contents of the working copy into the target path. */
       SVN_ERR (copy_versioned_files (from, to, revision, force, native_eol,
                                      ctx, pool));
     }
+  
 
   if (ctx->notify_func)
     (*ctx->notify_func) (ctx->notify_baton,
@@ -854,6 +834,25 @@ svn_client_export2 (svn_revnum_t *result_rev,
 }
 
 
+svn_error_t *
+svn_client_export2 (svn_revnum_t *result_rev,
+                    const char *from,
+                    const char *to,
+                    svn_opt_revision_t *revision,
+                    svn_boolean_t force, 
+                    const char *native_eol,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
+{
+  svn_opt_revision_t peg_revision;
+
+  peg_revision.kind = svn_opt_revision_unspecified;
+
+  return svn_client_export3 (result_rev, from, to, &peg_revision,
+                             revision, force, native_eol, ctx, pool);
+}
+
+  
 svn_error_t *
 svn_client_export (svn_revnum_t *result_rev,
                    const char *from,
