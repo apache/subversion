@@ -214,8 +214,8 @@ test_is_uri_safe (const char **msg,
     FALSE,
     FALSE,
     FALSE,
-    TRUE,
-    TRUE,
+    FALSE,
+    FALSE,
     TRUE,
     TRUE };
 
