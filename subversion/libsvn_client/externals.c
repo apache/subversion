@@ -166,6 +166,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
 {
   struct handle_external_item_change_baton *ib = baton;
   svn_wc_external_item_t *old_item, *new_item;
+  const char *parent;
   const char *path = svn_path_join (ib->parent_dir,
                                     (const char *) key, ib->pool);
 
@@ -211,11 +212,8 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
     {
       /* The target dir might have multiple components.  Guarantee
          the path leading down to the last component. */
-      {
-        const char *checkout_parent;
-        svn_path_split (path, &checkout_parent, NULL, ib->pool);
-        SVN_ERR (svn_io_make_dir_recursively (checkout_parent, ib->pool));
-      }
+      svn_path_split (path, &parent, NULL, ib->pool);
+      SVN_ERR (svn_io_make_dir_recursively (parent, ib->pool));
 
       /* If we were handling renames the fancy way, then  before
          checking out a new subdir here, we would somehow learn if
@@ -310,8 +308,9 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
     {
       /* Exact same item is present in both hashes, and caller wants
          to update such unchanged items. */
-
-      svn_error_t *err;
+      svn_wc_adm_access_t *adm_access;
+      const svn_wc_entry_t *ext_entry;
+      svn_node_kind_t kind;
 
       /* First notify that we're about to handle an external. */
       if (ib->ctx->notify_func)
@@ -324,41 +323,64 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                                  svn_wc_notify_state_unknown,
                                  SVN_INVALID_REVNUM);
 
-      /* Try an update, but if no such dir, then check out instead. */
-      err = svn_client__update_internal (path,
-                                         &(new_item->revision),
-                                         TRUE, /* recurse */
-                                         ib->timestamp_sleep,
-                                         ib->ctx,
-                                         ib->pool);
-
-      if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
+      /* Next, verify that the external working copy matches
+         (URL-wise) what is supposed to be on disk. */
+      SVN_ERR (svn_io_check_path (path, &kind, ib->pool));
+      if (kind == svn_node_dir)
         {
-          /* No problem.  Probably user added this external item, but
-             hasn't updated since then, so they don't actually have a
-             working copy of it yet.  Just check it out. */
-          
-          svn_error_clear (err);
+          SVN_ERR (svn_wc_adm_open (&adm_access, NULL, path, TRUE, TRUE,
+                                    ib->pool));
+          SVN_ERR (svn_wc_entry (&ext_entry, path, adm_access, 
+                                 FALSE, ib->pool));
+          SVN_ERR (svn_wc_adm_close (adm_access));
 
+          /* If we have what appears to be a version controlled
+             subdir, and its top-level URL matches that of our
+             externals definition, perform an update. */
+          if (ext_entry && (strcmp (ext_entry->url, new_item->url) == 0))
+            {
+              SVN_ERR (svn_client__update_internal (path,
+                                                    &(new_item->revision),
+                                                    TRUE, /* recurse */
+                                                    ib->timestamp_sleep,
+                                                    ib->ctx,
+                                                    ib->pool));
+            }
+          /* If, however, the URLs don't match, we need to relegate
+             the one subdir, and then checkout a new one. */
+          else
+            {
+              /* Buh-bye, old and busted ... */
+              SVN_ERR (relegate_external (path,
+                                          ib->ctx->cancel_func,
+                                          ib->ctx->cancel_baton,
+                                          ib->pool));
+              /* ... Hello, new hotness. */
+              SVN_ERR (svn_client__checkout_internal (new_item->url,
+                                                      path,
+                                                      &(new_item->revision),
+                                                      TRUE, /* recurse */
+                                                      ib->timestamp_sleep,
+                                                      ib->ctx,
+                                                      ib->pool));
+            }
+        }
+      else /* Not a directory at all -- just try the checkout. */
+        {
           /* The target dir might have multiple components.  Guarantee
              the path leading down to the last component. */
-          {
-            const char *parent;
-            svn_path_split (path, &parent, NULL, ib->pool);
-            SVN_ERR (svn_io_make_dir_recursively (parent, ib->pool));
-          }
-          
-          SVN_ERR (svn_client__checkout_internal
-                   (new_item->url,
-                    path,
-                    &(new_item->revision),
-                    TRUE, /* recurse */
-                    ib->timestamp_sleep,
-                    ib->ctx,
-                    ib->pool));
+          svn_path_split (path, &parent, NULL, ib->pool);
+          SVN_ERR (svn_io_make_dir_recursively (parent, ib->pool));
+
+          /* Checking out... */
+          SVN_ERR (svn_client__checkout_internal (new_item->url,
+                                                  path,
+                                                  &(new_item->revision),
+                                                  TRUE, /* recurse */
+                                                  ib->timestamp_sleep,
+                                                  ib->ctx,
+                                                  ib->pool));
         }
-      else if (err)
-        return err;
     }
 
   return SVN_NO_ERROR;
