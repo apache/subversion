@@ -56,6 +56,12 @@ struct file_baton
 };
 
 
+struct window_handler_baton
+{
+  repos_node_t *node;
+};
+
+
 static svn_error_t *
 delete_entry (svn_stringbuf_t *name, 
               void *parent_baton)
@@ -84,6 +90,8 @@ delete_entry (svn_stringbuf_t *name,
     node->kind = svn_node_file;
 
   node->action = 'D';
+  SVN_ERR (svn_fs_node_id (&(node->id), eb->base_root, 
+                           full_path->data, eb->pool));
 
   return SVN_NO_ERROR;
 }
@@ -101,6 +109,8 @@ replace_root (void *edit_baton,
   d->edit_baton = eb;
   d->node = (eb->node = svnlook_create_node ("", eb->pool));
   d->node->kind = svn_node_dir;
+  d->node->action = 'R';
+  SVN_ERR (svn_fs_node_id (&(d->node->id), eb->root, "", eb->pool));
   *root_baton = d;
   
   return SVN_NO_ERROR;
@@ -125,6 +135,8 @@ replace_directory (svn_stringbuf_t *name,
   d->edit_baton = eb;
   d->node = svnlook_create_child_node (pd->node, name->data, eb->pool);
   d->node->kind = svn_node_dir;
+  d->node->action = 'R';
+  SVN_ERR (svn_fs_node_id (&(d->node->id), eb->root, d->path->data, eb->pool));
   *child_baton = d;
 
   return SVN_NO_ERROR;
@@ -151,6 +163,7 @@ add_directory (svn_stringbuf_t *name,
   d->node = svnlook_create_child_node (pd->node, name->data, eb->pool);
   d->node->kind = svn_node_dir;
   d->node->action = 'A';
+  SVN_ERR (svn_fs_node_id (&(d->node->id), eb->root, d->path->data, eb->pool));
   *child_baton = d;
 
   return SVN_NO_ERROR;
@@ -175,6 +188,9 @@ replace_file (svn_stringbuf_t *name,
   fb->dir_baton = pd;
   fb->node = svnlook_create_child_node (pd->node, name->data, eb->pool);
   fb->node->kind = svn_node_file;
+  fb->node->action = 'R';
+  SVN_ERR (svn_fs_node_id (&(fb->node->id), eb->root, 
+                           fb->path->data, eb->pool));
   *file_baton = fb;
 
   return SVN_NO_ERROR;
@@ -201,6 +217,8 @@ add_file (svn_stringbuf_t *name,
   fb->node = svnlook_create_child_node (pd->node, name->data, eb->pool);
   fb->node->kind = svn_node_file;
   fb->node->action = 'A';
+  SVN_ERR (svn_fs_node_id (&(fb->node->id), eb->root, 
+                           fb->path->data, eb->pool));
   *file_baton = fb;
 
   return SVN_NO_ERROR;
@@ -208,26 +226,33 @@ add_file (svn_stringbuf_t *name,
 
 
 static svn_error_t *
-window_handler (svn_txdelta_window_t *window, 
-                void *baton)
+window_handler (svn_txdelta_window_t *window, void *baton)
 {
-  /* Do nothing. */
+  struct window_handler_baton *whb = baton;
+  
+  if (window != NULL)
+    whb->node->text_mod = TRUE;
+
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-apply_textdelta (void *file_baton,
+apply_textdelta (void *file_baton, 
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
-  fb->node->text_mod = TRUE;
+  struct edit_baton *eb = (struct edit_baton *) fb->dir_baton->edit_baton;
+  struct window_handler_baton *whb = apr_palloc (eb->pool, sizeof (*whb));
+
+  whb->node = fb->node;
   *handler = window_handler;
-  *handler_baton = NULL;
+  *handler_baton = whb;
 
   return SVN_NO_ERROR;
 }
+
 
 
 static svn_error_t *
@@ -255,12 +280,12 @@ change_dir_prop (void *parent_baton,
 
 
 svn_error_t *
-svnlook_rev_changes_editor (const svn_delta_edit_fns_t **editor,
-                            void **edit_baton,
-                            svn_fs_t *fs,
-                            svn_fs_root_t *root,
-                            svn_fs_root_t *base_root,
-                            apr_pool_t *pool)
+svnlook_tree_delta_editor (const svn_delta_edit_fns_t **editor,
+                           void **edit_baton,
+                           svn_fs_t *fs,
+                           svn_fs_root_t *root,
+                           svn_fs_root_t *base_root,
+                           apr_pool_t *pool)
 {
   svn_delta_edit_fns_t *my_editor;
   struct edit_baton *my_edit_baton;
@@ -290,40 +315,6 @@ svnlook_rev_changes_editor (const svn_delta_edit_fns_t **editor,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svnlook_txn_changes_editor (const svn_delta_edit_fns_t **editor,
-                            void **edit_baton,
-                            svn_fs_t *fs,
-                            svn_fs_root_t *root,
-                            apr_pool_t *pool)
-{
-  svn_delta_edit_fns_t *my_editor;
-  struct edit_baton *my_edit_baton;
-
-  /* Set up the editor. */
-  my_editor = svn_delta_default_editor (pool);
-  my_editor->replace_root        = replace_root;
-  my_editor->delete_entry        = delete_entry;
-  my_editor->add_directory       = add_directory;
-  my_editor->replace_directory   = replace_directory;
-  my_editor->add_file            = add_file;
-  my_editor->replace_file        = replace_file;
-  my_editor->apply_textdelta     = apply_textdelta;
-  my_editor->change_file_prop    = change_file_prop;
-  my_editor->change_dir_prop     = change_dir_prop;
-
-  /* Set up the edit baton. */
-  my_edit_baton = apr_pcalloc (pool, sizeof (*my_edit_baton));
-  my_edit_baton->pool = pool;
-  my_edit_baton->fs = fs;
-  my_edit_baton->root = root;
-
-  *editor = my_editor;
-  *edit_baton = my_edit_baton;
-
-  return SVN_NO_ERROR;
-}
 
 
 repos_node_t *
