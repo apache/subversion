@@ -59,7 +59,7 @@ Candidate changes:
     Justification: Follow the agreed-on rules.
     Notes: These changes plus a tweak: change SVN_VER_MINOR to 0, of course!
     Votes:
-      +1: brane, kfogel
+      +1: brane, kfogel, striker
 
   * r8756
     Turn off warnings for bad constant values in SWIG bindings.
