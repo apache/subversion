@@ -59,20 +59,7 @@
 #include <stdio.h>
 
 
-
-/* REALLY USEFUL macros for throwing errors quickly and easily! */
-#define SVN_RETURN_IF_ERROR(err) \
-	if (err) return (err); else
-
-#define SVN_RETURN_WRAPPED_ERROR(err, msg) \
-	if (err) return (svn_quick_wrap_error((err),(msg))); else
-
-
-#define SVN_SUCCESS   0
-
-#define SVN_FATAL     1    /* Use instead of TRUE or 1, for readability. */
-#define SVN_NON_FATAL 0    /* Use instead of FALSE or 0, for readability. */
-
+#define SVN_SUCCESS   0    /* What you return if you don't return error. */
 
 /* 
    Theoretically, this is the header file where we can define our own
