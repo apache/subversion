@@ -8,11 +8,12 @@ CFLAGS = -pthread
 INCLUDES = -I../../include -I../../../apr/include
 
 ## Libraries this binary depends upon:
-ra_dav_test_LDADD =   ../../tests-common/libsvn_tests_main.la   \
-                      ../../libsvn_string/libsvn_string.la      \
-                      ../../../expat-lite/libexpat.la           \
-                      ../../../neon/libneon.la                  \
-                      ../../../apr/libapr.a
+ra_dav_test_LDADD = ../libsvn_ra_dav.la      \
+                    ../../libsvn_subr/libsvn_subr.la           \
+                    ../../libsvn_string/libsvn_string.la           \
+                    ../../../expat-lite/libexpat.la           \
+                    ../../../neon/libneon.la                  \
+                    ../../../apr/libapr.a
 
 
 ## Automatic tests run by `make check` -----------------------------
