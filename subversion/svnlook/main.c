@@ -480,7 +480,7 @@ print_diff_tree (svn_fs_root_t *root,
       fflush (stdout);
 
       args[0] = SVN_CLIENT_DIFF;
-      args[1] = "-c";
+      args[1] = "-u";
       args[2] = orig_path->data;
       args[3] = new_path->data;
       args[4] = NULL;
