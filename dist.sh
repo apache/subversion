@@ -190,27 +190,42 @@ echo "Exporting revision $REVISION of Subversion into sandbox..."
      "http://svn.collab.net/repos/svn/$REPOS_PATH" \
      "$DISTNAME" --username none --password none)
 
-echo "Copying $APR_PATH into sandbox, making extraclean..."
-cp -r "$APR_PATH" "$DISTPATH/apr"
-(cd "$DISTPATH/apr" && [ -f Makefile ] && make extraclean)
-echo "Removing all CVS/ and .cvsignore files from apr..."
-find "$DISTPATH/apr" -name CVS -type d -print | xargs rm -fr
-find "$DISTPATH/apr" -name .cvsignore -print | xargs rm -f
+if [ -d "$APR_PATH/.svn" ]; then
+  echo "Exporting $APR_PATH into sandbox"
+  ${SVN:-svn} export "$APR_PATH" "$DISTPATH/apr"
+else
+  echo "Copying $APR_PATH into sandbox, making extraclean..."
+  cp -r "$APR_PATH" "$DISTPATH/apr"
+  (cd "$DISTPATH/apr" && [ -f Makefile ] && make extraclean)
+  echo "Removing all CVS/ and .cvsignore files from apr..."
+  find "$DISTPATH/apr" -name CVS -type d -print | xargs rm -fr
+  find "$DISTPATH/apr" -name .cvsignore -print | xargs rm -f
+fi
 
-echo "Copying $APRU_PATH into sandbox, making extraclean..."
-cp -r "$APRU_PATH" "$DISTPATH/apr-util"
-(cd "$DISTPATH/apr-util" && [ -f Makefile ] && make extraclean)
-echo "Removing all CVS/ and .cvsignore files from apr-util..."
-find "$DISTPATH/apr-util" -name CVS -type d -print | xargs rm -fr
-find "$DISTPATH/apr-util" -name .cvsignore -print | xargs rm -f
+if [ -d "$APRU_PATH/.svn" ]; then
+  echo "Exporting $APRU_PATH into sandbox"
+  ${SVN:-svn} export "$APRU_PATH" "$DISTPATH/apr-util"
+else
+  echo "Copying $APRU_PATH into sandbox, making extraclean..."
+  cp -r "$APRU_PATH" "$DISTPATH/apr-util"
+  (cd "$DISTPATH/apr-util" && [ -f Makefile ] && make extraclean)
+  echo "Removing all CVS/ and .cvsignore files from apr-util..."
+  find "$DISTPATH/apr-util" -name CVS -type d -print | xargs rm -fr
+  find "$DISTPATH/apr-util" -name .cvsignore -print | xargs rm -f
+fi
 
 if [ -n "$ZIP" ]; then
-  echo "Copying $APRI_PATH into sandbox, making extraclean..."
-  cp -r "$APRI_PATH" "$DISTPATH/apr-iconv"
-  (cd "$DISTPATH/apr-iconv" && [ -f Makefile ] && make extraclean)
-  echo "Removing all CVS/ and .cvsignore files from apr-iconv..."
-  find "$DISTPATH/apr-iconv" -name CVS -type d -print | xargs rm -fr
-  find "$DISTPATH/apr-iconv" -name .cvsignore -print | xargs rm -f
+  if [ -d "$APRI_PATH/.svn" ]; then
+    echo "Exporting $APRI_PATH into sandbox"
+    ${SVN:-svn} export "$APRI_PATH" "$DISTPATH/apr-iconv"
+  else
+    echo "Copying $APRI_PATH into sandbox, making extraclean..."
+    cp -r "$APRI_PATH" "$DISTPATH/apr-iconv"
+    (cd "$DISTPATH/apr-iconv" && [ -f Makefile ] && make extraclean)
+    echo "Removing all CVS/ and .cvsignore files from apr-iconv..."
+    find "$DISTPATH/apr-iconv" -name CVS -type d -print | xargs rm -fr
+    find "$DISTPATH/apr-iconv" -name .cvsignore -print | xargs rm -f
+  fi
 fi
 
 echo "Coping neon into sandbox, making clean..."
