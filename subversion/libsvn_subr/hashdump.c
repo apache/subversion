@@ -311,10 +311,11 @@ hash_read (apr_hash_t **hash,
           /* Get the length of the key */
           size_t keylen = (size_t) atoi (buf + 2);
 
-          /* Now read that many bytes into a buffer */
-          void *keybuf = apr_palloc (pool, keylen);
+          /* Now read that much into a buffer, + 1 byte for null terminator */
+          void *keybuf = apr_palloc (pool, keylen + 1);
           err = apr_full_read (srcfile, keybuf, keylen, &num_read);
           if (err) return err;
+          ((char *) keybuf)[keylen] = '\0';
 
           /* Suck up extra newline after key data */
           err = apr_getc (&c, srcfile);
@@ -331,10 +332,11 @@ hash_read (apr_hash_t **hash,
               /* Get the length of the value */
               int vallen = atoi (buf + 2);
 
-              /* Now read that many bytes into a buffer */
-              void *valbuf = apr_palloc (pool, vallen);
+              /* Again, 1 extra byte for the null termination. */
+              void *valbuf = apr_palloc (pool, vallen + 1);
               err = apr_full_read (srcfile, valbuf, vallen, &num_read);
               if (err) return err;
+              ((char *) valbuf)[vallen] = '\0';
 
               /* Suck up extra newline after val data */
               err = apr_getc (&c, srcfile);
