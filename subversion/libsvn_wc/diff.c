@@ -436,6 +436,7 @@ file_diff (struct dir_baton *dir_baton,
   const char *pristine_copy, *empty_file;
   svn_boolean_t modified;
   enum svn_wc_schedule_t schedule = entry->schedule;
+  svn_boolean_t copied = entry->copied;
   svn_wc_adm_access_t *adm_access;
   const char *pristine_mimetype, *working_mimetype;
 
@@ -446,6 +447,12 @@ file_diff (struct dir_baton *dir_baton,
      added. */
   if (added)
     schedule = svn_wc_schedule_add;
+
+  /* If the item is schedule-add *with history*, then we don't want to
+     see a comparison to the empty file;  we want the usual working
+     vs. text-base comparision. */
+  if (copied)
+    schedule = svn_wc_schedule_normal;
 
   switch (schedule)
     {
