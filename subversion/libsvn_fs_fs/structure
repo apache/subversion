@@ -212,13 +212,13 @@ Transaction layout
 
 A transaction directory has the following layout:
 
-  rev                   Protype rev file with new text reps
-  props                 Contains transaction props
-  next-ids              Contains the next temporary node-ID and copy-ID
-  changes               Contains changed-path information to date
-  <nid>.<cid>           New node-rev data for node
-  <nid>.<cid>.props     Property list for new node-rev, if changed
-  <nid>.<cid>.children  Directory contents for node-rev
+  rev                        Protype rev file with new text reps
+  props                      Transaction props
+  next-ids                   Next temporary node-ID and copy-ID
+  changes                    Changed-path information so far
+  node.<nid>.<cid>           New node-rev data for node
+  node.<nid>.<cid>.props     Props for new node-rev, if changed
+  node.<nid>.<cid>.children  Directory contents for node-rev
 
 The two kinds of props files are both in hash dump format.
 
