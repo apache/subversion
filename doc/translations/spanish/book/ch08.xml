@@ -32,78 +32,85 @@
   <!-- *** SECTION 1:  LAYERED LIBRARY DESIGN                          *** -->
   <!-- ******************************************************************* -->
   <sect1 id="svn-ch-8-sect-1">
-    <title>Layered Library Design</title>
+    <title>Diseño de librería por capas</title>
 
-    <para>Subversion has a modular design, implemented as a collection
-      of C libraries.  Each library has a well-defined purpose and
-      interface, and most modules are said to exist in one of three
-      main layers&mdash;the Repository Layer, the Repository Access
-      (RA) Layer, or the Client Layer.  We will examine these layers
-      shortly, but first, see our brief inventory of Subversion's
-      libraries in <xref linkend="svn-ch-8-table-1"/>.  For the sake
-      of consistency, we will refer to the libraries by their
-      extensionless Unix library names (e.g.: libsvn_fs, libsvn_wc,
+    <para>Subversion tiene un diseño modular, implementado como un
+      grupo de librerías en C. Cada librería tiene un
+      propósito e interfaz bien definidos, y la mayoría
+      de los módulos se puede decir que existen en una
+      de tres posibles capas&mdash;capa de repositorio,
+      capa de acceso al repositorio (RA<footnote><para>N.T.:
+      <quote>repository access</quote>.</para></footnote>), o capa
+      de cliente. Examinaremos en breve estas capas, pero antes, vea
+      un corto inventario de las librerías de Subversion en <xref
+      linkend="svn-ch-8-table-1"/>.  En aras de la consistencia,
+      nos referiremos a estas librerías por sus nombres de librería
+      Unix sin extensión (por ejemplo: libsvn_fs, libsvn_wc,
       mod_dav_svn).</para>
 
     <table id="svn-ch-8-table-1">
-      <title>A Brief Inventory of the Subversion Libraries</title>
+      <title>Un corto inventario de las librerías de Subversion</title>
       <tgroup cols="2">
         <thead>
           <row>
-            <entry>Library</entry>
-            <entry>Description</entry>
+            <entry>Librería</entry>
+            <entry>Descripción</entry>
           </row>
         </thead>
         <tbody>
           <row>
             <entry>libsvn_client</entry> 
-            <entry>Primary interface for client programs</entry>
+            <entry>Interfaz principal para programas cliente</entry>
           </row>
           <row>
             <entry>libsvn_delta</entry>
-            <entry>Tree and text differencing routines</entry>
+            <entry>Rutinas de diferenciado de árboles y texto</entry>
           </row>
           <row>
             <entry>libsvn_fs</entry>
-            <entry>The Subversion filesystem library</entry>
+            <entry>Librería del sistema de archivos de
+              Subversion</entry>
           </row>
           <row>
             <entry>libsvn_ra</entry>
-            <entry>Repository Access commons and module loader</entry>
+            <entry>Utilidades comunes de acceso al repositorio y
+              módulo cargador</entry>
           </row>
           <row>
             <entry>libsvn_ra_dav</entry>
-            <entry>The WebDAV Repository Access module</entry>
+            <entry>Módulo de acceso WebDav al repositorio</entry>
           </row>
           <row>
             <entry>libsvn_ra_local</entry>
-            <entry>The local Repository Access module</entry>
+            <entry>Módulo de acceso local al repositorio</entry>
           </row>
           <row>
             <entry>libsvn_ra_svn</entry>
-            <entry>A custom protocol Repository Access module</entry>
+            <entry>Módulo de acceso al repositorio mediante protocolo
+              personalizable</entry>
           </row>
           <row>
             <entry>libsvn_repos</entry>
-            <entry>Repository interface</entry>
+            <entry>Interfaz del repositorio</entry>
           </row>
           <row>
             <entry>libsvn_subr</entry>
-            <entry>Miscellaneous helpful subroutines</entry>
+            <entry>Miscelánea de subrutinas útiles</entry>
           </row>
           <row>
             <entry>libsvn_wc</entry>
-            <entry>The working copy management library</entry>
+            <entry>Librería para la gestión de la copia local de
+              trabajo</entry>
           </row>
           <row>
             <entry>mod_authz_svn</entry>
-            <entry>Apache authorization module for Subversion
-            repositories access via WebDAV.</entry>
+            <entry>Módulo de autorización de Apache para acceso a
+              repositorios Subversion vía WebDAV</entry>
           </row>
           <row>
             <entry>mod_dav_svn</entry>
-            <entry>Apache module for mapping WebDAV operations to
-            Subversion ones</entry>
+            <entry>Módulo Apache para relacionar operaciones WebDAV
+              con operaciones Subversion</entry>
           </row>
         </tbody>
       </tgroup>
