@@ -30,8 +30,6 @@
 #define SVN_JNI_STATUS__SIG "()V"
 #define SVN_JNI_STATUS__SET_ENTRY "setEntry"
 #define SVN_JNI_STATUS__SET_ENTRY_SIG "(Lorg/tigris/subversion/lib/Entry;)V"
-#define SVN_JNI_STATUS__SET_REPOS_REV "setReposRev"
-#define SVN_JNI_STATUS__SET_REPOS_REV_SIG "(J)V"
 #define SVN_JNI_STATUS__SET_TEXT_STATUS "setTextStatus"
 #define SVN_JNI_STATUS__SET_TEXT_STATUS_SIG "(I)V"
 #define SVN_JNI_STATUS__SET_PROP_STATUS "setPropStatus"
@@ -121,12 +119,6 @@ status__create(JNIEnv *env, svn_wc_status_t *status,
 
       if( !_hasException )
         {
-          status__set_repos_rev(env, &_hasException,
-                                jstatus, status->repos_rev);
-        }
-
-      if( !_hasException )
-        {
           status__set_text_status(env, &_hasException,
                                   jstatus, status->text_status);
         }
@@ -195,25 +187,6 @@ status__set_entry(JNIEnv *env, jboolean *hasException,
                 jstatus, jentry);
 #ifdef SVN_JNI__DEBUG_STATUS
   fprintf(stderr, "\n<<<status__set_entry\n");
-#endif
-}
-
-void
-status__set_repos_rev(JNIEnv *env, jboolean *hasException,
-                      jobject jstatus, jlong jrepos_rev)
-{
-#ifdef SVN_JNI__DEBUG_STATUS
-  fprintf(stderr, ">>>status__set_repos_rev(");
-  SVN_JNI__DEBUG_PTR(jstatus);
-  SVN_JNI__DEBUG_DEC(jrepos_rev);
-  fprintf(stderr, ")\n");
-#endif
-  j__set_long(env, hasException,
-              SVN_JNI_STATUS__CLASS, 
-              SVN_JNI_STATUS__SET_REPOS_REV,
-              jstatus, jrepos_rev);
-#ifdef SVN_JNI__DEBUG_STATUS
-  fprintf(stderr, "\n<<<status__set_repos_rev\n");
 #endif
 }
 

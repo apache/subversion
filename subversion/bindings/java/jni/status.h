@@ -34,10 +34,6 @@ status__set_entry(JNIEnv *env, jboolean *hasException,
                   jobject jstatus, jobject jentry);
 
 void
-status__set_repos_rev(JNIEnv *env, jboolean *hasException,
-                      jobject jstatus, jlong jrepos_rev);
-
-void
 status__set_text_status(JNIEnv *env, jboolean *hasException,
                         jobject jstatus, jint jtext_status);
 

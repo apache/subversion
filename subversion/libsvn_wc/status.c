@@ -128,7 +128,6 @@ assemble_status (svn_wc_status_t **status,
       /* return a blank structure. */
       stat = apr_pcalloc (pool, sizeof(*stat));
       stat->entry = NULL;
-      stat->repos_rev = SVN_INVALID_REVNUM;
       stat->text_status = svn_wc_status_none;
       stat->prop_status = svn_wc_status_none;
       stat->repos_text_status = svn_wc_status_none;
@@ -245,7 +244,6 @@ assemble_status (svn_wc_status_t **status,
 
   stat = apr_pcalloc (pool, sizeof(**status));
   stat->entry = svn_wc__entry_dup (entry, pool);
-  stat->repos_rev = SVN_INVALID_REVNUM;           /* caller fills in */
   stat->text_status = final_text_status;       
   stat->prop_status = final_prop_status;    
   stat->repos_text_status = svn_wc_status_none;   /* default */

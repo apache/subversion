@@ -716,15 +716,6 @@ wc_status_entry (VALUE self)
 }
 
 static VALUE
-wc_status_repos_rev (VALUE self)
-{
-  svn_ruby_wc_status_t *status;
-
-  Data_Get_Struct (self, svn_ruby_wc_status_t, status);
-  return LONG2NUM (status->status->repos_rev);
-}
-
-static VALUE
 wc_status_text_status (VALUE self)
 {
   svn_ruby_wc_status_t *status;
@@ -847,7 +838,6 @@ void svn_ruby_init_wc (void)
   rb_define_const (cSvnWcStatus, "MERGED", INT2FIX (svn_wc_status_merged));
   rb_define_const (cSvnWcStatus, "CONFLICTED", INT2FIX (svn_wc_status_conflicted));
   rb_define_method (cSvnWcStatus, "entry", wc_status_entry, 0);
-  rb_define_method (cSvnWcStatus, "reposRev", wc_status_repos_rev, 0);
   rb_define_method (cSvnWcStatus, "textStatus", wc_status_text_status, 0);
   rb_define_method (cSvnWcStatus, "propStatus", wc_status_prop_status, 0);
   rb_define_method (cSvnWcStatus, "locked?", wc_status_is_locked, 0);

@@ -257,7 +257,6 @@ enum svn_wc_status_kind
 typedef struct svn_wc_status_t
 {
   svn_wc_entry_t *entry;     /* Can be NULL if not under vc. */
-  svn_revnum_t repos_rev;    /* Head repos rev; can be SVN_INVALID_REVNUM */
   
   /* Mutually exclusive states. One of these will always be set for
      the "textual" component and one will be set for the "property"
