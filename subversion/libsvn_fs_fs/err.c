@@ -269,6 +269,19 @@ svn_fs_fs__err_bad_lock_token (svn_fs_t *fs, const char *lock_token)
 
 
 svn_error_t *
+svn_fs_fs__err_invalid_lockfile (svn_fs_t *fs,
+                                 const char *field,
+                                 const char *path)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_INVALID_LOCKFILE, 0,
+     _("Error reading %s field from lockfile for '%s' in filesystem '%s'"),
+     field, path, fs->path);
+}
+
+
+svn_error_t *
 svn_fs_fs__err_not_file (svn_fs_t *fs, const char *path)
 {
   return

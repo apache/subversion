@@ -113,6 +113,11 @@ svn_error_t *svn_fs_fs__err_not_directory (svn_fs_t *fs, const char *path);
 svn_error_t *svn_fs_fs__err_bad_lock_token (svn_fs_t *fs,
                                             const char *lock_token);
 
+/* SVN_ERR_FS_INVALID_LOCKFILE: LOCK_FILE on disk is incomplete or corrupt. */
+svn_error_t *svn_fs_fs__err_invalid_lockfile (svn_fs_t *fs,
+                                              const char *field,
+                                              const char *path);
+
 /* SVN_ERR_FS_NO_USER: FS does not have a user associated with it. */
 svn_error_t *svn_fs_fs__err_no_user (svn_fs_t *fs);
 

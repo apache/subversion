@@ -525,27 +525,35 @@ read_lock_from_abs_path (svn_lock_t **lock_p,
   lock = apr_palloc (pool, sizeof (*lock));
 
   val = hash_fetch (hash, PATH_KEY, pool);
-  if (val)
-    lock->path = val;
+  if (!val)
+    return svn_fs_fs__err_invalid_lockfile (fs, PATH_KEY, abs_path);
+  lock->path = val;
 
   val = hash_fetch (hash, TOKEN_KEY, pool);
-  if (val)
-    lock->token = val;
+  if (!val)
+    return svn_fs_fs__err_invalid_lockfile (fs, TOKEN_KEY, abs_path);
+  lock->token = val;
 
   val = hash_fetch (hash, OWNER_KEY, pool);
-  if (val)
-    lock->owner = val;
+  if (!val)
+    return svn_fs_fs__err_invalid_lockfile (fs, OWNER_KEY, abs_path);
+  lock->owner = val;
 
   val = hash_fetch (hash, COMMENT_KEY, pool);
   if (val)
     lock->comment = val;
+  else /* Comment optional. */
+    lock->comment = NULL;
 
   val = hash_fetch (hash, CREATION_DATE_KEY, pool);
-  if (val)
-    svn_time_from_cstring (&(lock->creation_date), val, pool);
+  if (!val)
+    return svn_fs_fs__err_invalid_lockfile (fs, CREATION_DATE_KEY, abs_path);
+  svn_time_from_cstring (&(lock->creation_date), val, pool);
 
   val = hash_fetch (hash, EXPIRATION_DATE_KEY, pool);
-  if (val)
+  if (!val || val == 0) /* No expiration date. */
+    lock->expiration_date = 0;
+  else
     svn_time_from_cstring (&(lock->expiration_date), val, pool);
 
   *lock_p = lock;

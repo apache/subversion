@@ -545,6 +545,10 @@ SVN_ERROR_START
               SVN_ERR_FS_CATEGORY_START + 41,
               "Item is out of date")
 
+  SVN_ERRDEF (SVN_ERR_FS_INVALID_LOCKFILE,
+              SVN_ERR_FS_CATEGORY_START + 42,
+              "Item is out of date")
+
 
   /* repos errors */
 
