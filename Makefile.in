@@ -132,7 +132,7 @@ check: $(TEST_DEPS) @FS_TEST_DEPS@
 	    echo >> $$logfile ; \
 	done ; \
 	if test "$$failed" = "yes"; then \
-	    grep FAIL $$logfile || /bin/true ; \
+	    grep FAIL $$logfile || true ; \
 	fi
 
 mkdir-init:
