@@ -42,7 +42,7 @@ Init_svn (void)
   svn_ruby_init_repos ();
 
   svn_ruby_init_ra ();
-  svn_ruby_init_wc ();
 #endif
+  svn_ruby_init_wc ();
   svn_ruby_init_client ();
 }

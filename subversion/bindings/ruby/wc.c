@@ -16,6 +16,7 @@
 #include <ruby.h>
 #include <svn_string.h>
 #include <svn_pools.h>
+#include <svn_path.h>
 #include <svn_wc.h>
 
 #include "svn_ruby.h"
@@ -27,13 +28,15 @@ static VALUE cSvnWcStatus, cSvnWcEntry;
 
 typedef struct svn_ruby_wc_entry_t
 {
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
+  const char *dir_path;
   apr_pool_t *pool;
 } svn_ruby_wc_entry_t;
 
 typedef struct svn_ruby_wc_status_t
 {
   svn_wc_status_t *status;
+  const char *dir_path;
   apr_pool_t *pool;
 } svn_ruby_wc_status_t;
 
@@ -44,19 +47,16 @@ static VALUE
 check_wc (VALUE self, VALUE aPath)
 {
   svn_stringbuf_t *path;
-  int is_wc;
+  svn_boolean_t is_wc;
   apr_pool_t *pool;
-  svn_error_t *err;
 
   Check_Type (aPath, T_STRING);
+
   pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_wc_check_wc (path, &is_wc, pool);
 
-  apr_pool_destroy (pool);
+  SVN_RB_ERR (svn_wc_check_wc (StringValuePtr (aPath), &is_wc, pool), pool);
 
-  if (err)
-    svn_ruby_raise (err);
+  svn_pool_destroy (pool);
 
   if (is_wc)
     return Qtrue;
@@ -70,17 +70,14 @@ wc_has_binary_prop (VALUE self, VALUE aPath)
   svn_stringbuf_t *path;
   svn_boolean_t has_binary_prop;
   apr_pool_t *pool;
-  svn_error_t *err;
 
   Check_Type (aPath, T_STRING);
+
   pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_wc_has_binary_prop (&has_binary_prop, path, pool);
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+
+  SVN_RB_ERR (svn_wc_has_binary_prop (&has_binary_prop, StringValuePtr (aPath), 
+                                      pool),
+              pool);
 
   if (has_binary_prop)
     return Qtrue;
@@ -94,17 +91,20 @@ text_modified_p (VALUE self, VALUE aFilename)
   svn_stringbuf_t *filename;
   svn_boolean_t modified_p;
   apr_pool_t *pool;
-  svn_error_t *err;
+  svn_wc_adm_access_t *adm_access;
 
   Check_Type (aFilename, T_STRING);
+
   pool = svn_pool_create (NULL);
-  filename = svn_stringbuf_create (StringValuePtr (aFilename), pool);
-  err = svn_wc_text_modified_p (&modified_p, filename, pool);
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+
+  SVN_RB_ERR (svn_wc_adm_probe_open (&adm_access, NULL,
+                                     StringValuePtr (aFilename), FALSE, FALSE,
+                                     pool),
+              pool);
+
+  SVN_RB_ERR (svn_wc_text_modified_p (&modified_p, StringValuePtr (aFilename), 
+                                      adm_access, pool),
+              pool);
 
   if (modified_p)
     return Qtrue;
@@ -118,17 +118,19 @@ props_modified_p (VALUE self, VALUE aPath)
   svn_stringbuf_t *path;
   svn_boolean_t modified_p;
   apr_pool_t *pool;
-  svn_error_t *err;
+  svn_wc_adm_access_t *adm_access;
 
   Check_Type (aPath, T_STRING);
+
   pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_wc_props_modified_p (&modified_p, path, pool);
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+
+  SVN_RB_ERR (svn_wc_adm_probe_open (&adm_access, NULL, StringValuePtr (aPath), 
+                                     FALSE, FALSE, pool),
+              pool);
+
+  SVN_RB_ERR (svn_wc_props_modified_p (&modified_p, StringValuePtr (aPath), 
+                                       adm_access, pool),
+              pool);
 
   if (modified_p)
     return Qtrue;
@@ -141,22 +143,19 @@ prop_list (VALUE class, VALUE aPath)
 {
   apr_hash_t *table;
   apr_pool_t *pool;
-  svn_error_t *err;
 
   Check_Type (aPath, T_STRING);
+
   pool = svn_pool_create (NULL);
-  err = svn_wc_prop_list (&table, StringValuePtr (aPath), pool);
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+
+  SVN_RB_ERR (svn_wc_prop_list (&table, StringValuePtr (aPath), pool), pool);
   
   {
     VALUE obj;
     apr_hash_index_t *hi;
 
     obj = rb_hash_new ();
+
     for (hi = apr_hash_first (pool, table); hi; hi = apr_hash_next (hi))
       {
         const void *key;
@@ -169,7 +168,9 @@ prop_list (VALUE class, VALUE aPath)
         rb_hash_aset (obj, rb_str_new (key, key_len),
                       rb_str_new (str->data, str->len));
       }
-    apr_pool_destroy (pool);
+
+    svn_pool_destroy (pool);
+
     return obj;
   }
 }
@@ -179,20 +180,15 @@ wc_prop_get (VALUE class, VALUE aName, VALUE aPath)
 {
   const svn_string_t *value;
   apr_pool_t *pool;
-  svn_error_t *err;
 
   Check_Type (aName, T_STRING);
   Check_Type (aPath, T_STRING);
 
   pool = svn_pool_create (NULL);
-  err = svn_wc_prop_get (&value, StringValuePtr (aName),
-                         StringValuePtr(aPath), pool);
 
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_wc_prop_get (&value, StringValuePtr (aName),
+                               StringValuePtr (aPath), pool),
+              pool);
 
   return rb_str_new (value->data, value->len);
 }
@@ -202,23 +198,24 @@ wc_prop_set (VALUE class, VALUE aName, VALUE aValue, VALUE aPath)
 {
   const svn_string_t *value;
   apr_pool_t *pool;
-  svn_error_t *err;
+  svn_wc_adm_access_t *adm_access;
 
   Check_Type (aName, T_STRING);
   Check_Type (aValue, T_STRING);
   Check_Type (aPath, T_STRING);
 
   pool = svn_pool_create (NULL);
-  value = svn_string_ncreate (StringValuePtr (aValue),
-                              RSTRING (aValue)->len, pool);
-  err = svn_wc_prop_set (StringValuePtr (aName), value,
-                         StringValuePtr (aPath), pool);
 
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_wc_adm_probe_open (&adm_access, NULL, StringValuePtr (aPath), 
+                                     TRUE, FALSE, pool),
+              pool);
+
+  value = svn_string_ncreate (StringValuePtr (aValue), RSTRING (aValue)->len,
+                              pool);
+
+  SVN_RB_ERR (svn_wc_prop_set (StringValuePtr (aName), value,
+                               StringValuePtr (aPath), adm_access, pool),
+              pool);
 
   return rb_str_new (value->data, value->len);
 }
@@ -229,6 +226,7 @@ is_wc_prop (VALUE class, VALUE aPath)
   svn_boolean_t wc_p;
 
   Check_Type (aPath, T_STRING);
+
   wc_p = svn_wc_is_wc_prop (StringValuePtr (aPath));
 
   if (wc_p)
@@ -240,23 +238,21 @@ is_wc_prop (VALUE class, VALUE aPath)
 static VALUE
 wc_get_pristine_copy_path (VALUE class, VALUE aPath)
 {
-  svn_stringbuf_t *path, *pristine_path;
+  const char *pristine_path;
   apr_pool_t *pool;
-  svn_error_t *err;
   VALUE obj;
 
   Check_Type (aPath, T_STRING);
-  pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_wc_get_pristine_copy_path (path, &pristine_path, pool);
 
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
-  obj = rb_str_new (pristine_path->data, pristine_path->len);
-  apr_pool_destroy (pool);
+  pool = svn_pool_create (NULL);
+
+  SVN_RB_ERR (svn_wc_get_pristine_copy_path (StringValuePtr (aPath),
+                                             &pristine_path, pool),
+              pool);
+
+  obj = rb_str_new (pristine_path, strlen(pristine_path));
+
+  svn_pool_destroy (pool);
 
   return obj;
 }
@@ -264,40 +260,55 @@ wc_get_pristine_copy_path (VALUE class, VALUE aPath)
 static VALUE
 wc_cleanup (VALUE class, VALUE aPath)
 {
-  svn_stringbuf_t *path;
+  svn_wc_adm_access_t *adm_access;
   apr_pool_t *pool;
-  svn_error_t *err;
 
   Check_Type (aPath, T_STRING);
-  pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_wc_cleanup (path, pool);
-  apr_pool_destroy (pool);
 
-  if (err)
-    svn_ruby_raise (err);
+  pool = svn_pool_create (NULL);
+
+  SVN_RB_ERR (svn_wc_adm_probe_open (&adm_access, NULL, StringValuePtr (aPath),
+                                     FALSE, FALSE, pool),
+              pool);
+
+  SVN_RB_ERR (svn_wc_cleanup (StringValuePtr (aPath), adm_access, pool), pool);
+
+  svn_pool_destroy (pool);
 
   return Qnil;
 }
 
+#if 0
 static VALUE
 wc_revert (VALUE class, VALUE aPath, VALUE recursive)
 {
-  svn_stringbuf_t *path;
+  svn_wc_adm_access_t *adm_access;
   apr_pool_t *pool;
-  svn_error_t *err;
 
   Check_Type (aPath, T_STRING);
-  pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_wc_revert (path, RTEST (recursive), NULL, NULL, pool);
-  apr_pool_destroy (pool);
 
-  if (err)
-    svn_ruby_raise (err);
+  pool = svn_pool_create (NULL);
+
+  /* XXX this is wrong.  see the code in svn_client_revert to see what we need 
+   * to be doing to get the correct adm_access baton.  i'm not going to bother 
+   * at this point since you can just as well use Svn::Client::Revert instead 
+   * for the time being.  at some point, we might want to do something funky to 
+   * give one access to the notification callbacks or something, but for now 
+   * it's just not worth the trouble. */
+
+  SVN_RB_ERR (svn_wc_adm_probe_open (&adm_access, NULL, StringValuePtr (aPath),
+                                     FALSE, FALSE, pool),
+              pool);
+
+  SVN_RB_ERR (svn_wc_revert (StringValuePtr (aPath), adm_access,
+                             RTEST (recursive), NULL, NULL, pool),
+              pool);
+
+  svn_pool_destroy (pool);
 
   return Qnil;
 }
+#endif
 
 
 /* WcEntry */
@@ -306,49 +317,55 @@ static void
 free_wc_entry (void *p)
 {
   svn_ruby_wc_entry_t *entry = p;
+
   long count = svn_ruby_get_refcount (entry->pool);
+
   if (count == 1)
-    apr_pool_destroy (entry->pool);
+    svn_pool_destroy (entry->pool);
   else
     svn_ruby_set_refcount (entry->pool, count - 1);
+
   free (entry);
 }
 
 static VALUE
-wc_entry_new (VALUE class, svn_wc_entry_t *entry, apr_pool_t *pool)
+wc_entry_new (VALUE class, const svn_wc_entry_t *entry, const char *dir_path,
+              apr_pool_t *pool)
 {
   svn_ruby_wc_entry_t *rb_entry;
+
   VALUE obj = Data_Make_Struct (class, svn_ruby_wc_entry_t, 0, free_wc_entry,
                                 rb_entry);
+
   rb_entry->entry = entry;
   rb_entry->pool = pool;
+  rb_entry->dir_path = apr_pstrdup (pool, dir_path);
 
   return obj;
 }
 
 
 static VALUE
-wc_entry_create (VALUE class, VALUE aPath)
+wc_entry_create (VALUE class, VALUE aPath, VALUE show_deleted)
 {
-  svn_wc_entry_t *entry;
-  svn_stringbuf_t *path;
+  const svn_wc_entry_t *entry;
+  svn_wc_adm_access_t *adm_access;
   apr_pool_t *pool;
-
-  svn_error_t *err;
   VALUE obj;
 
   Check_Type (aPath, T_STRING);
+
   pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_wc_entry (&entry, path, pool);
 
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_wc_adm_probe_open (&adm_access, NULL, StringValuePtr (aPath),
+                                     FALSE, FALSE, pool),
+              pool);
 
-  obj = wc_entry_new (class, entry, pool);
+  SVN_RB_ERR (svn_wc_entry (&entry, StringValuePtr (aPath), adm_access, 
+                            RTEST (show_deleted), pool),
+              pool);
+
+  obj = wc_entry_new (class, entry, StringValuePtr (aPath), pool);
   svn_ruby_set_refcount (pool, 1);
   rb_iv_set (obj, "@path", aPath);
 
@@ -359,6 +376,7 @@ static VALUE
 wc_entry_revision (VALUE self)
 {
   svn_ruby_wc_entry_t *entry;
+
   Data_Get_Struct (self, svn_ruby_wc_entry_t, entry);
 
   return LONG2NUM (entry->entry->revision);
@@ -368,21 +386,24 @@ static VALUE
 wc_entry_url (VALUE self)
 {
   svn_ruby_wc_entry_t *entry;
-  svn_stringbuf_t *url;
+  const char *url;
+
   Data_Get_Struct (self, svn_ruby_wc_entry_t, entry);
+
   url = entry->entry->url;
 
   if (!url)
     rb_raise (rb_eRuntimeError,
               "you need to create complete WcEntry object");
 
-  return rb_str_new (url->data, url->len);
+  return rb_str_new (url, strlen(url));
 }
 
 static VALUE
 wc_entry_node_kind (VALUE self)
 {
   svn_ruby_wc_entry_t *entry;
+
   Data_Get_Struct (self, svn_ruby_wc_entry_t, entry);
 
   return LONG2FIX (entry->entry->kind);
@@ -392,6 +413,7 @@ static VALUE
 wc_entry_schedule (VALUE self)
 {
   svn_ruby_wc_entry_t *entry;
+
   Data_Get_Struct (self, svn_ruby_wc_entry_t, entry);
 
   return LONG2FIX (entry->entry->schedule);
@@ -401,9 +423,17 @@ static VALUE
 wc_entry_conflicted (VALUE self)
 {
   svn_ruby_wc_entry_t *entry;
+  svn_boolean_t text_conf;
+  svn_boolean_t prop_conf;
+  const char *dir_path;
+
   Data_Get_Struct (self, svn_ruby_wc_entry_t, entry);
 
-  if (entry->entry->conflicted)
+  SVN_RB_ERR (svn_wc_conflicted_p (&text_conf, &prop_conf, entry->dir_path,
+                                   entry->entry, entry->pool),
+              NULL);
+
+  if (text_conf || prop_conf)
     return Qtrue;
   else
     return Qfalse;
@@ -413,6 +443,7 @@ static VALUE
 wc_entry_copied (VALUE self)
 {
   svn_ruby_wc_entry_t *entry;
+
   Data_Get_Struct (self, svn_ruby_wc_entry_t, entry);
 
   if (entry->entry->copied)
@@ -426,9 +457,11 @@ wc_entry_text_time (VALUE self)
 {
   svn_ruby_wc_entry_t *entry;
   apr_time_t text_time;
+
   Data_Get_Struct (self, svn_ruby_wc_entry_t, entry);
 
   text_time = entry->entry->text_time;
+
   if (!text_time)
     return Qnil;
   else
@@ -441,9 +474,11 @@ wc_entry_prop_time (VALUE self)
 {
   svn_ruby_wc_entry_t *entry;
   apr_time_t prop_time;
+
   Data_Get_Struct (self, svn_ruby_wc_entry_t, entry);
 
   prop_time = entry->entry->prop_time;
+
   if (!prop_time)
     return Qnil;
   else
@@ -451,6 +486,8 @@ wc_entry_prop_time (VALUE self)
                         prop_time % APR_USEC_PER_SEC);
 }
 
+#if 0
+/* XXX i'm not sure what this function is supposed to be doing... */
 static VALUE
 wc_entry_attributes (VALUE self)
 {
@@ -483,30 +520,30 @@ wc_entry_attributes (VALUE self)
         rb_hash_aset (obj, rb_str_new (key, key_len),
                       rb_str_new (value->data, value->len));
       }
-    apr_pool_destroy (pool);
+    svn_pool_destroy (pool);
     return obj;
   }
 }
+#endif
 
 static VALUE
-wc_entry_entries_read (VALUE class, VALUE aPath)
+wc_entry_entries_read (VALUE class, VALUE aPath, VALUE show_deleted)
 {
   apr_hash_t *entries;
-  svn_stringbuf_t *path;
+  svn_wc_adm_access_t *adm_access;
   apr_pool_t *pool;
 
-  svn_error_t *err;
-
   Check_Type (aPath, T_STRING);
-  pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_wc_entries_read (&entries, path, pool);
 
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  pool = svn_pool_create (NULL);
+
+  SVN_RB_ERR (svn_wc_adm_open (&adm_access, NULL, StringValuePtr (aPath),
+                               FALSE, FALSE, pool),
+              pool);
+
+  SVN_RB_ERR (svn_wc_entries_read (&entries, adm_access, RTEST (show_deleted),
+                                   pool),
+              pool);
 
   {
     VALUE obj;
@@ -515,6 +552,7 @@ wc_entry_entries_read (VALUE class, VALUE aPath)
     apr_pool_t *subpool = svn_pool_create (pool);
 
     obj = rb_hash_new ();
+
     for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
       {
         const void *key;
@@ -526,11 +564,15 @@ wc_entry_entries_read (VALUE class, VALUE aPath)
         entry = (svn_wc_entry_t *) val;
         count++;
         rb_hash_aset (obj, rb_str_new (key, key_len),
-                      wc_entry_new (class, entry, pool));
+                      wc_entry_new (class, entry,
+                                    svn_path_join (StringValuePtr (aPath),
+                                                   entry->name, pool),
+                                    pool));
       }
 
     svn_ruby_set_refcount (pool, count);
-    apr_pool_destroy (subpool);
+    svn_pool_destroy (subpool);
+
     return obj;
   }
 }
@@ -539,33 +581,31 @@ static VALUE
 wc_entry_conflicted_p (VALUE self)
 {
   svn_boolean_t text_conflicted_p, prop_conflicted_p;
-  svn_stringbuf_t *dir_path;
   apr_pool_t *pool;
-  svn_error_t *err;
 
   svn_ruby_wc_entry_t *entry;
   VALUE obj, aPath;
 
   Data_Get_Struct (self, svn_ruby_wc_entry_t, entry);
+
   pool = svn_pool_create (NULL);
+
   aPath = rb_iv_get (self, "@path");
   /* Should we use svn function or ruby method? */
   if (entry->entry->kind == svn_node_file)
     aPath = rb_funcall (rb_cFile, rb_intern ("dirname"), 1, aPath);
-  dir_path = svn_stringbuf_create (StringValuePtr (aPath), pool);
-  err = svn_wc_conflicted_p (&text_conflicted_p, &prop_conflicted_p,
-                             dir_path, entry->entry, pool);
 
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_wc_conflicted_p (&text_conflicted_p, &prop_conflicted_p,
+                                   StringValuePtr (aPath), entry->entry, pool),
+              pool);
 
   obj = rb_ary_new2 (2);
+
   rb_ary_store (obj, 0, text_conflicted_p ? Qtrue : Qfalse);
   rb_ary_store (obj, 1, prop_conflicted_p ? Qtrue : Qfalse);
-  apr_pool_destroy (pool);
+
+  svn_pool_destroy (pool);
+
   return obj;
 }
 
@@ -579,21 +619,23 @@ free_wc_status (void *p)
   long count = svn_ruby_get_refcount (status->pool);
 
   if (count == 1)
-    apr_pool_destroy (status->pool);
+    svn_pool_destroy (status->pool);
   else
     svn_ruby_set_refcount (status->pool, count - 1);
   free (status);
 }
 
 static VALUE
-wc_status_new (svn_wc_status_t *status, apr_pool_t *pool)
+wc_status_new (svn_wc_status_t *status, const char *dir_path, apr_pool_t *pool)
 {
   VALUE obj;
   svn_ruby_wc_status_t *rb_status;
 
-  obj = Data_Make_Struct (cSvnWcStatus, svn_ruby_wc_status_t, 0, free_wc_status,
-                          rb_status);
+  obj = Data_Make_Struct (cSvnWcStatus, svn_ruby_wc_status_t, 0,
+                          free_wc_status, rb_status);
+
   rb_status->status = status;
+  rb_status->dir_path = apr_pstrdup (pool, dir_path);
   rb_status->pool = pool;
 
   return obj;
@@ -603,25 +645,24 @@ static VALUE
 wc_status (VALUE class, VALUE aPath)
 {
   svn_wc_status_t *status;
-  svn_stringbuf_t *path;
+  svn_wc_adm_access_t *adm_access;
   apr_pool_t *pool;
 
-  svn_error_t *err;
-
   Check_Type (aPath, T_STRING);
+
   pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
 
-  err = svn_wc_status (&status, path, pool);
+  SVN_RB_ERR (svn_wc_adm_probe_open (&adm_access, NULL, StringValuePtr (aPath), 
+                                     FALSE, FALSE, pool),
+              pool);
 
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_wc_status (&status, StringValuePtr (aPath), adm_access,
+                             pool),
+              pool);
 
   svn_ruby_set_refcount (pool, 1);
-  return wc_status_new (status, pool);
+
+  return wc_status_new (status, StringValuePtr (aPath), pool);
 }
 
 /* Public interface.  client.c will use this.
@@ -640,7 +681,9 @@ svn_ruby_wc_to_statuses (apr_hash_t *statushash, apr_pool_t *pool)
   long count = 0;
 
   subpool = svn_pool_create (pool);
+
   obj = rb_hash_new ();
+
   for (hi = apr_hash_first (subpool, statushash); hi; hi = apr_hash_next (hi))
     {
       const void *key;
@@ -651,37 +694,40 @@ svn_ruby_wc_to_statuses (apr_hash_t *statushash, apr_pool_t *pool)
       apr_hash_this (hi, &key, &key_len, &val);
       status = (svn_wc_status_t *) val;
       count++;
+
       rb_hash_aset (obj, rb_str_new (key, key_len),
-                    wc_status_new (status, pool));
+                    wc_status_new (status, key, pool));
     }
 
   svn_ruby_set_refcount (pool, count);
-  apr_pool_destroy (subpool);
+
+  svn_pool_destroy (subpool);
+
   return obj;
 }
 
 static VALUE
-wc_statuses (VALUE class, VALUE aPath, VALUE descend, VALUE get_all, VALUE strict)
+wc_statuses (VALUE class, VALUE aPath, VALUE descend, VALUE get_all,
+             VALUE no_ignore)
 {
   apr_hash_t *statushash;
-  svn_stringbuf_t *path;
+  svn_wc_adm_access_t *adm_access;
   apr_pool_t *pool;
 
-  svn_error_t *err;
-
   Check_Type (aPath, T_STRING);
+
   pool = svn_pool_create (NULL);
-  path = svn_stringbuf_create (StringValuePtr (aPath), pool);
+
   statushash = apr_hash_make (pool);
 
-  err = svn_wc_statuses (statushash, path,
-                         RTEST (descend), RTEST (get_all),
-                         RTEST (strict), pool);
-  if (err)
-    {
-      apr_pool_destroy (pool);
-      svn_ruby_raise (err);
-    }
+  SVN_RB_ERR (svn_wc_adm_probe_open (&adm_access, NULL, StringValuePtr (aPath), 
+                                     FALSE, TRUE, pool),
+              pool);
+
+  SVN_RB_ERR (svn_wc_statuses (statushash, StringValuePtr (aPath), adm_access,
+                               RTEST (descend), RTEST (get_all),
+                               RTEST (no_ignore), NULL, NULL, pool),
+              pool);
 
   return svn_ruby_wc_to_statuses (statushash, pool);
 }
@@ -700,7 +746,8 @@ wc_status_entry (VALUE self)
       VALUE obj;
       long count;
 
-      obj = wc_entry_new (cSvnWcEntry, status->status->entry, status->pool);
+      obj = wc_entry_new (cSvnWcEntry, status->status->entry, status->dir_path,
+                          status->pool);
       count = svn_ruby_get_refcount (status->pool);
       svn_ruby_set_refcount (status->pool, count + 1);
 
@@ -714,6 +761,7 @@ wc_status_text_status (VALUE self)
   svn_ruby_wc_status_t *status;
 
   Data_Get_Struct (self, svn_ruby_wc_status_t, status);
+
   return INT2FIX (status->status->text_status);
 }
 
@@ -723,6 +771,7 @@ wc_status_prop_status (VALUE self)
   svn_ruby_wc_status_t *status;
 
   Data_Get_Struct (self, svn_ruby_wc_status_t, status);
+
   return INT2FIX (status->status->prop_status);
 }
 
@@ -732,6 +781,7 @@ wc_status_is_locked (VALUE self)
   svn_ruby_wc_status_t *status;
 
   Data_Get_Struct (self, svn_ruby_wc_status_t, status);
+
   return status->status->locked ? Qtrue : Qfalse;
 }
 
@@ -741,6 +791,7 @@ wc_status_repos_text_status (VALUE self)
   svn_ruby_wc_status_t *status;
 
   Data_Get_Struct (self, svn_ruby_wc_status_t, status);
+
   return INT2FIX (status->status->repos_text_status);
 }
 
@@ -750,6 +801,7 @@ wc_status_repos_prop_status (VALUE self)
   svn_ruby_wc_status_t *status;
 
   Data_Get_Struct (self, svn_ruby_wc_status_t, status);
+
   return INT2FIX (status->status->repos_prop_status);
 }
 
@@ -777,11 +829,11 @@ void svn_ruby_init_wc (void)
   rb_define_singleton_method (cSvnWc, "getPristineCopyPath",
 			      wc_get_pristine_copy_path, 1);
   rb_define_singleton_method (cSvnWc, "cleanup", wc_cleanup, 1);
-  rb_define_singleton_method (cSvnWc, "revert", wc_revert, 2);
+  /* rb_define_singleton_method (cSvnWc, "revert", wc_revert, 2); */
 
   cSvnWcEntry = rb_define_class_under (svn_ruby_mSvn, "WcEntry", rb_cObject);
-  rb_define_singleton_method (cSvnWcEntry, "new", wc_entry_create, 1);
-  rb_define_singleton_method (cSvnWcEntry, "entries", wc_entry_entries_read, 1);
+  rb_define_singleton_method (cSvnWcEntry, "new", wc_entry_create, 2);
+  rb_define_singleton_method (cSvnWcEntry, "entries", wc_entry_entries_read, 2);
   rb_define_const (cSvnWcEntry, "SCHEDULE_NORMAL",
                    INT2NUM (svn_wc_schedule_normal));
   rb_define_const (cSvnWcEntry, "SCHEDULE_ADD",
@@ -799,7 +851,7 @@ void svn_ruby_init_wc (void)
   rb_define_method (cSvnWcEntry, "copied?", wc_entry_copied, 0);
   rb_define_method (cSvnWcEntry, "textTime", wc_entry_text_time, 0);
   rb_define_method (cSvnWcEntry, "propTime", wc_entry_prop_time, 0);
-  rb_define_method (cSvnWcEntry, "attributes", wc_entry_attributes, 0);
+  /* rb_define_method (cSvnWcEntry, "attributes", wc_entry_attributes, 0); */
   rb_define_method (cSvnWcEntry, "conflicted?", wc_entry_conflicted_p, 0);
   cSvnWcStatus = rb_define_class_under (svn_ruby_mSvn, "WcStatus", rb_cObject);
   rb_define_singleton_method (cSvnWcStatus, "new", wc_status, 1);

@@ -57,6 +57,7 @@ cl_prompt (char **info,
     svn_error_createf
       (APR_EGENERAL, 0, 0,
        "Authentication is required but no block is given to get user data");
+
   obj = rb_protect (svn_ruby_protect_call2, (VALUE) args, &error);
 
   if (error)
@@ -67,6 +68,7 @@ cl_prompt (char **info,
                              "auth block must return string object");
 
   *info = apr_pstrdup (pool, StringValuePtr (obj));
+
   return SVN_NO_ERROR;
 }
 
@@ -74,6 +76,7 @@ static svn_opt_revision_t
 parse_revision (VALUE revOrDate)
 {
   svn_opt_revision_t revision;
+
   if (rb_obj_is_kind_of (revOrDate, rb_cTime) == Qtrue)
     {
       time_t sec, usec;
@@ -89,6 +92,7 @@ parse_revision (VALUE revOrDate)
       revision.kind = svn_opt_revision_number;
       revision.value.number = NUM2LONG (revOrDate);
     }
+
   return revision;
 }
 
@@ -96,13 +100,14 @@ parse_revision (VALUE revOrDate)
 static VALUE
 commit_info_to_array (svn_client_commit_info_t *commit_info)
 {
-  VALUE obj;
-  obj = rb_ary_new2 (3);
+  VALUE obj = rb_ary_new2 (3);
+
   rb_ary_store (obj, 0, INT2NUM (commit_info->revision));
   rb_ary_store (obj, 1,
                 commit_info->date ? rb_str_new2 (commit_info->date) : Qnil);
   rb_ary_store (obj, 2,
                 commit_info->author ? rb_str_new2 (commit_info->author) : Qnil);
+
   return obj;
 }
 
@@ -121,8 +126,10 @@ cl_new (int argc, VALUE *argv, VALUE class)
   svn_client_auth_baton_t *auth_baton;
 
   rb_scan_args (argc, argv, "00&", &auth);
+
   obj = Data_Make_Struct (class, svn_client_auth_baton_t, 0, free_cl,
                           auth_baton);
+
   auth_baton->prompt_callback = cl_prompt;
   auth_baton->prompt_baton = (void *) auth;
   rb_iv_set (obj, "@auth", auth);
@@ -139,11 +146,14 @@ cl_checkout (int argc, VALUE *argv, VALUE self)
   apr_pool_t *pool;
 
   rb_scan_args (argc, argv, "3*", &aURL, &aPath, &aRevOrTime, &rest);
+
   Check_Type (aURL, T_STRING);
   Check_Type (aPath, T_STRING);
+
   revision = parse_revision (aRevOrTime);
   
   pool = svn_pool_create (NULL);
+
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
 
   /* XXX svn_path_canonicalize_nts doesn't do a very good job of making a 
@@ -170,7 +180,9 @@ cl_update (int argc, VALUE *argv, VALUE self)
   apr_pool_t *pool;
 
   rb_scan_args (argc, argv, "3*", &aPath, &aRevOrTime, &recurse, &rest);
+
   Check_Type (aPath, T_STRING);
+
   revision = parse_revision (aRevOrTime);
 
   pool = svn_pool_create (NULL);
@@ -193,6 +205,7 @@ cl_add (VALUE class, VALUE aPath, VALUE recursive)
   apr_pool_t *pool;
 
   Check_Type (aPath, T_STRING);
+
   pool = svn_pool_create (NULL);
 
   SVN_RB_ERR (svn_client_add (svn_path_canonicalize_nts (StringValuePtr (aPath),
@@ -215,6 +228,7 @@ cl_mkdir (int argc, VALUE *argv, VALUE self)
   apr_pool_t *pool;
 
   rb_scan_args (argc, argv, "11", &aPath, &aMessage);
+
   Check_Type (aPath, T_STRING);
   if (aMessage != Qnil)
     Check_Type (aMessage, T_STRING);
@@ -253,9 +267,11 @@ cl_delete (int argc, VALUE *argv, VALUE self)
   apr_pool_t *pool;
 
   rb_scan_args (argc, argv, "21", &aPath, &force, &aMessage);
+
   Check_Type (aPath, T_STRING);
   if (aMessage != Qnil)
     Check_Type (aMessage, T_STRING);
+
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
 
   pool = svn_pool_create (NULL);
@@ -299,6 +315,7 @@ cl_import (int argc, VALUE *argv, VALUE self)
   apr_pool_t *pool;
 
   rb_scan_args (argc, argv, "3*", &aURL, &aPath, &aEntry, &rest);
+
   Check_Type (aURL, T_STRING);
   Check_Type (aPath, T_STRING);
   if (aEntry != Qnil)
@@ -336,14 +353,18 @@ cl_commit (int argc, VALUE *argv, VALUE self)
   int i;
 
   rb_scan_args (argc, argv, "1*", &aTargets, &rest);
+
   Check_Type (aTargets, T_ARRAY);
   for (i = 0; i < RARRAY (aTargets)->len; i++)
     Check_Type (RARRAY (aTargets)->ptr[i], T_STRING);
   
   pool = svn_pool_create (NULL);
+
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
+
   targets = apr_array_make (pool, RARRAY (aTargets)->len,
                             sizeof (svn_stringbuf_t *));
+
   for (i = 0; i < RARRAY (aTargets)->len; i++)
     (*((svn_stringbuf_t **) apr_array_push (targets))) =
       svn_stringbuf_create (StringValuePtr (RARRAY (aTargets)->ptr[i]), pool);
@@ -361,10 +382,7 @@ cl_commit (int argc, VALUE *argv, VALUE self)
   }
 }
 
-#if 0
-/* this compiles, but it's #if 0'd out because it uses stuff from wc.c, which 
- * does not build, and thus causes the module to have unresolved symbols, 
- * making it rather difficult to test things. */
+/* XXX default values for the various flags would be nice to have. */
 static VALUE
 cl_status (VALUE self, VALUE aPath,
            VALUE descend, VALUE get_all, VALUE update, VALUE no_ignore)
@@ -376,7 +394,9 @@ cl_status (VALUE self, VALUE aPath,
   VALUE obj;
 
   Check_Type (aPath, T_STRING);
+
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
+
   pool = svn_pool_create (NULL);
 
   SVN_RB_ERR (svn_client_status (&statushash, &youngest,
@@ -384,7 +404,8 @@ cl_status (VALUE self, VALUE aPath,
                                                              (aPath),
                                                             pool),
                                  auth_baton, RTEST (descend), RTEST (get_all),
-                                 RTEST (update), RTEST (no_ignore), pool),
+                                 RTEST (update), RTEST (no_ignore), NULL,
+                                 NULL, pool),
               pool);
 
   if (RTEST (update))
@@ -398,7 +419,6 @@ cl_status (VALUE self, VALUE aPath,
 
   return obj;
 }
-#endif
 
 static VALUE
 cl_log (int argc, VALUE *argv, VALUE self)
@@ -484,13 +504,16 @@ cl_copy (int argc, VALUE *argv, VALUE self)
 
   rb_scan_args (argc, argv, "31", &srcPath, &srcRev, &dstPath,
                 &aMessage);
+
   Check_Type (srcPath, T_STRING);
   Check_Type (dstPath, T_STRING);
   if (aMessage != Qnil)
     Check_Type (aMessage, T_STRING);
 
   Data_Get_Struct (self, svn_client_auth_baton_t, auth_baton);
+
   src_revision = parse_revision (srcRev);
+
   pool = svn_pool_create (NULL);
 
   if (aMessage == Qnil)
@@ -524,6 +547,7 @@ cl_propset (VALUE class, VALUE name, VALUE val, VALUE aTarget, VALUE recurse)
   Check_Type (aTarget, T_STRING);
 
   pool = svn_pool_create (NULL);
+
   propval.data = StringValuePtr (val);
   propval.len = RSTRING (val)->len;
 
@@ -576,6 +600,7 @@ cl_proplist (VALUE class, VALUE aTarget, VALUE recurse)
     int i;
 
     obj = rb_hash_new ();
+
     for (i = 0; i < props->nelts; i++)
       {
         svn_client_proplist_item_t *item;
@@ -585,7 +610,9 @@ cl_proplist (VALUE class, VALUE aTarget, VALUE recurse)
                                   item->node_name->len),
                       svn_ruby_strbuf_hash (item->prop_hash, pool));
       }
+
     svn_pool_destroy (pool);
+
     return obj;
   }
 }
@@ -605,7 +632,7 @@ void svn_ruby_init_client (void)
   rb_define_method (cSvnClient, "delete", cl_delete, -1);
   rb_define_method (cSvnClient, "import", cl_import, -1);
   rb_define_method (cSvnClient, "commit", cl_commit, -1);
-  /* rb_define_method (cSvnClient, "status", cl_status, 5); */
+  rb_define_method (cSvnClient, "status", cl_status, 5);
   rb_define_method (cSvnClient, "log", cl_log, -1);
   rb_define_singleton_method (cSvnClient, "cleanup", cl_cleanup, 1);
   rb_define_singleton_method (cSvnClient, "revert", cl_revert, 2);
