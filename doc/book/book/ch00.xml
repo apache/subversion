@@ -3,7 +3,7 @@
 
   <simplesect>
     <para>
-      This will be the start of the preface.
+      This will be the start of the preface.  WRITE ME.
     </para>
   </simplesect>
 
@@ -11,12 +11,11 @@
   <!-- ======================== SECTION 1 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-1">
-    <title>What is Subversion</title>
 
-    <para>
-      <indexterm><primary>Subversion</primary><secondary>history
-          of</secondary></indexterm> Subversion comes from...
-    </para>
+    <title>Version Control</title>
+
+    <para>### Explain version control in the most general sense, and
+      the problem it solves.  Why do we need it?</para>
 
   </sect1>
 
@@ -24,14 +23,36 @@
   <!-- ======================== SECTION 2 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-2">
-    <title>How This Book is Organized</title>
 
+    <title>Target audience</title>
+    
+    <para>The intended audience of this book is anyone who has used a
+      version control system before, although perhaps not Subversion
+      or CVS.  It assumes that the reader is computer-literate, and
+      reasonably comfortable at a Unix command-line.</para>
+
+    <para>People familiar with CVS may want to skip some of the introductory
+      sections that describe Subversion's concurrent versioning model.
+      Also, there is a quick guide for CVS users attached as an appendix
+      <xref linkend="svn-ap-a"/></para>
+    
   </sect1>
+
 
   <!-- ================================================================= -->
   <!-- ======================== SECTION 3 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-3">
+    <title>How This Book is Organized</title>
+
+    <para>## write me.  Maybe O'Reilly needs to fill this in.</para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 4 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-0-sect-4">
     <title>Conventions used in this book</title>
 
     <para>The source code examples are just that&mdash;examples. While
@@ -41,15 +62,8 @@
       bits that you would expect from production-quality code.
     </para>
 
-  </sect1>
-
-  <!-- ================================================================= -->
-  <!-- ======================== SECTION 4 ============================== -->
-  <!-- ================================================================= -->
-  <sect1 id="svn-ch-0-sect-4">
-    <title>Comments and Questions</title>
-    
-    <para>Insert ORA boilerplate here</para>
+    <para>O'Reilly almost certainly needs to fill this in, according
+    to their typesetting standards.</para>
 
   </sect1>
 
@@ -57,7 +71,25 @@
   <!-- ======================== SECTION 5 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-0-sect-5">
+    <title>This Book is Free</title>
+
+    <para>### Explain that the book is free, and how to get it, and
+      how to send patches.</para>
+    
+    <para>### Also insert O'Reilly boilerplate here, regarding general
+      comments, questions, and feedback.</para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 6 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-0-sect-6">
     <title>Acknowledgements</title>
+
+    <para>### Huge list of thanks to the many svn developers who sent
+      patches/feedback on this book. </para>
+
 
   </sect1>
 
