@@ -1,5 +1,7 @@
 dnl
-dnl  SVN_LIB_APR(version)
+dnl  SVN_LIB_APR(wanted_regex)
+dnl
+dnl  'wanted_regex' is a regex that the apr version string must match.
 dnl
 dnl  Check configure options and assign variables related to
 dnl  the Apache Portable Runtime (APR) library.
@@ -7,6 +9,8 @@ dnl
 
 AC_DEFUN(SVN_LIB_APR,
 [
+  APR_WANTED_REGEX="$1"
+
   AC_MSG_NOTICE([Apache Portable Runtime (APR) library configuration])
 
   APR_FIND_APR("$srcdir/apr", "./apr", 1)
@@ -19,6 +23,20 @@ AC_DEFUN(SVN_LIB_APR,
   if test $apr_found = "reconfig"; then
     SVN_SUBDIR_CONFIG(apr)
     SVN_SUBDIRS="$SVN_SUBDIRS apr"
+  fi
+
+  dnl check APR version number against regex  
+
+  AC_MSG_CHECKING([APR version])    
+  apr_version="`$apr_config --version`"
+  if test $? -ne 0; then
+    AC_MSG_ERROR([apr-config --version failed])
+  fi
+  AC_MSG_RESULT([$apr_version])
+
+  if test `expr $apr_version : $APR_WANTED_REGEX` -eq 0; then
+    echo "wanted regex is $APR_WANTED_REGEX"
+    AC_MSG_ERROR([invalid apr version found])
   fi
 
   dnl Get build information from APR
