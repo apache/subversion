@@ -755,7 +755,6 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
 static svn_error_t *
 create_conf (svn_repos_t *repos, apr_pool_t *pool)
 {
-  /* Create the hook directory. */
   SVN_ERR_W (create_repos_dir (repos->conf_path, pool),
              "creating conf directory");
 
