@@ -1356,8 +1356,7 @@ svn_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal,
   if (isFinal && svn_xml_parser->digger->editor->close_edit)
     {
       err = (* (svn_xml_parser->digger->editor->close_edit))
-        (svn_xml_parser->digger->edit_baton,
-         svn_xml_parser->digger->rootdir_baton);
+        (svn_xml_parser->digger->edit_baton);
 
       if (err)
         return err;        
