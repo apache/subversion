@@ -78,7 +78,7 @@
 Copyright @copyright{} 2000 Collab.Net, Inc. @*
 See @xref{License} for details.
 
-This is $Revision: 1.6 $ of this document.
+This is $Revision: 1.7 $ of this document.
 
 @end titlepage
 @c -----------------------------------------------------------------
@@ -89,7 +89,7 @@ This is $Revision: 1.6 $ of this document.
 This manual describes the design of the Subversion version control
 system.
 
-This is $Revision: 1.6 $ of this document.
+This is $Revision: 1.7 $ of this document.
 
 @end ifinfo
 
@@ -104,9 +104,9 @@ This is $Revision: 1.6 $ of this document.
 * Goals::                        The goals of the Subversion project.
 * Model::                        The versioning model used by Subversion.
 * Architecture::                 How Subversion's components work together.
-* Server::                       How the server works.
 * Client::                       How the client works.
 * Protocol::                     How the client and server communicate.
+* Server::                       How the server works.
 * Future::                       Future plans.
 * License::                      Copyright.
 @end menu
