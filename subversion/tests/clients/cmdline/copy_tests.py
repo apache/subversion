@@ -1475,16 +1475,23 @@ def url_to_non_existent_url_path(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  dirURL1  =  svntest.main.current_repo_url + "/A/B/E"
-  dirURL2  =  svntest.main.current_repo_url + "/G/C/E/I"
+  dirURL1 = svntest.main.current_repo_url + "/A/B/E"
+  dirURL2 = svntest.main.current_repo_url + "/G/C/E/I"
+  msg = ".*: Path 'G' not present"
 
   # Expect failure on 'svn cp SRC DST' where one or more ancestor
   # directories of DST do not exist
-  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
-                                     'cp', dirURL1, dirURL2,
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
-                                     '-m', 'fooogle')
+  out, err = svntest.main.run_svn(1,
+                                  'cp', dirURL1, dirURL2,
+                                  '--username', svntest.main.wc_author,
+                                  '--password', svntest.main.wc_passwd,
+                                  '-m', 'fooogle')
+  for err_line in err:
+    if re.match (msg, err_line):
+      break
+  else:
+    print "message \"" + msg + "\" not found in error output: ", err
+    raise svntest.Failure
 
 
 
