@@ -1347,23 +1347,25 @@ $ svn status README
           un tren<!--TODO:riding a commuter train--> o hackeando en
           la playa.</para>
 
-        <para>Subversion does this by keeping private caches of
-          pristine versions of each versioned file inside of the
-          <filename>.svn</filename> administrative areas.  This allows
-          Subversion to report&mdash;and revert&mdash;local
-          modifications to those files <emphasis>without network
-          access</emphasis>.  This cache (called the
-          <quote>text-base</quote>) also allows Subversion to send the
-          user's local modifications during a commit to the server as
-          a compressed <firstterm>delta</firstterm> (or
-          <quote>difference</quote>) against the pristine version.
-          Having this cache is a tremendous benefit&mdash;even if you
-          have a fast net connection, it's much faster to send only a
-          file's changes rather than the whole file to the server.  At
-          first glance, this might not seem that important, but
-          imagine the repercussions if you try to commit a one line
-          change to a 400MB file and have to send the whole file to
-          the server!</para>
+        <para>Subversion hace esto manteniendo almacenes privados de
+          versiones prístinas de cada fichero versionado dentro del
+          área administrativa <filename>.svn</filename>. Esto permite
+          a Subversion reportar&mdash;y revertir&mdash;modificaciones
+          locales a ésos ficheros emphasis>sin acceso de
+          red</emphasis>. Este almacén (llamado el
+          <quote>texto-base</quote>) también permite a Subversion
+          mandar las modificaciones locales del usuario durante un
+          envio al servidor como un <firstterm>delta</firstterm>
+          comprimido (o <quote>diferéncia</quote>) contra la
+          versión prístina. Tener este almacén es un benefício
+          tremendo&mdash;incluso si usted tiene una conexión de red
+          rápida, es mucho más rapido mandar solamente los cambios
+          del fichero al servidor antes que el fichero entero. A
+          primera vista, esto puede no parecer tán importante, pero
+          imagine la repercusión si usted intenta enviar un cambio de
+          una línea a un fichero de 400MB ¡ y tiene que enviar el fichero
+          entero al servidor!<!--TODO:la frase acaba "whole file to
+          the server!"... está bien donde he puesto la "¡"?--></para>
     </sidebar>
 
     </sect2>
