@@ -71,16 +71,14 @@ What's left to do:
 
         - for ra_dav, Apache does the authorization by looking at a
           list of committers in a .conf file.
-          [hmmm, kfogel wonders why we now have two different ways to
-          do write authorization, will ask on the list]
 
-        - more complex authorization (such as per-directory rights)
-          can be done using hook scripts.
+        - more complex authorization can be done using hook scripts.
 
 * Make a tarball dist.  (kfogel -- working)
 
   Make sure "make dist" works, establish release process, do a
-  release. :-)
+  release. :-)  lucas@collab.net has volunteered to review the release
+  procedure doc.
 
 * `svnadmin' program enhancements:  finished.
 
