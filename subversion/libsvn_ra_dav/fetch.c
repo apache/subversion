@@ -10,9 +10,6 @@
  * If newer versions of this license are posted there, you may use a
  * newer version instead, at your option.
  * ====================================================================
- *
- * Portions of this software were originally written by Greg Stein as a
- * sourceXchange project sponsored by SapphireCreek.
  */
 
 
