@@ -10,8 +10,10 @@ short-term tasks to it, if that's helpful.
 ------------------------------------------------------------------------
 
 Ben todo:
-   - adm_crawler.c: finish emitting properties and doing proper
-     conflict detection
+   - adm_crawler.c: almost done with props!!  big bug still:  after
+     sending local propchanges to editor callbacks, and if the commit
+     is successful, we need a log entry to move the local propfile to
+     the pristine propfile.
 
    - update-after-editor: isn't printing `G' for prop merges.  isn't
      printing `C' for either textual or property conflicts.  fix this.
