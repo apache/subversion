@@ -295,6 +295,19 @@ base_bdb_set_errcall (svn_fs_t *fs,
 
 /* Allocating an appropriate Berkeley DB environment object.  */
 
+/* Create a Berkeley DB environment. */
+static int
+create_env (DB_ENV **envp)
+{
+  int db_err;
+  db_err = db_env_create (envp, 0);
+  if (!db_err)
+    /* Needed on Windows in case Subversion and Berkeley DB are using
+       different C runtime libraries  */
+    db_err = (*envp)->set_alloc (*envp, malloc, realloc, free);
+  return db_err;
+}
+
 /* Allocate a Berkeley DB environment object for the filesystem FS,
    and set up its default parameters appropriately.  */
 static svn_error_t *
@@ -304,12 +317,7 @@ allocate_env (svn_fs_t *fs)
 
   /* Allocate a Berkeley DB environment object.  */
   SVN_ERR (BDB_WRAP (fs, "allocating environment object",
-                     db_env_create (&bfd->env, 0)));
-
-  /* Needed on Windows in case Subversion and Berkeley DB are using
-     different C runtime libraries  */
-  SVN_ERR (BDB_WRAP (fs, "setting environment object's allocation functions",
-                     bfd->env->set_alloc (bfd->env, malloc, realloc, free)));
+                     create_env (&bfd->env)));
 
   /* If we detect a deadlock, select a transaction to abort at random
      from those participating in the deadlock.  */
@@ -655,7 +663,7 @@ base_bdb_recover (const char *path,
   DB_ENV *env;
   const char *path_native;
 
-  SVN_BDB_ERR (db_env_create (&env, 0));
+  SVN_BDB_ERR (create_env (&env));
 
   /* Here's the comment copied from db_recover.c:
 
@@ -689,7 +697,7 @@ bdb_catastrophic_recover (const char *path,
   DB_ENV *env;
   const char *path_native;
 
-  SVN_BDB_ERR (db_env_create (&env, 0));
+  SVN_BDB_ERR (create_env (&env));
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
   SVN_BDB_ERR (env->open (env, path_native, (DB_RECOVER_FATAL | DB_CREATE
                                              | DB_INIT_LOCK | DB_INIT_LOG
@@ -722,12 +730,7 @@ base_bdb_logfiles (apr_array_header_t **logfiles,
 
   *logfiles = apr_array_make (pool, 4, sizeof (const char *));
 
-  SVN_BDB_ERR (db_env_create (&env, 0));
-
-  /* Needed on Windows in case Subversion and Berkeley DB are using
-     different C runtime libraries  */
-  SVN_BDB_ERR (env->set_alloc (env, malloc, realloc, free));
-
+  SVN_BDB_ERR (create_env (&env));
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
   SVN_BDB_ERR (env->open (env, path_native, (DB_CREATE
                                              | DB_INIT_LOCK | DB_INIT_LOG
@@ -838,8 +841,7 @@ check_env_flags (svn_boolean_t *match,
   u_int32_t envflags;
   const char *path_native;
 
-  SVN_BDB_ERR (db_env_create (&env, 0));
-  SVN_BDB_ERR (env->set_alloc (env, malloc, realloc, free));
+  SVN_BDB_ERR (create_env (&env));
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
 
   SVN_BDB_ERR (env->open (env, path_native, (DB_CREATE
@@ -968,7 +970,7 @@ base_delete_fs (const char *path,
 
   /* First, use the Berkeley DB library function to remove any shared
      memory segments.  */
-  SVN_BDB_ERR (db_env_create (&env, 0));
+  SVN_BDB_ERR (create_env (&env));
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
   SVN_BDB_ERR (env->remove (env, path_native, DB_FORCE));
 
