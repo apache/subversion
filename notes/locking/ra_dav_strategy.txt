@@ -30,8 +30,6 @@ RA->unlock()
 
      * generate http UNLOCK response:  success == "204 no content"
 
-         - has one custom response header:  creation-date
-
      * what if older server?  just returns '405 Method not Allowed'.
 
 
@@ -83,6 +81,9 @@ RA->get_commit_editor2()
        If: header of the request.
 
      * send *all* tokens in the If: header of the final MERGE request.
+
+          -- also send either a new XML body element, or custom
+             header, indicating whether to 'keep_locks' or not.
  
      * what if older server?  meaningless.  why would you have the
        tokens in the first place.  And anyway, the If: tokens will be
