@@ -68,25 +68,6 @@ To be fixed by sussman:
   - appA should mention no $Log$ keyword.  Or maybe it should mention
     what keywords *do* exist as well.
 
-  - ch04:  new "use-cases" section:
-
-      - resurrecting a deleted file or directory.  (how do I find out
-        where the item was deleted?  how to use 'merge' to get it
-        back;  how to use 'copy' to get it back.)
-
-      - move use-case to new section:  undoing a committed change, or
-        a range of changes.
-
-      - move use-case to new section:  merging one branch to another,
-        either repeatedly (how to avoid repeated merges!  see point
-        below!), or merge the 'entire' to another.
-       
-  - ch04:  clarify that merged revisions must be tracked in *log
-    messages*, i.e. that it's the user's responsibility to document
-    merges there.  'svn log -v' will only show changed files, and when
-    exactly branches were created.  It won't show which changesets
-    were merged.
-
   - in httpd.conf setup, remind people not to put the svn <Location>
     within an existing DocumentRoot, else the 301 error.
 
