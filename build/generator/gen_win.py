@@ -278,7 +278,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         if quote_path and '-' in rsrc:
           rsrc = '"%s"' % rsrc
         sources.append(ProjectItem(path=rsrc, reldir=reldir, user_deps=[],
-                                   swig_language=None))
+                                   custom_build=None))
 
     if isinstance(target, gen_base.TargetSWIG):
       for obj in self.graph.get_sources(gen_base.DT_LINK, target.name):
@@ -289,9 +289,12 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
               if isinstance(target, gen_base.TargetSWIGRuntime):
                 bsrc = rootpath + "\\build\\win32\\gen_swig_runtime.py"
-                sources.append(ProjectItem(path=bsrc, reldir=None, user_deps=[],
-                                           swig_language=target.lang,
-                                           swig_target=csrc, swig_output=None))
+                sources.append(ProjectItem(path=bsrc, reldir=None, 
+                                           custom_build="swigrun", 
+                                           custom_target=csrc,
+                                           user_deps=[],
+                                           swig_language=target.lang, 
+                                           swig_output=None))
                 continue
 
               # output path passed to swig has to use forward slashes,
@@ -311,10 +314,12 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                   continue
 
                 sources.append(ProjectItem(path=isrc, reldir=None,
+                                           custom_build="swiglib",
+                                           custom_target=csrc,
                                            user_deps=user_deps,
                                            swig_language=target.lang,
-                                           swig_target=csrc, swig_output=cout))
-        
+                                           swig_output=cout))
+
     sources.sort(lambda x, y: cmp(x.path, y.path))
     return sources
   

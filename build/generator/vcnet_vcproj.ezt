@@ -91,15 +91,15 @@
 		</File>[end]
 [for sources]		<File
 			RelativePath="[sources.path]">
-[if-any sources.swig_language][for configs]
+[if-any sources.custom_build][for configs]
 			<FileConfiguration
 				Name="[configs.name]|Win32">
 				<Tool
 					Name="VCCustomBuildTool"
-					[if-any sources.swig_output]CommandLine="swig -c -[sources.swig_language][for includes] -I&quot;[includes]&quot;[end] -o &quot;[sources.swig_output]&quot; $(InputPath)"
-					[else]CommandLine="python $(InputPath) [sources.swig_language] [sources.swig_target]"
-					[end]AdditionalDependencies="[for sources.user_deps]&quot;[sources.user_deps]&quot;;[end]"
-					Outputs="&quot;[sources.swig_target]&quot;"/>
+					[is sources.custom_build "swiglib"]CommandLine="swig -c -[sources.swig_language][for includes] -I&quot;[includes]&quot;[end] -o &quot;[sources.swig_output]&quot; $(InputPath)"
+					[else][is sources.custom_build "swigrun"]CommandLine="python $(InputPath) [sources.swig_language] [sources.custom_target]"
+					[end][end]AdditionalDependencies="[for sources.user_deps]&quot;[sources.user_deps]&quot;;[end]"
+					Outputs="&quot;[sources.custom_target]&quot;"/>
 			</FileConfiguration>
 [end][end]
 [if-any sources.reldir][for configs]

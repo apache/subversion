@@ -63,16 +63,16 @@ SOURCE=[sources.path][if-any sources.reldir]
 [end][end]
 !ENDIF
 [end][for sources.user_deps][if-index sources.user_deps first]
-USERDEP__=[else] [end]"[sources.user_deps]"[end][if-any sources.swig_language]
+USERDEP__=[else] [end]"[sources.user_deps]"[end][if-any sources.custom_build]
 
 # Begin Custom Build
 
 InputPath=[sources.path]
 
-[sources.swig_target] : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
-[if-any sources.swig_output]	swig -c -[sources.swig_language][for includes] -I"[includes]"[end] -o [sources.swig_output] $(InputPath)
-[else]	python $(InputPath) [sources.swig_language] [sources.swig_target]
-[end]
+[sources.custom_target] : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+[is sources.custom_build "swiglib"]	swig -c -[sources.swig_language][for includes] -I"[includes]"[end] -o [sources.swig_output] $(InputPath)
+[else][is sources.custom_build "swigrun"]	python $(InputPath) [sources.swig_language] [sources.custom_target]
+[end][end]
 # End Custom Build
 
 [end]
