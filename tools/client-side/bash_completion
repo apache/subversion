@@ -98,7 +98,7 @@ _svn()
 		         --editor-cmd $pOpts"
 		;; 
 	info)
-		cmdOpts="--targets -R --recursive"
+		cmdOpts="$rOpts --targets -R --recursive"
 		;;
 	list|ls)
 		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts \
