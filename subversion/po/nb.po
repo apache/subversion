@@ -41,6 +41,7 @@
 # stack - stabel
 # subcommand - delkommando
 # target - mål
+# unsupported x - x ikke støttet
 # URL - URL
 # usage - bruk
 # uuid - uuid
@@ -2233,9 +2234,8 @@ msgid "Unknown FS type"
 msgstr "Filsystemtypen er ukjent"
 
 #: include/svn_error_codes.h:525
-#, fuzzy
 msgid "Unsupported FS format"
-msgstr "Ingen støtte for formatet i arbeidskopien"
+msgstr "Filsystemformatet er ikke støttet"
 
 #: include/svn_error_codes.h:531
 msgid "The repository is locked, perhaps for db recovery"
@@ -3570,7 +3570,7 @@ msgstr "Filsystemobjekt er allerede åpent"
 #: libsvn_fs_base/fs.c:647 libsvn_fs_fs/fs_fs.c:248
 #, c-format
 msgid "Expected FS format '%d'; found format '%d'"
-msgstr ""
+msgstr "Forventet filsystemformat «%d»; fant format «%d»"
 
 #: libsvn_fs_base/fs.c:1028
 #, c-format
@@ -4284,7 +4284,7 @@ msgstr "Kan ikke regne ut størrelsen på forespørselsinnholdet"
 #: libsvn_ra_dav/util.c:687
 #, c-format
 msgid "Error spooling the %s request response to disk"
-msgstr ""
+msgstr "Feil under lagring av den køede %s-forespørselsresponsen til disk"
 
 #: libsvn_ra_dav/util.c:727
 #, c-format
@@ -4301,7 +4301,7 @@ msgstr "%s av «%s»"
 #: libsvn_ra_dav/util.c:750
 #, c-format
 msgid "Error reading spooled %s request response"
-msgstr ""
+msgstr "Feil under lesing av køet %s-forespørselrespons"
 
 #: libsvn_ra_dav/util.c:761
 #, c-format
@@ -4912,9 +4912,9 @@ msgid "Repository creation failed"
 msgstr "Opprettelse av depot feilet"
 
 #: libsvn_repos/repos.c:1094
-#, fuzzy, c-format
+#, c-format
 msgid "Expected format '%d' of repository; found format '%d'"
-msgstr "Forventet versjon «%d» av depotet, fant versjon «%d»"
+msgstr "Forventet format «%d» av depotet, fant versjon «%d»"
 
 #: libsvn_repos/repos.c:1141
 msgid "Error opening db lockfile"
