@@ -275,6 +275,7 @@ USE_NLS="no"
 if test "$enable_nls" = "yes"; then
   dnl First, check to see if there is a working msgfmt.
   AC_PATH_PROG(MSGFMT, msgfmt, none)
+  AC_PATH_PROG(MSGMERGE, msgmerge, none)
   AC_PATH_PROG(XGETTEXT, xgettext, none)
   if test "$MSGFMT" != "none"; then
     AC_SEARCH_LIBS(bindtextdomain, [intl], [],
