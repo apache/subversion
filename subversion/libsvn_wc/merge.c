@@ -65,7 +65,7 @@ svn_wc_merge (const char *left,
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf
           (apr_err, 0, NULL, pool,
-           "svn_wc_merge: unable to open tmp file `%s'", tmp_target);
+           "svn_wc_merge: unable to open tmp file `%s'", tmp_target->data);
     }
   else
     {
@@ -89,7 +89,7 @@ svn_wc_merge (const char *left,
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf
       (apr_err, 0, NULL, pool,
-       "svn_wc_merge: unable to close tmp file `%s'", tmp_target);
+       "svn_wc_merge: unable to close tmp file `%s'", tmp_target->data);
 
   if (exit_code == 1)  /* got a conflict */
     {
@@ -112,7 +112,7 @@ svn_wc_merge (const char *left,
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf
           (apr_err, 0, NULL, pool,
-           "svn_wc_merge: unable to close tmp file `%s'", left_copy);
+           "svn_wc_merge: unable to close tmp file `%s'", left_copy->data);
 
       /* Have I mentioned how much I miss Lisp? */
 
@@ -127,7 +127,7 @@ svn_wc_merge (const char *left,
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf
           (apr_err, 0, NULL, pool,
-           "svn_wc_merge: unable to close tmp file `%s'", right_copy);
+           "svn_wc_merge: unable to close tmp file `%s'", right_copy->data);
 
       /* Why, how much more pleasant to be forced to unroll my loops.
          If I'd been writing in Lisp, I might have mapped an inline
@@ -145,7 +145,7 @@ svn_wc_merge (const char *left,
       if (! APR_STATUS_IS_SUCCESS (apr_err))
         return svn_error_createf
           (apr_err, 0, NULL, pool,
-           "svn_wc_merge: unable to close tmp file `%s'", target_copy);
+           "svn_wc_merge: unable to close tmp file `%s'", target_copy->data);
 
       /* We preserve all the files with keywords expanded and line
          endings in local (working) form. */
