@@ -109,7 +109,7 @@ check_prop_mods (svn_boolean_t *props_changed,
   SVN_ERR (svn_wc_props_modified_p (props_changed, path, adm_access, pool));
   if (! props_changed)
     return SVN_NO_ERROR;
-  SVN_ERR (svn_wc_get_prop_diffs (&prop_mods, NULL, path, pool));
+  SVN_ERR (svn_wc_get_prop_diffs (&prop_mods, NULL, path, adm_access, pool));
   for (i = 0; i < prop_mods->nelts; i++)
     {
       svn_prop_t *prop_mod = &APR_ARRAY_IDX (prop_mods, i, svn_prop_t);
@@ -937,7 +937,8 @@ do_item_commit (const char *url,
 
           if (item->kind == svn_node_file)
             SVN_ERR (svn_wc_prop_get
-                     (&propval, SVN_PROP_MIME_TYPE, item->path, pool));
+                     (&propval, SVN_PROP_MIME_TYPE, item->path, adm_access,
+                      pool));
 
           (*ctx->notify_func) (ctx->notify_baton, path,
                                svn_wc_notify_commit_added,
@@ -1019,7 +1020,7 @@ do_item_commit (const char *url,
 
       SVN_ERR (svn_wc_entry (&tmp_entry, item->path, adm_access, TRUE, pool));
       SVN_ERR (svn_wc_transmit_prop_deltas 
-               (item->path, tmp_entry, editor,
+               (item->path, adm_access, tmp_entry, editor,
                 (kind == svn_node_dir) ? dir_baton : file_baton, 
                 &tempfile, pool));
       if (tempfile && tempfiles)

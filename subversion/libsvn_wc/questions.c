@@ -158,7 +158,7 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
     {
       const char *prop_path;
 
-      SVN_ERR (svn_wc__prop_path (&prop_path, path, 0, pool));
+      SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access, FALSE, pool));
       SVN_ERR (svn_io_file_affected_time (&wfile_time, prop_path, pool));
       entrytime = entry->prop_time;
     }
@@ -437,12 +437,14 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
 svn_error_t *
 svn_wc_has_binary_prop (svn_boolean_t *has_binary_prop,
                         const char *path,
+                        svn_wc_adm_access_t *adm_access,
                         apr_pool_t *pool)
 {
   const svn_string_t *value;
   apr_pool_t *subpool = svn_pool_create (pool);
 
-  SVN_ERR (svn_wc_prop_get (&value, SVN_PROP_MIME_TYPE, path, subpool));
+  SVN_ERR (svn_wc_prop_get (&value, SVN_PROP_MIME_TYPE, path, adm_access,
+                            subpool));
  
   if (value && (svn_mime_type_is_binary (value->data)))
     *has_binary_prop = TRUE;

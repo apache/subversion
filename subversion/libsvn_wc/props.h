@@ -31,9 +31,11 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* If the working item at PATH has properties attached, set HAS_PROPS. */
+/* If the working item at PATH has properties attached, set HAS_PROPS.
+   ADM_ACCESS is an access baton set that contains PATH. */
 svn_error_t *svn_wc__has_props (svn_boolean_t *has_props,
                                 const char *path,
+                                svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool);
 
 
@@ -115,17 +117,20 @@ svn_error_t *svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
 
 
 /* Get a single 'wcprop' NAME for versioned object PATH, return in
-   *VALUE. */
+   *VALUE.  ADM_ACCESS is an access baton set that contains PATH. */
 svn_error_t *svn_wc__wcprop_get (const svn_string_t **value,
                                  const char *name,
                                  const char *path,
+                                 svn_wc_adm_access_t *adm_access,
                                  apr_pool_t *pool);
 
 /* Set a single 'wcprop' NAME to VALUE for versioned object PATH. 
-   If VALUE is null, remove property NAME. */
+   If VALUE is null, remove property NAME.  ADM_ACCESS is an access
+   baton set that contains PATH. */
 svn_error_t *svn_wc__wcprop_set (const char *name,
                                  const svn_string_t *value,
                                  const char *path,
+                                 svn_wc_adm_access_t *adm_access,
                                  apr_pool_t *pool);
 
 /* Remove all wc properties under ADM_ACCESS, recursively.  Do any

@@ -52,11 +52,14 @@ extern "C" {
    If STYLE is null on entry, ignore it.  If *EOL is non-null on exit,
    it is a static string not allocated in POOL.
 
+   ADM_ACCESS is an access baton set that contains PATH.
+
    Use POOL for temporary allocation.
 */
 svn_error_t *svn_wc__get_eol_style (svn_subst_eol_style_t *style,
                                     const char **eol,
                                     const char *path,
+                                    svn_wc_adm_access_t *adm_access,
                                     apr_pool_t *pool);
 
 /* Reverse parser.  Given a real EOL string ("\n", "\r", or "\r\n"),
@@ -87,10 +90,12 @@ svn_error_t *svn_wc__get_keywords (svn_subst_keywords_t **keywords,
 
 /* If the SVN_PROP_EXECUTABLE property is present at all, then set
    PATH executable.  If DID_SET is non-null, then set *DID_SET to
-   TRUE if did set PATH executable, or to FALSE if not. */
+   TRUE if did set PATH executable, or to FALSE if not.  ADM_ACCESS
+   is an access baton set that contains PATH. */
 svn_error_t *
 svn_wc__maybe_set_executable (svn_boolean_t *did_set,
                               const char *path,
+                              svn_wc_adm_access_t *adm_access,
                               apr_pool_t *pool);
 
 #ifdef __cplusplus
