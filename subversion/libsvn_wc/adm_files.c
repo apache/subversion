@@ -1181,18 +1181,6 @@ init_adm (svn_stringbuf_t *path,
   /* SVN_WC__ADM_ENTRIES */
   SVN_ERR (svn_wc__entries_init (path, ancestor_path, pool));
 
-  /* SVN_WC__ADM_DIR_PROPS */
-  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_PROPS,
-                                   svn_node_file, perms, 0, pool));
-
-  /* SVN_WC__ADM_DIR_PROP_BASE */
-  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_PROP_BASE,
-                                   svn_node_file, perms, 0, pool));
-
-  /* SVN_WC__ADM_DIR_WCPROPS */
-  SVN_ERR (svn_wc__make_adm_thing (path, SVN_WC__ADM_DIR_WCPROPS,
-                                   svn_node_file, perms, 0, pool));
-
   /* THIS FILE MUST BE CREATED LAST: 
      After this exists, the dir is considered complete. */
   SVN_ERR (init_adm_file (path, SVN_WC__ADM_README,
