@@ -1543,19 +1543,21 @@ Resolved conflicted state of 'sandwich.txt'
 </screen>
 
       <sect3 id="svn-ch-3-sect-4.4.1">
-        <title>Merging Conflicts by Hand</title>
+        <title>Fusionando Conflictos a mano</title>
 
-        <para>Merging conflicts by hand can be quite intimidating the
-          first time you attempt it, but with a little practice, it
-          can become as easy as falling off a bike.</para>
+        <para>Fusionar conflictos a mano puede ser absolutamente
+          intimidatorio la primera vez que lo haga<!--TODO:you attempt
+          it-->, pero con un poco de practica, puede llegar a ser tan
+          fácil como caerse de una bici<!--TODO:it can become as easy as
+          falling off a bike.....ein???-->.</para>
 
-        <para>Here's an example.  Due to a miscommunication, you and
-          Sally, your collaborator, both edit the file
-          <filename>sandwich.txt</filename> at the same time.  Sally
-          commits her changes, and when you go to update your working
-          copy, you get a conflict and we're going to have to edit
-          <filename>sandwich.txt</filename> to resolve the conflicts.
-          First, let's take a look at the file:</para>
+        <para>Aquí tiene un ejemplo. Debido a una falta de comunicación,
+          <!--TODO:miscommunication--> usted y Sally, su colaboradora,
+          editan el fichero <filename>sandwich.txt</filename> en el mismo
+          momento. Sally envía sus cambios, y cuando usted va a actualizar
+          su copia de trabajo, obtiene un conflicto y vamos a tener que
+          editar <filename>sandwich.txt</filename> para resolver los
+          conflictos. Primero, hechemos una hojeada al fichero:</para>
 
         <screen>
 $ cat sandwich.txt
@@ -1576,13 +1578,12 @@ Creole Mustard
 Bottom piece of bread
 </screen>
 
-        <para>The strings of less-than signs, equal signs, and
-          greater-than signs are conflict markers, and are not part of
-          the actual data in conflict.  You generally want to ensure
-          that those are removed from the file before your next
-          commit.  The text between the first two sets of markers is
-          composed of the changes you made in the conflicting
-          area:</para>
+        <para>Las líneas de signos menor-que, y signos mayor-que son
+          marcas de conflictos, y no son parte de los datos en conflicto
+          actuales. Generalmente usted querrá asegurarse que estén
+          borrados del fichero antes de su proximo envío. El texto entre
+          las dos primeras marcas están compuestas por los cambios que
+          usted hizo en el área conflictiva:</para>
 
         <screen>
 &lt;&lt;&lt;&lt;&lt;&lt;&lt; .mine
