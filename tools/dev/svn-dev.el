@@ -401,4 +401,36 @@ See also the function `svn-log-message-file'."
 
 
 
+;;; Log message helpers.
+
+(defconst svn-log-msg-sep-line
+  "------------------------------------------------------------------------"
+  "The line of dashes that separates log messages in 'svn log' output.")
+
+(defconst svn-log-msg-boundary-regexp
+  (concat "^" svn-log-msg-sep-line "\n" "rev [0-9]+:  ")
+  "Regular expression matching the start of a log msg.  The start is
+the beginning of the separator line, not the rev/author/date line that
+follows the separator line.")
+
+(defun svn-narrow-to-log-msg ()
+  "Narrow to the current Subversion log message.
+This meant to be used while browsing the output of 'svn log'.
+If point is not in such output, error."
+  (interactive)
+  (let ((start nil) (end nil))
+    (save-excursion
+      (re-search-backward svn-log-msg-boundary-regexp)
+      (forward-line 1)
+      (setq start (point))
+      (end-of-line)
+      (re-search-backward "| \\([0-9]+\\) ")
+      (let ((num (match-string 1)))
+        (re-search-forward "^\n")
+        (forward-line (string-to-number num)))
+      (setq end (point)))
+    (narrow-to-region start end)))
+
+
+
 (message "loaded svn-dev.el")
