@@ -28,6 +28,7 @@ from svn import fs, core, repos
 class SVNShell(Cmd):
   def __init__(self, pool, path):
     """initialize an SVNShell object"""
+    Cmd.__init__(self)
     if path[-1] == '/':
       path = path[:-1]
     self.pool = pool
