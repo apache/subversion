@@ -29,3 +29,9 @@ Candidate changes:
     another ABI version later on.
     Votes:
       +1: brane
+
+  * 10262, 10263:
+    Comment and docstring fixes.
+    Justification: Good to have accurate API documentation.
+    Votes:
+      +1: lundblad
