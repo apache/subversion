@@ -275,9 +275,6 @@ svn_starpend_delta (svn_delta_digger_t *digger,
 static void
 svn_xml_handle_start (void *userData, const char *name, const char **atts)
 {
-  int i;
-  char *attr_name, *attr_value;
-
   /* Resurrect our digger structure */
   svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
 
@@ -293,7 +290,7 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
 
       new_frame->kind = svn_XML_tree;
       
-      if (my_digger->stack->next == NULL)
+      if (my_digger->stack == NULL)
         /* This is the very FIRST element of our tree delta! */
         my_digger->stack = new_frame;
       else  /* This is a nested tree-delta.  Hook it in. */
@@ -318,8 +315,6 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
 
   else if (strcmp (name, "new") == 0)
     {
-      svn_error_t *err;
-
       /* Create new stackframe */
       svn_delta_stackframe_t *new_frame 
         = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t *));
@@ -336,8 +331,6 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
 
   else if (strcmp (name, "replace"))
     {
-      svn_error_t *err;
-
       /* Create new stackframe */
       svn_delta_stackframe_t *new_frame 
         = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t *));
@@ -354,8 +347,6 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
 
   else if (strcmp (name, "delete"))
     {
-      svn_error_t *err;
-
       /* Create new stackframe */
       svn_delta_stackframe_t *new_frame 
         = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t *));
@@ -405,7 +396,8 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
       /* Call the "directory" callback in the digger struct; this
          allows the client to possibly create new subdirs on-the-fly,
          for example. */
-      (* (my_digger->dir_handler)) (my_digger, new_frame);
+      if (my_digger->dir_handler)
+        (* (my_digger->dir_handler)) (my_digger, new_frame);
     }
 
   else
@@ -413,7 +405,8 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
       svn_error_t *err;
       /* Found some unrecognized tag, so PUNT to the caller's
          default handler. */
-      err = (* (my_digger->unknown_elt_handler)) (my_digger, name);
+      if (my_digger->unknown_elt_handler)
+        err = (* (my_digger->unknown_elt_handler)) (my_digger, name);
 
       /* TODO: check for error */
     }
@@ -429,7 +422,6 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
 static void 
 svn_xml_handle_end (void *userData, const char *name)
 {
-  svn_error_t *err;
   svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
 
   
@@ -467,7 +459,8 @@ svn_xml_handle_end (void *userData, const char *name)
     {
       /* Found some unrecognized tag, so PUNT to the caller's
          default handler. */
-      (* (my_digger->unknown_elt_handler)) (my_digger, name);
+      if (my_digger->unknown_elt_handler)
+        (* (my_digger->unknown_elt_handler)) (my_digger, name);
     }
 }
 
@@ -487,8 +480,8 @@ svn_xml_handle_data (void *userData, const char *data, int len)
   /* TODO: see note about data handler context optimization in
      svn_delta.h:svn_delta_digger_t. */
 
-  (* (my_digger->data_handler)) (my_digger, data, len);
-
+  if (my_digger->data_handler)
+    (* (my_digger->data_handler)) (my_digger, data, len);
 }
 
 
