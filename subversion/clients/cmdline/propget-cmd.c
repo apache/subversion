@@ -143,6 +143,7 @@ svn_cl__propget (apr_getopt_t *os,
           svn_boolean_t print_filenames = FALSE;
 
           svn_pool_clear (subpool);
+          SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
           SVN_ERR (svn_client_propget (&props, pname_utf8, target,
                                        &(opt_state->start_revision),
                                        opt_state->recursive, ctx, subpool));
@@ -185,7 +186,6 @@ svn_cl__propget (apr_getopt_t *os,
               if (! opt_state->strict)
                 SVN_ERR (stream_write (out, "\n", 1));
             }
-          SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
         }
       svn_pool_destroy (subpool);
     }

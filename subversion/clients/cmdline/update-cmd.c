@@ -71,6 +71,8 @@ svn_cl__update (apr_getopt_t *os,
       svn_error_t *err;
 
       svn_pool_clear (subpool);
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
+
       err = svn_client_update (NULL, target,
                                &(opt_state->start_revision),
                                opt_state->nonrecursive ? FALSE : TRUE,
@@ -89,8 +91,6 @@ svn_cl__update (apr_getopt_t *os,
           else
             return err;
         }
-
-      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
     }
 
   svn_pool_destroy (subpool);

@@ -183,6 +183,7 @@ svn_cl__propedit (apr_getopt_t *os,
           const svn_wc_entry_t *entry;
           
           svn_pool_clear (subpool);
+          SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
           if (svn_path_is_url (target))
             {
               /* ### If/when svn_client_propset() supports setting
@@ -259,7 +260,6 @@ svn_cl__propedit (apr_getopt_t *os,
               printf ("No changes to property '%s' on '%s'\n",
                       pname, target_stdout);
             }
-          SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
         }
       svn_pool_destroy (subpool);
     }

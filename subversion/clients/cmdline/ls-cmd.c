@@ -148,11 +148,11 @@ svn_cl__ls (apr_getopt_t *os,
       apr_hash_t *dirents;
       const char *target = ((const char **) (targets->elts))[i];
      
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       SVN_ERR (svn_client_ls (&dirents, target, &(opt_state->start_revision),
                               opt_state->recursive, ctx, subpool));
 
       SVN_ERR (print_dirents (dirents, opt_state->verbose, subpool));
-      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       svn_pool_clear (subpool);
     }
 

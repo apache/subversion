@@ -542,6 +542,10 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
         {
           const char *path = APR_ARRAY_IDX (paths, i, const char *);
 
+          /* See if the user wants us to stop. */
+          if (ctx->cancel_func)
+            SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
+
           SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
           err = svn_client_add (path, FALSE, ctx, pool);
 
@@ -556,11 +560,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
             }
           SVN_ERR (err);
 
-          /* See if the user wants us to stop. */
-          if (ctx->cancel_func)
-            SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
           svn_pool_clear (subpool);
-
         }
       svn_pool_destroy (subpool);
     }

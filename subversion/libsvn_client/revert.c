@@ -127,6 +127,11 @@ svn_client_revert (const apr_array_header_t *paths,
     {
       const char *path = APR_ARRAY_IDX (paths, i, const char *);
 
+      /* See if we've been asked to cancel this operation. */
+      if ((ctx->cancel_func) 
+          && ((err = ctx->cancel_func (ctx->cancel_baton))))
+        goto errorful;
+
       err = revert (path, recursive, ctx, subpool);
       if (err)
         {
@@ -147,11 +152,6 @@ svn_client_revert (const apr_array_header_t *paths,
           else
             goto errorful;
         }
-
-      /* See if we've been asked to cancel this operation. */
-      if ((ctx->cancel_func) 
-          && ((err = ctx->cancel_func (ctx->cancel_baton))))
-        goto errorful;
 
       svn_pool_clear (subpool);
     }

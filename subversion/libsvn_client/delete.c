@@ -251,16 +251,17 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
 
           svn_pool_clear (subpool);
           parent_path = svn_path_dirname (path, subpool);
+
+          /* See if the user wants us to stop. */
+          if (ctx->cancel_func)
+            SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
+
           /* Let the working copy library handle the PATH. */
           SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, 
                                     TRUE, FALSE, subpool));
           SVN_ERR (svn_client__wc_delete (path, adm_access, force, 
                                           FALSE, ctx, subpool));
           SVN_ERR (svn_wc_adm_close (adm_access));
-
-          /* See if the user wants us to stop. */
-          if (ctx->cancel_func)
-            SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
         }
       svn_pool_destroy (subpool);
     }
