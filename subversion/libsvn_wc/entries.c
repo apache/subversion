@@ -607,18 +607,19 @@ svn_wc__entries_write (apr_hash_t *entries,
 }
 
 
-/* Create or modify an entry NAME in ENTRIES, using the arguments given. */
+/* Create or modify an entry NAME in ENTRIES, using the arguments given.
+   ATTS may be null. */
 static void
-stuff_entry_v (apr_hash_t *entries,
-               svn_string_t *name,
-               svn_revnum_t revision,
-               enum svn_node_kind kind,
-               int flags,
-               apr_time_t timestamp,
-               apr_pool_t *pool,
-               va_list ap)
+stuff_entry (apr_hash_t *entries,
+             svn_string_t *name,
+             svn_revnum_t revision,
+             enum svn_node_kind kind,
+             int flags,
+             apr_time_t timestamp,
+             apr_pool_t *pool,
+             apr_hash_t *atts)
 {
-  char *key;
+  apr_hash_index_t *hi;
   struct svn_wc_entry_t *entry
     = apr_hash_get (entries, name->data, name->len);
 
@@ -637,11 +638,23 @@ stuff_entry_v (apr_hash_t *entries,
   entry->flags |= flags;
 
   /* Do any other attributes. */
-  while ((key = va_arg (ap, char *)) != NULL)
+  if (atts)
     {
-      svn_string_t *val = va_arg (ap, svn_string_t *);
-      assert (val != NULL);
-      apr_hash_set (entry->attributes, key, APR_HASH_KEY_STRING, val);
+      for (hi = apr_hash_first (atts); hi; hi = apr_hash_next (hi))
+        {
+          const void *k;
+          apr_size_t klen;
+          void *v;
+          const char *key;
+          svn_string_t *val;
+          
+          /* Get a hash key and value */
+          apr_hash_this (hi, &k, &klen, &v);
+          key = (const char *) k;
+          val = (svn_string_t *) v;
+          
+          apr_hash_set (entry->attributes, key, APR_HASH_KEY_STRING, val);
+        }
     }
 
   /* The entry's name is an attribute, too. */
@@ -668,40 +681,6 @@ stuff_entry_v (apr_hash_t *entries,
 }
 
 
-svn_error_t *
-svn_wc__entry_add (apr_hash_t *entries,
-                   svn_string_t *name,
-                   svn_revnum_t revision,
-                   enum svn_node_kind kind,
-                   int flags,
-                   apr_time_t timestamp,
-                   apr_pool_t *pool,
-                   ...)
-{
-  struct svn_wc_entry_t *entry
-    = apr_hash_get (entries, name->data, name->len);
-
-  if (entry)
-    {
-      return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS,
-                                0,
-                                NULL,
-                                pool,
-                                "entries.c:svn_wc__entry_add(): %s",
-                                name->data);
-    }
-  else
-    {
-      va_list ap;
-      va_start (ap, pool);
-      stuff_entry_v (entries, name, revision, kind,
-                     flags, timestamp, pool, ap);
-      va_end (ap);
-      return SVN_NO_ERROR;
-    }
-}
-
-
 /* kff todo: we shouldn't have this function in the interface, probably. */
 void
 svn_wc__entry_remove (apr_hash_t *entries,
@@ -719,11 +698,10 @@ svn_wc__entry_merge_sync (svn_string_t *path,
                           int flags,
                           apr_time_t timestamp,
                           apr_pool_t *pool,
-                          ...)
+                          apr_hash_t *atts)
 {
   svn_error_t *err;
   apr_hash_t *entries = NULL;
-  va_list ap;
 
   err = svn_wc__entries_read (&entries, path, pool);
   if (err)
@@ -732,9 +710,7 @@ svn_wc__entry_merge_sync (svn_string_t *path,
   if (name == NULL)
     name = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
 
-  va_start (ap, pool);
-  stuff_entry_v (entries, name, revision, kind, flags, timestamp, pool, ap);
-  va_end (ap);
+  stuff_entry (entries, name, revision, kind, flags, timestamp, pool, atts);
   
   err = svn_wc__entries_write (entries, path, pool);
   if (err)
@@ -744,8 +720,6 @@ svn_wc__entry_merge_sync (svn_string_t *path,
 }
 
 
-
-/* Utility: return a duplicate of ENTRY object allocated in POOL. */
 svn_wc_entry_t *
 svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
 {
@@ -790,10 +764,6 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
 
   return dupentry;
 }
-
-
-
-
 
 
 

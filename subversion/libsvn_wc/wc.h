@@ -393,23 +393,6 @@ svn_error_t *svn_wc__entries_write (apr_hash_t *entries,
                                     apr_pool_t *pool);
 
 
-/* Create a new entry NAME in ENTRIES with appropriate fields.
-   Varargs specify any other xml attributes, as alternating pairs of
-   key (char *), value (svn_string_t *).  
-
-   An entry name of null means the dir's own entry, as usual.
-   
-   An error SVN_ERR_WC_ENTRY_EXISTS is returned if the entry already
-   exists. */
-svn_error_t *svn_wc__entry_add (apr_hash_t *entries,
-                                svn_string_t *name,
-                                svn_revnum_t revision,
-                                enum svn_node_kind kind,
-                                int flags,
-                                apr_time_t timestamp,
-                                apr_pool_t *pool,
-                                ...);
-
 /* For PATH's entries file, create or modify an entry NAME, using
  * explicit fields and, secondarily, varargs.
  * 
@@ -428,10 +411,10 @@ svn_error_t *svn_wc__entry_add (apr_hash_t *entries,
  * If TIMESTAMP is 0, the entry's timestamp will not be changed, else
  * it will be set to TIMESTAMP.
  * 
- * Any remaining (variadic) arguments are alternating pairs of key
- * (char *) and value (svn_string_t *), and will be set into the
- * entry's attributes hash, overwriting where they collide with what
- * is already present in the attributes.
+ * Any other attributes should be passed in ATTS, a hash whose keys
+ * are (const char *) and whose values are (svn_string_t *).  They
+ * will be set into the entry's attributes hash, overwriting where
+ * they collide with existing attributes.
  * 
  * NOTE: the entries file will be read, tweaked, and written back out.
  * This is your one-stop shopping for changing an entry.
@@ -443,7 +426,7 @@ svn_error_t *svn_wc__entry_merge_sync (svn_string_t *path,
                                        int flags,
                                        apr_time_t timestamp,
                                        apr_pool_t *pool,
-                                       ...);
+                                       apr_hash_t *atts);
 
 
 /* Remove entry NAME from ENTRIES, unconditionally. */
