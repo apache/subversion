@@ -1021,7 +1021,8 @@ check_repos_version (const char *path,
 static svn_error_t *
 get_repos (svn_repos_t **repos_p,
            const char *path,
-           int locktype,
+           svn_boolean_t exclusive,
+           svn_boolean_t nonblocking,
            svn_boolean_t open_fs,
            apr_pool_t *pool)
 {
@@ -1039,15 +1040,15 @@ get_repos (svn_repos_t **repos_p,
   /* Locking. */
   {
     const char *lockfile_path;
-    svn_boolean_t exclusive = FALSE;
+    svn_error_t *err;
 
     /* Get a filehandle for the repository's db lockfile. */
     lockfile_path = svn_repos_db_lockfile (repos, pool);
-    if (locktype == APR_FLOCK_EXCLUSIVE)
-      exclusive = TRUE;
 
-    SVN_ERR_W (svn_io_file_lock (lockfile_path, exclusive, pool),
-               "Error opening db lockfile");
+    err = svn_io_file_lock2 (lockfile_path, exclusive, nonblocking, pool);
+    if (err != NULL && err->apr_err == EWOULDBLOCK)
+      return err;
+    SVN_ERR_W (err, "Error opening db lockfile");
   }
 
   /* Open up the Berkeley filesystem only after obtaining the lock. */
@@ -1087,10 +1088,7 @@ svn_repos_open (svn_repos_t **repos_p,
   /* Fetch a repository object initialized with a shared read/write
      lock on the database. */
 
-  SVN_ERR (get_repos (repos_p, path,
-                      APR_FLOCK_SHARED,
-                      TRUE,     /* open the db into repos->fs. */
-                      pool));
+  SVN_ERR (get_repos (repos_p, path, FALSE, FALSE, TRUE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1141,8 +1139,9 @@ svn_repos_fs (svn_repos_t *repos)
  */
 
 svn_error_t *
-svn_repos_recover (const char *path,
-                   apr_pool_t *pool)
+svn_repos_recover2 (const char *path,
+                    svn_boolean_t nonblocking,
+                    apr_pool_t *pool)
 {
   svn_repos_t *repos;
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -1150,8 +1149,7 @@ svn_repos_recover (const char *path,
   /* Fetch a repository object initialized with an EXCLUSIVE lock on
      the database.   This will at least prevent others from trying to
      read or write to it while we run recovery. */
-  SVN_ERR (get_repos (&repos, path,
-                      APR_FLOCK_EXCLUSIVE,
+  SVN_ERR (get_repos (&repos, path, TRUE, nonblocking,
                       FALSE,    /* don't try to open the db yet. */
                       subpool));
 
@@ -1164,6 +1162,14 @@ svn_repos_recover (const char *path,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_repos_recover (const char *path,
+                   apr_pool_t *pool)
+{
+    return svn_repos_recover2 (path, FALSE, pool);
+}
+
 svn_error_t *svn_repos_db_logfiles (apr_array_header_t **logfiles,
                                     const char *path,
                                     svn_boolean_t only_unused,
@@ -1173,7 +1179,7 @@ svn_error_t *svn_repos_db_logfiles (apr_array_header_t **logfiles,
   int i;
 
   SVN_ERR (get_repos (&repos, path,
-                      APR_FLOCK_SHARED,
+                      FALSE, FALSE,
                       FALSE,     /* Do not open fs. */
                       pool));
 
@@ -1286,7 +1292,7 @@ svn_repos_hotcopy (const char *src_path,
   
   /* Try to open original repository */
   SVN_ERR (get_repos (&src_repos, src_path,
-                      APR_FLOCK_SHARED,
+                      FALSE, FALSE,
                       FALSE,    /* don't try to open the db yet. */
                       pool));
 
@@ -1327,7 +1333,7 @@ svn_repos_hotcopy (const char *src_path,
   /* Exclusively lock the new repository.  
      No one should be accessing it at the moment */ 
   SVN_ERR (get_repos (&dst_repos, dst_path,
-                      APR_FLOCK_EXCLUSIVE,
+                      TRUE, FALSE,
                       FALSE,    /* don't try to open the db yet. */
                       pool));
 
