@@ -270,13 +270,15 @@ locale-gnu-pot:
 	  -name bindings -prune -or \
 	  -name "*.c" -print -or \
 	  -name "svn_error_codes.h" -print | \
-	 $(XGETTEXT) -F -k_ -kN_ -kSVN_ERRDEF:3 -c --files-from=- \
-	  -o po/subversion.pot )
+	 $(XGETTEXT) --sort-by-file -k_ -kN_ -kSVN_ERRDEF:3 \
+	  --msgid-bugs-address=dev@subversion.tigris.org \
+	  --add-comments --files-from=- -o po/subversion.pot )
 
 locale-gnu-po-update: locale-gnu-pot
 	(cd $(abs_srcdir)/subversion/po ; \
 	 for i in *.po ; do \
-	   $(MSGMERGE) -F -U $$i subversion.pot ; \
+	   $(MSGMERGE) --sort-by-file --update --no-fuzzy-matching \
+	     $$i subversion.pot ; \
 	 done )
 
 # clean everything but the bulky test output, returning the system back

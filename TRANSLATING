@@ -10,6 +10,7 @@ please read this first.
 $LastChangedDate$
 
 * Introduction
+* Software version requirements
 * Starting a new translation
 * Updating existing po files
 * Requirements for po and mo files
@@ -29,6 +30,15 @@ subversion/po directory of the repository.
 
 Please take some time to go through this document as well as the HACKING
 document also in this directory.
+
+
+
+Software version requirements
+=============================
+
+The Makefile build targets locale-gnu-* (used to maintain po files)
+require GNU gettext 0.12 or newer.  Note that this is not a requirement
+for those wanting to compile the *.po files into *.mo's.
 
 
 
