@@ -112,7 +112,7 @@ char *svn_path_basename (const char *path, apr_pool_t *pool);
  * Get the dirname of the specified @a path, defined as the path with its
  * basename removed.  If @a path is root ("/"), it is returned unchanged.
  *
- * The returned basename will be allocated in @a pool.
+ * The returned dirname will be allocated in @a pool.
  */
 char *svn_path_dirname (const char *path, apr_pool_t *pool);
 

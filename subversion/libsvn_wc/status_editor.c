@@ -337,7 +337,7 @@ delete_entry (const char *path,
      versioned in this working copy, it was probably deleted via this
      working copy.  No need to report such a thing. */
   /* ### use svn_wc_entry() instead? */
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  SVN_ERR (svn_io_check_path (full_path, &kind, pool));
   if (kind == svn_node_dir)
     dir_path = full_path;
   else

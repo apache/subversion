@@ -524,6 +524,54 @@ def status_uninvited_parent_directory(sbox):
   return saw_uninvited_parent_dir
 
 
+def status_on_forward_deletion(sbox):
+  "status -u on working copy deleted in HEAD"
+  # See issue #1289.
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+  top_url = svntest.main.current_repo_url
+  A_url = top_url + '/A'
+
+  svntest.main.run_svn(None, 'rm', '-m', 'Remove A.', A_url)
+
+  svntest.main.safe_rmtree(wc_dir)
+  os.mkdir(wc_dir)
+  saved_cwd = os.getcwd()
+  os.chdir(wc_dir)
+  try:
+    svntest.main.run_svn(None, 'co', '-r1', top_url, 'wc')
+    # If the bug is present, this will error with
+    #
+    #    subversion/libsvn_wc/lock.c:513: (apr_err=155005)
+    #    svn: Working copy not locked
+    #    svn: directory '' not locked
+    #
+    out, err = svntest.main.run_svn(None, 'st', '-u', 'wc')
+    if err:
+      raise svntest.Failure
+
+    # Try again another way; the error would look like this:
+    #
+    #    subversion/libsvn_repos/delta.c:207: (apr_err=160005)
+    #    svn: Invalid filesystem path syntax
+    #    svn: svn_repos_dir_delta: invalid editor anchoring; at least \
+    #       one of the input paths is not a directory and there was   \
+    #       no source entry.
+    #
+    # (Dang!  Hope a user never has to see that :-) ).
+    #
+    svntest.main.safe_rmtree('wc')
+    svntest.main.run_svn(None, 'co', '-r1', A_url, 'wc')
+    out, err = svntest.main.run_svn(None, 'st', '-u', 'wc')
+    if err:
+      raise svntest.Failure
+    
+  finally:
+    os.chdir(saved_cwd)
+
+
 ########################################################################
 # Run the tests
 
@@ -541,6 +589,7 @@ test_list = [ None,
               status_for_nonexistent_file,
               status_file_needs_update,
               status_uninvited_parent_directory,
+              XFail(status_on_forward_deletion),
              ]
 
 if __name__ == '__main__':
