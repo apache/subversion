@@ -34,8 +34,6 @@ NICE TO HAVE
 * get neon 0.25 released, so the control-c bug can go away
   (chat with jorton about neon 0.25/svn 1.2 coordination?)
 
-* make --keep-locks into a runtime 'config' option
-
 -----------------------------------------------
 
 * Questions:
