@@ -251,6 +251,12 @@ dav_error *dav_svn_checkout(dav_resource *resource,
       apr_uuid_format(uuid_buf, &uuid);
       resource->info->root.activity_id = uuid_buf;
 
+      /* Remember that this resource was auto-checked-out, so that
+         dav_svn_auto_versionable allows us to do an auto-checkin and
+         dav_svn_can_be_activity will allow this resource to be an
+         activity. */
+      resource->info->auto_checked_out = TRUE;
+
       /* Create a txn based on youngest rev, and create an associated
          activity id in the activity database. */
       derr = dav_svn_make_activity(resource);
@@ -262,10 +268,6 @@ dav_error *dav_svn_checkout(dav_resource *resource,
       res = dav_svn_create_working_resource(resource, uuid_buf, 
                                             resource->info->root.txn_name,
                                             TRUE /* tweak in place */);
-
-      /* Remember that this resource was auto-checked-out, so that
-         dav_svn_auto_versionable allows us to do an auto-checkin. */
-      resource->info->auto_checked_out = TRUE;
 
       /* Finally, be sure to open the txn and txn_root in the
          resource.  Normally we only get a PUT on a WR uri, and
@@ -790,7 +792,13 @@ static dav_error *dav_svn_deliver_report(request_rec *r,
 
 static int dav_svn_can_be_activity(const dav_resource *resource)
 {
-  return resource->type == DAV_RESOURCE_TYPE_ACTIVITY && !resource->exists;
+  /* If our resource is marked as auto_checked_out'd, then we allow this to
+   * be an activity URL.  Otherwise, it must be a real activity URL that
+   * doesn't already exist.
+   */
+  return (resource->info->auto_checked_out == TRUE ||
+          (resource->type == DAV_RESOURCE_TYPE_ACTIVITY &&
+           !resource->exists));
 }
 
 static dav_error *dav_svn_make_activity(dav_resource *resource)
