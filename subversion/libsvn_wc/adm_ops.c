@@ -105,11 +105,12 @@ svn_wc__ensure_wc (svn_string_t *path,
 svn_error_t *
 svn_wc_close_commit (svn_string_t *path,
                      svn_vernum_t new_version,
+                     apr_hash_t *targets,
                      apr_pool_t *pool)
 {
   svn_error_t *err;
 
-  err = svn_wc__log_commit (path, new_version, pool);
+  err = svn_wc__log_commit (path, new_version, targets, pool);
   if (err)
     return err;
 

@@ -310,12 +310,38 @@ svn_wc__cleanup (svn_string_t *path,
   apr_hash_t *entries = NULL;
   apr_hash_index_t *hi;
 
-  /* Clean up this dir. */
+  if (bail_on_lock)
+    {
+      svn_boolean_t locked;
+      err = svn_wc__locked (&locked, path, pool);
+      if (err)
+        return err;
+
+      if (locked)
+        return svn_error_createf (SVN_ERR_WC_LOCKED,
+                                  0,
+                                  NULL,
+                                  pool,
+                                  "svn_wc__cleanup: %s locked",
+                                  path->data);
+    }
+
+  /* Eat what's put in front of us. */
   err = svn_wc__run_log (path, pool);
   if (err)
     return err;
 
-  /* Then find versioned subdirs and clean them up too. */
+  /* Remove any lock here.  But we couldn't even be here if there were
+     a lock file and bail_on_lock were set, so do the obvious check
+     first. */
+  if (! bail_on_lock)
+    {
+      err = svn_wc__unlock (path, pool);
+      if (err && (err->apr_err != APR_ENOENT))
+        return err;
+    }
+
+  /* Find versioned subdirs and recurse on them. */
   err = svn_wc__entries_read (&entries, path, pool);
   if (err)
     return err;
@@ -351,6 +377,7 @@ svn_wc__cleanup (svn_string_t *path,
 svn_error_t *
 svn_wc__log_commit (svn_string_t *path,
                     svn_vernum_t version,
+                    apr_hash_t *targets,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -380,16 +407,19 @@ svn_wc__log_commit (svn_string_t *path,
                                   svn_path_local_style,
                                   pool);
 
-          err = svn_wc__log_commit (subdir, version, pool);
+          err = svn_wc__log_commit (subdir, version, targets, pool);
           if (err)
             return err;
         }
-      else /* entry->kind == svn_file_kind */
+      else if (apr_hash_get (targets, key, keylen))
         {
+          /* entry->kind == svn_file_kind, and the file was actually
+             involved in the commit. */
+
           svn_string_t *logtag = svn_string_create ("", pool);
           char *verstr = apr_psprintf (pool, "%ld", version);
           apr_file_t *log_fp = NULL;
-
+          
           err = svn_wc__open_adm_file (&log_fp,
                                        path,
                                        SVN_WC__ADM_LOG,
@@ -397,7 +427,7 @@ svn_wc__log_commit (svn_string_t *path,
                                        pool);
           if (err)
             return err;
-
+          
           svn_xml_make_open_tag (&logtag,
                                  pool,
                                  svn_xml_self_closing,
@@ -407,7 +437,7 @@ svn_wc__log_commit (svn_string_t *path,
                                  SVN_WC__LOG_ATTR_VERSION,
                                  svn_string_create (verstr, pool),
                                  NULL);
-
+          
           apr_err = apr_full_write (log_fp, logtag->data, logtag->len, NULL);
           if (apr_err)
             {
@@ -417,7 +447,7 @@ svn_wc__log_commit (svn_string_t *path,
                                         "error writing %s's log file", 
                                         path->data);
             }
-
+          
           err = svn_wc__close_adm_file (log_fp,
                                         path,
                                         SVN_WC__ADM_LOG,

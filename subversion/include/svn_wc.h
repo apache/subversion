@@ -103,10 +103,17 @@ svn_error_t *svn_wc_add_file (svn_string_t *file,
 
 /*** Commits. ***/
 
-/* Update working copy PATH with NEW_VERSION after a commit has succeeded. */
+/* Update working copy PATH with NEW_VERSION after a commit has succeeded.
+ * TARGETS is a hash of files/dirs that actually got committed --
+ * these are the only ones who we can write log items for, and whose
+ * version numbers will get set.  todo: eventually this hash will be
+ * of the sort used by svn_wc__compose_paths(), as with all entries
+ * recursers.
+ */
 svn_error_t *
 svn_wc_close_commit (svn_string_t *path,
                      svn_vernum_t new_version,
+                     apr_hash_t *targets,
                      apr_pool_t *pool);
 
 
@@ -126,10 +133,15 @@ svn_wc_close_commit (svn_string_t *path,
    editor, and they should be set before close_edit() is called.  See
    svn_ra_get_commit_editor() for an example of how they might be
    obtained.
+
+   Any items that were found to be modified, and were therefore
+   committed, are stored in targets as full paths, so caller can clean
+   up appropriately.
 */
 svn_error_t *
-svn_wc_crawl_local_mods (svn_string_t *root_directory,
-                         svn_delta_edit_fns_t *edit_fns,
+svn_wc_crawl_local_mods (apr_hash_t **targets,
+                         svn_string_t *root_directory,
+                         const svn_delta_edit_fns_t *edit_fns,
                          void *edit_baton,
                          apr_pool_t *pool);
 

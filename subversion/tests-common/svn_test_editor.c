@@ -434,7 +434,7 @@ test_change_dir_prop (void *parent_baton,
 
 
 svn_error_t *
-svn_test_get_editor (svn_delta_edit_fns_t **editor,
+svn_test_get_editor (const svn_delta_edit_fns_t **editor,
                      void **edit_baton,
                      svn_string_t *path,
                      svn_vernum_t version,
