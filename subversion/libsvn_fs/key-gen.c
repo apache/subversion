@@ -190,6 +190,67 @@ svn_fs__next_key (const char *this, apr_size_t *len, char *next)
 }
 
 
+void
+svn_fs__prev_key (const char *this, apr_size_t *len, char *prev)
+{
+  apr_size_t olen = *len;     /* remember the first length */
+  int i;
+  char c;                     /* current char */
+  int borrow = 1;             /* boolean: do we have a borrow or not?
+                                 We start with a borrow, because we're
+                                 decrementing the number, after all. */
+  
+  /* Leading zeros are not allowed, except for the string "0", and "0"
+     is the most-previous key we can provide, so if this thing starts
+     with a zero at all, return nothing.  */
+  if (this[0] == '0')
+    {
+      *len = 0;
+      return;
+    }
+  
+
+  for (i = (olen - 1); i >= 0; i--)
+    {
+      c = this[i];
+
+      /* Validate as we go. */
+      if (! (((c >= '0') && (c <= '9')) || ((c >= 'a') && (c <= 'z'))))
+        {
+          *len = 0;
+          return;
+        }
+
+      if (borrow)
+        {
+          if (c == '0')
+            prev[i] = 'z';
+          else
+            {
+              borrow = 0;
+              if (c == 'a')
+                prev[i] = '9';
+              else
+                prev[i] = c - 1;
+            }
+        }
+      else
+        prev[i] = c;
+    }
+
+
+  *len = olen;
+  if ((*len > 1) && (prev[0] == '0'))
+    {
+      *len = *len - 1;
+      memmove (prev, prev+1, *len);
+    }
+
+  /* Now we know it's safe to add the null terminator. */
+  prev[*len] = '\0';
+}
+
+
 int 
 svn_fs__key_compare (const char *a, const char *b)
 {

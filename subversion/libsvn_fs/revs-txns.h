@@ -70,6 +70,15 @@ svn_error_t *svn_fs__txn_make_committed (svn_fs_t *fs,
                                          trail_t *trail);
 
 
+/* Set *REVISION to the revision which was created when FS transaction
+   TXN_NAME was committed, or to SVN_INVALID_REVNUM if the transaction
+   has not been committed.  Do all of this as part of TRAIL.  */
+svn_error_t *svn_fs__txn_get_revision (svn_revnum_t *revision,
+                                       svn_fs_t *fs,
+                                       const char *txn_name,
+                                       trail_t *trail);
+
+
 /* Retrieve information about the Subversion transaction SVN_TXN from
    the `transactions' table of FS, as part of TRAIL.
    Set *ROOT_ID_P to the ID of the transaction's root directory.
@@ -118,11 +127,10 @@ svn_error_t *svn_fs__add_txn_copy (svn_fs_t *fs,
 
    Returns SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
    transaction that has already been committed.  */
-svn_error_t *
-svn_fs__set_txn_base (svn_fs_t *fs,
-                      const char *txn_name,
-                      const svn_fs_id_t *new_id,
-                      trail_t *trail);
+svn_error_t *svn_fs__set_txn_base (svn_fs_t *fs,
+                                   const char *txn_name,
+                                   const svn_fs_id_t *new_id,
+                                   trail_t *trail);
 
 
 /* Set a property NAME to VALUE on transaction TXN_NAME in FS as part
