@@ -980,13 +980,17 @@ svn_wc__remove_adm_file (svn_stringbuf_t *path, apr_pool_t *pool, ...)
 
 /*** Checking for and creating administrative subdirs. ***/
 
-/* Set *EXISTS to non-zero iff there's an adm area for PATH.
-   If an error occurs, just return error and don't touch *EXISTS. */
+/* Set *EXISTS to non-zero iff there's an adm area for PATH, and it
+ * matches URL and REVISION.
+ * ### todo: The url/rev match is not currently implemented.
+ * 
+ * If an error occurs, just return the error and don't touch *EXISTS.
+ */
 static svn_error_t *
 check_adm_exists (int *exists,
                   svn_stringbuf_t *path,
-                  svn_stringbuf_t *ancestor_path,
-                  svn_revnum_t ancestor_revision,
+                  svn_stringbuf_t *url,
+                  svn_revnum_t revision,
                   apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
@@ -1139,11 +1143,11 @@ init_adm_tmp_area (svn_stringbuf_t *path,
 }
 
 
-/* Set up a new adm area, with appropriate ancestry. 
+/* Set up a new adm area for PATH, with URL as the ancestor url.
    The adm area starts out locked; remember to unlock it when done. */
 static svn_error_t *
 init_adm (svn_stringbuf_t *path,
-          svn_stringbuf_t *ancestor_path,
+          svn_stringbuf_t *url,
           apr_pool_t *pool)
 {
   /* Default perms */
@@ -1198,7 +1202,7 @@ init_adm (svn_stringbuf_t *path,
                           svn_stringbuf_create (format_contents, pool), pool));
 
   /* SVN_WC__ADM_ENTRIES */
-  SVN_ERR (svn_wc__entries_init (path, ancestor_path, pool));
+  SVN_ERR (svn_wc__entries_init (path, url, pool));
 
   /* THIS FILE MUST BE CREATED LAST: 
      After this exists, the dir is considered complete. */
@@ -1215,32 +1219,26 @@ init_adm (svn_stringbuf_t *path,
 }
 
 
-/* Make sure that PATH (a directory) contains a complete adm area.
- *
- * Creates the adm area if none, in which case PATH starts out at
- * revision 0.
- */
 svn_error_t *
 svn_wc__ensure_adm (svn_stringbuf_t *path,
-                    svn_stringbuf_t *ancestor_path,
-                    svn_revnum_t ancestor_revision,
+                    svn_stringbuf_t *url,
+                    svn_revnum_t revision,
                     apr_pool_t *pool)
 {
   svn_error_t *err;
   int exists_already;
 
-  /* kff todo: check repos... and ancestry? */
   err = check_adm_exists (&exists_already,
                           path,
-                          ancestor_path,
-                          ancestor_revision,
+                          url,
+                          revision,
                           pool);
   if (err)
     return err;
 
   if (! exists_already)
     {
-      err = init_adm (path, ancestor_path, pool);
+      err = init_adm (path, url, pool);
       if (err)
         return err;
     }

@@ -47,7 +47,7 @@
 
 svn_error_t *
 svn_wc__entries_init (svn_stringbuf_t *path,
-                      svn_stringbuf_t *ancestor_path,
+                      svn_stringbuf_t *url,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -86,7 +86,7 @@ svn_wc__entries_init (svn_stringbuf_t *path,
      SVN_WC_ENTRY_ATTR_REVISION,
      svn_stringbuf_create (initial_revstr, pool),
      SVN_WC_ENTRY_ATTR_URL,
-     ancestor_path,
+     url,
      NULL);
 
   /* Close the top-level form. */
@@ -1050,7 +1050,7 @@ svn_wc__entries_write (apr_hash_t *entries,
 
 
 /* Update an entry NAME in ENTRIES, according to a set of changes
-   {REVISION, KIND, STATE, TEXT_TIME, PROP_TIME, ANCESTOR, ATTS}.  ATTS may be
+   {REVISION, KIND, STATE, TEXT_TIME, PROP_TIME, URL, ATTS}.  ATTS may be
    null.
 
    If the entry already exists, the requested changes will be folded
@@ -1070,7 +1070,7 @@ fold_entry (apr_hash_t *entries,
             svn_boolean_t copied,
             apr_time_t text_time,
             apr_time_t prop_time,
-            svn_stringbuf_t *ancestor,
+            svn_stringbuf_t *url,
             apr_hash_t *atts,
             apr_pool_t *pool,
             va_list ap)
@@ -1117,7 +1117,7 @@ fold_entry (apr_hash_t *entries,
 
   /* Ancestral URL in repository */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_URL)
-    entry->url = svn_stringbuf_dup (ancestor, pool);
+    entry->url = svn_stringbuf_dup (url, pool);
 
   /* Attributes */
   if (atts)
@@ -1405,13 +1405,6 @@ fold_state_changes (apr_hash_t *entries,
 }
 
 
-
-
-/* Your one-stop shop for entry modification.
-
-   Loads up an entries file, calls the "logic" module if necessary to
-   transform the requested changes, folds the changes, then syncs
-   entries to disk.  */
 svn_error_t *
 svn_wc__entry_modify (svn_stringbuf_t *path,
                       svn_stringbuf_t *name,
@@ -1424,7 +1417,7 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
                       svn_boolean_t copied,
                       apr_time_t text_time,
                       apr_time_t prop_time,
-                      svn_stringbuf_t *ancestor,
+                      svn_stringbuf_t *url,
                       apr_hash_t *attributes,
                       apr_pool_t *pool,
                       ...)
@@ -1465,7 +1458,7 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
   if (! entry_was_deleted_p)
     fold_entry (entries, name, modify_flags, revision, kind, 
                 schedule, existence, conflicted, copied, text_time,
-                prop_time, ancestor, attributes, pool, ap);
+                prop_time, url, attributes, pool, ap);
 
   SVN_ERR (svn_wc__entries_write (entries, path, pool));
 
@@ -1529,9 +1522,9 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_wc__recursively_rewrite_ancestry (svn_stringbuf_t *dirpath,
-                                      svn_stringbuf_t *ancestor,
-                                      apr_pool_t *pool)
+svn_wc__recursively_rewrite_urls (svn_stringbuf_t *dirpath,
+                                  svn_stringbuf_t *url,
+                                  apr_pool_t *pool)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
@@ -1547,7 +1540,7 @@ svn_wc__recursively_rewrite_ancestry (svn_stringbuf_t *dirpath,
   fold_entry (entries, svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, subpool),
               SVN_WC__ENTRY_MODIFY_URL,
               SVN_INVALID_REVNUM, svn_node_none, 0, 0, 0, 0, 0, 0,
-              ancestor, NULL, subpool, NULL);
+              url, NULL, subpool, NULL);
 
   /* Recursively loop over all children. */
   for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
@@ -1568,7 +1561,7 @@ svn_wc__recursively_rewrite_ancestry (svn_stringbuf_t *dirpath,
         continue;
 
       /* Derive the new URL for the current entry */
-      child_url = svn_stringbuf_dup (ancestor, subpool);
+      child_url = svn_stringbuf_dup (url, subpool);
       svn_path_add_component_nts (child_url, name, svn_path_url_style);
 
       /* If a file, tweak the entry's URL. */
@@ -1584,7 +1577,7 @@ svn_wc__recursively_rewrite_ancestry (svn_stringbuf_t *dirpath,
           svn_stringbuf_t *child_path = svn_stringbuf_dup (dirpath, subpool);
           svn_path_add_component_nts (child_path, name, svn_path_local_style);
 
-          SVN_ERR (svn_wc__recursively_rewrite_ancestry 
+          SVN_ERR (svn_wc__recursively_rewrite_urls 
                    (child_path, child_url, subpool));
         }
     }

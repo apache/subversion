@@ -75,6 +75,9 @@ svn_error_t *svn_wc__locked (svn_boolean_t *locked,
 /*** Names and file/dir operations in the administrative area. ***/
 
 /* Create DIR as a working copy directory. */
+/* ### This function hasn't been defined nor completely documented
+   yet, so I'm not sure whether the "ancestor" arguments are really
+   meant to be urls and should be changed to "url_*".  -kff */ 
 svn_error_t *svn_wc__set_up_new_dir (svn_stringbuf_t *path,
                                      svn_stringbuf_t *ancestor_path,
                                      svn_revnum_t ancestor_revnum,
@@ -305,33 +308,30 @@ svn_error_t *svn_wc__wcprop_path (svn_stringbuf_t **wcprop_path,
                                   apr_pool_t *pool);
 
 
-/* Ensure that PATH is a locked working copy directory.
+/* Ensure that PATH is a locked working copy directory based on URL at
+ * REVISION.
  *
  * (In practice, this means creating an adm area if none exists, in
  * which case it is locked from birth, or else locking an adm area
  * that's already there.)
- * 
- * REPOSITORY is a repository string for initializing the adm area.
- *
- * REVISION is the revision for this directory.  kff todo: ancestor_path?
  */
 svn_error_t *svn_wc__ensure_wc (svn_stringbuf_t *path,
-                                svn_stringbuf_t *ancestor_path,
-                                svn_revnum_t ancestor_revision,
+                                svn_stringbuf_t *url,
+                                svn_revnum_t revision,
                                 apr_pool_t *pool);
 
+/* ### todo: above and below really should be merged into one
+   function. */
 
 /* Ensure that an administrative area exists for PATH, so that PATH is
- * a working copy subdir.
- *
- * Use REPOSITORY for the wc's repository.
+ * a working copy subdir based on URL at REVISION
  *
  * Does not ensure existence of PATH itself; if PATH does not exist,
  * an error will result. 
  */
 svn_error_t *svn_wc__ensure_adm (svn_stringbuf_t *path,
-                                 svn_stringbuf_t *ancestor_path,
-                                 svn_revnum_t ancestor_revision,
+                                 svn_stringbuf_t *url,
+                                 svn_revnum_t revision,
                                  apr_pool_t *pool);
 
 
@@ -463,9 +463,10 @@ svn_error_t *svn_wc__run_log (svn_stringbuf_t *path, apr_pool_t *pool);
 #define SVN_WC__ENTRIES_ATTR_FILE_STR   "file"
 #define SVN_WC__ENTRIES_ATTR_DIR_STR    "dir"
 
-/* Initialize contents of `entries' for a new adm area. */
+/* Initialize an entries file based on URL, in th adm area for
+   PATH.  The adm area must not already have an entries file. */
 svn_error_t *svn_wc__entries_init (svn_stringbuf_t *path,
-                                   svn_stringbuf_t *ancestor_path,
+                                   svn_stringbuf_t *url,
                                    apr_pool_t *pool);
 
 
@@ -485,6 +486,28 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                                     apr_uint16_t *modify_flags,
                                     apr_hash_t *atts,
                                     apr_pool_t *pool);
+
+
+/* The MODIFY_FLAGS that tell svn_wc__entry_modify which parameters to
+   pay attention to. */
+#define SVN_WC__ENTRY_MODIFY_REVISION      0x0001
+#define SVN_WC__ENTRY_MODIFY_KIND          0x0002
+#define SVN_WC__ENTRY_MODIFY_SCHEDULE      0x0004
+#define SVN_WC__ENTRY_MODIFY_EXISTENCE     0x0008
+#define SVN_WC__ENTRY_MODIFY_CONFLICTED    0x0010
+#define SVN_WC__ENTRY_MODIFY_COPIED        0x0020
+#define SVN_WC__ENTRY_MODIFY_TEXT_TIME     0x0040
+#define SVN_WC__ENTRY_MODIFY_PROP_TIME     0x0080
+#define SVN_WC__ENTRY_MODIFY_URL           0x0100
+#define SVN_WC__ENTRY_MODIFY_ATTRIBUTES    0x0200
+
+/* ...or perhaps this to mean all of those above... */
+#define SVN_WC__ENTRY_MODIFY_ALL           0x7FFF
+
+/* ...ORed together with this to mean "I really mean this, don't be
+   trying to protect me from myself on this one." */
+#define SVN_WC__ENTRY_MODIFY_FORCE         0x8000
+
 
 /* Your one-stop shopping for changing an entry:
 
@@ -530,27 +553,6 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
      
    NOTE: when you call this function, the entries file will be read,
    tweaked, and written back out.  */
-
-/* The MODIFY_FLAGS to note which of the parameters to pay attention to are
-   as follows: */
-#define SVN_WC__ENTRY_MODIFY_REVISION      0x0001
-#define SVN_WC__ENTRY_MODIFY_KIND          0x0002
-#define SVN_WC__ENTRY_MODIFY_SCHEDULE      0x0004
-#define SVN_WC__ENTRY_MODIFY_EXISTENCE     0x0008
-#define SVN_WC__ENTRY_MODIFY_CONFLICTED    0x0010
-#define SVN_WC__ENTRY_MODIFY_COPIED        0x0020
-#define SVN_WC__ENTRY_MODIFY_TEXT_TIME     0x0040
-#define SVN_WC__ENTRY_MODIFY_PROP_TIME     0x0080
-#define SVN_WC__ENTRY_MODIFY_URL           0x0100
-#define SVN_WC__ENTRY_MODIFY_ATTRIBUTES    0x0200
-
-/* or perhaps this to mean all of those above... */
-#define SVN_WC__ENTRY_MODIFY_ALL           0x7FFF
-
-/* ORed together with this to mean "I really mean this, don't be
-   trying to protect me from myself on this one." */
-#define SVN_WC__ENTRY_MODIFY_FORCE         0x8000
-
 svn_error_t *svn_wc__entry_modify (svn_stringbuf_t *path,
                                    svn_stringbuf_t *name,
                                    apr_uint16_t modify_flags,
@@ -562,7 +564,7 @@ svn_error_t *svn_wc__entry_modify (svn_stringbuf_t *path,
                                    svn_boolean_t copied,
                                    apr_time_t text_time,
                                    apr_time_t prop_time,
-                                   svn_stringbuf_t *ancestor,
+                                   svn_stringbuf_t *url,
                                    apr_hash_t *attributes,
                                    apr_pool_t *pool,
                                    ...);
@@ -576,12 +578,11 @@ void svn_wc__entry_remove (apr_hash_t *entries, svn_stringbuf_t *name);
 svn_wc_entry_t *svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool);
 
 
-/* Set the "ancestor" URL field of DIRPATH's entry to ANCESTOR, and
-   recursively tweak all its children to have URLs that are derived
-   therefrom. */
-svn_error_t *svn_wc__recursively_rewrite_ancestry (svn_stringbuf_t *dirpath,
-                                                   svn_stringbuf_t *ancestor,
-                                                   apr_pool_t *pool);
+/* Set the url field of DIRPATH's entry to URL, and recursively tweak
+   all its children to have urls derived therefrom. */
+svn_error_t *svn_wc__recursively_rewrite_urls (svn_stringbuf_t *dirpath,
+                                               svn_stringbuf_t *url,
+                                               apr_pool_t *pool);
 
 
 
