@@ -39,6 +39,16 @@ enum svn_wc__timestamp_kind
 };
 
 
+/* Return an SVN_ERR_WC_UNSUPPORTED_FORMAT error if the working copy
+ * format WC_FORMAT is unsupported.  PATH is only used in the error
+ * message.
+ *
+ * Use POOL for any temporary allocation.
+ */
+svn_error_t *
+svn_wc__check_format (int wc_format, const char *path, apr_pool_t *pool);
+
+
 /* Set *EQUAL_P to true if PATH's TIMESTAMP_KIND timestamp is the same as
  * the one recorded in its `entries' file, else to set to false. ADM_ACCESS
  * must be an access baton for PATH.

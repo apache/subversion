@@ -26,6 +26,7 @@
 
 #include "wc.h"
 #include "adm_files.h"
+#include "questions.h"
 
 
 
@@ -98,30 +99,19 @@ do_close (svn_wc_adm_access_t *adm_access, svn_boolean_t preserve_lock);
 static svn_error_t *
 maybe_upgrade_format (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 {
-  if (adm_access->wc_format == 1)
-    {
-      return svn_error_createf
-        (SVN_ERR_WC_FORMAT_UPGRADE, NULL,
-         "working copy format 1 is too old to upgrade, in '%s';\n"
-         "please check out your working copy again",
-         adm_access->path);
-    }
-  else if (adm_access->wc_format == 2
-           || adm_access->wc_format == 3)
+  SVN_ERR (svn_wc__check_format (adm_access->wc_format,
+                                 adm_access->path,
+                                 pool));
+
+  /* We can upgrade all formats that are accepted by
+     svn_wc__check_format. */
+  if (adm_access->wc_format != SVN_WC__VERSION)
     {
       const char *path = svn_wc__adm_path (adm_access->path, FALSE, pool,
                                            SVN_WC__ADM_FORMAT, NULL);
 
       SVN_ERR (svn_io_write_version_file (path, SVN_WC__VERSION, pool));
       adm_access->wc_format = SVN_WC__VERSION;
-    }
-  else if (adm_access->wc_format > SVN_WC__VERSION)
-    {
-      return svn_error_createf
-        (SVN_ERR_WC_FORMAT_UPGRADE, NULL,
-         "this client is much too old to work with working copy '%s';\n"
-         "please get a newer Subversion client",
-         adm_access->path);
     }
 
   return SVN_NO_ERROR;
@@ -359,12 +349,14 @@ do_open (svn_wc_adm_access_t **adm_access,
         {
           /* Should we attempt to distinguish certain errors? */
           svn_error_clear (err);
-          wc_format = 0;
+          return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                                    "'%s' is not a working copy",
+                                    svn_path_local_style (path, pool));
         }
-      if (wc_format == 0 || wc_format > SVN_WC__VERSION)
-        return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-                                  "'%s' is not a working copy",
-                                  svn_path_local_style (path, pool));
+
+      SVN_ERR (svn_wc__check_format (wc_format,
+                                     svn_path_local_style (path, pool),
+                                     pool));
     }
 
   /* Need to create a new lock */

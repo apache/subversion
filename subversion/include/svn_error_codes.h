@@ -349,9 +349,9 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 20,
               "Problem on first log entry in a working copy")
 
-  SVN_ERRDEF (SVN_ERR_WC_FORMAT_UPGRADE,
+  SVN_ERRDEF (SVN_ERR_WC_UNSUPPORTED_FORMAT,
               SVN_ERR_WC_CATEGORY_START + 21,
-              "Unable to upgrade working administrative format")  
+              "Unsupported working copy format")  
 
   /* fs errors */
 
