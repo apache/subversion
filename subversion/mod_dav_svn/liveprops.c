@@ -29,17 +29,32 @@
 static const char * const dav_svn_namespace_uris[] =
 {
     "DAV:",
-    /* ### SVN-specific namespace... ?? */
+    "SVN:",     /* ### need to get this approved from IANA */
 
     NULL	/* sentinel */
 };
 enum {
-    DAV_SVN_URI_DAV		/* the DAV: namespace URI */
-    /* ### SVN-specific ?? */
+    DAV_SVN_NAMESPACE_URI_DAV,  /* the DAV: namespace URI */
+    DAV_SVN_NAMESPACE_URI       /* the SVN: namespace URI */
 };
 
-#define SVN_RO_DAV_PROP(name) { DAV_SVN_URI_DAV, #name, DAV_PROPID_##name, 0 }
-#define SVN_RW_DAV_PROP(name) { DAV_SVN_URI_DAV, #name, DAV_PROPID_##name, 1 }
+#define SVN_RO_DAV_PROP(name) \
+	{ DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##name, 0 }
+#define SVN_RW_DAV_PROP(name) \
+	{ DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##name, 1 }
+#define SVN_RO_DAV_PROP2(sym,name) \
+	{ DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##sym, 0 }
+#define SVN_RW_DAV_PROP2(sym,name) \
+	{ DAV_SVN_NAMESPACE_URI_DAV, #name, DAV_PROPID_##sym, 1 }
+
+#define SVN_RO_SVN_PROP(sym,name) \
+	{ DAV_SVN_NAMESPACE_URI, #name, SVN_PROPID_##sym, 0 }
+#define SVN_RW_SVN_PROP(sym,name) \
+	{ DAV_SVN_NAMESPACE_URI, #name, SVN_PROPID_##sym, 1 }
+
+enum {
+  SVN_PROPID_baseline_relative_path
+};
 
 static const dav_liveprop_spec dav_svn_props[] =
 {
@@ -57,7 +72,14 @@ static const dav_liveprop_spec dav_svn_props[] =
 #endif
 
   /* DeltaV properties */
-  SVN_RO_DAV_PROP(target),
+  SVN_RO_DAV_PROP2(baseline_collection, baseline-collection),
+  SVN_RO_DAV_PROP2(checked_in, checked-in),
+  SVN_RO_DAV_PROP2(version_controlled_configuration,
+                   version-controlled-configuration),
+  SVN_RO_DAV_PROP2(version_name, version-name),
+
+  /* SVN properties */
+  SVN_RO_SVN_PROP(baseline_relative_path, baseline-relative-path),
 
   { 0 } /* sentinel */
 };
@@ -90,6 +112,9 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   */
   if (!resource->exists)
     return DAV_PROP_INSERT_NOTSUPP;
+
+  /* ### we may want to respond to DAV_PROPID_resourcetype for PRIVATE
+     ### resources. need to think on "proper" interaction with mod_dav */
 
   switch (propid)
     {
@@ -127,9 +152,78 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       return DAV_PROP_INSERT_NOTSUPP;
       break;
 
-    case DAV_PROPID_target:
-      /* ### need the target... */
+    case DAV_PROPID_baseline_collection:
+      /* only defined for Baselines */
+      /* ### whoops. also defined for a VCC. deal with it later. */
+      if (resource->type != DAV_RESOURCE_TYPE_VERSION || !resource->baselined)
+        return DAV_PROP_INSERT_NOTSUPP;
+      value = dav_svn_build_uri(resource,
+                                DAV_SVN_BUILD_URI_BC,
+                                resource->info->root.rev,
+                                NULL,
+                                p);
+      break;
+
+    case DAV_PROPID_checked_in:
+      /* only defined for VCRs */
+      /* ### VCRs within the BC should not have this property! */
+      /* ### note that a VCC (a special VCR) is defined as _PRIVATE for now */
+      if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
+        return DAV_PROP_INSERT_NOTSUPP;
+      /* ### need to fetch the resource's ID */
       return DAV_PROP_INSERT_NOTSUPP;
+      break;
+
+    case DAV_PROPID_version_controlled_configuration:
+      /* only defined for VCRs */
+      /* ### VCRs within the BC should not have this property! */
+      /* ### note that a VCC (a special VCR) is defined as _PRIVATE for now */
+      if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
+        return DAV_PROP_INSERT_NOTSUPP;
+      value = dav_svn_build_uri(resource,
+                                DAV_SVN_BUILD_URI_VCC,
+                                SVN_IGNORED_REVNUM,
+                                NULL,
+                                p);
+      break;
+
+    case DAV_PROPID_version_name:
+      /* only defined for Version Resources and Baselines */
+      /* ### whoops. also defined for VCRs. deal with it later. */
+      if (resource->type != DAV_RESOURCE_TYPE_VERSION)
+        return DAV_PROP_INSERT_NOTSUPP;
+      if (resource->baselined)
+        {
+          /* just the revision number for baselines */
+          value = apr_psprintf(p, "%ld", resource->info->root.rev);
+        }
+      else if (resource->info->node_id != NULL)
+        {
+          svn_string_t *id = svn_fs_unparse_id(resource->info->node_id, p);
+
+          /* use ":ID" */
+          value = apr_psprintf(p, ":%s", id->data);
+        }
+      else
+        {
+          /* assert: repos_path != NULL */
+
+          /* use "REV:PATH" */
+          value = apr_psprintf(p, "%ld:%s",
+                               resource->info->root.rev,
+                               resource->info->repos_path);
+        }
+      break;
+
+    case SVN_PROPID_baseline_relative_path:
+      /* only defined for VCRs */
+      /* ### VCRs within the BC should not have this property! */
+      /* ### note that a VCC (a special VCR) is defined as _PRIVATE for now */
+      if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
+        return DAV_PROP_INSERT_NOTSUPP;
+
+      /* drop the leading slash, so it is relative */
+      value = resource->info->repos_path + 1;
       break;
 
     default:
@@ -142,14 +236,15 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   /* get the information and global NS index for the property */
   global_ns = dav_get_liveprop_info(propid, &dav_svn_liveprop_group, &info);
 
-    /* assert: info != NULL && info->name != NULL */
+  /* assert: info != NULL && info->name != NULL */
 
-  if (what == DAV_PROP_INSERT_VALUE) {
+  if (what == DAV_PROP_INSERT_NAME
+      || (what == DAV_PROP_INSERT_VALUE && *value == '\0')) {
+    s = apr_psprintf(p, "<lp%d:%s/>" DEBUG_CR, global_ns, info->name);
+  }
+  else if (what == DAV_PROP_INSERT_VALUE) {
     s = apr_psprintf(p, "<lp%d:%s>%s</lp%d:%s>" DEBUG_CR,
                      global_ns, info->name, value, global_ns, info->name);
-  }
-  else if (what == DAV_PROP_INSERT_NAME) {
-    s = apr_psprintf(p, "<lp%d:%s/>" DEBUG_CR, global_ns, info->name);
   }
   else {
     /* assert: what == DAV_PROP_INSERT_SUPPORTED */
@@ -243,6 +338,8 @@ int dav_svn_find_liveprop(const dav_resource *resource,
 void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
                                   dav_prop_insert what, ap_text_header *phdr)
 {
+    const dav_liveprop_spec *spec;
+
     /* don't insert any liveprops if this isn't "our" resource */
     if (resource->hooks != &dav_svn_hooks_repos)
         return;
@@ -257,14 +354,10 @@ void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
 	return;
     }
 
-    (void) dav_svn_insert_prop(resource, DAV_PROPID_creationdate,
-                               what, phdr);
-    (void) dav_svn_insert_prop(resource, DAV_PROPID_getcontentlength,
-                               what, phdr);
-    (void) dav_svn_insert_prop(resource, DAV_PROPID_getlastmodified,
-                               what, phdr);
-    (void) dav_svn_insert_prop(resource, DAV_PROPID_getetag,
-                               what, phdr);
+    for (spec = dav_svn_props; spec->name != NULL; ++spec)
+      {
+        (void) dav_svn_insert_prop(resource, spec->propid, what, phdr);
+      }
 
     /* ### we know the others aren't defined as liveprops */
 }

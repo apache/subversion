@@ -34,7 +34,21 @@ struct dav_db {
 static dav_error *dav_svn_db_open(apr_pool_t *p, const dav_resource *resource,
                                   int ro, dav_db **pdb)
 {
-  dav_db *db = apr_pcalloc(p, sizeof(*db));
+  dav_db *db;
+
+  /* Baselines and some resource types do not have deadprop databases. */
+  /* ### baselines might in the future; clients "could" attach a property
+     ### to the working baseline. */
+  if ((resource->type == DAV_RESOURCE_TYPE_VERSION && resource->baselined)
+      || resource->type == DAV_RESOURCE_TYPE_HISTORY
+      || resource->type == DAV_RESOURCE_TYPE_ACTIVITY
+      || resource->type == DAV_RESOURCE_TYPE_PRIVATE)
+    {
+      *pdb = NULL;
+      return NULL;
+    }
+
+  db = apr_pcalloc(p, sizeof(*db));
 
   db->resource = resource;
   db->p = p;
@@ -64,6 +78,14 @@ static dav_error *dav_svn_db_fetch(dav_db *db, dav_datum key,
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not fetch a property");
+
+  if (propval == NULL)
+    {
+      /* the property wasn't present. */
+      pvalue->dptr = NULL;
+      pvalue->dsize = 0;
+      return NULL;
+    }
 
   pvalue->dptr = propval->data;
   pvalue->dsize = propval->len;
