@@ -141,7 +141,7 @@ msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
 msgstr ""
-"Følgende moduler for depottilgang er tilgjengelige:\n"
+"De følgende bakenforliggende depotmoduler for filsystemet er tilgjengelige:\n"
 "\n"
 
 #: clients/cmdline/import-cmd.c:82
@@ -295,21 +295,21 @@ msgid "Lock Expires"
 msgstr "Låsen utgår"
 
 #: clients/cmdline/info-cmd.c:206
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Lock Comment (%i lines):\n"
 "%s\n"
 msgstr ""
-"Låsekommentar (%i %s):\n"
+"Låsekommentar (%i linjer):\n"
 "%s\n"
 
 #: clients/cmdline/info-cmd.c:207
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Lock Comment (%i line):\n"
 "%s\n"
 msgstr ""
-"Låsekommentar (%i %s):\n"
+"Låsekommentar (%i linje):\n"
 "%s\n"
 
 #: clients/cmdline/info-cmd.c:280
@@ -1395,7 +1395,6 @@ msgstr ""
 "    Head revision:   981\n"
 
 #: clients/cmdline/main.c:678
-#, fuzzy
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -3078,17 +3077,17 @@ msgid "Name: %s%s"
 msgstr "Navn: %s%s"
 
 #: libsvn_client/diff.c:198
-#, fuzzy, c-format
+#, c-format
 msgid "URLs have no scheme ('%s' and '%s')"
 msgstr "Nettadressene er uten skjema («%s» og «%s»)"
 
 #: libsvn_client/diff.c:204 libsvn_client/diff.c:210
-#, fuzzy, c-format
+#, c-format
 msgid "URL has no scheme: '%s'"
 msgstr "Nettadressen er uten skjema: «%s»"
 
 #: libsvn_client/diff.c:217
-#, fuzzy, c-format
+#, c-format
 msgid "Access scheme mixtures not yet supported ('%s' and '%s')"
 msgstr "Blanding av tilgangsskjemaer er foreløpig ikke støttet («%s» og «%s»)"
 
@@ -3404,9 +3403,9 @@ msgid "'%s' does not define '%s()'"
 msgstr "«%s» definerer ikke «%s()»"
 
 #: libsvn_fs/fs-loader.c:128
-#, fuzzy, c-format
+#, c-format
 msgid "Failed to load module for FS type '%s'"
-msgstr "Kunne ikke finne etiketten «%s» for adressen «%s»"
+msgstr "Feil under lasting av modul for filsystemtypen «%s»"
 
 #: libsvn_fs/fs-loader.c:135
 #, c-format
@@ -3866,7 +3865,7 @@ msgstr ""
 
 #: libsvn_fs_base/fs.c:1335
 msgid "Module for working with a Berkeley DB repository."
-msgstr ""
+msgstr "Modul for bruk mot et Berkeley DB-depot."
 
 #: libsvn_fs_base/fs.c:1369
 #, c-format
@@ -4097,7 +4096,7 @@ msgstr "Ødelagt låsefil for stien «%s» i filsystem «%s»"
 
 #: libsvn_fs_fs/fs.c:272
 msgid "Module for working with a plain file (FSFS) repository."
-msgstr ""
+msgstr "Modul for bruk mot et filbasert (FSFS) depot."
 
 #: libsvn_fs_fs/fs.c:306
 #, c-format
@@ -4284,7 +4283,7 @@ msgid "Unrecognized URL scheme for '%s'"
 msgstr "Ukjent URL-skjema for «%s»"
 
 #: libsvn_ra/ra_loader.c:576
-#, fuzzy, c-format
+#, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - håndterer skjemaet «%s»\n"
 
@@ -4321,9 +4320,9 @@ msgid "The CHECKOUT response did not contain a 'Location:' header"
 msgstr "CHECKOUT-responsen inneholdt ikke en «Location:»-header"
 
 #: libsvn_ra_dav/commit.c:847
-#, fuzzy, c-format
+#, c-format
 msgid "Could not create a DELETE request (%s)"
-msgstr "Kunne ikke lage en PUT-forespørsel (%s)"
+msgstr "Kunne ikke lage en DELETE-forespørsel (%s)"
 
 #: libsvn_ra_dav/commit.c:1271
 msgid "Could not write svndiff to temp file"
@@ -5766,7 +5765,6 @@ msgstr ""
 "\n"
 
 #: libsvn_subr/opt.c:720
-#, fuzzy
 msgid ""
 "Copyright (C) 2000-2005 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
@@ -5774,7 +5772,7 @@ msgid ""
 "Net/).\n"
 "\n"
 msgstr ""
-"Opphavsrettighet (C) 2000-2004 CollabNet.\n"
+"Opphavsrettighet (C) 2000-2005 CollabNet.\n"
 "Programvaren Subversion er åpen kildekode, se http://subversion.tigris.org/\n"
 "Dette produktet inneholder programvare laget av CollabNet (http://www.Collab."
 "Net/).\n"
@@ -7019,24 +7017,24 @@ msgid "Expires: %s\n"
 msgstr "Utgår: %s\n"
 
 #: svnadmin/main.c:1033
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Comment (%i lines):\n"
 "%s\n"
 "\n"
 msgstr ""
-"Kommentar (%i %s):\n"
+"Kommentar (%i linjer):\n"
 "%s\n"
 "\n"
 
 #: svnadmin/main.c:1034
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Comment (%i line):\n"
 "%s\n"
 "\n"
 msgstr ""
-"Kommentar (%i %s):\n"
+"Kommentar (%i linje):\n"
 "%s\n"
 "\n"
 
@@ -7499,21 +7497,21 @@ msgid "Missing path argument"
 msgstr "Mangler stiargument"
 
 #: svnlook/main.c:1780
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Comment (%i lines):\n"
 "%s\n"
 msgstr ""
-"Kommentar (%i %s):\n"
+"Kommentar (%i linjer):\n"
 "%s\n"
 
 #: svnlook/main.c:1781
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Comment (%i line):\n"
 "%s\n"
 msgstr ""
-"Kommentar (%i %s):\n"
+"Kommentar (%i linje):\n"
 "%s\n"
 
 #: svnlook/main.c:1827
