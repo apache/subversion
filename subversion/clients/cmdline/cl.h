@@ -284,9 +284,11 @@ svn_cl__get_trace_commit_editor (const svn_delta_editor_t **editor,
 
 /* Search for a text editor command in standard environment variables,
    and invoke it to edit CONTENTS (using a temporary file created in
-   directory BASE_DIR).  Return the new contents in EDITED_CONTENTS,
-   or set EDITED_CONTENTS to NULL if no edit was performed.  Use POOL
-   for all allocations. */
+   directory BASE_DIR).  Return the new contents in *EDITED_CONTENTS,
+   or set *EDITED_CONTENTS to NULL if no edit was performed.  Use POOL
+   for all allocations. 
+
+   If return error, *EDITED_CONTENTS is not touched. */
 svn_error_t *
 svn_cl__edit_externally (const char **edited_contents,
                          const char *base_dir,
