@@ -1054,7 +1054,7 @@ svn_diff_contains_conflicts(svn_diff_t *diff)
 {
   while (diff != NULL)
     {
-      if (diff->type == svn_diff_type_conflict)
+      if (diff->type == svn_diff__type_conflict)
         {
           return TRUE;
         }
@@ -1070,7 +1070,7 @@ svn_diff_contains_diffs(svn_diff_t *diff)
 {
   while (diff != NULL)
     {
-      if (diff->type != svn_diff_type_common)
+      if (diff->type != svn_diff__type_common)
         {
           return TRUE;
         }
