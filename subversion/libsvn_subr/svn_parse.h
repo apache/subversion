@@ -67,7 +67,7 @@
 */
 
 svn_error_t * svn_parse (ap_hash_t **returnhash, 
-                         svn_string_t *filename, 
+                         const char *filename, 
                          ap_pool_t *pool);
 
 

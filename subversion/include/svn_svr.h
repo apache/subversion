@@ -132,7 +132,7 @@ typedef struct svn_svr_plugin_t
 
 typedef struct svn_svr_policies_t
 {
-  /* A hash which maps repositories -> aliases.
+  /* A hash which maps aliases -> repository paths
      KEY = bytestring data,  VAL = (svn_string_t *)  */
   ap_hash_t *repos_aliases;
 
@@ -152,15 +152,23 @@ typedef struct svn_svr_policies_t
 
 
 
-/* 
-   Makes the server library load a specified config file.  Network
-   layers *must* call this routine before using the rest of libsvn_svr.
-
-   Returns a svn_svr_policies_t to be used with all server routines. 
+/*
+  Creates a new, empty policy structure and specifies grandaddy of all
+  pools to be used in Subversion Server.  
 */
 
-svn_svr_policies_t * svn_svr_init (ap_hash_t *configdata, ap_pool_t *pool);
 
+svn_error_t * svn_svr_init (svn_svr_policies_t **policy, 
+                            ap_pool_t *pool);
+
+
+/* 
+   Makes the server library load a specified config file into a policy.
+*/
+
+
+svn_error_t * svn_svr_load_policy (svn_svr_policies_t *policy, 
+                                   const char *filename);
 
 /* Routine which each plugin's init() routine uses to register itself
    in the server's policy structure.  */

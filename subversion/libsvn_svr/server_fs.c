@@ -215,12 +215,12 @@ svn_svr_authorize (svn_svr_policies_t *policy,
   err = svn_svr_policy_authorize (policy, repos, user, action, ver, path);
   if (err)
     return (svn_quick_wrap_error
-            (err, "Global server policy denied authorization.");
+            (err, "Global server policy denied authorization."));
 
   err = svn_svr_plugin_authorize (policy, repos, user, action, ver, path);
   if (err)
     return (svn_quick_wrap_error
-            (err, "A plugin denied authorization.");
+            (err, "A plugin denied authorization."));
 
   return SVN_SUCCESS;  /* successfully authorized! */
 }
@@ -288,7 +288,7 @@ svn_svr_get_ver_prop (svn_svr_policies_t *policy,
     {
       /* Generate CUSTOM Subversion errno: */
       svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          
+                                          "
                                           policy->pool));
       return FALSE;
     }
