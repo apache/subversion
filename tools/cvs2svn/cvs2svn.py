@@ -252,14 +252,26 @@ def make_path(ctx, path, branch_name = None, tag_name = None):
 
   first_sep = path.find('/')
 
-  if branch_name:
-    return path[:first_sep] + '/' + ctx.branches_base + '/' \
-           + branch_name + path[first_sep:]
-  elif tag_name:
-    return path[:first_sep] + '/' + ctx.tags_base + '/' \
-           + tag_name + path[first_sep:]
+  if first_sep == -1:
+    ret_path = ''
+    first_sep = 0
+    extra_sep = '/'
   else:
-    return path[:first_sep] + '/' + ctx.trunk_base + path[first_sep:]
+    ret_path = path[:first_sep] + '/'
+    extra_sep = ''
+
+  if branch_name:
+    ret_path = ret_path + ctx.branches_base + '/' \
+               + branch_name + extra_sep + path[first_sep:]
+  elif tag_name:
+    ret_path = ret_path + ctx.tags_base + '/' \
+               + tag_name + extra_sep + path[first_sep:]
+  else:
+    ret_path = ret_path + ctx.trunk_base + extra_sep \
+               + path[first_sep:]
+
+  return ret_path
+    
 
 
 def relative_name(cvsroot, fname):
@@ -483,8 +495,6 @@ class Dump:
     """Write the next revision, with properties, to the dumpfile.
     Return the newly started revision."""
 
-    self.revision = self.revision + 1
-
     # A revision typically looks like this:
     # 
     #   Revision-number: 1
@@ -544,6 +554,7 @@ class Dump:
     self.dumpfile.write('PROPS-END\n')
     self.dumpfile.write('\n')
 
+    self.revision = self.revision + 1
     return self.revision
 
   def add_dir(self, path):
@@ -1174,6 +1185,7 @@ def pass4(ctx):
       ### See http://www.cs.uh.edu/~wjin/cvs/train/cvstrain-7.4.4.html
       ### for excellent clarification of the vendor branch thang.
       continue
+      # pass
 
     # Each time we read a new line, we scan the commits we've
     # accumulated so far to see if any are ready for processing now.
@@ -1268,6 +1280,7 @@ def usage(ctx):
   print '  --trunk=PATH     path for trunk (default: %s)' % ctx.trunk_base
   # print '  --branches=PATH  path for branches (default: %s)' % ctx.branches_base
   # print '  --tags=PATH      path for tags (default: %s)' % ctx.tags_base
+  print '  --no-prune         Don\'t prune empty directories.'
   print '  --encoding=ENC   encoding of log messages in CVS repos (default: %s)' % ctx.encoding
   sys.exit(1)
 
@@ -1292,7 +1305,8 @@ def main():
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'p:s:vn',
                                [ "create", "trunk=",
-                                 "branches=", "tags=", "encoding=" ])
+                                 "branches=", "tags=", "encoding=",
+                                 "no-prune"])
   except getopt.GetoptError:
     usage(ctx)
   if len(args) != 1:
