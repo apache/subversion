@@ -679,16 +679,16 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
       /* Store it. */
       SVN_ERR (svn_fs__create_successor (&root_id, fs, base_root_id, root_skel,
                                          trail));
+
+      /* ... And when it is grown
+       *      Then my own little clone
+       *        Will be of the opposite sex!
+       */
+      SVN_ERR (svn_fs__set_txn_root (fs, svn_txn, root_id, trail));
     }
 
   /* One way or another, root_id now identifies a cloned root node. */
   SVN_ERR (create_node (root_p, fs, root_id, trail));
-
-  /* ... And when it is grown
-   *      Then my own little clone
-   *        Will be of the opposite sex!
-   */
-  SVN_ERR (svn_fs__set_txn_root (fs, svn_txn, root_id, trail));
 
   /*
    * (Sung to the tune of "Home, Home on the Range", with thanks to
