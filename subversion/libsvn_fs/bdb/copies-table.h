@@ -81,6 +81,6 @@ svn_error_t *svn_fs__get_copy (svn_fs__copy_t **copy_p,
 
 /* 
  * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
+ * eval: (load-file "../../../tools/dev/svn-dev.el")
  * end:
  */

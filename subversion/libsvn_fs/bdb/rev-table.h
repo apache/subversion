@@ -101,6 +101,6 @@ svn_error_t *svn_fs__set_rev_prop (svn_fs_t *fs,
 
 /* 
  * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
+ * eval: (load-file "../../../tools/dev/svn-dev.el")
  * end:
  */

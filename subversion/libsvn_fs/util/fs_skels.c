@@ -962,6 +962,6 @@ svn_fs__unparse_entries_skel (skel_t **skel_p,
 
 /* 
  * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
+ * eval: (load-file "../../../tools/dev/svn-dev.el")
  * end:
  */

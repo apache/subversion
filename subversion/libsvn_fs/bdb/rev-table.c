@@ -443,6 +443,6 @@ svn_fs_change_rev_prop (svn_fs_t *fs,
 
 /* 
  * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
+ * eval: (load-file "../../../tools/dev/svn-dev.el")
  * end:
  */

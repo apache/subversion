@@ -572,6 +572,6 @@ svn_fs_change_txn_prop (svn_fs_txn_t *txn,
 
 /* 
  * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
+ * eval: (load-file "../../../tools/dev/svn-dev.el")
  * end:
  */
