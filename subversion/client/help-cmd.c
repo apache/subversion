@@ -23,6 +23,8 @@
 #include "svn_error.h"
 #include "cl.h"
 
+#include "svn_private_config.h"  /* for SVN_VERSION */
+
 
 /*** Code. ***/
 
@@ -77,6 +79,12 @@ print_generic_help (apr_pool_t *pool)
     "default.\n"
     "\n"
     "Available subcommands:\n";
+
+  static const char info[] =
+    "Subversion is a tool for revision control.\n"
+    "For updates and additional information, see the Subversion home page:\n"
+    "      http://subversion.tigris.org\n";
+
   int i = 0;
 
   printf ("%s", usage);
@@ -91,6 +99,10 @@ print_generic_help (apr_pool_t *pool)
         }
       i++;
     }
+
+  printf ("\nSubversion, version %s\n", SVN_VERSION);
+  printf ("%s\n", info);
+
 }
 
 
