@@ -66,7 +66,7 @@ svn_cl__propedit (apr_getopt_t *os,
       const char *base_dir = target;
       const char *target_native;
       svn_wc_adm_access_t *adm_access;
-      svn_wc_entry_t *entry;
+      const svn_wc_entry_t *entry;
 
       /* Fetch the current property. */
       SVN_ERR (svn_client_propget (&props, pname_utf8, target, FALSE, pool));

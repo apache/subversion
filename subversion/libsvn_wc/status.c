@@ -98,7 +98,7 @@ static svn_error_t *
 assemble_status (svn_wc_status_t **status,
                  const char *path,
                  svn_wc_adm_access_t *adm_access,
-                 svn_wc_entry_t *entry,
+                 const svn_wc_entry_t *entry,
                  svn_node_kind_t path_kind,
                  svn_boolean_t get_all,
                  apr_pool_t *pool)
@@ -285,7 +285,7 @@ static svn_error_t *
 add_status_structure (apr_hash_t *statushash,
                       const char *path,
                       svn_wc_adm_access_t *adm_access,
-                      svn_wc_entry_t *entry,
+                      const svn_wc_entry_t *entry,
                       svn_node_kind_t path_kind,
                       svn_boolean_t get_all,
                       apr_pool_t *pool)
@@ -412,7 +412,7 @@ svn_wc_status (svn_wc_status_t **status,
                apr_pool_t *pool)
 {
   svn_wc_status_t *s;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
 
   /* PATH may be unversioned, or nonexistent (in the case of 'svn st -u'
      being told about as-yet-unknnown paths), and either condition will
@@ -445,7 +445,7 @@ svn_wc_statuses (apr_hash_t *statushash,
                  apr_pool_t *pool)
 {
   enum svn_node_kind kind;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
 
   /* Is PATH a directory or file? */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
@@ -516,7 +516,7 @@ svn_wc_statuses (apr_hash_t *statushash,
           if (strcmp (base_name, SVN_WC_ENTRY_THIS_DIR) != 0)
             fullpath = svn_path_join (fullpath, base_name, pool);
 
-          entry = (svn_wc_entry_t *) val;
+          entry = val;
 
           /* ### todo: What if the subdir is from another repository? */
           
@@ -557,7 +557,7 @@ svn_wc_statuses (apr_hash_t *statushash,
                      disk), we don't want to reach down into that
                      subdir to try to flesh out a "complete entry".  */
 
-                  svn_wc_entry_t *fullpath_entry = entry;
+                  const svn_wc_entry_t *fullpath_entry = entry;
 
                   if (entry->kind == fullpath_kind)
                     SVN_ERR (svn_wc_entry (&fullpath_entry, fullpath, 

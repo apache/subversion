@@ -923,7 +923,7 @@ static svn_error_t *
 expand_keyword (svn_wc_keywords_t *keywords,
                 svn_boolean_t *is_valid_p,
                 const char *keyword,
-                svn_wc_entry_t *entry,
+                const svn_wc_entry_t *entry,
                 apr_pool_t *pool)
 {
   *is_valid_p = TRUE;
@@ -1013,7 +1013,7 @@ svn_wc__get_keywords (svn_wc_keywords_t **keywords,
   svn_stringbuf_t *found_word;
   svn_wc_keywords_t tmp_keywords = { 0 };
   svn_boolean_t got_one = FALSE;
-  svn_wc_entry_t *entry = NULL;
+  const svn_wc_entry_t *entry = NULL;
 
   /* Start by assuming no keywords. */
   *keywords = NULL;

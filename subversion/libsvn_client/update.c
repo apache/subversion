@@ -52,7 +52,7 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
   void *wrapped_old_edit_baton;
   const svn_ra_reporter_t *reporter;
   void *report_baton;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   const char *URL, *anchor, *target;
   svn_error_t *err;
   svn_revnum_t revnum;

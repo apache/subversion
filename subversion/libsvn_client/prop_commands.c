@@ -52,7 +52,7 @@ recursive_propset (const char *propname,
       const char *current_entry_name;
       svn_stringbuf_t *full_entry_path
         = svn_stringbuf_create (svn_wc_adm_access_path (adm_access), pool);
-      svn_wc_entry_t *current_entry;
+      const svn_wc_entry_t *current_entry;
 
       apr_hash_this (hi, &key, NULL, &val);
       keystring = key;
@@ -98,7 +98,7 @@ svn_client_propset (const char *propname,
                     apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
-  svn_wc_entry_t *node;
+  const svn_wc_entry_t *node;
 
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, TRUE, TRUE, pool));
   SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
@@ -138,7 +138,7 @@ recursive_propget (apr_hash_t *props,
       void * val;
       const char *current_entry_name;
       const char *full_entry_path;
-      svn_wc_entry_t *current_entry;
+      const svn_wc_entry_t *current_entry;
 
       apr_hash_this (hi, &key, NULL, &val);
       keystring = key;
@@ -189,7 +189,7 @@ svn_client_propget (apr_hash_t **props,
 {
   apr_hash_t *prop_hash = apr_hash_make (pool);
   svn_wc_adm_access_t *adm_access;
-  svn_wc_entry_t *node;
+  const svn_wc_entry_t *node;
 
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, FALSE, TRUE,
                                   pool));
@@ -256,7 +256,7 @@ recursive_proplist (apr_array_header_t *props,
       void * val;
       const char *current_entry_name;
       const char *full_entry_path;
-      svn_wc_entry_t *current_entry;
+      const svn_wc_entry_t *current_entry;
 
       apr_hash_this (hi, &key, NULL, &val);
       keystring = key;
@@ -300,7 +300,7 @@ svn_client_proplist (apr_array_header_t **props,
   apr_array_header_t *prop_list
       = apr_array_make (pool, 5, sizeof (svn_client_proplist_item_t *));
   svn_wc_adm_access_t *adm_access;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
 
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, FALSE, TRUE,
                                   pool));

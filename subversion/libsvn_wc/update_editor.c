@@ -175,7 +175,7 @@ make_dir_baton (const char *path,
   struct dir_baton *d = apr_pcalloc (pool, sizeof (*d));
   const char *URL;
   svn_error_t *err;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   struct bump_dir_info *bdi;
   
   /* Don't do this.  Just do NOT do this to me. */
@@ -354,7 +354,7 @@ make_file_baton (struct dir_baton *pb,
   struct file_baton *f = apr_pcalloc (pool, sizeof (*f));
   const char *URL;
   svn_error_t *err;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
 
   /* I rather need this information, yes. */
   if (! path)
@@ -633,7 +633,7 @@ add_directory (const char *path,
          parent, and make the revision equal to the global target
          revision. */
       svn_wc_adm_access_t *adm_access;
-      svn_wc_entry_t *parent_entry;
+      const svn_wc_entry_t *parent_entry;
 
       SVN_ERR (svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
                                     pb->path, db->pool));
@@ -960,7 +960,7 @@ add_or_open_file (const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct file_baton *fb;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   int is_wc;
   enum svn_node_kind kind;
   svn_wc_adm_access_t *adm_access;
@@ -1098,7 +1098,7 @@ apply_textdelta (void *file_baton,
          text base hasn't been corrupted. */
       {
         svn_wc_adm_access_t *adm_access;
-        svn_wc_entry_t *ent;
+        const svn_wc_entry_t *ent;
 
         SVN_ERR (svn_wc_adm_retrieve (&adm_access, fb->edit_baton->adm_access,
                                       svn_path_remove_component_nts (fb->path,
@@ -1569,7 +1569,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
               /* Now we need to let loose svn_wc_merge() to merge the
                  textual changes into the working file. */
               const char *oldrev_str, *newrev_str;
-              svn_wc_entry_t *e;
+              const svn_wc_entry_t *e;
               
               /* Create strings representing the revisions of the
                  old and new text-bases. */
@@ -1722,7 +1722,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
 
   if (content_state)
     {
-      svn_wc_entry_t *entry;
+      const svn_wc_entry_t *entry;
       svn_boolean_t tc, pc;
 
       /* Initialize the state of our returned value. */
@@ -2132,7 +2132,7 @@ check_wc_root (svn_boolean_t *wc_root,
                apr_pool_t *pool)
 {
   const char *parent, *base_name;
-  svn_wc_entry_t *p_entry, *entry;
+  const svn_wc_entry_t *p_entry, *entry;
   svn_error_t *err;
 
   /* Go ahead and initialize our return value to the most common

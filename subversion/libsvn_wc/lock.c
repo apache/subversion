@@ -307,7 +307,7 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
       for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
         {
           void *val;
-          svn_wc_entry_t *entry;
+          const svn_wc_entry_t *entry;
           svn_wc_adm_access_t *entry_access;
           const char *entry_path;
           svn_error_t *svn_err;

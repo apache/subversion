@@ -60,7 +60,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
 {
   const svn_ra_reporter_t *reporter;
   void *report_baton;
-  svn_wc_entry_t *entry, *session_entry;
+  const svn_wc_entry_t *entry, *session_entry;
   const char *URL, *anchor, *target;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;

@@ -74,7 +74,7 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
            || (revision->kind == svn_client_revision_previous))
     {
       svn_wc_adm_access_t *adm_access; /* ### FIXME local */
-      svn_wc_entry_t *ent;
+      const svn_wc_entry_t *ent;
 
       /* Sanity check. */
       if (path == NULL)

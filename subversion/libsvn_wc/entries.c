@@ -604,7 +604,7 @@ read_entries (svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
-svn_wc_entry (svn_wc_entry_t **entry,
+svn_wc_entry (const svn_wc_entry_t **entry,
               const char *path,
               svn_wc_adm_access_t *adm_access,
               svn_boolean_t show_deleted,
@@ -1505,7 +1505,7 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
 
 
 svn_wc_entry_t *
-svn_wc_entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
+svn_wc_entry_dup (const svn_wc_entry_t *entry, apr_pool_t *pool)
 {
   svn_wc_entry_t *dupentry = apr_pcalloc (pool, sizeof(*dupentry));
 
@@ -1608,7 +1608,7 @@ walker_helper (const char *dirpath,
       const void *key;
       apr_ssize_t klen;
       void *val;
-      svn_wc_entry_t *current_entry; 
+      const svn_wc_entry_t *current_entry; 
       const char *entrypath;
 
       apr_hash_this (hi, &key, &klen, &val);
@@ -1643,7 +1643,7 @@ svn_wc_walk_entries (const char *path,
                      svn_boolean_t show_deleted,
                      apr_pool_t *pool)
 {
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, show_deleted, pool));
 

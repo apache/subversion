@@ -42,7 +42,7 @@ svn_cl__switch (apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *target = NULL, *switch_url = NULL;
   svn_wc_adm_access_t *adm_access;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   svn_client_auth_baton_t *auth_baton;
   const char *parent_dir, *base_tgt;
   svn_wc_notify_func_t notify_func = NULL;

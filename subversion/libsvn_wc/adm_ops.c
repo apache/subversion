@@ -129,7 +129,7 @@ svn_wc__do_update_cleanup (const char *path,
                            apr_pool_t *pool)
 {
   apr_hash_t *entries;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
 
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, pool));
   if (entry == NULL)
@@ -341,7 +341,7 @@ svn_wc_process_committed (const char *path,
           const void *key;
           void *val;
           const char *name;
-          svn_wc_entry_t *current_entry;
+          const svn_wc_entry_t *current_entry;
           const char *this_path;
           svn_wc_adm_access_t *child_access;
 
@@ -451,7 +451,8 @@ mark_tree (svn_wc_adm_access_t *adm_access,
                               subpool));
         }
 
-      /* Mark this entry. */
+      /* Mark this entry.  This modifys the cache, but it's OK we are about
+         to write it out again. */
       entry->schedule = schedule;
       entry->copied = copied; 
       SVN_ERR (svn_wc__entry_modify (adm_access, base_name, entry, 
@@ -578,7 +579,7 @@ erase_from_wc (const char *path,
             const void *key;
             void *val;
             const char *name;
-            svn_wc_entry_t *entry;
+            const svn_wc_entry_t *entry;
             const char *down_path;
 
             apr_hash_this (hi, &key, NULL, &val);
@@ -631,7 +632,7 @@ svn_wc_delete (const char *path,
                apr_pool_t *pool)
 {
   svn_wc_adm_access_t *dir_access;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
   svn_boolean_t was_schedule_add;
 
   /* ### do we really need to retrieve? */
@@ -670,9 +671,10 @@ svn_wc_delete (const char *path,
          the addition of a delete flag. */
       const char *dir, *base_name;
       svn_path_split_nts (path, &dir, &base_name, pool);
+      svn_wc_entry_t tmp_entry;
       
-      entry->schedule = svn_wc_schedule_delete;
-      SVN_ERR (svn_wc__entry_modify (adm_access, base_name, entry,
+      tmp_entry.schedule = svn_wc_schedule_delete;
+      SVN_ERR (svn_wc__entry_modify (adm_access, base_name, &tmp_entry,
                                      SVN_WC__ENTRY_MODIFY_SCHEDULE, pool));
     }
 
@@ -703,7 +705,7 @@ svn_wc_get_ancestry (char **url,
                      svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool)
 {
-  svn_wc_entry_t *ent;
+  const svn_wc_entry_t *ent;
 
   SVN_ERR (svn_wc_entry (&ent, path, adm_access, FALSE, pool));
   *url = apr_pstrdup (pool, ent->url);
@@ -723,7 +725,8 @@ svn_wc_add (const char *path,
             apr_pool_t *pool)
 {
   const char *parent_dir, *base_name;
-  svn_wc_entry_t *orig_entry, *parent_entry, tmp_entry;
+  const svn_wc_entry_t *orig_entry, *parent_entry;
+  svn_wc_entry_t tmp_entry;
   svn_boolean_t is_replace = FALSE;
   enum svn_node_kind kind;
   apr_uint32_t modify_flags = 0;
@@ -851,7 +854,7 @@ svn_wc_add (const char *path,
     {
       if (! copyfrom_url)
         {
-          svn_wc_entry_t *p_entry; /* ### why not use parent_entry? */
+          const svn_wc_entry_t *p_entry; /* ### why not use parent_entry? */
           const char *new_url;
 
           /* Get the entry for this directory's parent.  We need to snatch
@@ -1187,7 +1190,8 @@ svn_wc_revert (const char *path,
 {
   enum svn_node_kind kind;
   const char *p_dir = NULL, *bname = NULL;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
+  svn_wc_entry_t *tmp_entry;
   svn_boolean_t wc_root = FALSE, reverted = FALSE;
   apr_uint32_t modify_flags = 0;
   svn_wc_adm_access_t *parent_access, *dir_access;
@@ -1247,6 +1251,8 @@ svn_wc_revert (const char *path,
     {
       parent_access = optional_parent_access;
     }
+
+  tmp_entry = svn_wc_entry_dup (entry, pool);
 
   /* Additions. */
   if (entry->schedule == svn_wc_schedule_add)
@@ -1321,11 +1327,11 @@ svn_wc_revert (const char *path,
     {
       /* Revert the prop and text mods (if any). */
       if (entry->kind == svn_node_file)
-        SVN_ERR (revert_admin_things (parent_access, bname, entry,
+        SVN_ERR (revert_admin_things (parent_access, bname, tmp_entry,
                                       &modify_flags, pool));
       if (entry->kind == svn_node_dir)
-        SVN_ERR (revert_admin_things (dir_access, NULL, entry, &modify_flags, 
-                                      pool));
+        SVN_ERR (revert_admin_things (dir_access, NULL, tmp_entry,
+                                      &modify_flags, pool));
     }
 
   /* Deletions and replacements. */
@@ -1334,11 +1340,11 @@ svn_wc_revert (const char *path,
     {
       /* Revert the prop and text mods (if any). */
       if (entry->kind == svn_node_file)
-        SVN_ERR (revert_admin_things (parent_access, bname, entry,
+        SVN_ERR (revert_admin_things (parent_access, bname, tmp_entry,
                                       &modify_flags, pool));
       if (entry->kind == svn_node_dir)
-        SVN_ERR (revert_admin_things (dir_access, NULL, entry, &modify_flags,
-                                      pool));
+        SVN_ERR (revert_admin_things (dir_access, NULL, tmp_entry,
+                                      &modify_flags, pool));
 
       modify_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
     }
@@ -1353,13 +1359,13 @@ svn_wc_revert (const char *path,
         recursive = TRUE;
 
       /* Reset the schedule to normal. */
-      entry->schedule = svn_wc_schedule_normal;
-      entry->conflict_old = NULL;
-      entry->conflict_new = NULL;
-      entry->conflict_wrk = NULL;
-      entry->prejfile = NULL;
+      tmp_entry->schedule = svn_wc_schedule_normal;
+      tmp_entry->conflict_old = NULL;
+      tmp_entry->conflict_new = NULL;
+      tmp_entry->conflict_wrk = NULL;
+      tmp_entry->prejfile = NULL;
       if (! wc_root)
-        SVN_ERR (svn_wc__entry_modify (parent_access, bname, entry,
+        SVN_ERR (svn_wc__entry_modify (parent_access, bname, tmp_entry,
                                        modify_flags 
                                        | SVN_WC__ENTRY_MODIFY_FORCE,
                                        pool));
@@ -1368,7 +1374,7 @@ svn_wc_revert (const char *path,
          directory itself. */
       if (entry->kind == svn_node_dir) 
         {
-          SVN_ERR (svn_wc__entry_modify (dir_access, NULL, entry,
+          SVN_ERR (svn_wc__entry_modify (dir_access, NULL, tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_SCHEDULE 
                                          | SVN_WC__ENTRY_MODIFY_PREJFILE
                                          | SVN_WC__ENTRY_MODIFY_FORCE,
@@ -1558,7 +1564,7 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
           const void *key;
           void *val;
           const char *current_entry_name;
-          svn_wc_entry_t *current_entry; 
+          const svn_wc_entry_t *current_entry; 
           
           apr_hash_this (hi, &key, NULL, &val);
           current_entry = val;
@@ -1656,7 +1662,7 @@ attempt_deletion (const char *parent_dir,
 /* Does the main resolution work: */
 static svn_error_t *
 resolve_conflict_on_entry (const char *path,
-                           svn_wc_entry_t *entry,
+                           const svn_wc_entry_t *orig_entry,
                            const char *conflict_dir,
                            const char *base_name,
                            svn_boolean_t resolve_text,
@@ -1667,6 +1673,7 @@ resolve_conflict_on_entry (const char *path,
 {
   svn_boolean_t text_conflict, prop_conflict;
   apr_uint32_t modify_flags = 0;
+  svn_wc_entry_t *entry = svn_wc_entry_dup (orig_entry, pool);
 #if 0  /* See below */
   svn_wc_adm_access_t *adm_access;
 #endif
@@ -1754,7 +1761,7 @@ struct resolve_callback_baton
 
 static svn_error_t *
 resolve_found_entry_callback (const char *path,
-                              svn_wc_entry_t *entry,
+                              const svn_wc_entry_t *entry,
                               void *walk_baton)
 {
   struct resolve_callback_baton *baton = walk_baton;
@@ -1810,7 +1817,7 @@ svn_wc_resolve_conflict (const char *path,
 
   if (! recursive)
     {
-      svn_wc_entry_t *entry;
+      const svn_wc_entry_t *entry;
       svn_wc_entry (&entry, path, adm_access, FALSE, pool);
       if (! entry)
         return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
@@ -1885,7 +1892,7 @@ svn_wc_set_auth_file (svn_wc_adm_access_t *adm_access,
       apr_hash_index_t *hi;
       apr_hash_t *entries;
       const char *base_name;
-      svn_wc_entry_t *entry;
+      const svn_wc_entry_t *entry;
 
       SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
 

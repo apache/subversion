@@ -74,7 +74,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
   const svn_ra_reporter_t *reporter;
   const char *anchor, *target, *URL;
   svn_wc_adm_access_t *anchor_access;
-  svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;
 
   /* Use PATH to get the update's anchor and targets. */
   SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
