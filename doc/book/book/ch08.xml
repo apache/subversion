@@ -4189,13 +4189,14 @@ Rearrange lunch.
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svnlook tree REPOS_PATH</programlisting>
+          <programlisting>svnlook tree REPOS_PATH [PATH_IN_REPOS]</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
 
-          <para>Print the tree, optionally showing node revision
-            ids.</para>
+          <para>Print the tree, starting at PATH_IN_REPOS (if
+            supplied, at the root of the tree otherwise), optionally
+            showing node revision ids.</para>
         </refsect1>
 
         <refsect1>
