@@ -364,6 +364,17 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
   /* Read the entries file for this directory. */
   SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
 
+  /* Handle "this dir" for cases that need it handled before
+     recursion. */
+  if (state == mark_tree_state_undelete)
+    SVN_ERR (svn_wc__entry_modify
+             (dir, NULL, 
+              SVN_WC__ENTRY_MODIFY_SCHEDULE,
+              SVN_INVALID_REVNUM, svn_node_dir,
+              svn_wc_schedule_undelete,
+              svn_wc_existence_normal,
+              FALSE, 0, 0, NULL, pool, NULL));
+
   /* Mark each entry in the entries file. */
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
@@ -376,6 +387,11 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
       /* Get the next entry */
       apr_hash_this (hi, &key, &klen, &val);
       entry = (svn_wc_entry_t *) val;
+
+      /* Skip "this dir".  */
+      if (! strcmp ((const char *)key, SVN_WC_ENTRY_THIS_DIR))
+        continue;
+          
       basename = svn_stringbuf_create ((const char *) key, subpool);
 
       /* If the entry's existence is `deleted', skip it. */
@@ -384,12 +400,8 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
 
       if (entry->kind == svn_node_dir)
         {
-          if (strcmp (basename->data, SVN_WC_ENTRY_THIS_DIR) != 0)
-            {
-              svn_path_add_component (fullpath, basename, 
-                                      svn_path_local_style);
-              SVN_ERR (mark_tree (fullpath, state, subpool));
-            }
+          svn_path_add_component (fullpath, basename, svn_path_local_style);
+          SVN_ERR (mark_tree (fullpath, state, subpool));
         }
 
       /* Mark this entry. */
@@ -402,7 +414,7 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
                     SVN_INVALID_REVNUM, entry->kind,
                     svn_wc_schedule_delete,
                     svn_wc_existence_normal,
-                    FALSE, 0, 0, NULL, pool, NULL));
+                    FALSE, 0, 0, NULL, subpool, NULL));
           break;
 
         case mark_tree_state_unadd:
@@ -412,7 +424,7 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
                     SVN_INVALID_REVNUM, entry->kind,
                     svn_wc_schedule_unadd,
                     svn_wc_existence_normal,
-                    FALSE, 0, 0, NULL, pool, NULL));
+                    FALSE, 0, 0, NULL, subpool, NULL));
           break;
 
         case mark_tree_state_undelete: 
@@ -422,7 +434,7 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
                     SVN_INVALID_REVNUM, entry->kind,
                     svn_wc_schedule_undelete,
                     svn_wc_existence_normal,
-                    FALSE, 0, 0, NULL, pool, NULL));
+                    FALSE, 0, 0, NULL, subpool, NULL));
           break;
         }
 
@@ -432,6 +444,24 @@ mark_tree (svn_stringbuf_t *dir, enum mark_tree_state state, apr_pool_t *pool)
       /* Clear our per-iteration pool. */
       svn_pool_clear (subpool);
     }
+
+  /* Handle "this dir" for states that need it done post-recursion. */
+  if (state == mark_tree_state_delete)
+    SVN_ERR (svn_wc__entry_modify
+             (dir, NULL, 
+              SVN_WC__ENTRY_MODIFY_SCHEDULE,
+              SVN_INVALID_REVNUM, svn_node_dir,
+              svn_wc_schedule_delete,
+              svn_wc_existence_normal,
+              FALSE, 0, 0, NULL, pool, NULL));
+  if (state == mark_tree_state_unadd)
+    SVN_ERR (svn_wc__entry_modify
+             (dir, NULL,
+              SVN_WC__ENTRY_MODIFY_SCHEDULE,
+              SVN_INVALID_REVNUM, svn_node_dir,
+              svn_wc_schedule_unadd,
+              svn_wc_existence_normal,
+              FALSE, 0, 0, NULL, pool, NULL));
 
   /* Destroy our per-iteration pool. */
   svn_pool_destroy (subpool);
