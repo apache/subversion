@@ -1114,6 +1114,9 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   comb->res.pool = r->pool;
   comb->res.uri = cleaned_uri;
 
+  /* Original request, off which to generate subrequests later. */
+  comb->priv.r = r;
+
   /* ### ugly hack to carry over Content-Type data to the open_stream, which
      ### does not have access to the request headers. */
   {

@@ -33,6 +33,8 @@
 #include "svn_dav.h"
 
 #include "mod_dav_svn.h"
+#include <http_request.h>
+#include <http_log.h>
 
 
 typedef struct {
@@ -96,6 +98,16 @@ typedef struct {
 #define DIR_OR_FILE(is_dir) ((is_dir) ? "directory" : "file")
 
 
+struct authz_read_baton
+{
+  /* The original request, needed to generate a subrequest. */
+  request_rec *r;
+
+  /* We need this to construct a URI based on a repository abs path. */
+  const dav_svn_repos *repos;
+};
+
+
 /* This implements 'svn_repos_authz_read_func_t'. */
 static svn_error_t *authz_read(svn_boolean_t *allowed,
                                svn_fs_root_t *root,
@@ -103,14 +115,39 @@ static svn_error_t *authz_read(svn_boolean_t *allowed,
                                void *baton,
                                apr_pool_t *pool)
 {
-  /* See page 554 of Apache book about httpd subrequests. */
+  struct authz_read_baton *arb = baton;
+  request_rec *subreq = NULL;
 
-  /* For now, a silly test implementation. */
-  if ((strstr ((char *) path, "/pi"))
-      || (strstr ((char *) path, "/E")))
-    *allowed = FALSE;
-  else
-    *allowed = TRUE;
+  if (svn_fs_is_txn_root(root))
+    {
+      /* ### Hack.  Updating a switched working copy will always
+         succeed right now (updates of switched working copies are the
+         only times the second root parameter to svn_repos_dir_delta
+         is a txn root instead of a revision root). */
+      *allowed = TRUE;
+    }
+  else  /* root is a revision root */
+    {
+      const char *uri;
+
+      /* Building a Version Resource URI to path. */
+      uri = dav_svn_build_uri(arb->repos,
+                              DAV_SVN_BUILD_URI_VERSION,
+                              svn_fs_revision_root_revision(root),
+                              path, FALSE, pool);
+
+      /* Check if GET would work against this uri. */
+      subreq = ap_sub_req_method_uri("GET", uri,
+                                     arb->r, arb->r->output_filters);
+      
+      if (subreq && (subreq->status == HTTP_OK))
+        *allowed = TRUE;
+      else
+        *allowed = FALSE;
+      
+      if (subreq)
+        ap_destroy_sub_req(subreq);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -723,6 +760,11 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   svn_boolean_t recurse = TRUE;
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
+  struct authz_read_baton arb;
+
+  /* Construct the authz read check baton. */
+  arb.r = resource->info->r;
+  arb.repos = repos;
 
   if (resource->info->restype != DAV_SVN_RESTYPE_VCC)
     {
@@ -937,7 +979,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      recurse,
                                      ignore_ancestry,
                                      editor, &uc,
-                                     authz_read, NULL,
+                                     authz_read, &arb,
                                      resource->pool)))
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1080,7 +1122,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                      /* re-use the editor */
                                      editor, &uc,
                                      authz_read,
-                                     NULL,
+                                     &arb,
                                      FALSE, /* no text deltas */
                                      recurse,
                                      TRUE, /* send entryprops */
