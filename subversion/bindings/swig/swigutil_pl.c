@@ -880,9 +880,10 @@ static svn_error_t *io_handle_write (void *baton,
     MAGIC *mg;
 
     if (mg = SvTIED_mg((SV*)io->io, PERL_MAGIC_tiedscalar)) {
-	SV *ret;
-	perl_callback_thunk (CALL_METHOD, "WRITE", &ret, "Osi",
-			     SvTIED_obj((SV*)io->io, mg), data, *len);
+	SV *ret, *pv;
+        pv = sv_2mortal (newSVpvn (data, *len));
+	perl_callback_thunk (CALL_METHOD, "WRITE", &ret, "OOi",
+			     SvTIED_obj((SV*)io->io, mg), pv, *len);
 	*len = SvIV (ret);
     }
     else
