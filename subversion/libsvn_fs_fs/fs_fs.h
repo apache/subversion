@@ -112,7 +112,7 @@ svn_boolean_t svn_fs__fs_noderev_same_data_key (svn_fs__node_revision_t *a,
 #define SVN_FS_FS__KIND              "type"     
 #define SVN_FS_FS__COUNT             "count"    
 #define SVN_FS_FS__PROPS             "props"    
-#define SVN_FS_FS__REP               "rep"      
+#define SVN_FS_FS__TEXT              "text"      
 #define SVN_FS_FS__CPATH             "cpath"
 #define SVN_FS_FS__COPYFROM          "copyfrom"
 #define SVN_FS_FS__COPYROOT          "copyroot"

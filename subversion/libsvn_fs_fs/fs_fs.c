@@ -56,7 +56,6 @@ hash_read (apr_hash_t *hash,
            svn_stream_t *stream,
            apr_pool_t *pool)
 {
-  svn_error_t *err;
   svn_stringbuf_t *stringbuf;
   svn_boolean_t eof;
   char buf[SVN_KEYLINE_MAXLEN];
@@ -75,7 +74,6 @@ hash_read (apr_hash_t *hash,
         {
           /* We got an EOF on our very first attempt to read, which
              means it's a zero-byte file.  No problem, just go home. */
-          svn_error_clear (err);
           return SVN_NO_ERROR;
         }
       first_time = 0;
@@ -293,6 +291,58 @@ open_and_seek_revision (apr_file_t **file,
   return SVN_NO_ERROR;
 }
 
+/* Parse the four numbers from a text or prop representation
+   descriptor in STRING.  The resulting revision, offset, size, and
+   expanded size are stored in *REVISION_P, *OFFSET_P, *SIZE_P, and
+   *EXPANDED_SIZE_P respectively. */
+svn_error_t *
+read_rep_offsets (svn_revnum_t *revision_p,
+                  apr_off_t *offset_p,
+                  apr_size_t *size_p,
+                  apr_size_t *expanded_size_p,
+                  char *string)
+{
+  char *str, *last_str;
+  svn_revnum_t revision;
+  apr_off_t offset;
+  apr_size_t size, expanded_size;
+  
+  str = apr_strtok (string, " ", &last_str);
+  if (str == NULL)
+    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                             "Malformed text rep offset line in node-rev");
+  
+  revision = atoi (str);
+  
+  str = apr_strtok (NULL, " ", &last_str);
+  if (str == NULL)
+    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                             "Malformed text rep offset line in node-rev");
+  
+  offset = apr_atoi64 (str);
+  
+  str = apr_strtok (NULL, " ", &last_str);
+  if (str == NULL)
+    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                             "Malformed text rep offset line in node-rev");
+  
+  size = apr_atoi64 (str);
+  
+  str = apr_strtok (NULL, " ", &last_str);
+  if (str == NULL)
+    return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
+                             "Malformed text rep offset line in node-rev");
+  
+  expanded_size = apr_atoi64 (str);
+
+  *revision_p = revision;
+  *offset_p = offset;
+  *size_p = size;
+  *expanded_size_p = expanded_size;
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
                               svn_fs_t *fs,
@@ -313,6 +363,9 @@ svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
   SVN_ERR (read_header_block (&headers, revision_file, pool) );
 
   noderev = apr_pcalloc (pool, sizeof (*noderev));
+
+  noderev->data_revision = SVN_INVALID_REVNUM;
+  noderev->prop_revision = SVN_INVALID_REVNUM;
 
   /* Read the node-rev id. */
   value = apr_hash_get (headers, SVN_FS_FS__NODE_ID, APR_HASH_KEY_STRING);
@@ -349,66 +402,20 @@ svn_fs__fs_get_node_revision (svn_fs__node_revision_t **noderev_p,
 
   /* Get the properties location. */
   value = apr_hash_get (headers, SVN_FS_FS__PROPS, APR_HASH_KEY_STRING);
-  if (value == NULL)
+  if (value)
     {
-      noderev->prop_offset = -1;
-    }
-  else
-    {
-      char *str, *last_str;
-
-      str = apr_strtok (value, " ", &last_str);
-      if (str == NULL)
-        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                 "Malformed props line in node-rev");
-
-      noderev->prop_revision = atoi (str);
-
-      str = apr_strtok (NULL, " ", &last_str);
-      if (str == NULL)
-        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                 "Malformed props line in node-rev");
-
-      noderev->prop_offset = apr_atoi64 (str);
+      SVN_ERR (read_rep_offsets (&noderev->prop_revision, &noderev->prop_offset,
+                                 &noderev->prop_size,
+                                 &noderev->prop_expanded_size, value));
     }
 
   /* Get the data location. */
-  value = apr_hash_get (headers, SVN_FS_FS__REP, APR_HASH_KEY_STRING);
-  if (value == NULL)
+  value = apr_hash_get (headers, SVN_FS_FS__TEXT, APR_HASH_KEY_STRING);
+  if (value)
     {
-      noderev->data_offset = -1;
-    }
-  else
-    {
-      char *str, *last_str;
-
-      str = apr_strtok (value, " ", &last_str);
-      if (str == NULL)
-        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                 "Malformed rep line in node-rev");
-
-      noderev->data_revision = atoi (str);
-
-      str = apr_strtok (NULL, " ", &last_str);
-      if (str == NULL)
-        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                 "Malformed rep line in node-rev");
-
-      noderev->data_offset = apr_atoi64 (str);
-
-      str = apr_strtok (NULL, " ", &last_str);
-      if (str == NULL)
-        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                 "Malformed rep line in node-rev");
-
-      noderev->data_size = apr_atoi64 (str);
-
-      str = apr_strtok (NULL, " ", &last_str);
-      if (str == NULL)
-        return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
-                                 "Malformed rep line in node-rev");
-
-      noderev->data_expanded_size = apr_atoi64 (str);
+      SVN_ERR (read_rep_offsets (&noderev->data_revision, &noderev->data_offset,
+                                 &noderev->data_size,
+                                 &noderev->data_expanded_size, value));
     }
 
   /* Get the created path. */
@@ -487,37 +494,6 @@ svn_fs__fs_put_node_revision (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs__fs_get_proplist (apr_hash_t **proplist_p,
-                         svn_fs_t *fs,
-                         svn_fs__node_revision_t *noderev,
-                         apr_pool_t *pool)
-{
-  apr_hash_t *proplist;
-  apr_file_t *rev_file;
-
-  proplist = apr_hash_make (pool);
-
-  if (noderev->prop_offset == -1)
-    {
-      *proplist_p = proplist;
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR (open_and_seek_revision (&rev_file,
-                                   fs,
-                                   noderev->prop_revision,
-                                   noderev->prop_offset,
-                                   pool));
-
-  SVN_ERR (svn_hash_read (proplist, rev_file, pool));
-
-  SVN_ERR (svn_io_file_close (rev_file, pool));
-
-  *proplist_p = proplist;
-
-  return SVN_NO_ERROR;
-}
 
 /* This structure is used to hold the information associated with a
    REP line. */
@@ -568,8 +544,6 @@ read_rep_line (struct rep_args_t **rep_args_p,
 
   abort ();
 
-  *rep_args_p = rep_args;
-  
   return SVN_NO_ERROR;
 }
 
@@ -789,7 +763,10 @@ read_contents_write_handler (void *baton,
 static svn_error_t *
 rep_read_get_baton (struct rep_read_baton **rb_p,
                     svn_fs_t *fs,
-                    svn_fs__node_revision_t *noderev,
+                    svn_revnum_t rev,
+                    apr_off_t offset,
+                    apr_size_t size,
+                    apr_size_t expanded_size,
                     apr_pool_t *pool)
 {
   struct rep_read_baton *b;
@@ -804,14 +781,13 @@ rep_read_get_baton (struct rep_read_baton **rb_p,
   b->fs = fs;
   b->pool = pool;
   b->rep_offset = 0;
-  b->rep_size = noderev->data_size;
-  b->size = noderev->data_expanded_size;
+  b->rep_size = size;
+  b->size = expanded_size;
   b->nonconsumed_data = svn_stringbuf_create ("", pool);
   b->is_delta = FALSE;
 
   /* Open the revision file. */
-  SVN_ERR (open_and_seek_revision (&b->rep_file, fs, noderev->data_revision,
-                                   noderev->data_offset, pool));
+  SVN_ERR (open_and_seek_revision (&b->rep_file, fs, rev, offset, pool));
 
   /* Read in the REP line. */
   SVN_ERR (read_rep_line (&rep_args, b->rep_file, pool));
@@ -933,18 +909,53 @@ rep_read_contents (void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Return a stream in *CONTENTS_P that will read the contents of a
+   text representation stored in filesystem FS, revision REV, at
+   offset OFFSET.  The size in the revision file should be exactly
+   SIZE, and if this is a delta representation it should undeltify to
+   a representation of EXPANDED_SIZE bytes.  If it is a plaintext
+   representation, SIZE == EXPANDED_SIZE.
+
+   If REV equals SVN_INVALID_REVNUM, then this representation is
+   asssumed to be empty, and an empty stream is returned.
+*/
+svn_error_t *
+get_representation_at_offset (svn_stream_t **contents_p,
+                              svn_fs_t *fs,
+                              svn_revnum_t rev,
+                              apr_off_t offset,
+                              apr_size_t size,
+                              apr_size_t expanded_size,
+                              apr_pool_t *pool)
+{
+  struct rep_read_baton *rb;
+
+  if (rev == SVN_INVALID_REVNUM)
+    {
+      *contents_p = svn_stream_empty (pool);
+    }
+  else
+    {
+      SVN_ERR (rep_read_get_baton (&rb, fs, rev, offset, size, expanded_size,
+                                   pool));
+      *contents_p = svn_stream_create (rb, pool);
+      svn_stream_set_read (*contents_p, rep_read_contents);
+      svn_stream_set_close (*contents_p, rep_read_contents_close);
+    }
+  
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs__fs_get_contents (svn_stream_t **contents_p,
                          svn_fs_t *fs,
                          svn_fs__node_revision_t *noderev,
                          apr_pool_t *pool)
 {
-  struct rep_read_baton *rb;
-
-  SVN_ERR (rep_read_get_baton (&rb, fs, noderev, pool));
-  *contents_p = svn_stream_create (rb, pool);
-  svn_stream_set_read (*contents_p, rep_read_contents);
-  svn_stream_set_close (*contents_p, rep_read_contents_close);
+  SVN_ERR (get_representation_at_offset (contents_p, fs, noderev->data_revision,
+                                         noderev->data_offset,
+                                         noderev->data_size,
+                                         noderev->data_expanded_size, pool));
   
   return SVN_NO_ERROR;
 }
@@ -1012,6 +1023,31 @@ svn_fs__fs_rep_contents_dir (apr_hash_t **entries_p,
       apr_hash_set (*entries_p, key, klen, dirent);
     }
   
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_get_proplist (apr_hash_t **proplist_p,
+                         svn_fs_t *fs,
+                         svn_fs__node_revision_t *noderev,
+                         apr_pool_t *pool)
+{
+  apr_hash_t *proplist;
+  svn_stream_t *stream;
+
+  proplist = apr_hash_make (pool);
+
+  SVN_ERR (get_representation_at_offset (&stream, fs, noderev->prop_revision,
+                                         noderev->prop_offset,
+                                         noderev->prop_size,
+                                         noderev->prop_expanded_size, pool));
+  
+  SVN_ERR (hash_read (proplist, stream, pool));
+
+  SVN_ERR (svn_stream_close (stream));
+
+  *proplist_p = proplist;
+
   return SVN_NO_ERROR;
 }
 

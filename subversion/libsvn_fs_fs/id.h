@@ -33,10 +33,8 @@ extern "C" {
 
               node_id ::= number ;
               copy_id ::= number ;
-               txn_id ::= number ;
-                  rev ::= number ;
-               offset ::= number ;
-     node_revision_id ::= node_id "." copy_id "." txn_id "." rev "." offset;
+               txn_id ::= (t<number>|r<number>/<number>) ;
+     node_revision_id ::= node_id "." copy_id "." txn_id;
 
    A directory entry identifies the file or subdirectory it refers to
    using a node revision number --- not a node number.  This means that
