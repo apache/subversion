@@ -642,7 +642,6 @@ svn_path_decompose (const char *path,
       if ((path[i] == '/') || (path[i] == '\0'))
         {
           if (SVN_PATH_IS_PLATFORM_EMPTY (path + oldi, i - oldi))
-            /* ### Should canonicalization strip "//" and "/./" substrings? */
             *((const char **) apr_array_push (components)) = SVN_EMPTY_PATH;
           else
             *((const char **) apr_array_push (components))
