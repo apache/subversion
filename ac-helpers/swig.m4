@@ -83,6 +83,27 @@ AC_DEFUN(SVN_FIND_SWIG,
       ])
       SWIG_LDFLAGS="$ac_cv_swig_ldflags"
 
+      AC_CACHE_CHECK([for swig python setup.py link time flags],
+        [ac_cv_setup_py_ldflags],[
+        # Take LDFLAGS and SWIG_LDFLAGS create flags appropriate for
+        # passing to setup.py.
+        flags=""
+        if test "$SWIG_LDFLAGS" || test "$LDFLAGS"; then
+          for flag in $SWIG_LDFLAGS $LDFLAGS; do
+            case "$flag" in
+              -L*)
+                flags="$flags $flag"
+                ;;
+              *)
+                flags="$flags -R $flag"
+                ;;
+            esac
+          done
+        fi
+        ac_cv_setup_py_ldflags="$flags"
+      ])
+      SWIG_PY_SETUP_LDFLAGS="$ac_cv_setup_py_ldflags"
+
       AC_CACHE_CHECK([for Python includes], [ac_cv_python_includes],[
         ac_cv_python_includes="`$PYTHON ${abs_srcdir}/ac-helpers/get-py-info.py --includes`"
       ])
@@ -98,6 +119,7 @@ AC_DEFUN(SVN_FIND_SWIG,
   AC_SUBST(SWIG_BUILD_RULES)
   AC_SUBST(SWIG_INSTALL_RULES)
   AC_SUBST(SWIG_PY_INCLUDES)
+  AC_SUBST(SWIG_PY_SETUP_LDFLAGS)
   AC_SUBST(SWIG_JAVA_INCLUDES)
   AC_SUBST(SWIG_LIBSWIG_DIR)
   AC_SUBST(SWIG_LDFLAGS)
