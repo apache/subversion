@@ -55,6 +55,16 @@
 #include "apr_pools.h"
 #include "fs.h"
 
+/* Create a new `versions' table for the new filesystem FS.  FS->env
+   must already be open; this sets FS->versions.  */
+svn_error_t *svn_fs__create_versions (svn_fs_t *fs);
+
+
+/* Open the existing `versions' table for the filesystem FS.  FS->env
+   must already be open; this sets FS->versions.  */
+svn_error_t *svn_fs__open_versions (svn_fs_t *fs);
+
+
 /* Set *ID to ID of the root of version V of the filesystem FS.
    Allocate the ID in POOL.  */
 svn_error_t *svn_fs__version_root (svn_fs_id_t **id,

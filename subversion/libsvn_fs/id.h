@@ -54,9 +54,30 @@
 #include "svn_fs.h"
 
 
+enum {
+  /* Recognize id strings with the `.head' suffix, as found in the
+     nodes table.  */
+  svn_fs__key_id = 1,
+};
+
+
 /* Parse the LEN bytes at DATA as a node ID.  Return zero if the bytes
-   are not a properly-formed node ID.  Allocate the parsed ID in POOL.  */
-svn_fs_id_t *svn_fs__parse_id (char *data, apr_size_t len,
+   are not a properly-formed node ID.
+
+   A well-formed ID has the form "[0-9](\.[0-9])*".  In the `nodes'
+   table, we also use ID's of the form "[0-9](\.[0-9])*\.head", to
+   help us find the most recent version of a node.
+
+   If FLAGS is zero, accept only the first form of ID.
+
+   If FLAGS & svn_fs__key_id is non-zero, also accept the second form,
+   with the `.head' suffix.  Represent the `.head' element in the
+   returned array as a -2.
+
+   Allocate the parsed ID in POOL.  As a special case for the Berkeley
+   DB comparison function, if POOL is zero, malloc the ID.  It's
+   generally better to use a pool if you can.  */
+svn_fs_id_t *svn_fs__parse_id (char *data, apr_size_t len, int flags,
 			       apr_pool_t *pool);
 
 

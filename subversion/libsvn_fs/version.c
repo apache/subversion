@@ -97,23 +97,22 @@ get_version_skel (skel_t **skel,
 		  svn_vernum_t v, 
 		  apr_pool_t *pool)
 {
+  db_recno_t recno;
   DBT key, value;
   int db_err;
-  char key_bytes[200];
-  int key_len;
   skel_t *version;
 
   SVN_ERR (svn_fs__check_fs (fs));
 
-  /* Generate the ASCII decimal form of the version number.  */
-  key_len = svn_fs__putsize (key_bytes, sizeof (key_bytes), v);
-  if (! key_len)
-    abort ();
-  svn_fs__set_dbt (&key, key_bytes, key_len);
+  /* Turn the version number into a Berkeley DB record number.
+     Versions are numbered starting with zero; Berkeley DB record numbers
+     begin with one.  */
+  recno = v + 1;
+  svn_fs__set_dbt (&key, &recno, sizeof (recno));
 
   svn_fs__result_dbt (&value);
   db_err = fs->versions->get (fs->versions, 0, /* no transaction */ 
-			      &key, &value, 0);
+			      &key, &value, DB_SET_RECNO);
   if (db_err == DB_NOTFOUND)
     return no_such_version (fs, v);
   SVN_ERR (DB_ERR (fs, "reading version root from filesystem", db_err));
@@ -148,7 +147,7 @@ svn_fs__version_root (svn_fs_id_t **id_p,
   if (! id_skel->is_atom)
     goto corrupt;
 
-  id = svn_fs__parse_id (id_skel->data, id_skel->len, pool);
+  id = svn_fs__parse_id (id_skel->data, id_skel->len, 0, pool);
   if (! id)
     goto corrupt;
 
@@ -158,4 +157,107 @@ svn_fs__version_root (svn_fs_id_t **id_p,
  corrupt:
   apr_destroy_pool (subpool);
   return corrupt_version (fs, v);
+}
+
+
+
+/* Writing versions.  */
+
+
+/* Add VERSION_SKEL as a new version to FS's `versions' table.  Set *V
+   to the number of the new version created.
+
+   Do this as part of the Berkeley DB transaction TXN; if TXN is zero,
+   then make the change without transaction protection.
+
+   Do any necessary temporary allocation in POOL.  */
+static svn_error_t *
+put_version_skel (svn_fs_t *fs,
+		  DB_TXN *txn,
+		  skel_t *version_skel,
+		  svn_vernum_t *v,
+		  apr_pool_t *pool)
+{
+  svn_string_t *version = svn_fs__unparse_skel (version_skel, pool);
+  db_recno_t recno;
+  DBT key, value;
+
+  SVN_ERR (svn_fs__check_fs (fs));
+
+  /* Since we use the DB_APPEND flag, the `put' call sets recno to the record
+     number of the new version.  */
+  recno = 0;
+  svn_fs__clear_dbt (&key);
+  key.data = &recno;
+  key.size = key.ulen = sizeof (recno);
+  key.flags |= DB_DBT_USERMEM;
+
+  svn_fs__set_dbt (&value, version->data, version->len);
+  SVN_ERR (DB_ERR (fs, "adding new version",
+		   fs->versions->put (fs->versions, txn, &key, &value, 
+				      DB_APPEND)));
+
+  /* Turn the record number into a Subversion version number.
+     Versions are numbered starting with zero; Berkeley DB record numbers
+     begin with one.  */
+  *v = recno - 1;
+  return 0;
+}
+
+
+
+/* Creating and opening a filesystem's `versions' table.  */
+
+
+/* Open / create FS's `versions' table.  FS->env must already be open;
+   this function initializes FS->versions.  If CREATE is non-zero, assume
+   we are creating the filesystem afresh; otherwise, assume we are
+   simply opening an existing database.  */
+static svn_error_t *
+make_versions (svn_fs_t *fs, int create)
+{
+  DB *versions;
+
+  SVN_ERR (DB_ERR (fs, "allocating `versions' table object",
+		   db_create (&versions, fs->env, 0)));
+  SVN_ERR (DB_ERR (fs, "creating `versions' table",
+		   versions->open (versions, "versions", 0, DB_RECNO,
+				   create ? (DB_CREATE | DB_EXCL) : 0,
+				   0666)));
+
+  if (create)
+    {
+      /* Create the initial version.  */
+      static char version_0[] = "(version 3 0.0 ())";
+      skel_t *version_skel = svn_fs__parse_skel (version_0,
+						 sizeof (version_0) - 1,
+						 fs->pool);
+      svn_vernum_t v;
+      SVN_ERR (put_version_skel (fs, 0, version_skel, &v, fs->pool));
+
+      /* That had better have created version zero.  */
+      if (v != 0)
+	abort ();
+    }
+
+  fs->versions = versions;
+  return 0;
+}
+
+
+/* Create a new `versions' table for the new filesystem FS.  FS->env
+   must already be open; this sets FS->versions.  */
+svn_error_t *
+svn_fs__create_versions (svn_fs_t *fs)
+{
+  return make_versions (fs, 1);
+}
+
+
+/* Open the existing `versions' table for the filesystem FS.  FS->env
+   must already be open; this sets FS->versions.  */
+svn_error_t *
+svn_fs__open_versions (svn_fs_t *fs)
+{
+  return make_versions (fs, 0);
 }

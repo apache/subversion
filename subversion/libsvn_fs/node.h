@@ -50,6 +50,16 @@
 #define SVN_LIBSVN_FS_NODE_H
 
 
+/* Create a new `nodes' table for the new filesystem FS.  FS->env must
+   already be open; this sets FS->nodes.  */
+svn_error_t *svn_fs__create_nodes (svn_fs_t *fs);
+
+
+/* Open the existing `nodes' table for the filesystem FS.  FS->env
+   must already be open; this sets FS->nodes.  */
+svn_error_t *svn_fs__open_nodes (svn_fs_t *fs);
+
+
 /* Set *NODE to the node identified by ID in FS.
 
    If POOL is non-zero, allocate the new node there.

@@ -406,7 +406,7 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
 
 	  length_len = svn_fs__putsize (buf, sizeof (buf), skel->len);
 	  if (! length_len)
-	    return 0;
+	    abort ();
 
 	  /* Make sure we have room for the length, the space, and the
              atom's contents.  */
@@ -438,8 +438,7 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
 	  str->data[str->len++] = '\n';
 	  for (i = 0; i < depth * 2; i++)
 	    str->data[str->len++] = ' ';
-	  if (! unparse (child, str, depth, pool))
-	    return 0;
+	  unparse (child, str, depth, pool);
 	}
 
       depth--;
