@@ -1092,7 +1092,7 @@ check_entry_absent (svn_fs_root_t *root, const char *path,
 struct check_id_args
 {
   svn_fs_t *fs;
-  svn_fs_id_t *id;
+  const svn_fs_id_t *id;
   svn_boolean_t present;
 };
 
@@ -1125,7 +1125,7 @@ txn_body_check_id (void *baton, trail_t *trail)
 /* Set *PRESENT to true if node revision ID is present in filesystem
    FS, else set *PRESENT to false. */
 static svn_error_t *
-check_id (svn_fs_t *fs, svn_fs_id_t *id, svn_boolean_t *present,
+check_id (svn_fs_t *fs, const svn_fs_id_t *id, svn_boolean_t *present,
           apr_pool_t *pool)
 {
   struct check_id_args args;
@@ -1145,7 +1145,7 @@ check_id (svn_fs_t *fs, svn_fs_id_t *id, svn_boolean_t *present,
 
 /* Return error if node revision ID is not present in FS. */
 static svn_error_t *
-check_id_present (svn_fs_t *fs, svn_fs_id_t *id, apr_pool_t *pool)
+check_id_present (svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 {
   svn_boolean_t present;
   SVN_ERR (check_id (fs, id, &present, pool));
@@ -1165,7 +1165,7 @@ check_id_present (svn_fs_t *fs, svn_fs_id_t *id, apr_pool_t *pool)
 
 /* Return error if node revision ID is present in FS. */
 static svn_error_t *
-check_id_absent (svn_fs_t *fs, svn_fs_id_t *id, apr_pool_t *pool)
+check_id_absent (svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 {
   svn_boolean_t present;
   SVN_ERR (check_id (fs, id, &present, pool));
@@ -1231,7 +1231,7 @@ abort_txn (const char **msg,
     /* Yes, I really am this paranoid. */
 
     /* IDs for every file in the standard Greek Tree. */
-    svn_fs_id_t
+    const svn_fs_id_t
       *t1_root_id,    *t2_root_id,
       *t1_iota_id,    *t2_iota_id,
       *t1_A_id,       *t2_A_id,
@@ -2789,7 +2789,7 @@ link_test (const char **msg,
 
   /* Test that the node id is the same on the two files in the txn. */
   {
-    svn_fs_id_t *orig_id, *link_id;
+    const svn_fs_id_t *orig_id, *link_id;
 
     SVN_ERR (svn_fs_node_id (&orig_id, txn_root, "A/D/G/pi", pool));
     SVN_ERR (svn_fs_node_id (&link_id, txn_root, "A/D/G/pi2", pool));
@@ -2833,7 +2833,7 @@ link_test (const char **msg,
 
   /* Test that the node id has changed now, since we changed the file. */
   {
-    svn_fs_id_t *orig_id, *link_id;
+    const svn_fs_id_t *orig_id, *link_id;
 
     SVN_ERR (svn_fs_node_id (&orig_id, rev_root, "A/D/G/pi", pool));
     SVN_ERR (svn_fs_node_id (&link_id, rev_root, "A/D/G/pi2", pool));
@@ -2867,7 +2867,7 @@ link_test (const char **msg,
        the issue has been fixed, so the test needs to be changed, not
        Subversion. 
     */
-    svn_fs_id_t *orig_id, *link_id;
+    const svn_fs_id_t *orig_id, *link_id;
 
     SVN_ERR (svn_fs_node_id (&orig_id, rev_root, "A/D/G/pi", pool));
     SVN_ERR (svn_fs_node_id (&link_id, rev_root, "A/D/G/pi2", pool));
@@ -2948,7 +2948,7 @@ delete_mutables (const char **msg,
 
   /* 1 */
   {
-    svn_fs_id_t *gamma_id;
+    const svn_fs_id_t *gamma_id;
     SVN_ERR (svn_fs_node_id (&gamma_id, txn_root, "A/D/gamma", pool));
 
     SVN_ERR (check_entry_present (txn_root, "A/D", "gamma", pool));
@@ -2962,7 +2962,7 @@ delete_mutables (const char **msg,
 
   /* 2 */
   {
-    svn_fs_id_t *pi_id, *rho_id, *tau_id;
+    const svn_fs_id_t *pi_id, *rho_id, *tau_id;
     SVN_ERR (svn_fs_node_id (&pi_id, txn_root, "A/D/G/pi", pool));
     SVN_ERR (svn_fs_node_id (&rho_id, txn_root, "A/D/G/rho", pool));
     SVN_ERR (svn_fs_node_id (&tau_id, txn_root, "A/D/G/tau", pool));
@@ -2995,7 +2995,7 @@ delete_mutables (const char **msg,
 
   /* 3 */
   {
-    svn_fs_id_t *G_id;
+    const svn_fs_id_t *G_id;
     SVN_ERR (svn_fs_node_id (&G_id, txn_root, "A/D/G", pool));
 
     SVN_ERR (check_id_present (fs, G_id, pool));
@@ -3020,7 +3020,7 @@ delete_mutables (const char **msg,
 
   /* 4 */
   {
-    svn_fs_id_t *tau_id;
+    const svn_fs_id_t *tau_id;
     SVN_ERR (svn_fs_node_id (&tau_id, txn_root, "A/D/G/tau", pool));
 
     SVN_ERR (check_entry_present (txn_root, "A/D/G", "tau", pool));
@@ -3034,7 +3034,7 @@ delete_mutables (const char **msg,
 
   /* 5 */
   {
-    svn_fs_id_t *G_id;
+    const svn_fs_id_t *G_id;
     SVN_ERR (svn_fs_node_id (&G_id, txn_root, "A/D/G", pool));
 
     SVN_ERR (check_entry_present (txn_root, "A/D", "G", pool));
@@ -3048,7 +3048,7 @@ delete_mutables (const char **msg,
 
   /* 6 */
   {
-    svn_fs_id_t *C_id;
+    const svn_fs_id_t *C_id;
     SVN_ERR (svn_fs_node_id (&C_id, txn_root, "A/C", pool));
 
     SVN_ERR (check_entry_present (txn_root, "A", "C", pool));
@@ -3062,7 +3062,7 @@ delete_mutables (const char **msg,
 
   /* 7 */
   {
-    svn_fs_id_t *root_id;
+    const svn_fs_id_t *root_id;
     SVN_ERR (svn_fs_node_id (&root_id, txn_root, "", pool));
 
     err = svn_fs_delete (txn_root, "", pool);
@@ -3085,7 +3085,7 @@ delete_mutables (const char **msg,
 
   /* 8 */
   {
-    svn_fs_id_t *D_id;
+    const svn_fs_id_t *D_id;
     SVN_ERR (svn_fs_node_id (&D_id, txn_root, "A/D", pool));
 
     err = svn_fs_delete (txn_root, "A/D", pool);
@@ -3109,7 +3109,7 @@ delete_mutables (const char **msg,
   
   /* 9 */
   {
-    svn_fs_id_t *iota_id;
+    const svn_fs_id_t *iota_id;
     SVN_ERR (svn_fs_node_id (&iota_id, txn_root, "iota", pool));
 
     SVN_ERR (check_entry_present (txn_root, "", "iota", pool));
@@ -3169,7 +3169,7 @@ delete (const char **msg,
 
   /* 1. Delete mutable file. */
   {
-    svn_fs_id_t *iota_id, *gamma_id;
+    const svn_fs_id_t *iota_id, *gamma_id;
     static svn_test__tree_entry_t expected_entries[] = {
       /* path, contents (0 = dir) */
       { "A",           0 },
@@ -3226,7 +3226,7 @@ delete (const char **msg,
   SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
 
   {
-    svn_fs_id_t *A_id, *mu_id, *B_id, *lambda_id, *E_id, *alpha_id,
+    const svn_fs_id_t *A_id, *mu_id, *B_id, *lambda_id, *E_id, *alpha_id,
       *beta_id, *F_id, *C_id, *D_id, *gamma_id, *H_id, *chi_id,
       *psi_id, *omega_id, *G_id, *pi_id, *rho_id, *tau_id;
 
@@ -3347,7 +3347,7 @@ delete (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
   {
-    svn_fs_id_t *A_id, *mu_id, *B_id, *lambda_id, *E_id, *alpha_id,
+    const svn_fs_id_t *A_id, *mu_id, *B_id, *lambda_id, *E_id, *alpha_id,
       *beta_id, *F_id, *C_id, *D_id, *gamma_id, *H_id, *chi_id,
       *psi_id, *omega_id, *G_id, *pi_id, *rho_id, *tau_id, *sigma_id;
 
@@ -3461,7 +3461,7 @@ delete (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
   {
-    svn_fs_id_t *iota_id, *gamma_id;
+    const svn_fs_id_t *iota_id, *gamma_id;
 
     /* Check nodes revision ID is present.  */
     SVN_ERR (svn_fs_node_id (&iota_id, txn_root, "iota", pool));
@@ -3518,7 +3518,7 @@ delete (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
   {
-    svn_fs_id_t *A_id, *mu_id, *B_id, *lambda_id, *E_id, *alpha_id,
+    const svn_fs_id_t *A_id, *mu_id, *B_id, *lambda_id, *E_id, *alpha_id,
       *beta_id, *F_id, *C_id, *D_id, *gamma_id, *H_id, *chi_id,
       *psi_id, *omega_id, *G_id, *pi_id, *rho_id, *tau_id;
 
@@ -5148,7 +5148,7 @@ check_related (const char **msg,
           {
             struct path_rev_t pr1 = path_revs[i];
             struct path_rev_t pr2 = path_revs[j];
-            svn_fs_id_t *id1, *id2;
+            const svn_fs_id_t *id1, *id2;
             int related = 0;
 
             /* Get the ID for the first path/revision combination. */

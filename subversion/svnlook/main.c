@@ -602,7 +602,7 @@ print_ids_tree (svn_repos_node_t *node,
   svn_stringbuf_t *full_path;
   svn_repos_node_t *tmp_node;
   int i;
-  svn_fs_id_t *id;
+  const svn_fs_id_t *id;
   svn_string_t *unparsed_id = NULL;
   apr_pool_t *subpool;
 

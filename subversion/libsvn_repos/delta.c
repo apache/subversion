@@ -168,7 +168,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   struct context c;
   svn_stringbuf_t *tgt_parent_dir, *tgt_entry;
   svn_stringbuf_t *src_fullpath;
-  svn_fs_id_t *src_id, *tgt_id;
+  const svn_fs_id_t *src_id, *tgt_id;
   svn_error_t *err;
   int distance;
 

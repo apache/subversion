@@ -66,7 +66,7 @@ print_tree (svn_fs_root_t *root,
       const char *this_full_path;
       int is_dir;
       int i;
-      svn_fs_id_t *id;
+      const svn_fs_id_t *id;
       svn_string_t *id_str;
 
       apr_hash_this (hi, &key, &keylen, &val);
@@ -368,7 +368,7 @@ main (int argc, const char * const *argv)
             if (show_extra)
               {
                 apr_pool_t *this_pool = svn_pool_create (pool);
-                svn_fs_id_t *root_id;
+                const svn_fs_id_t *root_id;
                 svn_string_t *id_str;
                 
                 INT_ERR (svn_fs_open_txn (&txn, fs, txn_name, this_pool));
@@ -443,7 +443,7 @@ main (int argc, const char * const *argv)
             svn_string_t *author;
             svn_string_t *log;
             apr_pool_t *this_pool = svn_pool_create (pool);
-            svn_fs_id_t *root_id;
+            const svn_fs_id_t *root_id;
             svn_string_t *id_str;
 
             INT_ERR (svn_fs_revision_root (&this_root, fs, this, this_pool));

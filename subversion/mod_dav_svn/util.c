@@ -70,7 +70,7 @@ svn_revnum_t dav_svn_get_safe_cr(svn_fs_root_t *root,
   svn_revnum_t revision = svn_fs_revision_root_revision(root);    
   svn_revnum_t created_rev;
   svn_fs_root_t *other_root;
-  svn_fs_id_t *id, *other_id;
+  const svn_fs_id_t *id, *other_id;
 
   if (svn_fs_node_id(&id, root, path, pool))
     return revision;   /* couldn't get id of root/path */

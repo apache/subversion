@@ -53,7 +53,7 @@ svn_fs_deltify (svn_fs_root_t *root,
 struct undeltify_args
 {
   svn_fs_t *fs;
-  svn_fs_id_t *id;
+  const svn_fs_id_t *id;
 };
 
 
