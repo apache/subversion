@@ -280,6 +280,7 @@ svn_error_t *
 svn_repos_delete_path (void *report_baton,
                        const char *path)
 {
+  svn_error_t *err;
   const char *delete_path;
   svn_repos_report_baton_t *rbaton = report_baton;
   
@@ -295,7 +296,13 @@ svn_repos_delete_path (void *report_baton,
                                     NULL);
 
   /* Remove the file or directory (recursively) from the txn. */
-  return svn_fs_delete_tree (rbaton->txn_root, delete_path, rbaton->pool);
+  err = svn_fs_delete_tree (rbaton->txn_root, delete_path, rbaton->pool);
+
+  /* If the delete is a no-op, don't throw an error;  just ignore. */
+  if (err && (err->apr_err != SVN_ERR_FS_NOT_FOUND))
+    return err;
+
+  return SVN_NO_ERROR;
 }
 
 
