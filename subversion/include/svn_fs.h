@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -940,13 +940,14 @@ svn_error_t *svn_fs_merge (const char **conflict_p,
 
 
 /** The type of a Subversion directory entry.  */
-typedef struct svn_fs_dirent_t {
+typedef struct svn_fs_dirent_t
+{
 
   /** The name of this directory entry.  */
-  char *name;
+  const char *name;
 
   /** The node revision ID it names.  */
-  svn_fs_id_t *id;
+  const svn_fs_id_t *id;
 
   /** The node kind. */
   svn_node_kind_t kind;

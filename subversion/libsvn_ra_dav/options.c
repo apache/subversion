@@ -2,7 +2,7 @@
  * options.c :  routines for performing OPTIONS server requests
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -128,9 +128,9 @@ svn_error_t * svn_ra_dav__get_activity_collection(
       /* ### error */
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
                               "The OPTIONS response did not include the "
-                              "requested activity-collection-set.\n"
-                              "(Check the URL again;  this often means that "
-                              "the URL is not WebDAV-enabled.)");
+                              "requested activity-collection-set; "
+                              "this often means that "
+                              "the URL is not WebDAV-enabled");
     }
 
   *activity_coll = oc.activity_coll;

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -112,8 +112,24 @@ typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)
 
 /** The update Reporter.
  *
- * A vtable structure which allows a working copy to describe a
- * subset (or possibly all) of its working-copy to an RA layer.
+ * A vtable structure which allows a working copy to describe a subset
+ * (or possibly all) of its working-copy to an RA layer, for the
+ * purposes of an update, switch, status, or diff operation.
+ *
+ * Paths for report calls are relative to the target (not the anchor)
+ * of the operation.  Report calls must be made in depth-first order:
+ * parents before children, all children of a parent before any
+ * siblings of the parent.  The first report call must be a set_path
+ * with a @a path argument of "" and a valid revision.  (If the target
+ * of the operation is locally deleted or missing, use the anchor's
+ * revision.)  If the target of the operation is deleted or switched
+ * relative to the anchor, follow up the initial set_path call with a
+ * link_path or delete_path call with a @a path argument of "" to
+ * indicate that.  In no other case may there be two report
+ * descriptions for the same path.  If the target of the operation is
+ * a locally added file or directory (which previously did not exist),
+ * it may be reported as having revision 0 or as having the parent
+ * directory's revision.
  */
 typedef struct svn_ra_reporter_t
 {
@@ -163,12 +179,14 @@ typedef struct svn_ra_reporter_t
    * or files not explicitly `set' above are assumed to be at the
    * baseline revision originally passed into @c do_update().
    */
-  svn_error_t *(*finish_report) (void *report_baton);
+  svn_error_t *(*finish_report) (void *report_baton,
+                                 apr_pool_t *pool);
 
   /** If an error occurs during a report, this routine should cause the
    * filesystem transaction to be aborted & cleaned up.
    */
-  svn_error_t *(*abort_report) (void *report_baton);
+  svn_error_t *(*abort_report) (void *report_baton,
+                                apr_pool_t *pool);
 
 } svn_ra_reporter_t;
 
@@ -441,7 +459,7 @@ typedef struct svn_ra_plugin_t
    *
    * @a update_target is an optional single path component will restrict
    * the scope of things affected by the update to an entry in the
-   * directory represented by the @a session_baton's URL, or @c NULL if the
+   * directory represented by the @a session_baton's URL, or empty if the
    * entire directory is meant to be updated.
    *
    * The working copy will be updated to @a revision_to_update_to, or the
@@ -482,7 +500,7 @@ typedef struct svn_ra_plugin_t
    *
    * @a switch_target is an optional single path component will restrict
    * the scope of things affected by the switch to an entry in the
-   * directory represented by the @a session_baton's URL, or @c NULL if the
+   * directory represented by the @a session_baton's URL, or empty if the
    * entire directory is meant to be switched.
    *
    * The working copy will be switched to @a revision_to_switch_to, or the
@@ -525,7 +543,7 @@ typedef struct svn_ra_plugin_t
    * the working copy were the client to call @c do_update().
    * @a status_target is an optional single path component will restrict
    * the scope of the status report to an entry in the directory
-   * represented by the @a session_baton's URL, or @c NULL if the entire
+   * represented by the @a session_baton's URL, or empty if the entire
    * directory is meant to be examined.
    *
    * The caller may not perform any RA operations using
@@ -568,7 +586,7 @@ typedef struct svn_ra_plugin_t
    *
    * @a diff_target is an optional single path component will restrict
    * the scope of the diff to an entry in the directory represented by
-   * the @a session_baton's URL, or @c NULL if the entire directory is 
+   * the @a session_baton's URL, or empty if the entire directory is 
    * meant to be one of the diff paths.
    *
    * The working copy will be diffed against @a versus_url as it exists

@@ -2,7 +2,7 @@
  * commit.c:  wrappers around wc commit functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -396,7 +396,7 @@ import (const char *path,
   else if (kind == svn_node_none)
     {
       return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL, 
-                                "'%s' does not exist.", path);  
+                                "'%s' does not exist", path);  
     }
 
   /* Close up shop; it's time to go home. */
@@ -923,7 +923,7 @@ adjust_rel_targets (const char **pbase_dir,
               
       SVN_ERR (svn_wc_get_actual_target (base_dir, &parent_dir, &name, pool));
 
-      if (name)
+      if (*name)
         {
           /* Our new "grandfather directory" is the parent directory
              of the former one. */
@@ -1005,7 +1005,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
       const char *parent_dir, *name;
 
       SVN_ERR (svn_wc_get_actual_target (base_dir, &parent_dir, &name, pool));
-      if (name)
+      if (*name)
         {
           svn_node_kind_t kind;
 
@@ -1055,7 +1055,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
           SVN_ERR (svn_wc_get_actual_target (target, &parent_dir, 
                                              &name, pool));
 
-          if (name)
+          if (*name)
             {
               svn_node_kind_t kind;
 

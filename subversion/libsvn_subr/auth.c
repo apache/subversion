@@ -2,7 +2,7 @@
  * auth.c: authentication support functions for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -174,7 +174,7 @@ svn_auth_first_credentials (void **credentials,
   table = apr_hash_get (auth_baton->tables, cred_kind, APR_HASH_KEY_STRING);
   if (! table)
     return svn_error_createf (SVN_ERR_AUTHN_NO_PROVIDER, NULL,
-                              "No provider registered for '%s' credentials.",
+                              "No provider registered for '%s' credentials",
                               cred_kind);
 
   /* First, see if we have cached creds in the auth_baton. */

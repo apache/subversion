@@ -2,7 +2,7 @@
  * main.c: Subversion server inspection tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,6 +23,7 @@
 #include <apr_time.h>
 #include <apr_thread_proc.h>
 #include <apr_file_io.h>
+#include <apr_signal.h>
 
 #define APR_WANT_STDIO
 #define APR_WANT_STRFUNC
@@ -233,9 +234,29 @@ typedef struct svnlook_ctxt_t
 
 } svnlook_ctxt_t;
 
+/* A flag to see if we've been cancelled by the client or not. */
+static volatile sig_atomic_t cancelled = FALSE;
 
 
 /*** Helper functions. ***/
+
+/* A signal handler to support cancellation. */
+static void
+signal_handler (int signo)
+{
+  cancelled = TRUE;
+}
+
+/* Our cancellation callback. */
+static svn_error_t *
+check_cancel (void *baton)
+{
+  if (cancelled)
+    return svn_error_create (SVN_ERR_CANCELLED, NULL, "Caught signal");
+  else
+    return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 get_property (svn_string_t **prop_value /* native */,
               svn_boolean_t need_translation,
@@ -336,6 +357,8 @@ print_dirs_changed_tree (svn_repos_node_t *node,
   int print_me = 0;
   const char *full_path;
 
+  SVN_ERR (check_cancel (NULL));
+
   if (! node)
     return SVN_NO_ERROR;
 
@@ -410,6 +433,8 @@ print_changed_tree (svn_repos_node_t *node,
   const char *full_path;
   char status[3] = "_ ";
   int print_me = 1;
+
+  SVN_ERR (check_cancel (NULL));
 
   if (! node)
     return SVN_NO_ERROR;
@@ -536,6 +561,7 @@ dump_contents (apr_file_t *fh,
   /* Now, route that data into our temporary file. */
   while (1)
     {
+      SVN_ERR (check_cancel (NULL));
       len = sizeof (buffer);
       SVN_ERR (svn_stream_read (stream, buffer, &len));
       len2 = len;
@@ -702,6 +728,8 @@ display_prop_diffs (const apr_array_header_t *prop_diffs,
       const svn_string_t *orig_value;
       const svn_prop_t *pc = &APR_ARRAY_IDX (prop_diffs, i, svn_prop_t);
 
+      SVN_ERR (check_cancel (NULL));
+
       if (orig_props)
         orig_value = apr_hash_get (orig_props, pc->name, APR_HASH_KEY_STRING);
       else
@@ -761,6 +789,8 @@ print_diff_tree (svn_fs_root_t *root,
   svn_boolean_t do_diff = FALSE;
   svn_boolean_t is_copy = FALSE;
   svn_boolean_t binary = FALSE;
+
+  SVN_ERR (check_cancel (NULL));
 
   if (! node)
     return SVN_NO_ERROR;
@@ -981,6 +1011,8 @@ print_tree (svn_fs_root_t *root,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
 
+  SVN_ERR (check_cancel (NULL));
+
   /* Print the indentation. */
   for (i = 0; i < indentation; i++)
     {
@@ -1117,7 +1149,7 @@ do_dirs_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
   if (! SVN_IS_VALID_REVNUM (base_rev_id))
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       "Transaction '%s' is not based on a revision.  How odd.",
+       "Transaction '%s' is not based on a revision; how odd",
        c->txn_name);
   
   SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, 
@@ -1147,10 +1179,10 @@ verify_path (svn_node_kind_t *kind,
       if (svn_path_is_url (path))  /* check for a common mistake. */
         return svn_error_createf
           (SVN_ERR_FS_NOT_FOUND, NULL,
-           "'%s' is a URL, probably should be a path.", path);
+           "'%s' is a URL, probably should be a path", path);
       else
         return svn_error_createf 
-          (SVN_ERR_FS_NOT_FOUND, NULL, "Path '%s' does not exist.", path);
+          (SVN_ERR_FS_NOT_FOUND, NULL, "Path '%s' does not exist", path);
     }
 
   return SVN_NO_ERROR;
@@ -1174,13 +1206,14 @@ do_cat (svnlook_ctxt_t *c, const char *path, apr_pool_t *pool)
 
   if (kind != svn_node_file)
     return svn_error_createf 
-      (SVN_ERR_FS_NOT_FILE, NULL, "Path '%s' is not a file.", path);
+      (SVN_ERR_FS_NOT_FILE, NULL, "Path '%s' is not a file", path);
 
   /* Else. */
 
   SVN_ERR (svn_fs_file_contents (&fstream, root, path, pool));
   SVN_ERR (svn_stream_for_stdout (&stdout_stream, pool));
   do {
+    SVN_ERR (check_cancel (NULL));
     SVN_ERR (svn_stream_read (fstream, buf, &len));
     SVN_ERR (svn_stream_write (stdout_stream, buf, &len));
   } while (len == BUFSIZ);
@@ -1207,7 +1240,7 @@ do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
   if (! SVN_IS_VALID_REVNUM (base_rev_id))
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       "Transaction '%s' is not based on a revision.  How odd.",
+       "Transaction '%s' is not based on a revision; how odd",
        c->txn_name);
   
   SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, 
@@ -1236,7 +1269,7 @@ do_diff (svnlook_ctxt_t *c, apr_pool_t *pool)
   if (! SVN_IS_VALID_REVNUM (base_rev_id))
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-       "Transaction '%s' is not based on a revision.  How odd.",
+       "Transaction '%s' is not based on a revision; how odd",
        c->txn_name);
   
   SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, 
@@ -1274,6 +1307,8 @@ print_history (void *baton,
                apr_pool_t *pool)
 {
   struct print_history_baton *phb = baton;
+
+  SVN_ERR (check_cancel (NULL));
 
   if (phb->show_ids)
     {
@@ -1351,7 +1386,7 @@ do_pget (svnlook_ctxt_t *c,
   if (prop == NULL)
     return svn_error_createf
       (SVN_ERR_PROPERTY_NOT_FOUND, NULL,
-       "Property '%s' not found on path '%s'.", propname, path);
+       "Property '%s' not found on path '%s'", propname, path);
 
   /* Else. */
 
@@ -1395,6 +1430,8 @@ do_plist (svnlook_ctxt_t *c,
       void *val;
       const char *pname;
       svn_string_t *propval;
+
+      SVN_ERR (check_cancel (NULL));
 
       apr_hash_this (hi, &key, NULL, &val);
       pname = key;
@@ -1487,7 +1524,7 @@ subcommand_cat (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (opt_state->arg1 == NULL)
     return svn_error_createf
       (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-       "Missing repository path argument.");
+       "Missing repository path argument");
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
   SVN_ERR (do_cat (c, opt_state->arg1, pool));
@@ -1618,13 +1655,13 @@ subcommand_pget (apr_getopt_t *os, void *baton, apr_pool_t *pool)
     {
       return svn_error_createf
         (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-         "Missing propname and repository path arguments.");
+         "Missing propname and repository path arguments");
     }
   else if (opt_state->arg2 == NULL)
     {
       return svn_error_createf
         (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-         "Missing propname or repository path argument.");
+         "Missing propname or repository path argument");
     }
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
@@ -1642,7 +1679,7 @@ subcommand_plist (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (opt_state->arg1 == NULL)
     return svn_error_createf
       (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-       "Missing repository path argument.");
+       "Missing repository path argument");
 
   SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
   SVN_ERR (do_plist (c, opt_state->arg1, opt_state->verbose, pool));
@@ -1762,7 +1799,7 @@ main (int argc, const char * const *argv)
           if (! SVN_IS_VALID_REVNUM (opt_state.rev))
             SVN_INT_ERR (svn_error_create
                          (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                          "Invalid revision number supplied."));
+                          "Invalid revision number supplied"));
           break;
 
         case 't':
@@ -1804,7 +1841,7 @@ main (int argc, const char * const *argv)
     SVN_INT_ERR (svn_error_create 
                  (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                   "The '--transaction' (-t) and '--revision' (-r) arguments "
-                  "may no co-exist."));
+                  "can not co-exist"));
 
   /* If the user asked for help, then the rest of the arguments are
      the names of subcommands to get help on (if any), or else they're
@@ -1921,6 +1958,20 @@ main (int argc, const char * const *argv)
           return EXIT_FAILURE;
         }
     }
+
+  /* Set up our cancellation support. */
+  apr_signal (SIGINT, signal_handler);
+#ifdef SIGHUP
+  apr_signal (SIGTERM, signal_handler);
+#endif
+#ifdef SIGTERM
+  apr_signal (SIGTERM, signal_handler);
+#endif
+
+#ifdef SIGPIPE
+  /* Disable SIGPIPE generation for the platforms that have it. */
+  apr_signal(SIGPIPE, SIG_IGN);
+#endif
 
   /* Run the subcommand. */
   err = (*subcommand->cmd_func) (os, &opt_state, pool);

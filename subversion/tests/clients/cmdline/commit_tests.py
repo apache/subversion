@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -772,7 +772,7 @@ def hudson_part_2(sbox):
   svntest.actions.run_and_verify_commit (wc_dir,
                                          None,
                                          None,
-                                         "out.of.date",
+                                         "[Oo]ut.of.date",
                                          None, None,
                                          None, None,
                                          wc_dir)
@@ -1772,7 +1772,7 @@ def commit_out_of_date_deletions(sbox):
   outlines, errlines = svntest.main.run_svn(1, 'commit', '-m', 'blah',
                                             omega_path)
   for line in errlines:
-    if re.match(".*out of date.*", line):
+    if re.match(".*[Oo]ut of date.*", line):
       break
   else:
     raise svntest.Failure
@@ -1782,7 +1782,7 @@ def commit_out_of_date_deletions(sbox):
   outlines, errlines = svntest.main.run_svn(1, 'commit', '-m', 'blah',
                                             C_path)
   for line in errlines:
-    if re.match(".*out of date.*", line):
+    if re.match(".*[Oo]ut of date.*", line):
       break
   else:
     raise svntest.Failure

@@ -2,7 +2,7 @@
  * config_file.c :  parsing configuration files
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -18,9 +18,6 @@
 
 
 
-#define APR_WANT_STDIO
-#include <apr_want.h>
-
 #include <apr_lib.h>
 #include <apr_md5.h>
 #include "config_impl.h"
@@ -30,6 +27,7 @@
 #include "svn_auth.h"
 #include "svn_md5.h"
 #include "svn_hash.h"
+#include "svn_utf.h"
 
 
 
@@ -345,28 +343,45 @@ svn_config__user_config_path (const char *config_dir,
 
 /*** Exported interfaces. ***/
 
+#ifndef WIN32
+svn_error_t *
+svn_config__open_file (FILE **pfile,
+                       const char *filename,
+                       const char *mode,
+                       apr_pool_t *pool)
+{
+  const char *filename_native;
+  SVN_ERR (svn_utf_cstring_from_utf8 (&filename_native, filename, pool));
+  *pfile = fopen (filename_native, mode);
+  return SVN_NO_ERROR;
+}
+#endif /* WIN32 */
+
+
 svn_error_t *
 svn_config__parse_file (svn_config_t *cfg, const char *file,
                         svn_boolean_t must_exist)
 {
+  apr_pool_t *pool = svn_pool_create (cfg->pool);
   svn_error_t *err = SVN_NO_ERROR;
   parse_context_t ctx;
   int ch, count;
+  FILE *fd;
   /* "Why," you ask yourself, "is he using stdio FILE's instead of
      apr_file_t's?"  The answer is simple: newline translation.  For
      all that it has an APR_BINARY flag, APR doesn't do newline
      translation in files.  The only portable way I know to get
      translated text files is to use the standard stdio library. */
 
-  FILE *fd = fopen (file, "rt");
+  SVN_ERR (svn_config__open_file (&fd, file, "rt", pool));
   if (fd == NULL)
     {
       if (errno != ENOENT)
         return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  "Can't open config file \"%s\"", file);
+                                  "Can't open config file '%s'", file);
       else if (must_exist && errno == ENOENT)
         return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  "Can't find config file \"%s\"", file);
+                                  "Can't find config file '%s'", file);
       else
         return SVN_NO_ERROR;
     }
@@ -375,7 +390,7 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
   ctx.file = file;
   ctx.fd = fd;
   ctx.line = 1;
-  ctx.pool = svn_pool_create (cfg->pool);
+  ctx.pool = pool;
   ctx.section = svn_stringbuf_create("", ctx.pool);
   ctx.option = svn_stringbuf_create("", ctx.pool);
   ctx.value = svn_stringbuf_create("", ctx.pool);
@@ -925,13 +940,13 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "### how to use this file.\n"
         "\n"
         "### Section for authentication and authorization customizations.\n"
-        "### Set store-password to 'no' to avoid storing your subversion\n"
-        "### passwords in the auth/ area of your config directory.\n"
+        "### Set store-auth-creds to 'no' to avoid storing your subversion\n"
+        "### credentials in the auth/ area of your config directory.\n"
         "### It defaults to 'yes'.  Note that this option only prevents\n"
         "### saving of *new* credentials;  it doesn't invalidate existing\n"
         "### caches.  (To do that, remove the cache files by hand.)\n"
         "# [auth]\n"
-        "# store-password = no\n"
+        "# store-auth-creds = no\n"
         "\n"
         "### Section for configuring external helper applications.\n"
         "### Set editor to the command used to invoke your text editor.\n"

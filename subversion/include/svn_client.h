@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -138,25 +138,11 @@ void svn_client_get_username_provider (svn_auth_provider_object_t **provider,
  * @a *provider retrieves its credentials from the configuration
  * mechanism.  The returned credential is used to override SSL
  * security on an error.
- *  
- * @a *provider requires certain run-time parameters be present in
- * the auth_baton:
- *
- *     - a loaded @c svn_config_t object
- *        (@c SVN_AUTH_PARAM_CONFIG)
- *
- *     - the name of the server-specific settings group if available
- *        (@c SVN_AUTH_PARAM_SERVER_GROUP)
- *
- *     - the failure bitmask reported by the ssl certificate validator
- *        (@c SVN_AUTH_PARAM_SSL_SERVER_FAILURES)
- *
- *     - the certificate info (svn_auth_ssl_server_cert_info_t*)
- *        (@c SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO)
  */
 void svn_client_get_ssl_server_trust_file_provider (
   svn_auth_provider_object_t **provider,
   apr_pool_t *pool);
+
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_t, allocated in @a pool.
@@ -164,19 +150,11 @@ void svn_client_get_ssl_server_trust_file_provider (
  * @a *provider retrieves its credentials from the configuration
  * mechanism.  The returned credential is used to load the appropriate
  * client certificate for authentication when requested by a server.
- *  
- * @a *provider requires certain run-time parameters be present in
- * the auth_baton:
- *
- *     - a loaded @c svn_config_t object
- *        (@c SVN_AUTH_PARAM_CONFIG)
- *
- *     - the name of the server-specific settings group if available
- *        (@c SVN_AUTH_PARAM_SERVER_GROUP)
  */
 void svn_client_get_ssl_client_cert_file_provider (
   svn_auth_provider_object_t **provider,
   apr_pool_t *pool);
+
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_pw_t, allocated in @a pool.
@@ -184,19 +162,11 @@ void svn_client_get_ssl_client_cert_file_provider (
  * @a *provider retrieves its credentials from the configuration
  * mechanism.  The returned credential is used when a loaded client
  * certificate is protected by a passphrase.
- *  
- * @a *provider requires certain run-time parameters be present in
- * the auth_baton:
- *
- *     - a loaded @c svn_config_t object
- *        (@c SVN_AUTH_PARAM_CONFIG)
- *
- *     - the name of the server-specific settings group if available
- *        (@c SVN_AUTH_PARAM_SERVER_GROUP)
  */
 void svn_client_get_ssl_client_cert_pw_file_provider (
   svn_auth_provider_object_t **provider,
   apr_pool_t *pool);
+
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.  
@@ -204,15 +174,6 @@ void svn_client_get_ssl_client_cert_pw_file_provider (
  * @a *provider retrieves its credentials by using the @a prompt_func
  * and @a prompt_baton.  The returned credential is used to override
  * SSL security on an error.
- *  
- * @a *provider requires certain run-time parameters be present in
- * the @c auth_baton:
- *
- *     - the failure bitmask reported by the ssl certificate validator
- *        (@c SVN_AUTH_PARAM_SSL_SERVER_FAILURES)
- *
- *     - the certificate info (svn_auth_ssl_server_cert_info_t*)
- *        (@c SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO)
  */
 void svn_client_get_ssl_server_trust_prompt_provider (
   svn_auth_provider_object_t **provider,
@@ -220,35 +181,36 @@ void svn_client_get_ssl_server_trust_prompt_provider (
   void *prompt_baton,
   apr_pool_t *pool);
 
+
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_t, allocated in @a pool.
  *
  * @a *provider retrieves its credentials by using the @a prompt_func
  * and @a prompt_baton.  The returned credential is used to load the
  * appropriate client certificate for authentication when requested by
- * a server.
- *  
- * @a *provider requires no run-time parameters.
+ * a server.  The prompt will be retried @a retry_limit times.
  */
 void svn_client_get_ssl_client_cert_prompt_provider (
   svn_auth_provider_object_t **provider,
   svn_auth_ssl_client_cert_prompt_func_t prompt_func,
   void *prompt_baton,
+  int retry_limit,
   apr_pool_t *pool);
+
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_pw_t, allocated in @a pool.
  *
  * @a *provider retrieves its credentials by using the @a prompt_func
  * and @a prompt_baton.  The returned credential is used when a loaded
- * client certificate is protected by a passphrase.
- *
- * @a *provider requires no run-time parameters. 
+ * client certificate is protected by a passphrase.  The prompt will
+ * be retried @a retry_limit times.
  */
 void svn_client_get_ssl_client_cert_pw_prompt_provider (
   svn_auth_provider_object_t **provider,
   svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
   void *prompt_baton,
+  int retry_limit,
   apr_pool_t *pool);
 
 
@@ -375,7 +337,9 @@ typedef svn_error_t *
 
 /** A client context structure, which holds client specific callbacks, 
  * batons, serves as a cache for configuration options, and other various 
- * and sundry things.
+ * and sundry things.  In order to avoid backwards compatability problems 
+ * clients should use @c svn_client_create_context() to allocate and 
+ * intialize this structure instead of doing so themselves.
  */
 typedef struct svn_client_ctx_t
 {
@@ -424,6 +388,19 @@ typedef struct svn_client_ctx_t
 /** @} */
 
 
+/** Initialize a client context.
+ * Return a client context in @a *ctx (allocated in @a pool) that 
+ * represents a particular instance of the svn client.  
+ *
+ * In order to avoid backwards compatability problems, clients must 
+ * use this function to intialize and allocate the 
+ * @c svn_client_ctx_t structure rather than doing so themselves, as 
+ * the size of this structure may change in the future. 
+ */ 
+svn_error_t *
+svn_client_create_context (svn_client_ctx_t **ctx,
+                           apr_pool_t *pool);
+
 /** Checkout a working copy of @a URL at @a revision, using @a path as
  * the root directory of the newly checked out working copy, and
  * authenticating with the authentication baton cached in @a ctx.  If
@@ -909,18 +886,17 @@ svn_client_relocate (const char *dir,
                      apr_pool_t *pool);
 
 
-/** Restore the pristine version of a working copy @a path, effectively
- * undoing any local mods.  If @a path is a directory, and @a recursive 
- * is @a true, this will be a recursive operation.
+/** Restore the pristine version of a working copy @a paths,
+ * effectively undoing any local mods.  For each path in @a paths, if
+ * it is a directory, and @a recursive is @a true, this will be a
+ * recursive operation.
  *
- * If @a ctx->notify_func is non-null, then for each item reverted, call
- * @a ctx->notify_func with @a ctx->notify_baton and the path of the reverted 
- * item.
- *
- * If @a path is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
+ * If @a ctx->notify_func is non-null, then for each item reverted,
+ * call @a ctx->notify_func with @a ctx->notify_baton and the path of
+ * the reverted item.
  */
 svn_error_t *
-svn_client_revert (const char *path,
+svn_client_revert (const apr_array_header_t *paths,
                    svn_boolean_t recursive,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
@@ -1132,7 +1108,7 @@ svn_client_propget (apr_hash_t **props,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
-/** Set @a *propname to the value of @a propval on revision @a revision 
+/** Set @a *propval to the value of @a propname on revision @a revision 
  * in the repository represented by @a URL.  Use the authentication baton 
  * in @a ctx for authentication, and @a pool for all memory allocation.  
  * Return the actual rev queried in @a *set_rev.

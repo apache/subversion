@@ -2,7 +2,7 @@
  * adm_crawler.c:  report local WC mods to an Editor.
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -563,14 +563,14 @@ svn_wc_crawl_revisions (const char *path,
     }
 
   /* Finish the report, which causes the update editor to be driven. */
-  SVN_ERR (reporter->finish_report (report_baton));
+  SVN_ERR (reporter->finish_report (report_baton, pool));
 
  abort_report:
   if (err)
     {
       /* Clean up the fs transaction. */
       svn_error_t *fserr;
-      if ((fserr = reporter->abort_report (report_baton)))
+      if ((fserr = reporter->abort_report (report_baton, pool)))
         {
           fserr = svn_error_quick_wrap (fserr, "Error aborting report");
           svn_error_compose (err, fserr);
@@ -694,7 +694,7 @@ svn_wc_transmit_text_deltas (const char *path,
   /* Open a filehandle for tmp text-base. */
   SVN_ERR_W (svn_io_file_open (&localfile, tmp_base,
                                APR_READ, APR_OS_DEFAULT, pool),
-             "svn_wc_transmit_text_deltas: error opening local file");
+             "Error opening local file");
 
   /* Create a text-delta stream object that pulls data out of the two
      files. */

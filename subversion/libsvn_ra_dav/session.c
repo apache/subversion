@@ -2,7 +2,7 @@
  * session.c :  routines for maintaining sessions state (to the DAV server)
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -72,13 +72,11 @@ static int request_auth(void *userdata, const char *realm, int attempt,
   if (attempt == 0)
     {
       const char *realmstring;
-      const char *portstring = apr_psprintf (ras->pool,
-                                             "%d", ras->root.port);
 
-      /* <https://svn.collab.net:80>Subversion repository */
-      realmstring = apr_pstrcat(ras->pool, "<", ras->root.scheme, "://",
-                                ras->root.host, ":", portstring, "> ",
-                                realm, NULL);
+      /* <https://svn.collab.net:80> Subversion repository */
+      realmstring = apr_psprintf (ras->pool, "<%s://%s:%d> %s",
+                                  ras->root.scheme, ras->root.host,
+                                  ras->root.port, realm);
 
       err = svn_auth_first_credentials (&creds,
                                         &(ras->auth_iterstate), 
@@ -160,13 +158,12 @@ server_ssl_callback(void *userdata,
   svn_auth_ssl_server_cert_info_t cert_info;
   char fingerprint[NE_SSL_DIGESTLEN];
   char valid_from[NE_SSL_VDATELEN], valid_until[NE_SSL_VDATELEN];
-  const char *portstring = apr_psprintf (ras->pool, "%d", ras->root.port);
   const char *realmstring;
   apr_uint32_t *svn_failures = apr_palloc (ras->pool, sizeof(*svn_failures));
 
   /* Construct the realmstring, e.g. https://svn.collab.net:80 */
-  realmstring = apr_pstrcat(ras->pool, ras->root.scheme, "://",
-                            ras->root.host, ":", portstring, NULL);
+  realmstring = apr_psprintf (ras->pool, "%s://%s:%d", ras->root.scheme,
+                              ras->root.host, ras->root.port);
 
   *svn_failures = convert_neon_failures(failures);
   svn_auth_set_parameter(ras->callbacks->auth_baton,
@@ -196,22 +193,18 @@ server_ssl_callback(void *userdata,
                                      realmstring,
                                      ras->callbacks->auth_baton,
                                      pool);
-  if (error || !creds)
+  if (error || ! creds)
     {
       svn_error_clear(error);
     }
   else
     {
       server_creds = creds;
-      if (server_creds->trust_permanently)
+      error = svn_auth_save_credentials(state, pool);
+      if (error)
         {
-          error = svn_auth_save_credentials(state, pool);
-          if (error)
-            {
-              /* It would be nice to show the error to the user
-               * somehow... */
-              svn_error_clear(error);
-            }
+          /* It would be nice to show the error to the user somehow... */
+          svn_error_clear(error);
         }
     }
 
@@ -221,39 +214,58 @@ server_ssl_callback(void *userdata,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
 
   apr_pool_destroy(pool);
-  return !server_creds;
+  return ! server_creds;
 }
 
-static int
-client_ssl_keypw_callback(void *userdata, char *pwbuf, size_t len)
+static svn_boolean_t
+client_ssl_decrypt_cert(svn_ra_session_t *ras,
+                        const char *cert_file,
+                        ne_ssl_client_cert *clicert)
 {
-  svn_ra_session_t *ras = userdata;
-  void *creds;
-  svn_auth_cred_ssl_client_cert_pw_t *pw_creds = NULL;
   svn_auth_iterstate_t *state;
-  apr_pool_t *pool;
   svn_error_t *error;
+  apr_pool_t *pool;
+  svn_boolean_t ok = FALSE;
+  void *creds;
+  int try;
 
   apr_pool_create(&pool, ras->pool);
-  error = svn_auth_first_credentials(&creds, &state,
-                                     SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
-                                     "none", /* ### fix? */
-                                     ras->callbacks->auth_baton,
-                                     pool);
-  if (error || !creds)
+  for (try = 0; TRUE; ++try)
     {
-      svn_error_clear(error);
-    }
-  else
-    {
-      pw_creds = creds;
-      if (pw_creds)
+      if (try == 0)
         {
-          apr_cpystrn(pwbuf, pw_creds->password, len);
+          error = svn_auth_first_credentials(&creds, &state,
+                                             SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
+                                             cert_file,
+                                             ras->callbacks->auth_baton,
+                                             pool);
+        }
+      else
+        {
+          error = svn_auth_next_credentials(&creds, state, pool);
+        }
+
+      if (error || ! creds)
+        {
+          /* Failure or too many attempts */
+          svn_error_clear(error);
+          break;
+        }
+      else
+        {
+          svn_auth_cred_ssl_client_cert_pw_t *pw_creds = creds;
+
+          if (ne_ssl_clicert_decrypt(clicert, pw_creds->password) == 0)
+            {
+              /* Success */
+              ok = TRUE;
+              break;
+            }
         }
     }
   apr_pool_destroy(pool);
-  return (pw_creds == NULL);
+
+  return ok;
 }
 
 
@@ -263,44 +275,58 @@ client_ssl_callback(void *userdata, ne_session *sess,
                     int dncount)
 {
   svn_ra_session_t *ras = userdata;
+  ne_ssl_client_cert *clicert = NULL;
   void *creds;
   svn_auth_iterstate_t *state;
+  const char *realmstring;
   apr_pool_t *pool;
   svn_error_t *error;
-  apr_pool_create(&pool, ras->pool);
-  error = svn_auth_first_credentials(&creds, &state,
-                                     SVN_AUTH_CRED_SSL_CLIENT_CERT,
-                                     "none", /* ### fix? */
-                                     ras->callbacks->auth_baton,
-                                     pool);
-  if (error || !creds)
-    {
-      svn_error_clear(error);
-    }
-  else
-    {
-      svn_auth_cred_ssl_client_cert_t *client_creds = creds;
-      ne_ssl_client_cert *clicert
-        = ne_ssl_clicert_read(client_creds->cert_file);
-      if (clicert != NULL)
-        {
-          if (ne_ssl_clicert_encrypted(clicert))
-            {
-              char pw[128];
-              if ((client_ssl_keypw_callback(userdata, pw, sizeof(pw)) == 0)
-                  && (ne_ssl_clicert_decrypt(clicert, pw) == 0))
-                /* Successfully decrypted */
-                ne_ssl_set_clicert(sess, clicert);
+  int try;
 
-              /* ### Notify user if decrypt fails? */
-            }
-          else
+  apr_pool_create(&pool, ras->pool);
+
+  realmstring = apr_psprintf (pool, "%s://%s:%d", ras->root.scheme,
+                              ras->root.host, ras->root.port);
+
+  for (try = 0; TRUE; ++try)
+    {
+      if (try == 0)
+        {
+          error = svn_auth_first_credentials(&creds, &state,
+                                             SVN_AUTH_CRED_SSL_CLIENT_CERT,
+                                             realmstring,
+                                             ras->callbacks->auth_baton,
+                                             pool);
+        }
+      else
+        {
+          error = svn_auth_next_credentials(&creds, state, pool);
+        }
+
+      if (error || ! creds)
+        {
+          /* Failure or too many attempts */
+          svn_error_clear(error);
+          break;
+        }
+      else
+        {
+          svn_auth_cred_ssl_client_cert_t *client_creds = creds;
+
+          clicert = ne_ssl_clicert_read(client_creds->cert_file);
+          if (clicert)
             {
-              /* Cert isn't encrypted, so just attach it. */
-              ne_ssl_set_clicert(sess, clicert);
+              if (! ne_ssl_clicert_encrypted(clicert) ||
+                  client_ssl_decrypt_cert(ras, client_creds->cert_file,
+                                          clicert))
+                {
+                  ne_ssl_set_clicert(sess, clicert);
+                }
+              break;
             }
         }
     }
+
   apr_pool_destroy(pool);
 }
 
@@ -530,7 +556,7 @@ svn_ra_dav__open (void **session_baton,
     {
       ne_uri_free(&uri);
       return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
-                              "network socket initialization failed");
+                              "Network socket initialization failed");
     }
 
   /* we want to know if the repository is actually somewhere else */
@@ -737,16 +763,21 @@ static svn_error_t *svn_ra_dav__get_repos_root(void *session_baton,
     {
       svn_string_t bc_relative;
       apr_size_t len;
+      apr_size_t relative_len;
 
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &bc_relative,
                                             NULL, ras->sess, ras->url,
                                             SVN_INVALID_REVNUM, pool));
 
+      /* Need to URI-encode bc_relative before determining length
+         since ras->url is URI-encoded */
+      relative_len = strlen (svn_path_uri_encode (bc_relative.data, pool));
+
       len = strlen(ras->url);
-      if (len <= bc_relative.len)
+      if (len <= relative_len)
         return svn_error_create(APR_EGENERAL, NULL,
                                 "Impossibly long relative url.");
-      len = len - bc_relative.len - 1;
+      len = len - relative_len - 1;
       ras->repos_root = apr_pstrmemdup(ras->pool, ras->url, len);
     }
 

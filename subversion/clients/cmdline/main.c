@@ -2,7 +2,7 @@
  * main.c:  Subversion command line client.
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -612,7 +612,7 @@ static volatile sig_atomic_t cancelled = FALSE;
 
 /* A signal handler to support cancellation. */
 static void
-sig_int (int unused)
+signal_handler (int unused)
 {
   cancelled = TRUE;
 }
@@ -622,7 +622,7 @@ svn_error_t *
 svn_cl__check_cancel (void *baton)
 {
   if (cancelled)
-    return svn_error_create (SVN_ERR_CANCELLED, NULL, "caught SIGINT");
+    return svn_error_create (SVN_ERR_CANCELLED, NULL, "Caught signal");
   else
     return SVN_NO_ERROR;
 }
@@ -640,7 +640,7 @@ main (int argc, const char * const *argv)
   int opt_id;
   apr_getopt_t *os;  
   svn_cl__opt_state_t opt_state = { { 0 } };
-  svn_client_ctx_t ctx = { 0 };
+  svn_client_ctx_t *ctx;
   int received_opts[SVN_OPT_MAX_OPTIONS];
   int i, num_opts = 0;
   const svn_opt_subcommand_desc_t *subcommand = NULL;
@@ -926,7 +926,7 @@ main (int argc, const char * const *argv)
           {
             err = svn_error_create (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                                     "--auto-props and --no-auto-props are "
-                                    "mutually exclusive.");
+                                    "mutually exclusive");
             svn_handle_error (err, stderr, FALSE);
             svn_error_clear (err);
             svn_pool_destroy (pool);
@@ -939,7 +939,7 @@ main (int argc, const char * const *argv)
           {
             err = svn_error_create (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                                     "--auto-props and --no-auto-props are "
-                                    "mutually exclusive.");
+                                    "mutually exclusive");
             svn_handle_error (err, stderr, FALSE);
             svn_error_clear (err);
             svn_pool_destroy (pool);
@@ -1049,7 +1049,7 @@ main (int argc, const char * const *argv)
           err = svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE,
                                   NULL,
                                   "Log message file is a versioned file; "
-                                  "use '--force-log' to override.");
+                                  "use '--force-log' to override");
           svn_handle_error (err, stderr, FALSE);
           svn_error_clear (err);
           svn_pool_destroy (pool);
@@ -1063,7 +1063,7 @@ main (int argc, const char * const *argv)
           err = svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
                                   "The log message is a pathname "
                                   "(was -F intended?); use '--force-log' "
-                                  "to override.");
+                                  "to override");
           svn_handle_error (err, stderr, FALSE);
           svn_error_clear (err);
           svn_pool_destroy (pool);
@@ -1090,9 +1090,17 @@ main (int argc, const char * const *argv)
 
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;
-  command_baton.ctx = &ctx;
+  if ((err = svn_client_create_context (&ctx, pool)))
+    {
+      svn_handle_error (err, stderr, FALSE);
+      svn_error_clear (err);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
+  command_baton.ctx = ctx;
 
-  if ((err = svn_config_get_config (&(ctx.config), opt_state.config_dir, pool)))
+  if ((err = svn_config_get_config (&(ctx->config),
+                                    opt_state.config_dir, pool)))
     {
       svn_handle_error (err, stderr, FALSE);
       svn_error_clear (err);
@@ -1100,7 +1108,7 @@ main (int argc, const char * const *argv)
       return EXIT_FAILURE;
     }
 
-  cfg = apr_hash_get (ctx.config, SVN_CONFIG_CATEGORY_CONFIG,
+  cfg = apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                       APR_HASH_KEY_STRING);
   
   /* Update the options in the config */
@@ -1130,8 +1138,8 @@ main (int argc, const char * const *argv)
     }
 
   /* Set the log message callback function.  Note that individual
-     subcommands will populate the ctx.log_msg_baton */
-  ctx.log_msg_func = svn_cl__get_log_message;
+     subcommands will populate the ctx->log_msg_baton */
+  ctx->log_msg_func = svn_cl__get_log_message;
 
   /* Authentication set-up. */
   {
@@ -1181,21 +1189,17 @@ main (int argc, const char * const *argv)
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
         svn_client_get_ssl_client_cert_prompt_provider
-          (&provider, svn_cl__auth_ssl_client_cert_prompt, NULL, pool);
+          (&provider, svn_cl__auth_ssl_client_cert_prompt, NULL, 2, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
         svn_client_get_ssl_client_cert_pw_prompt_provider
-          (&provider, svn_cl__auth_ssl_client_cert_pw_prompt, NULL, pool);
+          (&provider, svn_cl__auth_ssl_client_cert_pw_prompt, NULL, 2, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
       }
 
     /* Build an authentication baton to give to libsvn_client. */
     svn_auth_open (&ab, providers, pool);
-    ctx.auth_baton = ab;
-
-    /* Set up our cancellation support. */
-    apr_signal (SIGINT, sig_int);
-    ctx.cancel_func = svn_cl__check_cancel;
+    ctx->auth_baton = ab;
 
     /* Place any default --username or --password credentials into the
        auth_baton's run-time parameter hash. */
@@ -1217,15 +1221,30 @@ main (int argc, const char * const *argv)
 
     /* There are two different ways the user can disable disk caching
        of credentials:  either via --no-auth-cache, or in the config
-       file ('store-password = no'). */
+       file ('store-auth-creds = no'). */
     svn_config_get_bool (cfg, &store_password_val,
                          SVN_CONFIG_SECTION_AUTH,
-                         SVN_CONFIG_OPTION_STORE_PASSWORD,
+                         SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
                          TRUE);
     if (opt_state.no_auth_cache || !store_password_val)
       svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE,
                              (void *) "");
   }
+
+  /* Set up our cancellation support. */
+  ctx->cancel_func = svn_cl__check_cancel;
+  apr_signal (SIGINT, signal_handler);
+#ifdef SIGHUP
+  apr_signal (SIGTERM, signal_handler);
+#endif
+#ifdef SIGTERM
+  apr_signal (SIGTERM, signal_handler);
+#endif
+
+#ifdef SIGPIPE
+  /* Disable SIGPIPE generation for the platforms that have it. */
+  apr_signal(SIGPIPE, SIG_IGN);
+#endif
 
   /* And now we finally run the subcommand. */
   err = (*subcommand->cmd_func) (os, &command_baton, pool);

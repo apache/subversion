@@ -2,7 +2,7 @@
  * prop_commands.c:  Implementation of propset, propget, and proplist.
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -148,7 +148,7 @@ svn_client_propset (const char *propname,
          if it's ever to support setting properties remotely. */
       return svn_error_createf
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         "Setting property on non-local target '%s' not yet supported.",
+         "Setting property on non-local target '%s' not yet supported",
          target);
     }
 

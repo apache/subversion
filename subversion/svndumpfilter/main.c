@@ -2,7 +2,7 @@
  * main.c: Subversion dump stream filtering tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -441,7 +441,7 @@ new_node_record (void **node_baton,
                   /* bail out with an error */
                   return svn_error_createf
                     (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                     "Node with dropped parent sneaked in.");
+                     "Node with dropped parent sneaked in");
                 }
               SVN_ERR (svn_stream_printf
                        (header_stream, pool,
@@ -854,7 +854,8 @@ subcommand_exclude (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (parse_baton_initialize (&pb, opt_state, TRUE, pool));
 
   SVN_ERR (svn_repos_parse_dumpstream (pb->in_stream,
-                                       &filtering_vtable, pb, pool));
+                                       &filtering_vtable, pb,
+                                       NULL, NULL, pool));
 
   fprintf (stderr, "\n Dropped %d revisions, %d nodes\n",
            pb->rev_drop_count, pb->node_drop_count);
@@ -888,7 +889,8 @@ subcommand_include (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (parse_baton_initialize (&pb, opt_state, FALSE, pool));
 
   SVN_ERR (svn_repos_parse_dumpstream (pb->in_stream,
-                                       &filtering_vtable, pb, pool));
+                                       &filtering_vtable, pb,
+                                       NULL, NULL, pool));
 
   fprintf (stderr, "\n Dropped %d revisions, %d nodes\n",
            pb->rev_drop_count, pb->node_drop_count);

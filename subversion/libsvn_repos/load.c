@@ -1,7 +1,7 @@
 /* load.c --- parsing a 'dumpfile'-formatted stream.
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -124,7 +124,7 @@ read_header_block (svn_stream_t *stream,
           if (header_str->data[i] == '\0')
             return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
                                      "Found malformed header block "
-                                     "in dumpfile stream.");
+                                     "in dumpfile stream");
           i++;
         }
       /* Create a 'name' string and point to it. */
@@ -136,7 +136,7 @@ read_header_block (svn_stream_t *stream,
       if (i > header_str->len)
         return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
                                  "Found malformed header block "
-                                 "in dumpfile stream.");
+                                 "in dumpfile stream");
 
       /* Point to the 'value' string. */
       value = header_str->data + i;
@@ -153,14 +153,14 @@ static svn_error_t *
 stream_ran_dry (void)
 {
   return svn_error_create (SVN_ERR_INCOMPLETE_DATA, NULL,
-                           "Premature end of content data in dumpstream.");
+                           "Premature end of content data in dumpstream");
 }
 
 static svn_error_t *
 stream_malformed (void)
 {
   return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                           "Dumpstream data appears to be malformed.");
+                           "Dumpstream data appears to be malformed");
 }
 
 /* Read CONTENT_LENGTH bytes from STREAM, parsing the bytes as an
@@ -193,7 +193,7 @@ parse_property_block (svn_stream_t *stream,
              but better to give a non-generic property block error. */ 
           return svn_error_create
             (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-             "incomplete or unterminated property block");
+             "Incomplete or unterminated property block");
         }
 
       content_length -= (strbuf->len + 1); /* +1 because we read a \n too. */
@@ -367,13 +367,13 @@ parse_format_version (const char *versionstring, int *version)
                   SVN_REPOS_DUMPFILE_MAGIC_HEADER,
                   magic_len))
     return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                             "malformed dumpfile header.");
+                             "Malformed dumpfile header");
 
   value = atoi (p+1);
 
   if (value > SVN_REPOS_DUMPFILE_FORMAT_VERSION)
     return svn_error_createf (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                              "unsupported dumpfile version: %d",
+                              "Unsupported dumpfile version: %d",
                               value);
 
   *version = value;
@@ -387,6 +387,8 @@ svn_error_t *
 svn_repos_parse_dumpstream (svn_stream_t *stream,
                             const svn_repos_parser_fns_t *parse_fns,
                             void *parse_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             apr_pool_t *pool)
 {
   svn_boolean_t eof;
@@ -431,6 +433,10 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 
       /* Clear our per-line pool. */
       svn_pool_clear (linepool);
+
+      /* Check for cancellation. */
+      if (cancel_func)
+        SVN_ERR (cancel_func (cancel_baton));
 
       /* Keep reading blank lines until we discover a new record, or until
          the stream runs out. */
@@ -495,7 +501,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
         {
           /* What the heck is this record?!? */
           return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                                   "Unrecognized record type in stream.");
+                                   "Unrecognized record type in stream");
         }
       
       /* Is there a props content-block to parse? */
@@ -508,7 +514,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
             SVN_ERR (parse_fns->remove_node_props (node_baton));
 
           SVN_ERR (parse_property_block (stream,
-                                         apr_atoui64 (valstr),
+                                         svn__atoui64 (valstr),
                                          parse_fns,
                                          found_node ? node_baton : rev_baton,
                                          found_node,
@@ -521,7 +527,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                                   APR_HASH_KEY_STRING)))
         {
           SVN_ERR (parse_text_block (stream, 
-                                     apr_atoui64 (valstr),
+                                     svn__atoui64 (valstr),
                                      parse_fns,
                                      found_node ? node_baton : rev_baton,
                                      buffer, 
@@ -716,8 +722,8 @@ maybe_add_with_history (struct node_baton *nb,
 
       if (! SVN_IS_VALID_REVNUM(src_rev))
         return svn_error_createf (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                  "Relative copyfrom_rev %" SVN_REVNUM_T_FMT
-                                  " is not available in current repository.",
+                                  "Relative source revision %" SVN_REVNUM_T_FMT
+                                  " is not available in current repository",
                                   src_rev);
 
       SVN_ERR (svn_fs_revision_root (&copy_root, pb->fs, src_rev, pool));
@@ -805,7 +811,7 @@ new_node_record (void **node_baton,
       }
     default:
       return svn_error_createf (SVN_ERR_STREAM_UNRECOGNIZED_DATA, NULL,
-                                "Unrecognized node-action on node '%s'.",
+                                "Unrecognized node-action on node '%s'",
                                 nb->path);
     }
 
@@ -1024,6 +1030,8 @@ svn_repos_load_fs (svn_repos_t *repos,
                    svn_stream_t *feedback_stream,
                    enum svn_repos_load_uuid uuid_action,
                    const char *parent_dir,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *pool)
 {
   const svn_repos_parser_fns_t *parser;
@@ -1039,7 +1047,8 @@ svn_repos_load_fs (svn_repos_t *repos,
                                           parent_dir,
                                           pool));
 
-  SVN_ERR (svn_repos_parse_dumpstream (dumpstream, parser, parse_baton, pool));
+  SVN_ERR (svn_repos_parse_dumpstream (dumpstream, parser, parse_baton,
+                                       cancel_func, cancel_baton, pool));
 
   return SVN_NO_ERROR;
 }

@@ -2,7 +2,7 @@
  * fetch.c :  routines for fetching updates and checkouts
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -173,7 +173,7 @@ typedef struct {
   svn_boolean_t is_switch;
 
   /* Named target, or NULL if none.  For example, in 'svn up wc/foo',
-     this is "wc/foo", but in 'svn up' it is NULL.  
+     this is "wc/foo", but in 'svn up' it is "".  
 
      The target helps us determine whether a response received from
      the server should be acted on.  Take 'svn up wc/foo': the server
@@ -251,7 +251,7 @@ static svn_error_t *simple_store_vsn_url(const char *vsn_url,
   /* store the version URL as a property */
   SVN_ERR_W( (*setter)(baton, SVN_RA_DAV__LP_VSN_URL, 
                        svn_string_create(vsn_url, pool), pool),
-             "could not save the URL of the version resource" );
+             "Could not save the URL of the version resource" );
 
   return NULL;
 }
@@ -555,7 +555,7 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
 #if 0
       if (written != len && cgc->err == NULL)
         cgc->err = svn_error_createf(SVN_ERR_INCOMPLETE_DATA, NULL,
-                                     "unable to completely write the svndiff "
+                                     "Unable to completely write the svndiff "
                                      "data to the parser stream "
                                      "(wrote " APR_SIZE_T_FMT " "
                                      "of " APR_SIZE_T_FMT " bytes)",
@@ -582,7 +582,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
                                         pool,
                                         &frc.handler,
                                         &frc.handler_baton),
-             "could not save file");
+             "Could not save file");
 
   /* Only bother with text-deltas if our caller cares. */
   if (! text_deltas)
@@ -630,7 +630,7 @@ static void get_file_reader(void *userdata, const char *buf, size_t len)
       /* Uh oh, didn't write as many bytes as neon gave us. */
       return 
         svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                         "Error writing to svn_stream: unexpected EOF");
+                         "Error writing to stream: unexpected EOF");
     }
 #endif
       
@@ -815,7 +815,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
           if (strcmp (hex_digest, expected_checksum->data) != 0)
             return svn_error_createf
               (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-               "svn_ra_dav__get_file: checksum mismatch for '%s':\n"
+               "Checksum mismatch for '%s':\n"
                "   expected checksum:  %s\n"
                "   actual checksum:    %s\n",
                path, expected_checksum->data, hex_digest);
@@ -927,7 +927,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
           if (propval == NULL)
             entry->size = 0;
           else
-            entry->size = apr_atoui64(propval->data);
+            entry->size = svn__atoui64(propval->data);
           
           /* does this resource contain any 'svn' or 'custom' properties,
              i.e.  ones actually created and set by the user? */
@@ -1077,13 +1077,13 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                                           revision, NULL, NULL, pool);
   if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
     return svn_error_quick_wrap(err, "Server does not support date-based "
-                                "operations.");
+                                "operations");
   else if (err)
     return err;
 
   if (*revision == SVN_INVALID_REVNUM)
     return svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
-                            "Invalid server response to dated-rev request.");
+                            "Invalid server response to dated-rev request");
 
   return SVN_NO_ERROR;
 }
@@ -1498,8 +1498,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
           if (rb->is_switch && rb->ras->callbacks->invalidate_wc_props)
             {
               CHKERR( rb->ras->callbacks->invalidate_wc_props
-                      (rb->ras->callback_baton,
-                       rb->target ? rb->target : "", 
+                      (rb->ras->callback_baton, rb->target, 
                        SVN_RA_DAV__LP_VSN_URL, rb->ras->pool) );
             }
 
@@ -1945,7 +1944,7 @@ static int end_element(void *userdata, int state,
 
       /* fetch node props, unless this is the top dir and the real
          target of the operation is not the top dir. */
-      if (! ((rb->dirs->nelts == 1) && rb->target))
+      if (! ((rb->dirs->nelts == 1) && *rb->target))
         CHKERR( add_node_props(rb, TOP_DIR(rb).pool));
 
       /* Close the directory on top of the stack, and pop it.  Also,
@@ -2094,7 +2093,7 @@ static int end_element(void *userdata, int state,
           /* Update the wcprop here, unless this is the top directory
              and the real target of this operation is something other
              than the top directory. */
-          if (! ((rb->dirs->nelts == 1) && rb->target))
+          if (! ((rb->dirs->nelts == 1) && *rb->target))
             {
               CHKERR( simple_store_vsn_url(rb->href->data, TOP_DIR(rb).baton,
                                            rb->editor->change_dir_prop,
@@ -2238,7 +2237,8 @@ static svn_error_t * reporter_delete_path(void *report_baton,
 }
 
 
-static svn_error_t * reporter_abort_report(void *report_baton)
+static svn_error_t * reporter_abort_report(void *report_baton,
+                                           apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
 
@@ -2248,7 +2248,8 @@ static svn_error_t * reporter_abort_report(void *report_baton)
 }
 
 
-static svn_error_t * reporter_finish_report(void *report_baton)
+static svn_error_t * reporter_finish_report(void *report_baton,
+                                            apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
   svn_error_t *err;
@@ -2395,8 +2396,8 @@ make_reporter (void *session_baton,
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
 
-  /* A NULL target is no problem.  */
-  if (target)
+  /* Pre-0.36 servers don't like to see an empty target string.  */
+  if (*target)
     {
       s = apr_psprintf(pool, 
                        "<S:update-target>%s</S:update-target>",

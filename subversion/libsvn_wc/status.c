@@ -2,7 +2,7 @@
  * status.c: construct a status structure from an entry structure
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1217,7 +1217,7 @@ delete_entry (const char *path,
   /* Mark the parent dir -- it lost an entry (unless that parent dir
      is the root node and we're not supposed to report on the root
      node).  */
-  if ((db->parent_baton) && (! eb->target))
+  if (db->parent_baton && (! *eb->target))
     SVN_ERR (tweak_statushash (db->parent_baton->statii, eb->adm_access,
                                db->path, kind == svn_node_dir,
                                svn_wc_status_modified, 0));
@@ -1336,7 +1336,7 @@ close_directory (void *dir_baton,
     {
       /* If this is the top-most directory, and the operation had a
          target, we should only report the target. */
-      if (eb->target)
+      if (*eb->target)
         {
           svn_wc_status_t *tgt_status;
           const char *path = svn_path_join (eb->anchor, eb->target, pool);
@@ -1350,14 +1350,15 @@ close_directory (void *dir_baton,
                 {
                   svn_wc_adm_access_t *dir_access;
                   SVN_ERR (svn_wc_adm_retrieve (&dir_access, eb->adm_access, 
-                                                eb->target, pool));
+                                                path, pool));
                   SVN_ERR (get_dir_status 
                            (eb, tgt_status->entry, dir_access, NULL,
                             eb->ignores, TRUE, eb->get_all, eb->no_ignore, 
                             TRUE, eb->status_func, eb->status_baton, 
                             eb->cancel_func, eb->cancel_baton, pool));
                 }
-              (eb->status_func) (eb->status_baton, path, tgt_status);
+              if (is_sendable_status (tgt_status, eb))
+                (eb->status_func) (eb->status_baton, path, tgt_status);
             }
         }
       else

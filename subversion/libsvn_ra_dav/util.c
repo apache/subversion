@@ -2,7 +2,7 @@
  * util.c :  utility functions for the RA/DAV library
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -646,7 +646,7 @@ parsed_request(ne_session *sess,
     {
       err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                               "The %s request returned invalid XML "
-                              "in the response: %s. (%s)",
+                              "in the response: %s (%s)",
                               method, msg, url);
       goto cleanup;
     }

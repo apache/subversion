@@ -1,7 +1,7 @@
 /* reps-table.c : operations on the `representations' table
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -89,7 +89,7 @@ svn_fs__bdb_read_rep (svn_fs__representation_t **rep_p,
   if (db_err == DB_NOTFOUND)
     return svn_error_createf
       (SVN_ERR_FS_NO_SUCH_REPRESENTATION, 0,
-       "svn_fs__bdb_read_rep: no such representation '%s'", key);
+       "No such representation '%s'", key);
 
   /* Handle any other error conditions.  */
   SVN_ERR (BDB_WRAP (fs, "reading representation", db_err));
@@ -189,7 +189,7 @@ svn_fs__bdb_delete_rep (svn_fs_t *fs, const char *key, trail_t *trail)
   if (db_err == DB_NOTFOUND)
     return svn_error_createf
       (SVN_ERR_FS_NO_SUCH_REPRESENTATION, 0,
-       "svn_fs__bdb_delete_rep: no such representation '%s'", key);
+       "No such representation '%s'", key);
 
   /* Handle any other error conditions.  */
   SVN_ERR (BDB_WRAP (fs, "deleting representation", db_err));

@@ -2,7 +2,7 @@
  * util.c: some handy utilities functions
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -218,8 +218,8 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
       || memcmp(path, relative->info->repos->root_path, len2) != 0)
     {
       return svn_error_create(SVN_ERR_APMOD_MALFORMED_URI, NULL,
-                              "The specified URI does not refer to this "
-                              "repository, so it is unusable.");
+                              "Ununsable URI: it does not refer to this "
+                              "repository");
     }
 
   /* prep the return value */
@@ -298,12 +298,11 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
 
  malformed_uri:
     return svn_error_create(SVN_ERR_APMOD_MALFORMED_URI, NULL,
-                            "The specified URI could not be parsed.");
+                            "The specified URI could not be parsed");
 
  unhandled_form:
   return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                          "dav_svn_simple_parse_uri does not support that "
-                          "URI form yet.");
+                          "Unsupported URI form");
 }
 
 /* ### move this into apr_xml */

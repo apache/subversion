@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -180,7 +180,7 @@ def commit_routine_switching(wc_dir, verify):
   # same URL.  We don't allow this.
   svntest.actions.run_and_verify_commit(
     wc_dir, None, None,
-    "svn: Cannot commit both .* as they refer to the same URL.$",
+    "svn: Cannot commit both .* as they refer to the same URL$",
     None, None, None, None,
     wc_dir)
 

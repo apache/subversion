@@ -2,7 +2,7 @@
  * swigutil_java.c: utility functions for the SWIG Java bindings
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -341,7 +341,7 @@ static svn_error_t * convert_exception(JNIEnv *jenv, apr_pool_t *pool)
   else
     {
       status = APR_EGENERAL;
-      msg = "the Java callback raised an exception";
+      msg = "The Java callback raised an exception";
     }
   result = svn_error_create(status, NULL, msg);
 

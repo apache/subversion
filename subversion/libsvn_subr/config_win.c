@@ -2,7 +2,7 @@
  * config_win.c :  parsing configuration data from the registry
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -48,7 +48,7 @@ svn_config__win_config_path (const char **folder, int system_path,
                      | CSIDL_FLAG_CREATE);
 
   int style;
-  apr_status_t apr_err = apr_filepath_encoding(&style, pool);
+  apr_status_t apr_err = apr_filepath_encoding (&style, pool);
 
   if (apr_err)
     return svn_error_wrap_apr (apr_err,
@@ -108,9 +108,71 @@ svn_config__win_config_path (const char **folder, int system_path,
                             : "Can't determine the user's config path"));
 }
 
+/* Convert UTF8, a UTF-8 encoded string, to UCS2, a UCS-2 encoded
+   string, using POOL for temporary allocations. */
+static svn_error_t *
+utf8_to_ucs2 (WCHAR **ucs2, const char *utf8, apr_pool_t *pool)
+{
+  int inbytes, outwords, outlength;
+  apr_status_t apr_err;
+
+  inbytes = lstrlenA (utf8);
+  outwords = outlength = inbytes + 1; /* Include terminating null. */
+  *ucs2 = apr_palloc (pool, outwords * sizeof(WCHAR));
+  apr_err = apr_conv_utf8_to_ucs2 (utf8, &inbytes, *ucs2, &outwords);
+
+  if (!apr_err && (inbytes > 0 || outwords == 0))
+    apr_err = APR_INCOMPLETE;
+  if (apr_err)
+    return svn_error_wrap_apr (apr_err, "Can't convert config path to UCS-2");
+
+  /* Note that apr_conv_utf8_to_ucs2 does _not_ terminate the
+     outgoing buffer. */
+  (*ucs2)[outlength - outwords] = L'\0';
+  return SVN_NO_ERROR;
+}
+
 
 
 #include "config_impl.h"
+
+svn_error_t *
+svn_config__open_file (FILE **pfile,
+                       const char *filename,
+                       const char *mode,
+                       apr_pool_t *pool)
+{
+  int style;
+  apr_status_t apr_err = apr_filepath_encoding (&style, pool);
+
+  if (apr_err)
+    return svn_error_wrap_apr (apr_err,
+                               "Can't determine the native path encoding");
+
+  if (style == APR_FILEPATH_ENCODING_UTF8)
+    {
+      WCHAR *filename_ucs2;
+      WCHAR *mode_ucs2;
+
+      SVN_ERR (utf8_to_ucs2 (&filename_ucs2, filename, pool));
+      SVN_ERR (utf8_to_ucs2 (&mode_ucs2, mode, pool));
+      *pfile = _wfopen (filename_ucs2, mode_ucs2);
+    }
+  else if (style == APR_FILEPATH_ENCODING_LOCALE)
+    {
+      const char *filename_native;
+      SVN_ERR (svn_utf_cstring_from_utf8 (&filename_native, filename, pool));
+      *pfile = fopen (filename_native, mode);
+    }
+  else
+    {
+      /* There is no third option on Windows; we should never get here. */
+      return svn_error_createf (APR_EINVAL, NULL,
+                                "Unknown native path encoding (%d)", style);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* ### These constants are insanely large, but (a) we want to avoid
    reallocating strings if possible, and (b) the realloc logic might
@@ -197,7 +259,7 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
   else
     {
       return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                "Unrecognised registry path \"%s\"", file);
+                                "Unrecognised registry path '%s'", file);
     }
 
   err = RegOpenKeyEx (base_hkey, file, 0,
@@ -208,10 +270,10 @@ svn_config__parse_registry (svn_config_t *cfg, const char *file,
       const int is_enoent = APR_STATUS_IS_ENOENT(APR_FROM_OS_ERROR(err));
       if (!is_enoent)
         return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  "Can't open registry key \"%s\"", file);
+                                  "Can't open registry key '%s'", file);
       else if (must_exist && is_enoent)
         return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
-                                  "Can't find registry key \"%s\"", file);
+                                  "Can't find registry key '%s'", file);
       else
         return SVN_NO_ERROR;
     }

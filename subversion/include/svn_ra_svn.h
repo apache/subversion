@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -71,14 +71,16 @@ typedef svn_error_t *(*svn_ra_svn_command_handler)(svn_ra_svn_conn_t *conn,
  * If @c terminate is set, command-handling will cease after command is
  * processed.
  */
-typedef struct {
+typedef struct svn_ra_svn_cmd_entry_t 
+{
   const char *cmdname;
   svn_ra_svn_command_handler handler;
   svn_boolean_t terminate;
 } svn_ra_svn_cmd_entry_t;
 
 /** Memory representation of an on-the-wire data item. */
-typedef struct {
+typedef struct svn_ra_svn_item_t 
+{
   enum {
     SVN_RA_SVN_NUMBER,
     SVN_RA_SVN_STRING,
@@ -210,7 +212,7 @@ svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
                                              apr_pool_t *pool);
 
-/** Parse an array of @c svn_item_t structures as a tuple, using a
+/** Parse an array of @c svn_sort__item_t structures as a tuple, using a
  * printf-like interface.  The format string @a fmt may contain:
  *
  *<pre>

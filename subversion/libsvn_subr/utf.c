@@ -2,7 +2,7 @@
  * utf.c:  UTF-8 conversion routines
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -211,7 +211,7 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
                  "... was followed by non-ascii byte %d.\n"
                  "\n"
                  "Non-ascii character detected (see above), "
-                 "and unable to convert to/from UTF-8.\n",
+                 "and unable to convert to/from UTF-8",
                  error_data, *((const unsigned char *) data));
             }
           else
@@ -219,7 +219,7 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
               return svn_error_createf
                 (APR_EINVAL, NULL,
                  "Non-ascii character (code %d) detected, "
-                 "and unable to convert to/from UTF-8.\n",
+                 "and unable to convert to/from UTF-8",
                  *((const unsigned char *) data));
             }
         }

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -369,8 +369,10 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_commit_replaced,
 
   /** Transmitting post-fix text-delta data for a file. */
-  svn_wc_notify_commit_postfix_txdelta
+  svn_wc_notify_commit_postfix_txdelta,
 
+  /** Processed a single revision's blame. */
+  svn_wc_notify_blame_revision
 } svn_wc_notify_action_t;
 
 
@@ -1129,7 +1131,7 @@ typedef void (*svn_wc_status_func_t) (void *baton,
  * svn_wc_status_t structures and sends them through @a status_func /
  * @a status_baton.  @a anchor is an access baton, with a tree lock,
  * for the local path to the working copy which will be used as the
- * root of our editor.  If @a target is not @c NULL, it represents an
+ * root of our editor.  If @a target is not empty, it represents an
  * entry in the @a anchor path which is the subject of the editor
  * drive (otherwise, the @a anchor is the subject).
  * 
@@ -1516,7 +1518,7 @@ svn_error_t *svn_wc_is_wc_root (svn_boolean_t *wc_root,
  * should be rooted.
  *
  * @a target is the actual subject (relative to the @a anchor) of the
- * update/commit, or @c NULL if the @a anchor itself is the subject.
+ * update/commit, or "" if the @a anchor itself is the subject.
  *
  * Allocate @a anchor and @a target in @a pool.  
  */
@@ -1542,7 +1544,7 @@ svn_error_t *svn_wc_get_actual_target (const char *path,
  * when the editor driver calls @c close_edit.
  *
  * @a target is the entry in @a anchor that will actually be updated, or 
- * @c NULL if all of @a anchor should be updated.
+ * empty if all of @a anchor should be updated.
  *
  * The editor invokes @a notify_func with @a notify_baton as the update
  * progresses, if @a notify_func is non-null.
@@ -1595,7 +1597,7 @@ svn_error_t *svn_wc_get_update_editor (svn_revnum_t *target_revision,
  * when the editor driver calls @c close_edit.
  *
  * @a target is the entry in @a anchor that will actually be updated, or 
- * @c NULL if all of @a anchor should be updated.
+ * empty if all of @a anchor should be updated.
  *
  * The editor invokes @a notify_func with @a notify_baton as the switch
  * progresses, if @a notify_func is non-null.

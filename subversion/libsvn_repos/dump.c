@@ -1,7 +1,7 @@
 /* dump.c --- writing filesystem contents into a portable 'dumpfile' format.
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -486,7 +486,7 @@ dump_node (struct edit_baton *eb,
                      should never happen. */
                   return svn_error_createf 
                     (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                     "Error dumping textual contents of '%s'.", path);
+                     "Error dumping textual contents of '%s'", path);
                 }
             }
         
@@ -855,6 +855,8 @@ svn_repos_dump_fs (svn_repos_t *repos,
                    svn_revnum_t start_rev,
                    svn_revnum_t end_rev,
                    svn_boolean_t incremental,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *pool)
 {
   const svn_delta_editor_t *dump_editor;
@@ -877,13 +879,14 @@ svn_repos_dump_fs (svn_repos_t *repos,
   /* Validate the revisions. */
   if (start_rev > end_rev)
     return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, NULL,
-                              "start_rev %" SVN_REVNUM_T_FMT
-                              " is greater than end_rev %" SVN_REVNUM_T_FMT,
+                              "Start revision %" SVN_REVNUM_T_FMT
+                              " is greater than end revision %" 
+                              SVN_REVNUM_T_FMT,
                               start_rev, end_rev);
   if (end_rev > youngest)
     return svn_error_createf (SVN_ERR_REPOS_BAD_ARGS, NULL,
-                              "end_rev %" SVN_REVNUM_T_FMT " is invalid "
-                              "(youngest rev is %" SVN_REVNUM_T_FMT ")",
+                              "End revision %" SVN_REVNUM_T_FMT " is invalid "
+                              "(youngest revision is %" SVN_REVNUM_T_FMT ")",
                               end_rev, youngest);
   if ((start_rev == 0) && incremental)
     incremental = FALSE; /* revision 0 looks the same regardless of
@@ -909,6 +912,10 @@ svn_repos_dump_fs (svn_repos_t *repos,
     {
       svn_revnum_t from_rev, to_rev;
       svn_fs_root_t *to_root;
+
+      /* Check for cancellation. */
+      if (cancel_func)
+        SVN_ERR (cancel_func (cancel_baton));
 
       /* Special-case the initial revision dump: it needs to contain
          *all* nodes, because it's the foundation of all future

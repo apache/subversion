@@ -2,7 +2,7 @@
  * switch.c:  implement 'switch' feature via WC & RA interfaces.
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -135,7 +135,7 @@ svn_client_switch (svn_revnum_t *result_rev,
          itself, and thus PATH's name will never change, which is
          exactly what we want. */
       anchor = path;
-      target = NULL;
+      target = "";
       session_entry = entry;
     }
 

@@ -2,7 +2,7 @@
  * serve.c :  Functions for serving the Subversion protocol
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -87,7 +87,7 @@ static svn_error_t *get_fs_path(const char *repos_url, const char *url,
   len = strlen(repos_url);
   if (strncmp(url, repos_url, len) != 0)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                             "'%s'\nis not the same repository as\n'%s'",
+                             "'%s' is not the same repository as '%s'",
                              url, repos_url);
   *fs_path = url + len;
   return SVN_NO_ERROR;
@@ -290,7 +290,7 @@ static svn_error_t *finish_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* No arguments to parse. */
   SVN_ERR(trivial_auth_request(conn, pool, b->sb));
   if (!b->err)
-    b->err = svn_repos_finish_report(b->report_baton);
+    b->err = svn_repos_finish_report(b->report_baton, pool);
   return SVN_NO_ERROR;
 }
 
@@ -300,7 +300,7 @@ static svn_error_t *abort_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   report_driver_baton_t *b = baton;
 
   /* No arguments to parse. */
-  svn_error_clear(svn_repos_abort_report(b->report_baton));
+  svn_error_clear(svn_repos_abort_report(b->report_baton, pool));
   return SVN_NO_ERROR;
 }
 
@@ -751,8 +751,6 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb", &rev, &target,
                                  &recurse));
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  if (svn_path_is_empty(target))
-    target = NULL;  /* ### Compatibility hack, shouldn't be needed */
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
@@ -772,8 +770,6 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbc", &rev, &target,
                                  &recurse, &switch_url));
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  if (svn_path_is_empty(target))
-    target = NULL;  /* ### Compatibility hack, shouldn't be needed */
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   SVN_CMD_ERR(get_fs_path(b->repos_url, switch_url, &switch_path, pool));
@@ -794,8 +790,6 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb?(?r)",
                                  &target, &recurse, &rev));
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  if (svn_path_is_empty(target))
-    target = NULL;  /* ### Compatibility hack, shouldn't be needed */
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   return accept_report(conn, pool, b, rev, target, NULL, FALSE, recurse,
@@ -814,8 +808,6 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbbc", &rev, &target,
                                  &recurse, &ignore_ancestry, &versus_url));
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  if (svn_path_is_empty(target))
-    target = NULL;  /* ### Compatibility hack, shouldn't be needed */
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   SVN_CMD_ERR(get_fs_path(b->repos_url, versus_url, &versus_path, pool));
@@ -993,7 +985,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
 
   if(apr_err)
     return svn_error_create(SVN_ERR_BAD_FILENAME, NULL,
-                            "Couldn't determine repository path.");
+                            "Couldn't determine repository path");
 
   SVN_ERR(svn_path_cstring_to_utf8(&full_path, buffer, pool));
   full_path = svn_path_canonicalize(full_path, pool);

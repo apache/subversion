@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -38,23 +38,31 @@ extern "C" {
 /* ---------------------------------------------------------------*/
 
 
-/** Callback type for checking read authorization on paths produced by
- * (at least) svn_repos_dir_delta() and svn_repos_replay().
+/** Callback type for checking authorization on paths produced by (at
+ * least) svn_repos_dir_delta().
  *
- * Set @a *allowed to TRUE to indicate that @a path in @a root is
- * readable, or to FALSE to indicate unreadable (presumably according
- * to authorization state stored in @a baton).
- *
+ * Set @a *allowed to TRUE to indicate that some operation is
+ * authorized for @a path in @a root, or set it to FALSE to indicate
+ * unauthorized (presumably according to state stored in @a baton).
+ * 
  * Do not assume @a pool has any lifetime beyond this call.
  *
- * Note: If someday we want more sophisticated authorization states,
- * @a allowed can become an enum type.
+ * The exact operation being authorized depends on the callback
+ * implementation.  For read authorization, for example, the caller
+ * would implement an instance that does read checking, and pass it as
+ * a parameter named [perhaps] 'authz_read_func'.  The receiver of
+ * that parameter might also take another parameter named
+ * 'authz_write_func', which although sharing this type, would be a
+ * different implementation.
+ *
+ * Note: If someday we want more sophisticated authorization states
+ * than just yes/no, @a allowed can become an enum type.
  */
-typedef svn_error_t *(*svn_repos_authz_read_func_t) (svn_boolean_t *allowed,
-                                                     svn_fs_root_t *root,
-                                                     const char *path,
-                                                     void *baton,
-                                                     apr_pool_t *pool);
+typedef svn_error_t *(*svn_repos_authz_func_t) (svn_boolean_t *allowed,
+                                                svn_fs_root_t *root,
+                                                const char *path,
+                                                void *baton,
+                                                apr_pool_t *pool);
 
 
 
@@ -213,8 +221,8 @@ const char *svn_repos_post_revprop_change_hook (svn_repos_t *repos,
  * Specifically, the report will create a transaction made by @a username, 
  * relative to @a fs_base in the filesystem.  @a target is a single path 
  * component, used to limit the scope of the report to a single entry of 
- * @a fs_base, or @c NULL if all of @a fs_base itself is the main subject 
- * of the report.
+ * @a fs_base, or "" if all of @a fs_base itself is the main subject of
+ * the report.
  *
  * @a tgt_path and @a revnum is the fs path/revision pair that is the
  * "target" of @c dir_delta.  In other words, a tree delta will be
@@ -256,7 +264,7 @@ svn_repos_begin_report (void **report_baton,
                         svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
-                        svn_repos_authz_read_func_t authz_read_func,
+                        svn_repos_authz_func_t authz_read_func,
                         void *authz_read_baton,
                         apr_pool_t *pool);
 
@@ -322,7 +330,8 @@ svn_error_t *svn_repos_delete_path (void *report_baton,
  * aborted even if the editor drive fails, so the caller does not need
  * to clean up.
  */
-svn_error_t *svn_repos_finish_report (void *report_baton);
+svn_error_t *svn_repos_finish_report (void *report_baton,
+                                      apr_pool_t *pool);
 
 
 /** The report-driver is bailing, so abort the fs transaction.  This
@@ -330,7 +339,8 @@ svn_error_t *svn_repos_finish_report (void *report_baton);
  * called.  No other reporting functions should be called after calling
  * this function.
  */
-svn_error_t *svn_repos_abort_report (void *report_baton);
+svn_error_t *svn_repos_abort_report (void *report_baton,
+                                     apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------*/
@@ -340,13 +350,13 @@ svn_error_t *svn_repos_abort_report (void *report_baton);
 /** Use the provided @a editor and @a edit_baton to describe the changes
  * necessary for making a given node (and its descendants, if it is a
  * directory) under @a src_root look exactly like @a tgt_path under
- * @a tgt_root.  @a src_entry is the node to update, and is either @c NULL 
- * or a single path component.  If @a src_entry is @c NULL, then compute 
- * the difference between the entire tree anchored at @a src_parent_dir 
- * under @a src_root and @a tgt_path under @a target_root.  Else, describe 
- * the changes needed to update only that entry in @a src_parent_dir.
- * Typically, callers of this function will use a @a tgt_path that is the
- * concatenation of @a src_parent_dir and @a src_entry.
+ * @a tgt_root.  @a src_entry is the node to update.  If @a src_entry
+ * is empty, then compute the difference between the entire tree
+ * anchored at @a src_parent_dir under @a src_root and @a tgt_path
+ * under @a target_root.  Else, describe the changes needed to update
+ * only that entry in @a src_parent_dir.  Typically, callers of this
+ * function will use a @a tgt_path that is the concatenation of @a
+ * src_parent_dir and @a src_entry.
  *
  * @a src_root and @a tgt_root can both be either revision or transaction
  * roots.  If @a tgt_root is a revision, @a editor's @c set_target_revision()
@@ -395,7 +405,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      const char *tgt_path,
                      const svn_delta_editor_t *editor,
                      void *edit_baton,
-                     svn_repos_authz_read_func_t authz_read_func,
+                     svn_repos_authz_func_t authz_read_func,
                      void *authz_read_baton,
                      svn_boolean_t text_deltas,
                      svn_boolean_t recurse,
@@ -417,7 +427,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
  * revision parameters in the editor interface except the copyfrom
  * parameter of the add_file() and add_directory() editor functions.
  *
- * ### TODO: This ought to take an svn_repos_authz_read_func_t too.
+ * ### TODO: This ought to take an svn_repos_authz_func_t too.
  * The only reason it doesn't yet is the difficulty of implementing
  * that correctly, plus lack of strong present need -- it's currently
  * only used in creating a DAV MERGE response, in 'svnadmin dump', and
@@ -860,6 +870,10 @@ enum svn_repos_load_uuid
  * If @a incremental is @c TRUE, the first revision dumped will be a diff
  * against the previous revision (usually it looks like a full dump of
  * the tree).
+ *
+ * If @a cancel_func is not @c NULL, it is called periodically with
+ * @a cancel_baton as argument to see if the client wishes to cancel
+ * the dump.
  */
 svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
                                 svn_stream_t *dumpstream,
@@ -867,6 +881,8 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
                                 svn_revnum_t start_rev,
                                 svn_revnum_t end_rev,
                                 svn_boolean_t incremental,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
                                 apr_pool_t *pool);
 
 
@@ -889,12 +905,18 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
  *
  * If the dumpstream contains no UUID, then @a uuid_action is
  * ignored and the repository UUID is not touched.
+ *
+ * If @a cancel_func is not @c NULL, it is called periodically with
+ * @a cancel_baton as argument to see if the client wishes to cancel
+ * the load.
  */
 svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
                                 svn_stream_t *dumpstream,
                                 svn_stream_t *feedback_stream,
                                 enum svn_repos_load_uuid uuid_action,
                                 const char *parent_dir,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
                                 apr_pool_t *pool);
 
 
@@ -974,6 +996,10 @@ typedef struct svn_repos_parse_fns_t
 /** Read and parse dumpfile-formatted @a stream, calling callbacks in
  * @a parse_fns/@a parse_baton, and using @a pool for allocations.
  *
+ * If @a cancel_func is not @c NULL, it is called periodically with
+ * @a cancel_baton as argument to see if the client wishes to cancel
+ * the dump.
+ *
  * This parser has built-in knowledge of the dumpfile format, but only
  * in a general sense:
  *
@@ -993,6 +1019,8 @@ svn_error_t *
 svn_repos_parse_dumpstream (svn_stream_t *stream,
                             const svn_repos_parser_fns_t *parse_fns,
                             void *parse_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             apr_pool_t *pool);
 
 

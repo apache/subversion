@@ -2,7 +2,7 @@
  * swigutil_py.c: utility functions for the SWIG Python bindings
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -429,7 +429,7 @@ commit_item_array_to_list(const apr_array_header_t *array)
 static svn_error_t * convert_python_error(void)
 {
   return svn_error_create(SVN_ERR_SWIG_PY_EXCEPTION_SET, NULL,
-                          "the Python callback raised an exception");
+                          "The Python callback raised an exception");
 }
 
 

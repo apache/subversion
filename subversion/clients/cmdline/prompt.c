@@ -2,7 +2,7 @@
  * prompt.c -- ask the user for authentication information.
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -142,6 +142,7 @@ svn_cl__auth_simple_prompt (svn_auth_cred_simple_t **cred_p,
                             void *baton,
                             const char *realm,
                             const char *username,
+                            svn_boolean_t may_save,
                             apr_pool_t *pool)
 {
   svn_auth_cred_simple_t *ret = apr_pcalloc (pool, sizeof (*ret));
@@ -156,7 +157,7 @@ svn_cl__auth_simple_prompt (svn_auth_cred_simple_t **cred_p,
 
   pass_prompt = apr_psprintf (pool, "Password for '%s': ", ret->username);
   SVN_ERR (prompt (&(ret->password), pass_prompt, TRUE, pool));
-
+  ret->may_save = may_save;
   *cred_p = ret;
   return SVN_NO_ERROR;
 }
@@ -167,6 +168,7 @@ svn_error_t *
 svn_cl__auth_username_prompt (svn_auth_cred_username_t **cred_p,
                               void *baton,
                               const char *realm,
+                              svn_boolean_t may_save,
                               apr_pool_t *pool)
 {
   svn_auth_cred_username_t *ret = apr_pcalloc (pool, sizeof (*ret));
@@ -174,6 +176,7 @@ svn_cl__auth_username_prompt (svn_auth_cred_username_t **cred_p,
   SVN_ERR (maybe_print_realm (realm, pool));
 
   SVN_ERR (prompt (&(ret->username), "Username: ", FALSE, pool));
+  ret->may_save = may_save;
   *cred_p = ret;
   return SVN_NO_ERROR;
 }
@@ -187,9 +190,9 @@ svn_cl__auth_ssl_server_trust_prompt (
   const char *realm,
   apr_uint32_t failures,
   const svn_auth_ssl_server_cert_info_t *cert_info,
+  svn_boolean_t may_save,
   apr_pool_t *pool)
 {
-  apr_uint32_t allow_perm_accept = ! (failures & SVN_AUTH_SSL_OTHER);
   const char *choice;
   svn_stringbuf_t *msg;
   svn_stringbuf_t *buf = svn_stringbuf_createf
@@ -241,7 +244,7 @@ svn_cl__auth_ssl_server_trust_prompt (
      cert_info->fingerprint);
   svn_stringbuf_appendstr (buf, msg);
 
-  if (allow_perm_accept)
+  if (may_save)
     {
       svn_stringbuf_appendcstr
         (buf, "(R)eject, accept (t)emporarily or accept (p)ermanently? ");
@@ -255,13 +258,13 @@ svn_cl__auth_ssl_server_trust_prompt (
   if (choice && (choice[0] == 't' || choice[0] == 'T'))
     {
       *cred_p = apr_pcalloc (pool, sizeof (**cred_p));
-      (*cred_p)->trust_permanently = FALSE;
+      (*cred_p)->may_save = FALSE;
+      (*cred_p)->accepted_failures = failures;
     }
-  else if (allow_perm_accept &&
-           choice && (choice[0] == 'p' || choice[0] == 'P'))
+  else if (may_save && choice && (choice[0] == 'p' || choice[0] == 'P'))
     {
       *cred_p = apr_pcalloc (pool, sizeof (**cred_p));
-      (*cred_p)->trust_permanently = TRUE;
+      (*cred_p)->may_save = TRUE;
       (*cred_p)->accepted_failures = failures;
     }
   else
@@ -277,15 +280,19 @@ svn_cl__auth_ssl_server_trust_prompt (
 svn_error_t *
 svn_cl__auth_ssl_client_cert_prompt (svn_auth_cred_ssl_client_cert_t **cred_p,
                                      void *baton,
+                                     const char *realm,
+                                     svn_boolean_t may_save,
                                      apr_pool_t *pool)
 {
+  svn_auth_cred_ssl_client_cert_t *cred = NULL;
   const char *cert_file = NULL;
-  svn_auth_cred_ssl_client_cert_t *cred;
 
-  SVN_ERR (prompt (&cert_file, "client certificate filename: ", FALSE, pool));
+  SVN_ERR (maybe_print_realm (realm, pool));
+  SVN_ERR (prompt (&cert_file, "Client certificate filename: ", FALSE, pool));
 
   cred = apr_palloc (pool, sizeof(*cred));
   cred->cert_file = cert_file;
+  cred->may_save = may_save;
   *cred_p = cred;
 
   return SVN_NO_ERROR;
@@ -297,24 +304,20 @@ svn_error_t *
 svn_cl__auth_ssl_client_cert_pw_prompt (
   svn_auth_cred_ssl_client_cert_pw_t **cred_p,
   void *baton,
+  const char *realm,
+  svn_boolean_t may_save,
   apr_pool_t *pool)
 {
-  
+  svn_auth_cred_ssl_client_cert_pw_t *cred = NULL;
   const char *result;
+  const char *text = apr_psprintf (pool, "Passphrase for '%s': ", realm);
 
-  SVN_ERR (prompt (&result, "client certificate passphrase: ", TRUE, pool));
+  SVN_ERR (prompt (&result, text, TRUE, pool));
 
-  if (result && result[0])
-    {
-      svn_auth_cred_ssl_client_cert_pw_t *ret =
-        apr_pcalloc (pool, sizeof (*ret));
-      ret->password = result;
-      *cred_p = ret;
-    }
-  else
-    {
-      *cred_p = NULL;
-    }
+  cred = apr_pcalloc (pool, sizeof (*cred));
+  cred->password = result;
+  cred->may_save = may_save;
+  *cred_p = cred;
 
   return SVN_NO_ERROR;
 }

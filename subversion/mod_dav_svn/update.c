@@ -2,7 +2,7 @@
  * update.c: handle the update-report request and response
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -112,7 +112,7 @@ struct authz_read_baton
 };
 
 
-/* This implements 'svn_repos_authz_read_func_t'. */
+/* This implements 'svn_repos_authz_func_t'. */
 static svn_error_t *authz_read(svn_boolean_t *allowed,
                                svn_fs_root_t *root,
                                const char *path,
@@ -998,11 +998,12 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   const char *src_path = NULL;
   const char *dst_path = NULL;
   const dav_svn_repos *repos = resource->info->repos;
-  const char *target = NULL;
+  const char *target = "";
   svn_boolean_t recurse = TRUE;
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
   struct authz_read_baton arb;
+  apr_pool_t *subpool = svn_pool_create(resource->pool);
 
   /* Construct the authz read check baton. */
   arb.r = resource->info->r;
@@ -1195,7 +1196,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   uc.pathmap = NULL;
   if (dst_path) /* we're doing a 'switch' */
     {      
-      if (target) 
+      if (*target)
         {
           /* if the src is split into anchor/target, so must the
              telescoping dst_path be. */
@@ -1251,6 +1252,9 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   for (child = doc->root->first_child; child != NULL; child = child->next)
     if (child->ns == ns)
       {
+        /* Clear our subpool. */
+        svn_pool_clear(subpool);
+
         if (strcmp(child->name, "entry") == 0)
           {
             const char *path;
@@ -1274,7 +1278,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             /* we require the `rev' attribute for this to make sense */
             if (! SVN_IS_VALID_REVNUM (rev))
               {
-                svn_error_clear(svn_repos_abort_report(rbaton));
+                svn_error_clear(svn_repos_abort_report(rbaton, resource->pool));
                 serr = svn_error_create (SVN_ERR_XML_ATTRIB_NOT_FOUND, 
                                          NULL, "Missing XML attribute: rev");
                 return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1284,17 +1288,17 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
               }
 
             /* get cdata, stipping whitespace */
-            path = dav_xml_get_cdata(child, resource->pool, 1);
+            path = dav_xml_get_cdata(child, subpool, 1);
             
             if (! linkpath)
               serr = svn_repos_set_path(rbaton, path, rev,
-                                        start_empty, resource->pool);
+                                        start_empty, subpool);
             else
               serr = svn_repos_link_path(rbaton, path, linkpath, rev,
-                                         start_empty, resource->pool);
+                                         start_empty, subpool);
             if (serr != NULL)
               {
-                svn_error_clear(svn_repos_abort_report(rbaton));
+                svn_error_clear(svn_repos_abort_report(rbaton, resource->pool));
                 return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                            "A failure occurred while "
                                            "recording one of the items of "
@@ -1305,28 +1309,22 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                doing a regular update (not a `switch') */
             if (linkpath && (! dst_path))
               {
-                const char *this_path
-                  = svn_path_join_many(resource->pool, 
-                                       src_path,
-                                       target ? target : path,
-                                       target ? path : NULL,
-                                       NULL);
+                const char *this_path;
                 if (! uc.pathmap)
                   uc.pathmap = apr_hash_make(resource->pool);
+                this_path = svn_path_join_many(apr_hash_pool_get(uc.pathmap),
+                                               src_path, target, path, NULL);
                 add_to_path_map(uc.pathmap, this_path, linkpath);
               }
           }
         else if (strcmp(child->name, "missing") == 0)
           {
-            const char *path;
-
             /* get cdata, stipping whitespace */
-            path = dav_xml_get_cdata(child, resource->pool, 1);
-
-            serr = svn_repos_delete_path(rbaton, path, resource->pool);
+            const char *path = dav_xml_get_cdata(child, subpool, 1);
+            serr = svn_repos_delete_path(rbaton, path, subpool);
             if (serr != NULL)
               {
-                svn_error_clear(svn_repos_abort_report(rbaton));
+                svn_error_clear(svn_repos_abort_report(rbaton, resource->pool));
                 return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                            "A failure occurred while "
                                            "recording one of the (missing) "
@@ -1338,7 +1336,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 
   /* this will complete the report, and then drive our editor to generate
      the response to the client. */
-  serr = svn_repos_finish_report(rbaton);
+  serr = svn_repos_finish_report(rbaton, resource->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "A failure occurred while "
@@ -1373,7 +1371,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
              revision 0.  This should result in nothing but 'add' calls
              to the editor. */
           serr = svn_repos_dir_delta(/* source is revision 0: */
-                                     zero_root, "", NULL,
+                                     zero_root, "", "",
                                      /* target is 'switch' location: */
                                      uc.rev_root, dst_path,
                                      /* re-use the editor */
@@ -1402,12 +1400,15 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
      resource-walker... */
   if (serr != NULL)
     {
-      svn_error_clear(svn_repos_abort_report(rbaton));
+      svn_error_clear(svn_repos_abort_report(rbaton, resource->pool));
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "A failure occurred during the completion "
                                  "and response generation for the update "
                                  "report.");
     }
+
+  /* Destroy our subpool. */
+  svn_pool_destroy(subpool);
 
   return NULL;
 }

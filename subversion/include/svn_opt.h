@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -202,7 +202,8 @@ enum svn_opt_revision_kind {
 
 
 /** A revision, specified in one of @c svn_opt_revision_kind ways. */
-typedef struct svn_opt_revision_t {
+typedef struct svn_opt_revision_t
+{
   enum svn_opt_revision_kind kind;
   union {
     svn_revnum_t number;

@@ -2,7 +2,7 @@
  * export.c:  export a tree.
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -84,8 +84,8 @@ copy_versioned_files (const char *from,
             return err;
           if (! force)
             SVN_ERR_W (err,
-                       "Destination directory exists.  Please remove the "
-                       "directory, or use --force to override this error.");
+                       "Destination directory exists. Please remove the "
+                       "directory or use --force to override this error");
           else
             svn_error_clear (err);
         }
@@ -152,7 +152,7 @@ copy_versioned_files (const char *from,
                   svn_string_t *executable;
                   const char *eol = NULL;
                   svn_boolean_t local_mod = FALSE;
-                  apr_time_t time;
+                  apr_time_t tm;
     
                   if (revision->kind != svn_opt_revision_working)
                     {
@@ -188,9 +188,9 @@ copy_versioned_files (const char *from,
 
                   if (local_mod)
                     /* Use the modified time from the working copy if the file */
-                    SVN_ERR (svn_io_file_affected_time (&time, copy_from, iterpool));
+                    SVN_ERR (svn_io_file_affected_time (&tm, copy_from, iterpool));
                   else
-                    time = entry->cmt_date;
+                    tm = entry->cmt_date;
 
                   if (keywords)
                     {
@@ -218,7 +218,7 @@ copy_versioned_files (const char *from,
                                               fmt,
                                               entry->cmt_rev),
                                 entry->url,
-                                time,
+                                tm,
                                 author,
                                 iterpool));
                     }
@@ -230,7 +230,7 @@ copy_versioned_files (const char *from,
                   if (executable)
                     SVN_ERR (svn_io_set_file_executable (copy_to, TRUE, FALSE, iterpool));
                 
-                  SVN_ERR (svn_io_set_file_affected_time (time, copy_to, iterpool));
+                  SVN_ERR (svn_io_set_file_affected_time (tm, copy_to, iterpool));
                 }
             }
 
@@ -689,7 +689,7 @@ svn_client_export (svn_revnum_t *result_rev,
       SVN_ERR (ra_lib->do_update (session,
                                   &reporter, &report_baton,
                                   revnum,
-                                  NULL, /* no sub-target */
+                                  "", /* no sub-target */
                                   TRUE, /* recurse */
                                   export_editor, edit_baton, pool));
 
@@ -697,7 +697,7 @@ svn_client_export (svn_revnum_t *result_rev,
                                    TRUE, /* "help, my dir is empty!" */
                                    pool));
 
-      SVN_ERR (reporter->finish_report (report_baton));               
+      SVN_ERR (reporter->finish_report (report_baton, pool));               
 
       /* Special case: Due to our sly export/checkout method of
        * updating an empty directory, no target will have been created

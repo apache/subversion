@@ -2,7 +2,7 @@
  * commit-cmd.c -- Check changes into the repository.
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -74,7 +74,7 @@ svn_cl__commit (apr_getopt_t *os,
 
       SVN_ERR (svn_wc_get_actual_target (base_dir, &parent_dir, 
                                          &base_name, pool));
-      if (base_name)
+      if (*base_name)
         base_dir = apr_pstrdup (pool, parent_dir);
     }
 

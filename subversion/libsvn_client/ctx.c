@@ -1,5 +1,5 @@
 /*
- * svn_server.h :  declarations for the svn server
+ * ctx.c:  intialization function for client context
  *
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
@@ -16,23 +16,23 @@
  * ====================================================================
  */
 
+/* ==================================================================== */
+
 
 
-#ifndef SERVER_H
-#define SERVER_H
+/*** Includes. ***/
 
-#include <apr_network_io.h>
+#include <apr_pools.h>
+#include "svn_client.h"
+#include "svn_error.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+
+/*** Code. ***/
 
-svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
-                   svn_boolean_t tunnel, svn_boolean_t read_only,
-                   apr_pool_t *pool);
-
-#ifdef __cplusplus
+svn_error_t *
+svn_client_create_context (svn_client_ctx_t **ctx,
+                           apr_pool_t *pool)
+{
+  *ctx = apr_pcalloc (pool, sizeof (svn_client_ctx_t));
+  return SVN_NO_ERROR;
 }
-#endif /* __cplusplus */
-
-#endif  /* SERVER_H */

@@ -2,7 +2,7 @@
  * reporter.c : `reporter' vtable routines for updates.
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -77,7 +77,7 @@ typedef struct report_baton_t
   void *update_edit_baton; 
 
   /* Authz callback for svn_repos_dir_delta.  These may be NULL. */
-  svn_repos_authz_read_func_t authz_read_func;
+  svn_repos_authz_func_t authz_read_func;
   void *authz_read_baton;
 
   /* This hash contains any `linked paths', and what they were linked
@@ -223,7 +223,7 @@ svn_repos_set_path (void *report_baton,
   if (! SVN_IS_VALID_REVNUM (revision))
     return svn_error_create
       (SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
-       "svn_repos_set_path: invalid revision passed to report.");
+       "Invalid revision passed to report");
 
   if (! SVN_IS_VALID_REVNUM (rbaton->txn_base_rev))
     { 
@@ -232,7 +232,7 @@ svn_repos_set_path (void *report_baton,
       if (! svn_path_is_empty (path))
         return svn_error_create
           (SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
-           "svn_repos_set_path: initial revision report was bogus.");
+           "Initial revision report was bogus");
 
       /* Barring previous problems, squirrel away our based-on revision. */
       rbaton->txn_base_rev = revision;
@@ -267,18 +267,18 @@ svn_repos_set_path (void *report_baton,
       /* Create the transaction if we haven't yet done so. */
       if (! rbaton->txn)
         SVN_ERR (begin_txn (rbaton));
-        
+
       /* The path we are dealing with is the anchor (where the
          reporter is rooted) + target (the top-level thing being
          reported) + path (stuff relative to the target...this is the
          empty string in the file case since the target is the file
          itself, not a directory containing the file). */
-      from_path = svn_path_join_many (pool, 
+      from_path = svn_path_join_many (pool,
                                       rbaton->base_path,
-                                      rbaton->target ? rbaton->target : path,
-                                      rbaton->target ? path : NULL,
+                                      rbaton->target,
+                                      path,
                                       NULL);
-      
+
       /* However, the path may be the child of a linked thing, in
          which case we'll be linking from somewhere entirely
          different. */
@@ -346,12 +346,12 @@ svn_repos_link_path (void *report_baton,
      reported) + path (stuff relative to the target...this is the
      empty string in the file case since the target is the file
      itself, not a directory containing the file). */
-  from_path = svn_path_join_many (pool, 
+  from_path = svn_path_join_many (pool,
                                   rbaton->base_path,
-                                  rbaton->target ? rbaton->target : path,
-                                  rbaton->target ? path : NULL,
+                                  rbaton->target,
+                                  path,
                                   NULL);
-  
+
   /* Copy into our txn. */
   SVN_ERR (svn_fs_revision_root (&from_root, rbaton->repos->fs,
                                  revision, pool));
@@ -402,10 +402,10 @@ svn_repos_delete_path (void *report_baton,
      reported) + path (stuff relative to the target...this is the
      empty string in the file case since the target is the file
      itself, not a directory containing the file). */
-  delete_path = svn_path_join_many (pool, 
+  delete_path = svn_path_join_many (pool,
                                     rbaton->base_path,
-                                    rbaton->target ? rbaton->target : path,
-                                    rbaton->target ? path : NULL,
+                                    rbaton->target,
+                                    path,
                                     NULL);
 
   /* Remove the file or directory (recursively) from the txn. */
@@ -430,7 +430,8 @@ svn_repos_delete_path (void *report_baton,
  * any txns being aborted.
  */
 static svn_error_t *
-finish_report (void *report_baton)
+finish_report (void *report_baton,
+               apr_pool_t *pool)
 {
   svn_fs_root_t *root1, *root2;
   report_baton_t *rbaton = report_baton;
@@ -439,8 +440,8 @@ finish_report (void *report_baton)
   /* If nothing was described, then we have an error */
   if (! SVN_IS_VALID_REVNUM (rbaton->txn_base_rev))
     return svn_error_create (SVN_ERR_REPOS_NO_DATA_FOR_REPORT, NULL,
-                             "svn_repos_finish_report: no transaction was "
-                             "present, meaning no data was provided.");
+                             "No transaction was "
+                             "present, meaning no data was provided");
 
   /* Use the first transaction as a source if we made one, else get
      the root of the revision we would have based a transaction on. */
@@ -464,10 +465,7 @@ finish_report (void *report_baton)
   if (rbaton->tgt_path)
     tgt_path = rbaton->tgt_path;
   else
-    tgt_path = svn_path_join_many (rbaton->pool, 
-                                   rbaton->base_path,
-                                   rbaton->target ? rbaton->target : NULL, 
-                                   NULL);
+    tgt_path = svn_path_join (rbaton->base_path, rbaton->target, rbaton->pool);
 
   /* Drive the update-editor. */
   SVN_ERR (svn_repos_dir_delta (root1,
@@ -491,10 +489,11 @@ finish_report (void *report_baton)
  * finish_report returns an error.
  */
 svn_error_t *
-svn_repos_finish_report (void *report_baton)
+svn_repos_finish_report (void *report_baton,
+                         apr_pool_t *pool)
 {
-  svn_error_t *err1 = finish_report (report_baton);
-  svn_error_t *err2 = svn_repos_abort_report (report_baton);
+  svn_error_t *err1 = finish_report (report_baton, pool);
+  svn_error_t *err2 = svn_repos_abort_report (report_baton, pool);
   if (err1)
     {
       svn_error_clear (err2);
@@ -505,7 +504,8 @@ svn_repos_finish_report (void *report_baton)
 
 
 svn_error_t *
-svn_repos_abort_report (void *report_baton)
+svn_repos_abort_report (void *report_baton,
+                        apr_pool_t *pool)
 {
   report_baton_t *rbaton = report_baton;
 
@@ -536,7 +536,7 @@ svn_repos_begin_report (void **report_baton,
                         svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
-                        svn_repos_authz_read_func_t authz_read_func,
+                        svn_repos_authz_func_t authz_read_func,
                         void *authz_read_baton,
                         apr_pool_t *pool)
 {
@@ -560,7 +560,7 @@ svn_repos_begin_report (void **report_baton,
      We don't know what the caller might do with them after we return... */
   rbaton->username = username ? apr_pstrdup (pool, username) : NULL;
   rbaton->base_path = apr_pstrdup (pool, fs_base);
-  rbaton->target = target ? apr_pstrdup (pool, target) : NULL;
+  rbaton->target = apr_pstrdup (pool, target);
   rbaton->tgt_path = tgt_path ? apr_pstrdup (pool, tgt_path) : NULL;
 
   /* Hand reporter back to client. */

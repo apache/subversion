@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -42,7 +42,7 @@ extern "C" {
  * Defined here, rather than in svn_error.h, to avoid a recursive #include 
  * situation.
  */
-typedef struct svn_error
+typedef struct svn_error_t
 {
   /** APR error value, possibly SVN_ custom err */
   apr_status_t apr_err;
@@ -51,7 +51,7 @@ typedef struct svn_error
   const char *message;
 
   /** ptr to the error we "wrap" */
-  struct svn_error *child;
+  struct svn_error_t *child;
 
   /** The pool holding this error and any child errors it wraps */
   apr_pool_t *pool;
@@ -122,8 +122,10 @@ typedef apr_uint64_t svn_filesize_t;
 /** In @c printf()-style functions, format file sizes using this. */
 #define SVN_FILESIZE_T_FMT APR_UINT64_T_FMT
 
-/* FIXME: Have to fiddle with APR to define this function */
-#define apr_atoui64(X) ((apr_uint64_t) apr_atoi64(X))
+/* Parse a base-10 numeric string into a 64-bit unsigned numeric value. */
+/* NOTE: Private. For use by Subversion's own code only. See issue #1644. */
+/* FIXME: APR should supply a function to do this, such as "apr_atoui64". */
+#define svn__atoui64(X) ((apr_uint64_t) apr_atoi64(X))
 
 
 /** YABT:  Yet Another Boolean Type */
@@ -149,7 +151,7 @@ enum svn_recurse_kind
 
 
 /** A general subversion directory entry. */
-typedef struct svn_dirent
+typedef struct svn_dirent_t
 {
   /** node kind */
   svn_node_kind_t kind;

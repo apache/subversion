@@ -2,7 +2,7 @@
  * client.c :  Functions for repository access via the Subversion protocol
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -345,7 +345,8 @@ static svn_error_t *ra_svn_link_path(void *baton, const char *path,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_finish_report(void *baton)
+static svn_error_t *ra_svn_finish_report(void *baton,
+                                         apr_pool_t *pool)
 {
   ra_svn_reporter_baton_t *b = baton;
 
@@ -357,7 +358,8 @@ static svn_error_t *ra_svn_finish_report(void *baton)
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_abort_report(void *baton)
+static svn_error_t *ra_svn_abort_report(void *baton,
+                                        apr_pool_t *pool)
 {
   ra_svn_reporter_baton_t *b = baton;
 
@@ -416,7 +418,7 @@ static svn_error_t *find_tunnel_agent(const char *tunnel, const char *user,
 
   if (!val || !*val)
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                             "Undefined tunnel scheme %s", tunnel);
+                             "Undefined tunnel scheme '%s'", tunnel);
 
   /* If the scheme definition begins with "$varname", it means there
    * is an environment variable which can override the command. */
@@ -804,7 +806,7 @@ static svn_error_t *ra_svn_get_file(void *baton, const char *path,
       if (strcmp(hex_digest, expected_checksum) != 0)
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-           "ra_svn_get_file: checksum mismatch for '%s':\n"
+           "Checksum mismatch for '%s':\n"
            "   expected checksum:  %s\n"
            "   actual checksum:    %s\n",
            path, expected_checksum, hex_digest);
@@ -881,9 +883,6 @@ static svn_error_t *ra_svn_update(void *baton,
   ra_svn_session_baton_t *sess = baton;
   svn_ra_svn_conn_t *conn = sess->conn;
 
-  if (target == NULL)
-    target = "";
-
   /* Tell the server we want to start an update. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "update", "(?r)cb", rev, target,
                                recurse));
@@ -907,9 +906,6 @@ static svn_error_t *ra_svn_switch(void *baton,
   ra_svn_session_baton_t *sess = baton;
   svn_ra_svn_conn_t *conn = sess->conn;
 
-  if (target == NULL)
-    target = "";
-
   /* Tell the server we want to start a switch. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "switch", "(?r)cbc", rev, target,
                                recurse, switch_url));
@@ -932,9 +928,6 @@ static svn_error_t *ra_svn_status(void *baton,
 {
   ra_svn_session_baton_t *sess = baton;
   svn_ra_svn_conn_t *conn = sess->conn;
-
-  if (target == NULL)
-    target = "";
 
   /* Tell the server we want to start a status operation. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "status", "cb(?r)",
@@ -960,9 +953,6 @@ static svn_error_t *ra_svn_diff(void *baton,
 {
   ra_svn_session_baton_t *sess = baton;
   svn_ra_svn_conn_t *conn = sess->conn;
-
-  if (target == NULL)
-    target = "";
 
   /* Tell the server we want to start a diff. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "diff", "(?r)cbbc", rev, target,

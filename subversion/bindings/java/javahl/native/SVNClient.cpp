@@ -145,7 +145,7 @@ jobjectArray SVNClient::list(const char *url, Revision &revision, bool recurse)
 	if (Err == NULL)
 	{
 		apr_array_header_t *array =
-		 apr_hash_sorted_keys (dirents, svn_sort_compare_items_as_paths,
+		 svn_sort__hash (dirents, svn_sort_compare_items_as_paths,
 							   subPool.pool());
 		
 		// create the array of DirEntry
@@ -168,10 +168,10 @@ jobjectArray SVNClient::list(const char *url, Revision &revision, bool recurse)
 
 		for (int i = 0; i < array->nelts; i++)
 		{
-			const svn_item_t *item;
+			const svn_sort__item_t *item;
 			svn_dirent_t *dirent = NULL;
 
-			item = &APR_ARRAY_IDX (array, i, const svn_item_t);
+			item = &APR_ARRAY_IDX (array, i, const svn_sort__item_t);
 			dirent = (svn_dirent_t *) item->value;
 
 			jobject obj = createJavaDirEntry((const char *)item->key, dirent);
@@ -1697,8 +1697,11 @@ blame_receiver (void *baton,
                 apr_pool_t *pool)
 {
   svn_stream_t *out = (svn_stream_t*)baton;
-  return svn_stream_printf (out, pool, "%6"SVN_REVNUM_T_FMT" %10s %s\n",
-                            revision, author, line);
+  const char *rev_str = SVN_IS_VALID_REVNUM (revision) 
+                        ? apr_psprintf (pool, "%6" SVN_REVNUM_T_FMT, revision)
+                        : "     -";
+  return svn_stream_printf (out, pool, "%s %10s %s\n", rev_str, 
+                            author ? author : "         -", line);
 }
 jbyteArray SVNClient::blame(const char *path, Revision &revisionStart, Revision &revisionEnd)
 {

@@ -2,7 +2,7 @@
  * checkout.c:  wrappers around wc checkout functionality
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -109,7 +109,8 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
           SVN_ERR (svn_wc_ensure_adm (path, uuid, URL, revnum, pool));
           
           /* Have update fix the incompleteness. */
-          err = svn_client_update (NULL, path, revision, recurse, ctx, pool);
+          err = svn_client_update (result_rev, path, revision,
+                                   recurse, ctx, pool);
         }
       else if (kind == svn_node_dir)
         {
@@ -122,7 +123,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
             {
               /* Make the unversioned directory into a versioned one. */
               SVN_ERR (svn_wc_ensure_adm (path, uuid, URL, revnum, pool));
-              err = svn_client_update (NULL, path, revision, 
+              err = svn_client_update (result_rev, path, revision, 
                                        recurse, ctx, pool);
               goto done;
             }
@@ -138,7 +139,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
              interrupted checkout. */
           if (entry->url && (strcmp (entry->url, URL) == 0))
             {
-              err = svn_client_update (NULL, path, revision, 
+              err = svn_client_update (result_rev, path, revision, 
                                        recurse, ctx, pool);
             }
           else
@@ -158,7 +159,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
       else
         {
           return svn_error_createf (SVN_ERR_WC_NODE_KIND_CHANGE, NULL,
-                                    "'%s' is already a file/something else.",
+                                    "'%s' is already a file/something else",
                                     path);
         }
 

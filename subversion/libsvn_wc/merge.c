@@ -2,7 +2,7 @@
  * merge.c:  merging changes into a working file
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -296,13 +296,13 @@ svn_wc_merge (const char *left,
       /* Don't forget to clean up tmp_target, result_target, tmp_left,
          tmp_right.  There are a lot of scratch files lying around. */
       SVN_ERR_W (svn_io_remove_file (tmp_target, pool),
-                 "svn_wc_merge: unable to delete tmp file");
+                 "Unable to delete temporary file");
       SVN_ERR_W (svn_io_remove_file (result_target, pool),
-                 "svn_wc_merge: unable to delete tmp file");
+                 "Unable to delete temporary file");
       SVN_ERR_W (svn_io_remove_file (tmp_left, pool),
-                 "svn_wc_merge: unable to delete tmp file");
+                 "Unable to delete temporary file");
       SVN_ERR_W (svn_io_remove_file (tmp_right, pool),
-                 "svn_wc_merge: unable to delete tmp file");
+                 "Unable to delete temporary file");
 
     } /* end of merging for text files */
 

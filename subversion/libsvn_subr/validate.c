@@ -2,7 +2,7 @@
  * validate.c:  validation routines
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -41,7 +41,7 @@ svn_mime_type_validate (const char *mime_type, apr_pool_t *pool)
   if (strchr (mime_type, '/') == NULL)
     return svn_error_createf
       (SVN_ERR_BAD_MIME_TYPE, NULL,
-       "Mime type \"%s\" missing '/'\n", mime_type);
+       "MIME type '%s' misses '/'", mime_type);
 
   {
     /* Could just take an optional `len' arg and avoid this strlen.
@@ -55,7 +55,7 @@ svn_mime_type_validate (const char *mime_type, apr_pool_t *pool)
     if (! apr_isalnum (c))
       return svn_error_createf
         (SVN_ERR_BAD_MIME_TYPE, NULL,
-         "Mime type \"%s\" ends with non-alphanumeric.\n", mime_type);
+         "MIME type '%s' ends with non-alphanumeric character", mime_type);
   }
 
   return SVN_NO_ERROR;

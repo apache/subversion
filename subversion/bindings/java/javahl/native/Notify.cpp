@@ -207,6 +207,10 @@ Notify::onNotify (
 		/* Transmitting post-fix text-delta data for a file. */
 		jAction = org_tigris_subversion_javahl_Notify_Action_commit_postfix_txdelta;
 		break;
+	case svn_wc_notify_blame_revision:
+		/* Processed a single revision's blame. */
+		jAction = org_tigris_subversion_javahl_Notify_Action_blame_revision;
+		break;
 	}
 	jint jKind = org_tigris_subversion_javahl_NodeKind_unknown;
 	switch(kind)

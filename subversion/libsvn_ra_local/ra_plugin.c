@@ -2,7 +2,7 @@
  * ra_plugin.c : the main RA module for local repository access
  *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -101,18 +101,20 @@ reporter_link_path (void *reporter_baton,
 
 
 static svn_error_t *
-reporter_finish_report (void *reporter_baton)
+reporter_finish_report (void *reporter_baton,
+                        apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
-  return svn_repos_finish_report (rbaton->report_baton);
+  return svn_repos_finish_report (rbaton->report_baton, pool);
 }
 
 
 static svn_error_t *
-reporter_abort_report (void *reporter_baton)
+reporter_abort_report (void *reporter_baton,
+                       apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
-  return svn_repos_abort_report (rbaton->report_baton);
+  return svn_repos_abort_report (rbaton->report_baton, pool);
 }
 
 
@@ -740,7 +742,7 @@ svn_ra_local__get_file (void *session_baton,
                  error was returned.  According to the docstring, this
                  should never happen. */
               return svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                                       "Error writing to svn_stream.");
+                                       "Error writing to stream");
             }
           
           if (rlen != SVN_STREAM_CHUNK_SIZE)
