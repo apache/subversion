@@ -492,7 +492,8 @@ print_changed_tree (svn_repos_node_t *node,
       SVN_ERR (SVN_CMDLINE_PRINTF (pool, "%s  %s%s\n",
                                    status,
                                    path,
-                                   node->kind == svn_node_dir ? "/" : ""));
+                                   node->kind == svn_node_dir
+                                   ? SVN_UTF8_FSLASH_STR : ""));
     }
   
   /* Return here if the node has no children. */
