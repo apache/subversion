@@ -51,11 +51,12 @@ To be fixed by cmpilato:
     application *have* to set up in the cxt_t in order to call an
     svn_client_foo() function?
 
-  - I think we need to add  a *bit* more background on "how berkeley db"
-    works.  It's not clear to most readers 1) what the db logfiles are,
-    2) that they need to be pruned regularly, 3) that they grow *even*
-    if you only do checkouts and updates.   Ben wrote an email about
-    this which should probably be assimilated into ch05:
+  - I think we need to add a *bit* more background on "how berkeley
+    db" works.  It's not clear to most readers 1) what the db logfiles
+    are, 2) that they need to be pruned regularly (if not using 4.2),
+    3) that they grow *even* if you only do checkouts and updates.
+    Ben wrote an email about this which should probably be assimilated
+    into ch05:
 
       http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=38769
 
@@ -63,8 +64,16 @@ To be fixed by cmpilato:
     think this level of information is the exact right level of BDB
     knowledge that users/admins need to use svn well.
 
+  - Also regarding BDB:  make a big point (grey alert box?) about
+    *not* accessing repositories directly via network filesystems
+    (NFS, SMB, etc.)
+
   - book says that deleting a ~/.subversion file will recreate it,
     which is wrong.  the whole directory needs to be renamed and recreated.
+
+  - ch06: externals chapter.  Please be explicit about exactly which
+    commands honor 'svn:externals' (co, up, st, etc.), and exactly
+    which commands don't (commit).
 
 --------------------------------------------------------------
 
@@ -82,28 +91,66 @@ To be fixed by fitz:
 
   - Check all commands for flags in ch08
 
+  - document the 'autoprops' feature in ~/.subversion/servers
+
+
 --------------------------------------------------------------
 
 To be fixed by sussman:
 
-  - certificate support in the client.  how to configure
-    ~/.subversion/servers, manage certs, etc.
+  - ch01, "how this book is organized".  Expand this section vastly,
+    to give general pointers to different sections.  Many people will
+    open the book for the first time and just want to know "HOWTO" do
+    a particular thing quickly.  This section should help them jump to
+    the right chapter.  (This should address Ben Gross's concerns about
+    the first few chapters -- that they all assume you already have a
+    working svn system.)
 
-  - the auth data now lives in ~/.subversion/auth.  explain exactly
-    when stuff gets cached, how to prevent it from being cached, and
-    how to invalidate a cache.
+  - New "Server Configuration" Chapter:   chapter 5 will still be all
+    about repository management:  creation, tuning, BDB maintentance,
+    revprops, hooks, etc.  But the subsection currently called
+    "networking a repository" will be broken out into a whole
+    chapter.   Outline will look something like this:
 
+      * svn authn overview
+
+        - how svn AuthN works in general ('pull' model; how commit
+          info is stored in revprops; what an empty svn:author means)
+
+        - authn credential caching: (explain exactly where and when
+          stuff gets cached, how to prevent it from being cached, and
+          how to invalidate a cache, what --username does/doesn't do)
+
+      * svnserve
+
+        - AuthN options
+             - anonymous identification
+             - ssh (or generic tunnel) identification
+             - builtin cram5 identification
+        - AuthZ options
+             - access control via ssh (or tunnel):  unix groups
+             - access control via built-in authz:  svnserve.conf
+
+      * apache2 + mod_dav_svn
+
+        - SVNPath and SVNParentPath directives
+        - AuthN options
+             - anonymous identification
+             - Basic Auth identification:  AuthUserFile
+             - certificate identification:
+                 - pointers to apache docs on client/server cert setup
+                 - how to manage client/server certs from svn client
+        - AuthZ options
+             - blanket access control via 'Require' directive
+             - per-path access control via mod_authz_svn
+       
   - new 'svn diff' UI (when it's done) -- affects ch03, ch08, and
     maybe other chapters.
 
   - svn merge --dry-run   (different than 'svn diff')
 
-  - ch06: document the [tunnels] section of ~/.subversion/config.
-    also document the log-encoding and use-commit-times variables in
+  - ch06: document the log-encoding and use-commit-times variables in
     the [miscellany] section
-
-  - need big new section on authorization:  document
-    mod_auth_svn and svnserve.  they now share the same authz file format!
 
   - appA should mention no $Log$ keyword.  Or maybe it should mention
     what keywords *do* exist as well.
