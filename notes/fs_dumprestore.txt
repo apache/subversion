@@ -181,3 +181,22 @@ Content-length: 102
 
 Here is the fulltext of my change to an existing /bar/foo.c.
 Notice that this file has no properties.
+
+-------------------------------------
+
+SVN DUMPFILE VERSION 2 FORMAT
+
+This format is equivalent to the VERSION 1 format in every respect,
+except for the following:
+
+1.) The format starts with the new version number of the dump format
+    ("SVN-fs-dump-format-version: 2\n").
+
+2.) In addition to "Revision Records", another sort of record is supported:
+    the "UUID" record, which should be of the form:
+
+UUID: 7bf7a5ef-cabf-0310-b7d4-93df341afa7e
+
+    This should be used to indicate the UUID of the originating repository.
+
+
