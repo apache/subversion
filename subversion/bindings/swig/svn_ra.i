@@ -48,7 +48,7 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   these types (as 'type **') will always be an OUT param
+   %apply-ing of typemaps defined elsewhere
 */
 %apply SWIGTYPE **OUTPARAM {
     svn_ra_plugin_t **,
@@ -58,6 +58,10 @@
 };
 
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
+
+#ifdef SWIGPYTHON
+%apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
+#endif
 
 /* -----------------------------------------------------------------------
    thunk ra_callback

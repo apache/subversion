@@ -61,6 +61,10 @@ typedef void * svn_repos_file_rev_handler_t;
     const apr_array_header_t *paths
 };
 
+#ifdef SWIGPYTHON
+%apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
+#endif
+
 /* -----------------------------------------------------------------------
    handle the 'location_revisions' parameter appropriately
 */

@@ -131,6 +131,9 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 apr_file_t *svn_swig_py_make_file(PyObject *py_file,
                                   apr_pool_t *pool);
 
+svn_stream_t *svn_swig_py_make_stream(PyObject *py_io,
+                                      apr_pool_t *pool);
+
 /* a notify function that executes a Python function that is passed in
    via the baton argument */
 void svn_swig_py_notify_func(void *baton,

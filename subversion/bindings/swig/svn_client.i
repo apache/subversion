@@ -55,6 +55,10 @@
     const char **uuid
 };
 
+#ifdef SWIGPYTHON
+%apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
+#endif
+
 /* -----------------------------------------------------------------------
    svn_client_proplist()
    returns apr_array_header_t * <svn_client_proplist_item_t *>
