@@ -31,15 +31,16 @@
 
 #include "../fs-helpers.h"
 
-#include "../../libsvn_fs/fs.h"
-#include "../../libsvn_fs/dag.h"
-#include "../../libsvn_fs/node-rev.h"
-#include "../../libsvn_fs/trail.h"
-#include "../../libsvn_fs/id.h"
+#include "../../libsvn_fs/fs-loader.h"
 
-#include "../../libsvn_fs/bdb/rev-table.h"
-#include "../../libsvn_fs/bdb/txn-table.h"
-#include "../../libsvn_fs/bdb/nodes-table.h"
+#include "../../libsvn_fs_base/fs.h"
+#include "../../libsvn_fs_base/dag.h"
+#include "../../libsvn_fs_base/node-rev.h"
+#include "../../libsvn_fs_base/trail.h"
+
+#include "../../libsvn_fs_base/bdb/rev-table.h"
+#include "../../libsvn_fs_base/bdb/txn-table.h"
+#include "../../libsvn_fs_base/bdb/nodes-table.h"
 
 #include "../../libsvn_delta/delta.h"
 
@@ -275,95 +276,6 @@ create_file_transaction (const char **msg,
   
   /* Create a new file in the root directory. */
   SVN_ERR (svn_fs_make_file (txn_root, "beer.txt", pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-check_no_fs_error (svn_error_t *err)
-{
-  if (err && (err->apr_err != SVN_ERR_FS_NOT_OPEN))
-    return svn_error_create
-      (SVN_ERR_FS_GENERAL, err,
-       "checking not opened filesystem got wrong error");
-  else if (! err)
-    return svn_error_create
-      (SVN_ERR_FS_GENERAL, NULL,
-       "checking not opened filesytem failed to get error");
-  else
-    svn_error_clear (err);
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Call functions with not yet opened filesystem and see it returns
-   correct error.  */
-static svn_error_t *
-call_functions_with_unopened_fs (const char **msg,
-                                 svn_boolean_t msg_only,
-                                 apr_pool_t *pool)
-{
-  svn_fs_t *fs;
-  svn_error_t *err;
-  apr_hash_t *fs_config = apr_hash_make (pool);
-  apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
-                APR_HASH_KEY_STRING, "1");
-  fs = svn_fs_new (fs_config, pool);
-
-  *msg = "call functions with unopened fs and check errors";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  fs = svn_fs_new (fs_config, pool);
-  err = svn_fs_set_berkeley_errcall (fs, berkeley_error_handler);
-  SVN_ERR (check_no_fs_error (err));
-
-  {
-    svn_fs_txn_t *ignored;
-    err = svn_fs_begin_txn (&ignored, fs, 0, pool);
-    SVN_ERR (check_no_fs_error (err));
-    err = svn_fs_open_txn (&ignored, fs, "0", pool);
-    SVN_ERR (check_no_fs_error (err));
-  }
-
-  {
-    apr_array_header_t *ignored;
-    err = svn_fs_list_transactions (&ignored, fs, pool);
-    SVN_ERR (check_no_fs_error (err));
-  }
-
-  {
-    svn_fs_root_t *ignored;
-    err = svn_fs_revision_root (&ignored, fs, 0, pool);
-    SVN_ERR (check_no_fs_error (err));
-  }
-
-  {
-    svn_revnum_t ignored;
-    err = svn_fs_youngest_rev (&ignored, fs, pool);
-    SVN_ERR (check_no_fs_error (err));
-  }
-
-  {
-    svn_string_t *ignored;
-    err = svn_fs_revision_prop (&ignored, fs, 0, NULL, pool);
-    SVN_ERR (check_no_fs_error (err));
-  }
-
-  {
-    apr_hash_t *ignored;
-    err = svn_fs_revision_proplist (&ignored, fs, 0, pool);
-    SVN_ERR (check_no_fs_error (err));
-  }
-
-  {
-    svn_string_t unused1;
-    err = svn_fs_change_rev_prop (fs, 0, NULL, &unused1, pool);
-    SVN_ERR (check_no_fs_error (err));
-  }
 
   return SVN_NO_ERROR;
 }
@@ -1068,10 +980,10 @@ static svn_error_t *
 txn_body_check_id (void *baton, trail_t *trail)
 {
   struct check_id_args *args = baton;
-  svn_fs__node_revision_t *noderev;
+  node_revision_t *noderev;
   svn_error_t *err;
 
-  err = svn_fs__bdb_get_node_revision (&noderev, args->fs, args->id, trail);
+  err = svn_fs_bdb__get_node_revision (&noderev, args->fs, args->id, trail);
 
   if (err && (err->apr_err == SVN_ERR_FS_ID_NOT_FOUND))
     args->present = FALSE;
@@ -1100,7 +1012,7 @@ check_id (svn_fs_t *fs, const svn_fs_id_t *id, svn_boolean_t *present,
 
   args.id = id;
   args.fs = fs;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_check_id, &args, pool));
+  SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_check_id, &args, pool));
 
   if (args.present)
     *present = TRUE;
@@ -5198,7 +5110,7 @@ skip_deltas (const char **msg,
 /* Trail-ish helpers for redundant_copy(). */
 struct get_txn_args
 {
-  svn_fs__transaction_t **txn;
+  transaction_t **txn;
   const char *txn_name;
   svn_fs_t *fs;
 };
@@ -5207,7 +5119,7 @@ static svn_error_t *
 txn_body_get_txn (void *baton, trail_t *trail)
 {
   struct get_txn_args *args = baton;
-  return svn_fs__bdb_get_txn (args->txn, args->fs, args->txn_name, trail);
+  return svn_fs_bdb__get_txn (args->txn, args->fs, args->txn_name, trail);
 }
 
 
@@ -5219,7 +5131,7 @@ redundant_copy (const char **msg,
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   const char *txn_name;
-  svn_fs__transaction_t *transaction;
+  transaction_t *transaction;
   svn_fs_root_t *txn_root, *rev_root;
   const svn_fs_id_t *old_D_id, *new_D_id;
   svn_revnum_t youngest_rev = 0;
@@ -5251,7 +5163,7 @@ redundant_copy (const char **msg,
   args.fs = fs;
   args.txn_name = txn_name;
   args.txn = &transaction;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_txn, &args, pool));
+  SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_get_txn, &args, pool));
   if (transaction->copies->nelts != 1)
     return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "Expected 1 copy; got %d",
@@ -5265,7 +5177,7 @@ redundant_copy (const char **msg,
 
   /* Now, examine the transaction.  There should still only have been
      one copy operation that "took". */
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_txn, &args, pool));
+  SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_get_txn, &args, pool));
   if (transaction->copies->nelts != 1)
     return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "Expected only 1 copy; got %d",
@@ -5298,7 +5210,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (reopen_trivial_transaction),
     SVN_TEST_PASS (create_file_transaction),
     SVN_TEST_PASS (verify_txn_list),
-    SVN_TEST_PASS (call_functions_with_unopened_fs),
     SVN_TEST_PASS (write_and_read_file),
     SVN_TEST_PASS (create_mini_tree_transaction),
     SVN_TEST_PASS (create_greek_tree_transaction),

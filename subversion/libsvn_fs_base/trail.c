@@ -25,6 +25,7 @@
 #include "err.h"
 #include "bdb/bdb-err.h"
 #include "trail.h"
+#include "../libsvn_fs/fs-loader.h"
 
 
 #if defined(SVN_FS__TRAIL_DEBUG)
@@ -37,7 +38,7 @@ struct trail_debug_t
 };
 
 void
-svn_fs__trail_debug (trail_t *trail, const char *table, const char *op)
+svn_fs_base__trail_debug (trail_t *trail, const char *table, const char *op)
 {
   struct trail_debug_t *trail_debug;
 
@@ -95,6 +96,7 @@ begin_trail (trail_t **trail_p,
              svn_boolean_t use_txn,
              apr_pool_t *pool)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   trail_t *trail = apr_pcalloc (pool, sizeof (*trail));
 
   trail->pool = svn_pool_create (pool);
@@ -105,12 +107,13 @@ begin_trail (trail_t **trail_p,
     {
       /* If we're already inside a trail operation, abort() -- this is
          a coding problem (and will likely hang the repository anyway). */
-      if (fs->in_txn_trail)
+      if (bfd->in_txn_trail)
         abort();
 
       SVN_ERR (BDB_WRAP (fs, "beginning Berkeley DB transaction",
-                         fs->env->txn_begin (fs->env, 0, &trail->db_txn, 0)));
-      fs->in_txn_trail = TRUE;
+                         bfd->env->txn_begin (bfd->env, 0,
+                                              &trail->db_txn, 0)));
+      bfd->in_txn_trail = TRUE;
     }
   else
     {
@@ -127,6 +130,7 @@ abort_trail (trail_t *trail)
 {
   struct undo *undo;
   svn_fs_t *fs = trail->fs;
+  base_fs_data_t *bfd = fs->fsap_data;
 
   /* Undo those changes which should only persist when the transaction
      succeeds.  */
@@ -138,7 +142,7 @@ abort_trail (trail_t *trail)
     {
       SVN_ERR (BDB_WRAP (fs, "aborting Berkeley DB transaction",
                          trail->db_txn->abort (trail->db_txn)));
-      fs->in_txn_trail = FALSE;
+      bfd->in_txn_trail = FALSE;
     }
   svn_pool_destroy (trail->pool);
 
@@ -152,6 +156,7 @@ commit_trail (trail_t *trail)
   struct undo *undo;
   int db_err;
   svn_fs_t *fs = trail->fs;
+  base_fs_data_t *bfd = fs->fsap_data;
 
   /* Undo those changes which should persist only while the
      transaction is active.  */
@@ -166,13 +171,13 @@ commit_trail (trail_t *trail)
     {
       SVN_ERR (BDB_WRAP (fs, "committing Berkeley DB transaction",
                          trail->db_txn->commit (trail->db_txn, 0)));
-      fs->in_txn_trail = FALSE;
+      bfd->in_txn_trail = FALSE;
     }
 
   /* Do a checkpoint here, if enough has gone on.
      The checkpoint parameters below are pretty arbitrary.  Perhaps
      there should be an svn_fs_berkeley_mumble function to set them.  */
-  db_err = fs->env->txn_checkpoint (fs->env, 1024, 5, 0);
+  db_err = bfd->env->txn_checkpoint (bfd->env, 1024, 5, 0);
 
   /* Pre-4.1 Berkeley documentation says:
 
@@ -191,7 +196,7 @@ commit_trail (trail_t *trail)
       if (db_err != DB_INCOMPLETE)
 #endif /* SVN_BDB_HAS_DB_INCOMPLETE */
         {
-          return svn_fs__bdb_wrap_db
+          return svn_fs_bdb__wrap_db
             (fs, "checkpointing after Berkeley DB transaction", db_err);
         }
     }
@@ -220,7 +225,7 @@ do_retry (svn_fs_t *fs,
       trail_t *trail;
       svn_error_t *svn_err, *err;
       svn_boolean_t deadlocked = FALSE;
-      
+
       SVN_ERR (begin_trail (&trail, fs, use_txn, pool));
 
       /* Do the body of the transaction.  */
@@ -230,7 +235,7 @@ do_retry (svn_fs_t *fs,
         {
           /* The transaction succeeded!  Commit it.  */
           SVN_ERR (commit_trail (trail));
-          
+
           if (use_txn)
             print_trail_debug (trail, txn_body_fn_name, filename, line);
 
@@ -259,43 +264,44 @@ do_retry (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs__retry_debug (svn_fs_t *fs,
-                     svn_error_t *(*txn_body) (void *baton, trail_t *trail),
-                     void *baton,
-                     apr_pool_t *pool,
-                     const char *txn_body_fn_name,
-                     const char *filename,
-                     int line)
+svn_fs_base__retry_debug (svn_fs_t *fs,
+                          svn_error_t *(*txn_body) (void *baton,
+                                                    trail_t *trail),
+                          void *baton,
+                          apr_pool_t *pool,
+                          const char *txn_body_fn_name,
+                          const char *filename,
+                          int line)
 {
-  return do_retry (fs, txn_body, baton, TRUE, pool, 
+  return do_retry (fs, txn_body, baton, TRUE, pool,
                    txn_body_fn_name, filename, line);
-}					 
+}
 
 
 #if defined(SVN_FS__TRAIL_DEBUG)
-#undef svn_fs__retry_txn
+#undef svn_fs_base__retry_txn
 #endif
 
 svn_error_t *
-svn_fs__retry_txn (svn_fs_t *fs,
-                   svn_error_t *(*txn_body) (void *baton, trail_t *trail),
-                   void *baton,
-                   apr_pool_t *pool)
+svn_fs_base__retry_txn (svn_fs_t *fs,
+                        svn_error_t *(*txn_body) (void *baton, trail_t *trail),
+                        void *baton,
+                        apr_pool_t *pool)
 {
-  return do_retry (fs, txn_body, baton, TRUE, pool, 
+  return do_retry (fs, txn_body, baton, TRUE, pool,
                    "unknown", "", 0);
-}					 
+}
 
 
 svn_error_t *
-svn_fs__retry (svn_fs_t *fs,
-               svn_error_t *(*txn_body) (void *baton, trail_t *trail),
-               void *baton,
-               apr_pool_t *pool)
+svn_fs_base__retry (svn_fs_t *fs,
+                    svn_error_t *(*txn_body) (void *baton, trail_t *trail),
+                    void *baton,
+                    apr_pool_t *pool)
 {
-  return do_retry (fs, txn_body, baton, FALSE, pool, 
+  return do_retry (fs, txn_body, baton, FALSE, pool,
                    NULL, NULL, 0);
-}					 
+}
 
 
 
@@ -313,21 +319,21 @@ record_undo (trail_t *trail,
   undo->prev = trail->undo;
   trail->undo = undo;
 }
-             
+
 
 void
-svn_fs__record_undo (trail_t *trail,
-                     void (*func) (void *baton),
-                     void *baton)
+svn_fs_base__record_undo (trail_t *trail,
+                          void (*func) (void *baton),
+                          void *baton)
 {
   record_undo (trail, func, baton, undo_on_failure);
 }
 
 
 void
-svn_fs__record_completion (trail_t *trail,
-                           void (*func) (void *baton),
-                           void *baton)
+svn_fs_base__record_completion (trail_t *trail,
+                                void (*func) (void *baton),
+                                void *baton)
 {
   record_undo (trail, func, baton, undo_on_success | undo_on_failure);
 }

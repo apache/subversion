@@ -30,30 +30,11 @@ extern "C" {
 
 /*** The filesystem structure.  ***/
 
-struct svn_fs_t 
+typedef struct
 {
-  /* A pool managing this filesystem.  Freeing this pool must
-     completely clean up the filesystem, including any database
-     or system resources it holds.  */
-  apr_pool_t *pool;
-
-  /* The path to the repository's top-level directory. */
-  char *path;
-
-  /* The path to the repository's revision directory. */
-  char *fs_path;
-
-  /* A callback function for printing warning messages, and a baton to
-     pass through to it.  */
-  svn_fs_warning_callback_t warning;
-  void *warning_baton;
-
-  /* The filesystem configuration. */
-  apr_hash_t *config;
-
   /* The filesystem UUID (or NULL if not-yet-known; see svn_fs_get_uuid). */
   const char *uuid;
-};
+} fs_fs_data_t;
 
 
 /* Return a canonicalized version of a filesystem PATH, allocated in
@@ -75,24 +56,24 @@ typedef struct
      revision. */
   const char *txn_id;
 
-} svn_fs__revision_t;
+} revision_t;
 
 
 /*** Transaction Kind ***/
 typedef enum
 {
-  svn_fs__transaction_kind_normal = 1,  /* normal, uncommitted */
-  svn_fs__transaction_kind_committed,   /* committed */
-  svn_fs__transaction_kind_dead         /* uncommitted and dead */
+  transaction_kind_normal = 1,  /* normal, uncommitted */
+  transaction_kind_committed,   /* committed */
+  transaction_kind_dead         /* uncommitted and dead */
 
-} svn_fs__transaction_kind_t;
+} transaction_kind_t;
 
 
 /*** Filesystem Transaction ***/
 typedef struct
 {
   /* kind of transaction. */
-  svn_fs__transaction_kind_t kind;
+  transaction_kind_t kind;
 
   /* revision which this transaction was committed to create, or an
      invalid revision number if this transaction was never committed. */
@@ -113,15 +94,15 @@ typedef struct
      no copies in this transaction.  */
   apr_array_header_t *copies;
 
-} svn_fs__transaction_t;
+} transaction_t;
 
 /*** Copy Kind ***/
 typedef enum
 {
-  svn_fs__copy_kind_real = 1, /* real copy */
-  svn_fs__copy_kind_soft      /* soft copy */
+  copy_kind_real = 1, /* real copy */
+  copy_kind_soft      /* soft copy */
 
-} svn_fs__copy_kind_t;
+} copy_kind_t;
 
 
 /*** Representation ***/
@@ -158,7 +139,7 @@ typedef struct
   /* Is this a data rep? */
   svn_boolean_t is_data_rep;
   
-} svn_fs__representation_t;
+} representation_t;
 
 
 /*** Node-Revision ***/
@@ -189,11 +170,11 @@ typedef struct
 
   /* representation key for this node's properties.  may be NULL if
      there are no properties.  */
-  svn_fs__representation_t *prop_rep;
+  representation_t *prop_rep;
 
   /* representation for this node's data.  may be NULL if there is
      no data. */
-  svn_fs__representation_t *data_rep;
+  representation_t *data_rep;
   
   /* representation key for this node's text-data-in-progess (files
      only).  NULL if no edits are currently in-progress.  This field
@@ -203,16 +184,16 @@ typedef struct
   /* path at which this node first came into existence.  */
   const char *created_path;
 
-} svn_fs__node_revision_t;
+} node_revision_t;
 
 
 /*** Representation Kind ***/
 typedef enum
 {
-  svn_fs__rep_kind_fulltext = 1, /* fulltext */
-  svn_fs__rep_kind_delta         /* delta */
+  rep_kind_fulltext = 1, /* fulltext */
+  rep_kind_delta         /* delta */
 
-} svn_fs__rep_kind_t;
+} rep_kind_t;
 
 
 /*** "Delta" Offset/Window Chunk ***/
@@ -237,7 +218,7 @@ typedef struct
 
   /* apr_off_t rep_offset;  ### not implemented */
 
-} svn_fs__rep_delta_chunk_t;
+} rep_delta_chunk_t;
 
 
 
@@ -246,7 +227,7 @@ typedef struct
 typedef struct
 {
   /* What kind of copy occurred. */
-  svn_fs__copy_kind_t kind;
+  copy_kind_t kind;
 
   /* Path of copy source. */
   const char *src_path;
@@ -257,7 +238,7 @@ typedef struct
   /* Node-revision of copy destination. */
   const svn_fs_id_t *dst_noderev_id;
 
-} svn_fs__copy_t;
+} copy_t;
 
 
 /*** Change ***/
@@ -276,7 +257,11 @@ typedef struct
   svn_boolean_t text_mod;
   svn_boolean_t prop_mod;
 
-} svn_fs__change_t;
+  /* Copyfrom revision and path. */
+  svn_revnum_t copyfrom_rev;
+  const char * copyfrom_path;
+
+} change_t;
 
 
 #ifdef __cplusplus

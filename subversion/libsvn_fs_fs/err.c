@@ -26,10 +26,12 @@
 #include "fs.h"
 #include "err.h"
 
+#include "../libsvn_fs/fs-loader.h"
+
 svn_error_t *
-svn_fs__check_fs (svn_fs_t *fs)
+svn_fs_fs__check_fs (svn_fs_t *fs)
 {
-  if (fs->fs_path)
+  if (fs->path)
     return SVN_NO_ERROR;
   else
     return svn_error_create (SVN_ERR_FS_NOT_OPEN, 0,
@@ -51,7 +53,7 @@ corrupt_id (const char *fmt, const svn_fs_id_t *id, svn_fs_t *fs)
 
 
 svn_error_t *
-svn_fs__err_corrupt_node_revision (svn_fs_t *fs, const svn_fs_id_t *id)
+svn_fs_fs__err_corrupt_node_revision (svn_fs_t *fs, const svn_fs_id_t *id)
 {
   return
     corrupt_id ("Corrupt node revision for node '%s' in filesystem '%s'",
@@ -60,7 +62,7 @@ svn_fs__err_corrupt_node_revision (svn_fs_t *fs, const svn_fs_id_t *id)
 
 
 svn_error_t *
-svn_fs__err_corrupt_fs_revision (svn_fs_t *fs, svn_revnum_t rev)
+svn_fs_fs__err_corrupt_fs_revision (svn_fs_t *fs, svn_revnum_t rev)
 {
   return svn_error_createf
     (SVN_ERR_FS_CORRUPT, 0,
@@ -70,9 +72,9 @@ svn_fs__err_corrupt_fs_revision (svn_fs_t *fs, svn_revnum_t rev)
 
 
 svn_error_t *
-svn_fs__err_corrupt_clone (svn_fs_t *fs,
-                           const char *svn_txn,
-                           const char *base_path)
+svn_fs_fs__err_corrupt_clone (svn_fs_t *fs,
+                              const char *svn_txn,
+                              const char *base_path)
 {
   return
     svn_error_createf
@@ -83,7 +85,7 @@ svn_fs__err_corrupt_clone (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs__err_corrupt_id (svn_fs_t *fs, const svn_fs_id_t *id)
+svn_fs_fs__err_corrupt_id (svn_fs_t *fs, const svn_fs_id_t *id)
 {
   return
     corrupt_id ("Corrupt node revision id '%s' appears in filesystem '%s'",
@@ -92,7 +94,7 @@ svn_fs__err_corrupt_id (svn_fs_t *fs, const svn_fs_id_t *id)
 
 
 svn_error_t *
-svn_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id)
+svn_fs_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id)
 {
   svn_string_t *id_str = svn_fs_unparse_id (id, fs->pool);
   return svn_error_createf
@@ -103,7 +105,7 @@ svn_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id)
 
 
 svn_error_t *
-svn_fs__err_dangling_rev (svn_fs_t *fs, svn_revnum_t rev)
+svn_fs_fs__err_dangling_rev (svn_fs_t *fs, svn_revnum_t rev)
 {
   return svn_error_createf
     (SVN_ERR_FS_NO_SUCH_REVISION, 0,
@@ -115,7 +117,7 @@ svn_fs__err_dangling_rev (svn_fs_t *fs, svn_revnum_t rev)
 
 
 svn_error_t *
-svn_fs__err_corrupt_nodes_key (svn_fs_t *fs)
+svn_fs_fs__err_corrupt_nodes_key (svn_fs_t *fs)
 {
   return
     svn_error_createf
@@ -125,7 +127,7 @@ svn_fs__err_corrupt_nodes_key (svn_fs_t *fs)
 
 
 svn_error_t *
-svn_fs__err_corrupt_next_id (svn_fs_t *fs, const char *table)
+svn_fs_fs__err_corrupt_next_id (svn_fs_t *fs, const char *table)
 {
   return
     svn_error_createf
@@ -136,8 +138,8 @@ svn_fs__err_corrupt_next_id (svn_fs_t *fs, const char *table)
 
 
 svn_error_t *
-svn_fs__err_corrupt_txn (svn_fs_t *fs,
-                         const char *txn)
+svn_fs_fs__err_corrupt_txn (svn_fs_t *fs,
+                            const char *txn)
 {
   return
     svn_error_createf
@@ -148,7 +150,7 @@ svn_fs__err_corrupt_txn (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs__err_corrupt_copy (svn_fs_t *fs, const char *copy_id)
+svn_fs_fs__err_corrupt_copy (svn_fs_t *fs, const char *copy_id)
 {
   return
     svn_error_createf
@@ -159,7 +161,7 @@ svn_fs__err_corrupt_copy (svn_fs_t *fs, const char *copy_id)
 
 
 svn_error_t *
-svn_fs__err_not_mutable (svn_fs_t *fs, svn_revnum_t rev, const char *path)
+svn_fs_fs__err_not_mutable (svn_fs_t *fs, svn_revnum_t rev, const char *path)
 {
   return
     svn_error_createf
@@ -170,7 +172,7 @@ svn_fs__err_not_mutable (svn_fs_t *fs, svn_revnum_t rev, const char *path)
 
 
 svn_error_t *
-svn_fs__err_path_syntax (svn_fs_t *fs, const char *path)
+svn_fs_fs__err_path_syntax (svn_fs_t *fs, const char *path)
 {
   return
     svn_error_createf
@@ -181,7 +183,7 @@ svn_fs__err_path_syntax (svn_fs_t *fs, const char *path)
 
 
 svn_error_t *
-svn_fs__err_no_such_txn (svn_fs_t *fs, const char *txn)
+svn_fs_fs__err_no_such_txn (svn_fs_t *fs, const char *txn)
 {
   return
     svn_error_createf
@@ -192,7 +194,7 @@ svn_fs__err_no_such_txn (svn_fs_t *fs, const char *txn)
 
 
 svn_error_t *
-svn_fs__err_txn_not_mutable (svn_fs_t *fs, const char *txn)
+svn_fs_fs__err_txn_not_mutable (svn_fs_t *fs, const char *txn)
 {
   return
     svn_error_createf
@@ -203,7 +205,7 @@ svn_fs__err_txn_not_mutable (svn_fs_t *fs, const char *txn)
 
 
 svn_error_t *
-svn_fs__err_no_such_copy (svn_fs_t *fs, const char *copy_id)
+svn_fs_fs__err_no_such_copy (svn_fs_t *fs, const char *copy_id)
 {
   return
     svn_error_createf
@@ -213,7 +215,7 @@ svn_fs__err_no_such_copy (svn_fs_t *fs, const char *copy_id)
 
 
 svn_error_t *
-svn_fs__err_not_directory (svn_fs_t *fs, const char *path)
+svn_fs_fs__err_not_directory (svn_fs_t *fs, const char *path)
 {
   return
     svn_error_createf

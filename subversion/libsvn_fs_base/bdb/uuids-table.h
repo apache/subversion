@@ -32,10 +32,10 @@ extern "C" {
 /* Open a `uuids' table in @a env.
  *
  * Open a `uuids' table in @a env.  If @a create is non-zero, create
- * one if it doesn't exist.  Set @a *uuids_p to the new table.  
+ * one if it doesn't exist.  Set @a *uuids_p to the new table.
  * Return a Berkeley DB error code.
  */
-int svn_fs__bdb_open_uuids_table (DB **uuids_p,
+int svn_fs_bdb__open_uuids_table (DB **uuids_p,
                                   DB_ENV *env,
                                   svn_boolean_t create);
 
@@ -43,7 +43,7 @@ int svn_fs__bdb_open_uuids_table (DB **uuids_p,
  * storing the result in @a *uuid.
  */
 
-svn_error_t *svn_fs__bdb_get_uuid (svn_fs_t *fs,
+svn_error_t *svn_fs_bdb__get_uuid (svn_fs_t *fs,
                                    int idx,
                                    const char **uuid,
                                    trail_t *trail);
@@ -52,7 +52,7 @@ svn_error_t *svn_fs__bdb_get_uuid (svn_fs_t *fs,
  * to @a uuid.
  */
 
-svn_error_t *svn_fs__bdb_set_uuid (svn_fs_t *fs,
+svn_error_t *svn_fs_bdb__set_uuid (svn_fs_t *fs,
                                    int idx,
                                    const char *uuid,
                                    trail_t *trail);

@@ -24,8 +24,21 @@ extern "C" {
 
 
 
-/* The functions you might have expected to find here are all part of
-   the libsvn_fs public interface; see ../include/svn_fs.h. */
+/* These functions implement some of the calls in the FS loader
+   library's fs and txn vtables. */
+
+svn_error_t *svn_fs_base__revision_root (svn_fs_root_t **root_p, svn_fs_t *fs,
+                                         svn_revnum_t rev, apr_pool_t *pool);
+
+svn_error_t *svn_fs_base__deltify (svn_fs_t *fs, svn_revnum_t rev,
+                                   apr_pool_t *pool);
+
+svn_error_t *svn_fs_base__commit_txn (const char **conflict_p,
+                                      svn_revnum_t *new_rev, svn_fs_txn_t *txn,
+                                      apr_pool_t *pool);
+
+svn_error_t *svn_fs_base__txn_root (svn_fs_root_t **root_p, svn_fs_txn_t *txn,
+                                    apr_pool_t *pool);
 
 
 #ifdef __cplusplus

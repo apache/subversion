@@ -35,7 +35,7 @@ extern "C" {
    one."
 
    Well, there isn't a function that returns a trail.  All trails come
-   from svn_fs__retry_txn.  Here's how to use that:
+   from svn_fs_base__retry_txn.  Here's how to use that:
 
    When using Berkeley DB transactions to protect the integrity of a
    database, there are several things you need to keep in mind:
@@ -65,16 +65,16 @@ extern "C" {
      need to clear your cache once the transaction completes, either
      successfully or unsuccessfully.
 
-   The `svn_fs__retry_txn' function and its friends help you manage
+   The `svn_fs_base__retry_txn' function and its friends help you manage
    all of that, in one nice package.
-   
+
    To use it, write your code in a function like this:
-  
+
        static svn_error_t *
        txn_body_do_my_thing (void *baton,
                              trail_t *trail)
        {
-         ... 
+         ...
          Do everything which needs to be protected by a Berkeley DB
          transaction here.  Use TRAIL->db_txn as your Berkeley DB
          transaction, and do your allocation in TRAIL->pool.  Pass
@@ -88,10 +88,10 @@ extern "C" {
          ...
        }
 
-   Now, call svn_fs__retry_txn, passing a pointer to your function as
+   Now, call svn_fs_base__retry_txn, passing a pointer to your function as
    an argument:
 
-       err = svn_fs__retry_txn (fs, txn_body_do_my_thing, baton, pool);
+       err = svn_fs_base__retry_txn (fs, txn_body_do_my_thing, baton, pool);
 
    This will simply invoke your function `txn_body_do_my_thing',
    passing BATON through unchanged, and providing a fresh TRAIL
@@ -100,35 +100,35 @@ extern "C" {
    use.
 
    If your function returns a Subversion error wrapping a Berkeley DB
-   DB_LOCK_DEADLOCK error, `svn_fs__retry_txn' will abort the trail's
+   DB_LOCK_DEADLOCK error, `svn_fs_base__retry_txn' will abort the trail's
    Berkeley DB transaction for you (thus undoing any database changes
    you've made), free the trail's subpool (thus undoing any allocation
    you may have done), and try the whole thing again with a new trail,
    containing a new Berkeley DB transaction and pool.
 
    If your function returns any other kind of Subversion error,
-   `svn_fs__retry_txn' will abort the trail's Berkeley DB transaction,
+   `svn_fs_base__retry_txn' will abort the trail's Berkeley DB transaction,
    free the subpool, and return your error to its caller.
 
    If, heavens forbid, your function actually succeeds, returning
-   SVN_NO_ERROR, `svn_fs__retry_txn' commits the trail's Berkeley DB
+   SVN_NO_ERROR, `svn_fs_base__retry_txn' commits the trail's Berkeley DB
    transaction, thus making your DB changes permanent, leaves the
    trail's pool alone, so all the objects it contains are still
    around, and returns SVN_NO_ERROR.
 
    If you're making changes to in-memory data structures which should
    be reverted if the transaction doesn't complete successfully, you
-   can call `svn_fs__record_undo' as you make your changes to register
+   can call `svn_fs_base__record_undo' as you make your changes to register
    functions that will undo them.  On failure (either due to deadlock
-   or a real error), `svn_fs__retry_txn' will invoke your undo
+   or a real error), `svn_fs_base__retry_txn' will invoke your undo
    functions, youngest first, to restore your data structures to the
    state they were in when you started the transaction.
 
    If you're caching things in in-memory data structures, which may go
    stale once the transaction is complete, you can call
-   `svn_fs__record_completion' to register functions that will clear
+   `svn_fs_base__record_completion' to register functions that will clear
    your caches.  When the trail completes, successfully or
-   unsuccessfully, `svn_fs__retry_txn' will invoke your completion
+   unsuccessfully, `svn_fs_base__retry_txn' will invoke your completion
    functions, youngest first, to remove whatever cached information
    you like.  */
 
@@ -185,35 +185,37 @@ typedef struct trail_t trail_t;
    ensure that whatever transactions a filesystem function starts, it
    either aborts or commits before it returns.  If we don't somehow
    complete all our transactions, later operations could deadlock.  */
-svn_error_t *svn_fs__retry_txn (svn_fs_t *fs,
-                                svn_error_t *(*txn_body) (void *baton,
-                                                          trail_t *trail),
-                                void *baton,
-                                apr_pool_t *pool);
+svn_error_t *svn_fs_base__retry_txn (svn_fs_t *fs,
+                                     svn_error_t *(*txn_body) (void *baton,
+                                                               trail_t *trail),
+                                     void *baton,
+                                     apr_pool_t *pool);
 
-svn_error_t *svn_fs__retry_debug (svn_fs_t *fs,
-                                  svn_error_t *(*txn_body) (void *baton,
-                                                            trail_t *trail),
-                                  void *baton,
-                                  apr_pool_t *pool,
-                                  const char *txn_body_fn_name,
-                                  const char *filename,
-                                  int line);
+svn_error_t *
+svn_fs_base__retry_debug (svn_fs_t *fs,
+                          svn_error_t *(*txn_body) (void *baton,
+                                                    trail_t *trail),
+                          void *baton,
+                          apr_pool_t *pool,
+                          const char *txn_body_fn_name,
+                          const char *filename,
+                          int line);
 
 #if defined(SVN_FS__TRAIL_DEBUG)
-#define svn_fs__retry_txn(fs, txn_body, baton, pool) \
-  svn_fs__retry_debug(fs, txn_body, baton, pool, #txn_body, __FILE__, __LINE__)
+#define svn_fs_base__retry_txn(fs, txn_body, baton, pool) \
+  svn_fs_base__retry_debug(fs, txn_body, baton, pool, #txn_body,
+                           __FILE__, __LINE__)
 #endif
 
 
 /* Try an action repeatedly until it doesn't deadlock.  This is
-   exactly like svn_fs__retry_txn() (whose documentation you really
+   exactly like svn_fs_base__retry_txn() (whose documentation you really
    should read) except that no Berkeley DB transaction is created. */
-svn_error_t *svn_fs__retry (svn_fs_t *fs,
-                            svn_error_t *(*txn_body) (void *baton, 
-                                                      trail_t *trail),
-                            void *baton,
-                            apr_pool_t *pool);
+svn_error_t *svn_fs_base__retry (svn_fs_t *fs,
+                                 svn_error_t *(*txn_body) (void *baton,
+                                                           trail_t *trail),
+                                 void *baton,
+                                 apr_pool_t *pool);
 
 
 /* Record a change which should be undone if TRAIL is aborted, either
@@ -232,15 +234,15 @@ svn_error_t *svn_fs__retry (svn_fs_t *fs,
 
    When you make a such a change, call this function with a FUNC and
    BATON that, if invoked, will undo the change.  If TRAIL fails to
-   complete (deadlock, error, etc.), svn_fs__retry_txn will invoke the
+   complete (deadlock, error, etc.), svn_fs_base__retry_txn will invoke the
    FUNC/BATON pairs that were registered via this function.
 
    Younger undo and completion functions get invoked before older
    functions.  Undo and completion functions are ordered with respect
    to each other.  */
-void svn_fs__record_undo (trail_t *trail,
-                          void (*func) (void *baton),
-                          void *baton);
+void svn_fs_base__record_undo (trail_t *trail,
+                               void (*func) (void *baton),
+                               void *baton);
 
 
 /* Record a change which should be undone when TRAIL is completed,
@@ -253,16 +255,17 @@ void svn_fs__record_undo (trail_t *trail,
    Younger undo and completion functions get invoked before older
    functions.  Undo and completion functions are ordered with respect
    to each other.  */
-void svn_fs__record_completion (trail_t *trail,
-                                void (*func) (void *baton),
-                                void *baton);
-                                     
+void svn_fs_base__record_completion (trail_t *trail,
+                                     void (*func) (void *baton),
+                                     void *baton);
+
 
 /* Record that OPeration is being done on TABLE in the TRAIL. */
 #if defined(SVN_FS__TRAIL_DEBUG)
-void svn_fs__trail_debug (trail_t *trail, const char *table, const char *op);
+void svn_fs_base__trail_debug (trail_t *trail, const char *table,
+                               const char *op);
 #else
-#define svn_fs__trail_debug(trail, table, operation)
+#define svn_fs_base__trail_debug(trail, table, operation)
 #endif
 
 #ifdef __cplusplus

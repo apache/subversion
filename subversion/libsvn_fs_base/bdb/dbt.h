@@ -32,17 +32,17 @@ extern "C" {
 
 
 /* Set all fields of DBT to zero.  Return DBT.  */
-DBT *svn_fs__clear_dbt (DBT *dbt);
+DBT *svn_fs_base__clear_dbt (DBT *dbt);
 
 
 /* Set DBT to retrieve no data.  This is useful when you're just
    probing the table to see if an entry exists, or to find a key, but
    don't care what the value is.  Return DBT.  */
-DBT *svn_fs__nodata_dbt (DBT *dbt);
+DBT *svn_fs_base__nodata_dbt (DBT *dbt);
 
 
 /* Set DBT to refer to the SIZE bytes at DATA.  Return DBT.  */
-DBT *svn_fs__set_dbt (DBT *dbt, const void *data, u_int32_t size);
+DBT *svn_fs_base__set_dbt (DBT *dbt, const void *data, u_int32_t size);
 
 
 /* Prepare DBT to hold data returned from Berkeley DB.  Return DBT.
@@ -51,13 +51,13 @@ DBT *svn_fs__set_dbt (DBT *dbt, const void *data, u_int32_t size);
    requesting that Berkeley DB place the returned data in a freshly
    malloc'd block.  If the database operation succeeds, the caller
    then owns the data block, and is responsible for making sure it
-   gets freed.  
+   gets freed.
 
-   You can use this with svn_fs__track_dbt:
+   You can use this with svn_fs_base__track_dbt:
 
-       svn_fs__result_dbt (&foo);
+       svn_fs_base__result_dbt (&foo);
        ... some Berkeley DB operation that puts data in foo ...
-       svn_fs__track_dbt (&foo, pool);
+       svn_fs_base__track_dbt (&foo, pool);
 
    This arrangement is:
    - thread-safe --- the returned data is allocated via malloc, and
@@ -67,40 +67,41 @@ DBT *svn_fs__set_dbt (DBT *dbt, const void *data, u_int32_t size);
      type.
    - pool-friendly --- the data returned by Berkeley DB is now guaranteed
      to be freed when POOL is cleared.  */
-DBT *svn_fs__result_dbt (DBT *dbt);
+DBT *svn_fs_base__result_dbt (DBT *dbt);
 
 /* Arrange for POOL to `track' DBT's data: when POOL is cleared,
    DBT->data will be freed, using `free'.  If DBT->data is zero,
    do nothing.
 
-   This is meant for use with svn_fs__result_dbt; see the explanation
+   This is meant for use with svn_fs_base__result_dbt; see the explanation
    there.  */
-DBT *svn_fs__track_dbt (DBT *dbt, apr_pool_t *pool);
+DBT *svn_fs_base__track_dbt (DBT *dbt, apr_pool_t *pool);
 
 
 /* Prepare DBT for use as a key into a RECNO table.  This call makes
    DBT refer to the db_recno_t pointed to by RECNO as its buffer; the
    record number you assign to *RECNO will be the table key.  */
-DBT *svn_fs__recno_dbt (DBT *dbt, db_recno_t *recno);
+DBT *svn_fs_base__recno_dbt (DBT *dbt, db_recno_t *recno);
 
 
 /* Compare two DBT values in byte-by-byte lexicographic order.  */
-int svn_fs__compare_dbt (const DBT *a, const DBT *b);
+int svn_fs_base__compare_dbt (const DBT *a, const DBT *b);
 
 
 /* Set DBT to the unparsed form of ID; allocate memory from POOL.
    Return DBT.  */
-DBT *svn_fs__id_to_dbt (DBT *dbt, const svn_fs_id_t *id, apr_pool_t *pool);
+DBT *svn_fs_base__id_to_dbt (DBT *dbt, const svn_fs_id_t *id,
+                             apr_pool_t *pool);
 
 
 /* Set DBT to the unparsed form of SKEL; allocate memory from POOL.
    Return DBT.  */
-DBT *svn_fs__skel_to_dbt (DBT *dbt, skel_t *skel, apr_pool_t *pool);
+DBT *svn_fs_base__skel_to_dbt (DBT *dbt, skel_t *skel, apr_pool_t *pool);
 
 
 /* Set DBT to the text of the null-terminated string STR.  DBT will
    refer to STR's storage.  Return DBT.  */
-DBT *svn_fs__str_to_dbt (DBT *dbt, const char *str);
+DBT *svn_fs_base__str_to_dbt (DBT *dbt, const char *str);
 
 
 #ifdef __cplusplus

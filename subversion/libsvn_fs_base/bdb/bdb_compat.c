@@ -18,7 +18,7 @@
 #include "bdb_compat.h"
 
 int
-svn_fs__bdb_check_version (void)
+svn_fs_bdb__check_version (void)
 {
   int major, minor;
 
