@@ -1219,17 +1219,9 @@ svn_error_t *svn_swig_pl_blame_func (void *baton,
 }
 
 /* default pool support */
-static apr_pool_t *current_pool = 0;
 
-apr_pool_t *svn_swig_pl_get_current_pool (void)
-{
-  return current_pool;
-}
-
-void svn_swig_pl_set_current_pool (apr_pool_t *pool)
-{
-  current_pool = pool;
-}
+apr_pool_t *svn_swig_pl_get_current_pool (void);
+void svn_swig_pl_set_current_pool (apr_pool_t *pool);
 
 apr_pool_t *svn_swig_pl_make_pool (SV *obj)
 {
@@ -1246,12 +1238,11 @@ apr_pool_t *svn_swig_pl_make_pool (SV *obj)
 	}
     }
 
-    if (!current_pool)
+    if (!svn_swig_pl_get_current_pool())
 	svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"new_default",
 			            &obj, "s", "SVN::Pool");
-    pool = current_pool;
 
-    return pool;
+    return svn_swig_pl_get_current_pool();
 }
 
 /* stream interpolability with io::handle */
@@ -1353,7 +1344,7 @@ svn_error_t *svn_swig_pl_make_stream (svn_stream_t **stream, SV *obj)
 
     if (obj && SvROK(obj) && SvTYPE(SvRV(obj)) == SVt_PVGV &&
 	(io = GvIO(SvRV(obj)))) {
-	apr_pool_t *pool = current_pool;
+	apr_pool_t *pool = svn_swig_pl_get_current_pool();
 	io_baton_t *iob = apr_palloc (pool, sizeof(io_baton_t));
 	SvREFCNT_inc (obj);
 	iob->obj = obj;

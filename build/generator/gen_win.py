@@ -258,28 +258,18 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       sources.append(ProjectItem(path='makejar', reldir='', user_deps=deps,
                                  custom_build=cbuild, custom_target=jarfile))
 
-    if isinstance(target, gen_base.TargetSWIGRuntime):
-      for obj in self.graph.get_sources(gen_base.DT_LINK, target.name):
-        if isinstance(obj, gen_base.SWIGObject):
-          for cobj in self.graph.get_sources(gen_base.DT_OBJECT, obj):
-            if isinstance(cobj, gen_base.SWIGObject):
-              csrc = self.path(cobj.filename)
-              bsrc = self.path("build/win32/gen_swig_runtime.py")
-              cbuild = "python $(InputPath) %s %s %s" \
-                       % (target.lang, csrc, self.quote(self.swig_libdir))
-              sources.append(ProjectItem(path=bsrc, reldir=None,
-                                         custom_build=cbuild,
-                                         custom_target=csrc,
-                                         user_deps=[]))
-
-    elif isinstance(target, gen_base.TargetSWIG):
+    if isinstance(target, gen_base.TargetSWIG):
       swig_options = ["-" + target.lang]
       swig_deps = []
 
       if self.swig_vernum >= 103020:
-        swig_options.append("-noruntime")
+        if target.include_runtime:
+          swig_options.append("-runtime")
+        else:
+          swig_options.append("-noruntime")
       else:
-        swig_options.append("-c")
+        if not target.include_runtime:
+          swig_options.append("-c")
 
       if target.lang == "java":
         swig_options.append("-package org.tigris.subversion.swig")
