@@ -132,6 +132,10 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
       SVN_ERR (svn_path_condense_targets (&basename, &condensed_targets,
                                           targets, pool));
 
+      if (condensed_targets->nelts == 0)
+        (*((svn_stringbuf_t**)apr_array_push (condensed_targets))) =
+            svn_stringbuf_create("", pool);
+
       SVN_ERR (svn_wc_entry (&entry, basename, pool));
       if (! entry)
         return svn_error_createf
