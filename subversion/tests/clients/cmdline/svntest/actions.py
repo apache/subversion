@@ -130,6 +130,31 @@ def guarantee_greek_repository(path):
   # make the repos world-writeable, for mod_dav_svn's sake.
   main.chmod_tree(path, 0666, 0666)
 
+def run_and_verify_svnversion(message, wc_dir, repo_url,
+                              expected_stdout, expected_stderr):
+  "Run svnversion command and check it's output"
+
+  out, err = main.run_svnversion(wc_dir, repo_url)
+  
+  if type(expected_stdout) is type([]):
+    compare_and_display_lines(message, 'STDOUT', expected_stdout, out)
+  elif expected_stdout == SVNAnyOutput:
+    if len(out) == 0:
+      if message is not None: print message
+      raise SVNExpectedStdout
+  elif expected_stdout is not None:
+    raise SVNIncorrectDatatype("Unexpected specification for stdout data")
+  
+  if type(expected_stderr) is type([]):
+    compare_and_display_lines(message, 'STDERR', expected_stderr, err)
+  elif expected_stderr == SVNAnyOutput:
+    if len(err) == 0:
+      if message is not None: print message
+      raise SVNExpectedStderr
+  elif expected_stderr is not None:
+    raise SVNIncorrectDatatype("Unexpected specification for stderr data")
+  return out, err
+  
 
 def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
   """Invokes main.run_svn with *VARARGS.  If EXPECTED_STDOUT or
