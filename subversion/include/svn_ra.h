@@ -176,7 +176,8 @@ typedef struct svn_ra_plugin_t
    `svn_ra_FOO_init()' of type `svn_ra_init_func_t'.
 
    When called by libsvn_client, this routine simply returns an
-   internal, static plugin structure.  POOL is a pool for allocating
+   internal, static plugin structure. In addition, it returns the URI
+   scheme handled by this RA module. POOL is a pool for allocating
    configuration / one-time data.
 
    This type is defined to use the "C Calling Conventions" to ensure that
@@ -187,7 +188,7 @@ typedef struct svn_ra_plugin_t
 */
 typedef svn_error_t *svn_ra_init_func_t (int abi_version,
                                          apr_pool_t *pool,
-                                         const char **url_type,
+                                         const char **url_scheme,
                                          const svn_ra_plugin_t **plugin);
 
 /* The current ABI (Application Binary Interface) version for the
