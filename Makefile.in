@@ -10,7 +10,9 @@ SVN_RA_LIB_LINK = @SVN_RA_LIB_LINK@
 
 DOC_DIRS = doc/programmer/design doc/user/manual doc/user/svn_for_cvs_users
 
-EXTERNAL_PROJECT_DIRS = neon apr @DB_SUBDIR@
+EXTERNAL_PROJECT_DIRS = @NEON_SUBDIR@ @APR_SUBDIR@ @DB_SUBDIR@
+
+NEON_LIBS = @NEON_LIBS@
 
 SVN_APR_LIBS = @SVN_APR_LIBS@
 
