@@ -22,6 +22,7 @@
 
 
 #include <stdio.h>
+#include <assert.h>
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -34,6 +35,12 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "repos.h"
+
+/*** NOTE: This editor is unique in that it currently is hard-coded to
+     be anchored at the root directory of the filesystem.  This
+     affords us the ability to use the same paths for filesystem
+     locations and editor paths.  ***/
+
 
 
 /*** Node creation and assembly structures and routines. ***/
@@ -127,77 +134,93 @@ struct edit_baton
   svn_fs_t *fs;
   svn_fs_root_t *root;
   svn_fs_root_t *base_root;
-  apr_pool_t *pool;
   apr_pool_t *node_pool;
   svn_repos_node_t *node;
 };
 
 
-struct dir_baton
+struct node_baton
 {
-  svn_stringbuf_t *path;
   struct edit_baton *edit_baton;
-  svn_repos_node_t *node;
-};
-
-
-struct file_baton
-{
-  svn_stringbuf_t *path;
-  struct dir_baton *dir_baton;
-  svn_repos_node_t *node;
-};
-
-
-struct window_handler_baton
-{
+  struct node_baton *parent_baton;
   svn_repos_node_t *node;
 };
 
 
 static svn_error_t *
-delete_entry (svn_stringbuf_t *name, 
+delete_entry (const char *path,
               svn_revnum_t revision,
-              void *parent_baton)
+              void *parent_baton,
+              apr_pool_t *pool)
 {
-  struct dir_baton *d = (struct dir_baton *) parent_baton;
+  struct node_baton *d = (struct node_baton *) parent_baton;
   struct edit_baton *eb = (struct edit_baton *) d->edit_baton;
-  svn_stringbuf_t *full_path;
   svn_repos_node_t *node;
-  int is_dir;
-
-  /* Construct the full path of this entry based on its parent. */
-  full_path = svn_stringbuf_dup (d->path, eb->pool);
-  svn_path_add_component (full_path, name);
+  const char *name;
+  svn_node_kind_t kind;
 
   /* Was this a dir or file (we have to check the base root for this one) */
-  SVN_ERR (svn_fs_is_dir (&is_dir, eb->base_root, full_path->data, eb->pool));
-
+  kind = svn_fs_check_path (eb->base_root, path, pool);
+  if (kind == svn_node_none)
+    return svn_error_create (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool, path);
+                              
   /* Get (or create) the change node and update it. */
-  node = find_child_by_name (d->node, name->data);
+  name = svn_path_basename (path, pool);
+  node = find_child_by_name (d->node, name);
   if (! node)
-    node = create_child_node (d->node, name->data, eb->node_pool);
-
-  if (is_dir)
-    node->kind = svn_node_dir;
-  else
-    node->kind = svn_node_file;
-
+    node = create_child_node (d->node, name, eb->node_pool);
+  node->kind = kind;
   node->action = 'D';
+
+  return SVN_NO_ERROR;
+}
+
+
+
+static svn_error_t *
+add_open_helper (const char *path,
+                 char action,
+                 svn_node_kind_t kind,
+                 void *parent_baton,
+                 const char *copyfrom_path,
+                 svn_revnum_t copyfrom_rev,
+                 apr_pool_t *pool,
+                 void **child_baton)
+{
+  struct node_baton *pb = (struct node_baton *) parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
+  struct node_baton *nb = apr_pcalloc (pool, sizeof (*nb));
+
+  assert (parent_baton && path);
+
+  nb->edit_baton = eb;
+  nb->parent_baton = pb;
+
+  /* Create and populate the node. */
+  nb->node = create_child_node (pb->node, svn_path_basename (path, pool), 
+                                eb->node_pool);
+  nb->node->kind = kind;
+  nb->node->action = action;
+  nb->node->copyfrom_rev = copyfrom_rev;
+  nb->node->copyfrom_path = 
+    copyfrom_path ? apr_pstrdup (eb->node_pool, copyfrom_path) : NULL;
+  
+  *child_baton = nb;
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
 open_root (void *edit_baton,
-              svn_revnum_t base_revision,
-              void **root_baton)
+           svn_revnum_t base_revision,
+           apr_pool_t *pool,
+           void **root_baton)
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
-  struct dir_baton *d = apr_pcalloc (eb->pool, sizeof (*d));
+  struct node_baton *d = apr_pcalloc (pool, sizeof (*d));
 
-  d->path = (svn_stringbuf_t *) svn_stringbuf_create ("", eb->pool);
   d->edit_baton = eb;
+  d->parent_baton = NULL;
   d->node = (eb->node = create_node ("", eb->node_pool));
   d->node->kind = svn_node_dir;
   d->node->action = 'R';
@@ -208,111 +231,59 @@ open_root (void *edit_baton,
 
 
 static svn_error_t *
-open_directory (svn_stringbuf_t *name,
+open_directory (const char *path,
                 void *parent_baton,
                 svn_revnum_t base_revision,
+                apr_pool_t *pool,
                 void **child_baton)
 {
-  struct dir_baton *pd = (struct dir_baton *) parent_baton;
-  struct edit_baton *eb = (struct edit_baton *) pd->edit_baton;
-  struct dir_baton *d = apr_pcalloc (pd->edit_baton->pool, sizeof (*d));
-
-  /* Construct the full path of the new directory */
-  d->path = svn_stringbuf_dup (pd->path, eb->pool);
-  svn_path_add_component (d->path, name);
-
-  /* Fill in other baton members */
-  d->edit_baton = eb;
-  d->node = create_child_node (pd->node, name->data, eb->node_pool);
-  d->node->kind = svn_node_dir;
-  d->node->action = 'R';
-  *child_baton = d;
-
+  SVN_ERR (add_open_helper (path, 'R', svn_node_dir, parent_baton,
+                            NULL, SVN_INVALID_REVNUM,
+                            pool, child_baton));
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-add_directory (svn_stringbuf_t *name,
+add_directory (const char *path,
                void *parent_baton,
-               svn_stringbuf_t *copyfrom_path,
+               const char *copyfrom_path,
                svn_revnum_t copyfrom_revision,
+               apr_pool_t *pool,
                void **child_baton)
 {
-  struct dir_baton *pd = (struct dir_baton *) parent_baton;
-  struct edit_baton *eb = (struct edit_baton *) pd->edit_baton;
-  struct dir_baton *d = apr_pcalloc (pd->edit_baton->pool, sizeof (*d));
-
-  /* Construct the full path of the new directory */
-  d->path = svn_stringbuf_dup (pd->path, eb->pool);
-  svn_path_add_component (d->path, name);
-
-  /* Fill in other baton members */
-  d->edit_baton = eb;
-  d->node = create_child_node (pd->node, name->data, eb->node_pool);
-  d->node->kind = svn_node_dir;
-  d->node->action = 'A';
-  d->node->copyfrom_rev = copyfrom_revision;
-  d->node->copyfrom_path
-    = copyfrom_path ? apr_pstrdup (eb->node_pool, copyfrom_path->data) : NULL;
-  
-  *child_baton = d;
-
+  SVN_ERR (add_open_helper (path, 'A', svn_node_dir, parent_baton,
+                            copyfrom_path, copyfrom_revision, 
+                            pool, child_baton));
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-open_file (svn_stringbuf_t *name,
+open_file (const char *path,
            void *parent_baton,
            svn_revnum_t base_revision,
+           apr_pool_t *pool,
            void **file_baton)
 {
-  struct dir_baton *pd = (struct dir_baton *) parent_baton;
-  struct edit_baton *eb = (struct edit_baton *) pd->edit_baton;
-  struct file_baton *fb = apr_pcalloc (pd->edit_baton->pool, sizeof (*fb));
-
-  /* Construct the full path of the new directory */
-  fb->path = svn_stringbuf_dup (pd->path, eb->pool);
-  svn_path_add_component (fb->path, name);
-
-  /* Fill in other baton members */
-  fb->dir_baton = pd;
-  fb->node = create_child_node (pd->node, name->data, eb->node_pool);
-  fb->node->kind = svn_node_file;
-  fb->node->action = 'R';
-  *file_baton = fb;
-
+  SVN_ERR (add_open_helper (path, 'R', svn_node_file, parent_baton,
+                            NULL, SVN_INVALID_REVNUM,
+                            pool, file_baton));
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-add_file (svn_stringbuf_t *name,
+add_file (const char *path,
           void *parent_baton,
-          svn_stringbuf_t *copyfrom_path,
+          const char *copyfrom_path,
           svn_revnum_t copyfrom_revision,
+          apr_pool_t *pool,
           void **file_baton)
 {
-  struct dir_baton *pd = (struct dir_baton *) parent_baton;
-  struct edit_baton *eb = (struct edit_baton *) pd->edit_baton;
-  struct file_baton *fb = apr_pcalloc (pd->edit_baton->pool, sizeof (*fb));
-
-  /* Construct the full path of the new directory */
-  fb->path = svn_stringbuf_dup (pd->path, eb->pool);
-  svn_path_add_component (fb->path, name);
-
-  /* Fill in other baton members */
-  fb->dir_baton = pd;
-  fb->node = create_child_node (pd->node, name->data, eb->node_pool);
-  fb->node->kind = svn_node_file;
-  fb->node->action = 'A';
-  fb->node->copyfrom_rev = copyfrom_revision;
-  fb->node->copyfrom_path
-    = copyfrom_path ? apr_pstrdup (eb->node_pool, copyfrom_path->data) : NULL;
-
-  *file_baton = fb;
-
+  SVN_ERR (add_open_helper (path, 'A', svn_node_file, parent_baton,
+                            copyfrom_path, copyfrom_revision, 
+                            pool, file_baton));
   return SVN_NO_ERROR;
 }
 
@@ -329,46 +300,29 @@ apply_textdelta (void *file_baton,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
-  struct file_baton *fb = (struct file_baton *) file_baton;
-  struct edit_baton *eb = (struct edit_baton *) fb->dir_baton->edit_baton;
-  struct window_handler_baton *whb = apr_palloc (eb->pool, sizeof (*whb));
-
-  whb->node = fb->node;
-  whb->node->text_mod = TRUE;
+  struct node_baton *fb = (struct node_baton *) file_baton;
+  fb->node->text_mod = TRUE;
   *handler = window_handler;
-  *handler_baton = whb;
-
+  *handler_baton = NULL;
   return SVN_NO_ERROR;
 }
 
 
 
 static svn_error_t *
-change_file_prop (void *file_baton,
-                  svn_stringbuf_t *name, 
-                  svn_stringbuf_t *value)
+change_node_prop (void *node_baton,
+                  const char *name, 
+                  const svn_string_t *value,
+                  apr_pool_t *pool)
 {
-  struct file_baton *fb = (struct file_baton *) file_baton;
-  fb->node->prop_mod = TRUE;
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-change_dir_prop (void *parent_baton,
-                 svn_stringbuf_t *name, 
-                 svn_stringbuf_t *value)
-{
-  struct dir_baton *d = (struct dir_baton *) parent_baton;
-  d->node->prop_mod = TRUE;
-
+  struct node_baton *nb = (struct node_baton *) node_baton;
+  nb->node->prop_mod = TRUE;
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_repos_node_editor (const svn_delta_edit_fns_t **editor,
+svn_repos_node_editor (const svn_delta_editor_t **editor,
                        void **edit_baton,
                        svn_repos_t *repos,
                        svn_fs_root_t *base_root,
@@ -376,11 +330,11 @@ svn_repos_node_editor (const svn_delta_edit_fns_t **editor,
                        apr_pool_t *node_pool,
                        apr_pool_t *pool)
 {
-  svn_delta_edit_fns_t *my_editor;
+  svn_delta_editor_t *my_editor;
   struct edit_baton *my_edit_baton;
 
   /* Set up the editor. */
-  my_editor = svn_delta_old_default_editor (pool);
+  my_editor = svn_delta_default_editor (pool);
   my_editor->open_root           = open_root;
   my_editor->delete_entry        = delete_entry;
   my_editor->add_directory       = add_directory;
@@ -388,13 +342,12 @@ svn_repos_node_editor (const svn_delta_edit_fns_t **editor,
   my_editor->add_file            = add_file;
   my_editor->open_file           = open_file;
   my_editor->apply_textdelta     = apply_textdelta;
-  my_editor->change_file_prop    = change_file_prop;
-  my_editor->change_dir_prop     = change_dir_prop;
+  my_editor->change_file_prop    = change_node_prop;
+  my_editor->change_dir_prop     = change_node_prop;
 
   /* Set up the edit baton. */
   my_edit_baton = apr_pcalloc (pool, sizeof (*my_edit_baton));
   my_edit_baton->node_pool = node_pool;
-  my_edit_baton->pool = pool;
   my_edit_baton->fs = repos->fs;
   my_edit_baton->root = root;
   my_edit_baton->base_root = base_root;
