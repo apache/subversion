@@ -358,11 +358,6 @@ case "%{release}" in
       ;;
 esac
 export RELEASE_NAME
-vsn_file="subversion/include/svn_version.h"
-sed -e \
- "/#define SVN_VERSION/s/SVN_VER_NUM.*$/\"${RELEASE_NAME}\"/" \
-  < "$vsn_file" > "${vsn_file}.tmp"
-mv "${vsn_file}.tmp" "$vsn_file"
 echo "${RELEASE_NAME}" > doc/book/book/package.version
 
 # Configure static.

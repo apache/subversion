@@ -359,11 +359,6 @@ case "%{release}" in
       ;;
 esac
 export RELEASE_NAME
-vsn_file="subversion/include/svn_version.h"
-sed -e \
- "/#define SVN_VERSION/s/SVN_VER_NUM.*$/\"${RELEASE_NAME}\"/" \
-  < "$vsn_file" > "${vsn_file}.tmp"
-mv "${vsn_file}.tmp" "$vsn_file"
 echo "${RELEASE_NAME}" > doc/book/book/package.version
 
 # Configure static.
@@ -405,8 +400,7 @@ make swig-pl-lib
 cd subversion/bindings/swig/perl/native
 env APR_CONFIG=/usr/bin/apr-config perl Makefile.PL INSTALLDIRS=vendor PREFIX=$RPM_BUILD_ROOT/%{_prefix}
 make all
-# FIXME - The tests should be made to work.
-(make test)
+make test
 cd ../../../../..
 
 %if %{make_ra_local_check}

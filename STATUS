@@ -104,13 +104,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: cmpilato, kfogel, epg
 
-  * Issue #2111
-    Fix RPM build breakage.
-    Justification:
-      RPM build breakage = bad.
-    Votes:
-      +1: david, ghudson
-
   * r11862, r11921, r12061 (part of issue #1997)
     Fix encoding bug in svnserve -h.
     Justification:
