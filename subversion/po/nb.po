@@ -21,6 +21,7 @@
 # entry - post¹
 # hook - påhakning
 # item - element
+# lock token - låsnøkkel
 # merge - flette
 # module - modul
 # mutable - foranderlig, formbar(?)
@@ -28,6 +29,7 @@
 # no such x - x ikke funnet
 # node - node
 # path - sti
+# parse - tolke
 # plugin - programtillegg
 # property - egenskap
 # record - post¹
@@ -41,6 +43,7 @@
 # stack - stabel
 # subcommand - delkommando
 # target - mål
+# token - nøkkel (i lock-sammenheng)
 # unsupported x - x ikke støttet
 # URL - URL
 # usage - bruk
@@ -271,20 +274,20 @@ msgstr "Konflikt: Egenskapsfil: %s\n"
 #: clients/cmdline/info-cmd.c:184
 #, c-format
 msgid "Lock Token: %s\n"
-msgstr ""
+msgstr "Låsnøkkel: %s\n"
 
 #: clients/cmdline/info-cmd.c:188
 #, c-format
 msgid "Lock Owner: %s\n"
-msgstr ""
+msgstr "Eier av lås: %s\n"
 
 #: clients/cmdline/info-cmd.c:193
 msgid "Lock Created"
-msgstr ""
+msgstr "Lås opprettet"
 
 #: clients/cmdline/info-cmd.c:197
 msgid "Lock Expires"
-msgstr ""
+msgstr "Låsen utgår"
 
 #: clients/cmdline/info-cmd.c:205
 #, c-format
@@ -292,6 +295,8 @@ msgid ""
 "Lock Comment (%i %s):\n"
 "%s\n"
 msgstr ""
+"Låsekommentar (%i %s):\n"
+"%s\n"
 
 #: clients/cmdline/info-cmd.c:279
 #, c-format
@@ -312,14 +317,12 @@ msgstr ""
 "\n"
 
 #: clients/cmdline/lock-cmd.c:53
-#, fuzzy
 msgid "Lock comment contains a zero byte"
-msgstr "Loggmeldingen inneholder en null-byte"
+msgstr "Låsekommentaren inneholder en null-byte"
 
 #: clients/cmdline/lock-cmd.c:136
-#, fuzzy
 msgid "Your lock comment was left in a temporary file:"
-msgstr "Din loggmelding er lagt i en midlertidig fil:"
+msgstr "Låsekommentaren er lagt i en midlertidig fil:"
 
 #: clients/cmdline/log-cmd.c:162
 msgid "(no author)"
@@ -555,7 +558,7 @@ msgstr "maksimum antall loggmeldinger"
 
 #: clients/cmdline/main.c:150
 msgid "don't unlock the targets"
-msgstr ""
+msgstr "ikke lås opp målene"
 
 #: clients/cmdline/main.c:181
 msgid ""
@@ -633,7 +636,6 @@ msgstr ""
 "bruk: cleanup [STI...]\n"
 
 #: clients/cmdline/main.c:225
-#, fuzzy
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -648,6 +650,8 @@ msgstr ""
 "\n"
 "  En loggmelding må være med, men den kan være tom. Hvis melding ikke\n"
 "  oppgis med valgene --message eller --file, startes en tekstredigerer.\n"
+"  Hvis noen mål er (eller inneholder) låste elementer, vil disse bli\n"
+"  låst opp etter en vellykket innlegging.\n"
 
 #: clients/cmdline/main.c:236
 msgid ""
@@ -876,6 +880,11 @@ msgid ""
 "\n"
 "  Use --force to steal the lock from another user or working copy.\n"
 msgstr ""
+"Lås arbeidskopistier eller URLer i depotet, så ingen andre brukere\n"
+"kan legge inn forandringer til dem.\n"
+"bruk: lock STI...\n"
+"\n"
+"  Bruk --force for å stjele låsen fra en annen bruker eller arbeidskopi.\n"
 
 #: clients/cmdline/main.c:393
 msgid ""
@@ -1221,7 +1230,6 @@ msgstr ""
 "kataloger.\n"
 
 #: clients/cmdline/main.c:600
-#, fuzzy
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -1326,6 +1334,9 @@ msgstr ""
 "    Kolonne fem: Om plassering er forandret i forhold til arbeidskopien.\n"
 "      « » Normal\n"
 "      «S» Forandret\n"
+"    Kolonne seks: Om nøkkel som representerer depotlås er til stede\n"
+"      ' ' normal\n"
+"      'K' låsnøkkel finnes\n"
 "\n"
 "  Hvis -v er angitt, vises det i kolonne åtte om objektet er gått ut på\n"
 "  dato:\n"
@@ -1392,6 +1403,10 @@ msgid ""
 "\n"
 "  Use --force to break the lock.\n"
 msgstr ""
+"Lås opp stier i arbeidskopien eller URLer.\n"
+"bruk: unlock STI...\n"
+"\n"
+"  Bruk --force for å bryte låsen.\n"
 
 #: clients/cmdline/main.c:699
 msgid ""
@@ -1669,12 +1684,12 @@ msgstr "Sender fildata "
 #: clients/cmdline/notify.c:352
 #, c-format
 msgid "'%s' locked by user '%s'.\n"
-msgstr ""
+msgstr "«%s» låst av brukeren «%s»\n"
 
 #: clients/cmdline/notify.c:358
 #, c-format
 msgid "'%s' unlocked.\n"
-msgstr ""
+msgstr "«%s» låst opp.\n"
 
 #: clients/cmdline/prompt.c:94
 msgid "Can't open stdin"
@@ -2010,7 +2025,7 @@ msgstr "XML-data var ikke velformet"
 
 #: include/svn_error_codes.h:194
 msgid "Data cannot be safely XML-escaped"
-msgstr ""
+msgstr "Dataene kan ikke XML-beskyttes på en sikker måte"
 
 #: include/svn_error_codes.h:200
 msgid "Inconsistent line ending style"
@@ -2311,45 +2326,40 @@ msgid "Unknown FS type"
 msgstr "Filsystemtypen er ukjent"
 
 #: include/svn_error_codes.h:522
-#, fuzzy
 msgid "No user associated with filesystem"
-msgstr "Ingen transaksjon med navn «%s» i filsystem «%s»"
+msgstr "Ingen bruker assosiert med filsystem"
 
 #: include/svn_error_codes.h:527
 msgid "Path is locked"
-msgstr ""
+msgstr "Stien er låst"
 
 #: include/svn_error_codes.h:532 include/svn_error_codes.h:659
-#, fuzzy
 msgid "Path is not locked"
-msgstr "Filstien «%s» er ingen fil"
+msgstr "Stien er ikke låst"
 
 #: include/svn_error_codes.h:537
 msgid "Lock token is incorrect"
-msgstr ""
+msgstr "Låsnøkkel er feil"
 
 #: include/svn_error_codes.h:542
-#, fuzzy
 msgid "No lock token provided"
-msgstr "For få argumenter"
+msgstr "Ingen låsnøkkel skaffet"
 
 #: include/svn_error_codes.h:547
 msgid "Username does not match lock owner"
-msgstr ""
+msgstr "Brukernavn samsvarer ikke med eier av lås"
 
 #: include/svn_error_codes.h:552
-#, fuzzy
 msgid "Filesystem has no such lock"
-msgstr "Filsystemet har ingen slik kopi"
+msgstr "Filsystemet har ingen slik lås"
 
 #: include/svn_error_codes.h:557
 msgid "Lock has expired"
-msgstr ""
+msgstr "Låsen er utgått"
 
 #: include/svn_error_codes.h:562
-#, fuzzy
 msgid "Item is out of date"
-msgstr "Objektet er uaktuelt"
+msgstr "Elementet er utdatert"
 
 #: include/svn_error_codes.h:574
 msgid "Unsupported FS format"
@@ -2388,14 +2398,12 @@ msgid "Error running post-commit hook"
 msgstr "Feil ved kjøring av post-innsendingshake"
 
 #: include/svn_error_codes.h:618
-#, fuzzy
 msgid "Error running post-lock hook"
-msgstr "Feil ved kjøring av post-innsendingshake"
+msgstr "Feil ved kjøring av «post-lock»-påhakningen"
 
 #: include/svn_error_codes.h:623
-#, fuzzy
 msgid "Error running post-unlock hook"
-msgstr "Feil ved kjøring av post-innsendingshake"
+msgstr "Feil ved kjøring av «post-unlock»-påhakningen»"
 
 #: include/svn_error_codes.h:630
 msgid "Bad URL passed to RA layer"
@@ -2615,7 +2623,7 @@ msgstr "To versjonerte ressurser er urelaterte"
 
 #: include/svn_error_codes.h:886
 msgid "Path has no lock token"
-msgstr ""
+msgstr "Stien har ingen låsnøkkel"
 
 #: include/svn_error_codes.h:892
 msgid "A problem occurred; see later errors for details"
@@ -3177,21 +3185,21 @@ msgstr "URLen «%s» finnes ikke i revisjon «%ld»"
 
 #: libsvn_client/locking_commands.c:185
 msgid "No common parent found, unable to operate on disjoint arguments"
-msgstr ""
+msgstr "Ingen felles forelder funnet, klarer ikke å operere på usammenhengende argumenter"
 
 #: libsvn_client/locking_commands.c:266
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not locked in this working copy"
-msgstr "«%s» er ikke en arbeidskopi"
+msgstr "«%s» er ikke låst i denne arbeidskopien"
 
 #: libsvn_client/locking_commands.c:311
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not locked"
-msgstr "«%s» er ikke en fil"
+msgstr "«%s» er ikke låst"
 
 #: libsvn_client/locking_commands.c:344 libsvn_fs/fs-loader.c:805
 msgid "Lock comment has illegal characters."
-msgstr ""
+msgstr "Låsekommentaren inneholder ulovlige tegn"
 
 #: libsvn_client/log.c:72
 msgid "Missing required revision specification"
@@ -3710,49 +3718,49 @@ msgid "'%s' is not a directory in filesystem '%s'"
 msgstr "«%s» er ikke en katalog i filsystem «%s»"
 
 #: libsvn_fs_base/err.c:231 libsvn_fs_fs/err.c:288
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a file in filesystem '%s'"
-msgstr "«%s» er ikke en katalog i filsystem «%s»"
+msgstr "«%s» er ikke en fil i filsystem «%s»"
 
 #: libsvn_fs_base/err.c:242 libsvn_fs_fs/err.c:277
-#, fuzzy, c-format
+#, c-format
 msgid "Token '%s' does not point to any existing lock in filesystem '%s'"
-msgstr "«%s» er ikke en katalog i filsystem «%s»"
+msgstr "Nøkkelen «%s» peker ikke til noen eksisterende låser i filsystem «%s»"
 
 #: libsvn_fs_base/err.c:252
-#, fuzzy, c-format
+#, c-format
 msgid "No token given for path '%s' in filesystem '%s'"
-msgstr "Ingen kopi med identifikator «%s» i filsystem «%s»"
+msgstr "Ingen nøkkel gitt for stien «%s» i filsystem «%s»"
 
 #: libsvn_fs_base/err.c:261
-#, fuzzy, c-format
+#, c-format
 msgid "Corrupt lock in 'locks' table for '%s' in filesystem '%s'"
-msgstr "Korrupt innslag i tabellen «copies» for «%s» i filsystem «%s»"
+msgstr "Ødelagt lås i «locks»-tabellen for «%s» i filsystem «%s»"
 
 #: libsvn_fs_base/err.c:271 libsvn_fs_fs/err.c:244
-#, fuzzy, c-format
+#, c-format
 msgid "No lock on path '%s' in filesystem '%s'"
-msgstr "Ingen kopi med identifikator «%s» i filsystem «%s»"
+msgstr "Ingen lås på stien «%s» i filsystem «%s»"
 
 #: libsvn_fs_base/err.c:282 libsvn_fs_fs/err.c:179
-#, fuzzy, c-format
+#, c-format
 msgid "Lock has expired:  lock-token '%s' in filesystem '%s'"
-msgstr "Ingen kopi med identifikator «%s» i filsystem «%s»"
+msgstr "Låsen er utgått: Låsnøkkel «%s» i filsystem «%s»"
 
 #: libsvn_fs_base/err.c:293 libsvn_fs_fs/err.c:255
-#, fuzzy, c-format
+#, c-format
 msgid "No username is currently associated with filesystem '%s'"
-msgstr "Ingen transaksjon med navn «%s» i filsystem «%s»"
+msgstr "Ingen brukernavn er for øyeblikket assosiert med filsystem «%s»"
 
 #: libsvn_fs_base/err.c:305 libsvn_fs_fs/err.c:312
-#, fuzzy, c-format
+#, c-format
 msgid "User '%s' is trying to use a lock owned by '%s' in filesystem '%s'"
-msgstr "«%s» er ikke en katalog i filsystem «%s»"
+msgstr "Brukeren «%s» prøver å bruke en lås som eies av «%s» i filsystem «%s»"
 
 #: libsvn_fs_base/err.c:317 libsvn_fs_fs/err.c:299
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is locked by user '%s' in filesystem '%s'"
-msgstr "«%s» er ikke en katalog i filsystem «%s»"
+msgstr "Stien «%s» er låst av bruker «%s» i filsystem «%s»"
 
 #: libsvn_fs_base/fs.c:79
 #, c-format
@@ -3828,17 +3836,17 @@ msgstr "Ustøttet versjon av filsystemlaster (%d) for bdb"
 #: libsvn_fs_base/lock.c:550 libsvn_fs_fs/lock.c:618
 #, c-format
 msgid "Cannot verify lock on path '%s'; no username available"
-msgstr ""
+msgstr "Kan ikke kontrollere lås på stien «%s»; ingen brukernavn tilgjengelig"
 
 #: libsvn_fs_base/lock.c:556 libsvn_fs_fs/lock.c:624
 #, c-format
 msgid "User %s does not own lock on path '%s' (currently locked by %s)"
-msgstr ""
+msgstr "Bruker %s eier ikke egen lås på stien «%s» (for øyeblikket låst av %s)"
 
 #: libsvn_fs_base/lock.c:563 libsvn_fs_fs/lock.c:631
 #, c-format
 msgid "Cannot verify lock on path '%s'; no matching lock-token available"
-msgstr ""
+msgstr "Kan ikke kontrollere lås på stien «%s»; ingen samsvarende låsnøkkel tilgjengelig"
 
 #: libsvn_fs_base/reps-strings.c:103
 msgid "Representation is not of type 'delta'"
@@ -4020,13 +4028,13 @@ msgid "Can't get entries of non-directory"
 msgstr "Kan ikke få tak i poster i ikke-katalog"
 
 #: libsvn_fs_fs/dag.c:952
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Checksum mismatch, file '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Feil i kontrollsum, representasjon «%s»:\n"
+"Feil i kontrollsum, fil «%s»:\n"
 "   forventet:  %s\n"
 "     faktisk:  %s\n"
 
@@ -4041,9 +4049,9 @@ msgid "Corrupt node revision id '%s' appears in filesystem '%s'"
 msgstr "Korrupt noderevisjons-identifikator «%s» opptrer i filsystem «%s»"
 
 #: libsvn_fs_fs/err.c:168
-#, fuzzy, c-format
+#, c-format
 msgid "Corrupt lockfile for path '%s' in filesystem '%s'"
-msgstr "Korrupt noderevisjon for node «%s» i filsystem «%s»"
+msgstr "Ødelagt låsefil for stien «%s» i filsystem «%s»"
 
 #: libsvn_fs_fs/fs.c:300
 #, c-format
@@ -4205,14 +4213,14 @@ msgid "No such transaction"
 msgstr "Ingen slik transaksjon"
 
 #: libsvn_fs_fs/lock.c:230
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot write lock/entries hashfile '%s'"
-msgstr "Kan ikke skrive egenskapstabell for «%s»"
+msgstr "Kan ikke skrive lås/post-hashfil «%s»"
 
 #: libsvn_fs_fs/lock.c:286
-#, fuzzy, c-format
+#, c-format
 msgid "Can't parse lock/entries hashfile '%s'"
-msgstr "Klarte ikke få delt lås på filen «%s»"
+msgstr "Kan ikke tolke lås/post-hashfil «%s»"
 
 #: libsvn_fs_fs/revs-txns.c:214
 msgid "Transaction cleanup failed"
@@ -4231,7 +4239,7 @@ msgstr "Ukjent URL-skjema for «%s»"
 
 #: libsvn_ra/ra_loader.c:506
 msgid "Lock comment has illegal characters"
-msgstr ""
+msgstr "Låsekommentaren inneholder ulovlige tegn"
 
 #: libsvn_ra/ra_loader.c:574
 #, c-format
@@ -4330,14 +4338,12 @@ msgid "'get-locations' REPORT not implemented"
 msgstr "«get-locations» REPORT ikke implementert"
 
 #: libsvn_ra_dav/fetch.c:1429
-#, fuzzy
 msgid "Incomplete lock data returned"
-msgstr "Ufullstendige data"
+msgstr "Ufullstendige låsedata returnert"
 
 #: libsvn_ra_dav/fetch.c:1586 libsvn_ra_dav/fetch.c:1590
-#, fuzzy
 msgid "Server does not support locking features"
-msgstr "Tjeneren støtter ikke datobaserte operasjoner"
+msgstr "Tjeneren støtter ikke låsefunksjonalitet"
 
 #: libsvn_ra_dav/fetch.c:1667
 msgid ""
@@ -4517,29 +4523,25 @@ msgid "Please upgrade the server to 0.19 or later"
 msgstr "Oppgrader tjeneren til versjon 0.19 eller senere"
 
 #: libsvn_ra_dav/session.c:1027 libsvn_ra_dav/session.c:1151
-#, fuzzy
 msgid "Failed to parse URI"
-msgstr "Klarte ikke kjøre «%s»-påhakning"
+msgstr "Klarte ikke å tolke URI"
 
 #: libsvn_ra_dav/session.c:1050
-#, fuzzy
 msgid "Lock request failed"
-msgstr "Forespørsel feilet i RA-lag"
+msgstr "Låseforespørsel feilet"
 
 #: libsvn_ra_dav/session.c:1166
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not locked in the repository"
-msgstr "«%s» ble ikke funnet i depotet ved revisjon %ld"
+msgstr "«%s» er ikke låst i depotet"
 
 #: libsvn_ra_dav/session.c:1203
-#, fuzzy
 msgid "Unlock request failed"
-msgstr "Forespørsel feilet i RA-lag"
+msgstr "«Lås opp»-forespørsel feilet"
 
 #: libsvn_ra_dav/session.c:1385
-#, fuzzy
 msgid "Failed to fetch lock information"
-msgstr "vis ekstra informasjon"
+msgstr "Klarte ikke å hente låseinformasjon"
 
 #: libsvn_ra_dav/session.c:1460
 #, c-format
@@ -4748,18 +4750,16 @@ msgid "'stat' not implemented"
 msgstr "«stat» ikke implementert"
 
 #: libsvn_ra_svn/client.c:1272
-#, fuzzy
 msgid "'get-locations' not implemented"
-msgstr "«get-locations» REPORT ikke implementert"
+msgstr "«get-locations» ikke implementert"
 
 #: libsvn_ra_svn/client.c:1284
 msgid "Location entry not a list"
 msgstr "Post for beliggenhet er ikke en liste"
 
 #: libsvn_ra_svn/client.c:1334
-#, fuzzy
 msgid "'get-file-revs' not implemented"
-msgstr "«get-file-revs» REPORT ikke implementert"
+msgstr "«get-file-revs» ikke implementert"
 
 #: libsvn_ra_svn/client.c:1347
 msgid "Revision entry not a list"
@@ -4774,24 +4774,20 @@ msgid "The get-file-revs command didn't return any revisions"
 msgstr "«get-file-revs»-kommandoen returnerte ingen revisjoner"
 
 #: libsvn_ra_svn/client.c:1443
-#, fuzzy
 msgid "Server doesn't support the lock command"
-msgstr "Tjeneren støtter ikke datobaserte operasjoner"
+msgstr "Tjeneren støtter ikke låsekommandoen"
 
 #: libsvn_ra_svn/client.c:1504
-#, fuzzy
 msgid "Server doesn't support the unlock command"
-msgstr "Tjeneren støtter ikke datobaserte operasjoner"
+msgstr "Tjeneren støtter ikke «lås opp»-kommandoen"
 
 #: libsvn_ra_svn/client.c:1539 libsvn_ra_svn/client.c:1567
-#, fuzzy
 msgid "Server doesn't support the get-lock command"
-msgstr "Tjeneren støtter ikke datobaserte operasjoner"
+msgstr "Tjeneren støtter ikke «get-lock»-kommandoen"
 
 #: libsvn_ra_svn/client.c:1580
-#, fuzzy
 msgid "Lock element not a list"
-msgstr "Egenskapslisteelement er ikke en liste"
+msgstr "Låseelement er ikke en liste"
 
 #: libsvn_ra_svn/client.c:1638
 #, c-format
@@ -4880,9 +4876,9 @@ msgid "Source url '%s' is from different repository"
 msgstr "Kilde-URL «%s» er fra et forskjellig depot"
 
 #: libsvn_repos/commit.c:304
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' not present"
-msgstr "Filstien «%s» finnes ikke"
+msgstr "Stien «%s» ikke til stede"
 
 #: libsvn_repos/commit.c:488
 #, c-format
@@ -4965,12 +4961,11 @@ msgstr "Skriving nektet: Er ikke autorisert til å lese alt i revisjon %ld."
 #: libsvn_repos/fs-wrap.c:514
 #, c-format
 msgid "Cannot unlock path '%s', no authenticated username available"
-msgstr ""
+msgstr "Kan ikke låse opp stien «%s», ingen bekreftede brukernavn tilgjengelig"
 
 #: libsvn_repos/fs-wrap.c:528
-#, fuzzy
 msgid "Unlock succeeded, but post-unlock hook failed"
-msgstr "Innlegging var vellykket, men «post-commit»-påhakningen feilet"
+msgstr "Klarte å låse opp, men «post-unlock»-påhakningen feilet"
 
 #: libsvn_repos/hooks.c:65
 #, c-format
@@ -5406,17 +5401,17 @@ msgstr "Kan ikke gjøre «%s» skrivbar"
 #: libsvn_subr/io.c:1016
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file stat error"
-msgstr ""
+msgstr "Klarer ikke å få tak i standard filrettigheter for filen i «%s» («file stat»-feil"
 
 #: libsvn_subr/io.c:1022
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file close error)"
-msgstr ""
+msgstr "Klarer ikke å få tak i standard filrettigheter for filen i «%s» (feil under lukking av fil)"
 
 #: libsvn_subr/io.c:1054 libsvn_subr/io.c:1114
-#, fuzzy, c-format
+#, c-format
 msgid "Can't change read-write perms of file '%s'"
-msgstr "Kan ikke forandre kjørbarhet for filen «%s»"
+msgstr "Klarer ikke å forandre lese/skrive-rettigheter for filen «%s»"
 
 #: libsvn_subr/io.c:1153 libsvn_subr/io.c:1197 libsvn_subr/io.c:1221
 #, c-format
@@ -6276,9 +6271,9 @@ msgid "Error modifying entry for '%s'"
 msgstr "Feil under endring av oppføring for «%s»"
 
 #: libsvn_wc/log.c:623
-#, fuzzy, c-format
+#, c-format
 msgid "Error removing lock from entry for '%s'"
-msgstr "Feil ved sletting av egenskaper for «%s»"
+msgstr "Feil ved fjerning av lås fra post for «%s»"
 
 #: libsvn_wc/log.c:754
 #, c-format
@@ -6778,15 +6773,14 @@ msgstr ""
 "forhånd. Tilbakemeldinger sendes til standardutdata.\n"
 
 #: svnadmin/main.c:353
-#, fuzzy
 msgid ""
 "usage: svnadmin lslocks REPOS_PATH\n"
 "\n"
 "Print descriptions of all locks.\n"
 msgstr ""
-"bruk: svnadmin lstxns DEPOTSTI\n"
+"bruk: svnadmin lslocks DEPOTSTI\n"
 "\n"
-"Skriver ut navnene på alle transaksjoner som ikke er sendt inn.\n"
+"Vis beskrivelser av alle låser.\n"
 
 #: svnadmin/main.c:358
 msgid ""
@@ -6820,6 +6814,9 @@ msgid ""
 "\n"
 "Unconditionally remove lock from each LOCKED_PATH.\n"
 msgstr ""
+"bruk: svnadmin rmlocks DEPOTSTI LÅST_STI...\n"
+"\n"
+"Fjern lås betingelsesløst fra hver LÅST_STI.\n"
 
 #: svnadmin/main.c:376
 msgid ""
@@ -6953,22 +6950,22 @@ msgstr "Kun ett filargument behøves"
 #: svnadmin/main.c:1020 svnlook/main.c:1766
 #, c-format
 msgid "UUID Token: %s\n"
-msgstr ""
+msgstr "UUID-nøkkel: %s\n"
 
 #: svnadmin/main.c:1021 svnlook/main.c:1767
-#, fuzzy, c-format
+#, c-format
 msgid "Owner: %s\n"
-msgstr "Navn: %s\n"
+msgstr "Eier: %s\n"
 
 #: svnadmin/main.c:1022 svnlook/main.c:1768
-#, fuzzy, c-format
+#, c-format
 msgid "Created: %s\n"
-msgstr "Navn: %s\n"
+msgstr "Opprettet: %s\n"
 
 #: svnadmin/main.c:1023 svnlook/main.c:1769
 #, c-format
 msgid "Expires: %s\n"
-msgstr ""
+msgstr "Utgår: %s\n"
 
 #: svnadmin/main.c:1024
 #, c-format
@@ -6977,16 +6974,19 @@ msgid ""
 "%s\n"
 "\n"
 msgstr ""
+"Kommentar (%i %s):\n"
+"%s\n"
+"\n"
 
 #: svnadmin/main.c:1092
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' isn't locked.\n"
-msgstr "Filstien «%s» er ingen fil"
+msgstr "Stien «%s» er ikke låst\n"
 
 #: svnadmin/main.c:1104
-#, fuzzy, c-format
+#, c-format
 msgid "Removed lock on '%s'.\n"
-msgstr "Gjenopprettet «%s»\n"
+msgstr "Fjernet lås på «%s».\n"
 
 #: svnadmin/main.c:1329
 msgid "subcommand argument required\n"
@@ -7254,16 +7254,14 @@ msgstr ""
 "Vis forfatter, datostempel, størrelse på loggmelding og loggmelding.\n"
 
 #: svnlook/main.c:177
-#, fuzzy
 msgid ""
 "usage: svnlook lock REPOS_PATH PATH_IN_REPOS\n"
 "\n"
 "If a lock exists on a path in the repository, describe it.\n"
 msgstr ""
-"bruk: svnlook history DEPOTSTI [STI_I_DEPOT]\n"
+"bruk: svnlook lock DEPOTSTI STI_I_DEPOT\n"
 "\n"
-"Skriv ut informasjon om historien til en filsti i depotet (eller\n"
-"rotkatalogen hvis filstien er utelatt).\n"
+"Hvis en lås eksisterer på en sti i depotet, beskriv den.\n"
 
 #: svnlook/main.c:182
 msgid ""
@@ -7435,9 +7433,8 @@ msgstr ""
 "Tilgjengelige delkommandoer;\n"
 
 #: svnlook/main.c:1747
-#, fuzzy
 msgid "Missing path argument"
-msgstr "Mangler egenskapsnavn-argument"
+msgstr "Mangler stiargument"
 
 #: svnlook/main.c:1770
 #, c-format
@@ -7445,6 +7442,8 @@ msgid ""
 "Comment (%i %s):\n"
 "%s\n"
 msgstr ""
+"Kommentar (%i %s):\n"
+"%s\n"
 
 #: svnlook/main.c:1817
 msgid "Missing propname argument"
