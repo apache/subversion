@@ -71,7 +71,7 @@ section for approved changes.)
      Justification: API change; avoid permanent support for bizarre and
      unpredictable date formats.
      Votes:
-      +1: ghudson, epg, mbk
+      +1: ghudson, epg, mbk, brane
      Outdated votes (veto still applies until withdrawn, of course):
       +1: mbk, ghudson, dionisos, epg, striker
       +0: cmpilato
