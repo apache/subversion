@@ -1,5 +1,5 @@
 /*
- * delta_parse.c: create an svn_delta_t from an XML stream
+ * delta_parse.c:  build an svn_delta_stackframe_t from an XML stream
  *
  * ================================================================
  * Copyright (c) 2000 Collab.Net.  All rights reserved.
@@ -52,8 +52,9 @@
 
 /*
   This library contains callbacks to use with the "expat-lite" XML
-  parser.  The callbacks produce an svn_delta_t structure from a
-  stream containing Subversion's XML delta representation.
+  parser.  The callbacks maintain state by building & retracting an
+  svn_delta_stackframe_t structure from a stream containing
+  Subversion's XML delta representation.
 
   To use this library, see "deltaparse-test.c" in tests/.
   
@@ -110,6 +111,7 @@ svn_fill_attributes (apr_pool_t *pool,
 
 
 
+
 /* For code factorization: 
 
    Go to bottom of frame D, and set the state of the content's
@@ -132,6 +134,33 @@ svn_twiddle_edit_content_flags (svn_delta_stackframe_t *d,
 }
 
 
+
+
+
+/* Recursively walk down delta D.  (PARENT is used for recursion purposes.)
+
+   Return the bottommost object in BOTTOM_OBJ and BOTTOM_KIND.
+      (Needed later for appending objects to the delta.)
+
+   The penultimate object is returned in PENULT_OBJ and PENULT_KIND. 
+      (Needed later for removing objects from the delta.)
+*/
+
+void
+svn_walk_delta (svn_delta_t *delta,
+                fish see-prototype-for-callback,
+                void *user_data)
+{
+  /* kff todo: finish this, then implement svn_find_delta_bottom()
+     with it. */
+}
+
+
+/* Heh, by creating our "stackframe" structure, this routine has been
+   reduced to a trivial nothingness, like a lisp routine or something.
+   :) */
+
+
 /* Return the last frame of a delta stack. */
 svn_delta_stackframe_t *
 svn_find_delta_bottom (svn_delta_stackframe_t *frame)
@@ -143,42 +172,105 @@ svn_find_delta_bottom (svn_delta_stackframe_t *frame)
 }
 
 
+/* If we get malformed XML, return an informative error saying so. */
+svn_error_t *
+svn_XML_typeerror (apr_pool_t *pool, char *name, svn_boolean_t destroy_p)
+{
+  if (destroy_p)
+    {
+      char *msg = 
+        ap_psprintf (pool, "Typecheck error in svn_starpend_delta: trying to remove frame type '%s', but current bottom of stackframe is different type!", name);
+      return svn_create_error (SVN_ERR_MALFORMED_XML, NULL,
+                               msg, NULL, pool);
+    }
+
+  else
+    {
+      char *msg = 
+        ap_psprintf (pool, "Typecheck error in svn_starpend_delta: trying to append frame type '%s', but current bottom of stackframe is wrong type!", name);
+      return svn_create_error (SVN_ERR_MALFORMED_XML, NULL,
+                               msg, NULL, pool);
+    }
+}
+
+
 
 /* 
    svn_starpend_delta() : either (ap)pend or (un)pend a frame to the
                           end of a delta.  
-
-   (Feel free to think of a better name: svn_telescope_delta() ?) :)
 
    Append or remove NEW_FRAME to/from the end of delta-stackframe
    within DIGGER.
 
    Use DESTROY-P to toggle append/remove behavior.
 
+   This routine *type-checks* frames being added or removed.  The TAGNAME
+   argument is used to type-check a frame being removed;
+   NEW_FRAME->kind is used to type-check a frame being added.
+
 */
 
-void
+svn_error_t *
 svn_starpend_delta (svn_delta_digger_t *digger,
-                    svn_delta_stackframe_t *new_frame;
-                    svn_boolean_t destroy-p)
+                    svn_delta_stackframe_t *new_frame,
+                    char *tagname,
+                    svn_boolean_t destroy_p)
 {
+  /* Get a grip on the bottommost and penultimate frames in our
+     digger's stack. */
+
   svn_delta_stackframe_t *bot_frame = 
     svn_find_delta_bottom (digger->stack);
 
-  if (destroy-p)
+  svn_delta_stackframe_t *penultimate_frame 
+    = bot_frame->previous;
+
+  if (destroy_p)  /* unpend procedure... */
     {
-      svn_delta_stackframe_t *penultimate_frame = bot_frame->previous;
+      /* Type-check: make sure the kind of object we're removing (due
+         to an XML closure tag) actually agrees with the type of frame
+         at the bottom of the stack! */
+      if ((strcmp (tagname, "tree-delta") == 0)
+          && (bot_frame->kind != svn_XML_tree))
+            return svn_XML_typeerror (digger->pool, tagname, TRUE);
+      else if (((strcmp (tagname, "new") == 0) 
+                || (strcmp (tagname, "replace") == 0)
+                || (strcmp (tagname, "delete") == 0))
+               && (bot_frame->kind != svn_XML_edit))
+        return svn_XML_typeerror (digger->pool, tagname, TRUE);
+      else if (((strcmp (tagname, "file") == 0) 
+                || (strcmp (tagname, "dir") == 0))
+               && (bot_frame->kind != svn_XML_content))
+        return svn_XML_typeerror (digger->pool, tagname, TRUE);
+
 
       /* We're using pools, so just "lose" the pointer to the
          bottommost frame. */
       penultimate_frame->next = NULL;
-      return;
+      return SVN_NO_ERROR;
     }
 
-  else /* append */
+  else /* append procedure... */
     {
+      /* Type-check: make sure the kind of object we're adding (due to
+         an XML open tag) actually connects properly with the type of
+         frame at the bottom of the stack! */
+      if ((strcmp (tagname, "tree-delta") == 0)
+          && (penultimate_frame->kind != svn_XML_content))
+            return svn_XML_typeerror (digger->pool, tagname, TRUE);
+      else if (((strcmp (tagname, "new") == 0) 
+                || (strcmp (tagname, "replace") == 0)
+                || (strcmp (tagname, "delete") == 0))
+               && (penultimate_frame->kind != svn_XML_tree))
+        return svn_XML_typeerror (digger->pool, tagname, TRUE);
+      else if (((strcmp (tagname, "file") == 0) 
+                || (strcmp (tagname, "dir") == 0))
+               && (penultimate_frame->kind != svn_XML_edit))
+        return svn_XML_typeerror (digger->pool, tagname, TRUE);
+
+
       bot_frame->next = new_frame;
-      return;
+      return SVN_NO_ERROR;
     }
 }
 
@@ -365,7 +457,7 @@ void svn_xml_handle_end (void *userData, const char *name)
       || (strcmp (name, "dir") == 0))
     {
       /* Snip the bottommost frame off of the stackframe */
-      svn_starpend_delta (my_digger, NULL, TRUE);
+      svn_starpend_delta (my_digger, NULL, name, TRUE);
     }
 
   else if (strcmp (name, "text-delta") == 0)
