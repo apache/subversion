@@ -1931,7 +1931,7 @@ class Commit:
       print "  date:   '%s'" % date
       for rcs_file, cvs_rev, br, tags, branches in self.changes:
         print "    rev %s of '%s'" % (cvs_rev, rcs_file)
-      print 'Consider rerunning with (for example) \"--encoding=latin1\".'
+      print "Consider rerunning with (for example) '--encoding=latin1'."
       # Just fall back to the original data.
       props = { 'svn:author' : author, 'svn:log' : log, 'svn:date' : date }
       
@@ -2131,7 +2131,7 @@ def pass2(ctx):
         write_revs_line(output, record[2], digest, op, rev, fname,
                         branch_name, tags, branches)
 
-        print "RESYNC: '%s' (%s) : old time=\"%s\" new time=\"%s\"" \
+        print "RESYNC: '%s' (%s) : old time='%s' new time='%s'" \
               % (relative_name(ctx.cvsroot, fname),
                  rev, time.ctime(timestamp), time.ctime(record[2]))
 
