@@ -87,27 +87,31 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
 
   if (rv != NE_OK)
     {
-      /* ### need to be more sophisticated with reporting the failure */
+      svn_error_t *err2;
 
+      /* ### need to be more sophisticated with reporting the failure */
+      err2 = svn_error_createf (SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
+                                "neon: %s", ne_get_error (ras->sess));
+                               
       switch (rv)
         {
         case NE_CONNECT:
           /* ### need an SVN_ERR here */
-          err = svn_error_createf(APR_EGENERAL, 0, NULL, pool,
+          err = svn_error_createf(APR_EGENERAL, 0, err2, pool,
                                   "Could not connect to server "
                                   "(%s, port %d).",
                                   ras->root.host, ras->root.port);
           goto error;
 
         case NE_AUTH:
-          err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, 0, NULL, pool,
+          err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, 0, err2, pool,
                                  "Authentication failed on server.");
           goto error;
 
         default:
-          err = svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
-                                  "The %s request failed (#%d) (%s)",
-                                  method, rv, url);
+          err = svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, err2, pool,
+                                  "The %s request failed (%s)",
+                                  method, url);
           goto error;
         }
     }
