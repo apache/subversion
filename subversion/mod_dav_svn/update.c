@@ -668,12 +668,10 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
 
-  if ((resource->type != DAV_RESOURCE_TYPE_REGULAR)
-      && (resource->info->restype != DAV_SVN_RESTYPE_VCC))
+  if (resource->info->restype != DAV_SVN_RESTYPE_VCC)
     {
       return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
-                           "This report can only be run against a "
-                           "VCC or VCR (regular resource).");
+                           "This report can only be run against a VCC.");
     }
 
   ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -821,10 +819,15 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   editor->close_file = upd_close_file;
   editor->close_edit = upd_close_edit;
 
-  /* If the client never sent a <src-path> element, it's sending an
-     "old style" report -- so use the resource's path instead. */
+  /* If the client never sent a <src-path> element, it's old and
+     sending a style of report that we no longer allow. */
   if (! src_path)
-    src_path = resource->info->repos_path;
+    {
+      return dav_new_error
+        (resource->pool, HTTP_BAD_REQUEST, 0,
+         "The request did not contain the '<src-path>' element.\n"
+         "This may indicate that your client is too old.");
+    }
 
   uc.resource = resource;
   uc.output = output;  
