@@ -20,9 +20,9 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 
-#include <http_request.h>
-#include <uri.h>
-#include <dav_207.h>            /* for dav_propname, DAV_ELM_207_UNUSED */
+#include <ne_request.h>
+#include <ne_uri.h>
+#include <ne_207.h>            /* for ne_propname, NE_ELM_207_UNUSED */
 
 #include "svn_types.h"
 #include "svn_string.h"
@@ -36,7 +36,7 @@ typedef struct {
 
   struct uri root;              /* repository root */
 
-  http_session *sess;           /* HTTP session to server */
+  ne_session *sess;           /* HTTP session to server */
 
 } svn_ra_session_t;
 
@@ -127,7 +127,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                     const char *url,
                                     int depth,
                                     const char *label,
-                                    const dav_propname *which_props,
+                                    const ne_propname *which_props,
                                     apr_pool_t *pool);
 
 /* fetch a single resource's props from the server. */
@@ -135,7 +135,7 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
                                              svn_ra_session_t *ras,
                                              const char *url,
                                              const char *label,
-                                             const dav_propname *which_props,
+                                             const ne_propname *which_props,
                                              apr_pool_t *pool);
 
 /* send an OPTIONS request to fetch the activity-collection-set */
@@ -148,18 +148,18 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
                                         const char *method,
                                         const char *url,
                                         const char *body,
-                                        FILE *fp,
-                                        const struct hip_xml_elm *elements, 
-                                        hip_xml_validate_cb validate_cb,
-                                        hip_xml_startelm_cb startelm_cb, 
-                                        hip_xml_endelm_cb endelm_cb,
+                                        int fd,
+                                        const struct ne_xml_elm *elements, 
+                                        ne_xml_validate_cb validate_cb,
+                                        ne_xml_startelm_cb startelm_cb, 
+                                        ne_xml_endelm_cb endelm_cb,
                                         void *baton,
                                         apr_pool_t *pool);
 
 /* ### add SVN_RA_DAV_ to these to prefix conflicts with (sys) headers? */
 enum {
   /* DAV elements */
-  ELEM_activity_coll_set = DAV_ELM_207_UNUSED,
+  ELEM_activity_coll_set = NE_ELM_207_UNUSED,
   ELEM_add_directory,
   ELEM_add_file,
   ELEM_baseline,

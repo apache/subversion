@@ -15,12 +15,12 @@
 
 
 #include <apr_pools.h>
+#define APR_WANT_STRFUNC
+#include <apr_want.h>
 
-#include <strings.h>    /* for strcasecmp() (### should come from APR) */
-
-#include <nsocket.h>
-#include <http_request.h>
-#include <uri.h>
+#include <ne_socket.h>
+#include <ne_request.h>
+#include <ne_uri.h>
 
 #include "svn_error.h"
 #include "svn_ra.h"
@@ -31,7 +31,7 @@
 
 static apr_status_t cleanup_session(void *sess)
 {
-  http_session_destroy(sess);
+  ne_session_destroy(sess);
   return APR_SUCCESS;
 }
 
@@ -42,7 +42,7 @@ static svn_error_t * svn_ra_open (void **session_baton,
   const char *repository = repository_name->data;
   apr_size_t len;
 
-  http_session *sess;
+  ne_session *sess;
   struct uri uri = { 0 };
   svn_ra_session_t *ras;
 
@@ -58,12 +58,12 @@ static svn_error_t * svn_ra_open (void **session_baton,
                             "network socket initialization failed");
   }
 
-  sess = http_session_create();
+  sess = ne_session_create();
 
   /* make sure we will eventually destroy the session */
   apr_pool_cleanup_register(pool, sess, cleanup_session, apr_pool_cleanup_null);
 
-  http_set_useragent(sess, "SVN/" SVN_VERSION);
+  ne_set_useragent(sess, "SVN/" SVN_VERSION);
 
   /* we want to know if the repository is actually somewhere else */
   /* ### not yet: http_redirect_register(sess, ... ); */
@@ -74,8 +74,8 @@ static svn_error_t * svn_ra_open (void **session_baton,
         {
           uri.port = 443;
         }
-      if (http_set_secure(sess, 1) || 
-          http_set_accept_secure_upgrade(sess, 1))
+      if (ne_set_secure(sess, 1) || 
+          ne_set_accept_secure_upgrade(sess, 1))
         {
           return svn_error_create(SVN_ERR_RA_SOCK_INIT, 0, NULL, pool,
                                   "SSL is not supported");
@@ -86,7 +86,7 @@ static svn_error_t * svn_ra_open (void **session_baton,
       uri.port = 80;
     }
 
-  if (http_session_server(sess, uri.host, uri.port))
+  if (ne_session_server(sess, uri.host, uri.port))
     {
       return svn_error_createf(SVN_ERR_RA_HOSTNAME_LOOKUP, 0, NULL, pool,
                                "Hostname not found: %s", uri.host);

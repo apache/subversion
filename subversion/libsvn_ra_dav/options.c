@@ -16,8 +16,8 @@
 
 #include <apr_pools.h>
 
-#include <hip_xml.h>
-#include <http_request.h>
+#include <ne_request.h>
+#include <ne_xml.h>
 
 #include "svn_error.h"
 #include "svn_ra.h"
@@ -25,10 +25,10 @@
 #include "ra_dav.h"
 
 
-static const struct hip_xml_elm options_elements[] =
+static const struct ne_xml_elm options_elements[] =
 {
   { "DAV:", "activity-collection-set", ELEM_activity_coll_set, 0 },
-  { "DAV:", "href", DAV_ELM_href, HIP_XML_CDATA },
+  { "DAV:", "href", NE_ELM_href, NE_XML_CDATA },
   { "DAV:", "options-response", ELEM_options_response, 0 },
 
   { NULL }
@@ -42,48 +42,48 @@ typedef struct {
 
 
 
-static int validate_element(hip_xml_elmid parent, hip_xml_elmid child)
+static int validate_element(ne_xml_elmid parent, ne_xml_elmid child)
 {
   switch (parent)
     {
-    case HIP_ELM_root:
+    case NE_ELM_root:
       if (child == ELEM_options_response)
-        return HIP_XML_VALID;
+        return NE_XML_VALID;
       else
-        return HIP_XML_INVALID;
+        return NE_XML_INVALID;
 
     case ELEM_options_response:
       if (child == ELEM_activity_coll_set)
-        return HIP_XML_VALID;
+        return NE_XML_VALID;
       else
-        return HIP_XML_DECLINE; /* not concerned with other response */
+        return NE_XML_DECLINE; /* not concerned with other response */
 
     case ELEM_activity_coll_set:
-      if (child == DAV_ELM_href)
-        return HIP_XML_VALID;
+      if (child == NE_ELM_href)
+        return NE_XML_VALID;
       else
-        return HIP_XML_DECLINE; /* not concerned with unknown crud */
+        return NE_XML_DECLINE; /* not concerned with unknown crud */
 
     default:
-      return HIP_XML_DECLINE;
+      return NE_XML_DECLINE;
     }
 
   /* NOTREACHED */
 }
 
-static int start_element(void *userdata, const struct hip_xml_elm *elm,
+static int start_element(void *userdata, const struct ne_xml_elm *elm,
                          const char **atts)
 {
   /* nothing to do here */
   return 0;
 }
 
-static int end_element(void *userdata, const struct hip_xml_elm *elm,
+static int end_element(void *userdata, const struct ne_xml_elm *elm,
                        const char *cdata)
 {
   options_ctx_t *oc = userdata;
 
-  if (elm->id == DAV_ELM_href)
+  if (elm->id == NE_ELM_href)
     {
       oc->activity_url = svn_stringbuf_create(cdata, oc->pool);
     }
@@ -99,8 +99,8 @@ svn_error_t * svn_ra_dav__get_activity_url(svn_stringbuf_t **activity_url,
   options_ctx_t oc = { 0 };
 
 #if 0
-  http_add_response_header_handler(req, "dav",
-                                   http_duplicate_header, &dav_header);
+  ne_add_response_header_handler(req, "dav",
+                                 ne_duplicate_header, &dav_header);
 #endif
 
   oc.pool = pool;
@@ -110,7 +110,7 @@ svn_error_t * svn_ra_dav__get_activity_url(svn_stringbuf_t **activity_url,
                                       "encoding=\"utf-8\"?>"
                                       "<D:options xmlns:D=\"DAV:\">"
                                       "<D:activity-collection-set/>"
-                                      "</D:options>", NULL,
+                                      "</D:options>", 0,
                                       options_elements, validate_element,
                                       start_element, end_element, &oc,
                                       pool) );
