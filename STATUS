@@ -80,6 +80,6 @@ Candidate changes:
     Justification: Results in a somewhat wedged working copy.  Fix is 
     straightforward, we just look at the results of the test for the existence
     of the file that we were already running. 
-    Notes: Patch on issue will require the regression test be moved to a
-    different file, because we don't have that file.
+    Notes: Attachment 312 is a backported version of this fix.  Which was
+    applied to trunk in r8981. 
     Votes:
