@@ -43,6 +43,7 @@ if [ -d apr ]; then
   (cd apr; ./buildconf)  # this is apr's equivalent of autogen.sh
 else
   echo ""
+  echo "...Uh oh, there is a problem."
   echo "You don't have an apr/ subdirectory here.  Please get one:"
   echo ""
   echo "   cvs -d :pserver:anoncvs@apache.org:/home/cvspublic login"
@@ -56,15 +57,27 @@ else
 fi
 
 # Handle the neon/ subdir
+NEON_VER=0.8.1
 if [ ! -d neon ]; then
-  neon_ver=0.8.0
   echo ""
+  echo "...Uh oh, there is a problem."
   echo "You don't have a neon/ subdirectory here."
-  echo "Please get neon $neon_ver from:"
-  echo "       http://www.webdav.org/neon/neon-$neon_ver.tar.gz"
+  echo "Please get neon ${NEON_VER} from:"
+  echo "       http://www.webdav.org/neon/neon-${NEON_VER}.tar.gz"
   echo ""
   echo "Unpack the archive using tar/gunzip and rename the resulting"
-  echo "directory from ./neon-$neon_ver/ to ./neon/"
+  echo "directory from ./neon-${NEON_VER}/ to ./neon/"
+  echo ""
+  exit 1
+elif ! grep NEON_VERSION=${NEON_VER} neon/configure.in > /dev/null; then
+  echo ""
+  echo "...Uh oh, there is a problem."
+  echo "You have a neon/ subdir, but it is not neon ${NEON_VER}."
+  echo "Please get neon ${NEON_VER} from:"
+  echo "       http://www.webdav.org/neon/neon-${NEON_VER}.tar.gz"
+  echo ""
+  echo "Unpack the archive using tar/gunzip and rename the resulting"
+  echo "directory from ./neon-${NEON_VER}/ to ./neon/"
   echo ""
   exit 1
 fi
