@@ -281,19 +281,17 @@ class DiffEditor(delta.Editor):
       label = path
     print "===============================================================" + \
           "==============="
-    (pobj, file1, file2) = \
-           fs.diff_files(self.base_root, base_path, self.root, path, pool,
+    differ = fs.FileDiff(self.base_root, base_path, self.root, path, pool,
                          "-L '" + label + "\t(original)' " + \
                          "-L '" + label + "\t(new)' " + \
                          "-u")
+    pobj = differ.get_pipe()
     while 1:
       line = pobj.readline()
       if not line:
         break
       print line,
     print ""
-    os.remove(file1)
-    os.remove(file2)
     
   def delete_entry(self, path, revision, parent_baton, pool):
     ### need more logic to detect 'replace'
