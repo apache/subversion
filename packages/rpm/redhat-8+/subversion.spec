@@ -406,14 +406,14 @@ cp /usr/bin/svnadmin-%{version}-%{release}.static /usr/bin/svnadmin-%{version}-%
 # Restart apache server if needed.
 source /etc/init.d/functions
 if [ "`pidof httpd`"x != "x" ]; then
-   /etc/init.d/httpd restart
+   /etc/init.d/httpd restart || true
 fi
 
 %postun server
 # Restart apache server if needed.
 source /etc/init.d/functions
 if [ "`pidof httpd`"x != "x" ]; then
-   /etc/init.d/httpd restart
+   /etc/init.d/httpd restart || true
 fi
 
 %clean
