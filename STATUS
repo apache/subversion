@@ -9,20 +9,6 @@ Status of 1.0.6:
 
 Candidate changes:
 
-  * r8867, r8868, r8902
-    Trivial performance fix for mod_authz_svn; cache the access file per
-    connection instead of reloading it per request.
-    Justification: Saves at least 2 loads of the access file per update, plus
-    an additional number of times equal to the number of entries in the REPORT
-    response.
-    Notes: Similar code has been present in mod_dav_svn to cache an open
-    filesystem per connection.
-    Votes:
-      +1: striker
-      -0: kfogel  (Reviewed the change; it's not *so* trivial, and I'm
-                   not sure an optimization like this belongs in a
-                   patch release.)
-
   * r9861
     fixes reentrancy problem for javahl binding. The pool for a call could be
     destroyed before the end of the call. This could crash the jvm
