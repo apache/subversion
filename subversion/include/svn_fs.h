@@ -662,8 +662,11 @@ typedef enum
   svn_fs_path_change_replace,
 
   /** ignore all previous change items for path (internal-use only) */
-  svn_fs_path_change_reset
+  svn_fs_path_change_reset,
 
+  /** moved from path to ID.COMMIT-PATH (internal-use only for now) */
+  svn_fs_path_change_moved
+  
 } svn_fs_path_change_kind_t;
 
 /** Change descriptor. */
@@ -1028,8 +1031,8 @@ typedef struct svn_fs_dirent_t {
   /** The node revision ID it names.  */
   svn_fs_id_t *id;
 
-  /* The first revision that this node revision appeared
-     at this path. */
+  /** The first revision that this node revision appeared
+      at this path. */
   svn_revnum_t created_rev;
 
 } svn_fs_dirent_t;
@@ -1103,16 +1106,16 @@ svn_error_t *svn_fs_delete_tree (svn_fs_root_t *root,
                                  apr_pool_t *pool);
 
 
-/** Move the node named @a from to @a to, both in @a root.
+/** Move the node named @a from_path to @a to_path, both in @a root.
  *
- * Move the node named @a from to @a to, both in @a root.  @a root must be the
- * root of a transaction, not a revision.
+ * Move the node named @a from_path to @a to_path, both in @a root.  @a
+ * root must be the root of a transaction, not a revision.
  *
  * Do any necessary temporary allocation in @a pool.
  */
 svn_error_t *svn_fs_rename (svn_fs_root_t *root,
-                            const char *from,
-                            const char *to,
+                            const char *from_path,
+                            const char *to_path,
                             apr_pool_t *pool);
 
 

@@ -266,20 +266,43 @@ is_valid_node_revision_skel (skel_t *skel)
 
 
 static int
-is_valid_copy_skel (skel_t *skel)
+is_valid_copy_skel (skel_t *skel, svn_fs__copy_kind_t *kind)
 {
-  return ((svn_fs__list_length (skel) == 4)
-          && svn_fs__matches_atom (skel->children, "copy")
-          && skel->children->next->is_atom
-          && skel->children->next->next->is_atom
-          && skel->children->next->next->next->is_atom);
+  if ((svn_fs__list_length (skel) == 5)
+      && svn_fs__matches_atom (skel->children, "copy")
+      && skel->children->next->is_atom
+      && skel->children->next->next->is_atom
+      && skel->children->next->next->next->is_atom
+      && skel->children->next->next->next->is_atom
+      && skel->children->next->next->next->is_atom)
+    {
+      if (svn_fs__matches_atom (skel->children->next, "cp"))
+        {
+          if (kind)
+            {
+              *kind = svn_fs__copy_kind_copy;
+            }
+          return 1;
+        }
+      else if (svn_fs__matches_atom (skel->children->next, "mv"))
+        {
+          if (kind)
+            {
+              *kind = svn_fs__copy_kind_move;
+            }
+          return 1;
+        }
+    }
+  return 0;
 }
 
 
 static int
 is_valid_change_skel (skel_t *skel, svn_fs_path_change_kind_t *kind)
 {
-  if ((svn_fs__list_length (skel) == 5)
+  if ((svn_fs__list_length (skel) == 5
+       || (svn_fs__list_length (skel) == 6
+           && skel->children->next->next->next->next->next->is_atom))
       && svn_fs__matches_atom (skel->children, "change")
       && skel->children->next->is_atom
       && skel->children->next->next->is_atom
@@ -317,6 +340,12 @@ is_valid_change_skel (skel_t *skel, svn_fs_path_change_kind_t *kind)
         {
           if (kind)
             *kind = svn_fs_path_change_modify;
+          return 1;
+        }
+      if (svn_fs__matches_atom (kind_skel, "moved"))
+        {
+          if (kind)
+            *kind = svn_fs_path_change_moved;
           return 1;
         }
     }
@@ -634,28 +663,32 @@ svn_fs__parse_copy_skel (svn_fs__copy_t **copy_p,
                          apr_pool_t *pool)
 {
   svn_fs__copy_t *copy;
+  svn_fs__copy_kind_t kind;
 
   /* Validate the skel. */
-  if (! is_valid_copy_skel (skel))
+  if (! is_valid_copy_skel (skel, &kind))
     return skel_err ("copy");
 
   /* Create the returned structure */
   copy = apr_pcalloc (pool, sizeof (*copy));
 
+  /* COPY-TYPE */
+  copy->kind = kind;
+  
   /* SRC-PATH */
   copy->src_path = apr_pstrmemdup (pool,
-                                   skel->children->next->data,
-                                   skel->children->next->len);
+                                   skel->children->next->next->data,
+                                   skel->children->next->next->len);
 
   /* SRC-TXN-ID */
   copy->src_txn_id = apr_pstrmemdup (pool,
-                                     skel->children->next->next->data,
-                                     skel->children->next->next->len);
+                                     skel->children->next->next->next->data,
+                                     skel->children->next->next->next->len);
 
   /* DST-NODE-ID */
   copy->dst_noderev_id 
-    = svn_fs_parse_id (skel->children->next->next->next->data,
-                       skel->children->next->next->next->len, pool);
+    = svn_fs_parse_id (skel->children->next->next->next->next->data,
+                       skel->children->next->next->next->next->len, pool);
 
   /* Return the structure. */
   *copy_p = copy;
@@ -738,6 +771,15 @@ svn_fs__parse_change_skel (svn_fs__change_t **change_p,
   /* PROP-MOD */
   if (skel->children->next->next->next->next->len)
     change->prop_mod = 1;
+
+  /* PATH */
+  if (skel->children->next->next->next->next->next)
+    {
+      change->path =
+        apr_pstrmemdup (pool,
+                        skel->children->next->next->next->next->next->data,
+                        skel->children->next->next->next->next->next->len);
+    }
 
   /* Return the structure. */
   *change_p = change;
@@ -1111,11 +1153,21 @@ svn_fs__unparse_copy_skel (skel_t **skel_p,
   else
     svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), skel);
 
+  /* COPY-TYPE */
+  if (copy->kind == svn_fs__copy_kind_move)
+    {
+      svn_fs__prepend (svn_fs__str_atom ("mv", pool), skel);
+    }
+  else 
+    {
+      svn_fs__prepend (svn_fs__str_atom ("cp", pool), skel);
+    }
+
   /* "copy" */
   svn_fs__prepend (svn_fs__str_atom ("copy", pool), skel);
 
   /* Validate and return the skel. */
-  if (! is_valid_copy_skel (skel))
+  if (! is_valid_copy_skel (skel, NULL))
     return skel_err ("copy");
   *skel_p = skel;
   return SVN_NO_ERROR;
@@ -1177,6 +1229,9 @@ svn_fs__unparse_change_skel (skel_t **skel_p,
   /* Create the skel. */
   skel = svn_fs__make_empty_list (pool);
 
+  if (change->path)
+    svn_fs__prepend (svn_fs__str_atom (change->path, pool), skel);
+
   /* PROP-MOD */
   if (change->prop_mod)
     svn_fs__prepend (svn_fs__str_atom ("1", pool), skel);
@@ -1203,6 +1258,9 @@ svn_fs__unparse_change_skel (skel_t **skel_p,
       break;
     case svn_fs_path_change_replace:
       svn_fs__prepend (svn_fs__str_atom ("replace", pool), skel);
+      break;
+    case svn_fs_path_change_moved:
+      svn_fs__prepend (svn_fs__str_atom ("moved", pool), skel);
       break;
     case svn_fs_path_change_modify:
     default:

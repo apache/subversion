@@ -283,14 +283,22 @@ svn_fs__bdb_changes_fetch (apr_hash_t **changes_p,
       if (err)
         goto cleanup;
 
-      SVN_ERR (svn_fs__dag_get_node(&node, fs, change->noderev_id,
-                                    trail));
-      SVN_ERR (svn_fs__dag_get_committed_path (&change_path, node, trail));
+      if (change->path)
+        {
+          change_path = change->path;
+        }
+      else
+        {
+          SVN_ERR (svn_fs__dag_get_node(&node, fs, change->noderev_id,
+                                        trail));
+          SVN_ERR (svn_fs__dag_get_committed_path (&change_path, node, trail));
+        }
+      
       /* ... and merge it with our return hash.  */
       SVN_ERR (fold_change (changes,
                             svn_fs__canonicalize_abspath (change_path,
                                                           trail->pool),
-                            change));
+                            change));       
 
       /* Advance the cursor to the next record with this same KEY, and
          fetch that record. */

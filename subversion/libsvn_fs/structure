@@ -507,7 +507,7 @@ functionality (and with no particular sort order), and maps the
 one-to-many relationship of a transaction ID to a "change" item.
 Change items are skels of the form:
 
-   ("change" ID CHANGE-KIND TEXT-MOD PROP-MOD)
+   ("change" ID CHANGE-KIND TEXT-MOD PROP-MOD [PATH])
 
 where:
 
@@ -516,17 +516,24 @@ where:
 
    * CHANGE-KIND is one of the following:
 
-     - "add"     : PATH/ID was added to the filesystem.
-     - "delete"  : PATH/ID was removed from the filesystem.
-     - "replace" : PATH/ID was removed, then re-added to the filesystem.
-     - "modify"  : PATH/ID was otherwise modified.
-     - "reset"   : Ignore any previous changes for PATH/ID in this txn.
+     - "add"       : ID.COMMIT-PATH was added to the filesystem.
+     - "delete"    : If PATH exists then PATH was removed from the
+                     filesystem, otherwise ID.COMMIT-PATH was
+                     removed. 
+     - "replace"   : Something at ID.COMMIT-PATH was removed, then ID
+                     was added to the filesystem.
+     - "modify"    : ID.COMMIT-PATH was otherwise modified.
+     - "reset"     : Ignore any previous changes for ID in this txn.
+     - "moved"     : ID was moved from PATH to ID.COMMIT-PATH.
 
    * TEXT-MOD is a bit specifying whether or not the properties of
      this node where modified.
 
    * PROP-MOD is a bit specifying whether or not the properties of
      this node where modified.
+
+   * PATH is the path that a change that can't rely on
+     ID.COMMIT-PATH occurred on.
 
 In order to fully describe the changes made to any given path as part
 of a single transaction, one must read all the change items associated
@@ -548,7 +555,7 @@ form.
 The Berkeley DB `copies' table records all filesystem copies.  Every
 key in this table is copy ID, and every value is a skel of the form:
 
-   ("copy" SRC-PATH SRC-TXN DST-NODE-ID)
+   ("copy" COPY-TYPE SRC-PATH SRC-TXN DST-NODE-ID)
 
 where:
 
@@ -557,6 +564,9 @@ where:
 
    * DST-NODE-ID represents the new node revision created as a result
      of the copy.
+
+   * COPY-TYPE is either "cp" or "mv" which designates whether this
+     entry represents a copy or a move.
 
 As the sole exception to the rule above, the `copies' table always has
 one entry whose key is `next-id', and whose value is the lowest copy ID
@@ -756,15 +766,16 @@ Transactions:
 
 Changes:
 
-                 CHANGE ::= ("change" ID CHANGE-KIND TEXT-MOD PROP-MOD) ;
-            CHANGE-KIND ::= "add" | "delete" | "replace" | "modify" ;
+                 CHANGE ::= ("change" ID CHANGE-KIND TEXT-MOD PROP-MOD [PATH]) ;
+            CHANGE-KIND ::= "add" | "delete" | "replace" | "modify" 
+			    | "reset" | "moved" 
                TEXT-MOD ::= atom ;
                PROP-MOD ::= atom ;
 
-
 Copies:
 
-                   COPY ::= ("copy" SRC-PATH SRC-TXN DST-NODE-ID)
+                   COPY ::= ("copy" COPY-TYPE SRC-PATH SRC-TXN DST-NODE-ID)
+              COPY-TYPE ::= "cp" | "mv"
                SRC-PATH ::= atom ;
                 SRC-REV ::= TXN ;
             DST-NODE-ID ::= NODE-REV-ID ;
@@ -773,7 +784,7 @@ Copies:
 Entries lists:
 
                 ENTRIES ::= (ENTRY ...) ;
-                  ENTRY ::= (NAME ID) ;
+                  ENTRY ::= (NAME ID [RENAME-TO-TXN-ID]) ;
                    NAME ::= atom ;
 
 

@@ -112,6 +112,7 @@ add_standard_changes (svn_fs_t *fs,
       change.kind = string_to_kind (standard_changes[i][3]);
       change.text_mod = standard_changes[i][4] ? 1 : 0;
       change.prop_mod = standard_changes[i][5] ? 1 : 0;
+      change.path = NULL;
 
       /* Set up transaction baton. */
       args.fs = fs;
@@ -151,6 +152,7 @@ add_standard_fs_changes (svn_fs_t *fs,
       change.kind = string_to_kind (standard_changes[i][3]);
       change.text_mod = standard_changes[i][4] ? 1 : 0;
       change.prop_mod = standard_changes[i][5] ? 1 : 0;
+      change.path = NULL;
 
       if (strcmp(last_key, standard_changes[i][0]) != 0)
         {

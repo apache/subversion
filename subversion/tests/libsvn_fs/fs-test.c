@@ -2692,6 +2692,357 @@ copy_test (const char **msg,
 
 
 static svn_error_t *
+rename_test (const char **msg,
+             svn_boolean_t msg_only,
+             apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t after_rev;
+  const svn_fs_id_t *id_before, *id_after;
+  svn_string_t *s1, *s2;
+
+  *msg = "rename nodes";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Prepare a filesystem. */
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-rename-test", pool));
+
+  /* First txn, create and commit the greek tree. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* Second txn, rename the file A/D/G/pi to A/D/H/pi2. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_node_id (&id_before, rev_root, "A/D/G/pi", pool));
+  svn_fs_close_root (rev_root);
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_rename (txn_root, "A/D/G/pi", "A/D/H/pi2", pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_node_id (&id_after, rev_root, "A/D/H/pi2", pool));
+  /* Because pi and pi2 are on the same CopyID, the only allowed
+     difference is TxnIDs. */
+  s1 = svn_fs_unparse_id (id_before, pool);
+  s2 = svn_fs_unparse_id (id_after, pool);
+
+  if (strcmp (s1->data, "e.0.1") != 0)
+    {
+      return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                                "A/D/G/pi to A/D/H/pi2 rename expected pi: "
+                                "x.y.1, got: %s", s1->data);
+    }
+  if (strcmp (s2->data, "e.0.2") != 0)
+    {
+      return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                                "A/D/G/pi to A/D/H/pi2 rename expected pi2: "
+                                "x.y.1, got: %s", s1->data);
+
+    }
+  
+  {
+    static svn_test__tree_entry_t expected_entries[] = {
+      /* path, contents (0 = dir) */
+      { "iota",        "This is the file 'iota'.\n" },
+      { "A",           0 },
+      { "A/mu",        "This is the file 'mu'.\n" },
+      { "A/B",         0 },
+      { "A/B/lambda",  "This is the file 'lambda'.\n" },
+      { "A/B/E",       0 },
+      { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",  "This is the file 'beta'.\n" },
+      { "A/B/F",       0 },
+      { "A/C",         0 },
+      { "A/D",         0 },
+      { "A/D/gamma",   "This is the file 'gamma'.\n" },
+      { "A/D/G",       0 },
+      { "A/D/G/rho",   "This is the file 'rho'.\n" },
+      { "A/D/G/tau",   "This is the file 'tau'.\n" },
+      { "A/D/H",       0 },
+      { "A/D/H/chi",   "This is the file 'chi'.\n" },
+      { "A/D/H/pi2",   "This is the file 'pi'.\n" },
+      { "A/D/H/psi",   "This is the file 'psi'.\n" },
+      { "A/D/H/omega", "This is the file 'omega'.\n" }
+    };
+    SVN_ERR (svn_test__validate_tree (rev_root, expected_entries, 20, pool));
+  }
+  svn_fs_close_root (rev_root);
+
+  /* Third txn, rename the directory A/B/E to A/B/F/E. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_node_id (&id_before, rev_root, "A/B/E", pool));
+  svn_fs_close_root (rev_root);
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_rename (txn_root, "A/B/E", "A/B/F/E", pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_node_id (&id_after, rev_root, "A/B/F/E", pool));
+  /* The required difference between directories is CopyID and TxnID. */
+  s1 = svn_fs_unparse_id (id_before, pool);
+  s2 = svn_fs_unparse_id (id_after, pool);
+
+  if (strcmp (s1->data, "6.0.1") != 0)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "A/B/E to A/B/F/E moved expected A/B/E: x.y.3 "
+                              "got: %s", s2->data);
+  if (strcmp (s2->data, "6.1.3") != 0)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "A/B/E to A/B/F/E moved expected A/B/F/E: x.z.3 "
+                              "got: %s", s2->data);
+  {
+    static svn_test__tree_entry_t expected_entries[] = {
+      /* path, contents (0 = dir) */
+      { "iota",          "This is the file 'iota'.\n" },
+      { "A",             0 },
+      { "A/mu",          "This is the file 'mu'.\n" },
+      { "A/B",           0 },
+      { "A/B/lambda",    "This is the file 'lambda'.\n" },
+      { "A/B/F",         0 },
+      { "A/B/F/E",       0 },
+      { "A/B/F/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/F/E/beta",  "This is the file 'beta'.\n" },
+      { "A/C",           0 },
+      { "A/D",           0 },
+      { "A/D/gamma",     "This is the file 'gamma'.\n" },
+      { "A/D/G",         0 },
+      { "A/D/G/rho",     "This is the file 'rho'.\n" },
+      { "A/D/G/tau",     "This is the file 'tau'.\n" },
+      { "A/D/H",         0 },
+      { "A/D/H/chi",     "This is the file 'chi'.\n" },
+      { "A/D/H/pi2",     "This is the file 'pi'.\n" },
+      { "A/D/H/psi",     "This is the file 'psi'.\n" },
+      { "A/D/H/omega",   "This is the file 'omega'.\n" }
+    };
+    SVN_ERR (svn_test__validate_tree (rev_root, expected_entries, 20, pool));
+  }
+  svn_fs_close_root (rev_root);
+  
+  /* Fourth txn, rename the directory A/D/H to A/D. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_node_id (&id_before, rev_root, "A/D/H", pool));
+  svn_fs_close_root (rev_root);
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_rename (txn_root, "A/D/H", "A/D", pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_node_id (&id_after, rev_root, "A/D", pool));
+  s1 = svn_fs_unparse_id (id_before, pool);
+  s2 = svn_fs_unparse_id (id_after, pool);
+  if (strcmp (s1->data, "h.0.2") != 0)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "A/D/H to A/D moved expected A/D/H: h.0.2 "
+                              "got: %s", s2->data);
+  if (strcmp (s2->data, "h.2.4") != 0)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "A/D/H to A/D moved expected A/D: h.2.4 "
+                              "got: %s", s2->data);
+  
+  {
+    static svn_test__tree_entry_t expected_entries[] = {
+      /* path, contents (0 = dir) */
+      { "iota",          "This is the file 'iota'.\n" },
+      { "A",             0 },
+      { "A/mu",          "This is the file 'mu'.\n" },
+      { "A/B",           0 },
+      { "A/B/lambda",    "This is the file 'lambda'.\n" },
+      { "A/B/F",         0 },
+      { "A/B/F/E",       0 },
+      { "A/B/F/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/F/E/beta",  "This is the file 'beta'.\n" },
+      { "A/C",           0 },
+      { "A/D",           0 },
+      { "A/D/chi",       "This is the file 'chi'.\n" },
+      { "A/D/pi2",       "This is the file 'pi'.\n" },
+      { "A/D/psi",       "This is the file 'psi'.\n" },
+      { "A/D/omega",     "This is the file 'omega'.\n" }
+    };
+    SVN_ERR (svn_test__validate_tree (rev_root, expected_entries, 15, pool));
+  }
+  svn_fs_close_root (rev_root);
+
+  /* Fifth txn, rename the directory A/C to A/D/omega. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_node_id (&id_before, rev_root, "A/C", pool));
+  svn_fs_close_root (rev_root);
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_rename (txn_root, "A/C", "A/D/omega", pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_node_id (&id_after, rev_root, "A/D/omega", pool));
+  s1 = svn_fs_unparse_id (id_before, pool);
+  s2 = svn_fs_unparse_id (id_after, pool);
+  if (strcmp (s1->data, "a.0.1") != 0)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "A/C to A/D/omega moved expected A/C: a.0.1 "
+                              "got: %s", s2->data);
+  if (strcmp (s2->data, "a.3.5") != 0)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "A/C to A/D/omega moved expected A/D/omega: a.3.5 "
+                              "got: %s", s2->data);
+  {
+    static svn_test__tree_entry_t expected_entries[] = {
+      /* path, contents (0 = dir) */
+      { "iota",          "This is the file 'iota'.\n" },
+      { "A",             0 },
+      { "A/mu",          "This is the file 'mu'.\n" },
+      { "A/B",           0 },
+      { "A/B/lambda",    "This is the file 'lambda'.\n" },
+      { "A/B/F",         0 },
+      { "A/B/F/E",       0 },
+      { "A/B/F/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/F/E/beta",  "This is the file 'beta'.\n" },
+      { "A/D",           0 },
+      { "A/D/chi",       "This is the file 'chi'.\n" },
+      { "A/D/pi2",       "This is the file 'pi'.\n" },
+      { "A/D/psi",       "This is the file 'psi'.\n" },
+      { "A/D/omega",     0 }
+    };
+    SVN_ERR (svn_test__validate_tree (rev_root, expected_entries, 14, pool));
+  }
+  svn_fs_close_root (rev_root);
+
+  /* Sixth txn, rename the file A/B/F/E/beta to A/B/F. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_node_id (&id_before, rev_root, "A/B/F/E/beta", pool));
+  svn_fs_close_root (rev_root);
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_rename (txn_root, "A/B/F/E/beta", "A/B/F", pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_node_id (&id_after, rev_root, "A/B/F", pool));
+  s1 = svn_fs_unparse_id (id_before, pool);
+  s2 = svn_fs_unparse_id (id_after, pool);
+  if (strcmp (s1->data, "8.0.1") != 0)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "A/B/F/E/beta to A/B/F moved expected A/B/F/E/beta: 8.0.1 "
+                              "got: %s", s2->data);
+  if (strcmp (s2->data, "8.4.6") != 0)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "A/B/F/E/beta to A/B/F moved expected A/F: 8.4.6 "
+                              "got: %s", s2->data);
+  {
+    static svn_test__tree_entry_t expected_entries[] = {
+      /* path, contents (0 = dir) */
+      { "iota",          "This is the file 'iota'.\n" },
+      { "A",             0 },
+      { "A/mu",          "This is the file 'mu'.\n" },
+      { "A/B",           0 },
+      { "A/B/lambda",    "This is the file 'lambda'.\n" },
+      { "A/B/F",         "This is the file 'beta'.\n" },
+      { "A/D",           0 },
+      { "A/D/chi",       "This is the file 'chi'.\n" },
+      { "A/D/pi2",       "This is the file 'pi'.\n" },
+      { "A/D/psi",       "This is the file 'psi'.\n" },
+      { "A/D/omega",     0 }
+    };
+    SVN_ERR (svn_test__validate_tree (rev_root, expected_entries, 11, pool));
+  }
+  svn_fs_close_root (rev_root);
+
+  /* Seventh transaction: Do a cross-CopyID file move for A/mu -> A/D/mu. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_node_id (&id_before, rev_root, "A/mu", pool));
+  svn_fs_close_root (rev_root);
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_rename (txn_root, "A/mu", "A/D/mu", pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_node_id (&id_after, rev_root, "A/D/mu", pool));
+  /* A/D/mu's CopyID must not be A/D's, or A/mu's. */
+  s1 = svn_fs_unparse_id (id_before, pool);
+  s2 = svn_fs_unparse_id (id_after, pool);
+  if (strcmp (s1->data, "3.0.1") != 0)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "A/mu to A/D/mu moved expected A/mu: 3.0.5 "
+                              "got: %s", s2->data);
+  if (strcmp (s2->data, "3.5.7") != 0)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "A/mu to A/D/mu moved expected A/D/mu: 3.5.7 "
+                              "got: %s", s2->data);
+  {
+    static svn_test__tree_entry_t expected_entries[] = {
+      /* path, contents (0 = dir) */
+      { "iota",          "This is the file 'iota'.\n" },
+      { "A",             0 },
+      { "A/B",           0 },
+      { "A/B/lambda",    "This is the file 'lambda'.\n" },
+      { "A/B/F",         "This is the file 'beta'.\n" },
+      { "A/D",           0 },
+      { "A/D/chi",       "This is the file 'chi'.\n" },
+      { "A/D/mu",        "This is the file 'mu'.\n" },
+      { "A/D/pi2",       "This is the file 'pi'.\n" },
+      { "A/D/psi",       "This is the file 'psi'.\n" },
+      { "A/D/omega",     0 }
+    };
+    SVN_ERR (svn_test__validate_tree (rev_root, expected_entries, 11, pool));
+  }
+  svn_fs_close_root (rev_root);
+
+  /* Eigth transaction: Do a cross-CopyID directory move for A/B -> A/D/B. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_node_id (&id_before, rev_root, "A/B", pool));
+  svn_fs_close_root (rev_root);
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_rename (txn_root, "A/B", "A/D/B", pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_node_id (&id_after, rev_root, "A/D/B", pool));
+  /* A/D/B's CopyID must not be A/D's, or A/B's. */
+  s1 = svn_fs_unparse_id (id_before, pool);
+  s2 = svn_fs_unparse_id (id_after, pool);
+  if (strcmp (s1->data, "4.0.6") != 0)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "A/mu to A/D/mu moved expected A/mu: 3.0.5 "
+                              "got: %s", s2->data);
+  if (strcmp (s2->data, "4.6.8") != 0)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "A/mu to A/D/mu moved expected A/D/mu: 3.6.8 "
+                              "got: %s", s2->data);
+  {
+    static svn_test__tree_entry_t expected_entries[] = {
+      /* path, contents (0 = dir) */
+      { "iota",          "This is the file 'iota'.\n" },
+      { "A",             0 },
+      { "A/D",           0 },
+      { "A/D/B",           0 },
+      { "A/D/B/lambda",    "This is the file 'lambda'.\n" },
+      { "A/D/B/F",         "This is the file 'beta'.\n" },
+      { "A/D/chi",       "This is the file 'chi'.\n" },
+      { "A/D/mu",        "This is the file 'mu'.\n" },
+      { "A/D/pi2",       "This is the file 'pi'.\n" },
+      { "A/D/psi",       "This is the file 'psi'.\n" },
+      { "A/D/omega",     0 }
+    };
+    SVN_ERR (svn_test__validate_tree (rev_root, expected_entries, 11, pool));
+  }
+  svn_fs_close_root (rev_root);
+
+  
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 link_test (const char **msg,
            svn_boolean_t msg_only,
            apr_pool_t *pool)
@@ -5520,14 +5871,18 @@ branch_test (const char **msg,
                                         "Edited text.", spool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/G2/rho", 
                                         "Edited text.", spool));
+  /* rho2 gets CopyID 4 for implicit branch creation on rho2 */
   SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/G2/rho2", 
                                         "Edited text.", spool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "A/D2/G/rho", 
                                         "Edited text.", spool));
+  /* rho2 gets CopyID 5 for implicit branch creation on rho2 */
   SVN_ERR (svn_test__set_file_contents (txn_root, "A/D2/G/rho2", 
                                         "Edited text.", spool));
+  /* rho gets CopyID 6 for implicit branch creation on G2 */
   SVN_ERR (svn_test__set_file_contents (txn_root, "A/D2/G2/rho", 
                                         "Edited text.", spool));
+  /* rho2 gets CopyID 7 for implicit branch creation on rho2 */
   SVN_ERR (svn_test__set_file_contents (txn_root, "A/D2/G2/rho2", 
                                         "Edited text.", spool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
@@ -6307,6 +6662,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (fetch_youngest_rev),
     SVN_TEST_PASS (basic_commit),
     SVN_TEST_PASS (copy_test),
+    SVN_TEST_PASS (rename_test),
     SVN_TEST_XFAIL (link_test),
     SVN_TEST_PASS (merging_commit),
     SVN_TEST_PASS (commit_date),

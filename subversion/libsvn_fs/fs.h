@@ -221,10 +221,19 @@ typedef struct
   } contents;
 } svn_fs__representation_t;
 
+/*** Copy Kind ***/
+typedef enum
+{
+  svn_fs__copy_kind_copy = 0,
+  svn_fs__copy_kind_move,
+} svn_fs__copy_kind_t;
 
 /*** Copy ***/
 typedef struct
 {
+  /* Copy kind. */
+  svn_fs__copy_kind_t kind;
+  
   /* Path of copy source. */
   const char *src_path;
 
@@ -249,6 +258,9 @@ typedef struct
   /* Text or property mods? */
   int text_mod;
   int prop_mod;
+
+  /* Path of change. */
+  const char *path;
 
 } svn_fs__change_t;
 

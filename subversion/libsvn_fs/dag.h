@@ -19,7 +19,7 @@
 #define SVN_LIBSVN_FS_DAG_H
 
 #include "svn_fs.h"
-
+#include "fs.h"
 #include "trail.h"
 
 #ifdef __cplusplus
@@ -334,14 +334,15 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
    TRAIL.  PARENT must be mutable.  NAME must be a single path
    component; it cannot be a slash-separated directory path.  If the
    node being deleted is a mutable directory, remove all mutable nodes
-   reachable from it.  TXN_ID is the Subversion transaction under
-   which this occurs.
+   reachable from it when DELETE_MUTABLES is true.  TXN_ID is the
+   Subversion transaction under which this occurs.
 
    If return SVN_ERR_FS_NO_SUCH_ENTRY, then there is no entry NAME in
    PARENT.  */
 svn_error_t *svn_fs__dag_delete_tree (dag_node_t *parent,
                                       const char *name,
                                       const char *txn_id,
+                                      svn_boolean_t delete_mutables,
                                       trail_t *trail);
 
 
@@ -459,14 +460,17 @@ svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
    checked.  
 
    If PRESERVE_HISTORY is false, FROM_PATH and FROM_REV are ignored.  */
-svn_error_t *svn_fs__dag_copy (dag_node_t *to_node,
+svn_error_t *svn_fs__dag_copy (const svn_fs_id_t ** to_id,
+                               dag_node_t *to_node,
                                const char *entry,
                                dag_node_t *from_node,
                                svn_boolean_t preserve_history,
                                svn_revnum_t from_rev,
+                               const char *from_txn_id,
                                const char *from_path,
                                const char *txn_id,
                                const char *to_path,
+                               svn_fs__copy_kind_t kind,
                                trail_t *trail);
 
 

@@ -395,7 +395,8 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
     return svn_error_createf 
       (SVN_ERR_FS_CORRUPT, 0,
        "initial copy id not `0' in filesystem `%s'", fs->path);
-  SVN_ERR (svn_fs__bdb_create_copy (copy_id, fs, NULL, NULL, root_id, trail));
+  SVN_ERR (svn_fs__bdb_create_copy (copy_id, fs, svn_fs__copy_kind_copy,
+                                    NULL, NULL, root_id, trail));
 
   /* Link it into filesystem revision 0. */
   revision.txn_id = txn_id;
@@ -952,6 +953,7 @@ delete_entry (dag_node_t *parent,
               const char *name,
               svn_boolean_t require_empty,
               const char *txn_id,
+              svn_boolean_t delete_mutables,
               trail_t *trail)
 {
   svn_fs__node_revision_t *parent_noderev;
@@ -1044,8 +1046,12 @@ delete_entry (dag_node_t *parent,
            "Attempt to delete non-empty directory `%s'.", name);
     }
 
-  /* If mutable, remove it and any mutable children from db. */
-  SVN_ERR (svn_fs__dag_delete_if_mutable (parent->fs, id, txn_id, trail));
+  if (delete_mutables)
+    {
+      /* If mutable, remove it and any mutable children from db. */
+      SVN_ERR (svn_fs__dag_delete_if_mutable (parent->fs, id,
+                                              txn_id, trail));
+    }
         
   /* Remove this entry from its parent's entries list. */
   apr_hash_set (entries, name, APR_HASH_KEY_STRING, NULL);
@@ -1077,7 +1083,7 @@ svn_fs__dag_delete (dag_node_t *parent,
                     const char *txn_id,
                     trail_t *trail)
 {
-  return delete_entry (parent, name, TRUE, txn_id, trail);
+  return delete_entry (parent, name, TRUE, txn_id, TRUE, trail);
 }
 
 
@@ -1085,9 +1091,10 @@ svn_error_t *
 svn_fs__dag_delete_tree (dag_node_t *parent,
                          const char *name,
                          const char *txn_id,
+                         svn_boolean_t delete_mutables,
                          trail_t *trail)
 {
-  return delete_entry (parent, name, FALSE, txn_id, trail);
+  return delete_entry (parent, name, FALSE, txn_id, delete_mutables, trail);
 }
 
 
@@ -1485,14 +1492,17 @@ svn_fs__dag_open (dag_node_t **child_p,
 
 
 svn_error_t *
-svn_fs__dag_copy (dag_node_t *to_node,
+svn_fs__dag_copy (const svn_fs_id_t ** to_id,
+                  dag_node_t *to_node,
                   const char *entry,
                   dag_node_t *from_node,
                   svn_boolean_t preserve_history,
                   svn_revnum_t from_rev,
+                  const char *from_txn_id,
                   const char *from_path,
                   const char *txn_id,
                   const char *to_path,
+                  svn_fs__copy_kind_t kind,
                   trail_t *trail)
 {
   const svn_fs_id_t *id;
@@ -1503,7 +1513,6 @@ svn_fs__dag_copy (dag_node_t *to_node,
       const char *copy_id;
       svn_fs_t *fs = svn_fs__dag_get_fs (from_node);
       const svn_fs_id_t *src_id = svn_fs__dag_get_id (from_node);
-      const char *from_txn_id = NULL;
 
       /* Make a copy of the original node revision. */
       SVN_ERR (get_node_revision (&from_noderev, from_node, trail));
@@ -1521,13 +1530,16 @@ svn_fs__dag_copy (dag_node_t *to_node,
                                          copy_id, txn_id, trail));
 
       /* Translate FROM_REV into a transaction ID. */
-      SVN_ERR (svn_fs__rev_get_txn_id (&from_txn_id, fs, from_rev, trail));
+      if (from_rev != SVN_INVALID_REVNUM)
+        {
+          SVN_ERR (svn_fs__rev_get_txn_id (&from_txn_id, fs, from_rev, trail));
+        }
 
       /* Now that we've done the copy, we need to add the information
          about the copy to the `copies' table, using the COPY_ID we
          reserved above.  */
       SVN_ERR (svn_fs__bdb_create_copy 
-               (copy_id, fs, 
+               (copy_id, fs, kind,
                 svn_fs__canonicalize_abspath (from_path, trail->pool), 
                 from_txn_id, id, trail));
 
@@ -1544,6 +1556,8 @@ svn_fs__dag_copy (dag_node_t *to_node,
   /* Set the entry in to_node to the new id. */
   SVN_ERR (svn_fs__dag_set_entry (to_node, entry, id, txn_id, trail));
 
+  /* Let our callers know the decided upon id. */
+  *to_id = id;
   return SVN_NO_ERROR;
 }
 

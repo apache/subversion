@@ -360,9 +360,13 @@ typedef struct parent_path_t
   char *entry;
 
   /* The path that this entry was last committed at for a lazy
-     branch point. */
+     branch point. This path is used as the new CopyId's source
+     path. */
   const char *last_path;
-    
+
+  /* How to handle CopyID inheritance. */
+  copy_id_inherit_t inherit;
+  
   /* The parent of NODE, or zero if NODE is the root directory.  */
   struct parent_path_t *parent;
   
@@ -377,6 +381,7 @@ make_parent_path (dag_node_t *node,
                   char *entry,
                   const svn_fs_id_t *last_branch_id,
                   svn_boolean_t in_lazy_land,
+                  copy_id_inherit_t inherit,
                   const char *last_path,
                   parent_path_t *parent,
                   apr_pool_t *pool)
@@ -388,6 +393,7 @@ make_parent_path (dag_node_t *node,
   parent_path->entry = entry;
   parent_path->parent = parent;
   parent_path->last_path = last_path;
+  parent_path->inherit = inherit;
   return parent_path;
 }
 
@@ -404,73 +410,113 @@ get_id_path (const char **path,
 
   SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
   SVN_ERR (svn_fs__dag_get_committed_path (path, node, trail));
-  *path = svn_fs__canonicalize_abspath (*path, trail->pool);
   return SVN_NO_ERROR;
 }
 
 
 /* Sets lazy_p to TRUE if the child_id was not committed at
-   child_path. Sets branch_p to TRUE if the child_id is not
-   lazy and child_id is a branch point. Set
-   last_committed_path if child_id is a lazy branch point.
+   child_path or renamed to child_path. Sets branch_p to TRUE
+   if the child_id is a branch point. Set last_committed_path
+   if child_id is a lazy branch point. Sets inherit_p as
+   appropriate.
 */
 static svn_error_t *
-is_child_lazy_copied (svn_boolean_t *lazy_p,
-                      svn_boolean_t *branch_p,
-                      char **last_committed_path,
-                      svn_fs_t *fs,
-                      const svn_fs_id_t *parent_id,
-                      const svn_fs_id_t *child_id,
-                      const char *child_path,
-                      trail_t *trail)
+compute_parent_path_info (svn_boolean_t *lazy_p,
+                          svn_boolean_t *branch_p,
+                          copy_id_inherit_t *inherit_p,
+                          char **last_committed_path,
+                          svn_fs_t *fs,
+                          const svn_fs_id_t *parent_id,
+                          const svn_fs_id_t *child_id,
+                          const char *child_path,
+                          trail_t *trail)
 {
-  const char *child_committed_path;
+  const char *child_committed_path = NULL;
   svn_fs__copy_t *copy;
-    
+  const char *parent_copy_id, *child_copy_id;
+
+  child_copy_id = svn_fs__id_copy_id (child_id);
+  parent_copy_id = svn_fs__id_copy_id (parent_id);
+
+  /* From this point on, we'll assume that the child will just take
+     its copy ID from its parent. */
+  *inherit_p = copy_id_inherit_parent;
+  *branch_p = FALSE;
+  
   /* If the current CopyID and the child CopyID are different
      then the child is either a branch point, or a lazy copied
      node revision. */
-  if (strcmp (svn_fs__id_copy_id (parent_id),
-              svn_fs__id_copy_id (child_id)) != 0)
+  if (svn_fs__key_compare (parent_copy_id, child_copy_id) != 0)
     {
+      /* If the child is on the same branch that the parent is on, the
+         child should just use the same copy ID that the parent would use.
+         Otherwise, the child might be a rename, or needs to generate a new
+         copy ID to use should it need to be made mutable. */
+      SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, child_copy_id, trail));
       
-      /* The only way to determine laziness is to compare the
-         current path against the committed path. */
-      SVN_ERR (get_id_path (&child_committed_path, fs,
-                            child_id, trail));
-        
-      if (child_committed_path
-          && strcmp (child_path, child_committed_path) == 0)
+      /* See if the child is a branch point */
+      if ((strcmp (svn_fs__id_node_id (copy->dst_noderev_id),
+                   svn_fs__id_node_id (child_id)) == 0
+           && strcmp (svn_fs__id_copy_id (copy->dst_noderev_id),
+                      svn_fs__id_copy_id (child_id)) == 0))
         {
-          /* It's not lazy copied. This means it is a 
-             non-lazy branch point. */
-          /* Assert branch point-ness here. */
           *branch_p = TRUE;
-          *lazy_p = FALSE;
         }
       else
         {
-          /* This is a lazy node revision on this path. */
-          SVN_ERR (svn_fs__bdb_get_copy (&copy, fs,
-                                         svn_fs__id_copy_id (child_id),
-                                         trail));
-          if (strcmp (svn_fs__id_node_id (copy->dst_noderev_id),
-                      svn_fs__id_node_id (child_id)) == 0
-              && strcmp (svn_fs__id_copy_id (copy->dst_noderev_id),
-                         svn_fs__id_copy_id (child_id)) == 0
-              && child_committed_path
-              && last_committed_path)
-            {
-              *last_committed_path = apr_pstrdup (trail->pool,
-                                                  child_committed_path);
-            }
+          *branch_p = FALSE;
+          /* We have to be lazy if we aren't a branch point.
+             we get to inherit our parent CopyID. */
           *lazy_p = TRUE;
+          return SVN_NO_ERROR;
+        }
+
+      if (!(*lazy_p))
+        {
+          /* The way to determine laziness is to compare the
+             current path against the committed path. */
+          SVN_ERR (get_id_path (&child_committed_path, fs,
+                                child_id, trail));
+        
+          if (child_committed_path
+              && strcmp (child_path, child_committed_path) == 0)
+            {
+              /* It's not lazy. This means it is a 
+                 non-lazy branch point. */
+              /* non-lazy branches should keep
+                 their current CopyID. */
+              *inherit_p = copy_id_inherit_self;
+              return SVN_NO_ERROR;
+            }
+          else
+            {
+              *lazy_p = TRUE;
+            }
+        }
+      
+      /* Lazy branches need new CopyIDs. */
+      *inherit_p = copy_id_inherit_new;
+          
+      if (*branch_p == TRUE
+          && last_committed_path != NULL)
+        {
+          if (child_committed_path == NULL)
+            {
+              /* Occasionally a lazy branch point is detected lower in
+                 lazy land. Lazy branch points need someplace to
+                 copy from. */
+              SVN_ERR (get_id_path (&child_committed_path, fs,
+                                    child_id, trail));
+            }
+          
+          /* Lazy branches that need new CopyIDs
+             need somewhere to copy from. */
+          *last_committed_path = apr_pstrdup (trail->pool,
+                                              child_committed_path);
         }
     }
-  else
-    {
-      *lazy_p = FALSE;
-    }
+  /* Otherwise leave *lazy_p set to FALSE */
+  
   return SVN_NO_ERROR;
 }
 
@@ -519,6 +565,17 @@ next_entry_name (const char **next_p,
     }
 }
 
+static const char *
+parent_path_path (parent_path_t *parent_path,
+                  apr_pool_t *pool)
+{
+  const char *path_so_far = "";
+  if (parent_path->parent)
+    path_so_far = parent_path_path (parent_path->parent, pool);
+  return parent_path->entry 
+         ? svn_path_join (path_so_far, parent_path->entry, pool) 
+         : path_so_far;
+}
 
 /* Flags for open_path.  */
 typedef enum open_path_flags_t {
@@ -565,19 +622,31 @@ open_path (parent_path_t **parent_path_p,
   const char *rest; /* The portion of PATH we haven't traversed yet.  */
   const char *canon_path = svn_fs__canonicalize_abspath (path, trail->pool);
   char *last_path = NULL;
-
+  copy_id_inherit_t inherit;
+  const char *common_path;
+  
   /* Make a parent_path item for the root node, using its own current
      copy id.  */
-  SVN_ERR (root_node (&here, root, trail));
-
+  if (*parent_path_p == NULL)
+    {
+      SVN_ERR (root_node (&here, root, trail));
+      parent_path = make_parent_path (here, NULL, last_branch_id, FALSE,
+                                      copy_id_inherit_parent,
+                                      NULL, NULL, pool);
+      common_path = "";
+    }
+  else
+    {
+      parent_path = *parent_path_p;
+      here = parent_path->node;
+      common_path = parent_path_path (parent_path, pool);
+    }
+  
   id = svn_fs__dag_get_id (here);
   if (!(flags & open_path_skip_lazy_detection))
     {
       last_branch_id = id;
     }
-  
-  parent_path = make_parent_path (here, NULL, last_branch_id, FALSE,
-                                  NULL, NULL, pool);
   rest = canon_path + 1; /* skip the leading '/', it saves in iteration */
 
   /* Whenever we are at the top of this loop:
@@ -621,7 +690,8 @@ open_path (parent_path_t **parent_path_p,
                   && (! next || *next == '\0'))
                 {
                   parent_path = make_parent_path (NULL, entry,
-                                                  NULL, in_lazy_land, 
+                                                  NULL, in_lazy_land,
+                                                  copy_id_inherit_parent,
                                                   NULL, parent_path, pool);
                   break;
                 }
@@ -642,39 +712,41 @@ open_path (parent_path_t **parent_path_p,
              actually committed at this path. */
           if (!(flags & open_path_skip_lazy_detection))
             {
+              int length = strlen (canon_path) + 1;
+              char *child_path = apr_palloc (trail->pool, length);
+              svn_boolean_t is_branch = FALSE;
+              char *end = strchr (rest, '/');
               
-              if (!in_lazy_land)
+              if (end == NULL)
                 {
-                  int length = strlen (canon_path) + 1;
-                  char *child_path = apr_palloc (trail->pool, length);
-                  svn_boolean_t is_branch = FALSE;
-                  char *end = strchr (rest, '/');
-                  
-                  if (end == NULL)
+                  memcpy (child_path, canon_path + 1, length);
+                }
+              else
+                {
+                  length = end - canon_path;
+                  memcpy (child_path, canon_path + 1, length);
+                  if (child_path[length - 1] == '/')
                     {
-                      memcpy (child_path, canon_path, length);
+                      child_path[length - 1] = '\0';
                     }
-                  else
-                    {
-                      length = end - canon_path;
-                      memcpy (child_path, canon_path, length);
-                      child_path[length] = '\0';
-                    }
-                    
-                  SVN_ERR (is_child_lazy_copied (&in_lazy_land, &is_branch,
+                }
+
+              child_path = svn_path_join (common_path, child_path, pool);
+              SVN_ERR (compute_parent_path_info (&in_lazy_land, &is_branch,
+                                                 &inherit,
                                                  &last_path, fs, id, child_id,
                                                  child_path, trail));
-                  if (!in_lazy_land && is_branch)
-                    {
-                      /* It must be a branch point. */
-                      last_branch_id = child_id;
-                    }
+              if (!in_lazy_land && is_branch)
+                {
+                  /* It must be a branch point. */
+                  last_branch_id = child_id;
                 }
             }
           
           /* Now, make a parent_path item for CHILD. */
           parent_path = make_parent_path (child, entry, last_branch_id,
-                                          in_lazy_land, last_path, parent_path,
+                                          in_lazy_land, inherit,
+                                          last_path, parent_path,
                                           pool);
         }
       
@@ -693,97 +765,6 @@ open_path (parent_path_t **parent_path_p,
     }
 
   *parent_path_p = parent_path;
-  return SVN_NO_ERROR;
-}
-
-
-static const char *
-parent_path_path (parent_path_t *parent_path,
-                  apr_pool_t *pool)
-{
-  const char *path_so_far = "/";
-  if (parent_path->parent)
-    path_so_far = parent_path_path (parent_path->parent, pool);
-  return parent_path->entry 
-         ? svn_path_join (path_so_far, parent_path->entry, pool) 
-         : path_so_far;
-}
-
-
-
-/* Choose a copy ID inheritance method *INHERIT_P to be used in the
-   event that immutable node CHILD in FS needs to be made mutable.  If
-   the inheritance method is copy_id_inherit_new, also return a
-   *COPY_SRC_PATH on which to base the new copy ID (else return NULL
-   for that path).  CHILD must have a parent (it cannot be the root
-   node), and must be immutable (if it is mutable, it has already
-   inherited its copy ID).  */
-static svn_error_t *
-choose_copy_id (copy_id_inherit_t *inherit_p,
-                const char **copy_src_path,
-                svn_fs_t *fs,
-                parent_path_t *child,
-                trail_t *trail)
-{
-  const svn_fs_id_t *child_id, *parent_id;
-  const char *child_copy_id, *parent_copy_id;
-  svn_fs__copy_t *copy;
-
-  /* Make some assertions about the function input. */
-  assert (child && child->parent);
-
-  /* Initialize some convenience variables. */
-  child_id = svn_fs__dag_get_id (child->node);
-  parent_id = svn_fs__dag_get_id (child->parent->node);
-  child_copy_id = svn_fs__id_copy_id (child_id);
-  parent_copy_id = svn_fs__id_copy_id (parent_id);
-
-  /* From this point on, we'll assume that the child will just take
-     its copy ID from its parent. */
-  *inherit_p = copy_id_inherit_parent;
-  *copy_src_path = NULL;
-
-  /* Special case: if the child's copy ID is '0', use the parent's
-     copy ID. */
-  if (strcmp (child_copy_id, "0") == 0)
-    return SVN_NO_ERROR;  
-
-  /* Compare the copy IDs of the child and its parent.  If they are
-     the same, then the child is already on the same branch as the
-     parent, and should use the same mutability copy ID that the
-     parent will use. */
-  if (svn_fs__key_compare (child_copy_id, parent_copy_id) == 0)
-    return SVN_NO_ERROR;
-
-  /* If the child is on the same branch that the parent is on, the
-     child should just use the same copy ID that the parent would use.
-     Else, the child needs to generate a new copy ID to use should it
-     need to be made mutable.  We will claim that child is on the same
-     branch as its parent if the child itself is not a branch point,
-     or if it is a branch point that we are accessing via its original
-     copy destination path. */
-  SVN_ERR (svn_fs__bdb_get_copy (&copy, fs, child_copy_id, trail));
-  if (!(strcmp (svn_fs__id_node_id (copy->dst_noderev_id),
-                svn_fs__id_node_id (child_id)) == 0
-        && strcmp (svn_fs__id_copy_id (copy->dst_noderev_id),
-                   svn_fs__id_copy_id (child_id)) == 0))
-    return SVN_NO_ERROR;
-
-  /* The parent_path of child already knows whether or not this node
-     was committed on the current path or not. */
-  if (!child->in_lazy_land)
-    {
-       /* We now know that this branch was created on this path, and any
-          change to this node should keep the current CopyID. */
-       *inherit_p = copy_id_inherit_self;
-       return SVN_NO_ERROR;
-    }
-
-  /* We are sure that the child node is an unedited nested
-     branched node.  When it needs to be made mutable, it should claim
-     a new copy ID. */
-  *inherit_p = copy_id_inherit_new;
-  *copy_src_path = child->last_path;
   return SVN_NO_ERROR;
 }
 
@@ -813,19 +794,13 @@ make_path_mutable (svn_fs_root_t *root,
       const svn_fs_id_t *parent_id;
       const svn_fs_id_t *node_id = svn_fs__dag_get_id (parent_path->node);
       const char *copy_id = NULL;
-      const char *copy_src_path;
-      copy_id_inherit_t inherit;
-
-      /* Figure out what type of inheritance to use for our copy ID. */
-      SVN_ERR (choose_copy_id (&inherit, &copy_src_path, fs,
-                               parent_path, trail));
 
       /* We're trying to clone somebody's child.  Make sure our parent
          is mutable.  */
       SVN_ERR (make_path_mutable (root, parent_path->parent, 
                                   error_path, trail));
 
-      switch (inherit)
+      switch (parent_path->inherit)
         {
         case copy_id_inherit_parent:
           parent_id = svn_fs__dag_get_id (parent_path->parent->node);
@@ -855,10 +830,12 @@ make_path_mutable (svn_fs_root_t *root,
          `copies' table entry for it, as well as a notation in the
          transaction that should this transaction be terminated, our
          new copy needs to be removed. */
-      if (inherit == copy_id_inherit_new)
+      if (parent_path->inherit == copy_id_inherit_new)
         {
           const svn_fs_id_t *new_node_id = svn_fs__dag_get_id (clone);
-          SVN_ERR (svn_fs__bdb_create_copy (copy_id, fs, copy_src_path, 
+          SVN_ERR (svn_fs__bdb_create_copy (copy_id, fs,
+                                            svn_fs__copy_kind_copy,
+                                            parent_path->last_path, 
                                             svn_fs__id_txn_id (node_id),
                                             new_node_id, trail));
           SVN_ERR (svn_fs__add_txn_copy (fs, txn_id, copy_id, trail));
@@ -883,7 +860,7 @@ get_dag (dag_node_t **dag_node_p,
          const char *path,
          trail_t *trail)
 {
-  parent_path_t *parent_path;
+  parent_path_t *parent_path = NULL;
 
   /* Call open_path with the skip lazy detection flag, as we
      don't care about that data atm. */
@@ -909,6 +886,7 @@ add_change (svn_fs_t *fs,
             svn_fs_path_change_kind_t change_kind,
             int text_mod,
             int prop_mod,
+            const char *path,
             trail_t *trail)
 {
   svn_fs__change_t change;
@@ -916,6 +894,7 @@ add_change (svn_fs_t *fs,
   change.kind = change_kind;
   change.text_mod = text_mod;
   change.prop_mod = prop_mod;
+  change.path = path;
   return svn_fs__bdb_changes_add (fs, txn_id, &change, trail);
 }
 
@@ -973,7 +952,7 @@ static svn_error_t *
 txn_body_node_created_rev (void *baton, trail_t *trail)
 {
   struct node_created_rev_args *args = baton;
-  parent_path_t *parent_path;
+  parent_path_t *parent_path = NULL;
   svn_fs__copy_t *copy;
   svn_fs__transaction_t *txn;
 
@@ -1239,7 +1218,7 @@ static svn_error_t *
 txn_body_node_proplist (void *baton, trail_t *trail)
 {
   struct node_proplist_args *args = baton;
-  parent_path_t *parent_path;
+  parent_path_t *parent_path = NULL;
   apr_hash_t *proplist;
 
   SVN_ERR (open_path (&parent_path, args->root, args->path,
@@ -1283,7 +1262,7 @@ txn_body_change_node_prop (void *baton,
                            trail_t *trail)
 {
   struct change_node_prop_args *args = baton;
-  parent_path_t *parent_path;
+  parent_path_t *parent_path = NULL;
   apr_hash_t *proplist;
   const char *txn_id = svn_fs_txn_root_name (args->root, trail->pool);
 
@@ -1311,7 +1290,7 @@ txn_body_change_node_prop (void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (args->root), txn_id, 
                        svn_fs__dag_get_id (parent_path->node),
-                       svn_fs_path_change_modify, 0, 1, trail));
+                       svn_fs_path_change_modify, 0, 1, NULL, trail));
   
   return SVN_NO_ERROR;
 }
@@ -1356,6 +1335,9 @@ txn_body_props_changed (void *baton, trail_t *trail)
 {
   struct things_changed_args *args = baton;
   parent_path_t *parent_path_1, *parent_path_2;
+
+  parent_path_1 = NULL;
+  parent_path_2 = NULL;
 
   SVN_ERR (open_path (&parent_path_1, args->root1, args->path1,
                       open_path_skip_lazy_detection, trail));
@@ -1651,12 +1633,12 @@ undelete_change (svn_fs_t *fs,
       /* If so, reset the changes and re-add everything except the
          deletion. */
       SVN_ERR (add_change (fs, txn_id, NULL, 
-                           svn_fs_path_change_reset, 0, 0, trail));
+                           svn_fs_path_change_reset, 0, 0, NULL, trail));
       if (this_change->change_kind == svn_fs_path_change_replace)
         {
           SVN_ERR (add_change (fs, txn_id, this_change->node_rev_id, 
                                svn_fs_path_change_add, this_change->text_mod, 
-                               this_change->prop_mod, trail));
+                               this_change->prop_mod, NULL, trail));
         }
     }
   else
@@ -2098,7 +2080,7 @@ merge (svn_stringbuf_t *conflict_p,
                    "unexpected immutable node at \"%s\"", target_path);
               
               SVN_ERR (svn_fs__dag_delete_tree (target, t_entry->name, 
-                                                txn_id, trail));
+                                                txn_id, TRUE, trail));
 
               /* Seems cleanest to remove it from the target entries
                  hash now, even though no code would break if we
@@ -2605,7 +2587,7 @@ txn_body_dir_entries (void *baton,
                       trail_t *trail)
 {
   struct dir_entries_args *args = baton;
-  parent_path_t *parent_path;
+  parent_path_t *parent_path = NULL;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_revnum_t last_revision = SVN_INVALID_REVNUM; /* silence gcc unitialised */
@@ -2613,7 +2595,7 @@ txn_body_dir_entries (void *baton,
   svn_fs__transaction_t *txn;
   const char *parent_copy_id;
   const svn_fs_id_t *parent_id;
-  svn_boolean_t lazy = FALSE;
+  svn_boolean_t lazy;
   svn_fs_t *fs;
 
   fs = args->root->fs;
@@ -2670,16 +2652,16 @@ txn_body_dir_entries (void *baton,
          }
        else
          {
-            const char *child_path =
-                svn_fs__canonicalize_abspath (svn_path_join (
-                                                  args->path, dirent->name,
-                                                  trail->pool),
-                                              trail->pool);
+            const char *child_path = svn_path_join (args->path, dirent->name,
+                                                    trail->pool);
             svn_boolean_t is_branch = FALSE;
-            
-            SVN_ERR (is_child_lazy_copied (&lazy, &is_branch, NULL, fs,
-                                           parent_id, dirent->id, child_path,
-                                           trail));
+            copy_id_inherit_t inherit;
+
+            lazy = FALSE;
+            SVN_ERR (compute_parent_path_info (&lazy, &is_branch, &inherit,
+                                               NULL, fs,
+                                               parent_id, dirent->id,
+                                               child_path, trail));
             if (lazy)
               {
                  /* Lookup the revision of the copy operation that exposed
@@ -2750,7 +2732,7 @@ txn_body_make_dir (void *baton,
   struct make_dir_args *args = baton;
   svn_fs_root_t *root = args->root;
   const char *path = args->path;
-  parent_path_t *parent_path;
+  parent_path_t *parent_path = NULL;
   dag_node_t *sub_dir;
   const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
 
@@ -2776,7 +2758,7 @@ txn_body_make_dir (void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
                        svn_fs__dag_get_id (sub_dir),
-                       svn_fs_path_change_add, 0, 0, trail));
+                       svn_fs_path_change_add, 0, 0, NULL, trail));
 
   return SVN_NO_ERROR;
 }
@@ -2816,7 +2798,7 @@ txn_body_delete (void *baton,
   struct delete_args *args = baton;
   svn_fs_root_t *root = args->root;
   const char *path = args->path;
-  parent_path_t *parent_path;
+  parent_path_t *parent_path = NULL;
   const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
 
   /* We can't skip lazy calculations here because make_path_mutable
@@ -2838,7 +2820,7 @@ txn_body_delete (void *baton,
     {
       SVN_ERR (svn_fs__dag_delete_tree (parent_path->parent->node,
                                         parent_path->entry,
-                                        txn_id, trail));
+                                        txn_id, TRUE, trail));
     }
   else
     {
@@ -2850,7 +2832,7 @@ txn_body_delete (void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
                        svn_fs__dag_get_id (parent_path->node),
-                       svn_fs_path_change_delete, 0, 0, trail));
+                       svn_fs_path_change_delete, 0, 0, path, trail));
   
   return SVN_NO_ERROR;
 }
@@ -2883,14 +2865,159 @@ svn_fs_delete_tree (svn_fs_root_t *root,
   return svn_fs__retry_txn (root->fs, txn_body_delete, &args, pool);
 }
 
+struct rename_args
+{
+  svn_fs_root_t *root;
+  const char *from_path;
+  const char *to_path;
+};
+
+static svn_error_t *
+txn_body_rename (void *baton,
+                 trail_t *trail)
+{
+  struct rename_args *args = baton;
+  svn_fs_root_t *root = args->root;
+  const char *from_path = args->from_path;
+  const char *to_path = args->to_path;
+  parent_path_t *from_parent_path, *to_parent_path;
+  const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
+  const svn_fs_id_t *from_id, *to_id, *from_parent_id;
+  
+  svn_boolean_t simple_rename = FALSE;
+  svn_boolean_t replace = FALSE;
+  dag_node_t *replace_node = NULL;
+  parent_path_t *common_parent_path = NULL;
+  const char *common_path;
+
+  from_parent_path = NULL;
+  to_parent_path = NULL;
+
+  /* Sanity checks */
+  if (! svn_fs_is_txn_root (root))
+    return not_txn (root);
+  
+  if (svn_path_is_child (from_path, to_path, trail->pool))
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "cannot move '%s' to '%s'", from_path, to_path);
+
+  common_path = svn_path_get_longest_ancestor (from_path, to_path, trail->scratchpool);
+
+  if (common_path != NULL)
+    {
+      int len = strlen (common_path);
+      SVN_ERR (open_path (&common_parent_path, root, common_path, 0, trail));
+	  from_parent_path = to_parent_path = common_parent_path;
+      SVN_ERR (open_path (&from_parent_path, root,
+                          from_path + len, 0, trail));
+      SVN_ERR (open_path (&to_parent_path, root,
+                          to_path + len, open_path_last_optional,
+                          trail));
+    }
+  else
+    {
+      /* The source must exist */
+      SVN_ERR (open_path (&from_parent_path, root, from_path, 0, trail));
+  
+      /* The destination is optional, it can be added or replaced */
+      SVN_ERR (open_path (&to_parent_path, root, to_path, open_path_last_optional,
+                          trail));
+    }
+
+  if (to_parent_path->node)
+    {
+      replace = TRUE;
+      replace_node = to_parent_path->node;
+    }
+  
+  /* Cannot rename the root */
+  if (! from_parent_path->parent || ! to_parent_path->parent)
+    return svn_error_create (SVN_ERR_FS_ROOT_DIR, NULL,
+                             "the root directory cannot be renamed");
+
+  SVN_ERR (make_path_mutable (root, from_parent_path->parent,
+                              svn_path_dirname (from_path, trail->pool),
+                              trail));
+  
+  SVN_ERR (make_path_mutable (root, to_parent_path->parent, to_path, trail));
+
+  to_id = svn_fs__dag_get_id (to_parent_path->parent->node);
+  from_parent_id = svn_fs__dag_get_id (from_parent_path->parent->node);
+  
+  if (svn_fs__dag_is_file (from_parent_path->node)
+      && from_parent_path->inherit == copy_id_inherit_parent
+      && strcmp (svn_fs__id_copy_id (from_parent_id),
+                 svn_fs__id_copy_id (to_id)) == 0)
+    {
+      SVN_ERR (make_path_mutable (root, from_parent_path,
+                                  from_path, trail));
+      /* Only files that don't cross CopyIDs are allowed to be
+         simple renames. Directories that don't cross CopyIDs
+         can't be simple renames because the directory's move
+         history wouldn't be visible in the directory's children's
+         history. */
+      simple_rename = TRUE;
+    }
+  
+  /* We retrieve from_id after make_path_mutable so that any new CopyID
+     assignments from simple renames have already happened. */
+  from_id = svn_fs__dag_get_id (from_parent_path->node);
+
+  if (!simple_rename)
+    {
+      SVN_ERR (svn_fs__dag_copy (&from_id,
+                                 to_parent_path->parent->node,
+                                 to_parent_path->entry,
+                                 from_parent_path->node,
+                                 TRUE,
+                                 SVN_INVALID_REVNUM,
+                                 svn_fs__id_txn_id (from_id),
+                                 from_path, txn_id, to_path,
+                                 svn_fs__copy_kind_move,
+                                 trail));
+      
+    }
+  
+  /* Remove from source. */
+  SVN_ERR (svn_fs__dag_delete_tree (from_parent_path->parent->node,
+                                    from_parent_path->entry,
+                                    txn_id, FALSE, trail));
+
+  if (simple_rename)
+    {
+      /* Put in the destination */
+      SVN_ERR (svn_fs__dag_set_entry (to_parent_path->parent->node,
+                                      to_parent_path->entry,
+                                      from_id, txn_id, trail));
+    }
+  
+  /* Record the changes */
+  if (replace)
+    {
+      SVN_ERR (add_change (svn_fs_root_fs (root), txn_id,
+                           svn_fs__dag_get_id (replace_node),
+                           svn_fs_path_change_delete, 0, 0, to_path, trail));
+    }
+  SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
+                       from_id, svn_fs_path_change_moved, 0, 0,
+                       from_path, trail));
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_rename (svn_fs_root_t *root,
-               const char *from,
-               const char *to,
+               const char *from_path,
+               const char *to_path,
                apr_pool_t *pool)
 {
-  abort ();
+  struct rename_args args;
+
+  args.root      = root;
+  args.from_path = from_path;
+  args.to_path   = to_path;
+
+  return svn_fs__retry_txn (root->fs, txn_body_rename, &args, pool);
 }
 
 
@@ -2913,8 +3040,8 @@ txn_body_copy (void *baton,
   const char *from_path = args->from_path;
   svn_fs_root_t *to_root = args->to_root;
   const char *to_path = args->to_path;
-  parent_path_t *from_parent_path;
-  parent_path_t *to_parent_path;
+  parent_path_t *from_parent_path = NULL;
+  parent_path_t *to_parent_path = NULL;
 
   if (! svn_fs_is_revision_root (from_root))
     return svn_error_create (SVN_ERR_FS_GENERAL, 
@@ -2939,7 +3066,7 @@ txn_body_copy (void *baton,
     {
       svn_fs_path_change_kind_t kind;
       const char *txn_id = svn_fs_txn_root_name (to_root, trail->pool);
-      dag_node_t *new_node;
+      svn_fs_id_t *to_id;
 
       /* If TO_PATH already existed prior to the copy, note that this
          operation is a replacement, not an addition. */
@@ -2952,18 +3079,19 @@ txn_body_copy (void *baton,
       SVN_ERR (make_path_mutable (to_root, to_parent_path->parent, 
                                   to_path, trail));
 
-      SVN_ERR (svn_fs__dag_copy (to_parent_path->parent->node,
+      SVN_ERR (svn_fs__dag_copy (&to_id,
+                                 to_parent_path->parent->node,
                                  to_parent_path->entry,
                                  from_parent_path->node,
                                  args->preserve_history,
                                  svn_fs_revision_root_revision (from_root),
-                                 from_path, txn_id, to_path, trail));
+                                 NULL,
+                                 from_path, txn_id, to_path,
+                                 svn_fs__copy_kind_copy, trail));
 
       /* Make a record of this modification in the changes table. */
-      SVN_ERR (get_dag (&new_node, to_root, to_path, trail));
       SVN_ERR (add_change (svn_fs_root_fs (to_root), txn_id, 
-                           svn_fs__dag_get_id (new_node),
-                           kind, 0, 0, trail));
+                           to_id, kind, 0, 0, NULL, trail));
     }
   else
     {
@@ -3045,7 +3173,7 @@ static svn_error_t *
 txn_body_copied_from (void *baton, trail_t *trail)
 {
   struct copied_from_args *args = baton;
-  parent_path_t *path_down;
+  parent_path_t *path_down = NULL;
 
   /* Thankfully, we can skip laziness calculation for this
      difficult operation. */
@@ -3100,7 +3228,7 @@ txn_body_make_file (void *baton,
   struct make_file_args *args = baton;
   svn_fs_root_t *root = args->root;
   const char *path = args->path;
-  parent_path_t *parent_path;
+  parent_path_t *parent_path = NULL;
   dag_node_t *child;
   const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
 
@@ -3125,7 +3253,7 @@ txn_body_make_file (void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (root), txn_id, 
                        svn_fs__dag_get_id (child),
-                       svn_fs_path_change_add, 0, 0, trail));
+                       svn_fs_path_change_add, 0, 0, NULL, trail));
 
   return SVN_NO_ERROR;
 }
@@ -3419,7 +3547,7 @@ static svn_error_t *
 txn_body_apply_textdelta (void *baton, trail_t *trail)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
-  parent_path_t *parent_path;
+  parent_path_t *parent_path = NULL;
   const char *txn_id = svn_fs_txn_root_name (tb->root, trail->pool);
 
   /* Call open_path with no flags, as we want this to return an error
@@ -3477,7 +3605,7 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (tb->root), txn_id, 
                        svn_fs__dag_get_id (tb->node),
-                       svn_fs_path_change_modify, 1, 0, trail));
+                       svn_fs_path_change_modify, 1, 0, NULL, trail));
 
   return SVN_NO_ERROR;
 }
@@ -3597,7 +3725,7 @@ static svn_error_t *
 txn_body_apply_text (void *baton, trail_t *trail)
 {
   struct text_baton_t *tb = baton;
-  parent_path_t *parent_path;
+  parent_path_t *parent_path = NULL;
   const char *txn_id = svn_fs_txn_root_name (tb->root, trail->pool);
 
   /* Call open_path with no flags, as we want this to return an error
@@ -3620,7 +3748,7 @@ txn_body_apply_text (void *baton, trail_t *trail)
   /* Make a record of this modification in the changes table. */
   SVN_ERR (add_change (svn_fs_root_fs (tb->root), txn_id, 
                        svn_fs__dag_get_id (tb->node),
-                       svn_fs_path_change_modify, 1, 0, trail));
+                       svn_fs_path_change_modify, 1, 0, NULL, trail));
 
   return SVN_NO_ERROR;
 }
@@ -3662,6 +3790,9 @@ txn_body_contents_changed (void *baton, trail_t *trail)
 {
   struct things_changed_args *args = baton;
   parent_path_t *parent_path_1, *parent_path_2;
+
+  parent_path_1 = NULL;
+  parent_path_2 = NULL;
 
   SVN_ERR (open_path (&parent_path_1, args->root1, args->path1,
                       open_path_skip_lazy_detection, trail));
@@ -3834,7 +3965,7 @@ txn_body_revisions_changed (void *baton, trail_t *trail)
 {
   struct revisions_changed_args *args = baton;
   struct revisions_changed_baton b;
-  parent_path_t *parent_path;
+  parent_path_t *parent_path = NULL;
   svn_fs__copy_t *copy;
   svn_fs__transaction_t *txn;
   svn_revnum_t *rev 
