@@ -17,7 +17,9 @@
 ######################################################################
 
 import svn_test_main
+import svn_tree
 import svn_output
+
 import shutil         # for copytree()
 import string         # for strip()
 
@@ -26,11 +28,6 @@ import string         # for strip()
 XML_DIR = '../../xml'
 ANCESTOR_PATH = 'anni'
 
-# The paths within our greek tree:
-greek_paths = ['iota', 'A', 'A/mu', 'A/B', 'A/B/lambda', 'A/B/E',
-               'A/B/E/alpha', 'A/B/E/beta', 'A/B/F', 'A/C', 'A/D',
-               'A/D/gamma', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
-               'A/D/H', 'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega']
 
 ######################################################################
 # Utilities shared by these tests
@@ -43,14 +40,17 @@ def xml_checkout(wc_dir, xml_path, expected_lines):
   # Remove dir if it's already there.
   svn_test_main.remove_wc(wc_dir)
 
-  # Checkout from xml.
+  # Checkout from xml and make a tree of the output.
   output = svn_test_main.run_svn ('co', '-d', wc_dir, \
                                   '--xml-file', xml_path, \
                                   '-r 1', ANCESTOR_PATH)
+  output_tree = svn_output.tree_from_checkout (output)
+
+  # Make a tree out of the expected lines
+  expected_tree = svn_tree.build_generic_tree (expected_lines)
 
   # Verify actual output against expected output.
-  return svn_output.compare_sets(expected_lines, output,
-                                 svn_output.line_matches_regexp)
+  return svn_tree.compare_trees (output_tree, expected_tree)
 
   # TODO:  someday inspect the entries file too?? 
 
@@ -94,9 +94,11 @@ def xml_test_1():
 
   # Generate the expected output lines from a checkout.
   expected_output = []
-  for path in greek_paths:
-    line = 'A\s+' + wc_dir + '/' + path
-    expected_output.append(line)
+  for path in svn_test_main.greek_paths:
+    item = [ wc_dir + '/' + path,
+             None,
+             {'status' : 'A '} ]
+    expected_output.append(item)
 
   return xml_checkout(wc_dir, XML_DIR + '/co1-inline.xml', expected_output)
 
@@ -158,16 +160,63 @@ def xml_test_2():
 
   return 0 # final success
 
+#-----------------------------------------------------------------------------
 
+def xml_test_3():
+  """verify the actual wc from co1-inline.xml - 2"""
+
+  import svn_tree
+
+  wc_dir = 'wc-t3'
+
+  # actually do the check out
+  svn_test_main.run_svn ('co', '-d', wc_dir, \
+                                  '--xml-file', XML_DIR + '/co1-inline.xml', \
+                                  '-r 1', ANCESTOR_PATH)
+
+
+  exp_tree = svn_tree.build_tree_from_paths(greek_paths)
+  result_tree = svn_tree.build_tree_from_wc(wc_dir)
+
+  if svn_tree.compare_trees(exp_tree, result_tree):
+    return 0
+  else:
+    return 1
+
+#----------------------------------------------------------------------------
+
+def xml_test_4():
+  """verify that the entries files match the wc"""
+
+  import svn_tree, svn_entry
+
+  wc_dir = 'wc-t4'
+
+  # actually do the checkout
+  svn_test_main.run_svn ('co', '-d', wc_dir, \
+                                  '--xml-file', XML_DIR + '/co1-inline.xml', \
+                                  '-r 1', ANCESTOR_PATH)
+
+  exp_tree = svn_tree.build_tree_from_wc(wc_dir)
+  result_tree = svn_tree.build_tree_from_entries(wc_dir)
+
+  if svn_tree.compare_trees(exp_tree, result_tree):
+    return 0
+  else:
+    return 1
+  
 ########################################################################
 ## List all tests here, starting with None:
 test_list = [ None,
               xml_test_1,
-              xml_test_2
+              xml_test_2,
+              xml_test_3,
+              xml_test_4
              ]
 
-## And run the main test routine on them:
-svn_test_main.client_test(test_list)
+if __name__ == '__main__':  
+  ## And run the main test routine on them:
+  svn_test_main.client_test(test_list)
 
 ### End of file.
 # local variables:

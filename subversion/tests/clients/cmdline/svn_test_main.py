@@ -43,6 +43,17 @@ import shutil  # for rmtree()
 
 # Global:  set this to the location of the svn binary
 svn_binary = '../../../client/svn'
+# Global:  set this to the location of the svnadmin binary
+svnadmin_binary = '../../../svnadmin/svnadmin'
+
+
+# The paths within our greek tree, used to assemble 'expected' trees.
+greek_paths = ['iota', 'A', 'A/mu', 'A/B', 'A/B/lambda', 'A/B/E',
+               'A/B/E/alpha', 'A/B/E/beta', 'A/B/F', 'A/C', 'A/D',
+               'A/D/gamma', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
+               'A/D/H', 'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega']
+
+
 
 ######################################################################
 # Utilities shared by the tests
@@ -56,6 +67,15 @@ def run_svn(*varargs):
     command = command + " " + `arg`    # build the command string
   infile, outfile = os.popen2(command) # run command, get 2 file descriptors
   return outfile.readlines()           # convert stdout to list of lines
+
+# For running svnadmin.  Ignores the output.
+def run_svnadmin(*varargs):
+  "Run svnadmin with VARARGS."
+
+  command = svnadmin_binary
+  for arg in varargs:
+    command = command + " " + `arg`    # build the command string
+  os.popen2(command)                   # run command
 
 
 # For clearing away working copies
@@ -72,6 +92,15 @@ def file_append(path, new_text):
   fp = open(path, 'a')  # open in (a)ppend mode
   fp.write(new_text)
   fp.close()
+
+# For creating blank new repositories
+def create_repos(path):
+  """Create a brand-new SVN repository at PATH.  If PATH does not yet
+  exist, create it."""
+
+  if not(os.path.exists(path)):
+    os.makedirs(path) # this creates all the intermediate dirs, if neccessary
+  run_svnadmin("create", path)
 
 #  -- put more shared routines here --
 

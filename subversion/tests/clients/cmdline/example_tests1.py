@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  example_tests1.py: example 'template' test script for Subverison
+#  example_tests1.py:  sample 'template' test scripts for Subverison
 #
 #  Subversion is a tool for revision control. 
 #  See http://subversion.tigris.org for more information.
@@ -16,7 +16,8 @@
 #
 ######################################################################
 
-import svn_test_main
+import svn_test_main   # contains the main() routine to execute
+import svn_tree        # some tree utilities
 
 ######################################################################
 # Utilities shared by these tests
@@ -30,10 +31,21 @@ import svn_test_main
 #   Each test must return 0 on success or non-zero on failure.
 
 def test1():
-  "Test if foo is bar."
+  "Test a tree comparison"
 
-  pass
-  return 1
+  list1 = [ ['iota', 'this is iota', {'foo':'bar'}],
+            ['A/D/G/pi', 'this is pi', {}],
+            ['A/D', None, {1:2, 3:4}] ]
+
+  list2 = [ ['iota', 'this is iota', {'foo':'bar'}],
+            ['A/D', None, {1:2, 3:4}],
+            ['A/D/G/pi', 'this is pi', {}] ]
+
+  tree1 = svn_tree.build_generic_tree(list1)
+  tree2 = svn_tree.build_generic_tree(list2)
+
+  return svn_tree.compare_trees(tree1, tree2)
+
 
 def test2():
   "Test that the sky is blue."
