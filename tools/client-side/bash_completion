@@ -56,7 +56,7 @@ _svn()
 		cmdOpts="$qOpts"
 		;;
 	add)
-		cmdOpts="--targets $nOpts $qOpts"
+		cmdOpts="--auto-props --no-auto-props --targets $nOpts $qOpts"
 		;;
 	cat)
 		cmdOpts="$rOpts $pOpts"
@@ -87,7 +87,8 @@ _svn()
 		cmdOpts="$cmds $qOpts"
 		;;
 	import)
-		cmdOpts="$mOpts $qOpts $nOpts --editor-cmd $pOpts"
+		cmdOpts="--auto-props --no-auto-props $mOpts $qOpts $nOpts \
+		         --editor-cmd $pOpts"
 		;; 
 	info)
 		cmdOpts="--targets -R --recursive"
@@ -161,7 +162,7 @@ _svn()
 		cmdOpts=" $cmdOpts "
 		cmdOpts=${cmdOpts/ ${optBase} / }
 
-		# take out alternatives
+		# take out alternatives and mutually exclusives
 		case $optBase in
 		-v)              cmdOpts=${cmdOpts/ --verbose / } ;;
 		--verbose)       cmdOpts=${cmdOpts/ -v / } ;;
@@ -177,6 +178,8 @@ _svn()
 		--help)          cmdOpts=${cmdOpts/ -h / } ;;
 		-r)              cmdOpts=${cmdOpts/ --revision / } ;;
 		--revision)      cmdOpts=${cmdOpts/ -r / } ;;
+		--auto-props)    cmdOpts=${cmdOpts/ --no-auto-props / } ;;
+		--no-auto-props) cmdOpts=${cmdOpts/ --auto-props / } ;;
 
 		-m|--message|-F|--file)
 			cmdOpts=${cmdOpts/ --message / }
