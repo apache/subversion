@@ -368,6 +368,7 @@ static int end_element(void *userdata,
       /* Parse the <status> tag's CDATA for a status code. */
       if (ne_parse_statusline(cdata, &status))
         return 1;
+      free(status.reason_phrase);
       pc->status = status.code;
       return 0;
 
