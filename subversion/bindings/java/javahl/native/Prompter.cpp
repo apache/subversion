@@ -453,9 +453,18 @@ svn_error_t *Prompter::username_prompt(svn_auth_cred_username_t **cred_p, void *
 svn_error_t *Prompter::ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t **cred_p,
 										void *baton,
 										const char *realm,
-										int failures, 
+										apr_uint32_t failures, 
 										const svn_auth_ssl_server_cert_info_t *cert_info,
 										apr_pool_t *pool)
+/*
+typedef svn_error_t *(*svn_auth_ssl_server_trust_prompt_func_t) (
+  svn_auth_cred_ssl_server_trust_t **cred,
+  void *baton,
+  const char *realm,
+  apr_uint32_t failures,
+  const svn_auth_ssl_server_cert_info_t *cert_info,
+  apr_pool_t *pool);
+*/
 {
 	Prompter *that = (Prompter*)baton;
 	svn_auth_cred_ssl_server_trust_t *ret = (svn_auth_cred_ssl_server_trust_t*)apr_pcalloc(pool, sizeof(*ret));
