@@ -708,7 +708,7 @@ svn_path_is_backpath_present (const char *path)
    NULL if PATH doesn't appear to be a valid URI.  The returned value
    is not alloced -- it shares memory with PATH. */
 static const char *
-skip_uri_schema (const char *path)
+skip_uri_scheme (const char *path)
 {
   apr_size_t j;
   apr_size_t len = strlen (path);
@@ -760,7 +760,7 @@ svn_path_is_url (const char *path)
 
      Someday it might be nice to have an actual URI parser here.
   */
-  return skip_uri_schema (path) ? TRUE : FALSE;
+  return skip_uri_scheme (path) ? TRUE : FALSE;
 }
 
 
@@ -808,14 +808,14 @@ svn_path_is_uri_safe (const char *path)
 {
   apr_size_t i;
 
-  /* Skip the schema. */
-  path = skip_uri_schema (path);
+  /* Skip the URI scheme. */
+  path = skip_uri_scheme (path);
 
-  /* No schema?  Get outta here. */
+  /* No scheme?  Get outta here. */
   if (! path)
     return FALSE;
 
-  /* Skip to the first slash that's after the schema. */
+  /* Skip to the first slash that's after the URI scheme. */
   path = strchr (path, '/');
 
   /* If there's no first slash, then there's only a host portion;
@@ -1120,8 +1120,8 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
 
   dst = canon = apr_pcalloc (pool, strlen (path) + 1);
 
-  /* Copy over the URI shema if present. */
-  src = skip_uri_schema (path);
+  /* Copy over the URI scheme if present. */
+  src = skip_uri_scheme (path);
   if (src)
     {
       uri = TRUE;
