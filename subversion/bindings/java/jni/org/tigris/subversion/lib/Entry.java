@@ -44,6 +44,7 @@ public class Entry {
 
     public Entry()
         {
+            super();
         }
 
     public void setRevision(long _revision)
