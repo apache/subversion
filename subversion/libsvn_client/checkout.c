@@ -53,6 +53,7 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
 {
   const svn_delta_edit_fns_t *checkout_editor;
   void *checkout_edit_baton;
+  svn_error_t *err;
 
   /* Sanity check.  Without these, the checkout is meaningless. */
   assert (path != NULL);
@@ -111,11 +112,16 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
 
       /* Tell RA to do a checkout of REVISION; if we pass an invalid
          revnum, that means RA will fetch the latest revision.  */
-      SVN_ERR (ra_lib->do_checkout (session,
-                                    revision,
-                                    recurse,
-                                    checkout_editor,
-                                    checkout_edit_baton));
+      err = ra_lib->do_checkout (session,
+                                 revision,
+                                 recurse,
+                                 checkout_editor,
+                                 checkout_edit_baton);
+      /* Sleep for one second to ensure timestamp integrity. */
+      apr_sleep (APR_USEC_PER_SEC * 1);
+      
+      if (err)
+        return err;
 
       /* Close the RA session. */
       SVN_ERR (ra_lib->close (session));
@@ -138,12 +144,19 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
          means that there will be a revision number in the <delta-pkg>
          tag.  Otherwise, a valid revnum will be stored in the wc,
          assuming there's no <delta-pkg> tag to override it. */
-      SVN_ERR (svn_delta_xml_auto_parse (svn_stream_from_aprfile (in, pool),
-                                         checkout_editor,
-                                         checkout_edit_baton,
-                                         URL,
-                                         revision,
-                                         pool));
+      err = svn_delta_xml_auto_parse (svn_stream_from_aprfile (in, pool),
+                                      checkout_editor,
+                                      checkout_edit_baton,
+                                      URL,
+                                      revision,
+                                      pool);
+
+      /* Sleep for one second to ensure timestamp integrity. */
+      apr_sleep (APR_USEC_PER_SEC * 1);
+      
+      if (err)
+        return err;
+
       /* Close XML file. */
       apr_file_close (in);
     }

@@ -656,6 +656,7 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
 {
   svn_stringbuf_t *base_dir;
   apr_array_header_t *condensed_targets;
+  svn_error_t *err;
 
   SVN_ERR (svn_path_condense_targets (&base_dir,
                                       &condensed_targets,
@@ -692,17 +693,20 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
         }
     }
 
-  SVN_ERR (send_to_repos (before_editor, before_edit_baton,
-                          after_editor, after_edit_baton,                   
-                          base_dir,
-                          condensed_targets,
-                          NULL, NULL,  /* NULLs because not importing */
-                          auth_baton,
-                          log_msg,
-                          xml_dst, revision,
-                          pool));
+  err = send_to_repos (before_editor, before_edit_baton,
+                       after_editor, after_edit_baton,                   
+                       base_dir,
+                       condensed_targets,
+                       NULL, NULL,  /* NULLs because not importing */
+                       auth_baton,
+                       log_msg,
+                       xml_dst, revision,
+                       pool);
+  
+  /* Sleep for one second to ensure timestamp integrity. */
+  apr_sleep (APR_USEC_PER_SEC * 1);
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 

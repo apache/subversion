@@ -41,10 +41,11 @@ svn_client_propset (svn_stringbuf_t *propname,
                     apr_pool_t *pool)
 {
   svn_wc_entry_t *node;
-  SVN_ERR (svn_wc_entry(&node, target, pool));
+  SVN_ERR (svn_wc_entry (&node, target, pool));
   if (!node)
     return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-                              "'%s' -- not a versioned resource", target->data);
+                              "'%s' -- not a versioned resource", 
+                              target->data);
 
   if (recurse && node->kind == svn_node_dir)
     {
@@ -150,7 +151,8 @@ recursive_propget (apr_hash_t *props,
               SVN_ERR (svn_wc_prop_get (&propval, propname, full_entry_path,
                                         pool));
               if (propval)
-                apr_hash_set (props, full_entry_path->data, APR_HASH_KEY_STRING,
+                apr_hash_set (props, full_entry_path->data, 
+                              APR_HASH_KEY_STRING,
                               svn_string_create_from_buf (propval, pool));
             }
         }
@@ -273,7 +275,8 @@ svn_client_proplist (apr_array_header_t **props,
   SVN_ERR (svn_wc_entry(&node, target, pool));
   if (!node)
     return svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-                              "'%s' -- not a versioned resource", target->data);
+                              "'%s' -- not a versioned resource", 
+                              target->data);
 
 
   if (recurse && node->kind == svn_node_dir)
