@@ -615,16 +615,16 @@ M  integer.c
         mala idea, simplemente dé se por vencido y use <command>svn
         revert</command> para revertir el cambio local.</para>
 
-      <para>But assuming that you've reviewed the merged change, you can
-        <command>svn commit</command> the change as usual.  At that
-        point, the change has been merged into your repository branch.
-        In version control terminology, this act of copying changes
-        between branches is commonly called
-        <firstterm>porting</firstterm> changes.</para>
+      <para>Pero asumiendo que ha revisado el cambio fusionado, puede
+        guardar sus cambios como es habitual con <command>svn
+        commit</command>.  En ese punto, el cambio ha sido fusionado
+        en su rama del repositorio.  En terminología de control
+        de versiones, este acto de copiar cambios entre ramas se
+        denomina <firstterm>portar</firstterm> cambios.</para>
 
-      <para>When you commit the local modification, make sure your log
-        message mentions that you're porting a specific change from
-        one branch to another.  For example:</para>
+      <para>Cuando guarda su modificación local, asegúrese de que
+        el mensaje de cambios indica que está portando un cambio
+        específico de una rama a otra. Por ejemplo:</para>
 
 <screen>
 $ svn commit -m "integer.c: ported r344 (spelling fixes) from trunk."
