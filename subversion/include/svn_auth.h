@@ -94,7 +94,7 @@ typedef struct
                                      apr_pool_t *pool);
   
   /* Store CREDENTIALS for future use.  PROVIDER_BATON is general
-     context for the vtable. */
+     context for the vtable.  Return error if unable to save. */
   svn_error_t * (*save_credentials) (void *credentials,
                                      void *provider_baton,
                                      apr_pool_t *pool);
