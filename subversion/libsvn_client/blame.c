@@ -479,14 +479,15 @@ svn_client_blame (const char *target,
            !walk->next || line_no < walk->next->start;
            ++line_no)
         {
+          svn_boolean_t eof;
           svn_stringbuf_t *sb;
           apr_pool_clear (iterpool);
-          SVN_ERR (svn_stream_readline (stream, &sb, iterpool));
-          if (! sb)
-            break;
-          SVN_ERR (receiver (receiver_baton, line_no, walk->rev->revision,
-                             walk->rev->author, walk->rev->date,
-                             sb->len ? sb->data : "", iterpool));
+          SVN_ERR (svn_stream_readline (stream, &sb, "\n", &eof, iterpool));
+          if (!eof || sb->len)
+            SVN_ERR (receiver (receiver_baton, line_no, walk->rev->revision,
+                               walk->rev->author, walk->rev->date,
+                               sb->data, iterpool));
+          if (eof) break;
         }
     }
 

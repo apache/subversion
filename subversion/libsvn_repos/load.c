@@ -101,19 +101,21 @@ read_header_block (svn_stream_t *stream,
     {
       svn_stringbuf_t *header_str;
       const char *name, *value; 
+      svn_boolean_t eof;
       apr_size_t i = 0;
 
       if (first_header != NULL)
         {
           header_str = first_header;
           first_header = NULL;  /* so we never visit this block again. */
+          eof = FALSE;
         }
 
       else
         /* Read the next line into a stringbuf. */
-        SVN_ERR (svn_stream_readline (stream, &header_str, pool));
+        SVN_ERR (svn_stream_readline (stream, &header_str, "\n", &eof, pool));
       
-      if ((header_str == NULL) || (svn_stringbuf_isempty (header_str)))
+      if (eof || svn_stringbuf_isempty(header_str))
         break;    /* end of header block */
 
       /* Find the next colon in the stringbuf. */
@@ -180,11 +182,12 @@ parse_property_block (svn_stream_t *stream,
   while (content_length)
     {
       char *buf;  /* a pointer into the stringbuf's data */
+      svn_boolean_t eof;
 
       /* Read a key length line.  (Actually, it might be PROPS_END). */
-      SVN_ERR (svn_stream_readline (stream, &strbuf, pool));
+      SVN_ERR (svn_stream_readline (stream, &strbuf, "\n", &eof, pool));
 
-      if (strbuf == NULL)
+      if (eof)
         {
           /* We could just use stream_ran_dry() or stream_malformed(),
              but better to give a non-generic property block error. */ 
@@ -227,7 +230,7 @@ parse_property_block (svn_stream_t *stream,
             return stream_malformed ();
 
           /* Read a val length line */
-          SVN_ERR (svn_stream_readline (stream, &strbuf, pool));
+          SVN_ERR (svn_stream_readline (stream, &strbuf, "\n", &eof, pool));
           content_length -= (strbuf->len + 1); /* +1 because we read \n too */
           buf = strbuf->data;
 
@@ -386,6 +389,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                             void *parse_baton,
                             apr_pool_t *pool)
 {
+  svn_boolean_t eof;
   svn_stringbuf_t *linebuf;
   void *rev_baton = NULL;
   char *buffer = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE);
@@ -395,8 +399,8 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
   apr_pool_t *nodepool = svn_pool_create (pool);
   int version;
 
-  SVN_ERR (svn_stream_readline (stream, &linebuf, linepool));
-  if (linebuf == NULL)
+  SVN_ERR (svn_stream_readline (stream, &linebuf, "\n", &eof, linepool));
+  if (eof)
     return stream_ran_dry ();
     
   /* The first two lines of the stream are the dumpfile-format version
@@ -422,6 +426,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
       apr_hash_t *headers;
       void *node_baton;
       const char *valstr;
+      svn_boolean_t eof;
       svn_boolean_t found_node = FALSE;
       const char *value;
 
@@ -430,9 +435,9 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 
       /* Keep reading blank lines until we discover a new record, or until
          the stream runs out. */
-      SVN_ERR (svn_stream_readline (stream, &linebuf, linepool));
+      SVN_ERR (svn_stream_readline (stream, &linebuf, "\n", &eof, linepool));
       
-      if (linebuf == NULL)
+      if (eof)
         break;   /* end of stream, go home. */
 
       if ((linebuf->len == 0) || (apr_isspace (linebuf->data[0])))
