@@ -110,9 +110,6 @@ svn_boolean_t svn_string_compare (const svn_string_t *str1,
 
 size_t svn_string_first_non_whitespace (const svn_string_t *str);
 void svn_string_strip_whitespace (svn_string_t *str);
-void svn_string_print (const svn_string_t *str, FILE *stream,
-                       svn_boolean_t show_all_fields,
-                       svn_boolean_t add_newline);
 
 #endif  /* SVN_STRING_H */
 

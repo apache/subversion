@@ -26,8 +26,6 @@ my_vcdiff_windoweater (svn_delta_window_t *window, void *baton)
 {
   int i;
 
-  printf ("Windoweater: yum, got me a window of vcdiff data!\n");
-  
   /* Delve into the vcdiff window and print the data. */
   for (i = 0; i < window->num_ops; i++)
     {
@@ -35,14 +33,14 @@ my_vcdiff_windoweater (svn_delta_window_t *window, void *baton)
         {
         case svn_delta_new:
           {
-            size_t startaddr = (window->new->data +
+            char *startaddr = (window->new->data +
                                 (window->ops[i].offset));
             svn_string_t *str = 
               svn_string_ncreate (startaddr,
                                   (window->ops[i].length),
                                   globalpool);
 
-            printf ("--- new data -- : %s\n", str->data);
+            printf ("--- new datawindow -- : [%s]\n", str->data);
           }
         case svn_delta_source:
           {
