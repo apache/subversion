@@ -15,6 +15,44 @@
 #include "ra_local.h"
 
 
+svn_error_t *
+svn_ra_local__split_URL (svn_string_t **repos_path,
+                         svn_string_t **fs_path,
+                         svn_string_t *URL,
+                         apr_pool_t *pool)
+{
+  svn_error_t *err;
+  
+  svn_string_t *URL_copy = svn_string_dup (URL, pool);
+
+  /* Yank path components off the end of URL_copy, storing them in an
+     array.  */
+
+  /* (The final call to remove_component should nuke the `file:'
+     component) */
+
+  /* Start from the beginning of the array, build up a path,
+     successively adding new components and trying to
+     svn_fs_open_berkeley().  */
+
+
+
+
+
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
+/* ----------------------------------------------------------------
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */
+
+
 
 
 
