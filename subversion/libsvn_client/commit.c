@@ -180,10 +180,6 @@ import_file (const svn_delta_editor_t *editor,
 
   if (kind == svn_node_unknown)
     {
-      /* ### todo: Should use path_for_error_msg() as defined in
-         libsvn_subr/io.c, instead of svn_path_local_style?  It would
-         need to be published before it can be used here (and
-         elsewhere), of course. */
       return svn_error_createf
         (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
          _("Unknown or unversionable type for '%s'"),
@@ -496,7 +492,8 @@ import (const char *path,
   else if (kind == svn_node_none)
     {
       return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL, 
-                                _("'%s' does not exist"), path);  
+                                _("'%s' does not exist"),
+                                svn_path_local_style (path, pool));  
     }
 
   /* Close up shop; it's time to go home. */
@@ -698,7 +695,8 @@ svn_client_import (svn_client_commit_info_t **commit_info,
     return svn_error_createf
       (SVN_ERR_CL_ADM_DIR_RESERVED, NULL,
        _("'%s' is a reserved name and cannot be imported"),
-       SVN_WC_ADM_DIR_NAME);
+       /* ### Is svn_path_local_style() really necessary for this? */
+       svn_path_local_style (SVN_WC_ADM_DIR_NAME, pool));
 
 
   /* If an error occurred during the commit, abort the edit and return
