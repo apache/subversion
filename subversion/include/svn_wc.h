@@ -71,7 +71,8 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_copy,
   svn_wc_notify_delete,
   svn_wc_notify_restore,
-  svn_wc_notify_revert
+  svn_wc_notify_revert,
+  svn_wc_notify_update
   
 } svn_wc_notify_action_t;
 

@@ -94,7 +94,14 @@ notify_reverted (void *baton, const char *path)
 {
   printf ("Reverted %s\n", path);
 }
- 
+
+
+static void
+notify_updated (void *baton, const char *path)
+{
+  printf ("U   %s\n", path);
+} 
+
 
 void svn_cl__notify_func (void *baton, 
                           svn_wc_notify_action_t action, 
@@ -116,6 +123,10 @@ void svn_cl__notify_func (void *baton,
 
     case svn_wc_notify_revert:
       notify_reverted (baton, path);
+      return;
+
+    case svn_wc_notify_update:
+      notify_updated (baton, path);
       return;
 
     default:

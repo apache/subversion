@@ -234,10 +234,10 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
                                     new_text_path->data,
                                     proparray, TRUE, /* is full proplist */
                                     switch_url->data, /* new url */
-                                    pool));
-      
-      /* ### shouldn't the user see a 'U' somehow?  we have no trace
-         editor here!  Think about this... */
+                                    pool));     
+      if (notify_func != NULL)
+        (*notify_func) (notify_baton, svn_wc_notify_update, path->data);
+
     }  
   
   /* Sleep for one second to ensure timestamp integrity. */
