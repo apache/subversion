@@ -193,10 +193,6 @@ typedef struct svn_ra_reporter_t
 
 
 /** A collection of callbacks implemented by libsvn_client which allows
- * an RA layer to "pull" information from the client application, or 
- * possibly store information.
- *
- * A collection of callbacks implemented by libsvn_client which allows
  * an RA layer to "pull" information from the client application, or
  * possibly store information.  libsvn_client passes this vtable to
  * @c RA->open().  
