@@ -11,11 +11,11 @@ For gnuplot presentation:
        find-fix.py query-set-1.tsv outfile
 Gnuplot provides its own way to select date ranges.
 
-Either way, get query-set-1.tsv from 
-http://subversion.tigris.org/iz-data/query-set-1.tsv
-which is updated periodically.
+Either way, get a query-set-1.tsv from:
+  http://subversion.tigris.org/iz-data/query-set-1.tsv  (updated nightly)
+See http://subversion.tigris.org/iz-data/README for more info on that file.
 
-For more usage info:
+For more usage info on this script:
         find-fix.py --help
 """
 
