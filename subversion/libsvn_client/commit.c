@@ -797,6 +797,206 @@ have_processed_parent (apr_array_header_t *commit_items,
   return FALSE;
 }
 
+/* qsort-ready comparison function. */
+static int compare_paths (const void *a, const void *b)
+{
+  const char *item1 = *((const char * const *) a);
+  const char *item2 = *((const char * const *) b);
+
+  return svn_path_compare_paths (item1, item2);
+}
+
+/* Remove redundancies by removing duplicates from NONRECURSIVE_TARGETS,
+ * and removing any target that either is, a decendant of, a path in
+ * RECURSIVE_TARGETS.  Return the result in *PUNIQUE_TARGETS.
+ */
+static svn_error_t *
+remove_redundancies (apr_array_header_t **punique_targets,
+                     const apr_array_header_t *nonrecursive_targets,
+                     const apr_array_header_t *recursive_targets,
+                     apr_pool_t *pool)
+{
+  apr_pool_t *temp_pool;
+  apr_array_header_t *abs_recursive_targets = NULL;
+  apr_array_header_t *abs_targets;
+  apr_array_header_t *rel_targets;
+  int i;
+                                                                                                                                                                                                   
+  if ((nonrecursive_targets->nelts <= 0) || (! punique_targets))
+    {
+      /* No targets or no place to store our work means this function
+         really has nothing to do. */
+      if (punique_targets)
+        *punique_targets = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* Initialize our temporary pool. */
+  temp_pool = svn_pool_create (pool);
+                                                                                                                                                                                                   
+  /* Create our list of absolute paths for our "keepers" */
+  abs_targets = apr_array_make (temp_pool, nonrecursive_targets->nelts,
+                                sizeof (const char *));
+
+  /* Create our list of absolute paths for our recursive targets */
+  if (recursive_targets)
+    {
+      abs_recursive_targets = apr_array_make (temp_pool, recursive_targets->nelts,
+                                              sizeof (const char *));
+
+      for (i = 0; i < recursive_targets->nelts; i++)
+        {
+          const char *rel_path = APR_ARRAY_IDX (recursive_targets, i, const char *);
+          const char *abs_path;
+
+          /* Get the absolute path for this target. */
+          SVN_ERR (svn_path_get_absolute (&abs_path, rel_path, temp_pool));
+
+          APR_ARRAY_PUSH (abs_recursive_targets, const char *) = abs_path;
+        }
+    }
+                                                                                                                                                                                                   
+  /* Create our list of untainted paths for our "keepers" */
+  rel_targets = apr_array_make (pool, nonrecursive_targets->nelts,
+                                sizeof (const char *));
+                                                                                                                                                                                                   
+  /* For each target in our list we do the following:
+                                                                                                                                                                                                   
+     1.  Calculate its absolute path (ABS_PATH).
+     2.  See if any of the keepers in RECURSIVE_TARGETS is a parent of, or
+         is the same path as, ABS_PATH.  If so, we ignore this
+         target.  If not, however, add this target's original path to
+         REL_TARGETS.
+  */
+  for (i = 0; i < nonrecursive_targets->nelts; i++)
+    {
+      const char *rel_path = APR_ARRAY_IDX (nonrecursive_targets, i,
+                                            const char *);
+      const char *abs_path;
+      int j;
+      svn_boolean_t keep_me;
+                                                                                                                                                                                                   
+      /* Get the absolute path for this target. */
+      SVN_ERR (svn_path_get_absolute (&abs_path, rel_path, temp_pool));
+                                                                                                                                                                                                   
+      /* For each keeper in ABS_TARGETS, see if this target is the
+         same as or a child of that keeper. */
+      keep_me = TRUE;
+
+      if (abs_recursive_targets)
+        {
+          for (j = 0; j < abs_recursive_targets->nelts; j++)
+            {
+              const char *keeper = APR_ARRAY_IDX (abs_recursive_targets, j,
+                                                  const char *);
+                                                                                                                                                                                                   
+              /* Quit here if we find this path already in the keepers. */
+              if (strcmp (keeper, abs_path) == 0)
+                {
+                  keep_me = FALSE;
+                  break;
+                }
+
+              /* Quit here if this path is a child of one of the keepers. */
+              if (svn_path_is_child (keeper, abs_path, temp_pool))
+                {
+                  keep_me = FALSE;
+                  break;
+                }
+            }
+        }
+
+      if (keep_me)
+        {
+          for (j = 0; j < abs_targets->nelts; j++)
+            {
+              const char *keeper = APR_ARRAY_IDX (abs_targets, j, const char *);
+                                                                                                                                                                                                   
+              /* Quit here if we find this path already in the keepers. */
+              if (strcmp (keeper, abs_path) == 0)
+                {
+                  keep_me = FALSE;
+                  break;
+                }
+            }
+        }
+                                                                                                                                                                                                   
+      /* If this is a new keeper, add its absolute path to ABS_TARGETS
+         and its original path to REL_TARGETS. */
+      if (keep_me)
+        {
+          APR_ARRAY_PUSH (rel_targets, const char *) = rel_path;
+          APR_ARRAY_PUSH (abs_targets, const char *) = abs_path;
+        }
+    }
+                                                                                                                                                                                                   
+  /* Destroy our temporary pool. */
+  svn_pool_destroy (temp_pool);
+                                                                                                                                                                                                   
+  /* Make sure we return the list of untainted keeper paths. */
+  *punique_targets = rel_targets;
+                                                                                                                                                                                                   
+  return SVN_NO_ERROR;
+}
+
+/* Adjust relative targets.  If there is an empty string in REL_TARGETS
+ * get the actual target anchor point.  It is likely that this is one dir up
+ * from BASE_DIR, therefor we need to prepend the name part of the actual
+ * target to all paths in REL_TARGETS.  Return the new anchor in *PBASE_DIR,
+ * and the adjusted relative paths in *PREL_TARGETS.
+ */
+static svn_error_t *
+adjust_rel_targets (const char **pbase_dir,
+                    apr_array_header_t **prel_targets,
+                    const char *base_dir,
+                    apr_array_header_t *rel_targets,
+                    apr_pool_t *pool)
+{
+  const char *target;
+  int i;
+  svn_boolean_t anchor_one_up = FALSE;
+  apr_array_header_t *new_rel_targets;
+
+  for (i = 0; i < rel_targets->nelts; i++)
+    {
+      target = APR_ARRAY_IDX (rel_targets, i, const char *);
+
+      if (target[0] == '\0')
+        anchor_one_up = TRUE;
+        break;
+    }
+
+  /* Default to not doing anything */
+  new_rel_targets = rel_targets;
+
+  if (anchor_one_up)
+    {
+      const char *parent_dir, *name;
+              
+      SVN_ERR (svn_wc_get_actual_target (base_dir, &parent_dir, &name, pool));
+
+      if (name)
+        {
+          /* Our new "grandfather directory" is the parent directory
+             of the former one. */
+          base_dir = apr_pstrdup (pool, parent_dir);
+
+          new_rel_targets = apr_array_make (pool, rel_targets->nelts, sizeof (name));
+          for (i = 0; i < rel_targets->nelts; i++)
+            {
+              target = APR_ARRAY_IDX (rel_targets, i, const char *);
+              target = svn_path_join (name, target, pool);
+              APR_ARRAY_PUSH (new_rel_targets, const char *) = target;
+            }
+         }
+    }
+
+  *pbase_dir = base_dir;
+  *prel_targets = new_rel_targets;
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_commit (svn_client_commit_info_t **commit_info,
                    const apr_array_header_t *targets,
@@ -811,7 +1011,11 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   svn_ra_plugin_t *ra_lib;
   const char *base_dir;
   const char *base_url;
+  const char *target;
   apr_array_header_t *rel_targets;
+  apr_array_header_t *dirs_to_lock;
+  apr_array_header_t *dirs_to_lock_recursive;
+  svn_boolean_t lock_base_dir_recursive = FALSE;
   apr_hash_t *committables, *tempfiles = NULL;
   svn_wc_adm_access_t *base_dir_access;
   apr_array_header_t *commit_items;
@@ -824,7 +1028,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   /* Committing URLs doesn't make sense, so error if it's tried. */
   for (i = 0; i < targets->nelts; i++)
     {
-      const char *target = APR_ARRAY_IDX (targets, i, const char *);
+      target = APR_ARRAY_IDX (targets, i, const char *);
       if (svn_path_is_url (target))
         return svn_error_createf
           (SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -840,6 +1044,10 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   if (! base_dir)
     return SVN_NO_ERROR;
 
+  /* Prepare an array to accumulate dirs to lock */
+  dirs_to_lock = apr_array_make (pool, 1, sizeof (target));
+  dirs_to_lock_recursive = apr_array_make (pool, 1, sizeof (target));
+
   /* If we calculated only a base_dir and no relative targets, this
      must mean that we are being asked to commit (effectively) a
      single path. */
@@ -850,6 +1058,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
       SVN_ERR (svn_wc_get_actual_target (base_dir, &parent_dir, &name, pool));
       if (name)
         {
+          svn_node_kind_t kind;
+
           /* Our new "grandfather directory" is the parent directory
              of the former one. */
           base_dir = apr_pstrdup (pool, parent_dir);
@@ -860,12 +1070,130 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 
           /* Now, push this name as a relative path to our new
              base directory. */
-          (*((const char **)apr_array_push (rel_targets))) = name;
+          APR_ARRAY_PUSH (rel_targets, const char *) = name;
+
+          target = svn_path_join (base_dir, name, pool);
+          SVN_ERR (svn_io_check_path (target, &kind, pool));
+
+          /* If the final target is a dir, we want to recursively lock it */
+          if (kind == svn_node_dir)
+            {
+              if (nonrecursive)
+                APR_ARRAY_PUSH (dirs_to_lock, const char *) = target;
+              else
+                APR_ARRAY_PUSH (dirs_to_lock_recursive, const char *) = target;
+            }
+        }
+      else
+        {
+          /* This will recursively lock the base_dir further down */
+          lock_base_dir_recursive = TRUE;
+        }
+    }
+  else
+    {
+      SVN_ERR (adjust_rel_targets (&base_dir, &rel_targets,
+                                   base_dir, rel_targets,
+                                   pool));
+
+      for (i = 0; i < rel_targets->nelts; i++)
+        {
+          const char *parent_dir, *name;
+
+          target = svn_path_join (base_dir,
+                                  APR_ARRAY_IDX (rel_targets, i, const char *),
+                                  pool);
+          SVN_ERR (svn_wc_get_actual_target (target, &parent_dir, &name,
+                                             pool));
+
+          if (name)
+            {
+              svn_node_kind_t kind;
+
+              target = svn_path_join (parent_dir, name, pool);
+          
+              SVN_ERR (svn_io_check_path (target, &kind, pool));
+
+              /* If the final target is a dir, we want to recursively lock it */
+              if (kind == svn_node_dir)
+                {
+                  if (nonrecursive)
+                    APR_ARRAY_PUSH (dirs_to_lock, const char *) = target;
+                  else
+                    APR_ARRAY_PUSH (dirs_to_lock_recursive, const char *) = target;
+                }
+            }
+
+          target = parent_dir;
+          while (strcmp (target, base_dir))
+            {
+              if (target[0] == '/' && target[1] == '\0')
+                abort();
+
+              APR_ARRAY_PUSH (dirs_to_lock, const char *) = target;
+              target = svn_path_dirname(target, pool);
+            }
         }
     }
 
-  SVN_ERR (svn_wc_adm_open (&base_dir_access, NULL, base_dir, TRUE, TRUE,
-                            pool));
+  SVN_ERR (svn_wc_adm_open (&base_dir_access, NULL, base_dir,
+           TRUE,  /* Write lock */
+           lock_base_dir_recursive, /* Tree lock */
+           pool));
+
+  if (!lock_base_dir_recursive)
+    {
+      svn_wc_adm_access_t *adm_access;
+      apr_array_header_t *unique_dirs_to_lock;
+
+      /* Sort the paths in a depth-last directory-ish order. */
+      qsort (dirs_to_lock->elts, dirs_to_lock->nelts,
+             dirs_to_lock->elt_size, compare_paths);
+      qsort (dirs_to_lock_recursive->elts, dirs_to_lock_recursive->nelts,
+             dirs_to_lock_recursive->elt_size, compare_paths);
+
+      /* Remove any duplicates */
+      SVN_ERR (svn_path_remove_redundancies (&unique_dirs_to_lock,
+                                             dirs_to_lock_recursive,
+                                             pool));
+      dirs_to_lock_recursive = unique_dirs_to_lock;
+
+      /* Remove dirs and descendants from dirs_to_lock if there is
+         any ancestor in dirs_to_lock_recursive */
+      SVN_ERR (remove_redundancies (&unique_dirs_to_lock,
+                                    dirs_to_lock,
+                                    dirs_to_lock_recursive,
+                                    pool));
+      dirs_to_lock = unique_dirs_to_lock;
+
+      /* First lock all the dirs to be locked non-recursively */
+      if (dirs_to_lock)
+        {
+          for (i = 0; i < dirs_to_lock->nelts ; ++i)
+            {
+              target = APR_ARRAY_IDX (dirs_to_lock, i, const char *);
+
+              SVN_ERR (svn_wc_adm_open (&adm_access, base_dir_access, target,
+                       TRUE,  /* Write lock */
+                       FALSE, /* Tree lock */
+                       pool));
+            }
+        }
+
+      /* Lock the rest of the targets (recursively) */
+      if (dirs_to_lock_recursive)
+        {
+          for (i = 0; i < dirs_to_lock_recursive->nelts ; ++i)
+            {
+              target = APR_ARRAY_IDX (dirs_to_lock_recursive, i, const char *);
+
+              SVN_ERR (svn_wc_adm_open (&adm_access, base_dir_access, target,
+                       TRUE, /* Write lock */
+                       TRUE, /* Tree lock */
+                       pool));
+            }
+        }
+    }
 
   /* One day we might support committing from multiple working copies, but
      we don't yet.  This check ensures that we don't silently commit a
@@ -873,10 +1201,10 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   for (i = 0; i < targets->nelts; ++i)
     {
       svn_wc_adm_access_t *adm_access;
-      const char *target;
-          SVN_ERR (svn_path_get_absolute (&target,
-                                          ((const char **)targets->elts)[i],
-                                          pool));
+
+      SVN_ERR (svn_path_get_absolute (&target,
+                                      APR_ARRAY_IDX (targets, i, const char *),
+                                      pool));
       SVN_ERR_W (svn_wc_adm_probe_retrieve (&adm_access, base_dir_access,
                                             target, pool),
                  "Are all the targets part of the same working copy?");
