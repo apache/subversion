@@ -492,7 +492,7 @@ typedef struct svn_ra_plugin_t
         file, only a working copy directory.  See the do_switch()
         function for more details.]
 
-     The client initially provides an DIFF_EDITOR/BATON to the RA
+     The client initially provides a DIFF_EDITOR/BATON to the RA
      layer; this editor contains knowledge of where the common diff
      root is in the working copy (when open_root() is called). 
 
@@ -511,8 +511,8 @@ typedef struct svn_ra_plugin_t
      to be one of the diff paths.
 
      The working copy will be diffed against VERSUS_URL as it exists
-     in revision REVISION, or the "latest" revision if this arg is
-     invalid. */
+     in revision REVISION, or as it is in head if REVISION is
+     SVN_INVALID_REVNUM. */
   svn_error_t *(*do_diff) (void *session_baton,
                            const svn_ra_reporter_t **reporter,
                            void **report_baton,
