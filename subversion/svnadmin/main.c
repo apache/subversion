@@ -66,7 +66,8 @@ static svn_opt_subcommand_t
   subcommand_list_unused_dblogs,
   subcommand_recover,
   subcommand_rmtxns,
-  subcommand_setlog;
+  subcommand_setlog,
+  subcommand_verify;
 
 enum 
   { 
@@ -224,6 +225,11 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "will permanently overwrite the previous log message.)\n",
      {'r'} },
 
+    {"verify", subcommand_verify, {0},
+     "usage: svnadmin verify REPOS_PATH\n\n"
+     "Verifies the data stored in the repository.\n",
+     {0} },
+
     { NULL, NULL, {0}, NULL, {0} }
   };
 
@@ -247,6 +253,7 @@ struct svnadmin_opt_state
 
   const char *config_dir;    /* Overriding Configuration Directory */
 };
+
 
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
@@ -345,16 +352,13 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Run the dump to STDOUT.  Let the user redirect output into
      a file if they want.  :-)  */
-  SVN_ERR (create_stdio_stream (&stdout_stream,
-                                apr_file_open_stdout, pool));
+  SVN_ERR (create_stdio_stream (&stdout_stream, apr_file_open_stdout, pool));
 
   /* Progress feedback goes to stderr, unless they asked to suppress
      it. */
-  if (!opt_state->quiet)
-    {
-      SVN_ERR (create_stdio_stream (&stderr_stream,
-                                    apr_file_open_stderr, pool));
-    }
+  if (! opt_state->quiet)
+    SVN_ERR (create_stdio_stream (&stderr_stream,
+                                  apr_file_open_stderr, pool));
 
   SVN_ERR (svn_repos_dump_fs (repos, stdout_stream, stderr_stream,
                               lower, upper, opt_state->incremental, pool));
@@ -627,6 +631,26 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                    SVN_PROP_REVISION_LOG,
                                    log_contents, pool));
 
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_verify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+  svn_stream_t *stderr_stream = NULL;
+  svn_revnum_t youngest;
+
+  /* This whole process is basically just a dump of the repository
+     with no interest in the output. */
+  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
+  SVN_ERR (svn_fs_youngest_rev (&youngest, svn_repos_fs (repos), pool));
+  SVN_ERR (create_stdio_stream (&stderr_stream, apr_file_open_stderr, pool));
+  SVN_ERR (svn_repos_dump_fs (repos, NULL, stderr_stream, 
+                              0, youngest, FALSE, pool));
   return SVN_NO_ERROR;
 }
 

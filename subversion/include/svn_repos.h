@@ -780,7 +780,8 @@ enum svn_repos_load_uuid
 /** Dump the contents of the filesystem within already-open @a repos into
  * writable @a dumpstream.  Begin at revision @a start_rev, and dump every
  * revision up through @a end_rev.  Use @a pool for all allocation.  If
- * non-@c NULL, send feedback to @a feedback_stream.
+ * non-@c NULL, send feedback to @a feedback_stream. @a dumpstream can be
+ * @c NULL for the purpose of verifying the repository.
  *
  * If @a start_rev is @c SVN_INVALID_REVNUM, then start dumping at revision 
  * 0.  If @a end_rev is @c SVN_INVALID_REVNUM, then dump through the @c HEAD 
