@@ -45,13 +45,6 @@ Candidate changes:
        -1: brane [until someone explains to me why this should be a
                   Unix-only change]
 
-  * r10889 (Issue #1914)
-    Make external diff3 work again.
-    Justification:
-      Regression from 1.0.
-    Votes:
-      +1: bliss, breser, ghudson
-
   * r10890
     Run external diff3 with full environment.
     Justification:
