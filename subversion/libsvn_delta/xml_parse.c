@@ -260,6 +260,7 @@ telescope_delta_stack (svn_delta_digger_t *digger,
         return XML_type_error (digger->pool, tagname, FALSE);
 
       bot_frame->next = new_frame;
+      new_frame->previous = bot_frame;
       return SVN_NO_ERROR;
     }
 }
