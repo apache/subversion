@@ -617,23 +617,21 @@ static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
                                             apr_pool_t *pool)
 {
   svn_ra_session_t *ras = session_baton;
-  svn_error_t *err;
 
   if (! ras->uuid)
     {
       const svn_string_t *value;
-      ne_propname uuid_propname = { SVN_DAV_PROP_NS_DAV, "repository-uuid" };
+      static const ne_propname uuid_propname =
+        { SVN_DAV_PROP_NS_DAV, "repository-uuid" };
 
-      err = svn_ra_dav__get_one_prop(&value, ras->sess, ras->url, NULL,
-                                     &uuid_propname, pool);
-
-      if (err)
-        return svn_error_quick_wrap(err, "Repository has no UUID property.");
-
-      if (value)
+      SVN_ERR( svn_ra_dav__get_one_prop(&value, ras->sess, ras->url, NULL,
+                                        &uuid_propname, pool) );
+      
+      if (value && (value->len > 0))
         ras->uuid = apr_pstrdup(ras->pool, value->data); /* cache UUID */
       else
-        return svn_error_quick_wrap(err, "Repository UUID is NULL.");
+        return svn_error_create(SVN_ERR_RA_NO_REPOS_UUID, NULL,
+                                "Please upgrade the server to 0.19 or later.");
     }
 
   *uuid = ras->uuid;

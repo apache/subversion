@@ -320,7 +320,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
   dump_args = ' dump "' + src_path + '"'
   load_args = ' load "' + dst_path + '"'
 
-  if (ignore_uuid):
+  if ignore_uuid:
     load_args = load_args + " --ignore-uuid"
   if verbose_mode:
     print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
