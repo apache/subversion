@@ -32,6 +32,7 @@
 #include "node-rev.h"
 #include "id.h"
 #include "revs-txns.h"
+#include "fs_fs.h"
 
 
 /* Initializing a filesystem.  */
@@ -148,7 +149,9 @@ get_node_revision (svn_fs__node_revision_t **noderev_p,
   /* If we've already got a copy, there's no need to read it in.  */
   if (! node->node_revision)
     {
-      abort ();
+      SVN_ERR (svn_fs__fs_get_node_revision (&noderev, node->fs,
+                                             node->id, pool));
+      node->node_revision = noderev;
     }
           
   /* Now NODE->node_revision is set.  */
@@ -164,7 +167,8 @@ set_node_revision (dag_node_t *node,
                    svn_fs__node_revision_t *noderev,
                    apr_pool_t *pool)
 {
-  abort ();
+  SVN_ERR (svn_fs__fs_put_node_revision (node->fs, node->id,
+                                         noderev, pool));
 
   return SVN_NO_ERROR;
 }
@@ -304,7 +308,17 @@ get_dir_entries (apr_hash_t **entries_p,
                  svn_fs__node_revision_t *noderev,
                  apr_pool_t *pool)
 {
-  abort ();
+  apr_hash_t *entries;
+
+  if (noderev->kind != svn_node_dir )
+    return svn_error_create
+      (SVN_ERR_FS_NOT_DIRECTORY, NULL,
+       "Attempted to create entry in non-directory parent");
+
+  SVN_ERR (svn_fs__fs_rep_contents_dir (&entries, fs,
+                                        noderev, pool));
+
+  *entries_p = entries;
 
   /* Return our findings. */
   return SVN_NO_ERROR;
@@ -418,7 +432,15 @@ svn_fs__dag_get_proplist (apr_hash_t **proplist_p,
                           dag_node_t *node,
                           apr_pool_t *pool)
 {
-  abort ();
+  svn_fs__node_revision_t *noderev;
+  apr_hash_t *proplist = NULL;
+
+  SVN_ERR (get_node_revision (&noderev, node, pool));
+
+  SVN_ERR (svn_fs__fs_get_proplist (&proplist, node->fs,
+                                    noderev, pool));
+
+  *proplist_p = proplist;
   
   return SVN_NO_ERROR;
 }
@@ -642,11 +664,12 @@ svn_fs__dag_make_dir (dag_node_t **child_p,
 
 
 svn_error_t *
-svn_fs__dag_get_contents (svn_stream_t **contents,
+svn_fs__dag_get_contents (svn_stream_t **contents_p,
                           dag_node_t *file,
                           apr_pool_t *pool)
 { 
   svn_fs__node_revision_t *noderev;
+  svn_stream_t *contents;
 
   /* Make sure our node is a file. */
   if (file->kind != svn_node_file)
@@ -657,7 +680,11 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
   /* Go get a fresh node-revision for FILE. */
   SVN_ERR (get_node_revision (&noderev, file, pool));
 
-  abort ();
+  /* Get a stream to the contents. */
+  SVN_ERR (svn_fs__fs_get_contents (&contents, file->fs,
+                                    noderev, pool));
+
+  *contents_p = contents;
 
   return SVN_NO_ERROR;
 }

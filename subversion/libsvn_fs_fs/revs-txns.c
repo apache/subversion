@@ -33,6 +33,7 @@
 #include "tree.h"
 #include "revs-txns.h"
 #include "key-gen.h"
+#include "fs_fs.h"
 
 /* These defines are for temporary prototyping purposes until all
    references to BDB can be removed. */
@@ -113,9 +114,12 @@ svn_fs_youngest_rev (svn_revnum_t *youngest_p,
                      svn_fs_t *fs,
                      apr_pool_t *pool)
 {
+  svn_revnum_t youngest;
+  
   SVN_ERR (svn_fs__check_fs (fs));
-
-  abort ();
+  SVN_ERR (svn_fs__fs_youngest_revision (&youngest, fs, pool));
+  
+  *youngest_p = youngest;
   
   return SVN_NO_ERROR;
 }
@@ -126,7 +130,12 @@ svn_fs_revision_proplist (apr_hash_t **table_p,
                           svn_revnum_t rev,
                           apr_pool_t *pool)
 {
-  abort ();
+  apr_hash_t *table;
+
+  SVN_ERR (svn_fs__check_fs (fs));
+  SVN_ERR (svn_fs__fs_revision_proplist (&table, fs, rev, pool));
+
+  *table_p = table;
   
   return SVN_NO_ERROR;
 }
@@ -139,7 +148,14 @@ svn_fs_revision_prop (svn_string_t **value_p,
                       const char *propname,
                       apr_pool_t *pool)
 {
-  abort ();
+  apr_hash_t *table;
+
+  SVN_ERR (svn_fs__check_fs (fs));
+  SVN_ERR (svn_fs__fs_revision_proplist (&table, fs, rev, pool));
+
+  *value_p = NULL;
+  if (table)
+    *value_p = apr_hash_get (table, propname, APR_HASH_KEY_STRING);
   
   return SVN_NO_ERROR;
 }
