@@ -1,6 +1,6 @@
 import cmptag
 
-cmptag.check_tags("testcvs1", "space-fname", 
+cmptag.check_tags("cvsrepos", "space-fname", 
                   [
                       ( None, "/trunk" )
                   ]);
