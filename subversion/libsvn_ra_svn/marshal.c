@@ -168,12 +168,11 @@ static svn_error_t *writebuf_output_ssl(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool, const char *data,
                                         apr_size_t len)
 {
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
   apr_pool_t *subpool = NULL;
 
-  err = do_ssl_operation(conn, NULL, NULL, SSL_write, (char *) data, &len);
-  if (err)
-    return err;
+  if (len > 0)
+    SVN_ERR(do_ssl_operation(conn, NULL, NULL, SSL_write, (char *) data, &len));
 
   subpool = svn_pool_create(pool);
   if (conn->block_handler != NULL)
