@@ -983,8 +983,11 @@ svn_ra_dav__lock(void *session_baton,
   nlock = ne_lock_create();
   nlock->owner = ne_strdup(comment);
   if ((rv = ne_uri_parse(url, &(nlock->uri))))
-    return svn_ra_dav__convert_error(ras->sess, "Failed to parse URI",
-                                     rv, pool);
+    {
+      ne_lock_destroy(nlock);
+      return svn_ra_dav__convert_error(ras->sess, "Failed to parse URI",
+                                       rv, pool);
+    }
 
   /* Issue LOCK request. */
   rv = ne_lock(ras->sess, nlock);
@@ -995,14 +998,18 @@ svn_ra_dav__lock(void *session_baton,
       ne_lock_destroy(nlock);
       if (lrb->error_parser)
         ne_xml_destroy(lrb->error_parser);
-
       return lrb->err;
     }
 
   /* Did we get some other sort of neon error? */
   if (rv)
-    return svn_ra_dav__convert_error(ras->sess,
-                                     "Lock request failed", rv, pool);
+    {
+      ne_lock_destroy(nlock);
+      if (lrb->error_parser)
+        ne_xml_destroy(lrb->error_parser);
+      return svn_ra_dav__convert_error(ras->sess,
+                                       "Lock request failed", rv, pool);
+    }
 
   /* Build an svn_lock_t based on the returned ne_lock. */
   slock = apr_pcalloc(pool, sizeof(*slock));
@@ -1057,8 +1064,11 @@ svn_ra_dav__unlock(void *session_baton,
   nlock->token = ne_strdup(token);
   url = svn_path_url_add_component (ras->url, path, pool);  
   if ((rv = ne_uri_parse(url, &(nlock->uri))))
-    return svn_ra_dav__convert_error(ras->sess, "Failed to parse URI",
-                                     rv, pool);
+    {
+      ne_lock_destroy(nlock);
+      return svn_ra_dav__convert_error(ras->sess, "Failed to parse URI",
+                                       rv, pool);
+    }
 
   /* Issue UNLOCK request. */
   rv = ne_unlock(ras->sess, nlock);
@@ -1075,9 +1085,14 @@ svn_ra_dav__unlock(void *session_baton,
 
   /* Did we get some other sort of neon error? */
   if (rv)
-    return svn_ra_dav__convert_error(ras->sess,
-                                     "Lock request failed", rv, pool);
-  
+    {
+      ne_lock_destroy(nlock);
+      if (lrb->error_parser)
+        ne_xml_destroy(lrb->error_parser);
+      return svn_ra_dav__convert_error(ras->sess,
+                                       "Lock request failed", rv, pool);
+    }  
+
   /* Free neon things. */
   ne_lock_destroy(nlock);
   if (lrb->error_parser)
