@@ -519,50 +519,42 @@ svn_path_is_single_path_component (svn_stringbuf_t *path,
       alphanum | mark | ":" | "@" | "&" | "=" | "+" | "$" | "," 
 */
 static svn_boolean_t
-char_is_uri_safe (const unsigned char c)
+char_is_uri_safe (char c)
 {
-  unsigned char other[18] = "/:.-_!~'()@=+$,&*"; /* sorted by estimated use? */
-  int i;
-
   /* Is this an alphanumeric character? */
   if (((c >= 'A') && (c <='Z'))
       || ((c >= 'a') && (c <='z'))
       || ((c >= '0') && (c <='9')))
     return TRUE;
 
-  /* Is this a supported non-alphanumeric character? */
-  for (i = 0; i < sizeof (other); i++)
-    {
-      if (c == other[i])
-        return TRUE;
-    }
+  /* Is this a supported non-alphanumeric character? (these are sorted
+     by estimated usage, most-to-least commonly used) */
+  if (strchr ("/:.-_!~'()@=+$,&*", c) != NULL)
+    return TRUE;
 
   return FALSE;
 }
 
 
 svn_boolean_t 
-svn_path_is_uri_safe (const svn_stringbuf_t *path)
+svn_path_is_uri_safe (const svn_string_t *path)
 {
   int i;
 
   for (i = 0; i < path->len; i++)
-    {
-      if (! char_is_uri_safe (path->data[i]))
-        return FALSE;
-    }
+    if (! char_is_uri_safe (path->data[i]))
+      return FALSE;
 
   return TRUE;
 }
   
 
 svn_stringbuf_t *
-svn_path_uri_encode (const svn_stringbuf_t *path, apr_pool_t *pool)
+svn_path_uri_encode (const svn_string_t *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
-  int i;
-  int copied = 0;
-  unsigned char c;
+  int i, copied = 0;
+  char c;
 
   if ((! path) || (! path->data))
     return NULL;
@@ -603,33 +595,36 @@ svn_path_uri_encode (const svn_stringbuf_t *path, apr_pool_t *pool)
 
 
 svn_stringbuf_t *
-svn_path_uri_decode (const svn_stringbuf_t *path, apr_pool_t *pool)
+svn_path_uri_decode (const svn_string_t *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
   int i;
-  unsigned char c;
 
   if ((! path) || (! path->data))
     return NULL;
 
   retstr = svn_stringbuf_create ("", pool);
   svn_stringbuf_ensure (retstr, path->len);
+  retstr->len = 0;
   for (i = 0; i < path->len; i++)
     {
-      c = path->data[i];
+      char c = path->data[i];
       if (c == '+') /* _encode() doesn't do this, but it's easy...whatever. */
         c = ' ';
       else if (c == '%')
         {
-          unsigned char digitz[3];
+          char digitz[3];
           digitz[0] = path->data[++i];
           digitz[1] = path->data[++i];
           digitz[2] = '\0';
-          c = (unsigned char)(strtol (digitz, NULL, 16));
+          c = (char)(strtol (digitz, NULL, 16));
         }
 
       retstr->data[retstr->len++] = c;
     }
+
+  /* Null-terminate this bad-boy. */
+  retstr->data[retstr->len] = 0;
 
   return retstr;
 }

@@ -260,14 +260,14 @@ svn_stringbuf_t *svn_path_is_child (const svn_stringbuf_t *path1,
 
 
 /* Return TRUE if PATH is URI-safe, FALSE otherwise. */
-svn_boolean_t svn_path_is_uri_safe (const svn_stringbuf_t *path);
+svn_boolean_t svn_path_is_uri_safe (const svn_string_t *path);
 
 /* Return a URI-encoded copy of PATH, allocated in POOL. */
-svn_stringbuf_t *svn_path_uri_encode (const svn_stringbuf_t *path,
+svn_stringbuf_t *svn_path_uri_encode (const svn_string_t *path,
                                       apr_pool_t *pool);
 
 /* Return a URI-decoded copy of PATH, allocated in POOL. */
-svn_stringbuf_t *svn_path_uri_decode (const svn_stringbuf_t *path,
+svn_stringbuf_t *svn_path_uri_decode (const svn_string_t *path,
                                       apr_pool_t *pool);
 
 
