@@ -469,7 +469,8 @@ svn_fs__new_successor_id (svn_fs_id_t **successor_p,
 
   /* Set NEW_ID to the next node revision after ID.  Allocate some
      extra room, in case we need to construct a branch ID below.  */
-  new_id = apr_palloc (pool, sizeof (*new_id) * (id_len + 3) * sizeof (*id));
+  new_id = (svn_fs_id_t *) apr_palloc (pool,
+                                       (id_len + 3) * sizeof (*new_id));
   memcpy (new_id, id, (id_len + 1) * sizeof (*id)); /* copy the -1 */
   new_id[id_len - 1]++;         /* increment the revision number */
 
