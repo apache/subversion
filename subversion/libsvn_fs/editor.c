@@ -80,7 +80,7 @@ struct file_baton
 
 /* Helper for replace_root. */
 static svn_error_t *
-clone_root (void *dir_baton, trail_t *trail)
+txn_body_clone_root (void *dir_baton, trail_t *trail)
 {
   struct dir_baton *dirb = dir_baton;
   svn_error_t *err;
@@ -140,7 +140,7 @@ replace_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
   dirb->parent = NULL;
   dirb->name = svn_string_create ("", eb->pool);
   dirb->base_rev = eb->base_rev;
-  err = svn_fs__retry_txn (eb->fs, clone_root, dirb, eb->pool);
+  err = svn_fs__retry_txn (eb->fs, txn_body_clone_root, dirb, eb->pool);
   if (err)
     return err;
 
@@ -257,6 +257,21 @@ add_directory (svn_string_t *name,
 }
 
 
+struct replace_args
+{
+  fooo;
+};
+
+static svn_error_t *
+txn_body_replace (void *rargs, trail_t *trail)
+{
+  struct replace_args *repl_args = rargs;
+
+  
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 replace_directory (svn_string_t *name,
                    void *parent_baton,
@@ -269,6 +284,9 @@ replace_directory (svn_string_t *name,
   dirb->parent = pb;
   dirb->edit_baton = pb->edit_baton;
   dirb->name = svn_string_dup (name, pb->edit_baton->pool);
+
+  
+  fooo;
 
   *child_baton = dirb;
   return SVN_NO_ERROR;

@@ -178,6 +178,8 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
 
       /* With its Y-chromosome changed to X
          (Create the new, mutable root node.) */
+      /* kff todo: put_representation_skel doesn't seem to do anything
+         with mutability yet... */
       err = svn_fs__create_successor
         (&root_id, fs, base_root_id, base_skel, trail);
       if (err)
