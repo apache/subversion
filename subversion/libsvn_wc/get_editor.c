@@ -1011,29 +1011,6 @@ close_file (void *file_baton)
             
   */
 
-  /* Write the merged pristine prop hash to a file in SVN/tmp/prop-base/ */
-  base_prop_tmp_path = svn_wc__adm_path (fb->dir_baton->path,
-                                         TRUE, /* tmp area */
-                                         fb->pool,
-                                         SVN_WC__ADM_PROP_BASE,
-                                         fb->name,
-                                         NULL);
-
-  err = save_prop_file (base_prop_tmp_path, fb->baseprops, fb->pool);
-  if (err) return err;
-  
-  /* Write the merged local prop hash to a file in SVN/tmp/props/ */
-  local_prop_tmp_path = svn_wc__adm_path (fb->dir_baton->path,
-                                          TRUE, /* tmp area */
-                                          fb->pool,
-                                          SVN_WC__ADM_PROPS,
-                                          fb->name,
-                                          NULL);
-
-  err = save_prop_file (local_prop_tmp_path, fb->localprops, fb->pool);
-  if (err) return err;
-
-
   /* Save local mods. */
   err = svn_wc__get_local_changes (svn_wc__gnudiff_differ,
                                    &local_changes,
@@ -1083,6 +1060,28 @@ close_file (void *file_baton)
   
   if (fb->prop_changed)
     {
+      /* Write the merged pristine prop hash to a file in SVN/tmp/prop-base/ */
+      base_prop_tmp_path = svn_wc__adm_path (fb->dir_baton->path,
+                                             TRUE, /* tmp area */
+                                             fb->pool,
+                                             SVN_WC__ADM_PROP_BASE,
+                                             fb->name,
+                                             NULL);
+      
+      err = save_prop_file (base_prop_tmp_path, fb->baseprops, fb->pool);
+      if (err) return err;
+      
+      /* Write the merged local prop hash to a file in SVN/tmp/props/ */
+      local_prop_tmp_path = svn_wc__adm_path (fb->dir_baton->path,
+                                              TRUE, /* tmp area */
+                                              fb->pool,
+                                              SVN_WC__ADM_PROPS,
+                                              fb->name,
+                                              NULL);
+      
+      err = save_prop_file (local_prop_tmp_path, fb->localprops, fb->pool);
+      if (err) return err;
+      
       /* Merge props. */
       svn_xml_make_open_tag (&entry_accum,
                              fb->pool,
