@@ -54,40 +54,41 @@ abort_on_pool_failure (int retcode)
 #undef svn_pool_create_ex
 #endif /* APR_POOL_DEBUG */
 
+#if !APR_POOL_DEBUG
+
 apr_pool_t *
-svn_pool_create_ex (apr_pool_t *parent_pool, apr_allocator_t *allocator
-#if APR_POOL_DEBUG
-                    ,const char *file_line
-#endif /* APR_POOL_DEBUG */
-)
+svn_pool_create_ex (apr_pool_t *parent_pool, apr_allocator_t *allocator)
 {
   apr_pool_t *pool;
-
-#if !APR_POOL_DEBUG
   apr_pool_create_ex (&pool, parent_pool, abort_on_pool_failure, allocator);
-#else /* APR_POOL_DEBUG */
-  apr_pool_create_ex_debug (&pool, parent_pool, abort_on_pool_failure,
-                            allocator, file_line);
-#endif /* APR_POOL_DEBUG */
-
   return pool;
 }
 
-
-/* Wrappers that ensure binary compatibility */
-#if !APR_POOL_DEBUG
+/* Wrapper that ensures binary compatibility */
 apr_pool_t *
 svn_pool_create_ex_debug (apr_pool_t *pool, apr_allocator_t *allocator,
                           const char *file_line)
 {
-  return svn_pool_create (pool);
+  return svn_pool_create_ex (pool, allocator);
 }
 
 #else /* APR_POOL_DEBUG */
+
+apr_pool_t *
+svn_pool_create_ex_debug (apr_pool_t *parent_pool, apr_allocator_t *allocator,
+                          const char *file_line)
+{
+  apr_pool_t *pool;
+  apr_pool_create_ex_debug (&pool, parent_pool, abort_on_pool_failure,
+                            allocator, file_line);
+  return pool;
+}
+
+/* Wrapper that ensures binary compatibility */
 apr_pool_t *
 svn_pool_create_ex (apr_pool_t *pool, apr_allocator_t *allocator)
 {
-  return svn_pool_create_debug (pool, allocator, SVN_FILE_LINE_UNDEFINED);
+  return svn_pool_create_ex_debug (pool, allocator, SVN_FILE_LINE_UNDEFINED);
 }
 
 #endif /* APR_POOL_DEBUG */
