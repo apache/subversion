@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-08-18 11:18+0200\n"
-"PO-Revision-Date: 2004-08-18 11:32+0200\n"
+"PO-Revision-Date: 2004-08-24 11:15+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3238,7 +3238,7 @@ msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:863
 msgid "Malformed representation header"
-msgstr ""
+msgstr "Błędny nagłówek tablicy reprezentacji\n"
 
 #: libsvn_fs_fs/fs_fs.c:887
 msgid "Missing node-id in node-rev"
@@ -3267,7 +3267,7 @@ msgstr "Nie ma takiej wersji %ld"
 
 #: libsvn_fs_fs/fs_fs.c:1108
 msgid "Malformed svndiff data in representation"
-msgstr ""
+msgstr "Błędne dane svndiff w tablicy reprezentacji"
 
 #: libsvn_fs_fs/fs_fs.c:1224 libsvn_fs_fs/fs_fs.c:1244
 #: libsvn_fs_fs/fs_fs.c:1257
@@ -3276,7 +3276,7 @@ msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:1346
 msgid "svndiff data requested non-existent source"
-msgstr ""
+msgstr "Żądane dane svndiff wskazują na nieistniejące źródło"
 
 #: libsvn_fs_fs/fs_fs.c:1352
 msgid "svndiff requested position beyond end of stream"
@@ -3957,7 +3957,7 @@ msgstr ""
 #: libsvn_repos/rev_hunt.c:64
 #, c-format
 msgid "Failed to find time on revision %ld"
-msgstr "Nie znaleziono czasu dla wersji %ld"
+msgstr "Nie znaleziono atrybutu czas dla wersji %ld"
 
 #: libsvn_repos/rev_hunt.c:199
 #, c-format
