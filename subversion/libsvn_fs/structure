@@ -125,20 +125,22 @@ directory, etc.
 
 HEADER has the form:
 
-    (KIND REV)
+    (KIND REV [COPY])
 
 where:
-   - KIND indicates what sort of node this is,
-   - REV indicates the revision in which this node first appeared.  An
-     empty string here means this node was created in a transaction that
-     is yet to be committed.  Once committed, REV is updated with the
-     new revision number.
 
-KIND must be one of the following:
-   - "file", indicating that the node is a file (see FILE below).
-   - "dir", indicating that the node is a directory (see DIR below).
-   - "copy", indicating that the node is a copy of another node (see
-     COPY below).
+   * KIND indicates what sort of node this is.  It must be one of the
+     following:
+       - "file", indicating that the node is a file (see FILE below).
+       - "dir", indicating that the node is a directory (see DIR below).
+
+   * REV indicates the revision in which this node first appeared.  An
+     empty string atom here means this node was created in a
+     transaction that is yet to be committed.  Once committed, REV is
+     an atom indicating the revision number.
+
+   * COPY, if present, indicates the node from which this node was
+     copied:   ("copy" ANCESOR-REV ANCESTOR-PATH)
 
 Note that a node cannot change its kind from one revision to the next.
 A directory node is always a directory; a file node is always a file;
@@ -151,6 +153,8 @@ does not allow this.
 PROP-KEY is a key into the `representations' table (which see), whose
 value is a representation pointing to a string (see `strings' table)
 that is a PROPLIST skel.
+
+The KIND-SPECIFIC portions are discussed below.
 
 
 
@@ -196,23 +200,6 @@ where each entry is
 where:
   - NAME is the name of the directory entry, in UTF-8, and
   - ID is the ID of the node revision to which this entry refers
-
-
-
-COPY: how copied nodes are represented.
-
-NOTE: Copy nodes are pretty experimental.  I'm not sure they're
-necessary at all.  So don't take this stuff too seriously.  [It's not
-currently implemented in the filesystem, I'm pretty sure. -kff]
-
-If the header's KIND is "copy", then the node-revision skel represents
-a copy of another node, and has the form:
-
-    (HEADER SOURCE-REVISION (NAME ...))
-
-where SOURCE-REVISION is a filesystem revision, and (NAME ...) is a
-list of directory entry names (the path) that identifies the copy
-source in this revision. The copy source may not be a mutable node.
 
 
 
@@ -497,50 +484,6 @@ The `transactions' table is a btree, with no particular sort order.
 
 
 
-Copying
-
-[xbc todo: hammer some sense out of this. For now, this is only copied
-           out of STACK.
-[[
-   The Way It Works Now:
-      When we copy (or move) a node in the filesystem, we're currently
-      losing information about where it came from.  Our "lazy cloning"
-      model goes a long way, but in the end we get just a bunch of
-      duplicated pointers to the same node revision numbers.
-   
-      E.g.: if a node A points to the same node revision that two others
-      (B and C) point to, there's no way to know whether A was copied
-      from B or C.
-   
-   Proposed Changes:
-      1.  In the filesystem model, create a 3rd node type called a "copy"
-          node.  (This is in addition to our "file" and "dir" nodes.)
-   
-          A copy node contains a pointer to a revision and a path.
-   
-          When we create node B as a "copy" of node A, we create a new
-          copy node.  This copy node allows us to discover the proper
-          node-revision, but it also tracks the history of the copy.
-   
-      2.  Remember that a copy command is really just an "add with
-          history", and a move command is really just a "delete, followed
-          by an add with history".  Thus it's the *add* command, which,
-          when given an ancestor path and revision, creates a copy node.
-          (If there's no history given, then the add command creates a
-          regular node.)
-   
-          For clarity sake, the history arguments to the editor's add()
-          function should reflect this copying.  Instead of
-          "ancestor_path" and "ancestor_revision", we'd like to call the
-          arguments "copyfrom_url" and "copyfrom_revision".
-      
-   Rationale:
-      I think it's all been explained above.  Other folks, feel free to
-      add to this explanation.
-]]]
-
-
-
 Merge rules
 
 The Subversion filesystem must provide the following characteristics:
@@ -717,16 +660,19 @@ Transactions:
 Node revisions:
 
 
-          NODE-REVISION ::= FILE | DIR | COPY ;
+          NODE-REVISION ::= FILE | DIR ;
                    FILE ::= (HEADER PROP-KEY DATA-KEY) ;
                     DIR ::= (HEADER PROP-KEY ENTRIES-KEY) ;
-        (???)      COPY ::= (HEADER SOURCE-REVISION (NAME ...)) ;
                   ENTRY ::= (NAME ID) ;
                    NAME ::= atom ;
 
-                 HEADER ::= (KIND REV) ;
-                   KIND ::= "file" | "dir" | "copy" ;
+                 HEADER ::= (KIND REV [COPY]) ;
+                   KIND ::= "file" | "dir" ;
                     REV ::= "" | number ;
+
+                   COPY ::= ("copy" ANCESTOR-REV ANCESTOR-PATH)
+           ANCESTOR-REV ::= number ;
+          ANCESTOR-PATH ::= atom ;
 
         SOURCE-REVISION ::= number ;
 
