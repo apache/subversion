@@ -11,6 +11,4 @@ The following repository access (RA) modules are available:
   - handles 'https' schema
 * ra_local : Module for accessing a repository on local disk.
   - handles 'file' schema
-* ra_svn : Module for accessing a repository using the svn network protocol.
-  - handles 'svn' schema
 
