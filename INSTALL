@@ -140,6 +140,14 @@ I.    BUILD REQUIREMENTS
       This is required only if you plan to build from the latest source
       (See section II.B), which you probably want to do. See above.
 
+      -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
+      NOTE: To build on Solaris, you need at least libtool 1.4.3. Older
+      versions will no longer work, due to a bug in Solaris' default sed
+      (/usr/bin/sed). Apparently 1.4.3 works around this problem somehow.
+      There's a rumour that just using /usr/xpg4/bin/sed instead would work,
+      too, but so far nobody has confirmed that.
+      -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-
+
 
       4.  bison or yacc (Unix only)
 
