@@ -72,6 +72,7 @@ wc_to_wc_copy (const char *src_path,
   svn_node_kind_t src_kind, dst_kind;
   const char *dst_parent, *base_name;
   svn_wc_adm_access_t *adm_access, *src_access;
+  svn_error_t *err;
 
   /* Verify that SRC_PATH exists. */
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
@@ -153,9 +154,11 @@ wc_to_wc_copy (const char *src_path,
      ### won't detect any outstanding locks. If the source is locked and
      ### requires cleanup should we abort the copy? */
 
-  SVN_ERR (svn_wc_copy (src_path, adm_access, base_name,
-                        ctx->cancel_func, ctx->cancel_baton,
-                        ctx->notify_func, ctx->notify_baton, pool));
+  err = svn_wc_copy (src_path, adm_access, base_name,
+                     ctx->cancel_func, ctx->cancel_baton,
+                     ctx->notify_func, ctx->notify_baton, pool);
+  svn_sleep_for_timestamps ();
+  SVN_ERR (err);
 
 
   if (is_move)

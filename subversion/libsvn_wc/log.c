@@ -1462,6 +1462,7 @@ svn_wc_cleanup (const char *path,
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t cleanup;
   int wc_format_version;
+  apr_pool_t *subpool;
 
   /* Check cancellation; note that this catches recursive calls too. */
   if (cancel_func)
@@ -1480,29 +1481,45 @@ svn_wc_cleanup (const char *path,
   SVN_ERR (svn_wc__adm_steal_write_lock (&adm_access, optional_adm_access, 
                                          path, pool));
 
-  /* Recurse on versioned subdirs first, oddly enough. */
+  /* Recurse on versioned elements first, oddly enough. */
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
-
+  subpool = svn_pool_create (pool);
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       void *val;
       const svn_wc_entry_t *entry;
+      const char *entry_path;
 
+      svn_pool_clear (subpool);
       apr_hash_this (hi, &key, NULL, &val);
       entry = val;
+      entry_path = svn_path_join (path, key, subpool);
 
-      if ((entry->kind == svn_node_dir)
-          && (strcmp (key, SVN_WC_ENTRY_THIS_DIR) != 0))
+      if (entry->kind == svn_node_dir
+          && strcmp (key, SVN_WC_ENTRY_THIS_DIR) != 0)
         {
-          /* Recurse */
-          const char *subdir = svn_path_join (path, key, pool);
-          SVN_ERR (svn_io_check_path (subdir, &kind, pool));
+          /* Sub-directories */
+          SVN_ERR (svn_io_check_path (entry_path, &kind, subpool));
           if (kind == svn_node_dir)
-            SVN_ERR (svn_wc_cleanup (subdir, adm_access, diff3_cmd,
+            /* ### I'd like to pass subpool and close the batons as we go
+               ### but we probably need 2.0 for such a behaviour change */
+            SVN_ERR (svn_wc_cleanup (entry_path, adm_access, diff3_cmd,
                                      cancel_func, cancel_baton, pool));
         }
+      else
+        {
+          /* "." and things that are not directories, check for mods to
+             trigger the timestamp repair mechanism */
+          svn_boolean_t modified;
+          SVN_ERR (svn_wc_props_modified_p (&modified, entry_path,
+                                            adm_access, subpool));
+          if (entry->kind == svn_node_file)
+            SVN_ERR (svn_wc_text_modified_p (&modified, entry_path, FALSE,
+                                             adm_access, subpool));
+        }
     }
+  svn_pool_destroy (subpool);
 
   if (svn_wc__adm_path_exists (svn_wc_adm_access_path (adm_access), 0, pool,
                                SVN_WC__ADM_KILLME, NULL))
