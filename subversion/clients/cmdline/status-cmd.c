@@ -34,19 +34,26 @@
 
 /*** Code. ***/
 
-/* A faux status callback function for stashing STATUS item in a hash
-   keyed on PATH, and then passes the STATUS on through to a real
-   STATUS_FUNC.  This is merely for the purposes of verifying that we
-   don't call the STATUS_FUNC for the same path more than once.  */
-static void
-hash_stash (void *baton,
-            const char *path,
-            svn_wc_status_t *status)
+struct status_baton
 {
-  apr_hash_t *hash = baton;
-  apr_pool_t *pool = apr_hash_pool_get (hash);
-  apr_hash_set (hash, apr_pstrdup (pool, path), APR_HASH_KEY_STRING, 
-                svn_wc_dup_status (status, pool));
+  /* These fields all correspond to the ones in the
+     svn_cl__print_status() interface. */
+  svn_boolean_t detailed;
+  svn_boolean_t show_last_committed;
+  svn_boolean_t skip_unrecognized;
+  apr_pool_t *pool;
+};
+
+
+/* A status callback function for printing STATUS for PATH. */
+static void
+print_status (void *baton,
+              const char *path,
+              svn_wc_status_t *status)
+{
+  struct status_baton *sb = baton;
+  svn_cl__print_status (path, status, sb->detailed, sb->show_last_committed,
+                        sb->skip_unrecognized, sb->pool);
 }
 
 
@@ -62,6 +69,7 @@ svn_cl__status (apr_getopt_t *os,
   apr_pool_t * subpool;
   int i;
   svn_revnum_t youngest = SVN_INVALID_REVNUM;
+  struct status_baton sb;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -81,7 +89,6 @@ svn_cl__status (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
-      apr_hash_t *hash = apr_hash_make (pool);
 
       /* Retrieve a hash of status structures with the information
          requested by the user.
@@ -89,23 +96,22 @@ svn_cl__status (apr_getopt_t *os,
          svn_client_status directly understands the three commandline
          switches (-n, -u, -[vV]) : */
 
+      sb.detailed = (opt_state->verbose || opt_state->update);
+      sb.show_last_committed = opt_state->verbose;
+      sb.skip_unrecognized = opt_state->quiet;
+      sb.pool = subpool;
       SVN_ERR (svn_client_status (&youngest, target,
-                                  hash_stash, hash,
+                                  print_status, &sb,
                                   opt_state->nonrecursive ? FALSE : TRUE,
                                   opt_state->verbose,
                                   opt_state->update,
                                   opt_state->no_ignore,
                                   ctx, subpool));
 
-      /* Now print the structures to the screen.
-         The flag we pass indicates whether to use the 'detailed'
-         output format or not. */
-      svn_cl__print_status_list (hash,
-                                 youngest,
-                                 (opt_state->verbose || opt_state->update),
-                                 opt_state->verbose,
-                                 opt_state->quiet,
-                                 subpool);
+      /* If printing in detailed format, we might have a head revision to
+         print as well. */
+      if (sb.detailed && (youngest != SVN_INVALID_REVNUM))
+        printf ("Head revision: %6" SVN_REVNUM_T_FMT "\n", youngest);
 
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       svn_pool_clear (subpool);

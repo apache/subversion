@@ -142,48 +142,25 @@ print_status (const char *path,
 
 /* Called by status-cmd.c */
 void
-svn_cl__print_status_list (apr_hash_t *statushash,
-                           svn_revnum_t youngest,
-                           svn_boolean_t detailed,
-                           svn_boolean_t show_last_committed,
-                           svn_boolean_t skip_unrecognized,
-                           apr_pool_t *pool)
+svn_cl__print_status (const char *path,
+                      svn_wc_status_t *status,
+                      svn_boolean_t detailed,
+                      svn_boolean_t show_last_committed,
+                      svn_boolean_t skip_unrecognized,
+                      apr_pool_t *pool)
 {
-  int i;
-  apr_array_header_t *statusarray;
-  svn_wc_status_t *status = NULL;
+  svn_error_t *err;
+  const char *native_path;
 
-  /* Convert the unordered hash to an ordered, sorted array */
-  statusarray = apr_hash_sorted_keys (statushash,
-                                      svn_sort_compare_items_as_paths,
-                                      pool);
+  if (! status 
+      || (skip_unrecognized && ! status->entry)
+      || (status->text_status == svn_wc_status_none
+          && status->repos_text_status == svn_wc_status_none))
+    return;
 
-  /* Loop over array, printing each name/status-structure */
-  for (i = 0; i < statusarray->nelts; i++)
-    {
-      const svn_item_t *item;
-      const char *path;
-      svn_error_t *err;
+  if ((err = svn_utf_cstring_from_utf8 (&native_path, path, pool)))
+    svn_handle_error (err, stderr, FALSE);
 
-      item = &APR_ARRAY_IDX(statusarray, i, const svn_item_t);
-      status = item->value;
-
-      if (! status 
-          || (skip_unrecognized && ! status->entry)
-          || (status->text_status == svn_wc_status_none
-              && status->repos_text_status == svn_wc_status_none))
-        continue;
-
-      err = svn_utf_cstring_from_utf8 (&path, item->key, pool);
-      if (err)
-        svn_handle_error (err, stderr, FALSE);
-
-      print_status (svn_path_local_style (path, pool),
-                    detailed, show_last_committed, status);
-    }
-
-  /* If printing in detailed format, we might have a head revision to
-     print as well. */
-  if (detailed && (youngest != SVN_INVALID_REVNUM))
-    printf ("Head revision: %6" SVN_REVNUM_T_FMT "\n", youngest);
+  print_status (svn_path_local_style (native_path, pool),
+                detailed, show_last_committed, status);
 }
