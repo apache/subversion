@@ -5260,14 +5260,12 @@ redundant_copy (const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    /*
     SVN_TEST_PASS (create_berkeley_filesystem),
     SVN_TEST_PASS (open_berkeley_filesystem),
     SVN_TEST_PASS (trivial_transaction),
     SVN_TEST_PASS (reopen_trivial_transaction),
     SVN_TEST_PASS (create_file_transaction),
     SVN_TEST_PASS (verify_txn_list),
-    */
     SVN_TEST_PASS (call_functions_with_unopened_fs),
     SVN_TEST_PASS (write_and_read_file),
     SVN_TEST_PASS (create_mini_tree_transaction),
