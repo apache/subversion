@@ -1009,6 +1009,8 @@ static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
+/* This implements svn_write_fn_t.  Write LEN bytes starting at DATA to the
+   client as a string. */
 static svn_error_t *svndiff_handler(void *baton, const char *data,
                                     apr_size_t *len)
 {
@@ -1020,6 +1022,8 @@ static svn_error_t *svndiff_handler(void *baton, const char *data,
   return svn_ra_svn_write_string(b->conn, b->pool, &str);
 }
 
+/* This implements svn_close_fn_t.  Mark the end of the data by writing an
+   empty string to the client. */
 static svn_error_t *svndiff_close_handler(void *baton)
 {
   file_revs_baton_t *b = baton;
@@ -1028,6 +1032,7 @@ static svn_error_t *svndiff_close_handler(void *baton)
   return SVN_NO_ERROR;
 }
 
+/* This implements the svn_repos_file_rev_handler_t interface. */
 static svn_error_t *file_rev_handler(void *baton, const char *path,
                                      svn_revnum_t rev, apr_hash_t *rev_props,
                                      svn_txdelta_window_handler_t *d_handler,

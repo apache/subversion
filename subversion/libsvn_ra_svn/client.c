@@ -175,7 +175,8 @@ static svn_error_t *parse_proplist(apr_array_header_t *list, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-/* Convert property diffs received from the server to an array of svn_prop_. */
+/* Set *DIFFS to an array of svn_prop_t, allocated in POOL, based on the
+   property diffs in LIST, received from the server. */
 static svn_error_t *parse_prop_diffs(apr_array_header_t *list,
                                      apr_pool_t *pool,
                                      apr_array_header_t **diffs)
