@@ -67,7 +67,6 @@ svn_client_switch (const char *path,
   svn_revnum_t revnum;
   svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access;
-  svn_client_auth_baton_t *auth_baton;
 
   /* Sanity check.  Without these, the switch is meaningless. */
   assert (path);
@@ -135,8 +134,6 @@ svn_client_switch (const char *path,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
 
-  SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
-
   if (entry->kind == svn_node_dir)
     {
       const svn_delta_editor_t *switch_editor;
@@ -148,7 +145,7 @@ svn_client_switch (const char *path,
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL,
                                             path, adm_access,
                                             NULL, TRUE, TRUE, FALSE, 
-                                            auth_baton, pool));
+                                            ctx, pool));
       SVN_ERR (svn_client__get_revision_number
                (&revnum, ra_lib, session, revision, path, pool));
 
@@ -232,7 +229,7 @@ svn_client_switch (const char *path,
          svndiff data to construct a fulltext.  */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, switch_url, NULL,
                                             NULL, NULL, TRUE, TRUE, TRUE,
-                                            auth_baton, pool));
+                                            ctx, pool));
       SVN_ERR (svn_client__get_revision_number
                (&revnum, ra_lib, session, revision, path, pool));
 

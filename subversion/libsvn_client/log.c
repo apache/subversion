@@ -65,7 +65,6 @@ svn_client_log (const apr_array_header_t *targets,
   apr_array_header_t *condensed_targets;
   svn_revnum_t start_revnum, end_revnum;
   svn_error_t *err = SVN_NO_ERROR;  /* Because we might have no targets. */
-  svn_client_auth_baton_t *auth_baton;
 
   if ((start->kind == svn_opt_revision_unspecified)
       || (end->kind == svn_opt_revision_unspecified))
@@ -140,8 +139,6 @@ svn_client_log (const apr_array_header_t *targets,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
 
-  SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
-
   /* Open a repository session to the URL. If we got here from a full URL
      passed to the command line, then if the current directory is a
      working copy, we pass it as base_name for authentication
@@ -151,14 +148,14 @@ svn_client_log (const apr_array_header_t *targets,
   if (NULL != base_name)
     SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, base_name,
                                           NULL, NULL, TRUE, TRUE, TRUE, 
-                                          auth_baton, pool));
+                                          ctx, pool));
   else
     {
       SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL,
                                             auth_dir,
                                             NULL, NULL, FALSE, FALSE, TRUE, 
-                                            auth_baton, pool));
+                                            ctx, pool));
     }
 
   /* It's a bit complex to correctly handle the special revision words

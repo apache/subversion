@@ -125,7 +125,6 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       const char *log_msg;
       svn_node_kind_t kind;
       const char *auth_dir;
-      svn_client_auth_baton_t *auth_baton;
 
       /* Create a new commit item and add it to the array. */
       if (log_msg_func)
@@ -156,8 +155,6 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor, pool));
 
-      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
-
       /* Open an RA session for the URL. Note that we don't have a local
          directory, nor a place to put temp files or store the auth
          data, although we'll try to retrieve auth data from the
@@ -165,7 +162,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, auth_dir,
                                             NULL, NULL, FALSE, FALSE, TRUE,
-                                            auth_baton, pool));
+                                            ctx, pool));
 
       /* Verify that the thing to be deleted actually exists. */
       SVN_ERR (ra_lib->check_path (&kind, session, target, 

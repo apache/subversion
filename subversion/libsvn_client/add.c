@@ -182,7 +182,6 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
       const char *committed_date = NULL;
       const char *committed_author = NULL;
       const char *message;
-      svn_client_auth_baton_t *auth_baton;
 
       *commit_info = NULL;
 
@@ -216,14 +215,12 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, anchor, pool));
 
-      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
-
       /* Open a repository session to the URL. Note that we do not have a
          base directory, do not want to store auth data, and do not
          (necessarily) have an admin area for temp files. */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, NULL,
                                             NULL, NULL, FALSE, FALSE, TRUE, 
-                                            auth_baton, pool));
+                                            ctx, pool));
 
       /* Fetch RA commit editor */
       SVN_ERR (ra_lib->get_commit_editor (session, &editor, &edit_baton,

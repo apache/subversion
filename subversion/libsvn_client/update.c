@@ -98,18 +98,16 @@ svn_client_update (const char *path,
       svn_ra_plugin_t *ra_lib;
       svn_node_kind_t kind;
       svn_wc_adm_access_t *dir_access;
-      svn_client_auth_baton_t *auth_baton;
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
 
-      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
-
       /* Open an RA session for the URL */
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
-                                            adm_access, NULL, TRUE, TRUE, TRUE, 
-                                            auth_baton, pool));
+                                            adm_access, NULL,
+                                            TRUE, TRUE, TRUE, 
+                                            ctx, pool));
 
       /* ### todo: shouldn't svn_client__get_revision_number be able
          to take a url as easily as a local path?  */

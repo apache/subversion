@@ -81,13 +81,10 @@ svn_client_ls (apr_hash_t **dirents,
   svn_revnum_t rev;
   svn_node_kind_t url_kind;
   const char *auth_dir;
-  svn_client_auth_baton_t *auth_baton;
 
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, pool));
-
-  SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
 
   SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
 
@@ -95,7 +92,7 @@ svn_client_ls (apr_hash_t **dirents,
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url,
                                         auth_dir,
                                         NULL, NULL, FALSE, FALSE, TRUE, 
-                                        auth_baton, pool));
+                                        ctx, pool));
 
   /* Resolve REVISION into a real revnum. */
   SVN_ERR (svn_client__get_revision_number (&rev, ra_lib, session,
@@ -127,7 +124,7 @@ svn_client_ls (apr_hash_t **dirents,
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, parent_url,
                                             auth_dir,
                                             NULL, NULL, FALSE, FALSE, TRUE, 
-                                            auth_baton, pool));
+                                            ctx, pool));
 
       /* Get all parent's entries, no props. */
       if (ra_lib->get_dir)

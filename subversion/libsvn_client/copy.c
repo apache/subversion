@@ -170,7 +170,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
                      const char *src_url, 
                      const svn_opt_revision_t *src_revision, 
                      const char *dst_url, 
-                     svn_client_auth_baton_t *auth_baton,
+                     svn_client_ctx_t *ctx,
                      const char *message,
                      svn_boolean_t is_move,
                      apr_pool_t *pool)
@@ -266,7 +266,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, top_url,
                                         auth_dir,
                                         NULL, NULL, FALSE, FALSE, TRUE, 
-                                        auth_baton, pool));
+                                        ctx, pool));
 
   /* Pass null for the path, to ensure error if trying to get a
      revision based on the working copy. */
@@ -515,7 +515,7 @@ static svn_error_t *
 wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                   const char *src_path, 
                   const char *dst_url, 
-                  svn_client_auth_baton_t *auth_baton,
+                  svn_client_ctx_t *ctx,
                   const char *message,
                   svn_wc_notify_func_t notify_func,
                   void *notify_baton,
@@ -559,7 +559,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   /* Open an RA session for the anchor URL. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, parent,
                                         adm_access, NULL, TRUE, TRUE, TRUE, 
-                                        auth_baton, pool));
+                                        ctx, pool));
 
   /* Figure out the basename that will result from this operation. */
   SVN_ERR (ra_lib->check_path (&dst_kind, session, 
@@ -626,7 +626,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   if ((cmt_err = svn_client__open_ra_session (&session, ra_lib, base_url,
                                               auth_dir, NULL, commit_items,
                                               FALSE, FALSE, FALSE,
-                                              auth_baton, pool)))
+                                              ctx, pool)))
     goto cleanup;
 
   /* Fetch RA commit editor. */
@@ -685,7 +685,7 @@ repos_to_wc_copy (const char *src_url,
                   const svn_opt_revision_t *src_revision,
                   const char *dst_path, 
                   svn_wc_adm_access_t *optional_adm_access,
-                  svn_client_auth_baton_t *auth_baton,
+                  svn_client_ctx_t *ctx,
                   svn_wc_notify_func_t notify_func,
                   void *notify_baton,
                   apr_pool_t *pool)
@@ -711,7 +711,7 @@ repos_to_wc_copy (const char *src_url,
      auth data, though, once the WC is built. */
   SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, src_url, auth_dir,
                                         NULL, NULL, TRUE, FALSE, TRUE, 
-                                        auth_baton, pool));
+                                        ctx, pool));
       
   /* Pass null for the path, to ensure error if trying to get a
      revision based on the working copy. */
@@ -1024,34 +1024,22 @@ setup_copy (svn_client_commit_info_t **commit_info,
 
   else if ((! src_is_url) && (dst_is_url))
     {
-      svn_client_auth_baton_t *auth_baton;
-
-      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
-
       SVN_ERR (wc_to_repos_copy (commit_info, src_path, dst_path, 
-                                 auth_baton, message, 
+                                 ctx, message, 
                                  notify_func, notify_baton,
                                  pool));
     }
   else if ((src_is_url) && (! dst_is_url))
     {
-      svn_client_auth_baton_t *auth_baton;
-
-      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
-
       SVN_ERR (repos_to_wc_copy (src_path, src_revision, 
-                                 dst_path, optional_adm_access, auth_baton,
+                                 dst_path, optional_adm_access, ctx,
                                  notify_func, notify_baton,
                                  pool));
     }
   else
     {
-      svn_client_auth_baton_t *auth_baton;
-
-      SVN_ERR (svn_client_ctx_get_auth_baton (ctx, &auth_baton));
-
       SVN_ERR (repos_to_repos_copy (commit_info, src_path, src_revision,
-                                    dst_path, auth_baton, message, is_move,
+                                    dst_path, ctx, message, is_move,
                                     pool));
     }
 
