@@ -558,12 +558,14 @@ print_diff_tree (svn_fs_root_t *root,
                  apr_hash_t *config,
                  apr_pool_t *pool)
 {
-  const char *orig_path = NULL, *new_path = NULL;
+  const char *orig_path = NULL, *new_path = NULL, *path_native;
   apr_file_t *fh1, *fh2;
   svn_boolean_t is_copy = FALSE;
 
   if (! node)
     return SVN_NO_ERROR;
+
+  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
 
   /* Print copyfrom history for the top node of a copied tree. */
   if ((SVN_IS_VALID_REVNUM (node->copyfrom_rev))
@@ -586,7 +588,7 @@ print_diff_tree (svn_fs_root_t *root,
       SVN_ERR (svn_utf_cstring_from_utf8 (&base_path_native, base_path, pool));
 
       printf ("Copied: %s (from rev %" SVN_REVNUM_T_FMT ", %s)\n",
-              node->name, node->copyfrom_rev, base_path_native);
+              path_native, node->copyfrom_rev, base_path_native);
 
       SVN_ERR (svn_fs_revision_root (&base_root,
                                      svn_fs_root_fs (base_root),
@@ -663,17 +665,13 @@ print_diff_tree (svn_fs_root_t *root,
       const char *label;
       const char *abs_path;
       int exitcode;
-      const char *path_native;
       
       if (! is_copy)
-        {
-          SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-          printf ("%s: %s\n", 
-                  ((node->action == 'A') ? "Added" : 
-                   ((node->action == 'D') ? "Deleted" :
-                    ((node->action == 'R') ? "Modified" : "Index"))),
-                  path_native);
-        }
+        printf ("%s: %s\n", 
+                ((node->action == 'A') ? "Added" : 
+                 ((node->action == 'D') ? "Deleted" :
+                  ((node->action == 'R') ? "Modified" : "Index"))),
+                path_native);
 
       if ((! no_diff_deleted) || (node->action != 'D'))
         {
