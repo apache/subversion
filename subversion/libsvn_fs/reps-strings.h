@@ -72,6 +72,17 @@ svn_error_t *svn_fs__rep_contents_size (apr_size_t *size_p,
                                         trail_t *trail);
 
 
+/* Put into DIGEST the MD5 checksum for REP_KEY in FS, as part of TRAIL.
+   This is the prerecorded checksum for the rep's contents' fulltext.
+   If no checksum is available, do not calculate one dynamically, just
+   put all 0's into DIGEST.  (By convention, the all-zero checksum is
+   considered to match any checksum.) */
+svn_error_t *svn_fs__rep_contents_checksum (unsigned char digest[],
+                                            svn_fs_t *fs,
+                                            const char *rep_key,
+                                            trail_t *trail);
+
+
 /* Set STR->data to the contents of REP_KEY in FS, and STR->len to the
    contents' length, as part of TRAIL.  The data is allocated in
    TRAIL->pool.  If an error occurs, the effect on STR->data and

@@ -1190,6 +1190,43 @@ svn_error_t *svn_fs_file_length (apr_off_t *length_p,
                                  apr_pool_t *pool);
 
 
+/** Put the MD5 checksum of file @a path into @a digest, which points
+ * to MD5_DIGESTSIZE bytes of storage.  Use @a pool only for temporary
+ * allocations.
+ *
+ * If the filesystem does not have a prerecorded checksum for @a path,
+ * do not calculate a checksum dynamically, just put all 0's into @a
+ * digest.  (By convention, the all-zero checksum is considered to
+ * match any checksum.)
+ *
+ * Notes:
+ *
+ * You might wonder, why do we only provide this interface for file
+ * contents, and not for properties or directories?
+ *
+ * The answer is that property lists and directory entry lists are
+ * essentially data structures, not text.  We serialize them for
+ * transmission, but there is no guarantee that the consumer will
+ * parse them into the same form, or even the same order, as the
+ * producer.  It's difficult to find a checksumming method that
+ * reaches the same result given such variation in input.  (I suppose
+ * we could calculate an independent MD5 sum for each propname and
+ * value, and XOR them together; same with directory entry names.
+ * Maybe that's the solution?)  Anyway, for now we punt.  The most
+ * important data, and the only data that goes through svndiff
+ * processing, is file contents, so that's what we provide
+ * checksumming for.
+ *
+ * Internally, of course, the filesystem checksums everything, because
+ * it has access to the lowest level storage forms: strings behind
+ * representations.
+ */
+svn_error_t *svn_fs_file_md5_checksum (unsigned char digest[],
+                                       svn_fs_root_t *root,
+                                       const char *path,
+                                       apr_pool_t *pool);
+
+
 /** Set @a *contents to a readable generic stream will yield the contents
  *  of the file @a path in @a root.
  *

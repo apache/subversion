@@ -5607,6 +5607,53 @@ branch_test (const char **msg,
 }
 
 
+static svn_error_t *
+verify_checksum (const char **msg,
+                 svn_boolean_t msg_only,
+                 apr_pool_t *pool)
+{ 
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_stringbuf_t *str;
+  unsigned char expected_digest[MD5_DIGESTSIZE];
+  unsigned char actual_digest[MD5_DIGESTSIZE];
+
+  /* Write a file, compare the repository's idea of its checksum
+     against our idea of its checksum.  They should be the same. */
+
+  *msg = "test checksums";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  str = svn_stringbuf_create ("My text editor charges me rent.", pool);
+  apr_md5 (expected_digest, str->data, str->len);
+
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-verify-checksum", pool));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "fact", pool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "fact", str->data, pool));
+  SVN_ERR (svn_fs_file_md5_checksum (actual_digest, txn_root, "fact", pool));
+
+  if (memcmp (expected_digest, actual_digest, MD5_DIGESTSIZE) != 0)
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, NULL,
+       "verify-checksum: checksum mismatch:\n"
+       "   expected:  %s\n"
+       "     actual:  %s\n", 
+       svn_cstring_from_md5_digest (expected_digest, pool),
+       svn_cstring_from_md5_digest (actual_digest, pool));
+
+  SVN_ERR (svn_fs_close_txn (txn));
+  SVN_ERR (svn_fs_close_fs (fs));
+  svn_fs_close_fs (fs);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -5649,5 +5696,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (revisions_changed),
     SVN_TEST_PASS (canonicalize_abspath),
     SVN_TEST_PASS (branch_test),
+    SVN_TEST_PASS (verify_checksum),
     SVN_TEST_NULL
   };
