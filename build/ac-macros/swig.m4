@@ -249,39 +249,47 @@ AC_DEFUN(SVN_FIND_SWIG,
       AC_MSG_NOTICE([Configuring Ruby SWIG binding])
       SWIG_CLEAN_RULES="$SWIG_CLEAN_RULES clean-swig-rb" 
 
-      ac_cv_default_ruby_sitedir="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(sitedir))'`"
-      AC_ARG_WITH([swig-ruby-sitedir],
-		  AC_HELP_STRING([--with-swig-ruby-sitedir=SITEDIR],
+      AC_CACHE_CHECK([for Ruby include path], [svn_cv_ruby_includes],[
+        svn_cv_ruby_includes="-I. -I`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(archdir))'`"
+      ])
+      SWIG_RB_INCLUDES="\$(SWIG_INCLUDES) $svn_cv_ruby_includes"
+
+      AC_CACHE_CHECK([how to compile Ruby extensions], [svn_cv_ruby_compile],[
+        # XXX: This apparent temporary kludge needs to be resolved
+        # I assume we *should* be using CFLAGS from Ruby
+        svn_cv_ruby_compile="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(CC))'` -g \$(SWIG_RB_INCLUDES)"
+        # svn_cv_ruby_compile="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(CC)), %q( ), Config::CONFIG.fetch(%q(CFLAGS))'` \$(SWIG_RB_INCLUDES)"
+      ])
+      SWIG_RB_COMPILE="$svn_cv_ruby_compile"
+
+      AC_CACHE_CHECK([how to link Ruby extensions], [svn_cv_ruby_link],[
+        svn_cv_ruby_link="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(LDSHARED)).sub(/^\w+/, Config::CONFIG.fetch(%q(CC)) + %q( -shrext .) + Config::CONFIG.fetch(%q(DLEXT)))'`"
+      ])
+      SWIG_RB_LINK="$svn_cv_ruby_link"
+
+      AC_CACHE_VAL([svn_cv_ruby_sitedir],[
+        svn_cv_ruby_sitedir="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(sitedir))'`"
+      ])
+      AC_ARG_WITH([ruby-sitedir],
+		  AC_HELP_STRING([--with-ruby-sitedir=SITEDIR],
                                  [install Ruby bindings in SITEDIR
                                   (default is same as ruby's one)]),
-		  [ac_cv_ruby_sitedir=$withval],
-		  [ac_cv_ruby_sitedir=$ac_cv_default_ruby_sitedir])
+		  [svn_ruby_installdir="$withval"],
+		  [svn_ruby_installdir="$svn_cv_ruby_sitedir"])
 
-      AC_CACHE_CHECK([for Ruby includes], [ac_cv_ruby_includes],[
-        ac_cv_ruby_includes="-I. -I`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(archdir))'`"
+      AC_MSG_CHECKING([where to install Ruby scripts])
+      AC_CACHE_VAL([svn_cv_ruby_sitedir_libsuffix],[
+        svn_cv_ruby_sitedir_libsuffix="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(sitelibdir)).sub(/^#{Config::CONFIG.fetch(%q(sitedir))}/, %q())'`"
       ])
-      SWIG_RB_INCLUDES="\$(SWIG_INCLUDES) $ac_cv_ruby_includes"
+      SWIG_RB_SITE_LIB_DIR="${svn_ruby_installdir}${svn_cv_ruby_sitedir_libsuffix}"
+      AC_MSG_RESULT([$SWIG_RB_SITE_LIB_DIR])
 
-      AC_CACHE_CHECK([for compiling Ruby extensions], [ac_cv_ruby_compile],[
-        ac_cv_ruby_compile="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(CC))'` -g \$(SWIG_RB_INCLUDES)"
-        # ac_cv_ruby_compile="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(CC)), %q( ), Config::CONFIG.fetch(%q(CFLAGS))'` \$(SWIG_RB_INCLUDES)"
+      AC_MSG_CHECKING([where to install Ruby extensions])
+      AC_CACHE_VAL([svn_cv_ruby_sitedir_archsuffix],[
+        svn_cv_ruby_sitedir_archsuffix="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(sitearchdir)).sub(/^#{Config::CONFIG.fetch(%q(sitedir))}/, %q())'`"
       ])
-      SWIG_RB_COMPILE="$ac_cv_ruby_compile"
-
-      AC_CACHE_CHECK([for linking Ruby extensions], [ac_cv_ruby_link],[
-        ac_cv_ruby_link="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(LDSHARED)).sub(/^\w+/, Config::CONFIG.fetch(%q(CC)) + %q( -shrext .) + Config::CONFIG.fetch(%q(DLEXT)))'`"
-      ])
-      SWIG_RB_LINK="$ac_cv_ruby_link"
-
-      AC_CACHE_CHECK([for installing Ruby scripts], [ac_cv_ruby_site_lib],[
-        ac_cv_ruby_site_lib="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(sitelibdir)).sub(/^#{Config::CONFIG.fetch(%q(sitedir))}/, %q())'`"
-      ])
-      SWIG_RB_SITE_LIB_DIR="${ac_cv_ruby_sitedir}${ac_cv_ruby_site_lib}"
-
-      AC_CACHE_CHECK([for installing Ruby extensions], [ac_cv_ruby_site_arch],[
-        ac_cv_ruby_site_arch="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(sitearchdir)).sub(/^#{Config::CONFIG.fetch(%q(sitedir))}/, %q())'`"
-      ])
-      SWIG_RB_SITE_ARCH_DIR="${ac_cv_ruby_sitedir}${ac_cv_ruby_site_arch}"
+      SWIG_RB_SITE_ARCH_DIR="${svn_ruby_installdir}${svn_cv_ruby_sitedir_archsuffix}"
+      AC_MSG_RESULT([$SWIG_RB_SITE_ARCH_DIR])
     fi
 
   fi
