@@ -416,12 +416,20 @@ svn_path_compare_paths (const svn_stringbuf_t *path1,
   while (i < min_len && path1->data[i] == path2->data[i])
     ++i;
 
+  /* Are the paths exactly the same? */
   if ((path1->len == path2->len) && (i >= min_len))
-    return 0;     /* the paths are the same */
+    return 0;    
+
+  /* Children of paths are greater than their parents, but less than
+     greater siblings of their parents. */
+  if ((path1->data[i] == SVN_PATH_SEPARATOR) && (path2->data[i] == 0))
+    return 1;
+  if ((path2->data[i] == SVN_PATH_SEPARATOR) && (path1->data[i] == 0))
+    return -1;
   if (path1->data[i] == SVN_PATH_SEPARATOR)
-    return 1;     /* path1 child of path2, parent always comes before child */
+    return -1;
   if (path2->data[i] == SVN_PATH_SEPARATOR)
-    return -1;    /* path2 child of path1, parent always comes before child */
+    return 1;
 
   /* Common prefix was skipped above, next character is compared to
      determine order */
