@@ -147,7 +147,7 @@ See `vc-svn-parse-status' for a description of the result."
           ;; If you ask for the status of a file that isn't even in a
           ;; Subversion-controlled directory, then Subversion exits with
           ;; this error.
-          (if (or (looking-at "\\(.*\n\\)*.*is not a working copy directory")
+          (if (or (looking-at "\\(.*\n\\)*.*is not a working copy")
                   (looking-at "\\(.*\n\\)*.*is not a versioned resource")
                   (looking-at "\\(.*\n\\)*.*: No such file or directory"))
               nil
