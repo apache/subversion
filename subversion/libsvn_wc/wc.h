@@ -452,6 +452,7 @@ svn_error_t *svn_wc__adm_destroy (svn_stringbuf_t *path,
 #define SVN_WC__LOG_ATTR_AUTHOR         "author"
 #define SVN_WC__LOG_ATTR_URL            "url"
 #define SVN_WC__LOG_ATTR_REPAIR         "repair"
+#define SVN_WC__LOG_ATTR_EXPAND         "expand"
 /* The rest are for SVN_WC__LOG_RUN_CMD.  Extend as necessary. */
 #define SVN_WC__LOG_ATTR_INFILE         "infile"
 #define SVN_WC__LOG_ATTR_OUTFILE        "outfile"
