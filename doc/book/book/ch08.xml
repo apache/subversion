@@ -4,9 +4,9 @@
   <simplesect>
     <para>This chapter is intended to be a complete reference to using
       Subversion. This includes the command line client
-      (<command>svn</command>) and all its commands, as well as the
+      (<command>svn</command>) and all its subcommands, as well as the
       repository administration programs (<command>svnadmin</command>
-      and <command>svnlook</command>) and their respective commands.
+      and <command>svnlook</command>) and their respective subcommands.
     </para>
   </simplesect>
   
@@ -34,7 +34,7 @@ $ svn status -v myfile
     </screen>
 
     <para>You can find many more examples of how to use most client
-      commands in <xref linkend="svn-ch-3"/>, commands for managing
+      commands in <xref linkend="svn-ch-3"/> and commands for managing
       properties in <xref linkend="svn-ch-6-sect-2"/></para>
     
     <sect2 id="svn-ch-8-sect-1.1">
@@ -120,7 +120,7 @@ $ svn status -v myfile
         <varlistentry>
           <term><option>--file</option> (<option>-F</option>)
             <replaceable>FILENAME</replaceable>
-              </term>
+          </term>
           <listitem>
             <para>Uses the contents of the file passed as an argument
               to this switch for the specified subcommand.</para>
@@ -164,7 +164,9 @@ $ svn status -v myfile
         </varlistentry>
         
         <varlistentry>
-          <term><option>--help</option> (<option>-h or -?</option>)</term>
+          <term><option>--help</option> (<option>-h</option> or
+                <option>-?</option>)
+          </term>
           <listitem>
             <para>If used with one or more subcommands, shows the
               built-in help text for each subcommand.  If used alone,
@@ -191,7 +193,7 @@ $ svn status -v myfile
         <varlistentry>
           <term><option>--message</option> (<option>-m</option>)
             <replaceable>MESSAGE</replaceable>
-              </term>
+          </term>
           <listitem>
             <para>Indicates that you will specify a commit message
               on the command line, following this switch. For
@@ -301,7 +303,7 @@ $ svn commit -m "Initial import."
         <varlistentry>
           <term><option>--revision</option> (<option>-r</option>)
             <replaceable>REV</replaceable>
-              </term>
+          </term>
           <listitem>
             <para>Indicates that you're going to supply a revision (or
               range of revisions) for a particular operation.  You can
@@ -1280,7 +1282,7 @@ Index: COMMITTERS
             local directory name.</para>
 
           <para>The second form exports a clean directory tree from
-            the working copy specified by PATH1 into PATH2.  all
+            the working copy specified by PATH1 into PATH2.  All
             local changes will be preserved, but files not under
             revision control will not be copied.</para>
         </refsect1>
@@ -1451,7 +1453,8 @@ Committed revision 16.
             it&mdash;<command>svn import</command> will
             recursively create directories for you:</para>
           <screen>
-$ svn import -m "New import" myproj http://svn.red-bean.com/repos/test/trunk/vendors/myproj
+$ svn import -m "New import" myproj \
+    http://svn.red-bean.com/repos/test/trunk/vendors/myproj
 Adding         myproj/sample.txt
 &hellip;
 Transmitting file data .........
@@ -1570,7 +1573,7 @@ Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
           <title>Description</title>
 
           <para>List directory entries of a URL.  If URL is a file,
-            just file entry will be displayed.  <command>svn
+            just the file entry will be displayed.  <command>svn
             list</command> does not work on paths in your working
             copy.</para>
         </refsect1>
@@ -1665,10 +1668,10 @@ _      24     harry       0 Jan 18 11:27 examples/
             add paths past the URL, only messages for those paths
             under that URL will be printed.</para>
 
-          <para>With <option>--verbose</option>, also print all
-            affected paths with each log message.  With
-            <option>--quiet</option>, <command>svn log</command>
-            don't print the log message body itself (this is
+          <para>With <option>--verbose</option>, <command>svn log</command>
+            will also print all affected paths with each log message.
+            With <option>--quiet</option>, <command>svn log</command>
+            will not print the log message body itself (this is
             compatible with <option>--verbose</option>).</para>
 
           <para>Each log message is printed just once, even if more
@@ -1947,7 +1950,8 @@ Made a change.
             you have a working copy of the trunk):</para>
 
           <screen>
-$ svn merge http://svn.red-bean.com/repos/trunk/vendors http://svn.red-bean.com/repos/branches/vendors-with-fix
+$ svn merge http://svn.red-bean.com/repos/trunk/vendors \
+            http://svn.red-bean.com/repos/branches/vendors-with-fix
 U  myproj/tiny.txt
 U  myproj/thhgttg.txt
 U  myproj/win.txt
@@ -1991,7 +1995,7 @@ U  thhgttg.txt
           <para>Create a directory with a name given by the final
             component of TARGET.  If TARGET is a working copy path
             the directory is scheduled for addition in the working
-            copy.  If TARGET is an URL the directory is created in
+            copy.  If TARGET is a URL the directory is created in
             the repository via an immediate commit.  In both cases
             all the intermediate directories must already
             exist.</para>
@@ -2038,7 +2042,7 @@ $ svn mkdir newdir
 A         newdir
           </screen>
 
-          <para>Create on in the repository (instant commit, so a
+          <para>Create one in the repository (instant commit, so a
             log message is required):</para>
 
           <screen>
@@ -2145,7 +2149,8 @@ D         foo.c
             so it requires a commit message): </para>
 
           <screen>
-$ svn move -m "Move a file" http://svn.red-bean.com/repos/foo.c http://svn.red-bean.com/repos/bar.c
+$ svn move -m "Move a file" http://svn.red-bean.com/repos/foo.c \
+                            http://svn.red-bean.com/repos/bar.c
 
 Committed revision 27.
           </screen>
@@ -2170,7 +2175,7 @@ Committed revision 27.
 
           <para>Set PROPNAME to PROPVAL on files, directories, or
           revisions. The first example creates a versioned, local
-          propchange in working copy, and the second creates an
+          propchange in the working copy, and the second creates an
           unversioned, remote propchange on a repository revision.</para>
 
           <tip>
@@ -3060,8 +3065,8 @@ Head revision:   981
             a new URL&mdash;usually a URL which shares a common
             ancestor with your working copy, although not
             necessarily.  This is the Subversion way to move a
-            working copy to a new branch.  (See <xref
-            linkend="svn-ch-4-sect-5"/>) for an in-depth look at
+            working copy to a new branch.  See <xref
+            linkend="svn-ch-4-sect-5"/> for an in-depth look at
             switching.</para>
         </refsect1>
 
