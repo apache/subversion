@@ -222,17 +222,6 @@ maybe_derive_ancestry (svn_xml__digger_t *digger,
           p = p->previous;
         }
 
-      /* If we get to this point and ancestry *still* isn't set, then
-         default back on the `base' context variables that were used
-         to create the xml parser. */
-
-      if (frame->ancestor_version < 0)
-        frame->ancestor_version = digger->base_version;
-      
-      if ((! frame->ancestor_path)
-          || (svn_string_isempty (frame->ancestor_path)))
-        frame->ancestor_path = svn_string_dup (digger->base_path, pool);
-
     }
 }
 
@@ -242,14 +231,15 @@ maybe_derive_ancestry (svn_xml__digger_t *digger,
    The strategy for validating our XML stream is simple:
 
    1. When we find a new "open" tag, make sure it logically follows
-   the previous tag.  This is handled in do_stack_append().
+   the previous tag.  This is handled in do_stack_append().  (If valid,
+   this same routines does the append.)
 
    2. When we find a "close" tag, make sure the newest item on the
    stack is of the identical type.  This is handled by
-   do_stack_remove().
+   do_stack_check_remove().  (If valid, the removal is done at the end
+   of xml_handle_end().)
 
    When these functions find invalid XML, they call signal_expat_bailout().
-
 */
 
 
@@ -321,94 +311,88 @@ do_stack_append (svn_xml__digger_t *digger,
   apr_pool_t *pool = digger->pool;
   svn_xml__stackframe_t *youngest_frame = digger->stack;
 
-  if (youngest_frame == NULL)
+  if (youngest_frame->previous == NULL)
     {
-      /* The stack is empty, this is our first frame. */
+      /* The stack contains only the "root" frame, so this is our
+         first time appending. */
 
-      /* Make sure that it's indeed a tree-delta. */
+      /* Make sure that it's indeed a tree-delta we're appending. */
       if (new_frame->tag != svn_delta__XML_treedelta)
         return xml_validation_error (pool, tagname, FALSE);
-
-      digger->stack = new_frame;
-      /* kff todo: parent_baton cannot be side effected, so why do we
-         have it?  It will always be digger->dir_baton. */
-      new_frame->baton = digger->dir_baton;
-    }
-  else   /* We already have a context, so check validity. */
-    {
-      /* <tree-delta> must follow <dir> */
-      if ((new_frame->tag == svn_delta__XML_treedelta)
-          && (youngest_frame->tag != svn_delta__XML_dir))
-        return xml_validation_error (pool, tagname, FALSE);
-      
-      /* <add>, <replace> must follow <tree-delta> */
-      else if ( ((new_frame->tag == svn_delta__XML_add)
-                 || (new_frame->tag == svn_delta__XML_replace))
-                && (youngest_frame->tag != svn_delta__XML_treedelta) )
-        return xml_validation_error (pool, tagname, FALSE);
-
-      /* <delete> must follow either <tree-delta> or <prop-delta> */
-      else if ( (new_frame->tag == svn_delta__XML_delete)
-                && (youngest_frame->tag != svn_delta__XML_treedelta)
-                && (youngest_frame->tag != svn_delta__XML_propdelta) )
-        return xml_validation_error (pool, tagname, FALSE);
-      
-      /* <file>, <dir> must follow either <add> or <replace> */
-      else if ((new_frame->tag == svn_delta__XML_file)
-               || (new_frame->tag == svn_delta__XML_dir))
-        {
-          if ((youngest_frame->tag != svn_delta__XML_add)
-              && (youngest_frame->tag != svn_delta__XML_replace))
-            return xml_validation_error (digger->pool, tagname, FALSE);
-        }
-      
-      /* <prop-delta> must follow one of <add>, <replace> (if talking
-         about a directory entry's properties) or must follow one of
-         <file>, <dir> */
-      else if ((new_frame->tag == svn_delta__XML_propdelta)
-               && (youngest_frame->tag != svn_delta__XML_add)
-               && (youngest_frame->tag != svn_delta__XML_replace)
-               && (youngest_frame->tag != svn_delta__XML_file)
-               && (youngest_frame->tag != svn_delta__XML_dir))
-        return xml_validation_error (pool, tagname, FALSE);
-      
-      /* <text-delta> must follow <file> */
-      else if ((new_frame->tag == svn_delta__XML_textdelta)
-               && (youngest_frame->tag != svn_delta__XML_file))
-        return xml_validation_error (pool, tagname, FALSE);
-
-      /* <set> must follow <prop-delta> */
-      else if ((new_frame->tag == svn_delta__XML_textdelta)
-               && (youngest_frame->tag != svn_delta__XML_file))
-        return xml_validation_error (pool, tagname, FALSE);
-
-      /* ancestry information can only appear as <file> or <dir> attrs */
-      else if ((new_frame->ancestor_path
-                || (new_frame->ancestor_version >= 0))
-               && (new_frame->tag != svn_delta__XML_file)
-               && (new_frame->tag != svn_delta__XML_dir))
-        return xml_validation_error (pool, tagname, FALSE);
-
-      /* Final check: if this is an <add> or <replace>, make sure the
-         "name" attribute is unique within the parent <tree-delta>. */
-
-      err = check_dirent_namespace (digger, new_frame);
-      if (err)
-        return err;
-
-      /* The XML is valid.  Do the append.  */
-      youngest_frame->next = new_frame;
-
-      /* Inherit parent's baton. */
-      new_frame->baton = youngest_frame->baton; 
-
-      /* Change digger's field accordingly. */
-      digger->stack = new_frame;
     }
   
+  /* <tree-delta> must follow <dir> */
+  else if ((new_frame->tag == svn_delta__XML_treedelta)
+           && (youngest_frame->tag != svn_delta__XML_dir))
+    return xml_validation_error (pool, tagname, FALSE);
+  
+  /* <add>, <replace> must follow <tree-delta> */
+  else if ( ((new_frame->tag == svn_delta__XML_add)
+             || (new_frame->tag == svn_delta__XML_replace))
+            && (youngest_frame->tag != svn_delta__XML_treedelta) )
+    return xml_validation_error (pool, tagname, FALSE);
+  
+  /* <delete> must follow either <tree-delta> or <prop-delta> */
+  else if ( (new_frame->tag == svn_delta__XML_delete)
+            && (youngest_frame->tag != svn_delta__XML_treedelta)
+            && (youngest_frame->tag != svn_delta__XML_propdelta) )
+    return xml_validation_error (pool, tagname, FALSE);
+  
+  /* <file>, <dir> must follow either <add> or <replace> */
+  else if ((new_frame->tag == svn_delta__XML_file)
+           || (new_frame->tag == svn_delta__XML_dir))
+    {
+      if ((youngest_frame->tag != svn_delta__XML_add)
+              && (youngest_frame->tag != svn_delta__XML_replace))
+        return xml_validation_error (digger->pool, tagname, FALSE);
+    }
+  
+  /* <prop-delta> must follow one of <add>, <replace> (if talking
+     about a directory entry's properties) or must follow one of
+     <file>, <dir> */
+  else if ((new_frame->tag == svn_delta__XML_propdelta)
+           && (youngest_frame->tag != svn_delta__XML_add)
+           && (youngest_frame->tag != svn_delta__XML_replace)
+               && (youngest_frame->tag != svn_delta__XML_file)
+           && (youngest_frame->tag != svn_delta__XML_dir))
+    return xml_validation_error (pool, tagname, FALSE);
+  
+  /* <text-delta> must follow <file> */
+  else if ((new_frame->tag == svn_delta__XML_textdelta)
+           && (youngest_frame->tag != svn_delta__XML_file))
+    return xml_validation_error (pool, tagname, FALSE);
+  
+  /* <set> must follow <prop-delta> */
+  else if ((new_frame->tag == svn_delta__XML_textdelta)
+           && (youngest_frame->tag != svn_delta__XML_file))
+    return xml_validation_error (pool, tagname, FALSE);
+  
+  /* ancestry information can only appear as <file> or <dir> attrs */
+  else if ((new_frame->ancestor_path
+            || (new_frame->ancestor_version >= 0))
+           && (new_frame->tag != svn_delta__XML_file)
+           && (new_frame->tag != svn_delta__XML_dir))
+    return xml_validation_error (pool, tagname, FALSE);
+  
+  /* Final check: if this is an <add> or <replace>, make sure the
+     "name" attribute is unique within the parent <tree-delta>. */
+  
+  err = check_dirent_namespace (digger, new_frame);
+  if (err)
+    return err;
+
+  /* The XML is valid.  Do the append.  */
+  youngest_frame->next = new_frame;
+  
+  /* Inherit parent's baton. */
+  new_frame->baton = youngest_frame->baton; 
+  
+  /* Digger should now point to the youngest stackframe. */
+  digger->stack = new_frame;
+
   /* Link backwards, too. */
   new_frame->previous = youngest_frame;
-
+  
   /* Set up any unset ancestry information. */
   maybe_derive_ancestry (digger, new_frame, pool);
 
@@ -426,7 +410,8 @@ do_stack_check_remove (svn_xml__digger_t *digger, const char *tagname)
   apr_pool_t *pool = digger->pool;
   svn_xml__stackframe_t *youngest_frame = digger->stack;
 
-  if (youngest_frame == NULL)
+  if (youngest_frame->previous == NULL)
+    /* You can't remove the "root" stackframe! */
     return xml_validation_error (pool, tagname, TRUE);
 
   /* Validity check: Make sure the kind of object we're removing (due
@@ -640,7 +625,7 @@ do_close_directory (svn_xml__digger_t *digger)
 
   /* Nothing to do but caller the editor's callback, methinks. */
   err = (* (digger->editor->close_directory)) (digger->edit_baton,
-                                                digger->stack->baton);
+                                               digger->stack->baton);
   if (err)
     return err;
 
@@ -902,8 +887,11 @@ do_prop_delta_callback (svn_xml__digger_t *digger)
 
 
 
-
+
 /*-----------------------------------------------------------------------*/
+
+/* The Three Main Expat Callbacks */
+
 /* Callback:  called whenever expat finds a new "open" tag.
 
    NAME contains the name of the tag.
@@ -1141,14 +1129,26 @@ xml_handle_end (void *userData, const char *name)
   /* After checking for above events, do the stackframe removal. */
 
   /* Lose the pointer to the youngest frame. */
-  if (youngest_frame->previous) {
-    digger->stack = youngest_frame->previous;
-    digger->stack->next = NULL;
-  }
-  else
-    digger->stack = NULL;  /* we just removed the last frame */
-  
+  digger->stack = youngest_frame->previous;
+  digger->stack->next = NULL;
 
+  if (digger->stack->previous == NULL)
+    {
+      /* There's nothing left on the stack but our "root" frame, which
+         means we must have just popped off the final </tree-delta>.
+
+         Therefore, it's time to close the "root" directory!
+      */
+
+      /* This function sends (digger->stack->baton) as the "dir_baton"
+      argument to the editor's close_directory() callback, which is
+      perfect: our "root" frame has the root_baton in this place, just
+      as it should be.  */
+      err = do_close_directory (digger);
+      if (err)
+        signal_expat_bailout (err, digger);      
+    }
+  
   /* This is a void expat callback, don't return anything. */
 }
 
@@ -1232,6 +1232,7 @@ xml_handle_data (void *userData, const char *data, int len)
 
 
 /*------------------------------------------------------------------*/
+
 /* Public interfaces (see svn_delta.h)  */
 
 
@@ -1252,12 +1253,15 @@ svn_make_xml_parser (svn_xml_parser_t **parser,
 
   svn_xml_parser_t *xmlparser;
   XML_Parser expat_parser;
+
   svn_xml__digger_t *digger;
+  svn_xml__stackframe_t *rootframe;
 
   apr_pool_t *main_subpool;
   void *rootdir_baton = NULL;
 
-  /* Create a subpool to contain *everything*  */
+  /* Create a subpool to contain *everything*.  That way,
+     svn_free_xml_parser() has an easy target to destroy.  :) */
   main_subpool = apr_make_sub_pool (pool, NULL);
 
   /* Fetch the rootdir_baton by calling into the editor */
@@ -1271,12 +1275,21 @@ svn_make_xml_parser (svn_xml_parser_t **parser,
                                 "svn_make_xml_parser: replace_root failed.");
     }
       
+  /* Create a "root" stackframe that will always be the oldest object
+     in the digger's stack.  */
+  rootframe = apr_pcalloc (main_subpool, sizeof (svn_xml__stackframe_t));
+
+  rootframe->tag            = svn_delta__XML_dir;
+  rootframe->name           = NULL; /* This frame's distinguishing feature! */
+  rootframe->ancestor_path  = svn_string_dup (base_path, main_subpool);
+  rootframe->ancestor_version = base_version;
+  rootframe->baton          = rootdir_baton;
 
   /* Create a new digger structure and fill it out*/
   digger = apr_pcalloc (main_subpool, sizeof (svn_xml__digger_t));
 
   digger->pool             = main_subpool;
-  digger->stack            = NULL;
+  digger->stack            = rootframe;
   digger->editor           = editor;
   digger->base_path        = base_path;
   digger->base_version     = base_version;
