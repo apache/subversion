@@ -72,3 +72,16 @@ Port number
 ghudson is awaiting a port assignment from IANA.  In the meantime the
 code uses a temporary port in the private range.
 
+Hook Scripts
+------------
+
+Hook scripts which output to stdout confuse svnserve in tunnel mode,
+resulting in a cryptic "malformed network data" error on the client
+(as well as a confused working directory, if it's a commit hook).
+svnserve should probably protect against this.  On Unix, I would:
+
+  * dup the stdout file descriptor
+  * Set the duplicated file descriptor close-on-exec
+  * Close stdout and reopen it pointed at /dev/null
+
+But all that would need to be translated into apr-ese.
