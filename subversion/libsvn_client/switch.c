@@ -132,8 +132,6 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
     {
       const svn_delta_editor_t *switch_editor;
       void *switch_edit_baton;
-      const svn_delta_edit_fns_t *wrapped_old_editor;
-      void *wrapped_old_edit_baton;
       svn_wc_traversal_info_t *traversal_info
         = svn_wc_init_traversal_info (pool);
 
@@ -154,11 +152,6 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
                                          &switch_editor, &switch_edit_baton,
                                          traversal_info, pool));
 
-      /* ### todo:  This is a TEMPORARY wrapper around our editor so we
-         can use it with an old driver. */
-      svn_delta_compat_wrap (&wrapped_old_editor, &wrapped_old_edit_baton, 
-                             switch_editor, switch_edit_baton, pool);
-
       /* Tell RA to do a update of URL+TARGET to REVISION; if we pass an
          invalid revnum, that means RA will use the latest revision. */
       SVN_ERR (ra_lib->do_switch (session,
@@ -167,7 +160,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
                                   target,
                                   recurse,
                                   switch_url,
-                                  wrapped_old_editor, wrapped_old_edit_baton));
+                                  switch_editor, switch_edit_baton));
       
       /* Drive the reporter structure, describing the revisions within
          PATH.  When we call reporter->finish_report, the

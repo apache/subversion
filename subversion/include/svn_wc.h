@@ -1323,7 +1323,7 @@ svn_error_t *svn_wc_get_diff_editor (svn_wc_adm_access_t *anchor,
                                      const svn_wc_diff_callbacks_t *callbacks,
                                      void *callback_baton,
                                      svn_boolean_t recurse,
-                                     const svn_delta_edit_fns_t **editor,
+                                     const svn_delta_editor_t **editor,
                                      void **edit_baton,
                                      apr_pool_t *pool);
 

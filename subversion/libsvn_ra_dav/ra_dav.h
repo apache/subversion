@@ -129,7 +129,7 @@ svn_error_t * svn_ra_dav__do_update(
   svn_revnum_t revision_to_update_to,
   const char *update_target,
   svn_boolean_t recurse,
-  const svn_delta_edit_fns_t *wc_update,
+  const svn_delta_editor_t *wc_update,
   void *wc_update_baton);
 
 svn_error_t * svn_ra_dav__do_status(
@@ -138,7 +138,7 @@ svn_error_t * svn_ra_dav__do_status(
   void **report_baton,
   const char *status_target,
   svn_boolean_t recurse,
-  const svn_delta_edit_fns_t *wc_status,
+  const svn_delta_editor_t *wc_status,
   void *wc_status_baton);
 
 svn_error_t * svn_ra_dav__do_switch(
@@ -149,7 +149,7 @@ svn_error_t * svn_ra_dav__do_switch(
   const char *update_target,
   svn_boolean_t recurse,
   const char *switch_url,
-  const svn_delta_edit_fns_t *wc_update,
+  const svn_delta_editor_t *wc_update,
   void *wc_update_baton);
 
 svn_error_t * svn_ra_dav__do_diff(
@@ -160,7 +160,7 @@ svn_error_t * svn_ra_dav__do_diff(
   const char *diff_target,
   svn_boolean_t recurse,
   const char *versus_url,
-  const svn_delta_edit_fns_t *wc_diff,
+  const svn_delta_editor_t *wc_diff,
   void *wc_diff_baton);
 
 svn_error_t * svn_ra_dav__get_log(

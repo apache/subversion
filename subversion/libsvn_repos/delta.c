@@ -157,8 +157,8 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
                      const char *src_entry,
                      svn_fs_root_t *tgt_root,
                      const char *tgt_path,
-                     const svn_delta_edit_fns_t *editor,
-                     void *edit_baton,
+                     const svn_delta_editor_t *new_editor,
+                     void *new_baton,
                      svn_boolean_t text_deltas,
                      svn_boolean_t recurse,
                      svn_boolean_t entry_props,
@@ -172,9 +172,14 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   const svn_fs_id_t *src_id, *tgt_id;
   svn_error_t *err;
   int distance;
+  const svn_delta_edit_fns_t *editor;
+  void *edit_baton;
 
   /* ### need to change svn_path_is_empty() */
   svn_stringbuf_t *tempbuf;
+
+  /* Until we are converted to drive a new-format editor... */
+  svn_delta_compat_wrap (&editor, &edit_baton, new_editor, new_baton, pool);
 
   /* SRC_PARENT_DIR must be valid. */
   if (! src_parent_dir)

@@ -47,8 +47,6 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
 {
   const svn_delta_editor_t *update_editor;
   void *update_edit_baton;
-  const svn_delta_edit_fns_t *wrapped_old_editor;
-  void *wrapped_old_edit_baton;
   const svn_ra_reporter_t *reporter;
   void *report_baton;
   const svn_wc_entry_t *entry;
@@ -95,11 +93,6 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
                                      traversal_info,
                                      pool));
 
-  /* ### todo:  This is a TEMPORARY wrapper around our editor so we
-     can use it with an old driver. */
-  svn_delta_compat_wrap (&wrapped_old_editor, &wrapped_old_edit_baton, 
-                         update_editor, update_edit_baton, pool);
-
     {
       void *ra_baton, *session;
       svn_ra_plugin_t *ra_lib;
@@ -127,7 +120,7 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
                                   revnum,
                                   target,
                                   recurse,
-                                  wrapped_old_editor, wrapped_old_edit_baton));
+                                  update_editor, update_edit_baton));
 
       SVN_ERR (svn_io_check_path (path, &kind, pool));
       SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,

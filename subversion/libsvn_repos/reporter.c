@@ -64,7 +64,7 @@ typedef struct svn_repos_report_baton_t
   svn_boolean_t recurse;
 
   /* the editor to drive */
-  const svn_delta_edit_fns_t *update_editor;
+  const svn_delta_editor_t *update_editor;
   void *update_edit_baton; 
 
   /* This hash contains any `linked paths', and what they were linked
@@ -395,7 +395,7 @@ svn_repos_begin_report (void **report_baton,
                         const char *tgt_path,
                         svn_boolean_t text_deltas,
                         svn_boolean_t recurse,
-                        const svn_delta_edit_fns_t *editor,
+                        const svn_delta_editor_t *editor,
                         void *edit_baton,
                         apr_pool_t *pool)
 {

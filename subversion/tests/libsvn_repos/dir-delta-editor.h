@@ -37,11 +37,11 @@ extern "C" {
 
 
 svn_error_t *
-dir_delta_get_editor (const svn_delta_edit_fns_t **editor,
+dir_delta_get_editor (const svn_delta_editor_t **editor,
                       void **edit_baton,
                       svn_fs_t *fs,
                       svn_fs_root_t *txn_root,
-                      svn_stringbuf_t *path,
+                      const char *path,
                       apr_pool_t *pool);
 
 
