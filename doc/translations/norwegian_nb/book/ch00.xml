@@ -1233,10 +1233,10 @@
             Klienten aksepterte bare <quote>lovlige og korrekte</quote> 
             URL-er, som 
             <literal>http://host/path%20with%20space/project/espa%F1a</literal>.
-            Kommandolinjeklienten for 1,1 ved n&#229; hvordan den skal gj&#248;re 
+            Kommandolinjeklienten for 1.1 ved n&#229; hvordan den skal gj&#248;re 
             det som nettlesere har gjort i lang tid:
-            Den autobeskytter tegn som mellom og bokstaver med aksent, 
-            s&#229; lenge brukeren plasserer URL-en i hermetegn for &#229; 
+            Den autobeskytter tegn som mellomrom og bokstaver med 
+            aksent, s&#229; lenge brukeren plasserer URL-en i hermetegn for &#229; 
             beskytte tegn fra skallet:
             <literal>"http://host/sti med 
             mellomrom/project/espa&#241;a"</literal></para>

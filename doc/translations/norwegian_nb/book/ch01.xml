@@ -252,7 +252,7 @@
     @ENGLISH }}} -->
     <para>Etter fjorten m&#229;neder med programmering ble Subversion 
       <quote>selvlagrende</quote> den 31. august 2001.
-      Det bet&#248;d at Subversionutviklerne avsluttet bruken av CVS til &#229; 
+      Det betydde at Subversionutviklerne avsluttet bruken av CVS til &#229; 
       vedlikeholde Subversions kildekode, og gikk over til &#229; bruke 
       Subversion istedenfor.</para>
 
@@ -624,7 +624,7 @@
       Denne plassen inneholder vanligvis grafiske installasjonspakker 
       for brukere av operativsystemer fra Microsoft.
       Hvis du kj&#248;rer et Unix-lignende operativsystem, kan du bruke 
-      systemets innebyggede distribusjonssystem (RPM-filer, DEB-filer, 
+      systemets innebygde distribusjonssystem (RPM-filer, DEB-filer, 
       <quote>ports</quote>-treet, osv.) for &#229; hente Subversion.</para>
 
     <!-- @ENGLISH {{{

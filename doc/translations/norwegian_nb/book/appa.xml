@@ -207,7 +207,7 @@
       Imidlertid, hvis vi &#248;ker revisjonsnummeret for 
       <filename>foo</filename> etter innleggingen, ville det ogs&#229; v&#230;re 
       en l&#248;gn;
-      det kan v&#230;re andre forandiringer i <filename>foo</filename> som vi 
+      det kan v&#230;re andre forandringer i <filename>foo</filename> som vi 
       forel&#248;pig ikke har mottatt, fordi vi ikke har oppdatert 
       enda.</para>
     
@@ -671,7 +671,7 @@ X    Ressursen er ekstern i denne arbeidskopien (kommer fra et annet
       copy.</para>
     @ENGLISH }}} -->
     <para>En ny funksjon i Subversion lar deg legge til vilk&#229;rlige 
-      metadata (eller <quote>egenskaper</quote>) til filer og katalgoer.
+      metadata (eller <quote>egenskaper</quote>) til filer og kataloger.
       Egenskaper er vilk&#229;rlige navn/verdi-par koblet til filer og 
       kataloger i arbeidskopien din.</para>
     
