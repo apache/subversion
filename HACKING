@@ -66,12 +66,6 @@ on the screen.
 Writing Log Entries
 ===================
 
-Subversion does not keep ChangeLog files, but every change to the code
-or documentation should be described at commit time in the CVS log
-message.  (You can convert cvs logs to ChangeLogs automatically with a
-script available at http://www.red-bean.com/kfogel/cvs2cl.shtml; this
-is highly recommended for browsing the logs.)
-
 Certain guidelines should be adhered to when writing log messages:
 
 Make a log entry for every change.  The value of the log becomes much
@@ -162,6 +156,26 @@ This is why a new function, for example, needs only a log entry saying
 
 These guidelines were excerpted from Jim Blandy's excellent essay
 "Maintaining the ChangeLog".  It is in `doc/WritingChangeLogs.txt'.
+
+Generating ChangeLogs
+---------------------
+
+Subversion does not keep ChangeLog files, because they're redundant
+with the CVS log entries.  But ChangeLog is an easier format to
+browse, so it's often handy to generate a ChangeLog from the cvs log
+data.  You can do so with the script `cvs2cl.pl', from:
+
+   http://www.red-bean.com/kfogel/cvs2cl.shtml
+
+If you've never used it before, try invoking it like this:
+
+   cd subversion/subversion
+   cvs2cl.pl -S -r      /* produces `ChangeLog' in the current directory */
+   more ChangeLog
+
+That will produce a readable general-purpose ChangeLog; the "-r" flag
+means to include revision numbers.  Run "cvs2cl.pl --help" to see more
+about how to use it.
 
 
 Other Conventions:
