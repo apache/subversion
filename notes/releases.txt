@@ -97,7 +97,7 @@
    it's done, you'll have 'subversion-X.Y.Z.tar.gz' and 
    'subversion-X.Y.Z.tar.bz2' in the cwd.
 
-9. Test the tarball:
+9. Test one or both of the tarballs:
      a) tar zxvf subversion-X.Y.Z.tar.gz;  cd subversion-X.Y.Z
      b) ./configure
 
@@ -151,32 +151,37 @@
 
    [Details to be filled in later].
 
-11. Upload the tarball to /usr/www/docroot/tarballs/ on svn.collab.net,
-    then link to it from subversion.tigris.org.  
+11. Upload the tarballs to http://subversion.tigris.org/tarballs/.
 
-   The ability to upload a public, automatically approved tarball
-   requires the "Project Document - Approve" permission, which is a
-   standard part of the "Download Manager" or "Content Developer"
-   roles.  If you don't have this access, make sure you 'Request a New
-   Role' from the tigris web site.
+    Currently, the ability to upload a tarball requires login access
+    to subversion.tigris.org.  One of the collab.net developers can do
+    this.  We'd like to make possible for the Release Manager to do by
+    themselves, of course, but as tigris.org has its own security
+    policies, this will require some negotiation.  For now, just grab
+    a collab.net person on IRC, or plan for them to be available.
+    Sorry for the inconvenience.
 
-   Once Download Manager status has been granted:
+12. Link to the tarballs from the Downloads page:
 
-    a. Log into http://subversion.tigris.org
-    b. Click on the 'Downloads link (left frame at the top)
-    c. Click on the 'Source tarballs' link (main frame)
-    d. Click on the 'Add a file' link (top, main frame, under 'File Sharing')
-    e. Fill in the following fields:
+      http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=260
 
-      Name: subversion-X.Y.Z.tar.gz (replace X.Y.Z with the release number)
-      Status: Stable
-      Description: Subversion release X.Y.Z (MD5: <md5sum of tarball>)
-      Contents: (Link, then enter
-          http://subversion.tigris.org/tarballs/subversion-X.Y.Z.tar.gz)
+    Here's how:
+
+     a. Log into http://subversion.tigris.org/
+     b. Click on the 'Downloads link (left frame at the top)
+     c. Click on the 'Source tarballs' link (main frame)
+     d. Click on the 'Add a file' link (top, main frame, under 'File Sharing')
+     e. Fill in the following fields:
+
+       Name: subversion-X.Y.Z.tar.gz (replace X.Y.Z with the release number)
+       Status: Stable
+       Description: Subversion release X.Y.Z (MD5: <md5sum of tarball>)
+       Contents: (choose 'Link', then enter
+           http://subversion.tigris.org/tarballs/subversion-X.Y.Z.tar.gz)
 
     f. Click Submit
 
-12. Copy branch into the tags directory in the repository.
+12. Copy the branch into the tags directory in the repository.
 
       svn cp -m "Make tag for release X.Y.Z."     \
           http://svn.collab.net/repos/svn/branches/X.Y.x   \
@@ -231,6 +236,5 @@
     and send an announcement to dev@, users@, and announce@ lists.
     Remember to include the URL and MD5 checksum in the announcement.
 
-18. Someone with administrative access upgrade svn.collab.net to head.
-    (This is not usually the release manager.)
-
+18. Someone with administrative access should upgrade svn.collab.net
+    to head.  (This is not usually the release manager.)
