@@ -137,7 +137,16 @@ typedef apr_int32_t time_t;
 %typemap(java,out) apr_hash_t ** {
     svn_swig_java_add_to_map(jenv, *$1, $input);
 }
+
 %typemap(java,argout) apr_hash_t ** {
+    svn_swig_java_add_to_map(jenv, *$1, $input);
+}
+
+%typemap(java,out) apr_hash_t **PROPHASH {
+    svn_swig_java_add_to_map(jenv, *$1, $input);
+}
+
+%typemap(java,argout) apr_hash_t **PROPHASH {
     svn_swig_java_add_to_map(jenv, *$1, $input);
 }
 
@@ -153,7 +162,7 @@ typedef apr_int32_t time_t;
    apr_file_t ** is always an OUT param
 */
 
-%typemap(in,numinputs=0) apr_file_t ** (apr_file_t *temp)
+%typemap(python, in, numinputs=0) apr_file_t ** (apr_file_t *temp)
     "$1 = &temp;";
 
 %typemap(python,argout,fragment="t_output_helper") apr_file_t **
