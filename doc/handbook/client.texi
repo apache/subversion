@@ -1583,6 +1583,25 @@ don't use this tecnique for backing up; it's probably better for
 rolling source distributions.)
 
 
+@subheading @samp{svn ls}
+
+The ls command lets you find out information about files in a repository
+directory.
+
+@example
+$ svn ls http://svn.collab.net/repos/svn
+http://svn.collab.net/repos/svn:
+_    2738 bmatzell        0 Jul 26 13:07 clients/
+_    2743   rooneg        0 Jul 26 18:07 trunk/
+_    2703    brane        0 Jul 24 22:07 branches/
+P    2734   kfogel     2331 Jul 26 10:07 COMMITTERS
+_    2698   rooneg        0 Jul 24 18:07 tags/
+@end example
+
+The columns tell you if there file has any properties (``P'' if it does, 
+``_'' if it doesn't), the revision it was last updated at, the user who 
+last updated it, it's size, the date it was last updated, and the filename.
+ 
 @subheading @samp{svn mkdir}
 
 This is another convenience command, and it has two uses.
