@@ -205,11 +205,9 @@ close_file (void *file_baton)
       if (fb->text_changed)
         {
           if (! text_conflict)
-            {
-              err = svn_wc_text_modified_p 
-                (&merged, fb->path, fb->parent_dir_baton->edit_baton->pool);
-              if (err) return err;
-            }
+            SVN_ERR (svn_wc_text_modified_p 
+                     (&merged, fb->path, 
+                      fb->parent_dir_baton->edit_baton->pool));
 
           if (text_conflict)
             statchar_buf[0] = 'C';
@@ -221,11 +219,9 @@ close_file (void *file_baton)
       if (fb->prop_changed)
         {
           if (! prop_conflict)
-            {
-              err = svn_wc_props_modified_p 
-                (&merged, fb->path, fb->parent_dir_baton->edit_baton->pool);
-              if (err) return err;
-            }
+            SVN_ERR (svn_wc_props_modified_p 
+                     (&merged, fb->path, 
+                      fb->parent_dir_baton->edit_baton->pool));
           
           if (prop_conflict)
             statchar_buf[1] = 'C';
