@@ -157,6 +157,12 @@ Committed revision 3.
         </varlistentry>
         
       </variablelist>
+
+      <note>
+        <para><literal>PREV</literal>, <literal>BASE</literal>, and
+          <literal>COMMITTED</literal> can be used to refer to local
+          paths, but not to URLs.</para>
+      </note>
       
       <para>Here are some examples of revision keywords in action.
         Don't worry if the commands don't make sense yet; we'll be
@@ -664,7 +670,8 @@ Updated to revision 2.
               addition.  When <filename>bar</filename> is added to the
               repository on the next commit, its copy-history is
               recorded (as having originally come from
-              <filename>foo</filename>).</para>
+              <filename>foo</filename>).  <command>svn copy</command>
+              does not create intermediate directories.</para>
           </listitem>
         </varlistentry>
 
@@ -675,8 +682,9 @@ Updated to revision 2.
               <command>svn copy foo bar; svn delete foo</command>.
               That is, <filename>bar</filename> is scheduled for
               addition as a copy of <filename>foo</filename>, and
-              <filename>foo</filename> is scheduled for
-              removal.</para>
+              <filename>foo</filename> is scheduled for removal.
+              <command>svn move</command> does not create intermediate
+              directories.</para>
           </listitem>
         </varlistentry>
 
@@ -1380,14 +1388,13 @@ Resolved conflicted state of 'sandwich.txt'
           first time you attempt it, but with a little practice, it
           can become as easy as falling off a bike.</para>
 
-        <para>Here's an example.  Let's say that, due to a
-          miscommunication between you and your collaborator, Sally,
-          both edit the file named <filename>sandwich.txt</filename>
-          at the same time.  Sally commits her changes, and when you
-          go to update your working copy, you get a conflict and we're
-          going to have to edit <filename>sandwich.txt</filename> to
-          resolve the conflicts.  First, let's take a look at the
-          file:</para>
+        <para>Here's an example.  Due to a miscommunication, you and
+          Sally, your collaborator, both edit the file
+          <filename>sandwich.txt</filename> at the same time.  Sally
+          commits her changes, and when you go to update your working
+          copy, you get a conflict and we're going to have to edit
+          <filename>sandwich.txt</filename> to resolve the conflicts.
+          First, let's take a look at the file:</para>
 
         <screen>
 $ cat sandwich.txt
@@ -2056,11 +2063,12 @@ M      somedir/foo.c
       <title><command>svn import</command></title>
 
       <para>The <command>svn import</command> command is a quick way
-        to copy an unversioned tree of files into a repository.</para>
+        to copy an unversioned tree of files into a repository,
+        creating intermediate directories as necessary.</para>
 
       <screen>
 $ svnadmin create /usr/local/svn/newrepos
-$ svn import mytree file:///usr/local/svn/newrepos/fooproject
+$ svn import mytree file:///usr/local/svn/newrepos/some/project
 Adding         mytree/foo.c
 Adding         mytree/bar.c
 Adding         mytree/subdir
@@ -2069,15 +2077,15 @@ Adding         mytree/subdir/quux.h
 Committed revision 1.
 </screen>
 
-      <para>The above example copied the contents of directory
+      <para>The previous example copied the contents of directory
         <filename>mytree</filename> under the directory
-        <filename>fooproject</filename> in the repository:</para>
+        <filename>some/project</filename> in the repository:</para>
 
       <screen>
-/fooproject/foo.c
-/fooproject/bar.c
-/fooproject/subdir
-/fooproject/subdir/quux.h
+$ svn ls file:///usr/local/svn/newrepos/some/project
+bar.c
+foo.c
+subdir/
 </screen>
 
     </sect2>

@@ -37,33 +37,7 @@ ch05:
 --------------------------------------------------------------
 
 To be fixed by fitz:
-
-ch03:
-
-  - bizarre grammar: "Let's say that, due to a miscommunication
-        between you and your collaborator, Sally, both edit the file
-        _sandwich.txt_ at the same time."
-
-
-  - Be clear that PREV, BASE, and COMMITTED only refer to local paths,
-    not to URLs.
-
-  - import section at the end:
-
-   - you use the word 'above' which is verboten, right?
   
-   - explain that while 'svn import' creates intermediate directories
-     for you, 'svn mkdir', 'svn move', and 'svn copy' will not. 
-
-   - generally, need more examples so users understand when new
-     directories will be created, and when they won't.  users are
-     constantly confused by this.
-  
-   - create a 'tip' sidebar (?) in the 'svn import' section which
-     explains how to do an "in place" import; we have a FAQ on this
-     already.  people keep asking about it.
-
-
 ch09:
 
   - svnserve isn't mentioned at *all*.  this is really inconsistent;
@@ -71,10 +45,6 @@ ch09:
     ship.  it's not a 2nd-class citizen;  it needs to be documented in
     the reference chapter like everything else.  (run 'man svnserve'
     and/or read chapter 6 to understand how it works)
-
-  - Document svnadmin --deltify.  (yes, it's vestigial, but people
-    keep asking it what it is.  be sure to explain what
-    "deltification" is, and/or point to an existing description.)
 
 
 
