@@ -72,12 +72,93 @@
 
 /* Constructor, for factorizing code */
 svn_edit_t * 
-svn_create_edit (apr_pool_t *pool, svn_XML_elt_t action, char **atts)
+svn_create_edit (apr_pool_t *pool, int action, char **atts)
 {
   /* TODO:  fill in fields from atts */
   svn_edit_t *new_edit = apr_pcalloc (pool, sizeof (svn_edit_t *));
   
+  return new_edit;
 }
+
+
+/* Constructor, for factorizing code */
+svn_edit_t * 
+svn_create_edit_content (apr_pool_t *pool, int kind, char **atts)
+{
+  /* TODO:  fill in fields from atts */
+  svn_edit_t *new_content = apr_pcalloc (pool, sizeof (svn_edit_content_t *));
+
+  /* Build an ancestor object out of **atts */
+  while (*atts)
+    {
+      char *attr_name = *atts++;
+      char *attr_value = *atts++;
+      
+      if (strcmp (attr_name, "ancestor") == 0)
+        {
+          this_edit_content->ancestor_path
+            = svn_string_create (attr_value, my_digger->pool);
+        }
+      else if (strcmp (attr_name, "ver") == 0)
+        {
+          this_edit_content->ancestor_version = atoi (attr_value);
+        }
+      else if (strcmp (attr_name, "new") == 0)
+        {
+          /* Do nothing, because ancestor_path is already set to
+             NULL, which indicates a new entity. */
+        }
+      else
+        {
+          /* TODO: unknown tag attribute, return error */
+        }
+    }
+  
+  
+  return new_content;
+}
+
+
+
+/* For code factorization: 
+
+   Go to bottom of delta, and set the state of the edit_content's
+   text_delta or prop_delta flag.  (Returns error if bottom of delta
+   isn't the right type!)
+
+*/
+svn_error_t *
+svn_twiddle_edit_content_flags (svn_delta_t *d, 
+                                svn_boolean_t value,
+                                svn_boolean_t text_p)
+{
+  void *bottom_ptr, *penult_ptr;
+  svn_XML_elt_t bottom_kind, penult_kind;
+  svn_edit_content_t *ec;
+  
+  /* Get a grip on the last two objects in the delta (by cdr'ing down) */
+  svn_find_delta_bottom (&bottom_ptr, &bottom_kind, 
+                         &penult_ptr, &penult_kind, 
+                         d);
+  
+  /* Sanity check:  the bottom object _better_ be an edit_content_t! */
+  if (bottom_kind != svn_XML_editcontent)
+    {
+      return svn_create_error (SVN_ERR_MALFORMED_XML, NULL,
+                               "found text or prop delta after NON-edit_content_t!",
+                               NULL, my_digger->pool);
+    }
+  
+  /* ...just mark flag in edit_content structure (should be the
+     last structure on our growing delta) */
+  ec = (svn_edit_content *) bottom_ptr;
+  if (text_p)
+    ec->text_delta = value;
+  else
+    ec->prop_delta = value;
+}
+
+
 
 
 
@@ -373,29 +454,35 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
     {
       /* Found a new text-delta element */
       /* No need to create a text-delta structure... */
-      /* TODO: ...just mark flag in edit_content structure (should be the
-         last structure on our growing delta) */
 
+      svn_error_t *err = 
+        svn_twiddle_edit_content_flags (my_digger->delta, TRUE)
+
+        /* TODO: handle error somehow... */
     }
 
   else if (strcmp (name, "prop-delta") == 0)
     {
       /* Found a new prop-delta element */
       /* No need to create a prop-delta structure... */
-      /* TODO: ...just mark flag in edit_content structure (should be the
-         last structure on our growing delta) */
+
+      svn_error_t *err = 
+        svn_twiddle_edit_content_flags (my_digger->delta, FALSE)
+
+        /* TODO: handle error somehow... */
     }
 
   else if (strcmp (name, "new") == 0)
     {
       svn_error_t *err;
       /* Found a new svn_edit_t */
-      /* Build a new edit struct */
 
+      /* Build a new edit struct out of the tag's attributes. */
       svn_edit_t *new_edit = svn_create_edit (my_digger->pool,
-                                              action_new, 
+                                              svn_action_new, 
                                               atts);
 
+      /* Append this edit to the end of our delta.  */
       err = svn_starpend_delta (my_digger, new_edit, svn_XML_edit, FALSE);
 
       /* TODO: check error */
@@ -405,94 +492,46 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
     {
       svn_error_t *err;
       /* Found a new svn_edit_t */
-      /* Build a new edit struct */
-      svn_edit_t *new_edit = apr_pcalloc (my_digger->pool, 
-                                          sizeof (svn_edit_t *));
 
-      new_edit->kind = action_replace;
+      /* Build a new edit struct out of the tag's attributes. */
+      svn_edit_t *new_edit = svn_create_edit (my_digger->pool,
+                                              svn_action_replace, 
+                                              atts);
 
-      /* Our three edit tags currently only have one attribute: "name" */
-      if (strcmp (*atts, "name") == 0) {
-        new_edit->name = svn_string_create (++*atts, my_digger->pool);
-      }
-      else {
-        /* TODO: return error if we have some other attribute */
-      }
+      /* Append this edit to the end of our delta.  */
+      err = svn_starpend_delta (my_digger, new_edit, svn_XML_edit, FALSE);
 
-      /* Now drop this edit at the end of our delta */
-      err = svn_append_to_delta (my_digger->delta,
-                                 new_edit,
-                                 svn_XML_edit);
       /* TODO: check error */
-
     }
 
   else if (strcmp (name, "delete"))
     {
       svn_error_t *err;
       /* Found a new svn_edit_t */
-      /* Build a new edit struct */
-      svn_edit_t *new_edit = apr_pcalloc (my_digger->pool, 
-                                          sizeof (svn_edit_t *));
-      new_edit->kind = action_delete;
 
-      /* Our three edit tags currently only have one attribute: "name" */
-      if (strcmp (*atts, "name") == 0) {
-        new_edit->name = svn_string_create (++*atts, my_digger->pool);
-      }
-      else {
-        /* TODO: return error if we have some other attribute */
-      }
+      /* Build a new edit struct out of the tag's attributes. */
+      svn_edit_t *new_edit = svn_create_edit (my_digger->pool,
+                                              svn_action_delete, 
+                                              atts);
 
-      /* Now drop this edit at the end of our delta */
-      err = svn_append_to_delta (my_digger->delta,
-                                 new_edit,
-                                 svn_XML_edit);
+      /* Append this edit to the end of our delta.  */
+      err = svn_starpend_delta (my_digger, new_edit, svn_XML_edit, FALSE);
+
       /* TODO: check error */
-
     }
 
   else if (strcmp (name, "file"))
     {
       svn_error_t *err;
       /* Found a new svn_edit_content_t */
+
       /* Build a edit_content_t */
       svn_edit_content_t *this_edit_content 
-        = apr_pcalloc (my_digger->pool, 
-                       sizeof (svn_edit_content_t *));
-
-      this_edit_content->kind = file_type;
-      
-      /* Build an ancestor object out of **atts */
-      while (*atts)
-        {
-          char *attr_name = *atts++;
-          char *attr_value = *atts++;
-
-          if (strcmp (attr_name, "ancestor") == 0)
-            {
-              this_edit_content->ancestor_path
-                = svn_string_create (attr_value, my_digger->pool);
-            }
-          else if (strcmp (attr_name, "ver") == 0)
-            {
-              this_edit_content->ancestor_version = atoi (attr_value);
-            }
-          else if (strcmp (attr_name, "new") == 0)
-            {
-              /* Do nothing, because ancestor_path is already set to
-                 NULL, which indicates a new entity. */
-            }
-          else
-            {
-              /* TODO: unknown tag attribute, return error */
-            }
-        }
+        = svn_create_edit_content (my_digger->pool, svn_file_type, atts);
 
       /* Drop the edit_content object on the end of the delta */
-      err = svn_append_to_delta (my_digger->delta,
-                                 this_edit_content,
-                                 svn_XML_editcontent);
+      err = svn_starpend_delta (my_digger, this_edit_content,
+                                svn_XML_editcontent, FALSE);
 
       /* TODO:  check for error */
     }
@@ -501,43 +540,14 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
     {
       svn_error_t *err;
       /* Found a new svn_edit_content_t */
+
       /* Build a edit_content_t */
       svn_edit_content_t *this_edit_content 
-        = apr_pcalloc (my_digger->pool, 
-                       sizeof (svn_edit_content_t *));
-
-      this_edit_content->kind = directory_type;
-      
-      /* Build an ancestor object out of **atts */
-      while (*atts)
-        {
-          char *attr_name = *atts++;
-          char *attr_value = *atts++;
-
-          if (strcmp (attr_name, "ancestor") == 0)
-            {
-              this_edit_content->ancestor_path
-                = svn_string_create (attr_value, my_digger->pool);
-            }
-          else if (strcmp (attr_name, "ver") == 0)
-            {
-              this_edit_content->ancestor_version = atoi(attr_value);
-            }
-          else if (strcmp (attr_name, "new") == 0)
-            {
-              /* Do nothing, because NULL ancestor_path indicates a
-                 new entity. */
-            }
-          else
-            {
-              /* TODO: unknown tag attribute, return error */
-            }
-        }
+        = svn_create_edit_content (my_digger->pool, svn_directory_type, atts);
 
       /* Drop the edit_content object on the end of the delta */
-      err = svn_append_to_delta (my_digger->delta,
-                                 this_edit_content,
-                                 svn_XML_editcontent);
+      err = svn_starpend_delta (my_digger, this_edit_content,
+                                svn_XML_editcontent, FALSE);
 
       /* TODO:  check for error */
 
@@ -587,6 +597,8 @@ void svn_xml_handle_end (void *userData, const char *name)
       /* TODO */
       /* bottomost object of delta should be an edit_content_t,
          so we unset it's text_delta flag here. */
+
+      err =svn_twiddle_edit_content_flags (my_digger->delta, FALSE, TRUE);
     }
 
   else if (strcmp (name, "prop-delta") == 0)
@@ -594,6 +606,8 @@ void svn_xml_handle_end (void *userData, const char *name)
       /* TODO */
       /* bottomost object of delta should be an edit_content_t,
          so we unset it's prop_delta flag here. */
+
+      err = svn_twiddle_edit_content_flags (my_digger->delta, FALSE, FALSE);
     }
 
   else if ((strcmp (name, "new") == 0) 
