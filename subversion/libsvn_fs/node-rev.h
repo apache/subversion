@@ -22,7 +22,10 @@
 
 /* Set *SKEL_P to the NODE-REVISION skel for the node ID in FS, as
    part of TRAIL.  Allocate the skel, and do any other temporary
-   allocation in TRAIL->pool.  */
+   allocation in TRAIL->pool.
+
+   This function guarantees that SKEL is a well-formed NODE-REVISION
+   skel.  */
 svn_error_t *svn_fs__get_node_revision (skel_t **skel_p,
                                         svn_fs_t *fs,
                                         const svn_fs_id_t *id,
@@ -32,6 +35,8 @@ svn_error_t *svn_fs__get_node_revision (skel_t **skel_p,
 /* Store SKEL as the NODE-REVISION skel for the node revision whose id
    is ID in FS, as part of TRAIL.  Do any necessary temporary
    allocation in TRAIL->pool.
+
+   This function checks that SKEL is a well-formed NODE-REVISION skel.
 
    After this call, the node table manager assumes that NODE's
    contents will change frequently.  */
@@ -45,6 +50,8 @@ svn_error_t *svn_fs__put_node_revision (svn_fs_t *fs,
    NODE-REVISION skel is SKEL, as part of TRAIL.  Set *ID_P to the new
    node revision's ID.  Use TRAIL->pool for any temporary allocation.
 
+   This function checks that SKEL is a well-formed NODE-REVISION skel.
+
    After this call, the node table manager assumes that the new node's
    contents will change frequently.  */
 svn_error_t *svn_fs__create_node (svn_fs_id_t **id_p,
@@ -57,6 +64,9 @@ svn_error_t *svn_fs__create_node (svn_fs_id_t **id_p,
    OLD_ID, whose contents are NEW_SKEL, as part of TRAIL.  Set
    *NEW_ID_P to the new node revision's ID.  Use TRAIL->pool for any
    temporary allocation.
+
+   This function checks that NEW_SKEL is a well-formed NODE-REVISION
+   skel.
 
    After this call, the deltification code assumes that the new node's
    contents will change frequently, and will avoid representing other
