@@ -1,5 +1,6 @@
 /*
- * status.c:  the command-line's portion of the "svn status" command
+ * trace.c : an editor implementation that prints status characters
+ *           (when composed to follow after the update-editor)
  *
  * ====================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -132,11 +133,44 @@ replace_directory (svn_string_t *name,
 static svn_error_t *
 close_directory (void *dir_baton)
 {
+  svn_error_t *err;
   struct dir_baton *d = dir_baton;
+  char statchar_buf[3] = "- ";
 
   if (d->prop_changed)
-    printf ("X  %s\n", d->path->data);
+    {
+      /* First, check for conflicted state. */
+      svn_wc_entry_t *entry;
+      svn_boolean_t merged, text_conflict, prop_conflict;
+      
+      err = svn_wc_entry (&entry,
+                          d->path,
+                          d->edit_baton->pool);
+      if (err) return err;
+      
+      err = svn_wc_conflicted_p (&text_conflict, &prop_conflict,
+                                 d->path,
+                                 entry,
+                                 d->edit_baton->pool);
+      if (err) return err;
+      
+      if (! prop_conflict)
+        {
+          err = svn_wc_props_modified_p 
+            (&merged, d->path, d->edit_baton->pool);
+          if (err) return err;
+        }
+      
+      if (prop_conflict)
+        statchar_buf[1] = 'C';
+      else if (merged)
+        statchar_buf[1] = 'G';
+      else
+        statchar_buf[1] = 'U';
 
+      printf ("%s %s\n", statchar_buf, d->path->data);
+    }
+    
   return SVN_NO_ERROR;
 }
 
@@ -144,6 +178,7 @@ close_directory (void *dir_baton)
 static svn_error_t *
 close_file (void *file_baton)
 {
+  svn_error_t *err;
   struct file_baton *fb = file_baton;
   char statchar_buf[3] = "- ";
 
@@ -153,24 +188,52 @@ close_file (void *file_baton)
     }
   else
     {
+      /* First, check for conflicted state. */
+      svn_wc_entry_t *entry;
+      svn_boolean_t merged, text_conflict, prop_conflict;
+
+      err = svn_wc_entry (&entry,
+                          fb->path,
+                          fb->parent_dir_baton->edit_baton->pool);
+      if (err) return err;
+
+      err = svn_wc_conflicted_p (&text_conflict, &prop_conflict,
+                                 fb->parent_dir_baton->path,
+                                 entry,
+                                 fb->parent_dir_baton->edit_baton->pool);
+      if (err) return err;
+
       if (fb->text_changed)
         {
-          svn_error_t *err;
-          svn_boolean_t modified;
-          err = svn_wc_text_modified_p 
-            (&modified, fb->path, fb->parent_dir_baton->edit_baton->pool);
-          if (err)
-            return err;
+          if (! text_conflict)
+            {
+              err = svn_wc_text_modified_p 
+                (&merged, fb->path, fb->parent_dir_baton->edit_baton->pool);
+              if (err) return err;
+            }
 
-          if (modified)
+          if (text_conflict)
+            statchar_buf[0] = 'C';
+          else if (merged)
             statchar_buf[0] = 'G';
           else
             statchar_buf[0] = 'U';
         }
       if (fb->prop_changed)
         {
-          /* Do same for properties as did for text, above. */
-          statchar_buf[1] = 'X';
+          if (! prop_conflict)
+            {
+              err = svn_wc_props_modified_p 
+                (&merged, fb->path, fb->parent_dir_baton->edit_baton->pool);
+              if (err) return err;
+            }
+          
+          if (prop_conflict)
+            statchar_buf[1] = 'C';
+          else if (merged)
+            statchar_buf[1] = 'G';
+          else
+            statchar_buf[1] = 'U';
         }
     }
 
