@@ -135,6 +135,9 @@ typedef enum svn_errno_t {
   /* The name given is not a valid directory entry name, or filename.  */
   SVN_ERR_FS_PATH_SYNTAX,
 
+  /* The name given is not a valid single component of a path. */
+  SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT,
+
   /* The filesystem has no revision by the given number.  */
   SVN_ERR_FS_NO_SUCH_REVISION,
 
