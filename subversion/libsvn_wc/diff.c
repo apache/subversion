@@ -518,7 +518,7 @@ file_diff (struct dir_baton *dir_baton,
                   dir_baton->edit_baton->callback_baton));
 
       SVN_ERR (svn_wc_props_modified_p (&modified, path, adm_access, pool));
-      if (modified)
+      if (modified && (! eb->use_text_base))
         {
           apr_array_header_t *propchanges;
           apr_hash_t *baseprops;
@@ -577,7 +577,7 @@ file_diff (struct dir_baton *dir_baton,
         }
 
       SVN_ERR (svn_wc_props_modified_p (&modified, path, adm_access, pool));
-      if (modified)
+      if (modified && (! eb->use_text_base))
         {
           apr_array_header_t *propchanges;
           apr_hash_t *baseprops;
@@ -641,7 +641,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
 
       SVN_ERR (svn_wc_props_modified_p (&modified, dir_baton->path, adm_access,
                                         dir_baton->pool));
-      if (modified)
+      if (modified && (! dir_baton->edit_baton->use_text_base))
         {
           apr_array_header_t *propchanges;
           apr_hash_t *baseprops;
@@ -904,7 +904,9 @@ close_directory (void *dir_baton,
 
   if (b->propchanges->nelts > 0)
     {
-      reverse_propchanges (b->baseprops, b->propchanges, b->pool);
+      if (! b->edit_baton->reverse_order)
+        reverse_propchanges (b->baseprops, b->propchanges, b->pool);
+
       SVN_ERR (b->edit_baton->callbacks->props_changed
                (NULL, NULL,
                 b->path,
@@ -1188,7 +1190,9 @@ close_file (void *file_baton,
       
       if (b->propchanges->nelts > 0)
         {
-          reverse_propchanges (b->baseprops, b->propchanges, b->pool);
+          if (! eb->reverse_order)
+            reverse_propchanges (b->baseprops, b->propchanges, b->pool);
+
           SVN_ERR (b->edit_baton->callbacks->props_changed
                    (NULL, NULL,
                     b->path,
