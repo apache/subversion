@@ -41,6 +41,7 @@ Blanket commit access:
         breser   Ben Reser <ben@reser.org>
            djh   D.J. Heap <dj@shadyvale.net>
           maxb   Max Bowsher <maxb@ukf.net>
+      lundblad   Peter N. Lundblad <peter@famlundblad.se>
 
 Commit access for specific areas:
 
@@ -74,7 +75,6 @@ Commit access for specific areas:
       lonestar   Martin Maurer <martin.maurer@email.de>      (svnshow)
        shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
        niqueco   Nicolás Lichtmaier <nick@reloco.com.ar>     (.po files)
-      lundblad   Peter N. Lundblad <peter@famlundblad.se>    (.po files)
 
 Committers who have asked to be listed as dormant:
 
