@@ -204,31 +204,15 @@ typedef struct svn_version_checklist_t
 
 
 /**
- * Version error generator function type. The @a label and @a
- * versioninfo parameters come from a version compatibility
- * checklist. Implementations should wrap @a child a new
- * #SVN_ERR_VERSION_MISMATCH error.
- *
- * @see svn_ver_check_list(), svn_version_checklist_t
- * @since New in 1.1.
- */
-typedef svn_error_t *(*svn_ver_error_generator_t)
-     (const char *label,
-      const svn_version_t *versioninfo,
-      svn_error_t *child);
-
-/**
  * Perform a series of version compatibility checks. Checks if @a
- * my_version is compatible with each entry in @a checklist, and calls
- * @a mismatch_error for every incompatible entry, chaining and
- * returning the generated errors. @a checklist must end with an entry
- * whose label is @c NULL.
+ * my_version is compatible with each entry in @a checklist. @a
+ * checklist must end with an entry whose label is @c NULL.
  *
+ * @see svn_ver_compatible()
  * @since New in 1.1.
  */
 svn_error_t *svn_ver_check_list (const svn_version_t *my_version,
-                                 const svn_version_checklist_t *checklist,
-                                 svn_ver_error_generator_t mismatch_error);
+                                 const svn_version_checklist_t *checklist);
 
 
 /* libsvn_subr doesn't have an svn_subr header, so put the prototype here. */
