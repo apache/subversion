@@ -353,18 +353,30 @@ get_dirprops_from_ra (struct dir_baton *b)
 }
 
 
-/* Create an empty file, the path to the file is returned in EMPTY_FILE
+/* Create an empty file, the path to the file is returned in EMPTY_FILE.
+ * If HAVE_WRITE_LOCK is true, create the file in the working directory,
+ * otherwise use a system temp dir.
  */
 static svn_error_t *
 create_empty_file (const char **empty_file,
+                   svn_boolean_t have_write_lock,
                    apr_pool_t *pool)
 {
   apr_file_t *file;
-  const char *temp_dir;
+  const char *temp_path;
 
-  SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
-  SVN_ERR (svn_io_open_unique_file (&file, empty_file, 
-                                    svn_path_join (temp_dir, "tmp", pool),
+  if (have_write_lock)
+    {
+      temp_path = "tmp";
+    }
+  else 
+    {
+      const char *temp_dir;
+      SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
+      temp_path = svn_path_join (temp_dir, "tmp", pool);
+    }
+
+  SVN_ERR (svn_io_open_unique_file (&file, empty_file, temp_path,
                                     "", FALSE, pool));
   SVN_ERR (svn_io_file_close (file, pool));
 
@@ -432,7 +444,9 @@ get_empty_file (struct edit_baton *b,
   /* Create the file if it does not exist */
   if (!b->empty_file)
     {
-      SVN_ERR (create_empty_file (&(b->empty_file), b->pool));
+      svn_boolean_t have_lock;
+      have_lock = (b->adm_access && svn_wc_adm_locked (b->adm_access));
+      SVN_ERR (create_empty_file (&(b->empty_file), have_lock, b->pool));
 
       /* Install a pool cleanup handler to delete the file */
       SVN_ERR (temp_file_cleanup_register (b->empty_file, b->pool));
@@ -693,6 +707,7 @@ apply_textdelta (void *file_baton,
                  void **handler_baton)
 {
   struct file_baton *b = file_baton;
+  svn_boolean_t have_lock;
 
   /* Open the file to be used as the base for second revision */
   SVN_ERR (svn_io_file_open (&(b->file_start_revision),
@@ -701,7 +716,9 @@ apply_textdelta (void *file_baton,
 
   /* Open the file that will become the second revision after applying the
      text delta, it starts empty */
-  SVN_ERR (create_empty_file (&(b->path_end_revision), b->pool));
+  have_lock = (b->edit_baton->adm_access 
+               && svn_wc_adm_locked (b->edit_baton->adm_access));
+  SVN_ERR (create_empty_file (&(b->path_end_revision), have_lock, b->pool));
   SVN_ERR (temp_file_cleanup_register (b->path_end_revision, b->pool));
   SVN_ERR (svn_io_file_open (&(b->file_end_revision), b->path_end_revision,
                              APR_WRITE, APR_OS_DEFAULT, b->pool));
