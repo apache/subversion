@@ -117,12 +117,10 @@ mkdir ${DIST_SANDBOX}
 echo "Removed and recreated ${DIST_SANDBOX}"
 
 ### Export the dist tree, clean it up.
-echo "Checking out revision ${VERSION} of Subversion into sandbox..."
+echo "Exporting revision ${VERSION} of Subversion into sandbox..."
 (cd ${DIST_SANDBOX} && \
- svn co -q -r ${VERSION} http://svn.collab.net/repos/svn/$REPOS_PATH \
+ svn export -q -r ${VERSION} http://svn.collab.net/repos/svn/$REPOS_PATH \
         ${DISTNAME} --username none --password none)
-echo "Removing all .svn/ dirs from the checkout..."
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name .svn -print`
 
 ### Ship with (relatively) clean APR, APRUTIL, and neon working copies
 ### inside the tarball, just to make people's lives easier.
