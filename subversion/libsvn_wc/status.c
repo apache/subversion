@@ -285,17 +285,27 @@ svn_wc_statuses (apr_hash_t *statushash,
              kff todo: However, must handle mixed working copies.
              What if the subdir is not under revision control, or is
              from another repository? */
-          if ((kind == svn_node_dir)
-              && (strcmp (basename, SVN_WC_ENTRY_THIS_DIR) != 0))
+          
+          /* Do *not* store THIS_DIR in the statushash, unless this
+             path has never been seen before.  We don't want to add
+             the path key twice. */
+          if (! strcmp (basename, SVN_WC_ENTRY_THIS_DIR))
             {
-              if (descend)
-                svn_wc_statuses (statushash, fullpath, descend, pool);
-              /* else ignore subdir -- simply don't report its status */
+              svn_wc_entry_t *e = apr_hash_get (statushash,
+                                                fullpath->data,
+                                                fullpath->len);
+              if (! e)
+                SVN_ERR (add_status_structure (statushash, fullpath,
+                                               entry, pool));              
             }
           else
             {
-              err = add_status_structure (statushash, fullpath, entry, pool);
-              if (err) return err;              
+              /* Files and subdir entries *do* get stored. */
+              SVN_ERR (add_status_structure (statushash, fullpath,
+                                             entry, pool));
+              if ((kind == svn_node_dir) && descend)
+                SVN_ERR (svn_wc_statuses (statushash, fullpath,
+                                          descend, pool)); 
             }
         }
     }
