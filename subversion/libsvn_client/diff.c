@@ -808,7 +808,8 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
           {
             child = svn_path_is_child(merge_b->target, mine, merge_b->pool);
             assert (child != NULL);
-            copyfrom_url = svn_path_join (merge_b->url, child, merge_b->pool);
+            copyfrom_url = svn_path_url_add_component (merge_b->url, child,
+                                                       merge_b->pool);
             SVN_ERR (check_schema_match (adm_access, copyfrom_url));
 
             /* Since 'mine' doesn't exist, and this is
@@ -970,7 +971,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
 
   child = svn_path_is_child (merge_b->target, path, subpool);
   assert (child != NULL);
-  copyfrom_url = svn_path_join (merge_b->url, child, subpool);
+  copyfrom_url = svn_path_url_add_component (merge_b->url, child, subpool);
   SVN_ERR (check_schema_match (adm_access, copyfrom_url));
 
   SVN_ERR (svn_io_check_path (path, &kind, subpool));
