@@ -935,22 +935,23 @@ $ svn status
   <!-- ======================== SECTION 4 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-4">
-    <title>Common Use-Cases for Merging</title>
+    <title>Casos habituales de fusionado</title>
 
-    <para>There are many different uses for <command>svn
-        merge</command>, and this section describes the most common
-        ones you're likely to run into.</para>
+      <para>Hay muchos usos diferentes para <command>svn
+        merge</command>, y esta sección describe los más comunes
+        que posiblemente usará alguna vez.</para>
 
     <sect2 id="svn-ch-4-sect-4.1">
-      <title>Merging a Whole Branch to Another</title>
+      <title>Fusionando una rama completa con otra</title>
 
-      <para>To complete our running example, we'll move forward in
-        time.  Suppose several days have passed, and many changes have
-        happened on both the trunk and your private branch.  Suppose
-        that you've finished working on your private branch; the
-        feature or bugfix is finally complete, and now you want to
-        merge all of your branch changes back into the trunk for
-        others to enjoy.  </para>
+      <para>Para completar el ejemplo que hemos ido mostrando,
+        nos moveremos hacia adelante en el tiempo. Suponga que han
+        pasado varios días, y se han realizado muchos cambios tanto
+        en el tronco como en su rama privada. Suponga que ya ha
+        terminado de trabajar en su rama privada; la característica
+        o corrección está finalmente completada, y ahora quiere
+        fusionar todos los cambios de su rama en el tronco para
+        que otros puedan disfrutarlos. </para>
 
       <para>So how do we use <command>svn merge</command> in this
         scenario?  Remember that this command compares two trees, and
