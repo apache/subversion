@@ -239,10 +239,54 @@ translate_keyword_subst (char *buf,
 
   buf_ptr = buf + 1 + keyword_len;
 
+  /* Check for fixed-length expansion. 
+   * The format of fixed length keyword and its data is
+   * Unexpanded keyword:         "$keyword::       $"
+   * Expanded keyword:           "$keyword:: value $"
+   * Expanded kw with filling:   "$keyword:: value   $"
+   * Truncated keyword:          "$keyword:: longval#$"
+   */
+  if ((buf_ptr[0] == ':') /* first char after keyword is ':' */
+      && (buf_ptr[1] == ':') /* second char after keyword is ':' */
+      && (buf_ptr[2] == ' ') /* third char after keyword is ' ' */
+      && ((buf[*len - 2] == ' ')  /* has ' ' for next to last character */
+          || (buf[*len - 2] == '#')) /* .. or has '#' for next to last character */
+      && ((6 + keyword_len) < *len))  /* holds "$kw:: x $" at least */
+    {
+      /* This is fixed length keyword, so *len remains unchanged */
+      apr_size_t max_value_len = *len - (6 + keyword_len);
+
+      if (! value)
+        {
+            /* no value, so unexpand */
+            buf_ptr += 2;
+            while (*buf_ptr != '$')
+                *(buf_ptr++) = ' ';
+        }
+      else 
+        {
+          if (value->len <= max_value_len) 
+            { /* replacement not as long as template, pad with spaces */
+              strncpy (buf_ptr + 3, value->data, value->len);
+              buf_ptr += 3 + value->len;
+              while (*buf_ptr != '$')
+                *(buf_ptr++) = ' ';
+            }
+          else
+            {
+              /* replacement needs truncating */
+              strncpy (buf_ptr + 3, value->data, max_value_len);
+              buf[*len - 2] = '#';
+              buf[*len - 1] = '$';
+            }
+        }
+      return TRUE;
+    }
+
   /* Check for unexpanded keyword. */
-  if ((buf_ptr[0] == '$')          /* "$keyword$" */
-      || ((buf_ptr[0] == ':') 
-          && (buf_ptr[1] == '$'))) /* "$keyword:$" */
+  else if ((buf_ptr[0] == '$')          /* "$keyword$" */
+           || ((buf_ptr[0] == ':') 
+               && (buf_ptr[1] == '$'))) /* "$keyword:$" */
     {
       /* unexpanded... */
       if (value)

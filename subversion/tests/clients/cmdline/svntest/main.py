@@ -410,6 +410,16 @@ def set_repos_paths(repo_dir):
     current_repo_url = string.replace(current_repo_url, '\\', '/')
 
 
+def canonize_url(input):
+  "Canonize the url, if the schema is unknown, returns intact input"
+  
+  m = re.match(r"^((file://)|((svn|svn\+ssh|http|https)(://)))", input)
+  if m:
+    schema = m.group(1)
+    return schema + re.sub(r'//*', '/', input[len(schema):])
+  else:
+    return input
+
 ######################################################################
 # Sandbox handling
 

@@ -86,3 +86,9 @@ List of 1.2 features/changes (that still need to be documented)
 ============================
 
   * svn log --limit
+  * Fixed length keywords
+    The format of fixed length keyword and its data is
+    - Unexpanded keyword:         "$keyword::       $"
+    - Expanded keyword:           "$keyword:: value $"
+    - Expanded kw with filling:   "$keyword:: value   $"
+    - Truncated keyword:          "$keyword:: longval#$"
