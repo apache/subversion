@@ -806,6 +806,8 @@ typedef struct svn_wc_entry_t
  * Note that it is possible for @a path to be absent from disk but still
  * under revision control; and conversely, it is possible for @a path to
  * be present, but not under revision control.
+ *
+ * Use @a pool only for local processing.
  */
 svn_error_t *svn_wc_entry (const svn_wc_entry_t **entry,
                            const char *path,
