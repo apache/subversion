@@ -77,7 +77,7 @@ def update_binary_file(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a binary file to the project.
-  fp = open(os.path.join(sys.path[0], "theta.png"))
+  fp = open(os.path.join(sys.path[0], "theta.bin"))
   theta_contents = fp.read()  # suck up contents of a test .png file
   fp.close()
 
@@ -198,7 +198,7 @@ def update_binary_file_2(sbox):
   wc_dir = sbox.wc_dir
 
   # Suck up contents of a test .png file.
-  fp = open(os.path.join(sys.path[0], "theta.png"))
+  fp = open(os.path.join(sys.path[0], "theta.bin"))
   theta_contents = fp.read()  
   fp.close()
 
