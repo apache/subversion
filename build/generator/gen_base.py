@@ -522,14 +522,13 @@ class TargetSWIG(TargetLib):
     # the library depends upon the object
     self.gen_obj.graph.add(DT_LINK, self.name, ofile)
 
-    # non-java modules depend on swig runtime libraries
-    if self.lang != "java":
-      self.gen_obj.graph.add(DT_LINK, self.name, TargetSWIGRuntime(self.lang))
-
-    abbrev = lang_abbrev[self.lang]
+    # Some languages may depend on swig runtime libraries
+    if self.lang in ('python', 'perl'):
+      self.gen_obj.graph.add(DT_LINK, self.name,
+                             TargetSWIGRuntime(self.lang, {}, self.gen_obj))
 
     # the specified install area depends upon the library
-    self.gen_obj.graph.add(DT_INSTALL, 'swig-' + abbrev, self)
+    self.gen_obj.graph.add(DT_INSTALL, 'swig-' + lang_abbrev[self.lang], self)
 
   class Section(TargetLib.Section):
     def create_targets(self):
@@ -547,8 +546,9 @@ class TargetSWIG(TargetLib):
       return target and [target] or [ ]
 
 class TargetSWIGRuntime(TargetLinked):
-  def __init__(self, lang):
-    self.name = None
+  def __init__(self, lang, options, gen_obj):
+    name = "<SWIG Runtime Library for " + lang_full_name[lang] + ">"
+    TargetLinked.__init__(self, name, options, gen_obj)
     self.external_lib = "$(LSWIG" + string.upper(lang_abbrev[lang]) + ")"
 
 class TargetSWIGLib(TargetLib):
@@ -558,8 +558,10 @@ class TargetSWIGLib(TargetLib):
 
   def add_dependencies(self):
     TargetLib.add_dependencies(self)
-    if self.lang != "java":
-      self.gen_obj.graph.add(DT_LINK, self.name, TargetSWIGRuntime(self.lang))
+    # Some languages may depend on swig runtime libraries
+    if self.lang in ('python', 'perl'):
+      self.gen_obj.graph.add(DT_LINK, self.name,
+                             TargetSWIGRuntime(self.lang, {}, self.gen_obj))
 
   class Section(TargetLib.Section):
     def get_dep_targets(self, target):
@@ -583,14 +585,13 @@ class TargetSWIGProject(TargetProject):
     TargetProject.__init__(self, name, options, gen_obj)
     self.lang = options.get('lang')
 
-class TargetJava(TargetLib):
+class TargetJava(TargetLinked):
   def __init__(self, name, options, gen_obj):
-    TargetLib.__init__(self, name, options, gen_obj)
+    TargetLinked.__init__(self, name, options, gen_obj)
     self.link_cmd = options.get('link-cmd')
     self.packages = string.split(options.get('package-roots', ''))
     self.jar = options.get('jar')
     self.deps = [ ]
-    del self.filename
 
 class TargetJavaHeaders(TargetJava):
   def __init__(self, name, options, gen_obj):

@@ -36,11 +36,40 @@ def main(fname, gentype, verfname=None,
 
   generator.write()
 
+  if other_options and ('--debug', '') in other_options:
+    for dep_type, target_dict in generator.graph.deps.items():
+      sorted_targets = target_dict.keys(); sorted_targets.sort()
+      for target in sorted_targets:
+        print dep_type + ": " + _objinfo(target)
+        for source in target_dict[target]:
+          print "  " + _objinfo(source)
+      print "=" * 72
+    gen_keys = generator.__dict__.keys()
+    gen_keys.sort()
+    for name in gen_keys:
+      value = generator.__dict__[name]
+      if type(value) == type([]):
+        print name + ": "
+        for i in value:
+          print "  " + _objinfo(i)
+        print "=" * 72
+
+
+def _objinfo(o):
+  if type(o) == type(''):
+    return repr(o)
+  else:
+    t = o.__class__.__name__
+    n = getattr(o, 'name', '-')
+    f = getattr(o, 'filename', '-')
+    return "%s: %s %s" % (t,n,f)
+
 
 def _usage_exit():
   "print usage, exit the script"
   print "USAGE:  gen-make.py [options...] [conf-file]"
   print "  -s       skip dependency generation"
+  print "  --debug  print lots of stuff only developers care about"
   print "  -t TYPE  use the TYPE generator; can be one of:"
   items = gen_modules.items()
   items.sort()
@@ -142,6 +171,7 @@ if __name__ == '__main__':
                                 'enable-nls',
                                 'enable-bdb-in-apr-util',
                                 'vsnet-version=',
+                                'debug',
                                 ])
     if len(args) > 1:
       _usage_exit()
