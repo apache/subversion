@@ -759,6 +759,9 @@ svn_wc_add (const char *path,
   if (kind == svn_node_none)
     return svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL,
                               "'%s' not found", path);
+  if (kind == svn_node_unknown)
+    return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+                              "Unsupported node kind for path '%s'.", path);
 
   /* Get the original entry for this path if one exists (perhaps
      this is actually a replacement of a previously deleted thing).
