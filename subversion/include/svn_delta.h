@@ -90,7 +90,7 @@
      - a string of new data (accessible to this window only).  */
 
 /* A single text delta instruction.  */
-typedef struct svn_delta_insn_t {
+typedef struct svn_delta_op_t {
   enum {
     /* Append the LEN bytes at OFFSET in the source string to the
        target.  It must be the case that 0 <= OFFSET < OFFSET + LEN <=
@@ -119,7 +119,7 @@ typedef struct svn_delta_insn_t {
   
   ap_off_t offset;
   ap_off_t length;
-} svn_delta_insn_t;
+} svn_delta_op_t;
 
 
 /* How to produce the next stretch of the target string.  */
@@ -129,7 +129,7 @@ typedef struct svn_delta_window_t {
   int num_insns;
   
   /* The instructions for this window.  */
-  svn_delta_insn_t *insns;
+  svn_delta_op_t *insns;
 
   /* New data, for use by any `svn_delta_new' instructions.  */
   svn_string_t *new;
