@@ -1033,52 +1033,39 @@ typedef void (*svn_wc_status_func_t) (void *baton,
                                       svn_wc_status_t *status);
 
 
-/** Under @a path, generated @c svn_wc_status_t structures, and
- * passing them .  All fields in each struct will be filled in except for
- * @c repos_rev, which would presumably be filled in by the caller.
- * @a adm_access is an access baton which holds a write-lock for @a path.
- *
- * @a path will usually be a directory, since for a regular file, you would
- * have used @c svn_wc_status().  However, it is no error if @a path is not
- * a directory; its status will simply be stored in @a statushash like
- * any other.
- *
- */
-svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
-                              const char *path,
-                              svn_wc_adm_access_t *adm_access,
-                              svn_boolean_t descend,
-                              svn_boolean_t get_all,
-                              svn_boolean_t no_ignore,
-                              svn_wc_notify_func_t notify_func,
-                              void *notify_baton,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_hash_t *config,
-                              svn_wc_traversal_info_t *traversal_info,
-                              apr_pool_t *pool);
-
-
 /** Set @a *editor and @a *edit_baton to an editor that generates @c
  * svn_wc_status_t structures and sends them through @a status_func /
- * @a status_baton reflect the state of @a path in the working copy
- * and, if @a update is @c TRUE, in the repository.  (Also, if @a
- * update is set, set @a *youngest to the youngest revision in the
- * repository, and set the @c repos_rev field each @c svn_wc_status_t
- * structure to the same value.)  @a adm_access must be an access
- * baton for @a path.
- *
- * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c svn_config_t's.
- *
- * Assuming @a path is a directory, then:
+ * @a status_baton.  @a anchor is an access baton, with a tree lock,
+ * for the local path to the working copy which will be used as the
+ * root of our editor.  If @a target is not @c NULL, it represents an
+ * entry in the @a anchor path which is the subject of the editor
+ * drive (otherwise, the @a anchor is the subject).
  * 
- * If @a get_all is false, then only locally-modified entries will be
- * returned.  If true, then all entries will be returned.
+ * Callers drive this editor to describe working copy out-of-dateness
+ * with respect to the repository.  If this information is not
+ * available or not desired, callers should simply call the
+ * close_edit() function of the @a editor vtable.
  *
- * If @a descend is false, @a statushash will contain statuses for @a path 
- * and its entries.  Else if @a descend is true, @a statushash will contain
- * statuses for @a path and everything below it, including
- * subdirectories.  In other words, a full recursion.
+ * If the editor driver calls @a editor's set_target_revision() vtable
+ * function, then when the edit drive is completed, @a *edit_revision
+ * will contain the revision delivered via that interface, and any
+ * status items reported during the drive will have their @c repos_rev
+ * field set to this same revision.
+ *
+ * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c
+ * svn_config_t's.
+ *
+ * Assuming the target is a directory, then:
+ * 
+ *   - If @a get_all is false, then only locally-modified entries will be
+ *     returned.  If true, then all entries will be returned.
+ *
+ *   - If @a descend is false, status structures will be returned only
+ *     for the target and its immediate children.  Otherwise, this
+ *     operation is fully recursive.
+ *
+ * If @a no_ignore is set, statuses that would typically be ignored
+ * will instead be reported.
  *
  * If @a cancel_func is non-null, call it with @a cancel_baton while building 
  * the @a statushash to determine if the client has cancelled the operation.
@@ -1092,9 +1079,9 @@ svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
  */
 svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
                                        void **edit_baton,
-                                       svn_revnum_t *youngest,
-                                       const char *path,
-                                       svn_wc_adm_access_t *adm_access,
+                                       svn_revnum_t *edit_revision,
+                                       svn_wc_adm_access_t *anchor,
+                                       const char *target,
                                        apr_hash_t *config,
                                        svn_boolean_t descend,
                                        svn_boolean_t get_all,

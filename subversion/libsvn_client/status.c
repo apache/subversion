@@ -83,6 +83,7 @@ svn_client_status (svn_revnum_t *youngest,
 {
   svn_wc_adm_access_t *adm_access;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
+  const char *anchor, *target;
   const svn_delta_editor_t *editor;
   void *edit_baton;
   svn_ra_plugin_t *ra_lib;  
@@ -95,22 +96,28 @@ svn_client_status (svn_revnum_t *youngest,
 
   /* Need to lock the tree as even a non-recursive status requires the
      immediate directories to be locked. */
-  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, FALSE, TRUE, pool));
+  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, 
+                                  FALSE, FALSE, pool));
 
   /* Get the entry for this path.  If the item is unversioned, we
      can't really do a full status report on it, so we'll just call
      svn_wc_status().  */
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
-  if (! entry)
-    {
-      svn_wc_status_t *status;
-      SVN_ERR (svn_wc_status (&status, path, adm_access, pool));
-      status_func (status_baton, path, status);
-      return SVN_NO_ERROR;
-    }
+  if (entry)
+    SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
+  else
+    svn_path_split (path, &anchor, &target, pool);
+  
+  /* Close up our ADM area.  We'll be re-opening soon. */
+  SVN_ERR (svn_wc_adm_close (adm_access));
 
-  SVN_ERR (svn_wc_get_status_editor (&editor, &edit_baton, youngest, path, 
-                                     adm_access, ctx->config, descend, 
+  /* Need to lock the tree as even a non-recursive status requires the
+     immediate directories to be locked. */
+  SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, anchor, 
+                                  FALSE, TRUE, pool));
+
+  SVN_ERR (svn_wc_get_status_editor (&editor, &edit_baton, youngest,
+                                     adm_access, target, ctx->config, descend, 
                                      get_all, no_ignore, hash_stash, &sb,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      traversal_info, pool));
@@ -122,15 +129,12 @@ svn_client_status (svn_revnum_t *youngest,
     {
       void *ra_baton, *session, *report_baton;
       const svn_ra_reporter_t *reporter;
-      const char *anchor, *target, *URL;
+      const char *URL;
       svn_wc_adm_access_t *anchor_access;
       svn_node_kind_t kind;
 
-      /* Use PATH to get the update's anchor and targets. */
-      SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
-
-        /* Using pool cleanup to close it. This needs to be recursive so that
-           auth data can be stored. */
+      /* Using pool cleanup to close it. This needs to be recursive so that
+         auth data can be stored. */
       if (strlen (anchor) != strlen (path))
         SVN_ERR (svn_wc_adm_open (&anchor_access, NULL, anchor, FALSE, 
                                   TRUE, pool));
@@ -187,6 +191,8 @@ svn_client_status (svn_revnum_t *youngest,
         }
       else
         {
+          svn_wc_adm_access_t *tgt_access;
+          
           SVN_ERR (ra_lib->do_status (session, &reporter, &report_baton,
                                       target, descend, editor, 
                                       edit_baton, pool));
@@ -195,7 +201,9 @@ svn_client_status (svn_revnum_t *youngest,
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
              working copy and HEAD. */
-          SVN_ERR (svn_wc_crawl_revisions (path, adm_access, reporter, 
+          SVN_ERR (svn_wc_adm_probe_retrieve (&tgt_access, adm_access, 
+                                              path, pool));
+          SVN_ERR (svn_wc_crawl_revisions (path, tgt_access, reporter, 
                                            report_baton, FALSE, descend, 
                                            NULL, NULL, NULL, pool));
         }
