@@ -254,7 +254,7 @@ get_file_from_ra (struct file_baton *b)
   SVN_ERR (b->edit_baton->ra_lib->get_file (b->edit_baton->ra_session,
                                             b->path->data,
                                             b->edit_baton->revision,
-                                            fstream, NULL));
+                                            fstream, NULL, NULL));
 
   status = apr_file_close (file);
   if (status)

@@ -85,7 +85,8 @@ svn_error_t * svn_ra_dav__get_file(
   const char *path,
   svn_revnum_t revision,
   svn_stream_t *stream,
-  svn_revnum_t *fetched_rev);
+  svn_revnum_t *fetched_rev,
+  apr_hash_t **props);
 
 svn_error_t * svn_ra_dav__abort_commit(
  void *session_baton,
