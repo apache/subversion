@@ -84,6 +84,8 @@ section for approved changes.)
      Justification: Make svnserve more user friendly, low risk.
      Notes: http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=53957
             Message-Id: <200401080605.i0865R443408@newton.ch.collab.net>
+            Remember to change "and" to "or" in accordance with the note in
+            the issue when committing.
      Votes:
       +1: bliss, ghudson
       +0: cmpilato
