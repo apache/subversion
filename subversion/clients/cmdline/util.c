@@ -64,6 +64,7 @@ svn_error_t *
 svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
                          const char *base_dir /* UTF-8! */,
                          const char *contents /* UTF-8! */,
+                         const char *prefix,
                          apr_pool_t *pool)
 {
   const char *editor = NULL;
@@ -124,13 +125,10 @@ svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
 
   /*** From here on, any problems that occur require us to cd back!! ***/
 
-  /* Ask the working copy for a temporary file.  Note that the
-     filename is carefully chosen so editors can recognize it and
-     automatically customize for operating on a Subversion commit
-     message. */
-  err = svn_io_open_unique_file 
-    (&tmp_file, &tmpfile_name,
-     "svncommit", ".tmp", FALSE, pool);
+  /* Ask the working copy for a temporary file that starts with
+     PREFIX. */
+  err = svn_io_open_unique_file (&tmp_file, &tmpfile_name,
+                                 prefix, ".tmp", FALSE, pool);
   if (err)
     goto cleanup2;
 
@@ -372,8 +370,8 @@ svn_cl__get_log_message (const char **log_msg,
           svn_stringbuf_appendcstr (tmp_message, "\n");
         }
 
-      err = svn_cl__edit_externally (&msg2, lmb->base_dir,
-                                     tmp_message->data, pool);
+      err = svn_cl__edit_externally (&msg2, lmb->base_dir, tmp_message->data, 
+                                     "svn-commit", pool);
       
       if (err)
         {
