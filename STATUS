@@ -43,7 +43,7 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r10652
+  * r10652, r10673
     Fix missing UTF-8 -> native recoding in 'svn log' output.
     Justification:
       Solves user experience in very common operation.
