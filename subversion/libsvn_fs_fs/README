@@ -76,14 +76,15 @@ Workplan
   2. Write code to turn a (standard, not diffy) svn dump into the
      proposed file format.  This code will not survive the project,
      but will allow rapid generation of test cases.  At this point,
-     the code should store everything node-rev contents as plain text,
-     and it can do stupid things like hold the entire directory
+     the code should store all text representations against the empty
+     base, and it can do stupid things like hold the entire directory
      structure of the head revision in memory.  It doesn't need to
      work incrementally.
 
   3. Write FS code to read, but not write, the file format, under the
-     assumption that node-revs contain only plain text.  Use the tool
-     from (2) to generate test cases to ensure that the code works.
+     assumption that node-revs contain only deltas against the empty
+     base.  Use the tool from (2) to generate test cases to ensure
+     that the code works.
 
   4. Develop a format for the directory part of mutable transactions.
 
@@ -104,15 +105,15 @@ Workplan
      its changed-directory data onto the end of the changed-file data
      and moving the resulting file into place.
 
-  10. Extend the tool from (2) to write out node-rev contents in delta
-      form, possibly using the code from (3) to determine the base
-      contents to diff against.
+  10. Extend the tool from (2) to write out node-rev contents with
+      base deltas, possibly using the code from (3) to determine the
+      base contents to diff against.
 
-  11. Extend the read code from (3) to handle deltas.
+  11. Extend the read code from (3) to handle delta bases using the
+      delta combiner.
 
-  12. Extend the write code from (7) and (9) to generate deltas
-      instead of plain text.  (Or do we use deltas for directories in
-      the current code?  I forget.  It may be desirable not to.)
+  12. Extend the write code from (7) and (9) to generate deltas with
+      bases.
 
 Not every step depends on the previous step, so not everything has to
 proceed in order.

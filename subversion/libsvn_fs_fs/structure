@@ -22,42 +22,66 @@ the entire rev file.)
 Revision file format
 --------------------
 
-A revision file contains:
+A revision file contains a concatenation of various kinds of data:
 
-  * One or more node-revisions
-  * The changed-path data
+  * Text representations
+  * Property lists
+  * Node-revisions
+  * At the end, the changed-path data
+  * Two offsets at the very end
 
-We'll need a quick way to find the offset of the changed-path data and
-the offset of the root directory's node rev.  There are a bunch of
-workable (if not terribly elegant) options for storing these offsets:
-lump them in with the rev-prop file; store them in a separate file;
-store them at the beginning (in a binary field or with padding to
-accomodate an arbitrary decimal number up to the maximum offset);
-store them at the end (either with padding or not).
+A text representation begins with a line "REP <length> [<base-rev>
+<base-offset>]\n" where <length> gives the length of the ensuing
+svndiff data, and <base-rev> and <base-offset>, if present, give the
+location of the delta base of the representation.  If no base location
+is given, the base is the empty stream.  After the initial line comes
+raw svndiff data, followed by a cosmetic marker "END\n".
 
-We will need to pick a marshalling syntax (XML, skels, ra_svn-style
-marshalling, RFC822ish, fixed binary fields a la xdr, whatever).
+The representation of a property list is the hash dump format used by
+svn_hash_read and svn_hash_write.
 
-Meta-data fields we will need:
+The marshalling syntax for node-revs is a series of fields terminated
+by a blank line.  Fields have either the syntax "<name>: <value>\n" or
+"<name>:<length>:<value>\n", where <name> is a symbolic field name
+(each symbolic name is used only once in a given node-rev), <length>
+is the length of the value if given (not including the cosmetic
+newline), and <value> is the value data.  If no length is given, the
+value must contain no newlines.  Unrecognized fields are ignored, for
+extensibility.  The following fields are defined:
 
-  * The ID of the node-rev
-  * The type of node (file or dir)
-  * A pointer to the predecessor node-rev
-  * A count of the node-revs since the base of this node
-  (The previous two fields allow finding the appropriate base for a
-  skip-delta for a future node.)
-  * A pointer to the node-rev which acts as a base for the delta
-  * The copy ancestry of the node-rev, if any
+  id        The ID of the node-rev
+  type      "file" or "dir"
+  pred      "<rev> <offset>" giving offset of predecessor node-rev
+  count     Count of node-revs since the base of the node
+  rep       Offset of text representation
+  props     Offset of property list
+  copyfrom  "<rev> <path>" of copyfrom data
+  cpath     FS pathname node was created at [clarify]
 
-We may also need extra fields to support svn_fs_node_created_path and
-svn_fs_node_history.
+The predecessor of a node-rev crosses copy history; together with the
+count field, it allows efficient determination of the base for
+skip-deltas.  The root of a node contains no "pred" field.  The
+"copyfrom" field is only present for the root of a node-copy, of
+course.
+
+[Don't know how changed-path data is represented yet.]
+
+At the very end of a rev file is a line "<root-offset> <cp-offset>\n",
+where <root-offset> is the offset of the root directory node revision
+and <cp-offset> is the offset of the changed-path data.
+
+All numbers in the rev file format are unsigned and are represented as
+ASCII decimal.
 
 Directory format
 ----------------
 
-The text contents of a directory node-rev are structured data
-containing a map of filenames to directory entries, which must each
-contain an id, kind, and node-rev pointer.
+The text representation of a directory node is structured data in the
+form of a dumped hash map (a la svn_hash_write).  The value of each
+key is a string "<kind> <id> <rev> <offset>", where <kind> is "file"
+or "dir", <id> is the ID of the node-rev pointed to by the directory
+entry, and <rev> and <offset> give the location of the node-rev
+pointed to by the directory.
 
 Transaction layout
 ------------------
