@@ -128,6 +128,7 @@ sub new {
 our $AUTOLOAD;
 
 sub AUTOLOAD {
+    no warnings 'uninitialized';
     warn "$AUTOLOAD: ".join(',',@_) if $_[0]->{_debug};
     return unless $_[0]->{_editor};
     my $class = ref($_[0]);
