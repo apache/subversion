@@ -95,10 +95,6 @@ SOURCE=.\main.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\shell.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\build\win32\svn.rc
 # End Source File
 # End Group
