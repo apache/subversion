@@ -451,10 +451,10 @@ svn_fs__make_empty_list (apr_pool_t *pool)
 
 
 void
-svn_fs__prepend (skel_t *skel, skel_t *list)
+svn_fs__prepend (skel_t *skel, skel_t *list_skel)
 {
-  skel->next = list->children;
-  list->children = skel->next;
+  skel->next = list_skel->children;
+  list_skel->children = skel->next;
 }
 
 
