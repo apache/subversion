@@ -1215,7 +1215,6 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
-  apr_status_t apr_err;
   svn_xml_parser_t *parser;
   struct log_runner *loggy = apr_pcalloc (pool, sizeof (*loggy));
   char buf[BUFSIZ];
@@ -1241,38 +1240,26 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
   SVN_ERR (svn_xml_parse (parser, log_start, strlen (log_start), 0));
 
   /* Parse the log file's contents. */
-  err = svn_wc__open_adm_file (&f, svn_wc_adm_access_path (adm_access),
-                               SVN_WC__ADM_LOG, APR_READ, pool);
-  if (err)
-    return svn_error_quick_wrap (err, "Couldn't open log");
+  SVN_ERR_W (svn_wc__open_adm_file (&f, svn_wc_adm_access_path (adm_access),
+                                    SVN_WC__ADM_LOG, APR_READ, pool),
+             "Couldn't open log");
   
   do {
     buf_len = sizeof (buf);
 
-    apr_err = apr_file_read (f, buf, &buf_len);
-    if (apr_err && !APR_STATUS_IS_EOF(apr_err))
-      {
-        apr_file_close (f);
-        return 
-          svn_error_createf (apr_err, NULL,
-                             "Error reading administrative log file in '%s'",
-                             svn_wc_adm_access_path (adm_access));
-      }
+    err = svn_io_file_read (f, buf, &buf_len, pool);
+    if (err && !APR_STATUS_IS_EOF(err->apr_err))
+      svn_error_createf (err->apr_err, err,
+                         "Error reading administrative log file in '%s'",
+                         svn_wc_adm_access_path (adm_access));
 
-    err = svn_xml_parse (parser, buf, buf_len, 0);
-    if (err)
-      {
-        apr_file_close (f);
-        return err;
-      }
+    SVN_ERR (svn_xml_parse (parser, buf, buf_len, 0));
 
-    if (APR_STATUS_IS_EOF(apr_err))
-      {
-        /* Not an error, just means we're done. */
-        apr_file_close (f);
-        break;
-      }
-  } while (apr_err == APR_SUCCESS);
+  } while (! err);
+
+  svn_error_clear (err);
+  SVN_ERR (svn_io_file_close (f, pool));
+
 
   /* Pacify Expat with a pointless closing element tag. */
   SVN_ERR (svn_xml_parse (parser, log_end, strlen (log_end), 1));

@@ -964,21 +964,15 @@ init_adm_file (const char *path,
                const char *contents,
                apr_pool_t *pool)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-  apr_status_t apr_err;
   apr_file_t *f = NULL;
 
-  SVN_ERR (svn_wc__open_adm_file (&f, path, thing, APR_WRITE | APR_CREATE,
-                                  pool));
-
-  apr_err = apr_file_write_full (f, contents, strlen (contents), NULL);
-
+  SVN_ERR (svn_wc__open_adm_file (&f, path, thing, 
+                                  APR_WRITE | APR_CREATE, pool));
+  SVN_ERR (svn_io_file_write_full (f, contents, 
+                                   strlen (contents), NULL, pool));
   SVN_ERR (svn_wc__close_adm_file (f, path, thing, 1, pool));
   
-  if (apr_err)
-    err = svn_error_create (apr_err, NULL, path);
-
-  return err;
+  return SVN_NO_ERROR;
 }
 
 

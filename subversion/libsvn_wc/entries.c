@@ -58,7 +58,6 @@ svn_wc__entries_init (const char *path,
                       svn_revnum_t initial_rev,
                       apr_pool_t *pool)
 {
-  apr_status_t apr_err;
   apr_file_t *f = NULL;
   svn_stringbuf_t *accum = NULL;
   apr_hash_t *atts = apr_hash_make (pool);
@@ -114,14 +113,8 @@ svn_wc__entries_init (const char *path,
                           pool,
                           SVN_WC__ENTRIES_TOPLEVEL);
 
-  apr_err = apr_file_write_full (f, accum->data, accum->len, NULL);
-  if (apr_err)
-    {
-      apr_file_close (f);
-      return svn_error_createf (apr_err, NULL,
-                                "Error writing entries file for '%s'",
-                                path);
-    }
+  SVN_ERR_W (svn_io_file_write_full (f, accum->data, accum->len, NULL, pool),
+             apr_psprintf (pool, "Error writing entries file for '%s'", path));
 
   /* Now we have a `entries' file with exactly one entry, an entry
      for this dir.  Close the file and sync it up. */
@@ -632,7 +625,6 @@ read_entries (svn_wc_adm_access_t *adm_access,
   svn_error_t *err;
   apr_file_t *infile = NULL;
   svn_xml_parser_t *svn_parser;
-  apr_status_t apr_err;
   char buf[BUFSIZ];
   apr_size_t bytes_read;
   struct entries_accumulator accum;
@@ -660,19 +652,21 @@ read_entries (svn_wc_adm_access_t *adm_access,
   accum.parser = svn_parser;
 
   /* Parse. */
+  err = SVN_NO_ERROR;
   do {
-    apr_err = apr_file_read_full (infile, buf, sizeof(buf), &bytes_read);
-    if (apr_err && !APR_STATUS_IS_EOF(apr_err))
-      return svn_error_create 
-        (apr_err, NULL, NULL);
+    svn_error_clear (err);
+
+    err = svn_io_file_read_full (infile, buf, sizeof(buf), &bytes_read, pool);
+    if (err && !APR_STATUS_IS_EOF(err->apr_err))
+      return err;
+    svn_error_clear (err);
     
-    err = svn_xml_parse (svn_parser, buf, bytes_read,
-                         APR_STATUS_IS_EOF(apr_err));
-    if (err)
-      return svn_error_createf (err->apr_err, err, 
-                                "XML parser failed in '%s'", 
-                                svn_wc_adm_access_path (adm_access));
-  } while (!APR_STATUS_IS_EOF(apr_err));
+    SVN_ERR_W (svn_xml_parse (svn_parser, buf, bytes_read, 
+                              err && APR_STATUS_IS_EOF(err->apr_err)),
+               apr_psprintf (pool,
+                             "XML parser failed in '%s'", 
+                             svn_wc_adm_access_path (adm_access)));
+  } while (! err);
 
   /* Close the entries file. */
   SVN_ERR (svn_wc__close_adm_file (infile, svn_wc_adm_access_path (adm_access),
@@ -1098,7 +1092,6 @@ svn_wc__entries_write (apr_hash_t *entries,
   svn_error_t *err = SVN_NO_ERROR;
   svn_stringbuf_t *bigstr = NULL;
   apr_file_t *outfile = NULL;
-  apr_status_t apr_err;
   apr_hash_index_t *hi;
   svn_wc_entry_t *this_dir;
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -1162,15 +1155,15 @@ svn_wc__entries_write (apr_hash_t *entries,
   svn_pool_destroy (subpool);
   svn_xml_make_close_tag (&bigstr, pool, SVN_WC__ENTRIES_TOPLEVEL);
 
-  apr_err = apr_file_write_full (outfile, bigstr->data, bigstr->len, NULL);
-  if (apr_err)
-    err = svn_error_createf (apr_err, NULL,
-                             "Error writing to '%s'",
-                             svn_wc_adm_access_path (adm_access));
-  else
-    err = svn_wc__close_adm_file (outfile,
-                                   svn_wc_adm_access_path (adm_access),
-                                   SVN_WC__ADM_ENTRIES, 1, pool);
+  SVN_ERR_W (svn_io_file_write_full (outfile, bigstr->data, 
+                                     bigstr->len, NULL, pool),
+             apr_psprintf (pool,
+                           "Error writing to '%s'",
+                           svn_wc_adm_access_path (adm_access)));
+
+  err = svn_wc__close_adm_file (outfile,
+                                svn_wc_adm_access_path (adm_access),
+                                SVN_WC__ADM_ENTRIES, 1, pool);
 
   svn_wc__adm_access_set_entries (adm_access, TRUE, entries);
   svn_wc__adm_access_set_entries (adm_access, FALSE, NULL);
