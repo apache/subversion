@@ -131,6 +131,11 @@ Candidate changes:
     Votes:
        +0: dionisos
   
+  * r8856
+    Fix compressed streams on LP64 arch.
+    Justification: potential seg fault
+    Votes:
+       +1: kfogel
 
 Binding candidate changes:
 
