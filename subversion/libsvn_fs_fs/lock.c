@@ -199,8 +199,7 @@ write_entries_file (apr_hash_t *entries,
 
 /* Create ENTRIES and read lock entries file at PATH, adding each
    child hash as a key as a char * in ENTRIES.  The value should be
-   ignored.  If FD is non-NULL, read entries from FD instead of PATH.
-   FD will be closed before returning. */
+   ignored.  If FD is non-NULL, read entries from FD instead of PATH. */
 static svn_error_t *
 read_entries_file (apr_hash_t **entries,
                    const char *path, 
@@ -239,10 +238,7 @@ read_entries_file (apr_hash_t **entries,
           break;
         }
       if (err)
-        {
-          SVN_ERR (svn_io_file_close (fd, pool));
-          return err;
-        }
+        return err;
 
       buf[buf_len - 1] = '\0'; /* Strip '\n' off the end. */
       apr_hash_set (*entries, buf,
@@ -250,8 +246,6 @@ read_entries_file (apr_hash_t **entries,
 
     }
   
-  SVN_ERR (svn_io_file_close (fd, pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -492,8 +486,7 @@ generate_new_lock (svn_lock_t **lock_p,
 
 
 /* Read lock from file in FS at ABS_PATH into LOCK_P.  If open FD is
-   non-NULL, use FD instead of opening a new file. FD will be closed
-   before returning. */
+   non-NULL, use FD instead of opening a new file. */
 static svn_error_t *
 read_lock_from_abs_path (svn_lock_t **lock_p,
                          svn_fs_t *fs,
@@ -527,8 +520,6 @@ read_lock_from_abs_path (svn_lock_t **lock_p,
   stream = svn_stream_from_aprfile(fd, pool);
   SVN_ERR_W (svn_hash_read2 (hash, stream, SVN_HASH_TERMINATOR, pool),
              apr_psprintf (pool, _("Can't parse '%s'"), abs_path));
-
-  SVN_ERR (svn_io_file_close (fd, pool));
 
   /* Create our lock and load it up. */
   lock = apr_palloc (pool, sizeof (*lock));
@@ -665,6 +656,8 @@ get_locks_under_path (apr_hash_t **locks,
   apr_off_t offset = 0;
   
   SVN_ERR (read_entries_file (&entries, path, fd, pool));
+  if (fd)
+    SVN_ERR (svn_io_file_close (fd, pool));
       
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi)) 
     {
@@ -684,6 +677,7 @@ get_locks_under_path (apr_hash_t **locks,
         {
           svn_lock_t *lock;
           SVN_ERR (read_lock_from_hash_name (&lock, fs, child, fd, pool));
+          SVN_ERR (svn_io_file_close (fd, pool));
 
           apr_hash_set (*locks, lock->path, APR_HASH_KEY_STRING, lock);
         }
