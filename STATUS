@@ -337,8 +337,8 @@ the section for unapproved changes.)
         pages.  Also require correct apr/apr-util, and apache RPM versions.
      Justification: Packaging fixes and additions.
      Votes:
-      +1 (concept): gstein
       +1: kfogel, david, striker
+      +1 (concept): gstein
 
 
    * r8222
