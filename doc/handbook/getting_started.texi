@@ -48,14 +48,27 @@ problems that are difficult to fix.
 Subversion's original designers settled on a few simple goals: it was
 decided that Subversion should be a functional replacement for CVS.
 It should do everything that CVS does -- preserving the same
-development model while fixing the the most obvious flaws.  Existing
-CVS users are the first target audience: any CVS user should be able
-to start using Subversion with little effort.
+development model while fixing the most obvious flaws.  Existing CVS
+users are the first target audience: any CVS user should be able to
+start using Subversion with little effort.
 
 Collabnet (@url{http://www.collab.net}) provided the initial funding
 in 2000 to begin development work, and the effort has now blossomed
-into a large, open-source project backed by a community of Free
+into a large, open-source project backed by a community of free
 software developers.
+
+
+@subsection Audience
+
+The intended audience of this book is anyone who has used a revision
+control system before, although perhaps not Subversion or CVS.  It
+assumes that the reader is computer-literate, and reasonably
+comfortable at a Unix command-line.  
+
+People familiar with CVS may want to skip some of the introductory
+sections that describe Subversion's concurrent versioning model.
+Also, there is a quick guide for CVS users attached as an appendix
+(@xref{SVN for CVS users}.)
 
 
 @subsection Features
@@ -200,12 +213,12 @@ server, Subversion gets all these features for free.
 
 Subversion uses WebDAV as its network protocol.  DAV (Distributed
 Authoring and Versioning) is a whole discussion in itself (see
-www.webdav.org) -- but in short, it's an extension to HTTP that allows
-reads/writes and "versioning" of files over the web.  The Subversion
-project is hoping to ride a slowly rising tide of support for this
-protocol: all of the latest file-browsers for Win32, MacOS, and GNOME
-speak this protocol already.  Interoperability will (hopefully) become
-more and more of a boon over time.
+@url{http://www.webdav.org}) -- but in short, it's an extension to
+HTTP that allows reads/writes and "versioning" of files over the web.
+The Subversion project is hoping to ride a slowly rising tide of
+support for this protocol: all of the latest file-browsers for Win32,
+MacOS, and GNOME speak this protocol already.  Interoperability will
+(hopefully) become more and more of a boon over time.
 
 For users who simply wish to access Subversion repositories on local
 disk, the client can do this too; no network is required.  The
@@ -487,9 +500,10 @@ For each file in a working directory, Subversion records two essential
 pieces of information:
 @itemize @bullet
 @item
-what revision of what repository file your working copy is based on (this is called the file's @dfn{base revision}), and
+what revision of what repository file your working copy is based on
+(this is called the file's @dfn{working revision}), and
 @item
-a timestamp recording when the local copy was last updated.
+a timestamp recording when the local copy was last updated by the repository.
 @end itemize
 
 Given this information, by talking to the repository, Subversion can
@@ -569,12 +583,12 @@ unnecessary delays and friction.
 @end itemize
 
 Of course, the merge process needs to be under the users' control.
-Patch is not appropriate for files with rigid formats, like images or
-executables.  Subversion attempts to notice when a file is in a binary
-format, or is of any mime-type other than text/*.  For these
-rigid-format files, Subversion simply presents you with the two
-original texts to choose from.  @xref{Basic Work Cycle}, in particular
-the subsection ``Merge others' changes''.
+Contextual, line-by-line patching is not appropriate for files with
+rigid formats, like images or executables.  Subversion attempts to
+notice when a file is in a binary format, or is of any mime-type other
+than text/*.  For these rigid-format files, Subversion simply presents
+you with the two original texts to choose from.  @xref{Basic Work
+Cycle}, in particular the subsection ``Merge others' changes''.
 
 
 @c ------------------------------------
@@ -642,7 +656,7 @@ someproject/foo
             baz/bloo
 @end example
 
-After the repository exists, you can initially import your data into it,
+Once the repository exists, you can initially import your data into it,
 using the ra_local access method (invoked by using a 'file' URL):
 
 @example
@@ -664,7 +678,7 @@ specify a URL to the exact directory within the repository that we want.
 The parameter after the URL allows us to name the working copy we check out.
 
 @example
-$ svn co file:///usr/local/svn/repos1 wc
+$ svn co file:///usr/local/svn/repos/myproj wc
 A  wc/foo
 A  wc/bar
 A  wc/baz
@@ -673,7 +687,8 @@ A  wc/baz/bloo
 @end example
 
 Now we have a working copy in a local directory called @file{wc}, which
-represents the location @file{/myproj} in the repository.
+represents the location @file{/myproj} in the repository (assuming the
+repository's root is @url{file:///usr/local/svn/repos}.)
 
 For the sake of example, let's duplicate the working copy, and pretend
 it belongs to someone else:

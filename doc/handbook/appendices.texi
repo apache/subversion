@@ -303,7 +303,7 @@ property.  @xref{Modules}.
 @node Branches and tags
 @subsection Branches and tags
 
-Subversion doesn't separate between filesystem space and ``branch''
+Subversion doesn't distinguish between filesystem space and ``branch''
 space; branches and tags are ordinary directories within the
 filesystem.  This is probably the single biggest mental hurdle a CVS
 user will need to climb.  Read all about it: @xref{Branches and Tags}.

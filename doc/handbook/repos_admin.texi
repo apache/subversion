@@ -13,6 +13,7 @@ In this section, we'll mainly focus on how to use the
 * Repository maintenance::
 * Networking a repository::
 * Migrating a repository::
+* WebDAV::
 @end menu
 
 
@@ -24,18 +25,25 @@ In this section, we'll mainly focus on how to use the
 Creating a repository is incredibly simple:
 
 @example
-$ svnadmin create myrepos
+$ svnadmin create path/to/myrepos
 @end example
 
 This creates a new repository in a subdirectory @file{myrepos}.
 
+(Note that the @command{svnadmin} and @command{svnlook} programs
+operate @emph{directly} on a repository, by linking to libsvn_fs.so.
+So these tools expect ordinary, local paths to the repositories.  This
+is in contrast with the @command{svn} client program, which always
+accesses a repository via some URL, whether it be via @samp{http://}
+or @samp{file:///} schemas.)
+
 A new repository always begins life at revision 0, which is defined to
 be nothing but the root (@file{/}) directory.
 
-As mentioned in an earlier section (### xref?), repository revisions
-can have unversioned properties attached to them.  In particular,
-every revision is created with a @code{svn:date} timestamp property.
-(Other common properties include @code{svn:author} and @code{svn:log})
+As mentioned earlier, repository revisions can have unversioned
+properties attached to them.  In particular, every revision is created
+with a @code{svn:date} timestamp property.  (Other common properties
+include @code{svn:author} and @code{svn:log})
 
 For a newly created repository, revision 0 has nothing but a
 @code{svn:date} property attached.
@@ -462,9 +470,9 @@ To network your repository, you'll need to
 
 @itemize @bullet
 @item
-get Apache httpd 2.0 up and running with the @file{mod_dav} module
+get Apache httpd 2.0 up and running with the mod_dav module
 @item
-install the @file{mod_dav_svn} plugin to mod_dav, which uses
+install the mod_dav_svn plugin to mod_dav, which uses
 Subversion's libraries to access the repository
 @item
 configure your @file{httpd.conf} file to export the repository
@@ -517,16 +525,14 @@ mary:kV4/mQbu0iq82
 @end example
 
 You can generate the crypted passwords by using the standard
-@command{crypt(3)} command.  Here's a tiny perl program that does the
-trick as well:
+@command{crypt(3)} command, or using the @command{htpasswd} tool
+supplied in Apache's @file{bin} directory:
 
 @example
-#!/usr/bin/perl
-srand (time());
-my $randletter = "(int (rand (26)) + (int (rand (1) + .5) % 2 ? 65 : 97))";
-my $salt = sprintf ("%c%c", eval $randletter, eval $randletter);
-my $plaintext = shift;
-my $crypttext = crypt ($plaintext, $salt);
+$ /usr/local/apache2/bin/htpasswd -n sussman
+New password: 
+Re-type new password: 
+sussman:kUqncD/TBbdC6
 @end example
 
 Next, add lines within your <Location> block that point to the user file:
@@ -691,7 +697,8 @@ $ svnadmin dump myrepos | svnadmin load newrepos
 @end example
 
 Also, it's possible to create a series of smaller dumpfiles and load
-them in succession.  But it requires a small bit of hackery.
+them in succession (say, if a single dumpfile is too large to fit on
+backup or transport medium.)  But it requires a small bit of hackery:
 
 @example
 $ svnadmin dump myrepos 0 2000 > dumpfile1
@@ -735,3 +742,52 @@ $ svnadmin load newrepos < dumpfile1
 $ svnadmin load newrepos < dumpfile2
 @end example
 
+
+@c ------------------------------------------------------------------
+@node WebDAV
+@section WebDAV
+
+Subversion uses WebDAV (Distributed Authoring and Versioning) as its
+primary network protocol, and here we discuss what this means to you,
+both present and future.
+
+WebDAV was designed to make the web into a read/write medium, instead
+of a read-only medium (as it mainly exists today.)  The theory is that
+directories and files can be shared over the web, using standardized
+extensions to HTTP.  RFC 2518 describes the WebDAV extensions to HTTP,
+and is available (along with a lot of other useful information) at
+@url{http://www.webdav.org}.
+
+Already, a number of operating system file-browsers are able to mount
+networked directories using WebDAV.  On Win32, the Windows Explorer
+can browse what it calls ``WebFolders'', just like any other share.
+Mac OS X also has this capability, as does the Nautilus browser for
+GNOME.
+
+However, RFC 2518 doesn't fully implement the ``versioning'' aspect of
+WebDAV.  A separate committee has created RFC 3253, known as the
+@dfn{DeltaV} extensions to WebDAV, available at
+@url{http://www.webdav.org/deltav}.   These extensions add
+version-control concepts to HTTP, and this is what Subversion uses.
+
+It's important to understand that while Subversion uses DeltaV for
+communication, the Subversion client is @emph{not} a general-purpose
+DeltaV client. In fact, it expects some custom features from the
+server. Further, the Subversion server is not a general-purpose DeltaV
+server. It implements a strict subset of the DeltaV specification. A
+WebDAV or DeltaV client may very well be able to interoperate with it,
+but only if that client operates within the narrow confines of those
+features the server has implemented. Future versions of Subversion
+will address more complete WebDAV interoperability.
+
+At the moment, most DAV browsers and clients do not yet support
+DeltaV; this means that a Subversion repository can viewed or mounted
+only as a read-only resource.  (An HTTP 'PUT' request is valid when
+sent to a WebDAV-only server, but a DeltaV server such as mod_dav_svn
+will not allow it.  The client must use special version-control
+methods to write to the server.)  And on the flip side, a Subversion
+client cannot checkout a working copy from a generic WebDAV server; it
+expects a specific subset of DeltaV features.
+
+For a detailed description of Subversion's WebDAV implementation, see
+@url{http://svn.collab.net/repos/svn-repos/trunk/www/webdav-usage.html}.

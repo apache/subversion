@@ -4,8 +4,18 @@
 How to make a lovely gumbo with your Subversion client, in 11 easy steps.
 
 This chapter goes into more of the gritty details of client commands.
-For a first conversational overview of the the client's CVS-like
+For a first overview of the the client's CVS-like
 ``copy-modify-merge'' model of development, @xref{Basics}.
+
+Before reading on, here is the most important piece of information
+you'll ever need when using Subversion:  @command{svn help}.  The
+Subversion command-line client tries to be self-documenting;  at any
+time, a quick @command{svn help <subcommand>} will describe the
+syntax, switches, and behavior of @command{subcommand}.
+
+This chapter by no means covers every option to every client
+subcommand.  Instead, it's a conversational introduction to the most
+common tasks you'll encounter.  When in doubt, run @command{svn help}.
 
 @menu
 * Checkout::                    
@@ -14,7 +24,9 @@ For a first conversational overview of the the client's CVS-like
 * Branches and Tags::           
 * Properties::                  
 * Modules::                     
-* Other Commands::              
+* Revisions::
+* Other Commands::
+* Run-time Configuration::              
 @end menu
 
 @c ------------------------------------------------------------------
@@ -206,6 +218,13 @@ svn rm foo}.  That is, @file{bar} is scheduled for addition as a copy
 of @file{foo}, and @file{foo} is scheduled for removal.
 @end table
 
+Let's ammend our original statement: there @emph{are} some use-cases
+that immediately commit tree changes to the repository.  This usually
+happens when a subcommand is operating directly on a URL, rather than
+on a working-copy path. (In particular, specific uses of @command{svn
+mkdir}, @command{svn cp}, @command{svn mv}, and @command{svn rm} can
+work with URLs.  See @command{svn help} on these commands for more
+details.)
 
 @subsection Examine your changes  (svn status, diff, revert)
 
@@ -270,7 +289,7 @@ contacts the repository and adds information about things that are
 out-of-date:
 
 @example
-$ svn status -u
+$ svn status -u -v
 M      *        44        23    joe       ./README
 M               44        20    frank     ./bar.c
 _      *        44        35    mary      ./stuff/trout.c
@@ -295,7 +314,11 @@ $ svn status
 The '?' indicates a file in the directory that is not under revision
 control.  You can silence the question marks by either passing the
 @samp{--quiet} (@samp{-q}) option to status, or by setting the
-@samp{svn:ignore} property on the parent directory (@xref{Properties}.)
+@samp{svn:ignore} property on the parent directory
+(@xref{Properties}.   The '!' indicates that the file is under
+revision control, but the working file is missing.  A quick
+@command{svn up} or @command{svn revert foo.c} will restore the
+missing file from its cached pristine copy.
 
 Another way to examine your changes is with the @command{svn diff}
 command.  You can find out @emph{exactly} how you've modified things
@@ -500,12 +523,15 @@ Initial import
 @end example
 
 Note that the log messages are printed in reverse chronological order
-by default.  If you wish to see a different range of revisions, or
-just a single revision, pass the @samp{--revision} (@samp{-r}) switch:
+by default.  If you wish to see a different range of revisions in a
+particular order, or just a single revision, pass the
+@samp{--revision} (@samp{-r}) switch:
 
 @example
 $ svn log -r 5:19
-[...]
+[...]  # shows logs 5 through 19 in chronological order
+$ svn log -r 19:5
+[...]  # shows logs 5 through 19 in reverse order
 $ svn log -r 8
 [...]
 @end example
@@ -613,7 +639,10 @@ $ svn diff -r 23:24 http://foo.com/some/project
 @node Branches and Tags
 @section Branches and Tags
 
-@subsection Branching with @command{svn cp} 
+Branches and tags are general concepts common to almost all revision
+control systems.  If you're not familiar with these ideas, you can
+find a good introductory explanation in Karl Fogel's free CVS
+book: @url{http://cvsbook.red-bean.com/cvsbook.html#Branching_Basics}
 
 At this point, you should understand how each commit creates an entire
 new filesystem tree in the repository.  (If not, read about
@@ -629,6 +658,9 @@ demonstrates how the filesystem is able to make "cheap copies" of
 things.  These cheap copies are nothing more than directory entries
 that point to existing nodes.  And this is the basis of tags and
 branches.
+
+
+@subsection Branching with @command{svn cp} 
 
 Suppose we have a repository whose head tree is revision 82.  In this
 repository is a subdirectory @file{mooIRC} that contains a software
@@ -654,12 +686,13 @@ Now, as long as you never touch the contents of the directory
 the way @file{mooIRC} did at a specific moment in time (however it
 looked in revision 82).  And that's exactly what a @dfn{tag} is.
 
-But what if you start making commits within @file{mooIRC-beta}?  And
-what if you also continue to make commits in the original
-@file{mooIRC} directory?  Then you have two directories that started
-out looking identical -- their common ancestor was @file{mooIRC} in
-revision 82 -- but now have diverged their contents over time.  In
-other words, they represent different @dfn{branches} of the project.
+But suppose @file{mooIRC-beta} isn't sacred, and instead you decide to
+start making commits to it.  And suppose you @emph{also} continue to
+make commits in the original @file{mooIRC} directory.  Then you have
+two directories that started out looking identical -- their common
+ancestor was @file{mooIRC} in revision 82 -- but now have diverged
+their contents over time.  In other words, they represent different
+@dfn{branches} of the project.
 
 It's very important to note that the Subversion filesystem is
 @emph{not} aware of "tags" or "branches".  It's only aware of
@@ -718,8 +751,8 @@ time, I want the rest my working copy to remain on the original
 the new branch location:
 
 @example
-$ svn switch mooIRC/subsystems/renderer \
-             http://foo.com/repos/mooIRC-beta/subsystems/renderer
+$ svn switch http://foo.com/repos/mooIRC-beta/subsystems/renderer \
+             mooIRC/subsystems/renderer
 
 U  mooIRC/subsystems/renderer/foo.c
 U  mooIRC/subsystems/renderer/bar.h
@@ -736,6 +769,11 @@ or by updating to a specific revision given with @samp{-r}),
 @command{svn switch} is able to move your working copy through time
 @emph{and} space.
 
+If your working copy contains a number of ``switched'' subtrees from
+different repository locations, it continues to function as normal.
+When you update, you'll receive patches to each subtree as
+appropriate.  When you commit, your local changes will still be
+applied as a single, atomic change to the repository.
 
 @subsection Moving changes with @command{svn merge}
 
@@ -828,7 +866,7 @@ Keep in mind that rolling back a change like this is just like any other
 to be in, and then use @command{svn commit} to send the final version to 
 the repository.
 
-@subsection Tracking an externally maintained project on a vendor branch
+@subsection Vendor branches
 
 Sometimes you want to manage modified third-party source code inside your 
 Subversion repository, while still tracking upstream releases.  In CVS 
@@ -1084,6 +1122,13 @@ properties at all; this was a design choice, to ease new users into
 the concept.  When properties are created, edited, or updated on an
 item, that 2nd column appears forever after.
 
+Also: don't worry about the non-standard way that Subversion currently
+displays property differences.  You can still run @command{svn diff}
+and redirect the output to create a usable patch file.  The
+@command{patch} program will ignore property patches; as a rule, it
+ignores any noise it can't understand.  (In future versions of
+Subversion, though, we may start using a new patch format that
+describes property changes and file copies/renames.)
 
 @subsection Special properties
 
@@ -1303,6 +1348,59 @@ definition of the module can change over time, and subsequent calls to
 
 
 @c ------------------------------------------------------------------
+@node Revisions
+@section Revisions
+
+As you may have noticed, many Subversion commands are able to process
+the @samp{-r} switch.  Here we describe some special ways to specify
+revisions.
+
+The Subversion client understands a number of @dfn{revision keywords}.
+These keywords can be used instead of integer arguments to the
+@samp{-r} switch, and are resolved into specific revision numbers:
+
+@table @b
+@item HEAD
+The latest revision in the repository.
+@item BASE
+The ``pristine'' revision of an item in a working copy.
+@item COMMITTED
+The last revision in which an item changed.
+@item PREV
+The revision just @emph{before} the last revision in which an item
+changed.  (Technically, COMMITTED - 1).
+@end table
+
+Here are some examples of revision keywords in action:
+
+@example
+$ svn diff -r PREV:COMMITTED foo.c
+# shows the last change committed to foo.c
+
+$ svn log -r HEAD
+# shows log message for the latest repository commit
+
+$ svn diff -r HEAD
+# compares your working file (with local mods) to the latest version
+# in the repository.
+
+$ svn diff -r BASE:HEAD foo.c
+# compares your "pristine" foo.c (no local mods) with the latest version
+# in the repository
+
+$ svn log -r BASE:HEAD
+# shows all commit logs since you last updated
+
+$ svn update -r PREV foo.c
+# rewinds the last change on foo.c.
+# (foo.c's working revision is decreased.)
+@end example
+
+
+
+
+
+@c ------------------------------------------------------------------
 @node Other Commands
 @section Other Commands
 
@@ -1425,7 +1523,9 @@ Checked out revision 3.
 @end example
 
 The resulting directory will not contain any @file{.svn}
-administrative areas.
+administrative areas, and all property metadata will be lost.  (Hint:
+don't use this tecnique for backing up;  it's probably better for
+rolling source distributions.)
 
 
 @subheading @command{svn mkdir}
@@ -1451,3 +1551,60 @@ Committed revision 1123.
 Again, this is a form of immediate commit, so some sort of log message
 is required.
 
+
+@c ------------------------------------------------------------------
+@node Run-time Configuration
+@section Run-time Configuration
+
+When you first run the @command{svn} command-line client, it creates a
+per-user @dfn{configuration area}.  On Unix-like systems, a
+@file{.subversion/} directory is created in the user's home
+directory.  On Win32 systems, a @file{Subversion} folder is created
+wherever it's appropriate to do so (typically somewhere within
+@file{Documents and Settings\username}, although it depends on the
+system.)
+
+@subsection Proxies
+
+At the time of writing, the configuration area only contains one item:
+a @file{proxies} file.  By setting values in this this file, your
+Subversion client can operate through an http proxy.  (Read the file
+itself for details;  it should be self-documenting.)
+
+@subsection Config
+
+Soon -- very soon -- a @file{config} file will exist in this area for
+defining general user preferences.  For example, the preferred
+@samp{$EDITOR} to use, options to pass through to @command{svn diff},
+preferences for date/time formats, and so on.  See issue #668 for
+details.
+(@url{http://subversion.tigris.org/issues/show_bug.cgi?id=668})
+
+@subsection Multiple config areas
+
+On Unix, an administrator can create``global'' Subversion preferences
+by creating and populating an @file{/etc/subversion/} area.  The
+per-user @file{~/.subversion/} configuration will still override these
+defaults, however.
+
+On Win32, an administrator has the option of creating three other
+locations:  a global @file{Subversion} folder in the ``All Users''
+area, a collection of global registry settings, or a collection of
+per-user registry settings.  The registry settings are set in:
+
+@example
+HKCU\Software\Tigris.org\Subversion\Proxies
+HKCU\Software\Tigris.org\Subversion\Config
+etc.
+@end example
+
+To clarify, here is the order Subversion searches for run-time
+settings on Win32.  Each subsequent location overrides the previous
+one:
+
+@itemize @bullet
+@item global registry
+@item global @file{Subversion} folder
+@item user registry
+@item user @file{Subversion} folder
+@end itemize
