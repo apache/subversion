@@ -1332,8 +1332,9 @@ close_directory (void *dir_baton,
 
       /* See if the directory was deleted or replaced. */
       dir_status = apr_hash_get (pb->statii, db->path, APR_HASH_KEY_STRING);
-      if ((dir_status->repos_text_status == svn_wc_status_deleted)
-          || (dir_status->repos_text_status == svn_wc_status_replaced))
+      if (dir_status &&
+          ((dir_status->repos_text_status == svn_wc_status_deleted)
+           || (dir_status->repos_text_status == svn_wc_status_replaced)))
         was_deleted = TRUE;
 
       /* Now do the status reporting. */
