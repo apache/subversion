@@ -100,8 +100,7 @@ local-extraclean: local-distclean
 		ac-helpers/libtool.m4 ac-helpers/ltconfig \
 		ac-helpers/ltmain.sh
 
-local-install: install-lib install-include install-bin install-sbin \
-		$(INSTALL_APACHE_RULE)
+local-install: install-lib install-include install-bin $(INSTALL_APACHE_RULE)
 
 ### the chmod really sucks, but some repository files don't have it like
 ### they should ...
