@@ -691,6 +691,8 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
  * "Single repository, multiple projects?" for more.  We may simple
  * need to offer a few different semantics for @a paths.
  *
+ * If @a limit is non-zero then only return the first @a limit logs.
+ *
  * If @a discover_changed_paths, then each call to @a receiver passes a
  * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths 
  * argument; the hash's keys are all the paths committed in that revision.
@@ -716,6 +718,24 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
  * See also the documentation for @c svn_log_message_receiver_t.
  *
  * Use @a pool for temporary allocations.
+ */
+svn_error_t *
+svn_repos_get_logs3 (svn_repos_t *repos,
+                     const apr_array_header_t *paths,
+                     svn_revnum_t start,
+                     svn_revnum_t end,
+                     int limit,
+                     svn_boolean_t discover_changed_paths,
+                     svn_boolean_t strict_node_history,
+                     svn_repos_authz_func_t authz_read_func,
+                     void *authz_read_baton,
+                     svn_log_message_receiver_t receiver,
+                     void *receiver_baton,
+                     apr_pool_t *pool);
+
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.1.0 API.
  */
 svn_error_t *
 svn_repos_get_logs2 (svn_repos_t *repos,

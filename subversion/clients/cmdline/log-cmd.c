@@ -500,15 +500,16 @@ svn_cl__log (apr_getopt_t *os,
           SVN_ERR (svn_cmdline_printf (pool, "%s", sb->data));
         }
       
-      SVN_ERR (svn_client_log (targets,
-                               &(opt_state->start_revision),
-                               &(opt_state->end_revision),
-                               opt_state->verbose,
-                               opt_state->stop_on_copy,
-                               log_message_receiver_xml,
-                               &lb,
-                               ctx,
-                               pool));
+      SVN_ERR (svn_client_log2 (targets,
+                                &(opt_state->start_revision),
+                                &(opt_state->end_revision),
+                                opt_state->limit,
+                                opt_state->verbose,
+                                opt_state->stop_on_copy,
+                                log_message_receiver_xml,
+                                &lb,
+                                ctx,
+                                pool));
       
       if (! opt_state->incremental)
         {
@@ -529,15 +530,16 @@ svn_cl__log (apr_getopt_t *os,
        * is concerned, the result of 'svn log --quiet' is the same
        * either way.
        */
-      SVN_ERR (svn_client_log (targets,
-                               &(opt_state->start_revision),
-                               &(opt_state->end_revision),
-                               opt_state->verbose,
-                               opt_state->stop_on_copy,
-                               log_message_receiver,
-                               &lb,
-                               ctx,
-                               pool));
+      SVN_ERR (svn_client_log2 (targets,
+                                &(opt_state->start_revision),
+                                &(opt_state->end_revision),
+                                opt_state->limit,
+                                opt_state->verbose,
+                                opt_state->stop_on_copy,
+                                log_message_receiver,
+                                &lb,
+                                ctx,
+                                pool));
 
       if (! opt_state->incremental)
         SVN_ERR (svn_cmdline_printf (pool, SEP_STRING));

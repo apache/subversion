@@ -609,15 +609,16 @@ svn_ra_local__do_diff (void *session_baton,
 
 
 static svn_error_t *
-svn_ra_local__get_log (void *session_baton,
-                       const apr_array_header_t *paths,
-                       svn_revnum_t start,
-                       svn_revnum_t end,
-                       svn_boolean_t discover_changed_paths,
-                       svn_boolean_t strict_node_history,
-                       svn_log_message_receiver_t receiver,
-                       void *receiver_baton,
-                       apr_pool_t *pool)
+svn_ra_local__get_log2 (void *session_baton,
+                        const apr_array_header_t *paths,
+                        svn_revnum_t start,
+                        svn_revnum_t end,
+                        int limit,
+                        svn_boolean_t discover_changed_paths,
+                        svn_boolean_t strict_node_history,
+                        svn_log_message_receiver_t receiver,
+                        void *receiver_baton,
+                        apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sbaton = session_baton;
   apr_array_header_t *abs_paths
@@ -635,16 +636,41 @@ svn_ra_local__get_log (void *session_baton,
       (*((const char **)(apr_array_push (abs_paths)))) = abs_path;
     }
 
-  return svn_repos_get_logs2 (sbaton->repos,
+  return svn_repos_get_logs3 (sbaton->repos,
                               abs_paths,
                               start,
                               end,
+                              limit,
                               discover_changed_paths,
                               strict_node_history,
                               NULL, NULL,
                               receiver,
                               receiver_baton,
                               sbaton->pool);
+}
+
+
+static svn_error_t *
+svn_ra_local__get_log (void *session_baton,
+                       const apr_array_header_t *paths,
+                       svn_revnum_t start,
+                       svn_revnum_t end,
+                       svn_boolean_t discover_changed_paths,
+                       svn_boolean_t strict_node_history,
+                       svn_log_message_receiver_t receiver,
+                       void *receiver_baton,
+                       apr_pool_t *pool)
+{
+  return svn_ra_local__get_log2 (session_baton,
+                                 paths,
+                                 start,
+                                 end,
+                                 0,
+                                 discover_changed_paths,
+                                 strict_node_history,
+                                 receiver,
+                                 receiver_baton,
+                                 pool);
 }
 
 
@@ -947,7 +973,8 @@ static const svn_ra_plugin_t ra_local_plugin =
   svn_ra_local__get_repos_root,
   svn_ra_local__get_locations,
   svn_ra_local__get_file_revs,
-  ra_local_version
+  ra_local_version,
+  svn_ra_local__get_log2
 };
 
 

@@ -887,12 +887,16 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_array_header_t *paths, *full_paths;
   svn_ra_svn_item_t *elt;
   int i;
+  int limit;
   log_baton_t lb;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb", &paths,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n", &paths,
                                  &start_rev, &end_rev, &changed_paths,
-                                 &strict_node));
+                                 &strict_node, &limit));
+  if (limit == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+    limit = 0;
+
   full_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
   for (i = 0; i < paths->nelts; i++)
     {
@@ -908,7 +912,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Get logs.  (Can't report errors back to the client at this point.) */
   lb.fs_path = b->fs_path;
   lb.conn = conn;
-  err = svn_repos_get_logs2(b->repos, full_paths, start_rev, end_rev,
+  err = svn_repos_get_logs3(b->repos, full_paths, start_rev, end_rev, limit,
                             changed_paths, strict_node, NULL, NULL,
                             log_receiver, &lb, pool);
 

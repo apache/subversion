@@ -208,6 +208,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   dav_svn_authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = NULL;
+  int limit = 0;
   int ns;
 
   /* These get determined from the request document. */
@@ -240,6 +241,10 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
         start = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
       else if (strcmp(child->name, "end-revision") == 0)
         end = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
+      else if (strcmp(child->name, "limit") == 0)
+        {
+          limit = atoi(child->first_cdata.first->text);
+        }
       else if (strcmp(child->name, "discover-changed-paths") == 0)
         {
           /* ### todo: value doesn't matter, presence alone is enough?
@@ -287,10 +292,11 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
      flag in our log_receiver_baton structure). */
 
   /* Send zero or more log items. */
-  serr = svn_repos_get_logs2(repos->repos,
+  serr = svn_repos_get_logs3(repos->repos,
                              paths,
                              start,
                              end,
+                             limit,
                              discover_changed_paths,
                              strict_node_history,
                              dav_svn_authz_read,

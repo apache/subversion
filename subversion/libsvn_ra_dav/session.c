@@ -853,7 +853,8 @@ static const svn_ra_plugin_t dav_plugin = {
   svn_ra_dav__get_repos_root,
   svn_ra_dav__get_locations,
   svn_ra_dav__get_file_revs,
-  ra_dav_version
+  ra_dav_version,
+  svn_ra_dav__get_log2
 };
 
 

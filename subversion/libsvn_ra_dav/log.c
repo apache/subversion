@@ -79,6 +79,9 @@ struct log_baton
   svn_log_message_receiver_t receiver;
   void *receiver_baton;
 
+  int limit;
+  int count;
+
   /* If `receiver' returns error, it is stored here. */
   svn_error_t *err;
 };
@@ -215,6 +218,14 @@ log_end_element(void *userdata,
                                              lb->date,
                                              lb->msg,
                                              lb->subpool);
+
+        /* Compatability cruft so that we can provide limit functionality 
+           even if the server doesn't support it. */
+        if (lb->limit && (++lb->count == lb->limit))
+          {
+            lb->err = NULL;
+            return SVN_RA_DAV__XML_INVALID;
+          }
         
         reset_log_item (lb);
         
@@ -285,15 +296,16 @@ log_end_element(void *userdata,
 }
 
 
-svn_error_t * svn_ra_dav__get_log(void *session_baton,
-                                  const apr_array_header_t *paths,
-                                  svn_revnum_t start,
-                                  svn_revnum_t end,
-                                  svn_boolean_t discover_changed_paths,
-                                  svn_boolean_t strict_node_history,
-                                  svn_log_message_receiver_t receiver,
-                                  void *receiver_baton,
-                                  apr_pool_t *pool)
+svn_error_t * svn_ra_dav__get_log2(void *session_baton,
+                                   const apr_array_header_t *paths,
+                                   svn_revnum_t start,
+                                   svn_revnum_t end,
+                                   int limit,
+                                   svn_boolean_t discover_changed_paths,
+                                   svn_boolean_t strict_node_history,
+                                   svn_log_message_receiver_t receiver,
+                                   void *receiver_baton,
+                                   apr_pool_t *pool)
 {
   /* The Plan: Send a request to the server for a log report.
    * Somewhere in mod_dav_svn, there will be an implementation, R, of
@@ -356,6 +368,13 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
                            apr_psprintf(ras->pool,
                                         "<S:end-revision>%ld"
                                         "</S:end-revision>", end));
+  if (limit)
+    {
+      svn_stringbuf_appendcstr(request_body,
+                               apr_psprintf(ras->pool,
+                                            "<S:limit>%d</S:limit>", limit));
+    }
+
   if (discover_changed_paths)
     {
       svn_stringbuf_appendcstr(request_body,
@@ -385,6 +404,8 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
   lb.receiver_baton = receiver_baton;
   lb.subpool = svn_pool_create (ras->pool);
   lb.err = NULL;
+  lb.limit = limit;
+  lb.count = 0;
   reset_log_item (&lb);
 
   /* ras's URL may not exist in HEAD, and thus it's not safe to send
@@ -421,4 +442,19 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
   svn_pool_destroy (lb.subpool);
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t * svn_ra_dav__get_log(void *session_baton,
+                                  const apr_array_header_t *paths,
+                                  svn_revnum_t start,
+                                  svn_revnum_t end,
+                                  svn_boolean_t discover_changed_paths,
+                                  svn_boolean_t strict_node_history,
+                                  svn_log_message_receiver_t receiver,
+                                  void *receiver_baton,
+                                  apr_pool_t *pool)
+{
+  return svn_ra_dav__get_log2(session_baton, paths, start, end, 0,
+                              discover_changed_paths, strict_node_history,
+                              receiver, receiver_baton, pool);
 }

@@ -646,39 +646,11 @@ typedef struct svn_ra_plugin_t
                            void *diff_baton,
                            apr_pool_t *pool);
 
-  /** Invoke @a receiver with @a receiver_baton on each log message from
-   * @a start to @a end.  @a start may be greater or less than @a end; 
-   * this just controls whether the log messages are processed in descending 
-   * or ascending revision number order.
+  /**
+   * @deprecated provided for compatibility with the 1.1.0 API
    *
-   * If @a start or @a end is @c SVN_INVALID_REVNUM, it defaults to youngest.
-   *
-   * If @a paths is non-null and has one or more elements, then only show
-   * revisions in which at least one of @a paths was changed (i.e., if
-   * file, text or props changed; if dir, props changed or an entry
-   * was added or deleted).  Each path is an <tt>const char *</tt>, relative 
-   * to the session's common parent.
-   *
-   * If @a discover_changed_paths, then each call to receiver passes a
-   * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths argument;
-   * the hash's keys are all the paths committed in that revision.
-   * Otherwise, each call to receiver passes null for @a changed_paths.
-   *
-   * If @a strict_node_history is set, copy history will not be traversed
-   * (if any exists) when harvesting the revision logs for each path.
-   *
-   * If any invocation of @a receiver returns error, return that error
-   * immediately and without wrapping it.
-   *
-   * If @a start or @a end is a non-existent revision, return the error
-   * @c SVN_ERR_FS_NO_SUCH_REVISION, without ever invoking @a receiver.
-   *
-   * See also the documentation for @c svn_log_message_receiver_t.
-   *
-   * The caller may not invoke any RA operations using
-   * @a session_baton from within @a receiver.
-   *
-   * Use @a pool for memory allocation.
+   * Similar to get_log2, but with the @a limit parameter always set
+   * to @c 0.
    */
   svn_error_t *(*get_log) (void *session_baton,
                            const apr_array_header_t *paths,
@@ -809,6 +781,53 @@ typedef struct svn_ra_plugin_t
      can't fix this before 2.0, and the fix will cause undetectable
      ABI breakage. */
   const svn_version_t *(*get_version) (void);
+
+  /** Invoke @a receiver with @a receiver_baton on each log message from
+   * @a start to @a end.  @a start may be greater or less than @a end; 
+   * this just controls whether the log messages are processed in descending 
+   * or ascending revision number order.
+   *
+   * If @a start or @a end is @c SVN_INVALID_REVNUM, it defaults to youngest.
+   *
+   * If @a paths is non-null and has one or more elements, then only show
+   * revisions in which at least one of @a paths was changed (i.e., if
+   * file, text or props changed; if dir, props changed or an entry
+   * was added or deleted).  Each path is an <tt>const char *</tt>, relative 
+   * to the session's common parent.
+   *
+   * If @a limit is non-zero only return the first @a limit logs.
+   *
+   * If @a discover_changed_paths, then each call to receiver passes a
+   * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths argument;
+   * the hash's keys are all the paths committed in that revision.
+   * Otherwise, each call to receiver passes null for @a changed_paths.
+   *
+   * If @a strict_node_history is set, copy history will not be traversed
+   * (if any exists) when harvesting the revision logs for each path.
+   *
+   * If any invocation of @a receiver returns error, return that error
+   * immediately and without wrapping it.
+   *
+   * If @a start or @a end is a non-existent revision, return the error
+   * @c SVN_ERR_FS_NO_SUCH_REVISION, without ever invoking @a receiver.
+   *
+   * See also the documentation for @c svn_log_message_receiver_t.
+   *
+   * The caller may not invoke any RA operations using
+   * @a session_baton from within @a receiver.
+   *
+   * Use @a pool for memory allocation.
+   */
+  svn_error_t *(*get_log2) (void *session_baton,
+                            const apr_array_header_t *paths,
+                            svn_revnum_t start,
+                            svn_revnum_t end,
+                            int limit,
+                            svn_boolean_t discover_changed_paths,
+                            svn_boolean_t strict_node_history,
+                            svn_log_message_receiver_t receiver,
+                            void *receiver_baton,
+                            apr_pool_t *pool);
 } svn_ra_plugin_t;
 
 

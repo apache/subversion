@@ -729,6 +729,8 @@ svn_client_status (svn_revnum_t *result_rev,
  *
  * ### todo: the above paragraph is not fully implemented yet.
  *
+ * If @a limit is non-zero only the first @a limit logs are returned.
+ *
  * If @a discover_changed_paths is set, then the `@a changed_paths' argument
  * to @a receiver will be passed on each invocation.
  *
@@ -757,6 +759,24 @@ svn_client_status (svn_revnum_t *result_rev,
  * If @a ctx->notify_func is non-null, then call @a ctx->notify_func/baton
  * with a 'skip' signal on any unversioned targets.
  *
+ */
+svn_error_t *
+svn_client_log2 (const apr_array_header_t *targets,
+                 const svn_opt_revision_t *start,
+                 const svn_opt_revision_t *end,
+                 int limit,
+                 svn_boolean_t discover_changed_paths,
+                 svn_boolean_t strict_node_history,
+                 svn_log_message_receiver_t receiver,
+                 void *receiver_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+
+/**
+ * @deprecated provided for compatibility with the 1.0.0 API
+ *
+ * Similar to svn_client_log2, but with the @a limit parameter set to 0.
  */
 svn_error_t *
 svn_client_log (const apr_array_header_t *targets,

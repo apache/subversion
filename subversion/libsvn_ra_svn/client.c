@@ -1003,12 +1003,13 @@ static svn_error_t *ra_svn_diff(void *baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_log(void *baton, const apr_array_header_t *paths,
-                               svn_revnum_t start, svn_revnum_t end,
-                               svn_boolean_t discover_changed_paths,
-                               svn_boolean_t strict_node_history,
-                               svn_log_message_receiver_t receiver,
-                               void *receiver_baton, apr_pool_t *pool)
+static svn_error_t *ra_svn_log2(void *baton, const apr_array_header_t *paths,
+                                svn_revnum_t start, svn_revnum_t end,
+                                int limit,
+                                svn_boolean_t discover_changed_paths,
+                                svn_boolean_t strict_node_history,
+                                svn_log_message_receiver_t receiver,
+                                void *receiver_baton, apr_pool_t *pool)
 {
   ra_svn_session_baton_t *sess = baton;
   svn_ra_svn_conn_t *conn = sess->conn;
@@ -1020,6 +1021,7 @@ static svn_error_t *ra_svn_log(void *baton, const apr_array_header_t *paths,
   apr_hash_t *cphash;
   svn_revnum_t rev, copy_rev;
   svn_log_changed_path_t *change;
+  int nreceived = 0;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "log"));
   if (paths)
@@ -1030,8 +1032,9 @@ static svn_error_t *ra_svn_log(void *baton, const apr_array_header_t *paths,
           SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
         }
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)(?r)bb)", start, end,
-                                 discover_changed_paths, strict_node_history));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)(?r)bbn)", start, end,
+                                 discover_changed_paths, strict_node_history,
+                                 limit));
   SVN_ERR(handle_auth_request(sess, pool));
 
   /* Read the log messages. */
@@ -1069,17 +1072,38 @@ static svn_error_t *ra_svn_log(void *baton, const apr_array_header_t *paths,
         }
       else
         cphash = NULL;
+
+      if (limit && ++nreceived > limit)
+        break;
+
       SVN_ERR(receiver(receiver_baton, cphash, rev, author, date, message,
                        subpool));
       apr_pool_clear(subpool);
     }
   apr_pool_destroy(subpool);
 
-  /* Read the response. */
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
+  if (nreceived <= limit)
+    {
+      /* Read the response. */
+      SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
+    }
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *ra_svn_log(void *baton,
+                               const apr_array_header_t *paths,
+                               svn_revnum_t start,
+                               svn_revnum_t end,
+                               svn_boolean_t discover_changed_paths,
+                               svn_boolean_t strict_node_history,
+                               svn_log_message_receiver_t receiver,
+                               void *receiver_baton, apr_pool_t *pool)
+{
+  return ra_svn_log2(baton, paths, start, end, 0, discover_changed_paths,
+                     strict_node_history, receiver, receiver_baton, pool);
+}
+
 
 static svn_error_t *ra_svn_check_path(void *baton, const char *path,
                                       svn_revnum_t rev, svn_node_kind_t *kind,
@@ -1288,7 +1312,8 @@ static const svn_ra_plugin_t ra_svn_plugin = {
   ra_svn_get_repos_root,
   ra_svn_get_locations,
   ra_svn_get_file_revs,
-  svn_ra_svn_version
+  svn_ra_svn_version,
+  ra_svn_log2
 };
 
 svn_error_t *svn_ra_svn_init(int abi_version, apr_pool_t *pool,
