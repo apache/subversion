@@ -521,11 +521,11 @@ bail_if_unresolved_conflict (svn_string_t *full_path,
       else if (entry->kind == svn_node_dir)
         parent_dir = full_path;
       
-      err = svn_wc__conflicted_p (&text_conflict_p,
-                                  &prop_conflict_p,
-                                  parent_dir,
-                                  entry,
-                                  pool);
+      err = svn_wc_conflicted_p (&text_conflict_p,
+                                 &prop_conflict_p,
+                                 parent_dir,
+                                 entry,
+                                 pool);
       if (err) return err;
 
       if ((! text_conflict_p) && (! prop_conflict_p))

@@ -57,7 +57,6 @@ svn_error_t *svn_wc_props_modified_p (svn_boolean_t *modified_p,
 
 
 
-
 
 /*** Entries and status. ***/
 
@@ -122,6 +121,19 @@ typedef struct svn_wc_entry_t
 svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
                            svn_string_t *path,
                            apr_pool_t *pool);
+
+
+/* Given a DIR_PATH under version control, decide if one of its
+   entries (ENTRY) is in state of conflict; return the answers in
+   TEXT_CONFLICTED_P and PROP_CONFLICTED_P.  
+
+   (If the entry mentions that a .rej or .prej exist, but they are
+   both removed, assume the conflict has been resolved by the user.)  */
+svn_error_t *svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
+                                  svn_boolean_t *prop_conflicted_p,
+                                  svn_string_t *dir_path,
+                                  svn_wc_entry_t *entry,
+                                  apr_pool_t *pool);
 
 
 

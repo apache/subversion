@@ -541,11 +541,11 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
 
 
 svn_error_t *
-svn_wc__conflicted_p (svn_boolean_t *text_conflicted_p,
-                      svn_boolean_t *prop_conflicted_p,
-                      svn_string_t *dir_path,
-                      svn_wc_entry_t *entry,
-                      apr_pool_t *pool)
+svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
+                     svn_boolean_t *prop_conflicted_p,
+                     svn_string_t *dir_path,
+                     svn_wc_entry_t *entry,
+                     apr_pool_t *pool)
 {
   svn_error_t *err;
   svn_string_t *rej_file, *prej_file;
