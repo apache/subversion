@@ -145,7 +145,7 @@ IV.   QUICKSTART GUIDE
       see section II at the end of the INSTALL document for a HOWTO.
 
 
-  B.  EXAMPLE WALKTHOUGH
+  B.  EXAMPLE WALKTHROUGH
 
       Here are some simple examples of how one might use the svn
       client.  In general, things are designed to be similar to CVS.
