@@ -99,6 +99,10 @@ SOURCE=.\auth.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\cancellation_editor.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\checkout.c
 # End Source File
 # Begin Source File

@@ -712,6 +712,31 @@ svn_client_proplist (apr_array_header_t **props,
                      apr_pool_t *pool);
 
 
+
+/* Cancellation. */
+
+/* A function type for determining whether or not to cancel an operation.
+ * Returns TRUE if should cancel, FALSE if should not.
+ */
+typedef svn_boolean_t (*svn_client_cancellation_func_t) (void *baton);
+
+
+/* Set *EDITOR and *EDIT_BATON to an editor that returns
+ * SVN_ERR_CANCELLED if SHOULD_I_CANCEL(CANCEL_BATON) ever returns
+ * true.  Should be composed before any editor that does any real
+ * work.
+ */
+svn_error_t *svn_client_get_cancellation_editor
+      (const svn_delta_edit_fns_t **editor,
+       void **edit_baton,
+       svn_client_cancellation_func_t should_i_cancel,
+       void *cancel_baton,
+       apr_pool_t *pool);
+
+
+
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
