@@ -65,16 +65,14 @@ svn_ra_local__finish_report (void *report_baton)
                                  rbaton->pool));
   
   /* Ah!  The good stuff!  dir_delta does all the hard work. */  
-
-  /* ben sez:  comment this back in when we start compiling delta.c
-     into libsvn_fs again. */
-  /*  SVN_ERR (svn_fs_dir_delta (rbaton->txn_root, rbaton->base_path->data,
+  SVN_ERR (svn_fs_dir_delta (rbaton->txn_root, rbaton->base_path->data,
+                             rbaton->path_rev_hash,
                              rev_root, rbaton->base_path->data,
-                             rbaton->update_editor,
+                             rbaton->update_editor,             
                              rbaton->update_edit_baton,
-                             rbaton->pool)); */
+                             rbaton->pool));
   
-  /* Still here?  Great.  Throw out the transaction. */
+  /* Still here?  Great!  Throw out the transaction. */
   SVN_ERR (svn_fs_abort_txn (rbaton->txn));
 
   return SVN_NO_ERROR;

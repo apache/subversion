@@ -1010,18 +1010,33 @@ report_revisions (svn_string_t *dir_path,
         svn_path_add_component (full_entry_path, current_entry_name,
                                 svn_path_url_style);
 
-      /* The Big Test: */
-      if (current_entry->revision != dir_rev)
-        /* Report this unexpected revision. */
+      /* The Big Tests: */
+      
+      /* If it's a file with a different rev than its parent, report. */
+      if ((current_entry->kind == svn_node_file)
+          && (current_entry->revision != dir_rev))
         SVN_ERR (reporter->set_path (report_baton,
                                      full_entry_path,
                                      current_entry->revision));
       
-      /* If entry is a dir (and not `.'), then recurse. */
+      /* If entry is a dir (and not `.')... */
       if ((current_entry->kind == svn_node_dir) && current_entry_name)
-        SVN_ERR (report_revisions (full_entry_path,
-                                   current_entry->revision,
-                                   reporter, report_baton, subpool));
+        {
+          /* First check to see if it has a different rev than its
+             parent.  It might need to be reported. */
+          svn_wc_entry_t *subdir_entry;
+          SVN_ERR (svn_wc_entry (&subdir_entry, full_entry_path, subpool));
+
+          if (subdir_entry->revision != dir_rev)
+            SVN_ERR (reporter->set_path (report_baton,
+                                         full_entry_path,
+                                         subdir_entry->revision));          
+          /* Recurse. */
+          SVN_ERR (report_revisions (full_entry_path,
+                                     subdir_entry->revision,
+                                     reporter, report_baton,
+                                     subpool));
+        }
     }
 
   /* We're done examining this dir's entries, so free them. */
