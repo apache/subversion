@@ -269,7 +269,7 @@ svn_fs_fs__open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   SVN_ERR (svn_io_file_open (&current_file,
                              svn_path_join (path, SVN_FS_FS__CURRENT, pool),
-                             APR_READ, APR_OS_DEFAULT, pool));
+                             APR_READ | APR_BUFFERED , APR_OS_DEFAULT, pool));
 
   SVN_ERR (svn_io_file_close (current_file, pool));
   
@@ -291,7 +291,7 @@ get_youngest (svn_revnum_t *youngest_p,
   SVN_ERR (svn_io_file_open (&revision_file,
                              svn_path_join (fs_path, SVN_FS_FS__CURRENT,
                                             pool),
-                             APR_READ, APR_OS_DEFAULT, pool));
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   len = sizeof (buf);
   SVN_ERR (svn_io_file_read (revision_file, buf, &len, pool));
@@ -445,7 +445,7 @@ open_and_seek_revision (apr_file_t **file,
                                                  SVN_FS_FS__REVS_DIR,
                                                  rev_filename,
                                                  NULL),
-                             APR_READ, APR_OS_DEFAULT, pool));
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   SVN_ERR (svn_io_file_seek (rev_file, APR_SET, &offset, pool));
 
@@ -517,7 +517,7 @@ open_and_seek_transaction (apr_file_t **file,
   filename = get_txn_representation_filename (fs, txn_id, id, rep, pool);
   
   SVN_ERR (svn_io_file_open (&rev_file, filename,
-                             APR_READ, APR_OS_DEFAULT, pool));
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   offset = rep->offset;
   SVN_ERR (svn_io_file_seek (rev_file, APR_SET, &offset, pool));
@@ -645,7 +645,7 @@ open_txn_node_rev (apr_file_t **file_p,
                                  apr_pstrcat (pool, node_id, ".",
                                               copy_id, NULL), NULL);
 
-  SVN_ERR (svn_io_file_open (&file, filename, APR_READ,
+  SVN_ERR (svn_io_file_open (&file, filename, APR_READ | APR_BUFFERED,
                              APR_OS_DEFAULT, pool));
 
   *file_p = file;
@@ -1059,8 +1059,11 @@ get_root_changes_offset (apr_off_t *root_offset,
   
   /* We will assume that the last line containing the two offsets
      will never be longer than 64 characters. */
-  offset = -64;
+  offset = 0;
   SVN_ERR (svn_io_file_seek (rev_file, APR_END, &offset, pool));
+
+  offset -= 64;
+  SVN_ERR (svn_io_file_seek (rev_file, APR_SET, &offset, pool));
 
   /* Read in this last block, from which we will identify the last line. */
   num_bytes=64;
@@ -1124,7 +1127,7 @@ svn_fs_fs__rev_get_root (svn_fs_id_t **root_id_p,
                                                  SVN_FS_FS__REVS_DIR,
                                                  revision_filename,
                                                  NULL),
-                             APR_READ, APR_OS_DEFAULT, pool));
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   SVN_ERR (get_root_changes_offset (&root_offset, NULL, revision_file, pool));
 
@@ -2029,7 +2032,8 @@ svn_fs_fs__txn_changes_fetch (apr_hash_t **changed_paths_p,
                                              NULL),
                                 SVN_FS_FS__CHANGES, NULL);
 
-  SVN_ERR (svn_io_file_open (&file, changes, APR_READ, APR_OS_DEFAULT, pool));
+  SVN_ERR (svn_io_file_open (&file, changes, APR_READ | APR_BUFFERED,
+                             APR_OS_DEFAULT, pool));
 
   SVN_ERR (fetch_all_changes (changed_paths, file, pool));
 
@@ -2059,7 +2063,7 @@ svn_fs_fs__paths_changed (apr_hash_t **changed_paths_p,
                                                  SVN_FS_FS__REVS_DIR,
                                                  revision_filename,
                                                  NULL),
-                             APR_READ, APR_OS_DEFAULT, pool));
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   SVN_ERR (get_root_changes_offset (NULL, &changes_offset, revision_file,
                                     pool));
@@ -2231,7 +2235,7 @@ svn_fs_fs__change_txn_prop (svn_fs_txn_t *txn,
   /* Create a new version of the file and write out the new props. */
   /* Open the transaction properties file. */
   SVN_ERR (svn_io_file_open (&txn_prop_file, prop_filename,
-                             APR_READ | APR_WRITE | APR_CREATE | APR_TRUNCATE,
+                             APR_WRITE | APR_CREATE | APR_TRUNCATE,
                              APR_OS_DEFAULT, pool));
 
   SVN_ERR (svn_hash_write (txn_prop, txn_prop_file, pool));
@@ -2325,8 +2329,8 @@ read_next_ids (const char **node_id,
                                                  SVN_FS_FS__TXNS_EXT, NULL),
                                     SVN_FS_FS__NEXT_IDS, NULL);
 
-  SVN_ERR (svn_io_file_open (&file, id_filename, APR_READ, APR_OS_DEFAULT,
-                             pool));
+  SVN_ERR (svn_io_file_open (&file, id_filename, APR_READ | APR_BUFFERED,
+                             APR_OS_DEFAULT, pool));
 
   limit = sizeof (buf);
   SVN_ERR (svn_io_read_length_line (file, buf, &limit, pool));
@@ -2982,7 +2986,7 @@ get_next_revision_ids (const char **node_id,
   SVN_ERR (svn_io_file_open (&revision_file,
                              svn_path_join (fs->path, SVN_FS_FS__CURRENT,
                                             pool),
-                             APR_READ, APR_OS_DEFAULT, pool));
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   len = sizeof (buf);
   SVN_ERR (svn_io_read_length_line (revision_file, buf, &len, pool));
@@ -3242,7 +3246,7 @@ write_final_changed_path_info (apr_off_t *offset_p,
   SVN_ERR (svn_io_file_open (&changes_file, svn_path_join (txn_dir,
                                                            SVN_FS_FS__CHANGES,
                                                            pool),
-                             APR_READ, APR_OS_DEFAULT, pool));
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   changes_stream = svn_stream_from_aprfile (changes_file, pool);
   
@@ -3336,7 +3340,8 @@ write_final_current (svn_fs_t *fs,
   SVN_ERR (svn_io_file_open (&file,
                              svn_path_join (fs->path, SVN_FS_FS__CURRENT,
                                             pool),
-                             APR_WRITE | APR_TRUNCATE, APR_OS_DEFAULT, pool));
+                             APR_WRITE | APR_TRUNCATE,
+                             APR_OS_DEFAULT, pool));
 
   SVN_ERR (svn_io_file_write_full (file, buf, strlen (buf), NULL, pool));
 
@@ -3411,7 +3416,8 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
 
   /* Get a write handle on the proto revision file. */
   SVN_ERR (svn_io_file_open (&rev_file, rev_filename,
-                             APR_WRITE | APR_APPEND, APR_OS_DEFAULT, subpool));
+                             APR_WRITE | APR_APPEND,
+                             APR_OS_DEFAULT, subpool));
 
   offset = 0;
   SVN_ERR (svn_io_file_seek (rev_file, APR_END, &offset, pool));
@@ -3541,7 +3547,7 @@ svn_fs_fs__get_uuid (svn_fs_t *fs,
   SVN_ERR (svn_io_file_open (&uuid_file,
                              svn_path_join (fs->path, SVN_FS_FS__UUID,
                                             pool),
-                             APR_READ, APR_OS_DEFAULT, pool));
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   limit = sizeof (buf);
   SVN_ERR (svn_io_read_length_line (uuid_file, buf, &limit, pool));
