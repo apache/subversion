@@ -1204,7 +1204,6 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
   svn_boolean_t is_done;
   int i;
   const char *ret_path;
-  svn_error_t *err;
 
   /* Transmit the parameters. */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(cr(!",
@@ -1216,8 +1215,6 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
     }
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
-
-  err = handle_auth_request(sess_baton, pool);
 
   /* Servers before 1.1 don't support this command. Check for this here. */
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
@@ -1272,7 +1269,6 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
   svn_txdelta_window_handler_t d_handler;
   void *d_baton;
   apr_size_t size;
-  svn_error_t *err;
 
   /* One sub-pool for each revision and one for each txdelta chunk.
      Note that the rev_pool must live during the following txdelta. */
@@ -1281,8 +1277,6 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
 
   SVN_ERR(svn_ra_svn_write_cmd(sess_baton->conn, pool, "get-file-revs",
                                "c(?r)(?r)", path, start, end));
-
-  err = handle_auth_request(sess_baton, pool);
 
   /* Servers before 1.1 don't support this command.  Check for this here. */
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
