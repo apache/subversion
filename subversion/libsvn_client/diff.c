@@ -1076,7 +1076,7 @@ do_single_file_merge (const char *URL1,
                                tmpfile2,
                                rev1,
                                rev2,
-                               NULL, NULL, /* ### TODO: pass real mimetypes */
+                               mimetype1, mimetype2,
                                merge_b));
 
   SVN_ERR (svn_io_remove_file (tmpfile1, pool));
