@@ -259,63 +259,36 @@ svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
 }
 
 
-/* Return a pointer to the character after the first newline in LINE,
-   or NULL if there is no newline.  ### FIXME: this is not fully
-   portable for other kinds of newlines! */
-static char *
-get_next_line (char *line)
-{
-  char *newline = strchr (line, '\n');
-  return (newline ? newline + 1 : NULL);
-}
-
-
-/* Remove all lines from BUFFER that begin with PREFIX. */
+/* Remove line-starting PREFIX and everything after it from BUFFER. */
 static svn_stringbuf_t *
-strip_prefix_from_buffer (svn_stringbuf_t *buffer,
-                          const char *strip_prefix,
-                          apr_pool_t *pool)
+truncate_buffer_at_prefix (svn_stringbuf_t *buffer,
+                           const char *prefix,
+                           apr_pool_t *pool)
 {
-  /* Start with a pointer to the first letter in the buffer, this is
-     also on the beginning of a line */
-  char *ptr = buffer->data;
-  size_t strip_prefix_len = strlen (strip_prefix);
+  char *substring;
 
-  while (ptr && (ptr < (buffer->data + buffer->len)))
+  /* Find PREFIX in BUFFER. */
+  substring = strstr (buffer->data, prefix);
+
+  /* No PREFIX?  Get outta town. */
+  if (! substring)
+    return buffer;
+
+  /* We found PREFIX.  Is it really a PREFIX?  Well, if it's the first
+     thing in the file, or if the character before it is a
+     line-terminator character, it sure is. */
+  if ((substring == buffer->data) 
+      || (*(substring - 1) == '\r')
+      || (*(substring - 1) == '\n'))
     {
-      char *first_prefix = ptr;
-
-      /* First scan through all consecutive lines WITH prefix. */
-      while (ptr && (! strncmp (ptr, strip_prefix, strip_prefix_len)))
-        ptr = get_next_line (ptr);
-
-      if (first_prefix != ptr)
-        {
-          /* One or more prefixed lines were found, cut them off. */
-          if (! ptr)
-            {
-              /* This is the last line, no memmove() is necessary. */
-              buffer->len -= (buffer->data + buffer->len - first_prefix);
-              break;
-            }
-
-          /* Shift over the rest of the buffer to cover up the
-             stripped prefix'ed line. */
-          memmove (first_prefix, ptr, buffer->data + buffer->len - ptr);
-          buffer->len -= (ptr - first_prefix);
-          ptr = first_prefix;
-        }
-
-      /* Now skip all consecutive lines WITHOUT prefix */
-      while (ptr && strncmp (ptr, strip_prefix, strip_prefix_len) )
-        ptr = get_next_line (ptr);
+      *substring = '\0';
+      buffer->len = substring - buffer->data;
     }
-  buffer->data[buffer->len] = 0;
   return buffer;
 }
 
 
-#define EDITOR_PREFIX_TXT  "SVN:"
+#define EDITOR_EOF_PREFIX  "--This line, and those below, will be ignored--"
 
 /* This function is of type svn_client_get_commit_log_t. */
 svn_error_t *
@@ -324,14 +297,7 @@ svn_cl__get_log_message (const char **log_msg,
                          void *baton,
                          apr_pool_t *pool)
 {
-  const char *default_msg = "\n"
-    EDITOR_PREFIX_TXT 
-    " ---------------------------------------------------------------------\n" 
-    EDITOR_PREFIX_TXT " Enter Log.  Lines beginning with '" 
-                             EDITOR_PREFIX_TXT "' are removed automatically\n"
-    EDITOR_PREFIX_TXT "\n"
-    EDITOR_PREFIX_TXT " Current status of the target files and directories:\n"
-    EDITOR_PREFIX_TXT "\n";
+  const char *default_msg = "\n" EDITOR_EOF_PREFIX "\n\n";
   struct log_msg_baton *lmb = baton;
   svn_stringbuf_t *message = NULL;
 
@@ -396,8 +362,6 @@ svn_cl__get_log_message (const char **log_msg,
           if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
             prop_mod = 'M';
 
-          svn_stringbuf_appendcstr (tmp_message, EDITOR_PREFIX_TXT);
-          svn_stringbuf_appendcstr (tmp_message, "   ");
           svn_stringbuf_appendbytes (tmp_message, &text_mod, 1); 
           svn_stringbuf_appendbytes (tmp_message, &prop_mod, 1); 
           svn_stringbuf_appendcstr (tmp_message, "   ");
@@ -423,7 +387,7 @@ svn_cl__get_log_message (const char **log_msg,
 
       /* Strip the prefix from the buffer. */
       if (message)
-        message = strip_prefix_from_buffer (message, EDITOR_PREFIX_TXT, pool);
+        message = truncate_buffer_at_prefix (message, EDITOR_EOF_PREFIX, pool);
 
       if (message)
         {
