@@ -1,5 +1,3 @@
-<?xml version="1.0"?>
-<!DOCTYPE book SYSTEM "../tools/dtd/dblite.dtd">
 <!-- This is currently being roughed out.  Suggestions and comments
 are more than welcome, but patches are probably a bit premature at
 this point. -->
@@ -52,27 +50,25 @@ $ svn status -v myfile
         <option>--verbose</option> (<option>-v</option>) always
         means <quote>verbose output</quote>, regardless of the
         subcommand you use it with.</para>
-      
-<!-- ###TODO remove *any* command specific stuff and put it in that command. -->
+
       <variablelist>
         
         <varlistentry>
           <term><option>--dry-run</option></term>
           <listitem>
-            <para>Go through all the motions of running a command,
-              but make no actual changes&mdash;either on disk or in
+            <para>Goes through all the motions of running a command,
+              but makes no actual changes&mdash;either on disk or in
               the repository. </para>
           </listitem>
         </varlistentry>
       
         <varlistentry>
-          <term><option>--file</option>
+          <term><option>--file</option> (<option>-F</option>)
             <replaceable>FILENAME</replaceable>
-            (<option>-F</option>)</term>
+              </term>
           <listitem>
-            <para>Use the contents of the file passed as an argument
-              to this switch for the subcommand that you're
-              running.</para>
+            <para>Uses the contents of the file passed as an argument
+              to this switch for the specified subcommand.</para>
           </listitem>
         </varlistentry>
 
@@ -91,14 +87,14 @@ $ svn status -v myfile
           <term><option>--extensions</option><replaceable>"ARGS"</replaceable></term>
           <listitem>
             <para>Specifies an argument or arguments that Subversion
-              should pass to GNU diff when providing diffs. If you
-              wish to pass multiple arguments, you must enclose all of
-              them in quotes (for example, <command>svn diff -x "-b
-              -E"</command>).  In addition, Subversion will display
-              unified diffs by default, so if you want default diff
-              output, you can pass the <option>--normal</option>
-              switch to diff (e.g. <command>svn diff -x
-              "--normal"</command>.
+              should pass to GNU diff when providing differences
+              between files. If you wish to pass multiple arguments,
+              you must enclose all of them in quotes (for example,
+              <command>svn diff -x "-b -E"</command>).  In addition,
+              Subversion will display unified differences by default,
+              so if you want default diff output, you can pass the
+              <option>--normal</option> switch to diff
+              (e.g. <command>svn diff -x "--normal"</command>).
               </para>
           </listitem>
         </varlistentry>
@@ -110,11 +106,11 @@ $ svn status -v myfile
               There are some operations that Subversion will prevent
               you from doing in normal usage, but you can pass the
               force switch to tell Subversion <quote>I know what I'm
-              doing as well as the possible repercussions of doing
-              it, so let me at 'em.</quote>. This switch is the
+              doing as well as the possible repercussions of doing it,
+              so let me at 'em.</quote>. This switch is the
               programmatic equivalent of doing your own electrical
               work with the power on&mdash;if you don't know what
-              you're doing, you're likely to get a shock.</para>
+              you're doing, you're likely to get a nasty shock.</para>
           </listitem>
         </varlistentry>
         
@@ -131,77 +127,14 @@ $ svn status -v myfile
           <term><option>--incremental</option></term>
           <listitem>
             <para>Prints output in a format suitable for
-              concatenation.  For example, <command>svn
-              log</command> normally prints out a dashed line at the
-              beginning of a log message, after each subsequent log
-              message, and following the final log message.  If you
-              ran svn log on a range of two revisions, you would get
-              this:</para>
-<!-- ###TODO move this to svn log's section. -->
-            <screen>
-$ svn log -r 14:15
-------------------------------------------------------------------------
-rev 14: ...
-
-------------------------------------------------------------------------
-rev 15: ...
-
-------------------------------------------------------------------------
-            </screen>
-
-            <para>However, if you wanted to gather 2 non-sequential
-              log messages into a file, you might do something like
-              this:</para>
-
-            <screen>
-$ svn log -r 14 > mylog
-$ svn log -r 19 >> mylog
-$ svn log -r 27 >> mylog
-$ cat mylog
-------------------------------------------------------------------------
-rev 14: ...
-
-------------------------------------------------------------------------
-------------------------------------------------------------------------
-rev 19: ...
-
-------------------------------------------------------------------------
-------------------------------------------------------------------------
-rev 27: ...
-
-------------------------------------------------------------------------
-            </screen>
-
-            <para>You can avoid the clutter of the double dashed lines
-              in your output by using the incremental switch:</para>
-
-
-            <screen>
-$ svn log --incremental -r 14 > mylog
-$ svn log --incremental -r 19 >> mylog
-$ svn log --incremental -r 27 >> mylog
-$ cat mylog
-------------------------------------------------------------------------
-rev 14: ...
-
-------------------------------------------------------------------------
-rev 19: ...
-
-------------------------------------------------------------------------
-rev 27: ...
-              </screen>
-
-            <para>The <option>--incremental</option> switch provides
-              similar output control when using the
-              <option>--xml</option> switch.</para>
-            
+              concatenation.</para>
           </listitem>
         </varlistentry>
         
         <varlistentry>
-          <term><option>--message</option>
+          <term><option>--message</option> (<option>-m</option>)
             <replaceable>MESSAGE</replaceable>
-            (<option>-m</option>)</term>
+              </term>
           <listitem>
             <para>Indicates that you will specify a commit message
               on the command line, following this switch. For
@@ -293,17 +226,17 @@ rev 27: ...
         </varlistentry>
         
         <varlistentry>
-          <term><option>--revision</option>
+          <term><option>--revision</option> (<option>-r</option>)
             <replaceable>REV</replaceable>
-            (<option>-r</option>)</term>
+              </term>
           <listitem>
-            <para>The revision flag indicates that you're going to
-              supply a revision (or range of revisions) for a
-              particular operation.  You can provide revision
-              numbers, revision keywords or dates (in curly
-              braces), as arguments to the revision switch.  If you
-              wish to provide a range of revisions, you can provide
-              two revisions separated by a colon. For example:</para>
+            <para>Indicates that you're going to supply a revision (or
+              range of revisions) for a particular operation.  You can
+              provide revision numbers, revision keywords or dates (in
+              curly braces), as arguments to the revision switch.  If
+              you wish to provide a range of revisions, you can
+              provide two revisions separated by a colon. For
+              example:</para>
 
             <screen>
 $ svn log -r 1729
@@ -346,9 +279,12 @@ $ svn log -r 1729:{2/17/02}
           <varlistentry>
             <term><option>--strict</option></term>
             <listitem>
-              <para>Causes Subversion to use strict semantics.  See
-                  <xref linkend="svn-ch-8"/><!-- ###TODO fix link -->
-                  for more details </para>
+              <para>Causes Subversion to use strict semantics.  By
+              default, the log subcommand will cross copy boundaries
+              when generating output for a file&mdash;using this
+              switch makes log output log messages that
+              <quote>strictly</quote> belong to the path
+              specified.</para>
             </listitem>
           </varlistentry>
           
@@ -1148,7 +1084,8 @@ D         over-there
 
           <refsect1>
             <title>Accesses Repository</title>
-            <para>For diffs against anything but BASE revision in your working copy</para>
+            <para>For obtaining differences against anything but BASE
+              revision in your working copy</para>
           </refsect1>
 
           <refsect1>
@@ -1215,8 +1152,8 @@ Index: COMMITTERS
 +++ COMMITTERS	(revision 3500)
             </screen>
 
-            <para>If you have a working copy, you can do the diffs
-              without typing in the long URLs:</para>
+            <para>If you have a working copy, you can obtain the
+              differences without typing in the long URLs:</para>
 
             <screen>
 $ svn diff -r 3000:3500 COMMITTERS 
@@ -1274,7 +1211,7 @@ Index: COMMITTERS
 
           <refsect1>
             <title>Changes</title>
-            <para>local disk</para>
+            <para>Local disk</para>
           </refsect1>
 
           <refsect1>
@@ -1299,7 +1236,7 @@ Index: COMMITTERS
             <title>Examples</title>
 
             <para>Export from your working copy (doesn't print every
-              file/dir):</para>
+              file and directory):</para>
 
             <screen>
 $ svn export a-wc my-export
@@ -1307,7 +1244,7 @@ pantheon: /tmp&gt;
             </screen>
 
             <para>Export directly from the repository (prints every
-              file/dir):</para>
+              file and directory):</para>
 
             <screen>
 $ svn export file:///tmp/repos my-export
@@ -1658,9 +1595,7 @@ _      24     harry       0 Jan 18 11:27 examples/
 
             <para>Each log message is printed just once, even if more
               than one of the affected paths for that revision were
-              explicitly requested.  
-
-              Logs cross copy history by
+              explicitly requested.  Logs cross copy history by
               default; use <option>--strict</option> to disable
               this.</para>
 
@@ -1771,6 +1706,74 @@ $ svn log http://svn.red-bean.com/repos/test/foo.c \
           http://svn.red-bean.com/repos/test/foo.c
 ...
             </screen>
+
+            <para>When you're concatenating the results of multiple
+              calls to the log command, you may want to use the
+              <option>--incremental</option> switch. <command>svn
+              log</command> normally prints out a dashed line at the
+              beginning of a log message, after each subsequent log
+              message, and following the final log message.  If you
+              ran svn log on a range of two revisions, you would get
+              this:</para> <!-- ###TODO move this to svn log's
+              section. -->
+            <screen>
+$ svn log -r 14:15
+------------------------------------------------------------------------
+rev 14: ...
+
+------------------------------------------------------------------------
+rev 15: ...
+
+------------------------------------------------------------------------
+            </screen>
+
+            <para>However, if you wanted to gather 2 non-sequential
+              log messages into a file, you might do something like
+              this:</para>
+
+            <screen>
+$ svn log -r 14 > mylog
+$ svn log -r 19 >> mylog
+$ svn log -r 27 >> mylog
+$ cat mylog
+------------------------------------------------------------------------
+rev 14: ...
+
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+rev 19: ...
+
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+rev 27: ...
+
+------------------------------------------------------------------------
+            </screen>
+
+            <para>You can avoid the clutter of the double dashed lines
+              in your output by using the incremental switch:</para>
+
+
+            <screen>
+$ svn log --incremental -r 14 > mylog
+$ svn log --incremental -r 19 >> mylog
+$ svn log --incremental -r 27 >> mylog
+$ cat mylog
+------------------------------------------------------------------------
+rev 14: ...
+
+------------------------------------------------------------------------
+rev 19: ...
+
+------------------------------------------------------------------------
+rev 27: ...
+              </screen>
+
+            <para>The <option>--incremental</option> switch provides
+              similar output control when using the
+              <option>--xml</option> switch.</para>
+
+
 
             <warning>
               <para>If you run svn log on a specific path and provide
@@ -2064,18 +2067,18 @@ Committed revision 27.
         <refentry>
           <refnamediv>
             <refname>svn propset</refname>
-            <refpurpose>Set PROPNAME to PROPVAL on files, dirs, or revisions.</refpurpose>
+            <refpurpose>Set PROPNAME to PROPVAL on files, directories, or revisions.</refpurpose>
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
             <programlisting>svn propset PROPNAME [PROPVAL | -F VALFILE] PATH [PATH [PATH ... ]]</programlisting>
-            <programlisting>propset PROPNAME --revprop -r REV [PROPVAL | -F VALFILE] [URL]</programlisting>
+            <programlisting>svn propset PROPNAME --revprop -r REV [PROPVAL | -F VALFILE] [URL]</programlisting>
           </refsect1>
 
           <refsect1>
             <title>Description</title>
 
-            <para>Set PROPNAME to PROPVAL on files, dirs, or
+            <para>Set PROPNAME to PROPVAL on files, directories, or
             revisions. The first example creates a versioned, local
             propchange in working copy, and the second creates an
             unversioned, remote propchange on a repository revision.</para>
@@ -2095,7 +2098,7 @@ Committed revision 27.
 
           <refsect1>
             <title>Changes</title>
-            <para>working copy, repository only if operating on a URL</para>
+            <para>Working copy, repository only if operating on a URL</para>
           </refsect1>
 
           <refsect1>
@@ -2171,10 +2174,11 @@ property `owner-pic' set on 'moo.c'
             </screen>
 
             <warning>
-              <para>By default, you cannot modify revprops in a
-                Subversion repository.  Your repository administrator
-                must explicitly enable revprop modifications by
-                creating a hook named 'pre-revprop-change'. See <xref
+              <para>By default, you cannot modify revision properties
+                in a Subversion repository.  Your repository
+                administrator must explicitly enable revision property
+                modifications by creating a hook named
+                'pre-revprop-change'. See <xref
                 linkend="svn-ch-5-sect-2.1"/> for more information on
                 hook scripts.</para>
             </warning>
@@ -2209,7 +2213,7 @@ property `owner-pic' set on 'moo.c'
 
           <refsect1>
             <title>Changes</title>
-            <para>working copy, repository only if operating on a URL</para>
+            <para>Working copy, repository only if operating on a URL</para>
           </refsect1>
 
           <refsect1>
@@ -2276,7 +2280,7 @@ property `release-date' deleted from repository revision '26'
 
           <refsect1>
             <title>Changes</title>
-            <para>working copy, repository only if operating on a URL</para>
+            <para>Working copy, repository only if operating on a URL</para>
           </refsect1>
 
           <refsect1>
@@ -2488,7 +2492,7 @@ Properties on 'foo.c':
 
           <refsect1>
             <title>Changes</title>
-            <para>working copy</para>
+            <para>Working copy</para>
           </refsect1>
 
           <refsect1>
@@ -2967,7 +2971,7 @@ Head revision:   981
 
           <refsect1>
             <title>Changes</title>
-            <para>working copy</para>
+            <para>Working copy</para>
           </refsect1>
 
           <refsect1>
@@ -3060,8 +3064,8 @@ Updated to revision 31.
             </screen>
 
             <para>A character in the first column signifies an update
-              to the actual file, while updates to the file's props
-              are shown in the second column.</para>
+              to the actual file, while updates to the file's
+              properties are shown in the second column.</para>
           </refsect1>
 
           <refsect1>
@@ -3766,16 +3770,16 @@ tree.
         <refentry>
           <refnamediv>
             <refname>svnlook diff</refname>
-            <refpurpose>Print diffs of changed files and properties.</refpurpose>
+            <refpurpose>Print differences of changed files and properties.</refpurpose>
           </refnamediv>
           <refsect1>
             <title>Synopsis</title>
-            <programlisting> svnlook diff REPOS_PATH</programlisting>
+            <programlisting>svnlook diff REPOS_PATH</programlisting>
           </refsect1>
           <refsect1>
             <title>Description</title>
 
-            <para>Print GNU-style diffs of changed files and
+            <para>Print GNU-style differences of changed files and
               properties. ###TODO Tell more here.</para>
           </refsect1>
 
