@@ -2108,8 +2108,7 @@ typedef struct txdelta_baton_t
 
   /* This string holds the entire "growing" target in memory.  Yes,
      this is bad!  Someday we'll tell berkeley db to operate directly
-     on substrings of table values -- then each txdelta window can be
-     applied -directly- to disk as a db transaction. */
+     on substrings of table values. */
   svn_string_t *target_string;
 
   /* Information about the file into which we will eventually dump
