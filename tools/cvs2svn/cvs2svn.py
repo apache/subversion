@@ -848,7 +848,12 @@ class Dumper:
 
     # Initialize the dumpfile with the standard headers:
     #
+    # The CVS repository doesn't have a UUID, and the Subversion
+    # repository will be created with one anyway.  So when we load
+    # the dumpfile, we'll tell svnadmin to ignore the UUID below. 
     self.dumpfile.write('SVN-fs-dump-format-version: 2\n'
+                        '\n'
+                        'UUID: ????????-????-????-????-????????????\n'
                         '\n')
 
   def start_revision(self, props):
@@ -2078,7 +2083,7 @@ def pass4(ctx):
 def pass5(ctx):
   if (not ctx.dry_run) and (not ctx.dump_only):
     print 'loading %s into %s' % (ctx.dumpfile, ctx.target)
-    os.system('%s load %s < %s'
+    os.system('%s load --ignore-uuid %s < %s'
               % (ctx.svnadmin, ctx.target, ctx.dumpfile))
 
 
