@@ -234,10 +234,26 @@ log_message_receiver (void *baton,
         {
           svn_item_t *item = &(APR_ARRAY_IDX (sorted_paths, i, svn_item_t));
           const char *path_native, *path = item->key;
-          char action = (char) ((int) apr_hash_get (changed_paths, 
-                                                    item->key, item->klen));
+          svn_log_changed_path_t *log_item 
+            = apr_hash_get (changed_paths, item->key, item->klen);
+          const char *copy_data = "";
+          
+          if (log_item->copyfrom_path 
+              && SVN_IS_VALID_REVNUM (log_item->copyfrom_rev))
+            {
+              SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, 
+                                                  log_item->copyfrom_path, 
+                                                  pool));
+              copy_data 
+                = apr_psprintf (pool, 
+                                " (from %s:%" SVN_REVNUM_T_FMT ")",
+                                path_native,
+                                log_item->copyfrom_rev);
+            }
           SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-          printf ("   %c %s\n", action, path_native);
+          printf ("   %c %s%s\n", 
+                  (log_item->action == 'M') ? 'U' : log_item->action, 
+                  path_native, copy_data);
         }
     }
   printf ("\n");  /* A blank line always precedes the log message. */

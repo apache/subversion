@@ -349,8 +349,9 @@ enum {
   ELEM_add_file,
   ELEM_baseline_relpath,
   ELEM_deleted_path,  /* used in log reports */
+  ELEM_replaced_path,  /* used in log reports */
   ELEM_added_path,    /* used in log reports */
-  ELEM_changed_path,  /* used in log reports */
+  ELEM_modified_path,  /* used in log reports */
   ELEM_delete_entry,
   ELEM_fetch_file,
   ELEM_fetch_props,

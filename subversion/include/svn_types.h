@@ -306,6 +306,15 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 
 /*** Shared function types ***/
 
+typedef struct svn_log_changed_path_t
+{
+  char action; /* 'A'dd, 'D'elete, 'R'eplace, 'M'odify */
+  const char *copyfrom_path; /* Source path of copy (if any). */
+  svn_revnum_t copyfrom_rev; /* Source revision of copy (if any). */
+
+} svn_log_changed_path_t;
+
+
 /* The callback invoked by log message loopers, such as
  * svn_ra_plugin_t.get_log() and svn_repos_get_logs().
  *
@@ -317,12 +326,8 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
  * converted to apr_time_t with svn_time_from_string().  
  *
  * If CHANGED_PATHS is non-null, then it contains as keys every path
- * committed in REVISION; the values are (void *) 'A' or 'D' or 'R',
- * for added, deleted, or replaced (text or property mod),
- * respectively.  Note to developers: there is no compelling reason
- * for these particular values -- they were chosen to match
- * `svn_repos_node_t.action', but if more information were desired, we
- * could switch to a different convention.
+ * committed in REVISION; the values are (svn_log_changed_path_t *) 
+ * structures (see above).
  *
  * ### The only reason CHANGED_PATHS is not qualified with `const' is
  * that we usually want to loop over it, and apr_hash_first() doesn't
@@ -334,8 +339,7 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
  * Use POOL for all allocation.  (If the caller is iterating over log
  * messages, invoking this receiver on each, we recommend the standard
  * pool loop recipe: create a subpool, pass it as POOL to each call,
- * clear it after each iteration, destroy it after the loop is done.)
- */
+ * clear it after each iteration, destroy it after the loop is done.)  */
 typedef svn_error_t *(*svn_log_message_receiver_t)
      (void *baton,
       apr_hash_t *changed_paths,

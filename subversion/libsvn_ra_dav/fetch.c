@@ -1316,7 +1316,7 @@ static int validate_element(void *userdata,
 
 static const char *get_attr(const char **atts, const char *which)
 {
-  for (; *atts != NULL; atts += 2)
+  for (; atts && *atts; atts += 2)
     if (strcmp(*atts, which) == 0)
       return atts[1];
   return NULL;
