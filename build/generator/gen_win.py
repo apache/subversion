@@ -404,6 +404,13 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
     elif cfg == 'Release':
       fakedefines.append("NDEBUG")
+
+    # XXX: Check if db is present, and if so, let apr-util know
+    # XXX: This is a hack until the apr build system is improved to
+    # XXX: know these things for itself.
+    if self.dblibname:
+      fakedefines.append("APU_HAVE_DB=1")
+
     return fakedefines
 
   def get_win_includes(self, target, rootpath):
