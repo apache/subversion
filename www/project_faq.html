@@ -75,8 +75,8 @@
 <li><a href="#ethereal">What is the best method of doing a network
     trace of the conversation between a Subversion client and server?</a></li>
 <li><a href="#revert">Why does the <tt>svn revert</tt> require an
-    explicit target?  Why is not recursive by default?  These behaviors
-    differ from almost all the other subcommands.</a></li>
+    explicit target?  Why is it not recursive by default?  These
+    behaviors differ from almost all the other subcommands.</a></li>
 <p>
 
 <strong>References:</strong>
@@ -837,11 +837,10 @@ configuration file.</p>
 <![CDATA[-----------------------------------------------------------]]>
 
 <h3><a name="revert">Why does the <tt>svn revert</tt> require an
-    explicit target?  Why is not recursive by default?  These behaviors
-    differ from almost all the other subcommands.</a></h3>
+    explicit target?  Why is it not recursive by default?  These
+    behaviors differ from almost all the other subcommands.</a></h3>
 
-<p>The short answer: it's for your own good (or "Believe me, son, this
-hurts me more than it does you").</p>
+<p>The short answer: it's for your own good.</p>
 
 <p>Subversion places a very high priority on protecting your data, and
 not just your versioned data.  Modifications that you make to
@@ -849,7 +848,7 @@ already-versioned files, and new files scheduled for addition to the
 version control system, must be treated with care.</p>
 
 <p>Making the <tt>svn revert</tt> command require an explicit
-target &mdash; even if that target is just '.' &mdash; is one way of
+target&mdash;even if that target is just '.'&mdash;is one way of
 accomplishing that.  This requirement (as well as requiring you to
 supply the <tt>--recursive (-R)</tt> flag if you want that behavior)
 is intended to make you really think about what you're doing, because
