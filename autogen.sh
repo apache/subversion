@@ -21,7 +21,7 @@ automake --add-missing --verbose
 
 # Produce aclocal.m4, so autoconf gets the automake macros it needs
 echo "Creating aclocal.m4..."
-aclocal
+aclocal -I helpers
 
 # Produce ./configure
 echo "Creating configure..."
