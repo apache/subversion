@@ -155,10 +155,12 @@ def main(fname, oname=None):
             la_tweaked[bt + '-a'] = None
       la_tweaked = la_tweaked.keys()
 
+      s_files, s_errors = _collect_paths(parser.get('static-apache', 'paths'))
+      errors = errors or s_errors
+
       ofile.write('\ninstall-mods-static: %s\n'
-                  '\t$(mkinstalldirs) $(APACHE_TARGET)\n'
                   '\t$(mkinstalldirs) %s\n'
-                  % (string.join(la_tweaked),
+                  % (string.join(la_tweaked + s_files),
                      os.path.join('$(APACHE_TARGET)', '.libs')))
       for file in la_tweaked:
         dirname, fname = os.path.split(file)
@@ -169,6 +171,10 @@ def main(fname, oname=None):
                        os.path.join('$(APACHE_TARGET)', '.libs', base + '.a'),
                        file,
                        os.path.join('$(APACHE_TARGET)', base + '.la')))
+      for file in s_files:
+        ofile.write('\t$(INSTALL_MOD_STATIC) %s %s\n'
+                    % (file, os.path.join('$(APACHE_TARGET)',
+                                          os.path.basename(file))))
       ofile.write('\n')
 
     elif area != 'test':
@@ -181,6 +187,7 @@ def main(fname, oname=None):
       ofile.write('\n')
 
   includes, i_errors = _collect_paths(parser.get('includes', 'paths'))
+  errors = errors or i_errors
 
   ofile.write('install-include: %s\n'
               '\t$(mkinstalldirs) $(includedir)\n'
@@ -194,10 +201,10 @@ def main(fname, oname=None):
     ofile.write('%s: %s\n' % (target, tpath))
   ofile.write('\n')
 
-  if errors or i_errors:
+  if errors:
     sys.exit(1)
 
-_predef_sections = ['external', 'includes']
+_predef_sections = ['external', 'includes', 'static-apache']
 def _filter_targets(t):
   t = t[:]
   for s in _predef_sections:
