@@ -59,7 +59,7 @@ svn_cl__export (apr_getopt_t *os,
   /* If only one target was given, split off the basename to use as
      the `to' path.  Else, a `to' path was supplied. */
   if (targets->nelts == 1) 
-    to = svn_path_basename (from, pool);
+    to = svn_path_uri_decode (svn_path_basename (from, pool), pool);
   else
     to = ((const char **) (targets->elts))[1];
 

@@ -88,10 +88,15 @@ svn_cl__checkout (apr_getopt_t *os,
   if (svn_path_is_url (local_dir))
     {
       if (targets->nelts == 1)
-        local_dir = svn_path_basename (((const char **) (targets->elts))[0],
-                                       pool);
+        {
+          local_dir = svn_path_basename (((const char **) (targets->elts))[0],
+                                         pool);
+          local_dir = svn_path_uri_decode (local_dir, pool);
+        }
       else
-        local_dir = "";
+        {
+          local_dir = "";
+        }
       (*((const char **) apr_array_push (targets))) = local_dir;
     }
 
@@ -115,11 +120,15 @@ svn_cl__checkout (apr_getopt_t *os,
 
       /* Use sub-directory of destination if checking-out multiple URLs */
       if (targets->nelts == 2)
-        target_dir = local_dir;
+        {
+          target_dir = local_dir;
+        }
       else
-        target_dir = svn_path_join (local_dir,
-                                    svn_path_basename (repos_url, subpool),
-                                    subpool);
+        {
+          target_dir = svn_path_basename (repos_url, subpool);
+          target_dir = svn_path_uri_decode (target_dir, subpool);
+          target_dir = svn_path_join (local_dir, target_dir, subpool);
+        }
 
       SVN_ERR (svn_client_checkout (repos_url,
                                     target_dir,
