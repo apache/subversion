@@ -337,10 +337,11 @@ typedef struct
          open_file          open_directory
 
      Each of these takes a directory baton, indicating the directory
-     in which the change takes place, and a NAME argument, giving the
-     name of the file, subdirectory, or directory entry to change.
-     (NAME is always a single path component, never a full directory
-     path.)
+     in which the change takes place, and a PATH argument, giving the
+     path (relative to the root of the edit) of the file,
+     subdirectory, or directory entry to change. Editors will usually
+     want to join this relative path with some base stored in the edit
+     baton (e.g. a URL, a location in the OS filesystem).
 
      Since every call requires a parent directory baton, including
      add_directory and open_directory, where do we ever get our
@@ -352,18 +353,18 @@ typedef struct
      While `open_root' provides a directory baton for the root of
      the tree being changed, the `add_directory' and `open_directory'
      callbacks provide batons for other directories.  Like the
-     callbacks above, they take a PARENT_BATON and a single path
-     component NAME, and then return a new baton for the subdirectory
-     being created / modified --- CHILD_BATON.  The producer can then
-     use CHILD_BATON to make further changes in that subdirectory.
+     callbacks above, they take a PARENT_BATON and a relative path
+     PATH, and then return a new baton for the subdirectory being
+     created / modified --- CHILD_BATON.  The producer can then use
+     CHILD_BATON to make further changes in that subdirectory.
 
      So, if we already have subdirectories named `foo' and `foo/bar',
      then the producer can create a new file named `foo/bar/baz.c' by
      calling:
         open_root () --- yielding a baton ROOT for the top directory
         open_directory (ROOT, "foo") --- yielding a baton F for `foo'
-        open_directory (F, "bar") --- yielding a baton B for `foo/bar'
-        add_file (B, "baz.c")
+        open_directory (F, "foo/bar") --- yielding a baton B for `foo/bar'
+        add_file (B, "foo/bar/baz.c")
      
      When the producer is finished making changes to a directory, it
      should call `close_directory'.  This lets the consumer do any
@@ -376,11 +377,11 @@ typedef struct
      producer is finished making changes to a file, it should call
      `close_file', to let the consumer clean up and free the baton.
 
-     The `add_file', `add_directory', `open_file', and
-     `open_directory' functions all take arguments ANCESTOR_PATH and
-     ANCESTOR_REVISION.  If ANCESTOR_PATH is non-zero, then
-     ANCESTOR_PATH and ANCESTOR_REVISION indicate the ancestor of the
-     resulting object.
+     The `add_file' and `add_directory' functions each take arguments
+     COPYFROM_PATH and COPYFROM_REVISION.  If COPYFROM_PATH is
+     non-NULL, then COPYFROM_PATH and COPYFROM_REVISION indicate where
+     the file or directory should be copied from (to create the file
+     or directory being added).
 
 
      FUNCTION CALL ORDERING
@@ -478,6 +479,15 @@ typedef struct
                                 or add_File)
          close_edit             EDIT_BATON holds a pool
          abort_edit             EDIT_BATON holds a pool
+
+     Note that close_directory can be called *before* a file in that
+     directory has been closed. That is, the directory's baton is
+     closed before the file's baton. The implication is that
+     apply_textdelta() and close_file() should not refer to a parent
+     directory baton UNLESS the editor has taken precautions to
+     allocate it in a pool of the appropriate lifetime (the DIR_POOL
+     passed to open_directory and add_directory definitely does not
+     have the proper lifetime).
   */
 
   /* Set the target revision for this edit to TARGET_REVISION.  This
@@ -504,9 +514,9 @@ typedef struct
 
   /* Deleting things.  */
        
-  /* Remove the directory entry named NAME, a child of the directory
+  /* Remove the directory entry named PATH, a child of the directory
      represented by PARENT_BATON.  REVISION is used as a sanity check
-     to ensure that you are removing the revision of NAME that you
+     to ensure that you are removing the revision of PATH that you
      really think you are.
 
      All allocations should be performed in POOL. */
@@ -518,7 +528,7 @@ typedef struct
 
   /* Creating and modifying directories.  */
   
-  /* We are going to add a new subdirectory named NAME.  We will use
+  /* We are going to add a new subdirectory named PATH.  We will use
      the value this callback stores in *CHILD_BATON as the
      PARENT_BATON for further changes in the new subdirectory.  
 
@@ -536,10 +546,11 @@ typedef struct
                                  apr_pool_t *dir_pool,
                                  void **child_baton);
 
-  /* We are going to change the directory entry named NAME to a
-     subdirectory.  The callback must store a value in *CHILD_BATON
-     that should be used as the PARENT_BATON for subsequent changes in
-     this subdirectory.  BASE_REVISION is the current revision of the
+  /* We are going to make changes in a subdirectory (of the directory
+     identified by PARENT_BATON). The subdirectory is specified by
+     PATH. The callback must store a value in *CHILD_BATON that should
+     be used as the PARENT_BATON for subsequent changes in this
+     subdirectory.  BASE_REVISION is the current revision of the
      subdirectory.
 
      Allocations for the returned CHILD_BATON should be performed in
@@ -572,7 +583,7 @@ typedef struct
 
   /* Creating and modifying files.  */
 
-  /* We are going to add a new file named NAME.  The callback can
+  /* We are going to add a new file named PATH.  The callback can
      store a baton for this new file in **FILE_BATON; whatever value
      it stores there should be passed through to apply_textdelta
      and/or apply_propdelta.
@@ -591,7 +602,9 @@ typedef struct
                             apr_pool_t *file_pool,
                             void **file_baton);
 
-  /* We are going to change the directory entry named NAME to a file.
+  /* We are going to make change to a file named PATH, which resides
+     in the directory identified by PARENT_BATON.
+
      The callback can store a baton for this new file in **FILE_BATON;
      whatever value it stores there should be passed through to
      apply_textdelta and/or apply_propdelta.  This file has a current
