@@ -36,6 +36,23 @@
 
 #include <assert.h>
 
+static void add_default_ignores (apr_array_header_t *patterns)
+{
+  static const char *ignores[] = 
+  {
+    "*.o", "*.lo", "*.la", "#*#", "*.rej", "*~", ".#*",
+    /* what else? */
+    NULL
+  };
+  int i;
+  
+  for (i = 0; ignores[i] != NULL; i++)
+    {
+      const char **ent = apr_array_push(patterns);
+      *ent = ignores[i];
+    }
+
+}
 
 /* Helper routine: try to read the contents of DIRPATH/.svnignore.  If
    no such file exists, then set *PATTERNS to NULL.  Otherwise, set
@@ -43,7 +60,7 @@
    an array of (const char *) objects. */
 static svn_error_t *
 load_ignore_file (const char *dirpath,
-                  apr_array_header_t **patterns,
+                  apr_array_header_t *patterns,
                   apr_pool_t *pool)
 {
   apr_file_t *fp;
@@ -54,16 +71,13 @@ load_ignore_file (const char *dirpath,
   /* Try to load the .svnignore file. */
   svn_stringbuf_t *path = svn_stringbuf_create (dirpath, pool);
   svn_path_add_component_nts (path, SVN_WC_SVNIGNORE, svn_path_local_style);
-  status = apr_file_open (&fp, path->data, APR_READ | APR_BUFFERED, 
-                          APR_OS_DEFAULT, pool);
-  if (status)
+  if (apr_file_open (&fp, path->data, APR_READ | APR_BUFFERED, 
+                     APR_OS_DEFAULT, pool))
     {
-      *patterns = NULL;
       return SVN_NO_ERROR;
     }
 
   /* Now that it's open, read one line at a time into the array. */
-  *patterns = apr_array_make (pool, 1, sizeof(const char *));
   while (1)
     {
       status = svn_io_read_length_line (fp, buf, &sz);
@@ -73,7 +87,7 @@ load_ignore_file (const char *dirpath,
         return svn_error_createf(status, 0, NULL, pool,
                                  "error reading %s", path->data);
 
-      (*((const char **) apr_array_push (*patterns))) = 
+      (*((const char **) apr_array_push (patterns))) = 
         apr_pstrndup (pool, buf, sz);
 
       sz = 100;
@@ -1467,7 +1481,9 @@ report_revisions (svn_stringbuf_t *wc_path,
   SVN_ERR (svn_io_get_dirents (&dirents, full_path, subpool));
 
   /* Try to load any '.svnignore' file that may be present. */
-  SVN_ERR (load_ignore_file (full_path->data, &patterns, subpool));
+  patterns = apr_array_make (pool, 1, sizeof(const char *));
+  SVN_ERR (load_ignore_file (full_path->data, patterns, subpool));
+  add_default_ignores (patterns);
 
   /* Phase 1:  Print out every unrecognized (unversioned) object. */
 
@@ -1490,28 +1506,25 @@ report_revisions (svn_stringbuf_t *wc_path,
           {
             svn_boolean_t print_item = TRUE;
             apr_status_t status;
+            int i;
 
             current_entry_name = svn_stringbuf_create (keystring, subpool);
                         
-            if (patterns)
-              {    
-                int i;
-                for (i = 0; i < patterns->nelts; i++)
+            for (i = 0; i < patterns->nelts; i++)
+              {
+                const char *pat = (((const char **) (patterns)->elts))[i];
+                
+                /* Try to match current_entry_name to pat. */
+                status = apr_fnmatch (pat, current_entry_name->data,
+                                      FNM_PERIOD);
+                
+                if (status == APR_SUCCESS)
                   {
-                    const char *pat = (((const char **) (patterns)->elts))[i];
-
-                    /* Try to match current_entry_name to pat. */
-                    status = apr_fnmatch (pat, current_entry_name->data,
-                                          FNM_PERIOD);
-
-                    if (status == APR_SUCCESS)
-                      {
-                        /* APR_SUCCESS means we found a match: */
-                        print_item = FALSE;
-                        break;
-                      }
+                    /* APR_SUCCESS means we found a match: */
+                    print_item = FALSE;
+                    break;
                   }
-              } 
+              }
             
             if (print_item)
               {
