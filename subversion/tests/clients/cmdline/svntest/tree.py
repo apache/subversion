@@ -482,16 +482,23 @@ def build_tree_from_status(lines):
   "Return a tree derived by parsing the output LINES from 'st'."
 
   root = SVNTreeNode(root_node_name)
-  rm = re.compile ('^(..)(.)\s+(\d+)\s+\(\s+(\d+)\)\s+(.+)')
-  
+  rm = re.compile ('^.+\:.+(\d+)')
+  lastline = string.strip(lines.pop())
+  match = rm.search(lastline)
+  if match and match.groups():
+    repos_rev = match.group(1)
+  else:
+    repos_rev = '?'
+    
+  rm = re.compile ('^(..)(.)(.+)(\d+)\s+(.+)')
   for line in lines:
     match = rm.search(line)
     if match and match.groups():
       new_branch = create_from_path(match.group(5), None, {},
                                     {'status' : match.group(1),
                                      'locked' : match.group(2),
-                                     'wc_rev' : match.group(3),
-                                     'repos_rev' : match.group(4)})
+                                     'wc_rev' : match.group(4),
+                                     'repos_rev' : repos_rev})
       root.add_child(new_branch)
 
   return root
@@ -528,9 +535,5 @@ def build_tree_from_wc(wc_path, load_props=0, ignore_svn=1):
 
 ### End of file.
 # local variables:
-# eval: (load-file "../../../svn-dev.el")
+# eval: (load-file "../../../../svn-dev.el")
 # end:
-
-
-
-
