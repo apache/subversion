@@ -495,6 +495,7 @@ add_directory (svn_string_t *name,
                                   svn_dir_kind,
                                   0,
                                   0,
+                                  parent_dir_baton->pool,
                                   NULL);
   if (err)
     return err;
