@@ -49,51 +49,40 @@ svn_cl__info_print_time (apr_time_t atime,
 
 
 static svn_error_t *
-print_entry (const char *target,
-             const svn_wc_entry_t *entry,
-             apr_pool_t *pool)
+print_info (const char *target,
+            const svn_info_t *info,
+            apr_pool_t *pool)
 {
-  svn_boolean_t text_conflict = FALSE, props_conflict = FALSE;
-
   SVN_ERR (svn_cmdline_printf (pool, _("Path: %s\n"),
                                svn_path_local_style (target, pool)));
 
-  /* Note: we have to be paranoid about checking that these are
-     valid, since svn_wc_entry() doesn't fill them in if they
-     aren't in the entries file. */
-
-  if (entry->name && strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR))
-    SVN_ERR (svn_cmdline_printf (pool, _("Name: %s\n"), entry->name));
+  /* ### remove this someday:  it's only here for cmdline output
+     compatibility with svn 1.1 and older.  */
+  SVN_ERR (svn_cmdline_printf (pool, _("Name: %s\n"),
+                               svn_path_basename(target, pool)));
  
-  if (entry->url) 
-    SVN_ERR (svn_cmdline_printf (pool, _("URL: %s\n"), entry->url));
+  if (info->URL) 
+    SVN_ERR (svn_cmdline_printf (pool, _("URL: %s\n"), info->URL));
            
-  if (entry->repos) 
-    SVN_ERR (svn_cmdline_printf (pool, _("Repository: %s\n"), entry->repos));
+  if (info->repos_root_URL) 
+    SVN_ERR (svn_cmdline_printf (pool, _("Repository: %s\n"),
+                                 info->repos_root_URL));
  
-  if (entry->uuid) 
+  if (info->repos_UUID) 
     SVN_ERR (svn_cmdline_printf (pool, _("Repository UUID: %s\n"),
-                                 entry->uuid));
+                                 info->repos_UUID));
  
-  if (SVN_IS_VALID_REVNUM (entry->revision))
-    SVN_ERR (svn_cmdline_printf (pool, _("Revision: %ld\n"), entry->revision));
+  if (SVN_IS_VALID_REVNUM (info->rev))
+    SVN_ERR (svn_cmdline_printf (pool, _("Revision: %ld\n"), info->rev));
 
-  switch (entry->kind) 
+  switch (info->kind) 
     {
     case svn_node_file:
       SVN_ERR (svn_cmdline_printf (pool, _("Node Kind: file\n")));
-      {
-        const char *dir_name;
-        svn_path_split (target, &dir_name, NULL, pool);
-        SVN_ERR (svn_wc_conflicted_p (&text_conflict, &props_conflict,
-                                      dir_name, entry, pool));
-      }
       break;
           
     case svn_node_dir:
       SVN_ERR (svn_cmdline_printf (pool, _("Node Kind: directory\n")));
-      SVN_ERR (svn_wc_conflicted_p (&text_conflict, &props_conflict,
-                                    target, entry, pool));
       break;
           
     case svn_node_none:
@@ -106,7 +95,7 @@ print_entry (const char *target,
       break;
     }
 
-  switch (entry->schedule) 
+  switch (info->schedule) 
     {
     case svn_wc_schedule_normal:
       SVN_ERR (svn_cmdline_printf (pool, _("Schedule: normal\n")));
@@ -128,59 +117,56 @@ print_entry (const char *target,
       break;
     }
 
-  if (entry->copied)
-    {
-      if (entry->copyfrom_url) 
-        SVN_ERR (svn_cmdline_printf (pool, _("Copied From URL: %s\n"),
-                                     entry->copyfrom_url));
+  if (info->copyfrom_url) 
+    SVN_ERR (svn_cmdline_printf (pool, _("Copied From URL: %s\n"),
+                                 info->copyfrom_url));
  
-      if (SVN_IS_VALID_REVNUM (entry->copyfrom_rev))
-        SVN_ERR (svn_cmdline_printf (pool, _("Copied From Rev: %ld\n"),
-                                     entry->copyfrom_rev));
-    }
+  if (SVN_IS_VALID_REVNUM (info->copyfrom_rev))
+    SVN_ERR (svn_cmdline_printf (pool, _("Copied From Rev: %ld\n"),
+                                 info->copyfrom_rev));
  
-  if (entry->cmt_author) 
+  if (info->last_changed_author) 
     SVN_ERR (svn_cmdline_printf (pool, _("Last Changed Author: %s\n"),
-                                 entry->cmt_author));
+                                 info->last_changed_author));
  
-  if (SVN_IS_VALID_REVNUM (entry->cmt_rev))
+  if (SVN_IS_VALID_REVNUM (info->last_changed_rev))
     SVN_ERR (svn_cmdline_printf (pool, _("Last Changed Rev: %ld\n"),
-                                 entry->cmt_rev));
+                                 info->last_changed_rev));
 
-  if (entry->cmt_date)
-    SVN_ERR (svn_cl__info_print_time (entry->cmt_date, 
+  if (info->last_changed_date)
+    SVN_ERR (svn_cl__info_print_time (info->last_changed_date, 
                                       _("Last Changed Date"), pool));
 
-  if (entry->text_time)
-    SVN_ERR (svn_cl__info_print_time (entry->text_time, 
+  if (info->text_time)
+    SVN_ERR (svn_cl__info_print_time (info->text_time, 
                                       _("Text Last Updated"), pool));
 
-  if (entry->prop_time)
-    SVN_ERR (svn_cl__info_print_time (entry->prop_time, 
+  if (info->prop_time)
+    SVN_ERR (svn_cl__info_print_time (info->prop_time, 
                                       _("Properties Last Updated"), pool));
  
-  if (entry->checksum) 
+  if (info->checksum) 
       SVN_ERR (svn_cmdline_printf (pool, _("Checksum: %s\n"),
-                                   entry->checksum));
+                                   info->checksum));
  
-  if (text_conflict && entry->conflict_old) 
+  if (info->conflict_old) 
     SVN_ERR (svn_cmdline_printf (pool, _("Conflict Previous Base File: %s\n"),
-                                 svn_path_local_style (entry->conflict_old,
+                                 svn_path_local_style (info->conflict_old,
                                                        pool)));
  
-  if (text_conflict && entry->conflict_wrk) 
+  if (info->conflict_wrk) 
     SVN_ERR (svn_cmdline_printf
              (pool, _("Conflict Previous Working File: %s\n"),
-              svn_path_local_style (entry->conflict_wrk, pool)));
+              svn_path_local_style (info->conflict_wrk, pool)));
  
-  if (text_conflict && entry->conflict_new) 
+  if (info->conflict_new) 
     SVN_ERR (svn_cmdline_printf (pool, _("Conflict Current Base File: %s\n"),
-                                 svn_path_local_style (entry->conflict_new,
+                                 svn_path_local_style (info->conflict_new,
                                                        pool)));
  
-  if (props_conflict && entry->prejfile) 
+  if (info->prejfile) 
       SVN_ERR (svn_cmdline_printf (pool, _("Conflict Properties File: %s\n"),
-                                   svn_path_local_style (entry->prejfile,
+                                   svn_path_local_style (info->prejfile,
                                                          pool)));
  
   /* Print extra newline separator. */
@@ -190,28 +176,16 @@ print_entry (const char *target,
 }
 
 
+
+/* A callback of type svn_info_receiver_t. */
 static svn_error_t *
-info_found_entry_callback (const char *path,
-                           const svn_wc_entry_t *entry,
-                           void *walk_baton,
-                           apr_pool_t *pool)
+info_receiver (void *baton,
+               const char *path,
+               const svn_info_t *info,
+               apr_pool_t *pool)
 {
-  /* We're going to receive dirents twice;  we want to ignore the
-     first one (where it's a child of a parent dir), and only print
-     the second one (where we're looking at THIS_DIR.)  */
-  if ((entry->kind == svn_node_dir) 
-      && (strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR)))
-    return SVN_NO_ERROR;
-
-  return print_entry (path, entry, pool);
+  return print_info (path, info, pool);
 }
-
-
-static const svn_wc_entry_callbacks_t 
-entry_walk_callbacks =
-  {
-    info_found_entry_callback
-  };
 
 
 
@@ -226,57 +200,62 @@ svn_cl__info (apr_getopt_t *os,
   apr_array_header_t *targets;
   apr_pool_t *subpool = svn_pool_create (pool);
   int i;
+  svn_error_t *err;
+  svn_opt_revision_t revision, peg_revision;
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
                                           opt_state->targets, pool));
 
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target (targets, pool);
-
+  
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
-      svn_wc_adm_access_t *adm_access;
-      const svn_wc_entry_t *entry;
-
+      
       svn_pool_clear (subpool);
-
-      /* Make sure the user hasn't passed a URL by mistake. */
-      if (svn_path_is_url (target))
-        return svn_error_create
-          (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-           _("'svn info' only works on working copy paths, not URLs"));
-
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-      SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, target, FALSE,
-                                       opt_state->recursive ? -1 : 0,
-                                       ctx->cancel_func, ctx->cancel_baton,
-                                       subpool));
-      SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, subpool));
-      if (! entry)
-        {
-          /* Print non-versioned message and extra newline separator. */
 
+      if (svn_path_is_url (target))
+        {
+          /* ### remove this very, very soon.  set the opt_revision
+             variables by parsing options.  */
+          return svn_error_create
+            (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+             _("'svn info' only works on working copy paths, not URLs"));
+        }
+      else
+        {
+          revision.kind = svn_opt_revision_unspecified;
+          peg_revision.kind = svn_opt_revision_unspecified;
+        }
+
+      err = svn_client_info (target,
+                             &peg_revision, &revision,
+                             info_receiver, NULL,
+                             opt_state->recursive, ctx, subpool);
+
+      /* If one of the targets is a non-existent URL or wc-entry,
+         don't bail out.  Just warn and move on to the next target. */
+      if (err && err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
+        {
+          svn_error_clear (err);
           SVN_ERR (svn_cmdline_printf
                    (subpool, _("%s:  (Not a versioned resource)\n\n"),
                     svn_path_local_style (target, pool)));
           continue;
         }
-
-      if (entry->kind == svn_node_file)
-        SVN_ERR (print_entry (target, entry, subpool));
-
-      else if (entry->kind == svn_node_dir)
+      else if (err && err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
         {
-          if (opt_state->recursive)
-            /* the generic entry-walker: */
-            SVN_ERR (svn_wc_walk_entries2 (target, adm_access,
-                                           &entry_walk_callbacks, NULL,
-                                           FALSE, ctx->cancel_func,
-                                           ctx->cancel_baton, pool));
-          else
-            SVN_ERR (print_entry (target, entry, subpool));
+          svn_error_clear (err);
+          SVN_ERR (svn_cmdline_printf
+                   (subpool, _("%s:  (Not a valid URL)\n\n"),
+                    svn_path_local_style (target, pool)));
+          continue;
         }
+      else
+        return err;
+
     }
   svn_pool_destroy (subpool);
 

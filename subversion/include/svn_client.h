@@ -1736,6 +1736,112 @@ svn_client_cat (svn_stream_t *out,
                 apr_pool_t *pool);
 
 
+/** @since New in 1.2.
+ *
+ * A structure which describes various system-generated metadata about
+ * a working-copy path or URL.
+ */
+typedef struct svn_info_t
+{
+  /* Where the item lives in the repository. */
+  const char *URL;
+
+  /* The revision of the object.  If path_or_url is a working-copy
+     path, then this is its current working revnum.  If path_or_url
+     is a URL, then this is the repos revision that path_or_url lives in. */
+  svn_revnum_t rev;
+
+  /* The node's kind. */
+  svn_node_kind_t kind;
+
+  /* The root URL of the repository. */
+  const char *repos_root_URL;
+  
+  /* The repository's UUID. */
+  const char *repos_UUID;
+
+  /* The last revision in which this object changed. */
+  svn_revnum_t last_changed_rev;
+  
+  /* The date of the last_changed_rev. */
+  apr_time_t last_changed_date;
+  
+  /* The author of the last_changed_rev. */
+  const char *last_changed_author;
+
+  /* The following things only apply to a working-copy path.  See
+     svn_wc_entry_t explanations. */
+  svn_wc_schedule_t schedule;
+  const char *copyfrom_url;
+  svn_revnum_t copyfrom_rev;
+  apr_time_t text_time;
+  apr_time_t prop_time;
+  const char *checksum;
+  const char *conflict_old;
+  const char *conflict_new;
+  const char *conflict_wrk;
+  const char *prejfile;
+
+} svn_info_t;
+
+
+/** @since New in 1.2. 
+ *
+ * The callback invoked by svn_client_info().  Each invocation
+ * describes @a path with the information present in @a info.  Note
+ * that any fields within @a info may be NULL if information is
+ * unavailable.  Use @a pool for all temporary allocation.
+ */
+typedef svn_error_t *(*svn_info_receiver_t)
+     (void *baton,
+      const char *path,
+      const svn_info_t *info,
+      apr_pool_t *pool);
+
+/**
+ * @since New in 1.2.
+ *
+ * Invoke @a receiver with @a receiver_baton to return information
+ * about @a path_or_url in @a revision.  The information returned is
+ * system-generated metadata, not the sort of "property" metadata
+ * created by users.  See @c svn_info_t.
+ *
+ * If both revision arguments are either @c
+ * svn_opt_revision_unspecified or NULL, then information will be
+ * pulled soley from the working copy; no network connections will be
+ * made.
+ *
+ * Otherwise, information will be pulled from a repository.  The
+ * actual node revision selected is determined by the @a path_or_url
+ * as it exists in @a peg_revision.  If @a peg_revision is @c
+ * svn_opt_revision_unspecified, then it defaults to @c
+ * svn_opt_revision_head for URLs or @c svn_opt_revision_working for
+ * WC targets.
+ *
+ * If @a path_or_url is not a local path, then if @a revision is of
+ * kind @c svn_opt_revision_previous (or some other kind that requires
+ * a local path), an error will be returned, because the desired
+ * revision cannot be determined.
+ *
+ * Use the authentication baton cached in @a ctx to authenticate
+ * against the repository.
+ *
+ * If @a recurse is true (and @a path_or_url is a directory) this will
+ * be a recursive operation, invoking @a receiver on each child.
+ *
+ */
+svn_error_t *
+svn_client_info (const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_info_receiver_t receiver,
+                 void *receiver_baton,
+                 svn_boolean_t recurse,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+
+
 
 /* Converting paths to URLs. */
 
