@@ -10,11 +10,13 @@ libsvn_fs_la_SOURCES =				\
 			fs.c			\
 			id.c			\
 			nodes-table.c		\
+			rev-table.c		\
 			skel.c			\
 			trail.c			\
 			tree.c			\
 			txn.c			\
-			txn-table.c
+			txn-table.c		\
+			validate.c
 
 # Set aside for the moment:
 #		       delta.c			\
