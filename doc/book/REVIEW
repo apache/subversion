@@ -1,5 +1,34 @@
 Review and comments on the Subversion book listed by chapter.
 
+Overall Book Comments
+
+        #1) Blair
+
+            It may be a good idea where possible to set up a little
+            example repository for the book.  It could live as
+
+            http://www.svnbook.org/examples/
+
+        #2) Blair
+
+            All the diff output needs to be updated.  Here's the top
+            of the old format:
+
+                $ svn diff
+                Index: ./bar.c
+                ============================================================
+                --- ./bar.c
+                +++ ./bar.c     Mon Jul 15 17:58:18 2002
+
+            And here's the top of the new.  I'm using the new internal
+            diff engine here.
+
+                $ svn diff
+                Index: c
+                ============================================================
+                --- c   (revision 10)
+                +++ c   (working copy)
+
 Chapter 5
 
     Section svn-ch-5-sect-2.1

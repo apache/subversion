@@ -32,6 +32,13 @@
       powerful, very usable, and very flexible.
     </para>
 
+    <para>This book is written to document version 1.0 of the
+      Subversion version control system.  There are already a number
+      of features and improvements planned for follow on versions of
+      Subversion that may change some of the commands and specific
+      notes in this book.
+    </para>
+
   </simplesect>
 
 
@@ -49,6 +56,13 @@
       in this book assume the reader is using a Unix-like operating
       system, and is relatively comfortable with Unix and command-line
       interfaces.</para>
+
+    <para>Not to fear, Microsoft Windows users can download a
+      pre-compiled Windows native Subversion command-line client that
+      works in the Command Prompt application.  Many examples of the
+      client will work in the Command Prompt, but you may have more
+      success if you run the examples inside the Cygwin Unix emulation
+      environment.</para>
 
     <para>Most readers are probably programmers or sysadmins who need
       to track changes to source code; this is the most common use for
