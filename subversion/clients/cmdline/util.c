@@ -370,33 +370,30 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
   const char *cmd;
   apr_file_t *tmp_file;
   svn_stringbuf_t *tmpfile_name;
-  apr_status_t apr_err;
+  apr_status_t apr_err, apr_err2;
   apr_size_t written;
   apr_finfo_t finfo_before, finfo_after;
   svn_error_t *err = SVN_NO_ERROR;
+  int sys_err;
 
   /* Try to find an editor in the environment. */
   editor = getenv ("SVN_EDITOR");
   if (! editor)
-    editor = getenv ("EDITOR");
-  if (! editor)
     editor = getenv ("VISUAL");
+  if (! editor)
+    editor = getenv ("EDITOR");
 
-  /* If there is no editor specified, return an error stating that a
-     log message should be supplied via command-line options. */
+  /* Abort if there is no editor specified */
   if (! editor)
     return svn_error_create 
       (SVN_ERR_CL_NO_EXTERNAL_EDITOR, 0, NULL, pool,
-       "Could not find an external text editor in the usual environment "
-       "variables;\n"
-       "searched SVN_EDITOR, EDITOR, VISUAL, in that order.  If you set\n"
-       "one of them, check if you also need to `export' it.\n");
+       "None of the environment variables "
+       "SVN_EDITOR, VISUAL or EDITOR is set.");
 
   /* By now, we had better have an EDITOR to work with. */
   assert (editor);
 
-  /* Ask the working copy for a temporary file based on BASE_DIR, and ask
-     APR for that new file's name. */
+  /* Ask the working copy for a temporary file based on BASE_DIR */
   SVN_ERR (svn_io_open_unique_file 
            (&tmp_file, &tmpfile_name,
             svn_path_join (base_dir->data, "msg", pool), ".tmp", FALSE, pool));
@@ -408,92 +405,76 @@ svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
   apr_err = apr_file_write_full (tmp_file, contents->data, 
                                  contents->len, &written);
 
-  /* Close the file. */
-  apr_file_close (tmp_file);
+  apr_err2 = apr_file_close (tmp_file);
+  if (APR_STATUS_IS_SUCCESS(apr_err))
+    apr_err = apr_err2;
   
   /* Make sure the whole CONTENTS were written, else return an error. */
   if (apr_err || (written != contents->len))
     {
-      err = svn_error_create 
+      err = svn_error_createf
         (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, 0, NULL, pool,
-         "Unable to write initial contents to temporary file.");
+         "failed writing '%s'", tmpfile_name->data);
       goto cleanup;
     }
 
   /* Get information about the temporary file before the user has
      been allowed to edit its contents. */
-  apr_stat (&finfo_before, tmpfile_name->data, 
-            APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
+  apr_err = apr_stat (&finfo_before, tmpfile_name->data, 
+                      APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
+  if (! APR_STATUS_IS_SUCCESS(apr_err))
+    {
+      err =  svn_error_createf (apr_err, 0, NULL, pool,
+                                "failed to stat '%s'", tmpfile_name->data);
+      goto cleanup;
+    }
 
-  /* Now, run the editor command line.  Ignore the return values; all
-     we really care about (for now) is whether or not our tmpfile
-     contents have changed. */
+  /* Now, run the editor command line.  */
   cmd = apr_psprintf (pool, "%s %s", editor, tmpfile_name->data);
-
-  system (cmd);
+  sys_err = system (cmd);
+  if (sys_err != 0)
+    {
+      /* Extracting any meaning from sys_err is platform specific, so just
+         use the raw value. */
+      err =  svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, 0, NULL, pool,
+                                "system('%s') returned %d", cmd, sys_err);
+      goto cleanup;
+    }
   
   /* Get information about the temporary file after the assumed editing. */
-  apr_stat (&finfo_after, tmpfile_name->data, 
-            APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
+  apr_err = apr_stat (&finfo_after, tmpfile_name->data, 
+                      APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
+  if (! APR_STATUS_IS_SUCCESS(apr_err))
+    {
+      err = svn_error_createf (apr_err, 0, NULL, pool,
+                               "failed to stat '%s'", tmpfile_name->data);
+      goto cleanup;
+    }
   
   /* If the file looks changed... */
   if ((finfo_before.mtime != finfo_after.mtime) ||
       (finfo_before.size != finfo_after.size))
     {
-      svn_stringbuf_t *new_contents = svn_stringbuf_create ("", pool);
-
-      /* We have new contents in a temporary file, so read them. */
-      apr_err = apr_file_open (&tmp_file, tmpfile_name->data, APR_READ,
-                               APR_UREAD, pool);
-      
-      if (apr_err)
-        {
-          /* This is an annoying situation, as the file seems to have
-             been edited but we can't read it! */
-          
-          /* ### todo: Handle error here. */
-          goto cleanup;
-        }
-      else
-        {
-          /* Read the entire file into memory. */
-          svn_stringbuf_ensure (new_contents,
-                                (apr_size_t)(finfo_after.size + 1));
-          apr_err = apr_file_read_full (tmp_file, 
-                                        new_contents->data, 
-                                        (apr_size_t)finfo_after.size,
-                                        &(new_contents->len));
-          new_contents->data[new_contents->len] = 0;
-          
-          /* Close the file */
-          apr_file_close (tmp_file);
-          
-          /* Make sure we read the whole file, or return an error if we
-             didn't. */
-          if (apr_err || (new_contents->len != finfo_after.size))
-            {
-              /* ### todo: Handle error here. */
-              goto cleanup;
-            }
-        }
-
-      /* Return the new contents. */
-      *edited_contents = new_contents;
+      err = svn_string_from_file (edited_contents, tmpfile_name->data, pool);
+      if (err)
+        goto cleanup; /* In case more code gets added before cleanup... */
     }
   else
     {
-      /* No edits seem to have been made.  Just dup the original
-         contents. */
+      /* No edits seem to have been made */
       *edited_contents = NULL;
     }
 
  cleanup:
 
-  /* Destroy the temp file if we created one. */
-  apr_file_remove (tmpfile_name->data, pool); /* ignore status */
+  apr_err = apr_file_remove (tmpfile_name->data, pool);
 
-  /* ...and return! */
-  return SVN_NO_ERROR;
+  /* Only report remove error if there was no previous error. */
+  if (! err && ! APR_STATUS_IS_SUCCESS(apr_err))
+    err = svn_error_createf (apr_err, 0, NULL, pool,
+                             "failed to remove '%s'", tmpfile_name->data);
+
+  return err;
 }
 
 
@@ -622,7 +603,7 @@ svn_cl__get_log_message (svn_stringbuf_t **log_msg,
           svn_client_commit_item_t *item
             = ((svn_client_commit_item_t **) commit_items->elts)[i];
           svn_stringbuf_t *path = item->path;
-          char text_mod = 'M', prop_mod = ' ';
+          char text_mod = '_', prop_mod = ' ';
 
           if (! path)
             path = item->url;
@@ -634,9 +615,11 @@ svn_cl__get_log_message (svn_stringbuf_t **log_msg,
             text_mod = 'A';
           else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
             text_mod = 'D';
+          else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
+            text_mod = 'M';
 
           if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
-            prop_mod = '_';
+            prop_mod = 'M';
 
           svn_stringbuf_appendcstr (tmp_message, EDITOR_PREFIX_TXT);
           svn_stringbuf_appendcstr (tmp_message, "   ");
