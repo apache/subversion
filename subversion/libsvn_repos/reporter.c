@@ -711,11 +711,12 @@ delta_dirs (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   const char *name, *s_fullpath, *t_fullpath, *e_fullpath;
   path_info_t *info;
 
-  /* Compare the property lists.  */
-  SVN_ERR (delta_proplists (b, s_rev, s_path, t_path, change_dir_prop,
-                            dir_baton, pool));
+  /* Compare the property lists.  If we're starting empty, pass a NULL
+     source path so that we add all the properties. */
+  SVN_ERR (delta_proplists (b, s_rev, start_empty ? NULL : s_path, t_path,
+                            change_dir_prop, dir_baton, pool));
 
-  /* Get the list of entries in each of source and target.  */
+  /* Get the list of entries in each of source and target. */
   if (s_path && !start_empty)
     {
       SVN_ERR (get_source_root (b, &s_root, s_rev));
