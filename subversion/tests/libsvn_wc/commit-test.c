@@ -32,6 +32,19 @@
 /* libsvn_test.la requires this symbol */
 svn_error_t *(*test_funcs[])(char **msg, apr_pool_t *p) = { 0, 0 };
 
+
+static void
+print_usage (const char *progname)
+{
+  printf 
+    ("\nUsage: %s DIRNAME [--xml] [--verbose]:  crawls working copy [dir]\n",
+     progname);
+  printf ("Prints human-readable `commit' of directory DIRNAME, ");
+  printf ("or XML if --xml is used.\n");
+  return;
+}
+
+
 int
 main (int argc, char *argv[])
 {
@@ -40,7 +53,7 @@ main (int argc, char *argv[])
   apr_pool_t *globalpool;
   apr_file_t *stdout_handle;
   svn_stream_t *out_stream;
-
+  int i;
   const svn_delta_edit_fns_t *my_editor;
   void *my_edit_baton;
 
@@ -48,14 +61,12 @@ main (int argc, char *argv[])
   apr_array_header_t *targets;
 
   svn_boolean_t use_xml = FALSE;
+  svn_boolean_t be_verbose = FALSE;
 
   /* Process command-line args */
   if (argc < 2)
     {
-      printf 
-        ("\nUsage: %s [dir] [-x]:  crawls working copy [dir]\n",
-         argv[0]);
-      printf ("Prints human-readable `commit', or XML if -x is used.\n");
+      print_usage (argv[0]);
       exit (1);
     }
 
@@ -67,9 +78,18 @@ main (int argc, char *argv[])
   rootdir = svn_string_create (argv[1], globalpool);
   (*((svn_string_t**) apr_array_push (targets))) = rootdir;
 
-  if (argc > 2)
-    if (! strcmp (argv[2], "-x"))
-      use_xml = TRUE;
+  for (i = 2; i < argc; i++)
+    {
+      if (! strcmp (argv[i], "--xml"))
+        use_xml = TRUE;
+      else if (! strcmp (argv[i], "--verbose"))
+        be_verbose = TRUE;
+      else
+        {
+          print_usage (argv[0]);
+          exit (1);
+        }
+    }
       
   /* Get an editor */
 
@@ -92,8 +112,16 @@ main (int argc, char *argv[])
       /* A stream to print to stdout. */
       out_stream = svn_stream_from_stdio (stdout, globalpool);
 
-      err = svn_test_get_editor (&my_editor, &my_edit_baton,
-                                 out_stream, 3, rootdir, globalpool);
+      err = svn_test_get_editor (&my_editor, 
+                                 &my_edit_baton,
+                                 svn_string_create ("COMMIT-TEST", 
+                                                    globalpool),
+                                 out_stream, 
+                                 3, 
+                                 be_verbose, 
+                                 rootdir, 
+                                 svn_path_local_style,
+                                 globalpool);
       if (err)
         goto handle_error;
     }
