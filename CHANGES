@@ -1,19 +1,32 @@
 Version 0.37.0 [Beta Interim 2]
-(branching 20 January 2004, from /branches/1.0-stabilization)
+(branching 24 January 2004, from /branches/1.0-stabilization)
 http://svn.collab.net/repos/svn/tags/0.37.0
 
  User-visible changes:
  * bugfix: buffer overflow for AIX client
  * 'svn merge' now notices ancestry by default. (r8390)
+ * bugfix:  double Ctrl-C on windows no longer wedges repository.
+ * New date formats (see apichange: Rewrite of date parser below)
 
  Developer-visible changes:
  * apichange: Rewrite of date parser (r8327, r8328, r8329) (issue #408)
  * bugfix: svn_fs__bdb_changes_fetch() fouls up change ordering (issue #1695)
  * bugfix: Fix some 'access denied' errors on Windows (r8341, r8352)
- * require at least SWIG 1.3.19 (r8368, r8417, r8418) (issue #1690)
+ * require at least SWIG 1.3.19 (r8368, r8417, r8418) 
+ * support SWIG 1.3.20 and newer (r8417, r8418, r8438-r8442, r8457)
+   (issue #1690)
  * numerous changes to language bindings, to keep up with C API.
  * fix: apr build issues (r8279, r8280, r8318) (issue #1666)
  * more bigger and smaller internal code cleanups and fixes to mention
+ * changed the auth-provider C API to use 'realmstring' on all funcs
+ * check the ra plugin ABI versions.
+ * bugfix: Errors in authentication when --no-interactive is turned on (r8139
+ * fix: ABI problem with blame.  (r8494) (issue #1705)
+ * Change svn_filesize_t to a signed type. (r8489) (issue #1713)
+ * Remove svn_io_file_printf from public API. (r8492) (issue #1653)
+ * extensive changes in the perl client bindings. (r8270)
+ * to many big and small internal code cleanups and fixes to mention here
+
 
 
 Version 0.36.0 [Beta Interim 1]
