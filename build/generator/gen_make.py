@@ -98,8 +98,12 @@ class Generator(gen_base.GeneratorBase):
       # .la files are handled by the standard 'clean' rule; clean all the
       # other targets
       if not isinstance(target, gen_base.TargetScript) \
+         and not isinstance(target, gen_base.TargetProject) \
+         and not isinstance(target, gen_base.TargetExternal) \
+         and not isinstance(target, gen_base.TargetUtility) \
          and target.output[-3:] != '.la':
         cfiles.append(target.output)
+    cfiles.sort()
     self.ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
 
     for area, inst_targets in self.graph.get_deps(gen_base.DT_INSTALL):
