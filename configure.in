@@ -254,13 +254,17 @@ AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',
 AC_DEFINE_UNQUOTED(SVN_PATH_STRIP_TRAILING_SLASHDOT, 0,
         [Non-zero if the trailing /. in paths should be stripped])
 
-dnl Find a python binary, refer
+dnl Find a python 2.X binary, test cases will not run with Python 1.X
 
 AC_PATH_PROG(PYTHON2, python2, none)
 if test "$PYTHON2" = "none"; then
-	AC_PATH_PROG(PYTHON, python, fail-without-python)
+	AC_PATH_PROG(PYTHON, python, none)
 else
 	PYTHON=$PYTHON2
+fi
+if test "$PYTHON" != "none"; then
+  echo "checking for Python 2.0 or newer"
+  ${PYTHON} ${abs_srcdir}/pycheck.py
 fi
 
 AC_PATH_PROG(MAKEINFO, makeinfo, [echo cannot run makeinfo])
