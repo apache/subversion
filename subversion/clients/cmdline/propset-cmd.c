@@ -22,6 +22,7 @@
 
 /*** Includes. ***/
 
+#include "svn_private_config.h"
 #include "svn_cmdline.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
@@ -122,7 +123,7 @@ svn_cl__propset (apr_getopt_t *os,
                                        &rev, opt_state->force, ctx, pool));
       if (! opt_state->quiet) 
         {
-          printf ("property '%s' set on repository revision '%ld'\n",
+          printf (_("property '%s' set on repository revision %ld\n"),
                   pname, rev);
         }      
     }

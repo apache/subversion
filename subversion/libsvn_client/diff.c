@@ -264,7 +264,7 @@ diff_label (const char *path,
 {
   const char *label;
   if (revnum != SVN_INVALID_REVNUM)
-    label = apr_psprintf (pool, "%s\t(revision %ld)",
+    label = apr_psprintf (pool, _("%s\t(revision %ld)"),
                           path, revnum);
   else
     label = apr_psprintf (pool, _("%s\t(working copy)"), path);
@@ -1738,12 +1738,12 @@ diff_repos_repos (const apr_array_header_t *options,
   if (kind1 == svn_node_none)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FOUND, NULL,
-       "'%s' was not found in the repository at revision %ld",
+       _("'%s' was not found in the repository at revision %ld"),
        url1, rev1);
   if (kind2 == svn_node_none)
     return svn_error_createf 
       (SVN_ERR_FS_NOT_FOUND, NULL,
-       "'%s' was not found in the repository at revision %ld",
+       _("'%s' was not found in the repository at revision %ld"),
        url2, rev2);
   if ((kind1 == svn_node_file) || (kind2 == svn_node_file))
     {

@@ -16,6 +16,7 @@
  */
 
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -787,8 +788,8 @@ new_revision_record (void **revision_baton,
       
       if (pb->outstream)
         SVN_ERR (svn_stream_printf (pb->outstream, pool,
-                                    "<<< Started new transaction, based on "
-                                    "original revision %ld\n", rb->rev));
+                                    _("<<< Started new transaction, based on "
+                                      "original revision %ld\n"), rb->rev));
     }
 
   /* If we're parsing revision 0, only the revision are (possibly)
@@ -827,8 +828,8 @@ maybe_add_with_history (struct node_baton *nb,
 
       if (! SVN_IS_VALID_REVNUM(src_rev))
         return svn_error_createf (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                  "Relative source revision %ld is not"
-                                  " available in current repository",
+                                  _("Relative source revision %ld is not"
+                                    " available in current repository"),
                                   src_rev);
 
       SVN_ERR (svn_fs_revision_root (&copy_root, pb->fs, src_rev, pool));
@@ -1104,15 +1105,15 @@ close_revision (void *baton)
       if (new_rev == rb->rev)
         {
           SVN_ERR (svn_stream_printf (pb->outstream, rb->pool,
-                                      "\n------- Committed revision %ld"
-                                      " >>>\n\n", new_rev));
+                                      _("\n------- Committed revision %ld"
+                                        " >>>\n\n"), new_rev));
         }
       else
         {
           SVN_ERR (svn_stream_printf (pb->outstream, rb->pool,
-                                      "\n------- Committed new rev %ld"
-                                      " (loaded from original rev %ld"
-                                      ") >>>\n\n", new_rev, rb->rev));
+                                      _("\n------- Committed new rev %ld"
+                                        " (loaded from original rev %ld"
+                                        ") >>>\n\n"), new_rev, rb->rev));
         }
     }
 

@@ -18,6 +18,7 @@
 
 
 #include <string.h>
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -56,7 +57,7 @@ get_time (apr_time_t *tm,
   if (! date_str)    
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
-       "Failed to find time on revision %ld", rev);
+       _("Failed to find time on revision %ld"), rev);
 
   SVN_ERR (svn_time_from_cstring (tm, date_str->data, pool));
 
@@ -191,11 +192,11 @@ svn_repos_history (svn_fs_t *fs,
   if (! SVN_IS_VALID_REVNUM (start))
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_REVISION, 0, 
-       "Invalid start revision %ld", start);
+       _("Invalid start revision %ld"), start);
   if (! SVN_IS_VALID_REVNUM (end))
     return svn_error_createf 
       (SVN_ERR_FS_NO_SUCH_REVISION, 0, 
-       "Invalid end revision %ld", end);
+       _("Invalid end revision %ld"), end);
 
   /* Ensure that the input is ordered. */
   if (start > end)

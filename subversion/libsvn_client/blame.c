@@ -20,6 +20,7 @@
 
 #include "client.h"
 
+#include "svn_private_config.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -399,9 +400,9 @@ svn_client_blame (const char *target,
     }
   else
     return svn_error_createf (APR_EGENERAL, NULL,
-                              "Revision action '%c' for "
-                              "revision %ld of '%s'"
-                              "lacks a prior revision",
+                              _("Revision action '%c' for "
+                                "revision %ld of '%s'"
+                                "lacks a prior revision"),
                               lmb.action, lmb.eldest->revision,
                               lmb.eldest->path);
 

@@ -22,6 +22,7 @@
 
 /*** Includes. ***/
 
+#include "svn_private_config.h"
 #include "svn_cmdline.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
@@ -85,7 +86,7 @@ svn_cl__proplist (apr_getopt_t *os,
                                         URL, &(opt_state->start_revision),
                                         &rev, ctx, pool));
       
-      printf("Unversioned properties on revision %ld:\n",
+      printf(_("Unversioned properties on revision %ld:\n"),
              rev);
 
       SVN_ERR (svn_cl__print_prop_hash
