@@ -1489,10 +1489,11 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
                            resource->info->root.rev, title);
 
     bb = apr_brigade_create(resource->pool);
-    ap_fprintf(output, bb,
-               "<html><head><title>%s</title></head>"
-               "<body><h1>%s</h1><ul>",
-               title, title);
+    ap_fprintf(output, bb, "<html><head><title>%s</title></head>\n"
+	       "<body>\n <h2>%s</h2>\n <ul>\n", title, title);
+
+    if (resource->info->repos_path && resource->info->repos_path[1] != '\0')
+      ap_fprintf(output, bb, "  <li><a href=\"../\">..</a></li>\n");
 
     /* get a sorted list of the entries */
     sorted = apr_hash_sorted_keys(entries, svn_sort_compare_items_as_paths,
@@ -1526,7 +1527,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
           name = apr_pstrcat(entry_pool, name, "/", NULL);
 
         ap_fprintf(output, bb,
-                   "<li><a href=\"%s\">%s</a></li>",
+                   "  <li><a href=\"%s\">%s</a></li>\n",
                    name, name);
 
         svn_pool_clear(entry_pool);
@@ -1535,9 +1536,9 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
     svn_pool_destroy(entry_pool);
 
     ap_fputs(output, bb,
-             "</ul><hr noshade><em>Powered by "
+             " </ul>\n <hr noshade><em>Powered by "
              "<a href=\"http://subversion.tigris.org/\">Subversion</a>"
-             "</em></body></html>");
+             "</em>\n</body></html>");
 
     bkt = apr_bucket_eos_create();
     APR_BRIGADE_INSERT_TAIL(bb, bkt);
