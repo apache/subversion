@@ -965,7 +965,7 @@ change_file_prop (void *file_baton,
 
   propchange = apr_array_push (b->propchanges);
   propchange->name = apr_pstrdup (b->pool, name);
-  propchange->value = svn_string_dup (value, b->pool);
+  propchange->value = value ? svn_string_dup (value, b->pool) : NULL;
   
   /* Read the baseprops if you haven't already. */
   if (! b->fetched_baseprops)
@@ -997,7 +997,7 @@ change_dir_prop (void *dir_baton,
 
   propchange = apr_array_push (db->propchanges);
   propchange->name = apr_pstrdup (db->pool, name);
-  propchange->value = svn_string_dup (value, db->pool);
+  propchange->value = value ? svn_string_dup (value, db->pool) : NULL;
 
   /* Read the baseprops if you haven't already. */
   if (! db->fetched_baseprops)
