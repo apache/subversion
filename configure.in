@@ -62,6 +62,17 @@ else
   AC_MSG_ERROR([Must configure APR before Subversion.])
 fi
 
+dnl Get extra libraries for neon --------------------
+
+if test -f "$abs_builddir/neon/neon-config"; then
+  AC_MSG_CHECKING([for any extra libraries neon needs])
+  # this is not perfect since it will pick up extra -L flags too,
+  # but that shouldn't do any real damage.
+  NEON_LIBS=`$SHELL $abs_builddir/neon/neon-config --libs | sed -e "s/-lneon//g"`
+  AC_MSG_RESULT([$NEON_LIBS])
+else
+  AC_MSG_ERROR([Must configure neon before Subversion.])
+fi
 
 dnl Set include dir and module library lists for Makefiles -----------------
 
@@ -214,7 +225,8 @@ if test "$enable_shared" = "no"; then
   AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_DAV, 1,
         [Defined if libsvn_client should link against libsvn_ra_dav])
   SVN_RA_LIB_DEPS="subversion/libsvn_ra_dav/libsvn_ra_dav.la"
-  SVN_RA_LIB_LINK="-L\$(abs_builddir)/subversion/libsvn_ra_dav/.libs -lsvn_ra_dav -L\$(abs_builddir)/neon/src/.libs -lneon"
+  SVN_RA_LIB_LINK="-L\$(abs_builddir)/subversion/libsvn_ra_dav/.libs -lsvn_ra_dav \
+	-L\$(abs_builddir)/neon/src/.libs -lneon $NEON_LIBS"
 
   if test "$svn_lib_berkeley_db" = "yes"; then
     AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL, 1,
