@@ -267,10 +267,7 @@ node_is_kind_p (dag_node_t *node, const char *kindstr)
      node kind. */
   skel_t *kind = header->children;
 
-  if (svn_fs__matches_atom (kind, kindstr))  
-    return TRUE;
-  else
-    return FALSE;
+  return svn_fs__matches_atom (kind, kindstr);
 }
 
 int svn_fs__dag_is_file (dag_node_t *node)
