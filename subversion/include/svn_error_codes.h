@@ -1,5 +1,5 @@
-/* svn_error_codes.h:  define error codes specific to Subversion.
- *
+/**
+ * @copyright
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
@@ -13,6 +13,10 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ * @endcopyright
+ *
+ * @file svn_error_codes.h
+ * @brief Subversion error codes.
  */
 
 /* What's going on here?
@@ -60,7 +64,7 @@ extern "C" {
 #define SVN_ERROR_START \
 	typedef enum svn_errno_t { \
 	  SVN_WARNING = APR_OS_START_USERERR + 1,
-#define SVN_ERRDEF(num, offset, str) num = offset,
+#define SVN_ERRDEF(num, offset, str) /** str */ num = offset,
 #define SVN_ERROR_END SVN_ERR_LAST } svn_errno_t;
 
 #define SVN_ERROR_ENUM_DEFINED
@@ -87,6 +91,8 @@ extern "C" {
         the offset, again so that the values of other errors are not
         perturbed.
 */
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 
 #define SVN_ERR_CATEGORY_SIZE 5000
 
@@ -128,6 +134,8 @@ extern "C" {
                                            + (17 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_RA_SVN_CATEGORY_START   (APR_OS_START_USERERR \
                                            + (18 * SVN_ERR_CATEGORY_SIZE))
+
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
 SVN_ERROR_START
 
