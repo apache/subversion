@@ -494,7 +494,7 @@ class RepositoryMirror:
 
     # This corresponds to the 'nodes' table in a Subversion fs.  (We
     # don't need a 'representations' or 'strings' table because we
-    # only track metadata, not file contents.
+    # only track metadata, not file contents.)
     self.nodes_db_file = NODES_DB
     self.nodes_db = anydbm.open(self.nodes_db_file, 'n')
 
