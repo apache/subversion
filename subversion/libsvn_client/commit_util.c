@@ -747,7 +747,8 @@ do_item_commit (const char *url,
   if (notify_func)
     {
       /* Convert an absolute path into a relative one (if possible.) */
-      const char *path;
+      const char *path = NULL;
+
       if (notify_path_prefix)
         {
           if (strcmp (notify_path_prefix, item->path))
