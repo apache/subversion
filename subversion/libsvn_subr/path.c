@@ -778,7 +778,7 @@ svn_path_is_url (const char *path)
 
       alphanum | mark | ":" | "@" | "&" | "=" | "+" | "$" | "," 
 */
-static const int uri_char_validity[256] = {
+static const char uri_char_validity[256] = {
   0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0, 0, 0, 0, 0,
   0, 1, 0, 0, 1, 0, 1, 1,   1, 1, 1, 1, 1, 1, 1, 1,
@@ -849,7 +849,7 @@ svn_path_is_uri_safe (const char *path)
    If no encoding was needed, return PATH, else return a new string allocated
    in POOL. */
 static const char *
-uri_escape (const char *path, const int table[], apr_pool_t *pool)
+uri_escape (const char *path, const char table[], apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
   apr_size_t i, copied = 0;
@@ -914,7 +914,7 @@ svn_path_uri_encode (const char *path, apr_pool_t *pool)
     return ret;
 }
 
-static const int iri_escape_chars[256] = {
+static const char iri_escape_chars[256] = {
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
@@ -941,7 +941,7 @@ svn_path_uri_from_iri (const char *iri, apr_pool_t *pool)
   return uri_escape (iri, iri_escape_chars, pool);
 }
 
-const int uri_autoescape_chars[256] = {
+const char uri_autoescape_chars[256] = {
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   0, 1, 0, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
