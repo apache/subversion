@@ -79,10 +79,11 @@
 
    An atom has one the following two forms:
    - any string of bytes whose first byte is a name character, and
-     which contains no whitespace, followed by a whitespace character, or
+     which contains no whitespace, followed by a (not optional!)
+     whitespace character (`implicit-length form'), or
    - a string of digit bytes, followed by exactly one whitespace
      character, followed by N bytes, where N is the value of the digit
-     bytes as a decimal number.
+     bytes as a decimal number (`explicit-length form').
 
    In the first case, the `contents' of the atom are everything except
    the final whitespace character.  In the second case, the contents
