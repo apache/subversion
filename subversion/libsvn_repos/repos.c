@@ -31,11 +31,6 @@
 #include "repos.h"
 
 
-/* When creating the on-disk structure for a repository, we will look for
-   a builtin template of this name.  */
-#define DEFAULT_TEMPLATE_NAME "default"
-
-
 
 /* Path accessor functions. */
 
@@ -51,6 +46,20 @@ const char *
 svn_repos_db_env (svn_repos_t *repos, apr_pool_t *pool)
 {
   return apr_pstrdup (pool, repos->db_path);
+}
+
+
+const char *
+svn_repos_conf_dir (svn_repos_t *repos, apr_pool_t *pool)
+{
+  return apr_pstrdup (pool, repos->conf_path);
+}
+
+
+const char *
+svn_repos_svnserve_conf (svn_repos_t *repos, apr_pool_t *pool)
+{
+  return svn_path_join (repos->conf_path, SVN_REPOS__CONF_SVNSERVE_CONF, pool);
 }
 
 
@@ -738,70 +747,15 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-static void
-init_repos_dirs (svn_repos_t *repos, const char *path, apr_pool_t *pool)
-{
-  repos->path = apr_pstrdup (pool, path);
-  repos->db_path = svn_path_join (path, SVN_REPOS__DB_DIR, pool);
-  repos->dav_path = svn_path_join (path, SVN_REPOS__DAV_DIR, pool);
-  repos->hook_path = svn_path_join (path, SVN_REPOS__HOOK_DIR, pool);
-  repos->lock_path = svn_path_join (path, SVN_REPOS__LOCK_DIR, pool);
-}
-
-
 static svn_error_t *
-create_repos_structure (svn_repos_t *repos,
-                        const char *path,
-                        apr_pool_t *pool)
+create_conf (svn_repos_t *repos, apr_pool_t *pool)
 {
-  /* Create the top-level repository directory. */
-  SVN_ERR_W (create_repos_dir (path, pool),
-             "could not create top-level directory");
+  /* Create the hook directory. */
+  SVN_ERR_W (create_repos_dir (repos->conf_path, pool),
+             "creating conf directory");
 
-  /* Create the DAV sandbox directory.  */
-  SVN_ERR_W (create_repos_dir (repos->dav_path, pool),
-             "creating DAV sandbox dir");
-
-  /* Create the lock directory.  */
-  SVN_ERR (create_locks (repos, pool));
-
-  /* Create the hooks directory.  */
-  SVN_ERR (create_hooks (repos, pool));
-
-  /* Write the top-level README file. */
+  /* Write a default template for svnserve.conf. */
   {
-    const char *readme_file_name 
-      = svn_path_join (path, SVN_REPOS__README, pool);
-    static const char * const readme_contents =
-      "This is a Subversion repository; use the 'svnadmin' tool to examine"
-      APR_EOL_STR
-      "it.  Do not add, delete, or modify files here unless you know how"
-      APR_EOL_STR
-      "to avoid corrupting the repository."
-      APR_EOL_STR
-      APR_EOL_STR
-      "The directory \""
-      SVN_REPOS__DB_DIR
-      "\" contains a Berkeley DB environment."
-      APR_EOL_STR
-      "You may need to tweak the values in \""
-      SVN_REPOS__DB_DIR
-      "/DB_CONFIG\" to match the"
-      APR_EOL_STR
-      "requirements of your site."
-      APR_EOL_STR
-      APR_EOL_STR
-      "Visit http://subversion.tigris.org/ for more information."
-      APR_EOL_STR;
-
-    SVN_ERR_W (svn_io_file_create (readme_file_name, readme_contents, pool),
-               "creating readme file");
-  }
-
-  /* Write the top-level svnserve.conf file. */
-  {
-    const char *svnserve_conf_file_name
-      = svn_path_join (path, SVN_REPOS__SVNSERVE_CONF, pool);
     static const char * const svnserve_conf_contents =
       "### This file controls the configuration of the svnserve daemon, if you"
       APR_EOL_STR
@@ -852,8 +806,75 @@ create_repos_structure (svn_repos_t *repos,
       "# realm = My First Repository"
       APR_EOL_STR;
 
-    SVN_ERR_W (svn_io_file_create (svnserve_conf_file_name,
+    SVN_ERR_W (svn_io_file_create (svn_repos_svnserve_conf (repos, pool),
                                    svnserve_conf_contents, pool),
+               "creating svnserve.conf file");
+  }
+
+  return SVN_NO_ERROR;
+}
+
+static void
+init_repos_dirs (svn_repos_t *repos, const char *path, apr_pool_t *pool)
+{
+  repos->path = apr_pstrdup (pool, path);
+  repos->db_path = svn_path_join (path, SVN_REPOS__DB_DIR, pool);
+  repos->dav_path = svn_path_join (path, SVN_REPOS__DAV_DIR, pool);
+  repos->conf_path = svn_path_join (path, SVN_REPOS__CONF_DIR, pool);
+  repos->hook_path = svn_path_join (path, SVN_REPOS__HOOK_DIR, pool);
+  repos->lock_path = svn_path_join (path, SVN_REPOS__LOCK_DIR, pool);
+}
+
+
+static svn_error_t *
+create_repos_structure (svn_repos_t *repos,
+                        const char *path,
+                        apr_pool_t *pool)
+{
+  /* Create the top-level repository directory. */
+  SVN_ERR_W (create_repos_dir (path, pool),
+             "could not create top-level directory");
+
+  /* Create the DAV sandbox directory.  */
+  SVN_ERR_W (create_repos_dir (repos->dav_path, pool),
+             "creating DAV sandbox dir");
+
+  /* Create the lock directory.  */
+  SVN_ERR (create_locks (repos, pool));
+
+  /* Create the hooks directory.  */
+  SVN_ERR (create_hooks (repos, pool));
+
+  /* Create the conf directory.  */
+  SVN_ERR (create_conf (repos, pool));
+
+  /* Write the top-level README file. */
+  {
+    const char *readme_file_name 
+      = svn_path_join (path, SVN_REPOS__README, pool);
+    static const char * const readme_contents =
+      "This is a Subversion repository; use the 'svnadmin' tool to examine"
+      APR_EOL_STR
+      "it.  Do not add, delete, or modify files here unless you know how"
+      APR_EOL_STR
+      "to avoid corrupting the repository."
+      APR_EOL_STR
+      APR_EOL_STR
+      "The directory \""
+      SVN_REPOS__DB_DIR
+      "\" contains a Berkeley DB environment."
+      APR_EOL_STR
+      "You may need to tweak the values in \""
+      SVN_REPOS__DB_DIR
+      "/DB_CONFIG\" to match the"
+      APR_EOL_STR
+      "requirements of your site."
+      APR_EOL_STR
+      APR_EOL_STR
+      "Visit http://subversion.tigris.org/ for more information."
+      APR_EOL_STR;
+
+    SVN_ERR_W (svn_io_file_create (readme_file_name, readme_contents, pool),
                "creating readme file");
   }
 

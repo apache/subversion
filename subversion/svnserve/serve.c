@@ -947,8 +947,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
                                server_baton_t *b, apr_pool_t *pool)
 {
   apr_status_t apr_err;
-  const char *path, *full_path, *path_apr, *root_apr, *repos_root;
-  const char *cfg_path, *pwdb_path;
+  const char *path, *full_path, *path_apr, *root_apr, *repos_root, *pwdb_path;
   char *buffer;
 
   /* Decode any escaped characters in the URL. */
@@ -994,13 +993,14 @@ static svn_error_t *find_repos(const char *url, const char *root,
   b->repos_url = apr_pstrmemdup(pool, url, strlen(url) - strlen(b->fs_path));
 
   /* Read repository configuration. */
-  cfg_path = svn_path_join(repos_root, "svnserve.conf", pool);
-  SVN_ERR(svn_config_read(&b->cfg, cfg_path, FALSE, pool));
+  SVN_ERR(svn_config_read(&b->cfg, svn_repos_svnserve_conf(b->repos, pool),
+                          FALSE, pool));
   svn_config_get(b->cfg, &pwdb_path, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_PASSWORD_DB, NULL);
   if (pwdb_path)
     {
-      pwdb_path = svn_path_join(repos_root, pwdb_path, pool);
+      pwdb_path = svn_path_join(svn_repos_conf_dir(b->repos, pool),
+                                pwdb_path, pool);
       SVN_ERR(svn_config_read(&b->pwdb, pwdb_path, TRUE, pool));
       b->realm = apr_pstrmemdup(pool, path, strlen(repos_root));
       svn_config_get(b->cfg, &b->realm, SVN_CONFIG_SECTION_GENERAL,

@@ -36,14 +36,14 @@ extern "C" {
 
 /* The top-level repository dir contains a README and various
    subdirectories.  */
-#define SVN_REPOS__README        "README.txt"    /* Explanation. */
-#define SVN_REPOS__SVNSERVE_CONF "svnserve.conf" /* svnserve configuration. */
-#define SVN_REPOS__FORMAT        "format"        /* Stores the current version
-                                                    of the repository. */
-#define SVN_REPOS__DB_DIR        "db"            /* Where Berkeley lives. */
-#define SVN_REPOS__DAV_DIR       "dav"           /* DAV sandbox. */
-#define SVN_REPOS__LOCK_DIR      "locks"         /* Lock files live here. */
-#define SVN_REPOS__HOOK_DIR      "hooks"         /* Hook programs. */
+#define SVN_REPOS__README      "README.txt" /* Explanation for trespassers. */
+#define SVN_REPOS__FORMAT      "format"     /* Stores the current version
+                                               of the repository. */
+#define SVN_REPOS__DB_DIR      "db"         /* Where Berkeley lives. */
+#define SVN_REPOS__DAV_DIR     "dav"        /* DAV sandbox. */
+#define SVN_REPOS__LOCK_DIR    "locks"      /* Lock files live here. */
+#define SVN_REPOS__HOOK_DIR    "hooks"      /* Hook programs. */
+#define SVN_REPOS__CONF_DIR    "conf"       /* Configuration files. */
 
 /* Things for which we keep lockfiles. */
 #define SVN_REPOS__DB_LOCKFILE "db.lock" /* Our Berkeley lockfile. */
@@ -63,6 +63,10 @@ extern "C" {
 #define SVN_REPOS__HOOK_DESC_EXT        ".tmpl"
 
 
+/* In the repository conf directory, look for these files. */
+#define SVN_REPOS__CONF_SVNSERVE_CONF "svnserve.conf"
+
+
 /* The Repository object, created by svn_repos_open() and
    svn_repos_create(), allocated in POOL. */
 struct svn_repos_t
@@ -75,6 +79,9 @@ struct svn_repos_t
 
   /* The path to the repository's dav directory. */
   char *dav_path;
+
+  /* The path to the repository's conf directory. */
+  char *conf_path;
 
   /* The path to the repository's hooks directory. */
   char *hook_path;

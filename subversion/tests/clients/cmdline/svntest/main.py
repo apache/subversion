@@ -303,7 +303,7 @@ def create_repos(path):
   run_svnadmin("create", path, "--bdb-txn-nosync")
 
   # Allow unauthenticated users to write to the repos, for ra_svn testing.
-  file_append(os.path.join(path, "svnserve.conf"),
+  file_append(os.path.join(path, "conf", "svnserve.conf"),
               "[general]\nanon-access = write\n");
 
   # make the repos world-writeable, for mod_dav_svn's sake.
