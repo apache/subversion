@@ -89,20 +89,34 @@ class CollectData(rcsparse.Sink):
     self.branchlist = {}
 
   def set_branch_name(self, revision, name):
+    """Record that REVISION is the branch number for BRANCH_NAME.
+    REVISION is an RCS branch number with an odd number of components,
+    for example '1.7.2' (never '1.7.0.2')."""
     self.branch_names[revision] = name
 
   def get_branch_name(self, revision):
+    """Return the name of the branch whose branch number is REVISION.
+    REVISION is an RCS branch number with an odd number of components,
+    for example '1.7.2' (never '1.7.0.2')."""
     brev = revision[:revision.rindex(".")]
     if not self.branch_names.has_key(brev):
       return None
     return self.branch_names[brev]
 
   def add_branch_point(self, revision, branch_name):
+    """Record that BRANCH_NAME sprouts from REVISION.
+    REVISION is a non-branch revision number with an even number of
+    components, for example '1.7' (never '1.7.2' nor '1.7.0.2')."""
     if not self.branchlist.has_key(revision):
       self.branchlist[revision] = []
     self.branchlist[revision].append(branch_name)
 
   def add_cvs_branch(self, revision, branch_name):
+    """Record the root revision and branch revision for BRANCH_NAME,
+    based on REVISION.  REVISION is a CVS branch number having an even
+    number of components where the second-to-last is '0'.  For
+    example, if it's '1.7.0.2', then record that BRANCH_NAME sprouts
+    from 1.7 and has branch number 1.7.2."""
     last_dot = revision.rfind(".")
     branch_rev = revision[:last_dot]
     last2_dot = branch_rev.rfind(".")
@@ -111,18 +125,28 @@ class CollectData(rcsparse.Sink):
     self.add_branch_point(branch_rev[:last2_dot], branch_name)
 
   def get_tags(self, revision):
+    """Return a list of all tag names attached to REVISION.
+    REVISION is a regular revision number like '1.7', and the result
+    never includes branch names, only plain tags."""
     if self.taglist.has_key(revision):
       return self.taglist[revision]
     else:
       return []
 
   def get_branches(self, revision):
+    """Return a list of all branch names that sprout from REVISION.
+    REVISION is a regular revision number like '1.7'."""
     if self.branchlist.has_key(revision):
       return self.branchlist[revision]
     else:
       return []
 
   def define_tag(self, name, revision):
+    """Record a bidirectional mapping between symbolic NAME and REVISION
+    REVISION is an unprocessed revision number from the RCS file's
+    header, for example: '1.7', '1.7.0.2', or '1.1.1' or '1.1.1.1'.
+    This function will determine what kind of symbolic name it is by
+    inspection, and record it in the right places."""
     if branch_tag.match(revision):
       self.add_cvs_branch(revision, name)
     elif vendor_tag.match(revision):
@@ -1144,6 +1168,9 @@ def pass4(ctx):
       ### TODO: working here.  Because of this condition, we're not
       ### seeing tags and branches rooted in initial revisions (CVS's
       ### infamous "1.1.1.1").
+      ###
+      ### See http://www.cs.uh.edu/~wjin/cvs/train/cvstrain-7.4.4.html
+      ### for excellent clarification of the vendor branch thang.
       continue
 
     # Each time we read a new line, we scan the commits we've
