@@ -99,6 +99,8 @@ load_ra_module (svn_ra_init_func_t *func,
 #if 0
         char errbuf[200];
         apr_dso_error(dso, errbuf, sizeof(errbuf));
+
+        fprintf(stderr, "DSO error: %s\n", errbuf);
 #endif
 
         /* Just ignore the error. Assume the library isn't present */
