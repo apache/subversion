@@ -7,7 +7,7 @@
 
   <xsl:template match="svn">
     <html>
-      <header>
+      <head>
         <title>
           <xsl:if test="string-length(index/@name) != 0">
             <xsl:value-of select="index/@name"/>
@@ -16,7 +16,7 @@
           <xsl:value-of select="index/@path"/>
         </title>
         <link rel="stylesheet" type="text/css" href="/svnindex.css"/>
-      </header>
+      </head>
       <body>
         <div id="svn">
           <xsl:apply-templates/>
