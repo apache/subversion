@@ -138,15 +138,18 @@ commit_subject_prefix =
 # The default prefix for the Subject: header for propchanges
 propchange_subject_prefix =
 
-# The default From: and To: addresses for commit messages.  If the
-# from_addr is not specified or it is specified but there is no text
-# after the `=', then the revision's author is used as the from
-# address.  If the revision author is not specified, such as when a
-# commit is done without requiring authentication and authorization,
-# then the string 'no_author' is used.  You can specify a default
-# from_addr here and if you want to have a particular for_repos group
-# use the author as the from address, you can use "from_addr =".
+# The default From: address for messages.  If the from_addr is not
+# specified or it is specified but there is no text after the `=',
+# then the revision's author is used as the from address.  If the
+# revision author is not specified, such as when a commit is done
+# without requiring authentication and authorization, then the string
+# 'no_author' is used.  You can specify a default from_addr here and
+# if you want to have a particular for_repos group use the author as
+# the from address, you can use "from_addr =".
 from_addr = invalid@example.com
+
+# The default To: addresses for message.  One or more addresses,
+# separated by whitespace (no commas):
 to_addr = invalid@example.com
 
 # If this is set, then a Reply-To: will be inserted into the message
