@@ -412,15 +412,46 @@ def generate_list(output, header, changelist, selection):
 
 
 def generate_diff(output, cfg, repos, date, change, group, params, pool):
-
   if change.item_kind == svn.core.svn_node_dir:
     # all changes were printed in the summary. nothing to do.
     return
 
-  if not change.path:
-    ### params is a bit silly here
+  gen_diffs = cfg.get('generate_diffs', group, params)
+
+  ### Do a little dance for deprecated options.  Note that even if you
+  ### don't have an option anywhere in your configuration file, it
+  ### still gets returned as non-None.
+  if len(gen_diffs):
+    diff_add = False
+    diff_copy = False
+    diff_delete = False
+    diff_modify = False
+    list = string.split(gen_diffs, " ")
+    for item in list:
+      if item == 'add':
+        diff_add = True
+      if item == 'copy':
+        diff_copy = True
+      if item == 'delete':
+        diff_delete = True
+      if item == 'modify':
+        diff_modify = True
+  else:
+    diff_add = True
+    diff_copy = True
+    diff_delete = True
+    diff_modify = True
+    ### These options are deprecated
     suppress = cfg.get('suppress_deletes', group, params)
     if suppress == 'yes':
+      diff_delete = False
+    suppress = cfg.get('suppress_adds', group, params)
+    if suppress == 'yes':
+      diff_add = False
+
+  if not change.path:
+    ### params is a bit silly here
+    if diff_delete == False:
       # a record of the deletion is in the summary. no need to write
       # anything further here.
       return
@@ -436,10 +467,15 @@ def generate_diff(output, cfg, repos, date, change, group, params, pool):
     if change.base_path and (change.base_rev != -1):
       # this file was copied.
 
-      # copies with no changes are reported in the header, so we can just
-      # skip them here.
       if not change.text_changed:
+        # copies with no changes are reported in the header, so we can just
+        # skip them here.
         return
+
+      if diff_copy == False:
+        # a record of the copy is in the summary, no need to write
+        # anything further here.
+	return
 
       # note that we strip the leading slash from the base (copyfrom) path
       output.write('\nCopied: %s (from r%d, %s)\n'
@@ -452,8 +488,7 @@ def generate_diff(output, cfg, repos, date, change, group, params, pool):
       label2 = '%s\t%s' % (change.path, date)
       singular = False
     else:
-      suppress = cfg.get('suppress_adds', group, params)
-      if suppress == 'yes':
+      if diff_add == False:
         # a record of the addition is in the summary. no need to write
         # anything further here.
         return
@@ -467,6 +502,11 @@ def generate_diff(output, cfg, repos, date, change, group, params, pool):
     # don't bother to show an empty diff. prolly just a prop change.
     return
   else:
+    if diff_modify == False:
+      # a record of the modification is in the summary, no need to write
+      # anything further here.
+      return
+
     output.write('\nModified: %s\n' % change.path)
     diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
                            change.base_path[1:],
