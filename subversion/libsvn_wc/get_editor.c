@@ -113,20 +113,22 @@ check_existence (svn_string_t *path,
 #define SVN_DIR_SEPARATOR '/'
 
 static void
-path_add_component (svn_string_t *path_so_far, 
+path_add_component (svn_string_t *path, 
                     svn_string_t *component,
                     apr_pool_t *pool)
 {
   char dirsep = SVN_DIR_SEPARATOR;
-  svn_string_appendbytes (path_so_far, &dirsep, 1, pool);
-  svn_string_appendstr (path_so_far, component, pool);
+  if (! svn_string_isempty (path))
+    svn_string_appendbytes (path, &dirsep, 1, pool);
+  svn_string_appendstr (path, component, pool);
 }
 
 
-static apr_off_t
+static void
 path_remove_component (svn_string_t *path)
 {
-  return svn_string_chop_back_to_char (path, SVN_DIR_SEPARATOR);
+  if (! svn_string_chop_back_to_char (path, SVN_DIR_SEPARATOR))
+    svn_string_setempty (path);
 }
 
 
@@ -135,7 +137,7 @@ struct w_baton
 {
   svn_string_t *top_dir;
   int top_dir_done_p;
-  apr_pool_t *walk_pool;
+  apr_pool_t *pool;
 };
 
 
@@ -162,18 +164,29 @@ add_directory (svn_string_t *name,
      repository has no name, so if no subdir of the repository is
      specified in the checkout, the client must make up a local name
      for the root (i.e., the -d option should probably be mandatory if
-     no other name was given). */
+     no other name was given). 
+  */
 
   /* todo: it's convenient under Unix, and possibly some other OS's,
      to just store the path as a string.  But eventually we may want
-     some more general sort of path-chain, and store it in a more
-     general p_baton. */
-  svn_string_t *path_already = (svn_string_t *) parent_baton;
+     some more general sort of path-chain.
+  */
+  apr_status_t apr_err;
+  svn_string_t *path = (svn_string_t *) parent_baton;
   struct w_baton *wb = (struct w_baton *) walk_baton;
 
-  path_add_component (path_already, name, wb->walk_pool);
-  printf ("entering directory: %s\n", path_already->data);
-  *child_baton = path_already;
+  path_add_component (path, name, wb->pool);
+  printf ("entering directory: %s\n", path->data);
+
+  /* kff todo: we're going to be doing this a lot.  Maybe we should
+     have a wrapper around apr_make_dir().  But Yet Another
+     Wrapper... Hmmm. */
+  apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, wb->pool);
+
+  if (apr_err)
+    return svn_create_error (apr_err, 0, path->data, NULL, wb->pool);
+
+  *child_baton = path;
   return 0;
 }
 
@@ -194,17 +207,8 @@ finish_directory (void *child_baton)
 {
   svn_string_t *path = (svn_string_t *) child_baton;
 
-  printf ("leaving  directory: %s\n", path->data);
   path_remove_component (path);
 
-  return 0;
-}
-
-
-static svn_error_t *
-finish_file (void *child_baton)
-{
-  printf ("\n");
   return 0;
 }
 
@@ -213,6 +217,9 @@ static svn_error_t *
 window_handler (svn_delta_window_t *window, void *baton)
 {
   int i;
+  svn_string_t *filename = (svn_string_t *) baton;
+
+  printf ("   ......... FILE: %s\n", filename->data);
 
   for (i = 0; i < window->num_ops; i++)
     {
@@ -241,23 +248,19 @@ window_handler (svn_delta_window_t *window, void *baton)
 
 
 static svn_error_t *
-begin_textdelta (void *walk_baton, void *parent_baton,
-                 svn_text_delta_window_handler_t **handler,
-                 void **handler_baton)
-{
-  *handler = window_handler;
-  return 0;
-}
-
-
-static svn_error_t *
 add_file (svn_string_t *name,
           void *walk_baton, void *parent_baton,
           svn_string_t *ancestor_path,
           svn_vernum_t ancestor_version)
 {
+  svn_string_t *path = (svn_string_t *) parent_baton;
+  struct w_baton *wb = (struct w_baton *) walk_baton;
+
+  path_add_component (path, name, wb->pool);
+
   printf ("add file \"%s\" (%s, %ld)\n",
-          name->data, ancestor_path->data, ancestor_version);
+          path->data, ancestor_path->data, ancestor_version);
+
   return 0;
 }
 
@@ -270,6 +273,67 @@ replace_file (svn_string_t *name,
 {
   printf ("replace file \"%s\" (%s, %ld)\n",
           name->data, ancestor_path->data, ancestor_version);
+  return 0;
+}
+
+
+static svn_error_t *
+finish_file (void *child_baton)
+{
+  svn_string_t *fname = (svn_string_t *) child_baton;
+
+  /* Lop off the filename, so baton is the parent directory again. */
+  path_remove_component (fname);
+  return 0;
+}
+
+
+static svn_error_t *
+begin_textdelta (void *walk_baton, void *parent_baton,
+                 svn_text_delta_window_handler_t **handler,
+                 void **handler_baton)
+{
+  /* kff todo: this also needs to handle already-present files by
+     applying a text-delta, eventually.  And operate on a tmp file
+     first, for atomicity/crash-recovery, etc, etc. */
+
+  svn_string_t *fname = (svn_string_t *) parent_baton;
+
+#if 0 /* kff todo */
+  struct w_baton *wb = (struct w_baton *) walk_baton;
+  apr_file_t *sink = NULL;
+  apr_status_t apr_err;
+  apr_err = apr_open (&sink, fname->data,
+                      (APR_WRITE | APR_CREATE),
+                      APR_OS_DEFAULT,
+                      wb->pool);
+
+  if (apr_err)
+    return svn_create_error (apr_err, 0, fname->data, NULL, pool);
+
+  *handler_baton = sink;
+#endif /* 0 */
+
+  *handler_baton = fname;   /* for now */
+  *handler = window_handler;
+
+  return 0;
+}
+
+
+static svn_error_t *
+finish_textdelta (void *walk_baton, void *parent_baton)
+{
+#if 0   /* kff todo */
+  /* This doesn't work.  We need a way to get the window_handler's
+     handler_baton in here, because that's the apr_file_t pointer. */
+  apr_file_t *f = (apr_file_t *) child_baton;
+  apr_err = apr_close (f);
+  
+  if (apr_err)
+    return svn_create_error (apr_err, 0, NULL, NULL, pool);
+#endif /* 0 */
+
   return 0;
 }
 
@@ -324,11 +388,12 @@ svn_wc_apply_delta (void *delta_src,
   walker.add_file          = add_file;
   walker.replace_file      = replace_file;
   walker.begin_textdelta   = begin_textdelta;
+  walker.finish_textdelta  = finish_textdelta;
 
   /* Set up the batons... */
   memset (&w_baton, 0, sizeof (w_baton));
   w_baton.top_dir = target;   /* Remember, target might be null. */
-  w_baton.walk_pool = pool;
+  w_baton.pool = pool;
   telescoping_path = svn_string_create ("", pool);
 
   /* ... and walk! */
