@@ -208,12 +208,12 @@ def am_reps(ctx):
             len(rep.windows) != 1 and "s" or ""))
           for window in rep.windows:
             noterep = notestr = ""
-            if not ctx.reps_db.has_key(window[1][0][2]):
+            if not ctx.reps_db.has_key(window.vs_rep):
               noterep = " *MISS*"
-            if not ctx.strings_db.has_key(window[1][2]):
+            if not ctx.strings_db.has_key(window.str):
               notestr = " *MISS*"
-            print "\toff %s len %s vs-rep %s%s str %s%s" % (window[0],
-                window[1][1], window[1][0][2], noterep, window[1][2], notestr)
+            print "\toff %s len %s vs-rep %s%s str %s%s" % (window.offset,
+                window.size, window.vs_rep, noterep, window.str, notestr)
         else:
           print lead+"*** UNKNOWN REPRESENTATION TYPE ***"
       rec = cur.next()

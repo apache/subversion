@@ -5,7 +5,7 @@ from types import *
 
 def parse(s):
   if s[0] != '(' and s[-1] != ')':
-    raise ValueError("Improperly bounded skel")
+    raise ValueError("Improperly bounded skel: '%s'" % s)
   wholeskel = s
   s = s[1:-1].lstrip()
   prev_accums = []
@@ -54,7 +54,7 @@ def unparse(struc):
   accum = []
   for ent in struc:
     if type(ent) == StringType:
-      if _ok_implicit.match(ent[0]):
+      if len(ent) > 0 and _ok_implicit.match(ent[0]):
         accum.append(ent)
       else:
         accum.append(str(len(ent)))
@@ -65,7 +65,7 @@ def unparse(struc):
 
 
 class Rev:
-  def __init__(self, skelstring):
+  def __init__(self, skelstring="(revision null)"):
     sk = parse(skelstring)
     if len(sk) == 2 and sk[0] == "revision" and type(sk[1]) == StringType:
       self.txn = sk[1]
@@ -77,7 +77,7 @@ class Rev:
 
 
 class Change:
-  def __init__(self, skelstring):
+  def __init__(self, skelstring="(change null null null 0  0 )"):
     sk = parse(skelstring)
     if len(sk) == 6 and sk[0] == "change" and type(sk[1]) == type(sk[2]) \
         == type(sk[3]) == type(sk[4]) == type(sk[5]) == StringType:
@@ -95,7 +95,7 @@ class Change:
 
 
 class Copy:
-  def __init__(self, skelstring):
+  def __init__(self, skelstring="(copy null null null)"):
     sk = parse(skelstring)
     if len(sk) == 4 and sk[0] in ("copy", "soft-copy") and type(sk[1]) \
         == type(sk[2]) == type(sk[3]) == StringType:
@@ -111,7 +111,7 @@ class Copy:
 
 
 class Node:
-  def __init__(self,skelstring):
+  def __init__(self,skelstring="((file null null 1 0) null null)"):
     sk = parse(skelstring)
     if (len(sk) == 3 or (len(sk) == 4 and type(sk[3]) == StringType)) \
         and type(sk[0]) == ListType and type(sk[1]) == StringType \
@@ -139,7 +139,7 @@ class Node:
 
 
 class Txn:
-  def __init__(self,skelstring):
+  def __init__(self,skelstring="(transaction null null () ())"):
     sk = parse(skelstring)
     if len(sk) == 5 and sk[0] in ("transaction", "committed", "dead") \
         and type(sk[1]) == type(sk[2]) == StringType \
@@ -164,8 +164,18 @@ class Txn:
       self.copies) )
 
 
+class SvnDiffWindow:
+  def __init__(self, skelstructure):
+    self.offset = skelstructure[0]
+    self.str = skelstructure[1][0][2]
+    self.size = skelstructure[1][1]
+    self.vs_rep = skelstructure[1][2]
+    #self.rep_offset = skelstructure[1][3]
+    
+
 class Rep:
-  def __init__(self,skelstring):
+  def __init__(self, skelstring="((fulltext 0  (md5 16 \0\0\0\0\0\0\0\0" \
+          "\0\0\0\0\0\0\0\0)) null)"):
     sk = parse(skelstring)
     if type(sk[0]) == ListType and len(sk[0]) == 3 \
         and type(sk[0][1]) == StringType \
@@ -178,9 +188,9 @@ class Rep:
           if len(sk) == 2 and sk[0][0] == "fulltext":
             self.str = sk[1]
           elif len(sk) >= 2 and sk[0][0] == "delta":
-            self.windows = sk[1:]
+            self.windows = map(SvnDiffWindow, sk[1:])
     else:
-      raise ValueError("Invalid representation skel: %s" % skelstring)
+      raise ValueError("Invalid representation skel: %s" % repr(skelstring))
 
   def unparse(self):
     structure = [ [self.kind, self.txn, [self.cksumtype, self.cksum] ] ]
