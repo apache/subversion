@@ -674,6 +674,49 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
       return NULL;
     }
 
+  /* Set the txn author if not previously set.  Protect against multi-author
+   * commits by verifying authenticated user associated with the current
+   * request is the same as the txn author.
+   * Note that anonymous requests are being excluded as being a change
+   * in author, because the commit may touch areas of the repository
+   * that are anonymous writeable as well as areas that are not.
+   */
+  if (comb->priv.repos->username)
+    {
+      svn_string_t *current_author;
+      svn_string_t request_author;
+
+      serr = svn_fs_txn_prop(&current_author, comb->priv.root.txn,
+               SVN_PROP_REVISION_AUTHOR, pool);
+      if (serr != NULL)
+        {
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                   "Failed to retrieve author of the SVN FS transaction "
+                   "corresponding to the specified activity.",
+                   pool);
+        }
+
+      request_author.data = comb->priv.repos->username;
+      request_author.len = strlen(request_author.data);
+      if (!current_author)
+        {
+          serr = svn_fs_change_txn_prop(comb->priv.root.txn,
+                   SVN_PROP_REVISION_AUTHOR, &request_author, pool);
+          if (serr != NULL)
+            {
+              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                       "Failed to set the author of the SVN FS transaction "
+                       "corresponding to the specified activity.",
+                       pool);
+            }
+        }
+      else if (!svn_string_compare(current_author, &request_author))
+        {
+          return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                   "Multi-author commits not supported.");
+        }
+    }
+
   /* get the root of the tree */
   serr = svn_fs_txn_root(&comb->priv.root.root, comb->priv.root.txn, pool);
   if (serr != NULL)
