@@ -1115,14 +1115,7 @@ whether consensus has been reached, and if so, of what kind.  It does
 access.  Expertise in using one's mail reading software is optional,
 but recommended :-).
 
-This is an important role.  Having outstanding patches organized in
-the issue tracker makes them *much* more manageable; many changes are
-in Subversion today because they were caught by the Patch Manager.  We
-currently do not have a Patch Manager.  Sander Roobol, our first PM,
-did a great job for a long time, but he got swamped with some other
-stuff and had to step down.  We are now seeking a new Patch Manager.
-Please post to dev@subversion.tigris.org if you're interested.
-
+The current patch manager is Michael Thelen <thelenm@cs.utah.edu>.
 
 
 Filing bugs / issues
