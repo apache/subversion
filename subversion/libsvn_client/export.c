@@ -259,7 +259,7 @@ copy_versioned_files (const char *from,
                      "(local)" since we can't always determine the
                      current user's username */
                   fmt = "%ldM";
-                  author = "(local)";
+                  author = _("(local)");
                 }
               else
                 {

@@ -37,6 +37,7 @@
 #include "svn_time.h"
 #include "client.h"
 
+#include "svn_private_config.h"
 
 
 /*** Public Interfaces. ***/
@@ -93,11 +94,11 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
       SVN_ERR (ra_lib->check_path (session, "", revnum, &kind, pool));
       if (kind == svn_node_none)
         return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                  "URL '%s' doesn't exist", URL);
+                                  _("URL '%s' doesn't exist"), URL);
       else if (kind == svn_node_file)
-        return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE , NULL,
-                                  "URL '%s' refers to a file, not a directory",
-                                  URL);
+        return svn_error_createf
+          (SVN_ERR_UNSUPPORTED_FEATURE , NULL,
+           _("URL '%s' refers to a file, not a directory"), URL);
 
       /* Get the repos UUID. */
       SVN_ERR (ra_lib->get_uuid (session, &uuid, pool));
@@ -151,10 +152,10 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
               const char *errmsg;
               errmsg = apr_psprintf 
                 (pool,
-                 "'%s' is already a working copy for a different URL", path);
+                 _("'%s' is already a working copy for a different URL"), path);
               if (entry->incomplete)
                 errmsg = apr_pstrcat
-                  (pool, errmsg, "; run 'svn update' to complete it.", NULL);
+                  (pool, errmsg, _("; run 'svn update' to complete it."), NULL);
 
               return svn_error_create (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                                        errmsg);
@@ -163,7 +164,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
       else
         {
           return svn_error_createf (SVN_ERR_WC_NODE_KIND_CHANGE, NULL,
-                                    "'%s' is already a file/something else",
+                                    _("'%s' is already a file/something else"),
                                     path);
         }
 

@@ -37,6 +37,7 @@
 #include "svn_test.h"
 #include "svn_io.h"
 
+#include "svn_private_config.h"
 
 
 /*** Getting update information ***/
@@ -116,7 +117,7 @@ svn_client_status (svn_revnum_t *result_rev,
     svn_path_split (path, &anchor, &target, pool);
   else
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              "'%s' is not under version control", path);
+                              _("'%s' is not under version control"), path);
   
   /* Close up our ADM area.  We'll be re-opening soon. */
   SVN_ERR (svn_wc_adm_close (adm_access));
@@ -165,11 +166,11 @@ svn_client_status (svn_revnum_t *result_rev,
       if (! entry)
         return svn_error_createf
           (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-           "'%s' is not under version control", anchor);
+           _("'%s' is not under version control"), anchor);
       if (! entry->url)
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, NULL,
-           "Entry '%s' has no URL", anchor);
+           _("Entry '%s' has no URL"), anchor);
       URL = apr_pstrdup (pool, entry->url);
 
       /* Get the RA library that handles URL. */

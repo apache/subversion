@@ -43,6 +43,7 @@
 
 #include "client.h"
 
+#include "svn_private_config.h"
 
 /* Apply PATH's contents (as a delta against the empty string) to
    FILE_BATON in EDITOR.  Use POOL for any temporary allocation.
@@ -439,7 +440,7 @@ import (const char *path,
     {
       return svn_error_create
         (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-         "New entry name required when importing a file");
+         _("New entry name required when importing a file"));
     }
 
   /* Note that there is no need to check whether PATH's basename is
@@ -466,7 +467,7 @@ import (const char *path,
   else if (kind == svn_node_none)
     {
       return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL, 
-                                "'%s' does not exist", path);  
+                                _("'%s' does not exist"), path);  
     }
 
   /* Close up shop; it's time to go home. */
@@ -527,7 +528,7 @@ get_ra_editor (void **ra_baton,
                                       &kind, pool));
       if (kind == svn_node_none)
         return svn_error_createf (SVN_ERR_FS_NO_SUCH_ENTRY, NULL,
-                                  "Path '%s' does not exist",
+                                  _("Path '%s' does not exist"),
                                   base_url);
     }
 
@@ -657,7 +658,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   if (kind == svn_node_file && (! new_entries->nelts))
     return svn_error_createf
       (SVN_ERR_ENTRY_EXISTS, NULL,
-       "Path '%s' already exists", url);
+       _("Path '%s' already exists"), url);
 
   /* The repository doesn't know about the reserved administrative
      directory. */
@@ -667,7 +668,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
                               const char *), SVN_WC_ADM_DIR_NAME) == 0))
     return svn_error_createf
       (SVN_ERR_CL_ADM_DIR_RESERVED, NULL,
-       "'%s' is a reserved name and cannot be imported",
+       _("'%s' is a reserved name and cannot be imported"),
        SVN_WC_ADM_DIR_NAME);
 
 
@@ -745,7 +746,7 @@ reconcile_errors (svn_error_t *commit_err,
   if (commit_err)
     {
       commit_err = svn_error_quick_wrap 
-        (commit_err, "Commit failed (details follow):");
+        (commit_err, _("Commit failed (details follow):"));
       err = commit_err;
     }
 
@@ -753,14 +754,14 @@ reconcile_errors (svn_error_t *commit_err,
      that follow. */
   else
     err = svn_error_create (SVN_ERR_BASE, NULL,
-                            "Commit succeeded, but other errors follow:");
+                            _("Commit succeeded, but other errors follow:"));
 
   /* If there was an unlock error... */
   if (unlock_err)
     {
       /* Wrap the error with some headers. */
       unlock_err = svn_error_quick_wrap 
-        (unlock_err, "Error unlocking locked dirs (details follow):");
+        (unlock_err, _("Error unlocking locked dirs (details follow):"));
 
       /* Append this error to the chain. */
       svn_error_compose (err, unlock_err);
@@ -771,7 +772,7 @@ reconcile_errors (svn_error_t *commit_err,
     {
       /* Wrap the error with some headers. */
       bump_err = svn_error_quick_wrap 
-        (bump_err, "Error bumping revisions post-commit (details follow):");
+        (bump_err, _("Error bumping revisions post-commit (details follow):"));
 
       /* Append this error to the chain. */
       svn_error_compose (err, bump_err);
@@ -782,7 +783,7 @@ reconcile_errors (svn_error_t *commit_err,
     {
       /* Wrap the error with some headers. */
       cleanup_err = svn_error_quick_wrap 
-        (cleanup_err, "Error in post-commit clean-up (details follow):");
+        (cleanup_err, _("Error in post-commit clean-up (details follow):"));
 
       /* Append this error to the chain. */
       svn_error_compose (err, cleanup_err);
@@ -1051,7 +1052,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
       if (svn_path_is_url (target))
         return svn_error_createf
           (SVN_ERR_ILLEGAL_TARGET, NULL,
-           "'%s' is a URL, but URLs cannot be commit targets", target);
+           _("'%s' is a URL, but URLs cannot be commit targets"), target);
     }
 
   /* Condense the target list. */
@@ -1236,7 +1237,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                       pool));
       SVN_ERR_W (svn_wc_adm_probe_retrieve (&adm_access, base_dir_access,
                                             target, pool),
-                 "Are all the targets part of the same working copy?");
+                 _("Are all the targets part of the same working copy?"));
     }
 
   /* Crawl the working copy for commit items. */

@@ -31,6 +31,7 @@
 #include "svn_config.h"
 #include "client.h"
 
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
@@ -50,7 +51,7 @@ svn_client_cleanup (const char *dir,
   SVN_ERR (svn_io_check_path (dir, &kind, pool));
   if (kind != svn_node_dir)
     return svn_error_createf (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-                              "Cannot cleanup '%s': not a directory", 
+                              _("Cannot cleanup '%s': not a directory"),
                               dir);
 
   svn_config_get (cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,

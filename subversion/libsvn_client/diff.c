@@ -89,8 +89,8 @@ display_prop_diffs (const apr_array_header_t *propchanges,
   int i;
 
   SVN_ERR (file_printf_from_utf8 (file,
-                                  APR_EOL_STR "Property changes on: %s"
-                                  APR_EOL_STR, path));
+                                  _("%sProperty changes on: %s%s"),
+                                  APR_EOL_STR, path, APR_EOL_STR));
 
   /* ### todo [issue #1533]: Use file_printf_from_utf8() to convert this
      line of dashes to native encoding, at least conditionally?  Or is
@@ -111,8 +111,8 @@ display_prop_diffs (const apr_array_header_t *propchanges,
       else
         original_value = NULL;
       
-      SVN_ERR (file_printf_from_utf8 (file, "Name: %s" APR_EOL_STR,
-                                      propchange->name));
+      SVN_ERR (file_printf_from_utf8 (file, _("Name: %s%s"),
+                                      propchange->name, APR_EOL_STR));
 
       /* For now, we have a rather simple heuristic: if this is an
          "svn:" property, then assume the value is UTF-8 and must
@@ -379,7 +379,7 @@ diff_file_changed (svn_wc_adm_access_t *adm_access,
 
       SVN_ERR (svn_stream_printf
                (os, subpool,
-                "Cannot display: file marked as a binary type."
+                _("Cannot display: file marked as a binary type.%s"),
                 APR_EOL_STR));
       
       if (mt1_binary && !mt2_binary)
@@ -654,12 +654,14 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
 {
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
-  const char *target_label = ".working";
+  /* xgettext: the '.working', '.merge-left.r%ld' and '.merge-right.r%ld'
+     strings are used to tag onto a filename in case of a merge conflict */
+  const char *target_label = _(".working");
   const char *left_label = apr_psprintf (subpool,
-                                         ".merge-left.r%ld",
+                                         _(".merge-left.r%ld"),
                                          older_rev);
   const char *right_label = apr_psprintf (subpool,
-                                          ".merge-right.r%ld",
+                                          _(".merge-right.r%ld"),
                                           yours_rev);
   svn_boolean_t has_local_mods;
   svn_boolean_t merge_required = TRUE;

@@ -198,7 +198,8 @@ log_message_receiver (void *baton,
   if (rev == 0)
     {
       return svn_stream_printf (lb->out, pool,
-                                "No commit for revision 0." APR_EOL_STR);
+                                _("No commit for revision 0.%s"),
+                                APR_EOL_STR);
     }
 
   /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=807
@@ -251,6 +252,7 @@ log_message_receiver (void *baton,
   if (! lb->omit_log_message)
     {
       lines = num_lines (msg_stdout);
+      /*### FIXME: how do we translate this without ngettext?! */
       SVN_ERR (svn_stream_printf (lb->out, pool,
                                   " | %d line%s", lines,
                                   (lines > 1) ? "s" : ""));
@@ -268,7 +270,7 @@ log_message_receiver (void *baton,
                                      svn_sort_compare_items_as_paths, pool);
 
       SVN_ERR (svn_stream_printf (lb->out, pool,
-                                  "Changed paths:" APR_EOL_STR));
+                                  _("Changed paths:%s"), APR_EOL_STR));
       for (i = 0; i < sorted_paths->nelts; i++)
         {
           svn_sort__item_t *item = &(APR_ARRAY_IDX (sorted_paths, i,
@@ -285,7 +287,7 @@ log_message_receiver (void *baton,
                        (&path_stdout, log_item->copyfrom_path, pool));
               copy_data 
                 = apr_psprintf (pool, 
-                                " (from %s:%ld)",
+                                _(" (from %s:%ld)"),
                                 path_stdout,
                                 log_item->copyfrom_rev);
             }

@@ -35,6 +35,8 @@
 #include "svn_config.h"
 #include "client.h"
 
+#include "svn_private_config.h"
+
 
 
 /*** Code. ***/
@@ -307,7 +309,7 @@ add_dir_recursive (const char *dirname,
     {
       return svn_error_createf
         (err->apr_err, err,
-         "Error during recursive add of '%s'", dirname);
+         _("Error during recursive add of '%s'"), dirname);
     }
   else  /* Yes, it exited cleanly, so close the dir. */
     {
@@ -317,7 +319,7 @@ add_dir_recursive (const char *dirname,
       apr_err = apr_dir_close (dir);
       if (apr_err)
         return svn_error_wrap_apr
-          (apr_err, "Can't close directory '%s'", dirname);
+          (apr_err, _("Can't close directory '%s'"), dirname);
     }
 
   /* Opened by svn_wc_add */

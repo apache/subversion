@@ -24,6 +24,8 @@
 #include "svn_client.h"
 #include "svn_path.h"
 
+#include "svn_private_config.h"
+
 static svn_error_t *
 get_dir_contents (apr_hash_t *dirents,
                   const char *dir,
@@ -43,7 +45,7 @@ get_dir_contents (apr_hash_t *dirents,
                               NULL, NULL, pool));
   else
     return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                             "No get_dir() available for URL schema");
+                             _("No get_dir() available for URL schema"));
 
   for (hi = apr_hash_first (pool, tmpdirents);
        hi;
@@ -117,21 +119,21 @@ svn_client_ls (apr_hash_t **dirents,
                                   NULL, NULL, pool));
       else
         return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                                 "No get_dir() available for URL schema");
+                                 _("No get_dir() available for URL schema"));
 
       /* Copy the relevant entry into the caller's hash. */
       *dirents = apr_hash_make (pool);
       the_ent = apr_hash_get (parent_ents, base_name, APR_HASH_KEY_STRING);
       if (the_ent == NULL)
         return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
-                                  "URL '%s' non-existent in that revision",
+                                  _("URL '%s' non-existent in that revision"),
                                   url);
 
       apr_hash_set (*dirents, base_name, APR_HASH_KEY_STRING, the_ent);
     }
   else
     return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
-                              "URL '%s' non-existent in that revision",
+                              _("URL '%s' non-existent in that revision"),
                               url);
 
   return SVN_NO_ERROR;
