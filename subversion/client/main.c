@@ -191,8 +191,8 @@ get_cmd_table_entry (const char *cmd_name)
 static int
 parse_command_options (int argc,
                        const char **argv,
-                       apr_pool_t *pool,
-                       svn_cl__opt_state_t *p_opt_st)
+                       svn_cl__opt_state_t *p_opt_st,
+                       apr_pool_t *pool)
 {
   static const char needs_arg[] =
     "svn %s: \"--%s\" needs an argument\n";
@@ -384,7 +384,8 @@ get_canonical_command (const char *cmd)
   if (cmd_desc == NULL)
     return cmd_desc;
 
-  while (cmd_desc->is_alias)  cmd_desc--;
+  while (cmd_desc->is_alias)
+    cmd_desc--;
 
   return cmd_desc;
 }
@@ -447,8 +448,9 @@ print_generic_help (apr_pool_t *pool)
     option processing.  Of course, it does not accept any options :-),
     just command line args.  */
 svn_error_t *
-svn_cl__help (int argc, const char **argv, apr_pool_t *pool,
-              svn_cl__opt_state_t *p_opt_state)
+svn_cl__help (int argc, const char **argv,
+              svn_cl__opt_state_t *p_opt_state,
+              apr_pool_t *pool)
 {
   if (argc > 2)
     {
@@ -486,17 +488,17 @@ main (int argc, const char **argv)
   memset ((void*)&opt_state, 0, sizeof (opt_state));
   opt_state.cmd_opts = p_cmd->cmd_opts;
 
-  /*  IF the command descriptor has an option processing descriptor,
+  /*  If the command descriptor has an option processing descriptor,
       go do it.  Otherwise, the command routine promises to do the work */
   if (p_cmd->cmd_opts != NULL)
     {
-      int used_ct = parse_command_options (argc, argv, pool, &opt_state);
+      int used_ct = parse_command_options (argc, argv, &opt_state, pool);
       argc -= used_ct;
       argv += used_ct;
     }
 
   {
-    svn_error_t *err = (*p_cmd->cmd_func) (argc, argv, pool, &opt_state);
+    svn_error_t *err = (*p_cmd->cmd_func) (argc, argv, &opt_state, pool);
     if (err != SVN_NO_ERROR)
       svn_handle_error (err, stdout, 0);
   }

@@ -87,7 +87,7 @@ typedef struct svn_cl__cmd_opts_t
 {
   /* Ultimately an option list of some sort.  For now, the smarts
      are in the option processing routine. */
-  const svn_cl__command_t  cmd_code;
+  const svn_cl__command_t cmd_code;
 
   /* A brief string describing this command, for usage messages. */
   const char *help;
@@ -95,8 +95,8 @@ typedef struct svn_cl__cmd_opts_t
 } svn_cl__cmd_opts_t;
 
 
-/*  Option state.  This struct defines the data that are given to
-    the command procedure describing the option state.  */
+/* Hold results of option processing that are shared by multiple
+   commands. */
 typedef struct svn_cl__opt_state_t
 {
   const svn_cl__cmd_opts_t *cmd_opts;
@@ -123,9 +123,9 @@ typedef struct svn_cl__opt_state_t
    argc/argv specify only the post-option arguments.
 
    The error result will generally be that returned by the
-   command implementation procedures.  */
+   command implementation procedures. */
 typedef svn_error_t *(svn_cl__cmd_proc_t) \
-  (int argc, const char **argv, apr_pool_t*, svn_cl__opt_state_t*);
+  (int argc, const char **argv, svn_cl__opt_state_t *, apr_pool_t *);
 
 
 /* One element of the command dispatch table. */
