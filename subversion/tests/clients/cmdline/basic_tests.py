@@ -581,10 +581,10 @@ Original appended text for rho>>>>>>> .r2
     raise svntest.Failure
 
   # So now mu and rho are both in a "conflicted" state.  Run 'svn
-  # resolve' on them.
+  # resolved' on them.
 
-  svntest.actions.run_and_verify_svn("Resolve command", None, [],
-                                     'resolve',
+  svntest.actions.run_and_verify_svn("Resolved command", None, [],
+                                     'resolved',
                                      mu_path_backup,
                                      rho_path_backup)
 

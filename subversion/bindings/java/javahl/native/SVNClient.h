@@ -51,7 +51,7 @@ public:
 	void doImport(const char *path, const char *url, const char *newEntry, const char *message, bool recurse);
 	void doSwitch(const char *path, const char *url, Revision &revision, bool recurse);
 	void doExport(const char *srcPath, const char *destPath, Revision &revision);
-	void resolve(const char *path, bool recurse);
+	void resolved(const char *path, bool recurse);
 	void cleanup(const char *path);
 	void mkdir(const char *path, const char *message);
 	void move(const char *srcPath, const char *destPath, const char *message, Revision &revision, bool force);

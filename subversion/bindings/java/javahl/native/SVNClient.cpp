@@ -612,7 +612,7 @@ void SVNClient::cleanup(const char *path)
 
 }
 
-void SVNClient::resolve(const char *path, bool recurse)
+void SVNClient::resolved(const char *path, bool recurse)
 {
     Pool subPool;
     apr_pool_t * apr_pool = subPool.pool ();
@@ -622,7 +622,7 @@ void SVNClient::resolve(const char *path, bool recurse)
 	{
 		return;
 	}
-    svn_error_t *Err = svn_client_resolve (m_lastPath.c_str (),
+    svn_error_t *Err = svn_client_resolved (m_lastPath.c_str (),
                                 recurse,
 							    ctx,
                                 apr_pool);

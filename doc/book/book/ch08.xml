@@ -2651,13 +2651,13 @@ $ svn status
       <!-- ================================================================= -->
       <refentry>
         <refnamediv>
-          <refname>svn resolve</refname>
+          <refname>svn resolved</refname>
           <refpurpose>Remove <quote>conflicted</quote> state on
             working copy files or directories.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
-          <programlisting>svn resolve PATH [PATH [PATH ... ]]</programlisting>
+          <programlisting>svn resolved PATH [PATH [PATH ... ]]</programlisting>
         </refsect1>
         <refsect1>
           <title>Description</title>
@@ -2666,7 +2666,8 @@ $ svn status
             copy files or directories. This routine does not
             semantically resolve conflict markers; it merely removes
             conflict-related artifact files and allows PATH to be
-            committed again.  See <xref
+            committed again; that is, it tells Subversion that the
+            conflicts have been "resolved".  See <xref
             linkend="svn-ch-3-sect-4.4"/> for an in-depth look at
             resolving conflicts.</para>
         </refsect1>
@@ -2721,7 +2722,7 @@ foo.c.r31
           <warning>
             <para>You <emphasis>can</emphasis> just remove the
               conflict files and commit, but <command>svn
-              resolve</command> fixes up some bookkeeping data
+              resolved</command> fixes up some bookkeeping data
               in the working copy administrative area in addition
               to removing the conflict files, so we recommend that
               you use this command.</para>
