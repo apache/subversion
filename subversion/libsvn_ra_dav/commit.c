@@ -230,7 +230,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
   "mistakenly thinks something is wrong.  This is a known bug, and will be\n"
   "fixed soon.  See\n"
   "\n"
-  "   http://subversion.tigris.org/issues/show_bug.cgi?id=806"
+  "   http://subversion.tigris.org/issues/show_bug.cgi?id=806\n"
   "\n"
   "for details.\n",
                  rsrc->local_path,
