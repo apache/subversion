@@ -43,9 +43,9 @@
 
 /*** Helpers for svn_wc_copy_and_translate ***/
 /* #define this to turn on translation */
-/*
+
 #define SVN_TRANSLATE
-*/
+
 
 #ifdef SVN_TRANSLATE
 /* Return an SVN error for status ERR, using VERB and PATH to describe
