@@ -42,6 +42,8 @@ import os      # for popen2()
 import shutil  # for rmtree()
 import re      # to parse version string
 import string  # for atof()
+import copy    # for deepcopy()
+
 
 # The minimum required version of Python needed to run these tests.
 python_required_version = 2.0
@@ -58,27 +60,30 @@ svnadmin_binary = '../../../svnadmin/svnadmin'
 #     [ ['path', 'contents', {props}], ...]
 #
 #   Which is the format expected by svn_tree.build_generic_tree().
+#
+# Keep this global list IMMUTABLE by defining it as a tuple.  This
+# should prevent users from accidentally forgetting to copy it.
 
-greek_tree = [ ['iota', "This is the file 'iota'.", {}],
-               ['A', None, {}],
-               ['A/mu', "This is the file 'mu'.", {}],
-               ['A/B', None, {}],
-               ['A/B/lambda', "This is the file 'lambda'.", {}],
-               ['A/B/E', None, {}],
-               ['A/B/E/alpha', "This is the file 'alpha'.", {}],
-               ['A/B/E/beta', "This is the file 'beta'.", {}],
-               ['A/B/F', None, {}],
-               ['A/C', None, {}],
-               ['A/D', None, {}],
-               ['A/D/gamma', "This is the file 'gamma'.", {}],
-               ['A/D/G', None, {}],
-               ['A/D/G/pi', "This is the file 'pi'.", {}],
-               ['A/D/G/rho', "This is the file 'rho'.", {}],
-               ['A/D/G/tau', "This is the file 'tau'.", {}],
-               ['A/D/H', None, {}],
-               ['A/D/H/chi', "This is the file 'chi'.", {}],
-               ['A/D/H/psi', "This is the file 'psi'.", {}],
-               ['A/D/H/omega', "This is the file 'omega'.", {}] ]
+greek_tree = ( ('iota', "This is the file 'iota'.", {}),
+               ('A', None, {}),
+               ('A/mu', "This is the file 'mu'.", {}),
+               ('A/B', None, {}),
+               ('A/B/lambda', "This is the file 'lambda'.", {}),
+               ('A/B/E', None, {}),
+               ('A/B/E/alpha', "This is the file 'alpha'.", {}),
+               ('A/B/E/beta', "This is the file 'beta'.", {}),
+               ('A/B/F', None, {}),
+               ('A/C', None, {}),
+               ('A/D', None, {}),
+               ('A/D/gamma', "This is the file 'gamma'.", {}),
+               ('A/D/G', None, {}),
+               ('A/D/G/pi', "This is the file 'pi'.", {}),
+               ('A/D/G/rho', "This is the file 'rho'.", {}),
+               ('A/D/G/tau', "This is the file 'tau'.", {}),
+               ('A/D/H', None, {}),
+               ('A/D/H/chi', "This is the file 'chi'.", {}),
+               ('A/D/H/psi', "This is the file 'psi'.", {}),
+               ('A/D/H/omega', "This is the file 'omega'.", {}) )
 
 
 ######################################################################
@@ -159,6 +164,18 @@ def write_tree(path, lists):
       fp.close()
       
 
+# For returning a *mutable* copy of greek_tree (a tuple of tuples).
+def copy_greek_tree():
+  "Return a mutable (list) copy of svn_test_main.greek_tree."
+
+  templist = []
+  for x in greek_tree:
+    tempitem = []
+    for y in x:
+      tempitem.append(y)
+    templist.append(tempitem)
+
+  return copy.deepcopy(templist)
 
 ######################################################################
 # Main functions

@@ -133,6 +133,40 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree):
   return 0
 
 
+def run_and_verify_update(wc_dir_name,
+                          output_tree, disk_tree, status_tree, *args):
+  """Update WC_DIR_NAME into a new directory WC_DIR_NAME.  *ARGS are
+  any extra optional args to the update subcommand.
+
+  The subcommand output will be verified against OUTPUT_TREE, and the
+  working copy itself will be verified against DISK_TREE.  If optional
+  STATUS_OUTPUT_TREE is given, then 'svn status' output will be
+  compared.  (This is a good way to check that revision numbers were
+  bumped.)  Return 0 if successful."""
+
+  # Update and make a tree of the output.
+  output = svn_test_main.run_svn ('up', wc_dir_name, *args)
+  mytree = svn_tree.build_tree_from_checkout (output)
+
+  # Verify actual output against expected output.
+  if svn_tree.compare_trees (mytree, output_tree):
+    return 1
+
+  # Create a tree by scanning the working copy
+  mytree = svn_tree.build_tree_from_wc (wc_dir_name)
+
+  # Verify expected disk against actual disk.
+  if svn_tree.compare_trees (mytree, disk_tree):
+    return 1
+
+  # Verify via 'status' command too, if possible.
+  if status_tree:
+    if run_and_verify_status(wc_dir_name, status_tree):
+      return 1
+  
+  return 0
+
+
 def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree, *args):
   """Commit and verify results within working copy WC_DIR_NAME,
   sending ARGS to the commit subcommand.
@@ -221,6 +255,16 @@ def make_repo_and_wc(test_name):
                                  expected_output_tree,
                                  expected_wc_tree)
 
+
+# Duplicate a working copy or other dir.
+def duplicate_dir(wc_name, wc_copy_name):
+  """Copy the working copy WC_NAME to WC_COPY_NAME.  Overwrite any
+  existing tree at that location."""
+
+  if os.path.exists(wc_copy_name):
+    shutil.rmtree(wc_copy_name)
+  shutil.copytree(wc_name, wc_copy_name)
+  
 
 
 # A generic starting state for the output of 'svn status'.
@@ -471,7 +515,67 @@ def commit_multiple_targets_2():
   
 #----------------------------------------------------------------------
 
+def update_from_wc_top():
+  "update '.' in working copy"
+
+  wc_dir = os.path.join (general_wc_dir, 'update_from_wc_top')
   
+  if make_repo_and_wc('update_from_wc_top'):
+    return 1
+
+  # Make a backup copy of the working copy
+  wc_backup = os.path.join (general_wc_dir, 'update_from_wc_top_backup')
+  duplicate_dir(wc_dir, wc_backup)
+
+  # Make a couple of local mods to files
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svn_test_main.file_append (mu_path, 'appended mu text')
+  svn_test_main.file_append (rho_path, 'new appended text for rho')
+
+  # Created expected output tree for 'svn ci'
+  output_list = [ [mu_path, None, {'verb' : 'Changing' }],
+                  [rho_path, None, {'verb' : 'Changing' }] ]
+  expected_output_tree = svn_tree.build_generic_tree(output_list)
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but mu and rho should be at revision 2.
+  status_list = get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    if (item[0] != mu_path) and (item[0] != rho_path):
+      item[2]['wc_rev'] = '1'
+  expected_status_tree = svn_tree.build_generic_tree(status_list)
+
+  # Commit.
+  if run_and_verify_commit (wc_dir, expected_output_tree,
+                            expected_status_tree, wc_dir):
+    return 1
+
+  # Create expected output tree for an update of the wc_backup.
+  output_list = [[os.path.join(wc_backup, 'A', 'mu'),
+                  None, {'status' : 'G '}],
+                 [os.path.join(wc_backup, 'A', 'D', 'G', 'rho'),
+                   None, {'status' : 'G '}]]
+  expected_output_tree = svn_tree.build_generic_tree(output_list)
+
+  # Create expected disk tree for the update.
+  my_greek_tree = svn_test_main.copy_greek_tree()
+  my_greek_tree[2][1] = my_greek_tree[2][1] + 'appended mu text\n'
+  my_greek_tree[14][1] = my_greek_tree[14][1] + 'new appended text for rho\n'
+  expected_disk_tree = svn_tree.build_generic_tree(my_greek_tree)
+
+  # Create expected status tree for the update.
+  status_list = get_virginal_status_list(wc_dir, '2')
+  expected_status_tree = svn_tree.build_generic_tree(status_list)
+  
+  # Do the update and check the results in three ways.
+  return run_and_verify_update(wc_backup,
+                               expected_output_tree,
+                               expected_disk_tree,
+                               expected_status_tree)
+
+
+
 ########################################################################
 ## List all tests here, starting with None:
 test_list = [ None,
@@ -480,7 +584,8 @@ test_list = [ None,
               commit_from_wc_top,
               commit_one_file,
               commit_multiple_targets,
-              commit_multiple_targets_2
+              commit_multiple_targets_2,
+              update_from_wc_top
              ]
 
 if __name__ == '__main__':  
