@@ -71,66 +71,43 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
   void *report_baton;
   svn_wc_entry_t *entry;
   svn_stringbuf_t *URL;
-  svn_stringbuf_t *base_dir = path;
+  svn_stringbuf_t *anchor, *target;
 
   /* Sanity check.  Without this, the update is meaningless. */
   assert (path != NULL);
   assert (path->len > 0);
 
-  /* Get full URL from PATH. */
-  SVN_ERR (svn_wc_entry (&entry, path, pool));
+  /* If both REVISION and TM are specified, this is an error.
+     They mostly likely contradict one another. */
+  if ((revision != SVN_INVALID_REVNUM) && tm)
+    return
+      svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, 0, NULL, pool,
+                       "Cannot specify _both_ revision and time.");
+
+  /* Use PATH to get the update's anchor and targets. */
+  SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
+
+  /* Get full URL from the ANCHOR. */
+  SVN_ERR (svn_wc_entry (&entry, anchor, pool));
   if (! entry)
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
-       "svn_client_update: %s is not under revision control", path->data);
+       "svn_client_update: %s is not under revision control", anchor->data);
   if (entry->existence == svn_wc_existence_deleted)
     return svn_error_createf
       (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "svn_client_update: entry '%s' has been deleted", path->data);
-
-  /* Copy our entry's ancestry information into URL. */
-  if (entry->ancestor)
-    {
-      URL = svn_stringbuf_create (entry->ancestor->data, pool);
-    }
-
-  /* We found no ancestry information for our entry, so we'll see if
-     we can derive the ancestry from the entry's working copy
-     parent. */
-  else
-    {
-      svn_wc_entry_t *par_entry;
-      svn_stringbuf_t *basename;
-
-      svn_path_split (path, &base_dir, &basename, svn_path_local_style, pool);
-      if (svn_stringbuf_isempty (base_dir))
-        svn_stringbuf_set (base_dir, ".");
-
-      SVN_ERR (svn_wc_entry (&par_entry, base_dir, pool));
-      if (! par_entry)
-        return svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
-           "svn_client_update: %s is not under revision control",
-           base_dir->data);
-      if (par_entry->existence == svn_wc_existence_deleted)
-        return svn_error_createf
-          (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
-           "entry '%s' has already been deleted", base_dir->data);
-
-      URL = svn_stringbuf_dup (par_entry->ancestor, pool);
-      svn_path_add_component (URL, basename, svn_path_url_style);
-    }
-
-  /* The following is an ugly kludge.  In order to let the RA layer
-     know the difference between updating entry 'Z' in dir 'X/Y' and
-     updating entry '.' in 'X/Y/Z', we'll append a '.' to the URL. */
-  if (svn_path_is_thisdir (path, svn_path_repos_style))
-     svn_path_add_component (URL, path, svn_path_url_style);
+       "svn_client_update: entry '%s' has been deleted", anchor->data);
+  if (! entry->ancestor)
+    return svn_error_createf
+      (SVN_ERR_WC_ENTRY_MISSING_ANCESTRY, 0, NULL, pool,
+       "svn_client_update: entry '%s' has no URL", anchor->data);
+  URL = svn_stringbuf_create (entry->ancestor->data, pool);
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      either the RA or XML driver will call editor->set_target_revision
      later on. */
-  SVN_ERR (svn_wc_get_update_editor (path,
+  SVN_ERR (svn_wc_get_update_editor (anchor,
+                                     target,
                                      revision,
                                      &update_editor,
                                      &update_edit_baton,
@@ -142,7 +119,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                          update_editor, update_edit_baton,
                          after_editor, after_edit_baton, pool);
 
-  /* if using an RA layer */
+  /* Using an RA layer */
   if (! xml_src)
     {
       void *ra_baton, *session, *cb_baton;
@@ -153,36 +130,21 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
 
-      /* Open an RA session to URL */
-      /* ### svn_client_authenticate only accepts directory paths */
-      if (entry->kind != svn_node_dir)
-        {
-          base_dir = svn_stringbuf_dup (path, pool);
-          svn_path_remove_component (base_dir, svn_path_local_style);
-        }
+      /* Get the client callbacks for auth stuffs. */
       SVN_ERR (svn_client__get_ra_callbacks (&ra_callbacks, &cb_baton,
                                              auth_baton, path, TRUE, pool));
-      SVN_ERR (ra_lib->open (&session, URL,
-                             ra_callbacks, cb_baton, pool));
+      SVN_ERR (ra_lib->open (&session, URL, ra_callbacks, cb_baton, pool));
 
-      /* Decide which revision to update to: */
-
-      /* If both REVISION and TM are specified, this is an error.
-         They mostly likely contradict one another. */
-      if ((revision != SVN_INVALID_REVNUM) && tm)
-        return
-          svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, 0, NULL, pool,
-                           "Cannot specify _both_ revision and time.");
-
-      /* If only TM is given, convert the time into a revision number. */
-      else if (tm)
+      /* If TM is given, convert the time into a revision number. */
+      if (tm)
         SVN_ERR (ra_lib->get_dated_revision (session, &revision, tm));
       
-      /* Tell RA to do a update of PATH to REVISION; if we pass an
+      /* Tell RA to do a update of URL+TARGET to REVISION; if we pass an
          invalid revnum, that means RA will use the latest revision.  */
       SVN_ERR (ra_lib->do_update (session,
                                   &reporter, &report_baton,
                                   revision,
+                                  target,
                                   update_editor, update_edit_baton));
 
       /* Drive the reporter structure, describing the revisions within
@@ -194,7 +156,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
       SVN_ERR (ra_lib->close (session));
     }      
   
-  /* else we're checking out from xml */
+  /* Else we're checking out from xml */
   else
     {
       apr_status_t apr_err;

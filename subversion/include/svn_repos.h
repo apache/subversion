@@ -103,13 +103,15 @@ svn_error_t *svn_repos_get_editor (svn_delta_edit_fns_t **editor,
 /*** Reporting the state of a working copy, for updates. */
 
 
-/* Construct and return a REPORT_BATON to hold context while collecting
-   working copy revision state. When the collection of state is completed,
-   then the UPDATE_EDITOR will be driven to describe how to change the
-   working copy into revision REVNUM of filesystem FS. The description of
-   the working copy state will be relative to FS_BASE in the
-   filesystem.  USERNAME will be recorded as the creator of the
-   temporary fs txn.
+/* Construct and return a REPORT_BATON to hold context while
+   collecting working copy revision state. When the collection of
+   state is completed, then the UPDATE_EDITOR will be driven to
+   describe how to change the working copy into revision REVNUM of
+   filesystem FS. The description of the working copy state will be
+   relative to FS_BASE in the filesystem.  USERNAME will be recorded
+   as the creator of the temporary fs txn.  UPDATE_TARGET is a single
+   path component, used to limit the scope of the update to a single
+   entry of FS_BASE, or NULL if all of FS_BASE is meant to be updated.
 
    All allocation for the context and collected state will occur in POOL. */
 svn_error_t *
@@ -118,6 +120,7 @@ svn_repos_begin_report (void **report_baton,
                         const char *username,
                         svn_fs_t *fs,
                         svn_stringbuf_t *fs_base,
+                        svn_stringbuf_t *update_target,
                         const svn_delta_edit_fns_t *update_editor,
                         void *update_baton,
                         apr_pool_t *pool);

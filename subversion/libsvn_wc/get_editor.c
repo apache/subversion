@@ -1599,7 +1599,8 @@ close_edit (void *edit_baton)
 
 /* Helper for the two public editor-supplying functions. */
 static svn_error_t *
-make_editor (svn_stringbuf_t *dest,
+make_editor (svn_stringbuf_t *anchor,
+             svn_stringbuf_t *target,
              svn_revnum_t target_revision,
              svn_boolean_t is_checkout,
              svn_stringbuf_t *ancestor_path,
@@ -1620,21 +1621,8 @@ make_editor (svn_stringbuf_t *dest,
   eb->is_checkout     = is_checkout;
   eb->target_revision = target_revision;
   eb->ancestor_path   = ancestor_path;
-
-  if (is_checkout)
-    {
-      /* For checkouts, we'll let anchor represent the whole
-         destination. */
-      eb->anchor = dest;
-      eb->target = NULL;
-    }
-  else
-    {
-      SVN_ERR (svn_wc_get_actual_target (dest,
-                                         &eb->anchor,
-                                         &eb->target,
-                                         subpool));
-    }
+  eb->anchor          = anchor;
+  eb->target          = target;
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
@@ -1659,16 +1647,15 @@ make_editor (svn_stringbuf_t *dest,
 
 
 svn_error_t *
-svn_wc_get_update_editor (svn_stringbuf_t *dest,
+svn_wc_get_update_editor (svn_stringbuf_t *anchor,
+                          svn_stringbuf_t *target,
                           svn_revnum_t target_revision,
                           const svn_delta_edit_fns_t **editor,
                           void **edit_baton,
                           apr_pool_t *pool)
 {
-  return
-    make_editor (dest, target_revision,
-                 FALSE, NULL,
-                 editor, edit_baton, pool);
+  return make_editor (anchor, target, target_revision, FALSE, NULL,
+                      editor, edit_baton, pool);
 }
 
 
@@ -1680,8 +1667,7 @@ svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
                             void **edit_baton,
                             apr_pool_t *pool)
 {
-  return make_editor (dest, target_revision,
-                      TRUE, ancestor_path,
+  return make_editor (dest, NULL, target_revision, TRUE, ancestor_path,
                       editor, edit_baton, pool);
 }
 
@@ -1764,21 +1750,19 @@ svn_wc_get_checkout_editor (svn_stringbuf_t *dest,
 
    So, what are the conditions?
 
-   Well, any time X is '.' (implying it is a directory), we won't lop
-   off a basename.  So we'll root our editor at X, and update all of
-   X.
+   Case I: Any time X is '.' (implying it is a directory), we won't
+   lop off a basename.  So we'll root our editor at X, and update all
+   of X.
 
-   Any time we are trying to update some path ...N/X, we again will
-   not lop off a basename.  We can't root an editor at ...N with X as
-   a target, either because ...N isn't a versioned resource at all
-   (and our editors only care about versioned resources) or because X
-   is X is not a child of ...N in the repository.  We root at X, and
-   update X.
+   Cases II & III: Any time we are trying to update some path ...N/X,
+   we again will not lop off a basename.  We can't root an editor at
+   ...N with X as a target, either because ...N isn't a versioned
+   resource at all (Case II) or because X is X is not a child of ...N
+   in the repository (Case III).  We root at X, and update X.
 
-   We will, however, lop off a basename when we are updating a path
-   ...P/X, rooting our editor at ...P and updating X.  This case
-   provides enough information to us to be able to gracefully handle
-   the above changed-type cases that might occur.
+   Cases IV-???: We lop off a basename when we are updating a
+   path ...P/X, rooting our editor at ...P and updating X, or when X
+   is missing from disk.
 
    These conditions apply whether X is a file or directory.
 
@@ -1835,31 +1819,17 @@ svn_wc_get_actual_target (svn_stringbuf_t *path,
        parent->data);
 
 
-  /*** Case III: PATH's entry has no ancestry information.  This should
-       only happen when PATH is a versioned directory, deleted from
-       disk, but with an entry still in its parent's entries file.
-       Split PATH into an anchor and target. */
-  if (! entry->ancestor)
-    {
-      *anchor = parent;
-      if (svn_path_is_empty (parent, svn_path_local_style))
-        svn_stringbuf_set (*anchor, ".");
-      *target = basename;
-      return SVN_NO_ERROR;
-    }
-
-
-  /*** Case IV: PATH's parent in the WC is not its parent in the
-       repository, making PATH a WC root.  Do not lop off a basename. */
+  /*** Case III: PATH's parent in the WC is not its parent in the
+       repository, and PATH itself is not missing from the disk,
+       making PATH a WC root.  Do not lop off a basename. */
   expected_url = svn_stringbuf_dup (p_entry->ancestor, pool);
   svn_path_add_component (expected_url, basename, svn_path_url_style);
-  if (! svn_stringbuf_compare (expected_url, entry->ancestor))
+  if (entry->ancestor 
+      && (! svn_stringbuf_compare (expected_url, entry->ancestor)))
     return SVN_NO_ERROR;
 
 
-  /*** Case V: PATH's parent in the WC is also its parent in the
-       repository.  PATH is not a WC root.  Split it into an anchor
-       and target.  */
+  /*** Cases IV-???: Split PATH into an anchor and target.  */
   *anchor = parent;
   if (svn_path_is_empty (parent, svn_path_local_style))
     svn_stringbuf_set (*anchor, ".");

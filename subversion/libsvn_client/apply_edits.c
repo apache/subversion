@@ -58,7 +58,11 @@ apply_delta (const svn_delta_edit_fns_t *before_editor,
       
   if (is_update)
     {
-      err = svn_wc_get_update_editor (dest,
+      svn_stringbuf_t *anchor, *target;
+
+      SVN_ERR (svn_wc_get_actual_target (dest, &anchor, &target, pool));
+      err = svn_wc_get_update_editor (anchor,
+                                      target,
                                       ancestor_revision,
                                       &editor,
                                       &edit_baton,

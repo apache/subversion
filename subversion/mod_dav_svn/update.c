@@ -351,6 +351,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   svn_error_t *serr;
   svn_stringbuf_t *pathstr;
   const dav_svn_repos *repos = resource->info->repos;
+  svn_stringbuf_t *target = NULL;
 
   if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
     {
@@ -370,12 +371,19 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
     }
   
   for (child = doc->root->first_child; child != NULL; child = child->next)
-    if (child->ns == ns && strcmp(child->name, "target-revision") == 0)
-      {
-	/* ### assume no white space, no child elems, etc */
-	revnum = atol(child->first_cdata.first->text);
-	break;
-      }
+    {
+      if (child->ns == ns && strcmp(child->name, "target-revision") == 0)
+        {
+          /* ### assume no white space, no child elems, etc */
+          revnum = atol(child->first_cdata.first->text);
+        }
+      if (child->ns == ns && strcmp(child->name, "update-target") == 0)
+        {
+          /* ### assume no white space, no child elems, etc */
+          target = svn_stringbuf_create (child->first_cdata.first->text, 
+                                         resource->pool);
+        }
+    }
   if (revnum == SVN_INVALID_REVNUM)
     {
       serr = svn_fs_youngest_rev(&revnum, repos->fs, resource->pool);
@@ -414,25 +422,10 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
     }
 
   fs_base = svn_stringbuf_create(resource->info->repos_path, resource->pool);
-
-  /* ### temp hack until begin_report gets separate anchor/target params */
-  if (resource->collection)
-    {
-      uc.anchor = resource->info->repos_path;
-      svn_stringbuf_appendcstr(fs_base, "/.");
-    }
-  else
-    {
-      svn_stringbuf_t *anchor;
-      svn_stringbuf_t *target;
-
-      svn_path_split(fs_base, &anchor, &target, svn_path_repos_style,
-                     resource->pool);
-      uc.anchor = anchor->data;
-    }
-
+  uc.anchor = fs_base->data;
   serr = svn_repos_begin_report(&rbaton, revnum, repos->username, repos->fs,
-                                fs_base, editor, &uc, resource->pool);
+                                fs_base, target, editor, &uc, resource->pool);
+
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -456,7 +449,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             /* ### assume first/only attribute is the rev */
             rev = atol(child->attr->value);
 
-            path = dav_xml_get_cdata(child, resource->pool, 1 /* strip_white */);
+            /* get cdata, stipping whitespace */
+            path = dav_xml_get_cdata(child, resource->pool, 1);
 
             svn_stringbuf_set(pathstr, path);
             serr = svn_repos_set_path(rbaton, pathstr, rev);
@@ -474,7 +468,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           {
             const char *path;
 
-            path = dav_xml_get_cdata(child, resource->pool, 1 /* strip_white */);
+            /* get cdata, stipping whitespace */
+            path = dav_xml_get_cdata(child, resource->pool, 1);
 
             svn_stringbuf_set(pathstr, path);
             serr = svn_repos_delete_path(rbaton, pathstr);

@@ -275,6 +275,7 @@ do_update (void *session_baton,
            const svn_ra_reporter_t **reporter,
            void **report_baton,
            svn_revnum_t update_revision,
+           svn_stringbuf_t *update_target,
            const svn_delta_edit_fns_t *update_editor,
            void *update_baton)
 {
@@ -294,7 +295,7 @@ do_update (void *session_baton,
                                  revnum_to_update_to,
                                  sbaton->username,
                                  sbaton->fs, sbaton->fs_path,
-                                 update_editor, update_baton,
+                                 update_target, update_editor, update_baton,
                                  sbaton->pool);
 }
 

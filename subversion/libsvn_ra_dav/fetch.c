@@ -1189,6 +1189,7 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                                     const svn_ra_reporter_t **reporter,
                                     void **report_baton,
                                     svn_revnum_t revision_to_update_to,
+                                    svn_stringbuf_t *update_target,
                                     const svn_delta_edit_fns_t *wc_update,
                                     void *wc_update_baton)
 {
@@ -1219,7 +1220,7 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
   /* Use the client callback to create a tmpfile. */
   SVN_ERR(ras->callbacks->open_tmp_file (&rb->tmpfile, ras->callback_baton));
 
-  /* ### register a cleanup on our (sub)pool which closes the file. this
+  /* ### register a cleanup on our (sub)pool which removes the file. this
      ### will ensure that the file always gets tossed, even if we exit
      ### with an error. */
 
@@ -1232,6 +1233,11 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
       goto error;
     }
 
+  /* ### cmpilato todo:  we need to give UPDATE_TARGET to someone who
+     cares.  I imagine this means passing it over the wire as part of
+     our report to mod_dav_svn, who can then do something useful with
+     it. */
+
   /* an invalid revnum means "latest". we can just omit the target-revision
      element in that case. */
   if (SVN_IS_VALID_REVNUM(revision_to_update_to))
@@ -1241,7 +1247,20 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
       status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
       if (status)
         {
-          msg = "Could not write the revision into the temporary report file.";
+          msg = "Failed writing the target revision to the report tempfile.";
+          goto error;
+        }
+    }
+
+  /* a null update_target is noooo problem. */
+  if (update_target && update_target->data)
+    {
+      s = apr_psprintf(ras->pool, "<S:update-target>%s</S:update-target>",
+                       update_target->data);
+      status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
+      if (status)
+        {
+          msg = "Failed writing the update target to the report tempfile.";
           goto error;
         }
     }
