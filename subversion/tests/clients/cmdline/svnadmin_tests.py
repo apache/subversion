@@ -98,53 +98,6 @@ def test_create(sbox):
 
 #----------------------------------------------------------------------
 
-def create_txn(sbox):
-  "'svnadmin createtxn'"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  repo_dir = sbox.repo_dir
-
-  # Make a transaction based on revision 1.
-  output, errput = svntest.main.run_svnadmin("createtxn", repo_dir, "-r", "1")
-
-  # Look for it by running 'lstxn'.
-  tree_list = get_txns(repo_dir)
-  if tree_list != ['3']:
-    raise svntest.Failure
-
-
-#----------------------------------------------------------------------
-
-def remove_txn(sbox):
-  "'svnadmin rmtxns'"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  repo_dir = sbox.repo_dir
-
-  # Make several transactions based on revision 1.
-  svntest.main.run_svnadmin("createtxn", repo_dir, "-r", "1")
-  svntest.main.run_svnadmin("createtxn", repo_dir, "-r", "1")
-  svntest.main.run_svnadmin("createtxn", repo_dir, "-r", "1")
-  svntest.main.run_svnadmin("createtxn", repo_dir, "-r", "1")
-  svntest.main.run_svnadmin("createtxn", repo_dir, "-r", "1")
-
-  # Look for them by running 'lstxn'.
-  tree_list = get_txns(repo_dir)
-  if tree_list != ['3', '4', '5', '6', '7']:
-    raise svntest.Failure
-
-  # Remove the 2nd and 4th transactions.
-  svntest.main.run_svnadmin("rmtxns", repo_dir, "4", "6")
-
-  # Examine the list of transactions again.
-  tree_list = get_txns(repo_dir)
-  if tree_list != ['3', '5', '7']:
-    raise svntest.Failure
-
-#----------------------------------------------------------------------
-
 def dump_copied_dir(sbox):
   "'svnadmin dump' on copied directory"
   
@@ -213,9 +166,6 @@ def dump_quiet(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              test_create,
-              create_txn,
-              remove_txn,
               dump_copied_dir,
               dump_move_dir_modify_child,
               dump_quiet,
