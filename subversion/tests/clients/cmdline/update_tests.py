@@ -762,6 +762,70 @@ def update_after_add_rm_deleted(sbox):
 
 #----------------------------------------------------------------------
 
+# Issue 1591.  Updating a working copy which contains local
+# obstructions marks a directory as incomplete.  Removal of the
+# obstruction and subsequent update should clear the "incomplete"
+# flag.
+
+def obstructed_update_alters_wc_props(sbox):
+  "obstructed update alters WC properties"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a new dir in the repo in prep for creating an obstruction.
+  #print "Adding dir to repo"
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m',
+                                     'prep for obstruction',
+                                     sbox.repo_url + '/A/foo')
+
+  # Create an obstruction, a file in the WC with the same name as
+  # present in a newer rev of the repo.
+  #print "Creating obstruction"
+  obstruction_parent_path = os.path.join(wc_dir, 'A')
+  obstruction_path = os.path.join(obstruction_parent_path, 'foo')
+  file(obstruction_path, 'w')
+
+  # Update the WC to that newer rev to trigger the obstruction.
+  #print "Updating WC"
+  expected_output = svntest.wc.State(wc_dir, {})
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  error_re = 'Failed to add directory.*object of the same name already exists'
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        error_re)
+
+  # Remove the file which caused the obstruction.
+  #print "Removing obstruction"
+  os.unlink(obstruction_path)
+
+  # Update the -- now unobstructed -- WC again.
+  #print "Updating WC again"
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/foo' : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/foo' : Item(),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/foo' : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  # The previously obstructed resource should now be in the WC.
+  if not os.path.isdir(obstruction_path):
+    raise svntest.Failure
+
+#----------------------------------------------------------------------
+
 # Issue 938.
 def update_replace_dir(sbox):
   "update that replaces a directory"
@@ -1549,6 +1613,7 @@ test_list = [ None,
               update_schedule_add_dir,
               update_to_future_add,
               nested_in_read_only,
+              obstructed_update_alters_wc_props,
              ]
 
 if __name__ == '__main__':
