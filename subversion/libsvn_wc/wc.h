@@ -293,9 +293,8 @@ svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
 #define SVN_WC__ENTRIES_ATTR_DELETE    "delete"
 #define SVN_WC__ENTRIES_ATTR_ANCESTOR  "ancestor"
 
-/* How an entries file's owner dir is named in the entries file.
-   todo: change this to "" once apr hashes support empty keys */
-#define SVN_WC__ENTRIES_THIS_DIR       "."
+/* How an entries file's owner dir is named in the entries file. */
+#define SVN_WC__ENTRIES_THIS_DIR       ""
 
 /* Initialize contents of `entries' for a new adm area. */
 svn_error_t *svn_wc__entries_init (svn_string_t *path,
@@ -322,10 +321,9 @@ typedef struct svn_wc__entry_t
                                   local working file last changed.
                                   (NULL means not available) */ 
 
-  apr_hash_t *attributes;      /* All xml attributes, including ones
-                                  which already parsed to fill in the
-                                  fields above, and others that may
-                                  not appear above.  (Required) */
+  apr_hash_t *attributes;      /* All XML attributes, both those
+                                  duplicated above and any others.
+                                  (Required) */
 } svn_wc__entry_t;
 
 
