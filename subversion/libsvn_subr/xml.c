@@ -270,7 +270,7 @@ amalgamate (const char **atts,
         if (preserve && ((apr_hash_get (ht, key, keylen)) != NULL))
           continue;
         else
-          apr_hash_set (ht, key, keylen, 
+          apr_hash_set (ht, apr_pstrndup(pool, key, keylen), keylen, 
                         val ? svn_string_create (val, pool) : NULL);
       }
 }
