@@ -21,10 +21,7 @@
 
 
 /*** Includes. ***/
-#include <apr_hash.h>
-#include <apr_tables.h>
 #include "svn_cmdline.h"
-#include "svn_sorts.h"
 #include "svn_wc.h"
 #include "svn_path.h"
 #include "cl.h"

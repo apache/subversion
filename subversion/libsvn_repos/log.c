@@ -26,8 +26,8 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_string.h"
-#include "svn_time.h"
 #include "svn_sorts.h"
+#include "svn_props.h"
 #include "repos.h"
 
 

@@ -33,6 +33,8 @@
 
 #include "svn_cmdline.h"
 #include "svn_path.h"
+#include "svn_pools.h"
+#include "svn_error.h"
 #include "utf_impl.h"
 
 #include "svn_private_config.h"

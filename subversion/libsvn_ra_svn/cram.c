@@ -22,7 +22,6 @@
 #define APR_WANT_STDIO
 #include <apr_want.h>
 #include <apr_general.h>
-#include <apr_lib.h>
 #include <apr_strings.h>
 #include <apr_network_io.h>
 #include <apr_time.h>
@@ -30,7 +29,6 @@
 
 #include <svn_types.h>
 #include <svn_string.h>
-#include <svn_pools.h>
 #include <svn_error.h>
 #include <svn_ra_svn.h>
 #include <svn_config.h>

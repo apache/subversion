@@ -30,7 +30,6 @@
 #include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_path.h"
-#include "svn_utf.h"
 #include "svn_hash.h"
 #include "svn_md5.h"
 #include "../libsvn_delta/delta.h"

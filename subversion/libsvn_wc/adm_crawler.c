@@ -34,7 +34,6 @@
 #include "svn_io.h"
 #include "svn_md5.h"
 #include "svn_base64.h"
-#include "svn_sorts.h"
 #include "svn_delta.h"
 #include "svn_path.h"
 

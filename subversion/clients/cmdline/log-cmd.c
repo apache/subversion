@@ -26,18 +26,14 @@
 #define APR_WANT_STDIO
 #include <apr_want.h>
 
-#include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_path.h"
-#include "svn_delta.h"
 #include "svn_error.h"
-#include "svn_pools.h"
 #include "svn_sorts.h"
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "svn_cmdline.h"
-#include "svn_subst.h"
 #include "cl.h"
 
 #include "svn_private_config.h"

@@ -21,6 +21,7 @@
 #include "svn_repos.h"
 #include "svn_pools.h"
 #include "svn_md5.h"
+#include "svn_props.h"
 #include "repos.h"
 
 #define NUM_CACHED_SOURCE_ROOTS 4

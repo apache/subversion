@@ -30,7 +30,6 @@
 #include <mod_dav.h>
 
 #include "mod_dav_svn.h"
-#include "svn_error.h"
 #include "svn_path.h"
 #include "svn_config.h"
 #include "svn_string.h"

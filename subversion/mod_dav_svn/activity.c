@@ -23,7 +23,6 @@
 
 #include <apr_dbm.h>
 
-#include "svn_string.h"
 #include "svn_path.h"
 #include "svn_fs.h"
 #include "svn_repos.h"

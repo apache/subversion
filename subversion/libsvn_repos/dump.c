@@ -22,10 +22,10 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_string.h"
-#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_md5.h"
+#include "svn_props.h"
 
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p && SVN_IS_VALID_REVNUM (r)) ? 1 : 0)

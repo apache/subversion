@@ -26,7 +26,6 @@
 #include "svn_utf.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
-#include "svn_config.h"
 #include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
 
 #include "repos.h"

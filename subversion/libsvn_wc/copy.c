@@ -24,7 +24,6 @@
 
 #include <string.h>
 #include "svn_wc.h"
-#include "svn_string.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"

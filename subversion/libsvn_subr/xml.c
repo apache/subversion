@@ -24,6 +24,7 @@
 #include "svn_private_config.h"         /* for SVN_HAVE_OLD_EXPAT */
 #include "svn_pools.h"
 #include "svn_xml.h"
+#include "svn_error.h"
 
 #ifdef SVN_HAVE_OLD_EXPAT
 #include "xmlparse.h"

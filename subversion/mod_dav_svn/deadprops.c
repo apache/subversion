@@ -29,6 +29,7 @@
 #include "svn_pools.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
+#include "svn_props.h"
 
 
 struct dav_db {

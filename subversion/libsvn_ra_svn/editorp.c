@@ -21,7 +21,6 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <apr_general.h>
-#include <apr_lib.h>
 #include <apr_strings.h>
 #include <apr_md5.h>
 
@@ -33,7 +32,6 @@
 #include "svn_delta.h"
 #include "svn_ra_svn.h"
 #include "svn_pools.h"
-#include "svn_md5.h"
 #include "svn_private_config.h"
 
 #include "ra_svn.h"

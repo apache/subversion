@@ -28,6 +28,7 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_md5.h"
+#include "svn_props.h"
 
 #include "../fs-helpers.h"
 

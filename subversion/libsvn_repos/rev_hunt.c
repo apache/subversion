@@ -26,6 +26,7 @@
 #include "svn_string.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
+#include "svn_props.h"
 #include "repos.h"
 
 #include <assert.h>

@@ -27,12 +27,10 @@
 
 #include <apr_strings.h>
 #include <apr_pools.h>
-#include <apr_hash.h>
 
 #include "client.h"
 
 #include "svn_client.h"
-#include "svn_string.h"
 #include "svn_error.h"
 #include "svn_path.h"
 

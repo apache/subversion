@@ -26,13 +26,12 @@
 #include "svn_error.h"
 #include "svn_opt.h"
 #include "svn_utf.h"
-#include "svn_subst.h"
 #include "svn_path.h"
-#include "svn_config.h"
 #include "svn_hash.h"
 #include "svn_repos.h"
 #include "svn_pools.h"
 #include "svn_sorts.h"
+#include "svn_props.h"
 
 
 /*** Code. ***/

@@ -25,7 +25,6 @@
 
 #include "svn_delta.h"
 #include "svn_io.h"
-#include "svn_md5.h"
 #include "svn_pools.h"
 #include "delta.h"
 

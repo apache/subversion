@@ -30,6 +30,7 @@
 #include "svn_dav.h"
 #include "svn_time.h"
 #include "svn_pools.h"
+#include "svn_props.h"
 
 #include "dav_svn.h"
 
