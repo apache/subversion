@@ -109,10 +109,10 @@ if (!@ARGV and $opt_import_tag_location)
     &usage("$0: cannot use -tag_location when dirs are read from stdin.");
   }
 
-# If the tag directory is set, then the import directory cannot be `.'.
+# If the tag directory is set, then the import directory cannot be '.'.
 if (defined $opt_import_tag_location and $repos_load_rel_path eq '.')
   {
-    &usage("$0: cannot set import_dir to `.' and use -t command line option.");
+    &usage("$0: cannot set import_dir to '.' and use -t command line option.");
   }
 
 # Set the svn command line options that are used anytime svn connects
@@ -142,17 +142,17 @@ if (defined $opt_existing_wc_dir)
   {
     unless (-e $opt_existing_wc_dir)
       {
-        die "$0: working copy `$opt_existing_wc_dir' does not exist.\n";
+        die "$0: working copy '$opt_existing_wc_dir' does not exist.\n";
       }
 
     unless (-d _)
       {
-        die "$0: working copy `$opt_existing_wc_dir' is not a directory.\n";
+        die "$0: working copy '$opt_existing_wc_dir' is not a directory.\n";
       }
 
     unless (-d "$opt_existing_wc_dir/.svn")
       {
-        die "$0: working copy `$opt_existing_wc_dir' does not have .svn ",
+        die "$0: working copy '$opt_existing_wc_dir' does not have .svn ",
             "directory.\n";
       }
 
@@ -167,7 +167,7 @@ my $repos_base_uri = URI->new($repos_base_url);
 # that a command line option was forgotten.
 if ($repos_load_rel_path ne '.' and -d $repos_load_rel_path)
   {
-    die "$0: import_dir `$repos_load_rel_path' is a directory.\n";
+    die "$0: import_dir '$repos_load_rel_path' is a directory.\n";
   }
 
 # The remaining command line arguments should be directories.  Check
@@ -179,17 +179,17 @@ if (@ARGV)
       {
         unless (-e $dir)
           {
-            die "$0: directory `$dir' does not exist.\n";
+            die "$0: directory '$dir' does not exist.\n";
           }
 
         unless (-d _)
           {
-            die "$0: directory `$dir' is not a directory.\n";
+            die "$0: directory '$dir' is not a directory.\n";
           }
 
         if ($dirs{$dir})
           {
-            die "$0: directory `$dir' is listed more than once on command ",
+            die "$0: directory '$dir' is listed more than once on command ",
                 "line.\n";
           }
         $dirs{$dir} = 1;
@@ -231,7 +231,7 @@ my @property_settings;
 if (defined $property_config_filename and length $property_config_filename)
   {
     open(CFG, $property_config_filename)
-      or die "$0: cannot open `$property_config_filename' for reading: $!\n";
+      or die "$0: cannot open '$property_config_filename' for reading: $!\n";
 
     my $ok = 1;
 
@@ -249,7 +249,7 @@ if (defined $property_config_filename and length $property_config_filename)
 
         unless (@line == 2 or @line == 4)
           {
-            warn "$0: line $. of `$property_config_filename' has to have 2 ",
+            warn "$0: line $. of '$property_config_filename' has to have 2 ",
                  "or 4 columns.\n";
             $ok = 0;
             next;
@@ -258,8 +258,8 @@ if (defined $property_config_filename and length $property_config_filename)
 
         unless ($control eq 'break' or $control eq 'cont')
           {
-            warn "$0: line $. of `$property_config_filename' has illegal ",
-                 "value for column 3 `$control', must be `break' or `cont'.\n";
+            warn "$0: line $. of '$property_config_filename' has illegal ",
+                 "value for column 3 '$control', must be 'break' or 'cont'.\n";
             $ok = 0;
             next;
           }
@@ -269,7 +269,7 @@ if (defined $property_config_filename and length $property_config_filename)
         eval { $re = qr/$regex/i };
         if ($@)
           {
-            warn "$0: line $. of `$property_config_filename' regex `$regex' ",
+            warn "$0: line $. of '$property_config_filename' regex '$regex' ",
                  "does not compile:\n$@\n";
             $ok = 0;
             next;
@@ -281,7 +281,7 @@ if (defined $property_config_filename and length $property_config_filename)
                                   re      => $re});
       }
     close(CFG)
-      or warn "$0: error in closing `$property_config_filename' for ",
+      or warn "$0: error in closing '$property_config_filename' for ",
               "reading: $!\n";
 
     exit 1 unless $ok;
@@ -457,7 +457,7 @@ if (defined $opt_existing_wc_dir)
     print "$opt_existing_wc_dir\n";
 
     chdir($opt_existing_wc_dir)
-      or die "$0: cannot chdir `$opt_existing_wc_dir': $!\n";
+      or die "$0: cannot chdir '$opt_existing_wc_dir': $!\n";
 
     read_from_process($svn, 'update', @svn_use_repos_cmd_opts);
   }
@@ -483,14 +483,14 @@ else
     print "Checking out $checkout_url into $temp_dir/$checkout_dir_name\n";
 
     chdir($temp_dir)
-      or die "$0: cannot chdir `$temp_dir': $!\n";
+      or die "$0: cannot chdir '$temp_dir': $!\n";
 
     read_from_process($svn, 'checkout',
                       @svn_use_repos_cmd_opts,
                       $checkout_url, $checkout_dir_name);
 
     chdir($checkout_dir_name)
-      or die "$0: cannot chdir `$checkout_dir_name': $!\n";
+      or die "$0: cannot chdir '$checkout_dir_name': $!\n";
   }
 
 # At this point, the current working directory is the top level
@@ -575,13 +575,13 @@ while (defined (my $load_dir = &get_next_load_dir))
                 if ($dest_type ne '0' and $source_type ne $dest_type)
                   {
                     die "$0: does not handle changing source and destination ",
-                        "type for `$source_path'.\n";
+                        "type for '$source_path'.\n";
                   }
 
                 if ($source_type ne 'f' and $source_type ne 'd')
                   {
-                    warn "$0: skipping loading file `$source_path' of type ",
-                         "`$source_type'.\n";
+                    warn "$0: skipping loading file '$source_path' of type ",
+                         "'$source_type'.\n";
                     unless ($opt_no_user_input)
                       {
                         print STDERR "Press return to continue: ";
@@ -602,9 +602,9 @@ while (defined (my $load_dir = &get_next_load_dir))
             # relative directory path, then the script can change into
             # it.
             chdir($orig_cwd)
-              or die "$0: cannot chdir `$orig_cwd': $!\n";
+              or die "$0: cannot chdir '$orig_cwd': $!\n";
             chdir($load_dir)
-              or die "$0: cannot chdir `$load_dir': $!\n";
+              or die "$0: cannot chdir '$load_dir': $!\n";
 
             find({no_chdir   => 1,
                   preprocess => sub { sort { $b cmp $a } @_ },
@@ -630,7 +630,7 @@ while (defined (my $load_dir = &get_next_load_dir))
             # Now change into the working copy directory in case any
             # renames need to be performed.
             chdir($wc_import_dir_cwd)
-              or die "$0: cannot chdir `$wc_import_dir_cwd': $!\n";
+              or die "$0: cannot chdir '$wc_import_dir_cwd': $!\n";
 
             # Only do renames if there are both added and deleted
             # files and directories.
@@ -883,7 +883,7 @@ while (defined (my $load_dir = &get_next_load_dir))
         if ($dest_type ne '0' and $source_type ne $dest_type)
           {
             die "$0: does not handle changing source and destination type ",
-                "for `$source_path'.\n";
+                "for '$source_path'.\n";
           }
 
         # Determine if the file is being added or is an update to an
@@ -953,9 +953,9 @@ while (defined (my $load_dir = &get_next_load_dir))
                               }
                           }
 
-                        print "Adding to `$source_path' property ",
-                              "`$property_name' with value ",
-                              "`$property_value'.\n";
+                        print "Adding to '$source_path' property ",
+                              "'$property_name' with value ",
+                              "'$property_value'.\n";
 
                         push(@{$add_files{$source_path}{properties}},
                              $property);
@@ -973,7 +973,7 @@ while (defined (my $load_dir = &get_next_load_dir))
             if ($dest_type eq '0')
               {
                 mkdir($dest_path)
-                  or die "$0: cannot mkdir `$dest_path': $!\n";
+                  or die "$0: cannot mkdir '$dest_path': $!\n";
               }
           }
         elsif
@@ -982,12 +982,12 @@ while (defined (my $load_dir = &get_next_load_dir))
             if ($add_files{$source_path} or $upd_files{$source_path})
               {
                 copy($source_path, $dest_path)
-                  or die "$0: copy `$source_path' to `$dest_path': $!\n";
+                  or die "$0: copy '$source_path' to '$dest_path': $!\n";
               }
           }
         else
           {
-            die "$0: does not handle copying files of type `$source_type'.\n";
+            die "$0: does not handle copying files of type '$source_type'.\n";
           }
       };
 
@@ -996,9 +996,9 @@ while (defined (my $load_dir = &get_next_load_dir))
     # so that if the specified directory is a relative directory path,
     # then the script can change into it.
     chdir($orig_cwd)
-      or die "$0: cannot chdir `$orig_cwd': $!\n";
+      or die "$0: cannot chdir '$orig_cwd': $!\n";
     chdir($load_dir)
-      or die "$0: cannot chdir `$load_dir': $!\n";
+      or die "$0: cannot chdir '$load_dir': $!\n";
 
     find({no_chdir   => 1,
           preprocess => sub { sort { $b cmp $a } @_ },
@@ -1068,7 +1068,7 @@ while (defined (my $load_dir = &get_next_load_dir))
 
     # Now change back to the trunk directory and run the svn commands.
     chdir($wc_import_dir_cwd)
-      or die "$0: cannot chdir `$wc_import_dir_cwd': $!\n";
+      or die "$0: cannot chdir '$wc_import_dir_cwd': $!\n";
 
     # If any of the added files have the svn:eol-style property set,
     # then pass -b to diff, otherwise diff may fail because the end of
@@ -1128,8 +1128,8 @@ while (defined (my $load_dir = &get_next_load_dir))
             next unless @lines;
             if (@lines > 1)
               {
-                warn "$0: `@command' returned more than one line of output: ",
-                  "`@lines'.\n";
+                warn "$0: '@command' returned more than one line of output: ",
+                  "'@lines'.\n";
                 next;
               }
 
@@ -1189,17 +1189,17 @@ while (defined (my $load_dir = &get_next_load_dir))
         print "Checking out $to_url into $temp_dir/$checkout_dir_name\n";
 
         chdir($temp_dir)
-          or die "$0: cannot chdir `$temp_dir': $!\n";
+          or die "$0: cannot chdir '$temp_dir': $!\n";
 
         read_from_process($svn, 'checkout',
                           @svn_use_repos_cmd_opts,
                           $to_url, $checkout_dir_name);
 
         chdir($checkout_dir_name)
-          or die "$0: cannot chdir `$checkout_dir_name': $!\n";
+          or die "$0: cannot chdir '$checkout_dir_name': $!\n";
 
         chdir($orig_cwd)
-          or die "$0: cannot chdir `$orig_cwd': $!\n";
+          or die "$0: cannot chdir '$orig_cwd': $!\n";
         read_from_process('diff', '-u', @diff_ignore_space_changes,
                           '-x', '.svn',
                           '-r', $load_dir, "$temp_dir/$checkout_dir_name");
@@ -1285,7 +1285,7 @@ sub make_targets_file
   ++$make_targets_file_counter;
 
   open(TARGETS, ">$filename")
-    or die "$0: cannot open `$filename' for writing: $!\n";
+    or die "$0: cannot open '$filename' for writing: $!\n";
 
   foreach my $file (@_)
     {
@@ -1293,7 +1293,7 @@ sub make_targets_file
     }
 
   close(TARGETS)
-    or die "$0: error in closing `$filename' for writing: $!\n";
+    or die "$0: error in closing '$filename' for writing: $!\n";
 
   $filename;
 }
@@ -1342,7 +1342,7 @@ sub get_tag_dir
       my $j = index($tag_location, $REGEX_SEP_CHAR);
       if ($j < 0)
         {
-          die "$0: -t value `$opt_import_tag_location' does not have ",
+          die "$0: -t value '$opt_import_tag_location' does not have ",
               "matching $REGEX_SEP_CHAR.\n";
         }
       my $regex = substr($tag_location, 0, $j, '');
@@ -1387,7 +1387,7 @@ sub safe_read_from_pipe
       open(STDERR, ">&STDOUT")
         or die "$0: cannot dup STDOUT: $!\n";
       exec(@_)
-        or die "$0: cannot exec `@_': $!\n";
+        or die "$0: cannot exec '@_': $!\n";
   }
   my @output;
   while (<SAFE_READ>)
@@ -1402,7 +1402,7 @@ sub safe_read_from_pipe
   my $cd     = $result & 128 ? "with core dump" : "";
   if ($signal or $cd)
     {
-      warn "$0: pipe from `@_' failed $cd: exit=$exit signal=$signal\n";
+      warn "$0: pipe from '@_' failed $cd: exit=$exit signal=$signal\n";
     }
   if (wantarray)
     {
@@ -1459,7 +1459,7 @@ sub recursive_ls_and_hash
   my $return_cwd = cwd;
 
   chdir($dir)
-    or die "$0: cannot chdir `$dir': $!\n";
+    or die "$0: cannot chdir '$dir': $!\n";
 
   my %files;
 
@@ -1482,7 +1482,7 @@ sub recursive_ls_and_hash
        }, '.');
 
   chdir($return_cwd)
-    or die "$0: cannot chdir `$return_cwd': $!\n";
+    or die "$0: cannot chdir '$return_cwd': $!\n";
 
   %files;
 }
@@ -1521,11 +1521,11 @@ sub commit_renames
   # directories will also be updated.
   my $cwd = cwd;
   chdir($wc_import_dir_cwd)
-    or die "$0: cannot chdir `$wc_import_dir_cwd': $!\n";
+    or die "$0: cannot chdir '$wc_import_dir_cwd': $!\n";
   read_from_process($svn, 'commit', @svn_use_repos_cmd_opts, '-m', $message);
   read_from_process($svn, 'update', @svn_use_repos_cmd_opts);
   chdir($cwd)
-    or die "$0: cannot chdir `$cwd': $!\n";
+    or die "$0: cannot chdir '$cwd': $!\n";
 
   # Some versions of subversion have a bug where renamed files
   # or directories are not deleted after a commit, so do that
@@ -1623,7 +1623,7 @@ sub digest_hash_file
     }
   else
     {
-      die "$0: cannot open `$filename' for reading: $!\n";
+      die "$0: cannot open '$filename' for reading: $!\n";
     }
   $ctx->digest;
 }
@@ -1661,27 +1661,27 @@ sub determine_native_eol
   if (-e $filename)
     {
       unlink($filename)
-        or die "$0: cannot unlink `$filename': $!\n";
+        or die "$0: cannot unlink '$filename': $!\n";
     }
 
   # Write the \n in non-binary mode.
   open(NL_TEST, ">$filename")
-    or die "$0: cannot open `$filename' for writing: $!\n";
+    or die "$0: cannot open '$filename' for writing: $!\n";
   print NL_TEST "\n";
   close(NL_TEST)
-    or die "$0: error in closing `$filename' for writing: $!\n";
+    or die "$0: error in closing '$filename' for writing: $!\n";
 
   # Read the \n in binary mode.
   open(NL_TEST, $filename)
-    or die "$0: cannot open `$filename' for reading: $!\n";
+    or die "$0: cannot open '$filename' for reading: $!\n";
   binmode NL_TEST;
   local $/;
   undef $/;
   my $eol = <NL_TEST>;
   close(NL_TEST)
-    or die "$0: cannot close `$filename' for reading: $!\n";
+    or die "$0: cannot close '$filename' for reading: $!\n";
   unlink($filename)
-    or die "$0: cannot unlink `$filename': $!\n";
+    or die "$0: cannot unlink '$filename': $!\n";
 
   my $eol_length = length($eol);
   unless ($eol_length)
@@ -1710,13 +1710,13 @@ sub convert_file_to_native_eol
 
   my $filename = shift;
   open(FILE, $filename)
-    or die "$0: cannot open `$filename' for reading: $!\n";
+    or die "$0: cannot open '$filename' for reading: $!\n";
   binmode FILE;
   local $/;
   undef $/;
   my $in = <FILE>;
   close(FILE)
-    or die "$0: error in closing `$filename' for reading: $!\n";
+    or die "$0: error in closing '$filename' for reading: $!\n";
   my $out = '';
 
   # Go through the file and transform it byte by byte.
@@ -1747,13 +1747,13 @@ sub convert_file_to_native_eol
 
   my $tmp_filename = ".svn/tmp/svn_load_dirs.$$";
   open(FILE, ">$tmp_filename")
-    or die "$0: cannot open `$tmp_filename' for writing: $!\n";
+    or die "$0: cannot open '$tmp_filename' for writing: $!\n";
   binmode FILE;
   print FILE $out;
   close(FILE)
-    or die "$0: cannot close `$tmp_filename' for writing: $!\n";
+    or die "$0: cannot close '$tmp_filename' for writing: $!\n";
   rename($tmp_filename, $filename)
-    or die "$0: cannot rename `$tmp_filename' to `$filename': $!\n";
+    or die "$0: cannot rename '$tmp_filename' to '$filename': $!\n";
 
   return 1;
 }
