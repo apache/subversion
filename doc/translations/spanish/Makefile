@@ -19,6 +19,7 @@ BOOK_VERSION_SOURCE =  $(BOOK_DIR)/version.xml
 BOOK_ALL_SOURCE = $(BOOK_DIR)/*.xml
 BOOK_IMAGES = $(BOOK_DIR)/images/*.png
 BOOK_INSTALL_DIR = $(INSTALL_DIR)/book
+BOOK_ASPELL_FILES = book foreword ch00 ch01
 
 MDOCS_DIR = ${BOOK_TOP}/misc-docs
 MDOCS_HTML_TARGET = $(MDOCS_DIR)/misc-docs.html
@@ -48,6 +49,22 @@ BOOK_HTML_XSLTPROC_OPTS =
 # BOOK_PDF_XSLTPROC_OPTS = --stringparam paper.type A4
 
 all: all-html #all-pdf all-ps
+
+aspell_add_words:
+	@for file in $(BOOK_ASPELL_FILES); do \
+		cat book/$$file.xml |aspell list -H --lang=es |sort|uniq> tmp.txt;\
+		cat book/$$file.xml.aspell_ignore >> tmp.txt;\
+		sort tmp.txt|uniq> book/$$file.xml.aspell_ignore;\
+		rm tmp.txt;\
+		svn diff book/$$file.xml.aspell_ignore;\
+	done
+
+aspell_check:
+	@for file in $(BOOK_ASPELL_FILES); do \
+		aspell -H --lang=es create master ./book/.aspell.$$file < book/$$file.xml.aspell_ignore;\
+		aspell check book/$$file.xml -H --lang=es --add-extra-dicts ./book/.aspell.$$file;\
+	done
+
 
 install: install-book install-misc-docs
 
