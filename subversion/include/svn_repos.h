@@ -356,13 +356,11 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
 /*** Making checkouts. */
 
 /* Recursively walk over REVNUM:PATH inside an already-open repository
-   FS, and drive a checkout EDITOR.  URL is the base ancestry that
-   will be stored in the working copy.  Allocate all data in POOL. */
+   FS, and drive a checkout EDITOR.  Allocate all data in POOL. */
 svn_error_t *
 svn_repos_checkout (svn_fs_t *fs, 
                     svn_revnum_t revnum, 
                     svn_boolean_t recurse,
-                    const char *URL,
                     const char *fs_path,
                     const svn_delta_editor_t *editor, 
                     void *edit_baton,
