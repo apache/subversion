@@ -420,21 +420,51 @@ svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
 #endif /* APR_POOL_DEBUG */
 
 
+/* The maximum amount of memory to keep in the freelist: 4MB */
+#define SVN_POOL_MAX_FREE (4096 * 1024)
+
 SVN_POOL_FUNC_DEFINE(apr_pool_t *, svn_pool_create)
 {
   apr_pool_t *ret_pool;
+  apr_allocator_t *allocator = NULL;
+  apr_status_t apr_err;
+
+  /* For the top level pool we want a seperate allocator */
+  if (pool == NULL)
+    {
+      apr_err = apr_allocator_create (&allocator);
+      if (apr_err)
+        abort_on_pool_failure (apr_err);
+
+      apr_allocator_set_max_free (allocator, SVN_POOL_MAX_FREE);
+    }
 
 #if !APR_POOL_DEBUG
-  apr_pool_create_ex (&ret_pool, pool, abort_on_pool_failure, NULL);
+  apr_pool_create_ex (&ret_pool, pool, abort_on_pool_failure, allocator);
 #else /* APR_POOL_DEBUG */
   apr_pool_create_ex_debug (&ret_pool, pool, abort_on_pool_failure,
-                            NULL, file_line);
+                            allocator, file_line);
 #endif /* APR_POOL_DEBUG */
 
   /* If there is no parent, then initialize ret_pool as the "top". */
   if (pool == NULL)
     {
-      apr_status_t apr_err = svn_error_init_pool (ret_pool);
+#if APR_HAS_THREADS
+      {
+        apr_thread_mutex_t *mutex;
+
+        apr_err = apr_thread_mutex_create (&mutex, APR_THREAD_MUTEX_DEFAULT,
+                                           ret_pool);
+        if (apr_err)
+          abort_on_pool_failure (apr_err);
+
+        apr_allocator_set_mutex (allocator, mutex);
+      }
+#endif /* APR_HAS_THREADS */
+
+      apr_allocator_set_owner (allocator, ret_pool);
+     
+      apr_err = svn_error_init_pool (ret_pool);
       if (apr_err)
         abort_on_pool_failure (apr_err);
     }
