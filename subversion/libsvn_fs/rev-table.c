@@ -85,6 +85,7 @@ svn_fs__get_rev (skel_t **skel_p,
                                svn_fs__set_dbt (&key, &recno, sizeof (recno)),
                                svn_fs__result_dbt (&value),
                                0);
+  svn_fs__track_dbt (&value, pool);
 
   /* If there's no such revision, return an appropriately specific error.  */
   if (db_err == DB_NOTFOUND)
@@ -92,9 +93,6 @@ svn_fs__get_rev (skel_t **skel_p,
 
   /* Handle any other error conditions.  */
   SVN_ERR (DB_WRAP (fs, "reading filesystem revision", db_err));
-
-  /* Make sure the skel's contents get freed when POOL is destroyed.  */
-  svn_fs__track_dbt (&value, pool);
 
   /* Parse and check the REVISION skel.  */
   skel = svn_fs__parse_skel (value.data, value.size, pool);

@@ -62,17 +62,6 @@ svn_fs__result_dbt (DBT *dbt)
 }
 
 
-DBT *
-svn_fs__recno_dbt (DBT *dbt, db_recno_t *recno)
-{
-  svn_fs__set_dbt (dbt, recno, sizeof (*recno));
-  dbt->ulen = dbt->size;
-  dbt->flags |= DB_DBT_USERMEM;
-
-  return dbt;
-}
-
-
 /* An APR pool cleanup function that simply applies `free' to its
    argument.  */
 static apr_status_t
@@ -89,6 +78,17 @@ svn_fs__track_dbt (DBT *dbt, apr_pool_t *pool)
 {
   if (dbt->data)
     apr_pool_cleanup_register (pool, dbt->data, apr_free_cleanup, apr_pool_cleanup_null);
+
+  return dbt;
+}
+
+
+DBT *
+svn_fs__recno_dbt (DBT *dbt, db_recno_t *recno)
+{
+  svn_fs__set_dbt (dbt, recno, sizeof (*recno));
+  dbt->ulen = dbt->size;
+  dbt->flags |= DB_DBT_USERMEM;
 
   return dbt;
 }
