@@ -62,6 +62,7 @@
 #define PATH_TXN_PROPS     "props"         /* Transaction properties */
 #define PATH_NEXT_IDS      "next-ids"      /* Next temporary ID assignments */
 #define PATH_REV           "rev"           /* Proto rev file */
+#define PATH_PREFIX_NODE   "node."         /* Prefix for node filename */
 #define PATH_EXT_TXN       ".txn"          /* Extension of txn dir */
 #define PATH_EXT_CHILDREN  ".children"     /* Extension for dir contents */
 #define PATH_EXT_PROPS     ".props"        /* Extension for node props */
@@ -190,9 +191,10 @@ path_txn_node_rev (svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
   const char *txn_id = svn_fs_fs__id_txn_id (id);
   const char *node_id = svn_fs_fs__id_node_id (id);
   const char *copy_id = svn_fs_fs__id_copy_id (id);
+  const char *name = apr_psprintf (pool, PATH_PREFIX_NODE "%s.%s",
+                                   node_id, copy_id);
 
-  return svn_path_join (path_txn_dir (fs, txn_id, pool),
-                        apr_pstrcat (pool, node_id, ".", copy_id, NULL), pool);
+  return svn_path_join (path_txn_dir (fs, txn_id, pool), name, pool);
 }
 
 static const char *
