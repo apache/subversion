@@ -245,7 +245,7 @@ typedef struct {
   /* is this resource a collection? (from the DAV:resourcetype element) */
   int is_collection;
 
-  /* PROPSET: NAME -> VALUE (const char * -> const char *) */
+  /* PROPSET: NAME -> VALUE (const char * -> const svn_string_t *) */
   apr_hash_t *propset;
 
   /* --- only used during response processing --- */
