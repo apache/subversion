@@ -67,7 +67,8 @@ typedef enum {
   svn_cl__notice_ancestry_opt,
   svn_cl__editor_cmd_opt,
   svn_cl__old_cmd_opt,
-  svn_cl__new_cmd_opt
+  svn_cl__new_cmd_opt,
+  svn_cl__config_dir_opt,
 } svn_cl__longopt_t;
 
 
@@ -119,6 +120,7 @@ typedef struct svn_cl__opt_state_t
   const char *old_target;        /* diff target */
   const char *new_target;        /* diff target */
   svn_boolean_t relocate;        /* rewrite urls (svn switch) */
+  const char * config_dir;       /* over-riding configuration directory */
 } svn_cl__opt_state_t;
 
 

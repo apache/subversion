@@ -91,11 +91,13 @@ typedef struct svn_config_t svn_config_t;
    "*.o *.lo *.la #*# .*.rej *.rej .*~ *~ .#*"
 
 
-/** Read configuration information from the standard sources and merge
- * it into the hash @a *cfg_hash.  That is, first read any system-wide
- * configurations (from a file or from the registry), then merge in
- * personal configurations (again from file or registry).  The hash
- * and all its data are allocated in @a pool.
+/** Read configuration information from the standard sources and merge it
+ * into the hash @a *cfg_hash.  If @a config_dir is not NULL it specifies a
+ * directory from which to read the users configuration files overriding
+ * the default directory. It overrides everything else.  Otherwise, first
+ * read any system-wide configurations (from a file or from the registry),
+ * then merge in personal configurations (again from file or registry).
+ * The hash and all its data are allocated in @a pool.
  *
  * @a *cfg_hash is a hash whose keys are @c const char * configuration
  * categories (@c SVN_CONFIG_CATEGORY_SERVERS,
@@ -103,7 +105,8 @@ typedef struct svn_config_t svn_config_t;
  * svn_config_t * items representing the configuration values for that
  * category.  
  */
-svn_error_t *svn_config_get_config (apr_hash_t **cfg_hash, 
+svn_error_t *svn_config_get_config (apr_hash_t **cfg_hash,
+                                    const char *config_dir,
                                     apr_pool_t *pool);
 
 
@@ -218,9 +221,10 @@ svn_error_t *svn_config_get_server_setting_int(svn_config_t *cfg,
                                                apr_pool_t *pool);
 
 
-/** Try to ensure that the user's ~/.subversion/ area exists, and create no-op
- * template files for any absent config files.  Use @a pool for any
- * temporary allocation.  
+/** Try to ensure that the user's ~/.subversion/ area exists, and create
+ * no-op template files for any absent config files.  Use @a pool for any
+ * temporary allocation.  If @a config_dir is not NULL it specifies a
+ * directory to use instead of the default ~/.subversion.
  *
  * Don't error if something exists but is the wrong kind (for example,
  * ~/.subversion exists but is a file, or ~/.subversion/servers exists
@@ -231,7 +235,7 @@ svn_error_t *svn_config_get_server_setting_int(svn_config_t *cfg,
  * succeed in creating a config template file, return error if unable
  * to initialize its contents.
  */
-svn_error_t *svn_config_ensure (apr_pool_t *pool);
+svn_error_t *svn_config_ensure (const char *config_dir, apr_pool_t *pool);
 
 
 
@@ -253,6 +257,9 @@ svn_error_t *svn_config_ensure (apr_pool_t *pool);
  * and load the file contents into the hash, using @a pool.  If the
  * file doesn't exist, set @a *hash to NULL.
  *
+ * If @a config_dir is not NULL it specifies a directory to use instead of
+ * the ~/.subversion default.
+ *
  * Besides containing the original credential fields, the hash will
  * also contain @c SVN_CONFIG_REALMSTRING_KEY.  The caller can examine
  * this value as a sanity-check that the correct file was loaded.
@@ -263,11 +270,13 @@ svn_error_t *svn_config_ensure (apr_pool_t *pool);
 svn_error_t * svn_config_read_auth_data (apr_hash_t **hash,
                                          const char *cred_kind,
                                          const char *realmstring,
+                                         const char *config_dir,
                                          apr_pool_t *pool);
 
 /** Use @a cred_kind and @a realmstring to create or overwrite a file
- * within the ~/.subversion/auth/ area.  Write the contents of @a hash
- * into the file.  
+ * within the ~/.subversion/auth/ area.  Write the contents of @a hash into
+ * the file.  If @a config_dir is not NULL it specifies a directory to use
+ * instead of the the ~/.subversion/ default.
  *
  * Also, add @a realmstring to the file, with key @c
  * SVN_CONFIG_REALMSTRING_KEY.  This allows programs (or users) to
@@ -279,6 +288,7 @@ svn_error_t * svn_config_read_auth_data (apr_hash_t **hash,
 svn_error_t * svn_config_write_auth_data (apr_hash_t *hash,
                                           const char *cred_kind,
                                           const char *realmstring,
+                                          const char *config_dir,
                                           apr_pool_t *pool);
 
 /** @} */

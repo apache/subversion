@@ -186,6 +186,7 @@ read_all (svn_config_t **cfgp,
 
 static svn_error_t *
 get_category_config (svn_config_t **cfg,
+                     const char *config_dir,
                      const char *category,
                      apr_pool_t *pool)
 {
@@ -202,7 +203,8 @@ get_category_config (svn_config_t **cfg,
 #endif /* SVN_WIN32 */
 
   SVN_ERR (svn_config__sys_config_path (&sys_cfg_path, category, pool));
-  SVN_ERR (svn_config__user_config_path (&usr_cfg_path, category, pool));
+  SVN_ERR (svn_config__user_config_path (config_dir, &usr_cfg_path, category,
+                                         pool));
   SVN_ERR (read_all (cfg,
                      sys_reg_path, usr_reg_path,
                      sys_cfg_path, usr_cfg_path,
@@ -214,19 +216,22 @@ get_category_config (svn_config_t **cfg,
 
 svn_error_t *
 svn_config_get_config (apr_hash_t **cfg_hash,
+                       const char *config_dir,
                        apr_pool_t *pool)
 {
   svn_config_t *cfg;
   *cfg_hash = apr_hash_make (pool);
   
 #define CATLEN (sizeof (SVN_CONFIG_CATEGORY_SERVERS) - 1)
-  SVN_ERR (get_category_config (&cfg, SVN_CONFIG_CATEGORY_SERVERS, pool));
+  SVN_ERR (get_category_config (&cfg, config_dir, SVN_CONFIG_CATEGORY_SERVERS,
+                                pool));
   if (cfg)
     apr_hash_set (*cfg_hash, SVN_CONFIG_CATEGORY_SERVERS, CATLEN, cfg);
 #undef CATLEN
 
 #define CATLEN (sizeof (SVN_CONFIG_CATEGORY_CONFIG) - 1)
-  SVN_ERR (get_category_config (&cfg, SVN_CONFIG_CATEGORY_CONFIG, pool));
+  SVN_ERR (get_category_config (&cfg, config_dir, SVN_CONFIG_CATEGORY_CONFIG,
+                                pool));
   if (cfg)
     apr_hash_set (*cfg_hash, SVN_CONFIG_CATEGORY_CONFIG, CATLEN, cfg);
 #undef CATLEN

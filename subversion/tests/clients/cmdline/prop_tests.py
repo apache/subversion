@@ -368,7 +368,7 @@ def update_conflict_props(sbox):
 
   if len(extra_files) != 0:
     print "didn't get expected conflict files"
-    raise svntest.SVNUnexpectedOutput
+    raise svntest.actions.SVNUnexpectedOutput
 
   # Resolve the conflicts
   svntest.main.run_svn(None, 'resolved', mu_path)
@@ -664,7 +664,7 @@ def copy_inherits_special_props(sbox):
     print "svn pg svn:mime-type output does not match expected."
     print "Expected standard output: ", expected_stdout, "\n"
     print "Actual standard output: ", actual_stdout, "\n"
-    raise svntest.SVNUnexpectedOutput
+    raise svntest.actions.SVNUnexpectedOutput
 
   # Check the svn:executable value.
   # The value of the svn:executable property is now always forced to '*'
@@ -678,7 +678,7 @@ def copy_inherits_special_props(sbox):
       print "svn pg svn:executable output does not match expected."
       print "Expected standard output: ", expected_stdout, "\n"
       print "Actual standard output: ", actual_stdout, "\n"
-      raise svntest.SVNUnexpectedOutput
+      raise svntest.actions.SVNUnexpectedOutput
 
 #----------------------------------------------------------------------
 

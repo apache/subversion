@@ -33,6 +33,7 @@ Valid options:
   --password arg           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
+  --config-dir arg         : read user configuration files from directory ARG
 
 switch (sw): Update working copy to mirror a new URL
 usage: switch URL [PATH]   or
@@ -55,4 +56,5 @@ Valid options:
   --password arg           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
+  --config-dir arg         : read user configuration files from directory ARG
 
