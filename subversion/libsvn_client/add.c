@@ -214,7 +214,7 @@ mkdir_urls (svn_client_commit_info_t **commit_info,
   const char *common;
   int i;
 
-  /* Condense our list of deletion targets. */
+  /* Condense our list of mkdir targets. */
   SVN_ERR (svn_path_condense_targets (&common, &targets, paths, FALSE, pool));
   if (! targets->nelts)
     {
