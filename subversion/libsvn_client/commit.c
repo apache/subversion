@@ -160,9 +160,12 @@ import_dir (apr_hash_t *files,
       if (finfo.filetype == APR_DIR)
         {
           /* Skip entries for this dir and its parent.  
-             ### kff todo: APR actually promises that they'll come first,
-             so this guard could be moved outside the loop. */
-          if (! (strcmp (finfo.name, ".") && strcmp (finfo.name, "..")))
+             (APR promises that they'll come first, so technically
+             this guard could be moved outside the loop.  But somehow
+             that feels iffy. */
+          if (finfo.name[0] == '.'
+              && (finfo.name[1] == '\0'
+                  || (finfo.name[1] == '.' && finfo.name[2] == '\0')))
             continue;
 
           /* If someone's trying to import a directory named the same
