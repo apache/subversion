@@ -4,14 +4,10 @@ Version X.X.X (unreleased)
  * 'svn diff' can now compare two arbitrary URLs (issue 674)
  * 'svn diff' now displays property changes
  * 'svn rm' requires --force for unversioned and/or modified items
- * 'svn rm' removes files and uncommitted directories from the working
-    copy immediately
- * 'svn mv' for WC->WC moves behaves like 'svn rm' with respect to
-    the source, it requires --force for unversioned and/or modified items
-    and removes files and uncommitted directories from source
+ * 'svn rm' immediately removes files & uncommitted dirs
+ * 'svn mv' for WC->WC behaves like 'svn rm' with respect to the source
  * checkouts, updates, switches now print received revision on final line.
- * new 'svn info' command that prints out information about a versioned 
-    resource.
+ * new 'svn info' command prints information about a versioned resource.
 
  Developer-visible changes:
  * updates can deal with disjoint urls.
