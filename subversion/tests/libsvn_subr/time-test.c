@@ -236,12 +236,12 @@ static const char *failure_tests[] = {
 
 static svn_error_t *
 compare_results (struct date_test *dt,
-                 apr_time_exp_t *expl)
+                 apr_time_exp_t *expt)
 {
-  if (expl->tm_year + 1900 != dt->year || expl->tm_mon + 1 != dt->mon
-      || expl->tm_mday != dt->mday || expl->tm_hour != dt->hour
-      || expl->tm_min != dt->min || expl->tm_sec != dt->sec
-      || expl->tm_usec != dt->usec)
+  if (expt->tm_year + 1900 != dt->year || expt->tm_mon + 1 != dt->mon
+      || expt->tm_mday != dt->mday || expt->tm_hour != dt->hour
+      || expt->tm_min != dt->min || expt->tm_sec != dt->sec
+      || expt->tm_usec != dt->usec)
     return svn_error_createf
       (SVN_ERR_TEST_FAILED, NULL, "Comparison failed for '%s'", dt->str);
   return SVN_NO_ERROR;
@@ -253,7 +253,7 @@ test_parse_date (const char **msg,
                  apr_pool_t *pool)
 {
   apr_time_t now, result;
-  apr_time_exp_t nowexp, expl;
+  apr_time_exp_t nowexp, expt;
   svn_boolean_t matched;
   struct date_test *dt;
   const char **ft;
@@ -273,10 +273,10 @@ test_parse_date (const char **msg,
       if (!matched)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL, "Match failed for '%s'", dt->str);
-      if (apr_time_exp_lt (&expl, result) != APR_SUCCESS)
+      if (apr_time_exp_lt (&expt, result) != APR_SUCCESS)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL, "Expand failed for '%s'", dt->str);
-      SVN_ERR (compare_results (dt, &expl));
+      SVN_ERR (compare_results (dt, &expt));
     }
 
   for (dt = gmt_tests; dt->str; dt++)
@@ -285,10 +285,10 @@ test_parse_date (const char **msg,
       if (!matched)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL, "Match failed for '%s'", dt->str);
-      if (apr_time_exp_gmt (&expl, result) != APR_SUCCESS)
+      if (apr_time_exp_gmt (&expt, result) != APR_SUCCESS)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL, "Expand failed for '%s'", dt->str);
-      SVN_ERR (compare_results (dt, &expl));
+      SVN_ERR (compare_results (dt, &expt));
     }
 
   for (dt = daytime_tests; dt->str; dt++)
@@ -297,13 +297,13 @@ test_parse_date (const char **msg,
       if (!matched)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL, "Match failed for '%s'", dt->str);
-      if (apr_time_exp_lt (&expl, result) != APR_SUCCESS)
+      if (apr_time_exp_lt (&expt, result) != APR_SUCCESS)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL, "Expand failed for '%s'", dt->str);
       dt->year = nowexp.tm_year + 1900;
       dt->mon = nowexp.tm_mon + 1;
       dt->mday = nowexp.tm_mday;
-      SVN_ERR (compare_results (dt, &expl));
+      SVN_ERR (compare_results (dt, &expt));
     }
 
   for (ft = failure_tests; *ft; ft++)
