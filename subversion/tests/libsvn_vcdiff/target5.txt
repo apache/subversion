@@ -1,0 +1,4 @@
+This is not a related file at all -- it's just a random piece of text,
+though if by some chance I did happen to insert some of the alphabet
+into it, such as "ghijklmnopqrs", it should be expressed as a COPY
+instruction.  We'll see.

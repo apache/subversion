@@ -1,0 +1,55 @@
+The following people have commit access to the Subversion sources.
+Note that this is not a full list of Subversion's authors, however --
+for that, you'd need to look over the log messages to see all the
+patch contributors.
+
+If you have a question or comment, it's probably best to mail
+dev@subversion.tigris.org, rather than mailing any of these people
+directly.
+
+Blanket commit access:
+
+            jimb   Jim Blandy <jimb@redhat.com>
+         sussman   Ben Collins-Sussman <sussman@collab.net>
+          kfogel   Karl Fogel <kfogel@collab.net>
+          gstein   Greg Stein <gstein@lyra.org>
+           brane   Branko Cibej <brane@xbc.nu>
+             joe   Joe Orton <joe@light.plus.com>
+         ghudson   Greg Hudson <ghudson@mit.edu>
+            fitz   Brian Fitzpatrick <fitz@red-bean.com>
+          daniel   Daniel Stenberg <daniel@haxx.se>
+        cmpilato   C. Michael Pilato <cmpilato@collab.net>
+           kevin   Kevin Pilch-Bisson <kevin@pilch-bisson.net>
+          philip   Philip Martin <philip@codematters.co.uk>
+     jerenkrantz   Justin Erenkrantz <jerenkrantz@apache.org>
+          rooneg   Garrett Rooney <rooneg@electricjellyfish.net>
+        bcollins   Ben Collins <bcollins@debian.org>
+           blair   Blair Zajac <blair@orcaware.com>
+         striker   Sander Striker <striker@apache.org>
+           naked   Nuutti Kotivuori <naked@iki.fi>
+         dwhedon   David Kimdon <David_Kimdon@alumni.hmc.edu>
+             dlr   Daniel Rall <dlr@finemaltcoding.com>
+           kraai   Matt Kraai <kraai@alumni.cmu.edu>
+             mbk   Mark Benedetto King <mbk@boredom.org>
+             epg   Eric Gillespie <epg@pretzelnet.org>
+
+Commit access for specific areas:
+
+            xela   Alexander Mueller <alex@littleblue.de>      (Java bindings)
+         yoshiki   Yoshiki Hayashi <yoshiki@xemacs.org>        (Ruby bindings)
+           david   David Summers <david@summersoft.fay.ar.us>  (RPMs)
+        rassilon   Bill Tutt <rassilon@lyra.org>               (Win32 / COM)
+        kbohling   Kirby C. Bohling <kbohling@birddog.com>     (tools/dev)
+             nsd   Nick Duffek <nick@duffek.com>               (doc)
+         fmatias   Féliciano Matias <feliciano.matias@free.fr> (French docs)
+          xsteve   Stefan Reichör <reichoer@web.de>            (psvn)
+        josander   Jostein Andersen <jostein@josander.net>     (innosetup)
+        ballbach   Michael Ballbach <ballbach@rten.net>        (packages)
+        niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
+          morten   Morten Ludvigsen <morten@2ps.dk>            (bindings)
+          zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
+          mmacek   Marko Macek <Marko.Macek@gmx.net>           (cvs2svn branch)
+            mass   David Waite <mass@akuma.org>                (certs branch)
+        jespersm   Jesper Steen Møller <jesper@selskabet.org>  (bindings)
+          knacke   Kai Peter Nacke <KPNacke@bochum.de>         (bindings)
+          mprice   Michael Price <mprice@atl.lmco.com>         (releases)

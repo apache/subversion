@@ -1,0 +1,9 @@
+This directory holds the different tests
+for the java subversion binding.
+
+There are two kinds of tests:
+- java test cases using JUnit 3.7 framework
+  to test the Java side of the code
+- c test cases using the subversion test
+  framework
+

@@ -1,0 +1,215 @@
+
+HOW-TO:  svn repository upgrade procedure
+=========================================
+ $LastChangedDate$
+
+
+PROBLEM:
+
+In revision 2093 [June 5, 2002], the underlying schema for subversion
+repositories (libsvn_fs) was changed.  The schema was changed again in
+revision 2491.  This means you can see many different errors when
+accessing a repository:
+
+  1. if your client is newer that the repository, you might see:
+
+         Berkeley DB error while opening `copies' table
+         
+            or
+
+         Berkeley DB error while opening `changes' table
+
+
+  2. if your client is older than the repository, you might see:
+
+         Malformed revision skeleton
+
+
+
+SOLUTION:
+
+Here's the procedure for upgrading your old repository to a new one.
+
+If your repository is very large, it may have quite a bit of
+"deltified" data in it; you might notice very slow checkout times on
+old revisions, and if so, you're probably a victim of inefficient
+undeltification.  In these cases, we recommend running 'svnadmin
+undeltify' on every Nth revision... it will drastically speed up the
+repository export/import later on.  If you plan to do this, we labeled
+relevant steps below as [OPTIONAL].
+
+
+1. Depending on how old your repository is, obtain a working copy of
+   either the r2092 or r2490 branches.  These branches exist so that
+   you can compile a static binary of 'svnadmin' using the latest
+   dumping/loading code, but with old fs schemas.
+
+     svn co http://svn.collab.net/repos/svn/branches/fs-convert-2092
+
+       or
+
+     svn co http://svn.collab.net/repos/svn/branches/fs-convert-2490
+
+   (If your repository is using libsvn_fs older than r2092, then use
+   r2092.  If your libsvn_fs is between 2093 and 2490, then use the
+   2490 branch.)
+
+2. Build the branch statically (pass --disable-shared to ./configure),
+   and then copy the large 'svnadmin' binary to a safe place.  Rename
+   it to 'svnadmin-old'.
+
+3. [OPTIONAL] Run 'svnadmin-old undeltify' on every Nth revision in
+   your repository.  A perl script at the bottom of this document can
+   help with that.
+
+4. Build the HEAD revision of svn.  Find the latest svnadmin binary.
+
+5. Create a brand new repository using the new fs schema:
+
+       svnadmin create newrepos
+
+6. Create a 'dump' of your repository using the *older* svnadmin binary
+   like so:
+
+       svnadmin-old dump oldrepos > dumpfile
+
+   Then load the dumpfile into the new repository with the new
+   svnadmin binary.  This effectively replays all of your commits:
+
+       svnadmin load newrepos < dumpfile
+
+   OR, if you're feeling saucy, you can do it all at once:
+
+       svnadmin-old dump oldrepos | svnadmin load newrepos
+
+
+Congratulations, you now have a newly upgraded repository.  For
+starters, 'svn log' actually traces back through copy/rename history
+now, and 'svn log -v' will quickly show you the changed paths in each
+revision.
+
+
+----------------------------------------------------------------------
+
+
+Here's a perl script to undeltify every Nth revision in your repository.
+Run it like so:  ./undeltify.pl REPOS-PATH [START-REV:END_REV] [INCREMENT]
+
+
+
+#!/usr/bin/perl
+
+use strict;
+
+#############################################################################
+#  SETUP 
+
+my $svnadmin_cmd = '/home/cmpilato/bin/svnadmin-2092b';
+my $svnlook_cmd = '/home/cmpilato/bin/svnlook-2092b';
+
+#
+#############################################################################
+
+sub do_usage
+{
+    print "ERROR: usage: $0 REPOS [START-REV:END-REV] [INCREMENT]]\n\n";
+    exit;
+}
+
+sub do_undeltify # ($repos, $start_rev, $end_rev, $increment)
+{
+    my $repos     = shift @_;
+    my $start_rev = shift @_;
+    my $end_rev   = shift @_;
+    my $increment = shift @_;
+    my $i = $start_rev;
+    while (1)
+    {
+        print "--- Undeltifying revision $i...";
+        `$svnadmin_cmd undeltify $repos $i /`;
+        print "done.\n";
+        if ($start_rev > $end_rev)
+        {
+            $i = $i - $increment;
+            last if ($i < $end_rev);
+        }
+        else
+        {
+            $i = $i + $increment;
+            last if ($i > $end_rev);
+        }
+    }
+}
+
+my $next_arg;
+my $repos;
+my $start_rev;
+my $end_rev;
+my $increment;
+my $youngest;
+
+# REPOS argument is required.
+$next_arg = shift @ARGV;
+if ($next_arg eq '')
+{
+    &do_usage();
+}
+
+# Use the REPOS argument to first figure out the youngest revision in
+# the repository.
+$repos = $next_arg;
+$youngest = `$svnlook_cmd youngest $repos`;
+chomp $youngest;
+
+# Setup the default argument list, a backwards walk of all revisions
+# in the repository.
+$start_rev = $youngest - 1;
+$end_rev = 1;
+$increment = 1;
+
+# Parse the remaining arguments.
+$next_arg = shift @ARGV;
+if ($next_arg ne '')
+{
+    if ($next_arg =~ /^(\d+)\:(\d+)$/)
+    {
+        $start_rev = $1;
+        $end_rev = $2;
+        $next_arg = shift @ARGV;
+        if ($next_arg ne '')
+        {
+            if ($next_arg =~ /^\d+$/)
+            {
+                $increment = $next_arg;
+            }
+            else
+            {
+                &do_usage();
+            }
+        }
+    }
+    elsif ($next_arg =~ /^\d+$/)
+    {
+        $increment = $next_arg;
+    }
+    else
+    {
+        &do_usage();
+    }
+}
+
+# Validate the input.
+if (($start_rev > $youngest) 
+    or ($end_rev > $youngest)
+    or ($start_rev < 1)
+    or ($end_rev < 1))
+{
+    print "ERROR: You've specified an invalid revision.\n";
+    print "ERROR: Valid revisions are those between 1 and $youngest.\n\n";
+    exit;
+}
+
+print "Undeltifying `$repos', revs $start_rev - $end_rev (by $increment).\n";
+&do_undeltify ($repos, $start_rev, $end_rev, $increment);
+print "Finished.  Happy computing!\n\n";
+exit;

@@ -1,0 +1,1 @@
+some text, and now some more text, still no newline

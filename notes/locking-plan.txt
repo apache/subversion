@@ -1,0 +1,139 @@
+
+LOCKING PROPOSAL,
+
+  by sussman, striker, brane, rassilon, jerenkrantz, fitz
+
+  [This document assumes that you understand the WebDAV locking
+  model.  Look in notes/webdav-general-summary to read about that.]
+
+
+Accomplishing two goals:
+
+   1. General WebDAV interoperabilty
+
+        In particular, with basic versioning-unaware WebDAV (rfc 2518)
+        clients that expect support for LOCK and UNLOCK methods, such
+        as MS Office and OpenOffice.
+
+   2. Exclusive and advisory locking for regular svn clients.
+ 
+        Many, many people want this feature.
+
+------------------------
+
+Filesystem changes
+==================
+
+DAV Lock-Object:
+  - owner
+  - token (unique URI)
+  - scope = {exclusive | shared}
+  - type = write
+  - depth = {0 | infinity}
+
+
+* locks are not secret!  none of the fields, not even the 'token' field.
+
+* create a new 'lock' table in our db schema.  
+   fields:  [path, owner, scope, type, depth, lock-id, txn-name]
+   'path' always implicitly refers to path in HEAD.  locks always imply HEAD.
+
+* define new fs lock-object as an opaque baton.
+
+* svn_fs_lock(path, scope, owner, depth, type) 
+    ==> returns a lock-object.
+  Creates a txn if necessary (i.e. in the case of an exclusive lock)
+  [Possible lazy optimization:  don't create txn till first write happens]
+
+* all svn_fs_* write routines now take ({txn-name | lock-object}, path)
+  if lock-object:
+   - lock-object is converted to a txn via table lookup.
+   - make sure the path's lock object matches the one passed in.
+   - do the infinity check ???
+   - do the write to the txn.
+
+  else: 
+  -  do the write to the txn, but make sure no exclusive locks
+     already exist on the path, else throw error.
+
+* all svn_fs_* read routines still take (root, path), but in the
+  special case where root represents the HEAD revision, each read
+  routine must new look up 'path' in the lock table, because the
+  latest version of the file might be in a txn.
+
+* svn_fs_unlock(lock-object)
+   aborts the txn, removes lock object from the lock table.
+
+* svn_fs_commit_txn([list of lock-objects], regular-txn, cleanup-locks-p):
+
+   - if called by normal concurrent caller (list == NULL):
+      make sure every mutable node is not only out-of-date, but has
+      no exclusive lock attached.  else, throw a conflict.
+
+   - if called by svn_fs_unlock() (list != NULL):
+      no need to check for out-of-dateness or locks at all.
+      new automerging logic:
+       1- Automerge the regular-txn, then the list of lock-txns.
+       2- Possibly loop back to step 1, not needing to remerge the list.
+       3- Begin db txn: commit and possibly remove all lock txns.
+
+* by the way, we want this behavior:  an exclusive lock request should
+  be denied if a shared lock already exists.  don't know if DAV works
+  this way or not.
+
+
+
+mod_dav_svn changes:
+===================
+
+  * LOCK method calls svn_fs_lock().  sends back lock URI to client.
+
+  * client does GET:  see svn_fs_* read routines above.
+
+  * client does PUT with lock URI:  see svn_write_* routines above.
+
+  * UNLOCK method with lock URI:  calls
+           svn_fs_commit_txn(cleanup-locks-p = true)
+
+-------------------------------------------------------------------
+
+Client changes:
+
+[this proposal is only a design for exclusive locks.  the discussion
+about how to do shared "advisory" locks got very complex and heated,
+so we punted for now.]
+
+* call an exclusive lock a "lock"
+
+* 'svn st -u' should show not just out-of-date objects, but locks too.
+
+* 'svn lock foo.c' creates a lock object on the server.
+   returns a lock-token to client, which is stored in the file's entry.
+   the lock-token is the "auth" for the application, so that only the
+   same application can commit or release the lock.
+
+* 'svn unlock foo.c' does the reverse of above.  requires that the
+  working copy have the lock-token.  --force means you don't need the
+  token (or rather, the client simply "discovers" it by querying the
+  server for the token.)
+
+* 'svn commit' changes behavior:
+    when driving the commit editor, the client supplies any lock
+    tokens attached to committables.  the commit_editor's close_edit()
+    then passes the tokens as a list to svn_fs_commit_txn().
+
+* 'svn locklist' (?name)  asks the server to list all locks within a
+  directory, or if a lock is attached to a file.
+
+* 'svn lockrecover' re-fetches the lock-id back into the working copy,
+  in case you've checked out (or are using) a new working copy.
+
+* breaking of locks:  
+
+    1.  implement 'svnadmin rmlock'
+    2.  server-side config decides whether users can break locks.
+        if allowed, then 'svn unlock --break' would do so.
+
+
+
+

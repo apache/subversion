@@ -1,0 +1,39 @@
+Using the svntest scripts                                 -*- Text -*-
+=========================
+
+1) Read the INSTALL (http://svn.collab.net/repos/svm/trunk/INSTALL)
+   file, especially the sections about bootstrapping from a tarball
+   and getting the latest APR, APR-UTIL and httpd-2.0 sources.
+   Check out and compile the latest Subversion.
+
+2) Copy the svntest scripts from trunk/tools/test-scripts/svntest to
+   somewhere outside the repository. Then read and modify
+   svntest-config.sh to reflect your local installation. Take special
+   care about program locations and e-mail addresses.
+
+3) Create one or more scripts that configure Subversion in different
+   ways (e.g., configure.shared, configure.static). Here's the script
+   I'm using for static builds on Solaris 7:
+
+   #!/bin/sh
+   env CC='gcc' \
+       "../repo/configure" \
+       "--prefix=/home/brane/svn/inst" \
+       "--with-berkeley-db=/home/brane/svn/db4" \
+       "--disable-shared" \
+       "$@"
+
+   At the moment, svntest-rebuild.sh will only recognize shared and
+   static build types, but you can easily change that. If you do, also
+   change svntest.sh so that it tests all the different configurations.
+
+4) Make sure your environment (e.g., LD_LIBRARY_PATH) is set correctly
+   to find Berkeley DB, etc.
+
+5) Run svntest.sh to get the latest versions of ARP, APR-UTIL and
+   Subversion, build and test all the configurations. Note that the
+   scripts do not test Apache integration (yet).
+
+
+======================================================
+Need more detailed instructions? Use the Source, Luke!
