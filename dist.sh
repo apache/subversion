@@ -49,20 +49,20 @@ rm -rf ${DIST_SANDBOX}
 mkdir ${DIST_SANDBOX}
 
 ### Export the dist tree, clean it up.
-(cd ${DIST_SANDBOX}; cvs -d :pserver:guest@cvs.tigris.org:/cvs \
-                       export -D tomorrow -d ${DISTNAME} subversion)
+(cd ${DIST_SANDBOX} && cvs -d :pserver:guest@cvs.tigris.org:/cvs \
+                         export -D tomorrow -d ${DISTNAME} subversion)
 rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name .cvsignore -print`
 
 ### Ship with (relatively) clean APR and neon working copies
 ### inside the tarball, just to make people's lives easier.
 cp -r apr ${DIST_SANDBOX}/${DISTNAME}
-(cd ${DIST_SANDBOX}/${DISTNAME}/apr; make distclean)
+(cd ${DIST_SANDBOX}/${DISTNAME}/apr && make distclean)
 # Defang the APR working copy.
 rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name CVS -type d -print`
 rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name .cvsignore -print`
 # Clean most of neon.
 cp -r neon ${DIST_SANDBOX}/${DISTNAME}
-(cd ${DIST_SANDBOX}/${DISTNAME}/neon; make distclean)
+(cd ${DIST_SANDBOX}/${DISTNAME}/neon && make distclean)
 # Then do some extra cleaning in neon, since its `make distclean'
 # rule still leaves some .o files lying around.  Better to
 # patch Neon, of course; but the fix wasn't obvious to me --
@@ -74,7 +74,7 @@ rm -f ${DIST_SANDBOX}/${DISTNAME}/neon/src/*.o
 # points out, until we get permission versioning working, it won't be
 # executable on export from svn.
 chmod a+x ${DIST_SANDBOX}/${DISTNAME}/autogen.sh
-(cd ${DIST_SANDBOX}/${DISTNAME}; ./autogen.sh)
+(cd ${DIST_SANDBOX}/${DISTNAME} && ./autogen.sh)
 
 ### Copy all the pre-built docs, so we ship with ready documentation.
 for name in doc/programmer/design/svn-design.info   \
@@ -101,7 +101,7 @@ EOF
 
 ### Make the tarball.
 echo "Rolling ${DISTNAME}.tar.gz ..."
-(cd ${DIST_SANDBOX}; tar zcvpf ${DISTNAME}.tar.gz ${DISTNAME})
+(cd ${DIST_SANDBOX} && tar zcvpf ${DISTNAME}.tar.gz ${DISTNAME})
 
 ### Copy it upstairs and clean up.
 cp ${DIST_SANDBOX}/${DISTNAME}.tar.gz .
