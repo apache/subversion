@@ -23,8 +23,8 @@ def check_tag(cvs_repo, module, tag, svn_repo, path):
     cvs_checkout(cvs_repo, module, tag, "cvs-co.tmp");
     svn_checkout(svn_repo, path, "svn-co.tmp");
     rc = os.system("diff -x .svn -x CVS -ru cvs-co.tmp svn-co.tmp");
-    os.system("rm -rf cvs-co.tmp");
-    os.system("rm -rf svn-co.tmp");
+    shutil.rmtree("cvs-co.tmp");
+    shutil.rmtree("svn-co.tmp");
     return rc;
 
 def check_tags(cvs_repo, module, tags):
@@ -33,7 +33,11 @@ def check_tags(cvs_repo, module, tags):
     for tag, path in tags:
         print "        checking tag %s -> %s" % (tag, path)
         check_tag(cvs_repo, module, tag, "svn-repo.tmp", path);
-    os.system("rm -rf svn-repo.tmp");
-    os.system("rm -rf cvs2svn-data.*");
-    os.system("rm test.log");
+    shutil.rmtree("svn-repo.tmp");
+    os.unlink("cvs2svn-data.revs");
+    os.unlink("cvs2svn-data.tags");
+    os.unlink("cvs2svn-data.resync");
+    os.unlink("cvs2svn-data.c-revs");
+    os.unlink("cvs2svn-data.s-revs");
+    os.unlink("test.log");
 
