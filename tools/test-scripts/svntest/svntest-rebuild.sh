@@ -71,3 +71,7 @@ test $? = 0 || {
     FAIL
 }
 PASS
+
+START "$SVN_NAME::rebuild flag" "Updating rebuild flag..."
+$DATE "+%s" > "$TEST_ROOT/$SVN_NAME.rb" || FAIL
+PASS

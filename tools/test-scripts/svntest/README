@@ -130,7 +130,7 @@ Using the svntest scripts                                 -*- Text -*-
    Subversion, build and test all the configurations. 
 
 8) If you like force rebuilding of some component, you could do:
-   echo "1" > $PROJ_REPO.rb, dependencies are:
+   echo "0" > $PROJ_REPO.rb, dependencies are:
    apr-util depends on apr, and httpd depends on apr and apr-util.
    Any dependent project will be also rebuild.
    When you run this script first time, everything will be rebuilt 

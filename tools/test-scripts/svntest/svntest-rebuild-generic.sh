@@ -6,7 +6,7 @@ EXEC_PATH="`dirname $0`"
 . "$EXEC_PATH/svntest-config.sh"
 
 PROJ_NAME="$1"
-NEXT_PROJ="$2"
+PREV_PROJ="$2"
 LOCAL_MAKE_OPTS="$3"
 
 test -z "$PROJ_NAME" && exit 1
@@ -21,9 +21,17 @@ START "$PROJ_NAME::check rebuild status" \
     "Checking rebuild status of $PROJ_NAME..."
 test -f "$TEST_ROOT/$PROJ_NAME.rb" || FAIL
 REBUILD_PROJ="`$CAT $TEST_ROOT/$PROJ_NAME.rb`"
+if test ! -z "$PREV_PROJ"; then
+    test -f "$TEST_ROOT/$PREV_PROJ.rb" || FAIL
+    REBUILD_PREV_PROJ="`$CAT $TEST_ROOT/$PREV_PROJ.rb`"
+fi
 PASS
 
-if test $REBUILD_PROJ -eq 0 ; then
+if test ! -z "$PREV_PROJ" ; then
+    if test $REBUILD_PROJ -ne 0 -a $REBUILD_PREV_PROJ -lt $REBUILD_PROJ; then
+        exit 0
+    fi
+elif test $REBUILD_PROJ -ne 0 ; then
     exit 0
 fi
 
@@ -73,9 +81,7 @@ test $? = 0 || {
 PASS
 
 START "$PROJ_NAME::rebuild flag" "Updating rebuild flag..."
-echo "0" > "$TEST_ROOT/$PROJ_NAME.rb" || FAIL
-# force rebuilding of next depending project
-test -z "$NEXT_PROJ" || echo "1" > "$TEST_ROOT/$NEXT_PROJ".rb
+$DATE "+%s" > "$TEST_ROOT/$PROJ_NAME.rb" || FAIL
 PASS
 
 echo >> $LOG_FILE
