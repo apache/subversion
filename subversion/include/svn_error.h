@@ -149,14 +149,26 @@ typedef enum svn_errno_t {
      error code, and `message' is an error message.  */
   SVN_ERR_BERKELEY_DB,
 
-  /* a bad URL was passed to the repository access layer */
-  SVN_ERR_RA_ILLEGAL_URL,
+  /* ### need to come up with a mechanism for RA-specific errors */
 
-  /* the repository access layer could not initialize the socket layer */
-  SVN_ERR_RA_SOCK_INIT,
+  /* These RA errors are specific to ra_dav */
 
-  /* the repository access layer could not lookup the hostname */
-  SVN_ERR_RA_HOSTNAME_LOOKUP,
+    /* a bad URL was passed to the repository access layer */
+    SVN_ERR_RA_ILLEGAL_URL,
+
+    /* the repository access layer could not initialize the socket layer */
+    SVN_ERR_RA_SOCK_INIT,
+
+    /* the repository access layer could not lookup the hostname */
+    SVN_ERR_RA_HOSTNAME_LOOKUP,
+
+    /* could not create an HTTP request */
+    SVN_ERR_RA_CREATING_REQUEST,
+
+    /* error making an Activity for the commit to the server */
+    SVN_ERR_RA_MKACTIVITY_FAILED,
+
+  /* End of ra_dav errors */
 
   /* an unsuitable container-pool was passed to svn_make_pool() */
   SVN_ERR_BAD_CONTAINING_POOL,
