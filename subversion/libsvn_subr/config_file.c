@@ -956,7 +956,7 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "### Or, if you wanted to specify a full path and arguments:\n"
         "# rsh = /path/to/rsh -l myusername\n"
         "### On Windows, if you are specifying a full path to a command,\n"
-        "### use a forward slash (/) or a paired backslash (\\\\)\n as the\n"
+        "### use a forward slash (/) or a paired backslash (\\\\) as the\n"
         "### path separator.  A single backslash will be treated as an\n"
         "### escape for the following character.\n" 
         "\n"
