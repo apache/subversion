@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-04-03 00:39-0300\n"
-"PO-Revision-Date: 2005-04-03 00:40-0300\n"
+"POT-Creation-Date: 2005-04-03 17:16-0300\n"
+"PO-Revision-Date: 2005-04-03 17:18-0300\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Spanish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -408,11 +408,11 @@ msgstr "mostrar información de actualización"
 
 #: clients/cmdline/main.c:96
 msgid "specify a username ARG"
-msgstr "especificar PAR como nombre de usuario"
+msgstr "especifica un nombre de usuario PAR"
 
 #: clients/cmdline/main.c:98
 msgid "specify a password ARG"
-msgstr "especificar PAR como clave"
+msgstr "especifica una clave PAR"
 
 #: clients/cmdline/main.c:99
 msgid "pass ARG to --diff-cmd as options (default: '-u')"
@@ -439,8 +439,9 @@ msgstr "no atravesar copias al recorrer la historia"
 #: clients/cmdline/main.c:107
 msgid "disregard default and svn:ignore property ignores"
 msgstr ""
-"no usar la configuración de ignorado (ni de la propiedad svn:ignore ni de "
-"los valores por defecto)"
+"no usar la configuración de ignorado\n"
+"                             (ni de la propiedad svn:ignore ni de\n"
+"                             los valores por defecto)"
 
 #: clients/cmdline/main.c:109
 msgid "do not cache authentication tokens"
@@ -856,11 +857,11 @@ msgid ""
 "  Use --force to steal the lock from another user or working copy.\n"
 msgstr ""
 "Bloquea rutas de la copia de trabajo o URLs en el repositorio\n"
-"de modo que otro usuario no pueda hacer commit de nuevos cambios\n"
-"sobre esos objetivos.\n"
+"de modo que ningún otro usuario no pueda hacer commit de nuevos cambios\n"
+"en ellos.\n"
 "uso: lock RUTA...\n"
 "\n"
-"  Use --force para robar el bloqueo de otro usuario u otra copia\n"
+"  Use --force para robar el bloqueo de otro usuario o de otra copia\n"
 "  de trabajo.\n"
 
 #: clients/cmdline/main.c:394
@@ -1288,23 +1289,23 @@ msgid ""
 "     M           965    wc/bar.c\n"
 "           *     965    wc/foo.c\n"
 "    A  +         965    wc/qax.c\n"
-"    Head revision:   981\n"
+"    Status against revision:   981\n"
 "\n"
 "    svn status --show-updates --verbose wc\n"
 "     M           965       938 kfogel       wc/bar.c\n"
 "           *     965       922 sussman      wc/foo.c\n"
 "    A  +         965       687 joe          wc/qax.c\n"
 "                 965       687 joe          wc/zig.c\n"
-"    Head revision:   981\n"
+"    Status against revision:   981\n"
 msgstr ""
-"Imprime el estado de archivos y directorios en la copia de trabajo.\n"
+"Muestra el estado de archivos y directorios en la copia de trabajo.\n"
 "uso: status [RUTA...]\n"
 "\n"
-"  Sin argumentos, imprime solamente los ítems modificados localmente (sin "
+"  Sin parámetros muestra solamente los ítems modificados localmente (sin "
 "acceso a red).\n"
-"  Con -u, agrega información de revisión de trabajo e información\n"
+"  Con -u agrega información de revisión de trabajo e información\n"
 "   del servidor para determinar si el archivo esta actualizado.\n"
-"  Con -v, imprime la información de revisión completa para cada ítem.\n"
+"  Con -v muestra la información de revisión completa para cada ítem.\n"
 "\n"
 "  Las primeras seis columnas de la salida son de un carácter de ancho:\n"
 "    Primera columna: Indica si el ítem fue agregado, eliminado o cambiado\n"
@@ -1368,14 +1369,14 @@ msgstr ""
 "     M           965    wc/bar.c\n"
 "           *     965    wc/foo.c\n"
 "    A  +         965    wc/qax.c\n"
-"    Head revision:   981\n"
+"    Estado respecto a la revisión:   981\n"
 "\n"
 "    svn status --show-updates --verbose wc\n"
 "     M           965       938 kfogel       wc/bar.c\n"
 "           *     965       922 sussman      wc/foo.c\n"
 "    A  +         965       687 joe          wc/qax.c\n"
 "                 965       687 joe          wc/zig.c\n"
-"    Head revision:   981\n"
+"    Estado respecto a la revisión:   981\n"
 
 #: clients/cmdline/main.c:678
 msgid ""
@@ -3925,7 +3926,7 @@ msgstr ""
 
 #: libsvn_fs_base/fs.c:1335
 msgid "Module for working with a Berkeley DB repository."
-msgstr "Módulo para trabajar con un repositorio Berkeley DB"
+msgstr "Módulo para trabajar con un repositorio Berkeley DB."
 
 #: libsvn_fs_base/fs.c:1369
 #, c-format
@@ -4175,7 +4176,7 @@ msgstr "Módulo para trabajar con un repositorio de archivos simples (FSFS)."
 #: libsvn_fs_fs/fs.c:306
 #, c-format
 msgid "Unsupported FS loader version (%d) for fsfs"
-msgstr "Unsupported FS loader version (%d) for fsfs"
+msgstr "Versión de cargador FS (%d) no soportada para fsfs"
 
 #: libsvn_fs_fs/fs_fs.c:424 libsvn_fs_fs/fs_fs.c:438
 msgid "Found malformed header in revision file"
@@ -4249,7 +4250,7 @@ msgstr "Datos svndiff malformados en la representación"
 #: libsvn_fs_fs/fs_fs.c:1399
 msgid "Reading one svndiff window read beyond the end of the representation"
 msgstr ""
-"La lectura de una ventana de svndiff leyó mas allá del fin de la "
+"La lectura de una ventana de svndiff leyó más allá del fin de la "
 "representación"
 
 #: libsvn_fs_fs/fs_fs.c:1512
@@ -4356,7 +4357,7 @@ msgstr ""
 #: libsvn_ra/ra_loader.c:262
 #, c-format
 msgid "Unrecognized URL scheme for '%s'"
-msgstr "Esquema de URL no reconocido en '%s'"
+msgstr "Protocolo de URL no reconocido en '%s'"
 
 #: libsvn_ra/ra_loader.c:576
 #, c-format
@@ -4521,8 +4522,8 @@ msgid ""
 "Protocol error: the MERGE response for the '%s' resource did not return all "
 "of the properties that we asked for (and need to complete the commit)"
 msgstr ""
-"Error de protocolo: la respuesta MERGE para el recurso '%s' no retorno todas "
-"las propiedades que solicitamos (y necesitamos para completar el commit)"
+"Error de protocolo: la respuesta MERGE para el recurso '%s' no devolvió todas "
+"las propiedades que solicitamos (y que necesitamos para completar el commit)"
 
 #: libsvn_ra_dav/merge.c:260
 #, c-format
@@ -4615,7 +4616,7 @@ msgstr ""
 
 #: libsvn_ra_dav/session.c:542
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
-msgstr "Módulo para acceder a un repositorio vía el protocolo WebDAV (DeltaV)."
+msgstr "Módulo para acceder a un repositorio vía el WebDAV (DeltaV)."
 
 #: libsvn_ra_dav/session.c:588
 msgid "Malformed URL for repository"
@@ -4649,7 +4650,7 @@ msgstr "Falló el análisis de un URI"
 
 #: libsvn_ra_dav/session.c:1041
 msgid "Lock request failed"
-msgstr "Falló un requerimiento de bloqueo"
+msgstr "El pedido de bloqueo falló"
 
 #: libsvn_ra_dav/session.c:1158
 #, c-format
@@ -4658,11 +4659,11 @@ msgstr "'%s' no está bloqueado en el repositorio"
 
 #: libsvn_ra_dav/session.c:1195
 msgid "Unlock request failed"
-msgstr "Falló el pedido de desbloquear"
+msgstr "El pedido de desbloquear falló"
 
 #: libsvn_ra_dav/session.c:1379
 msgid "Failed to fetch lock information"
-msgstr "Falló el obtener información de bloqueos"
+msgstr "El pedido de información de bloqueos falló"
 
 #: libsvn_ra_dav/session.c:1454
 #, c-format
@@ -4738,7 +4739,7 @@ msgstr "Módulo para acceder a un repositorio en el disco local."
 msgid "Unable to open an ra_local session to URL"
 msgstr "No se pudo abrir una sesión ra_local con el URL"
 
-#: libsvn_ra_local/ra_plugin.c:1278
+#: libsvn_ra_local/ra_plugin.c:1281
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_local"
 msgstr "Versión de cargador RA (%d) no soportada para ra_local."
@@ -4807,13 +4808,13 @@ msgstr "No se pudo negociar un mecanismo de autentificación"
 #: libsvn_ra_svn/client.c:460
 #, c-format
 msgid "Undefined tunnel scheme '%s'"
-msgstr "Esquema de túnel '%s' no definido"
+msgstr "Protocolo de túnel '%s' no definido"
 
 #: libsvn_ra_svn/client.c:477
 #, c-format
 msgid "Tunnel scheme %s requires environment variable %s to be defined"
 msgstr ""
-"El esquema de túnel  %s requiere que la variable de entorno %s sea definida"
+"El protocolo de túnel  %s requiere que la variable de entorno %s sea definida"
 
 #: libsvn_ra_svn/client.c:488
 #, c-format
@@ -4831,7 +4832,7 @@ msgstr "No se pudo crear el túnel"
 
 #: libsvn_ra_svn/client.c:569
 msgid "Module for accessing a repository using the svn network protocol."
-msgstr "Módulo para acceder al repositorio utilizando el protocolo de red svn"
+msgstr "Módulo para acceder al repositorio vía el protocolo de red svn."
 
 #: libsvn_ra_svn/client.c:606
 #, c-format
@@ -4855,63 +4856,63 @@ msgstr "El servidor no envió la raíz del repositorio"
 msgid "Non-string as part of file contents"
 msgstr "Parte del contenido del archivo no es una cadena"
 
-#: libsvn_ra_svn/client.c:959
+#: libsvn_ra_svn/client.c:958
 msgid "Dirlist element not a list"
 msgstr "Elemento de la lista de directorios no es una lista"
 
-#: libsvn_ra_svn/client.c:1115
+#: libsvn_ra_svn/client.c:1114
 msgid "Log entry not a list"
 msgstr "Entrada de bitácora no es una lista"
 
-#: libsvn_ra_svn/client.c:1128
+#: libsvn_ra_svn/client.c:1127
 msgid "Changed-path entry not a list"
 msgstr "La entrada Changed-path no es una lista"
 
-#: libsvn_ra_svn/client.c:1207
+#: libsvn_ra_svn/client.c:1206
 msgid "'stat' not implemented"
 msgstr "'stat' no implementado"
 
-#: libsvn_ra_svn/client.c:1264
+#: libsvn_ra_svn/client.c:1263
 msgid "'get-locations' not implemented"
 msgstr "'get-locations' no está implementado"
 
-#: libsvn_ra_svn/client.c:1276
+#: libsvn_ra_svn/client.c:1275
 msgid "Location entry not a list"
 msgstr "La entrada Location no es una lista"
 
-#: libsvn_ra_svn/client.c:1326
+#: libsvn_ra_svn/client.c:1325
 msgid "'get-file-revs' not implemented"
 msgstr "'get-file-revs' no está implementado"
 
-#: libsvn_ra_svn/client.c:1339
+#: libsvn_ra_svn/client.c:1338
 msgid "Revision entry not a list"
 msgstr "La entrada de la revisión no es una lista"
 
-#: libsvn_ra_svn/client.c:1352 libsvn_ra_svn/client.c:1377
+#: libsvn_ra_svn/client.c:1351 libsvn_ra_svn/client.c:1376
 msgid "Text delta chunk not a string"
 msgstr "Porción del delta de texto no es una cadena"
 
-#: libsvn_ra_svn/client.c:1389
+#: libsvn_ra_svn/client.c:1388
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "El comando get-file-revs no devolvió ninguna revisión"
 
-#: libsvn_ra_svn/client.c:1435
+#: libsvn_ra_svn/client.c:1434
 msgid "Server doesn't support the lock command"
 msgstr "El servidor no soporta el comando lock"
 
-#: libsvn_ra_svn/client.c:1496
+#: libsvn_ra_svn/client.c:1495
 msgid "Server doesn't support the unlock command"
 msgstr "El servidor no soporta el comando unlock"
 
-#: libsvn_ra_svn/client.c:1531 libsvn_ra_svn/client.c:1559
+#: libsvn_ra_svn/client.c:1530 libsvn_ra_svn/client.c:1558
 msgid "Server doesn't support the get-lock command"
 msgstr "El servidor no soporta el comando get-lock"
 
-#: libsvn_ra_svn/client.c:1572
+#: libsvn_ra_svn/client.c:1571
 msgid "Lock element not a list"
 msgstr "Elemento bloqueo no es una lista"
 
-#: libsvn_ra_svn/client.c:1630
+#: libsvn_ra_svn/client.c:1629
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Versión de cargador RA (%d) no soportada para ra_svn"
@@ -4959,7 +4960,7 @@ msgstr "La conexión de red se cerró inesperadamente"
 
 #: libsvn_ra_svn/marshal.c:497
 msgid "String length larger than maximum"
-msgstr "La cadena es mas larga que el máximo"
+msgstr "La cadena es más larga que el máximo"
 
 #: libsvn_ra_svn/marshal.c:534
 msgid "Too many nested items"
@@ -4967,7 +4968,7 @@ msgstr "Demasiados items anidados"
 
 #: libsvn_ra_svn/marshal.c:553
 msgid "Number is larger than maximum"
-msgstr "El número es mas largo que el máximo"
+msgstr "El número es más largo que el máximo"
 
 #: libsvn_ra_svn/marshal.c:769
 msgid "Empty error list"
@@ -5439,6 +5440,11 @@ msgstr "No se pudo expandir la fecha"
 msgid "Can't recode error string from APR"
 msgstr "No se pudo recodificar el mensaje de error de APR"
 
+#: libsvn_subr/error.c:414
+#, c-format
+msgid "%swarning: %s\n"
+msgstr "%saviso: %s\n"
+
 #: libsvn_subr/io.c:129
 #, c-format
 msgid "Can't check path '%s'"
@@ -5798,7 +5804,7 @@ msgstr ""
 
 #: libsvn_subr/opt.c:237
 msgid " arg"
-msgstr " par"
+msgstr " PAR"
 
 #: libsvn_subr/opt.c:261
 #, c-format
@@ -5854,8 +5860,8 @@ msgid ""
 msgstr ""
 "Copyright (C) 2000-2005 CollabNet.\n"
 "Subversion es software libre, vea http://subversion.tigris.org/\n"
-"Este producto contiene software desarrollado por CollabNet (http://www."
-"Collab.Net/).\n"
+"Este producto contiene software desarrollado\n"
+"por CollabNet (http://www.Collab.Net/).\n"
 "\n"
 
 #: libsvn_subr/opt.c:773
@@ -7195,7 +7201,7 @@ msgstr "Renombrar revisiones restantes después del filtrado."
 
 #: svndumpfilter/main.c:769
 msgid "Don't filter revision properties."
-msgstr "No filtrar propiedades de las revisiones"
+msgstr "No filtrar propiedades de las revisiones."
 
 #: svndumpfilter/main.c:780
 msgid ""
@@ -7349,7 +7355,7 @@ msgid ""
 msgstr ""
 "uso: svnlook date RUTA_REPOSITORIO\n"
 "\n"
-"Imprime la fecha.\n"
+"Muestra la fecha.\n"
 
 #: svnlook/main.c:150
 msgid ""
@@ -7436,7 +7442,7 @@ msgstr ""
 "uso: svnlook propget RUTA_REPOSITORIO NOMBRE_PROPIEDAD "
 "[RUTA_EN_REPOSITORIO]\n"
 "\n"
-"Imprime el valor crudo de una propiedad en una ruta en el repositorio.\n"
+"Muestra el valor crudo de una propiedad en una ruta en el repositorio.\n"
 "Con --revprop muestra el valor crudo de una propiedad de revisión.\n"
 
 #: svnlook/main.c:193
@@ -7462,7 +7468,7 @@ msgid ""
 msgstr ""
 "uso: svnlook tree RUTA_REPOSITORIO [RUTA_EN_REPOSITORIO]\n"
 "\n"
-"Imprime el árbol, empezando en RUTA_EN_REPOSITORIO (si es provista, o en\n"
+"Muestra el árbol, empezando en RUTA_EN_REPOSITORIO (si es provista, o en\n"
 "la raíz del árbol si no), opcionalmente mostrando los identificadores de "
 "revisión de nodo.\n"
 
@@ -7635,7 +7641,7 @@ msgstr ""
 
 #: svnlook/main.c:2112
 msgid "Repository argument required\n"
-msgstr "Se requiere un parámetro que indique el repositorio\n"
+msgstr "Se requiere el parámetro que indica el repositorio\n"
 
 #: svnlook/main.c:2121
 #, c-format
@@ -7824,7 +7830,7 @@ msgstr ""
 "\n"
 "  El número de versión será un número único si la copia de trabajo\n"
 "  está en una sola revisión, sin modificar, no conmutada (con switch)\n"
-"  y con un URL que concuerda con el parámetro RESTO_URL. Si la copia\n"
+"  y con un URL que concuerde con el parámetro RESTO_URL. Si la copia\n"
 "  de trabajo es inusual, el número de versión sera más complejo:\n"
 "\n"
 "   4123:4168     versiones mezcladas en la copia de trabajo\n"
@@ -7860,9 +7866,6 @@ msgstr "%s no es un recurso versionado, no se exporta\n"
 
 #~ msgid "      Transmitting text...\n"
 #~ msgstr "      Transmitiendo texto...\n"
-
-#~ msgid "   Closing : %s\n"
-#~ msgstr "   Cerrando: %s\n"
 
 #~ msgid "   Opening : %s\n"
 #~ msgstr "   Abriendo: %s\n"
@@ -7937,7 +7940,7 @@ msgstr "%s no es un recurso versionado, no se exporta\n"
 #~ msgstr "No se puede limpiar '%s': no es un directorio"
 
 #~ msgid "No get_dir() available for URL schema"
-#~ msgstr "No hay get_dir() disponible para el esquema de URL"
+#~ msgstr "No hay get_dir() disponible para el protocolo de URL"
 
 #~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
 #~ msgstr "Aplique RA binariamente incompatible (versión %d) para ra_dav"
