@@ -34,7 +34,7 @@
 /* Change this to 1 to test deltification/undeltification.  When we're
    ready for it to be permanently on, we should just remove the
    #define altogether of course. */
-#define DELTIFYING 0
+#define DELTIFYING 1
 
 
 
@@ -260,6 +260,16 @@ delete_strings (apr_array_header_t *keys,
  * on checkouts, for example, except when a file is really
  * prohibitively large.
  */
+
+
+/* kff todo: this is an experiment -- we're going to trade space for
+   time, in a tuneable way.  */
+
+struct reconstructed_data_cache_t
+{
+  /* fooo */
+};
+   
 
 
 /* Baton for window_handler() below. */
@@ -536,12 +546,6 @@ rep_read_range (svn_fs_t *fs,
       char chunk[4096];      /* chunk of svndiff data */
       apr_size_t off;        /* offset into svndiff data */
       apr_size_t amt;        /* how much svndiff data to/was read */
-      const char *base_rep;  /* representation this delta is based against */
-
-      /* Extract the base rep key from this rep. */
-      base_rep = apr_pstrndup (subpool,
-                               rep->children->next->data,
-                               rep->children->next->len);
 
       /* Initialize THIS_WINDOW to the first (OFFSET WINDOW) skel. */
       this_window = rep->children->next;
@@ -637,12 +641,6 @@ rep_read_range (svn_fs_t *fs,
       SVN_ERR (svn_stream_close (wstream));
 
       *len = wb.len_read;
-
-      /* ### todo: hmmm, I just realized something: the way this
-         interface works, there's no natural place to actually use the
-         checksum stored in the delta representation.  Urk.  -kff  
-
-         Oh wait, news flash: See issue #413.  */
     }
 
   svn_pool_destroy (subpool);
@@ -1539,8 +1537,8 @@ svn_fs__rep_deltify (svn_fs_t *fs,
 
         ww = ((window_write_t **)(windows->elts))[i-1];
 
-        offset_str = apr_psprintf (trail->pool, "%ul", ww->text_off);
-        size_str = apr_psprintf (trail->pool, "%ul", ww->text_len);
+        offset_str = apr_psprintf (trail->pool, "%u", ww->text_off);
+        size_str = apr_psprintf (trail->pool, "%u", ww->text_len);
 
         /* The diff. */
         svn_fs__prepend (svn_fs__str_atom (ww->key, trail->pool), diff);
