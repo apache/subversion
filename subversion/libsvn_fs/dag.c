@@ -2105,7 +2105,7 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
     svn_fs__prepend (svn_fs__mem_atom (id_string->data,
                                        id_string->len, trail->pool),
                      new_revision_skel);
-    svn_fs__prepend (svn_fs__str_atom ((char *) "revision", trail->pool),
+    svn_fs__prepend (svn_fs__str_atom ("revision", trail->pool),
                      new_revision_skel);
 
     /* ### kff todo: later, when we have properties on txns, get the
