@@ -147,7 +147,7 @@ svn_cl__ls (apr_getopt_t *os,
         }
       
       SVN_ERR (svn_client_ls (&dirents, target, &(opt_state->start_revision),
-                              auth_baton, subpool));
+                              auth_baton, opt_state->recursive, subpool));
 
       SVN_ERR (print_dirents (dirents, opt_state->verbose, subpool));
 

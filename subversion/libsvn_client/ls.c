@@ -24,12 +24,56 @@
 #include "svn_client.h"
 #include "svn_path.h"
 
+static svn_error_t *
+get_dir_contents (apr_hash_t *dirents,
+                  const char *dir,
+                  svn_revnum_t rev,
+                  svn_ra_plugin_t *ra_lib,
+                  void *session,
+                  svn_boolean_t recurse,
+                  apr_pool_t *pool)
+{
+  apr_hash_t *tmpdirents;
+  svn_dirent_t *the_ent;
+  apr_hash_index_t *hi;
+
+  /* Get the directory's entries, but not its props. */
+  if (ra_lib->get_dir)
+    SVN_ERR (ra_lib->get_dir (session, dir, rev, &tmpdirents, NULL, NULL));
+  else
+    return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, 0, NULL, pool,
+                             "No get_dir() available for url schema.");
+
+  for (hi = apr_hash_first (pool, tmpdirents);
+       hi;
+       hi = apr_hash_next (hi))
+    {
+      const char *path;
+      const void *key;
+      void *val;
+
+      apr_hash_this (hi, &key, NULL, &val);
+
+      the_ent = val;
+
+      path = svn_path_join (dir, key, pool);
+
+      apr_hash_set (dirents, path, APR_HASH_KEY_STRING, val);
+
+      if (recurse && the_ent->kind == svn_node_dir)
+        SVN_ERR (get_dir_contents (dirents, path, rev, ra_lib, session,
+                                   recurse, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_client_ls (apr_hash_t **dirents,
                const char *url,
                svn_client_revision_t *revision,
-               svn_client_auth_baton_t *auth_baton,               
+               svn_client_auth_baton_t *auth_baton,
+               svn_boolean_t recurse,               
                apr_pool_t *pool)
 {
   svn_ra_plugin_t *ra_lib;  
@@ -57,13 +101,11 @@ svn_client_ls (apr_hash_t **dirents,
 
   if (url_kind == svn_node_dir)
     {
-      /* Get the directory's entries, but not its props. */
-      if (ra_lib->get_dir)
-        SVN_ERR (ra_lib->get_dir (session, "", rev, dirents, NULL, NULL));
-      else
-        return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, 0, NULL, pool,
-                                 "No get_dir() available for url schema.");
-      
+      *dirents = apr_hash_make (pool);
+
+      SVN_ERR (get_dir_contents (*dirents, "", rev, ra_lib, session, recurse,
+                                 pool));
+
       SVN_ERR (ra_lib->close (session));
     }
   else if (url_kind == svn_node_file)
