@@ -867,7 +867,7 @@ class ProjectItem:
     vars(self).update(kw)
 
 # ============================================================================
-# This is a cut-down and modified version code from:
+# This is a cut-down and modified version of code from:
 #   subversion/subversion/bindings/swig/python/svn/core.py
 #
 if sys.platform == "win32":
