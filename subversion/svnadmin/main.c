@@ -115,8 +115,6 @@ warning_func (void *baton,
 {
   if (! err)
     return;
-  err = svn_error_quick_wrap 
-    (err, "The filesystem warning function was called");
   svn_handle_error (err, stderr, FALSE);
 }
 
