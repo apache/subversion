@@ -27,24 +27,31 @@ struct edit_baton
 {
   apr_pool_t *pool;
 
-  /* Subversion file system. */
+  /* Subversion file system.
+     Supplied by the user when we create the editor.  */
   svn_fs_t *fs;
 
-  /* Transaction associated with this edit. */
-  svn_fs_txn_t *txn;
-
-  /* Cache the txn name. */
-  char *txn_name;
-
-  /* Existing revision number upon which this edit is based. */
+  /* Existing revision number upon which this edit is based.
+     Supplied by the user when we create the editor.  */
   svn_revnum_t base_rev;
 
-  /* Commit message for this commit. */
+  /* Commit message for this commit.
+     Supplied by the user when we create the editor.  */
   svn_string_t *log_msg;
 
-  /* Hook to run when when the commit is done. */
+  /* Hook to run when when the commit is done. 
+     Supplied by the user when we create the editor.  */
   svn_fs_commit_hook_t *hook;
   void *hook_baton;
+
+  /* Transaction associated with this edit.
+     This is zero until the driver calls replace_root.  */
+  svn_fs_txn_t *txn;
+
+  /* The txn name.  This is just the cached result of applying
+     svn_fs_txn_name to TXN, above.
+     This is zero until the driver calls replace_root.  */
+  char *txn_name;
 };
 
 
@@ -54,7 +61,7 @@ struct dir_baton
   struct dir_baton *parent;
   svn_string_t *name;  /* just this entry, not full path */
 
-  /* This directory. */
+  /* This directory, guaranteed to be mutable. */
   dag_node_t *node;
 
   /* Revision number of this directory */
@@ -67,7 +74,7 @@ struct file_baton
   struct dir_baton *parent;
   svn_string_t *name;  /* just this entry, not full path */
 
-  /* This file. */
+  /* This file, guaranteed to be mutable. */
   dag_node_t *node;
 
   /* Revision number of this file */
@@ -83,14 +90,11 @@ static svn_error_t *
 txn_body_clone_root (void *dir_baton, trail_t *trail)
 {
   struct dir_baton *dirb = dir_baton;
-  svn_error_t *err;
 
-  err = svn_fs__dag_clone_root (&(dirb->node),
-                                dirb->edit_baton->fs,
-                                dirb->edit_baton->txn_name,
-                                trail);
-  if (err)
-    return err;
+  SVN_ERR (svn_fs__dag_clone_root (&(dirb->node),
+                                   dirb->edit_baton->fs,
+                                   dirb->edit_baton->txn_name,
+                                   trail));
 
   return SVN_NO_ERROR;
 }
@@ -102,17 +106,12 @@ replace_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
   /* kff todo: figure out breaking into subpools soon */
   struct edit_baton *eb = edit_baton;
   struct dir_baton *dirb = apr_pcalloc (eb->pool, sizeof (*dirb));
-  svn_error_t *err;
 
   /* Begin a transaction. */
-  err = svn_fs_begin_txn (&(eb->txn), eb->fs, eb->base_rev, eb->pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_fs_begin_txn (&(eb->txn), eb->fs, eb->base_rev, eb->pool));
 
   /* Cache the transaction's name. */
-  err = svn_fs_txn_name (&(eb->txn_name), eb->txn, eb->pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_fs_txn_name (&(eb->txn_name), eb->txn, eb->pool));
   
   /* What don't we do?
    * 
@@ -140,9 +139,7 @@ replace_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
   dirb->parent = NULL;
   dirb->name = svn_string_create ("", eb->pool);
   dirb->base_rev = eb->base_rev;
-  err = svn_fs__retry_txn (eb->fs, txn_body_clone_root, dirb, eb->pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_fs__retry_txn (eb->fs, txn_body_clone_root, dirb, eb->pool));
 
   /* kff todo: If there was any error, this transaction will have to
      be cleaned up, including removing its nodes from the nodes
@@ -166,13 +163,10 @@ static svn_error_t *
 txn_body_delete (void *del_baton, trail_t *trail)
 {
   struct delete_args *del_args = del_baton;
-  svn_error_t *err;
 
-  err = svn_fs__dag_delete (del_args->parent->node,
-                            del_args->name->data,
-                            trail);
-  if (err)
-    return err;
+  SVN_ERR (svn_fs__dag_delete (del_args->parent->node,
+                               del_args->name->data,
+                               trail));
 
   return SVN_NO_ERROR;
 }
@@ -183,15 +177,12 @@ delete_entry (svn_string_t *name, void *parent_baton)
 {
   struct dir_baton *dirb = parent_baton;
   struct edit_baton *eb = dirb->edit_baton;
-  svn_error_t *err;
   struct delete_args del_args;
   
   del_args.parent = dirb;
   del_args.name   = name;
   
-  err = svn_fs__retry_txn (eb->fs, txn_body_delete, &del_args, eb->pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_fs__retry_txn (eb->fs, txn_body_delete, &del_args, eb->pool));
 
   return SVN_NO_ERROR;
 }
@@ -211,14 +202,11 @@ static svn_error_t *
 txn_body_add_directory (void *add_baton, trail_t *trail)
 {
   struct add_repl_args *add_args = add_baton;
-  svn_error_t *err;
   
-  err = svn_fs__dag_make_dir (&(add_args->new_node),
-                              add_args->parent->node,
-                              add_args->name->data,
-                              trail);
-  if (err)
-    return err;
+  SVN_ERR (svn_fs__dag_make_dir (&(add_args->new_node),
+                                 add_args->parent->node,
+                                 add_args->name->data,
+                                 trail));
 
   return SVN_NO_ERROR;
 }
@@ -231,7 +219,6 @@ add_directory (svn_string_t *name,
                long int ancestor_revision,
                void **child_baton)
 {
-  svn_error_t *err;
   struct dir_baton *pb = parent_baton;
   struct dir_baton *new_dirb
     = apr_pcalloc (pb->edit_baton->pool, sizeof (*new_dirb));
@@ -240,12 +227,10 @@ add_directory (svn_string_t *name,
   add_args.parent = pb;
   add_args.name = name;
   
-  err = svn_fs__retry_txn (pb->edit_baton->fs,
-                           txn_body_add_directory,
-                           &add_args,
-                           pb->edit_baton->pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_fs__retry_txn (pb->edit_baton->fs,
+                              txn_body_add_directory,
+                              &add_args,
+                              pb->edit_baton->pool));
 
   new_dirb->edit_baton = pb->edit_baton;
   new_dirb->parent = pb;
@@ -260,15 +245,12 @@ add_directory (svn_string_t *name,
 static svn_error_t *
 txn_body_replace_directory (void *rargs, trail_t *trail)
 {
-  svn_error_t *err;
   struct add_repl_args *repl_args = rargs;
 
-  err = svn_fs__dag_clone_child (&(repl_args->new_node),
-                                 repl_args->parent->node,
-                                 repl_args->name->data,
-                                 trail);
-  if (err)
-    return err;
+  SVN_ERR (svn_fs__dag_clone_child (&(repl_args->new_node),
+                                    repl_args->parent->node,
+                                    repl_args->name->data,
+                                    trail));
 
   if (! svn_fs__dag_is_directory (repl_args->new_node))
     {
@@ -291,7 +273,6 @@ replace_directory (svn_string_t *name,
                    svn_revnum_t base_revision,
                    void **child_baton)
 {
-  svn_error_t *err;
   struct dir_baton *pb = parent_baton;
   struct dir_baton *dirb = apr_pcalloc (pb->edit_baton->pool, sizeof (*dirb));
   struct add_repl_args repl_args;
@@ -299,12 +280,10 @@ replace_directory (svn_string_t *name,
   repl_args.parent = pb;
   repl_args.name   = name;
 
-  err = svn_fs__retry_txn (pb->edit_baton->fs,
-                           txn_body_replace_directory,
-                           &repl_args,
-                           pb->edit_baton->pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_fs__retry_txn (pb->edit_baton->fs,
+                              txn_body_replace_directory,
+                              &repl_args,
+                              pb->edit_baton->pool));
 
   dirb->edit_baton = pb->edit_baton;
   dirb->parent = pb;
@@ -319,9 +298,13 @@ replace_directory (svn_string_t *name,
 static svn_error_t *
 close_directory (void *dir_baton)
 {
-  /* todo: should this toggle mutability?  And then other funcs would
-     check mutability before working?  Hmm, might be a good sanity
-     check... */
+  /* One might be tempted to make this function mark the directory as
+     immutable; that way, if the traversal order is violated somehow,
+     we'll get an error the second time we visit the directory.
+
+     However, that would be incorrect --- the node must remain
+     mutable, since we may have to merge changes into it before we can
+     commit the transaction.  */
 
   return SVN_NO_ERROR;
 }
@@ -330,10 +313,9 @@ close_directory (void *dir_baton)
 static svn_error_t *
 close_file (void *file_baton)
 {
-  /* todo: should this toggle mutability?  And then other funcs would
-     check mutability before working?  Hmm, might be a good sanity
-     check... */
-
+  /* This function could mark the file as immutable, since even the
+     final pre-commit merge doesn't touch file contents.  (See the
+     comment above in `close_directory'.)  */
   return SVN_NO_ERROR;
 }
 
@@ -361,14 +343,11 @@ static svn_error_t *
 txn_body_add_file (void *add_baton, trail_t *trail)
 {
   struct add_repl_args *add_args = add_baton;
-  svn_error_t *err;
 
-  err = svn_fs__dag_make_file (&(add_args->new_node),
-                               add_args->parent->node,
-                               add_args->name->data,
-                               trail);
-  if (err)
-    return err;
+  SVN_ERR (svn_fs__dag_make_file (&(add_args->new_node),
+                                  add_args->parent->node,
+                                  add_args->name->data,
+                                  trail));
 
   return SVN_NO_ERROR;
 }
@@ -381,7 +360,6 @@ add_file (svn_string_t *name,
           long int ancestor_revision,
           void **file_baton)
 {
-  svn_error_t *err;
   struct dir_baton *pb = parent_baton;
   struct file_baton *new_fb
     = apr_pcalloc (pb->edit_baton->pool, sizeof (*new_fb));
@@ -390,10 +368,10 @@ add_file (svn_string_t *name,
   add_args.parent = pb;
   add_args.name = name;
 
-  err = svn_fs__retry_txn (pb->edit_baton->fs,
-                           txn_body_add_file, &add_args, pb->edit_baton->pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_fs__retry_txn (pb->edit_baton->fs,
+                              txn_body_add_file,
+                              &add_args,
+                              pb->edit_baton->pool));
 
   new_fb->parent = pb;
   new_fb->name = svn_string_dup (name, pb->edit_baton->pool);
@@ -407,15 +385,12 @@ add_file (svn_string_t *name,
 static svn_error_t *
 txn_body_replace_file (void *rargs, trail_t *trail)
 {
-  svn_error_t *err;
   struct add_repl_args *repl_args = rargs;
 
-  err = svn_fs__dag_clone_child (&(repl_args->new_node),
-                                 repl_args->parent->node,
-                                 repl_args->name->data,
-                                 trail);
-  if (err)
-    return err;
+  SVN_ERR (svn_fs__dag_clone_child (&(repl_args->new_node),
+                                    repl_args->parent->node,
+                                    repl_args->name->data,
+                                    trail));
   
   if (! svn_fs__dag_is_file (repl_args->new_node))
     {
@@ -438,7 +413,6 @@ replace_file (svn_string_t *name,
               svn_revnum_t base_revision,
               void **file_baton)
 {
-  svn_error_t *err;
   struct dir_baton *pb = parent_baton;
   struct file_baton *fb = apr_pcalloc (pb->edit_baton->pool, sizeof (*fb));
   struct add_repl_args repl_args;
@@ -446,10 +420,8 @@ replace_file (svn_string_t *name,
   repl_args.parent = pb;
   repl_args.name   = name;
 
-  err = svn_fs__retry_txn (pb->edit_baton->fs, txn_body_replace_file,
-                           &repl_args, pb->edit_baton->pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_fs__retry_txn (pb->edit_baton->fs, txn_body_replace_file,
+                              &repl_args, pb->edit_baton->pool));
 
   fb->parent = pb;
   fb->name = svn_string_dup (name, pb->edit_baton->pool);
@@ -481,15 +453,13 @@ change_dir_prop (void *dir_baton,
 static svn_error_t *
 close_edit (void *edit_baton)
 {
-  svn_error_t *err;
   struct edit_baton *eb = edit_baton;
   svn_revnum_t new_revision = SVN_INVALID_REVNUM;
 
-  err = svn_fs_commit_txn (&new_revision, eb->txn);
-  if (err) return err;
+  SVN_ERR (svn_fs_commit_txn (&new_revision, eb->txn));
+  SVN_ERR ((*eb->hook) (new_revision, eb->hook_baton));
 
-  err = (*eb->hook) (new_revision, eb->hook_baton);
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
