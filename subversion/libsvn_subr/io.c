@@ -44,7 +44,7 @@ svn_io_check_path (const svn_string_t *path,
   apr_finfo_t finfo;
   apr_status_t apr_err;
 
-  apr_err = apr_stat (&finfo, path->data, pool);
+  apr_err = apr_stat (&finfo, path->data, APR_FINFO_NORM, pool);
 
   if (apr_err && !APR_STATUS_IS_ENOENT(apr_err))
     return svn_error_createf (apr_err, 0, NULL, pool,
@@ -198,7 +198,7 @@ apr_transfer_file_contents (const char *src,
     return apr_err;
   
   /* Get its size. */
-  apr_err = apr_getfileinfo (&finfo, s);
+  apr_err = apr_getfileinfo (&finfo, APR_FINFO_NORM, s);
   if (apr_err)
     {
       apr_close (s);  /* toss any error */
@@ -354,7 +354,7 @@ svn_io_file_affected_time (apr_time_t *apr_time,
   apr_finfo_t finfo;
   apr_status_t apr_err;
 
-  apr_err = apr_stat (&finfo, path->data, pool);
+  apr_err = apr_stat (&finfo, path->data, APR_FINFO_NORM, pool);
   if (apr_err)
     return svn_error_createf
       (apr_err, 0, NULL, pool,

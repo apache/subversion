@@ -201,7 +201,7 @@ filesizes_definitely_different_p (svn_boolean_t *different_p,
   apr_status_t status;
 
   /* Stat both files */
-  status = apr_stat (&finfo1, filename1->data, pool);
+  status = apr_stat (&finfo1, filename1->data, APR_FINFO_NORM, pool);
   if (status)
     {
       /* If we got an error stat'ing a file, it could be because the
@@ -212,7 +212,7 @@ filesizes_definitely_different_p (svn_boolean_t *different_p,
       return SVN_NO_ERROR;
     }
 
-  status = apr_stat (&finfo2, filename2->data, pool);
+  status = apr_stat (&finfo2, filename2->data, APR_FINFO_NORM, pool);
   if (status)
     {
       /* See previous comment. */
