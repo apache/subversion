@@ -195,7 +195,7 @@
           la habilidad para hacer una copia de seguridad del entorno
           de la base de datos sin que tenga que estar <quote><!--TODO:offline--></quote>.
           Hablaremos sobre cómo hacer copias de seguridad de tu repositorio
-          en <xref linend="svn-ch-5-sect-3.6" />, pero los beneficios
+          en <xref linkend="svn-ch-5-sect-3.6" />, pero los beneficios
           de ser capaz de hacer copias completas y funcionales de tus
           repositorios sin <!--TODO:downtime--> debería ser obvia.</para>
 
