@@ -146,18 +146,18 @@
 ;;; default arguments to pass to svn commands
 (defvar svn-status-default-log-arguments ""
   "Arguments to pass to svn log
-\(used in `svn-status-show-svn-log'. override these by giving prefixes\).")
+\(used in `svn-status-show-svn-log'; override these by giving prefixes\).")
 
 ;;; hooks
 (defvar svn-log-edit-mode-hook nil "Hook run when entering `svn-log-edit-mode'.")
 
 (defvar svn-status-wash-control-M-in-process-buffers
   (eq system-type 'windows-nt)
-  "Remove any trailing ^M in the svn process buffers")
+  "Remove any trailing ^M in the svn process buffers.")
 
 ;;; Customize group
 (defgroup psvn nil
-  "Subversion interface for emacs."
+  "Subversion interface for Emacs."
   :group 'tools)
 
 (defgroup psvn-faces nil
@@ -210,7 +210,7 @@
     (((class color) (background light)) (:foreground "green3"))
     (((class color) (background dark)) (:foreground "palegreen2"))
     (t (:weight bold)))
-  "Face to highlight the mark for user marked files in svn status buffers"
+  "Face to highlight the mark for user marked files in svn status buffers."
   :group 'psvn-faces)
 
 (defface svn-status-modified-external-face
@@ -218,7 +218,7 @@
     (((class color) (background light)) (:foreground "magenta"))
     (((class color) (background dark)) (:foreground "yellow"))
     (t (:weight bold)))
-  "Face to highlight the externaly modified phrase in svn status buffers"
+  "Face to highlight the externaly modified phrase in svn status buffers."
   :group 'psvn-faces)
 
 ;based on cvs-filename-face
@@ -444,7 +444,7 @@ for  example: '(\"revert\" \"file1\"\)"
            (while (accept-process-output process 0 100))
            ;; find last error message and show it.
            (goto-char (point-max))
-           (message "svn failed: %s" 
+           (message "svn failed: %s"
                     (if (re-search-backward "^svn: \\(.*\\)" nil t)
                         (match-string 1)
                       event)))
@@ -538,12 +538,12 @@ for  example: '(\"revert\" \"file1\"\)"
 ;(svn-status-sort-predicate '(t t t ".") '(t t t "%")) => t
 (defun svn-status-sort-predicate (a b)
   "Return t if A should appear before B in the *svn-status* buffer.
-A and B must be line-info's"
+A and B must be line-info's."
   (string-lessp (concat (svn-status-line-info->full-path a) "/")
                 (concat (svn-status-line-info->full-path b) "/")))
 
 (defun svn-status-remove-temp-file-maybe ()
-  "Remove temporary created files from during the operation from psvn.el"
+  "Remove temporary created files from during the operation from psvn.el."
   (when svn-status-temp-file-to-remove
     (when (file-exists-p svn-status-temp-file-to-remove)
       (delete-file svn-status-temp-file-to-remove))
@@ -644,9 +644,9 @@ A and B must be line-info's"
     ["svn info" svn-status-info t]
     ["svn blame" svn-status-blame t]
     ("Diff"
-     ["svn diff actual file" svn-status-show-svn-diff t]
+     ["svn diff current file" svn-status-show-svn-diff t]
      ["svn diff marked files" svn-status-show-svn-diff-for-marked-files t]
-     ["svn ediff actual file" svn-status-ediff-with-revision t]
+     ["svn ediff current file" svn-status-ediff-with-revision t]
      )
     ["svn cat ..." svn-status-get-specific-revision t]
     ["svn add" svn-status-add-file t]
@@ -688,15 +688,15 @@ A and B must be line-info's"
     ))
 
 (defun svn-status-mode ()
-  "Major mode for processing the svn status
+  "Major mode for processing the svn status.
 
   psvn.el is an interface for the revision control tool subversion
-  (see http://subversion.tigris.org)
+  (see http://subversion.tigris.org).
   psvn.el provides a similar interface for subversion as pcl-cvs for cvs.
-  At the moment are the following commands implemented:
+  At the moment the following commands are implemented:
   M-x svn-status: run 'svn -status -v'
   and show the result in the *svn-status* buffer, this buffer uses the
-  svn-status mode. In this mode are the following keys defined:
+  svn-status mode. In this mode the following keys are defined:
   g     - svn-status-update:               run 'svn status -v'
   C-u g - svn-status-update:               run 'svn status -vu'
   =     - svn-status-show-svn-diff         run 'svn diff'
@@ -763,7 +763,7 @@ A and B must be line-info's"
 (defun svn-status-bury-buffer (arg)
   "Bury the *svn-status* buffer.
 When called with a prefix argument, switch back to the window configuration that was
-used on startup of `svn-status'"
+used on startup of `svn-status'."
   (interactive "P")
   (cond (arg
          (when svn-status-initial-window-configuration
@@ -890,7 +890,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
   (file-directory-p (svn-status-line-info->filename line-info)))
 
 (defun svn-status-line-info->full-path (line-info)
-  "Return the full path of the file represented by line-info"
+  "Return the full path of the file represented by LINE-INFO."
   (expand-file-name
    (svn-status-line-info->filename line-info)))
 
@@ -904,7 +904,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
     n))
 
 (defun svn-insert-line-in-status-buffer (line-info)
-  "Format line-info and insert the result in the current buffer."
+  "Format LINE-INFO and insert the result in the current buffer."
   (let ((usermark (if (svn-status-line-info->has-usermark line-info) "*" " "))
         (external (if (svn-status-line-info->modified-external line-info)
                       (svn-add-face (if svn-status-short-mod-flag-p
@@ -1070,7 +1070,7 @@ This hides the repository information again."
 
 (defun svn-status-update (&optional arg)
   "Run 'svn status -v'.
-When called with a prefix argument run 'svn status -vu'"
+When called with a prefix argument run 'svn status -vu'."
   (interactive "P")
   (unless (interactive-p)
     (save-excursion
@@ -1116,7 +1116,7 @@ otherwise return the directory containing the file under point."
 If the cursor is on a file this file is marked and the cursor advances to the next line.
 If the cursor is on a directory all files in this directory are marked.
 
-If this function is called with a prefix argument, only the actual line is
+If this function is called with a prefix argument, only the current line is
 marked, even if it is a directory."
   (interactive "P")
   (let ((info (svn-status-get-line-information)))
@@ -1131,7 +1131,7 @@ marked, even if it is a directory."
 If the cursor is on a file, this file is unmarked and the cursor advances to the next line.
 If the cursor is on a directory, all files in this directory are unmarked.
 
-If this function is called with a prefix argument, only the actual line is
+If this function is called with a prefix argument, only the current line is
 unmarked, even if is a directory."
   (interactive "P")
   (let ((info (svn-status-get-line-information)))
@@ -1287,7 +1287,7 @@ or (if no files were marked) the file under point."
                svn-status-ui-information)
       (setq st-info (cdr st-info)))
     svn-status-ui-information))
-  
+
 
 (defun svn-status-create-arg-file (file-name prefix file-info-list postfix)
   (with-temp-file file-name
@@ -1340,13 +1340,13 @@ See `svn-status-marked-files' for what counts as selected."
 
 ;; Todo: add possiblity to specify the revision
 (defun svn-status-blame ()
-  "Run `svn blame' on the actual file."
+  "Run `svn blame' on the current file."
   (interactive)
   ;;(svn-run-svn t t 'blame "blame" "-r" "BASE" (svn-status-line-info->filename (svn-status-get-line-information))))
   (svn-run-svn t t 'blame "blame" (svn-status-line-info->filename (svn-status-get-line-information))))
 
 (defun svn-status-show-svn-diff (arg)
-  "Run `svn diff' on the actual file.
+  "Run `svn diff' on the current file.
 If there is a newer revision in the repository, the diff is done against HEAD, otherwise
 compare the working copy with BASE.
 If ARG then prompt for revision to diff against."
@@ -1417,7 +1417,7 @@ The default DEST is the directory containing point.
 
 BUG: If we've marked some directory containging a file as well as the
 file itself, then we should just mv the directory, but this implementation
-doens't check for that.
+doesn't check for that.
 SOLUTION: for each dir, umark all its contents (but not the dir
 itself) before running mv.
 "
@@ -1575,7 +1575,7 @@ The older revisions are stored in backup files named F.~REVISION~."
 
 
 (defun svn-status-ediff-with-revision (arg)
-  "Run ediff on the actual file with a previous revision."
+  "Run ediff on the current file with a previous revision."
   (interactive "P")
   (svn-status-get-specific-revision t arg)
   (let* ((ediff-after-quit-destination-buffer (current-buffer))
@@ -1615,7 +1615,7 @@ The older revisions are stored in backup files named F.~REVISION~."
 ;; --------------------------------------------------------------------------------
 
 (defun svn-process-kill ()
-  "Kill the actual running svn process."
+  "Kill the current running svn process."
   (interactive)
   (let ((process (get-process "svn")))
     (if process
@@ -1625,7 +1625,7 @@ The older revisions are stored in backup files named F.~REVISION~."
 (defun svn-process-send-string (string)
   "Send a string to the running svn process.
 This is useful, if the running svn process asks the user a question.
-Note: use C-q C-j to send a line termination character"
+Note: use C-q C-j to send a line termination character."
   (interactive "sSend string to svn process: ")
   (save-excursion
     (set-buffer "*svn-process*")
@@ -1778,7 +1778,7 @@ When called with a prefix argument, it is possible to enter a new property."
   (setq svn-status-propedit-property-name prop-name)
   (svn-prop-edit-do-it nil)
   (svn-status-update))
-  
+
 
 (defun svn-status-get-directory (line-info)
   (let* ((file-name (svn-status-line-info->filename line-info))
@@ -2042,7 +2042,7 @@ If ARG then show diff between some other vesion of the selected files."
            (mapcar 'svn-status-line-info->filename svn-status-files-to-commit)))
 
 (defun svn-log-edit-save-message ()
-  "Save the actual log message to the file svn-log-edit-file-name"
+  "Save the current log message to the file svn-log-edit-file-name"
   (interactive)
   (write-region (point-min) (point-max) svn-log-edit-file-name))
 
