@@ -1174,7 +1174,13 @@ svn update
 
 <p>The first update will remove <tt>file.java</tt> from your working
 copy, the second update will add <tt>File.java</tt>, leaving you with
-a correct working copy.</p>
+a correct working copy.  Or if you had a lot of problematic files, you
+can update the working copy this way:</p>
+
+<pre>
+svn update *
+svn update
+</pre>
 
 <p>As you can see, adding a file with the wrong case is tricky to fix on
 an operating system that has a case insensitive filesystem.  Do try to
