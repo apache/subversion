@@ -100,7 +100,9 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   apr_sockaddr_t *sa;
   apr_status_t status;
   int family = APR_INET;
+#if APR_HAVE_IPV6
   int ipv6_supported = APR_HAVE_IPV6;
+#endif
   
   /* Make sure we have IPV6 support first before giving apr_sockaddr_info_get
      APR_UNSPEC, because it may give us back an IPV6 address even if we can't
