@@ -64,9 +64,7 @@ I.    BUILD REQUIREMENTS
       to look for the APR and APRUTIL libraries. By default, it will look
       for and use the apr-config and apu-config scripts. These scripts
       provide all the relevant information for the APR and APRUTIL
-      installations. If the libraries are installed in the default Apache
-      HTTP 2.0 location (/usr/local/apache2/lib) then these scripts will
-      be found and used.
+      installations.
 
       If you want to specify the location of the APR library, you can use
       the "--with-apr=" option of "./configure". It should be able to find
@@ -78,11 +76,10 @@ I.    BUILD REQUIREMENTS
       apu-config script relative to that directory.
 
       For example, if you want to use the APR libraries you built
-      with the Apache HTTP 2.0 server, and which you have installed in
-      a non-standard location, you could run:
+      with the Apache HTTP 2.0 server, you could run:
 
-          $ ./configure --with-apr=/home/fred/apache2 \
-            --with-apr-util=/home/fred/apache2  ...
+          $ ./configure --with-apr=/usr/local/apache2 \
+            --with-apr-util=/usr/local/apache2  ...
 
       If you want Subversion to build the APR libraries from source code
       as part of the Subversion build process, you can put their source
