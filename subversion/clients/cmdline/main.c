@@ -298,8 +298,11 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "propedit", svn_cl__propedit, {"pedit", "pe"},
     "Edit property PROPNAME with $EDITOR on targets.\n"
-    "usage: propedit PROPNAME [TARGETS]\n",
-    {0} },
+    "usage: 1. propedit PROPNAME [WC_TARGETS]\n"
+    "       2. propedit PROPNAME -r REV [URL]\n\n"
+    "First usage edits versioned props in working copy.\n"
+    "Second usage edits unversioned remote prop on repos revision.\n\n",
+    {'r'} },
   
   { "propget", svn_cl__propget, {"pget", "pg"},
     "Print value of PROPNAME on files, dirs, or revisions.\n"
