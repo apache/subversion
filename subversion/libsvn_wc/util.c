@@ -108,3 +108,30 @@ svn_wc_version (void)
 {
   SVN_VERSION_BODY;
 }
+
+svn_wc_notify_t *
+svn_wc_create_notify (const char *path, svn_wc_notify_action_t action,
+                      apr_pool_t *pool)
+{
+  svn_wc_notify_t *ret = apr_palloc (pool, sizeof (*ret));
+  ret->path = path;
+  ret->action = action;
+  ret->kind = svn_node_unknown;
+  ret->mime_type = NULL;
+  ret->content_state = ret->prop_state = svn_wc_notify_state_unknown;
+  ret->revision = SVN_INVALID_REVNUM;
+
+  return ret;
+}
+  
+
+void svn_wc__compat_call_notify_func (void *baton,
+                                      const svn_wc_notify_t *n,
+                                      apr_pool_t *pool)
+{
+  svn_wc__compat_notify_baton_t *nb = baton;
+
+  if (nb->func)
+    (*nb->func) (nb->baton, n->path, n->action, n->kind, n->mime_type,
+                 n->content_state, n->prop_state, n->revision);
+}

@@ -130,7 +130,7 @@ copy_file_administratively (const char *src_path,
                             svn_wc_adm_access_t *src_access,
                             svn_wc_adm_access_t *dst_parent,
                             const char *dst_basename,
-                            svn_wc_notify_func_t notify_copied,
+                            svn_wc_notify_func2_t notify_copied,
                             void *notify_baton,
                             apr_pool_t *pool)
 {
@@ -255,10 +255,10 @@ copy_file_administratively (const char *src_path,
     
     /* Pass NULL, NULL for cancellation func and baton, as this is
        only one file, not N files. */
-    SVN_ERR (svn_wc_add (dst_path, dst_parent,
-                         copyfrom_url, copyfrom_rev,
-                         NULL, NULL,
-                         notify_copied, notify_baton, pool));
+    SVN_ERR (svn_wc_add2 (dst_path, dst_parent,
+                          copyfrom_url, copyfrom_rev,
+                          NULL, NULL,
+                          notify_copied, notify_baton, pool));
   }
 
   return SVN_NO_ERROR;
@@ -365,7 +365,7 @@ copy_dir_administratively (const char *src_path,
                            const char *dst_basename,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
-                           svn_wc_notify_func_t notify_copied,
+                           svn_wc_notify_func2_t notify_copied,
                            void *notify_baton,
                            apr_pool_t *pool)
 {
@@ -432,10 +432,10 @@ copy_dir_administratively (const char *src_path,
     SVN_ERR (svn_wc_get_ancestry (&copyfrom_url, &copyfrom_rev,
                                   src_path, src_access, pool));
     
-    SVN_ERR (svn_wc_add (dst_path, dst_parent,
-                         copyfrom_url, copyfrom_rev,
-                         cancel_func, cancel_baton,
-                         notify_copied, notify_baton, pool));
+    SVN_ERR (svn_wc_add2 (dst_path, dst_parent,
+                          copyfrom_url, copyfrom_rev,
+                          cancel_func, cancel_baton,
+                          notify_copied, notify_baton, pool));
   }
  
   return SVN_NO_ERROR;
@@ -446,14 +446,14 @@ copy_dir_administratively (const char *src_path,
 /* Public Interface */
 
 svn_error_t *
-svn_wc_copy (const char *src_path,
-             svn_wc_adm_access_t *dst_parent,
-             const char *dst_basename,
-             svn_cancel_func_t cancel_func,
-             void *cancel_baton,
-             svn_wc_notify_func_t notify_func,
-             void *notify_baton,
-             apr_pool_t *pool)
+svn_wc_copy2 (const char *src_path,
+              svn_wc_adm_access_t *dst_parent,
+              const char *dst_basename,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              svn_wc_notify_func2_t notify_func,
+              void *notify_baton,
+              apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t src_kind;
@@ -489,6 +489,23 @@ svn_wc_copy (const char *src_path,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_wc_copy (const char *src_path,
+             svn_wc_adm_access_t *dst_parent,
+             const char *dst_basename,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             svn_wc_notify_func_t notify_func,
+             void *notify_baton,
+             apr_pool_t *pool)
+{
+  svn_wc__compat_notify_baton_t nb = { notify_func, notify_baton };
+
+  return svn_wc_copy2 (src_path, dst_parent, dst_basename, cancel_func,
+                       cancel_baton, svn_wc__compat_call_notify_func,
+                       &nb, pool);
+}
 
 
 /*
