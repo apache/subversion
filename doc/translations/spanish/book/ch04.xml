@@ -1301,11 +1301,11 @@ Removed real.c because code now in double.c.
         pero esta técnica no es muy escalable. ¿Qué pasa si hay 90
         ficheros modificados en la revisión 808?</para>
 
-      <para>A second, more targeted strategy is not to use
-        <command>svn merge</command> at all, but rather the
-        <command>svn copy</command> command.  Simply copy the exact
-        revision and path <quote>coordinate pair</quote> from the
-        repository to your working copy:</para>
+      <para>Otra estrategia más precisa es usar <command>svn
+        copy</command> en lugar de <command>svn
+        merge</command>. Simplemente copie la <quote>pareja
+        de coordenadas</quote> exactas de revisión y ruta del
+        repositorio a su copia de trabajo local:</para>
 
       <screen>
 $ svn copy --revision 807 \
