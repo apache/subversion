@@ -71,8 +71,10 @@ get_xlate_handle (apr_xlate_t **ret,
       return SVN_NO_ERROR;
     }
   if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr
-      (apr_err, "Can't create a converter from '%s' to '%s'",
+    /* Can't use svn_error_wrap_apr here because it calls functions in
+       this file, leading to infinite recursion. */
+    return svn_error_createf
+      (apr_err, NULL, "Can't create a converter from '%s' to '%s'",
        (topage == APR_LOCALE_CHARSET ? "native" : topage),
        (frompage == APR_LOCALE_CHARSET ? "native" : frompage));
 
@@ -166,7 +168,9 @@ convert_to_stringbuf (apr_xlate_t *convset,
 
   /* If we exited the loop with an error, return the error. */
   if (apr_err)
-    return svn_error_wrap_apr (apr_err, "Can't recode string");
+    /* Can't use svn_error_wrap_apr here because it calls functions in
+       this file, leading to infinite recursion. */
+    return svn_error_create (apr_err, NULL, "Can't recode string");
   
   /* Else, exited do to success.  Trim the result buffer down to the
      right length. */
