@@ -48,6 +48,11 @@
 
 
 
+
+#ifndef __SVN_ERROR_H__
+#define __SVN_ERROR_H__
+
+
 #include <svn_types.h>
 #include <apr_errno.h>     /* APR's error system */
 
@@ -57,6 +62,9 @@
    *custom* Subversion errno's, specifically between the ranges of
    APR_OS_START_USEERR and APR_OS_START_SYSERR (see apr_errno.h)
 */
+
+#define SVN_ERR_NOT_AUTHORIZED      (APR_START_USEERR + 1)
+
 
 
 typedef struct svn_error_t
@@ -88,6 +96,10 @@ void svn_handle_error (svn_error_t *error);
 
  */
 
+
+
+
+#endif   /* __SVN_ERROR_H__ */
 
 
 /* 

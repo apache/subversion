@@ -60,6 +60,8 @@
 svn_svr_policies_t *
 svn_svr_init (svn_string_t *config_file, ap_pool_t *pool)
 {
+  ap_status_t result;
+
   /* First, allocate a `policies' structure, and allocate all of its
      internal lists */
 
@@ -73,11 +75,18 @@ svn_svr_init (svn_string_t *config_file, ap_pool_t *pool)
 
   my_policies->plugins = ap_make_array (pool, 0, sizeof(svn_svr_plugin_t));
 
-  if (ap_create_pool (& (my_policies->pool)) != APR_SUCCESS)
+  /* A policy structure has its own private memory pool, too, for
+     miscellaneous useful things.  */
+
+  result = ap_create_pool (& (my_policies->pool));
+
+  if (result != APR_SUCCESS)
     {
-      /* TODO: handle this error better! */
-      printf ("svn_svr_init(): ap_create_pool() failed for new policy struct\n");
-      exit (1);
+      /* Can't create a private memory pool for the policy structure?
+         Then just use the one that was passed in instead.  */
+      svn_handle_error (svn_create_error (result, FALSE, pool));
+
+      my_policies->pool = pool;
     }
 
 

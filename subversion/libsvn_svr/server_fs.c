@@ -64,13 +64,13 @@
 
 /* 
    This routine is called by each "wrappered" filesystem call in this
-   library.
+   library; it loops through all plugins and checks to see if an
+   action is authorized.
 
    Input:  a {repos, user, action, path} group
 
-   Returns: TRUE (action is authorized by *all* authorization plugin-hooks) 
-             or FALSE (denied by at least one authorization hook)
-*/
+   Returns: TRUE (action is authorized by *all* authorization hooks) 
+             or FALSE (denied by at least one authorization hook) */
 
 svn_boolean_t
 svr__call_authorization_hooks (svn_svr_policies_t *policy, 
@@ -127,10 +127,15 @@ svr__call_authorization_hooks (svn_svr_policies_t *policy,
 }
 
 
+/*----------------------------------------------------------------
+   READING HISTORY.
+
+   These routines retrieve info from a repository's history array.
+   They return FALSE if authorization fails.
+*/
 
 
-/* Called by network layer.  Returns latest version of the repository,
-   or NULL if authorization failed.  */
+/* Returns latest version of the repository */
 
 svn_ver_t * 
 svn_svr_latest (svn_svr_policies_t *policy, 
@@ -150,10 +155,12 @@ svn_svr_latest (svn_svr_policies_t *policy,
 
   if (! authorized)
     {
-      /* play sad music */
+      /* play sad music, and generate CUSTOM Subversion errno: */
 
-      /* we need some kind of graceful authorization failure mechanism.
-         insert general exception-handling system <here>.   */
+      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
+                                          FALSE,
+                                          policy->pool));
+      return FALSE;
     }
   else
     {
@@ -165,12 +172,18 @@ svn_svr_latest (svn_svr_policies_t *policy,
 
 
 
+/* Return the value of a property for a specific version */
+
 svn_string_t * 
-svn_svr_get_ver_prop (svn_string_t *repos, svn_string_t *user, 
-                      svn_ver_t *ver, svn_string_t *propname)
+svn_svr_get_ver_prop (svn_string_t *repos, 
+                      svn_string_t *user, 
+                      svn_ver_t *ver, 
+                      svn_string_t *propname)
 {
 
 }
+
+
 
 
 svn_proplist_t * 
