@@ -190,7 +190,7 @@ po files on branches.
 Merging messages from trunk revision X of YY.po to your branch working
 copy can be done with this command:
 
-  svn cat -r X http://svn.collab.net/repos/trunk/subversion/po/YY.po | \
+  svn cat -r X http://svn.collab.net/repos/svn/trunk/subversion/po/YY.po | \
     po-merge.py YY.po
 
 
