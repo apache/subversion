@@ -47,6 +47,13 @@
  * individuals on behalf of CollabNet.
  */
 
+/* ====================================================================
+   To add tests, look toward the bottom of this file.
+
+*/
+
+
+
 
 
 #include <stdio.h>
@@ -56,24 +63,15 @@
 /* Some global variables, for simplicity.  Yes, simplicity. */
 
 apr_pool_t *pool;
+
 svn_string_t *a = NULL, *b = NULL, *c = NULL;
 const char *phrase_1 = "hello, ";
 const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
 
 
 
-
-
-
-static void
-print_dots(int foo)
-{
-}
-
-
-/* Test 1 */
 static int
-make_svn_string_from_cstring ()
+test1()
 {
   a = svn_string_create (phrase_1, pool);
   
@@ -85,9 +83,8 @@ make_svn_string_from_cstring ()
 }
 
 
-/* Test 2 */
 static int
-make_svn_string_from_substring_of_cstring ()
+test2()
 {
     b = svn_string_ncreate (phrase_2, 16, pool);
 
@@ -99,13 +96,15 @@ make_svn_string_from_substring_of_cstring ()
 }
 
 
-/* Test 3 */
 static int
-append_svn_string_to_svn_string ()
+test3()
 {
   char *tmp;
   size_t old_len;
   
+  a = svn_string_create (phrase_1, pool);
+  b = svn_string_ncreate (phrase_2, 16, pool);
+
   tmp = apr_palloc (pool, (a->len + b->len + 1));
   strcpy (tmp, a->data);
   strcat (tmp, b->data);
@@ -120,228 +119,164 @@ append_svn_string_to_svn_string ()
 }
 
 
-
 static int
-do_tests (apr_pool_t *pool)
+test4()
 {
-
-  const char *phrase_1 = "hello, ";
-  const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
-  char *msg;
-  int e, f;
-  int test_number = 1;
-  int written;
-  int max_pad = 60;
-  int i;
-
-
-
-  {
-    printf ("    %2d. Append bytes, then compare two strings %n",
-            test_number, &written);
-    svn_string_appendbytes (a, ", new bytes to append", 11, pool);
-
-    /* Test that length, data, and null-termination are correct. */
-    if (svn_string_compare 
-        (a, svn_string_create ("hello, a longish phrase, new bytes", pool)))
-      {
-        print_dots (max_pad - written);
-        printf (" OK\n");
-      }
-    else
-      {
-        print_dots (max_pad - written);
-        printf (" FAILED\n");
-      }
-    
-    test_number++;
-  }
-
-  {
-    printf ("    %2d. Dup two strings, then compare %n",
-            test_number, &written);
-    c = svn_string_dup (a, pool);
-
-    /* Test that length, data, and null-termination are correct. */
-    if ((svn_string_compare (a, c)) && (! svn_string_compare (b, c)))
-      {
-        print_dots (max_pad - written);
-        printf (" OK\n");
-      }
-    else
-      {
-        print_dots (max_pad - written);
-        printf (" FAILED\n");
-      }
-    
-    test_number++;
-  }
-
-  {
-    char *tmp;
-    size_t old_len;
-    printf ("    %2d. Chopping a string %n",
-            test_number, &written);
-
-    old_len = c->len;
-    tmp = apr_palloc (pool, old_len + 1);
-    strcpy (tmp, c->data);
-
-    svn_string_chop (c, 11);
-
-    if ((c->len == (old_len - 11))
-        && (strncmp (a->data, c->data, c->len) == 0)
-        && (strcmp (a->data, c->data) != 0)
-        && (c->data[c->len] == '\0'))
-      {
-        print_dots (max_pad - written);
-        printf (" OK\n");
-      }
-    else
-      {
-        print_dots (max_pad - written);
-        printf (" FAILED\n");
-      }
-    
-    test_number++;
-  }
-
-  {
-    printf ("    %2d. Emptifying a string %n",
-            test_number, &written);
-
-    svn_string_setempty (c);
-
-    /* Just for kicks, check again that c and a are separate objects, too. */
-    if (((c->len == 0) && (c->data[0] == '\0'))
-        && ((a->len != 0) && (a->data[0] != '\0')))
-      {
-        print_dots (max_pad - written);
-        printf (" OK\n");
-      }
-    else
-      {
-        print_dots (max_pad - written);
-        printf (" FAILED\n");
-      }
-    
-    test_number++;
-  }
-
-  {
-    printf ("    %2d. Filling a string with hashmarks %n",
-            test_number, &written);
-
-    svn_string_fillchar (a, '#');
-
-    if ((strcmp (a->data, "###"))
-        && ((strncmp (a->data, "############", 12)) == 0)
-        && (a->data[(a->len - 1)] == '#')
-        && (a->data[(a->len)] == '\0'))
-      {
-        print_dots (max_pad - written);
-        printf (" OK\n");
-      }
-    else
-      {
-        print_dots (max_pad - written);
-        printf (" FAILED\n");
-      }
-    
-    test_number++;
-  }
-
-  {
-    svn_string_t *s;
-
-    apr_off_t num_chopped_1 = 0;
-    apr_off_t num_chopped_2 = 0;
-    apr_off_t num_chopped_3 = 0;
-
-    int chopped_okay_1 = 0;
-    int chopped_okay_2 = 0;
-    int chopped_okay_3 = 0;
-
-    printf ("    %2d. String chopping %n",
-            test_number, &written);
-
-    s = svn_string_create ("chop from slash/you'll never see this", pool);
-
-    num_chopped_1 = svn_string_chop_back_to_char (s, '/');
-    chopped_okay_1 = (! strcmp (s->data, "chop from slash"));
-
-    num_chopped_2 = svn_string_chop_back_to_char (s, 'X');
-    chopped_okay_2 = (! strcmp (s->data, "chop from slash"));
-
-    num_chopped_3 = svn_string_chop_back_to_char (s, 'c');
-    chopped_okay_3 = (strlen (s->data) == 0);
-
-    if (chopped_okay_1 
-        && chopped_okay_2
-        && chopped_okay_3
-        && (num_chopped_1 == strlen ("/you'll never see this"))
-        && (num_chopped_2 == 0)
-        && (num_chopped_3 == strlen ("chop from slash")))
-      {
-        print_dots (max_pad - written);
-        printf (" OK\n");
-      }
-    else
-      {
-        print_dots (max_pad - written);
-        printf (" FAILED\n");
-      }
-    
-    test_number++;
-  }
-
-  {
-    svn_string_t *s, *t;
-    size_t len_1 = 0;
-    size_t len_2 = 0;
-    size_t block_len_1 = 0;
-    size_t block_len_2 = 0;
-
-    printf ("    %2d. Block initialization and growth %n",
-            test_number, &written);
-
-    s = svn_string_create ("a small string", pool);
-    len_1       = (s->len);
-    block_len_1 = (s->blocksize);
-
-    t = svn_string_create (", plus a string more than twice as long", pool);
-    svn_string_appendstr (s, t, pool);
-    len_2       = (s->len);
-    block_len_2 = (s->blocksize);
-
-    /* Test that:
-     *   - The initial block was just the right fit.
-     *   - The block more than doubled (because second string so long).
-     *   - The block grew by a power of 2.
-     */
-    if ((len_1 == (block_len_1 - 1))
-        && ((block_len_2 / block_len_1) > 2)
-        && (((block_len_2 / block_len_1) % 2) == 0))
-      {
-        print_dots (max_pad - written);
-        printf (" OK\n");
-      }
-    else
-      {
-        print_dots (max_pad - written);
-        printf (" FAILED\n");
-      }
-    
-    test_number++;
-  }
-
-  return 0;
+  a = svn_string_create (phrase_1, pool);
+  svn_string_appendbytes (a, "new bytes to append", 9, pool);
+  
+  /* Test that length, data, and null-termination are correct. */
+  if (svn_string_compare 
+      (a, svn_string_create ("hello, new bytes", pool)))
+    return 0; /* PASS */
+  else
+    return 1; /* FAIL */
 }
 
 
-/* ------------------------------------------------------------------
-   If you add a new test, make sure to update these two arrays,
-   and then add the test-number to the TESTS variable in Makefile.am 
+static int
+test5()
+{
+  a = svn_string_create (phrase_1, pool);
+  b = svn_string_create (phrase_2, pool);
+  c = svn_string_dup (a, pool);
+
+  /* Test that length, data, and null-termination are correct. */
+  if ((svn_string_compare (a, c)) && (! svn_string_compare (b, c)))
+    return 0;  /* PASS */
+  else
+    return 1;  /* FAIL */
+}
+
+
+static int
+test6()
+{
+  char *tmp;
+  size_t tmp_len;
+
+  c = svn_string_create (phrase_2, pool);
+
+  tmp_len = c->len;
+  tmp = apr_palloc (pool, c->len + 1);
+  strcpy (tmp, c->data);
+
+  svn_string_chop (c, 11);
+  
+  if ((c->len == (tmp_len - 11))
+      && (strncmp (tmp, c->data, c->len) == 0)
+      && (c->data[c->len] == '\0'))
+    return 0;  /* PASS */
+  else
+    return 1;  /* FAIL */
+}
+
+
+static int
+test7()
+{
+  c = svn_string_create (phrase_2, pool);  
+  
+  svn_string_setempty (c);
+  
+  if ((c->len == 0) && (c->data[0] == '\0'))
+    return 0;  /* PASS */
+  else
+    return 1;  /* FAIL */
+}
+
+
+static int
+test8()
+{
+  a = svn_string_create (phrase_1, pool);
+
+  svn_string_fillchar (a, '#');
+
+  if ((strcmp (a->data, "#######") == 0)
+      && ((strncmp (a->data, "############", a->len - 1)) == 0)
+      && (a->data[(a->len - 1)] == '#')
+      && (a->data[(a->len)] == '\0'))
+    return 0;  /* PASS */
+  else
+    return 1;  /* FAIL */
+}
+
+
+static int
+test9()
+{
+  svn_string_t *s;
+  
+  apr_off_t num_chopped_1 = 0;
+  apr_off_t num_chopped_2 = 0;
+  apr_off_t num_chopped_3 = 0;
+  
+  int chopped_okay_1 = 0;
+  int chopped_okay_2 = 0;
+  int chopped_okay_3 = 0;
+  
+  s = svn_string_create ("chop from slash/you'll never see this", pool);
+
+  num_chopped_1 = svn_string_chop_back_to_char (s, '/');
+  chopped_okay_1 = (! strcmp (s->data, "chop from slash"));
+  
+  num_chopped_2 = svn_string_chop_back_to_char (s, 'X');
+  chopped_okay_2 = (! strcmp (s->data, "chop from slash"));
+  
+  num_chopped_3 = svn_string_chop_back_to_char (s, 'c');
+  chopped_okay_3 = (strlen (s->data) == 0);
+
+  if (chopped_okay_1 
+      && chopped_okay_2
+      && chopped_okay_3
+      && (num_chopped_1 == strlen ("/you'll never see this"))
+      && (num_chopped_2 == 0)
+      && (num_chopped_3 == strlen ("chop from slash")))
+    return 0;  /* PASS */
+  else
+    return 1;  /* FAIL */
+}
+
+
+static int 
+test10()
+{
+  svn_string_t *s, *t;
+  size_t len_1 = 0;
+  size_t len_2 = 0;
+  size_t block_len_1 = 0;
+  size_t block_len_2 = 0;
+  
+  s = svn_string_create ("a small string", pool);
+  len_1       = (s->len);
+  block_len_1 = (s->blocksize);
+  
+  t = svn_string_create (", plus a string more than twice as long", pool);
+  svn_string_appendstr (s, t, pool);
+  len_2       = (s->len);
+  block_len_2 = (s->blocksize);
+  
+  /* Test that:
+   *   - The initial block was just the right fit.
+   *   - The block more than doubled (because second string so long).
+   *   - The block grew by a power of 2.
+   */
+  if ((len_1 == (block_len_1 - 1))
+      && ((block_len_2 / block_len_1) > 2)
+        && (((block_len_2 / block_len_1) % 2) == 0))
+    return 0;  /* PASS */
+  else
+    return 1;  /* FAIL */
+}
+
+
+
+
+/*
+   ====================================================================
+   If you add a new test to this file, make sure to update these two
+   arrays, and then add the test to the TESTS variable in Makefile.am
 
 */
 
@@ -349,44 +284,87 @@ do_tests (apr_pool_t *pool)
 int (*test_funcs[])() = 
 {
   NULL,
-  make_svn_string_from_cstring,
-  make_svn_string_from_substring_of_cstring,
-  append_svn_string_to_svn_string  
+  test1,
+  test2,
+  test3,
+  test4,
+  test5,
+  test6,
+  test7,
+  test8,
+  test9,
+  test10
 };
 
 /* Descriptions of each test we can run */
 static char *descriptions[] = 
 {
   NULL,
-  "make svn_string_t from cstring",
-  "make svn_string_t from substring of cstring",
-  "append svn_string_t to svn_string_t",
+  "test 1: make svn_string_t from cstring",
+  "test 2: make svn_string_t from substring of cstring",
+  "test 3: append svn_string_t to svn_string_t",
+  "test 4: append bytes, then compare two strings",
+  "test 5: dup two strings, then compare",
+  "test 6: chopping a string",
+  "test 7: emptying a string",
+  "test 8: fill string with hashmarks",
+  "test 9: chop_back_to_char",
+  "test 10: block initialization and growth"
 };
 
-/* ----------------------------------------------------------------- */
+/* ================================================================= */
 
 
 
-/* Execute a test number TEST_NUM.  Print result according to our
-   test-suite spec, and return its result code. */
+/* Execute a test number TEST_NUM.  Pretty-print test name and dots
+   according to our test-suite spec, and return the result code. */
 static int
-do_test_num (int test_num)
+do_test_num (const char *progname, int test_num)
 {
+  int retval;
+  int numdots, i;
   int (*func)();
   int array_size = sizeof(test_funcs)/sizeof(int (*)()) - 1;
 
+  /* Check our array bounds! */
   if ((test_num > array_size) 
       || (test_num <= 0))
     {
-      printf ("stringtest test %d: NO SUCH TEST ...", test_num);
-      return 1;  /* FAIL, this test number doesn't exist! */
+      char *msg = (char *) apr_psprintf (pool, "%s test %d: NO SUCH TEST",
+                                         progname, test_num);
+      printf ("%s", msg);
+      numdots = 75 - strlen (msg);
+      if (numdots > 0)
+        for (i = 0; i < numdots; i++)
+          printf (".");
+      else
+        printf ("...");
+      printf ("FAIL\n");
+
+      return 1;  /* BAIL, this test number doesn't exist. */
     }
 
+  /* Do test */
   func = test_funcs[test_num];
+  retval = (*func)();
 
-  printf ("stringtest test %d: %s ... ", test_num, descriptions[test_num]);
+  /* Pretty print results */
+  printf ("%s %s", progname, descriptions[test_num]);
 
-  return (*func)();
+  /* (some cute trailing dots) */
+  numdots = 74 - (strlen (progname) + strlen (descriptions[test_num]));
+  if (numdots > 0)
+    for (i = 0; i < numdots; i++)
+      printf (".");
+  else
+    printf ("...");
+
+  if (! retval)
+    printf ("PASS\n");
+  else
+    printf ("FAIL\n");
+
+  return retval;
 }
 
 
@@ -395,17 +373,11 @@ int
 main (int argc, char *argv[])
 {
   int test_num;
-  int retval;
+  int i;
+  int got_error = 0;
 
-  /* Get command-line argument */
-  if (argc < 2) {
-    printf ("\nUsage: %s [N], where N is a test number to run.\n\n",
-            argv[0]);
-    exit (1);
-  }
-  
-  test_num = atoi (argv[1]);
-  
+  /* How many tests are there? */
+  int array_size = sizeof(test_funcs)/sizeof(int (*)()) - 1;
   
   /* Initialize APR (Apache pools) */
   if (apr_initialize () != APR_SUCCESS)
@@ -419,17 +391,22 @@ main (int argc, char *argv[])
       exit (1);
     }
 
-  retval = do_test_num (test_num);
-  if (! retval)
-    printf ("PASS\n");
-  else
-    printf ("FAIL\n");
-  
+  /* Notice if there's a command-line argument */
+  if (argc >= 2) 
+    {
+      test_num = atoi (argv[1]);
+      got_error = do_test_num (argv[0], test_num);
+    }
+  else /* just run all tests */
+    for (i = 1; i <= array_size; i++)
+      if (do_test_num (argv[0], i))
+        got_error = 1;
 
+  /* Clean up APR */
   apr_destroy_pool (pool);
   apr_terminate();
 
-  return retval;
+  return got_error;
 }
 
 
