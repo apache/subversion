@@ -70,48 +70,48 @@
    FIXME: the help strings could give a lot more detail... */
 static svn_cl__cmd_desc_t cmd_table[] = {
   /* add */
-  { "add",        NULL,       TRUE,  svn_cl__add,
+  { "add",        NULL,       svn_cl__add,
     "Add a new file or directory to version control." },
-  { "ad",         "add",      TRUE,  svn_cl__add,      NULL },
-  { "new",        "add",      TRUE,  svn_cl__add,      NULL },
+  { "ad",         "add",      svn_cl__add,      NULL },
+  { "new",        "add",      svn_cl__add,      NULL },
 
   /* checkout */
-  { "checkout",   NULL,       TRUE,  svn_cl__checkout,
+  { "checkout",   NULL,       svn_cl__checkout,
     "Check out a working directory from a repository." },
-  { "co",         "checkout", TRUE,  svn_cl__checkout, NULL },
+  { "co",         "checkout", svn_cl__checkout, NULL },
 
   /* commit */
-  { "commit",     NULL,       TRUE,  svn_cl__commit,
+  { "commit",     NULL,       svn_cl__commit,
     "Commit changes from your working copy to the repository." },
-  { "ci",         "commit",   TRUE,  svn_cl__commit,   NULL },
+  { "ci",         "commit",   svn_cl__commit,   NULL },
 
   /* delete */
-  { "delete",     NULL,       TRUE,  svn_cl__delete,
+  { "delete",     NULL,       svn_cl__delete,
     "Remove a file or directory from version control." },
-  { "del",        "delete",   TRUE,  svn_cl__delete,   NULL },
-  { "remove",     "delete",   TRUE,  svn_cl__delete,   NULL },
-  { "rm",         "delete",   TRUE,  svn_cl__delete,   NULL },
+  { "del",        "delete",   svn_cl__delete,   NULL },
+  { "remove",     "delete",   svn_cl__delete,   NULL },
+  { "rm",         "delete",   svn_cl__delete,   NULL },
 
   /* help */
-  { "help",       NULL,       FALSE, svn_cl__help, 
+  { "help",       NULL,       svn_cl__help, 
     "Funny you should ask." },
 
   /* proplist */
-  { "proplist",   NULL,       TRUE,  svn_cl__proplist,
+  { "proplist",   NULL,       svn_cl__proplist,
     "List all properties for given files and directories." },
-  { "plist",      "proplist", TRUE,  svn_cl__proplist, NULL },
-  { "pl",         "proplist", TRUE,  svn_cl__proplist, NULL },
+  { "plist",      "proplist", svn_cl__proplist, NULL },
+  { "pl",         "proplist", svn_cl__proplist, NULL },
 
   /* status */
-  { "status",     NULL,       TRUE,  svn_cl__status,
+  { "status",     NULL,       svn_cl__status,
     "Print the status of working copy files and directories."},
-  { "stat",       "status",   TRUE,  svn_cl__status,   NULL },
-  { "st",         "status",   TRUE,  svn_cl__status,   NULL },
+  { "stat",       "status",   svn_cl__status,   NULL },
+  { "st",         "status",   svn_cl__status,   NULL },
 
   /* update */
-  { "update",     NULL,       TRUE,  svn_cl__update,
+  { "update",     NULL,       svn_cl__update,
     "Bring changes from the repository into the working copy." },
-  { "up",         "update",   TRUE,  svn_cl__update,   NULL }
+  { "up",         "update",   svn_cl__update,   NULL }
 };
 
 
