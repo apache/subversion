@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <!DOCTYPE book SYSTEM "../tools/dtd/dblite.dtd"
 [
+<!ENTITY % vers   SYSTEM "version.xml">
+%vers;
 <!ENTITY ch00     SYSTEM "ch00.xml">
 <!ENTITY ch01     SYSTEM "ch01.xml">
 <!ENTITY ch02     SYSTEM "ch02.xml">
@@ -23,6 +25,10 @@
 
   <book id="svn">
   <title>Subversion: The Definitive Guide</title>
+
+  <!-- Using revnumber would be more appropriate, but our stylesheets -->
+  <!-- don't seem to render it. -->
+  <subtitle>Draft Revision &svn.version;</subtitle>
 
   <bookinfo>
 

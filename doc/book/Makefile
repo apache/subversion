@@ -4,6 +4,7 @@ INSTALL = install
 
 ## You shouldn't normally need to edit anything below here.
 SHELL = /bin/sh
+SVNVERSION = svnversion
 
 BOOK_TOP = .
 BOOK_HTML_CHUNK_DIR = $(BOOK_DIR)/html-chunk
@@ -13,6 +14,7 @@ BOOK_PDF_TARGET = $(BOOK_DIR)/book.pdf
 BOOK_PS_TARGET = $(BOOK_DIR)/book.ps
 BOOK_FO_TARGET = $(BOOK_DIR)/book.fo
 BOOK_XML_SOURCE = $(BOOK_DIR)/book.xml
+BOOK_VERSION_SOURCE =  $(BOOK_DIR)/version.xml
 BOOK_ALL_SOURCE = $(BOOK_DIR)/*.xml
 BOOK_INSTALL_DIR = $(INSTALL_DIR)/book
 
@@ -61,15 +63,17 @@ install-misc-docs: install-misc-html install-misc-pdf \
 
 clean: book-clean misc-docs-clean
 
+$(BOOK_VERSION_SOURCE):
+	echo '<!ENTITY svn.version "'`$(SVNVERSION) .`'">' > $(BOOK_VERSION_SOURCE)
 
 book-html: $(BOOK_HTML_TARGET)
 
-$(BOOK_HTML_TARGET): $(BOOK_ALL_SOURCE)
+$(BOOK_HTML_TARGET): $(BOOK_ALL_SOURCE) $(BOOK_VERSION_SOURCE)
 	$(XSLTPROC) $(BOOK_HTML_XSLTPROC_OPTS) \
            --output $(BOOK_HTML_TARGET) $(XSL_HTML) $(BOOK_XML_SOURCE)
 
 ## This trailing slash is essential that xsltproc will output pages to the dir
-book-html-chunk: $(BOOK_ALL_SOURCE)
+book-html-chunk: $(BOOK_ALL_SOURCE) $(BOOK_VERSION_SOURCE)
 	mkdir -p $(BOOK_HTML_CHUNK_DIR)
 	$(XSLTPROC) $(BOOK_HTML_XSLTPROC_OPTS) \
            --output $(BOOK_HTML_CHUNK_DIR)/ \
@@ -81,12 +85,12 @@ book-pdf: $(BOOK_PDF_TARGET)
 
 book-ps: $(BOOK_PS_TARGET)
 
-$(BOOK_PDF_TARGET): $(BOOK_ALL_SOURCE)
+$(BOOK_PDF_TARGET): $(BOOK_ALL_SOURCE) $(BOOK_VERSION_SOURCE)
 	$(XSLTPROC) $(BOOK_PDF_XSLTPROC_OPTS) \
 	   --output $(BOOK_FO_TARGET) $(XSL_FO) $(BOOK_XML_SOURCE)
 	$(RUN_FOP) $(BOOK_TOP) -fo $(BOOK_FO_TARGET) -pdf $(BOOK_PDF_TARGET)
 
-$(BOOK_PS_TARGET): $(BOOK_ALL_SOURCE)
+$(BOOK_PS_TARGET): $(BOOK_ALL_SOURCE) $(BOOK_VERSION_SOURCE)
 	$(XSLTPROC) $(BOOK_PS_XSLTPROC_OPTS) \
 	   --output $(BOOK_FO_TARGET) $(XSL_FO) $(BOOK_XML_SOURCE)
 	$(RUN_FOP) $(BOOK_TOP) -fo $(BOOK_FO_TARGET) -ps $(BOOK_PS_TARGET)
@@ -114,6 +118,7 @@ install-book-ps: $(BOOK_PS_TARGET) $(BOOK_INSTALL_DIR)
 	$(INSTALL) $(BOOK_PS_TARGET) $(BOOK_INSTALL_DIR)
 
 book-clean:
+	rm -f $(BOOK_VERSION_SOURCE)
 	rm -f $(BOOK_HTML_TARGET) $(BOOK_FO_TARGET)
 	rm -rf $(BOOK_HTML_CHUNK_DIR)
 	rm -f $(BOOK_PDF_TARGET) $(BOOK_PS_TARGET) 
