@@ -982,21 +982,6 @@ svn_error_t *svn_fs_make_dir (svn_fs_root_t *root,
                               apr_pool_t *pool);
                               
 
-/** Delete the node named @a path in @a root.  @a root must be the root of
- * a transaction, not a revision.  Do any necessary temporary allocation
- * in @a pool.
- *
- * If the node being deleted is a directory, it must be empty, else
- * the error @c SVN_ERR_DIR_NOT_EMPTY is returned.
- *
- * Attempting to remove the root dir also results in an error,
- * @c SVN_ERR_FS_ROOT_DIR, even if the dir is empty.
- */
-svn_error_t *svn_fs_delete (svn_fs_root_t *root,
-                            const char *path,
-                            apr_pool_t *pool);
-
-
 /** Delete the node named @a path in @a root.  If the node being deleted is
  * a directory, its contents will be deleted recursively.  @a root must be
  * the root of a transaction, not of a revision.  Use @a pool for
@@ -1012,20 +997,12 @@ svn_error_t *svn_fs_delete (svn_fs_root_t *root,
  * If return @c SVN_ERR_FS_NO_SUCH_ENTRY, then the basename of @a path is
  * missing from its parent, that is, the final target of the deletion
  * is missing.
- */
-svn_error_t *svn_fs_delete_tree (svn_fs_root_t *root,
-                                 const char *path,
-                                 apr_pool_t *pool);
-
-
-/** Move the node named @a from to @a to, both in @a root.  @a root must be 
- * the root of a transaction, not a revision.
  *
- * Do any necessary temporary allocation in @a pool.
+ * Attempting to remove the root dir also results in an error,
+ * @c SVN_ERR_FS_ROOT_DIR, even if the dir is empty.
  */
-svn_error_t *svn_fs_rename (svn_fs_root_t *root,
-                            const char *from,
-                            const char *to,
+svn_error_t *svn_fs_delete (svn_fs_root_t *root,
+                            const char *path,
                             apr_pool_t *pool);
 
 

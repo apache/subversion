@@ -1586,7 +1586,7 @@ test_tree_node_validation (const char **msg,
     SVN_ERR (svn_test__set_file_contents 
              (txn_root, "iota", "This is a new version of 'iota'.\n", pool));
     SVN_ERR (svn_fs_delete (txn_root, "A/mu", pool));            
-    SVN_ERR (svn_fs_delete_tree (txn_root, "A/D/G", pool));            
+    SVN_ERR (svn_fs_delete (txn_root, "A/D/G", pool));            
     SVN_ERR (svn_fs_make_dir (txn_root, "A/D/I", pool));
     SVN_ERR (svn_fs_make_file (txn_root, "A/D/I/delta", pool));
     SVN_ERR (svn_test__set_file_contents 
@@ -1748,7 +1748,7 @@ merging_commit (const char **msg,
      knock it off.  Oh, and let's re-add iota, too. */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[revision_count-1], pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_fs_delete_tree (txn_root, "A/D/H", pool));
+  SVN_ERR (svn_fs_delete (txn_root, "A/D/H", pool));
   SVN_ERR (svn_fs_make_file (txn_root, "iota", pool));
   SVN_ERR (svn_test__set_file_contents 
            (txn_root, "iota", "This is the new file 'iota'.\n", pool));
@@ -1949,7 +1949,7 @@ merging_commit (const char **msg,
        merge yet, so we know we won't get a conflict here. */
     SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
     SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-    SVN_ERR (svn_fs_delete_tree (txn_root, "A/D/H", pool));
+    SVN_ERR (svn_fs_delete (txn_root, "A/D/H", pool));
     SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
     /*********************************************************************/
     /* REVISION 6 */
@@ -1999,7 +1999,7 @@ merging_commit (const char **msg,
       /* (1) but refers to different nodes.  Conflict. */
       SVN_ERR (svn_fs_begin_txn (&txn, fs, revisions[1], pool));
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-      SVN_ERR (svn_fs_delete_tree (txn_root, "A/D/H", pool));
+      SVN_ERR (svn_fs_delete (txn_root, "A/D/H", pool));
       SVN_ERR (svn_fs_make_dir (txn_root, "A/D/H", pool));
       SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
       revisions[revision_count++] = after_rev;
@@ -2013,7 +2013,7 @@ merging_commit (const char **msg,
         SVN_ERR (svn_fs_begin_txn 
                  (&txn, fs, revisions[revision_count - 1], pool));
         SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-        SVN_ERR (svn_fs_delete_tree (txn_root, "A/D/H", pool));
+        SVN_ERR (svn_fs_delete (txn_root, "A/D/H", pool));
         SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
         revisions[revision_count++] = after_rev;
       }
@@ -2898,25 +2898,21 @@ delete_mutables (const char **msg,
    *
    *    1. Delete a single file somewhere, succeed.
    *    2. Delete two files of three, then make sure the third remains.
-   *    3. Try to delete that directory, get the right error.
-   *    4. Delete the third and last file.
-   *    5. Try again to delete the dir, succeed.
-   *    6. Delete one of the natively empty dirs, succeed.
-   *    7. Try to delete root, fail.
-   *    8. Try to delete a dir whose only entries are also dirs, fail.
-   *    9. Try to delete a top-level file, succeed.
+   *    3. Delete the third and last file.
+   *    4. Try again to delete the dir, succeed.
+   *    5. Delete one of the natively empty dirs, succeed.
+   *    6. Try to delete root, fail.
+   *    7. Try to delete a top-level file, succeed.
    *
    * Specifically, that's:
    *
    *    1. Delete A/D/gamma.
    *    2. Delete A/D/G/pi, A/D/G/rho.
-   *    3. Try to delete A/D/G, fail.
-   *    4. Delete A/D/G/tau.
-   *    5. Try again to delete A/D/G, succeed.
-   *    6. Delete A/C.
-   *    7. Try to delete /, fail.
-   *    8. Try to delete A/D, fail.
-   *    9. Try to delete iota, succeed.
+   *    3. Delete A/D/G/tau.
+   *    4. Try again to delete A/D/G, succeed.
+   *    5. Delete A/C.
+   *    6. Try to delete /, fail.
+   *    7. Try to delete iota, succeed.
    *
    * Before and after each deletion or attempted deletion, we probe
    * the affected directory, to make sure everything is as it should
@@ -2972,32 +2968,6 @@ delete_mutables (const char **msg,
 
   /* 3 */
   {
-    const svn_fs_id_t *G_id;
-    SVN_ERR (svn_fs_node_id (&G_id, txn_root, "A/D/G", pool));
-
-    SVN_ERR (check_id_present (fs, G_id, pool));
-    err = svn_fs_delete (txn_root, "A/D/G", pool);            /* fail */
-
-    if (err && (err->apr_err != SVN_ERR_DIR_NOT_EMPTY))
-      {
-        return svn_error_createf
-          (SVN_ERR_FS_GENERAL, NULL,
-           "deleting non-empty directory got wrong error");
-      }
-    else if (! err)
-      {
-        return svn_error_createf
-          (SVN_ERR_FS_GENERAL, NULL,
-           "deleting non-empty directory failed to get error");
-      }
-    svn_error_clear (err);
-
-    SVN_ERR (check_entry_present (txn_root, "A/D", "G", pool));
-    SVN_ERR (check_id_present (fs, G_id, pool));
-  }
-
-  /* 4 */
-  {
     const svn_fs_id_t *tau_id;
     SVN_ERR (svn_fs_node_id (&tau_id, txn_root, "A/D/G/tau", pool));
 
@@ -3010,7 +2980,7 @@ delete_mutables (const char **msg,
     SVN_ERR (check_id_absent (fs, tau_id, pool));
   }
 
-  /* 5 */
+  /* 4 */
   {
     const svn_fs_id_t *G_id;
     SVN_ERR (svn_fs_node_id (&G_id, txn_root, "A/D/G", pool));
@@ -3024,7 +2994,7 @@ delete_mutables (const char **msg,
     SVN_ERR (check_id_absent (fs, G_id, pool));
   }
 
-  /* 6 */
+  /* 5 */
   {
     const svn_fs_id_t *C_id;
     SVN_ERR (svn_fs_node_id (&C_id, txn_root, "A/C", pool));
@@ -3038,7 +3008,7 @@ delete_mutables (const char **msg,
     SVN_ERR (check_id_absent (fs, C_id, pool));
   }
 
-  /* 7 */
+  /* 6 */
   {
     const svn_fs_id_t *root_id;
     SVN_ERR (svn_fs_node_id (&root_id, txn_root, "", pool));
@@ -3062,32 +3032,7 @@ delete_mutables (const char **msg,
     SVN_ERR (check_id_present (fs, root_id, pool));
   }
 
-  /* 8 */
-  {
-    const svn_fs_id_t *D_id;
-    SVN_ERR (svn_fs_node_id (&D_id, txn_root, "A/D", pool));
-
-    err = svn_fs_delete (txn_root, "A/D", pool);
-
-    if (err && (err->apr_err != SVN_ERR_DIR_NOT_EMPTY))
-      {
-        return svn_error_createf
-          (SVN_ERR_FS_GENERAL, NULL,
-           "deleting non-empty directory got wrong error");
-      }
-    else if (! err)
-      {
-        return svn_error_createf
-          (SVN_ERR_FS_GENERAL, NULL,
-           "deleting non-empty directory failed to get error");
-      }
-    svn_error_clear (err);
-
-    SVN_ERR (check_entry_present (txn_root, "A", "D", pool));
-    SVN_ERR (check_id_present (fs, D_id, pool));
-  }
-  
-  /* 9 */
+  /* 7 */
   {
     const svn_fs_id_t *iota_id;
     SVN_ERR (svn_fs_node_id (&iota_id, txn_root, "iota", pool));
@@ -3122,7 +3067,6 @@ delete (const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
   svn_revnum_t new_rev;
-  svn_error_t *err;
 
   *msg = "delete nodes tree";
 
@@ -3179,14 +3123,12 @@ delete (const char **msg,
     SVN_ERR (check_id_present (fs, iota_id, pool));
     SVN_ERR (check_id_present (fs, gamma_id, pool));
 
-    /* Try deleting a mutable file with plain delete. */
+    /* Try deleting mutable files. */
     SVN_ERR (svn_fs_delete (txn_root, "iota", pool));
+    SVN_ERR (svn_fs_delete (txn_root, "A/D/gamma", pool));
     SVN_ERR (check_entry_absent (txn_root, "", "iota", pool));
-    SVN_ERR (check_id_absent (fs, iota_id, pool));
-
-    /* Try deleting a mutable file with delete_tree. */
-    SVN_ERR (svn_fs_delete_tree (txn_root, "A/D/gamma", pool));
     SVN_ERR (check_entry_absent (txn_root, "A/D", "gamma", pool));
+    SVN_ERR (check_id_absent (fs, iota_id, pool));
     SVN_ERR (check_id_absent (fs, gamma_id, pool));
 
     /* Validate the tree.  */
@@ -3249,35 +3191,16 @@ delete (const char **msg,
     SVN_ERR (svn_fs_node_id (&tau_id, txn_root, "/A/D/G/tau", pool));
     SVN_ERR (check_entry_present (txn_root, "A/D/G", "tau", pool));
 
-    /* Try deleting a mutable empty dir with plain delete. */
+    /* Try deleting a mutable empty dir. */
     SVN_ERR (svn_fs_delete (txn_root, "A/C", pool));
+    SVN_ERR (svn_fs_delete (txn_root, "A/B/F", pool));
     SVN_ERR (check_entry_absent (txn_root, "A", "C", pool));
-    SVN_ERR (check_id_absent (fs, C_id, pool));
-
-    /* Try deleting a mutable empty dir with delete_tree. */
-    SVN_ERR (svn_fs_delete_tree (txn_root, "A/B/F", pool));
     SVN_ERR (check_entry_absent (txn_root, "A/B", "F", pool));
+    SVN_ERR (check_id_absent (fs, C_id, pool));
     SVN_ERR (check_id_absent (fs, F_id, pool));
 
-    /* Try an unsuccessful delete of a non-empty dir. */
-    err = svn_fs_delete (txn_root, "A", pool);
-    if (err && (err->apr_err != SVN_ERR_DIR_NOT_EMPTY))
-      {
-        return svn_error_create
-          (SVN_ERR_FS_GENERAL, NULL,
-           "delete failed as expected, but for wrong reason");
-      }
-    else if (! err)
-      {
-        return svn_error_create
-          (SVN_ERR_FS_GENERAL, NULL,
-           "delete succeeded when expected to fail");
-      }
-    svn_error_clear (err);
-
-    /* Try a successful delete of a non-empty dir. */
-    SVN_ERR (svn_fs_delete_tree (txn_root, "A", pool));
-
+    /* Now delete a mutable non-empty dir. */
+    SVN_ERR (svn_fs_delete (txn_root, "A", pool));
     SVN_ERR (check_entry_absent (txn_root, "", "A", pool));
     SVN_ERR (check_id_absent (fs, A_id, pool));
     SVN_ERR (check_id_absent (fs, mu_id, pool));
@@ -3331,14 +3254,14 @@ delete (const char **msg,
       *beta_id, *F_id, *C_id, *D_id, *gamma_id, *H_id, *chi_id,
       *psi_id, *omega_id, *G_id, *pi_id, *rho_id, *tau_id, *sigma_id;
 
-    /* Create A/D/G/sigma.  This makes all component of A/D/G
+    /* Create A/D/G/sigma.  This makes all components of A/D/G
        mutable.  */
     SVN_ERR (svn_fs_make_file (txn_root, "A/D/G/sigma", pool));
     SVN_ERR (svn_test__set_file_contents (txn_root, "A/D/G/sigma",
                                 "This is another file 'sigma'.\n", pool));
 
-    /* Check mutable nodes revision ID is removed and immutable ones
-       still exist.  */
+    /* Check that mutable node-revision-IDs are removed and immutable
+       ones still exist.  */
     SVN_ERR (svn_fs_node_id (&A_id, txn_root, "/A", pool));
     SVN_ERR (check_entry_present (txn_root, "", "A", pool));
     SVN_ERR (svn_fs_node_id (&mu_id, txn_root, "/A/mu", pool));
@@ -3380,25 +3303,8 @@ delete (const char **msg,
     SVN_ERR (svn_fs_node_id (&sigma_id, txn_root, "/A/D/G/sigma", pool));
     SVN_ERR (check_entry_present (txn_root, "A/D/G", "sigma", pool));
 
-    /* First try an unsuccessful delete. */
-    err = svn_fs_delete (txn_root, "A", pool);
-    if (err && (err->apr_err != SVN_ERR_DIR_NOT_EMPTY))
-      {
-        return svn_error_create
-          (SVN_ERR_FS_GENERAL, NULL,
-           "delete failed as expected, but for wrong reason");
-      }
-    else if (! err)
-      {
-        return svn_error_create
-          (SVN_ERR_FS_GENERAL, NULL,
-           "delete succeeded when expected to fail");
-      }
-    svn_error_clear (err);
-
-    /* Then try a successful delete. */
-    SVN_ERR (svn_fs_delete_tree (txn_root, "A", pool));
-
+    /* Delete "A" */
+    SVN_ERR (svn_fs_delete (txn_root, "A", pool));
     SVN_ERR (check_entry_absent (txn_root, "", "A", pool));
     SVN_ERR (check_id_absent (fs, A_id, pool));
     SVN_ERR (check_id_present (fs, mu_id, pool));
@@ -3452,14 +3358,12 @@ delete (const char **msg,
     SVN_ERR (check_id_present (fs, iota_id, pool));
     SVN_ERR (check_id_present (fs, gamma_id, pool));
 
-    /* Try it once with plain delete(). */
+    /* Delete some files. */
     SVN_ERR (svn_fs_delete (txn_root, "iota", pool));
+    SVN_ERR (svn_fs_delete (txn_root, "A/D/gamma", pool));
     SVN_ERR (check_entry_absent (txn_root, "", "iota", pool));
-    SVN_ERR (check_id_present (fs, iota_id, pool));
-
-    /* Try it once with delete_tree(). */
-    SVN_ERR (svn_fs_delete_tree (txn_root, "A/D/gamma", pool));
     SVN_ERR (check_entry_absent (txn_root, "A/D", "iota", pool));
+    SVN_ERR (check_id_present (fs, iota_id, pool));
     SVN_ERR (check_id_present (fs, gamma_id, pool));
 
     /* Validate the tree.  */
@@ -3543,25 +3447,8 @@ delete (const char **msg,
     SVN_ERR (svn_fs_node_id (&tau_id, txn_root, "/A/D/G/tau", pool));
     SVN_ERR (check_entry_present (txn_root, "A/D/G", "tau", pool));
 
-    /* First try an unsuccessful delete. */
-    err = svn_fs_delete (txn_root, "A", pool);
-    if (err && (err->apr_err != SVN_ERR_DIR_NOT_EMPTY))
-      {
-        return svn_error_create
-          (SVN_ERR_FS_GENERAL, NULL,
-           "delete failed as expected, but for wrong reason");
-      }
-    else if (! err)
-      {
-        return svn_error_create
-          (SVN_ERR_FS_GENERAL, NULL,
-           "delete succeeded when expected to fail");
-      }
-    svn_error_clear (err);
-
-    /* Then try a successful delete. */
-    SVN_ERR (svn_fs_delete_tree (txn_root, "A", pool));
-
+    /* Delete "A" */
+    SVN_ERR (svn_fs_delete (txn_root, "A", pool));
     SVN_ERR (check_entry_absent (txn_root, "", "A", pool));
     SVN_ERR (check_id_present (fs, A_id, pool));
     SVN_ERR (check_id_present (fs, mu_id, pool));

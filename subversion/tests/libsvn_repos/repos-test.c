@@ -389,8 +389,8 @@ node_tree_delete_under_copy (const char **msg,
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (svn_fs_copy (revision_root, "A", txn_root, "Z", pool));
-  SVN_ERR (svn_fs_delete_tree (txn_root, "Z/D/G/rho", pool));
-  SVN_ERR (svn_fs_delete_tree (txn_root, "Z/D/H", pool));
+  SVN_ERR (svn_fs_delete (txn_root, "Z/D/G/rho", pool));
+  SVN_ERR (svn_fs_delete (txn_root, "Z/D/H", pool));
   SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
 
@@ -582,7 +582,7 @@ revisions_changed (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
   SVN_ERR (svn_fs_copy (rev_root, "A/D", txn_root, "A/Z", spool));
-  SVN_ERR (svn_fs_delete_tree (txn_root, "A/D", spool));
+  SVN_ERR (svn_fs_delete (txn_root, "A/D", spool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
   svn_pool_clear (spool);
@@ -600,7 +600,7 @@ revisions_changed (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
   SVN_ERR (svn_fs_copy (rev_root, "A/Z", txn_root, "A/D", spool));
-  SVN_ERR (svn_fs_delete_tree (txn_root, "A/Z", spool));
+  SVN_ERR (svn_fs_delete (txn_root, "A/Z", spool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "iota", "8", spool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));

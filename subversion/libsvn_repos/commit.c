@@ -192,7 +192,7 @@ delete_entry (const char *path,
   /* This routine is a mindless wrapper.  We call svn_fs_delete_tree
      because that will delete files and recursively delete
      directories.  */
-  return svn_fs_delete_tree (eb->txn_root, full_path, pool);
+  return svn_fs_delete (eb->txn_root, full_path, pool);
 }
 
 

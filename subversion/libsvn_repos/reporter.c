@@ -171,9 +171,9 @@ gut_directory (const char *path,
       const void *key;
       svn_pool_clear (subpool);
       apr_hash_this (hi, &key, NULL, NULL);
-      SVN_ERR (svn_fs_delete_tree (txn_root, 
-                                   svn_path_join (path, key, subpool),
-                                   subpool));
+      SVN_ERR (svn_fs_delete (txn_root, 
+                              svn_path_join (path, key, subpool),
+                              subpool));
     }
 
   /* Then kill its properties. */
@@ -405,7 +405,7 @@ svn_repos_delete_path (void *report_baton,
                                     NULL);
 
   /* Remove the file or directory (recursively) from the txn. */
-  err = svn_fs_delete_tree (rbaton->txn_root, delete_path, pool);
+  err = svn_fs_delete (rbaton->txn_root, delete_path, pool);
 
   /* If the delete is a no-op, don't throw an error;  just ignore. */
   if (err)
