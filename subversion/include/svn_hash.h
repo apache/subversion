@@ -86,6 +86,9 @@ apr_size_t svn_unpack_bytestring (char **returndata, void *value);
  */
 void *svn_pack_bytestring (size_t len, const char *val, apr_pool_t *pool);
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* SVN_HASH_H */
 

@@ -85,6 +85,9 @@ apr_hash_sorted_keys (apr_hash_t *ht,
                       apr_pool_t *pool);
 #endif /* apr_hash_sorted_keys */
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* SVN_SORTS_H */
 
