@@ -118,11 +118,26 @@
 }
 
 /* -----------------------------------------------------------------------
+   fix up the return hash for svn_client_ls() 
+*/
+
+%typemap(in,numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
+%typemap(python,argout,fragment="t_output_helper") apr_hash_t **dirents {
+	$result = t_output_helper(
+		$result,
+		svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_dirent_t));
+}
+
+/* -----------------------------------------------------------------------
    We use 'svn_wc_status_t *' in some custom code, but it isn't in the
    API anywhere. Thus, SWIG doesn't generate a typemap entry for it. by
    adding a simple declaration here, SWIG will insert a name for it.
 */
 %types(svn_wc_status_t *);
+
+/* We also need SWIG to wrap svn_dirent_t for us.  It doesn't appear in
+   any API, but svn_client_ls returns a hash of pointers to dirents. */
+%types(svn_dirent_t *);
 
 /* ----------------------------------------------------------------------- */
 
@@ -139,3 +154,5 @@
 %}
 
 %include svn_client.h
+
+
