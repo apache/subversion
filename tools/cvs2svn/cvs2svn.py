@@ -1559,7 +1559,7 @@ class SymbolicNameTracker:
     if parent.has_key(ctx.branches_base):
       branch_base_key = parent[ctx.branches_base]
       branch_base = marshal.loads(self.db[branch_base_key])
-      for this_source in branch_base:
+      for this_source in branch_base.keys():
         if this_source[0] != '/':
           src_path = ctx.branches_base + '/' + this_source
           self.copy_descend(dumper, ctx, name, branch_base, this_source,
@@ -1617,10 +1617,10 @@ class SymbolicNameTracker:
     # they were commits on that branch and therefore cvs2svn must have
     # created it already (see the fill_branch call in Commit.commit).
     # So either way, the source paths exist by the time we need them.
-    for name in parent:
+    for name in parent.keys():
       if name[0] != '/':
         self.fill_branch(dumper, ctx, name, [1])
-    for name in parent:
+    for name in parent.keys():
       if name[0] != '/':
         self.fill_tag(dumper, ctx, name, [1])
 
