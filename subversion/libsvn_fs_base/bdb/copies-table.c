@@ -26,6 +26,7 @@
 #include "../util/fs_skels.h"
 #include "../trail.h"
 #include "../id.h"
+#include "../../libsvn_fs/fs_loader.h"
 #include "bdb-err.h"
 #include "copies-table.h"
 #include "rev-table.h"
@@ -69,6 +70,7 @@ put_copy (svn_fs_t *fs,
           const char *copy_id,
           trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   skel_t *copy_skel;
   DBT key, value;
 
@@ -81,8 +83,8 @@ put_copy (svn_fs_t *fs,
   svn_fs__skel_to_dbt (&value, copy_skel, trail->pool);
   svn_fs__trail_debug (trail, "copies", "put");
   SVN_ERR (BDB_WRAP (fs, "storing copy record",
-                    fs->copies->put (fs->copies, trail->db_txn,
-                                     &key, &value, 0)));
+                     bfd->copies->put (bfd->copies, trail->db_txn,
+                                       &key, &value, 0)));
 
   return SVN_NO_ERROR;
 }
@@ -93,6 +95,7 @@ svn_fs__bdb_reserve_copy_id (const char **id_p,
                              svn_fs_t *fs,
                              trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   DBT query, result;
   apr_size_t len;
   char next_key[SVN_FS__MAX_KEY_SIZE];
@@ -104,9 +107,9 @@ svn_fs__bdb_reserve_copy_id (const char **id_p,
      copies table.  */
   svn_fs__trail_debug (trail, "copies", "get");
   SVN_ERR (BDB_WRAP (fs, "allocating new copy ID (getting 'next-key')",
-                    fs->copies->get (fs->copies, trail->db_txn,
-                                     &query, svn_fs__result_dbt (&result), 
-                                     0)));
+                     bfd->copies->get (bfd->copies, trail->db_txn,
+                                       &query, svn_fs__result_dbt (&result), 
+                                       0)));
   svn_fs__track_dbt (&result, trail->pool);
 
   /* Set our return value. */
@@ -116,10 +119,10 @@ svn_fs__bdb_reserve_copy_id (const char **id_p,
   len = result.size;
   svn_fs__next_key (result.data, &len, next_key);
   svn_fs__trail_debug (trail, "copies", "put");
-  db_err = fs->copies->put (fs->copies, trail->db_txn,
-                            svn_fs__str_to_dbt (&query, svn_fs__next_key_key),
-                            svn_fs__str_to_dbt (&result, next_key), 
-                            0);
+  db_err = bfd->copies->put (bfd->copies, trail->db_txn,
+                             svn_fs__str_to_dbt (&query, svn_fs__next_key_key),
+                             svn_fs__str_to_dbt (&result, next_key), 
+                             0);
 
   SVN_ERR (BDB_WRAP (fs, "bumping next copy key", db_err));
   return SVN_NO_ERROR;
@@ -149,12 +152,13 @@ svn_fs__bdb_delete_copy (svn_fs_t *fs,
                          const char *copy_id,
                          trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   DBT key;
   int db_err;
 
   svn_fs__str_to_dbt (&key, copy_id);
   svn_fs__trail_debug (trail, "copies", "del");
-  db_err = fs->copies->del (fs->copies, trail->db_txn, &key, 0);
+  db_err = bfd->copies->del (bfd->copies, trail->db_txn, &key, 0);
   if (db_err == DB_NOTFOUND)
     return svn_fs__err_no_such_copy (fs, copy_id);
   return BDB_WRAP (fs, "deleting entry from 'copies' table", db_err);
@@ -167,6 +171,7 @@ svn_fs__bdb_get_copy (svn_fs__copy_t **copy_p,
                       const char *copy_id,
                       trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   DBT key, value;
   int db_err;
   skel_t *skel;
@@ -175,10 +180,10 @@ svn_fs__bdb_get_copy (svn_fs__copy_t **copy_p,
   /* Only in the context of this function do we know that the DB call
      will not attempt to modify copy_id, so the cast belongs here.  */
   svn_fs__trail_debug (trail, "copies", "get");
-  db_err = fs->copies->get (fs->copies, trail->db_txn,
-                            svn_fs__str_to_dbt (&key, copy_id),
-                            svn_fs__result_dbt (&value),
-                            0);
+  db_err = bfd->copies->get (bfd->copies, trail->db_txn,
+                             svn_fs__str_to_dbt (&key, copy_id),
+                             svn_fs__result_dbt (&value),
+                             0);
   svn_fs__track_dbt (&value, trail->pool);
 
   if (db_err == DB_NOTFOUND)

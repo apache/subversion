@@ -23,6 +23,7 @@
 #include "../err.h"
 #include "dbt.h"
 #include "../trail.h"
+#include "../../libsvn_fs/fs_loader.h"
 #include "bdb-err.h"
 #include "uuids-table.h"
 
@@ -90,8 +91,9 @@ svn_error_t *svn_fs__bdb_get_uuid (svn_fs_t *fs,
                                    const char **uuid,
                                    trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   char buffer[APR_UUID_FORMATTED_LENGTH + 1];
-  DB *uuids = fs->uuids;
+  DB *uuids = bfd->uuids;
   DBT key;
   DBT value;
 
@@ -117,7 +119,8 @@ svn_error_t *svn_fs__bdb_set_uuid (svn_fs_t *fs,
                                    const char *uuid,
                                    trail_t *trail)
 {
-  DB *uuids = fs->uuids;
+  base_fs_data_t *bfd = fs->fsap_data;
+  DB *uuids = bfd->uuids;
   DBT key;
   DBT value;
   

@@ -21,6 +21,7 @@
 #include "../err.h"
 #include "../util/skel.h"
 #include "../util/fs_skels.h"
+#include "../../libsvn_fs/fs_loader.h"
 #include "bdb-err.h"
 #include "dbt.h"
 #include "rev-table.h"
@@ -57,6 +58,7 @@ svn_fs__bdb_get_rev (svn_fs__revision_t **revision_p,
                      svn_revnum_t rev,
                      trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
   DBT key, value;
   skel_t *skel;
@@ -68,10 +70,10 @@ svn_fs__bdb_get_rev (svn_fs__revision_t **revision_p,
   db_recno_t recno = rev + 1;
 
   svn_fs__trail_debug (trail, "revisions", "get");
-  db_err = fs->revisions->get (fs->revisions, trail->db_txn,
-                               svn_fs__set_dbt (&key, &recno, sizeof (recno)),
-                               svn_fs__result_dbt (&value),
-                               0);
+  db_err = bfd->revisions->get (bfd->revisions, trail->db_txn,
+                                svn_fs__set_dbt (&key, &recno, sizeof (recno)),
+                                svn_fs__result_dbt (&value),
+                                0);
   svn_fs__track_dbt (&value, trail->pool);
 
   /* If there's no such revision, return an appropriately specific error.  */
@@ -104,6 +106,7 @@ svn_fs__bdb_put_rev (svn_revnum_t *rev,
                      const svn_fs__revision_t *revision,
                      trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
   db_recno_t recno = 0;
   skel_t *skel;
@@ -119,18 +122,19 @@ svn_fs__bdb_put_rev (svn_revnum_t *rev,
       /* Update the filesystem revision with the new skel. */
       recno = *rev + 1;
       svn_fs__trail_debug (trail, "revisions", "put");
-      db_err = fs->revisions->put 
-        (fs->revisions, trail->db_txn,
+      db_err = bfd->revisions->put 
+        (bfd->revisions, trail->db_txn,
          svn_fs__set_dbt (&query, &recno, sizeof (recno)),
          svn_fs__skel_to_dbt (&result, skel, trail->pool), 0);
       return BDB_WRAP (fs, "updating filesystem revision", db_err);
     }
       
   svn_fs__trail_debug (trail, "revisions", "put");
-  db_err = fs->revisions->put (fs->revisions, trail->db_txn,
-                               svn_fs__recno_dbt(&key, &recno),
-                               svn_fs__skel_to_dbt (&value, skel, trail->pool),
-                               DB_APPEND);
+  db_err = bfd->revisions->put (bfd->revisions, trail->db_txn,
+                                svn_fs__recno_dbt(&key, &recno),
+                                svn_fs__skel_to_dbt (&value, skel,
+                                                     trail->pool),
+                                DB_APPEND);
   SVN_ERR (BDB_WRAP (fs, "storing filesystem revision", db_err));
 
   /* Turn the record number into a Subversion revision number.
@@ -150,6 +154,7 @@ svn_fs__bdb_youngest_rev (svn_revnum_t *youngest_p,
                           svn_fs_t *fs,
                           trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
   DBC *cursor = 0;
   DBT key, value;
@@ -160,8 +165,8 @@ svn_fs__bdb_youngest_rev (svn_revnum_t *youngest_p,
   /* Create a database cursor.  */
   svn_fs__trail_debug (trail, "revisions", "cursor");
   SVN_ERR (BDB_WRAP (fs, "getting youngest revision (creating cursor)",
-                    fs->revisions->cursor (fs->revisions, trail->db_txn,
-                                           &cursor, 0)));
+                     bfd->revisions->cursor (bfd->revisions, trail->db_txn,
+                                             &cursor, 0)));
 
   /* Find the last entry in the `revisions' table.  */
   db_err = cursor->c_get (cursor,

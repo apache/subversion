@@ -23,6 +23,7 @@
 #include "dbt.h"
 #include "../trail.h"
 #include "../key-gen.h"
+#include "../../libsvn_fs/fs_loader.h"
 #include "bdb-err.h"
 #include "strings-table.h"
 
@@ -79,13 +80,14 @@ locate_key (apr_size_t *length,
             svn_fs_t *fs,
             trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
   DBT result;
 
   svn_fs__trail_debug (trail, "strings", "cursor");
   SVN_ERR (BDB_WRAP (fs, "creating cursor for reading a string",
-                    fs->strings->cursor (fs->strings, trail->db_txn,
-                                         cursor, 0)));
+                     bfd->strings->cursor (bfd->strings, trail->db_txn,
+                                           cursor, 0)));
 
   /* Set up the DBT for reading the length of the record. */
   svn_fs__clear_dbt (&result);
@@ -262,6 +264,7 @@ svn_fs__bdb_string_read (svn_fs_t *fs,
 static svn_error_t *
 get_key_and_bump (svn_fs_t *fs, const char **key, trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   DBC *cursor;
   char next_key[SVN_FS__MAX_KEY_SIZE];
   apr_size_t key_len;
@@ -279,8 +282,8 @@ get_key_and_bump (svn_fs_t *fs, const char **key, trail_t *trail)
 
   svn_fs__trail_debug (trail, "strings", "cursor");
   SVN_ERR (BDB_WRAP (fs, "creating cursor for reading a string",
-                    fs->strings->cursor (fs->strings, trail->db_txn,
-                                         &cursor, 0)));
+                     bfd->strings->cursor (bfd->strings, trail->db_txn,
+                                           &cursor, 0)));
 
   /* Advance the cursor to 'next-key' and read it. */
 
@@ -323,6 +326,7 @@ svn_fs__bdb_string_append (svn_fs_t *fs,
                            const char *buf,
                            trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   DBT query, result;
 
   /* If the passed-in key is NULL, we graciously generate a new string
@@ -335,11 +339,11 @@ svn_fs__bdb_string_append (svn_fs_t *fs,
   /* Store a new record into the database. */
   svn_fs__trail_debug (trail, "strings", "put");
   SVN_ERR (BDB_WRAP (fs, "appending string",
-                    fs->strings->put
-                    (fs->strings, trail->db_txn,
-                     svn_fs__str_to_dbt (&query, *key),
-                     svn_fs__set_dbt (&result, buf, len),
-                     0)));
+                     bfd->strings->put
+                     (bfd->strings, trail->db_txn,
+                      svn_fs__str_to_dbt (&query, *key),
+                      svn_fs__set_dbt (&result, buf, len),
+                      0)));
 
   return SVN_NO_ERROR;
 }
@@ -350,6 +354,7 @@ svn_fs__bdb_string_clear (svn_fs_t *fs,
                           const char *key,
                           trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
   DBT query, result;
 
@@ -357,7 +362,7 @@ svn_fs__bdb_string_clear (svn_fs_t *fs,
 
   /* Torch the prior contents */
   svn_fs__trail_debug (trail, "strings", "del");
-  db_err = fs->strings->del (fs->strings, trail->db_txn, &query, 0);
+  db_err = bfd->strings->del (bfd->strings, trail->db_txn, &query, 0);
 
   /* If there's no such node, return an appropriately specific error.  */
   if (db_err == DB_NOTFOUND)
@@ -376,8 +381,8 @@ svn_fs__bdb_string_clear (svn_fs_t *fs,
 
   svn_fs__trail_debug (trail, "strings", "put"); 
   return BDB_WRAP (fs, "storing empty contents",
-                  fs->strings->put (fs->strings, trail->db_txn,
-                                    &query, &result, 0));
+                   bfd->strings->put (bfd->strings, trail->db_txn,
+                                      &query, &result, 0));
 }
 
 
@@ -423,12 +428,13 @@ svn_fs__bdb_string_delete (svn_fs_t *fs,
                            const char *key,
                            trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   int db_err;
   DBT query;
 
   svn_fs__trail_debug (trail, "strings", "del");
-  db_err = fs->strings->del (fs->strings, trail->db_txn,
-                             svn_fs__str_to_dbt (&query, key), 0);
+  db_err = bfd->strings->del (bfd->strings, trail->db_txn,
+                              svn_fs__str_to_dbt (&query, key), 0);
 
   /* If there's no such node, return an appropriately specific error.  */
   if (db_err == DB_NOTFOUND)
@@ -449,6 +455,7 @@ svn_fs__bdb_string_copy (svn_fs_t *fs,
                          const char *key,
                          trail_t *trail)
 {
+  base_fs_data_t *bfd = fs->fsap_data;
   DBT query;
   DBT result;
   DBT copykey;
@@ -463,8 +470,8 @@ svn_fs__bdb_string_copy (svn_fs_t *fs,
 
   svn_fs__trail_debug (trail, "strings", "cursor");
   SVN_ERR (BDB_WRAP (fs, "creating cursor for reading a string",
-                    fs->strings->cursor (fs->strings, trail->db_txn,
-                                         &cursor, 0)));
+                     bfd->strings->cursor (bfd->strings, trail->db_txn,
+                                           &cursor, 0)));
 
   svn_fs__str_to_dbt (&query, old_key);
   svn_fs__str_to_dbt (&copykey, *new_key);
@@ -490,8 +497,8 @@ svn_fs__bdb_string_copy (svn_fs_t *fs,
 
       /* Write the data to the database */
       svn_fs__trail_debug (trail, "strings", "put");
-      db_err = fs->strings->put (fs->strings, trail->db_txn,
-                                 &copykey, &result, 0);
+      db_err = bfd->strings->put (bfd->strings, trail->db_txn,
+                                  &copykey, &result, 0);
       if (db_err)
         {
           cursor->c_close (cursor);
