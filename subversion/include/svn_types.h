@@ -262,15 +262,6 @@ typedef struct svn_vdelta_t {
 } svn_vdelta_t;
 
 
-/* Change content is delta(s) against ancestors.  This is an ancestor. */
-typedef struct svn_ancestor_t
-{
-  svn_string_t *path;
-  svn_version_t version;
-  svn_boolean_t new;
-} svn_ancestor_t;
-
-
 /* An edit is an action and some content.  This is the content. */
 typedef struct svn_edit_content_t
 {
@@ -278,7 +269,11 @@ typedef struct svn_edit_content_t
     file_type = 1,
     directory_type
   } kind;                           /* what kind of object is this? */
-  svn_ancestor_t *ancestor;         /* "Hoosier paw?!" */
+
+  /* An ancestor is a path rooted from a version. */
+  svn_string_t *ancestor_path;      /* If NULL, this object is `new'. */
+  svn_version_t ancestor_version;
+
   svn_boolean_t prop_delta;         /* flag: upcoming prop delta data */
   svn_boolean_t text_delta;         /* flag: upcoming text delta data */
   struct svn_delta_t *tree_delta;   /* A further tree delta, or NULL. */

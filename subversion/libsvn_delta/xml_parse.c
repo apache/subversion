@@ -189,8 +189,7 @@ svn_append_to_delta (svn_delta_t *d, void *object, svn_XML_elt_t elt_kind)
                   {
                     /* TODO:  do a sanity check that in fact
                        (elt_kind == svn_XML_treedelta) */
-                    current_content->tree_delta =
-                      (svn_delta_t *) object;
+                    current_content->tree_delta = (svn_delta_t *) object;
                     return SVN_NO_ERROR;
                   }
                 default:
@@ -361,28 +360,29 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
       svn_error_t *err;
       /* Found a new svn_edit_content_t */
       /* Build a edit_content_t */
-      svn_edit_t *new_edit_content = 
+      svn_edit_content_t *this_edit_content = 
         svn_delta_edit_content_create (my_digger->pool);
-      new_edit_content->kind = file_type;
+      this_edit_content->kind = file_type;
       
       /* Build an ancestor object out of **atts */
       while (*atts)
         {
           char *attr_name = *atts++;
           char *attr_value = *atts++;
-          svn_ancestor_t *annie = svn_delta_ancestor_create (my_digger->pool);
 
           if (strcmp (attr_name, "ancestor") == 0)
             {
-              annie->path = svn_string_create (attr_value, my_digger->pool);
+              this_edit_content->ancestor_path
+                = svn_string_create (attr_value, my_digger->pool);
             }
           else if (strcmp (attr_name, "ver") == 0)
             {
-              annie->version = atoi(attr_value);
+              this_edit_content->ancestor_version = atoi (attr_value);
             }
           else if (strcmp (attr_name, "new") == 0)
             {
-              annie->new = TRUE;
+              /* Do nothing, because ancestor_path is already set to
+                 NULL, which indicates a new entity. */
             }
           else
             {
@@ -390,11 +390,9 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
             }
         }
 
-      new_edit_content->ancestor = annie;
-
       /* Drop the edit_content object on the end of the delta */
       err = svn_append_to_delta (my_digger->delta,
-                                 new_edit_content,
+                                 this_edit_content,
                                  svn_XML_editcontent);
 
       /* TODO:  check for error */
@@ -405,9 +403,9 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
       svn_error_t *err;
       /* Found a new svn_edit_content_t */
       /* Build a edit_content_t */
-      svn_edit_t *new_edit_content = 
+      svn_edit_t *this_edit_content = 
         svn_delta_edit_content_create (my_digger->pool);
-      new_edit_content->kind = directory_type;
+      this_edit_content->kind = directory_type;
       
       /* Build an ancestor object out of **atts */
       while (*atts)
@@ -418,15 +416,17 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
 
           if (strcmp (attr_name, "ancestor") == 0)
             {
-              annie->path = svn_string_create (attr_value, my_digger->pool);
+              this_edit_content->ancestor_path
+                = svn_string_create (attr_value, my_digger->pool);
             }
           else if (strcmp (attr_name, "ver") == 0)
             {
-              annie->version = atoi(attr_value);
+              this_edit_content->ancestor_version = atoi(attr_value);
             }
           else if (strcmp (attr_name, "new") == 0)
             {
-              annie->new = TRUE;
+              /* Do nothing, because NULL ancestor_path indicates a
+                 new entity. */
             }
           else
             {
@@ -434,11 +434,9 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
             }
         }
 
-      new_edit_content->ancestor = annie;
-
       /* Drop the edit_content object on the end of the delta */
       err = svn_append_to_delta (my_digger->delta,
-                                 new_edit_content,
+                                 this_edit_content,
                                  svn_XML_editcontent);
 
       /* TODO:  check for error */
@@ -446,7 +444,7 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
       /* Call the "directory" callback in the digger struct; this
          allows the client to possibly create new subdirs on-the-fly,
          for example. */
-      err = (* (my_digger->dir_handler)) (my_digger, annie);
+      err = (* (my_digger->dir_handler)) (my_digger, this_edit_content);
 
       /* TODO: check for error */
     }
@@ -460,17 +458,6 @@ svn_xml_startElement(void *userData, const char *name, const char **atts)
 
       /* TODO: check for error */
     }
-
-
-
-  /* Read all attribute name/value pairs */
-  while (*atts)
-    {
-      printf ("(name=%s ", *atts++);
-      printf ("value=%s)", *atts++);
-    }  
-  printf ("\n");
-
 }
 
 
@@ -481,7 +468,9 @@ void svn_xml_endElement(void *userData, const char *name)
 {
   svn_delta_digger_t *my_digger = (svn_delta_digger_t *) userData;
 
-
+  /* TODO: snip the now-closed element off the delta, by setting its
+     pointer to NULL after checking that it matches the open-tag it's
+     trying to close. */
 }
 
 

@@ -96,9 +96,12 @@ typedef struct svn_delta_digger_t
                                const char *data,
                                int len);
 
-  /* Call handles dirs specially, because might want to create them. */
+  /* Call handles dirs specially, because might want to create them. 
+   * It gets the digger for context, but also the current edit_content
+   * because that's a faster way to get this edit. 
+   */
   svn_error_t (*dir_handler) (svn_delta_digger_t *digger,
-                              svn_ancestor_t *ancestor);
+                              svn_edit_content_t *this_edit_content);
 
   /* Caller optionally decides what to do with unrecognized elements. */
   svn_error_t (*unknown_elt_handler) (svn_delta_digger_t *digger,
