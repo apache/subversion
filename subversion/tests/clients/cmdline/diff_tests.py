@@ -105,6 +105,11 @@ def verify_expected_output(diff_output, expected):
     raise svntest.Failure
 
 
+def extract_diff_path(line):
+  l2 = line[(line.find("(")+1):]
+  l3 = l2[0:(l2.find(")"))]
+  return l3
+
 ######################################################################
 # diff on a repository subset and check the output
 
@@ -1387,6 +1392,63 @@ def diff_prop_change_local_edit(sbox):
   verify_expected_output(out, "+More text.")  # fails at r7481
   verify_expected_output(out, "   + pvalue")
 
+#----------------------------------------------------------------------
+def check_for_omitted_prefix_in_path_component(sbox):
+  "check for omitted prefix in path component"
+
+  sbox.build()
+
+  prefix_path = os.path.join(sbox.wc_dir, 'prefix_mydir')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', prefix_path)
+  other_prefix_path = os.path.join(sbox.wc_dir, 'prefix_other')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', other_prefix_path)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg', sbox.wc_dir)
+
+
+  file_path = os.path.join(prefix_path, "test.txt")
+  f = open(file_path, "w")
+  f.write("Hello\nThere\nIota\n")
+  f.close()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', file_path)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg', sbox.wc_dir)
+
+
+  prefix_url = svntest.main.current_repo_url + "/prefix_mydir"
+  other_prefix_url = svntest.main.current_repo_url + "/prefix_other/mytag"
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', '-m', 'log msg', prefix_url,
+                                     other_prefix_url)
+
+  f = open(file_path, "w")
+  f.write("Hello\nWorld\nIota\n")
+  f.close()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg', prefix_path)
+
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'diff', prefix_url,
+                                                other_prefix_url)
+
+  src = extract_diff_path(out[2])
+  dest = extract_diff_path(out[3])
+
+  good_src = ".../prefix_mydir"
+  good_dest = ".../prefix_other/mytag"
+
+  if ((src != good_src) or (dest != good_dest)):
+    print("src is '%s' instead of '%s' and dest is '%s' instead of '%s'" %
+          (src, good_src, dest, good_dest))
+    raise svntest.Failure
+
 ########################################################################
 #Run the tests
 
@@ -1413,6 +1475,7 @@ test_list = [ None,
               diff_repos_and_wc,
               diff_file_urls,
               XFail(diff_prop_change_local_edit),
+              check_for_omitted_prefix_in_path_component,
               ]
 
 if __name__ == '__main__':
