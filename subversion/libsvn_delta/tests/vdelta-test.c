@@ -21,7 +21,7 @@ read_from_file (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
 
 
 static apr_off_t
-print_delta_window (svn_txdelta_window_t *window, FILE *stream)
+print_delta_window (int quiet, svn_txdelta_window_t *window, FILE *stream)
 {
   int i;
   apr_off_t len = 0, tmp;
@@ -44,6 +44,9 @@ print_delta_window (svn_txdelta_window_t *window, FILE *stream)
           len += (length > 255 ? 2 : 1);
         }
     }
+
+  if (quiet)
+    return len;
   
   fprintf (stream, "(WINDOW %ld", (long) len);
   for (i = 0; i < window->num_ops; ++i)
@@ -66,7 +69,7 @@ print_delta_window (svn_txdelta_window_t *window, FILE *stream)
             {
               int const dat = window->new->data[tmp];
               if (iscntrl (dat) || !isascii(dat))
-                fprintf (stream, "\\%3.3o", dat);
+                fprintf (stream, "\\%3.3o", dat & 0xff);
               else if (dat == '\\')
                 fputs ("\\\\", stream);
               else
@@ -93,12 +96,19 @@ main (int argc, char **argv)
   svn_txdelta_window_t *window;
 
   int count = 0;
+  int quiet = 0;
   apr_off_t len = 0;
 
   if (argc > 1 && argv[1][0] == '-' && argv[1][1] == 's')
     {
       char *endptr;
       svn_txdelta__window_size = strtol (&argv[1][2], &endptr, 10);
+      --argc; ++argv;
+    }
+
+  if (argc > 1 && argv[1][0] == '-' && argv[1][1] == 'q')
+    {
+      quiet = 1;
       --argc; ++argv;
     }
 
@@ -114,8 +124,8 @@ main (int argc, char **argv)
   else
     {
       fprintf (stderr,
-               "Usage: vdelta-test [-s<window size>] <target>\n"
-               "   or: vdelta-test [-s<window size>] <source> <target>\n");
+               "Usage: vdelta-test [-q] [-s<window size>] <target>\n"
+               "   or: vdelta-test [-q] [-s<window size>] <source> <target>\n");
       exit (1);
     }
 
@@ -129,7 +139,7 @@ main (int argc, char **argv)
     svn_txdelta_next_window (&window, stream);
     if (window != NULL)
       {
-        len += print_delta_window (window, stdout);
+        len += print_delta_window (quiet, window, stdout);
         svn_txdelta_free_window (window);
         ++count;
       }
