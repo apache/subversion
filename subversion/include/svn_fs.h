@@ -943,10 +943,10 @@ svn_error_t *svn_fs_merge (const char **conflict_p,
 typedef struct svn_fs_dirent_t {
 
   /** The name of this directory entry.  */
-  char *name;
+  const char *name;
 
   /** The node revision ID it names.  */
-  svn_fs_id_t *id;
+  const svn_fs_id_t *id;
 
   /** The node kind. */
   svn_node_kind_t kind;
