@@ -581,6 +581,16 @@ SVN_CHECK_JDK
 AC_PATH_PROG(PERL, perl, none)
 
 AC_PATH_PROG(RUBY, ruby, none)
+if test "$RUBY" != "none"; then
+  if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)'; then
+    :
+  else
+    RUBY="none"
+    AC_MSG_WARN([The detected Ruby is too old for Subversion to use])
+    AC_MSG_WARN([At least Ruby which has rb_hash_foreach is required to])
+    AC_MSG_WARN([use the Subversion Ruby bindings])
+  fi
+fi
 
 SVN_CHECK_SWIG
 
