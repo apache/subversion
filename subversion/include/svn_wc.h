@@ -76,7 +76,8 @@
 
 /*** Entries. ***/
 
-/* A data structure representing an entry from the `entries' file. */
+/* A working copy entry -- that is, revision control information about
+   one versioned entity. */
 typedef struct svn_wc_entry_t
 {
   /* Note that the entry's name is not stored here, because it is the
