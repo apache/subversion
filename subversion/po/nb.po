@@ -2,11 +2,33 @@
 # Copyright (C) 2004 Collab Net.
 # This file is distributed under the same license as the subversion package.
 #
+# Dictionary:
+#
+# checkout - hente ut
+# client - klient
+# commit - sende inn
+# directory - katalog
+# item - element
+# merge - flette
+# module - modul
+# path - sti
+# plugin - programtillegg
+# property - egenskap
+# repository - depot
+# revision - revisjon
+# server - tjener
+# socket - sokkel
+# stack - stabel
+# subcommand - delkommando
+# target - mål
+# URL - URL
+# working copy - arbeidskopi
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-07-10 04:45+0200\n"
+"POT-Creation-Date: 2004-07-26 07:28+0200\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1489,7 +1511,7 @@ msgstr "Kan ikke åpne standardinndata"
 msgid "Can't read stdin"
 msgstr "Kan ikke lese fra standardinndata"
 
-#: clients/cmdline/prompt.c:146
+#: clients/cmdline/prompt.c:146 libsvn_ra_svn/client.c:304
 msgid "Can't get password"
 msgstr "Kan ikke hente passord"
 
@@ -1709,7 +1731,7 @@ msgid "Can't write to '%s'"
 msgstr "Kan ikke skrive til '%s'"
 
 #: clients/cmdline/util.c:187 clients/cmdline/util.c:211
-#: libsvn_fs_fs/fs_fs.c:3271
+#: libsvn_fs_fs/fs_fs.c:3272
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "Finner ikke status for '%s'"
@@ -1869,19 +1891,16 @@ msgid "Obstructed update"
 msgstr "Blokkert oppdatering"
 
 #: include/svn_error_codes.h:278
-#, fuzzy
 msgid "Mismatch popping the WC unwind stack"
-msgstr "Mismatch popping the WC unwind stack"
+msgstr ""
 
 #: include/svn_error_codes.h:282
-#, fuzzy
 msgid "Attempt to pop empty WC unwind stack"
-msgstr "Attempt to pop empty WC unwind stack"
+msgstr ""
 
 #: include/svn_error_codes.h:286
-#, fuzzy
 msgid "Attempt to unlock with non-empty unwind stack"
-msgstr "Attempt to unlock with non-empty unwind stack"
+msgstr ""
 
 #: include/svn_error_codes.h:290
 msgid "Attempted to lock an already-locked dir"
@@ -2153,7 +2172,7 @@ msgstr "Depotet mangler UUID"
 
 #: include/svn_error_codes.h:565
 msgid "Unsupported RA plugin ABI version"
-msgstr "RA-innstikksmodulens ABI-versjon støttes ikke"
+msgstr "RA-programtilleggets ABI-versjon støttes ikke"
 
 #: include/svn_error_codes.h:571
 msgid "RA layer failed to init socket layer"
@@ -2217,7 +2236,8 @@ msgstr "Nettverkstilkoblingen brøt plutselig"
 msgid "Network read/write error"
 msgstr "Lese-/skrivefeil i nettverket"
 
-#: include/svn_error_codes.h:635
+#: include/svn_error_codes.h:635 libsvn_ra_svn/marshal.c:592
+#: libsvn_ra_svn/marshal.c:697 libsvn_ra_svn/marshal.c:724
 msgid "Malformed network data"
 msgstr "Feilaktig nettverksdata"
 
@@ -2339,7 +2359,7 @@ msgstr "Et problem har oppstått. Se på videre feilmeldinger for detaljer"
 
 #: include/svn_error_codes.h:781
 msgid "Failure loading plugin"
-msgstr "Feil ved innlasting av innstikkemodul"
+msgstr "Feil ved innlasting av programtillegg"
 
 #: include/svn_error_codes.h:785
 msgid "Malformed file"
@@ -2459,21 +2479,21 @@ msgstr "Feil under rekursiv tillegging av '%s'"
 msgid "Can't close directory '%s'"
 msgstr "Kan ikke lukke katalogen '%s'"
 
-#: libsvn_client/blame.c:379 libsvn_client/blame.c:757
+#: libsvn_client/blame.c:389 libsvn_client/blame.c:766
 #, c-format
 msgid "Cannot calculate blame information for binary file '%s'"
 msgstr "Kan ikke beregne 'blame'-informasjon for binær fil '%s'"
 
-#: libsvn_client/blame.c:540
+#: libsvn_client/blame.c:549
 msgid "Start revision must precede end revision"
 msgstr "Startrevisjonen må angis før sluttrevisjonen"
 
-#: libsvn_client/blame.c:643 libsvn_client/cat.c:65
+#: libsvn_client/blame.c:652 libsvn_client/cat.c:65
 #, c-format
 msgid "URL '%s' refers to a directory"
 msgstr "URL-en '%s' refererer til en katalog"
 
-#: libsvn_client/blame.c:715
+#: libsvn_client/blame.c:724
 #, c-format
 msgid "Revision action '%c' for revision %ld of '%s' lacks a prior revision"
 msgstr ""
@@ -2842,8 +2862,8 @@ msgid "At least one revision must be non-local for a pegged diff"
 msgstr "Minst én revisjon må være ikke-lokal for en bundet diff"
 
 #: libsvn_client/diff.c:2260 libsvn_client/diff.c:2265
-#: libsvn_client/diff.c:2376 libsvn_client/export.c:729 libsvn_client/ra.c:690
-#: libsvn_client/ra.c:810
+#: libsvn_client/diff.c:2376 libsvn_client/export.c:729 libsvn_client/ra.c:694
+#: libsvn_client/ra.c:814
 #, c-format
 msgid "'%s' has no URL"
 msgstr "'%s' har ingen nettadresse"
@@ -2941,22 +2961,22 @@ msgstr "Kan ikke finne post for '%s'"
 msgid "Missing changed-path information for '%s' in revision %ld"
 msgstr "Manglende sti-endringsinformasjon for '%s' i revisjon %ld"
 
-#: libsvn_client/ra.c:556
+#: libsvn_client/ra.c:560
 #, c-format
 msgid "path '%s' doesn't exist in revision %ld"
 msgstr "Filstien '%s' finnes ikke i revisjon %ld"
 
-#: libsvn_client/ra.c:617 libsvn_client/ra.c:752
+#: libsvn_client/ra.c:621 libsvn_client/ra.c:756
 #, c-format
 msgid "Unable to find repository location for '%s' in revision %ld"
 msgstr "Kan ikke finne depotplassering for '%s' i revisjon %ld"
 
-#: libsvn_client/ra.c:628
+#: libsvn_client/ra.c:632
 #, c-format
 msgid "'%s' in revision %ld is an unrelated object"
 msgstr "'%s' i revisjon %ld er et urelatert objekt"
 
-#: libsvn_client/ra.c:757
+#: libsvn_client/ra.c:761
 #, c-format
 msgid ""
 "The location for '%s' for revision %ld does not exist in the repository or "
@@ -2975,15 +2995,23 @@ msgstr "Depotet på '%s' har uuiden '%s', men arbeidskopien har '%s'"
 msgid "Unrecognized revision type requested for '%s'"
 msgstr "Det ble bedt om en ukjent revisjonstype for '%s'"
 
-#: libsvn_fs/fs-loader.c:95 libsvn_ra/ra_loader.c:123
+#: libsvn_fs/fs-loader.c:100 libsvn_ra/ra_loader.c:123
 #, c-format
 msgid "'%s' does not define '%s()'"
 msgstr "'%s' definerer ikke '%s()'"
 
-#: libsvn_fs/fs-loader.c:130
+#: libsvn_fs/fs-loader.c:137
 #, c-format
 msgid "Unknown FS type '%s'"
 msgstr "Filsystem-typen '%s' er ukjent"
+
+#: libsvn_fs/fs-loader.c:143
+#, c-format
+msgid ""
+"Mismatched FS module version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
+msgstr ""
+"Usamsvarende filsystemmodul-versjon for '%s': Fant %d.%d.%d%s, forventet %d.%"
+"d.%d%s"
 
 #: libsvn_fs_base/err.c:69 libsvn_fs_fs/err.c:71
 #, c-format
@@ -3000,7 +3028,7 @@ msgstr "Referanse til ikke-eksisterende revisjon %ld i filsystem '%s'"
 msgid "File is not mutable: filesystem '%s', revision %ld, path '%s'"
 msgstr "Uforanderlig fil: Filsystem '%s', revisjon %ld, sti '%s'"
 
-#: libsvn_fs_base/fs.c:1077
+#: libsvn_fs_base/fs.c:1074
 msgid ""
 "Error copying logfile;  the DB_LOG_AUTOREMOVE feature \n"
 "may be interfering with the hotcopy algorithm.  If \n"
@@ -3011,7 +3039,7 @@ msgstr ""
 "skape problemer for hotcopy-algoritmen. Hvis problemet vedvarer, \n"
 "prøv å deaktivere det i DB_CONFIG."
 
-#: libsvn_fs_base/fs.c:1096
+#: libsvn_fs_base/fs.c:1093
 msgid ""
 "Error running catastrophic recovery on hotcopy;  the \n"
 "DB_LOG_AUTOREMOVE feature may be interfering with the \n"
@@ -3021,6 +3049,11 @@ msgstr ""
 "Feil ved katastrofe-gjenoppretting på hotcopy; bruken av \n"
 "DB_LOG_AUTOREMOVE kan skape problemer for hotcopy-algoritmen.\n"
 "Hvis problemet vedvarer, prøv å deaktivere det i DB_CONFIG."
+
+#: libsvn_fs_base/fs.c:1229
+#, c-format
+msgid "Unsupported FS loader version (%d) for bdb"
+msgstr "Ustøttet versjon av filsystemlaster (%d) for bdb"
 
 #: libsvn_fs_base/tree.c:381 libsvn_fs_fs/tree.c:301
 #, c-format
@@ -3101,6 +3134,11 @@ msgstr "Ingen kopi med identifikator '%s' i filsystem '%s'"
 msgid "'%s' is not a directory in filesystem '%s'"
 msgstr "'%s' er ikke en katalog i filsystem '%s'"
 
+#: libsvn_fs_fs/fs.c:290
+#, c-format
+msgid "Unsupported FS loader version (%d) for fsfs"
+msgstr "Ustøttet versjon av filsystemlaster (%d) for fsfs"
+
 #: libsvn_fs_fs/fs_fs.c:364 libsvn_fs_fs/fs_fs.c:378
 msgid "Found malformed header in revision file"
 msgstr "Fant misformet hodefelt i revisjonsfil"
@@ -3126,7 +3164,7 @@ msgstr "Misformet copyroot-linje i node-rev"
 msgid "Malformed copyfrom line in node-rev"
 msgstr "Misformet copyfrom-linje i node-rev"
 
-#: libsvn_fs_fs/fs_fs.c:779 libsvn_fs_fs/fs_fs.c:2865
+#: libsvn_fs_fs/fs_fs.c:779 libsvn_fs_fs/fs_fs.c:2866
 msgid "Attempted to write to non-transaction"
 msgstr "Forsøk på å skrive til en ikke-transaksjon"
 
@@ -3201,7 +3239,7 @@ msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:1850 libsvn_fs_fs/fs_fs.c:1858
 #: libsvn_fs_fs/fs_fs.c:1890 libsvn_fs_fs/fs_fs.c:1910
-#: libsvn_fs_fs/fs_fs.c:1943 libsvn_fs_fs/fs_fs.c:1948
+#: libsvn_fs_fs/fs_fs.c:1944 libsvn_fs_fs/fs_fs.c:1949
 msgid "Invalid changes line in rev-file"
 msgstr "Ugyldig endringslinje i rev-file"
 
@@ -3217,46 +3255,54 @@ msgstr "Ugyldig text-mod-merke i rev-file"
 msgid "Invalid prop-mod flag in rev-file"
 msgstr "Ugyldig prop-mod-merke i rev-file"
 
-#: libsvn_fs_fs/fs_fs.c:2098
+#: libsvn_fs_fs/fs_fs.c:2099
 msgid "Copying from transactions not allowed"
 msgstr "Kopiering fra transaksjoner er ikke tillatt"
 
-#: libsvn_fs_fs/fs_fs.c:2340 libsvn_fs_fs/fs_fs.c:2347
+#: libsvn_fs_fs/fs_fs.c:2341 libsvn_fs_fs/fs_fs.c:2348
 msgid "next-id file corrupt"
 msgstr "next-id-fil er korrupt"
 
-#: libsvn_fs_fs/fs_fs.c:2573
+#: libsvn_fs_fs/fs_fs.c:2574
 msgid "Invalid change type"
 msgstr "Ugyldig endringstype"
 
-#: libsvn_fs_fs/fs_fs.c:2884
+#: libsvn_fs_fs/fs_fs.c:2885
 msgid "Can't set text contents of a directory"
 msgstr "Kan ikke sette tekstinnholdet til en katalog"
 
-#: libsvn_fs_fs/fs_fs.c:2974 libsvn_fs_fs/fs_fs.c:2979
-#: libsvn_fs_fs/fs_fs.c:2986
+#: libsvn_fs_fs/fs_fs.c:2975 libsvn_fs_fs/fs_fs.c:2980
+#: libsvn_fs_fs/fs_fs.c:2987
 msgid "Corrupt current file"
 msgstr "Gjeldende fil er korrupt"
 
-#: libsvn_fs_fs/fs_fs.c:3274
+#: libsvn_fs_fs/fs_fs.c:3275
 #, c-format
 msgid "Can't chmod '%s'"
 msgstr "Kan ikke endre filrettigheter på '%s'"
 
-#: libsvn_fs_fs/fs_fs.c:3407
+#: libsvn_fs_fs/fs_fs.c:3408
 msgid "Transaction out of date"
 msgstr "Transaksjonen er foreldet"
 
-#: libsvn_fs_fs/fs_fs.c:3646
+#: libsvn_fs_fs/fs_fs.c:3647
 msgid "No such transaction"
 msgstr "Ingen slik transaksjon"
 
-#: libsvn_ra/ra_loader.c:210
+#: libsvn_ra/ra_loader.c:209
+#, c-format
+msgid ""
+"Mismatched RA plugin version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
+msgstr ""
+"Usamsvarende RA-programtilleggsversjon for '%s': Fant %d.%d.%d%s, forventet %"
+"d.%d.%d%s"
+
+#: libsvn_ra/ra_loader.c:225
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
 msgstr "Adresseskjemaet '%s' er ukjent"
 
-#: libsvn_ra/ra_loader.c:275
+#: libsvn_ra/ra_loader.c:290
 #, c-format
 msgid "  - handles '%s' schema\n"
 msgstr "  . håndterer skjemaet '%s'\n"
@@ -3302,7 +3348,7 @@ msgstr "Kunne ikke lagre filen"
 msgid "Error writing to stream: unexpected EOF"
 msgstr "Feil under skriving til strøm, forventet EOF"
 
-#: libsvn_ra_dav/fetch.c:822
+#: libsvn_ra_dav/fetch.c:822 libsvn_ra_svn/client.c:840
 #, c-format
 msgid ""
 "Checksum mismatch for '%s':\n"
@@ -3321,11 +3367,11 @@ msgstr "Tjeneren støtter ikke datobaserte operasjoner"
 msgid "Invalid server response to dated-rev request"
 msgstr "Ugyldig tjenersvar på forespørsel for dated-rev"
 
-#: libsvn_ra_dav/fetch.c:1237
+#: libsvn_ra_dav/fetch.c:1235
 msgid "get-locations REPORT not implemented"
 msgstr "get-locations REPORT er ikke implementert"
 
-#: libsvn_ra_dav/fetch.c:1305
+#: libsvn_ra_dav/fetch.c:1303
 msgid ""
 "DAV request failed; it's possible that the repository's pre-revprop-change "
 "hook either failed or is non-existent"
@@ -3333,27 +3379,27 @@ msgstr ""
 "DAV-forespørsel feilet. Det er mulig at haken til depotets pre-revprop-"
 "change enten feilet eller ikke finnes"
 
-#: libsvn_ra_dav/fetch.c:2028
+#: libsvn_ra_dav/fetch.c:2018
 #, c-format
 msgid "Error writing to '%s': unexpected EOF"
 msgstr "Feil under skriving til '%s': Uventet EOF"
 
-#: libsvn_ra_dav/fetch.c:2165
+#: libsvn_ra_dav/fetch.c:2155
 #, c-format
 msgid "Unknown XML encoding: '%s'"
 msgstr "Ukjent XML-koding: '%s'"
 
-#: libsvn_ra_dav/fetch.c:2423
+#: libsvn_ra_dav/fetch.c:2413
 msgid "REPORT response handling failed to complete the editor drive"
 msgstr ""
 "REPORT-responsens håndtering kunne ikke fullføre kjøringen av "
 "redigeringsprogrammet."
 
-#: libsvn_ra_dav/file_revs.c:369
+#: libsvn_ra_dav/file_revs.c:360
 msgid "get-file-revs REPORT not implemented"
 msgstr "get-file-revs REPORT er ikke implementert"
 
-#: libsvn_ra_dav/file_revs.c:376
+#: libsvn_ra_dav/file_revs.c:367
 msgid "The file-revs report didn't contain any revisions"
 msgstr "'file-revs'-rapport inneholdt ingen revisjoner"
 
@@ -3440,71 +3486,67 @@ msgstr "'DAV:version-name' var ikke til stede i grunnlinje-ressursen"
 msgid "At least one property change failed; repository is unchanged"
 msgstr "Minst en forandring av egenskap feilet. Depotet er uforandret"
 
-#: libsvn_ra_dav/session.c:428
+#: libsvn_ra_dav/session.c:429
 msgid "Invalid URL: illegal character in proxy port number"
 msgstr "Ugyldig adresse: Ulovlig tegn i mellomtjenerens port"
 
-#: libsvn_ra_dav/session.c:432
+#: libsvn_ra_dav/session.c:433
 msgid "Invalid URL: negative proxy port number"
 msgstr "Ugyldig adresse: Negativt nummer i mellomtjenerens port"
 
-#: libsvn_ra_dav/session.c:435
+#: libsvn_ra_dav/session.c:436
 msgid ""
 "Invalid URL: proxy port number greater than maximum TCP port number 65535"
 msgstr ""
 "Ugyldig adresse: Portnummeret til mellomtjeneren er større en TCP-porters "
 "maksimumsstørrelse på 65535"
 
-#: libsvn_ra_dav/session.c:449
+#: libsvn_ra_dav/session.c:450
 msgid "Invalid config: illegal character in timeout value"
 msgstr "Ugyldig innstilling: Tidsgrensens verdi har ulovlig tegn"
 
-#: libsvn_ra_dav/session.c:453
+#: libsvn_ra_dav/session.c:454
 msgid "Invalid config: negative timeout value"
 msgstr "Ugyldig innstilling: Negativ verdi på tidsgrense"
 
-#: libsvn_ra_dav/session.c:466
+#: libsvn_ra_dav/session.c:467
 msgid "Invalid config: illegal character in debug mask value"
 msgstr "Ugyldig innstilling: Ulovlig tegn i avlusningsfilterets verdi"
 
-#: libsvn_ra_dav/session.c:556
+#: libsvn_ra_dav/session.c:557
 msgid "Malformed URL for repository"
 msgstr "Ugyldig adresse for depotet"
 
-#: libsvn_ra_dav/session.c:564
+#: libsvn_ra_dav/session.c:565
 msgid "Network socket initialization failed"
 msgstr "Klargjøring for nettverks-sokkelen feilet"
 
-#: libsvn_ra_dav/session.c:577
+#: libsvn_ra_dav/session.c:578
 msgid "SSL is not supported"
 msgstr "SSL er ikke støttet"
 
-#: libsvn_ra_dav/session.c:723
+#: libsvn_ra_dav/session.c:724
 #, c-format
 msgid "Invalid config: unable to load certificate file '%s'"
 msgstr "Ugyldig innstilling: Kan ikke laste inn sertifikatfilen '%s'"
 
-#: libsvn_ra_dav/session.c:784
-msgid "Impossibly long relative URL"
-msgstr "Lengden på relativ adresse er umulig"
-
-#: libsvn_ra_dav/session.c:819
+#: libsvn_ra_dav/session.c:812
 msgid "The UUID property was not found on the resource or any of its parents"
 msgstr ""
 "UUID-egenskapen ble ikke funnet i ressursen eller noen av dens foreldre"
 
-#: libsvn_ra_dav/session.c:827
+#: libsvn_ra_dav/session.c:820
 msgid "Please upgrade the server to 0.19 or later"
 msgstr "Oppgrader tjeneren til versjon 0.19 eller senere"
 
-#: libsvn_ra_dav/session.c:838
+#: libsvn_ra_dav/session.c:836
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
 msgstr "Modul for tilgang til depot via protokollen WebDav (DeltaV)."
 
-#: libsvn_ra_dav/session.c:868
+#: libsvn_ra_dav/session.c:874
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
-msgstr "Mangler støtte for innstikkemodulens ABI-versjon (%d) for ra_dav"
+msgstr "Mangler støtte for programtilleggets ABI-versjon (%d) for ra_dav"
 
 #: libsvn_ra_dav/util.c:273
 msgid "authorization failed"
@@ -3544,7 +3586,7 @@ msgstr "Forespørselen %s returnerte ugyldig XML i svaret: %s (%s)"
 msgid "%s request failed on '%s'"
 msgstr "Forespørselen %s feilet på '%s'"
 
-#: libsvn_ra_local/ra_plugin.c:96 libsvn_ra_local/ra_plugin.c:462
+#: libsvn_ra_local/ra_plugin.c:98 libsvn_ra_local/ra_plugin.c:465
 #, c-format
 msgid ""
 "'%s'\n"
@@ -3555,62 +3597,228 @@ msgstr ""
 "er ikke samme depot som\n"
 "'%s'"
 
-#: libsvn_ra_local/ra_plugin.c:224
+#: libsvn_ra_local/ra_plugin.c:226
 msgid "Unable to open an ra_local session to URL"
 msgstr "Klarer ikke åpne en ra_local-økt til URL"
 
-#: libsvn_ra_local/ra_plugin.c:918
+#: libsvn_ra_local/ra_plugin.c:927
 msgid "Module for accessing a repository on local disk."
 msgstr "Modul for tilgang til et depot på lokal disk"
 
-#: libsvn_ra_local/ra_plugin.c:953
+#: libsvn_ra_local/ra_plugin.c:972
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_local"
-msgstr "Mangler støtte for RA-innstikksmodulens ABI-versjon (%d) for ra_local"
+msgstr "Mangler støtte for RA-programtilleggets ABI-versjon (%d) for ra_local"
 
-#: libsvn_ra_local/split_url.c:47
+#: libsvn_ra_local/split_url.c:44
 #, c-format
 msgid "Local URL '%s' does not contain 'file://' prefix"
 msgstr "Lokal URL '%s' inneholder ikke 'file://'-prefiks"
 
-#: libsvn_ra_local/split_url.c:58
+#: libsvn_ra_local/split_url.c:55
 #, c-format
 msgid "Local URL '%s' contains only a hostname, no path"
 msgstr "Lokal URL '%s' inneholder bare et vertsnavn, ingen sti"
 
-#: libsvn_ra_local/split_url.c:65
+#: libsvn_ra_local/split_url.c:66
 #, c-format
 msgid "Local URL '%s' contains unsupported hostname"
 msgstr "Lokal URL '%s' inneholder vertsnavn som ikke er støttet"
 
-#: libsvn_ra_local/split_url.c:105 libsvn_ra_local/split_url.c:112
+#: libsvn_ra_local/split_url.c:108 libsvn_ra_local/split_url.c:115
 #, c-format
 msgid "Unable to open repository '%s'"
 msgstr "Kunne ikke åpne depotet '%s'"
 
-#: libsvn_ra_svn/client.c:194
+#: libsvn_ra_svn/client.c:137
+#, c-format
+msgid "Unknown hostname '%s'"
+msgstr "Ukjent vertsnavn '%s'"
+
+#: libsvn_ra_svn/client.c:148
+msgid "Can't create socket"
+msgstr "Kan ikke opprette sokkel"
+
+#: libsvn_ra_svn/client.c:152
+#, c-format
+msgid "Can't connect to host '%s'"
+msgstr "Kan ikke koble til vert '%s'"
+
+#: libsvn_ra_svn/client.c:173
+msgid "Proplist element not a list"
+msgstr "Egenskapslisteelement er ikke en liste"
+
+#: libsvn_ra_svn/client.c:197
 msgid "Prop diffs element not a list"
 msgstr "Post med egenskapsforskjeller er ikke en liste"
 
-#: libsvn_ra_svn/client.c:1119
+#: libsvn_ra_svn/client.c:218
+#, c-format
+msgid "Unrecognized node kind '%s' from server"
+msgstr "Ukjent nodetype '%s' fra tjener"
+
+#: libsvn_ra_svn/client.c:263 libsvn_ra_svn/client.c:317
+#, c-format
+msgid "Authentication error from server: %s"
+msgstr "Autentiseringsfeil fra tjener: %s"
+
+#: libsvn_ra_svn/client.c:266 libsvn_ra_svn/cram.c:196
+#: libsvn_ra_svn/cram.c:214
+msgid "Unexpected server response to authentication"
+msgstr "Uventet tjenerrespons på autentisering"
+
+#: libsvn_ra_svn/client.c:324
+msgid "Cannot negotiate authentication mechanism"
+msgstr "Kan ikke utveksle autentiseringsmekanisme"
+
+#: libsvn_ra_svn/client.c:451
+#, c-format
+msgid "Undefined tunnel scheme '%s'"
+msgstr "Udefinert tunnelskjema '%s'"
+
+#: libsvn_ra_svn/client.c:468
+#, c-format
+msgid "Tunnel scheme %s requires environment variable %s to be defined"
+msgstr "Tunnelskjema %s krever at miljøvariabelen %s er definert"
+
+#: libsvn_ra_svn/client.c:479
+#, c-format
+msgid "Can't tokenize command '%s'"
+msgstr "Kan ikke dele opp kommandoen '%s'"
+
+#: libsvn_ra_svn/client.c:508
+#, c-format
+msgid "Error in child process: %s"
+msgstr "Feil i barneprosess: %s"
+
+#: libsvn_ra_svn/client.c:531
+msgid "Can't create tunnel"
+msgstr "Kan ikke opprette tunnel"
+
+#: libsvn_ra_svn/client.c:575
+#, c-format
+msgid "Illegal svn repository URL '%s'"
+msgstr "Ulovlig svn-depotURL '%s'"
+
+#: libsvn_ra_svn/client.c:594
+#, c-format
+msgid "Server requires minimum version %d"
+msgstr "Tjeneren krever minst versjon %d"
+
+#: libsvn_ra_svn/client.c:699
+msgid "Server did not send repository root"
+msgstr "Tjeneren sendte ikke rot av depot"
+
+#: libsvn_ra_svn/client.c:820
+msgid "Non-string as part of file contents"
+msgstr "Ikke-streng som del av filinnhold"
+
+#: libsvn_ra_svn/client.c:889
+msgid "Dirlist element not a list"
+msgstr "Element i katalogliste er ikke en liste"
+
+#: libsvn_ra_svn/client.c:1040
+msgid "Log entry not a list"
+msgstr "Loggpost er ikke en liste"
+
+#: libsvn_ra_svn/client.c:1053
+msgid "Changed-path entry not a list"
+msgstr "Post med stiforandring er ikke en liste"
+
+#: libsvn_ra_svn/client.c:1125
 msgid "get-locations not implemented"
 msgstr "get-locations ikke implementert"
 
-#: libsvn_ra_svn/client.c:1184
+#: libsvn_ra_svn/client.c:1138
+msgid "Location entry not a list"
+msgstr "Post for beliggenhet er ikke en liste"
+
+#: libsvn_ra_svn/client.c:1190
 msgid "get-file-revs not implemented"
 msgstr "get-file-revs ikke implementert"
 
-#: libsvn_ra_svn/client.c:1198
+#: libsvn_ra_svn/client.c:1204
 msgid "Revision entry not a list"
 msgstr "Revisjonspost er ikke en liste"
 
-#: libsvn_ra_svn/client.c:1210 libsvn_ra_svn/client.c:1235
+#: libsvn_ra_svn/client.c:1216 libsvn_ra_svn/client.c:1241
 msgid "Text delta chunk not a string"
 msgstr "Porsjon med tekst-delta (forskjeller) er ikke en streng"
 
-#: libsvn_ra_svn/client.c:1247
+#: libsvn_ra_svn/client.c:1253
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "'get-file-revs'-kommandoen returnerte ingen revisjoner"
+
+#: libsvn_ra_svn/client.c:1265
+msgid "Module for accessing a repository using the svn network protocol."
+msgstr "Modul for tilgang til depot ved bruk av svn-nettverksprotokollen."
+
+#: libsvn_ra_svn/client.c:1301
+#, c-format
+msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
+msgstr "Støtter ikke RA-programtilleggets ABI-versjon (%d) for ra_svn."
+
+#: libsvn_ra_svn/editor.c:384 libsvn_ra_svn/editorp.c:419
+msgid "Invalid file or dir token during edit"
+msgstr "Ugyldig fil eller katalogsymbol under redigering"
+
+#: libsvn_ra_svn/editor.c:608
+msgid "Non-string as part of text delta"
+msgstr "Ikke-streng som del av tekst-delta"
+
+#: libsvn_ra_svn/editorp.c:129
+msgid "Successful edit status returned too soon"
+msgstr "Vellykket redigeringsstatus returnert for fort"
+
+#: libsvn_ra_svn/editorp.c:601
+msgid "Apply-textdelta already active"
+msgstr "Apply-textdelta allerede aktiv"
+
+#: libsvn_ra_svn/editorp.c:623 libsvn_ra_svn/editorp.c:641
+msgid "Apply-textdelta not active"
+msgstr "Apply-textdelta ikke aktiv"
+
+#: libsvn_ra_svn/editorp.c:789 libsvn_ra_svn/marshal.c:809
+#, c-format
+msgid "Unknown command '%s'"
+msgstr "Ukjent kommando: '%s'"
+
+#: libsvn_ra_svn/marshal.c:78
+msgid "Capability entry is not a word"
+msgstr "Evneposten er ikke et ord"
+
+#: libsvn_ra_svn/marshal.c:160
+msgid "Can't write to connection"
+msgstr "Kan ikke skrive til forbindelse"
+
+#: libsvn_ra_svn/marshal.c:250
+msgid "Can't read from connection"
+msgstr "Kan ikke lese fra forbindelse"
+
+#: libsvn_ra_svn/marshal.c:253
+msgid "Connection closed unexpectedly"
+msgstr "Forbindelsen plutselig stengt"
+
+#: libsvn_ra_svn/marshal.c:497
+msgid "String length larger than maximum"
+msgstr "Strenglengde større enn maksimum"
+
+#: libsvn_ra_svn/marshal.c:545
+msgid "Number is larger than maximum"
+msgstr "Nummer er større enn maximum"
+
+#: libsvn_ra_svn/marshal.c:758
+msgid "Empty error list"
+msgstr "Tom feilliste"
+
+#: libsvn_ra_svn/marshal.c:765
+msgid "Malformed error list"
+msgstr "Misdannet feilliste"
+
+#: libsvn_ra_svn/marshal.c:780
+#, c-format
+msgid "Unknown status '%s' in command response"
+msgstr "Ukjent status '%s' i kommandorespons"
 
 #: libsvn_repos/dump.c:425
 #, c-format
@@ -3638,17 +3846,17 @@ msgstr "Sluttrevisjon %ld er ugyldig (yngste revisjon er %ld)"
 msgid "* %s revision %ld.\n"
 msgstr "* %s revisjon %ld.\n"
 
-#: libsvn_repos/load.c:791
+#: libsvn_repos/load.c:801
 #, c-format
 msgid "<<< Started new transaction, based on original revision %ld\n"
 msgstr "<<< Startet ny transaksjon, basert på opprinnelig revisjon %ld\n"
 
-#: libsvn_repos/load.c:831
+#: libsvn_repos/load.c:845
 #, c-format
 msgid "Relative source revision %ld is not available in current repository"
 msgstr "Relativ kilderevisjon %ld er ikke tilgjengelig i gjeldende depot"
 
-#: libsvn_repos/load.c:1108
+#: libsvn_repos/load.c:1122
 #, c-format
 msgid ""
 "\n"
@@ -3659,7 +3867,7 @@ msgstr ""
 "------- Innsendt revisjon %ld >>>\n"
 "\n"
 
-#: libsvn_repos/load.c:1114
+#: libsvn_repos/load.c:1128
 #, c-format
 msgid ""
 "\n"
@@ -3715,22 +3923,22 @@ msgstr "For få argumenter"
 msgid "Syntax error parsing revision '%s'"
 msgstr "Syntaksfeil under analysering av revisjon '%s'"
 
-#: libsvn_subr/opt.c:586
+#: libsvn_subr/opt.c:593
 #, c-format
 msgid "URL '%s' is not properly URI-encoded"
 msgstr "Adressen '%s' er ikke riktig kodet for oppsettadresser (URI)"
 
-#: libsvn_subr/opt.c:592
+#: libsvn_subr/opt.c:599
 #, c-format
 msgid "URL '%s' contains a '..' element"
 msgstr "URLen '%s' inneholder et '..'-element"
 
-#: libsvn_subr/opt.c:621
+#: libsvn_subr/opt.c:628
 #, c-format
 msgid "Error resolving case of '%s'"
 msgstr "Feil under løsning av bokstavstørrelse på '%s'"
 
-#: libsvn_subr/opt.c:699
+#: libsvn_subr/opt.c:706
 #, c-format
 msgid ""
 "%s, version %s\n"
@@ -3741,7 +3949,7 @@ msgstr ""
 "   kompilert %s, %s\n"
 "\n"
 
-#: libsvn_subr/opt.c:702
+#: libsvn_subr/opt.c:709
 msgid ""
 "Copyright (C) 2000-2004 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
@@ -3755,7 +3963,7 @@ msgstr ""
 "Net/).\n"
 "\n"
 
-#: libsvn_subr/opt.c:753
+#: libsvn_subr/opt.c:760
 #, c-format
 msgid "Type '%s help' for usage.\n"
 msgstr "Skriv '%s help' for bruk.\n"
@@ -5073,7 +5281,7 @@ msgstr "Indeks"
 
 #: svnlook/main.c:902
 msgid "(Binary files differ)\n"
-msgstr "(Binære filer har forskjeller)\n"
+msgstr "(Binære filer inneholder forskjeller)\n"
 
 #: svnlook/main.c:1038
 msgid "unknown"
