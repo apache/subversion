@@ -84,67 +84,68 @@
         en una nueva revisión del árbol, y se le asigna un nuevo número de
         revisión. Si el envío de datos fallara por alguna razón,
 	la transacción se destruye, y se le informa al cliente del error.</para>
-            
-      <para>Updates work in a similar way.  The client builds a
-        temporary transaction tree that mirrors the state of the
-        working copy.  The repository then compares that transaction
-        tree with the revision tree at the requested revision (usually
-        the most recent, or <quote>youngest</quote> tree), and sends
-        back information that informs the client about what changes
-        are needed to transform their working copy into a replica of
-        that revision tree.  After the update completes, the temporary
-        transaction is deleted.</para>
+        
+      <para>Las actualizaciones funcionan de una manera parecida. El Cliente
+        prepara un árbol de transacción temporal que <!--mirrors=copia?-->copia el estado
+        de la copia de trabajo. El repositorio compara entonces ese
+        árbol de transacción con el árbol de la revisión solicitada
+        (normalmente la más reciente, o el árbol <quote>youngest</quote>), e
+        informa al cliente acerca de qué cambios son necesario para
+        convertir su copia local de trabajo en una réplica de ese árbol
+        de revisión. Tras completarse la actualización, se borra la transacción 
+        temporal.</para>
           
-      <para>The use of transaction trees is the only way to make
-        permanent changes to a repository's versioned filesystem.
-        However, it's important to understand that the lifetime of a
-        transaction is completely flexible.  In the case of updates,
-        transactions are temporary trees that are immediately
-        destroyed.  In the case of commits, transactions are
-        transformed into permanent revisions (or removed if the commit
-        fails).  In the case of an error or bug, it's possible that a
-        transaction can be accidentally left lying around in the
-        repository (not really affecting anything, but still taking up
-        space).</para>
-
-     <para>In theory, someday whole workflow applications might
-        revolve around more fine-grained control of transaction
-        lifetime.  It is feasible to imagine a system whereby each
-        transaction slated to become a revision is left in stasis well
-        after the client finishes describing its changes to
-        repository.  This would enable each new commit to be reviewed
-        by someone else, perhaps a manager or engineering QA team, who
-        can choose to promote the transaction into a revision, or
-        abort it.</para>
+      <para>El uso de árboles de transacción es la única manera
+        de hacer cambio permanentes en un repositorio de sistema
+        de ficheros versionados. De todas maneras, es importante
+        entender que el tiempo de vidad de una transacción es completamente
+        flexible. En el caso de actualizaciones, las transacciones con árboles
+        temporales que se destruyen inmediatamente. En el caso de <!--TODO commits-->
+        commits, las transacciones son transformadas en revisiones
+        permanentes ( o borradas si el <!--TODO--> falla ). En el 
+        caso de un error, es posible que una transacción permanezca 
+        accidentalmente suelta en el repositorio ( sin que afecte
+        en realidad a nada, pero ocupando espacio).</para>
+     
+     <para>En teoría, un día los programas de flujo de trabajo completo
+        deberán girar hacia un control más fino del tiempo de vida de
+        la transacción. Es factible imaginar un sistema por el que
+        cada transacción <!--TODO slated???--> que se convierta en
+        revisión permanezca en <!--TODO: stasis?? --> bastante después
+        de que el cliente termine de describir sus cambios al repositorio.
+        Esto permitiría que cada nuevo <!--commit --> sea revisado
+        por alguna otra persona, quizás un <!--manager-->director o 
+        <!--TODO:engineering QA team-->, que pueda elegir entre promoverla
+        a una revisión, o cancelarla.</para>
             
     </sect2>
 
     <!-- ***************************************************************** -->
     <sect2 id="svn-ch-5-sect-1.2">
-      <title>Unversioned Properties</title>
+      <title>Propieades no versionadas</title>
 
-      <para>Transactions and revisions in the Subversion repository
-        can have properties attached to them.  These properties are
-        generic key-to-value mappings, and are generally used to store
-        information about the tree to which they are attached.  The
-        names and values of these properties are stored in the
-        repository's filesystem, along with the rest of your tree
-        data.</para>
+      <para>Las transacciones y las revisiones en el repositorio
+        subversion pueden tener propiedades adjuntas. Estas propiedades
+        son mapeos genéricos clave-valor, y generalmente se usan
+        para guardar información acerca del árbol al que están adjuntas.
+        Los nombres y valores de estas propiedades se guardan en el
+        sistema de ficheros del repositorio, junto con el resto de
+        los datos de tu árbol.</para>
 
-      <para>Revision and transaction properties are useful for
-        associating information with a tree that is not strictly
-        related to the files and directories in that tree&mdash;the
-        kind of information that isn't managed by client working
-        copies.  For example, when a new commit transaction is created
-        in the repository, Subversion adds a property to that
-        transaction named <literal>svn:date</literal>&mdash;a
-        datestamp representing the time that the transaction was
-        created.  By the time the commit process is finished, and the
-        transaction is promoted to a permanent revision, the tree has
-        also been given a property to store the username of the
-        revision's author (<literal>svn:author</literal>) and a
-        property to store the log message attached to that revision
-        (<literal>svn:log</literal>).</para>
+      <para>Las propiedades de revisiones y transacciones son útiles para
+        asociar información con un árbol que no está estríctamente
+        relacionada con los ficheros y directorios de ese árbol&mdash;el
+        tipo de información que no es gestiona por las copias de trabajo
+        de cliente. Por ejemplo, cuando una nueva transacción commit es
+        creada en el repositorio, Subversion añade una propiedad a dicha
+        transacción llamada <literal>svn:date</literal>&mdash; un
+        datestamp <!--TODO: ¿traducir esto?--> que representa el momento
+        en que la transacción se creó. En el momento que el proceso
+        de commit termina, el árbol también ha recibido una propiedad
+        para guardar el nombre del usuario que es autor de la revisión
+        (<literal>svn:author</literal>) y una propiedad para guardar
+        el mensaje de log <!--TODO: ¿traducir?--> adjunto a dicha
+        revisión (<literal>svn:log</literal>).</para>
 
       <para>Revision and transaction properties are
         <firstterm>unversioned properties</firstterm>&mdash;as they
@@ -164,15 +165,15 @@
     <sect2 id="svn-ch-5-sect-1.3">
       <title>Berkeley DB</title>
 
-        <para>The data housed within Subversion repositories actually
-          lives inside a database, specifically, a Berkeley DB Data
-          Store.  When the initial design phase of Subversion was in
-          progress, the developers decided to use Berkeley DB for a
-          variety of reasons, including its open-source license,
-          transaction support, reliability, performance, API
-          simplicity, thread-safety, support for cursors, and so
-          on.</para>
-
+        <para>Los datos almacenados dentro de repositorios Subversion,
+          realmente se encuentran en una base de datos, más concretamente,
+          un fichero de base de datos Berkley DB. Durante la fase inicial
+          de diseño de Subversion, los desarrolladores decicieron usar
+          una base de datos Berkeley por una serie de razones, como
+          su licencia open-source, soporte de transacciones, ser de confianza,
+          funcionamiento, simplicidad de su API, soporte de hilos, cursores,
+          y más.</para> 
+	
         <para>Berkeley DB provides real transaction
           support&mdash;perhaps its most powerful feature.  Multiple
           processes accessing your Subversion repositories don't have
