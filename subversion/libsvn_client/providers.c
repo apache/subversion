@@ -150,10 +150,13 @@ save_creds (svn_boolean_t *saved,
   if (strcmp (pb->cred_kind, SVN_AUTH_CRED_SIMPLE) == 0)
     {
       /* If the creds are different from our baton cache, store in hash */
-      if ((pb->username && (strcmp (username, pb->username) != 0))
-          || (! pb->username)
-          || (pb->password && (strcmp (password, pb->password) != 0))
-          || (! pb->password))
+      if (pb->username && strcmp (username, pb->username) == 0 &&
+          pb->password && strcmp (password, pb->password) == 0)
+        {
+          /* It is already saved... */
+          *saved = TRUE;
+        }
+      else
         {
           creds_hash = apr_hash_make (pool);
           apr_hash_set (creds_hash, SVN_CLIENT__AUTHFILE_USERNAME_KEY,
@@ -174,8 +177,12 @@ save_creds (svn_boolean_t *saved,
   else if (strcmp (pb->cred_kind, SVN_AUTH_CRED_USERNAME) == 0)
     {
       /* If the creds are different from our baton cache, store in hash */
-      if ((pb->username && (strcmp (username, pb->username) != 0))
-          || (! pb->username))
+      if (pb->username && strcmp (username, pb->username) == 0)
+        {
+          /* It is already saved... */
+          *saved = TRUE;
+        }
+      else
         {
           creds_hash = apr_hash_make (pool);
           apr_hash_set (creds_hash, SVN_CLIENT__AUTHFILE_USERNAME_KEY,
