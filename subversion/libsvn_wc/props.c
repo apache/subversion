@@ -385,7 +385,8 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
                            const svn_stringbuf_t *name,
                            apr_array_header_t *propchanges,
                            apr_pool_t *pool,
-                           svn_stringbuf_t **entry_accum)
+                           svn_stringbuf_t **entry_accum,
+                           apr_hash_t **conflicts)
 {
   int i;
   svn_error_t *err;
@@ -413,6 +414,8 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
 
   apr_file_t *reject_tmp_fp = NULL;       /* the temporary conflicts file */
   svn_stringbuf_t *reject_tmp_path = NULL;
+
+  *conflicts = apr_hash_make (pool);
 
   if (name == NULL)
     {
@@ -497,6 +500,10 @@ svn_wc__do_property_merge (svn_stringbuf_t *path,
           {
             /* Found a conflict! */
             
+            /* Note the conflict in the conflict-hash. */
+            apr_hash_set (*conflicts, update_change->name->data,
+                          update_change->name->len, update_change);
+
             if (! reject_tmp_fp)
               {
                 /* This is the very first prop conflict found on this

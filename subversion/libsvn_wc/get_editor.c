@@ -296,6 +296,7 @@ struct file_baton
      the new eol string that should be used. */
   svn_boolean_t got_new_eol_style;
   enum svn_wc__eol_style new_style;
+  svn_stringbuf_t *new_value;
   const char *new_eol;
 
   /* This gets set if there's a conflict when merging a prop-delta
@@ -738,6 +739,7 @@ close_directory (void *dir_baton)
   if (db->prop_changed)
     {
       svn_boolean_t prop_modified;
+      apr_hash_t *conflicts;
       apr_status_t apr_err;
       char *revision_str;
       apr_file_t *log_fp = NULL;
@@ -762,7 +764,7 @@ close_directory (void *dir_baton)
          conflicts. */
       err = svn_wc__do_property_merge (db->path, NULL,
                                        db->propchanges, db->pool,
-                                       &entry_accum);
+                                       &entry_accum, &conflicts);
       if (err) 
         return 
           svn_error_quick_wrap (err, "close_dir: couldn't do prop merge.");
@@ -1111,6 +1113,7 @@ close_file (void *file_baton)
   svn_stringbuf_t *entry_accum, *txtb, *tmp_txtb, *tmp_loc;
   svn_stringbuf_t *tmp_txtb_full_path, *txtb_full_path, *s_eol_str;
   svn_boolean_t has_binary_prop, is_locally_modified;
+  apr_hash_t *prop_conflicts;
   enum svn_wc__eol_style eol_style;
   const char *eol_str;
 
@@ -1191,6 +1194,20 @@ close_file (void *file_baton)
    So the first thing we do is figure out where we are in the
    matrix. */
 
+  /* MERGE ANY PROPERTY CHANGES, if they exist. */
+  if (fb->prop_changed)
+    {
+      /* This will merge the old and new props into a new prop db, and
+         write <cp> commands to the logfile to install the merged
+         props. It also returns any conflicts to us in a hash. */
+      err = svn_wc__do_property_merge (fb->dir_baton->path, fb->name,
+                                       fb->propchanges, fb->pool,
+                                       &entry_accum, &prop_conflicts);
+      if (err) 
+        return
+          svn_error_quick_wrap (err, "close_file: couldn't do prop merge.");
+    }
+
 
   if (fb->text_changed)
     {
@@ -1204,21 +1221,46 @@ close_file (void *file_baton)
       SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
                                        fb->path, fb->pool));
 
-      /* Get the latest value of the eol-style property.  By 'latest',
-         we mean -first- looking at any style value that may have been
-         received during this edit.  If it wasn't set, look in the
-         original set of props. */
-      if (fb->got_new_eol_style)
-        {
-          eol_style = fb->new_style;
-          eol_str   = fb->new_eol;
-        }
-      else        
-        SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
-                                        fb->path->data, fb->pool));      
-      if (eol_str)
-        s_eol_str = svn_stringbuf_create (eol_str, fb->pool);
+      /* Decide which value of eol-style to use.  This is complex! */
+      {
+        /* Did we get an eol-style during this update?
+           If not, use whatever style is currently in our props. */        
+        if (! fb->got_new_eol_style)
+          SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
+                                          fb->path->data, fb->pool));      
 
+        else  /* got a new eol-style from the server */
+          {            
+            /* Check to see if the new property conflicted. */
+            svn_prop_t *conflict = 
+              (svn_prop_t *) apr_hash_get (prop_conflicts, SVN_PROP_EOL_STYLE,
+                                           strlen(SVN_PROP_EOL_STYLE));
+
+            if (conflict)
+              /* Use our current locally-modified style. */
+              SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
+                                              fb->path->data, fb->pool));      
+            else
+              {
+                /* Go ahead and use the new style from the repository. */
+                eol_style = fb->new_style;
+                eol_str = fb->new_eol;
+
+                /* And also:  when we call svn_wc_text_modified_p()
+                   below, it needs to know this new value.  So we'll
+                   set this value immediately.  This is allowed,
+                   because we know it won't conflict! */
+                SVN_ERR (svn_wc_prop_set 
+                         (svn_stringbuf_create (SVN_PROP_EOL_STYLE, fb->pool),
+                          fb->new_value, fb->path, fb->pool));
+              }
+          }
+        
+        if (eol_str)
+          s_eol_str = svn_stringbuf_create (eol_str, fb->pool);
+        else
+          s_eol_str = NULL;
+      }
 
       /* ### check keyword property here. */
 
@@ -1637,20 +1679,6 @@ close_file (void *file_baton)
     }  /* End  of "textual" merging process */
   
 
-  /* MERGE ANY PROPERTY CHANGES, if they exist. */
-  if (fb->prop_changed)
-    {
-      /* This will merge the old and new props into a new prop db, and
-         write <cp> commands to the logfile to install the merged props. */
-      err = svn_wc__do_property_merge (fb->dir_baton->path, fb->name,
-                                       fb->propchanges, fb->pool,
-                                       &entry_accum);
-      if (err) 
-        return
-          svn_error_quick_wrap (err, "close_file: couldn't do prop merge.");
-    }
-
-
   /* If there are any ENTRY PROPS, make sure those get appended to the
      growing log as fields for the file's entry. */
   if (fb->entryprop_changed)
@@ -1703,17 +1731,9 @@ close_file (void *file_baton)
 
   if (fb->text_changed)
     {
-      svn_boolean_t text_modified;
-
-      /* Is the working file's text locally modified? */
-      err = svn_wc_text_modified_p (&text_modified,
-                                    fb->path,
-                                    fb->pool);
-      if (err) return err;
-
       /* Log entry which sets a new textual timestamp, but only if
          there are no local changes to the text. */
-      if (! text_modified)
+      if (! is_locally_modified)
         svn_xml_make_open_tag (&entry_accum,
                                fb->pool,
                                svn_xml_self_closing,
