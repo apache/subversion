@@ -645,15 +645,12 @@ svn_error_t *svn_io_dir_walk (const char *dirname,
                               void *walk_baton,
                               apr_pool_t *pool);
 
-/** Invoke @a cmd with @a args, using utf8-encoded @a path as working 
- * directory.  Connect @a cmd's stdin, stdout, and stderr to @a infile, 
- * @a outfile, and @a errfile, except where they are null.
+/** @since New in 1.3.
  *
- * If set, @a exitcode will contain the exit code of the process upon return,
- * and @a exitwhy will indicate why the process terminated. If @a exitwhy is 
- * not set and the exit reason is not @c APR_PROC_CHECK_EXIT(), or if 
- * @a exitcode is not set and the exit code is non-zero, then an 
- * @c SVN_ERR_EXTERNAL_PROGRAM error will be returned.
+ * Start @a cmd with @a args, using utf8-encoded @a path as working 
+ * directory.  Connect @a cmd's stdin, stdout, and stderr to @a infile, 
+ * @a outfile, and @a errfile, except where they are null.  Return the
+ * process handle for the invoked program in @a *cmd_proc.
  *
  * @a args is a list of utf8-encoded <tt>const char *</tt> arguments,
  * terminated by @c NULL.  @a args[0] is the name of the program, though it
@@ -661,6 +658,37 @@ svn_error_t *svn_io_dir_walk (const char *dirname,
  *
  * @a inherit sets whether the invoked program shall inherit its environment or
  * run "clean".
+ *
+ */
+svn_error_t *svn_io_start_cmd (apr_proc_t *cmd_proc,
+                               const char *path,
+                               const char *cmd,
+                               const char *const *args,
+                               svn_boolean_t inherit,
+                               apr_file_t *infile,
+                               apr_file_t *outfile,
+                               apr_file_t *errfile,
+                               apr_pool_t *pool);
+
+/** @since New in 1.3.
+ *
+ * Wait for the process @a *cmd_proc to complete and optionally retrieve
+ * it's exit code.  @a cmd is used only in error messages.
+ *
+ * If set, @a exitcode will contain the exit code of the process upon return,
+ * and @a exitwhy will indicate why the process terminated. If @a exitwhy is 
+ * not set and the exit reason is not @c APR_PROC_CHECK_EXIT(), or if 
+ * @a exitcode is not set and the exit code is non-zero, then an 
+ * @c SVN_ERR_EXTERNAL_PROGRAM error will be returned.
+ */
+svn_error_t *svn_io_wait_for_cmd (apr_proc_t *cmd_proc,
+                                  const char *cmd,
+                                  int *exitcode,
+                                  apr_exit_why_e *exitwhy,
+                                  apr_pool_t *pool);
+
+/** Run a command to completion, by first calling @c svn_io_start_cmd and
+ * then calling @c svn_io_wait_for_cmd.
  */
 svn_error_t *svn_io_run_cmd (const char *path,
                              const char *cmd,
