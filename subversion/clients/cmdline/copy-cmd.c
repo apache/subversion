@@ -47,6 +47,7 @@ svn_cl__copy (apr_getopt_t *os,
   const svn_delta_edit_fns_t *trace_editor = NULL;
   void *trace_edit_baton = NULL;
   svn_boolean_t src_is_url, dst_is_url;
+  svn_client_commit_info_t *commit_info = NULL;
 
   targets = svn_cl__args_to_target_array (os, pool);
 
@@ -117,11 +118,15 @@ svn_cl__copy (apr_getopt_t *os,
     ;
 
   SVN_ERR (svn_client_copy 
-           (src_path, opt_state->start_revision, dst_path, auth_baton, 
+           (&commit_info,
+            src_path, opt_state->start_revision, dst_path, auth_baton, 
             message ? message : svn_stringbuf_create ("", pool),
             NULL, NULL,                     /* no before_editor */
             trace_editor, trace_edit_baton, /* one after_editor */
             pool));
+
+  if (commit_info)
+    svn_cl__print_commit_info (commit_info);
 
   return SVN_NO_ERROR;
 }

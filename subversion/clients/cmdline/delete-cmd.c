@@ -43,6 +43,7 @@ svn_cl__delete (apr_getopt_t *os,
   svn_client_auth_baton_t *auth_baton = NULL;
   svn_stringbuf_t *message = NULL;
   int i;
+  svn_client_commit_info_t *commit_info = NULL;
 
   targets = svn_cl__args_to_target_array (os, pool);
 
@@ -59,8 +60,11 @@ svn_cl__delete (apr_getopt_t *os,
     for (i = 0; i < targets->nelts; i++)
       {
         svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
-        SVN_ERR (svn_client_delete (target, opt_state->force, 
+        commit_info = NULL;
+        SVN_ERR (svn_client_delete (&commit_info, target, opt_state->force, 
                                     auth_baton, message, pool));
+        if (commit_info)
+          svn_cl__print_commit_info (commit_info);
       }
   else
     {

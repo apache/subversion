@@ -48,9 +48,7 @@ svn_cl__commit (apr_getopt_t *os,
   const svn_delta_edit_fns_t *trace_editor;
   void *trace_edit_baton;
   svn_client_auth_baton_t *auth_baton;
-  svn_revnum_t new_rev;  /* The revision resulting from the commit. */
-  const char *date;      /* Server-side date of the commit. */
-  const char *author;    /* Server-side author of the commit. */
+  svn_client_commit_info_t *commit_info = NULL;
 
   /* Take our message from ARGV or a FILE */
   if (opt_state->filedata) 
@@ -107,7 +105,7 @@ svn_cl__commit (apr_getopt_t *os,
             pool));
 
   /* Commit. */
-  SVN_ERR (svn_client_commit (&new_rev, &date, &author,
+  SVN_ERR (svn_client_commit (&commit_info,
                               NULL, NULL,
                               opt_state->quiet ? NULL : trace_editor, 
                               opt_state->quiet ? NULL : trace_edit_baton,
@@ -118,8 +116,8 @@ svn_cl__commit (apr_getopt_t *os,
                               opt_state->start_revision,
                               pool));
 
-  if (SVN_IS_VALID_REVNUM (new_rev))
-    printf ("Committed revision %ld.\n", new_rev);
+  if (commit_info)
+    svn_cl__print_commit_info (commit_info);
 
   return SVN_NO_ERROR;
 }

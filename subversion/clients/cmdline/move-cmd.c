@@ -43,6 +43,7 @@ svn_cl__move (apr_getopt_t *os,
   svn_stringbuf_t *src_path, *dst_path;
   svn_client_auth_baton_t *auth_baton = NULL;
   svn_stringbuf_t *message = NULL;
+  svn_client_commit_info_t *commit_info = NULL;
 
   targets = svn_cl__args_to_target_array (os, pool);
 
@@ -65,8 +66,12 @@ svn_cl__move (apr_getopt_t *os,
   dst_path = ((svn_stringbuf_t **) (targets->elts))[1];
   
   SVN_ERR (svn_client_move 
-           (src_path, opt_state->start_revision, dst_path, auth_baton, 
+           (&commit_info, 
+            src_path, opt_state->start_revision, dst_path, auth_baton, 
             message ? message : svn_stringbuf_create ("", pool), pool));
+
+  if (commit_info)
+    svn_cl__print_commit_info (commit_info);
 
   return SVN_NO_ERROR;
 }

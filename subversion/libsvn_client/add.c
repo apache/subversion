@@ -131,7 +131,8 @@ svn_client_add (svn_stringbuf_t *path,
 }
 
 svn_error_t *
-svn_client_mkdir (svn_stringbuf_t *path,
+svn_client_mkdir (svn_client_commit_info_t **commit_info,
+                  svn_stringbuf_t *path,
                   svn_client_auth_baton_t *auth_baton,
                   svn_stringbuf_t *log_msg,
                   apr_pool_t *pool)
@@ -153,6 +154,9 @@ svn_client_mkdir (svn_stringbuf_t *path,
       const svn_delta_edit_fns_t *editor;
       void *edit_baton;
       void *root_baton, *dir_baton;
+      svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
+      const char *committed_date = NULL;
+      const char *committed_author = NULL;
 
       svn_path_split (path, &anchor, &target, svn_path_url_style, pool);
 
@@ -170,9 +174,9 @@ svn_client_mkdir (svn_stringbuf_t *path,
       SVN_ERR (ra_lib->get_commit_editor
                (session,
                 &editor, &edit_baton,
-                NULL,  /* change this if ever want to return new_rev */
-                NULL,  /* change this if ever want to return commit date */
-                NULL,  /* change this if ever want to return commit author */
+                &committed_rev,
+                &committed_date,
+                &committed_author,
                 log_msg ? log_msg : svn_stringbuf_create ("", pool),
                 NULL, NULL, NULL, NULL));
 
@@ -182,6 +186,22 @@ svn_client_mkdir (svn_stringbuf_t *path,
                                       SVN_INVALID_REVNUM, &dir_baton));
       SVN_ERR (editor->close_directory (dir_baton));
       SVN_ERR (editor->close_edit (edit_baton));
+
+      /* Allocate (and populate) the commit_info */
+      if ((committed_date != NULL) 
+          || (committed_author != NULL) 
+          || (SVN_IS_VALID_REVNUM (committed_rev)))
+        {
+          svn_client_commit_info_t *info;
+          
+          info = apr_pcalloc (pool, sizeof (**commit_info));
+          if (committed_date)
+            info->date = apr_pstrdup (pool, committed_date);
+          if (committed_author)
+            info->date = apr_pstrdup (pool, committed_author);
+          info->revision = committed_rev;
+          *commit_info = info;
+        }
 
       /* Free the RA session. */
       SVN_ERR (ra_lib->close (session));

@@ -96,7 +96,8 @@ wc_to_wc_copy (svn_stringbuf_t *src_path,
 
 
 static svn_error_t *
-repos_to_repos_copy (svn_stringbuf_t *src_url, 
+repos_to_repos_copy (svn_client_commit_info_t **commit_info,
+                     svn_stringbuf_t *src_url, 
                      svn_revnum_t src_rev, 
                      svn_stringbuf_t *dst_url, 
                      svn_client_auth_baton_t *auth_baton,
@@ -114,6 +115,9 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
   void *edit_baton, *root_baton, *baton;
   void **batons;
   int i = 0;
+  svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
+  const char *committed_date = NULL;
+  const char *committed_author = NULL;
 
   /* ### TODO:  Currently, this function will violate the depth-first
      rule of editors when doing a move of something up into one of its
@@ -205,9 +209,9 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
   /* Fetch RA commit editor. */
   SVN_ERR (ra_lib->get_commit_editor
            (sess, &editor, &edit_baton,
-            NULL,  /* change this if ever want to return new_rev */
-            NULL,  /* change this if ever want to return commit date */
-            NULL,  /* change this if ever want to return commit author */
+            &committed_rev,
+            &committed_date,
+            &committed_author,
             message, NULL, NULL, NULL, NULL));
 
   /* Drive that editor, baby! */
@@ -287,6 +291,23 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
   /* Turn off the lights, close up the shop, and go home. */
   SVN_ERR (editor->close_directory (batons[0]));
   SVN_ERR (editor->close_edit (edit_baton));
+
+  /* Allocate (and populate) the commit_info */
+  if ((committed_date != NULL) 
+      || (committed_author != NULL) 
+      || (SVN_IS_VALID_REVNUM (committed_rev)))
+    {
+      svn_client_commit_info_t *info;
+
+      info = apr_pcalloc (pool, sizeof (**commit_info));
+      if (committed_date)
+        info->date = apr_pstrdup (pool, committed_date);
+      if (committed_author)
+        info->date = apr_pstrdup (pool, committed_author);
+      info->revision = committed_rev;
+      *commit_info = info;
+    }
+
   SVN_ERR (ra_lib->close (sess));
 
   return SVN_NO_ERROR;
@@ -294,7 +315,8 @@ repos_to_repos_copy (svn_stringbuf_t *src_url,
 
 
 static svn_error_t *
-wc_to_repos_copy (svn_stringbuf_t *src_path, 
+wc_to_repos_copy (svn_client_commit_info_t **commit_info,
+                  svn_stringbuf_t *src_path, 
                   svn_stringbuf_t *dst_url, 
                   svn_client_auth_baton_t *auth_baton,
                   svn_stringbuf_t *message,
@@ -310,6 +332,9 @@ wc_to_repos_copy (svn_stringbuf_t *src_path,
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
   svn_node_kind_t src_kind, dst_kind;
+  svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
+  const char *committed_date = NULL;
+  const char *committed_author = NULL;
 
   /* Check the SRC_PATH. */
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
@@ -353,9 +378,9 @@ wc_to_repos_copy (svn_stringbuf_t *src_path,
   /* Fetch RA commit editor. */
   SVN_ERR (ra_lib->get_commit_editor
            (sess, &editor, &edit_baton,
-            NULL,  /* change this if ever want to return new_rev */
-            NULL,  /* change this if ever want to return commit date */
-            NULL,  /* change this if ever want to return commit author */
+            &committed_rev,
+            &committed_date,
+            &committed_author,
             message, NULL, NULL, NULL, NULL));
 
   /* Co-mingle the before- and after-editors with the commit
@@ -370,8 +395,25 @@ wc_to_repos_copy (svn_stringbuf_t *src_path,
   SVN_ERR (svn_wc_crawl_as_copy (parent, basename, target,
                                  editor, edit_baton, pool));
 
+  /* Allocate (and populate) the commit_info */
+  if ((committed_date != NULL) 
+      || (committed_author != NULL) 
+      || (SVN_IS_VALID_REVNUM (committed_rev)))
+    {
+      svn_client_commit_info_t *info;
+
+      info = apr_pcalloc (pool, sizeof (**commit_info));
+      if (committed_date)
+        info->date = apr_pstrdup (pool, committed_date);
+      if (committed_author)
+        info->date = apr_pstrdup (pool, committed_author);
+      info->revision = committed_rev;
+      *commit_info = info;
+    }
+
   /* Close the RA session. */
   SVN_ERR (ra_lib->close (sess));
+
   return SVN_NO_ERROR;
 }
 
@@ -562,7 +604,8 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
 
 
 static svn_error_t *
-setup_copy (svn_stringbuf_t *src_path,
+setup_copy (svn_client_commit_info_t **commit_info,
+            svn_stringbuf_t *src_path,
             svn_revnum_t src_rev,
             svn_stringbuf_t *dst_path,
             svn_client_auth_baton_t *auth_baton,
@@ -623,22 +666,22 @@ setup_copy (svn_stringbuf_t *src_path,
     SVN_ERR (wc_to_wc_copy (src_path, dst_path, is_move, pool));
 
   else if ((! src_is_url) && (dst_is_url))
-    SVN_ERR (wc_to_repos_copy (src_path, dst_path, 
+    SVN_ERR (wc_to_repos_copy (commit_info, src_path, dst_path, 
                                auth_baton, message, 
                                before_editor, before_edit_baton,
                                after_editor, after_edit_baton,
                                pool));
 
   else if ((src_is_url) && (! dst_is_url))
-    SVN_ERR (repos_to_wc_copy (src_path, src_rev, dst_path, auth_baton,
-                               message,
+    SVN_ERR (repos_to_wc_copy (src_path, src_rev, 
+                               dst_path, auth_baton, message,
                                before_editor, before_edit_baton,
                                after_editor, after_edit_baton,
                                pool));
 
   else
-    SVN_ERR (repos_to_repos_copy (src_path, src_rev, dst_path, auth_baton,
-                                  message, is_move, pool));
+    SVN_ERR (repos_to_repos_copy (commit_info, src_path, src_rev, dst_path, 
+                                  auth_baton, message, is_move, pool));
 
   return SVN_NO_ERROR;
 }
@@ -648,7 +691,8 @@ setup_copy (svn_stringbuf_t *src_path,
 /* Public Interfaces */
 
 svn_error_t *
-svn_client_copy (svn_stringbuf_t *src_path,
+svn_client_copy (svn_client_commit_info_t **commit_info,
+                 svn_stringbuf_t *src_path,
                  svn_revnum_t src_rev,
                  svn_stringbuf_t *dst_path,
                  svn_client_auth_baton_t *auth_baton,
@@ -659,7 +703,8 @@ svn_client_copy (svn_stringbuf_t *src_path,
                  void *after_edit_baton,
                  apr_pool_t *pool)
 {
-  return setup_copy (src_path, src_rev, dst_path, auth_baton, message,
+  return setup_copy (commit_info, 
+                     src_path, src_rev, dst_path, auth_baton, message,
                      before_editor, before_edit_baton,
                      after_editor, after_edit_baton,
                      FALSE /* is_move */, pool);
@@ -667,14 +712,16 @@ svn_client_copy (svn_stringbuf_t *src_path,
 
 
 svn_error_t *
-svn_client_move (svn_stringbuf_t *src_path,
+svn_client_move (svn_client_commit_info_t **commit_info,
+                 svn_stringbuf_t *src_path,
                  svn_revnum_t src_rev,
                  svn_stringbuf_t *dst_path,
                  svn_client_auth_baton_t *auth_baton,
                  svn_stringbuf_t *message,
                  apr_pool_t *pool)
 {
-  return setup_copy (src_path, src_rev, dst_path, auth_baton, message,
+  return setup_copy (commit_info,
+                     src_path, src_rev, dst_path, auth_baton, message,
                      NULL, NULL,  /* no before_editor, before_edit_baton */
                      NULL, NULL,  /* no after_editor, after_edit_baton */
                      TRUE /* is_move */, pool);
