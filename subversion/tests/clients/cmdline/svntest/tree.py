@@ -415,6 +415,7 @@ def compare_trees(a, b,
         print "ACTUAL NODE FOUND:"
         print "============================================================="
         a.pprint()
+        raise main.SVNTreeUnequal
               
       accounted_for = []
       # For each child of A, check and see if it's in B.  If so, run
