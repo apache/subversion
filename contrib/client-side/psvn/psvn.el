@@ -39,7 +39,7 @@
 ;; l     - svn-status-show-svn-log          run 'svn log'
 ;; i     - svn-status-info                  run 'svn info'
 ;; r     - svn-status-revert                run 'svn revert'
-;; V     - svn-status-resolved              run 'svn resolved'
+;; M-v   - svn-status-resolved              run 'svn resolved'
 ;; U     - svn-status-update-cmd            run 'svn update'
 ;; c     - svn-status-commit-file           run 'svn commit'
 ;; a     - svn-status-add-file              run 'svn add --non-recursive'
@@ -72,6 +72,7 @@
 ;; o     - svn-status-find-file-other-window
 ;; v     - svn-status-view-file-other-window
 ;; I     - svn-status-parse-info
+;; V     - svn-status-svnversion
 ;; P l   - svn-status-property-list
 ;; P s   - svn-status-property-set
 ;; P d   - svn-status-property-delete
@@ -793,6 +794,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "$") 'svn-status-toggle-elide)
   (define-key svn-status-mode-map (kbd ".") 'svn-status-goto-root-or-return)
   (define-key svn-status-mode-map (kbd "I") 'svn-status-parse-info)
+  (define-key svn-status-mode-map (kbd "V") 'svn-status-svnversion)
   (define-key svn-status-mode-map (kbd "?") 'svn-status-toggle-hide-unknown)
   (define-key svn-status-mode-map (kbd "_") 'svn-status-toggle-hide-unmodified)
   (define-key svn-status-mode-map (kbd "a") 'svn-status-add-file)
@@ -808,6 +810,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "i") 'svn-status-info)
   (define-key svn-status-mode-map (kbd "b") 'svn-status-blame)
   (define-key svn-status-mode-map (kbd "=") 'svn-status-show-svn-diff)
+  (define-key svn-status-mode-map (kbd "M-v") 'svn-status-resolved)
   ;; [(control ?=)] is unreachable on TTY, but you can use "*u" instead.
   ;; (Is the "u" mnemonic for something?)
   (define-key svn-status-mode-map (kbd "C-=") 'svn-status-show-svn-diff-for-marked-files)
@@ -828,7 +831,6 @@ A and B must be line-info's."
   (define-key svn-status-mode-mark-map (kbd "M") 'svn-status-mark-modified)
   (define-key svn-status-mode-mark-map (kbd "D") 'svn-status-mark-deleted)
   (define-key svn-status-mode-mark-map (kbd "*") 'svn-status-mark-changed)
-  (define-key svn-status-mode-mark-map (kbd "V") 'svn-status-resolved)
   (define-key svn-status-mode-mark-map (kbd "u") 'svn-status-show-svn-diff-for-marked-files))
 (when (not svn-status-mode-property-map)
   (setq svn-status-mode-property-map (make-sparse-keymap))
@@ -2093,6 +2095,21 @@ See `svn-status-marked-files' for what counts as selected."
       (message "resolving: %S" (svn-status-marked-file-names))
       (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
       (svn-run-svn t t 'resolved "resolved" "--targets" svn-status-temp-arg-file))))
+
+
+(defun svn-status-svnversion ()
+  "Run svnversion on the directory that contains the file at point."
+  (interactive)
+  (svn-status-ensure-cursor-on-file)
+  (let ((simple-path (svn-status-line-info->filename (svn-status-get-line-information)))
+        (full-path (svn-status-line-info->full-path (svn-status-get-line-information)))
+        (version))
+    (unless (file-directory-p simple-path)
+      (setq simple-path (file-name-directory simple-path))
+      (setq full-path (file-name-directory full-path)))
+    (setq version (shell-command-to-string (concat "svnversion -n " full-path)))
+    (message (format "svnversion for '%s': %s" simple-path version))
+    version))
 
 ;; --------------------------------------------------------------------------------
 ;; Update the *svn-status* buffer, when a file is saved
