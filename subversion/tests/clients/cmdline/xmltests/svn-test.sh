@@ -22,8 +22,7 @@ fi
 TEST_DIR_1=t1
 TEST_DIR_2=t2
 COMMIT_RESULTFILE_NAME=commit
-ANCESTOR_PATH=anni       # See if Greg Stein notices. :-)
-			 # notice what? everything seems fine here. ;-)
+ANCESTOR_PATH=http://www.example.com/repos/anni
 
 check_status()
 {
@@ -44,11 +43,10 @@ echo
 ### Checking out.
 echo "Checking out ${TEST_DIR_1}."
 ${SVN_PROG} checkout                                      \
-      --destination ${TEST_DIR_1}  \
-      --xml-file $XML_DIR/co1-inline.xml    \
+      --xml-file $XML_DIR/co1-inline.xml                  \
       --revision 1                                        \
-      ${ANCESTOR_PATH}
-
+      ${ANCESTOR_PATH}                                    \
+      ${TEST_DIR_1}
 check_status 1
 
 ### Copy the pristine checked-out tree, so we can test updates later.

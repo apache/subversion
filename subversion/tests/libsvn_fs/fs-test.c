@@ -2476,7 +2476,7 @@ copy_test (const char **msg,
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "pre-commit copy history not preserved (rev lost) for A/D/H/pi2");
 
-    if (strcmp (path, "A/D/G/pi") != 0)
+    if (strcmp (path, "/A/D/G/pi") != 0)
       return svn_error_create
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "pre-commit copy history not preserved (path lost) for A/D/H/pi2");
@@ -2499,7 +2499,7 @@ copy_test (const char **msg,
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "post-commit copy history wrong (rev) for A/D/H/pi2");
 
-    if (strcmp (path, "A/D/G/pi") != 0)
+    if (strcmp (path, "/A/D/G/pi") != 0)
       return svn_error_create
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "post-commit copy history wrong (path) for A/D/H/pi2");
@@ -2527,7 +2527,7 @@ copy_test (const char **msg,
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "first copy history wrong (rev) for A/D/H/pi2");
 
-    if (strcmp (path, "A/D/G/pi") != 0)
+    if (strcmp (path, "/A/D/G/pi") != 0)
       return svn_error_create
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "first copy history wrong (path) for A/D/H/pi2");
@@ -2541,7 +2541,7 @@ copy_test (const char **msg,
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "second copy history wrong (rev) for A/D/H/pi3");
 
-    if (strcmp (path, "A/D/H/pi2") != 0)
+    if (strcmp (path, "/A/D/H/pi2") != 0)
       return svn_error_create
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "second copy history wrong (path) for A/D/H/pi3");
@@ -2570,7 +2570,7 @@ copy_test (const char **msg,
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "copy history wrong (rev) for A/D/H/pi3");
 
-    if (strcmp (path, "A/D/H/pi2") != 0)
+    if (strcmp (path, "/A/D/H/pi2") != 0)
       return svn_error_create
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "copy history wrong (path) for A/D/H/pi3");
@@ -2612,7 +2612,7 @@ copy_test (const char **msg,
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "copy history wrong (rev) for H2");
 
-    if (strcmp (path, "A/D/H") != 0)
+    if (strcmp (path, "/A/D/H") != 0)
       return svn_error_create
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "copy history wrong (path) for H2");
@@ -2658,7 +2658,7 @@ copy_test (const char **msg,
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "copy history wrong (rev) for A/B/E/B");
 
-    if (strcmp (path, "A/B") != 0)
+    if (strcmp (path, "/A/B") != 0)
       return svn_error_create
         (SVN_ERR_FS_GENERAL, 0, NULL, pool,
          "copy history wrong (path) for A/B/E/B");
@@ -5232,6 +5232,7 @@ print_chrevs (const apr_array_header_t *revs_got,
   return apr_pstrcat (pool, outstr, "}", NULL);
 }
 
+
 static svn_error_t *
 revisions_changed (const char **msg,
                    svn_boolean_t msg_only,
@@ -5427,6 +5428,63 @@ revisions_changed (const char **msg,
 }
 
 
+static svn_error_t *
+canonicalize_abspath (const char **msg,
+                      svn_boolean_t msg_only,
+                      apr_pool_t *pool)
+{ 
+  int i;
+  const char *paths[21][2] = 
+    /* in                      out */
+  { { NULL,                    NULL },
+    { "",                      "/" },
+    { "/",                     "/" },
+    { "//",                    "/" },
+    { "///",                   "/" },
+    { "foo",                   "/foo" },
+    { "foo/",                  "/foo" },
+    { "foo//",                 "/foo" },
+    { "/foo",                  "/foo" },
+    { "/foo/",                 "/foo" },
+    { "/foo//",                "/foo" },
+    { "//foo//",               "/foo" },
+    { "foo/bar",               "/foo/bar" },
+    { "foo/bar/",              "/foo/bar" },
+    { "foo/bar//",             "/foo/bar" },
+    { "foo//bar",              "/foo/bar" },
+    { "foo//bar/",             "/foo/bar" },
+    { "foo//bar//",            "/foo/bar" },
+    { "/foo//bar//",           "/foo/bar" },
+    { "//foo//bar//",          "/foo/bar" },
+    { "///foo///bar///baz///", "/foo/bar/baz" },
+  };
+
+  *msg = "test svn_fs__canonicalize_abspath";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < (sizeof (paths) / 2 / sizeof (const char *)); i++)
+    {
+      const char *input = paths[i][0];
+      const char *output = paths[i][1];
+      const char *actual = svn_fs__canonicalize_abspath (input, pool);
+      
+      if ((! output) && (! actual))
+        continue;
+      if ((! output) && actual)
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                  "expected NULL path; got `%s'", actual);
+      if (output && (! actual))
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                  "expected `%s' path; got NULL", output);
+      if (strcmp (output, actual))
+        return svn_error_createf (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                  "expected `%s' path; got `%s'",
+                                  output, actual);
+    }
+  return SVN_NO_ERROR;
+}
 
 
 /* ------------------------------------------------------------------------ */
@@ -5470,6 +5528,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   test_node_created_rev,
   check_related,
   revisions_changed,
+  canonicalize_abspath,
   0
 };
 

@@ -138,15 +138,18 @@ SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
                     $SVN_FS_WANT_DB_PATCH)
 
 # Only add *_APACHE_RULE if we also have db, since mod_dav_svn depends on it.
-INSTALL_RULES="install-base-lib install-lib install-bin install-include install-docs"
+INSTALL_STATIC_RULES="install-bin install-docs"
+INSTALL_RULES="install-base-lib install-lib install-include install-static"
 BUILD_RULES="base-lib lib bin test"
 if test "$svn_lib_berkeley_db" = "yes"; then
   BUILD_RULES="base-lib fs-lib lib bin fs-bin $BUILD_APACHE_RULE test fs-test"
-  INSTALL_RULES="install-base-lib install-fs-lib install-lib install-bin install-fs-bin install-include install-docs $INSTALL_APACHE_RULE"
+  INSTALL_STATIC_RULES="install-bin install-fs-bin install-docs"
+  INSTALL_RULES="install-base-lib install-fs-lib install-lib install-include install-static $INSTALL_APACHE_RULE"
   FS_TEST_DEPS="\$(FS_TEST_DEPS)"
   FS_TEST_PROGRAMS="\$(FS_TEST_PROGRAMS)"
 fi
 AC_SUBST(BUILD_RULES)
+AC_SUBST(INSTALL_STATIC_RULES)
 AC_SUBST(INSTALL_RULES)
 AC_SUBST(FS_TEST_DEPS)
 AC_SUBST(FS_TEST_PROGRAMS)
@@ -294,7 +297,19 @@ fi
 dnl try to find "swig" to build the SWIG bindings
 AC_PATH_PROG(SWIG, swig, none)
 if test "$SWIG" != "none"; then
-  if test "$PYTHON" != "none"; then
+  AC_MSG_CHECKING([swig version])
+  SWIG_VERSION="`$SWIG -version 2>&1 | sed -ne 's/^.*Version \(.*\)$/\1/p'`"
+  AC_MSG_RESULT([$SWIG_VERSION])
+  case $SWIG_VERSION in
+      [1.3.1[23]*])
+        SWIG_SUITABLE=yes
+        ;;
+      *)
+        SWIG_SUITABLE=no
+        AC_MSG_WARN([swig bindings require 1.3.12.])
+        ;;
+  esac
+  if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes"; then
     SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-py-lib"
     SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-py-lib"
 
@@ -380,7 +395,7 @@ AC_SUBST(INCLUDE_OUTPUTS)
 
 dnl Final step:  create the Makefile ----------------------------
 
-AC_OUTPUT([Makefile])
+AC_OUTPUT([Makefile svn-config], [chmod +x svn-config])
 
 
 dnl Create all of the build directories

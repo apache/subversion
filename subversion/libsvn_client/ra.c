@@ -67,6 +67,55 @@ open_tmp_file (apr_file_t **fp,
 }
 
 
+/* This implements the `svn_ra_get_committed_rev_func_t' interface. */
+static svn_error_t *
+get_committed_rev (void *baton,
+                   const char *relpath,
+                   svn_revnum_t *rev,
+                   apr_pool_t *pool)
+{
+  svn_client__callback_baton_t *cb = baton;
+  svn_wc_entry_t *ent;
+
+  *rev = SVN_INVALID_REVNUM;
+
+  /* If we list of commit_items, search through that for a match for
+     this relative URL. */
+  if (cb->commit_items)
+    {
+      int i;
+      for (i = 0; i < cb->commit_items->nelts; i++)
+        {
+          svn_client_commit_item_t *item
+            = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
+          if (! strcmp (relpath, 
+                        svn_path_uri_decode (item->url, pool)))
+            {
+              /* ### Passing `show_deleted_items' flag, is this right? */
+              SVN_ERR (svn_wc_entry (&ent, item->path, TRUE, pool));
+              if (ent)
+                *rev = ent->cmt_rev;
+
+              return SVN_NO_ERROR;
+            }
+        }
+
+      return SVN_NO_ERROR;
+    }
+
+  /* If we don't have a base directory, then leave. */
+  else if (cb->base_dir == NULL)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (svn_wc_entry (&ent, svn_path_join (cb->base_dir, relpath, pool),
+                         TRUE, pool));
+  if (ent)
+    *rev = ent->cmt_rev;
+
+  return SVN_NO_ERROR;
+}
+
+/* This implements the `svn_ra_get_wc_prop_func_t' interface. */
 static svn_error_t *
 get_wc_prop (void *baton,
              const char *relpath,
@@ -78,8 +127,8 @@ get_wc_prop (void *baton,
 
   *value = NULL;
 
-  /* If we list of commit_items, search through that for a match for
-     this relative URL. */
+  /* If we have a list of commit_items, search through that for a
+     match for this relative URL. */
   if (cb->commit_items)
     {
       int i;
@@ -87,7 +136,8 @@ get_wc_prop (void *baton,
         {
           svn_client_commit_item_t *item
             = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
-          if (! strcmp (relpath, item->url))
+          if (! strcmp (relpath, 
+                        svn_path_uri_decode (item->url, pool)))
             return svn_wc_get_wc_prop (item->path, name, value, pool);
         }
 
@@ -102,6 +152,7 @@ get_wc_prop (void *baton,
                              name, value, pool);
 }
 
+/* This implements the `svn_ra_set_wc_prop_func_t' interface. */
 static svn_error_t *
 set_wc_prop (void *baton,
              const char *relpath,
@@ -111,8 +162,8 @@ set_wc_prop (void *baton,
 {
   svn_client__callback_baton_t *cb = baton;
 
-  /* If we list of commit_items, search through that for a match for
-     this relative URL. */
+  /* If we have a list of commit_items, search through that for a
+     match for this relative URL. */
   if (cb->commit_items)
     {
       int i;
@@ -120,7 +171,8 @@ set_wc_prop (void *baton,
         {
           svn_client_commit_item_t *item
             = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
-          if (! strcmp (relpath, item->url))
+          if (! strcmp (relpath, 
+                        svn_path_uri_decode (item->url, pool)))
             return svn_wc_set_wc_prop (item->path, name, value, pool);
         }
 
@@ -151,6 +203,7 @@ svn_client__open_ra_session (void **session_baton,
 
   cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
   cbtable->get_authenticator = svn_client__get_authenticator;
+  cbtable->get_committed_rev = use_admin ? get_committed_rev : NULL;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
   cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;
 

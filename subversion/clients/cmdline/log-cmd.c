@@ -35,6 +35,7 @@
 #include "svn_sorts.h"
 #include "svn_xml.h"
 #include "svn_time.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -115,6 +116,8 @@ log_message_receiver (void *baton,
                       apr_pool_t *pool)
 {
   struct log_message_receiver_baton *lb = baton;
+  const char *author_native, *date_native, *msg_native;
+  svn_error_t *err;
 
   /* Number of lines in the msg. */
   int lines;
@@ -127,6 +130,62 @@ log_message_receiver (void *baton,
       printf ("No commits in repository.\n");
       return SVN_NO_ERROR;
     }
+
+  /* If log data has UTF-8 characters that cannot be converted to to
+     the local encoding, we shouldn't stop cold, so we just emit a
+     placeholder and move on.  (Subversion's logs actually have such
+     data, in revision 2600 for example.)
+
+     In general, Subversion's behavior on encountering unconvertible
+     data depends on context.  There may becircumstances where
+     conversion failure should be a fatal error, it's just that log
+     isn't one of them.  If a particular log message can't be
+     converted, that doesn't imply others will fail too.
+
+     A more sophisticated solution would be a fuzzy conversion
+     function that converts what it can and uses '?' for the bad
+     bytes, or perhaps ?\XXX to give the UTF escape code, or whatever.
+
+     But the first task is to unbreak "svn log" for most users; fancy
+     stuff can come later! */
+
+  err = svn_utf_cstring_from_utf8 (&author_native, author, pool);
+  if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
+    {
+    
+      SVN_ERR (svn_utf_cstring_from_utf8
+               (&author_native,
+                "[unconvertible author,\n"
+"see http://subversion.tigris.org/issues/show_bug.cgi?id=807 for details.]\n",
+                pool));
+    }
+  else if (err)
+    return err;
+
+  err = svn_utf_cstring_from_utf8 (&date_native, date, pool);
+  if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))   /* unlikely! */
+    {
+      SVN_ERR (svn_utf_cstring_from_utf8
+               (&date_native,
+                "[unconvertible date,\n"
+"see http://subversion.tigris.org/issues/show_bug.cgi?id=807 for details.]\n",
+                pool));
+    }
+  else if (err)
+    return err;
+
+  err = svn_utf_cstring_from_utf8 (&msg_native, msg, pool);
+  if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
+    {
+      SVN_ERR (svn_utf_cstring_from_utf8
+               (&msg_native,
+                "[unconvertible log msg,\n"
+"see http://subversion.tigris.org/issues/show_bug.cgi?id=807 for details.]\n",
+                pool));
+    }
+  else if (err)
+    return err;
+
 
   {
     /* Convert date to a format for humans. */
@@ -145,9 +204,9 @@ log_message_receiver (void *baton,
       lb->first_call = 0;
     }
 
-  lines = num_lines (msg);
+  lines = num_lines (msg_native);
   printf ("rev %" SVN_REVNUM_T_FMT ":  %s | %s | %d line%s\n",
-          rev, author, dbuf, lines, (lines > 1) ? "s" : "");
+          rev, author_native, dbuf, lines, (lines > 1) ? "s" : "");
 
   if (changed_paths)
     {
@@ -174,14 +233,31 @@ log_message_receiver (void *baton,
       for (i = 0; i < sorted_paths->nelts; i++)
         {
           svn_item_t *item = &(APR_ARRAY_IDX (sorted_paths, i, svn_item_t));
-          const char *path = item->key;
-          char action = (char) ((int) apr_hash_get (changed_paths, 
-                                                    item->key, item->klen));
-          printf ("   %c %s\n", (action == 'R' ? 'U' : action), path);
+          const char *path_native, *path = item->key;
+          svn_log_changed_path_t *log_item 
+            = apr_hash_get (changed_paths, item->key, item->klen);
+          const char *copy_data = "";
+          
+          if (log_item->copyfrom_path 
+              && SVN_IS_VALID_REVNUM (log_item->copyfrom_rev))
+            {
+              SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, 
+                                                  log_item->copyfrom_path, 
+                                                  pool));
+              copy_data 
+                = apr_psprintf (pool, 
+                                " (from %s:%" SVN_REVNUM_T_FMT ")",
+                                path_native,
+                                log_item->copyfrom_rev);
+            }
+          SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
+          printf ("   %c %s%s\n", 
+                  (log_item->action == 'M') ? 'U' : log_item->action, 
+                  path_native, copy_data);
         }
     }
   printf ("\n");  /* A blank line always precedes the log message. */
-  printf ("%s\n", msg);
+  printf ("%s\n", msg_native);
   printf (SEP_STRING);
 
   return SVN_NO_ERROR;
@@ -277,8 +353,7 @@ log_message_receiver_xml (void *baton,
           apr_hash_this(hi, (void *) &path, NULL, &val);
           action = (char) ((int) val);
 
-          actionstr = apr_psprintf (pool, "%c",
-                                    (action == 'R' ? 'U' : action));
+          actionstr = apr_psprintf (pool, "%c", action);
           /* <path action="X">xxx</path> */
           svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "path",
                                  "action", actionstr, NULL);
@@ -313,7 +388,8 @@ svn_cl__log (apr_getopt_t *os,
   svn_client_auth_baton_t *auth_baton;
   struct log_message_receiver_baton lb;
 
-  targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
+  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
+                                         FALSE, pool));
 
   /* Build an authentication object to give to libsvn_client. */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);

@@ -35,6 +35,7 @@
 #include "bdb/rev-table.h"
 #include "bdb/txn-table.h"
 #include "bdb/copies-table.h"
+#include "bdb/changes-table.h"
 
 
 /* The private structure underlying the public svn_fs_txn_t typedef.  */
@@ -238,7 +239,11 @@ txn_body_abort_txn (void *baton, trail_t *trail)
           SVN_ERR (svn_fs__delete_copy (txn->fs, copy_id, trail));
         }
     }
-    
+
+  /* Remove any changes that were stored as part of this
+     transactions. */
+  SVN_ERR (svn_fs__changes_delete (txn->fs, txn->id, trail));
+
   /* Finally, delete the transaction itself. */
   SVN_ERR (svn_fs__delete_txn (txn->fs, txn->id, trail));
 

@@ -1167,11 +1167,10 @@ svn_wc__run_log (const char *path, apr_pool_t *pool)
       svn_wc_entry_t *thisdir_entry, *parent_entry, *tmpentry;
       SVN_ERR (svn_wc_entry (&thisdir_entry, path, FALSE, pool));
 
-      /* Blow away the entire administrative dir, and all those below
-         it too.  Don't remove any working files, though. */
+      /* Blow away the entire directory, and all those below it too. */
       SVN_ERR (svn_wc_remove_from_revision_control (path,
                                                     SVN_WC_ENTRY_THIS_DIR,
-                                                    FALSE, pool));
+                                                    TRUE, pool));
 
       /* If revnum of this dir is greater than parent's revnum, then
          recreate 'deleted' entry in parent. */
@@ -1218,6 +1217,13 @@ svn_wc_cleanup (const char *path,
                                            SVN_WC__ADM_LOG, NULL);
   svn_boolean_t locked;
   enum svn_node_kind kind;
+  svn_boolean_t is_wc;
+
+  SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
+  if (! is_wc)
+    return svn_error_createf
+      (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
+       "svn_wc_cleanup: %s is not a working copy directory", path);
 
   /* Recurse on versioned subdirs first, oddly enough. */
   SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));

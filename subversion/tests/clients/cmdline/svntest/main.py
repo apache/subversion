@@ -201,8 +201,7 @@ def run_svn(error_expected, *varargs):
 
   command = svn_binary
   for arg in varargs:                   # build the command string
-    if windows: command = command + ' "' + str(arg) + '"'
-    else: command = command + " " + `arg`
+    command = command + ' "' + str(arg) + '"'
 
   infile, outfile, errfile = os.popen3(command)
   stdout_lines = outfile.readlines()
@@ -223,8 +222,7 @@ def run_svnadmin(*varargs):
 
   command = svnadmin_binary
   for arg in varargs:                   # build the command string
-    if windows: command = command + ' "' + str(arg) + '"'
-    else: command = command + " " + `arg`
+    command = command + ' "' + str(arg) + '"'
 
   infile, outfile, errfile = os.popen3(command)
   stdout_lines = outfile.readlines()

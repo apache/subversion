@@ -28,6 +28,7 @@
 #include "svn_error.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
+#include "svn_path.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -680,6 +680,8 @@ svn_client_revert (const char *path,
 /* Remove the 'conflicted' state on a working copy PATH.  This will
    not semantically resolve conflicts;  it just allows PATH to be
    committed in the future.  The implementation details are opaque.
+   If RECURSIVE is set, recurse below PATH, looking for conflicts to
+   resolve.
 
    If PATH is not in a state of conflict to begin with, do nothing.
    If PATH's conflict state is removed and NOTIFY_FUNC is non-null,
@@ -688,6 +690,7 @@ svn_error_t *
 svn_client_resolve (const char *path,
                     svn_wc_notify_func_t notify_func,
                     void *notify_baton,
+                    svn_boolean_t recursive,
                     apr_pool_t *pool);
 
 

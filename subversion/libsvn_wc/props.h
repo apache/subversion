@@ -123,7 +123,8 @@ svn_error_t *svn_wc__wcprop_get (const svn_string_t **value,
                                  const char *path,
                                  apr_pool_t *pool);
 
-/* Set a single 'wcprop' NAME to VALUE for versioned object PATH. */
+/* Set a single 'wcprop' NAME to VALUE for versioned object PATH. 
+   If VALUE is null, remove property NAME. */
 svn_error_t *svn_wc__wcprop_set (const char *name,
                                  const svn_string_t *value,
                                  const char *path,

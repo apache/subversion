@@ -28,78 +28,9 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_io.h"
-#include "apr_file_info.h"
 
 
 /*** Code. ***/
-
-svn_error_t *
-svn_path_get_absolute(const char **pabsolute,
-                      const char *relative,
-                      apr_pool_t *pool)
-{
-  /* ### This belongs in path.c! */
-
-  /* We call svn_path_canonicalize_nts() on the input data, rather
-     than the output, so that `buffer' can be returned directly
-     without const vs non-const issues. */
-
-  char * buffer;
-  int apr_err = apr_filepath_merge(&buffer, NULL,
-                                   svn_path_canonicalize_nts (relative, pool),
-                                   APR_FILEPATH_NOTRELATIVE
-                                   | APR_FILEPATH_TRUENAME,
-                                   pool);
-  if (apr_err)
-    return svn_error_createf(SVN_ERR_BAD_FILENAME, apr_err, NULL, pool,
-                             "Couldn't determine absolute path of %s.", 
-                             relative);
-
-  *pabsolute = buffer;
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_path_split_if_file(const char *path,
-                       const char **pdirectory,
-                       const char **pfile,
-                       apr_pool_t *pool)
-{
-  /* ### This belongs in path.c! */
-
-  apr_finfo_t finfo;
-  svn_error_t *err;
-
-  err = svn_io_stat(&finfo, path, APR_FINFO_TYPE, pool);
-
-  if (err != SVN_NO_ERROR)
-    {
-      return svn_error_createf(SVN_ERR_BAD_FILENAME, 0, err,
-                               pool, "Couldn't determine if %s was a file or "
-                               "directory.", path);
-    }
-  else
-    {
-      if (finfo.filetype == APR_DIR)
-        {
-          *pdirectory = path;
-          *pfile = "";
-        }
-      else if (finfo.filetype == APR_REG)
-        {
-          svn_path_split_nts(path, pdirectory, pfile, pool);
-        }
-      else 
-        {
-          return svn_error_createf(SVN_ERR_BAD_FILENAME, 0, NULL, pool,
-                                  "%s is neither a file nor a directory name.",
-                                  path);
-        }
-    }
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_path_condense_targets (const char **pbasedir,

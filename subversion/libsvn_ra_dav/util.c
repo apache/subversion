@@ -232,12 +232,11 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   const char *msg;
   svn_error_t *err;
   parser_cxt_t *pc = apr_pcalloc (pool, sizeof(*pc));
-  const char *encoded_url = svn_path_uri_encode(url, pool);
 
   pc->pool = pool;
 
   /* create/prep the request */
-  req = ne_request_create(ras->sess, method, encoded_url);
+  req = ne_request_create(ras->sess, method, url);
 
   if (body != NULL)
     ne_set_request_body_buffer(req, body, strlen(body));

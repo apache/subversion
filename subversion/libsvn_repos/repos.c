@@ -242,8 +242,11 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "# REPOS=${1}\n"
       "# USER=${2}\n"
       "#\n"
-      "# commit_allower.pl --repository ${REPOS} --user ${USER}\n"
-      "# special-auth-check.py --user ${USER} --auth-level 3\n";
+      "# commit-allower.pl --repository ${REPOS} --user ${USER} || exit 1\n"
+      "# special-auth-check.py --user ${USER} --auth-level 3 || exit 1\n"
+      "#\n"
+      "# All checks passed, so allow the commit.\n"
+      "# exit 0\n";
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
@@ -311,11 +314,18 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "# REPOS=${1}\n"
       "# TXN=${2}\n"
       "#\n"
+      "# Make sure that the log message contains some text.\n"
       "# SVNLOOK=/usr/local/bin/svnlook\n"
       "# LOG=`${SVNLOOK} ${REPOS} txn ${TXN} log`\n"
       "# echo ${LOG} | grep \"[a-zA-Z0-9]\" > /dev/null || exit 1\n"
-      "# exit 0\n"
-      "#\n";
+      "#\n"
+      "# Check that the author of this commit has the rights to perform the\n"
+      "# commit on the files and directories being modified.\n"
+      "# commit-access-control.pl ${REPOS} ${TXN} commit-access-control.cfg "
+      "|| exit 1\n"
+      "#\n"
+      "# All checks passed, so allow the commit.\n"
+      "# exit 0\n";
     
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
@@ -414,8 +424,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "READ-SENTINEL\n"
       "\n"
       "The invocation convention and protocol for the read-sentinel\n"
-      "is yet to be defined.\n"
-      "\n";
+      "is yet to be defined.\n";
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
@@ -444,8 +453,7 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
       "WRITE-SENTINEL\n"
       "\n"
       "The invocation convention and protocol for the write-sentinel\n"
-      "is yet to be defined.\n"
-      "\n";
+      "is yet to be defined.\n";
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)

@@ -325,7 +325,7 @@ typedef struct svn_wc_entry_t
 
 
 /* Set *ENTRY to an entry for PATH, allocated in POOL.  If
- * SHOW_DELETED is set, return the entry even if it in 'deleted'
+ * SHOW_DELETED is set, return the entry even if it's in 'deleted'
  * state.  If PATH is not under revision control, or if entry is
  * 'deleted', not scheduled for re-addition, and SHOW_DELETED is
  * false, then set *ENTRY to NULL.
@@ -382,6 +382,49 @@ svn_error_t *svn_wc_get_ancestry (char **url,
                                   svn_revnum_t *rev,
                                   const char *path,
                                   apr_pool_t *pool);
+
+
+/* A callback vtable invoked by the generic entry-walker function. */
+typedef struct svn_wc_entry_callbacks_t
+{
+  /* An ENTRY was found at PATH.  
+     [Note: the pool which contains the entry will likely be freed
+     when return controls to the walker.] */
+  svn_error_t *(*found_entry) (const char *path,
+                               svn_wc_entry_t *entry,
+                               void *walk_baton);
+
+  /* ### add more callbacks as new callers need them. */
+
+} svn_wc_entry_callbacks_t;
+
+
+/* A generic entry-walker.
+
+   Do a recursive depth-first entry-walk beginning on PATH, which can
+   be a file or dir.  Call callbacks in WALK_CALLBACKS, passing
+   WALK_BATON to each.  Use POOL for looping, recursion, and to
+   allocate all entries returned.
+
+   Like our other entries interfaces, entries that are in a 'deleted'
+   state (and not scheduled for re-addition) are not discovered,
+   unless SHOW_DELETED is set.
+
+   When a new directory is entered, SVN_WC_ENTRY_THIS_DIR will always
+   be returned first.
+
+   [Note:  callers should be aware that each directory will be
+   returned *twice*:  first as an entry within its parent, and
+   subsequently as the '.' entry within itself.  The two calls can be
+   distinguished by looking for SVN_WC_ENTRY_THIS_DIR in the 'name'
+   field of the entry.]   */
+svn_error_t *svn_wc_walk_entries (const char *path,
+                                  const svn_wc_entry_callbacks_t 
+                                                     *walk_callbacks,
+                                  void *walk_baton,
+                                  svn_boolean_t show_deleted,
+                                  apr_pool_t *pool);
+
 
 
 /*** Status. ***/
@@ -659,7 +702,8 @@ svn_error_t *svn_wc_remove_from_revision_control (const char *path,
 /* Assuming PATH is under version control and in a state of conflict, then
    take PATH *out* of this state.  If RESOLVE_TEXT is set then any text
    conflict is resolved, if RESOLVE_PROPS is set then any property
-   conflicts are resolved.
+   conflicts are resolved.  If RECURSIVE is set, then search
+   recursively for conflicts to resolve.
 
    Needless to say, this function doesn't touch conflict markers or
    anything of that sort -- only a human can semantically resolve a
@@ -682,6 +726,7 @@ svn_error_t *svn_wc_remove_from_revision_control (const char *path,
 svn_error_t *svn_wc_resolve_conflict (const char *path,
                                       svn_boolean_t resolve_text,
                                       svn_boolean_t resolve_props,
+                                      svn_boolean_t recursive,
                                       svn_wc_notify_func_t notify_func,
                                       void *notify_baton,
                                       apr_pool_t *pool);
@@ -743,7 +788,7 @@ svn_error_t *svn_wc_get_wc_prop (const char *path,
                                  apr_pool_t *pool);
 
 /* This is a function of type svn_ra_set_wc_prop_func_t. Set property
-   NAME to VALUE on PATH.  
+   NAME to VALUE on PATH.  If VALUE is null, remove property NAME.
 
    NOTE: This is only for wc properties, that is, properties for
    which svn_wc_is_wc_prop(NAME) would return true.  See the comments
@@ -1045,15 +1090,17 @@ svn_error_t *svn_wc_prop_list (apr_hash_t **props,
                                apr_pool_t *pool);
 
 
-/* Set *VALUE to the value of wc property NAME for PATH, allocating
-   *VALUE in POOL.  If no such prop, set *VALUE to NULL. */
+/* Set *VALUE to the value of regular property NAME for PATH,
+   allocating *VALUE in POOL.  If no such prop, set *VALUE to NULL. */
 svn_error_t *svn_wc_prop_get (const svn_string_t **value,
                               const char *name,
                               const char *path,
                               apr_pool_t *pool);
 
-/* Set wc property NAME to VALUE for PATH.  Do any temporary
-   allocation in POOL. */
+/* Set regular property NAME to VALUE for PATH.  Do any temporary
+   allocation in POOL.  If NAME is not a valid property for PATH,
+   return SVN_ERR_ILLEGAL_TARGET.  If VALUE is null, remove property
+   NAME. */
 svn_error_t *svn_wc_prop_set (const char *name,
                               const svn_string_t *value,
                               const char *path,
@@ -1432,6 +1479,7 @@ svn_error_t *svn_wc_translated_file (const char **xlated_p,
 svn_error_t *svn_wc_lock (const char *path, 
                           int wait_for, 
                           apr_pool_t *pool);
+
 
 /* Unlock PATH, or error if can't. */
 svn_error_t *svn_wc_unlock (const char *path, 

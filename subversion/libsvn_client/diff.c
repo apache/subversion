@@ -33,6 +33,7 @@
 #include "svn_path.h"
 #include "svn_test.h"
 #include "svn_io.h"
+#include "svn_utf.h"
 #include "svn_pools.h"
 #include "client.h"
 #include <assert.h>
@@ -54,7 +55,7 @@ display_prop_diffs (const apr_array_header_t *propchanges,
 {
   int i;
 
-  svn_io_file_printf (file, "\nProperty changes on: %s\n", path);
+  SVN_ERR (svn_io_file_printf (file, "\nProperty changes on: %s\n", path));
   apr_file_printf (file, 
      "___________________________________________________________________\n");
 
@@ -71,13 +72,38 @@ display_prop_diffs (const apr_array_header_t *propchanges,
       else
         original_value = NULL;
       
-      svn_io_file_printf (file, "Name: %s\n", propchange->name);
+      SVN_ERR (svn_io_file_printf (file, "Name: %s\n", propchange->name));
 
-      if (original_value != NULL)
-        apr_file_printf (file, "   - %s\n", original_value->data);
+      /* For now, we have a rather simple heuristic: if this is an
+         "svn:" property, then assume the value is UTF-8 and must
+         therefore be converted before printing.  Otherwise, just
+         print whatever's there and hope for the best. */
+      {
+        svn_boolean_t val_to_utf8 = svn_prop_is_svn_prop (propchange->name);
+        const char *printable_val;
+        
+        if (original_value != NULL)
+          {
+            if (val_to_utf8)
+              SVN_ERR (svn_utf_cstring_from_utf8
+                       (&printable_val, original_value->data, pool));
+            else
+              printable_val = original_value->data;
+            
+            apr_file_printf (file, "   - %s\n", printable_val);
+          }
+        
+        if (propchange->value != NULL)
+          {
+            if (val_to_utf8)
+              SVN_ERR (svn_utf_cstring_from_utf8
+                       (&printable_val, propchange->value->data, pool));
+            else
+              printable_val = propchange->value->data;
 
-      if (propchange->value != NULL)
-        apr_file_printf (file, "   + %s\n", propchange->value->data);
+            apr_file_printf (file, "   + %s\n", printable_val);
+          }
+      }
     }
 
   apr_file_printf (file, "\n");
@@ -136,7 +162,8 @@ diff_file_changed (svn_wc_notify_state_t *state,
     }
 
   /* Print out the diff header. */
-  svn_io_file_printf (outfile, "Index: %s\n", label ? label : tmpfile1);
+  SVN_ERR (svn_io_file_printf (outfile, "Index: %s\n",
+                               label ? label : tmpfile1));
   apr_file_printf (outfile, 
      "===================================================================\n");
 
@@ -554,24 +581,20 @@ convert_to_url (const char **url,
                 const char *path,
                 apr_pool_t *pool)
 {
-  svn_boolean_t path_is_url;
+  svn_wc_entry_t *entry;      
 
-  path_is_url = svn_path_is_url (path);
-
-  if (path_is_url)
-    *url = path;
-  else
+  if (svn_path_is_url (path))
     {
-      svn_wc_entry_t *entry;      
-      SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
-      if (entry)
-        *url = apr_pstrdup (pool, entry->url);
-      else
-        return svn_error_createf 
-          (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
-           "convert_to_url: %s is not versioned", path);
+      *url = path;
+      return SVN_NO_ERROR;
     }
 
+  SVN_ERR (svn_wc_entry (&entry, path, FALSE, pool));
+  if (! entry)
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+                              "convert_to_url: %s is not versioned", path);
+  
+  *url = apr_pstrdup (pool, entry->url);
   return SVN_NO_ERROR;
 }
 
@@ -654,13 +677,13 @@ do_merge (svn_wc_notify_func_t notify_func,
   svn_delta_compat_wrap (&diff_editor, &diff_edit_baton,
                          new_diff_editor, new_diff_edit_baton, pool);
   
-  SVN_ERR (ra_lib->do_switch (session,
-                              &reporter, &report_baton,
-                              end_revnum,
-                              NULL,
-                              recurse,
-                              URL2,
-                              diff_editor, diff_edit_baton));
+  SVN_ERR (ra_lib->do_diff (session,
+                            &reporter, &report_baton,
+                            end_revnum,
+                            NULL,
+                            recurse,
+                            URL2,
+                            diff_editor, diff_edit_baton));
   
   SVN_ERR (reporter->set_path (report_baton, "", start_revnum));
   
@@ -699,6 +722,7 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   void *ra_baton, *session1, *session2;
   svn_ra_plugin_t *ra_lib;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
+  svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
   
   props1 = apr_hash_make (pool);
   props2 = apr_hash_make (pool);
@@ -755,8 +779,13 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   err = svn_wc_merge (tmpfile1, tmpfile2,
                       target_wcpath,
                       oldrev_str, newrev_str, ".working", pool);
-  if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
-    return err;  
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_CONFLICT)
+        return err;  
+      else
+        text_state = svn_wc_notify_state_conflicted;
+    }
              
   SVN_ERR (svn_io_remove_file (tmpfile1, pool));
   SVN_ERR (svn_io_remove_file (tmpfile2, pool));
@@ -769,6 +798,7 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
 
   if (notify_func)
     {
+
       /* First check that regular props changed. */
       if (propchanges->nelts > 0)
         {
@@ -783,19 +813,21 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
             prop_state = svn_wc_notify_state_unchanged;
         }
 
+      /* ### todo: Detect the actual text state, and pass that below.  */
+
       (*notify_func) (notify_baton,
                       target_wcpath,
                       svn_wc_notify_update_update,
                       svn_node_file,
                       NULL,
-                      svn_wc_notify_state_unknown, /* ### discover this! */
+                      text_state, 
                       prop_state,
                       SVN_INVALID_REVNUM);
     }
 
   return SVN_NO_ERROR;
 }
-     
+
 
 /* A Theoretical Note From Ben, regarding do_diff().
 
@@ -827,6 +859,16 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
    a more pressing issue.
  */
 static svn_error_t *
+polite_error (svn_error_t *child_err,
+              apr_pool_t *pool)
+{
+  return svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, child_err, pool,
+                           "Sorry, svn_client_diff was called in a way "
+                           "that is not yet supported.");
+}
+              
+
+static svn_error_t *
 do_diff (const apr_array_header_t *options,
          svn_client_auth_baton_t *auth_baton,
          const char *path1,
@@ -838,10 +880,8 @@ do_diff (const apr_array_header_t *options,
          void *callback_baton,
          apr_pool_t *pool)
 {
-  svn_error_t *err;
   svn_revnum_t start_revnum, end_revnum;
   const char *anchor = NULL, *target = NULL;
-  svn_wc_entry_t *entry;
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   const svn_ra_reporter_t *reporter;
@@ -861,20 +901,17 @@ do_diff (const apr_array_header_t *options,
     {
       /* Sanity check -- path1 and path2 are the same working-copy path. */
       if (strcmp (path1, path2) != 0) 
-        {
-          err = svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
-                                  "do_diff: paths aren't equal!");
-          goto polite_error;
-        }
+        return polite_error (svn_error_create 
+                             (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
+                              "do_diff: paths aren't equal!"),
+                             pool);
       if (svn_path_is_url (path1))
-        {
-          err = svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
-                                  "do_diff: path isn't a working-copy path.");
-          goto polite_error;
-        }
+        return polite_error (svn_error_create 
+                             (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
+                              "do_diff: path isn't a working-copy path."),
+                             pool);
 
       SVN_ERR (svn_wc_get_actual_target (path1, &anchor, &target, pool));
-      SVN_ERR (svn_wc_entry (&entry, anchor, FALSE, pool));
       SVN_ERR (svn_wc_diff (anchor, target, callbacks, callback_baton,
                             recurse, pool));
     }
@@ -889,11 +926,10 @@ do_diff (const apr_array_header_t *options,
 
       /* Sanity check -- path2 better be a working-copy path. */
       if (svn_path_is_url (path2))
-        {
-          err = svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
-                                  "do_diff: path isn't a working-copy path.");
-          goto polite_error;
-        }
+        return polite_error (svn_error_create 
+                             (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
+                              "do_diff: path isn't a working-copy path."),
+                             pool);
 
       /* Extract a URL and revision from path1 (if not already a URL) */
       SVN_ERR (convert_to_url (&URL1, path1, pool));
@@ -903,7 +939,9 @@ do_diff (const apr_array_header_t *options,
          assuming that URL1 is equal to path2's URL, as we used to. */
       SVN_ERR (svn_wc_get_actual_target (path2, &anchor, &target, pool));
       if (target)
-        svn_path_split_nts (URL1, &url_anchor, &url_target, pool);
+        {
+          svn_path_split_nts (URL1, &url_anchor, &url_target, pool);
+        }
       else
         {
           url_anchor = URL1;
@@ -931,7 +969,7 @@ do_diff (const apr_array_header_t *options,
       SVN_ERR (ra_lib->do_update (session,
                                   &reporter, &report_baton,
                                   start_revnum,
-                                  url_target,
+                                  svn_path_uri_decode (url_target, pool),
                                   recurse,                                  
                                   diff_editor, diff_edit_baton));
 
@@ -990,22 +1028,31 @@ do_diff (const apr_array_header_t *options,
       /* Now down to the -real- business.  We gotta figure out anchors
          and targets, whether things are urls or wcpaths.
 
-         Like we do in the 2nd use-case, we have path1 follow path2's
-         lead.  If path2 is split into anchor/target, then so must
-         path1 (URL1) be. */
+         Like we do in the 2nd use-case, we have PATH1 follow PATH2's
+         lead.  If PATH2 is split into anchor/target, then so must
+         PATH1 (URL1) be. 
+
+         Now, at the end of all this, we want ANCHOR2 to be "" if
+         PATH2 is a URL, or the actual path anchor otherwise.
+         TARGET2, if non-NULL, will be a filesystem path component.
+         Likewise, ANCHOR1 will be a URL, and TARGET1, if non-NULL,
+         will be a filesystem path component.  */
       if (path2_is_url)
         {
-          SVN_ERR (ra_lib->check_path (&path2_kind, session2,
-                                       "", end_revnum));
+          anchor2 = "";
+          SVN_ERR (ra_lib->check_path (&path2_kind, session2, "", end_revnum));
+
           switch (path2_kind)
             {
             case svn_node_file:
-              svn_path_split_nts (path2, &anchor2, &target2, pool);
+              target2 = svn_path_uri_decode (svn_path_basename (path2, pool),
+                                             pool);
               break;
+
             case svn_node_dir:
-              anchor2 = path2;
               target2 = NULL;
               break;
+
             default:
               return svn_error_createf (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
                                         "'%s' at rev %" SVN_REVNUM_T_FMT
@@ -1020,7 +1067,8 @@ do_diff (const apr_array_header_t *options,
 
       if (target2)
         {
-          svn_path_split_nts (URL1, &anchor1, &target1, pool);          
+          svn_path_split_nts (URL1, &anchor1, &target1, pool); 
+          target1 = svn_path_uri_decode (target1, pool);
         }
       else
         {
@@ -1047,7 +1095,7 @@ do_diff (const apr_array_header_t *options,
          path2 is a wc_dir.  if path2 is a URL, then we want to anchor
          the diff editor on "", because we don't want to see any url's
          in the diff headers. */
-      SVN_ERR (svn_client__get_diff_editor (path2_is_url ? "" : anchor2,
+      SVN_ERR (svn_client__get_diff_editor (anchor2,
                                             callbacks,
                                             callback_baton,
                                             recurse,
@@ -1064,13 +1112,13 @@ do_diff (const apr_array_header_t *options,
                              new_diff_editor, new_diff_edit_baton, pool);
 
       /* We want to switch our txn into URL2 */
-      SVN_ERR (ra_lib->do_switch (session,
-                                  &reporter, &report_baton,
-                                  end_revnum,
-                                  target1,
-                                  recurse,
-                                  URL2,
-                                  diff_editor, diff_edit_baton));      
+      SVN_ERR (ra_lib->do_diff (session,
+                                &reporter, &report_baton,
+                                end_revnum,
+                                target1,
+                                recurse,
+                                URL2,
+                                diff_editor, diff_edit_baton));      
 
       SVN_ERR (reporter->set_path (report_baton, "", start_revnum));
       SVN_ERR (reporter->finish_report (report_baton));
@@ -1082,16 +1130,10 @@ do_diff (const apr_array_header_t *options,
   else
     {
       /* can't pigeonhole our inputs into one of the three use-cases. */
-      err = NULL;
-      goto polite_error;
+      return polite_error (NULL, pool);
     }
     
   return SVN_NO_ERROR;
-    
- polite_error:
-  return svn_error_create (SVN_ERR_INCORRECT_PARAMS, 0, err, pool,
-                           "Sorry, svn_client_diff was called in a way "
-                           "that is not yet supported.");
 }
 
 

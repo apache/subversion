@@ -21,8 +21,7 @@ plenty of more work to do.
 
 So:
 
-   svn checkout URL://repository/path/baz/bat   \
-                -d DESTINATION
+   svn checkout URL://repository/path/baz/bat DESTINATION
    svn add [FILE|DIRECTORY]
    svn delete [--force] FILE # This doesn't work. -Fitz 2001-04-03
    svn commit
@@ -124,8 +123,6 @@ Options
   -l --local-dir                 Local; run only in current working directory.
       
      --recursive                 Operate recursively (default).
-      
-  -d --destination DEST          Target directory (like "cvs checkout -d DEST")
       
   -f --force                     Force. 
       

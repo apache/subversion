@@ -362,7 +362,7 @@ int svn_client__sort_commit_item_urls (const void *a, const void *b);
    Afterwards, some of the items in COMMIT_ITEMS may contain data
    allocated in POOL. */
 svn_error_t *
-svn_client__condense_commit_items (char **base_url,
+svn_client__condense_commit_items (const char **base_url,
                                    apr_array_header_t *commit_items,
                                    apr_pool_t *pool);
 

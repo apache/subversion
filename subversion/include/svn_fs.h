@@ -103,15 +103,15 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
 
 
 /* Create a new, empty Subversion filesystem, stored in a Berkeley DB
-   environment under PATH.  Make FS refer to this new filesystem.
-   FS provides the memory pool, warning function, etc.  If PATH
-   exists, it must be an empty directory.  */
+   environment under PATH, a utf8-encoded path.  Make FS refer to this
+   new filesystem.  FS provides the memory pool, warning function,
+   etc.  If PATH exists, it must be an empty directory.  */
 svn_error_t *svn_fs_create_berkeley (svn_fs_t *fs, const char *path);
 
 
 /* Make FS refer to the Berkeley DB-based Subversion filesystem at
-   PATH.  PATH must refer to a file or directory created by
-   `svn_fs_create_berkeley'.
+   PATH.  PATH is utf8-encoded, and must refer to a file or directory
+   created by `svn_fs_create_berkeley'.
 
    Only one thread may operate on any given filesystem object at once.
    Two threads may access the same filesystem simultaneously only if
@@ -123,9 +123,10 @@ svn_error_t *svn_fs_create_berkeley (svn_fs_t *fs, const char *path);
 svn_error_t *svn_fs_open_berkeley (svn_fs_t *fs, const char *path);
 
 
-/* Return the path to FS's repository, allocated in POOL.
-   Note: this is just what was passed to svn_fs_create_berkeley() or
-   svn_fs_open_berkeley() -- might be absolute, might not.  */
+/* Return the utf8-encoded path to FS's repository, allocated in
+   POOL.  Note: this is just what was passed to
+   svn_fs_create_berkeley() or svn_fs_open_berkeley() -- might be
+   absolute, might not.  */
 const char *svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool);
 
 
@@ -545,6 +546,41 @@ svn_revnum_t svn_fs_revision_root_revision (svn_fs_root_t *root);
 
    A path consisting of the empty string, or a string containing only
    slashes, refers to the root directory.  */
+
+
+
+/* Determining what has changed under a ROOT. */
+
+/* The kind of change that occured on the path. */
+typedef enum
+{
+  svn_fs_path_change_modify = 0,  /* default value */
+  svn_fs_path_change_add,         /* path added in txn */
+  svn_fs_path_change_delete,      /* path removed in txn */
+  svn_fs_path_change_replace,     /* path removed and re-added in txn */
+  svn_fs_path_change_reset        /* ignore all previous change items for 
+                                     path (internal-use only) */
+
+} svn_fs_path_change_kind_t;
+
+/* Change descriptor. */
+typedef struct svn_fs_path_change_t
+{
+  const svn_fs_id_t *node_rev_id;   /* node revision id of changed path */
+  svn_fs_path_change_kind_t change_kind;   /* kind of change (see above) */
+  int text_mod;   /* were there text mods? */
+  int prop_mod;   /* were there property mods? */
+
+} svn_fs_path_change_t;
+
+
+/* Allocate and return a hash *CHANGED_PATHS_P containing descriptions
+   of the paths changed under ROOT.  The hash is keyed with const char * 
+   paths, and has svn_fs_path_change_t * values.  Use POOL for all
+   allocations, including the hash and its values. */
+svn_error_t *svn_fs_paths_changed (apr_hash_t **changed_paths_p,
+                                   svn_fs_root_t *root,
+                                   apr_pool_t *pool);
 
 
 

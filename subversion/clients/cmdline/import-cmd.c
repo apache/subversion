@@ -81,7 +81,8 @@ svn_cl__import (apr_getopt_t *os,
    * ### kff todo: review above behaviors.
    */
 
-  targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
+  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
+                                         FALSE, pool));
 
   /* Get a repository url. */
   if (targets->nelts < 1)

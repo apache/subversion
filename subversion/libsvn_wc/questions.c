@@ -52,9 +52,7 @@ svn_wc_check_wc (const char *path,
   svn_error_t *err = NULL;
   enum svn_node_kind kind;
 
-  err = svn_io_check_path (path, &kind, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
   
   if (kind == svn_node_none)
     {
@@ -80,9 +78,8 @@ svn_wc_check_wc (const char *path,
       else
         {
           *is_wc = TRUE;
-          err = svn_wc__close_adm_file (f, path, SVN_WC__ADM_README, 0, pool);
-          if (err)
-            return err;
+          SVN_ERR (svn_wc__close_adm_file (f, path, SVN_WC__ADM_README, 0,
+                                           pool));
         }
     }
 
@@ -272,12 +269,9 @@ svn_wc__files_contents_same_p (svn_boolean_t *same,
                                const char *file2,
                                apr_pool_t *pool)
 {
-  svn_error_t *err;
   svn_boolean_t q;
 
-  err = svn_io_filesizes_different_p (&q, file1, file2, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_io_filesizes_different_p (&q, file1, file2, pool));
 
   if (q)
     {
@@ -285,9 +279,7 @@ svn_wc__files_contents_same_p (svn_boolean_t *same,
       return SVN_NO_ERROR;
     }
   
-  err = contents_identical_p (&q, file1, file2, pool);
-  if (err)
-    return err;
+  SVN_ERR (contents_identical_p (&q, file1, file2, pool));
 
   if (q)
     *same = 1;

@@ -48,7 +48,8 @@ svn_cl__add (apr_getopt_t *os,
   svn_wc_notify_func_t notify_func = NULL;
   void *notify_baton = NULL;
 
-  targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
+  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
+                                         FALSE, pool));
 
   if (! targets->nelts)
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");

@@ -40,6 +40,7 @@
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_time.h"
+#include "svn_utf.h"
 
 #include "wc.h"
 #include "log.h"
@@ -240,7 +241,8 @@ svn_wc__load_prop_file (const char *propfile_path,
       apr_file_t *propfile = NULL;
 
       SVN_ERR_W (svn_io_file_open (&propfile, propfile_path,
-                                   APR_READ, APR_OS_DEFAULT, pool),
+                                   APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                                   pool),
                  "load_prop_file: can't open propfile");
 
       status = svn_hash_read (hash, svn_pack_bytestring,
@@ -309,12 +311,18 @@ append_prop_conflict (apr_file_t *fp,
      timestamp or something? */
   apr_size_t written;
   apr_status_t status;
+  const svn_string_t *conflict_description_native;
 
-  status = apr_file_write_full (fp, conflict_description->data,
-                                conflict_description->len, &written);
+  SVN_ERR (svn_utf_string_from_utf8 (&conflict_description_native,
+                                     conflict_description,
+                                     pool));
+
+  status = apr_file_write_full (fp, conflict_description_native->data,
+                                conflict_description_native->len, &written);
   if (status)
     return svn_error_create (status, 0, NULL, pool,
-                             "append_prop_conflict: apr_file_write_full failed.");
+                             "append_prop_conflict: "
+                             "apr_file_write_full failed.");
   return SVN_NO_ERROR;
 }
 
@@ -878,8 +886,6 @@ wcprop_list (apr_hash_t **props,
 }
 
 
-/* This is what RA_DAV will use to fetch 'wc' properties.  It will be
-   passed to ra_session_baton->do_commit(). */
 svn_error_t *
 svn_wc__wcprop_get (const svn_string_t **value,
                     const char *name,
@@ -904,9 +910,6 @@ svn_wc__wcprop_get (const svn_string_t **value,
 }
 
 
-
-/* This is what RA_DAV will use to store 'wc' properties.  It will be
-   passed to ra_session_baton->do_commit(). */
 svn_error_t *
 svn_wc__wcprop_set (const char *name,
                     const svn_string_t *value,
@@ -919,7 +922,8 @@ svn_wc__wcprop_set (const char *name,
   apr_file_t *fp = NULL;
 
   /* ### be nice to eliminate this... */
-  svn_stringbuf_t *valuebuf = svn_stringbuf_create_from_string (value, pool);
+  svn_stringbuf_t *valuebuf
+    = value ? svn_stringbuf_create_from_string (value, pool) : NULL;
 
   err = wcprop_list (&prophash, path, pool);
   if (err)
@@ -1032,6 +1036,28 @@ svn_wc_prop_set (const char *name,
   /* ### argh */
   svn_stringbuf_t *valuebuf;
 
+  if (! strcmp (name, SVN_PROP_EXECUTABLE))
+    {
+      enum svn_node_kind kind;
+      SVN_ERR (svn_io_check_path (path, &kind, pool));
+
+      if (kind == svn_node_dir)
+        /* Setting the executable bit doesn't make sense for dirs. (And
+           don't try and tell me Unix does it...) */
+        return svn_error_create (SVN_ERR_ILLEGAL_TARGET, 0, NULL, pool,
+                                 "Cannot set svn:executable on a directory");
+      else
+        {
+          /* If the svn:executable property was set, then chmod +x.
+             If the svn:executable property was deleted (NULL value passed
+             in), then chmod -x. */
+          if (value == NULL)
+            SVN_ERR (svn_io_set_file_executable (path, FALSE, TRUE, pool));
+          else
+            SVN_ERR (svn_io_set_file_executable (path, TRUE, TRUE, pool));
+        }
+    }
+
   err = svn_wc_prop_list (&prophash, path, pool);
   if (err)
     return
@@ -1094,17 +1120,6 @@ svn_wc_prop_set (const char *name,
                                          SVN_WC__ENTRY_MODIFY_TEXT_TIME,
                                          pool));
         }
-    }
-
-  /* Addendum: if the svn:executable property was set, then chmod +x.
-     If the svn:executable property was deleted (NULL value passed
-     in), then chmod -x. */
-  if (! strcmp (name, SVN_PROP_EXECUTABLE))
-    {
-      if (value == NULL)
-        SVN_ERR (svn_io_set_file_executable (path, FALSE, TRUE, pool));
-      else
-        SVN_ERR (svn_io_set_file_executable (path, TRUE, TRUE, pool));
     }
 
   return SVN_NO_ERROR;

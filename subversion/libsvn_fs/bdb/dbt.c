@@ -81,7 +81,8 @@ DBT *
 svn_fs__track_dbt (DBT *dbt, apr_pool_t *pool)
 {
   if (dbt->data)
-    apr_pool_cleanup_register (pool, dbt->data, apr_free_cleanup, apr_pool_cleanup_null);
+    apr_pool_cleanup_register (pool, dbt->data, apr_free_cleanup, 
+                               apr_pool_cleanup_null);
 
   return dbt;
 }
@@ -128,7 +129,7 @@ svn_fs__id_to_dbt (DBT *dbt,
 }
 
 
-/* Set DBT to the unparsed form of SKEL; allocate memory form POOL.  */
+/* Set DBT to the unparsed form of SKEL; allocate memory from POOL.  */
 DBT *
 svn_fs__skel_to_dbt (DBT *dbt,
                      skel_t *skel,

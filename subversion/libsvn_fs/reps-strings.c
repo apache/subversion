@@ -234,7 +234,7 @@ get_one_window (struct compose_handler_baton *cb,
   const char *str_key;
 
   apr_array_header_t *chunks = rep->contents.delta.chunks;
-  svn_fs__rep_delta_chunk_t *this_chunk;
+  svn_fs__rep_delta_chunk_t *this_chunk, *first_chunk;
 
   cb->init = TRUE;
   if (chunks->nelts <= cur_chunk)
@@ -244,11 +244,18 @@ get_one_window (struct compose_handler_baton *cb,
   wstream = svn_txdelta_parse_svndiff (compose_handler, cb, TRUE,
                                        cb->trail->pool);
 
-  /* First things first: send the "SVN\0" header through the stream. */
+  /* First things first:  send the "SVN"{version} header through the
+     stream.  ### For now, we will just use the version specified
+     in the first chunk, and then verify that no chunks have a
+     different version number than the one used.  In the future,
+     we might simply convert chunks that use a different version
+     of the diff format -- or, heck, a different format
+     altogether -- to the format/version of the first chunk.  */
+  first_chunk = APR_ARRAY_IDX (chunks, 0, svn_fs__rep_delta_chunk_t*);
   diffdata[0] = 'S';
   diffdata[1] = 'V';
   diffdata[2] = 'N';
-  diffdata[3] = '\0';
+  diffdata[3] = (char) (first_chunk->version);
   amt = 4;
   SVN_ERR (svn_stream_write (wstream, diffdata, &amt));
   /* FIXME: The stream write handler is borked; assert (amt == 4); */
@@ -436,12 +443,23 @@ rep_read_range (svn_fs_t *fs,
             apr_array_make (trail->pool, 666, sizeof (rep));
           do
             {
+              const svn_fs__rep_delta_chunk_t *const first_chunk
+                = APR_ARRAY_IDX (rep->contents.delta.chunks,
+                                 0, svn_fs__rep_delta_chunk_t*);
               const svn_fs__rep_delta_chunk_t *const chunk
                 = APR_ARRAY_IDX (rep->contents.delta.chunks,
                                  cur_chunk, svn_fs__rep_delta_chunk_t*);
 
+              /* Verify that this chunk is of the same version as the first. */
+              if (first_chunk->version != chunk->version)
+                return svn_error_createf
+                  (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
+                   "diff version inconsistencies in representation `%s'",
+                   rep_key);
+
+              rep_key = chunk->rep_key;
               *(svn_fs__representation_t**) apr_array_push (reps) = rep;
-              SVN_ERR (svn_fs__read_rep (&rep, fs, chunk->rep_key, trail));
+              SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
             }
           while (rep->kind == svn_fs__rep_kind_delta
                  && rep->contents.delta.chunks->nelts > cur_chunk);
@@ -1076,6 +1094,12 @@ struct write_svndiff_strings_baton
      to the strings table. */
   apr_size_t header_read;
 
+  /* The version number of the svndiff data written.  ### You'd better
+     not count on this being populated after the first chunk is sent
+     through the interface, since it lives at the 4th byte of the
+     stream. */
+  apr_byte_t version;
+
   /* The trail we're writing in. */
   trail_t *trail;
 
@@ -1109,8 +1133,13 @@ write_svndiff_strings (void *baton, const char *data, apr_size_t *len)
       *len -= nheader;
       buf += nheader;
       wb->header_read += nheader;
+      
+      /* If we have *now* read the full 4-byte header, check that
+         least byte for the version number of the svndiff format. */
+      if (wb->header_read == 4)
+        wb->version = *(buf - 1);
     }
-
+  
   /* Append to the current string we're writing (or create a new one
      if WB->key is NULL). */
   SVN_ERR (svn_fs__string_append (wb->fs, &(wb->key), *len, buf, wb->trail));
@@ -1349,6 +1378,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
         chunk->offset = ww->text_off;
 
         /* Populate the window */
+        chunk->version = new_target_baton.version;
         chunk->string_key = ww->key;
         chunk->size = ww->text_len;
         memcpy (&(chunk->checksum), digest, MD5_DIGESTSIZE);

@@ -17,6 +17,7 @@
  */
 
 
+#include <locale.h>
 #include <apr_file_io.h>
 #include "svnadmin.h"
 
@@ -94,7 +95,7 @@ print_tree (svn_fs_root_t *root,
       apr_ssize_t keylen;
       void *val;
       svn_fs_dirent_t *this_entry;
-      const char *this_full_path;
+      const char *this_full_path, *native_name;
       int is_dir;
       int i;
       const svn_fs_id_t *id;
@@ -109,7 +110,9 @@ print_tree (svn_fs_root_t *root,
       for (i = 0; i < indentation; i++)
         printf (" ");
 
-      printf ("%s", this_entry->name);
+      SVN_ERR (svn_utf_cstring_from_utf8 (&native_name, this_entry->name,
+                                          pool));
+      printf ("%s", native_name);
       
       SVN_ERR (svn_fs_node_id (&id, root, this_full_path, pool));
       id_str = svn_fs_unparse_id (id, pool);
@@ -287,15 +290,18 @@ main (int argc, const char * const *argv)
      ### is refactored. for now, let's just get the tool up and
      ### running. */
 
+  setlocale (LC_CTYPE, "");
+
   if (argc < 3)
     {
       usage (argv[0], 1);
       /* NOTREACHED */
     }
 
-  path = argv[2];
   apr_initialize ();
   pool = svn_pool_create (NULL);
+
+  INT_ERR (svn_utf_cstring_to_utf8 (&path, argv[2], NULL, pool));
 
   command = parse_command (argv[1]);
   switch (command)
@@ -348,7 +354,8 @@ main (int argc, const char * const *argv)
           }
 
         paths = apr_array_make (pool, 1, sizeof (const char *));
-        (*(const char **)apr_array_push(paths)) = argv[3];
+        INT_ERR (svn_utf_cstring_to_utf8 ((const char **)apr_array_push(paths),
+                                          argv[3], NULL, pool));
 
         INT_ERR (svn_repos_open (&repos, path, pool));
         fs = svn_repos_fs (repos);
@@ -379,7 +386,7 @@ main (int argc, const char * const *argv)
                 /* NOTREACHED */
               }
             show_extra = TRUE;
-            path = argv[3];
+            INT_ERR (svn_utf_cstring_to_utf8 (&path, argv[3], NULL, pool));
           }
 
         INT_ERR (svn_repos_open (&repos, path, pool));
@@ -401,6 +408,8 @@ main (int argc, const char * const *argv)
                 apr_pool_t *this_pool = svn_pool_create (pool);
                 const svn_fs_id_t *root_id;
                 svn_string_t *id_str;
+                const char *txn_name_native, *datestamp_native;
+                const char *author_native, *log_native;
                 
                 INT_ERR (svn_fs_open_txn (&txn, fs, txn_name, this_pool));
                 INT_ERR (svn_fs_txn_root (&this_root, txn, this_pool));
@@ -420,11 +429,22 @@ main (int argc, const char * const *argv)
                 if (! log)
                   log = svn_string_create ("", this_pool);
                 
-                printf ("Txn %s:\n", txn_name);
-                printf ("Created: %s\n", datestamp->data);
-                printf ("Author: %s\n", author->data);
+                INT_ERR (svn_utf_cstring_from_utf8 (&txn_name_native, txn_name,
+                                                    this_pool));
+                INT_ERR (svn_utf_cstring_from_utf8 (&datestamp_native,
+                                                    datestamp->data,
+                                                    this_pool));
+                INT_ERR (svn_utf_cstring_from_utf8 (&author_native,
+                                                    author->data,
+                                                    this_pool));
+                INT_ERR (svn_utf_cstring_from_utf8 (&log_native, log->data,
+                                                    this_pool));
+
+                printf ("Txn %s:\n", txn_name_native);
+                printf ("Created: %s\n", datestamp_native);
+                printf ("Author: %s\n", author_native);
                 printf ("Log (%" APR_SIZE_T_FMT " bytes):\n%s\n",
-                        log->len, log->data);
+                        log->len, log_native);
                 printf ("==========================================\n");
                 INT_ERR (svn_fs_node_id (&root_id, this_root, "", pool));
                 id_str = svn_fs_unparse_id (root_id, pool);
@@ -476,6 +496,7 @@ main (int argc, const char * const *argv)
             apr_pool_t *this_pool = svn_pool_create (pool);
             const svn_fs_id_t *root_id;
             svn_string_t *id_str;
+            const char *datestamp_native, *author_native, *log_native;
 
             INT_ERR (svn_fs_revision_root (&this_root, fs, this, this_pool));
             INT_ERR (svn_fs_revision_prop (&datestamp, fs, this, 
@@ -491,11 +512,19 @@ main (int argc, const char * const *argv)
             if (! log)
               log = svn_string_create ("", this_pool);
             
+            INT_ERR (svn_utf_cstring_from_utf8 (&datestamp_native,
+                                                datestamp->data,
+                                                this_pool));
+            INT_ERR (svn_utf_cstring_from_utf8 (&author_native,
+                                                author->data, this_pool));
+            INT_ERR (svn_utf_cstring_from_utf8 (&log_native, log->data,
+                                                this_pool));
+
             printf ("Revision %" SVN_REVNUM_T_FMT "\n", this);
-            printf ("Created: %s\n", datestamp->data);
-            printf ("Author: %s\n", author->data);
+            printf ("Created: %s\n", datestamp_native);
+            printf ("Author: %s\n", author_native);
             printf ("Log (%" APR_SIZE_T_FMT " bytes):\n%s\n",
-                    log->len, log->data);
+                    log->len, log_native);
             printf ("==========================================\n");
             INT_ERR (svn_fs_node_id (&root_id, this_root, "", pool));
             id_str = svn_fs_unparse_id (root_id, pool);
@@ -582,7 +611,10 @@ main (int argc, const char * const *argv)
         /* All the rest of the arguments are transaction names. */
         for (i = 3; i < argc; i++)
           {
-            INT_ERR (svn_fs_open_txn (&txn, fs, argv[i], pool));
+            const char *txn_name_utf8;
+            INT_ERR (svn_utf_cstring_to_utf8 (&txn_name_utf8, argv[i],
+                                              NULL, pool));
+            INT_ERR (svn_fs_open_txn (&txn, fs, txn_name_utf8, pool));
             INT_ERR (svn_fs_abort_txn (txn));
           }
       }
@@ -608,8 +640,9 @@ main (int argc, const char * const *argv)
     case svnadmin_cmd_setlog:
       {
         svn_revnum_t the_rev;
-        svn_stringbuf_t *file_contents;
+        svn_stringbuf_t *file_contents, *file_contents_utf8;
         svn_string_t log_contents;
+        const char *filename_utf8;
 
         if (argc != 5)
           {
@@ -619,9 +652,13 @@ main (int argc, const char * const *argv)
       
         /* get revision and file from argv[] */
         the_rev = SVN_STR_TO_REV (argv[3]);
-        INT_ERR (svn_string_from_file (&file_contents, argv[4], pool)); 
-        log_contents.data = file_contents->data;
-        log_contents.len = file_contents->len;
+        INT_ERR (svn_utf_cstring_to_utf8 (&filename_utf8, argv[4],
+                                          NULL, pool));
+        INT_ERR (svn_string_from_file (&file_contents, filename_utf8, pool)); 
+        INT_ERR (svn_utf_stringbuf_to_utf8 (&file_contents_utf8, file_contents,
+                                            pool));
+        log_contents.data = file_contents_utf8->data;
+        log_contents.len = file_contents_utf8->len;
 
         /* open the filesystem  */
         INT_ERR (svn_repos_open (&repos, path, pool));
@@ -650,7 +687,7 @@ main (int argc, const char * const *argv)
 
         /* get revision and path from argv[] */
         the_rev = SVN_STR_TO_REV (argv[3]);
-        node = argv[4];
+        INT_ERR (svn_utf_cstring_to_utf8 (&node, argv[4], NULL, pool));
 
         /* open the filesystem */
         INT_ERR (svn_repos_open (&repos, path, pool));      
@@ -665,7 +702,7 @@ main (int argc, const char * const *argv)
 
         /* do the (un-)deltification */
         printf ("%seltifying `%s' in revision %" SVN_REVNUM_T_FMT "...", 
-                is_deltify ? "D" : "Und", node, the_rev);
+                is_deltify ? "D" : "Und", argv[4], the_rev);
         if (is_deltify)
           {
             INT_ERR (svn_fs_deltify (rev_root, node, is_dir ? 1 : 0, pool));
@@ -689,6 +726,10 @@ main (int argc, const char * const *argv)
         const char *lockfile_path, *env_path;
         apr_file_t *lockfile_handle = NULL;
         svn_error_t *err;
+        const char *progname_utf8;
+
+        INT_ERR (svn_utf_cstring_to_utf8 (argv[0], &progname_urf8,
+                                          NULL, pool));
 
         /* Don't use svn_repos_open() here, because we don't want the
            usual locking behavior. */
@@ -700,13 +741,13 @@ main (int argc, const char * const *argv)
         /* Exclusively lock the repository.  This blocks on other locks,
            including shared locks. */
         lockfile_path = svn_fs_db_lockfile (fs, pool);
-        apr_err = apr_file_open (&lockfile_handle, lockfile_path,
-                                 (APR_WRITE | APR_APPEND), APR_OS_DEFAULT, pool);
-        if (apr_err)
+        err = svn_io_file_open (&lockfile_handle, lockfile_path,
+                                (APR_WRITE | APR_APPEND), APR_OS_DEFAULT, pool);
+        if (err)
           {
             err = svn_error_createf
-              (apr_err, 0, NULL, pool,
-               "%s: error opening db lockfile `%s'", argv[0], lockfile_path);
+              (err->apr_err, err->src_err, err, pool,
+               "%s: error opening db lockfile `%s'", progname_utf8, lockfile_path);
             goto error;
           }
 
@@ -715,7 +756,7 @@ main (int argc, const char * const *argv)
           {
             err = svn_error_createf
               (apr_err, 0, NULL, pool,
-               "%s: exclusive lock on `%s' failed", argv[0], lockfile_path);
+               "%s: exclusive lock on `%s' failed", progname_utf8, lockfile_path);
             goto error;
           }
 
@@ -734,7 +775,7 @@ main (int argc, const char * const *argv)
           {
             err = svn_error_createf
               (apr_err, 0, NULL, pool,
-               "%s: error unlocking `%s'", argv[0], lockfile_path);
+               "%s: error unlocking `%s'", progname_utf8, lockfile_path);
             goto error;
           }
 
@@ -743,7 +784,7 @@ main (int argc, const char * const *argv)
           {
             err = svn_error_createf
               (apr_err, 0, NULL, pool,
-               "%s: error closing `%s'", argv[0], lockfile_path);
+               "%s: error closing `%s'", progname_utf8, lockfile_path);
             goto error;
           }
 

@@ -97,15 +97,6 @@ struct dir_baton
   /* The repository URL this directory corresponds to. */
   const char *URL;
 
-  /* Gets set iff this directory has a "disjoint url", i.e. its URL is
-     not its [parent's URL + name].
-
-     ### NOTE:  this editor is now detecting disjoint files and
-     subtrees, but is not yet *using* this information.  It will when
-     we finish issue #575.
-  */
-  svn_boolean_t disjoint_url;
-
   /* The global edit baton. */
   struct edit_baton *edit_baton;
 
@@ -182,7 +173,6 @@ make_dir_baton (const char *path,
   const char *URL;
   svn_error_t *err;
   svn_wc_entry_t *entry;
-  svn_boolean_t disjoint_url = FALSE;
   struct bump_dir_info *bdi;
   
   /* Don't do this.  Just do NOT do this to me. */
@@ -217,18 +207,6 @@ make_dir_baton (const char *path,
         URL = "";
       else
         URL = entry->url;
-
-      /* Is the URL disjoint from its parent's URL?  Notice that we
-         define disjointedness not just in terms of having an
-         unexpected URL, but also as a condition that is automatically
-         *inherited* from a parent baton.  */
-      if (pb) 
-        {
-          const char *parent_URL;
-          parent_URL = svn_path_join (pb->URL, d->name, pool);
-          if (pb->disjoint_url || (strcmp (parent_URL, URL) != 0))
-            disjoint_url = TRUE;
-        }
     }
 
   /* the bump information lives in the edit pool */
@@ -248,7 +226,6 @@ make_dir_baton (const char *path,
   d->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
   d->added        = added;
   d->URL          = URL;
-  d->disjoint_url = disjoint_url;
   d->bump_info    = bdi;
 
   return d;
@@ -332,15 +309,6 @@ struct file_baton
   /* Set if this file is new. */
   svn_boolean_t added;
 
-  /* Gets set iff this directory has a "disjoint url", i.e. its URL is
-     not its [parent's URL + name].
-
-     ### NOTE:  this editor is now detecting disjoint files and
-     subtrees, but is not yet *using* this information.  It will when
-     we finish issue #575.
-  */
-  svn_boolean_t disjoint_url;
-
   /* This gets set if the file underwent a text change, which guides
      the code that syncs up the adm dir and working copy. */
   svn_boolean_t text_changed;
@@ -370,7 +338,6 @@ make_file_baton (struct dir_baton *pb,
   const char *URL;
   svn_error_t *err;
   svn_wc_entry_t *entry;
-  svn_boolean_t disjoint_url = FALSE;
 
   /* I rather need this information, yes. */
   if (! path)
@@ -389,29 +356,18 @@ make_file_baton (struct dir_baton *pb,
     }
   else 
     {
-      const char *parent_URL;
-
       /* For updates, look in the 'entries' file */
       err = svn_wc_entry (&entry, f->path, FALSE, pool);
       if (err || (! entry) || (! entry->url))
         URL = "";
       else
         URL = entry->url;
-
-      /* Is the URL disjoint from its parent's URL?  Notice that we
-         define disjointedness not just in terms of having an
-         unexpected URL, but also as a condition that is automatically
-         *inherited* from a parent baton.  */
-      parent_URL = svn_path_join (pb->URL, f->name, pool);
-      if (pb->disjoint_url || (strcmp (parent_URL, URL) != 0))
-        disjoint_url = TRUE;
     }
 
   f->pool         = pool;
   f->edit_baton   = pb->edit_baton;
   f->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
   f->URL          = URL;
-  f->disjoint_url = disjoint_url;
   f->bump_info    = pb->bump_info;
   f->added        = adding;
 
@@ -641,12 +597,12 @@ add_directory (const char *path,
       /* If the copyfrom args are both invalid, inherit the URL from the
          parent, and make the revision equal to the global target
          revision. */
-      const char *new_URL;
       svn_wc_entry_t *parent_entry;
 
       SVN_ERR (svn_wc_entry (&parent_entry, pb->path, FALSE, db->pool));
-      new_URL = svn_path_join (parent_entry->url, db->name, db->pool);
-      copyfrom_path = new_URL;
+      copyfrom_path = svn_path_url_add_component (parent_entry->url, 
+                                                  db->name,
+                                                  db->pool);
       copyfrom_revision = pb->edit_baton->target_revision;      
     }
 
@@ -1401,10 +1357,9 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
           const char *propval;
           enum svn_prop_kind kind;
           const char *entry_field = NULL;
-          int prefix_len;
 
           prop = &APR_ARRAY_IDX (entry_props, i, svn_prop_t);
-          kind = svn_property_kind (&prefix_len, prop->name);
+          kind = svn_property_kind (NULL, prop->name);
 
           /* A prop value of NULL means the information was not
              available.  We don't remove this field from the entries
@@ -1725,6 +1680,9 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
     {
       svn_wc_entry_t *entry;
       svn_boolean_t tc, pc;
+
+      /* Initialize the state of our returned value. */
+      *content_state = svn_wc_notify_state_unchanged;
       
       /* ### There should be a more efficient way of finding out whether
          or not the file is modified|merged|conflicted.  If the
@@ -1750,8 +1708,8 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
           else
             *content_state = svn_wc_notify_state_modified;
         }
-      else
-        *content_state = svn_wc_notify_state_unknown;
+      else if (is_locally_modified)
+        *content_state = svn_wc_notify_state_modified;
     }
 
   /* Unlock the parent dir, we're done with this file installation. */
@@ -1793,17 +1751,20 @@ close_file (void *file_baton)
                                     fb->bump_info,
                                     fb->pool));
 
-  if (fb->edit_baton->notify_func)
-    (*fb->edit_baton->notify_func)
-      (fb->edit_baton->notify_baton,
-       fb->path,
-       fb->added ? svn_wc_notify_update_add : svn_wc_notify_update_update,
-       svn_node_file,
-       NULL,  /* ### if svn_wc_install_file gave mimetype, we could use here */
-       content_state,
-       prop_state,
-       SVN_INVALID_REVNUM);
-
+  if ((content_state != svn_wc_notify_state_unchanged) ||
+      (prop_state != svn_wc_notify_state_unchanged))
+    {
+      if (fb->edit_baton->notify_func)
+        (*fb->edit_baton->notify_func)
+          (fb->edit_baton->notify_baton,
+           fb->path,
+           fb->added ? svn_wc_notify_update_add : svn_wc_notify_update_update,
+           svn_node_file,
+           NULL,  /* ### if svn_wc_install_file gives mimetype, use it here */
+           content_state,
+           prop_state,
+           SVN_INVALID_REVNUM);
+    }
   return SVN_NO_ERROR;  
 }
 
@@ -1821,24 +1782,17 @@ close_edit (void *edit_baton)
      this editor needs to make sure that *all* paths have had their
      revisions bumped to the new target revision. */
 
-  if (eb->is_checkout)
-    /* do nothing for checkout;  all urls and working revs are fine. */
-    ;
-
-  else  /* must be an update or switch */
+  /* Do nothing for checkout;  all urls and working revs are fine.
+     Updates and switches, though, have to be cleaned up.  */
+  if (! eb->is_checkout)
     {
-      const char *full_path;
-      
-      if (eb->target)
-        full_path = svn_path_join (eb->anchor, eb->target, eb->pool);
-      else
-        full_path = apr_pstrdup (eb->pool, eb->anchor);
-
       /* Make sure our update target now has the new working revision.
          Also, if this was an 'svn switch', then rewrite the target's
-         url.  All of this tweaking might happen recursively! */
+         url.  All of this tweaking might happen recursively!  Note
+         that if eb->target is NULL, that's okay (albeit "sneaky",
+         some might say).  */
       SVN_ERR (svn_wc__do_update_cleanup
-               (full_path,
+               (svn_path_join_many (eb->pool, eb->anchor, eb->target, NULL),
                 eb->recurse,
                 eb->switch_url,
                 eb->target_revision,
@@ -2115,13 +2069,13 @@ svn_wc_edited_externals (apr_hash_t **externals_old,
    too, specifically for the case where a single directory is being
    committed (we have to anchor at that directory's parent in case the
    directory itself needs to be modified) */
-
-svn_error_t *
-svn_wc_is_wc_root (svn_boolean_t *wc_root,
-                   const char *path,
-                   apr_pool_t *pool)
+static svn_error_t *
+check_wc_root (svn_boolean_t *wc_root,
+               svn_node_kind_t *kind,
+               const char *path, 
+               apr_pool_t *pool)
 {
-  const char *parent, *base_name, *expected_url;
+  const char *parent, *base_name;
   svn_wc_entry_t *p_entry, *entry;
   svn_error_t *err;
 
@@ -2135,6 +2089,8 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
     return svn_error_createf 
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
        "svn_wc_is_wc_root: %s is not a versioned resource", path);
+  if (kind)
+    *kind = entry->kind;
 
   /* If PATH is the current working directory, we have no choice but
      to consider it a WC root (we can't examine its parent at all) */
@@ -2164,8 +2120,9 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
 
   /* If PATH's parent in the WC is not its parent in the repository,
      PATH is a WC root. */
-  expected_url = svn_path_join (p_entry->url, base_name, pool);
-  if (entry->url && (strcmp (expected_url, entry->url) != 0))
+  if (entry->url 
+      && (strcmp (svn_path_url_add_component (p_entry->url, base_name, pool),
+                  entry->url) != 0))
     return SVN_NO_ERROR;
 
   /* If we have not determined that PATH is a WC root by now, it must
@@ -2176,25 +2133,36 @@ svn_wc_is_wc_root (svn_boolean_t *wc_root,
 
 
 svn_error_t *
+svn_wc_is_wc_root (svn_boolean_t *wc_root,
+                   const char *path,
+                   apr_pool_t *pool)
+{
+  return check_wc_root (wc_root, NULL, path, pool);
+}
+
+
+svn_error_t *
 svn_wc_get_actual_target (const char *path,
                           const char **anchor,
                           const char **target,
                           apr_pool_t *pool)
 {
   svn_boolean_t is_wc_root;
+  svn_node_kind_t kind;
 
-  /* If PATH is a WC root, do not lop off a basename. */
-  SVN_ERR (svn_wc_is_wc_root (&is_wc_root, path, pool));
-  if (is_wc_root)
-    {
-      *anchor = apr_pstrdup (pool, path);
-      *target = NULL;
-    }
-  else
+  SVN_ERR (check_wc_root (&is_wc_root, &kind, path, pool));
+
+  /* If PATH is not a WC root, or if it is a file, lop off a basename. */
+  if ((! is_wc_root) || (kind == svn_node_file))
     {
       svn_path_split_nts (path, anchor, target, pool);
       if ((*anchor)[0] == '\0')
         *anchor = ".";
+    }
+  else
+    {
+      *anchor = apr_pstrdup (pool, path);
+      *target = NULL;
     }
 
   return SVN_NO_ERROR;

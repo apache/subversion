@@ -212,10 +212,6 @@ translate_keyword (char *buf,
                    svn_boolean_t expand,
                    const svn_wc_keywords_t *keywords)
 {
-  const char *keyword;
-  const svn_string_t *value;
-  int keyword_len;
-
   /* Make sure we gotz good stuffs. */
   assert (*len <= SVN_KEYWORD_MAX_LEN);
   assert ((buf[0] == '$') && (buf[*len - 1] == '$'));
@@ -225,66 +221,66 @@ translate_keyword (char *buf,
     return FALSE;
 
   /* Revision */
-  if ((value = keywords->revision))
+  if (keywords->revision)
     {
-      keyword = SVN_KEYWORD_REVISION_LONG;
-      keyword_len = strlen (SVN_KEYWORD_REVISION_LONG);
-      if (translate_keyword_subst (buf, len, keyword, keyword_len, 
-                                   expand ? value : NULL))
+      if (translate_keyword_subst (buf, len,
+                                   SVN_KEYWORD_REVISION_LONG,
+                                   (sizeof (SVN_KEYWORD_REVISION_LONG)) - 1,
+                                   expand ? keywords->revision : NULL))
         return TRUE;
 
-      keyword = SVN_KEYWORD_REVISION_SHORT;
-      keyword_len = strlen (SVN_KEYWORD_REVISION_SHORT);
-      if (translate_keyword_subst (buf, len, keyword, keyword_len, 
-                                   expand ? value : NULL))
+      if (translate_keyword_subst (buf, len,
+                                   SVN_KEYWORD_REVISION_SHORT,
+                                   (sizeof (SVN_KEYWORD_REVISION_SHORT)) - 1,
+                                   expand ? keywords->revision : NULL))
         return TRUE;
     }
 
   /* Date */
-  if ((value = keywords->date))
+  if (keywords->date)
     {
-      keyword = SVN_KEYWORD_DATE_LONG;
-      keyword_len = strlen (SVN_KEYWORD_DATE_LONG);
-      if (translate_keyword_subst (buf, len, keyword, keyword_len, 
-                                   expand ? value : NULL))
+      if (translate_keyword_subst (buf, len,
+                                   SVN_KEYWORD_DATE_LONG,
+                                   (sizeof (SVN_KEYWORD_DATE_LONG)) - 1,
+                                   expand ? keywords->date : NULL))
         return TRUE;
 
-      keyword = SVN_KEYWORD_DATE_SHORT;
-      keyword_len = strlen (SVN_KEYWORD_DATE_SHORT);
-      if (translate_keyword_subst (buf, len, keyword, keyword_len, 
-                                   expand ? value : NULL))
+      if (translate_keyword_subst (buf, len,
+                                   SVN_KEYWORD_DATE_SHORT,
+                                   (sizeof (SVN_KEYWORD_DATE_SHORT)) - 1,
+                                   expand ? keywords->date : NULL))
         return TRUE;
     }
 
   /* Author */
-  if ((value = keywords->author))
+  if (keywords->author)
     {
-      keyword = SVN_KEYWORD_AUTHOR_LONG;
-      keyword_len = strlen (SVN_KEYWORD_AUTHOR_LONG);
-      if (translate_keyword_subst (buf, len, keyword, keyword_len, 
-                                   expand ? value : NULL))
+      if (translate_keyword_subst (buf, len,
+                                   SVN_KEYWORD_AUTHOR_LONG,
+                                   (sizeof (SVN_KEYWORD_AUTHOR_LONG)) - 1,
+                                   expand ? keywords->author : NULL))
         return TRUE;
 
-      keyword = SVN_KEYWORD_AUTHOR_SHORT;
-      keyword_len = strlen (SVN_KEYWORD_AUTHOR_SHORT);
-      if (translate_keyword_subst (buf, len, keyword, keyword_len, 
-                                   expand ? value : NULL))
+      if (translate_keyword_subst (buf, len,
+                                   SVN_KEYWORD_AUTHOR_SHORT,
+                                   (sizeof (SVN_KEYWORD_AUTHOR_SHORT)) - 1,
+                                   expand ? keywords->author : NULL))
         return TRUE;
     }
 
   /* URL */
-  if ((value = keywords->url))
+  if (keywords->url)
     {
-      keyword = SVN_KEYWORD_URL_LONG;
-      keyword_len = strlen (SVN_KEYWORD_URL_LONG);
-      if (translate_keyword_subst (buf, len, keyword, keyword_len, 
-                                   expand ? value : NULL))
+      if (translate_keyword_subst (buf, len,
+                                   SVN_KEYWORD_URL_LONG,
+                                   (sizeof (SVN_KEYWORD_URL_LONG)) - 1,
+                                   expand ? keywords->url : NULL))
         return TRUE;
 
-      keyword = SVN_KEYWORD_URL_SHORT;
-      keyword_len = strlen (SVN_KEYWORD_URL_SHORT);
-      if (translate_keyword_subst (buf, len, keyword, keyword_len, 
-                                   expand ? value : NULL))
+      if (translate_keyword_subst (buf, len,
+                                   SVN_KEYWORD_URL_SHORT,
+                                   (sizeof (SVN_KEYWORD_URL_SHORT)) - 1,
+                                   expand ? keywords->url : NULL))
         return TRUE;
     }
 
@@ -792,18 +788,6 @@ svn_wc_translated_file (const char **xlated_p,
 }
 
 
-
-svn_string_t *svn_wc__friendly_date (const char *date, apr_pool_t *pool)
-{
-  char *dot_spot = strchr (date, '.');
-
-  if (dot_spot)
-    return svn_string_ncreate (date, dot_spot - date, pool);
-  else
-    return svn_string_create (date, pool);
-}
-
-
 svn_error_t *
 svn_wc__get_eol_style (enum svn_wc__eol_style *style,
                        const char **eol,
@@ -922,8 +906,8 @@ expand_keyword (svn_wc_keywords_t *keywords,
            || (! strcasecmp (keyword, SVN_KEYWORD_DATE_SHORT)))
     {
       if (entry && (entry->cmt_date))
-        keywords->date = svn_wc__friendly_date 
-          (svn_time_to_nts (entry->cmt_date, pool), pool);
+        keywords->date = svn_string_create
+          (svn_time_to_human_nts (entry->cmt_date, pool), pool);
       else
         keywords->date = svn_string_create ("", pool);
     }

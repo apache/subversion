@@ -28,6 +28,7 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -38,17 +39,18 @@ svn_cl__propdel (apr_getopt_t *os,
                  svn_cl__opt_state_t *opt_state,
                  apr_pool_t *pool)
 {
-  const char *pname;
-  apr_array_header_t *targets;
+  const char *pname, *pname_utf8;
+  apr_array_header_t *args, *targets;
   int i;
 
-  SVN_ERR (svn_cl__parse_num_args (os, opt_state, "propdel", 1, pool));
-
-  /* Get the property's name. */
-  pname = ((const char **) (opt_state->args->elts))[0];
+  /* Get the property's name (and a UTF-8 version of that name). */
+  SVN_ERR (svn_cl__parse_num_args (&args, os, 1, pool));
+  pname = ((const char **) (args->elts))[0];
+  SVN_ERR (svn_utf_cstring_to_utf8 (&pname_utf8, pname, NULL, pool));
 
   /* Suck up all the remaining arguments into a targets array */
-  targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
+  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
+                                         FALSE, pool));
 
   /* Add "." if user passed 0 file arguments */
   svn_cl__push_implicit_dot_target (targets, pool);
@@ -57,13 +59,16 @@ svn_cl__propdel (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
-      SVN_ERR (svn_client_propset (pname, NULL, target,
+      SVN_ERR (svn_client_propset (pname_utf8, NULL, target,
                                    opt_state->recursive, pool));
-
-      if (! opt_state->quiet)
-        printf ("property `%s' deleted %s from '%s'.\n", pname,
-                opt_state->recursive ? "(recursively)" : "",
-                target);
+      if (! opt_state->quiet) 
+        {
+          const char *target_native;
+          SVN_ERR (svn_utf_cstring_from_utf8 (&target_native, target, pool));
+          printf ("property `%s' deleted%sfrom '%s'.\n", pname,
+                  opt_state->recursive ? " (recursively) " : " ",
+                  target_native);
+        }
     }
 
   return SVN_NO_ERROR;

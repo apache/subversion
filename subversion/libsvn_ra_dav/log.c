@@ -69,6 +69,9 @@ struct log_baton
      ask for them to be reported. */
   apr_hash_t *changed_paths;
 
+  /* The current changed path item. */
+  svn_log_changed_path_t *this_path_item;
+
   /* Client's callback, invoked on the above fields when the end of an
      item is seen. */
   svn_log_message_receiver_t receiver;
@@ -107,6 +110,14 @@ log_validate(void *userdata, ne_xml_elmid parent, ne_xml_elmid child)
 }
 
 
+static const char *get_attr(const char **atts, const char *which)
+{
+  for (; atts && *atts; atts += 2)
+    if (strcmp(*atts, which) == 0)
+      return atts[1];
+  return NULL;
+}
+
 /*
  * This implements the `ne_xml_startelm_cb' prototype.
  */
@@ -115,7 +126,51 @@ log_start_element(void *userdata,
                   const struct ne_xml_elm *elm,
                   const char **atts)
 {
-  /* ### todo */
+  struct log_baton *lb = userdata;
+  const char *copyfrom_path, *copyfrom_rev;
+
+  switch (elm->id)
+    {
+    case ELEM_added_path:
+    case ELEM_replaced_path:
+    case ELEM_deleted_path:
+    case ELEM_modified_path:
+      lb->this_path_item = apr_pcalloc(lb->subpool, 
+                                       sizeof(*(lb->this_path_item)));
+      lb->this_path_item->copyfrom_rev = SVN_INVALID_REVNUM;
+
+      /* See documentation for `svn_repos_node_t' in svn_repos.h,
+         and `svn_log_message_receiver_t' in svn_types.h, for more
+         about these action codes. */
+      if ((elm->id == ELEM_added_path) || (elm->id == ELEM_replaced_path))
+        {
+          lb->this_path_item->action 
+            = (elm->id == ELEM_added_path) ? 'A' : 'R';
+          copyfrom_path = get_attr(atts, "copyfrom-path");
+          copyfrom_rev = get_attr(atts, "copyfrom-rev");
+          if (copyfrom_path 
+              && copyfrom_rev 
+              && SVN_IS_VALID_REVNUM (copyfrom_rev))
+            {
+              lb->this_path_item->copyfrom_path = apr_pstrdup(lb->subpool,
+                                                              copyfrom_path);
+              lb->this_path_item->copyfrom_rev = atoi(copyfrom_rev);
+            }
+        }
+      else if (elm->id == ELEM_deleted_path)
+        {
+          lb->this_path_item->action = 'D';
+        }
+      else
+        {
+          lb->this_path_item->action = 'M';
+        }
+      break;
+
+    default:
+      lb->this_path_item = NULL;
+      break;
+    }
   return NE_XML_VALID;
 }
 
@@ -142,29 +197,17 @@ log_end_element(void *userdata,
       lb->date = apr_pstrdup (lb->subpool, cdata);
       break;
     case ELEM_added_path:
+    case ELEM_replaced_path:
     case ELEM_deleted_path:
-    case ELEM_changed_path:
+    case ELEM_modified_path:
       {
         char *path = apr_pstrdup (lb->subpool, cdata);
-        char action;
-
-        /* See documentation for `svn_repos_node_t' in svn_repos.h,
-           and `svn_log_message_receiver_t' in svn_types.h, for more
-           about these action codes. */
-        if (elm->id == ELEM_added_path)
-          action = 'A';
-        else if (elm->id == ELEM_deleted_path)
-          action = 'D';
-        else
-          action = 'U';
-        
-        if (lb->changed_paths == NULL)
+        if (! lb->changed_paths)
           lb->changed_paths = apr_hash_make(lb->subpool);
-        
-        apr_hash_set(lb->changed_paths, path, APR_HASH_KEY_STRING,
-                     (void *) ((int) action));
+        apr_hash_set(lb->changed_paths, path, APR_HASH_KEY_STRING, 
+                     lb->this_path_item);
+        break;
       }
-      break;
     case ELEM_comment:
       lb->msg = apr_pstrdup (lb->subpool, cdata);
       break;
@@ -284,7 +327,8 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
       { SVN_XML_NAMESPACE, "date", ELEM_log_date, NE_XML_CDATA },
       { SVN_XML_NAMESPACE, "added-path", ELEM_added_path, NE_XML_CDATA },
       { SVN_XML_NAMESPACE, "deleted-path", ELEM_deleted_path, NE_XML_CDATA },
-      { SVN_XML_NAMESPACE, "changed-path", ELEM_changed_path, NE_XML_CDATA },
+      { SVN_XML_NAMESPACE, "modified-path", ELEM_modified_path, NE_XML_CDATA },
+      { SVN_XML_NAMESPACE, "replaced-path", ELEM_replaced_path, NE_XML_CDATA },
       { "DAV:", "version-name", ELEM_version_name, NE_XML_CDATA },
       { "DAV:", "creator-displayname", ELEM_creator_displayname,
         NE_XML_CDATA },
@@ -333,6 +377,7 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
   lb.receiver = receiver;
   lb.receiver_baton = receiver_baton;
   lb.subpool = svn_pool_create (ras->pool);
+  lb.err = NULL;
   reset_log_item (&lb);
 
   SVN_ERR( svn_ra_dav__parsed_request(ras,
@@ -346,7 +391,10 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
                                       log_end_element,
                                       &lb,
                                       ras->pool) );
-  
+
+  if (lb.err)
+    return lb.err;
+
   svn_pool_destroy (lb.subpool);
 
   return SVN_NO_ERROR;

@@ -72,11 +72,12 @@ class _GeneratorBase:
         self.install[itype] = [ target_ob ]
 
       # collect all the paths where stuff might get built
-      self.target_dirs[target_ob.path] = None
-      for pattern in string.split(self.parser.get(target, 'sources')):
-        if string.find(pattern, os.sep) != -1:
-          self.target_dirs[os.path.join(target_ob.path,
-                                        os.path.dirname(pattern))] = None
+      if type != 'script':
+        self.target_dirs[target_ob.path] = None
+        for pattern in string.split(self.parser.get(target, 'sources')):
+          if string.find(pattern, os.sep) != -1:
+            self.target_dirs[os.path.join(target_ob.path,
+                                          os.path.dirname(pattern))] = None
 
     if errors:
       raise GenError('Target generation failed.')
@@ -89,6 +90,8 @@ class MsvcProjectGenerator(_GeneratorBase):
     ('exe', 'object'): '.obj',
     ('lib', 'target'): '.dll',
     ('lib', 'object'): '.obj',
+    ('script', 'target'): '',
+    ('script', 'object'): '',
     }
 
   def __init__(self, fname, oname):
@@ -105,6 +108,8 @@ class MakefileGenerator(_GeneratorBase):
     ('exe', 'object'): '.o',
     ('lib', 'target'): '.la',
     ('lib', 'object'): '.lo',
+    ('script', 'target'): '',
+    ('script', 'object'): '',
     }
 
   def __init__(self, fname, oname):
@@ -125,6 +130,10 @@ class MakefileGenerator(_GeneratorBase):
       path = target_ob.path
       bldtype = target_ob.type
       objext = target_ob.objext
+
+      if bldtype == 'script':
+        # there is nothing to build
+        continue
 
       tpath = target_ob.output
       tfile = os.path.basename(tpath)
@@ -221,7 +230,7 @@ class MakefileGenerator(_GeneratorBase):
     for target in self.targets.values():
       # .la files are handled by the standard 'clean' rule; clean all the
       # other targets
-      if target.output[-3:] != '.la':
+      if target.type != 'script' and target.output[-3:] != '.la':
         cfiles.append(target.output)
     self.ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
 
@@ -313,7 +322,8 @@ class MakefileGenerator(_GeneratorBase):
 
     self.ofile.write('\n# handy shortcut targets\n')
     for name, target in self.targets.items():
-      self.ofile.write('%s: %s\n' % (name, target.output))
+      if target.type != 'script':
+        self.ofile.write('%s: %s\n' % (name, target.output))
     self.ofile.write('\n')
 
     scripts, s_errors = _collect_paths(self.parser.get('test-scripts',
@@ -409,7 +419,7 @@ class _Target:
     self.path = path
     self.type = type
 
-    if type == 'exe':
+    if type == 'exe' or type == 'script':
       if not install:
         install = 'bin'
     elif type == 'lib':
@@ -424,7 +434,7 @@ class _Target:
       ### dunno what yet
       pass
     else:
-      # type == 'lib' or type == 'exe'
+      # type == 'lib' or type == 'exe' or type == 'script'
       if vsn:
         # the target file is the name, vsn, and appropriate extension
         tfile = '%s-%s%s' % (name, vsn, extmap[(type, 'target')])
@@ -437,7 +447,9 @@ class _Target:
 
   def find_sources(self, patterns):
     if not patterns:
-      patterns = _default_sources[self.type]
+      patterns = _default_sources.get(self.type)
+      if not patterns:
+        raise GenError('build type "%s" has no default sources' % self.type)
     self.sources, errors = _collect_paths(patterns, self.path)
     self.sources.sort()
     return errors
@@ -445,8 +457,10 @@ class _Target:
   def write_dsp(self):
     if self.type == 'exe':
       template = open('build/win32/exe-template', 'rb').read()
-    else:
+    elif self.type == 'lib':
       template = open('build/win32/dll-template', 'rb').read()
+    else:
+      raise GenError('unknown build type -- cannot generate a .dsp')
 
     dsp = string.replace(template, '@NAME@', self.name)
 
@@ -497,6 +511,7 @@ def _filter_targets(t):
   for s in _predef_sections:
     if s in t:
       t.remove(s)
+  t.sort()
   return t
 
 def _collect_paths(pats, path=None):

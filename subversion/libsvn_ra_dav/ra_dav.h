@@ -129,6 +129,17 @@ svn_error_t * svn_ra_dav__do_switch(
   const svn_delta_edit_fns_t *wc_update,
   void *wc_update_baton);
 
+svn_error_t * svn_ra_dav__do_diff(
+  void *session_baton,
+  const svn_ra_reporter_t **reporter,
+  void **report_baton,
+  svn_revnum_t revision,
+  const char *diff_target,
+  svn_boolean_t recurse,
+  const char *versus_url,
+  const svn_delta_edit_fns_t *wc_diff,
+  void *wc_diff_baton);
+
 svn_error_t * svn_ra_dav__get_log(
   void *session_baton,
   const apr_array_header_t *paths,
@@ -161,6 +172,10 @@ svn_error_t *svn_ra_dav__do_check_path(
 
 /* store the URL of the version resource (from the DAV:checked-in property) */
 #define SVN_RA_DAV__LP_VSN_URL          SVN_RA_DAV__LP_NAMESPACE "version-url"
+
+/* The entry committed rev an item must have for us to consider that
+   item's SVN_RA_DAV__LP_VSN_URL valid. */
+#define SVN_RA_DAV__LP_VSN_URL_REV  SVN_RA_DAV__LP_NAMESPACE "version-url-rev"
 
 
 /*
@@ -334,8 +349,9 @@ enum {
   ELEM_add_file,
   ELEM_baseline_relpath,
   ELEM_deleted_path,  /* used in log reports */
+  ELEM_replaced_path,  /* used in log reports */
   ELEM_added_path,    /* used in log reports */
-  ELEM_changed_path,  /* used in log reports */
+  ELEM_modified_path,  /* used in log reports */
   ELEM_delete_entry,
   ELEM_fetch_file,
   ELEM_fetch_props,

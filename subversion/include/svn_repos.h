@@ -507,10 +507,10 @@ svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
 /* The RFC822-style headers in our dumpfile format. */
 #define SVN_REPOS_DUMPFILE_MAGIC_HEADER            "SVN-fs-dump-format-version"
 #define SVN_REPOS_DUMPFILE_FORMAT_VERSION           1
+#define SVN_REPOS_DUMPFILE_CONTENT_LENGTH            "Content-length"
 
 #define SVN_REPOS_DUMPFILE_REVISION_NUMBER           "Revision-number"
 #define SVN_REPOS_DUMPFILE_REVISION_CONTENT_CHECKSUM "Revision-content-md5"
-#define SVN_REPOS_DUMPFILE_CONTENT_LENGTH            "Content-length"
 
 #define SVN_REPOS_DUMPFILE_NODE_PATH                 "Node-path"
 #define SVN_REPOS_DUMPFILE_NODE_KIND                 "Node-kind"
@@ -520,6 +520,8 @@ svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
 #define SVN_REPOS_DUMPFILE_NODE_COPY_SOURCE_CHECKSUM "Node-copy-source-md5"
 #define SVN_REPOS_DUMPFILE_NODE_CONTENT_CHECKSUM     "Node-content-md5"
 
+#define SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH       "Prop-content-length"
+#define SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH       "Text-content-length"
 
 /* The different "actions" attached to nodes in the dumpfile. */
 enum svn_node_action
@@ -532,7 +534,7 @@ enum svn_node_action
 
 
 /* Dump the contents of the filesystem within already-open REPOS into
-   writable DEMPSTREAM.  Begin at revision START_REV, and dump every
+   writable DUMPSTREAM.  Begin at revision START_REV, and dump every
    revision up through END_REV.  Use POOL for all allocation.  If
    non-NULL, send feedback to FEEDBACK_STREAM.
 

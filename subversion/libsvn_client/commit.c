@@ -175,10 +175,10 @@ import_dir (apr_hash_t *files,
 
   SVN_ERR (svn_io_dir_open (&dir, path, pool));
 
-  for (err = svn_io_dir_read (&finfo, flags, dir, pool);
+  for (err = svn_io_dir_read (&finfo, flags, dir, subpool);
        err == SVN_NO_ERROR;
        svn_pool_clear (subpool),
-         err = svn_io_dir_read (&finfo, flags, dir, pool))
+         err = svn_io_dir_read (&finfo, flags, dir, subpool))
     {
       const char *this_path, *this_edit_path;
 
@@ -487,7 +487,7 @@ get_ra_editor (void **ra_baton,
                                         is_commit, !is_commit,
                                         auth_baton, pool));
   
-  /* Fetch RA commit editor, giving it svn_wc_process_committed(). */
+  /* Fetch RA commit editor. */
   return (*ra_lib)->get_commit_editor (*session, editor, edit_baton, 
                                        committed_rev, committed_date, 
                                        committed_author, log_msg);
@@ -563,10 +563,20 @@ svn_client_import (svn_client_commit_info_t **commit_info,
 
   /* Else we're importing to an RA layer. */
   else  
-    SVN_ERR (get_ra_editor (&ra_baton, &session, &ra_lib, 
-                            &editor, &edit_baton, auth_baton, url, path,
-                            log_msg, NULL, &committed_rev, &committed_date,
-                            &committed_author, FALSE, pool));
+    {
+      svn_node_kind_t kind;
+      const char *base_dir = path;
+
+      SVN_ERR (svn_io_check_path (path, &kind, pool));
+      if (kind == svn_node_file)
+        svn_path_split_nts (path, &base_dir, NULL, pool);
+      if (svn_path_is_empty_nts (base_dir))
+        base_dir = ".";
+      SVN_ERR (get_ra_editor (&ra_baton, &session, &ra_lib, 
+                              &editor, &edit_baton, auth_baton, url, base_dir,
+                              log_msg, NULL, &committed_rev, &committed_date,
+                              &committed_author, FALSE, pool));
+    }
 
   /* If an error occured during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
@@ -742,7 +752,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   const char *committed_author = NULL;
   svn_ra_plugin_t *ra_lib;
   const char *base_dir;
-  char *base_url;
+  const char *base_url;
   apr_array_header_t *rel_targets;
   apr_hash_t *committables, *locked_dirs, *tempfiles = NULL;
   apr_array_header_t *commit_items;

@@ -43,8 +43,8 @@ n/a		  _util
 (4) limited symbols/functionality exported via the _util module
 
 
-NOTE: the bindings code is being developed using SWIG 1.3.10. Earlier
-versions of SWIG will simple *not* work.
+NOTE: the bindings code is being developed using SWIG 1.3.12. Earlier
+versions of SWIG will simply *not* work.
 
 
 

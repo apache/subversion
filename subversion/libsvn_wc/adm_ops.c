@@ -468,9 +468,17 @@ mark_tree (const char *dir,
   
   /* Handle "this dir" for states that need it done post-recursion. */
   entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
-  entry->schedule = schedule;
-  entry->copied = copied;
-  SVN_ERR (svn_wc__entry_modify (dir, NULL, entry, modify_flags, subpool));
+
+  /* Uncommitted directories (schedule add) that are to be scheduled for
+     deletion are a special case, they don't need to be changed as they
+     will be removed from their parent's entry list. */
+  if (! (entry->schedule == svn_wc_schedule_add
+         && schedule == svn_wc_schedule_delete))
+  {
+     entry->schedule = schedule;
+     entry->copied = copied;
+     SVN_ERR (svn_wc__entry_modify (dir, NULL, entry, modify_flags, subpool));
+  }
   
   /* Destroy our per-iteration pool. */
   svn_pool_destroy (subpool);
@@ -817,21 +825,21 @@ svn_wc_add (const char *path,
     }  
   else /* scheduling a directory for addition */
     {
-      if (!copyfrom_url)
+      if (! copyfrom_url)
         {
           svn_wc_entry_t *p_entry;
-          const char *p_path;
+          const char *new_url;
 
           /* Get the entry for this directory's parent.  We need to snatch
              the ancestor path out of there. */
           SVN_ERR (svn_wc_entry (&p_entry, parent_dir, FALSE, pool));
   
           /* Derive the parent path for our new addition here. */
-          p_path = svn_path_join (p_entry->url, base_name, pool);
+          new_url = svn_path_url_add_component (p_entry->url, base_name, pool);
   
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
-          SVN_ERR (svn_wc__ensure_adm (path, p_path, 0, pool));
+          SVN_ERR (svn_wc__ensure_adm (path, new_url, 0, pool));
         }
       else
         {
@@ -839,7 +847,8 @@ svn_wc_add (const char *path,
              the admin directory already in existance, then the dir will
              contain the copyfrom settings.  So we need to pass the the
              copyfrom arguments to the ensure call. */
-          SVN_ERR (svn_wc__ensure_adm (path, copyfrom_url, copyfrom_rev, pool));
+          SVN_ERR (svn_wc__ensure_adm (path, copyfrom_url, 
+                                       copyfrom_rev, pool));
         }
       
       /* We're making the same mods we made above, but this time we'll
@@ -865,11 +874,14 @@ svn_wc_add (const char *path,
              this model someday. */
 
           /* Figure out what the new url should be. */
-          const char *url = svn_path_join (parent_entry->url, base_name, pool);
+          const char *new_url 
+            = svn_path_join (parent_entry->url, 
+                             svn_path_uri_encode (base_name, pool),
+                             pool);
 
           /* Change the entry urls recursively (but not the working rev). */
-          SVN_ERR (svn_wc__do_update_cleanup (path, TRUE, /* recursive */
-                                              url, SVN_INVALID_REVNUM, pool));
+          SVN_ERR (svn_wc__do_update_cleanup (path, TRUE, new_url, 
+                                              SVN_INVALID_REVNUM, pool));
 
           /* Recursively add the 'copied' existence flag as well!  */
           SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_COPIED,
@@ -1139,7 +1151,7 @@ svn_wc_revert (const char *path,
   enum svn_node_kind kind;
   const char *p_dir = NULL, *bname = NULL;
   svn_wc_entry_t *entry;
-  svn_boolean_t wc_root, reverted = FALSE;
+  svn_boolean_t wc_root = FALSE, reverted = FALSE;
   apr_uint32_t modify_flags = 0;
 
   /* Safeguard 1:  is this a versioned resource? */
@@ -1165,9 +1177,11 @@ svn_wc_revert (const char *path,
       (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
        "Cannot revert '%s' -- unsupported node kind in working copy", path);
 
-  /* Determine if PATH is a WC root.  If PATH is a file, it should
-     definitely NOT be a WC root. */
-  SVN_ERR (svn_wc_is_wc_root (&wc_root, path, pool));
+  /* For directories, determine if PATH is a WC root so that we can
+     tell if it is safe to split PATH into a parent directory and
+     basename.  For files, we always do this split.  */
+  if (kind == svn_node_dir)
+    SVN_ERR (svn_wc_is_wc_root (&wc_root, path, pool));
   if (! wc_root)
     {
       /* Split the base_name from the parent path. */
@@ -1304,12 +1318,13 @@ svn_wc_revert (const char *path,
                     svn_wc_notify_state_unknown,
                     svn_wc_notify_state_unknown,
                     SVN_INVALID_REVNUM);
-
+ 
   /* Finally, recurse if requested. */
   if (recursive && (entry->kind == svn_node_dir))
     {
       apr_hash_t *entries;
       apr_hash_index_t *hi;
+      apr_pool_t *subpool = svn_pool_create (pool);
 
       SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
@@ -1327,12 +1342,16 @@ svn_wc_revert (const char *path,
             continue;
 
           /* Add the entry name to FULL_ENTRY_PATH. */
-          full_entry_path = svn_path_join (path, keystring, pool);
+          full_entry_path = svn_path_join (path, keystring, subpool);
 
           /* Revert the entry. */
           SVN_ERR (svn_wc_revert (full_entry_path, TRUE,
-                                  notify_func, notify_baton, pool));
+                                  notify_func, notify_baton, subpool));
+
+          svn_pool_clear (subpool);
         }
+
+        svn_pool_destroy (subpool);
     }
   
   return SVN_NO_ERROR;
@@ -1529,8 +1548,11 @@ svn_wc_remove_from_revision_control (const char *path,
 }
 
 
+
+/*** Resolving a conflict automatically ***/
 
-/* Helper for svn_wc_resolve_conflict */
+
+/* Helper for resolve_conflict_on_entry */
 static svn_error_t *
 attempt_deletion (const char *parent_dir,
                   const char *base_name,
@@ -1541,30 +1563,20 @@ attempt_deletion (const char *parent_dir,
 }
 
 
-svn_error_t *
-svn_wc_resolve_conflict (const char *path,
-                         svn_boolean_t resolve_text,
-                         svn_boolean_t resolve_props,
-                         svn_wc_notify_func_t notify_func,
-                         void *notify_baton,
-                         apr_pool_t *pool)
+/* Does the main resolution work: */
+static svn_error_t *
+resolve_conflict_on_entry (const char *path,
+                           svn_wc_entry_t *entry,
+                           const char *conflict_dir,
+                           const char *base_name,
+                           svn_boolean_t resolve_text,
+                           svn_boolean_t resolve_props,
+                           svn_wc_notify_func_t notify_func,
+                           void *notify_baton,
+                           apr_pool_t *pool)
 {
-  const char *conflict_dir, *base_name;
   svn_boolean_t text_conflict, prop_conflict;
-  svn_wc_entry_t *entry = NULL;
   apr_uint32_t modify_flags = 0;
-
-  /* Feh, ignoring the return value here.  We just want to know
-     whether we got the entry or not. */
-  svn_wc_entry (&entry, path, FALSE, pool);
-  if (! entry)
-    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
-                              "Not under version control: '%s'", path);
-
-  if (entry->kind == svn_node_dir)
-    conflict_dir = path;
-  else
-    svn_path_split_nts (path, &conflict_dir, &base_name, pool);
 
   /* Sanity check: see if libsvn_wc thinks this item is in a state of
      conflict that we have asked to resolve.   If not, just go home.*/
@@ -1628,7 +1640,90 @@ svn_wc_resolve_conflict (const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Machinery for an automated entries walk... */
 
+struct resolve_callback_baton
+{
+  svn_boolean_t resolve_text;
+  svn_boolean_t resolve_props;
+  svn_wc_notify_func_t notify_func;
+  void *notify_baton;
+  apr_pool_t *pool;
+};
+
+static svn_error_t *
+resolve_found_entry_callback (const char *path,
+                              svn_wc_entry_t *entry,
+                              void *walk_baton)
+{
+  struct resolve_callback_baton *baton = walk_baton;
+  const char *conflict_dir, *base_name = NULL;
+
+  /* We're going to receive dirents twice;  we want to ignore the
+     first one (where it's a child of a parent dir), and only print
+     the second one (where we're looking at THIS_DIR.)  */
+  if ((entry->kind == svn_node_dir) 
+      && (strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR)))
+    return SVN_NO_ERROR;
+
+  /* Figger out the directory in which the conflict resides. */
+  if (entry->kind == svn_node_dir)
+    conflict_dir = path;
+  else
+    svn_path_split_nts (path, &conflict_dir, &base_name, baton->pool);
+
+  return resolve_conflict_on_entry (path, entry, conflict_dir, base_name,
+                                    baton->resolve_text, baton->resolve_props,
+                                    baton->notify_func, baton->notify_baton,
+                                    baton->pool);
+}
+
+static const svn_wc_entry_callbacks_t 
+resolve_walk_callbacks =
+  {
+    resolve_found_entry_callback
+  };
+
+
+/* The public function */
+svn_error_t *
+svn_wc_resolve_conflict (const char *path,
+                         svn_boolean_t resolve_text,
+                         svn_boolean_t resolve_props,
+                         svn_boolean_t recursive,
+                         svn_wc_notify_func_t notify_func,
+                         void *notify_baton,                         
+                         apr_pool_t *pool)
+{
+  struct resolve_callback_baton *baton = apr_pcalloc (pool, sizeof(*baton));
+
+  baton->resolve_text = resolve_text;
+  baton->resolve_props = resolve_props;
+  baton->notify_func = notify_func;
+  baton->notify_baton = notify_baton;
+  baton->pool = pool;
+
+  if (! recursive)
+    {
+      svn_wc_entry_t *entry;
+      svn_wc_entry (&entry, path, FALSE, pool);
+      if (! entry)
+        return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+                                  "Not under version control: '%s'", path);
+
+      SVN_ERR (resolve_found_entry_callback (path, entry, baton));
+    }
+  else
+    {
+      SVN_ERR (svn_wc_walk_entries (path,
+                                    &resolve_walk_callbacks, baton,
+                                    FALSE, pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+
+
 
 svn_error_t *
 svn_wc_get_auth_file (const char *path,

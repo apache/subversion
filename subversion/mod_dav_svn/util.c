@@ -104,6 +104,7 @@ const char *dav_svn_build_uri(const dav_svn_repos *repos,
 {
   const char *root_path = repos->root_path;
   const char *special_uri = repos->special_uri;
+  const char *path_uri = path ? svn_path_uri_encode (path, pool) : NULL;
   const char *href1 = add_href ? "<D:href>" : "";
   const char *href2 = add_href ? "</D:href>" : "";
 
@@ -123,12 +124,12 @@ const char *dav_svn_build_uri(const dav_svn_repos *repos,
 
     case DAV_SVN_BUILD_URI_PUBLIC:
       return apr_psprintf(pool, "%s%s%s%s",
-                          href1, root_path, path, href2);
+                          href1, root_path, path_uri, href2);
 
     case DAV_SVN_BUILD_URI_VERSION:
       return apr_psprintf(pool, "%s%s/%s/ver/%" SVN_REVNUM_T_FMT "%s%s",
                           href1, root_path, special_uri,
-                          revision, path, href2);
+                          revision, path_uri, href2);
 
     case DAV_SVN_BUILD_URI_VCC:
       return apr_psprintf(pool, "%s%s/%s/vcc/" DAV_SVN_DEFAULT_VCC_NAME "%s",
@@ -211,7 +212,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
     {
       /* this is an ordinary "public" URI, so back up to include the
          leading '/' and just return... no need to parse further. */
-      info->repos_path = path - 1;
+      info->repos_path = svn_path_uri_decode (path - 1, pool);
       return NULL;
     }
 
@@ -250,7 +251,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
         {
           created_rev_str = apr_pstrndup(pool, path, slash - path);
           info->rev = SVN_STR_TO_REV(created_rev_str);
-          info->repos_path = slash;
+          info->repos_path = svn_path_uri_decode (slash, pool);
         }
       if (info->rev == SVN_INVALID_REVNUM)
         goto malformed_uri;

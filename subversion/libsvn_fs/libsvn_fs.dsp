@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir "Release\obj"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\include" /I "..\..\apr\include" /I "..\..\apr-util\xml\expat\lib" /I "..\..\db4-win32\include" /I "..\.." /D "NDEBUG" /D "APR_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS" /D alloca=_alloca /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\include" /I "..\..\apr\include" /I "..\..\apr-util\include" /I "..\..\apr-util\xml\expat\lib" /I "..\..\db4-win32\include" /I "..\.." /D "NDEBUG" /D "APR_DECLARE_STATIC" /D "APU_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS" /D alloca=_alloca /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "NDEBUG"
 # ADD RSC /l 0x424 /d "NDEBUG"
@@ -65,7 +65,7 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir "Debug\obj\bdb"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /GX /ZI /Od /I "..\include" /I "..\..\apr\include" /I "..\..\apr-util\xml\expat\lib" /I "..\..\db4-win32\include" /I "..\.." /D "SVN_DEBUG" /D "_DEBUG" /D "APR_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS" /D alloca=_alloca /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /GX /ZI /Od /I "..\include" /I "..\..\apr\include" /I "..\..\apr-util\include" /I "..\..\apr-util\xml\expat\lib" /I "..\..\db4-win32\include" /I "..\.." /D "SVN_DEBUG" /D "_DEBUG" /D "APR_DECLARE_STATIC" /D "APU_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS" /D alloca=_alloca /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "_DEBUG"
 # ADD RSC /l 0x424 /d "_DEBUG"
@@ -122,6 +122,21 @@ SOURCE=.\util\skel.c
 # Begin Group "bdb"
 
 # PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=".\bdb\changes-table.c"
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+# PROP Intermediate_Dir "Debug\obj\bdb"
+
+!ENDIF 
+
+# End Source File
 # Begin Source File
 
 SOURCE=".\bdb\copies-table.c"
@@ -317,6 +332,19 @@ SOURCE=.\util\skel.h
 # Begin Group "hdr - bdb"
 
 # PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=".\bdb\changes-table.h"
+
+!IF  "$(CFG)" == "libsvn_fs - Win32 Release"
+
+# PROP Intermediate_Dir "Release\obj\bdb"
+
+!ELSEIF  "$(CFG)" == "libsvn_fs - Win32 Debug"
+
+!ENDIF 
+
+# End Source File
 # Begin Source File
 
 SOURCE=".\bdb\copies-table.h"

@@ -83,6 +83,10 @@ def guarantee_greek_repository(path):
 
     if tree.compare_trees(output_tree, expected_output_tree):
       print "ERROR:  output of import command is unexpected."
+      print "EXPECTED OUTPUT TREE:"
+      tree.dump_tree(expected_output_tree)
+      print "ACTUAL OUTPUT TREE:"
+      tree.dump_tree(output_tree)
       sys.exit(1)
 
   # Now that the pristine repos exists, copy it to PATH.
@@ -117,7 +121,7 @@ def guarantee_greek_repository(path):
 # For all the functions below, the OUTPUT_TREE and DISK_TREE args need
 # to be created by feeding carefully constructed lists to
 # tree.build_generic_tree().  A STATUS_TREE can be built by
-# hand, or by editing the tree returned by get_virginal_status_list().
+# hand, or by editing the tree returned by get_virginal_state().
 
 
 def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
@@ -147,7 +151,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   output, errput = main.run_svn (None, 'co',
                                  '--username', main.wc_author,
                                  '--password', main.wc_passwd,
-                                 URL, '-d', wc_dir_name)
+                                 URL, wc_dir_name)
   mytree = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
@@ -357,7 +361,7 @@ def run_and_verify_switch(wc_dir_name,
     status_tree = status_tree.old_tree()
 
   # Update and make a tree of the output.
-  output, errput = main.run_svn (None, 'switch', wc_target, switch_url)
+  output, errput = main.run_svn (None, 'switch', switch_url, wc_target)
   mytree = tree.build_tree_from_checkout (output)
 
   return verify_update (mytree, wc_dir_name,
@@ -440,6 +444,11 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
     
   # Verify actual output against expected output.
   if tree.compare_trees (expected_tree, output_tree):
+    print "Output of commit is unexpected."
+    print "EXPECTED OUTPUT TREE:"
+    tree.dump_tree(expected_tree)
+    print "ACTUAL OUTPUT TREE:"
+    tree.dump_tree(output_tree)
     return 1
     
   # Verify via 'status' command too, if possible.
@@ -475,9 +484,17 @@ def run_and_verify_status(wc_dir_name, output_tree,
     if tree.compare_trees (mytree, output_tree,
                            singleton_handler_a, a_baton,
                            singleton_handler_b, b_baton):
+      print "EXPECTED OUTPUT TREE:"
+      tree.dump_tree(output_tree)
+      print "ACTUAL OUTPUT TREE:"
+      tree.dump_tree(mytree)
       return 1
   else:
     if tree.compare_trees (mytree, output_tree):
+      print "EXPECTED OUTPUT TREE:"
+      tree.dump_tree(output_tree)
+      print "ACTUAL OUTPUT TREE:"
+      tree.dump_tree(mytree)
       return 1
     
   return 0

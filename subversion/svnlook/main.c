@@ -16,6 +16,7 @@
  * ====================================================================
  */
 
+#include <locale.h>
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_time.h>
@@ -34,6 +35,7 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_time.h"
+#include "svn_utf.h"
 
 
 /*** Some convenience macros and types. ***/
@@ -68,7 +70,7 @@ typedef struct svnlook_ctxt_t
   svn_boolean_t is_revision;
   svn_revnum_t rev_id;
   svn_fs_txn_t *txn;
-  char *txn_name;
+  const char *txn_name /* UTF-8! */;
 
 } svnlook_ctxt_t;
 
@@ -78,7 +80,7 @@ typedef struct svnlook_ctxt_t
 static svn_error_t *
 get_property (svn_string_t **prop_value,
               svnlook_ctxt_t *c, 
-              const char *prop_name,
+              const char *prop_name /* UTF-8! */,
               apr_pool_t *pool)
 {
   /* Fetch transaction property... */
@@ -155,9 +157,9 @@ generate_delta_tree (svn_repos_node_t **tree,
 
 /* Recursively print only directory nodes that either a) have property
    mods, or b) contains files that have changed. */
-static void
+static svn_error_t *
 print_dirs_changed_tree (svn_repos_node_t *node,
-                         svn_stringbuf_t *path,
+                         svn_stringbuf_t *path /* UTF-8! */,
                          apr_pool_t *pool)
 {
   svn_repos_node_t *tmp_node;
@@ -165,11 +167,11 @@ print_dirs_changed_tree (svn_repos_node_t *node,
   svn_stringbuf_t *full_path;
 
   if (! node)
-    return;
+    return SVN_NO_ERROR;
 
   /* Not a directory?  We're not interested. */
   if (node->kind != svn_node_dir)
-    return;
+    return SVN_NO_ERROR;
 
   /* Got prop mods?  Excellent. */
   if (node->prop_mod)
@@ -205,34 +207,36 @@ print_dirs_changed_tree (svn_repos_node_t *node,
   /* Print the node if it qualifies. */
   if (print_me)
     {
+      const char *path_native;
+      SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path->data, pool));
       printf ("%s/\n", path->data);
     }
 
   /* Recursively handle the node's children. */
   tmp_node = node->child;
   if (! tmp_node)
-    return;
+    return SVN_NO_ERROR;
 
   full_path = svn_stringbuf_dup (path, pool);
   svn_path_add_component_nts (full_path, tmp_node->name);
-  print_dirs_changed_tree (tmp_node, full_path, pool);
+  SVN_ERR (print_dirs_changed_tree (tmp_node, full_path, pool));
   while (tmp_node->sibling)
     {
       tmp_node = tmp_node->sibling;
       svn_stringbuf_set (full_path, path->data);
       svn_path_add_component_nts (full_path, tmp_node->name);
-      print_dirs_changed_tree (tmp_node, full_path, pool);
+      SVN_ERR (print_dirs_changed_tree (tmp_node, full_path, pool));
     }
 
-  return;
+  return SVN_NO_ERROR;
 }
 
 
 /* Recursively print all nodes in the tree that have been modified
    (do not include directories affected only by "bubble-up"). */
-static void
+static svn_error_t *
 print_changed_tree (svn_repos_node_t *node,
-                    svn_stringbuf_t *path,
+                    svn_stringbuf_t *path /* UTF-8! */,
                     apr_pool_t *pool)
 {
   svn_repos_node_t *tmp_node;
@@ -241,7 +245,7 @@ print_changed_tree (svn_repos_node_t *node,
   int print_me = 1;
 
   if (! node)
-    return;
+    return SVN_NO_ERROR;
 
   /* Print the node. */
   tmp_node = node;
@@ -263,47 +267,51 @@ print_changed_tree (svn_repos_node_t *node,
 
   /* Print this node unless told to skip it. */
   if (print_me)
-    printf ("%s  %s%s\n",
-            status,
-            path->data,
-            tmp_node->kind == svn_node_dir ? "/" : "");
+    {
+      const char *path_native;
+      SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path->data, pool));
+      printf ("%s  %s%s\n",
+              status,
+              path_native,
+              tmp_node->kind == svn_node_dir ? "/" : "");
+    }
   
   /* Return here if the node has no children. */
   tmp_node = tmp_node->child;
   if (! tmp_node)
-    return;
+    return SVN_NO_ERROR;
 
   /* Recursively handle the node's children. */
   full_path = svn_stringbuf_dup (path, pool);
   svn_path_add_component_nts (full_path, tmp_node->name);
-  print_changed_tree (tmp_node, full_path, pool);
+  SVN_ERR (print_changed_tree (tmp_node, full_path, pool));
   while (tmp_node->sibling)
     {
       tmp_node = tmp_node->sibling;
       svn_stringbuf_set (full_path, path->data);
       svn_path_add_component_nts (full_path, tmp_node->name);
-      print_changed_tree (tmp_node, full_path, pool);
+      SVN_ERR (print_changed_tree (tmp_node, full_path, pool));
     }
 
-  return;
+  return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
 open_writable_binary_file (apr_file_t **fh, 
-                           const char *path, 
+                           const char *path /* UTF-8! */, 
                            apr_pool_t *pool)
 {
   apr_array_header_t *path_pieces;
-  apr_status_t apr_err;
+  svn_error_t *err;
   int i;
   const char *full_path, *dir;
   
   /* Try the easy way to open the file. */
-  apr_err = apr_file_open (fh, path, 
-                           APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BINARY,
-                           APR_OS_DEFAULT, pool);
-  if (! apr_err)
+  err = svn_io_file_open (fh, path, 
+                          APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BINARY,
+                          APR_OS_DEFAULT, pool);
+  if (! err)
     return SVN_NO_ERROR;
 
   svn_path_split_nts (path, &dir, NULL, pool);
@@ -311,12 +319,12 @@ open_writable_binary_file (apr_file_t **fh,
   /* If the file path has no parent, then we've already tried to open
      it as best as we care to try above. */
   if (svn_path_is_empty_nts (dir))
-    return svn_error_createf (apr_err, 0, NULL, pool,
+    return svn_error_createf (err->apr_err, err->src_err, err, pool,
                               "Error opening writable file %s", path);
 
   path_pieces = svn_path_decompose (dir, pool);
   if (! path_pieces->nelts)
-    return APR_SUCCESS;
+    return SVN_NO_ERROR;
 
   full_path = "";
   for (i = 0; i < path_pieces->nelts; i++)
@@ -329,16 +337,12 @@ open_writable_binary_file (apr_file_t **fh,
       /* Does this path component exist at all? */
       if (kind == svn_node_none)
         {
-          apr_err = apr_dir_make (full_path, APR_OS_DEFAULT, pool);
-          if (apr_err)
-            return svn_error_createf (apr_err, 0, NULL, pool,
-                                      "Error creating dir %s", 
-                                      full_path);
+          SVN_ERR (svn_io_dir_make (full_path, APR_OS_DEFAULT, pool));
         }
       else if (kind != svn_node_dir)
         {
-          if (apr_err)
-            return svn_error_createf (apr_err, 0, NULL, pool,
+          if (err)
+            return svn_error_createf (err->apr_err, err->src_err, err, pool,
                                       "Error creating dir %s (path exists)", 
                                       full_path);
         }
@@ -346,11 +350,11 @@ open_writable_binary_file (apr_file_t **fh,
 
   /* Now that we are ensured that the parent path for this file
      exists, try once more to open it. */
-  apr_err = apr_file_open (fh, path, 
-                           APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BINARY,
-                           APR_OS_DEFAULT, pool);
-  if (apr_err)
-    return svn_error_createf (apr_err, 0, NULL, pool,
+  err = svn_io_file_open (fh, path, 
+                          APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BINARY,
+                          APR_OS_DEFAULT, pool);
+  if (err)
+    return svn_error_createf (err->apr_err, err->src_err, err, pool,
                               "Error opening writable file %s", path);
     
   return SVN_NO_ERROR;
@@ -360,7 +364,7 @@ open_writable_binary_file (apr_file_t **fh,
 static svn_error_t *
 dump_contents (apr_file_t *fh,
                svn_fs_root_t *root,
-               const char *path,
+               const char *path /* UTF-8! */,
                apr_pool_t *pool)
 {
   apr_status_t apr_err;
@@ -398,8 +402,8 @@ static svn_error_t *
 print_diff_tree (svn_fs_root_t *root,
                  svn_fs_root_t *base_root,
                  svn_repos_node_t *node, 
-                 const char *path,
-                 const char *base_path,
+                 const char *path /* UTF-8! */,
+                 const char *base_path /* UTF-8! */,
                  apr_pool_t *pool)
 {
   svn_repos_node_t *tmp_node;
@@ -417,6 +421,8 @@ print_diff_tree (svn_fs_root_t *root,
   if ((SVN_IS_VALID_REVNUM (tmp_node->copyfrom_rev))
       && (tmp_node->copyfrom_path != NULL))
     {
+      const char *base_path_native;
+
       /* This is ... a copy. */
       is_copy = TRUE;
 
@@ -429,8 +435,10 @@ print_diff_tree (svn_fs_root_t *root,
       else
         base_path = apr_pstrdup (pool, tmp_node->copyfrom_path);
 
+      SVN_ERR (svn_utf_cstring_from_utf8 (&base_path_native, base_path, pool));
+
       printf ("Copied: %s (from rev %" SVN_REVNUM_T_FMT ", %s)\n",
-              tmp_node->name, tmp_node->copyfrom_rev, base_path);
+              tmp_node->name, tmp_node->copyfrom_rev, base_path_native);
 
       SVN_ERR (svn_fs_revision_root (&base_root,
                                      svn_fs_root_fs (base_root),
@@ -507,14 +515,16 @@ print_diff_tree (svn_fs_root_t *root,
       const char *label;
       const char *abs_path;
       int exitcode;
-
+      const char *path_native;
+      
       if (! is_copy)
         {
+          SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
           printf ("%s: %s\n", 
                   ((tmp_node->action == 'A') ? "Added" : 
                    ((tmp_node->action == 'D') ? "Deleted" :
                     ((tmp_node->action == 'R') ? "Modified" : "Index"))),
-                path);
+                  path_native);
         }
       printf ("===============================================================\
 ===============\n");
@@ -546,9 +556,9 @@ print_diff_tree (svn_fs_root_t *root,
     
   /* Now, delete any temporary files. */
   if (orig_path)
-    apr_file_remove (orig_path, pool);
+    svn_io_remove_file (orig_path, pool);
   if (new_path)
-    apr_file_remove (new_path, pool);
+    svn_io_remove_file (new_path, pool);
 
   /* Return here if the node has no children. */
   tmp_node = tmp_node->child;
@@ -592,10 +602,10 @@ print_diff_tree (svn_fs_root_t *root,
  * time why it even takes the arguments it takes, or why it does what
  * it does with them.  See issue #540.  -kff
  */
-static void
+static svn_error_t *
 print_ids_tree (svn_repos_node_t *node,
                 svn_fs_root_t *root,
-                svn_stringbuf_t *path,
+                svn_stringbuf_t *path /* UTF-8! */,
                 int indentation,
                 apr_pool_t *pool)
 {
@@ -605,9 +615,10 @@ print_ids_tree (svn_repos_node_t *node,
   const svn_fs_id_t *id;
   svn_string_t *unparsed_id = NULL;
   apr_pool_t *subpool;
+  const char *name_native;
 
   if (! node)
-    return;
+    return SVN_NO_ERROR;
 
   /* Print the indentation. */
   for (i = 0; i < indentation; i++)
@@ -622,45 +633,50 @@ print_ids_tree (svn_repos_node_t *node,
     unparsed_id = svn_fs_unparse_id (id, pool);
   
   /* Print the node. */
+  SVN_ERR (svn_utf_cstring_from_utf8 (&name_native, tmp_node->name, pool));
   printf ("%s%s <%s>\n", 
-          tmp_node->name, 
+          name_native, 
           tmp_node->kind == svn_node_dir ? "/" : "",
           unparsed_id ? unparsed_id->data : "unknown");
 
   /* Return here if the node has no children. */
   tmp_node = tmp_node->child;
   if (! tmp_node)
-    return;
+    return SVN_NO_ERROR;
 
   /* Recursively handle the node's children. */
   subpool = svn_pool_create (pool);
   full_path = svn_stringbuf_dup (path, subpool);
   svn_path_add_component_nts (full_path, tmp_node->name);
-  print_ids_tree (tmp_node, root, full_path, indentation + 1, subpool);
+  SVN_ERR (print_ids_tree (tmp_node, root, full_path, indentation + 1,
+                           subpool));
   while (tmp_node->sibling)
     {
       tmp_node = tmp_node->sibling;
       svn_stringbuf_set (full_path, path->data);
       svn_path_add_component_nts (full_path, tmp_node->name);
-      print_ids_tree (tmp_node, root, full_path, indentation + 1, subpool);
+      SVN_ERR (print_ids_tree (tmp_node, root, full_path, indentation + 1,
+                               subpool));
     }
   svn_pool_destroy (subpool);
 
-  return;
+  return SVN_NO_ERROR;
 }
 
 
 /* Recursively print all nodes in the tree.  If SHOW_IDS is non-zero,
    print the id of each node next to its name. */
-static void
+static svn_error_t *
 print_tree (svn_repos_node_t *node,
-            int indentation)
+            int indentation,
+            apr_pool_t *pool)
 {
   svn_repos_node_t *tmp_node;
   int i;
+  const char *name_native;
 
   if (! node)
-    return;
+    return SVN_NO_ERROR;
 
   /* Print the indentation. */
   for (i = 0; i < indentation; i++)
@@ -670,24 +686,25 @@ print_tree (svn_repos_node_t *node,
 
   /* Print the node. */
   tmp_node = node;
+  SVN_ERR (svn_utf_cstring_from_utf8 (&name_native, tmp_node->name, pool));
   printf ("%s%s\n", 
-          tmp_node->name, 
+          name_native, 
           tmp_node->kind == svn_node_dir ? "/" : "");
 
   /* Return here if the node has no children. */
   tmp_node = tmp_node->child;
   if (! tmp_node)
-    return;
+    return SVN_NO_ERROR;
 
   /* Recursively handle the node's children. */
-  print_tree (tmp_node, indentation + 1);
+  SVN_ERR (print_tree (tmp_node, indentation + 1, pool));
   while (tmp_node->sibling)
     {
       tmp_node = tmp_node->sibling;
-      print_tree (tmp_node, indentation + 1);
+      SVN_ERR (print_tree (tmp_node, indentation + 1, pool));
     }
 
-  return;
+  return SVN_NO_ERROR;
 }
 
 
@@ -705,12 +722,16 @@ do_log (svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
 
   if (prop_value && prop_value->data)
     {
+      const char *log_native;
+
       if (print_size)
         {
           printf ("%" APR_SIZE_T_FMT "\n", prop_value->len);
         }
 
-      printf ("%s", prop_value->data);
+      SVN_ERR (svn_utf_cstring_from_utf8 (&log_native, prop_value->data,
+                                          pool));
+      printf ("%s", log_native);
     }
   else if (print_size)
     {
@@ -757,8 +778,12 @@ do_author (svnlook_ctxt_t *c, apr_pool_t *pool)
 
   SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_AUTHOR, pool));
 
-  if (prop_value && prop_value->data)
-    printf ("%s", prop_value->data);
+  if (prop_value && prop_value->data) {
+    const char *author_native;
+    SVN_ERR (svn_utf_cstring_from_utf8 (&author_native, prop_value->data,
+                                        pool));
+    printf ("%s", author_native);
+  }
   
   printf ("\n");
   return SVN_NO_ERROR;
@@ -788,7 +813,8 @@ do_dirs_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
   
   SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, pool)); 
   if (tree)
-    print_dirs_changed_tree (tree, svn_stringbuf_create ("", pool), pool);
+    SVN_ERR (print_dirs_changed_tree (tree, svn_stringbuf_create ("", pool),
+                                      pool));
 
   return SVN_NO_ERROR;
 }
@@ -817,7 +843,7 @@ do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
   
   SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, pool)); 
   if (tree)
-    print_changed_tree (tree, svn_stringbuf_create ("", pool), pool);
+    SVN_ERR (print_changed_tree (tree, svn_stringbuf_create ("", pool), pool));
 
   return SVN_NO_ERROR;
 }
@@ -870,12 +896,12 @@ do_tree (svnlook_ctxt_t *c, svn_boolean_t show_ids, apr_pool_t *pool)
     {
       if (show_ids)
         {
-          print_ids_tree (tree, root, 
-                          svn_stringbuf_create ("", pool), 0, pool);
+          SVN_ERR (print_ids_tree (tree, root, 
+                                   svn_stringbuf_create ("", pool), 0, pool));
         }
       else
         {
-          print_tree (tree, 0);
+          SVN_ERR (print_tree (tree, 0, pool));
         }
     }
 
@@ -960,11 +986,14 @@ int
 main (int argc, const char * const *argv)
 {
   apr_pool_t *pool;
-  const char *repos_path = NULL;
+  const char *repos_path = NULL, *repos_path_utf8;
+  const char *txn_name = NULL;
   int cmd_offset = 4;
   svnlook_cmd_t command;
   svnlook_ctxt_t c;
   svn_boolean_t was_success = FALSE;
+
+  setlocale (LC_CTYPE, "");
 
   /* Initialize context variable. */
   memset (&c, 0, sizeof (c));
@@ -989,7 +1018,7 @@ main (int argc, const char * const *argv)
       if (! strcmp (argv[2], "txn")) /* transaction */
         {
           c.is_revision = FALSE;
-          c.txn_name = (char *)argv[3];
+          txn_name = (char *)argv[3];
         }
       else if (! strcmp (argv[2], "rev")) /* revision */
         {
@@ -1051,8 +1080,13 @@ main (int argc, const char * const *argv)
   apr_initialize ();
   pool = svn_pool_create (NULL);
 
+  /* Convert repository path and txn name (if present) to UTF-8 */
+  INT_ERR (svn_utf_cstring_to_utf8 (&repos_path_utf8, repos_path, NULL, pool));
+  if(txn_name)
+    INT_ERR (svn_utf_cstring_to_utf8 (&c.txn_name, txn_name, NULL, pool));    
+
   /* Open the repository with the given path. */
-  INT_ERR (svn_repos_open (&(c.repos), repos_path, pool));
+  INT_ERR (svn_repos_open (&(c.repos), repos_path_utf8, pool));
   c.fs = svn_repos_fs (c.repos);
 
   /* If this is a transaction, open the transaction. */

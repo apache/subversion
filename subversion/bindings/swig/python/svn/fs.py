@@ -26,3 +26,10 @@ for name in dir(_fs):
 
 # we don't want these symbols exported
 del name, _fs
+
+def entries(root, path, pool):
+  "Call dir_entries returning a dictionary mappings names to IDs."
+  e = dir_entries(root, path, pool)
+  for name, entry in e.items():
+    e[name] = dirent_t_id_get(entry)
+  return e

@@ -84,7 +84,8 @@ restore_file (const char *file_path,
            (&toggled, file_path, pool));
 
   /* Remove any text conflict */
-  SVN_ERR (svn_wc_resolve_conflict (file_path, TRUE, FALSE, NULL, NULL, pool));
+  SVN_ERR (svn_wc_resolve_conflict (file_path, TRUE, FALSE, FALSE,
+                                    NULL, NULL, pool));
 
   /* ### hey guys, shouldn't we recording the 'restored'
      working-file's timestamp in its entry?  Right now, every time we
@@ -196,7 +197,8 @@ report_revisions (const char *wc_path,
                               this_url_s->len - dot_entry_url_s->len);
         svn_path_add_component_nts (this_path_s, key);
         svn_path_add_component_nts (this_full_path_s, key);
-        svn_path_add_component_nts (this_url_s, key);
+        svn_path_add_component_nts (this_url_s, 
+                                    svn_path_uri_encode (key, pool));
 
         this_path = this_path_s->data;
         this_full_path = this_full_path_s->data;
@@ -217,9 +219,8 @@ report_revisions (const char *wc_path,
       if (! dirent_kind)
         missing = TRUE;
       
-      /* From here on out, ignore any entry scheduled for addition
-         or deletion. */
-      if (current_entry->schedule != svn_wc_schedule_normal)
+      /* From here on out, ignore any entry scheduled for addition */
+      if (current_entry->schedule == svn_wc_schedule_add)
         continue;
       
       if (current_entry->kind == svn_node_file) 
@@ -234,7 +235,10 @@ report_revisions (const char *wc_path,
               continue;
             }
 
-          if (missing && restore_files)
+          if (missing 
+              && restore_files 
+              && (current_entry->schedule != svn_wc_schedule_delete)
+              && (current_entry->schedule != svn_wc_schedule_replace))
             {
               /* Recreate file from text-base. */
               SVN_ERR (restore_file (this_full_path, pool));
@@ -253,7 +257,9 @@ report_revisions (const char *wc_path,
             }
 
           /* Possibly report a disjoint URL... */
-          if (strcmp (current_entry->url, this_url) != 0)
+          if ((current_entry->schedule != svn_wc_schedule_add)
+              && (current_entry->schedule != svn_wc_schedule_replace)
+              && (strcmp (current_entry->url, this_url) != 0))
             SVN_ERR (reporter->link_path (report_baton,
                                           this_path,
                                           current_entry->url,
@@ -369,6 +375,7 @@ svn_wc_crawl_revisions (const char *path,
   svn_wc_entry_t *entry;
   svn_revnum_t base_rev = SVN_INVALID_REVNUM;
   svn_boolean_t missing = FALSE;
+  svn_wc_entry_t *parent_entry = NULL;
 
   /* The first thing we do is get the base_rev from the working copy's
      ROOT_DIRECTORY.  This is the first revnum that entries will be
@@ -377,11 +384,9 @@ svn_wc_crawl_revisions (const char *path,
   base_rev = entry->revision;
   if (base_rev == SVN_INVALID_REVNUM)
     {
-      svn_wc_entry_t *parent_entry;
-      const char *parent_name
-        = svn_path_remove_component_nts (path, pool);
-
-      SVN_ERR (svn_wc_entry (&parent_entry, parent_name, FALSE, pool));
+      SVN_ERR (svn_wc_entry (&parent_entry, 
+                             svn_path_remove_component_nts (path, pool),
+                             FALSE, pool));
       base_rev = parent_entry->revision;
     }
 
@@ -427,6 +432,8 @@ svn_wc_crawl_revisions (const char *path,
 
   else if (entry->kind == svn_node_file)
     {
+      const char *pdir, *bname;
+
       if (missing && restore_files)
         {
           /* Recreate file from text-base. */
@@ -443,8 +450,30 @@ svn_wc_crawl_revisions (const char *path,
                             svn_wc_notify_state_unknown,
                             SVN_INVALID_REVNUM);
         }
-
-      if (entry->revision != base_rev)
+      
+      /* Split PATH into parent PDIR and basename BNAME. */
+      svn_path_split_nts (path, &pdir, &bname, pool);
+      if (! parent_entry)
+        SVN_ERR (svn_wc_entry (&parent_entry, pdir, FALSE, pool));
+      
+      if (parent_entry 
+          && parent_entry->url 
+          && entry->url
+          && strcmp (entry->url, 
+                     svn_path_url_add_component (parent_entry->url, 
+                                                 bname, pool)))
+        {
+          /* This file is disjoint with respect to its parent
+             directory.  Since we are looking at the actual target of
+             the report (not some file in a subdirectory of a target
+             directory), and that target is a file, we need to pass an
+             empty string to link_path. */
+          SVN_ERR (reporter->link_path (report_baton,
+                                        "",
+                                        entry->url,
+                                        entry->revision));
+        }
+      else if (entry->revision != base_rev)
         {
           /* If this entry is a file node, we just want to report that
              node's revision.  Since we are looking at the actual target

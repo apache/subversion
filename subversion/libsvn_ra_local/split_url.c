@@ -34,6 +34,10 @@ svn_ra_local__split_URL (const char **repos_path,
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_repos_t *repos;
 
+  /* Decode the URL, as we only use its parts as filesystem paths
+     anyway. */
+  URL = svn_path_uri_decode (URL, pool);
+
   /* Verify that the URL is well-formed (loosely) */
 
   /* First, check for the "file://" prefix. */

@@ -460,7 +460,7 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
       && (! ((dst->schedule == svn_wc_schedule_add)
              || (dst->schedule == svn_wc_schedule_replace))))
     {
-      dst->url = svn_path_join (src->url, dst->name, pool);
+      dst->url = svn_path_url_add_component (src->url, dst->name, pool);
     }
 }
 
@@ -655,7 +655,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
       SVN_ERR (svn_wc_check_wc (dir, &is_wc, pool));
       if (! is_wc)
         return svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+          (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
            "svn_wc_entry: %s is not a working copy directory", dir);
 
       /* ### it would be nice to avoid reading all of these. or maybe read
@@ -965,8 +965,6 @@ write_entry (svn_stringbuf_t **output,
         }
       else
         {
-          const char *this_path;
-
           /* If this is not the "this dir" entry, and the revision is
              the same as that of the "this dir" entry, don't write out
              the revision. */
@@ -979,9 +977,9 @@ write_entry (svn_stringbuf_t **output,
              don't write out the url */
           if (entry->url)
             {
-              this_path = svn_path_join (this_dir->url, name, pool);
-
-              if (strcmp (this_path, entry->url) == 0)
+              if (strcmp (entry->url,
+                          svn_path_url_add_component (this_dir->url, 
+                                                      name, pool)) == 0)
                 apr_hash_set (atts, SVN_WC__ENTRY_ATTR_URL,
                               APR_HASH_KEY_STRING, NULL);
             }
@@ -1533,6 +1531,94 @@ svn_wc__tweak_entry (apr_hash_t *entries,
 
   return SVN_NO_ERROR;
 }
+
+
+
+
+/*** Generic Entry Walker */
+
+
+/* A recursive entry-walker, helper for svn_wc_walk_entries */
+static svn_error_t *
+walker_helper (const char *dirpath,
+               const svn_wc_entry_callbacks_t *walk_callbacks,
+               void *walk_baton,
+               svn_boolean_t show_deleted,
+               apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  svn_wc_entry_t *dot_entry;
+
+  SVN_ERR (svn_wc_entries_read (&entries, dirpath, show_deleted, subpool));
+  
+  /* As promised, always return the '.' entry first. */
+  dot_entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
+                            APR_HASH_KEY_STRING);
+  if (! dot_entry)
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
+                              "Directory '%s' has no THIS_DIR entry!",
+                              dirpath);
+
+  SVN_ERR (walk_callbacks->found_entry (dirpath, dot_entry, walk_baton));
+
+  apr_hash_set (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING, NULL);
+  
+  /* Loop over each of the other entries. */
+  for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      svn_wc_entry_t *current_entry; 
+      const char *entrypath;
+
+      apr_hash_this (hi, &key, &klen, &val);
+      current_entry = val;
+      
+      entrypath = svn_path_join (dirpath, key, subpool);
+      SVN_ERR (walk_callbacks->found_entry (entrypath, current_entry,
+                                            walk_baton));
+
+      if (current_entry->kind == svn_node_dir)
+        SVN_ERR (walker_helper (entrypath, walk_callbacks, walk_baton,
+                                show_deleted, subpool));
+    }
+
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
+
+/* The public function */
+svn_error_t *
+svn_wc_walk_entries (const char *path,
+                     const svn_wc_entry_callbacks_t *walk_callbacks,
+                     void *walk_baton,
+                     svn_boolean_t show_deleted,
+                     apr_pool_t *pool)
+{
+  svn_wc_entry_t *entry;
+  
+  SVN_ERR (svn_wc_entry (&entry, path, show_deleted, pool));
+
+  if (! entry)
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
+                              "%s is not under revision control.", path);
+
+  if (entry->kind == svn_node_file)
+    return walk_callbacks->found_entry (path, entry, walk_baton);
+
+  else if (entry->kind == svn_node_dir)
+    return walker_helper (path, walk_callbacks, walk_baton,
+                          show_deleted, pool);
+
+  else
+    return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+                              "%s: unrecognized node kind.", path);
+}
+
 
 
 

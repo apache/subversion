@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\..\include" /I "..\..\..\apr\include" /I "..\..\..\apr-util\xml\expat\lib" /I "..\..\.." /D "NDEBUG" /D "APR_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS_CONSOLE" /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\..\include" /I "..\..\..\apr\include" /I "..\..\..\apr-util\include" /I "..\..\..\apr-util\xml\expat\lib" /I "..\..\.." /D "NDEBUG" /D "APR_DECLARE_STATIC" /D "APU_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS_CONSOLE" /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "NDEBUG"
 # ADD RSC /l 0x424 /d "NDEBUG"
@@ -51,7 +51,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
-# ADD LINK32 ..\\Release\libsvn_tests_main.lib ..\..\libsvn_subr\Release\libsvn_subr.lib ..\..\..\apr\LibR\apr.lib ..\..\..\apr-util\xml\expat\lib\LibR\xml.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /machine:I386 /out:"Release/stringtest.exe"
+# ADD LINK32 ..\\Release\libsvn_tests_main.lib ..\..\libsvn_subr\Release\libsvn_subr.lib ..\..\..\apr\LibR\apr.lib ..\..\..\apr-util\LibR\aprutil.lib ..\..\..\apr-util\xml\expat\lib\LibR\xml.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /machine:I386 /out:"Release/stringtest.exe"
 
 !ELSEIF  "$(CFG)" == "tests_libsvn_subr_string - Win32 Debug"
 
@@ -67,7 +67,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /GX /ZI /Od /I "..\..\include" /I "..\..\..\apr\include" /I "..\..\..\apr-util\xml\expat\lib" /I "..\..\.." /D "SVN_DEBUG" /D "_DEBUG" /D "APR_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS_CONSOLE" /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /GX /ZI /Od /I "..\..\include" /I "..\..\..\apr\include" /I "..\..\..\apr-util\include" /I "..\..\..\apr-util\xml\expat\lib" /I "..\..\.." /D "SVN_DEBUG" /D "_DEBUG" /D "APR_DECLARE_STATIC" /D "APU_DECLARE_STATIC" /D "WIN32" /D "_WINDOWS_CONSOLE" /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x424 /d "_DEBUG"
 # ADD RSC /l 0x424 /d "_DEBUG"
@@ -76,7 +76,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 ..\Debug\libsvn_tests_main.lib ..\..\libsvn_subr\Debug\libsvn_subr.lib ..\..\..\apr\LibD\apr.lib ..\..\..\apr-util\xml\expat\lib\LibD\xml.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /debug /machine:I386 /out:"Debug/stringtest.exe" /pdbtype:sept
+# ADD LINK32 ..\Debug\libsvn_tests_main.lib ..\..\libsvn_subr\Debug\libsvn_subr.lib ..\..\..\apr\LibD\apr.lib ..\..\..\apr-util\LibD\aprutil.lib ..\..\..\apr-util\xml\expat\lib\LibD\xml.lib kernel32.lib advapi32.lib ws2_32.lib mswsock.lib ole32.lib /nologo /subsystem:console /debug /machine:I386 /out:"Debug/stringtest.exe" /pdbtype:sept
 # SUBTRACT LINK32 /incremental:no
 
 !ENDIF 

@@ -23,6 +23,8 @@
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_private_config.h"         /* for SVN_PATH_LOCAL_SEPARATOR */
+#include "svn_utf.h"
+#include "apr_file_info.h"
 
 
 /* todo: Though we have a notion of different types of separators for
@@ -330,14 +332,27 @@ svn_path_add_component (svn_stringbuf_t *path,
 void
 svn_path_remove_component (svn_stringbuf_t *path)
 {
+  int i;
+
   svn_path_canonicalize (path);
 
-  if (! svn_stringbuf_chop_back_to_char (path, SVN_PATH_SEPARATOR))
+  for (i = path->len; i >= 0; i--)
+    {
+      if (path->data[i] == SVN_PATH_SEPARATOR)
+        break;
+    }
+
+  if (i < 0)
     svn_stringbuf_setempty (path);
+  else if (i == 0)
+    {
+      path->len = 1;
+      path->data[1] = '\0';
+    }
   else
     {
-      if (path->len && path->data[path->len - 1] == SVN_PATH_SEPARATOR)
-          path->data[--path->len] = '\0';
+      path->len = i;
+      path->data[i] = '\0';
     }
 }
 
@@ -357,7 +372,10 @@ svn_path_remove_component_nts (const char *path, apr_pool_t *pool)
         break;
     }
 
-  return apr_pstrndup (pool, path, (i < 0) ? 0 : i);
+  if (i < 0)
+    return apr_pstrndup (pool, path, 0);
+
+  return apr_pstrndup (pool, path, (i == 0) ? 1 : i);
 }
 
 
@@ -782,7 +800,7 @@ svn_path_is_url (const char *path)
       alphanum | mark | ":" | "@" | "&" | "=" | "+" | "$" | "," 
 */
 static svn_boolean_t
-char_is_uri_safe (char c)
+char_is_uri_safe (int c)
 {
   /* Is this an alphanumeric character? */
   if (((c >= 'A') && (c <='Z'))
@@ -805,7 +823,7 @@ svn_path_is_uri_safe (const char *path)
   apr_size_t i;
 
   for (i = 0; path[i]; i++)
-    if (! char_is_uri_safe (path[i]))
+    if (! char_is_uri_safe ((unsigned char)path[i]))
       return FALSE;
 
   return TRUE;
@@ -817,7 +835,7 @@ svn_path_uri_encode (const char *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
   apr_size_t i, copied = 0;
-  char c;
+  int c;
 
   if (! path)
     return NULL;
@@ -825,7 +843,7 @@ svn_path_uri_encode (const char *path, apr_pool_t *pool)
   retstr = svn_stringbuf_create ("", pool);
   for (i = 0; path[i]; i++)
     {
-      c = path[i];
+      c = (unsigned char)path[i];
       if (char_is_uri_safe (c))
         continue;
 
@@ -840,9 +858,12 @@ svn_path_uri_encode (const char *path, apr_pool_t *pool)
                                    i - copied);
       
       /* Now, sprintf() in our escaped character, making sure our
-         buffer is big enough to hold the '%' and two digits. */
+         buffer is big enough to hold the '%' and two digits.  We cast
+         the C to unsigned char here because the 'X' format character
+         will be tempted to treat it as an unsigned int...which causes
+         problem when messing with 0x80-0xFF chars.  */
       svn_stringbuf_ensure (retstr, retstr->len + 3);
-      sprintf (retstr->data + retstr->len, "%%%02X", c);
+      sprintf (retstr->data + retstr->len, "%%%02X", (unsigned char)c);
       retstr->len += 3;
 
       /* Finally, update our copy counter. */
@@ -908,6 +929,87 @@ svn_path_uri_decode (const char *path, apr_pool_t *pool)
   retstr->data[retstr->len] = 0;
 
   return retstr->data;
+}
+
+
+const char *
+svn_path_url_add_component (const char *url,
+                            const char *component,
+                            apr_pool_t *pool)
+{
+  return svn_path_join (url, svn_path_uri_encode (component, pool), pool);
+}
+
+
+svn_error_t *
+svn_path_get_absolute(const char **pabsolute,
+                      const char *relative,
+                      apr_pool_t *pool)
+{
+  /* We call svn_path_canonicalize_nts() on the input data, rather
+     than the output, so that `buffer' can be returned directly
+     without const vs non-const issues. */
+
+  char * buffer;
+  apr_status_t apr_err;
+  const char *path_native;
+
+  SVN_ERR (svn_utf_cstring_from_utf8
+           (&path_native, svn_path_canonicalize_nts (relative, pool), pool));
+
+  apr_err = apr_filepath_merge(&buffer, NULL,
+                               path_native,
+                               (APR_FILEPATH_NOTRELATIVE
+                                | APR_FILEPATH_TRUENAME),
+                               pool);
+
+  if (apr_err)
+    return svn_error_createf(SVN_ERR_BAD_FILENAME, apr_err, NULL, pool,
+                             "Couldn't determine absolute path of %s.", 
+                             relative);
+
+  return svn_utf_cstring_to_utf8 (pabsolute, buffer, NULL, pool);
+}
+
+
+svn_error_t *
+svn_path_split_if_file(const char *path,
+                       const char **pdirectory,
+                       const char **pfile,
+                       apr_pool_t *pool)
+{
+  apr_finfo_t finfo;
+  svn_error_t *err;
+
+  err = svn_io_stat(&finfo, path, APR_FINFO_TYPE, pool);
+
+  if (err != SVN_NO_ERROR)
+    {
+      return svn_error_createf(SVN_ERR_BAD_FILENAME, 0, err, pool,
+                               "Couldn't determine if %s was "
+                               "a file or directory.",
+                               path);
+    }
+  else
+    {
+      if (finfo.filetype == APR_DIR)
+        {
+          *pdirectory = path;
+          *pfile = "";
+        }
+      else if (finfo.filetype == APR_REG)
+        {
+          svn_path_split_nts(path, pdirectory, pfile, pool);
+        }
+      else 
+        {
+          return svn_error_createf(SVN_ERR_BAD_FILENAME, 0, NULL, pool,
+                                  "%s is neither a file nor a directory name.",
+                                  path);
+        }
+    }
+
+  return SVN_NO_ERROR;
 }
 
 

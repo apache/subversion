@@ -21,6 +21,9 @@ Package=<4>
     Project_Dep_Name aprutil
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name apriconv
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name xml
     End Project Dependency
     Begin Project Dependency
@@ -81,6 +84,9 @@ Package=<4>
     Project_Dep_Name tests_libsvn_fs_strings_reps
     End Project Dependency
     Begin Project Dependency
+    Project_Dep_Name tests_libsvn_fs_changes
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name tests_libsvn_fs_fs
     End Project Dependency
     Begin Project Dependency
@@ -135,6 +141,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "apriconv"=".\apr-iconv\apriconv.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "aprutil"=".\apr-util\aprutil.dsp" - Package Owner=<4>
 
 Package=<5>
@@ -148,6 +166,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apriconv
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name xml
@@ -261,7 +282,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libsvn_repos"=.\SUBVERSION\LIBSVN_REPOS\libsvn_repos.dsp - Package Owner=<4>
+Project: "libsvn_repos"=.\subversion\libsvn_repos\libsvn_repos.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -415,6 +436,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name aprutil
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apriconv
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name xml
@@ -669,6 +693,30 @@ Package=<4>
 
 ###############################################################################
 
+Project: "tests_libsvn_fs_changes"=.\subversion\tests\libsvn_fs\changes_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_fs
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_repos
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_delta
+    End Project Dependency
+}}}
+
+###############################################################################
+
 Project: "tests_libsvn_repos_repos"=.\subversion\tests\libsvn_repos\repos_test.dsp - Package Owner=<4>
 
 Package=<5>
@@ -773,6 +821,12 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name apr
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apriconv
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name aprutil
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -793,6 +847,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name aprutil
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsvn_tests_main

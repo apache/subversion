@@ -29,6 +29,7 @@
 #include <apr_want.h>
 
 #include "svn_pools.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -57,29 +58,42 @@ notify (void *baton,
   struct notify_baton *nb = baton;
   char statchar_buf[3] = "_ ";
 
+  /* the pool (BATON) is typically the global pool; don't keep filling it */
+  apr_pool_t *subpool = svn_pool_create (nb->pool);
+
+  const char *path_native;
+  svn_error_t *err;
+
+  err = svn_utf_cstring_from_utf8 (&path_native, path, subpool);
+  if (err)
+    {
+      printf ("WARNING: error decoding UTF-8 for ?\n");
+      svn_pool_destroy (subpool);
+      return;
+    }
   switch (action)
     {
     case svn_wc_notify_delete:
     case svn_wc_notify_update_delete:
       nb->received_some_change = TRUE;
-      printf ("D  %s\n", path);
+      printf ("D  %s\n", path_native);
       break;
 
     case svn_wc_notify_update_add:
       nb->received_some_change = TRUE;
-      printf ("A  %s\n", path);
+      printf ("A  %s\n", path_native);
       break;
 
     case svn_wc_notify_restore:
-      printf ("Restored %s\n", path);
+      printf ("Restored %s\n", path_native);
       break;
 
     case svn_wc_notify_revert:
-      printf ("Reverted %s\n", path);
+      printf ("Reverted %s\n", path_native);
       break;
 
     case svn_wc_notify_resolve:
-      printf ("Resolved conflicted state of %s\n", path);
+      printf ("Resolved conflicted state of %s\n", path_native);
       break;
 
     case svn_wc_notify_add:
@@ -89,9 +103,9 @@ notify (void *baton,
       if (mime_type
           && ((strlen (mime_type)) > 5)
           && ((strncmp (mime_type, "text/", 5)) != 0))
-        printf ("A  (bin)  %s\n", path);
+        printf ("A  (bin)  %s\n", path_native);
       else
-        printf ("A         %s\n", path);
+        printf ("A         %s\n", path_native);
       break;
 
     case svn_wc_notify_update_update:
@@ -123,7 +137,7 @@ notify (void *baton,
             else if (prop_state == svn_wc_notify_state_modified)
               statchar_buf[1] = 'U';
 
-            printf ("%s %s\n", statchar_buf, path);
+            printf ("%s %s\n", statchar_buf, path_native);
           }
       }
       break;
@@ -131,7 +145,7 @@ notify (void *baton,
     case svn_wc_notify_update_external:
       /* Currently this is used for checkouts and switches too.  If we
          want different output, we'll have to add new actions. */
-      printf ("\nFetching external item into %s\n", path);
+      printf ("\nFetching external item into %s\n", path_native);
       break;
 
     case svn_wc_notify_update_completed:
@@ -166,24 +180,24 @@ notify (void *baton,
       break;
 
     case svn_wc_notify_commit_modified:
-      printf ("Sending        %s\n", path);
+      printf ("Sending        %s\n", path_native);
       break;
 
     case svn_wc_notify_commit_added:
       if (mime_type
           && ((strlen (mime_type)) > 5)
           && ((strncmp (mime_type, "text/", 5)) != 0))
-        printf ("Adding  (bin)  %s\n", path);
+        printf ("Adding  (bin)  %s\n", path_native);
       else
-        printf ("Adding         %s\n", path);
+        printf ("Adding         %s\n", path_native);
       break;
 
     case svn_wc_notify_commit_deleted:
-      printf ("Deleting       %s\n", path);
+      printf ("Deleting       %s\n", path_native);
       break;
 
     case svn_wc_notify_commit_replaced:
-      printf ("Replacing      %s\n", path);
+      printf ("Replacing      %s\n", path_native);
       break;
 
     case svn_wc_notify_commit_postfix_txdelta:
@@ -200,6 +214,8 @@ notify (void *baton,
     default:
       break;
     }
+
+  svn_pool_destroy (subpool);
 }
 
 

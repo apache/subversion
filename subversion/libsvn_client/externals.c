@@ -462,6 +462,8 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                     NULL,
                     ib->pool));
         }
+      else if (err)
+        return err;
     }
 
   return SVN_NO_ERROR;
@@ -516,6 +518,7 @@ handle_externals_desc_change (const void *key, apr_ssize_t klen,
   ib.notify_func       = cb->notify_func;
   ib.notify_baton      = cb->notify_baton;
   ib.auth_baton        = cb->auth_baton;
+  ib.update_unchanged  = cb->update_unchanged;
   ib.pool              = cb->pool;
 
   SVN_ERR (svn_hash_diff (old_desc, new_desc,

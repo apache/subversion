@@ -83,6 +83,7 @@ typedef struct
 
   apr_hash_t *valid_targets;
 
+  svn_ra_get_committed_rev_func_t get_committed_rev_func;
   svn_ra_get_wc_prop_func_t get_func;
   svn_ra_set_wc_prop_func_t set_func;
   void *cb_baton;
@@ -147,16 +148,15 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
                                     int okay_1, int okay_2)
 {
   ne_request *req;
-  const char *url_str = svn_path_uri_encode(url, ras->pool);
 
   /* create/prep the request */
-  req = ne_request_create(ras->sess, method, url_str);
+  req = ne_request_create(ras->sess, method, url);
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
                                ras->pool,
                                "Could not create a request (%s %s)",
-                               method, url_str);
+                               method, url);
     }
 
   /* run the request and get the resulting status code (and svn_error_t) */
@@ -178,6 +178,66 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
   if (!force && cc->get_func != NULL)
     {
       const svn_string_t *vsn_url_value;
+
+      /* If we can get a validating revision, but it does not match
+         the entry's committed revision, then there's a problem... */
+      if (cc->get_committed_rev_func != NULL)
+        {
+          const svn_string_t *vsn_url_rev_value;
+          svn_revnum_t entry_committed_rev, vsn_url_rev;
+
+          SVN_ERR( (*cc->get_committed_rev_func)(cc->cb_baton,
+                                                 rsrc->local_path,
+                                                 &entry_committed_rev,
+                                                 pool) );
+          
+          SVN_ERR( (*cc->get_func)(cc->cb_baton,
+                                   rsrc->local_path,
+                                   SVN_RA_DAV__LP_VSN_URL_REV,
+                                   &vsn_url_rev_value,
+                                   pool) );
+
+          if (vsn_url_rev_value)
+            vsn_url_rev = SVN_STR_TO_REV(vsn_url_rev_value->data);
+          else
+            vsn_url_rev = SVN_INVALID_REVNUM;
+
+          if (SVN_IS_VALID_REVNUM(vsn_url_rev)
+              && (vsn_url_rev != entry_committed_rev))
+            {
+              /* They don't match.  We could just remove the current
+                 version-url -- that would trigger a refetch from the
+                 server a bit later in this code, as part of which the
+                 validating rev will also be removed.  But the
+                 mismatch is a sign of some larger problem.  There's
+                 something wrong with this working copy, and we don't
+                 really know what happened.  So bolt right now.  But
+                 note that we don't return SVN_ERR_WC_CORRUPT; that's
+                 really for libsvn_wc to say.  We just point out the
+                 revision mismatch. */
+
+              return svn_error_createf
+                (SVN_ERR_BAD_REVISION, 0, NULL, cc->ras->pool,
+                 "get_version_url: Bad version resource url rev for %s.\n"
+                 "  (Expected revision %" SVN_REVNUM_T_FMT ", "
+                 "got revision %" SVN_REVNUM_T_FMT ".)\n"
+                 "\n"
+  "This may indicate a corrupt working copy, perhaps one in which a\n"
+  "Subversion operation was interrupted at an inauspicious time.  You should\n"
+  "probably check out a new working copy.\n"
+  "\n"
+  "It is also possible that no corruption has occurred, but Subversion\n"
+  "mistakenly thinks something is wrong.  This is a known bug, and will be\n"
+  "fixed soon.  See\n"
+  "\n"
+  "   http://subversion.tigris.org/issues/show_bug.cgi?id=806\n"
+  "\n"
+  "for details.\n",
+                 rsrc->local_path,
+                 entry_committed_rev,
+                 vsn_url_rev);
+            }
+        }
 
       SVN_ERR( (*cc->get_func)(cc->cb_baton,
                                rsrc->local_path,
@@ -212,7 +272,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
                                              rsrc->revision,
                                              pool));
 
-      url = svn_path_join(bc_url.data, bc_relative.data, pool);
+      url = svn_path_url_add_component(bc_url.data, bc_relative.data, pool);
     }
 
   /* Get the DAV:checked-in property, which contains the URL of the
@@ -243,6 +303,19 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
 
       value.data = url;
       value.len = strlen(url);
+
+      /* Remove any validating version-url-rev.  Since we fetched
+         this version-url directly from the server, possibly using a
+         specified revision, we *know* it's correct, and furthermore
+         there wasn't any version-url here until we store this new
+         one anyway. */
+      SVN_ERR( (*cc->set_func)(cc->cb_baton,
+                               rsrc->local_path,
+                               SVN_RA_DAV__LP_VSN_URL_REV,
+                               NULL,
+                               pool) );
+
+      /* Now we can store the new version-url. */
       SVN_ERR( (*cc->set_func)(cc->cb_baton,
                                rsrc->local_path,
                                SVN_RA_DAV__LP_VSN_URL,
@@ -315,7 +388,8 @@ static svn_error_t * create_activity(commit_ctx_t *cc)
   /* get the URL where we'll create activities, construct the URL
      for the activity, and create the activity. */
   SVN_ERR( get_activity_collection(cc, &activity_collection, FALSE) );
-  url = svn_path_join(activity_collection->data, uuid_buf, cc->ras->pool);
+  url = svn_path_url_add_component(activity_collection->data, 
+                                   uuid_buf, cc->ras->pool);
   SVN_ERR( simple_request(cc->ras, "MKACTIVITY", url, &code,
                           201 /* Created */,
                           404 /* Not Found */) );
@@ -326,7 +400,8 @@ static svn_error_t * create_activity(commit_ctx_t *cc)
   if (code == 404)
     {
       SVN_ERR( get_activity_collection(cc, &activity_collection, TRUE) );
-      url = svn_path_join(activity_collection->data, uuid_buf, cc->ras->pool);
+      url = svn_path_url_add_component(activity_collection->data, 
+                                       uuid_buf, cc->ras->pool);
       SVN_ERR( simple_request(cc->ras, "MKACTIVITY", url, &code, 201, 0) );
     }
 
@@ -358,7 +433,7 @@ static svn_error_t * add_child(resource_t **child,
 
   rsrc = apr_pcalloc(pool, sizeof(*rsrc));
   rsrc->revision = revision;
-  rsrc->url = svn_path_join(parent->url, name, pool);
+  rsrc->url = svn_path_url_add_component(parent->url, name, pool);
   rsrc->local_path = svn_path_join(parent->local_path, name, pool);
 
   /* Case 1:  the resource is truly "new".  Either it was added as a
@@ -367,9 +442,7 @@ static svn_error_t * add_child(resource_t **child,
      URL by the rules of deltaV:  "copy structure is preserved below
      the WR you COPY to."  */
   if (created || (parent->vsn_url == NULL))
-    {
-      rsrc->wr_url = svn_path_join(parent->wr_url, name, pool);
-    }
+    rsrc->wr_url = svn_path_url_add_component(parent->wr_url, name, pool);
 
   /* Case 2: the resource is already under version-control somewhere.
      This means it has a VR URL already, and the WR URL won't exist
@@ -391,22 +464,20 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
 {
   ne_request *req;
   const char *body;
-  const char *url_str;
 
   /* assert: vsn_url != NULL */
-  url_str = svn_path_uri_encode(vsn_url, cc->ras->pool);
 
   /* ### send a CHECKOUT resource on vsn_url; include cc->activity_url;
      ### place result into res->wr_url and return it */
 
   /* create/prep the request */
-  req = ne_request_create(cc->ras->sess, "CHECKOUT", url_str);
+  req = ne_request_create(cc->ras->sess, "CHECKOUT", vsn_url);
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
                                cc->ras->pool,
                                "Could not create a CHECKOUT request (%s)",
-                               url_str);
+                               vsn_url);
     }
 
   /* ### store this into cc to avoid pool growth */
@@ -427,7 +498,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
 
   /* run the request and get the resulting status code (and svn_error_t) */
   return svn_ra_dav__request_dispatch(code, req, cc->ras->sess,
-                                      "CHECKOUT", url_str,
+                                      "CHECKOUT", vsn_url,
                                       201 /* Created */,
                                       allow_404 ? 404 /* Not Found */ : 0,
                                       cc->ras->pool);
@@ -547,8 +618,8 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
   ne_request *req;
   int code;
   ne_buffer *body; /* ### using an ne_buffer because it can realloc */
-  const char *url_str;
   svn_error_t *err;
+  const char *url = rsrc->wr_url;
 
   /* just punt if there are no changes to make. */
   if ((rb->prop_changes == NULL || apr_is_empty_table(rb->prop_changes))
@@ -593,16 +664,13 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
     }
 
   ne_buffer_zappend(body, "</D:propertyupdate>");
-
-  url_str = svn_path_uri_encode(rsrc->wr_url, ras->pool);
-  req = ne_request_create(ras->sess, "PROPPATCH", url_str);
-
+  req = ne_request_create(ras->sess, "PROPPATCH", url);
   ne_set_request_body_buffer(req, body->data, ne_buffer_size(body));
   ne_add_request_header(req, "Content-Type", "text/xml; charset=UTF-8");
 
   /* run the request and get the resulting status code (and svn_error_t) */
   err = svn_ra_dav__request_dispatch(&code, req, ras->sess, "PROPPATCH",
-                                     url_str,
+                                     url,
                                      207 /* Multistatus */,
                                      0 /* nothing else allowed */,
                                      ras->pool);
@@ -671,7 +739,7 @@ static svn_error_t * commit_delete_entry(const char *path,
   SVN_ERR( checkout_resource(parent->cc, parent->rsrc, TRUE) );
 
   /* create the URL for the child resource */
-  child = svn_path_join(parent->rsrc->wr_url, name, pool);
+  child = svn_path_url_add_component(parent->rsrc->wr_url, name, pool);
 
   /* Note: the child cannot have a resource stored in the resources table
      because of the editor traversal rules. That is: this is the first time
@@ -745,8 +813,9 @@ static svn_error_t * commit_add_dir(const char *path,
          "source" argument to the COPY request.  The "Destination:"
          header given to COPY is simply the wr_url that is already
          part of the child object. */
-      copy_src = svn_path_join(bc_url.data, bc_relative.data, dir_pool);
-      copy_src = svn_path_uri_encode(copy_src, dir_pool);
+      copy_src = svn_path_url_add_component(bc_url.data,
+                                            bc_relative.data, 
+                                            dir_pool);
 
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,
@@ -933,8 +1002,9 @@ static svn_error_t * commit_add_file(const char *path,
          "source" argument to the COPY request.  The "Destination:"
          header given to COPY is simply the wr_url that is already
          part of the file_baton. */
-      copy_src = svn_path_join(bc_url.data, bc_relative.data, file_pool);
-      copy_src = svn_path_uri_encode(copy_src, file_pool);
+      copy_src = svn_path_url_add_component(bc_url.data, 
+                                            bc_relative.data, 
+                                            file_pool);
 
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,
@@ -1007,23 +1077,22 @@ static svn_error_t * commit_stream_close(void *baton)
 {
   put_baton_t *pb = baton;
   commit_ctx_t *cc = pb->file->cc;
-  resource_t *rsrc = pb->file->rsrc;
+  const char *url = pb->file->rsrc->wr_url;
   ne_request *req;
   int fdesc;
   int code;
   apr_status_t status;
   svn_error_t *err;
   apr_off_t offset = 0;
-  const char *url_str = svn_path_uri_encode(rsrc->wr_url, pb->pool);
-
+  
   /* create/prep the request */
-  req = ne_request_create(cc->ras->sess, "PUT", url_str);
+  req = ne_request_create(cc->ras->sess, "PUT", url);
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_CREATING_REQUEST, 0, NULL,
                                pb->pool,
                                "Could not create a PUT request (%s)",
-                               url_str);
+                               url);
     }
 
   /* ### use a symbolic name somewhere for this MIME type? */
@@ -1051,7 +1120,7 @@ static svn_error_t * commit_stream_close(void *baton)
 
   /* run the request and get the resulting status code (and svn_error_t) */
   err = svn_ra_dav__request_dispatch(&code, req, cc->ras->sess,
-                                     "PUT", url_str,
+                                     "PUT", url,
                                      201 /* Created */,
                                      204 /* No Content */,
                                      cc->ras->pool);
@@ -1227,6 +1296,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   cc->ras = ras;
   cc->resources = apr_hash_make(ras->pool);
   cc->valid_targets = apr_hash_make(ras->pool);
+  cc->get_committed_rev_func = ras->callbacks->get_committed_rev;
   cc->get_func = ras->callbacks->get_wc_prop;
   cc->set_func = ras->callbacks->set_wc_prop;
   cc->cb_baton = ras->callback_baton;

@@ -102,7 +102,8 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       const char *committed_date = NULL;
       const char *committed_author = NULL;
       const char *log_msg;
-      
+      svn_node_kind_t kind;
+
       /* Create a new commit item and add it to the array. */
       if (log_msg_func)
         {
@@ -135,6 +136,13 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, NULL,
                                             NULL, FALSE, FALSE, TRUE,
                                             auth_baton, pool));
+
+      /* Verify that the thing to be deleted actually exists. */
+      SVN_ERR (ra_lib->check_path (&kind, session, target, 
+                                   SVN_INVALID_REVNUM));
+      if (kind == svn_node_none)
+        return svn_error_createf (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
+                                  "URL `%s' does not exist", path);
 
       /* Fetch RA commit editor */
       SVN_ERR (ra_lib->get_commit_editor (session, &editor, &edit_baton,

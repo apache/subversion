@@ -65,9 +65,8 @@ svn_cl__diff (apr_getopt_t *os,
 
       const char *target1, *target2;
 
-      targets = svn_cl__args_to_target_array (os, opt_state,
-                                              TRUE, /* extract @revs */
-                                              pool);      
+      SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state,
+                                             TRUE, /* extract @revs */ pool));
       svn_cl__push_implicit_dot_target (targets, pool);
 
       target1 = ((const char **) (targets->elts))[0];
@@ -139,9 +138,9 @@ svn_cl__diff (apr_getopt_t *os,
          start_revision and (possibly) end_revision for us.
       */
 
-      targets = svn_cl__args_to_target_array (os, opt_state,
-                                              FALSE, /* don't extract @revs */
-                                              pool);      
+      SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state,
+                                             FALSE, /* don't extract @revs */
+                                             pool)); 
       svn_cl__push_implicit_dot_target (targets, pool);
       
       for (i = 0; i < targets->nelts; ++i)

@@ -72,12 +72,14 @@ typedef long int svn_revnum_t;
 
 /* Valid revision numbers begin at 0 */
 #define SVN_IS_VALID_REVNUM(n) (n >= 0)
-#define SVN_INVALID_REVNUM (-1) /* The 'official' invalid revision num */
-#define SVN_IGNORED_REVNUM (-1) /* Not really invalid...just
-                                   unimportant -- one day, this can be
-                                   its own unique value, for now, just
-                                   make it the same as
-                                   SVN_INVALID_REVNUM. */
+
+/* The 'official' invalid revision num */
+#define SVN_INVALID_REVNUM ((svn_revnum_t) -1)
+
+/* Not really invalid...just unimportant -- one day, this can be its
+   own unique value, for now, just make it the same as
+   SVN_INVALID_REVNUM. */
+#define SVN_IGNORED_REVNUM ((svn_revnum_t) -1) 
 
 /* Convert null-terminated C string STR to a revision number. */
 #define SVN_STR_TO_REV(str) ((svn_revnum_t) atol(str))
@@ -111,21 +113,26 @@ enum svn_recurse_kind
    particularly on the client-side.  There is no "unknown" kind; if
    there's nothing special about a property name, the default category
    is `svn_prop_regular_kind'. */ 
-enum svn_prop_kind
-  {
-    svn_prop_entry_kind,   /* In .svn/entries, i.e., author, date, etc. */
-    svn_prop_wc_kind,      /* Client-side only, stored by specific RA layer. */
-    svn_prop_regular_kind  /* Seen if user does "svn proplist"; note
-                              that this includes some "svn:" props and
-                              all user props, i.e. ones stored in the
-                              repository fs. */
-  };
+typedef enum svn_prop_kind
+{
+  svn_prop_entry_kind,   /* In .svn/entries, i.e., author, date, etc. */
+  svn_prop_wc_kind,      /* Client-side only, stored by specific RA layer. */
+  svn_prop_regular_kind  /* Seen if user does "svn proplist"; note
+                            that this includes some "svn:" props and
+                            all user props, i.e. ones stored in the
+                            repository fs. */
+} svn_prop_kind_t;
 
-/* Return the prop kind of a property named NAME, and set *PREFIX_LEN
-   to the length of the prefix of NAME that was sufficient to
-   distinguish its kind. */
-enum svn_prop_kind svn_property_kind (int *prefix_len,
-                                      const char *prop_name);
+/* Return the prop kind of a property named NAME, and (if PREFIX_LEN
+   is non-NULL) set *PREFIX_LEN to the length of the prefix of NAME
+   that was sufficient to distinguish its kind. */
+svn_prop_kind_t svn_property_kind (int *prefix_len,
+                                   const char *prop_name);
+
+
+/* Return TRUE iff PROP_NAME represents the name of a Subversion
+   property. */
+svn_boolean_t svn_prop_is_svn_prop (const char *prop_name);
 
 
 /* Given an PROPLIST array of svn_prop_t structures, allocate three
@@ -154,6 +161,7 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 
 /* All Subversion property names start with this. */
 #define SVN_PROP_PREFIX "svn:"
+
 
 /* --------------------------------------------------------------------- */
 /** VISIBLE PROPERTIES **/
@@ -298,6 +306,15 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 
 /*** Shared function types ***/
 
+typedef struct svn_log_changed_path_t
+{
+  char action; /* 'A'dd, 'D'elete, 'R'eplace, 'M'odify */
+  const char *copyfrom_path; /* Source path of copy (if any). */
+  svn_revnum_t copyfrom_rev; /* Source revision of copy (if any). */
+
+} svn_log_changed_path_t;
+
+
 /* The callback invoked by log message loopers, such as
  * svn_ra_plugin_t.get_log() and svn_repos_get_logs().
  *
@@ -309,12 +326,8 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
  * converted to apr_time_t with svn_time_from_string().  
  *
  * If CHANGED_PATHS is non-null, then it contains as keys every path
- * committed in REVISION; the values are (void *) 'A' or 'D' or 'R',
- * for added, deleted, or replaced (text or property mod),
- * respectively.  Note to developers: there is no compelling reason
- * for these particular values -- they were chosen to match
- * `svn_repos_node_t.action', but if more information were desired, we
- * could switch to a different convention.
+ * committed in REVISION; the values are (svn_log_changed_path_t *) 
+ * structures (see above).
  *
  * ### The only reason CHANGED_PATHS is not qualified with `const' is
  * that we usually want to loop over it, and apr_hash_first() doesn't
@@ -326,8 +339,7 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
  * Use POOL for all allocation.  (If the caller is iterating over log
  * messages, invoking this receiver on each, we recommend the standard
  * pool loop recipe: create a subpool, pass it as POOL to each call,
- * clear it after each iteration, destroy it after the loop is done.)
- */
+ * clear it after each iteration, destroy it after the loop is done.)  */
 typedef svn_error_t *(*svn_log_message_receiver_t)
      (void *baton,
       apr_hash_t *changed_paths,

@@ -42,7 +42,6 @@
 */
 
 
-
 
 /*** Harvesting Commit Candidates ***/
 
@@ -244,6 +243,7 @@ harvest_committables (apr_hash_t *committables,
           state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
           state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
           adds_only = TRUE;
+          entry->copyfrom_rev = entry->revision;
           if (copy_mode)
             cf_url = entry->url;
           else
@@ -291,9 +291,9 @@ harvest_committables (apr_hash_t *committables,
     {
       /* If the commit item is a directory, lock it, else lock its parent. */
       if (entry->kind == svn_node_dir)
-        lock_dir (locked_dirs, path, pool);
+        SVN_ERR (lock_dir (locked_dirs, path, pool));
       else
-        lock_dir (locked_dirs, p_path, pool);
+        SVN_ERR (lock_dir (locked_dirs, p_path, pool));
 
       /* Finally, add the committable item. */
       add_committable (committables, path, entry->kind, url,
@@ -323,22 +323,23 @@ harvest_committables (apr_hash_t *committables,
           void *val;
           const char *name;
           const char *used_url = NULL;
-
+          const char *name_uri = NULL;
           const char *full_path = apr_pstrdup (loop_pool, path);
           const char *this_url = apr_pstrdup (loop_pool, url);
           const char *this_cf_url
             = cf_url ? apr_pstrdup (loop_pool, cf_url) : NULL;
 
-          /* Get the next entry */
+          /* Get the next entry.  Name is an entry name; value is an
+             entry structure. */
           apr_hash_this (hi, &key, &klen, &val);
           name = (const char *) key;
-          
+
           /* Skip "this dir" */
           if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
             continue;
 
-          /* Name is an entry name; value is an entry structure. */
           this_entry = (svn_wc_entry_t *) val;
+          name_uri = svn_path_uri_encode (name, loop_pool);
 
           /* Skip subdirectory entries when we're not recursing.
 
@@ -354,14 +355,14 @@ harvest_committables (apr_hash_t *committables,
 
           full_path = svn_path_join (full_path, name, loop_pool);
           if (this_cf_url)
-            this_cf_url = svn_path_join (this_cf_url, name, loop_pool);
+            this_cf_url = svn_path_join (this_cf_url, name_uri, loop_pool);
 
           /* We'll use the entry's URL if it has one and if we aren't
              in copy_mode, else, we'll just extend the parent's URL
              with the entry's basename.  */
           if ((! this_entry->url) || (copy_mode))
             {
-              this_url = svn_path_join (this_url, name, loop_pool);
+              this_url = svn_path_join (this_url, name_uri, loop_pool);
               used_url = this_url;
             }
 
@@ -472,7 +473,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
                target);
           
           /* Manufacture a URL for this TARGET. */
-          url = svn_path_join (p_entry->url, base_name, pool);
+          url = svn_path_url_add_component (p_entry->url, base_name, pool);
         }
       else
         url = entry->url;
@@ -543,7 +544,7 @@ int svn_client__sort_commit_item_urls (const void *a, const void *b)
 
 
 svn_error_t *
-svn_client__condense_commit_items (char **base_url,
+svn_client__condense_commit_items (const char **base_url,
                                    apr_array_header_t *commit_items,
                                    apr_pool_t *pool)
 {
@@ -650,7 +651,7 @@ init_stack (apr_array_header_t **db_stack,
 
 
 static svn_error_t *
-push_stack (const char *rel_url, /* relative to base url of commit */
+push_stack (const char *rel_decoded_url, /* relative to commit base url */
             apr_array_header_t *db_stack,
             int *stack_ptr,
             const svn_delta_editor_t *editor,
@@ -660,17 +661,18 @@ push_stack (const char *rel_url, /* relative to base url of commit */
             apr_pool_t *pool)
 {
   void *parent_db, *db;
-  
+
   assert (db_stack && db_stack->nelts && *stack_ptr);
 
   /* Call the EDITOR's open_directory function to get a new directory
      baton. */
   parent_db = ((void **) db_stack->elts)[*stack_ptr - 1];
   if (is_add)
-    SVN_ERR (editor->add_directory (rel_url, parent_db, copyfrom_path,
+    SVN_ERR (editor->add_directory (rel_decoded_url, parent_db, copyfrom_path,
                                     revision, pool, &db));
   else
-    SVN_ERR (editor->open_directory (rel_url, parent_db, revision, pool, &db));
+    SVN_ERR (editor->open_directory (rel_decoded_url, parent_db, revision, 
+                                     pool, &db));
 
   /* If all our current stack space is in use, push the DB onto the
      end of the array (which will allocate more space).  Else, we will
@@ -753,7 +755,7 @@ do_item_commit (const char *url,
   apr_pool_t *file_pool = ((kind == svn_node_file)
                            ? svn_pool_create (apr_hash_pool_get (file_mods))
                            : NULL);
-
+  const char *url_decoded = svn_path_uri_decode (url, pool);
 
   /* Get the parent dir_baton. */
   parent_baton = ((void **) db_stack->elts)[*stack_ptr - 1];
@@ -811,7 +813,7 @@ do_item_commit (const char *url,
 
   /* If this item is supposed to be deleted, do so. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
-    SVN_ERR (editor->delete_entry (url, item->revision, 
+    SVN_ERR (editor->delete_entry (url_decoded, item->revision, 
                                    parent_baton, pool));
 
   /* If this item is supposed to be added, do so. */
@@ -820,14 +822,14 @@ do_item_commit (const char *url,
       if (kind == svn_node_file)
         {
           SVN_ERR (editor->add_file 
-                   (url, parent_baton, copyfrom_url, 
+                   (url_decoded, parent_baton, copyfrom_url, 
                     item->revision,
                     file_pool, &file_baton));
         }
       else
         {
           SVN_ERR (push_stack 
-                   (url, db_stack, stack_ptr, editor, copyfrom_url, 
+                   (url_decoded, db_stack, stack_ptr, editor, copyfrom_url, 
                     item->revision,
                     TRUE, pool));
           dir_baton = ((void **) db_stack->elts)[*stack_ptr - 1];
@@ -843,14 +845,16 @@ do_item_commit (const char *url,
       if (kind == svn_node_file)
         {
           if (! file_baton)
-            SVN_ERR (editor->open_file (url, parent_baton, item->revision,
+            SVN_ERR (editor->open_file (url_decoded, parent_baton, 
+                                        item->revision, 
                                         file_pool, &file_baton));
         }
       else
         {
           if (! dir_baton)
             {
-              SVN_ERR (push_stack (url, db_stack, stack_ptr, editor, NULL,
+              SVN_ERR (push_stack (url_decoded, db_stack, 
+                                   stack_ptr, editor, NULL,
                                    item->revision, FALSE, pool));
               dir_baton = ((void **) db_stack->elts)[*stack_ptr - 1];
             }
@@ -875,7 +879,7 @@ do_item_commit (const char *url,
                                            sizeof (*mod));
 
       if (! file_baton)
-        SVN_ERR (editor->open_file (url, parent_baton,
+        SVN_ERR (editor->open_file (url_decoded, parent_baton,
                                     item->revision,
                                     file_pool, &file_baton));
 
@@ -1000,7 +1004,8 @@ svn_client__do_commit (const char *base_url,
                 *piece = 0;
 
               /* Open the subdirectory. */
-              SVN_ERR (push_stack (rel, db_stack, &stack_ptr, 
+              SVN_ERR (push_stack (svn_path_uri_decode (rel, pool),
+                                   db_stack, &stack_ptr, 
                                    editor, NULL, SVN_INVALID_REVNUM,
                                    FALSE, pool));
               

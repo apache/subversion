@@ -344,6 +344,8 @@ make_file_baton (const char *name,
  * be compared. ENTRY is the working copy entry for the file. ADDED forces
  * the file to be treated as added.
  *
+ * Do all allocation in POOL.
+ *
  * ### TODO: Need to work on replace if the new filename used to be a
  * directory.
  */
@@ -351,7 +353,8 @@ static svn_error_t *
 file_diff (struct dir_baton *dir_baton,
            const char *path,
            svn_wc_entry_t *entry,
-           svn_boolean_t added)
+           svn_boolean_t added,
+           apr_pool_t *pool)
 {
   const char *pristine_copy, *empty_file;
   svn_boolean_t modified;
@@ -371,8 +374,8 @@ file_diff (struct dir_baton *dir_baton,
     case svn_wc_schedule_delete:
       /* Delete compares text-base against empty file, modifications to the
          working-copy version of the deleted file are not wanted. */
-      pristine_copy = svn_wc__text_base_path (path, FALSE, dir_baton->pool);
-      empty_file = svn_wc__empty_file_path (path, dir_baton->pool);
+      pristine_copy = svn_wc__text_base_path (path, FALSE, pool);
+      empty_file = svn_wc__empty_file_path (path, pool);
 
       SVN_ERR (dir_baton->edit_baton->callbacks->file_deleted
                (path, 
@@ -385,7 +388,7 @@ file_diff (struct dir_baton *dir_baton,
         break;
 
     case svn_wc_schedule_add:
-      empty_file = svn_wc__empty_file_path (path, dir_baton->pool);
+      empty_file = svn_wc__empty_file_path (path, pool);
 
       SVN_ERR (dir_baton->edit_baton->callbacks->file_added
                (path,
@@ -393,14 +396,14 @@ file_diff (struct dir_baton *dir_baton,
                 path,
                 dir_baton->edit_baton->callback_baton));
 
-      SVN_ERR (svn_wc_props_modified_p (&modified, path, dir_baton->pool));
+      SVN_ERR (svn_wc_props_modified_p (&modified, path, pool));
       if (modified)
         {
           apr_array_header_t *propchanges;
           apr_hash_t *baseprops;
 
           SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops, path,
-                                          dir_baton->pool));
+                                          pool));
 
           SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
                    (NULL,
@@ -411,22 +414,20 @@ file_diff (struct dir_baton *dir_baton,
       break;
 
     default:
-      SVN_ERR (svn_wc_text_modified_p (&modified, path, dir_baton->pool));
+      SVN_ERR (svn_wc_text_modified_p (&modified, path, pool));
       if (modified)
         {
           const char *translated;
           svn_error_t *err;
 
-          pristine_copy = svn_wc__text_base_path (path, FALSE,
-                                                  dir_baton->pool);   
+          pristine_copy = svn_wc__text_base_path (path, FALSE, pool);   
 
           /* Note that this might be the _second_ time we translate
              the file, as svn_wc_text_modified_p() might have used a
              tmp translated copy too.  But what the heck, diff is
              already expensive, translating twice for the sake of code
              modularity is liveable. */
-          SVN_ERR (svn_wc_translated_file (&translated, path,
-                                           dir_baton->pool));
+          SVN_ERR (svn_wc_translated_file (&translated, path, pool));
           
           err = dir_baton->edit_baton->callbacks->file_changed
             (NULL,
@@ -438,20 +439,20 @@ file_diff (struct dir_baton *dir_baton,
              dir_baton->edit_baton->callback_baton);
           
           if (translated != path)
-            SVN_ERR (svn_io_remove_file (translated, dir_baton->pool));
+            SVN_ERR (svn_io_remove_file (translated, pool));
 
           if (err)
             return err;
         }
 
-      SVN_ERR (svn_wc_props_modified_p (&modified, path, dir_baton->pool));
+      SVN_ERR (svn_wc_props_modified_p (&modified, path, pool));
       if (modified)
         {
           apr_array_header_t *propchanges;
           apr_hash_t *baseprops;
 
           SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops, path,
-                                          dir_baton->pool));
+                                          pool));
 
           SVN_ERR (dir_baton->edit_baton->callbacks->props_changed
                    (NULL,
@@ -479,6 +480,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_boolean_t in_anchor_not_target;
+  apr_pool_t *subpool;
 
   /* This directory should have been been unchanged or replaced, not added,
      since an added directory can only contain added files and these will
@@ -523,6 +525,8 @@ directory_elements_diff (struct dir_baton *dir_baton,
   SVN_ERR (svn_wc_entries_read (&entries, dir_baton->path,
                                 FALSE, dir_baton->pool));
 
+  subpool = svn_pool_create (dir_baton->pool);
+
   for (hi = apr_hash_first (dir_baton->pool, entries); hi;
        hi = apr_hash_next (hi))
     {
@@ -549,7 +553,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
           && strcmp (dir_baton->edit_baton->target, name))
         continue;
 
-      path = svn_path_join (dir_baton->path, name, dir_baton->pool);
+      path = svn_path_join (dir_baton->path, name, subpool);
 
       /* Skip entry if it is in the list of entries already diff'd. */
       if (apr_hash_get (dir_baton->compared, path, APR_HASH_KEY_STRING))
@@ -558,7 +562,7 @@ directory_elements_diff (struct dir_baton *dir_baton,
       switch (entry->kind)
         {
         case svn_node_file:
-          SVN_ERR (file_diff (dir_baton, path, entry, added));
+          SVN_ERR (file_diff (dir_baton, path, entry, added, subpool));
           break;
 
         case svn_node_dir:
@@ -579,17 +583,20 @@ directory_elements_diff (struct dir_baton *dir_baton,
               subdir_baton = make_dir_baton (name, dir_baton,
                                              dir_baton->edit_baton,
                                              FALSE,
-                                             dir_baton->pool);
+                                             subpool);
 
               SVN_ERR (directory_elements_diff (subdir_baton, added));
-              svn_pool_destroy (subdir_baton->pool);
             }
           break;
 
         default:
           break;
         }
+
+      svn_pool_clear (subpool);
     }
+
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }

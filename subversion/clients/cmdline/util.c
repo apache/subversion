@@ -41,13 +41,15 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_pools.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 
 #define DEFAULT_ARRAY_SIZE 5
 
-/* Hmm. This should probably find its way into libsvn_subr -Fitz */
-/* Create a SVN string from the char* and add it to the array */
+
+/* Copy STR into POOL and push the copy onto ARRAY.
+   ### todo: Hmm. This should probably find its way into libsvn_subr -Fitz */
 static void 
 array_push_str (apr_array_header_t *array,
                 const char *str,
@@ -63,9 +65,6 @@ array_push_str (apr_array_header_t *array,
 }
 
 
-/* Some commands take an implicit "." string argument when invoked
- * with no arguments. Those commands make use of this function to
- * add "." to the target array if the user passes no args */
 void
 svn_cl__push_implicit_dot_target (apr_array_header_t *targets, 
                                   apr_pool_t *pool)
@@ -75,20 +74,16 @@ svn_cl__push_implicit_dot_target (apr_array_header_t *targets,
   assert (targets->nelts);
 }
 
-/* Parse a given number of non-target arguments from the
- * command line args passed in by the user. Put them
- * into the opt_state args array */
+
 svn_error_t *
-svn_cl__parse_num_args (apr_getopt_t *os,
-                        svn_cl__opt_state_t *opt_state,
-                        const char *subcommand,
+svn_cl__parse_num_args (apr_array_header_t **args_p,
+                        apr_getopt_t *os,
                         int num_args,
                         apr_pool_t *pool)
 {
   int i;
-  
-  opt_state->args = apr_array_make (pool, DEFAULT_ARRAY_SIZE, 
-                                    sizeof (const char *));
+  apr_array_header_t *args 
+    = apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (const char *));
 
   /* loop for num_args and add each arg to the args array */
   for (i = 0; i < num_args; i++)
@@ -98,34 +93,31 @@ svn_cl__parse_num_args (apr_getopt_t *os,
           return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 
                                    0, 0, pool, "");
         }
-      array_push_str (opt_state->args, os->argv[os->ind++], pool);
+      array_push_str (args, os->argv[os->ind++], pool);
     }
 
+  *args_p = args;
   return SVN_NO_ERROR;
 }
 
-/* Parse all of the arguments from the command line args
- * passed in by the user. Put them into the opt_state
- * args array */
 svn_error_t *
-svn_cl__parse_all_args (apr_getopt_t *os,
-                        svn_cl__opt_state_t *opt_state,
-                        const char *subcommand,
+svn_cl__parse_all_args (apr_array_header_t **args_p,
+                        apr_getopt_t *os,
                         apr_pool_t *pool)
 {
-  opt_state->args = apr_array_make (pool, DEFAULT_ARRAY_SIZE, 
-                                    sizeof (const char *));
+  apr_array_header_t *args 
+    = apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (const char *));
 
-  if (os->ind >= os->argc)
+  if (os->ind > os->argc)
     {
       return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
     }
-
   while (os->ind < os->argc)
     {
-      array_push_str (opt_state->args, os->argv[os->ind++], pool);
+      array_push_str (args, os->argv[os->ind++], pool);
     }
 
+  *args_p = args;
   return SVN_NO_ERROR;
 }
 
@@ -144,7 +136,7 @@ svn_cl__parse_all_args (apr_getopt_t *os,
 static svn_error_t *
 parse_path (svn_client_revision_t *rev,
             const char **truepath,
-            const char *path,
+            const char *path /* UTF-8! */,
             apr_pool_t *pool)
 {
   int i;
@@ -157,11 +149,16 @@ parse_path (svn_client_revision_t *rev,
     {
       if (path[i] == '@')
         {
-          if (svn_cl__parse_revision (os, path + i + 1, subpool))
+          const char *native_rev;
+
+          SVN_ERR (svn_utf_cstring_from_utf8 (&native_rev, path + i + 1,
+                                              subpool));
+
+          if (svn_cl__parse_revision (os, native_rev, subpool))
             return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR,
                                       0, NULL, subpool,
                                       "Syntax error parsing revision \"%s\"",
-                                      path + 1);
+                                      path + i + 1);
 
           *truepath = apr_pstrndup (pool, path, i);
           rev->kind = os->start_revision.kind;
@@ -181,67 +178,121 @@ parse_path (svn_client_revision_t *rev,
 }
 
 
-/* Create a targets array and add all the remaining arguments
- * to it. We also process arguments passed in the --target file, if
- * specified, just as if they were passed on the command line.  */
-apr_array_header_t*
-svn_cl__args_to_target_array (apr_getopt_t *os,
+svn_error_t *
+svn_cl__args_to_target_array (apr_array_header_t **targets_p, 
+                              apr_getopt_t *os,
 			      svn_cl__opt_state_t *opt_state,
                               svn_boolean_t extract_revisions,
                               apr_pool_t *pool)
 {
+  int i;
   svn_client_revision_t *firstrev = NULL, *secondrev = NULL;
-  apr_array_header_t *targets =
+   apr_array_header_t *input_targets =
     apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (const char *));
+  apr_array_header_t *output_targets =
+    apr_array_make (pool, DEFAULT_ARRAY_SIZE, sizeof (const char *));
+
+  /* Step 1:  create a master array of targets that are in -native-
+     encoding, and come from concatenating the targets left by apr_getopt,
+     plus any extra targets in opt_state (from the --targets switch.) */
  
-  /* Command line args take precedence.  */
   for (; os->ind < os->argc; os->ind++)
     {
-      const char *target = apr_pstrdup (pool, os->argv[os->ind]);
-
-      /* If this path looks like it would work as a URL in one of the
-         currently available RA libraries, we add it unconditionally
-         to the target array. */
-      if (! svn_path_is_url (target))
+      /* The apr_getopt targets are still in native encoding. */
+      const char *raw_target = os->argv[os->ind];
+      (*((const char **) apr_array_push (input_targets))) = raw_target;
+    }
+  
+  if (opt_state->targets)
+    {
+      for (i = 0; i < opt_state->targets->nelts; i++)
         {
-          const char *base_name = svn_path_basename (target, pool);
+          /* The --targets array have already been converted to UTF-8,
+             because we needed to split up the list with svn_cstring_split. */
+          const char *raw_target;
+          const char *utf8_target = APR_ARRAY_IDX(opt_state->targets,
+                                                  i, const char *);
+          /* Convert each back to native encoding.  */
+          SVN_ERR (svn_utf_cstring_from_utf8 (&raw_target, utf8_target, pool));
+          
+          (*((const char **) apr_array_push (input_targets))) = raw_target;
+        }
+    }
 
+  /* Step 2:  process each target.  */
+
+  for (i = 0; i < input_targets->nelts; i++)
+    {
+      const char *raw_target = APR_ARRAY_IDX(input_targets, i, const char *);
+      const char *target;      /* after all processing is finished */
+
+      /* URLs and wc-paths get treated differently. */
+      if (svn_path_is_url (raw_target))
+        {
+          /* No need to canonicalize a URL's case or path separators. */
+
+          /* convert it to UTF-8 */
+          const char *utf8_url;
+          SVN_ERR (svn_utf_cstring_to_utf8 (&utf8_url, raw_target,
+                                            NULL, pool));
+
+          /* strip any trailing '/' */
+          target = svn_path_canonicalize_nts (utf8_url, pool);
+        }
+      else  /* not a url, so treat as a path */
+        {
+          const char *base_name = svn_path_basename (raw_target, pool);
+          char *truenamed_target;
+          apr_status_t apr_err;
+          
           /* If this target is a Subversion administrative directory,
              skip it.  TODO: Perhaps this check should not call the
              target a SVN admin dir unless svn_wc_check_wc passes on
              the target, too? */
           if (! strcmp (base_name, SVN_WC_ADM_DIR_NAME))
             continue;
-        }
-      else
-        {
-          target = svn_path_canonicalize_nts (target, pool);
+          
+          /* canonicalize case, and change all separators to '/'. */
+          apr_err = apr_filepath_merge (&truenamed_target, "", raw_target,
+                                        APR_FILEPATH_TRUENAME, pool);
+
+          /* It's okay for the file to not exist, that just means we have
+             to accept the case given to the client. */
+          if (APR_STATUS_IS_ENOENT (apr_err))
+            /* ### Disagreeable to cast, but it's only a tmp var and we're
+               casting it back a bit later on. */
+            truenamed_target = (char *) raw_target;
+          else if (apr_err)
+            return svn_error_createf (apr_err, 0, NULL, pool,
+                                      "Error resolving case of %s.",
+                                      raw_target);
+
+          /* convert to UTF-8. */
+          SVN_ERR (svn_utf_cstring_to_utf8 (&target,
+                                            (const char *) truenamed_target,
+                                            NULL, pool));
         }
 
-      (*((const char **) apr_array_push (targets))) = target;
+      (*((const char **) apr_array_push (output_targets))) = target;
     }
 
-  /* Now args from --targets, if any */
-  if (NULL != opt_state->targets)
-    apr_array_cat(targets, opt_state->targets);
 
   /* kff todo: need to remove redundancies from targets before
      passing it to the cmd_func. */
 
   if (extract_revisions)
     {
-      int i;
-      for (i = 0; i < targets->nelts; i++)
+      for (i = 0; i < output_targets->nelts; i++)
         {
           const char *truepath;
           svn_client_revision_t temprev; 
-          const char *path = ((const char **) (targets->elts))[i];
+          const char *path = ((const char **) (output_targets->elts))[i];
 
           parse_path (&temprev, &truepath, path, pool);
 
           if (temprev.kind != svn_client_revision_unspecified)
             {
-              ((const char **) (targets->elts))[i] = truepath;
+              ((const char **) (output_targets->elts))[i] = truepath;
 
               if (! firstrev)
                 {
@@ -273,7 +324,8 @@ svn_cl__args_to_target_array (apr_getopt_t *os,
         }
     }
   
-  return targets;
+  *targets_p = output_targets;
+  return SVN_NO_ERROR;
 }
 
 
@@ -290,15 +342,16 @@ svn_cl__print_commit_info (svn_client_commit_info_t *commit_info)
 
 
 svn_error_t *
-svn_cl__edit_externally (const char **edited_contents,
-                         const char *base_dir,
-                         const char *contents,
+svn_cl__edit_externally (const char **edited_contents /* UTF-8! */,
+                         const char *base_dir /* UTF-8! */,
+                         const char *contents /* UTF-8! */,
                          apr_pool_t *pool)
 {
   const char *editor = NULL;
   const char *cmd;
   apr_file_t *tmp_file;
   const char *tmpfile_name;
+  const char *contents_native, *tmpfile_native;
   apr_status_t apr_err, apr_err2;
   apr_size_t written;
   apr_finfo_t finfo_before, finfo_after;
@@ -319,6 +372,9 @@ svn_cl__edit_externally (const char **edited_contents,
        "None of the environment variables "
        "SVN_EDITOR, VISUAL or EDITOR is set.");
 
+  /* Convert file contents from UTF-8 */
+  SVN_ERR (svn_utf_cstring_from_utf8 (&contents_native, contents, pool));
+
   /* Ask the working copy for a temporary file based on BASE_DIR */
   SVN_ERR (svn_io_open_unique_file 
            (&tmp_file, &tmpfile_name,
@@ -328,15 +384,15 @@ svn_cl__edit_externally (const char **edited_contents,
        the file we just created!! ***/
 
   /* Dump initial CONTENTS to TMP_FILE. */
-  apr_err = apr_file_write_full (tmp_file, contents,
-                                 strlen (contents), &written);
+  apr_err = apr_file_write_full (tmp_file, contents_native, 
+                                 strlen (contents_native), &written);
 
   apr_err2 = apr_file_close (tmp_file);
   if (! apr_err)
     apr_err = apr_err2;
   
   /* Make sure the whole CONTENTS were written, else return an error. */
-  if (apr_err || (written != strlen (contents)))
+  if (apr_err || (written != strlen (contents_native)))
     {
       err = svn_error_createf
         (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, 0, NULL, pool,
@@ -344,9 +400,13 @@ svn_cl__edit_externally (const char **edited_contents,
       goto cleanup;
     }
 
+  err = svn_utf_cstring_from_utf8 (&tmpfile_native, tmpfile_name, pool);
+  if (err)
+    goto cleanup;
+
   /* Get information about the temporary file before the user has
      been allowed to edit its contents. */
-  apr_err = apr_stat (&finfo_before, tmpfile_name, 
+  apr_err = apr_stat (&finfo_before, tmpfile_native, 
                       APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
   if (apr_err)
     {
@@ -356,7 +416,7 @@ svn_cl__edit_externally (const char **edited_contents,
     }
 
   /* Now, run the editor command line.  */
-  cmd = apr_psprintf (pool, "%s %s", editor, tmpfile_name);
+  cmd = apr_psprintf (pool, "%s \"%s\"", editor, tmpfile_native);
   sys_err = system (cmd);
   if (sys_err != 0)
     {
@@ -368,7 +428,7 @@ svn_cl__edit_externally (const char **edited_contents,
     }
   
   /* Get information about the temporary file after the assumed editing. */
-  apr_err = apr_stat (&finfo_after, tmpfile_name, 
+  apr_err = apr_stat (&finfo_after, tmpfile_native, 
                       APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
   if (apr_err)
     {
@@ -383,10 +443,11 @@ svn_cl__edit_externally (const char **edited_contents,
     {
       svn_stringbuf_t *edited_contents_s;
       err = svn_string_from_file (&edited_contents_s, tmpfile_name, pool);
+      if (!err)
+        err = svn_utf_cstring_to_utf8 (edited_contents,
+                                       edited_contents_s->data, NULL, pool);
       if (err)
         goto cleanup; /* In case more code gets added before cleanup... */
-
-      *edited_contents = edited_contents_s->data;
     }
   else
     {
@@ -396,7 +457,7 @@ svn_cl__edit_externally (const char **edited_contents,
 
  cleanup:
 
-  apr_err = apr_file_remove (tmpfile_name, pool);
+  apr_err = apr_file_remove (tmpfile_native, pool);
 
   /* Only report remove error if there was no previous error. */
   if (! err && apr_err)
@@ -410,13 +471,14 @@ svn_cl__edit_externally (const char **edited_contents,
 struct log_msg_baton
 {
   const char *message;
-  const char *base_dir;
+  const char *message_encoding; /* the locale/encoding of the message. */
+  const char *base_dir; /* UTF-8! */
 };
 
 
 void *
 svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
-                            const char *base_dir,
+                            const char *base_dir /* UTF-8! */,
                             apr_pool_t *pool)
 {
   struct log_msg_baton *baton = apr_palloc (pool, sizeof (*baton));
@@ -425,6 +487,8 @@ svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
     baton->message = opt_state->filedata->data;
   else
     baton->message = opt_state->message;
+
+  baton->message_encoding = opt_state->filedata_encoding;
 
   baton->base_dir = base_dir ? base_dir : ".";
 
@@ -510,8 +574,24 @@ svn_cl__get_log_message (const char **log_msg,
 
   if (lmb->message)
     {
-      *log_msg = apr_pstrdup (pool, lmb->message);
-      return SVN_NO_ERROR;
+      /* If a special --message-encoding was given on the commandline,
+         convert the log message from that locale to UTF8: */
+      if (lmb->message_encoding)
+        {
+          apr_xlate_t *xlator;
+          apr_status_t apr_err =  
+            apr_xlate_open (&xlator, "UTF-8", lmb->message_encoding, pool);
+
+          if (apr_err != APR_SUCCESS)
+            return svn_error_create (apr_err, 0, NULL, pool,
+                                     "failed to create a converter to UTF-8");
+
+          return svn_utf_cstring_to_utf8 (log_msg, lmb->message, xlator, pool);
+        }
+      /* otherwise, just convert the message to utf8 by assuming it's
+         already in the 'default' locale of the environment. */
+      else        
+        return svn_utf_cstring_to_utf8 (log_msg, lmb->message, NULL, pool);
     }
 
   if (! (commit_items || commit_items->nelts))
@@ -523,7 +603,8 @@ svn_cl__get_log_message (const char **log_msg,
   while (! message)
     {
       /* We still don't have a valid commit message.  Use $EDITOR to
-         get one. */
+         get one.  Note that svn_cl__edit_externally will still return
+         a UTF-8'ized log message. */
       int i;
       svn_stringbuf_t *tmp_message = svn_stringbuf_create (default_msg, pool);
       svn_error_t *err = NULL;
@@ -589,6 +670,8 @@ svn_cl__get_log_message (const char **log_msg,
 
           for (len = message->len; len >= 0; len--)
             {
+              /* FIXME: should really use an UTF-8 whitespace test
+                 rather than apr_isspace, which is locale dependant */
               if (! apr_isspace (message->data[len]))
                 break;
             }

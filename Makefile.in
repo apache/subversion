@@ -7,7 +7,7 @@ VPATH = @top_srcdir@
 SVN_RA_LIB_DEPS = @SVN_RA_LIB_DEPS@
 SVN_RA_LIB_LINK = @SVN_RA_LIB_LINK@
 
-DOC_DIRS = doc/programmer/design doc/user/manual doc/user/svn_for_cvs_users
+DOC_DIRS = doc/programmer/design doc/handbook
 
 EXTERNAL_PROJECT_DIRS = @SVN_SUBDIRS@
 
@@ -47,7 +47,7 @@ LTFLAGS = --silent
 LT_LDFLAGS =
 
 INCLUDES = @SVN_EXTRA_INCLUDES@ @SVN_NEON_INCLUDES@ \
-		@SVN_DB_INCLUDES@
+		@SVN_DB_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_TARGET = @APACHE_TARGET@
@@ -120,6 +120,8 @@ local-extraclean: local-distclean
 
 local-install: @INSTALL_RULES@ @SWIG_INSTALL_RULES@
 
+install-static: @INSTALL_STATIC_RULES@
+
 check: $(TEST_DEPS) @FS_TEST_DEPS@
 	@$(PYTHON) $(top_srcdir)/build/pycheck.py ; \
 	$(PYTHON) $(top_srcdir)/build/run_tests.py \
@@ -160,12 +162,12 @@ external-extraclean:
 
 doc: doc-info doc-txt doc-html
 
-doc-info: doc/programmer/design/svn-design.info doc/user/manual/svn-manual.info doc/user/svn_for_cvs_users/svn_for_cvs_users.info
-doc-dvi: doc/programmer/design/svn-design.dvi doc/user/manual/svn-manual.dvi doc/user/svn_for_cvs_users/svn_for_cvs_users.dvi
-doc-txt: doc/programmer/design/svn-design.txt doc/user/manual/svn-manual.txt doc/user/svn_for_cvs_users/svn_for_cvs_users.txt
-doc-html: doc/programmer/design/svn-design.html doc/user/manual/svn-manual.html doc/user/svn_for_cvs_users/svn_for_cvs_users.html
-doc-ps: doc/programmer/design/svn-design.ps doc/user/manual/svn-manual.ps doc/user/svn_for_cvs_users/svn_for_cvs_users.ps
-doc-pdf: doc/programmer/design/svn-design.pdf doc/user/manual/svn-manual.pdf doc/user/svn_for_cvs_users/svn_for_cvs_users.pdf
+doc-info: doc/programmer/design/svn-design.info doc/handbook/svn-handbook.info
+doc-dvi: doc/programmer/design/svn-design.dvi doc/handbook/svn-handbook.dvi
+doc-txt: doc/programmer/design/svn-design.txt doc/handbook/svn-handbook.txt
+doc-html: doc/programmer/design/svn-design.html doc/handbook/svn-handbook.html
+doc-ps: doc/programmer/design/svn-design.ps doc/handbook/svn-handbook.ps
+doc-pdf: doc/programmer/design/svn-design.pdf doc/handbook/svn-handbook.pdf
 
 doc-clean:
 	for d in $(DOC_DIRS);                               \
@@ -202,13 +204,13 @@ dist:
 	$(MAKEINFO) -I `dirname $<` -o $@ $< 
 
 .texi.dvi:
-	wd=`pwd` ; cd `dirname $@` ; $(TEXI2DVI) -I `dirname $$wd/$<` $$wd/$<
+	wd=`pwd` ; cd `dirname $@` ; $(TEXI2DVI) $$wd/$<
 
 .texi.txt:
 	$(MAKEINFO) -I `dirname $<` --no-headers -o $@ $<
 
 .texi.html:
-	$(MAKEINFO) -I `dirname $<` --no-headers --html -o $@ $<
+	$(MAKEINFO) -I `dirname $<` --no-split --html -o $@ $<
 
 .dvi.ps:
 	$(DVIPS) $< -o $@

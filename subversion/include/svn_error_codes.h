@@ -125,6 +125,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_BAD_DATE,
               "Bogus date")
 
+  SVN_ERRDEF (SVN_ERR_BAD_REVISION,
+              "Bogus revision number")
+
   SVN_ERRDEF (SVN_ERR_UNSUPPORTED_FEATURE,
               "Trying to use an unsupported feature")
 
@@ -138,7 +141,7 @@ SVN_ERROR_START
               "Unknown svn_prop_kind")
 
   SVN_ERRDEF (SVN_ERR_ILLEGAL_TARGET,
-              "Illegal target for the requestion operation")
+              "Illegal target for the requested operation")
 
   SVN_ERRDEF (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT,
               "MD5 checksum is missing")

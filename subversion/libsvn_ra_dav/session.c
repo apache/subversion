@@ -33,6 +33,7 @@
 #include "svn_ra.h"
 #include "svn_config.h"
 #include "svn_version.h"
+#include "svn_path.h"
 
 #include "ra_dav.h"
 
@@ -493,6 +494,7 @@ static const svn_ra_plugin_t dav_plugin = {
   svn_ra_dav__do_update,
   svn_ra_dav__do_switch,
   svn_ra_dav__do_status,
+  svn_ra_dav__do_diff,
   svn_ra_dav__get_log,
   svn_ra_dav__do_check_path
 };

@@ -1,0 +1,142 @@
+#!/bin/sh
+# ====================================================================
+# Copyright (c) 2002 CollabNet.  All rights reserved.
+#
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
+#
+# This software consists of voluntary contributions made by many
+# individuals.  For exact contribution history, see the revision
+# history and logs, available at http://subversion.tigris.org/.
+# ====================================================================
+
+# SVN script designed to allow easy command line access to SVN
+# configuration parameters.
+
+prefix="@prefix@"
+exec_prefix="@exec_prefix@"
+bindir="@bindir@"
+libdir="@libdir@"
+includedir="@includedir@"
+
+LIBS="@NEON_LIBS@ @SVN_APRUTIL_EXPORT_LIBS@ @SVN_APR_EXPORT_LIBS@ @SVN_DB_LIBS@ @LIBS@"
+CFLAGS="@CFLAGS@"
+CPPFLAGS="@CPPFLAGS@"
+INCLUDES="@SVN_NEON_INCLUDES@ @SVN_DB_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@"
+LDFLAGS="@LDFLAGS@"
+
+SVN_SOURCE_DIR="@abs_srcdir@"
+SVN_BUILD_DIR="@abs_builddir@"
+
+show_usage()
+{
+    cat << EOF
+Usage: svn-config [OPTION]
+
+Known values for OPTION are:
+  --prefix[=DIR]    change prefix to DIR
+  --cflags          print C compiler flags
+  --cppflags        print cpp flags
+  --includes        print include information
+  --ldflags         print linker flags
+  --libs            print library information
+  --srcdir          print SVN source directory
+  --link-ld         [NOT IMPL] print link switch(es) for linking to SVN
+  --link-libtool    [NOT IMPL] print the libtool inputs for linking to SVN
+  --help            print this help
+
+When linking with libtool, an application should do something like:
+  SVN_LIBS="\`svn-config --link-libtool --libs\`"
+or when linking directly:
+  SVN_LIBS="\`svn-config --link-ld --libs\`"
+
+An application should use the results of --cflags, --cppflags, --includes,
+and --ldflags in their build process.
+EOF
+}
+
+if test $# -eq 0; then
+    show_usage
+    exit 1
+fi
+
+thisdir="`dirname $0`"
+thisdir="`cd $thisdir && pwd`"
+if test -d $bindir; then
+  tmpbindir="`cd $bindir && pwd`"
+else
+  tmpbindir=""
+fi
+if test "$tmpbindir" = "$thisdir"; then
+  location=installed
+elif test "$SVN_SOURCE_DIR" = "$thisdir"; then
+  location=source
+else
+  location=build
+fi
+
+flags=""
+
+while test $# -gt 0; do
+    # Normalize the prefix.
+    case "$1" in
+    -*=*) optarg=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+    *) optarg= ;;
+    esac
+
+    case "$1" in
+    # It is possible for the user to override our prefix.
+    --prefix=*)
+    prefix=$optarg
+    ;;
+    --prefix)
+    echo $prefix
+    exit 0
+    ;;
+    --cflags)
+    flags="$flags $CFLAGS"
+    ;;
+    --cppflags)
+    flags="$flags $CPPFLAGS"
+    ;;
+    --libs)
+    flags="$flags $LIBS"
+    ;;
+    --includes)
+    if test "$location" = "installed"; then
+        flags="$flags -I$includedir $INCLUDES"
+    elif test "$location" = "source"; then
+        flags="$flags -I$SVN_SOURCE_DIR/include $INCLUDES"
+    else
+        flags="$flags -I$thisdir/include -I$SVN_SOURCE_DIR/include $INCLUDES"
+    fi
+    ;;
+    --ldflags)
+    flags="$flags $LDFLAGS"
+    ;;
+    --srcdir)
+    echo $SVN_SOURCE_DIR
+    exit 0
+    ;;
+    --help)
+    show_usage
+    exit 0
+    ;;
+    *)
+    show_usage
+    exit 1
+    ;;
+    esac
+
+    # Next please.
+    shift
+done
+
+if test -n "$flags"; then
+  echo "$flags"
+fi
+
+exit 0
