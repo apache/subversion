@@ -119,6 +119,10 @@ List of 1.1 features/changes
     so folks can understand how/when renames are followed by certain
     commands.
 
+       --> really, we need a whole new section full of examples that
+           demonstrate syntaxes that follow history, vs. those that
+           don't.
+
   * do we need to tell people how to activate localized client
     output?  or is that just widespread knowledge?
 
