@@ -7,11 +7,13 @@ MUST HAVE
 
 * svn status -u shows lock info from repos.  (lundblad)
 
+* 'svn up' needs to notify when it deletes a defunct token
+       --> depends on patch-in-progress:
+           rev svn_wc_notify_func_t (on trunk) (lundblad/sussman)
+
 * research future ra_dav shim removal plan:  will it work? (sussman)
 
-* chat with jorton about neon 0.25/svn1.2 coordination.
-
-* fix svn_fs_access_t handling in svnserve (lundblad?)
+* fix svn_fs_access_t handling in svnserve (sussman)
    
 * autoversioning:
 
@@ -22,18 +24,21 @@ MUST HAVE
 
 * test 4 new hook scripts.  do they actually work? (fitz)
 
+* teach mailer.py to send lock/unlock notification mails. (cmpilato)
+
+* 'svn lock URL' should work, no working copy required.  easy to
+   do, just throw away the svn_lock_t that comes back.  (kfogel)
+
+* 'svn unlock URL --force' should work with no working copy present. (kfogel)
+
+* chat with jorton about neon 0.25/svn1.2 coordination.
+
+
 
 NICE TO HAVE
 ------------
 
 * improve cmdline help messages
-
-* 'svn lock URL' should work, no working copy required.  easy to
-   do, just throw away the svn_lock_t that comes back.
-
-* 'svn unlock URL --force' should work with no working copy present.
-
-* rev svn_wc_notify_func_t (on trunk) (lundblad)
 
 * remove ra_svn shim for multiple locks/unlocks (fitz)
 
