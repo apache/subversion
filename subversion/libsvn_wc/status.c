@@ -174,8 +174,7 @@ svn_wc_get_status (apr_hash_t *statushash,
       err = svn_wc__entries_read (&entries, path, pool);
       if (err) return err;
 
-      /* Loop over entries hash, calling add_status_structure() on
-         each entry */
+      /* Loop over entries hash */
       for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
         {
           const void *key;
@@ -184,23 +183,29 @@ svn_wc_get_status (apr_hash_t *statushash,
           apr_size_t keylen;
           svn_string_t *fullpath = svn_string_dup (path, pool);
 
+          /* Get the next dirent */
           apr_hash_this (hi, &key, &keylen, &val);
           basename = (const char *) key;
           svn_path_add_component_nts (fullpath, basename,
                                       svn_path_local_style);
           entry = (svn_wc__entry_t *) val;
 
-          /* Convert the entry into a status structure, store in the
-             hash */
-          if ((entry->kind == svn_file_kind)
-              || (! strcmp (basename, SVN_WC__ENTRIES_THIS_DIR)))
+          /* Recurse on the dirent, provided it's not "."  */
+          if (strcmp (basename, SVN_WC__ENTRIES_THIS_DIR))
             {
+              err = svn_wc_get_status (statushash, fullpath, pool);
+              if (err) return err;
+            }
+          else
+            {
+              /* This must be the "." dir;  store it instead of
+                 recursing. */
               err = add_status_structure (statushash, fullpath, entry, pool);
-              if (err) return err;         
+              if (err) return err;              
             }
         }      
     }
-
+  
   return SVN_NO_ERROR;
 }
 
