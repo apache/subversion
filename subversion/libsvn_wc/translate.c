@@ -658,7 +658,7 @@ svn_wc_copy_and_translate (const char *src,
         default:
           /* If we're currently bagging up a keyword string, we'll
              add this character to the keyword buffer.  */
-          if (keyword_off)
+          if ((len = keyword_off))
             {
               keyword_buf[keyword_off++] = c;
               
