@@ -48,7 +48,8 @@ static svn_error_t *
 print_unlock_info (void *baton,
                    const char *path,
                    svn_boolean_t do_lock,
-                   const svn_lock_t *lock)
+                   const svn_lock_t *lock,
+                 svn_error_t *ra_err)
 {
   svn_error_t *err;
   struct lock_baton *lb = baton;

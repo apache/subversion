@@ -1093,7 +1093,7 @@ svn_ra_local__lock (svn_ra_session_t *session,
 
       /* Run the lock callback if we have one. */
       if (lock_func)
-        SVN_ERR (lock_func (lock_baton, path, TRUE, lock));
+        SVN_ERR (lock_func (lock_baton, path, TRUE, lock, NULL));
 
       /* Add lock to the array of locks */
       APR_ARRAY_PUSH (locks, svn_lock_t *) = lock;
@@ -1143,7 +1143,7 @@ svn_ra_local__unlock (svn_ra_session_t *session,
 
       /* Run the lock callback if we have one. */
       if (lock_func)
-        SVN_ERR (lock_func (lock_baton, abs_path, FALSE, NULL));
+        SVN_ERR (lock_func (lock_baton, abs_path, FALSE, NULL, NULL));
     }
 
   return SVN_NO_ERROR;

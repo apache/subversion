@@ -449,13 +449,19 @@ typedef struct svn_lock_t
  * 
  * @a lock is a lock for @a path.
  *
+ * @a ra_err is null unless the ra layer encounters a locking related
+ * error which it passes back for notification purposes (although the
+ * callback can also re-throw the error).  The caller is responsible
+ * for clearing @a ra_err after the callback is run.
+ *
  * @a baton is a closure object; it should be provided by the
  * implementation, and passed by the caller.
  */
 typedef svn_error_t *(*svn_lock_callback_t) (void *baton,
                                              const char *path,
                                              svn_boolean_t do_lock,
-                                             const svn_lock_t *lock);
+                                             const svn_lock_t *lock,
+                                             svn_error_t *ra_err);
 
 #ifdef __cplusplus
 }

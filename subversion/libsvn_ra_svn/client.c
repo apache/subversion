@@ -1448,7 +1448,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
 
       /* Run the lock callback if we have one. */
       if (lock_func)
-        SVN_ERR(lock_func(lock_baton, path, TRUE, lock));
+        SVN_ERR(lock_func(lock_baton, path, TRUE, lock, NULL));
 
       /* Add lock to the array of locks */
       APR_ARRAY_PUSH(locks, svn_lock_t *) = lock;
@@ -1500,7 +1500,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
 
       /* Run the lock callback if we have one. */
       if (lock_func)
-        SVN_ERR(lock_func(lock_baton, path, FALSE, NULL));
+        SVN_ERR(lock_func(lock_baton, path, FALSE, NULL, NULL));
 
     }
 

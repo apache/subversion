@@ -98,7 +98,8 @@ static svn_error_t *
 store_locks_callback (void *baton, 
                       const char *path, 
                       svn_boolean_t do_lock,
-                      const svn_lock_t *lock)
+                      const svn_lock_t *lock,
+                      svn_error_t *ra_err)
 {
   struct lock_baton *lb = baton;
   svn_wc_adm_access_t *adm_access;
@@ -117,7 +118,8 @@ store_locks_callback (void *baton,
 
   /* Call our callback, if we've got one. */
   if (lb->nested_callback)
-    SVN_ERR (lb->nested_callback (lb->nested_baton, path, do_lock, lock));
+    SVN_ERR (lb->nested_callback (lb->nested_baton, path, do_lock, 
+                                  lock, ra_err));
 
   return SVN_NO_ERROR;
 }
