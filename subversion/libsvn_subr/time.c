@@ -55,6 +55,16 @@ static const char * const timestamp_format =
 static const char * const old_timestamp_format =
 "%s %d %s %d %02d:%02d:%02d.%06d (day %03d, dst %d, gmt_off %06d)";
 
+/* Our human representation of dates look like this:
+ *
+ *    "Sun, 23 Jun 2002 11:13:02 +0300"
+ *
+ * This format is used whenever time is shown to the user
+ * directly.
+ */
+static const char * const human_timestamp_format =
+"%3.3s, %.2d %3.3s %.2d %.2d:%.2d:%.2d %+.2d%.2d";
+
 
 const char *
 svn_time_to_nts (apr_time_t t, apr_pool_t *pool)
@@ -193,6 +203,27 @@ svn_time_from_nts(apr_time_t *when, const char *data, apr_pool_t *pool)
       return svn_error_createf(SVN_ERR_BAD_DATE, 0, NULL, pool,
                                "Date parsing failed.");
     }
+}
+
+
+const char *
+svn_time_to_human_nts (apr_time_t t, apr_pool_t *pool)
+{
+  apr_time_exp_t exploded_time;
+
+  apr_time_exp_lt (&exploded_time, t);
+
+  return apr_psprintf (pool,
+                       human_timestamp_format,
+                       apr_day_snames[exploded_time.tm_wday],
+                       exploded_time.tm_mday,
+                       apr_month_snames[exploded_time.tm_mon],
+                       exploded_time.tm_year + 1900,
+                       exploded_time.tm_hour,
+                       exploded_time.tm_min,
+                       exploded_time.tm_sec,
+                       exploded_time.tm_gmtoff / (60 * 60),
+                       (exploded_time.tm_gmtoff / 60) % 60);
 }
 
 
