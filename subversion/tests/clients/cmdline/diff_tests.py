@@ -1453,34 +1453,77 @@ def diff_renamed_file(sbox):
   was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
+  
+  svntest.main.file_append(os.path.join('A', 'D', 'G', 'pi'), "more pi")
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg')
+  
+  svntest.main.file_append(os.path.join('A', 'D', 'G', 'pi'), "even more pi")
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg')
+  
   svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G', 'pi'),
-                                   os.path.join('A', 'D', 'G', 'pi2'))
-  svntest.main.file_append(os.path.join('A', 'D', 'G', 'pi2'), "new pi")
+                                   os.path.join('A', 'D', 'pi2'))
 
-  # Check doing a repos->wc diff.
+  # Repos->WC diff of the file
+  # Since peg revision calculation of schedule-adds is broken, we
+  # need to specify the total path+revision for now.
   diff_output, err_output = svntest.main.run_svn(None, 'diff',
-                                                 os.path.join('A', 'D', 'G', 'pi2'))
+                                                 '--old',
+                                                 os.path.join(sbox.repo_url,
+                                                              'A', 'D', 'G',
+                                                              'pi@1'),
+                                                 '--new',
+                                                 os.path.join('A', 'D', 'pi2'))
+
   if check_diff_output(diff_output,
-                       os.path.join('A', 'D', 'G', 'pi2'),
+                       os.path.join('A', 'D', 'pi2'),
+                       'M') :
+    raise svntest.Failure
+                                   
+  svntest.main.file_append(os.path.join('A', 'D', 'pi2'), "new pi")
+
+  # Repos->WC of the directory
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
+                                                 os.path.join('A', 'D'))
+
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'G', 'pi'),
+                       'D') :
+    raise svntest.Failure
+    
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'pi2'),
+                       'M') :
+    raise svntest.Failure
+  
+  # WC->WC of the file
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 os.path.join('A', 'D', 'pi2'))
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'pi2'),
                        'M') :
     raise svntest.Failure
 
+    
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg')
 
-  # repos->wc diff after the rename.
+  # Repos->WC diff of file after the rename.
   diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
-                                                 os.path.join('A', 'D', 'G', 'pi2'))
+                                                 os.path.join('A', 'D', 'pi2'))
   if check_diff_output(diff_output,
-                       os.path.join('A', 'D', 'G', 'pi2'),
+                       os.path.join('A', 'D', 'pi2'),
                        'M') :
     raise svntest.Failure
 
-  # repos->repos diff after the rename.
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2',
-                                                 os.path.join('A', 'D', 'G', 'pi2'))
+  # Repos->repos diff after the rename.
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '2:3',
+                                                 os.path.join('A', 'D', 'pi2'))
   if check_diff_output(diff_output,
-                       os.path.join('A', 'D', 'G', 'pi'),
+                       os.path.join('A', 'D', 'pi'),
                        'M') :
     raise svntest.Failure
 
