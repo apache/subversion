@@ -156,6 +156,7 @@ svn_io_open_unique_file (apr_file_t **f,
         continue;
       else if (apr_err)
         {
+          char *filename = (*unique_name)->data;
           *f = NULL;
           *unique_name = NULL;
           return svn_error_createf (apr_err,
@@ -164,7 +165,7 @@ svn_io_open_unique_file (apr_file_t **f,
                                     pool,
                                     "svn_io_open_unique_file: "
                                     "error attempting %s",
-                                    (*unique_name)->data);
+                                    filename);
         }
       else
         return SVN_NO_ERROR;
