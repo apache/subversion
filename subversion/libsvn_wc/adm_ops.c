@@ -86,7 +86,7 @@ recursively_tweak_entries (const char *dirpath,
 
       /* Derive the new URL for the current (child) entry */
       if (base_url)
-        child_url = svn_path_join (base_url, name, subpool);
+        child_url = svn_path_url_add_component (base_url, name, subpool);
       
       /* If a file (or deleted dir), tweak the entry. */
       if ((current_entry->kind == svn_node_file)
