@@ -67,6 +67,7 @@ struct svn_diff__lcs_t
   svn_diff__lcs_t      *next;
   svn_diff__position_t *position[2];
   apr_off_t             length;
+  int                   refcount;
 };
 
 
