@@ -5,26 +5,26 @@ Outline Mode:
   
    C-c C-t       compress entire buffer into headings only
    C-c C-a       decompress entire buffer
-
    C-c C-d       compress subtree
    C-c C-s       decompress subtree
 
 ------------------------------------------------------------------------
 
-* M3 Master TODO list
+* M3 todo list
 
-  ANSWER: M3 will be client Test suite and self-hosting. "Test suite"
-           is defined as follows:
+  M3 is self-hosting with a command line client.
         
-           When every command supported by the client is tested
-           (edge-cases and all) by the test-suite. Those commands
-           include: add, checkout, commit, copy, delete, diff, import,
-           merge, propget, propset, status, update, and help.
-
+  We need every command supported by the client tested (edge-cases and
+  all) by the test-suite. Those commands include: add, checkout,
+  commit, copy, delete, diff, import, merge, propget, propset, status,
+  update, and help.
 
 ** Network layer needs to support user-props (gstein).
 
-  Things that depend on (non-wc) props:
+  ESTIMATE: 1 programmer week for most of us to get props over DAV
+            working, less time if gstein or joe orton does it.
+
+Things that depend on (non-wc) props:
 
 *** autodetection of text/binary types / keyword sub / newline translation
 
@@ -70,31 +70,23 @@ Outline Mode:
                      Subject: Alphe-checklist comments             --xbc ]
 
 
+  ESTIMATE: .5 to 1 programmer week.  Not difficult to code at all,
+            just a matter of getting properties interpreted right.
+
 ** Many working copy bugs & theoretical issues (sussman and cmpilato)
-
-*** the "Greg Hudson" scenario. :)
-
-  Deal with and adding removing files when parent dir is *not*
-up-to-date.  Create two new entries-file flag states: 'deleted' and
-'added'.  These flags will be removed when the parent-dir's revision is
-equal to or newer than the entry's revision.
 
 *** need many tests for tricky multi-target commits and updates
 
-We just don't have enough tests for this yet.
+Ben is working on these, has a list from cmpilato of the new
+functionality that needs testing.
 
-*** dealing with fs type changes in the wc.
-
-  In other words, when the user removes and re-adds an object of the
-same name, but not necessarily the same fs type.  Deal with this
-scenario in both the commit and update case.
-
-*** making directory removals and re-adds work correctly.
-
+  ESTIMATE: working on now, Ben sez definitely done before 6 July 2001
 
 ** new 'libsvn_repos':  utils built on *top* of libsvn_fs
 
 *** cross-process read/write lock function for DB_RUN_RECOVERY. (gstein)
+
+  ESTIMATE: 1 programmer week.  Might be less, betting conservatively.
 
 *** hook system -- to fire off shell scripts.  (kfogel defines, gstein imps)
 
@@ -116,42 +108,32 @@ scenario in both the commit and update case.
            in the repository. They will sit on the server *near* the
            repository, and users *can* put them in the repository.
 
+  ESTIMATE: 2 programmer weeks.
 
-** Filesystem improvements (kfogel and branko)
+** fs deltification (brane, kfogel, anyone else)
 
-*** strings table (kfogel working on, delayed till June 1)
+  This may also get us efficient file streaming; if it does not, an
+  issue will be opened.  Since it's not critical to functionality,
+  though, it's not an item on this list.
 
-*** deltification (branko working on)
+  ESTIMATE: kfogel, brane working on right now, needs a couple of
+  weeks, consider us allocated through 18th July, sigh.
 
-*** revision props
+** keep node-rev-id strings short  (kfogel)
 
-svn_fs_commit_txn() needs to automatically add some properties to the
-new revision if the commit is successful.  Specifically, it needs to
-add a `timestamp' property, and possibly a `user' property, so we know
-who did the commit.
+   Solution is known, easy to code.  See the long "### kff todo"
+   comment right after the recursive call in tree.c:merge().
 
-Then some library (libsvn_repos?) needs to provide an interface that
-allows the caller to ask the questions, "on what date was revision N
-committed?" and "which revision number was the HEAD on a particular
-date?"
+   ESTIMATE: 1 day
 
-This is important, because we need 'svn co/up' to not only take the
-'-r' flag, but a --date flag.
+** cvs2svn (gstein?  Thom Wood?  Someone else)
 
+  This does not have to be written using SWIG, although that would be
+  nice.  Writing it in C against the native SVN library interfaces
+  would be fine too.
 
-
-** cvs2svn (Thom and Greg)
-
-  Note that for M3, we only need a subset of cvs2svn
-  functionality... i.e. no branch support.
-
-** general pool usage code-review (gstein and fitz)
-
-Fitz and gstein will do a general pool review including documenting
-pool usage in HACKING. in svn_fs.h, the close functions for certain
-objects will go away. Where possible, the pool field will be removed
-from various structures and take a pool from the caller (may involve
-changing arguments, etc).
+  ESTIMATE: 4 programmer weeks, because it needs to be tested out the
+            wazoo.
 
 ** change #6:  invert text-delta interface (gstein)
 
@@ -160,13 +142,18 @@ changing arguments, etc).
    and/or a pair of svn_stream_t's, and/or an svn_txdelta_stream.  Let
    the editor select what it wants to use.
 
-** simple Apache-only authentication & authorization (gstein)
+   ESTIMATE: ?  Greg, was something blocking on this for M3?
+   Otherwise, let's do it during post-Alpha.
+
+** simple Apache-only authentication & authorization (gstein, kfogel)
 
   Ben asks:  doesn't this already exst?  Can't we just throw existing
   Apache security directives into the <Location> tag and build an
   htaccess file?
 
-** 'svn cleanup' command
+  ESTIMATE: ?  Need to start discussion on the list about this.
+
+** 'svn cleanup' command (kfogel)
 
   Often when svn segfaults, it leaves the working copy locked.
   Normally this is no big deal, we just blow away the working copy and
@@ -176,17 +163,16 @@ changing arguments, etc).
   -- we need to be able to run 'svn cleanup', which will run orphaned
   logs and remove locks.
 
-
+  ESTIMATE: .5 programmer weeks
 
 * ALPHA items
 
+  Alpha is when we're ready to release 1.0, except that we've got lots
+  of bugs. :-)
+
 ** Filesystem improvements
 
-*** real file streaming              /* may be done with above */
-
 *** dir_delta use 'copyfrom' args    /* cmpilato, in progres */
-
-*** keep node-rev-id strings short   /* kfogel will do, solution is known */
 
 *** copy properties  
 
@@ -231,6 +217,14 @@ subdirs, or hide them under a cvs-like interface?
 
    - 'merge' will probably need to use delta_dirs()
 
+
+** general pool usage code-review (gstein and fitz)
+
+   Fitz and gstein will do a general pool review including documenting
+   pool usage in HACKING. in svn_fs.h, the close functions for certain
+   objects will go away. Where possible, the pool field will be
+   removed from various structures and take a pool from the caller
+   (may involve changing arguments, etc).
 
 ** internalized diff/patch library:  (sussman has started)
 
