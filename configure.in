@@ -261,7 +261,7 @@ if test "$CHECKMAKEINFO" = "none"; then
         dnl we won't install/make any info pages then
 	INSTALL_INFO=""
 else
-	INSTALL_INFO='$(INFOPAGES)'
+	INSTALL_INFO='install-info'
 fi
 AC_SUBST(INSTALL_INFO)
 
