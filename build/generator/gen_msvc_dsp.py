@@ -41,7 +41,7 @@ class Generator(gen_win.WinGeneratorBase):
         targtype = "Win32 (x86) Static Library"
         targval = "0x0104"
         target.output_name = '%s-%d.lib' % (target.name, self.cfg.version)
-    elif isinstance(target, gen_base.TargetUtility):
+    elif isinstance(target, gen_base.TargetProject):
       if target.cmd:
         targtype = "Win32 (x86) External Target"
         targval = "0x0106"
@@ -67,10 +67,10 @@ class Generator(gen_win.WinGeneratorBase):
       'default_platform' : self.platforms[0],
       'default_config' : configs[0].name,
       'is_exe' : ezt.boolean(isinstance(target, gen_base.TargetExe)),
-      'is_external' : ezt.boolean(isinstance(target, gen_base.TargetUtility)
+      'is_external' : ezt.boolean(isinstance(target, gen_base.TargetProject)
                                   and target.cmd),
       'is_utility' : ezt.boolean(isinstance(target,
-                                            gen_base.TargetUtility)),
+                                            gen_base.TargetProject)),
       'is_dll' : ezt.boolean(isinstance(target, gen_base.TargetSWIG)
                              or isinstance(target, gen_base.TargetApacheMod)),
       'instrument_apr_pools' : self.instrument_apr_pools,
@@ -91,7 +91,7 @@ class Generator(gen_win.WinGeneratorBase):
     # Traverse the targets and generate the project files
     for target in install_targets:
       name = target.name
-      if isinstance(target, gen_base.TargetProject):
+      if isinstance(target, gen_base.TargetExternal):
         # Figure out where the external .dsp is located.
         if target.project_name:
           project_path = os.path.join(target.path, target.project_name)

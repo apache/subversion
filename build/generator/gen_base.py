@@ -551,21 +551,21 @@ class TargetSpecial(Target):
   def add_dependencies(self, graph, cfg, extmap):
     graph.add(DT_PROJECT, 'notused', self)
 
-class TargetProject(TargetSpecial):
+class TargetExternal(TargetSpecial):
   """Represents pre-existing project files not created by generator"""
   def __init__(self, name, options, cfg, extmap):
     TargetSpecial.__init__(self, name, options, cfg, extmap)
     self.project_name = options.get('project_name')
 
-class TargetUtility(TargetSpecial):
+class TargetProject(TargetSpecial):
   """Represents projects which don't produce any output"""
   def __init__(self, name, options, cfg, extmap):
     TargetSpecial.__init__(self, name, options, cfg, extmap)
     self.cmd = options.get('cmd')
 
-class TargetSWIGUtility(TargetUtility):
+class TargetSWIGProject(TargetProject):
   def __init__(self, name, options, cfg, extmap):
-    TargetUtility.__init__(self, name, options, cfg, extmap)
+    TargetProject.__init__(self, name, options, cfg, extmap)
     self.lang = options.get('language')
 
 _build_types = {
@@ -574,10 +574,10 @@ _build_types = {
   'lib' : TargetLib,
   'doc' : TargetDoc,
   'swig' : TargetSWIG,
+  'external' : TargetExternal,
   'project' : TargetProject,
-  'utility' : TargetUtility,
   'swig_runtime' : TargetSWIGRuntime,
-  'swig_utility' : TargetSWIGUtility,
+  'swig_project' : TargetSWIGProject,
   'ra-module': TargetRaModule,
   'apache-mod': TargetApacheMod,
   }
