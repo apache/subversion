@@ -20,8 +20,8 @@ TABLE OF CONTENTS
    * Document everything
    * Using page breaks
    * Other conventions
-   * APR status codes
    * APR pool usage conventions
+   * APR status codes
    * Automated tests
    * Writing test cases before code
    * Debugging the server
@@ -29,7 +29,7 @@ TABLE OF CONTENTS
    * Patch submission guidelines
    * Filing bugs / issues
    * Commit access
-   * The Configuration/Build System Under Unix
+   * The configuration/build system under unix
    * How to create a distribution tarball
    * Release numbering
 
