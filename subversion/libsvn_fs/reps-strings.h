@@ -105,8 +105,6 @@ svn_stream_t *svn_fs__rep_contents_read_stream (svn_fs_t *fs,
    of TRAIL; otherwise, each write happens in an internal, one-off
    trail (though TRAIL is still required).  POOL may be TRAIL->pool.
 
-   If REP_KEY is not empty, return SVN_ERR_FS_REP_NOT_EMPTY.
-
    If REP_KEY is not mutable, writes to *WS_P will return the
    error SVN_ERR_FS_REP_NOT_MUTABLE.  */
 svn_error_t *
