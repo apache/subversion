@@ -405,6 +405,14 @@ svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
   int wc_format;
 
   SVN_ERR (probe (&dir, path, &wc_format, pool));
+
+  /* If we moved up a directory, then the path is not a directory, or it
+     is not under version control. In either case, the notion of a tree_lock
+     does not apply to the provided path. Disable it so that we don't end
+     up trying to lock more than we need.  */
+  if (dir != path)
+    tree_lock = FALSE;
+
   SVN_ERR (svn_wc_adm_open (adm_access, associated, dir, write_lock, tree_lock,
                             pool));
   if (wc_format && ! (*adm_access)->wc_format)
