@@ -63,6 +63,8 @@ INSTALL_INCLUDE = $(INSTALL) -m 644
 INSTALL_MOD_SHARED = @APXS@ -i -a
 INSTALL_MOD_STATIC = $(INSTALL) -m 644
 
+PYTHON = @PYTHON@
+
 all: external-all local-all
 clean: external-clean local-clean
 distclean: external-distclean local-distclean
@@ -105,7 +107,12 @@ check: $(TEST_DEPS)
 	    progdir=`echo $$prog | sed 's?/[^/]*$$??'` ; \
 	    echo -n "Running all tests in $$progbase..." ; \
 	    echo "START: $$progbase" >> $$logfile ; \
-	    if (cd $$progdir && ./$$progbase) >> $$logfile ; then \
+	    if echo $$prog | grep \.py > /dev/null; then  \
+		runprog="$(PYTHON) $$prog" ; \
+	    else  \
+		runprog="cd $$progdir && ./$$progbase" ; \
+	    fi ; \
+	    if ( eval $$runprog ) >> $$logfile ; then \
 		echo "SUCCESS" ; \
 	    else \
 		failed=yes; \
