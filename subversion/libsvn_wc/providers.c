@@ -33,7 +33,11 @@ typedef struct
   /* the wc directory and access baton we're attempting to read/write from */
   const char *base_dir;
   svn_wc_adm_access_t *base_access;
-  
+
+  /* values retrieved from cache. */
+  const char *username;
+  const char *password;
+
 } provider_baton_t;
 
 
@@ -90,6 +94,12 @@ get_creds (const char **username,
       return SVN_NO_ERROR;
     }
 
+  /* If we read values from the cache, we want to remember those. */
+  if (susername && susername->data)
+    pb->username = susername->data;
+  if (spassword && spassword->data)
+    pb->password = spassword->data;
+
   if (username)
     *username = def_username ? def_username : susername->data;
   if (password)
@@ -101,8 +111,7 @@ get_creds (const char **username,
 
 static svn_error_t *
 save_creds (svn_boolean_t *saved,
-            const char *base_dir,
-            svn_wc_adm_access_t *base_access,
+            provider_baton_t *pb,
             const char *username,
             const char *password,
             apr_pool_t *pool)
@@ -116,7 +125,7 @@ save_creds (svn_boolean_t *saved,
   /* Repository queries (at the moment HEAD to number, but in future date
      to number and maybe others) prior to a checkout will attempt to store
      auth info before the working copy exists.  */
-  err = svn_wc_check_wc (base_dir, &wc_format, pool);
+  err = svn_wc_check_wc (pb->base_dir, &wc_format, pool);
   if (err || ! wc_format)
     {
       if (err && err->apr_err == APR_ENOENT)
@@ -132,18 +141,25 @@ save_creds (svn_boolean_t *saved,
      before storing auth info so we can open a new baton here.  We don't
      need a write-lock because storing auth data doesn't use log files. */
 
-  if (! base_access)
-    SVN_ERR (svn_wc_adm_open (&adm_access, NULL, base_dir, FALSE, TRUE, pool));
+  if (! pb->base_access)
+    SVN_ERR (svn_wc_adm_open (&adm_access, NULL, pb->base_dir, 
+                              FALSE, TRUE, pool));
   else
-    adm_access = base_access;
+    adm_access = pb->base_access;
 
-  /* Do a recursive store of username and password. */
-  if (username)
+  /* Do a recursive store of username and password if the new values
+     are different than what we read from the cache, or if we read
+     nothing from the cache at all. */
+  if (username && 
+      ((pb->username && (strcmp (username, pb->username) != 0))
+       || (! pb->username)))
     SVN_ERR (svn_wc_set_auth_file (adm_access, TRUE,
                                    SVN_WC__AUTHFILE_USERNAME, 
                                    svn_stringbuf_create (username, pool),
                                    pool));
-  if (password)
+  if (password && 
+      ((pb->password && (strcmp (password, pb->password) != 0))
+       || (! pb->password)))
     SVN_ERR (svn_wc_set_auth_file (adm_access, TRUE,
                                    SVN_WC__AUTHFILE_PASSWORD,
                                    svn_stringbuf_create (password, pool),
@@ -151,7 +167,7 @@ save_creds (svn_boolean_t *saved,
 
   *saved = TRUE;
 
-  if (! base_access)
+  if (! pb->base_access)
     SVN_ERR (svn_wc_adm_close (adm_access));
   
   return SVN_NO_ERROR;
@@ -210,8 +226,7 @@ simple_save_creds (svn_boolean_t *saved,
 
   if (pb->base_dir
       && (no_auth_cache == NULL))
-    SVN_ERR (save_creds (saved, pb->base_dir, pb->base_access, 
-                         creds->username, creds->password, pool));
+    SVN_ERR (save_creds (saved, pb, creds->username, creds->password, pool));
   return SVN_NO_ERROR;
 }
 
@@ -284,8 +299,7 @@ username_save_creds (svn_boolean_t *saved,
 
   if (pb->base_dir
       && (no_auth_cache == NULL))
-    SVN_ERR (save_creds (saved, pb->base_dir, pb->base_access, 
-                         creds->username, NULL, pool));
+    SVN_ERR (save_creds (saved, pb, creds->username, NULL, pool));
   return SVN_NO_ERROR;
 }
 
