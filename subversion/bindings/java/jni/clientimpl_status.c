@@ -263,7 +263,7 @@ Java_org_tigris_subversion_lib_ClientImpl_status
                     fprintf(stderr, "apr_hash_next(");
                     SVN_JNI__DEBUG_PTR(index);
                     fprintf(stderr, ")...");
-#endif SVN_JNI__VERBOSE
+#endif
 
                     /* proceed to the next iteration */
                     apr_hash_next(index);
