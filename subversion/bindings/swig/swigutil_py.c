@@ -44,7 +44,7 @@
   Python requires us to keep track of the PyThreadState on a per-thread
   basis, so we have to use pthreads.  If we don't have pthreads or
   python threading is disabled, this all becomes a no-op and the
-  python global interpreter lock will be held during calls to to
+  python global interpreter lock will be held during calls to
   subversion functions. 
 */
 

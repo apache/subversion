@@ -381,7 +381,7 @@ des cas utilisateurs problématiques.
 
 @subsubsection Problème
 
-@c This is the first part of of the ``Greg Hudson'' problem, so named
+@c This is the first part of the ``Greg Hudson'' problem, so named
 @c because he was the first one to bring it up and define it well.  :-)
 
 Supposons que votre copie de travail a un répertoire @samp{DIR:1}

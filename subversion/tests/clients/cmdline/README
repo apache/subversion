@@ -95,7 +95,7 @@ to include
    AuthUserFile /usr/local/apache2/conf/users
    Require valid-user
 
-Next create the auth file file using the command 
+Next create the auth file using the command 
 
    $ htpasswd -c /usr/local/apache2/conf/users jrandom
 

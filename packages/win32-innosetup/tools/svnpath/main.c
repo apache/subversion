@@ -385,7 +385,7 @@ svn_read_regval (HKEY hKey, char cValue[10], char cKey[BUFSIZE],
     DWORD dwBufLen;
     dwBufLen=BUFSIZE;
 
-    /* Get the key value and put in in pcPathCur */
+    /* Get the key value and put in pcPathCur */
     lRet = RegOpenKeyExA(HKEY_LOCAL_MACHINE, cKey,
                          0, KEY_READ, &hKey );
 

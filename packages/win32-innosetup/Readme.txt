@@ -161,9 +161,9 @@ Programs used for the Subversion Windows installer
   reliable and stable.
 
   The Inno Setup used by Subversion are extended with "My Inno Setup
-  Extentions" made by Martijn Laan and "Inno Setup Pre Proccessor" made by Alex
-  Yackimoff. ISX includes IS and ISPP so all you need to do, is to install
-  install "My Inno Setup Extentions"
+  Extentions" made by Martijn Laan and "Inno Setup Pre Proccessor"
+  made by Alex Yackimoff. ISX includes IS and ISPP so all you need to
+  do, is to install "My Inno Setup Extentions"
 
   Oh, you should visit Jordan Russell's (the Inno Setup creater) homepage at:
     http://www.jrsoftware.org/
@@ -213,8 +213,8 @@ Programs used for the Subversion Windows installer
   libxml, libxslt and iconv
   -------------------------
   We need to include some documentation and this tools will help us to convert
-  the XML files in the doc directory in the the repository to a Windows HTML
-  help file.
+  the XML files in the doc directory in the repository to a Windows HTML help
+  file.
   
   Installation notes:
     Unpack the zip-files and place the contents of the 'lib' and 'util' folders

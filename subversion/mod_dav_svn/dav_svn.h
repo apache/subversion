@@ -482,10 +482,10 @@ dav_error * dav_svn_split_uri (request_rec *r,
    pairs, and thus one of {svn_node_file, svn_node_dir, svn_node_none}
    will be returned.
 
-   If URI is something more abstract, then set *KIND to to
+   If URI is something more abstract, then set *KIND to
    svn_node_unknown.  This is true for baselines, working baselines,
    version controled configurations, activities, histories, and other
-   private resources.  
+   private resources.
 */
 dav_error * dav_svn_resource_kind (request_rec *r,
                                    const char *uri,
