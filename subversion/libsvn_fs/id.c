@@ -29,7 +29,7 @@ svn_fs_id_length (const svn_fs_id_t *id)
   int len;
 
   for (len = 0; id[len] != -1; len++)
-    ;
+    continue;
 
   return len;
 }
@@ -122,7 +122,8 @@ svn_fs_id_distance (const svn_fs_id_t *a, const svn_fs_id_t *b)
     return -1;
 
   /* Skip any common prefix.  */
-  for (i = 0; a[i] == b[i] && a[i+1] == b[i+1] && a[i] != -1; i+=2);
+  for (i = 0; a[i] == b[i] && a[i] != -1 && a[i+1] == b[i+1]; i += 2)
+    continue;
 
   /* If they're completely identical, then the distance is zero.  */
   if (a[i] == -1 && b[i] == -1)
