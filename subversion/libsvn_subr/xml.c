@@ -94,6 +94,76 @@ svn_xml_get_attr_value (const char *name, const char **atts)
 
 
 
+/*** Printing XML ***/
+
+/* Print an XML tag named TAGNAME into FILE.  Varargs are used to
+   specify a NULL-terminated list of {const char *attribute, const
+   char *value}.  TAGTYPE must be one of 
+
+              svn_xml__open_tag         ... <tagname>
+              svn_xml__close_tag        ... </tagname>
+              svn_xml__self_close_tag   ... <tagname/>
+
+   FILE is assumed to be already open for writing.
+*/
+svn_error_t *
+svn_xml_write_tag (apr_file_t *file,
+                   apr_pool_t *pool,
+                   const int tagtype,
+                   const char *tagname,
+                   ...)
+{
+  apr_status_t status;
+  apr_size_t bytes_written;
+  va_list argptr;
+  char *attribute, *value;
+  svn_string_t *xmlstring;
+
+  apr_pool_t *subpool = apr_make_sub_pool (pool, NULL);
+
+  xmlstring = svn_string_create ("<", subpool);
+
+  if (tagtype == svn_xml__close_tag)
+    svn_string_appendcstr (xmlstring, "/", subpool);
+
+  svn_string_appendcstr (xmlstring, tagname, subpool);
+
+  va_start (argptr, tagname);
+  attribute = (char *) argptr;
+
+  while (attribute)
+    {
+      value = va_arg (argptr, char *);
+      
+      svn_string_appendcstr (xmlstring, "\n   ", subpool);
+      svn_string_appendcstr (xmlstring, attribute, subpool);
+      svn_string_appendcstr (xmlstring, "=\"", subpool);
+      svn_string_appendcstr (xmlstring, value, subpool);
+      svn_string_appendcstr (xmlstring, "\"", subpool);
+      
+      attribute = va_arg (argptr, char *);
+    }
+  va_end (argptr);
+
+  if (tagtype == svn_xml__self_close_tag)
+    svn_string_appendcstr (xmlstring, "/", subpool);
+
+  svn_string_appendcstr (xmlstring, ">\n", subpool);
+
+  /* Do the write */
+  status = apr_full_write (file, xmlstring->data, xmlstring->len,
+                           &bytes_written);
+  if (status)
+    return svn_error_create (status, 0, NULL, pool,
+                             "svn_xml_write_tag:  file write error.");
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
