@@ -43,8 +43,7 @@ compare_items_as_paths (const svn_item_t *a, const svn_item_t *b)
 }
 
 static svn_error_t *
-print_dirents (const char *url,
-               apr_hash_t *dirents,
+print_dirents (apr_hash_t *dirents,
                svn_boolean_t verbose,
                apr_pool_t *pool)
 {
@@ -53,8 +52,6 @@ print_dirents (const char *url,
 
   array = apr_hash_sorted_keys (dirents, compare_items_as_paths, pool);
   
-  printf ("%s:\n", url);
-
   for (i = 0; i < array->nelts; ++i)
     {
       const char *utf8_entryname, *native_entryname;
@@ -140,7 +137,6 @@ svn_cl__ls (apr_getopt_t *os,
       apr_hash_t *dirents;
       const char *target_native;
       const char *target = ((const char **) (targets->elts))[i];
-      SVN_ERR (svn_utf_cstring_from_utf8 (&target_native, target, subpool));
      
       if (! svn_path_is_url (target))
         {
@@ -151,8 +147,7 @@ svn_cl__ls (apr_getopt_t *os,
       SVN_ERR (svn_client_ls (&dirents, target, &(opt_state->start_revision),
                               auth_baton, subpool));
 
-      SVN_ERR (print_dirents (target_native, dirents, opt_state->verbose, 
-                              subpool));
+      SVN_ERR (print_dirents (dirents, opt_state->verbose, subpool));
 
       svn_pool_clear (subpool);
     }
