@@ -2,7 +2,7 @@
  * paths.c:   a path manipulation library using svn_string_t
  *
  * ================================================================
- * Copyright (c) 2000 Collab.Net.  All rights reserved.
+ * Copyright (c) 2000 CollabNet.  All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -17,7 +17,7 @@
  * 
  * 3. The end-user documentation included with the redistribution, if
  * any, must include the following acknowlegement: "This product includes
- * software developed by Collab.Net (http://www.Collab.Net/)."
+ * software developed by CollabNet (http://www.CollabNet/)."
  * Alternately, this acknowlegement may appear in the software itself, if
  * and wherever such third-party acknowlegements normally appear.
  * 
@@ -27,7 +27,7 @@
  * 
  * 5. Products derived from this software may not use the "Tigris" name
  * nor may "Tigris" appear in their names without prior written
- * permission of Collab.Net.
+ * permission of CollabNet.
  * 
  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
  * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
@@ -44,7 +44,7 @@
  * ====================================================================
  * 
  * This software consists of voluntary contributions made by many
- * individuals on behalf of Collab.Net.
+ * individuals on behalf of CollabNet.
  */
 
 
