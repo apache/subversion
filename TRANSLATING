@@ -48,7 +48,10 @@ Starting a new translation
 ==========================
 
 Before starting a new translation please contact the subversion
-development mailing list to make sure you are not duplicating efforts.
+development mailing list to make sure you are not duplicating efforts. Also
+please note that the project has a strong preference for translations which
+are maintained by more than one person: mailing the lists with your
+intentions might help you find supporters.
 
 After that, you should perform the following steps:
 
