@@ -196,20 +196,10 @@ svn_client_add (svn_stringbuf_t *path,
 
 
 svn_error_t *
-svn_client_unadd (svn_stringbuf_t *path,
-                  apr_pool_t *pool);
-
-
-svn_error_t *
 svn_client_delete (svn_stringbuf_t *path,
                    svn_boolean_t force,
                    apr_pool_t *pool);
 
-
-svn_error_t *
-svn_client_undelete (svn_stringbuf_t *path,
-                     svn_boolean_t recursive,
-                     apr_pool_t *pool);
 
 /* Import a tree, using optional pre- and post-commit hook editors
  * (BEFORE_EDITOR, BEFORE_EDIT_BATON / AFTER_EDITOR,
@@ -353,10 +343,11 @@ svn_client_cleanup (svn_stringbuf_t *dir,
 
 
 /* Restore the pristine version of a working copy PATH, effectively
-   undoing any local mods.  ### cmpilato todo: What about directories?
-   What about properties?  Eh?  */
+   undoing any local mods.  If PATH is a directory, and RECURSIVE is
+   TRUE, this will be a recursive operation.  */
 svn_error_t *
 svn_client_revert (svn_stringbuf_t *path,
+                   svn_boolean_t recursive,
                    apr_pool_t *pool);
 
 

@@ -46,7 +46,7 @@ have status code @code{A} and be at revision 0.
 (Note that unlike CVS, adding a directory does @emph{not} effect an
 immediate change in the repository!)
 
-@item To undo additions before committing: @samp{svn unadd [items]}
+@item To undo additions before committing: @samp{svn revert [items]}
 
 Because added items have not yet been committed to the repository, it's
 easy to make your working copy "forget" that you wanted to add something.
@@ -187,7 +187,7 @@ R   1       (     1)  ./foo.c
 @end example
 
 At this point, the replaced item acts like any other kind of addition.
-You can undo the replacement by running @samp{svn unadd foo.c} -- and
+You can undo the replacement by running @samp{svn remove foo.c} -- and
 the file's status code will revert back to @code{D}.  If the replaced
 item is a directory, you can schedule items within it for addition as
 well.

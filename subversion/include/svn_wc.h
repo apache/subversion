@@ -114,8 +114,6 @@ enum svn_wc_schedule_t
   svn_wc_schedule_add,          /* Slated for addition */
   svn_wc_schedule_delete,       /* Slated for deletion */
   svn_wc_schedule_replace,      /* Slated for replacement (delete + add) */
-  svn_wc_schedule_unadd,        /* Slated for un-addition */
-  svn_wc_schedule_undelete      /* Slated for un-deletion */
 };
 
 enum svn_wc_existence_t
@@ -369,18 +367,6 @@ svn_error_t *svn_wc_add_directory (svn_stringbuf_t *dir,
 /* Add an entry for FILE.  Does not check that FILE exists on disk;
    caller should take care of that, if it cares. */
 svn_error_t *svn_wc_add_file (svn_stringbuf_t *file,
-                              apr_pool_t *pool);
-
-/* Recursively un-mark a tree (beginning at a directory or a file
-   PATH) for addition.  */
-svn_error_t *svn_wc_unadd (svn_stringbuf_t *path,
-                           apr_pool_t *pool);
-
-/* Un-mark a PATH for deletion.  If RECURSE is TRUE and PATH
-   represents a directory, un-mark the entire tree under PATH for
-   deletion.  */
-svn_error_t *svn_wc_undelete (svn_stringbuf_t *path,
-                              svn_boolean_t recurse,
                               apr_pool_t *pool);
 
 
@@ -670,9 +656,12 @@ svn_error_t *
 svn_wc_cleanup (svn_stringbuf_t *path, apr_pool_t *pool);
 
 
-/* Revert changes to PATH.  Perform necessary allocations in POOL.  */
+/* Revert changes to PATH (perhaps in a RECURSIVE fashion).  Perform
+   necessary allocations in POOL.  */
 svn_error_t *
-svn_wc_revert (svn_stringbuf_t *path, apr_pool_t *pool);
+svn_wc_revert (svn_stringbuf_t *path, 
+               svn_boolean_t recursive, 
+               apr_pool_t *pool);
 
 
 

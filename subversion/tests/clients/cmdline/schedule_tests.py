@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #  schedule_tests.py:  testing working copy scheduling
-#                      (adds, unadds, deletes, and undeletes)
+#                      (adds, deletes)
 #
 #  Subversion is a tool for revision control. 
 #  See http://subversion.tigris.org for more information.

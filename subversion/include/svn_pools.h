@@ -115,14 +115,8 @@ typedef struct svn_pool_feedback_t
   /* Report items just scheduled for addition to revision control. */
   apr_status_t (*report_added_item) (const char *path, apr_pool_t *pool);
 
-  /* Report items just un-scheduled for addition to revision control. */
-  apr_status_t (*report_unadded_item) (const char *path, apr_pool_t *pool);
-
   /* Report items just scheduled for removal to revision control. */
   apr_status_t (*report_deleted_item) (const char *path, apr_pool_t *pool);
-
-  /* Report items just un-scheduled for removal to revision control. */
-  apr_status_t (*report_undeleted_item) (const char *path, apr_pool_t *pool);
 
   /* Report items just reverted ('svn revert'). */
   apr_status_t (*report_reversion) (const char *path, apr_pool_t *pool);

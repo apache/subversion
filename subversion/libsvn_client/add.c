@@ -147,20 +147,6 @@ svn_client_add (svn_stringbuf_t *path,
 }
 
 
-svn_error_t *
-svn_client_unadd (svn_stringbuf_t *path, 
-                  apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  err = svn_wc_unadd (path, pool);
-  if (err)
-    return err;
-
-  return SVN_NO_ERROR;
-}
-
-
 
 /* 
  * local variables:

@@ -22,14 +22,15 @@ but it should give you a quick conceptual 'diff' when switching over.
 * Reversion and Diffs
 
     - SVN secretly keeps pristine copies of files
-    - To toss local mods, 'svn revert' works offline, and is
+    - To toss local mods, or to undo the results of an 'svn add' or
+      'svn remove' command,  'svn revert' works offline, and is
       preferable to the CVS habit of 'rm foo; svn up'
     - 'svn diff' works offline too
 
 * Directory versioning
 
     - tree structures are versioned;  no more RCS backend.
-    - svn add/unadd, rm/undel works on dirs
+    - svn add, remove works on dirs
     - working revnums on dirs *only* increment on updates, else we're lying
     - dirprops only committable on up-to-date dirs
 

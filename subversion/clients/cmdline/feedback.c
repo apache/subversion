@@ -80,27 +80,9 @@ report_added_item (const char *path, apr_pool_t *pool)
 
 
 static apr_status_t 
-report_unadded_item (const char *path, apr_pool_t *pool)
-{
-  printf ("-  %s\n", path);
-          
-  return APR_SUCCESS;
-}
-
-
-static apr_status_t 
 report_deleted_item (const char *path, apr_pool_t *pool)
 {
   printf ("D  %s\n", path);
-          
-  return APR_SUCCESS;
-}
-
-
-static apr_status_t 
-report_undeleted_item (const char *path, apr_pool_t *pool)
-{
-  printf ("+  %s\n", path);
           
   return APR_SUCCESS;
 }
@@ -147,9 +129,7 @@ svn_cl__init_feedback_vtable (apr_pool_t *top_pool)
 
   feedback_vtable->report_unversioned_item = report_unversioned_item;
   feedback_vtable->report_added_item = report_added_item;
-  feedback_vtable->report_unadded_item = report_unadded_item;
   feedback_vtable->report_deleted_item = report_deleted_item;
-  feedback_vtable->report_undeleted_item = report_undeleted_item;
   feedback_vtable->report_restoration = report_restoration;
   feedback_vtable->report_warning = report_warning;
   /* we're -not- overriding report_progress;  we have no need for it

@@ -39,6 +39,7 @@ svn_cl__revert (apr_getopt_t *os,
 {
   apr_array_header_t *targets;
   int i;
+  svn_boolean_t recursive = opt_state->recursive;
 
   targets = svn_cl__args_to_target_array (os, pool);
 
@@ -50,7 +51,7 @@ svn_cl__revert (apr_getopt_t *os,
       {
         svn_stringbuf_t *target = ((svn_stringbuf_t **) (targets->elts))[i];
         
-        SVN_ERR (svn_client_revert (target, pool));
+        SVN_ERR (svn_client_revert (target, recursive, pool));
       }
   else
     {
