@@ -227,31 +227,6 @@ typedef svn_error_t *(svn_prop_change_chunk_handler_t)
      (svn_string_t *chunk, void *baton, svn_prop_change_chunk_type_t type);
 
 
-/* A pdelta parser object.  */
-typedef struct svn_pdelta_chunk_parser_t
-{
-  /* Once this parser has enough data buffered to create a propchange
-     "chunk", it passes the window to the caller's consumer routine.  */
-  svn_prop_change_chunk_handler_t *consumer_func;
-  void *consumer_baton;
-
-  /* Pool to create subpools from; each developing chunk will live in
-     a subpool */
-  apr_pool_t *pool;
-
-  /* The current subpool which contains our current chunk */
-  apr_pool_t *subpool;
-
-  /* The actual parser data buffer, living within subpool. */
-  svn_string_t *buffer;
-
-} svn_pdelta_chunk_parser_t;
-
-
-
-
-
-
 
 /* Traversing tree deltas.  */
 
@@ -361,10 +336,15 @@ typedef struct svn_delta_walk_t
                                    void **handler_baton);
 
   
-  /* Define these if you wish to clean up after receiving a text-delta
-     or prop-delta in a streamy way. */
-  svn_error_t *(*finish_textdelta) (void *walk_baton, void *parent_baton);
-  svn_error_t *(*finish_propdelta) (void *walk_baton, void *parent_baton);
+  /* The first two batons are the familiar story, the last is the
+     handler_baton that was passed to the begin_* function. */
+  svn_error_t *(*finish_textdelta) (void *walk_baton, 
+                                    void *parent_baton,
+                                    void *handler_baton);
+
+  svn_error_t *(*finish_propdelta) (void *walk_baton, 
+                                    void *parent_baton,
+                                    void *handler_baton);
 
 
   /* We are going to add a new file named NAME.    */
