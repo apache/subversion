@@ -152,6 +152,13 @@ reply_to =
 # option's value.
 suppress_deletes = yes
 
+# When set to "yes", the mailer will suppress the creation of a diff which
+# adds all the lines in the file. If this is set to anything else, or
+# is simply commented out, then the diff will be inserted. Note that the
+# addition is always mentioned in the message header, regardless of this
+# option's value.
+#suppress_adds = yes
+
 # --------------------------------------------------------------------------
 
 #

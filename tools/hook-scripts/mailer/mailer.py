@@ -407,6 +407,12 @@ def generate_diff(output, cfg, repos, date, change, group, params, pool):
       label2 = '%s\t%s' % (change.path, date)
       singular = False
     else:
+      suppress = cfg.get('suppress_adds', group, params)
+      if suppress == 'yes':
+        # a record of the addition is in the summary. no need to write
+        # anything further here.
+        return
+
       output.write('\nAdded: %s\n' % change.path)
       diff = svn.fs.FileDiff(None, None, repos.root_this, change.path, pool)
       label1 = '(empty file)'
