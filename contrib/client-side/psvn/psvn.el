@@ -201,6 +201,7 @@
    (when (boundp 'temp-directory) temp-directory)                     ;xemacs
    "/tmp/"))
 (defvar svn-temp-suffix (make-temp-name "."))
+(defvar svn-status-temp-file-to-remove nil)
 (defvar svn-status-temp-arg-file (concat svn-status-temp-dir "svn.arg" svn-temp-suffix))
 
 ;;; faces
@@ -269,6 +270,12 @@ Else return TEXT unchanged."
 ; emacs 20
 (unless (fboundp 'point-at-eol) (defalias 'point-at-eol 'line-end-position))
 (unless (fboundp 'point-at-bol) (defalias 'point-at-bol 'line-beginning-position))
+
+(eval-when-compile
+  (if (not (fboundp 'gethash))
+      (require 'cl-macs)))
+(if (not (fboundp 'puthash))
+    (defalias 'puthash 'cl-puthash))
 
 ;;;###autoload
 (defun svn-status (dir &optional arg)
@@ -396,6 +403,7 @@ for  example: '(\"revert\" \"file1\"\)"
                   (svn-status-show-process-buffer-internal t)
                   (message "svn blame finished"))
                  ((eq svn-process-cmd 'commit)
+                  (svn-status-remove-temp-file-maybe)
                   (svn-status-show-process-buffer-internal t)
                   (svn-status-update)
                   (message "svn commit finished"))
@@ -426,6 +434,7 @@ for  example: '(\"revert\" \"file1\"\)"
                  ((eq svn-process-cmd 'proplist-parse)
                   (svn-status-property-parse-property-names))
                  ((eq svn-process-cmd 'propset)
+                  (svn-status-remove-temp-file-maybe)
                   (svn-status-update))
                  ((eq svn-process-cmd 'propdel)
                   (svn-status-update))))
@@ -532,6 +541,15 @@ for  example: '(\"revert\" \"file1\"\)"
 A and B must be line-info's"
   (string-lessp (concat (svn-status-line-info->full-path a) "/")
                 (concat (svn-status-line-info->full-path b) "/")))
+
+(defun svn-status-remove-temp-file-maybe ()
+  "Remove temporary created files from during the operation from psvn.el"
+  (when svn-status-temp-file-to-remove
+    (when (file-exists-p svn-status-temp-file-to-remove)
+      (delete-file svn-status-temp-file-to-remove))
+    (when (file-exists-p svn-status-temp-arg-file)
+      (delete-file svn-status-temp-arg-file))
+    (setq svn-status-temp-file-to-remove nil)))
 
 (defun svn-status-remove-control-M ()
   "Remove ^M at end of line in the whole buffer."
@@ -1911,8 +1929,9 @@ Commands:
   (save-excursion
     (set-buffer (get-buffer "*svn-property-edit*"))
     (set-buffer-file-coding-system 'undecided-unix nil)
-    (write-region (point-min) (point-max)
-                  (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix) nil 1))
+    (setq svn-status-temp-file-to-remove
+          (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix))
+    (write-region (point-min) (point-max) svn-status-temp-file-to-remove nil 1))
   (when svn-status-propedit-file-list ; there are files to change properties
     (svn-status-create-arg-file svn-status-temp-arg-file ""
                                 svn-status-propedit-file-list "")
@@ -1920,7 +1939,8 @@ Commands:
     (svn-run-svn async t 'propset "propset"
          svn-status-propedit-property-name
                  "--targets" svn-status-temp-arg-file
-                 "-F" (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix)))
+                 "-F" (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix))
+    (unless async (svn-status-remove-temp-file-maybe)))
   (set-window-configuration svn-status-pre-propedit-window-configuration))
 
 (defun svn-prop-edit-svn-diff (arg)
@@ -1994,8 +2014,9 @@ Commands:
     (svn-status-create-arg-file svn-status-temp-arg-file ""
                                 svn-status-files-to-commit "")
     (setq svn-status-files-to-commit nil)
+    (setq svn-status-temp-file-to-remove (concat svn-status-temp-dir "svn-log-edit.txt" svn-temp-suffix))
     (svn-run-svn t t 'commit "commit" "--targets" svn-status-temp-arg-file
-                 "-F" (concat svn-status-temp-dir "svn-log-edit.txt" svn-temp-suffix)))
+                 "-F" svn-status-temp-file-to-remove))
   (set-window-configuration svn-status-pre-commit-window-configuration))
 
 (defun svn-log-edit-svn-diff (arg)
