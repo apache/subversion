@@ -70,6 +70,7 @@ struct dir_baton
 {
   struct edit_baton *edit_baton;
   struct dir_baton *parent_dir_baton;
+  svn_wc_status_t *status;
   svn_string_t *path;
   svn_boolean_t added;
   svn_boolean_t prop_changed;
@@ -79,6 +80,7 @@ struct dir_baton
 struct file_baton
 {
   struct dir_baton *parent_dir_baton;
+  svn_wc_status_t *status;
   svn_string_t *path;
   svn_boolean_t added;
   svn_boolean_t text_changed;
@@ -181,15 +183,14 @@ close_file (void *file_baton)
 {
   struct file_baton *fb = file_baton;
 
-  if (! fb->added)
-    {
-      if (fb->text_changed && fb->prop_changed)
-        printf ("UX %s\n", fb->path->data);
-      else if (fb->text_changed)
-        printf ("U  %s\n", fb->path->data);
-      else if (fb->prop_changed)
-        printf ("X  %s\n", fb->path->data);
-    }
+  if (fb->added)
+    printf ("A  %s\n", fb->path->data);
+  else if (fb->text_changed && fb->prop_changed)
+    printf ("UX %s\n", fb->path->data);
+  else if (fb->text_changed)
+    printf ("U  %s\n", fb->path->data);
+  else if (fb->prop_changed)
+    printf ("X  %s\n", fb->path->data);
 
   return SVN_NO_ERROR;
 }
