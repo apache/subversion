@@ -142,7 +142,7 @@ INSTALL_RULES="install-base-lib install-lib install-bin install-include install-
 BUILD_RULES="base-lib lib bin test"
 if test "$svn_lib_berkeley_db" = "yes"; then
   BUILD_RULES="base-lib fs-lib lib bin fs-bin $BUILD_APACHE_RULE test fs-test"
-  INSTALL_RULES="install-base-lib install-fs-lib install-lib install-bin install-fs-bin $INSTALL_APACHE_RULE install-include install-docs"
+  INSTALL_RULES="install-base-lib install-fs-lib install-lib install-bin install-fs-bin install-include install-docs $INSTALL_APACHE_RULE"
   FS_TEST_DEPS="\$(FS_TEST_DEPS)"
   FS_TEST_PROGRAMS="\$(FS_TEST_PROGRAMS)"
 fi
