@@ -148,6 +148,9 @@ Greg:
         REPOS_PATH in the latest revision matches the node ID in the
 	VR URL (if not, they are checking out an old copy)
 
+      - change the dav_svn_ prefix to ??? (svn_mod_dav_svn too long;
+	svn_mds? svn_dav? leave it?
+
    - mod_dav: no apparent changes until vsn comes in
       - need: MERGE
       - verify Vasta's work against our needs: REPORT, LABEL
