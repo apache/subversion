@@ -154,53 +154,36 @@ static const char *get_from_path_map(apr_hash_t *hash,
 }
 
 
-/* Use POOL to delete all children and props of directory FS_PATH in
-   TXN_ROOT. */
+/* Use POOL to delete all children and props of directory PATH in TXN_ROOT. */
 static svn_error_t *
-remove_directory_children (const char *fs_path,
-                           svn_fs_root_t *txn_root,
-                           apr_pool_t *pool)
+gut_directory (const char *path,
+               svn_fs_root_t *txn_root,
+               apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   apr_hash_t *children, *props;
   apr_pool_t *subpool = svn_pool_create (pool);
-  
-  SVN_ERR (svn_fs_dir_entries (&children, txn_root, fs_path, pool));
-  
-  for (hi = apr_hash_first (pool, children); hi;
-       hi = apr_hash_next (hi))
+
+  /* First, kill PATH's children. */
+  SVN_ERR (svn_fs_dir_entries (&children, txn_root, path, pool));
+  for (hi = apr_hash_first (pool, children); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_ssize_t klen;
-      void *val;
-      svn_fs_dirent_t *dirent;
-      const char *child_path;
-      
-      apr_hash_this (hi, &key, &klen, &val);
-      dirent = val;
-      
-      child_path = svn_path_join (fs_path, dirent->name, subpool);
-      SVN_ERR (svn_fs_delete_tree (txn_root, child_path, subpool));
-      
       svn_pool_clear (subpool);
+      apr_hash_this (hi, &key, NULL, NULL);
+      SVN_ERR (svn_fs_delete_tree (txn_root, 
+                                   svn_path_join (path, key, subpool),
+                                   subpool));
     }
 
-  SVN_ERR (svn_fs_node_proplist (&props, txn_root, fs_path, pool));
-
-  for (hi = apr_hash_first (pool, props); hi;
-       hi = apr_hash_next (hi))
+  /* Then kill its properties. */
+  SVN_ERR (svn_fs_node_proplist (&props, txn_root, path, pool));
+  for (hi = apr_hash_first (pool, props); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_ssize_t klen;
-      void *val;
-      const char *propname;
-      
-      apr_hash_this (hi, &key, &klen, &val);
-      propname = key;
-
-      SVN_ERR (svn_fs_change_node_prop (txn_root, fs_path,
-                                        propname, NULL, subpool));
       svn_pool_clear (subpool);
+      apr_hash_this (hi, &key, NULL, NULL);
+      SVN_ERR (svn_fs_change_node_prop (txn_root, path, key, NULL, subpool));
     }
 
   svn_pool_destroy (subpool);  
@@ -268,8 +251,7 @@ svn_repos_set_path (void *report_baton,
              up the transaction stuffs and then clean out the starting
              directory. */
           SVN_ERR (begin_txn (rbaton));
-          SVN_ERR (remove_directory_children (rbaton->base_path, 
-                                              rbaton->txn_root, pool));
+          SVN_ERR (gut_directory (rbaton->base_path, rbaton->txn_root, pool));
         }
     }
   else
@@ -314,8 +296,7 @@ svn_repos_set_path (void *report_baton,
         {
           /* Destroy any children & props of the path.  We assume that
              the client will (later) re-add the entries it knows about. */
-          SVN_ERR (remove_directory_children (from_path, rbaton->txn_root, 
-                                              pool));
+          SVN_ERR (gut_directory (from_path, rbaton->txn_root, pool));
         }
     }
 
@@ -392,7 +373,7 @@ svn_repos_link_path (void *report_baton,
   if (start_empty)
     /* Destroy any children & props of the path.  We assume that the
        client will (later) re-add the entries it knows about.  */
-    SVN_ERR (remove_directory_children (from_path, rbaton->txn_root, pool));
+    SVN_ERR (gut_directory (from_path, rbaton->txn_root, pool));
 
   return SVN_NO_ERROR;
 }
