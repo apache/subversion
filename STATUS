@@ -9,12 +9,6 @@ Status of 1.1.2:
 
 Candidate changes:
 
-  * r12133 (Issue #2106)
-    Client-side memory leak when doing 'svn switch' over http://.
-    Justification: Scalability bug, very small & simple fix.
-    Votes:
-      +1: cmpilato, kfogel, epg
-
   * r11483, r12072, r12157, r12158, r12180 (Issue #2091)
     Unitialized variable on Win98.
     Justification:
@@ -44,14 +38,6 @@ Candidate changes:
       +1: ghudson
       Nominated by: David James <james82@gmail.com>
 
-  * r11708
-    Fix a bug which caused certain unfinished switch operations to leave
-    the working copy in a busticated state.
-    Justification:
-      Did you miss the part where I said "working copy ... busticated state"?
-    Votes:
-      +1: cmpilato, epg
-
   * r11862, r11921, r12061 (part of issue #1997)
     Fix encoding bug in svnserve -h.
     Justification:
@@ -62,15 +48,7 @@ Candidate changes:
       +1: lundblad, maxb, epg
       +0: nori (not r12061)
 
-  * r11936
-    Fixes a 'working copy not locked' error.
-    Justification:
-      It's a regression from 1.0.x.
-    Votes:
-      +1: philip, epg
-      Nominated by: Chris AtLee <catlee@sidefx.com>
-
-  * r12006
+  * r12006, r12136, r12146
     Fix issue 2124 - bugs in svn switch over ra-dav.
     Justification:
       Changes made in the 1.1 client cause 1.0 and 1.1 servers to be
@@ -78,16 +56,7 @@ Candidate changes:
       working copies that *look* okay, but can actually send commits
       to the wrong repository location (if able to commit at all).
     Votes:
-      +1: cmpilato
-
-  * r12046
-    Fix issue 2142 - svndumpfilter mislabels output as version 3.
-    Justification:
-      Prevents chaining of multiple svndumpfilter runs.
-      (This is a regression from 1.0.x)
-      Trivial change.
-    Votes:
-      +1: maxb, epg
+      +1: cmpilato, kfogel
 
   * r12063, r12084 (Issue #2119)
     Canonicalize paths received over the wire in ra_svn and svnserve.
@@ -102,7 +71,7 @@ Candidate changes:
       It just looks ugly and sloppy.
     Branch: 1.1.x-r12100
     Votes:
-      +1: breser
+      +1: breser, kfogel
 
   * r12102
     Fix a slight ABI/API incompatability between 1.0.x and 1.1.x
@@ -112,7 +81,7 @@ Candidate changes:
       who have an open bug on the issue.  See:
       http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=275545
     Votes:
-      +1: breser
+      +1: breser, kfogel
 
   * r12117
     Fix merges that replace directories.
@@ -122,6 +91,8 @@ Candidate changes:
     Branch: 1.1.x-r12117
     Votes:
       +1: breser
+
+Approved changes (further review is welcome, but not required):
 
   * r11438
     Fix a bug that caused 'svnversion --version .' to crash.
@@ -137,8 +108,37 @@ Candidate changes:
     Votes:
       +1: ghudson, epg, cmpilato
 
+  * r12046
+    Fix issue 2142 - svndumpfilter mislabels output as version 3.
+    Justification:
+      Prevents chaining of multiple svndumpfilter runs.
+      (This is a regression from 1.0.x)
+      Trivial change.
+    Votes:
+      +1: maxb, epg, kfogel
 
-Approved changes (further review is welcome, but not required):
+  * r11936
+    Fixes a 'working copy not locked' error.
+    Justification:
+      It's a regression from 1.0.x.
+    Votes:
+      +1: philip, epg, kfogel
+      Nominated by: Chris AtLee <catlee@sidefx.com>
+
+  * r11708
+    Fix a bug which caused certain unfinished switch operations to leave
+    the working copy in a busticated state.
+    Justification:
+      Did you miss the part where I said "working copy ... busticated state"?
+    Notes: See r12192 for clarification to code comment.
+    Votes:
+      +1: cmpilato, epg, kfogel
+
+  * r12133 (Issue #2106)
+    Client-side memory leak when doing 'svn switch' over http://.
+    Justification: Scalability bug, very small & simple fix.
+    Votes:
+      +1: cmpilato, kfogel, epg
 
   * r11439, r11669
     Fix slow "svn st" where the targets are files by not locking the whole
