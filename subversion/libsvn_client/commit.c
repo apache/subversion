@@ -258,8 +258,10 @@ import (svn_string_t *path,
        "the name \"%s\" is reserved and cannot be imported",
        SVN_WC_ADM_DIR_NAME);
 
-  /* Get a root dir baton. */
-  SVN_ERR (editor->replace_root (edit_baton, 0, &root_baton));
+  /* Get a root dir baton.  We pass an invalid revnum to replace_root
+     to mean "base this on the youngest revision".  Should we have an
+     SVN_YOUNGEST_REVNUM defined for these purposes? */
+  SVN_ERR (editor->replace_root (edit_baton, SVN_INVALID_REVNUM, &root_baton));
 
   /* Import a file or a directory tree. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));

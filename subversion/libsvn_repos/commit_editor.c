@@ -122,6 +122,13 @@ replace_root (void *edit_baton,
   struct dir_baton *dirb;
   struct edit_baton *eb = edit_baton;
 
+  /* If we're given an invalid base_revision, we'll base our
+     transaction on the latest revision available at this time. */
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    {
+      SVN_ERR (svn_fs_youngest_rev (&base_revision, eb->fs, eb->pool));
+    }
+
   /* Begin a subversion transaction, cache its name, and get its
      root object. */
   SVN_ERR (svn_fs_begin_txn (&(eb->txn), eb->fs, base_revision, eb->pool));
