@@ -205,17 +205,11 @@ log_message_receiver (void *baton,
       apr_time_t time_temp;
       
       SVN_ERR (svn_time_from_cstring (&time_temp, date, pool));
-      date = svn_time_to_human_cstring(time_temp, pool);
+      date_native = svn_time_to_human_cstring(time_temp, pool);
     }
   else
-    date = "(no date)";
+    date_native = "(no date)";
   
-  err = svn_utf_cstring_from_utf8 (&date_native, date, pool);
-  if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))   /* unlikely! */
-    date_native = svn_utf_cstring_from_utf8_fuzzy (date, pool);
-  else if (err)
-    return err;
-
   if (! lb->quiet)
     {
       if (msg == NULL)
