@@ -31,6 +31,7 @@ class Parser:
         except:
           continue
         setattr(result, name, int(match.group(2)))
+    stream.close()
     return result
 
 
@@ -51,5 +52,5 @@ if __name__ == '__main__':
 
 ### End of file.
 # local variables:
-# eval: (load-file "../../tools/dev/svn-dev.el")
+# eval: (load-file "../tools/dev/svn-dev.el")
 # end:
