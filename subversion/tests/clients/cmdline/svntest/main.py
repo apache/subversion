@@ -71,7 +71,7 @@ pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 
 # Global URL to testing area.  Default to ra_local, current working dir.
-test_area_url = "file://" + os.path.abspath(os.getcwd()) + "/"
+test_area_url = "file://" + os.path.abspath(os.getcwd())
 
 
 # Our pristine greek tree, used to assemble 'expected' trees.
@@ -200,6 +200,9 @@ def create_repos(path):
   if not(os.path.exists(path)):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
   run_svnadmin("create", path)
+
+  # make the repos world-writeable, for mod_dav_svn's sake.
+  os.system('chmod -R a+rw ' + path)
 
 # Convert a list of lists of the form [ [path, contents], ...] into a
 # real tree on disk.
