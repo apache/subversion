@@ -172,7 +172,7 @@ main (int argc, const char * const *argv)
     {"version",       'v', 0},
     {"filedata",      'F', 1},
     {"xml-file",      svn_cl__xml_file_opt, 1},
-    {"setlocale",     svn_cl__setlocale_opt, 1},
+    {"locale",        svn_cl__locale_opt, 1},
     {0,               0, 0}
   };
 
@@ -259,13 +259,13 @@ main (int argc, const char * const *argv)
       case svn_cl__recursive_opt:
         opt_state.recursive = TRUE;
         break;
-      case svn_cl__setlocale_opt:
+      case svn_cl__locale_opt:
         /* The only locale name that ISO C defines is the "C" locale;
            using any other argument is not portable. But that's O.K.,
            because the main purpose of this option is:
 
               a) support for wrapper programs which parse `svn's
-                 output, and should call `svn --setlocale=C' to get
+                 output, and should call `svn --locale=C' to get
                  predictable results; and
 
               b) for testing various translations without having to
