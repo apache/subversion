@@ -70,7 +70,7 @@
 
 
 
-/* Functions taking an argument (apr_array_header_t *)paths are taking
+/* Functions taking an argument (apr_array_header_t *)PATHS are taking
  * an array of (svn_string_t *) file and/or directory names.  
  */
 
@@ -79,7 +79,6 @@ ap_status_t svn_wc_copy   (svn_string_t *src, svn_string_t *dst);
 ap_status_t svn_wc_add    (apr_array_header_t *paths);
 ap_status_t svn_wc_delete (apr_array_header_t *paths);
 
-svn_skelta_t svn_wc_make_skelta (apr_array_header_t *paths);
 svn_skelta_t svn_wc_make_skelta (apr_array_header_t *paths);
 
 /* Turn SKELTA into a full delta. */
@@ -96,11 +95,9 @@ svn_prop_t *svn_wc_get_node_prop (svn_string_t *path,
 svn_prop_t *svn_wc_get_dirent_prop (svn_string_t *path,
                                     svn_string_t *propname);
 
-/* kff todo: shouldn't we just use apr_hash_t for this? */
 /* Return all properties (names and values) of file or directory PATH. */
 svn_proplist_t *svn_wc_get_node_proplist (svn_string_t *path);
 
-/* kff todo: shouldn't we just use apr_hash_t for this? */
 /* Return all properties (names and values) of directory entry PATH. */
 svn_proplist_t *svn_wc_get_dirent_proplist (svn_string_t *path);
 
