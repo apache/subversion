@@ -32,7 +32,7 @@
 #include "../../libsvn_fs/rev-table.h"
 #include "../../libsvn_fs/nodes-table.h"
 #include "../../libsvn_fs/trail.h"
-
+#include "../../libsvn_delta/delta.h"
 
 #define SET_STR(ps, s) ((ps)->data = (s), (ps)->len = strlen(s))
 
@@ -4572,7 +4572,7 @@ get_file_digest (unsigned char digest[MD5_DIGESTSIZE],
                  apr_pool_t *pool)
 {
   svn_stream_t *stream;
-  char buf[100000];
+  char buf[4096];
   apr_size_t len;
   apr_md5_ctx_t context;
 
@@ -4584,8 +4584,8 @@ get_file_digest (unsigned char digest[MD5_DIGESTSIZE],
 
   do 
     {
-      /* "please read 1000 bytes into buf" */
-      len = 100000;
+      /* "please fill the buf with bytes" */
+      len = sizeof (buf);
       SVN_ERR (svn_stream_read (stream, buf, &len));
       
       /* Update the MD5 calculation with the data we just read.  */
@@ -4600,6 +4600,39 @@ get_file_digest (unsigned char digest[MD5_DIGESTSIZE],
 }
 
 
+/* Put pseudo-random bytes in buffer BUF (which is LEN bytes long).
+   If FULL is TRUE, simply replace every byte in BUF with a
+   pseudo-random byte, else, replace a pseudo-random collection of
+   bytes with pseudo-random data. */
+static void
+random_data_to_buffer (char *buf, 
+                       apr_size_t buf_len, 
+                       svn_boolean_t full)
+{
+  apr_size_t i;
+  apr_size_t num_bytes;
+  apr_size_t offset;
+
+  if (full)
+    {
+      for (i = 0; i < buf_len; i++)
+        {
+          buf[i] = (char) ((rand() / RAND_MAX) * 255.0);
+        }
+
+      return;
+    }
+
+  num_bytes = (int) (((rand() / RAND_MAX) * (buf_len / 100)) + 1);
+  for (i = 0; i < num_bytes; i++)
+    {
+      offset = (int) ((rand() / RAND_MAX) * (buf_len - 1));
+      buf[offset] = (char) ((rand() / RAND_MAX) * 255.0);
+    }
+
+  return;
+}
+
 
 static svn_error_t *
 large_file_integrity (const char **msg,
@@ -4613,11 +4646,18 @@ large_file_integrity (const char **msg,
   svn_stringbuf_t contents;
   unsigned char digest[MD5_DIGESTSIZE];
   unsigned char digest_list[100][MD5_DIGESTSIZE];
-  apr_size_t filesize = 100000; /* This should be at least 100, and
-                                  perhaps as large as 1000000.  */
   svn_txdelta_window_handler_t wh_func;
   void *wh_baton;
-  int i, j;
+  int j;
+
+  /* Because we've had problems in the past with files with sizes >
+     svn_txdelta__window_size, our file should be at least one byte
+     bigger than that. */
+#ifdef MAKE_THIS_FUNCTION_FAIL
+  apr_size_t filesize = svn_txdelta__window_size + 1;
+#else
+  apr_size_t filesize = svn_txdelta__window_size;
+#endif
 
   *msg = "create and modify a large file, verifying its integrity";
 
@@ -4649,8 +4689,7 @@ large_file_integrity (const char **msg,
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
   SVN_ERR (svn_fs_make_file (txn_root, "bigfile", subpool));
-  for (i = 0; i < filesize; i++)
-    contents.data[i] = (char) ((rand() / RAND_MAX) * 255.0);
+  random_data_to_buffer (contents.data, filesize, TRUE);
   apr_md5 (digest, contents.data, contents.len);
   SVN_ERR (svn_fs_apply_textdelta 
            (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
@@ -4664,8 +4703,7 @@ large_file_integrity (const char **msg,
   svn_pool_clear (subpool);
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
-  for (i = 0; i < 20; i++)
-    contents.data[i] = (char) ((rand() / RAND_MAX) * 255.0);
+  random_data_to_buffer (contents.data, 20, TRUE);
   apr_md5 (digest, contents.data, contents.len);
   SVN_ERR (svn_fs_apply_textdelta 
            (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
@@ -4678,8 +4716,7 @@ large_file_integrity (const char **msg,
   svn_pool_clear (subpool);
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
-  for (i = filesize - 10; i < filesize; i++)
-    contents.data[i] = (char) ((rand() / RAND_MAX) * 255.0);
+  random_data_to_buffer (contents.data + (filesize - 20), 20, TRUE);
   apr_md5 (digest, contents.data, contents.len);
   SVN_ERR (svn_fs_apply_textdelta 
            (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
@@ -4693,10 +4730,8 @@ large_file_integrity (const char **msg,
   svn_pool_clear (subpool);
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
-  for (i = 0; i < 10; i++)
-    contents.data[i] = (char) ((rand() / RAND_MAX) * 255.0);
-  for (i = filesize - 10; i < filesize; i++)
-    contents.data[i] = (char) ((rand() / RAND_MAX) * 255.0);
+  random_data_to_buffer (contents.data, 20, TRUE);
+  random_data_to_buffer (contents.data + (filesize - 20), 20, TRUE);
   apr_md5 (digest, contents.data, contents.len);
   SVN_ERR (svn_fs_apply_textdelta 
            (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
@@ -4710,18 +4745,10 @@ large_file_integrity (const char **msg,
      more pseudo-random values.  */
   for (j = youngest_rev; j < 10; j++)
     {
-      int num_bytes;
-      int offset;
-      
       svn_pool_clear (subpool);
       SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
       SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
-      num_bytes = (int) (((rand() / RAND_MAX) * (filesize / 100)) + 1);
-      for (i = 0; i < num_bytes; i++)
-        {
-          offset = (int) ((rand() / RAND_MAX) * (filesize - 1));
-          contents.data[offset] = (char) ((rand() / RAND_MAX) * 255.0);
-        }
+      random_data_to_buffer (contents.data, filesize, FALSE);
       apr_md5 (digest, contents.data, contents.len);
       SVN_ERR (svn_fs_apply_textdelta 
                (&wh_func, &wh_baton, txn_root, "bigfile", subpool));
