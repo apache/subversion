@@ -9,19 +9,19 @@
         &mdash;Brian Fitzpatrick</para>
     </blockquote>
 
-    <para>
-      In the world of open-source software, the Concurrent Versions
-      System (CVS) has long been the tool of choice for version
-      control.  And rightly so.  CVS itself is free software, and its
-      wonderful <quote>non-locking</quote> system&mdash;which allows
-      dozens of far-flung programmers to share their work&mdash;fits
-      the collaborative nature of the open-source world very well.  CVS
-      and its semi-chaotic development model have become cornerstones
-      of open-source culture.
+    <para>In the world of open-source software, the Concurrent
+      Versions System (CVS) has long been the tool of choice for
+      version control.  And rightly so.  CVS itself is free software,
+      and its non-restrictive <foreignphrase>modus
+      operandus</foreignphrase> and support for networked
+      operation&mdash;which allow dozens of geographically dispersed
+      programmers to share their work&mdash;fits the collaborative
+      nature of the open-source world very well.  CVS and its
+      semi-chaotic development model have become cornerstones of
+      open-source culture.
     </para>
 
-    <para>
-      But like many tools, CVS is starting to show its age.
+    <para>But like many tools, CVS is starting to show its age.
       Subversion is a relatively new version control system designed
       to be the successor to CVS.  The designers set out to win the
       hearts of CVS users in two ways: by creating an open-source
@@ -32,10 +32,12 @@
       powerful, very usable, and very flexible.
     </para>
 
-    <para>This book is written to document version 1.0 of the
-      Subversion version control system.  There are already a number
-      of features and improvements planned for follow on versions of
-      Subversion that may change some of the commands and specific
+    <para>This book is written to document version 1.0.1 of the
+      Subversion version control system.  We have made attempt to be
+      thorough in our coverage.  However, Subversion has a thriving
+      and energetic development community, so there are already a
+      number of features and improvements planned for future versions
+      of Subversion that may change some of the commands and specific
       notes in this book.
     </para>
 
