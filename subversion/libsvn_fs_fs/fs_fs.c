@@ -3649,7 +3649,7 @@ svn_fs_fs__open_txn (svn_fs_txn_t **txn_p,
 
   SVN_ERR (svn_fs_fs__get_txn (&local_txn, fs, name, pool));
 
-  txn->base_rev = local_txn->revision;
+  txn->base_rev = svn_fs_fs__id_rev (local_txn->base_id);
 
   txn->vtable = &txn_vtable;
   txn->fsap_data = NULL;
