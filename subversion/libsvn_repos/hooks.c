@@ -86,7 +86,6 @@ svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
                                    const char *author,
                                    svn_string_t *log_msg,
                                    apr_pool_t *pool)
-
 {
   svn_string_t log_prop_name = { SVN_PROP_REVISION_LOG,
                                  sizeof(SVN_PROP_REVISION_LOG) - 1};
