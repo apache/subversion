@@ -40,8 +40,6 @@ svn_cl__export (apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
   const char *from, *to;
   apr_array_header_t *targets;
 
@@ -66,15 +64,13 @@ svn_cl__export (apr_getopt_t *os,
     to = ((const char **) (targets->elts))[1];
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, TRUE, FALSE,
-			  pool);
+    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, TRUE,
+                          FALSE, pool);
 
   /* Do the export. */
   SVN_ERR (svn_client_export (from,
                               to,
                               &(opt_state->start_revision),
-                              notify_func,
-                              notify_baton,
                               ctx,
                               pool));
   return SVN_NO_ERROR;

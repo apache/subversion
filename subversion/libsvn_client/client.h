@@ -468,8 +468,8 @@ svn_client__condense_commit_items (const char **base_url,
    directories are "up-to-date" when a dir-propchange is discovered.
    We don't expect it to be here forever.  :-) 
 
-   NOTIFY_FUNC/BATON will be called as the commit progresses, as a way
-   of describing actions to the application layer (if non NULL).
+   CTX->NOTIFY_FUNC/CTX->BATON will be called as the commit progresses, as 
+   a way of describing actions to the application layer (if non NULL).
 
    NOTIFY_PATH_PREFIX is used to send shorter, relative paths to the
    notify_func (it's a prefix that will be subtracted from the front
@@ -484,10 +484,9 @@ svn_client__do_commit (const char *base_url,
                        svn_wc_adm_access_t *adm_access,
                        const svn_delta_editor_t *editor,
                        void *edit_baton,
-                       svn_wc_notify_func_t notify_func,
-                       void *notify_baton,
                        const char *notify_path_prefix,
                        apr_hash_t **tempfiles,
+                       svn_client_ctx_t *ctx,
                        apr_pool_t *pool);
 
 
@@ -516,8 +515,6 @@ svn_client__do_commit (const char *base_url,
    Use POOL for temporary allocation. */
 svn_error_t *svn_client__handle_externals
    (svn_wc_traversal_info_t *traversal_info,
-    svn_wc_notify_func_t notify_func,
-    void *notify_baton,
     svn_boolean_t update_unchanged,
     svn_client_ctx_t *ctx,
     apr_pool_t *pool);

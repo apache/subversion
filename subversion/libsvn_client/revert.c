@@ -37,8 +37,7 @@
 svn_error_t *
 svn_client_revert (const char *path,
                    svn_boolean_t recursive,
-                   svn_wc_notify_func_t notify_func,
-                   void *notify_baton,
+                   svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
@@ -76,7 +75,7 @@ svn_client_revert (const char *path,
     }
 
   err = svn_wc_revert (path, adm_access, recursive,
-                       notify_func, notify_baton,
+                       ctx->notify_func, ctx->notify_baton,
                        pool);
 
   SVN_ERR (svn_wc_adm_close (adm_access));

@@ -471,7 +471,7 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
              parameter can be removed from the function. */
           SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, mine,
                                     adm_access,
-                                    NULL, NULL, NULL, NULL, merge_b->ctx,
+                                    NULL, NULL, merge_b->ctx,
                                     merge_b->pool));
         }
       break;
@@ -530,7 +530,7 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
       SVN_ERR (svn_client_delete (NULL, mine, parent_access, merge_b->force,
-                                  NULL, NULL, NULL, NULL, NULL, subpool));
+                                  NULL, NULL, merge_b->ctx, subpool));
       break;
     case svn_node_dir:
       /* ### create a .drej conflict or something someday? */
@@ -572,7 +572,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
         /* ### FIXME: This will get the directory tree again! */
         SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
                                   adm_access,
-                                  NULL, NULL, NULL, NULL, merge_b->ctx,
+                                  NULL, NULL, merge_b->ctx,
                                   subpool));
       break;
     case svn_node_dir:
@@ -583,7 +583,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
         /* ### FIXME: This will get the directory tree again! */
         SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
                                   adm_access,
-                                  NULL, NULL, NULL, NULL, merge_b->ctx,
+                                  NULL, NULL, merge_b->ctx,
                                   subpool));
       break;
     case svn_node_file:
@@ -620,7 +620,7 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
                                     merge_b->pool));
       SVN_ERR (svn_client_delete (NULL, path, parent_access, merge_b->force,
-                                  NULL, NULL, NULL, NULL, NULL, subpool));
+                                  NULL, NULL, merge_b->ctx, subpool));
       break;
     case svn_node_file:
       /* ### create a .drej conflict or something someday? */
@@ -743,9 +743,7 @@ convert_to_url (const char **url,
 /* PATH1, PATH2, and TARGET_WCPATH all better be directories.   For
    the single file case, the caller do the merging manually. */
 static svn_error_t *
-do_merge (svn_wc_notify_func_t notify_func,
-          void *notify_baton,
-          const char *URL1,
+do_merge (const char *URL1,
           const svn_opt_revision_t *revision1,
           const char *URL2,
           const svn_opt_revision_t *revision2,
@@ -799,7 +797,7 @@ do_merge (svn_wc_notify_func_t notify_func,
   SVN_ERR (svn_client__open_ra_session (&session2, ra_lib, URL1, auth_dir,
                                         NULL, NULL, FALSE, FALSE, TRUE,
                                         ctx, pool));
-  
+ 
   SVN_ERR (svn_client__get_diff_editor (target_wcpath,
                                         adm_access,
                                         callbacks,
@@ -808,8 +806,8 @@ do_merge (svn_wc_notify_func_t notify_func,
                                         dry_run,
                                         ra_lib, session2,
                                         start_revnum,
-                                        notify_func,
-                                        notify_baton,
+                                        ctx->notify_func,
+                                        ctx->notify_baton,
                                         &diff_editor,
                                         &diff_edit_baton,
                                         pool));
@@ -837,9 +835,7 @@ do_merge (svn_wc_notify_func_t notify_func,
 
 /* The single-file, simplified version of do_merge. */
 static svn_error_t *
-do_single_file_merge (svn_wc_notify_func_t notify_func,
-                      void *notify_baton,
-                      const char *URL1,
+do_single_file_merge (const char *URL1,
                       const svn_opt_revision_t *revision1,
                       svn_wc_adm_access_t *adm_access,
                       struct merge_cmd_baton *merge_b,
@@ -931,16 +927,16 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
                                 NULL,
                                 merge_b));
 
-  if (notify_func)
+  if (merge_b->ctx->notify_func)
     {
-      (*notify_func) (notify_baton,
-                      merge_b->target,
-                      svn_wc_notify_update_update,
-                      svn_node_file,
-                      NULL,
-                      text_state, 
-                      prop_state,
-                      SVN_INVALID_REVNUM);
+      (*merge_b->ctx->notify_func) (merge_b->ctx->notify_baton,
+                                    merge_b->target,
+                                    svn_wc_notify_update_update,
+                                    svn_node_file,
+                                    NULL,
+                                    text_state, 
+                                    prop_state,
+                                    SVN_INVALID_REVNUM);
     }
 
   return SVN_NO_ERROR;
@@ -1379,9 +1375,7 @@ svn_client_diff (const apr_array_header_t *options,
 
 
 svn_error_t *
-svn_client_merge (svn_wc_notify_func_t notify_func,
-                  void *notify_baton,
-                  const char *URL1,
+svn_client_merge (const char *URL1,
                   const svn_opt_revision_t *revision1,
                   const char *URL2,
                   const svn_opt_revision_t *revision2,
@@ -1418,9 +1412,7 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
      PATH2 are files as well, and do a single-file merge. */
   if (entry->kind == svn_node_file)
     {
-      SVN_ERR (do_single_file_merge (notify_func,
-                                     notify_baton,
-                                     URL1, revision1,
+      SVN_ERR (do_single_file_merge (URL1, revision1,
                                      adm_access,
                                      &merge_cmd_baton,
                                      pool));
@@ -1430,9 +1422,7 @@ svn_client_merge (svn_wc_notify_func_t notify_func,
      recursive diff-editor thing. */
   else if (entry->kind == svn_node_dir)
     {
-      SVN_ERR (do_merge (notify_func,
-                         notify_baton,
-                         URL1,
+      SVN_ERR (do_merge (URL1,
                          revision1,
                          URL2,
                          revision2,

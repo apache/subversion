@@ -44,8 +44,6 @@ svn_cl__update (apr_getopt_t *os,
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
   int i;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -62,8 +60,8 @@ svn_cl__update (apr_getopt_t *os,
                                          pool));
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
-			  pool);
+    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
+                          FALSE, pool);
 
   for (i = 0; i < condensed_targets->nelts; i++)
     {
@@ -73,7 +71,7 @@ svn_cl__update (apr_getopt_t *os,
                (target,
                 &(opt_state->start_revision),
                 opt_state->nonrecursive ? FALSE : TRUE,
-                notify_func, notify_baton, ctx,
+                ctx,
                 pool));
     }
 

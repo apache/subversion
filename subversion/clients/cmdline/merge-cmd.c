@@ -47,8 +47,6 @@ svn_cl__merge (apr_getopt_t *os,
   const char *sourcepath1, *sourcepath2, *targetpath;
   svn_boolean_t using_alternate_syntax = FALSE;
   svn_error_t *err;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton;
 
   /* If the first opt_state revision is filled in at this point, then
      we know the user must have used the '-r' switch. */
@@ -146,11 +144,10 @@ svn_cl__merge (apr_getopt_t *os,
   */
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, FALSE,
-			  pool);
+    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
+                          FALSE, pool);
 
-  err = svn_client_merge (notify_func, notify_baton,
-                          sourcepath1,
+  err = svn_client_merge (sourcepath1,
                           &(opt_state->start_revision),
                           sourcepath2,
                           &(opt_state->end_revision),
