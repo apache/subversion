@@ -1428,7 +1428,8 @@ dag_node_t *svn_fs__dag_dup (dag_node_t *node,
   new_node->fs = node->fs;
   new_node->pool = trail->pool;
   new_node->id = svn_fs_copy_id (node->id, node->pool);
-  
+  new_node->kind = node->kind;
+
   /* Leave new_node->node_revision zero for now, so it'll get read in.
      We can get fancy and duplicate node's cache later.  */
 
