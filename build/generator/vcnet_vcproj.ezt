@@ -95,8 +95,8 @@
 				Name="[configs.name]|Win32">
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="swig -[sources.swig_language] -noproxy[for includes] -I&quot;[includes]&quot;[end] -o [sources.swig_output] $(InputPath)"
-					Outputs="[sources.swig_output]"/>
+					CommandLine="swig -[sources.swig_language][for includes] -I&quot;[includes]&quot;[end] -o [sources.swig_output] $(InputPath)"
+					Outputs="[sources.swig_target]"/>
 			</FileConfiguration>
 [end][end]
 [if-any sources.reldir][for configs]

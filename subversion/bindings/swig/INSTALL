@@ -55,7 +55,7 @@ SPECIFIC LANGUAGE BINDINGS
        files, resulting in a collection of .c source files.  It will
        then compile and link those .c files into Python libraries.
 
-       On Windows, build the python_* projects in Visual Studio.
+       On Windows, build the __SWIG_PYTHON__ project in Visual Studio.
 
    2.  On Unix systems, run 'make install-swig-py' (as root, typically)
        from the top of the Subversion source tree.  This will copy
@@ -71,18 +71,23 @@ SPECIFIC LANGUAGE BINDINGS
        example of doing this for building rpms looks like
        'make install-swig-py DESTDIR=$RPM_BUILD_ROOT/usr'.
 
-       On Windows, copy the subversion\bindings\swig\python\svn folder to
-       <PYTHON>\Lib\site-packages, and then copy the
-       Release\subversion\bindings\swig\python\*.dll files to
-       <PYTHON>\Lib\site-packages\svn.
+       On Windows, create two folders:
 
-       Optionally, you can run the following command to compile the python
+         <PYTHON>\Lib\site-packages\svn
+         <PYTHON>\Lib\site-packages\libsvn
+
+       Copy subversion\bindings\swig\python\svn\*.py into the svn folder.
+       Copy subversion\bindings\swig\python\*.py and
+       Release\subversion\bindings\swig\python\*.dll into the libsvn folder.
+
+       Optionally, you can run the following commands to compile the python
        sources into bytecode:
-       
+
          python <PYTHON>\lib\compileall.py <PYTHON>\Lib\site-packages\svn
-         
+         python <PYTHON>\lib\compileall.py <PYTHON>\Lib\site-packages\libsvn
+
        This can make the modules load faster for users without write access
-       to <PYTHON>\Lib\site-packages\svn.       
+       to the site-packages directory.
 
    3.  Verify that an 'svn' package has been installed correctly.  You can
        do this by running python via 'python -c "from svn import client"'.
