@@ -362,11 +362,19 @@ static svn_error_t *
 read_helper_gz (svn_read_fn_t read_fn,
                 void *baton,
                 char *buffer, 
-                apr_size_t *len, int *zflush)
+                uInt *len, int *zflush)
 {
-  apr_size_t orig_len = *len;
+  uInt orig_len = *len;
+
+  /* There's no reason this value should grow bigger than the range of
+     uInt, but Subversion's API requires apr_size_t. */
+  apr_size_t apr_len = (apr_size_t) *len;
   
-  SVN_ERR ((*read_fn) (baton, buffer, len));
+  SVN_ERR ((*read_fn) (baton, buffer, &apr_len));
+  
+  /* Type cast back to uInt type that zlib uses.  On LP64 platforms
+     apr_size_t will be bigger than uInt. */
+  *len = (uInt) apr_len;
   
   /* I wanted to use Z_FINISH here, but we need to know our buffer is
      big enough */
