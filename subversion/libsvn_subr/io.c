@@ -185,7 +185,13 @@ svn_io_copy_file (const char *src,
                   apr_pool_t *pool)
 {
   apr_status_t apr_err;
+  /* FIXME: apr_file_copy with perms may fail on Win32. We need a platform
+     - specific implementation to get the permissions right. */
+#ifndef SVN_WIN32
   apr_int32_t options = copy_perms ? APR_FILE_SOURCE_PERMS : APR_OS_DEFAULT;
+#else
+  apr_int32_t options = APR_OS_DEFAULT;
+#endif
 
   apr_err = apr_file_copy (src, dst, options, pool);
   if (apr_err)
@@ -365,7 +371,7 @@ svn_io_set_file_read_only (const char *path, apr_pool_t *pool)
 
   attributes |= APR_FILE_ATTR_READONLY;
   status = apr_file_attrs_set (path, attributes, pool);
-  if (!APR_STATUS_IS_SUCCESS(status))
+  if (status && status != APR_ENOTIMPL)
     return svn_error_createf (status, 0, NULL, pool,
                              "failed to set file '%s' read-only", path);
 
