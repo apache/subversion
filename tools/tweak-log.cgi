@@ -175,6 +175,14 @@ sub doFetchLog
     print "<h1>Editing Log Message for Revision $rev</h1>\n";
     print "<h2>Current log message:</h2>\n";
     print "<blockquote><hr /><pre>$escaped_log</pre><hr /></blockquote>\n";
+    print "\n<p>\n";
+    print "<font color=\"red\">\n";
+    print "<i>This cgi script is perfect and has no bugs.  Therefore, the\n";
+    print "ordinarily sensible precaution of running `<tt>svn log</tt>' and\n";
+    print "saving the output before you modify a log message is entirely\n";
+    print "unnecessary.  After all, what could possibly go wrong?</i>\n";
+    print "</font>\n";
+    print "\n<p>\n";
     print "<form action=\"$gActionURL\" method=\"post\">\n";
     print "<h2>New log message:</h2>\n";
     print "<blockquote>\n";
