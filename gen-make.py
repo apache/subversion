@@ -11,10 +11,12 @@ import os, sys
 sys.path.insert(0, 'build')
 import gen_make
 
-def main(fname, oname=None, skip_depends=0):
+def main(fname, verfname=None, oname=None, skip_depends=0):
   if oname is None:
     oname = os.path.splitext(os.path.basename(fname))[0] + '-outputs.mk'
-  generator = gen_make.MakefileGenerator(fname, oname)
+  if verfname is None:
+    verfname = os.path.join('subversion', 'include', 'svn_version.h')
+  generator = gen_make.MakefileGenerator(fname, verfname, oname)
   generator.write()
   if not skip_depends:
     generator.write_depends()

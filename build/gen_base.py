@@ -22,12 +22,21 @@ class GeneratorBase:
   #        file-type is 'target', 'object', ...
   #
 
-  def __init__(self, fname):
+  def __init__(self, fname, verfname):
     self.parser = ConfigParser.ConfigParser(_cfg_defaults)
     self.parser.read(fname)
 
     # extract some basic information
-    self.version = self.parser.get('options', 'version')
+
+    # Version comes from a header file since it is used in the code.
+    versionre = re.compile(r'^\s*#\s*define\s+SVN_VER_LIBRARY\s+(\d+)\s+$')
+    for line in open(verfname, 'r').readlines():
+      match = versionre.match(line)
+      if match is not None:
+        self.version = match.group(1)
+        break
+    else:
+      raise GenError('Unable to extract version.')
 
     self.targets = { }
     self.includes = [ ]
