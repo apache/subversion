@@ -9,6 +9,19 @@ target_test_SOURCES = target-test.c
 INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@
 
 ## Libraries this binary depends upon:
+if BUILD_FS_STUFF
+hashdump_test_LDADD = @SVN_TESTS_MAIN_LIBS@ \
+                      @SVN_LIBSVN_FS_LIBS@ \
+                      @SVN_LIBSVN_DELTA_LIBS@ \
+                      @SVN_LIBSVN_SUBR_LIBS@ \
+                      @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
+
+stringtest_LDADD = @SVN_TESTS_MAIN_LIBS@ \
+                   @SVN_LIBSVN_FS_LIBS@ \
+                   @SVN_LIBSVN_DELTA_LIBS@ \
+                   @SVN_LIBSVN_SUBR_LIBS@ \
+                   @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
+else
 hashdump_test_LDADD = @SVN_TESTS_MAIN_LIBS@ \
                       @SVN_LIBSVN_DELTA_LIBS@ \
                       @SVN_LIBSVN_SUBR_LIBS@ \
@@ -18,6 +31,7 @@ stringtest_LDADD = @SVN_TESTS_MAIN_LIBS@ \
                    @SVN_LIBSVN_DELTA_LIBS@ \
                    @SVN_LIBSVN_SUBR_LIBS@ \
                    @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
+endif
 
 target_test_LDADD = @SVN_LIBSVN_SUBR_LIBS@ @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 

@@ -12,8 +12,14 @@ svndiff_test_SOURCES = svndiff-test.c
 INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_EXPAT_INCLUDES@
 
 ## Libraries this binary depends upon:
+if BUILD_FS_STUFF
+deltaparse_test_LDADD = @SVN_TESTS_MAIN_LIBS@ @SVN_LIBSVN_FS_LIBS@ \
+                        @SVN_LIBSVN_DELTA_LIBS@ @SVN_LIBSVN_SUBR_LIBS@ \
+                        @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
+else
 deltaparse_test_LDADD = @SVN_TESTS_MAIN_LIBS@ @SVN_LIBSVN_DELTA_LIBS@ \
                         @SVN_LIBSVN_SUBR_LIBS@ @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
+endif
 
 vdelta_test_LDADD = @SVN_LIBSVN_DELTA_LIBS@ @SVN_LIBSVN_SUBR_LIBS@ \
                     @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@

@@ -29,7 +29,8 @@
 #include "svn_wc.h"
 #include "svn_test.h"
 
-
+/* libsvn_test.la requires this symbol */
+svn_error_t *(*test_funcs[])(char **msg, apr_pool_t *p) = {};
 
 int
 main (int argc, char *argv[])
