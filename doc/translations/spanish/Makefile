@@ -19,7 +19,7 @@ BOOK_VERSION_SOURCE =  $(BOOK_DIR)/version.xml
 BOOK_ALL_SOURCE = $(BOOK_DIR)/*.xml
 BOOK_IMAGES = $(BOOK_DIR)/images/*.png
 BOOK_INSTALL_DIR = $(INSTALL_DIR)/book
-BOOK_ASPELL_FILES = book foreword ch00 ch01
+BOOK_ASPELL_FILES = book
 
 MDOCS_DIR = ${BOOK_TOP}/misc-docs
 MDOCS_HTML_TARGET = $(MDOCS_DIR)/misc-docs.html
@@ -61,6 +61,7 @@ aspell_add_words:
 
 aspell_check:
 	@for file in $(BOOK_ASPELL_FILES); do \
+		touch book/$$file.xml.aspell_ignore;\
 		aspell -H --lang=es create master ./book/.aspell.$$file < book/$$file.xml.aspell_ignore;\
 		aspell check book/$$file.xml -H --lang=es --add-extra-dicts ./book/.aspell.$$file;\
 	done
