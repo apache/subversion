@@ -32,8 +32,6 @@
 #include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_path.h"
-#include "svn_io.h"
-#include "svn_utf.h"
 
 #include "client.h"
 
@@ -146,8 +144,7 @@ struct file_baton {
 
 /* Data used by the apr pool temp file cleanup handler */
 struct temp_file_cleanup_s {
-  /* The path to the file to be deleted.  NOTE: this path is
-     native-encoded, _not_ utf8-encoded! */
+  /* The path to the file to be deleted */
   const char *path;
   /* The pool to which the deletion of the file is linked. */
   apr_pool_t *pool;
@@ -211,8 +208,6 @@ temp_file_plain_cleanup_handler (void *arg)
 {
   struct temp_file_cleanup_s *s = arg;
 
-  /* Note to UTF-8 watchers: this is ok because the path is already in
-     native encoding. */ 
   return apr_file_remove (s->path, s->pool);
 }
 
@@ -246,7 +241,7 @@ temp_file_cleanup_register (const char *path,
                             apr_pool_t *pool)
 {
   struct temp_file_cleanup_s *s = apr_palloc (pool, sizeof (*s));
-  SVN_ERR (svn_utf_cstring_from_utf8 (path, &(s->path), pool));
+  s->path = path;
   s->pool = pool;
   apr_pool_cleanup_register (s->pool, s, temp_file_plain_cleanup_handler,
                              temp_file_child_cleanup_handler);

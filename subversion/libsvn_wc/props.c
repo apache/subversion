@@ -40,7 +40,6 @@
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_time.h"
-#include "svn_utf.h"
 
 #include "wc.h"
 #include "log.h"
@@ -310,18 +309,12 @@ append_prop_conflict (apr_file_t *fp,
      timestamp or something? */
   apr_size_t written;
   apr_status_t status;
-  const svn_string_t *conflict_description_native;
 
-  SVN_ERR (svn_utf_string_from_utf8 (conflict_description,
-                                     &conflict_description_native,
-                                     pool));
-
-  status = apr_file_write_full (fp, conflict_description_native->data,
-                                conflict_description_native->len, &written);
+  status = apr_file_write_full (fp, conflict_description->data,
+                                conflict_description->len, &written);
   if (status)
     return svn_error_create (status, 0, NULL, pool,
-                             "append_prop_conflict: "
-                             "apr_file_write_full failed.");
+                             "append_prop_conflict: apr_file_write_full failed.");
   return SVN_NO_ERROR;
 }
 
