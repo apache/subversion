@@ -866,12 +866,56 @@ class ProjectItem:
   def __init__(self, **kw):
     vars(self).update(kw)
 
+# ============================================================================
+# Reusable code segment. This code is duplicated in the several locations.
+# This is NOT the master copy.
+# The master copy is: subversion/subversion/bindings/swig/python/svn/core.py
+#  
+# Please keep all copies in sync.
+#
 if sys.platform == "win32":
-  def escape_shell_arg(str):
-    return '"' + string.replace(str, '"', '"^""') + '"'
+  _escape_shell_arg_re = re.compile(r'(\\+)(\"|$)')
+
+  def escape_shell_arg(arg):
+    # The (very strange) parsing rules used by the C runtime library are
+    # described at:
+    # http://msdn.microsoft.com/library/en-us/vclang/html/_pluslang_Parsing_C.2b2b_.Command.2d.Line_Arguments.asp
+
+    # double up slashes, but only if they are followed by a quote character
+    arg = re.sub(_escape_shell_arg_re, r'\1\1\2', arg)
+
+    # surround by quotes and escape quotes inside
+    arg = '"' + string.replace(arg, '"', '"^""') + '"'
+    return arg
+
+
+  def argv_to_command_string(argv):
+    """Flatten a list of command line arguments into a command string.
+
+    The resulting command string is expected to be passed to the system
+    shell which os functions like popen() and system() invoke internally.
+    """
+
+    # According cmd's usage notes (cmd /?), it parses the command line by
+    # "seeing if the first character is a quote character and if so, stripping
+    # the leading character and removing the last quote character."
+    # So to prevent the argument string from being changed we add an extra set
+    # of quotes around it here.
+    return '"' + string.join(map(escape_shell_arg, argv), " ") + '"'
+
 else:
   def escape_shell_arg(str):
     return "'" + string.replace(str, "'", "'\\''") + "'"
+
+  def argv_to_command_string(argv):
+    """Flatten a list of command line arguments into a command string.
+
+    The resulting command string is expected to be passed to the system
+    shell which os functions like popen() and system() invoke internally.
+    """
+
+    return string.join(map(escape_shell_arg, argv), " ")
+# ============================================================================
 
 FILTER_LIBS = 1
 FILTER_PROJECTS = 2
