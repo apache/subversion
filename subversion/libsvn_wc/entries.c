@@ -1659,7 +1659,7 @@ walker_helper (const char *dirpath,
   apr_hash_index_t *hi;
   svn_wc_entry_t *dot_entry;
 
-  SVN_ERR (svn_wc_entries_read (&entries, adm_access, show_deleted, subpool));
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, show_deleted, pool));
   
   /* As promised, always return the '.' entry first. */
   dot_entry = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, 
@@ -1669,10 +1669,10 @@ walker_helper (const char *dirpath,
                               "Directory '%s' has no THIS_DIR entry!",
                               dirpath);
 
-  SVN_ERR (walk_callbacks->found_entry (dirpath, dot_entry, walk_baton));
+  SVN_ERR (walk_callbacks->found_entry (dirpath, dot_entry, walk_baton, pool));
 
   /* Loop over each of the other entries. */
-  for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
       apr_ssize_t klen;
@@ -1688,7 +1688,7 @@ walker_helper (const char *dirpath,
 
       entrypath = svn_path_join (dirpath, key, subpool);
       SVN_ERR (walk_callbacks->found_entry (entrypath, current_entry,
-                                            walk_baton));
+                                            walk_baton, subpool));
 
       if (current_entry->kind == svn_node_dir)
         {
@@ -1699,6 +1699,8 @@ walker_helper (const char *dirpath,
                                   walk_callbacks, walk_baton,
                                   show_deleted, subpool));
         }
+
+      svn_pool_clear (subpool);
     }
 
   svn_pool_destroy (subpool);
@@ -1724,7 +1726,7 @@ svn_wc_walk_entries (const char *path,
                               "'%s' is not under revision control.", path);
 
   if (entry->kind == svn_node_file)
-    return walk_callbacks->found_entry (path, entry, walk_baton);
+    return walk_callbacks->found_entry (path, entry, walk_baton, pool);
 
   else if (entry->kind == svn_node_dir)
     return walker_helper (path, adm_access, walk_callbacks, walk_baton,

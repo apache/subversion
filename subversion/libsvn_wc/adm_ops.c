@@ -1985,13 +1985,13 @@ struct resolve_callback_baton
   /* Notification function and baton */
   svn_wc_notify_func_t notify_func;
   void *notify_baton;
-  apr_pool_t *pool;
 };
 
 static svn_error_t *
 resolve_found_entry_callback (const char *path,
                               const svn_wc_entry_t *entry,
-                              void *walk_baton)
+                              void *walk_baton,
+                              apr_pool_t *pool)
 {
   struct resolve_callback_baton *baton = walk_baton;
   const char *conflict_dir, *base_name = NULL;
@@ -2008,14 +2008,14 @@ resolve_found_entry_callback (const char *path,
   if (entry->kind == svn_node_dir)
     conflict_dir = path;
   else
-    svn_path_split (path, &conflict_dir, &base_name, baton->pool);
+    svn_path_split (path, &conflict_dir, &base_name, pool);
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, baton->adm_access, conflict_dir,
-                                baton->pool));
-
+                                pool));
+  
   return resolve_conflict_on_entry (path, entry, adm_access, base_name,
                                     baton->resolve_text, baton->resolve_props,
                                     baton->notify_func, baton->notify_baton,
-                                    baton->pool);
+                                    pool);
 }
 
 static const svn_wc_entry_callbacks_t 
@@ -2043,7 +2043,6 @@ svn_wc_resolve_conflict (const char *path,
   baton->adm_access = adm_access;
   baton->notify_func = notify_func;
   baton->notify_baton = notify_baton;
-  baton->pool = pool;
 
   if (! recursive)
     {
@@ -2053,7 +2052,7 @@ svn_wc_resolve_conflict (const char *path,
         return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                                   "Not under version control: '%s'", path);
 
-      SVN_ERR (resolve_found_entry_callback (path, entry, baton));
+      SVN_ERR (resolve_found_entry_callback (path, entry, baton, pool));
     }
   else
     {

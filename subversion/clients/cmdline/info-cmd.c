@@ -208,10 +208,9 @@ print_entry (const char *target,
 static svn_error_t *
 info_found_entry_callback (const char *path,
                            const svn_wc_entry_t *entry,
-                           void *walk_baton)
+                           void *walk_baton,
+                           apr_pool_t *pool)
 {
-  apr_pool_t *pool = walk_baton;
-
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only print
      the second one (where we're looking at THIS_DIR.)  */
@@ -282,7 +281,7 @@ svn_cl__info (apr_getopt_t *os,
           if (opt_state->recursive)
             /* the generic entry-walker: */
             SVN_ERR (svn_wc_walk_entries (target, adm_access,
-                                          &entry_walk_callbacks, subpool,
+                                          &entry_walk_callbacks, NULL,
                                           FALSE, pool));
           else
             SVN_ERR (print_entry (target, entry, subpool));

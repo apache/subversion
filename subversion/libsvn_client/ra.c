@@ -181,17 +181,16 @@ struct invalidate_wcprop_walk_baton
 
   /* Access baton for the top of the walk. */
   svn_wc_adm_access_t *base_access;
-
-  /* You knew this was coming. */
-  apr_pool_t *pool;
 };
+
 
 /* This implements the `found_entry' prototype in
    `svn_wc_entry_callbacks_t'. */
 static svn_error_t *
 invalidate_wcprop_for_entry (const char *path,
                              const svn_wc_entry_t *entry,
-                             void *walk_baton)
+                             void *walk_baton,
+                             apr_pool_t *pool)
 {
   struct invalidate_wcprop_walk_baton *wb = walk_baton;
   svn_wc_adm_access_t *entry_access;
@@ -199,10 +198,11 @@ invalidate_wcprop_for_entry (const char *path,
   SVN_ERR (svn_wc_adm_retrieve (&entry_access, wb->base_access,
                                 ((entry->kind == svn_node_dir)
                                  ? path
-                                 : svn_path_dirname (path, wb->pool)),
-                                wb->pool));
-  return svn_wc_prop_set (wb->prop_name, NULL, path, entry_access, wb->pool);
+                                 : svn_path_dirname (path, pool)),
+                                pool));
+  return svn_wc_prop_set (wb->prop_name, NULL, path, entry_access, pool);
 }
+
 
 /* This implements the `svn_ra_invalidate_wc_props_func_t' interface. */
 static svn_error_t *
@@ -217,7 +217,6 @@ invalidate_wc_props (void *baton,
 
   wb.base_access = cb->base_access;
   wb.prop_name = prop_name;
-  wb.pool = pool;
   walk_callbacks.found_entry = invalidate_wcprop_for_entry;
 
   SVN_ERR (svn_wc_walk_entries (svn_path_join (cb->base_dir, path, pool),
