@@ -23,8 +23,8 @@ higher priority items first.
 How do we do this?
 
 Let TL be an apr_array_header_t representing the target list, in the
-order it appeared on the command line.  Assume that no "../blah" paths
-are allowed in the targets.  
+order the targets appeared on the command line.  Assume that no
+"../blah" paths are allowed in the targets.
 
    1. Remove redundancies from the target list: all targets that are
       descendants of some other target are removed.
