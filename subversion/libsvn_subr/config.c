@@ -14,6 +14,8 @@
 
 
 
+#include <string.h>
+
 #include "svn_private_config.h"
 
 #include <apr_lib.h>
