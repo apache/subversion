@@ -244,29 +244,18 @@ static svn_error_t *ra_svn_apply_textdelta(void *file_baton,
 {
   ra_svn_baton_t *b = file_baton;
   svn_stream_t *diff_stream;
-  svn_boolean_t wanted;
 
   /* Tell the other side we're starting a text delta. */
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "apply-textdelta", "c(?c)",
                                b->token, base_checksum));
-  SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, "b", &wanted));
 
-  if (wanted)
-    {
-      /* Transform the window stream to an svndiff stream.  Reuse the
-       * file baton for the stream handler, since it has all the
-       * needed information. */
-      diff_stream = svn_stream_create(b, pool);
-      svn_stream_set_write(diff_stream, ra_svn_svndiff_handler);
-      svn_stream_set_close(diff_stream, ra_svn_svndiff_close_handler);
-      svn_txdelta_to_svndiff(diff_stream, pool, wh, wh_baton);
-    }
-  else
-    {
-      /* The editor consumer doesn't want text delta information. */
-      *wh = NULL;
-      *wh_baton = NULL;
-    }
+  /* Transform the window stream to an svndiff stream.  Reuse the
+   * file baton for the stream handler, since it has all the
+   * needed information. */
+  diff_stream = svn_stream_create(b, pool);
+  svn_stream_set_write(diff_stream, ra_svn_svndiff_handler);
+  svn_stream_set_close(diff_stream, ra_svn_svndiff_close_handler);
+  svn_txdelta_to_svndiff(diff_stream, pool, wh, wh_baton);
   return SVN_NO_ERROR;
 }
   
@@ -594,21 +583,10 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?c)",
                                  &token, &base_checksum));
   SVN_ERR(lookup_token(ds, token, &entry, pool));
-  if (entry->err)
-    {
-      /* The file isn't necessarily even open; do nothing. */
-      SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "b", FALSE));
-      return SVN_NO_ERROR;
-    }
 
-  SVN_CMD_ERR(ds->editor->apply_textdelta(entry->baton,
-                                          base_checksum, pool,
-                                          &wh, &wh_baton));
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "b", (wh != NULL)));
-
-  /* If we said we didn't want text delta information, we're done. */
-  if (!wh)
-    return SVN_NO_ERROR;
+  if (!entry->err)
+    entry->err = ds->editor->apply_textdelta(entry->baton, base_checksum, pool,
+                                             &wh, &wh_baton);
 
   stream = svn_txdelta_parse_svndiff(wh, wh_baton, TRUE, entry->pool);
   subpool = svn_pool_create(entry->pool);

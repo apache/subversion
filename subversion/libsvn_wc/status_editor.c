@@ -494,7 +494,7 @@ apply_textdelta (void *file_baton,
 
   /* Send back a NULL window handler -- we don't need the actual diffs. */
   *handler_baton = NULL;
-  *handler = NULL;
+  *handler = svn_delta_null_window_handler;
 
   return SVN_NO_ERROR;
 }

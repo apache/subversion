@@ -95,6 +95,12 @@ change_prop (void *file_baton,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *svn_delta_null_window_handler (svn_txdelta_window_t *window,
+                                            void *baton)
+{
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 apply_textdelta (void *file_baton,
                  const char *base_checksum,
@@ -102,7 +108,7 @@ apply_textdelta (void *file_baton,
                  svn_txdelta_window_handler_t *handler,
                  void **handler_baton)
 {
-  *handler = NULL;
+  *handler = svn_delta_null_window_handler;
   *handler_baton = NULL;
   return SVN_NO_ERROR;
 }

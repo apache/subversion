@@ -736,24 +736,15 @@ thunk_apply_textdelta(void *file_baton,
       goto finished;
     }
 
-  if (result == Py_None)
-    {
-      Py_DECREF(result);
-      *handler = NULL;
-      *h_baton = NULL;
-    }
-  else
-    {
-      handler_baton *hb = apr_palloc(ib->pool, sizeof(*hb));
+  handler_baton *hb = apr_palloc(ib->pool, sizeof(*hb));
 
-      /* return the thunk for invoking the handler. the baton takes our
-         'result' reference. */
-      hb->handler = result;
-      hb->pool = ib->pool;
+  /* return the thunk for invoking the handler. the baton takes our
+     'result' reference. */
+  hb->handler = result;
+  hb->pool = ib->pool;
 
-      *handler = thunk_window_handler;
-      *h_baton = hb;
-    }
+  *handler = thunk_window_handler;
+  *h_baton = hb;
 
   err = SVN_NO_ERROR;
 

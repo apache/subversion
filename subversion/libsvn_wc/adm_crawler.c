@@ -649,17 +649,10 @@ svn_wc_transmit_text_deltas (const char *path,
 
   /* Tell the editor that we're about to apply a textdelta to the
      file baton; the editor returns to us a window consumer routine
-     and baton.  If there is no handler provided, just close the file
-     and get outta here.  */
+     and baton.  */
   SVN_ERR (editor->apply_textdelta
            (file_baton,
             base_digest_hex, pool, &handler, &wh_baton));
-
-  if (! handler)
-    {
-      SVN_ERR (svn_io_remove_file (tmp_base, pool));
-      return editor->close_file (file_baton, NULL, pool);
-    }
 
   /* Alert the caller that we have created a temporary file that might
      need to be cleaned up. */

@@ -280,12 +280,10 @@ The main command set corresponds to the svn_ra interfaces.
     params:   ( path:string dir-token:string file-token:string rev:number )
 
   apply-textdelta:
+    This command has no response; errors will be reported in close-file.
     params:   ( file-token:string [ base-checksum:string ] )
-    response: ( wanted:bool )
-    Upon receiving positive response, client sends svndiff data as
-     strings, terminated by an empty string.  If an error occurs
-     during application of the svndiff data, it is reported in
-     close-file.
+    After sending command, client sends svndiff data as strings,
+     terminated by an empty string.
 
   change-file-prop:
     This command has no response; errors will be reported in close-file.
