@@ -179,6 +179,15 @@ svn_error_t *svn_swig_py_log_receiver(void *py_receiver,
                                       const char *msg,
                                       apr_pool_t *pool);
 
+/* thunked blame receiver function */
+svn_error_t *svn_swig_py_client_blame_receiver_func(void *baton,
+                                                    apr_int64_t line_no,
+                                                    svn_revnum_t revision,
+                                                    const char *author,
+                                                    const char *date,
+                                                    const char *line,
+                                                    apr_pool_t *pool);
+
 /* auth provider callbacks */
 svn_error_t *svn_swig_py_auth_simple_prompt_func(
     svn_auth_cred_simple_t **cred,

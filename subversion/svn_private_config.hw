@@ -54,6 +54,22 @@
 /* Defined to be the path to the installed binaries */
 #define SVN_BINARY_DIR "/usr/local/bin"
 
+/* Define to the Python/C API format character suitable for apr_int64_t */
+/*
+ * FIXME: The Windows Python bindings build is currently broken.
+ * Uncommenting the below should probably be sufficient to fix things,
+ * but since I don't have a Windows build environment to test, I am just
+ * breaking things and leaving this hint to help someone who does.
+ *
+ * #ifdef _WIN64
+ * #define SVN_APR_INT64_T_PYCFMT "l"
+ * #else
+ * #ifdef _WIN32
+ * #define SVN_APR_INT64_T_PYCFMT "L"
+ * #endif
+ * #endif
+ */
+
 /* Setup gettext macros */
 #define N_(x) x
 #define PACKAGE_NAME "subversion"

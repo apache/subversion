@@ -219,6 +219,12 @@
    handle svn_client_blame_receiver_t/baton pairs
 */
 
+%typemap(python, in) (svn_client_blame_receiver_t receiver, 
+                      void *receiver_baton) {
+    $1 = svn_swig_py_client_blame_receiver_func;
+    $2 = (void *)$input;
+}
+
 %typemap(perl5,in) (svn_client_blame_receiver_t receiver, void *receiver_baton) {
   $1 = svn_swig_pl_blame_func;
   $2 = $input; /* our function is the baton. */
