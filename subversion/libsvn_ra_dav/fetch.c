@@ -354,7 +354,7 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
     }
 }
 
-static svn_error_t *simple_fetch_file(svn_ra_session_t *ras,
+static svn_error_t *simple_fetch_file(ne_session *sess,
                                       const char *url,
                                       svn_boolean_t text_deltas,
                                       void *file_baton,
@@ -385,14 +385,13 @@ static svn_error_t *simple_fetch_file(svn_ra_session_t *ras,
 
   frc.pool = pool;
 
-  rv = ne_read_file(ras->sess2, url_str->data, fetch_file_reader, &frc);
+  rv = ne_read_file(sess, url_str->data, fetch_file_reader, &frc);
   if (rv != NE_OK)
     {
       /* ### other GET responses? */
 
       /* ### need an SVN_ERR here */
-      err = svn_error_create(APR_EGENERAL, 0, NULL, pool,
-                             ne_get_error(ras->sess2));
+      err = svn_error_create(APR_EGENERAL, 0, NULL, pool, ne_get_error(sess));
     }
   /* else: err == NULL */
 
@@ -403,7 +402,7 @@ static svn_error_t *simple_fetch_file(svn_ra_session_t *ras,
   return err ? err : err2;
 }
 
-static svn_error_t *fetch_file(svn_ra_session_t *ras,
+static svn_error_t *fetch_file(ne_session *sess,
                                const svn_ra_dav_resource_t *rsrc,
                                void *dir_baton,
                                vsn_url_helper *vuh,
@@ -423,7 +422,7 @@ static svn_error_t *fetch_file(svn_ra_session_t *ras,
   if (err)
     return svn_error_quick_wrap(err, "could not add a file");
 
-  err = simple_fetch_file(ras, bc_url, TRUE, file_baton, editor, pool);
+  err = simple_fetch_file(sess, bc_url, TRUE, file_baton, editor, pool);
   if (err)
     {
       /* ### do we really need to bother with closing the file_baton? */
@@ -690,7 +689,8 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
         {
           rsrc = ((svn_ra_dav_resource_t **)files->elts)[i];
 
-          err = fetch_file(ras, rsrc, this_baton, &vuh, editor, ras->pool);
+          err = fetch_file(ras->sess, rsrc, this_baton, &vuh, editor,
+                           ras->pool);
           if (err)
             /* ### should we close the dir batons first? */
             return svn_error_quick_wrap(err, "could not checkout a file");
@@ -1023,7 +1023,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
     case ELEM_fetch_file:
       /* assert: rb->href->len > 0 */
-      CHKERR( simple_fetch_file(rb->ras, rb->href->data, 
+      CHKERR( simple_fetch_file(rb->ras->sess2, rb->href->data, 
                                 rb->is_status ? FALSE : TRUE,
                                 rb->file_baton, rb->editor, rb->ras->pool) );
       break;
@@ -1124,7 +1124,7 @@ static int end_element(void *userdata,
          retrieve the href before fetching. */
 
       /* fetch file */
-      CHKERR( simple_fetch_file(rb->ras, rb->href->data, 
+      CHKERR( simple_fetch_file(rb->ras->sess2, rb->href->data, 
                                 rb->is_status ? FALSE : TRUE,
                                 rb->file_baton, rb->editor, rb->ras->pool) );
 
