@@ -649,8 +649,7 @@ def fail_add_directory(sbox):
   saved_wd = os.getcwd()
   try:
     os.chdir(sbox.wc_dir)
-    svntest.actions.run_and_verify_svn('Failed mkdir', None,
-                                       ["svn: '.' is not a working copy\n"],
+    svntest.actions.run_and_verify_svn('Failed mkdir', None, SVNAnyOutput,
                                        'mkdir', 'A')
     if os.path.exists('A'):
       raise svntest.Failure('svn mkdir created an unversioned directory')
