@@ -47,7 +47,18 @@
     $1 = ($1_ltype)&temp;
 }
 
+
+/* -----------------------------------------------------------------------
+   %apply-ing of typemaps
+*/
+
 %apply SWIGTYPE **OUTPARAM { svn_stream_t ** };
+
+%apply long *OUTPUT { svn_revnum_t * };
+%apply int *OUTPUT { svn_boolean_t * };
+
+/* svn_fs_check_path() */
+%apply long *OUTPUT { svn_node_kind_t * };
 
 /* -----------------------------------------------------------------------
    Create a typemap for specifying string args that may be NULL.
@@ -128,12 +139,6 @@
 
 /* Make the proxy classes much more usable */
 %typemap(javaptrconstructormodifiers) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [] "public"
-
-/* -----------------------------------------------------------------------
-   'svn_revnum_t *' and 'svn_boolean_t *' will always be an OUTPUT parameter
-*/
-%apply long *OUTPUT { svn_revnum_t * };
-%apply int *OUTPUT { svn_boolean_t * };
 
 /* -----------------------------------------------------------------------
    Define an OUTPUT typemap for 'svn_filesize_t *'.  For now, we'll
@@ -262,12 +267,6 @@
 	_global_pool = *(apr_pool_t **)&j$1;
 	$1 = 0;
 }
-
-/* -----------------------------------------------------------------------
-   result of check_path
-*/
-
-%apply long *OUTPUT { svn_node_kind_t * };
 
 /* -----------------------------------------------------------------------
    Callback: svn_log_message_receiver_t
