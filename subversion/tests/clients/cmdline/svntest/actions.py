@@ -46,17 +46,14 @@ def guarantee_greek_repository(path):
     main.write_tree(main.greek_dump_dir,
                     [[x[0], x[1]] for x in main.greek_tree])
 
-    if main.DAV_mode:      
-      # figger out the "http:" url needed to run import
-      url = "http://localhost/svn/tmp/repo"
-      # this is the first test in the run, so create an empty .htaccess file
-      if os.path.exists(main.htaccess_file):
-        unlink(main.htaccess_file)
+    # build a URL for doing an import.
+    url = main.test_area_url + main.pristine_dir
+
+    # this is the first test in the run, so create an empty .htaccess file
+    if os.path.exists(main.htaccess_file):
+      os.unlink(main.htaccess_file)
       fp = open(main.htaccess_file, 'w')
       fp.close()
-    else:
-      # figger out the "file:" url needed to run import
-      url = "file://" + os.path.abspath(main.pristine_dir)
 
     # import the greek tree.
     output, errput = main.run_svn("import", url, main.greek_dump_dir)
@@ -299,17 +296,19 @@ def make_repo_and_wc(test_name):
   # Create (or copy afresh) a new repos with a greek tree in it.
   guarantee_greek_repository(repo_dir)
 
-  if main.DAV_mode:
-    url = 'http://localhost/svn/repositories/' + test_name
+  # make url for checkout
+  url = main.test_area_url + repo_dir
 
+  # extract location from test_area_url.
+  match_obj = re.match("https{0,1}://[^/](.*)/*", main.test_area_url)
+  if match_obj:
+    loc = match_obj.group(1)  
     # append the new repository to the .htaccess file.
-    location  = "<Location /svn/repositories/" + test_name + "\n"
+    location  = "<Location " + loc + "/" + test_name + ">\n"
     location += "   DAV svn\n"
     location += "   SVNPath " + os.path.abspath(repo_dir) + "\n"
     location += "</Location>\n\n"
     main.file_append(main.htaccess_file, location)
-  else:
-    url = 'file://' + os.path.abspath(repo_dir)
 
   # Generate the expected output tree.
   output_list = []
