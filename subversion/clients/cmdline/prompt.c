@@ -251,6 +251,7 @@ svn_cl__auth_ssl_server_prompt (
     {
       *cred_p = apr_pcalloc (pool, sizeof (**cred_p));
       (*cred_p)->trust_permanently = TRUE;
+      (*cred_p)->accepted_failures = failures;
     }
   else
     {

@@ -127,15 +127,12 @@ server_ssl_callback(void *userdata,
   svn_auth_ssl_server_cert_info_t cert_info;
   char fingerprint[NE_SSL_DIGESTLEN];
   char valid_from[NE_SSL_VDATELEN], valid_until[NE_SSL_VDATELEN];
+  const char *portstring = apr_psprintf (ras->pool, "%d", ras->root.port);
+  const char *realmstring;
 
-  /* The following is a quick hack to prevent alternate CN hostname
-   * spoofing. It will be replaced by a better more secure solution
-   * shortly. */
-  if ((failures & NE_SSL_UNTRUSTED) &&
-      strcmp(ne_ssl_cert_identity(cert), ras->root.host) != 0)
-    {
-      failures |= NE_SSL_IDMISMATCH;
-    }
+  /* Construct the realmstring, e.g. https://svn.collab.net:80 */
+  realmstring = apr_pstrcat(ras->pool, ras->root.scheme, "://",
+                            ras->root.host, ":", portstring, NULL);
 
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
@@ -161,7 +158,7 @@ server_ssl_callback(void *userdata,
   apr_pool_create(&pool, ras->pool);
   error = svn_auth_first_credentials(&creds, &state,
                                      SVN_AUTH_CRED_SERVER_SSL,
-                                     ascii_cert,
+                                     realmstring,
                                      ras->callbacks->auth_baton,
                                      pool);
   if (error || !creds)

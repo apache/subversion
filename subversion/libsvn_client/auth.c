@@ -37,6 +37,9 @@
 #include "svn_config.h"
 #include "client.h"
 
+/* The keys that will be stored on disk */
+#define SVN_CLIENT__AUTHFILE_ASCII_CERT_KEY            "ascii_cert"
+#define SVN_CLIENT__AUTHFILE_FAILURES_KEY              "failures"
 
 /*-----------------------------------------------------------------------*/
 
@@ -437,9 +440,6 @@ svn_client_get_username_prompt_provider
 
 /*** SSL file providers. ***/
 typedef struct {
-  /* the cred_kind being fetched (see svn_auth.h)*/
-  const char *cred_kind;
-
   /* cache:  realmstring which identifies the credentials file */
   const char *realmstring;
 } ssl_server_file_provider_baton_t;
@@ -476,6 +476,9 @@ server_ssl_file_first_credentials (void **credentials,
   *credentials = NULL;
   *iter_baton = NULL;
 
+  /* Make sure the save_creds function can get the realmstring */
+  pb->realmstring = apr_pstrdup (pool, realmstring);
+
   /* Check for ignored cert dates */
   if (failures & (SVN_AUTH_SSL_NOTYETVALID | SVN_AUTH_SSL_EXPIRED))
     {
@@ -501,21 +504,36 @@ server_ssl_file_first_credentials (void **credentials,
           failures &= ~SVN_AUTH_SSL_CNMISMATCH;
         }
     }
-  
 
-  /* Check if this is a permanently accepted cert */
-  if (failures & SVN_AUTH_SSL_UNKNOWNCA)
+  /* Check if this is a permanently accepted certificate */
+  config_dir = apr_hash_get (parameters,
+                             SVN_AUTH_PARAM_CONFIG_DIR,
+                             APR_HASH_KEY_STRING);
+  error = svn_config_read_auth_data (&creds_hash, SVN_AUTH_CRED_SERVER_SSL,
+                                     pb->realmstring, config_dir, pool);
+  svn_error_clear(error);
+  if (!error && creds_hash)
     {
-      pb->realmstring = apr_pstrdup (pool, realmstring);
-      config_dir = apr_hash_get (parameters,
-                                 SVN_AUTH_PARAM_CONFIG_DIR,
-                                 APR_HASH_KEY_STRING);
-      error = svn_config_read_auth_data (&creds_hash, pb->cred_kind,
-                                         pb->realmstring, config_dir, pool);
-      svn_error_clear(error);
-      if (!error && creds_hash)
+      svn_string_t *trusted_cert, *this_cert, *failstr;
+      int last_failures;
+
+      trusted_cert = apr_hash_get (creds_hash,
+                                   SVN_CLIENT__AUTHFILE_ASCII_CERT_KEY,
+                                   APR_HASH_KEY_STRING);
+      this_cert = svn_string_create(cert_info->ascii_cert, pool);
+      failstr = apr_hash_get (creds_hash,
+                              SVN_CLIENT__AUTHFILE_FAILURES_KEY,
+                              APR_HASH_KEY_STRING);
+
+      last_failures = failstr ? atoi(failstr->data) : 0;
+
+      /* If the cert is trusted and there are no new failures, we
+       * accept it by clearing all failures. */
+      if (trusted_cert &&
+          svn_string_compare(this_cert, trusted_cert) &&
+          (failures & ~last_failures) == 0)
         {
-          failures &= ~SVN_AUTH_SSL_UNKNOWNCA;
+          failures = 0;
         }
     }
 
@@ -544,7 +562,8 @@ server_ssl_file_save_credentials (svn_boolean_t *saved,
                                   apr_pool_t *pool)
 {
   ssl_server_file_provider_baton_t *pb = provider_baton;
-  const char *ascii_cert = pb->realmstring;
+  svn_auth_cred_server_ssl_t *creds = credentials;
+  const svn_auth_ssl_server_cert_info_t *cert_info;
   apr_hash_t *creds_hash = NULL;
   const char *config_dir;
 
@@ -552,10 +571,23 @@ server_ssl_file_save_credentials (svn_boolean_t *saved,
                              SVN_AUTH_PARAM_CONFIG_DIR,
                              APR_HASH_KEY_STRING);
 
+  cert_info = apr_hash_get (parameters,
+                            SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
+                            APR_HASH_KEY_STRING);
+
   creds_hash = apr_hash_make (pool);
+  apr_hash_set (creds_hash,
+                SVN_CLIENT__AUTHFILE_ASCII_CERT_KEY,
+                APR_HASH_KEY_STRING,
+                svn_string_create (cert_info->ascii_cert, pool));
+  apr_hash_set (creds_hash,
+                SVN_CLIENT__AUTHFILE_FAILURES_KEY,
+                APR_HASH_KEY_STRING,
+                svn_string_createf(pool, "%d", creds->accepted_failures));
+
   SVN_ERR (svn_config_write_auth_data (creds_hash,
-                                       pb->cred_kind,
-                                       ascii_cert,
+                                       SVN_AUTH_CRED_SERVER_SSL,
+                                       pb->realmstring,
                                        config_dir,
                                        pool));
   *saved = TRUE;
@@ -667,8 +699,6 @@ svn_client_get_ssl_server_file_provider (svn_auth_provider_object_t **provider,
 {
   svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
   ssl_server_file_provider_baton_t *pb = apr_pcalloc (pool, sizeof(*pb));
-
-  pb->cred_kind = SVN_AUTH_CRED_SERVER_SSL;
 
   po->vtable = &server_ssl_file_provider;
   po->provider_baton = pb;
