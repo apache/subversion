@@ -101,9 +101,11 @@ get_creds (const char **username,
     pb->password = spassword->data;
       
   if (username)
-    *username = def_username ? def_username : susername->data;
+    *username
+      = def_username ? def_username : susername ? susername->data : NULL;
   if (password)
-    *password = def_password ? def_password : spassword->data;
+    *password
+      = def_password ? def_password : spassword ? spassword->data : NULL;
   *got_creds = TRUE;
   return SVN_NO_ERROR;
 }
