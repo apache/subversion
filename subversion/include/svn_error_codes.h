@@ -297,7 +297,7 @@ SVN_ERROR_START
                 "RA layer failed to create HTTP request")
 
     SVN_ERRDEF (SVN_ERR_RA_REQUEST_FAILED,
-                "RA layer's server request failed")
+                "RA layer request failed")
 
     SVN_ERRDEF (SVN_ERR_RA_MKACTIVITY_FAILED,
                 "RA layer failed to make an activity for commit")
