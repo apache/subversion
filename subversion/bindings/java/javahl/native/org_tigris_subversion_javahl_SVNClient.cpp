@@ -655,12 +655,12 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_resolved
  * Method:    doExport
  * Signature: (Ljava/lang/String;Ljava/lang/String;
  *             Lorg/tigris/subversion/javahl/Revision;
- *             Lorg/tigris/subversion/javahl/Revision;ZZLjava/lang/String;)J
+ *             Lorg/tigris/subversion/javahl/Revision;ZZZLjava/lang/String;)J
  */
 JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNClient_doExport
   (JNIEnv* env, jobject jthis, jstring jsrcPath, jstring jdestPath, 
    jobject jrevision, jobject jpegRevision, jboolean jforce, 
-   jboolean jignoreExternals, jstring jnativeEOL)
+   jboolean jignoreExternals, jboolean jrecurse, jstring jnativeEOL)
 {
     JNIEntry(SVNClient, doExport);
     SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -695,7 +695,8 @@ JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNClient_doExport
         return -1;
     }
     return cl->doExport(srcPath, destPath, revision, pegRevision, 
-        jforce ? true : false, jignoreExternals ? true : false, nativeEOL);
+        jforce ? true : false, jignoreExternals ? true : false, 
+        jrecurse ? true: false, nativeEOL);
 }
 
 /*

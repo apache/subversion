@@ -342,12 +342,13 @@ public interface SVNClientInterface
      * @param pegRevision the revision to interpret srcPath
      * @param force     set if it is ok to overwrite local files
      * @param ignoreExternals ignore external during export
+     * @param recurse   recurse to subdirectories
      * @param nativeEOL which EOL characters to use during export
      * @exception ClientException
      */
     long doExport(String srcPath, String destPath, Revision revision,
                   Revision pegRevision, boolean force, boolean ignoreExternals,
-                  String nativeEOL) throws ClientException;
+                  boolean recurse, String nativeEOL) throws ClientException;
     /**
      * Update local copy to mirror a new url.
      * @param path      the working copy path
