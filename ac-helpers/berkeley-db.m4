@@ -114,14 +114,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   else
 
     if test "$places" = "search"; then
-
-      # This is pretty messed up.  It seems that the FreeBSD port of Berkeley
-      # DB 4 puts the header file in /usr/local/include/db4, but the
-      # database library in /usr/local/lib, as libdb4.[a|so].  There is no
-      # /usr/local/include/db.h.  So if you check for /usr/local first, you'll
-      # get the old header file from /usr/include, and the new library from
-      # /usr/local/lib.  Disaster.  We check for that bogosity first.
-      places="/usr/local/include/db4:/usr/local/lib std /usr/local
+      places="std /usr/local/include/db4:/usr/local/lib /usr/local
               /usr/local/BerkeleyDB.$1.$2 /usr/include/db4:/usr/lib"
     fi
     # Now `places' is guaranteed to be a list of place specs we should
@@ -237,6 +230,15 @@ dnl   This macro uses the Berkeley DB library function `db_version' to
 dnl   find the version.  If the library installed doesn't have this
 dnl   function, then this macro assumes it is too old.
 
+dnl NOTE: This is pretty messed up.  It seems that the FreeBSD port of
+dnl Berkeley DB 4 puts the header file in /usr/local/include/db4, but the
+dnl database library in /usr/local/lib, as libdb4.[a|so].  There is no
+dnl /usr/local/include/db.h.  So if you check for /usr/local first, you'll
+dnl get the old header file from /usr/include, and the new library from
+dnl /usr/local/lib.  Disaster.  Thus this test compares the version constants
+dnl in the db.h header with the ones returned by db_version().
+
+
 AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
   [
     svn_lib_berkeley_db_try_save_libs="$LIBS"
@@ -257,6 +259,14 @@ main ()
   int major, minor, patch;
 
   db_version (&major, &minor, &patch);
+
+  /* Sanity check: ensure that db.h constants actually match the db library */
+  if (major != DB_VERSION_MAJOR
+      || minor != DB_VERSION_MINOR
+      || patch != DB_VERSION_PATCH)
+    exit (1);
+
+  /* Run-time check:  ensure the library claims to be the correct version. */
 
   if (major < $svn_check_berkeley_db_major)
     exit (1);
