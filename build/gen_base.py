@@ -530,8 +530,8 @@ def _collect_paths(pats, path=None):
 
 def _strip_path(path, files):
   "Strip the given path from each file."
-  if path[-1] != '/':
-    path = path + '/'
+  if path[-1] not in (os.sep, os.altsep):
+    path = path + os.sep
   l = len(path)
   result = [ ]
   for file in files:
