@@ -54,7 +54,7 @@ Candidate changes:
     Votes:
       +1: dionisos, lundblad
 
-  * r11202
+  * r11202, r11243
     Fix eol-style translation error for propget.
     Justification:
       Simple fix.
