@@ -183,7 +183,12 @@ void svn_txdelta (svn_txdelta_stream_t **stream,
 
 
 /* Set *STREAM to a pointer to a delta stream that will turn an empty
-   bytestream into STRING. */
+   bytestream into STRING.  Do necessary allocation in POOL.
+
+   When we call `svn_txdelta_next_window' on *STREAM, the window
+   returned will contain pointers directly into STRING (rather than
+   duplicating STRING's data.)  So callers beware:  make sure STRING
+   is not freed before STREAM and its windows!   */
 void svn_txdelta_from_string (svn_txdelta_stream_t **stream,
                               svn_string_t *string,
                               apr_pool_t *pool);
