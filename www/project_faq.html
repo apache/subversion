@@ -50,6 +50,9 @@
     import or check out from it.  What's wrong?</a></li>
 <li><a href="#write-over-dav">I'm having trouble doing write
     operations to a Subversion repository over a network.</a></li>
+<li><a href="#windows-xp-server">Under Windows XP, the Subversion
+    server sometimes seems to send out corrupted data.  Can this really be
+    happening?</a></li>  
 <p>
 <strong>References:</strong>
 </p>
@@ -477,6 +480,45 @@ the httpd process.  Check the permissions to ensure Apache can write
 to the <tt>dav/</tt> directory (and to <tt>db/</tt>, of course).  </p>
 
 <![CDATA[=========================================================]]>
+
+
+<h3>Under Windows XP, the Subversion server sometimes seems to send
+    out corrupted data. <a name="windows-xp-server"> Can this really
+    be happening?</a></h3>
+
+<p>Yes, it seems so.  We <i>think</i> this may be due to a bug in the
+XP network code, that Apache has already run into: see</p>
+
+    <ul>
+    <a href="http://www.apache.org/dist/httpd/binaries/win32/#xpbug"
+    >http://www.apache.org/dist/httpd/binaries/win32/#xpbug</a>
+    </ul>
+<p>
+and 
+<p>
+    <ul>
+    <a href="http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949"
+    >http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949</a>
+    </ul>
+
+</p>
+
+<p>for details, and also see the thread "Question about propset" on
+the Subversion dev list.  Here's one message from late in that thread:</p>
+
+<p>
+    <ul>
+<a href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=185063"
+  >http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=185063</a>
+    </ul>
+</p>
+
+<p>For now, our only advice is "Don't run a Subversion server from
+Windows XP."</p>
+
+
+<![CDATA[=========================================================]]>
+
 
 <p>
 <hr>
