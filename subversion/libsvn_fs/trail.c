@@ -101,10 +101,20 @@ begin_trail (trail_t **trail_p,
   trail->scratchpool = svn_pool_create (trail->pool);
   trail->undo = 0;
   if (use_txn)
-    SVN_ERR (BDB_WRAP (fs, "beginning Berkeley DB transaction",
-                       fs->env->txn_begin (fs->env, 0, &trail->db_txn, 0)));
+    {
+      /* If we're already inside a trail operation, abort() -- this is
+         a coding problem (and will likely hang the repository anyway). */
+      if (fs->in_txn_trail)
+        abort();
+
+      SVN_ERR (BDB_WRAP (fs, "beginning Berkeley DB transaction",
+                         fs->env->txn_begin (fs->env, 0, &trail->db_txn, 0)));
+      fs->in_txn_trail = TRUE;
+    }
   else
-    trail->db_txn = NULL;
+    {
+      trail->db_txn = NULL;
+    }
 
   *trail_p = trail;
   return SVN_NO_ERROR;
@@ -124,9 +134,11 @@ abort_trail (trail_t *trail,
       undo->func (undo->baton);
 
   if (trail->db_txn)
-    SVN_ERR (BDB_WRAP (fs, "aborting Berkeley DB transaction",
-                       trail->db_txn->abort (trail->db_txn)));
- 
+    {
+      SVN_ERR (BDB_WRAP (fs, "aborting Berkeley DB transaction",
+                         trail->db_txn->abort (trail->db_txn)));
+      fs->in_txn_trail = FALSE;
+    }
   svn_pool_destroy (trail->pool);
 
   return SVN_NO_ERROR;
@@ -150,8 +162,11 @@ commit_trail (trail_t *trail,
      doesn't return DB_LOCK_DEADLOCK --- all deadlocks are reported
      earlier.  */
   if (trail->db_txn)
-    SVN_ERR (BDB_WRAP (fs, "committing Berkeley DB transaction",
-                       trail->db_txn->commit (trail->db_txn, 0)));
+    {
+      SVN_ERR (BDB_WRAP (fs, "committing Berkeley DB transaction",
+                         trail->db_txn->commit (trail->db_txn, 0)));
+      fs->in_txn_trail = FALSE;
+    }
 
   /* Do a checkpoint here, if enough has gone on.
      The checkpoint parameters below are pretty arbitrary.  Perhaps
