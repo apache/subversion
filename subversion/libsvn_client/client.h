@@ -192,19 +192,15 @@ svn_error_t * svn_client__can_delete (const char *path,
 
 /*** Add/delete ***/
 
-/* Read automatic properties matching PATH from CTX->config.
-   A hash is returned in *PROPERTIES containing propname/value pairs or
-   when auto-props are disabled *PROPERTIES is set to NULL.
-   *MIMETYPE is set to the mimetype or to NULL.
-   This function does not create a subpool, the caller is responsible to
-   create one if necessary.
-*/
-svn_error_t *
-svn_client__get_auto_props (apr_hash_t **properties,
-                            const char **mimetype,
-                            const char *path,
-                            svn_client_ctx_t *ctx,
-                            apr_pool_t *pool);
+/* Read automatic properties matching PATH from CTX->config.  If
+   *PROPERTIES is non-NULL, set it to a hash which maps 'const char *'
+   property names to 'const svn_string_t *' values.  *MIMETYPE is set
+   to the mimetype or to NULL. */
+svn_error_t *svn_client__get_auto_props (apr_hash_t **properties,
+                                         const char **mimetype,
+                                         const char *path,
+                                         svn_client_ctx_t *ctx,
+                                         apr_pool_t *pool);
                             
 
 /* The main logic for client deletion from a working copy. Deletes PATH
