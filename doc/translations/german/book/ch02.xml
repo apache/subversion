@@ -78,7 +78,20 @@
       directory tree itself, such as the addition, deletion, and
       rearrangement of files and directories.</para>
 
-    <para>When a client reads data from the repository, it normally
+  <para>Wenn ein Client Daten vom Repository liest, sieht 
+      er normalerweise nur die letzte Version des Dateisystembaumes.
+      Der Client hat aber auch die Möglichkeit <emphasis>vorherige</emphasis>
+      Zustände des Dateisystems anzusehen.
+      Beispielsweise kann der Client die Frage stellen: <quote>Was beinhaltete
+      das Verzeichnis letzen Mittwoch?</quote> oder <quote>Wer war
+      die letzte Person, die diese Datei geändert hat und welche Änderungen
+      wurden durchgeführt?</quote> Diese Art von Fragen sind Grundlegend 
+      für jedes <firstterm>Versionkontrollsystem</firstterm>: Systeme,
+      die dazu geschaffen wurden jede Veränderung aufzuzeichnen und 
+      zu verfolgen über die Zeit.
+          
+      
+      When a client reads data from the repository, it normally
       sees only the latest version of the filesystem tree.  But the
       client also has the ability to view
       <emphasis>previous</emphasis> states of the filesystem.  For
@@ -93,24 +106,49 @@
   </sect1>
 
   <sect1 id="svn-ch-2-sect-2">
-    <title>Versioning Models</title>
+      <title>Modelle der Versionierung    Versioning Models</title>
     
     <sect2 id="svn-ch-2-sect-2.1">
-      <title>The Problem of File-Sharing</title>
+      <title>Das Problem des gemeinsamen Datei zugriffs     The Problem of File-Sharing</title>
       
-      <para>All version control systems have to solve the same
+      <para>Alle Versionskontrollsystem haben alle das gleiche 
+          Fundamentale Problem zu lösen: Wie soll es ein System 
+          Anwendern erlauben Informationen zu Teilen, aber davon
+          abzuhalten durch Zufall gegenseitig auf die Füße zu treten?
+          Es ist allzu einfach für Anwender sich durch Zufall 
+          gegenseitig Änderungen im Repository zu überschreiben.
+          
+          All version control systems have to solve the same
         fundamental problem: how will the system allow users to share
         information, but prevent them from accidentally stepping on
         each other's feet?  It's all too easy for users to
         accidentally overwrite each other's changes in the
         repository.</para>
 
-      <para>Consider this scenario: suppose we have two co-workers,
+    <para>Betrachten wird das folgende Szenario: Angenommen, wir 
+        habe zwei Kollegen, Harry und Sally. Sie haben sich beide 
+        entschieden die gleiche Repository Datei zu gleichen Zeit
+        zu bearbeiten. Wenn Harry seine Änderungen nun zuerst in das
+        Repository speichert, dann ist es möglich (einige Momente
+        später), dass Sally aus versehen die Änderungen
+        mit Ihrer Version der Datei überschreibt.
+        Während Harrys Version der Datei nicht für immer verloren ist
+        (das System erinnert sich ja an jede Änderung), aber jede Änderung
+        die Harry gemacht hat ist nicht in Sallys neuer Version zu sehen.
+        Das liegt daran, dass Sally nie die Änderungen von Harry zu Anfang 
+        gesehen hat. Harrys Arbiets ist doch gewissermaßen verloren, oder
+        wenigstens nicht in der letzten Version der Datei möglichweise
+        durch Zufall. Das ist definitiv eine Situations, die vermieden
+        werden muß.
+
+        
+        Consider this scenario: suppose we have two co-workers,
         Harry and Sally.  They each decide to edit the same repository
         file at the same time.  If Harry saves his changes to the
         repository first, then it's possible that (a few moments
         later) Sally could accidentally overwrite them with her own
-        new version of the file.  While Harry's version of the file
+        new version of the file.  
+        While Harry's version of the file
         won't be lost forever (because the system remembers every
         change), any changes Harry made <emphasis>won't</emphasis> be
         present in Sally's newer version of the file, because she
@@ -127,9 +165,25 @@
       </sect2>
     
     <sect2 id="svn-ch-2-sect-2.2">
-      <title>The Lock-Modify-Unlock Solution</title>
+        <title>Die Lock-Modify-Unlock Lösung ???     The Lock-Modify-Unlock Solution</title>
       
-      <para>Many version control systems use a
+        <para>Viele Versionskontrollsysteme verwenden ein 
+            <firstterm>Sperren-Ändern-Entsperren<footnote>Lock-Modify-Unlock</footnote></firstterm> Modell um 
+            das Problem auf diese Weise zu behandeln, wobei das eine sehr 
+            einfache Lösungsmethode ist. In solchen Systemen erlaubt 
+            das Repository genau einer Person eine Datei zur gleichen
+            Zeit zu ändern. Zuerst müsste Harry die Datei <quote>sperren</quote>
+            bevor er Änderungen an der Datei durchführen könnte. Das Sperren
+            einer Datei ist ein wenig wie die Ausleihe eines Buches aus
+            einer Bibliothek. Wenn Harry die Datei gesperrt hat, dann kann
+            Sally keinerlei Änderungen an der Datei durchführen. Wenn Sie versucht
+            die Datei zu Sperren, wird das Repository das verbieten. Alles 
+            was Sie machen kann ist die Datei lesen und darauf warten, dass
+            Harry mit seinen Änderungen fertig wird und die Sperre wieder aufhebt.
+            Wenn Harry die Sperry wieder freigegeben hat ist nun Sally an der
+            Reihe zu Sperren und Änderungen an der Datei zu machen.
+            
+            Many version control systems use a
         <firstterm>lock-modify-unlock</firstterm> model to address
         this problem, which is a very simple solution.  In such a
         system, the repository allows only one person to change a file
@@ -144,18 +198,32 @@
         turn by locking and editing.</para>
       
       <figure id="svn-ch2-dia3">
-        <title>The Lock-Modify-Unlock Solution</title>
+        <title>Die Lock-Modify-Unlock Lösung ???     The Lock-Modify-Unlock Solution</title>
         <graphic fileref="images/ch02dia3.png"/>
       </figure>
       
-      <para>The problem with the lock-modify-unlock model is that it's
+      <para>Das Problem mit der Vorgehensweise ist, dass es 
+          ein bisschen Einschränkend ist und oft zu einer Hürde 
+          für die Anwender wird.
+          
+          The problem with the lock-modify-unlock model is that it's
         a bit restrictive, and often becomes a roadblock for
         users:</para>
 
       <itemizedlist>
         <listitem><para>
-            <emphasis>Locking may cause administrative problems.</emphasis>
+                <emphasis>Sperren kann zu Administrativen Problemen führen.
+                    Locking may cause administrative problems.</emphasis>
 
+
+            Manchmal sperrt Harry eine Datei und vergisst es.
+            Unterdessen, weil Sally darauf wartet die Datei ändern zu
+            können, sind Ihre Hände gefesselt (????)..
+            Und dann geht Harry in Urlaub. Nun muß Sally zum Administrator
+            rennen, um Harrys Sperre aufheben zu lassen. Das führt zu
+            einer Menge unnötiger Verzögerungen und verschwendeter Zeit.
+            
+            
             Sometimes Harry will lock a file and then forget about it.
             Meanwhile, because Sally is still waiting to edit the file,
             her hands are tied.  And then Harry goes on vacation.  Now
@@ -164,7 +232,20 @@
             and wasted time.</para></listitem>
         
         <listitem><para>
-            <emphasis>Locking may cause unnecessary serialization.</emphasis>
+                <emphasis>Sperren für zu unnötiger Anordnung der Arbeit ??? 
+                    der Reihe nach ???
+                    
+                    Locking may cause unnecessary serialization.</emphasis>
+
+            Was ist wenn Harry am Anfang eine Text Datei änderungen macht,
+            und Sally möchte einfach am Ende der gleichen Datei Änderungen machen?
+            Diese Änderungen überlappen sich überhaupt nicht. Sie könnten einfach
+            die Datei gleichzeitig bearbeiten und es würde kein großer Nachteil
+            würde entstehen, vorausgesetzt dass die Änderungen genau 
+            zusammengeführt<footnote>merged</footnote> würden. 
+            Es besteht keine Notwendigkeit für die Beiden abwechselnd zu 
+            Arbeiten in dieser Situtaion.
+            
 
             What if Harry is editing the beginning of a text file,
             and Sally simply wants to edit the end of the same file?
@@ -175,7 +256,10 @@
             situation.</para></listitem>
     
         <listitem><para>
-            <emphasis>Locking may create a false sense of security.</emphasis>
+                <emphasis>Sperren kann zu einem falschen Gefühl von Sicherheit führen.
+                    
+                    Locking may create a false sense of security.</emphasis>
+
 
             Pretend that Harry locks and edits file A, while
             Sally simultaneously locks and edits file B.  But suppose
