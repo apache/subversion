@@ -34,7 +34,6 @@
 #include "fs.h"
 #include "err.h"
 #include "trail.h"
-#include "clones-table.h"
 #include "txn-table.h"
 #include "dag.h"
 #include "tree.h"
@@ -62,6 +61,11 @@ struct svn_fs_root_t
      roots, it's -1.  */
   svn_revnum_t rev;
 
+  /* For revision roots, this is a dag node for the revision's root
+     directory.  For transaction roots, we open the root directory
+     afresh every time, since the root may have been cloned, or
+     the transaction may have disappeared altogether.  */
+  dag_node_t *root_dir;
 };
 
 
@@ -87,15 +91,17 @@ make_root (svn_fs_t *fs,
 }
 
 
-/* Construct a root object referring to the root of REVISION in FS.
-   Create the new root in POOL.  */
+/* Construct a root object referring to the root of REVISION in FS,
+   whose root directory is ROOT_DIR.  Create the new root in POOL.  */
 static svn_fs_root_t *
 make_revision_root (svn_fs_t *fs,
                     svn_revnum_t rev,
+                    dag_node_t *root_dir,
                     apr_pool_t *pool)
 {
   svn_fs_root_t *root = make_root (fs, pool);
   root->rev = rev;
+  root->root_dir = root_dir;
 
   return root;
 }
@@ -204,26 +210,41 @@ open_path (dag_node_t **child_p,
 }
 
 
+/* Set *NODE_P to the node referred to by PATH in ROOT, as part of 
+   TRAIL.  */
+static svn_error_t *
+open_path (dag_node_t **node_p,
+           svn_fs_root_t *root,
+           const char *path,
+           trail_t *trail)
+{
+  abort (); /* to be written */
+}
+
+
 
 /* Generic node operations.  */
 
-struct get_node_prop_args
+
+struct node_prop_args
 {
   svn_string_t **value_p;
-  svn_fs_node_t *node;
+  svn_fs_root_t *root;
+  const char *path;
   svn_string_t *propname;
 };
 
 
 static svn_error_t *
-txn_body_get_node_prop (void *baton,
-                        trail_t *trail)
+txn_body_node_prop (void *baton,
+                    trail_t *trail)
 {
-  struct get_node_prop_args *args = baton;
+  struct node_prop_args *args = baton;
+  dag_node_t *node;
   skel_t *proplist, *prop;
 
-  SVN_ERR (check_for_clone (args->node, trail));
-  SVN_ERR (svn_fs__dag_get_proplist (&proplist, args->node->dag_node, trail));
+  SVN_ERR (open_path (&node, root, path, trail));
+  SVN_ERR (svn_fs__dag_get_proplist (&proplist, node, trail));
   
   /* Search the proplist for a property with the right name.  */
   for (prop = proplist->children; prop; prop = prop->next->next)
@@ -252,14 +273,15 @@ svn_fs_node_prop (svn_string_t **value_p,
                   svn_string_t *propname,
                   apr_pool_t *pool)
 {
-  struct get_node_prop_args args;
+  struct node_prop_args args;
   svn_string_t *value;
 
   args.value_p  = &value;
-  args.node     = node;
+  args.root     = root;
+  args.path     = path;
   args.propname = propname;
 
-  SVN_ERR (svn_fs__retry_txn (node->fs, txn_body_get_node_prop, &args, pool));
+  SVN_ERR (svn_fs__retry_txn (node->fs, txn_body_node_prop, &args, pool));
 
   *value_p = value;
   return 0;
@@ -369,35 +391,6 @@ svn_fs_merge (const char **conflict_p,
 /* Directories.  */
 
 
-#if 0
-/* Starting from PARENT, traverse PATH, and set *NODE_P to a newly
-   opened svn_fs_node_t for whatever we find there.  Do all this as
-   part of the Berkeley DB transaction DB_TXN.  Allocate the new node,
-   and do any necessary temporary allocation, in POOL.  */
-static svn_error_t *
-traverse_path (svn_fs_node_t **node_p,
-               svn_fs_node_t *parent,
-               dag_node_t *parent_dag,
-               const char *path,
-               DB_TXN *db_txn,
-               apr_pool_t *pool)
-{
-  abort ();
-}
-#endif
-
-
-static svn_error_t *
-traverse_to_parent (svn_fs_node_t **parent_p,
-                    const char **entry_name,
-                    svn_fs_node_t *root,
-                    const char *path,
-                    trail_t *trail)
-{
-  abort ();
-}
-
-
 svn_error_t *
 svn_fs_dir_entries (apr_hash_t **table_p,
                     svn_fs_root_t *root,
@@ -501,27 +494,90 @@ svn_fs_copy (svn_fs_root_t *from_root,
 /* Creating transaction and revision root nodes.  */
 
 
-svn_error_t *
-svn_fs__txn_root_node (svn_fs_root_t **root_p,
-                       svn_fs_t *fs,
-                       const char *txn,
-                       trail_t *trail)
+struct txn_root_args
 {
+  svn_fs_root_t **root_p;
+  svn_fs_txn_t *txn;
+};
+
+
+static svn_error_t *
+txn_body_txn_root (void *baton,
+                   trail_t *trail)
+{
+  struct txn_root_args *args = baton;
   svn_fs_id_t *root_id, *base_root_id;
-  dag_node_t *dag_root;
   svn_fs_root_t *root;
 
-  SVN_ERR (svn_fs__get_txn (&root_id, &base_root_id, fs, txn, trail));
-  SVN_ERR (svn_fs__dag_txn_node (&dag_root, fs, txn, root_id, trail));
+  /* Verify that the transaction actually exists.  */
+  SVN_ERR (svn_fs__get_txn (&root_id, &base_root_id, txn->fs, txn, trail));
 
-  root = new_root_object (fs, trail->pool);
-  root->txn = apr_pstrdup (root->pool, txn);
-  root->is_cloned = ! svn_fs_id_eq (root_id, base_root_id);
-  root->dag_node = dag_root;
+  root = make_txn_root (fs, txn, trail->pool);
+
+  *args->root_p = root;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_txn_root (svn_fs_root_t **root_p,
+                 svn_fs_txn_t *txn,
+                 apr_pool_t *pool)
+{
+  svn_fs_root_t *root;
+  struct txn_root_args args;
+
+  args.root_p = &root;
+  args.txn    = txn;
+  SVN_ERR (svn_fs__retry_txn (txn->fs, txn_body_txn_root, &args, pool));
 
   *root_p = root;
-  return 0;
+  return SVN_NO_ERROR;
 }
+
+
+struct revision_root_args
+{
+  svn_fs_root_t *root_p;
+  svn_fs_t *fs;
+  svn_revnum_t rev;
+};
+
+
+static svn_error_t *
+txn_body_revision_root (void *baton,
+                        trail_t *trail)
+{
+  struct revision_root_args *args = baton;
+  dag_node_t *root_dir;
+  svn_fs_root_t *root;
+
+  SVN_ERR (svn_fs__dag_revision_root (&root_dir, args->fs, args->rev, trail));
+  root = make_revision_root (args->fs, args->rev, root_dir, trail->pool);
+
+  *args->root_p = root;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_revision_root (svn_fs_root_t **root_p,
+                      svn_fs_t *fs,
+                      svn_revnum_t rev,
+                      apr_pool_t *pool)
+{
+  struct revision_root_args args;
+  svn_fs_root_t *root;
+
+  args.root_p = &root;
+  args.fs     = fs;
+  args.rev    = rev;
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_revision_root, &args, pool));
+
+  *root_p = root;
+  return SVN_NO_ERROR;
+}
+
 
 
 
