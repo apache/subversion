@@ -114,7 +114,7 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r8844
+  * r8844, r8872
     Make RPMs build again after cvs2svn was taken out.
     Votes:
       +1: david
