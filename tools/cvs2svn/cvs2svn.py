@@ -460,19 +460,6 @@ def visit_file(arg, dirname, files):
             % (warning_prefix, pathname)
 
 
-def is_vendor_first_revision(cvs_rev):
-  """Return true if CVS_REV is the first revision on a vendor branch,
-  false otherwise.  If CVS_REV has an even number of components, and
-  last component is 1 and the component before that is odd, then it is
-  the first revision on a vendor branch."""
-  c = string.split(cvs_rev, '.')
-  n = len(c)
-  if ((n > 2) and (n % 2 == 0) and (c[-1] == '1') and (int(c[-2]) % 2 == 1)):
-    return 1
-  else:
-    return None
-
-
 class RevInfoParser(rcsparse.Sink):
   def __init__(self):
     self.authors = { }	# revision -> author
