@@ -936,6 +936,28 @@ expand_author (const char **msg,
 
 
 static svn_error_t *
+expand_date (const char **msg,
+             svn_boolean_t msg_only,
+             apr_pool_t *pool)
+{
+  *msg = "expand date keyword";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("date", "\n", NULL, 0,
+            NULL, "Wed Jan  9 07:49:05 2002", NULL, NULL, 1, pool));
+
+  SVN_ERR (substitute_and_verify
+           ("date", "\r\n", NULL, 0,
+            NULL, "Wed Jan  9 07:49:05 2002", NULL, NULL, 1, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 expand_author_date (const char **msg,
                     svn_boolean_t msg_only,
                     apr_pool_t *pool)
@@ -1187,6 +1209,28 @@ unexpand_author (const char **msg,
 
   SVN_ERR (substitute_and_verify
            ("author", "\r\n", NULL, 0, NULL, NULL, "jrandom", NULL, 0, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+unexpand_date (const char **msg,
+               svn_boolean_t msg_only,
+               apr_pool_t *pool)
+{
+  *msg = "unexpand date keyword";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("date", "\n", NULL, 0,
+            NULL, "Wed Jan  9 07:49:05 2002", NULL, NULL, 0, pool));
+
+  SVN_ERR (substitute_and_verify
+           ("date", "\r\n", NULL, 0,
+            NULL, "Wed Jan  9 07:49:05 2002", NULL, NULL, 0, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1459,6 +1503,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   mixed_no_repair,
   /* Keyword expansion alone, no eol conversion involved. */
   expand_author,
+  expand_date,
   expand_author_date,
   expand_author_rev,
   expand_rev,
@@ -1473,6 +1518,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   mixed_to_crlf_expand_author_date_rev_url,
   /* Keyword unexpansion alone, no eol conversion involved. */
   unexpand_author,
+  unexpand_date,
   unexpand_author_date,
   unexpand_author_rev,
   unexpand_rev,
