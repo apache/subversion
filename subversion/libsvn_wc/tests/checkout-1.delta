@@ -11,7 +11,7 @@
           <dir ancestor='/A/B'>
             <tree-delta>
               <new>
-                <file ancestor="/A/B/lambda">
+                <file ancestor='/A/B/lambda'>
                   <text-delta>This is the file 'lambda'.</text-delta>
                 </file>
               </new>
