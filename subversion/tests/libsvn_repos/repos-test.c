@@ -697,6 +697,100 @@ revisions_changed (const char **msg,
   return SVN_NO_ERROR;
 }
 
+
+
+struct locations_info
+{
+  svn_revnum_t rev;
+  const char *path;
+};
+
+/* Check that LOCATIONS contain everything in INFO and nothing more. */
+static svn_error_t *
+check_locations_info (apr_hash_t *locations, const struct locations_info *info)
+{
+  int i;
+  for (i = 0; info->rev != 0; ++i, ++info)
+    {
+      const char *p = apr_hash_get (locations, &info->rev, sizeof
+                                    (svn_revnum_t));
+      if (!p)
+        return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
+                                  "Missing path for revision %ld", info->rev);
+      if (strcmp (p, info->path) != 0)
+        return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
+                                  "Pth mismatch for rev %ld", info->rev);
+    }
+
+  if (apr_hash_count (locations) > i)
+    return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
+                             "Returned locations contain too many elements.");
+  
+  return SVN_NO_ERROR;
+}
+
+/* Check that all locations in INFO exist in REPOS for PATH and PEG_REVISION.
+ */
+static svn_error_t *
+check_locations (svn_fs_t *fs, struct locations_info *info,
+                 const char *path, svn_revnum_t peg_revision,
+                 apr_pool_t *pool)
+{
+  apr_array_header_t *a = apr_array_make (pool, 0, sizeof (svn_revnum_t));
+  apr_hash_t *h;
+  struct locations_info *iter;
+
+  for (iter = info; iter->rev != 0; ++iter)
+    *(svn_revnum_t *) apr_array_push (a) = iter->rev;
+
+  SVN_ERR (svn_repos_trace_node_locations (fs, &h, path, peg_revision, a, pool));
+  SVN_ERR (check_locations_info (h, info));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+node_locations (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  svn_revnum_t youngest_rev;
+
+  *msg = "test svn_repos_node_locations";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create the repository with a Greek tree. */
+  SVN_ERR (svn_test__create_repos (&repos, "test-repo-node-locations", pool));
+  fs = svn_repos_fs (repos);
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, subpool));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn, subpool));
+  svn_pool_clear (subpool);
+
+  /* Move a file. Rev 2. */
+  SVN_ERR (svn_fs_revision_root (&root, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_fs_copy (root, "/A/mu", txn_root, "/mu.new", subpool));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn, subpool));
+  {
+    struct locations_info info[] =
+      {
+        { 1, "/A/mu" },
+        { 2, "/mu.new" }
+      };
+    SVN_ERR (check_locations (fs, info, "/mu.new", 2, pool));
+  }
+  svn_pool_clear (subpool);
+  
+  return SVN_NO_ERROR;
+}
+
 
 
 /* The test table.  */
@@ -707,5 +801,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (dir_deltas),
     SVN_TEST_PASS (node_tree_delete_under_copy),
     SVN_TEST_PASS (revisions_changed),
+    SVN_TEST_PASS (node_locations),
     SVN_TEST_NULL
   };

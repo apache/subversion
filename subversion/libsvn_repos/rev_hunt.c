@@ -27,6 +27,8 @@
 #include "svn_time.h"
 #include "repos.h"
 
+#include <assert.h>
+
 
 
 /* Note:  this binary search assumes that the datestamp properties on
@@ -251,4 +253,154 @@ svn_repos_history (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-                             
+/* Compare revision numbers for sorting in decreasing order. */
+static int
+compare_revnums (const void *p_a, const void *p_b)
+{
+  svn_revnum_t a, b;
+  a = *(svn_revnum_t *)p_a;
+  b = *(svn_revnum_t *)p_b;
+
+  return (a < b) ? 1 : (a > b) ? -1 : 0;
+}
+
+/* The purpose of this function is to discover if fs_path@future_rev
+ * is derived from fs_path@peg_rev.  The return is placed in *is_ancestor. */
+
+static svn_error_t *
+check_ancestry_of_peg_path (svn_boolean_t *is_ancestor,
+                            svn_fs_t *fs,
+                            const char *fs_path,
+                            svn_revnum_t peg_revision,
+                            svn_revnum_t future_revision,
+                            apr_pool_t *pool)
+{
+  svn_fs_root_t *root;
+  svn_fs_history_t *history;
+  const char *path;
+  svn_revnum_t revision;
+  apr_pool_t *lastpool, *currpool;
+
+  lastpool = svn_pool_create (pool);
+  currpool = svn_pool_create (pool);
+
+  SVN_ERR (svn_fs_revision_root (&root, fs, future_revision, pool));
+
+  SVN_ERR (svn_fs_node_history (&history, root, fs_path, lastpool));
+
+  while (1)
+    {
+      apr_pool_t *tmppool;
+
+      SVN_ERR (svn_fs_history_prev (&history, history, TRUE, currpool));
+
+      if (!history)
+        break;
+
+      SVN_ERR (svn_fs_history_location (&path, &revision, history, currpool));
+
+      if (revision <= peg_revision)
+        break;
+
+      /* Clear old pool and flip. */
+      svn_pool_clear (lastpool);
+      tmppool = lastpool;
+      lastpool = currpool;
+      currpool = tmppool;
+    }
+
+  *is_ancestor = (history && strcmp (path, fs_path) == 0);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos_trace_node_locations (svn_fs_t *fs,
+                                apr_hash_t **locations,
+                                const char *fs_path,
+                                svn_revnum_t peg_revision,
+                                apr_array_header_t *location_revisions_orig,
+                                apr_pool_t *pool)
+{
+  apr_array_header_t *location_revisions;
+  svn_revnum_t *revision_ptr, *revision_ptr_end;
+  svn_fs_root_t *root;
+  svn_fs_history_t *history;
+  const char *path;
+  svn_revnum_t revision;
+  svn_boolean_t is_ancestor;
+  apr_pool_t *lastpool, *currpool;
+
+  /* Sanity check. */
+  assert (location_revisions_orig->elt_size == sizeof(svn_revnum_t));
+
+  *locations = apr_hash_make (pool);
+
+  /* We flip between two pools in the second loop below. */
+  lastpool = svn_pool_create (pool);
+  currpool = svn_pool_create (pool);
+
+  /* First - let's sort the array of the revisions from the greatest revision
+   * downward, so it will be easier to search on. */
+  location_revisions = apr_array_copy (pool, location_revisions_orig);
+  qsort (location_revisions->elts, location_revisions->nelts,
+         sizeof (*revision_ptr), compare_revnums);
+
+  revision_ptr = (svn_revnum_t *)location_revisions->elts;
+  revision_ptr_end = revision_ptr + location_revisions->nelts;
+
+  /* Ignore revisions R that are younger than the peg_revisions where
+     path@peg_revision is not an ancestor of path@R. */
+  is_ancestor = FALSE;
+  while (revision_ptr < revision_ptr_end && *revision_ptr > peg_revision)
+    {
+      svn_pool_clear (currpool);
+      SVN_ERR (check_ancestry_of_peg_path (&is_ancestor, fs, fs_path,
+                                           peg_revision, *revision_ptr,
+                                           currpool));
+      if (is_ancestor)
+        break;
+      ++revision_ptr;
+    }
+
+  SVN_ERR (svn_fs_revision_root (&root, fs,
+                                 (is_ancestor ?
+                                  (*revision_ptr) :
+                                  peg_revision), pool));
+
+  SVN_ERR (svn_fs_node_history (&history, root, fs_path, lastpool));
+
+  while (revision_ptr < revision_ptr_end)
+    {
+      apr_pool_t *tmppool;
+
+      SVN_ERR (svn_fs_history_prev (&history, history, TRUE, currpool));
+      if (!history)
+        break;
+
+      SVN_ERR (svn_fs_history_location (&path, &revision, history, currpool));
+
+      /* Assign the current path to all younger revisions until we reach
+         the current one. */
+      while ((revision_ptr < revision_ptr_end) && (*revision_ptr >= revision))
+        {
+          /* *revision_ptr is allocated out of pool, so we can point
+             to in the hash table. */
+          apr_hash_set (*locations, revision_ptr, sizeof (*revision_ptr),
+                        apr_pstrdup (pool, path));
+          revision_ptr++;
+        }
+
+      /* Clear last pool and switch. */
+      svn_pool_clear (lastpool);
+      tmppool = lastpool;
+      lastpool = currpool;
+      currpool = tmppool;
+    }
+
+  svn_pool_destroy (lastpool);
+  svn_pool_destroy (currpool);
+
+  return SVN_NO_ERROR;
+}
+

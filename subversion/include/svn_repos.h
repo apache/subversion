@@ -537,6 +537,24 @@ svn_repos_history (svn_fs_t *fs,
                    svn_boolean_t cross_copies,
                    apr_pool_t *pool);
 
+/** Set @a *locations to be a mapping of the revisions to the paths of
+ * the file @a fs_path present at the repository in revision
+ * @a peg_revision, where the revisions are taken out of the array
+ * @a location_revisions.
+ *
+ * @a location_revisions is an array of svn_revnum_t's and @a *locations
+ * maps svn_revnum_t's to const char *.
+ *
+ * @a pool is used for all allocations.
+ */
+svn_error_t *
+svn_repos_trace_node_locations (svn_fs_t *fs,
+                                apr_hash_t **locations,
+                                const char *fs_path,
+                                svn_revnum_t peg_revision,
+                                apr_array_header_t *location_revisions,
+                                apr_pool_t *pool);
+
 /* ### other queries we can do someday --
 
      * fetch the last revision created by <user>
