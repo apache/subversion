@@ -60,6 +60,16 @@ Candidate changes:
       +1: philip
       Nominated by: Chris AtLee <catlee@sidefx.com>
 
+  * r12006
+    Fix issue 2124 - bugs in svn switch over ra-dav.
+    Justification:
+      Changes made in the 1.1 client cause 1.0 and 1.1 servers to be
+      driven in a way that weren't able to handle, resulting in
+      working copies that *look* okay, but can actually send commits
+      to the wrong repository location (if able to commit at all).
+    Votes:
+      +1: cmpilato
+
   * r12046
     Fix issue 2142 - svndumpfilter mislabels output as version 3.
     Justification:
