@@ -51,36 +51,90 @@
 #ifndef SVN_PARSE_H
 #define SVN_PARSE_H
 
-#include <svn_types.h>
-#include <svn_string.h>
+#include <stdio.h>
 #include <svn_error.h>
-#include <apr_pools.h>
-#include <apr_hash.h>
-#include <apr_file_io.h>
-#include <ctype.h>           /* isspace() */
+#include <svn_types.h>
 
 
-/* 
-   General Utility -- reads a config file, returns a hash of hashes.
+/* Subversion uses a single syntax for many of its config files,
+   internal administrative files, and so on.  This syntax is a subset
+   of the syntax for Scheme data; when we get a real, integral
+   extension language, we may substitute the interpreter's parser for
+   this little home-grown parser.
 
-   For file format, see `notes/svn-config-files'
-*/
+   The syntax we recognize here is as follows:
 
-svn_error_t * svn_parse (ap_hash_t **returnhash, 
-                         const char *filename, 
-                         ap_pool_t *pool);
+     object:              list | symbol | string | number ;
+     list:                '(' object_list_opt ')' ;
+     object_list_opt:     (nothing) | object_list ;
+     object_list:         object | object object_list ;
+
+   The lexical details are as follows:
+
+     token:               '(' | ')' | symbol | string | number ;
+     symbol:              (any string made from the characters
+                          '!$%&*:/<=>?~_^.+-', letters, or digits, that
+                          does not start with any of the characters '.+-'
+                          or a digit) ;
+     string:              '"' (any sequence of characters, in which '"'
+                          and backslash are escaped with a backslash) '"' ;
+     number:              digits | '+' digits | '-' digits ;
+     digits:              (any sequence of digits) ;
+     intertoken_space:    ' ' | '\t' | '\n' | '\r' | '\f' | comment ;
+     comment:             ';' (and then all subsequent characters up to 
+                                  the next newline) ;
+
+   intertoken_space may occur on either side of any token, but not
+   within a token.  */
 
 
-/* Prints a hash, assuming all keys/vals are (svn_string_t *) */
 
-void svn_hash_print (ap_hash_t *hash, FILE *stream);
+/* A data structure representing a parsed `object', as defined above.  */
+typedef struct svn_parsed {
 
-/* Prints uberhash returned from svn_parse(),
-   assuming each key is (svn_string_t *)
-   and each val is printable by svn_hash_print(). */
+  /* What kind of object does this structure represent?  The
+     possibilities are given in the `object' production of the grammar
+     above.  */
+  enum svn_parsed_kind {
+    svn_parsed_list,
+    svn_parsed_symbol,
+    svn_parsed_string,
+    svn_parsed_number
+  } kind;
 
-void svn_uberhash_print (ap_hash_t *uberhash, FILE *stream);
+  /* The `kind' field indicates which member of the union is valid.  */
+  union {
+    
+    struct svn_parsed_list {
+      /* The number of elements in this list.  */
+      int n;
 
+      /* A null-terminated array of pointers to the list's elements.  */
+      struct svn_parsed *elt;
+    } list;
+
+    svn_string_t string;
+    svn_string_t symbol;
+    long number;
+  } u;
+} svn_parsed_t;
+
+
+/* Parse one object from STREAM, and set *OBJECT_P to an svn_parsed_t
+   object, allocated from POOL.  If we reach EOF, set OBJECT to 0.  */
+extern svn_error_t *svn_parse (svn_parsed_t **object_p,
+                               FILE *stream,
+                               ap_pool_t *pool);
+   
+/* Print the external representation of OBJECT on STREAM.  The resulting
+   output could be parsed by `svn_parse'.  */
+extern svn_error_t *svn_parse_print (FILE *stream, svn_parsed_t *object);
+
+/* Given OBJECT, which must be a list of lists, set *ELT_P the element
+   of OBJECT whose first element is a symbol whose name is NAME.  */
+extern svn_error_t *svn_parse_ref (svn_parsed_t *elt_p,
+                                   svn_parsed_t *object,
+                                   char *name);
 
 #endif /* SVN_PARSE_H */
 
@@ -89,4 +143,3 @@ void svn_uberhash_print (ap_hash_t *uberhash, FILE *stream);
  * local variables:
  * eval: (load-file "../svn-dev.el")
  * end: */
-
