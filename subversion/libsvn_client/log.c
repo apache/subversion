@@ -67,7 +67,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
       || (end->kind == svn_client_revision_unspecified))
     {
       return svn_error_create
-        (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+        (SVN_ERR_CLIENT_BAD_REVISION, 0, NULL, pool,
          "svn_client_log: caller failed to supply revision");
     }
 
@@ -78,7 +78,7 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
   SVN_ERR (svn_wc_entry (&entry, basename, pool));
   if (! entry)
     return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+      (SVN_ERR_UNVERSIONED_RESOURCE, 0, NULL, pool,
        "svn_client_log: %s is not under revision control", basename->data);
   if (! entry->url)
     return svn_error_createf
