@@ -1014,9 +1014,10 @@ def update_receive_illegal_name(sbox):
                                      legal_url, illegal_url)
   out, err = svntest.main.run_svn(1, 'up', wc_dir)
   for line in err:
-    if re.search("Obstructed update", line):
-      return 0
-  raise svntest.Failure
+    if line.find("Obstructed update") != -1:
+      break
+  else:
+    raise svntest.Failure
 
 ########################################################################
 # Run the tests
