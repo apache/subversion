@@ -262,20 +262,21 @@ Committed revision 341.
       </figure>
       
       <sidebar>
-        <title>Cheap Copies</title>
+        <title>Copias baratas</title>
                 
-        <para>Subversion's repository has a special design.  When you
-          copy a directory, you don't need to worry about the
-          repository growing huge&mdash;Subversion doesn't actually
-          duplicate any data.  Instead, it creates a new directory
-          entry that points to an <emphasis>existing</emphasis> tree.
-          If you're a Unix user, this is the same concept as a
-          hard-link.  From there, the copy is said to be
-          <quote>lazy</quote>.  That is, if you commit a change to one
-          file within the copied directory, then only that file
-          changes&mdash;the rest of the files continue to exist as
-          links to the original files in the original
-          directory.</para>
+        <para>El repositorio de Subversion sigue un diseño
+          especial. Cuando copia un directorio, no necesita
+          preocuparse por el crecimiento del repositorio&mdash;en
+          realidad Subversion no duplica los datos.  En su lugar,
+          crear una nueva entrada de directorio que apunta a un árbol
+          <emphasis>existente</emphasis>. Si es un usuario de Unix,
+          este es el mismo concepto que un enlace duro. A partir
+          de ahí, se dice que la copia es <quote>vaga</quote>. <!--
+          TODO lazy copy: copia vaga o copia tardía? --> Es decir, si
+          realiza un cambio a un fichero contenido en el directorio
+          copiado, sólo cambia ese fichero&mdash;el resto de los
+          ficheros continúan su existencia como enlaces a los
+          ficheros originales del directorio original.</para>
       
         <para>This is why you'll often hear Subversion users talk
           about <quote>cheap copies</quote>.  It doesn't matter how
