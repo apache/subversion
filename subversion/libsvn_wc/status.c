@@ -1139,7 +1139,9 @@ handle_statii (struct edit_baton *eb,
       svn_pool_clear (subpool);
 
       /* Now, handle the status. */
-      if (descend && status->entry && (status->entry->kind == svn_node_dir) )
+      if (svn_wc__adm_missing (eb->adm_access, key))
+        status->text_status = svn_wc_status_missing;
+      else if (descend && status->entry && status->entry->kind == svn_node_dir)
         {
           svn_wc_adm_access_t *dir_access;
           SVN_ERR (svn_wc_adm_retrieve (&dir_access, eb->adm_access,
