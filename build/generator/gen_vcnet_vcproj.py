@@ -139,11 +139,7 @@ class Generator(gen_win.WinGeneratorBase):
 
       if isinstance(target, gen_base.TargetExternal):
         # Figure out where the external .vcproj is located.
-        if target.project_name:
-          project_path = os.path.join(target.path, target.project_name)
-        else:
-          project_path = os.path.join(target.path, name)
-        fname = project_path + '.vcproj'
+        fname = target.msvc_project + '.vcproj'
       else:
         fname = os.path.join(self.projfilesdir,
                              "%s_vcnet.vcproj" % target.proj_name)

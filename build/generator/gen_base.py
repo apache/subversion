@@ -540,28 +540,26 @@ class TargetSWIGRuntime(TargetSWIG):
         target.add_dependencies(graph, cfg, extmap)
         self.targets[lang] = target
 
-class TargetSpecial(Target):
-  """Abstract Target class for Visual C++ Project Files"""
+class TargetExternal(Target):
   def __init__(self, name, options, cfg, extmap):
     Target.__init__(self, name, options, cfg, extmap)
+    self.msvc_project = options.get('msvc-project')
+    self.filename = name
+
+  def add_dependencies(self, graph, cfg, extmap):
+    if self.msvc_project:
+      graph.add(DT_PROJECT, 'notused', self)
+
+class TargetProject(Target):
+  def __init__(self, name, options, cfg, extmap):
+    Target.__init__(self, name, options, cfg, extmap)
+    self.cmd = options.get('cmd')
     self.release = options.get('release')
     self.debug = options.get('debug')
-    self.filename = os.path.join(self.path, name)
+    self.filename = name
 
   def add_dependencies(self, graph, cfg, extmap):
     graph.add(DT_PROJECT, 'notused', self)
-
-class TargetExternal(TargetSpecial):
-  """Represents pre-existing project files not created by generator"""
-  def __init__(self, name, options, cfg, extmap):
-    TargetSpecial.__init__(self, name, options, cfg, extmap)
-    self.project_name = options.get('project_name')
-
-class TargetProject(TargetSpecial):
-  """Represents projects which don't produce any output"""
-  def __init__(self, name, options, cfg, extmap):
-    TargetSpecial.__init__(self, name, options, cfg, extmap)
-    self.cmd = options.get('cmd')
 
 class TargetSWIGProject(TargetProject):
   def __init__(self, name, options, cfg, extmap):
