@@ -315,13 +315,15 @@ def run_and_verify_update(wc_dir_name,
 
 
 def run_and_verify_merge(dir, rev1, rev2, url,
-                         output_tree, disk_tree, status_tree,
+                         output_tree, disk_tree, status_tree, skip_tree,
                          error_re_string = None,
                          singleton_handler_a = None,
                          a_baton = None,
                          singleton_handler_b = None,
                          b_baton = None,
-                         check_props = 0):
+                         check_props = 0,
+                         dry_run = 1,
+                         *args):
 
   """Run 'svn merge -rREV1:REV2 URL DIR'
 
@@ -333,12 +335,16 @@ def run_and_verify_merge(dir, rev1, rev2, url,
   The subcommand output will be verified against OUTPUT_TREE, and the
   working copy itself will be verified against DISK_TREE.  If optional
   STATUS_TREE is given, then 'svn status' output will be compared.
-  (This is a good way to check that revision numbers were bumped.)
+  The 'skipped' merge output will be compared to SKIP_TREE.
   SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
   tree.compare_trees - see that function's doc string for more
   details.
   
   If CHECK_PROPS is set, then disk comparison will examine props.
+
+  If DRY_RUN is set then a --dry-run merge will be carried out first and
+  the output compared with that of the full merge.
+  
   Returns if successful, raises on failure."""
 
   if isinstance(output_tree, wc.State):
@@ -347,19 +353,29 @@ def run_and_verify_merge(dir, rev1, rev2, url,
     disk_tree = disk_tree.old_tree()
   if isinstance(status_tree, wc.State):
     status_tree = status_tree.old_tree()
+  if isinstance(skip_tree, wc.State):
+    skip_tree = skip_tree.old_tree()
 
-  ### See http://subversion.tigris.org/issues/show_bug.cgi?id=748
-  ### "svn merge" only works in "." right now, unlike all the other
-  ### commands.  This means that people building expected_output trees
-  ### should pass "" as the wc_dir for now, until we can run merge on
-  ### a target deeper than ".".
+  merge_command = ('merge', '-r', rev1 + ':' + rev2, url, dir)
+
+  if dry_run:
+    pre_disk = tree.build_tree_from_wc(dir)
+    dry_run_command = merge_command + ('--dry-run',)
+    dry_run_command = dry_run_command + args
+    out_dry, err_dry = main.run_svn(error_re_string, *dry_run_command)
+    post_disk = tree.build_tree_from_wc(dir)
+    try:
+      tree.compare_trees(pre_disk, post_disk)
+    except tree.SVNTreeError:
+      print "============================================================="
+      print "Dry-run merge altered working copy"
+      print "============================================================="
+      raise
+      
 
   # Update and make a tree of the output.
-  dry_out, dry_err = main.run_svn (error_re_string,
-                                   'merge', '--dry-run',
-                                   '-r', rev1 + ':' + rev2, url, dir)
-  out, err = main.run_svn (error_re_string,
-                           'merge', '-r', rev1 + ':' + rev2, url, dir)
+  merge_command = merge_command + args
+  out, err = main.run_svn (error_re_string, *merge_command)
 
   if (error_re_string):
     rm = re.compile(error_re_string)
@@ -372,18 +388,30 @@ def run_and_verify_merge(dir, rev1, rev2, url,
     ### we should raise a less generic error here. which?
     raise Failure(err)
 
-  if dry_out != out:
+  if dry_run and out != out_dry:
     print "============================================================="
-    print "The merge dry-run output didn't match that of the real merge"
-    print "============================================================="
-    print "The merge dry-run output:"
-    map(sys.stdout.write, dry_out)
-    print "============================================================="
-    print "The merge output:"
+    print "Merge outputs differ"
+    print "The dry-run merge output:"
+    map(sys.stdout.write, out_dry)
+    print "The full merge output:"
     map(sys.stdout.write, out)
     print "============================================================="
-    ### we should raise a less generic error here. which?
+    raise main.SVNUnmatchedError
+
+  def missing_skip(a, b):
+    print "============================================================="
+    print "Merge failed to skip: " + a.path
+    print "============================================================="
     raise Failure
+  def extra_skip(a, b):
+    print "============================================================="
+    print "Merge unexpectedly skipped: " + a.path
+    print "============================================================="
+    raise Failure
+
+  myskiptree = tree.build_tree_from_skipped(out)
+  tree.compare_trees(skip_tree, myskiptree,
+                     extra_skip, None, missing_skip, None)
 
   mytree = tree.build_tree_from_checkout(out)
   verify_update (mytree, dir,
