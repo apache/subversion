@@ -1,5 +1,5 @@
 /*
- * local_changes.c:  preserving local mods across updates.
+ * log.c:  handle the adm area's log file.
  *
  * ================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
@@ -50,90 +50,24 @@
 
 
 #include <apr_pools.h>
-#include <apr_time.h>
 #include <apr_strings.h>
 #include "svn_wc.h"
 #include "wc.h"
 
 
-
 
-struct svn_wc__diff_holder
-{
-  apr_pool_t *pool;
-};
-
-
 svn_error_t *
-svn_wc__generic_differ (void *user_data,
-                        void **result,
-                        svn_string_t *src,
-                        svn_string_t *target)
+svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
 {
-  struct svn_wc__diff_holder *holder;
-  apr_pool_t *pool = (apr_pool_t *) user_data;
+  svn_error_t *err = NULL;
 
-  /* kff todo: someday, do "diff -c SVN/text-base/foo ./foo" and store
-     the result in *RESULT. */
-  
-  holder = apr_pcalloc (pool, sizeof (*holder));
-  holder->pool = pool;
-  *result = holder;
+  /* kff todo: pretend everything worked for now. */
+  err = svn_wc__remove_adm_thing (path, SVN_WC__ADM_LOG, pool);
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 
-svn_error_t *
-svn_wc__generic_patcher (void *user_data,
-                         svn_string_t *src,
-                         svn_string_t *target)
-{
-  struct svn_wc__diff_holder *holder 
-    = (struct svn_wc__diff_holder *) user_data;
-  apr_pool_t *pool = holder->pool;
-  apr_status_t apr_err;
-
-  /* kff todo: someday, take CHANGES, which are the result of "diff -c
-     SVN/text-base/foo ./foo", and re-apply them to the 
-     file.  If any hunks fail, that's a conflict, do what CVS does. */
-
-  /* kff todo: "Patch?  We don't need no stinkin' patch."  Just
-     overwrite local mods for now. */
-
-  apr_err = apr_copy_file (src->data, target->data, pool);
-  if (apr_err)
-    {
-      /* kff todo: write svn_io_copy_file ? */
-      char *msg = apr_psprintf (pool, "copying %s to %s",
-                                src->data, target->data);
-      return svn_create_error (apr_err, 0, msg, NULL, pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__get_local_changes (svn_wc_diff_fn_t *diff_fn,
-                           void **result,
-                           svn_string_t *path,
-                           apr_pool_t *pool)
-{
-  return (*diff_fn) (pool, result, path, svn_wc__text_base_path (path, pool));
-}
-
-
-svn_error_t *
-svn_wc__merge_local_changes (svn_wc_patch_fn_t *patch_fn,
-                             void *changes,
-                             svn_string_t *path,
-                             apr_pool_t *pool)
-{
-  /* kff todo: this will be reworked.  for now, just reverse source
-     and dest to achieve desired effect. */
-  return (*patch_fn) (changes, svn_wc__text_base_path (path, pool), path);
-}
 
 
 
@@ -142,3 +76,4 @@ svn_wc__merge_local_changes (svn_wc_patch_fn_t *patch_fn,
  * eval: (load-file "../svn-dev.el")
  * end:
  */
+

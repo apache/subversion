@@ -180,8 +180,14 @@ struct file_baton
   /* Baton for this file's parent directory. */
   struct dir_baton *dir_baton;
 
+  /* Pool specific to this file_baton. */
+  apr_pool_t *pool;
+
+  /* Name of this file (its entry in the directory). */
+  const svn_string_t *name;
+
   /* Path to this file, either abs or relative to the change-root. */
-  svn_string_t *path;           /* full (abs or relative) path to the file */
+  svn_string_t *path;
 
   /* This gets set if the file underwent a text change, which guides
      the code that syncs up the adm dir and working copy. */
@@ -193,21 +199,25 @@ struct file_baton
 };
 
 
-/* NAME is just one component, not a path. */
+/* Make a file baton, using a new subpool of PARENT_DIR_BATON's pool.
+   NAME is just one component, not a path. */
 static struct file_baton *
 make_file_baton (struct dir_baton *parent_dir_baton, svn_string_t *name)
 {
-  struct file_baton *f = apr_pcalloc (parent_dir_baton->pool, sizeof (*f));
+  apr_pool_t *subpool = apr_make_sub_pool (parent_dir_baton->pool, NULL);
+  struct file_baton *f = apr_pcalloc (subpool, sizeof (*f));
   svn_string_t *path = svn_string_dup (parent_dir_baton->path,
-                                       parent_dir_baton->pool);
+                                       subpool);
 
   /* Make the file's on-disk name. */
   svn_path_add_component (path,
                           name,
                           SVN_PATH_LOCAL_STYLE,
-                          parent_dir_baton->pool);
+                          subpool);
 
+  f->pool       = subpool;
   f->dir_baton  = parent_dir_baton;
+  f->name       = name;
   f->path       = path;
 
   return f;
@@ -576,10 +586,12 @@ static svn_error_t *
 close_file (void *edit_baton, void *file_baton)
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
+  apr_file_t *log_fp = NULL;
   svn_error_t *err;
   void *local_changes;
+  char *version_str = NULL;
 
-  err = svn_wc__lock (fb->dir_baton->path, 0, fb->dir_baton->pool);
+  err = svn_wc__lock (fb->dir_baton->path, 0, fb->pool);
   if (err)
     return err;
 
@@ -626,13 +638,18 @@ close_file (void *edit_baton, void *file_baton)
          2. Write out the following SVN/log entries, omitting any that
             aren't applicable of course:
 
-              <merge-text name="blah" saved-local-mods="..."/>
+              <merge-text name="blah" saved-mods="..."/>
                  <!-- Will attempt to merge local changes into the new
                       text.  When done, ./blah will reflect the new
                       state, either by having the changes folded in,
                       having them folded in with conflict markers, or
                       not having them folded in (in which case the
-                      user is told that no merge was possible). -->
+                      user is told that no merge was possible).  Yes,
+                      this means that the working file is updated
+                      *before* its text-base, but that's okay, because
+                      the updating of the text-base will already be
+                      logged by the time any of this runs, so it's "as
+                      good as done".  -->
               <replace-text-base name="blah"/>
                   <!-- Now that the merge step is done, it's safe to
                        replace the old pristine copy with the new,
@@ -662,14 +679,107 @@ close_file (void *edit_baton, void *file_baton)
   err = svn_wc__get_local_changes (svn_wc__generic_differ,
                                    &local_changes,
                                    fb->path,
-                                   fb->dir_baton->pool);
+                                   fb->pool);
   if (err)
     return err;
+
+  /** Write out the appropriate log entries. 
+      This is safe because the adm area is locked right now. **/ 
+      
+  err = svn_wc__open_adm_file (&log_fp,
+                               fb->dir_baton->path,
+                               SVN_WC__ADM_LOG,
+                               (APR_WRITE | APR_CREATE), /* not excl */
+                               fb->pool);
+  if (err)
+    return err;
+
+  /* kff todo: there's going to be an issue with the lack of
+     outermost wrapping XML element in the log file.  Several ways
+     to deal with that, sleep on it... */
+  
+  /* kff todo: save *local_changes somewhere, maybe to a tmp file
+     in SVN/. */
+  
+  if (fb->text_changed)
+    {
+      /* Merge text. */
+      err = svn_wc__write_adm_entry (log_fp,
+                                     fb->pool,
+                                     SVN_WC__LOG_MERGE_TEXT,
+                                     SVN_WC__LOG_ATTR_NAME,
+                                     fb->name,
+                                     SVN_WC__LOG_ATTR_SAVED_MODS,
+                                     svn_string_create ("kff todo", fb->pool),
+                                     NULL);
+      if (err)
+        return err;
+      
+      /* Replace text base. */
+      err = svn_wc__write_adm_entry (log_fp,
+                                     fb->pool,
+                                     SVN_WC__LOG_REPLACE_TEXT_BASE,
+                                     SVN_WC__LOG_ATTR_NAME,
+                                     fb->name,
+                                     NULL);
+      if (err)
+        return err;
+    }
+  
+  if (fb->prop_changed)
+    {
+      /* Merge props. */
+      err = svn_wc__write_adm_entry (log_fp,
+                                     fb->pool,
+                                     SVN_WC__LOG_MERGE_PROPS,
+                                     SVN_WC__LOG_ATTR_NAME,
+                                     fb->name,
+                                     NULL);
+      if (err)
+        return err;
+      
+      /* Replace prop base. */
+      err = svn_wc__write_adm_entry (log_fp,
+                                     fb->pool,
+                                     SVN_WC__LOG_REPLACE_PROP_BASE,
+                                     SVN_WC__LOG_ATTR_NAME,
+                                     fb->name,
+                                     NULL);
+      if (err)
+        return err;
+    }
+
+  /* Set version. */
+  version_str = apr_psprintf (fb->pool,
+                              "%d",
+                              fb->dir_baton->edit_baton->target_version);
+
+  err = svn_wc__write_adm_entry (log_fp,
+                                 fb->pool,
+                                 SVN_WC__LOG_SET_VERSION,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 fb->name,
+                                 SVN_WC__LOG_ATTR_VERSION,
+                                 svn_string_create (version_str, fb->pool),
+                                 NULL);
+  if (err)
+    return err;
+
+  /* The log is ready to run, close it. */
+  err = svn_wc__close_adm_file (log_fp,
+                                fb->dir_baton->path,
+                                SVN_WC__ADM_LOG,
+                                1, /* sync */
+                                fb->pool);
+  if (err)
+    return err;
+
+  /* kff todo: here, we do by hand the work that run_log will do. */ 
 
   /* Update the text-base copy. */
   if (fb->text_changed)
     {
-      err = svn_wc__sync_text_base (fb->path, fb->dir_baton->pool);
+      err = svn_wc__sync_text_base (fb->path, fb->pool);
       if (err)
         return (err);
     }
@@ -678,12 +788,18 @@ close_file (void *edit_baton, void *file_baton)
   err = svn_wc__merge_local_changes (svn_wc__generic_patcher,
                                      local_changes,
                                      fb->path,
-                                     fb->dir_baton->pool);
+                                     fb->pool);
   if (err)
     return (err);
 
+  /* kff todo: if run_log were really implemented, it would have done
+     the stuff above all by itself: */
+  err = svn_wc__run_log (fb->dir_baton->path, fb->pool);
+  if (err)
+    return err;
+
   /* Unlock, we're done with this file. */
-  err = svn_wc__unlock (fb->dir_baton->path, fb->dir_baton->pool);
+  err = svn_wc__unlock (fb->dir_baton->path, fb->pool);
   if (err)
     return err;
 

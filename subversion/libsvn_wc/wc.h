@@ -98,7 +98,7 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
    worry about them conflicting with future all-caps symbols that may
    be defined in svn_wc.h. */
 
-/* The files within the administrative subdir. */
+/** The files within the administrative subdir. **/
 #define SVN_WC__ADM_FORMAT              "format"
 #define SVN_WC__ADM_README              "README"
 #define SVN_WC__ADM_REPOSITORY          "repository"
@@ -111,13 +111,7 @@ svn_error_t *svn_wc__set_up_new_dir (svn_string_t *path,
 #define SVN_WC__ADM_TEXT_BASE           "text-base"
 #define SVN_WC__ADM_PROP_BASE           "prop-base"
 #define SVN_WC__ADM_DPROP_BASE          "dprop-base"
-
-/* The directory that does bookkeeping during an operation. */
-#define SVN_WC__ADM_DOING               "doing"
-#define SVN_WC__ADM_DOING_ACTION        SVN_WC__ADM_DOING  "action"
-#define SVN_WC__ADM_DOING_FILES         SVN_WC__ADM_DOING  "files"
-#define SVN_WC__ADM_DOING_STARTED       SVN_WC__ADM_DOING  "started"
-#define SVN_WC__ADM_DOING_FINISHED      SVN_WC__ADM_DOING  "finished"
+#define SVN_WC__ADM_LOG                 "log"
 
 /* Return a string containing the admin subdir name. */
 svn_string_t *svn_wc__adm_subdir (apr_pool_t *pool);
@@ -165,6 +159,19 @@ svn_error_t *svn_wc__close_adm_file (apr_file_t *fp,
                                      const char *fname,
                                      int sync,
                                      apr_pool_t *pool);
+
+/* Append an entry ENTRY to administrative file FP.  Arguments
+ * (attributes) follow in pairs: name, value, name, value, and so on,
+ * terminated by a single null.  Each name is a char *, but values are
+ * svn_string_t *.
+ *
+ * Since adm entries share a common format (XML), this abstracts the
+ * content from the format.
+ */
+svn_error_t *svn_wc__write_adm_entry (apr_file_t *fp,
+                                      apr_pool_t *pool,
+                                      const char *entry,
+                                      ...);
 
 /* Remove `PATH/<adminstrative_subdir>/THING'. 
    kff todo: just using it for files, not dirs, at the moment. */
@@ -233,6 +240,23 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
                                  svn_string_t *ancestor_path,
                                  svn_vernum_t ancestor_version,
                                  apr_pool_t *pool);
+
+
+/*** The log file. ***/
+
+/* Ops and attributes in the log file. */
+#define SVN_WC__LOG_MERGE_TEXT          "merge-text"
+#define SVN_WC__LOG_REPLACE_TEXT_BASE   "replace-text-base"
+#define SVN_WC__LOG_MERGE_PROPS         "merge-props"
+#define SVN_WC__LOG_REPLACE_PROP_BASE   "replace-prop-base"
+#define SVN_WC__LOG_SET_VERSION         "set-version"
+#define SVN_WC__LOG_ATTR_NAME           "name"
+#define SVN_WC__LOG_ATTR_VERSION        "version"
+#define SVN_WC__LOG_ATTR_SAVED_MODS     "saved-mods"
+
+/* Process the instructions in the log file for PATH. */
+svn_error_t *svn_wc__run_log (svn_string_t *path, apr_pool_t *pool);
+
 
 
 /*** Stuff that knows about the working copy XML formats. ***/
