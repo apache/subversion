@@ -40,6 +40,8 @@
 #include "svn_md5.h"
 #include "svn_fs.h"
 #include "svn_sorts.h"
+#include "svn_props.h"
+
 #include "fs.h"
 #include "err.h"
 #include "trail.h"

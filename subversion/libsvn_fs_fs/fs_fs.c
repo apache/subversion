@@ -34,6 +34,8 @@
 #include "svn_hash.h"
 #include "svn_md5.h"
 #include "svn_sorts.h"
+#include "svn_props.h"
+
 #include "../libsvn_delta/delta.h"
 
 #include "fs.h"
