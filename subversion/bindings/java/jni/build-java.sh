@@ -9,16 +9,13 @@
 javac -classpath . org/tigris/subversion/*.java
 javac -classpath . org/tigris/subversion/lib/*.java
 javac -classpath . *.java
+javac -classpath $CLASSPATH:tests tests/*.java
 
 # second step: build the JNI header
 javah -classpath . -o svn_jni.h org.tigris.subversion.lib.ClientImpl
+javah -classpath tests -o svn_jni_tests.h NativeWrapper
 
 # third step: give some extra information
-echo "to run the examples, first set the shell variable."
-echo "type:"
-echo "export LD_LIBRARY_PATH=."
-echo "otherwise the library wont be found!"
-echo "run the sample apps with:"
-echo "java TestAdd"
-
+echo "to run the tests, start them with:"
+echo "run-tests.sh"
 
