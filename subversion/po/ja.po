@@ -61,8 +61,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-11 04:45+0900\n"
-"PO-Revision-Date: 2004-09-10 18:50+0900\n"
+"POT-Creation-Date: 2004-09-20 00:21+0900\n"
+"PO-Revision-Date: 2004-09-19 23:58+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2032,8 +2032,8 @@ msgstr "パイププロトコルのフレーミングエラーです"
 msgid "Read error in pipe"
 msgstr "パイプの読み込みエラーです"
 
-#: include/svn_error_codes.h:220 libsvn_subr/cmdline.c:283
-#: libsvn_subr/cmdline.c:300
+#: include/svn_error_codes.h:220 libsvn_subr/cmdline.c:310
+#: libsvn_subr/cmdline.c:327
 msgid "Write error"
 msgstr "書き込みエラーです"
 
@@ -2083,15 +2083,15 @@ msgstr "更新が妨害されました"
 
 #: include/svn_error_codes.h:278
 msgid "Mismatch popping the WC unwind stack"
-msgstr ""
+msgstr "作業コピーアンワインドスタックに対してポップする際に不一致があります"
 
 #: include/svn_error_codes.h:282
 msgid "Attempt to pop empty WC unwind stack"
-msgstr ""
+msgstr "空の作業コピーアンワインドスタックに対してポップしようとしています"
 
 #: include/svn_error_codes.h:286
 msgid "Attempt to unlock with non-empty unwind stack"
-msgstr ""
+msgstr "空でないアンワインドスタックのロックを解除しようとしています"
 
 #: include/svn_error_codes.h:290
 msgid "Attempted to lock an already-locked dir"
@@ -2454,7 +2454,7 @@ msgstr "認証供給者はすべて使い果たされています"
 
 #: include/svn_error_codes.h:669
 msgid "Read access denied for root of edit"
-msgstr ""
+msgstr "編集のルートへの読み込みアクセスが拒否されました"
 
 #: include/svn_error_codes.h:675
 msgid "Svndiff data has invalid header"
@@ -2467,7 +2467,7 @@ msgstr "snvdiff データに壊れた window が含まれています"
 
 #: include/svn_error_codes.h:683
 msgid "Svndiff data contains backward-sliding source view"
-msgstr ""
+msgstr "svndiff データに、逆方向にスライドするソースビューが含まれています"
 
 #: include/svn_error_codes.h:687
 msgid "Svndiff data contains invalid instruction"
@@ -2666,12 +2666,12 @@ msgstr "利用できる外部エディタがありません"
 msgid "Something is wrong with the log message's contents"
 msgstr "ログメッセージの中身に不正な箇所があります"
 
-#: libsvn_client/add.c:343
+#: libsvn_client/add.c:348
 #, c-format
 msgid "Error during recursive add of '%s'"
 msgstr "'%s' を再帰的に追加する際にエラーが生じました"
 
-#: libsvn_client/add.c:353
+#: libsvn_client/add.c:358
 #, c-format
 msgid "Can't close directory '%s'"
 msgstr "ディレクトリ '%s' を閉じることができません"
@@ -2733,65 +2733,65 @@ msgstr "'%s' は既に、ファイルか何か他のものとなっています"
 msgid "Cannot cleanup '%s': not a directory"
 msgstr "'%s' を掃除できません: ディレクトリではありません"
 
-#: libsvn_client/commit.c:459
+#: libsvn_client/commit.c:460
 msgid "New entry name required when importing a file"
 msgstr "ファイルのインポートをするときは新しいエントリ名が必要です"
 
-#: libsvn_client/commit.c:486 libsvn_wc/props.c:736 libsvn_wc/questions.c:63
+#: libsvn_client/commit.c:487 libsvn_wc/props.c:736 libsvn_wc/questions.c:63
 #, c-format
 msgid "'%s' does not exist"
 msgstr "'%s' は存在しません"
 
-#: libsvn_client/commit.c:547 libsvn_client/copy.c:83 svnlook/main.c:1188
+#: libsvn_client/commit.c:548 libsvn_client/copy.c:83 svnlook/main.c:1188
 #, c-format
 msgid "Path '%s' does not exist"
 msgstr "パス '%s' は存在しません"
 
-#: libsvn_client/commit.c:677 libsvn_client/copy.c:397
+#: libsvn_client/commit.c:678 libsvn_client/copy.c:397
 #: libsvn_client/copy.c:413
 #, c-format
 msgid "Path '%s' already exists"
 msgstr "パス '%s' は既に存在しています"
 
-#: libsvn_client/commit.c:687
+#: libsvn_client/commit.c:688
 #, c-format
 msgid "'%s' is a reserved name and cannot be imported"
 msgstr "'%s' は予約された名称です。インポートはできません"
 
-#: libsvn_client/commit.c:765 libsvn_client/copy.c:541
+#: libsvn_client/commit.c:766 libsvn_client/copy.c:541
 msgid "Commit failed (details follow):"
 msgstr "コミットに失敗しました (詳しい理由は以下のとおりです):"
 
-#: libsvn_client/commit.c:773 libsvn_client/copy.c:549
+#: libsvn_client/commit.c:774 libsvn_client/copy.c:549
 msgid "Commit succeeded, but other errors follow:"
 msgstr "コミットには成功しましたが、続けて他のエラーが生じました:"
 
-#: libsvn_client/commit.c:780 libsvn_client/copy.c:556
+#: libsvn_client/commit.c:781 libsvn_client/copy.c:556
 msgid "Error unlocking locked dirs (details follow):"
 msgstr ""
 "ディレクトリのロック解除時にエラーが起きました (詳しい理由は以下のとおりで"
 "す):"
 
-#: libsvn_client/commit.c:791
+#: libsvn_client/commit.c:792
 msgid "Error bumping revisions post-commit (details follow):"
 msgstr ""
 "コミット後にリビジョンを上げる際にエラーが起きました (詳しくは以下のとおりで"
 "す):"
 
-#: libsvn_client/commit.c:802 libsvn_client/copy.c:567
+#: libsvn_client/commit.c:803 libsvn_client/copy.c:567
 msgid "Error in post-commit clean-up (details follow):"
 msgstr "コミット後の掃除中にエラーが起きました (詳しくは以下のとおりです):"
 
-#: libsvn_client/commit.c:1071
+#: libsvn_client/commit.c:1064
 #, c-format
 msgid "'%s' is a URL, but URLs cannot be commit targets"
 msgstr "'%s' は URL です。しかし URL はコミットの対象ではありません"
 
-#: libsvn_client/commit.c:1259
+#: libsvn_client/commit.c:1252
 msgid "Are all the targets part of the same working copy?"
 msgstr "すべての対象は同じ作業コピーの一部ですか?"
 
-#: libsvn_client/commit.c:1274
+#: libsvn_client/commit.c:1267
 msgid "Cannot non-recursively commit a directory deletion"
 msgstr "非再帰的なディレクトリの削除をコミットできません"
 
@@ -2802,8 +2802,8 @@ msgstr "'%s' のエントリ種別が不明です"
 
 #: libsvn_client/commit_util.c:237
 #, c-format
-msgid "Entry '%s' has been replaced by a special file"
-msgstr "エントリ '%s' が特殊なファイルによって置換されました"
+msgid "Entry '%s' has unexpectedly changed special status"
+msgstr "エントリ '%s' が特殊なステータスを突然変更しました"
 
 #: libsvn_client/commit_util.c:287
 #, c-format
@@ -3138,11 +3138,11 @@ msgstr "エントリ '%s' に URL がありません"
 msgid "No commits in repository."
 msgstr "リポジトリにコミット内容がありません。"
 
-#: libsvn_client/ls.c:48 libsvn_client/ls.c:122
+#: libsvn_client/ls.c:49 libsvn_client/ls.c:126
 msgid "No get_dir() available for URL schema"
 msgstr "URL スキーマに対して利用できる get_dir() がありません"
 
-#: libsvn_client/ls.c:129 libsvn_client/ls.c:136
+#: libsvn_client/ls.c:133 libsvn_client/ls.c:140
 #, c-format
 msgid "URL '%s' non-existent in that revision"
 msgstr "この URL '%s' は、そのリビジョンには存在しません"
@@ -3813,12 +3813,13 @@ msgstr "リクエストのボディのサイズを計算できません"
 msgid "'%s' path not found"
 msgstr "パス '%s' が見つかりません"
 
+# * Arguments are (1) method and (2) url.
 #. We either have a neon error, or some other error
 #. that we didn't expect.
 #: libsvn_ra_dav/util.c:646 libsvn_ra_dav/util.c:789
 #, c-format
 msgid "%s of '%s'"
-msgstr ""
+msgstr "%s (URL: '%s')"
 
 #: libsvn_ra_dav/util.c:657
 #, c-format
@@ -3966,17 +3967,17 @@ msgstr ""
 "        をコミットしました >>>\n"
 "\n"
 
-#: libsvn_repos/rev_hunt.c:63
+#: libsvn_repos/rev_hunt.c:64
 #, c-format
 msgid "Failed to find time on revision %ld"
 msgstr "リビジョン %ld の日時が見つかりませんでした"
 
-#: libsvn_repos/rev_hunt.c:198
+#: libsvn_repos/rev_hunt.c:199
 #, c-format
 msgid "Invalid start revision %ld"
 msgstr "開始リビジョン '%ld' が不正です"
 
-#: libsvn_repos/rev_hunt.c:202
+#: libsvn_repos/rev_hunt.c:203
 #, c-format
 msgid "Invalid end revision %ld"
 msgstr "終了リビジョン '%ld' が不正です"
@@ -5202,7 +5203,7 @@ msgstr "リビジョン %ld は %ld としてコミットされました。\n"
 msgid "Revision %ld skipped.\n"
 msgstr "リビジョン %ld は飛ばされました。\n"
 
-#: svndumpfilter/main.c:892
+#: svndumpfilter/main.c:883
 #, c-format
 msgid ""
 "Dropped %d revision(s).\n"
@@ -5211,26 +5212,26 @@ msgstr ""
 "%d 個のリビジョンを取り除きました。\n"
 "\n"
 
-#: svndumpfilter/main.c:898
+#: svndumpfilter/main.c:889
 msgid "Revisions renumbered as follows:\n"
 msgstr "以下のようにリビジョン番号がふりなおされました:\n"
 
-#: svndumpfilter/main.c:926
+#: svndumpfilter/main.c:917
 #, c-format
 msgid "   %ld => (dropped)\n"
 msgstr "   %ld => (取り除かれました)\n"
 
-#: svndumpfilter/main.c:930
+#: svndumpfilter/main.c:921
 #, c-format
 msgid "   %ld => %ld\n"
 msgstr "   %ld => %ld\n"
 
-#: svndumpfilter/main.c:941
+#: svndumpfilter/main.c:932
 #, c-format
 msgid "Dropped %d node(s):\n"
 msgstr "%d 個のノードを取り除きました:\n"
 
-#: svndumpfilter/main.c:1149
+#: svndumpfilter/main.c:1140
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
@@ -5238,7 +5239,7 @@ msgstr ""
 "\n"
 "プレフィックスが与えられていません。\n"
 
-#: svndumpfilter/main.c:1192
+#: svndumpfilter/main.c:1183
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -5655,24 +5656,395 @@ msgstr "エクスポートされたものです\n"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
 
-#~ msgid "unknown command: '%s'\n"
-#~ msgstr "未知のコマンドです: '%s'\n"
+#~ msgid "No changes to property '%s' on revision %ld"
+#~ msgstr "属性 '%s' (リビジョン %ld) に変更がありません"
 
-#~ msgid "Including prefixes:\n"
-#~ msgstr "次のプレフィックスをもつノードを残します:\n"
+#~ msgid "No commit for revision 0.%s"
+#~ msgstr "リビジョン 0 のコミットはありません。%s"
 
-#~ msgid "Including (and dropping empty revisions for) prefixes:\n"
+#~ msgid "Changed paths:%s"
+#~ msgstr "変更のあったパス:%s"
+
+#~ msgid "Impossibly long relative URL"
+#~ msgstr "相対 URL が長すぎます"
+
+#~ msgid "Entry '%s' has been replaced by a special file"
+#~ msgstr "エントリ '%s' が特殊なファイルによって置換されました"
+
+#~ msgid ""
+#~ "wait instead of exit if the the repository is in\n"
+#~ "                             use by another process"
 #~ msgstr ""
-#~ "次のプレフィックスをもつノードを残します (空になったリビジョンは落としま"
-#~ "す):\n"
+#~ "リポジトリを他のプロセスが利用中の場合、終了する\n"
+#~ "                             代わりに待ちます"
 
-#~ msgid "Excluding prefixes:\n"
-#~ msgstr "次のプレフィックスをもつノードを取り除きます:\n"
+#~ msgid "Print client version info\n"
+#~ msgstr "クライアントのバージョン情報を表示します\n"
 
-#~ msgid "Excluding (and dropping empty revisions for) prefixes:\n"
+#~ msgid "Unknown hostname '%s'"
+#~ msgstr "ホスト名 '%s' が不明です"
+
+#~ msgid "Can't create socket"
+#~ msgstr "ソケットを作成できません"
+
+#~ msgid "Can't connect to host '%s'"
+#~ msgstr "ホスト '%s' に接続できません"
+
+#~ msgid "Proplist element not a list"
+#~ msgstr "proplist 要素がリストではありません"
+
+#~ msgid "Unrecognized node kind '%s' from server"
+#~ msgstr "サーバから送られてきたノード種別 '%s' を認識できません"
+
+#~ msgid "Authentication error from server: %s"
+#~ msgstr "サーバの認証エラーです: %s"
+
+#~ msgid "Unexpected server response to authentication"
+#~ msgstr "認証に対する予想外のサーバのレスポンスです"
+
+#~ msgid "Cannot negotiate authentication mechanism"
+#~ msgstr "認証機構と交渉できません"
+
+#~ msgid "Undefined tunnel scheme '%s'"
+#~ msgstr "トンネルスキーマ '%s' は未定義です"
+
+#~ msgid "Tunnel scheme %s requires environment variable %s to be defined"
 #~ msgstr ""
-#~ "次のプレフィックスをもつノードを取り除きます (空になったリビジョンは落とし"
-#~ "ます):\n"
+#~ "トンネルスキーマ %s を使うには環境変数 %s が定義されている必要があります"
+
+#~ msgid "Can't tokenize command '%s'"
+#~ msgstr "コマンド '%s' をトークン化できません"
+
+#~ msgid "Error in child process: %s"
+#~ msgstr "子プロセスにおけるエラーです: %s"
+
+#~ msgid "Can't create tunnel"
+#~ msgstr "トンネルを作成できません"
+
+#~ msgid "Illegal svn repository URL '%s'"
+#~ msgstr "Subversion リポジトリの URL '%s' が不正です"
+
+#~ msgid "Server requires minimum version %d"
+#~ msgstr "バージョン %d 以上をサーバが必要としています"
+
+#~ msgid "impossibly long repository root from server"
+#~ msgstr "サーバから送られてきたリポジトリのルートが長すぎます"
+
+#~ msgid "Server did not send repository root"
+#~ msgstr "サーバがリポジトリのルートを送信しませんでした"
+
+#~ msgid "Non-string as part of file contents"
+#~ msgstr "ファイルの一部に文字列以外が含まれています"
+
+#~ msgid "Dirlist element not a list"
+#~ msgstr "dirlist 要素がリストではありません"
+
+#~ msgid "Log entry not a list"
+#~ msgstr "log エントリがリストではありません"
+
+#~ msgid "Changed-path entry not a list"
+#~ msgstr "changed-path エントリがリストではありません"
+
+#~ msgid "Location entry not a list"
+#~ msgstr "location エントリがリストではありません"
+
+#~ msgid "Module for accessing a repository using the svn network protocol."
+#~ msgstr ""
+#~ "svn ネットワークプロトコルを使ってリポジトリにアクセスするモジュール。"
+
+#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
+#~ msgstr ""
+#~ "ra_svn 用の RA プラグイン ABI バージョン (%d) はサポートされていません"
+
+#~ msgid "Invalid file or dir token during edit"
+#~ msgstr "編集中に不正なファイルまたはディレクトリのトークンがありました"
+
+#~ msgid "Non-string as part of text delta"
+#~ msgstr "テキスト差分の一部に文字列以外が含まれています"
+
+#~ msgid "Successful edit status returned too soon"
+#~ msgstr "編集成功ステータスが返ってくるのが早すぎます"
+
+#~ msgid "Apply-textdelta already active"
+#~ msgstr "apply-textdelta は既に使えるようになっています"
+
+#~ msgid "Apply-textdelta not active"
+#~ msgstr "apply-textdelta は使えません"
+
+#~ msgid "Unknown command '%s'"
+#~ msgstr "'%s' は未知のコマンドです"
+
+#~ msgid "Capability entry is not a word"
+#~ msgstr "capability エントリが単語ではありません"
+
+#~ msgid "Can't write to connection"
+#~ msgstr "接続に書き込めません"
+
+#~ msgid "Can't read from connection"
+#~ msgstr "接続を読めません"
+
+#~ msgid "Connection closed unexpectedly"
+#~ msgstr "接続が突然閉じました"
+
+#~ msgid "String length larger than maximum"
+#~ msgstr "文字列の長さが最大値を超えています"
+
+#~ msgid "Number is larger than maximum"
+#~ msgstr "数値が最大値を超えています"
+
+#~ msgid "Empty error list"
+#~ msgstr "エラーリストが空です"
+
+#~ msgid "Malformed error list"
+#~ msgstr "エラーリストが不正です"
+
+#~ msgid "Unknown status '%s' in command response"
+#~ msgstr "コマンドへのレスポンス内に未知のステータス '%s' があります"
+
+#~ msgid "Can't check path '%s'"
+#~ msgstr "パス '%s' をチェックできません"
+
+#~ msgid "Can't open '%s'"
+#~ msgstr "'%s' を開けません"
+
+#~ msgid "Unable to make name for '%s'"
+#~ msgstr "'%s' に名前をつけられません"
+
+#~ msgid "Symbolic links are not supported on this platform"
+#~ msgstr "シンボリックリンクはこのプラットフォームではサポートされていません"
+
+#~ msgid "Can't read contents of link"
+#~ msgstr "リンクの中身を読めません"
+
+#~ msgid "Can't get shared lock on file '%s'"
+#~ msgstr "ファイル '%s' で共有ロックを取得できません"
+
+#~ msgid "Can't get exclusive lock on file '%s'"
+#~ msgstr "ファイル '%s' に対して排他的なロックを取得できません"
+
+#~ msgid "Can't flush file '%s'"
+#~ msgstr "ファイル '%s' をフラッシュできません"
+
+#~ msgid "Can't flush stream"
+#~ msgstr "ストリームをフラッシュできません"
+
+#~ msgid "Can't flush file to disk"
+#~ msgstr "ファイルをディスクにフラッシュできません"
+
+#~ msgid "Reading from stdin is currently broken, so disabled"
+#~ msgstr "標準入力からの読み込みが現在こわれており、使用できません"
+
+#~ msgid "Can't get file name"
+#~ msgstr "ファイル名を取得できません"
+
+#~ msgid "Can't remove file '%s'"
+#~ msgstr "ファイル '%s' を削除できません"
+
+#~ msgid "Can't rewind directory '%s'"
+#~ msgstr "ディレクトリ '%s' の読み込み位置を先頭に戻せません"
+
+#~ msgid "Can't open directory '%s'"
+#~ msgstr "ディレクトリ '%s' を開けません"
+
+#~ msgid "Can't remove '%s'"
+#~ msgstr "'%s' を削除できません"
+
+#~ msgid "Can't read directory '%s'"
+#~ msgstr "ディレクトリ '%s' を読めません"
+
+#~ msgid "Error closing directory '%s'"
+#~ msgstr "ディレクトリ '%s' を閉じる際にエラーが生じました"
+
+#~ msgid "Can't create process '%s' attributes"
+#~ msgstr "プロセス '%s' の属性を作成できません"
+
+#~ msgid "Can't set process '%s' cmdtype"
+#~ msgstr "プロセス '%s' に対してコマンドタイプを設定できません"
+
+#~ msgid "Can't set process '%s' directory"
+#~ msgstr "プロセス '%s' に対してディレクトリを設定できません"
+
+#~ msgid "Can't set process '%s' child input"
+#~ msgstr "プロセス '%s' に対して子の入力を設定できません"
+
+#~ msgid "Can't set process '%s' child outfile"
+#~ msgstr "プロセス '%s' に対して子の出力ファイルを設定できません"
+
+#~ msgid "Can't set process '%s' child errfile"
+#~ msgstr "プロセス '%s' に対して子のエラー出力ファイルを設定できません"
+
+#~ msgid "Can't start process '%s'"
+#~ msgstr "プロセス '%s' を開始できません"
+
+#~ msgid "Error waiting for process '%s'"
+#~ msgstr "プロセス '%s' を待っている際にエラーが発生しました"
+
+#~ msgid "Process '%s' failed (exitwhy %d)"
+#~ msgstr "プロセス '%s' は失敗しました (終了理由 %d)"
+
+#~ msgid "Process '%s' returned error exitcode %d"
+#~ msgstr "プロセス '%s' はエラー終了コード %d を返しました"
+
+#~ msgid "'%s' returned %d"
+#~ msgstr "'%s' が %d を返しました"
+
+#~ msgid ""
+#~ "Error running '%s':  exitcode was %d, args were:\n"
+#~ "in directory '%s', basenames:\n"
+#~ "%s\n"
+#~ "%s\n"
+#~ "%s"
+#~ msgstr ""
+#~ "'%s' の実行中にエラーが発生しました。終了コードは %d で、引数は以下のとお"
+#~ "りです:\n"
+#~ "実行ディレクトリ: '%s', ベース名:\n"
+#~ "%s\n"
+#~ "%s\n"
+#~ "%s"
+
+#~ msgid "Can't detect MIME type of non-file '%s'"
+#~ msgstr "ファイルでない '%s' の MIME タイプを検出できません"
+
+#~ msgid "Can't open file '%s'"
+#~ msgstr "ファイル '%s' を開けません"
+
+#~ msgid "Can't close file '%s'"
+#~ msgstr "ファイル '%s' を閉じられません"
+
+#~ msgid "Can't close stream"
+#~ msgstr "ストリームを閉じられません"
+
+#~ msgid "Can't read file '%s'"
+#~ msgstr "ファイル '%s' を読めません"
+
+#~ msgid "Can't read stream"
+#~ msgstr "ストリームを読めません"
+
+#~ msgid "Can't get attribute information from file '%s'"
+#~ msgstr "ファイル '%s' から属性情報を取得できません"
+
+#~ msgid "Can't get attribute information from stream"
+#~ msgstr "ストリームから属性情報を取得できません"
+
+#~ msgid "Can't set position pointer in file '%s'"
+#~ msgstr "ファイル '%s' 中に位置ポインタを設定できません"
+
+#~ msgid "Can't set position pointer in stream"
+#~ msgstr "ストリーム中に位置ポインタを設定できません"
+
+#~ msgid "Can't write to file '%s'"
+#~ msgstr "ファイル '%s' に書き込めません"
+
+#~ msgid "Can't write to stream"
+#~ msgstr "ストリームに書き込めません"
+
+#~ msgid "Can't move '%s' to '%s'"
+#~ msgstr "'%s' から '%s' にファイル名を変更できません"
+
+#~ msgid "Can't create directory '%s'"
+#~ msgstr "ディレクトリ '%s' を作成できません"
+
+#~ msgid "Can't hide directory '%s'"
+#~ msgstr "ディレクトリ '%s' を隠せません"
+
+#~ msgid "Can't stat directory '%s'"
+#~ msgstr "ディレクトリ '%s' に対して stat を実行できません"
+
+#~ msgid "Can't stat new directory '%s'"
+#~ msgstr "新しいディレクトリ '%s' に対して stat を実行できません"
+
+#~ msgid "Can't remove directory '%s'"
+#~ msgstr "ディレクトリ '%s' を削除できません"
+
+#~ msgid "Can't read directory"
+#~ msgstr "ディレクトリを読めません"
+
+#~ msgid "Can't read directory entry in '%s'"
+#~ msgstr "'%s' 中のディレクトリエントリを読めません"
+
+#~ msgid "Can't check directory '%s'"
+#~ msgstr "ディレクトリ '%s' をチェックできません"
+
+#~ msgid "Version %d is not non-negative"
+#~ msgstr "バージョン %d が非負の数でありません"
+
+#~ msgid "Reading '%s'"
+#~ msgstr "'%s' を読んでいます"
+
+#~ msgid "First line of '%s' contains non-digit"
+#~ msgstr "'%s' の 1 行目に数字以外が含まれています"
+
+#~ msgid ""
+#~ "usage: svnadmin recover REPOS_PATH\n"
+#~ "\n"
+#~ "Run the Berkeley DB recovery procedure on a repository.  Do\n"
+#~ "this if you've been getting errors indicating that recovery\n"
+#~ "ought to be run.  Recovery requires exclusive access and will\n"
+#~ "exit if the repository is in use by another process.\n"
+#~ msgstr ""
+#~ "使用方法: svnadmin recover <リポジトリパス>\n"
+#~ "\n"
+#~ "Berkeley DB の復旧手続きをリポジトリ上で実行します。復旧実行の必要性を知ら"
+#~ "せる\n"
+#~ "エラーが見られたときにこれを実行してください。復旧には排他的なアクセスが必"
+#~ "要な\n"
+#~ "ので、リポジトリが他のプロセスで利用されている場合は終了します。\n"
+
+#~ msgid "Invalid copy source path '%s'"
+#~ msgstr "コピー元のパス '%s' が不正です。"
+
+#~ msgid "Node with dropped parent sneaked in"
+#~ msgstr "親が取り除かれたノードが入ってしまっています"
+
+# * Each empty revision only contains date and this log message.
+#~ msgid "This is an empty revision for padding."
+#~ msgstr "単に番号が飛ばないようにするための空のリビジョンです。"
+
+# * Description for 'svndumpfilter --quiet'.
+# * 29 one-byte characters are displayed on the left.
+#~ msgid "Do not display filtering statistics."
+#~ msgstr "フィルタリングを行うときに統計を表示しません。"
+
+# * Description for 'svndumpfilter --drop-empty-revs'.
+# * 29 one-byte characters are displayed on the left.
+#~ msgid "Remove revisions emptied by filtering."
+#~ msgstr ""
+#~ "フィルタをかけたために空になったリビジョンを取り除\n"
+#~ "                             きます。"
+
+# * Description for 'svndumpfilter --renumber-revs'.
+# * 29 one-byte characters are displayed on the left.
+#~ msgid "Renumber revisions left after filtering."
+#~ msgstr ""
+#~ "フィルタをかけた後に残ったリビジョンに番号をふりな\n"
+#~ "                             おします。"
+
+# * Description for 'svndumpfilter --preserve-revprops'.
+# * 29 one-byte characters are displayed on the left.
+#~ msgid "Don't filter revision properties."
+#~ msgstr "リビジョン属性にはフィルタをかけません。"
+
+#~ msgid ""
+#~ "Filter out nodes with given prefixes from dumpstream.\n"
+#~ "usage: svndumpfilter exclude PATH_PREFIX...\n"
+#~ msgstr ""
+#~ "指定されたプレフィックスをもつノードをダンプストリームから取り除きます。\n"
+#~ "使用方法: svndumpfilter exclude <パスのプレフィックス>...\n"
+
+#~ msgid ""
+#~ "Filter out nodes without given prefixes from dumpstream.\n"
+#~ "usage: svndumpfilter include PATH_PREFIX...\n"
+#~ msgstr ""
+#~ "指定されたプレフィックスをもたないノードをダンプストリームから取り除きま"
+#~ "す。\n"
+#~ "使用方法: svndumpfilter include <パスのプレフィックス>...\n"
+
+#~ msgid ""
+#~ "Describe the usage of this program or its subcommands.\n"
+#~ "usage: svndumpfilter help [SUBCOMMAND...]\n"
+#~ msgstr ""
+#~ "このプログラムやそのサブコマンドの使用方法を説明します。\n"
+#~ "使用方法: svndumpfilter help [<サブコマンド>...]\n"
 
 #~ msgid ""
 #~ "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
@@ -5687,206 +6059,24 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "\n"
 #~ "利用可能なサブコマンド:\n"
 
-#~ msgid ""
-#~ "Describe the usage of this program or its subcommands.\n"
-#~ "usage: svndumpfilter help [SUBCOMMAND...]\n"
+#~ msgid "Excluding (and dropping empty revisions for) prefixes:\n"
 #~ msgstr ""
-#~ "このプログラムやそのサブコマンドの使用方法を説明します。\n"
-#~ "使用方法: svndumpfilter help [<サブコマンド>...]\n"
+#~ "次のプレフィックスをもつノードを取り除きます (空になったリビジョンは落とし"
+#~ "ます):\n"
 
-#~ msgid ""
-#~ "Filter out nodes without given prefixes from dumpstream.\n"
-#~ "usage: svndumpfilter include PATH_PREFIX...\n"
+#~ msgid "Excluding prefixes:\n"
+#~ msgstr "次のプレフィックスをもつノードを取り除きます:\n"
+
+#~ msgid "Including (and dropping empty revisions for) prefixes:\n"
 #~ msgstr ""
-#~ "指定されたプレフィックスをもたないノードをダンプストリームから取り除きま"
-#~ "す。\n"
-#~ "使用方法: svndumpfilter include <パスのプレフィックス>...\n"
+#~ "次のプレフィックスをもつノードを残します (空になったリビジョンは落としま"
+#~ "す):\n"
 
-#~ msgid ""
-#~ "Filter out nodes with given prefixes from dumpstream.\n"
-#~ "usage: svndumpfilter exclude PATH_PREFIX...\n"
-#~ msgstr ""
-#~ "指定されたプレフィックスをもつノードをダンプストリームから取り除きます。\n"
-#~ "使用方法: svndumpfilter exclude <パスのプレフィックス>...\n"
+#~ msgid "Including prefixes:\n"
+#~ msgstr "次のプレフィックスをもつノードを残します:\n"
 
-# * Description for 'svndumpfilter --preserve-revprops'.
-# * 29 one-byte characters are displayed on the left.
-#~ msgid "Don't filter revision properties."
-#~ msgstr "リビジョン属性にはフィルタをかけません。"
+#~ msgid "unknown command: '%s'\n"
+#~ msgstr "未知のコマンドです: '%s'\n"
 
-# * Description for 'svndumpfilter --renumber-revs'.
-# * 29 one-byte characters are displayed on the left.
-#~ msgid "Renumber revisions left after filtering."
-#~ msgstr ""
-#~ "フィルタをかけた後に残ったリビジョンに番号をふりな\n"
-#~ "                             おします。"
-
-# * Description for 'svndumpfilter --drop-empty-revs'.
-# * 29 one-byte characters are displayed on the left.
-#~ msgid "Remove revisions emptied by filtering."
-#~ msgstr ""
-#~ "フィルタをかけたために空になったリビジョンを取り除\n"
-#~ "                             きます。"
-
-# * Description for 'svndumpfilter --quiet'.
-# * 29 one-byte characters are displayed on the left.
-#~ msgid "Do not display filtering statistics."
-#~ msgstr "フィルタリングを行うときに統計を表示しません。"
-
-# * Each empty revision only contains date and this log message.
-#~ msgid "This is an empty revision for padding."
-#~ msgstr "単に番号が飛ばないようにするための空のリビジョンです。"
-
-#~ msgid "Node with dropped parent sneaked in"
-#~ msgstr "親が取り除かれたノードが入ってしまっています"
-
-#~ msgid "Invalid copy source path '%s'"
-#~ msgstr "コピー元のパス '%s' が不正です。"
-
-#~ msgid "Unknown status '%s' in command response"
-#~ msgstr "コマンドへのレスポンス内に未知のステータス '%s' があります"
-
-#~ msgid "Malformed error list"
-#~ msgstr "エラーリストが不正です"
-
-#~ msgid "Empty error list"
-#~ msgstr "エラーリストが空です"
-
-#~ msgid "Number is larger than maximum"
-#~ msgstr "数値が最大値を超えています"
-
-#~ msgid "String length larger than maximum"
-#~ msgstr "文字列の長さが最大値を超えています"
-
-#~ msgid "Connection closed unexpectedly"
-#~ msgstr "接続が突然閉じました"
-
-#~ msgid "Can't read from connection"
-#~ msgstr "接続を読めません"
-
-#~ msgid "Can't write to connection"
-#~ msgstr "接続に書き込めません"
-
-#~ msgid "Capability entry is not a word"
-#~ msgstr "capability エントリが単語ではありません"
-
-#~ msgid "Unknown command '%s'"
-#~ msgstr "'%s' は未知のコマンドです"
-
-#~ msgid "Apply-textdelta not active"
-#~ msgstr "apply-textdelta は使えません"
-
-#~ msgid "Apply-textdelta already active"
-#~ msgstr "apply-textdelta は既に使えるようになっています"
-
-#~ msgid "Successful edit status returned too soon"
-#~ msgstr "編集成功ステータスが返ってくるのが早すぎます"
-
-#~ msgid "Non-string as part of text delta"
-#~ msgstr "テキスト差分の一部に文字列以外が含まれています"
-
-#~ msgid "Invalid file or dir token during edit"
-#~ msgstr "編集中に不正なファイルまたはディレクトリのトークンがありました"
-
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
-#~ msgstr ""
-#~ "ra_svn 用の RA プラグイン ABI バージョン (%d) はサポートされていません"
-
-#~ msgid "Module for accessing a repository using the svn network protocol."
-#~ msgstr ""
-#~ "svn ネットワークプロトコルを使ってリポジトリにアクセスするモジュール。"
-
-#~ msgid "Location entry not a list"
-#~ msgstr "location エントリがリストではありません"
-
-#~ msgid "Changed-path entry not a list"
-#~ msgstr "changed-path エントリがリストではありません"
-
-#~ msgid "Log entry not a list"
-#~ msgstr "log エントリがリストではありません"
-
-#~ msgid "Dirlist element not a list"
-#~ msgstr "dirlist 要素がリストではありません"
-
-#~ msgid "Non-string as part of file contents"
-#~ msgstr "ファイルの一部に文字列以外が含まれています"
-
-#~ msgid "Server did not send repository root"
-#~ msgstr "サーバがリポジトリのルートを送信しませんでした"
-
-#~ msgid "impossibly long repository root from server"
-#~ msgstr "サーバから送られてきたリポジトリのルートが長すぎます"
-
-#~ msgid "Server requires minimum version %d"
-#~ msgstr "バージョン %d 以上をサーバが必要としています"
-
-#~ msgid "Illegal svn repository URL '%s'"
-#~ msgstr "Subversion リポジトリの URL '%s' が不正です"
-
-#~ msgid "Can't create tunnel"
-#~ msgstr "トンネルを作成できません"
-
-#~ msgid "Error in child process: %s"
-#~ msgstr "子プロセスにおけるエラーです: %s"
-
-#~ msgid "Can't tokenize command '%s'"
-#~ msgstr "コマンド '%s' をトークン化できません"
-
-#~ msgid "Tunnel scheme %s requires environment variable %s to be defined"
-#~ msgstr ""
-#~ "トンネルスキーマ %s を使うには環境変数 %s が定義されている必要があります"
-
-#~ msgid "Undefined tunnel scheme '%s'"
-#~ msgstr "トンネルスキーマ '%s' は未定義です"
-
-#~ msgid "Cannot negotiate authentication mechanism"
-#~ msgstr "認証機構と交渉できません"
-
-#~ msgid "Unexpected server response to authentication"
-#~ msgstr "認証に対する予想外のサーバのレスポンスです"
-
-#~ msgid "Authentication error from server: %s"
-#~ msgstr "サーバの認証エラーです: %s"
-
-#~ msgid "Unrecognized node kind '%s' from server"
-#~ msgstr "サーバから送られてきたノード種別 '%s' を認識できません"
-
-#~ msgid "Proplist element not a list"
-#~ msgstr "proplist 要素がリストではありません"
-
-#~ msgid "Can't connect to host '%s'"
-#~ msgstr "ホスト '%s' に接続できません"
-
-#~ msgid "Can't create socket"
-#~ msgstr "ソケットを作成できません"
-
-#~ msgid "Unknown hostname '%s'"
-#~ msgstr "ホスト名 '%s' が不明です"
-
-#~ msgid "Entry '%s' has unexpectedly changed special status"
-#~ msgstr "エントリ '%s' が特殊なステータスを突然変更しました"
-
-#~ msgid "Print client version info\n"
-#~ msgstr "クライアントのバージョン情報を表示します\n"
-
-#~ msgid "No commit for revision 0.%s"
-#~ msgstr "リビジョン 0 のコミットはありません。%s"
-
-#~ msgid "Changed paths:%s"
-#~ msgstr "変更のあったパス:%s"
-
-#~ msgid "Can't create directory '%s'"
-#~ msgstr "ディレクトリ '%s' を作成できません"
-
-#~ msgid "Impossibly long relative URL"
-#~ msgstr "相対 URL が長すぎます"
-
-#~ msgid "No changes to property '%s' on revision %ld"
-#~ msgstr "属性 '%s' (リビジョン %ld) に変更がありません"
-
-#~ msgid ""
-#~ "wait instead of exit if the the repository is in\n"
-#~ "                             use by another process"
-#~ msgstr ""
-#~ "リポジトリを他のプロセスが利用中の場合、終了する\n"
-#~ "                             代わりに待ちます"
+#~ msgid "exported%s"
+#~ msgstr "エクスポートされたものです%s"
