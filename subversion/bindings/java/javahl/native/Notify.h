@@ -38,7 +38,7 @@ private:
      * because it has to live longer than the SVNClient.notification call
      */ 
     jobject m_notify;
-    Notify(jobject notify);
+    Notify(jobject p_notify);
 public:
     static jint mapState(svn_wc_notify_state_t);
     static Notify * makeCNotify(jobject notify);

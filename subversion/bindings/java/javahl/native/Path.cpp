@@ -30,9 +30,9 @@
  * @see Path::Path (const std::string &)
  * @param path Path string
  */
-Path::Path (const char * path)
+Path::Path (const char * pi_path)
 {
-    init (path);
+    init (pi_path);
 }
 
 /**
@@ -42,9 +42,9 @@ Path::Path (const char * path)
  *
  * @param path Path string
  */
-Path::Path (const std::string & path)
+Path::Path (const std::string & pi_path)
 {
-    init (path.c_str ());
+    init (pi_path.c_str ());
 }
 
 /**
@@ -52,9 +52,9 @@ Path::Path (const std::string & path)
  *
  * @param path Path to be copied
  */
-Path::Path (const Path & path)
+Path::Path (const Path & pi_path)
 {
-    init (path.c_str ());
+    init (pi_path.c_str ());
 }
 
 /**
@@ -63,15 +63,15 @@ Path::Path (const Path & path)
  * @param path Path string
  */
 void
-Path::init (const char * path)
+Path::init (const char * pi_path)
 {
-    if(*path == 0)
+    if(*pi_path == 0)
     {
         m_path = "";
     }
     else
     {
-        const char * int_path = svn_path_internal_style (path, 
+        const char * int_path = svn_path_internal_style (pi_path, 
             JNIUtil::getRequestPool()->pool() );
 
         m_path = int_path;
@@ -100,8 +100,8 @@ Path::c_str() const
  * Assignment operator
  */
 Path&
-Path::operator=(const Path & path)
+Path::operator=(const Path & pi_path)
 {
-    init (path.c_str ());
+    init (pi_path.c_str ());
     return *this;
 }

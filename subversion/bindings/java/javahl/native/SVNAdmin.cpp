@@ -526,7 +526,6 @@ void SVNAdmin::rmtxns(const char *path, Targets &transactions)
     for (i = 0; i < args->nelts; i++)
     {
         const char *txn_name = APR_ARRAY_IDX (args, i, const char *);
-        svn_error_t *err;
 
         /* Try to open the txn.  If that succeeds, try to abort it. */
         err = svn_fs_open_txn (&txn, fs, txn_name, transactionPool);

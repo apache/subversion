@@ -39,33 +39,33 @@ private:
     /**
      * initialize the class
      *
-     * @param path Path string
+     * @param pi_path Path string
      */
-    void init (const char * path);
+    void init (const char * pi_path);
 public:
     /**
      * Constructor that takes a string as parameter.
      * The string is converted to subversion internal
      * representation. The string is copied.
      *
-     * @param path Path string
+     * @param pi_path Path string
      */
-    Path (const std::string & path = "");
+    Path (const std::string & pi_path = "");
     
     /**
      * Constructor
      *
      * @see Path::Path (const std::string &)
-     * @param path Path string
+     * @param pi_path Path string
      */
-    Path (const char * path);
+    Path (const char * pi_path);
 
     /**
      * Copy constructor
      *
-     * @param path Path to be copied
+     * @param pi_path Path to be copied
      */
-    Path (const Path & path);
+    Path (const Path & pi_path);
 
     /**
      * Assignment operator
