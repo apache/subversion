@@ -1388,7 +1388,6 @@ A full URL to the latest version of the file in the repository.  Can be
 abbreviated as @samp{URL}.  The keyword substitution of @samp{$HeadURL$} will
 look something like
 @samp{$HeadURL: http://svn.collab.net/repos/trunk/README $}.
-@end table
 
 @item Id
 A compressed summary of the other keywords, for example:
