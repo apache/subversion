@@ -570,17 +570,18 @@ II.   INSTALLATION
       * Perl 5.8 or higher from http://www.activestate.com/
       * Neon 0.24.7 or higher, downloaded from
         http://www.webdav.org/neon/neon-0.24.7.tar.gz which is required
-        for building the client components.
+        for building the client components.  Neon is included in the zip file
+        distribution.
       * Berkeley DB is required for support for local server components,
         version 4.2.52 is available from
         http://subversion.tigris.org/servlets/ProjectDocumentList as
         db-4.2.52-win32.zip. For more information see Section I.5.
       * Apache 2 source, downloaded from
         http://httpd.apache.org/download.cgi, these instructions assume
-        version 2.0.49.
+        version 2.0.50.  Only needed for building the server dso modules.
       * Apache 2 msi install file, also from
         http://httpd.apache.org/download.cgi (required for running the
-        tests)
+        tests).  Only needed for testing the server dso modules.
       * ZLib 1.1.4 or higher (version 1.1.x) binaries
         http://www.winimage.com/zLibDll/zlib114dll.zip.
       * Openssl 0.9.7d or higher obtained from
@@ -593,23 +594,23 @@ II.   INSTALLATION
         libiconv-1.9.1.bin.woe32.zip from
         http://mirrors.kernel.org/gnu/gettext/ and
         http://mirrors.kernel.org/gnu/libiconv/.
-      * A Subversion client binary from http://subversion.tigris.org/ to
-        do the initial checkout of the Subversion source. See the section
-        "Bootstrapping from a Zip or Installer File under Windows" above
-        for more.
+      * Either a Subversion client binary from http://subversion.tigris.org/ to
+        do the initial checkout of the Subversion source or the zip file
+        source distribution. See the section "Bootstrapping from a Zip or
+        Installer File under Windows" above for more.
       * A means of unpacking the files.  The Subversion tar.gz file uses the
         POSIX.1 standard for file names which exceed 100 characters.  This
         format is not understood by all programs which claim to be able to
         unpack .tar.gz files.  Notable examples of this are WinZip and the
-        utilities which can be found at http://unxutils.sourceforge.net/. 
-        The version of tar at http://gnuwin32.sourceforge.net/ is derived from
-        GNU tar, so it can handle POSIX.1. However, it is *not* able to unpack
-        gzip files, neither is it able to pipe from gzip. Thus the unpacking
-        must be done in two steps if you are using that program.
-        Cygwin can unpack this file, however cygwin is a large package to
-        install such just to unpack the tarball on Windows.  The Subversion
-        project will be making source releases available in zip format so when
-        this is available use it in preference to the .tar.gz file.
+        utilities which can be found at http://unxutils.sourceforge.net/.  The
+        version of tar at http://gnuwin32.sourceforge.net/ is derived from GNU
+        tar, so it can handle POSIX.1. However, it is *not* able to unpack
+        gzip files, although it is able to read a pipe from gzip.  Cygwin can
+        unpack this file, however cygwin is a large package to install such
+        just to unpack the tarball on Windows.  To avoid these problems use
+        the Subversion zip file source distribution.  The other required
+        package which is packaged as a tar file (openssl) can be unpacked with
+        any of the utilities mentioned.
 
    E.2 Notes
 
@@ -631,9 +632,12 @@ II.   INSTALLATION
       This section describes how to unpack the files to make a build tree.
 
       * Make a directory SVN and cd into it.
-      * Checkout Subversion:
+      * Either checkout Subversion:
 
           svn co http://svn.collab.net/repos/svn/trunk/ src-trunk
+
+        or unpack the zip file distribution and rename the directory to
+        src-trunk.
 
       * Install Visual Studio 6. You either have to tell the installer to
         register environment variables or run VCVARS32.BAT before building
@@ -658,8 +662,11 @@ II.   INSTALLATION
 
       * Install Python and add it to your path
       * Install Perl
-      * Install Apache 2 using the msi file
-      * Extract neon into SVN\src-trunk\neon
+      * Install Apache 2 using the msi file if you are going to test the
+        server dso modules.
+      * If you checked out Subversion from the repository then extract neon
+        into SVN\src-trunk\neon, the zip file source distribution includes
+        neon.
       * Extract the Berkeley DB files into SVN\src-trunk\db4-win32. It's a
         good idea to add SVN\src-trunk\db4-win32\bin to your PATH, so that
         Subversion can find the Berkeley DB DLLs.
@@ -675,7 +682,8 @@ II.   INSTALLATION
         SVN\src-trunk\db4-win32\lib. Again, the DLLs should be somewhere in
         your path.
 
-      * Extract Apache source into SVN\http-2.0.49
+      * Extract Apache source into SVN\http-2.0.50 if you wish to build the
+        server dso modules.
       * Extract the pre-built zlib into SVN\zlib and copy
         SVN\zlib\static32\zlibstat.lib into SVN\zlib
       * Extract openssl into SVN\openssl-0.9.7d
@@ -692,7 +700,9 @@ II.   INSTALLATION
 
     To build the binaries either follow the instructions here or use
     build\win32\vc6-build.bat.in after editing it's default paths to match
-    yours and saving it as vc6-build.bat.
+    yours and saving it as vc6-build.bat.  The vc6-build.bat does a full build
+    so it requires Apache 2 source and if the tests are to be run the 
+    Apache 2 install.
 
     Start in the SVN directory you created.
 
@@ -704,7 +714,6 @@ II.   INSTALLATION
     C:>set PYTHONDIR=C:\Python22
     C:>set SDKINC=C:\Program Files\Microsoft SDK\include
     C:>set SDKLIB=C:\Program Files\Microsoft SDK\lib
-    C:>set APACHEDIR=C:\Program Files\Apache Group\Apache2
     C:>set GETTEXTINC=C:\SVN\gettext\include
     C:>set GETTEXTLIB=C:\SVN\gettext\lib
     C:>set GETTEXTBIN=C:\SVN\gettext\bin
@@ -725,20 +734,34 @@ II.   INSTALLATION
 
     Apache 2
 
-    C:>msdev httpd-2.0.49\apache.dsw /MAKE "BuildBin - Win32 Release"
+    This step is only required for building the server dso modules.
+
+    The Subversion gen-make.py script must be run before building Apache or
+    Apache and Subversion will be running incompatible versions of apr.
+
+    C:>cd src-%DIR%
+    C:>python gen-make.py -t dsp --with-httpd=..\httpd-2.0.50
+       --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7d
+       --with-zlib=..\zlib --enable-nls --enable-bdb-in-apr-util
+    C:>cd ..
+    C:>set APACHEDIR=C:\Program Files\Apache Group\Apache2
+    C:>msdev httpd-2.0.50\apache.dsw /MAKE "BuildBin - Win32 Release"
 
     Subversion
 
     Things to note:
 
       * If you don't want to build mod_dav_svn, omit the --with-httpd
-        option. In this case, you will have to tell the generator where
-        to find the APR libraries; the options are --with-apr,
-        --with-apr-util and --with-apr-iconv.
+        option.  The zip file source distribution contains apr, apr-util and
+        apr-iconv in the default build location. If you have downloaded the
+        apr files yourself you will have to tell the generator where to find
+        the APR libraries; the options are --with-apr, --with-apr-util and
+        --with-apr-iconv.
       * If you would like a debug build substitute Debug for Release in
         the msdev commands.
       * There have been rumors that Subversion on Win32 can be built
-        using the latest cygwin. ymmv.
+        using the latest cygwin, you probably don't want the zip file source
+        distribution though. ymmv.
       * The /USEENV switch to msdev makes it take notice of the INCLUDE and
         LIB environment variables, it also makes it ignore it's own lib and
         include settings so you need to have the Windows SDK lib and include
@@ -751,12 +774,21 @@ II.   INSTALLATION
       * If you are using Visual Studio .NET add -t vcproj to the gen-make.py
         command, you will also have to distribute the C runtime dll with the
         binaries.
-      * Apache must not be running or the copy of the modules will fail.
+      * If the server dso modules are being built and tested Apache must not
+        be running or the copy of the dso modules will fail.
 
     C:>cd src-%DIR%
-    C:>python gen-make.py -t dsp --with-httpd=..\httpd-2.0.49
-       --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7d
-       --with-zlib=..\zlib --enable-nls --enable-bdb-in-apr-util
+
+    If Apache 2 has been built and the server modules are required then
+    gen-make.py will already have been run. If the source is from the zip
+    file, Apache 2 has not been built so gen-make.py must be run:
+
+    C:>python gen-make.py -t dsp --with-berkeley-db=db4-win32
+        --with-openssl=..\openssl-0.9.7d --with-zlib=..\zlib --enable-nls
+        --enable-bdb-in-apr-util
+
+    Then build subversion:
+
     C:>msdev subversion_msvc.dsw /USEENV /MAKE "__ALL_TESTS__ - Win32 Release"
     C:>cd ..
 
@@ -777,11 +809,6 @@ II.   INSTALLATION
     C:>copy src-%DIR%\db4-win32\bin\libdb42.dll svn-win32-%VER%\bin
     C:>copy openssl-0.9.7d\out32dll\libeay32.dll svn-win32-%VER%\bin
     C:>copy openssl-0.9.7d\out32dll\ssleay32.dll svn-win32-%VER%\bin
-    C:>copy httpd-2.0.49\srclib\apr\Release\libapr.dll svn-win32-%VER%\bin
-    C:>copy httpd-2.0.49\srclib\apr-iconv\Release\libapriconv.dll
-       svn-win32-%VER%\bin
-    C:>copy httpd-2.0.49\srclib\apr-util\Release\libaprutil.dll
-       svn-win32-%VER%\bin
     C:>copy gettext\bin\intl.dll svn-win32-%VER%\bin
     C:>copy gettext\bin\iconv.dll svn-win32-%VER%\bin
     C:>copy src-%DIR%\Release\subversion\clients\cmdline\svn.exe
@@ -797,6 +824,24 @@ II.   INSTALLATION
     C:>copy src-%DIR%\Release\subversion\svnversion\svnversion.exe
        svn-win32-%VER%\bin
 
+    If Apache 2 and the server modules were built:
+
+    C:>copy httpd-2.0.50\srclib\apr\Release\libapr.dll svn-win32-%VER%\bin
+    C:>copy httpd-2.0.50\srclib\apr-iconv\Release\libapriconv.dll
+       svn-win32-%VER%\bin
+    C:>copy httpd-2.0.50\srclib\apr-util\Release\libaprutil.dll
+       svn-win32-%VER%\bin
+    C:>copy httpd-2.0.50\srclib\apr-iconv\Release\iconv\*.so
+       svn-win32-%VER%\iconv
+
+    If the source is from the zip file, Apache 2 has not been built and the
+    server modules are not required:
+
+    C:>copy src-%DIR%\apr\Release\libapr.dll svn-win32-%VER%\bin
+    C:>copy src-%DIR%\apr-iconv\Release\libapriconv.dll svn-win32-%VER%\bin
+    C:>copy src-%DIR%\apr-util\Release\libaprutil.dll svn-win32-%VER%\bin
+    C:>copy src-%DIR%\apr-iconv\Release\iconv\*.so svn-win32-%VER%\iconv
+
    E.6 Testing the Binaries
 
     The build process creates the binary test programs but it does not
@@ -806,7 +851,8 @@ II.   INSTALLATION
     C:>mkdir Release\subversion\tests\clients
     C:>xcopy /S /Y subversion\tests\clients Release\subversion\tests\clients
 
-    Copy the dso files into the Apache modules directory.
+    If the server dso modules  have been built then copy the dso files and
+    dlls into the Apache modules directory.
 
     C:>copy Release\subversion\mod_dav_svn\mod_dav_svn.so "%APACHEDIR%"\modules
     C:>copy Release\subversion\mod_authz_svn\mod_authz_svn.so
@@ -814,16 +860,21 @@ II.   INSTALLATION
     C:>copy svn-win32-%VER%\bin\intl.dll "%APACHEDIR%\bin"
     C:>copy svn-win32-%VER%\bin\iconv.dll "%APACHEDIR%\bin"
     C:>copy svn-win32-%VER%\bin\libdb42.dll "%APACHEDIR%\bin"
-    C:>copy httpd-2.0.49\srclib\apr-iconv\Release\iconv\*.so
-       svn-win32-%VER%\iconv
     C:>cd ..
 
     Put the svn-win32-trunk\bin directory at the start of your path so
     you run the newly built binaries and not another version you might
     have installed.
 
-    Configure Apache to use the mod_dav_svn and mod_authz_svn modules by
-    making sure these lines appear uncommented in httpd.conf:
+    Then run the client tests:
+
+    C:>PATH=%DRIVE%:\SVN\svn-win32-%VER%\bin;%PATH%
+    C:>cd src-%DIR%
+    C:>python win-tests.py -c -r -v
+
+    If the server dso modules were built configure Apache to use the
+    mod_dav_svn and mod_authz_svn modules by making sure these lines appear
+    uncommented in httpd.conf:
 
       LoadModule dav_module         modules/mod_dav.so
       LoadModule dav_fs_module      modules/mod_dav_fs.so
@@ -848,9 +899,6 @@ II.   INSTALLATION
 
     Then restart Apache and run the tests:
 
-    C:>PATH=%DRIVE%:\SVN\svn-win32-%VER%\bin;%PATH%
-    C:>cd src-%DIR%
-    C:>python win-tests.py -c -r -v
     C:>python win-tests.py -c -r -v -u http://localhost
     C:>cd ..
 

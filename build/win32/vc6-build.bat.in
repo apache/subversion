@@ -28,7 +28,7 @@ if not exist subversion goto wrongstartdir
 cd ..
 
 rem ====== Check the prerequisites are at least in the right place.
-if not exist httpd-2.0.49 goto httpderr
+if not exist httpd-2.0.50 goto httpderr
 if not exist nasm goto nasmerr
 if not exist openssl-0.9.7d goto opensslerr
 if not exist src-%DIR% goto svnerr
@@ -43,7 +43,7 @@ goto allok
 echo Unable to find %DRIVE%:\SVN\src-%DIR%\subversion
 goto theveryend
 :httpderr
-echo Unable to find httpd-2.0.49
+echo Unable to find httpd-2.0.50
 goto end
 :nasmerr
 echo Unable to find nasm
@@ -81,11 +81,11 @@ call ..\ms\test
 cd ..\..
 
 rem ====== Build Apache 2
-msdev httpd-2.0.49\apache.dsw /MAKE "BuildBin - Win32 Release"
+msdev httpd-2.0.50\apache.dsw /MAKE "BuildBin - Win32 Release"
 
 rem ====== Subversion
 cd src-%DIR%
-python gen-make.py -t dsp --with-httpd=..\httpd-2.0.49 --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7d --with-zlib=..\zlib --enable-nls --enable-bdb-in-apr-util
+python gen-make.py -t dsp --with-httpd=..\httpd-2.0.50 --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7d --with-zlib=..\zlib --enable-nls --enable-bdb-in-apr-util
 msdev subversion_msvc.dsw /USEENV /MAKE "__ALL_TESTS__ - Win32 Release"
 mkdir Release\subversion\tests\clients
 xcopy /S /Y subversion\tests\clients Release\subversion\tests\clients
@@ -101,9 +101,9 @@ mkdir svn-win32-%VER%\iconv
 copy src-%DIR%\db4-win32\bin\libdb42.dll svn-win32-%VER%\bin
 copy openssl-0.9.7d\out32dll\libeay32.dll svn-win32-%VER%\bin
 copy openssl-0.9.7d\out32dll\ssleay32.dll svn-win32-%VER%\bin
-copy httpd-2.0.49\srclib\apr\Release\libapr.dll svn-win32-%VER%\bin
-copy httpd-2.0.49\srclib\apr-iconv\Release\libapriconv.dll svn-win32-%VER%\bin
-copy httpd-2.0.49\srclib\apr-util\Release\libaprutil.dll svn-win32-%VER%\bin
+copy httpd-2.0.50\srclib\apr\Release\libapr.dll svn-win32-%VER%\bin
+copy httpd-2.0.50\srclib\apr-iconv\Release\libapriconv.dll svn-win32-%VER%\bin
+copy httpd-2.0.50\srclib\apr-util\Release\libaprutil.dll svn-win32-%VER%\bin
 copy gettext\bin\intl.dll svn-win32-%VER%\bin
 copy gettext\bin\iconv.dll svn-win32-%VER%\bin
 copy src-%DIR%\Release\subversion\clients\cmdline\svn.exe svn-win32-%VER%\bin
@@ -117,7 +117,7 @@ copy src-%DIR%\Release\subversion\mod_dav_svn\mod_dav_svn.so svn-win32-%VER%\htt
 copy svn-win32-%VER%\bin\intl.dll "%APACHEDIR%\bin"
 copy svn-win32-%VER%\bin\iconv.dll "%APACHEDIR%\bin"
 copy svn-win32-%VER%\bin\libdb42.dll "%APACHEDIR%\bin"
-copy httpd-2.0.49\srclib\apr-iconv\Release\iconv\*.so svn-win32-%VER%\iconv
+copy httpd-2.0.50\srclib\apr-iconv\Release\iconv\*.so svn-win32-%VER%\iconv
 
 rem ====== Configure Apache ready for doing tests.
 @echo off
