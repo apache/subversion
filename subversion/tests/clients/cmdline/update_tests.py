@@ -329,8 +329,8 @@ def update_missing(sbox):
 
   ### FIXME I think directories work because they generate 'A'
   ### feedback, is this the correct feedback?
-  svntest.main.remove_wc(E_path)
-  svntest.main.remove_wc(H_path)
+  svntest.main.safe_rmtree(E_path)
+  svntest.main.safe_rmtree(H_path)
 
   # Create expected output tree for an update of the missing items by name
   expected_output = svntest.wc.State(wc_dir, {

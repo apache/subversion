@@ -220,7 +220,7 @@ def status_type_change(sbox):
 
     # Now change the versioned dir that is obstructing the file into an
     # unversioned dir.
-    svntest.main.remove_wc('iota')
+    svntest.main.safe_rmtree('iota')
     os.mkdir('iota')
 
     stat_output, err_output = svntest.main.run_svn(None, 'status')
@@ -250,7 +250,7 @@ def status_type_change_to_symlink(sbox):
     # "broken" symlinks
     os.remove('iota')
     os.symlink('foo', 'iota')
-    svntest.main.remove_wc('A/D')
+    svntest.main.safe_rmtree('A/D')
     os.symlink('bar', 'A/D')
 
     stat_output, err_output = svntest.main.run_svn(None, 'status')
