@@ -34,38 +34,30 @@ struct edit_baton
 {
   apr_pool_t *pool;
 
-  /* Transaction associated with this edit.
-     This is zero until the driver calls replace_root.  */
-  svn_fs_txn_t *txn;
+  /* Supplied when the editor is created: */
 
-  /* The txn name.  This is just the cached result of applying
-     svn_fs_txn_name to TXN, above.
-     This is zero until the driver calls replace_root.  */
-  const char *txn_name;
-
-  /* The root directory of the transaction. */
-  svn_fs_root_t *root_p;
-
-
-
-  
-
-  /* Subversion file system.
-     Supplied by the user when we create the editor.  */
-  svn_fs_t *fs;
-
-  /* Existing revision number upon which this edit is based.
-     Supplied by the user when we create the editor.  */
-  svn_revnum_t base_rev;
-
-  /* Commit message for this commit.
-     Supplied by the user when we create the editor.  */
+  /* Commit message for this commit. */
   svn_string_t *log_msg;
 
-  /* Hook to run when when the commit is done. 
-     Supplied by the user when we create the editor.  */
+  /* Hook to run when when the commit is done. */
   svn_fs_commit_hook_t *hook;
   void *hook_baton;
+
+  /* The already-open svn filesystem to commit to. */
+  svn_fs_t *fs;
+
+  /* Location in fs where where the edit will begin. */
+  svn_revnum_t base_rev;
+  svn_string_t *base_path;
+
+  /* Created during the edit: */
+
+  /* svn transaction associated with this edit (created in replace_root). */
+  svn_fs_txn_t *txn;
+  const char *txn_name;
+
+  /* The object representing the root directory of the svn txn. */
+  svn_fs_root_t *root;
 
 };
 
@@ -74,170 +66,69 @@ struct dir_baton
 {
   struct edit_baton *edit_baton;
   struct dir_baton *parent;
-  svn_string_t *name;  /* just this entry, not full path */
 
-  /* The revision we should base differences against. */
-  svn_revnum_t base_rev;
+  svn_string_t *path;  /* the -absolute- path to this dir in the fs */
+  svn_string_t *name;  /* basename of the field above */
 
-  /* If non-null, base differences against this path at the
-     base_revision specified above.  Else if null, the path to this
-     node is implied.  (In the add_* editor calls, this var is called
-     ancestor_path; I'm not clear on which is a better name.)  */
-  svn_string_t *base_path;
-
-  /* This directory, guaranteed to be mutable. */
-  dag_node_t *node;
 };
 
 
 struct file_baton
 {
   struct dir_baton *parent;
-  svn_string_t *name;  /* just this entry, not full path */
 
-  /* The revision we should base differences against. */
-  svn_revnum_t base_rev;
+  svn_string_t *path;  /* the -absolute- path to this file in the fs */
+  svn_string_t *name;  /* basename of the field above */
 
-  /* If non-null, base differences against this path at the
-     base_revision specified above.  Else if null, the path to this
-     node is implied.  (In the add_* editor calls, this var is called
-     ancestor_path; I'm not clear on which is a better name.)  */
-  svn_string_t *base_path;
-
-  /* This file, guaranteed to be mutable. */
-  dag_node_t *node;
 };
 
 
 
-/*** Editor functions and their helpers. ***/
-
-/* Helper for replace_root. */
-static svn_error_t *
-txn_body_clone_root (void *dir_baton, trail_t *trail)
-{
-  struct dir_baton *dirb = dir_baton;
-
-  SVN_ERR (svn_fs__dag_clone_root (&(dirb->node),
-                                   dirb->edit_baton->fs,
-                                   dirb->edit_baton->txn_name,
-                                   trail));
-
-  return SVN_NO_ERROR;
-}
-
+/*** Editor functions ***/
 
 static svn_error_t *
-replace_root (void *edit_baton, svn_revnum_t base_revision, void **root_baton)
+replace_root (void *edit_baton,
+              svn_revnum_t base_revision,
+              void **root_baton)
 {
   /* kff todo: figure out breaking into subpools soon */
   struct edit_baton *eb = edit_baton;
   struct dir_baton *dirb = apr_pcalloc (eb->pool, sizeof (*dirb));
 
-  /* Begin a transaction. */
+  /* Begin a -subversion- transaction, cache its name, and get its
+     root object. */
   SVN_ERR (svn_fs_begin_txn (&(eb->txn), eb->fs, eb->base_rev, eb->pool));
-
-  /* Cache the transaction's name. */
   SVN_ERR (svn_fs_txn_name (&(eb->txn_name), eb->txn, eb->pool));
+  SVN_ERR (svn_fs_txn_root (&(dirb->root), eb->txn, eb->pool));
   
-  /* What don't we do?
-   * 
-   * What we don't do is start a single Berkeley DB transaction here,
-   * keep it open throughout the entire edit, and then call
-   * txn_commit() inside close_edit().  That would result in writers
-   * interfering with writers unnecessarily.
-   * 
-   * Instead, we take small steps.  As the driver calls editing
-   * functions to build the new tree from the old one, we clone each
-   * node that is changed, using a separate Berkeley DB transaction
-   * for each cloning.  When it's time to commit, we'll walk those
-   * nodes (it doesn't matter in what order), looking for
-   * irreconcileable conflicts but otherwise merging changes from
-   * revisions committed since we started work into our transaction.
-   * 
-   * When our private tree is all in order, we lock a revision and
-   * walk again, making sure the final merge states are sane.  Then we
-   * mark them all as immutable and hook in the new root.
-   */
-
-  /* Set up the root directory baton, the last step of which is to get
-     a new root directory for this txn, cloned from the root dir of
-     the txn's base revision. */
+  /* Finish filling out the root dir baton. */
   dirb->edit_baton = edit_baton;
   dirb->parent = NULL;
-  dirb->name = svn_string_create ("", eb->pool);
-  dirb->base_rev = eb->base_rev;
-  SVN_ERR (svn_fs__retry_txn (eb->fs, txn_body_clone_root, dirb, eb->pool));
-
-  /* kff todo: If there was any error, this transaction will have to
-     be cleaned up, including removing its nodes from the nodes
-     table. */
-
+  dirb->base_path = svn_string_dup (eb->base_path, eb->pool);
+  /* ben todo:  do we really need a dirb->name field? */
+ 
   *root_baton = dirb;
   return SVN_NO_ERROR;
 }
 
 
-/* Helper for delete_node and delete_entry. */
-struct delete_args
-{
-  struct dir_baton *parent;
-  svn_string_t *name;
-};
-
-
-/* Helper for delete_entry. */
-static svn_error_t *
-txn_body_delete (void *del_baton, trail_t *trail)
-{
-  struct delete_args *del_args = del_baton;
-
-  SVN_ERR (svn_fs__dag_delete (del_args->parent->node,
-                               del_args->name->data,
-                               trail));
-
-  return SVN_NO_ERROR;
-}
-
 
 static svn_error_t *
-delete_entry (svn_string_t *name, void *parent_baton)
+delete_entry (svn_string_t *name,
+              void *parent_baton)
 {
-  struct dir_baton *dirb = parent_baton;
+  struct dir_baton *parent = parent_baton;
   struct edit_baton *eb = dirb->edit_baton;
-  struct delete_args del_args;
-  
-  del_args.parent = dirb;
-  del_args.name   = name;
-  
-  SVN_ERR (svn_fs__retry_txn (eb->fs, txn_body_delete, &del_args, eb->pool));
+
+  svn_string_t *path_to_kill = svn_string_dup (parent->path, eb->pool);
+  svn_string_append (path_to_kill, name);
+
+  SVN_ERR (svn_fs_delete (eb->root, path_to_kill, eb->pool));
 
   return SVN_NO_ERROR;
 }
 
 
-/* Helper for addition and replacement of files and directories. */
-struct add_repl_args
-{
-  struct dir_baton *parent;  /* parent in which we're adding|replacing */
-  svn_string_t *name;        /* name of what we're adding|replacing */
-  dag_node_t *new_node;      /* what we added|replaced */
-};
-
-
-/* Helper for add_directory. */
-static svn_error_t *
-txn_body_add_directory (void *add_baton, trail_t *trail)
-{
-  struct add_repl_args *add_args = add_baton;
-  
-  SVN_ERR (svn_fs__dag_make_dir (&(add_args->new_node),
-                                 add_args->parent->node,
-                                 add_args->name->data,
-                                 trail));
-
-  return SVN_NO_ERROR;
-}
 
 
 static svn_error_t *
@@ -271,30 +162,6 @@ add_directory (svn_string_t *name,
   return SVN_NO_ERROR;
 }
 
-
-static svn_error_t *
-txn_body_replace_directory (void *rargs, trail_t *trail)
-{
-  struct add_repl_args *repl_args = rargs;
-
-  SVN_ERR (svn_fs__dag_clone_child (&(repl_args->new_node),
-                                    repl_args->parent->node,
-                                    repl_args->name->data,
-                                    trail));
-
-  if (! svn_fs__dag_is_directory (repl_args->new_node))
-    {
-      return svn_error_createf (SVN_ERR_FS_NOT_DIRECTORY,
-                                0,
-                                NULL,
-                                trail->pool,
-                                "trying to replace directory, but %s "
-                                "is not a directory",
-                                repl_args->name->data);
-    }
-
-  return SVN_NO_ERROR;
-}
 
 
 static svn_error_t *
@@ -330,17 +197,7 @@ replace_directory (svn_string_t *name,
 static svn_error_t *
 close_directory (void *dir_baton)
 {
-  /* One might be tempted to make this function mark the directory as
-     immutable; that way, if the traversal order is violated somehow,
-     we'll get an error the second time we visit the directory.
 
-     However, that would be incorrect --- the node must remain
-     mutable, since we may have to merge changes into it before we can
-     commit the transaction.  
-
-     Thank you, Jim, for adding that second paragraph. :-)  Well, I
-     can't think of anything for close_directory to do.  Is it really
-     a no-op?  How delightfully demulcent. */
 
   return SVN_NO_ERROR;
 }
@@ -349,54 +206,10 @@ close_directory (void *dir_baton)
 static svn_error_t *
 close_file (void *file_baton)
 {
-  /* This function could mark the file as immutable, since even the
-     final pre-commit merge doesn't touch file contents.  (See the
-     comment above in `close_directory'.)  */
-  return SVN_NO_ERROR;
-}
-
-
-/* Helper for txn_body_get_base_contents and txn_body_handle_window. */
-struct handle_txdelta_args
-{
-  struct file_baton *fb;
-  dag_node_t *base_node;
-};
-
-
-/* Helper for apply_txdelta, and indirectly for window_handler. */
-static svn_error_t *
-txn_body_get_base_contents (void *args, trail_t *trail)
-{
-#if 0
-  struct handle_txdelta_args *txdelta_args = args;
-
-  /* Make txdelta_args->base_node be a dag_node_t for the immutable
-     base node ancestral to the file-in-progress. */
-#endif /* 0 */
 
   return SVN_NO_ERROR;
 }
 
-
-/* Helper for window_handler. */
-static svn_error_t *
-txn_body_handle_window (void *handler_baton, trail_t *trail)
-{
-#if 0
-  struct handlle_txdelta_args *txdelta_args = handler_baton;
-
-  /* Accumulate more and more of the new contents as each window is
-   * received, patching txdelta_args->fb->node based on
-   * txdelta_args->base_node's contents.
-   *
-   * When receive the null window, write out txdelta_args->fb->node to
-   * the database.
-   */
-#endif /* 0 */
-
-  return SVN_NO_ERROR;
-}
 
 
 static svn_error_t *
@@ -438,19 +251,6 @@ apply_textdelta (void *file_baton,
 }
 
 
-/* Helper for add_file. */
-static svn_error_t *
-txn_body_add_file (void *add_baton, trail_t *trail)
-{
-  struct add_repl_args *add_args = add_baton;
-
-  SVN_ERR (svn_fs__dag_make_file (&(add_args->new_node),
-                                  add_args->parent->node,
-                                  add_args->name->data,
-                                  trail));
-
-  return SVN_NO_ERROR;
-}
 
 
 static svn_error_t *
@@ -664,8 +464,38 @@ close_edit (void *edit_baton)
 {
   struct edit_baton *eb = edit_baton;
   svn_revnum_t new_revision = SVN_INVALID_REVNUM;
+  svn_error_t *err;
 
-  SVN_ERR (svn_fs_commit_txn (&new_revision, eb->txn));
+  err = svn_fs_commit_txn (&new_revision, eb->txn);
+  if (err)
+    {
+      /* If the commit failed, it's *probably* due to an out-of-date
+         conflict.  Now, the filesystem gives us the ability to
+         continue diddling the transaction and try again; but let's
+         face it: that's not how the cvs or svn works from a suser
+         interface standpoint.  Thus we don't make use of this fs
+         feature (for now, at least.)
+
+         So, in a nutshell: svn commits are an all-or-nothing deal.
+         Each commit creates a new fs txn which either succeeds or is
+         aborted completely.  No second chances.  :) */
+
+      SVN_ERR (svn_fs_abort_txn (eb->txn));
+    }
+
+  /* The commit succeeded.  Save the log message as a property of the
+     new revision.
+
+     TODO:  What if we crash right at this line?  We'd have a new
+     revision with no log message.  In the future, we need to make the
+     log message part of the same db txn that executes within
+     svn_fs_commit_txn -- probably by passing it right in.  */
+  SVN_ERR (svn_fs_change_rev_prop (eb->fs, new_revision,
+                                   svn_string_create (SVN_PROP_REVISION_LOG,
+                                                      eb->pool),
+                                   eb->log_msg, eb->pool));
+
+  /* Pass the new revision number to the caller's hook. */
   SVN_ERR ((*eb->hook) (new_revision, eb->hook_baton));
 
   return SVN_NO_ERROR;
@@ -680,6 +510,7 @@ svn_fs_get_editor (svn_delta_edit_fns_t **editor,
                    void **edit_baton,
                    svn_fs_t *fs,
                    svn_revnum_t base_revision,
+                   svn_string_t *base_path,
                    svn_string_t *log_msg,
                    svn_fs_commit_hook_t *hook,
                    void *hook_baton,
@@ -709,6 +540,7 @@ svn_fs_get_editor (svn_delta_edit_fns_t **editor,
   eb->hook = hook;
   eb->hook_baton = hook_baton;
   eb->base_rev = base_revision;
+  eb->base_path = svn_string_dup (base_path, subpool);
 
   *edit_baton = eb;
   *editor = e;
