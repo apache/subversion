@@ -123,6 +123,22 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                                     self.dblibname)
     self.envvars["$(SVN_DB_LIBS)"] = [self.dblibname]
 
+    # Find the right perl library name to link swig bindings with
+    fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
+                  'print "$Config{revision}$Config{patchlevel}"'), 'r')
+    try:
+      num = fp.readline()
+      if num:
+        self.perl_lib = 'perl' + string.rstrip(num) + '.lib'
+        sys.stderr.write('Found installed perl version number. Perl bindings\n'
+                         '  will be linked with %s\n' % self.perl_lib)
+      else:
+        self.perl_lib = 'perl56.lib'
+        sys.stderr.write('Could not detect perl version. Perl bindings will\n'
+                         '  be linked with %s\n' % self.perl_lib)
+    finally:
+      fp.close()
+
     #Make some files for the installer so that we don't need to require sed or some other command to do it
     ### GJS: don't do this right now
     if 0:
@@ -500,12 +516,15 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       return libs
 
     if isinstance(target, gen_base.SWIGLibrary):
-      return [ self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib'),
+      libs = [ self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib'),
                'mswsock.lib',
                'ws2_32.lib',
                'advapi32.lib',
                'rpcrt4.lib',
                'shfolder.lib' ]
+      if target.lang == 'perl':
+        libs.append(self.perl_lib)
+      return libs
 
     if not isinstance(target, gen_base.TargetExe):
       return []
@@ -591,3 +610,11 @@ class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
   def __init__(self, **kw):
     vars(self).update(kw)
+
+if sys.platform == "win32":
+  def escape_shell_arg(str):
+    return '"' + string.replace(str, '"', '"^""') + '"'
+else:
+  def escape_shell_arg(str):
+    return "'" + string.replace(str, "'", "'\\''") + "'"
+
