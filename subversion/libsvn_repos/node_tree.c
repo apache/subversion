@@ -297,7 +297,7 @@ apply_textdelta (void *file_baton,
 {
   struct node_baton *fb = file_baton;
   fb->node->text_mod = TRUE;
-  *handler = svn_delta_null_window_handler;
+  *handler = svn_delta_noop_window_handler;
   *handler_baton = NULL;
   return SVN_NO_ERROR;
 }

@@ -745,7 +745,7 @@ svn_delta_editor_t *svn_delta_default_editor (apr_pool_t *pool);
  * Editors can return this handler from apply_textdelta if they don't
  * care about text delta windows.
  */
-svn_error_t *svn_delta_null_window_handler (svn_txdelta_window_t *window,
+svn_error_t *svn_delta_noop_window_handler (svn_txdelta_window_t *window,
                                             void *baton);
 
 /** Return a cancellation editor that wraps @a wrapped_editor.
