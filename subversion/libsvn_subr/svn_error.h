@@ -49,8 +49,8 @@
 
 
 
-#ifndef __SVN_ERROR_H__
-#define __SVN_ERROR_H__
+#ifndef SVN_ERROR_H
+#define SVN_ERROR_H
 
 
 #include <svn_types.h>
@@ -144,7 +144,7 @@ void svn_handle_error (svn_error_t *error, FILE *stream);
 void svn_handle_warning (void *data, char *fmt, ...);
 
 
-#endif   /* __SVN_ERROR_H__ */
+#endif   /* SVN_ERROR_H */
 
 
 /* 
