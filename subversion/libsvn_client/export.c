@@ -181,7 +181,6 @@ svn_client_export (const char *from,
                                     to,
                                     revision,
                                     TRUE,
-                                    NULL,
                                     pool));
 
       /* walk over the wc and remove the administrative directories. */

@@ -369,7 +369,6 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                 path,
                 &(new_item->revision),
                 TRUE, /* recurse */
-                NULL,
                 ib->pool));
     }
   else if (! new_item)
@@ -427,7 +426,6 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                 path,
                 &(new_item->revision),
                 TRUE, /* recurse */
-                NULL,
                 ib->pool));
     }
   else if (ib->update_unchanged)
@@ -450,7 +448,6 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
       /* Try an update, but if no such dir, then check out instead. */
       err = svn_client_update (ib->auth_baton,
                                path,
-                               NULL,
                                &(new_item->revision),
                                TRUE, /* recurse */
                                ib->notify_func, ib->notify_baton,
@@ -477,7 +474,6 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                     path,
                     &(new_item->revision),
                     TRUE, /* recurse */
-                    NULL,
                     ib->pool));
         }
       else if (err)
