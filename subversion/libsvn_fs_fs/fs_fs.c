@@ -2261,7 +2261,6 @@ svn_fs_fs__get_txn (transaction_t **txn_p,
   svn_fs_id_t *root_id;
 
   txn = apr_pcalloc (pool, sizeof (*txn));
-  txn->revision = SVN_INVALID_REVNUM;
   txn->proplist = apr_hash_make (pool);
 
   SVN_ERR (get_txn_proplist (txn->proplist, fs, txn_id, pool));
