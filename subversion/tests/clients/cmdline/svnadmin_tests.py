@@ -107,8 +107,8 @@ def test_youngest():
   svntest.main.file_append (rho_path, 'new appended text for rho')
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [mu_path, None, {}, {'verb' : 'Changing' }],
-                  [rho_path, None, {}, {'verb' : 'Changing' }] ]
+  output_list = [ [mu_path, None, {}, {'verb' : 'Sending' }],
+                  [rho_path, None, {}, {'verb' : 'Sending' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree; all local revisions should be at 1,
@@ -213,8 +213,8 @@ def list_revs():
   svntest.main.file_append (rho_path, 'new appended text for rho')
 
   # Created expected output tree for 'svn ci'
-  output_list = [ [mu_path, None, {}, {'verb' : 'Changing' }],
-                  [rho_path, None, {}, {'verb' : 'Changing' }] ]
+  output_list = [ [mu_path, None, {}, {'verb' : 'Sending' }],
+                  [rho_path, None, {}, {'verb' : 'Sending' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Create expected status tree; all local revisions should be at 1,

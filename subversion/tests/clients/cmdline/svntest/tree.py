@@ -456,13 +456,16 @@ def build_tree_from_checkout(lines):
 def build_tree_from_commit(lines):
   "Return a tree derived by parsing the output LINES from 'ci' or 'im'."
 
+  # Lines typically have a verb followed by whitespace then a path.
+  # However, a special case exists: the verb "Added" might be followed
+  # by whitespace, "(bin)", more whitespace, and then the path.
   root = SVNTreeNode(root_node_name)
-  rm = re.compile ('^(\w+)\s+(.+)')
+  rm = re.compile ('^(\w+)\s+(\(bin\))*\s+(.+)')
   
   for line in lines:
     match = rm.search(line)
     if match and match.groups():
-      new_branch = create_from_path(match.group(2), None, {},
+      new_branch = create_from_path(match.group(3), None, {},
                                     {'verb' : match.group(1)})
       root.add_child(new_branch)
 

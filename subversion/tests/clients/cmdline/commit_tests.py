@@ -178,7 +178,7 @@ def commit_one_file():
 
   # Create expected output tree.
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega') 
-  output_list = [ [omega_path, None, {}, {'verb' : 'Changing' }] ]
+  output_list = [ [omega_path, None, {}, {'verb' : 'Sending' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   # Created expected status tree.
@@ -222,12 +222,12 @@ def commit_inclusive_dir():
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   
-  output_list = [ [D_path, None, {}, {'verb' : 'Changing' }],
-                  [pi_path, None, {}, {'verb' : 'Changing'}],
+  output_list = [ [D_path, None, {}, {'verb' : 'Sending' }],
+                  [pi_path, None, {}, {'verb' : 'Sending'}],
                   [rho_path, None, {}, {'verb' : 'Deleting'}],
                   [gloo_path, None, {}, {'verb' : 'Adding'}],
                   [chi_path, None, {}, {'verb' : 'Replacing'}], # stacked!
-                  [omega_path, None, {}, {'verb' : 'Changing'}],
+                  [omega_path, None, {}, {'verb' : 'Sending'}],
                   [gamma_path, None, {}, {'verb' : 'Deleting'}] ]
                   
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
@@ -286,19 +286,19 @@ def commit_top_dir():
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   
-  output_list = [ [top_path, None, {}, {'verb' : 'Changing'}],
+  output_list = [ [top_path, None, {}, {'verb' : 'Sending'}],
                   [Q_path, None, {}, {'verb' : 'Adding'}],
                   [floo_path, None, {}, {'verb' : 'Adding'}],
                   [E_path, None, {}, {'verb' : 'Replacing'}],
                   [bloo_path, None, {}, {'verb' : 'Adding'}],
-                  [lambda_path, None, {}, {'verb' : 'Changing'}],
+                  [lambda_path, None, {}, {'verb' : 'Sending'}],
                   [C_path, None, {}, {'verb' : 'Deleting'}],                  
-                  [D_path, None, {}, {'verb' : 'Changing' }],
-                  [pi_path, None, {}, {'verb' : 'Changing'}],
+                  [D_path, None, {}, {'verb' : 'Sending' }],
+                  [pi_path, None, {}, {'verb' : 'Sending'}],
                   [rho_path, None, {}, {'verb' : 'Deleting'}],
                   [gloo_path, None, {}, {'verb' : 'Adding'}],
                   [chi_path, None, {}, {'verb' : 'Replacing'}], # stacked!
-                  [omega_path, None, {}, {'verb' : 'Changing'}],
+                  [omega_path, None, {}, {'verb' : 'Sending'}],
                   [gamma_path, None, {}, {'verb' : 'Deleting'}] ]
                   
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
