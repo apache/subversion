@@ -1328,15 +1328,15 @@ svn_wc__adm_destroy (svn_stringbuf_t *path, apr_pool_t *pool)
   /* Well, I think the coast is clear for blowing away this directory
      (which should also remove the lock file we created above) */
   {
-    apr_status_t apr_err;
+    svn_error_t *err;
     svn_stringbuf_t *adm_path = svn_stringbuf_dup (path, pool);
 
     svn_path_add_component (adm_path, svn_wc__adm_subdir (pool));
 
-    apr_err = apr_dir_remove_recursively (adm_path->data, pool);
-    if (apr_err)
-      return svn_error_createf 
-        (apr_err, 0, NULL, pool,
+    err = svn_io_remove_dir (adm_path->data, pool);
+    if (err)
+      return svn_error_createf
+        (err->apr_err, err->src_err, err, err->pool,
          "error removing administrative directory for %s",
          path->data);
   }
@@ -1349,7 +1349,7 @@ svn_wc__adm_cleanup_tmp_area (svn_stringbuf_t *path, apr_pool_t *pool)
 {
   svn_boolean_t was_locked;
   svn_stringbuf_t *tmp_path;
-  apr_status_t apr_err;
+  svn_error_t *err;
 
   /* Lock the admin area if it's not already locked. */
   SVN_ERR (svn_wc_locked (&was_locked, path, pool));
@@ -1359,10 +1359,11 @@ svn_wc__adm_cleanup_tmp_area (svn_stringbuf_t *path, apr_pool_t *pool)
   /* Get the path to the tmp area, and blow it away. */
   tmp_path = svn_stringbuf_dup (path, pool);
   extend_with_adm_name (tmp_path, NULL, 0, pool, SVN_WC__ADM_TMP, NULL);
-  apr_err = apr_dir_remove_recursively (tmp_path->data, pool);
-  if (apr_err)
-    return svn_error_createf 
-      (apr_err, 0, NULL, pool,
+
+  err = svn_io_remove_dir (tmp_path->data, pool);
+  if (err)
+    return svn_error_createf
+      (err->apr_err, err->src_err, err, err->pool,
        "error removing tmp area in administrative directory for %s",
        path->data);
 

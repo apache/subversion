@@ -75,7 +75,7 @@ installed APU, nor an APR-util build directory.])
       apu_config="apu-config"
     else
       dnl look in the some standard places (apparently not in builtin/default)
-      for lookdir in /usr /usr/local /opt/apr ; do
+      for lookdir in /usr /usr/local /opt/apr /usr/local/apache2 ; do
         if test -x "$lookdir/bin/apu-config"; then
           apu_found="yes"
           apu_config="$lookdir/bin/apu-config"

@@ -339,7 +339,7 @@ svn_error_t *svn_string_from_aprfile (svn_stringbuf_t **result,
 svn_error_t *svn_io_remove_file (const char *path, apr_pool_t *pool);
 
 /* Recursively remove directory PATH. */
-apr_status_t apr_dir_remove_recursively (const char *path, apr_pool_t *pool);
+svn_error_t *svn_io_remove_dir (const char *path, apr_pool_t *pool);
 
 
 /* Read all of the disk entries in directory PATH.  Return a DIRENTS

@@ -689,17 +689,13 @@ svn_error_t *
 svn_repos_delete (const char *path, 
                   apr_pool_t *pool)
 {
-  apr_status_t apr_err;
   const char *db_path = apr_psprintf (pool, "%s/%s", path, SVN_REPOS__DB_DIR);
 
   /* Delete the Berkeley environment... */
   SVN_ERR (svn_fs_delete_berkeley (db_path, pool));
 
   /* ...then blow away everything else.  */
-  apr_err = apr_dir_remove_recursively (path, pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    return svn_error_createf (apr_err, 0, 0, pool,
-                              "recursively removing `%s'", path);
+  SVN_ERR (svn_io_remove_dir (path, pool));
 
   return SVN_NO_ERROR;
 }
