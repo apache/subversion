@@ -38,6 +38,11 @@ This is a tentative update - further refinement will follow
 
 Shamim Islam
 BA BS
+
+Report any problems in this directory to me on the developers list
+or the users mailing list. I check these frequently.
+
+My email on both these lists is files@poetryunlimited.com.
 -----------------------------------------------------------------------
 Note: When I built the new RPMs - after some time having not built any -
 the svn binary that was produced was linked to libsvn_auth. That library
