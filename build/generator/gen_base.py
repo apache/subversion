@@ -82,9 +82,6 @@ class GeneratorBase:
       ### certainly don't want the targets looking at the parser...
       target_ob.add_deps = parser.get(target, 'add-deps')
 
-      # find all the sources involved in building this target
-      target_ob.find_sources(parser.get(target, 'sources'))
-
       ### another hack for now. tell a SWIG target what libraries should
       ### be linked into each wrapper. this also depends on the fact that
       ### the swig libraries occur *after* the other targets in build.conf
@@ -92,8 +89,9 @@ class GeneratorBase:
       if type == 'swig':
         target_ob.libs = self._find_libs(parser.get(target, 'libs'))
 
-      # the target should add all relevant dependencies
-      target_ob.add_dependencies(self.graph)
+      # the target should add all relevant dependencies onto the
+      # specified sources
+      target_ob.add_dependencies(parser.get(target, 'sources'), self.graph)
 
       self.manpages.extend(string.split(parser.get(target, 'manpages')))
       self.infopages.extend(string.split(parser.get(target, 'infopages')))
@@ -343,33 +341,9 @@ class Target:
     # default output name; subclasses can/should change this
     self.output = os.path.join(path, name)
 
-  def find_sources(self, patterns):
-    if not patterns:
-      try:
-        patterns = self.default_sources
-      except AttributeError:
-        raise GenError('Class "%s" has no default sources'
-                       % self.__class__.__name__)
-    self._sources = _collect_paths(patterns, self.path)
-    self._sources.sort()
-
-  def add_dependencies(self, graph):
-    # the specified install area depends upon this target
-    graph.add(DT_INSTALL, self.install, self)
-
-    for src in self._sources:
-      if src[-2:] == '.c':
-        objname = src[:-2] + self.objext
-
-        ofile = self.object_cls(objname)
-
-        # object depends upon source
-        graph.add(DT_OBJECT, ofile, src)
-
-        # target (a linked item) depends upon object
-        graph.add(DT_LINK, self.name, ofile)
-      else:
-        raise GenError('ERROR: unknown file extension on ' + src)
+  def add_dependencies(self, src_patterns, graph):
+    # subclasses should override to provide behavior, as appropriate
+    pass
 
   def __cmp__(self, ob):
     if isinstance(ob, Target):
@@ -385,6 +359,35 @@ class TargetLinked(Target):
   ### hmm. this is Makefile-specific
   link_cmd = '$(LINK)'
 
+  def add_dependencies(self, src_patterns, graph):
+    # the specified install area depends upon this target
+    graph.add(DT_INSTALL, self.install, self)
+
+    for src in self._get_sources(src_patterns):
+      if src[-2:] != '.c':
+        raise GenError('ERROR: unknown file extension on ' + src)
+
+      objname = src[:-2] + self.objext
+
+      ofile = self.object_cls(objname)
+
+      # object depends upon source
+      graph.add(DT_OBJECT, ofile, src)
+
+      # target (a linked item) depends upon object
+      graph.add(DT_LINK, self.name, ofile)
+
+  def _get_sources(self, src_patterns):
+    if not src_patterns:
+      try:
+        src_patterns = self.default_sources
+      except AttributeError:
+        raise GenError('Class "%s" has no default sources'
+                       % self.__class__.__name__)
+    sources = _collect_paths(src_patterns, self.path)
+    sources.sort()
+    return sources
+
 class TargetExe(TargetLinked):
   default_install = 'bin'
   default_sources = '*.c'
@@ -399,15 +402,11 @@ class TargetScript(Target):
   default_install = 'bin'
   # no default_sources
 
-  def find_sources(self, patterns):
-    # Script "sources" are actually final targets, which means they may be
-    # generated, which means they are not available the time this program
-    # is run. Therefore, we have no work to do in find_sources().
-    pass
-
-  def add_dependencies(self, graph):
+  def add_dependencies(self, src_patterns, graph):
     # we don't need to "compile" the sources, so there are no dependencies
     # to add here, except to get the script installed in the proper area.
+    # note that the script might itself be generated, but that isn't a
+    # concern here.
     graph.add(DT_INSTALL, self.install, self)
 
 class TargetLib(TargetLinked):
@@ -447,25 +446,29 @@ class TargetSWIG(Target):
   def __init__(self, name, path, install, custom, cfg, extmap):
     Target.__init__(self, name, path, install, custom, cfg, extmap)
 
-    self.objext = extmap['lib', 'object']
-    self.libext = extmap['lib', 'target']
+    self._objext = extmap['lib', 'object']
+    self._libext = extmap['lib', 'target']
 
-  def add_dependencies(self, graph):
+  def add_dependencies(self, src_patterns, graph):
+    assert src_patterns, "source(s) must be specified explicitly"
+
+    sources = _collect_paths(src_patterns, self.path)
+
     ### simple assertions for now
-    assert len(self._sources) == 1
+    assert len(sources) == 1
 
-    ifile = self._sources[0]
+    ifile = sources[0]
     assert ifile[-2:] == '.i'
 
     dir, iname = os.path.split(ifile)
     cname = iname[:-2] + '.c'
-    oname = iname[:-2] + self.objext
+    oname = iname[:-2] + self._objext
 
     ### we should really extract the %module line
     if iname[:4] == 'svn_':
-      libname = iname[3:-2] + self.libext
+      libname = iname[3:-2] + self._libext
     else:
-      libname = '_' + iname[:-2] + self.libext
+      libname = '_' + iname[:-2] + self._libext
 
     for lang in self.cfg.swig_lang:
       abbrev = lang_abbrev[lang]
@@ -499,32 +502,24 @@ class TargetSWIG(Target):
       # the specified install area depends upon the library
       graph.add(DT_INSTALL, self.install + '-' + abbrev, library)
 
-class TargetProject(TargetLinked):
+### I don't think this should be TargetLinked, but 'apr' uses the 'libs'
+### option, which means we need to make this TargetLinked so that the
+### GeneratorBase.__init__ method will process libs on this target.
+### so... there is a bit more thought to apply
+class TargetSpecial(TargetLinked):
+  def add_dependencies(self, src_patterns, graph):
+    # we have no dependencies since this is built externally
+    pass
+
+class TargetProject(TargetSpecial):
   default_install = 'project'
-  def find_sources(self, patterns):
-    # We don't use sources
-    pass
-  def add_dependencies(self, graph):
-    # We don't use dependencies
-    pass
 
-class TargetExternal(TargetLinked):
+class TargetExternal(TargetSpecial):
   default_install = 'external'
-  def find_sources(self, patterns):
-    # We don't use sources
-    pass
-  def add_dependencies(self, graph):
-    # We don't use dependencies
-    pass
 
-class TargetUtility(TargetLinked):
+class TargetUtility(TargetSpecial):
   default_install = 'utility'
-  def find_sources(self, patterns):
-    # We don't use sources
-    pass
-  def add_dependencies(self, graph):
-    # We don't use dependencies
-    pass
+
 
 _build_types = {
   'exe' : TargetExe,
