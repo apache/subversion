@@ -2017,7 +2017,10 @@ umask 002
             it lives in <literal>$PATH</literal>) is actually a
             wrapper script which sets <command>umask 002</command> and
             executes the real <command>svnserve</command>
-            binary.</para>
+            binary.  Take similar measures when using
+            <command>svnlook</command> and
+            <command>svnadmin</command>.  Either run them with a sane
+            umask, or wrap them as described above.</para>
         </listitem>
 
         <listitem>
