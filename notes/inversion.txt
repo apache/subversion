@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.35 $ of this document.)
+              ($Revision: 1.36 $ of this document.)
 
 * Introduction
 
@@ -962,7 +962,7 @@ foo:
 
 
 This "line-of-ancestry copying" looks a lot more expensive than it
-actually is.  Remember that this example project consists mostly of
+really is.  Remember that this example project consists mostly of
 directories, but a real project is mostly files, whose nodes never
 need to be copied except when they change.  And directory nodes only
 need to be copied the first time one of their descendents changes --
