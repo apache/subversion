@@ -155,8 +155,9 @@ svn_client__get_auto_props (apr_hash_t **properties,
   autoprops.mimetype = NULL;
   autoprops.have_executable = FALSE;
   *properties = autoprops.properties;
-  cfg = apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
-                      APR_HASH_KEY_STRING);
+
+  cfg = ctx->config ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
+                                    APR_HASH_KEY_STRING) : NULL;
 
   /* check that auto props is enabled */
   SVN_ERR (svn_config_get_bool (cfg, &use_autoprops,
