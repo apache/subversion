@@ -16,6 +16,7 @@
 
 #include <httpd.h>
 #include <mod_dav.h>
+#include <apr_tables.h>
 
 #include "dav_svn.h"
 
@@ -50,6 +51,9 @@ static dav_error *dav_svn_vsn_control(dav_resource *resource,
 }
 
 static dav_error *dav_svn_checkout(dav_resource *resource,
+                                   int is_unreserved, int is_fork_ok,
+                                   int create_activity,
+                                   apr_array_header_t *activities,
                                    dav_resource **working_resource)
 {
   return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
