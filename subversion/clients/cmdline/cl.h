@@ -229,7 +229,7 @@ svn_cl__subcommand_help (const char *subcommand,
  * N and/or M may be one of the special revision descriptors
  * recognized by revision_from_word().
  *
- * If ARG is invalid, return non-zero; else return zero.
+ * If ARG is invalid, return TRUE; else return FALSE.
  * It is invalid to omit a revision (as in, ":", "N:" or ":M").
  *
  * Note:
@@ -238,9 +238,9 @@ svn_cl__subcommand_help (const char *subcommand,
  * and OPT_STATE->end_revision to be svn_client_revision_unspecified
  * kind on entry.
  */
-int svn_cl__parse_revision (svn_cl__opt_state_t *os,
-                            const char *arg,
-                            apr_pool_t *pool);
+svn_boolean_t svn_cl__parse_revision (svn_cl__opt_state_t *os,
+                                      const char *arg,
+                                      apr_pool_t *pool);
 
 
 /*** Command-line output functions -- printing to the user. ***/
