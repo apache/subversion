@@ -881,6 +881,11 @@ struct rep_write_baton
      pool.  Otherwise, see `pool' below.  */ 
   trail_t *trail;
 
+  /* MD5 checksum.  Initialized when the baton is created, updated as
+     we write data, and finalized and stored when the stream is
+     closed. */
+  struct apr_md5_ctx_t md5_context;
+
   /* Used for temporary allocations, iff `trail' (above) is null.  */
   apr_pool_t *pool;
 
@@ -897,6 +902,7 @@ rep_write_get_baton (svn_fs_t *fs,
   struct rep_write_baton *b;
 
   b = apr_pcalloc (pool, sizeof (*b));
+  apr_md5_init (&(b->md5_context));
   b->fs = fs;
   b->trail = trail;
   b->pool = pool;
@@ -977,6 +983,8 @@ txn_body_write_rep (void *baton, trail_t *trail)
                       args->wb->txn_id,
                       trail));
 
+  apr_md5_update (&(args->wb->md5_context), args->buf, args->len);
+
   return SVN_NO_ERROR;
 }
 
@@ -1014,6 +1022,64 @@ rep_write_contents (void *baton,
                                   &args,
                                   subpool));
       svn_pool_destroy (subpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper for rep_write_close_contents(); see that doc string for
+   more.  BATON is of type `struct rep_write_baton'. */
+static svn_error_t *
+txn_body_write_close_rep (void *baton, trail_t *trail)
+{
+  struct rep_write_baton *wb = baton;
+  unsigned char digest[MD5_DIGESTSIZE];
+  svn_fs__representation_t *rep;
+
+  /* ### Thought: if we fixed apr-util MD5 contexts to allow repeated
+     digestification, then we wouldn't need a stream close function at
+     all -- instead, we could update the stored checksum each time a
+     write occurred, which would have the added advantage of making
+     interleaving reads and writes work.  Currently, they'd fail with
+     a checksum mismatch, it just happens that our code never tries to
+     do that anyway. */
+
+  apr_md5_final (digest, &(wb->md5_context));
+
+  /* ### Temporarily set the digest to all zeros; this code is still
+     in testing, so we don't want to store real checksums yet. */
+  memset (digest, 0, MD5_DIGESTSIZE);
+
+  SVN_ERR (svn_fs__bdb_read_rep (&rep, wb->fs, wb->rep_key, trail));
+  memcpy (rep->checksum, digest, MD5_DIGESTSIZE);
+  SVN_ERR (svn_fs__bdb_write_rep (wb->fs, wb->rep_key, rep, trail));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* BATON is of type `struct rep_write_baton'. 
+ *
+ * Finalize BATON->md5_context and store the resulting digest under
+ * BATON->rep_key.
+ */
+static svn_error_t *
+rep_write_close_contents (void *baton)
+{
+  struct rep_write_baton *wb = baton;
+
+  /* If we got a trail, use it; else make one. */
+  if (wb->trail)
+    {
+      SVN_ERR (txn_body_write_close_rep (wb, wb->trail));
+    }
+  else
+    {
+      SVN_ERR (svn_fs__retry_txn (wb->fs,
+                                  txn_body_write_close_rep,
+                                  wb,
+                                  wb->pool));
     }
 
   return SVN_NO_ERROR;
@@ -1095,6 +1161,7 @@ svn_fs__rep_contents_write_stream (svn_stream_t **ws_p,
                             use_trail_for_writes ? trail : NULL, pool);
   *ws_p = svn_stream_create (wb, pool);
   svn_stream_set_write (*ws_p, rep_write_contents);
+  svn_stream_set_close (*ws_p, rep_write_close_contents);
 
   return SVN_NO_ERROR;
 }
