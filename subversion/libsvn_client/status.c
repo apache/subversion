@@ -111,7 +111,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
                                      path, descend, statushash, pool));
   if (ra_lib->do_status (session,
                          &reporter, &report_baton,
-                         target,
+                         target, descend,
                          status_editor, edit_baton) == NULL)
     {
       /* Drive the reporter structure, describing the revisions within
@@ -120,6 +120,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
       SVN_ERR (svn_wc_crawl_revisions (path, reporter, report_baton, 
                                        FALSE, /* ignore unversioned stuff */
                                        FALSE, /* don't restore missing files */
+                                       descend,
                                        pool));
     }
 
