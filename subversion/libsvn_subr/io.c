@@ -987,11 +987,11 @@ svn_error_t *svn_io_file_flush_to_disk (apr_file_t *file,
     return svn_error_wrap_apr
       (apr_err, "Can't flush file '%s' to disk.", file);
 
-    apr_os_file_get (&filehand, file);
+  apr_os_file_get (&filehand, file);
     
   /* Call the operating system specific function to actually force the
      data to disk. */
-    {
+  {
 #ifdef WIN32
       
       if (! FlushFileBuffers (filehand))
@@ -1010,7 +1010,7 @@ svn_error_t *svn_io_file_flush_to_disk (apr_file_t *file,
           (apr_get_os_error (), "Can't flush file to disk.");
       
 #endif
-    }
+  }
   return APR_SUCCESS;
 }
     
