@@ -375,9 +375,10 @@ svn_io_copy_and_translate (const char *src,
                            const char *dst,
                            const char *eol_str,
                            svn_boolean_t repair,
-                           const char *author,
                            const char *revision,
                            const char *date,
+                           const char *author,
+                           const char *url,
                            apr_pool_t *pool)
 {
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
