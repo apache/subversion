@@ -249,7 +249,11 @@ def run_one_test(n, test_list):
     print "There is no test", `n` + ".\n"
     return 1
   # Run the test.
-  error = test_list[n]()
+  try:
+    error = test_list[n]()
+  except:
+    print "caught an exception, returning error instead"
+    error = 1
   if error:
     print "FAIL:",
   else:
