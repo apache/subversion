@@ -40,7 +40,8 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                    svn_stringbuf_t *path,
                    svn_boolean_t force, 
                    svn_client_auth_baton_t *auth_baton,
-                   svn_stringbuf_t *log_msg,
+                   svn_client_get_commit_log_t log_msg_func,
+                   void *log_msg_baton,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
                    apr_pool_t *pool)
@@ -62,7 +63,29 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
       const char *committed_date = NULL;
       const char *committed_author = NULL;
+      svn_stringbuf_t *log_msg;
       
+      /* Create a new commit item and add it to the array. */
+      if (log_msg_func)
+        {
+          svn_client_commit_item_t *item;
+          apr_array_header_t *commit_items 
+            = apr_array_make (pool, 1, sizeof (item));
+          
+          item = apr_pcalloc (pool, sizeof (*item));
+          item->url = svn_stringbuf_dup (path, pool);
+          item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
+          (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
+            = item;
+          
+          SVN_ERR ((*log_msg_func) (&log_msg, commit_items, 
+                                    log_msg_baton, pool));
+          if (! log_msg)
+            return SVN_NO_ERROR;
+        }
+      else
+        log_msg = svn_stringbuf_create ("", pool);
+
       svn_path_split (path, &anchor, &target, pool);
 
       /* Get the RA vtable that matches URL. */
@@ -74,10 +97,6 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, NULL,
                                             NULL, FALSE, FALSE, TRUE,
                                             auth_baton, pool));
-
-      /* Ensure a non-NULL log message. */
-      if (! log_msg)
-        log_msg = svn_stringbuf_create ("", pool);
 
       /* Fetch RA commit editor */
       SVN_ERR (ra_lib->get_commit_editor (session, &editor, &edit_baton,

@@ -352,6 +352,10 @@ svn_client_add (svn_stringbuf_t *path,
    addition (using svn_client_add, whose docstring you should
    read).
 
+   LOG_MSG_FUNC/LOG_MSG_BATON are a callback/baton combo that this
+   function can use to query for a commit log message when one is
+   needed.
+
    When the directory has been created (successfully) in the working
    copy, NOTIFY_FUNC will be called with NOTIFY_BATON and the path of
    the new directory.  If this information is not required, then
@@ -362,7 +366,8 @@ svn_error_t *
 svn_client_mkdir (svn_client_commit_info_t **commit_info,
                   svn_stringbuf_t *path,
                   svn_client_auth_baton_t *auth_baton,
-                  svn_stringbuf_t *message,
+                  svn_client_get_commit_log_t log_msg_func,
+                  void *log_msg_baton,
                   svn_wc_notify_func_t notify_func,
                   void *notify_baton,
                   apr_pool_t *pool);
@@ -380,6 +385,10 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
    until a commit occurs.  This scheduling can be removed with
    svn_client_revert.
 
+   LOG_MSG_FUNC/LOG_MSG_BATON are a callback/baton combo that this
+   function can use to query for a commit log message when one is
+   needed.
+
    For each item deleted, NOTIFY_FUNC will be called with NOTIFY_BATON
    and the path of the deleted item. NOTIFY_FUNC may be NULL if this
    information is not required.  */
@@ -388,7 +397,8 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                    svn_stringbuf_t *path,
                    svn_boolean_t force,
                    svn_client_auth_baton_t *auth_baton,
-                   svn_stringbuf_t *message,
+                   svn_client_get_commit_log_t log_msg_func,
+                   void *log_msg_baton,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
                    apr_pool_t *pool);
@@ -425,6 +435,10 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
    
    Use POOL for any temporary allocation.  
    
+   LOG_MSG_FUNC/LOG_MSG_BATON are a callback/baton combo that this
+   function can use to query for a commit log message when one is
+   needed.
+
    Note: REVISION is svn_revnum_t, rather than svn_client_revision_t,
    because only the svn_client_revision_number kind would be useful
    anyway.
@@ -445,7 +459,8 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
                                 svn_stringbuf_t *path,
                                 svn_stringbuf_t *url,
                                 svn_stringbuf_t *new_entry,
-                                svn_stringbuf_t *log_msg,
+                                svn_client_get_commit_log_t log_msg_func,
+                                void *log_msg_baton,
                                 svn_stringbuf_t *xml_dst,
                                 svn_revnum_t revision,
                                 apr_pool_t *pool);
@@ -701,6 +716,10 @@ svn_client_resolve (svn_stringbuf_t *path,
    until a commit occurs.  This scheduling can be removed with
    svn_client_revert.
 
+   LOG_MSG_FUNC/LOG_MSG_BATON are a callback/baton combo that this
+   function can use to query for a commit log message when one is
+   needed.
+
    For each item added (at the new location), NOTIFY_FUNC will be
    called with the NOTIFY_BATON and the (new, relative) path of the
    added item. If this information is not required, then NOTIFY_FUNC
@@ -711,7 +730,8 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  const svn_client_revision_t *src_revision,
                  svn_stringbuf_t *dst_path,
                  svn_client_auth_baton_t *auth_baton,
-                 svn_stringbuf_t *message,
+                 svn_client_get_commit_log_t log_msg_func,
+                 void *log_msg_baton,
                  const svn_delta_editor_t *before_editor,
                  void *before_edit_baton,
                  const svn_delta_editor_t *after_editor,
@@ -748,6 +768,10 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
        repository until a commit occurs.  This scheduling can be
        removed with svn_client_revert.
 
+   LOG_MSG_FUNC/LOG_MSG_BATON are a callback/baton combo that this
+   function can use to query for a commit log message when one is
+   needed.
+
    For each item moved, NOTIFY_FUNC will be called with the
    NOTIFY_BATON twice, once to indicate the deletion of the moved
    thing, and once to indicate the addition of the new location of the
@@ -758,7 +782,8 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  const svn_client_revision_t *src_revision,
                  svn_stringbuf_t *dst_path,
                  svn_client_auth_baton_t *auth_baton,
-                 svn_stringbuf_t *message,
+                 svn_client_get_commit_log_t log_msg_func,
+                 void *log_msg_baton,
                  svn_wc_notify_func_t notify_func,
                  void *notify_baton,
                  apr_pool_t *pool);

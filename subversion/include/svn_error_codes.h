@@ -433,6 +433,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_CL_COMMIT_IN_ADDED_DIR,
               "Commiting in directory scheduled for addition")
 
+  SVN_ERRDEF (SVN_ERR_CL_NO_EXTERNAL_EDITOR,
+              "No external editor available")
+
   /* END Client errors */
         
   /* BEGIN Generic UI related errors */

@@ -248,10 +248,10 @@ svn_cl__get_trace_commit_editor (const svn_delta_editor_t **editor,
 
 
 /* Search for a text editor command in standard environment variables,
-   and invoke it to edit CONTENTS (using a temporary file based on
-   working copy directory BASE_DIR).  Return the new contents in
-   EDITED_CONTENTS, or set EDITED_CONTENTS to NULL if no edit was
-   performed.  Use POOL for all allocations. */
+   and invoke it to edit CONTENTS (using a temporary file created in
+   directory BASE_DIR).  Return the new contents in EDITED_CONTENTS,
+   or set EDITED_CONTENTS to NULL if no edit was performed.  Use POOL
+   for all allocations. */
 svn_error_t *
 svn_cl__edit_externally (svn_stringbuf_t **edited_contents,
                          svn_stringbuf_t *base_dir,
@@ -303,6 +303,35 @@ void *svn_cl__make_notify_baton (apr_pool_t *pool);
    user has requested "quiet" mode. */
 #define SVN_CL_NOTIFY(opt_state) \
 		((opt_state)->quiet ? NULL : svn_cl__notify_func)
+
+
+
+/*** Log message callback stuffs. ***/
+
+/* Allocate in POOL a baton for use with svn_cl__get_log_message().
+
+   OPT_STATE is the set of command-line options given.  
+
+   BASE_DIR is a directory in which to create temporary files if an
+   external editor is used to edit the log message.  If BASE_DIR is
+   NULL, the current working directory (`.') will be used, and
+   therefore the user must have the proper permissions on that
+   directory.  ### todo: What *should* happen in the NULL case is that
+   we ask APR to tell us where a suitable tmp directory is (like, /tmp
+   on Unix and C:\Windows\Temp on Win32 or something), and use it.
+   But APR doesn't yet have that capability.
+   
+   NOTE: While the baton itself will be allocated from POOL, the items
+   add to it are added by reference, not duped into POOL!*/
+void *svn_cl__make_log_msg_baton (svn_cl__opt_state_t *opt_state,
+                                  svn_stringbuf_t *base_dir,
+                                  apr_pool_t *pool);
+
+/* A function of type svn_client_get_commit_log_t. */
+svn_error_t *svn_cl__get_log_message (svn_stringbuf_t **log_msg,
+                                      apr_array_header_t *commit_items,
+                                      void *baton,
+                                      apr_pool_t *pool);
 
 
 

@@ -455,7 +455,6 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
                   const svn_client_revision_t *src_revision,
                   svn_stringbuf_t *dst_path, 
                   svn_client_auth_baton_t *auth_baton,
-                  svn_stringbuf_t *message,
                   const svn_delta_editor_t *before_editor,
                   void *before_edit_baton,
                   const svn_delta_editor_t *after_editor,
@@ -686,7 +685,8 @@ setup_copy (svn_client_commit_info_t **commit_info,
             const svn_client_revision_t *src_revision,
             svn_stringbuf_t *dst_path,
             svn_client_auth_baton_t *auth_baton,
-            svn_stringbuf_t *message,
+            svn_client_get_commit_log_t log_msg_func,
+            void *log_msg_baton,
             const svn_delta_editor_t *before_editor,
             void *before_edit_baton,
             const svn_delta_editor_t *after_editor,
@@ -698,6 +698,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
 {
   svn_boolean_t src_is_url, dst_is_url;
   svn_string_t path_str;
+  svn_stringbuf_t *message;
 
   /* Are either of our paths URLs? */
   path_str.data = src_path->data;
@@ -746,8 +747,25 @@ setup_copy (svn_client_commit_info_t **commit_info,
         }
     }
 
-  /* Make sure our log_msg is non-NULL. */
-  if (! message)
+  /* Create a new commit item and add it to the array. */
+  if (dst_is_url && log_msg_func)
+    {
+      svn_client_commit_item_t *item;
+      apr_array_header_t *commit_items 
+        = apr_array_make (pool, 1, sizeof (item));
+      
+      item = apr_pcalloc (pool, sizeof (*item));
+      item->url = svn_stringbuf_dup (dst_path, pool);
+      item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
+      (*((svn_client_commit_item_t **) apr_array_push (commit_items))) 
+        = item;
+      
+      SVN_ERR ((*log_msg_func) (&message, commit_items, 
+                                log_msg_baton, pool));
+      if (! message)
+        return SVN_NO_ERROR;
+    }
+  else
     message = svn_stringbuf_create ("", pool);
 
   /* Now, call the right handler for the operation. */
@@ -765,7 +783,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
 
   else if ((src_is_url) && (! dst_is_url))
     SVN_ERR (repos_to_wc_copy (src_path, src_revision, 
-                               dst_path, auth_baton, message,
+                               dst_path, auth_baton,
                                before_editor, before_edit_baton,
                                after_editor, after_edit_baton,
                                notify_func, notify_baton,
@@ -789,7 +807,8 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  const svn_client_revision_t *src_revision,
                  svn_stringbuf_t *dst_path,
                  svn_client_auth_baton_t *auth_baton,
-                 svn_stringbuf_t *message,
+                 svn_client_get_commit_log_t log_msg_func,
+                 void *log_msg_baton,
                  const svn_delta_editor_t *before_editor,
                  void *before_edit_baton,
                  const svn_delta_editor_t *after_editor,
@@ -799,7 +818,8 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  apr_pool_t *pool)
 {
   return setup_copy (commit_info, 
-                     src_path, src_revision, dst_path, auth_baton, message,
+                     src_path, src_revision, dst_path, auth_baton, 
+                     log_msg_func, log_msg_baton,
                      before_editor, before_edit_baton,
                      after_editor, after_edit_baton,
                      FALSE /* is_move */,
@@ -814,13 +834,15 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  const svn_client_revision_t *src_revision,
                  svn_stringbuf_t *dst_path,
                  svn_client_auth_baton_t *auth_baton,
-                 svn_stringbuf_t *message,
+                 svn_client_get_commit_log_t log_msg_func,
+                 void *log_msg_baton,
                  svn_wc_notify_func_t notify_func,
                  void *notify_baton,
                  apr_pool_t *pool)
 {
   return setup_copy (commit_info,
-                     src_path, src_revision, dst_path, auth_baton, message,
+                     src_path, src_revision, dst_path, auth_baton,
+                     log_msg_func, log_msg_baton,
                      NULL, NULL,  /* no before_editor, before_edit_baton */
                      NULL, NULL,  /* no after_editor, after_edit_baton */
                      TRUE /* is_move */,
