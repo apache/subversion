@@ -40,6 +40,13 @@ Candidate changes:
       +1: sussman, kfogel, dlr
 
 
+  * r8637
+    Add documentation of working directory to hook templates.
+    Justification: Hook writers need to know, and experimenting is no fun.
+    Votes:
+      +1: kfogel
+
+
 Status of 1.0.1:
 ================
 
