@@ -115,20 +115,19 @@ the snapshot claims that two files have been renamed to the same name,
 or something equally ridiculous, it is rejected out of hand.
 
 Assuming the snapshot is consistent, the server checks whether each
-entity in it has changed in the repository since the given base
-version.  A direct change would make the pre-commit check fail
-definitely; indirect changes cause failure iff they mention the same
-child name as some change mentioned in the snapshot.
+entity in it has changed in the repository, or will change due to a
+pending commit, since the given base version.  A direct change would
+make the pre-commit check fail definitely; indirect changes cause
+failure iff they mention the same child name as some change in the
+snapshot.
 
-The same check is looped across all commits in the pending pool.
+(See the section "Conflict/Merge Tables" farther down for a formal
+accounting of these rules.)
 
 The server *never* accepts a commit based on a working copy state that
 conflicts with the repository.  The client is always responsible for
 sending non-conflicting deltas.  Therefore, the client may need to
 update and resolve any conflicts before committing.
-
-(See the section "Conflict/Merge Tables" farther down for a formal
-accounting of these rules.)
 
 Of course, when a pre-commit check fails, the server doesn't just send
 back a terse denial.  It tells the client exactly which entities are
@@ -245,44 +244,42 @@ happens when one change meets another on the same entity.
 
 In each cell
 
-   C   means    "Conflict, unfoldable"
-   M   means    "Mergable"
-   F   means    "Conflict for server, possibly a conflict for client
-                 but might be foldable (either via straight merge, or
-                 folding conflict)" 
+   C   means    "Conflict, not even foldable"
 
-Fortunately the principles involved are symmetrical, so it doesn't
-matter which side is the working copy and which is the
-repository.  
+   M   means    "Mergeable"
 
-For example, Table 1 says that an entity-rename (a direct change) and
-a child-rename (an indirect change) conflict in a commit, and a
-mergeable in an update.  Let's see how that plays out in real life:
+   F   means    "Conflict for server, so pre-commit check would fail.
+                 Possibly a conflict for client, but might be foldable
+                 (either via straight merge, or folding conflict)"
 
-   Scenario 1: Working copy renames foo/bar.c to foo/baz.c.
-   Meanwhile, in the repository, someone has renamed foo to qux.  If
-   the working copy tries to commit, the server treats this as a
-   conflict and tells the working copy to update.  If update, then
-   it's fine: baz.c remains where it is, and foo is renamed to qux
-   (assuming the update included foo).
+The principles involved are symmetrical, so the immediate source of
+each change (working copy or repository) doesn't matter.
 
-   Scenario 2: Working copy renames foo to qux.  Meanwhile, in the
-   repository, someone has renamed foo/bar.c to foo/baz.c.  If the
-   working copy tries to commit, the server treats this as a conflict
-   and tells the working copy to update.  If update, then qux/bar.c is
-   renamed to qux/baz.c.
+Let's justify this claim of symmetry:  
 
+It's tempting to think of a change as being either "from" the working
+copy or "in" the repository.  But the true source of every change is
+some committer -- each change represents some developer's intention
+toward a file or a tree, and a conflict is what happens when two
+intentions are incompatible (or at any rate not automatically
+compatible).  It doesn't matter in what order the intentions were
+discovered, i.e., which has already made it into the repository vs
+which is only expressed in someone's working copy.  Incompatibility is
+incompatibility, independent of timing.
 
-todo: run through a couple of cells from both sides, to show how these
-scenarios play out in real-life.
+So what these tables really show is "How do we decide when two changes
+are compatible?"  They're a brute force guide to the changespace,
+mapping each kind of change against each other kind of change, and
+telling what happens in each scenario.
 
-   [todo: what if you are at version 3, trying to commit an add of
-   foo/bar.c.  Meanwhile, in 5, someone changed name of foo to baz,
-   then in 6 someone added baz/bar.c.  Will this be detected?
+fooo working here
 
-   Yes, not because of the add, but because of the direct change
-   against indirect 
-    
+For example, it's not a conflict if the client changes a directory
+name while the repository has added a new child in that directory, nor
+is it a conflict if the client adds a child while the repository has
+changed the directory's name.  It is a conflict if the client removes
+a directory while someone else has committed a change to a file in
+that directory fooo
 
 
           Table 1: Direct changes against indirect changes
@@ -292,52 +289,70 @@ scenarios play out in real-life.
    on direc-  |
    tories]    |    self add         self remove        self rename
   ------------|------------------.---------------.-------------------.
-  i           | C                .               .                   .
-  n     child | (Must be really  .       C       .     commit: C     .
-  d      add  | out-of-date for  .               .     update: M     .
+              | C                .               .                   .
+        child | (Must be really  .       C       .     commit: M     .
+         add  | out-of-date for  .               .     update: M     .
   i           | this to happen!) .               .                   .
-  r           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
-  e           |                  .               .                   .
+  n           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  d           |                  .               .                   .
+  i     child |  C               .               .                   .
+  r    remove |                  .       C       .     commit: M     .
+  e           | (Same as above.) .               .     update: M     .
+  c           |                  .               .                   .
+  t           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
+              |                  .               .                   .
   c     child |  C               .               .                   .
-  t    remove |                  .       C       .     commit: C     .
+  h    rename |                  .       C       .     commit: M     .
+  a           | (Same as above.) .               .     update: M     .
+  n           |                  .               .                   .
+  g           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  e           |                  .               .                   .
+  s     child |  C               .       C       .                   .
+       modify |                  .               .     commit: M     .
               | (Same as above.) .               .     update: M     .
               |                  .               .                   .
-  c           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
-  h           |                  .               .                   .
-  a     child |  C               .               .                   .
-  n    rename |                  .       C       .     commit: C     .
-  g           | (Same as above.) .               .     update: M     .
-  e           |                  .               .                   .
-  s           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
+              |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+
 
 
 
          Table 2: Indirect changes against indirect changes
          **************************************************
 
-  [changes    |         i n d i r e c t     c h a n g e s
-   on direc-  |
-   tories]    |    child add        child remove      child rename
-  ------------|----------------.-------------------.-----------------.
-  i           |                .                   .                 .
-  n     child |    C if name   .    C if name      .  C if name      .
-  d      add  |    conflicts,  .    conflicts,     .  conflicts,     .
-  i           |    else M      .    else M         .  else M         .
-  r           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
-  e           |                . commit: C if name .                 .
-  c     child |    C if name   .         conflicts,.  C if name      .
-  t    remove |    conflicts,  .         else M    .  conflicts,     .
-              |    else M      . update: M         .  else M         .
-  c           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
-  h           |                .                   .                 .
-  a     child |    C if name   .    C if name      .  C if name      .
-  n    rename |    conflicts,  .    conflicts,     .  conflicts,     .
-  g           |    else M      .    else M         .  else M         .
-  e           |                .                   .                 .
-  s           |. . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  [changes  |         i n d i r e c t     c h a n g e s
+   on direc-|
+   tories]  |  child add      child remove      child rename    child mod
+  ----------|--------------.-----------------.-----------------.-------------.
+  i         |              .                 .                 .             .
+  n   child |  C if name   .  C if name      .  C if name      . C if name   .
+  d    add  |  conflicts,  .  conflicts,     .  conflicts,     . conflicts,  .
+  i         |  else M      .  else M         .  else M         . else M      .
+  r         |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  e         |              . commit: C if    .                 .             .
+  c   child |  C if name   . name conflicts, .  C if name      . C if name   .
+  t  remove |  conflicts,  . else M          .  conflicts,     . conflicts,  .
+            |  else M      . update: M       .  else M         . else M      .
+  c         |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  h         |              .                 .                 . commit: C   .
+  a   child |  C if name   .  C if name      .  C if name      . if name     .
+  n  rename |  conflicts,  .  conflicts,     .  conflicts,     . conflicts,  .
+  g         |  else M      .  else M         .  else M         . else M      .
+  e         |              .                 .                 . update: M   .
+  s         |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+            |              .                 . commit: C if    .             .
+      child |  C if name   .  C if name      . name conflicts, .  commit: C  .
+     modify |  conflicts,  .  conflicts,     . else M          .  update: F  .
+            |  else M      .  else M         . update: M       .             .
+            |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
 
-fooo
+Explain the name conflict rules!  The use of "mention" above is very
+specific: it means any two of the entity's four possible names are the
+same (that is, the original and names on the working copy side, and
+the original and new names in the repository).
+
+
 
            Table 3: Direct changes against direct changes
            **********************************************
@@ -348,8 +363,8 @@ fooo
   ------------|------------.-------------.---------------.-----------------.
               | commit: C  .             .               .  commit: C      .
       add     |            .             .               .                 .
-  d           | update: M  .     C       .     C         .  update: M      .
-  i           |   or C     .             .               .    or C         .
+  d           | update: F  .     C       .     C         .  update: M      .
+  i           |            .             .               .    or C         .
   r           |. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
   e           |            . commit: C   .               .                 .
   c   remove  |            .             .               .                 .
