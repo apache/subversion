@@ -85,6 +85,7 @@
 
 typedef size_t svn_version_t;   /* Would they ever need to be signed? */
 
+
 typedef struct svn_delta_stackframe_t
 {
   enum {                     /* The type of XML object we're representing */
@@ -123,9 +124,6 @@ typedef struct svn_delta_stackframe_t
 
 
 
-
-
-
 /* A property diff */
 typedef struct svn_pdelta_t {
   enum {
@@ -143,61 +141,6 @@ typedef struct svn_vdelta_t {
   int todo;
 } svn_vdelta_t;
 
-
-/* An edit is an action and some content.  This is the content. */
-typedef struct svn_edit_content_t
-{
-  enum { 
-    svn_file_type = 1,
-    svn_directory_type
-  } kind;                           /* what kind of object is this? */
-
-  /* An ancestor is a path rooted from a version. */
-  svn_string_t *ancestor_path;      /* If NULL, this object is `new'. */
-  svn_version_t ancestor_version;
-
-  svn_boolean_t prop_delta;         /* flag: upcoming prop delta data */
-  svn_boolean_t text_delta;         /* flag: upcoming text delta data */
-  struct svn_delta_t *tree_delta;   /* A further tree delta, or NULL. */
-} svn_edit_content_t;
-
-
-/* A tree delta is a list of edits.  This is an edit. */
-typedef struct svn_edit_t
-{
-  enum { 
-    svn_action_delete = 1,            /* Delete a file or directory. */
-    svn_action_new,                   /* Create a new file or directory. */
-    svn_action_replace,               /* Replace an existing file or dir */
-  } kind;
-  svn_string_t *name;             /* name to add/del/replace */
-  svn_edit_content_t *content;    /* the object we're adding/replacing */
-} svn_edit_t;
-
-
-/* This is a tree delta. */
-typedef struct svn_delta_t
-{
-  svn_string_t *source_root;   /* Directory to which this delta applies */
-  svn_version_t base_version;  /* Base version of this directory */
-  svn_edit_t *edit;            /* latest edit we're holding */
-} svn_delta_t;
-
-
-
-/* An enumerated type that can indicates one of the Subversion-delta
-   XML tag categories; needed for walking & building a
-   delta-in-progress */
-
-typedef enum
-{
-  svn_XML_treedelta = 1,
-  svn_XML_edit,
-  svn_XML_editcontent,
-  svn_XML_propdelta,
-  svn_XML_textdelta
-  
-} svn_XML_elt_t
 
 
 
