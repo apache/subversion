@@ -138,6 +138,8 @@ kill_svnserve() {
 }
 
 # Test
+ts_start=`$DATE +"%s"`
+
 START "make $CHECK_TARGET" "Testing $RA_TYPE..."
 CHECK_LOG_FILE="$TEST_ROOT/LOG_svn_check_${BUILD_TYPE}_${RA_TYPE}"
 cd $TEST_ROOT/$OBJ
@@ -158,6 +160,11 @@ test $? = 0 || {
     $GZIP_C < "tests.log" > "$TEST_ROOT/tests.$BUILD_TYPE.$RA_TYPE.log.gz"
     FAIL kill_svnserve
 }
+PASS
+ts_stop=`$DATE +"%s"`
+
+START "Timer: make $CHECK_TARGET $(($ts_stop - $ts_start)) sec" \
+      "Timer: make $CHECK_TARGET $(($ts_stop - $ts_start)) sec"
 PASS
 
 kill_svnserve
