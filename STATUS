@@ -9,12 +9,13 @@ Status of 1.1.2:
 
 Candidate changes:
 
-  * r12075
+  * r12075, r12448
     Add pre-0.14 dumpfile compatability.
     Justification: Some very old clients were recently spotted in
     the wild.  And: Dumpfile compatibility is always good.
     Votes:
-      +1: dionisos, ghudson
+      +1: maxb
+      (r12075 only) +1: dionisos, ghudson
 
   * r11050
     Add install dependencies for libsvn_fs and libsvn_fs_base.
