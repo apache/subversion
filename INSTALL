@@ -77,7 +77,7 @@ I.    BUILD REQUIREMENTS
       the "--with-apr=" option of "./configure". It should be able to find
       the apr-config script in the standard location under that directory
       (e.g. ${prefix}/bin).
-      
+
       Similar, you can specify the location of APRUTIL using the
       "--with-apr-util=" option to "./configure". It will look for the
       apu-config script relative to that directory.
@@ -89,7 +89,7 @@ I.    BUILD REQUIREMENTS
 	       --with-apr-util=/usr/local/apache2  ...
 
 
-      2.  autoconf 2.50 or newer
+      2.  autoconf 2.50 or newer (Unix only)
 
       This is required only if you plan to build from the latest source
       (See section II.B). Generally only developers would be doing this,
@@ -97,13 +97,13 @@ I.    BUILD REQUIREMENTS
       want to do this as well.
 
 
-      3.  libtool 1.4 or newer
+      3.  libtool 1.4 or newer (Unix only)
 
       This is required only if you plan to build from the latest source
       (See section II.B), which you probably want to do. See above.
 
 
-      4.  bison or yacc
+      4.  bison or yacc (Unix only)
 
       This is required only if you plan to build from the latest source
       (See section II.B), which you probably want to do. See above.
@@ -113,6 +113,11 @@ I.    BUILD REQUIREMENTS
       Subversion can work with dates like "yesterday" and "last month"
       and "four hours ago". Note that most modern Unices come with one
       or the other of these programs, and only one is required.
+
+      The reason you don't need one of these programs on a Windows
+      platform is that the date parsing file has been pregenerated
+      and will automatically be copied into place by the Windows
+      Build.
 
 
       5.  Neon library 0.18.5
@@ -165,6 +170,12 @@ I.    BUILD REQUIREMENTS
       named Berkeley.  You may need to use a different path, of
       course.
 
+      If you are on the Windows platform and want to build Subversion,
+      a precompiled version of the Berkeley DB library is available for
+      download at the Subversion web site:
+
+          http://subversion.tigris.org/servlets/ProjectDownloadList
+
 
       7.  Apache Web Server 2.0.31 or newer
 
@@ -179,10 +190,41 @@ I.    BUILD REQUIREMENTS
       8.  Python 2.0
 
       If you want to run "make check" or build from the latest source
-      as described in section II.B, install Python 2.0 or higher on
-      your system. The majority of the test suite is written in
-      Python, as is part of Subversion's build system.  Get it from
+      under Unix as described in section II.B, install Python 2.0 or
+      higher on your system. The majority of the test suite is written
+      in Python, as is part of Subversion's build system.  Get it from
       http://www.python.org/.
+
+
+      9.  Visual C++ 6.0 or newer (Windows Only)
+
+      To build Subversion under any of the MS Windows platforms, you
+      will need a copy of Microsoft Visual C++. The project files are
+      provided for you.
+
+
+      10. A gnu-like diff and patch
+
+      Many of the features of the Subversion client require the ability
+      to call out to an external diff or patch program, one that
+      conforms to the behaviour of the GNU versions of these programs.
+
+      On some versions of Unix, this may involve getting a replacement
+      for your already existing diff and patch program. On FreeBSD
+      systems, for example, it requires getting gdiff and gpatch.
+
+      On a Windows platform, Subversion also requires a GNU diff.exe
+      and patch.exe. One implementation is provided by the Cygwin
+      project:
+
+          http://sources.redhat.com/cygwin
+
+      Note that the diff.exe and patch.exe must be installed into the
+      "C:\Program Files\cygnus\cygwin\bin" directory in order for
+      Subversion to find them at this time. If you have Cygwin
+      installed somewhere else, you should create this directory
+      path and copy those two files to it. You'll also need to copy
+      the cygwin1.dll file into the same directory.
 
 
 
@@ -258,7 +300,7 @@ II.   INSTALLATION OF SUBVERSION
       one-line build procedure.
 
 
-  B.  BUILDING THE LATEST SOURCE
+  B.  BUILDING THE LATEST SOURCE UNDER UNIX
 
       You can discard the directory created by the tarball; you're
       about to build the latest, greatest Subversion client.
@@ -294,10 +336,14 @@ II.   INSTALLATION OF SUBVERSION
       installed before "make check" will work.
 
       Additionally, with shared library builds, the destination
-      library directory must be listed in either /etc/ld.so.conf or
-      $LD_LIBRARY_PATH (for linux systems), so that Subversion will be
-      able to dynamically load repository access plugins.  If you try
-      to do a checkout and see an error like:
+      library directory must be identified in your operating system's
+      library search path. That is in either /etc/ld.so.conf or
+      $LD_LIBRARY_PATH for linux systems and in /etc/rc.conf for
+      FreeBSD, followed by a run of the 'ldconfig' program. Check your
+      system documentation for details. By identifying the destination
+      directory, Subversion will be able to dynamically load repository
+      access plugins.  If you try to do a checkout and see an error
+      like:
 
       svn_error: #21068 : <Bad URL passed to RA layer>
          Unrecognized URL scheme: http://svn.collab.net/repos/svn/trunk
@@ -316,6 +362,159 @@ II.   INSTALLATION OF SUBVERSION
           $ make -jN local-all
           $ make check
           # make install
+
+
+  C.  BUILDING UNDER UNIX IN DIFFERENT DIRECTORIES
+
+      It is possible to configure and build Subversion on Unix in a
+      directory other than the working copy. For example
+
+          $ svn co http://svn.collab.net/trunk/repos -d svn
+          $ cd svn
+          $ # get neon/db/apr as required
+          $ chmod +x autogen.sh
+          $ ./autogen.sh
+          $ mkdir ../obj
+          $ cd ../obj
+          $ ../svn/configure [...with options as appropriate...]
+          $ make
+
+      puts the Subversion working copy in the directory svn and builds
+      it in a separate, parallel directory obj.
+
+      Why would you want to do this? Well there are a number of
+      reasons...
+
+          *  You may prefer to avoid "polluting" the working copy with
+             files generated during the build.
+
+          *  You may want to put the build directory and the working
+             copy on different physical disks to improve performance.
+
+          *  You may want to separate source and object code and only
+             backup the source.
+
+          *  You may want to remote mount the working copy on multiple
+             machines, and build for different machines from the same
+             working copy.
+
+          *  You may want to build multiple configurations from the
+             same working copy.
+
+      The last reason above is possibly the most useful.  For instance
+      you can have separate debug and optimised builds each using the
+      same working copy. Or you may want a client only build and a
+      client-server build. Using multiple build directories you can
+      rebuild any or all configurations after an edit without the need
+      to either clean and reconfigure, or identify and copy changes
+      into a another working copy.
+
+
+  D.  BOOTSTRAPPING FROM A ZIP FILE UNDER WINDOWS
+
+      Of all the ways of getting a Subversion client, this is the
+      easiest. Just download the ZIP file, run your unzipping utility
+      (WinZIP, ZipGenius, UltimateZIP, FreeZIP, whatever) and extract
+      the DLLs and EXEs to a directory of your choice. Included in
+      the download is the SVN client, the SVNADMIN administration
+      tool, and the SVNLOOK reporting tool.
+
+      Now open a DOS box (run either "cmd" or "command" from the
+      Start menu's "Run..." menu option), change to the directory you
+      installed the executables into, and run:
+
+          C:\test>svn co http://svn.collab.net/repos/svn/trunk -d svn
+
+      This will get the latest Subversion sources and put them into the
+      "svn" subdirectory.
+
+      If you want to use this client for more than just downloading
+      the latest sources, though, you will probably need to make sure
+      that Subversion has access to the diff.exe and patch.exe
+      programs, as described in section I.10.
+
+
+  E.  BUILDING THE LATEST SOURCE UNDER WINDOWS
+
+      There is some support for building Subversion on Win32 platforms.
+      The project files included in the source tree are from Microsoft
+      Visual C++ 6.x; earlier versions of the compiler are not
+      supported at this time.
+
+      To build the client components, you'll need a copy of neon
+      0.18.5. The sources are available at
+
+          http://www.webdav.org/neon/neon-0.18.5.tar.gz
+
+      Unpack the distribution into the root directory of the Subversion
+      source tree (henceforth know as <SVN> -- that's where you found
+      this file) and rename the directory neon-0.18.5 to neon.
+
+      [NOTE: The neon library supports secure connections with OpenSSL
+          and on-the-wire compression with zlib. If you want to use
+          those features, you should edit the file
+
+              <SVN>\build\win32\build_neon.bat
+
+          to point to the appropriate directories.
+
+          You can get a copy of OpenSSL, including instructions for
+          building and packaging on Windows, at
+
+              http://www.openssl.org/
+
+          Zlib is available from
+
+              http://www.gzip.org/zlib/
+
+          but I recommend just using the pre-build package,
+
+              http://www.gzip.org/zlib/contrib/zlib-Win32.zip
+
+          The neon build scripts are set up to use those libraries.]
+
+      If you want to build the (local) server components, you'll also
+      need a copy of Berkeley DB, version 4.0.14 or newer. The sources
+      are available at
+
+          http://www.sleepycat.com
+
+      For your convenience, there is also a binary distibution on the
+      Subversion downloads page
+
+          http://subversion.tigris.org/ProjectDownloadList
+
+      The file there is named
+
+          db-4.0.14-win32.zip
+
+      Unpack the distribution into the root directory of the Subversion
+      source tree as <SVN>\db4-win32. It's a good idea to add
+      <SVN>\db4-win32\bin to your PATH, so that Subversion can find the
+      Berkeley DB DLLs.
+
+      [NOTE: This binary package of Berkeley DB is provided for
+          convenience only. Please don't address questions about
+          Berkeley DB that aren't directly related to using Subversion
+          to the project list.]
+
+      If you build Berkeley DB from the source, you will have to copy
+      the file ..db-4.0.14\build_win32\db.h to <SVN>\db4-win32\include,
+      and all the import libraries to <SVN>\db4-win32\lib. Again, the
+      DLLs should be somewhere in your path.
+
+      The workspace `subversion.dsw' at the top of the source tree
+      includes all the necessary projects. Right now, only static
+      libraries are built. The "__build__" project (active by default)
+      builds all the libraries and programs. The "__check__" project
+      builds the test drivers.
+
+      You will have to edit the file svn_private_config.hw to set the
+      correct paths for diff and patch.
+
+      [NOTE: There have been rumours that Subversion on Win32 can be built
+          using the latest cygwin. ymmv.]
+
 
 
 III.  BUILDING A SUBVERSION SERVER
