@@ -588,21 +588,21 @@ svn_config_ensure (apr_pool_t *pool)
    "Typically, Subversion uses two config directories, one for site-wide\n"
    "configuration,\n"
    "\n"
-   "  /etc/subversion/proxies\n"
+   "  /etc/subversion/servers\n"
    "  /etc/subversion/config\n"
    "  /etc/subversion/hairstyles\n"
    "     -- or --\n"
-   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Proxies\n"
+   "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Servers\n"
    "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Config\n"
    "  REGISTRY:HKLM\\Software\\Tigris.org\\Subversion\\Hairstyles\n"
    "\n"
    "and one for per-user configuration:\n"
    "\n"
-   "  ~/.subversion/proxies\n"
+   "  ~/.subversion/servers\n"
    "  ~/.subversion/config\n"
    "  ~/.subversion/hairstyles\n"
    "     -- or --\n"
-   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Proxies\n"
+   "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Servers\n"
    "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Config\n"
    "  REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Hairstyles\n"
    "\n";
@@ -626,9 +626,9 @@ svn_config_ensure (apr_pool_t *pool)
         }
     }
 
-  /** Ensure that the `proxies' file exists. **/
+  /** Ensure that the `servers' file exists. **/
   SVN_ERR (svn_config__user_config_path
-           (&path, SVN_CONFIG__USR_PROXY_FILE, pool));
+           (&path, SVN_CONFIG__USR_SERVERS_FILE, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
@@ -652,7 +652,7 @@ svn_config_ensure (apr_pool_t *pool)
         "\n"
         "### In this section, the URL of the repository you're\n"
         "### trying to access is matched against the patterns on\n"
-        "### the right.  If a match is found, the proxy info is\n"
+        "### the right.  If a match is found, the server info is\n"
         "### taken from the section with the corresponding name.\n"
         "### Timeouts, if given, are specified in seconds.  A timeout\n"
         "### of 0, i.e. zero, causes a builtin default to be used.\n"

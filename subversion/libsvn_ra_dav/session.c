@@ -195,13 +195,13 @@ static svn_boolean_t search_groups(const char *name,
  * (unsigned int) -1 and the rest to NULL.  This function can return an
  * error, so before checking *PROXY_*, check for error return value.
  */
-static svn_error_t *get_proxy_and_timeout(const char **proxy_host,
-                                          unsigned int *proxy_port,
-                                          const char **proxy_username,
-                                          const char **proxy_password,
-                                          int *timeout_seconds,
-                                          const char *requested_host,
-                                          apr_pool_t *pool)
+static svn_error_t *get_server_settings(const char **proxy_host,
+                                        unsigned int *proxy_port,
+                                        const char **proxy_username,
+                                        const char **proxy_password,
+                                        int *timeout_seconds,
+                                        const char *requested_host,
+                                        apr_pool_t *pool)
 {
   struct search_groups_baton gb;
   svn_config_t *cfg;
@@ -216,7 +216,7 @@ static svn_error_t *get_proxy_and_timeout(const char **proxy_host,
   port_str        = NULL;
   timeout_str     = NULL;
 
-  SVN_ERR( svn_config_read_proxies(&cfg, pool) );
+  SVN_ERR( svn_config_read_servers(&cfg, pool) );
 
   /* If there are defaults, use them, but only if the requested host
      is not one of the exceptions to the defaults. */
@@ -418,13 +418,13 @@ svn_ra_dav__open (void **session_baton,
     int timeout;
     svn_error_t *err;
     
-    err = get_proxy_and_timeout(&proxy_host,
-                                &proxy_port,
-                                &proxy_username,
-                                &proxy_password,
-                                &timeout,
-                                uri.host,
-                                pool);
+    err = get_server_settings(&proxy_host,
+                              &proxy_port,
+                              &proxy_username,
+                              &proxy_password,
+                              &timeout,
+                              uri.host,
+                              pool);
     if (err)
       {
         ne_uri_free(&uri);
