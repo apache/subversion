@@ -60,7 +60,7 @@ typedef struct svn_error
 /* index into an apr_array_header_t */
 #define APR_ARRAY_IDX(ary,i,type) (((type *)(ary)->elts)[i])
 
-typedef enum svn_node_kind
+typedef enum
 {
   svn_node_none,        /* absent */
   svn_node_file,        /* regular file */
