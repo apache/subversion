@@ -258,7 +258,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         rsrc = string.replace(os.path.join(rootpath, src), os.sep, '\\')
         if quote_path and '-' in rsrc:
           rsrc = '"%s"' % rsrc
-        sources.append(ProjectItem(path=rsrc, reldir=reldir,
+        sources.append(ProjectItem(path=rsrc, reldir=reldir, user_deps=[],
                                    swig_language=None))
 
     if isinstance(target, gen_base.SWIGLibrary):
@@ -267,7 +267,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
           for cobj in self.graph.get_sources(gen_base.DT_OBJECT, obj):
             if isinstance(cobj, gen_base.SWIGObject):
               csrc = rootpath + '\\' + string.replace(cobj.fname, '/', '\\')
-              sources.append(ProjectItem(path=csrc, reldir=None,
+              sources.append(ProjectItem(path=csrc, reldir=None, user_deps=[],
                                          swig_language=None))
 
               # output path passed to swig has to use forward slashes,
@@ -275,10 +275,19 @@ class WinGeneratorBase(gen_base.GeneratorBase):
               # classes) will be saved to the wrong directory
               cout = string.replace(os.path.join(rootpath, cobj.fname),
                                     os.sep, '/')
+                                    
+              # included header files that the generated c file depends on
+              user_deps = []
 
-              for ifile in self.graph.get_sources(gen_base.DT_SWIG_C, cobj):
-                isrc = rootpath + '\\' + string.replace(ifile, '/', '\\')
-                sources.append(ProjectItem(path=isrc, reldir=None, 
+              for iobj in self.graph.get_sources(gen_base.DT_SWIG_C, cobj):
+                isrc = rootpath + '\\' + string.replace(str(iobj), '/', '\\')
+
+                if not isinstance(iobj, gen_base.SWIGSource):
+                  user_deps.append(isrc)
+                  continue
+
+                sources.append(ProjectItem(path=isrc, reldir=None,
+                                           user_deps=user_deps,
                                            swig_language=target.lang,
                                            swig_target=csrc, swig_output=cout))
         

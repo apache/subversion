@@ -207,10 +207,10 @@ class Generator(gen_base.GeneratorBase):
     self.ofile.write('MANPAGES = %s\n\n' % string.join(self.manpages))
 
     for objname, sources in self.graph.get_deps(gen_base.DT_SWIG_C):
-      deps = string.join(sources)
+      deps = string.join(map(str, sources))
       self.ofile.write('%s: %s\n\t$(RUN_SWIG_%s) %s\n'
                        % (objname, deps, string.upper(objname.lang_abbrev),
-                          os.path.join('$(top_srcdir)', sources[0])))
+                          os.path.join('$(top_srcdir)', str(sources[0]))))
 
     for objname, sources in self.graph.get_deps(gen_base.DT_OBJECT):
       deps = string.join(map(str, sources))
