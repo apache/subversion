@@ -1492,7 +1492,8 @@ report_revisions (svn_stringbuf_t *wc_path,
           || (current_entry->existence == svn_wc_existence_deleted))
         SVN_ERR (reporter->delete_path (report_baton, full_entry_path));
 
-      else /* The entry exists on disk, and isn't `deleted'. */
+      else if (current_entry->schedule == svn_wc_schedule_normal)
+        /* The entry exists on disk, and isn't `deleted'. */
         {
           if (current_entry->kind == svn_node_file) 
             {
