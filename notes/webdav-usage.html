@@ -132,12 +132,19 @@
 	http://www.example.com/$svn/act/01234567-89ab-cdef-0123-456789abcdef</dt>
       <dd>Response: 201, created</dd>
     </dl>
+    <p>
+      The (advanced) <code>CHECKOUT</code> method has a way to specify 
+      an activity upon checkout. This feature will be used to
+      associate all items with the newly-created activity.
+    </p>
     
     <h3>Mapping changes to WebDAV</h3>
     <p>
-      A change set in Subversion is specified with a "tree delta". The
-      tree delta will be unravelled into a set of requests. These
-      requests will be one of the following forms:
+      A change set in Subversion is specified with a "tree delta" (see
+      the SVN design for more details on the changes that can be
+      placed into a tree delta). The tree delta will be unravelled
+      into a set of requests. These requests will be one of the
+      following forms:
     </p>
     <dl>
       <dt>Delete file/directory</dt>
@@ -153,11 +160,29 @@
 	  working resource will be deleted upon <code>CHECKIN</code>
 	  (or <code>MERGE</code>)."
 	</p>
+
+	<p>
+	  Note: this implicitly changes the directory containing the
+	  deleted file/dir. These changes will be integrated at
+	  <code>MERGE</code> time. Effectively, we are assuming the
+	  directory has <code>DAV:auto-version</code> enabled on it,
+	  allowing the change to the set of bindings within the
+	  directory. It may turn out that we will need to perform a
+	  <code>CHECKOUT</code> on the directory itself before doing
+	  the <code>DELETE</code>.
+	</p>
       </dd>
 
       <dt>New file</dt>
-      <dd>This is simply modelled with a <code>PUT</code> or
-      <code>MKCOL</code> operation.</dd>
+      <dd>
+	This is modeled by performing a <code>CHECKOUT</code> on the
+	target directory. The new file is created within the
+	directory's working resource with a <code>PUT</code>, or a
+	directory can be created there using a <code>MKCOL</code>
+	request.
+
+	<p></p>
+      </dd>
 
       <dt>New file/directory, previous ancestory</dt>
       <dd>
@@ -166,12 +191,225 @@
 	by additional elements the tree delta.
 
 	<p>
-	  This change will be modeled by a <code>PUT</code> or
-	  <code>MKCOL</code>. If a copy is made, followed by specific
-	  changes, then ...###...
+	  This change will be modeled by performing a
+	  <code>CHECKOUT</code> on the directory containing the new
+	  file/directory. A <code>COPY</code> of the version selector
+	  (of the original file/dir) into the target directory will
+	  establish the ancestry. The resource created by the
+	  <code>COPY</code> will become a new working resource, thus
+	  becoming a target for additional changes.
 	</p>
       </dd>
+
+      <dt>Replace file</dt>
+      <dd>
+	This is modeled with a <code>CHECKOUT</code> on the target
+	file, followed by a <code>PUT</code> to the working resource.
+
+	<p></p>
+      </dd>
+
+      <dt>Replace file with another file</dt>
+      <dd>
+	This operation is performed by using a <code>CHECKOUT</code>
+	on the target, then using <code>COPY</code> to copy the source
+	file (a version selector) over the working resource. The
+	<code>COPY</code> establishes the proper ancestry for the
+	file.
+	<p>
+	  Note that the source of the <code>COPY</code> is the version 
+	  selector. This makes it possible to swap files arbitrarily
+	  since the source (the version selectors) will not change
+	  until <code>MERGE</code> time.
+	</p>
+      </dd>
+
+      <dt>Replace directory</dt>
+      <dd>
+	In Subversion terms, "replace directory" means that additions, 
+	deletions, and other changes will occur <em>within</em> the
+	directory. Each of these changes are modeled individually, and 
+	the change to the directory is performed
+	implicitly. Therefore, this "change" has no particular mapping 
+	into WebDAV.
+
+	<p></p>
+      </dd>
+
+      <dt>Replace directory with another directory/file</dt>
+      <dd>
+	When a directory is <em>replaced</em>, rather than simply
+	modified, we use the <code>COPY</code> method to copy a
+	resource over the replaced directory. As usual, the directory
+	to be replaced is checked out first, using
+	<code>CHECKOUT</code>. The <code>COPY</code> will specify
+	<code>Overwrite:&nbsp;T</code> header to overwrite the
+	checked-out directory.
+
+	<p></p>
+      </dd>
+
+      <dt>Property delta</dt>
+      <dd>
+	A property delta (against a file or directory) maps directly
+	to a <code>PROPPATCH</code> in WebDAV terms. Before applying a 
+	<code>PROPPATCH</code>, the target file/directory will be
+	checked out using <code>CHECKOUT</code>
+      </dd>
     </dl>
+
+    <p>
+      Note that file "moves" are modeled using <code>COPY</code> to
+      establish the linkage between the new/old files/directories,
+      followed by a <code>DELETE</code> to remove the old
+      file/directory.
+    </p>
+
+    <h3>Skeleton Deltas</h3>
+    <p>
+      As mentioned above, Subversion uses a two-pass system during a
+      commit. The first pass will create the activity, perform all the 
+      necessary <code>CHECKOUT</code> operations, and then perform a
+      number of <code>DELETE</code>, <code>COPY</code>, and
+      <code>MKCOL</code> requests against the working resources. To
+      keep the wire bandwidth small, <code>PROPPATCH</code> and
+      <code>PUT</code> requests will be minimized:
+    </p>
+    <dl>
+      <dt><code>PROPPATCH</code> skeleton</dt>
+      <dd>
+	To provide a quick test of whether a <code>PROPPATCH</code> is
+	allowed against the target resource, the client will issue the
+	<code>PROPPATCH</code> with a <code>DAV:remove</code> element
+	for a custom, predefine Subversion property (which will never
+	exist). This will "exercise" the access rights for property
+	changes. At commit time, the property-delta will be mapped
+	into a complete <code>PROPPATCH</code>.
+	<p>
+	  Note that DAV says it is okay to remove a property that
+	  doesn't exist. Effectively, the removal of the property will 
+	  always be a null operation.
+	</p>
+      </dd>
+
+      <dt><code>PUT</code> skeleton</dt>
+      <dd>
+	The client will issue a zero-length <code>PUT</code> request
+	against the working resource. When the final commit is
+	performed, another <code>PUT</code> will be performed with the 
+	entire file contents.
+	<p></p>
+      </dd>
+    </dl>
+
+    <h3>Final Commit</h3>
+    <p>
+      The final action of the commit process is to issue a
+      <code>MERGE</code> request to the Subversion server, specifying
+      that the activity (created earlier) be merged into the
+      corresponding versioned resources.
+    </p>
+
+    <h3>Example</h3>
+    <p>
+      Consider the following set of operations and its corresponding
+      tree delta (taken from the SVN design document):
+    </p>
+    <ol type=1 start=1>
+      <li>rename <code>/dir1/dir2</code> to <code>/dir1/dir4</code>,</li>
+      <li>rename <code>/dir1/dir3</code> to <code>/dir1/dir2</code>, and</li>
+      <li>move <code>file3</code> from <var>/dir1/dir4</var> to <var>/dir1/dir2</var>.</li>
+    </ol>
+<pre>&lt;tree-delta&gt;
+  &lt;replace name='dir1'&gt;
+    &lt;directory&gt;
+      &lt;tree-delta&gt;
+        &lt;replace name='dir2'&gt;
+          &lt;directory ancestor='/dir1/dir3'&gt;
+            &lt;tree-delta&gt;
+              &lt;new name='file3'&gt;
+                &lt;file ancestor='/dir1/dir2/file3'/&gt;
+              &lt;/new&gt;
+            &lt;/tree-delta&gt;
+          &lt;/directory&gt;
+        &lt;/replace&gt;
+        &lt;delete name='dir3'/&gt;
+        &lt;new name='dir4'&gt;
+          &lt;directory ancestor='/dir1/dir2'&gt;
+            &lt;tree-delta&gt;
+              &lt;delete name='file3'/&gt;
+            &lt;/tree-delta&gt;
+          &lt;/directory&gt;
+        &lt;/new&gt;
+      &lt;/tree-delta&gt;
+    &lt;/directory&gt;
+  &lt;/replace&gt;
+&lt;/tree-delta&gt;
+</pre>
+
+    <p>
+      Walking through this delta, we map out the following WebDAV
+      requests:
+    </p>
+    <ul>
+      <li>
+	The <code>&lt;directory ancestor="/dir1/dir3"&gt;</code>
+	specifies that we are overwriting <code>/dir1/dir2</code> with 
+	<code>/dir1/dir3</code>.
+	<p>
+	  <code>CHECKOUT&nbsp;/dir1/dir2</code><br>
+	  <i>(returns a working resource URL for the directory)</i>
+	</p>
+	<p>
+	  <code>COPY&nbsp;/dir1/dir3</code><br>
+	  <code>Destination:&nbsp;http://www.example.com/$svn/wr/...</code><br>
+	  <code>Overwrite:&nbsp;T</code>
+	</p>
+      </li>
+      <li>
+	<code>/dir1/dir2/file3</code> is new (since we just overwrote
+	the original <code>dir2</code> directory), and originates from
+	<code>/dir1/dir2/file3</code>. Thus, we simply
+	<code>COPY</code> the file into the target directory's working 
+	resource:
+	<p>
+	  <code>COPY&nbsp;/dir1/dir2/file3</code><br>
+	  <code>Destination:&nbsp;http://www.example.com/$svn/wr/.../file3</code>
+	</p>
+      </li>
+      <li>
+	<code>CHECKOUT&nbsp;/dir1/dir3</code><br>
+	<i>(returns a working resource URL for the directory)</i>
+	<p>
+	  <code>DELETE&nbsp;/$svn/wr/...</code>
+	</p>
+      </li>
+      <li>
+	We are going to  creating a new subdirectory (<code>dir4</code>) in the
+	<code>/dir1</code> directory. Since we don't have
+	<code>/dir1</code> checked out yet, we do so:
+	<p>
+	  <code>CHECKOUT&nbsp;/dir1</code><br>
+	  <i>(returns a working resource URL for the directory)</i>
+	</p>
+	<p>
+	  And now we copy the right directory into the new working
+	  resource:
+	</p>
+	<p>
+	  <code>COPY&nbsp;/dir1/dir2</code><br>
+	  <code>Destination:&nbsp;http://www.example.com/$svn/wr/.../dir4</code>
+	</p>
+      </li>
+      <li>
+	The <code>COPY</code> created a complete set of working
+	resources on the server, so we simply delete the part that we
+	don't want:
+	<p>
+	  <code>DELETE:&nbsp;/$svn/wr/.../dir4/file3</code>
+	</p>
+      </li>
+    </ul>
 
     <h2>URL Layout</h2>
     <p>
@@ -193,14 +431,21 @@
       <code>DAV:repository-report</code>
       <br>
       Retain activity information. Activities have user-specified
-      names, mapping to the server-side records.
+      names, mapping to the server-side records. Advanced CHECKOUT to
+      associate an activity with the working resource. COPY into a
+      checked-out collection must create new working resources
+      (recursively). Add SVN:test-proppatch (live) property.
+    </p>
+    <p>
+      Discuss timeouts and auto-purge of activities (and the related
+      working resources).
     </p>
 
     <hr>
     <address><a href="mailto:gstein@lyra.org">Greg Stein</a></address>
 <!-- Created: Thu Aug 10 19:14:20 PDT 2000 -->
 <!-- hhmts start -->
-Last modified: Mon Aug 14 04:03:56 Pacific Daylight Time 2000
+Last modified: Mon Aug 14 18:48:43 PDT 2000
 <!-- hhmts end -->
   </body>
 </html>
