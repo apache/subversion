@@ -563,7 +563,8 @@ extern svn_error_t *svn_XML_parse (svn_delta_read_fn_t *source_fn,
 
 
 
-/* local variables:
+/* 
+ * local variables:
  * eval: (load-file "../svn-dev.el")
  * end:
  */
