@@ -64,7 +64,7 @@ package.
 Group: Utilities/System
 Summary: Development package for Subversion developers.
 Requires: subversion = %{version}-%{release}
-Requires: apache >= %{apache_version}
+Requires: httpd >= %{apache_version}
 %description devel
 The subversion-devel package includes the static libraries and include files
 for developers interacting with the subversion package.
