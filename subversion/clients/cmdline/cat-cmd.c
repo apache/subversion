@@ -44,10 +44,6 @@ svn_cl__cat (apr_getopt_t *os,
   svn_stream_t *out;
   apr_pool_t *subpool = svn_pool_create (pool);
 
-  if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
-    return svn_error_createf (SVN_ERR_CLIENT_REVISION_RANGE, NULL,
-                              "cat only accepts a single revision");
-
   SVN_ERR (svn_opt_args_to_target_array (&targets, os,
                                          opt_state->targets,
                                          &(opt_state->start_revision),
