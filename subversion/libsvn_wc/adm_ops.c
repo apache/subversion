@@ -42,7 +42,7 @@
 /*** adm area guarantees ***/
 
 /* Make sure that PATH (a directory) contains a complete adm area,
- * based at REPOSITORY.
+ * based on URL at REVISION.
  *
  * Creates the adm area if none, in which case PATH starts out at
  * revision 0.
@@ -52,15 +52,15 @@
  */
 svn_error_t *
 svn_wc__ensure_wc (svn_stringbuf_t *path,
-                   svn_stringbuf_t *ancestor_path,
-                   svn_revnum_t ancestor_revision,
+                   svn_stringbuf_t *url,
+                   svn_revnum_t revision,
                    apr_pool_t *pool)
 {
   svn_error_t *err;
 
   err = svn_wc__ensure_adm (path,
-                            ancestor_path,
-                            ancestor_revision,
+                            url,
+                            revision,
                             pool);
   if (err)
     return err;
@@ -738,7 +738,7 @@ add_to_revision_control (svn_stringbuf_t *path,
           svn_path_add_component (url, basename, svn_path_url_style);
 
           /* Change the entry-urls recursively. */
-          SVN_ERR (svn_wc__recursively_rewrite_ancestry (path, url, pool));
+          SVN_ERR (svn_wc__recursively_rewrite_urls (path, url, pool));
 
           /* Recursively add the 'copied' existence flag as well!  */
           SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_COPIED,
