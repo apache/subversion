@@ -377,3 +377,18 @@ Here's how `update', `status' and `commit' could cooperate:
 
 Declaring a "pure" merge (see list archives, can't find that thread
 right now) could remove the entry in SVN/conflicts, too.
+
+* convert functionality (JimB's idea)
+
+  provide a svn command to add versioning metadata (SVN directories
+  and whatnot) to a local directory tree that is (presumably) the
+  equivalent of a working copy without the SVN directories.
+  
+  svn convert local-dir repository
+  
+  Did I get that right? -Fitz
+
+* repository commands
+  
+  the ability to do repository operations from the client via the 'svn
+  repo' subcommand. 
