@@ -1439,7 +1439,7 @@ LoadModule authz_svn_module   modules/mod_authz_svn.so
                 <literal>Limit</literal> or
                 <literal>LimitExcept</literal> directives.</para></listitem>
           <listitem>
-            <para>You must use specify a path to an <firstterm>access
+            <para>You must specify a path to an <firstterm>access
                 file</firstterm>, which describes the permissions
                 policy for the repository, via the new
                 <literal>AuthzSVNAccessFile</literal>
