@@ -23,13 +23,6 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r10608
-    Fix issue 1674: "svnadmin load" crashes on contentful rev 0.
-    Justification:
-      Trivial fix. Never crash.
-    Votes:
-      +1: maxb, ghudson, lundblad
-
   * r10616, r10638
     Work around directory creation bug in APR shipped with httpd 2.0.50.
     Justification:
