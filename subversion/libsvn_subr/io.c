@@ -26,6 +26,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_file_info.h>
+#include <apr_general.h>
 #include <apr_strings.h>
 #include <apr_thread_proc.h>
 #include <apr_portable.h>
@@ -38,6 +39,7 @@
 #include "svn_base64.h"
 #include "svn_pools.h"
 #include "svn_utf.h"
+#include "svn_config.h"
 #include "svn_private_config.h" /* for SVN_CLIENT_DIFF */
 
 
@@ -1457,6 +1459,11 @@ svn_io_run_diff (const char *dir,
 
   apr_pool_t *subpool = svn_pool_create (pool);
 
+  svn_config_t *cfg;
+  const char *diff_cmd;
+  SVN_ERR (svn_config_read_config (&cfg, subpool));
+  svn_config_get (cfg, &diff_cmd, "helpers", "diff_cmd", SVN_CLIENT_DIFF);
+
   if (pexitcode == NULL)
     pexitcode = &exitcode;
 
@@ -1473,7 +1480,7 @@ svn_io_run_diff (const char *dir,
   args = apr_palloc (subpool, nargs * sizeof(char *));
 
   i = 0;
-  args[i++] = SVN_CLIENT_DIFF;
+  args[i++] = diff_cmd;
 
   if (user_args != NULL)
     {
@@ -1501,7 +1508,7 @@ svn_io_run_diff (const char *dir,
 
   assert (i == nargs);
 
-  SVN_ERR (svn_utf_cstring_to_utf8 (&diff_utf8, SVN_CLIENT_DIFF, NULL, pool));
+  SVN_ERR (svn_utf_cstring_to_utf8 (&diff_utf8, diff_cmd, NULL, pool));
   
   SVN_ERR (svn_io_run_cmd (dir, diff_utf8, args, pexitcode, NULL, FALSE, 
                            NULL, outfile, errfile, subpool));
@@ -1518,7 +1525,7 @@ svn_io_run_diff (const char *dir,
    */
   if (*pexitcode != 0 && *pexitcode != 1)
     return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, 0, NULL, subpool, 
-                              "%s returned %d", SVN_CLIENT_DIFF, *pexitcode);
+                              "%s returned %d", diff_cmd, *pexitcode);
 
   svn_pool_destroy (subpool);
 
@@ -1541,6 +1548,12 @@ svn_io_run_diff3 (const char *dir,
 {
   const char *args[14];
   const char *diff3_utf8;
+  int nargs = 13, i = 0;
+
+  svn_config_t *cfg;
+  const char *diff3_cmd;
+  SVN_ERR (svn_config_read_config (&cfg, pool));
+  svn_config_get (cfg, &diff3_cmd, "helpers", "diff3_cmd", SVN_CLIENT_DIFF3);
 
   /* Labels fall back to sensible defaults if not specified. */
   if (mine_label == NULL)
@@ -1551,34 +1564,41 @@ svn_io_run_diff3 (const char *dir,
     yours_label = ".new";
   
   /* Set up diff3 command line. */
-  args[0] = SVN_CLIENT_DIFF3;
-  args[1] = "-E";               /* We tried "-A" here, but that caused
+  args[i++] = diff3_cmd;
+  args[i++] = "-E";             /* We tried "-A" here, but that caused
                                    overlapping identical changes to
                                    conflict.  See issue #682. */
-  args[2] = "-m";
-  args[3] = "-L";
-  args[4] = mine_label;
-  args[5] = "-L";
-  args[6] = older_label;        /* note:  this label is ignored if
+  args[i++] = "-m";
+  args[i++] = "-L";
+  args[i++] = mine_label;
+  args[i++] = "-L";
+  args[i++] = older_label;      /* note:  this label is ignored if
                                    using 2-part markers, which is the
                                    case with "-E". */
-  args[7] = "-L";
-  args[8] = yours_label;
+  args[i++] = "-L";
+  args[i++] = yours_label;
 #ifdef SVN_DIFF3_HAS_DIFF_PROGRAM_ARG
-  args[9] = "--diff-program=" SVN_CLIENT_DIFF;
-  args[10] = mine;
-  args[11] = older;
-  args[12] = yours;
-  args[13] = NULL;
-#else
-  args[9] = mine;
-  args[10] = older;
-  args[11] = yours;
-  args[12] = NULL;
+  {
+    const char *has_arg;
+    svn_config_get (cfg, &has_arg, "helpers", "diff3_has_program_arg", "yes");
+    if (0 == strcasecmp(has_arg, "yes")
+        || 0 == strcasecmp(has_arg, "true"))
+      {
+        const char *diff_cmd;
+        svn_config_get (cfg, &diff_cmd,
+                        "helpers", "diff_cmd", SVN_CLIENT_DIFF);
+        args[i++] = apr_pstrcat(pool, "--diff-program=", diff_cmd, NULL);
+        ++nargs;
+      }
+  }
 #endif
+  args[i++] = mine;
+  args[i++] = older;
+  args[i++] = yours;
+  args[i++] = NULL;
+  assert (i == nargs);
 
-  SVN_ERR (svn_utf_cstring_to_utf8 (&diff3_utf8, SVN_CLIENT_DIFF3,
-                                    NULL, pool));
+  SVN_ERR (svn_utf_cstring_to_utf8 (&diff3_utf8, diff3_cmd, NULL, pool));
 
   /* Run diff3, output the merged text into the scratch file. */
   SVN_ERR (svn_io_run_cmd (dir, diff3_utf8, args, 
@@ -1595,7 +1615,7 @@ svn_io_run_diff3 (const char *dir,
                               "svn_io_run_diff3: "
                               "Error running %s:  exitcode was %d, args were:"
                               "\nin directory %s, basenames:\n%s\n%s\n%s",
-                              SVN_CLIENT_DIFF3, *exitcode,
+                              diff3_cmd, *exitcode,
                               dir, mine, older, yours);
 
   return SVN_NO_ERROR;
