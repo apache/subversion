@@ -783,6 +783,10 @@ svn_client_move (svn_client_commit_info_t **commit_info,
  
    A PROPVAL of NULL will delete the property.
 
+   If PROPNAME is an svn-controlled property (i.e. prefixed with
+   SVN_PROP_PREFIX), then the caller is responsible for ensuring that
+   the value UTF8-encoded and uses LF line-endings.
+
    Use POOL for all memory allocation. */
 svn_error_t *
 svn_client_propset (const char *propname,
@@ -795,6 +799,10 @@ svn_client_propset (const char *propname,
    represented by URL.  Use AUTH_BATON for authentication, and POOL
    for all memory allocation.  Return the actual rev affected in *SET_REV.
    A PROPVAL of NULL will delete the property.
+
+   If PROPNAME is an svn-controlled property (i.e. prefixed with
+   SVN_PROP_PREFIX), then the caller is responsible for ensuring that
+   the value UTF8-encoded and uses LF line-endings.
 
    Note that unlike its cousin svn_client_propset(), this routine
    doesn't affect the working copy at all;  it's a pure network

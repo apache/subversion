@@ -56,7 +56,7 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
       const void *key;
       void *val;
       const char *pname;
-      const svn_string_t *propval;
+      svn_string_t *propval;
       const char *pname_native;
 
       apr_hash_this (hi, &key, NULL, &val);
@@ -66,8 +66,10 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
       /* Distinguish between svn: and non-svn: props -- the former are
          stored in UTF-8, the latter are stored as binary values.  All
          property names, however, are stored in UTF-8.  */
-      if (svn_prop_is_svn_prop (pname))
-        SVN_ERR (svn_utf_string_from_utf8 (&propval, propval, pool));
+      if (svn_cl__prop_needs_translation (pname))
+        SVN_ERR (svn_cl__detranslate_string (&propval, propval,
+                                             pool));
+
       SVN_ERR (svn_utf_cstring_from_utf8 (&pname_native, pname, pool));
       printf ("  %s : %s\n", pname_native, propval->data);
     } 
