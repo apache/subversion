@@ -706,6 +706,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   /* Write out response. */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(r(!", "success", rev));
+  SVN_ERR(write_proplist(conn, pool, props));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(!"));
   if (want_contents)
     {
