@@ -82,12 +82,10 @@ class SVNLook:
     else:
       base_rev = self.rev - 1
 
-    ### oops. this prints bubble-up dirs, not just those with changes
-
-    self._print_tree(base_rev, dirs_only=1)
+    self._print_tree(base_rev, DirsChangedEditor)
 
   def cmd_ids(self):
-    self._print_tree(0, do_indent=1, show_ids=1)
+    self._print_tree(0, Editor, show_ids=1)
 
   def cmd_info(self):
     self.cmd_author()
@@ -102,14 +100,14 @@ class SVNLook:
     print log
 
   def cmd_tree(self):
-    self._print_tree(0, do_indent=1)
+    self._print_tree(0, Editor)
 
   def _get_property(self, name):
     if self.txn_ptr:
       return fs.txn_prop(self.txn_ptr, name, self.pool)
     return fs.revision_prop(self.fs_ptr, self.rev, name, self.pool)
 
-  def _print_tree(self, base_rev, dirs_only=0, do_indent=0, show_ids=0):
+  def _print_tree(self, base_rev, e_factory, show_ids=0):
     # get the current root
     if self.txn_ptr:
       root = fs.txn_root(self.txn_ptr, self.pool)
@@ -120,9 +118,9 @@ class SVNLook:
     base_root = fs.revision_root(self.fs_ptr, base_rev, self.pool)
 
     if show_ids:
-      editor = Editor(dirs_only, do_indent, root)
+      editor = e_factory(root)
     else:
-      editor = Editor(dirs_only, do_indent)
+      editor = e_factory()
 
     # construct the editor for printing these things out
     e_ptr, e_baton = delta.make_editor(editor, self.pool)
@@ -136,25 +134,18 @@ class SVNLook:
 
 
 class Editor(delta.Editor):
-  def __init__(self, dirs_only=0, do_indent=0, root=None):
-    self.dirs_only = dirs_only
-    self.do_indent = do_indent
+  def __init__(self, root=None):
     self.root = root
-
     self.indent = ''
 
   def open_root(self, base_revision, dir_pool):
     print '/' + self._get_id('/', dir_pool)
-    if self.do_indent:
-      self.indent = self.indent + ' '    # indent one space
+    self.indent = self.indent + ' '    # indent one space
 
   def add_directory(self, path, *args):
     id = self._get_id(path, args[-1])
-    if self.do_indent:
-      print self.indent + _basename(path) + '/' + id
-      self.indent = self.indent + ' '    # indent one space
-    else:
-      print path + '/' + id
+    print self.indent + _basename(path) + '/' + id
+    self.indent = self.indent + ' '    # indent one space
 
   # we cheat. one method implementation for two entry points.
   open_directory = add_directory
@@ -165,13 +156,8 @@ class Editor(delta.Editor):
     self.indent = self.indent[:-1]
 
   def add_file(self, path, *args):
-    if self.dirs_only:
-      return
     id = self._get_id(path, args[-1])
-    if self.do_indent:
-      print self.indent + _basename(path) + id
-    else:
-      print path + id
+    print self.indent + _basename(path) + id
 
   # we cheat. one method implementation for two entry points.
   open_file = add_file
@@ -181,6 +167,39 @@ class Editor(delta.Editor):
       id = fs.node_id(self.root, path, pool)
       return ' <%s>' % fs.unparse_id(id, pool)
     return ''
+
+
+class DirsChangedEditor(delta.Editor):
+  def open_root(self, base_revision, dir_pool):
+    return [ 1, '' ]
+
+  def delete_entry(self, path, revision, parent_baton, pool):
+    self._dir_changed(parent_baton)
+
+  def add_directory(self, path, parent_baton,
+                    copyfrom_path, copyfrom_revision, dir_pool):
+    self._dir_changed(parent_baton)
+    return [ 1, path ]
+
+  def open_directory(self, path, parent_baton, base_revision, dir_pool):
+    return [ 1, path ]
+
+  def change_dir_prop(self, dir_baton, name, value, pool):
+    self._dir_changed(dir_baton)
+
+  def add_file(self, path, parent_baton,
+               copyfrom_path, copyfrom_revision, file_pool):
+    self._dir_changed(parent_baton)
+
+  def open_file(self, path, parent_baton, base_revision, file_pool):
+    # some kind of change is going to happen
+    self._dir_changed(parent_baton)
+
+  def _dir_changed(self, baton):
+    if baton[0]:
+      # the directory hasn't been printed yet. do it.
+      print baton[1] + '/'
+      baton[0] = 0
 
 
 def _basename(path):
