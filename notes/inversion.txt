@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.14 $ of this document.)
+              ($Revision: 1.15 $ of this document.)
 
 * Introduction
 
@@ -194,11 +194,15 @@ Maybe if no good client-side program is available, Ivn can get
 sophisticated and send the working file to the server, who will try to
 do the diff and send it back.  But that's for the future.
 
-* Implementation
+* Design
 
-** Data design
+** The basic repository structure
 
-Suppose we have a new project, at version 1, that looks like this:
+[This design is drawn from Jim Blandy's "Subversion" spec, with a few
+optimizations from Ben and Karl.]
+
+Suppose we have a new project, at version 1, looking like this (pardon
+the CVS syntax):
 
    prompt$ inv checkout myproj
    U myproj/
@@ -210,11 +214,11 @@ Suppose we have a new project, at version 1, that looks like this:
    prompt$
 
 (Only the file `foo' is a regular file, everything else in myproj is a
-directory).
+directory so far).
 
-Now we'll see what myproj looks like as an abstract data structure in
-the repository, and how that structure works in various operations
-(such as update, commit, and branch).  
+Let's see what this looks like as an abstract data structure in the
+repository, and how that structure works in various operations (such
+as update, commit, and branch).
 
 In the diagrams that follow, lines with arrowheads represent time
 (that is, the progression of versions), and any other lines represent
@@ -420,9 +424,9 @@ something:
                            |________|          |________|
 
 
-Yes, version 2 points to exactly the same root node as version 1.  And
-why not?  That node (a directory) hasn't changed at all.  Nor has its
-child, nor has anything until you get all the way down to foo.
+Version 2 points to exactly the same root node as version 1, because
+that directory hasn't changed at all.  Nor has its child, nor has
+anything until you get all the way down to foo.
 
 That's why nodes don't store version numbers -- the exact same node
 may appear in many different versions.
@@ -586,8 +590,16 @@ README to the project's top level directory):
                             |________|          |________|
 
 
+** How branches work in this design
 
-** Natively client/server.
+  [Still writing this up, although we know how it works.  The basic
+  thing to note is how tags are totally constant space, but once you
+  start committing on a tag it becomes a branch and line-of-ancestry
+  copying is forced.] 
+
+** Other miscellaneous design goals
+
+*** Natively client/server.
 
 Even when accessing a local repository, the ivn client connects to a
 ivn server and talks the ivn protocol.  This is for maintainability --
@@ -598,7 +610,7 @@ often neither, but that's another story).
 The protocol may be DAV, if DAV turns out to be suitable.  Still under
 investigation.
 
-** The client/server protocol sends diffs in both directions
+*** The client/server protocol sends diffs in both directions
 
 Inversion transmits diffs both ways (unlike CVS, which transmits diffs
 from server to client, but full files going the other way, thus using
