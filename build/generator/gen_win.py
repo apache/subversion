@@ -305,24 +305,37 @@ class WinGeneratorBase(gen_base.GeneratorBase):
 
     return nondeplibs
 
-  def get_win_sources(self, target):
+  def get_win_sources(self, target, reldir_prefix=''):
     "Return the list of source files that need to be compliled for target"
 
     sources = { }
 
     if target.name == 'mod_dav_svn':
-      for fname in (self.get_win_sources(self.targets['libsvn_fs'])
-                    + self.get_win_sources(self.targets['libsvn_subr'])
-                    + self.get_win_sources(self.targets['libsvn_delta'])
-                    + self.get_win_sources(self.targets['libsvn_repos'])):
-        sources[fname] = None
+      # get (fname, reldir) pairs for these dependent libs
+      for src in (self.get_win_sources(self.targets['libsvn_fs'], 'fs')
+                  + self.get_win_sources(self.targets['libsvn_subr'], 'subr')
+                  + self.get_win_sources(self.targets['libsvn_delta'], 'delta')
+                  + self.get_win_sources(self.targets['libsvn_diff'], 'diff')
+                  + self.get_win_sources(self.targets['libsvn_repos'],
+                                         'repos')):
+        sources[src] = None
 
     for obj in self.graph.get_sources(gen_base.DT_LINK, target.name):
       if isinstance(obj, gen_base.Target):
         continue
 
       for src in self.graph.get_sources(gen_base.DT_OBJECT, obj):
-        sources[src] = None
+        if isinstance(src, gen_base.SourceFile):
+          if reldir_prefix:
+            if src.reldir:
+              reldir = reldir_prefix + '\\' + src.reldir
+            else:
+              reldir = reldir_prefix
+          else:
+            reldir = src.reldir
+        else:
+          reldir = ''
+        sources[str(src), reldir] = None
 
     return sources.keys()
 
