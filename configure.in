@@ -65,33 +65,8 @@ dnl Top level
 SVN_INCLUDES='-I$(top_srcdir)/subversion/include'
 AC_SUBST(SVN_INCLUDES)
 
-dnl libsvn_client
-SVN_LIBSVN_CLIENT_LIBS='$(top_builddir)/subversion/libsvn_client/libsvn_client.la'
-AC_SUBST(SVN_LIBSVN_CLIENT_LIBS)
-
-dnl libsvn_delta
-SVN_LIBSVN_DELTA_LIBS='$(top_builddir)/subversion/libsvn_delta/libsvn_delta.la'
-AC_SUBST(SVN_LIBSVN_DELTA_LIBS)
-
-dnl libsvn_fs
-SVN_LIBSVN_FS_LIBS='$(top_builddir)/subversion/libsvn_fs/libsvn_fs.la'
-AC_SUBST(SVN_LIBSVN_FS_LIBS)
-
-dnl libsvn_ra_dav
-SVN_LIBSVN_RA_DAV_LIBS='$(top_builddir)/subversion/libsvn_ra_dav/libsvn_ra_dav.la'
-AC_SUBST(SVN_LIBSVN_RA_DAV_LIBS)
-
-dnl libsvn_ra_local
-SVN_LIBSVN_RA_LOCAL_LIBS='$(top_builddir)/subversion/libsvn_ra_local/libsvn_ra_local.la'
-AC_SUBST(SVN_LIBSVN_RA_LOCAL_LIBS)
-
-dnl libsvn_subr
-SVN_LIBSVN_SUBR_LIBS='$(top_builddir)/subversion/libsvn_subr/libsvn_subr.la'
-AC_SUBST(SVN_LIBSVN_SUBR_LIBS)
-
-dnl libsvn_wc
-SVN_LIBSVN_WC_LIBS='$(top_builddir)/subversion/libsvn_wc/libsvn_wc.la'
-AC_SUBST(SVN_LIBSVN_WC_LIBS)
+dnl define all the library macros
+SVN_DEFINE_LIBS
 
 dnl APR
 SVN_APR_INCLUDES=-I'$(top_srcdir)/apr/include'
@@ -128,9 +103,6 @@ AC_PROG_CC
 
 dnl See if 'ln -s' works
 AC_PROG_LN_S
-
-dnl `autoscan' suggested we check for ranlib... why?
-dnl AC_PROG_RANLIB
 
 dnl Check for libtool -- we'll definitely need it for all our shared libs!
 echo "configuring libtool now"
