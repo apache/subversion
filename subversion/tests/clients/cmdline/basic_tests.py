@@ -716,48 +716,48 @@ def basic_delete(sbox):
     return 1
 
   # 'svn rm' that should fail
-  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', chi_path)
+  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', chi_path)
   if len (stderr_lines) == 0:
     print "Delete should have failed due to text changes"
     return 1
 
-  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', chi_parent_path)
+  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', chi_parent_path)
   if len (stderr_lines) == 0:
     print "Delete should have failed due to child text changes"
     return 1
 
-  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', rho_path)
+  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', rho_path)
   if len (stderr_lines) == 0:
     print "Delete should have failed due to file prop changes"
     return 1
 
-  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', rho_parent_path)
+  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', rho_parent_path)
   if len (stderr_lines) == 0:
     print "Delete should have failed due to child file prop changes"
     return 1
 
-  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', F_path)
+  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', F_path)
   if len (stderr_lines) == 0:
     print "Delete should have failed due to dir prop changes"
     return 1
 
-  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', F_parent_path)
+  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', F_parent_path)
   if len (stderr_lines) == 0:
     print "Delete should have failed due to child dir prop changes"
     return 1
   
-  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', sigma_path)
+  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', sigma_path)
   if len (stderr_lines) == 0:
     print "Delete should have failed due to unversioned file"
     return 1
 
-  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm',
+  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm',
                                                     sigma_parent_path)
   if len (stderr_lines) == 0:
     print "Delete should have failed due to unversioned child"
     return 1
 
-  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', X_path)
+  stdout_lines, stderr_lines = svntest.main.run_svn(1, 'rm', X_path)
   if len (stderr_lines) == 0:
     print "Delete should have failed due to added hierarchy"
     return 1
