@@ -241,7 +241,7 @@ svn_error_clear (svn_error_t *err)
 }
 
 static void
-print_error (svn_error_t *err, FILE *stream, svn_boolean_t print_strerror)
+print_error (svn_error_t *err, FILE *stream)
 {
   char errbuf[256];
   const char *err_string;
@@ -273,9 +273,11 @@ print_error (svn_error_t *err, FILE *stream, svn_boolean_t print_strerror)
   
   /* Only print the same APR error string once. */
   if (err->message)
-    svn_error_clear (svn_cmdline_fprintf (stream, err->pool, "svn: %s\n",
-                                          err->message));
-  else if (print_strerror)
+    {
+      svn_error_clear (svn_cmdline_fprintf (stream, err->pool, "svn: %s\n",
+                                            err->message));
+    }
+  else
     {
       /* Is this a Subversion-specific error code? */
       if ((err->apr_err > APR_OS_START_USEERR)
@@ -298,14 +300,55 @@ print_error (svn_error_t *err, FILE *stream, svn_boolean_t print_strerror)
 void
 svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
 {
-  apr_status_t parent_apr_err = APR_SUCCESS;
+  /* In a long error chain, there may be multiple errors with the same
+     error code and no custom message.  We only want to print the
+     default message for that code once; printing it multiple times
+     would add no useful information.  The 'empties' array below
+     remembers the codes of empty errors already seen in the chain.
+
+     We could allocate it in err->pool, but there's no telling how
+     long err will live or how many times it will get handled.  So we
+     use a subpool. */
+  apr_pool_t *subpool;
+  apr_array_header_t *empties;
+
+  /* ### The rest of this file carefully avoids using svn_pool_*(),
+     preferring apr_pool_*() instead.  I can't remember why -- it may
+     be an artifact of r3719, or it may be for some deeper reason --
+     but I'm playing it safe and using apr_pool_*() here too. */
+  apr_pool_create (&subpool, err->pool);
+  empties = apr_array_make (subpool, 0, sizeof (apr_status_t));
 
   while (err)
     {
-      print_error (err, stream, (err->apr_err != parent_apr_err));
-      parent_apr_err = err->apr_err;
+      int i;
+      svn_boolean_t printed_already = FALSE;
+
+      if (! err->message)
+        {
+          for (i = 0; i < empties->nelts; i++)
+            {
+              if (err->apr_err == ((apr_status_t *)empties->elts)[i])
+                {
+                  printed_already = TRUE;
+                  break;
+                }
+            }
+        }
+      
+      if (! printed_already)
+        {
+          print_error (err, stream);
+          if (! err->message)
+            {
+              (*((apr_status_t *) apr_array_push (empties))) = err->apr_err;
+            }
+        }
+
       err = err->child;
     }
+
+  apr_pool_destroy (subpool);
 
   fflush (stream);
   if (fatal)
