@@ -179,6 +179,39 @@ svn_delta_t * svn_svr_get_update (svn_string_t *repos,
 
 
 
+/* One simple routine for determining permissions and roles.
+
+   We're assuming that the network layer has *already* authenticated
+   the user in question, and now simply wants to know if the user is
+   permitted to perform an action on some data.
+
+   Input:    a previously authenticated username and auth_method
+
+   Returns:  either NULL if the action is denied, or returns the
+             internal Subversion username.  (The server then uses this
+             Subversion username to perform the requested action
+             against the filesystem.)
+
+   This routine is implemented by a server-side "plug-in" on the back end.
+
+   The default plug-in consults the `svn_security' file, maps the
+   auth_user/auth_method pair to an internal Subversion user, and
+   looks up user's various roles.  
+
+   An alternate tigris plug-in would actually look up roles in a mySQL
+   database and return the same information.
+
+ */
+
+typedef enum svr_action {add, rm, mv, checkout, 
+                         commit, import, update} svr_action_t;
+
+svn_string_t * svn_getuser (svn_string_t *repos,
+                            svn_string_t *authenticated_username,
+                            svn_string_t *authenticated_method,
+                            svr_action_t requested_action,
+                            svn_string_t *path);
+                            
 
 
 /* --------------------------------------------------------------
