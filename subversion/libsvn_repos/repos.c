@@ -228,6 +228,17 @@ create_locks (svn_repos_t *repos, apr_pool_t *pool)
   "# culprit may be unusual (or missing) environment variables."        \
   APR_EOL_STR
 
+#define PREWRITTEN_HOOKS_TEXT                                           \
+  "# For more examples and pre-written hooks, see those in"             \
+  APR_EOL_STR                                                           \
+  "# the Subversion repository at"                                      \
+  APR_EOL_STR                                                           \
+  "# http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/ and"     \
+  APR_EOL_STR                                                           \
+  "# http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/"       \
+  APR_EOL_STR                                                           \
+
+
 static svn_error_t *
 create_hooks (svn_repos_t *repos, apr_pool_t *pool)
 {
@@ -320,7 +331,8 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       HOOKS_ENVIRONMENT_TEXT
       "# "
       APR_EOL_STR
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      "# Here is an example hook script, for a Unix /bin/sh interpreter."
+      PREWRITTEN_HOOKS_TEXT
       APR_EOL_STR
       APR_EOL_STR
       "REPOS=\"$1\""
@@ -443,7 +455,8 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       HOOKS_ENVIRONMENT_TEXT
       "# "
       APR_EOL_STR
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      "# Here is an example hook script, for a Unix /bin/sh interpreter."
+      PREWRITTEN_HOOKS_TEXT
       APR_EOL_STR
       APR_EOL_STR
       "REPOS=\"$1\""
@@ -579,7 +592,8 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       HOOKS_ENVIRONMENT_TEXT
       "# "
       APR_EOL_STR
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      "# Here is an example hook script, for a Unix /bin/sh interpreter."
+      PREWRITTEN_HOOKS_TEXT
       APR_EOL_STR
       APR_EOL_STR
       "REPOS=\"$1\""
@@ -689,7 +703,8 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       HOOKS_ENVIRONMENT_TEXT
       "# "
       APR_EOL_STR
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      "# Here is an example hook script, for a Unix /bin/sh interpreter."
+      PREWRITTEN_HOOKS_TEXT
       APR_EOL_STR
       APR_EOL_STR
       "REPOS=\"$1\""
@@ -794,7 +809,8 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       HOOKS_ENVIRONMENT_TEXT
       "# "
       APR_EOL_STR
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      "# Here is an example hook script, for a Unix /bin/sh interpreter."
+      PREWRITTEN_HOOKS_TEXT
       APR_EOL_STR
       APR_EOL_STR
       "REPOS=\"$1\""
