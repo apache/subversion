@@ -84,11 +84,10 @@ added later without breaking backwards-compatibility.
 
 Behaviors
 =========
-  
-All files are assumed binary by default.  If the user explicitly
-asks for it, she can get keyword substitution.  And, if she asks for
-it, she can get line-end conversion.  These two filters are
-completely independent of one another.
+
+All files are assumed binary by default.  If users explicitly ask for it, they
+can get keyword substitution.  And, if they ask for it, they can get line-end
+conversion.  These two filters are completely independent of one another.
 
 * Keyword substitution (on/OFF) per filesystem object. Children of
   directories inherit this property.
@@ -116,16 +115,19 @@ Options
 
   -? -h -H --help                Help.
       
-  -V --verbosity KEY             [quiet|progress|verbose|pontifical]
+  -V --verbose [ KEY ]           [quiet|progress|verbose|trace]
                                  Determines the level of spewage that the
-                                 client gives (progress is the default)
-      
+                                 client gives (progress is the default,
+                                 --verbose without arg defaults to verbose)
+
   -D --date DATESPEC             Like "cvs cmd -D DATESPEC"
-      
-  -v --version VER               Like "cvs -r" Subversion does not have revisions,
-                                 we have versions. Multiple version #s are
-                                 separated by a `,'
-      
+
+  -v --file-version VER          Like "cvs -r" Subversion does not have
+                                 revisions, we have versions. Multiple
+                                 version #s are separated by a `,'
+
+     --version                   svn version is printed.
+
   -l --local-dir                 Local; run only in current working directory.
       
      --recursive                 Operate recursively (default).
@@ -149,14 +151,14 @@ Options
      --read-only                 Make new working files read-only.
       
      --writable                  Make new working files read-write (default)
-      
-     --                          End of option processing
 
   -I --ignore GLOB               Ignore entities whose names match GLOB
 
   -K --keywords GLOB             Expand keywords in files whose names match GLOB.
 
   -L --line-conversion GLOB      Do line-end conversion for files matching GLOB.
+
+     --                          End of option processing
 
 * Aliases (shorthand for commonly used options and option combinations)
 
@@ -196,12 +198,10 @@ Summary:
    tag      | tg
    update   | up
 
-NOTE: For now, I am not including Options in the usage
+NOTE: For now, the option descriptions are mostly not included in the
       statements for each subcommand. Once this document becomes a bit
       less fluid, we should document them for each subcommand as the
-      behaviors of the Options may have subtle differences
-      depending on the subcommand -Fitz
-
+      subcommand specific behavior warrents.
 
   checkout
   ========
@@ -283,7 +283,7 @@ NOTE: For now, I am not including Options in the usage
 
   "I for one abhor cvs's current behavior for cvs rm" -Fitz
   "I for two abhor cvs's current behavior for cvs rm" -Karl
-
+  "I merely think CVS is utterly insufferable in this regard" -Bruce
 
   copy
   ====
@@ -321,8 +321,9 @@ NOTE: For now, I am not including Options in the usage
   Create a configuration in the repository at PATH, mirroring the tree
   in the working copy and based on the versions found there.
 
-  TODO: this needs to be documented _very_ thoroughly.  These are not
-  much like CVS tags.
+  [[TODO: this needs to be documented _very_ thoroughly.  These are not
+  much like CVS tags.]]  [[Then you need to reference another doc, since
+  here we are mostly putting together option/usage text. -b]]
  
  
   status
@@ -339,7 +340,9 @@ NOTE: For now, I am not including Options in the usage
 
   Usage: svn diff [svn-diff-opts/args]
 
-  This is like cvs diff. Anyone have anything to add?
+  This is like cvs diff. [[Anyone have anything to add?]]
+  [[Like, maybe, special handling of binary diffs or alternate
+  diff programs? -b]]
 
 
   rdiff
@@ -357,7 +360,7 @@ NOTE: For now, I am not including Options in the usage
   annotate
   ========
 
-  This is like cvs annotate. Anyone have anything to add?
+  This is like cvs annotate. [[Anyone have anything to add?]]
  
 
   import
