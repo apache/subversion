@@ -47,6 +47,19 @@
  */
 
 
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+/* meta-todo: get APR soon */
+
+/* todo: need an error() routine, etc, as in CVS!  Once have it,
+   rewrite the error reporting in here.  Remember that the error()
+   routine can't require malloc() to succeed.  */
+
+
 /* Malloc, but with built-in error checking. */
 void *
 svn_malloc (size_t len)
@@ -57,6 +70,7 @@ svn_malloc (size_t len)
     {
       char err[60];
       sprintf (err, "unable to allocate %lu bytes", (unsigned long) len);
+      fprintf (stderr, "%s", err);
       exit (1);   /* todo: use some custom exit function later */
     }
   
@@ -83,12 +97,54 @@ svn_realloc (void *old, size_t new_len)
     {
       char err[60];
       sprintf (err, "unable to allocate %lu bytes", (unsigned long) new_len);
+      fprintf (stderr, "%s", err);
       exit (1);   /* todo: use some custom exit function later? */
     }
 
   /* Else. */
 
   return (new);
+}
+
+
+/* Slurp entire contents of FILE into a buffer, recording length in LEN. */
+void *
+slurp_file (const char *file, size_t *len)
+{
+  struct stat s;
+  FILE *fp;
+  unsigned char *buf;
+  size_t total_so_far = 0;
+  
+  /* todo: fooo, this is crap, make it robust or use APR */
+
+  if (stat (file, &s) < 0)
+    fprintf (stderr, errno, "can't stat %s", file);
+  
+  *len = s.st_size;
+
+  buf = svn_malloc (*len);
+
+  fp = fopen (file, "r");
+
+  while (1)
+    {
+      size_t received;
+      
+      received = fread (buf, 1, (*len - total_so_far), fp);
+      if (ferror (fp))
+        fprintf (stderr, "can't read %s", file);
+
+      total_so_far += received;
+
+      if (feof (fp))
+        break;
+    }
+
+    if (fclose (fp) < 0)
+      fprintf (stderr, "cannot close %s", file);
+
+    return buf;
 }
 
 
