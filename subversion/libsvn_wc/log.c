@@ -311,7 +311,6 @@ log_do_merge (struct log_runner *loggy,
   const char *left, *right;
   const char *left_label, *right_label, *target_label;
   enum svn_wc_merge_outcome_t merge_outcome;
-  apr_hash_t *config;
 
   /* NAME is the basename of our merge_target.  Pull out LEFT and RIGHT. */
   left = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_1, atts);
