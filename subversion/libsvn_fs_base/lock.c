@@ -333,7 +333,7 @@ svn_fs_base__generate_token (const char **token,
                              svn_fs_t *fs,
                              apr_pool_t *pool)
 {
-  /* ### Notice that 'fs' is currently unused.  But perhaps someday,
+  /* Notice that 'fs' is currently unused.  But perhaps someday,
      we'll want to use the fs UUID + some incremented number?  */
   apr_uuid_t uuid;
   char *uuid_str = apr_pcalloc (pool, APR_UUID_FORMATTED_LENGTH + 1);

@@ -2916,12 +2916,12 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
 static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
                                 dav_response **response)
 {
-  /* ### Thinking about adding support for LOCKNULL resources in this
-         walker?  Check out the (working) code that was removed here:
-              Author: cmpilato
-              Date: Fri Mar 18 14:54:02 2005
-              New Revision: 13475
-     ### */
+  /* Thinking about adding support for LOCKNULL resources in this
+     walker?  Check out the (working) code that was removed here:
+          Author: cmpilato
+          Date: Fri Mar 18 14:54:02 2005
+          New Revision: 13475
+     */
 
   dav_svn_walker_context ctx = { 0 };
   dav_error *err;

@@ -105,7 +105,7 @@ svn_lock_to_dav_lock(dav_lock **dlock,
   if (! hide_auth_user)
     lock->auth_user = apr_pstrdup(pool, slock->owner);
 
-  /* ### This is absurd.  apr_time.h has an apr_time_t->time_t func,
+  /* This is absurd.  apr_time.h has an apr_time_t->time_t func,
      but not the reverse?? */
   if (slock->expiration_date)
     lock->timeout = (time_t)slock->expiration_date / APR_USEC_PER_SEC;

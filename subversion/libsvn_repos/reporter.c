@@ -757,7 +757,8 @@ delta_dirs (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
   /* Compare the property lists.  If we're starting empty, pass a NULL
      source path so that we add all the properties.
-     ### When we support directory locks, we must pass the lock token here. */
+     
+     When we support directory locks, we must pass the lock token here. */
   SVN_ERR (delta_proplists (b, s_rev, start_empty ? NULL : s_path, t_path,
                             NULL, change_dir_prop, dir_baton, pool));
 
