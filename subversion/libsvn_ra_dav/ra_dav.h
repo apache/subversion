@@ -123,6 +123,8 @@ typedef struct {
   /* when we see a DAV:href element, what element is the parent? */
   int href_parent;
 
+  apr_pool_t *pool;
+
 } svn_ra_dav_resource_t;
 
 /* fetch a bunch of properties from the server. */
