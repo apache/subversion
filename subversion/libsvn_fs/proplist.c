@@ -23,9 +23,9 @@
 
 
 svn_error_t *
-svn_fs__get_prop (svn_stringbuf_t **value_p,
+svn_fs__get_prop (svn_string_t **value_p,
                   skel_t *proplist,
-                  const svn_string_t *name,
+                  const char *name,
                   apr_pool_t *pool)
 {
   skel_t *prop;
@@ -42,9 +42,9 @@ svn_fs__get_prop (svn_stringbuf_t **value_p,
       skel_t *this_name = prop;
       skel_t *this_value = prop->next;
 
-      if (svn_fs__atom_matches_string (this_name, name))
+      if (svn_fs__matches_atom (this_name, name))
         {
-          *value_p = svn_stringbuf_ncreate (this_value->data, 
+          *value_p = svn_string_ncreate (this_value->data,
                                          this_value->len, 
                                          pool);
           return SVN_NO_ERROR;

@@ -54,33 +54,30 @@ static const char *get_repos_path (struct dav_resource_private *info)
 
 /* construct the repos-local name for the given DAV property name */
 static void get_repos_propname(dav_db *db, const dav_prop_name *name,
-                               svn_string_t *repos_propname)
+                               char **repos_propname)
 {
   if (strcmp(name->ns, SVN_PROP_PREFIX) == 0)
     {
       /* recombine the namespace ("svn:") and the name. */
       svn_stringbuf_set(db->work, SVN_PROP_PREFIX);
       svn_stringbuf_appendcstr(db->work, name->name);
-      repos_propname->data = db->work->data;
-      repos_propname->len = db->work->len;
+      *repos_propname = db->work->data;
     }
   else if (strcmp(name->ns, SVN_PROP_CUSTOM_PREFIX) == 0)
     {
       /* the name of a custom prop is just the name -- no ns URI */
-      repos_propname->data = name->name;
-      repos_propname->len = strlen(name->name);
+      *repos_propname = (char *)name->name;
     }
   else
     {
-      repos_propname->data = NULL;
-      repos_propname->len = 0;
+      *repos_propname = NULL;
     }
 }
 
 static dav_error *get_value(dav_db *db, const dav_prop_name *name,
-                            svn_stringbuf_t **pvalue)
+                            svn_string_t **pvalue)
 {
-  svn_string_t propname;
+  char *propname;
   svn_error_t *serr;
 
   /* get the repos-local name */
@@ -88,7 +85,7 @@ static dav_error *get_value(dav_db *db, const dav_prop_name *name,
 
   /* ### disallow arbitrary, non-SVN properties. this effectively shuts
      ### off arbitrary DeltaV clients for now. */
-  if (propname.data == NULL)
+  if (propname == NULL)
     {
       /* we know these are not present. */
       *pvalue = NULL;
@@ -101,15 +98,15 @@ static dav_error *get_value(dav_db *db, const dav_prop_name *name,
   if (db->resource->baselined)
     if (db->resource->type == DAV_RESOURCE_TYPE_WORKING)
       serr = svn_fs_txn_prop(pvalue, db->resource->info->root.txn,
-                             &propname, db->p);
+                             propname, db->p);
     else
       serr = svn_fs_revision_prop(pvalue, db->resource->info->repos->fs,
                                   db->resource->info->root.rev,
-                                  &propname, db->p);
+                                  propname, db->p);
   else
     serr = svn_fs_node_prop(pvalue, db->resource->info->root.root,
                             get_repos_path(db->resource->info),
-                            &propname, db->p);
+                            propname, db->p);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not fetch a property");
@@ -122,13 +119,16 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
 {
   svn_string_t propname;
   svn_error_t *serr;
+  char *tpropname;
 
   /* get the repos-local name */
-  get_repos_propname(db, name, &propname);
+  get_repos_propname(db, name, &tpropname);
+  propname.data = tpropname;
+  propname.len = strlen (tpropname);
 
   /* ### disallow arbitrary, non-SVN properties. this effectively shuts
      ### off arbitrary DeltaV clients for now. */
-  if (propname.data == NULL)
+  if (tpropname == NULL)
     return dav_new_error(db->p, HTTP_CONFLICT, 0,
                          "Properties may only be defined in the "
                          SVN_PROP_PREFIX " and " SVN_PROP_CUSTOM_PREFIX
@@ -207,11 +207,12 @@ static dav_error *dav_svn_db_define_namespaces(dav_db *db, dav_xmlns_info *xi)
   return NULL;
 }
 
-static dav_error *dav_svn_db_output_value(dav_db *db, const dav_prop_name *name,
+static dav_error *dav_svn_db_output_value(dav_db *db, 
+                                          const dav_prop_name *name,
                                           dav_xmlns_info *xi,
                                           apr_text_header *phdr, int *found)
 {
-  svn_stringbuf_t *propval;
+  svn_string_t *propval;
   svn_stringbuf_t *xmlsafe = NULL;
   const char *prefix;
   const char *s;
@@ -226,7 +227,7 @@ static dav_error *dav_svn_db_output_value(dav_db *db, const dav_prop_name *name,
     return NULL;
 
   /* XML-escape our properties before sending them across the wire. */
-  svn_xml_escape_stringbuf(&xmlsafe, propval, db->p);
+  svn_xml_escape_string(&xmlsafe, propval, db->p);
 
   if (strcmp(name->ns, SVN_PROP_CUSTOM_PREFIX) == 0)
     prefix = "C:";
@@ -293,9 +294,12 @@ static dav_error *dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
 {
   svn_string_t propname;
   svn_error_t *serr;
+  char *tpropname;
 
   /* get the repos-local name */
-  get_repos_propname(db, name, &propname);
+  get_repos_propname(db, name, &tpropname);
+  propname.data = tpropname;
+  propname.len = strlen (tpropname);
 
   /* ### non-svn props aren't in our repos, so punt for now */
   if (propname.data == NULL)
@@ -321,30 +325,30 @@ static dav_error *dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
 
 static int dav_svn_db_exists(dav_db *db, const dav_prop_name *name)
 {
-  svn_string_t propname;
-  svn_stringbuf_t *propval;
+  char *propname;
+  svn_string_t *propval;
   svn_error_t *serr;
 
   /* get the repos-local name */
   get_repos_propname(db, name, &propname);
 
   /* ### non-svn props aren't in our repos */
-  if (propname.data == NULL)
+  if (propname == NULL)
     return 0;
 
   /* Working Baseline, Baseline, or (Working) Version resource */
   if (db->resource->baselined)
     if (db->resource->type == DAV_RESOURCE_TYPE_WORKING)
       serr = svn_fs_txn_prop(&propval, db->resource->info->root.txn,
-                             &propname, db->p);
+                             propname, db->p);
     else
       serr = svn_fs_revision_prop(&propval, db->resource->info->repos->fs,
                                   db->resource->info->root.rev,
-                                  &propname, db->p);
+                                  propname, db->p);
   else
     serr = svn_fs_node_prop(&propval, db->resource->info->root.root,
                             get_repos_path(db->resource->info),
-                            &propname, db->p);
+                            propname, db->p);
 
   /* ### try and dispose of the value? */
 
@@ -428,7 +432,7 @@ static dav_error *dav_svn_db_get_rollback(dav_db *db, const dav_prop_name *name,
 {
   dav_error *err;
   dav_deadprop_rollback *ddp;
-  svn_stringbuf_t *propval;
+  svn_string_t *propval;
 
   if ((err = get_value(db, name, &propval)) != NULL)
     return err;

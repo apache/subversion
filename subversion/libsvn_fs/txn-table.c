@@ -413,10 +413,10 @@ svn_error_t *svn_fs__get_txn_list (char ***names_p,
 
 
 struct txn_prop_args {
-  svn_stringbuf_t **value_p;
+  svn_string_t **value_p;
   svn_fs_t *fs;
   const char *id;
-  const svn_string_t *propname;
+  const char *propname;
 };
 
 
@@ -441,13 +441,13 @@ txn_body_txn_prop (void *baton,
 
 
 svn_error_t *
-svn_fs_txn_prop (svn_stringbuf_t **value_p,
+svn_fs_txn_prop (svn_string_t **value_p,
                  svn_fs_txn_t *txn,
-                 const svn_string_t *propname,
+                 const char *propname,
                  apr_pool_t *pool)
 {
   struct txn_prop_args args;
-  svn_stringbuf_t *value;
+  svn_string_t *value;
   svn_fs_t *fs = svn_fs_txn_fs (txn);
 
   SVN_ERR (svn_fs__check_fs (fs));

@@ -27,13 +27,10 @@
 
 /* Get the value of the property NAME in PROPLIST, storing it in
    *VALUE_P.  Do all necessary allocations in POOL.  If NAME is not
-   found in PROPLIST, set *VALUE_P to NULL.
-
-   ### todo (issue #406): name could be const char *, value_p
-   svn_string_t instead of svn_stringbuf_t.  */
-svn_error_t *svn_fs__get_prop (svn_stringbuf_t **value_p,
+   found in PROPLIST, set *VALUE_P to NULL.  */
+svn_error_t *svn_fs__get_prop (svn_string_t **value_p,
                                skel_t *proplist,
-                               const svn_string_t *name,
+                               const char *name,
                                apr_pool_t *pool);
 
 /* Set *PROP_HASH to a hash table mapping const char * names to

@@ -175,8 +175,8 @@ timestamps_equal_p (svn_boolean_t *equal_p,
   {
     /* Put the disk timestamp through a string conversion, so it's
        at the same resolution as entry timestamps. */
-    svn_stringbuf_t *tstr = svn_time_to_string (wfile_time, pool);
-    wfile_time = svn_time_from_string (tstr);
+    const char *tstr = svn_time_to_nts (wfile_time, pool);
+    wfile_time = svn_time_from_nts (tstr);
   }
   
   if (wfile_time == entrytime)

@@ -73,9 +73,9 @@ typedef struct svnlook_ctxt_t
 
 /*** Helper functions. ***/
 static svn_error_t *
-get_property (svn_stringbuf_t **prop_value, 
+get_property (svn_string_t **prop_value,
               svnlook_ctxt_t *c, 
-              svn_string_t *prop_name,
+              const char *prop_name,
               apr_pool_t *pool)
 {
   /* Fetch transaction property... */
@@ -645,14 +645,9 @@ print_tree (svn_repos_node_t *node,
 static svn_error_t *
 do_log (svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
 {
-  svn_stringbuf_t *prop_value;
-  svn_string_t prop_name;
-  const char *name = SVN_PROP_REVISION_LOG;
+  svn_string_t *prop_value;
 
-  prop_name.data = name;
-  prop_name.len = strlen (name);
-
-  SVN_ERR (get_property (&prop_value, c, &prop_name, pool));
+  SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_LOG, pool));
 
   if (prop_value && prop_value->data)
     {
@@ -681,14 +676,9 @@ do_date (svnlook_ctxt_t *c, apr_pool_t *pool)
 {
   if (c->is_revision)
     {
-      svn_stringbuf_t *prop_value;
-      svn_string_t prop_name;
-      const char *name = SVN_PROP_REVISION_DATE;
+      svn_string_t *prop_value;
       
-      prop_name.data = name;
-      prop_name.len = strlen (name);
-      
-      SVN_ERR (get_property (&prop_value, c, &prop_name, pool));
+      SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_DATE, pool));
 
       if (prop_value && prop_value->data)
         {
@@ -702,7 +692,7 @@ do_date (svnlook_ctxt_t *c, apr_pool_t *pool)
           apr_time_t aprtime;
           apr_status_t apr_err;
               
-          aprtime = svn_time_from_string (prop_value);
+          aprtime = svn_time_from_nts (prop_value->data);
           apr_err = apr_explode_time (&extime, aprtime, 0);
           if (apr_err)
             return svn_error_create (apr_err, 0, NULL, pool,
@@ -726,14 +716,9 @@ do_date (svnlook_ctxt_t *c, apr_pool_t *pool)
 static svn_error_t *
 do_author (svnlook_ctxt_t *c, apr_pool_t *pool)
 {
-  svn_stringbuf_t *prop_value;
-  svn_string_t prop_name;
-  const char *name = SVN_PROP_REVISION_AUTHOR;
+  svn_string_t *prop_value;
 
-  prop_name.data = name;
-  prop_name.len = strlen (name);
-
-  SVN_ERR (get_property (&prop_value, c, &prop_name, pool));
+  SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_AUTHOR, pool));
 
   if (prop_value && prop_value->data)
     printf ("%s", prop_value->data);

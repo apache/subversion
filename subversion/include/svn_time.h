@@ -32,15 +32,12 @@ extern "C" {
 #include "svn_error.h"
 
 
-/* Convert WHEN to an svn string representation allocated in POOL.
-   Use svn_time_from_string() for the reverse conversion. */
-svn_stringbuf_t *svn_time_to_string (apr_time_t when, apr_pool_t *pool);
+/* Convert WHEN to a const char * representation allocated in POOL.
+   Use svn_time_from_nts() for the reverse conversion. */
+const char *svn_time_to_nts (apr_time_t when, apr_pool_t *pool);
 
-
-/* Convert TIMESTR to an apr_time_t.  TIMESTR should be of the form
-   returned by svn_wc__time_to_string(). */
-apr_time_t svn_time_from_string (svn_stringbuf_t *timestr);
-
+/* Convert TIMESTR to an apr_time_t. */
+apr_time_t svn_time_from_nts (const char *timestr);
 
 /* Needed by getdate.y parser */
 struct getdate_time {

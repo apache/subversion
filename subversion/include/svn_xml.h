@@ -54,6 +54,12 @@ void svn_xml_escape_stringbuf (svn_stringbuf_t **outstr,
                                const svn_stringbuf_t *string,
                                apr_pool_t *pool);
 
+/* Same as `svn_xml_escape_stringbuf', but STRING is an svn_string_t.
+ */
+void svn_xml_escape_string (svn_stringbuf_t **outstr,
+                            const svn_string_t *string,
+                            apr_pool_t *pool);
+
 /* Same as `svn_xml_escape_stringbuf', but STRING is a null-terminated
  * C string.
  */
@@ -78,6 +84,11 @@ void svn_xml_unescape_stringbuf (svn_stringbuf_t **outstr,
                                  const svn_stringbuf_t *string,
                                  apr_pool_t *pool);
 
+/* Same as `svn_xml_unescape_stringbuf', but STRING is an svn_string_t.
+ */
+void svn_xml_unescape_string (svn_stringbuf_t **outstr,
+                              const svn_string_t *string,
+                              apr_pool_t *pool);
 
 /* Same as `svn_xml_unescape_stringbuf', but STRING is a
  * null-terminated C string.

@@ -55,20 +55,14 @@ svn_repos_get_logs (svn_fs_t *fs,
        ((start >= end) ? (this_rev >= end) : (this_rev <= end));
        ((start >= end) ? this_rev-- : this_rev++))
     {
-      svn_stringbuf_t *author, *date, *message;
-      svn_string_t date_prop = {SVN_PROP_REVISION_DATE,
-                                strlen(SVN_PROP_REVISION_DATE)};
-      svn_string_t author_prop = {SVN_PROP_REVISION_AUTHOR,
-                                  strlen(SVN_PROP_REVISION_AUTHOR)};
-      svn_string_t message_prop = {SVN_PROP_REVISION_LOG,
-                                   strlen(SVN_PROP_REVISION_LOG)};
+      svn_string_t *author, *date, *message;
 
       SVN_ERR (svn_fs_revision_prop
-               (&author, fs, this_rev, &author_prop, subpool));
+               (&author, fs, this_rev, SVN_PROP_REVISION_AUTHOR, subpool));
       SVN_ERR (svn_fs_revision_prop
-               (&date, fs, this_rev, &date_prop, subpool));
+               (&date, fs, this_rev, SVN_PROP_REVISION_DATE, subpool));
       SVN_ERR (svn_fs_revision_prop
-               (&message, fs, this_rev, &message_prop, subpool));
+               (&message, fs, this_rev, SVN_PROP_REVISION_LOG, subpool));
 
       SVN_ERR ((*receiver) (receiver_baton,
                             NULL,

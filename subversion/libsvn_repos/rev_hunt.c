@@ -48,17 +48,16 @@ get_time (apr_time_t *tm,
           svn_revnum_t rev,
           apr_pool_t *pool)
 {
-  svn_stringbuf_t *date_str;
-  svn_string_t date_prop = {SVN_PROP_REVISION_DATE,
-                            strlen(SVN_PROP_REVISION_DATE)};
+  svn_string_t *date_str;
 
-  SVN_ERR (svn_fs_revision_prop (&date_str, fs, rev, &date_prop, pool));
+  SVN_ERR (svn_fs_revision_prop (&date_str, fs, rev, SVN_PROP_REVISION_DATE,
+                                 pool));
   if (! date_str)    
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
        "failed to find tm on revision %ld", rev);
 
-  *tm = svn_time_from_string (date_str);
+  *tm = svn_time_from_nts (date_str->data);
 
   return SVN_NO_ERROR;
 }
