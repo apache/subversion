@@ -443,8 +443,8 @@ get_chunk_offset (svn_fs__representation_t *rep,
 static svn_error_t *
 rep_read_range (svn_fs_t *fs,
                 const char *rep_key,
-                char *buf,
                 apr_size_t offset,
+                char *buf,
                 apr_size_t *len,
                 trail_t *trail)
 {
@@ -686,7 +686,7 @@ svn_fs__rep_contents (svn_string_t *str,
   data = apr_palloc (trail->pool, str->len);
   str->data = data;
   len = str->len;
-  SVN_ERR (rep_read_range (fs, rep_key, data, 0, &len, trail));
+  SVN_ERR (rep_read_range (fs, rep_key, 0, data, &len, trail));
 
   /* Paranoia. */
   if (len != str->len)
@@ -729,8 +729,8 @@ txn_body_read_rep (void *baton, trail_t *trail)
     {
       SVN_ERR (rep_read_range (args->rb->fs,
                                args->rb->rep_key,
-                               args->buf,
                                args->rb->offset,
+                               args->buf,
                                args->len,
                                trail));
 
