@@ -330,27 +330,64 @@ class TreeMirror:
       self._delete_tree(directory[entry])
     del self.db[key]
 
-  def delete_path(self, path):
+  def delete_path(self, path, prune=None):
     """Delete PATH from the tree.  PATH may not have a leading slash.
     Return the deleted path.
 
-    ### FIXME: Right now, the path deleted is always PATH.  But later,
-    this will delete the highest possible directory, since that's how
-    CVS behaves (hence the -d flag to 'cvs checkout', to counteract
-    said behavior), and return that directory.  If callers always
-    use the return value, they won't need to change a thing."""
+    If PRUNE is not None, then the deleted path may differ from PATH,
+    because this will delete the highest possible directory.  In other
+    words, if PATH was the last entry in its parent, then delete
+    PATH's parent, unless it too is the last entry in *its* parent, in
+    which case delete that parent, and and so on up the chain, until a
+    directory is encountered that has an entry not in the parent stack
+    of the original target.
+
+    PRUNE is like the -P option to 'cvs checkout'."""
     components = string.split(path, '/')
+    path_so_far = None
+
+    # This is only used with PRUNE.  If not None, it is a list of
+    #
+    #   (PATH, PARENT_DIR_DICTIONARY, PARENT_DIR_DB_KEY)
+    #
+    # where PATH is the actual path we deleted, and the next two
+    # elements represent PATH's parent dir.
+    highest_empty = None
 
     parent_dir_key = self.root_key
     parent_dir = marshal.loads(self.db[parent_dir_key])
 
     # Find the target of the delete.
     for component in components[:-1]:
+
+      if path_so_far:
+        path_so_far = path_so_far + '/' + component
+      else:
+        path_so_far = component
+
+      if prune:
+        # In with the out...
+        last_parent_dir_key = parent_dir_key
+        last_parent_dir = parent_dir
+
+      # ... and old with the new:
       parent_dir_key = parent_dir[component]
       parent_dir = marshal.loads(self.db[parent_dir_key])
 
+      if prune and (len(parent_dir) == 1):
+        highest_empty = (path_so_far, last_parent_dir, last_parent_dir_key)
+      else:
+        highest_empty = None
+
     # Remove subtree, if any, then remove this entry from its parent.
-    basename = components[-1]
+    if highest_empty:
+      path = highest_empty[0]
+      basename = os.path.basename(path)
+      parent_dir = highest_empty[1]
+      parent_dir_key = highest_empty[2]
+    else:
+      basename = components[-1]
+      
     self._delete_tree(parent_dir[basename])
     del parent_dir[basename]
     self.db[parent_dir_key] = marshal.dumps(parent_dir)
@@ -549,7 +586,8 @@ class Dump:
     self.dumpfile.write('\n')
 
   def delete_path(self, svn_path):
-    deleted_path = self.head_mirror.delete_path(svn_path)
+    deleted_path = self.head_mirror.delete_path(svn_path, 1) # 1 means prune
+    print '    (deleted %s)' % deleted_path
     self.dumpfile.write('Node-path: %s\n'
                         'Node-action: delete\n'
                         '\n' % deleted_path)
