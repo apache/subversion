@@ -141,11 +141,10 @@ svn_error_t *svn_fs__set_txn_prop (svn_fs_t *fs,
                                    trail_t *trail);
 
 
-/* Set *NAMES_P to a null-terminated array of strings, giving the
-   names of all currently unfinished transactions in FS, as part of
-   TRAIL.  Allocate the array and the names in POOL, and use
-   TRAIL->pool for any temporary allocations.  */
-svn_error_t *svn_fs__get_txn_list (char ***names_p,
+/* Set *NAMES_P to an array of const char * IDs (unfinished
+   transactions in FS) as part of TRAIL.  Allocate the array and the
+   names in POOL, and use TRAIL->pool for any temporary allocations.  */
+svn_error_t *svn_fs__get_txn_list (apr_array_header_t **names_p,
                                    svn_fs_t *fs,
                                    apr_pool_t *pool,
                                    trail_t *trail);

@@ -324,9 +324,10 @@ main (int argc, const char * const *argv)
 
     case svnadmin_cmd_lstxns:
       {
-        char **txns;
-        char *txn_name;
+        apr_array_header_t *txns;
+        const char *txn_name;
         svn_boolean_t show_extra = FALSE;
+        int i;
 
         if (argc >= 4) 
           {
@@ -344,7 +345,7 @@ main (int argc, const char * const *argv)
         INT_ERR (svn_fs_list_transactions(&txns, fs, pool));
         
         /* Loop, printing revisions. */
-        while ((txn_name = *txns++))
+        for (i = 0; i < txns->nelts; i++)
           {
             svn_fs_txn_t *txn;
             svn_fs_root_t *this_root;
@@ -352,6 +353,7 @@ main (int argc, const char * const *argv)
             svn_string_t *author;
             svn_string_t *log;
 
+            txn_name = APR_ARRAY_IDX (txns, i, const char *);
             if (show_extra)
               {
                 apr_pool_t *this_pool = svn_pool_create (pool);

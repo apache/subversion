@@ -17,6 +17,7 @@
 
 #include <string.h>
 
+#include "svn_pools.h"
 #include "db.h"
 #include "fs.h"
 #include "err.h"
@@ -320,23 +321,22 @@ svn_fs__add_txn_copy (svn_fs_t *fs,
 }
 
 
-svn_error_t *svn_fs__get_txn_list (char ***names_p,
+svn_error_t *svn_fs__get_txn_list (apr_array_header_t **names_p,
                                    svn_fs_t *fs,
                                    apr_pool_t *pool,
                                    trail_t *trail)
 {
   apr_size_t const next_id_key_len = strlen (svn_fs__next_key_key);
-
-  char **names;
-  apr_size_t names_count = 0;
-  apr_size_t names_size = 4;
+  apr_pool_t *subpool = svn_pool_create (trail->pool);
+  apr_array_header_t *names;
+  const char *this_name;
 
   DBC *cursor;
   DBT key, value;
   int db_err, db_c_err;
 
   /* Allocate the initial names array */
-  names = apr_pcalloc (pool, names_size * sizeof (*names));
+  names = apr_array_make (pool, 4, sizeof (this_name));
 
   /* Create a database cursor to list the transaction names. */
   SVN_ERR (DB_WRAP (fs, "reading transaction list (opening cursor)",
@@ -360,39 +360,31 @@ svn_error_t *svn_fs__get_txn_list (char ***names_p,
       svn_fs__track_dbt (&key, trail->pool);
       svn_fs__track_dbt (&value, trail->pool);
 
+      /* Clear the per-iteration subpool */
+      svn_pool_clear (subpool);
+
       /* Ignore the "next-id" key. */
       if (key.size == next_id_key_len
           && 0 == memcmp (key.data, svn_fs__next_key_key, next_id_key_len))
         continue;
 
       /* Parse TRANSACTION skel */
-      txn_skel = svn_fs__parse_skel (value.data, value.size, trail->pool);
+      txn_skel = svn_fs__parse_skel (value.data, value.size, subpool);
       if (! txn_skel)
         return svn_fs__err_corrupt_txn 
-          (fs, apr_pstrmemdup (pool, key.data, key.size));
+          (fs, apr_pstrmemdup (trail->pool, key.data, key.size));
 
       /* Convert skel to native type. */
-      SVN_ERR (svn_fs__parse_transaction_skel (&txn, txn_skel, trail->pool));
+      SVN_ERR (svn_fs__parse_transaction_skel (&txn, txn_skel, subpool));
       
       /* If this is a immutable "committed" transaction, ignore it. */
       if (is_committed (txn))
         continue;
-      
-      /* Make sure there's enough space in the names array. */
-      if (names_count == names_size - 1)
-        {
-          char **tmp;
 
-          names_size *= 2;
-          tmp = apr_pcalloc (pool, names_size * sizeof (*tmp));
-          memcpy (tmp, names, names_count * sizeof (*tmp));
-          names = tmp;
-        }
-
-      names[names_count++] = apr_pstrmemdup(pool, key.data, key.size);
+      /* Add the transaction name to the NAMES array. */
+      (*((const char **) apr_array_push (names)))
+        = apr_pstrmemdup (pool, key.data, key.size);
     }
-
-  names[names_count] = NULL;
 
   /* Check for errors, but close the cursor first. */
   db_c_err = cursor->c_close (cursor);
@@ -403,6 +395,9 @@ svn_error_t *svn_fs__get_txn_list (char ***names_p,
     }
   SVN_ERR (DB_WRAP (fs, "reading transaction list (closing cursor)",
                     db_c_err));
+
+  /* Destroy the per-iteration subpool */
+  svn_pool_destroy (subpool);
 
   *names_p = names;
   return SVN_NO_ERROR;
