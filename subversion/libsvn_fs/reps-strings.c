@@ -30,9 +30,11 @@
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
 
+#include "../libsvn_delta/delta.h"
 
 
 /*** Local prototypes. ***/
+#define APR_ARRAY_IDX(ary,i,type) (((type *)(ary)->elts)[i])
 
 static svn_error_t *rep_read_range (svn_fs_t *fs,
                                     const char *rep_key,
@@ -134,316 +136,229 @@ delete_strings (apr_array_header_t *keys,
 
 /*** Reading the contents from a representation. ***/
 
-/* The fulltext reconstruction code has its weak spot isolated to one
- * case in the function window_handler().  By improving that case, we
- * asymptotically approach having a real delta combiner; for now, it's
- * just the naive reconstruction method.
- *
- * Here's an overview:
- *
- * rep_read_range() runs through the raw svndiff data, passing it into
- * a stream which invokes window_handler() every time a new window is
- * available.  The window_handler() ignores windows until it sees one
- * that reconstructs data within the range requested, at which point
- * it
- *
- *     1. obtains the range of source fulltext used by this window in
- *        reconstructing whatever portion the requested target range,
- *        by naively making a recursive call to rep_read_range(),
- *
- *   or
- *
- *     2. looks at the source rep; if it's a fulltext, does a dance
- *        for joy and grabs the relevant range, else if it's a delta,
- *        starts reading windows and reconstructs on the fly --
- *        wherever, this new window stream itself needs source data,
- *        it starts reading windows, and so on...
- *
- * [Got this up and running using #1, next task is to switch to #2.]
- *
- * When window_handler() has finished reconstructing the requested
- * range, or receives the null window, it sets the `done' bit in its
- * baton, so that rep_read_range() won't bother looping over the
- * trailing svndiff data.
- * 
- * We won't bother to evaluate plan #1; its weaknesses are well-known,
- * although it'll probably perform acceptably for a while.
- *
- * Let's assume we've finished implementing plan #2.  How does it
- * perform?  In terms of number of passes over ignored leading svndiff
- * data, its worst case is probably Subversion's most common case,
- * that is, looping to read a whole file from beginning to end.  But
- * note that the case is only bad when each loop reads a chunk that is
- * small relative to the full size of the file.  If you use big
- * chunks, the penalty is not so bad; and if you read the whole file
- * in one call, then there's no penalty at all (except, of course,
- * that you held a whole file in memory, which your mother taught you
- * never to do).  Users of the FS interface should use their
- * judgement; probably it would be good to read a whole file at a time
- * on checkouts, for example, except when a file is really
- * prohibitively large.
- */
-
-
-/* Baton for window_handler() below.  Note that this baton can live
-   across multiple calls to window_handler(). */
-struct window_handler_baton_t
+/* This is a very special, extremely complicated window handler. Its
+   deep purpose is to return the parsed window to the caller. */
+struct window_handler_baton
 {
-  /* Where to store the data as we undeltify it. */
-  char *buf;
-
-  /* Requested offset into the fulltext. */
-  apr_size_t req_offset;
-
-  /* Current offset into the fulltext. */
-  apr_size_t cur_offset;
-
-  /* The FS in which `base_rep' can be found. */
-  svn_fs_t *fs;
-
-  /* Representation whose fulltext this delta was made against. */
-  const char *base_rep;
-
-  /* Amount of fulltext requested to reconstruct. */
-  apr_size_t len_req;
-
-  /* Amount of fulltext reconstructed so far;
-     i.e., the offset into buf. */
-  apr_size_t len_read;
-
-  /* False until we have received the null (final) window. */
-  svn_boolean_t done;
-
-  /* Trail in which to do everything. */
-  trail_t *trail;
-
-  /* Pool in which to do temporary allocations.  This may be cleared
-     by the window handler, so you probably don't want it to be the
-     pool in which this baton or its buf live. */
-  apr_pool_t *pool;
+  svn_txdelta_window_t *window;
 };
 
-
-/* Function of type `svn_txdelta_window_handler_t';
-   BATON is a `struct window_handler_baton_t'.
-
-   If BATON->done is set, do nothing and return immediately.
-   Otherwise...
-
-   If WINDOW is relevant, reconstruct some portion of BATON->buf, as
-   part of BATON->trail; any temporary allocation happens in
-   BATON->pool, which may be cleared before the handler exits.  If
-   WINDOW is irrelevant, ignore it and return.
-
-   Q: When is WINDOW irrelevant?
-
-   A: If the range (BATON->req_offset + BATON->len_req) does not
-      overlap with the range (WINDOW->tview_len + BATON->cur_offset),
-      then the window is irrelevant, so: If the former range lies
-      before the latter, then increment BATON->cur_offset by
-      WINDOW->tview_len, else if the former range lies after the
-      latter, set BATON->done to 1, and then return in either case.
-
-      If the ranges do overlap, then the window is relevant -- that
-      is, it reconstructs some or all of the requested content range,
-      BATON->req_offset + BATON->len_req, so read on...
-
-   Q: Okay, so what exactly happens when WINDOW is relevant?
-
-   A: In that case, the data reconstructed by this window is stored at
-      BATON->buf + BATON->len_read, and BATON->len_read is incremented
-      by the number of bytes reconstructed, and BATON->cur_offset is
-      incremented by the same amount.
-
-      BATON->base_rep may be used to obtain source text against which
-      to reconstruct.  
-      
-      ### todo:  I'll go into shock if this function doesn't change as
-      a result of the new `delta' representation scheme.
-*/ 
 static svn_error_t *
 window_handler (svn_txdelta_window_t *window, void *baton)
 {
-  struct window_handler_baton_t *wb = baton;
-
-  /* If we're done, we're done. */
-  if ((window == NULL) || wb->done)
-    {
-      wb->done = TRUE;  /* might be redundant */
-      return SVN_NO_ERROR;
-    }
-
-  /** Otherwise, handle the window. **/
-  
-  /* Get the range of source text that's relevant to us. */
-
-  /* ### todo: if we wanted to make the naive algorithm really space
-     efficient, we could pass in (wb->buf + some_offset) for the data
-     buffer in a bunch of tiny calls to rep_read_range(), and
-     reconstruct the data in-place.  That would probably be, ahem,
-     slow. :-)  And anyway, we're going to do things differently. */
-
-  {
-    char *tbuf;       /* Reconstructed target data. */
-    char *sbuf;       /* Reconstructed source data. */
-    apr_size_t slen;  /* Length of source data. */
-
-    slen = window->sview_len;
-    sbuf = apr_palloc (wb->pool, slen);
-    tbuf = apr_palloc (wb->pool, window->tview_len);
-
-    /* Q: Why is there a target buf allocated inside this function?
-          Why not just use the output buffer directly?
-
-       A: A given window (say, the current one) contains all the data
-          necessary to reproduce a contiguous range of bytes.  If that
-          range of bytes is entirely outside the range the caller
-          requested, the window is ignored.  If, however, any overlap
-          occurs between the window's "target view" and the requested
-          range, this window must be processed.  When considering
-          overlap, we have exactly one of the following situations:
-
-             1. target window and requested range have the same
-                starting offset.
-
-             2. target window starting offset is greater than the
-                starting offset of the requested range.
-
-             3. target window starting offset is less than the
-                starting offset of the requested range.
-
-          Case 1 and Case 2 and fairly simple to deal with.  Case 1 is
-          super-trivial.  Case 2 can be treated like a special Case 1
-          because the "overlapped" portion came from a previous window(s).
-
-          Case 3 is the weird one.  In this case, we have some amount
-          of data coming out of the window op handling that needs to
-          be discarded before we actually get to data that we care
-          about.  Now, one might be tempted to just literally discard
-          that data, and then actually begin writing to the output
-          buffer at the proper time.  This would be fine if the only
-          op types were svn_txdelta_source (which reads from a source
-          buffer) and svn_txdelta_new (which reads from a "new data"
-          buffer).  But the svn_txdelta_target op also exists, and it
-          reads from the target buffer.  With this op type comes the
-          risk that we will be asked to read from an offset that
-          exists in the "overlap" region -- which we just discarded!
-
-          So, in order to safeguard against the svn_txdelta_target op
-          making requests for data which we no longer have, we need to
-          "play out" this window into a temporary buffer, then copy
-          the range requested by the caller into the output buffer
-          once we're finished.
-    */
-
-
-    /* Now we can loop over the window ops, doing them.  I think this
-       makes more sense than trying to use the functions in
-       svn_delta.h.  We'd spend a lot of effort packing things up
-       right, for not much gain. */
-
-    {
-      const svn_txdelta_op_t *op;
-      int i;
-      int src_read = 0;
-      apr_size_t len_read = 0;
-      apr_size_t copy_amt = 0;
-      apr_size_t discard_amt = (wb->req_offset > wb->cur_offset) 
-                                ? (wb->req_offset - wb->cur_offset)
-                                : 0;
-
-      /* For each op, we must check to see what portion of that op's output
-         is meant for the "discard pile."  */
-      for (i = 0; i < window->num_ops; i++)
-        {
-          op = window->ops + i;
-          switch (op->action_code)
-            {
-            case svn_txdelta_source:
-              {
-                if (! src_read)
-                  {
-                    /* The first time we actually have a reference to
-                       our source data, we'll read all the source data
-                       that this window might use.  We may end up
-                       reading more than we need to based on the
-                       portion of this window our caller actually
-                       requested, but we'll at least only have the one
-                       database access in this window_handler() call.
-
-                       ### todo: this is the core of the naive
-                       algorithm, and is what has to go when we have a
-                       true delta combiner.  */
-                    SVN_ERR (rep_read_range (wb->fs, wb->base_rep, sbuf,
-                                             window->sview_offset, &slen, 
-                                             wb->trail));
-                    src_read = 1;
-                  }
-                memcpy (tbuf + len_read, sbuf + op->offset, op->length);
-                len_read += op->length;
-              }
-              break;
-
-            case svn_txdelta_target:
-              {
-                /* This could be done in bigger blocks, at the expense
-                   of some more complexity. */
-                apr_size_t t;
-                for (t = op->offset; t < op->offset + op->length; t++)
-                  tbuf[len_read++] = tbuf[t];
-              }
-              break;
-
-            case svn_txdelta_new:
-              {
-                memcpy (tbuf + len_read,
-                        window->new_data->data + op->offset,
-                        op->length);
-                len_read += op->length;
-              }
-              break;
-
-            default:
-              return svn_error_createf
-                (SVN_ERR_FS_CORRUPT, 0, NULL, wb->pool,
-                 "window_handler: unknown delta op action code (%d)",
-                 op->action_code);
-            }
-
-          /* If we've at least read into the caller's requested range
-             of data, figure out how much data we would copy into the
-             output buffer were we going to do so right now.  If that
-             amount is enough to "fill the request", stop handling ops
-             here. */
-          if (len_read >= discard_amt)
-            {
-              copy_amt = len_read - discard_amt;
-              if (copy_amt > (wb->len_req - wb->len_read))
-                {
-                  copy_amt = wb->len_req - wb->len_read;
-                  break;
-                }
-            }
-        }
-
-      /* Copy our requested range into the output buffer. */
-      memcpy (wb->buf + wb->len_read, tbuf + discard_amt, copy_amt);
-      wb->len_read += copy_amt;
-
-      /* If this window looks past relevant data, then we're done. */
-      wb->cur_offset += copy_amt;
-      if (wb->cur_offset >= (wb->req_offset + wb->len_req))
-        wb->done = TRUE;
-
-    }
-  }
-    
-  /* Clear out the window baton's pool. */
-  svn_pool_clear (wb->pool);
-
+  struct window_handler_baton *wb = baton;
+  assert (wb->window == NULL);
+  wb->window = window;
   return SVN_NO_ERROR;
 }
 
+
+/* Read one delta window from REP[CUR_CHUNK], allocating from
+   WINDOW_POOL, which is a subpool ot TRAIL's pool. */
+static svn_error_t *
+get_one_window (svn_txdelta_window_t **window,
+                apr_pool_t **window_pool,
+                svn_fs_t *fs,
+                svn_fs__representation_t *rep,
+                int cur_chunk,
+                trail_t *trail)
+{
+  svn_stream_t *wstream;
+  struct window_handler_baton wb;
+  char diffdata[4096];   /* hunk of svndiff data */
+  apr_size_t off;        /* offset into svndiff data */
+  apr_size_t amt;        /* how much svndiff data to/was read */
+  const char *str_key;
+
+  apr_array_header_t *chunks = rep->contents.delta.chunks;
+  svn_fs__rep_delta_chunk_t *this_chunk;
+
+  if (chunks->nelts < cur_chunk)
+    {
+      *window = NULL;
+      *window_pool = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  *window_pool = svn_pool_create (trail->pool);
+  wb.window = NULL;
+
+ /* Set up a window handling stream for the svndiff data. */
+  wstream = svn_txdelta_parse_svndiff (window_handler, &wb, TRUE,
+                                       *window_pool);
+
+  /* First things first:  send the "SVN\0" header through the
+     stream. */
+  diffdata[0] = 'S';
+  diffdata[1] = 'V';
+  diffdata[2] = 'N';
+  diffdata[3] = '\0';
+  amt = 4;
+  SVN_ERR (svn_stream_write (wstream, diffdata, &amt));
+  assert (amt == 4);
+
+  /* Get this string key which holds this window's data.
+     ### todo: make sure this is an `svndiff' DIFF skel here. */
+  this_chunk = APR_ARRAY_IDX (chunks, cur_chunk, svn_fs__rep_delta_chunk_t*);
+  str_key = this_chunk->string_key;
+
+  /* Run through the svndiff data, at least as far as necessary. */
+  off = 0;
+  do
+    {
+      amt = sizeof (diffdata);
+      SVN_ERR (svn_fs__string_read (fs, str_key, diffdata,
+                                    off, &amt, trail));
+      off += amt;
+      SVN_ERR (svn_stream_write (wstream, diffdata, &amt));
+    }
+  while (amt != 0);
+  SVN_ERR (svn_stream_close (wstream));
+
+  *window = wb.window;
+  return SVN_NO_ERROR;
+}
+
+
+/* Undeltify a range of data. DELTAS is the set of delta windows to
+   combine, FULLTEXT is the source text, CUR_CHUNK is the index of the
+   delta chunk we're starting from. OFFSET is the relative offset of
+   the requested data within the chunk; BUF and LEN are what we're
+   undeltifying to. */
+
+static svn_error_t *
+rep_undeltify_range (svn_fs_t *fs,
+                     apr_array_header_t *deltas,
+                     svn_fs__representation_t *fulltext,
+                     int cur_chunk,
+                     char *buf,
+                     apr_size_t offset,
+                     apr_size_t *len,
+                     trail_t *trail)
+{
+  apr_size_t len_read = 0;
+
+  do
+    {
+      svn_txdelta_window_t *window_A, *window_B, *composite;
+      apr_pool_t *wpool_A, *wpool_B, *wpool_composite;
+      svn_fs__representation_t *rep;
+      int cur_rep;
+
+      apr_size_t source_len, target_len;
+      char *source_buf, *target_buf;
+
+      rep = APR_ARRAY_IDX (deltas, 0, svn_fs__representation_t*);
+      SVN_ERR (get_one_window
+               (&window_B, &wpool_B, fs, rep, cur_chunk, trail));
+
+      if (!window_B)
+          /* That's it, no more source data is available. */
+          break;
+
+      window_A = composite = NULL;
+      for (cur_rep = 1; cur_rep < deltas->nelts; ++cur_rep)
+        {
+          apr_off_t sview_offset = window_B->sview_offset;
+          rep = APR_ARRAY_IDX (deltas, cur_rep, svn_fs__representation_t*);
+          SVN_ERR (get_one_window
+                   (&window_A, &wpool_A, fs, rep, cur_chunk, trail));
+
+          wpool_composite = svn_pool_create (trail->pool);
+          composite = svn_txdelta__compose_windows
+            (window_A, window_B, &sview_offset, wpool_composite);
+
+          window_B = composite;
+          wpool_B = wpool_composite;
+          svn_pool_destroy (wpool_A);
+          svn_pool_destroy (wpool_B);
+
+          if (window_B->sview_len == 0)
+            /* We'll undeltify without source data now. */
+            break;
+        }
+
+      /* window_B is the combined delta window. Read the source text
+         into a buffer. */
+      source_len = window_B->sview_len;
+      if (fulltext && source_len > 0)
+        {
+          source_buf = apr_palloc (wpool_B, source_len);
+          SVN_ERR (svn_fs__string_read
+                   (fs, fulltext->contents.fulltext.string_key,
+                    source_buf, window_B->sview_offset, &source_len, trail));
+          assert (source_len == window_B->sview_len);
+        }
+      else
+        {
+          source_buf = "";      /* Won't read anything from here. */
+        }
+
+      if (offset > 0)
+        {
+          target_len = *len - len_read + offset;
+          target_buf = apr_palloc (wpool_B, target_len);
+        }
+      else
+        {
+          target_len = *len - len_read;
+          target_buf = buf;
+        }
+
+      svn_txdelta__apply_instructions (window_B, source_buf,
+                                       target_buf, &target_len);
+      if (offset > 0)
+        {
+          assert (target_len > offset);
+          target_len -= offset;
+          memcpy (buf, target_buf + offset, target_len);
+          offset = 0; /* Read from the beginning of the next chunk. */
+        }
+      svn_pool_destroy (wpool_B); /* Don't need this window any more. */
+
+      len_read += target_len;
+      buf += target_len;
+      ++cur_chunk;
+    }
+  while (len_read < *len);
+
+  *len = len_read;
+  return SVN_NO_ERROR;
+}
+
+
+/* Calculate the index of the chunk in REP that contains OFFSET, and
+   find the relative offset within the chunk.  Return -1 if offset is
+   beyond the end of the represented data.
+   ### The basic assumption is that all delta windows are the same size
+   and aligned at the same offset, so this number is the same in all
+   dependent deltas.  Oh, and the chunks in REP must be ordered. */
+
+static int
+get_chunk_offset (svn_fs__representation_t *rep,
+                  apr_size_t *offset)
+{
+  const apr_array_header_t *chunks = rep->contents.delta.chunks;
+  int cur_chunk;
+  assert (chunks->nelts);
+
+  /* ### Yes, this is a linear search.  I'll change this to bisection
+     the very second we notice it's slowing us down. */
+  for (cur_chunk = 0; cur_chunk < chunks->nelts; ++cur_chunk)
+  {
+    const svn_fs__rep_delta_chunk_t *const this_chunk
+      = APR_ARRAY_IDX (chunks, cur_chunk, svn_fs__rep_delta_chunk_t*);
+
+    if ((this_chunk->offset + this_chunk->size) > *offset)
+      {
+        assert (this_chunk->offset <= *offset);
+        *offset -= this_chunk->offset;
+        return cur_chunk;
+      }
+  }
+
+  return -1;
+}
 
 /* Copy into BUF *LEN bytes starting at OFFSET from the string
    represented via REP_KEY in FS, as part of TRAIL.
@@ -457,7 +372,6 @@ rep_read_range (svn_fs_t *fs,
                 trail_t *trail)
 {
   svn_fs__representation_t *rep;
-  apr_pool_t *subpool = svn_pool_create (trail->pool);
 
   /* Read in our REP. */
   SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
@@ -468,104 +382,43 @@ rep_read_range (svn_fs_t *fs,
     }
   else if (rep->kind == svn_fs__rep_kind_delta)
     {
-      svn_stream_t *wstream;
-      struct window_handler_baton_t wb;
-      int cur_chunk = 0;     /* is that, "kerCHUNK!" ? */
-      char diffdata[4096];   /* hunk of svndiff data */
-      apr_size_t off;        /* offset into svndiff data */
-      apr_size_t amt;        /* how much svndiff data to/was read */
-      apr_array_header_t *chunks = rep->contents.delta.chunks;
-
-      assert (chunks->nelts);
-
-      /* Initialize the window handler baton. */
-      wb.fs            = fs;
-      wb.buf           = buf;
-      wb.req_offset    = offset;
-      wb.len_req       = *len;
-      wb.len_read      = 0;
-      wb.done          = FALSE;
-      wb.trail         = trail;
-      wb.pool          = svn_pool_create (subpool);
-
-      /* Set up a window handling stream for the svndiff data. */
-      wstream = svn_txdelta_parse_svndiff (window_handler, &wb, 
-                                           FALSE, subpool);
-
-      /* First things first:  send the "SVN\0" header through the
-         stream. */
-      diffdata[0] = 'S';
-      diffdata[1] = 'V';
-      diffdata[2] = 'N';
-      diffdata[3] = '\0';
-      amt = 4;
-      SVN_ERR (svn_stream_write (wstream, diffdata, &amt));
-      
-      /* Now, for each window, decide if the window is relevant.  That
-         is, do we need to use to reconstruct data in the range
-         requested by the caller?  */
-      do
+      const int cur_chunk = get_chunk_offset (rep, &offset);
+      if (cur_chunk < 0)
+        *len = 0;
+      else
         {
-          apr_size_t this_off, this_len;
-          const char *str_key;
-          svn_fs__rep_delta_chunk_t *this_chunk 
-            = (((svn_fs__rep_delta_chunk_t **) chunks->elts)[cur_chunk]);
-
-          /* Get the offset and size of this window from the skel. */
-          this_off = this_chunk->offset;
-          this_len = this_chunk->size;
-
-          /* If this window is irrelevant because it reconstructs text
-             that is entirely before the range we're interested in,
-             then ignore it. */
-          if ((this_off + this_len - 1) < offset)
+          /* Make a list of all the rep's we need to undeltify this range.
+             We'll have to read them within this trail anyway, so we might
+             as well do it once and up front. */
+          apr_array_header_t *reps =  /* ### what constant here? */
+            apr_array_make (trail->pool, 666, sizeof (rep));
+          do
             {
-              cur_chunk++;
-              continue;
+              const svn_fs__rep_delta_chunk_t *const chunk
+                = APR_ARRAY_IDX (rep->contents.delta.chunks,
+                                 cur_chunk, svn_fs__rep_delta_chunk_t*);
+
+              *(svn_fs__representation_t**) apr_array_push (reps) = rep;
+              SVN_ERR (svn_fs__read_rep (&rep, fs, chunk->rep_key, trail));
             }
+          while (rep->kind == svn_fs__rep_kind_delta
+                 && rep->contents.delta.chunks->nelts > cur_chunk);
 
-          /* If this window is irrelevant because it reconstructs text
-             that is entirely after the range we're interested in,
-             we're definitely done. */
-          if (this_off > (offset + *len))
-            break;
+          /* Right. We've either just read the fulltext rep, a rep that's
+             too short, in which case we'll undeltify without source data.*/
+          if (rep->kind != svn_fs__rep_kind_delta
+              && rep->kind != svn_fs__rep_kind_fulltext)
+            abort(); /* unknown kind */
 
-          /* Get this string key which holds this window's data. 
-             ### todo: make sure this is an `svndiff' DIFF skel here. */
-          str_key = this_chunk->string_key;
-
-          /* Finish initializing our baton with window-specific
-             stuff. */
-          wb.cur_offset = this_off;
-          wb.base_rep = this_chunk->rep_key;
-
-          /* Run through the svndiff data, at least as far as necessary. */
-          off = 0;
-          do 
-            {
-              amt = sizeof (diffdata);
-              SVN_ERR (svn_fs__string_read (fs, str_key, diffdata,
-                                            off, &amt, trail));
-              off += amt;
-              SVN_ERR (svn_stream_write (wstream, diffdata, &amt));
-              
-            } 
-          while ((wb.done == FALSE) && (amt != 0));
-
-          cur_chunk++;
+          if (rep->kind == svn_fs__rep_kind_delta)
+            rep = NULL;         /* Don't use source data */
+          SVN_ERR (rep_undeltify_range (fs, reps, rep, cur_chunk,
+                                        buf, offset, len, trail));
         }
-      while ((cur_chunk < chunks->nelts) && (wb.done == FALSE));
-
-      /* Close the stream.  We should not get an error for closing the
-         stream early because we explicitly told the stream handlers
-         not to care in the call to svn_txdelta_parse_svndiff() above.  */
-      SVN_ERR (svn_stream_close (wstream));
-
-      *len = wb.len_read;
     }
   else /* unknown kind */
     abort ();
-  svn_pool_destroy (subpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -618,27 +471,32 @@ svn_fs__get_mutable_rep (const char **new_rep_key,
              don't have to be up-to-date to receive commits, whereas
              files do.  */
 
-          char buf[10000];
           apr_size_t offset;
           apr_size_t size;
           const char *new_str = NULL;
           apr_size_t amount;
-          
+          apr_pool_t *subpool;
+          char *buf;
+
           SVN_ERR (svn_fs__rep_contents_size (&size, fs, rep_key, trail));
-          
+
+          subpool = svn_pool_create (trail->pool);
+          buf = apr_palloc (subpool, SVN_STREAM_CHUNK_SIZE);
+
           for (offset = 0; offset < size; offset += amount)
             {
-              if ((size - offset) > (sizeof (buf)))
-                amount = sizeof (buf);
+              if ((size - offset) > SVN_STREAM_CHUNK_SIZE)
+                amount = SVN_STREAM_CHUNK_SIZE;
               else
                 amount = size - offset;
-              
-              SVN_ERR (rep_read_range (fs, rep_key, buf, 
+
+              SVN_ERR (rep_read_range (fs, rep_key, buf,
                                        offset, &amount, trail));
               SVN_ERR (svn_fs__string_append (fs, &new_str, amount, buf,
                                               trail));
             }
-          
+
+          svn_pool_destroy (subpool);
           rep = make_fulltext_rep (new_str, txn_id, trail->pool);
         }
       else /* unknown kind */
@@ -1293,6 +1151,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
        "svn_fs__rep_deltify: attempt to deltify \"%s\" against itself",
        target);
 
+#if 0 /* This bit'll go waaaay, waay, away. */
   /* To favor time over space, we don't currently deltify files that
      are larger than the svndiff window size.  This might seem
      counterintuitive, but most files are smaller than a window
@@ -1306,6 +1165,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
     if (size > SVN_STREAM_CHUNK_SIZE)
       return SVN_NO_ERROR;
   }
+#endif
 
   /* Set up a handler for the svndiff data, which will write each
      window to its own string in the `strings' table. */
@@ -1482,9 +1342,9 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
   struct write_string_baton target_baton;
   apr_array_header_t *orig_keys;
   apr_size_t len;
+  apr_pool_t *subpool;
+  char *buf;
 
-  /* ### crap. this shouldn't be on the stack. way too big! */
-  char buf[65536];
 
   /* Read the rep skel. */
   SVN_ERR (svn_fs__read_rep (&rep, fs, rep_key, trail));
@@ -1498,7 +1358,7 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
   /* Get the original string keys from REP (so we can delete them after
      we write our new skel out. */
   SVN_ERR (delta_string_keys (&orig_keys, rep, trail->pool));
-  
+
   /* Set up a string to receive the svndiff data. */
   target_baton.fs = fs;
   target_baton.trail = trail;
@@ -1509,20 +1369,24 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
   /* Set up the source stream. */
   source_stream = svn_fs__rep_contents_read_stream (fs, rep_key, 0,
                                                     trail, trail->pool);
+
+  subpool = svn_pool_create (trail->pool);
+  buf = apr_palloc (subpool, SVN_STREAM_CHUNK_SIZE);
   do
     {
       apr_size_t len_read;
 
-      len = sizeof (buf);
+      len = SVN_STREAM_CHUNK_SIZE;
       SVN_ERR (svn_stream_read (source_stream, buf, &len));
       len_read = len;
       SVN_ERR (svn_stream_write (target_stream, buf, &len));
       if (len_read != len)
-        return svn_error_createf 
+        return svn_error_createf
           (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
            "svn_fs__rep_undeltify: Error writing fulltext contents");
     }
   while (len);
+  svn_pool_destroy (subpool);
 
   /* Now `target_baton.key' has the key of the new string.  We
      should hook it into the representation.  So we make a new rep,
