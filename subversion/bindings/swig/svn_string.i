@@ -193,8 +193,9 @@ typedef struct svn_string_t svn_string_t;
 	$result = sv_2mortal(newSVpv(*$1, 0));
     ++argvi;
 }
+
 /* -----------------------------------------------------------------------
-   define a general INPUT param of an array of svn_stringbuf_t* items.
+   define a general INPUT param of an array of const char * items.
  */
 
 %typemap(python,in) const apr_array_header_t *STRINGLIST {
