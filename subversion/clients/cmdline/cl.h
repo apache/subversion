@@ -58,6 +58,7 @@ typedef enum {
   svn_cl__ignore_ancestry_opt,
   svn_cl__incremental_opt,
   svn_cl__merge_cmd_opt,
+  svn_cl__native_eol_opt,
   svn_cl__new_cmd_opt,
   svn_cl__no_auth_cache_opt,
   svn_cl__no_autoprops_opt,
@@ -129,6 +130,7 @@ typedef struct svn_cl__opt_state_t
   const char * config_dir;       /* over-riding configuration directory */
   svn_boolean_t autoprops;       /* enable automatic properties */
   svn_boolean_t no_autoprops;    /* disable automatic properties */
+  const char *native_eol;        /* override system standard eol marker */
 } svn_cl__opt_state_t;
 
 

@@ -1263,8 +1263,32 @@ svn_client_revprop_list (apr_hash_t **props,
  *
  * @a ctx is a context used for authentication in the repository case.
  *
+ * @a force if true will cause the export to overwrite files or directories.
+ *
+ * @a native_eol allows you to override the standard eol marker on the platform
+ * you are running on.  Can be either "LF", "CR" or "CRLF" or NULL.  If NULL
+ * will use the standard eol marker.  Any other value will cause the
+ * SVN_ERR_IO_UNKNOWN_EOL error to be returned.
+ *
  * All allocations are done in @a pool.
  */ 
+svn_error_t *
+svn_client_export2 (svn_revnum_t *result_rev,
+                    const char *from,
+                    const char *to,
+                    svn_opt_revision_t *revision,
+                    svn_boolean_t force, 
+                    const char *native_eol,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0.0 API.
+ *
+ * Similar to svn_client_export2(), but with the @a native_eol parameter
+ * always set to @c NULL.
+ */
 svn_error_t *
 svn_client_export (svn_revnum_t *result_rev,
                    const char *from,
