@@ -620,8 +620,10 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
   if (!cgc->checked_type)
     {
 
-      if (!strcmp(cgc->ctype.type, "application") && 
-          !strcmp(cgc->ctype.subtype, "vnd.svn-svndiff"))
+      if (cgc->ctype.type
+          && cgc->ctype.subtype
+          && !strcmp(cgc->ctype.type, "application") 
+          && !strcmp(cgc->ctype.subtype, "vnd.svn-svndiff"))
         {
           /* we are receiving an svndiff. set things up. */
           frc->stream = svn_txdelta_parse_svndiff(frc->handler,
