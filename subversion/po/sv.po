@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-09-12 15:56+0200\n"
-"PO-Revision-Date: 2004-09-12 16:06+0200\n"
+"POT-Creation-Date: 2004-09-29 20:59+0200\n"
+"PO-Revision-Date: 2004-09-29 21:07+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -2282,213 +2282,221 @@ msgstr "Alla tillhandahållare av autentisering förbrukade"
 msgid "Read access denied for root of edit"
 msgstr "Läsning nekas till roten för editeringen"
 
-#: include/svn_error_codes.h:675
+#: include/svn_error_codes.h:674
+msgid "Item is not readable."
+msgstr "Posten är inte läsbar."
+
+#: include/svn_error_codes.h:679
+msgid "Item is partially readable."
+msgstr "Objektet är delvis läsbar."
+
+#: include/svn_error_codes.h:686
 msgid "Svndiff data has invalid header"
 msgstr "Svndiff-data har ogiltigt huvud"
 
-#: include/svn_error_codes.h:679
+#: include/svn_error_codes.h:690
 msgid "Svndiff data contains corrupt window"
 msgstr "Svndiff-data innehåller trasigt fönster"
 
-#: include/svn_error_codes.h:683
+#: include/svn_error_codes.h:694
 msgid "Svndiff data contains backward-sliding source view"
 msgstr "Svndiff-data innehåller källvyer med förflyttningar baklänges"
 
-#: include/svn_error_codes.h:687
+#: include/svn_error_codes.h:698
 msgid "Svndiff data contains invalid instruction"
 msgstr "Ogiltig instruktion i svndiff-data"
 
-#: include/svn_error_codes.h:691
+#: include/svn_error_codes.h:702
 msgid "Svndiff data ends unexpectedly"
 msgstr "Svndiff-data tog oväntat slut"
 
-#: include/svn_error_codes.h:697
+#: include/svn_error_codes.h:708
 msgid "Apache has no path to an SVN filesystem"
 msgstr "Apache saknar sökväg till SVN-filsystem"
 
-#: include/svn_error_codes.h:701
+#: include/svn_error_codes.h:712
 msgid "Apache got a malformed URI"
 msgstr "Apache fick en felaktig URI"
 
-#: include/svn_error_codes.h:705
+#: include/svn_error_codes.h:716
 msgid "Activity not found"
 msgstr "Aktivitet hittades ej"
 
-#: include/svn_error_codes.h:709
+#: include/svn_error_codes.h:720
 msgid "Baseline incorrect"
 msgstr "Felaktig baseline"
 
-#: include/svn_error_codes.h:713
+#: include/svn_error_codes.h:724
 msgid "Input/output error"
 msgstr "In/ut-fel"
 
-#: include/svn_error_codes.h:719
+#: include/svn_error_codes.h:730
 msgid "A path under version control is needed for this operation"
 msgstr "Operationen kräver en versionshanterad sökväg"
 
-#: include/svn_error_codes.h:723
+#: include/svn_error_codes.h:734
 msgid "Repository access is needed for this operation"
 msgstr "Operationen kräver åtkomst till databasen"
 
-#: include/svn_error_codes.h:727
+#: include/svn_error_codes.h:738
 msgid "Bogus revision information given"
 msgstr "Felaktig revisionsinformation angiven"
 
-#: include/svn_error_codes.h:731
+#: include/svn_error_codes.h:742
 msgid "Attempting to commit to a URL more than once"
 msgstr "Försöker checka in till en URL mer än en gång"
 
-#: include/svn_error_codes.h:735
+#: include/svn_error_codes.h:746
 msgid "Operation does not apply to binary file"
 msgstr "Operationen kan ej utföras på binär fil"
 
-#: include/svn_error_codes.h:741
+#: include/svn_error_codes.h:752
 msgid "Format of an svn:externals property was invalid"
 msgstr "Felaktigt format på svn:externals-egenskap"
 
-#: include/svn_error_codes.h:745
+#: include/svn_error_codes.h:756
 msgid "Attempting restricted operation for modified resource"
 msgstr "Operationen tillåter ej att källan är modifierad"
 
-#: include/svn_error_codes.h:749
+#: include/svn_error_codes.h:760
 msgid "Operation does not apply to directory"
 msgstr "Operationen kan ej utföras på katalog"
 
-#: include/svn_error_codes.h:753
+#: include/svn_error_codes.h:764
 msgid "Revision range is not allowed"
 msgstr "Revisionsområde otillåtet"
 
-#: include/svn_error_codes.h:757
+#: include/svn_error_codes.h:768
 msgid "Inter-repository relocation not allowed"
 msgstr "Flytt mellan databaser otillåten"
 
-#: include/svn_error_codes.h:761
+#: include/svn_error_codes.h:772
 msgid "Author name cannot contain a newline"
 msgstr "Författarnamn kan ej innehålla radslut"
 
-#: include/svn_error_codes.h:765
+#: include/svn_error_codes.h:776
 msgid "Bad property name"
 msgstr "Felaktigt egenskapsnamn"
 
-#: include/svn_error_codes.h:770
+#: include/svn_error_codes.h:781
 msgid "Two versioned resources are unrelated"
 msgstr "Två orelaterade versionshanterade resurser"
 
-#: include/svn_error_codes.h:777
+#: include/svn_error_codes.h:788
 msgid "A problem occurred; see later errors for details"
 msgstr "Ett problem har inträffat; se vidare fel för mer detaljer"
 
-#: include/svn_error_codes.h:781
+#: include/svn_error_codes.h:792
 msgid "Failure loading plugin"
 msgstr "Fel vid inladdning av insticksmodul"
 
-#: include/svn_error_codes.h:785
+#: include/svn_error_codes.h:796
 msgid "Malformed file"
 msgstr "Felaktig fil"
 
-#: include/svn_error_codes.h:789
+#: include/svn_error_codes.h:800
 msgid "Incomplete data"
 msgstr "Ofullständig data"
 
-#: include/svn_error_codes.h:793
+#: include/svn_error_codes.h:804
 msgid "Incorrect parameters given"
 msgstr "Felaktiga parametrar angivna"
 
-#: include/svn_error_codes.h:797
+#: include/svn_error_codes.h:808
 msgid "Tried a versioning operation on an unversioned resource"
 msgstr ""
 "Försökte utföra en versionshanteringsoperation på en resurs som ej är "
 "versionshanterad"
 
-#: include/svn_error_codes.h:801
+#: include/svn_error_codes.h:812
 msgid "Test failed"
 msgstr "Test misslyckades"
 
-#: include/svn_error_codes.h:805
+#: include/svn_error_codes.h:816
 msgid "Trying to use an unsupported feature"
 msgstr "Försöker använda en funktion som ej stöds"
 
-#: include/svn_error_codes.h:809
+#: include/svn_error_codes.h:820
 msgid "Unexpected or unknown property kind"
 msgstr "Oväntad eller okänd egenskapstyp"
 
-#: include/svn_error_codes.h:813
+#: include/svn_error_codes.h:824
 msgid "Illegal target for the requested operation"
 msgstr "Felaktigt mål för begärd operation"
 
-#: include/svn_error_codes.h:817
+#: include/svn_error_codes.h:828
 msgid "MD5 checksum is missing"
 msgstr "MD5-kontrollsumma saknas"
 
-#: include/svn_error_codes.h:821
+#: include/svn_error_codes.h:832
 msgid "Directory needs to be empty but is not"
 msgstr "Katalogen måste vara tom, men det är den inte"
 
-#: include/svn_error_codes.h:825
+#: include/svn_error_codes.h:836
 msgid "Error calling external program"
 msgstr "Fel vid anrop av externt program"
 
-#: include/svn_error_codes.h:829
+#: include/svn_error_codes.h:840
 msgid "Python exception has been set with the error"
 msgstr "Python-undantag har satts för felet"
 
-#: include/svn_error_codes.h:833
+#: include/svn_error_codes.h:844
 msgid "A checksum mismatch occurred"
 msgstr "Felaktig kontrollsumma"
 
-#: include/svn_error_codes.h:837
+#: include/svn_error_codes.h:848
 msgid "The operation was interrupted"
 msgstr "Operationen avbröts"
 
-#: include/svn_error_codes.h:841
+#: include/svn_error_codes.h:852
 msgid "The specified diff option is not supported"
 msgstr "Den angivna diff-flaggan stöds ej"
 
-#: include/svn_error_codes.h:845
+#: include/svn_error_codes.h:856
 msgid "Property not found"
 msgstr "Egenskap finns ej"
 
-#: include/svn_error_codes.h:849
+#: include/svn_error_codes.h:860
 msgid "No auth file path available"
 msgstr "Sökväg för auth-fil ej tillgänglig"
 
-#: include/svn_error_codes.h:854
+#: include/svn_error_codes.h:865
 msgid "Incompatible library version"
 msgstr "Biblioteksversion inte kompatible"
 
-#: include/svn_error_codes.h:860
+#: include/svn_error_codes.h:871
 msgid "Client error in parsing arguments"
 msgstr "Klientfel vid tolkning av argument"
 
-#: include/svn_error_codes.h:864
+#: include/svn_error_codes.h:875
 msgid "Not enough args provided"
 msgstr "Argument saknas"
 
-#: include/svn_error_codes.h:868
+#: include/svn_error_codes.h:879
 msgid "Mutually exclusive arguments specified"
 msgstr "De angivna argumenten kan inte användas samtidigt"
 
-#: include/svn_error_codes.h:872
+#: include/svn_error_codes.h:883
 msgid "Attempted command in administrative dir"
 msgstr "Försök att utföra kommando i administrativ katalog"
 
-#: include/svn_error_codes.h:876
+#: include/svn_error_codes.h:887
 msgid "The log message file is under version control"
 msgstr "Fil med loggmeddelande är versionshanterad"
 
-#: include/svn_error_codes.h:880
+#: include/svn_error_codes.h:891
 msgid "The log message is a pathname"
 msgstr "Logmeddelandet är en sökväg"
 
-#: include/svn_error_codes.h:884
+#: include/svn_error_codes.h:895
 msgid "Committing in directory scheduled for addition"
 msgstr "Checkar in i katalog schemalagd att läggas till"
 
-#: include/svn_error_codes.h:888
+#: include/svn_error_codes.h:899
 msgid "No external editor available"
 msgstr "Ingen extern editor tillgänglig"
 
-#: include/svn_error_codes.h:892
+#: include/svn_error_codes.h:903
 msgid "Something is wrong with the log message's contents"
 msgstr "Fel i loggmeddelandets innehåll"
 
@@ -2945,11 +2953,11 @@ msgstr "Posten \"%s\" saknar URL"
 msgid "No commits in repository."
 msgstr "Databasen innehåller inga incheckningar."
 
-#: libsvn_client/ls.c:48 libsvn_client/ls.c:122
+#: libsvn_client/ls.c:49 libsvn_client/ls.c:126
 msgid "No get_dir() available for URL schema"
 msgstr "get_dir() ej tillgänglig för URL-schemat"
 
-#: libsvn_client/ls.c:129 libsvn_client/ls.c:136
+#: libsvn_client/ls.c:133 libsvn_client/ls.c:140
 #, c-format
 msgid "URL '%s' non-existent in that revision"
 msgstr "URL:en \"%s\" finns inte i den revisionen"
@@ -3231,7 +3239,7 @@ msgstr "Den sista raden i en revisionsfil är längre än 64 tecken"
 msgid "Final line in revision file missing space"
 msgstr "Den sista raden i en revisionsfil saknar mellanslag"
 
-#: libsvn_fs_fs/fs_fs.c:990 libsvn_repos/log.c:163 libsvn_repos/log.c:167
+#: libsvn_fs_fs/fs_fs.c:990 libsvn_repos/log.c:231 libsvn_repos/log.c:235
 #, c-format
 msgid "No such revision %ld"
 msgstr "Revisionen %ld finns inte"
@@ -3624,7 +3632,7 @@ msgstr "Förfrågan %s gav felaktig XML i svaret: %s (%s)"
 msgid "%s request failed on '%s'"
 msgstr "%s-förfrågan misslyckades till \"%s\""
 
-#: libsvn_ra_local/ra_plugin.c:98 libsvn_ra_local/ra_plugin.c:465
+#: libsvn_ra_local/ra_plugin.c:98 libsvn_ra_local/ra_plugin.c:467
 #, c-format
 msgid ""
 "'%s'\n"
@@ -3639,11 +3647,11 @@ msgstr ""
 msgid "Unable to open an ra_local session to URL"
 msgstr "Kunde inte öppna en ra_local-session till URL:en"
 
-#: libsvn_ra_local/ra_plugin.c:927
+#: libsvn_ra_local/ra_plugin.c:930
 msgid "Module for accessing a repository on local disk."
 msgstr "Modul för åtkomst av databas på disk lokalt."
 
-#: libsvn_ra_local/ra_plugin.c:972
+#: libsvn_ra_local/ra_plugin.c:975
 #, c-format
 msgid "Unsupported RA plugin ABI version (%d) for ra_local"
 msgstr ""
@@ -3759,15 +3767,19 @@ msgstr ""
 msgid "Failed to find time on revision %ld"
 msgstr "Kunde inte hitta tiden för revision %ld"
 
-#: libsvn_repos/rev_hunt.c:199
+#: libsvn_repos/rev_hunt.c:219
 #, c-format
 msgid "Invalid start revision %ld"
 msgstr "Ogiltig startrevision %ld"
 
-#: libsvn_repos/rev_hunt.c:203
+#: libsvn_repos/rev_hunt.c:223
 #, c-format
 msgid "Invalid end revision %ld"
 msgstr "Ogiltig slutrevision %ld"
+
+#: libsvn_repos/rev_hunt.c:315
+msgid "Unreadable path encountered; access denied."
+msgstr "Sökväg som ej är läsbar påträffad; åtkomst nekas."
 
 #: libsvn_subr/error.c:294
 msgid "Can't recode error string from APR"
