@@ -431,6 +431,8 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
     static const char dbconfig_contents[] =
       "# This is the configuration file for the Berkeley DB environment\n"
       "# used by your Subversion repository.\n"
+      "# You must run 'svnadmin recover' whenever you modify this file,\n"
+      "# for your changes to take effect.\n"
       "\n"
       "### Lock subsystem\n"
       "#\n"
