@@ -415,6 +415,25 @@
 							PreprocessorDefinitions=""/>
 					</FileConfiguration>
 				</File>
+				<File
+					RelativePath="file_io\unix\tempdir.c">
+					<FileConfiguration
+						Name="Release|Win32">
+						<Tool
+							Name="VCCLCompilerTool"
+							Optimization="2"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|Win32">
+						<Tool
+							Name="VCCLCompilerTool"
+							Optimization="0"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""/>
+					</FileConfiguration>
+				</File>
 			</Filter>
 			<Filter
 				Name="locks"
