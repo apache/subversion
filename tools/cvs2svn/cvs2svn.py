@@ -1302,20 +1302,17 @@ class SymbolicNameTracker:
       entry_val[revlist_key] = [(rev, 1)]
     else:
       rev_counts = entry_val[revlist_key]
-      done = None
       for i in range(len(rev_counts)):
         this_rev, this_count = rev_counts[i]
         if rev == this_rev:
           rev_counts[i] = (this_rev, this_count + 1)
-          done = 1
           break
         elif this_rev > rev:
           if i > 0:
             i = i - 1
           rev_counts.insert(i, (rev, 1))
-          done = 1
           break
-      if not done:
+      else:
         rev_counts.append((rev, 1))
       entry_val[revlist_key] = rev_counts
 
