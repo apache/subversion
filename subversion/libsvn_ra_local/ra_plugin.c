@@ -211,33 +211,6 @@ svn_ra_local__open (void **session_baton,
   session->pool = pool;
   session->repository_URL = repos_URL;
   
-  /* Get a username somehow, so we have some svn:author property to
-     attach to a commit. */
-  if (! callbacks->auth_baton)
-    {
-      session->username = "";
-    }
-  else
-    {
-      void *creds;
-      svn_auth_cred_username_t *username_creds;
-      SVN_ERR (svn_auth_first_credentials (&creds, &iterstate, 
-                                           SVN_AUTH_CRED_USERNAME,
-                                           callbacks->auth_baton,
-                                           pool));
-
-      /* No point in calling next_creds(), since that assumes that the
-         first_creds() somehow failed to authenticate.  But there's no
-         challenge going on, so we use whatever creds we get back on
-         the first try. */
-      username_creds = creds;
-      if (username_creds == NULL
-          || (username_creds->username == NULL))
-        session->username = "";
-      else
-        session->username = apr_pstrdup (pool, username_creds->username);
-    }
-
   /* Look through the URL, figure out which part points to the
      repository, and which part is the path *within* the
      repository. */
@@ -258,6 +231,34 @@ svn_ra_local__open (void **session_baton,
   /* Stuff the callbacks/baton here. */
   session->callbacks = callbacks;
   session->callback_baton = callback_baton;
+
+  /* Get a username somehow, so we have some svn:author property to
+     attach to a commit. */
+  if (! callbacks->auth_baton)
+    {
+      session->username = "";
+    }
+  else
+    {
+      void *creds;
+      svn_auth_cred_username_t *username_creds;
+      SVN_ERR (svn_auth_first_credentials (&creds, &iterstate, 
+                                           SVN_AUTH_CRED_USERNAME,
+                                           session->uuid, /* realmstring */
+                                           callbacks->auth_baton,
+                                           pool));
+
+      /* No point in calling next_creds(), since that assumes that the
+         first_creds() somehow failed to authenticate.  But there's no
+         challenge going on, so we use whatever creds we get back on
+         the first try. */
+      username_creds = creds;
+      if (username_creds == NULL
+          || (username_creds->username == NULL))
+        session->username = "";
+      else
+        session->username = apr_pstrdup (pool, username_creds->username);
+    }
 
   *session_baton = session;
   return SVN_NO_ERROR;

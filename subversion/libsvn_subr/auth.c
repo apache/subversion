@@ -81,6 +81,7 @@ struct svn_auth_iterstate_t
   svn_boolean_t got_first;     /* did we get the provider's first creds? */
   void *provider_iter_baton;   /* the provider's own iteration context */
   void *last_creds;            /* the last set of credentials returned */
+  const char *realmstring;     /* The original realmstring passed in */
   apr_hash_t *parameters;      /* pointer to auth_baton's runtime params */
 };
 
@@ -152,6 +153,7 @@ svn_error_t *
 svn_auth_first_credentials (void **credentials,
                             svn_auth_iterstate_t **state,
                             const char *cred_kind,
+                            const char *realmstring,
                             svn_auth_baton_t *auth_baton,
                             apr_pool_t *pool)
 {
@@ -176,7 +178,7 @@ svn_auth_first_credentials (void **credentials,
                                svn_auth_provider_object_t *);
       SVN_ERR (provider->vtable->first_credentials 
                (&creds, &iter_baton, provider->provider_baton,
-                auth_baton->parameters, pool));
+                auth_baton->parameters, realmstring, pool));
 
       if (creds != NULL)
         break;
@@ -193,6 +195,7 @@ svn_auth_first_credentials (void **credentials,
       iterstate->got_first = TRUE;
       iterstate->provider_iter_baton = iter_baton;
       iterstate->last_creds = creds;
+      iterstate->realmstring = apr_pstrdup (pool, realmstring);
       iterstate->parameters = auth_baton->parameters;
       *state = iterstate;
     }
@@ -224,7 +227,8 @@ svn_auth_next_credentials (void **credentials,
         {
           SVN_ERR (provider->vtable->first_credentials 
                    (&creds, &(state->provider_iter_baton),
-                    provider->provider_baton, state->parameters, pool));
+                    provider->provider_baton, state->parameters,
+                    state->realmstring, pool));
           state->got_first = TRUE;
         }
       else
