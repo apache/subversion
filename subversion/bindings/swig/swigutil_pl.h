@@ -70,6 +70,16 @@ void SWIG_MakePtr(SV *, void *, swig_type_info *, int flags);
 extern apr_pool_t *current_pool;
 apr_pool_t *svn_swig_pl_make_pool (SV *obj);
 
+typedef enum perl_func_invoker {
+    CALL_METHOD,
+    CALL_SV
+} perl_func_invoker_t;
+
+svn_error_t *svn_swig_pl_callback_thunk (perl_func_invoker_t caller_func,
+		                         void *func,
+					 SV **result,
+					 const char *fmt, ...);
+
 SV *svn_swig_pl_prophash_to_hash (apr_hash_t *hash);
 SV *svn_swig_pl_convert_hash (apr_hash_t *hash, swig_type_info *tinfo);
 
@@ -89,6 +99,8 @@ const apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
 
 SV *svn_swig_pl_array_to_list(const apr_array_header_t *array);
 SV *svn_swig_pl_ints_to_list(const apr_array_header_t *array);
+SV *svn_swig_pl_convert_array(const apr_array_header_t *array,
+                              swig_type_info *tinfo);
 
 /* thunked log receiver function.  */
 svn_error_t * svn_swig_pl_thunk_log_receiver(void *py_receiver,
@@ -170,6 +182,41 @@ svn_error_t *thunk_get_wc_prop (void *baton,
                                 const char *name,
                                 const svn_string_t **value,
                                 apr_pool_t *pool);
+
+/* Thunked version of svn_wc_notify_func_t callback type */
+void svn_swig_pl_notify_func(void * baton,
+                             const char *path,
+		             svn_wc_notify_action_t action,
+			     svn_node_kind_t kind,
+			     const char *mime_type,
+			     svn_wc_notify_state_t content_state,
+			     svn_wc_notify_state_t prop_state,
+			     svn_revnum_t revision);
+
+
+/* Thunked version of svn_client_get_commit_log_t callback type. */
+svn_error_t *svn_swig_pl_get_commit_log_func(const char **log_msg,
+                                             const char **tmp_file,
+                                             apr_array_header_t *commit_items,
+                                             void *baton,
+                                             apr_pool_t *pool);
+
+/* Thunked version of svn_wc_cancel_func_t callback type. */
+svn_error_t *svn_swig_pl_cancel_func(void *cancel_baton);
+
+/* Thunked version of svn_wc_status_func_t callback type. */
+void svn_swig_pl_status_func(void *baton,
+                             const char *path,
+                             svn_wc_status_t *status);
+/* Thunked version of svn_client_blame_receiver_t callback type. */
+svn_error_t *svn_swig_pl_blame_func (void *baton,
+                                     apr_off_t line_no,
+                                     svn_revnum_t revision,
+                                     const char *author,
+                                     const char *date,
+                                     const char *line,
+                                     apr_pool_t *pool);
+
 
 /* helper for making the editor */
 void svn_delta_make_editor(svn_delta_editor_t **editor,

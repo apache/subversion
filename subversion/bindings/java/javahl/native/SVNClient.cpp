@@ -26,6 +26,7 @@
 #include "Pool.h"
 #include "Targets.h"
 #include "Revision.h"
+#include "BlameCallback.h"
 #include "JNIByteArray.h"
 #include <svn_client.h>
 #include <svn_sorts.h>
@@ -492,11 +493,12 @@ void SVNClient::revert(const char *path, bool recurse)
     apr_pool_t * apr_pool = subPool.pool ();
     m_lastPath = svn_path_internal_style (path, apr_pool);
    	svn_client_ctx_t *ctx = getContext(NULL);
+    Targets target (m_lastPath.c_str () );
 	if(ctx == NULL)
 	{
 		return;
 	}
-	svn_error_t *Err = svn_client_revert (m_lastPath.c_str (), recurse, ctx, apr_pool);
+	svn_error_t *Err = svn_client_revert (target.array(subPool), recurse, ctx, apr_pool);
 
     if(Err != NULL)
  		JNIUtil::handleSVNError(Err);
@@ -1011,7 +1013,14 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
 {
 	apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
     svn_auth_baton_t *ab;
-	svn_client_ctx_t *ctx = (svn_client_ctx_t *) apr_pcalloc (JNIUtil::getRequestPool()->pool(), sizeof (*ctx));
+	//svn_client_ctx_t *ctx = (svn_client_ctx_t *) apr_pcalloc (JNIUtil::getRequestPool()->pool(), sizeof (*ctx));
+	svn_client_ctx_t *ctx;
+	svn_error_t *err = NULL;
+    if (( err = svn_client_create_context(&ctx, pool)))
+    {
+		JNIUtil::handleSVNError(err);
+        return NULL;
+    }
 
     apr_array_header_t *providers
       = apr_array_make (pool, 10, sizeof (svn_auth_provider_object_t *));
@@ -1076,8 +1085,7 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
 	ctx->log_msg_baton = getCommitMessageBaton(message);
 	ctx->cancel_func = NULL;
 	ctx->cancel_baton = NULL;
-	svn_error_t *err = NULL;
-    if (( err = svn_config_get_config (&(ctx->config), NULL, JNIUtil::getRequestPool()->pool())))
+    if (( err = svn_config_get_config (&(ctx->config), NULL, pool)))
     {
 		JNIUtil::handleSVNError(err);
         return NULL;
@@ -1309,6 +1317,8 @@ jint SVNClient::mapStatusKind(int svnKind)
 		return org_tigris_subversion_javahl_Status_Kind_ignored;
     case svn_wc_status_obstructed:
 		return org_tigris_subversion_javahl_Status_Kind_obstructed;
+	case svn_wc_status_external:
+		return org_tigris_subversion_javahl_Status_Kind_external;
 	case svn_wc_status_incomplete:
 		return org_tigris_subversion_javahl_Status_Kind_incomplete;
 	}
@@ -1757,4 +1767,40 @@ jbyteArray SVNClient::blame(const char *path, Revision &revisionStart, Revision 
 	}
 
 	return ret;
+}
+static svn_error_t *
+blame_receiver2 (void *baton,
+                apr_off_t line_no,
+                svn_revnum_t revision,
+                const char *author,
+                const char *date,
+                const char *line,
+                apr_pool_t *pool)
+{
+	((BlameCallback *)baton)->callback(revision, author, date, line, pool);
+	return NULL;
+}
+void SVNClient::blame(const char *path, Revision &revisionStart, Revision &revisionEnd, BlameCallback *callback)
+{
+  Pool subPool;
+  apr_pool_t * apr_pool = subPool.pool ();
+  m_lastPath = svn_path_internal_style (path, apr_pool);
+	
+  svn_client_ctx_t *ctx = getContext(NULL);
+  if(ctx == NULL)
+  {
+	return;
+  }
+  svn_error_t * error = svn_client_blame (path,
+                                 revisionStart.revision(),
+                                 revisionEnd.revision(),
+                                 blame_receiver2,
+								 callback,
+                                 ctx,
+                                 apr_pool);
+  if(error != SVN_NO_ERROR)
+  {
+ 	JNIUtil::handleSVNError(error);
+	return;
+  }
 }

@@ -9,7 +9,7 @@ SVN::Core - Core module of the subversion perl bindings
 
 =head1 SYNOPSIS
 
-    require SVN::Core; # does apr_initialize and cleanup for you
+    use SVN::Core; # does apr_initialize and cleanup for you
 
     # create a root pool and set it as default pool for later use
     my $pool = SVN::Pool->new_default;
@@ -73,6 +73,8 @@ to an array containing the references to the callbacks.
 These callback arrays should be stored in the object
 the auth_baton is attached to.
 
+=back
+
 =cut
 
 sub auth_open_helper {
@@ -90,6 +92,10 @@ sub auth_open_helper {
     return ($auth_baton,\@auth_callbacks);
 }
 
+# import the INVALID and IGNORED constants
+our $INVALID_REVNUM = $SVN::_Core::SWIG_SVN_INVALID_REVNUM;
+our $IGNORED_REVNUM = $SVN::_Core::SWIG_SVN_IGNORED_REVNUM;
+
 package _p_svn_stream_t;
 use SVN::Base qw(Core svn_stream_);
 
@@ -99,8 +105,6 @@ our @ISA = qw(IO::Handle);
 
 =head1 OTHER OBJECTS
 
-=over 4
-
 =head2 svn_stream_t - SVN::Stream
 
 You can use native perl io handles (including io globs) as
@@ -108,7 +112,7 @@ svn_stream_t in subversion functions. Returned svn_stream_t are also
 translated into perl io handles, so you could access them with regular
 print, read, etc.
 
-Note that some functions takes a stream to read or write, while it
+Note that some functions take a stream to read or write, while it
 does not close it but still hold the reference to the handle. In this case
 the handle won't be destroyed properly. You should always use correct
 default pool before calling such functions.
@@ -286,27 +290,23 @@ sub DESTROY {
 package SVN::Pool;
 use SVN::Base qw/Core svn_pool_/;
 
-=back
-
-=over 4
-
 =head2 svn_pool_t - SVN::Pool
 
-The perl bindings significantly simplify the usage of pools, without
-making them not manually adjustable.
+The perl bindings significantly simplify the usage of pools, while 
+still being manually adjustable.
 
 Functions requiring pool as the last argument (which are, almost all
-of the subversion functions), the pool is optionally. the default pool
+of the subversion functions), the pool is optionally. The default pool
 is used if it is omitted. If default pool is not set, a new root pool
 will be created and set as default automatically when the first
 function requiring a default pool is called.
 
 For callback functions providing pool to your subroutine, you could
-also use $pool->default to make it the default pool in the scope.
+also use $pool-E<gt>default to make it the default pool in the scope.
 
 =head3 Methods
 
-=over
+=over 4
 
 =item new ([$parent])
 
@@ -328,7 +328,7 @@ Clear the pool.
 
 =item destroy
 
-Destroy the pool. if the pool is the default pool, restore the
+Destroy the pool. If the pool is the default pool, restore the
 previous default pool as default. This is normally called
 automatically when the SVN::Pool object is no longer used and
 destroyed by the perl garbage collector.
@@ -409,10 +409,273 @@ sub DESTROY {
     }
 }
 
+package _p_svn_error_t;
+use SVN::Base qw(Core svn_error_t_);
+
+sub strerror {
+	return SVN::Error::strerror($_[$[]->apr_err());
+}
+
+sub handle_error {
+	return SVN::Error::handle_error(@_);
+}
+
+sub expanded_message {
+	return SVN::Error::expanded_message(@_);
+}
+
+sub handle_warning {
+	# need to swap parameter order.
+	return SVN::Error::handle_warning($_[$[+1],$_[$[]);
+}
+
+foreach my $function (qw(compose clear quick_wrap)) {
+    my $real_function = \&{"SVN::_Core::svn_error_$function"};
+    *{"_p_svn_error_t::$function"} = sub {
+			  return $real_function->(@_);
+		}
+}
+
+package SVN::Error;
+use SVN::Base qw(Core svn_error_);
+use SVN::Base qw(Core SVN_ERR_);
+use Carp;
+our @CARP_NOT = qw(SVN::Base SVN::Client SVN::Core SVN::Delta
+                   SVN::Delta::Editor SVN::Error SVN::Fs SVN::Node
+									 SVN::Pool SVN::Ra SVN::Ra::Callbacks SVN::Ra::Reporter
+									 SVN::Repos SVN::Stream SVN::TxDelta SVN::Wc);
+
+=head2 svn_error_t - SVN::Error
+
+By default the perl bindings handle exceptions for you.  The default handler
+automatically croaks with an appropriate error message.  This is likely
+sufficient for simple scripts, but more complex usage may demand handling of
+errors.  
+
+You can override the default exception handler by changing the
+$SVN::Error::handler variable.  This variable holds a reference to a perl sub
+that should be called whenever an error is returned by a svn function.  This
+sub will be passed a svn_error_t object.   Its return value is ignored.
+
+If you set the $SVN::Error::handler to undef then each call will return an
+svn_error_t object as its first return in the case of an error, followed by the
+normal return values.  If there is no error then a svn_error_t will not be
+returned and only the normal return values will be returned.  When using this
+mode you should be careful only to call functions in array context.  For
+example: my ($ci) = $ctx-E<gt>mkdir('http://svn/foo');  In this case $ci will
+be an svn_error_t object if an error occurs and a svn_client_commit_info object
+otherwise.  If you leave the parenthesis off around $ci (scalar context) it
+will be the commit_info object, which in the case of an error will be undef.
+
+If you plan on using this exception handling, understanding the exception
+handling system the C API uses is helpful.  You can find information on it in
+the HACKING file and the API documentation.  Looking at the implementation of
+SVN::Error::croak_on_error and SVN::Error::expanded_message may be helpful as
+well.
+
+=over 4
+
+=item $svn_error_t-E<gt>apr_err()
+
+APR error value, possibly SVN_ custom error.
+
+=item $svn_error_t-E<gt>message()
+
+Details from producer of error.
+
+=item $svn_error_t-E<gt>child()
+
+svn_error_t object of the error that's wrapped.
+
+=item $svn_error_t-E<gt>pool()
+
+The pool holding this error and any child errors it wraps.
+
+=item $svn_error_t-E<gt>file()
+
+Source file where the error originated.
+
+=item $svn_error_t-E<gt>line()
+
+Source line where the error originated.
+
+=item SVN::Error::strerror($apr_status_t)
+
+Returns the english description of the status code.
+
+=item $svn_error_t-E<gt>strerror()
+
+Returns the english description of the apr_err status code set on the
+$svn_error_t.  This is short for:
+SVN::Error::strerror($svn_error_t-E<gt>apr_err());
+
+=item SVN::Error::create($apr_err, $child, $messsage);
+
+Returns a new svn_error_t object with the error status specified in $apr_err,
+the child as $child, and error message of $message.
+
+=item SVN::Error::quick_wrap($child, $new_msg); or $child-E<gt>quick_wrap($new_msg);
+
+A quick n' easy way to create a wrappered exception with your own message
+before throwing it up the stack.
+
+$child is the svn_error_t object you want to wrap and $new_msg is the new error
+string you want to set.
+
+=item SVN::Error::compose($chain, $new_error); or $chain-E<gt>compose($new_error);
+
+Add new_err to the end of $chain's chain of errors.
+
+The $new_err chain will be copied into $chain's pool and destroyed, so $new_err
+itself becomes invalid after this function.
+
+=item SVN::Error::clear($svn_error_t); or $svn_error_t-E<gt>clear();
+
+Free the memory used by $svn_error_t, as well as all ancestors and descendants
+of $svn_error_t.
+
+You must call this on every svn_error_t object you get or you will leak memory.
+
+=cut
+
+# Permit users to determine if they want automatic croaking or not.
+our $handler = \&croak_on_error;
+
+# Import functions that don't follow the normal naming scheme.
+foreach my $function (qw(handle_error handle_warning strerror)) {
+    my $real_function = \&{"SVN::_Core::svn_$function"};
+	  *{"SVN::Error::$function"} = sub {
+	      return $real_function->(@_);
+		}
+}
+
+=item SVN::Error::expanded_message($svn_error_t) or $svn_error_t-E<gt>expanded_message()
+
+Returns the error message by tracing through the svn_error_t object and its
+children and concatenating the error messages.  This is how the internal
+exception handlers get their error messages.
+
+=cut
+
+sub expanded_message {
+	  my $svn_error = shift;
+    unless (is_error($svn_error)) {
+	      return undef;
+		}
+
+		my $error_message = $svn_error->strerror();
+		while ($svn_error) {
+		    $error_message .= ': ' . $svn_error->message();
+				$svn_error = $svn_error->child();
+		}
+		return $error_message;
+}
+		
+		
+=item SVN::Error::is_error($value)
+
+Returns true if the value is an svn_error type return.  Returns false if the
+value is anything else or undefined.  This is useful for seeing if a call has
+returned an error.
+
+=cut
+
+sub is_error {
+		 return (ref($_[$[]) eq '_p_svn_error_t');
+}
+
+=item SVN::Error::croak_on_error 
+
+Default error handler.  It takes an svn_error_t and extracts the error messages
+from it and croaks with those messages.
+
+It can be used two ways.  The first is detailed above as setting it as the
+automatic exception handler via setting $SVN::Error::handler. 
+
+The 2nd is if you have $SVN::Error::handler set to undef as a wrapper for calls
+you want to croak on when there is an error but don't want to have to write an
+explicit error handler for example:
+
+my $result_rev=SVN::Error::croak_on_error($ctx-E<gt>checkout($url,$path,'HEAD',1));
+
+If there is no error then croak_on_error will return the arguments passed to it
+unchanged.
+
+=cut
+
+sub croak_on_error {
+		unless (is_error($_[$[])) {
+			return @_;
+		}
+    my $svn_error = shift;		
+    
+		my $error_message = $svn_error->expanded_message();
+		
+		$svn_error->clear();
+
+		croak($error_message);
+}
+
+=item SVN::Error::confess_on_error
+
+The same as croak_on_error except it will give a more detailed stack backtrace.
+Including showing internal calls within the implementations of the perl
+bindings.  This is useful if you're working on developing the bindings.
+
+=cut
+
+sub confess_on_error {
+		unless (is_error($_[$[])) {
+				return @_;
+		}
+    my $svn_error = shift;		
+    
+		my $error_message = $svn_error->expanded_message();
+		
+		$svn_error->clear();
+
+		confess($error_message);
+}
+
+=item SVN::Error::ignore_error
+
+This is useful for wrapping around calls which you wish to ignore any potential
+error.  It checks to see if the first parameter is an error and if it is it
+clears it.  It then returns all the other parameters.
+
+=back
+
+=cut
+
+sub ignore_error {
+    if (is_error($_[$[])) {
+		    my $svn_error = shift;
+				$svn_error->clear();
+		}
+
+		return @_;
+}
+
 package _p_svn_log_changed_path_t;
 use SVN::Base qw(Core svn_log_changed_path_t_);
 
 =head2 svn_log_changed_path_t
+
+=over 4
+
+=item $lcp-E<gt>action()
+
+'A'dd, 'D'elete, 'R'eplace, 'M'odify 
+
+=item $lcp-E<gt>copyfrom_path()
+
+Source path of copy (if any).
+
+=item $lcp-E<gt>copyfrom_rev()
+
+Source revision of copy (if any).
+
+=back
 
 =cut
 
@@ -420,6 +683,11 @@ package SVN::Node;
 use SVN::Base qw(Core svn_node_);
 
 =head2 svn_node_kind_t - SVN::Node
+
+An enum of the following constants:
+
+$SVN::Node::none, $SVN::Node::file,
+$SVN::Node::dir, $SVN::Node::unknown.
 
 =cut
 
@@ -436,12 +704,216 @@ use SVN::Base qw(Core svn_opt_revision_t_value_);
 package _p_svn_config_t;
 use SVN::Base qw(Core svn_config_);
 
+=head2 svn_config_t
+
+Opaque object describing a set of configuration options.
+
+=cut
+
 package _p_svn_dirent_t;
 use SVN::Base qw(Core svn_dirent_t_);
 
-=head2 svn_config_t
+=head2 svn_dirent_t
+
+=over 4
+
+=item $dirent-E<gt>kind()
+
+Node kind.  One of these constants:
+$SVN::Node::none, $SVN::Node::file,
+$SVN::Node::dir, $SVN::Node::unknown.
+
+=item $dirent-E<gt>size()
+
+Length of file text, or 0 for directories.
+
+=item $dirent-E<gt>has_props()
+
+Does the node have props?
+
+=item $dirent-E<gt>created_rev()
+
+Last rev in which this node changed.
+
+=item $dirent-E<gt>time()
+
+Time of created_rev (mod-time).
+
+=item $dirent-E<gt>last_author()
+
+Author of created rev.
+
+=back
 
 =cut
+
+package _p_svn_auth_cred_simple_t;
+use SVN::Base qw(Core svn_auth_cred_simple_t_);
+
+=head2 svn_auth_cred_simple_t
+
+=over 4
+
+=item $simple-E<gt>username()
+
+Username.
+
+=item $simple-E<gt>password()
+
+Password.
+
+=item $simple-E<gt>may_save()
+
+Indicates if the credentials may be saved (to disk).
+
+=back
+
+=cut
+
+package _p_svn_auth_cred_username_t;
+use SVN::Base qw(Core svn_auth_cred_username_t_);
+
+=head2 svn_auth_cred_username_t
+
+=over 4
+
+=item $username-E<gt>username()
+
+Username.
+
+=item $username-E<gt>may_save()
+
+Indicates if the credentials may be saved (to disk).
+
+=back
+
+=cut
+
+package _p_svn_auth_cred_ssl_server_trust_t;
+use SVN::Base qw(Core svn_auth_cred_ssl_server_trust_t_);
+
+=head2 svn_auth_cred_ssl_server_trust_t
+
+=over 4
+
+=item $strust-E<gt>may_save()
+
+Indicates if the credentials may be saved (to disk).
+
+=item $strust-E<gt>accepted_failures()
+
+Bit mask of the accepted failures.
+
+=back
+
+=cut
+
+package _p_svn_auth_ssl_server_cert_info_t;
+use SVN::Base qw(Core svn_auth_ssl_server_cert_info_t_);
+
+=head2 svn_auth_ssl_server_cert_info_t
+
+=over 4
+
+=item $scert-E<gt>hostname()
+
+Primary CN.
+
+=item $scert-E<gt>fingerprint()
+
+ASCII fingerprint.
+
+=item $scert-E<gt>valid_from()
+
+ASCII date from which the certificate is valid.
+
+=item $scert-E<gt>valid_until()
+
+ASCII date until which the certificate is valid.
+
+=item $scert-E<gt>issuer_dname()
+
+DN of the certificate issuer.
+
+=item $scert-E<gt>ascii_cert()
+
+Base-64 encoded DER certificate representation.
+
+=back
+
+=cut
+
+package _p_svn_auth_cred_ssl_client_cert_t;
+use SVN::Base qw(Core svn_auth_cred_ssl_client_cert_t_);
+
+=head2 svn_auth_cred_ssl_client_cert_t
+
+=over 4
+
+=item $ccert-E<gt>cert_file()
+
+Full paths to the certificate file.
+
+=item $ccert-E<gt>may_save()
+
+Indicates if the credentials may be saved (to disk).
+
+=back
+
+=cut
+
+package _p_svn_auth_cred_ssl_client_cert_pw_t;
+use SVN::Base qw(Core svn_auth_cred_ssl_client_cert_pw_t_);
+
+=head2 svn_auth_cred_ssl_client_cert_pw_t
+
+=over 4
+
+=item $ccertpw-E<gt>password()
+
+Certificate password.
+
+=item $ccertpw-E<gt>may_save()
+
+Indicates if the credentials may be saved (to disk).
+
+=back
+
+=cut
+
+=head1 CONSTANTS
+
+=head2 SVN::Auth::SSL
+
+=over 4
+
+=item $SVN::Auth::SSL::NOTYETVALID
+
+Certificate is not yet valid.
+
+=item $SVN::Auth::SSL::EXPIRED
+
+Certificate has expired.
+
+=item $SVN::Auth::SSL::CNMISMATCH
+
+Certificate's CN (hostname) does not match the remote hostname. 
+
+=item $SVN::Auth::SSL::UNKNOWNCA
+
+Certificate authority is unknown (i.e. not trusted). 
+
+=item $SVN::Auth::SSL::OTHER
+
+Other failure. This can happen if neon has introduced a new failure bit that we
+do not handle yet.
+
+=back
+
+=cut
+
+package SVN::Auth::SSL;
+use SVN::Base qw(Core SVN_AUTH_SSL_);
 
 =head1 AUTHORS
 

@@ -17,10 +17,9 @@
  */
 package org.tigris.subversion.javahl;
 
-public interface PromptUserPassword2 extends PromptUserPassword
+import java.util.Date;
+
+public interface BlameCallback
 {
-    public static final int Reject = 0;
-    public static final int AccecptTemporary = 1;
-    public static final int AcceptPermanently = 2;
-    public int askTrustSSLServer(String info, boolean allowPermanently);
+    public void singleLine(Date changed, long revision, String author, String line);
 }

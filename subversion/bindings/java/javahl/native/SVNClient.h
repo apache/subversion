@@ -33,12 +33,14 @@ class Notify;
 class Targets;
 class JNIByteArray;
 class Prompter;
+class BlameCallback;
 #include <svn_client.h>
 
 class SVNClient
 {
 public:
 	jbyteArray blame(const char *path, Revision& revisionStart, Revision &revisionEnd);
+	void blame(const char *path, Revision &revisionStart, Revision &revisionEnd, BlameCallback *callback);
 	void relocate(const char *from, const char *to, const char *path, bool recurse);
 	jbyteArray fileContent(const char *path, Revision &revision);
 	void propertyCreate(const char *path, const char *name, JNIByteArray &value, bool recurse);

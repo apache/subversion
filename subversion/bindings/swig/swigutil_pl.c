@@ -108,19 +108,24 @@ static const apr_array_header_t *svn_swig_pl_to_array (SV *source,
     apr_array_header_t *temp;
     AV* array;
 
-    if (!(source && SvROK(source) && SvTYPE(SvRV(source)) == SVt_PVAV)) {
-	/* raise exception here */
-	return NULL;
-    }
-    array = (AV *)SvRV (source);
-    targlen = av_len (array) + 1;
-    temp = apr_array_make (pool, targlen, sizeof(const char *));
-    temp->nelts = targlen;
+    if (SvROK(source) && SvTYPE(SvRV(source)) == SVt_PVAV) {
+        array = (AV *)SvRV (source);
+        targlen = av_len (array) + 1;
+        temp = apr_array_make (pool, targlen, sizeof(const char *));
+        temp->nelts = targlen;
 
-    while (targlen--) {
-	/* more error handling here */
-	SV **item = av_fetch (array, targlen, 0);
-        APR_ARRAY_IDX(temp, targlen, const char *) = cv (*item, ctx, pool);
+        while (targlen--) {
+            /* more error handling here */
+            SV **item = av_fetch (array, targlen, 0);
+            APR_ARRAY_IDX(temp, targlen, const char *) = cv (*item, ctx, pool);
+        }
+    } else if (SvOK(source)) {
+        targlen = 1;
+        temp = apr_array_make (pool, targlen, sizeof(const char *));
+        temp->nelts = targlen;
+        APR_ARRAY_IDX(temp, 0, const char *) = cv (source, ctx, pool);
+    } else {
+        croak("Must pass a single value or an array reference");
     }
 
     return temp;
@@ -231,10 +236,12 @@ SV *svn_swig_pl_ints_to_list(const apr_array_header_t *array)
     return convert_array (array, (element_converter_t)convert_int, NULL);
 }
 
-typedef enum perl_func_invoker {
-    CALL_METHOD,
-    CALL_SV
-} perl_func_invoker_t;
+SV *svn_swig_pl_convert_array(const apr_array_header_t *array,
+                              swig_type_info *tinfo)
+{
+    return convert_array (array, (element_converter_t)convert_to_swig_type,
+                          tinfo);		          
+}
 
 /* put the va_arg in stack and invoke caller_func with func.
    fmt:
@@ -246,7 +253,7 @@ typedef enum perl_func_invoker {
    put returned value in result if result is not NULL
 */
 
-static svn_error_t *perl_callback_thunk (perl_func_invoker_t caller_func,
+svn_error_t *svn_swig_pl_callback_thunk (perl_func_invoker_t caller_func,
 					 void *func,
 					 SV **result,
 					 const char *fmt, ...)
@@ -254,6 +261,9 @@ static svn_error_t *perl_callback_thunk (perl_func_invoker_t caller_func,
     const char *fp = fmt;
     va_list ap;
     int count;
+    I32 call_flags;
+
+    call_flags = result ? G_SCALAR : (G_VOID & G_DISCARD);
 
     dSP ;
     ENTER ;
@@ -298,10 +308,10 @@ static svn_error_t *perl_callback_thunk (perl_func_invoker_t caller_func,
     PUTBACK;
     switch (caller_func) {
     case CALL_SV:
-	count = call_sv (func, G_SCALAR);
+	count = call_sv (func, call_flags );
 	break;
     case CALL_METHOD:
-	count = call_method (func, G_SCALAR);
+	count = call_method (func, call_flags );
 	break;
     default:
 	croak ("unkonwn calling type");
@@ -309,8 +319,9 @@ static svn_error_t *perl_callback_thunk (perl_func_invoker_t caller_func,
     }
     SPAGAIN ;
 
-    if (count != 1)
-	croak("Big trouble\n") ;
+    if (((call_flags & G_SCALAR) && count != 1) ||
+	((call_flags & G_VOID) && count != 0))
+	    croak ("Wrong number of returns");
 
     if (result) {
 	*result = POPs;
@@ -384,9 +395,9 @@ static svn_error_t * thunk_set_target_revision(void *edit_baton,
 {
     item_baton *ib = edit_baton;
 
-    SVN_ERR (perl_callback_thunk (CALL_METHOD,
-				  (void *)"set_target_revision", NULL,
-				  "Oi", ib->editor, target_revision));
+    SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
+				         (void *)"set_target_revision", NULL,
+				         "Oi", ib->editor, target_revision));
 
     return SVN_NO_ERROR;
 }
@@ -400,10 +411,10 @@ static svn_error_t * thunk_open_root(void *edit_baton,
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
     SV *result;
 
-    SVN_ERR (perl_callback_thunk (CALL_METHOD,
-				  (void *)"open_root", &result,
-				  "OiS", ib->editor, base_revision,
-				  dir_pool, poolinfo));
+    SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
+				         (void *)"open_root", &result,
+				         "OiS", ib->editor, base_revision,
+				         dir_pool, poolinfo));
 
     *root_baton = make_baton(dir_pool, ib->editor, result);
     return SVN_NO_ERROR;
@@ -417,10 +428,10 @@ static svn_error_t * thunk_delete_entry(const char *path,
     item_baton *ib = parent_baton;
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
 
-    SVN_ERR (perl_callback_thunk (CALL_METHOD,
-				  (void *)"delete_entry", NULL,
-				  "OsiOS", ib->editor, path, revision,
-				  ib->baton, pool, poolinfo));
+    SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
+				         (void *)"delete_entry", NULL,
+				         "OsiOS", ib->editor, path, revision,
+				         ib->baton, pool, poolinfo));
     return SVN_NO_ERROR;
 }
 
@@ -435,11 +446,11 @@ static svn_error_t * thunk_add_directory(const char *path,
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
     SV *result;
 
-    SVN_ERR (perl_callback_thunk (CALL_METHOD,
-				  (void *)"add_directory", &result,
-				  "OsOsiS", ib->editor, path, ib->baton,
-				  copyfrom_path, copyfrom_revision, 
-				  dir_pool, poolinfo));
+    SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
+				         (void *)"add_directory", &result,
+				         "OsOsiS", ib->editor, path, ib->baton,
+				         copyfrom_path, copyfrom_revision, 
+				         dir_pool, poolinfo));
     *child_baton = make_baton(dir_pool, ib->editor, result);
     return SVN_NO_ERROR;
 }
@@ -454,10 +465,10 @@ static svn_error_t * thunk_open_directory(const char *path,
     SV *result;
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
 
-    SVN_ERR (perl_callback_thunk (CALL_METHOD,
-				  (void *)"open_directory", &result,
-				  "OsOiS", ib->editor, path, ib->baton,
-				  base_revision, dir_pool, poolinfo));
+    SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
+				         (void *)"open_directory", &result,
+				         "OsOiS", ib->editor, path, ib->baton,
+				         base_revision, dir_pool, poolinfo));
 
     *child_baton = make_baton(dir_pool, ib->editor, result);
 
@@ -472,11 +483,11 @@ static svn_error_t * thunk_change_dir_prop(void *dir_baton,
     item_baton *ib = dir_baton;
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
 
-    SVN_ERR (perl_callback_thunk (CALL_METHOD,
-				  (void *)"change_dir_prop", NULL,
-				  "OOssS", ib->editor, ib->baton, name,
-				  value ? value->data : NULL,
-				  pool, poolinfo));
+    SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
+				         (void *)"change_dir_prop", NULL,
+				         "OOssS", ib->editor, ib->baton, name,
+				         value ? value->data : NULL,
+				         pool, poolinfo));
 
     return SVN_NO_ERROR;
 }
@@ -494,10 +505,10 @@ static svn_error_t * thunk_absent_directory(const char *path,
     item_baton *ib = parent_baton;
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
 
-    SVN_ERR (perl_callback_thunk (CALL_METHOD,
-				  (void *)"absent_directory", NULL,
-				  "OsOS", ib->editor, path, ib->baton,
-				  pool, poolinfo));
+    SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
+	   			         (void *)"absent_directory", NULL,
+				         "OsOS", ib->editor, path, ib->baton,
+				         pool, poolinfo));
 
     return SVN_NO_ERROR;
 }
@@ -513,11 +524,11 @@ static svn_error_t * thunk_add_file(const char *path,
     SV *result;
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
 
-    SVN_ERR (perl_callback_thunk (CALL_METHOD,
-				  (void *)"add_file", &result,
-				  "OsOsiS", ib->editor, path, ib->baton,
-				  copyfrom_path, copyfrom_revision,
-				  file_pool, poolinfo));
+    SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
+				         (void *)"add_file", &result,
+				         "OsOsiS", ib->editor, path, ib->baton,
+				         copyfrom_path, copyfrom_revision,
+				         file_pool, poolinfo));
 
     *file_baton = make_baton(file_pool, ib->editor, result);
     return SVN_NO_ERROR;
@@ -533,10 +544,10 @@ static svn_error_t * thunk_open_file(const char *path,
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
     SV *result;
 
-    SVN_ERR (perl_callback_thunk (CALL_METHOD,
-				  (void *)"open_file", &result,
-				  "OsOiS", ib->editor, path, ib->baton,
-				  base_revision, file_pool, poolinfo));
+    SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
+				         (void *)"open_file", &result,
+				         "OsOiS", ib->editor, path, ib->baton,
+				         base_revision, file_pool, poolinfo));
 
     *file_baton = make_baton(file_pool, ib->editor, result);
     return SVN_NO_ERROR;
@@ -548,14 +559,14 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
     SV *handler = baton;
 
     if (window == NULL) {
-	SVN_ERR (perl_callback_thunk (CALL_SV,
-				      handler, NULL, "O",
-				      &PL_sv_undef));
+	SVN_ERR (svn_swig_pl_callback_thunk (CALL_SV,
+				             handler, NULL, "O",
+				             &PL_sv_undef));
     }
     else {
 	swig_type_info *tinfo = SWIG_TypeQuery("svn_txdelta_window_t *");
-	SVN_ERR (perl_callback_thunk (CALL_SV,
-				      handler, NULL, "S", window, tinfo));
+	SVN_ERR (svn_swig_pl_callback_thunk (CALL_SV, handler,
+				             NULL, "S", window, tinfo));
     }
 
     return SVN_NO_ERROR;
@@ -572,10 +583,10 @@ thunk_apply_textdelta(void *file_baton,
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
     SV *result;
 
-    SVN_ERR (perl_callback_thunk (CALL_METHOD,
-				  (void *)"apply_textdelta", &result,
-				  "OOsS", ib->editor, ib->baton, base_checksum,
-				  pool, poolinfo));
+    SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
+				         (void *)"apply_textdelta", &result,
+				         "OOsS", ib->editor, ib->baton,
+					 base_checksum, pool, poolinfo));
     if (SvOK(result)) {
 	if (SvROK(result) && SvTYPE(SvRV(result)) == SVt_PVAV) {
 	    swig_type_info *handler_info = SWIG_TypeQuery("svn_txdelta_window_handler_t"), *void_info = SWIG_TypeQuery("void *");
@@ -583,11 +594,11 @@ thunk_apply_textdelta(void *file_baton,
 
 	    if (SWIG_ConvertPtr(*av_fetch (array, 0, 0),
 				(void **)handler, handler_info,0) < 0) {
-		croak("FOO!");
+		croak("Unable to convert from SWIG Type");
 	    }
 	    if (SWIG_ConvertPtr(*av_fetch (array, 1, 0),
 				h_baton, void_info,0) < 0) {
-		croak("FOO!");
+		croak("Unable to convert from SWIG Type ");
 	    }
 	}
 	else {
@@ -611,11 +622,11 @@ static svn_error_t * thunk_change_file_prop(void *file_baton,
     item_baton *ib = file_baton;
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
 
-    SVN_ERR (perl_callback_thunk (CALL_METHOD,
-				  (void *)"change_file_prop", NULL,
-				  "OOssS", ib->editor, ib->baton, name,
-				  value ? value->data : NULL,
-				  pool, poolinfo));
+    SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
+				         (void *)"change_file_prop", NULL,
+				         "OOssS", ib->editor, ib->baton, name,
+				         value ? value->data : NULL,
+				         pool, poolinfo));
   
     return SVN_NO_ERROR;
 }
@@ -627,10 +638,10 @@ static svn_error_t * thunk_close_file(void *file_baton,
     item_baton *ib = file_baton;
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
 
-    SVN_ERR (perl_callback_thunk (CALL_METHOD,
-				  (void *)"close_file", NULL, "OOsS",
-				  ib->editor, ib->baton, text_checksum,
-				  pool, poolinfo));
+    SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
+				         (void *)"close_file", NULL, "OOsS",
+				         ib->editor, ib->baton, text_checksum,
+				         pool, poolinfo));
 
     SvREFCNT_dec(ib->editor);
     SvREFCNT_dec(ib->baton);
@@ -649,10 +660,10 @@ static svn_error_t * thunk_absent_file(const char *path,
     item_baton *ib = parent_baton;
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
 
-    SVN_ERR (perl_callback_thunk (CALL_METHOD,
-				  (void *)"absent_file", NULL,
-				  "OsOS", ib->editor, path, ib->baton,
-				  pool, poolinfo));
+    SVN_ERR (svn_swig_pl_callback_thunk (CALL_METHOD,
+				         (void *)"absent_file", NULL,
+				         "OsOS", ib->editor, path, ib->baton,
+				         pool, poolinfo));
 
     return SVN_NO_ERROR;
 }
@@ -705,19 +716,19 @@ svn_error_t *svn_swig_pl_thunk_log_receiver(void *baton,
 					    const char *msg,
 					    apr_pool_t *pool)
 {
-    SV *receiver = baton, *result;
+    SV *receiver = baton;
     swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
     swig_type_info *tinfo = SWIG_TypeQuery("svn_log_changed_path_t *");
 
     if (!SvOK(receiver))
 	return SVN_NO_ERROR;
 
-    perl_callback_thunk (CALL_SV,
-			 receiver, &result,
-			 "OisssS", (changed_paths) ?
-			 svn_swig_pl_convert_hash(changed_paths, tinfo)
-			 : &PL_sv_undef,
-			 rev, author, date, msg, pool, poolinfo);
+    svn_swig_pl_callback_thunk (CALL_SV,
+			        receiver, NULL,
+			        "OisssS", (changed_paths) ?
+			        svn_swig_pl_convert_hash(changed_paths, tinfo)
+			        : &PL_sv_undef,
+			        rev, author, date, msg, pool, poolinfo);
 
     return SVN_NO_ERROR;
 }
@@ -733,9 +744,9 @@ svn_error_t *svn_swig_pl_thunk_history_func(void *baton,
     if (!SvOK(func))
 	return SVN_NO_ERROR;
 
-    perl_callback_thunk (CALL_SV,
-			 func, NULL,
-			 "siS", path, revision, pool, poolinfo);
+    svn_swig_pl_callback_thunk (CALL_SV,
+			        func, NULL,
+			        "siS", path, revision, pool, poolinfo);
 
     return SVN_NO_ERROR;
 }
@@ -753,11 +764,12 @@ svn_error_t *svn_swig_pl_thunk_authz_func (svn_boolean_t *allowed,
     if (!SvOK(func))
 	return SVN_NO_ERROR;
 
-    perl_callback_thunk (CALL_SV,
-			 func, &result,
-			 "SsS", root, rootinfo, path, pool, poolinfo);
+    svn_swig_pl_callback_thunk (CALL_SV,
+			        func, &result,
+			        "SsS", root, rootinfo, path, pool, poolinfo);
 
     *allowed = SvIV (result);
+    SvREFCNT_dec (result);
 
     return SVN_NO_ERROR;
 }
@@ -770,8 +782,8 @@ svn_error_t *svn_swig_pl_thunk_commit_callback(svn_revnum_t new_revision,
     if (!SvOK((SV *)baton))
 	return SVN_NO_ERROR;
 
-    perl_callback_thunk (CALL_SV, baton, NULL,
-			 "iss", new_revision, date, author);
+    svn_swig_pl_callback_thunk (CALL_SV, baton, NULL,
+			        "iss", new_revision, date, author);
 
     return SVN_NO_ERROR;
 }
@@ -785,11 +797,11 @@ static svn_error_t * thunk_open_tmp_file(apr_file_t **fp,
     SV *result;
     swig_type_info *tinfo = SWIG_TypeQuery("apr_file_t *");
 
-    perl_callback_thunk (CALL_METHOD, (void *)"open_tmp_file",
-			 &result, "O", callback_baton);
+    svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"open_tmp_file",
+			        &result, "O", callback_baton);
 
     if (SWIG_ConvertPtr(result, (void *)fp, tinfo,0) < 0) {
-	croak("ouch");
+	croak("Unable to convert from SWIG Type");
     }
 
     return SVN_NO_ERROR;
@@ -804,8 +816,9 @@ svn_error_t *thunk_get_wc_prop (void *baton,
     SV *result;
     swig_type_info *tinfo = SWIG_TypeQuery("apr_pool_t *");
 
-    perl_callback_thunk (CALL_METHOD, (void *)"get_wc_prop",
-			 &result, "OssS", baton, relpath, name, pool, tinfo);
+    svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"get_wc_prop",
+			        &result, "OssS", baton, relpath, name,
+			       	pool, tinfo);
 
     /* this is svn_string_t * typemap in */
     if (!SvOK (result) || result == &PL_sv_undef) {
@@ -815,9 +828,11 @@ svn_error_t *thunk_get_wc_prop (void *baton,
 	*value = svn_string_create (SvPV_nolen (result), pool);
     }
     else {
+	SvREFCNT_dec(result);
 	croak("not a string");
     }
 
+    SvREFCNT_dec(result);
     return SVN_NO_ERROR;
 }
 
@@ -840,7 +855,7 @@ svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
     auth_baton = *hv_fetch((HV *)SvRV(perl_callbacks), "auth", 4, 0);
 
     if (SWIG_ConvertPtr(auth_baton, (void **)&(*cb)->auth_baton, tinfo,0) < 0) {
-	croak("ouch");
+	croak("Unable to convert from SWIG Type");
     }
     *c_baton = perl_callbacks;
     SvREFCNT_inc(perl_callbacks);
@@ -855,7 +870,6 @@ svn_error_t *svn_swig_pl_thunk_simple_prompt(svn_auth_cred_simple_t **cred,
                                              svn_boolean_t may_save,
                                              apr_pool_t *pool)
 {
-    SV *result;
     swig_type_info *poolinfo = SWIG_TypeQuery ("apr_pool_t *");
     swig_type_info *credinfo = SWIG_TypeQuery ("svn_auth_cred_simple_t *");
 
@@ -865,10 +879,10 @@ svn_error_t *svn_swig_pl_thunk_simple_prompt(svn_auth_cred_simple_t **cred,
     if (!*cred) {
         croak ("Could not allocate memory for cred structure");
     }
-    perl_callback_thunk (CALL_SV,
-                         baton, &result,
-                         "SssiS", *cred, credinfo,
-                         realm, username, may_save, pool, poolinfo);
+    svn_swig_pl_callback_thunk (CALL_SV,
+                                baton, NULL,
+                                "SssiS", *cred, credinfo,
+                                realm, username, may_save, pool, poolinfo);
 
     return SVN_NO_ERROR;
 }
@@ -879,7 +893,6 @@ svn_error_t *svn_swig_pl_thunk_username_prompt(svn_auth_cred_username_t **cred,
                                                svn_boolean_t may_save,
                                                apr_pool_t *pool)
 {
-    SV *result;
     swig_type_info *poolinfo = SWIG_TypeQuery ("apr_pool_t *");
     swig_type_info *credinfo = SWIG_TypeQuery ("svn_auth_cred_username_t *");
 
@@ -889,10 +902,10 @@ svn_error_t *svn_swig_pl_thunk_username_prompt(svn_auth_cred_username_t **cred,
     if (!*cred) {
         croak ("Could not allocate memory for cred structure");
     }
-    perl_callback_thunk (CALL_SV,
-                         baton, &result,
-                         "SsiS", *cred, credinfo,
-                         realm, may_save, pool, poolinfo);
+    svn_swig_pl_callback_thunk (CALL_SV,
+                                baton, NULL,
+                                "SsiS", *cred, credinfo,
+                                realm, may_save, pool, poolinfo);
 
     return SVN_NO_ERROR;
 }
@@ -906,7 +919,6 @@ svn_error_t *svn_swig_pl_thunk_ssl_server_trust_prompt(
                               svn_boolean_t may_save,
                               apr_pool_t *pool)
 {
-    SV *result;
     swig_type_info *poolinfo = SWIG_TypeQuery ("apr_pool_t *");
     swig_type_info *credinfo = SWIG_TypeQuery (
                                  "svn_auth_cred_ssl_server_trust_t *");
@@ -919,12 +931,12 @@ svn_error_t *svn_swig_pl_thunk_ssl_server_trust_prompt(
     if (!*cred) {
         croak ("Could not allocate memory for cred structure");
     }
-    perl_callback_thunk (CALL_SV,
-                         baton, &result,
-                         "SsiSiS", *cred, credinfo,
-                         realm, failures, 
-                         cert_info, cert_info_info,
-                         may_save, pool, poolinfo);
+    svn_swig_pl_callback_thunk (CALL_SV,
+                                baton, NULL,
+                                "SsiSiS", *cred, credinfo,
+                                realm, failures, 
+                                cert_info, cert_info_info,
+                                may_save, pool, poolinfo);
 
     /* Allow the perl callback to indicate failure by setting all vars to 0 
      * or by simply doing nothing.  While still allowing them to indicate
@@ -945,7 +957,6 @@ svn_error_t *svn_swig_pl_thunk_ssl_client_cert_prompt(
                 svn_boolean_t may_save,
                 apr_pool_t *pool)
 {
-    SV *result;
     swig_type_info *poolinfo = SWIG_TypeQuery ("apr_pool_t *");
     swig_type_info *credinfo = SWIG_TypeQuery (
                                  "svn_auth_cred_ssl_client_cert_t *");
@@ -956,10 +967,10 @@ svn_error_t *svn_swig_pl_thunk_ssl_client_cert_prompt(
     if (!*cred) {
         croak ("Could not allocate memory for cred structure");
     }
-    perl_callback_thunk (CALL_SV,
-                         baton, &result,
-                         "SsiS", *cred, credinfo,
-                         realm, may_save, pool, poolinfo);
+    svn_swig_pl_callback_thunk (CALL_SV,
+                                baton, NULL,
+                                "SsiS", *cred, credinfo,
+                                realm, may_save, pool, poolinfo);
 
     return SVN_NO_ERROR;
 }
@@ -971,7 +982,6 @@ svn_error_t *svn_swig_pl_thunk_ssl_client_cert_pw_prompt(
                                      svn_boolean_t may_save,
                                      apr_pool_t *pool)
 {
-    SV *result;
     swig_type_info *poolinfo = SWIG_TypeQuery ("apr_pool_t *");
     swig_type_info *credinfo = SWIG_TypeQuery (
                                  "svn_auth_cred_ssl_client_cert_pw_t *");
@@ -982,12 +992,168 @@ svn_error_t *svn_swig_pl_thunk_ssl_client_cert_pw_prompt(
     if (!*cred) {
         croak ("Could not allocate memory for cred structure");
     }
-    perl_callback_thunk (CALL_SV,
-                         baton, &result,
-                         "SsiS", *cred, credinfo,
-                         realm, may_save, pool, poolinfo);
+    svn_swig_pl_callback_thunk (CALL_SV,
+                                baton, NULL,
+                                "SsiS", *cred, credinfo,
+                                realm, may_save, pool, poolinfo);
 
     return SVN_NO_ERROR;
+}
+
+/* Thunked version of svn_wc_notify_func_t callback type */
+void svn_swig_pl_notify_func(void * baton,
+		             const char *path,
+			     svn_wc_notify_action_t action,
+			     svn_node_kind_t kind,
+			     const char *mime_type,
+			     svn_wc_notify_state_t content_state,
+			     svn_wc_notify_state_t prop_state,
+			     svn_revnum_t revision)
+{
+    if (!SvOK((SV *)baton)) {
+        return; 
+    }
+
+    svn_swig_pl_callback_thunk (CALL_SV,
+		                baton, NULL,
+				"siisiii", path, action, kind, mime_type,
+				content_state, prop_state, revision);
+    
+}
+
+/* Thunked version of svn_client_get_commit_log_t callback type. */
+svn_error_t *svn_swig_pl_get_commit_log_func(const char **log_msg,
+                                             const char **tmp_file,
+                                             apr_array_header_t *commit_items,
+                                             void *baton,
+                                             apr_pool_t *pool)
+{
+    SV *result;
+    svn_error_t *ret_val = SVN_NO_ERROR;
+    SV *log_msg_sv;
+    SV *tmp_file_sv;
+    SV *commit_items_sv;
+    swig_type_info *commit_itemsinfo = SWIG_TypeQuery 
+	                                ("svn_client_commit_item_t *");
+    swig_type_info *poolinfo = SWIG_TypeQuery ("apr_pool_t *");
+
+    if (!SvOK((SV *)baton)) {
+        *log_msg = apr_pstrdup (pool, "");
+	*tmp_file = NULL;
+        return SVN_NO_ERROR;
+    }
+    
+    log_msg_sv = newRV_noinc (sv_newmortal ());
+    tmp_file_sv = newRV_noinc (sv_newmortal ());
+    commit_items_sv = svn_swig_pl_convert_array (commit_items, 
+			                         commit_itemsinfo);
+
+    svn_swig_pl_callback_thunk (CALL_SV,
+	                        baton, &result,
+				"OOOS", log_msg_sv, tmp_file_sv,
+				commit_items_sv, pool, poolinfo);
+
+    if (!SvOK(SvRV(log_msg_sv))) {
+        /* client returned undef to us */
+        *log_msg = NULL;
+    } else if (SvPOK(SvRV(log_msg_sv))) {
+	/* client returned string so get the string and then duplicate
+	 * it using pool memory */
+        *log_msg = apr_pstrdup(pool, SvPV_nolen(SvRV(log_msg_sv)));
+    } else {
+        croak("Invalid value in log_msg reference, must be undef or a string");
+    }
+
+    if (!SvOK(SvRV(tmp_file_sv))) {
+	*tmp_file = NULL;
+    } else if (SvPOK(SvRV(tmp_file_sv))) {
+	*tmp_file = apr_pstrdup(pool, SvPV_nolen(SvRV(tmp_file_sv)));
+    } else {
+        croak("Invalid value in tmp_file reference, must be undef or a string");    
+    }
+
+    if (sv_derived_from (result, "_p_svn_error_t")) {
+        swig_type_info *errorinfo = SWIG_TypeQuery("svn_error_t *");
+	if (SWIG_ConvertPtr(result, (void *)&ret_val, errorinfo, 0) < 0) {
+            SvREFCNT_dec(result);
+	    croak("Unable to convert from SWIG Type");
+        }
+    }
+
+    SvREFCNT_dec(result);
+    return ret_val;
+}
+
+/* Thunked version of svn_wc_cancel_func_t callback type. */
+svn_error_t *svn_swig_pl_cancel_func(void *cancel_baton) {
+    SV *result;
+    svn_error_t *ret_val;
+
+    if (!SvOK((SV *)cancel_baton)) {
+        return SVN_NO_ERROR;
+    }
+    svn_swig_pl_callback_thunk(CALL_SV, cancel_baton, &result, "");
+
+    if (sv_derived_from(result,"_p_svn_error_t")) { 
+        swig_type_info *errorinfo = SWIG_TypeQuery("svn_error_t *");
+	if (SWIG_ConvertPtr(result, (void *)&ret_val, errorinfo, 0) < 0) {
+	    SvREFCNT_dec(result);
+	    croak("Unable to convert from SWIG Type");
+	}
+    } else if (SvIOK(result) && SvIV(result)) {
+        ret_val = svn_error_create(SVN_ERR_CANCELLED, NULL,"By cancel callback");
+    } else if (SvTRUE(result) && SvPOK(result)) {
+        ret_val = svn_error_create(SVN_ERR_CANCELLED, NULL, SvPV_nolen(result));
+    } else {
+        ret_val = SVN_NO_ERROR;
+    }
+    SvREFCNT_dec(result);
+    return ret_val;
+}
+
+/* Thunked version of svn_wc_status_func_t callback type. */
+void svn_swig_pl_status_func(void *baton,
+                             const char *path,
+                             svn_wc_status_t *status)
+{
+  swig_type_info *statusinfo = SWIG_TypeQuery ("svn_wc_status_t *");
+
+  if (!SvOK ((SV *)baton)) {
+    return;
+  }
+   
+  svn_swig_pl_callback_thunk (CALL_SV, baton, NULL, "sS",
+                              path, status, statusinfo); 
+
+}
+
+/* Thunked version of svn_client_blame_receiver_t callback type. */
+svn_error_t *svn_swig_pl_blame_func (void *baton,
+		                     apr_off_t line_no,
+				     svn_revnum_t revision,
+				     const char *author,
+				     const char *date,
+				     const char *line,
+				     apr_pool_t *pool)
+{
+    SV *result;
+    svn_error_t *ret_val = SVN_NO_ERROR;
+    swig_type_info *poolinfo = SWIG_TypeQuery("apr_pool_t *");
+    
+    svn_swig_pl_callback_thunk (CALL_SV, baton, &result, "iisssS",
+		                line_no, revision, author, date, line,
+				pool, poolinfo);
+
+    if (sv_derived_from (result, "_p_svn_error_t")) {
+        swig_type_info *errorinfo = SWIG_TypeQuery("svn_error_t *");
+	if (SWIG_ConvertPtr(result, (void *)&ret_val, errorinfo, 0) < 0) {
+            SvREFCNT_dec(result);
+	    croak("Unable to convert from SWIG Type");
+        }
+    }
+    
+    SvREFCNT_dec(result);
+    return ret_val;
 }
 
 /* default pool support */
@@ -1009,8 +1175,8 @@ apr_pool_t *svn_swig_pl_make_pool (SV *obj)
     }
 
     if (!current_pool)
-	perl_callback_thunk (CALL_METHOD, (void *)"new_default",
-			     &obj, "s", "SVN::Pool");
+	svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"new_default",
+			            &obj, "s", "SVN::Pool");
     pool = current_pool;
 
     return pool;
@@ -1033,10 +1199,11 @@ static svn_error_t *io_handle_read (void *baton,
     if ((mg = SvTIED_mg((SV*)io->io, PERL_MAGIC_tiedscalar))) {
 	SV *ret;
 	SV *buf = sv_newmortal();
-	perl_callback_thunk (CALL_METHOD, (void *)"READ", &ret, "OOi",
-			     SvTIED_obj((SV*)io->io, mg),
-			     buf, *len);
+	svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"READ", &ret, "OOi",
+			            SvTIED_obj((SV*)io->io, mg),
+			            buf, *len);
 	*len = SvIV (ret);
+	SvREFCNT_dec (ret);
 	memmove (buffer, SvPV_nolen(buf), *len);
     }
     else
@@ -1054,9 +1221,10 @@ static svn_error_t *io_handle_write (void *baton,
     if ((mg = SvTIED_mg((SV*)io->io, PERL_MAGIC_tiedscalar))) {
 	SV *ret, *pv;
         pv = sv_2mortal (newSVpvn (data, *len));
-	perl_callback_thunk (CALL_METHOD, (void *)"WRITE", &ret, "OOi",
-			     SvTIED_obj((SV*)io->io, mg), pv, *len);
+	svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"WRITE", &ret, "OOi",
+			            SvTIED_obj((SV*)io->io, mg), pv, *len);
 	*len = SvIV (ret);
+	SvREFCNT_dec (ret);
     }
     else
 	*len = PerlIO_write (IoIFP (io->io), data, *len);
@@ -1069,8 +1237,8 @@ static svn_error_t *io_handle_close (void *baton)
     MAGIC *mg;
 
     if ((mg = SvTIED_mg((SV*)io->io, PERL_MAGIC_tiedscalar))) {
-	perl_callback_thunk (CALL_METHOD, (void *)"CLOSE", NULL, "O",
-			     SvTIED_obj((SV*)io->io, mg));
+	svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"CLOSE", NULL, "O",
+			            SvTIED_obj((SV*)io->io, mg));
     }
     else {
 	PerlIO_close (IoIFP (io->io));
@@ -1099,8 +1267,8 @@ svn_error_t *svn_swig_pl_make_stream (svn_stream_t **stream, SV *obj)
 
     if (obj && sv_isobject(obj)) {
         if (sv_derived_from (obj, "SVN::Stream"))
-	    perl_callback_thunk (CALL_METHOD, (void *)"svn_stream",
-			         &obj, "O", obj);
+	    svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"svn_stream",
+			                &obj, "O", obj);
 	else if (!sv_derived_from(obj, "_p_svn_stream_t"))
             simple_type = 0;
 
@@ -1136,8 +1304,8 @@ SV *svn_swig_pl_from_stream (svn_stream_t *stream)
     swig_type_info *tinfo = SWIG_TypeQuery("svn_stream_t *");
     SV *ret;
 
-    perl_callback_thunk (CALL_METHOD, (void *)"new", &ret, "sS",
-			 "SVN::Stream", stream, tinfo);
+    svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"new", &ret, "sS",
+			        "SVN::Stream", stream, tinfo);
 
     return sv_2mortal (ret);
 }

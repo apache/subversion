@@ -1,14 +1,17 @@
 #!/usr/bin/perl -w
 
-use Test::More qw(no_plan);
+use Test::More tests => 5;
+use File::Temp qw(tempdir);
+use File::Path qw(rmtree);
 use strict;
 
 require SVN::Core;
 require SVN::Repos;
 require SVN::Fs;
 require SVN::Delta;
+use File::Path;
 
-my $repospath = "/tmp/svn-$$";
+my $repospath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1);
 
 my $repos;
 
@@ -77,5 +80,5 @@ END {
 diag "cleanup";
 print `svn cat file://$repospath/trunk/filea`;
 print `svn log -v file://$repospath`;
-`rm -rf $repospath`;
+rmtree($repospath);
 }

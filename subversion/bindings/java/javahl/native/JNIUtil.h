@@ -35,6 +35,7 @@ class Pool;
 #include <fstream>
 #include <apr_time.h>
 #include <string>
+struct svn_error_t;
 
 #define JAVA_PACKAGE "org/tigris/subversion/javahl"
 
@@ -56,14 +57,14 @@ public:
 	static bool isExceptionThrown();
 	static void handleAPRError(int error, const char *op);
 	static void putFinalizedClient(SVNClient *cl);
-	static void handleSVNError(svn_error *err);
+	static void handleSVNError(svn_error_t *err);
 	static void throwError(const char *message);
 	static apr_pool_t * getPool();
 	static bool JNIInit(JNIEnv *env);
 	enum { formatBufferSize = 2048 };
 	enum { noLog, errorLog, exceptionLog, entryLog } LogLevel;
 private:
-	static void assembleErrorMessage(svn_error *err, int depth, apr_status_t parent_apr_err, std::string &buffer);
+	static void assembleErrorMessage(svn_error_t *err, int depth, apr_status_t parent_apr_err, std::string &buffer);
 	static Pool * g_requestPool;
 	static int g_logLevel;
 	static void setExceptionThrown();

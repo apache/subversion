@@ -1,6 +1,13 @@
 #!/usr/bin/perl
 use strict;
-use Test::More qw(no_plan);
+use Test::More tests => 6;
+use File::Path q(rmtree);
+use File::Temp qw(tempdir);
+
+# shut up about variables that are only used once.
+# these come from constants and variables used
+# by the bindings but not elsewhere in perl space.
+no warnings 'once'; 
 
 require SVN::Core;
 require SVN::Repos;
@@ -23,7 +30,7 @@ sub is_pool_default {
 	$$SVN::_Core::current_pool, $text);
 }
 
-my $repospath = "/tmp/svn-$$";
+my $repospath = tempdir('svn-perl-test-XXXXXX', TMPDIR => 1);
 
 my $repos;
 
@@ -59,3 +66,8 @@ SVN::Repos::dir_delta ($root, '', '',
 
 
 is_pool_default ($pool, 'default pool from c calls destroyed');
+
+END {
+diag('cleanup');
+rmtree($repospath);
+}
