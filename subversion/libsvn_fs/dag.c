@@ -275,8 +275,8 @@ svn_fs__dag_get_node (dag_node_t **node,
   else if (node_is_kind_p (contents, "copy"))
     new_node->kind = dag_node_kind_copy;
   else
-    return svn_error_createf (SVN_ERR_FS_GENERAL, 0, 0, fs->pool,
-                              "Attempt to create unknown kind of node");
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, 0, fs->pool,
+                             "Attempt to create unknown kind of node");
   
   /* Return a fresh new node */
   *node = new_node;
