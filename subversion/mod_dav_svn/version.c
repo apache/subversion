@@ -925,6 +925,7 @@ dav_error *dav_svn__get_locations_report(const dav_resource *resource,
   dav_error *derr = NULL;
   apr_status_t apr_err;
   apr_bucket_brigade *bb;
+  dav_svn_authz_read_baton arb;
 
   /* The parameters to do the operation on. */
   const char *relative_path = NULL;
@@ -984,9 +985,15 @@ dav_error *dav_svn__get_locations_report(const dav_resource *resource,
   abs_path = svn_path_join(resource->info->repos_path, relative_path,
                            resource->pool);
 
+  /* Build an authz read baton */
+  arb.r = resource->info->r;
+  arb.repos = resource->info->repos;
+
   serr = svn_repos_trace_node_locations(resource->info->repos->fs,
                                         &fs_locations, abs_path, peg_revision,
-                                        location_revisions, resource->pool);
+                                        location_revisions,
+                                        dav_svn_authz_read, &arb,
+                                        resource->pool);
 
   if (serr)
     {

@@ -634,6 +634,13 @@ svn_repos_history (svn_fs_t *fs,
  * @a location_revisions is an array of svn_revnum_t's and @a *locations
  * maps svn_revnum_t's to const char *.
  *
+ * If optional @a authz_read_func is non-NULL, then use it (and @a
+ * authz_read_baton) to verify that the peg-object is readable.  If not,
+ * return SVN_ERR_AUTHZ_UNREADABLE.  Also use the @a authz_read_func
+ * to check that every path returned in the hash is readable.  If an
+ * unreadable path is encountered, stop tracing and return
+ * SVN_NO_ERROR.
+ *
  * @a pool is used for all allocations.
  */
 svn_error_t *
@@ -642,6 +649,8 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
                                 const char *fs_path,
                                 svn_revnum_t peg_revision,
                                 apr_array_header_t *location_revisions,
+                                svn_repos_authz_func_t authz_read_func,
+                                void *authz_read_baton,
                                 apr_pool_t *pool);
 
 /* ### other queries we can do someday --
