@@ -300,7 +300,7 @@ free_file_baton (struct file_baton *fb)
 
      Changing svn_error.c:svn_pool_create() to use apr_make_sub_pool()
      instead of apr_create_pool() has not solved this. */
-#if 1
+#if 0
   apr_destroy_pool (fb->pool);
 #endif /* 0/1 */
 
@@ -359,9 +359,12 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 
   /* Either we're done (window is NULL) or we had an error.  In either
      case, clean up the handler.  */
-  err2 = svn_wc__close_text_base (hb->source, fb->path, 0, window->pool);
-  if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
-    err = err2;
+  if (! fb->dir_baton->edit_baton->is_checkout)
+    {
+      err2 = svn_wc__close_text_base (hb->source, fb->path, 0, window->pool);
+      if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
+        err = err2;
+    }
   err2 = svn_wc__close_text_base (hb->dest, fb->path, 0, window->pool);
   if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
     err = err2;
