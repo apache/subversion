@@ -1357,13 +1357,10 @@ merge (const char **conflict_p,
                      reflects the state of the target at all times. */
                   apr_hash_set (t_entries, key, klen, NULL);
                 }
-              else
+              else if (svn_fs_id_distance (t_entry->id, a_entry->id) != -1)
                 {
-                  /* Otherwise, E is different in target than in
-                     ancestor, so it's a conflict with the deletion of
-                     E in source. */
-
-                  /* ### kff todo: abstract path creation func here? */
+                  /* E is an attempt to modify ancestor, so it's a
+                     conflict with the deletion of E in source. */
                   *conflict_p = apr_psprintf (trail->pool, "%s/%s",
                                               target_path, t_entry->name);
 
