@@ -66,7 +66,7 @@ corrupt_version (svn_fs_t *fs, svn_vernum_t v)
 {
   return
     svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
-		       "corrupt root data for version %d of filesystem `%s'",
+		       "corrupt root data for version %ld of filesystem `%s'",
 		       v, fs->env_path);
 }
 
@@ -76,7 +76,7 @@ no_such_version (svn_fs_t *fs, svn_vernum_t v)
 {
   return
     svn_error_createf (SVN_ERR_FS_NO_SUCH_VERSION, 0, 0, fs->pool,
-		       "filesystem `%s' has no version number %d",
+		       "filesystem `%s' has no version number %ld",
 		       fs->env_path, v);
 }
 

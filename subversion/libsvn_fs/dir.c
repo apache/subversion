@@ -388,7 +388,7 @@ svn_fs_open_root (svn_fs_dir_t **dir,
       return
 	svn_error_createf
 	(SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
-	 "the root of version %d in filesystem `%s' is not a directory",
+	 "the root of version %ld in filesystem `%s' is not a directory",
 	 v, fs->env_path);
     }
 
