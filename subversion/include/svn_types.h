@@ -197,7 +197,7 @@ svn_error_t *svn_categorize_props (const apr_array_header_t *proplist,
 #define SVN_PROP_CHARSET  SVN_PROP_PREFIX "charset"
 
 /* --------------------------------------------------------------------- */
-/** INVISBILE PROPERTIES  **/
+/** INVISIBLE PROPERTIES  **/
 
 /* WC props are props that are invisible to users:  they're generated
    by an RA layer, and stored in secret parts of .svn/.  */
