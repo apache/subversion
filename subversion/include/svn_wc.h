@@ -92,6 +92,12 @@ svn_error_t *svn_wc_apply_delta (svn_delta_stream_t *delta_stream,
 
 #if 0
 /* Will have to think about the interface here a bit more. */
+
+svn_error_t *svn_wc_make_skelta (svn_delta_stream_t *delta_stream,
+                                 svn_delta_write_fn_t *delta_stream_writer,
+                                 apr_array_header_t *paths);
+
+
 svn_error_t *svn_wc_make_delta (svn_delta_stream_t *delta_stream,
                                 svn_delta_write_fn_t *delta_stream_writer,
                                 apr_array_header_t *paths);
