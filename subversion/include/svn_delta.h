@@ -144,10 +144,6 @@ typedef struct svn_delta_window_t {
 
 
 
-/* Free the the entire sub-pool which contains delta window WINDOW.  */
-extern void svn_free_delta_window (svn_delta_window_t *window);
-
-
 /* A function resembling the POSIX `read' system call --- BATON is some
    opaque structure indicating what we're reading, BUFFER is a buffer
    to hold the data, and *LEN indicates how many bytes to read.  Upon
@@ -174,31 +170,9 @@ typedef svn_error_t *(svn_text_delta_window_handler_t)
 
 /* Property deltas.  */
 
-/*  
-    Because pdelta "operations" are well-defined by XML tags, things
-have the potential to be a little simpler than in in the
-text-delta-parsing universe.  The pdelta parser can send commands to
-the caller's svn_walk_t callbacks in two different, *non*-mutually
-exclusive ways.
-
-  (1) If the svn_walk_t callbacks "apply_*_propchange" are non-NULL:
-  buffer the propname and propvalue completely into RAM, and send it
-  to these callbacks.
-
-  (2) If the svn_walk_t callbacks "begin_*delta" are non-NULL: buffer
-  the propname and propvalue gradually, and send off `chunks' to these
-  handlers.  This is similar to the text-delta strategy.
-      
-Again, note that these methods are non-mututally-exclusive.  It is
-unlikely that a caller would use both strategies, but libsvn_delta
-does not prohibit it.
-
-*/
 
 
-/* This represents an *entire* propchange, all in memory (see (1)
-   above).  This is what gets passed to the apply_*_propchange()
-   callbacks */
+/* This represents an *entire* propchange, all in memory. */
 typedef struct svn_propchange_t
 {
   enum {
@@ -212,19 +186,10 @@ typedef struct svn_propchange_t
 
 
 
-/* The type of propchange chunk we're sending to a handler (see (2)
-   above). */
-typedef enum 
-{
-  svn_prop_name_chunk = 1,
-  svn_prop_value_chunk
-} svn_prop_change_chunk_type_t;   /* yes, we're serious. */
+/* A function to consume an entire in-memory propchange structure. */
+typedef svn_error_t *(svn_propchange_handler_t) 
+     (svn_propchange_t *propchange, void *baton);
 
-
-/* A function to consume a series of propchange chunks.  Must be
-   defined by the caller of the parser.  */
-typedef svn_error_t *(svn_prop_change_chunk_handler_t)
-     (svn_string_t *chunk, void *baton, svn_prop_change_chunk_type_t type);
 
 
 
@@ -260,24 +225,6 @@ typedef struct svn_delta_walk_t
   /* Remove the directory entry named NAME.  */
   svn_error_t *(*delete) (svn_string_t *name,
 			  void *walk_baton, void *parent_baton);
-
-  /* Handle property changes a full change at a time.  This is not a
-     completely streamy interface, but it's probably what we'll use
-     for the forseeable future.  If we ever get properties whose names
-     or values are huge, there is a fully streamy interface available
-     too (see (1) above, but note that this would imply a change to
-     how property names are set in XML as well, since names are
-     currently XML attributes and therefore can't really be streamed
-     at parse time anyway). */
-  svn_error_t *(*apply_dir_propchange) (svn_propchange_t *propchange,
-                                        void *walk_baton, void *parent_baton);
-  
-  svn_error_t *(*apply_file_propchange) (svn_propchange_t *propchange,
-                                         void *walk_baton, void *parent_baton);
-  
-  svn_error_t *(*apply_dirent_propchange) (svn_propchange_t *propchange,
-                                           void *walk_baton,
-                                           void *parent_baton);
   
   /* We are going to add a new subdirectory named NAME.  We will use
      the value this callback stores in *CHILD_BATON as the
@@ -321,19 +268,21 @@ typedef struct svn_delta_walk_t
                                    void **handler_baton);
 
 
-  /* We're about to start receiving a prop-delta. HANDLER and
-     HANDLER_BATON specify a function to consume a series of
-     propchange chunks.  If ANCESTOR_PATH is zero, the changes are
-     relative to the empty file. 
-  
-     Note: this is the "fully streamy" interface referred to earlier.
-     You probably don't want to use it right now, unless we've had a
-     problem with property sizes, in which case please remove this
-     comment. 
-  */
+  /* Handle property changes a full change at a time.  This is not a
+     completely streamy interface, but it's probably what we'll use
+     for the forseeable future.  If we ever get properties whose names
+     or values are huge, there is a fully streamy interface available
+     too (see (1) above, but note that this would imply a change to
+     how property names are set in XML as well, since names are
+     currently XML attributes and therefore can't really be streamed
+     at parse time anyway). */
   svn_error_t *(*begin_propdelta) (void *walk_baton, void *parent_baton,
-                                   svn_prop_change_chunk_handler_t **handler,
-                                   void **handler_baton);
+                                   svn_propchange_handler_t **file_handler,
+                                   void **file_handler_baton;
+                                   svn_propchange_handler_t **dir_handler,
+                                   void **dir_handler_baton;
+                                   svn_propchange_handler_t **dirent_handler,
+                                   void **dirent_handler_baton);
 
   
   /* The first two batons are the familiar story, the last is the
