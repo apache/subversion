@@ -25,7 +25,7 @@ class GeneratorBase:
   #
 
   def __init__(self, fname, verfname, options=None):
-    parser = ConfigParser.ConfigParser(_cfg_defaults)
+    parser = ConfigParser.ConfigParser()
     parser.read(fname)
 
     self.cfg = Config()
@@ -57,73 +57,53 @@ class GeneratorBase:
       if self.skip_targets.has_key(target):
         continue
 
-      install = parser.get(target, 'install')
-      type = parser.get(target, 'type')
+      options = {}
+      for option in parser.options(target):
+        options[option] = parser.get(target, option)
+
+      type = options.get('type')
 
       target_class = _build_types.get(type)
       if not target_class:
         raise GenError('ERROR: unknown build type: ' + type)
 
       target_ob = target_class(target,
-                               parser.get(target, 'description'),
-                               parser.get(target, 'path'),
-                               install,
-                               parser.get(target, 'custom'), ### bogus
+                               options,
                                self.cfg,
                                self._extension_map)
 
-      if parser.get(target, 'cmd'):
-        target_ob.cmd = parser.get(target, 'cmd')
-
-      if parser.get(target, 'release'):
-        target_ob.release = parser.get(target, 'release')
-
-      if parser.get(target, 'debug'):
-        target_ob.debug = parser.get(target, 'debug')
-
-      if parser.get(target, 'project_name'):
-        target_ob.project_name = parser.get(target, 'project_name')
-
-      if parser.get(target, 'language'):
-        target_ob.language = parser.get(target, 'language')
-
       self.targets[target] = target_ob
-
-      ### I don't feel like passing these to the constructor right now,
-      ### and I'm not sure how to really pass this stuff along. we
-      ### certainly don't want the targets looking at the parser...
-      target_ob.add_deps = parser.get(target, 'add-deps')
 
       ### another hack for now. tell a SWIG target what libraries should
       ### be linked into each wrapper. this also depends on the fact that
       ### the swig libraries occur *after* the other targets in build.conf
       ### cuz of the test for "is this in self.targets?"
       if type == 'swig':
-        target_ob.libs = self._find_libs(parser.get(target, 'libs'))
+        target_ob.swig_libs = self._find_libs(parser.get(target, 'libs'))
 
       # the target should add all relevant dependencies onto the
       # specified sources
-      target_ob.add_dependencies(parser.get(target, 'sources'), self.graph)
+      target_ob.add_dependencies(options.get('sources', ''), self.graph)
 
-      self.manpages.extend(string.split(parser.get(target, 'manpages')))
+      self.manpages.extend(string.split(options.get('manpages', '')))
 
-      if type not in ('script', 'project', 'external', 'utility', 'swig_utility'):
+      if isinstance(target_ob, TargetLinked):
         # collect test programs
-        if type == 'exe':
-          if install == 'test':
+        if isinstance(target_ob, TargetExe):
+          if target_ob.install == 'test':
             self.test_deps.append(target_ob.output)
-            if parser.get(target, 'testing') != 'skip':
+            if options.get('testing') != 'skip':
               self.test_progs.append(target_ob.output)
-          elif install == 'fs-test':
+          elif target_ob.install == 'fs-test':
             self.fs_test_deps.append(target_ob.output)
-            if parser.get(target, 'testing') != 'skip':
+            if options.get('testing') != 'skip':
               self.fs_test_progs.append(target_ob.output)
 
         # collect all the paths where stuff might get built
         ### we should collect this from the dependency nodes rather than
         ### the sources. "what dir are you going to put yourself into?"
         self.target_dirs[target_ob.path] = None
-        for pattern in string.split(parser.get(target, 'sources')):
+        for pattern in string.split(options.get('sources', '')):
           idx = string.rfind(pattern, '/')
           if idx != -1:
             ### hmm. probably shouldn't be os.path.join() right here
@@ -133,11 +113,10 @@ class GeneratorBase:
 
     # compute intra-library dependencies
     for name, target in self.targets.items():
-      if isinstance(target, TargetLinked):
-        for lib in self._find_libs(parser.get(name, 'libs')):
-          self.graph.add(DT_LINK, name, lib)
-        for nonlib in self._find_libs(parser.get(name, 'nonlibs')):
-          self.graph.add(DT_NONLIB, name, nonlib)
+      for lib in self._find_libs(target.libs):
+        self.graph.add(DT_LINK, name, lib)
+      for nonlib in self._find_libs(target.nonlibs):
+        self.graph.add(DT_NONLIB, name, nonlib)
          
 
     # collect various files
@@ -366,31 +345,23 @@ lang_full_name = {
 
 ### we should turn these targets into DependencyNode subclasses...
 class Target:
-  def __init__(self, name, desc, path, install, custom, cfg, extmap):
+  def __init__(self, name, options, cfg, extmap):
     self.name = name
-    self.desc = desc
-    self.path = path
     self.cfg = cfg
-
-    ### this should be a class attr and we should use different Target
-    ### classes based on the "custom" value.
-    self.object_cls = _custom_build.get(custom, ObjectFile)
-
-    if not install:
-      try:
-        install = self.default_install
-      except AttributeError:
-        raise GenError('Class "%s" has no default install location'
-                       % self.__class__.__name__)
-    self.install = install
-    self.is_apache_mod = (self.install == 'apache-mod')
-
-    # default output name; subclasses can/should change this
-    self.output = os.path.join(path, name)
+    self.desc = options.get('description')
+    self.path = options.get('path')
+    self.libs = options.get('libs', '')
+    self.nonlibs = options.get('nonlibs', '')
+    self.add_deps = options.get('add-deps', '')
 
     # true if several targets share the same directory, as is the case
     # with SWIG bindings.
     self.shared_dir = None
+
+    ### eek. this is pretty ugly. we should have a new Target subclass.
+    # These values may be changed by TargetLinked constructor
+    self.is_ra_module = 0
+    self.is_apache_mod = 0
 
   def add_dependencies(self, src_patterns, graph):
     # subclasses should override to provide behavior, as appropriate
@@ -406,6 +377,30 @@ class Target:
 
 class TargetLinked(Target):
   "The target is linked (by libtool) against other libraries."
+
+  def __init__(self, name, options, cfg, extmap):
+    Target.__init__(self, name, options, cfg, extmap)
+    self.install = options.get('install')
+
+    if not self.install:
+      try:
+        self.install = self.default_install
+      except AttributeError:
+        raise GenError('Class "%s" has no default install location'
+                       % self.__class__.__name__)
+
+    # default output name; subclasses can/should change this
+    self.output = os.path.join(self.path, name)    
+
+    custom = options.get('custom')
+
+    ### this should be a class attr and we should use different Target
+    ### classes based on the "custom" value.
+    self.object_cls = _custom_build.get(custom, ObjectFile)
+    if custom == 'ra-module':
+      self.is_ra_module = 1
+    elif custom == 'apache-mod':
+      self.is_apache_mod = 1
 
   ### hmm. this is Makefile-specific
   link_cmd = '$(LINK)'
@@ -443,11 +438,11 @@ class TargetExe(TargetLinked):
   default_install = 'bin'
   default_sources = '*.c'
 
-  def __init__(self, name, desc, path, install, custom, cfg, extmap):
-    Target.__init__(self, name, desc, path, install, custom, cfg, extmap)
+  def __init__(self, name, options, cfg, extmap):
+    TargetLinked.__init__(self, name, options, cfg, extmap)
 
     self.objext = extmap['exe', 'object']
-    self.output = os.path.join(path, name + extmap['exe', 'target'])
+    self.output = os.path.join(self.path, name + extmap['exe', 'target'])
 
 class TargetScript(Target):
   default_install = 'bin'
@@ -464,12 +459,12 @@ class TargetLib(TargetLinked):
   default_install = 'lib'
   default_sources = '*.c'
 
-  def __init__(self, name, desc, path, install, custom, cfg, extmap):
-    Target.__init__(self, name, desc, path, install, custom, cfg, extmap)
+  def __init__(self, name, options, cfg, extmap):
+    TargetLinked.__init__(self, name, options, cfg, extmap)
 
     self.objext = extmap['lib', 'object']
 
-    if install != 'apache-mod':
+    if not self.is_apache_mod:
       # the target file is the name, version, and appropriate extension
       tfile = '%s-%s%s' % (name, cfg.version, extmap['lib', 'target'])
     else:
@@ -480,23 +475,18 @@ class TargetLib(TargetLinked):
       ### kind of hacky anyways. we should use a different Target subclass
       self.link_cmd = '$(LINK_APACHE_MOD)'
 
-    self.output = os.path.join(path, tfile)
-
-    ### eek. this is pretty ugly. we should have a new Target subclass.
-    if custom == 'ra-module':
-      self.is_ra_module = 1
+    self.output = os.path.join(self.path, tfile)
 
 class TargetDoc(Target):
   # no default_install
   default_sources = '*.texi'
 
-class TargetSWIG(Target):
+class TargetSWIG(TargetLinked):
   default_install = 'swig'
   # no default_sources
 
-  def __init__(self, name, desc, path, install, custom, cfg, extmap):
-    Target.__init__(self, name, desc, path, install, custom, cfg, extmap)
-
+  def __init__(self, name, options, cfg, extmap):
+    TargetLinked.__init__(self, name, options, cfg, extmap)
     self._objext = extmap['lib', 'object']
     self._libext = extmap['lib', 'target']
 
@@ -542,7 +532,7 @@ class TargetSWIG(Target):
       graph.add(DT_LINK, library.name, ofile)
 
       # add some more libraries
-      for lib in self.libs:
+      for lib in self.swig_libs:
         graph.add(DT_LINK, library.name, lib)
 
       # add some language-specific libraries for languages other than
@@ -589,11 +579,12 @@ class TargetSWIGRuntime(TargetSWIG):
   def get_library(self, lang):
     return self._libraries.get(lang, None)
 
-### I don't think this should be TargetLinked, but 'apr' uses the 'libs'
-### option, which means we need to make this TargetLinked so that the
-### GeneratorBase.__init__ method will process libs on this target.
-### so... there is a bit more thought to apply
-class TargetSpecial(TargetLinked):
+class TargetSpecial(Target):
+  def __init__(self, name, options, cfg, extmap):
+    Target.__init__(self, name, options, cfg, extmap)
+    self.release = options.get('release')
+    self.debug = options.get('debug')
+
   def add_dependencies(self, src_patterns, graph):
     # we have no dependencies since this is built externally
     pass
@@ -601,14 +592,26 @@ class TargetSpecial(TargetLinked):
 class TargetProject(TargetSpecial):
   default_install = 'project'
 
+  def __init__(self, name, options, cfg, extmap):
+    TargetSpecial.__init__(self, name, options, cfg, extmap)
+    self.project_name = options.get('project_name')
+
 class TargetExternal(TargetSpecial):
   default_install = 'external'
+
+  def __init__(self, name, options, cfg, extmap):
+    TargetSpecial.__init__(self, name, options, cfg, extmap)
+    self.cmd = options.get('cmd')
 
 class TargetUtility(TargetSpecial):
   default_install = 'utility'
 
 class TargetSWIGUtility(TargetUtility):
   default_install = 'swig_utility'
+
+  def __init__(self, name, options, cfg, extmap):
+    TargetSpecial.__init__(self, name, options, cfg, extmap)  
+    self.language = options.get('language')
 
 _build_types = {
   'exe' : TargetExe,
@@ -631,24 +634,6 @@ class Config:
 class GenError(Exception):
   pass
 
-
-# for each configuration option, specify the default value:
-_cfg_defaults = {
-  'sources' : '',
-  'libs' : '',
-  'nonlibs' : '',
-  'manpages' : '',
-  'custom' : '',
-  'install' : '',
-  'testing' : '',
-  'add-deps' : '',
-  'cmd' : '',
-  'release' : '',
-  'debug' : '',
-  'project_name' : '',
-  'description' : '',
-  'language' : '',
-  }
 
 _predef_sections = [
   'options',
