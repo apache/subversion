@@ -92,6 +92,31 @@ typedef enum svn_delta__XML_t
 
 } svn_delta__XML_t;
 
+/* Private xml name definitions */
+#define SVN_DELTA__XML_TAG_ADD               "add"
+#define SVN_DELTA__XML_TAG_DELETE            "delete"
+#define SVN_DELTA__XML_TAG_DELTA_PKG         "delta-pkg"
+#define SVN_DELTA__XML_TAG_DIR               "dir"
+#define SVN_DELTA__XML_TAG_FILE              "file"
+#define SVN_DELTA__XML_TAG_PROP_DELTA        "prop-delta"
+#define SVN_DELTA__XML_TAG_REPLACE           "replace"
+#define SVN_DELTA__XML_TAG_SET               "set"
+#define SVN_DELTA__XML_TAG_TEXT_DELTA        "text-delta"
+#define SVN_DELTA__XML_TAG_TEXT_DELTA_REF    "text-delta-ref"
+#define SVN_DELTA__XML_TAG_TREE_DELTA        "tree-delta"
+
+/* Private xml attribute definitions */
+#define SVN_DELTA__XML_ATTR_ANCESTOR         "ancestor"
+#define SVN_DELTA__XML_ATTR_BASE_PATH        "base-path"
+#define SVN_DELTA__XML_ATTR_BASE_REV         "base-rev"
+#define SVN_DELTA__XML_ATTR_COPYFROM_PATH    "copyfrom-path"
+#define SVN_DELTA__XML_ATTR_COPYFROM_REV     "copyfrom-rev"
+#define SVN_DELTA__XML_ATTR_DTD_VER          "dtd-ver"
+#define SVN_DELTA__XML_ATTR_ENCODING         "encoding"
+#define SVN_DELTA__XML_ATTR_ID               "id"
+#define SVN_DELTA__XML_ATTR_NAME             "name"
+#define SVN_DELTA__XML_ATTR_TARGET_REV       "target-rev"
+#define SVN_DELTA__XML_ATTR_VER              "ver"
 
 
 
