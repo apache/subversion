@@ -18,17 +18,19 @@ import gen_base
 import ezt
 
 
-class WinGeneratorBase(gen_base.GeneratorBase):
-  "Base class for all Windows project files generators"
-
+class GeneratorBase(gen_base.GeneratorBase):
+  """This intermediate base class exists to be instantiated by win-tests.py,
+  in order to obtain information from build.conf without actually doing
+  any generation."""
   _extension_map = {
     ('exe', 'target'): '.exe',
     ('exe', 'object'): '.obj',
     ('lib', 'target'): '.dll',
     ('lib', 'object'): '.obj',
-    ('script', 'target'): '',
-    ('script', 'object'): '',
     }
+
+class WinGeneratorBase(GeneratorBase):
+  "Base class for all Windows project files generators"
 
   def parse_options(self, options):
     self.apr_path = 'apr'
@@ -167,7 +169,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                              'build_locale.ezt', data)
 
     #Initialize parent
-    gen_base.GeneratorBase.__init__(self, fname, verfname)
+    GeneratorBase.__init__(self, fname, verfname)
 
     #Make the project files directory if it doesn't exist
     #TODO win32 might not be the best path as win64 stuff will go here too
