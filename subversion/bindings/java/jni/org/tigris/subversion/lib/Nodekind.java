@@ -17,46 +17,32 @@ package org.tigris.subversion.lib;
  *
  */
 
-public final class Revision {
-    public final static long INVALID_REVISION=-1;
-    private final long revision;
+public final class Nodekind 
+{
+    /**
+     * IMPORTANT: KEEP THIS IN SYNC WITH THE
+     * DEFINITION OF svn_node_kind_t
+     */
+    public final static int NONE=0;
+    public final static int FILE=1;
+    public final static int DIR=2;
+    public final static int UNKNOWN=3;
 
-    public Revision(long _revision)
-    {
-	super();
+    private final int kind;
 
-	revision = _revision;
-    }
+    public Nodekind(int _kind) 
+	{
+	    super();
+	    kind = _kind;
+	}
 
-    public Revision(Revision _revision)
-    {
-	this(_revision.toLong());
-    }
+    public Nodekind(Nodekind nodekind)
+	{
+	    this(nodekind.getKind());
+	}
 
-    public static boolean isValidRevision(Revision _revision)
-    {
-	return isValidRevision(_revision.toLong());
-    }
-
-    public static boolean isValidRevision(long _revision)
-    {
-	return _revision >= 0;
-    }
-
-    public final long toLong()
-    {
-	return revision;
-    }
-
-    public static long toLong(Revision _revision)
-    {
-	return _revision.toLong();
-    }
+    public final int getKind()
+	{
+	    return kind;
+	}
 }
-
-/* 
- * local variables:
- * eval: (load-file "../../../../../../../svn-dev.el")
- * end: 
- */
-

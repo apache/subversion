@@ -20,22 +20,11 @@ import java.util.Date;
 import java.util.Hashtable;
 
 public class Entry {
-    public final static int SCHEDULE_NORMAL=0;
-    public final static int SCHEDULE_ADD=1;
-    public final static int SCHEDULE_DELETE=2;
-    public final static int SCHEDULE_REPLACE=3;
-    public final static int SCHEDULE_UNADD=4;
-    public final static int SCHEDULE_UNDELETE=5;
-
-    public final static int NODEKIND_NONE = 0;
-    public final static int NODEKIND_FILE = 1;
-    public final static int NODEKIND_DIR = 2;
-    public final static int NODEKIND_UNKNOWN = 3;
-
-    private long revision = 0;
+    
+    private Revision revision = null;
     private String url = null;
-    private int nodekind = NODEKIND_NONE;
-    private int schedule = SCHEDULE_NORMAL;
+    private Nodekind kind = null;
+    private Schedule schedule = null;
     private boolean conflicted = false;
     private boolean copied = false;
     private Date texttime = null;
@@ -47,11 +36,11 @@ public class Entry {
             super();
         }
 
-    public void setRevision(long _revision)
+    public void setRevision(Revision _revision)
         {
             revision = _revision;
         }
-    public long getRevision()
+    public Revision getRevision()
         {
             return revision;
         }
@@ -63,19 +52,19 @@ public class Entry {
         {
             return url;
         }
-    public void setNodekind(int _nodekind)
+    public void setKind(Nodekind _kind)
         {
-            nodekind = _nodekind;
+            kind = _kind;
         }
-    public int getNodekind()
+    public Nodekind getKind()
         {
-            return nodekind;
+            return kind;
         }
-    public void setSchedule(int _schedule)
+    public void setSchedule(Schedule _schedule)
         {
             schedule = _schedule;
         }
-    public int getSchedule()
+    public Schedule getSchedule()
         {
             return schedule;
         }

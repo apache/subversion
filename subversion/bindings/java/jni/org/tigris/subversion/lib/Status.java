@@ -20,7 +20,6 @@ package org.tigris.subversion.lib;
 public class Status 
 {
     private Entry entry = null;
-    private Revision reposRev = null;
     private StatusKind textStatus = null;
     private StatusKind propStatus = null;
     private boolean copied = false;
@@ -30,6 +29,20 @@ public class Status
 
     public Status()
         {
+            super();
+        }
+
+    public Status(Status status)
+        {
+            this();
+            
+            setEntry(status.getEntry());
+            setTextStatus(status.getTextStatus());
+            setPropStatus(status.getPropStatus());
+            setCopied(status.getCopied());
+            setLocked(status.getLocked());
+            setReposTextStatus(status.getReposTextStatus());
+            setReposPropStatus(status.getReposPropStatus());
         }
 
     public void setEntry(Entry _entry)
@@ -42,29 +55,9 @@ public class Status
             return entry;
         }
 
-    public void setReposRev(Revision _reposRev)
-        {
-            reposRev = _reposRev;
-        }
-
-    public void setReposRev(long _reposRev)
-        {
-            reposRev = new Revision(_reposRev);
-        }
-
-    public Revision getReposRev()
-        {
-            return reposRev;
-        }
-
     public void setTextStatus(StatusKind _textStatus)
         {
             textStatus = _textStatus;
-        }
-
-    public void setTextStatus(int _textStatus)
-        {
-            textStatus = new StatusKind(_textStatus);
         }
 
     public StatusKind getTextStatus()
@@ -75,11 +68,6 @@ public class Status
     public void setPropStatus(StatusKind _propStatus)
         {
             propStatus = _propStatus;
-        }
-
-    public void setPropStatus(int _propStatus)
-        {
-            propStatus = new StatusKind(_propStatus);
         }
 
     public StatusKind getPropStatus()
@@ -112,11 +100,6 @@ public class Status
             reposTextStatus = _reposTextStatus;
         }
 
-    public void setReposTextStatus(int _reposTextStatus)
-        {
-            reposTextStatus = new StatusKind(_reposTextStatus);
-        }
-
     public StatusKind getReposTextStatus()
         {
             return reposTextStatus;
@@ -125,11 +108,6 @@ public class Status
     public void setReposPropStatus(StatusKind _reposPropStatus)
         {
             reposPropStatus = _reposPropStatus;
-        }
-
-    public void setReposPropStatus(int _reposPropStatus)
-        {
-            reposPropStatus = new StatusKind(_reposPropStatus);
         }
 
     public StatusKind getReposPropStatus()
