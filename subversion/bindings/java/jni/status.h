@@ -26,8 +26,12 @@
 
 /*** Code ***/
 jobject
-status__create(JNIEnv *env, svn_wc_status_t *status, 
-               jboolean *hasException);
+status__create(JNIEnv *env, jboolean *hasException);
+
+jobject
+status__create_from_svn_wc_status_t(JNIEnv *env, 
+                                    jboolean *hasException,
+                                    svn_wc_status_t *status);
 
 void
 status__set_entry(JNIEnv *env, jboolean *hasException,
@@ -40,6 +44,10 @@ status__set_text_status(JNIEnv *env, jboolean *hasException,
 void 
 status__set_prop_status(JNIEnv *env, jboolean *hasException,
                         jobject jstatus, jint jprop_status);
+
+void
+status__set_copied(JNIEnv *env, jboolean *hasException,
+                   jobject status, jboolean copied);
 
 void
 status__set_locked(JNIEnv *env, jboolean *hasException,

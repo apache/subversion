@@ -145,6 +145,11 @@ public class NativeWrapper
     public static native void statusSetPropStatus(Status status, int prop_status);
 
     /**
+     * wrapper for function "status__set_copied" (status.h)
+     */
+    public static native void statusSetCopied(Status status, boolean copied);
+
+    /**
      * wrapper for function "status__set_locked" (status.h)
      */
     public static native void statusSetLocked(Status status, boolean locked);
