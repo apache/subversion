@@ -12,36 +12,6 @@
  * ====================================================================
  */
 
-/* ### todo:
-
-   Not sure how to display changes in the txn case.  What is the diff
-   against?  My first guess would be the base-rev of the txn, but I
-   don't think I have access to that revision number.  Am I missing
-   some API call (svn_fs_txn_base_revision() or something)?  Not
-   likely, since we don't even store the base-revision in the txn
-   (either in the FS or in the data struct.  Is this something we'd
-   like to keep track of?  This would require:
-
-   - modifying svn_fs_txn_t to include `svn_revnum_t base_rev'
-
-   - modifying the transaction skel to include the base revision,
-     which would mean it no longer needs to store the base root ID
-     (since I think that can be derived from the base revision).
-     Perhaps the following:
-
-        TRANSACTION ::= ("transaction" ROOT-ID BASE-REV PROPLIST) ;
-
-   - modifying stuff in txn-table.* to use this new skel structure.
-
-   - adding a new API call to retrieve the base revision from a txn.
-     Again, I think this would do the trick:
-
-        svn_error_t *svn_fs_txn_base_revision (svn_revnum_t *rev,
-                                               svn_fs_t *fs,
-                                               svn_fs_txn_t *txn,
-                                               apr_pool_t *pool);
-*/
-
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_time.h>
@@ -90,7 +60,8 @@ typedef struct svnlook_ctxt_t
   svn_boolean_t is_revision;
   svn_revnum_t rev_id;
   svn_fs_txn_t *txn;
-  
+  char *txn_name;
+
 } svnlook_ctxt_t;
 
 
@@ -329,7 +300,17 @@ do_dirs_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
   repos_node_t *tree;
 
   SVN_ERR (get_root (&root, c, pool));
-  base_rev_id = c->rev_id - 1;
+  if (c->is_revision)
+    base_rev_id = c->rev_id - 1;
+  else
+    base_rev_id = svn_fs_txn_base_revision (c->txn);
+
+  if (! SVN_IS_VALID_REVNUM (base_rev_id))
+    return svn_error_createf 
+      (SVN_ERR_FS_NO_SUCH_REVISION, 0, NULL, pool,
+       "Transaction '%s' is not based on a revision.  How odd.",
+       c->txn_name);
+  
   apr_hash_set (src_revs, "", APR_HASH_KEY_STRING, &(c->rev_id));
   SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
   SVN_ERR (svnlook_rev_changes_editor (&editor, &edit_baton, c->fs,
@@ -402,8 +383,17 @@ do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
   repos_node_t *tree;
 
   SVN_ERR (get_root (&root, c, pool));
+  if (c->is_revision)
+    base_rev_id = c->rev_id - 1;
+  else
+    base_rev_id = svn_fs_txn_base_revision (c->txn);
 
-  base_rev_id = c->rev_id - 1;
+  if (! SVN_IS_VALID_REVNUM (base_rev_id))
+    return svn_error_createf 
+      (SVN_ERR_FS_NO_SUCH_REVISION, 0, NULL, pool,
+       "Transaction '%s' is not based on a revision.  How odd.",
+       c->txn_name);
+
   apr_hash_set (src_revs, "", APR_HASH_KEY_STRING, &base_rev_id);
 
   SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
@@ -484,7 +474,7 @@ do_tree (svnlook_ctxt_t *c, apr_pool_t *pool)
   repos_node_t *tree;
 
   SVN_ERR (get_root (&root, c, pool));
-  base_rev_id = c->rev_id - 1;
+  base_rev_id = 0;
   apr_hash_set (src_revs, "", APR_HASH_KEY_STRING, &base_rev_id);
   SVN_ERR (svn_fs_revision_root (&base_root, c->fs, 0, pool));
   SVN_ERR (svnlook_rev_changes_editor (&editor, &edit_baton, c->fs,
@@ -558,7 +548,7 @@ int
 main (int argc, const char * const *argv)
 {
   apr_pool_t *pool;
-  const char *repos_path = NULL, *txn_name = NULL;
+  const char *repos_path = NULL;
   int cmd_offset = 4;
   svnlook_cmd_t command;
   svnlook_ctxt_t c;
@@ -588,7 +578,7 @@ main (int argc, const char * const *argv)
       if (! strcmp (argv[2], "txn")) /* transaction */
         {
           c.is_revision = FALSE;
-          txn_name = argv[3];
+          c.txn_name = (char *)argv[3];
         }
       else if (! strcmp (argv[2], "rev")) /* revision */
         {
@@ -652,7 +642,7 @@ main (int argc, const char * const *argv)
 
   /* If this is a transaction, open the transaction. */
   if (! c.is_revision)
-    INT_ERR (svn_fs_open_txn (&(c.txn), c.fs, txn_name, pool));
+    INT_ERR (svn_fs_open_txn (&(c.txn), c.fs, c.txn_name, pool));
  
   /* If this is a revision with an invalid revision number, just use
      the head revision. */
