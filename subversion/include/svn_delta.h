@@ -142,7 +142,7 @@ typedef struct svn_txdelta_op_t {
 typedef struct svn_txdelta_window_t {
 
   /** The offset of the source view for this window.  */
-  apr_off_t sview_offset;
+  svn_filesize_t sview_offset;
 
   /** The length of the source view for this window.  */
   apr_size_t sview_len;

@@ -50,7 +50,7 @@ typedef struct svn_txdelta__ops_baton_t {
 /* Context for composing windows. */
 typedef struct svn_txdelta__compose_ctx_t
 {
-  apr_off_t sview_offset;       /* Source view offset in the combined window */
+  svn_filesize_t sview_offset;       /* Source view offset in the combined window */
   apr_size_t sview_len;         /* Source view length in the combined window */
   svn_boolean_t use_second;     /* TRUE if window_B is the composite. */
 } svn_txdelta__compose_ctx_t;
@@ -62,8 +62,8 @@ typedef struct svn_txdelta__compose_ctx_t
    allocations are performed in POOL. */
 void svn_txdelta__insert_op (svn_txdelta__ops_baton_t *build_baton,
                              int opcode,
-                             apr_off_t offset,
-                             apr_off_t length,
+                             apr_size_t offset,
+                             apr_size_t length,
                              const char *new_data,
                              apr_pool_t *pool);
 
