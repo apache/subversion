@@ -308,7 +308,9 @@ recursive_propget (apr_hash_t *props,
         full_entry_path = apr_pstrdup (pool,
                                        svn_wc_adm_access_path (adm_access));
 
-      if (current_entry->schedule != svn_wc_schedule_delete)
+      /* Process the entry if it exists at the time of interest. */
+      if (current_entry->schedule
+          != (pristine ? svn_wc_schedule_add : svn_wc_schedule_delete))
         {
           if (current_entry->kind == svn_node_dir && current_entry_name)
             {
@@ -830,7 +832,9 @@ recursive_proplist (apr_array_header_t *props,
         full_entry_path = apr_pstrdup (pool,
                                        svn_wc_adm_access_path (adm_access));
 
-      if (current_entry->schedule != svn_wc_schedule_delete)
+      /* Process the entry if it exists at the time of interest. */
+      if (current_entry->schedule
+          != (pristine ? svn_wc_schedule_add : svn_wc_schedule_delete))
         {
           if (current_entry->kind == svn_node_dir && current_entry_name)
             {
