@@ -58,7 +58,7 @@ svn_time_to_nts (apr_time_t t, apr_pool_t *pool)
      furthermore their current implementations can only return success
      anyway. */
 
-  apr_explode_localtime (&exploded_time, t);
+  apr_time_exp_lt (&exploded_time, t);
 
   /* It would be nice to use apr_strftime(), but APR doesn't give a way
      to convert back, so we wouldn't be able to share the format string
