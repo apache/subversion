@@ -750,8 +750,8 @@ def usage(ctx):
   print '  -p NUM           start at pass NUM of %d.' % len(_passes)
   print '  --create         create a new SVN repository'
   print '  --trunk=PATH     path for trunk (default: %s)' % ctx.trunk_base
-  print '  --branches=PATH  path for branches (default: %s)' % ctx.branches_base
-  print '  --tags=PATH      path for tags (default: %s)' % ctx.tags_base
+  # print '  --branches=PATH  path for branches (default: %s)' % ctx.branches_base
+  # print '  --tags=PATH      path for tags (default: %s)' % ctx.tags_base
   print '  --encoding=ENC   encoding of log messages in CVS repos (default: %s)' % ctx.encoding
   sys.exit(1)
 
