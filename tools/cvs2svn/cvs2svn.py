@@ -110,10 +110,7 @@ class CollectData(rcsparse.Sink):
     """Return the name of the branch on which REVISION lies.
     REVISION is a non-branch evision number with an even number of,
     components, for example '1.7.2.1' (never '1.7.2' nor '1.7.0.2')."""
-    brev = revision[:revision.rindex(".")]
-    if not self.branch_names.has_key(brev):
-      return None
-    return self.branch_names[brev]
+    return self.branch_names.get(revision[:revision.rindex(".")])
 
   def add_branch_point(self, revision, branch_name):
     """Record that BRANCH_NAME sprouts from REVISION.
@@ -140,18 +137,12 @@ class CollectData(rcsparse.Sink):
     """Return a list of all tag names attached to REVISION.
     REVISION is a regular revision number like '1.7', and the result
     never includes branch names, only plain tags."""
-    if self.taglist.has_key(revision):
-      return self.taglist[revision]
-    else:
-      return []
+    return self.taglist.get(revision, [])
 
   def get_branches(self, revision):
     """Return a list of all branch names that sprout from REVISION.
     REVISION is a regular revision number like '1.7'."""
-    if self.branchlist.has_key(revision):
-      return self.branchlist[revision]
-    else:
-      return []
+    return self.branchlist.get(revision, [])
 
   def define_tag(self, name, revision):
     """Record a bidirectional mapping between symbolic NAME and REVISION
