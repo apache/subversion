@@ -4,6 +4,7 @@ noinst_PROGRAMS = skel-test
 skel_test_SOURCES = skel-test.c
 skel_test_LDADD = ../libsvn_fs.la				\
 		  ../../tests-common/libsvn_tests_main.la	\
+		  ../../libsvn_subr/libsvn_subr.la		\
 		  ../../libsvn_string/libsvn_string.la		\
 		  ../../../apr/libapr.a
 
