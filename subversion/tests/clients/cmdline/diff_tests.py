@@ -561,10 +561,7 @@ def diff_pure_repository_update_a_file(sbox):
   svntest.main.run_svn(None, 'ci')
   os.chdir(was_cwd)
 
-  url = os.path.join(svntest.main.test_area_url,
-                     svntest.main.general_repo_dir,
-                     sbox.name)
-  print url
+  url = svntest.main.test_area_url + '/' + svntest.main.current_repo_dir
 
   diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r1:2', url)
 
