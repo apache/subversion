@@ -31,6 +31,7 @@
 
 #include "wc.h"
 #include "adm_files.h"
+#include "entries.h"
 #include "props.h"
 #include "translate.h"
 
@@ -264,6 +265,84 @@ copy_file_administratively (const char *src_path,
   return SVN_NO_ERROR;
 }
 
+/* For all entries in and under ADM_ACCESS convert deleted=true into
+   schedule=delete.  The result of this is that when the copy is committed
+   the items in question get deleted and the result is a directory in the
+   repository that matches the original source directory for copy.  If this
+   were not done the deleted=true items would simply vanish from the
+   entries file as the copy is added to the working copy.  Issue 2101. */
+static svn_error_t *
+convert_deleted_to_schedule_delete (svn_wc_adm_access_t *adm_access,
+                                    apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+
+  SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
+
+  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+    {
+      void *val;
+      const svn_wc_entry_t *entry; 
+
+      svn_pool_clear (subpool);
+      apr_hash_this (hi, NULL, NULL, &val);
+      entry = val;
+
+      if (entry->deleted)
+        {
+          svn_wc_entry_t tmp_entry;
+          apr_uint32_t flags = SVN_WC__ENTRY_MODIFY_FORCE;
+
+          tmp_entry.schedule = svn_wc_schedule_delete;
+          flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
+
+          tmp_entry.deleted = FALSE;
+          flags |= SVN_WC__ENTRY_MODIFY_DELETED;
+
+          if (entry->kind == svn_node_dir)
+            {
+              /* ### WARNING: Very dodgy stuff here! ###
+
+              Directories are a problem since a schedule delete directory
+              needs an admin directory to be present.  It's possible to
+              create a dummy admin directory and that sort of works, it's
+              good enough if the user commits the copy.  Where it falls
+              down is if the user *reverts* the dummy directory since the
+              now schedule normal, copied, directory doesn't have the
+              correct contents.
+
+              The dodgy solution is to cheat and use a schedule delete file
+              as a placeholder!  This is sufficient to provide a delete
+              when the copy is committed.  Attempts to revert any such
+              "fake" files will fail due to a missing text-base. This
+              effectively means that the schedule deletes have to remain
+              schedule delete until the copy is committed, when they become
+              state deleted and everything works! */
+              tmp_entry.kind = svn_node_file;
+              flags |= SVN_WC__ENTRY_MODIFY_KIND;
+            }
+
+          SVN_ERR (svn_wc__entry_modify (adm_access, entry->name, &tmp_entry,
+                                         flags, TRUE, subpool));
+        }
+      else if (entry->kind == svn_node_dir
+               && strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR))
+        {
+          svn_wc_adm_access_t *dir_access;
+          SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
+                                        svn_path_join
+                                        (svn_wc_adm_access_path (adm_access),
+                                         entry->name, subpool),
+                                        subpool));
+          SVN_ERR (convert_deleted_to_schedule_delete (dir_access, subpool));
+        }
+    }
+
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
 
 /* This function effectively creates and schedules a dir for
    addition, but does extra administrative things to allow it to
@@ -337,6 +416,7 @@ copy_dir_administratively (const char *src_path,
   SVN_ERR (svn_wc_adm_open2 (&adm_access, NULL, dst_path, TRUE, -1,
                              pool));
   SVN_ERR (svn_wc__remove_wcprops (adm_access, TRUE, pool));
+  SVN_ERR (convert_deleted_to_schedule_delete (adm_access, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
 
   /* Schedule the directory for addition in both its parent and itself

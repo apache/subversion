@@ -1348,6 +1348,101 @@ def double_uri_escaping_1814(sbox):
                                      '-R', base_url)
 
 
+#----------------------------------------------------------------------
+#  Regression test for issue 2101
+
+def wc_to_wc_copy_deleted(sbox):
+  "wc to wc copy with deleted=true items"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  B2_path = os.path.join(wc_dir, 'A', 'B2')
+
+  # Get some stuff in state deleted
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                     os.path.join(B_path, 'E', 'alpha'),
+                                     os.path.join(B_path, 'lambda'),
+                                     os.path.join(B_path, 'F'))
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/B/E/alpha', 'A/B/lambda', 'A/B/F')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Deleting'),
+    'A/B/lambda'  : Item(verb='Deleting'),
+    'A/B/F'       : Item(verb='Deleting'),
+    })
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
+  # Copy including stuff in state deleted=true
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy', B_path, B2_path)
+  expected_status.add({
+    'A/B2'         : Item(status='A ', wc_rev='-', copied='+'),
+    'A/B2/E'       : Item(status='  ', wc_rev='-', copied='+'),
+    'A/B2/E/beta'  : Item(status='  ', wc_rev='-', copied='+'),
+    'A/B2/E/alpha' : Item(status='D ', wc_rev='-', copied='+'),
+    'A/B2/lambda'  : Item(status='D ', wc_rev='-', copied='+'),
+    'A/B2/F'       : Item(status='D ', wc_rev='-', copied='+'),
+    })
+  expected_status.tweak(repos_rev=2)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Stuff copied from state deleted=true is now schedule=delete.
+  # Attempts to revert the schedule=delete will fail, but should not
+  # break the wc.  It's very important that the directory revert fails
+  # since it's a placeholder rather than a full hierarchy
+  out, err = svntest.main.run_svn(1, 'revert', '--recursive',
+                                  os.path.join(B2_path, 'F'))
+  for line in err:
+    if line.find("Error restoring text") != -1:
+      break
+  else:
+    raise svntest.Failure
+  out, err = svntest.main.run_svn(1, 'revert', os.path.join(B2_path, 'lambda'))
+  for line in err:
+    if line.find("Error restoring text") != -1:
+      break
+  else:
+    raise svntest.Failure
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Revert the entire copy including the schedule delete bits
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
+                                     B2_path)
+  expected_status.remove('A/B2',
+                         'A/B2/E',
+                         'A/B2/E/beta',
+                         'A/B2/E/alpha',
+                         'A/B2/lambda',
+                         'A/B2/F')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.main.safe_rmtree(B2_path)
+
+  # Copy again and commit
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy', B_path, B2_path)
+  expected_status.add({
+    'A/B2'        : Item(status='  ', wc_rev=3),
+    'A/B2/E'      : Item(status='  ', wc_rev=3),
+    'A/B2/E/beta' : Item(status='  ', wc_rev=3),
+    })
+  expected_status.tweak(repos_rev=3)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B2'         : Item(verb='Adding'),
+    'A/B2/E/alpha' : Item(verb='Deleting'),
+    'A/B2/lambda'  : Item(verb='Deleting'),
+    'A/B2/F'       : Item(verb='Deleting'),
+    })
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -1377,6 +1472,7 @@ test_list = [ None,
               copy_over_missing_file,
               repos_to_wc_1634,
               double_uri_escaping_1814,
+              wc_to_wc_copy_deleted,
              ]
 
 if __name__ == '__main__':
