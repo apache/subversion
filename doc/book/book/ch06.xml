@@ -106,7 +106,7 @@
         contains three files&mdash;two configuration files
         (<filename>config</filename> and
         <filename>servers</filename>), and a
-        <filename>README</filename> file which describes the INI
+        <filename>README.txt</filename> file which describes the INI
         format.  At the time of their creation, the files contain
         default values for each of the supported Subversion options,
         mostly commented out and grouped with textual descriptions

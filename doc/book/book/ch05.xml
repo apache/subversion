@@ -190,10 +190,10 @@ $ svnadmin create path/to/repos
             
     <screen>
 $ ls repos
-dav/  db/  format  hooks/  locks/  README
+dav/  db/  format  hooks/  locks/  README.txt
 </screen>
       
-    <para>With the exception of the <filename>README</filename> file,
+    <para>With the exception of the <filename>README.txt</filename> file,
       the repository directory is a collection of subdirectories.  As
       in other areas of the Subversion design, modularity is given
       high regard, and hierarchical organization is preferred to
@@ -238,7 +238,7 @@ dav/  db/  format  hooks/  locks/  README
         </listitem>
       </varlistentry>
      <varlistentry>
-        <term>README</term>
+        <term>README.txt</term>
         <listitem>
           <para>A file which merely informs its readers that they
             are looking at a Subversion repository.</para>
