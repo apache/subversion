@@ -670,13 +670,14 @@ svn cleanup working-copy
 Subversion, I get an error about an "Unrecognized URL scheme."  What's up
 with<a name="unrecognized-url-error"> that?</a></h3>
 
-<p>Subversion uses a plugin system to allow access to repositories.  Currently
-there are two of these plugins: ra_local allows access to a local
-repository, and ra_dav which allows access to a repository via WebDAV
-When you attempt to perform an operation in subversion, the program tries
-to dynamically load a plugin based on the URL scheme.  A `file://' URL
-will try to load ra_local, and an `http://' URL will try to load
-ra_dav.</p>
+<p>Subversion uses a plugin system to allow access to repositories.
+Currently there are three of these plugins: ra_local allows access to
+a local repository, ra_dav which allows access to a repository via
+WebDAV, and ra_svn allows local or remote access via the svnserve
+server.  When you attempt to perform an operation in subversion, the
+program tries to dynamically load a plugin based on the URL scheme.  A
+`file://' URL will try to load ra_local, and an `http://' URL will try
+to load ra_dav.</p>
 
 <p>The error you are seeing means that the dynamic linker/loader can't find
 the plugins to load.  This normally happens when you build subversion with
