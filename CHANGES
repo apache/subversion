@@ -1,3 +1,42 @@
+Version 0.31.0 (released ??, revision ??)
+http://svn.collab.net/repos/svn/tags/0.31.0
+
+ User-visible changes:
+ * new 'svnlook history' command
+ * new 'auto-props' feature can set properties during 'svn add/import'
+ * win32 client now properly converts UTF8 to console-locale. (r7168, #872)
+ * 'svn up' now notices when svn:externals value changes. (r7256, #1519)
+ * authentication changes:
+     - client caches auth-creds in memory for a single session (r7292, #1526)
+     - SSL cert caches keyed on host+port, not any SSL connection. (r7174)
+ * much faster 'svn log' (see new fs-history algorithm) (#1499)
+ * faster repos read-operations (caching gives ~20% speedup) (rXXXX, #1499)
+ * faster updates (fewer entries-file writes gives ~20% speedup) (r7170, #1490)
+ * other bugfixes:  no more revision keywords "FIRST" or "CHANGED" (r7250),
+   fix 'svn cp URL URL' $EDITOR msg generation (r7264), fix regression
+   bug in 'svnadmin load' (r7273), 'svnadmin setlog' now triggers
+   repository hooks (r7322), 'svn cp -rHEAD wc' now works correctly (r7331).
+
+ Developer-visible changes:
+ * tons of filesystem improvements (#1499):
+     - new fast fs-history algorithm: allows stable VR urls (r7283, #1499)
+     - new dag-node caching (r7163)
+     - skip-deltas now run in individual trails (r7138)
+     - svn_fs_copy() can be a no-op (r7158)
+ * server MERGE response is faster (using svn_repos_replay()) (r7191)
+ * ensure consistent wc 'dead entry' cleanup (r7197, r7204, #1075)
+ * lots of work on gen_win.py, gen_make.py, gen_base.py tools
+ * lots of work on making SWIG-java bindings build.
+ * more work on psvn.el and svn_load_dirs.pl
+ * updates/improvements to javahl bindings and SWIG-perl bindings
+ * updates/improvements to Mandrake RPM builds
+ * more cvs2svn bugfixes
+ * other bugfixes:  python testsuite now uses local path separators (r7224),
+   svn:externals no longer keeps connections open (r7312, #1448),
+   svn_time_to_human_cstring now takes UTF8 input (r7316, #1534),
+   API consistification changes (r7298, r7302, r7304, r7307),
+
+
 Version 0.30.0 (released 24 Sep 2003, revision 7178)
 http://svn.collab.net/repos/svn/tags/0.30.0
 
