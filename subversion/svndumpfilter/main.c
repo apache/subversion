@@ -17,6 +17,8 @@
  */
 
 
+#include <stdlib.h>
+
 #include <apr_file_io.h>
 
 #include "svn_cmdline.h"
@@ -29,6 +31,7 @@
 #include "svn_hash.h"
 #include "svn_repos.h"
 #include "svn_pools.h"
+#include "svn_sorts.h"
 
 
 /*** Code. ***/
@@ -804,6 +807,15 @@ subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
+/* qsort-ready comparison function. */
+static int compare_paths (const void *a, const void *b)
+{
+  const char *item1 = *((const char * const *) a);
+  const char *item2 = *((const char * const *) b);
+  return svn_path_compare_paths (item1, item2);
+}
+
+
 /* Do the real work of filtering. */
 static svn_error_t *
 do_filter (apr_getopt_t *os, 
@@ -814,13 +826,12 @@ do_filter (apr_getopt_t *os,
   struct svndumpfilter_opt_state *opt_state = baton;
   struct parse_baton_t *pb;
   apr_hash_index_t *hi;
+  apr_array_header_t *keys;
   const void *key;
-  void *val;
+  int i, num_keys;
 
   if (! opt_state->quiet)
     {
-      int i;
-
       fprintf (stderr, "%s %sprefixes:\n",
                do_exclude ? "Excluding" : "Including",
                opt_state->drop_empty_revs 
@@ -844,34 +855,70 @@ do_filter (apr_getopt_t *os,
   if (opt_state->quiet)
     return SVN_NO_ERROR;
 
-  fprintf (stderr, "\nDropped %d revisions, %d nodes",
-           pb->rev_drop_count, apr_hash_count (pb->dropped_nodes));
+  fprintf (stderr, "\n");
+
+  if (pb->rev_drop_count)
+    fprintf (stderr, "Dropped %d revision(s).\n\n", pb->rev_drop_count);
 
   if (pb->do_renumber_revs)
     {
-      fprintf (stderr, "\n\nRenumber history:\n");
+      fprintf (stderr, "Revisions renumbered as follows:\n");
+
+      /* Get the keys of the hash, sort them, then print the hash keys
+         and values, sorted by keys. */
+      num_keys = apr_hash_count (pb->renumber_history);
+      keys = apr_array_make (pool, num_keys + 1, sizeof (svn_revnum_t));
       for (hi = apr_hash_first (pool, pb->renumber_history); 
            hi; 
            hi = apr_hash_next (hi))
         {
-          apr_hash_this (hi, &key, NULL, &val);
-          fprintf (stderr, 
-                   "   '%" SVN_REVNUM_T_FMT "' => '%" SVN_REVNUM_T_FMT "'\n", 
-                   *((svn_revnum_t *)key), 
-                   *((svn_revnum_t *)val));
+          apr_hash_this (hi, &key, NULL, NULL);
+          APR_ARRAY_PUSH (keys, svn_revnum_t) = *((svn_revnum_t *) key);
         }
+      qsort (keys->elts, keys->nelts, 
+             keys->elt_size, svn_sort_compare_revisions);
+      for (i = 0; i < keys->nelts; i++)
+        {
+          svn_revnum_t this_key = APR_ARRAY_IDX (keys, i, svn_revnum_t);
+          svn_revnum_t this_val = 
+            *((svn_revnum_t *)apr_hash_get (pb->renumber_history,
+                                            &this_key,
+                                            sizeof (this_key)));
+          if (this_val == SVN_INVALID_REVNUM)
+            fprintf (stderr, "   '%" SVN_REVNUM_T_FMT "' => (dropped)\n",
+                     this_key);
+          else
+            fprintf (stderr, 
+                     "   '%" SVN_REVNUM_T_FMT "' => '%" 
+                     SVN_REVNUM_T_FMT "'\n", 
+                     this_key, this_val);
+        }
+      fprintf (stderr, "\n");
     }
 
   if (apr_hash_count (pb->dropped_nodes))
     {
-      fprintf (stderr, "\n\nDropped nodes list:\n");
+      fprintf (stderr, "Dropped %d node(s):\n", 
+               apr_hash_count (pb->dropped_nodes));
+
+      /* Get the keys of the hash, sort them, then print the hash keys
+         and values, sorted by keys. */
+      num_keys = apr_hash_count (pb->dropped_nodes);
+      keys = apr_array_make (pool, num_keys + 1, sizeof (const char *));
       for (hi = apr_hash_first (pool, pb->dropped_nodes);
            hi; 
            hi = apr_hash_next (hi))
         {
           apr_hash_this (hi, &key, NULL, NULL);
-          fprintf (stderr, "   '%s'\n", (const char *)key);
+          APR_ARRAY_PUSH (keys, const char *) = key;
         }
+      qsort (keys->elts, keys->nelts, keys->elt_size, compare_paths);
+      for (i = 0; i < keys->nelts; i++)
+        {
+          fprintf (stderr, "   '%s'\n", 
+                   (const char *)APR_ARRAY_IDX (keys, i, const char *));
+        }
+      fprintf (stderr, "\n");
     }
 
   return SVN_NO_ERROR;
