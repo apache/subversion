@@ -96,7 +96,7 @@ assemble_status (svn_wc_status_t *status,
       if (prop_modified_p)
         status->prop_status = svn_wc_status_modified;      
       
-      if (entry->state & SVN_WC_ENTRY_ADDED)
+      if (entry->state & SVN_WC_ENTRY_ADD)
         {
           /* If an entry has been marked for future addition to the
              repository, we *know* it has a textual component: */
@@ -108,7 +108,7 @@ assemble_status (svn_wc_status_t *status,
             status->prop_status = svn_wc_status_added;
         }
 
-      else if (entry->state & SVN_WC_ENTRY_DELETED)
+      else if (entry->state & SVN_WC_ENTRY_DELETE)
         {
           status->text_status = svn_wc_status_deleted;
           

@@ -357,7 +357,7 @@ do_apply_textdelta (svn_string_t *filename,
                          local_tmp_path->data);
 
   textbasefile = NULL; /* paranoia! */
-  if (! (tb->entry->state & SVN_WC_ENTRY_ADDED))
+  if (! (tb->entry->state & SVN_WC_ENTRY_ADD))
     {
       err = svn_wc__open_text_base (&textbasefile, filename, APR_READ, pool);
       if (err)
@@ -613,7 +613,7 @@ verify_deleted_tree (svn_string_t *dir,
         svn_path_add_component_nts (fullpath, key, svn_path_local_style);
 
       /* If this entry is not marked for deletion, quit here. */
-      if (! (entry->state & SVN_WC_ENTRY_DELETED))
+      if (! (entry->state & SVN_WC_ENTRY_DELETE))
         return svn_error_createf 
           (SVN_ERR_WC_FOUND_CONFLICT, 0, NULL, pool,
            "Aborting commit: '%s' dangling in deleted directory.",
@@ -776,7 +776,7 @@ report_local_mods (svn_string_t *path,
        */
       
       /* DELETION CHECK */
-      if ((current_entry->state & SVN_WC_ENTRY_DELETED)
+      if ((current_entry->state & SVN_WC_ENTRY_DELETE)
           && (current_entry_name))
         {
           /* Do what's necessary to get a baton for current directory */
@@ -808,7 +808,7 @@ report_local_mods (svn_string_t *path,
   
 
       /* ADDITION CHECK */
-      if ((current_entry->state & SVN_WC_ENTRY_ADDED) && (current_entry_name))
+      if ((current_entry->state & SVN_WC_ENTRY_ADD) && (current_entry_name))
         {
           /* Create an affected-target object */
           svn_string_t *longpath;
@@ -984,7 +984,7 @@ report_local_mods (svn_string_t *path,
          recurse! */
       if ((current_entry->kind == svn_node_dir) 
           && (current_entry_name)
-          && (! (current_entry->state & SVN_WC_ENTRY_DELETED)))
+          && (! (current_entry->state & SVN_WC_ENTRY_DELETE)))
         /* Recurse, using new_dir_baton, which will most often be
            NULL (unless the entry is a newly added directory.)  Why
            NULL?  Because that will later force a call to
