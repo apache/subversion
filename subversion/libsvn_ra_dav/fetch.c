@@ -682,7 +682,7 @@ svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
 
 svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                                              svn_revnum_t *revision,
-                                             apr_time_t time)
+                                             apr_time_t timestamp)
 {
   *revision = 0;
 
