@@ -10,13 +10,11 @@ INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@
 
 ## Libraries this binary depends upon:
 hashdump_test_LDADD = @SVN_TESTS_MAIN_LIBS@ \
-                      @SVN_TESTS_EDITOR_LIBS@ \
                       @SVN_LIBSVN_DELTA_LIBS@ \
                       @SVN_LIBSVN_SUBR_LIBS@ \
                       @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@
 
 stringtest_LDADD = @SVN_TESTS_MAIN_LIBS@ \
-                   @SVN_TESTS_EDITOR_LIBS@ \
                    @SVN_LIBSVN_DELTA_LIBS@ \
                    @SVN_LIBSVN_SUBR_LIBS@ \
                    @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@

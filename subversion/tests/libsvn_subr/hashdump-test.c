@@ -25,13 +25,9 @@
 #include "svn_hash.h"
 
 
-/* Global variables required by included main() */
-apr_pool_t *pool = NULL;
-
-
 /* Convert an apr_status_t into an svn_error_t.  */
 static svn_error_t *
-check (apr_status_t status)
+check (apr_status_t status, apr_pool_t *pool)
 {
   if (status != APR_SUCCESS)
     return svn_error_create (status, 0, 0, pool, "");
@@ -55,7 +51,7 @@ const char *review =
 
 
 static svn_error_t *
-test1 (const char **msg)
+test1 (const char **msg, apr_pool_t *pool)
 {
   apr_status_t result;
   svn_string_t *key;
@@ -94,14 +90,14 @@ test1 (const char **msg)
 
   apr_file_close (f);
 
-  return check (result);
+  return check (result, pool);
 }
 
 
 
 
 static svn_error_t *
-test2 (const char **msg)
+test2 (const char **msg, apr_pool_t *pool)
 {
   apr_status_t result;
   apr_file_t *f;
@@ -116,13 +112,13 @@ test2 (const char **msg)
 
   apr_file_close (f);
 
-  return check (result);
+  return check (result, pool);
 }
 
 
 
 static svn_error_t *
-test3 (const char **msg)
+test3 (const char **msg, apr_pool_t *pool)
 {
   apr_hash_index_t *this;
   svn_error_t *err;
@@ -132,12 +128,12 @@ test3 (const char **msg)
   *msg = "write hash out, read back in, compare";
 
   /* Build a hash in global variable "proplist", then write to a file. */
-  err = test1 (&ignored);
+  err = test1 (&ignored, pool);
   if (err)
     return err;
 
   /* Read this file back into global variable "new_proplist" */
-  err = test2 (&ignored);
+  err = test2 (&ignored, pool);
   if (err)
     return err;
 
@@ -186,7 +182,7 @@ test3 (const char **msg)
 */
 
 /* An array of all test functions */
-svn_error_t *(*test_funcs[])(const char **msg) =
+svn_error_t *(*test_funcs[])(const char **msg, apr_pool_t *pool) =
 {
   NULL,
   test1,

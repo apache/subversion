@@ -4,7 +4,6 @@
 #ra_local_test_SOURCES = ra-local-test.c
 
 COMMON_LIBS = @SVN_TESTS_MAIN_LIBS@ \
-              @SVN_TESTS_EDITOR_LIBS@ \
               @SVN_LIBSVN_RA_LIBS@ \
               @LIBSVN_CLIENT_DEPS@ \
               @SVN_LIBSVN_FS_LIBS@ \

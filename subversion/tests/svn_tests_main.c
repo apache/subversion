@@ -24,18 +24,10 @@
 #include "svn_error.h"
 
 
-/* All Subversion test programs have a single global memory pool that
-   main() initializes.  Individual sub-test routines can make subpools
-   from it, should they wish.  */
-
-extern apr_pool_t *pool;
-
-
-/* All Subversion test programs include two global arrays that both
-   begin and end with NULL: */
-
-/* An array of function pointers (all of our sub-tests) */
-extern svn_error_t *(*test_funcs[])(const char **msg);
+/* All Subversion test programs include an array of function pointers
+   (all of our sub-tests) that begins and ends with a NULL entry. */
+extern svn_error_t *(*test_funcs[])(const char **msg, 
+                                    apr_pool_t *pool);
 
 /* ================================================================= */
 
@@ -58,7 +50,7 @@ get_array_size (void)
 /* Execute a test number TEST_NUM.  Pretty-print test name and dots
    according to our test-suite spec, and return the result code. */
 static int
-do_test_num (const char *progname, int test_num)
+do_test_num (const char *progname, int test_num, apr_pool_t *pool)
 {
   svn_error_t *err;
   int array_size = get_array_size();
@@ -72,7 +64,7 @@ do_test_num (const char *progname, int test_num)
     }
 
   /* Do test */
-  err = test_funcs[test_num](&msg);
+  err = test_funcs[test_num](&msg, pool);
 
   /* If we got an error, print it out.  */
   if (err)
@@ -97,6 +89,7 @@ main (int argc, char *argv[])
   int test_num;
   int i;
   int got_error = 0;
+  apr_pool_t *pool;
 
   /* How many tests are there? */
   int array_size = get_array_size();
@@ -123,14 +116,24 @@ main (int argc, char *argv[])
       for (i = 1; i < argc; i++)
         {
           test_num = atoi (argv[i]);
-          if (do_test_num (prog_name, test_num))
+          if (do_test_num (prog_name, test_num, pool))
             got_error = 1;
+
+          /* Clear the per-function pool */
+          svn_pool_clear (pool);
         }
     }
   else            /* just run all tests */
-    for (i = 1; i <= array_size; i++)
-      if (do_test_num (prog_name, i))
-        got_error = 1;
+    {
+      for (i = 1; i <= array_size; i++)
+        {
+          if (do_test_num (prog_name, i, pool))
+            got_error = 1;
+
+          /* Clear the per-function pool */
+          svn_pool_clear (pool);
+        }
+    }
 
   /* Clean up APR */
   svn_pool_destroy (pool);
@@ -146,4 +149,3 @@ main (int argc, char *argv[])
  * eval: (load-file "../svn-dev.el")
  * end:
  */
-

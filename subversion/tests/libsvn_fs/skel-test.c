@@ -24,13 +24,9 @@
 /* Some utility functions.  */
 
 
-/* A global pool, initialized by `main' for tests to use.  */
-apr_pool_t *pool;
-
-
 /* A quick way to create error messages.  */
 static svn_error_t *
-fail (const char *fmt, ...)
+fail (apr_pool_t *pool, const char *fmt, ...)
 {
   va_list ap;
   char *msg;
@@ -45,7 +41,7 @@ fail (const char *fmt, ...)
 
 /* Free everything from pool, and return an empty Subversion string.  */
 static svn_string_t *
-get_empty_string (void)
+get_empty_string (apr_pool_t *pool)
 {
   svn_pool_clear (pool);
 
@@ -54,7 +50,7 @@ get_empty_string (void)
 
 /* Parse a skeleton from a Subversion string.  */
 static skel_t *
-parse_str (svn_string_t *str)
+parse_str (svn_string_t *str, apr_pool_t *pool)
 {
   return svn_fs__parse_skel (str->data, str->len, pool);
 }
@@ -62,7 +58,7 @@ parse_str (svn_string_t *str)
 
 /* Parse a skeleton from a C string.  */
 static skel_t *
-parse_cstr (char *str)
+parse_cstr (char *str, apr_pool_t *pool)
 {
   return svn_fs__parse_skel (str, strlen (str), pool);
 }
@@ -248,9 +244,9 @@ check_implicit_length_all_chars (skel_t *skel)
 /* Test parsing of implicit-length atoms.  */
 
 static svn_error_t *
-parse_implicit_length (const char **msg)
+parse_implicit_length (const char **msg, apr_pool_t *pool)
 {
-  svn_string_t *str = get_empty_string ();
+  svn_string_t *str = get_empty_string (pool);
   skel_t *skel;
 
   *msg = "parse implicit-length atoms";
@@ -266,9 +262,9 @@ parse_implicit_length (const char **msg)
           {
             svn_string_setempty (str);
             put_implicit_length_byte (str, i, *c);
-            skel = parse_str (str);
+            skel = parse_str (str, pool);
             if (! check_implicit_length_byte (skel, i))
-              return fail ("single-byte implicit-length skel 0x%02x"
+              return fail (pool, "single-byte implicit-length skel 0x%02x"
 			   " with terminator 0x%02x",
 			   i, c);
           }
@@ -278,9 +274,9 @@ parse_implicit_length (const char **msg)
      implicit-length atom.  */
   svn_string_setempty (str);
   put_implicit_length_all_chars (str, '\0');
-  skel = parse_str (str);
+  skel = parse_str (str, pool);
   if (! check_implicit_length_all_chars (skel))
-    return fail ("implicit-length skel containing all legal chars");
+    return fail (pool, "implicit-length skel containing all legal chars");
 
   return SVN_NO_ERROR;
 }
@@ -324,10 +320,11 @@ check_explicit_length (skel_t *skel, const char *data, int len)
 /* Test parsing of explicit-length atoms.  */
 
 static svn_error_t *
-try_explicit_length (const char *data, int len, int check_len)
+try_explicit_length (const char *data, int len, int check_len,
+                     apr_pool_t *pool)
 {
   int i;
-  svn_string_t *str = get_empty_string ();
+  svn_string_t *str = get_empty_string (pool);
   skel_t *skel;
 
   /* Try it with every possible separator character.  */
@@ -336,9 +333,9 @@ try_explicit_length (const char *data, int len, int check_len)
       {
 	svn_string_setempty (str);
 	put_explicit_length (str, data, len, i);
-	skel = parse_str (str);
+	skel = parse_str (str, pool);
 	if (! check_explicit_length (skel, data, check_len))
-	  return fail ("failed to reparse explicit-length atom"); 
+	  return fail (pool, "failed to reparse explicit-length atom"); 
       }
 
   return SVN_NO_ERROR;
@@ -346,12 +343,12 @@ try_explicit_length (const char *data, int len, int check_len)
 
 
 static svn_error_t *
-parse_explicit_length (const char **msg)
+parse_explicit_length (const char **msg, apr_pool_t *pool)
 {
   *msg = "parse explicit-length atoms";
 
   /* Try to parse the empty atom.  */
-  SVN_ERR (try_explicit_length ("", 0, 0));
+  SVN_ERR (try_explicit_length ("", 0, 0, pool));
 
   /* Try to parse every one-character atom.  */
   {
@@ -362,7 +359,7 @@ parse_explicit_length (const char **msg)
 	char buf[1];
 	
 	buf[0] = i;
-	SVN_ERR (try_explicit_length (buf, 1, 1));
+	SVN_ERR (try_explicit_length (buf, 1, 1, pool));
       }
   }
 
@@ -374,7 +371,7 @@ parse_explicit_length (const char **msg)
     for (i = 0; i < 256; i++)
       data[i] = i;
 
-    SVN_ERR (try_explicit_length (data, 256, 256));
+    SVN_ERR (try_explicit_length (data, 256, 256, pool));
   }
 
   return SVN_NO_ERROR;
@@ -403,7 +400,7 @@ static struct invalid_atoms
                       { 7,  0, NULL } };
 
 static svn_error_t *
-parse_invalid_atoms (const char **msg)
+parse_invalid_atoms (const char **msg, apr_pool_t *pool)
 {
   struct invalid_atoms *ia = invalid_atoms;
 
@@ -413,14 +410,14 @@ parse_invalid_atoms (const char **msg)
     {
       if (ia->type == 1)
         {
-          skel_t *skel = parse_cstr ((char *) ia->data);
+          skel_t *skel = parse_cstr ((char *) ia->data, pool);
           if (check_atom (skel, ia->data, ia->len))
-            return fail ("failed to detect parsing error in `%s'", ia->data);
+            return fail (pool, "failed to detect parsing error in `%s'", ia->data);
         }
       else
-	if (try_explicit_length (ia->data, ia->len, strlen (ia->data))
+	if (try_explicit_length (ia->data, ia->len, strlen (ia->data), pool)
 	    == SVN_NO_ERROR)
-	  fail ("got wrong length in explicit-length atom");
+	  fail (pool, "got wrong length in explicit-length atom");
 
       ia++;
     }
@@ -487,7 +484,7 @@ check_list (skel_t *skel, int desired_len)
 /* Parse lists.  */
 
 static svn_error_t *
-parse_list (const char **msg)
+parse_list (const char **msg, apr_pool_t *pool)
 {
   *msg = "parse lists";
 
@@ -521,7 +518,7 @@ parse_list (const char **msg)
 		    if (skel_is_name (atom_byte))
 		      {
 			int i;
-			svn_string_t *str = get_empty_string ();
+			svn_string_t *str = get_empty_string (pool);
 			skel_t *skel;
 			skel_t *child;
 
@@ -530,21 +527,21 @@ parse_list (const char **msg)
 			  put_implicit_length_byte (str, atom_byte, sep);
 			put_list_end (str, sep, sep_count);
 
-			skel = parse_str (str);
+			skel = parse_str (str, pool);
 			if (! check_list (skel, list_len))
-			  return fail ("couldn't parse list");
+			  return fail (pool, "couldn't parse list");
 			for (child = skel->children;
 			     child;
 			     child = child->next)
 			  if (! check_implicit_length_byte (child, atom_byte))
-			    return fail ("list was reparsed incorrectly");
+			    return fail (pool, "list was reparsed incorrectly");
 		      }
 
 		  /* Try the atom containing every character that's
                      legal in an implicit-length atom as the element.  */
 		  {
 		    int i;
-		    svn_string_t *str = get_empty_string ();
+		    svn_string_t *str = get_empty_string (pool);
 		    skel_t *skel;
 		    skel_t *child;
 
@@ -553,14 +550,14 @@ parse_list (const char **msg)
 		      put_implicit_length_all_chars (str, sep);
 		    put_list_end (str, sep, sep_count);
 
-		    skel = parse_str (str);
+		    skel = parse_str (str, pool);
 		    if (! check_list (skel, list_len))
-		      return fail ("couldn't parse list");
+		      return fail (pool, "couldn't parse list");
 		    for (child = skel->children;
 			 child;
 			 child = child->next)
 		      if (! check_implicit_length_all_chars (child))
-			return fail ("couldn't parse list");
+			return fail (pool, "couldn't parse list");
 		  }
 
 		  /* Try using every one-byte explicit-length atom as
@@ -568,7 +565,7 @@ parse_list (const char **msg)
 		  for (atom_byte = 0; atom_byte < 256; atom_byte++)
 		    {
 		      int i;
-		      svn_string_t *str = get_empty_string ();
+		      svn_string_t *str = get_empty_string (pool);
 		      skel_t *skel;
 		      skel_t *child;
 		      char buf[1];
@@ -580,21 +577,21 @@ parse_list (const char **msg)
 			put_explicit_length (str, buf, 1, sep);
 		      put_list_end (str, sep, sep_count);
 
-		      skel = parse_str (str);
+		      skel = parse_str (str, pool);
 		      if (! check_list (skel, list_len))
-			return fail ("couldn't parse list");
+			return fail (pool, "couldn't parse list");
 		      for (child = skel->children;
 			   child;
 			   child = child->next)
 			if (! check_explicit_length (child, buf, 1))
-			  return fail ("list was reparsed incorrectly");
+			  return fail (pool, "list was reparsed incorrectly");
 		    }
 
 		  /* Try using an atom containing every character as
 		     an element.  */
 		  {
 		    int i;
-		    svn_string_t *str = get_empty_string ();
+		    svn_string_t *str = get_empty_string (pool);
 		    skel_t *skel;
 		    skel_t *child;
 		    char data[256];
@@ -607,14 +604,14 @@ parse_list (const char **msg)
 		      put_explicit_length (str, data, 256, sep);
 		    put_list_end (str, sep, sep_count);
 
-		    skel = parse_str (str);
+		    skel = parse_str (str, pool);
 		    if (! check_list (skel, list_len))
-		      return fail ("couldn't parse list");
+		      return fail (pool, "couldn't parse list");
 		    for (child = skel->children;
 			 child;
 			 child = child->next)
 		      if (! check_explicit_length (child, data, 256))
-			return fail ("list was re-parsed incorrectly");
+			return fail (pool, "list was re-parsed incorrectly");
 		  }
 		}
 	    }
@@ -640,24 +637,24 @@ parse_list (const char **msg)
 	      svn_string_t *str;
 
 	      /* A list with only a separator.  */
-	      str = get_empty_string ();
+	      str = get_empty_string (pool);
 	      put_list_start (str, sep, sep_count);
-	      if (parse_str (str))
-		return fail ("failed to detect syntax error");
+	      if (parse_str (str, pool))
+		return fail (pool, "failed to detect syntax error");
 
 	      /* A list with only a terminator.  */
-	      str = get_empty_string ();
+	      str = get_empty_string (pool);
 	      put_list_end (str, sep, sep_count);
-	      if (parse_str (str))
-		return fail ("failed to detect syntax error");
+	      if (parse_str (str, pool))
+		return fail (pool, "failed to detect syntax error");
 
 	      /* A list containing an invalid element.  */
-	      str = get_empty_string ();
+	      str = get_empty_string (pool);
 	      put_list_start (str, sep, sep_count);
 	      svn_string_appendcstr (str, "100 ");
 	      put_list_end (str, sep, sep_count);
-	      if (parse_str (str))
-		return fail ("failed to detect invalid element");
+	      if (parse_str (str, pool))
+		return fail (pool, "failed to detect invalid element");
 	    }
 	}
   }
@@ -671,7 +668,7 @@ parse_list (const char **msg)
 
 /* Build an atom skel containing the LEN bytes at DATA.  */
 static skel_t *
-build_atom (apr_size_t len, char *data)
+build_atom (apr_size_t len, char *data, apr_pool_t *pool)
 {
   char *copy = apr_palloc (pool, len);
   skel_t *skel = apr_palloc (pool, sizeof (*skel));
@@ -686,7 +683,7 @@ build_atom (apr_size_t len, char *data)
 
 /* Build an empty list skel.  */
 static skel_t *
-empty (void)
+empty (apr_pool_t *pool)
 {
   skel_t *skel = apr_palloc (pool, sizeof (*skel));
 
@@ -737,7 +734,7 @@ skel_equal (skel_t *a, skel_t *b)
 /* Unparsing implicit-length atoms.  */
 
 static svn_error_t *
-unparse_implicit_length (const char **msg)
+unparse_implicit_length (const char **msg, apr_pool_t *pool)
 {
   *msg = "unparse implicit-length atoms";
 
@@ -748,16 +745,16 @@ unparse_implicit_length (const char **msg)
     for (byte = 0; byte < 256; byte++)
       if (skel_is_name (byte))
 	{
-	  svn_string_t *str = get_empty_string ();
+	  svn_string_t *str = get_empty_string (pool);
 	  char buf = byte;
-	  skel_t *skel = build_atom (1, &buf);
+	  skel_t *skel = build_atom (1, &buf, pool);
 
 	  str = svn_fs__unparse_skel (skel, pool);
 	  
 	  if (! (str
 		 && str->len == 1
 		 && str->data[0] == byte))
-	    return fail ("incorrectly unparsed single-byte "
+	    return fail (pool, "incorrectly unparsed single-byte "
 			 "implicit-length atom");
 	}
   }
@@ -770,22 +767,22 @@ unparse_implicit_length (const char **msg)
 /* Unparse some lists.  */
 
 static svn_error_t *
-unparse_list (const char **msg)
+unparse_list (const char **msg, apr_pool_t *pool)
 {
   *msg = "unparse lists";
 
   /* Make a list of all the single-byte implicit-length atoms.  */
   {
-    svn_string_t *str = get_empty_string ();
+    svn_string_t *str = get_empty_string (pool);
     int byte;
-    skel_t *list = empty ();
+    skel_t *list = empty (pool);
     skel_t *reparsed, *elt;
 
     for (byte = 0; byte < 256; byte++)
       if (skel_is_name (byte))
 	{
 	  char buf = byte;
-	  add (build_atom (1, &buf), list);
+	  add (build_atom (1, &buf, pool), list);
 	}
 
     /* Unparse that, parse it again, and see if we got the same thing
@@ -794,10 +791,10 @@ unparse_list (const char **msg)
     reparsed = svn_fs__parse_skel (str->data, str->len, pool);
 
     if (! reparsed || reparsed->is_atom)
-      return fail ("result is syntactically misformed, or not a list");
+      return fail (pool, "result is syntactically misformed, or not a list");
 
     if (! skel_equal (list, reparsed))
-      return fail ("unparsing and parsing didn't preserve contents");
+      return fail (pool, "unparsing and parsing didn't preserve contents");
 
     elt = reparsed->children;
     for (byte = 255; byte >= 0; byte--)
@@ -807,31 +804,31 @@ unparse_list (const char **msg)
 		 && elt->is_atom
 		 && elt->len == 1
 		 && elt->data[0] == byte))
-	    return fail ("bad element");
+	    return fail (pool, "bad element");
 
 	  /* Verify that each element's data falls within the string.  */
 	  if (elt->data < str->data
 	      || elt->data + elt->len > str->data + str->len)
-	    return fail ("bad element");
+	    return fail (pool, "bad element");
 
 	  elt = elt->next;
 	}
 
     /* We should have reached the end of the list at this point.  */
     if (elt)
-      return fail ("list too long");
+      return fail (pool, "list too long");
   }
 
   /* Make a list of lists.  */
   {
-    svn_string_t *str = get_empty_string ();
-    skel_t *top = empty ();
+    svn_string_t *str = get_empty_string (pool);
+    skel_t *top = empty (pool);
     skel_t *reparsed;
     int i;
 
     for (i = 0; i < 10; i++)
       {
-	skel_t *middle = empty ();
+	skel_t *middle = empty (pool);
 	int j;
 
 	for (j = 0; j < 10; j++)
@@ -848,7 +845,7 @@ unparse_list (const char **msg)
 		val += j;
 	      }
 
-	    add (build_atom (sizeof (buf), buf), middle);
+	    add (build_atom (sizeof (buf), buf, pool), middle);
 	  }
 
 	add (middle, top);
@@ -858,7 +855,7 @@ unparse_list (const char **msg)
     reparsed = svn_fs__parse_skel (str->data, str->len, pool);
 
     if (! skel_equal (top, reparsed))
-      return fail ("failed to reparse list of lists");
+      return fail (pool, "failed to reparse list of lists");
   }
 
   return SVN_NO_ERROR;
@@ -867,7 +864,7 @@ unparse_list (const char **msg)
 
 /* The test table.  */
 
-svn_error_t *(*test_funcs[]) (const char **msg) = {
+svn_error_t *(*test_funcs[]) (const char **msg, apr_pool_t *pool) = {
   0,
   parse_implicit_length,
   parse_explicit_length,
