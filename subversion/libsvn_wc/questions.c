@@ -220,7 +220,8 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
 
   if (err)
     {
-      svn_error_compose (err, err2);
+      if (err2)
+        svn_error_compose (err, err2);
       return err;
     }
 
