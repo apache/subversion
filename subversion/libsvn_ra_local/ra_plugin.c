@@ -307,6 +307,48 @@ svn_ra_local__rev_prop (void *session_baton,
 }
 
 
+struct deltify_etc_baton
+{
+  svn_fs_t *fs;                    /* the fs to deltify in */
+  apr_pool_t *pool;                /* pool for scratch work */
+  svn_commit_callback_t callback;  /* the original callback */
+  void *callback_baton;            /* the original callback's baton */
+};
+
+/* This implements 'svn_commit_callback_t'.  Its invokes the original
+   (wrapped) callback, but also does deltification on the new revision.
+   BATON is 'struct deltify_etc_baton *'. */
+static svn_error_t * 
+deltify_etc (svn_revnum_t new_revision,
+             const char *date,
+             const char *author,
+             void *baton)
+{
+  struct deltify_etc_baton *db = baton;
+  svn_error_t *err1, *err2;
+
+  /* Invoke the original callback first, in case someone's waiting to
+     know the revision number so they can go off and annotate an
+     issue or something. */
+  err1 = (*db->callback) (new_revision, date, author, db->callback_baton);
+
+  /* But, deltification shouldn't be stopped just because someone's
+     random callback failed, so proceed unconditionally on to
+     deltification. */
+  err2 = svn_fs_deltify_revision (db->fs, new_revision, db->pool);
+
+  /* It's more interesting if the original callback failed, so let
+     that one dominate. */
+  if (err1)
+    {
+      svn_error_clear (err2);
+      return err1;
+    }
+
+  return err2;
+}
+
+
 static svn_error_t *
 svn_ra_local__get_commit_editor (void *session_baton,
                                  const svn_delta_editor_t **editor,
@@ -317,12 +359,18 @@ svn_ra_local__get_commit_editor (void *session_baton,
                                  apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session_baton;
-                                         
+  struct deltify_etc_baton *db = apr_palloc (pool, sizeof(*db));
+
+  db->fs = sess->fs;
+  db->pool = pool;
+  db->callback = callback;
+  db->callback_baton = callback_baton;
+
   /* Get the repos commit-editor */     
   SVN_ERR (svn_repos_get_commit_editor (editor, edit_baton, sess->repos,
                                         sess->repos_url, sess->fs_path,
                                         sess->username, log_msg,
-                                        callback, callback_baton, pool));
+                                        deltify_etc, db, pool));
 
   return SVN_NO_ERROR;
 }

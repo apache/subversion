@@ -547,8 +547,20 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (!aborted)
     {
       SVN_ERR(trivial_auth_request(conn, pool, b));
+
+      /* In tunnel mode, deltify before answering the client, because
+         answering may cause the client to terminate the connection
+         and thus kill the server.  But otherwise, deltify after
+         answering the client, to avoid user-visible delay. */
+
+      if (b->tunnel)
+        SVN_ERR(svn_fs_deltify_revision(b->fs, new_rev, pool));
+
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(?c)(?c)",
                                      new_rev, date, author));
+
+      if (! b->tunnel)
+        SVN_ERR(svn_fs_deltify_revision(b->fs, new_rev, pool));
     }
   return SVN_NO_ERROR;
 }
