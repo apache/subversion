@@ -41,13 +41,3 @@ This is not a case of a new error obsoleting an old one.  The two
 errors are not the same.  The whole purpose of the change is to allow
 us to distinguish repository format problems from fs format problems
 in the future."
-
-> svn_wc_notify_t
-> svn_wc_notify_func2_t
->    The documentation for the structure fields should be in the
->    structure definition rather than in the function's doc string.  Or, at
->    least, the structure doc string should refer to the function for
->    details.
->    Bug: The "err" field is not documented.
-
-Lundblad

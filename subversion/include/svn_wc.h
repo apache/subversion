@@ -595,6 +595,46 @@ typedef enum svn_wc_notify_lock_state_t {
  *
  * Structure used in the @c svn_wc_notify_func2_t function.
  *
+ * @c path is either absolute or relative to the current working directory
+ * (i.e., not relative to an anchor).  @c action describes what happened
+ * to @c path.
+ *
+ * @c kind, @c content_state @c prop_state and @c lock_state are from
+ * after
+ * @c action, not before.  @c lock_state reflects the addition or
+ * removal of a lock token in the working copy.
+ *
+ * If @c mime_type is non-null, it indicates the mime-type of @c path.
+ * It is always @c NULL for directories.
+ *
+ * If @c action is @c svn_wc_notify_update_completed, @c revision is the
+ * target revision of the update, or @c SVN_INVALID_REVNUM if not
+ * available.  If @c action is @c svn_wc_notify_blame_revision, @c
+ * revision is the processed revision.  In all other cases, @c
+ * revision is @c SVN_INVALID_REVNUM.
+ *
+ * For an @c action of svn_wc_notify_locked, @c lock is the lock
+ * structure received from the repository.  For other actions, it is
+ * @c NULL.
+ *
+ * @c err is @c NULL, except when @c action is @c
+ * svn_wc_notify_failed_lock or @c svn_wc_notify_failed_unlock, in
+ * which case it points to an error describing the reason for the failure.
+ *
+ * Note that if @c action is @c svn_wc_notify_update, then @c path has 
+ * already been installed, so it is legitimate for an implementation of
+ * @c svn_wc_notify_func2_t to examine @c path in the working copy.
+ *
+ * @note The purpose of the @c kind, @c mime_type, @c content_state, and
+ * @c prop_state fields is to provide "for free" information that an
+ * implementation is likely to want, and which it would otherwise be
+ * forced to deduce via expensive operations such as reading entries
+ * and properties.  However, if the caller does not have this
+ * information, it will simply pass the corresponding `*_unknown'
+ * values, and it is up to the implementation how to handle that
+ * (i.e., whether or not to attempt deduction, or just to punt and
+ * give a less informative notification).
+ *
  * @note Callers of notification functions should use @c svn_wc_create_notify
  * to create structures of this type to allow for extensibility. */
 typedef struct svn_wc_notify_t {
@@ -636,36 +676,6 @@ svn_wc_dup_notify (const svn_wc_notify_t *notify, apr_pool_t *pool);
 /** @since New in 1.2.
  *
  * Notify the world that @a notify->action has happened to @a notify->path.
- * @a notify->path is either absolute or relative to cwd (i.e., not relative
- * to an anchor).
- *
- * @a notify->kind, @a notify->content_state and @a notify->prop_state are
- * from after @a notify->action, not before.
- *
- * If @a notify->mime_type is non-null, it indicates the mime-type of 
- * @a notify->path.  It is always @c NULL for directories.
- *
- * @a notify->revision is @c SVN_INVALID_REVNUM, except when @a action is
- * @c svn_wc_notify_update_completed, in which case @a notify->revision is 
- * the target revision of the update if available, else it is still
- * @c SVN_INVALID_REVNUM.
- *
- * Note that if @a notify->action is @c svn_wc_notify_update, then @a path has 
- * already been installed, so it is legitimate for an implementation of
- * @c svn_wc_notify_func2_t to examine @a notify->path in the working copy.
- *
- * ### Design Notes:
- *
- * The purpose of the @a notify->kind, @a notify->mime_type, @a
- * notify->content_state, and @a notify->prop_state fields is to
- * provide "for free" information that this function is likely to
- * want, and which it would otherwise be forced to deduce via
- * expensive operations such as reading entries and properties.
- * However, if the caller does not have this information, it will
- * simply pass the corresponding `*_unknown' values, and it is up to
- * the implementation how to handle that (i.e., whether or not to
- * attempt deduction, or just to punt and give a less informative
- * notification).
  *
  * Recommendation: callers of @c svn_wc_notify_func2_t should avoid
  * invoking it multiple times on the same path within a given
@@ -1419,6 +1429,10 @@ enum svn_wc_status_kind
  * The item's entry data is in @a entry, augmented and possibly shadowed
  * by the other fields.  @a entry is @c NULL if this item is not under
  * version control.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
  */
 typedef struct svn_wc_status2_t
 {
