@@ -355,6 +355,15 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
                                             const ne_propname *which_props,
                                             apr_pool_t *pool);
 
+/* Fetch the repository's unique Version-Controlled-Configuration url.
+   
+   Given a Neon session SESS and a URL, set *VCC to the url of the
+   repository's version-controlled-configuration resource.
+ */
+svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
+                                 ne_session *sess,
+                                 const char *url,
+                                 apr_pool_t *pool);
 
 /* Issue a PROPPATCH request on URL, transmitting PROP_CHANGES (a hash
    of const svn_string_t * values keyed on Subversion user-visible
