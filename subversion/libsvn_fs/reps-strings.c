@@ -265,7 +265,8 @@ struct reconstructed_data_cache_t
    
 
 
-/* Baton for window_handler() below. */
+/* Baton for window_handler() below.  Note that this baton can live
+   across multiple calls to window_handler(). */
 struct window_handler_baton_t
 {
   /* Where to store the data as we undeltify it. */
@@ -298,7 +299,7 @@ struct window_handler_baton_t
 
   /* Pool in which to do temporary allocations.  This may be cleared
      by the window handler, so you probably don't want it to be the
-     same as trail->pool. */
+     pool in which this baton or its buf live. */
   apr_pool_t *pool;
 };
 
@@ -568,7 +569,7 @@ rep_read_range (svn_fs_t *fs,
       SVN_ERR (svn_stream_write (wstream, chunk, &amt));
       
       /* Now, for each window, decide if the window is relevant.  That
-         is, do we need to use to recostruct data in the range
+         is, do we need to use to reconstruct data in the range
          requested by the caller?  */
       do
         {
