@@ -137,6 +137,9 @@ svn_error_t * svn_ra_dav__get_activity_url(svn_string_t **activity_url,
 
   /* run the request and get the resulting status code. */
   rv = http_request_dispatch(req);
+  code = http_get_status(req)->code;
+  http_request_destroy(req);
+
   if (rv != HTTP_OK)
     {
       /* ### need to be more sophisticated with reporting the failure */
@@ -160,10 +163,6 @@ svn_error_t * svn_ra_dav__get_activity_url(svn_string_t **activity_url,
                                    rv, url);
         }
     }
-
-  code = http_get_status(req)->code;
-
-  http_request_destroy(req);
 
   if (code != 200)
     {
