@@ -26,6 +26,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Symbols and constants */
+
 /* BDB 4.1 introduced the DB_AUTO_COMMIT flag. Older versions can just
    use 0 instead. */
 #ifdef DB_AUTO_COMMIT
@@ -41,6 +43,17 @@ extern "C" {
 #define SVN_BDB_HAS_DB_INCOMPLETE 0
 #endif
 
+/* In BDB 4.3, "buffer too small" errors come back with
+   DB_BUFFER_SMALL (instead of ENOMEM, which is now fatal). */
+#ifdef DB_BUFFER_SMALL
+#define SVN_BDB_DB_BUFFER_SMALL DB_BUFFER_SMALL
+#else
+#define SVN_BDB_DB_BUFFER_SMALL ENOMEM
+#endif
+
+
+/* Parameter lists */
+
 /* In BDB 4.1, DB->open takes a transaction parameter. We'll ignore it
    when building with 4.0. */
 #if (DB_VERSION_MAJOR > 4) \
@@ -50,14 +63,16 @@ extern "C" {
 #define SVN_BDB_OPEN_PARAMS(env,txn) (env)
 #endif
 
-
-/* In BDB 4.3, "buffer too small" errors come back with
-   DB_BUFFER_SMALL (instead of ENOMEM, which is now fatal). */
+/* In BDB 4.3, the error gatherer function grew a nrw DBENV parameter,
+   and the MSG parameter's type changed. */
 #if (DB_VERSION_MAJOR > 4) \
     || (DB_VERSION_MAJOR == 4) && (DB_VERSION_MINOR >= 3)
-#define SVN_BDB_DB_BUFFER_SMALL DB_BUFFER_SMALL
+/* Prevents most compilers from whining about unused parameters. */
+#define SVN_BDB_ERROR_GATHERER_IGNORE(varname) ((void)(varname))
 #else
-#define SVN_BDB_DB_BUFFER_SMALL ENOMEM
+#define bdb_error_gatherer(param1, param2, param3) \
+  bdb_error_gatherer (param2, char *msg)
+#define SVN_BDB_ERROR_GATHERER_IGNORE(varname) ((void)0)
 #endif
 
 
