@@ -2,10 +2,11 @@
 
 ## SUBDIRS = tests
 
-lib_LTLIBRARIES = libsvn_string.la
+lib_LTLIBRARIES = libsvn_string.so
 
-libsvn_string_la_SOURCES = svn_string.c
+## libsvn_string_la_SOURCES = svn_string.c
+libsvn_string_so_SOURCES = svn_string.c
 
-libsvn_string_la_INCLUDES = -I@SVN_INCLUDE@ -I@APR_INCLUDE@
-
-libsvn_string_la_LIBADD = -L@APR_LIB@
+CFLAGS = -shared -fPIC 
+INCLUDES = -I../include -I../../apr/include
+LIBADD = -L../../apr
