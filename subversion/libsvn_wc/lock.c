@@ -117,9 +117,12 @@ svn_wc_adm_close (svn_wc_adm_access_t *adm_access)
 {
   if (adm_access->type == svn_wc_adm_access_write_lock)
     {
-      SVN_ERR (svn_wc__unlock (adm_access->path, adm_access->pool));
+      if (adm_access->lock_exists)
+        {
+          SVN_ERR (svn_wc__unlock (adm_access->path, adm_access->pool));
+          adm_access->lock_exists = FALSE;
+        }
       /* Reset to prevent further use of the write lock. */
-      adm_access->lock_exists = FALSE;
       adm_access->type = svn_wc_adm_access_unlocked;
     }
 

@@ -529,7 +529,7 @@ delete_entry (const char *path,
                                    TRUE, /* sync */
                                    pool));
     
-  SVN_ERR (svn_wc__run_log (pb->path, pool));
+  SVN_ERR (svn_wc__run_log (adm_access, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
 
   /* The passed-in `path' is relative to the anchor of the edit, so if
@@ -879,7 +879,7 @@ close_directory (void *dir_baton)
                                        db->pool));
 
       /* Run the log. */
-      SVN_ERR (svn_wc__run_log (db->path, db->pool));
+      SVN_ERR (svn_wc__run_log (adm_access, db->pool));
 
       /* Unlock, we're done modifying directory props. */
       SVN_ERR (svn_wc_adm_close (adm_access));
@@ -1661,7 +1661,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
   /* The log is ready to run.  Close it and run it! */
   SVN_ERR (svn_wc__close_adm_file (log_fp, parent_dir, SVN_WC__ADM_LOG,
                                    TRUE, /* sync */ pool));
-  SVN_ERR (svn_wc__run_log (parent_dir, pool));
+  SVN_ERR (svn_wc__run_log (adm_access, pool));
 
   /* Now that the file's text, props, and entries are fully installed,
      we dump any "wc" props.  ### This should be done *loggily*, see

@@ -259,9 +259,10 @@ svn_error_t *svn_wc__ensure_adm (const char *path,
                                  apr_pool_t *pool);
 
 
-/* Blow away the admistrative directory associated with directory
-   PATH, make sure beforehand that it isn't locked. */
-svn_error_t *svn_wc__adm_destroy (const char *path,
+/* Blow away the admistrative directory associated with the access baton
+   ADM_ACCESS.  It is safe to close the baton after calling this
+   function. */
+svn_error_t *svn_wc__adm_destroy (svn_wc_adm_access_t *adm_access,
                                   apr_pool_t *pool);
 
 

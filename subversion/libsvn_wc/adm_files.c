@@ -1181,18 +1181,23 @@ svn_wc__ensure_adm (const char *path,
 
 
 svn_error_t *
-svn_wc__adm_destroy (const char *path, apr_pool_t *pool)
+svn_wc__adm_destroy (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
-  /* Try to lock the admin directory, hoping that this function will
-     eject an error if we're already locked (which is fine, cause if
-     it is already locked, we certainly don't want to blow it away. */
-  SVN_ERR (svn_wc_adm_open (&adm_access, path, TRUE, pool));
+  const char *path;
 
-  /* Well, I think the coast is clear for blowing away this directory
-     (which will also remove the lock file we created above) */
-  path = svn_path_join (path, adm_subdir (), pool);
+  SVN_ERR (svn_wc_adm_write_check (adm_access));
+
+  /* Well, the coast is clear for blowing away the administrative
+     directory, which also removes the lock file */
+  path = svn_path_join (adm_access->path, adm_subdir (), pool);
   SVN_ERR (svn_io_remove_dir (path, pool));
+
+  /* ### Need do this so that svn_wc_adm_close can still be called on the
+     ### access baton.  Should the caller be responsible for not calling
+     ### svn_wc_adm_close in this case?  That could be tricky if the baton
+     ### comes from a high level function like svn_client_commit, how would
+     ### the caller know? */
+  adm_access->lock_exists = FALSE;
 
   return SVN_NO_ERROR;
 }

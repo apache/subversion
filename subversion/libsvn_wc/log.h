@@ -155,8 +155,9 @@ svn_error_t *svn_wc__log_commit (const char *path,
                                  apr_pool_t *pool);
 
 
-/* Process the instructions in the log file for PATH. */
-svn_error_t *svn_wc__run_log (const char *path, apr_pool_t *pool);
+/* Process the instructions in the log file for ADM_ACCESS. */
+svn_error_t *svn_wc__run_log (svn_wc_adm_access_t *adm_access,
+                              apr_pool_t *pool);
 
 
 #ifdef __cplusplus

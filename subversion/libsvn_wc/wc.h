@@ -21,6 +21,7 @@
 #define SVN_LIBSVN_WC_H
 
 #include <apr_pools.h>
+#include <apr_hash.h>
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -129,6 +130,65 @@ svn_error_t *svn_wc__ensure_directory (const char *path, apr_pool_t *pool);
    feature. */
 svn_error_t *svn_wc__adm_steal_write_lock (svn_wc_adm_access_t **adm_access,
                                            const char *path, apr_pool_t *pool);
+
+
+
+/* ### Should this definition go into lock.c?  At present it is visible so
+   ### that users can access the path member, we could provide an access
+   ### function.  There is one place that directly access the lock_exists
+   ### member as well. */
+struct svn_wc_adm_access_t
+{
+   /* PATH to directory which contains the administrative area */
+   const char *path;
+
+   enum svn_wc_adm_access_type {
+
+      /* SVN_WC_ADM_ACCESS_UNLOCKED indicates no lock is held allowing
+         read-only access without cacheing. */
+      svn_wc_adm_access_unlocked,
+
+#if 0 /* How cacheing might work one day */
+
+      /* ### If read-only operations are allowed sufficient write access to
+         ### create read locks (did you follow that?) then entries cacheing
+         ### could apply to read-only operations as well.  This would
+         ### probably want to fall back to unlocked access if the
+         ### filesystem permissions prohibit writing to the administrative
+         ### area (consider running svn_wc_status on some other user's
+         ### working copy). */
+
+      /* SVN_WC_ADM_ACCESS_READ_LOCK indicates that read-only access and
+         cacheing are allowed. */
+      svn_wc_adm_access_read_lock,
+#endif
+
+      /* SVN_WC_ADM_ACCESS_WRITE_LOCK indicates that read-write access and
+         cacheing are allowed. */
+      svn_wc_adm_access_write_lock
+
+   } type;
+
+   /* LOCK_EXISTS is set TRUE when the write lock exists */
+   svn_boolean_t lock_exists;
+
+#if 0 /* How cacheing might work one day */
+
+   /* ENTRIES_MODIFED is set TRUE when the entries cached in ENTRIES have
+      been modified from the original values read from the file. */
+   svn_boolean_t entries_modified;
+
+   /* Once the 'entries' file has been read, ENTRIES will cache the
+      contents if this access baton has an appropriate lock. Otherwise
+      ENTRIES will be NULL. */
+   apr_hash_t *entries;
+#endif
+
+   /* POOL is used to allocate cached items, they need to persist for the
+      lifetime of this access baton */
+   apr_pool_t *pool;
+
+};
 
 #ifdef __cplusplus
 }
