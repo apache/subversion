@@ -68,20 +68,6 @@ static const dav_liveprop_spec dav_svn_props[] =
     0
   },
 
-  /* ### these aren't SVN specific */
-  {
-    DAV_SVN_URI_DAV,
-    "displayname",
-    DAV_PROPID_displayname,
-    1
-  },
-  {
-    DAV_SVN_URI_DAV,
-    "source",
-    DAV_PROPID_source,
-    1
-  },
-
   { 0 } /* sentinel */
 };
 
@@ -107,10 +93,6 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   /*
   ** None of SVN provider properties are defined if the resource does not
   ** exist. Just bail for this case.
-  **
-  ** Note that DAV:displayname and DAV:source will be stored as dead
-  ** properties; the NOTDEF return code indicates that mod_dav should
-  ** look there for the value.
   **
   ** Even though we state that the SVN properties are not defined, the
   ** client cannot store dead values -- we deny that thru the is_writable
@@ -144,13 +126,8 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       return DAV_PROP_INSERT_NOTDEF;
       break;
 
-    case DAV_PROPID_displayname:
-    case DAV_PROPID_source:
     default:
-      /*
-      ** This property is not defined. However, it may be a dead
-      ** property.
-      */
+      /* ### what the heck was this property? */
       return DAV_PROP_INSERT_NOTDEF;
     }
 
