@@ -29,6 +29,7 @@
 #include "svn_repos.h"
 #include "svn_dav.h"
 #include "svn_time.h"
+#include "svn_pools.h"
 
 #include "dav_svn.h"
 
@@ -621,22 +622,25 @@ static apr_status_t cleanup_deltify(void *data)
   svn_repos_t *repos;
   svn_error_t *err;
 
-  /* Yes, opening a repository registers a cleanup on the pool from
-     which we are already running as a cleanup.  But these days that's
-     safe.  A big +smooch+ to Sander Striker -- I'm not sure it was
-     he who implemented this, but he told me about it anyway :-). */
-  err = svn_repos_open(&repos, cdb->repos_path, cdb->pool);
+  /* It's okay to allocate in the pool that's being cleaned up, and
+     it's also okay to register new cleanups against that pool.  But
+     if you create subpools of it, you must make sure to destroy them
+     at the end of the cleanup.  So we do all our work in this
+     subpool, then destroy it before exiting. */
+  apr_pool_t *subpool = svn_pool_create(cdb->pool);
+
+  err = svn_repos_open(&repos, cdb->repos_path, subpool);
   if (err)
     {
       ap_log_perror(APLOG_MARK, APLOG_ERR, err->apr_err, cdb->pool,
                     "cleanup_deltify: error opening repository '%s'",
                     cdb->repos_path);
       svn_error_clear(err);
-      return APR_SUCCESS;
+      goto cleanup;
     }
 
   err = svn_fs_deltify_revision(svn_repos_fs(repos),
-                                cdb->revision, cdb->pool);
+                                cdb->revision, subpool);
   if (err)
     {
       ap_log_perror(APLOG_MARK, APLOG_ERR, err->apr_err, cdb->pool,
@@ -645,6 +649,9 @@ static apr_status_t cleanup_deltify(void *data)
                     cdb->revision, cdb->repos_path);
       svn_error_clear(err);
     }
+
+ cleanup:
+  svn_pool_destroy(subpool);
 
   return APR_SUCCESS;
 }
