@@ -135,7 +135,9 @@ Directory structure
   path_svnlook        svnlook.exe
   path_svnserve       svnserve.exe
   path_svnversion     svnversion.exe
+  path_svndumpfilter  svndumpfilter.exe
   path_davsvn         mod_dav_svn.so
+  path_authzsvn       mod_authz_svn.so
   path_svnpath        svnpath.exe
   path_iconv          *.so
   path_brkdb_bin      db_*.exe, ex_*.exe, excxx_*.exe, libdb4*.dll, libdb4*.exp

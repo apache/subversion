@@ -31,7 +31,9 @@
 ;#define path_svnlook "C:\svn_innosrc\svn-win32-rXXXX"
 ;#define path_svnserve "C:\svn_innosrc\svn-win32-rXXXX"
 ;#define path_svnversion "C:\svn_innosrc\svn-win32-rXXXX"
+;#define path_svndumpfilter "C:\svn_innosrc\svn-win32-rXXXX"
 ;#define path_davsvn "C:\svn_innosrc\svn-win32-rXXXX"
+;#define path_authzsvn "C:\svn_innosrc\svn-win32-rXXXX"
 ;#define path_svnpath "tools\svnpath"
 ;; Berkeley stuff
 ;#define path_brkdb_bin "C:\svn_innosrc\db4-win32\bin"
@@ -50,7 +52,9 @@
 #define path_svnlook "..\..\subversion\svnlook\Release"
 #define path_svnserve "..\..\subversion\svnserve\Release"
 #define path_svnversion "..\..\subversion\svnversion\Release"
+#define path_svndumpfilter "..\..\subversion\svndumpfilter\Release"
 #define path_davsvn "..\..\subversion\mod_dav_svn\Release"
+#define path_authzsvn "..\..\subversion\mod_authz_svn\Release"
 #define path_svnpath "tools\svnpath"
 ; Berkeley stuff
 #define path_brkdb "E:\src\db-4.0.14"
