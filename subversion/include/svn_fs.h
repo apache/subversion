@@ -368,40 +368,92 @@ extern svn_error_t *svn_fs_proplist_table (apr_hash_t *table,
 /* Committing changes to Subversion filesystems.  */
 
 
-/* [[Comments on the above would be so welcome.]]  
+/* [[Comments on the below would be so welcome.]]  
 
-   All changes to a Subversion filesystem take place as part of a
-   transaction.  The transaction either succeeds completely, and
-   creates a new version of the filesystem, or fails completely,
-   leaving the filesystem unchanged.
+   To make a change to the Subversion filesystem:
+   - Create a transaction object, using `svn_fs_begin_txn'.
+   - Create a new root directory object, using `svn_fs_replace_root'.
+   - Make whatever changes you like to that directory tree, using
+     the appropriate functions below.
+   - Commit the transaction, using `svn_fs_commit_txn'.
 
-   File and directory objects, as created by the functions above,
-   refer to specific versions of a node.  The objects they refer to
-   never change --- the history recorded in the repository must not be
-   rewritten.  Instead, when we modify the filesystem, we create new
-   objects as we go, which refer to new nodes, or new versions of
-   existing nodes.
+   The filesystem implementation guarantees that your commit will
+   either:
+   - succeed completely, so that all of the changes are committed to
+     create a new version of the filesystem, or
+   - fail completely, leaving the filesystem unchanged.
 
-   While you make changes as part of the transaction, the new nodes
-   and node versions are not yet part of the filesystem.  When you
-   commit the transaction, they become visible as a new version.  If
-   you abort the transaction, they are discarded.
+   Until you commit the transaction, any changes you make are
+   invisible.  Only when your commit succeeds do they become visible
+   to the outside world, as a new version of the filesystem.
 
-   The directory and file objects created by functions above are
-   immutable; they refer to extant filesystem versions, and you cannot
-   add, delete, or change files or directories in those objects.  The
-   functions below, however, return mutable objects, which can be
-   changed.
+   If you begin a transaction, and then decide you don't want to make
+   the change after all (say, because your net connection with the
+   client disappeared before the change was complete), you can call
+   `svn_fs_abort_txn', to cancel the entire transaction; this
+   leaves the filesystem unchanged.
 
-   This distinction between immutable and mutable objects is
-   completely independent of whether you have *permission* to change a
-   given directory or file.  For example, you could have a mutable
-   directory object DIR referring to a directory which you don't have
-   permission to write.  If you do have permission to write some
-   subdirectory SUBDIR of DIR, then you could use DIR to obtain a
-   mutable directory object referring to SUBDIR, and make changes
-   there.  The mutable/immutable distinction refers to directory and
-   file *objects*, not to the nodes they refer to.  */
+   The only way to change the contents of files or directories, or
+   their properties, is by making a transaction and creating a new
+   version, as described above.  Once a version has been committed, it
+   never changes again; the filesystem interface provides no means to
+   go back and edit the contents of an old version.  Once history has
+   been recorded, it is set in stone.  Clients depend on this property
+   to do updates and commits reliably; proxies depend on this property
+   to cache changes accurately; and so on.
+
+
+   There are two kinds of file and directory objects: mutable, and
+   immutable.  The functions above create immutable objects, that
+   refer to nodes in extant versions of the filesystem.  Since those
+   nodes are in the history, they can never change.  The functions
+   below, for performing transactions, create mutable file and
+   directory objects.  They refer to new nodes (or new versions of
+   existing nodes), which you can change as necessary to create the
+   new version the way you like it.
+
+   In other words, you use immutable objects for reading committed,
+   fixed versions of the filesystem, and you use mutable objects for
+   building new directories and files, as part of a transaction.
+
+   Note that the terms "mutable" and "immutable" describe the role of
+   the file and directory objects --- not the permissions on the nodes
+   they refer to.  Even if you aren't authorized to modify the
+   filesystem's root directory, you could still have a mutable
+   directory object referring to it.  Since it's mutable, you could
+   call `svn_fs_replace_subdir' to get another mutable directory
+   object referring to a directory you do have permission to change.
+   Mutability refers to the role of the object --- reading an existing
+   version, or writing a new one --- which is independent of your
+   authorization to make changes in a particular place.
+
+   A pattern to note in the interface below: you can't get mutable
+   objects from immutable objects.  If you have an immutable directory
+   object DIR (like those produced by `svn_fs_open_subdir'), you can't
+   call `svn_fs_replace_subdir' on DIR to get a mutable directory
+   object for one of DIR's subdirectories.  You need to use mutable
+   objects from the very beginning, starting with a call to
+   `svn_fs_replace_root'.
+
+
+   The following calls make changes to nodes:
+     svn_fs_delete
+     svn_fs_add_file            svn_fs_add_directory
+     svn_fs_replace_file        svn_fs_replace_directory
+     svn_fs_apply_textdelta    
+     svn_fs_change_file_prop    svn_fs_change_dir_prop
+                                svn_fs_change_dirent_prop
+
+   Any of these functions may return an SVN_ERR_FS_CONFLICT error.
+   This means that the change you requested conflicts with some other
+   change committed to the repository since the base version you
+   selected.  If you get this error, the transaction you're building
+   is still live --- it's up to you whether you want to abort the
+   transaction entirely, try a different version of the change, or
+   drop the conflicting part from the change.  But if you want to
+   abort, you'll still need to call svn_fs_abort_txn; simply getting a
+   conflict error doesn't free the temporary resources held by the
+   transaction.  */
 
 
 /* The type of a Subversion transaction object.  */
@@ -411,7 +463,7 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
 /* Begin a new transaction on the filesystem FS; when committed, this
    transaction will create a new version.  Set *TXN_P to a pointer to
    an object representing the new transaction.  */
-extern svn_error_t *svn_fs_txn_begin (svn_fs_txn_t **TXN_P, svn_fs_t *FS);
+extern svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **TXN_P, svn_fs_t *FS);
 
 
 /* Commit the transaction TXN.  If the transaction conflicts with
@@ -420,19 +472,24 @@ extern svn_error_t *svn_fs_txn_begin (svn_fs_txn_t **TXN_P, svn_fs_t *FS);
    version containing the changes made in TXN, and return zero.
 
    This call frees TXN, and any temporary resources it holds.  */
-extern svn_error_t *svn_fs_txn_commit (svn_fs_txn_t *txn);
+extern svn_error_t *svn_fs_commit_txn (svn_fs_txn_t *txn);
 
 
 /* Abort the transaction TXN.  Any changes made in TXN are discarded,
    and the filesystem is left unchanged.
 
    This frees TXN, and any temporary resources it holds.  */
-extern svn_error_t *svn_fs_txn_abort (svn_fs_txn_t *txn);
+extern svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn);
 
 
 /* Select the root directory of version VERSION as the base root
    directory for the transaction TXN.  Set *ROOT to a directory object
-   for that root dir.  ROOT is a mutable directory object.  */
+   for that root dir.  ROOT is a mutable directory object.
+
+   Every change starts with a call to this function.  In order to get
+   a mutable file or directory object, you need to have a mutable
+   directory object for its parent --- this is the function that gives
+   you the first mutable directory object.  */
 extern svn_error_t *svn_fs_replace_root (svn_fs_dir_t **root,
 					 svn_fs_txn_t *txn,
 					 svn_vernum_t version);
@@ -440,7 +497,7 @@ extern svn_error_t *svn_fs_replace_root (svn_fs_dir_t **root,
 
 /* Delete the entry named NAME from the directory DIR.  DIR must be a
    mutable directory object.  */
-extern svn_error_t *svn_fs_unlink (svn_fs_dir_t *dir, svn_string_t *name);
+extern svn_error_t *svn_fs_delete (svn_fs_dir_t *dir, svn_string_t *name);
 
 
 /* Create a new file named NAME in the directory DIR, and set *FILE to
@@ -489,6 +546,21 @@ extern svn_error_t *svn_fs_apply_textdelta (svn_fs_file_t *file,
 extern svn_error_t *svn_fs_change_file_prop (svn_fs_file_t *file,
 					     svn_string_t *name,
 					     svn_string_t *value);
+
+
+
+/* Non-historical properties.  */
+
+/* Okay, so what we said above was a lie --- there are certain changes
+   you can make to a Subversion filesystem that don't need to be part
+   of a transaction.  And you can actually go back in history and
+   change them.
+
+   Files, directories, and directory entries can have 
+
+
+
+*/
 
 
 #endif /* SVN_FS_H */
