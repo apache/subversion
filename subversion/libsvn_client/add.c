@@ -222,7 +222,7 @@ add_file (const char *path,
       SVN_ERR (svn_wc_prop_set2
                (SVN_PROP_SPECIAL,
                 svn_string_create (SVN_PROP_SPECIAL_VALUE, pool),
-                path, adm_access, 0, pool));
+                path, adm_access, FALSE, pool));
       mimetype = NULL;
     }
   else
@@ -244,7 +244,7 @@ add_file (const char *path,
                  the autoprops say to set some weird combination,
                  we just error and let the user sort it out. */
               SVN_ERR (svn_wc_prop_set2 (pname, pval, path,
-                                         adm_access, 0, pool));
+                                         adm_access, FALSE, pool));
             }
         }
     }
