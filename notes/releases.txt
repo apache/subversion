@@ -9,7 +9,7 @@
       http://svn.collab.net/repos/svn/branches/X.Y.x
 
    All release of the X.Y line will come out of this branch.
-   Changes from trunk will be merged based upon compatability
+   Changes from trunk will be merged based upon compatibility
    rules and voting as explained in HACKING.
 
 2. Bump the version numbers in svn_version.h on trunk.
