@@ -881,7 +881,10 @@ svn_error_t *svn_fs_youngest_rev (svn_revnum_t *youngest_p,
 
 /* Set *VALUE_P to the value of the property named PROPNAME on
    revision REV in the filesystem FS.  If REV has no property by that
-   name, set *VALUE_P to zero.  Allocate the result in POOL.  */
+   name, set *VALUE_P to zero.  Allocate the result in POOL.
+
+   ### todo (issue #406): svn_string_t, not svn_stringbuf_t.  And the
+   name could be const char *.  */
 svn_error_t *svn_fs_revision_prop (svn_stringbuf_t **value_p,
                                    svn_fs_t *fs,
                                    svn_revnum_t rev,
@@ -890,9 +893,11 @@ svn_error_t *svn_fs_revision_prop (svn_stringbuf_t **value_p,
 
 
 /* Set *TABLE_P to the entire property list of revision REV in
-   filesystem FS, as an APR hash table allocated in POOL.  The
-   resulting table maps property names to pointers to svn_stringbuf_t
-   objects containing the property value.  */
+   filesystem FS, as an APR hash table allocated in POOL.  The table
+   maps char * property names to svn_stringbuf_t * values; the names
+   and values are allocated in POOL.
+
+   ### todo (issue #406): map to svn_string_t, not svn_stringbuf_t. */
 svn_error_t *svn_fs_revision_proplist (apr_hash_t **table_p,
                                        svn_fs_t *fs,
                                        svn_revnum_t rev,
@@ -911,7 +916,9 @@ svn_error_t *svn_fs_revision_proplist (apr_hash_t **table_p,
    them after the revision has been committed.  They are not protected
    via transactions.
 
-   Do any necessary temporary allocation in POOL.  */
+   Do any necessary temporary allocation in POOL.  
+
+   ### todo (issue #406): could be const char *name. */
 svn_error_t *svn_fs_change_rev_prop (svn_fs_t *fs,
                                      svn_revnum_t rev,
                                      const svn_string_t *name,

@@ -460,7 +460,10 @@ typedef struct svn_delta_edit_fns_t
      - DIR_BATON specifies the directory whose property should change.
      - NAME is the name of the property to change.
      - VALUE is the new value of the property, or zero if the property
-     should be removed altogether.  */
+     should be removed altogether.  
+
+     ### todo (issue #406): name could be const char *, value
+     svn_string_t instead of svn_stringbuf_t.  */
   svn_error_t *(*change_dir_prop) (void *dir_baton,
                                    svn_stringbuf_t *name,
                                    svn_stringbuf_t *value);
@@ -516,7 +519,10 @@ typedef struct svn_delta_edit_fns_t
      - FILE_BATON specifies the file whose property should change.
      - NAME is the name of the property to change.
      - VALUE is the new value of the property, or zero if the property
-     should be removed altogether.  */
+     should be removed altogether.
+
+     ### todo (issue #406): name could be const char *, value
+     svn_string_t instead of svn_stringbuf_t.  */
   svn_error_t *(*change_file_prop) (void *file_baton,
                                     svn_stringbuf_t *name,
                                     svn_stringbuf_t *value);
@@ -691,7 +697,10 @@ svn_error_t *svn_delta_xml_auto_parse (svn_stream_t *source,
 /* A general in-memory representation of a single property.  Most of
    the time, property lists will be stored completely in hashes.  But
    sometimes it's useful to have an "ordered" collection of
-   properties, in which case we use an apr_array of the type below. */
+   properties, in which case we use an apr_array of the type below. 
+
+   ### todo (issue #406): name could be const char *, value
+   svn_string_t instead of svn_stringbuf_t.  */
 typedef struct svn_prop_t
 {
   svn_stringbuf_t *name;
