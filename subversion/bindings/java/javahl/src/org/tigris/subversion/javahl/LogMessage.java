@@ -43,9 +43,9 @@ public class LogMessage
         return date;
     }
 
-    public long getRevision()
+    public Revision.Number getRevision()
     {
-        return revision;
+        return new Revision.Number(revision);
     }
 
     public String getAuthor()

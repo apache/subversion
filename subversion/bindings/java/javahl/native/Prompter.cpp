@@ -416,7 +416,7 @@ svn_error_t *Prompter::firstCreds_server_ssl (void **credentials, void **iter_ba
     int failure;
     int failures_in =
         (int) apr_hash_get (parameters,
-                        SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN,
+                        SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
                         APR_HASH_KEY_STRING);
 
     svn_stringbuf_t *buf = svn_stringbuf_create
@@ -454,7 +454,7 @@ svn_error_t *Prompter::firstCreds_server_ssl (void **credentials, void **iter_ba
 	if(that->askYesNo(realmstring, buf->data, false))
     {
         cred = (svn_auth_cred_server_ssl_t*)apr_palloc (pool, sizeof(*cred));
-        cred->failures_allow = failures_in;
+        cred->accepted_failures = failures_in;
         *credentials = cred;
     }
     else
@@ -464,16 +464,15 @@ svn_error_t *Prompter::firstCreds_server_ssl (void **credentials, void **iter_ba
     *iter_baton = NULL;
     return SVN_NO_ERROR;
 }
+
 svn_error_t *Prompter::firstCreds_client_ssl (void **credentials, void **iter_baton, 
 							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool)
 {
 	Prompter *that = (Prompter*)provider_baton;
   const char *cert_file = NULL, *key_file = NULL;
-  size_t cert_file_len;
-  const char *extension;
   svn_auth_cred_client_ssl_t *cred;
 
-  svn_auth_ssl_cert_type_t cert_type;
+
   cert_file = that->askQuestion(realmstring, "client certificate filename: ", true);
   
   if ((cert_file == NULL) || (cert_file[0] == 0))
@@ -481,55 +480,13 @@ svn_error_t *Prompter::firstCreds_client_ssl (void **credentials, void **iter_ba
       return NULL;
     }
 
-  cert_file_len = strlen(cert_file);
-  extension = cert_file + cert_file_len - 4;
-  if ((strcmp (extension, ".p12") == 0) || 
-      (strcmp (extension, ".P12") == 0))
-    {
-      cert_type = svn_auth_ssl_pkcs12_cert_type;
-    }
-  else if ((strcmp (extension, ".pem") == 0) || 
-           (strcmp (extension, ".PEM") == 0))
-    {
-      cert_type = svn_auth_ssl_pem_cert_type;
-    }
-  else
-    {
-      const char *type = NULL;
-	  type = that->askQuestion(realmstring, "cert type ('pem' or 'pkcs12'): ", true);
-      if (type != NULL && (strcmp(type, "pkcs12") == 0) ||
-          (strcmp(type, "PKCS12") == 0))
-        {
-          cert_type = svn_auth_ssl_pkcs12_cert_type;
-        }
-      else if (type != NULL && (strcmp (type, "pem") == 0) || 
-               (strcmp (type, "PEM") == 0))
-        {
-          cert_type = svn_auth_ssl_pem_cert_type;
-        }
-      else
-        {
-          return svn_error_createf (SVN_ERR_INCORRECT_PARAMS, NULL,
-                                    "unknown ssl certificate type '%s'", type);
-        }
-    }
-  
-  if (cert_type == svn_auth_ssl_pem_cert_type)
-    {
-	  key_file = that->askQuestion(realmstring, "optional key file: ", true);
-    }
-  if (key_file && key_file[0] == 0)
-    {
-      key_file = 0;
-    }
   cred = (svn_auth_cred_client_ssl_t*)apr_palloc (pool, sizeof(*cred));
   cred->cert_file = cert_file;
-  cred->key_file = key_file;
-  cred->cert_type = cert_type;
   *credentials = cred;
   *iter_baton = NULL;
   return SVN_NO_ERROR;
 }
+
 svn_error_t *Prompter::firstCreds_client_ssl_pass (void **credentials, void **iter_baton, 
 							void *provider_baton, apr_hash_t *parameters, const char *realmstring, apr_pool_t *pool)
 {

@@ -16,190 +16,241 @@
  * @endcopyright
  */
 package org.tigris.subversion.javahl;
-
+import java.util.Date;
 
 
 /**
  * Subversion status API.
+ * @author Patrick Mayweg
+ * @author Cédric Chabanois 
+ *         <a href="mailto:cchabanois@ifrance.com">cchabanois@ifrance.com</a> 
  */
 public class Status
 {
-    Status(String p, boolean id, long r, long lc, String lca, int tt, int pt, boolean iv,
-                   boolean il, boolean ic, int rtt, int rpt, String coo, String con, String cow, String ur, String urcf, long recf)
+    private String url;              // url in repository    
+    private String path;
+    private int nodeKind;                // node kind (file, dir, ...)
+    private long revision;           // base revision
+    private long lastChangedRevision;// last revision this was changed
+    private long lastChangedDate;    // last date this was changed 
+    private String lastCommitAuthor; // last commit author of this item
+    private int textStatus;
+    private int propStatus;
+    private boolean locked;
+    private boolean copied;          // in a copied state 
+    private int repositoryTextStatus;
+    private int repositoryPropStatus;
+    private String conflictNew;      // new version of conflicted file 
+    private String conflictOld;      // old version of conflicted file
+    private String conflictWorking;  // working version of conflicted file
+    private String urlCopiedFrom;
+    private long revisionCopiedFrom;
+
+    
+    public Status(String path, String url, int nodeKind, long revision, 
+        long lastChangedRevision, long lastChangedDate, String lastCommitAuthor, 
+        int textStatus, int propStatus, 
+        int repositoryTextStatus, int repositoryPropStatus,
+        boolean locked, boolean copied, 
+        String conflictOld, String conflictNew, String conflictWorking,
+        String urlCopiedFrom, long revisionCopiedFrom)
     {
-        pa = p;
-        idi = id;
-        re = r;
-        lch = lc;
-        lcoa = lca;
-        tty = tt;
-        pty = pt;
-        ive = iv;
-        ilo = il;
-        ico = ic;
-        rtty = rtt;
-        rpty = rpt;
-        co = coo;
-        cn = con;
-        cw = cow;
-        u = ur;
-        ucf = urcf;
-        rcf = recf;
+        this.path = path;
+        this.url = url;
+        this.nodeKind = nodeKind;
+        this.revision = revision;
+        this.lastChangedRevision = lastChangedRevision;
+        this.lastChangedDate = lastChangedDate;
+        this.lastCommitAuthor = lastCommitAuthor;
+        this.textStatus = textStatus;
+        this.propStatus = propStatus;
+        this.locked = locked;
+        this.copied = copied;
+        this.repositoryTextStatus = repositoryTextStatus;
+        this.repositoryPropStatus = repositoryPropStatus;
+        this.conflictOld = conflictOld;
+        this.conflictNew = conflictNew;
+        this.conflictWorking = conflictWorking;
+        this.urlCopiedFrom = urlCopiedFrom;
+        this.revisionCopiedFrom = revisionCopiedFrom;
     }
-    private String pa;
-    private boolean idi;
-    private long re;
-    private long lch;
-    private String lcoa;
-    private int tty;
-    private int pty;
-    private boolean ive;
-    private boolean ilo;
-    private boolean ico;
-    private int rtty;
-    private int rpty;
-    private String cn;
-    private String co;
-    private String cw;
-    private String u;
-    private String ucf;
-    private long rcf;
+
     /**
      * @return path of status entry
      */
-    public String path()
+    public String getPath()
     {
-        return pa;
+        return path;
     }
-    /**
-     * @return true if entry is a dir
-     */
-    public boolean isDir()
-    {
-        return idi;
-    }
+
     /**
      * @return revision if versioned, otherwise SVN_INVALID_REVNUM
      */
-    public long revision()
+    public Revision.Number getRevision()
     {
-        return re;
+        return new Revision.Number(revision);
     }
     /**
-     * Returns the last time the file was changed revision number.
+     * @return the last time the file was changed revision number.
+     * or null if not available
      */
-    public long lastChanged()
+    public Date getLastChangedDate()
     {
-        return lch;
+        if (lastChangedDate == 0)
+            return null;
+        else
+            return new Date(lastChangedDate/1000);
     }
     /**
      * @return name of author if versioned, NULL otherwise
      */
-    public String lastCommitAuthor()
+    public String getLastCommitAuthor()
     {
-        return lcoa;
+        return lastCommitAuthor;
     }
-    /**
-     * @return file status of the "textual" component.
-     */
-    public String textDescription()
-    {
-        return Kind.getDescription(tty);
-    }
+
     /**
      * @return file status property enum of the "textual" component.
      */
-    public int textType()
+    public int getTextStatus()
     {
-        return tty;
+        return textStatus;
     }
-    /**
-     * @return textual file status of the "property" component.
-     */
-    public String propDescription()
-    {
-        return Kind.getDescription(pty);
-    }
+
     /**
      * @return file status property enum of the "property" component.
      */
-    public int propType()
+    public int getPropStatus()
     {
-        return pty;
+        return propStatus;
     }
-    /**
-     * @return file status of the "textual" component im the repository.
-     */
-    public String repositoryTextDescription()
-    {
-        return Kind.getDescription(rtty);
-    }
+
     /**
      * @return file status property enum of the "textual" component im the repository.
      */
-    public int repositoryTextType()
+    public int getRepositoryTextStatus()
     {
-        return rtty;
+        return repositoryTextStatus;
     }
-    /**
-     * @return textual file status of the "property" component im the repository.
-     */
-    public String repositoryPropDescription()
-    {
-        return Kind.getDescription(rpty);
-    }
+
     /**
      * @return file status property enum of the "property" component im the repository.
      */
-    public int repositoryPropType()
+    public int getRepositoryPropStatus()
     {
-        return rpty;
+        return repositoryPropStatus;
     }
-    /**
-     * @return true if under version control
-     */
-    public boolean isVersioned()
-    {
-        return ive;
-    }
+
     /**
      * @return true if locked
      */
      public boolean isLocked()
     {
-        return ilo;
+        return locked;
     }
     /**
      * @return true if copied
      */
     public boolean isCopied()
     {
-        return ico;
+        return copied;
     }
-    public String conflictNew()
+    public String getConflictNew()
     {
-        return cn;
+        return conflictNew;
     }
-    public String conflictOld()
+    public String getConflictOld()
     {
-        return co;
+        return conflictOld;
     }
-    public String conflictWorking()
+    public String getConflictWorking()
     {
-        return cw;
+        return conflictWorking;
     }
-    public String url()
-    {
-        return u;
+
+    /**
+     * @return url in repository or null if not known
+     */
+    public String getUrl() {
+        return url;
     }
-    public String urlCopiedFrom()
-    {
-        return ucf;
+
+
+    /**
+     * @return last changed revision
+     */
+    public Revision.Number getLastChangedRevision() {
+        return new Revision.Number(lastChangedRevision);
     }
-    public long revisionCopiedFrom()
-    {
-        return rcf;
+
+    /**
+     * @return the node kind
+     */
+    public int getNodeKind() {
+        return nodeKind;
     }
+
+
+    public String getUrlCopiedFrom() {
+        return urlCopiedFrom;
+    }
+    
+    public Revision.Number getRevisionCopiedFrom() {
+        return new Revision.Number(revisionCopiedFrom);
+    }
+
+    /**
+     * tells if is managed by svn (added, normal, modified ...)
+     * @return
+     */
+    public boolean isManaged()  {
+        int textStatus = getTextStatus();
+        return ((textStatus != Status.Kind.unversioned) && 
+                (textStatus != Status.Kind.none) &&
+                (textStatus != Status.Kind.ignored));
+    }
+    
+    /**
+     * tells if the resource has a remote counter-part
+     * @return
+     */
+    public boolean hasRemote() {
+        int textStatus = getTextStatus();
+        return ((isManaged()) && (textStatus != Status.Kind.added));
+    }
+    
+    public boolean isAdded() {
+        int textStatus = getTextStatus();
+        return textStatus == Status.Kind.added;
+    }
+
+    public boolean isDeleted() {
+        int textStatus = getTextStatus();
+        return textStatus == Status.Kind.deleted;        
+    }
+
+    public boolean isMerged() {
+        int textStatus = getTextStatus();
+        return textStatus == Status.Kind.merged;        
+    }
+
+    public boolean isIgnored() {
+        int textStatus = getTextStatus();
+        return textStatus == Status.Kind.ignored;        
+    }
+    
+
+
+    /**
+     * tells if it is modified
+     * @return
+     */
+    public boolean isModified() {
+        int textStatus = getTextStatus();
+        return textStatus == Status.Kind.modified;
+    }
+
+
 
     public static final class Kind
     {
@@ -236,6 +287,12 @@ public class Status
         /** an unversioned resource is in the way of the versioned resource */
         public static final int obstructed = 10;
 
+        /** a resource marked as ignored */
+        public static final int ignored = 11;
+        
+        /** a directory doesn't contain a complete entries list  */
+        public static final int incomplete = 12;
+
         public static final String getDescription(int kind)
         {
             switch (kind)
@@ -258,10 +315,17 @@ public class Status
               return "merged";
             case conflicted:
               return "conflicted";
+            case ignored:
+              return "ignored";
+            case incomplete:
+              return "incomplete";
             case unversioned:
             default:
               return "unversioned";
             }
         }
     }
+
+
 }
+

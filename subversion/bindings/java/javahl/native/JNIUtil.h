@@ -56,7 +56,7 @@ public:
 	static bool isExceptionThrown();
 	static void handleAPRError(int error, const char *op);
 	static void putFinalizedClient(SVNClient *cl);
-	static void handleSVNError(svn_error *err, const char *message);
+	static void handleSVNError(svn_error *err);
 	static void throwError(const char *message);
 	static apr_pool_t * getPool();
 	static bool JNIInit(JNIEnv *env);
