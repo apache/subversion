@@ -1143,8 +1143,8 @@ svn_fs__rep_contents_clear (svn_fs_t *fs,
 
 /* Change this to 1 to test deltification/undeltification.  When we're
    ready for it to be permanently on, we should just remove the
-   #define altogther of course. */
-#define DELTIFYING 1
+   #define altogether of course. */
+#define DELTIFYING 0
 
 #if DELTIFYING
 /* Baton for svn_write_fn_t write_string(). */
