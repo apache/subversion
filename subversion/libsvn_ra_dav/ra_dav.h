@@ -243,6 +243,19 @@ svn_error_t * svn_ra_dav__get_activity_url(svn_stringbuf_t **activity_url,
                                            const char *url,
                                            apr_pool_t *pool);
 
+
+/* Send a METHOD request (e.g., "MERGE", "REPORT", "PROPFIND") to URL
+ * in session RAS, and parse the response.  If BODY is non-null, it is
+ * the body of the request, else use the contents of file FD as the body.
+ *
+ * ELEMENTS is the set of xml elements to recognize in the response.
+ *
+ * VALIDATE_CB, STARTELM_CB, and ENDELM_CB are Neon validation, start
+ * element, and end element handlers, respectively.  BATON is passed
+ * to each as userdata.
+ *
+ * Use POOL for any temporary allocation.
+ */
 svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
                                         const char *method,
                                         const char *url,
@@ -255,6 +268,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
                                         void *baton,
                                         apr_pool_t *pool);
 
+
 /* ### add SVN_RA_DAV_ to these to prefix conflicts with (sys) headers? */
 enum {
   /* DAV elements */
@@ -265,11 +279,15 @@ enum {
   ELEM_baseline_coll,
   ELEM_checked_in,
   ELEM_collection,
+  ELEM_comment,
+  ELEM_creator_displayname,
   ELEM_delete_entry,
   ELEM_fetch_file,
   ELEM_fetch_props,
   ELEM_remove_prop,
   ELEM_ignored_set,
+  ELEM_log_item,
+  ELEM_log_date,
   ELEM_merge_response,
   ELEM_merged_set,
   ELEM_options_response,
