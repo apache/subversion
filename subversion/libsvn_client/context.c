@@ -48,15 +48,8 @@ svn_client_ctx_set_auth_baton (svn_client_ctx_t *ctx,
   ctx->auth_baton = auth_baton;
 }
 
-svn_error_t *
-svn_client_ctx_get_old_auth_baton (svn_client_ctx_t *ctx,
-                                   svn_client_auth_baton_t **auth_baton)
+svn_client_auth_baton_t *
+svn_client_ctx_get_old_auth_baton (svn_client_ctx_t *ctx)
 {
-  *auth_baton = ctx->old_auth_baton;
-
-  if (! *auth_baton)
-    return svn_error_create (SVN_ERR_CLIENT_CTX_NOT_FOUND, NULL,
-                             "no authentication baton found");
-
-  return SVN_NO_ERROR;
+  return ctx->old_auth_baton;
 }
