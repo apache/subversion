@@ -264,6 +264,29 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...)
 
 
 
+/* Return the length of substring necessary to encompass the entire
+ * previous path segment in PATH, which should be a LEN byte string.
+ *
+ * A trailing slash will not be included in the returned length except
+ * in the case in which PATH is absolute and there are no more
+ * previous segments.
+ */
+static apr_size_t
+previous_segment (const char *path,
+                  apr_size_t len)
+{
+  if (len == 0)
+    return 0;
+
+  while (len > 0 && path[--len] != '/')
+    ;
+
+  if (len == 0 && path[0] == '/')
+    return 1;
+  else
+    return len;
+}
+
 void
 svn_path_add_component (svn_stringbuf_t *path, 
                         const char *component)
@@ -291,16 +314,8 @@ svn_path_remove_component (svn_stringbuf_t *path)
 {
   assert (is_canonical (path->data, path->len));
 
-  while (path->len > 0 && path->data[path->len] != '/')
-    --path->len;
-
-  if (path->len == 0 && path->data[0] == '/')
-    path->len++;
-
+  path->len = previous_segment(path->data, path->len);
   path->data[path->len] = '\0';
-
-  if (SVN_PATH_IS_PLATFORM_EMPTY (path->data, path->len))
-    svn_stringbuf_set (path, SVN_EMPTY_PATH);
 }
 
 
@@ -311,16 +326,7 @@ svn_path_dirname (const char *path, apr_pool_t *pool)
 
   assert (is_canonical (path, len));
 
-  while (len > 0 && path[len] != '/')
-    --len;
-
-  if (len == 0 && path[0] == '/')
-    ++len;
-
-  if (SVN_PATH_IS_PLATFORM_EMPTY (path, len))
-    return apr_pmemdup (pool, SVN_EMPTY_PATH, sizeof (SVN_EMPTY_PATH));
-
-  return apr_pstrmemdup (pool, path, len);
+  return apr_pstrmemdup (pool, path, previous_segment(path, len));
 }
 
 
@@ -993,7 +999,7 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
       dst += (src - path);
 
       /* Skip over the hostname. */
-      while(*src && *src != '/')
+      while (*src && *src != '/')
         *(dst++) = *(src++);
     }
   else
