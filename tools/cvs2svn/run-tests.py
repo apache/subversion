@@ -688,30 +688,9 @@ def mixed_commit():
 
 
 def split_branch():
-  "a branch created at different times in different places"
-  # See test-data/main-cvsrepos/proj/README.
-  repos, wc, logs = ensure_conversion('main', None, 1)
-  # Don't yet know the exact revision numbers, but basically we're
-  # testing these steps from test-data/main-cvsrepos/proj/README:
-  # 
-  # 13. Do "cvs up -A" to get everyone back to trunk, then make a new
-  #     branch B_SPLIT on everyone except sub1/subsubB/default,v.
-  # 
-  # 14. Switch to branch B_SPLIT (see sub1/subsubB/default disappear)
-  #     and commit a change that affects everyone except sub3/default.
-  # 
-  # 15. An hour or so later, "cvs up -A" to get sub1/subsubB/default
-  #     back, then commit a change on that file, on trunk.  (It's
-  #     important that this change happened after the previous commits
-  #     on B_SPLIT.)
-  # 
-  # 16. Branch sub1/subsubB/default to B_SPLIT, then "cvs up -r B_SPLIT"
-  #     to switch the whole working copy to the branch.
-  # 
-  # 17. Commit a change on B_SPLIT, to sub1/subsubB/default and
-  #     sub3/default.
-
-  raise svntest.Failure
+  "branch created from both trunk and from another branch"
+  # See test-data/split-branch/README.
+  repos, wc, logs = ensure_conversion('split-branch')
   
 
 #----------------------------------------------------------------------

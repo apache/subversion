@@ -1,0 +1,2613 @@
+head	1.24;
+access;
+symbols
+	volsung_20010721:1.15.0.2
+	xiphophorus:1.1.1;
+locks; strict;
+comment	@ * @;
+
+
+1.24
+date	2003.07.14.01.55.46;	author volsung;	state Exp;
+branches;
+next	1.23;
+
+1.23
+date	2003.01.08.03.48.54;	author volsung;	state Exp;
+branches;
+next	1.22;
+
+1.22
+date	2002.06.09.17.06.31;	author volsung;	state Exp;
+branches;
+next	1.21;
+
+1.21
+date	2002.06.09.15.44.43;	author volsung;	state Exp;
+branches;
+next	1.20;
+
+1.20
+date	2001.09.05.19.34.29;	author cwolf;	state Exp;
+branches;
+next	1.19;
+
+1.19
+date	2001.08.31.23.17.55;	author volsung;	state Exp;
+branches;
+next	1.18;
+
+1.18
+date	2001.08.22.01.56.25;	author volsung;	state Exp;
+branches;
+next	1.17;
+
+1.17
+date	2001.08.13.05.24.04;	author volsung;	state Exp;
+branches;
+next	1.16;
+
+1.16
+date	2001.08.04.02.56.14;	author volsung;	state Exp;
+branches;
+next	1.15;
+
+1.15
+date	2001.05.13.03.30.40;	author jack;	state Exp;
+branches
+	1.15.2.1;
+next	1.14;
+
+1.14
+date	2001.05.06.00.13.59;	author jack;	state Exp;
+branches;
+next	1.13;
+
+1.13
+date	2001.02.28.07.50.11;	author msmith;	state Exp;
+branches;
+next	1.12;
+
+1.12
+date	2001.02.24.01.31.46;	author jack;	state Exp;
+branches;
+next	1.11;
+
+1.11
+date	2001.02.24.01.21.04;	author jack;	state Exp;
+branches;
+next	1.10;
+
+1.10
+date	2001.02.24.01.18.50;	author jack;	state Exp;
+branches;
+next	1.9;
+
+1.9
+date	2000.12.17.20.28.35;	author giles;	state Exp;
+branches;
+next	1.8;
+
+1.8
+date	2000.12.17.13.24.10;	author kcarnold;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2000.11.18.06.36.58;	author jack;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2000.11.04.05.29.29;	author jack;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2000.10.30.04.38.48;	author jack;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2000.10.30.00.46.41;	author jack;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2000.09.30.01.16.15;	author kcarnold;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2000.09.27.06.11.55;	author jack;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2000.09.03.09.56.05;	author jack;	state Exp;
+branches
+	1.1.1.1;
+next	;
+
+1.1.1.1
+date	2000.09.03.09.56.05;	author jack;	state Exp;
+branches;
+next	;
+
+1.15.2.1
+date	2001.07.22.03.35.48;	author volsung;	state Exp;
+branches;
+next	1.15.2.2;
+
+1.15.2.2
+date	2001.07.23.23.13.29;	author volsung;	state Exp;
+branches;
+next	1.15.2.3;
+
+1.15.2.3
+date	2001.07.24.00.08.02;	author volsung;	state Exp;
+branches;
+next	1.15.2.4;
+
+1.15.2.4
+date	2001.07.24.17.51.11;	author volsung;	state Exp;
+branches;
+next	1.15.2.5;
+
+1.15.2.5
+date	2001.07.25.19.55.29;	author volsung;	state Exp;
+branches;
+next	1.15.2.6;
+
+1.15.2.6
+date	2001.07.25.20.54.43;	author volsung;	state Exp;
+branches;
+next	;
+
+
+desc
+@@
+
+
+1.24
+log
+@Patch from David Walser <luigiwalser@@yahoo.com> to do plugin detection in
+a better way.  Sort the plugin priorities and do them in descending order.
+Also makes use of arts/esd functions to test if they are holding the
+device or not.  If present, we check the those plugins first and only
+use them if they are currently holding the device.
+@
+text
+@/*
+ *
+ *  audio_out.c
+ *
+ *      Original Copyright (C) Aaron Holtzman - May 1999
+ *      Modifications Copyright (C) Stan Seibert - July 2000
+ *
+ *  This file is part of libao, a cross-platform audio output library.  See
+ *  README for a history of this source code.
+ *
+ *  libao is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2, or (at your option)
+ *  any later version.
+ *
+ *  libao is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with GNU Make; see the file COPYING.  If not, write to
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
+ */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <dlfcn.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#ifndef _MSC_VER
+# include <unistd.h>
+#endif
+#include <dirent.h>
+
+#include "ao/ao.h"
+#include "ao_private.h"
+
+/* These should have been set by the Makefile */
+#ifndef AO_PLUGIN_PATH
+#define AO_PLUGIN_PATH "/usr/local/lib/ao"
+#endif
+#ifndef SHARED_LIB_EXT
+#define SHARED_LIB_EXT ".so"
+#endif
+
+/* --- Other constants --- */
+#define DEF_SWAP_BUF_SIZE  1024
+
+/* --- Driver Table --- */
+
+typedef struct driver_list {
+	ao_functions *functions;
+	void *handle;
+	struct driver_list *next;
+} driver_list;
+
+
+extern ao_functions ao_null;
+extern ao_functions ao_wav;
+extern ao_functions ao_raw;
+extern ao_functions ao_au;
+#ifdef HAVE_SYS_AUDIO_H
+extern ao_functions ao_aixs;
+#endif
+
+static ao_functions *static_drivers[] = {
+	&ao_null, /* Must have at least one static driver! */
+	&ao_wav,
+	&ao_raw,
+	&ao_au,
+#ifdef HAVE_SYS_AUDIO_H
+	&ao_aixs,
+#endif
+	NULL /* End of list */
+};
+
+static driver_list *driver_head = NULL;
+static ao_config config = {
+	NULL /* default_driver */
+};
+
+static ao_info **info_table = NULL;
+static int driver_count = 0;
+
+/* ---------- Helper functions ---------- */
+
+/* Clear out all of the library configuration options and set them to
+   defaults.   The defaults should match the initializer above. */
+static void _clear_config()
+{
+	free(config.default_driver);
+	config.default_driver = NULL;
+}
+
+
+/* Load a plugin from disk and put the function table into a driver_list
+   struct. */
+
+static driver_list *_get_plugin(char *plugin_file)
+{
+	driver_list *dt;
+	void *handle;
+
+	handle = dlopen(plugin_file, DLOPEN_FLAG /* See ao_private.h */);
+
+	if (handle) {
+		dt = (driver_list *)malloc(sizeof(driver_list));
+		if (!dt) return NULL;
+
+		dt->handle = handle;
+		
+		dt->functions = (ao_functions *)malloc(sizeof(ao_functions));
+		if (!(dt->functions)) {
+			free(dt);
+			return NULL;
+		}
+
+		dt->functions->test = dlsym(dt->handle, "ao_plugin_test");
+		if (dlerror()) { free(dt->functions); free(dt); return NULL; }
+
+		dt->functions->driver_info = 
+		  dlsym(dt->handle, "ao_plugin_driver_info");
+		if (dlerror()) { free(dt->functions); free(dt); return NULL; }
+
+		dt->functions->device_init = 
+		  dlsym(dt->handle, "ao_plugin_device_init");
+		if (dlerror()) { free(dt->functions); free(dt); return NULL; }
+
+		dt->functions->set_option = 
+		  dlsym(dt->handle, "ao_plugin_set_option");
+		if (dlerror()) { free(dt->functions); free(dt); return NULL; }
+
+		dt->functions->open = dlsym(dt->handle, "ao_plugin_open");
+		if (dlerror()) { free(dt->functions); free(dt); return NULL; }
+
+		dt->functions->play = dlsym(dt->handle, "ao_plugin_play");
+		if (dlerror()) { free(dt->functions); free(dt); return NULL; }
+
+		dt->functions->close = dlsym(dt->handle, "ao_plugin_close");
+		if (dlerror()) { free(dt->functions); free(dt); return NULL; }
+
+		dt->functions->device_clear = 
+		  dlsym(dt->handle, "ao_plugin_device_clear");
+		if (dlerror()) { free(dt->functions); free(dt); return NULL; }
+
+
+	} else {
+		return NULL;
+	}
+
+	return dt;
+}
+
+
+/* If *name is a valid driver name, return its driver number.
+   Otherwise, test all of available live drivers until one works. */
+static int _find_default_driver_id (const char *name)
+{
+	int def_id;
+	int id;
+	ao_info *info;
+	driver_list *driver = driver_head;
+
+	if ( name == NULL || (def_id = ao_driver_id(name)) < 0 ) {
+		/* No default specified. Find one among available drivers. */
+		def_id = -1;
+		
+		id = 0;
+		while (driver != NULL) {
+
+			info = driver->functions->driver_info();
+
+			if ( info->type == AO_TYPE_LIVE && 
+			     info->priority > 0 && /* Skip static drivers */
+			     driver->functions->test() ) {
+				def_id = id; /* Found a usable driver */
+				break;
+			}
+
+			driver = driver->next;
+			id++;
+		}
+	}
+
+	return def_id;
+}
+
+
+/* Convert the static drivers table into a linked list of drivers. */ 
+static driver_list* _load_static_drivers(driver_list **end)
+{
+	driver_list *head;
+	driver_list *driver;
+	int i;
+       
+	/* insert first driver */
+	head = driver = malloc(sizeof(driver_list));
+	if (driver != NULL) {
+		driver->functions = static_drivers[0];
+		driver->handle = NULL;
+		driver->next = NULL;
+
+		i = 1;
+		while (static_drivers[i] != NULL) {
+			driver->next = malloc(sizeof(driver_list));
+			if (driver->next == NULL)
+				break;
+
+			driver->next->functions = static_drivers[i];
+			driver->next->handle = NULL;
+			driver->next->next = NULL;
+			
+			driver = driver->next;
+			i++;
+		}
+	}
+
+	if (end != NULL)
+		*end = driver;
+
+	return head;
+}
+
+
+/* Load the dynamic drivers from disk and append them to end of the
+   driver list.  end points the driver_list node to append to. */
+static void _append_dynamic_drivers(driver_list *end)
+{
+	struct dirent *plugin_dirent;
+	char *ext;
+	struct stat statbuf;
+	char fullpath[FILENAME_MAX];
+	DIR *plugindir;
+	driver_list *plugin;
+	driver_list *driver = end;
+
+	/* now insert any plugins we find */
+	plugindir = opendir(AO_PLUGIN_PATH);
+	if (plugindir != NULL) {
+		while ((plugin_dirent = readdir(plugindir)) != NULL) {
+			snprintf(fullpath, FILENAME_MAX, "%s/%s", 
+				 AO_PLUGIN_PATH, plugin_dirent->d_name);
+			if (!stat(fullpath, &statbuf) && 
+			    S_ISREG(statbuf.st_mode) && 
+			 (ext = strrchr(plugin_dirent->d_name, '.')) != NULL) {
+				if (strcmp(ext, SHARED_LIB_EXT) == 0) {
+					plugin = _get_plugin(fullpath);
+					if (plugin) {
+						driver->next = plugin;
+						plugin->next = NULL;
+						driver = driver->next;
+					}
+				}
+			}
+		}
+		
+		closedir(plugindir);
+	}
+}
+
+
+/* Compare two drivers based on priority 
+   Used as compar function for qsort() in _make_info_table() */
+static int _compar_driver_priority (const driver_list **a, 
+				    const driver_list **b)
+{
+	return memcmp(&((*b)->functions->driver_info()->priority),
+		      &((*a)->functions->driver_info()->priority),
+		      sizeof(int));
+}
+
+
+/* Make a table of driver info structures for ao_driver_info_list(). */
+static ao_info ** _make_info_table (driver_list **head, int *driver_count)
+{
+	driver_list *list;
+	int i;
+	ao_info **table;
+	driver_list **drivers_table;
+
+	*driver_count = 0;
+
+	/* Count drivers */
+	list = *head;
+	i = 0;
+	while (list != NULL) {
+		i++;
+		list = list->next;
+	}
+
+	
+	/* Sort driver_list */
+	drivers_table = (driver_list **) calloc(i, sizeof(driver_list *));
+	if (drivers_table == NULL)
+		return (ao_info **) NULL;
+	list = *head;
+	*driver_count = i;
+	for (i = 0; i < *driver_count; i++, list = list->next)
+		drivers_table[i] = list;
+	qsort(drivers_table, i, sizeof(driver_list *), _compar_driver_priority);
+	*head = drivers_table[0];
+	for (i = 1; i < *driver_count; i++)
+		drivers_table[i-1]->next = drivers_table[i];
+	drivers_table[i-1]->next = NULL;
+
+
+	/* Alloc table */
+	table = (ao_info **) calloc(i, sizeof(ao_info *));
+	if (table != NULL) {
+		for (i = 0; i < *driver_count; i++)
+			table[i] = drivers_table[i]->functions->driver_info();
+	}
+
+	free(drivers_table);
+
+	return table;
+}
+
+
+/* Return the driver struct corresponding to particular driver id
+   number. */
+static driver_list *_get_driver(int driver_id) {
+	int i = 0;
+	driver_list *driver = driver_head;
+
+	if (driver_id < 0) return NULL;
+
+	while (driver && (i < driver_id)) {
+		i++;
+		driver = driver->next;
+	}
+
+	if (i == driver_id) 
+		return driver;
+
+	return NULL;
+}
+
+
+/* Check if driver_id is a valid id number */
+static int _check_driver_id(int driver_id)
+{
+	int i = 0;
+	driver_list *driver = driver_head;
+
+	if (driver_id < 0) return 0;
+
+	while (driver && (i <= driver_id)) {
+		driver = driver->next;
+		i++;
+	}
+	
+	if (i == (driver_id + 1))
+		return 1;
+
+	return 0;
+}	
+
+
+/* helper function to convert a byte_format of AO_FMT_NATIVE to the
+   actual byte format of the machine, otherwise just return
+   byte_format */
+static int _real_byte_format(int byte_format)
+{
+	if (byte_format == AO_FMT_NATIVE) {
+		if (ao_is_big_endian())
+			return AO_FMT_BIG;
+		else
+			return AO_FMT_LITTLE;
+	} else
+		return byte_format;
+}
+
+
+/* Create a new ao_device structure and populate it with data */
+static ao_device* _create_device(int driver_id, driver_list *driver,
+				 ao_sample_format *format, FILE *file)
+{
+	ao_device *device;
+	
+	device = malloc(sizeof(ao_device));
+	
+	if (device != NULL) {		
+		device->type = driver->functions->driver_info()->type;
+		device->driver_id = driver_id;
+		device->funcs = driver->functions;
+		device->file = file;
+		device->machine_byte_format = 
+		  ao_is_big_endian() ? AO_FMT_BIG : AO_FMT_LITTLE;
+		device->client_byte_format =
+		  _real_byte_format(format->byte_format);
+		device->swap_buffer = NULL;
+		device->swap_buffer_size = 0;
+		device->internal = NULL;
+	}
+
+	return device;
+}
+
+
+/* Expand the swap buffer in this device if it is smaller than
+   min_size. */
+static int _realloc_swap_buffer(ao_device *device, int min_size)
+{
+	void *temp;
+
+	if (min_size > device->swap_buffer_size) {
+		temp = realloc(device->swap_buffer, min_size);
+		if (temp != NULL) {
+			device->swap_buffer = temp;
+			device->swap_buffer_size = min_size;
+			return 1; /* Success, realloc worked */
+		} else
+			return 0; /* Fail to realloc */
+	} else
+		return 1; /* Success, no need to realloc */
+}
+
+
+/* Swap and copy the byte order of samples from the source buffer to
+   the target buffer. */
+static void _swap_samples(char *target_buffer, char* source_buffer,
+			  uint_32 num_bytes)
+{
+	uint_32 i;
+
+	for (i = 0; i < num_bytes; i += 2) {
+		target_buffer[i] = source_buffer[i+1];
+		target_buffer[i+1] = source_buffer[i];
+	}
+}
+		
+
+/* Open a device.  If this is a live device, file == NULL. */
+static ao_device* _open_device(int driver_id, ao_sample_format *format, 
+			       ao_option *options, FILE *file)
+{
+	ao_functions *funcs;
+	driver_list *driver;
+	ao_device *device;
+	int result;
+	
+	/* Get driver id */
+	if ( (driver = _get_driver(driver_id)) == NULL ) {
+		errno = AO_ENODRIVER;
+		return NULL; /* No driver exists */
+	}
+
+	funcs = driver->functions;
+
+	/* Check the driver type */
+	if (file == NULL && 
+	    funcs->driver_info()->type != AO_TYPE_LIVE) {
+
+		errno = AO_ENOTLIVE;
+		return NULL;
+	} else if (file != NULL && 
+		   funcs->driver_info()->type != AO_TYPE_FILE) {
+
+		errno = AO_ENOTFILE;
+		return NULL;
+	}
+	
+	/* Make a new device structure */
+	if ( (device = _create_device(driver_id, driver, 
+				      format, file)) == NULL ) {
+		errno = AO_EFAIL;
+		return NULL; /* Couldn't alloc device */
+	}
+		
+	/* Initialize the device memory */
+	if (!funcs->device_init(device)) {
+		free(device);
+		errno = AO_EFAIL;
+		return NULL; /* Couldn't init internal memory */
+	}
+	
+	/* Load options */
+	while (options != NULL) {
+		if (!funcs->set_option(device, options->key, options->value)) {
+			/* Problem setting options */
+			free(device);
+			errno = AO_EOPENDEVICE;
+			return NULL;
+		}
+			
+		options = options->next;
+	}
+
+	/* Open the device */
+	result = funcs->open(device, format);
+	if (!result) {
+		funcs->device_clear(device);
+		free(device);
+		errno = AO_EOPENDEVICE;
+		return NULL; /* Couldn't open device */
+	}
+		
+	/* Resolve actual driver byte format */
+	device->driver_byte_format = 
+		_real_byte_format(device->driver_byte_format);
+	
+	/* Only create swap buffer for 16 bit samples if needed */
+	if (format->bits == 16 &&
+	    device->client_byte_format != device->driver_byte_format) {
+		
+		result = _realloc_swap_buffer(device, DEF_SWAP_BUF_SIZE);
+		
+		if (!result) {
+			
+			device->funcs->close(device);
+			device->funcs->device_clear(device);
+			free(device);
+			errno = AO_EFAIL;
+			return NULL; /* Couldn't alloc swap buffer */
+		}
+	}
+	
+	/* If we made it this far, everything is OK. */
+	return device; 
+}
+
+
+/* ---------- Public Functions ---------- */
+
+/* -- Library Setup/Teardown -- */
+
+void ao_initialize(void)
+{
+	driver_list *end;
+
+	/* Read config files */
+	read_config_files(&config);
+
+	if (driver_head == NULL) {
+		driver_head = _load_static_drivers(&end);
+		_append_dynamic_drivers(end);
+	}
+
+	/* Create the table of driver info structs */
+	info_table = _make_info_table(&driver_head, &driver_count);
+}
+
+
+void ao_shutdown(void)
+{
+	driver_list *driver = driver_head;
+	driver_list *next_driver;
+
+	if (!driver_head) return;
+
+	/* unload and free all the drivers */
+	while (driver) {
+		if (driver->handle) {
+		  dlclose(driver->handle);
+		  free(driver->functions); /* DON'T FREE STATIC FUNC TABLES */
+		}
+		next_driver = driver->next;
+		free(driver);
+		driver = next_driver;
+	}
+
+        _clear_config();
+	/* NULL out driver_head or ao_initialize() won't work */
+	driver_head = NULL;
+}
+
+
+/* -- Device Setup/Playback/Teardown -- */
+
+int ao_append_option(ao_option **options, const char *key, const char *value)
+{
+	ao_option *op, *list;
+
+	op = malloc(sizeof(ao_option));
+	if (op == NULL) return 0;
+
+	op->key = strdup(key);
+	op->value = strdup(value);
+	op->next = NULL;
+
+	if ((list = *options) != NULL) {
+		list = *options;
+		while (list->next != NULL) list = list->next;
+		list->next = op;
+	} else {
+		*options = op;
+	}
+
+
+	return 1;
+}
+
+
+void ao_free_options(ao_option *options)
+{
+	ao_option *rest;
+
+	while (options != NULL) {
+		rest = options->next;
+		free(options->key);
+		free(options->value);
+		free(options);
+		options = rest;
+	}
+}
+
+
+ao_device *ao_open_live (int driver_id, ao_sample_format *format, 
+			ao_option *options)
+{
+	return _open_device(driver_id, format, options, NULL);		
+}
+
+
+ao_device *ao_open_file (int driver_id, const char *filename, int overwrite, 
+			 ao_sample_format *format, ao_option *options)
+{
+	FILE *file;
+	ao_device *device;
+
+	if (strcmp("-", filename) == 0)
+		file = stdout;
+	else {
+
+		if (!overwrite) {
+			/* Test for file existence */
+			file = fopen(filename, "r");
+			if (file != NULL) {
+				fclose(file);
+				errno = AO_EFILEEXISTS;
+				return NULL;
+			}
+		}
+
+
+		file = fopen(filename, "w");
+	}
+
+
+	if (file == NULL) {
+		errno = AO_EOPENFILE;
+		return NULL;
+	}
+		
+	device = _open_device(driver_id, format, options, file);
+	
+	if (device == NULL) {
+		fclose(file);
+		/* errno already set by _open_device() */
+		return NULL;
+	}
+
+	return device;
+}
+
+
+int ao_play(ao_device *device, char* output_samples, uint_32 num_bytes)
+{
+	char *playback_buffer;
+
+	if (device->swap_buffer != NULL) {
+		if (_realloc_swap_buffer(device, num_bytes)) {
+			_swap_samples(device->swap_buffer, 
+				      output_samples, num_bytes);
+			playback_buffer = device->swap_buffer;
+		} else
+			return 0; /* Could not expand swap buffer */
+	} else
+		playback_buffer = output_samples;
+
+	return device->funcs->play(device, playback_buffer, num_bytes);
+}
+
+
+int ao_close(ao_device *device)
+{
+	int result;
+
+	result = device->funcs->close(device);
+	device->funcs->device_clear(device);
+	free(device);
+
+	return result;
+}
+
+
+/* -- Driver Information -- */
+
+int ao_driver_id(const char *short_name)
+{
+	int i;
+	driver_list *driver = driver_head;
+
+	i = 0;
+	while (driver) {
+		if (strcmp(short_name, 
+			   driver->functions->driver_info()->short_name) == 0)
+			return i;
+		driver = driver->next;
+		i++;
+	}
+	
+	return -1; /* No driver by that name */
+}
+
+
+int ao_default_driver_id ()
+{
+	/* Find the default driver in the list of loaded drivers */
+  
+	return _find_default_driver_id(config.default_driver);
+}
+
+
+ao_info *ao_driver_info(int driver_id)
+{
+	driver_list *driver;
+
+	if ( (driver = _get_driver(driver_id)) )
+		return driver->functions->driver_info();
+	else
+		return NULL;
+}
+
+
+ao_info **ao_driver_info_list(int *count)
+{
+	*count = driver_count;
+	return info_table;
+}
+
+
+/* -- Miscellaneous -- */
+
+/* Stolen from Vorbis' lib/vorbisfile.c */
+int ao_is_big_endian(void) 
+{
+	uint_16 pattern = 0xbabe;
+	unsigned char *bytewise = (unsigned char *)&pattern;
+
+	if (bytewise[0] == 0xba) return 1;
+	return 0;
+}
+@
+
+
+1.23
+log
+@Patch from Stefan Tibus <sjti@@gmx.net> to add support for the AIX audio
+devices.  The conditional compilation is a little messy, but I still need
+to decide a good way to do that in general.
+@
+text
+@a163 1
+	int priority;
+a171 1
+		priority = 0; /* This forces the null driver to be skipped */ 
+d177 1
+a177 1
+			     info->priority > priority &&
+a178 1
+				priority = info->priority;
+d180 1
+d265 11
+d277 1
+a277 1
+static ao_info ** _make_info_table (driver_list *head, int *driver_count)
+d282 3
+d287 1
+a287 1
+	list = head;
+d295 15
+d313 5
+a317 6
+		*driver_count = i;
+		list = head;
+		for (i = 0; i < *driver_count; i++, list = list->next)
+			table[i] = list->functions->driver_info();
+	} else
+		*driver_count = 0;
+d544 1
+a544 1
+	info_table = _make_info_table(driver_head, &driver_count);
+@
+
+
+1.22
+log
+@Removed unnecessary trailing comma to make Jack happy.  :-P
+@
+text
+@d65 3
+d74 3
+@
+
+
+1.21
+log
+@Made use of "static" to prevent unwanted symbols from being exported.
+@
+text
+@d76 1
+a76 1
+	NULL, /* default_driver */
+@
+
+
+1.20
+log
+@Don't include unistd.h with MSVC, fix a warning
+@
+text
+@d66 1
+a66 1
+ao_functions *static_drivers[] = {
+d74 2
+a75 2
+driver_list *driver_head = NULL;
+ao_config config = {
+d79 2
+a80 2
+ao_info **info_table = NULL;
+int driver_count = 0;
+d86 1
+a86 1
+void _clear_config()
+d96 1
+a96 1
+driver_list *_get_plugin(char *plugin_file)
+d154 1
+a154 1
+int _find_default_driver_id (const char *name)
+d189 1
+a189 1
+driver_list* _load_static_drivers(driver_list **end)
+d226 1
+a226 1
+void _append_dynamic_drivers(driver_list *end)
+d262 1
+a262 1
+ao_info ** _make_info_table (driver_list *head, int *driver_count)
+d293 1
+a293 1
+driver_list *_get_driver(int driver_id) {
+d312 1
+a312 1
+int _check_driver_id(int driver_id)
+d334 1
+a334 1
+int _real_byte_format(int byte_format)
+d347 2
+a348 2
+ao_device* _create_device(int driver_id, driver_list *driver,
+			  ao_sample_format *format, FILE *file)
+d374 1
+a374 1
+int _realloc_swap_buffer(ao_device *device, int min_size)
+d393 2
+a394 1
+void _swap_samples(char *target_buffer, char* source_buffer, uint_32 num_bytes)
+d406 2
+a407 2
+ao_device* _open_device(int driver_id, ao_sample_format *format, 
+			ao_option *options, FILE *file)
+@
+
+
+1.19
+log
+@API update allowing library users to get the suggested file extension
+associated with a particular file output driver.  The additional
+plugin function is optional, so drivers that don't need to implement it
+don't have to.  That's why we don't need to bump the plugin API version number.
+@
+text
+@d33 3
+a35 1
+#include <unistd.h>
+d37 1
+d43 1
+a43 1
+#define AO_PLUGIN_PATH "/usr/local/lib/ao/plugins"
+a142 5
+		/* Optional function */
+		dt->functions->file_extension = 
+		  dlsym(dt->handle, "ao_plugin_file_extension");
+		if (dlerror()) { dt->functions->file_extension = NULL; }
+
+d395 1
+a395 1
+	int i;
+a701 12
+
+
+char *ao_file_extension(int driver_id)
+{
+	driver_list *driver;
+
+	if ( (driver = _get_driver(driver_id)) 
+	     && driver->functions->file_extension != NULL)
+		return driver->functions->file_extension();
+	else
+		return NULL;
+}  
+@
+
+
+1.18
+log
+@Changed plugin dir to be less messy.  All plugin versions will be in
+separate subdirectories of $libdir/ao.
+@
+text
+@d140 5
+d704 12
+@
+
+
+1.17
+log
+@Default driver is now identified when ao_default_driver_id() is called
+rather than ao_initialize().  This has the benefit of avoiding autodetection
+unless is it necessary.
+@
+text
+@d40 1
+a40 1
+#define AO_PLUGIN_PATH "/usr/local/lib/ao"
+@
+
+
+1.16
+log
+@Merger of new API branch (volsung_20010721) with head.
+@
+text
+@a73 1
+	-1,   /* default_driver_id */
+a86 1
+	config.default_driver_id = -1;
+a506 4
+	/* Find the default driver in the list of loaded drivers */
+	config.default_driver_id = 
+	  _find_default_driver_id(config.default_driver);
+
+d677 3
+a679 1
+	return config.default_driver_id;
+@
+
+
+1.15
+log
+@.au output device
+
+provided by William T. Mahan <wtm2@@duke.edu>
+@
+text
+@d35 2
+a36 1
+#include <ao/ao.h>
+a38 3
+#ifndef AO_DEFAULT
+#define AO_DEFAULT AO_NULL
+#endif
+d46 3
+d51 2
+a52 2
+typedef struct driver_tree_s {
+	ao_functions_t *functions;
+d54 25
+a78 2
+	struct driver_tree_s *next;
+} driver_tree_t;
+d80 1
+a80 4
+extern ao_functions_t ao_null;
+extern ao_functions_t ao_wav;
+extern ao_functions_t ao_raw;
+extern ao_functions_t ao_au;
+d82 12
+a93 1
+driver_tree_t *driver_head = NULL;
+d95 1
+a95 1
+driver_tree_t *_get_plugin(char *plugin_file)
+d97 1
+a97 1
+	driver_tree_t *dt;
+d99 3
+a101 2
+	
+	handle = dlopen(plugin_file, RTLD_NOW);
+d103 1
+a103 1
+		dt = (driver_tree_t *)malloc(sizeof(driver_tree_t));
+d108 1
+a108 1
+		dt->functions = (ao_functions_t *)malloc(sizeof(ao_functions_t));
+d114 1
+a114 1
+		dt->functions->get_driver_info = dlsym(dt->handle, "plugin_get_driver_info");
+d116 14
+a129 1
+		dt->functions->open = dlsym(dt->handle, "plugin_open");
+d131 2
+a132 1
+		dt->functions->play = dlsym(dt->handle, "plugin_play");
+d134 2
+a135 1
+		dt->functions->close = dlsym(dt->handle, "plugin_close");
+d137 3
+a139 1
+		dt->functions->get_latency = dlsym(dt->handle, "plugin_get_latency");
+d141 2
+d150 76
+a225 1
+void ao_initialize(void)
+a226 7
+	driver_tree_t *dnull;
+	driver_tree_t *dwav;
+	driver_tree_t *draw;
+	driver_tree_t *dau;
+	driver_tree_t *plugin;
+	driver_tree_t *driver;
+	DIR *plugindir;
+a229 1
+	void *plughand;
+d231 3
+d235 15
+a249 36
+	if (driver_head == NULL) {
+		/* insert the null, wav, raw, and au drivers into the tree */
+		dnull = (driver_tree_t *)malloc(sizeof(driver_tree_t));
+		dnull->functions = &ao_null;
+		dnull->handle = NULL;
+		dwav = (driver_tree_t *)malloc(sizeof(driver_tree_t));
+		dwav->functions = &ao_wav;
+		dwav->handle = NULL;
+		draw = (driver_tree_t *)malloc(sizeof(driver_tree_t));
+		draw->functions = &ao_raw;
+		draw->handle = NULL;
+		dau = (driver_tree_t *)malloc(sizeof(driver_tree_t));
+		dau->functions = &ao_au;
+		dau->handle = NULL;
+		
+		dnull->next = dwav;
+		dwav->next = draw;
+		draw->next = dau;
+		dau->next = NULL;
+
+		driver_head = dnull;		
+		driver = dau;
+
+		/* now insert any plugins we find */
+		plugindir = opendir(AO_PLUGIN_PATH);
+		if (plugindir != NULL) {
+			while ((plugin_dirent = readdir(plugindir)) != NULL) {
+				snprintf(fullpath, FILENAME_MAX, "%s/%s", AO_PLUGIN_PATH, plugin_dirent->d_name);
+				if (!stat(fullpath, &statbuf) && S_ISREG(statbuf.st_mode) && (ext = strrchr(plugin_dirent->d_name, '.')) != NULL) {
+					if (strcmp(ext, SHARED_LIB_EXT) == 0) {
+						plugin = _get_plugin(fullpath);
+						if (plugin) {
+							driver->next = plugin;
+							plugin->next = NULL;
+							driver = driver->next;
+						}
+a252 2
+			
+			closedir(plugindir);
+d254 2
+d259 3
+a261 1
+void ao_shutdown(void)
+d263 3
+a265 2
+	driver_tree_t *driver = driver_head;
+	driver_tree_t *next_driver;
+d267 6
+a272 10
+	if (!driver_head) return;
+
+	/* unload and free all the plugins */
+	driver = driver->next->next->next->next;  /* Skip null, wav, raw, and au driver */
+	while (driver) {
+		if (driver->functions) free(driver->functions);
+		if (driver->handle) dlclose(driver->handle);
+		next_driver = driver->next;
+		free(driver);
+		driver = next_driver;
+a274 6
+	/* free the standard drivers */
+	if (driver_head) {
+		if(driver_head->next)
+			free(driver_head->next);
+		free(driver_head);
+	}
+d276 11
+a286 2
+	/* NULL out driver_head or ao_initialize won't work */
+	driver_head = NULL;
+a288 19
+int ao_get_driver_id(const char *short_name)
+{
+	int i;
+	driver_tree_t *driver = driver_head;
+
+	if (short_name == NULL) {
+		return AO_NULL;
+	} else {
+		i = 0;
+		while (driver) {
+			if (strcmp(short_name, driver->functions->get_driver_info()->short_name) == 0)
+				return i;
+			driver = driver->next;
+			i++;
+		}
+		
+		return -1; /* No driver by that name */
+	}
+}
+d290 3
+a292 1
+driver_tree_t *_get_driver(int driver_id) {
+d294 1
+a294 1
+	driver_tree_t *driver = driver_head;
+d309 2
+d314 1
+a314 1
+	driver_tree_t *driver = driver_head;
+d329 19
+a347 1
+ao_info_t *ao_get_driver_info(int driver_id)
+d349 17
+a365 1
+	driver_tree_t *driver;
+d367 1
+a367 4
+	if (driver = _get_driver(driver_id))
+		return driver->functions->get_driver_info();
+	else
+		return NULL;
+d371 17
+a388 1
+/* -- Audio Functions --- */
+d390 3
+a392 1
+ao_device_t* ao_open(int driver_id, uint_32 bits, uint_32 rate, uint_32 channels, ao_option_t *options)
+d394 91
+a484 13
+	ao_functions_t *funcs;
+	ao_internal_t *state;
+	ao_device_t *device;
+	driver_tree_t *driver = driver_head;
+
+	if (driver = _get_driver(driver_id)) {
+		funcs = driver->functions;
+		state = funcs->open(bits, rate, channels, options);
+		if (state != NULL) {
+			device = malloc(sizeof(ao_device_t));
+			device->funcs = funcs;
+			device->state = state;
+			return device;
+d488 8
+a495 2
+	return NULL;
+}	
+d497 1
+a497 1
+void ao_play(ao_device_t *device, void* output_samples, uint_32 num_bytes)
+d499 16
+a514 1
+	device->funcs->play(device->state, output_samples, num_bytes);
+d518 1
+a518 1
+void ao_close(ao_device_t *device)
+d520 19
+a538 2
+	device->funcs->close(device->state);
+	free(device);
+d542 1
+d544 1
+a544 3
+/* --- Option Functions --- */
+
+int ao_append_option(ao_option_t **options, const char *key, const char *value)
+d546 1
+a546 1
+	ao_option_t *op, *list;
+d548 1
+a548 1
+	op = malloc(sizeof(ao_option_t));
+d568 1
+a568 1
+void ao_free_options(ao_option_t *options)
+d570 1
+a570 1
+	ao_option_t *rest;
+d581 127
+a707 1
+/* Helper function lifted from Vorbis' lib/vorbisfile.c */
+a715 6
+
+int ao_get_latency(ao_device_t *device)
+{
+	return device->funcs->get_latency(device->state);
+}
+
+@
+
+
+1.15.2.1
+log
+@Initial branch of libao to new API.  Great fear and trembling shall
+sweep the land...
+@
+text
+@d35 1
+a35 2
+#include "ao/ao.h"
+#include "ao_private.h"
+d38 3
+a47 3
+/* --- Other constants --- */
+#define DEF_SWAP_BUF_SIZE  1024
+
+d50 2
+a51 2
+typedef struct driver_list {
+	ao_functions *functions;
+d53 2
+a54 25
+	struct driver_list *next;
+} driver_list;
+
+
+extern ao_functions ao_null;
+extern ao_functions ao_wav;
+extern ao_functions ao_raw;
+extern ao_functions ao_au;
+
+ao_functions *static_drivers[] = {
+	&ao_null, /* Must have at least one static driver! */
+	&ao_wav,
+	&ao_raw,
+	&ao_au,
+	NULL /* End of list */
+};
+
+driver_list *driver_head = NULL;
+ao_config config = {
+	NULL, /* default_driver */
+	-1,   /* default_driver_id */
+};
+
+ao_info **info_table = NULL;
+int driver_count = 0;
+d56 4
+a59 1
+/* ---------- Helper functions ---------- */
+d61 1
+a61 8
+/* Clear out all of the library configuration options and set them to
+   defaults.   The defaults should match the initializer above. */
+void _clear_config()
+{
+	free(config.default_driver);
+	config.default_driver = NULL;
+	config.default_driver_id = -1;
+}
+d63 1
+a63 4
+
+/* Load a plugin from disk and put the function table into a driver_list
+   struct. */
+driver_list *_get_plugin(char *plugin_file)
+d65 1
+a65 1
+	driver_list *dt;
+d70 1
+a70 1
+		dt = (driver_list *)malloc(sizeof(driver_list));
+d75 1
+a75 1
+		dt->functions = (ao_functions *)malloc(sizeof(ao_functions));
+d81 1
+a81 9
+		dt->functions->test = dlsym(dt->handle, "plugin_test");
+		if (dlerror()) { free(dt->functions); free(dt); return NULL; }
+
+		dt->functions->driver_info = 
+		  dlsym(dt->handle, "plugin_driver_info");
+		if (dlerror()) { free(dt->functions); free(dt); return NULL; }
+
+		dt->functions->device_init = 
+		  dlsym(dt->handle, "plugin_device_init");
+a82 5
+
+		dt->functions->set_option = 
+		  dlsym(dt->handle, "plugin_set_option");
+		if (dlerror()) { free(dt->functions); free(dt); return NULL; }
+
+a84 1
+
+a86 1
+
+d89 1
+a89 3
+
+		dt->functions->device_clear = 
+		  dlsym(dt->handle, "plugin_device_clear");
+a90 2
+
+
+d98 1
+a98 76
+
+/* If *name is a valid driver name, return its driver number.
+   Otherwise, test all of available live drivers until one works. */
+int _find_default_driver_id (const char *name)
+{
+	int def_id;
+	int id;
+	driver_list *driver = driver_head;
+
+	if ( name == NULL || (def_id = ao_driver_id(name)) < 0 ) {
+		/* No default specified. Find one among available drivers. */
+		def_id = -1;
+		
+		/* Skip null driver */
+		id = 1;
+		driver = driver->next;
+
+		while (driver != NULL && def_id == -1) {
+
+			if ( (driver->functions->driver_info()->type
+			     == AO_TYPE_LIVE) &&
+			     driver->functions->test() ) {
+				
+				def_id = id; /* Found a usable driver */
+			}
+			driver = driver->next;
+			id++;
+		}
+
+		/* Did we actually find anything? */
+		if (def_id == -1)
+			def_id = 0; /* If not, use null driver */
+	}
+
+	return def_id;
+}
+
+
+/* Convert the static drivers table into a linked list of drivers. */ 
+driver_list* _load_static_drivers(driver_list **end)
+{
+	driver_list *head;
+	driver_list *driver;
+	int i;
+       
+	/* insert first driver */
+	head = driver = malloc(sizeof(driver_list));
+	if (driver != NULL) {
+		driver->functions = static_drivers[0];
+		driver->handle = NULL;
+		driver->next = NULL;
+
+		i = 1;
+		while (static_drivers[i] != NULL) {
+			driver->next = malloc(sizeof(driver_list));
+			if (driver->next == NULL)
+				break;
+
+			driver->next->functions = static_drivers[i];
+			driver->next->next = NULL;
+			
+			driver = driver->next;
+			i++;
+		}
+	}
+
+	if (end != NULL)
+		*end = driver;
+
+	return head;
+}
+
+
+/* Load the dynamic drivers from disk and append them to end of the
+   driver list.  end points the driver_list node to append to. */
+void _append_dynamic_drivers(driver_list *end)
+d100 7
+d110 1
+a111 3
+	DIR *plugindir;
+	driver_list *plugin;
+	driver_list *driver = end;
+d113 36
+a148 15
+	/* now insert any plugins we find */
+	plugindir = opendir(AO_PLUGIN_PATH);
+	if (plugindir != NULL) {
+		while ((plugin_dirent = readdir(plugindir)) != NULL) {
+			snprintf(fullpath, FILENAME_MAX, "%s/%s", 
+				 AO_PLUGIN_PATH, plugin_dirent->d_name);
+			if (!stat(fullpath, &statbuf) && 
+			    S_ISREG(statbuf.st_mode) && 
+			 (ext = strrchr(plugin_dirent->d_name, '.')) != NULL) {
+				if (strcmp(ext, SHARED_LIB_EXT) == 0) {
+					plugin = _get_plugin(fullpath);
+					if (plugin) {
+						driver->next = plugin;
+						plugin->next = NULL;
+						driver = driver->next;
+d152 2
+a154 2
+		
+		closedir(plugindir);
+d158 4
+d163 1
+a163 6
+/* Make a table of driver info structures for ao_driver_info_list(). */
+ao_info ** _make_info_table (driver_list *head, int *driver_count)
+{
+	driver_list *list;
+	int i;
+	ao_info **table;
+d165 8
+a172 6
+	/* Count drivers */
+	list = head;
+	i = 0;
+	while (list != NULL) {
+		i++;
+		list = list->next;
+d175 6
+d182 2
+a183 11
+	/* Alloc table */
+	table = (ao_info **) calloc(i, sizeof(ao_info *));
+	if (table != NULL) {
+		*driver_count = i;
+		list = head;
+		for (i = 0; i < *driver_count; i++, list = list->next)
+			table[i] = list->functions->driver_info();
+	} else
+		*driver_count = 0;
+
+	return table;
+d186 19
+d206 1
+a206 3
+/* Return the driver struct corresponding to particular driver id
+   number. */
+driver_list *_get_driver(int driver_id) {
+d208 1
+a208 1
+	driver_list *driver = driver_head;
+a222 2
+
+/* Check if driver_id is a valid id number */
+d226 1
+a226 1
+	driver_list *driver = driver_head;
+d241 1
+a241 19
+
+/* helper function to convert a byte_format of AO_FMT_NATIVE to the
+   actual byte format of the machine, otherwise just return
+   byte_format */
+int _real_byte_format(int byte_format)
+{
+	if (byte_format == AO_FMT_NATIVE) {
+		if (ao_is_big_endian())
+			return AO_FMT_BIG;
+		else
+			return AO_FMT_LITTLE;
+	} else
+		return byte_format;
+}
+
+
+/* Create a new ao_device structure and populate it with data */
+ao_device* _create_device(int driver_id, driver_list *driver,
+			  ao_sample_format *format, FILE *file)
+d243 1
+a243 17
+	ao_device *device;
+	
+	device = malloc(sizeof(ao_device));
+	
+	if (device != NULL) {		
+		device->type = driver->functions->driver_info()->type;
+		device->driver_id = driver_id;
+		device->funcs = driver->functions;
+		device->file = file;
+		device->machine_byte_format = 
+		  ao_is_big_endian() ? AO_FMT_BIG : AO_FMT_LITTLE;
+		device->client_byte_format =
+		  _real_byte_format(format->byte_format);
+		device->swap_buffer = NULL;
+		device->swap_buffer_size = 0;
+		device->internal = NULL;
+	}
+d245 4
+a248 1
+	return device;
+a251 17
+/* Expand the swap buffer in this device if it is smaller than
+   min_size. */
+int _realloc_swap_buffer(ao_device *device, int min_size)
+{
+	void *temp;
+
+	if (min_size > device->swap_buffer_size) {
+		temp = realloc(device->swap_buffer, min_size);
+		if (temp != NULL) {
+			device->swap_buffer = temp;
+			device->swap_buffer_size = min_size;
+			return 1; /* Success, realloc worked */
+		} else
+			return 0; /* Fail to realloc */
+	} else
+		return 1; /* Success, no need to realloc */
+}
+d253 1
+d255 1
+a255 3
+/* Swap and copy the byte order of samples from the source buffer to
+   the target buffer. */
+void _swap_samples(char *target_buffer, char* source_buffer, uint_32 num_bytes)
+d257 13
+a269 60
+	int i;
+
+	for (i = 0; i < num_bytes; i += 2) {
+		target_buffer[i] = source_buffer[i+1];
+		target_buffer[i+1] = source_buffer[i];
+	}
+}
+		
+
+/* Open a device.  If this is a live device, file == NULL. */
+ao_device* _open_device(int driver_id, ao_sample_format *format, 
+			ao_option *options, FILE *file)
+{
+	ao_functions *funcs;
+	driver_list *driver;
+	ao_device *device;
+	int result;
+	
+	/* Get driver id */
+	if ( (driver = _get_driver(driver_id)) == NULL ) {
+		errno = AO_ENODRIVER;
+		return NULL; /* No driver exists */
+	}
+
+	funcs = driver->functions;
+
+	/* Check the driver type */
+	if (file == NULL && 
+	    funcs->driver_info()->type != AO_TYPE_LIVE) {
+
+		errno = AO_ENOTLIVE;
+		return NULL;
+	} else if (file != NULL && 
+		   funcs->driver_info()->type != AO_TYPE_FILE) {
+
+		errno = AO_ENOTFILE;
+		return NULL;
+	}
+	
+	/* Make a new device structure */
+	if ( (device = _create_device(driver_id, driver, 
+				      format, file)) == NULL ) {
+		errno = AO_EFAIL;
+		return NULL; /* Couldn't alloc device */
+	}
+		
+	/* Initialize the device memory */
+	if (!funcs->device_init(device)) {
+		free(device);
+		errno = AO_EFAIL;
+		return NULL; /* Couldn't init internal memory */
+	}
+	
+	/* Load options */
+	while (options != NULL) {
+		if (!funcs->set_option(device, options->key, options->value)) {
+			/* Problem setting options */
+			free(device);
+			errno = AO_EOPENDEVICE;
+			return NULL;
+a270 2
+			
+		options = options->next;
+a271 13
+
+	/* Open the device */
+	result = funcs->open(device, format);
+	if (!result) {
+		funcs->device_clear(device);
+		free(device);
+		errno = AO_EOPENDEVICE;
+		return NULL; /* Couldn't open device */
+	}
+		
+	/* Resolve actual driver byte format */
+	device->driver_byte_format = 
+		_real_byte_format(device->driver_byte_format);
+d273 2
+a274 22
+	/* Only create swap buffer for 16 bit samples if needed */
+	if (format->bits == 16 &&
+	    device->client_byte_format != device->driver_byte_format) {
+		
+		result = _realloc_swap_buffer(device, DEF_SWAP_BUF_SIZE);
+		
+		if (!result) {
+			
+			device->funcs->close(device);
+			device->funcs->device_clear(device);
+			free(device);
+			errno = AO_EFAIL;
+			return NULL; /* Couldn't alloc swap buffer */
+		}
+	}
+	
+	/* If we made it this far, everything is OK. */
+	return device; 
+}
+
+
+/* ---------- Public Functions ---------- */
+d276 1
+a276 3
+/* -- Library Setup/Teardown -- */
+
+void ao_initialize(void)
+d278 1
+a278 16
+	driver_list *end;
+
+	/* Read config files */
+	read_config_files(&config);
+
+	if (driver_head == NULL) {
+		driver_head = _load_static_drivers(&end);
+		_append_dynamic_drivers(end);
+	}
+
+	/* Find the default driver in the list of loaded drivers */
+	config.default_driver_id = 
+	  _find_default_driver_id(config.default_driver);
+
+	/* Create the table of driver info structs */
+	info_table = _make_info_table(driver_head, &driver_count);
+d282 1
+a282 1
+void ao_shutdown(void)
+d284 3
+a286 15
+	driver_list *driver = driver_head;
+	driver_list *next_driver;
+
+	if (!driver_head) return;
+
+	/* unload and free all the drivers */
+	while (driver) {
+		if (driver->handle) {
+		  dlclose(driver->handle);
+		  free(driver->functions); /* DON'T FREE STATIC FUNC TABLES */
+		}
+		next_driver = driver->next;
+		free(driver);
+		driver = next_driver;
+	}
+a287 4
+        _clear_config();
+	/* NULL out driver_head or ao_initialize() won't work */
+	driver_head = NULL;
+}
+d290 1
+a290 1
+/* -- Device Setup/Playback/Teardown -- */
+d292 1
+a292 1
+int ao_append_option(ao_option **options, const char *key, const char *value)
+d294 1
+a294 1
+	ao_option *op, *list;
+d296 1
+a296 1
+	op = malloc(sizeof(ao_option));
+d316 1
+a316 1
+void ao_free_options(ao_option *options)
+d318 1
+a318 1
+	ao_option *rest;
+d329 1
+a329 127
+
+ao_device *ao_open_live (int driver_id, ao_sample_format *format, 
+			ao_option *options)
+{
+	return _open_device(driver_id, format, options, NULL);		
+}
+
+
+ao_device *ao_open_file (int driver_id, const char *filename, int overwrite, 
+			 ao_sample_format *format, ao_option *options)
+{
+	FILE *file;
+	ao_device *device;
+
+	if (strcmp("-", filename) == 0)
+		file = stdout;
+	else {
+
+		if (!overwrite) {
+			/* Test for file existence */
+			file = fopen(filename, "r");
+			if (file != NULL) {
+				fclose(file);
+				errno = AO_EFILEEXISTS;
+				return NULL;
+			}
+		}
+
+
+		file = fopen(filename, "w");
+	}
+
+
+	if (file == NULL) {
+		errno = AO_EOPENFILE;
+		return NULL;
+	}
+		
+	device = _open_device(driver_id, format, options, file);
+	
+	if (device == NULL) {
+		fclose(file);
+		/* errno already set by _open_device() */
+		return NULL;
+	}
+
+	return device;
+}
+
+
+int ao_play(ao_device *device, char* output_samples, uint_32 num_bytes)
+{
+	char *playback_buffer;
+
+	if (device->swap_buffer != NULL) {
+		if (_realloc_swap_buffer(device, num_bytes)) {
+			_swap_samples(device->swap_buffer, 
+				      output_samples, num_bytes);
+			playback_buffer = device->swap_buffer;
+		} else
+			return 0; /* Could not expand swap buffer */
+	} else
+		playback_buffer = output_samples;
+
+	return device->funcs->play(device, playback_buffer, num_bytes);
+}
+
+
+int ao_close(ao_device *device)
+{
+	int result;
+
+	result = device->funcs->close(device);
+	device->funcs->device_clear(device);
+	free(device);
+
+	return result;
+}
+
+
+/* -- Driver Information -- */
+
+int ao_driver_id(const char *short_name)
+{
+	int i;
+	driver_list *driver = driver_head;
+
+	i = 0;
+	while (driver) {
+		if (strcmp(short_name, 
+			   driver->functions->driver_info()->short_name) == 0)
+			return i;
+		driver = driver->next;
+		i++;
+	}
+	
+	return -1; /* No driver by that name */
+}
+
+
+int ao_default_driver_id ()
+{
+	return config.default_driver_id;
+}
+
+
+ao_info *ao_driver_info(int driver_id)
+{
+	driver_list *driver;
+
+	if ( (driver = _get_driver(driver_id)) )
+		return driver->functions->driver_info();
+	else
+		return NULL;
+}
+
+
+ao_info **ao_driver_info_list(int *count)
+{
+	*count = driver_count;
+	return info_table;
+}
+
+
+/* -- Miscellaneous -- */
+
+/* Stolen from Vorbis' lib/vorbisfile.c */
+d338 6
+@
+
+
+1.15.2.2
+log
+@Forgot to zero an element of a struct.  Fixes segfault some users were
+experiencing during ao_shutdown().
+@
+text
+@a206 1
+			driver->next->handle = NULL;
+@
+
+
+1.15.2.3
+log
+@Changed the plugin_*() functions to ao_plugin_*() functions for
+consistency.
+@
+text
+@d112 1
+a112 1
+		dt->functions->test = dlsym(dt->handle, "ao_plugin_test");
+d116 1
+a116 1
+		  dlsym(dt->handle, "ao_plugin_driver_info");
+d120 1
+a120 1
+		  dlsym(dt->handle, "ao_plugin_device_init");
+d124 1
+a124 1
+		  dlsym(dt->handle, "ao_plugin_set_option");
+d127 1
+a127 1
+		dt->functions->open = dlsym(dt->handle, "ao_plugin_open");
+d130 1
+a130 1
+		dt->functions->play = dlsym(dt->handle, "ao_plugin_play");
+d133 1
+a133 1
+		dt->functions->close = dlsym(dt->handle, "ao_plugin_close");
+d137 1
+a137 1
+		  dlsym(dt->handle, "ao_plugin_device_clear");
+@
+
+
+1.15.2.4
+log
+@We now use a ranking system to select a defaut driver from the range of
+possible drivers.  Note that the null device is no longer a possible
+default device to prevent user confusion that we have had in the past.
+@
+text
+@a154 2
+	int priority;
+	ao_info *info;
+d161 3
+a163 3
+		id = 0;
+		priority = 0; /* This forces the null driver to be skipped */ 
+		while (driver != NULL) {
+d165 1
+a165 1
+			info = driver->functions->driver_info();
+d167 2
+a168 2
+			if ( info->type == AO_TYPE_LIVE && 
+			     info->priority > priority &&
+d170 1
+a170 1
+				priority = info->priority;
+a172 1
+
+d176 4
+@
+
+
+1.15.2.5
+log
+@OpenBSD compatability patches from Christian Weisgerber
+<naddy@@mips.inka.de>.  Yes, I know #ifdef's are evil, but making C
+work on multiple UNIX's is the work of the devil to begin with.
+@
+text
+@d93 1
+a93 8
+   struct.
+
+   OpenBSD systems with a.out binaries require dlsym()ed symbols to be
+   prepended with an underscore, so we need the following nasty #ifdef
+   hack. */
+#if defined(__OpenBSD__) && !defined(__ELF__)
+#define dlsym(h,s) dlsym(h, "_" s)
+#endif
+d98 1
+a98 6
+
+	/* RTLD_NOW is the preferred symbol resolution behavior, but
+           some platforms do not support it. */
+#if defined(__OpenBSD__)	
+	handle = dlopen(plugin_file, RTLD_LAZY);
+#else
+a99 2
+#endif
+
+@
+
+
+1.15.2.6
+log
+@Moved #ifdefs to header file as per Jack's suggestion.
+@
+text
+@d93 1
+a93 1
+   struct. */
+d95 6
+d106 7
+a112 1
+	handle = dlopen(plugin_file, DLOPEN_FLAG /* See ao_private.h */);
+@
+
+
+1.14
+log
+@Stan Seibert's ao_raw device.
+@
+text
+@d59 1
+d103 1
+d114 1
+a114 1
+		/* insert the null and wav drivers into the tree */
+d124 3
+d130 2
+a131 1
+		draw->next = NULL;
+d134 1
+a134 1
+		driver = draw;
+d166 1
+a166 1
+	driver = driver->next->next->next;  /* Skip null, wav, and raw driver */
+@
+
+
+1.13
+log
+@
+
+Fix the really obvious errors found in various places trying to track down
+the arts bug.
+ - wrong function prototypes in ao_null and ao_wav
+ - freeing stuff based on wrong tests in audio_out.c
+ - fix a memory leak in ao_arts.c
+@
+text
+@d58 1
+d101 1
+d119 3
+d124 2
+a125 1
+		dwav->next = NULL;
+d128 1
+a128 1
+		driver = dwav;
+d160 1
+a160 1
+	driver = driver->next->next;
+@
+
+
+1.12
+log
+@rik@@kde.org's ao_get_latency patch + fixes to make it compile
+incremented teh library version
+@
+text
+@d164 5
+a168 2
+	if (driver_head->next) free(driver_head->next);
+	if (driver_head->next) free(driver_head);
+@
+
+
+1.11
+log
+@let's back that change out since I'm an idiot.
+
+you can do this without that api change
+@
+text
+@d87 2
+d323 6
+@
+
+
+1.10
+log
+@added new function suggested by rik@@kde.org
+updated library version for release
+@
+text
+@a320 14
+
+int ao_get_driver_count(void)
+{
+	int i = 0;
+
+	driver_tree_t *driver = driver_head;
+
+	while (driver) {
+		i++;
+		driver = driver->next;
+	}
+
+	return i;
+}
+@
+
+
+1.9
+log
+@
+API change. Rather than passing the driver options as single "key:value"
+string, we have a slot for each in ao_append_option()
+
+corresponding documentation changes, harmonized ao_append_option()
+definition in the header and docs, plus some other doc fixups.
+@
+text
+@d321 14
+@
+
+
+1.8
+log
+@Fix for case where ao_initialize is called after ao_shutdown.
+@
+text
+@d275 1
+a275 1
+ao_option_t* _parse_option(const char* op_str)
+d277 1
+a277 24
+	char *copy;
+	char *value_ptr;
+	char *colon;
+        ao_option_t *op = NULL;
+	
+        copy = strdup(op_str);
+	
+        colon = strchr(copy, ':');
+        if (colon != NULL) {
+                value_ptr = colon + 1;
+                *colon = 0x00; // Null terminate the key part
+                
+                /* Allocate the option structure */
+                op = malloc(sizeof(ao_option_t));
+                if (op != NULL) {
+                        op->key = strdup(copy);
+                        op->value = strdup(value_ptr);
+                        op->next = NULL;
+                }
+        }
+	
+        free(copy);
+        return op;
+}
+d279 2
+d282 3
+a284 5
+int ao_append_option(ao_option_t **options, const char *op_str)
+{
+	ao_option_t *temp;
+
+	temp = _parse_option(op_str);
+d286 4
+a289 7
+	if (temp == NULL)
+		return 0; //Bad option format
+
+	if (*options != NULL) {
+		while ((*options)->next != NULL)
+			*options = (*options)->next;
+		(*options)->next = temp;
+d291 1
+a291 1
+		*options = temp;
+d293 1
+@
+
+
+1.7
+log
+@using correct constant now
+@
+text
+@d164 3
+@
+
+
+1.6
+log
+@few fixes courtesy of ingo saitz
+@
+text
+@d105 1
+a105 1
+	char fullpath[NAME_MAX];
+d126 1
+a126 1
+				snprintf(fullpath, NAME_MAX, "%s/%s", AO_PLUGIN_PATH, plugin_dirent->d_name);
+@
+
+
+1.5
+log
+@now this actually works :)
+@
+text
+@d133 1
+@
+
+
+1.4
+log
+@the long awaited ao fixes.  this hasn't been well tested.
+@
+text
+@d79 1
+a79 1
+		dt->functions->get_driver_info = dlsym(dt->handle, "get_driver_info");
+d81 1
+a81 1
+		dt->functions->open = dlsym(dt->handle, "open");
+d83 1
+a83 1
+		dt->functions->play = dlsym(dt->handle, "play");
+d85 1
+a85 1
+		dt->functions->close = dlsym(dt->handle, "close");
+@
+
+
+1.3
+log
+@Trying to get libao to compile properly. This is at least an improvement.
+See post on mailing list for more info.
+@
+text
+@d8 1
+a8 1
+ *  This file is part of libao, a cross-platform library.  See
+d30 5
+a34 1
+#include <assert.h>
+d37 3
+a39 12
+/* --- Function Tables --- */
+
+extern ao_functions_t ao_null;
+
+/* Okay, so this is messy.  I'm open to ideas of how to clean this
+   up.  - Stan */
+
+#ifdef AO_COMPILE_OSS
+extern ao_functions_t ao_oss;
+#define AO_FUNC_OSS &ao_oss
+#else
+#define AO_FUNC_OSS NULL
+d41 2
+a42 6
+
+#ifdef AO_COMPILE_IRIX
+extern ao_functions_t ao_irix;
+#define AO_FUNC_IRIX &ao_irix
+#else
+#define AO_FUNC_IRIX NULL
+d44 2
+a45 6
+
+#ifdef AO_COMPILE_SOLARIS
+extern ao_functions_t ao_solaris;
+#define AO_FUNC_SOLARIS &ao_solaris
+#else
+#define AO_FUNC_SOLARIS NULL
+d48 1
+a48 6
+#ifdef AO_COMPILE_WIN32
+extern ao_functions_t ao_win32;
+#define AO_FUNC_WIN32 &ao_win32
+#else
+#define AO_FUNC_WIN32 NULL
+#endif
+d50 5
+a54 6
+#ifdef AO_COMPILE_BEOS
+extern ao_functions_t ao_beos;
+#define AO_FUNC_BEOS &ao_beos
+#else
+#define AO_FUNC_BEOS NULL
+#endif
+d56 2
+a57 6
+#ifdef AO_COMPILE_ESD
+extern ao_functions_t ao_esd;
+#define AO_FUNC_ESD &ao_esd
+#else
+#define AO_FUNC_ESD NULL
+#endif
+d59 1
+a59 6
+#ifdef AO_COMPILE_ALSA
+extern ao_functions_t ao_alsa;
+#define AO_FUNC_ALSA &ao_alsa
+#else
+#define AO_FUNC_ALSA NULL
+#endif
+d61 9
+a69 1
+extern ao_functions_t ao_wav;
+d71 7
+d79 11
+d91 2
+a92 1
+/* --- Driver Table --- */
+d94 1
+a94 1
+ao_functions_t* ao_drivers[AO_DRIVERS] = 
+d96 46
+a141 13
+	&ao_null,        /* 0: Null Device */
+        AO_FUNC_OSS,     /* 1: Linux, *BSD */ 
+	AO_FUNC_IRIX,    /* 2: IRIX */
+	AO_FUNC_SOLARIS, /* 3: Solaris */
+	AO_FUNC_WIN32,   /* 4: Win32 */
+	AO_FUNC_BEOS,    /* 5: BeOS */
+	AO_FUNC_ESD,     /* 6: EsounD */
+	AO_FUNC_ALSA,    /* 7: ALSA */
+	NULL,            /* 8: Unassigned */
+	NULL,            /* 9: Unassigned */
+	&ao_wav,         /* 10: .WAV output */
+	NULL,            /* 11: RAW output */
+};
+d143 4
+d148 1
+d150 9
+a158 1
+/* --- Driver Functions --- */
+d160 4
+a163 4
+/* This should have been set by the Makefile */
+#ifndef AO_DEFAULT
+#define AO_DEFAULT AO_NULL
+#endif
+d165 1
+a165 1
+int ao_get_driver_id (const char *short_name)
+d168 1
+d170 3
+a172 4
+	if (short_name == NULL) 
+		return AO_DEFAULT;
+	else 
+	{
+d174 2
+a175 6
+		while (i < AO_DRIVERS)
+		{
+			/* Skip empty driver slots */
+			if (ao_drivers[i] != NULL
+			    && !strcmp(short_name, 
+				       ao_drivers[i]->get_driver_info()->short_name))
+d177 1
+a177 1
+
+d185 10
+d196 7
+a202 1
+int ao_check_driver_id (int driver_id)
+d204 14
+a217 2
+	return driver_id >= 0 && driver_id < AO_DRIVERS && 
+		ao_drivers[driver_id] != NULL;	
+d220 1
+a220 1
+ao_info_t *ao_get_driver_info (int driver_id)
+d222 4
+a225 2
+	if (ao_check_driver_id(driver_id))
+		return ao_drivers[driver_id]->get_driver_info();
+d234 1
+a234 2
+ao_device_t* ao_open (int driver_id, uint_32 bits, uint_32 rate, uint_32 channels, 
+	     ao_option_t *options)
+d239 1
+d241 2
+a242 3
+	if (ao_check_driver_id(driver_id))
+	{
+		funcs = ao_drivers[driver_id];
+d244 1
+a244 2
+		if (state != NULL)
+		{
+d255 1
+a255 1
+void ao_play (ao_device_t *device, void* output_samples, uint_32 num_bytes)
+d257 1
+a257 2
+  device->funcs->play(device->state, output_samples,
+		      num_bytes);
+d261 1
+a261 1
+void ao_close (ao_device_t *device)
+d271 1
+a271 1
+ao_option_t* ao_parse_option (const char* op_str)
+d281 1
+a281 2
+        if (colon != NULL) 
+        {
+d285 1
+a285 1
+                // Allocate the option structure
+d287 1
+a287 2
+                if (op != NULL)
+                {
+d299 1
+a299 1
+int ao_append_option (ao_option_t **options, const char *op_str)
+d303 1
+a303 1
+	temp = ao_parse_option(op_str);
+d308 1
+a308 2
+	if (*options != NULL)
+	{
+a309 1
+		{
+a310 1
+		}
+d312 1
+a312 3
+	}
+	else
+	{
+d320 1
+a320 1
+void ao_free_options (ao_option_t* options)
+d324 1
+a324 2
+	while (options != NULL)
+	{
+d333 3
+a335 2
+/* Helper function lifted from lib/vorbisfile.c */
+int ao_is_big_endian() {
+d338 1
+a339 2
+	
+	assert(bytewise[0] == 0xbe);
+@
+
+
+1.2
+log
+@brought up to date with postbeta2
+@
+text
+@d31 1
+a31 1
+#include "audio_out.h"
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d30 2
+a31 1
+#include <ao/ao.h>
+d271 10
+@
+
+
+1.1.1.1
+log
+@The first sample...
+@
+text
+@@
