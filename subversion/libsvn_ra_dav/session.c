@@ -188,26 +188,25 @@ static svn_boolean_t search_groups(const char *name,
     return TRUE;
 }
 
-
-/* Set *PROXY_HOST, *PROXY_PORT, *PROXY_USERNAME, and *PROXY_PASSWORD
- * to the proxy information for REQUESTED_HOST, allocated in POOL, if
- * there is any applicable information.  If there is no applicable
- * information or if there is an error, then set *PROXY_PORT to
- * (unsigned int) -1 and the rest to NULL.  This function can return
- * an error, so before checking *PROXY_*, check for error return
- * value.
+/* Set *PROXY_HOST, *PROXY_PORT, *PROXY_USERNAME, *PROXY_PASSWORD and
+ * *TIMEOUT_SECONDS to the proxy information for REQUESTED_HOST, allocated
+ * in POOL, if there is any applicable information.  If there is no
+ * applicable information or if there is an error, then set *PROXY_PORT to
+ * (unsigned int) -1 and the rest to NULL.  This function can return an
+ * error, so before checking *PROXY_*, check for error return value.
  */
-static svn_error_t *get_proxy(const char **proxy_host,
-                              unsigned int *proxy_port,
-                              const char **proxy_username,
-                              const char **proxy_password,
-                              const char *requested_host,
-                              apr_pool_t *pool)
+static svn_error_t *get_proxy_and_timeout(const char **proxy_host,
+                                          unsigned int *proxy_port,
+                                          const char **proxy_username,
+                                          const char **proxy_password,
+                                          int *timeout_seconds,
+                                          const char *requested_host,
+                                          apr_pool_t *pool)
 {
   struct search_groups_baton gb;
   svn_config_t *cfg;
   const char *exceptions;
-  const char *port_str;
+  const char *port_str, *timeout_str;
 
   /* If we find nothing, default to nulls. */
   *proxy_host     = NULL;
@@ -215,6 +214,7 @@ static svn_error_t *get_proxy(const char **proxy_host,
   *proxy_username = NULL;
   *proxy_password = NULL;
   port_str        = NULL;
+  timeout_str     = NULL;
 
   SVN_ERR( svn_config_read_proxies(&cfg, pool) );
 
@@ -227,6 +227,7 @@ static svn_error_t *get_proxy(const char **proxy_host,
       svn_config_get(cfg, &port_str, "default", "port", NULL);
       svn_config_get(cfg, proxy_username, "default", "username", NULL);
       svn_config_get(cfg, proxy_password, "default", "password", NULL);
+      svn_config_get(cfg, &timeout_str, "default", "timeout", NULL);
     }
 
   /* Search for a proxy pattern specific to this host. */
@@ -243,6 +244,7 @@ static svn_error_t *get_proxy(const char **proxy_host,
                      *proxy_username);
       svn_config_get(cfg, proxy_password, gb.proxy_group, "password",
                      *proxy_password);
+      svn_config_get(cfg, &timeout_str, gb.proxy_group, "timeout", timeout_str);
     }
 
   /* Special case: convert the port value, if any. */
@@ -265,6 +267,22 @@ static svn_error_t *get_proxy(const char **proxy_host,
     }
   else
     *proxy_port = 80;
+
+  if (timeout_str)
+    {
+      char *endstr;
+      const long int timeout = strtol(timeout_str, &endstr, 10);
+
+      if (*endstr)
+        return svn_error_create(SVN_ERR_RA_DAV_INVALID_TIMEOUT, 0, NULL, pool,
+                                "illegal character in timeout value");
+      if (timeout < 0)
+        return svn_error_create(SVN_ERR_RA_DAV_INVALID_TIMEOUT, 0, NULL, pool,
+                                "negative timeout value");
+      *timeout_seconds = timeout;
+    }
+  else
+    *timeout_seconds = 0;
 
   return SVN_NO_ERROR;
 }
@@ -391,20 +409,22 @@ svn_ra_dav__open (void **session_baton,
   sess = ne_session_create(uri.scheme, uri.host, uri.port);
   sess2 = ne_session_create(uri.scheme, uri.host, uri.port);
 
-  /* If there's a proxy for this URL, use it. */
+  /* If there's a timeout or proxy for this URL, use it. */
   {
     const char *proxy_host;
     unsigned int proxy_port;
     const char *proxy_username;
     const char *proxy_password;
+    int timeout;
     svn_error_t *err;
     
-    err = get_proxy(&proxy_host,
-                    &proxy_port,
-                    &proxy_username,
-                    &proxy_password,
-                    uri.host,
-                    pool);
+    err = get_proxy_and_timeout(&proxy_host,
+                                &proxy_port,
+                                &proxy_username,
+                                &proxy_password,
+                                &timeout,
+                                uri.host,
+                                pool);
     if (err)
       {
         ne_uri_free(&uri);
@@ -428,6 +448,12 @@ svn_ra_dav__open (void **session_baton,
             ne_set_proxy_auth(sess, proxy_auth, pab);
             ne_set_proxy_auth(sess2, proxy_auth, pab);
           }
+      }
+
+    if (timeout)
+      {
+        ne_set_read_timeout(sess, timeout);
+        ne_set_read_timeout(sess2, timeout);
       }
   }
 

@@ -642,7 +642,8 @@ svn_config_ensure (apr_pool_t *pool)
       apr_file_t *f;
       const char *contents =
         "### This file determines which proxy servers to use, if\n"
-        "### any, when contacting a remote repository.\n"
+        "### any, when contacting a remote repository and the duration\n"
+        "### of the timeout waiting for a response from the server.\n"
         "###\n"
         "### The commented-out examples below are intended only to\n"
         "### demonstrate how to use this file; any resemblance to\n"
@@ -653,6 +654,8 @@ svn_config_ensure (apr_pool_t *pool)
         "### trying to access is matched against the patterns on\n"
         "### the right.  If a match is found, the proxy info is\n"
         "### taken from the section with the corresponding name.\n"
+        "### Timeouts, if given, are specified in seconds.  A timeout\n"
+        "### of 0, i.e. zero, causes a builtin default to be used.\n"
         "# [groups]\n"
         "# group1 = *.collab.net\n"
         "# othergroup = repository.blarggitywhoomph.com\n"
@@ -663,6 +666,7 @@ svn_config_ensure (apr_pool_t *pool)
         "# port = 80\n"
         "# username = blah\n"
         "# password = doubleblah\n"
+        "# timeout = 60\n"
         "\n"
         "### Information for the second group:\n"
         "# [othergroup]\n"
@@ -686,7 +690,8 @@ svn_config_ensure (apr_pool_t *pool)
         "# host = defaultproxy.whatever.com\n"
         "# port = 7000\n"
         "# username = defaultusername\n"
-        "# password = defaultpassword\n";
+        "# password = defaultpassword\n"
+        "# No timeout, so just use the builtin default.\n";
 
       apr_err = apr_file_open (&f, path,
                                (APR_WRITE | APR_CREATE | APR_EXCL),
