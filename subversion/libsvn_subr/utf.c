@@ -213,7 +213,7 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
                  "... was followed by non-ascii byte %d.\n"
                  "\n"
                  "Non-ascii character detected (see above), "
-                 "and unable to convert to UTF-8.\n",
+                 "and unable to convert to/from UTF-8.\n",
                  error_data, *((const unsigned char *) data));
             }
           else
@@ -221,7 +221,7 @@ check_non_ascii (const char *data, apr_size_t len, apr_pool_t *pool)
               return svn_error_createf
                 (APR_EINVAL, NULL,
                  "Non-ascii character (code %d) detected, "
-                 "and unable to convert to UTF-8.\n",
+                 "and unable to convert to/from UTF-8.\n",
                  *((const unsigned char *) data));
             }
         }
