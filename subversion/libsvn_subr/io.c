@@ -55,6 +55,7 @@
 */
 #ifdef WIN32
 #define WIN32_RETRY_LOOP(err, expr)                                        \
+  do                                                                       \
   {                                                                        \
     int retries = 0;                                                       \
     int sleep_count = 1000;                                                \
@@ -68,9 +69,9 @@
         sleep_count *= 2;                                                  \
       err = expr;                                                          \
     }                                                                      \
-  }
+  } while (0)
 #else
-#define WIN32_RETRY_LOOP(err, expr)
+#define WIN32_RETRY_LOOP(err, expr) do {} while(0)
 #endif
 
 /* Helper for svn_io_check_path() and svn_io_check_resolved_path();
