@@ -36,6 +36,20 @@ skel_err (const char *skel_type)
 
 /*** Validity Checking ***/
 
+static int
+is_valid_checksum_skel (skel_t *skel)
+{
+  if (svn_fs__list_length (skel) != 2)
+    return 0;
+
+  if (svn_fs__matches_atom (skel->children, "md5")
+      && skel->children->next->is_atom)
+    return 1;
+
+  return 0;
+}
+
+
 static int 
 is_valid_proplist_skel (skel_t *skel)
 {
@@ -93,7 +107,6 @@ is_valid_rep_delta_chunk_skel (skel_t *skel)
 {
   int len;
   skel_t *window;
-  skel_t *checksum;
   skel_t *diff;
 
   /* check the delta skel. */
@@ -116,9 +129,7 @@ is_valid_rep_delta_chunk_skel (skel_t *skel)
     return 0;
   
   /* check the checksum list. */
-  checksum = window->children->next->next;
-  if (! ((svn_fs__matches_atom (checksum->children, "md5")
-          && (checksum->children->next->is_atom))))
+  if (! is_valid_checksum_skel (window->children->next->next))
     return 0;
   
   /* check the diff. ### currently we support only svndiff version
@@ -139,18 +150,24 @@ is_valid_representation_skel (skel_t *skel)
 {
   int len = svn_fs__list_length (skel);
   skel_t *header;
+  int header_len;
 
   /* the rep has at least two items in it, a HEADER list, and at least
      one piece of kind-specific data. */
   if (len < 2)
     return 0;
 
-  /* check the header.  it must have two pieces, both of which are
-     atoms.  */
+  /* check the header.  it must have KIND and TXN atoms, and
+     optionally a CHECKSUM (which is a list form). */
   header = skel->children;
-  if (! ((svn_fs__list_length (header) == 2)
-         && (header->children->is_atom)
-         && (header->children->next->is_atom)))
+  header_len = svn_fs__list_length (header);
+  if (! (((header_len == 2)     /* 2 means checksum absent */
+          && (header->children->is_atom)
+          && (header->children->next->is_atom))
+         || ((header_len == 3)  /* 3 means checksum present */
+             && (header->children->is_atom)
+             && (header->children->next->is_atom)
+             && (is_valid_checksum_skel (header->children->next->next)))))
     return 0;
 
   /* check for fulltext rep. */
@@ -458,6 +475,12 @@ svn_fs__parse_representation_skel (svn_fs__representation_t **rep_p,
   /* TXN */
   rep->txn_id = apr_pstrmemdup (pool, header_skel->children->next->data,
                                 header_skel->children->next->len);
+  
+  /* CHECKSUM */
+  if (header_skel->children->next->next)
+    rep->checksum = apr_pstrmemdup (pool,
+                                    header_skel->children->next->next->data,
+                                    header_skel->children->next->next->len);
   
   /* KIND-SPECIFIC stuff */
   if (rep->kind == svn_fs__rep_kind_fulltext)
@@ -858,19 +881,37 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
                                      const svn_fs__representation_t *rep,
                                      apr_pool_t *pool)
 {
-  skel_t *skel;
-  skel_t *header_skel;
+  skel_t *skel = svn_fs__make_empty_list (pool);
+  skel_t *header_skel = svn_fs__make_empty_list (pool);
 
-  /* Create the skel. */
-  skel = svn_fs__make_empty_list (pool);
+  /** Some parts of the header are common to all representations; do
+      those parts first. **/
+  
+  /* CHECKSUM */
+  if (rep->checksum)
+    {
+      skel_t *checksum_skel = svn_fs__make_empty_list (pool);
+      
+      svn_fs__prepend (svn_fs__mem_atom
+                       (rep->checksum,
+                        MD5_DIGESTSIZE / sizeof (*(rep->checksum)), pool),
+                       checksum_skel);
+      svn_fs__prepend (svn_fs__str_atom ("md5", pool), checksum_skel);
+      svn_fs__prepend (checksum_skel, header_skel);
+    }
+  
+  /* TXN */
+  if (rep->txn_id)
+    svn_fs__prepend (svn_fs__str_atom (rep->txn_id, pool), header_skel);
+  else
+    svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), header_skel);
+
+  /** Do the kind-specific stuff. **/
 
   if (rep->kind == svn_fs__rep_kind_fulltext)
     {
       /*** Fulltext Representation. ***/
 
-      /* Create the header. */
-      header_skel = svn_fs__make_empty_list (pool);
-      
       /* STRING-KEY */
       if ((! rep->contents.fulltext.string_key) 
           || (! *rep->contents.fulltext.string_key))
@@ -879,12 +920,6 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
         svn_fs__prepend (svn_fs__str_atom 
                          (rep->contents.fulltext.string_key, pool), skel);
       
-      /* TXN */
-      if (rep->txn_id)
-        svn_fs__prepend (svn_fs__str_atom (rep->txn_id, pool), header_skel);
-      else
-        svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), header_skel);
-
       /* "fulltext" */
       svn_fs__prepend (svn_fs__str_atom ("fulltext", pool), header_skel);
 
@@ -951,15 +986,6 @@ svn_fs__unparse_representation_skel (skel_t **skel_p,
           /* Add this window item to the main skel. */
           svn_fs__prepend (chunk_skel, skel);
         }
-      
-      /* Create the header. */
-      header_skel = svn_fs__make_empty_list (pool);
-      
-      /* TXN */
-      if (rep->txn_id)
-        svn_fs__prepend (svn_fs__str_atom (rep->txn_id, pool), header_skel);
-      else
-        svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), header_skel);
       
       /* "delta" */
       svn_fs__prepend (svn_fs__str_atom ("delta", pool), header_skel);
