@@ -231,7 +231,7 @@ AC_DEFINE_UNQUOTED(SVN_CLIENT_DIFF, "$SVN_CLIENT_DIFF",
 
 dnl Find a (non-broken) version of GNU diff3
 AC_MSG_CHECKING([for non-broken GNU diff3])
-SVN_CLIENT_DIFF3="`${abs_srcdir}/ac-helpers/gnu-diff3.sh ${abs_srcdir}/ac-helpers`"
+SVN_CLIENT_DIFF3="`$SHELL ${abs_srcdir}/ac-helpers/gnu-diff3.sh ${abs_srcdir}/ac-helpers`"
 if test "$SVN_CLIENT_DIFF3" = "";  then
   AC_MSG_ERROR([not found
 
