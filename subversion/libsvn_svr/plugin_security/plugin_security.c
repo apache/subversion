@@ -83,11 +83,7 @@
 */
   
 svn_error_t *
-svn_plugin_internal_authorization (svn_string_t *repos,
-                                   svn_user_t *user,
-                                   svr_action_t requested_action,
-                                   unsigned long ver,
-                                   svn_string_t *path)
+svn_plugin_internal_authorization (svn_fsrequest_t *request)
 {
 
   /* this routine should consult the repository's `svn_security' file

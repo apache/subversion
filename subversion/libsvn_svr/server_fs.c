@@ -81,7 +81,7 @@
 
 svn_string_t *
 svn__svr_expand_repos_name (svn_svr_policy_t *policy,
-                        svn_string_t *repos)
+                            svn_string_t *repos)
 {
  /* Loop through policy->repos_aliases hash.
      If there's a match, return new bytestring containing hash value.
@@ -109,12 +109,7 @@ svn__svr_expand_repos_name (svn_svr_policy_t *policy,
 */
 
 svn_error_t *
-svn_svr_plugin_authorize (svn_svr_policies_t *policy, 
-                          svn_string_t *repos, 
-                          svn_user_t *user, 
-                          svn_svr_action_t *action,
-                          unsigned long ver,
-                          svn_string_t *path)
+svn_svr_plugin_authorize (svn_fsrequest_t *request)
 {
   int i;
   svn_error_t *err;
@@ -128,7 +123,8 @@ svn_svr_plugin_authorize (svn_svr_policies_t *policy,
 
   /* Next:  loop through our policy's array of plugins... */
 
-  for (hash_index = ap_hash_first (policy->plugins); /* get first hash entry */
+  for (hash_index = 
+         ap_hash_first (request->policy->plugins); /* get first hash entry */
        hash_index;                                 /* NULL if out of entries */
        hash_index = ap_hash_next (hash_index))     /* get next hash entry */
     {
@@ -144,7 +140,7 @@ svn_svr_plugin_authorize (svn_svr_policies_t *policy,
         {
           /* Call the authorization routine, giving it a chance to
              kill our authorization assumption */
-          err = (*my_hook) (repos, user, action, ver, path);
+          err = (*my_hook) (request);
           if (err)
             return (err);
         }
@@ -156,16 +152,18 @@ svn_svr_plugin_authorize (svn_svr_policies_t *policy,
      (A good auth_hook should fill it in automatically, though.)
   */
 
-  if (svn_string_isempty (user->svn_username))
+  if (svn_string_isempty (request->user->svn_username))
     {
       /* Using the policy's memory pool, duplicate the auth_username
          string and assign it to svn_username */
-      user->svn_username = svn_string_dup (user->auth_username,
-                                           policy->pool);
+      request->user->svn_username = 
+        svn_string_dup (request->user->auth_username, request->policy->pool);
     }
   
   return SVN_SUCCESS;  /* successfully authorized to perform the action! */
 }
+
+
 
 
 /* svn_svr_policy_authorize()
@@ -180,12 +178,7 @@ svn_svr_plugin_authorize (svn_svr_policies_t *policy,
  */
 
 svn_error_t *
-svn_svr_policy_authorize (svn_svr_policies_t *policy,
-                          svn_string_t *repos,
-                          svn_user_t *user,
-                          svn_svr_action_t *action,
-                          unsigned long ver,
-                          svn_string_t *path)
+svn_svr_policy_authorize (svn_fs_request_t *request)
 {
   /* BIG TODO: loop through policy->global_restrictions array,
      interpreting each restriction and checking authorization */
@@ -210,24 +203,19 @@ svn_svr_policy_authorize (svn_svr_policies_t *policy,
 */
 
 svn_error_t *
-svn_svr_authorize (svn_svr_policies_t *policy,
-                   svn_string_t *repos,
-                   svn_user_t *user,
-                   svn_svr_action_t *action,
-                   unsigned long ver,
-                   svn_string_t *path)
+svn_svr_authorize (svn_fsrequest_t *request);
 {
   svn_error_t *err;
   
-  err = svn_svr_policy_authorize (policy, repos, user, action, ver, path);
+  err = svn_svr_policy_authorize (request);
   if (err)
     return (svn_quick_wrap_error
             (err, "Global server policy denied authorization."));
 
-  err = svn_svr_plugin_authorize (policy, repos, user, action, ver, path);
+  err = svn_svr_plugin_authorize (request);
   if (err)
     return (svn_quick_wrap_error
-            (err, "A plugin denied authorization."));
+            (err, "At least one server plugin denied authorization."));
 
   return SVN_SUCCESS;  /* successfully authorized! */
 }
@@ -235,672 +223,246 @@ svn_svr_authorize (svn_svr_policies_t *policy,
 
 
 
+/* 
+   svn_svr_do_fs_call()  :  The UBER-filesystem wrapper routine!
 
-/*========================================================================
+   Input:  void **, and an fsrequest structure
 
-   READING HISTORY ARRAY.
-
-   These routines retrieve info from a repository's history array.
-   They return FALSE if authorization fails.
+   Returns:  svn_error_t or SVN_SUCCESS, and **returndata filled in.
 
 */
 
-
-/* Returns latest version of the repository */
 
 svn_error_t *
-svn_svr_latest (svn_ver_t **latest_ver,
-                svn_svr_policies_t *policy, 
-                svn_string_t *repos, 
-                svn_user_t *user)
+svn_svr_do_fs_call (void **returndata, svn_fsrequest_t *request)
 {
-  /* Convert "repos" into real pathname */
-  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
+  svn_error_t *error;
 
-  /* Check authorization, both server policy & auth hooks */
-  svn_svr_action_t my_action = svn_action_latest;
-  svn_error_t *err = svn_svr_authorize (policy, repository, user, 
-                                        my_action, NULL, NULL);
+  /* Look up the repos alias, find the true repository name */
+  svn_string_t *repository = svn__svr_expand_repos_name (*request->policy, 
+                                                         *request->repos);
+  
+  /* Check authorization in both server policy & plugins */
+  error = svn_svr_authorize (request);
   if (error)
-    return (error, "svn_svr_authorize() failed.");
- 
-  /* Do filesystem call with "canonical" username */
-  return  (svn_fs_latest (latest_ver,
-                          repository, 
-                          user->svn_username));
-}
+    return svn_quick_wrap_error (error, "svn_svr_authorize() failed.");
 
-
-
-
-/* Given a version, return a certain property value */
-
-svn_string_t * 
-svn_svr_get_ver_prop (svn_svr_policies_t *policy,
-                      svn_string_t *repos, 
-                      svn_string_t *user, 
-                      unsigned long ver, 
-                      svn_string_t *propname)
-{
-  /* Convert "repos" into real pathname */
-  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
-
-  /* Check authorization, both server policy & auth hooks */
-  svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = svn_action_get_ver_prop;
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, ver, NULL);
-
-  if (! authorized)
+  /* Now parse the fsrequest_t, and pass the call through to the filesystem */
+  
+  switch (request->action)
     {
-      /* Generate CUSTOM Subversion errno: */
-      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          "
-                                          policy->pool));
-      return FALSE;
+
+    case svn_action_latest:
+      {
+        /* sets returndata = (svn_ver_t *) */
+        return 
+          svn_fs_latest (returndata,         
+                         repository,                   
+                         request->user->svn_username); 
+      }
+
+    case svn_action_get_ver_prop:
+      {
+        /* sets returndata = (svn_string_t *) */
+        return 
+          svn_fs_get_ver_prop (returndata,         
+                               repository,                   
+                               request->user->svn_username,
+                               request->ver1,
+                               request->propname); 
+      }
+
+    case svn_action_get_ver_proplist:
+      {
+        /* sets returndata = (ap_hash_t *) */
+        return 
+          svn_fs_get_ver_proplist (returndata,         
+                                   repository,                   
+                                   request->user->svn_username,
+                                   request->ver1);
+      }
+
+    case svn_action_get_ver_propnames:
+      {
+        /* sets returndata = (ap_hash_t *) */
+        return 
+          svn_fs_get_ver_propnames (returndata,         
+                                    repository,                   
+                                    request->user->svn_username,
+                                    request->ver1);
+      }
+
+    case svn_action_read:
+      {
+        /* sets returndata = (ap_node_t *) */
+        return 
+          svn_fs_read (returndata,         
+                       repository,                   
+                       request->user->svn_username,
+                       request->ver1,
+                       request->path1);
+      }
+      
+    case svn_action_get_node_prop:
+      {
+        /* sets returndata = (svn_string_t *) */
+        return 
+          svn_fs_get_node_prop (returndata,         
+                                repository,                   
+                                request->user->svn_username,
+                                request->ver1,
+                                request->path1,
+                                request->propname);
+      }
+
+    case svn_action_get_dirent_prop:
+      {
+        /* sets returndata = (svn_string_t *) */
+        return 
+          svn_fs_get_dirent_prop (returndata,         
+                                  repository,                   
+                                  request->user->svn_username,
+                                  request->ver1,
+                                  request->path1,
+                                  request->propname);
+      }
+
+    case svn_action_get_node_proplist:
+      {
+        /* sets returndata = (ap_hash_t *) */
+        return 
+          svn_fs_get_node_proplist (returndata,         
+                                    repository,                   
+                                    request->user->svn_username,
+                                    request->ver1,
+                                    request->path1);
+      }
+
+    case svn_action_get_dirent_proplist:
+      {
+        /* sets returndata = (ap_hash_t *) */
+        return 
+          svn_fs_get_dirent_proplist (returndata,         
+                                      repository,                   
+                                      request->user->svn_username,
+                                      request->ver1,
+                                      request->path1);
+      }
+
+    case svn_action_get_node_propnames:
+      {
+        /* sets returndata = (ap_hash_t *) */
+        return 
+          svn_fs_get_node_propnames (returndata,         
+                                     repository,                   
+                                     request->user->svn_username,
+                                     request->ver1,
+                                     request->path1);
+      }
+
+    case svn_action_get_dirent_propnames:
+      {
+        /* sets returndata = (ap_hash_t *) */
+        return 
+          svn_fs_get_dirent_propnames (returndata,         
+                                       repository,                   
+                                       request->user->svn_username,
+                                       request->ver1,
+                                       request->path1);
+      }
+
+    case svn_action_submit:
+      {        
+        /* sets returndata = (svn_token_t *) */
+        return 
+          svn_fs_submit (returndata,         
+                         repository,                   
+                         request->user->svn_username,
+                         request->skelta);
+      }
+
+    case svn_action_write:
+      {
+        /* sets returndata = (ap_ver_t *) */
+        return 
+          svn_fs_write (returndata,         
+                        repository,                   
+                        request->user->svn_username,
+                        request->delta,
+                        request->token);
+      }
+
+    case svn_action_abandon:
+      {
+        /* sets returndata = NULL (?) */
+        return 
+          svn_fs_abandon (returndata,         
+                          repository,                   
+                          request->user->svn_username,
+                          request->token);
+      }
+
+    case svn_action_get_delta:
+      {
+        /* sets returndata = (svn_delta_t *) */
+        return 
+          svn_fs_get_delta (returndata,         
+                            repository,                   
+                            request->user->svn_username,
+                            request->ver1,
+                            request->path1,
+                            request->ver2,
+                            request->path2);
+      }
+
+    case svn_action_get_diff:
+      {
+        /* sets returndata = (svn_diff_t *) */
+        return 
+          svn_fs_get_diff (returndata,         
+                           repository,                   
+                           request->user->svn_username,
+                           request->ver1,
+                           request->path1,
+                           request->ver2,
+                           request->path2);
+      }
+
+    case svn_action_get_status:
+      {
+        /* SPECIAL CASE : see dedicated server routine below */
+        /* sets returndata = (svn_skelta_t *) */
+        return 
+          svn_svr_get_status (returndata,         
+                              repository,                   
+                              request->user->svn_username,
+                              request->skelta)
+      }
+
+    case svn_action_get_update:
+      {
+        /* SPECIAL CASE : see dedicated server routine below */
+        /* sets returndata = (svn_delta_t *) */
+        return 
+          svn_svr_get_update (returndata,         
+                              repository,                   
+                              request->user->svn_username,
+                              request->skelta)
+
+      }
+
+    default:
+      {
+        char *msg = 
+          ap_psprintf (request->policy->pool,
+                       "svn_svr_do_fs_call(): unknown fs action: %d",
+                       request->action);
+        return svn_create_error (SVN_ERR_UNKNOWN_FS_ACTION,
+                                 NULL, msg, NULL, request->policy->pool);
+      }
+
     }
-  else
-    {
-      /* Do filesystem call with "canonical" username */
-      return (svn_fs_get_ver_prop (repository, 
-                                   user->svn_username,
-                                   ver,
-                                   propname));
-    }
-}
 
-
-
-/* Retrieve entire proplist of a version */
-
-ap_hash_t * 
-svn_svr_get_ver_proplist (svn_svr_policies_t *policy,
-                          svn_string_t *repos, 
-                          svn_string_t *user, 
-                          unsigned long ver)
-{
-  /* Convert "repos" into real pathname */
-  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
-
-  /* Check authorization, both server policy & auth hooks */
-  svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = svn_action_get_ver_proplist;
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, ver, NULL);
-
-  if (! authorized)
-    {
-      /* Generate CUSTOM Subversion errno: */
-      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          SVN_NON_FATAL,
-                                          policy->pool));
-      return FALSE;
-    }
-  else
-    {
-      /* Do filesystem call with "canonical" username */
-      return (svn_fs_get_ver_proplist (repository, 
-                                       user->svn_username,
-                                       ver));
-    }
-}
-
-
-
-/* Return the property names of a version.
-   TODO:  Should this return something other than a proplist?
-          If not, how is it any different than get_ver_proplist()? 
-*/
-
-
-ap_hash_t * 
-svn_svr_get_ver_propnames (svn_svr_policies_t *policy,
-                           svn_string_t *repos, 
-                           svn_string_t *user, 
-                           unsigned long ver)
-{
-  /* Convert "repos" into real pathname */
-  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
-
-  /* Check authorization, both server policy & auth hooks */
-  svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = svn_action_get_ver_propnames;
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, ver, NULL);
-
-  if (! authorized)
-    {
-      /* Generate CUSTOM Subversion errno: */
-      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          SVN_NON_FATAL,
-                                          policy->pool));
-      return FALSE;
-    }
-  else
-    {
-      /* Do filesystem call with "canonical" username */
-      return (svn_fs_get_ver_propnames (repository, 
-                                        user->svn_username,
-                                        ver));
-    }
-}
-
-
-
-/*========================================================================
-
-   READING NODES.
-
-   These routines retrieve info from a node in the filesystem.
-   They return FALSE if authorization fails.
-
-*/
-
-
-
-/* Return the entire contents of a node */
-
-svn_node_t * 
-svn_svr_read (svn_svr_policies_t *policy,
-              svn_string_t *repos, 
-              svn_user_t *user, 
-              unsigned long ver, 
-              svn_string_t *path)
-{
-  /* Convert "repos" into real pathname */
-  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
-
-  /* Check authorization, both server policy & auth hooks */
-  svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = svn_action_read;
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, ver, path);
-
-  if (! authorized)
-    {
-      /* Generate CUSTOM Subversion errno: */
-      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          SVN_NON_FATAL,
-                                          policy->pool));
-      return FALSE;
-    }
-  else
-    {
-      /* Do filesystem call with "canonical" username */
-      return (svn_fs_read (repository, 
-                           user->svn_username,
-                           ver,
-                           path));
-    }
-}
-
-
-
-/* Return the value of a node's propery */
-
-svn_string_t * 
-svn_svr_get_node_prop (svn_svr_policies_t *policy,
-                       svn_string_t *repos, 
-                       svn_user_t *user, 
-                       unsigned long ver, 
-                       svn_string_t *path, 
-                       svn_string_t *propname)
-
-{
-  /* Convert "repos" into real pathname */
-  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
-
-  /* Check authorization, both server policy & auth hooks */
-  svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = svn_action_get_node_prop;
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, ver, path);
-
-  if (! authorized)
-    {
-      /* Generate CUSTOM Subversion errno: */
-      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          SVN_NON_FATAL,
-                                          policy->pool));
-      return FALSE;
-    }
-  else
-    {
-      /* Do filesystem call with "canonical" username */
-      return (svn_fs_get_node_prop (repository, 
-                                    user->svn_username,
-                                    ver,
-                                    path,
-                                    propname));
-    }  
-}
-
-
-/* Get the value of a dirent's property */
-
-svn_string_t * 
-svn_svr_get_dirent_prop (svn_svr_policies_t *policy,
-                         svn_string_t *repos, 
-                         svn_user_t *user, 
-                         unsigned long ver, 
-                         svn_string_t *path, 
-                         svn_string_t *propname)
-{
-    /* Convert "repos" into real pathname */
-  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
-
-  /* Check authorization, both server policy & auth hooks */
-  svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = svn_action_get_dirent_prop;
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, ver, path);
-
-  if (! authorized)
-    {
-      /* Generate CUSTOM Subversion errno: */
-      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          SVN_NON_FATAL,
-                                          policy->pool));
-      return FALSE;
-    }
-  else
-    {
-      /* Do filesystem call with "canonical" username */
-      return (svn_fs_get_dirent_prop (repository, 
-                                      user->svn_username,
-                                      ver,
-                                      path,
-                                      propname));
-    }  
-}
- 
-
-
-/* Get a node's entire proplist */
-
-ap_hash_t * 
-svn_svr_get_node_proplist (svn_svr_policies_t *policy,
-                           svn_string_t *repos,
-                           svn_user_t *user,
-                           unsigned long ver, 
-                           svn_string_t *path)
-{
-  /* Convert "repos" into real pathname */
-  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
-
-  /* Check authorization, both server policy & auth hooks */
-  svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = svn_action_get_node_proplist;
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, ver, path);
-
-  if (! authorized)
-    {
-      /* Generate CUSTOM Subversion errno: */
-      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          SVN_NON_FATAL,
-                                          policy->pool));
-      return FALSE;
-    }
-  else
-    {
-      /* Do filesystem call with "canonical" username */
-      return (svn_fs_get_node_proplist (repository, 
-                                        user->svn_username,
-                                        ver,
-                                        path));
-    }
-}
- 
-
-
-
-/* Get a dirent's entire proplist */
-
-ap_hash_t * 
-svn_svr_get_dirent_proplist (svn_svr_policies_t *policy,
-                             svn_string_t *repos, 
-                             svn_user_t *user, 
-                             unsigned long ver, 
-                             svn_string_t *path)
-{
-  /* Convert "repos" into real pathname */
-  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
-
-  /* Check authorization, both server policy & auth hooks */
-  svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = svn_action_get_dirent_proplist;
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, ver, path);
-
-  if (! authorized)
-    {
-      /* Generate CUSTOM Subversion errno: */
-      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          SVN_NON_FATAL,
-                                          policy->pool));
-      return FALSE;
-    }
-  else
-    {
-      /* Do filesystem call with "canonical" username */
-      return (svn_fs_get_dirent_proplist (repository, 
-                                          user->svn_username,
-                                          ver,
-                                          path));
-    }
-}
- 
-
-
-/* Get a list of a node's property names */
-
-ap_hash_t * 
-svn_svr_get_node_propnames (svn_svr_policies_t *policy,
-                            svn_string_t *repos, 
-                            svn_user_t *user, 
-                            unsigned long ver, 
-                            svn_string_t *path)
-{
-  /* Convert "repos" into real pathname */
-  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
-
-  /* Check authorization, both server policy & auth hooks */
-  svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = svn_action_get_node_propnames;
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, ver, path);
-
-  if (! authorized)
-    {
-      /* Generate CUSTOM Subversion errno: */
-      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          SVN_NON_FATAL,
-                                          policy->pool));
-      return FALSE;
-    }
-  else
-    {
-      /* Do filesystem call with "canonical" username */
-      return (svn_fs_get_node_propnames (repository, 
-                                         user->svn_username,
-                                         ver,
-                                         path));
-    }
-}
- 
-
-
-/* Get a list of a dirent's property names */
-     
-ap_hash_t * 
-svn_svr_get_dirent_propnames (svn_svr_policies_t *policy,
-                              svn_string_t *repos, 
-                              svn_user_t *user, 
-                              unsigned long ver, 
-                              svn_string_t *path)
-{
-  /* Convert "repos" into real pathname */
-  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
-
-  /* Check authorization, both server policy & auth hooks */
-  svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = svn_action_get_dirent_propnames;
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, ver, path);
-
-  if (! authorized)
-    {
-      /* Generate CUSTOM Subversion errno: */
-      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          SVN_NON_FATAL,
-                                          policy->pool));
-      return FALSE;
-    }
-  else
-    {
-      /* Do filesystem call with "canonical" username */
-      return (svn_fs_get_dirent_propnames (repository, 
-                                           user->svn_username,
-                                           ver,
-                                           path));
-    }
-}
-
-
-/*========================================================================
-
-   WRITING.
-
-   These routines for writing deltas into the filesystem.
-   They return FALSE if authorization fails.
-
-*/
-
-
-
-/* Submit a skelta for approval; on success, returns a transaction
-   token. */
-
-svn_token_t 
-svn_svr_submit (svn_svr_policies_t *policy,
-                svn_string_t *repos, 
-                svn_user_t *user, 
-                svn_skelta_t *skelta)
-{
-  /* Convert "repos" into real pathname */
-  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
-
-  /* Check authorization, both server policy & auth hooks */
-  svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = svn_action_submit;
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, NULL, NULL);
-  /* TODO: perhaps the "path" argument to svr__authorize should be
-     somehow read out of the skelta?  */
-
-  if (! authorized)
-    {
-      /* Generate CUSTOM Subversion errno: */
-      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          SVN_NON_FATAL,
-                                          policy->pool));
-      return FALSE;
-    }
-  else
-    {
-      /* Do filesystem call with "canonical" username */
-      return (svn_fs_submit (repository,
-                             user->svn_username,
-                             skelta));
-    }
-}
- 
-
-
-/* Use the token to apply the delta to the filesystem.  
-   On success, returns the new version number of the repository. */
-
-unsigned long
-svn_svr_write (svn_svr_policies_t *policy,
-               svn_string_t *repos, 
-               svn_user_t *user, 
-               svn_delta_t *delta, 
-               svn_token_t token)
-{
-  /* Convert "repos" into real pathname */
-  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
-
-  /* Check authorization, both server policy & auth hooks */
-  svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = svn_action_write;
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, NULL, NULL);
-  /* TODO: perhaps the "path" argument to svr__authorize should be
-     somehow read out of the delta?  
-
-     Actually, nobody can call this routine without a token, which
-     means they've already been authorized to submit().  Is there any
-     point in differentiating authorization between submit() and
-     write()?  */
-
-  if (! authorized)
-    {
-      /* Generate CUSTOM Subversion errno: */
-      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          SVN_NON_FATAL,
-                                          policy->pool));
-      return FALSE;
-    }
-  else
-    {
-      /* Do filesystem call with "canonical" username */
-      return (svn_fs_write (repository,
-                            user->svn_username,
-                            delta,
-                            token));
-    }
-}
- 
-
-
-/* Abandon an approved, pending token */
-
-svn_boolean_t
-svn_svr_abandon (svn_svr_policies_t *policy,
-                 svn_string_t *repos, 
-                 svn_user_t *user, 
-                 svn_token_t token)
-{
-  /* Convert "repos" into real pathname */
-  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
-
-  /* Check authorization, both server policy & auth hooks */
-  svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = svn_action_abandon;
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, NULL, NULL);
-  /* TODO: 
-     
-     What does it mean to have (or *not* have) permission to abandon an
-     approved token?  :)
-  */
-
-  if (! authorized)
-    {
-      /* Generate CUSTOM Subversion errno: */
-      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          SVN_NON_FATAL,
-                                          policy->pool));
-      return FALSE;
-    }
-  else
-    {
-      /* Do filesystem call with "canonical" username */
-      return (svn_fs_abandon (repository,
-                              user->svn_username,
-                              token));
-    }  
-}
-
-
-/*========================================================================
-
-  DIFFERENCE QUERIES.
-
-  Report information on differences between objects in the repository.
-  They return FALSE if authorization fails.
-
-*/
-
-
-/* Return a delta that describes the difference between two trees in
-   the repository.  */
-
-svn_delta_t * 
-svn_svr_get_delta (svn_svr_policies_t *policy,
-                   svn_string_t *repos, 
-                   svn_user_t *user, 
-                   unsigned long ver1, 
-                   svn_string_t *path1, 
-                   unsigned long ver2, 
-                   svn_string_t *path2)
-{
-  /* Convert "repos" into real pathname */
-  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
-
-  /* Check authorization, both server policy & auth hooks */
-  svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = svn_action_get_delta;
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, ver1, path1);
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, ver2, path2);
-  /* 
-     TODO: notice I'm calling the authorize routine twice, checking
-     *both* paths and versions.  Is this right?
-  */
-
-  if (! authorized)
-    {
-      /* Generate CUSTOM Subversion errno: */
-      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          SVN_NON_FATAL,
-                                          policy->pool));
-      return FALSE;
-    }
-  else
-    {
-      /* Do filesystem call with "canonical" username */
-      return (svn_fs_get_delta (repository,
-                                user->svn_username,
-                                ver1, path1, ver2, path2));
-    }  
-}
- 
-
-
-/* Return a GNU diff describing the difference between two files */
-
-svn_diff_t * 
-svn_svr_get_diff (svn_svr_policies_t *policy,
-                  svn_string_t *repos, 
-                  svn_user_t *user, 
-                  unsigned long ver1, 
-                  svn_string_t *path1, 
-                  unsigned long ver2, 
-                  svn_string_t *path2)
-{
-  /* Convert "repos" into real pathname */
-  svn_string_t *repository = svn__svr_expand_repos_name (policy, repos);
-
-  /* Check authorization, both server policy & auth hooks */
-  svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = svn_action_get_diff;
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, ver1, path1);
-  authorized = svr__authorize (policy, repository, user, 
-                               my_action, ver2, path2);
-  /* 
-     TODO: notice I'm calling the authorize routine twice, checking
-     *both* paths and versions.  Is this right?
-  */
-
-  if (! authorized)
-    {
-      /* Generate CUSTOM Subversion errno: */
-      svn_handle_error (svn_create_error (SVN_ERR_NOT_AUTHORIZED,
-                                          SVN_NON_FATAL,
-                                          policy->pool));
-      return FALSE;
-    }
-  else
-    {
-      /* Do filesystem call with "canonical" username */
-      return (svn_fs_get_diff (repository,
-                               user->svn_username,
-                               ver1, path1, ver2, path2));
-    }  
 }
 
 
@@ -913,20 +475,20 @@ svn_svr_get_diff (svn_svr_policies_t *policy,
   calls to svn_fs_cmp() and svn_fs_get_delta() respectively (see
   <svn_fs.h>)
 
-  They return FALSE if authorization fails.
-
 */
 
 
 
 /* Input:  a skelta describing working copy's current tree
 
-   Output: a skelta describing exactly how the tree is out of date 
+   Returns: an svn error or SVN_SUCCESS, and 
+
+            returndata = a skelta describing how the tree is out of date 
 
 */
 
-svn_skelta_t * 
-svn_svr_get_status (svn_svr_policies_t *policy,
+svn_error_t * 
+svn_svr_get_status (void **returndata,
                     svn_string_t *repos, 
                     svn_user_t *user, 
                     svn_skelta_t *skelta)
@@ -936,17 +498,22 @@ svn_svr_get_status (svn_svr_policies_t *policy,
      We would iterate over the skelta and call svn_fs_cmp() on each
      file to check for up-to-date-ness.  Then we'd built a new skelta
      to send back the results.  */
+
+  return SVN_SUCCESS;
 }
  
 
+
 /* Input: a skelta describing working copy's current tree.
 
-   Output: a delta which, when applied, will actually update working
-   copy's tree to latest version.
+   Returns:  svn_error_t * or SVN_SUCCESS, and
+
+            returndata = a delta which, when applied, will actually
+            update working copy's tree to latest version.  
 */
 
-svn_delta_t * 
-svn_svr_get_update (svn_svr_policies_t *policy,
+svn_error_t * 
+svn_svr_get_update (void **returndata,
                     svn_string_t *repos, 
                     svn_user_t *user, 
                     svn_skelta_t *skelta)
@@ -956,6 +523,8 @@ svn_svr_get_update (svn_svr_policies_t *policy,
      We would iterate over the skelta and call svn_fs_get_delta() on
      each file.  Then we'd built a new composite delta to send back. 
   */
+
+  return SVN_SUCCESS;
 }
 
 
