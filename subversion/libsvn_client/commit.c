@@ -177,40 +177,34 @@ import_dir (const svn_delta_editor_t *editor,
             apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);  /* iteration pool */
-  apr_dir_t *dir;
-  apr_finfo_t finfo;
-  apr_status_t apr_err;
+  apr_hash_t *dirents;
+  apr_hash_index_t *hi;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
-  svn_error_t *err;
   apr_array_header_t *ignores;
-
-  SVN_ERR (svn_io_dir_open (&dir, path, pool));
 
   SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
 
-  for (err = svn_io_dir_read (&finfo, flags, dir, subpool);
-       err == SVN_NO_ERROR;
-       svn_pool_clear (subpool),
-         err = svn_io_dir_read (&finfo, flags, dir, subpool))
+  SVN_ERR (svn_io_get_dirents (&dirents, path, pool));
+
+  for (hi = apr_hash_first (pool, dirents);
+       hi;
+       svn_pool_clear (subpool), hi = apr_hash_next (hi))
     {
       const char *this_path, *this_edit_path, *abs_path;
+      const svn_node_kind_t *filetype;
+      const char *filename;
+      const void *key;
+      void *val;
+
+      apr_hash_this (hi, &key, NULL, &val);
+
+      filename = key;
+      filetype = val;
 
       if (ctx->cancel_func)
         SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
 
-      if ((finfo.filetype == APR_DIR)
-          && (finfo.name[0] == '.')
-          && (finfo.name[1] == '\0'
-              || (finfo.name[1] == '.' && finfo.name[2] == '\0')))
-        {
-          /* Skip entries for this dir and its parent.  
-             (APR promises that they'll come first, so technically
-             this guard could be moved outside the loop.  But somehow
-             that feels iffy. */
-          continue;
-        }
-
-      if (strcmp (finfo.name, SVN_WC_ADM_DIR_NAME) == 0)
+      if (strcmp (filename, SVN_WC_ADM_DIR_NAME) == 0)
         {
           /* If someone's trying to import a directory named the same
              as our administrative directories, that's probably not
@@ -220,7 +214,7 @@ import_dir (const svn_delta_editor_t *editor,
              that name.  */
           if (ctx->notify_func)
             (*ctx->notify_func) (ctx->notify_baton,
-                                 svn_path_join (path, finfo.name, subpool),
+                                 svn_path_join (path, filename, subpool),
                                  svn_wc_notify_skip,
                                  svn_node_dir,
                                  NULL,
@@ -233,20 +227,20 @@ import_dir (const svn_delta_editor_t *editor,
       /* Typically, we started importing from ".", in which case
          edit_path is "".  So below, this_path might become "./blah",
          and this_edit_path might become "blah", for example. */
-      this_path = svn_path_join (path, finfo.name, subpool);
-      this_edit_path = svn_path_join (edit_path, finfo.name, subpool);
+      this_path = svn_path_join (path, filename, subpool);
+      this_edit_path = svn_path_join (edit_path, filename, subpool);
 
       /* If this is an excluded path, exclude it. */
       SVN_ERR (svn_path_get_absolute (&abs_path, this_path, subpool));
       if (apr_hash_get (excludes, abs_path, APR_HASH_KEY_STRING))
         continue;
 
-      if (svn_cstring_match_glob_list (finfo.name, ignores))
+      if (svn_cstring_match_glob_list (filename, ignores))
         continue;
 
       /* We only import subdirectories when we're doing a regular
          recursive import. */
-      if ((finfo.filetype == APR_DIR) && (! nonrecursive))
+      if ((*filetype == svn_node_dir) && (! nonrecursive))
         {
           void *this_dir_baton;
 
@@ -278,7 +272,7 @@ import_dir (const svn_delta_editor_t *editor,
           /* Finally, close the sub-directory. */
           SVN_ERR (editor->close_directory (this_dir_baton, subpool));
         }
-      else if (finfo.filetype == APR_REG)
+      else if (*filetype == svn_node_file)
         {
           /* Import a file. */
           SVN_ERR (import_file (editor, dir_baton, 
@@ -287,21 +281,6 @@ import_dir (const svn_delta_editor_t *editor,
       /* We're silently ignoring things that aren't files or
          directories.  If we stop doing that, here is the place to
          change your world.  */
-    }
-
-  /* Check that the loop exited cleanly. */
-  if (! (APR_STATUS_IS_ENOENT (err->apr_err)))
-    {
-      return svn_error_createf
-        (err->apr_err, err, "Error during import of '%s'", path);
-    }
-  /* Yes, it exited cleanly, so close the dir. */
-  else
-    {
-      svn_error_clear (err);
-      if ((apr_err = apr_dir_close (dir)))
-        return svn_error_createf
-          (apr_err, NULL, "Error closing dir '%s'", path);
     }
 
   svn_pool_destroy (subpool);
