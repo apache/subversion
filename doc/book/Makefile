@@ -55,7 +55,8 @@ clean: book-clean misc-docs-clean
 book-html: $(BOOK_HTML_TARGET)
 
 $(BOOK_HTML_TARGET): $(BOOK_ALL_SOURCE)
-	$(XSLTPROC) $(XSL_HTML) $(BOOK_XML_SOURCE) > $(BOOK_HTML_TARGET)
+	$(XSLTPROC) --stringparam html.stylesheet "styles.css" \
+           $(XSL_HTML) $(BOOK_XML_SOURCE) > $(BOOK_HTML_TARGET)
 
 book-pdf: $(BOOK_PDF_TARGET)
 
