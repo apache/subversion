@@ -661,7 +661,7 @@ svn_wc_entry (svn_wc_entry_t **entry,
   if (err)
     return err;
 
-  /* kff todo: fooo working here:
+  /* ### todo:
      Make an innocent way to discover that a dir/path is or is not
      under version control, so that this function can be robust.  I
      think svn_wc_entries_read() will return an error right now if,
