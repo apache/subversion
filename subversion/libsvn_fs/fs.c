@@ -89,9 +89,21 @@ cleanup_fs_db (svn_fs_t *fs, DB **db_ptr, const char *name)
     {
       DB *db = *db_ptr;
       char *msg = apr_psprintf (fs->pool, "closing `%s' database", name);
+      int db_err;
 
       *db_ptr = 0;
-      SVN_ERR (DB_WRAP (fs, msg, db->close (db, 0)));
+      db_err = db->close (db, 0);
+
+      /* We can ignore DB_INCOMPLETE on db->close and db->sync; it
+       * just means someone else was using the db at the same time
+       * we were.  See the Berkeley documentation at:
+       * http://www.sleepycat.com/docs/ref/program/errorret.html#DB_INCOMPLETE
+       * http://www.sleepycat.com/docs/api_c/db_close.html
+       */
+      if (db_err == DB_INCOMPLETE)
+        db_err = 0;
+
+      SVN_ERR (DB_WRAP (fs, msg, db_err));
     }
 
   return SVN_NO_ERROR;
