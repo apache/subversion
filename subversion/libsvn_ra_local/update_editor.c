@@ -362,6 +362,7 @@ svn_ra_local__get_update_pipe_editor (svn_delta_edit_fns_t **editor,
                                       const svn_delta_edit_fns_t *update_editor,
                                       void *update_edit_baton,
                                       svn_ra_local__session_baton_t *session,
+                                      svn_stringbuf_t *base_path,
                                       apr_pool_t *pool)
 {
   svn_delta_edit_fns_t *e;
@@ -385,7 +386,7 @@ svn_ra_local__get_update_pipe_editor (svn_delta_edit_fns_t **editor,
   /* Set up our -private- edit baton. */
   my_eb = apr_pcalloc (pool, sizeof(*my_eb));
   my_eb->pool = pool;
-  my_eb->base_path = svn_stringbuf_create_from_string (session->fs_path, pool);
+  my_eb->base_path = base_path;
   my_eb->session = session;
 
   /* Insert our private edit baton into the public one. */

@@ -2051,7 +2051,7 @@ close_edit (void *edit_baton)
       if (eb->target)
         svn_path_add_component (full_path, eb->target);
       SVN_ERR (svn_wc_entry (&entry, full_path, eb->pool));
-      if (entry->kind == svn_node_dir)
+      if (entry && (entry->kind == svn_node_dir))
         SVN_ERR (svn_wc__ensure_uniform_revision (full_path,
                                                   eb->target_revision,
                                                   eb->recurse,
@@ -2059,7 +2059,7 @@ close_edit (void *edit_baton)
       if (eb->is_switch)
         {
           /* rewrite all the urls as well, starting at the top of the tree */
-          if (entry->kind == svn_node_dir)            
+          if (entry && (entry->kind == svn_node_dir))
             {
               svn_stringbuf_t *url = svn_stringbuf_dup (eb->switch_url,
                                                         eb->pool);

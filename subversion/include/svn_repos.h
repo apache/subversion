@@ -109,22 +109,22 @@ const char *svn_repos_write_sentinel_hook (svn_repos_t *repos, apr_pool_t *pool)
 /*** Reporting the state of a working copy, for updates. */
 
 
-/* Construct and return a REPORT_BATON to hold context while
-   collecting working copy revision state. When the collection of
-   state is completed, then the EDITOR will be driven to
-   describe how to change the working copy into revision REVNUM of
-   REPOS's filesystem. 
+/* Construct and return a REPORT_BATON that will be paired with some
+   svn_ra_reporter_t table.  The table and baton are used to build a
+   transaction in the system;  when the report is finished,
+   svn_repos_dir_delta is called on the transaction, driving
+   EDITOR/EDIT_BATON. 
 
-   The description of the working copy state will be relative to
-   FS_BASE in the filesystem.  USERNAME will be recorded as the
-   creator of the temporary fs txn.  TARGET is a single path
-   component, used to limit the scope of the update to a single entry
-   of FS_BASE, or NULL if all of FS_BASE is meant to be updated.
+   Specifically, the report will create a transaction made by
+   USERNAME, relative to FS_BASE in the filesystem.  TARGET is a
+   single path component, used to limit the scope of the report to a
+   single entry of FS_BASE, or NULL if all of FS_BASE itself is the
+   main subject of the report.
 
-   SWITCH_PATH is the fs path that the working copy should be
-   transformed into.  (In the case of updates, the caller should make
-   sure it's identical to FS_BASE or FS_BASE/TARGET.)
-
+   TGT_PATH and REVNUM is the fs path/revision pair that is the
+   "target" of dir_delta.  In other words, a tree delta will be
+   returned that transforms the transaction into TGT_PATH/REVNUM.
+ 
    TEXT_DELTAS instructs the driver of the EDITOR to enable to disable
    the generation of text deltas.
 
@@ -137,7 +137,7 @@ svn_repos_begin_report (void **report_baton,
                         svn_repos_t *repos,
                         const char *fs_base,
                         const char *target,
-                        const char *switch_path,
+                        const char *tgt_path,
                         svn_boolean_t text_deltas,
                         svn_boolean_t recurse,
                         const svn_delta_edit_fns_t *editor,

@@ -154,6 +154,10 @@ svn_error_t *svn_ra_local__get_editor (svn_delta_edit_fns_t **editor,
    tweaks the way the UPDATE_EDITOR is driven; specifically, extra
    'entry props' are inserted into the stream whenever {open_root,
    open_file, open_dir, add_file, add_dir} are called.
+
+   BASE_PATH is an absolute fs path that is prepended to all paths
+   that pass through;  the resulting fs paths are queried for
+   entry-props.
 */
 svn_error_t *
 svn_ra_local__get_update_pipe_editor (svn_delta_edit_fns_t **editor,
@@ -161,6 +165,7 @@ svn_ra_local__get_update_pipe_editor (svn_delta_edit_fns_t **editor,
                                       const svn_delta_edit_fns_t *update_editor,
                                       void *update_edit_baton,
                                       svn_ra_local__session_baton_t *session,
+                                      svn_stringbuf_t *base_path,
                                       apr_pool_t *pool);
 
 
