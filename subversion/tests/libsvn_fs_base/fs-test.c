@@ -1069,10 +1069,10 @@ static svn_error_t *
 txn_body_check_id (void *baton, trail_t *trail)
 {
   struct check_id_args *args = baton;
-  svn_fs__node_revision_t *noderev;
+  node_revision_t *noderev;
   svn_error_t *err;
 
-  err = svn_fs__bdb_get_node_revision (&noderev, args->fs, args->id, trail);
+  err = svn_fs_bdb__get_node_revision (&noderev, args->fs, args->id, trail);
 
   if (err && (err->apr_err == SVN_ERR_FS_ID_NOT_FOUND))
     args->present = FALSE;
@@ -1101,7 +1101,7 @@ check_id (svn_fs_t *fs, const svn_fs_id_t *id, svn_boolean_t *present,
 
   args.id = id;
   args.fs = fs;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_check_id, &args, pool));
+  SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_check_id, &args, pool));
 
   if (args.present)
     *present = TRUE;
@@ -5199,7 +5199,7 @@ skip_deltas (const char **msg,
 /* Trail-ish helpers for redundant_copy(). */
 struct get_txn_args
 {
-  svn_fs__transaction_t **txn;
+  transaction_t **txn;
   const char *txn_name;
   svn_fs_t *fs;
 };
@@ -5208,7 +5208,7 @@ static svn_error_t *
 txn_body_get_txn (void *baton, trail_t *trail)
 {
   struct get_txn_args *args = baton;
-  return svn_fs__bdb_get_txn (args->txn, args->fs, args->txn_name, trail);
+  return svn_fs_bdb__get_txn (args->txn, args->fs, args->txn_name, trail);
 }
 
 
@@ -5220,7 +5220,7 @@ redundant_copy (const char **msg,
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   const char *txn_name;
-  svn_fs__transaction_t *transaction;
+  transaction_t *transaction;
   svn_fs_root_t *txn_root, *rev_root;
   const svn_fs_id_t *old_D_id, *new_D_id;
   svn_revnum_t youngest_rev = 0;
@@ -5252,7 +5252,7 @@ redundant_copy (const char **msg,
   args.fs = fs;
   args.txn_name = txn_name;
   args.txn = &transaction;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_txn, &args, pool));
+  SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_get_txn, &args, pool));
   if (transaction->copies->nelts != 1)
     return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "Expected 1 copy; got %d",
@@ -5266,7 +5266,7 @@ redundant_copy (const char **msg,
 
   /* Now, examine the transaction.  There should still only have been
      one copy operation that "took". */
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_txn, &args, pool));
+  SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_get_txn, &args, pool));
   if (transaction->copies->nelts != 1)
     return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                               "Expected only 1 copy; got %d",
