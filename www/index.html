@@ -48,15 +48,14 @@ progress.
 
 <ul>  <!-- list of features -->
 
-<li><strong>All current CVS features.</strong>
-    <p>Subversion is trying to be a better CVS, so it supports all
-    CVS features.  It versions files, automatically folds
-    non-conflicting changes and detects conflicting ones, supports
-    branches and merging, diffs between past revisions, log messages,
-    etc (but see below regarding "cvs annotate").  Generally,
-    Subversion's interface to a particular feature is as similar to
-    CVS's as possible, except where there's a compelling reason to do
-    otherwise.</p>
+<li><strong>Most current CVS features.</strong>
+    <p>Subversion is trying to be a better CVS, so it will have all
+    CVS features eventually, with most of them in the 1.0 release.
+    The two main exceptions are modules and "svn&nbsp;blame"
+    (i.e., "cvs annotate"), which have been put off until after 1.0
+    for scheduling reasons.  Generally, Subversion's interface to a
+    particular feature is as similar to CVS's as possible, except
+    where there's a compelling reason to do otherwise.</p>
 </li>
 
 <li><strong>Directories, renames, and file meta-data are versioned.</strong>
@@ -174,6 +173,12 @@ progress.
     WebDAV requests -- the subset necessary to support Subversion's
     own functionality.  Increased support for WebDAV is a high
     priority after the 1.0 release, however.</p>
+</li>
+
+<li><strong>module support</strong>
+    <p>Subversion will have something like CVS's modules (but
+    hopefully a more flexible mechanism); several designs are being
+    considered.</p>
 </li>
 
 <li><strong>Support for plug-in client side diff programs</strong>
