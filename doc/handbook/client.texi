@@ -769,6 +769,65 @@ applied as local changes, you can examine them as usual with
 @command{svn revert} as usual.  If the changes are acceptable, you can
 commit them.
 
+@subsection Rolling back a change with @command{svn merge}
+
+Another common use for @command{svn merge} is for rolling back a change 
+that has been committed.  Say you commit some changes in revision 10, and 
+later decide that they were a mistake.  You can easily revert the tree to 
+the state it was in at revision 9 with an @command{svn merge} command.
+
+@example
+$ svn commit -m "change some stuff"
+Sending        bar.c
+Sending        foo.c
+Transmitting file data ..
+Committed revision 10.
+$
+
+  [ ... ] # developer continues on and realizes he made a mistake
+
+$ svn merge -r 10:9 .
+U ./bar.c
+U ./foo.c
+$ svn commit -m "oops, reverting revision 10"
+Sending        bar.c
+Sending        foo.c
+Transmitting file data ..
+Committed revision 11.
+@end example
+
+If you aren't rolling back the changes to your current directory (say you 
+want to roll back one specific file, or all the files in one specific 
+subdirectory), then the syntax is slightly different, as you have to tell
+@command{svn merge} where it should merge the changes into.
+
+@example
+$ svn merge -r 10:9 baz/ baz/
+U ./baz/bar.c
+U ./baz/foo.c
+$ svn commit -m "reverting revision 10's changes in baz/"
+Sending        baz/bar.c
+Sending        baz/foo.c
+Transmitting file data ..
+Committed revision 12.
+$
+
+[ ... ] # developer continues on and later makes another mistake
+
+$ svn merge -r 13:12 baz/foo.c baz/foo.c
+U ./baz/foo.c
+$ svn commit -m "reverting revision 12's change to foo.c"
+Sending        baz/foo.c
+Transmitting file data .
+Committed revision 15.
+@end example
+
+Keep in mind that rolling back a change like this is just like any other 
+@command{svn merge} operation, so you should use @command{svn status} and 
+@command{svn diff} to confirm that your work is in the state you want it 
+to be in, and then use @command{svn commit} to send the final version to 
+the repository.
+
 @subsection Removing a branch or tag with @command{svn rm}
 
 The @command{svn rm} command can operate on URLs.  A file or directory
