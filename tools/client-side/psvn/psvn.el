@@ -1201,9 +1201,9 @@ Then move to that line."
 (when (not svn-log-edit-mode-map)
   (setq svn-log-edit-mode-map (make-sparse-keymap))
   (define-key svn-log-edit-mode-map [(control ?c) (control ?c)] 'svn-log-edit-done)
-  (define-key svn-log-edit-mode-map [(control ?c) ?=] 'svn-log-edit-svn-diff)
-  (define-key svn-log-edit-mode-map [(control ?c) ?s] 'svn-log-edit-svn-status)
-  (define-key svn-log-edit-mode-map [(control ?c) ?q] 'svn-log-edit-abort))
+  (define-key svn-log-edit-mode-map [(control ?c) (control ?d)] 'svn-log-edit-svn-diff)
+  (define-key svn-log-edit-mode-map [(control ?c) (control ?s)] 'svn-log-edit-svn-status)
+  (define-key svn-log-edit-mode-map [(control ?c) (control ?q)] 'svn-log-edit-abort))
 
 (easy-menu-define svn-log-edit-mode-menu svn-log-edit-mode-map
 "'svn-log-edit-mode' menu"
