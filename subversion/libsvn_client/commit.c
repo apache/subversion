@@ -621,27 +621,19 @@ send_to_repos (svn_client_commit_info_t **commit_info,
       if (apr_err)
         return svn_error_createf (apr_err, 0, NULL, pool,
                                   "error closing %s", xml_dst->data);
+      
+      /* Use REVISION for COMMITTED_REV. */
+      committed_rev = revision;
     }
   else  
     /* We were committing to RA, so close the session. */
     SVN_ERR (ra_lib->close (session));
 
-  /* Allocate (and populate) the commit_info */
-  if ((committed_date != NULL) 
-      || (committed_author != NULL) 
-      || (SVN_IS_VALID_REVNUM (committed_rev)))
-    {
-      svn_client_commit_info_t *info;
-
-      info = apr_pcalloc (pool, sizeof (**commit_info));
-      if (committed_date)
-        info->date = apr_pstrdup (pool, committed_date);
-      if (committed_author)
-        info->date = apr_pstrdup (pool, committed_author);
-      info->revision = committed_rev;
-      *commit_info = info;
-    }
-  
+  /* Fill in the commit_info structure. */
+  *commit_info = svn_client__make_commit_info (committed_rev,
+                                               committed_author,
+                                               committed_date,
+                                               pool);
   return SVN_NO_ERROR;
 }
 
@@ -746,6 +738,27 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 
   return err;
 }
+
+
+svn_client_commit_info_t *
+svn_client__make_commit_info (svn_revnum_t revision,
+                              const char *author,
+                              const char *date,
+                              apr_pool_t *pool)
+{
+  svn_client_commit_info_t *info;
+
+  if (date || author || SVN_IS_VALID_REVNUM (revision))
+    {
+      info = apr_palloc (pool, sizeof (*info));
+      info->date = date ? apr_pstrdup (pool, date) : NULL;
+      info->author = author ? apr_pstrdup (pool, author) : NULL;
+      info->revision = revision;
+      return info;
+    }
+  return NULL;
+}
+
 
 
 

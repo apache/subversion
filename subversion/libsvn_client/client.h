@@ -95,6 +95,17 @@ svn_error_t * svn_client__get_authenticator (void **authenticator,
                                              void *callback_baton,
                                              apr_pool_t *pool);
 
+/* ---------------------------------------------------------------- */
+
+/*** Commit ***/
+
+/* If REVISION or AUTHOR or DATE has a valid value, then allocate (in
+   POOL) an svn_client_commit_info_t structure and populate it with
+   those values (that is, copies of them allocated in POOL).  */
+svn_client_commit_info_t *svn_client__make_commit_info (svn_revnum_t revision,
+                                                        const char *author,
+                                                        const char *date,
+                                                        apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 

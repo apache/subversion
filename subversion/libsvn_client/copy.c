@@ -291,21 +291,11 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   SVN_ERR (editor->close_directory (batons[0]));
   SVN_ERR (editor->close_edit (edit_baton));
 
-  /* Allocate (and populate) the commit_info */
-  if ((committed_date != NULL) 
-      || (committed_author != NULL) 
-      || (SVN_IS_VALID_REVNUM (committed_rev)))
-    {
-      svn_client_commit_info_t *info;
-
-      info = apr_pcalloc (pool, sizeof (**commit_info));
-      if (committed_date)
-        info->date = apr_pstrdup (pool, committed_date);
-      if (committed_author)
-        info->date = apr_pstrdup (pool, committed_author);
-      info->revision = committed_rev;
-      *commit_info = info;
-    }
+  /* Fill in the commit_info structure. */
+  *commit_info = svn_client__make_commit_info (committed_rev,
+                                               committed_author,
+                                               committed_date,
+                                               pool);
 
   SVN_ERR (ra_lib->close (sess));
 
@@ -394,21 +384,11 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   SVN_ERR (svn_wc_crawl_as_copy (parent, basename, target,
                                  editor, edit_baton, pool));
 
-  /* Allocate (and populate) the commit_info */
-  if ((committed_date != NULL) 
-      || (committed_author != NULL) 
-      || (SVN_IS_VALID_REVNUM (committed_rev)))
-    {
-      svn_client_commit_info_t *info;
-
-      info = apr_pcalloc (pool, sizeof (**commit_info));
-      if (committed_date)
-        info->date = apr_pstrdup (pool, committed_date);
-      if (committed_author)
-        info->date = apr_pstrdup (pool, committed_author);
-      info->revision = committed_rev;
-      *commit_info = info;
-    }
+  /* Fill in the commit_info structure. */
+  *commit_info = svn_client__make_commit_info (committed_rev,
+                                               committed_author,
+                                               committed_date,
+                                               pool);
 
   /* Close the RA session. */
   SVN_ERR (ra_lib->close (sess));
