@@ -72,8 +72,7 @@
    Since text deltas can be very large, we make it possible to
    generate them in pieces.  Each piece, represented by an
    `svn_delta_window_t' structure, describes how to produce the next
-   section of the target string, based on either a supplied source
-   string, or a prior region of the target string.
+   section of the target string.
 
    We begin delta generation by calling `svn_delta_files' or
    `svn_delta_strings' on the files or strings we want to compare.
@@ -154,6 +153,13 @@ extern svn_error_t *svn_next_delta_window (svn_delta_stream_t *stream,
 /* Free the delta window WINDOW.  */
 extern void svn_free_delta_window (svn_delta_window_t *window);
 
+/* A function resembling the POSIX `read' system call --- DATA is some
+   opaque structure indicating what we're reading, BUFFER is a buffer
+   to hold the data, and LEN indicates how many bytes to read.  */
+typedef svn_error_t *(*svn_delta_read_fn_t) (void *data,
+                                             char *buffer,
+                                             ap_off_t len);
+
 /* Set *STREAM to a pointer to a delta stream that will turn the text
    from SOURCE into the text from TARGET.
 
@@ -165,10 +171,6 @@ extern void svn_free_delta_window (svn_delta_window_t *window);
    allows us to process the data as we go.  When we call
    `svn_next_delta_window' on STREAM, it will call upon its SOURCE and
    TARGET `read'-like functions to gather as much data as it needs.  */
-typedef svn_error_t *(*svn_delta_read_fn_t) (void *data,
-                                           char *buffer,
-                                           ap_off_t len);
-
 extern svn_error_t *svn_text_delta (svn_delta_read_fn_t *source,
                                     void *source_data,
                                     svn_delta_read_fn_t *target,
@@ -178,20 +180,22 @@ extern svn_error_t *svn_text_delta (svn_delta_read_fn_t *source,
 /* Free the delta stream STREAM.  */
 extern void svn_free_delta_stream (svn_delta_stream_t *stream);
 
-/* Given a delta stream STREAM, set *FN and *DATA to a `read'-like
+/* Given a delta stream STREAM, set *READ_FN and *DATA to a `read'-like
    function that will return a VCDIFF-format byte stream.
    (Do we need a `free' function for disposing of DATA somehow?)  */
 extern svn_error_t *svn_delta_to_vcdiff (svn_delta_stream_t *stream,
-                                         svn_delta_read_fn_t **fn,
+                                         svn_delta_read_fn_t **read_fn,
                                          void **data);
 
-/* Given FN and DATA, a `read'-like function and data pointer that
+/* Given READ_FN and DATA, a `read'-like function and data pointer that
    yield a VCDIFF-format byte stream, set *STREAM to a pointer to a
    delta stream carrying the data from the VCDIFF stream.  */
-extern svn_error_t *svn_vcdiff_to_delta (svn_delta_read_fn_t *fn,
+extern svn_error_t *svn_vcdiff_to_delta (svn_delta_read_fn_t *read_fn,
                                          void *data,
                                          svn_delta_stream_t **stream);
 
+
+/* A 
 
 
 /* Property deltas.  */
