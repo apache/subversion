@@ -141,7 +141,7 @@ conflicting deltas.
 Examples
 --------
 
-Example 1:
+Example 1:  No conflict
 
 
        C(B->WC)   = { 2, 5, 9, 13, 21, 87 }
@@ -153,16 +153,49 @@ Example 1:
     for an update, the server would send back RWC->L.
 
 
-Example 2:
+Example 2:  One conflict
      
        C(B->WC)   = { 2, 5, 9, 13, 21, 87 }
        C(RWC->L)  = { 3, 4, 6, 22, 54, 87, 102 }
 
     Both deltas have changed node 87.  If the client were attempting
     to commit, the entire transaction would be denied.  If the client
-    were asking for an update, 
+    were asking for an update, the server would point out the
+    conflict.  In both cases, it's up to the client to describe the
+    conflict either with conflict markers (in the case of a changed
+    file) or with an informational message (in the case of a changed
+    directory).
 
-;  the client
-    would then use conflict markers (or other methods) to show how
-    node 87 conflicts  If the client
+
+Example 3:  Client adds a file
+  
+     Suppose that completely new file has been added to the working
+     copy, but not yet committed.
+
+       C(B->WC)   = { 2, 5, 9, 13, 21, 87, ?? }
+       C(RWC->L)  = { 3, 4, 6, 22, 54, 99, 102 }
+
+     The question marks indicate the fact that while C() was
+     traversing the delta and looking up node numbers, it ran into an
+     unrecognized pathname.  There's no node number for the file,
+     because it doesn't yet exist in the repository!
+
+     This case demonstrates that mere node numbers aren't quite
+     enough;  pathnames must be also be examined when looking for
+     conflicts between two deltas.  E.g., suppose that the new file
+     has the exact same pathname as node 102 in L?
+
+
+Example 4:  Client deletes a file
+
+     Deleting a file shows up in a tree-delta as a "change" to a file,
+     and thus this file's node shows up in C(B->WC), so this is the
+     same as example 2.
+
+
+Example 5:  Client moves a file or directory.
+
+     This action would show up as *two* changed node numbers in
+     C(B->WC), and the rest would play out like example 2.
+
 
