@@ -175,8 +175,8 @@ svn_error_t *svn_wc__write_adm_entry (apr_file_t *fp,
 
 /* Remove `PATH/<adminstrative_subdir>/THING'. */
 svn_error_t *svn_wc__remove_adm_file (svn_string_t *path,
-                                       apr_pool_t *pool,
-                                       ...);
+                                      apr_pool_t *pool,
+                                      ...);
 
 /* Set *EXISTS to true iff PATH exists, false otherwise.
  * If PATH's existence cannot be determined, an error will be
