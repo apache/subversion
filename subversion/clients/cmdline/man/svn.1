@@ -132,16 +132,18 @@ developers, by incorporating them into the source repository.
 
 -m/--message can be used to specify commit message on the command line.
 
+-F/--msg-file can be used to specify from which file to read the pre-written
+commit message.
+
 \fBexample:\fP svn commit foo.c bar.h baz/ bat/*.m
 .TP
-\fBcopy\fP \fIsource destination\fP
-(Alias: cp)
-Where \fBsource\fP and \fBdestination\fP can be directories or files. `copy'
-is used where you want to make a copy of \fBsource\fP so that
-\fBdestination\fP will share ancestry of \fBsource\fP. Unless
-\fBdestination\fP is a directory, \fBdestination\fP must not exist (In the
-spirit of unix cp, \fBsource\fP will be placed inside of \fBdestination\fP if
-\fBdestination\fP is a directory).
+\fBcopy\fP \fIsource destination\fP (Alias: cp) Where \fBsource\fP and
+\fBdestination\fP can be directories or files, local ones in a repository or
+remote ones specified as URLs. `copy' is used where you want to make a copy of
+\fBsource\fP so that \fBdestination\fP will share ancestry of
+\fBsource\fP. Unless \fBdestination\fP is a directory, \fBdestination\fP must
+not exist (In the spirit of unix cp, \fBsource\fP will be placed inside of
+\fBdestination\fP if \fBdestination\fP is a directory).
 
 \fBexample:\fP If you do this (MAINTAIN ANCESTRY)
 
@@ -157,12 +159,16 @@ Then foo.c and bar.c will share a common ancestor in the repository.
 
 Then you will have the identical file in your working copy, but bar.c will
 have no revision history beyond the initial import that you just did.
+
+\fBexample:\fP Make a new copy from a remote source
+
+  $ svn cp http://rep.com/repo/path/bar.c foo.c
+  $ svn ci -m "copied that remote bar.c here"
 .TP
 \fBdelete\fP \fIfile|dir\fP\|.\|.\|.
-(Alias: del, remove, rm)
-Mark the given files/directories for deletion upon commit. When you commit,
-the entries will be marked as deleted in the repository and deleted from your
-working copy.
+(Alias: del, remove, rm) Mark the given files/directories for deletion upon
+commit. When you commit, the entries will be removed from the head revision in
+the repository, and deleted from your working copy.
 
 \fBexample:\fP svn delete foo.c bar.h
 .TP
@@ -185,6 +191,15 @@ Show log messages (and affected entities) for commits in which any of the
 entities in question changed.  If none were specified, then recursive
 inclusion is the default.  The set of messages can be further restricted by a
 date or revision range specification (using -d or -r).
+.TP
+\fBmkdir\fP [\fIdirectory...\fP]
+Create the directory(ies), if they do not already exist. The directories can
+be specified as a local directory name, or as a URL.
+.TP
+\fBmove\fP [\fISOURCE\fP] [\fIDEST\fP]
+Rename SOURCE to DEST, or move SOURCE(s) to DIRECTORY. Both source and dest
+can be specified either as a local file name, or as a URL in a possibly remote
+repository.
 .TP
 \fBpropdel\fP \fIname\fP [\fItargets\fP]
 (Alias: pdel)
