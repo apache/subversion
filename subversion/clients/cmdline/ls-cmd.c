@@ -36,6 +36,7 @@
 static svn_error_t *
 print_dirents (apr_hash_t *dirents,
                svn_boolean_t verbose,
+               svn_client_ctx_t *ctx,
                apr_pool_t *pool)
 {
   apr_array_header_t *array;
@@ -48,6 +49,9 @@ print_dirents (apr_hash_t *dirents,
       const char *utf8_entryname;
       svn_dirent_t *dirent;
       svn_sort__item_t *item;
+
+      if (ctx->cancel_func)
+        SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
      
       item = &APR_ARRAY_IDX (array, i, svn_sort__item_t);
 
@@ -141,7 +145,7 @@ svn_cl__ls (apr_getopt_t *os,
       SVN_ERR (svn_client_ls (&dirents, target, &(opt_state->start_revision),
                               opt_state->recursive, ctx, subpool));
 
-      SVN_ERR (print_dirents (dirents, opt_state->verbose, subpool));
+      SVN_ERR (print_dirents (dirents, opt_state->verbose, ctx, subpool));
       svn_pool_clear (subpool);
     }
 
