@@ -1231,13 +1231,16 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       SVN_ERR (svn_wc__prop_base_path (&base_thing, fullpath, adm_access, FALSE,
                                        pool));
       SVN_ERR (svn_io_check_path (base_thing, &kind, pool));
-
-      if ((err = svn_io_copy_file (base_thing, thing, FALSE, pool)))
-        return revert_error (err, fullpath, "restoring props", pool);
       
-      SVN_ERR (svn_io_file_affected_time (&tstamp, thing, pool));
-      entry->prop_time = tstamp;
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_TIME;
+      if (kind == svn_node_file)
+        {
+          if ((err = svn_io_copy_file (base_thing, thing, FALSE, pool)))
+            return revert_error (err, fullpath, "restoring props", pool);
+      
+          SVN_ERR (svn_io_file_affected_time (&tstamp, thing, pool));
+          entry->prop_time = tstamp;
+          *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_TIME;
+        }
     }
 
   if (entry->kind == svn_node_file)

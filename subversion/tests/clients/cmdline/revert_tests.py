@@ -146,6 +146,59 @@ def revert_corrupted_text_base(sbox):
   if not found_it:
     raise svntest.Failure
 
+#----------------------------------------------------------------------
+# Regression test for issue #1775:
+# Should be able to revert a file with no properties i.e. no prop-base 
+def revert_replaced_file_without_props(sbox):
+  "revert a replaced file with no properties"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file1_path = os.path.join(wc_dir, 'file1')
+
+  # Add a new file, file1, that has no prop-base
+  svntest.main.file_append(file1_path, "This is the file 'file1' revision 2.")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', file1_path)
+
+  # commit file1
+  expected_output = svntest.wc.State(wc_dir, {
+    'file1' : Item(verb='Adding')
+    })
+  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'file1' : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                         expected_status, None, None,
+                                         None, None, None, wc_dir)
+
+  # delete file1 
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', file1_path)
+
+  # test that file1 is scheduled for deletion.
+  expected_status.tweak('file1', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # recreate and add file1 
+  svntest.main.file_append(file1_path, "This is the file 'file1' revision 3.")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', file1_path)
+
+  # Test to see if file1 is schedule for replacement 
+  expected_status.tweak('file1', status='R ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # revert file1
+  svntest.actions.run_and_verify_svn(None, ["Reverted '" + file1_path + "'\n"],
+                                     None, 'revert', file1_path)
+
+  # test that file1 really was reverted
+  expected_status.tweak('file1', status='  ', wc_rev=2, repos_rev=2)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -155,6 +208,7 @@ def revert_corrupted_text_base(sbox):
 test_list = [ None,
               XFail(revert_reexpand_keyword),
               revert_corrupted_text_base,
+              revert_replaced_file_without_props,
              ]
 
 if __name__ == '__main__':
