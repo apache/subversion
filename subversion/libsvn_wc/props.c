@@ -1068,6 +1068,18 @@ svn_wc_prop_set (const char *name,
               new_value = svn_stringbuf_create_from_string (value, pool);
               svn_stringbuf_appendbytes (new_value, "\n", 1);
             }
+
+          /* Make sure this is a valid externals property. */
+          if (strcmp (name, SVN_PROP_EXTERNALS) == 0)
+            {
+              /* We don't allow "." nor ".." as target directories in
+                 an svn:externals line.  As it happens, our parse code
+                 checks for this, so all we have to is invoke it --
+                 we're not interested in the parsed result, only in
+                 whether or the parsing errored. */
+              SVN_ERR (svn_wc_parse_externals_description
+                       (NULL, path, value->data, pool));
+            }
         }
       else if (strcmp (name, SVN_PROP_KEYWORDS) == 0)
         {
@@ -1439,10 +1451,12 @@ svn_wc_parse_externals_description (apr_hash_t **externals_p,
                                     const char *desc,
                                     apr_pool_t *pool)
 {
-  apr_hash_t *externals = apr_hash_make (pool);
   apr_array_header_t *lines = svn_cstring_split (desc, "\n\r", TRUE, pool);
   int i;
   
+  if (externals_p)
+    *externals_p = apr_hash_make (pool);
+
   for (i = 0; i < lines->nelts; i++)
     {
       const char *line = APR_ARRAY_IDX (lines, i, const char *);
@@ -1525,37 +1539,32 @@ svn_wc_parse_externals_description (apr_hash_t **externals_p,
              "Invalid line: '%s'", parent_directory, line);
         }
 
-      /* Make sure we don't have a reference to "../" in the tgt dir.
-       *
-       * ### Ideally, we'd prevent this at propset time, not when the
-       * client receives the external.  But that's a much larger
-       * change.  For now, the important thing is to make sure such
-       * references error and are not used, since they are a security
-       * risk (they could clobber things outside the working copy).
-       */
+      /* Make sure we don't have "." nor "../" in the tgt dir. */
       {
-        apr_ssize_t target_dir_len = strlen (item->target_dir);
+        int tgt_dir_len = strlen (item->target_dir);
 
-        if ((target_dir_len > 3)
-            && ((strncmp (item->target_dir, "../", 3) == 0)
-                || (strstr (item->target_dir, "/../") != NULL)
-                || (strncmp ((item->target_dir + target_dir_len - 3),
-                             "/..", 3) == 0)))
-        return svn_error_createf
-          (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
-           "error parsing " SVN_PROP_EXTERNALS " property on '%s':\n"
-           "Invalid line: '%s'\n"
-           "Target dir '%s' references '..', which is not allowed.",
-           parent_directory, line, item->target_dir);
+        if ((strcmp (item->target_dir, ".") == 0)
+            || (strcmp (item->target_dir, "./") == 0)
+            || (strncmp (item->target_dir, "../", 3) == 0)
+            || (strstr (item->target_dir, "/../") != NULL)
+            || (strncmp ((item->target_dir + tgt_dir_len - 3), "/..", 3) == 0))
+          return svn_error_createf
+            (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+             "error parsing " SVN_PROP_EXTERNALS " property on '%s':\n"
+             "Invalid line: '%s'\n"
+             "Target dir '%s' involves '.' or '..', which is not allowed.",
+             parent_directory, line, item->target_dir);
       }
 
       item->target_dir = svn_path_canonicalize (item->target_dir, pool);
       item->url = svn_path_canonicalize (item->url, pool);
 
-      apr_hash_set (externals, item->target_dir, APR_HASH_KEY_STRING, item);
+      if (externals_p)
+        {
+          apr_hash_set (*externals_p, item->target_dir,
+                        APR_HASH_KEY_STRING, item);
+        }
     }
-
-  *externals_p = externals;
 
   return SVN_NO_ERROR;
 }
