@@ -644,6 +644,11 @@ svn_error_t *
 svn_io_file_close (apr_file_t *file, apr_pool_t *pool);
 
 
+/** Wrapper for @c apr_file_getc(), which see. */
+svn_error_t *
+svn_io_file_getc (char *ch, apr_file_t *file, apr_pool_t *pool);
+
+
 /** Wrapper for @c apr_file_read(), which see. */
 svn_error_t *
 svn_io_file_read (apr_file_t *file, void *buf, 
@@ -659,13 +664,13 @@ svn_io_file_read_full (apr_file_t *file, void *buf,
 
 /** Wrapper for @c apr_file_write(), which see. */
 svn_error_t *
-svn_io_file_write (apr_file_t *file, void *buf, 
+svn_io_file_write (apr_file_t *file, const void *buf, 
                    apr_size_t *nbytes, apr_pool_t *pool);
 
 
 /** Wrapper for @c apr_file_write_full(), which see. */
 svn_error_t *
-svn_io_file_write_full (apr_file_t *file, void *buf, 
+svn_io_file_write_full (apr_file_t *file, const void *buf, 
                         apr_size_t nbytes, apr_size_t *bytes_written,
                         apr_pool_t *pool);
 
