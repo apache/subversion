@@ -17,7 +17,13 @@ SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
 SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
 SWIG_DIRS = subversion/bindings/swig            \
             subversion/bindings/swig/python     \
-            subversion/bindings/swig/python/svn
+            subversion/bindings/swig/python/svn \
+            subversion/bindings/swig/java       \
+            subversion/bindings/swig/java/build \
+            subversion/bindings/swig/java/org   \
+            subversion/bindings/swig/java/org/tigris \
+            subversion/bindings/swig/java/org/tigris/subversion \
+            subversion/bindings/swig/java/org/tigris/subversion/swig
 
 EXTERNAL_PROJECT_DIRS = @SVN_SUBDIRS@
 
@@ -140,10 +146,10 @@ local-extraclean: local-distclean
               ac-helpers/ltmain.sh
 
 # clean everything, including test output.
-local-clean: fast-clean check-clean swig-py-ext-clean
+local-clean: fast-clean check-clean swig-clean
 
 # clean everything, including test output.
-local-distclean: fast-distclean check-clean swig-py-ext-clean
+local-distclean: fast-distclean check-clean swig-clean
 
 local-install: @INSTALL_RULES@ @SWIG_INSTALL_RULES@
 
@@ -274,18 +280,23 @@ doc-clean:
                    *.dvi *.txt *.html *.ps *.pdf *.fo);     \
         done
 
-swig-py-ext:
+swig-assert-available:
 	@if test -z "$(SWIG)"; then                                 \
 	    echo 'SWIG variable not defined; this rule is unavailable' >&2; \
 	    echo 'Re-run configure --with-swig' >&2;               \
 	    exit 1;                                                \
 	fi
+
+swig-clean: swig-py-ext-clean swig-java-ext-clean
+
+swig-py-ext: swig-assert-available
 	cd $(SWIG_SRC_DIR)/python;                                 \
         $(PYTHON) setup.py                                         \
             -I$(SWIG_SRC_DIR)                                      \
             -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
             -S$(SWIG_SRC_DIR)                                      \
             -L$(DESTDIR)$(prefix)/lib -L$(SVN_APR_PREFIX)/lib      \
+            -s"$(SWIG)"                                            \
 	    $(SWIG_LDFLAGS)                                        \
             build --build-base=$(SWIG_BUILD_DIR)/python/build
 
@@ -297,6 +308,20 @@ install-swig-py-ext:
 
 swig-py-ext-clean:
 	rm -rf $(SWIG_BUILD_DIR)/python/build
+
+# FIXME: Replace inline Perl invocation with something cleaner.
+swig-java-ext: swig-assert-available mkdir-init
+	cd $(SWIG_SRC_DIR); \
+    for source in *.i; do \
+        target="`echo -n $$source | perl -pe 's/\.i$$/.c/'`"; \
+        $(SWIG) -c -java -noproxy -module 'svn_' \
+            -I$(SWIG_SRC_DIR) \
+            -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
+            -o java/build/$$target $$source; \
+    done
+
+swig-java-ext-clean:
+	rm -rf $(SWIG_SRC_DIR)/*.java $(SWIG_SRC_DIR)/java
 
 ### Build a tarball.
 dist: 
