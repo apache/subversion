@@ -96,7 +96,10 @@ SYMBOLIC_NAME_ROOTS_DB = 'cvs2svn-symroots.db'
 # See class SymbolicNameTracker for details.
 SYMBOLIC_NAMES_DB = "cvs2svn-sym-names.db"
 
-# Records the author and log message for each changeset
+# Records the author and log message for each changeset.
+# The keys are author+log digests, the same kind used to identify
+# unique revisions in the .revs, etc files.  Each value is a list
+# of two elements: '(author logmessage)'.
 METADATA_DB = "cvs2svn-metadata.db"
 
 REVS_SUFFIX = '.revs'
