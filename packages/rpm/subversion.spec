@@ -17,7 +17,7 @@ Requires: apache-libapr-utils >= %{apache_version}
 Requires: db >= 4.0.14
 Requires: expat
 Requires: neon = %{neon_version}
-Requires: /sbin/install-info
+#Requires: /sbin/install-info
 BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
 BuildPreReq: apache-libapr-devel >= %{apache_version}
@@ -170,25 +170,29 @@ make install \
 %post
 # Only add to INFO directory if this is the only instance installed.
 if [ "$1"x = "1"x ]; then
-   /sbin/install-info /usr/share/info/svn-design.info.gz \
-      /usr/share/info/dir \
-      --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
+   if [ -f /sbin/install-info -a -x /sbin/install-info ]; then
+      /sbin/install-info /usr/share/info/svn-design.info.gz \
+         /usr/share/info/dir \
+         --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
 
-   /sbin/install-info /usr/share/info/svn-handbook.info.gz \
-      /usr/share/info/dir \
-      --entry='* Subversion: (svn-handbook).          Subversion Versioning System Manual'
+      /sbin/install-info /usr/share/info/svn-handbook.info.gz \
+         /usr/share/info/dir \
+         --entry='* Subversion: (svn-handbook).          Subversion Versioning System Manual'
+   fi
 fi
 
 %preun
 # Only delete from INFO directory if this is the last instance being deleted.
 if [ "$1"x = "0"x ]; then
-   /sbin/install-info --delete /usr/share/info/svn-design.info.gz \
-      /usr/share/info/dir \
-      --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
+   if [ -f /sbin/install-info -a -x /sbin/install-info ]; then
+      /sbin/install-info --delete /usr/share/info/svn-design.info.gz \
+         /usr/share/info/dir \
+         --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
 
-   /sbin/install-info --delete /usr/share/info/svn-handbook.info.gz \
-      /usr/share/info/dir \
-      --entry='* Subversion: (svn-handbook).          Subversion Versioning System Manual'
+      /sbin/install-info --delete /usr/share/info/svn-handbook.info.gz \
+         /usr/share/info/dir \
+         --entry='* Subversion: (svn-handbook).          Subversion Versioning System Manual'
+   fi
 fi
 
 %post server
