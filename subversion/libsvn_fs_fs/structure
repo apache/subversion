@@ -30,12 +30,12 @@ A revision file contains a concatenation of various kinds of data:
   * At the end, the changed-path data
   * Two offsets at the very end
 
-A text representation begins with a line "REP <length> [<base-rev>
-<base-offset>]\n" where <length> gives the length of the ensuing
-svndiff data, and <base-rev> and <base-offset>, if present, give the
-location of the delta base of the representation.  If no base location
-is given, the base is the empty stream.  After the initial line comes
-raw svndiff data, followed by a cosmetic marker "END\n".
+A text rep begins with a line "REP[ <rev> <offset> <length>]\n" where
+<rev>, <offset>, and <length>, if present, give the location of the
+delta base of the representation and the amount of svndiff data it
+contains.  If no base location is given, the base is the empty stream.
+After the initial line comes raw svndiff data, followed by a cosmetic
+marker "END\n".
 
 The representation of a property list is the hash dump format used by
 svn_hash_read and svn_hash_write.
@@ -53,8 +53,9 @@ extensibility.  The following fields are defined:
   type      "file" or "dir"
   pred      "<rev> <offset>" giving location of predecessor node-rev
   count     Count of node-revs since the base of the node
-  rep       Offset of text representation
-  props     Offset of property list
+  rep       "<rev> <offset> <length>" giving location of text rep and
+            the amount of svndiff data it contains
+  props     "<rev> <offset>" giving location of property list
   copyfrom  "{soft|hard} <rev> <path>" of copyfrom data
   copyroot  "<base> <offset>" giving location of root of copy
   cpath     FS pathname node was created at [clarify]
