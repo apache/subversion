@@ -84,11 +84,21 @@
  */
 
 /* kff todo: these do nothing and return SVN_NO_ERROR right now. */
-svn_error_t *svn_wc_rename (svn_string_t *src, svn_string_t *dst);
-svn_error_t *svn_wc_copy   (svn_string_t *src, svn_string_t *dst);
-svn_error_t *svn_wc_add    (apr_array_header_t *paths);
-svn_error_t *svn_wc_delete (apr_array_header_t *paths);
+svn_error_t *svn_wc_rename (svn_string_t *src,
+                            svn_string_t *dst,
+                            apr_pool_t *pool);
 
+svn_error_t *svn_wc_copy (svn_string_t *src,
+                          svn_string_t *dst,
+                          apr_pool_t *pool);
+
+svn_error_t *svn_wc_delete_file (svn_string_t *file,
+                                 apr_pool_t *pool);
+
+/* Add an entry for FILE.  Does not check that FILE exists on disk;
+   caller should take care of that, if it cares. */
+svn_error_t *svn_wc_add_file (svn_string_t *file,
+                              apr_pool_t *pool);
 
 
 /*** Commits. ***/

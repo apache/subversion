@@ -190,7 +190,7 @@ parse_options (int argc,
       fprintf (stderr, "%s: no command given\n", s);
       exit (1);
     }
-  if (! *xml_file)
+  if ((! *xml_file) && (*command != add_command))
     {
       fprintf (stderr, "%s: need \"--xml-file FILE.XML\"\n", s);
       exit (1);
