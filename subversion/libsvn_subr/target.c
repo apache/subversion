@@ -67,10 +67,10 @@ svn_path_condense_targets (const char **pcommon,
   /* Copy the targets array, but with absolute paths instead of
      relative.  Also, find the pcommon argument by finding what is
      common in all of the absolute paths. NOTE: This is not as
-     efficient as it could be.  The calculation of the basedir
-     could be done in the loop below, which would save some calls to
+     efficient as it could be.  The calculation of the basedir could
+     be done in the loop below, which would save some calls to
      svn_path_get_longest_ancestor.  I decided to do it this way
-     because I thought it would simpler, since this way, we don't
+     because I thought it would be simpler, since this way, we don't
      even do the loop if we don't need to condense the targets. */
   
   removed = apr_pcalloc (pool, (targets->nelts * sizeof (svn_boolean_t)));

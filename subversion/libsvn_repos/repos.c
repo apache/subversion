@@ -228,6 +228,17 @@ create_locks (svn_repos_t *repos, apr_pool_t *pool)
   "# culprit may be unusual (or missing) environment variables."        \
   APR_EOL_STR
 
+#define PREWRITTEN_HOOKS_TEXT                                           \
+  "# For more examples and pre-written hooks, see those in"             \
+  APR_EOL_STR                                                           \
+  "# the Subversion repository at"                                      \
+  APR_EOL_STR                                                           \
+  "# http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/ and"     \
+  APR_EOL_STR                                                           \
+  "# http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/"       \
+  APR_EOL_STR                                                           \
+
+
 static svn_error_t *
 create_hooks (svn_repos_t *repos, apr_pool_t *pool)
 {
@@ -320,7 +331,8 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       HOOKS_ENVIRONMENT_TEXT
       "# "
       APR_EOL_STR
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      "# Here is an example hook script, for a Unix /bin/sh interpreter."
+      PREWRITTEN_HOOKS_TEXT
       APR_EOL_STR
       APR_EOL_STR
       "REPOS=\"$1\""
@@ -443,7 +455,8 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       HOOKS_ENVIRONMENT_TEXT
       "# "
       APR_EOL_STR
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      "# Here is an example hook script, for a Unix /bin/sh interpreter."
+      PREWRITTEN_HOOKS_TEXT
       APR_EOL_STR
       APR_EOL_STR
       "REPOS=\"$1\""
@@ -579,7 +592,8 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       HOOKS_ENVIRONMENT_TEXT
       "# "
       APR_EOL_STR
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      "# Here is an example hook script, for a Unix /bin/sh interpreter."
+      PREWRITTEN_HOOKS_TEXT
       APR_EOL_STR
       APR_EOL_STR
       "REPOS=\"$1\""
@@ -689,7 +703,8 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       HOOKS_ENVIRONMENT_TEXT
       "# "
       APR_EOL_STR
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      "# Here is an example hook script, for a Unix /bin/sh interpreter."
+      PREWRITTEN_HOOKS_TEXT
       APR_EOL_STR
       APR_EOL_STR
       "REPOS=\"$1\""
@@ -794,7 +809,8 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       HOOKS_ENVIRONMENT_TEXT
       "# "
       APR_EOL_STR
-      "# Here is an example hook script, for a Unix /bin/sh interpreter:"
+      "# Here is an example hook script, for a Unix /bin/sh interpreter."
+      PREWRITTEN_HOOKS_TEXT
       APR_EOL_STR
       APR_EOL_STR
       "REPOS=\"$1\""
@@ -979,7 +995,7 @@ create_repos_structure (svn_repos_t *repos,
   /* Write the top-level FORMAT file. */
   SVN_ERR (svn_io_write_version_file 
            (svn_path_join (path, SVN_REPOS__FORMAT, pool),
-            SVN_REPOS__VERSION, pool));
+            SVN_REPOS__FORMAT_NUMBER, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1063,20 +1079,22 @@ check_repos_path (const char *path,
 
 /* Verify that the repository's 'format' file is a suitable version. */
 static svn_error_t *
-check_repos_version (const char *path,
+check_repos_format (svn_repos_t *repos,
                      apr_pool_t *pool)
 {
-  int version;
+  int format;
   const char *format_path;
 
-  format_path = svn_path_join (path, SVN_REPOS__FORMAT, pool);
-  SVN_ERR (svn_io_read_version_file (&version, format_path, pool));
+  format_path = svn_path_join (repos->path, SVN_REPOS__FORMAT, pool);
+  SVN_ERR (svn_io_read_version_file (&format, format_path, pool));
 
-  if (version != SVN_REPOS__VERSION)
+  if (format != SVN_REPOS__FORMAT_NUMBER)
     return svn_error_createf 
       (SVN_ERR_REPOS_UNSUPPORTED_VERSION, NULL,
-       _("Expected version '%d' of repository; found version '%d'"), 
-       SVN_REPOS__VERSION, version);
+       _("Expected format '%d' of repository; found format '%d'"), 
+       SVN_REPOS__FORMAT_NUMBER, format);
+
+  repos->format = format;
 
   return SVN_NO_ERROR;
 }
@@ -1100,14 +1118,14 @@ get_repos (svn_repos_t **repos_p,
 {
   svn_repos_t *repos;
 
-  /* Verify the validity of our repository format. */
-  SVN_ERR (check_repos_version (path, pool));
-
   /* Allocate a repository object. */
   repos = apr_pcalloc (pool, sizeof (*repos));
 
   /* Initialize the repository paths. */
   init_repos_dirs (repos, path, pool);
+
+  /* Verify the validity of our repository format. */
+  SVN_ERR (check_repos_format (repos, pool));
 
   /* Locking. */
   {

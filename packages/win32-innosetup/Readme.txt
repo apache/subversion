@@ -33,7 +33,7 @@ Introduction
 
   Inno Setup
   ----------
-  Inno Setup QuickStart Pack 5.0.7. This package gives you Inno Setup (IS)
+  Inno Setup QuickStart Pack 5.0.8. This package gives you Inno Setup (IS)
   and a sutable version of "Inno Setup Pre Processor" (ISPP):
     http://www.jrsoftware.org/isdl.php
 
@@ -41,6 +41,14 @@ Introduction
   -------
   UninsHs-1.6 adds "Modify/Repair/Uninstall" capabilities for the installer.
     http://www.han-soft.biz/uninshs.php
+
+  Svnbook
+  -------
+  We need the sources of this book in order to make the MS HTML-documentation.
+  Fire up a console window (a so called DOS box) and download the sources via
+  Subversion to a location by your choice:
+    svn co http://svn.red-bean.com/svnbook/trunk svnbook
+
 
   Perl
   ----
@@ -214,9 +222,10 @@ Programs used for the Subversion Windows installer
   This package is needed for making documentation.
   
   Unzip the files inside docbook-xsl-*.**.*.zip to a folder named xsl which
-  resides under doc\book\tools in your working copy of the subversion
-  repository. The result should be like this: 
-    doc\book\tools\xsl
+  resides under doc\book\tools in your working copy of the svnbook repository.
+  Rename the unpacked top level folder from "docbook-xsl-x.xx.x" to "xsl", the
+  result should be like this:
+    src\tools\xsl
 
   Perl
   ----

@@ -127,6 +127,18 @@ implement, some of them may not work at all.
     mean that svn_wc_props_modified_p usually avoids all disk IO then
     svn_wc__get_special could become a major bottleneck.
 
+- Optimise update/incomplete handling to reduce the number of times
+  the entry file gets written.
+  http://svn.haxx.se/dev/archive-2005-03/0060.shtml
+
+  * Avoid adding incomplete="true" if the revision is not changing.
+
+  * Don't write incomplete="true" immediately, cache it in the access
+    baton and only write it when next writing the entries file.
+
+  * Combine removing incomplete="true", and revision bumping, with the
+    last change due to the update.
+
 - The svn_wc_t context could work in conjunction with a more advanced
   svn_wc_crawl_revisions system.  This would provide a way of plugging
   multiple callbacks into a queue, probably with some sort of ordering

@@ -28,8 +28,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/*** Repository version number. */
-#define SVN_REPOS__VERSION     3
+/*** Repository format number. */
+#define SVN_REPOS__FORMAT_NUMBER     3
 
 
 /*** Repository layout. ***/
@@ -91,6 +91,9 @@ struct svn_repos_t
 
   /* The path to the Berkeley DB filesystem environment. */
   char *db_path;
+
+  /* The format number of this repository. */
+  int format;
 };
 
 

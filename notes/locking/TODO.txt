@@ -1,74 +1,78 @@
 TODO for locking
-===============
+================
 
-This is a summary of the current state of the locking implementation.
 
-* svn info URL (sussman)
-* svn update removes defunct locks svn status -u shows locking info from repo
-  - Rev reporter in libsvn_repos (lundblad)
-  - Rev svn_ra_reporter and RA APIs (lundblad)
-    + ra_dav
-    + ra_svn/svnserve
-    + ra_local
-  - Rev svn_wc_notify_func_t (!)
-  - WC stuff (lundblad)
-  - Client changes
+MUST HAVE
+---------
+
+* svn status -u shows lock info from repos.  (lundblad)
+
+* 'svn up' needs to notify when it deletes a defunct token
+       --> depends on patch-in-progress:
+           rev svn_wc_notify_func_t (on trunk) (lundblad/sussman)
+
+* research future ra_dav shim removal plan:  will it work? (sussman)
+
+* fix svn_fs_access_t handling in svnserve (sussman)
+   
+* autoversioning:
+
+    - finish issue 2161:  PROPFIND depth 1 should show locked,
+      nonexistent paths.  (cmpilato)
+
+    - research interoperability with popular dav clients (fitz)
+
+* test 4 new hook scripts.  do they actually work? (fitz)
+
+* teach mailer.py to send lock/unlock notification mails. (cmpilato)
+
+* chat with jorton about neon 0.25/svn1.2 coordination.
+
+* Fix svn_xml_is_xml_safe.  Currently, it allows invaid UTF8!  (lundblad?)
+
+* Scan the whole patch for TODO items introduced on the branch. (all, please)
+
+
+NICE TO HAVE
+------------
+
+* improve cmdline help messages
+
+* remove ra_svn shim for multiple locks/unlocks (fitz)
+
 * client test cases (fitz) [broad cases done]
-* Fix svn_fs_access_t handling in svnserve
-* Fix svn_ra_unlock force==true for ra_dav.
-* Improve cmdline help messages
-* svn lock and unlock should continue with next target on certain errors
-* Decide what should happen when unlocking in commit operation if an error
-  happens.
+
+* get httpd 2.0.54 released, so that svn 1.2 can compile on win32
+
+* get neon 0.25 released, so the control-c bug can go away
+
+* make --keep-locks into a runtime 'config' option
 
 
-LIST DISCUSSIONS TO HAVE:
+-----------------------------------------------
 
-  ### should we bump the format file, so a libsvn_fs 1.0 or 1.1
-      library isn't allowed to circumvent locks?
+* Questions:
 
-  ### how do locks relate to 
+   * Decide what should happen when unlocking in commit if an error happens.
 
-              - dumping/loading?
-              - backups?
-              - mirroring scripts?
+   * how do locks relate to dump/load?  file as an enhancement? 
 
 
-
-DAV bugs:
-
- -- Make ra_dav error on non-xml-safe lock comments,
-    and make mod_dav_svn fuzzily-escape lock-comments coming out of repos.
-
- -- BUG:  header length limits in MERGE request.
-          SOLUTION:
-              - pass locktoken hash in MERGE request body as new XML element.
-              - rev the provider API:  ap_lookup_provider()
-                 - fix get_locktoken_list()
-                 -  pass <D:merge> element to provider merge()                 
-                 -  new lock vtable with *one* function to add lock
-              - svn 1.2 will require httpd-2.0.53
-
- -- BUG: 'svn commit' does a no-op commit if locks exist in wc, but
-          files have no edits.  creates a commit with no changed paths!
-
-
-
-
-Stuff to document in book:
+* Stuff to document in book:
      
        - 4 new hooks
        - 'lock' and 'unlock' commands, svn:needs-lock property.
        - svnadmin lslocks, rmlocks, lock
        - svnlook lock
+       - 'svn info URL'
+       - 'svn st -u' additions
+       - new 'svn up' and 'svn commit' behaviors w.r.t. locktokens
        - two new bdb tables in BDB section.
        - update the description of autoversioning in appendix C!
 
          ### remember to update authz policy doc. 
 
-
-
-Autoversioning Compatibility Issues:
+* Autoversioning TODO:
 
  * propfind depth 1 on a collection should show lock-null resources.
    currently not happening.  can this be done *compatibly* with svn

@@ -112,6 +112,13 @@ display_prop_diffs (const apr_array_header_t *propchanges,
                                        propchange->name, APR_HASH_KEY_STRING);
       else
         original_value = NULL;
+
+      /* If the property doesn't exist on either side, or if it exists
+         with the same value, skip it.  */
+      if ((! (original_value || propchange->value))
+          || (original_value && propchange->value 
+              && svn_string_compare (original_value, propchange->value)))
+        continue;
       
       SVN_ERR (file_printf_from_utf8 (file, _("Name: %s%s"),
                                       propchange->name, APR_EOL_STR));
@@ -1161,8 +1168,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
         {
           if (!merge_b->dry_run)
             SVN_ERR (svn_wc_add (path, adm_access,
-                                 copyfrom_url,
-                                 merge_b->revision->value.number,
+                                 copyfrom_url, rev,
                                  merge_b->ctx->cancel_func,
                                  merge_b->ctx->cancel_baton,
                                  NULL, NULL, /* no notification func! */

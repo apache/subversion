@@ -714,7 +714,111 @@ def propset_revert_noerror(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  
+ 
+#----------------------------------------------------------------------
+#      Testing for canonicalized input to svn:keywords
+#      Propset a case-different keyword and check if
+#      expansion works
+def canonicalize_keywords_prop(sbox):
+  "test canonicalization of the svn:keywords input"
+
+  tests = [
+           ("lastchangedrevision",                      "Revision\n"),
+           ("lastcHANgedREviSIoN",                      "Revision\n"),
+           ("revision",                                 "Revision\n"),
+           ("rev",                                      "Revision\n"),
+           ("lastchangedby",                            "Author\n"),
+           ("author",                                   "Author\n"),
+           ("aUtHoR",                                   "Author\n"),
+           ("headurl",                                  "URL\n"),
+           ("url",                                      "URL\n"),
+           ("lasTChangEDdate",                          "Date\n"),
+           ("date",                                     "Date\n"),
+           ("DaTe",                                     "Date\n"),
+           ("id",                                       "Id\n"),
+           ("lastchangedrevision author LastChangedBy", "Revision Author\n"),
+          ]
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  for given_input, expected_output in tests:
+    svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                       "svn:keywords",
+                                       given_input,
+                                       iota_path)
+    svntest.actions.run_and_verify_svn(None,  [expected_output], [], 'propget',
+                                       "svn:keywords",
+                                       iota_path)
+
+
+#----------------------------------------------------------------------
+#      Testing for expansion of keywords in the file
+#      in addition to canonicalizable input to svn:keywords
+#      Propset a case-different keyword and check if
+#      expansion works
+def canonicalized_and_keywords_expanded(sbox):
+  "test keyword expansion after canonicalization"
+
+  keywords = [
+    'LastChangedRevision',
+    'Revision',
+    'Rev',
+    'LastChangedDate',
+    'Date',
+    'LastChangedBy',
+    'Author',
+    'HeadURL',
+    'URL',
+    ]
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  Z_path = os.path.join(wc_dir, 'Z')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', Z_path)
+
+  # Add the file that has the keyword to be expanded
+  url_path = os.path.join(Z_path, 'url')
+  for kwd in keywords:
+    svntest.main.file_append(url_path,
+                             kwd + ":$" + kwd + "$\n" +
+                             kwd.lower() + ":$" + kwd.lower() + "$\n")
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', url_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     "svn:keywords",
+                                     "lastchangedrevision lastchangeddate lastchangedby headurl",
+                                     url_path)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg', wc_dir)
+
+  # Check that the properly capitalised keyword "kwd" has been expanded on
+  # the first line of "lines", and a lower-case version of it has not been
+  # expanded on the next line of "lines".
+  def kwd_test(kwd, lines):
+    if not (lines[0].startswith(kwd + ":$" + kwd + ": ")):
+      print kwd + " expansion failed for", url_path
+      print "Line is: " + lines[0]
+      raise svntest.Failure
+    kwd = kwd.lower()
+    if not (lines[1].startswith(kwd + ":$" + kwd + "$")):
+      print kwd + " expansion failed for", url_path
+      print "Line is: " + lines[1]
+      raise svntest.Failure
+
+  # Check keyword got expanded (and thus the mkdir, add, ps, commit
+  # etc. worked)
+  fp = open(url_path, 'r')
+  lines = fp.readlines()
+  for kwd in keywords:
+    kwd_test(kwd, lines)
+    lines = lines[2:]
+  fp.close()
+
 ########################################################################
 # Run the tests
 
@@ -732,6 +836,8 @@ test_list = [ None,
               copy_propset_commit,
               propset_commit_checkout_nocrash,
               propset_revert_noerror, 
+              canonicalize_keywords_prop,
+              canonicalized_and_keywords_expanded,
              ]
 
 if __name__ == '__main__':

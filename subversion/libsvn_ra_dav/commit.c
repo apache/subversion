@@ -260,9 +260,9 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
     {
       /* ### need a proper SVN_ERR here */
       return svn_error_create(APR_EGENERAL, NULL,
-                              "Could not fetch the Version Resource URL "
-                              "(needed during an import or when it is "
-                              "missing from the local, cached props)");
+                              _("Could not fetch the Version Resource URL "
+                                "(needed during an import or when it is "
+                                "missing from the local, cached props)"));
     }
 
   /* ensure we get the proper lifetime for this URL since it is going into
@@ -430,7 +430,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                               "Could not create a CHECKOUT request (%s)",
+                               _("Could not create a CHECKOUT request (%s)"),
                                vsn_url);
     }
 
@@ -502,7 +502,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         return svn_error_createf
           (err->apr_err, err,
-           "Your file or directory '%s' is probably out-of-date",
+           _("Your file or directory '%s' is probably out-of-date"),
            svn_path_local_style(rsrc->local_path, pool));
       return err;
     }
@@ -510,8 +510,8 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   /* we got the header, right? */
   if (locn == NULL)
     return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                            "The CHECKOUT response did not contain a "
-                            "'Location:' header");
+                            _("The CHECKOUT response did not contain a "
+                              "'Location:' header"));
 
   /* The location is an absolute URI. We want just the path portion. */
   /* ### what to do with the rest? what if it points somewhere other

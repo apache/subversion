@@ -399,7 +399,7 @@ int main(int argc, const char *const *argv)
      APR_UNSPEC, becuase it may give us back an IPV6 address even if we can't
      create IPV6 sockets. */  
 
-#ifdef APR_HAVE_IPV6
+#if APR_HAVE_IPV6
 #ifdef MAX_SECS_TO_LINGER
   /* ### old APR interface */
   status = apr_socket_create(&sock, APR_INET6, SOCK_STREAM, pool);

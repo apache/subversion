@@ -512,6 +512,18 @@ SVN_ERROR_START
               SVN_ERR_FS_CATEGORY_START + 33,
               "Unknown FS type")
 
+  /* @since New in 1.2.
+   *
+   * This is analogous to SVN_ERR_REPOS_UNSUPPORTED_VERSION.  To avoid
+   * confusion with "versions" (i.e., releases) of Subversion, we've
+   * started calling this the "format" number instead.  The old
+   * SVN_ERR_REPOS_UNSUPPORTED_VERSION error predates this and so
+   * retains its name.
+   */
+  SVN_ERRDEF (SVN_ERR_FS_UNSUPPORTED_FORMAT,
+              SVN_ERR_FS_CATEGORY_START + 34,
+              "Unsupported FS format")
+
   /* repos errors */
 
   SVN_ERRDEF (SVN_ERR_REPOS_LOCKED,
@@ -534,6 +546,11 @@ SVN_ERROR_START
               SVN_ERR_REPOS_CATEGORY_START + 4,
               "Bogus revision report")
  
+  /* This is analogous to SVN_ERR_FS_UNSUPPORTED_FORMAT.  To avoid
+   * confusion with "versions" (i.e., releases) of Subversion, we
+   * started using the word "format" instead of "version".  However,
+   * this error code's name predates that decision.
+   */
   SVN_ERRDEF (SVN_ERR_REPOS_UNSUPPORTED_VERSION,
               SVN_ERR_REPOS_CATEGORY_START + 5,
               "Unsupported repository version")
