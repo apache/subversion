@@ -17,10 +17,6 @@
 
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #ifndef SVN_CONFIG_H
 #define SVN_CONFIG_H
 
@@ -28,6 +24,12 @@ extern "C" {
 
 #include <svn_types.h>
 #include <svn_string.h>
+#include <svn_error.h>
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 /*
    Subversion configuration files
@@ -174,11 +176,12 @@ typedef svn_boolean_t (*svn_config_enumerator_t)
 int svn_config_enumerate (svn_config_t *cfg, const char *section,
                           svn_config_enumerator_t callback, void *baton);
 
-#endif /* SVN_CONFIG_H */
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+#endif /* SVN_CONFIG_H */
 
 
 /* --------------------------------------------------------------
