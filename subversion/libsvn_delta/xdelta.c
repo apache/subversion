@@ -105,12 +105,12 @@ struct match
 
 static void
 init_matches_table (const char *data,
-                    apr_uint32_t datalen,
-                    apr_uint32_t blocksize,
+                    apr_size_t datalen,
+                    apr_size_t blocksize,
                     apr_hash_t *matches,
                     apr_pool_t *pool)
 {
-  apr_uint32_t i = 0;
+  apr_size_t i = 0;
   struct adler32 adler;
   for (i = 0; i < datalen; i += blocksize)
     {
@@ -138,30 +138,32 @@ init_matches_table (const char *data,
    BADVANCEP.  PENDING_INSERT is a pointer to a stringbuf pointer that is the
    last insert operation that has not been committed yet to the delta stream,
    if any.  This is used when extending the matches backwards, possibly
-   alleviating the need for the insert entirely.  */
+   alleviating the need for the insert entirely. 
+   Return TRUE if the lookup found a match, regardless of length.
+   Return FALSE otherwise.  */
 
-static void
+static svn_boolean_t
 find_match (apr_hash_t *matches,
             const struct adler32 *rolling,
             const char *a,
-            apr_uint32_t asize,
+            apr_size_t asize,
             const char *b,
-            apr_uint32_t bsize,
-            apr_uint32_t bpos,
-            apr_uint32_t *aposp,
-            apr_uint32_t *alenp,
-            apr_uint32_t *badvancep,
+            apr_size_t bsize,
+            apr_size_t bpos,
+            apr_size_t *aposp,
+            apr_size_t *alenp,
+            apr_size_t *badvancep,
             svn_stringbuf_t **pending_insert)
 {
   apr_uint32_t sum = adler32_sum (rolling);
-  apr_uint32_t alen, badvance, apos;
+  apr_size_t alen, badvance, apos;
   struct match *match;
-  apr_uint32_t tpos, tlen;
+  apr_size_t tpos, tlen;
 
   /* See if we have a match.  */
   match = apr_hash_get (matches, &sum, sizeof (sum));
   if (match == NULL)
-    return;
+    return FALSE;
 
   /* See where our match started.  */
   tpos = match->pos;
@@ -169,12 +171,11 @@ find_match (apr_hash_t *matches,
 
   /* Make sure it's not a false match.  */
   if (memcmp (a + tpos, b + bpos, tlen) != 0)
-    return;
+    return FALSE;
 
   apos = tpos;
   alen = tlen;
   badvance = tlen;
-
   /* Extend the match forward as far as possible */
   while ((apos + alen < asize)
          && (bpos + badvance < bsize)
@@ -205,6 +206,7 @@ find_match (apr_hash_t *matches,
   *aposp = apos;
   *alenp = alen;
   *badvancep = badvance;
+  return TRUE;
 }
 
 /* Size of the blocks we compute checksums for. This was chosen out of
@@ -246,7 +248,7 @@ compute_delta (svn_txdelta__ops_baton_t *build_baton,
 {
   apr_hash_t *matches = apr_hash_make(pool);
   struct adler32 rolling;
-  apr_uint32_t sz, lo, hi;
+  apr_size_t sz, lo, hi;
   svn_stringbuf_t *pending_insert = NULL;
 
   /* Initialize the matches table.  */
@@ -265,19 +267,20 @@ compute_delta (svn_txdelta__ops_baton_t *build_baton,
   init_adler32 (&rolling, b, MATCH_BLOCKSIZE);
   for (sz = bsize, lo = 0, hi = MATCH_BLOCKSIZE; lo < sz;)
     {
-      apr_uint32_t apos = 0;
-      apr_uint32_t alen = 1;
-      apr_uint32_t badvance = 1;
-      apr_uint32_t next;
+      apr_size_t apos = 0;
+      apr_size_t alen = 1;
+      apr_size_t badvance = 1;
+      apr_size_t next;
+      svn_boolean_t match;
 
-      find_match (matches, &rolling, a, asize, b, bsize, lo, &apos, &alen,
-                  &badvance, &pending_insert);
+      match = find_match (matches, &rolling, a, asize, b, bsize, lo, &apos, 
+                          &alen, &badvance, &pending_insert);
 
       /* If we didn't find a real match, insert the byte at the target
          position into the pending insert.  */
-      if (alen < MATCH_BLOCKSIZE &&
-          (apos + alen < asize))
+      if (match == FALSE)
         {
+
           if (pending_insert != NULL)
             svn_stringbuf_appendbytes (pending_insert, b + lo, 1);
           else
@@ -285,6 +288,12 @@ compute_delta (svn_txdelta__ops_baton_t *build_baton,
         }
       else
         {
+          /* The only legal way to end up here is to find a match.  If we
+             didn't find a match, we are going to generate a copy instruction
+             when we should have generated an insert, so something about the
+             condition above, or what the match routine did, is wrong.  */
+          assert (match == TRUE);
+
           if (pending_insert)
             {
               svn_txdelta__insert_op (build_baton, svn_txdelta_new,
