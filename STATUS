@@ -199,3 +199,10 @@ already know about.)
      SVN_CONFIG_OPTION_STORE_AUTH_CREDS.
      Justification: API stability; low risk
      Votes:
+
+
+   * r8101
+     Improved authentication system documentation.
+     Justification: Better external API documentation, ultra-low
+     risk.
+     Votes:
