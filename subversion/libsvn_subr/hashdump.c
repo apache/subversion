@@ -88,6 +88,7 @@ svn_pack_bytestring (size_t len, const char *val, apr_pool_t *pool)
   valstring->len       = len;
   valstring->blocksize = len;
   valstring->data      = (void *) val;
+  valstring->pool      = pool;
 
   return valstring;
 }
