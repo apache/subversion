@@ -69,12 +69,12 @@ set the User and Group directives in httpd.conf, something like this:
 Now you can run a test script over ra_dav:
 
    $ ./basic_tests.py --url http://localhost
-   $ ./basic_tests.py 3 --url http://localhost
+   $ ./basic_tests.py --url http://localhost 3
 
 or 
 
    $ ./basic_tests.py --url=http://localhost
-   $ ./basic_tests.py 3 --url=http://localhost
+   $ ./basic_tests.py --url=http://localhost 3
 
 If you run httpd on a port other than 80, you can specify the port in
 the URL: "http://localhost:15835" for example.
@@ -87,7 +87,7 @@ from the top of the build dir:
 BASE_URL=URL can also be used when running individual tests:
 
    $ ./basic_tests.py BASE_URL=http://localhost
-   $ ./basic_tests.py 3 BASE_URL=http://localhost
+   $ ./basic_tests.py BASE_URL=http://localhost 3
 
 
 You can run the tests over ra_dav with authentication enabled.  First you
@@ -117,7 +117,7 @@ $ make check BASE_URL=svn://localhost
 
 or, to run individual tests,
 
-$ ./basic_tests.py 3 --url=svn://localhost
+$ ./basic_tests.py --url=svn://localhost 3
 
 
 
