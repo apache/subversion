@@ -12,41 +12,33 @@
  * ====================================================================
  */
 
-#include <apr_pools.h>
-
-#include "svn_error.h"
-#include "svn_string.h"
-#include "svn_delta.h"
-#include "svn_ra.h"
+#include "ra_local.h"
 
 
-/*
 
-  Ben'z Notez
+/*----------------------------------------------------------------*/
+
+/** The commit cleanup routine passed as a "hook" to the filesystem
+    editor **/
 
-    Plan of attack for commits:
+/* (This is a routine of type svn_fs_commit_hook_t) */
+static svn_error_t *
+cleanup_commit (svn_revnum_t *new_revision,
+                void *baton)
+{
+  /* Recover our hook baton */
+  svn_ra_local__commit_hook_baton_t *hook_baton =
+    (svn_ra_local__commit_hook_baton_t *) baton;
 
-     - write an editor which remembers committed targets by stashing
-     them in a list
+  /* Call hook_baton->close_func() on each committed target! */
+  /* TODO */
 
-     - get_commit_editor:  fetch the FS editor and compose our
-     tracking editor with it as an "after" editor
-
-     - client calls close_edit()
-
-        - fs passes new revision to `hook' routine.
-
-        - hook routine inserts final revision number into `tracking'
-        editor's edit_baton
-
-        - `tracking' edit's close_edit() is now called, which,
-        noticing it has a valid revision number its edit_baton, calls
-        the supplied close_func() on each target it tracked.
-    
-
- */
+  return SVN_NO_ERROR;
+}
 
 
+
+/*----------------------------------------------------------------*/
 
 /** The reporter routines **/
 
@@ -79,9 +71,9 @@ finish_report (void *report_baton)
 
 
 
-
+/*----------------------------------------------------------------*/
 
-/** The plugin routines **/
+/** The RA plugin routines **/
 
 
 static svn_error_t *
@@ -89,18 +81,64 @@ open (void **session_baton,
       svn_string_t *repository_URL,
       apr_pool_t *pool)
 {
+  svn_error_t *err;
+  svn_ra_local__session_baton_t *baton;
+  svn_string_t *repos_path, *fs_path;
 
-  /* Stash info into the session baton */
+  /* When we close the session_baton later, we don't necessarily want
+     to kill the main caller's pool; so let's subpool and work from
+     there. */
+  apr_pool_t *subpool = svn_pool_create (pool);
 
+  /* Allocate the session_baton itself in this subpool */ 
+  baton = apr_pcalloc (subpool, sizeof(*baton));
+
+  /* And let all other session_baton data use the same subpool */
+  baton->pool = subpool;
+  baton->repository_URL = repository_URL;
+  baton->fs = apr_pcalloc (subpool, sizeof(*(baton->fs)));
+
+  /* Look through the URL, figure out which part points to the
+     repository, and which part is the path *within* the
+     repository. */
+  err = svn_ra_local__split_URL (&(baton->repos_path),
+                                 &(baton->fs_path),
+                                 baton->repository_URL,
+                                 subpool);
+  if (err) return err;
+
+  /* Open the filesystem at `repos_path' */
+  err = svn_fs_open_berkeley (baton->fs, baton->repos_path->data);
+  if (err) return err;
+
+  
+
+
+  /* Return the session baton */
+  *session_baton = baton;
   return SVN_NO_ERROR;
 }
+
 
 
 static svn_error_t *
 close (void *session_baton)
 {
+  svn_error_t *err;
+
+  /* Close the repository filesystem */
+  err = svn_fs_close_fs (session_baton->fs);
+  if (err) return err;
+
+  /* When we free the session's pool, the entire session and
+     everything inside it is freed, which is good.  However, the
+     original pool passed to open() is NOT freed, which is also good. */
+  apr_pool_destroy (session_baton->pool);
+
   return SVN_NO_ERROR;
 }
+
+
 
 
 static svn_error_t *
@@ -120,6 +158,40 @@ get_commit_editor (void *session_baton,
                    svn_ra_set_wc_prop_func_t set_func,
                    void *close_baton)
 {
+  svn_error_t *err;
+  svn_delta_edit_fns_t *commit_editor, *tracking_editor;
+  void *commit_editor_baton, *tracking_editor_baton;
+
+  /* Construct a commit-hook baton */
+  svn_ra_local__commit_hook_baton_t *hook_baton
+    = apr_pcalloc (session_baton->pool, sizeof(*hook_baton));
+
+  hook_baton->pool = session_baton->pool;
+  hook_baton->close_func = close_func;
+  hook_baton->set_func = set_func;
+  hook_baton->close_baton = close_baton;
+  hook_baton->target_array = apr_pcalloc (hook_baton->pool,
+                                          sizeof(*(hook_baton->target_array)));
+
+  /* Get the filesystem editor */     
+  err = svn_fs_get_editor (&commit_editor,
+                           &commit_editor_baton,
+                           session_baton->fs,
+                           session_baton->revision,
+                           log_msg,
+                           cleanup_commit, /* our post-commit hook */
+                           hook_baton,
+                           session_baton->pool);
+  if (err) return err;
+
+  /* Get the commit `tracking' editor, telling it store committed
+     targets in our hook_baton */
+
+  /* Compose the two editors */
+
+  /* Give the magic composed-editor thingie back to the client */
+
+
   return SVN_NO_ERROR;
 }
 
@@ -148,11 +220,9 @@ do_update (void *session_baton,
 
 
 
-
-
-
+/*----------------------------------------------------------------*/
 
-/** The reporter and ra_plugin objects **/
+/** The static reporter and ra_plugin objects **/
 
 static const svn_ra_reporter_t ra_local_reporter = 
 {
