@@ -120,8 +120,7 @@ class GeneratorBase:
     for d in unique(self.graph.get_sources(DT_LIST, LT_TARGET_DIRS)):
       hdrs = glob.glob(os.path.join(native_path(d), '*.h'))
       if hdrs:
-        more_deps = _create_include_deps(hdrs, include_deps)
-        include_deps.update(more_deps)
+        include_deps = _create_include_deps(hdrs, include_deps)
 
     for objname, sources in self.graph.get_deps(DT_OBJECT):
       assert len(sources) == 1
