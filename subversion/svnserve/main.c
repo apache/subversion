@@ -415,7 +415,7 @@ int main(int argc, const char *const *argv)
     {
       svn_error_clear
         (svn_cmdline_fprintf
-           (stderr, pool, _("Can't create server socket: %s\n"),
+           (stderr, pool, _("Can't get address info: %s\n"),
             apr_strerror(status, errbuf, sizeof(errbuf))));
       exit(1);
     }
@@ -432,7 +432,7 @@ int main(int argc, const char *const *argv)
     {
       svn_error_clear
         (svn_cmdline_fprintf
-           (stderr, pool, _("Can't get address info: %s\n"),
+           (stderr, pool, _("Can't create server socket: %s\n"),
             apr_strerror(status, errbuf, sizeof(errbuf))));
       exit(1);
     }
