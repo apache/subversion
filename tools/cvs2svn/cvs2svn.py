@@ -260,6 +260,7 @@ class RevInfoParser(rcsparse.Sink):
 
     rcsparse.Parser().parse(rcsfile, self)
 
+### FIXME: What is this class for?  It has no docs and isn't called...
 class BuildRevision(rcsparse.Sink):
   def __init__(self, rev, get_metadata=0):
     self.rev = rev
@@ -343,7 +344,14 @@ class Commit:
     return self.files.has_key(fname)
 
   def add(self, t, op, file, rev, branch_name, tags, branches):
-    # record the time range of this commit
+    # Record the time range of this commit.
+    #
+    # ### ISSUE: It's possible, though unlikely, that the time range
+    # of a commit could get gradually expanded to be arbitrarily
+    # longer than COMMIT_THRESHOLD.  I'm not sure this is a huge
+    # problem, and anyway deciding where to break it up would be a
+    # judgement call. For now, we just print a warning in commit() if
+    # this happens.
     if t < self.t_min:
       self.t_min = t
     if t > self.t_max:
@@ -380,8 +388,10 @@ class Commit:
 
   def commit(self, t_fs, ctx):
     # commit this transaction
-    print 'committing: %s, over %d seconds' % (time.ctime(self.t_min),
-                                               self.t_max - self.t_min)
+    seconds = self.t_max - self.t_min
+    print 'committing: %s, over %d seconds' % (time.ctime(self.t_min), seconds)
+    if seconds > COMMIT_THRESHOLD:
+      print 'WARNING: commit spans more than %d seconds' % COMMIT_THRESHOLD
 
     if ctx.dry_run:
       for f, r, br, tags, branches in self.changes:
@@ -701,42 +711,58 @@ def pass4(ctx):
   else:
     t_fs = t_repos = None
 
-  # process the logfiles, creating the target
+  # A dictionary of Commit objects, keyed by digest.  Each object
+  # represents one logical commit, which may involve multiple files.
+  #
+  # The reason this is a dictionary, not a single object, is that
+  # there may be multiple commits interleaved in time.  A commit can
+  # span up to COMMIT_THRESHOLD seconds, which leaves plenty of time
+  # for parts of some other commit to occur.  Since the s-revs file is
+  # sorted by timestamp first, then by digest within each timestamp,
+  # it's quite easy to have interleaved commits.
   commits = { }
+
+  # The number of separate commits processed in a given flush.  This
+  # is used only for printing statistics, it does not affect the
+  # results in the repository.
   count = 0
 
+  # process the logfiles, creating the target
   for line in fileinput.FileInput(ctx.log_fname_base + SORTED_REVS_SUFFIX):
     timestamp, id, op, rev, fname, branch_name, tags, branches = \
       parse_revs_line(line)
 
-    # scan for commits to process
+    # Each time we read a new line, we scan the commits we've
+    # accumulated so far to see if any are ready for processing now.
     process = [ ]
     for scan_id, scan_c in commits.items():
 
-      # ISSUE: the has_file() check below is not optimal.
-      # it does fix the dataloss bug where revisions would get lost
-      # if checked in too quickly, but it can alco break apart the 
+      # ### ISSUE: the has_file() check below is not optimal.
+      # It does fix the dataloss bug where revisions would get lost
+      # if checked in too quickly, but it can also break apart the 
       # commits. The correct fix would require tracking the dependencies
-      # between change sets and commiting them in proper order.
+      # between change sets and committing them in proper order.
       if scan_c.t_max + COMMIT_THRESHOLD < timestamp or \
          scan_c.has_file(fname):
         process.append((scan_c.t_max, scan_c))
         del commits[scan_id]
 
-    # sort the commits into time-order, then commit 'em
+    # If there are any elements in 'process' at this point, they need
+    # to be committed, because this latest rev couldn't possibly be
+    # part of any of them.  Sort them into time-order, then commit 'em.
     process.sort()
     for t_max, c in process:
       c.commit(t_fs, ctx)
     count = count + len(process)
 
-    # add this item into the set of commits we're assembling
+    # Add this item into the set of still-available commits.
     if commits.has_key(id):
       c = commits[id]
     else:
       c = commits[id] = Commit()
     c.add(timestamp, op, fname, rev, branch_name, tags, branches)
 
-  # if there are any pending commits left, then flush them
+  # End of the sorted revs file.  Flush any remaining commits:
   if commits:
     process = [ ]
     for id, c in commits.items():
