@@ -196,7 +196,8 @@ svn_error_t *svn_ra_dav__do_check_path(
   svn_node_kind_t *kind,
   void *session_baton,
   const char *path,
-  svn_revnum_t revision);
+  svn_revnum_t revision,
+  apr_pool_t *pool);
 
 /*
 ** SVN_RA_DAV__LP_*: local properties for RA/DAV

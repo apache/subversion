@@ -1262,7 +1262,8 @@ do_diff (const apr_array_header_t *options,
       if (path2_is_url)
         {
           anchor2 = "";
-          SVN_ERR (ra_lib->check_path (&path2_kind, session2, "", end_revnum));
+          SVN_ERR (ra_lib->check_path (&path2_kind, session2, "", end_revnum,
+                                       pool));
 
           switch (path2_kind)
             {

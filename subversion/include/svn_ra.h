@@ -691,11 +691,14 @@ typedef struct svn_ra_plugin_t
    * Set @a *kind to node kind associated with @a path at @a revision.  
    * If @a path does not exist under @a revision, set @a *kind to 
    * @c svn_node_none.  @a path is relative to the session's parent URL.
+   *
+   * Use @a pool for memory allocation.
    */
   svn_error_t *(*check_path) (svn_node_kind_t *kind,
                               void *session_baton,
                               const char *path,
-                              svn_revnum_t revision);
+                              svn_revnum_t revision,
+                              apr_pool_t *pool);
 
   /** Set @a *uuid to the repository's UUID.  The UUID has the same lifetime
    *  as the session_baton. 

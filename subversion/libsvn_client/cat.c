@@ -73,7 +73,7 @@ svn_client_cat (svn_stream_t* out,
     SVN_ERR (ra_lib->get_latest_revnum (session, &rev, pool));
 
   /* Decide if the URL is a file or directory. */
-  SVN_ERR (ra_lib->check_path (&url_kind, session, "", rev));
+  SVN_ERR (ra_lib->check_path (&url_kind, session, "", rev, pool));
 
   if (url_kind == svn_node_dir)
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,

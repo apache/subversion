@@ -488,7 +488,7 @@ svn_client_propget (apr_hash_t **props,
           SVN_ERR (svn_client__get_revision_number
                    (&revnum, ra_lib, session, revision, NULL, pool));
 
-          SVN_ERR (ra_lib->check_path (&kind, session, "", revnum));
+          SVN_ERR (ra_lib->check_path (&kind, session, "", revnum, pool));
 
           SVN_ERR (remote_propget (*props, propname, utarget, "",
                                    kind, revnum, ra_lib, session,
@@ -508,7 +508,7 @@ svn_client_propget (apr_hash_t **props,
               SVN_ERR (svn_client__get_revision_number
                        (&revnum, NULL, NULL, revision, target, pool));
               
-              SVN_ERR (ra_lib->check_path (&kind, session, "", revnum));
+              SVN_ERR (ra_lib->check_path (&kind, session, "", revnum, pool));
               
               SVN_ERR (remote_propget (*props, propname, utarget, "",
                                        kind, revnum, ra_lib, session,
@@ -870,7 +870,7 @@ svn_client_proplist (apr_array_header_t **props,
           SVN_ERR (svn_client__get_revision_number
                    (&revnum, ra_lib, session, revision, NULL, pool));
 
-          SVN_ERR (ra_lib->check_path (&kind, session, "", revnum));
+          SVN_ERR (ra_lib->check_path (&kind, session, "", revnum, pool));
 
           SVN_ERR (remote_proplist (prop_list, utarget, "",
                                     kind, revnum, ra_lib, session,
@@ -890,7 +890,7 @@ svn_client_proplist (apr_array_header_t **props,
               SVN_ERR (svn_client__get_revision_number
                        (&revnum, NULL, NULL, revision, target, pool));
               
-              SVN_ERR (ra_lib->check_path (&kind, session, "", revnum));
+              SVN_ERR (ra_lib->check_path (&kind, session, "", revnum, pool));
               
               SVN_ERR (remote_proplist (prop_list, utarget, "",
                                         kind, revnum, ra_lib, session,

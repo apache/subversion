@@ -459,7 +459,8 @@ delete_entry (const char *path,
   SVN_ERR (pb->edit_baton->ra_lib->check_path (&kind,
                                                pb->edit_baton->ra_session,
                                                path,
-                                               pb->edit_baton->revision));
+                                               pb->edit_baton->revision,
+                                               pool));
 
   /* Missing access batons are a problem during delete */
   SVN_ERR (get_path_access (&adm_access, eb->adm_access, pb->wcpath,

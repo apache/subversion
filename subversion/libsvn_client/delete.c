@@ -164,7 +164,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
 
       /* Verify that the thing to be deleted actually exists. */
       SVN_ERR (ra_lib->check_path (&kind, session, target, 
-                                   SVN_INVALID_REVNUM));
+                                   SVN_INVALID_REVNUM, pool));
       if (kind == svn_node_none)
         return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
                                   "URL `%s' does not exist", path);
