@@ -19,6 +19,13 @@ fi
 echo "Creating aclocal.m4..."
 aclocal -I ac-helpers
 
+# Produce config.h.in
+# Do this before the automake (automake barfs if the header isn't available).
+# Do it after the aclocal command -- automake sets up the header to depend
+# on aclocal.m4
+echo "Creating svn_private_config.h.in..."
+autoheader
+
 # Produce all the `Makefile.in's, verbosely, and create neat missing things
 # like `libtool', `install-sh', etc.
 automake --add-missing --verbose
@@ -32,10 +39,6 @@ fi
 # Produce ./configure
 echo "Creating configure..."
 autoconf
-
-# Produce config.h.in
-echo "Creating svn_private_config.h.in..."
-autoheader
 
 # Meta-configure apr/ subdir
 if [ -d apr ]; then
