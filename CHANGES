@@ -1,5 +1,13 @@
+Version 1.0.5
+(21 May 2004, from /branches/1.0.5)
+http://svn.collab.net/repos/svn/tags/1.0.5
+
+ User-visible-changes:
+ * fixed: security bug in svn protocol string parsing. (CAN-2004-0413)
+
+
 Version 1.0.4
-(21 May 2004, from /branches/1.0.4)
+(21 May 2004, from /branches/1.0.x)
 http://svn.collab.net/repos/svn/tags/1.0.4
 
  User-visible-changes:
