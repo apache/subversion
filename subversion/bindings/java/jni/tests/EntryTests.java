@@ -38,35 +38,37 @@ public class EntryTests extends TestCase
 	{
 	    Entry entry=NativeWrapper.entryCreate();
 
-	    assertTrue( entry != null );
+	    assertNotNull( entry  );
 	}
 
     public void testEntrySetUrl()
 	{
 	    Entry entry=new Entry();
+	    String url="url";
 
-	    NativeWrapper.entrySetUrl(entry, "url");
-	    assertTrue(true);
+	    NativeWrapper.entrySetUrl(entry, url);
+
+	    assertEquals( url, entry.getUrl() );
 	}
 
     public void testEntrySetRevision()
 	{
-	    long revision=123456;
+	    Revision revision=new Revision(123456);
 	    Entry entry = new Entry();
 
 	    NativeWrapper.entrySetRevision(entry, revision);
 
-	    assertTrue( revision == entry.getRevision() );
+	    assertEquals( revision, entry.getRevision() );
 	}
 
     public void testEntrySetSchedule()
 	{
-	    int schedule=0;
+	    Schedule schedule=new Schedule(Schedule.ADD);
 	    Entry entry = new Entry();
 
 	    NativeWrapper.entrySetSchedule(entry, schedule);
 
-	    assertTrue( schedule == entry.getSchedule() );
+	    assertEquals( schedule, entry.getSchedule() );
 	}
 
     public void testEntrySetConflicted()
@@ -76,7 +78,7 @@ public class EntryTests extends TestCase
 
 	    NativeWrapper.entrySetConflicted(entry, conflicted);
 
-	    assertTrue( conflicted == entry.getConflicted() );
+	    assertEquals( conflicted, entry.getConflicted() );
 	}
 
     public void testEntrySetCopied()
@@ -86,7 +88,7 @@ public class EntryTests extends TestCase
 
 	    NativeWrapper.entrySetCopied(entry, copied);
 
-	    assertTrue( copied == entry.getCopied() );
+	    assertEquals( copied, entry.getCopied() );
 	}
 
     public void testEntrySetTexttime()
@@ -96,7 +98,7 @@ public class EntryTests extends TestCase
 
 	    NativeWrapper.entrySetTexttime(entry, date);
 
-	    assertTrue( date.getTime() == entry.getTexttime().getTime() );
+	    assertEquals( date, entry.getTexttime() );
 	}
 
     public void testEntrySetProptime()
@@ -106,7 +108,7 @@ public class EntryTests extends TestCase
 
 	    NativeWrapper.entrySetProptime(entry, date);
 
-	    assertTrue( date.getTime() == entry.getProptime().getTime() );
+	    assertEquals( date, entry.getProptime() );
 	}
 
     public void testEntrySetAttributes()
