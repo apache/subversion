@@ -105,6 +105,13 @@ while (@ARGV) {
   my $ok = 1;
   for (my $i=0; $i<@project_settings_list; ++$i) {
     my $match_regex = $project_settings_list[$i]->{match_regex};
+
+    # To help users that automatically write regular expressions that
+    # match the root directory using ^/, remove the / character
+    # because subversion paths, while they start at the root level, do
+    # not begin with a /.
+    $match_regex =~ s#^\^/#^#;
+
     my $match_re;
     eval { $match_re = qr/$match_regex/ };
     if ($@) {
@@ -148,9 +155,9 @@ grep
 @svnlooklines = &read_from_process($svnlook, $repos, 'rev', $rev, 'changed');
 
 # parse the changed nodes
-my @adds = ();
-my @dels = ();
-my @mods = ();
+my @adds;
+my @dels;
+my @mods;
 foreach my $line (@svnlooklines)
 {
     my $path = '';
@@ -164,13 +171,11 @@ foreach my $line (@svnlooklines)
     }
 
     if ($code eq 'A') {
-        push (@adds, "   $path\n");
-    }
-    elsif ($code eq 'D') {
-        push (@dels, "   $path\n");
-    }
-    else {
-        push (@mods, "   $path\n");
+        push(@adds, $path);
+    } elsif ($code eq 'D') {
+        push(@dels, $path);
+    } else {
+        push(@mods, $path);
     }
 }
 
@@ -224,17 +229,17 @@ push(@body, "\n");
 if (scalar @adds) {
   @adds = sort @adds;
   push(@body, "Added:\n");
-  push(@body, @adds);
+  push(@body, map { "   $_\n" } @adds);
 }
 if (scalar @dels) {
   @dels = sort @dels;
   push(@body, "Removed:\n");
-  push(@body, @dels);
+  push(@body, map { "   $_\n" } @dels);
 }
 if (scalar @mods) {
   @mods = sort @mods;
   push(@body, "Modified:\n");
-  push(@body, @mods);
+  push(@body, map { "   $_\n" } @mods);
 }
 push(@body, "Log:\n");
 push(@body, @log);
