@@ -110,6 +110,6 @@ DBT *svn_fs__str_to_dbt (DBT *dbt, char *str);
 
 /* 
  * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
+ * eval: (load-file "../../../tools/dev/svn-dev.el")
  * end:
  */
