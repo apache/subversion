@@ -60,6 +60,7 @@ extern "C" {
 typedef struct _unnamed swig_type_info;
 PyObject *SWIG_NewPointerObj(void *, swig_type_info *, int own);
 swig_type_info *SWIG_TypeQuery(const char *name);
+int SWIG_ConvertPtr(PyObject *, void **, swig_type_info *, int flags);
 
 #endif /* SVN_NEED_SWIG_TYPES */
 
@@ -176,19 +177,43 @@ svn_error_t *svn_swig_py_log_receiver(void *py_receiver,
                                       apr_pool_t *pool);
 
 /* auth provider callbacks */
-svn_error_t *
-svn_swig_py_auth_simple_prompt_func (svn_auth_cred_simple_t **cred,
-                                     void *baton,
-                                     const char *realm,
-                                     const char *username,
-                                     svn_boolean_t may_save,
-                                     apr_pool_t *pool);
-svn_error_t *
-svn_swig_py_auth_username_prompt_func (svn_auth_cred_username_t **cred,
-                                       void *baton,
-                                       const char *realm,
-                                       svn_boolean_t may_save,
-                                       apr_pool_t *pool);
+svn_error_t *svn_swig_py_auth_simple_prompt_func(
+    svn_auth_cred_simple_t **cred,
+    void *baton,
+    const char *realm,
+    const char *username,
+    svn_boolean_t may_save,
+    apr_pool_t *pool);
+
+svn_error_t *svn_swig_py_auth_username_prompt_func(
+    svn_auth_cred_username_t **cred,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool);
+
+svn_error_t *svn_swig_py_auth_ssl_server_trust_prompt_func(
+    svn_auth_cred_ssl_server_trust_t **cred,
+    void *baton,
+    const char *realm,
+    apr_uint32_t failures,
+    const svn_auth_ssl_server_cert_info_t *cert_info,
+    svn_boolean_t may_save,
+    apr_pool_t *pool);
+
+svn_error_t *svn_swig_py_auth_ssl_client_cert_prompt_func(
+    svn_auth_cred_ssl_client_cert_t **cred,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool);
+
+svn_error_t *svn_swig_py_auth_ssl_client_cert_pw_prompt_func(
+    svn_auth_cred_ssl_client_cert_pw_t **cred,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
