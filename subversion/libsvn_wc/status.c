@@ -116,6 +116,7 @@ assemble_status (svn_wc_status_t **status,
   svn_boolean_t has_props;
   svn_boolean_t text_modified_p = FALSE;
   svn_boolean_t prop_modified_p = FALSE;
+  svn_boolean_t locked_p = FALSE;
 
   /* Defaults for two main variables. */
   enum svn_wc_status_kind final_text_status = svn_wc_status_normal;
@@ -230,26 +231,34 @@ assemble_status (svn_wc_status_t **status,
         missing.  This overrides every possible state *except*
         deletion.  (If something is deleted or scheduled for it, we
         don't care if the working file exists.)  */
+
   if ((path_kind == svn_node_none)
       && (final_text_status != svn_wc_status_deleted))
     final_text_status = svn_wc_status_absent;
 
 
-  /* 4. Easy out:  unless we're fetching -every- entry, don't bother
+  /* 4. Check for locked directory. */
+
+  if (entry->kind == svn_node_dir)
+    SVN_ERR (svn_wc__locked (&locked_p, path, pool));
+
+
+  /* 5. Easy out:  unless we're fetching -every- entry, don't bother
      to allocate a struct for an uninteresting entry. */
 
   if (! get_all)
     if (((final_text_status == svn_wc_status_none)
          || (final_text_status == svn_wc_status_normal))
         && ((final_prop_status == svn_wc_status_none)
-            || (final_prop_status == svn_wc_status_normal)))
+            || (final_prop_status == svn_wc_status_normal))
+        && (! locked_p))
       {
         *status = NULL;
         return SVN_NO_ERROR;
       }
 
 
-  /* 5. Build and return a status structure. */
+  /* 6. Build and return a status structure. */
 
   stat = apr_pcalloc (pool, sizeof(**status));
   stat->entry = svn_wc__entry_dup (entry, pool);
@@ -257,15 +266,8 @@ assemble_status (svn_wc_status_t **status,
   stat->prop_status = final_prop_status;    
   stat->repos_text_status = svn_wc_status_none;   /* default */
   stat->repos_prop_status = svn_wc_status_none;   /* default */
-  stat->locked = FALSE;
-  stat->copied = FALSE;
-  
-  /* 6. Check for locked directory, or if the item is 'copied'. */
-
-  if (entry->kind == svn_node_dir)
-    SVN_ERR (svn_wc__locked (&(stat->locked), path, pool));
-  if (entry->copied)
-    stat->copied = TRUE;
+  stat->locked = locked_p;
+  stat->copied = entry->copied;
 
   *status = stat;
 
