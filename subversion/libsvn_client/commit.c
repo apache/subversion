@@ -38,8 +38,15 @@
 
 #include "client.h"
 
+
 
-/* Shared internals of import and commit. */
+/* Hash value for FILES hash in the import routines. */
+struct imported_file
+{
+  apr_pool_t *subpool;
+  void *file_baton;
+};
+
 
 /* Apply PATH's contents (as a delta against the empty string) to
    FILE_BATON in EDITOR.  Use POOL for any temporary allocation.  */
@@ -95,11 +102,13 @@ import_file (apr_hash_t *files,
   void *file_baton;
   const char *mimetype;
   apr_pool_t *hash_pool = apr_hash_pool_get (files);
+  apr_pool_t *subpool = svn_pool_create (hash_pool);
   svn_stringbuf_t *filepath = svn_stringbuf_dup (path, hash_pool);
+  struct imported_file *value = apr_palloc (hash_pool, sizeof (*value));
 
   /* Add the file, using the pool from the FILES hash. */
   SVN_ERR (editor->add_file (edit_path, dir_baton, NULL, SVN_INVALID_REVNUM, 
-                             hash_pool, &file_baton));          
+                             subpool, &file_baton));
 
   /* If the file has a discernable mimetype, add that as a property to
      the file. */
@@ -110,7 +119,9 @@ import_file (apr_hash_t *files,
                                        pool));
   
   /* Finally, add the file's path and baton to the FILES hash. */
-  apr_hash_set (files, filepath->data, filepath->len, (void *)file_baton);
+  value->subpool = subpool;
+  value->file_baton = file_baton;
+  apr_hash_set (files, filepath->data, filepath->len, (void *)value);
 
   return SVN_NO_ERROR;
 }
@@ -258,7 +269,6 @@ import (const svn_stringbuf_t *path,
   void *root_baton;
   enum svn_node_kind kind;
   apr_hash_t *files = apr_hash_make (pool);
-  apr_pool_t *subpool = svn_pool_create (pool); /* for post-fix textdeltas */
   apr_hash_index_t *hi;
 
   /* Get a root dir baton.  We pass an invalid revnum to open_root
@@ -320,20 +330,16 @@ import (const svn_stringbuf_t *path,
     {
       const void *key;
       apr_ssize_t keylen;
-      void *file_baton;
+      struct imported_file *value;
       svn_stringbuf_t *full_path;
-
-      apr_hash_this (hi, &key, &keylen, &file_baton);
-      full_path = svn_stringbuf_create ((char *) key, subpool);
-      SVN_ERR (send_file_contents (full_path, file_baton, editor, subpool));
-      SVN_ERR (editor->close_file (file_baton));
-
-      /* Clear our per-iteration subpool. */
-      svn_pool_clear (subpool);
+      
+      apr_hash_this (hi, &key, &keylen, (void **) &value);
+      full_path = svn_stringbuf_create ((char *) key, value->subpool);
+      SVN_ERR (send_file_contents (full_path, value->file_baton, 
+                                   editor, value->subpool));
+      SVN_ERR (editor->close_file (value->file_baton));
+      svn_pool_destroy (value->subpool);
     }
-  
-  /* Destroy the per-iteration subpool. */
-  svn_pool_destroy (subpool);
 
   SVN_ERR (editor->close_edit (edit_baton));
 
@@ -819,6 +825,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   /* Bump the revision if the commit went well. */
   if (! cmt_err)
     {
+      apr_pool_t *subpool = svn_pool_create (pool);
+
       if (use_xml)
         committed_rev = revision;
 
@@ -836,9 +844,18 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
           if ((bump_err = svn_wc_process_committed (item->path, recurse,
                                                     committed_rev, 
                                                     committed_date,
-                                                    committed_author, pool)))
+                                                    committed_author, 
+                                                    subpool)))
             break;
+
+          /* Clear the per-iteration subpool. */
+          svn_pool_clear (subpool);
         }
+
+      /* Destroy the subpool (unless an error occurred, since we'll
+         need to keep the error around for a little while longer). */
+      if (! bump_err)
+        svn_pool_destroy (subpool);
     }
 
   /* If we were committing into XML, close the xml file. */      
