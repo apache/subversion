@@ -43,7 +43,6 @@ class SVNLook:
     finally:
       if self.txn_ptr:
         fs.close_txn(txn_ptr)
-      _repos.svn_repos_close(repos)
 
   def cmd_default(self):
     self.cmd_info()
