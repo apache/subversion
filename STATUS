@@ -13,11 +13,15 @@ Candidate changes:
     Add pre-0.14 dumpfile compatability.
     Justification: Some very old clients were recently spotted in
     the wild.  And: Dumpfile compatibility is always good.
+    Notes: These look good to me, but are complex enough that I'm not
+      comfortable +1'ing without testing on an old dumpfile, and I
+      haven't done that yet.  -kfogel
     Votes:
       +1: maxb, dionisos
       (r12075 only) +1: ghudson
       -0: bliss (because the patch is non-trivial and there is only a
                  single known pre-0.14 user)
+      +0: kfogel
 
   * r11050
     Add install dependencies for libsvn_fs and libsvn_fs_base.
