@@ -711,11 +711,11 @@ U   my-calc-branch/integer.c
           possible.</para>
 
         <para>Unfortunately, Subversion is not such a system.  Like
-          CVS, Subversion 1.0 does not yet record any information
-          about merge operations.  When you commit local
-          modifications, the repository has no idea whether those
-          changes came from running <command>svn merge</command>, or
-          from just hand-editing the files.</para>
+          CVS, Subversion does not yet record any information about
+          merge operations.  When you commit local modifications, the
+          repository has no idea whether those changes came from
+          running <command>svn merge</command>, or from just
+          hand-editing the files.</para>
 
         <para>What does this mean to you, the user?  It means that
           until the day Subversion grows this feature, you'll have to
