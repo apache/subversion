@@ -18,7 +18,8 @@
 #ifndef SVN_LIBSVN_FS_BDB_COMPAT_H
 #define SVN_LIBSVN_FS_BDB_COMPAT_H
 
-#include <db.h>
+#define APU_WANT_DB
+#include <apu_want.h>
 
 #ifdef __cplusplus
 extern "C" {

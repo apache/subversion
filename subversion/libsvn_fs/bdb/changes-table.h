@@ -18,7 +18,8 @@
 #ifndef SVN_LIBSVN_FS_CHANGES_TABLE_H
 #define SVN_LIBSVN_FS_CHANGES_TABLE_H
 
-#include <db.h>
+#define APU_WANT_DB
+#include <apu_want.h>
 
 #include "svn_io.h"
 #include "svn_fs.h"

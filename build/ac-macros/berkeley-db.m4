@@ -1,26 +1,17 @@
-dnl   SVN_LIB_BERKELEY_DB(major, minor, patch, libname)
+dnl   SVN_LIB_BERKELEY_DB(major, minor, patch)
 dnl
-dnl   Search for a useable version of Berkeley DB in a number of
-dnl   common places.  The installed DB must be no older than the
-dnl   version given by MAJOR, MINOR, and PATCH.  LIBNAME is a list of
-dnl   names of the library to attempt to link against, typically
-dnl   'db' and 'db4'.
+dnl   Compare if the DB provided by APR-UTIL is no older than the
+dnl   version given by MAJOR, MINOR, and PATCH.
 dnl
-dnl   If we find a useable version, set CPPFLAGS and LIBS as
-dnl   appropriate, and set the shell variable `svn_lib_berkeley_db' to
-dnl   `yes'.  Otherwise, set `svn_lib_berkeley_db' to `no'.
+dnl   If we find a useable version, set the shell variable
+dnl   `svn_lib_berkeley_db' to `yes'.  Otherwise, set `svn_lib_berkeley_db'
+dnl   to `no'.
 dnl
 dnl   This macro also checks for the `--with-berkeley-db=PATH' flag;
 dnl   if given, the macro will use the PATH specified, and the
 dnl   configuration script will die if it can't find the library.  If
 dnl   the user gives the `--without-berkeley-db' flag, the entire
 dnl   search is skipped.
-dnl
-dnl   We cache the results of individual searches under particular
-dnl   prefixes, not the overall result of whether we found Berkeley
-dnl   DB.  That way, the user can re-run the configure script with
-dnl   different --with-berkeley-db switch values, without interference
-dnl   from the cache.
 
 
 AC_DEFUN(SVN_LIB_BERKELEY_DB,
@@ -30,25 +21,25 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   dnl  of the following values:
   dnl    `required' --- the user specified that they did want to use
   dnl        Berkeley DB, so abort the configuration if we cannot find it.
-  dnl    `if-found' --- search for Berkeley DB in the usual places;
-  dnl        if we cannot find it, just do not build the server code.
+  dnl    `try-link' --- See if APR-UTIL supplies the correct DB version;
+  dnl        if it doesn't, just do not build the server code.
   dnl    `skip' --- Do not look for Berkeley DB, and do not build the
   dnl        server code.
   dnl
-  dnl  Assuming `status' is not `skip', we set the variable `places' to
-  dnl  either `search', meaning we should check in a list of typical places,
-  dnl  or to a single place spec.
+  dnl  Finding it is defined as doing a runtime check against the db
+  dnl  that is supplied by APR-UTIL.
+  dnl  Assuming `status' is not `skip', we do a runtime check against the db
+  dnl  that is supplied by APR-UTIL.
+  dnl
+  dnl  Since APR-UTIL uses --with-berkeley-db aswell, and we pass it
+  dnl  through when APR-UTIL is in the tree, we also accept a place spec
+  dnl  as argument, and handle that case specifically.
   dnl
   dnl  A `place spec' is either:
-  dnl    - the string `std', indicating that we should look for headers and
-  dnl      libraries in the standard places,
   dnl    - a directory prefix P, indicating we should look for headers in
   dnl      P/include and libraries in P/lib, or
   dnl    - a string of the form `HEADER:LIB', indicating that we should look
   dnl      for headers in HEADER and libraries in LIB.
-  dnl 
-  dnl  You'll notice that the value of the `--with-berkeley-db' switch is a
-  dnl  place spec.
 
   AC_ARG_WITH(berkeley-db,
   [  --with-berkeley-db=PATH Find the Berkeley DB header and library in
@@ -63,173 +54,93 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
                           $db_version or newer.  If you specify
                           `--without-berkeley-db', the server will not be
                           built.  Otherwise, the configure script builds the
-                          server if and only if it can find a new enough
-                          version installed, or if a copy of Berkeley DB
-                          exists in the subversion tree as subdir `db'.],
+                          server if and only if APR-UTIL is linked against
+                          a new enough version of Berkeley DB.],
   [
-    if test "$withval" = "yes"; then
-      status=required
-      places=search
-    elif test "$withval" = "no"; then
+    if test "$withval" = "no"; then
       status=skip
     else
-      status=required
-      places="$withval"
+      apu_db_version="`$apu_config --db-version`"
+      if test $? -ne 0; then
+        AC_MSG_ERROR([Can't determine whether apr-util is linked against a
+                      proper version of Berkeley DB.])
+      fi
+
+      if test "$withval" = "yes"; then
+        if test "$apu_db_version" != "4"; then
+          AC_MSG_ERROR([APR-UTIL wasn't linked against Berkeley DB 4,
+                        while the fs component is required.  Reinstall
+                        APR-UTIL with the appropiate options.])
+        fi
+        
+        status=required
+
+      elif test "$apu_found" != "reconfig"; then
+        if test "$apu_db_version" != 4; then
+          AC_MSG_ERROR([APR-UTIL was installed independently, it won't be
+                        possible to use the specified Berkeley DB: $withval])
+        fi
+
+        AC_MSG_WARN([APR-UTIL may or may not be using the specified
+                     Berkeley DB at `$withval'.  Using the Berkeley DB
+                     supplied by APR-UTIL.])
+
+        status=required
+      fi
     fi
   ],
   [
     # No --with-berkeley-db option:
     #
-    # Check to see if a db directory exists in the build directory.
-    # If it does then we will be using the berkeley DB version
-    # from the source tree. We can't test it since it is not built
-    # yet, so we have to assume it is the correct version.
-
-    AC_MSG_CHECKING([for built-in Berkeley DB])
-
-    if test -d db ; then
-      status=builtin
-      AC_MSG_RESULT([yes])
+    # Check if APR-UTIL is providing the correct Berkeley DB version
+    # for us.
+    #
+    apu_db_version="`$apu_config --db-version`"
+    if test $? -ne 0; then
+      AC_MSG_WARN([Detected older version of APR-UTIL, trying to determine
+                   whether apr-util is linked against Berkeley DB
+                   $db_version])
+      status=try-link
+    elif test "$apu_db_version" != "4"; then
+      status=skip
     else
-      status=if-found
-      places=search
-      AC_MSG_RESULT([no])
+      status=try-link
     fi
   ])
 
-  if test "$status" = "builtin"; then
-    # Use the include and lib files in the build dir.
-    dbdir=`cd db/dist ; pwd`
-    SVN_DB_INCLUDES="-I$dbdir"
-    svn_lib_berkeley_db=yes
-    # Linking directly to the .la is broken with --disable-shared
-    # because Berkeley db does not seem to generate a .la library.
-    if test "$enable_shared" = "yes"; then
-        DB_VERSION_MAJOR=`sed -n 's/#define[ 	][ 	]*DB_VERSION_MAJOR[ 	][ 	]*//p' db/dist/db.h`
-        DB_VERSION_MINOR=`sed -n 's/#define[ 	][ 	]*DB_VERSION_MINOR[ 	][ 	]*//p' db/dist/db.h`
-        SVN_DB_LIBS="$dbdir/libdb-$DB_VERSION_MAJOR.$DB_VERSION_MINOR.la"
-    else
-        SVN_DB_LIBS="-L$dbdir -ldb" # ignoring $db_libname here on purpose.
-    fi
-  elif test "$status" = "skip"; then
+  if test "$status" = "skip"; then
     svn_lib_berkeley_db=no
   else
-
-    if test "$places" = "search"; then
-      places="std /usr/local/include/db4:/usr/local/lib /usr/local
-              /usr/local/BerkeleyDB.$1.$2 /usr/include/db4:/usr/lib"
+    AC_MSG_CHECKING([for availability of Berkeley DB])
+    SVN_LIB_BERKELEY_DB_TRY($1, $2, $3)
+    if test "$svn_have_berkeley_db" = "yes"; then
+      AC_MSG_RESULT([yes])
+      svn_lib_berkeley_db=yes
+    else
+      AC_MSG_RESULT([no])
+      svn_lib_berkeley_db=no
+      if test "$status" = "required"; then
+        AC_MSG_ERROR([Berkeley DB $db_version wasn't found.])
+      fi
     fi
-    # Now `places' is guaranteed to be a list of place specs we should
-    # search, no matter what flags the user passed.
-
-    # Save the original values of the flags we tweak.
-    SVN_LIB_BERKELEY_DB_save_libs="$LIBS"
-    SVN_LIB_BERKELEY_DB_save_cppflags="$CPPFLAGS"
-
-    # The variable `found' is the prefix under which we've found
-    # Berkeley DB, or `not' if we haven't found it anywhere yet.
-    found=not
-    for place in $places; do
-
-      LIBS="$SVN_LIB_BERKELEY_DB_save_libs"
-      CPPFLAGS="$SVN_LIB_BERKELEY_DB_save_cppflags"
-      case "$place" in
-        "std" )
-          description="the standard places"
-        ;;
-        *":"* )
-          header="`echo $place | sed -e 's/:.*$//'`"
-          lib="`echo $place | sed -e 's/^.*://'`"
-	  CPPFLAGS="$CPPFLAGS -I$header"
-	  LIBS="$LIBS -L$lib"
-	  description="$header and $lib"
-        ;;
-        * )
-	  LIBS="$LIBS -L$place/lib"
-	  CPPFLAGS="$CPPFLAGS -I$place/include"
-	  description="$place"
-        ;;
-      esac
-
-      for db_libname in $4; do
-        # We generate a separate cache variable for each prefix and libname
-        # we search under.  That way, we avoid caching information that
-        # changes if the user runs `configure' with a different set of
-        # switches.
-        changequote(,)
-        cache_id="`echo svn_cv_lib_berkeley_db_$1_$2_$3_${db_libname}_in_${place} \
-                   | sed -e 's/[^a-zA-Z0-9_]/_/g'`"
-        changequote([,])
-        dnl We can't use AC_CACHE_CHECK here, because that won't print out
-        dnl the value of the computed cache variable properly.
-        AC_MSG_CHECKING([for Berkeley DB in $description (as $db_libname)])
-        AC_CACHE_VAL($cache_id,
-          [
-  	  SVN_LIB_BERKELEY_DB_TRY($1, $2, $3, $db_libname)
-            eval "$cache_id=$svn_have_berkeley_db"
-          ])
-        result="`eval echo '$'$cache_id`"
-        AC_MSG_RESULT($result)
-
-        # If we found it, no need to search any more.
-        if test "`eval echo '$'$cache_id`" = "yes"; then
-          found="$place"
-          break
-        fi
-      done
-        test "$found" != "not" && break
-    done
-
-    # Restore the original values of the flags we tweak.
-    LIBS="$SVN_LIB_BERKELEY_DB_save_libs"
-    CPPFLAGS="$SVN_LIB_BERKELEY_DB_save_cppflags"
-
-    case "$found" in
-      "not" )
-	if test "$status" = "required"; then
-	  AC_MSG_ERROR([Could not find Berkeley DB $db_version with names: $4])
-	fi
-	svn_lib_berkeley_db=no
-      ;;
-      "std" )
-        SVN_DB_INCLUDES=
-        SVN_DB_LIBS=-l$db_libname
-        svn_lib_berkeley_db=yes
-      ;;
-      *":"* )
-	header="`echo $found | sed -e 's/:.*$//'`"
-	lib="`echo $found | sed -e 's/^.*://'`"
-        SVN_DB_INCLUDES="-I$header"
-dnl ### should look for a .la file
-        SVN_DB_LIBS="-L$lib -l$db_libname"
-        svn_lib_berkeley_db=yes
-      ;;
-      * )
-        SVN_DB_INCLUDES="-I$found/include"
-dnl ### should look for a .la file
-        SVN_DB_LIBS="-L$found/lib -l$db_libname"
-	svn_lib_berkeley_db=yes
-      ;;
-    esac
   fi
 ])
 
 
-dnl   SVN_LIB_BERKELEY_DB_TRY(major, minor, patch, db_name)
+dnl   SVN_LIB_BERKELEY_DB_TRY(major, minor, patch)
 dnl
 dnl   A subroutine of SVN_LIB_BERKELEY_DB.
 dnl
 dnl   Check that a new-enough version of Berkeley DB is installed.
 dnl   "New enough" means no older than the version given by MAJOR,
 dnl   MINOR, and PATCH.  The result of the test is not cached; no
-dnl   messages are printed.  Use DB_NAME as the library to link against.
-dnl   (e.g. DB_NAME should usually be "db" or "db4".)
+dnl   messages are printed.
 dnl
 dnl   Set the shell variable `svn_have_berkeley_db' to `yes' if we found
-dnl   an appropriate version installed, or `no' otherwise.
+dnl   an appropriate version via APR-UTIL, or `no' otherwise.
 dnl
 dnl   This macro uses the Berkeley DB library function `db_version' to
-dnl   find the version.  If the library installed doesn't have this
+dnl   find the version.  If the library linked to APR-UTIL doesn't have this
 dnl   function, then this macro assumes it is too old.
 
 dnl NOTE: This is pretty messed up.  It seems that the FreeBSD port of
@@ -243,19 +154,31 @@ dnl in the db.h header with the ones returned by db_version().
 
 AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
   [
+    svn_lib_berkeley_db_try_save_cppflags="$CPPFLAGS"
     svn_lib_berkeley_db_try_save_libs="$LIBS"
 
     svn_check_berkeley_db_major=$1
     svn_check_berkeley_db_minor=$2
     svn_check_berkeley_db_patch=$3
-    svn_berkeley_db_lib_name=$4
 
-    LIBS="$LIBS -l$svn_berkeley_db_lib_name"
+    # Extract only the -ldb.* flag from the libs supplied by apu-config
+    # Otherwise we get bit by the fact that expat might not be built yet
+    # Or that it resides in a non-standard location which we would have
+    # to compensate with using something like -R`$apu_config --prefix`/lib.
+    #
+    changequote(<<, >>)dnl
+    svn_apu_bdb_lib="`$apu_config --libs | sed -e 's/.*\(-ldb[^ ]*\).*/\1/'`"
+    changequote([, ])dnl
+
+    CPPFLAGS="$SVN_APRUTIL_INCLUDES $CPPFLAGS" 
+    LIBS="`$apu_config --ldflags` $svn_apu_bdb_lib $LIBS"
 
     AC_TRY_RUN(
       [
 #include <stdio.h>
-#include "db.h"
+#define APU_WANT_DB
+#include <apu_want.h>
+
 main ()
 {
   int major, minor, patch;
@@ -291,6 +214,7 @@ main ()
       [svn_have_berkeley_db=yes]
     )
 
+  CPPFLAGS="$svn_lib_berkeley_db_try_save_cppflags"
   LIBS="$svn_lib_berkeley_db_try_save_libs"
   ]
 )

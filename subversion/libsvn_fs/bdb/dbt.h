@@ -19,7 +19,9 @@
 #define SVN_LIBSVN_FS_DBT_H
 
 #include <apr_pools.h>
-#include <db.h>
+
+#define APU_WANT_DB
+#include <apu_want.h>
 
 #include "svn_fs.h"
 #include "../util/skel.h"

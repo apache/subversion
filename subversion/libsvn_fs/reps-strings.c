@@ -17,7 +17,9 @@
 
 #include <assert.h>
 #include <apr_md5.h>
-#include <db.h>
+
+#define APU_WANT_DB
+#include <apu_want.h>
 
 #include "svn_fs.h"
 #include "svn_pools.h"

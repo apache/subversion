@@ -18,7 +18,9 @@
 #ifndef SVN_LIBSVN_FS_STRINGS_TABLE_H
 #define SVN_LIBSVN_FS_STRINGS_TABLE_H
 
-#include <db.h>
+#define APU_WANT_DB
+#include <apu_want.h>
+
 #include "svn_io.h"
 #include "svn_fs.h"
 #include "../trail.h"
