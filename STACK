@@ -24,7 +24,7 @@ Ben todo:
      used to communicate the working copy's state to the repository
      *before* receiving an update.
 
-Karl todo:
+Karl wc todo:
 
    - Propagate changes down into libsvn_client.  Currently, the client
      usually takes a `targets' list and iterates over it, invoking
@@ -76,3 +76,35 @@ Greg:
    - APR: move apr_copy_file() from SVN. and apr_append_file, etc.
 
    - security checks (e.g. system() usage in wc/get_editor)
+
+Filesystem:
+
+  (Branko and Karl have made this list here to keep straight the order in
+  which they're doing stuff in the fs.)
+
+  Let's get these working and tested in fs-test.c:
+
+    1.  svn_fs_begin_txn()
+    2.  svn_fs_abort_txn()
+    3.  svn_fs_close_txn()
+    4.  svn_fs_txn_name()
+    5.  svn_fs_open_txn()
+    6.  svn_fs_list_transactions()
+
+  These don't do anything useful by themselves, of course, but they're
+  prerequisites for:
+
+    7.  Begin, open a txn
+    8.  Make a change to some node in that txn
+    9.  Get txn's name
+    10. close the txn
+    11. re-open the same txn, by name
+    12. check that our change is still there!
+
+  I'm not sure yet what specific functions are required to implement
+  steps 6-12; we'll first establish the concrete list of functions,
+  then implement them.
+
+  Once that's working, we can do the Big One: svn_fs_commit_txn(). :-)
+
+  -Karl
