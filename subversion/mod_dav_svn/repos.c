@@ -56,8 +56,8 @@ typedef struct {
 } dav_svn_walker_context;
 
 
-static int dav_svn_setup_activity(dav_resource_combined *comb,
-                                  const char *path)
+static int dav_svn_parse_activity_uri(dav_resource_combined *comb,
+                                      const char *path)
 {
   comb->res.type = DAV_RESOURCE_TYPE_ACTIVITY;
 
@@ -67,8 +67,8 @@ static int dav_svn_setup_activity(dav_resource_combined *comb,
   return FALSE;
 }
 
-static int dav_svn_setup_version(dav_resource_combined *comb,
-                                 const char *path)
+static int dav_svn_parse_version_uri(dav_resource_combined *comb,
+                                     const char *path)
 {
   comb->res.type = DAV_RESOURCE_TYPE_VERSION;
 
@@ -78,8 +78,8 @@ static int dav_svn_setup_version(dav_resource_combined *comb,
   return FALSE;
 }
 
-static int dav_svn_setup_history(dav_resource_combined *comb,
-                                 const char *path)
+static int dav_svn_parse_history_uri(dav_resource_combined *comb,
+                                     const char *path)
 {
   comb->res.type = DAV_RESOURCE_TYPE_HISTORY;
 
@@ -89,8 +89,8 @@ static int dav_svn_setup_history(dav_resource_combined *comb,
   return FALSE;
 }
 
-static int dav_svn_setup_working(dav_resource_combined *comb,
-                                 const char *path)
+static int dav_svn_parse_working_uri(dav_resource_combined *comb,
+                                     const char *path)
 {
   comb->res.type = DAV_RESOURCE_TYPE_WORKING;
   comb->res.working = TRUE;
@@ -108,12 +108,103 @@ static const struct special_defn
 
 } special_subdirs[] =
 {
-  { "act", dav_svn_setup_activity },
-  { "ver", dav_svn_setup_version },
-  { "his", dav_svn_setup_history },
-  { "wrk", dav_svn_setup_working },
+  { "act", dav_svn_parse_activity_uri },
+  { "ver", dav_svn_parse_version_uri },
+  { "his", dav_svn_parse_history_uri },
+  { "wrk", dav_svn_parse_working_uri },
   { NULL }
 };
+
+/*
+ * dav_svn_identify_uri: identify the type of URI provided
+ *
+ * URI will contain a path relative to our configured root URI. It should
+ * not have a leading "/". The root is identified by "".
+ *
+ * SPECIAL_URI is the component of the URI path configured by the
+ * SVNSpecialPath directive (defaults to "$svn").
+ *
+ * On output: *COMB will contain all of the information parsed out of
+ * the URI -- the resource type, activity ID, path, etc.
+ *
+ * Note: this function will only parse the URI. Validation of the pieces,
+ * opening data stores, etc, are not part of this function.
+ *
+ * TRUE is returned if a parsing error occurred. FALSE for success.
+ */
+static int dav_svn_parse_uri(dav_resource_combined *comb,
+                             const char *uri,
+                             const char *special_uri)
+{
+  apr_size_t len1;
+  apr_size_t len2;
+  char ch;
+
+  len1 = strlen(uri);
+  len2 = strlen(special_uri);
+  if (len1 > len2
+      && ((ch = uri[len2]) == '/' || ch == '\0')
+      && memcmp(uri, special_uri, len2) == 0)
+    {
+      if (ch == '\0')
+        {
+          /* URI was "/root/$svn". It exists, but has restricted usage. */
+          comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
+        }
+      else
+        {
+          const struct special_defn *defn;
+
+          /* skip past the "$svn/" prefix */
+          uri += len2 + 1;
+          len1 -= len2 + 1;
+
+          for (defn = special_subdirs ; defn->name != NULL; ++defn)
+            {
+              apr_size_t len3 = strlen(defn->name);
+
+              if (len1 >= len3 && memcmp(uri, defn->name, len3) == 0)
+                {
+                  if (uri[len3] == '\0')
+                    {
+                      /* URI was "/root/$svn/XXX". The location exists, but
+                         has restricted usage. */
+                      comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
+
+                      /* ### store the DEFN info. we will probably want to
+                         ### allow PROPFIND in "/root/$svn/act/" and will
+                         ### need to know this refers to the activities
+                         ### collection. */
+                    }
+                  else if (uri[len3] == '/')
+                    {
+                      if ((*defn->func)(comb, uri + len3 + 1))
+                        return TRUE;
+                    }
+                  else
+                    {
+                      /* e.g. "/root/$svn/activity" (we just know "act") */
+                      return TRUE;
+                    }
+
+                  break;
+                }
+            }
+
+          /* if completed the loop, then it is an unrecognized subdir */
+          if (defn->name == NULL)
+            return TRUE;
+        }
+    }
+  else
+    {
+      /* Anything under the root, but not under "$svn". These are all
+         version-controlled resources. */
+      comb->res.type = DAV_RESOURCE_TYPE_REGULAR;
+    }
+
+  return FALSE;
+}
 
 static dav_error * dav_svn_get_resource(request_rec *r,
                                         const char *root_uri,
@@ -125,11 +216,9 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   dav_resource_combined *comb;
   dav_svn_repos *repos;
   apr_size_t len1;
-  apr_size_t len2;
   char *uri;
   const char *relative;
   const char *special_uri;
-  char ch;
   svn_error_t *serr;
 
   if ((fs_path = dav_svn_get_fs_path(r)) == NULL)
@@ -218,55 +307,11 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 
   special_uri = dav_svn_get_special_uri(r);
 
-  /* "relative" will have a leading "/" while the special URI does
-     not. Take particular care in this comparison. */
-  len1 = strlen(relative);
-  len2 = strlen(special_uri);
-  if (len1 > len2
-      && memcmp(relative + 1, special_uri, len2) == 0
-      && ((ch = relative[1 + len2]) == '/' || ch == '\0'))
-    {
-      if (ch == '\0')
-        {
-          /* URI was "/root/$svn". It exists, but has restricted usage. */
-          comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
-        }
-      else
-        {
-          const char *skip = relative + 1 + len2 + 1;
-          apr_size_t skiplen = len1 - 1 - len2 - 1;
-          const struct special_defn *defn = special_subdirs;
+  /* skip over the leading "/" in the relative URI */
+  if (dav_svn_parse_uri(comb, relative + 1, special_uri))
+    goto malformed_URI;
 
-          for ( ; defn->name != NULL; ++defn)
-            {
-              apr_size_t len3 = strlen(defn->name);
-
-              if (skiplen >= len3 && memcmp(skip, defn->name, len3) == 0)
-                {
-                  if (skip[len3] == '\0')
-                    {
-                      /* URI was "/root/$svn/XXX". The location exists, but
-                         has restricted usage. */
-                      comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
-                    }
-                  else if (skip[len3] == '/')
-                    {
-                      if ((*defn->func)(comb, skip + len3 + 1))
-                        goto malformed_URI;
-                    }
-                  else
-                    goto malformed_URI;
-
-                  break;
-                }
-            }
-
-          /* if completed the loop, then it is an unrecognized subdir */
-          if (defn->name == NULL)
-            goto malformed_URI;
-        }
-    }
-  else
+  if (comb->res.type == DAV_RESOURCE_TYPE_REGULAR)
     {
       /* ### note that we won't *always* go for the head... if this resource
          ### corresponds to a Version Resource, then we have a specific
@@ -327,8 +372,6 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 
           comb->res.collection = svn_fs_node_is_dir(comb->priv.node);
         }
-
-      comb->res.type = DAV_RESOURCE_TYPE_REGULAR;
     }
 
 #ifdef SVN_DEBUG
