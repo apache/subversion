@@ -17,7 +17,6 @@ SOURCE0: subversion-%{version}-%{release}.tar.gz
 SOURCE1: subversion.conf
 SOURCE2: httpd.davcheck.conf
 Patch0: install.patch
-Patch1: hang.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: apache-libapr >= %{apache_version}
@@ -214,9 +213,6 @@ sh autogen.sh
 # Fix up mod_dav_svn installation.
 %patch0 -p1
 
-# Fix subversion test hang during RA_SVN testing.
-%patch1 -p0
-
 # Brand release number into the displayed version number.
 RELEASE_NAME="r%{release}"
 export RELEASE_NAME
@@ -323,7 +319,7 @@ make install-swig-py DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_
 sed -e 's;#!/usr/bin/env python;#!/usr/bin/env python2;' < $RPM_BUILD_DIR/%{name}-%{version}/tools/cvs2svn/cvs2svn.py > $RPM_BUILD_ROOT/usr/bin/cvs2svn
 chmod a+x $RPM_BUILD_ROOT/usr/bin/cvs2svn
 mkdir -p $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
-cp tools/cvs2svn/rcsparse.py $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
+cp -r tools/cvs2svn/rcsparse $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages/rcsparse
 mv $RPM_BUILD_ROOT/usr/lib/svn-python/svn $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
 rmdir $RPM_BUILD_ROOT/usr/lib/svn-python
 
@@ -437,7 +433,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
 /usr/bin/cvs2svn
 /usr/lib/python2.2/site-packages/svn
-/usr/lib/python2.2/site-packages/rcsparse.py
+/usr/lib/python2.2/site-packages/rcsparse
 /usr/lib/libsvn_swig_py*so*
 
 %files tools
