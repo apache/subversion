@@ -202,3 +202,11 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: josander
       +0: maxb
+
+ * r12184
+   Fix crash in javahl binding, when trying to retrieve non-existing property
+   Justification:
+     2 simple fixes in javahl binding only to prevent crash of jvm. Reported
+     by users.
+   Votes:
+      +1: pmayweg
