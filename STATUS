@@ -52,6 +52,24 @@ Candidate changes:
     Justification: Perl correctness issue.
     Votes:
 
+  * r8710, r8713, r8714
+    svn_filesize_t fixes for swig bindings.
+    Justification: Wrong data size == bug.
+    Votes:
+      +1: breser
+
+  * r8712
+    apr_time_t warning fixes.
+    Justification: Easy warning fix.
+    Votes:
+      +1: breser
+
+  * r8715
+    apr_file_open_stdout and apr_file_open_stdout bindings fix.
+    Justification: Easy warning fix.
+    Votes:
+      +1: breser
+
 Status of 1.0.1:
 ================
 
