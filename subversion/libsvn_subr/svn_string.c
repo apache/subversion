@@ -111,6 +111,14 @@ svn_string_fillchar (svn_string_t *str, const unsigned char c)
 }
 
 
+void
+svn_string_set (svn_string_t *str, const char *value)
+{
+  apr_size_t amt = strlen (value) + 1;
+
+  svn_string_ensure (str, amt);
+  memcpy (str->data, value, amt);
+}
 
 void
 svn_string_setempty (svn_string_t *str)

@@ -70,6 +70,9 @@ svn_string_t *svn_string_createv (apr_pool_t *pool,
 void svn_string_ensure (svn_string_t *str,
                         apr_size_t minimum_size);
 
+/* Set a bytestring STR to VALUE */
+void svn_string_set (svn_string_t *str, const char *value);
+
 /* Set a bytestring STR to empty (0 length). */
 void svn_string_setempty (svn_string_t *str);
 
