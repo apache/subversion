@@ -150,9 +150,9 @@ set_entry (svn_string_t *path,
 
   /* This operation is idempotent, so just do it without worrying
      whether it's been done before. */
-  return svn_wc__entry_set (path, sname, version, svn_file_kind, pool,
-                            SVN_WC__ENTRIES_ATTR_TIMESTAMP, timestamp,
-                            NULL);
+  return svn_wc__entry_merge (path, sname, version, svn_file_kind, pool,
+                              SVN_WC__ENTRIES_ATTR_TIMESTAMP, timestamp,
+                              NULL);
 }
 
 
@@ -180,7 +180,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
   /* Most elements have a name attribute, so try to grab one now. */
   const char *name = svn_xml_get_attr_value ("name", atts);
 
-  if (strcmp (eltname, "merge-text") == 0)
+  if (strcmp (eltname, SVN_WC__LOG_MERGE_TEXT) == 0)
     {
       const char *saved_mods = svn_xml_get_attr_value ("saved-mods", atts);
 
@@ -190,7 +190,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
         /* Note that saved_mods is allowed to be null. */
         err = merge_text (loggy->path, name, saved_mods, loggy->pool);
     }
-  else if (strcmp (eltname, "replace-text-base") == 0)
+  else if (strcmp (eltname, SVN_WC__LOG_REPLACE_TEXT_BASE) == 0)
     {
       if (! name)
         signal_error (loggy, "missing name attr in %s");
