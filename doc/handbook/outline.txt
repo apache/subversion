@@ -10,46 +10,6 @@ Most importantly, it shouldn't be so detailed as to preclude a *real*
 book, like the one Karl and Fitz are writing for O'Reilly.  (Someday 
 that book will be included in our source tree too.)
 
-
---------------------------------------------------------
-Outline of the FreeBSD Handbook
-
-Preface
-
-I. Getting Started
-
-  1. Intro -- overview of capabilities, about the project
-  2. Installation 
-  3. Unix Basics
-  4. Packages/ports
-  5. X windows
-
-II. Administration
-
-  6. Configuration/tuning
-  7. Boot process
-  8. account management
-  9. Building a kernel
- 10. security
- 11. printing
- 12. storage
- 13. i18n/l10n
- 14. sound
- 15. serial
- 16. ppp/slip
- 17. advanced networking
- 18. email
- 19. updating
-
-III. Appendices
-
-  1. obtaining freebsd
-  2. bibliography
-  3. net resources
-
-*Indices of Tables/Figures/Examples*
-
-
 -------------------------------------------------------
 Possible Outline of the Subversion Handbook
 
@@ -93,8 +53,9 @@ II. Client Cookbook
       a. general use:  pl, pg, ps, pe, pd
       b. "magic" properties:  eol-style, keywords, executable
   6. modules:  svn:externals
-  7. other commands:  import, export, mkdir, cleanup
-
+  7. revision keywords:  HEAD, PREV, BASE, etc.
+  8. other commands:  import, export, mkdir, cleanup
+  9. the .subversion/ area
 
 III.  Repository Administration
 
@@ -107,6 +68,7 @@ III.  Repository Administration
        c. undeltify, setlog, ls/rmtxns
   6. Networking the repository [httpd config]
   7. Repository migration: dump, load
+  8. WebDAV interoperability
 
 IV. Appendices
 
