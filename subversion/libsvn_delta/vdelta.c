@@ -329,13 +329,21 @@ svn_txdelta__vdelta (svn_txdelta_window_t *window,
         }
 
       /* We have a best match, Commit this copy. */
-      if (here >= target)
+      if (here + current_match_len > target)
         {
           svn_error_t *err = SVN_NO_ERROR;
 
-          /* First, commit the pending insert. */
-          if (insert_from != NULL)
+          if (here < target)
             {
+              /* The destination of the copy straddles the boundary.
+                 We have to adjust the match. */
+              current_match += (target - here);
+              current_match_len -= (target - here);
+              here = target;
+            }
+          else if (insert_from != NULL)
+            {
+              /* Commit the pending insert. */
               err = svn_txdelta__insert_op (window, svn_txdelta_new,
                                             0, here - insert_from,
                                             insert_from);
