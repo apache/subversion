@@ -96,7 +96,7 @@ END_CONNECTION_POINT_MAP()
 
 // ISVNWorkingCopy
 public:
-	STDMETHOD(wc_statuses)(/*[in]*/ BSTR bstrPath, /*[out]*/ SAFEARRAY **ppsa);
+	STDMETHOD(wc_statuses)(/*[in]*/ BSTR bstrPath, /*[in]*/ BOOL getALl, /*[out]*/ SAFEARRAY **ppsa);
 	STDMETHOD(watch_dir)(/*[in]*/ BSTR bstrDir);
 	STDMETHOD(check_wc)(/*[in]*/ BSTR bstrDir, /*[out, retval]*/ VARIANT_BOOL *pfIsValid); 
 private:
