@@ -56,18 +56,17 @@ extern "C" {
    This symbol may be #undef'd for major releases; for development
    snapshots, it should be the number of the snapshot's revision. */
 /* #undef SVN_VER_TAG */
-#define SVN_VER_TAG        "rc1"
+#define SVN_VER_TAG        "rc2"
 
 
 
 /* Version strings composed from the above definitions. */
 
-/* Complete version string */
-#ifdef SVN_VER_TAG
-#  define SVN_VERSION      SVN_VER_NUMBER " (" SVN_VER_TAG ")"
-#else
-#  define SVN_VERSION      SVN_VER_NUMBER
-#endif /* SVN_VER_TAG */
+
+/* Yet another stringification macro. */
+#define SVN_VER_STRINGIFY(X) SVN_VER_REALLY_STRINGIFY(X)
+#define SVN_VER_REALLY_STRINGIFY(X) #X
+
 
 /* Version number */
 #ifndef SVN_VER_NAME
@@ -79,9 +78,13 @@ extern "C" {
 #endif /* SVN_VER_NAME */
 
 
-/* Yet another stringification macro. */
-#define SVN_VER_STRINGIFY(X) SVN_VER_REALLY_STRINGIFY(X)
-#define SVN_VER_REALLY_STRINGIFY(X) #X
+/* Complete version string */
+#ifdef SVN_VER_TAG
+#  define SVN_VERSION      SVN_VER_NUMBER " (" SVN_VER_TAG ")"
+#else
+#  define SVN_VERSION      SVN_VER_NUMBER
+#endif /* SVN_VER_TAG */
+
 
 
 #endif /* SVN_VERSION_H */
