@@ -35,18 +35,6 @@ Candidate changes:
       +1: pmayweg
       +0: breser
 
-  * Issue #1862
-    Fix the 'file not found' update error.
-    Notes:
-      The patch is unique to 1.0.x because of the reporter rewrite in
-      1.1.x/trunk.  The log message and patch are attached to the issue.
-      Here is the URL to the attachment for the impatient:
-      http://subversion.tigris.org/nonav/issues/showattachment.cgi/389/issue1862.diff
-    
-    Justification: Lots and lots of TSVN users are hit by this.
-    Votes:
-      +1: bliss, sussman, cmpilato, breser
-
   * r10112, r10113, r10215, r10440, r10441, r10458, r10711, r10775
     Backport Perl bindings fixes from the 1.1.x branch
     Justification:

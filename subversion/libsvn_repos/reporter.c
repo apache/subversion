@@ -218,6 +218,7 @@ svn_repos_set_path (void *report_baton,
 {
   report_baton_t *rbaton = report_baton;
   svn_boolean_t first_time = FALSE;
+  const char *from_path;
 
   /* Sanity check: make that we didn't call this with a bogus revision. */
   if (! SVN_IS_VALID_REVNUM (revision))
@@ -246,6 +247,17 @@ svn_repos_set_path (void *report_baton,
      than the based-on revision, or the START_EMPTY flag set. */
   if ((! rbaton->txn) && (revision == rbaton->txn_base_rev) && (! start_empty))
     return SVN_NO_ERROR;
+
+  /* The path we are dealing with is the anchor (where the
+     reporter is rooted) + target (the top-level thing being
+     reported) + path (stuff relative to the target...this is the
+     empty string in the file case since the target is the file
+     itself, not a directory containing the file). */
+  from_path = svn_path_join_many (pool,
+                                  rbaton->base_path,
+                                  rbaton->target,
+                                  path,
+                                  NULL);
   
   if (first_time)
     {
@@ -255,29 +267,17 @@ svn_repos_set_path (void *report_baton,
              up the transaction stuffs and then clean out the starting
              directory. */
           SVN_ERR (begin_txn (rbaton));
-          SVN_ERR (gut_directory (rbaton->base_path, rbaton->txn_root, pool));
+          SVN_ERR (gut_directory (from_path, rbaton->txn_root, pool));
         }
     }
   else
     {
-      const char *from_path;
       svn_fs_root_t *from_root;
       const char *link_path;
 
       /* Create the transaction if we haven't yet done so. */
       if (! rbaton->txn)
         SVN_ERR (begin_txn (rbaton));
-
-      /* The path we are dealing with is the anchor (where the
-         reporter is rooted) + target (the top-level thing being
-         reported) + path (stuff relative to the target...this is the
-         empty string in the file case since the target is the file
-         itself, not a directory containing the file). */
-      from_path = svn_path_join_many (pool,
-                                      rbaton->base_path,
-                                      rbaton->target,
-                                      path,
-                                      NULL);
 
       /* However, the path may be the child of a linked thing, in
          which case we'll be linking from somewhere entirely
