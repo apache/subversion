@@ -24,6 +24,7 @@
 
 #include "svn_fs.h"
 #include "err.h"
+#include "id.h"
 #include "../libsvn_fs/fs-loader.h"
 
 svn_error_t *
@@ -44,7 +45,7 @@ svn_fs_base__check_fs (svn_fs_t *fs)
 static svn_error_t *
 corrupt_id (const char *fmt, const svn_fs_id_t *id, svn_fs_t *fs)
 {
-  svn_string_t *unparsed_id = svn_fs_unparse_id (id, fs->pool);
+  svn_string_t *unparsed_id = svn_fs_base__id_unparse (id, fs->pool);
   return svn_error_createf (SVN_ERR_FS_CORRUPT, 0,
                             fmt, unparsed_id->data, fs->path);
 }
@@ -94,7 +95,7 @@ svn_fs_base__err_corrupt_id (svn_fs_t *fs, const svn_fs_id_t *id)
 svn_error_t *
 svn_fs_base__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id)
 {
-  svn_string_t *id_str = svn_fs_unparse_id (id, fs->pool);
+  svn_string_t *id_str = svn_fs_base__id_unparse (id, fs->pool);
   return svn_error_createf
     (SVN_ERR_FS_ID_NOT_FOUND, 0,
      "Reference to non-existent node '%s' in filesystem '%s'",

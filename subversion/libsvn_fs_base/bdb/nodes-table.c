@@ -144,8 +144,8 @@ svn_fs_bdb__new_successor_id (svn_fs_id_t **successor_p,
   err = svn_fs_bdb__get_node_revision (NULL, fs, new_id, trail);
   if ((! err) || (err->apr_err != SVN_ERR_FS_ID_NOT_FOUND))
     {
-      svn_string_t *id_str = svn_fs_unparse_id (id, trail->pool);
-      svn_string_t *new_id_str = svn_fs_unparse_id (new_id, trail->pool);
+      svn_string_t *id_str = svn_fs_base__id_unparse (id, trail->pool);
+      svn_string_t *new_id_str = svn_fs_base__id_unparse (new_id, trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_ALREADY_EXISTS, err,
          "Successor id '%s' (for '%s') already exists in filesystem '%s'",

@@ -907,13 +907,13 @@ svn_fs_base__unparse_transaction_skel (skel_t **skel_p,
   else
     {
       /* ...where other transactions have a base node revision ID. */
-      id_str = svn_fs_unparse_id (transaction->base_id, pool);
+      id_str = svn_fs_base__id_unparse (transaction->base_id, pool);
       svn_fs_base__prepend (svn_fs_base__mem_atom (id_str->data, id_str->len, \
                                                    pool), skel);
     }
 
   /* ROOT-ID */
-  id_str = svn_fs_unparse_id (transaction->root_id, pool);
+  id_str = svn_fs_base__id_unparse (transaction->root_id, pool);
   svn_fs_base__prepend (svn_fs_base__mem_atom (id_str->data, id_str->len,
                                                pool), skel);
 
@@ -1081,7 +1081,8 @@ svn_fs_base__unparse_node_revision_skel (skel_t **skel_p,
   /* PREDECESSOR-ID */
   if (noderev->predecessor_id)
     {
-      svn_string_t *id_str = svn_fs_unparse_id (noderev->predecessor_id, pool);
+      svn_string_t *id_str = svn_fs_base__id_unparse (noderev->predecessor_id,
+                                                      pool);
       svn_fs_base__prepend (svn_fs_base__mem_atom (id_str->data, id_str->len,
                                                    pool),
                             header_skel);
@@ -1146,7 +1147,7 @@ svn_fs_base__unparse_copy_skel (skel_t **skel_p,
   skel = svn_fs_base__make_empty_list (pool);
 
   /* DST-NODE-ID */
-  tmp_str = svn_fs_unparse_id (copy->dst_noderev_id, pool);
+  tmp_str = svn_fs_base__id_unparse (copy->dst_noderev_id, pool);
   svn_fs_base__prepend (svn_fs_base__mem_atom (tmp_str->data, tmp_str->len,
                                                pool), skel);
 
@@ -1202,7 +1203,7 @@ svn_fs_base__unparse_entries_skel (skel_t **skel_p,
           value = val;
 
           /* VALUE */
-          id_str = svn_fs_unparse_id (value, pool);
+          id_str = svn_fs_base__id_unparse (value, pool);
           svn_fs_base__prepend (svn_fs_base__mem_atom (id_str->data,
                                                        id_str->len, pool),
                            entry_skel);
@@ -1270,7 +1271,7 @@ svn_fs_base__unparse_change_skel (skel_t **skel_p,
   /* NODE-REV-ID */
   if (change->noderev_id)
     {
-      tmp_str = svn_fs_unparse_id (change->noderev_id, pool);
+      tmp_str = svn_fs_base__id_unparse (change->noderev_id, pool);
       svn_fs_base__prepend (svn_fs_base__mem_atom (tmp_str->data,
                                                    tmp_str->len, pool),
                             skel);

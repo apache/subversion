@@ -22,6 +22,7 @@
 #define APU_WANT_DB
 #include <apu_want.h>
 
+#include "../id.h"
 #include "dbt.h"
 
 
@@ -126,7 +127,7 @@ svn_fs_base__id_to_dbt (DBT *dbt,
                         const svn_fs_id_t *id,
                         apr_pool_t *pool)
 {
-  svn_string_t *unparsed_id = svn_fs_unparse_id (id, pool);
+  svn_string_t *unparsed_id = svn_fs_base__id_unparse (id, pool);
   svn_fs_base__set_dbt (dbt, unparsed_id->data, unparsed_id->len);
   return dbt;
 }

@@ -196,8 +196,8 @@ svn_fs_fs__begin_txn (svn_fs_txn_t **txn_p,
      automatically overwritten with a revision datestamp. */
   date.data = svn_time_to_cstring (apr_time_now(), pool);
   date.len = strlen (date.data);
-  SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_DATE, 
-                                   &date, pool));
+  SVN_ERR (svn_fs_fs__change_txn_prop (*txn_p, SVN_PROP_REVISION_DATE, 
+                                       &date, pool));
   
 
   return SVN_NO_ERROR;
@@ -211,7 +211,7 @@ svn_fs_fs__abort_txn (svn_fs_txn_t *txn,
   SVN_ERR (svn_fs_fs__check_fs (txn->fs));
 
   /* Now, purge it. */
-  SVN_ERR_W (svn_fs_purge_txn (txn->fs, txn->id, pool),
+  SVN_ERR_W (svn_fs_fs__purge_txn (txn->fs, txn->id, pool),
              "Transaction cleanup failed");
 
   return SVN_NO_ERROR;

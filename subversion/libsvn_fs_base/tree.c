@@ -575,7 +575,7 @@ get_copy_inheritance (copy_id_inherit_t *inherit_p,
      or if it is a branch point that we are accessing via its original
      copy destination path. */
   SVN_ERR (svn_fs_bdb__get_copy (&copy, fs, child_copy_id, trail));
-  if (svn_fs_compare_ids (copy->dst_noderev_id, child_id) == -1)
+  if (svn_fs_base__id_compare (copy->dst_noderev_id, child_id) == -1)
     return SVN_NO_ERROR;
 
   /* Determine if we are looking at the child via its original path or
@@ -1884,7 +1884,7 @@ merge (svn_stringbuf_t *conflict_p,
   /* It's improper to call this function with ancestor == target. */
   if (svn_fs_base__id_eq (ancestor_id, target_id))
     {
-      svn_string_t *id_str = svn_fs_unparse_id (target_id, trail->pool);
+      svn_string_t *id_str = svn_fs_base__id_unparse (target_id, trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL,
          "Bad merge; target '%s' has id '%s', same as ancestor",
@@ -2216,7 +2216,7 @@ merge (svn_stringbuf_t *conflict_p,
       else if ((t_entry = apr_hash_get (t_entries, key, klen))
                && (! apr_hash_get (s_entries, key, klen)))
         {
-          int distance = svn_fs_compare_ids (t_entry->id, a_entry->id);
+          int distance = svn_fs_base__id_compare (t_entry->id, a_entry->id);
 
           if (distance == 0)
             {
@@ -2487,7 +2487,8 @@ txn_body_commit (void *baton, trail_t *trail)
   if (! svn_fs_base__id_eq (y_rev_root_id,
                             svn_fs_base__dag_get_id (txn_base_root_node)))
     {
-      svn_string_t *id_str = svn_fs_unparse_id (y_rev_root_id, trail->pool);
+      svn_string_t *id_str = svn_fs_base__id_unparse (y_rev_root_id,
+                                                      trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
          "Transaction '%s' out of date with respect to revision '%s'",
@@ -2909,9 +2910,9 @@ txn_body_copy (void *baton,
      happening at all), just do nothing an return successfully,
      proud that you saved yourself from a tiresome task. */
   if ((to_parent_path->node)
-      && (svn_fs_compare_ids (svn_fs_base__dag_get_id (from_node),
-                              svn_fs_base__dag_get_id
-                              (to_parent_path->node)) == 0))
+      && (svn_fs_base__id_compare (svn_fs_base__dag_get_id (from_node),
+                                   svn_fs_base__dag_get_id
+                                   (to_parent_path->node)) == 0))
     return SVN_NO_ERROR;
 
   if (! from_root->is_txn_root)
