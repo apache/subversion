@@ -46,6 +46,7 @@ typedef struct {
 typedef struct {
   const char *fs_path;          /* path to the SVN FS */
   const char *repo_name;        /* repository name */
+  const char *xslt_uri;         /* XSL transform URI */
 } dav_svn_dir_conf;
 
 #define INHERIT_VALUE(parent, child, field) \
@@ -116,6 +117,7 @@ static void *dav_svn_merge_dir_config(apr_pool_t *p,
 
     newconf->fs_path = INHERIT_VALUE(parent, child, fs_path);
     newconf->repo_name = INHERIT_VALUE(parent, child, repo_name);
+    newconf->xslt_uri = INHERIT_VALUE(parent, child, xslt_uri);
 
     return newconf;
 }
@@ -126,6 +128,16 @@ static const char *dav_svn_repo_name(cmd_parms *cmd, void *config,
   dav_svn_dir_conf *conf = config;
 
   conf->repo_name = apr_pstrdup(cmd->pool, arg1);
+
+  return NULL;
+}
+
+static const char *dav_svn_xslt_uri(cmd_parms *cmd, void *config,
+                                    const char *arg1)
+{
+  dav_svn_dir_conf *conf = config;
+
+  conf->xslt_uri = apr_pstrdup(cmd->pool, arg1);
 
   return NULL;
 }
@@ -190,6 +202,14 @@ const char *dav_svn_get_repo_name(request_rec *r)
     return conf->repo_name;
 }
 
+const char *dav_svn_get_xslt_uri(request_rec *r)
+{
+    dav_svn_dir_conf *conf;
+
+    conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+    return conf->xslt_uri;
+}
+
 const char *dav_svn_get_special_uri(request_rec *r)
 {
     dav_svn_server_conf *conf;
@@ -217,6 +237,11 @@ static const command_rec dav_svn_cmds[] =
   /* per directory/location */
   AP_INIT_TAKE1("SVNReposName", dav_svn_repo_name, NULL, ACCESS_CONF,
                 "specify the name of a Subversion repository"),
+
+  /* per directory/location */
+  AP_INIT_TAKE1("SVNIndexXSLT", dav_svn_xslt_uri, NULL, ACCESS_CONF,
+                "specify the URI of an XSL transformation for "
+                "directory indexes"),
 
   { NULL }
 };
