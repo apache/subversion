@@ -30,6 +30,9 @@ extern "C" {
 #include <apr_thread_proc.h>
 #include <svn_ra_svn.h>
 
+#include <openssl/ssl.h>
+#include <openssl/bio.h>
+
 /* Handler for blocked writes. */
 typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
                                                apr_pool_t *pool,
@@ -54,6 +57,10 @@ struct svn_ra_svn_conn_st {
   void *block_baton;
   apr_hash_t *capabilities;
   apr_pool_t *pool;
+  svn_boolean_t use_ssl;  /* Set to true after a SSL handshake is done */
+  SSL *ssl;               /* The SSL to use for this connection.  */
+  BIO *internal_bio;      /* The Subversion/SSL side of a BIO pair. */
+  BIO *network_bio;       /* The network side of a BIO pair. */
 };
 
 /* Set a callback for blocked writes on conn.  This handler may

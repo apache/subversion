@@ -41,6 +41,7 @@ extern "C" {
 
 /** Currently-defined capabilities. */
 #define SVN_RA_SVN_CAP_EDIT_PIPELINE "edit-pipeline"
+#define SVN_RA_SVN_CAP_SSL "ssl"
 
 /** A value used to indicate an optional number element in a tuple that was
  * not received.
@@ -333,6 +334,27 @@ svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  * @since New in 1.1.
  */
 const svn_version_t *svn_ra_svn_version (void);
+
+/**
+ * Initializes SSL session for the connection from @a ssl_ctx. 
+ * @since New in 1.2.
+ */
+svn_error_t *svn_ra_svn_ssl_init(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                 void *ssl_ctx);
+
+/** This function is only intended for use by svnserve.
+ *
+ * Wait for a SSL connection. Assumes that svn_ra_svn_ssl_init has been called.
+ * @since New in 1.2.
+ */
+svn_error_t *svn_ra_svn_ssl_accept(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
+
+/** This function is only intended for use by client.
+ *
+ * Initiate a SSL connection. Assumes that svn_ra_svn_ssl_init has been called.
+ * @since New in 1.2.
+ */
+svn_error_t *svn_ra_svn_ssl_connect(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

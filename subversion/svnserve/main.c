@@ -42,6 +42,8 @@
 
 #include "server.h"
 
+#include <openssl/err.h>
+
 /* The strategy for handling incoming connections.  Some of these may be
    unavailable due to platform limitations. */
 enum connection_handling_mode {
@@ -95,6 +97,8 @@ enum run_mode {
 #define SVNSERVE_OPT_FOREGROUND  258
 #define SVNSERVE_OPT_TUNNEL_USER 259
 #define SVNSERVE_OPT_VERSION     260
+#define SVNSERVE_OPT_CERT_FILE   261
+#define SVNSERVE_OPT_KEY_FILE    262
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -118,6 +122,10 @@ static const apr_getopt_option_t svnserve__options[] =
     {"threads",          'T', 0, "use threads instead of fork"},
 #endif
     {"listen-once",      'X', 0, "listen once (useful for debugging)"},
+    {"cert-file",        SVNSERVE_OPT_CERT_FILE, 1,
+     "public certificate for SSL"},
+    {"key-file",         SVNSERVE_OPT_KEY_FILE, 1,
+     "private key to certificate for SSL"},
     {0,                  0,   0, 0}
   };
 
@@ -215,7 +223,83 @@ check_lib_versions (void)
   return svn_ver_check_list (&my_version, checklist);
 }
 
+/* Helper method for more verbose SSL errors. */
+static const char *ssl_last_error(apr_pool_t *pool)
+{
+  unsigned long ssl_error = ERR_get_error();
+  char *buffer;
+  
+  if (ssl_error == 0)
+    return strerror(errno);
 
+  buffer = apr_pcalloc(pool, 256);  
+  ERR_error_string_n(ssl_error, buffer, 256);
+  return buffer;
+}
+
+/* Initializes the SSL context to be used by the server. */
+static svn_boolean_t init_ssl_ctx(apr_pool_t *pool,
+                                  serve_params_t *params,
+                                  const char *ssl_cert_file,
+                                  const char *ssl_key_file)
+{
+  /* List of ciphers that we allow for SSL connections. */
+  const char *cipher_list = "ALL:!LOW";
+
+  SSL_load_error_strings();
+  SSL_library_init();
+  
+  /* TODO :  Seed the randum number generator (RNG)
+   * for those operating systems that does not have /dev/urandom.
+   */
+
+  params->ssl_ctx = SSL_CTX_new(SSLv23_server_method());
+  if (params->ssl_ctx == NULL) 
+    {
+      fprintf(stderr, "SSL_CTX_new() failed.\n");
+      return FALSE;    
+    }
+  
+  if (SSL_CTX_set_cipher_list(params->ssl_ctx, cipher_list) != 1)
+    {
+      fprintf(stderr, "Failed to set cipher list to %s\n", cipher_list);
+      return FALSE;
+    }    
+    
+  if (SSL_CTX_use_certificate_chain_file(params->ssl_ctx, ssl_cert_file) != 1)
+    {
+      fprintf(stderr, "Failed to load certificate file %s : %s",
+              ssl_cert_file, ssl_last_error(pool));
+      return FALSE;
+    }
+    
+  if (SSL_CTX_use_RSAPrivateKey_file(params->ssl_ctx, ssl_key_file, 
+      SSL_FILETYPE_PEM) != 1)
+    {
+      fprintf(stderr, "Failed to load key file %s : %s",
+              ssl_key_file, ssl_last_error(pool));
+      return FALSE;  
+    }
+
+          
+  if (!SSL_CTX_check_private_key(params->ssl_ctx))
+    {
+      fprintf(stderr, "Failed to verify key file %s : %s",
+              ssl_key_file, ssl_last_error(pool));
+      return FALSE;  
+    } 
+  
+  return TRUE;
+}
+  
+/* Frees the allocated SSL context. */
+static void destroy_ssl_ctx(serve_params_t *params)
+{
+  if (params->ssl_ctx != NULL)
+    SSL_CTX_free(params->ssl_ctx);
+}
+  
+  
 int main(int argc, const char *const *argv)
 {
   enum run_mode run_mode = run_mode_none;
@@ -242,7 +326,9 @@ int main(int argc, const char *const *argv)
   enum connection_handling_mode handling_mode = CONNECTION_DEFAULT;
   apr_uint16_t port = SVN_RA_SVN_PORT;
   const char *host = NULL;
-
+  const char *ssl_cert_file = NULL; /* Path to the server public certificate. */
+  const char *ssl_key_file = NULL;  /* Path to server private key. */
+	
   /* Initialize the app. */
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
@@ -266,6 +352,8 @@ int main(int argc, const char *const *argv)
   params.tunnel = FALSE;
   params.tunnel_user = NULL;
   params.read_only = FALSE;
+  params.ssl_layer = FALSE;
+  params.ssl_ctx = NULL;
   while (1)
     {
       status = apr_getopt_long(os, svnserve__options, &opt, &arg);
@@ -336,11 +424,49 @@ int main(int argc, const char *const *argv)
         case 'T':
           handling_mode = connection_mode_thread;
           break;
+
+        case SVNSERVE_OPT_CERT_FILE:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&ssl_cert_file, arg, pool));
+          ssl_cert_file = svn_path_internal_style(ssl_cert_file, pool);
+          SVN_INT_ERR(svn_path_get_absolute(&ssl_cert_file, ssl_cert_file, pool));
+          break;
+
+        case SVNSERVE_OPT_KEY_FILE:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&ssl_key_file, arg, pool));
+          ssl_key_file = svn_path_internal_style(ssl_key_file, pool);
+          SVN_INT_ERR(svn_path_get_absolute(&ssl_key_file, ssl_key_file, pool));
+          break;
         }
     }
   if (os->ind != argc)
     usage(argv[0]);
 
+  if (ssl_cert_file != NULL || ssl_key_file != NULL)
+    {
+      if (ssl_cert_file == NULL)
+        {
+          fprintf(stderr, "Certificate file not specified for the key.\n");
+          usage(argv[0]);
+        }
+      if (ssl_key_file == NULL)
+        {
+          fprintf(stderr, "Key file not specified for the certificate.\n");
+          usage(argv[0]);
+        }
+      if (run_mode != run_mode_listen_once &&
+          run_mode != run_mode_daemon)
+        {
+          fprintf(stderr, "Only daemon and listen-once is supported for SSL.\n");
+          usage(argv[0]);
+        }
+     
+      if (!init_ssl_ctx(pool, &params, ssl_cert_file, ssl_key_file))
+        {
+	  exit(1);
+        }
+      params.ssl_layer = TRUE;
+    }
+    
   if (params.tunnel_user && run_mode != run_mode_tunnel)
     {
       fprintf(stderr, "Option --tunnel-user is only valid in tunnel mode.\n");
@@ -521,5 +647,9 @@ int main(int argc, const char *const *argv)
         }
     }
 
+  if (params.ssl_layer)
+    destroy_ssl_ctx(&params);
+    
   return 0;
 }
+
