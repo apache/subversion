@@ -32,10 +32,32 @@ extern "C" {
 #include <apr_tables.h>
 #include "svn_types.h"
 #include "svn_wc.h"
+#include "svn_ra.h"
 #include "svn_string.h"
 #include "svn_error.h"
 
 
+
+
+/*** Repository Access (RA) interface for client library ***/
+
+/* Every user of the client library *must* call this routine and hold
+   on to the RA_BATON returned.  This baton contains all known methods
+   of accessing a repository, and will be required by most
+   svn_client_* routines below. */
+svn_error_t *
+svn_client_init_ra_libs (void **ra_baton,
+                         apr_pool_t *pool);
+
+
+/* Return an ra vtable-LIBRARY (already within RA_BATON) which can
+   handle URL.  A number of svn_client_* routines will call this
+   internally, but client apps might use it too. */
+svn_error_t *
+svn_client_get_ra_library (svn_ra_plugin_t **library,
+                           void *ra_baton,
+                           const char *URL,
+                           apr_pool_t *pool);
 
 
 

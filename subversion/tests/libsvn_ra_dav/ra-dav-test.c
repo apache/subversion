@@ -21,10 +21,6 @@
 #include "svn_ra.h"
 #include "svn_wc.h"
 
-/* declare explicitly when we call directly (rather than via DSO load) */
-svn_error_t *svn_ra_dav_init(int abi_version,
-                             apr_pool_t *pconf,
-                             const svn_ra_plugin_t **plugin);
 
 
 int
@@ -41,6 +37,7 @@ main (int argc, char **argv)
   svn_string_t *anc_path;
   svn_string_t *root_path;
   svn_revnum_t revision;
+  const char *url_type;
   const svn_ra_plugin_t *plugin;
 
   apr_initialize ();
@@ -55,7 +52,7 @@ main (int argc, char **argv)
   url = svn_string_create(argv[1], pool);
   dir = argv[2];        /* ### default to the last component of the URL */
 
-  err = svn_ra_dav_init(0, pool, &plugin);
+  err = svn_ra_dav_init(0, pool, &url_type, &plugin);
   if (err)
     goto error;
 

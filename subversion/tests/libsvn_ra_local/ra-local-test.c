@@ -30,6 +30,7 @@ main (int argc, char **argv)
   svn_error_t *err;
   void *session_baton;
   svn_string_t *url; 
+  const char *url_type;
   const svn_ra_plugin_t *plugin;
 
   apr_initialize ();
@@ -43,7 +44,7 @@ main (int argc, char **argv)
 
   url = svn_string_create (argv[1], pool);
 
-  err = svn_ra_local_init(0, pool, &plugin);
+  err = svn_ra_local_init(0, pool, &url_type, &plugin);
   if (err)
     goto error;
 

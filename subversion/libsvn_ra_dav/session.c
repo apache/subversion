@@ -125,12 +125,14 @@ static const svn_ra_plugin_t dav_plugin = {
 
 svn_error_t *svn_ra_dav_init(int abi_version,
                              apr_pool_t *pconf,
+                             const char **url_type,
                              const svn_ra_plugin_t **plugin)
 {
   /* ### need a version number to check here... */
   if (abi_version != 0)
     ;
 
+  *url_type = "http";
   *plugin = &dav_plugin;
 
   return NULL;
