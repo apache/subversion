@@ -111,24 +111,29 @@ class hashDir:
 
 class Scrambler:
   def __init__(self, seed, vc_actions, dry_run, quiet):
+    if not quiet:
+      print 'SEED: ' + seed
+
+    self.rand = random.Random(seed)
     self.vc_actions = vc_actions
     self.dry_run = dry_run
     self.quiet = quiet
+    self.ops = []  ### ["add" | "munge", path]
     self.greeking = """
 ======================================================================
 This is some text that was inserted into this file by the lovely and
 talented scramble-tree.py script.
 ======================================================================
 """
-    self.file_modders = [self._mod_append_to_file,
-                         self._mod_append_to_file,
-                         self._mod_append_to_file,                         
-                         self._mod_remove_from_file,
-                         self._mod_remove_from_file,
-                         self._mod_remove_from_file,
-                         self._mod_delete_file,
-                         ]
-    self.rand = random.Random(seed)
+
+  ### Helpers
+  def shrink_list(self, list, remove_count):
+    if len(list) < remove_count:
+      return []
+    for i in range(remove_count):
+      j = self.rand.randrange(len(list) - 1)
+      del list[j]
+    return list
 
   def _make_new_file(self, dir):
     i = 0
@@ -139,7 +144,8 @@ talented scramble-tree.py script.
         open(path, 'w').write(self.greeking)
         return path
     raise Exception("Ran out of unique new filenames in directory '%s'" % dir)
-    
+
+  ### File Mungers
   def _mod_append_to_file(self, path):
     if not self.quiet:
       print 'append_to_file:', path
@@ -154,15 +160,7 @@ talented scramble-tree.py script.
       print 'remove_from_file:', path
     if self.dry_run:
       return
-    def _shrink_list(list):
-      # remove 5 random lines
-      if len(list) < 6:
-        return list
-      for i in range(5): # TODO remove a random number of lines in a range
-        j = self.rand.randrange(len(list) - 1)
-        del list[j]
-      return list
-    lines = _shrink_list(open(path, "r").readlines())
+    lines = self.shrink_list(open(path, "r").readlines(), 5)
     open(path, "w").writelines(lines)
 
   def _mod_delete_file(self, path):
@@ -172,20 +170,41 @@ talented scramble-tree.py script.
       return    
     self.vc_actions.remove_file(path)
 
-  def munge_file(self, path):
-    # Only do something 33% of the time
-    if self.rand.randrange(3):
-      self.rand.choice(self.file_modders)(path)
+  ### Public Interfaces
+  def get_randomizer(self):
+    return self.rand
+  
+  def schedule_munge(self, path):
+    self.ops.append(tuple(["munge", path]))
+    
+  def schedule_addition(self, dir):
+    self.ops.append(tuple(["add", dir]))
 
-  def maybe_add_file(self, dir):
-    if self.rand.randrange(3) == 2:
-      path = self._make_new_file(dir)
-      if not self.quiet:
-        print "maybe_add_file:", path
-      if self.dry_run:
-        return
-      self.vc_actions.add_file(path)
-
+  def enact(self, limit):
+    num_ops = len(self.ops)
+    if limit == 0:
+      return
+    elif limit > 0 and limit <= num_ops:
+      self.ops = self.shrink_list(self.ops, num_ops - limit)
+    for op, path in self.ops:
+      if op == "add":
+        path = self._make_new_file(path)
+        if not self.quiet:
+          print "add_file:", path
+        if self.dry_run:
+          return
+        self.vc_actions.add_file(path)
+      elif op == "munge":
+        file_mungers = [self._mod_append_to_file,
+                        self._mod_append_to_file,
+                        self._mod_append_to_file,                         
+                        self._mod_remove_from_file,
+                        self._mod_remove_from_file,
+                        self._mod_remove_from_file,
+                        self._mod_delete_file,
+                        ]
+        self.rand.choice(file_mungers)(path)
+                            
 
 def usage(retcode=255):
   print 'Usage: %s [OPTIONS] DIRECTORY' % (sys.argv[0])
@@ -203,11 +222,13 @@ def usage(retcode=255):
 def walker_callback(scrambler, dirname, fnames):
   if ((dirname.find('.svn') != -1) or dirname.find('CVS') != -1):
     return
-  scrambler.maybe_add_file(dirname)
+  rand = scrambler.get_randomizer()
+  if rand.randrange(5) == 1:
+    scrambler.schedule_addition(dirname)
   for filename in fnames:
     path = os.path.join(dirname, filename)
-    if not os.path.isdir(path):
-      scrambler.munge_file(path)
+    if not os.path.isdir(path) and rand.randrange(3) == 1:
+      scrambler.schedule_munge(path)
 
 
 def main():
@@ -215,11 +236,12 @@ def main():
   vc_actions = NoVCActions()
   dry_run = 0
   quiet = 0
+  limit = None
   
   # Mm... option parsing.
   optlist, args = getopt.getopt(sys.argv[1:], "hq",
                                 ['seed=', 'use-svn', 'use-cvs',
-                                 'help', 'quiet', 'dry-run'])
+                                 'help', 'quiet', 'dry-run', 'limit='])
   for opt, arg in optlist:
     if opt == '--help' or opt == '-h':
       usage(0)
@@ -231,6 +253,8 @@ def main():
       vc_actions = CVSActions()
     if opt == '--dry-run':
       dry_run = 1
+    if opt == '--limit':
+      limit = int(arg)
     if opt == '--quiet' or opt == '-q':
       quiet = 1
 
@@ -244,12 +268,8 @@ def main():
   if seed is None:
     seed = hashDir(rootdir).gen_seed()
   scrambler = Scrambler(seed, vc_actions, dry_run, quiet)
-  
-  # Fire up the treewalker
-  print 'SEED: ' + seed
-  
   os.path.walk(rootdir, walker_callback, scrambler)
-
+  scrambler.enact(limit)
 
 if __name__ == '__main__':
   main()
