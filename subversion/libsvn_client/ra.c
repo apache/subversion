@@ -292,8 +292,10 @@ svn_client_uuid_from_url (const char **uuid,
                                         NULL, NULL, FALSE, TRUE, 
                                         ctx, subpool));
 
-  /* Allocate the uuid in the passed-in pool. */
-  ra_lib->get_uuid (session, uuid, pool);
+  ra_lib->get_uuid (session, uuid, subpool);
+
+  /* Copy the uuid in to the passed-in pool. */
+  *uuid = apr_pstrdup (pool, *uuid);
 
   /* destroy the RA session */
   svn_pool_destroy (subpool);
