@@ -1609,7 +1609,7 @@ static dav_error * dav_svn_seek_stream(dav_stream *stream,
                        "[at this time].");
 }
 
-const char * dav_svn_getetag(const dav_resource *resource)
+const char * dav_svn_getetag(const dav_resource *resource, apr_pool_t *pool)
 {
   svn_error_t *serr;
   svn_revnum_t created_rev;
@@ -1627,16 +1627,23 @@ const char * dav_svn_getetag(const dav_resource *resource)
 
   if ((serr = svn_fs_node_created_rev(&created_rev, resource->info->root.root,
                                       resource->info->repos_path,
-                                      resource->pool)))
+                                      pool)))
     {
       /* ### what to do? */
       return "";
     }
   
-  return apr_psprintf(resource->pool, "\"%" SVN_REVNUM_T_FMT "/%s\"",
+  return apr_psprintf(pool, "\"%" SVN_REVNUM_T_FMT "/%s\"",
                       created_rev,
-                      apr_xml_quote_string(resource->pool,
+                      apr_xml_quote_string(pool,
                                            resource->info->repos_path, 1));
+}
+
+/* Since dav_svn_getetag() takes a pool argument, this wrapper is for
+   the mod_dav hooks vtable entry, which does not. */
+static const char * getetag_pathetic(const dav_resource *resource)
+{
+  return dav_svn_getetag(resource, resource->pool);
 }
 
 static dav_error * dav_svn_set_headers(request_rec *r,
@@ -1662,7 +1669,8 @@ static dav_error * dav_svn_set_headers(request_rec *r,
 #endif
 
   /* generate our etag and place it into the output */
-  apr_table_setn(r->headers_out, "ETag", dav_svn_getetag(resource));
+  apr_table_setn(r->headers_out, "ETag",
+                 dav_svn_getetag(resource, resource->pool));
 
   /* we accept byte-ranges */
   apr_table_setn(r->headers_out, "Accept-Ranges", "bytes");
@@ -2736,5 +2744,5 @@ const dav_hooks_repository dav_svn_hooks_repos =
   dav_svn_move_resource,
   dav_svn_remove_resource,
   dav_svn_walk,
-  dav_svn_getetag,
+  getetag_pathetic
 };
