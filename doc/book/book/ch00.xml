@@ -441,8 +441,8 @@
       Nuutti Kotivuori, Matt Kraai, Scott Lamb, Vincent Lefevre,
       Morten Ludvigsen, Paul Lussier, Bruce A. Mah, Philip Martin,
       Feliciano Matias, Patrick Mayweg, Gareth McCaughan, Jon
-      Middleton, Tim Moloney, Mats Nilsson, Joe Orton, Kevin
-      Pilch-Bisson, Dmitriy Popkov, Michael Price, Mark Proctor,
+      Middleton, Tim Moloney, Mats Nilsson, Joe Orton, Amy Lyn Pilato,
+      Kevin Pilch-Bisson, Dmitriy Popkov, Michael Price, Mark Proctor,
       Daniel Rall, Tobias Ringstrom, Garrett Rooney, Joel Rosdahl,
       Christian Sauer, Larry Shatzer, Russell Steicke, Sander Striker,
       Erik Sjoelund, Johan Sundstroem, John Szakmeister, Mason Thomas,
@@ -481,7 +481,31 @@
     <sect2 id="svn-ch-0-sect-6.3">
       <title>From C. Michael Pilato</title>
 
-      <para>### thanks ###</para>
+      <para>Special thanks to my wife, Amy, for her love and patient
+        support, for putting up with late nights as I pursue my
+        various hobbies, and for even reviewing entire sections of
+        this book&mdash;you've already logged more <quote>extra
+        miles</quote> than the old Blazer, and you do it all with
+        incredibly grace.  Gavin, you're too young to read right now,
+        but when you do, I hope you're as proud of your daddy as he is
+        of you.  Mom and Dad (and the rest of the family), thanks for
+        your support and enthusiasm.</para>
+
+     <para>Hats off to Shepherd Kendall, through whom the world of
+        computers was first opened to me; Ben Collins-Sussman, my
+        tour-guide through the open-source world; Karl Fogel&mdash;you
+        <emphasis>are</emphasis> my <filename>.emacs</filename>; Greg
+        Stein, for oozing practical programming know-how;
+        Fitz&mdash;for sharing this writing experience with me.  To
+        everyone who believed I could <quote>do it</quote>, and
+        especially those who gave me a hand along the way, you are
+        appreciated.  And to the innumerable folks from whom I am
+        constantly picking up some new knowledge&mdash;keep dropping
+        it!</para>
+
+      <para>Finally, to the One who most perfectly demonstrated
+        creative excellence&mdash;thank you.</para>
+
     </sect2>
 
   </sect1>
