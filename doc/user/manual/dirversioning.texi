@@ -18,7 +18,7 @@ versions files.
 * Revisions::                   Extending revisions to directories.
 * The Lagging Directory::       When directory revisions fall behind.
 * The Overeager Directory::     When directory revisions jump ahead.
-* User impact:                  How these problems affect the user.
+* User impact::                 How these problems affect the user.
 @end menu
 
 
