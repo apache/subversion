@@ -77,14 +77,14 @@ section for approved changes.)
              If also same is true of you, and you vote for this, then
              please note it here so the merger can do it.
       Votes:
-       +1: ghudson, kfogel
+       +1: ghudson, kfogel, bliss
 
     * Issue #1713
       Change svn_filesize_t to a signed value.
       Justification:  Inconsistent with what we support and breaks
         SVN_INVALID_FILESIZE.
       Votes:
-       +1: ghudson, kfogel
+       +1: ghudson, kfogel, bliss
 
     * r8463  (fix for issue #1709)
       Make mod_dav_svn stop spewing huge responses at dead sockets.
@@ -100,7 +100,7 @@ section for approved changes.)
         turned on.  Which includes the command line client when
         --non-interactive is used.
       Votes:
-       +1: ghudson
+       +1: ghudson, bliss
 
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
