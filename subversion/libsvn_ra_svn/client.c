@@ -200,6 +200,7 @@ static svn_error_t *ra_svn_finish_report(void *baton)
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
   SVN_ERR(svn_ra_svn_drive_editor(b->conn, pool, b->editor, b->edit_baton,
                                   TRUE, NULL));
+  SVN_ERR(svn_ra_svn_flush(b->conn, pool));
   return SVN_NO_ERROR;
 }
 
@@ -273,6 +274,12 @@ static svn_boolean_t find_mech(apr_array_header_t *mechlist, const char *mech)
   return FALSE;
 }
 
+/* A pool cleanup handler to close a file. */
+static apr_status_t cleanup_file(void *arg)
+{
+  return apr_file_close(arg);
+}
+
 static svn_error_t *ra_svn_open(void **sess, const char *url,
                                 const svn_ra_callbacks_t *callbacks,
                                 void *callback_baton,
@@ -294,7 +301,7 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
   tunnel_agent = find_tunnel_agent(hostname, pool);
   if (tunnel_agent)
     {
-      /* ### It should be nice if tunnel_agent could contain flags. */
+      /* ### It would be nice if tunnel_agent could contain flags. */
       args[0] = tunnel_agent;
       args[1] = hostname;
       args[2] = "svnserve";
@@ -307,6 +314,18 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
       apr_proc_create(proc, tunnel_agent, args, NULL, attr, pool);
       conn = svn_ra_svn_create_conn(NULL, proc->out, proc->in, pool);
       conn->proc = proc;
+
+      /* APR pipe objects don't have a child cleanup handler.  Set one
+       * up so child processes don't hold open the tunnel agent's
+       * input and output.  Unfortunately, the child cleanup handler
+       * will flush the child process's write buffer (APR gives no way
+       * to avoid that); this means we have to be careful not to leave
+       * stuff lying around in the write buffer between ra_lib
+       * calls. */
+      apr_pool_cleanup_register(pool, proc->in, apr_pool_cleanup_null,
+                                cleanup_file);
+      apr_pool_cleanup_register(pool, proc->out, apr_pool_cleanup_null,
+                                cleanup_file);
     }
   else
     {
@@ -587,6 +606,7 @@ static svn_error_t *ra_svn_checkout(void *sess, svn_revnum_t rev,
 
   /* Let the server drive the checkout editor. */
   SVN_ERR(svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, TRUE, NULL));
+  SVN_ERR(svn_ra_svn_flush(conn, pool));
   return SVN_NO_ERROR;
 }
 
