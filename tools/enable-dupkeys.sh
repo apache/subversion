@@ -26,12 +26,43 @@ if test "$#" != 1; then
 fi
 
 #
-# first, verify that we have the proper versions of the tools
+# First, verify that we have the proper versions of the tools.
 #
 
 VSN=4.0.14
 
-v="`db_dump -V`"
+#
+# Find the proper db_dump and db_load to run.  On RedHat systems,
+# db_dump is called db4_dump and db_load is named db4_load.  First
+# check for db4_* and then fall back to db_*.
+#
+
+for try in db4_dump db_dump; do
+    if $try -V >/dev/null 2>&1; then
+        db_dump=$try
+        break
+    fi
+done
+
+if test -z "$db_dump"; then
+    echo "$VSN of db4_dump or db_dump cannot be found in your PATH."
+    exit 1
+fi
+
+for try in db4_load db_load; do
+    if $try -V >/dev/null 2>&1; then
+        db_load=$try
+        break
+    fi
+done
+
+if test -z "$db_load"; then
+    echo "$VSN of db4_load or db_load cannot be found in your PATH."
+    exit 1
+fi
+
+
+v="`$db_dump -V`"
 tmp="`echo $v | grep $VSN`"
 if test -z "$tmp"; then
     echo "$VSN of db_dump is required. You are running:"
@@ -41,7 +72,7 @@ if test -z "$tmp"; then
     exit 1
 fi
 
-v="`db_load -V`"
+v="`$db_load -V`"
 tmp="`echo $v | grep $VSN`"
 if test -z "$tmp"; then
     echo "$VSN of db_load is required. You are running:"
@@ -78,7 +109,7 @@ fi
 #
 
 echo "Converting '$strings_old' to '$strings_new' ..."
-db_dump "$strings_old" | db_load -c duplicates=1 "$strings_new"
+$db_dump "$strings_old" | $db_load -c duplicates=1 "$strings_new"
 
 echo "Preserving '$strings_old' as '$strings_old.bak' ..."
 mv "$strings_old" "${strings_old}.bak"
