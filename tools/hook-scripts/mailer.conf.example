@@ -3,5 +3,10 @@
 #
 
 [general]
-diff = /usr/bin/diff -u -L %(label)s %(from)s %(to)s
+
+### for now, this is passed to os.popen(), meaning it is a shell line, which
+### means it must be quoted properly. "soon" it will become an argument list
+### and spaces will be separators. quoting won't be needed...  (and I don't
+### know how I plan to allow the insertion of spaces)
+diff = /usr/bin/diff -u -L "%(label_from)s" -L "%(label_to)s" "%(from)s" "%(to)s"
 
