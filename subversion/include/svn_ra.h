@@ -37,21 +37,18 @@
 
 typedef struct svn_ra_plugin_t
 {
-  svn_string_t *name;         /* The name of the ra library,
+  const char *name;         /* The name of the ra library,
                                  e.g. "ra_dav" or "ra_local" */
 
-  svn_string_t *description;  /* Short documentation string */
-
-  apr_dso_handle_t *my_dso;   /* handle on the actual library loaded */
-
+  const char *description;  /* Short documentation string */
 
   /* The vtable hooks */
   
-  /* Open a "session" with a repository.  *SESSION_BATON is returned
-     and then used (opaquely) for all further interactions with the
-     repository. */
+  /* Open a "session" with a repository at URL.  *SESSION_BATON is
+     returned and then used (opaquely) for all further interactions
+     with the repository. */
   svn_error_t *(*svn_ra_open) (void **session_baton,
-                               svn_string_t *repository_name,
+                               svn_string_t *repository_URL,
                                apr_pool_t *pool);
 
 
@@ -70,12 +67,13 @@ typedef struct svn_ra_plugin_t
                                             svn_revnum_t *new_revision);
 
 
-  /* Ask the network layer to check out a copy of URL, using EDITOR
-     and EDIT_BATON to create a working copy. */
+  /* Ask the network layer to check out a copy of ROOT_PATH from a
+     repository's filesystem, using EDITOR and EDIT_BATON to create a
+     working copy. */
   svn_error_t *(*svn_ra_do_checkout) (void *session_baton,
                                       const svn_delta_edit_fns_t *editor,
                                       void *edit_baton,
-                                      svn_string_t *URL);
+                                      svn_string_t *root_path);
 
 
   /* Ask the network layer to update a working copy from URL.
@@ -96,24 +94,21 @@ typedef struct svn_ra_plugin_t
                                     const svn_delta_edit_fns_t **commit_editor,
                                     void **commit_baton,
                                     const svn_delta_edit_fns_t *update_editor,
-                                    void *update_baton,
-                                    svn_string_t *URL);
+                                    void *update_baton);
 
 } svn_ra_plugin_t;
 
 
 
 
-/* Input to the ra library's public initialization method.  (See
-   svn_ra_register_plugin() below.)  */
-
-typedef struct svn_ra_init_params
+/* The client will keep a private hash that maps
+   names->svn_ra_library_t objects. */
+typedef struct svn_ra_library_t
 {
-  apr_pool_t *pool;                   /* where to allocate new plugin */
-  apr_array_header_t *client_plugins; /* client's private array of
-                                         plugins */
-} svn_ra_init_params;
+  const svn_ra_plugin_t *plugin;  /* the vtable to use */
+  apr_dso_handle_t *dso;          /* handle on the actual library loaded */
 
+} svn_ra_library_t;
 
 
 /* libsvn_client will be reponsible for loading each RA DSO it needs.
@@ -121,17 +116,13 @@ typedef struct svn_ra_init_params
    `svn_ra_FOO_init()':
 
       svn_error_t *svn_ra_FOO_init (int abi_version,
-                                    const svn_ra_init_params *params);
+                                    svn_ra_plugin_t **plugin);
 
-   When called by libsvn_client, this routine must:
-
-    * allocate a new ra_plugin object from params->pool
-    * fill in the vtable with its own internal routines
-    * call the routine below, which adds it to libsvn_client's array.  
+   When called by libsvn_client, this routine simply returns an
+   internal, static plugin structure.  (The client then adds it to its
+   ra_library hash.)
 
 */
-svn_error_t *svn_ra_register_plugin (const svn_ra_plugin_t *new_ra_plugin,
-                                     const svn_ra_init_params *params);
 
 
 #endif  /* SVN_RA_H */
