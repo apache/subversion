@@ -245,7 +245,7 @@ svn_fs_close_fs (svn_fs_t *fs)
 {
   svn_error_t *svn_err = 0;
 
-#if 1   /* Set to 1 for instrumenting. */
+#if 0   /* Set to 1 for instrumenting. */
   {
     DB_TXN_STAT *t;
     DB_LOCK_STAT *l;
