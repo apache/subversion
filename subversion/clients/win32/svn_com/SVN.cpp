@@ -343,7 +343,7 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, SAFEARRAY **ppsa)
 	SafeArrayUnaccessData(psa);
 	fLockedSA = FALSE;
 
-	if (rgsBound.cElements > i) {
+	if (rgsBound.cElements > (UINT)i) {
 		rgsBound.cElements = i;
 		hr = SafeArrayRedim(psa, &rgsBound);
 		if (FAILED(hr))

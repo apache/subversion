@@ -18,6 +18,15 @@
 // of connection points.
 // See example usage in svn_comCP.h.
 
+// BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG
+// This class as is returns IMarshal * for IEnumConnectionPoint calls.
+// This doesn't cause any problems currently.
+// The only way to fix this is to have a per thread proxy cache.
+// BUT... This requires catching DLL_THREAD_DETACH in DllMain in order 
+// so the proxies won't leak. This is definately a "Don't fix what ain't broke"
+// problem.
+// BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG BUG
+
 template <const IID* piid>
 class CComDynamicMarshalledUnkArray
 {
@@ -80,8 +89,6 @@ public:
 		// CoGetInterfaceAndReleaseStream because
 		// we're caching the Marshalled interface pointer
 		// for whomever needs us.
-		// TODO: Do a per thread lazy proxy cache,
-		// so that proxy objects aren't always being created.
 		hr = CoUnmarshalInterface(
 			reinterpret_cast<IStream *>(pUnk),
 			*piid,
