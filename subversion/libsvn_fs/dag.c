@@ -1399,6 +1399,7 @@ svn_fs__dag_set_contents (dag_node_t *file,
   /* This whole routine will have to be reincarnated as a "streamy"
      interface someday. */
   skel_t *content_skel;
+  svn_boolean_t is_mutable;
 
   /* Make sure our node is a file. */
   if (! svn_fs__dag_is_file (file))
@@ -1407,6 +1408,14 @@ svn_fs__dag_set_contents (dag_node_t *file,
       (SVN_ERR_FS_NOT_FILE, 0, NULL, trail->pool,
        "Attempted to set textual contents of a *non*-file node.");
   
+  /* Make sure our node is mutable. */
+  SVN_ERR (svn_fs__dag_check_mutable (&is_mutable, file, trail));
+  if (! is_mutable)
+    return 
+      svn_error_createf 
+      (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
+       "Attempted to set textual contents of an immutable node.");
+
   /* Get the node's current contents... */
   SVN_ERR (get_node_revision (&content_skel, file, trail));
   
