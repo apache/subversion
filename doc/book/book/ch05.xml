@@ -2235,7 +2235,7 @@ $
       <para>Incremental backups using the repository dump format are
         excellent to have on hand if the database schema changes
         between successive versions of Subversion itself.  Since a
-        full repository dump and load are generally required to
+        complete repository dump and load are generally required to
         upgrade your repository to the new schema, it's very
         convenient to already have half of that process (the dump
         part) finished.  Unfortunately, the creation of&mdash;and
