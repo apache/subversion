@@ -218,11 +218,13 @@ svn_error_t *svn_subst_translate_string (svn_string_t **new_value,
                                          apr_pool_t *pool);
 
 /** Translate the data in @a value from UTF8 and LF line-endings into
- * native locale and native line-endings.  Return the translated data
- * in @a *new_value, allocated in @a pool.  
+ * native locale and native line-endings, or to the output locale if
+ * @a for_output is TURE.  Return the translated data in @a
+ * *new_value, allocated in @a pool.
  */
 svn_error_t *svn_subst_detranslate_string (svn_string_t **new_value,
                                            const svn_string_t *value,
+                                           svn_boolean_t for_stdout,
                                            apr_pool_t *pool);
 
 

@@ -26,10 +26,10 @@
 #include <apr_strings.h>
 #include <apr_hash.h>
 
+#include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_io.h"
-#include "svn_utf.h"
 
 #ifdef SVN_DEBUG
 /* file_line for the non-debug case. */
@@ -168,6 +168,20 @@ svn_error_clear (svn_error_t *err)
 }
 
 
+static const char *
+convert_string_for_output (const char *src, apr_pool_t *pool)
+{
+  const char *dest;
+  svn_error_t *err = svn_cmdline_cstring_from_utf8 (&dest, src, pool);
+  if (err)
+    {
+      svn_error_clear (err);
+      dest = svn_cmdline_cstring_from_utf8_fuzzy (src, pool);
+    }
+  return dest;
+}
+
+
 static void
 handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal,
               int depth, apr_status_t parent_apr_err)
@@ -196,7 +210,7 @@ handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal,
       /* Is this a Subversion-specific error code? */
       if ((err->apr_err > APR_OS_START_USEERR)
           && (err->apr_err <= APR_OS_START_CANONERR))
-        err_string = svn_utf_cstring_from_utf8_fuzzy
+        err_string = convert_string_for_output
           (svn_strerror (err->apr_err, errbuf, sizeof (errbuf)), err->pool);
       /* Otherwise, this must be an APR error code. */
       else
@@ -206,7 +220,7 @@ handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal,
     }
   if (err->message)
     fprintf (stream, "svn: %s\n",
-             svn_utf_cstring_from_utf8_fuzzy (err->message, err->pool));
+             convert_string_for_output (err->message, err->pool));
   fflush (stream);
 
   if (err->child)
@@ -228,18 +242,9 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
 void
 svn_handle_warning (FILE *stream, svn_error_t *err)
 {
-  const char *msg_native;
-  svn_error_t *err2;
-
-  err2 = svn_utf_cstring_from_utf8 (&msg_native, err->message, err->pool);
-
-  if (err2)
-    handle_error (err2, stream, FALSE, 0, APR_SUCCESS);
-  else
-    {
-      fprintf (stream, "svn: warning: %s\n", msg_native);
-      fflush (stream);
-    }
+  fprintf (stream, "svn: warning: %s\n",
+           convert_string_for_output (err->message, err->pool));
+  fflush (stream);
 }
 
 

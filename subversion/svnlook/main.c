@@ -28,6 +28,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include "svn_cmdline.h"
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -230,6 +231,7 @@ typedef struct svnlook_ctxt_t
 /*** Helper functions. ***/
 static svn_error_t *
 get_property (svn_string_t **prop_value /* native */,
+              svn_boolean_t need_translation,
               svnlook_ctxt_t *c, 
               const char *prop_name /* UTF-8! */,
               apr_pool_t *pool)
@@ -245,8 +247,8 @@ get_property (svn_string_t **prop_value /* native */,
     SVN_ERR (svn_fs_revision_prop (&raw_value, c->fs, c->rev_id,
                                    prop_name, pool));
 
-  if (svn_prop_needs_translation (prop_name))
-    SVN_ERR (svn_subst_detranslate_string (&raw_value, raw_value, pool));
+  if (need_translation && svn_prop_needs_translation (prop_name))
+    SVN_ERR (svn_subst_detranslate_string (&raw_value, raw_value, TRUE, pool));
 
   *prop_value = raw_value;
 
@@ -368,9 +370,9 @@ print_dirs_changed_tree (svn_repos_node_t *node,
   /* Print the node if it qualifies. */
   if (print_me)
     {
-      const char *path_native;
-      SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-      printf ("%s/\n", path_native);
+      const char *path_stdout;
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&path_stdout, path, pool));
+      printf ("%s/\n", path_stdout);
     }
 
   /* Recursively handle the node's children. */
@@ -425,11 +427,11 @@ print_changed_tree (svn_repos_node_t *node,
   /* Print this node unless told to skip it. */
   if (print_me)
     {
-      const char *path_native;
-      SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
+      const char *path_stdout;
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&path_stdout, path, pool));
       printf ("%s  %s%s\n",
               status,
-              path_native,
+              path_stdout,
               node->kind == svn_node_dir ? "/" : "");
     }
   
@@ -717,8 +719,8 @@ display_prop_diffs (const apr_array_header_t *prop_diffs,
         if (orig_value != NULL)
           {
             if (val_to_utf8)
-              SVN_ERR (svn_utf_cstring_from_utf8 (&printable_val, 
-                                                  orig_value->data, pool));
+              SVN_ERR (svn_cmdline_cstring_from_utf8 (&printable_val, 
+                                                      orig_value->data, pool));
             else
               printable_val = orig_value->data;
             printf ("   - %s\n", printable_val);
@@ -727,7 +729,7 @@ display_prop_diffs (const apr_array_header_t *prop_diffs,
         if (pc->value != NULL)
           {
             if (val_to_utf8)
-              SVN_ERR (svn_utf_cstring_from_utf8
+              SVN_ERR (svn_cmdline_cstring_from_utf8
                        (&printable_val, pc->value->data, pool));
             else
               printable_val = pc->value->data;
@@ -1041,7 +1043,7 @@ do_log (svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
 {
   svn_string_t *prop_value;
 
-  SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_LOG, pool));
+  SVN_ERR (get_property (&prop_value, TRUE, c, SVN_PROP_REVISION_LOG, pool));
   if (! (prop_value && prop_value->data))
     {
       printf ("%s\n", print_size ? "0" : "");
@@ -1064,7 +1066,7 @@ do_date (svnlook_ctxt_t *c, apr_pool_t *pool)
 {
   svn_string_t *prop_value;
 
-  SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_DATE, pool));
+  SVN_ERR (get_property (&prop_value, FALSE, c, SVN_PROP_REVISION_DATE, pool));
   if (prop_value && prop_value->data)
     {
       /* Convert the date for humans. */
@@ -1085,7 +1087,8 @@ do_author (svnlook_ctxt_t *c, apr_pool_t *pool)
 {
   svn_string_t *prop_value;
 
-  SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_AUTHOR, pool));
+  SVN_ERR (get_property (&prop_value, TRUE, c,
+                         SVN_PROP_REVISION_AUTHOR, pool));
   if (prop_value && prop_value->data) 
     printf ("%s", prop_value->data);
   
@@ -1315,7 +1318,7 @@ do_plist (svnlook_ctxt_t *c,
     {
       const void *key;
       void *val;
-      const char *pname, *pname_native;
+      const char *pname;
       svn_string_t *propval;
 
       apr_hash_this (hi, &key, NULL, &val);
@@ -1326,12 +1329,15 @@ do_plist (svnlook_ctxt_t *c,
          colon and some spaces) anyway, just mimic the output of the
          command line client proplist.   Compare to 'svnlook propget',
          which sends the raw bytes to stdout, untranslated. */
-      SVN_ERR (svn_utf_cstring_from_utf8 (&pname_native, pname, pool));
       if (svn_prop_needs_translation (pname))
-        SVN_ERR (svn_subst_detranslate_string (&propval, propval, pool));
+        SVN_ERR (svn_subst_detranslate_string (&propval, propval, TRUE, pool));
 
       if (verbose)
-        printf ("  %s : %s\n", pname, propval->data);
+        {
+          const char *pname_stdout;
+          SVN_ERR (svn_cmdline_cstring_from_utf8 (&pname_stdout, pname, pool));
+          printf ("  %s : %s\n", pname_stdout, propval->data);
+        }
       else
         printf ("  %s\n", pname);
     }

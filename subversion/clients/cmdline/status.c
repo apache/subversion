@@ -23,10 +23,10 @@
 /*** Includes. ***/
 #include <apr_hash.h>
 #include <apr_tables.h>
+#include "svn_cmdline.h"
 #include "svn_sorts.h"
 #include "svn_path.h"
 #include "svn_wc.h"
-#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -60,7 +60,8 @@ static void
 print_status (const char *path,
               svn_boolean_t detailed,
               svn_boolean_t show_last_committed,
-              svn_wc_status_t *status)
+              svn_wc_status_t *status,
+              apr_pool_t *pool)
 {
   char ood_status = '@';    /* Silence a gcc uninitialized warning */
   char working_rev_buf[21]; /* Enough for 2^64 in base 10 plus '\0' */
@@ -98,7 +99,18 @@ print_status (const char *path,
             commit_rev = "      ";
 
           if (status->entry && status->entry->cmt_author)
-            commit_author = status->entry->cmt_author;
+            {
+              const char *const author_utf8 = status->entry->cmt_author;
+              svn_error_t *err =
+                svn_cmdline_cstring_from_utf8 (&commit_author, author_utf8,
+                                               pool);
+              if (err)
+                {
+                  svn_error_clear (err);
+                  commit_author =
+                    svn_cmdline_cstring_from_utf8_fuzzy (author_utf8, pool);
+                }
+            }
           else if (status->entry)
             commit_author = "      ? ";
           else
@@ -150,7 +162,7 @@ svn_cl__print_status (const char *path,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
-  const char *native_path;
+  const char *path_stdout;
 
   if (! status 
       || (skip_unrecognized && ! status->entry)
@@ -158,9 +170,11 @@ svn_cl__print_status (const char *path,
           && status->repos_text_status == svn_wc_status_none))
     return;
 
-  if ((err = svn_utf_cstring_from_utf8 (&native_path, path, pool)))
+  err = svn_cmdline_cstring_from_utf8 (&path_stdout,
+                                       svn_path_local_style (path, pool),
+                                       pool);
+  if (err)
     svn_handle_error (err, stderr, FALSE);
 
-  print_status (svn_path_local_style (native_path, pool),
-                detailed, show_last_committed, status);
+  print_status (path_stdout, detailed, show_last_committed, status, pool);
 }

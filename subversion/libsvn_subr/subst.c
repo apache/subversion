@@ -28,6 +28,8 @@
 #include <apr_file_io.h>
 #include <apr_strings.h>
 #include <apr_lib.h>
+
+#include "svn_cmdline.h"
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_string.h"
@@ -943,10 +945,11 @@ svn_subst_translate_string (svn_string_t **new_value,
 svn_error_t *
 svn_subst_detranslate_string (svn_string_t **new_value,
                               const svn_string_t *value,
+                              svn_boolean_t for_output,
                               apr_pool_t *pool)
 {
   svn_error_t *err;
-  const char *val_nlocale;
+  const char *val_neol;
   const char *val_nlocale_neol;
 
   if (value == NULL)
@@ -955,20 +958,32 @@ svn_subst_detranslate_string (svn_string_t **new_value,
       return SVN_NO_ERROR;
     }
 
-  err = svn_utf_cstring_from_utf8 (&val_nlocale, value->data, pool);
-  if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
-    val_nlocale = svn_utf_cstring_from_utf8_fuzzy (value->data, pool);
-  else if (err)
-    return err;
-
-  SVN_ERR (svn_subst_translate_cstring (val_nlocale,
-                                        &val_nlocale_neol,
+  SVN_ERR (svn_subst_translate_cstring (value->data,
+                                        &val_neol,
                                         APR_EOL_STR,  /* 'native' eol */
                                         FALSE, /* no repair */
                                         NULL,  /* no keywords */
                                         FALSE, /* no expansion */
                                         pool));
-  
+
+  if (for_output)
+    {
+      err = svn_cmdline_cstring_from_utf8 (&val_nlocale_neol, val_neol, pool);
+      if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
+        val_nlocale_neol =
+          svn_cmdline_cstring_from_utf8_fuzzy (val_neol, pool);
+      else if (err)
+        return err;
+    }
+  else
+    {
+      err = svn_utf_cstring_from_utf8 (&val_nlocale_neol, val_neol, pool);
+      if (err && (APR_STATUS_IS_EINVAL (err->apr_err)))
+        val_nlocale_neol = svn_utf_cstring_from_utf8_fuzzy (val_neol, pool);
+      else if (err)
+        return err;
+    }
+
   *new_value = svn_string_create (val_nlocale_neol, pool);
 
   return SVN_NO_ERROR;

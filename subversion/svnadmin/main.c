@@ -19,6 +19,7 @@
 
 #include <apr_file_io.h>
 
+#include "svn_cmdline.h"
 #include "svn_error.h"
 #include "svn_opt.h"
 #include "svn_utf.h"
@@ -479,12 +480,13 @@ list_dblogs (apr_getopt_t *os, void *baton, svn_boolean_t only_unused, apr_pool_
      style and encoding before printing. */
   for (i = 0; i < logfiles->nelts; i++)
     {
-      const char *log_utf8, *log_native;
+      const char *log_utf8, *log_stdout;
       log_utf8 = svn_path_join (opt_state->repository_path,
                                 APR_ARRAY_IDX (logfiles, i, const char *),
                                 pool);
-      SVN_ERR (svn_utf_cstring_from_utf8 (&log_native, log_utf8, pool));
-      printf ("%s\n", svn_path_local_style (log_native, pool));
+      log_utf8 = svn_path_local_style (log_utf8, pool);
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&log_stdout, log_utf8, pool));
+      printf ("%s\n", log_stdout);
     }
   
   return SVN_NO_ERROR;

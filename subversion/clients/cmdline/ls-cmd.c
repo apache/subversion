@@ -22,11 +22,11 @@
 
 /*** Includes. ***/
 
+#include "svn_cmdline.h"
 #include "svn_client.h"
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_sorts.h"
-#include "svn_utf.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_time.h"
@@ -53,7 +53,7 @@ print_dirents (apr_hash_t *dirents,
   
   for (i = 0; i < array->nelts; ++i)
     {
-      const char *utf8_entryname, *native_entryname;
+      const char *utf8_entryname, *stdout_entryname;
       svn_dirent_t *dirent;
       svn_item_t *item;
       char timestr[20];
@@ -64,19 +64,20 @@ print_dirents (apr_hash_t *dirents,
 
       dirent = apr_hash_get (dirents, utf8_entryname, item->klen);
 
-      SVN_ERR (svn_utf_cstring_from_utf8 (&native_entryname,
-                                          utf8_entryname, pool));      
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&stdout_entryname,
+                                              utf8_entryname, pool));
       if (verbose)
         {
           apr_time_t now = apr_time_now();
           apr_time_exp_t exp_time;
           apr_status_t apr_err;
           apr_size_t size;
-          const char *native_author = NULL;
+          const char *stdout_author = NULL;
           
           if (dirent->last_author)
-            SVN_ERR (svn_utf_cstring_from_utf8 (&native_author,
-                                                dirent->last_author, pool));
+            SVN_ERR (svn_cmdline_cstring_from_utf8 (&stdout_author,
+                                                    dirent->last_author,
+                                                    pool));
 
           /* svn_time_to_human_cstring gives us something *way* to long
              to use for this, so we have to roll our own.  We include
@@ -102,15 +103,15 @@ print_dirents (apr_hash_t *dirents,
                   "%8"SVN_FILESIZE_T_FMT" %12s %s%s\n",
                   dirent->has_props ? 'P' : '_',
                   dirent->created_rev,
-                  native_author ? native_author : "      ? ",
+                  stdout_author ? stdout_author : "      ? ",
                   dirent->size,
                   timestr,
-                  native_entryname,
+                  stdout_entryname,
                   (dirent->kind == svn_node_dir) ? "/" : "");
         }
       else
         {
-          printf ("%s%s\n", native_entryname, 
+          printf ("%s%s\n", stdout_entryname, 
                   (dirent->kind == svn_node_dir) ? "/" : "");
         }
     }

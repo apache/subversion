@@ -30,6 +30,7 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_utf.h"
+#include "utf_impl.h"
 
 
 
@@ -410,8 +411,10 @@ svn_utf_cstring_from_utf8_ex (const char **dest,
 
 
 const char *
-svn_utf_cstring_from_utf8_fuzzy (const char *src,
-                                 apr_pool_t *pool)
+svn_utf__cstring_from_utf8_fuzzy (const char *src,
+                                  apr_pool_t *pool,
+                                  svn_error_t *(*convert_from_utf8)
+                                  (const char **, const char *, apr_pool_t *))
 {
   const char *src_orig = src;
   apr_size_t new_len = 0;
@@ -458,7 +461,7 @@ svn_utf_cstring_from_utf8_fuzzy (const char *src,
 
   /* Okay, now we have a *new* UTF-8 string, one that's guaranteed to
      contain only 7-bit bytes :-).  Recode to native... */
-  err = svn_utf_cstring_from_utf8 (((const char **) &new), new_orig, pool);
+  err = convert_from_utf8 (((const char **) &new), new_orig, pool);
 
   if (err)
     {
@@ -472,6 +475,15 @@ svn_utf_cstring_from_utf8_fuzzy (const char *src,
    * conversion!  See Ulrich Drepper's patch at
    * http://subversion.tigris.org/issues/show_bug.cgi?id=807.
    */
+}
+
+
+const char *
+svn_utf_cstring_from_utf8_fuzzy (const char *src,
+                                 apr_pool_t *pool)
+{
+  return svn_utf__cstring_from_utf8_fuzzy (src, pool,
+                                           svn_utf_cstring_from_utf8);
 }
 
 

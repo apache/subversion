@@ -23,13 +23,13 @@
 /*** Includes. ***/
 
 #include <apr_hash.h>
+#include "svn_cmdline.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
-#include "svn_utf.h"
 #include "svn_subst.h"
 #include "cl.h"
 
@@ -59,7 +59,7 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
       void *val;
       const char *pname;
       svn_string_t *propval;
-      const char *pname_native;
+      const char *pname_stdout;
 
       apr_hash_this (hi, &key, NULL, &val);
       pname = key;
@@ -67,14 +67,14 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
 
       if (svn_prop_needs_translation (pname))
         SVN_ERR (svn_subst_detranslate_string (&propval, propval,
-                                               pool));
+                                               TRUE, pool));
 
-      SVN_ERR (svn_utf_cstring_from_utf8 (&pname_native, pname, pool));
+      SVN_ERR (svn_cmdline_cstring_from_utf8 (&pname_stdout, pname, pool));
 
       if (names_only)
-        printf ("  %s\n", pname_native);
+        printf ("  %s\n", pname_stdout);
       else
-        printf ("  %s : %s\n", pname_native, propval->data);
+        printf ("  %s : %s\n", pname_stdout, propval->data);
     }
 
   return SVN_NO_ERROR;
