@@ -269,15 +269,16 @@ static svn_error_t *set_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                              apr_array_header_t *params, void *baton)
 {
   report_driver_baton_t *b = baton;
-  const char *path;
+  const char *path, *lock_token;
   svn_revnum_t rev;
   svn_boolean_t start_empty;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "crb",
-                                 &path, &rev, &start_empty));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "crb?(?c)",
+                                 &path, &rev, &start_empty, &lock_token));
   path = svn_path_canonicalize(path, pool);
   if (!b->err)
-    b->err = svn_repos_set_path(b->report_baton, path, rev, start_empty, pool);
+    b->err = svn_repos_set_path2(b->report_baton, path, rev, start_empty,
+                                 lock_token, pool);
   return SVN_NO_ERROR;
 }
 
@@ -298,19 +299,20 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                               apr_array_header_t *params, void *baton)
 {
   report_driver_baton_t *b = baton;
-  const char *path, *url, *fs_path;
+  const char *path, *url, *lock_token, *fs_path;
   svn_revnum_t rev;
   svn_boolean_t start_empty;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccrb",
-                                 &path, &url, &rev, &start_empty));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccrb?(?c)",
+                                 &path, &url, &rev, &start_empty,
+                                 &lock_token));
   path = svn_path_canonicalize(path, pool);
   url = svn_path_uri_decode(svn_path_canonicalize(url, pool), pool);
   if (!b->err)
     b->err = get_fs_path(b->repos_url, url, &fs_path, pool);
   if (!b->err)
-    b->err = svn_repos_link_path(b->report_baton, path, fs_path, rev,
-                                 start_empty, pool);
+    b->err = svn_repos_link_path2(b->report_baton, path, fs_path, rev,
+                                  start_empty, lock_token, pool);
   return SVN_NO_ERROR;
 }
 
