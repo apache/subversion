@@ -6158,18 +6158,32 @@ create_within_copy (const char **msg,
   SVN_ERR (svn_fs_close_txn (txn));
   svn_pool_clear (spool);
 
-  /*** Revision 3:  Copy A/D to A/D2 and create A/D2/up and A/D2/I  ***/
+  /*** Revision 3:  Copy A/D/G to A/D/G2 ***/
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
-  SVN_ERR (svn_fs_copy (rev_root, "A/D", txn_root, "A/D2", spool));
-  SVN_ERR (svn_fs_make_dir (txn_root, "A/D2/I", pool));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/D2/up", pool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D/G", txn_root, "A/D/G2", spool));
   SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
   SVN_ERR (svn_fs_close_txn (txn));
   svn_pool_clear (spool);
 
-  /*** Revision 4:  Create A/D3/down and A/D3/J ***/
+  /*** Revision 4: Copy A/D to A/D2 and create up and I in the existing
+   A/D/G2, in the new A/D2, and in the nested, new A/D2/G2 ***/
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D", txn_root, "A/D2", spool));
+  SVN_ERR (svn_fs_make_dir (txn_root, "A/D/G2/I", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D/G2/up", pool));
+  SVN_ERR (svn_fs_make_dir (txn_root, "A/D2/I", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D2/up", pool));
+  SVN_ERR (svn_fs_make_dir (txn_root, "A/D2/G2/I", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "A/D2/G2/up", pool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+  svn_pool_clear (spool);
+
+  /*** Revision 5:  Create A/D3/down and A/D3/J ***/
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
   SVN_ERR (svn_fs_make_file (txn_root, "A/D3/down", pool));
@@ -6184,12 +6198,18 @@ create_within_copy (const char **msg,
       const char *path;
       const char *unparsed_id;
     } new_nodes[] = {
-      { "A/D2",      "b.2.3" },
-      { "A/D2/I",    "l.2.3" },
-      { "A/D2/up",   "m.2.3" },
-      { "A/D3",      "b.1.4" },
-      { "A/D3/down", "n.1.4" },
-      { "A/D3/J",    "o.1.4" },
+      { "A/D/G2",     "d.2.4" },
+      { "A/D/G2/I",   "l.2.4" },
+      { "A/D/G2/up",  "m.2.4" },
+      { "A/D2",       "b.3.4" },
+      { "A/D2/I",     "n.3.4" },
+      { "A/D2/up",    "o.3.4" },
+      { "A/D2/G2",    "d.4.4" },
+      { "A/D2/G2/I",  "p.4.4" },
+      { "A/D2/G2/up", "q.4.4" },
+      { "A/D3",       "b.1.5" },
+      { "A/D3/down",  "r.1.5" },
+      { "A/D3/J",     "s.1.5" },
       { NULL, NULL }
     }, *node = new_nodes; 
 
@@ -6304,7 +6324,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (lazy_copies_created_rev),
     SVN_TEST_PASS (lazy_copies_dir_entries),
     SVN_TEST_PASS (lazy_copies_rev_changed),
-    SVN_TEST_XFAIL (create_within_copy),
+    SVN_TEST_PASS (create_within_copy),
     SVN_TEST_PASS (verify_checksum),
     SVN_TEST_NULL
   };
