@@ -46,6 +46,56 @@
 
 #include "../libsvn_fs/fs-loader.h"
 
+/* Following are defines that specify the textual elements of the
+   native filesystem directories and revision files. */
+
+/* Names of special files in the fs_fs filesystem. */
+#define PATH_UUID          "uuid"          /* Contains UUID */
+#define PATH_CURRENT       "current"       /* Youngest revision */
+#define PATH_LOCK_FILE     "write-lock"    /* Revision lock file */
+#define PATH_REVS_DIR      "revs"          /* Directory of revisions */
+#define PATH_REVPROPS_DIR  "revprops"      /* Directory of revprops */
+#define PATH_TXNS_DIR      "transactions"  /* Directory of transactions */
+
+/* Names of special files and file extensions dor transactions */
+#define PATH_CHANGES       "changes"       /* Records changes made so far */
+#define PATH_TXN_PROPS     "props"         /* Transaction properties */
+#define PATH_NEXT_IDS      "next-ids"      /* Next temporary ID assignments */
+#define PATH_EXT_TXN       ".txn"          /* Extension of txn dir */
+#define PATH_EXT_CHILDREN  ".children"     /* Extension for dir contents */
+#define PATH_EXT_PROPS     ".props"        /* Extension for node props */
+#define PATH_REV           "rev"           /* Proto rev file */
+
+/* Headers used to describe node-revision in the revision file. */
+#define HEADER_ID          "id"
+#define HEADER_TYPE        "type"
+#define HEADER_COUNT       "count"
+#define HEADER_PROPS       "props"
+#define HEADER_TEXT        "text"
+#define HEADER_CPATH       "cpath"
+#define HEADER_PRED        "pred"
+#define HEADER_COPYFROM    "copyfrom"
+#define HEADER_COPYROOT    "copyroot"
+
+/* Kinds that a change can be. */
+#define ACTION_MODIFY      "modify"
+#define ACTION_ADD         "add"
+#define ACTION_DELETE      "delete"
+#define ACTION_REPLACE     "replace"
+#define ACTION_RESET       "reset"
+
+/* True and False flags. */
+#define FLAG_TRUE          "true"
+#define FLAG_FALSE         "false"
+
+/* Kinds that a node-rev can be. */
+#define KIND_FILE          "file"
+#define KIND_DIR           "dir"
+
+/* Kinds of representation. */
+#define REP_PLAIN          "PLAIN"
+#define REP_DELTA          "DELTA"
+
 /* Notes:
 
 To avoid opening and closing the rev-files all the time, it would
@@ -241,7 +291,7 @@ svn_fs_fs__open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   fs->path = apr_pstrdup (pool, path);
 
   SVN_ERR (svn_io_file_open (&current_file,
-                             svn_path_join (path, SVN_FS_FS__CURRENT, pool),
+                             svn_path_join (path, PATH_CURRENT, pool),
                              APR_READ | APR_BUFFERED , APR_OS_DEFAULT, pool));
 
   SVN_ERR (svn_io_file_close (current_file, pool));
@@ -262,8 +312,7 @@ get_youngest (svn_revnum_t *youngest_p,
   apr_size_t len;
 
   SVN_ERR (svn_io_file_open (&revision_file,
-                             svn_path_join (fs_path, SVN_FS_FS__CURRENT,
-                                            pool),
+                             svn_path_join (fs_path, PATH_CURRENT, pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   len = sizeof (buf);
@@ -286,18 +335,17 @@ svn_fs_fs__hotcopy (const char *src_path,
   svn_revnum_t youngest, rev;
 
   /* Copy the current file. */
-  SVN_ERR (svn_io_dir_file_copy (src_path, dst_path, SVN_FS_FS__CURRENT,
-                                 pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dst_path, PATH_CURRENT, pool));
 
   /* Copy the uuid. */
-  SVN_ERR (svn_io_dir_file_copy (src_path, dst_path, SVN_FS_FS__UUID, pool));
+  SVN_ERR (svn_io_dir_file_copy (src_path, dst_path, PATH_UUID, pool));
 
   /* Find the youngest revision from this current file. */
   SVN_ERR (get_youngest (&youngest, dst_path, pool));
 
   /* Copy the necessary rev files. */
-  src_subdir = svn_path_join (src_path, SVN_FS_FS__REVS_DIR, pool);
-  dst_subdir = svn_path_join (dst_path, SVN_FS_FS__REVS_DIR, pool);
+  src_subdir = svn_path_join (src_path, PATH_REVS_DIR, pool);
+  dst_subdir = svn_path_join (dst_path, PATH_REVS_DIR, pool);
 
   SVN_ERR (svn_io_make_dir_recursively (dst_subdir, pool));
   
@@ -307,8 +355,8 @@ svn_fs_fs__hotcopy (const char *src_path,
                                    pool));
 
   /* Copy the necessary revprop files. */
-  src_subdir = svn_path_join (src_path, SVN_FS_FS__REVPROPS_DIR, pool);
-  dst_subdir = svn_path_join (dst_path, SVN_FS_FS__REVPROPS_DIR, pool);
+  src_subdir = svn_path_join (src_path, PATH_REVPROPS_DIR, pool);
+  dst_subdir = svn_path_join (dst_path, PATH_REVPROPS_DIR, pool);
 
   SVN_ERR (svn_io_make_dir_recursively (dst_subdir, pool));
 
@@ -320,7 +368,7 @@ svn_fs_fs__hotcopy (const char *src_path,
   /* Make an empty transactions directory for now.  Eventually some
      method of copying in progress transactions will need to be
      developed.*/
-  dst_subdir = svn_path_join (dst_path, SVN_FS_FS__TXNS_DIR, pool);
+  dst_subdir = svn_path_join (dst_path, PATH_TXNS_DIR, pool);
   SVN_ERR (svn_io_make_dir_recursively (dst_subdir, pool));
 
   return SVN_NO_ERROR;
@@ -413,7 +461,7 @@ open_and_seek_revision (apr_file_t **file,
   SVN_ERR (svn_io_file_open (&rev_file,
                              svn_path_join_many (pool, 
                                                  fs->path,
-                                                 SVN_FS_FS__REVS_DIR,
+                                                 PATH_REVS_DIR,
                                                  rev_filename,
                                                  NULL),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
@@ -437,22 +485,22 @@ get_txn_representation_filename (svn_fs_t *fs,
 {
   const char *filename;
 
-  filename = svn_path_join_many (pool, fs->path, SVN_FS_FS__TXNS_DIR,
+  filename = svn_path_join_many (pool, fs->path, PATH_TXNS_DIR,
                                  apr_pstrcat (pool, txn_id,
-                                              SVN_FS_FS__TXNS_EXT, NULL),
+                                              PATH_EXT_TXN, NULL),
                                  NULL);
 
   if (! (rep->is_directory_contents))
     {
       if (rep->is_data_rep)
         {
-          filename = svn_path_join (filename, SVN_FS_FS__REV, pool);
+          filename = svn_path_join (filename, PATH_REV, pool);
         }
       else
         {
           filename = svn_path_join (filename,
                                     apr_psprintf (pool, "%s.%s"
-                                                  SVN_FS_FS__PROPS_EXT,
+                                                  PATH_EXT_PROPS,
                                                   svn_fs_fs__id_node_id (id),
                                                   svn_fs_fs__id_copy_id (id)),
                                     pool);
@@ -462,7 +510,7 @@ get_txn_representation_filename (svn_fs_t *fs,
     {
       filename = svn_path_join (filename,
                                 apr_psprintf (pool, "%s.%s"
-                                              SVN_FS_FS__CHILDREN_EXT,
+                                              PATH_EXT_CHILDREN,
                                               svn_fs_fs__id_node_id (id),
                                               svn_fs_fs__id_copy_id (id)),
                                 pool);
@@ -613,7 +661,7 @@ open_txn_node_rev (apr_file_t **file_p,
   apr_file_t *file;
 
   filename = svn_path_join_many (pool, fs->path,
-                                 SVN_FS_FS__TXNS_DIR,
+                                 PATH_TXNS_DIR,
                                  apr_pstrcat (pool, txn_id, ".txn", NULL),
                                  apr_pstrcat (pool, node_id, ".",
                                               copy_id, NULL), NULL);
@@ -670,21 +718,21 @@ svn_fs_fs__get_node_revision (node_revision_t **noderev_p,
   noderev = apr_pcalloc (pool, sizeof (*noderev));
 
   /* Read the node-rev id. */
-  value = apr_hash_get (headers, SVN_FS_FS__NODE_ID, APR_HASH_KEY_STRING);
+  value = apr_hash_get (headers, HEADER_ID, APR_HASH_KEY_STRING);
 
   SVN_ERR (svn_io_file_close (revision_file, pool));
 
   noderev->id = svn_fs_fs__id_parse (value, strlen (value), pool);
 
   /* Read the type. */
-  value = apr_hash_get (headers, SVN_FS_FS__KIND, APR_HASH_KEY_STRING);
+  value = apr_hash_get (headers, HEADER_TYPE, APR_HASH_KEY_STRING);
 
   if ((value == NULL) ||
-      (strcmp (value, SVN_FS_FS__FILE) != 0 && strcmp (value, SVN_FS_FS__DIR)))
+      (strcmp (value, KIND_FILE) != 0 && strcmp (value, KIND_DIR)))
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                              "Missing kind field in node-rev.");
 
-  if (strcmp (value, SVN_FS_FS__FILE) == 0)
+  if (strcmp (value, KIND_FILE) == 0)
     {
       noderev->kind = svn_node_file;
     }
@@ -694,7 +742,7 @@ svn_fs_fs__get_node_revision (node_revision_t **noderev_p,
     }
 
   /* Read the 'count' field. */
-  value = apr_hash_get (headers, SVN_FS_FS__COUNT, APR_HASH_KEY_STRING);
+  value = apr_hash_get (headers, HEADER_COUNT, APR_HASH_KEY_STRING);
   if (value == NULL)
     {
       noderev->predecessor_count = 0;
@@ -705,7 +753,7 @@ svn_fs_fs__get_node_revision (node_revision_t **noderev_p,
     }
 
   /* Get the properties location. */
-  value = apr_hash_get (headers, SVN_FS_FS__PROPS, APR_HASH_KEY_STRING);
+  value = apr_hash_get (headers, HEADER_PROPS, APR_HASH_KEY_STRING);
   if (value)
     {
       SVN_ERR (read_rep_offsets (&noderev->prop_rep, value,
@@ -715,7 +763,7 @@ svn_fs_fs__get_node_revision (node_revision_t **noderev_p,
     }
 
   /* Get the data location. */
-  value = apr_hash_get (headers, SVN_FS_FS__TEXT, APR_HASH_KEY_STRING);
+  value = apr_hash_get (headers, HEADER_TEXT, APR_HASH_KEY_STRING);
   if (value)
     {
       SVN_ERR (read_rep_offsets (&noderev->data_rep, value,
@@ -724,7 +772,7 @@ svn_fs_fs__get_node_revision (node_revision_t **noderev_p,
     }
 
   /* Get the created path. */
-  value = apr_hash_get (headers, SVN_FS_FS__CPATH, APR_HASH_KEY_STRING);
+  value = apr_hash_get (headers, HEADER_CPATH, APR_HASH_KEY_STRING);
   if (value == NULL)
     {
       return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
@@ -736,13 +784,13 @@ svn_fs_fs__get_node_revision (node_revision_t **noderev_p,
     }
 
   /* Get the predecessor ID. */
-  value = apr_hash_get (headers, SVN_FS_FS__PRED, APR_HASH_KEY_STRING);
+  value = apr_hash_get (headers, HEADER_PRED, APR_HASH_KEY_STRING);
   if (value)
     noderev->predecessor_id = svn_fs_fs__id_parse (value, strlen (value),
                                                    pool);
   
   /* Get the copyroot. */
-  value = apr_hash_get (headers, SVN_FS_FS__COPYROOT, APR_HASH_KEY_STRING);
+  value = apr_hash_get (headers, HEADER_COPYROOT, APR_HASH_KEY_STRING);
   if (value == NULL)
     {
       noderev->copyroot_path = apr_pstrdup (pool, noderev->created_path);
@@ -766,7 +814,7 @@ svn_fs_fs__get_node_revision (node_revision_t **noderev_p,
     }
 
   /* Get the copyfrom. */
-  value = apr_hash_get (headers, SVN_FS_FS__COPYFROM, APR_HASH_KEY_STRING);
+  value = apr_hash_get (headers, HEADER_COPYFROM, APR_HASH_KEY_STRING);
   if (value == NULL)
     {
       noderev->copyfrom_path = NULL;
@@ -824,44 +872,44 @@ write_noderev_txn (apr_file_t *file,
 
   outfile = svn_stream_from_aprfile (file, pool);
 
-  SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__NODE_ID ": %s\n",
+  SVN_ERR (svn_stream_printf (outfile, pool, HEADER_ID ": %s\n",
                               svn_fs_fs__id_unparse (noderev->id,
                                                      pool)->data));
 
-  SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__KIND ": %s\n",
+  SVN_ERR (svn_stream_printf (outfile, pool, HEADER_TYPE ": %s\n",
                               (noderev->kind == svn_node_file) ?
-                              SVN_FS_FS__FILE : SVN_FS_FS__DIR));
+                              KIND_FILE : KIND_DIR));
 
   if (noderev->predecessor_id)
-    SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__PRED ": %s\n",
+    SVN_ERR (svn_stream_printf (outfile, pool, HEADER_PRED ": %s\n",
                                 svn_fs_fs__id_unparse (noderev->predecessor_id,
                                                        pool)->data));
 
-  SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__COUNT ": %d\n",
+  SVN_ERR (svn_stream_printf (outfile, pool, HEADER_COUNT ": %d\n",
                               noderev->predecessor_count));
 
   if (noderev->data_rep)
-    SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__TEXT ": %s\n",
+    SVN_ERR (svn_stream_printf (outfile, pool, HEADER_TEXT ": %s\n",
                                 representation_string (noderev->data_rep,
                                                        pool)));
 
   if (noderev->prop_rep)
-    SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__PROPS ": %s\n",
+    SVN_ERR (svn_stream_printf (outfile, pool, HEADER_PROPS ": %s\n",
                                 representation_string (noderev->prop_rep,
                                                        pool)));
 
-  SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__CPATH ": %s\n",
+  SVN_ERR (svn_stream_printf (outfile, pool, HEADER_CPATH ": %s\n",
                               noderev->created_path));
 
   if (noderev->copyfrom_path)
-    SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__COPYFROM ": %ld"
+    SVN_ERR (svn_stream_printf (outfile, pool, HEADER_COPYFROM ": %ld"
                                 " %s\n",
                                 noderev->copyfrom_rev,
                                 noderev->copyfrom_path));
 
   if ((noderev->copyroot_rev != svn_fs_fs__id_rev (noderev->id)) ||
       (strcmp (noderev->copyroot_path, noderev->created_path) != 0))
-    SVN_ERR (svn_stream_printf (outfile, pool, SVN_FS_FS__COPYROOT ": %ld"
+    SVN_ERR (svn_stream_printf (outfile, pool, HEADER_COPYROOT ": %ld"
                                 " %s\n",
                                 noderev->copyroot_rev,
                                 noderev->copyroot_path));
@@ -885,7 +933,7 @@ svn_fs_fs__put_node_revision (svn_fs_t *fs,
                              "Attempted to write to non-transaction.");
 
   /* Write out the new node-rev file in this transaction. */
-  dirname = svn_path_join_many (pool, fs->path, SVN_FS_FS__TXNS_DIR,
+  dirname = svn_path_join_many (pool, fs->path, PATH_TXNS_DIR,
                                 apr_pstrcat (pool, svn_fs_fs__id_txn_id (id),
                                              ".txn", NULL),
                                 apr_psprintf (pool, "%s.%s",
@@ -936,13 +984,13 @@ read_rep_line (struct rep_args_t **rep_args_p,
   rep_args = apr_pcalloc (pool, sizeof (*rep_args));
   rep_args->is_delta = FALSE;
 
-  if (strcmp (buffer, SVN_FS_FS__PLAIN) == 0)
+  if (strcmp (buffer, REP_PLAIN) == 0)
     {
       *rep_args_p = rep_args;
       return SVN_NO_ERROR;
     }
 
-  if (strcmp (buffer, SVN_FS_FS__DELTA) == 0)
+  if (strcmp (buffer, REP_DELTA) == 0)
     {
       /* This is a delta against the empty stream. */
       rep_args->is_delta = TRUE;
@@ -956,7 +1004,7 @@ read_rep_line (struct rep_args_t **rep_args_p,
   
   /* We have hopefully a DELTA vs. a non-empty base revision. */
   str = apr_strtok (buffer, " ", &last_str);
-  if (! str || (strcmp (str, SVN_FS_FS__DELTA) != 0)) goto err;
+  if (! str || (strcmp (str, REP_DELTA) != 0)) goto err;
 
   str = apr_strtok (NULL, " ", &last_str);
   if (! str) goto err;
@@ -995,8 +1043,7 @@ get_fs_id_at_offset (svn_fs_id_t **id_p,
 
   SVN_ERR (read_header_block (&headers, rev_file, pool));
 
-  node_id_str = apr_hash_get (headers, SVN_FS_FS__NODE_ID,
-                              APR_HASH_KEY_STRING);
+  node_id_str = apr_hash_get (headers, HEADER_ID, APR_HASH_KEY_STRING);
 
   if (node_id_str == NULL)
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
@@ -1103,7 +1150,7 @@ svn_fs_fs__rev_get_root (svn_fs_id_t **root_id_p,
   err = svn_io_file_open (&revision_file,
                           svn_path_join_many (pool, 
                                               fs->path,
-                                              SVN_FS_FS__REVS_DIR,
+                                              PATH_REVS_DIR,
                                               revision_filename,
                                               NULL),
                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
@@ -1142,7 +1189,7 @@ svn_fs_fs__set_revision_proplist (svn_fs_t *fs,
   SVN_ERR (svn_io_file_open (&revprop_file,
                              svn_path_join_many (pool,
                                                  fs->path,
-                                                 SVN_FS_FS__REVPROPS_DIR, 
+                                                 PATH_REVPROPS_DIR, 
                                                  revprop_filename,
                                                  NULL),
                              APR_WRITE | APR_TRUNCATE | APR_CREATE,
@@ -1170,7 +1217,7 @@ svn_fs_fs__revision_proplist (apr_hash_t **proplist_p,
   SVN_ERR (svn_io_file_open (&revprop_file,
                              svn_path_join_many (pool,
                                                  fs->path,
-                                                 SVN_FS_FS__REVPROPS_DIR, 
+                                                 PATH_REVPROPS_DIR, 
                                                  revprop_filename,
                                                  NULL),
                              APR_READ | APR_CREATE, APR_OS_DEFAULT, pool));
@@ -1594,11 +1641,11 @@ svn_fs_fs__rep_contents_dir (apr_hash_t **entries_p,
         return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                                  "Directory entry corrupt");
       
-      if (strcmp (str, SVN_FS_FS__FILE) == 0)
+      if (strcmp (str, KIND_FILE) == 0)
         {
           dirent->kind = svn_node_file;
         }
-      else if (strcmp (str, SVN_FS_FS__DIR) == 0)
+      else if (strcmp (str, KIND_DIR) == 0)
         {
           dirent->kind = svn_node_dir;
         }
@@ -1914,23 +1961,23 @@ read_change (change_t **change_p,
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                              "Invalid changes line in rev-file");
 
-  if (strcmp (str, SVN_FS_FS__ACTION_MODIFY) == 0)
+  if (strcmp (str, ACTION_MODIFY) == 0)
     {
       change->kind = svn_fs_path_change_modify;
     }
-  else if (strcmp (str, SVN_FS_FS__ACTION_ADD) == 0)
+  else if (strcmp (str, ACTION_ADD) == 0)
     {
       change->kind = svn_fs_path_change_add;
     }
-  else if (strcmp (str, SVN_FS_FS__ACTION_DELETE) == 0)
+  else if (strcmp (str, ACTION_DELETE) == 0)
     {
       change->kind = svn_fs_path_change_delete;
     }
-  else if (strcmp (str, SVN_FS_FS__ACTION_REPLACE) == 0)
+  else if (strcmp (str, ACTION_REPLACE) == 0)
     {
       change->kind = svn_fs_path_change_replace;
     }
-  else if (strcmp (str, SVN_FS_FS__ACTION_RESET) == 0)
+  else if (strcmp (str, ACTION_RESET) == 0)
     {
       change->kind = svn_fs_path_change_reset;
     }
@@ -1946,11 +1993,11 @@ read_change (change_t **change_p,
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                              "Invalid changes line in rev-file");
 
-  if (strcmp (str, SVN_FS_FS__TRUE) == 0)
+  if (strcmp (str, FLAG_TRUE) == 0)
     {
       change->text_mod = TRUE;
     }
-  else if (strcmp (str, SVN_FS_FS__FALSE) == 0)
+  else if (strcmp (str, FLAG_FALSE) == 0)
     {
       change->text_mod = FALSE;
     }
@@ -1966,11 +2013,11 @@ read_change (change_t **change_p,
     return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                              "Invalid changes line in rev-file");
 
-  if (strcmp (str, SVN_FS_FS__TRUE) == 0)
+  if (strcmp (str, FLAG_TRUE) == 0)
     {
       change->prop_mod = TRUE;
     }
-  else if (strcmp (str, SVN_FS_FS__FALSE) == 0)
+  else if (strcmp (str, FLAG_FALSE) == 0)
     {
       change->prop_mod = FALSE;
     }
@@ -2095,11 +2142,11 @@ svn_fs_fs__txn_changes_fetch (apr_hash_t **changed_paths_p,
   apr_hash_t *changed_paths = apr_hash_make (pool);
 
   changes = svn_path_join_many (pool, fs->path,
-                                SVN_FS_FS__TXNS_DIR,
+                                PATH_TXNS_DIR,
                                 apr_pstrcat (pool, txn_id,
-                                             SVN_FS_FS__TXNS_EXT,
+                                             PATH_EXT_TXN,
                                              NULL),
-                                SVN_FS_FS__CHANGES, NULL);
+                                PATH_CHANGES, NULL);
 
   SVN_ERR (svn_io_file_open (&file, changes, APR_READ | APR_BUFFERED,
                              APR_OS_DEFAULT, pool));
@@ -2130,7 +2177,7 @@ svn_fs_fs__paths_changed (apr_hash_t **changed_paths_p,
   SVN_ERR (svn_io_file_open (&revision_file,
                              svn_path_join_many (pool, 
                                                  fs->path,
-                                                 SVN_FS_FS__REVS_DIR,
+                                                 PATH_REVS_DIR,
                                                  revision_filename,
                                                  NULL),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
@@ -2197,7 +2244,7 @@ svn_fs_fs__create_txn (svn_fs_txn_t **txn_p,
   svn_fs_txn_t *txn;
   svn_fs_id_t *root_id;
   char *txn_filename = svn_path_join_many (pool, fs->path,
-                                           SVN_FS_FS__TXNS_DIR,
+                                           PATH_TXNS_DIR,
                                            apr_psprintf (pool, "%ld",
                                                          rev),
                                            NULL);
@@ -2225,7 +2272,7 @@ svn_fs_fs__create_txn (svn_fs_txn_t **txn_p,
     }
   
   /* Create the transaction directory based on this temporary file. */
-  txn_dirname = apr_pstrcat (pool, txn_tmpfile, SVN_FS_FS__TXNS_EXT, NULL);
+  txn_dirname = apr_pstrcat (pool, txn_tmpfile, PATH_EXT_TXN, NULL);
 
   SVN_ERR (svn_io_make_dir_recursively (txn_dirname, pool));
 
@@ -2248,19 +2295,17 @@ svn_fs_fs__create_txn (svn_fs_txn_t **txn_p,
   SVN_ERR (create_new_txn_noderev_from_rev (fs, txn->id, root_id, pool));
 
   /* Create an empty rev file. */
-  SVN_ERR (svn_io_file_create (svn_path_join (txn_dirname, SVN_FS_FS__REV,
-                                              pool),
+  SVN_ERR (svn_io_file_create (svn_path_join (txn_dirname, PATH_REV, pool),
                                "", pool));
 
   /* Create an empty changes file. */
-  SVN_ERR (svn_io_file_create (svn_path_join (txn_dirname, SVN_FS_FS__CHANGES,
+  SVN_ERR (svn_io_file_create (svn_path_join (txn_dirname, PATH_CHANGES,
                                               pool),
                                "", pool));
   
   /* Write the next-ids file. */
   SVN_ERR (svn_io_file_open (&next_ids_file,
-                             svn_path_join (txn_dirname, SVN_FS_FS__NEXT_IDS,
-                                            pool),
+                             svn_path_join (txn_dirname, PATH_NEXT_IDS, pool),
                              APR_WRITE | APR_CREATE | APR_TRUNCATE,
                              APR_OS_DEFAULT, pool));
 
@@ -2287,10 +2332,10 @@ get_txn_proplist (const char **filename,
   const char *prop_filename;
 
   prop_filename = svn_path_join_many (pool, fs->path,
-                                      SVN_FS_FS__TXNS_DIR,
+                                      PATH_TXNS_DIR,
                                       apr_pstrcat (pool, txn_id,
-                                                   SVN_FS_FS__TXNS_EXT, NULL),
-                                      SVN_FS_FS__TXNS_PROPS, NULL);
+                                                   PATH_EXT_TXN, NULL),
+                                      PATH_TXN_PROPS, NULL);
 
   /* Open the transaction properties file. */
   SVN_ERR (svn_io_file_open (&txn_prop_file, prop_filename,
@@ -2379,10 +2424,10 @@ write_next_ids (svn_fs_t *fs,
   apr_file_t *file;
   svn_stream_t *out_stream;
 
-  id_filename = svn_path_join_many (pool, fs->path, SVN_FS_FS__TXNS_DIR,
+  id_filename = svn_path_join_many (pool, fs->path, PATH_TXNS_DIR,
                                     apr_pstrcat (pool, txn_id,
-                                                 SVN_FS_FS__TXNS_EXT, NULL),
-                                    SVN_FS_FS__NEXT_IDS, NULL);
+                                                 PATH_EXT_TXN, NULL),
+                                    PATH_NEXT_IDS, NULL);
 
   SVN_ERR (svn_io_file_open (&file, id_filename, APR_WRITE | APR_TRUNCATE,
                              APR_OS_DEFAULT, pool));
@@ -2412,10 +2457,10 @@ read_next_ids (const char **node_id,
   apr_size_t limit;
   char *str, *last_str;
 
-  id_filename = svn_path_join_many (pool, fs->path, SVN_FS_FS__TXNS_DIR,
+  id_filename = svn_path_join_many (pool, fs->path, PATH_TXNS_DIR,
                                     apr_pstrcat (pool, txn_id,
-                                                 SVN_FS_FS__TXNS_EXT, NULL),
-                                    SVN_FS_FS__NEXT_IDS, NULL);
+                                                 PATH_EXT_TXN, NULL),
+                                    PATH_NEXT_IDS, NULL);
 
   SVN_ERR (svn_io_file_open (&file, id_filename, APR_READ | APR_BUFFERED,
                              APR_OS_DEFAULT, pool));
@@ -2506,7 +2551,7 @@ svn_fs_fs__purge_txn (svn_fs_t *fs,
   svn_error_t *err;
   int i;
   
-  txn_name = svn_path_join_many (pool, fs->path, SVN_FS_FS__TXNS_DIR, txn_id,
+  txn_name = svn_path_join_many (pool, fs->path, PATH_TXNS_DIR, txn_id,
                                  NULL);
 
   /* First remove the temporary directory associated with this
@@ -2515,7 +2560,7 @@ svn_fs_fs__purge_txn (svn_fs_t *fs,
      the other.  Removing the directory first is necessary to prevent
      race conditions when creating new transactions. */
 
-  err = svn_io_remove_dir (apr_pstrcat (pool, txn_name, SVN_FS_FS__TXNS_EXT,
+  err = svn_io_remove_dir (apr_pstrcat (pool, txn_name, PATH_EXT_TXN,
                                         NULL),
                            pool);
 
@@ -2579,7 +2624,7 @@ unparse_dir_entries (apr_hash_t **str_entries_p,
 
       new_val = svn_string_createf (pool, "%s %s",
                                     (dirent->kind == svn_node_file) ?
-                                    SVN_FS_FS__FILE : SVN_FS_FS__DIR,
+                                    KIND_FILE : KIND_DIR,
                                     svn_fs_fs__id_unparse (dirent->id,
                                                            pool)->data);
 
@@ -2638,19 +2683,19 @@ write_change_entry (apr_file_t *file,
   switch (change->change_kind)
     {
     case svn_fs_path_change_modify:
-      change_string = SVN_FS_FS__ACTION_MODIFY;
+      change_string = ACTION_MODIFY;
       break;
     case svn_fs_path_change_add:
-      change_string = SVN_FS_FS__ACTION_ADD;
+      change_string = ACTION_ADD;
       break;
     case svn_fs_path_change_delete:
-      change_string = SVN_FS_FS__ACTION_DELETE;
+      change_string = ACTION_DELETE;
       break;
     case svn_fs_path_change_replace:
-      change_string = SVN_FS_FS__ACTION_REPLACE;
+      change_string = ACTION_REPLACE;
       break;
     case svn_fs_path_change_reset:
-      change_string = SVN_FS_FS__ACTION_RESET;
+      change_string = ACTION_RESET;
       break;
     default:
       return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
@@ -2660,12 +2705,12 @@ write_change_entry (apr_file_t *file,
   if (change->node_rev_id)
       idstr = svn_fs_fs__id_unparse (change->node_rev_id, pool)->data;
   else
-      idstr = SVN_FS_FS__ACTION_RESET;
+      idstr = ACTION_RESET;
   
   buf = apr_psprintf (pool, "%s %s %s %s %s\n",
                       idstr, change_string,
-                      change->text_mod ? SVN_FS_FS__TRUE : SVN_FS_FS__FALSE,
-                      change->prop_mod ? SVN_FS_FS__TRUE : SVN_FS_FS__FALSE,
+                      change->text_mod ? FLAG_TRUE : FLAG_FALSE,
+                      change->prop_mod ? FLAG_TRUE : FLAG_FALSE,
                       path);
 
   SVN_ERR (svn_io_file_write_full (file, buf, strlen (buf), NULL, pool));
@@ -2694,12 +2739,12 @@ svn_fs_fs__add_change (svn_fs_t *fs,
   const char *txn_dir, *copyfrom;
   svn_fs_path_change_t *change = apr_pcalloc (pool, sizeof (*change));
 
-  txn_dir = svn_path_join_many (pool, fs->path, SVN_FS_FS__TXNS_DIR,
+  txn_dir = svn_path_join_many (pool, fs->path, PATH_TXNS_DIR,
                                 apr_pstrcat (pool, txn_id,
-                                             SVN_FS_FS__TXNS_EXT, NULL),
+                                             PATH_EXT_TXN, NULL),
                                 NULL);
 
-  SVN_ERR (svn_io_file_open (&file, svn_path_join (txn_dir, SVN_FS_FS__CHANGES,
+  SVN_ERR (svn_io_file_open (&file, svn_path_join (txn_dir, PATH_CHANGES,
                                                    pool),
                              APR_APPEND | APR_WRITE | APR_CREATE,
                              APR_OS_DEFAULT, pool));
@@ -2810,9 +2855,9 @@ open_and_seek_representation_write (apr_file_t **file_p,
   apr_off_t offset;
   int open_flag;
 
-  txn_dir = svn_path_join_many (pool, fs->path, SVN_FS_FS__TXNS_DIR,
+  txn_dir = svn_path_join_many (pool, fs->path, PATH_TXNS_DIR,
                                 apr_pstrcat (pool, svn_fs_fs__id_txn_id (id),
-                                             SVN_FS_FS__TXNS_EXT, NULL),
+                                             PATH_EXT_TXN, NULL),
                                 NULL);
 
   /* If this is a normal representation, i.e. not directory contents,
@@ -2820,7 +2865,7 @@ open_and_seek_representation_write (apr_file_t **file_p,
   if ((! is_directory_contents) && is_data)
     {
       /* A normal node data rep. */
-      filename = svn_path_join (txn_dir, SVN_FS_FS__REV, pool);
+      filename = svn_path_join (txn_dir, PATH_REV, pool);
       open_flag = APR_APPEND;
     }
   else if (! is_data)
@@ -2829,7 +2874,7 @@ open_and_seek_representation_write (apr_file_t **file_p,
 
       filename = svn_path_join (txn_dir,
                                 apr_psprintf (pool, "%s.%s"
-                                              SVN_FS_FS__PROPS_EXT,
+                                              PATH_EXT_PROPS,
                                               svn_fs_fs__id_node_id (id),
                                               svn_fs_fs__id_copy_id (id)),
                                 pool);
@@ -2841,7 +2886,7 @@ open_and_seek_representation_write (apr_file_t **file_p,
 
       filename = svn_path_join (txn_dir,
                                 apr_psprintf (pool, "%s.%s"
-                                              SVN_FS_FS__CHILDREN_EXT,
+                                              PATH_EXT_CHILDREN,
                                               svn_fs_fs__id_node_id (id),
                                               svn_fs_fs__id_copy_id (id)),
                                 pool);
@@ -2958,7 +3003,7 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
       /* Write out the rep header. */
       if (base_rep)
         {
-          header = apr_psprintf (b->pool, SVN_FS_FS__DELTA " %ld"
+          header = apr_psprintf (b->pool, REP_DELTA " %ld"
                                  " %" APR_OFF_T_FMT " %"
                                  APR_SIZE_T_FMT "\n",
                                  base_rep->revision, base_rep->offset,
@@ -2966,7 +3011,7 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
         }
       else
         {
-          header = SVN_FS_FS__DELTA "\n";
+          header = REP_DELTA "\n";
         }
       SVN_ERR (svn_io_file_write_full (file, header, strlen (header), NULL,
                                        b->pool));
@@ -3137,7 +3182,7 @@ get_next_revision_ids (const char **node_id,
   char *str, *last_str;
 
   SVN_ERR (svn_io_file_open (&revision_file,
-                             svn_path_join (fs->path, SVN_FS_FS__CURRENT,
+                             svn_path_join (fs->path, PATH_CURRENT,
                                             pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
@@ -3516,7 +3561,7 @@ write_final_current (svn_fs_t *fs,
   buf = apr_psprintf (pool, "%ld %s %s\n", rev, new_node_id,
                       new_copy_id);
 
-  name = svn_path_join (fs->path, SVN_FS_FS__CURRENT, pool);
+  name = svn_path_join (fs->path, PATH_CURRENT, pool);
 
   SVN_ERR (svn_io_open_unique_file (&file, &tmp_name, name, ".tmp", FALSE,
                                     pool));
@@ -3541,7 +3586,7 @@ get_write_lock (svn_fs_t *fs,
   const char *lock_filename;
   svn_node_kind_t kind;
   
-  lock_filename = svn_path_join (fs->path, SVN_FS_FS__LOCK_FILE, pool);
+  lock_filename = svn_path_join (fs->path, PATH_LOCK_FILE, pool);
 
   SVN_ERR (svn_io_check_path (lock_filename, &kind, pool));
   if ((kind == svn_node_unknown) || (kind == svn_node_none))
@@ -3591,21 +3636,21 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
   new_rev = old_rev + 1;
 
   old_rev_filename = svn_path_join_many (subpool, fs->path,
-                                         SVN_FS_FS__REVS_DIR,
+                                         PATH_REVS_DIR,
                                          apr_psprintf (subpool, "%ld",
                                                        old_rev),
                                          NULL);
 
-  rev_filename = svn_path_join_many (subpool, fs->path, SVN_FS_FS__REVS_DIR,
+  rev_filename = svn_path_join_many (subpool, fs->path, PATH_REVS_DIR,
                                      apr_psprintf (subpool, "%ld",
                                                    new_rev),
                                      NULL);
 
   proto_filename = svn_path_join_many (subpool, fs->path,
-                                       SVN_FS_FS__TXNS_DIR,
+                                       PATH_TXNS_DIR,
                                        apr_pstrcat (subpool, txn->id,
-                                                    SVN_FS_FS__TXNS_EXT, NULL),
-                                       SVN_FS_FS__REV, NULL);
+                                                    PATH_EXT_TXN, NULL),
+                                       PATH_REV, NULL);
 
   SVN_ERR (move_into_place (proto_filename, rev_filename, old_rev_filename,
                             subpool));
@@ -3639,14 +3684,14 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
   SVN_ERR (svn_io_file_close (rev_file, subpool));
 
   revprop_filename = svn_path_join_many (subpool, fs->path,
-                                         SVN_FS_FS__TXNS_DIR,
+                                         PATH_TXNS_DIR,
                                          apr_pstrcat (subpool, txn->id,
-                                                      SVN_FS_FS__TXNS_EXT,
+                                                      PATH_EXT_TXN,
                                                       NULL),
-                                         SVN_FS_FS__PROPS, NULL);
+                                         PATH_TXN_PROPS, NULL);
 
   final_revprop = svn_path_join_many (subpool, fs->path,
-                                      SVN_FS_FS__REVPROPS_DIR,
+                                      PATH_REVPROPS_DIR,
                                       apr_psprintf (pool, "%ld",
                                                     new_rev),
                                       NULL);
@@ -3703,21 +3748,21 @@ svn_fs_fs__create (svn_fs_t *fs,
   apr_uuid_t uuid;
   
   SVN_ERR (svn_io_make_dir_recursively (svn_path_join (path,
-                                                       SVN_FS_FS__REVS_DIR,
+                                                       PATH_REVS_DIR,
                                                        pool),
                                         pool));
   SVN_ERR (svn_io_make_dir_recursively (svn_path_join (path,
-                                                       SVN_FS_FS__REVPROPS_DIR,
+                                                       PATH_REVPROPS_DIR,
                                                        pool),
                                         pool));
 
   SVN_ERR (svn_io_make_dir_recursively (svn_path_join (path,
-                                                       SVN_FS_FS__TXNS_DIR,
+                                                       PATH_TXNS_DIR,
                                                        pool),
                                         pool));
 
   SVN_ERR (svn_io_file_create (svn_path_join (path,
-                                              SVN_FS_FS__CURRENT, pool),
+                                              PATH_CURRENT, pool),
                                "0 1 1\n", pool));
 
   fs->path = apr_pstrdup (pool, path);
@@ -3741,7 +3786,7 @@ svn_fs_fs__get_uuid (svn_fs_t *fs,
   apr_size_t limit;
 
   SVN_ERR (svn_io_file_open (&uuid_file,
-                             svn_path_join (fs->path, SVN_FS_FS__UUID,
+                             svn_path_join (fs->path, PATH_UUID,
                                             pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
@@ -3762,7 +3807,7 @@ svn_fs_fs__set_uuid (svn_fs_t *fs,
   apr_file_t *uuid_file;
 
   SVN_ERR (svn_io_file_open (&uuid_file,
-                             svn_path_join (fs->path, SVN_FS_FS__UUID,
+                             svn_path_join (fs->path, PATH_UUID,
                                             pool),
                              APR_WRITE | APR_CREATE | APR_TRUNCATE,
                              APR_OS_DEFAULT, pool));
@@ -3783,7 +3828,7 @@ svn_fs_fs__write_revision_zero (svn_fs_t *fs)
   const char *rev_filename;
 
   /* Create the revision 0 rev-file. */
-  rev_filename = svn_path_join_many (pool, fs->path, SVN_FS_FS__REVS_DIR,
+  rev_filename = svn_path_join_many (pool, fs->path, PATH_REVS_DIR,
                                      "0", NULL);
 
   SVN_ERR (svn_io_file_create (rev_filename, "PLAIN\nEND\nENDREP\n"
@@ -3811,7 +3856,7 @@ svn_fs_fs__list_transactions (apr_array_header_t **names_p,
   names = apr_array_make (pool, 1, sizeof (const char *));
   
   /* Get the transactions directory. */
-  txn_dir = svn_path_join (fs->path, SVN_FS_FS__TXNS_DIR, pool);
+  txn_dir = svn_path_join (fs->path, PATH_TXNS_DIR, pool);
 
   /* Now find a listing of this directory. */
   SVN_ERR (svn_io_get_dirents (&dirents, txn_dir, pool));
@@ -3832,8 +3877,8 @@ svn_fs_fs__list_transactions (apr_array_header_t **names_p,
 
       /* If this entry is exactly the right length, and ends with the
          '.txn' extension, we'll count it as a transaction. */
-      if ((strlen (name) == (6 + strlen (SVN_FS_FS__TXNS_EXT)))
-          && (strcmp (name + 6, SVN_FS_FS__TXNS_EXT) == 0))
+      if ((strlen (name) == (6 + strlen (PATH_EXT_TXN)))
+          && (strcmp (name + 6, PATH_EXT_TXN) == 0))
         {
           char *txn_id;
 
@@ -3860,9 +3905,9 @@ svn_fs_fs__open_txn (svn_fs_txn_t **txn_p,
   svn_node_kind_t kind;
   transaction_t *local_txn;
   char *txn_dirname = svn_path_join_many (pool, fs->path,
-                                          SVN_FS_FS__TXNS_DIR,
+                                          PATH_TXNS_DIR,
                                           apr_pstrcat (pool, name,
-                                                       SVN_FS_FS__TXNS_EXT,
+                                                       PATH_EXT_TXN,
                                                        NULL),
                                           NULL);
 
@@ -3943,7 +3988,7 @@ svn_fs_fs__delete_node_revision (svn_fs_t *fs,
   char *filename;
 
   filename = svn_path_join_many (pool, fs->path,
-                                 SVN_FS_FS__TXNS_DIR,
+                                 PATH_TXNS_DIR,
                                  apr_pstrcat (pool,
                                               svn_fs_fs__id_txn_id (id),
                                               ".txn", NULL),
