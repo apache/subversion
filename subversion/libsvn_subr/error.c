@@ -142,10 +142,24 @@ svn_error_quick_wrap (svn_error_t *child, const char *new_msg)
 void
 svn_error_compose (svn_error_t *chain, svn_error_t *new_err)
 {
+  apr_pool_t *pool = chain->pool;
+  apr_pool_t *oldpool = new_err->pool;
+
   while (chain->child)
     chain = chain->child;
 
-  chain->child = new_err;
+  /* Copy the new error chain into the old chain's pool. */
+  while (new_err)
+    {
+      chain->child = apr_palloc (pool, sizeof (*chain->child));
+      chain = chain->child;
+      *chain = *new_err;
+      chain->message = apr_pstrdup (pool, new_err->message);
+      new_err = new_err->child;
+    }
+
+  /* Destroy the new error chain. */
+  apr_pool_destroy (new_err->pool);
 }
 
 
