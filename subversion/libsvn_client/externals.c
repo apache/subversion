@@ -462,6 +462,8 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
                     NULL,
                     ib->pool));
         }
+      else if (err)
+        return err;
     }
 
   return SVN_NO_ERROR;
