@@ -97,6 +97,15 @@ svn_fs__set_txn_base (svn_fs_t *fs,
                       trail_t *trail);
 
 
+/* Set a property NAME to VALUE on transaction TXN_NAME in FS as part
+   of TRAIL.  Use TRAIL->pool for any necessary allocations.  */
+svn_error_t *svn_fs__set_txn_prop (svn_fs_t *fs,
+                                   const char *txn_name,
+                                   const char *name,
+                                   const svn_string_t *value,
+                                   trail_t *trail);
+
+
 /* Set *NAMES_P to a null-terminated array of strings, giving the
    names of all currently active transactions in FS, as part of TRAIL.
    Allocate the array and the names in TRAIL->pool.  */
