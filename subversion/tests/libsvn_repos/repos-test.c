@@ -237,6 +237,7 @@ dir_deltas (const char **msg,
      revision). */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_fs_revision_root (&revision_root, fs, youngest_rev, subpool)); 
   SVN_ERR (svn_fs_copy (revision_root, "A/D/G",
                         txn_root, "A/D/G2",
                         subpool));
