@@ -263,8 +263,12 @@ svn_ra_local__checkout (svn_fs_t *fs,
   SVN_ERR (svn_fs_revision_root (&root, fs, revnum, pool));
 
   SVN_ERR (editor->set_target_revision (edit_baton, revnum));
+
   SVN_ERR (editor->open_root (edit_baton, SVN_INVALID_REVNUM,
                               &root_dir_baton));
+
+  SVN_ERR (set_any_props (root, fs_path, root_dir_baton,
+                          editor, 1, pool));
 
   SVN_ERR (walk_tree (root, fs_path, root_dir_baton,
                       editor, edit_baton, URL, recurse, pool));
