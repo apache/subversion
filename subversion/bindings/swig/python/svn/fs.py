@@ -17,6 +17,9 @@
 #
 
 import _fs
+import _util
+import tempfile
+import os
 
 # copy the wrapper functions out of the extension module, dropping the
 # 'svn_fs_' prefix.
@@ -33,3 +36,39 @@ def entries(root, path, pool):
   for name, entry in e.items():
     e[name] = dirent_t_id_get(entry)
   return e
+
+def diff_files(root1, path1, root2, path2, pool, diffoptions=None):
+  """Checkout ROOT1/PATH1 and ROOT2/PATH2 into a temporary directory,
+  then run `diff` on the two files using the optional DIFFOPTIONS and
+  LABELs.  If either path doesn't exist, an empty file will be used in
+  its place."""
+  assert(not ((path1 is None) and (path2 is None)))
+  if path1 is None:
+    label = path1
+  else:
+    label = path2
+
+  tempfile1 = tempfile.mktemp()
+  contents = ''
+  if path1 is not None:
+    len = file_length(root1, path1, pool)
+    stream = file_contents(root1, path1, pool)
+    contents = _util.svn_stream_read(stream, len)
+  fp = open(tempfile1, 'w+')
+  fp.write(contents)
+  fp.close()
+
+  tempfile2 = tempfile.mktemp()
+  contents = ''
+  if path2 is not None:
+    len = file_length(root2, path2, pool)
+    stream = file_contents(root2, path2, pool)
+    contents = _util.svn_stream_read(stream, len)
+  fp = open(tempfile2, 'w+')
+  fp.write(contents)
+  fp.close()
+
+  if diffoptions is None:
+    diffoptions = ''
+  cmd = "diff %s %s %s" % (diffoptions, tempfile1, tempfile2)
+  return (os.popen(cmd), tempfile1, tempfile2)
