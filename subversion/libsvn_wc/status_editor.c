@@ -35,61 +35,14 @@
 
 #include "wc.h"
 
-
-/*** Helper ***/
 
-
-/* Look up the key PATH in STATUSHASH.
-
-   If the value doesn't yet exist, create a new status struct using POOL.
-
-   Set the status structure's "network" fields to REPOS_TEXT_STATUS,
-   REPOS_PROP_STATUS, HEAD_REVISION.  If any of these three fields is
-   0, it will be ignored.  */
-static svn_error_t *
-tweak_statushash (apr_hash_t *statushash,
-                  const char *path,
-                  enum svn_wc_status_kind repos_text_status,
-                  enum svn_wc_status_kind repos_prop_status,
-                  svn_revnum_t head_revision,
-                  apr_pool_t *pool)
-{
-  svn_wc_status_t *statstruct;
-
-  statstruct = (svn_wc_status_t *) apr_hash_get (statushash, path,
-                                                 APR_HASH_KEY_STRING);
-  
-  if (! statstruct)
-    {
-      /* Add a status structure just for PATH, using public API. */
-      SVN_ERR (svn_wc_status (&statstruct, svn_stringbuf_create (path, pool),
-                              pool));
-      apr_hash_set (statushash, path, APR_HASH_KEY_STRING, statstruct);
-    }
-
-  if (repos_text_status)
-    statstruct->repos_text_status = repos_text_status;
-  if (repos_prop_status)
-    statstruct->repos_prop_status = repos_prop_status;
-  if (head_revision)
-    statstruct->repos_rev         = head_revision;
-  
-  return SVN_NO_ERROR;
-}
-
-
-
-
-/*** batons ***/
 
 struct edit_baton
 {
-  /* For updates, the "destination" of the edit is the ANCHOR (the
-     directory at which the edit is rooted) plus the TARGET (the
-     actual thing we wish to update).  For checkouts, ANCHOR holds the
-     whole path, and TARGET is unused. */
-  svn_stringbuf_t *anchor;
-  svn_stringbuf_t *target;
+  /* For status, the "destination" of the edit  and whether to honor
+     any paths that are 'below'.  */
+  svn_stringbuf_t *path;
+  svn_boolean_t descend;
 
   /* The youngest revision in the repository.  */
   svn_revnum_t youngest_revision;
@@ -105,6 +58,95 @@ struct edit_baton
   apr_pool_t *pool;
 };
 
+
+
+
+
+/*** Helper ***/
+
+
+/* Look up the key PATH in EDIT_BATON->STATUSHASH.
+
+   If the value doesn't yet exist, create a new status struct using
+   EDIT_BATON->HASHPOOL.
+
+   Set the status structure's "network" fields to REPOS_TEXT_STATUS,
+   REPOS_PROP_STATUS.  If either of these fields is 0, it will be
+   ignored.  */
+static svn_error_t *
+tweak_statushash (void *edit_baton,
+                  const char *path,
+                  enum svn_wc_status_kind repos_text_status,
+                  enum svn_wc_status_kind repos_prop_status)
+{
+  svn_wc_status_t *statstruct;
+  svn_stringbuf_t *remainder;
+  struct edit_baton *eb = (struct edit_baton *) edit_baton;
+  apr_hash_t *statushash = eb->statushash;
+  apr_pool_t *pool = eb->hashpool;
+
+  /* If you want temporary debugging info... */
+  /* {
+     apr_hash_index_t *hi;
+     char buf[200];
+     
+     printf("Tweaking statushash:\n");
+     printf("    Editing path `%s'\n", path);
+     printf("Current statushash keys:\n");
+     
+     for (hi = apr_hash_first (pool, statushash); 
+          hi; 
+          hi = apr_hash_next (hi))
+     {
+     const void *key;
+     void *val;
+     apr_size_t klen;
+     
+     apr_hash_this (hi, &key, &klen, &val);
+     snprintf(buf, klen+1, (const char *)key);
+     printf("    %s\n", buf);
+     }
+     fflush(stdout);
+     }
+  */
+  
+  /* Recursion check: if PATH is a child of the root path, we should
+     ignore it.  This is how we implement the '--nonrecursive' feature
+     right now.
+
+     ### It seems it would be nice if dir_delta() could be told not to
+     recurse, but that's a future feature, I guess.  For now, we just
+     ignore any extra recursive info it hands us. */
+  remainder = svn_path_is_child (eb->path, svn_stringbuf_create (path, pool),
+                                 svn_path_local_style, eb->pool);
+  if (remainder)
+    return SVN_NO_ERROR;  /* no-op */
+    
+  /* Is PATH already a hash-key? */
+  statstruct = (svn_wc_status_t *) apr_hash_get (statushash, path,
+                                                 APR_HASH_KEY_STRING);
+  /* If not, make it so. */
+  if (! statstruct)
+    {
+      /* Add a status structure just for PATH, using public API. */
+      SVN_ERR (svn_wc_status (&statstruct, svn_stringbuf_create (path, pool),
+                              pool));
+      apr_hash_set (statushash, path, APR_HASH_KEY_STRING, statstruct);
+    }
+
+  /* Tweak the structure's repos fields. */
+  if (repos_text_status)
+    statstruct->repos_text_status = repos_text_status;
+  if (repos_prop_status)
+    statstruct->repos_prop_status = repos_prop_status;
+  
+  return SVN_NO_ERROR;
+}
+
+
+
+
+/*** batons ***/
 
 struct dir_baton
 {
@@ -177,7 +219,7 @@ make_dir_baton (svn_stringbuf_t *name,
   else
     {
       /* I am Adam.  All my base are belong to me. */
-      path = svn_stringbuf_dup (eb->anchor, subpool);
+      path = svn_stringbuf_dup (eb->path, subpool);
     }
 
   if (name)
@@ -362,16 +404,14 @@ delete_entry (svn_stringbuf_t *name, void *parent_baton)
   /* Mark the deleted object as such. */
   svn_stringbuf_t *deleted_path = svn_stringbuf_dup (db->path, db->pool);
   svn_path_add_component (deleted_path, name, svn_path_local_style);
-  SVN_ERR (tweak_statushash (db->edit_baton->statushash,
+  SVN_ERR (tweak_statushash (db->edit_baton,
                              deleted_path->data,
-                             svn_wc_status_deleted, 0, 0,
-                             db->edit_baton->hashpool));
+                             svn_wc_status_deleted, 0));
 
   /* Mark the parent dir as having changed too;  it lost an entry. */
-  SVN_ERR (tweak_statushash (db->edit_baton->statushash,
+  SVN_ERR (tweak_statushash (db->edit_baton,
                              db->path->data,
-                             svn_wc_status_modified, 0, 0,
-                             db->edit_baton->hashpool));
+                             svn_wc_status_modified, 0));
 
   return SVN_NO_ERROR;
 }
@@ -450,12 +490,11 @@ close_directory (void *dir_baton)
       && ((db->prop_changed) || (db->text_changed)))
     {
       /* Mark the directory in the statushash */
-      SVN_ERR (tweak_statushash (db->edit_baton->statushash,
+      SVN_ERR (tweak_statushash (db->edit_baton,
                                  db->path->data,
                                  db->text_changed ? svn_wc_status_modified : 0,
-                                 db->prop_changed ? svn_wc_status_modified : 0,
-                                 0,
-                                 db->edit_baton->hashpool));      
+                                 db->prop_changed ? svn_wc_status_modified : 0));
+
     }
 
   /* We're truly done with this directory now.  decrement_ref_count
@@ -562,12 +601,10 @@ close_file (void *file_baton)
       && ((fb->prop_changed) || (fb->text_changed)))
     {
       /* Mark the file in the statushash */
-      SVN_ERR (tweak_statushash (fb->dir_baton->edit_baton->statushash,
+      SVN_ERR (tweak_statushash (fb->dir_baton->edit_baton,
                                  fb->path->data,
                                  fb->text_changed ? svn_wc_status_modified : 0,
-                                 fb->prop_changed ? svn_wc_status_modified : 0,
-                                 0,
-                                 fb->dir_baton->edit_baton->hashpool));      
+                                 fb->prop_changed ? svn_wc_status_modified : 0));
     }
 
   /* Tell the directory it has one less thing to worry about. */
@@ -615,12 +652,13 @@ close_edit (void *edit_baton)
 svn_error_t *
 svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
                           void **edit_baton,
-                          svn_stringbuf_t *anchor,
-                          svn_stringbuf_t *target,
+                          svn_stringbuf_t *path,
+                          svn_boolean_t descend,
                           apr_hash_t *statushash,
                           apr_pool_t *pool)
 {
   struct edit_baton *eb;
+  svn_stringbuf_t *anchor, *target, *tempbuf;
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_delta_edit_fns_t *tree_editor = svn_delta_default_editor (pool);
 
@@ -628,9 +666,20 @@ svn_wc_get_status_editor (svn_delta_edit_fns_t **editor,
   eb = apr_palloc (subpool, sizeof (*eb));
   eb->pool            = subpool;
   eb->hashpool        = pool;
-  eb->anchor          = anchor;
-  eb->target          = target;
   eb->statushash      = statushash;
+
+  /* Anchor target analysis, to make this editor able to match
+     hash-keys already in the hash.  (svn_wc_statuses is ignorant of
+     anchor/target issues.) */
+  SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
+  tempbuf = svn_stringbuf_dup (anchor, pool);
+  if (target)
+    svn_path_add_component (tempbuf, target, svn_path_local_style);
+
+  if (! svn_stringbuf_compare (path, tempbuf))
+    eb->path = svn_stringbuf_create ("", pool);
+  else
+    eb->path = anchor;
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;

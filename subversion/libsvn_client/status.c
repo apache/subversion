@@ -46,14 +46,19 @@
    authentication callbacks.
 
    STATUSHASH has presumably been filled with status structures that
-   contain only local-mod information.  Ask RA->do_update() to drive a
+   contain only local-mod information.  Ask RA->do_status() to drive a
    custom editor that will add update information to this collection
    of structures.  Also, use the RA session to fill in the "youngest
-   revnum" field in each structure.  */
+   revnum" field in each structure.
+
+   If DESCEND is zero, only immediate children of PATH will be edited
+   or added to the hash.  Else, the dry-run update will be fully
+   recursive. */
 static svn_error_t *
 add_update_info_to_status_hash (apr_hash_t *statushash,
                                 svn_stringbuf_t *path,
                                 svn_client_auth_baton_t *auth_baton,
+                                svn_boolean_t descend,
                                 apr_pool_t *pool)
 {
   svn_ra_plugin_t *ra_lib;  
@@ -103,8 +108,7 @@ add_update_info_to_status_hash (apr_hash_t *statushash,
      repos_status_ fields and repos_rev fields in each status struct. */
 
   SVN_ERR (svn_wc_get_status_editor (&status_editor, &edit_baton,
-                                     anchor, target,
-                                     statushash, pool));
+                                     path, descend, statushash, pool));
   if (ra_lib->do_status (session,
                          &reporter, &report_baton,
                          target,
@@ -151,12 +155,9 @@ svn_client_status (apr_hash_t **statushash,
   /* ### Right here is where we might parse an incoming switch about
      whether to contact the network or not.  :-) */
 
-  /* ### Crap!  This next call needs to honor the DESCEND flag
-     somehow! */
-
   /* Contact the repository, add -update info- to our structures. */
   SVN_ERR (add_update_info_to_status_hash (hash, path,
-                                           auth_baton, pool));
+                                           auth_baton, descend, pool));
 
   *statushash = hash;
 
