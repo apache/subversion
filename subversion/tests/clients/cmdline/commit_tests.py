@@ -484,7 +484,7 @@ def commit_unversioned_thing(sbox):
   svntest.actions.run_and_verify_commit (wc_dir,
                                          None,
                                          None,
-                                         "svn: Tried a versioning operation",
+                                         "is not under version control",
                                          None, None,
                                          None, None,
                                          os.path.join(wc_dir,'blorg'))
@@ -1356,7 +1356,7 @@ def commit_with_lock(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        'already-locked',
+                                        'svn: Working copy \'.*\' locked',
                                         None, None,
                                         None, None,
                                         wc_dir)

@@ -526,8 +526,11 @@ def diff_non_version_controlled_file(sbox):
   # error message.  The appropriate response is a few lines of errors.  I wish 
   # there was a way to figure out if svn crashed, but all run_svn gives us is 
   # the output, so here we are...
-  if len(err_output) <= 1: raise svntest.Failure
-
+  for line in err_output:
+    if re.search("foo' is not under version control$", line):
+      break
+  else:
+    raise svntest.Failure
   
 # test 9
 def diff_pure_repository_update_a_file(sbox):
@@ -778,7 +781,7 @@ def diff_nonextant_urls(sbox):
                                                  '--old', non_extant_url,
                                                  '--new', extant_url)
   for line in err_output:
-    if re.match('svn: Filesystem has no item$', line):
+    if re.search('was not found in the repository at revision', line):
       break
   else:
     raise svntest.Failure
@@ -787,7 +790,7 @@ def diff_nonextant_urls(sbox):
                                                  '--old', extant_url,
                                                  '--new', non_extant_url)
   for line in err_output:
-    if re.match('svn: Filesystem has no item$', line):
+    if re.search('was not found in the repository at revision', line):
       break
   else:
     raise svntest.Failure
@@ -1117,8 +1120,10 @@ def diff_targets(sbox):
 
     diff_output, err_output = svntest.main.run_svn(1, 'diff', '-r1:2',
                                                    update_path, add_path)
+
+    regex = 'svn: \'.*\' was not found in the repository'
     for line in err_output:
-      if re.match('svn: Filesystem has no item$', line):
+      if re.match(regex, line):
         break
     else:
       raise svntest.Failure
@@ -1126,7 +1131,7 @@ def diff_targets(sbox):
     diff_output, err_output = svntest.main.run_svn(1, 'diff', '-r1:2',
                                                    add_path)
     for line in err_output:
-      if re.match('svn: Filesystem has no item$', line):
+      if re.match(regex, line):
         break
     else:
       raise svntest.Failure
@@ -1135,7 +1140,7 @@ def diff_targets(sbox):
                                                    '--old', parent_path,
                                                    'alpha', 'theta')
     for line in err_output:
-      if re.match('svn: Filesystem has no item$', line):
+      if re.match(regex, line):
         break
     else:
       raise svntest.Failure

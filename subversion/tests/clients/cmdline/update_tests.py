@@ -686,7 +686,7 @@ def update_delete_modified_files(sbox):
     "Updating failed", None, SVNAnyOutput, 'up', wc_dir)
 
   for line in errput:
-    if re.match(".*Obstructed update.*", line):
+    if re.match("svn: Won't delete locally modified file 'alpha'", line):
       return
 
   # Else never matched the expected error output, so the test failed.
@@ -942,7 +942,7 @@ def update_receive_illegal_name(sbox):
   for n in range(2):
     out, err = svntest.main.run_svn(1, 'up', wc_dir)
     for line in err:
-      if line.find("Obstructed update") != -1:
+      if line.find("object of the same name already exists") != -1:
         break
     else:
       raise svntest.Failure

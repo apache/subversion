@@ -178,10 +178,11 @@ def commit_routine_switching(wc_dir, verify):
   # Try to commit.  We expect this to fail because, if all the
   # switching went as expected, A/B/pi and A/D/G/pi point to the
   # same URL.  We don't allow this.
-  svntest.actions.run_and_verify_commit(wc_dir, None, None,
-                                        "commit to a URL more than once",
-                                        None, None, None, None,
-                                        wc_dir)
+  svntest.actions.run_and_verify_commit(
+    wc_dir, None, None,
+    "svn: Cannot commit both .* as they refer to the same URL.$",
+    None, None, None, None,
+    wc_dir)
 
   # Okay, that all taken care of, let's revert the A/D/G/pi path and
   # move along.  Afterward, we should be okay to commit.  (Sorry,

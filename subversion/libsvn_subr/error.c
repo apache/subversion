@@ -279,7 +279,10 @@ print_error (svn_error_t *err, FILE *stream, svn_boolean_t print_strerror)
 #endif /* SVN_DEBUG */
   
   /* Only print the same APR error string once. */
-  if (print_strerror)
+  if (err->message)
+    fprintf (stream, "svn: %s\n",
+             convert_string_for_output (err->message, err->pool));
+  else if (print_strerror)
     {
       /* Is this a Subversion-specific error code? */
       if ((err->apr_err > APR_OS_START_USEERR)
@@ -292,9 +295,6 @@ print_error (svn_error_t *err, FILE *stream, svn_boolean_t print_strerror)
 
       fprintf (stream, "svn: %s\n", err_string);
     }
-  if (err->message)
-    fprintf (stream, "svn: %s\n",
-             convert_string_for_output (err->message, err->pool));
 }
 
 void
