@@ -280,11 +280,13 @@ class TreeMirror:
     self.root_key = gen_key()
     self.db[self.root_key] = marshal.dumps({}) # Init as a dir with no entries
 
-  def ensure_path(self, path, dumpfile):
+  def ensure_path(self, path, output_intermediate_dir=None):
     """Add PATH to the tree.  PATH may not have a leading slash.
-    If any of PATH's intermediate directories are missing, create them
-    in the tree, and output the appropriate dir adds to DUMPFILE.
-    Return None if PATH already existed, else return 1."""
+    Return None if PATH already existed, else return 1.
+    If OUTPUT_INTERMEDIATE_DIR is not None, then invoke it once on
+    each full path to each missing intermediate directory in PATH, in
+    order from shortest to longest."""
+
     components = string.split(path, '/')
     path_so_far = None
 
@@ -302,17 +304,8 @@ class TreeMirror:
         parent_dir[component] = child_key
         self.db[parent_dir_key] = marshal.dumps(parent_dir)
         self.db[child_key] = marshal.dumps({})
-        ### FIXME: Abstract the writing knowledge back into the
-        ### dumper, as a callback or something.
-        dumpfile.write("Node-path: %s\n" 
-                       "Node-kind: dir\n"
-                       "Node-action: add\n"
-                       "Prop-content-length: 10\n"
-                       "Content-length: 10\n"
-                       "\n"
-                       "PROPS-END\n"
-                       "\n"
-                       "\n" % path_so_far)
+        if output_intermediate_dir:
+          output_intermediate_dir(path_so_far)
       else:
         child_key = parent_dir[component]
 
@@ -460,6 +453,17 @@ class Dump:
     self.revision = self.revision + 1
     return old_rev
 
+  def add_dir(self, path):
+    self.dumpfile.write("Node-path: %s\n" 
+                        "Node-kind: dir\n"
+                        "Node-action: add\n"
+                        "Prop-content-length: 10\n"
+                        "Content-length: 10\n"
+                        "\n"
+                        "PROPS-END\n"
+                        "\n"
+                        "\n" % path)
+
   def add_or_change_path(self, cvs_path, svn_path, cvs_rev, rcs_file):
 
     # figure out the real file path for "co"
@@ -492,7 +496,7 @@ class Dump:
     # to determine if this path exists in head yet.  But that wouldn't
     # be perfectly reliable, both because of 'cvs commit -r', and also
     # the possibility of file resurrection.
-    if self.head_mirror.ensure_path(svn_path, self.dumpfile):
+    if self.head_mirror.ensure_path(svn_path, self.add_dir):
       action = 'add'
     else:
       action = 'change'
