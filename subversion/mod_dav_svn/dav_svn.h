@@ -72,6 +72,9 @@ typedef struct {
   /* This records the filesystem path to the SVN FS */
   const char *fs_path;
 
+  /* The name of this repository */
+  const char *repo_name;
+
   /* the open repository */
   svn_repos_t *repos;
 

@@ -835,6 +835,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                                         dav_resource **resource)
 {
   const char *fs_path;
+  const char *repo_name;
   dav_resource_combined *comb;
   dav_svn_repos *repos;
   apr_size_t len1;
@@ -857,6 +858,8 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                            "directive is required to specify the location "
                            "of this resource's repository.");
     }
+
+  repo_name = dav_svn_get_repo_name(r);
 
   comb = apr_pcalloc(r->pool, sizeof(*comb));
   comb->res.info = &comb->priv;
@@ -948,6 +951,9 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 
   /* where is the SVN FS for this resource? */
   repos->fs_path = fs_path;
+
+  /* A name for the repository */
+  repos->repo_name = repo_name;
 
   /* Remember various bits for later URL construction */
   repos->base_url = ap_construct_url(r->pool, "", r);
@@ -1488,6 +1494,11 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
     if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
       title = apr_psprintf(resource->pool, "Revision %ld: %s",
                            resource->info->root.rev, title);
+
+    if (resource->info->repos->repo_name)
+      title = apr_psprintf(resource->pool, "%s - %s",
+                          resource->info->repos->repo_name,
+                          title);
 
     bb = apr_brigade_create(resource->pool);
     ap_fprintf(output, bb, "<html><head><title>%s</title></head>\n"
