@@ -11,7 +11,6 @@ CONTENTS:
     - Inno Setup
     - ISTool
     - 7-zip
-    - GNU diffutils (Cygwin)
     - Perl
     - Packages for converting XML documentation
     - MS HTML Help Workshop
@@ -33,24 +32,19 @@ Introduction
 
   Inno Setup
   ----------
-  Inno Setup (IS) 3.0.6 or better with "My Inno Setup Extentions"
+  Inno Setup (IS) 3.0.6.2 with "My Inno Setup Extentions"
   (ISX) and "Inno Setup Pre Processor" (ISPP) included:
     http://www.wintax.nl/isx/
 
   ISTool
   ------
-  ISTool 3.0.6.1 or better:
+  ISTool 3.0.6.2:
     http://www.bhenden.org/istool/
 
   7-zip
   -----
-  7-Zip 2.30 Beta 26 or better:
+  7-Zip 2.30 Beta 28:
     http://www.7-zip.org/
-
-  GNU diffutils
-  -------------
-  Get Cygwin with diffutils-2.8.1 or better from:
-    http://www.cygwin.com/
 
   Perl
   ----
@@ -139,14 +133,16 @@ Directory structure
   path_svnclient      svn.exe
   path_svnadmin       svnadmin.exe
   path_svnlook        svnlook.exe
+  path_svnserve       svnserve.exe
+  path_svnversion     svnversion.exe
   path_davsvn         mod_dav_svn.so
   path_svnpath        svnpath.exe
+  path_iconv          *.so
   path_brkdb_bin      db_*.exe, ex_*.exe, excxx_*.exe, libdb4*.dll, libdb4*.exp
   path_brkdb_lib      libdb4*.lib
   path_brkdb_inc      db.h, db_cxx.h)
   path_brkdb_inc2     cxx_common.h, cxx_except.h
   path_ssl            libeay32.dll, ssleay32.dll
-  path_diffutls_bin   cygintl-1.dll, cygwin1.dll, diff.exe, diff3.exe
 
 
 

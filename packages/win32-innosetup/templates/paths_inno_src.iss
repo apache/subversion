@@ -29,6 +29,8 @@
 ;#define path_svnclient "C:\svn_innosrc\svn-win32-rXXXX"
 ;#define path_svnadmin "C:\svn_innosrc\svn-win32-rXXXX"
 ;#define path_svnlook "C:\svn_innosrc\svn-win32-rXXXX"
+;#define path_svnserve "C:\svn_innosrc\svn-win32-rXXXX"
+;#define path_svnversion "C:\svn_innosrc\svn-win32-rXXXX"
 ;#define path_davsvn "C:\svn_innosrc\svn-win32-rXXXX"
 ;#define path_svnpath "tools\svnpath"
 ;; Berkeley stuff
@@ -38,14 +40,16 @@
 ;#define path_brkdb_inc2 "C:\svn_innosrc\db4-win32\include"
 ;; Openssl
 ;#define path_ssl "C:\svn_innosrc\svn-win32-rXXXX"
-;; Diffutils
-;#define path_diffutls_bin "E:\cygwin\bin"
+;; Misc
+;#define path_iconv "C:\svn_innosrc\svn-win32-rXXXX\iconv"
 
 ; Default setup - Edit this paths so they fits to your system #################
 ; Subversion stuff
 #define path_svnclient "..\..\subversion\clients\cmdline\Release"
 #define path_svnadmin "..\..\subversion\svnadmin\Release"
 #define path_svnlook "..\..\subversion\svnlook\Release"
+#define path_svnserve "..\..\subversion\svnserve\Release"
+#define path_svnversion "..\..\subversion\svnversion\Release"
 #define path_davsvn "..\..\subversion\mod_dav_svn\Release"
 #define path_svnpath "tools\svnpath"
 ; Berkeley stuff
@@ -56,8 +60,7 @@
 #define path_brkdb_inc2 "E:\src\db-4.0.14\dbinc
 ; Openssl
 #define path_ssl "E:\src\l\openssl-0.9.6g\out32dll"
-; Diffutils
-#define path_diffutls_bin "E:\cygwin\bin"
 ; Misc
-#define path_setup_out "out"
+#define path_iconv "C:\path\to\the\.so\files"
+
 

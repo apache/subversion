@@ -13,14 +13,8 @@
  * history and logs, available at http://subversion.tigris.org/.
  * =================================================================== *)
 
-// Global variables
-var
-	sCygBinDir: String;
-	bCygDiffsFound: Boolean;
-	bUseCygDiff: Boolean;
-
 // Constants
 const
 	KEY_SVN_HELPERS = 'SOFTWARE\Tigris.org\Subversion\Config\Helpers';
-    KEY_CYGBIN = 'SOFTWARE\Cygnus Solutions\Cygwin\mounts v2\/';
+
 
