@@ -99,7 +99,6 @@ struct dir_baton
 struct file_baton
 {
   struct edit_baton *edit_baton;
-  struct dir_baton *parent;
   const char *path; /* the -absolute- path to this file in the fs */
   apr_pool_t *pool; /* my personal pool, in which I am allocated. */
 };
@@ -380,7 +379,6 @@ add_file (const char *path,
   /* Build a new file baton */
   new_fb = apr_pcalloc (pool, sizeof (*new_fb));
   new_fb->edit_baton = eb;
-  new_fb->parent = pb;
   new_fb->pool = pool;
   new_fb->path = full_path;
 
@@ -415,7 +413,6 @@ open_file (const char *path,
   /* Build a new file baton */
   new_fb = apr_pcalloc (pool, sizeof (*new_fb));
   new_fb->edit_baton = eb;
-  new_fb->parent = pb;
   new_fb->pool = pool;
   new_fb->path = full_path;
   
@@ -432,7 +429,7 @@ change_file_prop (void *file_baton,
                   apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
-  struct edit_baton *eb = fb->parent->edit_baton;
+  struct edit_baton *eb = fb->edit_baton;
   return svn_fs_change_node_prop (eb->txn_root, fb->path, name, value, pool);
 }
 
