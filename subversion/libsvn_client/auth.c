@@ -110,6 +110,9 @@ typedef struct
   /* The original provider baton */
   prompt_provider_baton_t *pb;
 
+  /* The original realmstring */
+  const char *realmstring;
+
   /* how many times we've reprompted */
   int retries;
 
@@ -125,12 +128,17 @@ get_creds (const char **username,
            svn_boolean_t *got_creds,
            prompt_provider_baton_t *pb,
            apr_hash_t *parameters,
+           const char *realmstring,
            svn_boolean_t first_time,
            apr_pool_t *pool)
 {
   const char *prompt_username = NULL, *prompt_password = NULL;
   const char *def_username = NULL, *def_password = NULL;
-  
+  svn_boolean_t displayed_realm = FALSE;
+  const char *promptstr = apr_psprintf (pool,
+                                        "Authentication realm: %s\n",
+                                        realmstring);  
+
   /* Setup default return values. */
   *got_creds = FALSE;
   if (username)
@@ -173,9 +181,12 @@ get_creds (const char **username,
     }
   else if (username)
     {
-      SVN_ERR (pb->prompt_func (&prompt_username, "username: ",
+      SVN_ERR (pb->prompt_func (&prompt_username,
+                                apr_pstrcat (pool,
+                                             promptstr, "username: ", NULL),
                                 FALSE, /* screen echo ok */
                                 pb->prompt_baton, pool));
+      displayed_realm = TRUE;
     }
 
   /* If we have no username, we can go no further. */
@@ -189,8 +200,12 @@ get_creds (const char **username,
     }
   else if (password)
     {
-      const char *prompt = apr_psprintf (pool, "%s's password: ", 
-                                         prompt_username);
+      const char *prompt = apr_psprintf (pool,
+                                         "%s's password: ", prompt_username);
+      
+      if (! displayed_realm)
+        prompt = apr_pstrcat (pool, promptstr, prompt, NULL);
+                                      
       SVN_ERR (pb->prompt_func (&prompt_password, prompt,
                                 TRUE, /* don't echo to screen */
                                 pb->prompt_baton, pool));
@@ -224,7 +239,7 @@ simple_prompt_first_creds (void **credentials,
   svn_boolean_t got_creds;
 
   SVN_ERR (get_creds (&username, &password, &got_creds, pb,
-                      parameters, TRUE, pool));
+                      parameters, realmstring, TRUE, pool));
   if (got_creds)
     {
       svn_auth_cred_simple_t *creds = apr_pcalloc (pool, sizeof (*creds));
@@ -239,6 +254,7 @@ simple_prompt_first_creds (void **credentials,
 
   ibaton->retries = 0;
   ibaton->pb = pb;
+  ibaton->realmstring = apr_pstrdup (pool, realmstring);
   *iter_baton = ibaton;
 
   return SVN_NO_ERROR;
@@ -266,7 +282,7 @@ simple_prompt_next_creds (void **credentials,
   ib->retries++;
 
   SVN_ERR (get_creds (&username, &password, &got_creds, ib->pb,
-                      parameters, FALSE, pool));
+                      parameters, ib->realmstring, FALSE, pool));
   if (got_creds)
     {
       svn_auth_cred_simple_t *creds = apr_pcalloc (pool, sizeof (*creds));
@@ -330,7 +346,7 @@ username_prompt_first_creds (void **credentials,
   svn_boolean_t got_creds;
 
   SVN_ERR (get_creds (&username, NULL, &got_creds, pb,
-                      parameters, TRUE, pool));
+                      parameters, realmstring, TRUE, pool));
   if (got_creds)
     {
       svn_auth_cred_simple_t *creds = apr_pcalloc (pool, sizeof (*creds));
@@ -344,6 +360,7 @@ username_prompt_first_creds (void **credentials,
 
   ibaton->retries = 0;
   ibaton->pb = pb;
+  ibaton->realmstring = apr_pstrdup (pool, realmstring);
   *iter_baton = ibaton;
 
   return SVN_NO_ERROR;
@@ -372,7 +389,7 @@ username_prompt_next_creds (void **credentials,
   ib->retries++;
 
   SVN_ERR (get_creds (&username, NULL, &got_creds, ib->pb,
-                      parameters, FALSE, pool));
+                      parameters, ib->realmstring, FALSE, pool));
   if (got_creds)
     {
       svn_auth_cred_simple_t *creds = apr_pcalloc (pool, sizeof (*creds));
