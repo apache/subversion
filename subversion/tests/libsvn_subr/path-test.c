@@ -331,6 +331,90 @@ test_uri_decode (const char **msg,
 
 
 static svn_error_t *
+test_uri_autoescape (const char **msg,
+                     svn_boolean_t msg_only,
+                     apr_pool_t *pool)
+{
+  static const char *paths[3][2] = {
+    { "http://svn.collab.net/", "http://svn.collab.net/" },
+    { "file:///<>\" {}|\\^`", "file:///%3C%3E%22%20%7B%7D%7C%5C%5E%60" },
+    { "http://[::1]", "http://[::1]" }
+  };
+  int i;
+
+  *msg = "test svn_path_uri_autoescape";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < 3; ++i)
+    {
+      const char* uri = svn_path_uri_autoescape (paths[i][0], pool);
+      if (strcmp (uri, paths[i][1]) != 0)
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_path_uri_autoescape on '%s' returned '%s' instead of '%s'",
+           paths[i][0], uri, paths[i][1]);
+      if (strcmp (paths[i][0], paths[i][1]) == 0
+          && paths[i][0] != uri)
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_path_uri_autoescape on '%s' returned identical but not same"
+           " string", paths[i][0]);
+    }
+                                  
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_uri_from_iri (const char **msg,
+                   svn_boolean_t msg_only,
+                   apr_pool_t *pool)
+{
+  /* We have to code the IRIs like this because the compiler might translate
+     character and string literals outside of ASCII to some character set,
+     but here we are hard-coding UTF-8.  But we all read UTF-8 codes like
+     poetry, don't we. */
+  static const char p1[] = {
+    0x66, 0x69, 0x6C, 0x65, 0x3A, 0x2F, 0x2F, 0x2F,
+    0x72, 0xC3, 0xA4, 0x6B, 0x73, 0x6D, 0xC3, 0xB6, 0x72,
+    0x67, 0xC3, 0xA5, 0x73, 0 };
+  static const char p2[] = {
+    0x66, 0x69, 0x6C, 0x65, 0x3A, 0x2F, 0x2F, 0x2F,
+    0x61, 0x62, 0x25, 0x32, 0x30, 0x63, 0x64, 0 };
+  static const char *paths[2][2] = {
+    { p1,
+      "file:///r%C3%A4ksm%C3%B6rg%C3%A5s" },
+    { p2,
+      "file:///ab%20cd" }
+  };
+  int i;
+
+  *msg = "testing svn_uri_from_iri";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < 2; ++i)
+    {
+      const char *uri = svn_path_uri_from_iri (paths[i][0], pool);
+      if (strcmp (paths[i][1], uri) != 0)
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_uri_from_iri on '%s' returned '%s' instead of '%s'",
+           paths[i][0], uri, paths[i][1]);
+      if (strcmp (paths[i][0], uri) == 0
+          && paths[i][0] != uri)
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_path_uri_from_iri on '%s' returned identical but not same"
+           " string", paths[i][0]);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 test_join (const char **msg,
            svn_boolean_t msg_only,
            apr_pool_t *pool)
@@ -645,6 +729,8 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (test_is_uri_safe),
     SVN_TEST_PASS (test_uri_encode),
     SVN_TEST_PASS (test_uri_decode),
+    SVN_TEST_PASS (test_uri_autoescape),
+    SVN_TEST_PASS (test_uri_from_iri),
     SVN_TEST_PASS (test_join),
     SVN_TEST_PASS (test_basename),
     SVN_TEST_PASS (test_decompose),
