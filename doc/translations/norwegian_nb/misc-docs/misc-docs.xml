@@ -8,11 +8,14 @@
 ]>
 
   <book id="svn">
-  <title>Subversion: Miscellaneous Documentation</title>
+  <title>Subversion: Diverse dokumentasjon</title>
 
   <!-- External entity refs -->
+<!-- Kommentert ut for å ikke plage make {{{
   &quick_walkthrough; 
   &best_practices;
   &directory_versioning;
+}}} -->
 
   </book>
+  <!-- vim: set textwidth=0 wrap expandtab shiftwidth=2 tabstop=2 softtabstop=2 fileencoding=utf8 : -->
