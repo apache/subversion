@@ -38,7 +38,7 @@ http://svn.collab.net/repos/svn/tags/1.1.2
     * fixed: memleak into UTF8 translation routines (r11689)
 
  Developer-visible-changes:
- * add support for BerkeleyDB 4.3
+ * add support for BerkeleyDB 4.3 (if using a compatible apr-util)
  * add support for any apr/apr-util 1.X
  * disallow incompatible SWIG versions (r12450)
  * fixed: slight API/ABI incompatibility between 1.0.9 and 1.1.x (r12102)
