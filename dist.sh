@@ -3,7 +3,8 @@
 #
 # USAGE: ./dist.sh -v VERSION -r REVISION [-rs REVISION-SVN] [-pr REPOS-PATH]
 #                  [-apr PATH-TO-APR ] [-apu PATH-TO-APR-UTIL] 
-#                  [-neon PATH-TO-NEON ] [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM]
+#                  [-api PATH-TO-APR-ICONV] [-neon PATH-TO-NEON]
+#                  [-zip] [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM]
 #
 #   Create a distribution tarball, labelling it with the given VERSION.
 #   The REVISION or REVISION-SVN will be used in the version string.
@@ -30,13 +31,17 @@
 # 
 #   If neither an -alpha, -beta or -rc option with a number is
 #   specified, it will build a release tarball.
+#  
+#   To build a Windows zip file package pass -zip and the path
+#   to apr-iconv with -api.
 
 
 # A quick and dirty usage message
 USAGE="USAGE: ./dist.sh -v VERSION -r REVISION \
 [-rs REVISION-SVN ] [-pr REPOS-PATH] \
 [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM] \
-[-apr APR_PATH ] [-apu APR_UTIL_PATH] [-neon NEON_PATH ]
+[-apr APR_PATH ] [-apu APR_UTIL_PATH] [-api APR_ICONV_PATH]
+[-neon NEON_PATH ] [-zip]
  EXAMPLES: ./dist.sh -v 0.36.0 -r 8278
            ./dist.sh -v 0.36.0 -r 8278 -pr trunk
            ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0
@@ -58,6 +63,7 @@ do
 	-rc)  RC="$ARG" ;;
        -apr)  APR_PATH="$ARG" ;;
        -apu)  APU_PATH="$ARG" ;;
+       -api)  API_PATH="$ARG" ;;
       -neon)  NEON_PATH="$ARG" ;;
       -beta)  BETA="$ARG" ;;
      -alpha)  ALPHA="$ARG" ;;
@@ -69,9 +75,13 @@ do
   else
 
     case $ARG in
-      -v|-r|-rs|-pr|-beta|-rc|-alpha|-apr|-apu|-neon)
+      -v|-r|-rs|-pr|-beta|-rc|-alpha|-apr|-apu|-api|-neon)
         ARG_PREV=$ARG
         ;;
+      -zip)
+        ZIP=1
+        ARG_PREV=""
+	;;
       *)
         echo " $USAGE"
         exit 1
@@ -103,6 +113,10 @@ else
   VER_NUMTAG=""
 fi
   
+if [ -n "$ZIP" ] ; then
+  EXTRA_EXPORT_OPTIONS="--native-eol CRLF"
+fi
+
 if [ -z "$VERSION" ] || [ -z "$REVISION" ] ; then
   echo " $USAGE"
   exit 1
@@ -113,11 +127,15 @@ if [ -z "$APR_PATH" ]; then
 fi
 
 if [ -z "$APU_PATH" ]; then
-  APU_PATH='apu'
+  APU_PATH='apr-util'
 fi
 
 if [ -z "$NEON_PATH" ]; then
   NEON_PATH='neon'
+fi
+
+if [ -z "$API_PATH" ]; then
+  API_PATH='apr-iconv'
 fi
 
 if [ ! -d "$APR_PATH" ]; then
@@ -132,6 +150,12 @@ fi
 
 if [ ! -d "$NEON_PATH" ]; then
   echo "ERROR: '$NEON_PATH' does not exist."
+  exit 1
+fi
+
+# apr-iconv is only included in zip files
+if [ -n "$ZIP" ] && [ ! -d "$API_PATH" ]; then
+  echo "ERROR: '$API_PATH' does not exist."
   exit 1
 fi
 
@@ -156,27 +180,36 @@ echo "Removed and recreated $DIST_SANDBOX"
 
 echo "Exporting revision $REVISION of Subversion into sandbox..."
 (cd "$DIST_SANDBOX" && \
- ${SVN:-svn} export -q -r "$REVISION" \
+ ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
      "http://svn.collab.net/repos/svn/$REPOS_PATH" \
      "$DISTNAME" --username none --password none)
 
 echo "Copying $APR_PATH into sandbox, making extraclean..."
 cp -r "$APR_PATH" "$DISTPATH/apr"
-(cd "$DISTPATH/apr" && make extraclean)
+(cd "$DISTPATH/apr" && [ -f Makefile ] && make extraclean)
 echo "Removing all CVS/ and .cvsignore files from apr..."
 find "$DISTPATH/apr" -name CVS -type d -print | xargs rm -fr
 find "$DISTPATH/apr" -name .cvsignore -print | xargs rm -f
 
 echo "Copying $APU_PATH into sandbox, making extraclean..."
 cp -r "$APU_PATH" "$DISTPATH/apr-util"
-(cd "$DISTPATH/apr-util" && make extraclean)
+(cd "$DISTPATH/apr-util" && [ -f Makefile ] && make extraclean)
 echo "Removing all CVS/ and .cvsignore files from apr-util..."
 find "$DISTPATH/apr-util" -name CVS -type d -print | xargs rm -fr
 find "$DISTPATH/apr-util" -name .cvsignore -print | xargs rm -f
 
+if [ -n "$ZIP" ]; then
+  echo "Copying $API_PATH into sandbox, making extraclean..."
+  cp -r "$API_PATH" "$DISTPATH/apr-iconv"
+  (cd "$DISTPATH/apr-iconv" && [ -f Makefile ] && make extraclean)
+  echo "Removing all CVS/ and .cvsignore files from apr-iconv..."
+  find "$DISTPATH/apr-iconv" -name CVS -type d -print | xargs rm -fr
+  find "$DISTPATH/apr-iconv" -name .cvsignore -print | xargs rm -f
+fi
+
 echo "Coping neon into sandbox, making clean..."
 cp -r "$NEON_PATH" "$DISTPATH/neon"
-(cd "$DISTPATH/neon" && make distclean)
+(cd "$DISTPATH/neon" && [ -f Makefile ] && make distclean)
 echo "Cleaning *.o in neon..."
 find "$DISTPATH/neon/src" -name '*.o' -print | xargs rm -f
 
@@ -184,6 +217,9 @@ find "$DISTPATH" -name config.nice -print | xargs rm -f
 
 echo "Running ./autogen.sh in sandbox, to create ./configure ..."
 (cd "$DISTPATH" && ./autogen.sh --release) || exit 1
+
+echo "Removing any autom4te.cache directories that might exist..."
+find "$DISTPATH" -depth -type d -name 'autom4te*.cache' -exec rm -rf {} \;
 
 echo "Downloading book into sandbox..."
 
@@ -225,27 +261,38 @@ mv -f "$vsn_file.tmp" "$vsn_file"
 
 cp "$vsn_file" "svn_version.h.dist"
 
-# Do not use tar, it's probably GNU tar which produces tar files that are
-# not compliant with POSIX.1 when including filenames longer than 100 chars.
-# Platforms without a tar that understands the GNU tar extension will not
-# be able to extract the resulting tar file.  Use pax to produce POSIX.1
-# tar files.
-echo "Rolling $DISTNAME.tar ..."
-(cd "$DIST_SANDBOX" > /dev/null && pax -x ustar -w "$DISTNAME") > \
-  "$DISTNAME.tar"
+if [ -z "$ZIP" ]; then
+  # Do not use tar, it's probably GNU tar which produces tar files that are
+  # not compliant with POSIX.1 when including filenames longer than 100 chars.
+  # Platforms without a tar that understands the GNU tar extension will not
+  # be able to extract the resulting tar file.  Use pax to produce POSIX.1
+  # tar files.
+  echo "Rolling $DISTNAME.tar ..."
+  (cd "$DIST_SANDBOX" > /dev/null && pax -x ustar -w "$DISTNAME") > \
+    "$DISTNAME.tar"
 
-echo "Compressing to $DISTNAME.tar.bz2 ..."
-bzip2 -9k "$DISTNAME.tar"
+  echo "Compressing to $DISTNAME.tar.bz2 ..."
+  bzip2 -9fk "$DISTNAME.tar"
 
-echo "Compressing to $DISTNAME.tar.gz ..."
-gzip -9 "$DISTNAME.tar"
-
+  echo "Compressing to $DISTNAME.tar.gz ..."
+  gzip -9f "$DISTNAME.tar"
+else
+  echo "Rolling $DISTNAME.zip ..."
+  (cd "$DIST_SANDBOX" > /dev/null && zip -q -r - "$DISTNAME") > \
+    "$DISTNAME.zip"
+fi
+exit 1
 echo "Removing sandbox..."
 rm -rf "$DIST_SANDBOX"
 
 echo ""
 echo "Done:"
-ls -l "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
-echo ""
-md5sum "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
-
+if [ -z "$ZIP" ]; then
+  ls -l "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
+  echo ""
+  md5sum "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
+else
+  ls -l "$DISTNAME.zip"
+  echo ""
+  md5sum "$DISTNAME.zip"
+fi
