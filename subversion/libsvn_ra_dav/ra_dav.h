@@ -35,6 +35,8 @@ typedef struct {
   apr_pool_t *pool;
 
   struct uri root;              /* repository root */
+  const char *username;
+  const char *password;
 
   ne_session *sess;           /* HTTP session to server */
 
