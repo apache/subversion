@@ -15,10 +15,6 @@ libsvn_wc_la_SOURCES = get_editor.c                      \
                        entries.c                         \
                        adm_crawler.c
 
-## Libraries this binary depends upon:
-libsvn_wc_la_LIBADD = ../libsvn_subr/libsvn_subr.la     \
-	              ../../expat-lite/libexpat.la
-
 ## Build flags ---------
 
 ## These should be variables, no?  (from autoconf?)

@@ -12,11 +12,6 @@ libsvn_client_la_SOURCES = checkout.c update.c apply_edits.c \
                            add.c delete.c                    \
                            commit.c
 
-## Libraries this binary depends upon:
-libsvn_client_la_LIBADD = ../libsvn_subr/libsvn_subr.la     \
-                          ../libsvn_wc/libsvn_wc.la         \
-                          ../libsvn_delta/libsvn_delta.la
-
 ## Build flags ---------
 
 ## These should be variables, no?  (from autoconf?)
