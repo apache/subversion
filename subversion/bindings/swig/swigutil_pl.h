@@ -44,14 +44,6 @@ extern "C" {
 /* If this file is being included outside of a wrapper file, then need to
    create stubs for some of the SWIG types. */
 
-/* XXX: this has to be set by configure and also swig -swiglib needs
-   to be added to include paths.
-*/
-
-#if SWIG_VERSION >= 0x010320
-#include "perl5/precommon.swg"
-#endif
-
 /* if SWIGEXPORT is defined, then we're in a wrapper. otherwise, we need
    the prototypes and type definitions. */
 #ifndef SWIGEXPORT
@@ -59,6 +51,13 @@ extern "C" {
 #endif
 
 #ifdef SVN_NEED_SWIG_TYPES
+
+/* XXX: this has to be set by configure and also swig -swiglib needs
+   to be added to include paths.
+*/
+#if SWIG_VERSION >= 0x010320
+#include "perl5/precommon.swg"
+#endif
 
 typedef struct _unnamed swig_type_info;
 
@@ -84,7 +83,9 @@ const apr_hash_t *svn_swig_pl_objs_to_hash(SV *source, swig_type_info *tinfo,
 const apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
 						   const char *typename,
 						   apr_pool_t *pool);
-
+const apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
+                                                    swig_type_info *tinfo,
+                                                    apr_pool_t *pool);
 
 SV *svn_swig_pl_array_to_list(const apr_array_header_t *array);
 SV *svn_swig_pl_ints_to_list(const apr_array_header_t *array);
@@ -122,6 +123,19 @@ svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
 				   SV *perl_callbacks,
 				   apr_pool_t *pool);
 
+
+/* thunked callback for svn_ra_get_wc_prop_func_t */
+svn_error_t *thunk_get_wc_prop (void *baton,
+                                const char *relpath,
+                                const char *name,
+                                const svn_string_t **value,
+                                apr_pool_t *pool);
+
+/* helper for making the editor */
+void svn_delta_make_editor(const svn_delta_editor_t **editor,
+                           void **edit_baton,
+                           SV *perl_editor,
+                           apr_pool_t *pool);
 
 /* svn_stream_t helpers */
 svn_error_t *svn_swig_pl_make_stream (svn_stream_t **stream, SV *obj);
