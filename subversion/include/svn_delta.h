@@ -231,7 +231,7 @@ typedef struct svn_delta_walk_t
   svn_error_t *(*add_directory) (svn_string_t *name,
 				 void *walk_baton, void *parent_baton,
 				 svn_string_t *base_path,
-				 svn_version_t base_version,
+				 long int base_version,
 				 svn_pdelta_t *pdelta,
 				 void **child_baton);
 
@@ -244,7 +244,7 @@ typedef struct svn_delta_walk_t
   svn_error_t *(*replace_directory) (svn_string_t *name,
 				     void *walk_baton, void *parent_baton,
 				     svn_string_t *base_path,
-				     svn_version_t base_version,
+				     long int base_version,
 				     svn_pdelta_t *pdelta,
 				     void **child_baton);
 
@@ -263,7 +263,7 @@ typedef struct svn_delta_walk_t
   svn_error_t *(*add_file) (svn_string_t *name,
 			    void *walk_baton, void *parent_baton,
 			    svn_string_t *base_path,
-			    svn_version_t base_version,
+			    long int base_version,
 			    svn_pdelta_t *pdelta,
                             svn_delta_handler_t **handler,
 			    void **handler_baton);
@@ -274,7 +274,7 @@ typedef struct svn_delta_walk_t
   svn_error_t *(*replace_file) (svn_string_t *name,
 				void *walk_baton, void *parent_baton,
 				svn_string_t *base_path,
-				svn_version_t base_version,
+				long int base_version,
 				svn_pdelta_t *pdelta,
                                 svn_delta_handler_t **handler,
                                 void **handler_baton);
