@@ -62,7 +62,7 @@ main (int argc, char **argv)
       return 1;
     }
 
-  err = (*plugin->svn_ra_open)(&session_baton, url, pool);
+  err = (*plugin->open)(&session_baton, url, pool);
   if (err)
     {
       svn_handle_error (err, stdout, 0);
@@ -86,8 +86,7 @@ main (int argc, char **argv)
 
   /* ### what is this path? */
   root_path = svn_string_create("", pool);
-  err = (*plugin->svn_ra_do_checkout)(session_baton, editor, edit_baton,
-                                      root_path);
+  err = (*plugin->do_checkout)(session_baton, editor, edit_baton, root_path);
   if (err)
     goto error;
 
@@ -95,7 +94,7 @@ main (int argc, char **argv)
   if (err)
     goto error;
 
-  (*plugin->svn_ra_close)(session_baton);
+  (*plugin->close)(session_baton);
 
   apr_destroy_pool(pool);
   apr_terminate();
