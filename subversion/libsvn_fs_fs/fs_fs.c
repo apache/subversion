@@ -235,7 +235,7 @@ svn_fs_fs__open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
      isn't much need for specific state associated with an open fs_fs
      repository. */
 
-  fs->path = apr_pstrdup (pool, path);
+  fs->path = apr_pstrdup (fs->pool, path);
 
   SVN_ERR (svn_io_file_open (&current_file, path_current (fs, pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
