@@ -1371,11 +1371,11 @@ $ svn status README
     </sect2>
 
     <sect2 id="svn-ch-3-sect-4.4">
-      <title>Resolve Conflicts (Merging Others' Changes)</title>
+      <title>Resolver Conflictos (Fusionando los Cambios de Otros)</title>
            
-      <para>We've already seen how <command>svn status -u</command>
-          can predict conflicts.  Suppose you run <command>svn
-          update</command> and some interesting things occur:</para>
+      <para>Ya hemos visto cómo <command>svn status -u</command> puede
+        predecir conflictos. Suponga que ejecuta <command>svn
+          update</command> y ocurren algunas cosas interesantes</para>
       
       <screen>
 $ svn update
@@ -1385,22 +1385,24 @@ C  bar.c
 Updated to revision 46.
 </screen>
            
-      <para>The <computeroutput>U</computeroutput> and
-        <computeroutput>G</computeroutput> codes are no cause for
-        concern; those files cleanly absorbed changes from the
-        repository.  The files marked with
-        <computeroutput>U</computeroutput> contained no local changes
-        but were <computeroutput>U</computeroutput>pdated with changes
-        from the repository.  The <computeroutput>G</computeroutput>
-        stands for mer<computeroutput>G</computeroutput>ed, which
-        means that the file had local changes to begin with, but the
-        changes coming from the repository didn't overlap in any
-        way.</para>
-           
-      <para>But the <computeroutput>C</computeroutput> stands for
-        conflict.  This means that the changes from the server overlapped
-        with your own, and now you have to manually choose between
-        them.</para>
+      <para>Los códigos <computeroutput>U</computeroutput> y
+        <computeroutput>G</computeroutput> no son causa para la
+        <!--TODO:are no cause for concern-->inquietud; esos ficheros
+        absorbieron limpiamente los cambios del repositorio. Los
+        ficheros marcados con una <computeroutput>U</computeroutput>
+        no contienen cambios locales pero fueron
+        act<computeroutput>U</computeroutput>alizados<!--TODO:en ingles
+        ponía Updated--> con cambios del repositorio. La
+        <computeroutput>G</computeroutput> representa
+        mer<computeroutput>G</computeroutput>ed<!--TODO:se pone "enviado"
+        entre parentesis?-->, lo que significa que el fichero tenía
+        para comenzar cambios locales, pero los cambios que venían del
+        repositorio no se solaparon de ninguna manera.</para>
+
+      <para>Pero la <computeroutput>C</computeroutput> representa
+        conflicto. Esto significa que los cambios del servidor se solapan
+        con los suyos propios, y ahora tiene que elegir manualmente
+        entre ellos.</para>
            
       <para>Whenever a conflict occurs, three things occur to assist
         you in noticing and resolving that conflict:</para>
@@ -2233,8 +2235,8 @@ Adding         mytree/subdir/quux.h
 Committed revision 1.
 </screen>
 
-      <para>El ejemplo anterior ha copiado el contenido del directorio
-        <filename>mytree</filename> debajo el directorio
+      <para>El ejemplo anterior copia el contenido del directorio
+        <filename>mytree</filename> debajo del directorio
         <filename>some/project</filename> en el repositorio:</para>
 
       <screen>
