@@ -221,7 +221,7 @@ a timestamp recording when the local copy was last updated.
 
 Given this information, by talking to the repository, Subversion can
 tell which of the following four states a file is in:
-@itemize
+@itemize @bullet
 @item
 @b{Unchanged, and current.}  The file is unchanged in the working
 directory, and no changes to that file have been committed to the
