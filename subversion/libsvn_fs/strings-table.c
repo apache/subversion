@@ -86,7 +86,28 @@ svn_fs__string_read (svn_fs_t *fs,
   /* Handle any other error conditions.  */
   SVN_ERR (DB_WRAP (fs, "reading string", db_err));
 
-  *len = result.size;
+  {
+    /* ### ugly hack!!  
+
+       Thanks to what is believed to be a bug in Berkeley DB 3.2.9,
+       reading off the end of this end (if it is stored in a
+       B_OVERFLOW page, as BDB defines it) will not return the proper
+       value in results.size, so for now we will hack around that by
+       calculating the legal sizes for ourselves. 
+
+       This section of code *should* just be:
+
+           *len = result.size;
+       
+       and is certainly intended to someday return to that. */
+    apr_size_t size;
+
+    SVN_ERR (svn_fs__string_size (&size, fs, key, trail));
+    if (offset >= size)
+      *len = 0;
+    else if (*len > (size - offset))
+      *len = size - offset;
+  }
 
   return SVN_NO_ERROR;
 }
@@ -100,7 +121,7 @@ svn_fs__string_append (svn_fs_t *fs,
                        trail_t *trail)
 {
   DBT query, result;
-  apr_size_t offset;
+  apr_size_t offset = 0;
   int db_err;
 
   /* If the passed-in key is NULL, we graciously generate a new string
@@ -133,9 +154,11 @@ svn_fs__string_append (svn_fs_t *fs,
 
       SVN_ERR (DB_WRAP (fs, "bumping next string key", db_err));
     }
-
-  /* Get the current size of the record. */
-  SVN_ERR (svn_fs__string_size (&offset, fs, *key, trail));
+  else
+    {
+      /* Get the current size of the record. */
+      SVN_ERR (svn_fs__string_size (&offset, fs, *key, trail));
+    }
 
   /* Append to it. */
   svn_fs__clear_dbt (&result);
@@ -212,8 +235,8 @@ svn_fs__string_size (apr_size_t *size,
       (SVN_ERR_FS_NO_SUCH_STRING, 0, 0, fs->pool,
        "svn_fs__string_size: no such string `%s'", key);
 
-  /* Handle any other error conditions.  */
-  SVN_ERR (DB_WRAP (fs, "reading string", db_err));
+  if (db_err && db_err != ENOMEM)
+    return DB_WRAP (fs, "reading string", db_err);
 
   /* kff todo: how can we know this cast is safe? */
   *size = (apr_size_t) result.size;
@@ -223,7 +246,7 @@ svn_fs__string_size (apr_size_t *size,
 
 
 svn_error_t *
-svn_fs__delete_string (svn_fs_t *fs,
+svn_fs__string_delete (svn_fs_t *fs,
                        const char *key,
                        trail_t *trail)
 {
