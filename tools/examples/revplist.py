@@ -19,7 +19,7 @@ import sys
 import os
 import getopt
 
-from svn import fs, util
+from svn import fs, util, core
 
 def plist(pool, rev=None, home='.', *props):
 

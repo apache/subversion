@@ -211,13 +211,7 @@ class SVNShell(Cmd):
     print rev
     core.svn_pool_clear(self.taskpool)
 
-  def do_EOF(self, arg):
-    self.do_exit(arg)
-    
   def do_exit(self, arg):
-    # Make sure a newline is printed and the shell begins on a newline
-    # afterwards
-    print ''
     sys.exit(0)
 
   def _path_to_parts(self, path):
