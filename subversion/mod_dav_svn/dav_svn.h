@@ -232,12 +232,15 @@ dav_resource *dav_svn_create_working_resource(const dav_resource *base,
 
 enum dav_svn_build_what {
   DAV_SVN_BUILD_URI_ACT_COLLECTION, /* the collection of activities */
-  DAV_SVN_BUILD_URI_BC,         /* a Baseline Collection */
-  DAV_SVN_BUILD_URI_VERSION,    /* a Version Resource */
   DAV_SVN_BUILD_URI_BASELINE,   /* a Baseline */
+  DAV_SVN_BUILD_URI_BC,         /* a Baseline Collection */
+  DAV_SVN_BUILD_URI_PUBLIC,     /* the "public" VCR */
+  DAV_SVN_BUILD_URI_VERSION,    /* a Version Resource */
   DAV_SVN_BUILD_URI_VCC         /* a Version Controlled Configuration */
 };
 
+/* PATH should be NULL, or should start with a leading slash. */
+/* ### more docco. talk about expected params for each variant. */
 const char *dav_svn_build_uri(const dav_svn_repos *repos,
                               enum dav_svn_build_what what,
                               svn_revnum_t revision,
