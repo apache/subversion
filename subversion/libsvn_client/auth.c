@@ -158,8 +158,7 @@ get_creds (const char **username,
             return svn_error_create (status, NULL, "Error getting UID");
           if ((status = apr_uid_name_get (&un, uid, pool)))
             return svn_error_create (status, NULL, "Error getting username");
-          SVN_ERR (svn_utf_cstring_to_utf8 ((const char **)&def_username,
-                                            un, NULL, pool));
+          SVN_ERR (svn_utf_cstring_to_utf8 (&def_username, un, NULL, pool));
         }
 
       def_password = apr_hash_get (parameters, 
