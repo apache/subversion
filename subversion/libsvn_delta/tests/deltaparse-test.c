@@ -130,7 +130,7 @@ test_replace_root (void *edit_baton,
                    void **root_baton)
 {
   struct edit_baton *eb = (struct edit_baton *) edit_baton;
-  struct dir_baton *d = apr_palloc (eb->pool, sizeof (*d));
+  struct dir_baton *d = apr_pcalloc (eb->pool, sizeof (*d));
 
   d->path = (svn_string_t *) svn_string_dup (eb->root_path, globalpool);
   d->edit_baton = eb;
@@ -279,7 +279,7 @@ add_or_replace_file (svn_string_t *name,
           pivot_string, Aname, ancestor, ancestor_version);
 
   /* Put the filename in file_baton */
-  fb = apr_palloc (d->edit_baton->pool, sizeof (*fb));
+  fb = apr_pcalloc (d->edit_baton->pool, sizeof (*fb));
   fb->dir_baton = parent_baton;
   fb->path = (svn_string_t *) svn_string_dup (name, globalpool);
   *file_baton = fb;

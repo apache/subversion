@@ -646,7 +646,7 @@ apply_textdelta (void *file_baton,
 {
   struct file_baton *fb = (struct file_baton *) file_baton;
   apr_pool_t *subpool = svn_pool_create (fb->pool, NULL);
-  struct handler_baton *hb = apr_palloc (subpool, sizeof (*hb));
+  struct handler_baton *hb = apr_pcalloc (subpool, sizeof (*hb));
   svn_error_t *err;
 
   /* Open the text base for reading, unless this is a checkout. */
