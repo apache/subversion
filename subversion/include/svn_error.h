@@ -14,6 +14,10 @@
 
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #ifndef SVN_ERROR_H
 #define SVN_ERROR_H
 
@@ -365,8 +369,12 @@ void svn_handle_warning (void *data, char *fmt, ...);
 
 #endif   /* SVN_ERROR_H */
 
-
-/* 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+
+/* ----------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")
  * end:

@@ -14,6 +14,10 @@
  */
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #ifndef SVN_STRING_H
 #define SVN_STRING_H
 
@@ -119,8 +123,12 @@ apr_size_t svn_string_find_char_backward (const svn_string_t *str, char ch);
 apr_size_t svn_string_chop_back_to_char (svn_string_t *str, char ch);
 #endif  /* SVN_STRING_H */
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
-/* --------------------------------------------------------------
+
+/* ----------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")
  * end:

@@ -15,6 +15,10 @@
 /* ==================================================================== */
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #ifndef SVN_IO_H
 #define SVN_IO_H
 
@@ -211,3 +215,14 @@ svn_error_t *svn_stream_close (svn_stream_t *stream);
 
 
 #endif /* SVN_IO_H */
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+
+/* ----------------------------------------------------------------
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

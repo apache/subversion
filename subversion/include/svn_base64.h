@@ -13,6 +13,10 @@
 
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #ifndef SVN_BASE64_H
 #define SVN_BASE64_H
 
@@ -38,8 +42,11 @@ svn_string_t *svn_base64_decode_string (svn_string_t *str, apr_pool_t *pool);
 
 #endif /* SVN_BASE64_H */
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
-
+
 /* --------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")

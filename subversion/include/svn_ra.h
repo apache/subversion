@@ -14,6 +14,10 @@
 
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #ifndef SVN_RA_H
 #define SVN_RA_H
 
@@ -126,8 +130,12 @@ typedef svn_error_t *svn_ra_init_func_t (int abi_version,
 
 #endif  /* SVN_RA_H */
 
-
-/* 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+
+/* ----------------------------------------------------------------
  * local variables:
  * eval: (load-file "../svn-dev.el")
  * end:

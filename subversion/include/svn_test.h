@@ -14,6 +14,10 @@
 
 /* ==================================================================== */
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #ifndef SVN_TEST_H
 #define SVN_TEST_H
 
@@ -35,3 +39,14 @@ svn_error_t *svn_test_get_editor (const svn_delta_edit_fns_t **editor,
                                   apr_pool_t *pool);
      
 #endif /* SVN_TEST_H */
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+
+/* ----------------------------------------------------------------
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

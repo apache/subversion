@@ -12,6 +12,10 @@
  */
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #ifndef SVN_PATHS_H
 #define SVN_PATHS_H
 
@@ -121,3 +125,14 @@ svn_string_t *svn_path_get_longest_ancestor (const svn_string_t *path1,
                                              apr_pool_t *pool);
 
 #endif /* SVN_PATHS_H */
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+
+/* ----------------------------------------------------------------
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */
