@@ -75,7 +75,7 @@ with a Subversion repository.  This includes the ability to read files,
 write new versions of files, and ask the repository to compare a working
 copy against its latest version.
 
-The third library provides ``high-level'' client functions such as
+The third library provides general client functions such as
 @code{update()} and @code{commit()}, which involve the using the
 routines in @emph{both} of the other two client libraries.
 
@@ -136,9 +136,9 @@ repositories on the server machine.
 
 Finally, the client's function calls reach a particular repository and
 are interpreted by the @dfn{Subversion Filesystem library}.  The
-Subversion Filesystem is a simple, abstract UNIX-like filesystem, but
-with a small twist: @code{write ()} calls are versioned and atomic, and
-no data is ever deleted!
+Subversion Filesystem is a custom UNIX-like filesystem, but with a small
+twist: @code{write ()} calls are versioned and atomic, and no data is
+ever deleted!
 
 These filesystem calls then talk to disk, either through a set of
 Berkeley DBM files, or a more powerful SQL database.

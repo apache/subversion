@@ -20,7 +20,7 @@ and the @dfn{Main Subversion} library.
 
 @menu
 * Filesystem::                The Subversion Filesystem.
-* Main Library::              The highest-level server interface.
+* Main Library::              The Subversion Server interface.
 @end menu
 
 
@@ -44,7 +44,7 @@ and the @dfn{Main Subversion} library.
   @b{Provides:}
   @itemize
   @item
-    an abstract representation of a repository
+    a repository for storing files
   @item
     support for multiple concurrent accesses (via a lock manager)
   @item
@@ -52,17 +52,18 @@ and the @dfn{Main Subversion} library.
   @end itemize
 @end itemize
 
-The @dfn{Subversion Filesystem} implements a hierarchical file system,
+The @dfn{Subversion Filesystem} implements a hierarchical filesystem
 which supports atomic changes to arbitrary groups of files, and records
-the complete history of the tree, including directory and file contents.
+the complete history of the tree -- including directory and file
+contents.
 
-While CVS uses the UNIX filesystem to hold a repository, svn_fs
-implements filesystem objects abstractly.  This allows us to store
-@dfn{properties} (or ``meta-data'') with each file, directory, directory
-entry, and version number.  For example, some useful properties might be
-@{author, creation date, modification date, Access Control List (ACL),
-file type (text, binary), file encoding, ...@}.  Similarly, a version in
-a repository's history can store the log message as a property.
+Because Subversion avoids using the UNIX filesystem directly, it can
+store @dfn{properties} (or ``meta-data'') with each file, directory,
+directory entry, and version number.  For example, some useful
+properties might be @{author, creation date, modification date, Access
+Control List (ACL), file type (text, binary), file encoding, ...@}.
+Similarly, a version in a repository's history can store the log message
+as a property.
 
 @subsection Schema
 
