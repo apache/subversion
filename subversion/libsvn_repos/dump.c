@@ -948,6 +948,8 @@ svn_repos_dump_fs2 (svn_repos_t *repos,
     start_rev = 0;
   if (! SVN_IS_VALID_REVNUM(end_rev))
     end_rev = youngest;
+  if (! stream)
+    stream = svn_stream_empty (pool);
 
   /* Validate the revisions. */
   if (start_rev > end_rev)
