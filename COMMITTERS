@@ -66,7 +66,7 @@ Commit access for specific areas:
            pll   Paul lussier <p.lussier@comcast.net>        (releases)
      gthompson   Glenn A. Thompson <gthompson@cdr.net>       (fs/db branch)
            kon   Kalle Olavi Niemitalo <kon@iki.fi>          (Emacs Lisp)
-       patrick   Patrick Mayweg <mayweg@qint.de>             (Java bindings)
+       pmayweg   Patrick Mayweg <mayweg@qint.de>             (Java bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (perl bindings)
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
