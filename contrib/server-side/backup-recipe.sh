@@ -9,7 +9,7 @@
 #  restore scripts based on this recipe.                                  #
 #                                                                         #
 #  To reiterate: this is *not* a backup and restore solution.  It's       #
-#  just documentation, in the form of code with comments.                 #
+#  really just documentation, in the form of code with comments.          #
 #                                                                         #
 #  If you do implement your own scripts based on the recipe here, and     #
 #  your implementations are generic enough to be generally useful,        #
@@ -24,7 +24,7 @@
 #                                                                         #
 ###########################################################################
 
-# High-level overview of the hot backup recipe:
+# High-level overview of the full backup recipe:
 # 
 #    1. Ask BDB's db_archive for a list of unused log files.
 #
@@ -36,11 +36,16 @@
 #    4. Remove the logfiles listed as inactive in step (1) from the
 #       repository, though not from the backup.
 #    
+# High-level overview of the incremental backup recipe:
+#
+#    1. Just copy the Berkeley logfiles to a backup area.
+#    
 # High-level overview of the restoration recipe:
 #
-#    1. Copy all the datafiles and logfiles back to the repository.
+#    1. Copy all the datafiles and logfiles back to the repository, in
+#       the same order they were backed up.
 #
-#    2. Run Berkeley's "catastrophic recovery" utility on the repository.
+#    2. Run Berkeley's "catastrophic recovery" command on the repository.
 #
 # That's it.  Here we go...
 
