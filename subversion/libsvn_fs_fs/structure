@@ -68,11 +68,12 @@ extensibility.  The following fields are defined:
   type      "file" or "dir"
   pred      The ID of the predecessor node-rev
   count     Count of node-revs since the base of the node
-  text      "<rev> <offset> <length> <size>" for text rep
-  props     "<rev> <offset> <length> <size>" for property rep
+  text      "<rev> <offset> <length> <size> <digest>" for text rep
+  props     "<rev> <offset> <length> <size> <digest>" for props rep
             <rev> and <offset> give location of rep
             <length> gives length of rep, sans header and trailer
             <size> gives size of expanded rep
+            <digest> gives hex MD5 digest of expanded rep
   cpath     FS pathname node was created at
   copyfrom  "{soft|hard} <rev> <path>" of copyfrom data
   copyroot  The ID of the root node-revision of the copy
