@@ -2012,7 +2012,7 @@ svn_client_merge (const char *source1,
   if (entry == NULL)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                               "Can't merge changes into '%s':"
-                              "it's not under revision control.", 
+                              "it's not under version control.", 
                               target_wcpath);
 
   merge_cmd_baton.force = force;

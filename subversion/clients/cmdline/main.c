@@ -146,7 +146,7 @@ const apr_getopt_option_t svn_cl__options[] =
 const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 {
   { "add", svn_cl__add, {0},
-    "Put files and directories under revision control, scheduling\n"
+    "Put files and directories under version control, scheduling\n"
     "them for addition to repository.  They will be added in next commit.\n"
     "usage: add PATH...\n",
     {svn_cl__targets_opt, 'N', 'q', svn_cl__config_dir_opt,
@@ -262,7 +262,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "\n"
     "  2. Exports a clean directory tree from the working copy specified by\n"
     "     PATH1 into PATH2.  All local changes will be preserved, but files\n"
-    "     not under revision control will not be copied.\n",
+    "     not under version control will not be copied.\n",
     {'r', 'q', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
 
@@ -367,7 +367,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
   { "mkdir", svn_cl__mkdir, {0},
-    "Create a new directory under revision control.\n"
+    "Create a new directory under version control.\n"
     "usage: 1. mkdir PATH...\n"
     "       2. mkdir URL...\n"
     "\n"
@@ -516,7 +516,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "      'C' Conflicted\n"
     "      'I' Ignored\n"
     "      'X' item is unversioned, but is used by an externals definition\n"
-    "      '?' item is not under revision control\n"
+    "      '?' item is not under version control\n"
     "      '!' item is missing (removed by non-svn command) or incomplete\n"
     "      '~' versioned item obstructed by some item of a different kind\n"
     "    Second column: Modifications of a file's or directory's properties\n"

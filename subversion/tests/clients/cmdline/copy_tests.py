@@ -262,7 +262,7 @@ def mv_unversioned_file(sbox):
   output, errput = svntest.main.run_svn(1, 'mv', unver_path, dst_path)
 
   for line in errput:
-    if string.find(line, "not under revision control") != -1:
+    if string.find(line, "not under version control") != -1:
       break
   else:
     raise svntest.Failure

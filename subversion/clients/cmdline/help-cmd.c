@@ -44,7 +44,7 @@ const char svn_cl__help_header[] =
     "Available subcommands:\n";
 
 const char svn_cl__help_footer[] =
-    "Subversion is a tool for revision control.\n"
+    "Subversion is a tool for version control.\n"
     "For additional information, see http://subversion.tigris.org/\n"
     "\n";
 

@@ -58,7 +58,7 @@ been resolved."
   "The path from cwd to the Subversion entries file.")
 
 (defun svn-controlled-path-p (path)
-  "Return non-nil if PATH is under Subversion revision control, else
+  "Return non-nil if PATH is under Subversion version control, else
 return nil.  If PATH does not exist, return nil.
 
 In the future, this will return an Emacs Lisp reflection of PATH's
@@ -94,7 +94,7 @@ entries file, instead of just detecting PATH among the entries."
 
 (defun svn-text-base-path (file)
   "Return the path to the text base for FILE (a string).
-If FILE is a directory or not under revision control, return nil."
+If FILE is a directory or not under version control, return nil."
   (cond
    ((not (svn-controlled-path-p file)) nil)
    ((file-directory-p file)            nil)

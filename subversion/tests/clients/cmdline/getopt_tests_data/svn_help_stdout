@@ -36,6 +36,6 @@ Available subcommands:
    switch (sw)
    update (up)
 
-Subversion is a tool for revision control.
+Subversion is a tool for version control.
 For additional information, see http://subversion.tigris.org/
 

@@ -157,7 +157,7 @@ svn_client_status (svn_revnum_t *youngest,
       if (! entry)
         return svn_error_createf
           (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-           "svn_client_status: '%s' is not under revision control", anchor);
+           "svn_client_status: '%s' is not under version control", anchor);
       if (! entry->url)
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, NULL,

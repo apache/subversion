@@ -108,7 +108,7 @@ svn_client_switch (const char *path,
   if (! entry)
     return svn_error_createf
       (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-       "svn_client_switch: '%s' is not under revision control", path);
+       "svn_client_switch: '%s' is not under version control", path);
 
   if (! entry->url)
     return svn_error_createf
@@ -124,7 +124,7 @@ svn_client_switch (const char *path,
       if (! session_entry)
         return svn_error_createf
           (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-           "svn_client_switch: '%s' is not under revision control", anchor);
+           "svn_client_switch: '%s' is not under version control", anchor);
 
       if (! session_entry->url)
         return svn_error_createf

@@ -296,7 +296,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
   if (entry == NULL)
     return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, NULL,
                               "Can't merge props into '%s':"
-                              "it's not under revision control.", path);
+                              "it's not under version control.", path);
 
   /* Notice that we're not using svn_path_split_if_file(), because
      that looks at the actual working file.  It's existence shouldn't
