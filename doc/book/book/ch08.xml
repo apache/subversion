@@ -3412,6 +3412,13 @@ Updated to revision 30.
       <variablelist>
         
         <varlistentry>
+          <term><option>--bypass-hooks</option></term>
+          <listitem>
+            <para>Bypass the repository hook system.</para>
+          </listitem>
+        </varlistentry>
+        
+        <varlistentry>
           <term><option>--copies</option></term>
           <listitem>
             <para>Follow copy history when examining a path.</para>
@@ -3830,13 +3837,13 @@ $ svnadmin rmtxns /usr/local/svn/repos/  `svnadmin lstxns /usr/local/svn/repos/`
           <para>Set the log-message on revision REVISION to the
             contents of FILE.</para>
 
-          <para>You might think that this sounds remarkably like the
-            kind of thing that you can do by using <command>svn
-            propset --revprop</command> to set the
-            <literal>svn:log</literal> property on a revision.  While
-            it does, in fact, accomplish the same end result (changing
-            the log message), <command>setlog</command> does not run
-            any pre or post-commit hooks.</para>
+          <para>This is similar to using <command>svn propset
+            --revprop</command> to set the <literal>svn:log</literal> property
+            on a revision, except that you can also use the option
+            <option>--bypass-hooks</option> to avoid running any pre- or
+            post-commit hooks, which is useful if the modification of
+            revision properties has not been enabled in the pre-revprop-change
+            hook.</para>
 
           <warning>
             <para>Revision properties are not under version control,
@@ -3851,6 +3858,7 @@ $ svnadmin rmtxns /usr/local/svn/repos/  `svnadmin lstxns /usr/local/svn/repos/`
 
           <screen>
 --revision (-r) ARG
+--bypass-hooks
           </screen>
         </refsect1>
 
