@@ -151,7 +151,7 @@ main (int argc, char **argv)
 
   if (!seed_set)
     {
-      seed = (unsigned int) apr_now () ^ (unsigned int) getpid ();
+      seed = (unsigned int) apr_now ();
       printf ("Using seed %d\n", seed);
       srand (seed);
     }
