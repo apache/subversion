@@ -54,14 +54,6 @@ Candidate changes:
     Votes:
       +1: clkao, breser
 
-  * r10464
-    Have mailer.py open repository via svn_repos.h, not svn_fs.h.
-    Justification:
-       Allows mailer.py to work with fsfs.
-    Votes:
-      +1: sussman, cmpilato, kfogel, brane
-      +0: breser
-
   * r10473
     Fix OS X build.
     Justification: Should work out of the tarball.

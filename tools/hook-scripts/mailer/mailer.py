@@ -550,12 +550,8 @@ class Repository:
     self.rev = rev
     self.pool = pool
 
-    db_path = os.path.join(repos_dir, 'db')
-    if not os.path.exists(db_path):
-      db_path = repos_dir
-
-    self.fs_ptr = svn.fs.new(None, pool)
-    svn.fs.open_berkeley(self.fs_ptr, db_path)
+    self.repos_ptr = svn.repos.svn_repos_open(repos_dir, pool)
+    self.fs_ptr = svn.repos.svn_repos_fs(self.repos_ptr)
 
     self.roots = { }
 
