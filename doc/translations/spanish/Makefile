@@ -19,7 +19,7 @@ BOOK_VERSION_SOURCE =  $(BOOK_DIR)/version.xml
 BOOK_ALL_SOURCE = $(BOOK_DIR)/*.xml
 BOOK_IMAGES = $(BOOK_DIR)/images/*.png
 BOOK_INSTALL_DIR = $(INSTALL_DIR)/book
-BOOK_ASPELL_FILES = book foreword ch00 ch01 ch04
+BOOK_ASPELL_FILES = book foreword ch00 ch01 ch04 ch08
 OTHER_ASPELL_FILES = COORDINADOR glosario_traduccion LEAME TODO TRABAJO
 
 MDOCS_DIR = ${BOOK_TOP}/misc-docs
