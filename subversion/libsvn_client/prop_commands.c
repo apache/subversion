@@ -165,7 +165,7 @@ svn_client_revprop_set (const char *propname,
  * is true, or else the working value if PRISTINE is false.  
  *
  * The keys of *PROPS will be `const char *' property names, and the
- * values `const svn_string_t *' property values.  Allocate *PROPS
+ * values `const svn_stringbuf_t *' property values.  Allocate *PROPS
  * and its contents in POOL.
  */
 static svn_error_t *
@@ -488,14 +488,40 @@ svn_client_propget (apr_hash_t **props,
             }
           else  /* target is a working copy path */
             {
-              SVN_ERR (svn_client__get_revision_number
-                       (&revnum, NULL, NULL, revision, target, pool));
-              
-              SVN_ERR (ra_lib->check_path (&kind, session, "", revnum));
-              
-              SVN_ERR (remote_propget (*props, propname, utarget, "",
-                                       kind, revnum, ra_lib, session,
-                                       recurse, pool));
+              if (! recurse)
+                {
+                  SVN_ERR (svn_client__get_revision_number
+                           (&revnum, NULL, NULL, revision, target, pool));
+                  
+                  SVN_ERR (ra_lib->check_path (&kind, session, "", revnum));
+
+                  SVN_ERR (remote_propget (*props, propname, utarget, "",
+                                           kind, revnum, ra_lib, session,
+                                           recurse, pool));
+                }
+              else  /* ### recursive case unimplemented */
+                {
+                  return svn_error_create
+                    (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+               "Recursing on previous revision not yet supported.\n"
+               "(http://subversion.tigris.org/issues/show_bug.cgi?id=1023)\n");
+                  
+                  /* In the recursive case, the correctest behavior is
+                     hard to implement.  If the command is
+
+                         svn propget -rPREV -R SOMEDIR
+
+                     then the PREV keyword will expand to the previous
+                     revision for SOMEDIR, and then *that same*
+                     revision will be used all the way down the
+                     recursion, even though there might be objects
+                     beneath SOMEDIR that have different previous
+                     revisions.  For now, we punt and don't handle
+                     'svn propget -R -rPREV' at all.  I suspect it's
+                     an edge case anyway, and I'm not sure that my
+                     idea of the "correct" interpretation of PREV
+                     will be the user's idea anyway. */
+                }
             }
         }
       else
@@ -627,7 +653,7 @@ push_props_on_list (apr_array_header_t *list,
  * containing the properties for "TARGET_PREFIX/TARGET_RELATIVE" in
  * REVNUM, obtained using RA_LIB and SESSION.  The item->node_name
  * will be "TARGET_PREFIX/TARGET_RELATIVE", and the value will be a
- * hash mapping `const char *' property names onto `svn_string_t *'
+ * hash mapping `const char *' property names onto `svn_stringbuf_t *'
  * property values.  Allocate the new item and its contents in POOL.
  *
  * KIND is the kind of the node at "TARGET_PREFIX/TARGET_RELATIVE".
@@ -871,14 +897,40 @@ svn_client_proplist (apr_array_header_t **props,
             }
           else  /* it's a working copy path */
             {
-              SVN_ERR (svn_client__get_revision_number
-                       (&revnum, NULL, NULL, revision, target, pool));
-              
-              SVN_ERR (ra_lib->check_path (&kind, session, "", revnum));
-              
-              SVN_ERR (remote_proplist (prop_list, utarget, "",
-                                        kind, revnum, ra_lib, session,
-                                        recurse, pool));
+              if (! recurse)
+                {
+                  SVN_ERR (svn_client__get_revision_number
+                           (&revnum, NULL, NULL, revision, target, pool));
+                  
+                  SVN_ERR (ra_lib->check_path (&kind, session, "", revnum));
+
+                  SVN_ERR (remote_proplist (prop_list, utarget, "",
+                                            kind, revnum, ra_lib, session,
+                                            recurse, pool));
+                }
+              else  /* ### recursive case unimplemented */
+                {
+                  return svn_error_create
+                    (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+              "Recursing on previous revision not yet supported.\n"
+              "(http://subversion.tigris.org/issues/show_bug.cgi?id=1023)\n");
+                  
+                  /* In the recursive case, the correctest behavior is
+                     hard to implement.  If the command is
+
+                         svn proplist -rPREV -R SOMEDIR
+
+                     then the PREV keyword will expand to the previous
+                     revision for SOMEDIR, and then *that same*
+                     revision will be used all the way down the
+                     recursion, even though there might be objects
+                     beneath SOMEDIR that have different previous
+                     revisions.  For now, we punt and don't handle
+                     'svn proplist -R -rPREV' at all.  I suspect it's
+                     an edge case anyway, and I'm not sure that my
+                     idea of the "correct" interpretation of PREV
+                     will be the user's idea anyway. */
+                }
             }
         }
       else

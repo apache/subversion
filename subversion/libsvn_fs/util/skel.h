@@ -109,8 +109,15 @@ typedef struct skel_t skel_t;
    zero.
 
    The returned skel objects point into the block indicated by DATA
-   and LEN; we don't copy the contents. */
-skel_t *svn_fs__parse_skel (const char *data, apr_size_t len,
+   and LEN; we don't copy the contents.
+
+   You'd think that DATA would be a `const char *', but we want to
+   create `skel' structures that point into it, and a skel's DATA
+   pointer shouldn't be a `const char *', since that would constrain
+   how the caller can use the structure.  We only want to say that
+   *we* won't change it --- we don't want to prevent the caller from
+   changing it --- but C's type system doesn't allow us to say that.  */
+skel_t *svn_fs__parse_skel (char *data, apr_size_t len,
                             apr_pool_t *pool);
 
 

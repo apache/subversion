@@ -273,14 +273,10 @@ static void add_props(const svn_ra_dav_resource_t *r,
 
   for (hi = apr_hash_first(pool, r->propset); hi; hi = apr_hash_next(hi))
     {
-      const void *vkey;
-      void *vval;
       const char *key;
       char *val;
 
-      apr_hash_this(hi, &vkey, NULL, &vval);
-      key = vkey;
-      val = vval;
+      apr_hash_this(hi, (const void **)&key, NULL, (void *)&val);
 
 #define NSLEN (sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1)
       if (strncmp(key, SVN_DAV_PROP_NS_CUSTOM, NSLEN) == 0)

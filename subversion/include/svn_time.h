@@ -1,5 +1,9 @@
 /**
- * @copyright
+ * @file svn_time.h
+ * @brief Time/date utilities
+ * @{
+ */
+/*
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
  *
@@ -13,11 +17,6 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
- * @endcopyright
- *
- * @file svn_time.h
- * @brief Time/date utilities
- * @{
  */
 
 #ifndef SVN_TIME_H

@@ -41,7 +41,7 @@ svn_fs__open_nodes_table (DB **nodes_p,
                           DB_ENV *env,
                           int create)
 {
-  const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
+  const int open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *nodes;
 
   DB_ERR (svn_bdb__check_version());

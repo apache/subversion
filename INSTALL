@@ -29,7 +29,6 @@ Contents:
      B. Making and Installing the Subversion Server
      C. Configuring Apache for Subversion
      D. Running and Testing
-     E. Alternative:  'svnserve' and ra_svn
 
 
 
@@ -899,37 +898,3 @@ III.  BUILDING A SUBVERSION SERVER
       the instructions in subversion/tests/clients/cmdline/README.
       For advice about tracing problems, see "Debugging the server" in
       the HACKING file.
-
-
-  E. Alternative:  'svnserve' and ra_svn
-     -----------------------------------
-
-      As of svn 0.16, we have new repository-access implementation,
-      libsvn_ra_svn (on the client side) and the 'svnserve' process on
-      the server.  This is a simple network layer that speaks a custom
-      protocol over plain TCP (documented in libsvn_ra_svn/protocol):
-
-         $ svnserve     # becomes a background daemon
-         $ svn checkout svn://localhost/usr/local/svn/repository
-
-      This network layer passes 'make check', but is still relatively
-      new and untested.  Greg Hudson, the author, issues these caveats:
-
-        -- It only handles anonymous authentication.  That's pretty
-           limiting.  I hope to find time to implement ssh tunneling
-           soon.
-
-        -- It is insecure; if you run svnserve, you will allow commits
-           (as "anonymous") to any repository your uid can find, even
-           if you pass a "-r" option specifying a logical root.  This
-           is because the server doesn't try to prevent "../" in URLs.
-           I hope to fix that soon.
-
-      If subversion/svnserve/ and subversion/libsvn_ra_svn/ aren't
-      compiled by the default build process, you can activate them by
-      uncommenting the [libsvn_ra_svn] and [svnserve] sections of
-      build.conf, and unblock the "if" statement of the ra_svn clause
-      within configure.in.
-
-      
-      

@@ -31,7 +31,7 @@ int svn_fs__open_revisions_table (DB **revisions_p,
                                   DB_ENV *env,
                                   int create)
 {
-  const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
+  const int open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *revisions;
 
   DB_ERR (svn_bdb__check_version());

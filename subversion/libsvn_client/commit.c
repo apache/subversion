@@ -850,8 +850,15 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
     goto cleanup;
 
     {
-      svn_client_commit_item_t *item = NULL;
+      svn_revnum_t head;
 
+      if ((cmt_err = get_ra_editor (&ra_baton, &session, &ra_lib, &head,
+                                    &editor, &edit_baton, auth_baton,
+                                    base_url, base_dir, base_dir_access,
+                                    log_msg, commit_items, &committed_rev, 
+                                    &committed_date, &committed_author, 
+                                    TRUE, pool)))
+        goto cleanup;
 
       /* Make a note that we have a commit-in-progress. */
       commit_in_progress = TRUE;
@@ -861,29 +868,12 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
          Someday this should just be protected against by the server.  */
       for (i = 0; i < commit_items->nelts; i++)
         {
-          item = ((svn_client_commit_item_t **) commit_items->elts)[i];
+          svn_client_commit_item_t *item
+            = ((svn_client_commit_item_t **) commit_items->elts)[i];
           if ((item->kind == svn_node_dir)
               && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
-              && (! (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)))
-            break;
-        }
-
-      /* If we didn't clear the loop above without early exit, then we
-         have a directory with property mods.  */
-      if (i < commit_items->nelts)
-        {
-          svn_revnum_t head;
-          if ((cmt_err = get_ra_editor (&ra_baton, &session, &ra_lib, &head,
-                                        &editor, &edit_baton, auth_baton,
-                                        base_url, base_dir, base_dir_access,
-                                        log_msg, commit_items, &committed_rev, 
-                                        &committed_date, &committed_author, 
-                                        TRUE, pool)))
-            goto cleanup;
-
-          /* If the item's revision isn't the same as the HEAD
-             revision, bail out now. */
-          if (item->revision != head)
+              && (! (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
+              && item->revision != head)
             {
               cmt_err = svn_error_createf 
                 (SVN_ERR_WC_NOT_UP_TO_DATE, 0, NULL,
@@ -891,18 +881,6 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                  item->path);
               goto cleanup;
             }
-        }
-      /* No early loop exit above means we don't care about the HEAD
-         revision, so don't request it. */
-      else
-        {
-          if ((cmt_err = get_ra_editor (&ra_baton, &session, &ra_lib, NULL,
-                                        &editor, &edit_baton, auth_baton,
-                                        base_url, base_dir, base_dir_access,
-                                        log_msg, commit_items, &committed_rev, 
-                                        &committed_date, &committed_author, 
-                                        TRUE, pool)))
-            goto cleanup;
         }
     }
 

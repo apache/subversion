@@ -35,7 +35,7 @@ svn_fs__open_copies_table (DB **copies_p,
                            DB_ENV *env,
                            int create)
 {
-  const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
+  const int open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *copies;
 
   DB_ERR (svn_bdb__check_version());

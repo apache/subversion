@@ -434,8 +434,8 @@ svn_path_compare_paths (const char *path1,
      share with svn_path_compare_paths (if that other function stays
      around). */
 
-  apr_size_t path1_len = strlen (path1);
-  apr_size_t path2_len = strlen (path2);
+  int path1_len = strlen (path1);
+  int path2_len = strlen (path2);
 
   apr_size_t min_len = ((path1_len < path2_len) ? path1_len : path2_len);
   apr_size_t i = 0;

@@ -105,7 +105,7 @@ svn_hash_write (apr_hash_t *hash,
       err = apr_file_write_full (destfile, "\n", 1, NULL);
       if (err) return err;
 
-      err = apr_file_write_full (destfile, (const char *) key, keylen, NULL);
+      err = apr_file_write_full (destfile, (char *) key, keylen, NULL);
       if (err) return err;
 
       err = apr_file_write_full (destfile, "\n", 1, NULL);
