@@ -149,8 +149,8 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
   /* Working Baseline or Working (Version) Resource */
   if (db->resource->baselined)
     if (db->resource->working)
-      serr = svn_fs_change_txn_prop(db->resource->info->root.txn,
-                                    propname, value, db->resource->pool);
+      serr = svn_repos_fs_change_txn_prop(db->resource->info->root.txn,
+                                          propname, value, db->resource->pool);
     else
       /* ### VIOLATING deltaV: you can't proppatch a baseline, it's
          not a working resource!  But this is how we currently
@@ -161,9 +161,9 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
                                           db->resource->info->repos->username,
                                           propname, value, db->resource->pool);
   else
-    serr = svn_fs_change_node_prop(db->resource->info->root.root,
-                                   get_repos_path(db->resource->info),
-                                   propname, value, db->resource->pool);
+    serr = svn_repos_fs_change_node_prop(db->resource->info->root.root,
+                                         get_repos_path(db->resource->info),
+                                         propname, value, db->resource->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not change a property");
@@ -346,8 +346,8 @@ static dav_error *dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
   /* Working Baseline or Working (Version) Resource */
   if (db->resource->baselined)
     if (db->resource->working)
-      serr = svn_fs_change_txn_prop(db->resource->info->root.txn,
-                                    propname, NULL, db->resource->pool);
+      serr = svn_repos_fs_change_txn_prop(db->resource->info->root.txn,
+                                          propname, NULL, db->resource->pool);
     else
       /* ### VIOLATING deltaV: you can't proppatch a baseline, it's
          not a working resource!  But this is how we currently
@@ -358,9 +358,9 @@ static dav_error *dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
                                           db->resource->info->repos->username,
                                           propname, NULL, db->resource->pool);
   else
-    serr = svn_fs_change_node_prop(db->resource->info->root.root,
-                                   get_repos_path(db->resource->info),
-                                   propname, NULL, db->resource->pool);
+    serr = svn_repos_fs_change_node_prop(db->resource->info->root.root,
+                                         get_repos_path(db->resource->info),
+                                         propname, NULL, db->resource->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not remove a property");
