@@ -791,14 +791,14 @@ U   my-calc-branch/integer.c
           es una opción. Los dos conjuntos de cambios quizás sean
           imposibles de separar.</para>
 
-        <para>In cases like this, people take comfort in being able to
-          predict or examine merges before they happen.  One simple
-          way to do that is to run <command>svn diff</command> with
-          the same arguments you plan to pass to <command>svn
-          merge</command>, as we already showed in our first example
-          of merging.  Another method of previewing is to pass the
-          <option>--dry-run</option> option to the merge
-          command:</para>
+        <para>En casos como este, la gente se reconforta con la idea
+          de ser capaces de predecir o examinar las fusiones antes
+          de que ocurran. Una manera simple de hacerlo es ejecutar
+          <command>svn diff</command> con los mismos argumentos que
+          planea pasar a <command>svn merge</command>, tal y como
+          ya le enseñamos en el primer ejemplo de fusionado. Otro
+          método de visualización previa es pasar la opción
+          <option>--dry-run</option> al comando de fusionado:</para>
 
         <screen>
 $ svn merge --dry-run -r 343:344 http://svn.example.com/repos/calc/trunk
@@ -808,13 +808,14 @@ $ svn status
 #  nothing printed, working copy is still unchanged.
 </screen>
 
-        <para>The <option>--dry-run</option> option doesn't actually
-          apply any local changes to the working copy.  It only shows
-          status codes that <emphasis>would</emphasis> be printed in a
-          real merge.  It's useful for getting a <quote>high
-          level</quote> preview of the potential merge, for those
-          times when running <command>svn diff</command> gives too
-          much detail.</para>
+        <para>La opción <option>--dry-run</option> en realidad no
+          aplica ningún cambio a su copia local. Únicamente muestra
+          los códigos de estado que <emphasis>serían</emphasis>
+          mostrados durante una fusión de verdad.  Esto es útil
+          para obtener una visualización previa de <quote>alto
+          nivel</quote> de la potencial fusión, para aquellos
+          casos en los que ejecutar <command>svn diff</command>
+          proporcionaría demasiados detalles.</para>
 
       </sect3>
 
