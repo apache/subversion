@@ -335,7 +335,6 @@ svn_fs_close_fs (svn_fs_t *fs)
      pool, so just freeing the pool should shut everything down
      nicely.  But do catch an error, if one occurs.  */
   fs->cleanup_error = &svn_err;
-  svn_pool_destroy (fs->pool); 
 
   return svn_err;
 }
