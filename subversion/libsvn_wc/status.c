@@ -96,7 +96,8 @@ assemble_status (svn_wc_status_t *status,
       if (prop_modified_p)
         status->prop_status = svn_wc_status_modified;      
       
-      if (entry->state & SVN_WC_ENTRY_ADD)
+      if ((entry->schedule == svn_wc_schedule_add)
+          || (entry->schedule == svn_wc_schedule_replace))
         {
           /* If an entry has been marked for future addition to the
              repository, we *know* it has a textual component: */
@@ -108,7 +109,7 @@ assemble_status (svn_wc_status_t *status,
             status->prop_status = svn_wc_status_added;
         }
 
-      else if (entry->state & SVN_WC_ENTRY_DELETE)
+      else if (entry->schedule == svn_wc_schedule_delete)
         {
           status->text_status = svn_wc_status_deleted;
           
@@ -116,7 +117,7 @@ assemble_status (svn_wc_status_t *status,
             status->prop_status = svn_wc_status_deleted;
         }
 
-      if (entry->state & SVN_WC_ENTRY_CONFLICTED)
+      if (entry->conflicted)
         {
           /* We must decide if either component is "conflicted", based
              on whether reject files are mentioned and/or continue to

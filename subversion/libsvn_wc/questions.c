@@ -558,7 +558,7 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
   /* Note:  it's assumed that ENTRY is a particular entry inside
      DIR_PATH's entries file. */
   
-  if (entry->state & SVN_WC_ENTRY_CONFLICTED)
+  if (entry->conflicted)
     {
       /* Get up to two reject files */
       rej_file = apr_hash_get (entry->attributes,

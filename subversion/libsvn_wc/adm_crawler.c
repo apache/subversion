@@ -357,7 +357,7 @@ do_apply_textdelta (svn_string_t *filename,
                          local_tmp_path->data);
 
   textbasefile = NULL; /* paranoia! */
-  if (! (tb->entry->state & SVN_WC_ENTRY_ADD))
+  if (! (tb->entry->schedule == svn_wc_schedule_add))
     {
       err = svn_wc__open_text_base (&textbasefile, filename, APR_READ, pool);
       if (err)
@@ -532,7 +532,7 @@ bail_if_unresolved_conflict (svn_string_t *full_path,
 {
   svn_error_t *err;
 
-  if (entry->state & SVN_WC_ENTRY_CONFLICTED)
+  if (entry->conflicted)
     {
       /* We must decide if either component is "conflicted", based
          on whether reject files are mentioned and/or continue to
@@ -579,17 +579,36 @@ bail_if_unresolved_conflict (svn_string_t *full_path,
 }
 
 
-/* Given a directory DIR under revision control, verify that it is
-   marked for deletion, and that all of its children are marked for
-   deletion. */
+/* Given a directory DIR under revision control with schedule
+   SCHEDULE:
+
+   - if SCHEDULE is svn_wc_schedule_delete, all children of this
+     directory must have a schedule _delete.
+
+   - else, if SCHEDULE is svn_wc_schedule_replace, all children of
+     this directory must have a schedule of either _add or _delete.
+
+   - else, this directory must not be marked for deletion, which is an
+     automatic to fail this verifation!
+*/
 static svn_error_t *
-verify_deleted_tree (svn_string_t *dir,
-                     apr_pool_t *pool)
+verify_tree_deletion (svn_string_t *dir,
+                      enum svn_wc_schedule_t schedule,
+                      apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_string_t *fullpath = svn_string_dup (dir, pool);
+
+  if ((schedule != svn_wc_schedule_delete) 
+      && (schedule != svn_wc_schedule_replace))
+    {
+      return svn_error_createf 
+        (SVN_ERR_WC_FOUND_CONFLICT, 0, NULL, pool,
+         "Aborting commit: '%s' not scheduled for deletion as expected.",
+         dir->data);
+    }
 
   /* Read the entries file for this directory. */
   SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
@@ -612,16 +631,32 @@ verify_deleted_tree (svn_string_t *dir,
       if (! is_this_dir)
         svn_path_add_component_nts (fullpath, key, svn_path_local_style);
 
-      /* If this entry is not marked for deletion, quit here. */
-      if (! (entry->state & SVN_WC_ENTRY_DELETE))
-        return svn_error_createf 
-          (SVN_ERR_WC_FOUND_CONFLICT, 0, NULL, pool,
-           "Aborting commit: '%s' dangling in deleted directory.",
-           fullpath->data);
+      /* If parent is marked for deletion only, this entry must be
+         marked the same way. */
+      if ((schedule == svn_wc_schedule_delete)
+          && (entry->schedule != svn_wc_schedule_delete))
+        {
+          return svn_error_createf 
+            (SVN_ERR_WC_FOUND_CONFLICT, 0, NULL, pool,
+             "Aborting commit: '%s' dangling in deleted directory.",
+             fullpath->data);
+        }
+      /* If parent is marked for both deletion and addition, this
+         entry must be marked for either deletion only or addition
+         only. */
+      if ((schedule == svn_wc_schedule_replace)
+          && (! ((entry->schedule == svn_wc_schedule_delete)
+                 || (entry->schedule == svn_wc_schedule_add))))
+        {
+          return svn_error_createf 
+            (SVN_ERR_WC_FOUND_CONFLICT, 0, NULL, pool,
+             "Aborting commit: '%s' dangling in replaced directory.",
+             fullpath->data);
+        }
 
       /* Recurse on subdirectories. */
       if ((entry->kind == svn_node_dir) && (! is_this_dir))
-        SVN_ERR (verify_deleted_tree (fullpath, subpool));
+        SVN_ERR (verify_tree_deletion (fullpath, entry->schedule, subpool));
 
       /* Reset FULLPATH to just hold this dir's name. */
       svn_string_set (fullpath, dir->data);
@@ -706,10 +741,11 @@ report_local_mods (svn_string_t *path,
       svn_error_createf (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, subpool,
                          "Can't find `.' entry in %s", path->data);
 
-  /* If the `.' entry is marked as ADDED, then we *only* want to
+  /* If the `.' entry is marked with ADD, then we *only* want to
      notice child entries that are also added.  It makes no sense to
      look for deletes or local mods in an added directory. */
-  if (this_dir->state & SVN_WC_ENTRY_ADD)
+  if ((this_dir->schedule == svn_wc_schedule_add)
+      || (this_dir->schedule == svn_wc_schedule_replace))
     only_add_entries = TRUE;
                              
   /**                           **/
@@ -736,6 +772,8 @@ report_local_mods (svn_string_t *path,
       svn_string_t *current_entry_name;
       svn_wc_entry_t *current_entry; 
       svn_string_t *full_path_to_entry;
+      int do_add = FALSE; 
+      int do_delete = FALSE;
       
       /* Get the next entry name (and structure) from the hash */
       apr_hash_this (entry_index, &key, &klen, &val);
@@ -746,7 +784,11 @@ report_local_mods (svn_string_t *path,
       else
         current_entry_name = svn_string_create (keystring, subpool);
       current_entry = (svn_wc_entry_t *) val;
-      
+      do_add = ((current_entry->schedule == svn_wc_schedule_add)
+                || (current_entry->schedule == svn_wc_schedule_replace));
+      do_delete = ((current_entry->schedule == svn_wc_schedule_delete)
+                   || (current_entry->schedule == svn_wc_schedule_replace));
+
       /* If we're only looking to commit a single file in this dir,
          then skip past all irrelevant entries. */
       if (filename)
@@ -784,8 +826,7 @@ report_local_mods (svn_string_t *path,
        */
       
       /* DELETION CHECK */
-      if ((current_entry->state & SVN_WC_ENTRY_DELETE)
-          && (current_entry_name) && (! only_add_entries))
+      if (do_delete && current_entry_name && (! only_add_entries))
         {
           /* Do what's necessary to get a baton for current directory */
           if (! dir_baton)
@@ -797,7 +838,9 @@ report_local_mods (svn_string_t *path,
              that all the directory's children are also marked for
              deletion.  If not, we're in a screwy state. */
           if (current_entry->kind == svn_node_dir)
-            SVN_ERR(verify_deleted_tree (full_path_to_entry, subpool));
+            SVN_ERR (verify_tree_deletion (full_path_to_entry, 
+                                           current_entry->schedule,
+                                           subpool));
           
           /* Delete the entry */
           err = editor->delete_entry (current_entry_name, dir_baton);
@@ -816,7 +859,7 @@ report_local_mods (svn_string_t *path,
   
 
       /* ADDITION CHECK */
-      if ((current_entry->state & SVN_WC_ENTRY_ADD) && (current_entry_name))
+      if (do_add && current_entry_name)
         {
           /* Create an affected-target object */
           svn_string_t *longpath;
@@ -976,7 +1019,7 @@ report_local_mods (svn_string_t *path,
                      sending postfix text-deltas.)*/
                   if ((current_entry->kind == svn_node_file)
                       && (! text_modified_p))
-                    SVN_ERR(editor->close_file (tb->editor_baton));
+                    SVN_ERR (editor->close_file (tb->editor_baton));
                 }
           
               /* Store the affected-target for safe keeping (possibly
@@ -996,17 +1039,17 @@ report_local_mods (svn_string_t *path,
       */
       if ((current_entry->kind == svn_node_dir) 
           && (current_entry_name)
-          && (current_entry->state != SVN_WC_ENTRY_DELETE))
-        /* Recurse, using new_dir_baton, which will most often be
-           NULL (unless the entry is a newly added directory.)  Why
-           NULL?  Because that will later force a call to
-           do_dir_replaces() and get the _correct_ dir baton for the
-           child directory. */
-        SVN_ERR(report_local_mods (full_path_to_entry, new_dir_baton, filename,
-                                   editor, edit_baton, stack,
-                                   affected_targets, locks, top_pool));
-  
-
+          && (current_entry->schedule != svn_wc_schedule_delete))
+        {
+          /* Recurse, using new_dir_baton, which will most often be
+             NULL (unless the entry is a newly added directory.)  Why
+             NULL?  Because that will later force a call to
+             do_dir_replaces() and get the _correct_ dir baton for the
+             child directory. */
+          SVN_ERR (report_local_mods (full_path_to_entry, new_dir_baton, 
+                                      filename, editor, edit_baton, stack,
+                                      affected_targets, locks, top_pool));
+        }
       /* -- Done examining current_entry --  */      
     }
 

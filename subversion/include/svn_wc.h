@@ -98,6 +98,23 @@ svn_error_t *svn_wc_props_modified_p (svn_boolean_t *modified_p,
 
 /*** Entries and status. ***/
 
+enum svn_wc_schedule_t
+{
+  svn_wc_schedule_normal,       /* Nothing special here */
+  svn_wc_schedule_add,          /* Slated for addition */
+  svn_wc_schedule_delete,       /* Slated for deletion */
+  svn_wc_schedule_replace,      /* Slated for replacement (delete + add) */
+  svn_wc_schedule_unadd,        /* Slated for un-addition */
+  svn_wc_schedule_undelete,     /* Slated for un-deletion */
+};
+
+enum svn_wc_existence_t
+{
+  svn_wc_existence_normal = 0,  /* Nothing unusual here */
+  svn_wc_existence_added,       /* Added to revision control */  
+  svn_wc_existence_deleted,     /* Deleted from revision control */
+};
+
 /* A working copy entry -- that is, revision control information about
    one versioned entity. */
 typedef struct svn_wc_entry_t
@@ -110,7 +127,10 @@ typedef struct svn_wc_entry_t
   svn_string_t *ancestor;      /* Base path.  (Required) */
   enum svn_node_kind kind;     /* Is it a file, a dir, or... ? (Required) */
 
-  int state;                   /* Bitmasks.  Entry modified?  conflicted?.. */
+  /* State information. */
+  enum svn_wc_schedule_t schedule;
+  enum svn_wc_existence_t existence;
+  svn_boolean_t conflicted;
 
   apr_time_t text_time;        /* When the file's text was last
                                   up-to-date.  (Zero means not
@@ -126,32 +146,25 @@ typedef struct svn_wc_entry_t
 } svn_wc_entry_t;
 
 
-#define SVN_WC_ENTRY_ATTR_NAME      "name"
-#define SVN_WC_ENTRY_ATTR_REVISION  "revision"
-#define SVN_WC_ENTRY_ATTR_KIND      "kind"
-#define SVN_WC_ENTRY_ATTR_TEXT_TIME "text-time"
-#define SVN_WC_ENTRY_ATTR_PROP_TIME "prop-time"
-#define SVN_WC_ENTRY_ATTR_CHECKSUM  "checksum"
-#define SVN_WC_ENTRY_ATTR_ADD       "add"
-#define SVN_WC_ENTRY_ATTR_DELETE    "delete"
-#define SVN_WC_ENTRY_ATTR_DELETED   "deleted"
-#define SVN_WC_ENTRY_ATTR_MERGED    "merged"
-#define SVN_WC_ENTRY_ATTR_CONFLICT  "conflict"
-#define SVN_WC_ENTRY_ATTR_ANCESTOR  "ancestor"
-#define SVN_WC_ENTRY_ATTR_REJFILE   "text-reject-file"
-#define SVN_WC_ENTRY_ATTR_PREJFILE  "prop-reject-file"
+#define SVN_WC_ENTRY_ATTR_NAME        "name"
+#define SVN_WC_ENTRY_ATTR_REVISION    "revision"
+#define SVN_WC_ENTRY_ATTR_KIND        "kind"
+#define SVN_WC_ENTRY_ATTR_TEXT_TIME   "text-time"
+#define SVN_WC_ENTRY_ATTR_PROP_TIME   "prop-time"
+#define SVN_WC_ENTRY_ATTR_CHECKSUM    "checksum"
+#define SVN_WC_ENTRY_ATTR_SCHEDULE    "schedule"
+#define SVN_WC_ENTRY_ATTR_EXISTENCE   "existence"
+#define SVN_WC_ENTRY_ATTR_CONFLICTED  "conflicted"
+#define SVN_WC_ENTRY_ATTR_ANCESTOR    "ancestor"
+#define SVN_WC_ENTRY_ATTR_REJFILE     "text-reject-file"
+#define SVN_WC_ENTRY_ATTR_PREJFILE    "prop-reject-file"
 
-
-/* Bitmasks for `svn_wc_entry_t.state'.
-   REMINDER: if you add a new mask here, make sure to update
-   sync_entry() in entries.c. */
-#define SVN_WC_ENTRY_ADD           1  /* entry marked for addition */
-#define SVN_WC_ENTRY_DELETE        2  /* entry marked for deletion */
-#define SVN_WC_ENTRY_DELETED       4  /* entry deleted */
-#define SVN_WC_ENTRY_MERGED        8  /* wfile merged as of timestamp */
-#define SVN_WC_ENTRY_CONFLICTED   16  /* wfile conflicted as of timestamp */
-#define SVN_WC_ENTRY_CLEAR_NAMED  32  /* action: clear mentioned flags */
-#define SVN_WC_ENTRY_CLEAR_ALL    64  /* action: clear all flags */
+/* Attribute values */
+#define SVN_WC_ENTRY_VALUE_ADD        "add"
+#define SVN_WC_ENTRY_VALUE_DELETE     "delete"
+#define SVN_WC_ENTRY_VALUE_REPLACE    "replace"
+#define SVN_WC_ENTRY_VALUE_ADDED      "added"
+#define SVN_WC_ENTRY_VALUE_DELETED    "deleted"
 
 /* How an entries file's owner dir is named in the entries file. */
 #define SVN_WC_ENTRY_THIS_DIR  "svn:this_dir"

@@ -174,16 +174,19 @@ free_dir_baton (struct dir_baton *dir_baton)
      checkout. */
   if (dir_baton->edit_baton->is_checkout || parent)
     {
-      SVN_ERR (svn_wc__entry_fold_sync_intelligently
+      SVN_ERR (svn_wc__entry_modify
                (dir_baton->path,
                 NULL,
+                SVN_WC__ENTRY_MODIFY_REVISION,
                 dir_baton->edit_baton->target_revision,
                 svn_node_dir,
+                svn_wc_schedule_normal,
+                svn_wc_existence_normal,
+                FALSE,
                 0,
                 0,
-                0,
-                dir_baton->pool,
                 NULL,
+                dir_baton->pool,
                 NULL));
     }
 
@@ -574,16 +577,19 @@ add_directory (svn_string_t *name,
 
   /* Notify the parent that this child dir exists.  This can happen
      right away, there is no need to wait until the child is done. */
-  err = svn_wc__entry_fold_sync_intelligently (parent_dir_baton->path,
-                                               this_dir_baton->name,
-                                               SVN_INVALID_REVNUM,
-                                               svn_node_dir,
-                                               0,
-                                               0,
-                                               0,
-                                               parent_dir_baton->pool,
-                                               NULL,
-                                               NULL);
+  err = svn_wc__entry_modify (parent_dir_baton->path,
+                              this_dir_baton->name,
+                              SVN_WC__ENTRY_MODIFY_KIND,
+                              SVN_INVALID_REVNUM,
+                              svn_node_dir,
+                              svn_wc_schedule_normal,
+                              svn_wc_existence_normal,
+                              FALSE,
+                              0,
+                              0,
+                              NULL,
+                              parent_dir_baton->pool,
+                              NULL);
   if (err)
     return err;
 
@@ -1331,6 +1337,9 @@ close_file (void *file_baton)
                          SVN_WC__LOG_MODIFY_ENTRY,
                          SVN_WC__LOG_ATTR_NAME,
                          fb->name,
+                         SVN_WC_ENTRY_ATTR_KIND,
+                         svn_string_create (SVN_WC__ENTRIES_ATTR_FILE_STR, 
+                                            fb->pool),
                          SVN_WC_ENTRY_ATTR_REVISION,
                          svn_string_create (revision_str, fb->pool),
                          NULL);
