@@ -14,35 +14,37 @@ sys.modules['svnfs_bsddb'] = bsddb
 from svnfs_bsddb.db import *
 
 class Ctx:
-  def __init__(self):
+  def __init__(self, dbhome, readonly=None, dbenv=None):
     self.env = self.uuids_db = self.revs_db = self.txns_db = self.changes_db \
         = self.copies_db = self.nodes_db = self.reps_db = self.strings_db = \
         None
-
-  def open(self, env, dbhome, readonly=None):
-    self.env = env
-    self.env.set_lk_detect(DB_LOCK_DEFAULT)
-    self.env.set_get_returns_none(1)
     try:
-      self.env.open(dbhome, DB_JOINENV)
-    except bsddb._db.DBNoSuchFileError:
-      self.env.open(dbhome, DB_CREATE | DB_INIT_MPOOL | DB_INIT_TXN \
-          | DB_INIT_LOCK | DB_INIT_LOG)
-    def open_db(dbname):
-      db = DB(self.env)
-      dbflags = 0
-      if readonly:
-        dbflags = DB_RDONLY
-      db.open(dbname, flags=dbflags)
-      return db
-    self.uuids_db   = open_db('uuids')
-    self.revs_db    = open_db('revisions')
-    self.txns_db    = open_db('transactions')
-    self.changes_db = open_db('changes')
-    self.copies_db  = open_db('copies')
-    self.nodes_db   = open_db('nodes')
-    self.reps_db    = open_db('representations')
-    self.strings_db = open_db('strings')
+      self.env = dbenv or DBEnv()
+      self.env.set_lk_detect(DB_LOCK_DEFAULT)
+      self.env.set_get_returns_none(1)
+      try:
+        self.env.open(dbhome, DB_JOINENV)
+      except bsddb._db.DBNoSuchFileError:
+        self.env.open(dbhome, DB_CREATE | DB_INIT_MPOOL | DB_INIT_TXN \
+            | DB_INIT_LOCK | DB_INIT_LOG)
+      def open_db(dbname):
+        db = DB(self.env)
+        dbflags = 0
+        if readonly:
+          dbflags = DB_RDONLY
+        db.open(dbname, flags=dbflags)
+        return db
+      self.uuids_db   = open_db('uuids')
+      self.revs_db    = open_db('revisions')
+      self.txns_db    = open_db('transactions')
+      self.changes_db = open_db('changes')
+      self.copies_db  = open_db('copies')
+      self.nodes_db   = open_db('nodes')
+      self.reps_db    = open_db('representations')
+      self.strings_db = open_db('strings')
+    except:
+      self.close()
+      raise
   
   def close(self):
     def close_if_not_None(i):
@@ -57,6 +59,9 @@ class Ctx:
     close_if_not_None(self.reps_db    )    
     close_if_not_None(self.strings_db )    
     close_if_not_None(self.env        )    
+    self.env = self.uuids_db = self.revs_db = self.txns_db = self.changes_db \
+        = self.copies_db = self.nodes_db = self.reps_db = self.strings_db = \
+        None
 
   # And now, some utility functions
   def get_whole_string(self, key):

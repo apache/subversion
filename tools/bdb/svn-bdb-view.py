@@ -4,10 +4,7 @@
 #
 
 import sys, os, re, codecs, textwrap
-
 import skel, svnfs
-
-from svnfs_bsddb.db import *
 
 # Parse arguments
 if len(sys.argv) == 2:
@@ -250,17 +247,14 @@ modules = (
 def main():
   print "Repository View for '%s'" % dbhome
   print
-  ctx = svnfs.Ctx()
+  ctx = svnfs.Ctx(dbhome, readonly=1)
   # Stash process state in a library data structure. Yuck!
   ctx.verbose = 0
   try:
-    ctx.open(DBEnv(), dbhome, readonly=1)
-
     for am in modules:
       print "MODULE: %s" % am.__doc__
       am(ctx)
       print
-
   finally:
     ctx.close()
 

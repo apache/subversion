@@ -4,10 +4,7 @@
 #
 
 import sys, os
-
 import skel, svnfs
-
-from svnfs_bsddb.db import *
 
 def main():
   if len(sys.argv) == 2:
@@ -33,9 +30,8 @@ def main():
     sys.exit(0)
   print "Opening database environment..."
   cur = None
-  ctx = svnfs.Ctx()
+  ctx = svnfs.Ctx(dbhome)
   try:
-    ctx.open(DBEnv(), dbhome)
     cur = ctx.nodes_db.cursor()
     nodecount = 0
     newrep = skel.Rep()
