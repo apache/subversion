@@ -412,8 +412,24 @@ create_conf (svn_fs_t *fs, const char *path)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
                                 "creating conf file `%s'", this_path);
     
-    contents =
-      "# START-COMMIT HOOKS\n";
+    contents = 
+      "START-COMMIT HOOK\n"
+      "\n"
+      "A start-commit hook is one that is invoked prior to\n"
+      "starting a commit.  Subversion executes the start-commit\n"
+      "hook by attempting to run a program (script, executable\n"
+      "binary, etc.) named `" SVN_FS__REPOS_HOOK_START_COMMIT "' with\n"
+      "the following ordered arguments:\n"
+      "\n"
+      "   [1] REPOS-PATH (the path to this repository)\n"
+      "   [2] USER (the name of the user starting the commit)\n"
+      "\n"
+      "On a Unix system, you might have a script named\n"
+      "`" SVN_FS__REPOS_HOOK_START_COMMIT "' which calls several other\n"
+      "commands.  On a Windows system, you might instead have\n"
+      "`" SVN_FS__REPOS_HOOK_START_COMMIT ".bat' or perhaps even\n"
+      "`" SVN_FS__REPOS_HOOK_START_COMMIT ".exe' for doing the same thing.\n"
+      "\n";
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
@@ -439,24 +455,26 @@ create_conf (svn_fs_t *fs, const char *path)
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
                                 "creating conf file `%s'", this_path);
-    
-    contents =
-      "# Pre-commit hooks: invoke a hook program before a txn is committed.\n"
-      "# One of the arguments may be \"$txn\", which is substituted with a\n"
-      "# Subversion txn id at the time the hook is run.  Another may be\n"
-      "# \"$repos\", which is substituted with the absolute path to the\n"
-      "# repository in which the txn can be found.\n"
-      "#\n"
-      "# If a hook program exits with non-zero status, the txn will be\n"
-      "# discarded and no commit will take place; if all exit with zero\n"
-      "# (successful) status, the txn will be committed.\n"
-      "#\n"
-      "# All hooks are run, until one fails or there are no more left.\n"
-      "#\n"
-      "# EXAMPLE:\n"
-      "#\n"
-      "# my-pre-commit-hook.py some_arg --repository $repos --txn-id $txn\n";
 
+    contents =
+      "PRE-COMMIT HOOK\n"
+      "\n"
+      "A pre-commit hook is one that is invoked prior to committing\n"
+      "a transaction.  Subversion executes the pre-commit hook by\n"
+      "attempting to run a program (script, executable binary,\n"
+      "etc.) named `" SVN_FS__REPOS_HOOK_PRE_COMMIT "' with the following\n"
+      "ordered arguments:\n"
+      "\n"
+      "   [1] REPOS-PATH (the path to this repository)\n"
+      "   [2] TXN-NAME (the name of the commit transaction)\n"
+      "\n"
+      "On a Unix system, you might have a script named\n"
+      "`" SVN_FS__REPOS_HOOK_PRE_COMMIT "' which calls several other\n"
+      "commands.  On a Windows system, you might instead have\n"
+      "`" SVN_FS__REPOS_HOOK_PRE_COMMIT ".bat' or perhaps even\n"
+      "`" SVN_FS__REPOS_HOOK_PRE_COMMIT ".exe' for doing the same thing.\n"
+      "\n";
+    
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
       return svn_error_createf (apr_err, 0, NULL, fs->pool, 
@@ -483,18 +501,23 @@ create_conf (svn_fs_t *fs, const char *path)
                                 "creating conf file `%s'", this_path);
     
     contents =
-      "# Post-commit hooks: invoke a hook program when a new revision is\n"
-      "# committed.  One of the arguments may be \"$rev\", which is\n"
-      "# substituted with the revision number of the newly-committed tree.\n"
-      "# Another may be \"$repos\", which is substituted with the absolute\n"
-      "# path to the repository in which the revision was committed.\n"
-      "#\n"
-      "# All hooks are run, regardless of the success or failure\n"
-      "# of any one hook.\n"
-      "#\n"
-      "# EXAMPLE:\n"
-      "#\n"
-      "# my-post-commit-hook.pl blah --repository $repos --revision $rev\n";
+      "POST-COMMIT HOOK\n"
+      "\n"
+      "A post-commit hook is one that is invoked when a new revision\n"
+      "is committed.  Subversion executes the post-commit hook by\n"
+      "attempting to run a program (script, executable binary,\n"
+      "etc.) named `" SVN_FS__REPOS_HOOK_POST_COMMIT "' with the following\n"
+      "ordered arguments:\n"
+      "\n"
+      "   [1] REPOS-PATH (the path to this repository)\n"
+      "   [2] REVISION (the just-created revision number)\n"
+      "\n"
+      "On a Unix system, you might have a script named\n"
+      "`" SVN_FS__REPOS_HOOK_POST_COMMIT "' which calls several other\n"
+      "commands.  On a Windows system, you might instead have\n"
+      "`" SVN_FS__REPOS_HOOK_POST_COMMIT ".bat' or perhaps even\n"
+      "`" SVN_FS__REPOS_HOOK_POST_COMMIT ".exe' for doing the same thing.\n"
+      "\n";
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
@@ -522,7 +545,11 @@ create_conf (svn_fs_t *fs, const char *path)
                                 "creating conf file `%s'", this_path);
     
     contents =
-      "# Read-sentinels: invocation conventions and protocol TBD.\n";
+      "READ-SENTINEL\n"
+      "\n"
+      "The invocation convention and protocol for the read-sentinel\n"
+      "is yet to be defined.\n"
+      "\n";
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
@@ -550,7 +577,11 @@ create_conf (svn_fs_t *fs, const char *path)
                                 "creating conf file `%s'", this_path);
     
     contents =
-      "# Write-sentinels: invocation conventions and protocol TBD.\n";
+      "WRITE-SENTINEL\n"
+      "\n"
+      "The invocation convention and protocol for the write-sentinel\n"
+      "is yet to be defined.\n"
+      "\n";
 
     apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
     if (apr_err)
