@@ -96,8 +96,7 @@ assemble_status (svn_wc_status_t *status,
       if (prop_modified_p)
         status->prop_status = svn_wc_status_modified;      
       
-      if ((entry->schedule == svn_wc_schedule_add)
-          || (entry->schedule == svn_wc_schedule_replace))
+      if (entry->schedule == svn_wc_schedule_add)
         {
           /* If an entry has been marked for future addition to the
              repository, we *know* it has a textual component: */
@@ -107,6 +106,14 @@ assemble_status (svn_wc_status_t *status,
              it does, report that portion as "added" too. */
           if (prop_exists)
             status->prop_status = svn_wc_status_added;
+        }
+
+      else if (entry->schedule == svn_wc_schedule_replace)
+        {
+          status->text_status = svn_wc_status_replaced;
+          
+          if (prop_exists)
+            status->prop_status = svn_wc_status_replaced;
         }
 
       else if (entry->schedule == svn_wc_schedule_delete)

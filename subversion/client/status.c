@@ -48,6 +48,9 @@ generate_status_codes (char *str_status,
     case svn_wc_status_deleted:
       text_statuschar = 'D';
       break;
+    case svn_wc_status_replaced:
+      text_statuschar = 'R';
+      break;
     case svn_wc_status_modified:
       text_statuschar = 'M';
       break;
