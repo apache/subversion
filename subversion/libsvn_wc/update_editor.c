@@ -1230,9 +1230,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
   const char *parent_dir, *base_name;
   svn_stringbuf_t *log_accum;
   svn_boolean_t is_locally_modified;
-  svn_boolean_t
-    translation_prop_changed = FALSE,
-    executable_prop_changed = FALSE;
+  svn_boolean_t magic_props_changed = FALSE;
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
 
@@ -1367,11 +1365,10 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
             svn_prop_t *propchange
               = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
             
-            if (strcmp (propchange->name, SVN_PROP_EXECUTABLE) == 0)
-              executable_prop_changed = TRUE;
-            else if ((strcmp (propchange->name, SVN_PROP_KEYWORDS) == 0)
-                     || (strcmp (propchange->name, SVN_PROP_EOL_STYLE) == 0))
-              translation_prop_changed = TRUE;
+            if ((! strcmp (propchange->name, SVN_PROP_EXECUTABLE))
+                || (! strcmp (propchange->name, SVN_PROP_KEYWORDS))
+                || (! strcmp (propchange->name, SVN_PROP_EOL_STYLE)))
+              magic_props_changed = TRUE;
           }
       }
 
@@ -1460,37 +1457,31 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
       txtb     = svn_wc__text_base_path (base_name, FALSE, pool);
       tmp_txtb = svn_wc__text_base_path (base_name, TRUE, pool);
     }
-  else
+  else if (magic_props_changed) /* no new text base, but... */
     {
-      /* Special cases: it's possible that this file installation only
-         involves prop changes, but that some of those pro changes
-         require tweaking the working file. */
-      
-      if (executable_prop_changed)
-        SVN_ERR (svn_io_set_file_executable (file_path, TRUE, TRUE, pool));
-          
-      if (translation_prop_changed)
-        {
-          const char *tmptext = svn_wc__text_base_path (base_name, TRUE, pool);
-          
-          /* A log command which copies and DEtranslates the working file
-             to a tmp-text-base. */
-          svn_xml_make_open_tag (&log_accum, pool,
-                                 svn_xml_self_closing,
-                                 SVN_WC__LOG_CP_AND_DETRANSLATE,
-                                 SVN_WC__LOG_ATTR_NAME, base_name,
-                                 SVN_WC__LOG_ATTR_DEST, tmptext,
-                                 NULL);
-          
-          /* A log command that copies the tmp-text-base and REtranslates
-             the tmp-text-base back to the working file. */
-          svn_xml_make_open_tag (&log_accum, pool,
-                                 svn_xml_self_closing,
-                                 SVN_WC__LOG_CP_AND_TRANSLATE,
-                                 SVN_WC__LOG_ATTR_NAME, tmptext,
-                                 SVN_WC__LOG_ATTR_DEST, base_name,
-                                 NULL);
-        }
+      /* Special edge-case: it's possible that this file installation
+         only involves propchanges, but that some of those props still
+         require a retranslation of the working file. */
+
+      const char *tmptext = svn_wc__text_base_path (base_name, TRUE, pool);
+
+      /* A log command which copies and DEtranslates the working file
+         to a tmp-text-base. */
+      svn_xml_make_open_tag (&log_accum, pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_CP_AND_DETRANSLATE,
+                             SVN_WC__LOG_ATTR_NAME, base_name,
+                             SVN_WC__LOG_ATTR_DEST, tmptext,
+                             NULL);
+
+      /* A log command that copies the tmp-text-base and REtranslates
+         the tmp-text-base back to the working file. */
+      svn_xml_make_open_tag (&log_accum, pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_CP_AND_TRANSLATE,
+                             SVN_WC__LOG_ATTR_NAME, tmptext,
+                             SVN_WC__LOG_ATTR_DEST, base_name,
+                             NULL);
     }
 
   /* Write log entry which will bump the revision number.  Also, just
