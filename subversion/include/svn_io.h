@@ -356,6 +356,31 @@ svn_error_t *svn_io_run_diff (const char *dir,
                               apr_file_t *errfile,
                               apr_pool_t *pool);
 
+
+/*  Invoke SVN_CLIENT_DIFF3 within like this:
+
+            diff3 -Em MINE OLDER YOURS > MERGED
+
+   (Read documentation on diff3 for details about how this behaves.)
+
+   The `diff3` command will execute in DIR, and return the exit status
+   in *EXITCODE.
+
+   The caller must insure that MINE, OLDER, and YOURS are files that
+   already exist, and they must be *relative* paths below DIR.
+
+   MERGED must also be relative to DIR, but may or may not exist.  If
+   non-existent, it will be created.  If it exists, it will be
+   overwritten.  */
+svn_error_t *svn_io_run_diff3 (const char *dir,
+                               const char *mine,
+                               const char *older,
+                               const char *yours,
+                               const char *merged,
+                               int *exitcode,
+                               apr_pool_t *pool);
+
+
 /* Examine FILE to determine if it can be described by a known (as in,
    known by this function) Multipurpose Internet Mail Extension (MIME)
    type.  If so, set MIMETYPE to a character string describing the
