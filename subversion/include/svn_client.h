@@ -1048,6 +1048,8 @@ svn_client_propset (const char *propname,
  * rev affected in @a *set_rev.  A @a propval of @c NULL will delete the 
  * property.
  *
+ * If @a force is true, allow newlines in the author property.
+ *
  * If @a propname is an svn-controlled property (i.e. prefixed with
  * @c SVN_PROP_PREFIX), then the caller is responsible for ensuring that
  * the value UTF8-encoded and uses LF line-endings.
@@ -1068,6 +1070,7 @@ svn_client_revprop_set (const char *propname,
                         const svn_opt_revision_t *revision,
                         svn_revnum_t *set_rev,
                         svn_client_ctx_t *ctx,
+                        svn_boolean_t force,
                         apr_pool_t *pool);
                         
 /** Set @a *props to a hash table whose keys are `<tt>char *</tt>' paths,

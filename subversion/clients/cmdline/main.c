@@ -350,7 +350,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "  1. Edits versioned props in working copy.\n"
     "  2. Edits unversioned remote prop on repos revision.\n",
     {'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__encoding_opt, svn_cl__editor_cmd_opt} },
+     svn_cl__encoding_opt, svn_cl__editor_cmd_opt, svn_cl__force_opt} },
   
   { "propget", svn_cl__propget, {"pget", "pg"},
     "Print value of PROPNAME on files, dirs, or revisions.\n"
@@ -409,7 +409,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     "        foo             http://example.com/repos/zig\n"
     "        foo/bar -r 1234 http://example.com/repos/zag\n",
     {'F', 'q', 'r', svn_cl__targets_opt, 'R', svn_cl__revprop_opt,
-     SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt} },
+     SVN_CL__AUTH_OPTIONS, svn_cl__encoding_opt, svn_cl__force_opt} },
   
   { "resolve", svn_cl__resolve, {0},
     "Remove 'conflicted' state on working copy files or directories.\n"

@@ -692,6 +692,10 @@ SVN_ERROR_START
               SVN_ERR_CLIENT_CATEGORY_START + 9,
               "Inter-repository relocation not allowed")
 
+  SVN_ERRDEF (SVN_ERR_CLIENT_REVISION_AUTHOR_CONTAINS_NEWLINE,
+              SVN_ERR_CLIENT_CATEGORY_START + 10,
+              SVN_PROP_REVISION_AUTHOR " contains a newline.")
+
   /* misc errors */
 
   SVN_ERRDEF (SVN_ERR_BASE,
