@@ -205,14 +205,15 @@ class Generator(gen_base.GeneratorBase):
 
     for objname, sources in self.graph.get_deps(gen_base.DT_SWIG_C):
       deps = string.join(sources)
-      self.ofile.write('%s: %s\n\t$(RUN_SWIG_%s)\n'
-                       % (objname, deps, string.upper(objname.lang_abbrev)))
+      self.ofile.write('%s: %s\n\t$(RUN_SWIG_%s) %s\n'
+                       % (objname, deps, string.upper(objname.lang_abbrev),
+                          sources[0]))
 
     for objname, sources in self.graph.get_deps(gen_base.DT_OBJECT):
       deps = string.join(sources)
       cmd = getattr(objname, 'build_cmd', '')
       if cmd:
-        self.ofile.write('%s: %s\n\t%s\n' % (objname, deps, cmd))
+        self.ofile.write('%s: %s\n\t%s %s\n' % (objname, deps, cmd, sources[0]))
       else:
         self.ofile.write('%s: %s\n' % (objname, deps))
 
