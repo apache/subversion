@@ -641,7 +641,57 @@ svn_fs__dag_delete (dag_node_t *parent,
                     const char *txn_id,
                     apr_pool_t *pool)
 {
-  abort ();
+  svn_fs__node_revision_t *parent_noderev;
+  apr_hash_t *entries;
+  svn_fs_t *fs = parent->fs;
+  svn_fs_dirent_t *dirent;
+  dag_node_t *node;
+
+  /* Make sure parent is a directory. */
+  if (parent->kind != svn_node_dir)
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_DIRECTORY, NULL,
+       "Attempted to delete entry '%s' from *non*-directory node", name);
+
+  /* Make sure parent is mutable. */
+  if (! svn_fs__dag_check_mutable (parent, txn_id))
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_MUTABLE, NULL,
+       "Attempted to delete entry '%s' from immutable directory node", name);
+
+  /* Make sure that NAME is a single path component. */
+  if (! svn_path_is_single_path_component (name))
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_SINGLE_PATH_COMPONENT, NULL,
+       "Attempted to delete a node with an illegal name '%s'", name);
+
+  /* Get a fresh NODE-REVISION for the parent node. */
+  SVN_ERR (get_node_revision (&parent_noderev, parent, pool));
+
+  /* Get a dirent hash for this directory. */
+  SVN_ERR (svn_fs__fs_rep_contents_dir (&entries, fs, parent_noderev, pool));
+
+  /* Find name in the ENTRIES hash. */
+  dirent = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
+
+  /* If we never found ID in ENTRIES (perhaps because there are no
+          ENTRIES, perhaps because ID just isn't in the existing ENTRIES
+          ... it doesn't matter), return an error.  */
+  if (! dirent)
+    return svn_error_createf
+      (SVN_ERR_FS_NO_SUCH_ENTRY, NULL,
+       "Delete failed--directory has no entry '%s'", name);
+  
+  /* Use the ID of this ENTRY to get the entry's node.  */
+  SVN_ERR (svn_fs__dag_get_node (&node, svn_fs__dag_get_fs (parent),
+                                 dirent->id, pool));
+
+  /* If mutable, remove it and any mutable children from db. */
+  SVN_ERR (svn_fs__dag_delete_if_mutable (parent->fs, dirent->id, txn_id, pool));
+
+  /* Remove this entry from its parent's entries list. */
+  SVN_ERR (svn_fs__fs_set_entry (parent->fs, txn_id, parent_noderev, name,
+                                 NULL, svn_node_unknown, pool));
     
   return SVN_NO_ERROR;
 }
@@ -665,11 +715,46 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
                                const char *txn_id,
                                apr_pool_t *pool)
 {
-  abort ();
-  
+  dag_node_t *node;
+
+  /* Get the node. */
+  SVN_ERR (svn_fs__dag_get_node (&node, fs, id, pool));
+
+  /* If immutable, do nothing and return immediately. */
+  if (! svn_fs__dag_check_mutable (node, txn_id))
+    return SVN_NO_ERROR;
+
+  /* Else it's mutable.  Recurse on directories... */
+  if (node->kind == svn_node_dir)
+    {
+      apr_hash_t *entries;
+      apr_hash_index_t *hi;
+
+      /* Loop over hash entries */
+      SVN_ERR (svn_fs__dag_dir_entries (&entries, node, pool));
+      if (entries)
+        {
+          for (hi = apr_hash_first (pool, entries);
+               hi;
+               hi = apr_hash_next (hi))
+            {
+              void *val;
+              svn_fs_dirent_t *dirent;
+
+              apr_hash_this (hi, NULL, NULL, &val);
+              dirent = val;
+              SVN_ERR (svn_fs__dag_delete_if_mutable (fs, dirent->id,
+                                                      txn_id, pool));
+            }
+        }
+    }
+
+  /* ... then delete the node itself, after deleting any mutable
+     representations and strings it points to. */
+  SVN_ERR (svn_fs__dag_remove_node (fs, id, txn_id, pool));
+
   return SVN_NO_ERROR;
 }
-
 
 svn_error_t *
 svn_fs__dag_make_file (dag_node_t **child_p,
