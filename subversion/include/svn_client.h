@@ -880,7 +880,9 @@ svn_client_revprop_get (const char *propname,
                         svn_revnum_t *set_rev,
                         apr_pool_t *pool);
 
-/* Set *PROPS to the properties of TARGET, a working copy path or a url. 
+/* Set *PROPS to the regular properties of TARGET, a url or working
+   copy path.
+
    Each element of the returned array is (svn_client_proplist_item_t *).
    For each item, item->node_name contains the name relative to the
    same base as TARGET, and item->prop_hash maps (const char *)

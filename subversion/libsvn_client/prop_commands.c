@@ -584,9 +584,27 @@ svn_client_proplist (apr_array_header_t **props,
           if (kind == svn_node_file)
             {
               apr_hash_t *prop_hash;
+              apr_hash_index_t *hi;
               
               SVN_ERR (ra_lib->get_file (session, "", revnum,
                                          NULL, NULL, &prop_hash));
+
+              /* Filter out non-regular properties, since the RA layer
+                 returns all kinds. */
+              for (hi = apr_hash_first (pool, prop_hash);
+                   hi;
+                   hi = apr_hash_next (hi))
+                {
+                  const void *key;
+                  apr_ssize_t klen;
+                  svn_prop_kind_t prop_kind;
+
+                  apr_hash_this (hi, &key, &klen, NULL);
+                  prop_kind = svn_property_kind (NULL, (const char *) key);
+
+                  if (prop_kind != svn_prop_regular_kind)
+                    apr_hash_set (prop_hash, key, klen, NULL);
+                }
 
               /* ### This bit was swiped from add_to_proplist().  It
                  all really needs to be refactored. */

@@ -1233,7 +1233,7 @@ svn_error_t *svn_wc_install_file (svn_wc_notify_state_t *content_state,
  */
 
 /* Set *PROPS to a hash table mapping char * names onto
-   svn_string_t * values for all the wc properties of PATH.
+   svn_string_t * values for all the regular properties of PATH.
    Allocate the table, names, and values in POOL.  If the node has no
    properties, an empty hash is returned. */
 svn_error_t *svn_wc_prop_list (apr_hash_t **props,
