@@ -34,7 +34,14 @@ What's left to do:
   procedure doc.
 
 
-* New material on Web site (kfogel)
+* Repository preparations (tbd)
+    - Get httpd 2.0 ready, and new repository area
+    - Get list of committers & get passwords from them
+    - Come up with repository layout & import cmd
+    - Write a commit email script.  :-)
+
+
+* New material on Web site (tbd)
     - post instructions for downloading tarball, building
     - especially, put dav_setup.txt up!
     - basic subversion checkout instructions
