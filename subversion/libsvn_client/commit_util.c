@@ -712,6 +712,7 @@ count_components (const char *path)
 
 struct file_mod_t
 {
+  apr_pool_t *subpool;
   svn_client_commit_item_t *item;
   void *file_baton;
 };
@@ -723,7 +724,7 @@ do_item_commit (const char *url,
                 const svn_delta_editor_t *editor,
                 apr_array_header_t *db_stack,
                 int *stack_ptr,
-                apr_array_header_t *file_mods,
+                apr_hash_t *file_mods,
                 apr_hash_t *tempfiles,
                 svn_wc_notify_func_t notify_func,
                 void *notify_baton,
@@ -735,6 +736,10 @@ do_item_commit (const char *url,
   const char *copyfrom_url = item->copyfrom_url 
                              ? item->copyfrom_url->data
                              : NULL;
+  apr_pool_t *file_pool = ((kind == svn_node_file)
+                           ? svn_pool_create (apr_hash_pool_get (file_mods))
+                           : NULL);
+
 
   /* Get the parent dir_baton. */
   parent_baton = ((void **) db_stack->elts)[*stack_ptr - 1];
@@ -774,7 +779,7 @@ do_item_commit (const char *url,
           SVN_ERR (editor->add_file 
                    (url, parent_baton, copyfrom_url, 
                     item->revision,
-                    pool, &file_baton));
+                    file_pool, &file_baton));
         }
       else
         {
@@ -795,7 +800,7 @@ do_item_commit (const char *url,
         {
           if (! file_baton)
             SVN_ERR (editor->open_file (url, parent_baton, item->revision,
-                                        pool, &file_baton));
+                                        file_pool, &file_baton));
         }
       else
         {
@@ -821,26 +826,31 @@ do_item_commit (const char *url,
   if ((kind == svn_node_file) 
       && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS))
     {
-      struct file_mod_t mod;
+      struct file_mod_t *mod = apr_palloc (apr_hash_pool_get (file_mods),
+                                           sizeof (*mod));
 
       if (! file_baton)
         SVN_ERR (editor->open_file (url, parent_baton,
                                     item->revision,
-                                    pool, &file_baton));
+                                    file_pool, &file_baton));
 
       /* Copy in the contents of the mod structure to the array.  Note
          that this is NOT a copy of a pointer reference, but a copy of
          the structure's contents!! */
-      mod.item = item;
-      mod.file_baton = file_baton;
-      (*((struct file_mod_t *) apr_array_push (file_mods))) = mod;
+      mod->subpool = file_pool;
+      mod->item = item;
+      mod->file_baton = file_baton;
+      apr_hash_set (file_mods, item->url->data, item->url->len, (void *)mod);
     }
 
   /* Close any outstanding file batons that didn't get caught by the
      "has local mods" conditional above. */
   else if (file_baton)
-    SVN_ERR (editor->close_file (file_baton));
-  
+    {
+      SVN_ERR (editor->close_file (file_baton));
+      svn_pool_destroy (file_pool);
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -865,8 +875,8 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
                        apr_pool_t *pool)
 {
   apr_array_header_t *db_stack;
-  apr_array_header_t *file_mods 
-    = apr_array_make (pool, 1, sizeof (struct file_mod_t));
+  apr_hash_t *file_mods = apr_hash_make (pool);
+  apr_hash_index_t *hi;
   int i, stack_ptr = 0;
 
 #ifdef SVN_CLIENT_COMMIT_DEBUG
@@ -981,14 +991,22 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
     }
 
   /* Transmit outstanding text deltas. */
-  for (i = 0; i < file_mods->nelts; i++)
+  for (hi = apr_hash_first (pool, file_mods); hi; hi = apr_hash_next (hi))
     {
-      struct file_mod_t *mod
-        = ((struct file_mod_t *) file_mods->elts) + i;
-      svn_client_commit_item_t *item = mod->item;
-      void *file_baton = mod->file_baton;
+      const void *key;
+      apr_ssize_t klen;
+      struct file_mod_t *mod;
+      svn_client_commit_item_t *item;
+      void *file_baton;
       svn_stringbuf_t *tempfile;
       svn_boolean_t fulltext = FALSE;
+      
+      /* Get the next entry. */
+      apr_hash_this (hi, &key, &klen, (void **) &mod);
+
+      /* Transmit the entry. */
+      item = mod->item;
+      file_baton = mod->file_baton;
 
       if (notify_func)
         (*notify_func) (notify_baton, svn_wc_notify_commit_postfix_txdelta, 
@@ -999,9 +1017,16 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
 
       SVN_ERR (svn_wc_transmit_text_deltas (item->path, fulltext,
                                             editor, file_baton, 
-                                            &tempfile, pool));
+                                            &tempfile, mod->subpool));
       if (tempfile && *tempfiles)
-        apr_hash_set (*tempfiles, tempfile->data, tempfile->len, (void *)1);
+        {
+          tempfile = svn_stringbuf_dup (tempfile, 
+                                        apr_hash_pool_get (*tempfiles));
+          apr_hash_set (*tempfiles, tempfile->data, tempfile->len, (void *)1);
+        }
+      
+      SVN_ERR (editor->close_file (file_baton));
+      svn_pool_destroy (mod->subpool);
     }
 
   /* Close the edit. */
