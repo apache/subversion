@@ -1202,7 +1202,7 @@ $
           examining the signer of the server certificate, or
           <firstterm>certifying authority</firstterm> (CA).  If
           OpenSSL is unable to automatically trust the CA, or if some
-          other problem occurs (such as as an expired certificate or
+          other problem occurs (such as an expired certificate or
           hostname mismatch), the Subversion commandline client will
           ask you whether you want to trust the server certificate
           anyway:</para>
@@ -1224,7 +1224,7 @@ Certificate information:
 
         <para>This dialogue should look familiar; it's essentially the
           same question you've probably seen coming from your web
-          browser (which is just another HTTP client like Subversion!)
+          browser (which is just another HTTP client like Subversion!).
           If you choose the (p)ermanent option, the server certificate
           will be cached in your private run-time
           <filename>auth/</filename> area in just the same way your
@@ -1233,7 +1233,7 @@ Certificate information:
           automatically remember to trust this certificate in future
           negotiations.</para>
 
-        <para>Your run-time <filename>servers</filename> also gives
+        <para>Your run-time <filename>servers</filename> file also gives
           you the ability to make your Subversion client automatically
           trust specific CAs, either globally or on a per-host basis.
           Simply set the <literal>ssl-authority-files</literal>
