@@ -230,6 +230,12 @@ svn_error_t *svn_wc_entries_read (apr_hash_t **entries,
                                   svn_stringbuf_t *path,
                                   apr_pool_t *pool);
 
+
+/* Return a duplicate of ENTRY, allocated in POOL.  No part of the new
+   entry will be shared with ENTRY. */
+svn_wc_entry_t *svn_wc_entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool);
+
+
 /* Given a DIR_PATH under version control, decide if one of its
    entries (ENTRY) is in state of conflict; return the answers in
    TEXT_CONFLICTED_P and PROP_CONFLICTED_P.  

@@ -1117,7 +1117,7 @@ report_single_mod (const char *name,
 
       /* Create an affected-target object */
       tb = apr_pcalloc (top_pool, sizeof (*tb));
-      tb->entry = svn_wc__entry_dup (entry, top_pool);          
+      tb->entry = svn_wc_entry_dup (entry, top_pool);          
       
       /* Do what's necesary to get a baton for current directory */
       if (! *dir_baton)
@@ -1233,7 +1233,7 @@ report_single_mod (const char *name,
           /* There was a local change.  Build an affected-target
              object in the top-most pool. */
           tb = apr_pcalloc (top_pool, sizeof (*tb));
-          tb->entry = svn_wc__entry_dup (entry, top_pool);
+          tb->entry = svn_wc_entry_dup (entry, top_pool);
           tb->text_modified_p = text_modified_p;
           
           /* Build the full path to this entry, also from the top-pool. */

@@ -634,11 +634,6 @@ svn_error_t *svn_wc__entry_modify (svn_stringbuf_t *path,
 void svn_wc__entry_remove (apr_hash_t *entries, svn_stringbuf_t *name);
 
 
-/* Return a duplicate of ENTRY, allocated in POOL.  No part of the new
-   entry will be shared with ENTRY. */
-svn_wc_entry_t *svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool);
-
-
 
 
 /*** General utilities that may get moved upstairs at some point. */
