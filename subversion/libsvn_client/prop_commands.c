@@ -65,7 +65,7 @@ is_valid_prop_name (const char *name)
 static svn_boolean_t
 is_revision_prop_name (const char *name)
 {
-  int i;
+  apr_size_t i;
   const char *revision_props[] = 
     {
       SVN_PROP_REVISION_ALL_PROPS
