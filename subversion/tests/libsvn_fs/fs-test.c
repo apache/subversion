@@ -483,7 +483,7 @@ create_mini_tree_transaction (const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
 
-  *msg = "make a file, a subdir, and another file in the subdir";
+  *msg = "test basic file and subdirectory creation";
 
   if (msg_only)
     return SVN_NO_ERROR;
