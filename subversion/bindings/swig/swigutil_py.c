@@ -204,7 +204,7 @@ const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
             return NULL;
         if (!PyString_Check(o)) {
             Py_DECREF(o);
-            PyErr_SetString(PyExc_TypeError, "not a sequence");
+            PyErr_SetString(PyExc_TypeError, "not a string");
             return NULL;
         }
         APR_ARRAY_IDX(temp, targlen, const char *) = PyString_AS_STRING(o);
@@ -671,6 +671,53 @@ void svn_swig_py_notify_func(void *baton,
         }
     }
 }
+
+svn_error_t *
+svn_swig_py_get_commit_log_func (const char **log_msg,
+                                 apr_array_header_t *commit_items,
+                                 void *baton,
+                                 apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  PyObject *cmt_items;
+
+  if ((function == NULL) || (function == Py_None))
+    return SVN_NO_ERROR;
+
+  if (commit_items)
+    {
+      cmt_items = svn_swig_py_array_to_list (commit_items);
+    }
+  else
+    {
+      cmt_items = Py_None;
+      Py_INCREF(Py_None);
+    }
+
+  /* ### python doesn't have 'const' on the method name and format */
+  if ((result = PyObject_CallFunction(function, 
+                                      (char *)"OO&",
+                                      cmt_items, make_ob_pool, pool)) == NULL)
+    {
+      Py_DECREF(cmt_items);
+      return convert_python_error(pool);
+    }
+
+  Py_DECREF(cmt_items);
+
+  if (!PyString_Check(result)) 
+    {
+      Py_DECREF(result);
+      PyErr_SetString(PyExc_TypeError, "not a string");
+      return convert_python_error(pool);
+    }
+
+  *log_msg = PyString_AS_STRING(result);
+  Py_DECREF(result);
+  return SVN_NO_ERROR;
+}
+
 
 
 /*** Other Wrappers for SVN Functions ***/

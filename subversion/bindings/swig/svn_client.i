@@ -30,6 +30,13 @@
 %ignore svn_client_proplist_item_s;
 
 /* -----------------------------------------------------------------------
+   these types (as 'type **') will always be an OUT param
+*/
+%apply SWIGTYPE **OUTPARAM {
+  svn_client_commit_info_t **
+};
+
+/* -----------------------------------------------------------------------
    all "targets" and "diff_options" arrays are constant inputs of
    svn_stringbuf_t *
  */
@@ -37,20 +44,6 @@
     const apr_array_header_t *targets,
     const apr_array_header_t *diff_options
 };
-
-/* -----------------------------------------------------------------------
-   In svn_client_checkout and svn_client_update, the xml_src parameter
-   needs to be NULL sometimes.
-*/
-
-%typemap(python,in,parse="z") const char *xml_src "";
-
-/* -----------------------------------------------------------------------
-   In svn_client_import and svn_client_commit, the xml_dst parameter
-   needs to be NULL sometimes.
-*/
-
-%typemap(python,in,parse="z") const char *xml_dst "";
 
 /* -----------------------------------------------------------------------
    fix up the return hash for svn_client_propget()
@@ -100,6 +93,17 @@
 %typemap(python,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
 
   $1 = svn_swig_py_notify_func;
+  $2 = $input; /* our function is the baton. */
+}
+
+/* -----------------------------------------------------------------------
+   handle svn_client_get_commit_log_t/baton pairs
+*/
+
+%typemap(python,in) (svn_client_get_commit_log_t log_msg_func, 
+                     void *log_msg_baton) {
+
+  $1 = svn_swig_py_get_commit_log_func;
   $2 = $input; /* our function is the baton. */
 }
 

@@ -30,27 +30,11 @@
 %apply SWIGTYPE **OUTPARAM {
     svn_txdelta_stream_t **,
     void **,
-    svn_delta_xml_parser_t **,
     svn_txdelta_window_t **,
     const svn_delta_editor_t **,
     struct svn_pipe_edit_baton **,
     svn_txdelta_window_handler_t *
 };
-
-/* -----------------------------------------------------------------------
-   handle the ptr/len params of svn_delta_xml_parsebytes()
-*/
-/* ### hack. force the fragment's inclusion. t_output_helper is required
-   ### by the application of an OUTPARAM, but the fragment doesn't get
-   ### brought into this compilation unit. force it here. */
-%typemap(python, in,fragment="t_output_helper") (const char *buffer, apr_size_t len) {
-    if (!PyString_Check($input)) {
-        PyErr_SetString(PyExc_TypeError, "expecting a string");
-        return NULL;
-    }
-    $1 = PyString_AS_STRING($input);
-    $2 = PyString_GET_SIZE($input);
-}
 
 /* -----------------------------------------------------------------------
    mark window.new_data as readonly since we would need a pool to set it
