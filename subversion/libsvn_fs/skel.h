@@ -128,6 +128,12 @@ skel_t *svn_fs__make_empty_list (apr_pool_t *pool);
 void svn_fs__prepend (skel_t *skel, skel_t *list);
 
 
+/* Append SKEL to LIST.  This is not as efficient as prepending skels,
+   so prepend in places where you can sensibly do so, and you want to
+   save a couple clock cycles. */
+void svn_fs__append (skel_t *skel, skel_t *list);
+
+
 /* Return a string whose contents are a concrete representation of
    SKEL.  Allocate the string from POOL.  */
 svn_string_t *svn_fs__unparse_skel (skel_t *skel, apr_pool_t *pool);
