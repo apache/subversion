@@ -215,7 +215,9 @@ Updated to revision 2.
       
       <para>Let's examine the output of <command>svn update</command>
         a bit more.  When the server sends changes to your working
-        copy, a letter code is displayed next to each item:</para>
+        copy, a letter code is displayed next to each item to let you
+        know what actions Subversion performed to bring your working
+        copy up to date:</para>
 
       <variablelist>
 
@@ -261,9 +263,10 @@ Updated to revision 2.
         <varlistentry>
           <term><computeroutput>G      foo</computeroutput></term>
           <listitem>
-            <para>File <filename>foo</filename> received new changes,
-              but also had changes of your own to begin with.  The
-              changes did not intersect, however, so Subversion has
+            <para>File <filename>foo</filename> received new changes
+              from the repository, but your local copy of the file had
+              changes that you made.  The changes did not intersect,
+              however, so Subversion has
               mer<computeroutput>G</computeroutput>ed the repository's
               changes into the file without a problem.</para>
           </listitem>
@@ -291,10 +294,10 @@ Updated to revision 2.
       <para>Now you can to get to work and make changes in your
         working copy. It's usually most convenient to create a
         <quote>task</quote> for yourself, such as writing a new
-        feature, fixing a bug, etc. The Subversion commands that
-        you will use here are <command>svn add</command>,
-        <command>svn rm</command>, <command>svn cp</command>, and
-        <command>svn mv</command>).</para>
+        feature, fixing a bug, etc.  The Subversion commands that you
+        will use here are <command>svn add</command>, <command>svn
+        delete</command>, <command>svn copy</command>, and
+        <command>svn move</command>).</para>
       
       <variablelist>
         <title>Changes you can make to your working copy:</title>
@@ -302,9 +305,10 @@ Updated to revision 2.
         <varlistentry>
           <term>File changes</term>
           <listitem>
-            <para>This is the simplest sort of change.  Unlike other version control
-              systems, you don't need to tell Subversion that you intend to change a
-              file; just do it.  Later on, Subversion will be able to automatically
+            <para>This is the simplest sort of change.  Unlike other
+              version control systems, you don't need to tell
+              Subversion that you intend to change a file; just make
+              your changes.  Subversion will be able to automatically
               detect which files have been changed.</para>
           </listitem>
         </varlistentry>
@@ -313,24 +317,24 @@ Updated to revision 2.
           <term>Tree changes</term>
           <listitem>
             <para>You can ask Subversion to <quote>mark</quote> files
-              and directories for scheduled removal or addition.  Of
-              course, no additions or removals will happen in the
-              repository until you decide to commit.</para>
+              and directories for scheduled removal or addition.
+              While these changes may take place immediately in your
+              working copy, no additions or removals will happen in
+              the repository until you decide to commit.</para>
           </listitem>
         </varlistentry>
 
       </variablelist>
       
-      <para>To make file changes, just use your normal editor, word processor, or
-        whatever.   A file needn't be in text-format; binary files work just
-        fine.</para>
+      <para>To make file changes, just use your text editor, word
+        processor, or graphics program&mdash;whatever tool you would
+        normally use.  A file needn't be in text-format; Subversion
+        handles binary files with no problems.</para>
       
-      <para>There are at least four Subversion subcommands for making
-        tree changes.  Detailed help can be found with <command>svn
-          help</command>, but here is an overview:</para><!-- ###TODO We
-      can (and should) remove the above pointer to svn help and
-      flush this out a bit!-->
-
+      <para>Here is an overview of the four Subversion subcommands
+        that you'll use most often to make tree changes (we'll cover
+        <command>svn import</command> and <command>svn mkdir</command>
+        later).</para>
       
       <variablelist>
         
@@ -353,12 +357,19 @@ Updated to revision 2.
           <listitem>
             <para>Schedule <filename>foo</filename> to be removed from
               the repository.  If <filename>foo</filename> is a file,
-              it immediately vanishes from the working copy&mdash;but
-              it can be recovered with <command>svn revert</command>
-              (discussed later).  If <filename>foo</filename> is a
-              directory, it is merely scheduled for deletion.  After
-              you commit, <filename>foo</filename> will no longer
-              exist in the working copy or repository.</para>
+              it is immediately removed from your working
+              copy&mdash;but it can be recovered with <command>svn
+              revert</command> (discussed later).  If
+              <filename>foo</filename> is a directory, it is not
+              deleted, but Subversion schedules it for deletion.  When
+              you commit your changes, <filename>foo</filename> will
+              be removed from your working copy and the repository.
+              <footnote><para>Of course, nothing is ever totally
+              deleted from the repository&mdash;just from the HEAD of
+              the repository.  You can get back anything you delete by
+              checking out (or updating your working copy) to a
+              revision earlier than the one in which you deleted
+              it.</para> </footnote></para>
           </listitem>
         </varlistentry>
 
@@ -388,19 +399,22 @@ Updated to revision 2.
 
       </variablelist>
 
-      <para>Let's amend our original statement: there
-        <emphasis>are</emphasis> some use-cases that immediately
-        commit tree changes to the repository.  This usually
-        happens when a subcommand is operating directly on a URL,
-        rather than on a working-copy path. (In particular,
-        specific uses of <command>svn mkdir</command>, <command>svn
-          cp</command>, <command>svn mv</command>, and <command>svn
-          rm</command> can work with URLs.  See <command>svn
-          help</command> on these commands for more
-        details.)</para><!-- ###TODO Again, we can (and should)
-      remove the above pointer to svn help and flush this out a
-      bit!-->
-      
+      <sidebar>
+        <title>Changing the repository without committing</title>
+        
+        <para>Earlier in this chapter, we said that you have to commit
+          any changes that you make in order for the repository to
+          reflect these changes. That's not entirely true&mdash;there
+          <emphasis>are</emphasis> some use-cases that immediately
+          commit tree changes to the repository.  This only happens
+          when a subcommand is operating directly on a URL, rather
+          than on a working-copy path. (In particular, specific uses
+          of <command>svn mkdir</command>, <command>svn cp</command>,
+          <command>svn mv</command>, and <command>svn rm</command> can
+          work with URLs.</para>
+
+      </sidebar>
+
     </sect2>
 
     <sect2 id="svn-ch-3-sect-4.3">
