@@ -74,10 +74,10 @@ typedef struct svn_cl__cmd_desc_t
   const char *cmd_name;
 
   /* If cmd_name is a short synonym, such as "ci", then short_for
-     would be what it abbreviates, "commit", else if cmd_name is not an
-     abbreviation, then short_for is NULL.  This allows us to identify
-     groups of `the same' command automatically, and list them all
-     under one canonical name when appropriate. */
+     would be what it abbreviates ("commit").  Else if cmd_name is not
+     an abbreviation, then short_for is NULL.  This allows us to
+     identify groups of `the same' command automatically, and list
+     them all under one canonical name when appropriate. */
   const char *short_for;
 
   /* Bruce: you can document this more accurately than I.  -kff */
@@ -87,7 +87,8 @@ typedef struct svn_cl__cmd_desc_t
   svn_cl__cmd_proc_t *cmd_func;
 
   /* A brief string describing this command, for usage messages.  If
-     this command is a short synonym, this should be set to NULL. */
+     this command is a short synonym, this should be set to NULL; the
+     canonical command desc will contain the help string. */
   const char *help;
 
 } svn_cl__cmd_desc_t;
