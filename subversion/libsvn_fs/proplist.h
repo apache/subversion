@@ -25,9 +25,6 @@
    *VALUE_P.  Do all necessary allocations in POOL.  If NAME is not
    found in PROPLIST, set *VALUE_P to NULL.
 
-/* Set a local value of property NAME to VALUE for the file or
-   directory PATH.
-
    ### todo (issue #406): name could be const char *, value_p
    svn_string_t instead of svn_stringbuf_t.  */
 svn_error_t *svn_fs__get_prop (svn_stringbuf_t **value_p,
