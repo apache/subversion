@@ -51,12 +51,31 @@ void
 svn_diff__snake(apr_off_t k,
                 svn_diff__snake_t *fp,
                 int idx,
+                svn_diff__lcs_t **freelist,
                 apr_pool_t *pool)
 {
   svn_diff__position_t *start_position[2];
   svn_diff__position_t *position[2];
   svn_diff__lcs_t *lcs;
   svn_diff__lcs_t *previous_lcs;
+
+  /* The previous entry at fp[k] is going to be replaced.  See if we
+   * can mark that lcs node for reuse, because the sequence up to this
+   * point was a dead end.
+   */
+  lcs = fp[k].lcs;
+  while (lcs)
+    {
+      lcs->refcount--;
+      if (lcs->refcount)
+        break;
+
+      previous_lcs = lcs->next;
+      lcs->next = *freelist;
+      lcs->next = *freelist;
+      *freelist = lcs;
+      lcs = previous_lcs;
+    }
 
   if (fp[k - 1].y + 1 > fp[k + 1].y)
     {
@@ -73,6 +92,7 @@ svn_diff__snake(apr_off_t k,
       previous_lcs = fp[k + 1].lcs;
     }
 
+
   /* ### Optimization, skip all positions that don't have matchpoints
    * ### anyway. Beware of the sentinel, don't skip it!
    */
@@ -85,22 +105,35 @@ svn_diff__snake(apr_off_t k,
       position[0] = position[0]->next;
       position[1] = position[1]->next;
     }
-
+  
   if (position[1] != start_position[1])
     {
-      lcs = apr_palloc(pool, sizeof(*lcs));
+      lcs = *freelist;
+      if (lcs)
+        {
+          *freelist = lcs->next;
+        }
+      else
+        {
+          lcs = apr_palloc(pool, sizeof(*lcs));
+        }
 
       lcs->position[idx] = start_position[0];
       lcs->position[abs(1 - idx)] = start_position[1];
       lcs->length = position[1]->offset - start_position[1]->offset;
-
       lcs->next = previous_lcs;
+      lcs->refcount = 1;
       fp[k].lcs = lcs;
     }
   else
     {
       fp[k].lcs = previous_lcs;
     }
+
+  if (previous_lcs)
+    {
+      previous_lcs->refcount++;
+    }  
 
   fp[k].position[0] = position[0];
   fp[k].position[1] = position[1];
@@ -140,7 +173,7 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
   apr_off_t d;
   apr_off_t k;
   apr_off_t p = 0;
-  svn_diff__lcs_t *lcs;
+  svn_diff__lcs_t *lcs, *lcs_freelist = NULL;
 
   svn_diff__position_t sentinel_position[2];
 
@@ -153,6 +186,7 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
   lcs->position[1] = apr_pcalloc(pool, sizeof(*lcs->position[1]));
   lcs->position[1]->offset = position_list2 ? position_list2->offset + 1 : 1;
   lcs->length = 0;
+  lcs->refcount = 1;
   lcs->next = NULL;
 
   if (position_list1 == NULL || position_list2 == NULL)
@@ -163,6 +197,9 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
   length[1] = position_list2->offset - position_list2->next->offset + 1;
   idx = length[0] > length[1] ? 1 : 0;
 
+  /* strikerXXX: here we allocate the furthest point array, which is
+   * strikerXXX: sized M + N + 3 (!)
+   */
   fp = apr_pcalloc(pool,
                    sizeof(*fp) * (apr_size_t)(length[0] + length[1] + 3));
   fp += length[idx] + 1;
@@ -196,12 +233,12 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
       /* Forward */
       for (k = -p; k < d; k++)
         {
-          svn_diff__snake(k, fp, idx, pool);
+          svn_diff__snake(k, fp, idx, &lcs_freelist, pool);
         }
 
       for (k = d + p; k >= d; k--)
         {
-          svn_diff__snake(k, fp, idx, pool);
+          svn_diff__snake(k, fp, idx, &lcs_freelist, pool);
         }
 
       p++;
