@@ -616,7 +616,11 @@ int dav_svn_get_last_modified_time (const char **datestring,
   svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
   svn_string_t *committed_date = NULL;
   svn_error_t *serr;
+  apr_time_t timeval_tmp;
   
+  if ((datestring == NULL) && (timeval == NULL))
+    return 0;
+
   if (resource->baselined && resource->type == DAV_RESOURCE_TYPE_VERSION)
     {
       /* A baseline URI. */
@@ -650,11 +654,16 @@ int dav_svn_get_last_modified_time (const char **datestring,
     return 1;
 
   /* return the ISO8601 date as an apr_time_t */
-  serr = svn_time_from_cstring(timeval, committed_date->data, pool);
+  serr = svn_time_from_cstring(&timeval_tmp, committed_date->data, pool);
   if (serr != NULL)
     return 1;
 
-  /* return a datestring in the proper format */
+  if (timeval)
+    memcpy(timeval, &timeval_tmp, sizeof(*timeval));
+
+  if (! datestring)
+    return 0;
+
   if (format == dav_svn_time_format_iso8601)
     {
       *datestring = committed_date->data;
@@ -665,7 +674,7 @@ int dav_svn_get_last_modified_time (const char **datestring,
       apr_status_t status;
       
       /* convert the apr_time_t into a apr_time_exp_t */
-      status = apr_time_exp_gmt(&tms, *timeval);
+      status = apr_time_exp_gmt(&tms, timeval_tmp);
       if (status != APR_SUCCESS)
         return 1;
               
