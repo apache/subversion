@@ -151,7 +151,7 @@ svn_error_t * svn_client__open_ra_session (void **session_baton,
 
   cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
   cbtable->get_authenticator = svn_client__get_authenticator;
-  cbtable->get_wc_prop = get_wc_prop;
+  cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
   cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;
   cbtable->close_commit = read_only_wc ? NULL : close_commit;
 
