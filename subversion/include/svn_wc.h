@@ -225,33 +225,44 @@ svn_wc_close_commit (svn_string_t *path,
                      apr_pool_t *pool);
 
 
-/* Do a depth-first crawl of the local changes in a working copy,
-   beginning at ROOT_DIRECTORY (absolute path).  Communicate all local
-   changes (both textual and tree) to the supplied EDIT_FNS object
-   (coupled with the supplied EDIT_BATON).
+/* The "soul" of a working copy commit:
 
-   (Presumably, the client library will someday grab EDIT_FNS and
-   EDIT_BATON from libsvn_ra, and then pass it to this routine.  This
-   is how local changes in the working copy are ultimately translated
-   into network requests.)  
-
-   A function and baton for completing this commit must be set in
-   *CLOSE_COMMIT_FN and *CLOSE_COMMIT_BATON, respectively.  These are
-   not so much for the caller's sake as for close_edit() in the
-   editor, and they should be set before close_edit() is called.  See
-   svn_ra_get_commit_editor() for an example of how they might be
-   obtained.
+   Do a depth-first crawl of the local changes in a working copy,
+   beginning at ROOT_DIRECTORY.  Communicate all local changes (both
+   textual and tree) to the supplied EDIT_FNS object (coupled with the
+   supplied EDIT_BATON).
 
    Any items that were found to be modified, and were therefore
-   committed, are stored in targets as full paths, so caller can clean
-   up appropriately.
-*/
+   committed, are stored in TARGETS as full paths, so caller can clean
+   up appropriately.  */
 svn_error_t *
 svn_wc_crawl_local_mods (apr_hash_t **targets,
                          svn_string_t *root_directory,
                          const svn_delta_edit_fns_t *edit_fns,
                          void *edit_baton,
                          apr_pool_t *pool);
+
+
+/* The "soul" of a working copy update:
+
+   Do a depth-first crawl in a working copy, beginning at
+   ROOT_DIRECTORY.  Communicate the `state' of the working copy's
+   revisions to EDIT_FNS.  
+
+   No locks are or logs are created, nor are any animals harmed in the
+   process.  No cleanup is necessary.
+
+   However, after all revisions are reported, edit_fns->close_edit()
+   is called, which immediately causes the RA layer to update the
+   working copy.  Thus the return value may very well reflect the
+   result of the update!   
+ */
+svn_error_t *
+svn_wc_crawl_revisions (svn_string_t *root_directory,
+                        const svn_delta_edit_fns_t *edit_fns,
+                        void *edit_baton,
+                        apr_pool_t *pool);
+
 
 
 

@@ -16,7 +16,7 @@ check_status()
       exit $res
     fi
     # REMOVE ME;  for easy debugging step-throughs:
-    # read foo
+     read foo
 }
 
 # Remove the testing tree
