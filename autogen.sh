@@ -46,7 +46,7 @@ done
 # ### APR's libtool. deferring to a second round of change...
 #
 
-libtoolize="`./build/PrintPath glibtoolize libtoolize`"
+libtoolize="`./build/PrintPath glibtoolize libtoolize libtoolize15`"
 
 if [ "x$libtoolize" = "x" ]; then
     echo "libtoolize not found in path"
@@ -56,10 +56,10 @@ fi
 $libtoolize --copy --automake
 
 ltpath="`dirname $libtoolize`"
-ltfile="`cd $ltpath/../share/aclocal ; pwd`"/libtool.m4
+ltfile=${LIBTOOL_M4-`cd $ltpath/../share/aclocal ; pwd`/libtool.m4}
 
 if [ ! -f $ltfile ]; then
-    echo "$ltfile not found"
+    echo "$ltfile not found (try setting the LIBTOOL_M4 environment variable)"
     exit 1
 fi
 
