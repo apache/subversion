@@ -1720,26 +1720,26 @@ Then move to that line."
 (defun svn-status-apply-usermark (set-mark only-this-line)
   "Do the work for the various marking/unmarking functions."
   (let* ((st-info svn-status-info)
+         (mark-count 0)
          (line-info (svn-status-get-line-information))
          (file-name (svn-status-line-info->filename line-info))
-     (sub-file-regexp (concat "^" (regexp-quote
-                       (file-name-as-directory file-name))))
+         (sub-file-regexp (concat "^" (regexp-quote
+                                       (file-name-as-directory file-name))))
          (newcursorpos-fname)
          (i-fname)
          (current-line svn-start-of-file-list-line-number))
+    (message "%s..." (if set-mark "Marking" "Unmarking"))
     (while st-info
       (when (svn-status-line-info->is-visiblep (car st-info))
         (setq current-line (1+ current-line)))
       (setq i-fname (svn-status-line-info->filename (car st-info)))
       (when (or (string= file-name i-fname)
-        (string-match sub-file-regexp i-fname))
+                (string-match sub-file-regexp i-fname))
         (when (svn-status-line-info->is-visiblep (car st-info))
           (when (or (not only-this-line) (string= file-name i-fname))
             (setq newcursorpos-fname i-fname)
-            (if set-mark
-                (message "marking: %s" i-fname)
-              (message "unmarking: %s" i-fname))
-            ;;(message "ui-status: %S" (svn-status-line-info->ui-status (car st-info)))
+            (message "%s: %s" (if set-mark "Marking" "Unmarking") i-fname)
+            (setq mark-count (+ 1 mark-count))
             (setcar (svn-status-line-info->ui-status (car st-info)) set-mark)
             (save-excursion
               (let ((buffer-read-only nil))
@@ -1749,23 +1749,29 @@ Then move to that line."
                 (delete-char 1))))))
       (setq st-info (cdr st-info)))
     ;;(svn-status-update-buffer)
-    (svn-status-goto-file-name newcursorpos-fname)))
+    (svn-status-goto-file-name newcursorpos-fname)
+    (when (> mark-count 1)
+      (message "%s...done" (if set-mark "Marking" "Unmarking")))))
 
 (defun svn-status-apply-usermark-checked (check-function set-mark)
   "Mark or unmark files, whether a given function returns t.
-The function is called with the line information. Therefore the svnstatus-line-info->* functions can be
-used in the check."
-  (let ((st-info svn-status-info))
+The function is called with the line information. Therefore the
+svn-status-line-info->* functions can be used in the check."
+  (let ((st-info svn-status-info)
+        (mark-count 0))
+    (message "%s..." (if set-mark "Marking" "Unmarking"))
     (while st-info
       (when (apply check-function (list (car st-info)))
-        (if set-mark
-            (when (not (svn-status-line-info->has-usermark (car st-info)))
-              (message "marking: %s" (svn-status-line-info->filename (car st-info))))
-          (when (svn-status-line-info->has-usermark (car st-info))
-            (message "unmarking: %s" (svn-status-line-info->filename (car st-info)))))
+        (when (not (svn-status-line-info->has-usermark (car st-info)))
+          (setq mark-count (+ 1 mark-count))
+          (message "%s: %s"
+                   (if set-mark "Marking" "Unmarking")
+                   (svn-status-line-info->filename (car st-info))))
         (setcar (svn-status-line-info->ui-status (car st-info)) set-mark))
       (setq st-info (cdr st-info)))
-    (svn-status-update-buffer)))
+    (svn-status-update-buffer)
+    (when (> mark-count 1)
+      (message "%s...done" (if set-mark "Marking" "Unmarking")))))
 
 (defun svn-status-mark-unknown (arg)
   "Mark all unknown files.
@@ -2932,9 +2938,9 @@ When called with a prefix argument, ask the user for the revision."
 ;; --------------------------------------------------------------------------------
 
 (defun svn-status-base-dir ()
-  (let ((base-dir default-directory)
+  (let ((base-dir (expand-file-name default-directory))
         (dot-svn-dir)
-        (dir-below default-directory))
+        (dir-below (expand-file-name default-directory)))
     (setq dot-svn-dir (concat base-dir ".svn"))
     (while (when (file-exists-p dot-svn-dir)
              (setq base-dir (file-name-directory dot-svn-dir))
