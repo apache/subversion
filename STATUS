@@ -90,7 +90,7 @@ Candidate changes:
     Justification:
        Allows mailer.py to work with fsfs.
     Votes:
-      +1: sussman, cmpilato, kfogel
+      +1: sussman, cmpilato, kfogel, brane
       +0: breser
 
   * r10473
@@ -166,4 +166,4 @@ Candidate changes:
     contents in 'svnadmin verify' (r10508,r10509).
     Justification: Must keeps the precious data nice and safe
     Votes:
-     +1: ghudson, kfogel
+     +1: ghudson, kfogel, brane
