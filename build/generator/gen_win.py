@@ -44,9 +44,11 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     # Instrumentation options
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
-    
+    self.configure_apr_util = None
+
     # NLS options
     self.enable_nls = None
+
 
     for opt, val in options:
       if opt == '--with-berkeley-db':
@@ -76,6 +78,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         self.instrument_apr_pools = 1
       elif opt == '--enable-nls':
         self.enable_nls = 1
+      elif opt == '--enable-bdb-in-apr-util':
+        self.configure_apr_util = 1
 
   def __init__(self, fname, verfname, options, subdir):
     """
@@ -791,6 +795,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     return ''
 
   def _configure_apr_util(self):
+    if not self.configure_apr_util:
+      return
     script_path = os.path.join(self.apr_util_path, "build", "w32locatedb.pl")
     inc_path = os.path.join(self.bdb_path, "include")
     lib_path = os.path.join(self.bdb_path, "lib")

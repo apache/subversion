@@ -756,7 +756,7 @@ II.   INSTALLATION
     C:>cd src-%DIR%
     C:>python gen-make.py -t dsp --with-httpd=..\httpd-2.0.49
        --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7d
-       --with-zlib=..\zlib --enable-nls
+       --with-zlib=..\zlib --enable-nls --enable-bdb-in-apr-util
     C:>msdev subversion_msvc.dsw /USEENV /MAKE "__ALL_TESTS__ - Win32 Release"
     C:>cd ..
 
