@@ -372,7 +372,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                 (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                  _("The entry '%s' is no longer a directory; "
                    "remove the entry before updating"),
-                 this_path);
+                 svn_path_local_style (this_path, iterpool));
             }
 
           /* We need to read the full entry of the directory from its
@@ -710,7 +710,8 @@ svn_wc_transmit_text_deltas (const char *path,
                     (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
                      _("Checksum mismatch for '%s'; "
                        "expected '%s', actual: '%s'"),
-                     tb, ent->checksum, base_digest_hex);
+                     svn_path_local_style (tb, pool),
+                     ent->checksum, base_digest_hex);
                 }
             }
         }

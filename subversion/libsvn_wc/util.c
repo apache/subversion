@@ -48,7 +48,8 @@ svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
          ensure this directory's existence, so just return the error.
          Might happen if there's a file in the way, for example. */
       return svn_error_createf (APR_ENOTDIR, NULL,
-                                _("'%s' is not a directory"), path);
+                                _("'%s' is not a directory"),
+                                svn_path_local_style (path, pool));
     }
   else if (kind == svn_node_none)
     {

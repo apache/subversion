@@ -165,7 +165,8 @@ svn_wc__load_prop_file (const char *propfile_path,
                                  pool));
 
       SVN_ERR_W (svn_hash_read (hash, propfile, pool),
-                 apr_psprintf (pool, _("Can't parse '%s'"), propfile_path));
+                 apr_psprintf (pool, _("Can't parse '%s'"),
+                               svn_path_local_style (propfile_path, pool)));
 
       SVN_ERR (svn_io_file_close (propfile, pool));
     }
@@ -192,7 +193,7 @@ svn_wc__save_prop_file (const char *propfile_path,
   SVN_ERR_W (svn_hash_write (hash, prop_tmp, pool),
              apr_psprintf (pool, 
                            _("Can't write property hash to '%s'"),
-                           propfile_path));
+                           svn_path_local_style (propfile_path, pool)));
 
   SVN_ERR (svn_io_file_close (prop_tmp, pool));
 
@@ -245,7 +246,8 @@ svn_wc__get_existing_prop_reject_file (const char **reject_file,
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, NULL,
        _("Can't find entry '%s' in '%s'"),
-       name, svn_wc_adm_access_path (adm_access));
+       name,
+       svn_path_local_style (svn_wc_adm_access_path (adm_access), pool));
 
   *reject_file = the_entry->prejfile 
                  ? apr_pstrdup (pool, the_entry->prejfile)
@@ -276,7 +278,8 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   if (entry == NULL)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                              _("'%s' is not under version control"), path);
+                              _("'%s' is not under version control"),
+                              svn_path_local_style (path, pool));
 
   /* Notice that we're not using svn_path_split_if_file(), because
      that looks at the actual working file.  It's existence shouldn't
@@ -312,7 +315,8 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
     {
       SVN_ERR_W (svn_io_file_write_full (log_fp, log_accum->data, 
                                          log_accum->len, NULL, pool),
-                 apr_psprintf (pool, _("Error writing log for '%s'"), path));
+                 apr_psprintf (pool, _("Error writing log for '%s'"),
+                               svn_path_local_style (path, pool)));
 
       SVN_ERR (svn_wc__close_adm_file (log_fp, parent, SVN_WC__ADM_LOG,
                                        1, /* sync */ pool));
@@ -731,12 +735,12 @@ wcprop_list (apr_hash_t **props,
   if (kind == svn_node_none)
     return svn_error_createf (SVN_ERR_BAD_FILENAME, NULL,
                               _("'%s' does not exist"),
-                              path);
+                              svn_path_local_style (path, pool));
   
   if (kind == svn_node_unknown)
     return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                               _("Unknown node kind: '%s'"),
-                              path);
+                              svn_path_local_style (path, pool));
 #endif
 
   /* Construct a path to the relevant property file */
@@ -809,7 +813,8 @@ svn_wc__wcprop_set (const char *name,
   /* Write. */
   SVN_ERR_W (svn_hash_write (prophash, fp, pool),
              apr_psprintf (pool,
-                           _("Cannot write property hash for '%s'"), path));
+                           _("Cannot write property hash for '%s'"),
+                           svn_path_local_style (path, pool)));
   
   /* Close file, and doing an atomic "move". */
   SVN_ERR (svn_wc__close_props (fp, path, 0, 1,
@@ -912,20 +917,22 @@ validate_prop_against_node_kind (const char *name,
       while (*node_kind_prohibit)
         if (strcmp (name, *node_kind_prohibit++) == 0)
           return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, NULL,
-                                    _("Cannot set '%s' on a directory (%s)"),
-                                    name, path);
+                                    _("Cannot set '%s' on a directory ('%s')"),
+                                    name, svn_path_local_style (path, pool));
       break;
     case svn_node_file:
       node_kind_prohibit = file_prohibit;
       while (*node_kind_prohibit)
         if (strcmp (name, *node_kind_prohibit++) == 0)
           return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, NULL,
-                                    _("Cannot set '%s' on a file (%s)"),
-                                    name, path);
+                                    _("Cannot set '%s' on a file ('%s')"),
+                                    name,
+                                    svn_path_local_style (path, pool));
       break;
     default:
       return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                                _("'%s' is not a file or directory"), path);
+                                _("'%s' is not a file or directory"),
+                                svn_path_local_style (path, pool));
     }
 
   return SVN_NO_ERROR;
@@ -948,7 +955,8 @@ validate_eol_prop_against_file (const char *path,
   if (mime_type && svn_mime_type_is_binary (mime_type->data))
     return svn_error_createf 
       (SVN_ERR_ILLEGAL_TARGET, NULL,
-       _("File '%s' has binary mime type property"), path);
+       _("File '%s' has binary mime type property"),
+       svn_path_local_style (path, pool));
 
   /* Open PATH. */
   SVN_ERR (svn_io_file_open (&fp, path, 
@@ -969,7 +977,8 @@ validate_eol_prop_against_file (const char *path,
                                     "", FALSE, NULL, FALSE);
   if (err && err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
     return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, err,
-                              _("File '%s' has inconsistent newlines"), path);
+                              _("File '%s' has inconsistent newlines"),
+                              svn_path_local_style (path, pool));
   else if (err)
     return err;
 
@@ -1115,7 +1124,8 @@ svn_wc_prop_set2 (const char *name,
   /* Write. */
   SVN_ERR_W (svn_hash_write (prophash, fp, pool),
              apr_psprintf (pool, 
-                           _("Cannot write property hash for '%s'"), path));
+                           _("Cannot write property hash for '%s'"),
+                           svn_path_local_style (path, pool)));
   
   /* Close file, and doing an atomic "move". */
   SVN_ERR (svn_wc__close_props (fp, path, 0, 0,
@@ -1541,7 +1551,9 @@ svn_wc_parse_externals_description2 (apr_array_header_t **externals_p,
           return svn_error_createf
             (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
              _("Error parsing %s property on '%s': '%s'"),
-             SVN_PROP_EXTERNALS, parent_directory, line);
+             SVN_PROP_EXTERNALS,
+             svn_path_local_style (parent_directory, pool),
+             line);
         }
 
       item->target_dir = svn_path_canonicalize
@@ -1553,7 +1565,8 @@ svn_wc_parse_externals_description2 (apr_array_header_t **externals_p,
             (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
              _("Invalid %s property on '%s': "
                "target involves '.' or '..' or is an absolute path"),
-             SVN_PROP_EXTERNALS, parent_directory);
+             SVN_PROP_EXTERNALS,
+             svn_path_local_style (parent_directory, pool));
       }
 
       item->url = svn_path_canonicalize (item->url, pool);
