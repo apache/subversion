@@ -264,8 +264,7 @@ AC_DEFINE_UNQUOTED(SVN_CLIENT_DIFF3, "$SVN_CLIENT_DIFF3",
 
 dnl Determine whether diff3 supports the --diff-program arg.
 AC_MSG_CHECKING([whether diff3 supports --diff-program arg])
-touch A
-$SVN_CLIENT_DIFF3 --diff-program=$SVN_CLIENT_DIFF A A A > /dev/null 2>&1
+$SVN_CLIENT_DIFF3 --diff-program=$SVN_CLIENT_DIFF ${0} ${0} ${0} > /dev/null 2>&1
 if test "$?" = "0"; then
   AC_MSG_RESULT([yes])
   AC_DEFINE_UNQUOTED(SVN_DIFF3_HAS_DIFF_PROGRAM_ARG, 1, 
@@ -273,7 +272,6 @@ if test "$?" = "0"; then
 else
   AC_MSG_RESULT([no])
 fi
-rm -f A
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',
