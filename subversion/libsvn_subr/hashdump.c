@@ -113,7 +113,7 @@ svn_hash_write (apr_hash_t *hash,
     {
       const void *key;
       void *val;
-      size_t keylen;
+      apr_ssize_t keylen;
       size_t vallen;
       int bytes_used;
       char *valstring;

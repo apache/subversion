@@ -61,7 +61,7 @@ svn_wc__remove_wcprops (svn_stringbuf_t *path, apr_pool_t *pool)
   for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_size_t keylen;
+      apr_ssize_t keylen;
       void *val;
       const char *name;
       svn_wc_entry_t *current_entry;

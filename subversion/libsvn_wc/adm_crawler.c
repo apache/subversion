@@ -203,7 +203,7 @@ remove_all_locks (apr_hash_t *locks, apr_pool_t *pool)
       svn_error_t *err;
       const void *key;
       void *val;
-      apr_size_t klen;
+      apr_ssize_t klen;
       svn_stringbuf_t *unlock_path;
       
       apr_hash_this (hi, &key, &klen, &val);
@@ -235,7 +235,7 @@ remove_all_tmpfiles (apr_hash_t *targets, apr_pool_t *pool)
     {
       const void *key;
       void *val;
-      apr_size_t klen;
+      apr_ssize_t klen;
       svn_stringbuf_t *tmpfile_path;
       enum svn_node_kind kind;
 
@@ -555,7 +555,7 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
   struct target_baton *tb;
   const void *key;
   void *val;
-  size_t keylen;
+  apr_ssize_t keylen;
 
   for (hi = apr_hash_first (pool, affected_targets); 
        hi; 
@@ -744,7 +744,7 @@ verify_tree_deletion (svn_stringbuf_t *dir,
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_size_t klen;
+      apr_ssize_t klen;
       void *val;
       svn_wc_entry_t *entry; 
       int is_this_dir;
@@ -1456,7 +1456,7 @@ crawl_dir (svn_stringbuf_t *path,
     {
       const void *key;
       const char *keystring;
-      apr_size_t klen;
+      apr_ssize_t klen;
       void *val;
       svn_wc_entry_t *current_entry; 
       
@@ -1881,7 +1881,7 @@ report_revisions (svn_stringbuf_t *wc_path,
     for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))
       {
         const void *key;
-        apr_size_t klen;
+        apr_ssize_t klen;
         void *val;
         const char *keystring;
         svn_stringbuf_t *current_entry_name;
@@ -1941,7 +1941,7 @@ report_revisions (svn_stringbuf_t *wc_path,
     {
       const void *key;
       const char *keystring;
-      apr_size_t klen;
+      apr_ssize_t klen;
       void *val;
       svn_stringbuf_t *current_entry_name;
       svn_wc_entry_t *current_entry; 

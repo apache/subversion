@@ -800,7 +800,7 @@ log_do_committed (struct log_runner *loggy,
                 {
                   const void *key;
                   const char *keystring;
-                  apr_size_t klen;
+                  apr_ssize_t klen;
                   void *val;
                   svn_stringbuf_t *current_entry_name;
                   svn_wc_entry_t *current_entry; 
@@ -1232,7 +1232,7 @@ svn_wc_cleanup (svn_stringbuf_t *path,
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_size_t keylen;
+      apr_ssize_t keylen;
       void *val;
       svn_wc_entry_t *entry;
       svn_boolean_t is_this_dir = FALSE;

@@ -465,7 +465,7 @@ resolve_to_defaults (svn_stringbuf_t *path,
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_size_t keylen;
+      apr_ssize_t keylen;
       void *val;
       svn_wc_entry_t *this_entry;
       svn_stringbuf_t *entryname;
@@ -1011,7 +1011,7 @@ svn_wc__entries_write (apr_hash_t *entries,
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_size_t keylen;
+      apr_ssize_t keylen;
       void *val;
       svn_wc_entry_t *this_entry;
 
@@ -1125,7 +1125,7 @@ fold_entry (apr_hash_t *entries,
       for (hi = apr_hash_first (pool, atts); hi; hi = apr_hash_next (hi))
         {
           const void *k;
-          apr_size_t klen;
+          apr_ssize_t klen;
           void *v;
           const char *key;
           svn_stringbuf_t *val;
@@ -1491,7 +1491,7 @@ svn_wc__entry_dup (svn_wc_entry_t *entry, apr_pool_t *pool)
        hi = apr_hash_next (hi))
     {
       const void *k;
-      apr_size_t klen;
+      apr_ssize_t klen;
       void *v;
 
       const char *key;
@@ -1546,7 +1546,7 @@ svn_wc__recursively_rewrite_urls (svn_stringbuf_t *dirpath,
   for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_size_t keylen;
+      apr_ssize_t keylen;
       void *val;
       const char *name;
       svn_wc_entry_t *current_entry;

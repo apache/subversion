@@ -179,7 +179,7 @@ svn_ra_get_ra_library (svn_ra_plugin_t **library,
     {
       const void *key;
       void *val;
-      size_t keylen;
+      apr_ssize_t keylen;
       const char *keystr;
 
       /* Get key and val. */
@@ -238,7 +238,7 @@ svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
     {
       const void *key;
       void *val;
-      size_t keylen;
+      apr_ssize_t keylen;
 
       /* Get key and val. */
       apr_hash_this (this, &key, &keylen, &val);

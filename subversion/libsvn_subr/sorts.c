@@ -103,7 +103,7 @@ apr_hash_sorted_keys (apr_hash_t *ht,
   for (hi = apr_hash_first (pool, ht); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_size_t klen;
+      apr_ssize_t klen;
       void *value;
       svn_item_t **receiver;
       svn_item_t *item = apr_pcalloc (pool, sizeof(*item));
