@@ -828,24 +828,21 @@ svn_ra_local__get_dir (void *session_baton,
         {
           const void *key;
           void *val;
-          svn_boolean_t is_dir;
           apr_hash_t *prophash;
           const char *datestring, *entryname, *fullpath;
           svn_fs_dirent_t *fs_entry;
           svn_dirent_t *entry = apr_pcalloc (pool, sizeof(*entry));
-          
-          
+
           apr_hash_this (hi, &key, NULL, &val);
           entryname = (const char *) key;
           fs_entry = (svn_fs_dirent_t *) val;
           
           /* node kind */
           fullpath = svn_path_join (abs_path, entryname, subpool);
-          SVN_ERR (svn_fs_is_dir (&is_dir, root, fullpath, subpool));
-          entry->kind = is_dir ? svn_node_dir : svn_node_file;
+          entry->kind = fs_entry->kind;
           
           /* size  */
-          if (is_dir)
+          if (entry->kind == svn_node_dir)
             entry->size = 0;
           else
             SVN_ERR (svn_fs_file_length (&(entry->size), root,

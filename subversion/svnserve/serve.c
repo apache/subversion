@@ -503,7 +503,6 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_dirent_t *entry;
   const void *key;
   void *val;
-  svn_boolean_t is_dir;
   svn_fs_root_t *root;
   apr_pool_t *subpool;
   svn_boolean_t want_props, want_contents;
@@ -539,15 +538,14 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           entry = apr_pcalloc(pool, sizeof(*entry));
 
           /* kind */
-          SVN_CMD_ERR(svn_fs_is_dir(&is_dir, root, file_path, subpool));
-          entry->kind = is_dir ? svn_node_dir : svn_node_file;
+          entry->kind = fsent->kind;
 
           /* size */
-          if (is_dir)
+          if (entry->kind == svn_node_dir)
             entry->size = 0;
           else
             SVN_CMD_ERR(svn_fs_file_length(&entry->size, root, file_path,
-                                       subpool));
+                                           subpool));
 
           /* has_props */
           SVN_CMD_ERR(svn_fs_node_proplist(&file_props, root, file_path,
@@ -556,8 +554,8 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
           /* created_rev, last_author, time */
           SVN_CMD_ERR(svn_repos_get_committed_info(&entry->created_rev, &cdate,
-                                               &cauthor, root, file_path,
-                                               subpool));
+                                                   &cauthor, root, file_path,
+                                                   subpool));
           entry->last_author = apr_pstrdup (pool, cauthor);
           if (cdate)
             SVN_CMD_ERR(svn_time_from_cstring(&entry->time, cdate, subpool));
