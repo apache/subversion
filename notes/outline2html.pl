@@ -161,6 +161,10 @@ sub count_stars ()
   my $str = shift;
 
   # Handles up to 9 stars.
+  # 
+  # todo: there's probably some way with Perl regexps to actually get
+  #       the count and return it.  Or could just do it without
+  #       regexps, but is it worth it?
 
   return 0 if ($str =~ /^[^*]/); # Common case -- this is not a star line
   return 1 if ($str =~ /^\* /);
