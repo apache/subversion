@@ -63,6 +63,9 @@ To be fixed by cmpilato:
     think this level of information is the exact right level of BDB
     knowledge that users/admins need to use svn well.
 
+  - book says that deleting a ~/.subversion file will recreate it,
+    which is wrong.  the whole directory needs to be renamed and recreated.
+
 --------------------------------------------------------------
 
 To be fixed by fitz:
