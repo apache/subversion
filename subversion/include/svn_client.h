@@ -528,7 +528,7 @@ svn_client_add (const char *path,
  * only called for items added to the working copy.  */
 svn_error_t *
 svn_client_mkdir (svn_client_commit_info_t **commit_info,
-                  apr_array_header_t *paths,
+                  const apr_array_header_t *paths,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
                   
@@ -563,7 +563,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
  * item.  */
 svn_error_t *
 svn_client_delete (svn_client_commit_info_t **commit_info,
-                   apr_array_header_t *paths,
+                   const apr_array_header_t *paths,
                    svn_boolean_t force,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
