@@ -178,10 +178,37 @@ read_rep (const char **msg,
   struct rep_args new_args;
   struct rep_args args;
   struct rep_args read_args;
-  const char *new_rep = "((fulltext 0 ) a83t2Z0)";
-  const char *rep = "((fulltext 0 ) kfogel31337)";
   svn_stringbuf_t *skel_data;
   svn_fs_t *fs;
+
+  const char *rep = "((fulltext 0 ) kfogel31337)";
+  const char *new_rep_before = "((fulltext 0 ) a83t2Z0)";
+
+  /* This test also tests the introduction of checksums into skels that
+     didn't have them. */
+
+  /* Get writeable strings. */
+  char *rep_after = apr_pstrdup
+    (pool, "((fulltext 0  (md5 16 XXXXXXXXXXXXXXXX)) kfogel31337");
+  char *new_rep_after = apr_pstrdup
+    (pool, "((fulltext 0  (md5 16 XXXXXXXXXXXXXXXX)) a83t2Z0");
+  int rep_after_len = strlen (rep_after);
+  int new_rep_after_len = strlen (new_rep_after);
+
+  /* Replace the fake fake checksums with the real fake checksums.
+     And someday, when checksums are actually calculated, we can
+     replace the real fake checksums with real real checksums. */
+  {
+    char *p;
+
+    for (p = rep_after; *p; p++)
+      if (*p == 'X')
+        *p = '\0';
+    
+    for (p = new_rep_after; *p; p++)
+      if (*p == 'X')
+        *p = '\0';
+  }
 
   *msg = "Write and overwrite a new rep; confirm with reads.";
 
@@ -194,7 +221,8 @@ read_rep (const char **msg,
 
   /* Set up transaction baton */
   new_args.fs = fs;
-  new_args.skel = svn_fs__parse_skel ((char *)new_rep, strlen (new_rep), pool);
+  new_args.skel = svn_fs__parse_skel ((char *)new_rep_before,
+                                      strlen (new_rep_before), pool);
   new_args.key = NULL;
 
   /* Write new rep to reps table. */
@@ -219,10 +247,9 @@ read_rep (const char **msg,
                              "error reading new representation");
   
   skel_data = svn_fs__unparse_skel (read_args.skel, pool);
-  if (strcmp (skel_data->data, new_rep))
+  if (memcmp (skel_data->data, new_rep_after, new_rep_after_len) != 0)
     return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
-                              "representation corrupted (\"%s\" != \"%s\")",
-                              skel_data->data, new_rep);
+                              "representation corrupted (first check)");
   
   /* Set up transaction baton for re-writing reps. */
   args.fs = new_args.fs;
@@ -246,10 +273,9 @@ read_rep (const char **msg,
                              "error reading new representation");
   
   skel_data = svn_fs__unparse_skel (read_args.skel, pool);
-  if (strcmp (skel_data->data, rep))
+  if (memcmp (skel_data->data, rep_after, rep_after_len) != 0)
     return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
-                              "representation corrupted (\"%s\" != \"%s\")",
-                              skel_data->data, rep);
+                              "representation corrupted (second check)");
   
   /* Close the filesystem. */
   SVN_ERR (svn_fs_close_fs (fs));
