@@ -1,8 +1,26 @@
-Version 0.23.0 (released 16 May 2003, revision XXXX, branches/release-0.23.0)
+Version 0.23.0 (released 16 May 2003, revision 5960, branches/release-0.23.0)
 
  User-visible changes:
+ * 'svn cat' now performs keyword expansion (#399)
+ * 'svn export' keyword expansion fixed
+ * checkouts are now restartable (#730)
+ * ssh ra_svn tunnel agent specified with svn+ssh://hostname/path syntax.
+ * remove dependency on external diff program
+ * don't error out early on unversioned files (#774)
+ * fix commands where REPORT fails if item isn't in HEAD (#891)
+ * updates now receive checksums like checkouts (#1101)
+ * 'svn revert dir' now resets property timestamp (#1163)
+ * fix instances of client showing help instead of error message (#1265)
+ * fix incorrect path in 'now a working copy' error messages (#1291)
+ * fix cvs2svn.py file added on branch problem (#1302)
+ * fix misc vc-svn.el problems (#1257, #1268)
+ * fix misc psvn problems (#1270)
+ * misc Win32 build fixes
 
  Developer-visible changes:
+ * fix misc gcc 3.3 warnings (#1031)
+ * misc memory errors/leaks
+ * remove java/jni bindings
 
 
 Version 0.22.2 (released 13 May 2003, revision 5918, branches/release-0.22.2)
