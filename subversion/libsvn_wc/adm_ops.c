@@ -688,6 +688,9 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
       /* Remove self from parent's entries file */
       svn_path_split (full_path, &parent_dir, &basename,
                       svn_path_local_style, pool);
+      /* ### sanity check:  is parent_dir even a working copy?
+         if not, it should not be a fatal error.  we're just removing
+         the top of the wc. */
       SVN_ERR (svn_wc_entries_read (&entries, parent_dir, pool));
       svn_wc__entry_remove (entries, basename);
       SVN_ERR (svn_wc__entries_write (entries, parent_dir, pool));      
@@ -749,11 +752,15 @@ svn_wc_remove_from_revision_control (svn_stringbuf_t *path,
          below */
       if (destroy_wf && (! left_a_file))
         {
-          apr_err = apr_dir_remove_recursively (path->data, subpool);
+          /* If the dir is *truly* empty (i.e. has no unversioned
+             resources, all versioned files are gone, all SVN dirs are
+             gone, and contains nothing but empty dirs), then a
+             *non*-recursive dir_remove should work.  If it doesn't,
+             no big deal.  Just assume there are unversioned items in
+             there and set "left_a_file" */
+          apr_err = apr_dir_remove (path->data, subpool);
           if (apr_err)
-            return svn_error_createf (apr_err, 0, NULL, subpool,
-                                      "Can't recursively remove dir '%s'",
-                                      path->data);
+            left_a_file = TRUE;
         }
     }  /* end of directory case */
 
