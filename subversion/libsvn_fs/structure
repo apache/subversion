@@ -254,25 +254,31 @@ and parse it appropriately.  A representation has the form:
 
 where HEADER is
 
-   (KIND TXN)
+   (KIND TXN [CHECKSUM])
 
-The KIND is "fulltext" or "delta", and TXN is the txn ID for the txn
-in which this representation was created.  The TXN therefore serves as
-a kind of mutability flag: if a txn T goes to change a representation,
-but the rep's TXN is not T, then something has gone horribly wrong and
-T should leave the rep alone (and probably error).  Of course, "change
-a representation" here means changing what the rep's consumer sees.
-Switching a representation's storage strategy, for example from
-fulltext to deltified, wouldn't count as a change, since it wouldn't
-affect what the rep produces.
+The KIND is "fulltext" or "delta".  TXN is the txn ID for the txn in
+which this representation was created.  CHECKSUM is a checksum of the
+representation's contents, that is, what the representation produces,
+regardless of whether it is stored deltified or as fulltext.  (For
+compatibility with older versions of Subversion, CHECKSUM may be
+absent, in which case the filesystem behaves as though the checksum is
+there and is correct.)
+
+The TXN also serves as a kind of mutability flag: if txn T tries to
+change a representation's contents, but the rep's TXN is not T, then
+something has gone horribly wrong and T should leave the rep alone
+(and probably error).  Of course, "change a representation" here means
+changing what the rep's consumer sees.  Switching a representation's
+storage strategy, for example from fulltext to deltified, wouldn't
+count as a change, since that wouldn't affect what the rep produces.
 
 KIND-SPECIFIC varies considerably depending on the kind of
 representation.  Here are the two forms currently recognized:
 
-   (("fulltext" TXN) KEY)
+   (("fulltext" TXN CHECKSUM) KEY)
        The data is at KEY in the `strings' table.
 
-   (("delta" TXN) (OFFSET WINDOW) ...)
+   (("delta" TXN CHECKSUM) (OFFSET WINDOW) ...)
        Each OFFSET indicates the point in the fulltext that this
        element reconstructs, and WINDOW says how to reconstruct it:
 
@@ -288,6 +294,12 @@ representation.  Here are the two forms currently recognized:
        version 0 is supported); and STRING-KEY says which string
        contains the actual svndiff data (there is no diff data held
        directly in the representations table, of course).
+
+       CHECKSUM is always present, but for compatibility with older
+       versions of Subversion, if all its bytes are 0 it is treated as
+       if correct.  (For historical reasons, the compatibility mode
+       for the rep header checksum is absence, while for the delta
+       window checksum, it is zeroed data.  Go figure.)
 
        Note also that REP-KEY might refer to a representation that
        itself requires undeltification.  We use a delta combiner to
@@ -314,11 +326,11 @@ Let's work through an example node revision:
 
 The entry for key "2345" in `representations' is:
 
-   (("delta" TXN) (0 (("svndiff" 0 "1729") 65 CHECKSUM "2343")))
+   (("delta" TXN CHECKSUM) (0 (("svndiff" 0 "1729") 65 CHECKSUM "2343")))
 
 and the entry for key "2343" in `representations' is:
 
-   (("fulltext" TXN) "1001")
+   (("fulltext" TXN CHECKSUM) "1001")
 
 while the entry for key "1729" in `strings' is:
 
@@ -793,7 +805,7 @@ Representations:
                  OFFSET ::= number ;
              REP-OFFSET ::= number ;
 
-                 HEADER ::= (KIND TXN) ;
+                 HEADER ::= (KIND TXN [CHECKSUM]) ;
                    KIND ::= "fulltext" | "delta" ;
              
                    SIZE ::= number ;

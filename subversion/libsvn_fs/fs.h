@@ -210,6 +210,15 @@ typedef struct
      transaction). */
   const char *txn_id;
 
+  /* MD5 checksum for the contents produced by this representation.
+     This checksum is for the contents the rep shows to consumers,
+     regardless of how the rep stores the data under the hood.  It is
+     independent of the storage (fulltext, delta, whatever). 
+
+     If NULL, then for compatibility behave as though the absent
+     checksum matches the expected checksum. */
+  const char *checksum;
+
   /* kind-specific stuff */
   union 
   {
