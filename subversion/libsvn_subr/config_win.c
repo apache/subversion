@@ -18,12 +18,32 @@
 
 
 
-#include "config_impl.h"
+#include "svn_private_config.h"
 
 #ifdef SVN_WIN32
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <shlobj.h>
+
+HRESULT
+svn_config__win_config_path (char *folder, int system_path)
+{
+  /* ### Adding CSIDL_FLAG_CREATE here, because those folders really
+     must exist.  I'm not too sure about the SHGFP_TYPE_CURRENT
+     semancics, though; maybe we should use ..._DEFAULT instead? */
+
+  /* FIXME: The path returned here is *not* in UTF-8, and does *not*
+     use / as the path separator.  Have to keep that in mind. */
+
+   const int csidl = (system_path ? CSIDL_COMMON_APPDATA : CSIDL_APPDATA);
+   return SHGetFolderPathA (NULL, csidl | CSIDL_FLAG_CREATE, NULL,
+                            SHGFP_TYPE_CURRENT, folder);
+}
+
+
+
+#include "config_impl.h"
 
 static svn_error_t *
 parse_section (svn_config_t *cfg, HKEY hkey, const char *section)
