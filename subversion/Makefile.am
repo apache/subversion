@@ -8,7 +8,6 @@ SUBDIRS = libsvn_subr                \
           libsvn_wc                  \
           libsvn_ra                  \
           libsvn_ra_dav              \
-          libsvn_ra_local            \
           libsvn_client              \
           @FS_BASED_DIRS@            \
           client                     \
