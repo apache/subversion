@@ -11,8 +11,14 @@
 @rem * NOTE: The paths should be relative to the Neon directory, ..\..\neon
 @rem **************************************************************************
 
-@rem Must set EXPAT_FLAGS, not EXPAT_SRC, to define HAVE_EXPAT_H
-set EXPAT_FLAGS="/I ../apr-util/xml/expat/lib /D HAVE_EXPAT_H"
+@rem The normal compilation of Neon on Windows is designed to compile
+@rem and link against the pre-compiled Windows binary Expat
+@rem installation and use the EXPAT_SRC command line parameter to
+@rem 'neon /f neon.mak' to specify where this binary installation
+@rem resides.  However, here, Neon is instructed to compile and link
+@rem against the Expat packages with APR, and the EXPAT_FLAGS
+@rem parameter must be used instead of EXPAT_SRC.
+set EXPAT_FLAGS="/I ../apr-util/xml/expat/lib /D HAVE_EXPAT /D HAVE_EXPAT_H"
 
 set exitcode=0
 
