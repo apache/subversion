@@ -96,7 +96,6 @@
 
 /* ----------------------------------------------------------------------- */
 
-%include svn_ra.h
 %{
 #include "svn_ra.h"
 
@@ -111,7 +110,13 @@
 #ifdef SWIGPERL
 #include "swigutil_pl.h"
 #endif
+
+#ifdef SWIGRUBY
+#include "swigutil_rb.h"
+#endif
 %}
+
+%include svn_ra.h
 
 #ifdef SWIGPERL
 %include ra_reporter.hi

@@ -129,7 +129,6 @@
 
 /* ----------------------------------------------------------------------- */
 
-%include svn_fs.h
 %{
 #include "svn_md5.h"
 #include "svn_fs.h"
@@ -145,4 +144,10 @@
 #ifdef SWIGPERL
 #include "swigutil_pl.h"
 #endif
+
+#ifdef SWIGRUBY
+#include "swigutil_rb.h"
+#endif
 %}
+
+%include svn_fs.h
