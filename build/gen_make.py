@@ -36,14 +36,18 @@ class MakefileGenerator(gen_base.GeneratorBase):
     for target in self.target_names:
       target_ob = self.targets[target]
 
-      path = target_ob.path
       bldtype = target_ob.type
-      objext = target_ob.objext
 
       if bldtype == 'script':
         # there is nothing to build
         continue
 
+      if bldtype == 'swig':
+        ### nothing defined yet
+        continue
+
+      path = target_ob.path
+      objext = target_ob.objext
       tpath = target_ob.output
       tfile = os.path.basename(tpath)
 
@@ -219,7 +223,7 @@ class MakefileGenerator(gen_base.GeneratorBase):
       #  pass
 
     self.includes, i_errors = gen_base._collect_paths(
-      self.parser.get('includes', 'paths'))
+      self.parser.get('options', 'includes'))
     errors = errors or i_errors
 
     includedir = os.path.join('$(includedir)', 'subversion-%s' % self.version)
