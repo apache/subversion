@@ -43,23 +43,23 @@
  * Note that this will return an EINTR on a signal.
  *
  * ### FIX: When APR gives us a better way of doing this use it. */
-static apr_status_t wait_for_input(apr_file_t *f,
-                                   apr_pool_t *pool)
+static apr_status_t wait_for_input (apr_file_t *f,
+                                    apr_pool_t *pool)
 {
-    apr_pollfd_t pollset;
-    int srv, n;
+  apr_pollfd_t pollset;
+  int srv, n;
 
-    pollset.desc_type = APR_POLL_FILE;
-    pollset.desc.f = f;
-    pollset.p = pool;
-    pollset.reqevents = APR_POLLIN;
+  pollset.desc_type = APR_POLL_FILE;
+  pollset.desc.f = f;
+  pollset.p = pool;
+  pollset.reqevents = APR_POLLIN;
 
-    srv = apr_poll(&pollset, 1, &n, -1);
+  srv = apr_poll(&pollset, 1, &n, -1);
 
-    if (n == 1 && pollset.rtnevents & APR_POLLIN)
-      return APR_SUCCESS;
+  if (n == 1 && pollset.rtnevents & APR_POLLIN)
+    return APR_SUCCESS;
 
-    return srv;
+  return srv;
 }
 
 /* Set @a *result to the result of prompting the user with @a
@@ -100,7 +100,7 @@ prompt (const char **result,
             SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
           status = wait_for_input (fp, pool);
           if (APR_STATUS_IS_EINTR (status))
-              continue;
+            continue;
           else if (status && status != APR_ENOTIMPL)
             return svn_error_wrap_apr (status, _("Can't read stdin"));
              
