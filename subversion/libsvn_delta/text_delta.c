@@ -62,7 +62,7 @@ struct tpush_baton {
 
   /* Private data */
   char *buf;
-  apr_size_t source_offset;
+  svn_filesize_t source_offset;
   apr_size_t source_len;
   svn_boolean_t source_done;
   apr_size_t target_len;
@@ -131,7 +131,7 @@ svn_txdelta__make_window (const svn_txdelta__ops_baton_t *build_baton,
    data, and is simply copied into the window's sview_offset field. */
 static svn_txdelta_window_t *
 compute_window (const char *data, apr_size_t source_len, apr_size_t target_len,
-                apr_size_t source_offset, apr_pool_t *pool)
+                svn_filesize_t source_offset, apr_pool_t *pool)
 {
   svn_txdelta__ops_baton_t build_baton = { 0 };
   svn_txdelta_window_t *window;
