@@ -29,7 +29,8 @@ log: changelog
 ChangeLog: changelog
 
 changelog:
-	cvs2cl.pl --fsf -r -S -U ./AUTHORS subversion doc www \
-                                     `find . -type f -maxdepth 1`
+	cvs2cl.pl --fsf -r -S -U ./AUTHORS            \
+            subversion doc www expat-lite notes tools \
+            `find . -type f -maxdepth 1`
 
 
