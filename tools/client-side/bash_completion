@@ -86,7 +86,7 @@ _svn()
 		         $nOpts $pOpts --old --new --ignore-ancestry"
 		;;
 	export)
-		cmdOpts="$rOpts $qOpts $pOpts"
+		cmdOpts="$rOpts $qOpts $pOpts --force"
 		;;
 	import)
 		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts"
