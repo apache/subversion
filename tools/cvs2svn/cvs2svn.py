@@ -89,15 +89,7 @@ class CollectData(rcsparse.Sink):
     self.cvsroot = cvsroot
     self.revs = open(log_fname_base + REVS_SUFFIX, 'w')
     self.resync = open(log_fname_base + RESYNC_SUFFIX, 'w')
-
-    # This is always a number.  rcsparse calls this the "principal
-    # branch", but CVS and RCS usually call it the "default branch",
-    # so that's what we say internally, even though the rcsparse API
-    # setter method is 'set_principal_branch'.
-    self.default_branch = None
-
-  def set_principal_branch(self, branch):
-    self.default_branch = branch
+    # See set_fname() for initializations of other variables.
 
   def set_fname(self, fname):
     "Prepare to receive data for a new file."
@@ -106,10 +98,28 @@ class CollectData(rcsparse.Sink):
     # revision -> [timestamp, author, operation, old-timestamp]
     self.rev_data = { }
     self.prev = { }
+
+    # Hash mapping branch numbers, like '1.7.2', to branch names,
+    # like 'Release_1_0_dev'.
     self.branch_names = { }
-    self.taglist = { }
+
+    # Hash mapping revision numbers, like '1.7', to lists of names
+    # indicating which branches sprout from that revision, like
+    # ['Release_1_0_dev', 'experimental_driver', ...].
     self.branchlist = { }
+
+    # Like self.branchlist, but the values are lists of tag names that
+    # apply to the key revision.
+    self.taglist = { }
+
+    # This is always a number -- rcsparse calls this the "principal
+    # branch", but CVS and RCS refer to it as the "default branch",
+    # so that's what we call it, even though the rcsparse API setter
+    # method is still 'set_principal_branch'.
     self.default_branch = None
+
+  def set_principal_branch(self, branch):
+    self.default_branch = branch
 
   def set_branch_name(self, branch_number, name):
     """Record that BRANCH_NUMBER is the branch number for branch NAME,
