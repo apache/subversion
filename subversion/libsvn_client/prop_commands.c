@@ -57,64 +57,48 @@ is_valid_prop_name (const char *name)
 }
 
 
-static svn_error_t *
-recursive_propset (const char *propname,
-                   const svn_string_t *propval,
-                   svn_wc_adm_access_t *adm_access,
-                   apr_pool_t *pool)
+/* A baton for propset_walk_cb. */
+struct propset_walk_baton
 {
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
+  const char *propname;  /* The name of the property to set. */
+  const svn_string_t *propval;  /* The value to set. */
+  svn_wc_adm_access_t *base_access;  /* Access for the tree being walked. */
+};
 
-  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
+/* An entries-walk callback for svn_client_propset.
+ * 
+ * For the path given by PATH and ENTRY,
+ * set the property named wb->PROPNAME to the value wb->PROPVAL,
+ * where "wb" is the WALK_BATON of type "struct propset_walk_baton *".
+ */
+static svn_error_t *
+propset_walk_cb (const char *path,
+                 const svn_wc_entry_t *entry,
+                 void *walk_baton,
+                 apr_pool_t *pool)
+{
+  struct propset_walk_baton *wb = walk_baton;
+  svn_error_t *err;
 
-  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+  /* We're going to receive dirents twice;  we want to ignore the
+     first one (where it's a child of a parent dir), and only use
+     the second one (where we're looking at THIS_DIR).  */
+  if (strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
+    return SVN_NO_ERROR;
+
+  /* Ignore the entry if it does not exist at the time of interest. */
+  if (entry->schedule == svn_wc_schedule_delete)
+    return SVN_NO_ERROR;
+
+  err = svn_wc_prop_set (wb->propname, wb->propval,
+                         path, wb->base_access, pool);
+  if (err)
     {
-      const void *key;
-      const char *keystring;
-      void * val;
-      const char *current_entry_name;
-      svn_stringbuf_t *full_entry_path
-        = svn_stringbuf_create (svn_wc_adm_access_path (adm_access), pool);
-      const svn_wc_entry_t *current_entry;
-
-      apr_hash_this (hi, &key, NULL, &val);
-      keystring = key;
-      current_entry = val;
-        
-      if (! strcmp (keystring, SVN_WC_ENTRY_THIS_DIR))
-        current_entry_name = NULL;
-      else
-        current_entry_name = keystring;
-
-      /* Compute the complete path of the entry */
-      if (current_entry_name)
-        svn_path_add_component (full_entry_path, current_entry_name);
-
-      if (current_entry->schedule != svn_wc_schedule_delete)
-        {
-          svn_error_t *err;
-          if (current_entry->kind == svn_node_dir && current_entry_name)
-            {
-              svn_wc_adm_access_t *dir_access;
-
-              SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
-                                            full_entry_path->data, pool));
-              err = recursive_propset (propname, propval, dir_access, pool);
-            }
-          else
-            {
-              err = svn_wc_prop_set (propname, propval,
-                                     full_entry_path->data, adm_access, pool);
-            }
-          if (err)
-            {
-              if (err->apr_err != SVN_ERR_ILLEGAL_TARGET)
-                return err;
-              svn_error_clear (err);
-            }
-        }
+      if (err->apr_err != SVN_ERR_ILLEGAL_TARGET)
+        return err;
+      svn_error_clear (err);
     }
+
   return SVN_NO_ERROR;
 }
 
@@ -151,7 +135,16 @@ svn_client_propset (const char *propname,
 
   if (recurse && node->kind == svn_node_dir)
     {
-      SVN_ERR (recursive_propset (propname, propval, adm_access, pool));
+      static const svn_wc_entry_callbacks_t walk_callbacks
+        = { propset_walk_cb };
+      struct propset_walk_baton wb;
+
+      wb.base_access = adm_access;
+      wb.propname = propname;
+      wb.propval = propval;
+
+      SVN_ERR (svn_wc_walk_entries (target, adm_access,
+                                    &walk_callbacks, &wb, FALSE, pool));
     }
   else
     {
@@ -261,79 +254,56 @@ pristine_or_working_propval (const svn_string_t **propval,
 }
 
 
-/* Helper for svn_client_propget.
+/* A baton for propget_walk_cb. */
+struct propget_walk_baton
+{
+  const char *propname;  /* The name of the property to get. */
+  svn_boolean_t pristine;  /* Select base rather than working props. */
+  svn_wc_adm_access_t *base_access;  /* Access for the tree being walked. */
+  apr_hash_t *props;  /* Out: mapping of (path:propval). */
+};
+
+/* An entries-walk callback for svn_client_propget.
  * 
- * Starting from the path associated with ADM_ACCESS, populate PROPS
- * with the values of property PROPNAME.  If PRISTINE is true, use the
- * base values, else use working values.
+ * For the path given by PATH and ENTRY,
+ * populate wb->PROPS with the values of property wb->PROPNAME,
+ * where "wb" is the WALK_BATON of type "struct propget_walk_baton *".
+ * If wb->PRISTINE is true, use the base value, else use the working value.
  *
- * The keys of PROPS will be 'const char *' paths, rooted at the
+ * The keys of wb->PROPS will be 'const char *' paths, rooted at the
  * path svn_wc_adm_access_path(ADM_ACCESS), and the values are
  * 'const svn_string_t *' property values.
  */
 static svn_error_t *
-recursive_propget (apr_hash_t *props,
-                   const char *propname,
-                   svn_boolean_t pristine,
-                   svn_wc_adm_access_t *adm_access,
-                   apr_pool_t *pool)
+propget_walk_cb (const char *path,
+                 const svn_wc_entry_t *entry,
+                 void *walk_baton,
+                 apr_pool_t *pool)
 {
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
+  struct propget_walk_baton *wb = walk_baton;
+  const svn_string_t *propval;
 
-  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+  /* We're going to receive dirents twice;  we want to ignore the
+     first one (where it's a child of a parent dir), and only use
+     the second one (where we're looking at THIS_DIR).  */
+  if (strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
+    return SVN_NO_ERROR;
+
+  /* Ignore the entry if it does not exist at the time of interest. */
+  if (entry->schedule
+      == (wb->pristine ? svn_wc_schedule_add : svn_wc_schedule_delete))
+    return SVN_NO_ERROR;
+
+  SVN_ERR (pristine_or_working_propval (&propval, wb->propname, path,
+                                        wb->base_access, wb->pristine,
+                                        apr_hash_pool_get (wb->props)));
+
+  if (propval)
     {
-      const void *key;
-      const char *keystring;
-      void * val;
-      const char *current_entry_name;
-      const char *full_entry_path;
-      const svn_wc_entry_t *current_entry;
-
-      apr_hash_this (hi, &key, NULL, &val);
-      keystring = key;
-      current_entry = val;
-    
-      if (! strcmp (keystring, SVN_WC_ENTRY_THIS_DIR))
-          current_entry_name = NULL;
-      else
-          current_entry_name = keystring;
-
-      /* Compute the complete path of the entry */
-      if (current_entry_name)
-        full_entry_path = svn_path_join (svn_wc_adm_access_path (adm_access),
-                                         current_entry_name, pool);
-      else
-        full_entry_path = apr_pstrdup (pool,
-                                       svn_wc_adm_access_path (adm_access));
-
-      /* Process the entry if it exists at the time of interest. */
-      if (current_entry->schedule
-          != (pristine ? svn_wc_schedule_add : svn_wc_schedule_delete))
-        {
-          if (current_entry->kind == svn_node_dir && current_entry_name)
-            {
-              svn_wc_adm_access_t *dir_access;
-              SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
-                                            full_entry_path, pool));
-              SVN_ERR (recursive_propget (props, propname, pristine,
-                                          dir_access, pool));
-            }
-          else
-            {
-              const svn_string_t *propval;
-
-              SVN_ERR (pristine_or_working_propval (&propval, propname,
-                                                    full_entry_path,
-                                                    adm_access,
-                                                    pristine, pool));
-              if (propval)
-                apr_hash_set (props, full_entry_path,
-                              APR_HASH_KEY_STRING, propval);
-            }
-        }
+      path = apr_pstrdup (apr_hash_pool_get (wb->props), path);
+      apr_hash_set (wb->props, path, APR_HASH_KEY_STRING, propval);
     }
+
   return SVN_NO_ERROR;
 }
 
@@ -580,8 +550,19 @@ svn_client_propget (apr_hash_t **props,
 
       /* Fetch, recursively or not. */
       if (recurse && (node->kind == svn_node_dir))
-        SVN_ERR (recursive_propget (*props, propname, pristine,
-                                    adm_access, pool));
+        {
+          static const svn_wc_entry_callbacks_t walk_callbacks
+            = { propget_walk_cb };
+          struct propget_walk_baton wb;
+
+          wb.base_access = adm_access;
+          wb.props = *props;
+          wb.propname = propname;
+          wb.pristine = pristine;
+
+          SVN_ERR (svn_wc_walk_entries (target, adm_access,
+                                        &walk_callbacks, &wb, FALSE, pool));
+        }
       else
         {
           const svn_string_t *propval;
@@ -785,71 +766,47 @@ add_to_proplist (apr_array_header_t *prop_list,
   return SVN_NO_ERROR;
 }
 
-/* Helper for svn_client_proplist.
+/* A baton for proplist_walk_cb. */
+struct proplist_walk_baton
+{
+  svn_boolean_t pristine;  /* Select base rather than working props. */
+  svn_wc_adm_access_t *base_access;  /* Access for the tree being walked. */
+  apr_array_header_t *props;  /* Out: array of svn_client_proplist_item_t. */
+};
+
+/* An entries-walk callback for svn_client_proplist.
  * 
- * Starting from the path associated with ADM_ACCESS, populate PROPS
- * with the values of property PROPNAME.  If PRISTINE is true, use the
- * base values, else use working values.
- *
- * The keys of PROPS will be 'const char *' paths, rooted at the
- * path svn_wc_adm_access_path(ADM_ACCESS), and the values are
- * 'const svn_string_t *' property values.
+ * For the path given by PATH and ENTRY,
+ * populate wb->PROPS with a svn_client_proplist_item_t for each path,
+ * where "wb" is the WALK_BATON of type "struct proplist_walk_baton *".
+ * If wb->PRISTINE is true, use the base values, else use the working values.
  */
 static svn_error_t *
-recursive_proplist (apr_array_header_t *props,
-                    svn_wc_adm_access_t *adm_access,
-                    svn_boolean_t pristine,
-                    apr_pool_t *pool)
+proplist_walk_cb (const char *path,
+                  const svn_wc_entry_t *entry,
+                  void *walk_baton,
+                  apr_pool_t *pool)
 {
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
+  struct proplist_walk_baton *wb = walk_baton;
 
-  SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
+  /* We're going to receive dirents twice;  we want to ignore the
+     first one (where it's a child of a parent dir), and only use
+     the second one (where we're looking at THIS_DIR).  */
+  if (strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
+    return SVN_NO_ERROR;
 
-  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      const char *keystring;
-      void * val;
-      const char *current_entry_name;
-      const char *full_entry_path;
-      const svn_wc_entry_t *current_entry;
+  /* Ignore the entry if it does not exist at the time of interest. */
+  if (entry->schedule
+      == (wb->pristine ? svn_wc_schedule_add : svn_wc_schedule_delete))
+    return SVN_NO_ERROR;
 
-      apr_hash_this (hi, &key, NULL, &val);
-      keystring = key;
-      current_entry = val;
-    
-      if (! strcmp (keystring, SVN_WC_ENTRY_THIS_DIR))
-          current_entry_name = NULL;
-      else
-          current_entry_name = keystring;
+  path = apr_pstrdup (wb->props->pool, path);
+  SVN_ERR (add_to_proplist (wb->props, path, wb->base_access,
+                            wb->pristine, wb->props->pool));
 
-      /* Compute the complete path of the entry */
-      if (current_entry_name)
-        full_entry_path = svn_path_join (svn_wc_adm_access_path (adm_access),
-                                         current_entry_name, pool);
-      else
-        full_entry_path = apr_pstrdup (pool,
-                                       svn_wc_adm_access_path (adm_access));
-
-      /* Process the entry if it exists at the time of interest. */
-      if (current_entry->schedule
-          != (pristine ? svn_wc_schedule_add : svn_wc_schedule_delete))
-        {
-          if (current_entry->kind == svn_node_dir && current_entry_name)
-            {
-              svn_wc_adm_access_t *dir_access;
-              SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
-                                            full_entry_path, pool));
-              SVN_ERR (recursive_proplist (props, dir_access, pristine, pool));
-            }
-          else
-            SVN_ERR (add_to_proplist (props, full_entry_path, adm_access,
-                                      pristine, pool));
-        }
-    }
   return SVN_NO_ERROR;
 }
+
 
 /* Note: this implementation is very similar to svn_client_propget. */
 svn_error_t *
@@ -951,7 +908,18 @@ svn_client_proplist (apr_array_header_t **props,
 
       /* Fetch, recursively or not. */
       if (recurse && (node->kind == svn_node_dir))
-        SVN_ERR (recursive_proplist (*props, adm_access, pristine, pool));
+        {
+          static const svn_wc_entry_callbacks_t walk_callbacks
+            = { proplist_walk_cb };
+          struct proplist_walk_baton wb;
+
+          wb.base_access = adm_access;
+          wb.props = *props;
+          wb.pristine = pristine;
+
+          SVN_ERR (svn_wc_walk_entries (target, adm_access,
+                                        &walk_callbacks, &wb, FALSE, pool));
+        }
       else 
         SVN_ERR (add_to_proplist (*props, target, adm_access, pristine, pool));
       
