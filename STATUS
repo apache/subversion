@@ -83,7 +83,7 @@ Candidate changes:
       -1: ghudson
           (http://www.contactor.se/~dast/svn/archive-2004-08/0754.shtml)
 
-  * r10467, r10734, r10472, r10759, rXXXXX
+  * r10467, r10734, r10472, r10759, r10789, rXXXXX
     Detect and report lock-contention at recovery time.
     Justification:
       Improved user interface, low risk.
@@ -96,7 +96,8 @@ Candidate changes:
     Note: See discussion in
      http://www.contactor.se/~dast/svn/archive-2004-08/0804.shtml
     Votes:
-      +1: mbk
+      +1: bliss
+      +0: mbk
 
   * r10752
     Remove packages/rpm/mandrake-*.
