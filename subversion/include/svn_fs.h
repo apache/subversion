@@ -743,10 +743,6 @@ svn_error_t *svn_fs_file_contents (svn_stream_t **contents,
                                    apr_pool_t *pool);
 
 
-/* Free the file content baton BATON.  */
-void svn_fs_free_file_contents (void *baton);
-
-
 /* Create a new file named PATH in ROOT.  The file's initial contents
    are the empty string, and it has no properties.  ROOT must be the
    root of a transaction, not a revision.
