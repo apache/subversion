@@ -384,33 +384,6 @@ svn_error_t *svn_fs__dag_get_copy (svn_revnum_t *rev_p,
                                    trail_t *trail);
 
 
-/* Merge changes between ANCESTOR and SOURCE into TARGET, as part of
- * TRAIL.  ANCESTOR and TARGET must be distinct node revisions, and
- * TARGET must be mutable. 
- *
- * SOURCE, TARGET, and ANCESTOR are generally directories; this
- * function recursively merges the directories' contents.  If any are
- * files, this function simply returns an error whenever SOURCE,
- * TARGET, and ANCESTOR are all distinct node revisions.
- *
- * If there are differences between ANCESTOR and SOURCE that conflict
- * with changes between ANCESTOR and TARGET, this function returns an
- * SVN_ERR_FS_CONFLICT error, and sets *CONFLICT_P to the name of the
- * conflicting node in TARGET, with TARGET_PATH prepended as a path.
- *
- * If there are no conflicting differences, *CONFLICT_P is set to
- * null. 
- *
- * Do any necessary temporary allocation in TRAIL->pool.
- */
-svn_error_t *svn_fs__dag_merge (const char **conflict_p,
-                                const char *target_path,
-                                dag_node_t *source,
-                                dag_node_t *target,
-                                dag_node_t *ancestor,
-                                trail_t *trail);
-
-
 #endif /* SVN_LIBSVN_FS_DAG_H */
 
 
