@@ -341,10 +341,18 @@ In our experience, we have seen situations where a bug in Subversion
 DB environment in a `locked' state.  Any further attempts to read or
 write to the repository just sit there, waiting on the lock.
 
-To `unwedge' the repository, use @command{db_recover}:
-
+To `unwedge' the repository:
+@enumerate
+@item
+Shut down the Subversion server, to make sure nobody is accessing the
+repository's Berkeley DB files.
+@item
+Switch to the user who owns and manages the database.
+@item
+Run the command @command{db_recover -ve -h @var{repos}/db}, where
+@var{repos} is the repository's directory name.  You should see
+output like this:
 @example
-$ db_recover -ve -h repos/db
 db_recover: Finding last valid log LSN: file: 40 offset 4080873
 db_recover: Checkpoint at: [40][4080333]
 db_recover: Checkpoint LSN: [40][4080333]
@@ -355,14 +363,19 @@ db_recover: Previous checkpoint: [40][4078761]
 db_recover: Recovery complete at Sun Jul 14 07:15:42 2002
 db_recover: Maximum transaction id 80000000 Recovery checkpoint [40][4080333]
 @end example
+Make sure that the @command{db_recover} program you invoke is the one
+distributed with the same version of Berkeley DB you're using in your
+Subversion server.  
+@item
+Restart the Subversion server.
+@end enumerate
 
-You should shut down the httpd server before doing this.  You'll
-probably have to be root to shut down httpd, but make sure to run the
-actual @command{db_recover} command as the user who owns and manages
-the database and @emph{not} as root.  Running @command{db_recover} as
-root will leave root owned files in the db directory which cannot be
-opened by the non-root user that manages the database (typically, the
-user the Apache process runs as).
+Make sure you run this command as the user that owns and manages the
+database --- typically your Apache process --- and @emph{not} as root.
+Running @command{db_recover} as root leaves files owned by root in the
+@file{db} directory, which the non-root user that manages the database
+cannot open.  If you do this, you'll get ``permission denied'' error
+messages when you try to access the repository.
 
 Second, a repository administrator may need to manage the growth of
 logfiles.  At any given time, the DB environment is using at least one
