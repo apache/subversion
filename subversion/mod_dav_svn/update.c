@@ -353,9 +353,9 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   if (ns == -1)
     {
       return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                           "The request does not contain the 'SVN:' "
+                           "The request does not contain the 'svn:' "
                            "namespace, so it is not going to have an "
-                           "SVN:target-revision element. That element "
+                           "svn:target-revision element. That element "
                            "is required.");
     }
   

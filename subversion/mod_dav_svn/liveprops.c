@@ -29,13 +29,13 @@
 static const char * const dav_svn_namespace_uris[] =
 {
     "DAV:",
-    "SVN:",     /* ### need to get this approved from IANA */
+    SVN_PROP_PREFIX,    /* ### need to get this approved from IANA */
 
     NULL	/* sentinel */
 };
 enum {
     DAV_SVN_NAMESPACE_URI_DAV,  /* the DAV: namespace URI */
-    DAV_SVN_NAMESPACE_URI       /* the SVN: namespace URI */
+    DAV_SVN_NAMESPACE_URI       /* the svn: namespace URI */
 };
 
 #define SVN_RO_DAV_PROP(name) \

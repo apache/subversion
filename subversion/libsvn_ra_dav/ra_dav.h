@@ -95,11 +95,7 @@ svn_error_t * svn_ra_dav__do_update(
 ** necessary to store, and some is simply stored as a cached value.
 */
 
-#define SVN_RA_DAV__LP_NAMESPACE \
-        "svn:wc:http://subversion.tigris.org/props/ra/dav/local/"
-
-#define SVN_RA_DAV__CUSTOM_NAMESPACE \
-	"SVN:custom:"
+#define SVN_RA_DAV__LP_NAMESPACE SVN_PROP_WC_PREFIX "ra_dav:"
 
 /* store the URL where Activities can be created */
 #define SVN_RA_DAV__LP_ACTIVITY_URL     SVN_RA_DAV__LP_NAMESPACE "activity-url"
@@ -107,6 +103,8 @@ svn_error_t * svn_ra_dav__do_update(
 /* store the URL of the version resource (from the DAV:checked-in property) */
 #define SVN_RA_DAV__LP_VSN_URL          SVN_RA_DAV__LP_NAMESPACE "version-url"
 
+
+#define SVN_RA_DAV__CUSTOM_NAMESPACE SVN_PROP_PREFIX "custom:"
 
 /*
 ** SVN_RA_DAV__PROP_*: properties that we fetch from the server
@@ -118,7 +116,8 @@ svn_error_t * svn_ra_dav__do_update(
 #define SVN_RA_DAV__PROP_VCC            "DAV:version-controlled-configuration"
 #define SVN_RA_DAV__PROP_VERSION_NAME   "DAV:version-name"
 
-#define SVN_RA_DAV__PROP_BASELINE_RELPATH       "SVN:baseline-relative-path"
+#define SVN_RA_DAV__PROP_BASELINE_RELPATH \
+    SVN_PROP_PREFIX "baseline-relative-path"
 
 typedef struct {
   /* what is the URL for this resource */
