@@ -47,11 +47,12 @@
       The two documents are almost the same, after all; they only
       differ in small, specific ways.</para>
 
-    <para>This is the basic concept of a "branch" -- namely, a line of
-      development that exists independently of another line, yet still
-      shares a common history if you look far enough back in time.  A
-      branch always begins life as a copy of something, and moves on
-      from there, generating its own history.</para>
+    <para>This is the basic concept of a <firstterm>branch</firstterm>
+      &mdash; namely, a line of development that exists independently of
+      another line, yet still shares a common history if you look far
+      enough back in time.  A branch always begins life as a copy of
+      something, and moves on from there, generating its own
+      history.</para>
 
       <figure id="svn-ch4-dia1">
         <title>Branches of development</title>
@@ -73,24 +74,191 @@
   <!-- ======================== SECTION 2 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-2">
-    <title>Branching with svn cp</title> 
+    <title>Creating a branch</title> 
 
     <para>At this point, you should understand how each commit creates
       an entire new filesystem tree (called a "revision") in the
       repository.  If not, go back and read about revisions in  <xref
-      linkend="svn-ch-2-sect-3.2"/></para>
+      linkend="svn-ch-2-sect-3.2"/>.</para>
 
-    <para>As you may have suspected, the filesystem doesn't grow 652
-      new inodes each time a new revision is created.  Instead, each
-      new tree is <emphasis>mostly</emphasis> made of pointers to
-      already-existing nodes; new nodes are created only for changed
-      items, and all the rest of the revision tree is <quote>shared
-      storage</quote> with other revision trees.  This technique
-      demonstrates how the filesystem is able to make <quote>cheap
-      copies</quote> of things.  These cheap copies are nothing more
-      than directory entries that point to existing nodes.  And this
-      is the basis of tags and branches.</para>
+    <para>For this chapter, we'll go back to the same example from
+      Chapter 2.  Remember that you and your collaborator, Felix, are
+      sharing a repository that contains two projects,
+      <filename>trunk</filename> and <filename>write.</filename>
+      Notice, however, that this time somebody has created two new
+      top-level directories in the repository, called
+      <filename>trunk</filename> and <filename>branches</filename>.
+      The projects themselves are subdirectories of
+      <filename>trunk</filename>, and the reason for this will become
+      clearer later on.</para>
     
+      <figure id="svn-ch4-dia2">
+        <title>Starting repository layout</title>
+        <graphic fileref="images/ch04dia2.png"/>
+      </figure>
+
+    <para>As before, assume that you and Felix both have working
+      copies of the <filename>/trunk/write</filename> project.</para>
+
+    <para>Let's say that you've been given the task of performing a
+      radical reorganization of the project.  Not only is it a wide
+      change (it will affect all the files in the project), but it's a
+      very large change (it will take a long time to write.)  The
+      problem here is that you don't want to interfere with Felix, who
+      is in the process of fixing small bugs here and there.  He's
+      depending on the fact that the latest version of the project is
+      always usable.  If you start committing your changes as you make
+      them, you'll surely "break" the project for Felix.</para>
+
+    <para>One strategy is to simply crawl into a hole: you and Felix
+      can stop sharing information for a week or two.  That is, start
+      gutting and reorganizing all the files in your working copy, but
+      don't commit or update until you're completely finished with the
+      task.  There are are number of problems with this, though.
+      First, it's not very safe.  Most people like to save their work
+      to the repository frequently, should something bad accidentally
+      happen to their working copy.  Second, it's not very flexible.
+      If you do your work on different computers (perhaps you have a
+      working copy of <filename>/trunk/write</filename> on two
+      different machines), you'll need to manually copy your
+      long-running changes back and forth, or just do all the work on
+      a single computer.  Finally, when you're finished, you might
+      find it very difficult to commit.  Felix (or others) may have
+      made many changes in the repository that are difficult to merge
+      into your working copy -- especially all at once.</para>
+
+    <para>The better solution, of course, is to create your own
+      branch, or line of development, in the repository.  This allows
+      you to save your half-broken work frequently without interfering
+      with others, yet you can still selectively share information
+      with your collaborators.  You'll see exactly how this works
+      later on.</para>
+
+    <para>So how do we create a branch?  Very simple -- you make a
+      copy of the project in the repository using the <command>svn
+      copy</command> command.  Subversion is not only able to copy
+      single files, but whole directories as well.  In this case, you
+      want to make a copy of the <filename>/trunk/write</filename>
+      directory.  Where should the new copy live?  It doesn't really
+      matter; Subversion doesn't care.  It's a matter of project
+      policy.  Let's say that your team has a policy of creating
+      branches in the <filename>/branches</filename> area of the
+      repository.  So you want to create a new directory,
+      <filename>/branches/my-write-branch</filename>, which starts as
+      a copy of <filename>/trunk/write</filename>. </para>
+
+    <para>There are two different ways to make a copy.  We'll
+      demonstrate the messy way first, just to make the concept clear.
+      To begin, check out a working copy of the root
+      (<filename>/</filename>) of the repository:</para>
+
+<screen>
+$ svn checkout http://svn.example.com/repos/ bigwc
+A  bigwc/branches/
+A  bigwc/trunk/
+A  bigwc/trunk/write
+A  bigwc/trunk/write/Makefile
+A  bigwc/trunk/write/document.c
+A  bigwc/trunk/write/search.c
+A  bigwc/trunk/paint
+A  bigwc/trunk/paint/Makefile
+A  bigwc/trunk/paint/canvas.c
+A  bigwc/trunk/paint/brush.c
+Checked out revision 340.
+</screen>
+
+    <para>And now it's simply a matter of passing two working-copy
+      paths to the <command>svn copy</command> command:</para>
+
+<screen>
+$ cd bigwc
+$ svn copy trunk/write branches/my-write-branch
+$ svn status
+A  +   branches/my-write-branch
+</screen>
+
+    <para>In this case, the <command>svn copy</command> command
+    recursively copied the <filename>trunk/write</filename> directory
+    to a new directory, <filename>branches/my-write-branch</filename>.
+    As you can see from the <command>svn status</command> command, the
+    new directory is now scheduled for addition to the repository.
+    But also notice the '+' next to the letter A.  This indicates that
+    the scheduled addition is a <emphasis>copy</emphasis> of
+    something, not something new.  When you commit your changes,
+    Subversion will create
+    <filename>/branches/my-write-branch</filename> in the repository
+    by copying <filename>/trunk/write</filename>, rather than
+    resending all of the working copy data over the network.</para>
+
+<screen>
+$ svn commit -m "Creating a private branch of /trunk/write."
+Adding      branches/my-write-branch
+Committed revision 341.
+</screen>
+
+    <para>And now the easier method of creating a branch, which we
+      should have told you about in first place: the <command>svn
+      copy</command> is able to operate on two URLs.</para>
+
+<screen>
+$ svn copy http://svn.example.com/repos/trunk/write \
+           http://svn.example.com/repos/branches/my-write-branch \
+      -m "Creating a private branch of /trunk/write"
+
+Committed revision 341.
+</screen>
+
+    <para>From Subversion's point of view, there's absolutely no
+    difference between these two methods.  Both procedures end up
+    creating a new directory in revision 341, and the new directory is
+    a copy of <filename>/trunk/write</filename>.  Notice that the
+    second method, however, performs an <emphasis>immediate</emphasis>
+    commit.  It's an easier procedure, because it doesn't require you
+    to check out a large mirror of the repository.  In fact, this
+    technique doesn't even require you to have a working copy at all!
+    </para>
+
+    <figure id="svn-ch4-dia3">
+      <title>Repository with new copy</title>
+      <graphic fileref="images/ch04dia3.png"/>
+    </figure>
+    
+    <sidebar>
+      <title>Cheap copies</title>
+      
+      <para>At this point, you might be thinking to yourself: "Holy
+        cow, the repository is copying entire directories -- doesn't
+        that mean that the repository will get really huge if you
+        start making branch-copies of big projects?"</para>
+
+      <para>This is a valid concern!  However, no need to worry.
+        Subversion's repository has a clever internal design.  When
+        the repository copies something, it doesn't actually duplicate
+        any data.  Instead, it creates a new directory entry that
+        points to an <emphasis>existing</emphasis> tree.  If you're a
+        Unix user, this is the same concept as a hard-link.  From
+        there, the copy is said to be "lazy".  That is, if you commit
+        a change to one file within the copied directory, then only
+        that file changes -- the rest of the files continue to exist
+        as hard-links to the original files in the original
+        directory.</para>
+      
+      <para>This is why you'll often hear Subversion users talk about
+        "cheap copies".  It doesn't matter how large the directory is
+        -- it takes a very tiny, constant amount of time to make a
+        copy of it.  In fact, this feature is the basis of how commits
+        work in Subversion: each revision is a "cheap copy" of the
+        previous revision, with a few items lazily changed within.  To
+        read more about this, look at Subversion's Design document.
+        <!-- ### link?  is this in the book?  URL? --></para>
+
+      <para>The moral of the story is: copies are cheap, both in of
+        time and space.  Make branches as early and often as you want
+        to.</para>
+    </sidebar>
+
+    <para>EVERTHING BELOW HERE IS BEING REWRITTEN</para>
+
     <para>Suppose we have a repository whose head tree is revision 82.
       In this repository is a subdirectory <filename>mooIRC</filename>
       that contains a software project that is ready to be tagged.
