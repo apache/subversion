@@ -112,6 +112,24 @@ svn_txdelta__insert_op (svn_txdelta__ops_baton_t *build_baton,
 {
   svn_txdelta_op_t *op;
 
+  /* Check if this op can be merged with the previous op. The vdelta
+     algorithm will never generate such ops, but the delta combiner
+     can, and this is the obvious place to make the check. */
+  if (build_baton->num_ops > 0)
+    {
+      op = &build_baton->ops[build_baton->num_ops - 1];
+      if (op->action_code == opcode
+          && (opcode == svn_txdelta_new
+              || op->offset + op->length == offset))
+        {
+          op->length += length;
+          if (opcode == svn_txdelta_new)
+            svn_stringbuf_appendbytes (build_baton->new_data,
+                                       new_data, length);
+          return;
+        }
+    }
+
   /* Create space for the new op. */
   if (build_baton->num_ops == build_baton->ops_size)
     {

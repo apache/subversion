@@ -261,7 +261,7 @@ walk_range_index (range_index_node_t *node, const char **msg)
     }
   if (prev_prev_node != NULL
       && prev_node->target_offset > 0
-      && prev_prev_node->limit >= node->offset)
+      && prev_prev_node->limit > node->offset)
     {
       ret = prev_node->target_offset;
       prev_node->target_offset = -prev_node->target_offset;
