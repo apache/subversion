@@ -19,7 +19,6 @@
 
 
 #include <string.h>
-#include <ctype.h>
 #include <assert.h>
 
 #include <apr_strings.h>
@@ -29,6 +28,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_pools.h"
+#include "svn_ctype.h"
 #include "svn_utf.h"
 #include "utf_impl.h"
 #include "svn_private_config.h"
@@ -333,7 +333,7 @@ fuzzy_escape (const char *src, apr_size_t len, apr_pool_t *pool)
   /* First count how big a dest string we'll need. */
   while (src < src_end)
     {
-      if (! apr_isascii (*src) || *src == '\0')
+      if (! svn_ctype_isascii (*src) || *src == '\0')
         new_len += 5;  /* 5 slots, for "?\XXX" */
       else
         new_len += 1;  /* one slot for the 7-bit char */
@@ -349,7 +349,7 @@ fuzzy_escape (const char *src, apr_size_t len, apr_pool_t *pool)
   /* And fill it up. */
   while (src_orig < src_end)
     {
-      if (! apr_isascii (*src_orig) || src_orig == '\0')
+      if (! svn_ctype_isascii (*src_orig) || src_orig == '\0')
         {
           /* This is the same format as svn_xml_fuzzy_escape uses, but that
              function escapes different characters.  Please keep in sync!
