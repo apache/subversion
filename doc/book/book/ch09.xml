@@ -1799,14 +1799,14 @@ Transmitting file data .........
 Committed revision 16.
 </screen>
 
-          <para>This imports the local directory <filename>myproj</filename> into
-            <filename>trunk/vendors</filename> in your repository.  The directory
-            <filename>trunk/vendors</filename> need not exist before you import into
-            it&mdash;<command>svn import</command> will
+          <para>This imports the local directory <filename>myproj</filename>
+            into <filename>trunk/misc</filename> in your repository.  The
+            directory <filename>trunk/misc</filename> need not exist before
+            you import into it&mdash;<command>svn import</command> will
             recursively create directories for you:</para>
           <screen>
 $ svn import -m "New import" myproj \
-    http://svn.red-bean.com/repos/test/trunk/vendors/myproj
+    http://svn.red-bean.com/repos/test/trunk/misc/myproj
 Adding         myproj/sample.txt
 &hellip;
 Transmitting file data .........

@@ -1308,7 +1308,7 @@ $
         <screen>
 $ svn list https://host.example.com/repos/project
 
-Error validating server certificate for 'https://home.example.com:443':
+Error validating server certificate for 'https://host.example.com:443':
  - The certificate is not issued by a trusted authority. Use the
    fingerprint to validate the certificate manually!
 Certificate information:
