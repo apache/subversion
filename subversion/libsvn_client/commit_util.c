@@ -642,8 +642,8 @@ svn_client__harvest_committables (apr_hash_t **committables,
       if ((entry->copied) && (entry->schedule == svn_wc_schedule_normal))
         return svn_error_createf 
           (SVN_ERR_ILLEGAL_TARGET, NULL, 
-           _("Entry for '%s' is marked as 'copied' but is not itself scheduled\n"
-             "for addition.  Perhaps you're committing a target that is\n"
+           _("Entry for '%s' is marked as 'copied' but is not itself scheduled"
+             "\nfor addition.  Perhaps you're committing a target that is\n"
              "inside an unversioned (or not-yet-versioned) directory?"),
            target);
 
