@@ -419,15 +419,9 @@ svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
      itself a list. */
   header = node_rev->children;
 
-  {
-    /* The property list is the 2nd item in the header skel. */
-    skel_t *props = header->next;
+  /* The property list is the 2nd item in the header skel. */
+  *proplist_p = header->next;
 
-    /* Return a copy dup'd in TRAIL's pool, to fulfill this routine's
-       promise about lifetimes.  This is instead of doing fancier
-       cache-y things. */
-    *proplist_p = svn_fs__copy_skel (props, trail->pool);
-  }
   return SVN_NO_ERROR;
 }
 
