@@ -1289,16 +1289,17 @@ Removed real.c because code now in double.c.
         añadido, y tras enviar los cambios, el fichero existiría
         de nuevo en <literal>HEAD</literal>.</para>
 
-      <para>In this particular example, however, this is probably not
-        the best strategy.  Reverse-applying revision 808 would not
-        only schedule <filename>real.c</filename> for addition, but
-        the log message indicates that it would also undo certain
-        changes to <filename>integer.c</filename>, which you don't
-        want.  Certainly, you could reverse-merge revision 808 and
-        then <command>svn revert</command> the local modifications to
-        <filename>integer.c</filename>, but this technique doesn't
-        scale well.  What if there were 90 files changed in revision
-        808?</para>
+      <para>No obstante, en este ejemplo particular, ésta
+        probablemente no es la mejor estrategia. Aplicar al revés
+        la revisión 808 no solamente programaría la adición
+        de <filename>real.c</filename>, ya que el mensaje de
+        cambios indica que también se deshacerían ciertos cambios
+        a <filename>integer.c</filename>, cosa que no desea.
+        Ciertamente, podría fusionar al revés la revisión 808
+        y entonces ejecutar <command>svn revert</command> sobre
+        la modificación local de <filename>integer.c</filename>,
+        pero esta técnica no es muy escalable. ¿Qué pasa si hay 90
+        ficheros modificados en la revisión 808?</para>
 
       <para>A second, more targeted strategy is not to use
         <command>svn merge</command> at all, but rather the
