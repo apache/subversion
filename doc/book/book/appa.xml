@@ -68,8 +68,8 @@
 
         <listitem>
         <para>The <command>svn add</command> and <command>svn
-          rm</command> commands work on directories now, just as they
-          work on files.  So do <command>svn copy</command> and
+          delete</command> commands work on directories now, just as
+          they work on files.  So do <command>svn copy</command> and
           <command>svn move</command>.  However, these commands do
           <emphasis>not</emphasis> cause any kind of immediate change
           in the repository.  Instead, the working items are simply
@@ -350,7 +350,7 @@ X    Resource is external to this working copy (comes from another
   <!-- ======================== SECTION 6 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-app-a-sect-6">
-    <title>Meta-data Properties</title>
+    <title>Metadata Properties</title>
 
     <para>A new feature of Subversion is that you can attach arbitrary
       metadata to files and directories.  We refer to this data as

@@ -222,11 +222,44 @@
 
   </sect1>
 
-
   <!-- ================================================================= -->
   <!-- ======================== SECTION 4 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-1-sect-4">
+
+    <title>Subversion's Architecture</title>
+
+    <para>This diagram is one what might call a
+      <quote>mile-high</quote> view of Subversion's design.</para>
+    
+    <figure id="svn-ch-1-dia1">
+      <title>Subversion's Architecture</title>
+      <graphic fileref="images/ch01dia1.png"/>
+    </figure>
+
+    <para>On one end, the Subversion server machine stores all of your
+      versioned data in a central repository.  This database is
+      accessed through a standard set of APIs by any number of network
+      server programs.  At the moment, there are two such server
+      programs available: one can use either the Apache HTTP server,
+      or a standalone server called <command>svnserve</command>.  (See
+      <xref linkend="svn-ch-6"/> for details.)</para>
+    
+    <para>On the client side, the user runs a Subversion client
+      application.  This is typically a commandline client, but
+      possibly a GUI client as well.  Subversion client applications
+      share a common set of libraries that manage local views of
+      projects (called <quote>working copies</quote>).  The client
+      libraries are also responsible for synchronizing working copies
+      with the repository; they do this by contacting the appropriate
+      server processes over the internet.</para>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 5 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-1-sect-5">
 
     <title>Installing Subversion</title>
 
@@ -263,9 +296,9 @@
   </sect1>
 
   <!-- ================================================================= -->
-  <!-- ======================== SECTION 5 ============================== -->
+  <!-- ======================== SECTION 6 ============================== -->
   <!-- ================================================================= -->
-  <sect1 id="svn-ch-1-sect-5">
+  <sect1 id="svn-ch-1-sect-6">
 
     <title>Subversion's Components</title>
     
@@ -274,7 +307,7 @@
       Here's a quick overview of what you get.
     </para>
 
-    <sect2 id="svn-ch-1-sect-5.1">
+    <sect2 id="svn-ch-1-sect-6.1">
 
       <title>Client Components (for the User)</title>
 
@@ -302,7 +335,7 @@
 
     </sect2>
 
-    <sect2 id="svn-ch-1-sect-5.2">
+    <sect2 id="svn-ch-1-sect-6.2">
 
       <title>Server Components (for the Administrator)</title>
 
