@@ -1020,6 +1020,7 @@ log_do_committed (struct log_runner *loggy,
                     (pdir,
                      basename,
                      (SVN_WC__ENTRY_MODIFY_SCHEDULE 
+                      | SVN_WC__ENTRY_MODIFY_EXISTENCE
                       | SVN_WC__ENTRY_MODIFY_FORCE),
                      SVN_INVALID_REVNUM,
                      svn_node_dir,
@@ -1030,6 +1031,8 @@ log_do_committed (struct log_runner *loggy,
                      0,
                      NULL, NULL,
                      loggy->pool,
+                     SVN_WC_ENTRY_ATTR_COPYFROM_URL,
+                     SVN_WC_ENTRY_ATTR_COPYFROM_REV,
                      NULL);
                   if (err)
                     return svn_error_createf

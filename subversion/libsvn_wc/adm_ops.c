@@ -398,9 +398,14 @@ svn_wc_rename (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool)
 }
 
 
-/* Recursively mark a tree DIR for some STATE. */
+/* Recursively mark a tree DIR for with a SCHEDULE and/or EXISTENCE
+   flag, depending on the state of MODIFY_FLAGS. */
 static svn_error_t *
-delete_tree (svn_stringbuf_t *dir, apr_pool_t *pool)
+mark_tree (svn_stringbuf_t *dir, 
+           apr_uint16_t modify_flags,
+           enum svn_wc_schedule_t schedule,
+           enum svn_wc_existence_t existence,           
+           apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *entries;
@@ -437,17 +442,19 @@ delete_tree (svn_stringbuf_t *dir, apr_pool_t *pool)
 
       /* If this is a directory, recurse. */
       if (entry->kind == svn_node_dir)
-        SVN_ERR (delete_tree (fullpath, subpool));
+        SVN_ERR (mark_tree (fullpath, modify_flags,
+                            schedule, existence, subpool));
 
       /* Mark this entry. */
       SVN_ERR (svn_wc__entry_modify
                (dir, basename, 
-                SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                modify_flags,
                 SVN_INVALID_REVNUM, entry->kind,
-                svn_wc_schedule_delete,
-                svn_wc_existence_normal,
+                schedule,
+                existence,
                 FALSE, 0, 0, NULL, NULL, subpool, NULL));
-      if (fbtable)
+
+      if (fbtable && (schedule == svn_wc_schedule_delete))
         {
           apr_status_t apr_err;
           
@@ -468,10 +475,10 @@ delete_tree (svn_stringbuf_t *dir, apr_pool_t *pool)
   /* Handle "this dir" for states that need it done post-recursion. */
   SVN_ERR (svn_wc__entry_modify
            (dir, NULL, 
-            SVN_WC__ENTRY_MODIFY_SCHEDULE,
+            modify_flags,
             SVN_INVALID_REVNUM, svn_node_dir,
-            svn_wc_schedule_delete,
-            svn_wc_existence_normal,
+            schedule,
+            existence,
             FALSE, 0, 0, NULL, NULL, pool, NULL));
   
   /* Destroy our per-iteration pool. */
@@ -506,7 +513,8 @@ svn_wc_delete (svn_stringbuf_t *path, apr_pool_t *pool)
         dir_unadded = TRUE;
       else
         /* Recursively mark a whole tree for deletion. */
-        SVN_ERR (delete_tree (path, pool));
+        SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                            svn_wc_schedule_delete, NULL, pool));
     }
 
   /* Deleting a directory that has been added but not yet
@@ -633,12 +641,14 @@ add_to_revision_control (svn_stringbuf_t *path,
   SVN_ERR (svn_wc__entry_modify
            (parent_dir, basename,
             (SVN_WC__ENTRY_MODIFY_SCHEDULE
-             | (is_replace ? 0 : SVN_WC__ENTRY_MODIFY_REVISION)
+             | (ancestor_path ? SVN_WC__ENTRY_MODIFY_EXISTENCE : 0)
+             | ((is_replace || ancestor_path) ?
+                  0 : SVN_WC__ENTRY_MODIFY_REVISION)
              | SVN_WC__ENTRY_MODIFY_KIND
              | SVN_WC__ENTRY_MODIFY_ATTRIBUTES),
             0, kind,
             svn_wc_schedule_add,
-            svn_wc_existence_normal,
+            ancestor_path ? svn_wc_existence_copied : svn_wc_existence_normal,
             FALSE, 0, 0, NULL,
             atts,  /* may or may not contain copyfrom args */
             pool, NULL));
@@ -685,7 +695,9 @@ add_to_revision_control (svn_stringbuf_t *path,
       
       /* Things we plan to change in this_dir. */
       flags = (SVN_WC__ENTRY_MODIFY_SCHEDULE
-               | (is_replace ? 0 : SVN_WC__ENTRY_MODIFY_REVISION)
+               | (ancestor_path ? SVN_WC__ENTRY_MODIFY_EXISTENCE : 0)
+               | ((is_replace || ancestor_path)
+                     ? 0 : SVN_WC__ENTRY_MODIFY_REVISION)
                | SVN_WC__ENTRY_MODIFY_KIND
                | SVN_WC__ENTRY_MODIFY_ATTRIBUTES
                | SVN_WC__ENTRY_MODIFY_FORCE);
@@ -697,7 +709,8 @@ add_to_revision_control (svn_stringbuf_t *path,
                 flags,
                 0, svn_node_dir,
                 is_replace ? svn_wc_schedule_replace : svn_wc_schedule_add,
-                svn_wc_existence_normal,
+                ancestor_path ?
+                    svn_wc_existence_copied : svn_wc_existence_normal,
                 FALSE, 0, 0,
                 NULL,
                 atts,  /* may or may not contain copyfrom args */
@@ -717,8 +730,12 @@ add_to_revision_control (svn_stringbuf_t *path,
           url = svn_stringbuf_dup (parent_entry->ancestor, pool);
           svn_path_add_component (url, basename, svn_path_url_style);
 
-          /* Change the url recursively. */
+          /* Change the entry-urls recursively. */
           SVN_ERR (svn_wc__recursively_rewrite_ancestry (path, url, pool));
+
+          /* Recursively add the 'copied' existence flag as well!  */
+          SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_EXISTENCE,
+                              NULL, svn_wc_existence_copied, pool));
         }
     }
   
@@ -1009,7 +1026,7 @@ svn_wc_revert (svn_stringbuf_t *path,
      update our entries files. */
   if (modify_flags)
     {
-      const char *remove1, *remove2;
+      const char *remove1 = NULL, *remove2 = NULL;
 
       /* Reset the schedule to normal. */
       if (! wc_root)

@@ -537,7 +537,7 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_TEXT_TIME     0x0020
 #define SVN_WC__ENTRY_MODIFY_PROP_TIME     0x0040
 #define SVN_WC__ENTRY_MODIFY_ANCESTOR      0x0080
-#define SVN_WC__ENTRY_MODIFY_ATTRIBUTES    0x0160
+#define SVN_WC__ENTRY_MODIFY_ATTRIBUTES    0x0100
 
 /* or perhaps this to mean all of those above... */
 #define SVN_WC__ENTRY_MODIFY_ALL           0x7FFF

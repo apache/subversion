@@ -123,7 +123,8 @@ assemble_status (svn_wc_status_t **status,
         these states are of medium precedence.  They also override any
         C or M that may be in the prop_status field at this point.*/
 
-  if (entry->schedule == svn_wc_schedule_add)
+  if ((entry->schedule == svn_wc_schedule_add)
+      || (entry->existence == svn_wc_existence_copied))
     {
       final_text_status = svn_wc_status_added;
       final_prop_status = svn_wc_status_none;
