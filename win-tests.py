@@ -27,13 +27,12 @@ client_tests = ['subversion/tests/clients/cmdline/getopt_tests.py',
                 'subversion/tests/clients/cmdline/log_tests.py',
                 'subversion/tests/clients/cmdline/copy_tests.py',
                 'subversion/tests/clients/cmdline/diff_tests.py',
+                'subversion/tests/clients/cmdline/module_tests.py',
                 'subversion/tests/clients/cmdline/merge_tests.py',
                 'subversion/tests/clients/cmdline/stat_tests.py',
                 'subversion/tests/clients/cmdline/trans_tests.py',
                 'subversion/tests/clients/cmdline/svnadmin_tests.py']
 
-
-all_tests = tests + fs_tests + client_tests
 
 
 # Have to move the executables where the tests expect them to be
@@ -44,6 +43,16 @@ elif sys.argv[1] == 'r' or sys.argv[1] == 'release':
 else:
   sys.stderr.write("Wrong test mode '" + type + "'\n")
   sys.exit(1)
+
+if len(sys.argv) == 3:
+  # Doesn't make sense to run all the tests if we're testing over DAV.
+  all_tests = client_tests
+  base_url = sys.argv[2]
+  log = "dav-tests.log"
+else:
+  all_tests = tests + fs_tests + client_tests
+  base_url = None
+  log = "tests.log"
 
 def delete_execs(filter, dirname, names):
   if os.path.basename(dirname) != filter: return
@@ -84,7 +93,7 @@ abs_builddir = abs_srcdir  ### For now ...
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
 th = run_tests.TestHarness(abs_srcdir, abs_builddir, sys.executable, shell,
-                           os.path.abspath('tests.log'))
+                           os.path.abspath(log), base_url)
 failed = th.run(all_tests)
 
 # Remove the execs again

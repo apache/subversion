@@ -60,6 +60,7 @@ svn_cl__revert (apr_getopt_t *os,
     {
       const char *target = ((const char **) (targets->elts))[i];
       
+      target = svn_path_canonicalize_nts (target, pool);
       SVN_ERR (svn_client_revert (target, recursive, 
                                   notify_func, notify_baton, subpool));
       svn_pool_clear (subpool);

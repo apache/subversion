@@ -43,11 +43,13 @@ Item = svntest.wc.StateItem
 #----------------------------------------------------------------------
 
 #######################################################################
-#  Helper code for tests - The real work behind Stage I testing.
+#  Stage I - Schedules and modifications, verified with `svn status'
 #
 
-def add_files_core(sbox, wc_dir):
-  "helper for add_files()"
+def add_files(sbox):
+  "schedule: add some files"
+
+  wc_dir = sbox.wc_dir
 
   if svntest.actions.make_repo_and_wc(sbox):
     return 1
@@ -75,8 +77,10 @@ def add_files_core(sbox, wc_dir):
 
 #----------------------------------------------------------------------
 
-def add_directories_core(sbox, wc_dir):
-  "helper for add_directories()"
+def add_directories(sbox):
+  "schedule: add some directories"
+
+  wc_dir = sbox.wc_dir
 
   if svntest.actions.make_repo_and_wc(sbox):
     return 1
@@ -104,8 +108,10 @@ def add_directories_core(sbox, wc_dir):
 
 #----------------------------------------------------------------------
 
-def nested_adds_core(sbox, wc_dir):
-  "helper for nested_adds()"
+def nested_adds(sbox):
+  "schedule: add some nested files and directories"
+
+  wc_dir = sbox.wc_dir
 
   if svntest.actions.make_repo_and_wc(sbox):
     return 1
@@ -162,8 +168,10 @@ def nested_adds_core(sbox, wc_dir):
 
 #----------------------------------------------------------------------
 
-def delete_files_core(sbox, wc_dir):
-  "helper for delete_files()"
+def delete_files(sbox):
+  "schedule: delete some files"
+
+  wc_dir = sbox.wc_dir
 
   if svntest.actions.make_repo_and_wc(sbox):
     return 1
@@ -185,8 +193,10 @@ def delete_files_core(sbox, wc_dir):
 
 #----------------------------------------------------------------------
 
-def delete_dirs_core(sbox, wc_dir):
-  "helper for delete_dirs()"
+def delete_dirs(sbox):
+  "schedule: delete some directories"
+
+  wc_dir = sbox.wc_dir
 
   if svntest.actions.make_repo_and_wc(sbox):
     return 1
@@ -215,44 +225,6 @@ def delete_dirs_core(sbox, wc_dir):
 
 
 #######################################################################
-#  Stage I - Schedules and modifications, verified with `svn status'
-#
-
-def add_files(sbox):
-  "schedule: add some files"
-
-  return add_files_core(sbox.name, sbox.wc_dir)
-
-#----------------------------------------------------------------------
-
-def add_directories(sbox):
-  "schedule: add some directories"
-
-  return add_directories_core(sbox.name, sbox.wc_dir)
-
-#----------------------------------------------------------------------
-
-def nested_adds(sbox):
-  "schedule: add some nested files and directories"
-
-  return nested_adds_core(sbox.name, sbox.wc_dir)
-
-#----------------------------------------------------------------------
-
-def delete_files(sbox):
-  "schedule: delete some files"
-
-  return delete_files_core(sbox.name, sbox.wc_dir)
-
-#----------------------------------------------------------------------
-
-def delete_dirs(sbox):
-  "schedule: delete some directories"
-
-  return delete_dirs_core(sbox.name, sbox.wc_dir)
-
-
-#######################################################################
 #  Stage II - Reversion of changes made in Stage I
 #
 
@@ -261,7 +233,7 @@ def revert_add_files(sbox):
 
   wc_dir = sbox.wc_dir
 
-  if add_files_core(sbox.name, wc_dir):
+  if add_files(sbox):
     return 1
 
   # Revert our changes recursively from wc_dir.
@@ -293,7 +265,7 @@ def revert_add_directories(sbox):
 
   wc_dir = sbox.wc_dir
 
-  if add_directories_core(sbox.name, wc_dir):
+  if add_directories(sbox):
     return 1
 
   # Revert our changes recursively from wc_dir.
@@ -325,7 +297,7 @@ def revert_nested_adds(sbox):
 
   wc_dir = sbox.wc_dir
 
-  if nested_adds_core(sbox.name, wc_dir):
+  if nested_adds(sbox):
     return 1
 
   # Revert our changes recursively from wc_dir.
@@ -357,7 +329,7 @@ def revert_delete_files(sbox):
 
   wc_dir = sbox.wc_dir
 
-  if delete_files_core(sbox.name, wc_dir):
+  if delete_files(sbox):
     return 1
 
   # Revert our changes recursively from wc_dir.
@@ -391,7 +363,7 @@ def revert_delete_dirs(sbox):
 
   wc_dir = sbox.wc_dir
 
-  if delete_dirs_core(sbox.name, wc_dir):
+  if delete_dirs(sbox):
     return 1
 
   # Revert our changes recursively from wc_dir.
@@ -434,7 +406,7 @@ def revert_delete_dirs(sbox):
 def commit_add_files(sbox):
   "commit: add some files"
 
-  if add_files_core(sbox.name, sbox.wc_dir):
+  if add_files(sbox):
     return 1
 
   return 0
@@ -444,7 +416,7 @@ def commit_add_files(sbox):
 def commit_add_directories(sbox):
   "commit: add some directories"
 
-  if add_directories_core(sbox.name, sbox.wc_dir):
+  if add_directories(sbox):
     return 1
 
   return 0
@@ -454,7 +426,7 @@ def commit_add_directories(sbox):
 def commit_nested_adds(sbox):
   "commit: add some nested files and directories"
 
-  if nested_adds_core(sbox.name, sbox.wc_dir):
+  if nested_adds(sbox):
     return 1
 
   return 0
@@ -464,7 +436,7 @@ def commit_nested_adds(sbox):
 def commit_delete_files(sbox):
   "commit: delete some files"
 
-  if delete_files_core(sbox.name, sbox.wc_dir):
+  if delete_files(sbox):
     return 1
 
   return 0
@@ -474,7 +446,7 @@ def commit_delete_files(sbox):
 def commit_delete_dirs(sbox):
   "commit: delete some directories"
 
-  if delete_dirs_core(sbox.name, sbox.wc_dir):
+  if delete_dirs(sbox):
     return 1
 
   return 0

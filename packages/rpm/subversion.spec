@@ -1,5 +1,5 @@
-%define apache_version 2.0.40-0.8
-%define neon_version 0.21.3
+%define apache_version 2.0.41-0.1
+%define neon_version 0.22.0
 %define apache_dir /usr/local/apache2
 # If you don't have 360+ MB of free disk space or don't want to run checks then
 # set make_check to 0.
@@ -12,6 +12,7 @@ Copyright: BSD
 Group: Utilities/System
 URL: http://subversion.tigris.org
 Source0: subversion-%{version}-%{release}.tar.gz
+Source1: subversion.conf
 Patch0: install.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
@@ -60,7 +61,6 @@ Group: Utilities/System
 Summary: Apache server module for Subversion server.
 Requires: apache-libapr >= 0.%{apache_version}
 Requires: apache-libapr-utils >= 0.%{apache_version}
-Requires: perl
 Requires: subversion = %{version}-%{release}
 BuildPreReq: apache-devel >= %{apache_version}
 %description server
@@ -68,6 +68,20 @@ The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
 %changelog
+* Fri Aug 16 2002 David Summers <david@summersoft.fay.ar.us> 0.14.1-2984
+- Now requires neon-0.22.0.
+
+* Thu Aug 15 2002 David Summers <david@summersoft.fay.ar.us> 0.14.1-2978
+- Took out loading mod_dav_svn from subversion.spec file and put it in
+  subversion.conf file which goes into the apache conf directory.
+- Simplify what gets put into httpd.conf to only the include for the
+  subversion.conf file.
+  (Thanks to Scott Harrison <sharrison@users.sourceforge.net> for prompting
+  me to do this).
+
+* Thu Aug 08 2002 David Summers <david@summersoft.fay.ar.us> 0.14.0-2919
+- Updated to APR/APR-UTIL 2002-08-08.
+
 * Tue Jun 25 2002 David Summers <david@summersoft.fay.ar.us> 0.13.0-2332
 - Updated to APACHE/APR/APR-UTIL 2002-06-25.
 - Previous version had a few problems because of missing apache error/ files.
@@ -166,6 +180,7 @@ make check
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/usr/share
+mkdir -p $RPM_BUILD_ROOT/%{apache_dir}/conf
 make install \
 	prefix=$RPM_BUILD_ROOT/usr \
 	mandir=$RPM_BUILD_ROOT/usr/share/man \
@@ -173,6 +188,9 @@ make install \
 	base_libdir=$RPM_BUILD_ROOT/usr/lib \
 	infodir=$RPM_BUILD_ROOT/usr/share/info \
 	libexecdir=$RPM_BUILD_ROOT/%{apache_dir}/lib
+
+# Add subversion.conf configuration file into httpd.conf directory.
+cp %{SOURCE1} $RPM_BUILD_ROOT/%{apache_dir}/conf
 
 %post
 # Only add to INFO directory if this is the only instance installed.
@@ -214,44 +232,13 @@ fi
 # Load subversion server into apache configuration.
 CONF=%{apache_dir}/conf/httpd.conf
 
-# Search for Subversion dav_svn_module and add it to config file if not found.
+# Search for Subversion include file and add it if not found.
 
-if [ "`grep -i dav_svn_module $CONF`"x = "x" ]; then
-   # Put in LoadModule dav_svn_module line at end of LoadModule section.
-   perl -e '
-   while ( <> )
-      {
-      if ( /LoadModule dav_fs_module/ )
-         {
-         print;
-         print "LoadModule dav_svn_module modules/mod_dav_svn.so\n";
-         next;
-         }
-      print;
-      }
-   ' < $CONF > $CONF.new && mv $CONF $CONF.bak && mv $CONF.new $CONF
-fi
-
-# Conditionally add subversion example configuration.
-if [ "`grep -i svnpath $CONF`"x = "x" ]; then
+if [ "`grep -i subversion.conf $CONF`"x = "x" ]; then
    cat >> $CONF <<EOF
 
 # Begin Subversion server configuration - Please don't delete this line.
-#<Location /svn/repos>
-#   DAV svn
-#   SVNPath /home/svnroot
-#
-#   # Limit write permission to list of valid users.
-#   <LimitExcept GET PROPFIND OPTIONS REPORT>
-#      # Require SSL connection for password protection.
-#      # SSLRequireSSL
-#
-#      AuthType Basic
-#      AuthName "Authorization Realm"
-#      AuthUserFile /absolute/path/to/passwdfile
-#      Require valid-user
-#   </LimitExcept>
-#</Location>
+include subversion.conf
 # End Subversion server configuration - Please don't delete this line.
 EOF
 fi
@@ -267,7 +254,7 @@ fi
 # Only take it out if this package is being erased and not upgraded.
 if [ "$1" = "0" ];
    then
-   cd %{apache_dir}/conf && sed -e 's/^LoadModule dav_svn_module/#LoadModule dav_svn_module/' -e '/^# Begin Subversion server/,/^# End Subversion server/s/^/#/' < httpd.conf > httpd.conf.new && mv httpd.conf httpd.conf.bak && mv httpd.conf.new httpd.conf
+   cd %{apache_dir}/conf && sed -e '/^# Begin Subversion server/,/^# End Subversion server/s/^/#/' < httpd.conf > httpd.conf.new && mv httpd.conf httpd.conf.bak && mv httpd.conf.new httpd.conf
 fi
 
 %postun server
@@ -306,5 +293,6 @@ rm -rf $RPM_BUILD_ROOT
 
 %files server
 %defattr(-,root,root)
+%config %{apache_dir}/conf/subversion.conf
 %{apache_dir}/modules/mod_dav_svn.la
 %{apache_dir}/modules/mod_dav_svn.so

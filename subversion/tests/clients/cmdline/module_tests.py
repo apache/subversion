@@ -18,6 +18,7 @@
 
 # General modules
 import shutil, string, sys, re, os
+import warnings
 
 # Our testing module
 import svntest
@@ -45,14 +46,11 @@ def externals_test_cleanup(sbox):
   the initialization working copy."""
   if os.path.exists(sbox.repo_dir):
     shutil.rmtree(sbox.repo_dir)
-  if os.path.exists(sbox.wc_dir):
-    shutil.rmtree(sbox.wc_dir)
-  if os.path.exists(sbox.wc_dir + ".other"):
-    shutil.rmtree(sbox.wc_dir + ".other")
   if os.path.exists(sbox.repo_dir + ".other"):
     shutil.rmtree(sbox.repo_dir + ".other")
-  if os.path.exists(sbox.wc_dir + ".init"):
-    shutil.rmtree(sbox.wc_dir + ".init")
+  svntest.main.remove_wc(sbox.wc_dir)
+  svntest.main.remove_wc(sbox.wc_dir + ".other")
+  svntest.main.remove_wc(sbox.wc_dir + ".init")
 
 ### todo: it's inefficient to keep calling externals_test_setup() for
 ### every test.  It's slow.  But it's very safe -- we're guaranteed to
@@ -88,7 +86,7 @@ def externals_test_setup(sbox):
   if sbox.build():
     return 1
 
-  shutil.rmtree(sbox.wc_dir) # The test itself will recreate this
+  svntest.main.remove_wc(sbox.wc_dir) # The test itself will recreate this
 
   wc_init_dir    = sbox.wc_dir + ".init"  # just for setting up props
   repo_dir       = sbox.repo_dir
@@ -367,16 +365,16 @@ def update_lose_external(sbox):
   # it (G and H) which are not being removed.  We expect them to
   # remain -- in other words:
   #
-  #      BEFORE                              AFTER
-  #    ----------                          ----------     
-  #    A/exdir_A                           A/exdir_A
-  #    A/exdir_A/.svn/...                    <GONE>
-  #    A/exdir_A/mu                          <GONE>
-  #    A/exdir_A/B/...                       <GONE>
-  #    A/exdir_A/C/...                       <GONE>
-  #    A/exdir_A/D/...                       <GONE>
-  #    A/exdir_A/G/...                     A/exdir_A/G/...
-  #    A/exdir_A/H/...                     A/exdir_A/H/...
+  #      BEFORE                                AFTER
+  #    ------------                          ------------
+  #    A/D/exdir_A                           A/D/exdir_A
+  #    A/D/exdir_A/.svn/...                    <GONE>
+  #    A/D/exdir_A/mu                          <GONE>
+  #    A/D/exdir_A/B/...                       <GONE>
+  #    A/D/exdir_A/C/...                       <GONE>
+  #    A/D/exdir_A/D/...                       <GONE>
+  #    A/D/exdir_A/G/...                     A/D/exdir_A/G/...
+  #    A/D/exdir_A/H/...                     A/D/exdir_A/H/...
 
   new_externals_desc = \
            "exdir_A/G         " + os.path.join(other_repo_url, "A/D/G") + \
@@ -624,13 +622,14 @@ def update_receive_change_under_external(sbox):
 test_list = [ None,
               checkout_with_externals,
               update_receive_new_external,
-              # update_lose_external,
+              update_lose_external,
               update_change_pristine_external,
               update_change_modified_external,
               update_receive_change_under_external,
              ]
 
 if __name__ == '__main__':
+  warnings.filterwarnings('ignore', 'tempnam', RuntimeWarning)
   svntest.main.run_tests(test_list)
   # NOTREACHED
 

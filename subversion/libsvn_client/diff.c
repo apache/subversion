@@ -131,7 +131,8 @@ struct diff_cmd_baton {
    two temporary files.   The path is the "true" label to use in the
    diff output, and the revnums are ignored. */
 static svn_error_t *
-diff_file_changed (svn_wc_notify_state_t *state,
+diff_file_changed (svn_wc_adm_access_t *adm_access,
+                   svn_wc_notify_state_t *state,
                    const char *path,
                    const char *tmpfile1,
                    const char *tmpfile2,
@@ -190,23 +191,25 @@ diff_file_changed (svn_wc_notify_state_t *state,
    each of these next two functions, they can be dumb wrappers around
    the main workhorse routine. */
 static svn_error_t *
-diff_file_added (const char *path,
+diff_file_added (svn_wc_adm_access_t *adm_access,
+                 const char *path,
                  const char *tmpfile1,
                  const char *tmpfile2,
                  void *diff_baton)
 {
-  return diff_file_changed (NULL, path, tmpfile1, tmpfile2, 
+  return diff_file_changed (adm_access, NULL, path, tmpfile1, tmpfile2, 
                             SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
                             diff_baton);
 }
 
 static svn_error_t *
-diff_file_deleted (const char *path,
+diff_file_deleted (svn_wc_adm_access_t *adm_access,
+                   const char *path,
                    const char *tmpfile1,
                    const char *tmpfile2,
                    void *diff_baton)
 {
-  return diff_file_changed (NULL, path, tmpfile1, tmpfile2, 
+  return diff_file_changed (adm_access, NULL, path, tmpfile1, tmpfile2, 
                             SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
                             diff_baton);
 }
@@ -215,7 +218,8 @@ diff_file_deleted (const char *path,
    application, so that something reasonable about directories and
    propsets gets printed to stdout. */
 static svn_error_t *
-diff_dir_added (const char *path,
+diff_dir_added (svn_wc_adm_access_t *adm_access,
+                const char *path,
                 void *diff_baton)
 {
   /* ### todo:  send feedback to app */
@@ -223,7 +227,8 @@ diff_dir_added (const char *path,
 }
 
 static svn_error_t *
-diff_dir_deleted (const char *path,
+diff_dir_deleted (svn_wc_adm_access_t *adm_access,
+                  const char *path,
                   void *diff_baton)
 {
   /* ### todo:  send feedback to app */
@@ -231,7 +236,8 @@ diff_dir_deleted (const char *path,
 }
   
 static svn_error_t *
-diff_props_changed (svn_wc_notify_state_t *state,
+diff_props_changed (svn_wc_adm_access_t *adm_access,
+                    svn_wc_notify_state_t *state,
                     const char *path,
                     const apr_array_header_t *propchanges,
                     apr_hash_t *original_props,
@@ -288,7 +294,8 @@ struct merge_cmd_baton {
 
 
 static svn_error_t *
-merge_file_changed (svn_wc_notify_state_t *state,
+merge_file_changed (svn_wc_adm_access_t *adm_access,
+                    svn_wc_notify_state_t *state,
                     const char *mine,
                     const char *older,
                     const char *yours,
@@ -313,7 +320,7 @@ merge_file_changed (svn_wc_notify_state_t *state,
 
   SVN_ERR (svn_wc_text_modified_p (&has_local_mods, mine, subpool));
 
-  err = svn_wc_merge (older, yours, mine,
+  err = svn_wc_merge (older, yours, mine, adm_access,
                       left_label, right_label, target_label,
                       subpool);
 
@@ -343,7 +350,8 @@ merge_file_changed (svn_wc_notify_state_t *state,
 }
 
 static svn_error_t *
-merge_file_added (const char *mine,
+merge_file_added (svn_wc_adm_access_t *adm_access,
+                  const char *mine,
                   const char *older,
                   const char *yours,
                   void *baton)
@@ -362,7 +370,10 @@ merge_file_added (const char *mine,
       assert (child != NULL);
       copyfrom_url = svn_path_join (merge_b->path, child, merge_b->pool);
       /* ### FIXME: This will get the file again! */
+      /* ### 838 When 838 stops using svn_client_copy the adm_access
+         parameter can be removed from the function. */
       SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, mine,
+                                adm_access,
                                 merge_b->auth_baton, NULL, NULL, NULL, NULL,
                                 merge_b->pool));
       break;
@@ -388,7 +399,7 @@ merge_file_added (const char *mine,
                                     "Cannot create file '%s' for addition, "
                                     "because an unversioned file by that name "
                                     "already exists.", mine);
-        err = svn_wc_merge (older, yours, mine,
+        err = svn_wc_merge (older, yours, mine, adm_access,
                             ".older", ".yours", ".working", /* ###? */
                             subpool);
         if (err && (err->apr_err != SVN_ERR_WC_CONFLICT))
@@ -404,7 +415,8 @@ merge_file_added (const char *mine,
 }
 
 static svn_error_t *
-merge_file_deleted (const char *mine,
+merge_file_deleted (svn_wc_adm_access_t *adm_access,
+                    const char *mine,
                     const char *older,
                     const char *yours,
                     void *baton)
@@ -438,7 +450,8 @@ merge_file_deleted (const char *mine,
 }
 
 static svn_error_t *
-merge_dir_added (const char *path,
+merge_dir_added (svn_wc_adm_access_t *adm_access,
+                 const char *path,
                  void *baton)
 {
   struct merge_cmd_baton *merge_b = baton;
@@ -457,6 +470,7 @@ merge_dir_added (const char *path,
     case svn_node_none:
       /* ### FIXME: This will get the directory tree again! */
       SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
+                                adm_access,
                                 merge_b->auth_baton, NULL, NULL, NULL, NULL,
                                 subpool));
       break;
@@ -466,6 +480,7 @@ merge_dir_added (const char *path,
       if (! entry || (entry && entry->schedule == svn_wc_schedule_delete))
         /* ### FIXME: This will get the directory tree again! */
         SVN_ERR (svn_client_copy (NULL, copyfrom_url, merge_b->revision, path,
+                                  adm_access,
                                   merge_b->auth_baton, NULL, NULL, NULL, NULL,
                                   subpool));
       break;
@@ -485,7 +500,8 @@ merge_dir_added (const char *path,
 }
 
 static svn_error_t *
-merge_dir_deleted (const char *path,
+merge_dir_deleted (svn_wc_adm_access_t *adm_access,
+                   const char *path,
                    void *baton)
 {
   struct merge_cmd_baton *merge_b = baton;
@@ -517,7 +533,8 @@ merge_dir_deleted (const char *path,
 }
   
 static svn_error_t *
-merge_props_changed (svn_wc_notify_state_t *state,
+merge_props_changed (svn_wc_adm_access_t *adm_access,
+                     svn_wc_notify_state_t *state,
                      const char *path,
                      const apr_array_header_t *propchanges,
                      apr_hash_t *original_props,
@@ -534,7 +551,8 @@ merge_props_changed (svn_wc_notify_state_t *state,
   /* We only want to merge "regular" version properties:  by
      definition, 'svn merge' shouldn't touch any data within .svn/  */
   if (regular_props)
-    SVN_ERR (svn_wc_merge_prop_diffs (state, path, regular_props, subpool));
+    SVN_ERR (svn_wc_merge_prop_diffs (state, path, adm_access, regular_props,
+                                      subpool));
 
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
@@ -636,6 +654,7 @@ do_merge (svn_wc_notify_func_t notify_func,
   const svn_delta_edit_fns_t *diff_editor;
   const svn_delta_editor_t *new_diff_editor;
   void *diff_edit_baton, *new_diff_edit_baton;
+  svn_wc_adm_access_t *adm_access;
 
   /* Sanity check -- ensure that we have valid revisions to look at. */
   if ((revision1->kind == svn_client_revision_unspecified)
@@ -672,7 +691,11 @@ do_merge (svn_wc_notify_func_t notify_func,
                                         NULL, FALSE, FALSE, TRUE,
                                         auth_baton, pool));
   
+  SVN_ERR (svn_wc_adm_open(&adm_access, NULL, target_wcpath, TRUE, recurse,
+                           pool));
+
   SVN_ERR (svn_client__get_diff_editor (target_wcpath,
+                                        adm_access,
                                         callbacks,
                                         callback_baton,
                                         recurse,
@@ -700,6 +723,8 @@ do_merge (svn_wc_notify_func_t notify_func,
   
   SVN_ERR (reporter->finish_report (report_baton));
   
+  SVN_ERR (svn_wc_adm_close (adm_access));
+
   SVN_ERR (ra_lib->close (session2));
 
   SVN_ERR (ra_lib->close (session));
@@ -726,7 +751,7 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   apr_file_t *fp1 = NULL, *fp2 = NULL;
   const char *tmpfile1, *tmpfile2, *URL1, *URL2;
   svn_stream_t *fstream1, *fstream2;
-  const char *oldrev_str, *newrev_str;
+  const char *oldrev_str, *newrev_str, *parent_path;
   svn_revnum_t rev1, rev2;
   apr_hash_t *props1, *props2;
   apr_array_header_t *propchanges;
@@ -734,6 +759,7 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   svn_ra_plugin_t *ra_lib;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t text_state = svn_wc_notify_state_unknown;
+  svn_wc_adm_access_t *adm_access;
   
   props1 = apr_hash_make (pool);
   props2 = apr_hash_make (pool);
@@ -783,12 +809,17 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
     return svn_error_createf (status, 0, NULL, pool, "failed to close '%s'.",
                               tmpfile2);   
   
+  parent_path = svn_path_remove_component_nts (target_wcpath, pool);
+  if (svn_path_is_empty_nts (parent_path))
+    parent_path = ".";
+  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, FALSE, pool));
+
   /* Perform a 3-way merge between the temporary fulltexts and the
      current working file. */
   oldrev_str = apr_psprintf (pool, ".r%" SVN_REVNUM_T_FMT, rev1);
   newrev_str = apr_psprintf (pool, ".r%" SVN_REVNUM_T_FMT, rev2); 
   err = svn_wc_merge (tmpfile1, tmpfile2,
-                      target_wcpath,
+                      target_wcpath, adm_access,
                       oldrev_str, newrev_str, ".working", pool);
   if (err)
     {
@@ -804,8 +835,10 @@ do_single_file_merge (svn_wc_notify_func_t notify_func,
   /* Deduce property diffs, and merge those too. */
   SVN_ERR (svn_wc_get_local_propchanges (&propchanges,
                                          props1, props2, pool));
-  SVN_ERR (svn_wc_merge_prop_diffs (&prop_state, target_wcpath,
+  SVN_ERR (svn_wc_merge_prop_diffs (&prop_state, target_wcpath, adm_access,
                                     propchanges, pool));
+
+  SVN_ERR (svn_wc_adm_close (adm_access));
 
   if (notify_func)
     {
@@ -1107,6 +1140,7 @@ do_diff (const apr_array_header_t *options,
          the diff editor on "", because we don't want to see any url's
          in the diff headers. */
       SVN_ERR (svn_client__get_diff_editor (anchor2,
+                                            NULL,
                                             callbacks,
                                             callback_baton,
                                             recurse,

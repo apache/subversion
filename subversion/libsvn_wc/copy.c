@@ -115,7 +115,7 @@ svn_wc__remove_wcprops (const char *path, apr_pool_t *pool)
  */
 static svn_error_t *
 copy_file_administratively (const char *src_path, 
-                            const char *dst_parent,
+                            svn_wc_adm_access_t *dst_parent,
                             const char *dst_basename,
                             svn_wc_notify_func_t notify_copied,
                             void *notify_baton,
@@ -126,7 +126,7 @@ copy_file_administratively (const char *src_path,
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   const char *dst_path
-    = svn_path_join (dst_parent, dst_basename, pool);
+    = svn_path_join (svn_wc_adm_access_path (dst_parent), dst_basename, pool);
 
   /* Sanity check:  if dst file exists already, don't allow overwrite. */
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
@@ -229,7 +229,8 @@ copy_file_administratively (const char *src_path,
     SVN_ERR (svn_wc_get_ancestry (&copyfrom_url, &copyfrom_rev,
                                   src_path, pool));
     
-    SVN_ERR (svn_wc_add (dst_path, copyfrom_url, copyfrom_rev,
+    SVN_ERR (svn_wc_add (dst_path, dst_parent,
+                         copyfrom_url, copyfrom_rev,
                          notify_copied, notify_baton, pool));
   }
 
@@ -252,7 +253,7 @@ copy_file_administratively (const char *src_path,
  */
 static svn_error_t *
 copy_dir_administratively (const char *src_path, 
-                           const char *dst_parent,
+                           svn_wc_adm_access_t *dst_parent,
                            const char *dst_basename,
                            svn_wc_notify_func_t notify_copied,
                            void *notify_baton,
@@ -261,7 +262,8 @@ copy_dir_administratively (const char *src_path,
   svn_wc_entry_t *src_entry;
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
-  const char *dst_path = svn_path_join (dst_parent, dst_basename, pool);
+  const char *dst_path = svn_path_join (svn_wc_adm_access_path (dst_parent),
+                                        dst_basename, pool);
 
   /* Sanity check:  you cannot make a copy of something that's not
      in the repository.  See comment at the bottom of this file for an
@@ -279,7 +281,9 @@ copy_dir_administratively (const char *src_path,
      
       (This gets us all text-base, props, base-props, as well as entries,
       local mods, schedulings, existences, etc.) */
-  SVN_ERR (svn_io_copy_dir_recursively (src_path, dst_parent, dst_basename,
+  SVN_ERR (svn_io_copy_dir_recursively (src_path,
+                                        svn_wc_adm_access_path (dst_parent),
+                                        dst_basename,
                                         TRUE, pool));
 
   /* Remove all wcprops in the directory, because they're all bogus
@@ -297,7 +301,8 @@ copy_dir_administratively (const char *src_path,
     SVN_ERR (svn_wc_get_ancestry (&copyfrom_url, &copyfrom_rev,
                                   src_path, pool));
     
-    SVN_ERR (svn_wc_add (dst_path, copyfrom_url, copyfrom_rev,
+    SVN_ERR (svn_wc_add (dst_path, dst_parent,
+                         copyfrom_url, copyfrom_rev,
                          notify_copied, notify_baton, pool));
   }
  
@@ -310,7 +315,7 @@ copy_dir_administratively (const char *src_path,
 
 svn_error_t *
 svn_wc_copy (const char *src_path,
-             const char *dst_parent,
+             svn_wc_adm_access_t *dst_parent,
              const char *dst_basename,
              svn_wc_notify_func_t notify_func,
              void *notify_baton,

@@ -98,7 +98,7 @@ svn_cl__copy (apr_getopt_t *os,
 
   SVN_ERR (svn_client_copy 
            (&commit_info,
-            src_path, &(opt_state->start_revision), dst_path, auth_baton, 
+            src_path, &(opt_state->start_revision), dst_path, NULL, auth_baton, 
             &svn_cl__get_log_message,
             svn_cl__make_log_msg_baton (opt_state, NULL, pool),
             notify_func, notify_baton,

@@ -275,13 +275,13 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
      DST_BASENAME doesn't already exist in DST_PARENT. */
   SVN_ERR (svn_io_check_path (src, &kind, subpool));
   if (kind != svn_node_dir)
-    return svn_error_createf (SVN_ERR_WC_UNEXPECTED_KIND, 0, NULL, subpool,
+    return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, 0, NULL, subpool,
                               "svn_io_copy_dir: '%s' is not a directory.",
                               src);
 
   SVN_ERR (svn_io_check_path (dst_parent, &kind, subpool));
   if (kind != svn_node_dir)
-    return svn_error_createf (SVN_ERR_WC_UNEXPECTED_KIND, 0, NULL, subpool,
+    return svn_error_createf (SVN_ERR_NODE_UNEXPECTED_KIND, 0, NULL, subpool,
                               "svn_io_copy_dir: '%s' is not a directory.",
                               dst_parent);
 
@@ -1844,6 +1844,56 @@ svn_io_dir_empty (svn_boolean_t *is_empty_p,
                               "unable to check directory '%s'",
                               path);
 
+  return SVN_NO_ERROR;
+}
+
+
+
+/*** Version/format files ***/
+
+svn_error_t *
+svn_io_write_version_file (const char *path,
+                           int version,
+                           apr_pool_t *pool)
+{
+  apr_file_t *format_file = NULL;
+  apr_status_t apr_err;
+  const char *format_contents = apr_psprintf (pool, "%d\n", version);
+
+  if (version < 0)
+    return svn_error_createf (SVN_ERR_INCORRECT_PARAMS, 0, NULL, pool,
+                              "Version %d is not non-negative", version);
+
+  SVN_ERR (svn_io_file_open (&format_file, path,
+                             APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
+  
+  apr_err = apr_file_write_full (format_file, format_contents,
+                                 strlen (format_contents), NULL);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, 0, pool, "writing to `%s'", path);
+  
+  apr_err = apr_file_close (format_file);
+  if (apr_err)
+    return svn_error_createf (apr_err, 0, 0, pool, "closing `%s'", path);
+  
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_io_read_version_file (int *version,
+                          const char *path,
+                          apr_pool_t *pool)
+{
+  apr_file_t *format_file;
+  svn_stream_t *format_stream;
+  svn_stringbuf_t *version_str;
+
+  SVN_ERR (svn_io_file_open (&format_file, path, APR_READ, 
+                             APR_OS_DEFAULT, pool));
+  format_stream = svn_stream_from_aprfile (format_file, pool);
+  SVN_ERR (svn_stream_readline (format_stream, &version_str, pool));
+  *version = atoi (version_str->data);
   return SVN_NO_ERROR;
 }
 

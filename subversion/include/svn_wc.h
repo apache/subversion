@@ -113,6 +113,8 @@ svn_error_t *svn_wc_adm_close (svn_wc_adm_access_t *adm_access);
    ADM_ACCESS */
 const char *svn_wc_adm_access_path (svn_wc_adm_access_t *adm_access);
 
+/* Return the pool used by access baton ADM_ACCESS */
+apr_pool_t *svn_wc_adm_access_pool (svn_wc_adm_access_t *adm_access);
 
 /* Ensure ADM_ACCESS has a write lock, and that it is still valid. Returns
    SVN_ERR_WC_NOT_LOCKED if this is not the case. */
@@ -237,13 +239,17 @@ typedef struct svn_wc_diff_callbacks_t
      TMPFILE1 and TMPFILE2, which represent REV1 and REV2 of the file,
      respectively.
 
+     ADM_ACCESS will be an access baton for the directory containing PATH,
+     or NULL if the diff editor is not using access batons.
+
      If STATE is non-null, set *STATE to the state of the file
      contents after the operation has been performed.  (In practice,
      this is only useful with merge, not diff; diff callbacks will
      probably set *STATE to svn_wc_notify_state_unknown, since they do
      not change the state and therefore do not bother to know the
      state after the operation.) */
-  svn_error_t *(*file_changed) (svn_wc_notify_state_t *state,
+  svn_error_t *(*file_changed) (svn_wc_adm_access_t *adm_access,
+                                svn_wc_notify_state_t *state,
                                 const char *path,
                                 const char *tmpfile1,
                                 const char *tmpfile2,
@@ -252,30 +258,49 @@ typedef struct svn_wc_diff_callbacks_t
                                 void *diff_baton);
 
   /* A file PATH was added.  The contents can be seen by comparing
-     TMPFILE1 and TMPFILE2. */
-  svn_error_t *(*file_added) (const char *path,
+     TMPFILE1 and TMPFILE2.
+
+     ADM_ACCESS will be an access baton for the directory containing PATH,
+     or NULL if the diff editor is not using access batons. */
+  svn_error_t *(*file_added) (svn_wc_adm_access_t *adm_access,
+                              const char *path,
                               const char *tmpfile1,
                               const char *tmpfile2,
                               void *diff_baton);
   
   /* A file PATH was deleted.  The [loss of] contents can be seen by
-     comparing TMPFILE1 and TMPFILE2. */
-  svn_error_t *(*file_deleted) (const char *path,
+     comparing TMPFILE1 and TMPFILE2.
+
+     ADM_ACCESS will be an access baton for the directory containing PATH,
+     or NULL if the diff editor is not using access batons. */
+  svn_error_t *(*file_deleted) (svn_wc_adm_access_t *adm_access,
+                                const char *path,
                                 const char *tmpfile1,
                                 const char *tmpfile2,
                                 void *diff_baton);
   
-  /* A directory PATH was added. */
-  svn_error_t *(*dir_added) (const char *path,
+  /* A directory PATH was added.
+
+     ADM_ACCESS will be an access baton for the directory containing PATH,
+     or NULL if the diff editor is not using access batons. */
+  svn_error_t *(*dir_added) (svn_wc_adm_access_t *adm_access,
+                             const char *path,
                              void *diff_baton);
   
-  /* A directory PATH was deleted. */
-  svn_error_t *(*dir_deleted) (const char *path,
+  /* A directory PATH was deleted.
+
+     ADM_ACCESS will be an access baton for the directory containing PATH,
+     or NULL if the diff editor is not using access batons. */
+  svn_error_t *(*dir_deleted) (svn_wc_adm_access_t *adm_access,
+                               const char *path,
                                void *diff_baton);
   
   /* A list of property changes (PROPCHANGES) was applied to PATH.
      The array is a list of (svn_prop_t) structures. 
      The original list of properties is provided in ORIGINAL_PROPS.
+
+     ADM_ACCESS will be an access baton for the directory containing PATH,
+     or NULL if the diff editor is not using access batons.
 
      If STATE is non-null, set *STATE to the state of the properties
      after the operation has been performed.  (In practice,
@@ -283,7 +308,8 @@ typedef struct svn_wc_diff_callbacks_t
      probably set *STATE to svn_wc_notify_state_unknown, since they do
      not change the state and therefore do not bother to know the
      state after the operation.)  */
-  svn_error_t *(*props_changed) (svn_wc_notify_state_t *state,
+  svn_error_t *(*props_changed) (svn_wc_adm_access_t *adm_access,
+                                 svn_wc_notify_state_t *state,
                                  const char *path,
                                  const apr_array_header_t *propchanges,
                                  apr_hash_t *original_props,
@@ -545,7 +571,9 @@ enum svn_wc_status_kind
     svn_wc_status_replaced,    /* was deleted and then re-added */
     svn_wc_status_modified,    /* text or props have been modified */
     svn_wc_status_merged,      /* local mods received repos mods */
-    svn_wc_status_conflicted   /* local mods received conflicting repos mods */
+    svn_wc_status_conflicted,  /* local mods received conflicting repos mods */
+    svn_wc_status_obstructed   /* an unversioned resource is in the way of
+                                  the versioned resource */
 };
 
 /* Structure for holding the "status" of a working copy item. 
@@ -615,11 +643,19 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * a directory; its status will simply be stored in STATUSHASH like
  * any other.
  *
- * If STRICT is non-zero, then if we encounter a path that is not in
- * the wc, we'll return an error. STRICT should be zero if we're
- * updating, as the update will catch any non wc path errors (and
- * properly deal with files that are in the repository but missing
- * from the wc for whatever reason).
+ * If STRICT is set, then if we encounter a path that is missing from
+ * the wc, or is obstructing a resource in the wc, we'll return an
+ * error.  Else if STRICT is unset, then just use the appropriate
+ * status codes for entries that would have caused an error if STRICT
+ * were set: that is, missing items produce status code
+ * `svn_wc_status_absent', and items which exist but whose actual type
+ * does not match their entry type get `svn_wc_status_obstructed'.
+ *
+ * If STRICT is set, then: if what should be a versioned directory
+ * appears to be unversioned, return SVN_ERR_WC_NOT_DIRECTORY; else if
+ * the item on disk is simply a different kind from what's expected by
+ * the entry, then return SVN_ERR_NODE_UNEXPECTED_KIND; else if the
+ * item is missing from disk, return APR_ENOENT.
  *
  * Assuming PATH is a directory, then:
  * 
@@ -627,8 +663,7 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * returned.  If non-zero, then all entries will be returned.
  *
  * If DESCEND is zero, statushash will contain paths for PATH and
- * its non-directory entries (subdirectories should be subjects of
- * separate status calls).  
+ * its entries.
  *
  * If DESCEND is non-zero, statushash will contain statuses for PATH
  * and everything below it, including subdirectories.  In other
@@ -680,7 +715,7 @@ svn_error_t *svn_wc_get_status_editor (const svn_delta_editor_t **editor,
    to the repository until a commit occurs.  This scheduling can be
    removed with svn_client_revert.  */
 svn_error_t *svn_wc_copy (const char *src,
-                          const char *dst_parent,
+                          svn_wc_adm_access_t *dst_parent,
                           const char *dst_basename,
                           svn_wc_notify_func_t notify_func,
                           void *notify_baton,
@@ -749,6 +784,7 @@ svn_error_t *svn_wc_delete (const char *path,
    ### broken out into a separate function, but its all intertwined in
    ### the code right now.  Ben, thoughts?  Hard?  Easy?  Mauve? */
 svn_error_t *svn_wc_add (const char *path,
+                         svn_wc_adm_access_t *optional_adm_access,
                          const char *copyfrom_url,
                          svn_revnum_t copyfrom_rev,
                          svn_wc_notify_func_t notify_func,
@@ -990,9 +1026,14 @@ svn_error_t *svn_wc_get_actual_target (const char *path,
  * If TI is non-null, record traversal info in TI, for use by
  * post-traversal accessors such as svn_wc_edited_externals().
  * 
- * ANCHOR is the local path to the working copy which will be used as
- * the root of our editor.  TARGET is the entry in ANCHOR that will
- * actually be updated, or NULL if all of ANCHOR should be updated.
+ * ANCHOR is an access baton, with a write lock, for the local path to the
+ * working copy which will be used as the root of our editor.  Further
+ * locks will be acquired if the update creates new directories.  All
+ * locks, both those in ANCHOR and newly acquired ones, will be released
+ * when the editor driver calls close_edit.
+ *
+ * TARGET is the entry in ANCHOR that will actually be updated, or NULL if
+ * all of ANCHOR should be updated.
  *
  * The editor invokes NOTIFY_FUNC with NOTIFY_BATON as the update
  * progresses, if NOTIFY_FUNC is non-null.
@@ -1000,7 +1041,7 @@ svn_error_t *svn_wc_get_actual_target (const char *path,
  * TARGET_REVISION is the repository revision that results from this set
  * of changes.
  */
-svn_error_t *svn_wc_get_update_editor (const char *anchor,
+svn_error_t *svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                                        const char *target,
                                        svn_revnum_t target_revision,
                                        svn_boolean_t recurse,
@@ -1052,9 +1093,14 @@ svn_error_t *svn_wc_get_checkout_editor (const char *dest,
  * If TI is non-null, record traversal info in TI, for use by
  * post-traversal accessors such as svn_wc_edited_externals().
  * 
- * ANCHOR is the local path to the working copy which will be used as
- * the root of our editor.  TARGET is the entry in ANCHOR that will
- * actually be updated, or NULL if all of ANCHOR should be updated.
+ * ANCHOR is an access baton, with a write lock, for the local path to the
+ * working copy which will be used as the root of our editor.  Further
+ * locks will be acquired if the switch creates new directories.  All
+ * locks, both those in ANCHOR and newly acquired ones, will be released
+ * when the editor driver calls close_edit.
+ *
+ * TARGET is the entry in ANCHOR that will actually be updated, or NULL if
+ * all of ANCHOR should be updated.
  *
  * The editor invokes NOTIFY_FUNC with NOTIFY_BATON as the switch
  * progresses, if NOTIFY_FUNC is non-null.
@@ -1062,7 +1108,7 @@ svn_error_t *svn_wc_get_checkout_editor (const char *dest,
  * TARGET_REVISION is the repository revision that results from this set
  * of changes.
  */
-svn_error_t *svn_wc_get_switch_editor (const char *anchor,
+svn_error_t *svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                                        const char *target,
                                        svn_revnum_t target_revision,
                                        const char *switch_url,
@@ -1076,7 +1122,8 @@ svn_error_t *svn_wc_get_switch_editor (const char *anchor,
 
 
 /* Given a FILE_PATH already under version control, fully "install" a
-   NEW_REVISION of the file.  
+   NEW_REVISION of the file.  ADM_ACCESS is an access baton with a write
+   lock for the directory containing FILE_PATH.
 
    By "install", we mean: the working copy library creates a new
    text-base and prop-base, merges any textual and property changes
@@ -1126,6 +1173,7 @@ svn_error_t *svn_wc_get_switch_editor (const char *anchor,
  */
 svn_error_t *svn_wc_install_file (svn_wc_notify_state_t *content_state,
                                   svn_wc_notify_state_t *prop_state,
+                                  svn_wc_adm_access_t *adm_access,
                                   const char *file_path,
                                   svn_revnum_t new_revision,
                                   const char *new_text_path,
@@ -1295,6 +1343,9 @@ svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
    respectively, in the diff3 documentation.)  Use POOL for any
    temporary allocation.
 
+   ADM_ACCESS is an access baton with a write lock for the directory
+   containing MERGE_TARGET.
+
    This function assumes that LEFT and RIGHT are in repository-normal
    form (linefeeds, with keywords contracted); if necessary,
    MERGE_TARGET is temporarily converted to this form to receive the
@@ -1334,6 +1385,7 @@ svn_wc_get_local_propchanges (apr_array_header_t **local_propchanges,
 svn_error_t *svn_wc_merge (const char *left,
                            const char *right,
                            const char *merge_target,
+                           svn_wc_adm_access_t *adm_access,
                            const char *left_label,
                            const char *right_label,
                            const char *target_label,
@@ -1342,7 +1394,8 @@ svn_error_t *svn_wc_merge (const char *left,
 
 /* Given a PATH under version control, merge an array of PROPCHANGES
    into the path's existing properties.  PROPCHANGES is an array of
-   svn_prop_t objects.
+   svn_prop_t objects.  ADM_ACCESS is an access baton for the directory
+   containing PATH.
 
    If STATE is non-null, set *STATE to the state of the properties
    after the merge.
@@ -1354,6 +1407,7 @@ svn_error_t *svn_wc_merge (const char *left,
 svn_error_t *
 svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
                          const char *path,
+                         svn_wc_adm_access_t *adm_access,
                          const apr_array_header_t *propchanges,
                          apr_pool_t *pool);
 
@@ -1373,17 +1427,24 @@ svn_error_t *svn_wc_get_pristine_copy_path (const char *path,
    be taken over and then cleared by this function.  WARNING: there is no
    mechanism that will protect locks that are still being used. */
 svn_error_t *
-svn_wc_cleanup (const char *path, apr_pool_t *pool);
+svn_wc_cleanup (const char *path,
+                svn_wc_adm_access_t *optional_adm_access,
+                apr_pool_t *pool);
 
 
 /* Revert changes to PATH (perhaps in a RECURSIVE fashion).  Perform
    necessary allocations in POOL.
+
+   ADM_ACCESS is an access baton for the directory containing
+   PATH. ADM_ACCESS can be NULL in which case the function will open and
+   close acess batons as required.
 
    For each item reverted, NOTIFY_FUNC will be called with NOTIFY_BATON
    and the path of the reverted item. NOTIFY_FUNC may be NULL if this
    notification is not needed.  */
 svn_error_t *
 svn_wc_revert (const char *path, 
+               svn_wc_adm_access_t *optional_adm_access,
                svn_boolean_t recursive, 
                svn_wc_notify_func_t notify_func,
                void *notify_baton,

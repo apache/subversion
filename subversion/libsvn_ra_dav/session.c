@@ -191,13 +191,14 @@ static svn_boolean_t search_groups(const char *name,
 
 /* Set *PROXY_HOST, *PROXY_PORT, *PROXY_USERNAME, and *PROXY_PASSWORD
  * to the proxy information for REQUESTED_HOST, allocated in POOL, if
- * there is any applicable information.  Else set *PROXY_PORT to -1
- * and the rest to NULL.
- *
- * If return error, the effect on the return parameters is undefined.
+ * there is any applicable information.  If there is no applicable
+ * information or if there is an error, then set *PROXY_PORT to
+ * (unsigned int) -1 and the rest to NULL.  This function can return
+ * an error, so before checking *PROXY_*, check for error return
+ * value.
  */
 static svn_error_t *get_proxy(const char **proxy_host,
-                              int *proxy_port,
+                              unsigned int *proxy_port,
                               const char **proxy_username,
                               const char **proxy_password,
                               const char *requested_host,
@@ -210,9 +211,10 @@ static svn_error_t *get_proxy(const char **proxy_host,
 
   /* If we find nothing, default to nulls. */
   *proxy_host     = NULL;
+  *proxy_port     = (unsigned int) -1;
   *proxy_username = NULL;
   *proxy_password = NULL;
-  port_str = NULL;
+  port_str        = NULL;
 
   SVN_ERR( svn_config_read_proxies(&cfg, pool) );
 
@@ -245,9 +247,24 @@ static svn_error_t *get_proxy(const char **proxy_host,
 
   /* Special case: convert the port value, if any. */
   if (port_str)
-    *proxy_port = atoi(port_str);
+    {
+      char *endstr;
+      const long int port = strtol(port_str, &endstr, 10);
+
+      if (*endstr)
+        return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool,
+                                "illegal character in proxy port number");
+      if (port < 0)
+        return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool,
+                                "negative proxy port number");
+      if (port > 65535)
+        return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, 0, NULL, pool,
+                                "proxy port number greater than maximum TCP "
+                                "port number 65535");
+      *proxy_port = port;
+    }
   else
-    *proxy_port = -1;
+    *proxy_port = 80;
 
   return SVN_NO_ERROR;
 }
@@ -334,7 +351,7 @@ svn_ra_dav__open (void **session_baton,
   if (ne_sock_init() != 0)
     {
       ne_uri_free(&uri);
-      return svn_error_create(SVN_ERR_RA_SOCK_INIT, 0, NULL, pool,
+      return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, 0, NULL, pool,
                               "network socket initialization failed");
     }
 
@@ -352,7 +369,7 @@ svn_ra_dav__open (void **session_baton,
       if (ne_supports_ssl() == 0)
         {
           ne_uri_free(&uri);
-          return svn_error_create(SVN_ERR_RA_SOCK_INIT, 0, NULL, pool,
+          return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, 0, NULL, pool,
                                   "SSL is not supported");
         }
     }
@@ -377,7 +394,7 @@ svn_ra_dav__open (void **session_baton,
   /* If there's a proxy for this URL, use it. */
   {
     const char *proxy_host;
-    int proxy_port;
+    unsigned int proxy_port;
     const char *proxy_username;
     const char *proxy_password;
     svn_error_t *err;
@@ -393,9 +410,6 @@ svn_ra_dav__open (void **session_baton,
         ne_uri_free(&uri);
         return err;
       }
-
-    if (proxy_port == -1)
-      proxy_port = 80;
 
     if (proxy_host)
       {

@@ -34,6 +34,7 @@
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
+#include "svn_dav.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -200,7 +201,13 @@ svn_error_t *svn_ra_dav__do_check_path(
 #define SVN_RA_DAV__PROP_GETCONTENTLENGTH "DAV:getcontentlength"
 
 #define SVN_RA_DAV__PROP_BASELINE_RELPATH \
+    SVN_DAV_PROP_NS_DAV "baseline-relative-path"
+
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+#define SVN_RA_DAV__PROP_BASELINE_RELPATH_OLD \
     SVN_PROP_PREFIX "baseline-relative-path"
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
+
 
 typedef struct {
   /* what is the URL for this resource */
@@ -357,7 +364,10 @@ enum {
   /* SVN elements */
   ELEM_add_directory,
   ELEM_add_file,
-  ELEM_baseline_relpath,
+  ELEM_baseline_relpath, 
+#ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+  ELEM_baseline_relpath_old,
+#endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   ELEM_deleted_path,  /* used in log reports */
   ELEM_replaced_path,  /* used in log reports */
   ELEM_added_path,    /* used in log reports */

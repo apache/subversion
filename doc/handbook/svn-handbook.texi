@@ -59,6 +59,15 @@
 
 @c @finalout
 
+@ifinfo
+@format
+INFO-DIR-SECTION Development
+START-INFO-DIR-ENTRY
+* Subversion Handbook: (svn-handbook).   General guide to Subversion.
+END-INFO-DIR-ENTRY
+@end format
+@end ifinfo
+
 @c Browser defaults lose.  Let's go for black text on white background.
 @ifhtml
 @html
@@ -97,12 +106,14 @@ This manual is a general guide to the Subversion revision control system.
 * Getting Started::           History, installation and overview of Subversion.
 * Client Cookbook::           How to use the Subversion client.
 * Repository Administration:: Managing a repository.
+* Best Practices::            Tips to use Subversion more effectively.
 * Appendices::                Other useful documents and pointers.
 @end menu
 
 @include getting_started.texi
 @include client.texi
 @include repos_admin.texi
+@include best_practices.texi
 @include appendices.texi
 
 @bye

@@ -61,6 +61,9 @@ struct edit_baton
   const char *anchor;
   const char *target;
 
+  /* ADM_ACCESS is an access baton that includes the ANCHOR directory */
+  svn_wc_adm_access_t *adm_access;
+
   /* The revision we're targeting...or something like that. */
   svn_revnum_t target_revision;
 
@@ -265,7 +268,11 @@ maybe_bump_dir_revision (struct edit_baton *eb,
          checkout. */
       if (eb->is_checkout || bdi->parent)
         {
-          SVN_ERR (svn_wc__entry_modify (bdi->path, NULL, &tmp_entry,
+          svn_wc_adm_access_t *adm_access;
+          SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, bdi->path,
+                                        pool));
+
+          SVN_ERR (svn_wc__entry_modify (adm_access, NULL, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_REVISION, pool));
         }
 
@@ -276,7 +283,11 @@ maybe_bump_dir_revision (struct edit_baton *eb,
       if (bdi->added && bdi->parent)
         {
           const char *name = svn_path_basename (bdi->path, pool);
-          SVN_ERR (svn_wc__entry_modify (bdi->parent->path, name, &tmp_entry,
+          svn_wc_adm_access_t *adm_access;
+          SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
+                                        bdi->parent->path, pool));
+
+          SVN_ERR (svn_wc__entry_modify (adm_access, name, &tmp_entry,
                                          (SVN_WC__ENTRY_MODIFY_KIND
                                           | SVN_WC__ENTRY_MODIFY_DELETED),
                                          pool));
@@ -423,27 +434,37 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 }
 
 
-/* Prepare directory PATH for updating or checking out.
- *
- * If FORCE is non-zero, then the directory will definitely exist
- * after this call, else the directory must exist already.
+/* Prepare directory for dir_baton DB for updating or checking out.
  *
  * If the path already exists, but is not a working copy for
  * ANCESTOR_URL and ANCESTOR_REVISION, then an error will be returned. 
  */
 static svn_error_t *
-prep_directory (const char *path,
+prep_directory (struct dir_baton *db,
                 const char *ancestor_url,
                 svn_revnum_t ancestor_revision,
-                svn_boolean_t force,
                 apr_pool_t *pool)
 {
-  if (force)   /* Make sure the directory exists. */
-    SVN_ERR (svn_wc__ensure_directory (path, pool));
+  /* Make sure the directory exists. */
+  SVN_ERR (svn_wc__ensure_directory (db->path, pool));
 
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
-  return svn_wc__ensure_adm (path, ancestor_url, ancestor_revision, pool);
+  SVN_ERR (svn_wc__ensure_adm (db->path, ancestor_url, ancestor_revision,
+                               pool));
+
+  if (! db->edit_baton->adm_access
+      || strcmp (svn_wc_adm_access_path (db->edit_baton->adm_access),
+                 db->path))
+    {
+      svn_wc_adm_access_t *adm_access;
+      SVN_ERR (svn_wc_adm_open (&adm_access, db->edit_baton->adm_access,
+                                db->path, TRUE, FALSE, db->edit_baton->pool));
+      if (!db->edit_baton->adm_access)
+        db->edit_baton->adm_access = adm_access;
+    }
+  
+  return SVN_NO_ERROR;
 }
 
 
@@ -472,8 +493,7 @@ open_root (void *edit_baton,
 
   *dir_baton = d = make_dir_baton (NULL, eb, NULL, eb->is_checkout, pool);
   if (eb->is_checkout)
-    SVN_ERR (prep_directory (d->path, eb->ancestor_url, eb->target_revision,
-                             TRUE, pool));
+    SVN_ERR (prep_directory (d, eb->ancestor_url, eb->target_revision, pool));
 
   return SVN_NO_ERROR;
 }
@@ -492,7 +512,8 @@ delete_entry (const char *path,
   svn_wc_adm_access_t *adm_access;
   svn_stringbuf_t *log_item = svn_stringbuf_create ("", pool);
 
-  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, pb->path, TRUE, TRUE, pool));
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, pb->edit_baton->adm_access,
+                                pb->path, pool));
   SVN_ERR (svn_wc__open_adm_file (&log_fp,
                                   pb->path,
                                   SVN_WC__ADM_LOG,
@@ -530,7 +551,6 @@ delete_entry (const char *path,
                                    pool));
     
   SVN_ERR (svn_wc__run_log (adm_access, pool));
-  SVN_ERR (svn_wc_adm_close (adm_access));
 
   /* The passed-in `path' is relative to the anchor of the edit, so if
    * the operation was invoked on something other than ".", then
@@ -609,8 +629,7 @@ add_directory (const char *path,
 
   /* Create dir (if it doesn't yet exist), make sure it's formatted
      with an administrative subdir.   */
-  SVN_ERR (prep_directory (db->path, copyfrom_path, copyfrom_revision,
-                           TRUE, db->pool));
+  SVN_ERR (prep_directory (db, copyfrom_path, copyfrom_revision, db->pool));
 
   *child_baton = db;
 
@@ -697,8 +716,13 @@ change_dir_prop (void *dir_baton,
         }
 
       if (modify_flags)
-        return svn_wc__entry_modify (db->path, NULL, &entry,
-                                     modify_flags, pool);
+        {
+          svn_wc_adm_access_t *adm_access;
+          SVN_ERR (svn_wc_adm_retrieve (&adm_access, db->edit_baton->adm_access,
+                                        db->path, pool));
+          return svn_wc__entry_modify (adm_access, NULL, &entry,
+                                       modify_flags, pool);
+        }
     }
 
   /* Else, it's a real ("normal") property... */
@@ -758,8 +782,8 @@ close_directory (void *dir_baton)
       svn_stringbuf_t *entry_accum = svn_stringbuf_create ("", db->pool);
 
       /* Lock down the administrative area */
-      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, db->path, TRUE, FALSE,
-                                db->pool));
+      SVN_ERR (svn_wc_adm_retrieve (&adm_access, db->edit_baton->adm_access,
+                                    db->path, db->pool));
       
       /* Open log file */
       SVN_ERR (svn_wc__open_adm_file (&log_fp,
@@ -881,9 +905,6 @@ close_directory (void *dir_baton)
 
       /* Run the log. */
       SVN_ERR (svn_wc__run_log (adm_access, db->pool));
-
-      /* Unlock, we're done modifying directory props. */
-      SVN_ERR (svn_wc_adm_close (adm_access));
     }
 
 
@@ -1163,6 +1184,7 @@ change_file_prop (void *file_baton,
 svn_error_t *
 svn_wc_install_file (svn_wc_notify_state_t *content_state,
                      svn_wc_notify_state_t *prop_state,
+                     svn_wc_adm_access_t *adm_access,
                      const char *file_path,
                      svn_revnum_t new_revision,
                      const char *new_text_path,
@@ -1177,8 +1199,7 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
   const char *parent_dir, *base_name;
   svn_stringbuf_t *log_accum;
   svn_boolean_t is_locally_modified;
-  svn_wc_adm_access_t *adm_access;
-  svn_boolean_t magic_props_changed = FALSE, magic_props_caused_tweak = FALSE;
+  svn_boolean_t magic_props_changed = FALSE;
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
 
@@ -1189,11 +1210,6 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
 
   /* Start by splitting FILE_PATH. */
   svn_path_split_nts (file_path, &parent_dir, &base_name, pool);
-
-  /* Lock the parent directory while we change things.  If for some
-     reason the parent isn't under version control, this function will
-     bomb out.  */
-  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_dir, TRUE, FALSE, pool));
 
   /*
      When this function is called on file F, we assume the following
@@ -1401,6 +1417,76 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
         }
     }
 
+  /* Has the user made local mods to the working file?  */
+  SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
+                                   file_path, pool));
+
+  if (new_text_path)   /* is there a new text-base to install? */
+    {
+      txtb     = svn_wc__text_base_path (base_name, FALSE, pool);
+      tmp_txtb = svn_wc__text_base_path (base_name, TRUE, pool);
+    }
+  else if (magic_props_changed) /* no new text base, but... */
+    {
+      /* Special edge-case: it's possible that this file installation
+         only involves propchanges, but that some of those props still
+         require a retranslation of the working file. */
+
+      const char *tmptext = svn_wc__text_base_path (base_name, TRUE, pool);
+
+      /* A log command which copies and DEtranslates the working file
+         to a tmp-text-base. */
+      svn_xml_make_open_tag (&log_accum, pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_CP_AND_DETRANSLATE,
+                             SVN_WC__LOG_ATTR_NAME, base_name,
+                             SVN_WC__LOG_ATTR_DEST, tmptext,
+                             NULL);
+
+      /* A log command that copies the tmp-text-base and REtranslates
+         the tmp-text-base back to the working file. */
+      svn_xml_make_open_tag (&log_accum, pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_CP_AND_TRANSLATE,
+                             SVN_WC__LOG_ATTR_NAME, tmptext,
+                             SVN_WC__LOG_ATTR_DEST, base_name,
+                             NULL);
+    }
+
+  /* Write log entry which will bump the revision number.  Also, just
+     in case we're overwriting an existing phantom 'deleted' entry, be
+     sure to remove the deleted-ness. */
+  revision_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, new_revision);
+  svn_xml_make_open_tag (&log_accum,
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_MODIFY_ENTRY,
+                         SVN_WC__LOG_ATTR_NAME,
+                         base_name,
+                         SVN_WC__ENTRY_ATTR_KIND,
+                         SVN_WC__ENTRIES_ATTR_FILE_STR,
+                         SVN_WC__ENTRY_ATTR_REVISION,
+                         revision_str,
+                         SVN_WC__ENTRY_ATTR_DELETED,
+                         "false",
+                         NULL);
+
+
+  /* Possibly install a *non*-inherited URL in the entry. */
+  if (new_URL)
+    {
+      svn_xml_make_open_tag (&log_accum,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_MODIFY_ENTRY,
+                             SVN_WC__LOG_ATTR_NAME,
+                             base_name,
+                             SVN_WC__ENTRY_ATTR_URL,
+                             new_URL,
+                             NULL);
+    }
+
+
   /* For 'textual' merging, we implement this matrix.
 
                   Text file                   Binary File
@@ -1415,16 +1501,8 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
 
    So the first thing we do is figure out where we are in the
    matrix. */
-
-  /* Has the user made local mods to the working file?  */
-  SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
-                                   file_path, pool));
-
-  if (new_text_path)   /* is there a new text-base to install? */
+  if (new_text_path)
     {
-      txtb     = svn_wc__text_base_path (base_name, FALSE, pool);
-      tmp_txtb = svn_wc__text_base_path (base_name, TRUE, pool);
-
       if (! is_locally_modified)
         {
           /* If there are no local mods, who cares whether it's a text
@@ -1505,56 +1583,8 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
         } /* end: working file has mods */
     }  /* end:  "textual" merging process */
 
-
-  /* Special edge-case: it's possible that this file installation only
-     involves propchanges, but that some of those props still require
-     a retranslation of the working file. */
-  if ((! new_text_path) && magic_props_changed)
-    {
-      const char *tmptext = svn_wc__text_base_path (base_name, TRUE, pool);
-
-      /* A log command which copies and DEtranslates the working file
-         to a tmp-text-base. */
-      svn_xml_make_open_tag (&log_accum, pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_CP_AND_DETRANSLATE,
-                             SVN_WC__LOG_ATTR_NAME, base_name,
-                             SVN_WC__LOG_ATTR_DEST, tmptext,
-                             NULL);
-
-      /* A log command that copies the tmp-text-base and REtranslates
-         the tmp-text-base back to the working file. */
-      svn_xml_make_open_tag (&log_accum, pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_CP_AND_TRANSLATE,
-                             SVN_WC__LOG_ATTR_NAME, tmptext,
-                             SVN_WC__LOG_ATTR_DEST, base_name,
-                             NULL);
-    }
-
-  /* Write log entry which will bump the revision number.  Also, just
-     in case we're overwriting an existing phantom 'deleted' entry, be
-     sure to remove the deleted-ness. */
-  revision_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, new_revision);
-  svn_xml_make_open_tag (&log_accum,
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_MODIFY_ENTRY,
-                         SVN_WC__LOG_ATTR_NAME,
-                         base_name,
-                         SVN_WC__ENTRY_ATTR_KIND,
-                         SVN_WC__ENTRIES_ATTR_FILE_STR,
-                         SVN_WC__ENTRY_ATTR_REVISION,
-                         revision_str,
-                         SVN_WC__ENTRY_ATTR_DELETED,
-                         "false",
-                         NULL);
-
-
-  /* Possibly write log commands to tweak text/prop entry timestamps:
-     */
-
-  if (new_text_path || magic_props_caused_tweak)
+  /* Possibly write log commands to tweak text/prop entry timestamps: */
+  if (new_text_path)
     {
       /* Log entry which sets a new textual timestamp, but only if
          there are no local changes to the text. */
@@ -1593,21 +1623,6 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
                                /* use wfile time */
                                SVN_WC_TIMESTAMP_WC,
                                NULL);
-    }
-
-
-  /* Possibly install a *non*-inherited URL in the entry. */
-  if (new_URL)
-    {
-      svn_xml_make_open_tag (&log_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MODIFY_ENTRY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             base_name,
-                             SVN_WC__ENTRY_ATTR_URL,
-                             new_URL,
-                             NULL);
     }
 
   if (new_text_path)
@@ -1716,9 +1731,6 @@ svn_wc_install_file (svn_wc_notify_state_t *content_state,
         *content_state = svn_wc_notify_state_modified;
     }
 
-  /* Unlock the parent dir, we're done with this file installation. */
-  SVN_ERR (svn_wc_adm_close (adm_access));
-
   return SVN_NO_ERROR;
 }
 
@@ -1729,9 +1741,10 @@ static svn_error_t *
 close_file (void *file_baton)
 {
   struct file_baton *fb = file_baton;
-  const char *new_text_path = NULL;
+  const char *new_text_path = NULL, *parent_path;
   apr_array_header_t *propchanges = NULL;
   svn_wc_notify_state_t content_state, prop_state;
+  svn_wc_adm_access_t *adm_access;
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (fb->text_changed)
@@ -1740,8 +1753,16 @@ close_file (void *file_baton)
   if (fb->prop_changed)
     propchanges = fb->propchanges;
 
+  parent_path = svn_path_remove_component_nts (fb->path, fb->pool);
+  if (svn_path_is_empty_nts (parent_path))
+    parent_path = ".";
+    
+  SVN_ERR (svn_wc_adm_retrieve (&adm_access, fb->edit_baton->adm_access,
+                                parent_path, fb->pool));
+
   SVN_ERR (svn_wc_install_file (&content_state,
                                 &prop_state,
+                                adm_access,
                                 fb->path,
                                 fb->edit_baton->target_revision,
                                 new_text_path,
@@ -1813,6 +1834,10 @@ close_edit (void *edit_baton)
                         svn_wc_notify_state_inapplicable,
                         eb->target_revision);
 
+  /* ### Would really like to pass this back to the caller, but there is no
+     ### easy way to do it. So we close it. */
+  SVN_ERR (svn_wc_adm_close (eb->adm_access));
+
   /* The edit is over, free its pool.
      ### No, this is wrong.  Who says this editor/baton won't be used
      again?  But the change is not merely to remove this call.  We
@@ -1830,7 +1855,8 @@ close_edit (void *edit_baton)
 
 /* Helper for the two public editor-supplying functions. */
 static svn_error_t *
-make_editor (const char *anchor,
+make_editor (svn_wc_adm_access_t *adm_access,
+             const char *anchor,
              const char *target,
              svn_revnum_t target_revision,
              svn_boolean_t is_checkout,
@@ -1858,6 +1884,7 @@ make_editor (const char *anchor,
   eb->target_revision = target_revision;
   eb->ancestor_url    = ancestor_url;
   eb->switch_url      = switch_url;
+  eb->adm_access      = adm_access;
   eb->anchor          = anchor;
   eb->target          = target;
   eb->recurse         = recurse;
@@ -1888,7 +1915,7 @@ make_editor (const char *anchor,
 
 
 svn_error_t *
-svn_wc_get_update_editor (const char *anchor,
+svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                           const char *target,
                           svn_revnum_t target_revision,
                           svn_boolean_t recurse,
@@ -1899,7 +1926,8 @@ svn_wc_get_update_editor (const char *anchor,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
-  return make_editor (anchor, target, target_revision, 
+  return make_editor (anchor, svn_wc_adm_access_path (anchor),
+                      target, target_revision, 
                       FALSE, NULL, NULL,
                       recurse, notify_func, notify_baton,
                       editor, edit_baton, traversal_info, pool);
@@ -1918,7 +1946,7 @@ svn_wc_get_checkout_editor (const char *dest,
                             svn_wc_traversal_info_t *traversal_info,
                             apr_pool_t *pool)
 {
-  return make_editor (dest, NULL, target_revision, 
+  return make_editor (NULL, dest, NULL, target_revision, 
                       TRUE, ancestor_url, NULL,
                       recurse, notify_func, notify_baton,
                       editor, edit_baton,
@@ -1927,7 +1955,7 @@ svn_wc_get_checkout_editor (const char *dest,
 
 
 svn_error_t *
-svn_wc_get_switch_editor (const char *anchor,
+svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                           const char *target,
                           svn_revnum_t target_revision,
                           const char *switch_url,
@@ -1941,13 +1969,13 @@ svn_wc_get_switch_editor (const char *anchor,
 {
   assert (switch_url);
 
-  return make_editor (anchor, target, target_revision,
+  return make_editor (anchor, svn_wc_adm_access_path (anchor),
+                      target, target_revision,
                       FALSE, NULL, switch_url,
                       recurse, notify_func, notify_baton,
                       editor, edit_baton,
                       traversal_info, pool);
 }
-
 
 svn_wc_traversal_info_t *
 svn_wc_init_traversal_info (apr_pool_t *pool)

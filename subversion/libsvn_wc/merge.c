@@ -30,6 +30,7 @@ svn_error_t *
 svn_wc_merge (const char *left,
               const char *right,
               const char *merge_target,
+              svn_wc_adm_access_t *adm_access,
               const char *left_label,
               const char *right_label,
               const char *target_label,
@@ -139,6 +140,7 @@ svn_wc_merge (const char *left,
           apr_file_t *lcopy_f, *rcopy_f, *tcopy_f;
           const char *left_copy, *right_copy, *target_copy;
           const char *parentt, *left_base, *right_base, *target_base;
+          svn_wc_adm_access_t *parent_access;
       
           /* I miss Lisp. */
 
@@ -224,8 +226,8 @@ svn_wc_merge (const char *left,
                                      target_copy, TRUE, pool));
 
           /* Derive the basenames of the 3 backup files. */
-          svn_path_split_nts (left_copy, &parentt, &left_base, pool);
-          svn_path_split_nts (right_copy, &parentt, &right_base, pool);
+          svn_path_split_nts (left_copy, NULL, &left_base, pool);
+          svn_path_split_nts (right_copy, NULL, &right_base, pool);
           svn_path_split_nts (target_copy, &parentt, &target_base, pool);
           entry->conflict_old = left_base;
           entry->conflict_new = right_base;
@@ -233,8 +235,10 @@ svn_wc_merge (const char *left,
 
           /* Mark merge_target's entry as "Conflicted", and start tracking
              the backup files in the entry as well. */
+          SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parentt,
+                                        pool));
           SVN_ERR (svn_wc__entry_modify 
-                   (parentt, mt_bn, entry,
+                   (parent_access, mt_bn, entry,
                     SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
                     | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
                     | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
@@ -273,6 +277,7 @@ svn_wc_merge (const char *left,
       apr_file_t *lcopy_f, *rcopy_f;
       const char *left_copy, *right_copy;
       const char *parentt, *left_base, *right_base;
+      svn_wc_adm_access_t *parent_access;
       
       /* reserve names for backups of left and right fulltexts */
       SVN_ERR (svn_io_open_unique_file (&lcopy_f,
@@ -314,8 +319,9 @@ svn_wc_merge (const char *left,
 
       /* Mark merge_target's entry as "Conflicted", and start tracking
          the backup files in the entry as well. */
+      SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parentt, pool));
       SVN_ERR (svn_wc__entry_modify 
-               (parentt, mt_bn, entry,
+               (parent_access, mt_bn, entry,
                 SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
                 | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
                 | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,

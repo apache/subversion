@@ -721,7 +721,7 @@ N unrelated changes in one submission -- send N separate emails
 instead.
 
 The email message should start off with a log message, as described in
-"Writing log entries" above.  The patch itself should be in unified
+"Writing log messages" above.  The patch itself should be in unified
 diff format, preferably inserted directly into the body of your
 message (rather than MIME-attached, uuencoded, or otherwise
 opaqified).  If your mailer wraps long lines, then you will need to
@@ -735,7 +735,7 @@ feature completely in your mail; if the patch fixes a bug, describe
 the bug in detail and give a reproduction recipe.  An exception to
 these guidelines is when the patch addresses a specific issue in the
 issues database -- in that case, just make sure to refer to the issue
-number in your log message, as described in "Writing log entries".
+number in your log message, as described in "Writing log messages".
 
 It is normal for patches to undergo several rounds of feedback and
 change before being applied.  Don't be discouraged if your patch is

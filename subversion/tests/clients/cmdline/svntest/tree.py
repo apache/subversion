@@ -163,12 +163,16 @@ class SVNTreeNode:
       
 
   def pprint(self):
-    print " * Node name: ", self.name
-    print "    Path:     ", self.path
+    print " * Node name:  ", self.name
+    print "    Path:      ", self.path
     print "    Contents:  ", self.contents
     print "    Properties:", self.props
     print "    Attributes:", self.atts
-    if self.children:
+    ### FIXME: I'd like to be able to tell the difference between
+    ### self.children is None (file) and self.children == [] (empty
+    ### diretory), but it seems that most places that construct
+    ### SVNTreeNode objects don't even try to do that.  --xbc
+    if self.children is not None:
       print "    Children:  ", len(self.children)
     else:
       print "    Children: is a file."
@@ -374,6 +378,19 @@ def compare_trees(a, b,
   the entry exists only in A, invoke FUNC_A on it, and likewise for
   B with FUNC_B."""
 
+  def display_nodes(a, b):
+    'Display two nodes, expected and actual.'
+    print "============================================================="
+    print "Expected", b.name, "and actual", a.name, "are different!"
+    print "============================================================="
+    print "EXPECTED NODE TO BE:"
+    print "============================================================="
+    b.pprint()
+    print "============================================================="
+    print "ACTUAL NODE FOUND:"
+    print "============================================================="
+    a.pprint()
+
   # Setup singleton handlers
   if (singleton_handler_a is None):
     singleton_handler_a = default_singleton_handler
@@ -384,39 +401,20 @@ def compare_trees(a, b,
     # A and B are both files.
     if ((a.children is None) and (b.children is None)):
       if compare_file_nodes(a, b):
-        print "============================================================="
-        print "Expected", b.name, "and actual", a.name, "are different!"
-        print "============================================================="
-        print "EXPECTED NODE TO BE:"
-        print "============================================================="
-        b.pprint()
-        print "============================================================="
-        print "ACTUAL NODE FOUND:"
-        print "============================================================="
-        a.pprint()
+        display_nodes(a, b)
         raise main.SVNTreeUnequal
     # One is a file, one is a directory.
     elif (((a.children is None) and (b.children is not None))
           or ((a.children is not None) and (b.children is None))):
-      a.pprint()
-      b.pprint()
+      display_nodes(a, b)
       raise main.SVNTypeMismatch
     # They're both directories.
     else:
       # First, compare the directories' two hashes.
       if (a.props != b.props) or (a.atts != b.atts):
-        print "============================================================="
-        print "Expected", b.name, "and actual", a.name, "are different!"
-        print "============================================================="
-        print "EXPECTED NODE TO BE:"
-        print "============================================================="
-        b.pprint()
-        print "============================================================="
-        print "ACTUAL NODE FOUND:"
-        print "============================================================="
-        a.pprint()
+        display_nodes(a, b)
         raise main.SVNTreeUnequal
-              
+
       accounted_for = []
       # For each child of A, check and see if it's in B.  If so, run
       # compare_trees on the two children and add b's child to

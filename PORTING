@@ -6,10 +6,10 @@
 # Entries should look something like this:
 #
 #    arch-company-os:
-#       Client:     Build OK, Check OK.
-#       Filesystem: Failed due to something    
-#       Last Check: 17 Feb 2001, revision 1729
-#       Tester:     J. Random Hacker <jrandom@example.com>
+#       HTTP:              Build OK, Check OK.
+#       HTTP + Filesystem: Failed due to something    
+#       Last Check:        17 Feb 2001, revision 1729
+#       Tester:            J. Random Hacker <jrandom@example.com>
 #       Notes: 
 #       -- Still cannot build with --wapcapplet-enabled
 #       -- The dependency on the wanglethorpe is really making things
@@ -17,117 +17,139 @@
 #          frobnicator to see if I can't get the filesystem to
 #          build. -J. Random
 #
+
+# The `HTTP' and `HTTP + Filesystem' lines describe the results of
+# building and testing the Subversion client with the specified access
+# methods to a Subversion repository.  The first line, `HTTP', refers
+# to a Subversion client that *can only* access a Subversion
+# repository via HTTP or possibly HTTPS; it does not have direct
+# access to a Subversion repository via the local filesystem, (even if
+# there may be a Subversion repository on a local filesystem, this
+# Subversion client must still talk to a Subversion server to access
+# the repository).  This means that the client was not compiled
+# against the Berkeley Database libraries.  The `HTTP + Filesystem'
+# line describes the results of a Subversion client that was compiled
+# and tested that included the Berkeley Database library.  This
+# Subversion client can directly access Subversion repositories stored
+# in local filesystems without needing the Subversion server.
+#
+# Because the Subversion `HTTP + Filesystem' client is a super set of
+# the `HTTP' client and the test suite for the `HTTP + Filesystem'
+# client includes the tests for the `HTTP' client, then if the `HTTP +
+# Filesystem' client passes all tests, then so must the `HTTP' client.
+#
 # To discover your canonical host triplet, run ac-helpers/config.guess
 # after autogen.sh.  If you can't discover a canonical host triplet,
 # or for some reason it's not applicable, you can just say something
 # like "RedHat Linux 7.2 (intel) 2.4.9-13 kernel".
 
-
 BSDi 4.0:  # Need host string
-     Client:     Build OK, Check OK
-     Filesystem: ?
-     Last Check: 21 Feb 2001, revision ???
-     Tester:     Joe Orton <joe@manyfish.co.uk>
-     Notes:      using GNU make, haven't tried native make
+     HTTP:              Build OK, Check OK
+     HTTP + Filesystem: ?
+     Last Check:        21 Feb 2001, revision ???
+     Tester:            Joe Orton <joe@manyfish.co.uk>
+     Notes:
+     -- Using GNU make, haven't tried native make
 
 hppa1.1-hp-hpux10.20:
-     Client:     Build OK, Check OK.
-     Filesystem: ?
-     Last Check: 17 Jan 2001, revision ???
-     Tester:     Branko Cibej <brane@xbc.nu>
+     HTTP:              Build OK, Check OK.
+     HTTP + Filesystem: ?
+     Last Check:        17 Jan 2001, revision ???
+     Tester:            Branko Cibej <brane@xbc.nu>
 
 i386 OpenBSD 3.0-current:
-     Client:     Build OK, Check OK
-     Filesystem: ?
-     Last Check: 15 February 2002, revision 1302
-     Tester:     Alex Holst <a@area51.dk>
+     HTTP:              Build OK, Check OK
+     HTTP + Filesystem: ?
+     Last Check:        15 February 2002, revision 1302
+     Tester:            Alex Holst <a@area51.dk>
      Notes:
      -- "The client builds and passes make checks on i386 OpenBSD
          3.0-current, with a few hacks to the ac-helper files as gnu
          patch and gnu diff is not currently available as ports."
 
 i386-unknown-freebsd4.5:
-     Client:     Build OK, Check OK
-     Filesystem: Build OK, Check OK
-     Last Check: 15 Feb 2002, revision 1302
-     Tester:     Ben Collins-Sussman <sussman@collab.net>
+     HTTP:              Build OK, Check OK
+     HTTP + Filesystem: Build OK, Check OK
+     Last Check:        15 Feb 2002, revision 1302
+     Tester:            Ben Collins-Sussman <sussman@collab.net>
 
 i386-unknown-freebsd4.4:
-     Client:     Build OK, Check OK
-     Filesystem: Build OK, Check OK
-     Last Check: 7 November 2001, revision ???
-     Tester:     Ben Collins-Sussman <sussman@collab.net>
+     HTTP:              Build OK, Check OK
+     HTTP + Filesystem: Build OK, Check OK
+     Last Check:        7 November 2001, revision ???
+     Tester:            Ben Collins-Sussman <sussman@collab.net>
      Notes:
      -- See the freebsd4.5 entry; conjecture that the rev 1302
         distribution works on 4.4 as well. 
 
 i386-unknown-freebsd4.3:
-     Client:     Build OK, Check OK
-     Filesystem: Build OK, Check OK
-     Last Check: 7 June 2001, revision ???
-     Tester:     Ben Collins-Sussman <sussman@collab.net>
+     HTTP:              Build OK, Check OK
+     HTTP + Filesystem: Build OK, Check OK
+     Last Check:        7 June 2001, revision ???
+     Tester:            Ben Collins-Sussman <sussman@collab.net>
      Notes:
      -- See the freebsd4.5 entry; conjecture that the rev 1302
         distribution works on 4.3 as well. 
 
 i386-unknown-freebsd4.2:
-     Client:     Build OK, Check OK
-     Filesystem: Build OK, Check OK
-     Last Check: 22 May 2001, revision ???
-     Tester:     Ben Collins-Sussman <sussman@collab.net>
+     HTTP:              Build OK, Check OK
+     HTTP + Filesystem: Build OK, Check OK
+     Last Check:        22 May 2001, revision ???
+     Tester:            Ben Collins-Sussman <sussman@collab.net>
      Notes:
      -- See the freebsd4.5 entry; conjecture that the rev 1302
         distribution works on 4.2 as well. 
 
 i686-pc-cygwin (cygwin 1.3.6 on Win2K):
-     Client:     Build OK, Check OK
-     Filesystem: Build OK, Check OK (? has been true before, still true?)
-     Last Check: 15 February 2002, revision 1302
-     Tester:     Ben Collins-Sussman <sussman@collab.net>
+     HTTP:              Build OK, Check OK
+     HTTP + Filesystem: Build OK, Check OK (? has been true before, still true?)
+     Last Check:        15 February 2002, revision 1302
+     Tester:            Ben Collins-Sussman <sussman@collab.net>
      Notes:      
      -- "Of course, I had to manually install the latest autoconf and
          libtool, but that was no big deal."
 
 i686-pc-linux-gnu:
-     Client:     Build OK, Check OK.
-     Filesystem: ?
-     Last Check: 17 Jan 2001, revision ???
-     Tester:     Branko Cibej <brane@xbc.nu>
+     HTTP:              Build OK, Check OK.
+     HTTP + Filesystem: ?
+     Last Check:        17 Jan 2001, revision ???
+     Tester:            Branko Cibej <brane@xbc.nu>
 
 i688-pc-win32:
-     Client:     Build OK, Check OK.
-     Filesystem: ?
-     Last Check: 17 Jan 2001, revision ???
-     Tester:     Branko Cibej <brane@xbc.nu>
+     HTTP:              Build OK, Check OK.
+     HTTP + Filesystem: ?
+     Last Check:        17 Jan 2001, revision ???
+     Tester:            Branko Cibej <brane@xbc.nu>
 
 RedHat Linux 7.2 (intel) 2.4.9-13 kernel:
-     Client:     Build OK
-     Filesystem: ?
-     Last Check: 15 Feb 2002, revision 1302
-     Tester:     Wayne Stidolph <wayne.stidolph@lutris.com>
+     HTTP:              Build OK
+     HTTP + Filesystem: ?
+     Last Check:        15 Feb 2002, revision 1302
+     Tester:            Wayne Stidolph <wayne.stidolph@lutris.com>
      Notes:
      -- Wayne says "bootstraps fine", which I'm guessing means he was
         able to check out a working copy with it.
 
-SunOS 5.8 Generic_108528-08 sun4u sparc SUNW:
-     Client:     Build OK, able to check out a working copy
-     Filesystem: ?
-     Last Check: 15 Feb 2002, revision 1302
-     Testers:    Richard Li <richardl@MIT.EDU>,
-                 Gautam Guliani <gautamg@grassroots-tech.com>
-     Notes:      compiled with gcc 2.95.3
+SunOS 5.8 Generic_108528-13 sun4u sparc
+     HTTP:              Build OK, make check OK
+     HTTP + Filesystem: Build OK, make check OK
+     Last Check:        15 Aug 2002, revision 2977
+     Testers:           Blair Zajac <blair@orcaware.com>
+     Notes:
+     -- Compiled with gcc 3.1.1.
 
 Irix 6.5 IP 27:
-     Client:     Build OK
-     Filesystem: ?
-     Last Check: 15 Feb 2002, revision 1302
-     Tester:     Blair Zajac <blair@orcaware.com>
-     Notes:      compiled with gcc 3.0.3
+     HTTP:              Build OK, make check OK
+     HTTP + Filesystem: Build OK, make check OK
+     Last Check:        15 Aug 2002, revision 2977
+     Tester:            Blair Zajac <blair@orcaware.com>
+     Notes:
+     Compiled with gcc 3.2.
 
-Mac OS X 10.1.5:
-     Client:     Build OK
-     Filesystem: Build OK
-     Last Check: 30 Jul 2002, revision 2793
+powerpc-apple-darwin5.5 (Mac OS X 10.1.5):
+     HTTP:              Build OK
+     HTTP + Filesystem: Build OK
+     Last Check:        30 Jul 2002, revision 2793
      Testers:    Garrett Rooney <rooneg@electricjellyfish.net>,
                  Max Horn <max@quendi.de>,
                  Hamilton Link <helink@sandia.gov>
@@ -136,18 +158,27 @@ Mac OS X 10.1.5:
         and texinfo 4.0 are needed to complete the entire server build process.
         Suitable versions are not provided with OS X yet. Use fink and see
         http://www.apache.org/~pier/macosx/ to gather them all. Additional
-        system-neutral dependancies are listed in the INSTALL file.
+        system-neutral dependencies are listed in the INSTALL file.
      -- As of 0.21.3, neon appears to build with or without --enable-shared,
         but currently the svn build process later gives a warning without it.
-     -- These comments from Brian Fitzpatrick <fitz@apple.com> regarding
-        some older builds may also still apply:
-          + haven't tried to build apr with dso enabled.
+     -- GNU libtool performance is unacceptable.
+     -- Use of Norton AntiVirus 8.0 (and higher) Auto-Protect feature seems to
+        cause intermittent lockups with SVN.
+
+powerpc-apple-darwin6.0 (Mac OS X 10.2):
+     HTTP:              Build OK, Check OK.
+     HTTP + Filesystem: Build OK, Check OK.
+     Last Check:        11 Aug 2002, revision 2941
+     Testers:    Justin Erenkrantz <jerenkrantz@apache.org>
+     Notes:
+     -- Suitable versions of autoconf, libtool, and automake are included.
+     -- GNU libtool performance better than 10.1.
 
 NetBSD (1.5, 1.6_BETA, -CURRENT):
-     Client:     Build OK, Check OK.
-     Filesystem: Build OK, Check OK
-     Last Check: 29 July 2002, revision 2786
-     Tester:     Perry E. Metzger <perry@wasabisystems.com>
+     HTTP:              Build OK, Check OK.
+     HTTP + Filesystem: Build OK, Check OK
+     Last Check:        29 July 2002, revision 2786
+     Tester:            Perry E. Metzger <perry@wasabisystems.com>
                  Eric Gillespie <epg@pretzelnet.org>
      Notes:
      -- Perry says: NetBSD seems to fine. You need to install gnu
@@ -159,32 +190,22 @@ NetBSD (1.5, 1.6_BETA, -CURRENT):
 
 
 rs6000-ibm-aix4.3.2.0:
-     Client:     Build OK, Check OK.
-     Filesystem: ?
-     Last Check: 17 Jan 2001, revision ???
-     Tester:     Branko Cibej <brane@xbc.nu>
+     HTTP:              Build OK, Check OK.
+     HTTP + Filesystem: ?
+     Last Check:        17 Jan 2001, revision ???
+     Tester:            Branko Cibej <brane@xbc.nu>
 
 sparc-sun-solaris2.6:
-     Client:     Build OK, Check OK.
-     Filesystem: Build OK, Check OK.
-     Last Check: 9 May 2001, revision ???
-     Tester:     Branko Cibej <brane@xbc.nu>
-
-Solaris 8:
-     Client:     Build OK
-     Filesystem: ?
-     Last Check: 15 February 2002, revision 1302
-     Tester:     Sam.Cooper@scisys.co.uk
-     Notes:
-     -- gcc 2.95.2
-     -- checked out a working copy successfully, don't know if it
-        passed "make check" or not, though
+     HTTP:              Build OK, Check OK.
+     HTTP + Filesystem: Build OK, Check OK.
+     Last Check:        9 May 2001, revision ???
+     Tester:            Branko Cibej <brane@xbc.nu>
 
 Solaris 2.6:
-     Client:     Build OK
-     Filesystem: ?
-     Last Check: 15 February 2002, revision 1302
-     Tester:     Sam.Cooper@scisys.co.uk
+     HTTP:              Build OK
+     HTTP + Filesystem: ?
+     Last Check:        15 February 2002, revision 1302
+     Tester:            Sam.Cooper@scisys.co.uk
      Notes:
      -- gcc 2.95.2
      -- failed to check out a working copy, but think this may be due
@@ -196,24 +217,24 @@ Solaris 2.6:
         Subversion issue.
 
 alphaev6-dec-osf5.0:
-     Client:     Build OK, Check ??
-     Filesystem: ???
-     Last Check: 15 Feb 2002, revision 1282 + fix from 1287
-     Tester:     Joe Orton <joe@manyfish.co.uk>
+     HTTP:              Build OK, Check ??
+     HTTP + Filesystem: ???
+     Last Check:        15 Feb 2002, revision 1282 + fix from 1287
+     Tester:            Joe Orton <joe@manyfish.co.uk>
      Notes:
      -- configured using --disable-shared
      -- no python on this machine: no tests run.
 
 unixware7: # Need host string
-     Client:     Build OK, Check OK
-     Filesystem: ?
-     Last Check: 21 Feb 2001, revision ???
-     Tester:     Joe Orton <joe@manyfish.co.uk>
+     HTTP:              Build OK, Check OK
+     HTTP + Filesystem: ?
+     Last Check:        21 Feb 2001, revision ???
+     Tester:            Joe Orton <joe@manyfish.co.uk>
      Notes:
      -- had to disable threads in APR
 
 Windows:  # Need separate WinNT vs WinXP vs Win2000, etc?
-     Client:     ?
-     Filesystem: ?
-     Last Check: ?
-     Tester:     ?  Branko?  CMike?
+     HTTP:              ?
+     HTTP + Filesystem: ?
+     Last Check:        ?
+     Tester:            ?  Branko?  CMike?

@@ -49,6 +49,30 @@ extern "C" {
 #define SVN_DAV_ERROR_TAG       "error"
 
 
+
+/* General property (xml) namespaces that will be used by both ra_dav
+   and mod_dav_svn for marshalling properties. */
+
+/* A property stored in the fs and wc, begins with 'svn:', and is
+   interpreted either by client or server.  */
+#define SVN_DAV_PROP_NS_SVN "http://subversion.tigris.org/xmlns/svn/"
+
+/* A property stored in the fs and wc, but totally ignored by svn
+   client and server.  (Simply invented by the users.) */
+#define SVN_DAV_PROP_NS_CUSTOM "http://subversion.tigris.org/xmlns/custom/"
+
+/* A property purely generated and consumed by the network layer, not
+   seen by either fs or wc. */
+#define SVN_DAV_PROP_NS_DAV "http://subversion.tigris.org/xmlns/dav/"
+
+
+/* Remove this #define to disable support for older (broken) svn_dav
+   property namespaces (like "svn:" and "svn:custom:").  Once this
+   #define is removed, please remove the code that it enabled in
+   mod_dav_svn and libsvn_ra_dav.  Thank you.  */
+#define SVN_DAV_FEATURE_USE_OLD_NAMESPACES
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -46,7 +46,7 @@ svn_client_cleanup (const char *dir,
                               "Cannot cleanup '%s' -- not a directory", 
                               dir);
 
-  return svn_wc_cleanup (dir, pool);
+  return svn_wc_cleanup (dir, NULL, pool);
 }
 
 

@@ -57,12 +57,14 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
   svn_error_t *err;
   svn_revnum_t revnum;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
+  svn_wc_adm_access_t *adm_access;
 
   /* Sanity check.  Without this, the update is meaningless. */
   assert (path && (path[0] != '\0'));
 
-  /* Use PATH to get the update's anchor and targets. */
+  /* Use PATH to get the update's anchor and targets and get a write lock */
   SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
+  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, anchor, TRUE, TRUE, pool));
 
   /* Get full URL from the ANCHOR. */
   SVN_ERR (svn_wc_entry (&entry, anchor, FALSE, pool));
@@ -86,7 +88,7 @@ svn_client_update (svn_client_auth_baton_t *auth_baton,
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      either the RA or XML driver will call editor->set_target_revision
      later on. */
-  SVN_ERR (svn_wc_get_update_editor (anchor,
+  SVN_ERR (svn_wc_get_update_editor (adm_access,
                                      target,
                                      revnum,
                                      recurse,

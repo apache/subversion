@@ -124,6 +124,7 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       void *switch_edit_baton;
       const svn_delta_edit_fns_t *wrapped_old_editor;
       void *wrapped_old_edit_baton;
+      svn_wc_adm_access_t *adm_access;
       svn_wc_traversal_info_t *traversal_info
         = svn_wc_init_traversal_info (pool);
 
@@ -134,10 +135,12 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       SVN_ERR (svn_client__get_revision_number
                (&revnum, ra_lib, session, revision, path, pool));
 
+      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, anchor, TRUE, recurse,
+                                pool));
       /* Fetch the switch (update) editor.  If REVISION is invalid, that's
          okay; the RA driver will call editor->set_target_revision() later
          on. */
-      SVN_ERR (svn_wc_get_switch_editor (anchor, target,
+      SVN_ERR (svn_wc_get_switch_editor (adm_access, target,
                                          revnum, switch_url, recurse,
                                          notify_func, notify_baton,
                                          &switch_editor, &switch_edit_baton,
@@ -179,6 +182,8 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
                                              auth_baton,
                                              FALSE,
                                              pool));
+
+      SVN_ERR (svn_wc_adm_close (adm_access));
     }
   
   else if (entry->kind == svn_node_file)
@@ -247,13 +252,23 @@ svn_client_switch (svn_client_auth_baton_t *auth_baton,
       {
         svn_wc_notify_state_t content_state;
         svn_wc_notify_state_t prop_state;
+        svn_wc_adm_access_t *adm_access;
+        const char *parent_path = svn_path_remove_component_nts (path, pool);
+        if (svn_path_is_empty_nts (parent_path))
+          parent_path = ".";
+
+        SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent_path, TRUE, FALSE,
+                                  pool));
         
         SVN_ERR (svn_wc_install_file (&content_state, &prop_state,
+                                      adm_access,
                                       path, fetched_rev,
                                       new_text_path,
                                       proparray, TRUE, /* is full proplist */
                                       switch_url, /* new url */
                                       pool));     
+
+        SVN_ERR (svn_wc_adm_close (adm_access));
         if (notify_func != NULL)
           (*notify_func) (notify_baton, path, svn_wc_notify_update_update,
                           svn_node_file,

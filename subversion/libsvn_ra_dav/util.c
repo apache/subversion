@@ -53,7 +53,7 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
                                        int retcode,
                                        apr_pool_t *pool)
 {
-  int errcode = SVN_ERR_RA_REQUEST_FAILED;
+  int errcode = SVN_ERR_RA_DAV_REQUEST_FAILED;
   const char *msg;
 
   /* Convert the return codes. */
@@ -313,7 +313,7 @@ svn_error_t *svn_ra_dav__parsed_request(svn_ra_session_t *ras,
   msg = ne_xml_get_error(success_parser);
   if (msg != NULL && *msg != '\0')
     {
-      err = svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL,
+      err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, 0, NULL,
                               pool,
                               "The %s request returned invalid XML "
                               "in the response: %s. (%s)",
@@ -409,7 +409,7 @@ svn_ra_dav__request_dispatch(int *code,
 
   /* Bad http status, but error-parser didn't build an svn_error_t
      for some reason.  Return a generic error instead. */
-  return svn_error_createf(SVN_ERR_RA_REQUEST_FAILED, 0, NULL, pool,
+  return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, 0, NULL, pool,
                            "%s of %s returned status code %d (%s)",
                            method, url, *code, code_desc);
 }

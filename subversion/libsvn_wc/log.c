@@ -427,7 +427,7 @@ log_do_merge (struct log_runner *loggy,
                         subpool);
   
   /* Now do the merge with our full paths. */
-  err = svn_wc_merge (left, right, name,
+  err = svn_wc_merge (left, right, name, loggy->adm_access,
                       left_label, right_label, target_label,
                       subpool);
 
@@ -577,7 +577,7 @@ log_do_modify_entry (struct log_runner *loggy,
     }
 
   /* Now write the new entry out */
-  err = svn_wc__entry_modify (svn_wc_adm_access_path (loggy->adm_access), name,
+  err = svn_wc__entry_modify (loggy->adm_access, name,
                               entry, modify_flags, loggy->pool);
   if (err)
     return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
@@ -618,10 +618,6 @@ log_do_delete_entry (struct log_runner *loggy, const char *name)
       err = svn_wc_remove_from_revision_control (adm_access,
                                                  SVN_WC_ENTRY_THIS_DIR,
                                                  TRUE, loggy->pool);
-
-      /* ### Ugly. Unlock only if not going to return an error. Revisit */
-      if (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
-        SVN_ERR (svn_wc_adm_close (adm_access));
     }
   else if (entry->kind == svn_node_file)
     err = svn_wc_remove_from_revision_control (loggy->adm_access, name,
@@ -710,8 +706,7 @@ log_do_committed (struct log_runner *loggy,
           tmpentry.kind = svn_node_dir;
 
           SVN_ERR (svn_wc__entry_modify
-                   (svn_wc_adm_access_path (loggy->adm_access),
-                    NULL, &tmpentry,
+                   (loggy->adm_access, NULL, &tmpentry,
                     SVN_WC__ENTRY_MODIFY_REVISION | SVN_WC__ENTRY_MODIFY_KIND,
                     pool));
 
@@ -746,8 +741,7 @@ log_do_committed (struct log_runner *loggy,
               tmpentry->deleted = TRUE;
               tmpentry->revision = new_rev;
               SVN_ERR (svn_wc__entry_modify
-                       (svn_wc_adm_access_path (loggy->adm_access),
-                        name, tmpentry,
+                       (loggy->adm_access, name, tmpentry,
                         SVN_WC__ENTRY_MODIFY_REVISION
                         | SVN_WC__ENTRY_MODIFY_KIND
                         | SVN_WC__ENTRY_MODIFY_DELETED,
@@ -975,7 +969,7 @@ log_do_committed (struct log_runner *loggy,
          for addition, because such an entry doesn't yet have a URL. */
       entry->schedule = svn_wc_schedule_normal;
       if ((err = svn_wc__entry_modify
-           (svn_wc_adm_access_path (loggy->adm_access), name, entry,
+           (loggy->adm_access, name, entry,
             SVN_WC__ENTRY_MODIFY_SCHEDULE | SVN_WC__ENTRY_MODIFY_FORCE, pool)))
         return svn_error_createf
           (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
@@ -1026,8 +1020,7 @@ log_do_committed (struct log_runner *loggy,
   entry->prejfile = NULL;
   entry->copyfrom_url = NULL;
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
-  if ((err = svn_wc__entry_modify (svn_wc_adm_access_path (loggy->adm_access),
-                                   name, entry,
+  if ((err = svn_wc__entry_modify (loggy->adm_access, name, entry,
                                    (SVN_WC__ENTRY_MODIFY_REVISION 
                                     | SVN_WC__ENTRY_MODIFY_SCHEDULE 
                                     | SVN_WC__ENTRY_MODIFY_COPIED
@@ -1069,7 +1062,10 @@ log_do_committed (struct log_runner *loggy,
   SVN_ERR (svn_wc_entries_read (&entries, pdir, FALSE, pool));
   if (apr_hash_get (entries, base_name, APR_HASH_KEY_STRING))
     {
-      if ((err = svn_wc__entry_modify (pdir, base_name, entry,
+      svn_wc_adm_access_t *parent_access;
+      SVN_ERR (svn_wc_adm_retrieve (&parent_access, loggy->adm_access, pdir,
+                                    pool));
+      if ((err = svn_wc__entry_modify (parent_access, base_name, entry,
                                        (SVN_WC__ENTRY_MODIFY_SCHEDULE 
                                         | SVN_WC__ENTRY_MODIFY_COPIED
                                         | SVN_WC__ENTRY_MODIFY_DELETED
@@ -1255,11 +1251,14 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
         
         if (thisdir_entry->revision > parent_entry->revision)
           {
+            svn_wc_adm_access_t *parent_access;
+            SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent,
+                                          pool));
             tmpentry = apr_pcalloc (pool, sizeof(*tmpentry));
             tmpentry->kind = svn_node_dir;
             tmpentry->deleted = TRUE;
             tmpentry->revision = thisdir_entry->revision;
-            SVN_ERR (svn_wc__entry_modify (parent, bname, tmpentry,
+            SVN_ERR (svn_wc__entry_modify (parent_access, bname, tmpentry,
                                            SVN_WC__ENTRY_MODIFY_REVISION
                                            | SVN_WC__ENTRY_MODIFY_KIND
                                            | SVN_WC__ENTRY_MODIFY_DELETED,
@@ -1283,9 +1282,9 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 
 svn_error_t *
 svn_wc_cleanup (const char *path,
+                svn_wc_adm_access_t *optional_adm_access,
                 apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_hash_t *entries = NULL;
   apr_hash_index_t *hi;
   const char *log_path = svn_wc__adm_path (path, 0, pool,
@@ -1300,64 +1299,44 @@ svn_wc_cleanup (const char *path,
       (SVN_ERR_WC_NOT_DIRECTORY, 0, NULL, pool,
        "svn_wc_cleanup: %s is not a working copy directory", path);
 
+  /* Lock this working copy directory, or steal an existing lock */
+  SVN_ERR (svn_wc__adm_steal_write_lock (&adm_access, optional_adm_access, 
+                                         path, pool));
+
   /* Recurse on versioned subdirs first, oddly enough. */
   SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
 
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_ssize_t keylen;
       void *val;
       svn_wc_entry_t *entry;
-      svn_boolean_t is_this_dir;
 
-      apr_hash_this (hi, &key, &keylen, &val);
+      apr_hash_this (hi, &key, NULL, &val);
       entry = val;
 
-#define KLEN (sizeof(SVN_WC_ENTRY_THIS_DIR) - 1)
-
-      is_this_dir = keylen == KLEN
-                    && memcmp(key, SVN_WC_ENTRY_THIS_DIR, KLEN) == 0;
-
-#undef KLEN
-
-      if ((entry->kind == svn_node_dir) && (! is_this_dir))
+      if ((entry->kind == svn_node_dir)
+          && (strcmp (key, SVN_WC_ENTRY_THIS_DIR) != 0))
         {
           /* Recurse */
           const char *subdir = svn_path_join (path, key, pool);
-          SVN_ERR (svn_wc_cleanup (subdir, pool));
+          SVN_ERR (svn_wc_cleanup (subdir, adm_access, pool));
         }
     }
 
-  /* Lock this working copy directory, or steal an existing lock */
-  SVN_ERR (svn_wc__adm_steal_write_lock (&adm_access, path, pool));
-
   /* Is there a log?  If so, run it. */
-  err = svn_io_check_path (log_path, &kind, pool);
-  if (err)
-    {
-      if (! APR_STATUS_IS_ENOENT(err->apr_err))
-        return err;
-      else
-        svn_error_clear_all (err);
-    }
-  else if (kind == svn_node_file)
+  SVN_ERR (svn_io_check_path (log_path, &kind, pool));
+  if (kind == svn_node_file)
     SVN_ERR (svn_wc__run_log (adm_access, pool));
 
-  /* Cleanup the tmp area of the admin subdir.  The logs have been
-     run, so anything left here has no hope of being useful. */
-  SVN_ERR (svn_wc__adm_cleanup_tmp_area (adm_access, pool));
-
-  /* Remove the lock here, making sure that the administrative
-     directory still exists after running the log! */
+  /* Cleanup the tmp area of the admin subdir, if running the log has not
+     removed it!  The logs have been run, so anything left here has no hope
+     of being useful. */
   if (svn_wc__adm_path_exists (path, 0, pool, NULL))
-    {
-      err = svn_wc_adm_close (adm_access);
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-        svn_error_clear_all (err);
-      else if (err)
-        return err;
-    }
+    SVN_ERR (svn_wc__adm_cleanup_tmp_area (adm_access, pool));
+
+  if (! optional_adm_access)
+    SVN_ERR (svn_wc_adm_close (adm_access));
 
   return SVN_NO_ERROR;
 }

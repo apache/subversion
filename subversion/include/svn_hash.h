@@ -90,7 +90,7 @@ typedef svn_error_t *(*svn_hash_diff_func_t)
         void *baton);
 
 
-/* For each key in the union of hash_a's and hash_b's keys, invoke
+/* For each key in the union of HASH_A's and HASH_B's keys, invoke
  * DIFF_FUNC exactly once, passing the key, the key's length, an enum
  * svn_hash_diff_key_status indicating which table(s) the key appears
  * in, and DIFF_FUNC_BATON.

@@ -924,7 +924,6 @@ check_adm_exists (svn_boolean_t *exists,
   svn_error_t *err = NULL;
   enum svn_node_kind kind;
   svn_boolean_t dir_exists = FALSE, wc_exists = FALSE;
-  apr_file_t *f = NULL;
   const char *tmp_path;
 
   /** Step 1: check that the directory exists. **/
@@ -963,18 +962,13 @@ check_adm_exists (svn_boolean_t *exists,
   /** The directory exists, but is it a valid working copy yet?
       Try step 2: checking that SVN_WC__ADM_README exists. **/
 
-  err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_README, APR_READ, pool);
-  if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
-    return err;
-  else if (err)
-    {
-      svn_error_clear_all (err);
-      wc_exists = FALSE;
-    }
-  else
+  SVN_ERR (svn_io_check_path (svn_path_join (tmp_path,
+                                             SVN_WC__ADM_README, pool),
+                              &kind, pool));
+  if (kind == svn_node_file)
     wc_exists = TRUE;
-
-  SVN_ERR (svn_wc__close_adm_file (f, path, SVN_WC__ADM_README, 0, pool));
+  else
+    wc_exists = FALSE;
 
   /** Step 3: now check that repos and ancestry are correct **/
 
@@ -1105,7 +1099,6 @@ init_adm (const char *path,
   apr_fileperms_t perms = APR_OS_DEFAULT;
 
   /* Initial contents for certain adm files. */
-  const char *format_contents = "1\n";
   const char *readme_contents =
     "This is a Subversion working copy administrative directory.\n"
     "Visit http://subversion.tigris.org/ for more information.\n";
@@ -1149,7 +1142,11 @@ init_adm (const char *path,
   /** Initialize each administrative file. */
 
   /* SVN_WC__ADM_FORMAT */
-  SVN_ERR (init_adm_file (path, SVN_WC__ADM_FORMAT, format_contents, pool));
+  SVN_ERR (svn_io_write_version_file 
+           (svn_path_join_many (pool, 
+                                path, adm_subdir (), SVN_WC__ADM_FORMAT, 
+                                NULL),
+            SVN_WC__VERSION, pool));
 
   /* SVN_WC__ADM_ENTRIES */
   SVN_ERR (svn_wc__entries_init (path, url, pool));

@@ -59,6 +59,8 @@ def basic_checkout(sbox):
   stdout_lines, stderr_lines = svntest.main.run_svn ("Obstructed update",
                                                      'checkout', A_url,
                                                      wc_dir)
+  if not stderr_lines:
+    return 1
 
   # Make some changes to the working copy
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -67,8 +69,9 @@ def basic_checkout(sbox):
   os.remove(lambda_path)
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'rm', G_path)
+  if stderr_lines:
+    return 1
   extra_files = ['lambda']
-
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.tweak('A/mu', status='M ')
   expected_output.tweak('A/B/lambda', status='! ')
@@ -334,8 +337,11 @@ def basic_corruption(sbox):
   os.chmod (tb_dir_path, tb_dir_saved_mode)
   os.chmod (mu_tb_path, mu_tb_saved_mode)
 
-  # This update should succeed.  (Actually, I'm kind of astonished
-  # that this works without even an intervening "svn cleanup".)
+  outlines, errlines = svntest.main.run_svn(None, 'cleanup', other_wc)
+  if errlines:
+    return 1
+  
+  # This update should succeed.
   return svntest.actions.run_and_verify_update (other_wc,
                                                 expected_output,
                                                 expected_disk,

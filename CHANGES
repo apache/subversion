@@ -1,4 +1,12 @@
-Version 0.14.1 [Alpha Interim 1] (released ? August 2002, revision ?)
+Version 0.14.2 [Alpha Interim 2] (released ?? ?????? 2002, revision ????)
+
+ User-visible changes:
+ * new 'svn ls -R' option
+
+ Developer-visible changes:
+ * upgrade to neon 0.22.0
+
+Version 0.14.1 [Alpha Interim 1] (released 9 August 2002, revision 2927)
 
  User-visible changes:
  * show copy-ancestry in 'svn log -v'
@@ -7,11 +15,13 @@ Version 0.14.1 [Alpha Interim 1] (released ? August 2002, revision ?)
  * new 'svn st --no-ignore' option
  * new 'svn --version --quiet' option
  * more conservative 'svn help' usage error-message
- * more graceful degredation from charset conversion failure
+ * more graceful degradation from charset conversion failure
  * standardize policy of -q switch behavior
  * less intimidating error output
  * new SVNParentPath directive for mod_dav_svn <Location>s
- * Handbook: additions, tweaks, cleanups, and new French Translation.  :-)
+ * svnlook now correctly displays copied subtrees
+ * Handbook: additions, tweaks, cleanups, and new French Translation :-)
+ * svn_load_dirs.pl: auto propset on files matching specified regex, bug fixes
 
  Developer-visible changes:
  * integrated the delta-combiner! (issue #531)
@@ -24,13 +34,16 @@ Version 0.14.1 [Alpha Interim 1] (released ? August 2002, revision ?)
  * extend SWIG bindings to libsvn_wc and libsvn_client
  * BerkeleyDB usage tweaking:  in preparation for auto-recovery features.
  * work on #850 (.dsp generator)
+ * Better support for incremental dumps (see revision 2920)
  * started fs branch work on #842 (copyID inheritance), #830 (copies of
    copies), #790 (copy table uses txnID), #815 (custom sorting)
  * numerous bugfixes: #709 (better error handling), #813/814
    (apr_filepath_merge), #685 (showing dir propdiffs), OS X dumper
-    bugfix, #561 (property conflict detection), mod_dav_svn path bugs,
-    svn_wc_status() bugs, path canonicalization bugs, #816 (svn log  -r), 
-    #843 (URL keyword), #846 (kind-change replacement), #809 ($EDITOR dir),
+   bugfix, #561 (property conflict detection), mod_dav_svn path bugs,
+   svn_wc_status() bugs, path canonicalization bugs, #816 (svn log  -r), 
+   #843 (URL keyword), #846 (kind-change replacement), #809 ($EDITOR dir),
+   #855 (module updates not cooperating with new wc access batons),
+   improvements to test suite sensitivity, 
 
 
 Version 0.14.0 [Alpha] (released 23 July 2002, revision 2667)

@@ -127,7 +127,7 @@ svn_ra_local__split_URL (const char **repos_path,
      found the repository.  We give up. */
   if (err)
     return svn_error_createf 
-      (SVN_ERR_RA_REPOSITORY_NOT_FOUND, 0, NULL, pool, 
+      (SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND, 0, NULL, pool, 
        "svn_ra_local__split_URL: Unable to find valid repository\n"
        "   (%s)", URL);
 

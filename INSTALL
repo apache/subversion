@@ -141,7 +141,7 @@ I.    BUILD REQUIREMENTS
       Build.
 
 
-      5.  Neon library 0.21.3
+      5.  Neon library 0.22.0
 
       The Neon library allows a Subversion client to interact with remote
       repositories over the Internet. Although in theory you could have
@@ -153,10 +153,10 @@ I.    BUILD REQUIREMENTS
       want Subversion to build it. The source code is included with the
       latest Subversion tarball, and it can also be obtained from:
 
-          http://www.webdav.org/neon/neon-0.21.3.tar.gz
+          http://www.webdav.org/neon/neon-0.22.0.tar.gz
 
       Unpack the archive using tar/gunzip and rename the resulting
-      directory from "./neon-0.21.3/" to "./neon/".
+      directory from "./neon-0.22.0/" to "./neon/".
 
       Without source code, a previously compiled library can be picked up
       from the standard locations. If you want to specify a nonstandard
@@ -366,10 +366,10 @@ II.   INSTALLATION
       subversion RPM depending on what packages you already have installed:
 
           subversion*.i386.rpm
-          apache*.i386.rpm (Version 2.0.40 or greater)
+          apache*.i386.rpm (Version 2.0.41 or greater)
           db*.i386.rpm     (Version 4.0.14 or greater)
           expat            (Comes with RedHat)
-          neon             (Version 0.21.3)
+          neon             (Version 0.22.0)
 
       After downloading, install it (as root user):
 
@@ -546,7 +546,7 @@ II.   INSTALLATION
       MSVC 6.x are too old.
 
       To build the client components, you'll need a copy of neon
-      0.21.3.  See section I.5 for details on where to get one and
+      0.22.0.  See section I.5 for details on where to get one and
       what to do with it when you get it.
 
       [NOTE: The neon library supports secure connections with OpenSSL
@@ -611,7 +611,7 @@ III.  BUILDING A SUBVERSION SERVER
 
       (Following the BOOTSTRAPPING FROM RPM procedures above will install and
       build the latest Subversion server for Linux RedHat 7.1, 7.2, and PPC
-      Linux systems *IF* the apache-devel-2.0.40 or greater package is already
+      Linux systems *IF* the apache-devel-2.0.41 or greater package is already
       installed when the SUBVERSION RPM is built.)
 
 

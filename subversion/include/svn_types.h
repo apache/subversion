@@ -206,7 +206,7 @@ typedef struct svn_log_changed_path_t
  * ### The only reason CHANGED_PATHS is not qualified with `const' is
  * that we usually want to loop over it, and apr_hash_first() doesn't
  * take a const hash, for various reasons.  I'm not sure that those
- * "various reasons" are actually ever relevant anymore, and if
+ * "various reasons" are actually even relevant anymore, and if
  * they're not, it might be nice to change apr_hash_first() so
  * read-only uses of hashes can be protected via the type system.
  *

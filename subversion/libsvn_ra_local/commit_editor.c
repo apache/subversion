@@ -110,7 +110,7 @@ struct file_baton
 static svn_error_t *
 out_of_date (const char *path, const char *txn_name, apr_pool_t *pool)
 {
-  return svn_error_createf (SVN_ERR_TXN_OUT_OF_DATE, 0, NULL, pool, 
+  return svn_error_createf (SVN_ERR_FS_TXN_OUT_OF_DATE, 0, NULL, pool, 
                             "out of date: `%s' in txn `%s'", path, txn_name);
 }
 

@@ -99,23 +99,26 @@ create_lock (svn_wc_adm_access_t *adm_access, int wait_for, apr_pool_t *pool)
 {
   svn_error_t *err;
 
-  do {
-    err = svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_LOCK,
-                                  svn_node_file, APR_OS_DEFAULT, 0, pool);
-    if (err)
-      {
-        if (APR_STATUS_IS_EEXIST(err->apr_err))
-          {
-            svn_error_clear_all (err);
-            apr_sleep (1 * APR_USEC_PER_SEC);  /* micro-seconds */
-            wait_for--;
-          }
-        else
-          return err;
-      }
-    else
-      return SVN_NO_ERROR;
-  } while (wait_for > 0);
+  for (;;)
+    {
+      err = svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_LOCK,
+                                    svn_node_file, APR_OS_DEFAULT, 0, pool);
+      if (err)
+        {
+          if (APR_STATUS_IS_EEXIST(err->apr_err))
+            {
+              svn_error_clear_all (err);
+              if (wait_for <= 0)
+                break;
+              wait_for--;
+              apr_sleep (1 * APR_USEC_PER_SEC);  /* micro-seconds */
+            }
+          else
+            return err;
+        }
+      else
+        return SVN_NO_ERROR;
+    }
 
   return svn_error_createf (SVN_ERR_WC_LOCKED, 0, NULL, pool, 
                             "working copy locked: %s", adm_access->path); 
@@ -180,8 +183,20 @@ adm_access_alloc (enum svn_wc__adm_access_type type,
   return lock;
 }
 
+static void
+adm_ensure_set (svn_wc_adm_access_t *adm_access)
+{
+  if (! adm_access->set)
+    {
+      adm_access->set = apr_hash_make (adm_access->pool);
+      apr_hash_set (adm_access->set, adm_access->path, APR_HASH_KEY_STRING,
+                    adm_access);
+    }
+}
+
 svn_error_t *
 svn_wc__adm_steal_write_lock (svn_wc_adm_access_t **adm_access,
+                              svn_wc_adm_access_t *associated,
                               const char *path,
                               apr_pool_t *pool)
 {
@@ -196,6 +211,13 @@ svn_wc__adm_steal_write_lock (svn_wc_adm_access_t **adm_access,
         svn_error_clear_all (err);  /* Steal existing lock */
       else
         return err;
+    }
+
+  if (associated)
+    {
+      adm_ensure_set (associated);
+      lock->set = associated->set;
+      apr_hash_set (lock->set, lock->path, APR_HASH_KEY_STRING, lock);
     }
 
   lock->lock_exists = TRUE;
@@ -248,14 +270,7 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
     }
 
   if (associated)
-    {
-      if (! associated->set)
-        {
-          associated->set = apr_hash_make (associated->pool);
-          apr_hash_set (associated->set, associated->path, APR_HASH_KEY_STRING,
-                        associated);
-        }
-    }
+    adm_ensure_set (associated);
 
   if (tree_lock)
     {
@@ -480,6 +495,12 @@ const char *
 svn_wc_adm_access_path (svn_wc_adm_access_t *adm_access)
 {
   return adm_access->path;
+}
+
+apr_pool_t *
+svn_wc_adm_access_pool (svn_wc_adm_access_t *adm_access)
+{
+  return adm_access->pool;
 }
 
 

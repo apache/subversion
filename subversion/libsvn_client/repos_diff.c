@@ -44,6 +44,9 @@ struct edit_baton {
      URL open in RA_SESSION below. */
   const char *target;
 
+  /* ADM_ACCESS is an access baton that includes the TARGET directory */
+  svn_wc_adm_access_t *adm_access;
+
   /* The callback and calback argument that implement the file comparison
      function */
   const svn_wc_diff_callbacks_t *diff_callbacks;
@@ -332,6 +335,38 @@ create_empty_file (const char **empty_file,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+get_parent_access (svn_wc_adm_access_t **parent_access,
+                   svn_wc_adm_access_t *adm_access,
+                   const char *path,
+                   apr_pool_t *pool)
+{
+  if (! adm_access)
+    *parent_access = NULL;
+  else
+    {
+      const char *parent_path = svn_path_remove_component_nts (path, pool);
+      if (svn_path_is_empty_nts (parent_path))
+        parent_path = ".";
+      SVN_ERR (svn_wc_adm_retrieve (parent_access, adm_access, parent_path,
+                                    pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+get_path_access (svn_wc_adm_access_t **path_access,
+                 svn_wc_adm_access_t *adm_access,
+                 const char *path,
+                 apr_pool_t *pool)
+{
+  if (! adm_access)
+    *path_access = NULL;
+  else
+    SVN_ERR (svn_wc_adm_retrieve (path_access, adm_access, path, pool));
+  return SVN_NO_ERROR;
+}
+                  
 /* Get the empty file associated with the edit baton. This is cached so
  * that it can be reused, all empty files are the same.
  */
@@ -401,6 +436,7 @@ delete_entry (const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_node_kind_t kind;
+  svn_wc_adm_access_t *adm_access;
 
   /* We need to know if this is a directory or a file */
   SVN_ERR (pb->edit_baton->ra_lib->check_path (&kind,
@@ -408,6 +444,7 @@ delete_entry (const char *path,
                                                path,
                                                pb->edit_baton->revision));
 
+  SVN_ERR (get_path_access (&adm_access, eb->adm_access, pb->wcpath, pool));
   switch (kind)
     {
     case svn_node_file:
@@ -421,7 +458,7 @@ delete_entry (const char *path,
         SVN_ERR (get_empty_file(b->edit_baton, &(b->path_end_revision)));
         
         SVN_ERR (pb->edit_baton->diff_callbacks->file_deleted 
-                 (b->wcpath,
+                 (adm_access, b->wcpath,
                   b->path_start_revision,
                   b->path_end_revision,
                   b->edit_baton->diff_cmd_baton));
@@ -431,7 +468,7 @@ delete_entry (const char *path,
     case svn_node_dir:
       {
         SVN_ERR (pb->edit_baton->diff_callbacks->dir_deleted 
-                 (svn_path_join (eb->target, path, pool),
+                 (adm_access, svn_path_join (eb->target, path, pool),
                   pb->edit_baton->diff_cmd_baton));
         break;
       }
@@ -464,14 +501,17 @@ add_directory (const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct dir_baton *b;
+  svn_wc_adm_access_t *adm_access;
 
   /* ### TODO: support copyfrom? */
 
   b = make_dir_baton (path, pb, TRUE, pool);
   *child_baton = b;
 
+  SVN_ERR (get_path_access (&adm_access, pb->edit_baton->adm_access, pb->wcpath,
+                            pool));
   SVN_ERR (pb->edit_baton->diff_callbacks->dir_added 
-           (b->wcpath,
+           (adm_access, b->wcpath,
             pb->edit_baton->diff_cmd_baton));
 
   if (pb->edit_baton->notify_func)
@@ -623,21 +663,23 @@ close_file (void *file_baton)
 {
   struct file_baton *b = file_baton;
   struct edit_baton *eb = b->edit_baton;
+  svn_wc_adm_access_t *adm_access;
   svn_wc_notify_state_t
     content_state = svn_wc_notify_state_unknown,
     prop_state = svn_wc_notify_state_unknown;
 
+  SVN_ERR (get_parent_access (&adm_access, eb->adm_access, b->wcpath, b->pool));
   if (b->path_end_revision)
     {
       if (b->added)
         SVN_ERR (eb->diff_callbacks->file_added
-                 (b->wcpath,
+                 (adm_access, b->wcpath,
                   b->path_start_revision,
                   b->path_end_revision,
                   b->edit_baton->diff_cmd_baton));
       else
         SVN_ERR (eb->diff_callbacks->file_changed
-                 (&content_state,
+                 (adm_access, &content_state,
                   b->wcpath,
                   b->path_start_revision,
                   b->path_end_revision,
@@ -649,7 +691,7 @@ close_file (void *file_baton)
   if (b->propchanges->nelts > 0)
     {
       SVN_ERR (eb->diff_callbacks->props_changed
-               (&prop_state,
+               (adm_access, &prop_state,
                 b->wcpath,
                 b->propchanges, b->pristine_props,
                 b->edit_baton->diff_cmd_baton));
@@ -686,8 +728,11 @@ close_directory (void *dir_baton)
 
   if (b->propchanges->nelts > 0)
     {
+      svn_wc_adm_access_t *adm_access;
+      SVN_ERR (get_path_access (&adm_access, eb->adm_access, b->wcpath,
+                                b->pool));
       SVN_ERR (eb->diff_callbacks->props_changed
-               (&prop_state,
+               (adm_access, &prop_state,
                 b->wcpath,
                 b->propchanges, b->pristine_props,
                 b->edit_baton->diff_cmd_baton));
@@ -760,6 +805,7 @@ close_edit (void *edit_baton)
  */
 svn_error_t *
 svn_client__get_diff_editor (const char *target,
+                             svn_wc_adm_access_t *adm_access,
                              const svn_wc_diff_callbacks_t *diff_callbacks,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,
@@ -777,6 +823,7 @@ svn_client__get_diff_editor (const char *target,
   struct edit_baton *eb = apr_palloc (subpool, sizeof (*eb));
 
   eb->target = target;
+  eb->adm_access = adm_access;
   eb->diff_callbacks = diff_callbacks;
   eb->diff_cmd_baton = diff_cmd_baton;
   eb->recurse = recurse;

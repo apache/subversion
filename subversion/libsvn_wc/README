@@ -59,9 +59,9 @@ a general branch-merge problem:
      the repository.  The exact same algorithm is used as with
      updates, the only difference being that a commit must succeed
      completely or not at all.  That last condition is merely a
-     useability decision: the repository tree is shared by many
+     usability decision: the repository tree is shared by many
      people, so folding both sides of a conflict into it to aid
-     resolution would actually make it less useable, not more.  On the
+     resolution would actually make it less usable, not more.  On the
      other hand, representing both sides of a conflict in a working
      copy is often helpful to the person who owns that copy.
 
@@ -75,7 +75,7 @@ Structure of the Working Copy
 =============================
 
 Working copy meta-information is stored in SVN/ subdirectories,
-analogous to CVS/ sudirs:
+analogous to CVS/ subdirs:
 
   .svn/README                   /* No, it's not this file.  Details below. */
        format                   /* Contains wc adm format version. */
@@ -185,7 +185,7 @@ analogous to CVS/ sudirs:
 
       1. Added files are recorded with the "new='true'" flag; if they
          are truly new, their initial revision is 0, otherwise their
-         ancestory is recorded (see files X and Y in the example).
+         ancestry is recorded (see files X and Y in the example).
 
       2. Added dirs get the "new='true'" flag too, but they record
          their own ancestry.
@@ -211,7 +211,7 @@ analogous to CVS/ sudirs:
 
 `dir-prop-base'
 
-  Same as `dir-props', except this is the pristine copy;  analagous to
+  Same as `dir-props', except this is the pristine copy;  analogous to
   the "text-base" revisions of files.  The last up-to-date copy of the
   directory's properties live here. 
 
@@ -246,14 +246,14 @@ analogous to CVS/ sudirs:
       2. apply_textdelta() hands window_handler() to its caller.
 
       3. window_handler() is invoked N times, constructing
-         ./SVN/tmp/iota
+         ./.svn/tmp/iota
 
       4. finish_file() is called.  First, it creates `log' atomically,
          with the following items,
 
-            <mv src="SVN/tmp/iota" dst="SVN/text-base/iota">
-            <mv src="SVN/tmp/SVN/entries" dst="SVN/entries">
-            <merge src="SVN/text-base/iota" dst="iota">
+            <mv src=".svn/tmp/iota" dst=".svn/text-base/iota">
+            <mv src=".svn/tmp/.svn/entries" dst=".svn/entries">
+            <merge src=".svn/text-base/iota" dst="iota">
 
          Then it does the operations in the log file one by one.
          When it's done, it removes the log.

@@ -350,7 +350,8 @@ svn_error_t *svn_stream_close (svn_stream_t *stream);
 svn_error_t *svn_stream_printf (svn_stream_t *stream,
                                 apr_pool_t *pool,
                                 const char *fmt,
-                                ...);
+                                ...)
+       __attribute__ ((format(printf, 3, 4)));
 
 /* Allocate *STRINGBUF in POOL, and read one line from STREAM into it.
    The '\n' is read from the stream, but is not added to the end of
@@ -548,6 +549,22 @@ svn_io_dir_read (apr_finfo_t *finfo,
    native encoding before printing. */
 svn_error_t *
 svn_io_file_printf (apr_file_t *fptr, const char *format, ...);
+
+
+
+/*** Version/format files. ***/
+
+/* Read the file at PATH as a textfile that contains a single line of
+   text, formatted as a integer followed by a newline, and return that
+   integer in *VERSION.  Use POOL for all allocations.  */
+svn_error_t *
+svn_io_read_version_file (int *version, const char *path, apr_pool_t *pool);
+
+/* Create (or overwrite) the file at PATH with new contents,
+   formatted as a non-negative integer VERSION followed by a single
+   newline.  Use POOL for all allocations. */
+svn_error_t *
+svn_io_write_version_file (const char *path, int version, apr_pool_t *pool);
 
 
 #ifdef __cplusplus

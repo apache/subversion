@@ -117,7 +117,7 @@ read_header_block (svn_stream_t *stream,
       while (header_str->data[i] != ':')
         {
           if (header_str->data[i] == '\0')
-            return svn_error_create (SVN_ERR_MALFORMED_STREAM_DATA,
+            return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA,
                                      0, NULL, pool,
                                      "Found malformed header block "
                                      "in dumpfile stream.");
@@ -130,7 +130,7 @@ read_header_block (svn_stream_t *stream,
       /* Skip over the NULL byte and the space following it.  */
       i += 2;
       if (i > header_str->len)
-        return svn_error_create (SVN_ERR_MALFORMED_STREAM_DATA,
+        return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA,
                                  0, NULL, pool,
                                  "Found malformed header block "
                                  "in dumpfile stream.");
@@ -156,7 +156,7 @@ stream_ran_dry (apr_pool_t *pool)
 static svn_error_t *
 stream_malformed (apr_pool_t *pool)
 {
-  return svn_error_create (SVN_ERR_MALFORMED_STREAM_DATA, 0, NULL, pool,
+  return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, 0, NULL, pool,
                            "Dumpstream data appears to be malformed.");
 }
 
@@ -323,7 +323,7 @@ parse_text_block (svn_stream_t *stream,
           if (wlen != rlen)
             {
               /* Uh oh, didn't write as many bytes as we read. */
-              return svn_error_create (SVN_ERR_UNEXPECTED_EOF, 0, NULL, pool,
+              return svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, 0, NULL, pool,
                                        "Error pushing textual contents.");
             }
         }
@@ -443,7 +443,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
       else
         {
           /* What the heck is this record?!? */
-          return svn_error_create (SVN_ERR_MALFORMED_STREAM_DATA,
+          return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA,
                                    0, NULL, pool,
                                    "Unrecognized record type in stream.");
         }
@@ -714,7 +714,7 @@ new_node_record (void **node_baton,
         break;
       }
     default:
-      return svn_error_createf (SVN_ERR_UNRECOGNIZED_STREAM_DATA,
+      return svn_error_createf (SVN_ERR_STREAM_UNRECOGNIZED_DATA,
                                 0, NULL, pool, 
                                 "Unrecognized node-action on node %s.",
                                 nb->path);

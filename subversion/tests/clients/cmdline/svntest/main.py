@@ -118,8 +118,8 @@ test_area_url = file_schema_prefix + os.path.abspath(os.getcwd())
 general_repo_dir = "repositories"
 general_wc_dir = "working_copies"
 
-# A symlink that will always point to latest repository
-current_repo_dir = os.path.join(general_repo_dir, "current-repo")
+# A relative path that will always point to latest repository
+current_repo_dir = None
 current_repo_url = None
 
 # temp directory in which we will create our 'pristine' local
@@ -271,7 +271,13 @@ def create_repos(path):
 
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
-      
+
+def set_repos_paths(repo_dir):
+  "Set current_repo_dir and current_repo_url from a relative path to the repo."
+  global current_repo_dir, current_repo_url
+  current_repo_dir = repo_dir
+  current_repo_url = test_area_url + '/' + repo_dir
+
 
 ######################################################################
 # Sandbox handling
@@ -285,7 +291,7 @@ class Sandbox:
     self.repo_dir = os.path.join(general_repo_dir, self.name)
 
   def build(self):
-    return actions.make_repo_and_wc(self.name)
+    return actions.make_repo_and_wc(self)
 
 
 ######################################################################
@@ -305,6 +311,10 @@ def run_one_test(n, test_list):
     print "There is no test", `n` + ".\n"
     return 1
 
+  # Clear the repos paths for this test
+  current_repo_dir = None
+  current_repo_url = None
+
   func = test_list[n]
   if func.func_code.co_argcount:
     # ooh! this function takes a sandbox argument
@@ -321,6 +331,9 @@ def run_one_test(n, test_list):
     error = apply(func, args)
   except SVNTreeUnequal:
     print "caught an SVNTreeUnequal exception, returning error instead"
+  except KeyboardInterrupt:
+    print "Interrupted"
+    sys.exit(0)
   except:
     print "caught unexpected exception"
     traceback.print_exc(file=sys.stdout)
@@ -361,7 +374,6 @@ def run_tests(test_list):
   """
 
   global test_area_url
-  global current_repo_url
   testnum = None
 
   for arg in sys.argv:
@@ -387,7 +399,6 @@ def run_tests(test_list):
       except ValueError:
         pass
 
-  current_repo_url = os.path.join(test_area_url, current_repo_dir)
   exit_code = _internal_run_tests(test_list, testnum)
 
   # remove all scratchwork: the 'pristine' repository, greek tree, etc.

@@ -134,7 +134,7 @@ harvest_committables (apr_hash_t *committables,
   /* Return error on unknown path kinds. */
   if ((entry->kind != svn_node_file) && (entry->kind != svn_node_dir))
     return svn_error_create 
-      (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool, path);
+      (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL, pool, path);
 
   /* Get a fully populated entry for PATH if we can, and check for
      conflicts. If this is a directory ... */

@@ -2180,7 +2180,7 @@ struct commit_args
  *
  * Up-to-date means that ARGS->txn's base root is the same as the root
  * of the youngest revision.  If ARGS->txn is not up-to-date, the
- * error SVN_ERR_TXN_OUT_OF_DATE is returned, and the commit fails: no
+ * error SVN_ERR_FS_TXN_OUT_OF_DATE is returned, and the commit fails: no
  * new revision is created, and ARGS->new_rev is not touched.
  *
  * If the commit succeeds, ARGS->txn is destroyed.
@@ -2215,7 +2215,7 @@ txn_body_commit (void *baton, trail_t *trail)
     {
       svn_string_t *id_str = svn_fs_unparse_id (y_rev_root_id, trail->pool);
       return svn_error_createf
-        (SVN_ERR_TXN_OUT_OF_DATE, 0, NULL, trail->pool,
+        (SVN_ERR_FS_TXN_OUT_OF_DATE, 0, NULL, trail->pool,
          "txn `%s' out of date w.r.t. revision `%s'", txn_name, id_str->data);
     }
   
@@ -2333,7 +2333,7 @@ svn_fs_commit_txn (const char **conflict_p,
       /* Try to commit. */
       commit_args.txn = txn;
       err = svn_fs__retry_txn (fs, txn_body_commit, &commit_args, pool);
-      if (err && (err->apr_err == SVN_ERR_TXN_OUT_OF_DATE))
+      if (err && (err->apr_err == SVN_ERR_FS_TXN_OUT_OF_DATE))
         {
           /* Did someone else finish committing a new revision while we
              were in mid-merge or mid-commit?  If so, we'll need to

@@ -378,7 +378,7 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
       svn_error_t *err;
       svn_wc_adm_access_t *adm_access;
 
-      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, path, TRUE, FALSE,
+      SVN_ERR (svn_wc_adm_open (&adm_access, NULL, path, TRUE, TRUE,
                                 ib->pool));
 
       /* We don't use relegate_external() here, because we know that

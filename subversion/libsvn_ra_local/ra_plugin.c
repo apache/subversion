@@ -644,7 +644,7 @@ svn_ra_local__get_file (void *session_baton,
              error was returned.  According to the docstring, this
              should never happen. */
           return 
-            svn_error_create (SVN_ERR_UNEXPECTED_EOF, 0, NULL,
+            svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, 0, NULL,
                               sbaton->pool, "Error writing to svn_stream.");
         }
       

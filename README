@@ -33,8 +33,12 @@ I.    A FEW POINTERS
 
 II.   DOCUMENTATION
 
-      If you like what you see, then run "make ps" inside the doc/ directory
-      and read any PostScript files that result.
+      The main documentation lives in the doc/ tree.  It is built and
+      installed in Info format as part of the normal installation
+      process.  You can also run 'make doc-ps', 'make doc-pdf', or
+      'make doc-html' from the top level of the Subversion
+      distribution (after configuring, of course; see the INSTALL file
+      for more on that).
 
       See COPYING for copyright information.
       See HACKING for development information.
