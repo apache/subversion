@@ -68,11 +68,12 @@ Candidate changes:
     Fix issue #1854 (user data loss on case-insensitive file systems).
     Justification: Never ever overwrite local modifications.
     Votes:
-      +1: bliss, brane
+      +1: bliss, brane, dionisos
 
   * r9720,r9727
-    Fix problem with javahl bindings which triggers a java.lang.NoSuchMethodError
-    exception and problems where the callback from C calls the wrong java method.
+    Fix problem with javahl bindings which triggers a
+    java.lang.NoSuchMethodError exception and problems where the callback
+    from C calls the wrong java method.
     The second problem can lead to a crash of the java virtual machine.
     Justification: Bindings only changes, where the wrong java interfaces
     is referenced. Without it a crash can happen.
