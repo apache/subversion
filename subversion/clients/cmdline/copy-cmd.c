@@ -41,6 +41,8 @@ svn_cl__copy (apr_getopt_t *os,
 {
   apr_array_header_t *targets;
   svn_stringbuf_t *src_path, *dst_path;
+  svn_client_auth_baton_t *auth_baton = NULL;
+  svn_stringbuf_t *message = NULL;
 
   targets = svn_cl__args_to_target_array (os, pool);
 
@@ -50,10 +52,21 @@ svn_cl__copy (apr_getopt_t *os,
       return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
     }
 
+  /* Take our message from ARGV or a FILE */
+  if (opt_state->filedata) 
+    message = opt_state->filedata;
+  else
+    message = opt_state->message;
+  
+  /* Build an authentication object to give to libsvn_client. */
+  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
+
   src_path = ((svn_stringbuf_t **) (targets->elts))[0];
   dst_path = ((svn_stringbuf_t **) (targets->elts))[1];
   
-  SVN_ERR (svn_client_copy (src_path, dst_path, pool));
+  SVN_ERR (svn_client_copy 
+           (src_path, opt_state->start_revision, dst_path, auth_baton, 
+            message ? message : svn_stringbuf_create ("", pool), pool));
 
   return SVN_NO_ERROR;
 }
