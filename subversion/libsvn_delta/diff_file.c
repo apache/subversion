@@ -120,8 +120,8 @@ svn_diff__file_datasource_close(void *baton,
 
 static
 svn_error_t *
-svn_diff__file_datasource_get_token(void **token, void *baton,
-                                    svn_diff_datasource_e datasource)
+svn_diff__file_datasource_get_next_token(void **token, void *baton,
+                                         svn_diff_datasource_e datasource)
 {
   svn_diff__file_baton_t *file_baton = baton;
   svn_diff__file_token_t *file_token;
@@ -241,6 +241,17 @@ svn_diff__file_token_discard(void *baton,
   file_baton->reuse_token = file_baton->token == token;
 }
 
+static
+svn_diff_fns_t svn_diff__file_vtable =
+{
+  svn_diff__file_datasource_open,
+  svn_diff__file_datasource_close,
+  svn_diff__file_datasource_get_next_token,
+  svn_diff__file_token_compare,
+  svn_diff__file_token_discard,
+  NULL
+};
+
 svn_error_t *
 svn_diff_file(svn_diff_t **diff,
               const char *original,
@@ -248,21 +259,13 @@ svn_diff_file(svn_diff_t **diff,
               apr_pool_t *pool)
 {
   svn_diff__file_baton_t baton;
-  svn_diff_fns_t vtable;
 
   memset(&baton, 0, sizeof(baton));
   baton.path[0] = original;
   baton.path[1] = modified;
   baton.pool = pool;
 
-  memset(&vtable, 0, sizeof(vtable));
-  vtable.datasource_open = svn_diff__file_datasource_open;
-  vtable.datasource_close = svn_diff__file_datasource_close;
-  vtable.datasource_get_next_token = svn_diff__file_datasource_get_token;
-  vtable.token_compare = svn_diff__file_token_compare;
-  vtable.token_discard = svn_diff__file_token_discard;
-
-  return svn_diff(diff, &baton, &vtable, pool);
+  return svn_diff(diff, &baton, &svn_diff__file_vtable, pool);
 }
 
 svn_error_t *
@@ -273,13 +276,12 @@ svn_diff3_file(svn_diff_t **diff,
                apr_pool_t *pool)
 {
   svn_diff__file_baton_t baton;
-  svn_diff_fns_t vtable;
 
   memset(&baton, 0, sizeof(baton));
   baton.path[0] = original;
   baton.path[1] = modified1;
   baton.path[2] = modified2;
 
-  return svn_diff3(diff, &baton, &vtable, pool);
+  return svn_diff3(diff, &baton, &svn_diff__file_vtable, pool);
 }
 
