@@ -18,6 +18,7 @@
 #include "svn_fs.h"
 #include "svn_path.h"
 #include "apr_hash.h"
+#include "svn_repos.h"
 
 
 
@@ -466,19 +467,19 @@ delta_files (struct context *c, void *file_baton,
     {
       /* Get a delta stream turning SOURCE_PATH's contents into
          TARGET_PATH's contents.  */
-      SVN_ERR (svn_fs_file_delta (&delta_stream, 
-                                  c->source_root, source_path->data,
-                                  c->target_root, target_path->data,
-                                  subpool));
+      SVN_ERR (svn_fs_get_file_delta_stream 
+               (&delta_stream, 
+                c->source_root, source_path->data,
+                c->target_root, target_path->data,
+                subpool));
     }
   else
     {
       /* Get a delta stream turning an empty file into one having
          TARGET_PATH's contents.  */
-      SVN_ERR (svn_fs_file_delta (&delta_stream, 
-                                  0, 0,
-                                  c->target_root, target_path->data,
-                                  subpool));
+      SVN_ERR (svn_fs_get_file_delta_stream 
+               (&delta_stream, 0, 0,
+                c->target_root, target_path->data, subpool));
     }
 
   SVN_ERR (send_text_delta (c, file_baton, delta_stream, subpool));
