@@ -6,17 +6,13 @@ import os
 import sys
 import string
 
+try:
+  from cStringIO import StringIO
+except ImportError:
+  from StringIO import StringIO
+
 import gen_base
-
-
-def unique(s):
-    """Eliminate duplicates from the list"""
-
-    u = []
-    for x in s:
-        if x not in u:
-            u.append(x)
-    return u
+import ezt
 
 
 class WinGeneratorBase(gen_base.GeneratorBase):
@@ -183,26 +179,27 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     If recurse is 2, only return the dependencies of target's dependencies
 
     """
-    ret = []
+    deps = { }
 
     for obj in self.graph.get_sources(gen_base.DT_LINK, target.name):
       if not isinstance(obj, gen_base.Target):
         continue
 
-      if recurse<>2:
-        ret.append(obj)
+      if recurse != 2:
+        deps[obj] = None
 
       if recurse:
-        ret = ret + self.get_win_depends(obj, 1)
+        for dep in self.get_win_depends(obj, 1):
+          deps[dep] = None
 
-    ret = unique(ret)
-    ret.sort()
-    return ret
+    deps = deps.keys()
+    deps.sort()
+    return deps
 
   def get_unique_win_depends(self, target):
     "Return the list of dependencies for target that are not already depended upon by a child"
 
-    ret = []
+    deps = { }
 
     sub = self.get_win_depends(target, 2)
     
@@ -210,14 +207,13 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       if not isinstance(obj, gen_base.Target):
         continue
 
-      #Don't include files that have already been included by a dependency
-      if obj in sub:
-        continue
-      ret.append(obj)
+      # if the object is in 'sub', then skip it
+      if obj not in sub:
+        deps[obj] = None
 
-    ret = unique(ret)
-    ret.sort()
-    return ret
+    deps = deps.keys()
+    deps.sort()
+    return deps
 
   def get_win_defines(self, target, cfg):
     "Return the list of defines for target"
@@ -312,23 +308,23 @@ class WinGeneratorBase(gen_base.GeneratorBase):
   def get_win_sources(self, target):
     "Return the list of source files that need to be compliled for target"
 
-    ret = []
+    sources = { }
 
     if target.name == 'mod_dav_svn':
-      ret = self.get_win_sources(self.targets['libsvn_fs'])+self.get_win_sources(self.targets['libsvn_subr'])+self.get_win_sources(self.targets['libsvn_delta'])+self.get_win_sources(self.targets['libsvn_repos'])
+      for fname in (self.get_win_sources(self.targets['libsvn_fs'])
+                    + self.get_win_sources(self.targets['libsvn_subr'])
+                    + self.get_win_sources(self.targets['libsvn_delta'])
+                    + self.get_win_sources(self.targets['libsvn_repos'])):
+        sources[fname] = None
 
     for obj in self.graph.get_sources(gen_base.DT_LINK, target.name):
       if isinstance(obj, gen_base.Target):
         continue
 
       for src in self.graph.get_sources(gen_base.DT_OBJECT, obj):
-        if src in ret:
-          continue
+        sources[src] = None
 
-        ret.append(src)
-
-    return ret
-
+    return sources.keys()
 
   def find_win_project(self, base, projtypes):
     "Find a project for base that is one of projtypes & return the projects filename"
@@ -338,24 +334,30 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         return base+x
     raise gen_base.GenError("Unable to find project file for external build rule '%s'" % base)
 
-  # If you have your windows projects open and generate the projects
-  # its not a small thing for windows to re-read all projects so
-  # only update those that have changed.
-  def write_file_if_changed(self, file, buf):
-    "Compare buf vs the contents of file & only write out to file if the contents have changed"
+  def write_file_if_changed(self, fname, new_contents):
+    """Rewrite the file if new_contents are different than its current content.
+
+    If you have your windows projects open and generate the projects
+    it's not a small thing for windows to re-read all projects so
+    only update those that have changed.
+    """
 
     try:
-      f=open(file, 'r+b')
-      if f.read()==buf:
-        f.close()
-        return 0
+      old_contents = open(fname, 'rb').read()
     except IOError:
-      f=open(file, 'wb')
-    f.seek(0)
-    f.truncate(0)
-    f.write(buf)
-    f.close()
-    return 1
+      old_contents = None
+    if old_contents != new_contents:
+      open(fname, 'wb').write(new_contents)
+      print "Wrote:", fname
+
+  def write_with_template(self, fname, tname, data):
+    fout = StringIO()
+
+    template = ezt.Template(compress_whitespace = 0)
+    template.parse_file(os.path.join('build', 'generator', tname))
+    template.generate(fout, data)
+
+    self.write_file_if_changed(fname, fout.getvalue())
 
   def write(self):
     "Override me when creating a new project type"

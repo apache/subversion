@@ -6,11 +6,6 @@ import os
 import sys
 import string
 
-try:
-  from cStringIO import StringIO
-except ImportError:
-  from StringIO import StringIO
-
 import gen_base
 import gen_win
 import ezt
@@ -85,14 +80,7 @@ class Generator(gen_win.WinGeneratorBase):
       'is_apache_mod' : ezt.boolean(target.install == 'apache-mod'),
       }
 
-    fout = StringIO()
-
-    template = ezt.Template(compress_whitespace = 0)
-    template.parse_file(os.path.join('build', 'generator', 'msvc_dsp.ezt'))
-    template.generate(fout, data)
-
-    if self.write_file_if_changed(fname, fout.getvalue()):
-      print "Wrote %s" % fname
+    self.write_with_template(fname, 'msvc_dsp.ezt', data)
 
   def write(self, oname):
     "Write a Workspace (.dsw)"
@@ -166,14 +154,7 @@ class Generator(gen_win.WinGeneratorBase):
       'targets' : targets,
       }
 
-    fout = StringIO()
-
-    template = ezt.Template(compress_whitespace = 0)
-    template.parse_file(os.path.join('build', 'generator', 'msvc_dsw.ezt'))
-    template.generate(fout, data)
-
-    if self.write_file_if_changed(oname, fout.getvalue()):
-      print "Wrote %s\n" % oname
+    self.write_with_template(oname, 'msvc_dsw.ezt', data)
 
 
 class _item:

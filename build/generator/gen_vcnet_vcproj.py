@@ -6,11 +6,6 @@ import os
 import md5
 import string
 
-try:
-  from cStringIO import StringIO
-except ImportError:
-  from StringIO import StringIO
-
 import gen_base
 import gen_win
 import ezt
@@ -99,14 +94,7 @@ class Generator(gen_win.WinGeneratorBase):
 #      'is_apache_mod' : ezt.boolean(target_ob.install == 'apache-mod'),
       }
 
-    fout = StringIO()
-
-    template = ezt.Template(compress_whitespace = 0)
-    template.parse_file(os.path.join('build', 'generator', 'vcnet_vcproj.ezt'))
-    template.generate(fout, data)
-
-    if self.write_file_if_changed(fname, fout.getvalue()):
-      print "Wrote %s" % fname
+    self.write_with_template(fname, 'vcnet_vcproj.ezt', data)
 
   def makeguid(self, data):
     "Generate a windows style GUID"
@@ -210,14 +198,7 @@ class Generator(gen_win.WinGeneratorBase):
       'guids' : guidvals,
       }
 
-    fout = StringIO()
-
-    template = ezt.Template(compress_whitespace = 0)
-    template.parse_file(os.path.join('build', 'generator', 'vcnet_sln.ezt'))
-    template.generate(fout, data)
-
-    if self.write_file_if_changed(oname, fout.getvalue()):
-      print "Wrote %s" % oname
+    self.write_with_template(oname, 'vcnet_sln.ezt', data)
 
 
 class _item:
