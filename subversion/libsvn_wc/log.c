@@ -455,7 +455,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                           flags,
                                           timestamp,
                                           loggy->pool,
-                                          NULL);
+                                          ah);
           if (err)
             {
               signal_error (loggy, svn_error_createf 
