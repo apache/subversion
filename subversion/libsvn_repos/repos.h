@@ -29,7 +29,7 @@ extern "C" {
 
 
 /*** Repository format number. */
-#define SVN_REPOS__FORMAT_NUMBER     3
+#define SVN_REPOS__FORMAT_NUMBER     4
 
 
 /*** Repository layout. ***/
@@ -57,6 +57,10 @@ extern "C" {
 #define SVN_REPOS__HOOK_WRITE_SENTINEL  "write-sentinels"
 #define SVN_REPOS__HOOK_PRE_REVPROP_CHANGE  "pre-revprop-change"
 #define SVN_REPOS__HOOK_POST_REVPROP_CHANGE "post-revprop-change"
+#define SVN_REPOS__HOOK_PRE_LOCK        "pre-lock"
+#define SVN_REPOS__HOOK_POST_LOCK       "post-lock"
+#define SVN_REPOS__HOOK_PRE_UNLOCK      "pre-unlock"
+#define SVN_REPOS__HOOK_POST_UNLOCK     "post-unlock"
 
 
 /* The extension added to the names of example hook scripts. */
@@ -171,6 +175,47 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
                                       char action,
                                       apr_pool_t *pool);
 
+/* Run the pre-lock hook for REPOS.  Use POOL for any temporary
+   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  
+
+   PATH is the path being locked, USERNAME is the person doing it.  */
+svn_error_t *
+svn_repos__hooks_pre_lock (svn_repos_t *repos,
+                           const char *path,
+                           const char *username,
+                           apr_pool_t *pool);
+
+/* Run the post-lock hook for REPOS.  Use POOL for any temporary
+   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  
+
+   PATHS is an array of paths being locked, USERNAME is the person
+   who did it.  */
+svn_error_t *
+svn_repos__hooks_post_lock (svn_repos_t *repos,
+                            apr_array_header_t *paths,
+                            const char *username,
+                            apr_pool_t *pool);
+
+/* Run the pre-unlock hook for REPOS.  Use POOL for any temporary
+   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  
+   
+   PATH is the path being unlocked, USERNAME is the person doing it.  */
+svn_error_t *
+svn_repos__hooks_pre_unlock (svn_repos_t *repos,
+                             const char *path,
+                             const char *username,
+                             apr_pool_t *pool);
+
+/* Run the post-unlock hook for REPOS.  Use POOL for any temporary
+   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  
+   
+   PATHS is an array of paths being unlocked, USERNAME is the person
+   who did it.  */
+svn_error_t *
+svn_repos__hooks_post_unlock (svn_repos_t *repos,
+                              apr_array_header_t *paths,
+                              const char *username,
+                              apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

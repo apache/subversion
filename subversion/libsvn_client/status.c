@@ -23,8 +23,8 @@
 /*** Includes. ***/
 #include <assert.h>
 #include <apr_strings.h>
-#include <apr_pools.h>
 
+#include "svn_pools.h"
 #include "client.h"
 
 #include "svn_wc.h"
@@ -66,6 +66,122 @@ tweak_status (void *baton,
   sb->real_status_func (sb->real_status_baton, path, status);
 }
 
+/* A baton for our reporter that is used to collect locks. */
+typedef struct report_baton_t {
+  const svn_ra_reporter2_t* wrapped_reporter;
+  void *wrapped_report_baton;
+  /* The common ancestor URL of all paths included in the report. */
+  char *ancestor;
+  void *set_locks_baton;
+  svn_client_ctx_t *ctx;
+  /* Pool to store locks in. */
+  apr_pool_t *pool;
+} report_baton_t;
+
+/* Implements svn_ra_reporter2_t->set_path. */
+static svn_error_t *
+reporter_set_path (void *report_baton, const char *path, svn_revnum_t revision,
+                   svn_boolean_t start_empty, const char *lock_token,
+                   apr_pool_t *pool)
+{
+  report_baton_t *rb = report_baton;
+
+  return rb->wrapped_reporter->set_path (rb->wrapped_report_baton, path,
+                                         revision, start_empty, lock_token,
+                                         pool);
+}
+
+/* Implements svn_ra_reporter2_t->delete_path. */
+static svn_error_t *
+reporter_delete_path (void *report_baton, const char *path, apr_pool_t *pool)
+{
+  report_baton_t *rb = report_baton;
+
+  return rb->wrapped_reporter->delete_path (rb->wrapped_report_baton, path,
+                                            pool);
+}
+
+/* Implements svn_ra_reporter2_t->link_path. */
+static svn_error_t *
+reporter_link_path (void *report_baton, const char *path, const char *url,
+                    svn_revnum_t revision, svn_boolean_t start_empty,
+                    const char *lock_token, apr_pool_t *pool)
+{
+  report_baton_t *rb = report_baton;
+  const char *ancestor;
+  apr_size_t len;
+
+  ancestor = svn_path_get_longest_ancestor (url, rb->ancestor, pool);
+
+  /* If we got a shorter ancestor, truncate our current ancestor.
+     Note that svn_path_get_longest_ancestor will allocate its return
+     value even if it identical to one of its arguments. */
+  len = strlen (ancestor);
+  if (len < strlen (rb->ancestor))
+    rb->ancestor[len] = '\0';
+
+  return rb->wrapped_reporter->link_path (rb->wrapped_report_baton, path, url,
+                                          revision, start_empty, lock_token,
+                                          pool);
+}
+
+/* Implements svn_ra_reporter2_t->finish_report. */
+static svn_error_t *
+reporter_finish_report (void *report_baton, apr_pool_t *pool)
+{
+  report_baton_t *rb = report_baton;
+  svn_ra_session_t *ras;
+  apr_hash_t *locks;
+  const char *repos_root;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_error_t *err = SVN_NO_ERROR;
+
+  /* Open an RA session to our common ancestor and grab the locks under it.
+   */
+  SVN_ERR (svn_client__open_ra_session (&ras, rb->ancestor, NULL, NULL, NULL,
+                                        FALSE, TRUE, rb->ctx, subpool));
+
+  /* The locks need to live throughout the edit.  Note that if the
+     server doesn't support lock discovery, we'll just not do locky
+     stuff. */
+  err = svn_ra_get_locks (ras, &locks, "", rb->pool);
+  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+    {
+      svn_error_clear (err);
+      err = SVN_NO_ERROR;
+      locks = apr_hash_make (rb->pool);
+    }
+  SVN_ERR (err);
+
+  SVN_ERR (svn_ra_get_repos_root (ras, &repos_root, pool));
+
+  /* Close the RA session. */
+  svn_pool_destroy (subpool);
+
+  SVN_ERR (svn_wc_status_set_repos_locks (rb->set_locks_baton, locks,
+                                          repos_root, rb->pool));
+
+  return rb->wrapped_reporter->finish_report (rb->wrapped_report_baton, pool);
+}
+
+/* Implements svn_ra_reporter2_t->abort_report. */
+static svn_error_t *
+reporter_abort_report (void *report_baton, apr_pool_t *pool)
+{
+  report_baton_t *rb = report_baton;
+
+  return rb->wrapped_reporter->abort_report (rb->wrapped_report_baton, pool);
+}
+
+/* A reporter that keeps track of the common URL ancestor of all paths in
+   the WC and fetches repository locks for all paths under this ancestor. */
+static svn_ra_reporter2_t lock_fetch_reporter = {
+  reporter_set_path,
+  reporter_delete_path,
+  reporter_link_path,
+  reporter_finish_report,
+  reporter_abort_report
+};
 
 
 /*** Public Interface. ***/
@@ -89,7 +205,7 @@ svn_client_status2 (svn_revnum_t *result_rev,
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
   const char *anchor, *target;
   const svn_delta_editor_t *editor;
-  void *edit_baton;
+  void *edit_baton, *set_locks_baton;
   const svn_wc_entry_t *entry;
   struct status_baton sb;
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
@@ -106,20 +222,19 @@ svn_client_status2 (svn_revnum_t *result_rev,
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
-  SVN_ERR (svn_wc_get_status_editor (&editor, &edit_baton, &edit_revision,
-                                     anchor_access, target, ctx->config,
-                                     descend, get_all, no_ignore, tweak_status,
-                                     &sb, ctx->cancel_func, ctx->cancel_baton,
-                                     traversal_info, pool));
+  SVN_ERR (svn_wc_get_status_editor2 (&editor, &edit_baton, &set_locks_baton,
+                                      &edit_revision, anchor_access, target,
+                                      ctx->config, descend, get_all, no_ignore,
+                                      tweak_status, &sb, ctx->cancel_func,
+                                      ctx->cancel_baton, traversal_info,
+                                      pool));
 
   /* If we want to know about out-of-dateness, we crawl the working copy and
      let the RA layer drive the editor for real.  Otherwise, we just close the
      edit.  :-) */ 
   if (update)
     {
-      void *report_baton;
       svn_ra_session_t *ra_session;
-      const svn_ra_reporter_t *reporter;
       const char *URL;
       svn_node_kind_t kind;
 
@@ -163,6 +278,7 @@ svn_client_status2 (svn_revnum_t *result_rev,
       else
         {
           svn_revnum_t revnum;
+          report_baton_t rb;
             
           if (revision->kind == svn_opt_revision_head)
             {
@@ -178,17 +294,25 @@ svn_client_status2 (svn_revnum_t *result_rev,
             }
 
           /* Do the deed.  Let the RA layer drive the status editor. */
-          SVN_ERR (svn_ra_do_status (ra_session, &reporter, &report_baton,
+          SVN_ERR (svn_ra_do_status (ra_session, &rb.wrapped_reporter,
+                                     &rb.wrapped_report_baton,
                                      target, revnum, descend, editor, 
                                      edit_baton, pool));
 
+          /* Init the report baton. */
+          rb.ancestor = apr_pstrdup (pool, URL);
+          rb.set_locks_baton = set_locks_baton;
+          rb.ctx = ctx;
+          rb.pool = pool;
+          
           /* Drive the reporter structure, describing the revisions
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
              working copy and HEAD. */
-          SVN_ERR (svn_wc_crawl_revisions2 (path, target_access, reporter, 
-                                            report_baton, FALSE, descend, 
-                                            FALSE, NULL, NULL, NULL, pool));
+          SVN_ERR (svn_wc_crawl_revisions2 (path, target_access,
+                                            &lock_fetch_reporter, &rb, FALSE,
+                                            descend, FALSE, NULL, NULL, NULL,
+                                            pool));
         }
     }
   else

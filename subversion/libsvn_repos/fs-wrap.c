@@ -22,6 +22,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
+#include "svn_path.h"
 #include "svn_props.h"
 #include "svn_repos.h"
 #include "repos.h"
@@ -73,8 +74,9 @@ svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
   /* Run start-commit hooks. */
   SVN_ERR (svn_repos__hooks_start_commit (repos, author, pool));
 
-  /* Begin the transaction. */
-  SVN_ERR (svn_fs_begin_txn (txn_p, repos->fs, rev, pool));
+  /* Begin the transaction, ask for the fs to do on-the-fly lock checks. */
+  SVN_ERR (svn_fs_begin_txn2 (txn_p, repos->fs, rev,
+                              SVN_FS_TXN_CHECK_LOCKS, pool));
 
   /* We pass the author and log message to the filesystem by adding
      them as properties on the txn.  Later, when we commit the txn,
@@ -120,7 +122,7 @@ svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
   /* ### someday, we might run a read-hook here. */
 
   /* Begin the transaction. */
-  SVN_ERR (svn_fs_begin_txn (txn_p, repos->fs, rev, pool));
+  SVN_ERR (svn_fs_begin_txn2 (txn_p, repos->fs, rev, 0, pool));
 
   /* We pass the author to the filesystem by adding it as a property
      on the txn. */
@@ -405,6 +407,199 @@ svn_repos_fs_revision_proplist (apr_hash_t **table_p,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_repos_fs_lock (svn_lock_t **lock,
+                   svn_repos_t *repos,
+                   const char *path,
+                   const char *comment,
+                   svn_boolean_t force,
+                   long int timeout,
+                   svn_revnum_t current_rev,
+                   apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_fs_access_t *access_ctx = NULL;
+  const char *username = NULL;
+  /* Setup an array of paths in anticipation of the ra layers handling
+     multiple locks in one request (1.3 most likely).  This is only
+     used by svn_repos__hooks_post_lock. */
+  apr_array_header_t *paths = apr_array_make (pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(paths, const char *) = path;
+
+  SVN_ERR (svn_fs_get_access (&access_ctx, repos->fs));
+  if (access_ctx)
+    SVN_ERR (svn_fs_access_get_username (&username, access_ctx));
+
+  if (! username)
+    return svn_error_createf 
+      (SVN_ERR_FS_NO_USER, NULL,
+       "Cannot lock path '%s', no authenticated username available.", path);
+  
+  /* Run pre-lock hook.  This could throw error, preventing
+     svn_fs_lock() from happening. */
+  SVN_ERR (svn_repos__hooks_pre_lock (repos, path, username, pool));
+
+  /* Lock. */
+  SVN_ERR (svn_fs_lock (lock, repos->fs, path, comment, force,
+                        timeout, current_rev, pool));
+
+  /* Run post-lock hook. */
+  if ((err = svn_repos__hooks_post_lock (repos, paths, username, pool)))
+    return svn_error_create
+      (SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED, err,
+       "Lock succeeded, but post-lock hook failed");
+
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_repos_fs_attach_lock (svn_lock_t *lock,
+                          svn_repos_t *repos,
+                          svn_boolean_t force,
+                          svn_revnum_t current_rev,
+                          apr_pool_t *pool)
+{
+  svn_error_t *err;
+  /* Setup an array of paths in anticipation of the ra layers handling
+     multiple locks in one request (1.3 most likely).  This is only
+     used by svn_repos__hooks_post_lock. */
+  apr_array_header_t *paths = apr_array_make (pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(paths, const char *) = lock->path;
+
+  /* Run pre-lock hook.  This could throw error, preventing
+     svn_fs_lock() from happening. */
+  SVN_ERR (svn_repos__hooks_pre_lock (repos, lock->path, lock->owner, pool));
+
+  /* Lock. */
+  SVN_ERR (svn_fs_attach_lock (lock, repos->fs, force, current_rev, pool));
+  
+  /* Run post-lock hook. */
+  if ((err = svn_repos__hooks_post_lock (repos, paths,
+                                         lock->owner, pool)))
+    return svn_error_create
+      (SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED, err,
+       "Lock succeeded, but post-lock hook failed");
+
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_repos_fs_unlock (svn_repos_t *repos,
+                     const char *path,
+                     const char *token,
+                     svn_boolean_t force,
+                     apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_fs_access_t *access_ctx = NULL;
+  const char *username = NULL;
+  /* Setup an array of paths in anticipation of the ra layers handling
+     multiple locks in one request (1.3 most likely).  This is only
+     used by svn_repos__hooks_post_lock. */
+  apr_array_header_t *paths = apr_array_make (pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(paths, const char *) = path;
+
+  SVN_ERR (svn_fs_get_access (&access_ctx, repos->fs));
+  if (access_ctx)
+    SVN_ERR (svn_fs_access_get_username (&username, access_ctx));
+
+  if (! force && ! username)
+    return svn_error_createf 
+      (SVN_ERR_FS_NO_USER, NULL,
+       _("Cannot unlock path '%s', no authenticated username available"),
+       path);
+
+  /* Run pre-unlock hook.  This could throw error, preventing
+     svn_fs_unlock() from happening. */
+  SVN_ERR (svn_repos__hooks_pre_unlock (repos, path, username, pool));
+
+  /* Unlock. */
+  SVN_ERR (svn_fs_unlock (repos->fs, path, token, force, pool));
+
+  /* Run post-unlock hook. */
+  if ((err = svn_repos__hooks_post_unlock (repos, paths, username, pool)))
+    return svn_error_create
+      (SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED, err,
+       _("Unlock succeeded, but post-unlock hook failed"));
+
+  return SVN_NO_ERROR;
+}
+
+
+struct get_locks_baton_t
+{
+  svn_fs_t *fs;
+  svn_fs_root_t *head_root;
+  svn_repos_authz_func_t authz_read_func;
+  void *authz_read_baton;
+  apr_hash_t *locks;
+};
+
+
+/* This implements the svn_fs_get_locks_callback_t interface. */
+static svn_error_t *
+get_locks_callback (void *baton, 
+                    svn_lock_t *lock, 
+                    apr_pool_t *pool)
+{
+  struct get_locks_baton_t *b = baton;
+  svn_boolean_t readable = TRUE;
+  apr_pool_t *hash_pool = apr_hash_pool_get (b->locks);
+
+  /* If there's auth to deal with, deal with it. */
+  if (b->authz_read_func)
+    {
+      SVN_ERR (b->authz_read_func (&readable, b->head_root, lock->path,
+                                   b->authz_read_baton, pool));
+    }
+
+  /* If we can read this lock path, add the lock to the return hash. */
+  if (readable)
+    apr_hash_set (b->locks, apr_pstrdup(hash_pool, lock->path), 
+                  APR_HASH_KEY_STRING, svn_lock_dup (lock, hash_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos_fs_get_locks (apr_hash_t **locks,
+                        svn_repos_t *repos,
+                        const char *path,
+                        svn_repos_authz_func_t authz_read_func,
+                        void *authz_read_baton,
+                        apr_pool_t *pool)
+{
+  apr_hash_t *all_locks = apr_hash_make (pool);
+  svn_revnum_t head_rev;
+  struct get_locks_baton_t baton;
+
+  /* Locks are always said to apply to HEAD revision, so we'll check
+     to see if locked-paths are readable in HEAD as well. */
+  SVN_ERR (svn_fs_youngest_rev (&head_rev, repos->fs, pool));
+
+  /* Populate our callback baton. */
+  baton.fs = repos->fs;
+  baton.locks = all_locks;
+  baton.authz_read_func = authz_read_func;
+  baton.authz_read_baton = authz_read_baton;
+  SVN_ERR (svn_fs_revision_root (&(baton.head_root), repos->fs, 
+                                 head_rev, pool));
+
+  /* Get all the locks. */
+  SVN_ERR (svn_fs_get_locks (repos->fs, path, get_locks_callback,
+                             &baton, pool));
+
+  *locks = baton.locks;
+  return SVN_NO_ERROR;
+}
+
+
 
 
 

@@ -22,6 +22,7 @@
 
 #include <httpd.h>
 #include <http_config.h>
+#include <http_request.h>
 #include <mod_dav.h>
 #include <ap_provider.h>
 
@@ -289,6 +290,112 @@ svn_boolean_t dav_svn_get_pathauthz_flag(request_rec *r)
     return conf->do_path_authz != DAV_SVN_FLAG_OFF;
 }
 
+static void merge_xml_filter_insert(request_rec *r)
+{
+    /* We only care about MERGE requests. */
+    if (r->method_number == M_MERGE) {
+        dav_svn_dir_conf *conf;
+        conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+
+        /* We only care if we are configured. */
+        if (conf->fs_path || conf->fs_parent_path) {
+            ap_add_input_filter("SVN-MERGE", NULL, r, r->connection);
+        }
+    }
+}
+
+typedef struct {
+    apr_bucket_brigade *bb;
+    apr_xml_parser *parser;
+    apr_pool_t *pool;
+} merge_ctx_t;
+
+static apr_status_t merge_xml_in_filter(ap_filter_t *f,
+                                        apr_bucket_brigade *bb,
+                                        ap_input_mode_t mode,
+                                        apr_read_type_e block,
+                                        apr_off_t readbytes)
+{
+    apr_status_t rv;
+    request_rec *r = f->r;
+    merge_ctx_t *ctx = f->ctx;
+    apr_bucket *bucket;
+    int seen_eos = 0;
+
+    /* We shouldn't be added if we're not a MERGE, but double check. */
+    if (r->method_number != M_MERGE) {
+        ap_remove_input_filter(f);
+        return ap_get_brigade(f->next, bb, mode, block, readbytes);
+    }
+
+    if (!ctx) {
+        f->ctx = ctx = apr_palloc(r->pool, sizeof(*ctx));
+        ctx->parser = apr_xml_parser_create(r->pool);
+        ctx->bb = apr_brigade_create(r->pool, r->connection->bucket_alloc);
+        apr_pool_create(&ctx->pool, r->pool);
+    }
+
+    rv = ap_get_brigade(f->next, ctx->bb, mode, block, readbytes);
+
+    if (rv != APR_SUCCESS) {
+        return rv;
+    }
+
+    for (bucket = APR_BRIGADE_FIRST(ctx->bb);
+         bucket != APR_BRIGADE_SENTINEL(ctx->bb);
+         bucket = APR_BUCKET_NEXT(bucket))
+    {
+        const char *data;
+        apr_size_t len;
+
+        if (APR_BUCKET_IS_EOS(bucket)) {
+            seen_eos = 1;
+            break;
+        }
+
+        if (APR_BUCKET_IS_METADATA(bucket)) {
+            continue;
+        }
+
+        rv = apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
+        if (rv != APR_SUCCESS) {
+            return rv;
+        }
+
+        rv = apr_xml_parser_feed(ctx->parser, data, len);
+        if (rv != APR_SUCCESS) {
+            /* Clean up the parser. */
+            (void) apr_xml_parser_done(ctx->parser, NULL);
+            break;
+        }
+    }
+
+    /* This will clear-out the ctx->bb as well. */
+    APR_BRIGADE_CONCAT(bb, ctx->bb);
+
+    if (seen_eos) {
+        apr_xml_doc *pdoc;
+
+        /* Remove ourselves now. */
+        ap_remove_input_filter(f);
+
+        /* tell the parser that we're done */
+        rv = apr_xml_parser_done(ctx->parser, &pdoc);
+        if (rv == APR_SUCCESS) {
+#if APR_CHARSET_EBCDIC
+          apr_xml_parser_convert_doc(r->pool, pdoc, ap_hdrs_from_ascii);
+#endif
+          /* stash the doc away for mod_dav_svn's later use. */
+          rv = apr_pool_userdata_set(pdoc, "svn-merge-body", NULL, r->pool);
+          if (rv != APR_SUCCESS) {
+            return rv;
+          }
+            
+        }
+    }
+
+    return APR_SUCCESS;
+}
 
 
 /** Module framework stuff **/
@@ -335,7 +442,7 @@ static dav_provider dav_svn_provider =
 {
     &dav_svn_hooks_repos,
     &dav_svn_hooks_propdb,
-    NULL,                       /* locks */
+    &dav_svn_hooks_locks,
     &dav_svn_hooks_vsn,
     NULL,                       /* binding */
     NULL                        /* search */
@@ -343,18 +450,16 @@ static dav_provider dav_svn_provider =
 
 static void register_hooks(apr_pool_t *pconf)
 {
-    dav_hooks_locks *optional_locks;
-
     ap_hook_post_config(dav_svn_init, NULL, NULL, APR_HOOK_MIDDLE);
-
-    optional_locks = ap_lookup_provider("dav-lock", "generic", "0");
-
-    if (optional_locks) {
-        dav_svn_provider.locks = optional_locks;
-    }
 
     /* our provider */
     dav_register_provider(pconf, "svn", &dav_svn_provider);
+
+    /* input filter to read MERGE bodies. */
+    ap_register_input_filter("SVN-MERGE", merge_xml_in_filter, NULL,
+                             AP_FTYPE_RESOURCE);
+    ap_hook_insert_filter(merge_xml_filter_insert, NULL, NULL,
+                          APR_HOOK_MIDDLE);
 
     /* live property handling */
     dav_hook_gather_propsets(dav_svn_gather_propsets, NULL, NULL,

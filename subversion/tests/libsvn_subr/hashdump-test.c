@@ -47,6 +47,7 @@ const char *review =
 static svn_error_t *
 test1 (const char **msg, 
        svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
   svn_error_t *result;
@@ -99,6 +100,7 @@ test1 (const char **msg,
 static svn_error_t *
 test2 (const char **msg, 
        svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
   svn_error_t *result;
@@ -126,6 +128,7 @@ test2 (const char **msg,
 static svn_error_t *
 test3 (const char **msg, 
        svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
   apr_hash_index_t *this;
@@ -139,12 +142,12 @@ test3 (const char **msg,
     return SVN_NO_ERROR;
 
   /* Build a hash in global variable "proplist", then write to a file. */
-  err = test1 (&ignored, FALSE, pool);
+  err = test1 (&ignored, FALSE, opts, pool);
   if (err)
     return err;
 
   /* Read this file back into global variable "new_proplist" */
-  err = test2 (&ignored, FALSE, pool);
+  err = test2 (&ignored, FALSE, opts, pool);
   if (err)
     return err;
 

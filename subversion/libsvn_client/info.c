@@ -29,11 +29,13 @@
 #include "svn_private_config.h"
 
 
-/* Helper: build an svn_info_t *INFO struct from svn_dirent_t DIRENT,
-   allocated in POOL.  Pointer fields are copied by reference, not dup'd. */
+/* Helper: build an svn_info_t *INFO struct from svn_dirent_t DIRENT
+   and (possibly NULL) svn_lock_t LOCK, all allocated in POOL.
+   Pointer fields are copied by reference, not dup'd. */
 static svn_error_t *
 build_info_from_dirent (svn_info_t **info,
                         const svn_dirent_t *dirent,
+                        svn_lock_t *lock,
                         const char *URL,
                         svn_revnum_t revision,
                         const char *repos_UUID,
@@ -50,6 +52,7 @@ build_info_from_dirent (svn_info_t **info,
   tmpinfo->last_changed_rev     = dirent->created_rev;
   tmpinfo->last_changed_date    = dirent->time;
   tmpinfo->last_changed_author  = dirent->last_author;;
+  tmpinfo->lock                 = lock;
 
   *info = tmpinfo;
   return SVN_NO_ERROR;
@@ -86,6 +89,17 @@ build_info_from_entry (svn_info_t **info,
   tmpinfo->conflict_wrk         = entry->conflict_wrk;
   tmpinfo->prejfile             = entry->prejfile;
 
+  /* lock stuff */
+  if (entry->lock_token)  /* the token is the critical bit. */
+    {
+      tmpinfo->lock = apr_pcalloc (pool, sizeof(*(tmpinfo->lock)));
+
+      tmpinfo->lock->token      = entry->lock_token;
+      tmpinfo->lock->owner      = entry->lock_owner;
+      tmpinfo->lock->comment    = entry->lock_comment;
+      tmpinfo->lock->creation_date = entry->lock_crt_date;
+    }
+
   *info = tmpinfo;
   return SVN_NO_ERROR;
 }
@@ -103,6 +117,7 @@ push_dir_info (svn_ra_session_t *ra_session,
                svn_info_receiver_t receiver,
                void *receiver_baton,
                svn_client_ctx_t *ctx,
+               apr_hash_t *locks,
                apr_pool_t *pool)
 {
   apr_hash_t *tmpdirents;
@@ -116,8 +131,9 @@ push_dir_info (svn_ra_session_t *ra_session,
 
   for (hi = apr_hash_first (pool, tmpdirents); hi; hi = apr_hash_next (hi))
     {
-      const char *path, *URL;
+      const char *path, *URL, *fs_path;
       const void *key;
+      svn_lock_t *lock;
       void *val;
 
       svn_pool_clear (subpool);
@@ -130,8 +146,12 @@ push_dir_info (svn_ra_session_t *ra_session,
 
       path = svn_path_join (dir, key, subpool);
       URL  = svn_path_url_add_component (session_URL, key, subpool);
+     
+      fs_path = svn_path_is_child (repos_root, URL, subpool);
+      fs_path = apr_pstrcat (subpool, "/", fs_path, NULL);
+      lock = apr_hash_get (locks, fs_path, APR_HASH_KEY_STRING);
 
-      SVN_ERR (build_info_from_dirent (&info, the_ent, URL, rev,
+      SVN_ERR (build_info_from_dirent (&info, the_ent, lock, URL, rev,
                                        repos_UUID, repos_root, subpool));
 
       SVN_ERR (receiver (receiver_baton, path, info, subpool));
@@ -140,14 +160,13 @@ push_dir_info (svn_ra_session_t *ra_session,
         SVN_ERR (push_dir_info (ra_session, URL, path,
                                 rev, repos_UUID, repos_root,
                                 receiver, receiver_baton,
-                                ctx, subpool));
+                                ctx, locks, subpool));
     }
 
   svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
-
 
 
 
@@ -251,6 +270,7 @@ svn_client_info (const char *path_or_url,
   const char *url;
   svn_node_kind_t url_kind;
   const char *repos_root_URL, *repos_UUID;
+  svn_lock_t *lock;
   apr_hash_t *parent_ents;
   const char *parent_url, *base_name;
   svn_dirent_t *the_ent;
@@ -335,20 +355,58 @@ svn_client_info (const char *path_or_url,
                               _("URL '%s' non-existent in revision '%ld'"),
                               url, rev);
 
-  /* Push the URL's dirent at the callback.*/  
-  SVN_ERR (build_info_from_dirent (&info, the_ent, url, rev,
+  /* Possibly discover a lock attached to the remote URL. */
+  lock = NULL;
+  if (peg_revision->kind == svn_opt_revision_head)
+    {
+      err = svn_ra_get_lock (ra_session, &lock, "", pool);
+
+      /* An old mod_dav_svn will always work; there's nothing wrong with
+         doing a PROPFIND for a property named "DAV:supportedlock".  But
+         an old svnserve will error. */
+      if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+        {
+          svn_error_clear(err);
+          lock = NULL;
+        }
+      else if (err)
+        return err;
+    }
+
+  /* Push the URL's dirent (and lock) at the callback.*/  
+  SVN_ERR (build_info_from_dirent (&info, the_ent, lock, url, rev,
                                    repos_UUID, repos_root_URL, pool));
   SVN_ERR (receiver (receiver_baton, base_name, info, pool));
-  
+
+  /* Possibly recurse, using the original RA session. */  
  recurse:
   
-  /* Possibly recurse, using the original RA session. */      
   if (recurse && (the_ent->kind == svn_node_dir))
     {
+      apr_hash_t *locks;
+
+      if (peg_revision->kind == svn_opt_revision_head)
+        {
+          err = svn_ra_get_locks (ra_session, &locks, "", pool);
+          
+          /* Catch specific errors thrown by old mod_dav_svn or svnserve. */
+          if (err && 
+              (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED
+               || err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE))
+            {
+              svn_error_clear(err);
+              locks = apr_hash_make(pool); /* use an empty hash */
+            }
+          else if (err)
+            return err;
+        }
+      else
+        locks = apr_hash_make(pool); /* use an empty hash */
+        
       SVN_ERR (push_dir_info (ra_session, url, "", rev,
                               repos_UUID, repos_root_URL,
                               receiver, receiver_baton,
-                              ctx, pool));
+                              ctx, locks, pool));
     }
 
   return SVN_NO_ERROR;

@@ -831,7 +831,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
         {
           void *edit_baton;
           const svn_delta_editor_t *export_editor;
-          const svn_ra_reporter_t *reporter;
+          const svn_ra_reporter2_t *reporter;
           void *report_baton;
           svn_delta_editor_t *editor = svn_delta_default_editor (pool);
           svn_boolean_t use_sleep = FALSE;
@@ -864,7 +864,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
 
           SVN_ERR (reporter->set_path (report_baton, "", revnum,
                                        TRUE, /* "help, my dir is empty!" */
-                                       pool));
+                                       NULL, pool));
 
           SVN_ERR (reporter->finish_report (report_baton, pool));
  

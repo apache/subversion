@@ -675,20 +675,39 @@ prep_directory (struct dir_baton *db,
 
 
 /* Accumulate tags in LOG_ACCUM to set ENTRY_PROPS for BASE_NAME.
-   ENTRY_PROPS is an array of svn_prop_t* entry props. */
+   ENTRY_PROPS is an array of svn_prop_t* entry props.
+   If ENTRY_PROPS contains the removal of a lock token, all entryprops
+   related to a lock will be removed and LOCK_STATE, if non-NULL, will be
+   set to svn_wc_notify_lock_state_unlocked.  Else, LOCK_STATE, if non-NULL
+   will be set to svn_wc_lock_state_unchanged. */
 static void
 accumulate_entry_props (svn_stringbuf_t *log_accum,
+                        svn_wc_notify_lock_state_t *lock_state,
                         const char *base_name,
                         apr_array_header_t *entry_props,
                         apr_pool_t *pool)
 {
   int i;
 
+  if (lock_state)
+    *lock_state = svn_wc_notify_lock_state_unchanged;
+  
   for (i = 0; i < entry_props->nelts; ++i)
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX (entry_props, i, svn_prop_t);
       const char *entry_field = NULL;
 
+      /* The removal of the lock-token entryprop means that the lock was
+         defunct. */
+      if (! strcmp (prop->name, SVN_PROP_ENTRY_LOCK_TOKEN))
+        {
+          svn_xml_make_open_tag (&log_accum, pool, svn_xml_self_closing,
+                                 SVN_WC__LOG_DELETE_LOCK,
+                                 SVN_WC__LOG_ATTR_NAME, base_name, NULL);
+          if (lock_state)
+            *lock_state = svn_wc_notify_lock_state_unlocked;
+          continue;
+        }
       /* A prop value of NULL means the information was not
          available.  We don't remove this field from the entries
          file; we have convention just leave it empty.  So let's
@@ -1293,8 +1312,8 @@ close_directory (void *dir_baton,
                                    NULL);
         }
 
-      accumulate_entry_props (entry_accum, SVN_WC_ENTRY_THIS_DIR, entry_props,
-                              pool);
+      accumulate_entry_props (entry_accum, NULL, SVN_WC_ENTRY_THIS_DIR,
+                              entry_props, pool);
 
       accumulate_wcprops (entry_accum, SVN_WC_ENTRY_THIS_DIR, wc_props, pool);
 
@@ -1754,6 +1773,10 @@ change_file_prop (void *file_baton,
  * properties after the installation; if return error, the value of
  * @a *prop_state is undefined.
  *
+ * If @a lock_state is non-null, set it to the state of the lock on the
+ * file after the operation; if an error is returned, the value of
+ * @a lock_state is undefined.
+ *
  * If @a new_url is non-null, then this URL will be attached to the file
  * in the 'entries' file.  Otherwise, the file will simply "inherit"
  * its URL from the parent dir.
@@ -1778,6 +1801,7 @@ change_file_prop (void *file_baton,
 static svn_error_t *
 install_file (svn_wc_notify_state_t *content_state,
               svn_wc_notify_state_t *prop_state,
+              svn_wc_notify_lock_state_t *lock_state,
               svn_wc_adm_access_t *adm_access,
               int *log_number,
               const char *file_path,
@@ -1803,11 +1827,16 @@ install_file (svn_wc_notify_state_t *content_state,
     *entry_props = NULL;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   const char *logfile_name;
+  svn_wc_notify_lock_state_t local_lock_state;
 
   /* The code flow does not depend upon these being set to NULL, but
      it removes a gcc 3.1 `might be used uninitialized in this
      function' warning. */
   const char *txtb = NULL, *tmp_txtb = NULL;
+
+  /* We need the lock state, even if the caller doesn't. */
+  if (! lock_state)
+    lock_state = &local_lock_state;
 
   /* Start by splitting FILE_PATH. */
   svn_path_split (file_path, &parent_dir, &base_name, pool);
@@ -1969,6 +1998,7 @@ install_file (svn_wc_notify_state_t *content_state,
           svn_prop_t *propchange = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
             
           if ((! strcmp (propchange->name, SVN_PROP_EXECUTABLE))
+              || (! strcmp (propchange->name, SVN_PROP_NEEDS_LOCK))
               || (! strcmp (propchange->name, SVN_PROP_KEYWORDS))
               || (! strcmp (propchange->name, SVN_PROP_EOL_STYLE))
               || (! strcmp (propchange->name, SVN_PROP_SPECIAL)))
@@ -1993,7 +2023,10 @@ install_file (svn_wc_notify_state_t *content_state,
      versioned, so the value of IS_FULL_PROPLIST is irrelevant -- if
      the property is present, we overwrite the value. */  
   if (entry_props)
-    accumulate_entry_props (log_accum, base_name, entry_props, pool);
+    accumulate_entry_props (log_accum, lock_state, base_name,
+                            entry_props, pool);
+  else
+    *lock_state = svn_wc_notify_lock_state_unchanged;
 
   /* Has the user made local mods to the working file?  */
   SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
@@ -2171,7 +2204,17 @@ install_file (svn_wc_notify_state_t *content_state,
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
     }  /* end:  "textual" merging process */
-
+  else if (*lock_state == svn_wc_notify_lock_state_unlocked)
+    {
+      /* If a lock was removed and we didn't update the text contents, we
+         might need to set the file read-only. */
+      svn_xml_make_open_tag (&log_accum,
+                             pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_MAYBE_READONLY,
+                             SVN_WC__LOG_ATTR_NAME, base_name,
+                             NULL);
+    }
   /* Possibly write log commands to tweak prop entry timestamp */
   if (props)
     {
@@ -2321,6 +2364,7 @@ close_file (void *file_baton,
   const char *new_text_path = NULL, *parent_path;
   apr_array_header_t *propchanges = NULL;
   svn_wc_notify_state_t content_state, prop_state;
+  svn_wc_notify_lock_state_t lock_state;
   svn_wc_adm_access_t *adm_access;
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
@@ -2350,6 +2394,7 @@ close_file (void *file_baton,
 
   SVN_ERR (install_file (&content_state,
                          &prop_state,
+                         &lock_state,
                          adm_access,
                          &fb->dir_baton->log_number,
                          fb->path,
@@ -2369,7 +2414,8 @@ close_file (void *file_baton,
   SVN_ERR (maybe_bump_dir_info (eb, fb->bump_info, pool));
 
   if (((content_state != svn_wc_notify_state_unchanged) ||
-       (prop_state != svn_wc_notify_state_unchanged)) &&
+       (prop_state != svn_wc_notify_state_unchanged) ||
+       (lock_state != svn_wc_notify_lock_state_unchanged)) &&
       eb->notify_func)
     {
       svn_wc_notify_t *notify
@@ -2379,6 +2425,7 @@ close_file (void *file_baton,
       notify->kind = svn_node_file;
       notify->content_state = content_state;
       notify->prop_state = prop_state;
+      notify->lock_state = lock_state;
       /* ### use install_file() mimetype here */
       (*eb->notify_func) (eb->notify_baton, notify, pool);
     }
@@ -2891,6 +2938,7 @@ svn_wc_add_repos_file (const char *dst_path,
                            apr_hash_make (pool), pool));
   
   SVN_ERR (install_file (NULL,
+                         NULL,
                          NULL,
                          adm_access,
                          &log_number,

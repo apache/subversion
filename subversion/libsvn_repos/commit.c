@@ -521,6 +521,7 @@ change_dir_prop (void *dir_baton,
 }
 
 
+
 static svn_error_t *
 close_edit (void *edit_baton,
             apr_pool_t *pool)

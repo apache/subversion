@@ -36,7 +36,12 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* what the one VCC is called */
 #define DAV_SVN_DEFAULT_VCC_NAME        "default"
+
+/* a pool-key for the shared dav_svn_root used by autoversioning  */
+#define DAV_SVN_AUTOVERSIONING_ACTIVITY "svn-autoversioning-activity"
+
 
 /* dav_svn_repos
  *
@@ -99,6 +104,9 @@ typedef struct {
 
   /* the user operating against this repository */
   const char *username;
+
+  /* is the client a Subversion client? */
+  svn_boolean_t is_svn_client;
 
 } dav_svn_repos;
 
@@ -253,6 +261,7 @@ extern const dav_hooks_repository dav_svn_hooks_repos;
 extern const dav_hooks_propdb dav_svn_hooks_propdb;
 extern const dav_hooks_liveprop dav_svn_hooks_liveprop;
 extern const dav_hooks_vsn dav_svn_hooks_vsn;
+extern const dav_hooks_locks dav_svn_hooks_locks;
 
 /* for the repository referred to by this request, where is the SVN FS? */
 const char *dav_svn_get_fs_path(request_rec *r);
@@ -381,6 +390,12 @@ dav_error *dav_svn_checkin(dav_resource *resource,
                            int keep_checked_out,
                            dav_resource **version_resource);
 
+/* For an autoversioning commit, a helper function which attaches an
+   auto-generated 'svn:log' property to a txn, as well as a property
+   that indicates the revision was made via autoversioning. */
+svn_error_t *dav_svn_attach_auto_revprops(svn_fs_txn_t *txn,
+                                          const char *fs_path,
+                                          apr_pool_t *pool);
 
 enum dav_svn_build_what {
   DAV_SVN_BUILD_URI_ACT_COLLECTION, /* the collection of activities */
@@ -567,6 +582,14 @@ svn_error_t *dav_svn_authz_read(svn_boolean_t *allowed,
                                 const char *path,
                                 void *baton,
                                 apr_pool_t *pool);
+
+
+/* Every provider needs to define an opaque locktoken type. */
+struct dav_locktoken
+{
+  /* This is identical to the 'token' field of an svn_lock_t. */
+  const char *uuid_str;
+};
 
 
 

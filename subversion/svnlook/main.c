@@ -60,6 +60,7 @@ static svn_opt_subcommand_t
   subcommand_help,
   subcommand_history,
   subcommand_info,
+  subcommand_lock,
   subcommand_log,
   subcommand_pget,
   subcommand_plist,
@@ -171,6 +172,11 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      N_("usage: svnlook info REPOS_PATH\n\n"
         "Print the author, datestamp, log message size, and log message.\n"),
      {'r', 't'} },
+
+    {"lock", subcommand_lock, {0},
+     N_("usage: svnlook lock REPOS_PATH PATH_IN_REPOS\n\n"
+        "If a lock exists on a path in the repository, describe it.\n"),
+     {0} },
 
     {"log", subcommand_log, {0},
      N_("usage: svnlook log REPOS_PATH\n\n"
@@ -1723,6 +1729,53 @@ subcommand_history (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (do_history (c, path, opt_state->show_ids, pool));
   return SVN_NO_ERROR;
 }
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_lock (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+  const char *path;
+  svn_lock_t *lock;
+
+  if (opt_state->arg1)
+    path = opt_state->arg1;
+  else
+    return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
+                             _("Missing path argument"));
+
+  SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
+
+  SVN_ERR (svn_fs_get_lock (&lock, c->fs, path, pool));
+
+  if (lock)
+    {
+      const char *cr_date, *exp_date = "";
+      int comment_lines = 0;
+
+      cr_date = svn_time_to_human_cstring (lock->creation_date, pool);
+
+      if (lock->expiration_date)
+        exp_date = svn_time_to_human_cstring (lock->expiration_date, pool);
+
+      if (lock->comment)
+        comment_lines = svn_cstring_count_newlines (lock->comment) + 1;
+
+      SVN_ERR (svn_cmdline_printf (pool, _("UUID Token: %s\n"), lock->token));
+      SVN_ERR (svn_cmdline_printf (pool, _("Owner: %s\n"), lock->owner));
+      SVN_ERR (svn_cmdline_printf (pool, _("Created: %s\n"), cr_date));
+      SVN_ERR (svn_cmdline_printf (pool, _("Expires: %s\n"), exp_date));
+      SVN_ERR (svn_cmdline_printf (pool, _("Comment (%i %s):\n%s\n"),
+                                   comment_lines, 
+                                   (comment_lines > 1) ? "lines" : "line",
+                                   lock->comment ? lock->comment : ""));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *

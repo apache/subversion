@@ -50,7 +50,7 @@ svn_client__update_internal (svn_revnum_t *result_rev,
 {
   const svn_delta_editor_t *update_editor;
   void *update_edit_baton;
-  const svn_ra_reporter_t *reporter;
+  const svn_ra_reporter2_t *reporter;
   void *report_baton;
   const svn_wc_entry_t *entry;
   const char *anchor, *target;
@@ -169,6 +169,7 @@ svn_client__update_internal (svn_revnum_t *result_rev,
       notify->kind = svn_node_none;
       notify->content_state = notify->prop_state
         = svn_wc_notify_state_inapplicable;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
       notify->revision = revnum;
       (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
     }

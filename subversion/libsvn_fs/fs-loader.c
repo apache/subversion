@@ -26,6 +26,7 @@
 #include "svn_version.h"
 #include "svn_fs.h"
 #include "svn_path.h"
+#include "svn_xml.h"
 #include "svn_private_config.h"
 
 #include "fs-loader.h"
@@ -396,10 +397,18 @@ svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
 /* --- Transaction functions --- */
 
 svn_error_t *
+svn_fs_begin_txn2 (svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
+                   apr_uint32_t flags, apr_pool_t *pool)
+{
+  return fs->vtable->begin_txn (txn_p, fs, rev, flags, pool);
+}
+
+
+svn_error_t *
 svn_fs_begin_txn (svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
                   apr_pool_t *pool)
 {
-  return fs->vtable->begin_txn (txn_p, fs, rev, pool);
+  return fs->vtable->begin_txn (txn_p, fs, rev, 0, pool);
 }
 
 svn_error_t *
@@ -781,6 +790,62 @@ svn_fs_set_uuid (svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
 {
   return fs->vtable->set_uuid (fs, uuid, pool);
 }
+
+svn_error_t *
+svn_fs_lock (svn_lock_t **lock, svn_fs_t *fs, const char *path,
+             const char *comment, svn_boolean_t force, long int timeout,
+             svn_revnum_t current_rev, apr_pool_t *pool)
+{
+  /* Enforce that the comment be xml-escapable. */
+  if (comment)
+    {
+      if (! svn_xml_is_xml_safe(comment, strlen(comment)))
+        return svn_error_create
+          (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
+           _("Lock comment has illegal characters."));      
+    }
+
+  return fs->vtable->lock (lock, fs, path, comment, force, timeout,
+                           current_rev, pool);  
+}
+
+svn_error_t *
+svn_fs_attach_lock (svn_lock_t *lock, svn_fs_t *fs, svn_boolean_t force,
+                    svn_revnum_t current_rev, apr_pool_t *pool)
+{
+  return fs->vtable->attach_lock (lock, fs, force, current_rev, pool);  
+}
+
+svn_error_t *
+svn_fs_generate_token (const char **token, svn_fs_t *fs, apr_pool_t *pool)
+{
+  return fs->vtable->generate_token (token, fs, pool);  
+}
+
+svn_error_t *
+svn_fs_unlock (svn_fs_t *fs, const char *path, const char *token,
+               svn_boolean_t force, apr_pool_t *pool)
+{
+  return fs->vtable->unlock (fs, path, token, force, pool);
+}
+
+svn_error_t *
+svn_fs_get_lock (svn_lock_t **lock, svn_fs_t *fs, const char *path,
+                 apr_pool_t *pool)
+{
+  return fs->vtable->get_lock (lock, fs, path, pool);
+}
+
+svn_error_t *
+svn_fs_get_locks (svn_fs_t *fs, const char *path,
+                  svn_fs_get_locks_callback_t get_locks_func,
+                  void *get_locks_baton,
+                  apr_pool_t *pool)
+{
+  return fs->vtable->get_locks (fs, path, get_locks_func, 
+                                get_locks_baton, pool);
+}
+
 
 
 /* --- History functions --- */

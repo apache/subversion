@@ -142,8 +142,36 @@ typedef svn_error_t *(*svn_ra_file_rev_handler_t)
         apr_array_header_t *prop_diffs,
         apr_pool_t *pool);
 
+/** 
+ * @since New in 1.2.
+ *
+ * Callback function type for locking and unlocking actions.
+ * 
+ * @a do_lock should be TRUE when locking @a path, and FALSE
+ * otherwise.
+ * 
+ * @a lock is a lock for @a path.
+ *
+ * @a ra_err is NULL unless the ra layer encounters a locking related
+ * error which it passes back for notification purposes (although the
+ * callback can also re-throw the error).  The caller is responsible
+ * for clearing @a ra_err after the callback is run.
+ *
+ * @a baton is a closure object; it should be provided by the
+ * implementation, and passed by the caller.  @a pool may be used for
+ * temporary allocation.
+ */
+typedef svn_error_t *(*svn_ra_lock_callback_t) (void *baton,
+                                                const char *path,
+                                                svn_boolean_t do_lock,
+                                                const svn_lock_t *lock,
+                                                svn_error_t *ra_err,
+                                                apr_pool_t *pool);
+
 
-/** The update Reporter.
+/** @since New in 1.2.
+ *
+ * The update Reporter.
  *
  * A vtable structure which allows a working copy to describe a subset
  * (or possibly all) of its working-copy to an RA layer, for the
@@ -164,7 +192,7 @@ typedef svn_error_t *(*svn_ra_file_rev_handler_t)
  * it may be reported as having revision 0 or as having the parent
  * directory's revision.
  */
-typedef struct svn_ra_reporter_t
+typedef struct svn_ra_reporter2_t
 {
   /** Describe a working copy @a path as being at a particular @a revision.  
    *
@@ -174,12 +202,15 @@ typedef struct svn_ra_reporter_t
    * This will *override* any previous @c set_path() calls made on parent
    * paths.  @a path is relative to the URL specified in @c open().
    *
+   * If @a lock_token is non-NULL, it is the lock token for @a path in the WC.
+   * 
    * All temporary allocations are done in @a pool.
    */
   svn_error_t *(*set_path) (void *report_baton,
                             const char *path,
                             svn_revnum_t revision,
                             svn_boolean_t start_empty,
+                            const char *lock_token,
                             apr_pool_t *pool);
 
   /** Describing a working copy @a path as missing.
@@ -199,6 +230,8 @@ typedef struct svn_ra_reporter_t
    * If @a START_EMPTY is set and @a path is a directory,
    * the implementor should assume the directory has no entries or props.
    *
+   * If @a lock_token is non-NULL, it is the lock token for @a path in the WC.
+   * 
    * All temporary allocations are done in @a pool.
    */
   svn_error_t *(*link_path) (void *report_baton,
@@ -206,6 +239,7 @@ typedef struct svn_ra_reporter_t
                              const char *url,
                              svn_revnum_t revision,
                              svn_boolean_t start_empty,
+                             const char *lock_token,
                              apr_pool_t *pool);
 
   /** WC calls this when the state report is finished; any directories
@@ -221,8 +255,44 @@ typedef struct svn_ra_reporter_t
   svn_error_t *(*abort_report) (void *report_baton,
                                 apr_pool_t *pool);
 
-} svn_ra_reporter_t;
+} svn_ra_reporter2_t;
 
+/** @deprecated Provided for backward compatibility with the 1.1 API.
+ *
+ * Similar to @c svn_ra_reporter2_t, but without support for lock tokens.
+ */
+typedef struct svn_ra_reporter_t
+{
+  /** Similar to the corresponding field in @c svn_ra_reporter2_t, but
+   * with @a lock_token always set to NULL. */
+  svn_error_t *(*set_path) (void *report_baton,
+                            const char *path,
+                            svn_revnum_t revision,
+                            svn_boolean_t start_empty,
+                            apr_pool_t *pool);
+
+  /** Same as the corresponding field in @c svn_ra_reporter2_t. */
+  svn_error_t *(*delete_path) (void *report_baton,
+                               const char *path,
+                               apr_pool_t *pool);
+    
+  /** Similar to the corresponding field in @c svn_ra_reporter2_t, but
+   * with @a lock_token always set to NULL. */
+  svn_error_t *(*link_path) (void *report_baton,
+                             const char *path,
+                             const char *url,
+                             svn_revnum_t revision,
+                             svn_boolean_t start_empty,
+                             apr_pool_t *pool);
+
+  /** Same as the corresponding field in @c svn_ra_reporter2_t. */
+  svn_error_t *(*finish_report) (void *report_baton,
+                                 apr_pool_t *pool);
+
+  /** Same as the corresponding field in @c svn_ra_reporter2_t. */
+  svn_error_t *(*abort_report) (void *report_baton,
+                                apr_pool_t *pool);
+} svn_ra_reporter_t;
 
 
 /** A collection of callbacks implemented by libsvn_client which allows
@@ -401,6 +471,15 @@ svn_error_t *svn_ra_rev_prop (svn_ra_session_t *session,
  * The callback will not be called if the commit was a no-op
  * (i.e. nothing was committed);
  *
+ * @a lock_tokens, if non-NULL, is a hash mapping <tt>const char
+ * *</tt> paths (relative to the URL of @a session_baton) to <tt>
+ * const char *</tt> lock tokens.  The server checks that the
+ * correct token is provided for each committed, locked path.  @a lock_tokens
+ * must live during the whole commit operation.
+ *
+ * If @a keep_locks is @c TRUE, then do not release locks on
+ * committed objects.  Else, automatically release such locks.
+ *
  * The caller may not perform any RA operations using @a session before
  * finishing the edit.
  * 
@@ -412,6 +491,8 @@ svn_error_t *svn_ra_get_commit_editor (svn_ra_session_t *session,
                                        const char *log_msg,
                                        svn_commit_callback_t callback,
                                        void *callback_baton,
+                                       apr_hash_t *lock_tokens,
+                                       svn_boolean_t keep_locks,
                                        apr_pool_t *pool);
 
 /**
@@ -513,7 +594,7 @@ svn_error_t *svn_ra_get_dir (svn_ra_session_t *session,
  * Use @a pool for memory allocation.
  */
 svn_error_t *svn_ra_do_update (svn_ra_session_t *session,
-                               const svn_ra_reporter_t **reporter,
+                               const svn_ra_reporter2_t **reporter,
                                void **report_baton,
                                svn_revnum_t revision_to_update_to,
                                const char *update_target,
@@ -561,7 +642,7 @@ svn_error_t *svn_ra_do_update (svn_ra_session_t *session,
  * Use @a pool for memory allocation.
  */
 svn_error_t *svn_ra_do_switch (svn_ra_session_t *session,
-                               const svn_ra_reporter_t **reporter,
+                               const svn_ra_reporter2_t **reporter,
                                void **report_baton,
                                svn_revnum_t revision_to_switch_to,
                                const char *switch_target,
@@ -606,7 +687,7 @@ svn_error_t *svn_ra_do_switch (svn_ra_session_t *session,
  * Use @a pool for memory allocation.
  */
 svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
-                               const svn_ra_reporter_t **reporter,
+                               const svn_ra_reporter2_t **reporter,
                                void **report_baton,
                                const char *status_target,
                                svn_revnum_t revision,
@@ -664,7 +745,7 @@ svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
  * Use @a pool for memory allocation.
  */
 svn_error_t *svn_ra_do_diff (svn_ra_session_t *session,
-                             const svn_ra_reporter_t **reporter,
+                             const svn_ra_reporter2_t **reporter,
                              void **report_baton,
                              svn_revnum_t revision,
                              const char *diff_target,
@@ -841,6 +922,102 @@ svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
                                    void *handler_baton,
                                    apr_pool_t *pool);
 
+/**
+ * @since New in 1.2.
+ *
+ * Lock each path in @a path_revs, which is a hash whose keys are the
+ * paths to be locked, and whose values are the corresponding bas
+ * revisions for each path.
+ *
+ * Note that locking is never anonymous, so any server implementing
+ * this function will have to "pull" a username from the client, if
+ * it hasn't done so already.
+ *
+ * @a comment is optional: it's either an xml-escapable string
+ * which describes the lock, or it is NULL.
+ *
+ * If any path is already locked by a different user, then call @a
+ * lock_func/@a lock_baton with an error.  If @a force is true, then
+ * "steal" the existing lock(s) anyway, even if the RA username does
+ * not match the current lock's owner.  Delete any lock on the path,
+ * and unconditionally create a new lock.
+ *
+ * For each path, if its base revision (in @a path_revs) is a valid
+ * revnum, then do an out-of-dateness check.  If the revnum is less
+ * than the last-changed-revision of any path (or if a path doesn't
+ * exist in HEAD), call @a lock_func/@a lock_baton with an
+ * SVN_ERR_RA_OUT_OF_DATE error.
+ *
+ * After successfully locking a file, @a lock_func is called with the
+ * @a lock_baton.
+ *
+ * Use @a pool for temporary allocations.
+ */
+svn_error_t *svn_ra_lock (svn_ra_session_t *session,
+                          apr_hash_t *path_revs,
+                          const char *comment,
+                          svn_boolean_t force,
+                          svn_ra_lock_callback_t lock_func, 
+                          void *lock_baton,
+                          apr_pool_t *pool);
+
+/**
+ * @since New in 1.2.
+ *
+ * Remove the repository lock for each path in @a path_tokens.
+ * @a path_tokens is a hash whose keys are the paths to be locked, and
+ * whose values are the corresponding lock tokens for each path.  If
+ * the path has no corresponding lock token, or if @a force is TRUE,
+ * then the corresponding value shall be "".
+ * 
+ * Note that unlocking is never anonymous, so any server
+ * implementing this function will have to "pull" a username from
+ * the client, if it hasn't done so already.
+ *
+ * If @a token points to a lock, but the RA username doesn't match
+ * the lock's owner, call @a lockfunc/@a lock_baton with an error.  If
+ * @a force is true, however, instead allow the lock to be "broken" by the
+ * RA user.
+ *
+ * After successfully unlocking a path, @a lock_func is called with
+ * the @a lock_baton.
+ *
+ * Use @a pool for temporary allocations.
+ */
+svn_error_t *svn_ra_unlock (svn_ra_session_t *session,
+                            apr_hash_t *path_tokens,
+                            svn_boolean_t force,
+                            svn_ra_lock_callback_t lock_func, 
+                            void *lock_baton,
+                            apr_pool_t *pool);
+
+/**
+ * @since New in 1.2.
+ *  
+ * If @a path is locked, set @a *lock to an svn_lock_t which
+ * represents the lock, allocated in @a pool.  If @a path is not
+ * locked, set @a *lock to NULL.
+ */
+svn_error_t *svn_ra_get_lock (svn_ra_session_t *session,
+                              svn_lock_t **lock,
+                              const char *path,
+                              apr_pool_t *pool);
+
+/**
+ * @since New in 1.2.
+ *
+ * Set @a *locks to a hashtable which represents all locks on or
+ * below @a path.
+ *
+ * The hashtable maps (const char *) absolute fs paths to (const
+ * svn_lock_t *) structures.  The hashtable -- and all keys and
+ * values -- are allocated in @a pool.
+ */
+svn_error_t *svn_ra_get_locks (svn_ra_session_t *session,
+                               apr_hash_t **locks,
+                               const char *path,
+                               apr_pool_t *pool);
+
 /** @since New in 1.2.
  *
  * Return a @a *descriptions string (allocated in @a pool) that is a textual
@@ -925,7 +1102,8 @@ typedef struct svn_ra_plugin_t
                             apr_pool_t *pool);
                                    
   /** Call @c svn_ra_get_commit_editor with the session associated with
-   * @a session_baton and all other arguments.
+   * @a session_baton and all other arguments plus @a lock_tokens set to
+   * @c NULL and @a keep_locks set to @c TRUE.
    */
   svn_error_t *(*get_commit_editor) (void *session_baton,
                                      const svn_delta_editor_t **editor,
@@ -1074,15 +1252,69 @@ typedef struct svn_ra_plugin_t
                                  void *handler_baton,
                                  apr_pool_t *pool);
 
-  /** Call @c svn_ra_get_dated_revision with the session associated with
-   * @a session_baton and all other arguments.
-   */
   /**
    * @since New in 1.1.
    *
    * Return the plugin's version information.
    */
   const svn_version_t *(*get_version) (void);
+
+  
+  /** @since New in 1.2.
+   * Set @a *editor and @a *edit_baton to an editor for committing changes
+   * to the repository, using @a log_msg as the log message.  The
+   * revisions being committed against are passed to the editor
+   * functions, starting with the rev argument to @c open_root.  The path
+   * root of the commit is in the @a session_baton's url.
+   *
+   * These three functions all share @c close_baton:
+   *
+   *   * @c get_func is used by the RA layer to fetch any WC properties
+   *     during the commit.
+   *
+   *   * @c set_func is used by the RA layer to set any WC properties,
+   *     after the commit completes. 
+   *
+   *   * @c close_func is used by the RA layer to bump the revisions of
+   *     each committed item, after the commit completes.  It may be
+   *     called multiple times.
+   *
+   * Any of these functions may be @c NULL.
+   *
+   * Before @c close_edit returns, but after the commit has succeeded,
+   * it will invoke @a callback with the new revision number, the
+   * commit date (as a <tt>const char *</tt>), commit author (as a
+   * <tt>const char *</tt>), and @a callback_baton as arguments.  If
+   * @a callback returns an error, that error will be returned from @c
+   * close_edit, otherwise @c close_edit will return successfully
+   * (unless it encountered an error before invoking @a callback).
+   *
+   * The callback will not be called if the commit was a no-op
+   * (i.e. nothing was committed).
+   *
+   * @a lock_tokens, if non-NULL, is a hash mapping <tt>const char
+   * *</tt> paths (relative to the URL of @a session_baton) to <tt>
+   * const char *</tt> lock tokens.  The server checks that the
+   * correct token is provided for each committed, locked path.  @a lock_tokens
+   * must live during the whole commit operation.
+   *
+   * If @a keep_locks is @c TRUE, then do not release locks on
+   * committed objects.  Else, automatically release such locks.
+   *
+   * The caller may not perform any RA operations using
+   * @a session_baton before finishing the edit.
+   * 
+   * Use @a pool for memory allocation during the commit.
+   */
+  svn_error_t *(*get_commit_editor2) (void *session_baton,
+                                      const svn_delta_editor_t **editor,
+                                      void **edit_baton,
+                                      const char *log_msg,
+                                      svn_commit_callback_t callback,
+                                      void *callback_baton,
+                                      apr_hash_t *lock_tokens,
+                                      svn_boolean_t keep_locks,
+                                      apr_pool_t *pool);
 } svn_ra_plugin_t;
 
 /**

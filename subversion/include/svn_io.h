@@ -249,6 +249,31 @@ svn_error_t *svn_io_set_file_read_write (const char *path,
                                          svn_boolean_t ignore_enoent,
                                          apr_pool_t *pool);
 
+
+/** Minimally change the read-write permissions of a file.
+ * @since New in 1.1.
+ *
+ * When making @a path read-write on operating systems with unix style
+ * permissions, set the permissions on @a path to the permissions that
+ * are set when a new file is created (effectively honoring the user's
+ * umask).
+ *
+ * When making the file read-only on operating systems with unix style
+ * permissions, remove all write permissions.
+ *
+ * On other operating systems, toggle the file's "writability" as much as
+ * the operating system allows.
+ *
+ * @a path is the utf8-encoded path to the file.  If @a enable_write
+ * is @c TRUE, then make the file read-write.  If @c FALSE, make it
+ * write-only.  If @a ignore_enoent is @c TRUE, don't fail if the target
+ * file doesn't exist.
+ */
+svn_error_t *svn_io_set_file_read_write_carefully (const char *path,
+                                                   svn_boolean_t enable_write,
+                                                   svn_boolean_t ignore_enoent,
+                                                   apr_pool_t *pool);
+    
 /** Toggle a file's "executability".
  *
  * When making the file executable on operating systems with unix style

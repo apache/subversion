@@ -42,4 +42,9 @@ public interface CommitItemStateFlags
      * the item has been copied
      */
     public static final int IsCopy=16;
+    /**
+     * the item has a change in locking
+     */
+    public static final int LockToken=32;
+
 }

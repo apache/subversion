@@ -297,6 +297,7 @@ struct log_msg_baton
   const char *base_dir; /* the base directory for an external edit. UTF-8! */
   const char *tmpfile_left; /* the tmpfile left by an external edit. UTF-8! */
   apr_hash_t *config; /* client configuration hash */
+  svn_boolean_t keep_locks; /* Keep repository locks? */
   apr_pool_t *pool; /* a pool. */
 };
 
@@ -346,6 +347,7 @@ svn_cl__make_log_msg_baton (void **baton,
   lmb->base_dir = base_dir ? base_dir : "";
   lmb->tmpfile_left = NULL;
   lmb->config = config;
+  lmb->keep_locks = opt_state->no_unlock;
   lmb->pool = pool;
   *baton = lmb;
   return SVN_NO_ERROR;
@@ -489,7 +491,7 @@ svn_cl__get_log_message (const char **log_msg,
           svn_client_commit_item_t *item
             = ((svn_client_commit_item_t **) commit_items->elts)[i];
           const char *path = item->path;
-          char text_mod = '_', prop_mod = ' ';
+          char text_mod = '_', prop_mod = ' ', unlock = ' ';
 
           if (! path)
             path = item->url;
@@ -516,9 +518,14 @@ svn_cl__get_log_message (const char **log_msg,
           if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
             prop_mod = 'M';
 
+          if (! lmb->keep_locks
+              && item->state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
+            unlock = 'U';
+
           svn_stringbuf_appendbytes (tmp_message, &text_mod, 1); 
           svn_stringbuf_appendbytes (tmp_message, &prop_mod, 1); 
-          svn_stringbuf_appendcstr (tmp_message, "   ");
+          svn_stringbuf_appendbytes (tmp_message, &unlock, 1); 
+          svn_stringbuf_appendcstr (tmp_message, "  ");
           svn_stringbuf_appendcstr (tmp_message, path);
           svn_stringbuf_appendcstr (tmp_message, APR_EOL_STR);
         }

@@ -146,6 +146,8 @@ const apr_getopt_option_t svn_cl__options[] =
                       "of 'LF', 'CR', 'CRLF'")},
     {"limit",         svn_cl__limit_opt, 1,
                       N_("maximum number of log entries")},
+    {"no-unlock",     svn_cl__no_unlock_opt, 0,
+                      N_("don't unlock the targets")},
     {0,               0, 0, 0}
   };
 
@@ -221,11 +223,13 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "commit", svn_cl__commit, {"ci"},
     N_("Send changes from your working copy to the repository.\n"
-     "usage: commit [PATH...]\n"
-     "\n"
-     "  A log message must be provided, but it can be empty.  If it is not\n"
-     "  given by a --message or --file option, an editor will be started.\n"),
-    {'q', 'N', svn_cl__targets_opt,
+       "usage: commit [PATH...]\n"
+       "\n"
+       "  A log message must be provided, but it can be empty.  If it is not\n"
+       "  given by a --message or --file option, an editor will be started.\n"
+       "  If any targets are (or contain) locked items, those will be\n"
+       "  unlocked after a successful commit.\n"),
+    {'q', 'N', svn_cl__targets_opt, svn_cl__no_unlock_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
   { "copy", svn_cl__copy, {"cp"},
@@ -377,6 +381,14 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'r', 'v', 'R', svn_cl__incremental_opt, svn_cl__xml_opt,
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
+  { "lock", svn_cl__lock, {0},
+    N_("Lock working copy paths or URLs in the repository, so that\n"
+       "no other user can commit changes to them.\n"
+       "usage: lock PATH...\n"
+       "\n"
+       "  Use --force to steal the lock from another user or working copy.\n"),
+    { svn_cl__targets_opt, SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS,
+      svn_cl__config_dir_opt, svn_cl__force_opt } },
   { "log", svn_cl__log, {0},
     N_("Show the log messages for a set of revision(s) and/or file(s).\n"
        "usage: 1. log [PATH]\n"
@@ -620,6 +632,9 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "    Fifth column: Whether the item is switched relative to its parent\n"
      "      ' ' normal\n"
      "      'S' switched\n"
+     "    Sixth column: Whether token representing repos lock is present\n"
+     "      ' ' normal\n"
+     "      'K' lock-token is present\n"
      "\n"
      "  The out-of-date information appears in the eighth column (with -u):\n"
      "      '*' a newer revision exists on the server\n"
@@ -672,6 +687,14 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     { 'r', 'N', 'q', svn_cl__merge_cmd_opt, svn_cl__relocate_opt,
       SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
  
+  { "unlock", svn_cl__unlock, {0},
+    N_("Unlock working copy paths or URLs.\n"
+       "usage: unlock PATH...\n"
+       "\n"
+       "  Use --force to break the lock.\n"),
+    { svn_cl__targets_opt, SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS,
+      svn_cl__config_dir_opt, svn_cl__force_opt } },
+
   { "update", svn_cl__update, {"up"}, 
     N_("Bring changes from the repository into the working copy.\n"
        "usage: update [PATH...]\n"
@@ -1044,6 +1067,9 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
+      case svn_cl__no_unlock_opt:
+        opt_state.no_unlock = TRUE;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -1242,6 +1268,11 @@ main (int argc, const char * const *argv)
                                SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS, FALSE);
         }
     }
+
+  /* Update the 'keep-locks' runtime option */
+  if (opt_state.no_unlock)
+    svn_config_set_bool (cfg, SVN_CONFIG_SECTION_MISCELLANY,
+                         SVN_CONFIG_OPTION_NO_UNLOCK, TRUE);
 
   /* Set the log message callback function.  Note that individual
      subcommands will populate the ctx->log_msg_baton */

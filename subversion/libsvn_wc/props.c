@@ -907,6 +907,7 @@ validate_prop_against_node_kind (const char *name,
                                  SVN_PROP_KEYWORDS,
                                  SVN_PROP_EOL_STYLE,
                                  SVN_PROP_MIME_TYPE,
+                                 SVN_PROP_NEEDS_LOCK,
                                  NULL };
   const char **node_kind_prohibit;
 
@@ -1163,6 +1164,30 @@ svn_wc_prop_set2 (const char *name,
 
           value = &executable_value;
           SVN_ERR (svn_io_set_file_executable (path, TRUE, TRUE, pool));
+        }
+    }
+
+  if (kind == svn_node_file && strcmp (name, SVN_PROP_NEEDS_LOCK) == 0)
+    {
+      /* If the svn:needs-lock property was set to NULL, set the file
+         to read-write */
+      if (value == NULL)
+        {
+          SVN_ERR (svn_io_set_file_read_write_carefully (path, TRUE, 
+                                                         FALSE, pool));
+        }
+      else
+        {
+          /* Since we only check if the property exists or not, force the
+             property value to a specific value */
+          static const svn_string_t needs_lock_value =
+            {
+              SVN_PROP_NEEDS_LOCK_VALUE,
+              sizeof (SVN_PROP_NEEDS_LOCK_VALUE) - 1
+            };
+
+          value = &needs_lock_value;
+          /* And we'll set the file to read-only at commit time. */
         }
     }
 

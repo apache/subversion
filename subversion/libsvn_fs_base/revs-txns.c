@@ -438,7 +438,6 @@ svn_fs_base__add_txn_copy (svn_fs_t *fs,
 struct txn_proplist_args {
   apr_hash_t **table_p;
   const char *id;
-  svn_revnum_t rev;
 };
 
 
@@ -455,6 +454,25 @@ txn_body_txn_proplist (void *baton, trail_t *trail)
   *(args->table_p) = txn->proplist;
   return SVN_NO_ERROR;
 }
+
+
+
+svn_error_t *
+svn_fs_base__txn_proplist_in_trail (apr_hash_t **table_p,
+                                    const char *txn_id,
+                                    trail_t *trail)
+{
+  struct txn_proplist_args args;
+  apr_hash_t *table;
+
+  args.table_p = &table;
+  args.id = txn_id;
+  SVN_ERR (txn_body_txn_proplist (&args, trail));
+
+  *table_p = table ? table : apr_hash_make (trail->pool);
+  return SVN_NO_ERROR;
+}
+
 
 
 svn_error_t *
@@ -607,6 +625,7 @@ struct begin_txn_args
 {
   svn_fs_txn_t **txn_p;
   svn_revnum_t rev;
+  apr_uint32_t flags;
 };
 
 
@@ -622,6 +641,28 @@ txn_body_begin_txn (void *baton, trail_t *trail)
   SVN_ERR (svn_fs_bdb__create_txn (&txn_id, trail->fs, root_id, 
                                    trail, trail->pool));
 
+  if (args->flags & SVN_FS_TXN_CHECK_OOD)
+    {
+      struct change_txn_prop_args cpargs;
+      cpargs.fs = trail->fs;
+      cpargs.id = txn_id;
+      cpargs.name = SVN_FS_PROP_TXN_CHECK_OOD;
+      cpargs.value = svn_string_create ("true", trail->pool);
+
+      SVN_ERR (txn_body_change_txn_prop (&cpargs, trail));
+    }
+
+  if (args->flags & SVN_FS_TXN_CHECK_LOCKS)
+    {
+      struct change_txn_prop_args cpargs;
+      cpargs.fs = trail->fs;
+      cpargs.id = txn_id;
+      cpargs.name = SVN_FS_PROP_TXN_CHECK_LOCKS;
+      cpargs.value = svn_string_create ("true", trail->pool);
+
+      SVN_ERR (txn_body_change_txn_prop (&cpargs, trail));
+    }
+    
   *args->txn_p = make_txn (trail->fs, txn_id, args->rev, trail->pool);
   return SVN_NO_ERROR;
 }
@@ -635,6 +676,7 @@ svn_error_t *
 svn_fs_base__begin_txn (svn_fs_txn_t **txn_p,
                         svn_fs_t *fs,
                         svn_revnum_t rev,
+                        apr_uint32_t flags,
                         apr_pool_t *pool)
 {
   svn_fs_txn_t *txn;
@@ -645,6 +687,7 @@ svn_fs_base__begin_txn (svn_fs_txn_t **txn_p,
 
   args.txn_p = &txn;
   args.rev   = rev;
+  args.flags = flags;
   SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_begin_txn, &args, pool));
 
   *txn_p = txn;
@@ -685,6 +728,7 @@ txn_body_open_txn (void *baton, trail_t *trail)
       SVN_ERR (svn_fs_base__txn_get_revision (&base_rev, trail->fs, txn_id,
                                               trail, trail->pool));
     }
+  
   *args->txn_p = make_txn (trail->fs, args->name, base_rev, trail->pool);
   return SVN_NO_ERROR;
 }

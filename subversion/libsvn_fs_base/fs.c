@@ -40,6 +40,7 @@
 #include "uuid.h"
 #include "tree.h"
 #include "id.h"
+#include "lock.h"
 #include "svn_private_config.h"
 
 #include "bdb/bdb-err.h"
@@ -52,6 +53,8 @@
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
 #include "bdb/uuids-table.h"
+#include "bdb/locks-table.h"
+#include "bdb/lock-tokens-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -161,6 +164,8 @@ cleanup_fs (svn_fs_t *fs)
   SVN_ERR (cleanup_fs_db (fs, &bfd->representations, "representations"));
   SVN_ERR (cleanup_fs_db (fs, &bfd->strings, "strings"));
   SVN_ERR (cleanup_fs_db (fs, &bfd->uuids, "uuids"));
+  SVN_ERR (cleanup_fs_db (fs, &bfd->locks, "locks"));
+  SVN_ERR (cleanup_fs_db (fs, &bfd->lock_tokens, "lock-tokens"));
 
   /* Finally, close the environment.  */
   bfd->env = 0;
@@ -535,7 +540,13 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__open_txn,
   svn_fs_base__purge_txn,
   svn_fs_base__list_transactions,
-  svn_fs_base__deltify
+  svn_fs_base__deltify,
+  svn_fs_base__lock,
+  svn_fs_base__attach_lock,
+  svn_fs_base__generate_token,
+  svn_fs_base__unlock,
+  svn_fs_base__get_lock,
+  svn_fs_base__get_locks
 };
 
 /* Where the format number is stored. */
@@ -609,6 +620,14 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   svn_err = BDB_WRAP (fs, "creating 'uuids' table",
                       svn_fs_bdb__open_uuids_table (&bfd->uuids,
                                                     bfd->env, TRUE));
+  if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "creating 'locks' table",
+                      svn_fs_bdb__open_locks_table (&bfd->locks,
+                                                    bfd->env, TRUE));
+  if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "creating 'lock-nodes' table",
+                      svn_fs_bdb__open_lock_tokens_table (&bfd->lock_tokens,
+                                                          bfd->env, TRUE));
   if (svn_err) goto error;
 
   /* Initialize the DAG subsystem. */
@@ -718,6 +737,14 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   svn_err = BDB_WRAP (fs, "opening 'uuids' table",
                       svn_fs_bdb__open_uuids_table (&bfd->uuids,
                                                     bfd->env, FALSE));
+  if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "opening 'locks' table",
+                      svn_fs_bdb__open_locks_table (&bfd->locks,
+                                                    bfd->env, FALSE));
+  if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "opening 'lock-nodes' table",
+                      svn_fs_bdb__open_lock_tokens_table (&bfd->lock_tokens,
+                                                         bfd->env, FALSE));
   if (svn_err) goto error;
 
   /* Read the FS format number. */
@@ -1147,6 +1174,10 @@ base_hotcopy (const char *src_path,
                                 "strings", pagesize, pool));
   SVN_ERR (copy_db_file_safely (src_path, dest_path,
                                 "uuids", pagesize, pool));
+  SVN_ERR (copy_db_file_safely (src_path, dest_path,
+                                "locks", pagesize, pool));
+  SVN_ERR (copy_db_file_safely (src_path, dest_path,
+                                "lock-tokens", pagesize, pool));
 
   {
     apr_array_header_t *logfiles;

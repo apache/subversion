@@ -97,6 +97,8 @@ restore_file (const char *file_path,
   
   SVN_ERR (svn_io_remove_file (tmp_text_base_path, pool));
 
+  SVN_ERR (svn_wc__maybe_set_read_only (NULL, file_path, adm_access, pool));
+
   /* If necessary, tweak the new working file's executable bit. */
   SVN_ERR (svn_wc__maybe_set_executable (NULL, file_path, adm_access, pool));
 
@@ -157,7 +159,7 @@ static svn_error_t *
 report_revisions (svn_wc_adm_access_t *adm_access,
                   const char *dir_path,
                   svn_revnum_t dir_rev,
-                  const svn_ra_reporter_t *reporter,
+                  const svn_ra_reporter2_t *reporter,
                   void *report_baton,
                   svn_wc_notify_func2_t notify_func,
                   void *notify_baton,
@@ -318,11 +320,13 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                 SVN_ERR (reporter->link_path (report_baton, this_path,
                                               current_entry->url,
                                               current_entry->revision,
-                                              FALSE, iterpool));
+                                              FALSE, current_entry->lock_token,
+                                              iterpool));
               else
                 SVN_ERR (reporter->set_path (report_baton, this_path,
                                              current_entry->revision,
-                                             FALSE, iterpool));              
+                                             FALSE, current_entry->lock_token,
+                                             iterpool));              
             }
 
           /* Possibly report a disjoint URL ... */
@@ -334,13 +338,16 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                                           current_entry->url,
                                           current_entry->revision,
                                           FALSE,
+                                          current_entry->lock_token,
                                           iterpool));
-          /* ... or perhaps just a differing revision. */
-          else if (current_entry->revision !=  dir_rev)
+          /* ... or perhaps just a differing revision or lock token. */
+          else if (current_entry->revision !=  dir_rev
+                   || current_entry->lock_token)
             SVN_ERR (reporter->set_path (report_baton,
                                          this_path,
                                          current_entry->revision,
                                          FALSE,
+                                         current_entry->lock_token,
                                          iterpool));
         } /* end file case */
       
@@ -390,11 +397,13 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                                               subdir_entry->url,
                                               subdir_entry->revision,
                                               subdir_entry->incomplete,
+                                              subdir_entry->lock_token,
                                               iterpool));
               else
                 SVN_ERR (reporter->set_path (report_baton, this_path,
                                              subdir_entry->revision,
                                              subdir_entry->incomplete,
+                                             subdir_entry->lock_token,
                                              iterpool));              
             }
 
@@ -405,14 +414,18 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                                           subdir_entry->url,
                                           subdir_entry->revision,
                                           subdir_entry->incomplete,
+                                          subdir_entry->lock_token,
                                           iterpool));
-          /* ... or perhaps just a differing revision or incomplete subdir. */
+          /* ... or perhaps just a differing revision, lock token or
+             incomplete subdir. */
           else if (subdir_entry->revision != dir_rev
+                   || subdir_entry->lock_token
                    || subdir_entry->incomplete)
             SVN_ERR (reporter->set_path (report_baton,
                                          this_path,
                                          subdir_entry->revision,
                                          subdir_entry->incomplete,
+                                         subdir_entry->lock_token,
                                          iterpool));
 
           /* Recurse. */
@@ -444,7 +457,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
 svn_error_t *
 svn_wc_crawl_revisions2 (const char *path,
                          svn_wc_adm_access_t *adm_access,
-                         const svn_ra_reporter_t *reporter,
+                         const svn_ra_reporter2_t *reporter,
                          void *report_baton,
                          svn_boolean_t restore_files,
                          svn_boolean_t recurse,
@@ -476,7 +489,7 @@ svn_wc_crawl_revisions2 (const char *path,
       base_rev = parent_entry->revision;
       SVN_ERR (reporter->set_path (report_baton, "", base_rev,
                                    entry ? entry->incomplete : TRUE, 
-                                   pool));
+                                   NULL, pool));
       SVN_ERR (reporter->delete_path (report_baton, "", pool)); 
 
       /* Finish the report, which causes the update editor to be
@@ -501,7 +514,7 @@ svn_wc_crawl_revisions2 (const char *path,
      argument is ignored. */
   SVN_ERR (reporter->set_path (report_baton, "", base_rev,
                                entry->incomplete , /* start_empty ? */
-                               pool));
+                               NULL, pool));
 
   if (entry->schedule != svn_wc_schedule_delete)
     {
@@ -588,16 +601,18 @@ svn_wc_crawl_revisions2 (const char *path,
                                         entry->url,
                                         entry->revision,
                                         FALSE,
+                                        entry->lock_token,
                                         pool));
         }
-      else if (entry->revision != base_rev)
+      else if (entry->revision != base_rev || entry->lock_token)
         {
           /* If this entry is a file node, we just want to report that
              node's revision.  Since we are looking at the actual target
              of the report (not some file in a subdirectory of a target
              directory), and that target is a file, we need to pass an
              empty string to set_path. */
-          err = reporter->set_path (report_baton, "", base_rev, FALSE, pool);
+          err = reporter->set_path (report_baton, "", base_rev, FALSE,
+                                    entry->lock_token, pool);
           if (err)
             goto abort_report;
         }
@@ -622,6 +637,73 @@ svn_wc_crawl_revisions2 (const char *path,
   return SVN_NO_ERROR;
 }
 
+/*** Compatibility wrapper: turns an svn_ra_reporter_t into an
+     svn_ra_reporter2_t. ***/
+struct wrap_report_baton {
+  const svn_ra_reporter_t *reporter;
+  void *baton;
+};
+
+static svn_error_t *wrap_set_path (void *report_baton,
+                                   const char *path,
+                                   svn_revnum_t revision,
+                                   svn_boolean_t start_empty,
+                                   const char *lock_token,
+                                   apr_pool_t *pool)
+{
+  struct wrap_report_baton *wrb = report_baton;
+
+  return wrb->reporter->set_path (wrb->baton, path, revision, start_empty,
+                                  pool);
+}
+
+static svn_error_t *wrap_delete_path (void *report_baton,
+                                      const char *path,
+                                      apr_pool_t *pool)
+{
+  struct wrap_report_baton *wrb = report_baton;
+
+  return wrb->reporter->delete_path (wrb->baton, path, pool);
+}
+    
+static svn_error_t *wrap_link_path (void *report_baton,
+                                    const char *path,
+                                    const char *url,
+                                    svn_revnum_t revision,
+                                    svn_boolean_t start_empty,
+                                    const char *lock_token,
+                                    apr_pool_t *pool)
+{
+  struct wrap_report_baton *wrb = report_baton;
+
+  return wrb->reporter->link_path (wrb->baton, path, url, revision,
+                                   start_empty, pool);
+}
+
+static svn_error_t *wrap_finish_report (void *report_baton,
+                                        apr_pool_t *pool)
+{
+  struct wrap_report_baton *wrb = report_baton;
+
+  return wrb->reporter->finish_report (wrb->baton, pool);
+}
+
+static svn_error_t *wrap_abort_report (void *report_baton,
+                                       apr_pool_t *pool)
+{
+  struct wrap_report_baton *wrb = report_baton;
+
+  return wrb->reporter->abort_report (wrb->baton, pool);
+}
+
+static const svn_ra_reporter2_t wrap_reporter = {
+  wrap_set_path,
+  wrap_delete_path,
+  wrap_link_path,
+  wrap_finish_report,
+  wrap_abort_report
+};
+
 svn_error_t *
 svn_wc_crawl_revisions (const char *path,
                         svn_wc_adm_access_t *adm_access,
@@ -635,12 +717,17 @@ svn_wc_crawl_revisions (const char *path,
                         svn_wc_traversal_info_t *traversal_info,
                         apr_pool_t *pool)
 {
+  struct wrap_report_baton wrb;
   svn_wc__compat_notify_baton_t nb = { notify_func, notify_baton };
 
-  return svn_wc_crawl_revisions2 (path, adm_access, reporter, report_baton,
+  wrb.reporter = reporter;
+  wrb.baton = report_baton;
+
+  return svn_wc_crawl_revisions2 (path, adm_access, &wrap_reporter, &wrb,
                                   restore_files, recurse, use_commit_times,
                                   svn_wc__compat_call_notify_func, &nb,
-                                  traversal_info, pool);
+                                  traversal_info,
+                                  pool);
 }
 
 svn_error_t *

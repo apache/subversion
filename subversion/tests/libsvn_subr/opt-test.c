@@ -25,6 +25,7 @@
 static svn_error_t *
 test_parse_peg_rev (const char **msg,
                     svn_boolean_t msg_only,
+                    svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {      
   apr_size_t i;

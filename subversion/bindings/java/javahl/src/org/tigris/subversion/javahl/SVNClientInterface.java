@@ -268,6 +268,18 @@ public interface SVNClientInterface
     long commit(String[] path, String message, boolean recurse)
             throws ClientException;
     /**
+     * Commits changes to the repository.
+     * @param path      files to commit.
+     * @param message   log message.
+     * @param recurse   whether the operation should be done recursively.
+     * @param noUnlock  do remove any locks
+     * @return Returns a long representing the revision. It returns a
+     *         -1 if the revision number is invalid.
+     * @exception ClientException
+     */
+    long commit(String[] path, String message, boolean recurse,
+                boolean noUnlock) throws ClientException;
+    /**
      * Copies a versioned file with the history preserved.
      * @param srcPath   source path or url
      * @param destPath  destination path or url
@@ -739,6 +751,37 @@ public interface SVNClientInterface
      */
     Info info(String path) throws ClientException;
 
+    /**
+     * Lock a working copy item
+     * @param path  path of the item
+     * @param comment
+     * @param lockCallback
+     * @param force break an existing lock
+     * @throws ClientException
+     */
+    Lock[] lock(String[] path, String comment, LockCallback lockCallback, boolean force)
+            throws ClientException;
+
+    /**
+     * Unlock a working copy item
+     * @param path  path of the item
+     * @param lockCallback
+     * @param force break an existing lock
+     * @throws ClientException
+     */
+    void unlock(String[] path, LockCallback lockCallback, boolean force)
+            throws ClientException;
+
+    /**
+     * Retrieve information about repository or working copy items.
+     * @param pathOrUrl     the path or the url of the item
+     * @param revision      the revision of the item to return
+     * @param pegRevision   the revision to interpret pathOrUrl
+     * @param recurse       flag if to recurse, if the item is a directory
+     * @return              the information objects
+     */
+    Info2[] info2(String pathOrUrl, Revision revision, Revision pegRevision,
+                 boolean recurse) throws ClientException;
     /**
      *  Produce a compact "version number" for a working copy
      * @param path          path of the working copy

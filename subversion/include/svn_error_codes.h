@@ -189,6 +189,10 @@ SVN_ERROR_START
               SVN_ERR_XML_CATEGORY_START + 3,
               "XML data was not well-formed")
 
+  SVN_ERRDEF (SVN_ERR_XML_UNESCAPABLE_DATA,
+              SVN_ERR_XML_CATEGORY_START + 4,
+              "Data cannot be safely XML-escaped")
+
   /* io errors */
 
   SVN_ERRDEF (SVN_ERR_IO_INCONSISTENT_EOL,
@@ -512,6 +516,51 @@ SVN_ERROR_START
               SVN_ERR_FS_CATEGORY_START + 33,
               "Unknown FS type")
 
+  /* @since New in 1.2 */
+  SVN_ERRDEF (SVN_ERR_FS_NO_USER,
+              SVN_ERR_FS_CATEGORY_START + 34,
+              "No user associated with filesystem")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_PATH_LOCKED,
+              SVN_ERR_FS_CATEGORY_START + 35,
+              "Path is locked")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_PATH_NOT_LOCKED,
+              SVN_ERR_FS_CATEGORY_START + 36,
+              "Path is not locked")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_BAD_LOCK_TOKEN,
+              SVN_ERR_FS_CATEGORY_START + 37,
+              "Lock token is incorrect")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_NO_LOCK_TOKEN,
+              SVN_ERR_FS_CATEGORY_START + 38,
+              "No lock token provided")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_LOCK_OWNER_MISMATCH,
+              SVN_ERR_FS_CATEGORY_START + 39,
+              "Username does not match lock owner")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_NO_SUCH_LOCK,
+              SVN_ERR_FS_CATEGORY_START + 40,
+              "Filesystem has no such lock")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_LOCK_EXPIRED,
+              SVN_ERR_FS_CATEGORY_START + 41,
+              "Lock has expired")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_OUT_OF_DATE,
+              SVN_ERR_FS_CATEGORY_START + 42,
+              "Item is out of date")
+
   /* @since New in 1.2.
    *
    * This is analogous to SVN_ERR_REPOS_UNSUPPORTED_VERSION.  To avoid
@@ -521,7 +570,7 @@ SVN_ERROR_START
    * retains its name.
    */
   SVN_ERRDEF (SVN_ERR_FS_UNSUPPORTED_FORMAT,
-              SVN_ERR_FS_CATEGORY_START + 34,
+              SVN_ERR_FS_CATEGORY_START + 43,
               "Unsupported FS format")
 
   /* repos errors */
@@ -563,6 +612,17 @@ SVN_ERROR_START
               SVN_ERR_REPOS_CATEGORY_START + 7,
               "Error running post-commit hook")
 
+  /* @since New in 1.2 */
+  SVN_ERRDEF (SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED,
+              SVN_ERR_REPOS_CATEGORY_START + 8,
+              "Error running post-lock hook")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED,
+              SVN_ERR_REPOS_CATEGORY_START + 9,
+              "Error running post-unlock hook")
+
+
   /* generic RA errors */
 
   SVN_ERRDEF (SVN_ERR_RA_ILLEGAL_URL,
@@ -592,6 +652,12 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_RA_UNSUPPORTED_ABI_VERSION,
               SVN_ERR_RA_CATEGORY_START + 6,
               "Unsupported RA plugin ABI version")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_RA_NOT_LOCKED,
+              SVN_ERR_RA_CATEGORY_START + 7,
+              "Path is not locked")
+
 
   /* ra_dav errors */
 
@@ -630,6 +696,11 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_RA_DAV_PROPPATCH_FAILED,
               SVN_ERR_RA_DAV_CATEGORY_START + 8,
               "Failed to excute WebDAV PROPPATCH")
+
+  /* @since New in 1.2 */
+  SVN_ERRDEF (SVN_ERR_RA_DAV_MALFORMED_DATA,
+              SVN_ERR_RA_DAV_CATEGORY_START + 9,
+              "Malformed network data")
 
 
   /* ra_local errors */
@@ -809,6 +880,10 @@ SVN_ERROR_START
               SVN_ERR_CLIENT_CATEGORY_START + 12,
               "Two versioned resources are unrelated")
 
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_CLIENT_MISSING_LOCK_TOKEN,
+              SVN_ERR_CLIENT_CATEGORY_START + 13,
+              "Path has no lock token")
 
   /* misc errors */
 

@@ -562,6 +562,7 @@ delete_entry (const char *path,
                                 action, pool);
       notify->kind = kind;
       notify->content_state = notify->prop_state = state;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
       (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton, notify,
                                       pool);
     }
@@ -889,6 +890,7 @@ close_directory (void *dir_baton,
       notify->kind = svn_node_dir;
       notify->content_state = svn_wc_notify_state_inapplicable;
       notify->prop_state = prop_state;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
       (*eb->notify_func) (eb->notify_baton, notify, pool);
     }
 

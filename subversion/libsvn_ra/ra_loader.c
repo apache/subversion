@@ -31,6 +31,7 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
+#include "svn_xml.h"
 #include "ra_loader.h"
 #include "svn_private_config.h"
 
@@ -321,11 +322,13 @@ svn_error_t *svn_ra_get_commit_editor (svn_ra_session_t *session,
                                        const char *log_msg,
                                        svn_commit_callback_t callback,
                                        void *callback_baton,
+                                       apr_hash_t *lock_tokens,
+                                       svn_boolean_t keep_locks,
                                        apr_pool_t *pool)
 {
   return session->vtable->get_commit_editor (session, editor, edit_baton,
                                              log_msg, callback, callback_baton,
-                                             pool);
+                                             lock_tokens, keep_locks, pool);
 }
 
 svn_error_t *svn_ra_get_file (svn_ra_session_t *session,
@@ -353,7 +356,7 @@ svn_error_t *svn_ra_get_dir (svn_ra_session_t *session,
 }
 
 svn_error_t *svn_ra_do_update (svn_ra_session_t *session,
-                               const svn_ra_reporter_t **reporter,
+                               const svn_ra_reporter2_t **reporter,
                                void **report_baton,
                                svn_revnum_t revision_to_update_to,
                                const char *update_target,
@@ -369,7 +372,7 @@ svn_error_t *svn_ra_do_update (svn_ra_session_t *session,
 }
 
 svn_error_t *svn_ra_do_switch (svn_ra_session_t *session,
-                               const svn_ra_reporter_t **reporter,
+                               const svn_ra_reporter2_t **reporter,
                                void **report_baton,
                                svn_revnum_t revision_to_switch_to,
                                const char *switch_target,
@@ -386,7 +389,7 @@ svn_error_t *svn_ra_do_switch (svn_ra_session_t *session,
 }
 
 svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
-                               const svn_ra_reporter_t **reporter,
+                               const svn_ra_reporter2_t **reporter,
                                void **report_baton,
                                const char *status_target,
                                svn_revnum_t revision,
@@ -401,7 +404,7 @@ svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
 }
 
 svn_error_t *svn_ra_do_diff (svn_ra_session_t *session,
-                             const svn_ra_reporter_t **reporter,
+                             const svn_ra_reporter2_t **reporter,
                              void **report_baton,
                              svn_revnum_t revision,
                              const char *diff_target,
@@ -489,6 +492,49 @@ svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
                                          handler_baton, pool);
 }
 
+svn_error_t *svn_ra_lock (svn_ra_session_t *session,
+                          apr_hash_t *path_revs,
+                          const char *comment,
+                          svn_boolean_t force,
+                          svn_ra_lock_callback_t lock_func, 
+                          void *lock_baton,
+                          apr_pool_t *pool)
+{
+  if (! svn_xml_is_xml_safe(comment, strlen(comment)))
+    return svn_error_create
+      (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
+       _("Lock comment has illegal characters"));
+  
+  return session->vtable->lock (session, path_revs, comment, force,
+                                lock_func, lock_baton, pool);
+}
+
+svn_error_t *svn_ra_unlock (svn_ra_session_t *session,
+                            apr_hash_t *path_tokens,
+                            svn_boolean_t force,
+                            svn_ra_lock_callback_t lock_func, 
+                            void *lock_baton,
+                            apr_pool_t *pool)
+{
+  return session->vtable->unlock (session, path_tokens, force, 
+                                  lock_func, lock_baton, pool);
+}
+
+svn_error_t *svn_ra_get_lock (svn_ra_session_t *session,
+                              svn_lock_t **lock,
+                              const char *path,
+                              apr_pool_t *pool)
+{
+  return session->vtable->get_lock (session, lock, path, pool);
+}
+
+svn_error_t *svn_ra_get_locks (svn_ra_session_t *session,
+                               apr_hash_t **locks,
+                               const char *path,
+                               apr_pool_t *pool)
+{
+  return session->vtable->get_locks (session, locks, path, pool);
+}
 
 
 

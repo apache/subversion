@@ -221,6 +221,7 @@ import_file (const svn_delta_editor_t *editor,
       notify->mime_type = mimetype;
       notify->content_state = notify->prop_state
         = svn_wc_notify_state_inapplicable;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
       (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
     }
 
@@ -320,6 +321,7 @@ import_dir (const svn_delta_editor_t *editor,
               notify->kind = svn_node_dir;
               notify->content_state = notify->prop_state
                 = svn_wc_notify_state_inapplicable;
+              notify->lock_state = svn_wc_notify_lock_state_inapplicable;
               (*ctx->notify_func2) (ctx->notify_baton2, notify, subpool);
             }
           continue;
@@ -363,6 +365,7 @@ import_dir (const svn_delta_editor_t *editor,
               notify->kind = svn_node_dir;
               notify->content_state = notify->prop_state
                 = svn_wc_notify_state_inapplicable;
+              notify->lock_state = svn_wc_notify_lock_state_inapplicable;
               (*ctx->notify_func2) (ctx->notify_baton2, notify, subpool);
             }
 
@@ -534,6 +537,8 @@ get_ra_editor (svn_ra_session_t **ra_session,
                apr_array_header_t *commit_items,
                svn_client_commit_info_t **commit_info,
                svn_boolean_t is_commit,
+               apr_hash_t *lock_tokens,
+               svn_boolean_t keep_locks,
                apr_pool_t *pool)
 {
   void *commit_baton;
@@ -567,7 +572,8 @@ get_ra_editor (svn_ra_session_t **ra_session,
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
   return svn_ra_get_commit_editor (*ra_session, editor, edit_baton, log_msg,
                                    svn_client__commit_callback,
-                                   commit_baton, pool);
+                                   commit_baton, lock_tokens, keep_locks,
+                                   pool);
 }
 
 
@@ -659,7 +665,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   while ((err = get_ra_editor (&ra_session, NULL,
                                &editor, &edit_baton, ctx, url, base_dir,
                                NULL, log_msg, NULL, commit_info,
-                               FALSE, subpool)));
+                               FALSE, NULL, TRUE, subpool)));
 
   /* Reverse the order of the components we added to our NEW_ENTRIES array. */
   if (new_entries->nelts)
@@ -1036,12 +1042,54 @@ adjust_rel_targets (const char **pbase_dir,
   return SVN_NO_ERROR;
 }
 
+
+/* For all lock tokens in ALL_TOKENS for URLs under BASE_URL, add them
+   to a new hashtable allocated in POOL.  *RESULT is set to point to this
+   new hash table.  *RESULT will be keyed on const char * URI-decoded paths
+   relative to BASE_URL.  The lock tokens will not be duplicated. */
+static svn_error_t *
+collect_lock_tokens (apr_hash_t **result,
+                     apr_hash_t *all_tokens,
+                     const char *base_url,
+                     apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  size_t base_len = strlen (base_url);
+
+  *result = apr_hash_make (pool);
+
+  for (hi = apr_hash_first (pool, all_tokens); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      const char *url;
+      const char *token;
+
+      apr_hash_this (hi, &key, NULL, &val);
+      url = key;
+      token = val;
+
+      if (strncmp (base_url, url, base_len) == 0
+          && (url[base_len] == '\0' || url[base_len] == '/'))
+        {
+          if (url[base_len] == '\0')
+            url = "";
+          else
+            url = svn_path_uri_decode (url + base_len + 1, pool);
+          apr_hash_set (*result, url, APR_HASH_KEY_STRING, token);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
-svn_client_commit (svn_client_commit_info_t **commit_info,
-                   const apr_array_header_t *targets,
-                   svn_boolean_t nonrecursive,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+svn_client_commit2 (svn_client_commit_info_t **commit_info,
+                    const apr_array_header_t *targets,
+                    svn_boolean_t nonrecursive,
+                    svn_boolean_t keep_locks,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
 {
   const svn_delta_editor_t *editor;
   void *edit_baton;
@@ -1054,7 +1102,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   apr_array_header_t *dirs_to_lock;
   apr_array_header_t *dirs_to_lock_recursive;
   svn_boolean_t lock_base_dir_recursive = FALSE;
-  apr_hash_t *committables, *tempfiles = NULL;
+  apr_hash_t *committables, *lock_tokens, *tempfiles = NULL;
   svn_wc_adm_access_t *base_dir_access;
   apr_array_header_t *commit_items;
   svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
@@ -1285,10 +1333,12 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
     }
 
   /* Crawl the working copy for commit items. */
-  if ((cmt_err = svn_client__harvest_committables (&committables, 
+  if ((cmt_err = svn_client__harvest_committables (&committables,
+                                                   &lock_tokens,
                                                    base_dir_access,
                                                    rel_targets, 
                                                    nonrecursive,
+                                                   ! keep_locks,
                                                    ctx,
                                                    pool)))
     goto cleanup;
@@ -1303,6 +1353,28 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                        SVN_CLIENT__SINGLE_REPOS_NAME, 
                                        APR_HASH_KEY_STRING))))
     goto cleanup;
+
+  /* If our array of targets contains only locks (and no actual file
+     or prop modifications), then we return here to avoid committing a
+     revision with no changes. */
+  {
+    svn_boolean_t found_changed_path = FALSE;
+
+    for (i = 0; i < commit_items->nelts; ++i)
+      {
+        svn_client_commit_item_t *item;
+        item = APR_ARRAY_IDX (commit_items, i, svn_client_commit_item_t *);
+        
+        if (item->state_flags != SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN) 
+          {
+            found_changed_path = TRUE;
+            break;
+          }
+      }
+
+    if (!found_changed_path)
+      goto cleanup;
+  }
 
   /* Go get a log message.  If an error occurs, or no log message is
      specified, abort the operation. */
@@ -1323,11 +1395,16 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                                                     pool)))
     goto cleanup;
 
+  /* Collect our lock tokens with paths relative to base_url. */
+  if ((cmt_err = collect_lock_tokens (&lock_tokens, lock_tokens, base_url,
+                                      pool)))
+    goto cleanup;
+
   if ((cmt_err = get_ra_editor (&ra_session, NULL,
                                 &editor, &edit_baton, ctx,
                                 base_url, base_dir, base_dir_access,
                                 log_msg, commit_items, commit_info,
-                                TRUE, pool)))
+                                TRUE, lock_tokens, keep_locks, pool)))
     goto cleanup;
 
   /* Make a note that we have a commit-in-progress. */
@@ -1362,6 +1439,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
           const char *adm_access_path;
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *entry;
+          svn_boolean_t remove_lock;
 
           /* Clear the subpool here because there are some 'continue'
              statements in this loop. */
@@ -1421,15 +1499,19 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
               && (item->copyfrom_url))
             recurse = TRUE;
 
+          remove_lock = (! keep_locks && (item->state_flags
+                                          & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN));
           assert (*commit_info);
-          if ((bump_err = svn_wc_process_committed (item->path, adm_access,
-                                                    recurse,
-                                                    (*commit_info)->revision,
-                                                    (*commit_info)->date,
-                                                    (*commit_info)->author,
-                                                    item->wcprop_changes,
-                                                    subpool)))
+          if ((bump_err = svn_wc_process_committed2 (item->path, adm_access,
+                                                     recurse,
+                                                     (*commit_info)->revision,
+                                                     (*commit_info)->date,
+                                                     (*commit_info)->author,
+                                                     item->wcprop_changes,
+                                                     remove_lock,
+                                                     subpool)))
             break;
+
         }
 
       /* Destroy the subpool. */
@@ -1447,7 +1529,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
   /* A bump error is likely to occur while running a working copy log file,
      explicitly unlocking and removing temporary files would be wrong in
      that case.  A commit error (cmt_err) should only occur before any
-     attempt to modify the working copy, so it doesn't prevent explict
+     attempt to modify the working copy, so it doesn't prevent explicit
      clean-up. */
   if (! bump_err)
     {
@@ -1458,4 +1540,15 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
     }
 
   return reconcile_errors (cmt_err, unlock_err, bump_err, cleanup_err, pool);
+}
+
+svn_error_t *
+svn_client_commit (svn_client_commit_info_t **commit_info,
+                   const apr_array_header_t *targets,
+                   svn_boolean_t nonrecursive,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_commit2 (commit_info, targets, nonrecursive, TRUE,
+                             ctx, pool);
 }

@@ -129,6 +129,7 @@ typedef struct {
   void *callback_baton;
  
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
+  const char *auth_username;            /* last authenticated username used */
 
   svn_boolean_t compression;            /* should we use http compression? */
   const char *uuid;                     /* repository UUID */
@@ -182,6 +183,8 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   const char *log_msg,
   svn_commit_callback_t callback,
   void *callback_baton,
+  apr_hash_t *lock_tokens,
+  svn_boolean_t keep_locks,
   apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__get_file(
@@ -208,7 +211,7 @@ svn_error_t * svn_ra_dav__abort_commit(
 
 svn_error_t * svn_ra_dav__do_update(
   svn_ra_session_t *session,
-  const svn_ra_reporter_t **reporter,
+  const svn_ra_reporter2_t **reporter,
   void **report_baton,
   svn_revnum_t revision_to_update_to,
   const char *update_target,
@@ -219,7 +222,7 @@ svn_error_t * svn_ra_dav__do_update(
 
 svn_error_t * svn_ra_dav__do_status(
   svn_ra_session_t *session,
-  const svn_ra_reporter_t **reporter,
+  const svn_ra_reporter2_t **reporter,
   void **report_baton,
   const char *status_target,
   svn_revnum_t revision,
@@ -230,7 +233,7 @@ svn_error_t * svn_ra_dav__do_status(
 
 svn_error_t * svn_ra_dav__do_switch(
   svn_ra_session_t *session,
-  const svn_ra_reporter_t **reporter,
+  const svn_ra_reporter2_t **reporter,
   void **report_baton,
   svn_revnum_t revision_to_update_to,
   const char *update_target,
@@ -242,7 +245,7 @@ svn_error_t * svn_ra_dav__do_switch(
 
 svn_error_t * svn_ra_dav__do_diff(
   svn_ra_session_t *session,
-  const svn_ra_reporter_t **reporter,
+  const svn_ra_reporter2_t **reporter,
   void **report_baton,
   svn_revnum_t revision,
   const char *diff_target,
@@ -463,11 +466,13 @@ svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
 /* Issue a PROPPATCH request on URL, transmitting PROP_CHANGES (a hash
    of const svn_string_t * values keyed on Subversion user-visible
    property names) and PROP_DELETES (an array of property names to
-   delete).  Use POOL for all allocations.  */
+   delete).  Send any extra request headers in EXTRA_HEADERS. Use POOL
+   for all allocations.  */
 svn_error_t *svn_ra_dav__do_proppatch (svn_ra_dav__session_t *ras,
                                        const char *url,
                                        apr_hash_t *prop_changes,
                                        apr_array_header_t *prop_deletes,
+                                       apr_hash_t *extra_headers,
                                        apr_pool_t *pool);
 
 extern const ne_propname svn_ra_dav__vcc_prop;
@@ -651,7 +656,15 @@ enum {
   ELEM_location,
   ELEM_file_revs_report,
   ELEM_file_rev,
-  ELEM_rev_prop
+  ELEM_rev_prop,
+  ELEM_get_locks_report,
+  ELEM_lock,
+  ELEM_lock_path,
+  ELEM_lock_token,
+  ELEM_lock_owner,
+  ELEM_lock_comment,
+  ELEM_lock_creationdate,
+  ELEM_lock_expirationdate
 };
 
 /* ### docco */
@@ -663,6 +676,8 @@ svn_error_t * svn_ra_dav__merge_activity(
     const char *repos_url,
     const char *activity_url,
     apr_hash_t *valid_targets,
+    apr_hash_t *lock_tokens,
+    svn_boolean_t keep_locks,
     svn_boolean_t disable_merge_response,
     apr_pool_t *pool);
 
@@ -722,6 +737,18 @@ svn_ra_dav__request_dispatch(int *code_p,
                              int okay_2,
                              apr_pool_t *pool);
 
+
+/* Give PARSER the ability to parse a mod_dav_svn <D:error> response
+   body in the case of a non-2XX response to REQUEST.  If a <D:error>
+   response is detected, then set *ERR to the parsed error.
+*/
+void
+svn_ra_dav__add_error_handler(ne_request *request,
+                              ne_xml_parser *parser,
+                              svn_error_t **err,
+                              apr_pool_t *pool);
+
+
 /*
  * Implements the get_locations RA layer function. */
 svn_error_t *
@@ -731,6 +758,24 @@ svn_ra_dav__get_locations (svn_ra_session_t *session,
                            svn_revnum_t peg_revision,
                            apr_array_header_t *location_revisions,
                            apr_pool_t *pool);
+
+
+/*
+ * Implements the get_locks RA layer function. */
+svn_error_t *
+svn_ra_dav__get_locks(svn_ra_session_t *session,
+                      apr_hash_t **locks,
+                      const char *path,
+                      apr_pool_t *pool);
+
+/*
+ * Implements the get_lock RA layer function. */
+svn_error_t *
+svn_ra_dav__get_lock(svn_ra_session_t *session,
+                     svn_lock_t **lock,
+                     const char *path,
+                     apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

@@ -32,6 +32,7 @@
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_dav.h"
+#include "svn_base64.h"
 
 #include "dav_svn.h"
 
@@ -44,6 +45,7 @@ static const dav_report_elem avail_reports[] = {
   { SVN_XML_NAMESPACE, "dated-rev-report" },
   { SVN_XML_NAMESPACE, "get-locations" },
   { SVN_XML_NAMESPACE, "file-revs-report" },
+  { SVN_XML_NAMESPACE, "get-locks-report" },
   { NULL },
 };
 
@@ -51,35 +53,57 @@ static const dav_report_elem avail_reports[] = {
 static dav_error *dav_svn_make_activity(dav_resource *resource);
 
 
-/* Helper: attach an auto-generated svn:log property to a txn within
-   an auto-checked-out working resource. */
-static dav_error *set_auto_log_message(dav_resource *resource)
+svn_error_t *dav_svn_attach_auto_revprops(svn_fs_txn_t *txn,
+                                          const char *fs_path,
+                                          apr_pool_t *pool)
 {
   const char *logmsg;
   svn_string_t *logval;
   svn_error_t *serr;
 
+  logmsg = apr_psprintf(pool,  
+                        "Autoversioning commit:  a non-deltaV client made "
+                        "a change to\n%s", fs_path);
+
+  logval = svn_string_create(logmsg, pool);
+  if ((serr = svn_repos_fs_change_txn_prop(txn, SVN_PROP_REVISION_LOG, logval,
+                                           pool)))
+    return serr;
+
+  /* Notate that this revision was created by autoversioning.  (Tools
+     like post-commit email scripts might not care to send an email
+     for every autoversioning change.) */
+  if ((serr = svn_repos_fs_change_txn_prop(txn,
+                                           SVN_PROP_REVISION_AUTOVERSIONED, 
+                                           svn_string_create("*", pool),
+                                           pool)))
+    return serr;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper: attach an auto-generated svn:log property to a txn within
+   an auto-checked-out working resource. */
+static dav_error *set_auto_revprops(dav_resource *resource)
+{
+  svn_error_t *serr;
+
   if (! (resource->type == DAV_RESOURCE_TYPE_WORKING
          && resource->info->auto_checked_out))
     return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                         "set_auto_log_message called on invalid resource.");
-  
-  logmsg = apr_psprintf(resource->pool, 
-                        "Autoversioning commit:  a non-deltaV client made "
-                        "a change to\n%s", resource->info->repos_path);
+                         "Set_auto_revprops called on invalid resource.");
 
-  logval = svn_string_create(logmsg, resource->pool);
-
-  serr = svn_repos_fs_change_txn_prop(resource->info->root.txn,
-                                      SVN_PROP_REVISION_LOG, logval,
-                                      resource->pool);
-  if (serr)
+  if ((serr = dav_svn_attach_auto_revprops(resource->info->root.txn,
+                                           resource->info->repos_path,
+                                           resource->pool)))
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Error setting auto-log-message on "
-                               "auto-checked-out resource's transaction.",
+                               "Error setting a revision property "
+                               " on auto-checked-out resource's txn. ",
                                resource->pool);
   return NULL;
 }
+
 
 static dav_error *open_txn(svn_fs_txn_t **ptxn, svn_fs_t *fs,
                            const char *txn_name, apr_pool_t *pool)
@@ -218,6 +242,7 @@ dav_error *dav_svn_checkout(dav_resource *resource,
 {
   const char *txn_name;
   svn_error_t *serr;
+  apr_status_t apr_err;
   dav_error *derr;
   dav_svn_uri_info parse;
 
@@ -227,6 +252,8 @@ dav_error *dav_svn_checkout(dav_resource *resource,
       dav_resource *res; /* ignored */
       apr_uuid_t uuid;
       char uuid_buf[APR_UUID_FORMATTED_LENGTH + 1];
+      void *data;
+      const char *shared_activity, *shared_txn_name = NULL;
 
       /* Baselines can be auto-checked-out -- grudgingly -- so we can
          allow clients to proppatch unversioned rev props.  See issue
@@ -256,46 +283,81 @@ dav_error *dav_svn_checkout(dav_resource *resource,
                                  SVN_DAV_ERROR_NAMESPACE,
                                  SVN_DAV_ERROR_TAG);
 
-      /* Come up with a unique activity name, put it in the resource. */
-      apr_uuid_get(&uuid);
-      apr_uuid_format(uuid_buf, &uuid);
-      resource->info->root.activity_id = uuid_buf;
+      /* See if the shared activity already exists. */
+      apr_err = apr_pool_userdata_get(&data,
+                                      DAV_SVN_AUTOVERSIONING_ACTIVITY,
+                                      resource->info->r->pool);
+      if (apr_err)
+        return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                                   HTTP_INTERNAL_SERVER_ERROR,
+                                   "Error fetching pool userdata.",
+                                   resource->pool);
+      shared_activity = data;
+
+      if (! shared_activity)
+        {
+          /* Build a shared activity for all auto-checked-out resources. */
+          apr_uuid_get(&uuid);
+          apr_uuid_format(uuid_buf, &uuid);
+          shared_activity = apr_pstrdup(resource->info->r->pool, uuid_buf);
+
+          derr = dav_svn_create_activity(resource->info->repos,
+                                         &shared_txn_name,
+                                         resource->info->r->pool);
+          if (derr) return derr;
+
+          derr = dav_svn_store_activity(resource->info->repos,
+                                        shared_activity, shared_txn_name);
+          if (derr) return derr;
+
+          /* Save the shared activity in r->pool for others to use. */         
+          apr_err = apr_pool_userdata_set(shared_activity,
+                                          DAV_SVN_AUTOVERSIONING_ACTIVITY,
+                                          NULL, resource->info->r->pool);
+          if (apr_err)
+            return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                                       HTTP_INTERNAL_SERVER_ERROR,
+                                       "Error setting pool userdata.",
+                                       resource->pool);
+        }
+
+      if (! shared_txn_name)
+        {                       
+          shared_txn_name = dav_svn_get_txn(resource->info->repos,
+                                            shared_activity);
+          if (! shared_txn_name)
+            return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                 "Cannot look up a txn_name by activity");
+        }
+
+      /* Tweak the VCR in-place, making it into a WR.  (Ignore the
+         NULL return value.) */
+      res = dav_svn_create_working_resource(resource,
+                                            shared_activity, shared_txn_name,
+                                            TRUE /* tweak in place */);
 
       /* Remember that this resource was auto-checked-out, so that
          dav_svn_auto_versionable allows us to do an auto-checkin and
          dav_svn_can_be_activity will allow this resource to be an
          activity. */
       resource->info->auto_checked_out = TRUE;
-
-      /* Create a txn based on youngest rev, and create an associated
-         activity id in the activity database. */
-      derr = dav_svn_make_activity(resource);
-      if (derr)
-        return derr;
-      
-      /* Tweak the VCR in-place, making it into a WR.  (Ignore the
-         NULL return value.) */
-      res = dav_svn_create_working_resource(resource, uuid_buf, 
-                                            resource->info->root.txn_name,
-                                            TRUE /* tweak in place */);
-
-      /* Finally, be sure to open the txn and txn_root in the
-         resource.  Normally we only get a PUT on a WR uri, and
-         prep_working() opens the txn automatically.  We need to make
-         sure this WR is in the exact same state, ready for a PUT. */
+        
+      /* The txn and txn_root must be open and ready to go in the
+         resource's root object.  Normally prep_resource() will do
+         this automatically on a WR's root object.  We're
+         converting a VCR to WR forcibly, so it's now our job to
+         make sure it happens. */
       derr = open_txn(&resource->info->root.txn, resource->info->repos->fs,
                       resource->info->root.txn_name, resource->pool);
-      if (derr)
-        return derr;
-
+      if (derr) return derr;
+      
       serr = svn_fs_txn_root(&resource->info->root.root,
                              resource->info->root.txn, resource->pool);
       if (serr != NULL)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "Could not open the (transaction) root "
-                                   "of the repository",
+                                   "Could not open a (transaction) root "
+                                   "in the repository",
                                    resource->pool);
-        
       return NULL;
     }
   /* end of Auto-Versioning Stuff */
@@ -595,6 +657,15 @@ static dav_error *dav_svn_uncheckout(dav_resource *resource)
     svn_error_clear(svn_fs_abort_txn(resource->info->root.txn,
                                      resource->pool));
 
+  /* Attempt to destroy the shared activity. */
+  if (resource->info->root.activity_id)
+    {
+      dav_svn_delete_activity(resource->info->repos,
+                              resource->info->root.activity_id);
+      apr_pool_userdata_set(NULL, DAV_SVN_AUTOVERSIONING_ACTIVITY,
+                            NULL, resource->info->r->pool);
+    }
+
   resource->info->root.txn_name = NULL;
   resource->info->root.txn = NULL;
 
@@ -701,7 +772,10 @@ dav_error *dav_svn_checkin(dav_resource *resource,
 {
   svn_error_t *serr;
   dav_error *err;
+  apr_status_t apr_err;
   const char *uri;
+  const char *shared_activity;
+  void *data;
 
   /* ### mod_dav has a flawed architecture, in the sense that it first
      tries to auto-checkin the modified resource, then attempts to
@@ -718,79 +792,113 @@ dav_error *dav_svn_checkin(dav_resource *resource,
                              SVN_DAV_ERROR_NAMESPACE,
                              SVN_DAV_ERROR_TAG);
 
+  /* If the global autoversioning activity still exists, that means
+     nobody's committed it yet. */
+  apr_err = apr_pool_userdata_get(&data,
+                                  DAV_SVN_AUTOVERSIONING_ACTIVITY,
+                                  resource->info->r->pool);
+  if (apr_err)
+    return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                               HTTP_INTERNAL_SERVER_ERROR,
+                               "Error fetching pool userdata.",
+                               resource->pool);
+  shared_activity = data;
+
   /* Try to commit the txn if it exists. */
-  if (resource->info->root.txn_name)
+  if (shared_activity
+      && (strcmp(shared_activity, resource->info->root.activity_id) == 0))
     {
-      svn_fs_txn_t *txn;
+      const char *shared_txn_name;
       const char *conflict_msg;
       svn_revnum_t new_rev;
 
-      err = open_txn(&txn, resource->info->repos->fs,
-                     resource->info->root.txn_name, resource->pool);
+      shared_txn_name = dav_svn_get_txn(resource->info->repos,
+                                        shared_activity);
+      if (! shared_txn_name)
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             "Cannot look up a txn_name by activity");
+
+      /* Sanity checks */
+      if (resource->info->root.txn_name
+          && (strcmp(shared_txn_name, resource->info->root.txn_name) != 0))
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             "Internal txn_name doesn't match"
+                             " autoversioning transaction.");
+     
+      if (! resource->info->root.txn)
+        /* should already be open by dav_svn_checkout */
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             "Autoversioning txn isn't open "
+                             "when it should be.");
       
-      /* If we failed to open the txn, don't worry about it.  It may
-         have already been committed when a child resource was
-         checked in.  */
-      if (! err)
+      err = set_auto_revprops(resource);
+      if (err)
+        return err;
+      
+      serr = svn_repos_fs_commit_txn(&conflict_msg,
+                                     resource->info->repos->repos,
+                                     &new_rev, 
+                                     resource->info->root.txn,
+                                     resource->pool);
+
+      if (serr != NULL)
         {
-          err = set_auto_log_message(resource);
-          if (err)
-            return err;
-
-          serr = svn_repos_fs_commit_txn(&conflict_msg,
-                                         resource->info->repos->repos,
-                                         &new_rev, 
-                                         resource->info->root.txn,
-                                         resource->pool);
-          if (serr != NULL)
+          const char *msg;
+          svn_error_clear(svn_fs_abort_txn(resource->info->root.txn,
+                                           resource->pool));
+          
+          if (serr->apr_err == SVN_ERR_FS_CONFLICT)
             {
-              const char *msg;
-              svn_error_clear(svn_fs_abort_txn(resource->info->root.txn,
-                                               resource->pool));
-              
-              if (serr->apr_err == SVN_ERR_FS_CONFLICT)
-                {
-                  msg = apr_psprintf(resource->pool,
-                                     "A conflict occurred during the CHECKIN "
-                                     "processing. The problem occurred with  "
-                                     "the \"%s\" resource.",
-                                     conflict_msg);
-                }
-              else
-                msg = "An error occurred while committing the transaction.";
-              
-              return dav_svn_convert_err(serr, HTTP_CONFLICT, msg,
-                                         resource->pool);
+              msg = apr_psprintf(resource->pool,
+                                 "A conflict occurred during the CHECKIN "
+                                 "processing. The problem occurred with  "
+                                 "the \"%s\" resource.",
+                                 conflict_msg);
             }
+          else
+            msg = "An error occurred while committing the transaction.";
 
-          /* Commit was successful, so schedule deltification. */
-          register_deltification_cleanup(resource->info->repos->repos,
-                                         new_rev,
-                                         resource->info->r->connection->pool);
-
-          /* If caller wants it, return the new VR that was created by
-             the checkin. */
-          if (version_resource)
-            {
-              uri = dav_svn_build_uri(resource->info->repos,
-                                      DAV_SVN_BUILD_URI_VERSION,
-                                      new_rev, resource->info->repos_path,
-                                      0, resource->pool);
-
-              err = dav_svn_create_version_resource(version_resource, uri,
-                                                    resource->pool);
-              if (err)
-                return err;
-            }
+          /* Attempt to destroy the shared activity. */
+          dav_svn_delete_activity(resource->info->repos, shared_activity);
+          apr_pool_userdata_set(NULL, DAV_SVN_AUTOVERSIONING_ACTIVITY,
+                                NULL, resource->info->r->pool);
+          
+          return dav_svn_convert_err(serr, HTTP_CONFLICT, msg,
+                                     resource->pool);
         }
 
-      /* whether the txn was committed, aborted, or inaccessible,
-         it's gone now.  the resource needs to lose all knowledge
-         of it. */
-      resource->info->root.txn_name = NULL;
-      resource->info->root.txn = NULL;
-    }
-
+      /* Attempt to destroy the shared activity. */
+      dav_svn_delete_activity(resource->info->repos, shared_activity);
+      apr_pool_userdata_set(NULL, DAV_SVN_AUTOVERSIONING_ACTIVITY,
+                            NULL, resource->info->r->pool);
+            
+      /* Commit was successful, so schedule deltification. */
+      register_deltification_cleanup(resource->info->repos->repos,
+                                     new_rev,
+                                     resource->info->r->connection->pool);
+      
+      /* If caller wants it, return the new VR that was created by
+         the checkin. */
+      if (version_resource)
+        {
+          uri = dav_svn_build_uri(resource->info->repos,
+                                  DAV_SVN_BUILD_URI_VERSION,
+                                  new_rev, resource->info->repos_path,
+                                  0, resource->pool);
+          
+          err = dav_svn_create_version_resource(version_resource, uri,
+                                                resource->pool);
+          if (err)
+            return err;
+        }
+    } /* end of commit stuff */
+  
+  /* The shared activity was either nonexistent to begin with, or it's
+     been committed and is only now nonexistent.  The resource needs
+     to forget about it. */
+  resource->info->root.txn_name = NULL;
+  resource->info->root.txn = NULL;
+ 
   /* Convert the working resource back into an regular one. */
   if (! keep_checked_out)
     {
@@ -891,6 +999,185 @@ static dav_error * dav_svn__drev_report(const dav_resource *resource,
 
   return derr;
 }
+
+
+/* Respond to a get-locks-report request.  See description of this
+   report in libsvn_ra_dav/fetch.c.  */
+static dav_error * dav_svn__get_locks_report(const dav_resource *resource,
+                                             const apr_xml_doc *doc,
+                                             ap_filter_t *output)
+{
+  apr_bucket_brigade *bb;
+  svn_error_t *err;
+  apr_status_t apr_err;
+  apr_hash_t *locks;
+  dav_svn_authz_read_baton arb;
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool;
+
+  /* The request URI should be a public one representing an fs path. */
+  if ((! resource->info->repos_path)
+      || (! resource->info->repos->repos))
+    return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+                         "get-locks-report run on resource which doesn't "
+                         "represent a path within a repository.");
+
+  arb.r = resource->info->r;
+  arb.repos = resource->info->repos;
+
+  /* Fetch the locks, but allow authz_read checks to happen on each. */
+  if ((err = svn_repos_fs_get_locks(&locks,
+                                    resource->info->repos->repos,
+                                    resource->info->repos_path,
+                                    dav_svn_authz_read, &arb,
+                                    resource->pool)) != SVN_NO_ERROR)
+    return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                               err->message, resource->pool);      
+
+  bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+
+  /* start sending report */
+  apr_err = ap_fprintf(output, bb,
+                       DAV_XML_HEADER DEBUG_CR
+                       "<S:get-locks-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+                       "xmlns:D=\"DAV:\">" DEBUG_CR);
+  if (apr_err)
+    return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                               HTTP_INTERNAL_SERVER_ERROR,
+                               "Error writing REPORT response.",
+                               resource->pool);
+
+  /* stream the locks */
+  subpool = svn_pool_create(resource->pool);
+  for (hi = apr_hash_first(resource->pool, locks); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const svn_lock_t *lock;
+      const char *path_quoted, *token_quoted;
+      const char *creation_str, *expiration_str;
+      const char *owner_to_send, *comment_to_send;
+      svn_boolean_t owner_base64 = FALSE, comment_base64 = FALSE;
+
+      svn_pool_clear(subpool);
+      apr_hash_this(hi, &key, NULL, &val);
+      lock = val;
+      
+      path_quoted = apr_xml_quote_string(subpool, lock->path, 1);
+      token_quoted = apr_xml_quote_string(subpool, lock->token, 1);
+      creation_str = svn_time_to_cstring(lock->creation_date, subpool);
+
+      apr_err = ap_fprintf(output, bb,
+                           "<S:lock>" DEBUG_CR
+                           "<S:path>%s</S:path>" DEBUG_CR
+                           "<S:token>%s</S:token>" DEBUG_CR
+                           "<S:creationdate>%s</S:creationdate>" DEBUG_CR,
+                           path_quoted, token_quoted, creation_str);
+      if (apr_err)
+        return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                                   HTTP_INTERNAL_SERVER_ERROR,
+                                   "Error writing REPORT response.",
+                                   resource->pool);
+      
+      if (lock->expiration_date)
+        {
+          expiration_str = svn_time_to_cstring(lock->expiration_date, subpool);
+          apr_err = ap_fprintf(output, bb,
+                               "<S:expirationdate>%s</S:expirationdate>"
+                               DEBUG_CR, expiration_str);
+          if (apr_err)
+            return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                                       HTTP_INTERNAL_SERVER_ERROR,
+                                       "Error writing REPORT response.",
+                                       resource->pool);
+        }
+
+      if (svn_xml_is_xml_safe(lock->owner, strlen(lock->owner)))
+        {
+          owner_to_send = apr_xml_quote_string(subpool, lock->owner, 1);
+        }
+      else
+        {
+          svn_string_t owner_string;
+          const svn_string_t *encoded_owner;
+
+          owner_string.data = lock->owner;
+          owner_string.len = strlen(lock->owner);         
+          encoded_owner = svn_base64_encode_string(&owner_string, subpool);
+          owner_to_send = encoded_owner->data;
+          owner_base64 = TRUE;
+        }
+          
+      apr_err = ap_fprintf(output, bb,
+                           "<S:owner %s>%s</S:owner>" DEBUG_CR,
+                           owner_base64 ? "encoding=\"base64\"" : "",
+                           owner_to_send);
+      if (apr_err)
+        return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                                   HTTP_INTERNAL_SERVER_ERROR,
+                                   "Error writing REPORT response.",
+                                   resource->pool);          
+
+      if (lock->comment)
+        {
+          if (svn_xml_is_xml_safe(lock->comment, strlen(lock->comment)))
+            {
+              comment_to_send = apr_xml_quote_string(subpool,
+                                                     lock->comment, 1);
+            }
+          else
+            {
+              svn_string_t comment_string;
+              const svn_string_t *encoded_comment;
+              
+              comment_string.data = lock->comment;
+              comment_string.len = strlen(lock->comment);         
+              encoded_comment = svn_base64_encode_string(&comment_string,
+                                                         subpool);
+              comment_to_send = encoded_comment->data;
+              comment_base64 = TRUE;
+            }
+
+          apr_err = ap_fprintf(output, bb,
+                               "<S:comment %s>%s</S:comment>" DEBUG_CR,
+                               comment_base64 ? "encoding=\"base64\"" : "",
+                               comment_to_send);
+          if (apr_err)
+            return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                                       HTTP_INTERNAL_SERVER_ERROR,
+                                       "Error writing REPORT response.",
+                                       resource->pool);
+        }
+          
+      apr_err = ap_fprintf(output, bb, "</S:lock>" DEBUG_CR);
+      if (apr_err)
+        return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                                   HTTP_INTERNAL_SERVER_ERROR,
+                                   "Error writing REPORT response.",
+                                   resource->pool);
+    } /* end of hash loop */
+  svn_pool_destroy(subpool);
+
+  /* finish the report */
+  apr_err = ap_fprintf(output, bb, "</S:get-locks-report>" DEBUG_CR);
+  if (apr_err)
+    return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                               HTTP_INTERNAL_SERVER_ERROR,
+                               "Error writing REPORT response.",
+                               resource->pool);
+
+  /* Flush the contents of the brigade (returning an error only if we
+     don't already have one). */
+  if ((apr_err = ap_fflush(output, bb)))
+    return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                               HTTP_INTERNAL_SERVER_ERROR,
+                               "Error flushing brigade.",
+                               resource->pool);
+
+  return NULL;
+}
+
+
 
 static apr_status_t send_get_locations_report(ap_filter_t *output,
                                               apr_bucket_brigade *bb,
@@ -1070,6 +1357,11 @@ static dav_error *dav_svn_deliver_report(request_rec *r,
         {
           return dav_svn__file_revs_report(resource, doc, output);
         }
+      else if (strcmp(doc->root->name, "get-locks-report") == 0)
+        {
+          return dav_svn__get_locks_report(resource, doc, output);
+        }
+
       /* NOTE: if you add a report, don't forget to add it to the
        *       avail_reports[] array at the top of this file.
        */
@@ -1125,6 +1417,158 @@ static dav_error *dav_svn_make_activity(dav_resource *resource)
   return NULL;
 }
 
+
+
+/* -------------------------------------------------------------------- */
+
+/* Helper for dav_svn_merge().  Return a hash that maps (const char *)
+   absolute fs paths to (const char *) locktokens.  Allocate the hash
+   and all keys/vals in POOL.  PATH_PREFIX is the prefix we need to
+   prepend to each relative 'lock-path' in the xml in order to create
+   an absolute fs-path.
+*/
+static dav_error *build_lock_hash(apr_hash_t **locks,
+                                  request_rec *r,
+                                  const char *path_prefix,
+                                  apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  dav_error *derr;
+  void *data = NULL;
+  apr_xml_doc *doc = NULL;
+  apr_xml_elem *child, *lockchild;
+  int ns;
+  apr_hash_t *hash = apr_hash_make(pool);
+  
+  /* Grab the MERGE body out of r->pool, as it contains all of the
+     lock tokens.  It should have been stashed already by our custom
+     input filter. */
+  apr_err = apr_pool_userdata_get(&data, "svn-merge-body", r->pool);
+  if (apr_err)
+    return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                               HTTP_INTERNAL_SERVER_ERROR,
+                               "Error fetching pool userdata.",
+                               pool);
+  doc = data;
+  if (! doc)
+    {
+      *locks = hash;
+      return SVN_NO_ERROR;
+    }
+  
+  /* Sanity check. */
+  ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
+  if (ns == -1)
+    {
+      return dav_new_error_tag(pool, HTTP_BAD_REQUEST, 0,
+                               "The request does not contain the 'svn:' "
+                               "namespace, so it is not going to have certain "
+                               "required elements.",
+                               SVN_DAV_ERROR_NAMESPACE,
+                               SVN_DAV_ERROR_TAG);
+    }
+
+  /* Search all the doc's children until we find the <lock-token-list>. */
+  for (child = doc->root->first_child; child != NULL; child = child->next)
+    {
+      /* if this element isn't one of ours, then skip it */
+      if (child->ns != ns)
+        continue;
+
+      if (strcmp(child->name, "lock-token-list") == 0)
+        break;
+    }
+
+  /* Then look for N different <lock> structures within. */
+  for (lockchild = child->first_child; lockchild != NULL;
+       lockchild = lockchild->next)
+    {
+      if (strcmp(lockchild->name, "lock") == 0)
+        {
+          const char *lockpath = NULL, *locktoken = NULL;
+          apr_xml_elem *lfchild;
+          
+          for (lfchild = lockchild->first_child; lfchild != NULL;
+               lfchild = lfchild->next)
+            {
+              if (strcmp(lfchild->name, "lock-path") == 0)
+                {
+                  if (lfchild->first_cdata.first)
+                    {
+                      if ((derr = dav_svn__test_canonical
+                           (lfchild->first_cdata.first->text, pool)))
+                        return derr;
+
+                      /* Create an absolute fs-path */
+                      lockpath = 
+                        svn_path_join(path_prefix,
+                                      lfchild->first_cdata.first->text,
+                                      pool);
+                      
+                      if (lockpath && locktoken)
+                        {
+                          apr_hash_set(hash, lockpath,
+                                       APR_HASH_KEY_STRING, locktoken);
+                          lockpath = NULL;
+                          locktoken = NULL;
+                        }
+                    }
+                }
+              else if (strcmp(lfchild->name, "lock-token") == 0)
+                {
+                  if (lfchild->first_cdata.first)
+                    {
+                      locktoken = 
+                        apr_pstrdup(pool,
+                                    lfchild->first_cdata.first->text);
+                      
+                      if (lockpath && locktoken)
+                        {
+                          apr_hash_set(hash, lockpath,
+                                       APR_HASH_KEY_STRING, locktoken);
+                          lockpath = NULL;
+                          locktoken = NULL;
+                        }
+                    }
+                }
+            }
+        }
+    }
+  
+  *locks = hash;
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper for dav_svn_merge().  Free every lock in LOCKS.  The locks
+   live in REPOS.  Use POOL for temporary work.*/
+static svn_error_t *release_locks(apr_hash_t *locks,
+                                  svn_repos_t *repos,
+                                  apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  const void *key;
+  void *val;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
+    {
+      svn_pool_clear(subpool);
+      apr_hash_this(hi, &key, NULL, &val);
+
+      /* The lock may be stolen or broken sometime between
+         svn_fs_commit_txn() and this post-commit cleanup.  So ignore
+         any errors from this command; just free as many locks as we can. */
+      svn_repos_fs_unlock(repos, key, val, FALSE, subpool);
+    }
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+
 static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
                                 int no_auto_merge, int no_checkout,
                                 apr_xml_elem *prop_elem,
@@ -1136,6 +1580,7 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
   const char *conflict;
   svn_error_t *serr;
   svn_revnum_t new_rev;
+  apr_hash_t *locks;
   svn_boolean_t disable_merge_response = FALSE;
 
   /* We'll use the target's pool for our operation. We happen to know that
@@ -1153,6 +1598,54 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
                                "as the source [at this time].",
                                SVN_DAV_ERROR_NAMESPACE,
                                SVN_DAV_ERROR_TAG);
+    }
+
+  /* Before attempting the final commit, we need to push any incoming
+     lock-tokens into the filesystem's access_t.   Normally they come
+     in via 'If:' header, and dav_svn_get_resource() automatically
+     notices them and does this work for us.  In the case of MERGE,
+     however, svn clients are sending them in the request body. */
+
+  err = build_lock_hash(&locks, target->info->r,
+                        target->info->repos_path,
+                        pool);
+  if (err != NULL)
+    return err;
+
+  if (apr_hash_count(locks))
+    {
+      svn_fs_access_t *fsaccess;
+      apr_hash_index_t *hi;
+
+      serr = svn_fs_get_access (&fsaccess, source->info->repos->fs);
+      if (serr)
+        {
+          /* If an authenticated username was attached to the MERGE
+             request, then dav_svn_get_resource() should have already
+             noticed and created an fs_access_t in the filesystem.  */
+          const char *new_msg = "Lock token(s) in request, but no username.";
+          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
+                                                          NULL, new_msg);
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, source->info->r,
+                        "%s", serr->message);
+          svn_error_clear(serr);
+          return dav_svn_convert_err (sanitized_error, HTTP_BAD_REQUEST,
+                                      apr_psprintf(pool, new_msg), pool);
+        }
+      
+      for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
+        {
+          const char *token;
+          void *val;
+          apr_hash_this(hi, NULL, NULL, &val);
+          token = val;
+
+          serr = svn_fs_access_add_lock_token (fsaccess, token);
+          if (serr)
+            return dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
+                                        "Error pushing token into filesystem.",
+                                        pool);
+        }
     }
 
   /* We will ignore no_auto_merge and no_checkout. We can't do those, but the
@@ -1212,10 +1705,22 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
 
   /* Check the dav_resource->info area for information about the
      special X-SVN-Options: header that may have come in the http
-     request.  If the header contains "no-merge-response", then pass
-     the correct boolean value to the routine below. */
+     request. */
   if (source->info->svn_client_options != NULL)
     {
+      /* The client might want us to release all locks sent in the
+         MERGE request. */
+      if ((NULL != (ap_strstr_c(source->info->svn_client_options,
+                                SVN_DAV_OPTION_RELEASE_LOCKS)))
+          && apr_hash_count(locks))
+        {
+          serr = release_locks(locks, source->info->repos->repos, pool);
+          if (serr != NULL)
+            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                       "Error releasing locks", pool);
+        }
+
+      /* The client might want us to disable the merge response altogether. */
       if (NULL != (ap_strstr_c(source->info->svn_client_options,
                                SVN_DAV_OPTION_NO_MERGE_RESPONSE)))
         disable_merge_response = TRUE;

@@ -1118,6 +1118,34 @@ dav_svn_split_uri(request_rec *r,
 }
 
 
+
+/* Context for cleanup handler. */
+struct cleanup_fs_access_baton
+{
+  svn_fs_t *fs;
+  apr_pool_t *pool;
+};
+
+/* Pool cleanup handler.  Make sure fs's access ctx points to NULL
+   when request pool is destroyed. */
+static apr_status_t cleanup_fs_access(void *data)
+{
+  svn_error_t *serr;
+  struct cleanup_fs_access_baton *baton = data;
+  
+  serr = svn_fs_set_access (baton->fs, NULL);
+  if (serr)
+    {
+      ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err, baton->pool,
+                    "cleanup_fs_access: error clearing fs access context.");
+      svn_error_clear(serr);
+    }
+
+  return APR_SUCCESS;
+}
+
+
+
 static dav_error * dav_svn_get_resource(request_rec *r,
                                         const char *root_path,
                                         const char *label,
@@ -1139,6 +1167,8 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   svn_error_t *serr;
   dav_error *err;
   int had_slash;
+  dav_locktoken_list *ltl;
+  struct cleanup_fs_access_baton *cleanup_baton;
 
   repo_name = dav_svn_get_repo_name(r);
   xslt_uri = dav_svn_get_xslt_uri(r);
@@ -1243,6 +1273,13 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* Remember who is making this request */
   repos->username = r->user;
 
+  /* Remember if the requesting client is a Subversion client */
+  {
+    const char *ua = apr_table_get(r->headers_in, "User-Agent");
+    if (ua && (ap_strstr_c(ua, "SVN/") == ua))
+      repos->is_svn_client = TRUE;
+  }
+  
   /* Retrieve/cache open repository */
   repos_key = apr_pstrcat(r->pool, "mod_dav_svn:", fs_path, NULL);
   apr_pool_userdata_get((void **)&repos->repos, repos_key, r->connection->pool);
@@ -1281,6 +1318,98 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 
   /* capture warnings during cleanup of the FS */
   svn_fs_set_warning_func(repos->fs, log_warning, r);
+
+  /* if an authenticated username is present, attach it to the FS */
+  if (r->user)
+    {
+      svn_fs_access_t *access_ctx;
+
+      /* The fs is cached in connection->pool, but the fs access
+         context lives in r->pool.  Because the username or token
+         could change on each request, we need to make sure that the
+         fs points to a NULL access context after the request is gone. */
+      cleanup_baton = apr_pcalloc(r->pool, sizeof(*cleanup_baton));
+      cleanup_baton->pool = r->pool;
+      cleanup_baton->fs = repos->fs;      
+      apr_pool_cleanup_register(r->pool, cleanup_baton, cleanup_fs_access,
+                                apr_pool_cleanup_null);      
+      
+      /* Create an access context based on the authenticated username. */
+      serr = svn_fs_create_access (&access_ctx, r->user, r->pool);
+      if (serr)
+        {
+          const char *new_msg = "Could not create fs access context";
+          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
+                                                          NULL, new_msg);
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                        "%s", serr->message);
+          svn_error_clear(serr);
+          return dav_svn_convert_err (sanitized_error,
+                                      HTTP_INTERNAL_SERVER_ERROR,
+                                      apr_psprintf(r->pool, new_msg),
+                                      r->pool);
+        }
+
+      /* Attach the access context to the fs. */
+      serr = svn_fs_set_access (repos->fs, access_ctx);
+      if (serr)
+        {
+          const char *new_msg = "Could not attach access context to fs";
+          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
+                                                          NULL, new_msg);
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                        "%s", serr->message);
+          svn_error_clear(serr);
+          return dav_svn_convert_err (sanitized_error,
+                                      HTTP_INTERNAL_SERVER_ERROR,
+                                      apr_psprintf(r->pool, new_msg),
+                                      r->pool);
+        }
+    }
+
+  /* Look for locktokens in the "If:" request header. */
+  err = dav_get_locktoken_list(r, &ltl);
+  
+  /* ### dav_get_locktoken_list claims to return a NULL list when no
+     locktokens are present.  But it actually throws this error
+     instead!  So we're deliberately trapping/ignoring it.  */
+  if (err && (err->error_id != DAV_ERR_IF_ABSENT))
+    return err;
+
+  /* If one or more locktokens are present in the header, push them
+     into the filesystem access context. */
+  if (ltl)
+    {
+      svn_fs_access_t *access_ctx;
+      dav_locktoken_list *list = ltl;
+
+      serr = svn_fs_get_access (&access_ctx, repos->fs);
+      if (serr)
+        {
+          const char *new_msg = "Lock token is in request, but no username.";
+          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
+                                                          NULL, new_msg);
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                        "%s", serr->message);
+          svn_error_clear(serr);
+          return dav_svn_convert_err (sanitized_error,
+                                      HTTP_BAD_REQUEST,
+                                      apr_psprintf(r->pool, new_msg),
+                                      r->pool);
+        }
+
+      do {
+        serr = svn_fs_access_add_lock_token (access_ctx,
+                                             list->locktoken->uuid_str);
+        if (serr)
+          return dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Error pushing token into filesystem.",
+                                      r->pool);
+        list = list->next;
+
+      } while (list);
+    }
+
 
   /* Figure out the type of the resource. Note that we have a PARSE step
      which is separate from a PREP step. This is because the PARSE can
@@ -1339,9 +1468,37 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                        "software.");
 }
 
+
+/* Helper func:  return the parent of PATH, allocated in POOL. */
+static const char *get_parent_path(const char *path,
+                                   apr_pool_t *pool)
+{
+  apr_size_t len;
+  const char *parentpath, *base_name;
+  char *tmp = apr_pstrdup(pool, path);
+
+  len = strlen(tmp);
+
+  if (len > 0)
+    {
+      /* Remove any trailing slash; else svn_path_split() asserts. */
+      if (tmp[len-1] == '/')
+        tmp[len-1] = '\0';      
+      svn_path_split(tmp, &parentpath, &base_name, pool);
+
+      /* ### preserve the slash on the parent?? */
+      return parentpath;
+    }  
+
+  return path;
+}
+
+
 static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
                                                dav_resource **parent_resource)
 {
+  dav_resource *parent;
+  dav_resource_private *parentinfo;
   svn_stringbuf_t *path = resource->info->uri_path;
 
   /* the root of the repository has no parent */
@@ -1353,8 +1510,35 @@ static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
 
   switch (resource->type)
     {
-    case DAV_RESOURCE_TYPE_WORKING:
     case DAV_RESOURCE_TYPE_REGULAR:
+
+      parent = apr_pcalloc(resource->pool, sizeof(*parent));
+      parentinfo  = apr_pcalloc(resource->pool, sizeof(*parentinfo));
+
+      parent->type = DAV_RESOURCE_TYPE_REGULAR;
+      parent->exists = 1;
+      parent->collection = 1;
+      parent->versioned = 1;
+      parent->hooks = resource->hooks;
+      parent->pool = resource->pool;
+      parent->uri = get_parent_path(resource->uri, resource->pool);
+      parent->info = parentinfo;
+
+      parentinfo->pool = resource->info->pool;
+      parentinfo->uri_path = 
+        svn_stringbuf_create(get_parent_path(resource->info->uri_path->data,
+                                             resource->pool), resource->pool);
+      parentinfo->repos = resource->info->repos;
+      parentinfo->root = resource->info->root;
+      parentinfo->r = resource->info->r;
+      parentinfo->svn_client_options = resource->info->svn_client_options;
+      parentinfo->repos_path = get_parent_path(resource->info->repos_path,
+                                               resource->pool);
+
+      *parent_resource = parent;
+      break;
+
+    case DAV_RESOURCE_TYPE_WORKING:
       /* The "/" occurring within the URL of working resources is part of
          its identifier; it does not establish parent resource relationships.
          All working resources have the same parent, which is:
@@ -2411,9 +2595,10 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
   if (!serr)
     {
       if (strcmp(src_repos_path, dst_repos_path) != 0)
-        return dav_new_error
+        return dav_new_error_tag
           (dst->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-           "Copy source and destination are in different repositories.");
+           "Copy source and destination are in different repositories.",
+           SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
       serr = svn_fs_copy(src->info->root.root,  /* root object of src rev*/
                          src->info->repos_path, /* relative path of src */
                          dst->info->root.root,  /* root object of dst txn*/ 
@@ -2717,7 +2902,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
             return err;
 
           /* restore the data */
-          ctx->res.collection = 0;
+          ctx->res.collection = FALSE;
         }
 
       /* chop the child off the paths and uri. NOTE: no null-term. */
@@ -2725,13 +2910,19 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       ctx->uri->len = uri_len;
       ctx->repos_path->len = repos_len;
     }
-
   return NULL;
 }
 
 static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
                                 dav_response **response)
 {
+  /* ### Thinking about adding support for LOCKNULL resources in this
+         walker?  Check out the (working) code that was removed here:
+              Author: cmpilato
+              Date: Fri Mar 18 14:54:02 2005
+              New Revision: 13475
+     ### */
+
   dav_svn_walker_context ctx = { 0 };
   dav_error *err;
 

@@ -76,6 +76,8 @@ typedef struct
   DB *strings;
   DB *transactions;
   DB *uuids;
+  DB *locks;
+  DB *lock_tokens;
 
   /* A boolean for tracking when we have a live Berkeley DB
      transaction trail alive. */
@@ -307,6 +309,19 @@ typedef struct
   svn_boolean_t prop_mod;
 
 } change_t;
+
+
+/*** Lock node ***/
+typedef struct
+{
+  /* entries list, maps (const char *) name --> (const char *) lock-node-id */
+  apr_hash_t *entries;
+
+  /* optional lock-token, might be NULL. */
+  const char *lock_token;
+
+} lock_node_t;
+
 
 
 #ifdef __cplusplus

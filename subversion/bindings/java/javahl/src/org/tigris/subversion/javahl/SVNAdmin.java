@@ -101,7 +101,8 @@ public class SVNAdmin
      * @param end               end revision
      * @throws ClientException  throw in case of problem
      */
-    public native void deltify(String path, Revision start, Revision end) throws ClientException;
+    public native void deltify(String path, Revision start, Revision end)
+            throws ClientException;
     /**
      * dump the data in a repository
      * @param path              the path to the repository
@@ -112,16 +113,20 @@ public class SVNAdmin
      * @param incremental       the dump will be incremantal
      * @throws ClientException  throw in case of problem
      */
-    public native void dump(String path, OutputInterface dataOut, OutputInterface errorOut, Revision start, Revision end,
-                            boolean incremental) throws ClientException;
+    public native void dump(String path, OutputInterface dataOut,
+                            OutputInterface errorOut, Revision start,
+                            Revision end, boolean incremental)
+            throws ClientException;
     /**
      * make a hot copy of the repository
      * @param path              the path to the source repository
      * @param targetPath        the path to the target repository
-     * @param cleanLogs         clean the unused log files in the source repository
+     * @param cleanLogs         clean the unused log files in the source
+     *                          repository
      * @throws ClientException  throw in case of problem
      */
-    public native void hotcopy(String path, String targetPath, boolean cleanLogs) throws ClientException;
+    public native void hotcopy(String path, String targetPath,
+                               boolean cleanLogs) throws ClientException;
 
     /**
      * list all logfiles (BDB) in use or not)
@@ -129,14 +134,16 @@ public class SVNAdmin
      * @param receiver          interface to receive the logfile names
      * @throws ClientException  throw in case of problem
      */
-    public native void listDBLogs(String path, MessageReceiver receiver) throws ClientException;
+    public native void listDBLogs(String path, MessageReceiver receiver)
+            throws ClientException;
     /**
      * list unused logfiles
      * @param path              the path to the repository
      * @param receiver          interface to receive the logfile names
      * @throws ClientException  throw in case of problem
      */
-    public native void listUnusedDBLogs(String path, MessageReceiver receiver) throws ClientException;
+    public native void listUnusedDBLogs(String path, MessageReceiver receiver)
+            throws ClientException;
 
     /**
      * interface to receive the messages
@@ -155,13 +162,16 @@ public class SVNAdmin
      * @param dataInput         the data input source
      * @param messageOutput     the target for processing messages
      * @param ignoreUUID        ignore any UUID found in the input stream
-     * @param forceUUID         set the repository UUID to any found in the stream
-     * @param relativePath      the directory in the repository, where the data in put
-     *                          optional.
+     * @param forceUUID         set the repository UUID to any found in the
+     *                          stream
+     * @param relativePath      the directory in the repository, where the data
+     *                          in put optional.
      * @throws ClientException  throw in case of problem
      */
-    public native void load(String path, InputInterface dataInput, OutputInterface messageOutput, boolean ignoreUUID,
-                            boolean forceUUID, String relativePath) throws ClientException;
+    public native void load(String path, InputInterface dataInput,
+                            OutputInterface messageOutput, boolean ignoreUUID,
+                            boolean forceUUID, String relativePath)
+            throws ClientException;
 
     /**
      * list all open transactions in a repository
@@ -169,7 +179,8 @@ public class SVNAdmin
      * @param receiver          receives one transaction name per call
      * @throws ClientException  throw in case of problem
      */
-    public native void lstxns(String path, MessageReceiver receiver) throws ClientException;
+    public native void lstxns(String path, MessageReceiver receiver)
+            throws ClientException;
     /**
      * recover the berkeley db of a repostory, returns youngest revision
      * @param path              the path to the repository
@@ -182,7 +193,8 @@ public class SVNAdmin
      * @param transactions      the transactions to be removed
      * @throws ClientException  throw in case of problem
      */
-    public native void rmtxns(String path, String [] transactions) throws ClientException;
+    public native void rmtxns(String path, String [] transactions)
+            throws ClientException;
     /**
      * set the log message of a revision
      * @param path              the path to the repository
@@ -191,7 +203,8 @@ public class SVNAdmin
      * @param bypassHooks       if to bypass all repository hooks
      * @throws ClientException  throw in case of problem
      */
-    public native void setLog(String path, Revision rev, String message, boolean bypassHooks)
+    public native void setLog(String path, Revision rev, String message,
+                              boolean bypassHooks)
             throws ClientException;
     /**
      * verify the repository
@@ -201,5 +214,14 @@ public class SVNAdmin
      * @param end               the last revision
      * @throws ClientException  throw in case of problem
      */
-    public native void verify(String path,  OutputInterface messageOut, Revision start, Revision end) throws ClientException;
+    public native void verify(String path,  OutputInterface messageOut,
+                              Revision start, Revision end)
+            throws ClientException;
+
+    /**
+     * List all locks in the repository
+     * @param path              the path to the repository
+     * @throws ClientException  throw in case of problem
+     */ 
+    public native Lock[] lslocks(String path) throws ClientException;
 }

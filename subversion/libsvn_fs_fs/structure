@@ -31,12 +31,15 @@ Layout of the FS directory
 The layout of the FS directory (the "db" subdirectory of the
 repository) is:
 
-  revs          Subdirectory containing revs
-   <revnum>      File containing rev <revnum>
-  revprops      Subdirectory containing rev-props
-   <revnum>      File containing rev-props for <revnum>
-  transactions  Subdirectory containing transactions
-   <txnid>.txn   Directory containing transaction <txnid>
+  revs                Subdirectory containing revs
+    <revnum>          File containing rev <revnum>
+  revprops            Subdirectory containing rev-props
+    <revnum>          File containing rev-props for <revnum>
+  transactions        Subdirectory containing transactions
+    <txnid>.txn       Directory containing transaction <txnid>
+  locks               Subdirectory containing locks
+    partial-digest    Subdirectory named for first 3 letters of an MD5 digest
+      <digest>        File containing locks/children for path with <digest>
   current       File specifying current revision
   write-lock    Lockfile for commits
 
@@ -152,7 +155,7 @@ in the form of a dumped hash map mapping property names to property
 values.
 
 The marshalling syntax for node-revs is a series of fields terminated
-by a blank line.  Fields havethe syntax "<name>: <value>\n", where
+by a blank line.  Fields have the syntax "<name>: <value>\n", where
 <name> is a symbolic field name (each symbolic name is used only once
 in a given node-rev) and <value> is the value data.  Unrecognized
 fields are ignored, for extensibility.  The following fields are
@@ -212,7 +215,7 @@ Transaction layout
 
 A transaction directory has the following layout:
 
-  rev                        Protype rev file with new text reps
+  rev                        Prototype rev file with new text reps
   props                      Transaction props
   next-ids                   Next temporary node-ID and copy-ID
   changes                    Changed-path information so far
@@ -256,3 +259,31 @@ follows:
 
   * The "copyroot" field may have the value "-1 <created-path>" if the
     copy root of the node-rev is part of the transaction in process.
+
+Locks layout
+------------------
+
+Locks in FSFS are stored in serialized hash format in files whose
+names are MD5 digests of the FS path which the lock is associated
+with.  For the purposes of keeping directory inode usage down, these
+digest files live in subdirectories of the main lock directory whose
+names are the first 3 characters of the digest filename.
+
+Also stored in the digest file for a given FS path are pointers to
+other digest files which contain information associated with other FS
+paths that are our path's immediate children.
+
+To answer the question, "Does path FOO have a lock associate with
+it?", one need only generate the MD5 digest of FOO's
+absolute-in-the-FS path (say, 3b1b011fed614a263986b5c4869604e8), lock
+for a file located like so:
+
+   /path/to/repos/locks/3b1/3b1b011fed614a263986b5c4869604e8
+
+And then see if that file contains lock information.
+
+To inquire about locks on children of the path FOO, you would
+reference the same path as above, but look for a list of children in
+that file (instead of lock information).  Children as listed as MD5
+digests, too, so you would simply iterate over those digests and
+consult the files they reference, and so on, recursively.

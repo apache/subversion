@@ -38,6 +38,7 @@ struct status_baton
   svn_boolean_t detailed;
   svn_boolean_t show_last_committed;
   svn_boolean_t skip_unrecognized;
+  svn_boolean_t repos_locks;
   apr_pool_t *pool;
 
   svn_boolean_t had_print_error;  /* To avoid printing lots of errors if we get
@@ -56,7 +57,8 @@ print_status (void *baton,
   
   err = svn_cl__print_status (path, status, sb->detailed,
                               sb->show_last_committed,
-                              sb->skip_unrecognized, sb->pool);
+                              sb->skip_unrecognized, sb->repos_locks,
+                              sb->pool);
 
   if (err)
     {
@@ -116,6 +118,7 @@ svn_cl__status (apr_getopt_t *os,
       sb.detailed = (opt_state->verbose || opt_state->update);
       sb.show_last_committed = opt_state->verbose;
       sb.skip_unrecognized = opt_state->quiet;
+      sb.repos_locks = opt_state->update;
       sb.pool = subpool;
       SVN_ERR (svn_client_status2 (NULL, target, &rev, print_status, &sb,
                                    opt_state->nonrecursive ? FALSE : TRUE,
