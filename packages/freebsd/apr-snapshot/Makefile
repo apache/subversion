@@ -19,22 +19,20 @@ BUILD_DEPENDS=	autoconf:${PORTSDIR}/devel/autoconf \
 
 GNU_CONFIGURE=	yes
 
-WRKSRC=		${WRKDIR}
-
 pre-configure:
-	(cd ${WRKSRC}/apr/ && ./buildconf)
-	(cd ${WRKSRC}/apr-util/ && ./buildconf)
+	(cd ${WRKDIR}/apr/ && ./buildconf)
+	(cd ${WRKDIR}/apr-util/ && ./buildconf)
 
 do-configure:
-	(cd ${WRKSRC}/apr/ && ./configure)
-	(cd ${WRKSRC}/apr-util/ && ./configure --with-apr=../apr/)
+	(cd ${WRKDIR}/apr/ && ./configure --prefix=${PREFIX})
+	(cd ${WRKDIR}/apr-util/ && ./configure --prefix=${PREFIX} --with-apr=../apr/)
 
 do-build:
-	(cd ${WRKSRC}/apr/ && make)
-	(cd ${WRKSRC}/apr-util/ && make)
+	(cd ${WRKDIR}/apr/ && make)
+	(cd ${WRKDIR}/apr-util/ && make)
 
 do-install:
-	(cd ${WRKSRC}/apr/ && make install)
-	(cd ${WRKSRC}/apr-util/ && make install)
+	(cd ${WRKDIR}/apr/ && make install)
+	(cd ${WRKDIR}/apr-util/ && make install)
 
 .include <bsd.port.mk>
