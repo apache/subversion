@@ -49,7 +49,6 @@ typedef struct {
 
 static int validate_element(hip_xml_elmid parent, hip_xml_elmid child)
 {
-  printf("validate: parent=%d child=%d\n", parent, child);
   switch (parent)
     {
     case HIP_ELM_root:
@@ -80,7 +79,6 @@ static int validate_element(hip_xml_elmid parent, hip_xml_elmid child)
 static int start_element(void *userdata, const struct hip_xml_elm *elm,
                          const char **atts)
 {
-  printf("start: id=%d\n", elm->id);
   /* nothing to do here */
   return 0;
 }
@@ -90,7 +88,6 @@ static int end_element(void *userdata, const struct hip_xml_elm *elm,
 {
   options_ctx_t *oc = userdata;
 
-  printf("end: id=%d\n", elm->id);
   if (elm->id == DAV_ELM_href)
     {
       oc->activity_url = svn_string_create(cdata, oc->pool);
