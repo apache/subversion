@@ -248,8 +248,8 @@ svn_path_get_longest_ancestor (const svn_stringbuf_t *path1,
 {
   svn_stringbuf_t *common_path;
   char dirsep = get_separator_from_style (style);
-  int i = 0;
-  int last_dirsep = 0;
+  apr_size_t i = 0;
+  apr_size_t last_dirsep = 0;
 
   /* If either string is NULL or empty, we must go no further. */
   
@@ -298,7 +298,7 @@ svn_path_is_child (const svn_stringbuf_t *path1,
                    apr_pool_t *pool)
 {
   char dirsep = get_separator_from_style (style);
-  int i = 0;
+  apr_size_t i = 0;
       
   /* If either path is empty, return NULL. */
   if ((! path1) || (! path2)
@@ -360,7 +360,7 @@ svn_path_decompose (const svn_stringbuf_t *path,
                     enum svn_path_style style,
                     apr_pool_t *pool)
 {
-  int i, oldi;
+  apr_size_t i, oldi;
 
   apr_array_header_t *components = 
     apr_array_make (pool, 1, sizeof(svn_stringbuf_t *));
