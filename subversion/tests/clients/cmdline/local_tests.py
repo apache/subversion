@@ -412,6 +412,65 @@ def commit_multiple_targets():
   
 #----------------------------------------------------------------------
 
+
+def commit_multiple_targets_2():
+  "commit multiple targets, 2nd variation"
+
+  wc_dir = os.path.join (general_wc_dir, 'commit_multiple_targets_2')
+  
+  if make_repo_and_wc('commit_multiple_targets_2'):
+    return 1
+
+  # This test will commit three targets:  psi, B, omega and pi.  In that order.
+
+  # Make local mods to many files.
+  AB_path = os.path.join(wc_dir, 'A', 'B')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+  svn_test_main.file_append (lambda_path, 'new appended text for lambda')
+  svn_test_main.file_append (rho_path, 'new appended text for rho')
+  svn_test_main.file_append (pi_path, 'new appended text for pi')
+  svn_test_main.file_append (omega_path, 'new appended text for omega')
+  svn_test_main.file_append (psi_path, 'new appended text for psi')
+
+  # Just for kicks, add a property to A/D/G as well.  We'll make sure
+  # that it *doesn't* get committed.
+  ADG_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  svn_test_main.run_svn('propset', 'foo', 'bar', ADG_path)
+
+  # Created expected output tree for 'svn ci'.  We should see changes
+  # only on these three targets, no others.  
+  output_list = [ [psi_path, None, {'verb' : 'Changing' }],
+                  [lambda_path, None, {'verb' : 'Changing' }],
+                  [omega_path, None, {'verb' : 'Changing' }],
+                  [pi_path, None, {'verb' : 'Changing' }] ]
+  expected_output_tree = svn_tree.build_generic_tree(output_list)
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but our four targets should be at 2.
+  status_list = get_virginal_status_list(wc_dir, '2')
+  for item in status_list:
+    if ((item[0] != psi_path) and (item[0] != lambda_path)
+        and (item[0] != pi_path) and (item[0] != omega_path)):
+      item[2]['wc_rev'] = '1'
+    # rho should still display as locally modified:
+    if (item[0] == rho_path):
+      item[2]['status'] = 'M '
+    # A/D/G should still have a local property set, too.
+    if (item[0] == ADG_path):
+      item[2]['status'] = '_M'
+  expected_status_tree = svn_tree.build_generic_tree(status_list)
+
+  return run_and_verify_commit (wc_dir,
+                                expected_output_tree,
+                                expected_status_tree,
+                                psi_path, AB_path, omega_path, pi_path)
+  
+#----------------------------------------------------------------------
+
   
 ########################################################################
 ## List all tests here, starting with None:
@@ -420,7 +479,8 @@ test_list = [ None,
               basic_status,
               commit_from_wc_top,
               commit_one_file,
-              commit_multiple_targets
+              commit_multiple_targets,
+              commit_multiple_targets_2
              ]
 
 if __name__ == '__main__':  
