@@ -1295,7 +1295,9 @@ svn_error_t *svn_wc_get_pristine_copy_path (const char *path,
 
 
 /* Recurse from PATH, cleaning up unfinished log business.  Perform
-   necessary allocations in POOL.  */
+   necessary allocations in POOL.  Any working copy locks under PATH will
+   be taken over and then cleared by this function.  WARNING: there is no
+   mechanism that will protect locks that are still being used. */
 svn_error_t *
 svn_wc_cleanup (const char *path, apr_pool_t *pool);
 
@@ -1468,19 +1470,76 @@ svn_error_t *svn_wc_translated_file (const char **xlated_p,
 
 
 
-/*** Locking. ***/
+/*** Locking/Opening/Closing ***/
 
-/* Lock the working copy administrative area.
-   Wait for WAIT_FOR seconds if encounter another lock, trying again every
-   second, then return 0 if success or an SVN_ERR_WC_LOCKED error if
-   failed to obtain the lock. */
-svn_error_t *svn_wc_lock (const char *path, 
-                          int wait_for, 
-                          apr_pool_t *pool);
+/* ### Should this type be opaque in the public interface? */
+typedef struct svn_wc_adm_access_t
+{
+   /* PATH to directory which contains the administrative area */
+   const char *path;
 
-/* Unlock PATH, or error if can't. */
-svn_error_t *svn_wc_unlock (const char *path, 
-                            apr_pool_t *pool);
+   enum svn_wc_adm_access_type {
+
+      /* SVN_WC_ADM_ACCESS_UNLOCKED indicates no lock is held allowing
+         read-only access without cacheing. */
+      svn_wc_adm_access_unlocked,
+
+#if 0
+      /* ### If read-only operations are allowed sufficient write access to
+         ### create read locks (did you follow that?) then entries cacheing
+         ### could apply to read-only operations as well.  This would
+         ### probably want to fall back to unlocked access if the
+         ### filesystem permissions prohibit writing to the administrative
+         ### area (consider running svn_wc_status on some other user's
+         ### working copy). */
+
+      /* SVN_WC_ADM_ACCESS_READ_LOCK indicates that read-only access and
+         cacheing are allowed. */
+      svn_wc_adm_access_read_lock,
+#endif
+
+      /* SVN_WC_ADM_ACCESS_WRITE_LOCK indicates that read-write access and
+         cacheing are allowed. */
+      svn_wc_adm_access_write_lock
+
+   } type;
+
+   /* LOCK_EXISTS is set TRUE when the write lock exists */
+   svn_boolean_t lock_exists;
+
+#if 0
+   /* ENTRIES_MODIFED is set TRUE when the entries cached in ENTRIES have
+      been modified from the original values read from the file. */
+   svn_boolean_t entries_modified;
+
+   /* Once the 'entries' file has been read, ENTRIES will cache the
+      contents if this access baton has an appropriate lock. Otherwise
+      ENTRIES will be NULL. */
+   apr_hash_t *entries;
+#endif
+
+   /* POOL is used to allocate cached items, they need to persist for the
+      lifetime of this access baton */
+   apr_pool_t *pool;
+
+} svn_wc_adm_access_t;
+
+/* Return an access baton in ADM_ACCESS for the working copy administrative
+   area associated with the directory PATH.  If WRITE_LOCK is set the baton
+   will include a write lock, otherwise the baton can only be used for read
+   access. POOL will be used to allocate the baton and any subsequently
+   cached items. */
+svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
+                              const char *path,
+                              svn_boolean_t write_lock,
+                              apr_pool_t *pool);
+
+/* Give up the access baton ADM_ACCESS, and its lock if any */
+svn_error_t *svn_wc_adm_close (svn_wc_adm_access_t *adm_access);
+
+/* Ensure ADM_ACCESS has a write lock, and that the lock file still
+   exists. Returns SVN_ERR_WC_NOT_LOCKED if this is not the case. */
+svn_error_t *svn_wc_adm_write_check (svn_wc_adm_access_t *adm_access);
 
 /* Set *LOCKED to non-zero if PATH is locked, else set it to zero. */
 svn_error_t *svn_wc_locked (svn_boolean_t *locked, 

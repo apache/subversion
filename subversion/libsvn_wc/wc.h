@@ -121,6 +121,15 @@ svn_error_t *svn_wc__set_up_new_dir (svn_stringbuf_t *path,
 /* Ensure that DIR exists. */
 svn_error_t *svn_wc__ensure_directory (const char *path, apr_pool_t *pool);
 
+/* Take out a write-lock, stealing an existing lock if one exists.  This
+   function avoids the potential race between checking for an existing lock
+   and creating a lock. The cleanup code uses this function, but stealing
+   locks is not a good idea because the code cannot determine whether a
+   lock is still in use. Try not to write any more code that requires this
+   feature. */
+svn_error_t *svn_wc__adm_steal_write_lock (svn_wc_adm_access_t **adm_access,
+                                           const char *path, apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

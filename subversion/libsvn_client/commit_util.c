@@ -60,9 +60,10 @@ lock_dir (apr_hash_t *locked_dirs,
 
   if (! apr_hash_get (locked_dirs, dir, APR_HASH_KEY_STRING))
     {
-      SVN_ERR (svn_wc_lock (dir, 0, pool));
+      svn_wc_adm_access_t *adm_access;
+      SVN_ERR (svn_wc_adm_open (&adm_access, dir, TRUE, hash_pool));
       apr_hash_set (locked_dirs, apr_pstrdup (hash_pool, dir), 
-                    APR_HASH_KEY_STRING, (void *)1);
+                    APR_HASH_KEY_STRING, adm_access);
     }
   return SVN_NO_ERROR;
 }
