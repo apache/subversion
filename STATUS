@@ -53,6 +53,12 @@ Candidate changes:
     Justification: Perl correctness issue.
     Votes:
 
+  * r8731
+    Change the version numbering scheme according to the rules in HACKING.
+    Justification: Follow the agreed-on rules.
+    Votes:
+      +1: brane
+
 Status of 1.0.1:
 ================
 
@@ -153,4 +159,4 @@ Candidate changes:
                     which then hoses checkouts.
     Notes:  This has the potential to burn a whole lot of new users.
     Votes:
-      +1: sussman
+      +1: sussman, brane
