@@ -151,13 +151,6 @@ Candidate changes:
     Votes:
       +1: cmpilato, dlr, sussman
 
-  * r8678
-    Add verbose option to blame.
-    Justification: Makes emacs annotate work better and exposes more
-      information that we have available anyway.
-    Votes:
-      -1: sussman -- 1.0.1 should be important bugfixes, not enhancements.
-
   * r8581
     Detect invalid UTF8 filenames when native locale is UTF8.
     Justification:  it's really easy to get invalid utf8 into the repository,
