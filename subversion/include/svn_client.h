@@ -1081,14 +1081,14 @@ svn_client_export (const char *from,
                    apr_pool_t *pool);
 
 
-/** List the contents of a repository url.
+/** List the contents of @a path_or_url.
  *
- * Set @a *dirents to a newly allocated hash of entries for @a url at
- * @a revision.
+ * Set @a *dirents to a newly allocated hash of entries for @a path_or_url
+ * at @a revision.
  *
- * If @a url is a directory, return all dirents in the hash.  If @a url 
- * is a file, return only the dirent for the file.  If @a url is 
- * non-existent, return @c SVN_ERR_FS_NOT_FOUND.
+ * If @a path_or_url is a directory, return all dirents in the hash.  If
+ * @a path_or_url is a file, return only the dirent for the file.  If @a
+ * path_or_url is non-existent, return @c SVN_ERR_FS_NOT_FOUND.
  *
  * The hash maps entrynames (<tt>const char *</tt>) to @c svn_dirent_t *'s.  
  * Do all allocation in @a pool.
@@ -1096,12 +1096,12 @@ svn_client_export (const char *from,
  * Use authentication baton cached in @a ctx to authenticate against the 
  * repository.
  *
- * If @a recurse is true (and the @a url is a directory) this will be a
- * recursive operation.
+ * If @a recurse is true (and @a path_or_url is a directory) this will
+ * be a recursive operation.
  */
 svn_error_t *
 svn_client_ls (apr_hash_t **dirents,
-               const char *url,
+               const char *path_or_url,
                svn_opt_revision_t *revision,
                svn_boolean_t recurse,
                svn_client_ctx_t *ctx,
