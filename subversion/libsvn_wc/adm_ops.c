@@ -154,14 +154,19 @@ svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
 
 
       /* If the entry is a file or SVN_WC_ENTRY_THIS_DIR, and it has a
-         different rev than REVISION, fix it. */
+         different rev than REVISION, fix it.  (But ignore the entry
+         if it's scheduled for addition.) */
       else if (((current_entry->kind == svn_node_file)
                 || (! current_entry_name))
-               && (current_entry->revision != revision))
+               && (current_entry->revision != revision)
+               && (current_entry->schedule != svn_wc_schedule_add))
         SVN_ERR (svn_wc_set_revision (cbaton, full_entry_path, revision));
       
-      /* If entry is a dir (and not `.'), recurse. */
-      else if ((current_entry->kind == svn_node_dir) && current_entry_name)
+      /* If entry is a dir (and not `.', and not scheduled for
+         addition), then recurse into it. */
+      else if ((current_entry->kind == svn_node_dir)
+               && current_entry_name
+               && (current_entry->schedule != svn_wc_schedule_add))
         SVN_ERR (svn_wc__ensure_uniform_revision (full_entry_path,
                                                   revision, subpool));
     }
