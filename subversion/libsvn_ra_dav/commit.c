@@ -918,6 +918,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   resource_t baseline_rsrc = { 0 };
   ne_proppatch_operation po[2] = { { 0 } };
   int rv;
+  svn_stringbuf_t *xml_data;
 
   /* ### this whole sequence can/should be replaced with an expand-property
      ### REPORT when that is available on the server. */
@@ -933,18 +934,13 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   baseline_rsrc.vsn_url = baseline_url->data;
   SVN_ERR( checkout_resource(cc, &baseline_rsrc) );
 
+  /* XML-Escape the log message. */
+  svn_xml_escape_string (&xml_data, 
+                        svn_stringbuf_create (log_msg->data, cc->ras->pool),
+                        cc->ras->pool);
   po[0].name = &log_message_prop;
   po[0].type = ne_propset;
-
-  /* ### todo: The following should be:
-
-     po[0].value = apr_xml_quote_string (cc->ras->pool, log_msg->data, 1); 
-     
-     but that will have to wait until Subversion makes use of the
-     apr-util library (we'll also #include <apr_xml.h> when that
-     happens.  This should clear up Issue #475.
-  */
-  po[0].value = log_msg->data;  /* ### do not allow embedded nulls */
+  po[0].value = xml_data->data;
 
   rv = ne_proppatch(cc->ras->sess, baseline_rsrc.wr_url, po);
   if (rv != NE_OK)
