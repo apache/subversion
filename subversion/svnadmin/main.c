@@ -521,8 +521,7 @@ subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
   struct svnadmin_opt_state *opt_state = baton;
 
-  printf ("Acquiring exclusive lock on repository db.\n"
-          "Recovery is running, please stand by...");
+  printf ("Please wait; recovering the repository may take some time...\n");
   fflush (stdout);
 
   SVN_ERR (svn_repos_recover (opt_state->repository_path, pool));
