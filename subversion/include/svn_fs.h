@@ -439,14 +439,14 @@ typedef struct svn_fs_root_t svn_fs_root_t;
 
 /* Set *ROOT_P to the root directory of revision REV in filesystem FS.
    Allocate *ROOT_P in POOL.  */
-svn_error_t *svn_fs_revision_root (svn_fs_root_t *root_p,
+svn_error_t *svn_fs_revision_root (svn_fs_root_t **root_p,
                                    svn_fs_t *fs,
                                    svn_revnum_t rev,
                                    apr_pool_t *pool);
 
 
 /* Set *ROOT_P to the root directory of TXN.  Allocate *ROOT_P in POOL.  */
-svn_error_t *svn_fs_txn_root (svn_fs_root_t *root_p,
+svn_error_t *svn_fs_txn_root (svn_fs_root_t **root_p,
                               svn_fs_txn_t *txn,
                               apr_pool_t *pool);
 
