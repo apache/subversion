@@ -112,8 +112,24 @@ typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)
 
 /** The update Reporter.
  *
- * A vtable structure which allows a working copy to describe a
- * subset (or possibly all) of its working-copy to an RA layer.
+ * A vtable structure which allows a working copy to describe a subset
+ * (or possibly all) of its working-copy to an RA layer, for the
+ * purposes of an update, switch, status, or diff operation.
+ *
+ * Paths for report calls are relative to the target (not the anchor)
+ * of the operation.  Report calls must be made in depth-first order:
+ * parents before children, all children of a parent before any
+ * siblings of the parent.  The first report call must be a set_path
+ * with a @a path argument of "" and a valid revision.  (If the target
+ * of the operation is locally deleted or missing, use the anchor's
+ * revision.)  If the target of the operation is deleted or switched
+ * relative to the anchor, follow up the initial set_path call with a
+ * link_path or delete_path call with a @a path argument of "" to
+ * indicate that.  In no other case may there be two report
+ * descriptions for the same path.  If the target of the operation is
+ * a locally added file or directory (which previously did not exist),
+ * it may be reported as having revision 0 or as having the parent
+ * directory's revision.
  */
 typedef struct svn_ra_reporter_t
 {
