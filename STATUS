@@ -323,17 +323,17 @@ already know about.)
 
 
    * r8140
-     Ignore SIGPIPE in svserve.
+     Ignore SIGPIPE in svnserve.
      Justification: Avoid uncontrolled svnserve termination, low risk.
      Votes:
-      +1: bliss
+      +1: bliss, mbk
 
 
    * r8142
      Fix an svnserve crash bug for network errors.
      Justification: Avoid uncontrolled svnserve termination, low risk.
      Votes:
-      +1: bliss
+      +1: bliss, mbk
 
 
    * Issue #1681
