@@ -1619,37 +1619,50 @@ $ svnadmin load newrepos &lt; dumpfile3
         <title>Using Incremental Repository Dumps</title>
 
         <programlisting>
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
-$repos_path  = '/path/to/repos';
-$dumpfile    = '/usr/backup/svn-dumpfile';
-$last_dumped = '/var/log/svn-last-dumped';
+use strict;
+
+my $repos_path  = '/path/to/repos';
+my $dumpfile    = '/usr/backup/svn-dumpfile';
+my $last_dumped = '/var/log/svn-last-dumped';
  
-# Figure out the starting revision (0 if we cannot read the last-dumped file,
-# else use the revision in that file incremented by 1).
-if (open LASTDUMPED, "$last_dumped")
-{
-    $new_start = &lt;LASTDUMPED&gt;;
-    chomp $new_start;
-    $new_start++;
+# Figure out the starting revision. Use 0 if we cannot read the
+# last-dumped file, else use the revision in that file incremented
+# by 1.
+my $new_start = 0;
+if (open LASTDUMPED, $last_dumped)
+  {
+    my $line = &lt;LASTDUMPED&gt;;
+    if (defined $line and $line =~ /^(\d+)/)
+      {
+        $new_start = $1 + 1;
+      }
     close LASTDUMPED;
-}
-else
-{
-    $new_start = 0;
-}
+  }
 
 # Query the youngest revision in the repos.
-$youngest = `svnlook youngest $repos_path`;
+my $youngest = `svnlook youngest $repos_path`;
+defined $youngest && $youngest =~ /^\d+$/
+  or die "$0: 'svnlook youngest $repos_path' cannot get youngest revision.\n";
 chomp $youngest;
 
 # Do the backup.
-`svnadmin dump $repos_path --revision $new_start:$youngest --incremental &gt;&gt; $dumpfile`;
+system("svnadmin dump $repos_path --revision $new_start:$youngest --incremental &gt;&gt; $dumpfile.tmp") == 0
+  or die "$0: svnadmin dump to '$dumpfile.tmp' failed.\n";
 
-# Store a new last-dumped revision
-open LASTDUMPED, "&gt; $last_dumped" or die;
+# Store a new last-dumped revision.
+open LASTDUMPED, "&gt; $last_dumped.tmp"
+  or die "$0: cannot open '$last_dumped.tmp' for writing: $!\n";
 print LASTDUMPED "$youngest\n";
-close LASTDUMPED;
+close LASTDUMPED
+  or die "$0: error in closing '$last_dumped.tmp' for writing: $!\n";
+
+# Rename to final locations.
+rename("$dumpfile.tmp", $dumpfile)
+  or die "$0: cannot rename '$dumpfile.tmp' to '$dumpfile': $!\n";
+rename("$last_dumped.tmp", $last_dumped)
+  or die "$0: cannot rename '$last_dumped.tmp' to '$last_dumped': $!\n";
 
 # All done!
 </programlisting>
