@@ -27,7 +27,7 @@ test_parse_peg_rev (const char **msg,
                     svn_boolean_t msg_only,
                     apr_pool_t *pool)
 {      
-  int i;
+  apr_size_t i;
   static struct {
       const char *input;
       const char *path; /* NULL means an error is expected. */
