@@ -30,10 +30,7 @@ SVN_FS_LIB_DEPS = @SVN_FS_LIB_DEPS@
 SVN_FS_LIB_INSTALL_DEPS = @SVN_FS_LIB_INSTALL_DEPS@
 SVN_FS_LIB_LINK = @SVN_FS_LIB_LINK@
 
-DESIGN_DIR = doc/programmer/design
-BOOK_TOP = doc/book
-MDOCS_DIR = ${BOOK_TOP}/misc-docs
-DOC_DIRS = $(DESIGN_DIR) $(MDOCS_DIR) 
+DOC_DIRS = doc/programmer/design doc/misc-docs
 
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
 SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
