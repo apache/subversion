@@ -23,8 +23,6 @@ A rough guide to the source tree:
       *Note*: This is not in the same repository as Subversion.  Read
       autogen.sh for instructions on how to get it if you don't
       already have it.
-   glib/
-      GNU Library (vendor branched, see glib/README.svn).
    subversion/  
       Source code to subversion itself (as opposed to external libraries).
    subversion/include/
@@ -47,3 +45,4 @@ A rough guide to the source tree:
       Common code for client operations.
    subversion/client/
       The command line client
+
