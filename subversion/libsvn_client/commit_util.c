@@ -331,17 +331,16 @@ harvest_committables (apr_hash_t *committables,
         {
           state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
           state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
-          adds_only = TRUE;
+          adds_only = FALSE;
           cf_rev = entry->revision;
           if (copy_mode)
             cf_url = entry->url;
           else if (copyfrom_url)
             cf_url = copyfrom_url;
-          else
+          else /* ### See issue #830 */
             return svn_error_createf 
               (SVN_ERR_BAD_URL, NULL,
-               "Commit item '%s' has copy flag but no copyfrom URL\n"
-               "See issue #830", path);
+               "Commit item '%s' has copy flag but no copyfrom URL\n", path);
         }
     }
 
