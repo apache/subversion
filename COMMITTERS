@@ -7,7 +7,7 @@ If you have a question or comment, it's probably best to mail
 dev@subversion.tigris.org, rather than mailing any of these people
 directly.
 
-Blanket commit access (excluding /clients):
+Blanket commit access:
 
             jimb   Jim Blandy <jimb@redhat.com>
          sussman   Ben Collins-Sussman <sussman@collab.net>
