@@ -672,11 +672,6 @@ typedef struct
      gracefully clean up things if it needs to. */
   svn_error_t *(*abort_edit) (void *edit_baton);
 
-  /* In some cases, applications might allocate this editor and want to
-     treat it as an object. This field can be used to associate a context
-     directly with the structure. */
-  void *ctx;
-
 } svn_delta_editor_t;  
 
 
