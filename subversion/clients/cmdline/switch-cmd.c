@@ -29,6 +29,7 @@
 #include "svn_pools.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
 
 /*** Code. ***/
 
@@ -54,7 +55,7 @@ rewrite_urls(apr_array_header_t *targets,
   if (svn_path_is_url (from) != svn_path_is_url (to))
     return svn_error_createf 
       (SVN_ERR_INCORRECT_PARAMS, NULL, 
-       "'%s' to '%s' is not a valid relocation", from, to);
+       _("'%s' to '%s' is not a valid relocation"), from, to);
  
   subpool = svn_pool_create (pool);
 
@@ -121,7 +122,7 @@ svn_cl__switch (apr_getopt_t *os,
   if (! svn_path_is_url (switch_url))
     return svn_error_createf 
       (SVN_ERR_BAD_URL, NULL, 
-       "'%s' does not appear to be a URL", switch_url);
+       _("'%s' does not appear to be a URL"), switch_url);
 
   /* Canonicalize the URL. */
   switch_url = svn_path_canonicalize (switch_url, pool);
@@ -133,7 +134,7 @@ svn_cl__switch (apr_getopt_t *os,
   if (! entry)
     return svn_error_createf 
       (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
-       "'%s' does not appear to be a working copy path", target);
+       _("'%s' does not appear to be a working copy path"), target);
   
   /* We want the switch to print the same letters as a regular update. */
   if (entry->kind == svn_node_file)
