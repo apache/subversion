@@ -9,7 +9,8 @@ lib_LTLIBRARIES = libsvn_subr.la
 
 ## Sources needed to build each library (names canonicalized)
 libsvn_subr_la_SOURCES = svn_string.c svn_error.c path.c \
-                         hashdump.c xml.c base64.c io.c
+                         hashdump.c xml.c base64.c io.c \
+                         keysort.c
 
 ## Build flags ---------
 

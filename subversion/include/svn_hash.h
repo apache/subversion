@@ -53,11 +53,12 @@
 #ifndef SVN_HASH_H
 #define SVN_HASH_H
 
+/*----------------------------------------------------*/
+
+/*** Reading/writing hashtables to disk ***/
 
-/* Generalized routines for reading/writing hashtables to disk.
- *  
+/*
  * Each takes a "helper" routine which can encode/decode a hash value.
- *
  */
 
 apr_status_t svn_hash_read (apr_hash_t *hash, 
@@ -84,6 +85,14 @@ apr_size_t svn_unpack_bytestring (char **returndata, void *value);
 void * svn_pack_bytestring (size_t len, const char *val, apr_pool_t *pool);
 
 
+/*----------------------------------------------------*/
+
+/*** Converting a hash into a sorted array ***/
+
+/* Grab the keys (and values) in apr_hash HT and return them in an a
+   sorted apr_array_header_t ARRAY allocated from POOL.  The array
+   will contain pointers of type (apr_item_t *).  */
+apr_array_header_t *apr_get_sorted_keys (apr_hash_t *ht, apr_pool_t *pool);
 
 
 #endif /* SVN_HASH_H */
