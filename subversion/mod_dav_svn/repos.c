@@ -1605,7 +1605,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 
         if (gen_html)
           ap_fprintf(output, bb,
-                     "  <li><a href=\"%s%s\">%s%s</a></li>\n",
+                     "  <li><a href=\"%s\">%s</a></li>\n",
                      href, href);
         else
           {
