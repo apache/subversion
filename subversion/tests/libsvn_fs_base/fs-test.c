@@ -57,6 +57,7 @@
 static svn_error_t *
 create_berkeley_filesystem (const char **msg,
                             svn_boolean_t msg_only,
+                            svn_test_opts_t *opts,
                             apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -159,6 +160,7 @@ test_commit_txn (svn_revnum_t *new_rev,
 static svn_error_t *
 open_berkeley_filesystem (const char **msg,
                           svn_boolean_t msg_only,
+                          svn_test_opts_t *opts,
                           apr_pool_t *pool)
 {
   svn_fs_t *fs, *fs2;
@@ -187,6 +189,7 @@ open_berkeley_filesystem (const char **msg,
 static svn_error_t *
 trivial_transaction (const char **msg,
                      svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -219,6 +222,7 @@ trivial_transaction (const char **msg,
 static svn_error_t *
 reopen_trivial_transaction (const char **msg,
                             svn_boolean_t msg_only,
+                            svn_test_opts_t *opts,
                             apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -257,6 +261,7 @@ reopen_trivial_transaction (const char **msg,
 static svn_error_t *
 create_file_transaction (const char **msg,
                          svn_boolean_t msg_only,
+                         svn_test_opts_t *opts,
                          apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -287,6 +292,7 @@ create_file_transaction (const char **msg,
 static svn_error_t *
 verify_txn_list (const char **msg,
                  svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -346,6 +352,7 @@ verify_txn_list (const char **msg,
 static svn_error_t *
 write_and_read_file (const char **msg,
                      svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -390,6 +397,7 @@ write_and_read_file (const char **msg,
 static svn_error_t *
 create_mini_tree_transaction (const char **msg,
                               svn_boolean_t msg_only,
+                              svn_test_opts_t *opts,
                               apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -426,6 +434,7 @@ create_mini_tree_transaction (const char **msg,
 static svn_error_t *
 create_greek_tree_transaction (const char **msg,
                                svn_boolean_t msg_only,
+                               svn_test_opts_t *opts,
                                apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -489,6 +498,7 @@ verify_entry (apr_hash_t *entries, const char *key)
 static svn_error_t *
 list_directory (const char **msg,
                 svn_boolean_t msg_only,
+                svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -553,6 +563,7 @@ list_directory (const char **msg,
 static svn_error_t *
 revision_props (const char **msg,
                 svn_boolean_t msg_only,
+                svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -651,6 +662,7 @@ revision_props (const char **msg,
 static svn_error_t *
 transaction_props (const char **msg,
                    svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
                    apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -803,6 +815,7 @@ transaction_props (const char **msg,
 static svn_error_t *
 node_props (const char **msg,
             svn_boolean_t msg_only,
+            svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -1072,6 +1085,7 @@ check_id_absent (svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 static svn_error_t *
 abort_txn (const char **msg,
            svn_boolean_t msg_only,
+           svn_test_opts_t *opts,
            apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -1302,6 +1316,7 @@ abort_txn (const char **msg,
 static svn_error_t *
 fetch_youngest_rev (const char **msg,
                     svn_boolean_t msg_only,
+                    svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -1351,6 +1366,7 @@ fetch_youngest_rev (const char **msg,
 static svn_error_t *
 basic_commit (const char **msg,
               svn_boolean_t msg_only,
+              svn_test_opts_t *opts,
               apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -1407,6 +1423,7 @@ basic_commit (const char **msg,
 static svn_error_t *
 test_tree_node_validation (const char **msg,
                            svn_boolean_t msg_only,
+                           svn_test_opts_t *opts,
                            apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -1537,6 +1554,7 @@ test_tree_node_validation (const char **msg,
 static svn_error_t *
 merging_commit (const char **msg,
                 svn_boolean_t msg_only,
+                svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -2319,6 +2337,7 @@ merging_commit (const char **msg,
 static svn_error_t *
 copy_test (const char **msg,
            svn_boolean_t msg_only,
+           svn_test_opts_t *opts,
            apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -2612,6 +2631,7 @@ copy_test (const char **msg,
 static svn_error_t *
 link_test (const char **msg,
            svn_boolean_t msg_only,
+           svn_test_opts_t *opts,
            apr_pool_t *pool)
 {
   *msg = "linking, so no copy history";
@@ -2781,6 +2801,7 @@ link_test (const char **msg,
 static svn_error_t *
 delete_mutables (const char **msg,
                  svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -2966,6 +2987,7 @@ delete_mutables (const char **msg,
 static svn_error_t *
 delete (const char **msg,
         svn_boolean_t msg_only,
+        svn_test_opts_t *opts,
         apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -3393,6 +3415,7 @@ delete (const char **msg,
 static svn_error_t *
 commit_date (const char **msg,
              svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
               apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -3448,6 +3471,7 @@ commit_date (const char **msg,
 static svn_error_t *
 check_old_revisions (const char **msg,
                      svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -3810,6 +3834,7 @@ validate_revisions (svn_fs_t *fs,
 static svn_error_t *
 check_all_revisions (const char **msg,
                      svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
                      apr_pool_t *pool)
 { 
   svn_fs_t *fs;
@@ -4279,6 +4304,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
 static svn_error_t *
 medium_file_integrity (const char **msg,
                        svn_boolean_t msg_only,
+                       svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
   apr_uint32_t seed = (apr_uint32_t) apr_time_now();
@@ -4297,8 +4323,9 @@ medium_file_integrity (const char **msg,
 
 static svn_error_t *
 large_file_integrity (const char **msg,
-                       svn_boolean_t msg_only,
-                       apr_pool_t *pool)
+                      svn_boolean_t msg_only,
+                      svn_test_opts_t *opts,
+                      apr_pool_t *pool)
 {
   apr_uint32_t seed = (apr_uint32_t) apr_time_now();
   *msg = apr_psprintf (pool,
@@ -4317,6 +4344,7 @@ large_file_integrity (const char **msg,
 static svn_error_t *
 check_root_revision (const char **msg,
                      svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
                      apr_pool_t *pool)
 { 
   svn_fs_t *fs;
@@ -4413,6 +4441,7 @@ verify_path_revs (svn_fs_root_t *root,
 static svn_error_t *
 test_node_created_rev (const char **msg,
                        svn_boolean_t msg_only,
+                       svn_test_opts_t *opts,
                        apr_pool_t *pool)
 { 
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -4551,6 +4580,7 @@ test_node_created_rev (const char **msg,
 static svn_error_t *
 check_related (const char **msg,
                svn_boolean_t msg_only,
+               svn_test_opts_t *opts,
                apr_pool_t *pool)
 { 
   apr_pool_t *subpool = svn_pool_create (pool);
@@ -4759,6 +4789,7 @@ check_related (const char **msg,
 static svn_error_t *
 canonicalize_abspath (const char **msg,
                       svn_boolean_t msg_only,
+                      svn_test_opts_t *opts,
                       apr_pool_t *pool)
 { 
   apr_size_t i;
@@ -4818,6 +4849,7 @@ canonicalize_abspath (const char **msg,
 static svn_error_t *
 branch_test (const char **msg,
              svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
              apr_pool_t *pool)
 { 
   apr_pool_t *spool = svn_pool_create (pool);
@@ -4896,6 +4928,7 @@ branch_test (const char **msg,
 static svn_error_t *
 verify_checksum (const char **msg,
                  svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
                  apr_pool_t *pool)
 { 
   svn_fs_t *fs;
@@ -4938,6 +4971,7 @@ verify_checksum (const char **msg,
 static svn_error_t *
 create_within_copy (const char **msg,
                     svn_boolean_t msg_only,
+                    svn_test_opts_t *opts,
                     apr_pool_t *pool)
 { 
   apr_pool_t *spool = svn_pool_create (pool);
@@ -5049,6 +5083,7 @@ create_within_copy (const char **msg,
 static svn_error_t *
 skip_deltas (const char **msg,
              svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
              apr_pool_t *pool)
 { 
   svn_fs_t *fs;
@@ -5124,6 +5159,7 @@ txn_body_get_txn (void *baton, trail_t *trail)
 static svn_error_t *
 redundant_copy (const char **msg,
                 svn_boolean_t msg_only,
+                svn_test_opts_t *opts,
                 apr_pool_t *pool)
 { 
   svn_fs_t *fs;

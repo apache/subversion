@@ -9,8 +9,7 @@ sys.path.insert(0, python_libs)
 
 # Run the tests
 import exectest
-errors = exectest.run_tests(['key-test', 'skel-test',
-                             'strings-reps-test', 'fs-test'])
+errors = exectest.run_tests(['locks-test'])
 sys.exit(errors)
 
 

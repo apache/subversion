@@ -58,6 +58,7 @@
 static svn_error_t *
 basic_lock (const char **msg,
             svn_boolean_t msg_only,
+            svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -74,7 +75,8 @@ basic_lock (const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a filesystem and a new txn. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit", pool));
+  SVN_ERR (svn_test__create_any_fs (&fs, "test-repo-basic-commit", 
+                                    opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
@@ -118,6 +120,7 @@ basic_lock (const char **msg,
 static svn_error_t *
 lock_credentials (const char **msg,
                   svn_boolean_t msg_only,
+                  svn_test_opts_t *opts,
                   apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -135,7 +138,8 @@ lock_credentials (const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a filesystem and a new txn. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit", pool));
+  SVN_ERR (svn_test__create_any_fs (&fs, "test-repo-basic-commit", 
+                                    opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
@@ -209,6 +213,7 @@ lock_credentials (const char **msg,
 static svn_error_t *
 final_lock_check (const char **msg,
                   svn_boolean_t msg_only,
+                  svn_test_opts_t *opts,
                   apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -226,7 +231,8 @@ final_lock_check (const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a filesystem and a new txn. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit", pool));
+  SVN_ERR (svn_test__create_any_fs (&fs, "test-repo-basic-commit", 
+                                    opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
@@ -270,6 +276,7 @@ final_lock_check (const char **msg,
 static svn_error_t *
 lock_dir_propchange (const char **msg,
                      svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -286,7 +293,8 @@ lock_dir_propchange (const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a filesystem and a new txn. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit", pool));
+  SVN_ERR (svn_test__create_any_fs (&fs, "test-repo-basic-commit", 
+                                    opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
@@ -323,6 +331,7 @@ lock_dir_propchange (const char **msg,
 static svn_error_t *
 lock_name_reservation (const char **msg,
                        svn_boolean_t msg_only,
+                       svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -340,7 +349,8 @@ lock_name_reservation (const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a filesystem and a new txn. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit", pool));
+  SVN_ERR (svn_test__create_any_fs (&fs, "test-repo-basic-commit", 
+                                    opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
@@ -378,6 +388,7 @@ lock_name_reservation (const char **msg,
 static svn_error_t *
 lock_expiration (const char **msg,
                  svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -395,7 +406,8 @@ lock_expiration (const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a filesystem and a new txn. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit", pool));
+  SVN_ERR (svn_test__create_any_fs (&fs, "test-repo-basic-commit", 
+                                    opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
@@ -439,6 +451,7 @@ lock_expiration (const char **msg,
 static svn_error_t *
 lock_break_steal_refresh (const char **msg,
                           svn_boolean_t msg_only,
+                          svn_test_opts_t *opts,
                           apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -455,7 +468,8 @@ lock_break_steal_refresh (const char **msg,
     return SVN_NO_ERROR;
 
   /* Prepare a filesystem and a new txn. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit", pool));
+  SVN_ERR (svn_test__create_any_fs (&fs, "test-repo-basic-commit", 
+                                    opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
@@ -527,3 +541,5 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (lock_break_steal_refresh),
     SVN_TEST_NULL
   };
+
+

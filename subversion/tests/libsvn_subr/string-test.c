@@ -62,6 +62,7 @@ const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
 static svn_error_t *
 test1 (const char **msg, 
        svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
   *msg = "make svn_stringbuf_t from cstring";
@@ -82,6 +83,7 @@ test1 (const char **msg,
 static svn_error_t *
 test2 (const char **msg, 
        svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
   *msg = "make svn_stringbuf_t from substring of cstring";
@@ -102,6 +104,7 @@ test2 (const char **msg,
 static svn_error_t *
 test3 (const char **msg, 
        svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
   char *tmp;
@@ -132,6 +135,7 @@ test3 (const char **msg,
 static svn_error_t *
 test4 (const char **msg, 
        svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
   *msg = "append C string to svn_stringbuf_t";
@@ -154,6 +158,7 @@ test4 (const char **msg,
 static svn_error_t *
 test5 (const char **msg, 
        svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
   *msg = "append bytes, then compare two strings";
@@ -176,6 +181,7 @@ test5 (const char **msg,
 static svn_error_t *
 test6 (const char **msg, 
        svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
   *msg = "dup two strings, then compare";
@@ -198,6 +204,7 @@ test6 (const char **msg,
 static svn_error_t *
 test7 (const char **msg, 
        svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
   char *tmp;
@@ -228,6 +235,7 @@ test7 (const char **msg,
 static svn_error_t *
 test8 (const char **msg, 
        svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
   *msg = "emptying a string";
@@ -249,6 +257,7 @@ test8 (const char **msg,
 static svn_error_t *
 test9 (const char **msg, 
        svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
   *msg = "fill string with hashmarks";
@@ -274,6 +283,7 @@ test9 (const char **msg,
 static svn_error_t *
 test10 (const char **msg, 
         svn_boolean_t msg_only,
+        svn_test_opts_t *opts,
         apr_pool_t *pool)
 {
   svn_stringbuf_t *s, *t;
@@ -313,6 +323,7 @@ test10 (const char **msg,
 static svn_error_t *
 test11 (const char **msg, 
         svn_boolean_t msg_only,
+        svn_test_opts_t *opts,
         apr_pool_t *pool)
 {
   svn_stringbuf_t *s;
@@ -375,6 +386,7 @@ check_string_contents(svn_stringbuf_t *string,
 static svn_error_t *
 test12 (const char **msg, 
         svn_boolean_t msg_only,
+        svn_test_opts_t *opts,
         apr_pool_t *pool)
 {
   svn_stringbuf_t *s;
@@ -471,6 +483,7 @@ test_find_char_backward (const char* data,
 static svn_error_t *
 test13 (const char **msg,
         svn_boolean_t msg_only,
+        svn_test_opts_t *opts,
         apr_pool_t *pool)
 {
   *msg = "find_char_backward; middle case";
@@ -483,6 +496,7 @@ test13 (const char **msg,
 static svn_error_t *
 test14 (const char **msg,
         svn_boolean_t msg_only,
+        svn_test_opts_t *opts,
         apr_pool_t *pool)
 {
   *msg = "find_char_backward; 0 case";
@@ -496,6 +510,7 @@ test14 (const char **msg,
 static svn_error_t *
 test15 (const char **msg,
         svn_boolean_t msg_only,
+        svn_test_opts_t *opts,
         apr_pool_t *pool)
 {
   *msg = "find_char_backward; strlen - 1 case";
@@ -513,6 +528,7 @@ test15 (const char **msg,
 static svn_error_t *
 test16 (const char **msg,
         svn_boolean_t msg_only,
+        svn_test_opts_t *opts,
         apr_pool_t *pool)
 {
   *msg = "find_char_backward; len = 0 case";
@@ -526,6 +542,7 @@ test16 (const char **msg,
 static svn_error_t *
 test17 (const char **msg,
         svn_boolean_t msg_only,
+        svn_test_opts_t *opts,
         apr_pool_t *pool)
 {
   *msg = "find_char_backward; no occurence case";
@@ -564,6 +581,7 @@ test_first_non_whitespace (const char *str,
 static svn_error_t *
 test18 (const char **msg,
         svn_boolean_t msg_only,
+        svn_test_opts_t *opts,
         apr_pool_t *pool)
 {
   *msg = "check whitespace removal; common case";
@@ -574,6 +592,7 @@ test18 (const char **msg,
 static svn_error_t *
 test19 (const char **msg,
         svn_boolean_t msg_only,
+        svn_test_opts_t *opts,
         apr_pool_t *pool)
 {
   *msg = "check whitespace removal; no whitespace case";
@@ -584,6 +603,7 @@ test19 (const char **msg,
 static svn_error_t *
 test20 (const char **msg,
         svn_boolean_t msg_only,
+        svn_test_opts_t *opts,
         apr_pool_t *pool)
 {
   *msg = "check whitespace removal; all whitespace case";
@@ -594,6 +614,7 @@ test20 (const char **msg,
 static svn_error_t *
 test21 (const char **msg,
         svn_boolean_t msg_only,
+        svn_test_opts_t *opts,
         apr_pool_t *pool)
 {
   *msg = "check that whitespace will be stripped correctly";
@@ -633,6 +654,7 @@ test_stringbuf_unequal (const char* str1,
 static svn_error_t *
 test22 (const char **msg,
         svn_boolean_t msg_only,
+        svn_test_opts_t *opts,
         apr_pool_t *pool)
 {
   *msg = "compare stringbufs; different lengths";
@@ -643,6 +665,7 @@ test22 (const char **msg,
 static svn_error_t *
 test23 (const char **msg,
         svn_boolean_t msg_only,
+        svn_test_opts_t *opts,
         apr_pool_t *pool)
 {
   *msg = "compare stringbufs; same length, different content";

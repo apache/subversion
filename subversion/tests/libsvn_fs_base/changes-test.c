@@ -159,6 +159,7 @@ txn_body_changes_delete (void *baton, trail_t *trail)
 static svn_error_t *
 changes_add (const char **msg, 
              svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -181,6 +182,7 @@ changes_add (const char **msg,
 static svn_error_t *
 changes_fetch_raw (const char **msg, 
                    svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
                    apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -288,6 +290,7 @@ changes_fetch_raw (const char **msg,
 static svn_error_t *
 changes_delete (const char **msg, 
                 svn_boolean_t msg_only,
+                svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -423,6 +426,7 @@ get_ideal_changes (const char *txn_id,
 static svn_error_t *
 compare_changes (apr_hash_t *ideals,
                  apr_hash_t *changes,
+                 svn_test_opts_t *opts,
                  const char *txn_id,
                  apr_pool_t *pool)
 {
@@ -482,6 +486,7 @@ compare_changes (apr_hash_t *ideals,
 static svn_error_t *
 changes_fetch (const char **msg, 
                svn_boolean_t msg_only,
+               svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
   svn_fs_t *fs;
@@ -535,7 +540,7 @@ changes_fetch (const char **msg,
         return svn_error_createf 
           (SVN_ERR_TEST_FAILED, NULL,
            "unexpected number of changes for key '%s'", txn_id);
-      SVN_ERR (compare_changes (ideals, args.changes, txn_id, pool));
+      SVN_ERR (compare_changes (ideals, args.changes, opts, txn_id, pool));
     }
 
   return SVN_NO_ERROR;
@@ -545,6 +550,7 @@ changes_fetch (const char **msg,
 static svn_error_t *
 changes_fetch_ordering (const char **msg, 
                         svn_boolean_t msg_only,
+                        svn_test_opts_t *opts,
                         apr_pool_t *pool)
 {
   svn_fs_t *fs;

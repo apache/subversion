@@ -354,6 +354,7 @@ make_random_merge_file (const char *filename,
 static svn_error_t *
 dump_core (const char **msg,
            svn_boolean_t msg_only,
+           svn_test_opts_t *opts,
            apr_pool_t *pool)
 {
   *msg = "these dump core";
@@ -403,6 +404,7 @@ dump_core (const char **msg,
 static svn_error_t *
 test_two_way_unified (const char **msg,
                       svn_boolean_t msg_only,
+                      svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
   *msg = "2-way unified diff and trivial merge";
@@ -727,6 +729,7 @@ test_two_way_unified (const char **msg,
 static svn_error_t *
 test_two_way_unified_suspect (const char **msg,
                               svn_boolean_t msg_only,
+                              svn_test_opts_t *opts,
                               apr_pool_t *pool)
 {
   *msg = "2-way unified diff where output is suspect";
@@ -844,6 +847,7 @@ test_two_way_unified_suspect (const char **msg,
 static svn_error_t *
 test_three_way_merge_no_overlap (const char **msg,
                                  svn_boolean_t msg_only,
+                                 svn_test_opts_t *opts,
                                  apr_pool_t *pool)
 {
   *msg = "3-way merge, non-overlapping changes";
@@ -1043,6 +1047,7 @@ test_three_way_merge_no_overlap (const char **msg,
 static svn_error_t *
 test_three_way_merge_with_overlap (const char **msg,
                                    svn_boolean_t msg_only,
+                                   svn_test_opts_t *opts,
                                    apr_pool_t *pool)
 {
   *msg = "3-way merge, non-conflicting overlapping changes";
@@ -1200,6 +1205,7 @@ test_three_way_merge_with_overlap (const char **msg,
 static svn_error_t *
 test_three_way_merge_with_conflict (const char **msg,
                                     svn_boolean_t msg_only,
+                                    svn_test_opts_t *opts,
                                     apr_pool_t *pool)
 {
   *msg = "3-way merge, conflicting overlapping changes";
@@ -1299,6 +1305,7 @@ test_three_way_merge_with_conflict (const char **msg,
 static svn_error_t *
 random_trivial_merge (const char **msg,
                       svn_boolean_t msg_only,
+                      svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
   int i;
@@ -1351,6 +1358,7 @@ random_trivial_merge (const char **msg,
 static svn_error_t *
 random_three_way_merge (const char **msg,
                         svn_boolean_t msg_only,
+                        svn_test_opts_t *opts,
                         apr_pool_t *pool)
 {
   int i;
@@ -1419,6 +1427,7 @@ random_three_way_merge (const char **msg,
 static svn_error_t *
 merge_with_part_already_present (const char **msg,
                                  svn_boolean_t msg_only,
+                                 svn_test_opts_t *opts,
                                  apr_pool_t *pool)
 {
   int i;
@@ -1492,6 +1501,7 @@ merge_with_part_already_present (const char **msg,
 static svn_error_t *
 merge_adjacent_changes (const char **msg,
                         svn_boolean_t msg_only,
+                        svn_test_opts_t *opts,
                         apr_pool_t *pool)
 {
   *msg = "3-way merge, adjacent changes";

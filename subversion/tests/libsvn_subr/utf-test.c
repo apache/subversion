@@ -53,6 +53,7 @@ range_rand (apr_uint32_t min_val,
 static svn_error_t *
 utf_validate (const char **msg,
               svn_boolean_t msg_only,
+              svn_test_opts_t *opts,
               apr_pool_t *pool)
 {
   struct data {
@@ -179,6 +180,7 @@ utf_validate (const char **msg,
 static svn_error_t *
 utf_validate2 (const char **msg,
                svn_boolean_t msg_only,
+               svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
   int i;

@@ -36,6 +36,7 @@
 static svn_error_t *
 dir_deltas (const char **msg,
             svn_boolean_t msg_only,
+            svn_test_opts_t *opts,
             apr_pool_t *pool)
 { 
   svn_repos_t *repos;
@@ -354,6 +355,7 @@ dir_deltas (const char **msg,
 static svn_error_t *
 node_tree_delete_under_copy (const char **msg,
                              svn_boolean_t msg_only,
+                             svn_test_opts_t *opts,
                              apr_pool_t *pool)
 { 
   svn_repos_t *repos;
@@ -494,6 +496,7 @@ struct revisions_changed_results
 static svn_error_t *
 revisions_changed (const char **msg,
                    svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
                    apr_pool_t *pool)
 { 
   apr_pool_t *spool = svn_pool_create (pool);
@@ -751,7 +754,10 @@ check_locations (svn_fs_t *fs, struct locations_info *info,
 }
 
 static svn_error_t *
-node_locations (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+node_locations (const char **msg, 
+                svn_boolean_t msg_only, 
+                svn_test_opts_t *opts,
+                apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_repos_t *repos;

@@ -29,6 +29,7 @@
 static svn_error_t *
 test_path_is_child (const char **msg,
                     svn_boolean_t msg_only,
+                    svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
   int i, j;
@@ -91,6 +92,7 @@ test_path_is_child (const char **msg,
 static svn_error_t *
 test_path_split (const char **msg,
                  svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   apr_size_t i;
@@ -143,6 +145,7 @@ test_path_split (const char **msg,
 static svn_error_t *
 test_is_url (const char **msg,
              svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
   int i;
@@ -188,6 +191,7 @@ test_is_url (const char **msg,
 static svn_error_t *
 test_is_uri_safe (const char **msg,
                   svn_boolean_t msg_only,
+                  svn_test_opts_t *opts,
                   apr_pool_t *pool)
 {
   apr_size_t i;
@@ -241,6 +245,7 @@ test_is_uri_safe (const char **msg,
 static svn_error_t *
 test_uri_encode (const char **msg,
                  svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   int i;
@@ -294,6 +299,7 @@ test_uri_encode (const char **msg,
 static svn_error_t *
 test_uri_decode (const char **msg,
                  svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   int i;
@@ -333,6 +339,7 @@ test_uri_decode (const char **msg,
 static svn_error_t *
 test_uri_autoescape (const char **msg,
                      svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
   static const char *paths[3][2] = {
@@ -369,6 +376,7 @@ test_uri_autoescape (const char **msg,
 static svn_error_t *
 test_uri_from_iri (const char **msg,
                    svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
                    apr_pool_t *pool)
 {
   /* We have to code the IRIs like this because the compiler might translate
@@ -417,6 +425,7 @@ test_uri_from_iri (const char **msg,
 static svn_error_t *
 test_join (const char **msg,
            svn_boolean_t msg_only,
+           svn_test_opts_t *opts,
            apr_pool_t *pool)
 {
   int i;
@@ -515,6 +524,7 @@ test_join (const char **msg,
 static svn_error_t *
 test_basename (const char **msg,
                svn_boolean_t msg_only,
+               svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
   int i;
@@ -560,6 +570,7 @@ test_basename (const char **msg,
 static svn_error_t *
 test_decompose (const char **msg,
                 svn_boolean_t msg_only,
+                svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
   static const char * const paths[] = {
@@ -616,6 +627,7 @@ test_decompose (const char **msg,
 static svn_error_t *
 test_canonicalize (const char **msg,
                    svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
                    apr_pool_t *pool)
 {
   const char *paths[][2] = {
@@ -687,6 +699,7 @@ test_canonicalize (const char **msg,
 static svn_error_t *
 test_remove_component (const char **msg,
                        svn_boolean_t msg_only,
+                       svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
   const char *paths[][2] = {

@@ -33,6 +33,7 @@ const char *test_old_timestring =
 static svn_error_t *
 test_time_to_cstring (const char **msg,
                       svn_boolean_t msg_only,
+                      svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
   const char *timestring;
@@ -60,6 +61,7 @@ test_time_to_cstring (const char **msg,
 static svn_error_t *
 test_time_from_cstring (const char **msg,
                         svn_boolean_t msg_only,
+                        svn_test_opts_t *opts,
                         apr_pool_t *pool)
 {
   apr_time_t timestamp;
@@ -107,6 +109,7 @@ static const char *failure_old_tests[] = {
 static svn_error_t *
 test_time_from_cstring_old (const char **msg,
                             svn_boolean_t msg_only,
+                            svn_test_opts_t *opts,
                             apr_pool_t *pool)
 {
   apr_time_t timestamp;
@@ -153,6 +156,7 @@ test_time_from_cstring_old (const char **msg,
 static svn_error_t *
 test_time_invariant (const char **msg,
                      svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
   apr_time_t current_timestamp = apr_time_now();
@@ -290,6 +294,7 @@ compare_results (struct date_test *dt,
 static svn_error_t *
 test_parse_date (const char **msg,
                  svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   apr_time_t now, result;

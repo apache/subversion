@@ -52,6 +52,7 @@ fs_warning_handler (void *baton, svn_error_t *err)
   svn_handle_warning(stderr, err);
 }
 
+/* This is used only by bdb fs tests. */
 svn_error_t *
 svn_test__fs_new (svn_fs_t **fs_p, apr_pool_t *pool)
 {
@@ -77,7 +78,19 @@ svn_test__create_fs (svn_fs_t **fs_p,
                      const char *name, 
                      apr_pool_t *pool)
 {
+  SVN_ERR (svn_test__create_any_fs (fs_p, name, SVN_FS_TYPE_BDB, pool));
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_test__create_any_fs (svn_fs_t **fs_p,
+                         const char *name, 
+                         const char *fs_type,
+                         apr_pool_t *pool)
+{
   apr_finfo_t finfo;
+  apr_hash_t *fs_config = apr_hash_make (pool);
 
   /* If there's already a repository named NAME, delete it.  Doing
      things this way means that repositories stick around after a
@@ -93,11 +106,27 @@ svn_test__create_fs (svn_fs_t **fs_p,
                                   "there is already a file named '%s'", name);
     }
 
-  SVN_ERR (svn_test__fs_new (fs_p, pool));
-  SVN_ERR (svn_fs_create_berkeley (*fs_p, name));
+  /* If using BDB, enable TXN_NOSYNC to speed up the tests. */
+  if (strcmp (fs_type, SVN_FS_TYPE_BDB) == 0)
+    apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
+                  APR_HASH_KEY_STRING, "1");
+
+  apr_hash_set (fs_config, SVN_FS_CONFIG_FS_TYPE,
+                APR_HASH_KEY_STRING,
+                fs_type);
+
+  SVN_ERR (svn_fs_create (fs_p, name, fs_config, pool));
+
+  if (! *fs_p)
+    return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
+                             "Couldn't alloc a new fs object.");
+
+  /* Provide a warning function that just dumps the message to stderr.  */
+  svn_fs_set_warning_func (*fs_p, fs_warning_handler, NULL);
   
   /* Provide a handler for Berkeley DB error messages.  */
-  SVN_ERR (svn_fs_set_berkeley_errcall (*fs_p, berkeley_error_handler));
+  if (strcmp (SVN_FS_TYPE_BDB, fs_type) == 0)
+      SVN_ERR (svn_fs_set_berkeley_errcall (*fs_p, berkeley_error_handler));
 
   /* Register this fs for cleanup. */
   svn_test_add_dir_cleanup (name);

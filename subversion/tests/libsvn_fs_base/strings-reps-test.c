@@ -89,6 +89,7 @@ txn_body_delete_rep (void *baton, trail_t *trail)
 static svn_error_t *
 write_new_rep (const char **msg, 
                svn_boolean_t msg_only,
+               svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
   struct rep_args args;
@@ -124,6 +125,7 @@ write_new_rep (const char **msg,
 static svn_error_t *
 write_rep (const char **msg, 
            svn_boolean_t msg_only,
+           svn_test_opts_t *opts,
            apr_pool_t *pool)
 {
   struct rep_args new_args;
@@ -171,6 +173,7 @@ write_rep (const char **msg,
 static svn_error_t *
 read_rep (const char **msg, 
           svn_boolean_t msg_only,
+          svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
   struct rep_args new_args;
@@ -282,6 +285,7 @@ read_rep (const char **msg,
 static svn_error_t *
 delete_rep (const char **msg, 
             svn_boolean_t msg_only,
+            svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
   struct rep_args new_args;
@@ -514,6 +518,7 @@ static const char *bigstring3 =
 static svn_error_t *
 test_strings (const char **msg, 
               svn_boolean_t msg_only,
+              svn_test_opts_t *opts,
               apr_pool_t *pool)
 {
   struct string_args args;
@@ -618,6 +623,7 @@ test_strings (const char **msg,
 static svn_error_t *
 write_null_string (const char **msg, 
                    svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
                    apr_pool_t *pool)
 {
   struct string_args args;
@@ -646,6 +652,7 @@ write_null_string (const char **msg,
 static svn_error_t *
 abort_string (const char **msg, 
               svn_boolean_t msg_only,
+              svn_test_opts_t *opts,
               apr_pool_t *pool)
 {
   struct string_args args, args2;
@@ -711,6 +718,7 @@ abort_string (const char **msg,
 static svn_error_t *
 copy_string (const char **msg, 
              svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
   struct string_args args;
