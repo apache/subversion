@@ -103,8 +103,8 @@
 }
 
 %typemap(jni) svn_wc_notify_func_t "jobject"
-%typemap(jtype) svn_wc_notify_func_t "org.tigris.subversion.Notifier"
-%typemap(jstype) svn_wc_notify_func_t "org.tigris.subversion.Notifier"
+%typemap(jtype) svn_wc_notify_func_t "org.tigris.subversion.wc.Notifier"
+%typemap(jstype) svn_wc_notify_func_t "org.tigris.subversion.wc.Notifier"
 %typemap(javain) svn_wc_notify_func_t "$javainput"
 %typemap(javaout) svn_wc_notify_func_t {
     return $jnicall;
@@ -182,8 +182,8 @@
 */
 
 %typemap(jni) svn_log_message_receiver_t "jobject"
-%typemap(jtype) svn_log_message_receiver_t "org.tigris.subversion.swig.callbacks.LogMessageReceiver"
-%typemap(jstype) svn_log_message_receiver_t "org.tigris.subversion.swig.callbacks.LogMessageReceiver"
+%typemap(jtype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
+%typemap(jstype) svn_log_message_receiver_t "org.tigris.subversion.client.LogMessageReceiver"
 %typemap(javain) svn_log_message_receiver_t "$javainput"
 %typemap(javaout) svn_log_message_receiver_t {
     return $jnicall;
