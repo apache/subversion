@@ -393,35 +393,212 @@ translate_write (apr_file_t *file,
   return SVN_NO_ERROR;
 }
 
-/* Parse BUF (whose length is LEN) for Subversion keywords, return
-   TRUE if a keyword was found, FALSE otherwise.  
+
+/* Perform the substition of VALUE into keyword string BUF (with len
+   *LEN), given a pre-parsed KEYWORD (and KEYWORD_LEN), and updating
+   *LEN to the new size of the substituted result.  Return TRUE if all
+   goes well, FALSE otherwise.  */
+static svn_boolean_t
+translate_keyword_subst (char *buf,
+                         apr_size_t *len,
+                         const char *keyword,
+                         apr_size_t keyword_len,
+                         const char *value)
+{
+  char *buf_ptr;
+
+  /* Make sure we gotz good stuffs. */
+  assert (*len <= SVN_KEYWORD_MAX_LEN);
+  assert ((buf[0] == '$') && (buf[*len - 1] == '$'));
+
+  /* Need at least a keyword and two $'s.  */
+  if (*len < keyword_len + 2)
+    return FALSE;
+
+  /* The keyword needs to match what we're looking for. */
+  if (strncmp (buf + 1, keyword, keyword_len))
+    return FALSE;
+
+  buf_ptr = buf + 1 + keyword_len;
+
+  /* Check for unexpanded keyword. */
+  if (buf_ptr[0] == '$')
+    {
+      /* unexpanded... */
+      if (value)
+        {
+          /* ...so expand. */
+          apr_size_t value_len = strlen (value);
+
+          buf_ptr[0] = ':';
+          buf_ptr[1] = ' ';
+          if (value_len)
+            {
+              /* "$keyword: value $" */
+              if (value_len > (SVN_KEYWORD_MAX_LEN - 5))
+                value_len = SVN_KEYWORD_MAX_LEN - 5;
+              strncpy (buf_ptr + 2, value, value_len);
+              buf_ptr[2 + value_len] = ' ';
+              buf_ptr[2 + value_len + 1] = '$';
+              *len = 5 + keyword_len + value_len;
+            }
+          else
+            {
+              /* "$keyword: $"  */
+              buf_ptr[2] = '$';
+              *len = 4 + keyword_len;
+            }
+        }
+      else
+        {
+          /* ...but do nothing. */
+        }
+      return TRUE;
+    }
+
+  /* Check for expanded keyword. */
+  else if ((*len >= 4 + keyword_len ) /* holds at least "$keyword: $" */
+           && (buf_ptr[0] == ':')     /* first char after keyword is ':' */
+           && (buf_ptr[1] == ' ')     /* second char after keyword is ' ' */
+           && (buf[*len - 2] == ' ')) /* has ' ' for next to last character */
+    {
+      /* expanded... */
+      if (! value)
+        {
+          /* ...so unexpand. */
+          buf_ptr[0] = '$';
+          *len = 2 + keyword_len;
+        }
+      else
+        {
+          /* ...so re-expand. */
+          apr_size_t value_len = strlen (value);
+
+          buf_ptr[0] = ':';
+          buf_ptr[1] = ' ';
+          if (value_len)
+            {
+              /* "$keyword: value $" */
+              if (value_len > (SVN_KEYWORD_MAX_LEN - 5))
+                value_len = SVN_KEYWORD_MAX_LEN - 5;
+              strncpy (buf_ptr + 2, value, value_len);
+              buf_ptr[2 + value_len] = ' ';
+              buf_ptr[2 + value_len + 1] = '$';
+              *len = 5 + keyword_len + value_len;
+            }
+          else
+            {
+              /* "$keyword: $"  */
+              buf_ptr[2] = '$';
+              *len = 4 + keyword_len;
+            }
+        }
+      return TRUE;
+    }
+  
+  return FALSE;
+}                         
+
+/* Parse BUF (whose length is *LEN) for Subversion keywords.  If a
+   keyword is found, optionally perform the substitution on it in
+   place, update *LEN with the new length of the translated keyword
+   string, and return TRUE.  If this buffer doesn't contain a known
+   keyword pattern, leave BUF and *LEN untouched and return FALSE.
 
    BUF can contain:
 
-   - an unexpanded keyword: If the corresponding keyword value
-     argument is NULL, do nothing, else perform the translation.
+   - AN UNEXPANDED KEYWORD - $Keyword$: If the corresponding keyword
+     value argument is NULL, do nothing, else perform the translation.
      Regardless, return TRUE to indicate that a keyword substitution
      was handled.
 
-   - an expanded keyword: If the corresponding keyword value argument
-     is NULL, unexpand the keyword, else replace the old expansion
-     with a new one that reflects the keyword value.  Return TRUE to
-     indicate that a keyword substitution was handled.
+   - AN EXPANDED KEYWORD - $Keyword: [value ]$: If the corresponding
+     keyword value argument is NULL, unexpand the keyword, else
+     replace the old expansion with a new one that reflects the
+     keyword value.  Return TRUE to indicate that a keyword
+     substitution was handled.
 
    - something that isn't keywordy at all: Return FALSE.  
 
    REVISION, DATE, AUTHOR, and URL are the keyword value arguments
    spoken of above.  
-*/
+
+   NOTE: It is assumed that BUF has been allocated to be at least
+   SVN_KEYWORD_MAX_LEN bytes longs, and that the data in BUF is less
+   than or equal SVN_KEYWORD_MAX_LEN in length.  Also, any expansions
+   which would result in a keyword string which is greater than
+   SVN_KEYWORD_MAX_LEN will have their values truncated in such a way
+   that the resultant keyword string is still valid (begins with
+   "$Keyword:", ends in " $" and is SVN_KEYWORD_MAX_LEN bytes long).  */
 static svn_boolean_t
-translate_keyword (const char *buf,
-                   apr_size_t len,
+translate_keyword (char *buf,
+                   apr_size_t *len,
                    const char *revision,
                    const char *date,
                    const char *author,
                    const char *url)
 {
-  abort();
+  const char *keyword;
+  const char *value;
+  int keyword_len;
+
+  /* Make sure we gotz good stuffs. */
+  assert (*len <= SVN_KEYWORD_MAX_LEN);
+  assert ((buf[0] == '$') && (buf[*len - 1] == '$'));
+
+  /* Revision */
+  value = revision;
+
+  keyword = SVN_KEYWORD_REVISION_LONG;
+  keyword_len = strlen (SVN_KEYWORD_REVISION_LONG);
+  if (translate_keyword_subst (buf, len, keyword, keyword_len, value))
+    return TRUE;
+
+  keyword = SVN_KEYWORD_REVISION_SHORT;
+  keyword_len = strlen (SVN_KEYWORD_REVISION_SHORT);
+  if (translate_keyword_subst (buf, len, keyword, keyword_len, value))
+    return TRUE;
+
+  /* Date */
+  value = date;
+
+  keyword = SVN_KEYWORD_DATE_LONG;
+  keyword_len = strlen (SVN_KEYWORD_DATE_LONG);
+  if (translate_keyword_subst (buf, len, keyword, keyword_len, value))
+    return TRUE;
+
+  keyword = SVN_KEYWORD_DATE_SHORT;
+  keyword_len = strlen (SVN_KEYWORD_DATE_SHORT);
+  if (translate_keyword_subst (buf, len, keyword, keyword_len, value))
+    return TRUE;
+
+  /* Author */
+  value = author;
+
+  keyword = SVN_KEYWORD_AUTHOR_LONG;
+  keyword_len = strlen (SVN_KEYWORD_AUTHOR_LONG);
+  if (translate_keyword_subst (buf, len, keyword, keyword_len, value))
+    return TRUE;
+
+  keyword = SVN_KEYWORD_AUTHOR_SHORT;
+  keyword_len = strlen (SVN_KEYWORD_AUTHOR_SHORT);
+  if (translate_keyword_subst (buf, len, keyword, keyword_len, value))
+    return TRUE;
+
+  /* URL */
+  value = url;
+
+  keyword = SVN_KEYWORD_URL_LONG;
+  keyword_len = strlen (SVN_KEYWORD_URL_LONG);
+  if (translate_keyword_subst (buf, len, keyword, keyword_len, value))
+    return TRUE;
+
+  keyword = SVN_KEYWORD_URL_SHORT;
+  keyword_len = strlen (SVN_KEYWORD_URL_SHORT);
+  if (translate_keyword_subst (buf, len, keyword, keyword_len, value))
+    return TRUE;
+
+  /* No translations were successful.  Return FALSE. */
   return FALSE;
 }
 #endif /* 0 */
@@ -523,6 +700,9 @@ svn_io_copy_and_translate (const char *src,
                   err = translate_err (apr_err, "closing", dst, pool);
                   goto cleanup;
                 }
+
+              /* All done, all files closed, all is well, and all that. */
+              return SVN_NO_ERROR;
             }
         }
 
@@ -554,21 +734,13 @@ svn_io_copy_and_translate (const char *src,
 
           /* Else, it must be the end of one!  Attempt to translate
              the buffer. */
-          keyword_buf[keyword_off++] = c;
-
-          /* ### todo: Obviously, we aren't *always* expanding
-             keywords...sometimes we are unexpanding them. */
-          if (translate_keyword (keyword_buf,
-                                 keyword_off,
-                                 revision,
-                                 date,
-                                 author,
-                                 url))
+          len = keyword_off;
+          if (translate_keyword (keyword_buf, &len, 
+                                 revision, date, author, url))
             {
               /* We successfully found and translated a keyword.  We
                  can write out this buffer now. */
-              if ((err = translate_write (d, dst, keyword_buf, 
-                                          keyword_off, pool)))
+              if ((err = translate_write (d, dst, keyword_buf, len, pool)))
                 goto cleanup;
               keyword_off = 0;
             }
