@@ -135,15 +135,6 @@ the section for unapproved changes.)
       -0: gstein
 
 
-   * r8003
-     Remove svnserve -u client and server code.
-     Justification: Fixes arguable privacy leak in client.
-     Notes: svnserve -u (believe usernames) was deprecated in 0.34.
-     Votes:
-      +1: jerenkrantz, rooneg, ghudson, epg
-      +0: gstein, cmpilato
-
-
    * Issue #1644
      apr_ and APR_ namespace symbols in Subversion
      Justification: API stability, non-interference w/ APR's namespace
@@ -320,30 +311,6 @@ the section for unapproved changes.)
       -0: gstein (or remove the feature)
 
 
-   * r8001, r8002
-     Implement "--listen-port" and "--listen-host" svnserve options.
-     Justification: useful features for 1.0, low risk.
-     Votes:
-      +1: mbk, bliss, ghudson, rooneg
-      +0: gstein
-
-
-   * r8140
-     Ignore SIGPIPE in svnserve.
-     Justification: Avoid uncontrolled svnserve termination, low risk.
-     Votes:
-      +1: bliss, mbk, rooneg, jszakmeister, epg
-      +0: gstein, sussman
-
-
-   * r8142
-     Fix an svnserve crash bug for network errors.
-     Justification: Avoid uncontrolled svnserve termination, low risk.
-     Votes:
-      +1: bliss, mbk, ghudson, rooneg, jszakmeister, epg
-      -0: gstein
-
-
    * r8154
      Fix a small bug in the FS history harvesting code.  
      Notes:  The codespeak repository is sufficient complex enough
@@ -387,15 +354,6 @@ the section for unapproved changes.)
      Justification: Negligible risk, API cleanliness and stability.
      Votes:
       +1: ghudson, kfogel, dlr
-
-
-   * Issue #1681
-     Make svnserve require --inetd to use stdin/stdout.
-     Justification: Make svnserve more user friendly, low risk.
-     Votes:
-      +1: bliss, ghudson, kfogel
-      +0: cmpilato
-      -0: gstein, sussman
 
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*-

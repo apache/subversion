@@ -48,6 +48,15 @@ enum connection_handling_mode {
   connection_mode_single  /* One connection at a time in this process */
 };
 
+/* The mode in which to run svnserve */
+enum run_mode {
+  run_mode_none,
+  run_mode_inetd,
+  run_mode_daemon,
+  run_mode_tunnel,
+  run_mode_listen_once,
+};
+
 #if APR_HAS_FORK
 #if APR_HAS_THREADS
 
@@ -72,21 +81,34 @@ enum connection_handling_mode {
 /* Option codes and descriptions for svnserve.
  *
  * This must not have more than SVN_OPT_MAX_OPTIONS entries; if you
- * need more, increase that limit first. 
+ * need more, increase that limit first.
  *
  * The entire list must be terminated with an entry of nulls.
+ *
+ * APR requires that options without abbreviations
+ * have codes greater than 255.
  */
+#define SVNSERVE_OPT_LISTEN_PORT 256
+#define SVNSERVE_OPT_LISTEN_HOST 257
+#define SVNSERVE_OPT_FOREGROUND  258
+
 static const apr_getopt_option_t svnserve__options[] =
   {
     {"daemon",           'd', 0, "daemon mode"},
+    {"listen-port",       SVNSERVE_OPT_LISTEN_PORT, 1,
+     "listen port (for daemon mode)"},
+    {"listen-host",       SVNSERVE_OPT_LISTEN_HOST, 1,
+     "listen hostname or IP address (for daemon mode)"},
+    {"foreground",        SVNSERVE_OPT_FOREGROUND, 0,
+     "run in foreground (useful for debugging)"},
     {"help",             'h', 0, "display this help"},
+    {"inetd",            'i', 0, "inetd mode"},
     {"root",             'r', 1, "root of directory to serve"},
     {"read-only",        'R', 0, "deprecated; use repository config file"},
     {"tunnel",           't', 0, "tunnel mode"},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     {"threads",          'T', 0, "use threads instead of fork"},
 #endif
-    {"believe-username", 'u', 0, "deprecated; use password authentication"},
     {"listen-once",      'X', 0, "listen once (useful for debugging)"},
     {0,                  0,   0, 0}
   };
@@ -146,7 +168,6 @@ struct serve_thread_t {
   const char *root;
   svn_ra_svn_conn_t *conn;
   svn_boolean_t read_only;
-  svn_boolean_t believe_username;
   apr_pool_t *pool;
 };
 
@@ -155,8 +176,7 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
 {
   struct serve_thread_t *d = data;
 
-  svn_error_clear(serve(d->conn, d->root, FALSE, d->read_only, 
-                        d->believe_username, d->pool));
+  svn_error_clear(serve(d->conn, d->root, FALSE, d->read_only, d->pool));
   svn_pool_destroy(d->pool);
 
   return NULL;
@@ -165,8 +185,8 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
 
 int main(int argc, const char *const *argv)
 {
-  svn_boolean_t listen_once = FALSE, daemon_mode = FALSE, tunnel_mode = FALSE;
-  svn_boolean_t read_only = FALSE, believe_username = FALSE;
+  enum run_mode run_mode = run_mode_none;
+  svn_boolean_t read_only = FALSE, foreground = FALSE;
   apr_socket_t *sock, *usock;
   apr_file_t *in_file, *out_file;
   apr_sockaddr_t *sa;
@@ -186,6 +206,8 @@ int main(int argc, const char *const *argv)
   struct serve_thread_t *thread_data;
 #endif
   enum connection_handling_mode handling_mode = CONNECTION_DEFAULT;
+  apr_uint16_t port = SVN_RA_SVN_PORT;
+  const char *host = NULL;
 
   /* Initialize the app. */
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
@@ -210,15 +232,31 @@ int main(int argc, const char *const *argv)
           break;
 
         case 'd':
-          daemon_mode = TRUE;
+          run_mode = run_mode_daemon;
+          break;
+
+        case SVNSERVE_OPT_FOREGROUND:
+          foreground = TRUE;
+          break;
+
+        case 'i':
+          run_mode = run_mode_inetd;
+          break;
+
+        case SVNSERVE_OPT_LISTEN_PORT:
+          port = atoi(arg);
+          break;
+
+        case SVNSERVE_OPT_LISTEN_HOST:
+          host = arg;
           break;
 
         case 't':
-          tunnel_mode = TRUE;
+          run_mode = run_mode_tunnel;
           break;
 
         case 'X':
-          listen_once = TRUE;
+          run_mode = run_mode_listen_once;
           break;
 
         case 'r':
@@ -241,34 +279,26 @@ int main(int argc, const char *const *argv)
         case 'T':
           handling_mode = connection_mode_thread;
           break;
-
-        case 'u':
-          believe_username = TRUE;
-          fprintf(stderr, "Warning: -u is deprecated and will go away.\n");
-          fprintf(stderr, "svnserve now supports password authentication.\n");
-          fprintf(stderr, "To configure, put conf/svnserve.conf in repos:\n");
-          fprintf(stderr, "  [general]\n");
-          fprintf(stderr, "  password-db = FILENAME\n");
-          fprintf(stderr, "In FILENAME (may be relative to conf dir) put:\n");
-          fprintf(stderr, "  [users]\n");
-          fprintf(stderr, "  USERNAME = PASSWORD\n");
-          fprintf(stderr, "  ...\n");
-          fprintf(stderr, "Clients must be 0.33 (or r7604) or newer.\n");
-          break;
         }
     }
   if (os->ind != argc)
     usage(argv[0]);
 
-  if (!daemon_mode && !listen_once)
+  if (run_mode == run_mode_none)
+    {
+      fprintf(stdout, "You must specify one of -d, -i, -t or -X.\n");
+      usage(argv[0]);
+    }
+
+  if (run_mode == run_mode_inetd || run_mode == run_mode_tunnel)
     {
       apr_pool_cleanup_register(pool, pool, apr_pool_cleanup_null,
                                 redirect_stdout);
       apr_file_open_stdin(&in_file, pool);
       apr_file_open_stdout(&out_file, pool);
       conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
-      svn_error_clear(serve(conn, root, tunnel_mode, read_only, 
-                            believe_username, pool));
+      svn_error_clear(serve(conn, root, run_mode == run_mode_tunnel,
+                            read_only, pool));
       exit(0);
     }
 
@@ -290,7 +320,7 @@ int main(int argc, const char *const *argv)
    * restarted. */
   apr_socket_opt_set(sock, APR_SO_REUSEADDR, 1);
 
-  apr_sockaddr_info_get(&sa, NULL, APR_INET, SVN_RA_SVN_PORT, 0, pool);
+  apr_sockaddr_info_get(&sa, host, APR_INET, port, 0, pool);
   status = apr_socket_bind(sock, sa);
   if (status)
     {
@@ -302,10 +332,15 @@ int main(int argc, const char *const *argv)
   apr_socket_listen(sock, 7);
 
 #if APR_HAS_FORK
-  if (!listen_once)
+  if (run_mode != run_mode_listen_once && !foreground)
     apr_proc_detach(APR_PROC_DETACH_DAEMONIZE);
 
   apr_signal(SIGCHLD, sigchld_handler);
+#endif
+
+#ifdef SIGPIPE
+  /* Disable SIGPIPE generation for the platforms that have it. */
+  apr_signal(SIGPIPE, SIG_IGN);
 #endif
 
   while (1)
@@ -337,13 +372,11 @@ int main(int argc, const char *const *argv)
 
       conn = svn_ra_svn_create_conn(usock, NULL, NULL, connection_pool);
 
-      if (listen_once)
+      if (run_mode == run_mode_listen_once)
         {
-          err = serve(conn, root, FALSE, read_only, believe_username, 
-                      connection_pool);
+          err = serve(conn, root, FALSE, read_only, connection_pool);
 
-          if (listen_once && err
-              && err->apr_err != SVN_ERR_RA_SVN_CONNECTION_CLOSED)
+          if (err && err->apr_err != SVN_ERR_RA_SVN_CONNECTION_CLOSED)
             svn_handle_error(err, stdout, FALSE);
           svn_error_clear(err);
 
@@ -360,7 +393,7 @@ int main(int argc, const char *const *argv)
           if (status == APR_INCHILD)
             {
               svn_error_clear(serve(conn, root, FALSE, read_only,
-                                    believe_username, connection_pool));
+                                    connection_pool));
               apr_socket_close(usock);
               exit(0);
             }
@@ -400,7 +433,6 @@ int main(int argc, const char *const *argv)
           thread_data->conn = conn;
           thread_data->root = root;
           thread_data->read_only = read_only;
-          thread_data->believe_username = believe_username;
           thread_data->pool = connection_pool;
           status = apr_thread_create(&tid, tattr, serve_thread, thread_data,
                                      connection_pool);
@@ -415,7 +447,7 @@ int main(int argc, const char *const *argv)
 
         case connection_mode_single:
           /* Serve one connection at a time. */
-          svn_error_clear(serve(conn, root, FALSE, read_only, believe_username, 
+          svn_error_clear(serve(conn, root, FALSE, read_only,
                                 connection_pool));
           svn_pool_destroy(connection_pool);
         }

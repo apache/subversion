@@ -54,7 +54,6 @@ typedef struct {
   const char *user;
   svn_boolean_t tunnel;    /* Tunneled through login agent; allow EXTERNAL */
   svn_boolean_t read_only; /* Disallow write access (global flag) */
-  svn_boolean_t believe;   /* Believe ANONYMOUS usernames */
   int protocol_version;
 } server_baton_t;
 
@@ -166,8 +165,6 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (get_access(b, UNAUTHENTICATED) >= required
       && strcmp(mech, "ANONYMOUS") == 0)
     {
-      if (b->believe && mecharg && *mecharg)
-        b->user = mecharg;
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w()", "success"));
       *success = TRUE;
       return SVN_NO_ERROR;
@@ -265,7 +262,7 @@ static svn_error_t *delete_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     b->err = svn_repos_delete_path(b->report_baton, path, pool);
   return SVN_NO_ERROR;
 }
-    
+
 static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                               apr_array_header_t *params, void *baton)
 {
@@ -433,7 +430,7 @@ static svn_error_t *get_props(apr_hash_t **props, svn_fs_root_t *root,
   SVN_ERR(svn_fs_get_uuid(svn_fs_root_fs(root), &uuid, pool));
   str = (uuid) ? svn_string_create(uuid, pool) : NULL;
   apr_hash_set(*props, SVN_PROP_ENTRY_UUID, APR_HASH_KEY_STRING, str);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -794,7 +791,7 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_boolean_t recurse;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb?(?r)", 
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb?(?r)",
                                  &target, &recurse, &rev));
   SVN_ERR(trivial_auth_request(conn, pool, b));
   if (svn_path_is_empty(target))
@@ -1044,7 +1041,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
 
 svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
                    svn_boolean_t tunnel, svn_boolean_t read_only,
-                   svn_boolean_t believe_username, apr_pool_t *pool)
+                   apr_pool_t *pool)
 {
   svn_error_t *err, *io_err;
   apr_uint64_t ver;
@@ -1056,7 +1053,6 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
 
   b.tunnel = tunnel;
   b.read_only = read_only;
-  b.believe = believe_username;
   b.user = NULL;
   b.cfg = NULL;  /* Ugly; can drop when we remove v1 support. */
   b.pwdb = NULL; /* Likewise */
