@@ -23,6 +23,9 @@ automake --add-missing --verbose
 echo "Creating aclocal.m4..."
 aclocal -I ac-helpers
 
+# Preserve the old configure script for later comparison
+cp configure configure.$$.tmp
+
 # Produce ./configure
 echo "Creating configure..."
 autoconf
@@ -63,8 +66,12 @@ if [ ! -d neon ]; then
   exit 1
 fi
 
-# toss our old config.cache. it may be invalid now.
-rm -f config.cache
+# Toss config.cache if configure itself has changed.
+if ! cmp configure configure.$$.tmp > /dev/null 2>&1; then
+   echo "Tossing config.cache, since configure has changed."
+   rm -f config.cache
+fi
+rm configure.$$.tmp
 
 echo ""
 echo "You can run ./configure now."
