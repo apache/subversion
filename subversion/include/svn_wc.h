@@ -491,12 +491,15 @@ svn_error_t *svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
    the update!
 
    If PRINT_UNRECOGNIZED is set, then unversioned objects will be
-   reported to the application layer via a pool feedback table.  */
+   reported to the application layer via a pool feedback table.  If
+   RESTORE_FILES is set, then unexpectedly missing working files will
+   be restored from the administrative directory's cache. */
 svn_error_t *
 svn_wc_crawl_revisions (svn_stringbuf_t *path,
                         const svn_ra_reporter_t *reporter,
                         void *report_baton,
                         svn_boolean_t print_unrecognized,
+                        svn_boolean_t restore_files,
                         apr_pool_t *pool);
 
 
