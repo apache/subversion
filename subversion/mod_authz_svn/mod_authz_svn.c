@@ -366,7 +366,9 @@ static int req_check_access(request_rec *r,
         ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
                       "%s  [%d, #%d]",
                       dav_err->desc, dav_err->status, dav_err->error_id);
-        return HTTP_INTERNAL_SERVER_ERROR;
+        /* Ensure that we never allow access by dav_err->status */
+        return (dav_err->status != OK && dav_err->status != DECLINED) ?
+            dav_err->status : HTTP_INTERNAL_SERVER_ERROR;
     }
 
     /* Ignore the URI passed to MERGE, like mod_dav_svn does.
@@ -417,7 +419,9 @@ static int req_check_access(request_rec *r,
             ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
                           "%s  [%d, #%d]",
                           dav_err->desc, dav_err->status, dav_err->error_id);
-            return HTTP_INTERNAL_SERVER_ERROR;
+            /* Ensure that we never allow access by dav_err->status */
+            return (dav_err->status != OK && dav_err->status != DECLINED) ?
+                dav_err->status : HTTP_INTERNAL_SERVER_ERROR;
         }
 
         if (dest_repos_path)
