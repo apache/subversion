@@ -165,6 +165,24 @@ svn_fs__rev_get_root (const svn_fs_id_t **root_id_p,
 }
 
 
+svn_error_t *
+svn_fs__rev_get_txn_id (const char **txn_id_p,
+                        svn_fs_t *fs,
+                        svn_revnum_t rev,
+                        trail_t *trail)
+{
+  svn_fs__revision_t *revision;
+
+  SVN_ERR (svn_fs__get_rev (&revision, fs, rev, trail));
+
+  /* The skel validator doesn't check the ID format. */
+  if (revision->id == NULL)
+    return svn_fs__err_corrupt_fs_revision (fs, -1);
+
+  *txn_id_p = revision->txn;
+  return SVN_NO_ERROR;
+}
+
 
 
 /* Getting the youngest revision.  */

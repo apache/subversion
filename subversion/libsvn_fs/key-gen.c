@@ -178,6 +178,20 @@ svn_fs__next_key (const char *this, apr_size_t *len, char *next)
 }
 
 
+int 
+svn_fs__key_compare (const char *a, const char *b)
+{
+  int a_len = strlen (a);
+  int b_len = strlen (b);
+  int cmp;
+
+  if (a_len > b_len)
+    return 1;
+  if (b_len > a_len)
+    return -1;
+  cmp = strcmp (a, b);
+  return (cmp ? (cmp / abs (cmp)) : 0);
+}
 
 
 /* 

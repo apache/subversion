@@ -260,8 +260,14 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_FS_NO_SUCH_STRING,
               "Filesystem has no such string")
 
-  SVN_ERRDEF (SVN_ERR_FS_NOT_FOUND,
+  SVN_ERRDEF (SVN_ERR_FS_NO_SUCH_COPY,
+              "Filesystem has no such copy")
+
+  SVN_ERRDEF (SVN_ERR_FS_TRANSACTION_NOT_MUTABLE,
               "Filesystem has no such file")
+
+  SVN_ERRDEF (SVN_ERR_FS_NOT_FOUND,
+              "Filesystem has no item")
 
   SVN_ERRDEF (SVN_ERR_FS_ID_NOT_FOUND,
               "Filesystem has no such node-rev-id")
@@ -282,7 +288,7 @@ SVN_ERROR_START
               "Attempt to change immutable filesystem node")
 
   SVN_ERRDEF (SVN_ERR_FS_ALREADY_EXISTS,
-              "File already exists in revision")
+              "Item already exists in filesystem")
 
   SVN_ERRDEF (SVN_ERR_FS_DIR_NOT_EMPTY,
               "Attempt to remove non-empty filesystem directory")

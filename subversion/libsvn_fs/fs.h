@@ -46,7 +46,7 @@ struct svn_fs_t
   DB_ENV *env;
 
   /* The filesystem's various tables.  See `structure' for details.  */
-  DB *nodes, *revisions, *transactions, *representations, *strings;
+  DB *nodes, *revisions, *transactions, *representations, *strings, *copies;
 
   /* A callback function for printing warning messages, and a baton to
      pass through to it.  */
@@ -81,8 +81,12 @@ struct svn_fs_t
 /*** Filesystem Revision ***/
 typedef struct
 {
-  /* id of the root node. */
+  /* node revsion id of the root node. */
   const svn_fs_id_t *id;
+
+  /* id of the transaction that was committed to create this
+     revision. */
+  const char *txn;
 
   /* property list (const char * name, svn_string_t * value) 
      may be NULL if there are no properies.  */
@@ -94,15 +98,25 @@ typedef struct
 /*** Filesystem Transaction ***/
 typedef struct
 {
-  /* id of the root node */
+  /* revision which this transaction was committed to create, or an
+     invalid revision number to indicate that this is a transaction
+     still unfinished. */
+  svn_revnum_t revision;
+
+  /* node revision id of the root node.  (unfinished only) */
   const svn_fs_id_t *root_id;
 
-  /* id of the revision root node upon which this txn is base */
-  const svn_fs_id_t *base_root_id;
+  /* node revision id of the node which is the root of the revision
+     upon which this txn is base.  (unfinished only) */
+  const svn_fs_id_t *base_id;
 
   /* property list (const char * name, svn_string_t * value).
-     may be NULL if there are no properties.  */
+     may be NULL if there are no properties.  (unfinished only) */
   apr_hash_t *proplist;
+
+  /* copies list (const char * copy_ids), or NULL if there have been
+     no copies in this transaction.  (unfinished only) */
+  apr_array_header_t *copies;
 
 } svn_fs__transaction_t;
 
@@ -113,13 +127,9 @@ typedef struct
   /* node kind */
   svn_node_kind_t kind;
 
-  /* revision in which this node was committed (< 1 here means this node
-     is mutable -- not yet committed */
-  svn_revnum_t revision;
-
-  /* ancestor path/revision */
-  const char *ancestor_path;
-  svn_revnum_t ancestor_rev;
+  /* predecessor node revision id, or NULL if there is no predecessor
+     for this node revision */
+  const svn_fs_id_t *predecessor_id;
 
   /* representation key for this node's properties.  may be NULL if
      there are no properties.  */
@@ -131,7 +141,7 @@ typedef struct
 
   /* representation key for this node's text-data-in-progess (files
      only).  NULL if no edits are currently in-progress. */
-  const char *edit_data_key;
+  const char *edit_key;
 
 } svn_fs__node_revision_t;
 
@@ -175,8 +185,10 @@ typedef struct
   /* representation kind */
   svn_fs__rep_kind_t kind;
 
-  /* is this representation mutable? */
-  int is_mutable;
+  /* transaction ID under which representation was created (used as a
+     mutability flag when compared with a current editing
+     transaction). */
+  const char *txn_id;
 
   /* kind-specific stuff */
   union 
@@ -201,6 +213,22 @@ typedef struct
 } svn_fs__representation_t;
 
 
+/*** Copy ***/
+typedef struct
+{
+  /* Path of copy source. */
+  const char *src_path;
+
+  /* Revision of copy source. */
+  svn_revnum_t src_revision;
+
+  /* Node-revision of copy destination. */
+  const svn_fs_id_t *dst_noderev_id;
+
+} svn_fs__copy_t;
+
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -46,6 +46,7 @@
 #include "rev-table.h"
 #include "nodes-table.h"
 #include "node-rev.h"
+#include "key-gen.h"
 #include "txn.h"
 #include "dag.h"
 #include "tree.h"
@@ -77,7 +78,6 @@ typedef enum root_kind_t {
   unspecified_root = 0,
   revision_root,
   transaction_root,
-  id_root
 } root_kind_t;
 
 struct svn_fs_root_t
@@ -259,7 +259,9 @@ mutable_root_node (dag_node_t **node_p,
                    trail_t *trail)
 {
   if (root->kind == transaction_root)
-    return svn_fs__dag_clone_root (node_p, root->fs, root->txn, trail);
+    return svn_fs__dag_clone_root (node_p, root->fs, 
+                                   svn_fs_txn_root_name (root, trail->pool),
+                                   trail);
   else
     /* If it's not a transaction root, we can't change its contents.  */
     return svn_fs__err_not_mutable (root->fs, root->rev, error_path);
@@ -294,13 +296,6 @@ int
 svn_fs_is_revision_root (svn_fs_root_t *root)
 {
   return root->kind == revision_root;
-}
-
-
-int
-svn_fs_is_id_root (svn_fs_root_t *root)
-{
-  return root->kind == id_root;
 }
 
 
@@ -346,6 +341,10 @@ typedef struct parent_path_t
      root directory, which (obviously) has no name in its parent.  */
   char *entry;
 
+  /* The copy id for this path component should that component be
+     cloned for mutability.  */
+  const char *copy_id;
+
   /* The parent of NODE, or zero if NODE is the root directory.  */
   struct parent_path_t *parent;
   
@@ -353,11 +352,12 @@ typedef struct parent_path_t
 
 
 /* Allocate a new parent_path_t node from POOL, referring to NODE,
-   ENTRY, and PARENT.  */
+   ENTRY, PARENT, and COPY_ID.  */
 static parent_path_t *
 make_parent_path (dag_node_t *node,
                   char *entry,
                   parent_path_t *parent,
+                  const char *copy_id,
                   apr_pool_t *pool)
 {
   parent_path_t *parent_path = apr_pcalloc (pool, sizeof (*parent_path));
@@ -365,6 +365,7 @@ make_parent_path (dag_node_t *node,
   parent_path->node = node;
   parent_path->entry = entry;
   parent_path->parent = parent;
+  parent_path->copy_id = copy_id;
 
   return parent_path;
 }
@@ -455,6 +456,8 @@ open_path (parent_path_t **parent_path_p,
 {
   svn_fs_t *fs = root->fs;
   apr_pool_t *pool = trail->pool;
+  const svn_fs_id_t *id;
+  const char *copy_id;
 
   /* The directory we're currently looking at.  */
   dag_node_t *here;
@@ -465,93 +468,106 @@ open_path (parent_path_t **parent_path_p,
   /* The portion of PATH we haven't traversed yet.  */
   const char *rest = path;
 
-  if (svn_fs_is_id_root (root))
-    {
-      dag_node_t *node;
-      svn_fs_id_t *id = svn_fs_parse_id (path, strlen (path), pool);
-
-      /* Unwise callers pay at the door. */
-      assert ((flags & open_path_last_optional) == 0);
-
-      /* This won't detect a string that's a node id but not a node
-         revision id, but such an id would fail later on anyway. */
-      if (! id)
-        return svn_error_createf
-          (SVN_ERR_FS_NOT_ID, 0, NULL, pool,
-           "`%s' is not a node revision ID", path);
-
-      SVN_ERR (svn_fs__dag_get_node (&node, root->fs, id, trail));
-      parent_path = make_parent_path (node, 0, 0, pool);
-    }
-  else
-    {
-      SVN_ERR (root_node (&here, root, trail));
-      parent_path = make_parent_path (here, 0, 0, pool);
+  /* Make a parent_path item for the root node, using its own current
+     copy id.  */
+  SVN_ERR (root_node (&here, root, trail));
+  id = svn_fs__dag_get_id (here);
+  copy_id = svn_fs__id_copy_id (id);
+  parent_path = make_parent_path (here, 0, 0, copy_id, pool);
       
-      /* Whenever we are at the top of this loop:
-         - HERE is our current directory,
-         - REST is the path we're going to find in HERE, and 
-         - PARENT_PATH includes HERE and all its parents.  */
-      for (;;)
+  /* Whenever we are at the top of this loop:
+     - HERE is our current directory,
+     - ID is the node revision ID of HERE,
+     - COPY_ID is the copy ID to be used for HERE if it is made mutable,
+     - REST is the path we're going to find in HERE, and 
+     - PARENT_PATH includes HERE and all its parents.  */
+  for (;;)
+    {
+      const char *next;
+      char *entry;
+      dag_node_t *child;
+      
+      /* Parse out the next entry from the path.  */
+      entry = next_entry_name (&next, rest, pool);
+      
+      if (*entry == '\0')
         {
-          const char *next;
-          char *entry;
-          dag_node_t *child;
-          
-          /* Parse out the next entry from the path.  */
-          entry = next_entry_name (&next, rest, pool);
-          
-          if (*entry == '\0')
-            /* Given the behavior of next_entry_name, this happens when
-               the path either starts or ends with a slash.  In either
-               case, we stay put: the current directory stays the same,
-               and we add nothing to the parent path.  */
-            child = here;
-          else
+          /* Given the behavior of next_entry_name, this happens when
+             the path either starts or ends with a slash.  In either
+             case, we stay put: the current directory stays the same,
+             and we add nothing to the parent path.  */
+          child = here;
+        }
+      else
+        {
+          const svn_fs_id_t *this_id;
+          const char *this_copy_id;
+
+          /* If we found a directory entry, follow it.  */
+          svn_error_t *err = svn_fs__dag_open (&child, here, entry, trail);
+
+          /* "file not found" requires special handling.  */
+          if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
             {
-              /* If we found a directory entry, follow it.  */
-              svn_error_t *svn_err = svn_fs__dag_open (&child, here,
-                                                       entry, trail);
+              /* If this was the last path component, and the caller
+                 said it was optional, then don't return an error;
+                 just put a NULL node pointer in the path.  */
               
-              /* "file not found" requires special handling.  */
-              if (svn_err && svn_err->apr_err == SVN_ERR_FS_NOT_FOUND)
+              svn_error_clear_all (err);
+              
+              if ((flags & open_path_last_optional)
+                  && (! next || *next == '\0'))
                 {
-                  /* If this was the last path component, and the caller
-                     said it was optional, then don't return an error;
-                     just put a zero node pointer in the path.  */
-
-                  svn_error_clear_all (svn_err);
-
-                  if ((flags & open_path_last_optional)
-                      && (! next || *next == '\0'))
-                    {
-                      parent_path = make_parent_path (0, entry,
-                                                      parent_path, pool);
-                      break;
-                    }
-                  else
-                    /* Build a better error message than svn_fs__dag_open
-                       can provide, giving the root and full path name.  */
-                    return not_found (root, path);
+                  parent_path = make_parent_path (NULL, entry, parent_path, 
+                                                  NULL, pool);
+                  break;
                 }
-              
-              /* Other errors we return normally.  */
-              SVN_ERR (svn_err);
-              
-              parent_path = make_parent_path (child, entry, parent_path, pool);
+              else
+                {
+                  /* Build a better error message than svn_fs__dag_open
+                     can provide, giving the root and full path name.  */
+                  return not_found (root, path);
+                }
             }
           
-          /* Are we finished traversing the path?  */
-          if (! next)
-            break;
-          
-          /* The path isn't finished yet; we'd better be in a directory.  */
-          if (! svn_fs__dag_is_directory (child))
-            return svn_fs__err_not_directory (fs, path);
-          
-          rest = next;
-          here = child;
+          /* Other errors we return normally.  */
+          SVN_ERR (err);
+
+          /* Get the ID and copy ID for CHILD.  */
+          this_id = svn_fs__dag_get_id (child);
+          this_copy_id = svn_fs__id_copy_id (this_id);
+
+          /* Compare the copy IDs of CHILD and its parent.
+
+             If they are the same, then CHILD should use the current
+             value of COPY_ID should it need to be made mutable.
+
+             If CHILD's copy ID is younger than that of its parent, then
+             CHILD was the target of a copy operation, and COPY_ID
+             should be changed to reflect CHILD's current copy ID.
+
+             If CHILD's copy ID is older than that of its parent,
+             then CHILD is an un-edited sub-item of a copy operation
+             that occured on PARENT, and should use the value of
+             COPY_ID should it need to be made mutable.  */
+          if (svn_fs__key_compare (this_copy_id, copy_id) > 0)
+            copy_id = this_copy_id;
+
+          /* Now, make a parent_path item for CHILD. */
+          parent_path = make_parent_path (child, entry, parent_path, 
+                                          copy_id, pool);
         }
+      
+      /* Are we finished traversing the path?  */
+      if (! next)
+        break;
+      
+      /* The path isn't finished yet; we'd better be in a directory.  */
+      if (! svn_fs__dag_is_directory (child))
+        return svn_fs__err_not_directory (fs, path);
+      
+      rest = next;
+      here = child;
     }
 
   *parent_path_p = parent_path;
@@ -571,29 +587,25 @@ make_path_mutable (svn_fs_root_t *root,
                    trail_t *trail)
 {
   dag_node_t *clone;
+  const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
 
-  {
-    svn_boolean_t is_mutable;
-
-    /* Is the node mutable already?  */
-    SVN_ERR (svn_fs__dag_check_mutable (&is_mutable,
-                                        parent_path->node, trail));
-    if (is_mutable)
-      return SVN_NO_ERROR;
-  }
+  /* Is the node mutable already?  */
+  if (svn_fs__dag_check_mutable (parent_path->node, txn_id))
+    return SVN_NO_ERROR;
 
   /* Are we trying to clone the root, or somebody's child node?  */
   if (parent_path->parent)
     {
       /* We're trying to clone somebody's child. 
          Make sure our parent is mutable.  */
-      SVN_ERR (make_path_mutable (root, parent_path->parent, error_path,
+      SVN_ERR (make_path_mutable (root, parent_path->parent, error_path, 
                                   trail));
       
       /* Now make this node mutable.  */
       SVN_ERR (svn_fs__dag_clone_child (&clone,
                                         parent_path->parent->node,
-                                        parent_path->entry,
+                                        parent_path->entry, 
+                                        parent_path->copy_id, txn_id,
                                         trail));
     }
   else
@@ -984,7 +996,10 @@ txn_body_change_node_prop (void *baton,
   apr_hash_set (proplist, args->name, APR_HASH_KEY_STRING, args->value);
 
   /* Overwrite the node's proplist. */
-  return svn_fs__dag_set_proplist (parent_path->node, proplist, trail);
+  return svn_fs__dag_set_proplist (parent_path->node, proplist, 
+                                   svn_fs_txn_root_name (args->root,
+                                                         trail->pool),
+                                   trail);
 }
 
 
@@ -1073,7 +1088,95 @@ svn_fs_props_changed (int *changed_p,
 
 
 /* Merges and commits. */
- 
+
+
+struct deltify_committed_args
+{
+  svn_fs_t *fs; /* the filesystem */
+  svn_revnum_t rev; /* revision just committed */
+  const char *txn_id; /* transaction just committed */
+};
+
+
+/* Deltify ID's predecessor iff ID is mutable under TXN_ID in FS.  If
+   ID is a mutable directory, recurse.  Do this as part of TRAIL. */
+static svn_error_t *
+deltify_if_mutable_under_txn_id (svn_fs_t *fs,
+                                 const svn_fs_id_t *id,
+                                 const char *txn_id,
+                                 trail_t *trail)
+{
+  svn_fs__node_revision_t *noderev;
+  dag_node_t *node;
+  apr_hash_t *entries;
+  int is_dir;
+  const svn_fs_id_t *pred_id;
+
+  /* Not mutable?  Go no further.  This is safe to do because for
+     items in the tree to be mutable, their parent dirs must also be
+     mutable.  Therefore, if a directory is not mutable under TXN_ID,
+     its children cannot be.  */
+  if (strcmp (svn_fs__id_txn_id (id), txn_id))
+    return SVN_NO_ERROR;
+
+  /* Get the NODE and node revision for ID. */
+  SVN_ERR (svn_fs__dag_get_node (&node, fs, id, trail));
+  SVN_ERR (svn_fs__get_node_revision (&noderev, fs, id, trail));
+
+  /* If this is a directory, recurse on its entries. */
+  if ((is_dir = svn_fs__dag_is_directory (node)))
+    {
+      SVN_ERR (svn_fs__dag_dir_entries (&entries, node, trail));
+      if (entries)
+        {
+          apr_hash_index_t *hi;
+
+          for (hi = apr_hash_first (trail->pool, entries); 
+               hi; 
+               hi = apr_hash_next (hi))
+            {
+              const svn_fs_dirent_t *dirent;
+              void *val;
+              
+              /* KEY will be the entry name (about which we really
+                 don't care), VAL the dirent */
+              apr_hash_this (hi, NULL, NULL, &val);
+              dirent = val;
+
+              SVN_ERR (deltify_if_mutable_under_txn_id (fs, dirent->id,
+                                                        txn_id, trail));
+            }
+        }
+    }
+
+  /* If we have have a predecessor, deltify it against the current
+     node revision. */
+  if ((pred_id = noderev->predecessor_id))
+    {
+      dag_node_t *pred_node;
+      SVN_ERR (svn_fs__dag_get_node (&pred_node, fs, pred_id, trail));
+      SVN_ERR (svn_fs__dag_deltify (pred_node, node, is_dir, trail));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+txn_body_deltify_committed (void *baton, trail_t *trail)
+{
+  struct deltify_committed_args *args = baton;
+  const svn_fs_id_t *id;
+  dag_node_t *root_dir;
+
+  /* Get the ID of the root dir of the revision. */
+  SVN_ERR (svn_fs__dag_revision_root (&root_dir, args->fs, args->rev, trail));
+  id = svn_fs__dag_get_id (root_dir);
+
+  /* Now...deltify! */
+  return deltify_if_mutable_under_txn_id (args->fs, id, args->txn_id, trail);
+}
+
 struct get_root_args
 {
   svn_fs_root_t *root;
@@ -1098,6 +1201,94 @@ path_append (const char *dir, const char *entry, apr_pool_t *pool)
   return apr_psprintf (pool, "%s/%s", dir, entry);
 }
 
+
+/* Set *IS_ANCESTOR to non-zero iff ID1 is an ancestor of ID2 in FS,
+   as part of TRAIL. */
+static svn_error_t *
+id_check_ancestor (int *is_ancestor,
+                   svn_fs_t *fs, 
+                   const svn_fs_id_t *id1, 
+                   const svn_fs_id_t *id2,
+                   trail_t *trail)
+{
+  dag_node_t *node1, *node2;
+
+  /* Get the nodes. */
+  svn_fs__dag_get_node (&node1, fs, id1, trail);
+  svn_fs__dag_get_node (&node2, fs, id2, trail);
+  
+  /* Do the test.  If the test fails, we'll just go with "not an
+     ancestor" for now.  ### better come back and check this out.  */
+  return svn_fs__dag_is_ancestor (is_ancestor, node1, node2, trail);
+}
+
+/* Set *IS_PARENT to non-zero iff ID1 is the direct predecessor of ID2
+   in FS, as part of TRAIL. */
+static svn_error_t *
+id_is_parent (int *is_parent,
+              svn_fs_t *fs,
+              const svn_fs_id_t *id1,
+              const svn_fs_id_t *id2,
+              trail_t *trail)
+{
+  dag_node_t *node1, *node2;
+
+  /* Get the nodes. */
+  svn_fs__dag_get_node (&node1, fs, id1, trail);
+  svn_fs__dag_get_node (&node2, fs, id2, trail);
+
+  return svn_fs__dag_is_parent (is_parent, node1, node2, trail);
+}              
+
+static svn_error_t *
+maybe_update_ancestry (svn_fs_t *fs,
+                       const svn_fs_id_t *ancestor_id,
+                       const svn_fs_id_t *source_id,
+                       const svn_fs_id_t *target_id,
+                       const char *txn_id,
+                       const char *target_path,
+                       trail_t *trail)
+{
+  int a_parentof_t;
+  int a_ancestorof_s;
+
+  /* Per the really really big comment in merge(), we can reset the
+     predecessor-id in the node to which TARGET_ID refers to point to
+     SOURCE_ID iff:
+
+     - we have successfully merged ancestor, source, and target, 
+     - target is a direct successor of ancestor (meaning, ancestor is
+       the parent of target), and
+     - source is a descendent of ancestor (meaning ancestor is ... uh,
+       an ancestor of source).
+
+     *** IT IS ASSUMED THAT IF YOU ARE CALLING THIS FUNCTION, THE
+         SUCCESSFUL MERGE REQUIREMENT HAS BEEN MET. ***
+
+     So now, just check the other two requirements, easiest check
+     first. */
+
+  SVN_ERR (id_is_parent (&a_parentof_t, fs, ancestor_id, target_id, trail));
+  if (a_parentof_t)
+    {
+      SVN_ERR (id_check_ancestor (&a_ancestorof_s, fs, ancestor_id, 
+                                  target_id, trail));
+      if (a_ancestorof_s)
+        {
+          /* Set target's predecessor-id to source_id.  */
+          svn_fs__node_revision_t *noderev;
+
+          if (strcmp (svn_fs__id_txn_id (target_id), txn_id))
+            return svn_error_createf
+              (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
+               "unexpected immutable node at \"%s\"", target_path);
+          SVN_ERR (svn_fs__get_node_revision (&noderev, fs, target_id, trail));
+          noderev->predecessor_id = source_id;
+          SVN_ERR (svn_fs__put_node_revision (fs, target_id, noderev, trail));
+        }
+    }
+  return SVN_NO_ERROR;
+}
 
 /* Merge changes between ANCESTOR and SOURCE into TARGET, as part of
  * TRAIL.  ANCESTOR and TARGET must be distinct node revisions.
@@ -1127,6 +1318,7 @@ merge (svn_stringbuf_t *conflict_p,
        dag_node_t *target,
        dag_node_t *source,
        dag_node_t *ancestor,
+       const char *txn_id,
        trail_t *trail)
 {
   const svn_fs_id_t *source_id, *target_id, *ancestor_id;
@@ -1154,7 +1346,7 @@ merge (svn_stringbuf_t *conflict_p,
   /* It's improper to call this function with ancestor == target. */
   if (svn_fs__id_eq (ancestor_id, target_id))
     {
-      svn_stringbuf_t *id_str = svn_fs_unparse_id (target_id, trail->pool);
+      svn_string_t *id_str = svn_fs_unparse_id (target_id, trail->pool);
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, 0, NULL, trail->pool,
          "Bad merge call -- target `%s' has id `%s', same as ancestor.",
@@ -1245,6 +1437,54 @@ merge (svn_stringbuf_t *conflict_p,
    *     // Remaining entries in target should be left as-is.
    *   }
    *
+   *
+   * A WORD ABOUT MERGE RECURSION AND ANCESTRY TRACKING
+   *
+   * After we do the merge into target, target has absorbed the
+   * history between ancestor and source, but there is no record of
+   * this absorbtion having happened.  For example, when generating a
+   * log message for target, you'd want to include all the changes
+   * between ancestor and source.
+   *
+   * In the general case, this is the same genetic merge problem that
+   * we'll have to deal with when we do full ancestry tracking.
+   * (Hello, changesets.)
+   *
+   * But the most common particular case is that target is an
+   * immediate descendant of ancestor, and source is also a descendant
+   * of ancestor.
+   *
+   * In such cases, we can record the successful merge for free, by
+   * setting target's predecessor-id to s_entry->id.  This is safe
+   * because:
+   *
+   * - all the history from time-zero to ancestor is preserved
+   *
+   * - all the history from ancestor to source is now preserved
+   *
+   * - the single historical step from ancestor to target is preserved
+   *   as a single step from source to target, which is an accurate
+   *   reflection of the post-merge situation anyway.
+   *
+   * Note: this trick should be used after any call to merge(), not
+   * just the recursive call above.  That means the transaction root
+   * should potentially have its predecessor-id updated after the
+   * merge, too.
+   *
+   * Note Some More:  Bill Tutt explains that a more generic way of
+   * knowing when to update the predecessor-id is when S and T are
+   * related, but as cousins in the ancestry tree.  That is:
+   *
+   *    ((S.NodeId == T.NodeId)
+   *     && (! S == T)
+   *     && (! S ancestorof T)
+   *     && (! T ancestorof S))
+   *
+   * However, he has some uncertainty about how this holds up in the
+   * face of copies.
+   *
+   * See the following message for the full details:
+   * http://subversion.tigris.org/servlets/ReadMsg?msgId=75127&listName=dev
    */
 
   if ((! svn_fs__dag_is_directory (source))
@@ -1318,13 +1558,64 @@ merge (svn_stringbuf_t *conflict_p,
           /* If source entry has changed since ancestor entry... */
           if (! svn_fs__id_eq (a_entry->id, s_entry->id))
             {
-              /* ... and if target entry has not changed,
-                 - OR - if target descends from ancestor, and source
-                 descends from target... */
-              if ( (svn_fs__id_eq (a_entry->id, t_entry->id))
-                   || ( (svn_fs__id_is_ancestor(a_entry->id, t_entry->id)) 
-                        && (svn_fs__id_is_ancestor(t_entry->id,
-                                                   s_entry->id))) )
+              int a_ancestorof_t = 0, t_ancestorof_s = 0;
+              int s_ancestorof_t = 0;
+              int a_is_t = 0;
+              int logic_case = 0;
+
+              /*** The id_check_ancestor calls are rather expensive,
+                   so reproduce the logic below up here so we only ask
+                   the questions that need to be asked.  This would be
+                   a heckuva lot easier if id_check_ancestor could
+                   return an int instead of an svn_error_t *, but
+                   that's just life, I suppose.  
+
+                   This could very well be the ugliest code in
+                   Subversion. */
+
+              a_is_t = svn_fs__id_eq (a_entry->id, t_entry->id);
+              if (a_is_t)
+                {
+                  /* This is Case 1.  */
+                  logic_case = 1;
+                }
+              else
+                {
+                  SVN_ERR (id_check_ancestor (&a_ancestorof_t, fs, a_entry->id,
+                                              t_entry->id, trail));
+                  if (a_ancestorof_t)
+                    {
+                      /* this is an &&, so we need both ancestor checks. */
+                      SVN_ERR (id_check_ancestor (&t_ancestorof_s, fs, 
+                                                  t_entry->id, s_entry->id, 
+                                                  trail));
+                      if (t_ancestorof_s)
+                        {
+                          /* This is Case 1.  */
+                          logic_case = 1;
+                        }
+                    }
+                }
+
+              /* if we didn't choose Case 1, try for Case 2. */
+              if (! logic_case)
+                {
+                  SVN_ERR (id_check_ancestor (&s_ancestorof_t, fs, 
+                                              s_entry->id, t_entry->id, 
+                                              trail));
+                  if (! s_ancestorof_t)
+                    {
+                      /* This is Case 2. */
+                      logic_case = 2;
+                    }
+                }
+
+              /*** Now, actually use our findings to do real work. ***/
+
+              /* ... and if target entry has not changed, - OR - if
+                 target descends from ancestor, and source descends
+                 from target... (Case 1) */
+              if (logic_case == 1)
                 {
                   /* ### kff todo: what about svn_fs__dag_link()
                      instead of svn_fs__dag_set_entry()?  The cycle
@@ -1337,20 +1628,19 @@ merge (svn_stringbuf_t *conflict_p,
                      commits. */
 
                   /* ... target takes source. */
-                  svn_boolean_t is_mutable;
-                  SVN_ERR (svn_fs__dag_check_mutable (&is_mutable,
-                                                      target, trail));
-                  if (! is_mutable)
+                  if (! svn_fs__dag_check_mutable (target, txn_id))
                     return svn_error_createf
                       (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
                        "unexpected immutable node at \"%s\"", target_path);
 
                   SVN_ERR (svn_fs__dag_set_entry
-                           (target, t_entry->name, s_entry->id, trail));
+                           (target, t_entry->name, s_entry->id, 
+                            txn_id, trail));
                 }
               /* or if target entry is different from both and
-                 unrelated to source, and all three entries are dirs... */
-              else if (! svn_fs__id_is_ancestor (s_entry->id, t_entry->id))
+                 unrelated to source, and all three entries are
+                 dirs... (Case 2) */
+              else if (logic_case == 2)
                 {
                   dag_node_t *s_ent_node, *t_ent_node, *a_ent_node;
                   const char *new_tpath;
@@ -1367,9 +1657,10 @@ merge (svn_stringbuf_t *conflict_p,
                       || (! svn_fs__dag_is_directory (a_ent_node)))
                     {
                       /* Not all of these entries is a directory. Conflict. */
-                      svn_stringbuf_set (conflict_p, path_append (target_path,
-                                                                  a_entry->name,
-                                                                  trail->pool));
+                      svn_stringbuf_set (conflict_p, 
+                                         path_append (target_path,
+                                                      a_entry->name,
+                                                      trail->pool));
                       return svn_error_createf
                         (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
                          "conflict at \"%s\"", conflict_p->data);
@@ -1380,86 +1671,15 @@ merge (svn_stringbuf_t *conflict_p,
                                            trail->pool);
                   SVN_ERR (merge (conflict_p, new_tpath,
                                   t_ent_node, s_ent_node, a_ent_node,
-                                  trail));
-                  /* ### kff todo: 
+                                  txn_id, trail));
 
-                     As Jim mentioned on the phone, there's a
-                     history-tracking problem here.  After we do the
-                     merge into target, target has absorbed the
-                     history between ancestor and source, but there is
-                     no record of this absorbtion having happened.
-                     For example, when generating a log message for
-                     target, you'd want to include all the changes
-                     between ancestor and source.
-
-                     In the general case, this is the same genetic
-                     merge problem that we'll have to deal with when
-                     we do full ancestry tracking.  (Hello,
-                     changesets.)
-
-                     But the most common particular case is that
-                     target is an immediate descendant of ancestor,
-                     and source is also a descendant of ancestor.
-                     That is:
-
-                        svn_fs_id_distance (ancestor, target) == 1
-                        svn_fs_id_distance (ancestor, source) >= 1
-                             
-                     In such cases, we can record the successful merge
-                     for free, by making t_entry->name point to a node
-                     id that is a successor of s_entry->id.  This is
-                     safe because
-
-                     - all the history from time-zero to ancestor is
-                     preserved
-
-                     - all the history from ancestor to source is now
-                     preserved
-
-                     - the single historical step from ancestor to
-                     target is preserved as a single step from source
-                     to target, which is an accurate reflection of the
-                     post-merge situation anyway.
-
-                     Note that this trick should be used after any
-                     call to merge(), not just the recursive call
-                     above.  That means the transaction root should be
-                     re-ID'd after the merge.  (And come to think of
-                     it, we're already resetting the transaction's
-                     base root to source, so setting the txn's mutable
-                     root to a successor of source has a certain
-                     inevitability, n'est ce pas?) */
-
-                  /* Per the comment above, if target is an immediate
-                     descendant of ancestor, and source is also a
-                     descendant of ancestor, we need to re-ID target
-                     with a successor ID of source. */
-                  if ((svn_fs_id_distance (a_entry->id,
-                                           t_entry->id) == 1)
-                      && (svn_fs_id_distance (a_entry->id,
-                                              s_entry->id) >= 1))
-                    {
-                      svn_fs_id_t *successor;
-                      svn_fs__node_revision_t *noderev;
-                      
-                      /* Get a successor id. */
-                      SVN_ERR (svn_fs__new_successor_id 
-                               (&successor, fs, s_entry->id, trail));
-                              
-                      /* Copy the target node to the new successor id. */
-                      SVN_ERR (svn_fs__get_node_revision 
-                               (&noderev, fs, t_entry->id, trail));
-                      SVN_ERR (svn_fs__put_node_revision 
-                               (fs, successor, noderev, trail));
-                              
-                      /* Update t_entry's parent with the new id. */
-                      SVN_ERR (svn_fs__dag_set_entry (target, t_entry->name, 
-                                                      successor, trail));
-
-                      /* Now, delete the old node revision. */
-                      SVN_ERR (svn_fs__delete_nodes_entry 
-                               (fs, t_entry->id, trail));
-                    }
+                  /* If target is an immediate descendant of ancestor,
+                     and source is also a descendant of ancestor, we
+                     need to point target's predecessor-id to
+                     source. */
+                  SVN_ERR (maybe_update_ancestry (fs, a_entry->id, s_entry->id,
+                                                  t_entry->id, txn_id, 
+                                                  new_tpath, trail));
                 }
               /* Else target entry has changed since ancestor entry,
                  but it changed either to source entry or to a
@@ -1489,20 +1709,20 @@ merge (svn_stringbuf_t *conflict_p,
       else if ((t_entry = apr_hash_get (t_entries, key, klen))
                && (! apr_hash_get (s_entries, key, klen)))
         {
-          if (svn_fs__id_eq (t_entry->id, a_entry->id))
+          int distance = svn_fs_compare_ids (t_entry->id, a_entry->id);
+          
+          if (distance == 0)
             {
               /* If E is same in target as ancestor, then it has not
                  changed, and the deletion in source should be
                  honored. */
-              svn_boolean_t is_mutable;
-              SVN_ERR (svn_fs__dag_check_mutable (&is_mutable,
-                                                  target, trail));
-              if (! is_mutable)
+              if (! svn_fs__dag_check_mutable (target, txn_id))
                 return svn_error_createf
                   (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
                    "unexpected immutable node at \"%s\"", target_path);
               
-              SVN_ERR (svn_fs__dag_delete_tree (target, t_entry->name, trail));
+              SVN_ERR (svn_fs__dag_delete_tree (target, t_entry->name, 
+                                                txn_id, trail));
 
               /* Seems cleanest to remove it from the target entries
                  hash now, even though no code would break if we
@@ -1510,7 +1730,7 @@ merge (svn_stringbuf_t *conflict_p,
                  the state of the target at all times. */
               apr_hash_set (t_entries, key, klen, NULL);
             }
-          else if (svn_fs_id_distance (t_entry->id, a_entry->id) != -1)
+          else if (distance != -1)
             {
               /* E is an attempt to modify ancestor, so it's a
                  conflict with the deletion of E in source.  If E
@@ -1552,28 +1772,38 @@ merge (svn_stringbuf_t *conflict_p,
       const void *key;
       void *val;
       apr_ssize_t klen;
-          
+      int s_ancestorof_t = 0;
+
       apr_hash_this (hi, &key, &klen, &val);
       s_entry = val;
       t_entry = apr_hash_get (t_entries, key, klen);
+
+      /* The id_check_ancestor calls are rather expensive, so
+         reproduce the logic below up here so we only ask the
+         questions that need to be asked.  This would be a
+         heckuva lot easier if id_check_ancestor could return
+         an int instead of an svn_error_t *, but that's just
+         life, I suppose.  */
+      if (t_entry)
+        {
+          SVN_ERR (id_check_ancestor (&s_ancestorof_t, fs, s_entry->id,
+                                      t_entry->id, trail));
+        }
 
       /* E does not exist in target */
       if (! t_entry)
         {
           /* target takes source */
-          svn_boolean_t is_mutable;
-          SVN_ERR (svn_fs__dag_check_mutable (&is_mutable,
-                                              target, trail));
-          if (! is_mutable)
+          if (! svn_fs__dag_check_mutable (target, txn_id))
             return svn_error_createf
               (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
                "unexpected immutable node at \"%s\"", target_path);
               
           SVN_ERR (svn_fs__dag_set_entry
-                   (target, s_entry->name, s_entry->id, trail));
+                   (target, s_entry->name, s_entry->id, txn_id, trail));
         }
       /* E exists in target but is different from E in source */
-      else if (! svn_fs__id_is_ancestor (s_entry->id, t_entry->id))
+      else if (! s_ancestorof_t)
         {
           svn_stringbuf_set (conflict_p, path_append (target_path,
                                                       t_entry->name,
@@ -1636,18 +1866,18 @@ txn_body_merge (void *baton, trail_t *trail)
   dag_node_t *source_node, *txn_root_node, *ancestor_node;
   const svn_fs_id_t *source_id;
   svn_fs_t *fs = svn_fs__txn_fs (args->txn);
-  const char *txn_name = svn_fs__txn_id (args->txn);
+  const char *txn_id = svn_fs__txn_id (args->txn);
 
   source_node = args->source_node;
   ancestor_node = args->ancestor_node;
   source_id = svn_fs__dag_get_id (source_node);
   
-  SVN_ERR (svn_fs__dag_txn_root (&txn_root_node, fs, txn_name, trail));
+  SVN_ERR (svn_fs__dag_txn_root (&txn_root_node, fs, txn_id, trail));
 
   if (ancestor_node == NULL)
     {
       SVN_ERR (svn_fs__dag_txn_base_root (&ancestor_node, fs,
-                                          txn_name, trail));
+                                          txn_id, trail));
     }
   
   if (svn_fs__id_eq (svn_fs__dag_get_id (ancestor_node),
@@ -1662,51 +1892,29 @@ txn_body_merge (void *baton, trail_t *trail)
          for the caller to do, and we might want to consider whether
          this response is really appropriate. */
       
-      SVN_ERR (svn_fs__set_txn_base (fs, txn_name, source_id, trail));
-      SVN_ERR (svn_fs__set_txn_root (fs, txn_name, source_id, trail));
+      SVN_ERR (svn_fs__set_txn_base (fs, txn_id, source_id, trail));
+      SVN_ERR (svn_fs__set_txn_root (fs, txn_id, source_id, trail));
     }
   else
     {
       const svn_fs_id_t *ancestor_id, *target_id;
 
-      SVN_ERR (merge (args->conflict,
-                      "",
-                      txn_root_node,
-                      source_node,
-                      ancestor_node,
-                      trail));
+      SVN_ERR (merge (args->conflict, "", txn_root_node,
+                      source_node, ancestor_node, txn_id, trail));
 
+      /* Possibly change the target's predecessor-id to be source
+         following a successful merge; see Dostoyevskian comment in
+         merge() about this for the full explanation. */
       ancestor_id = svn_fs__dag_get_id (ancestor_node);
       target_id = svn_fs__dag_get_id (txn_root_node);
-
-      /* Re-ID the txn following a successful merge; see Dostoyevskian
-         comment in merge() about this for the full explanation. */
-      if ((svn_fs_id_distance (ancestor_id, target_id) == 1)
-          && (svn_fs_id_distance (ancestor_id, source_id) >= 1))
-        {
-          svn_fs_id_t *successor;
-          svn_fs__node_revision_t *noderev;
-          
-          /* Get a successor id. */
-          SVN_ERR (svn_fs__new_successor_id 
-                   (&successor, fs, source_id, trail));
-          
-          /* Copy the target node to the new successor id. */
-          SVN_ERR (svn_fs__get_node_revision (&noderev, fs, target_id, trail));
-          SVN_ERR (svn_fs__put_node_revision (fs, successor, noderev, trail));
-          
-          /* Update the transaction with the new root id. */
-          SVN_ERR (svn_fs__set_txn_root (fs, txn_name, successor, trail));
-
-          /* Now, delete the old node revision. */
-          SVN_ERR (svn_fs__delete_nodes_entry (fs, target_id, trail));
-        }
+      SVN_ERR (maybe_update_ancestry (fs, ancestor_id, source_id, 
+                                      target_id, txn_id, "", trail));
 
       /* After the merge, txn's new "ancestor" is now really the node
          at source_id, so record that fact.  Think of this as
          ratcheting the txn forward in time, so it can't backslide and
          forget the merging work that's already been done. */
-      SVN_ERR (svn_fs__set_txn_base (fs, txn_name, source_id, trail));
+      SVN_ERR (svn_fs__set_txn_base (fs, txn_id, source_id, trail));
     }
   
   return SVN_NO_ERROR;
@@ -1758,7 +1966,7 @@ txn_body_commit (void *baton, trail_t *trail)
      start, instead of having to transform one of them. */ 
   if (! svn_fs__id_eq (y_rev_root_id, svn_fs__dag_get_id (txn_base_root_node)))
     {
-      svn_stringbuf_t *id_str = svn_fs_unparse_id (y_rev_root_id, trail->pool);
+      svn_string_t *id_str = svn_fs_unparse_id (y_rev_root_id, trail->pool);
       return svn_error_createf
         (SVN_ERR_TXN_OUT_OF_DATE, 0, NULL, trail->pool,
          "txn `%s' out of date w.r.t. revision `%s'", txn_name, id_str->data);
@@ -1821,9 +2029,13 @@ svn_fs_commit_txn (const char **conflict_p,
   svn_error_t *err;
   svn_fs_t *fs = svn_fs__txn_fs (txn);
   apr_pool_t *pool = svn_fs__txn_pool (txn);
+  const char *txn_id;
 
   /* Initialize returned revision number to an invalid value. */
   *new_rev = SVN_INVALID_REVNUM;
+
+  /* Get the transaction's name.  We'll need it later. */
+  SVN_ERR (svn_fs_txn_name (&txn_id, txn, pool));
 
   while (1729)
     {
@@ -1892,20 +2104,22 @@ svn_fs_commit_txn (const char **conflict_p,
         return err;
       else
         {
-          svn_fs_root_t *root;
-          svn_error_t *err2;
+          struct deltify_committed_args dc_args;
 
+          /* Set the return value, the new revision. */
           *new_rev = commit_args.new_rev;
 
           /* Final step: after a successful commit of the transaction,
              deltify the new revision. */
-          if (! ((err2 = svn_fs_revision_root (&root, fs, *new_rev - 1, pool))))
-            err2 = svn_fs_deltify (root, "/", TRUE, pool);
-          
-          return (err2 
-                  ? svn_error_quick_wrap 
-                      (err2, "Commit succeeded, deltification failed")
-                  : SVN_NO_ERROR);
+          dc_args.fs = fs;
+          dc_args.rev = *new_rev;
+          dc_args.txn_id = txn_id;
+
+          SVN_ERR_W (svn_fs__retry_txn (fs, txn_body_deltify_committed, 
+                                        &dc_args, pool),
+                     "Commit succeeded, deltification failed");
+
+          return SVN_NO_ERROR;
         }
     }
 
@@ -2069,6 +2283,7 @@ txn_body_make_dir (void *baton,
   SVN_ERR (svn_fs__dag_make_dir (&sub_dir,
                                  parent_path->parent->node, 
                                  parent_path->entry,
+                                 svn_fs_txn_root_name (root, trail->pool),
                                  trail));
 
   return SVN_NO_ERROR;
@@ -2128,12 +2343,15 @@ txn_body_delete (void *baton,
     {
       SVN_ERR (svn_fs__dag_delete_tree (parent_path->parent->node,
                                         parent_path->entry,
+                                        svn_fs_txn_root_name (root, 
+                                                              trail->pool),
                                         trail));
     }
   else
     {
       SVN_ERR (svn_fs__dag_delete (parent_path->parent->node,
                                    parent_path->entry,
+                                   svn_fs_txn_root_name (root, trail->pool),
                                    trail));
     }
 
@@ -2229,6 +2447,7 @@ txn_body_copy (void *baton,
                                  args->preserve_history,
                                  svn_fs_revision_root_revision (from_root),
                                  from_path,
+                                 svn_fs_txn_root_name (to_root, trail->pool),
                                  trail));
     }
   else
@@ -2275,11 +2494,10 @@ svn_fs_copy (svn_fs_root_t *from_root,
 
 
 svn_error_t *
-svn_fs_link (svn_fs_root_t *from_root,
-             const char *from_path,
-             svn_fs_root_t *to_root,
-             const char *to_path,
-             apr_pool_t *pool)
+svn_fs_revision_link (svn_fs_root_t *from_root,
+                      svn_fs_root_t *to_root,
+                      const char *path,
+                      apr_pool_t *pool)
 {
   struct copy_args args;
 
@@ -2287,9 +2505,9 @@ svn_fs_link (svn_fs_root_t *from_root,
     return not_txn (to_root);
 
   args.from_root         = from_root;
-  args.from_path         = from_path;
+  args.from_path         = path;
   args.to_root           = to_root;
-  args.to_path           = to_path;
+  args.to_path           = path;
   args.preserve_history  = 0;
 
   return svn_fs__retry_txn (to_root->fs, txn_body_copy, &args, pool);
@@ -2380,6 +2598,7 @@ txn_body_make_file (void *baton,
   SVN_ERR (svn_fs__dag_make_file (&child,
                                   parent_path->parent->node, 
                                   parent_path->entry,
+                                  svn_fs_txn_root_name (root, trail->pool),
                                   trail));
 
   return SVN_NO_ERROR;
@@ -2540,7 +2759,10 @@ static svn_error_t *
 txn_body_finalize_edits (void *baton, trail_t *trail)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
-  return svn_fs__dag_finalize_edits (tb->node, trail);
+  return svn_fs__dag_finalize_edits (tb->node, 
+                                     svn_fs_txn_root_name (tb->root,
+                                                           trail->pool),
+                                     trail);
 }
 
 
@@ -2631,14 +2853,13 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
      ROOT/PATH; obviously, this must done in the context of a db_txn.
      The stream is returned in tb->source_stream. */
   SVN_ERR (svn_fs__dag_get_contents (&(tb->source_stream),
-                                     tb->node,
-                                     tb->pool,
-                                     trail));
+                                     tb->node, tb->pool, trail));
 
   /* Make a writable "target" stream */
   SVN_ERR (svn_fs__dag_get_edit_stream (&(tb->target_stream),
-                                        tb->node,
-                                        tb->pool,
+                                        tb->node, tb->pool,
+                                        svn_fs_txn_root_name (tb->root,
+                                                              trail->pool),
                                         trail));
 
   /* Make a writable "string" stream which writes data to
@@ -2684,6 +2905,7 @@ svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
 
 /* --- End machinery for svn_fs_apply_textdelta() ---  */
 
+#if 0
 /* --- Machinery for svn_fs_apply_text() ---  */
 
 /* Baton for svn_fs_apply_text(). */
@@ -2757,6 +2979,116 @@ txn_body_apply_text (void *baton, trail_t *trail)
   SVN_ERR (svn_fs__dag_get_edit_stream (&(tb->file_stream),
                                         tb->node,
                                         tb->pool,
+                                        trail));
+
+  /* Create a 'returnable' stream which writes to the file_stream. */
+  tb->stream = svn_stream_create (tb, tb->pool);
+  svn_stream_set_write (tb->stream, text_stream_writer);
+  svn_stream_set_close (tb->stream, text_stream_closer);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_apply_text (svn_stream_t **contents_p,
+                   svn_fs_root_t *root,
+                   const char *path,
+                   apr_pool_t *pool)
+{
+  struct text_baton_t *tb = apr_pcalloc (pool, sizeof(*tb));
+
+  tb->root = root;
+  tb->path = path;
+  tb->pool = pool;
+
+  SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root),
+                              txn_body_apply_text, tb, pool));
+  
+  *contents_p = tb->stream;
+  return SVN_NO_ERROR;
+}
+
+/* --- End machinery for svn_fs_apply_text() ---  */
+
+#endif
+/* --- Machinery for svn_fs_apply_text() ---  */
+
+/* Baton for svn_fs_apply_text(). */
+struct text_baton_t
+{
+  /* The original file info */
+  svn_fs_root_t *root;
+  const char *path;
+  
+  /* Derived from the file info */
+  dag_node_t *node;
+  
+  /* The returned stream that will accept the file's new contents. */
+  svn_stream_t *stream;
+
+  /* The actual fs stream that the returned stream will write to. */
+  svn_stream_t *file_stream;
+
+  /* Pool used by db txns */
+  apr_pool_t *pool;
+};
+
+
+/* A different trail-ready wrapper around svn_fs__dag_finalize_edits. */
+static svn_error_t *
+another_txn_body_finalize_edits (void *baton, trail_t *trail)
+{
+  struct text_baton_t *tb = baton;
+  return svn_fs__dag_finalize_edits (tb->node, 
+                                     svn_fs_txn_root_name (tb->root, 
+                                                           trail->pool),
+                                     trail);
+}
+
+/* Write function for the publically returned stream. */
+static svn_error_t *
+text_stream_writer (void *baton,
+                    const char *data,
+                    apr_size_t *len)
+{
+  struct text_baton_t *tb = baton;
+
+  /* Psst, here's some data.  Pass it on to the -real- file stream. */
+  return svn_stream_write (tb->file_stream, data, len);
+}
+
+/* Close function for the publically returned stream. */
+static svn_error_t *
+text_stream_closer (void *baton)
+{
+  struct text_baton_t *tb = baton;
+
+  /* Need to tell fs that we're done sending text */
+  return svn_fs__retry_txn (svn_fs_root_fs (tb->root),
+                            another_txn_body_finalize_edits, tb, tb->pool);
+}
+
+
+static svn_error_t *
+txn_body_apply_text (void *baton, trail_t *trail)
+{
+  struct text_baton_t *tb = baton;
+  parent_path_t *parent_path;
+
+  /* Call open_path with no flags, as we want this to return an error
+     if the node for which we are searching doesn't exist. */
+  SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, trail));
+
+  /* Now, make sure this path is mutable. */
+  SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, trail));
+  tb->node = parent_path->node;
+
+  /* Make a writable stream for replacing the file's text. */
+  SVN_ERR (svn_fs__dag_get_edit_stream (&(tb->file_stream),
+                                        tb->node, tb->pool,
+                                        svn_fs_txn_root_name (tb->root, 
+                                                              trail->pool),
                                         trail));
 
   /* Create a 'returnable' stream which writes to the file_stream. */
@@ -2892,9 +3224,55 @@ svn_fs_get_file_delta_stream (svn_txdelta_stream_t **stream_p,
 }
 
 
-
 
-/* Determining the revisions in which a given path was changed. */
+/* Determining the revisions in which a given set of paths were changed. */
+
+struct revisions_changed_baton
+{
+  apr_array_header_t *revs;
+  int cross_copy_history;
+  dag_node_t *successor;
+};
+
+
+static svn_error_t *
+revisions_changed_callback (void *baton,
+                            dag_node_t *node,
+                            int *done,
+                            trail_t *trail)
+{
+  struct revisions_changed_baton *b = baton;
+
+  /* If there is no NODE, then this is the last call, so we need to
+     flush our B->SUCCESSOR cache. */
+  if (! node)
+    {
+      b->successor = NULL;
+    }
+  else
+    {
+      svn_revnum_t revision;
+
+      /* ### todo:  At this point, in the future, we will check
+         B->CROSS_COPY_HISTORY, then determine if we just crossed copy
+         history by comparing with our B->SUCCESSOR.  */
+
+      /* ... see what it's created revision is. */
+      SVN_ERR (svn_fs__dag_get_revision (&revision, node, trail));
+
+      /* If it's a valid revision, then add this to the BATON's array. */
+      if (SVN_IS_VALID_REVNUM (revision))
+        (*((svn_revnum_t *) apr_array_push (b->revs))) = revision;
+
+      /* ### todo:  And at this point, in the future, we will copy
+         NODE into B->SUCCESSOR and cache it so we can do the proper
+         copy history crossing detection mentioned above on the next
+         iteration of this callback. */
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 struct revisions_changed_args
 {
@@ -2904,56 +3282,64 @@ struct revisions_changed_args
   apr_pool_t *pool;
 };
 
+
 static svn_error_t *
 txn_body_revisions_changed (void *baton, trail_t *trail)
 {
   struct revisions_changed_args *args = baton;
-  apr_array_header_t *array;
-  int i;
+  struct revisions_changed_baton b;
   apr_pool_t *subpool = svn_pool_create(args->pool);
   svn_revnum_t prev_rev;
+  int i;
 
-  /* Allocate an array for holding revision numbers. */
-  array = apr_array_make (subpool, 4, sizeof (svn_revnum_t));
+  /* Allocate an array for holding revision numbers, and put it into
+     our callback baton. */
+  b.revs = apr_array_make (subpool, 4, sizeof (svn_revnum_t));
+
+  /* Also, note in our baton that we do wish to cross copy history.
+     ### todo: someday this will be an option passed to this
+     function.  */
+  b.cross_copy_history = 1;
 
   /* Check the ID for each path */
   for (i = 0; i < args->ids->nelts; i++)
     {
-      svn_fs_id_t *tmp_id = APR_ARRAY_IDX (args->ids, i, svn_fs_id_t *);
+      const svn_fs_id_t *tmp_id = APR_ARRAY_IDX (args->ids, i, svn_fs_id_t *);
+      dag_node_t *node;
+      svn_revnum_t revision;
 
-      /* Loop, from ID, through its predecessors, until it ceases to
-         exist.  */
-      do
-        {
-          svn_revnum_t revision;
-          dag_node_t *node;
+      /* Flush the SUCCESSOR member of the callback baton as we are
+         about to start working on a new node. */
+      b.successor = NULL;
+      
+      /* Get the NODE for TMP_ID.  */
+      SVN_ERR (svn_fs__dag_get_node (&node, args->fs, tmp_id, trail));
 
-          /* Get the dag node for this id. */
-          SVN_ERR (svn_fs__dag_get_node (&node, args->fs, tmp_id, trail));
+      /* Add NODE's created rev to the array in the baton. */
+      SVN_ERR (svn_fs__dag_get_revision (&revision, node, trail));
+      if (SVN_IS_VALID_REVNUM (revision))
+        (*((svn_revnum_t *) apr_array_push (b.revs))) = revision;
 
-          /* Now get the revision from the dag. */
-          SVN_ERR (svn_fs__dag_get_revision (&revision, node, trail));
-
-          (*((svn_revnum_t *) apr_array_push (array))) = revision;
-
-          svn_fs__precede_id (tmp_id);
-        }
-      while (tmp_id->digits[0] != -1);
+      /* Walk NODE's its predecessors, harvesting revisions changed. */
+      SVN_ERR (svn_fs__dag_walk_predecessors (node, revisions_changed_callback,
+                                              &b, trail));
     }
 
   /* Now sort the array */
-  qsort (array->elts, array->nelts, array->elt_size, 
+  qsort (b.revs->elts, b.revs->nelts, b.revs->elt_size, 
          svn_sort_compare_revisions);
 
   /* Now build the return array, removing duplicates along the way. */
   *(args->revs) = apr_array_make (args->pool, 4, sizeof (svn_revnum_t));
   prev_rev = SVN_INVALID_REVNUM;
-  for (i = 0; i < array->nelts; i++)
+  for (i = 0; i < b.revs->nelts; i++)
     {
-      if (APR_ARRAY_IDX (array, i, svn_revnum_t) != prev_rev)
-        (*((svn_revnum_t *) apr_array_push (*(args->revs)))) =
-            APR_ARRAY_IDX (array, i, svn_revnum_t);
-      prev_rev = APR_ARRAY_IDX (array, i, svn_revnum_t);
+      if (APR_ARRAY_IDX (b.revs, i, svn_revnum_t) != prev_rev)
+        {
+          (*((svn_revnum_t *) apr_array_push (*(args->revs)))) =
+            APR_ARRAY_IDX (b.revs, i, svn_revnum_t);
+        }
+      prev_rev = APR_ARRAY_IDX (b.revs, i, svn_revnum_t);
     }
 
   svn_pool_destroy (subpool);
@@ -2973,6 +3359,20 @@ svn_fs_revisions_changed (apr_array_header_t **revs,
   svn_fs_id_t *tmp_id;
   const char *this_path;
   apr_pool_t *subpool = svn_pool_create (pool);
+
+  /* ### todo: This function should someday take a flag to state
+     whether the search for revisions changed should cross copy
+     history.  The flags will be added to ARGS and thereby passed into
+     txn_body_revisions_changed, where it will be copied into the
+     its revisions_changed_baton's "cross_copy_history" flag.  Then, the
+     "todo" comments in revisions_changed_callback() will have to be,
+     well, done, and *poof* suddenly `svn log' has the option of
+     following or stopping at copy history.  
+
+     Options. Power.  Greed.  Lust!
+    
+     Well, maybe not those last two...
+  */
 
   /* Populate the baton. */
   args.revs = revs;
@@ -3097,84 +3497,6 @@ svn_fs_revision_root (svn_fs_root_t **root_p,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_fs_id_root (svn_fs_root_t **root_p,
-                svn_fs_t *fs,
-                apr_pool_t *pool)
-{
-  svn_fs_root_t *root = make_root (fs, pool);
-
-  root->kind = id_root;
-  *root_p = root;
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *svn_fs_txn_path_is_id (int *matches,
-                                    svn_fs_root_t *txn_root,
-                                    const char *path,
-                                    const svn_fs_id_t *id,
-                                    apr_pool_t *pool)
-{
-  svn_fs_id_t *res_id;
-
-  /* get the ID of PATH within the TXN */
-  SVN_ERR_W (svn_fs_node_id (&res_id, txn_root, path, pool),
-             "could not fetch the node ID of the path within the"
-             "transaction tree.");
-
-  /* Assume the path/id match, unless we find out otherwise. */
-  *matches = 1;
-
-  if (!svn_fs__id_eq(res_id, id))
-    {
-      svn_boolean_t okay = FALSE;
-
-      /* The provided ID does not match the ID of the node in the
-         transaction tree. However, there is a special exception case:
-
-         If the nodes are directories, and the transaction's node is
-         an immediate child of the requested node, then we're okay.
-         The issue is that we generate a child for the directory when
-         it goes from an immutable node in a revision root, into a
-         mutable node in the transaction root. We should not consider
-         this a change, and there would be no way for the client to
-         check out the transaction root's directory node anyway.
-
-         Files do not have this behavior because they are not spuriously
-         placed into the transaction root (directories are because of
-         the bubble up algorithm). The only time a file will shift is
-         when a true change is being made, and we will see that when the
-         caller makes it happen.
-      */
-      if (svn_fs__id_is_parent (id, res_id))
-        {
-          int is_dir;
-          svn_error_t *err;
-
-          err = svn_fs_is_dir (&is_dir, txn_root, path, pool);
-          if (err == NULL)
-            {
-              okay = is_dir;
-            }
-          else
-            {
-              /* ignore the error and go with the "not matching" msg */
-              /* ### this needs to get changed... */
-              /* svn_error_clear_all (err); */
-            }
-        }
-
-      if (!okay)
-        {
-          *matches = 0;
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
 
 
 /* 
