@@ -110,9 +110,9 @@ svn_config_read (svn_config_t **cfgp, const char *file,
  *
  *    1. SYS_REGISTRY_PATH   (only on SVN_WIN32, but ignored if NULL)
  *
- *    2. USR_REGISTRY_PATH   (only on SVN_WIN32, but ignored if NULL)
+ *    2. SYS_FILE_PATH       (everywhere, but ignored if NULL)
  *
- *    3. SYS_FILE_PATH       (everywhere, but ignored if NULL)
+ *    3. USR_REGISTRY_PATH   (only on SVN_WIN32, but ignored if NULL)
  *
  *    4. USR_FILE_PATH       (everywhere, but ignored if NULL)
  *
