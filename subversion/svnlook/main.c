@@ -1027,7 +1027,6 @@ print_tree (svn_fs_root_t *root,
 {
   apr_pool_t *subpool;
   int i;
-  const char *name_native;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
 
@@ -1040,9 +1039,6 @@ print_tree (svn_fs_root_t *root,
     }
 
   /* Print the node. */
-  SVN_ERR (svn_utf_cstring_from_utf8 (&name_native, 
-                                      svn_path_basename (path, pool), 
-                                      pool));
   SVN_ERR (svn_cmdline_printf (pool, "%s%s",
                                svn_path_basename (path, pool),
                                is_dir ? "/" : ""));
