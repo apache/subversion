@@ -99,5 +99,27 @@
 }
 %typemap(in) apr_pool_t *pool "";
 
+/* -----------------------------------------------------------------------
+   Handle python thread locking.
+
+   Swig doesn't allow us to specify a language in the %exception command,
+   so we have to use #ifdefs for the python-specific parts.
+*/
+
+%exception {
+#ifdef SWIGPYTHON
+    release_py_lock();
+#endif
+    $action
+#ifdef SWIGPYTHON
+    acquire_py_lock();
+#endif
+}
 
 %include svn_types.h
+
+%header %{
+#ifdef SWIGPYTHON
+#include "swigutil_py.h"
+#endif
+%}

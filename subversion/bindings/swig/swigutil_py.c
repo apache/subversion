@@ -34,6 +34,23 @@
 #include "swigutil_py.h"
 
 
+
+/*** Manage the Global Interpreter Lock ***/
+
+static PyThreadState *_saved_thread_state = NULL;
+
+void release_py_lock(void)
+{
+  assert(_saved_thread_state == NULL);
+  _saved_thread_state = PyEval_SaveThread();
+}
+
+void acquire_py_lock(void)
+{
+  PyEval_RestoreThread(_saved_thread_state);
+  _saved_thread_state = NULL;
+}
+
 /*** Helper/Conversion Routines ***/
 
 static PyObject *make_pointer(const char *typename, void *ptr)
@@ -333,6 +350,9 @@ static svn_error_t * close_baton(void *baton, const char *method)
 {
   item_baton *ib = baton;
   PyObject *result;
+  svn_error_t *err;
+
+  acquire_py_lock();
 
   /* If there is no baton object, then it is an edit_baton, and we should
      not bother to pass an object. Note that we still shove a NULL onto
@@ -342,7 +362,8 @@ static svn_error_t * close_baton(void *baton, const char *method)
                                     ib->baton ? (char *)"(O)" : NULL,
                                     ib->baton)) == NULL)
     {
-      return convert_python_error(ib->pool);
+      err = convert_python_error(ib->pool);
+      goto finished;
     }
 
   /* there is no return value, so just toss this object (probably Py_None) */
@@ -358,7 +379,11 @@ static svn_error_t * close_baton(void *baton, const char *method)
   ib->editor = ib->baton = NULL;
 #endif
 
-  return SVN_NO_ERROR;
+  err = SVN_NO_ERROR;
+
+ finished:
+  release_py_lock();
+  return err;
 }
 
 static svn_error_t * thunk_set_target_revision(void *edit_baton,
@@ -367,18 +392,25 @@ static svn_error_t * thunk_set_target_revision(void *edit_baton,
 {
   item_baton *ib = edit_baton;
   PyObject *result;
+  svn_error_t *err;
+
+  acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"set_target_revision",
                                     (char *)"l", target_revision)) == NULL)
     {
-      return convert_python_error(ib->pool);
+      err = convert_python_error(ib->pool);
+      goto finished;
     }
 
   /* there is no return value, so just toss this object (probably Py_None) */
   Py_DECREF(result);
-
-  return SVN_NO_ERROR;
+  err = SVN_NO_ERROR;
+  
+ finished:
+  release_py_lock();
+  return err;
 }
 
 static svn_error_t * thunk_open_root(void *edit_baton,
@@ -388,19 +420,26 @@ static svn_error_t * thunk_open_root(void *edit_baton,
 {
   item_baton *ib = edit_baton;
   PyObject *result;
+  svn_error_t *err;
+
+  acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"open_root",
                                     (char *)"lO&", base_revision,
                                     make_ob_pool, dir_pool)) == NULL)
     {
-      return convert_python_error(dir_pool);
+      err = convert_python_error(dir_pool);
+      goto finished;
     }
 
   /* make_baton takes our 'result' reference */
   *root_baton = make_baton(dir_pool, ib->editor, result);
+  err = SVN_NO_ERROR;
 
-  return SVN_NO_ERROR;
+ finished:
+  release_py_lock();
+  return err;
 }
 
 static svn_error_t * thunk_delete_entry(const char *path,
@@ -410,19 +449,26 @@ static svn_error_t * thunk_delete_entry(const char *path,
 {
   item_baton *ib = parent_baton;
   PyObject *result;
+  svn_error_t *err;
+
+  acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"delete_entry",
                                     (char *)"slOO&", path, revision, ib->baton,
                                     make_ob_pool, pool)) == NULL)
     {
-      return convert_python_error(pool);
+      err = convert_python_error(pool);
+      goto finished;
     }
 
   /* there is no return value, so just toss this object (probably Py_None) */
   Py_DECREF(result);
+  err = SVN_NO_ERROR;
 
-  return SVN_NO_ERROR;
+ finished:
+  release_py_lock();
+  return err;
 }
 
 static svn_error_t * thunk_add_directory(const char *path,
@@ -434,6 +480,9 @@ static svn_error_t * thunk_add_directory(const char *path,
 {
   item_baton *ib = parent_baton;
   PyObject *result;
+  svn_error_t *err;
+
+  acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"add_directory",
@@ -441,13 +490,17 @@ static svn_error_t * thunk_add_directory(const char *path,
                                     copyfrom_path, copyfrom_revision,
                                     make_ob_pool, dir_pool)) == NULL)
     {
-      return convert_python_error(dir_pool);
+      err = convert_python_error(dir_pool);
+      goto finished;
     }
 
   /* make_baton takes our 'result' reference */
   *child_baton = make_baton(dir_pool, ib->editor, result);
+  err = SVN_NO_ERROR;
 
-  return SVN_NO_ERROR;
+ finished:
+  release_py_lock();
+  return err;
 }
 
 static svn_error_t * thunk_open_directory(const char *path,
@@ -458,6 +511,9 @@ static svn_error_t * thunk_open_directory(const char *path,
 {
   item_baton *ib = parent_baton;
   PyObject *result;
+  svn_error_t *err;
+
+  acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"open_directory",
@@ -465,13 +521,17 @@ static svn_error_t * thunk_open_directory(const char *path,
                                     base_revision,
                                     make_ob_pool, dir_pool)) == NULL)
     {
-      return convert_python_error(dir_pool);
+      err = convert_python_error(dir_pool);
+      goto finished;
     }
 
   /* make_baton takes our 'result' reference */
   *child_baton = make_baton(dir_pool, ib->editor, result);
-
-  return SVN_NO_ERROR;
+  err = SVN_NO_ERROR;
+  
+ finished:
+  release_py_lock();
+  return err;
 }
 
 static svn_error_t * thunk_change_dir_prop(void *dir_baton,
@@ -481,6 +541,9 @@ static svn_error_t * thunk_change_dir_prop(void *dir_baton,
 {
   item_baton *ib = dir_baton;
   PyObject *result;
+  svn_error_t *err;
+
+  acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"change_dir_prop",
@@ -488,13 +551,17 @@ static svn_error_t * thunk_change_dir_prop(void *dir_baton,
                                     value->data, value->len,
                                     make_ob_pool, pool)) == NULL)
     {
-      return convert_python_error(pool);
+      err = convert_python_error(pool);
+      goto finished;
     }
 
   /* there is no return value, so just toss this object (probably Py_None) */
   Py_DECREF(result);
+  err = SVN_NO_ERROR;
 
-  return SVN_NO_ERROR;
+ finished:
+  release_py_lock();
+  return err;
 }
 
 static svn_error_t * thunk_close_directory(void *dir_baton,
@@ -512,6 +579,9 @@ static svn_error_t * thunk_add_file(const char *path,
 {
   item_baton *ib = parent_baton;
   PyObject *result;
+  svn_error_t *err;
+
+  acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"add_file",
@@ -519,13 +589,18 @@ static svn_error_t * thunk_add_file(const char *path,
                                     copyfrom_path, copyfrom_revision,
                                     make_ob_pool, file_pool)) == NULL)
     {
-      return convert_python_error(file_pool);
+      err = convert_python_error(file_pool);
+      goto finished;
     }
 
   /* make_baton takes our 'result' reference */
   *file_baton = make_baton(file_pool, ib->editor, result);
 
-  return SVN_NO_ERROR;
+  err = SVN_NO_ERROR;
+
+ finished:
+  release_py_lock();
+  return err;
 }
 
 static svn_error_t * thunk_open_file(const char *path,
@@ -536,6 +611,9 @@ static svn_error_t * thunk_open_file(const char *path,
 {
   item_baton *ib = parent_baton;
   PyObject *result;
+  svn_error_t *err;
+  
+  acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"open_file",
@@ -543,13 +621,17 @@ static svn_error_t * thunk_open_file(const char *path,
                                     base_revision,
                                     make_ob_pool, file_pool)) == NULL)
     {
-      return convert_python_error(file_pool);
+      err = convert_python_error(file_pool);
+      goto finished;
     }
 
   /* make_baton takes our 'result' reference */
   *file_baton = make_baton(file_pool, ib->editor, result);
+  err = SVN_NO_ERROR;
 
-  return SVN_NO_ERROR;
+ finished:
+  release_py_lock();
+  return err;
 }
 
 static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
@@ -557,6 +639,9 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
 {
   handler_baton *hb = baton;
   PyObject *result;
+  svn_error_t *err;
+
+  acquire_py_lock();
 
   if (window == NULL)
     {
@@ -578,12 +663,18 @@ static svn_error_t * thunk_window_handler(svn_txdelta_window_t *window,
     }
 
   if (result == NULL)
-    return convert_python_error(hb->pool);
+    {
+      err = convert_python_error(hb->pool);
+      goto finished;
+    }
 
   /* there is no return value, so just toss this object (probably Py_None) */
   Py_DECREF(result);
+  err = SVN_NO_ERROR;
 
-  return SVN_NO_ERROR;
+ finished:
+  release_py_lock();
+  return err;
 }
 
 static svn_error_t *
@@ -594,12 +685,16 @@ thunk_apply_textdelta(void *file_baton,
 {
   item_baton *ib = file_baton;
   PyObject *result;
+  svn_error_t *err;
+
+  acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"apply_textdelta",
                                     (char *)"(O)", ib->baton)) == NULL)
     {
-      return convert_python_error(ib->pool);
+      err = convert_python_error(ib->pool);
+      goto finished;
     }
 
   if (result == Py_None)
@@ -621,7 +716,11 @@ thunk_apply_textdelta(void *file_baton,
       *h_baton = hb;
     }
 
-  return SVN_NO_ERROR;
+  err = SVN_NO_ERROR;
+
+ finished:
+  release_py_lock();
+  return err;
 }
 
 static svn_error_t * thunk_change_file_prop(void *file_baton,
@@ -631,6 +730,9 @@ static svn_error_t * thunk_change_file_prop(void *file_baton,
 {
   item_baton *ib = file_baton;
   PyObject *result;
+  svn_error_t *err;
+
+  acquire_py_lock();
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"change_file_prop",
@@ -638,13 +740,17 @@ static svn_error_t * thunk_change_file_prop(void *file_baton,
                                     value->data, value->len,
                                     make_ob_pool, pool)) == NULL)
     {
-      return convert_python_error(pool);
+      err = convert_python_error(pool);
+      goto finished;
     }
 
   /* there is no return value, so just toss this object (probably Py_None) */
   Py_DECREF(result);
-
-  return SVN_NO_ERROR;
+  err = SVN_NO_ERROR;
+  
+ finished:
+  release_py_lock();
+  return err;
 }
 
 static svn_error_t * thunk_close_file(void *file_baton,
@@ -743,6 +849,8 @@ void svn_swig_py_notify_func(void *baton,
 
   if (function != NULL && function != Py_None)
     {
+      acquire_py_lock();
+
       if ((result = PyObject_CallFunction(function, 
                                           (char *)"(siisiii)", 
                                           path, action, kind,
@@ -752,6 +860,8 @@ void svn_swig_py_notify_func(void *baton,
         {
           Py_XDECREF(result);
         }
+
+      release_py_lock();
     }
 }
 
@@ -765,6 +875,7 @@ svn_swig_py_get_commit_log_func(const char **log_msg,
   PyObject *function = baton;
   PyObject *result;
   PyObject *cmt_items;
+  svn_error_t *err;
 
   *log_msg = NULL;
   *tmp_file = NULL;
@@ -773,6 +884,8 @@ svn_swig_py_get_commit_log_func(const char **log_msg,
 
   if ((function == NULL) || (function == Py_None))
     return SVN_NO_ERROR;
+
+  acquire_py_lock();
 
   if (commit_items)
     {
@@ -791,7 +904,8 @@ svn_swig_py_get_commit_log_func(const char **log_msg,
                                       make_ob_pool, pool)) == NULL)
     {
       Py_DECREF(cmt_items);
-      return convert_python_error(pool);
+      err = convert_python_error(pool);
+      goto finished;
     }
 
   Py_DECREF(cmt_items);
@@ -800,18 +914,24 @@ svn_swig_py_get_commit_log_func(const char **log_msg,
     {
       Py_DECREF(result);
       *log_msg = NULL;
-      return SVN_NO_ERROR;
+      err = SVN_NO_ERROR;
+      goto finished;
     }
   else if (PyString_Check(result)) 
     {
       *log_msg = apr_pstrdup(pool, PyString_AS_STRING(result));
       Py_DECREF(result);
-      return SVN_NO_ERROR;
+      err = SVN_NO_ERROR;
+      goto finished;
     }
      
   Py_DECREF(result);
   PyErr_SetString(PyExc_TypeError, "not a string");
-  return convert_python_error(pool);
+  err = convert_python_error(pool);
+
+ finished:
+  release_py_lock();
+  return err;
 }
 
 
@@ -830,9 +950,12 @@ svn_error_t * svn_swig_py_thunk_log_receiver(void *baton,
   PyObject *result;
   swig_type_info *tinfo = SWIG_TypeQuery("SWIGTYPE_p_svn_log_changed_path_t");
   PyObject *chpaths;
+  svn_error_t *err;
  
   if ((receiver == NULL) || (receiver == Py_None))
     return SVN_NO_ERROR;
+
+  acquire_py_lock();
 
   if (changed_paths)
     {
@@ -851,11 +974,16 @@ svn_error_t * svn_swig_py_thunk_log_receiver(void *baton,
                                       make_ob_pool, pool)) == NULL)
     {
       Py_DECREF(chpaths);
-      return convert_python_error(pool);
+      err = convert_python_error(pool);
+      goto finished;
     }
 
   /* there is no return value, so just toss this object (probably Py_None) */
   Py_DECREF(result);
   Py_DECREF(chpaths);
-  return SVN_NO_ERROR;
+  err = SVN_NO_ERROR;
+
+ finished:
+  release_py_lock();
+  return err;
 }
