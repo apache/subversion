@@ -150,3 +150,9 @@ Bindings changes that don't affect the build system:
      Votes:
       +1: clkao, epg
       +0: jerenkrantz
+
+
+   * r8233
+     Catch up r8213 authz_func renaming for SWIG / Perl bindings.
+     Votes:
+      +1: clkao
