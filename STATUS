@@ -285,9 +285,16 @@ already know about.)
       +1: mbk
 
 
-   * r8035, r8036, r8037
-     Assign no blame to unprocessed revisions and handle an edge case.
+   * r8035, r8036, r8037, r8128
+     Blame UI changes.
      Justification: much nicer user experience; low risk.
+     Votes:
+      +1: mbk
+
+
+   * r8129
+     Improved blame cancellation support.
+     Justification: better UI, fixes latent tempfile leak; low risk.
      Votes:
       +1: mbk
 
