@@ -213,7 +213,7 @@ _svnadmin ()
 	COMPREPLY=()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
-	cmds='create dump help h ? hotcopy load lscr list-dblogs \
+	cmds='create deltify dump help h ? hotcopy load list-dblogs \
 	      list-unused-dblogs lstxns recover rmtxns setlog verify'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
@@ -239,6 +239,9 @@ _svnadmin ()
 	create)
 		cmdOpts="--bdb-txn-nosync --config-dir"
 		;;
+	deltify)
+		cmdOpts="-r --revision -q --quiet"
+		;;
 	dump)
 		cmdOpts="-r --revision --incremental -q --quiet"
 		;;
@@ -250,9 +253,6 @@ _svnadmin ()
 		;;
 	load)
 		cmdOpts="--ignore-uuid --force-uuid --parent-dir"
-		;;
-	lscr)
-		cmdOpts="--copies"
 		;;
 	list-dblogs)
 		;;
