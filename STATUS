@@ -101,9 +101,3 @@ Approved changes (further review is welcome, but not required):
       +1: ghudson, jerenkrantz, jszakmeister
       Nominated by: David James <james82@gmail.com>
 
-  * r13683
-    Fix FSFS segfault when handling non-existent data representations
-    Justification:
-      Client will segfault on otherwise valid revision files.
-    Votes:
-      +1: jpieper, jszakmeister, ghudson
