@@ -1840,7 +1840,7 @@ $
         <para>As we've seen, invoking <command>svn diff</command> with
           no switches will compare your working files to the cached
           <quote>pristine</quote> copies in
-          the<filename>.svn</filename> area:</para>
+          the <filename>.svn</filename> area:</para>
         
         <screen>
 $ svn diff
