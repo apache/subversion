@@ -39,6 +39,7 @@
 #include "trail.h"
 #include "txn-table.h"
 #include "rev-table.h"
+#include "nodes-table.h"
 #include "txn.h"
 #include "dag.h"
 #include "tree.h"
@@ -1259,6 +1260,40 @@ merge (const char **conflict_p,
                              base root to source, so setting the txn's
                              mutable root to a successor of source has
                              a certain inevitability, n'est ce pas?) */
+
+                          /* Per the comment above, if target is an
+                             immediate descendant of ancestor, and
+                             source is also a descendant of ancestor,
+                             we need to re-ID target with a successor
+                             ID of source. */
+                          if ((svn_fs_id_distance (a_entry->id,
+                                                   t_entry->id) == 1)
+                              && (svn_fs_id_distance (a_entry->id,
+                                                      s_entry->id) >= 1))
+                            {
+                              svn_fs_id_t *successor;
+                              skel_t *node_rev;
+
+                              /* Get a successor id. */
+                              SVN_ERR (svn_fs__new_successor_id 
+                                       (&successor, fs, s_entry->id, trail));
+                              
+                              /* Copy the target node to the new
+                                 successor id. */
+                              SVN_ERR (svn_fs__get_node_revision 
+                                       (&node_rev, fs, t_entry->id, trail));
+                              SVN_ERR (svn_fs__put_node_revision 
+                                       (fs, successor, node_rev, trail));
+                              
+                              /* Update t_entry's parent with the new id. */
+                              SVN_ERR (svn_fs__dag_set_entry 
+                                       (target, t_entry->name, 
+                                        successor, trail));
+
+                              /* Now, delete the old node revision. */
+                              SVN_ERR (svn_fs__delete_nodes_entry 
+                                       (fs, t_entry->id, trail));
+                            }
                         }
                       else  /* otherwise, they're not all dirs, so... */
                         {
@@ -1473,6 +1508,8 @@ txn_body_merge (void *baton, trail_t *trail)
   else
     {
       svn_fs_root_t *target_root;
+      const svn_fs_id_t *ancestor_id, *target_id;
+
       SVN_ERR (svn_fs_txn_root (&target_root, args->txn, trail->pool));
 
       SVN_ERR (merge (&(args->conflict),
@@ -1481,10 +1518,32 @@ txn_body_merge (void *baton, trail_t *trail)
                       source_node,
                       ancestor_node,
                       trail));
-      
-      /* ### kff todo:
-         See the comment immediately after the recursive call in
-         merge().  The same thing applies here. */
+
+      ancestor_id = svn_fs__dag_get_id (ancestor_node);
+      target_id = svn_fs__dag_get_id (txn_root_node);
+
+      if ((svn_fs_id_distance (ancestor_id, target_id) == 1)
+          && (svn_fs_id_distance (ancestor_id, source_id) >= 1))
+        {
+          svn_fs_id_t *successor;
+          skel_t *node_rev;
+          
+          /* Get a successor id. */
+          SVN_ERR (svn_fs__new_successor_id 
+                   (&successor, fs, source_id, trail));
+          
+          /* Copy the target node to the new successor id. */
+          SVN_ERR (svn_fs__get_node_revision 
+                   (&node_rev, fs, target_id, trail));
+          SVN_ERR (svn_fs__put_node_revision 
+                   (fs, successor, node_rev, trail));
+          
+          /* Update the transaction with the new root id. */
+          SVN_ERR (svn_fs__set_txn_root (fs, txn_name, successor, trail));
+
+          /* Now, delete the old node revision. */
+          SVN_ERR (svn_fs__delete_nodes_entry (fs, target_id, trail));
+        }
 
       SVN_ERR (svn_fs__set_txn_base (fs, txn_name, source_id, trail));
     }
