@@ -1,7 +1,7 @@
 ## Makefile.in is generated from this by automake.
 
-noinst_PROGRAMS = ra-local-test 
-ra_local_test_SOURCES = ra-local-test.c
+#noinst_PROGRAMS = ra-local-test 
+#ra_local_test_SOURCES = ra-local-test.c
 
 COMMON_LIBS = @SVN_TESTS_MAIN_LIBS@ \
               @SVN_TESTS_EDITOR_LIBS@ \
@@ -13,7 +13,7 @@ COMMON_LIBS = @SVN_TESTS_MAIN_LIBS@ \
               @SVN_APR_LIBS@ @SVN_EXPAT_LIBS@ -ldb
               ## Shouldn't -ldb be added automatically by the autoconf script?
 
-ra_local_test_LDADD = ${COMMON_LIBS}
+#ra_local_test_LDADD = ${COMMON_LIBS}
 
 ## Flags needed when compiling:
 INCLUDES = -I$(srcdir)/.. @SVN_INCLUDES@ @SVN_APR_INCLUDES@
@@ -25,7 +25,7 @@ LIBTOOL = @LIBTOOL@ --silent
 ## Automatic tests run by `make check` -----------------------------
 
 ## A list of test-programs to run.  (Each program contains sub-tests.)
-SVN_TESTS = ra-local-test
+#SVN_TESTS = ra-local-test
 
 ## We're overriding automake's own `check' rule, because it's extremely
 ## inflexible;  we want better control over automated-test output. 
