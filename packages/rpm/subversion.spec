@@ -1,4 +1,4 @@
-%define apache_version 2.0.40-0.5
+%define apache_version 2.0.40-0.7
 %define neon_version 0.21.3
 %define apache_dir /usr/local/apache2
 Summary: A Concurrent Versioning system similar to but better than CVS.
@@ -170,7 +170,7 @@ make install \
 %post
 # Only add to INFO directory if this is the only instance installed.
 if [ "$1"x = "1"x ]; then
-   if [ -f /sbin/install-info -a -x /sbin/install-info ]; then
+   if [ -x /sbin/install-info ]; then
       /sbin/install-info /usr/share/info/svn-design.info.gz \
          /usr/share/info/dir \
          --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
@@ -184,7 +184,7 @@ fi
 %preun
 # Only delete from INFO directory if this is the last instance being deleted.
 if [ "$1"x = "0"x ]; then
-   if [ -f /sbin/install-info -a -x /sbin/install-info ]; then
+   if [ -x /sbin/install-info ]; then
       /sbin/install-info --delete /usr/share/info/svn-design.info.gz \
          /usr/share/info/dir \
          --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
