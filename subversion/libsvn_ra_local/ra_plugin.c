@@ -190,10 +190,11 @@ open (void **session_baton,
   /* Look through the URL, figure out which part points to the
      repository, and which part is the path *within* the
      repository. */
-  SVN_ERR (svn_ra_local__split_URL (&(session->repos_path),
-                                    &(session->fs_path),
-                                    session->repository_URL,
-                                    session->pool));
+  SVN_ERR_W (svn_ra_local__split_URL (&(session->repos_path),
+                                      &(session->fs_path),
+                                      session->repository_URL,
+                                      session->pool),
+             "Unable to open an ra_local session to URL");
 
   /* Open the filesystem at located at environment `repos_path' */
   SVN_ERR (svn_repos_open (&(session->repos),
@@ -443,8 +444,9 @@ do_switch (void *session_baton,
   target = update_target ? update_target->data : NULL;
   
   /* Pull the relevant fs-path portion out of switch_url. */
-  SVN_ERR (svn_ra_local__split_URL (&switch_repos_path, &switch_fs_path,
-                                    switch_url, sbaton->pool));
+  SVN_ERR_W (svn_ra_local__split_URL (&switch_repos_path, &switch_fs_path,
+                                      switch_url, sbaton->pool),
+             "The 'switch' URL is invalid.");
 
   /* Sanity check:  the switch_url better be in the same repository as
      the original session url! */

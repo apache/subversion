@@ -333,8 +333,8 @@ SVN_ERROR_START
 
   /* These RA errors are specific to ra_local */
   
-    SVN_ERRDEF (SVN_ERR_RA_NOT_VERSIONED_RESOURCE,
-                "URL is not a versioned resource")
+    SVN_ERRDEF (SVN_ERR_RA_REPOSITORY_NOT_FOUND,
+                "Couldn't find a repository.")
 
     SVN_ERRDEF (SVN_ERR_RA_BAD_REVISION_REPORT,
                 "Bogus revision report")
