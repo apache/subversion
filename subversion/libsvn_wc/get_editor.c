@@ -855,12 +855,18 @@ change_file_prop (void *file_baton,
 {
   svn_error_t *err;
   struct file_baton *fb = file_baton;
+  svn_string_t *my_name, *my_value;
 
   /* Duplicate storage of name/value pair;  they should live in the
      file baton's pool, not some pool within the editor's driver. :)
   */
-  svn_string_t *my_name = svn_string_dup (name, fb->pool);
-  svn_string_t *my_value = svn_string_dup (value, fb->pool);
+  my_name = svn_string_dup (name, fb->pool);
+  if (value)
+    /* remember that value could be NULL, signifying a property
+       `delete' */
+    my_value = svn_string_dup (value, fb->pool);
+  else
+    my_value = NULL;
 
   /* Create the file's in-memory prophashes if they don't yet exist */
   if (! fb->baseprops)
