@@ -101,10 +101,46 @@ static mr_baton *make_child_baton(mr_baton *parent, const char *name,
 }
 
 /* send a response to the client for this baton */
-static apr_status_t send_response(mr_baton *baton)
+static svn_error_t *send_response(mr_baton *baton, svn_boolean_t is_dir)
 {
-  /* ### do some work */
+  merge_response_ctx *mrc = baton->mrc;
+  const char *href;
+  const char *rt;
+  svn_fs_id_t *id;
+  svn_string_t *stable_id;
+  const char *vsn_url;
+  apr_status_t status;
 
+  href = dav_svn_build_uri(mrc->repos, DAV_SVN_BUILD_URI_PUBLIC,
+                           SVN_IGNORED_REVNUM, baton->path,
+                           1 /* add_href */, baton->pool);
+
+  rt = is_dir
+    ? "<D:resourcetype><D:collection/></D:resourcetype>" DEBUG_CR
+    : "<D:resourcetype/>" DEBUG_CR;
+
+  SVN_ERR( svn_fs_node_id(&id, mrc->root, baton->path, baton->pool) );
+
+  stable_id = svn_fs_unparse_id(id, baton->pool);
+  svn_string_appendcstr(stable_id, baton->path);
+
+  vsn_url = dav_svn_build_uri(mrc->repos, DAV_SVN_BUILD_URI_VERSION,
+                              SVN_INVALID_REVNUM, stable_id->data,
+                              1 /* add_href */, baton->pool);
+
+  status = ap_fputstrs(mrc->output, mrc->bb,
+                       "<D:response>" DEBUG_CR
+                       "<D:href>", href, "</D:href>" DEBUG_CR
+                       "<D:propstat><D:prop>" DEBUG_CR,
+                       rt,
+                       "<D:checked-in>", vsn_url, "</D:checked-in>" DEBUG_CR
+                       "<D:status>200 OK</D:status>" DEBUG_CR
+                       "</D:prop></D:propstat>" DEBUG_CR
+                       "</D:response>" DEBUG_CR,
+                       NULL);
+  if (status != APR_SUCCESS)
+    return svn_error_create(status, 0, NULL, baton->pool,
+                            "could not write response to output");
   return APR_SUCCESS;
 }
 
@@ -201,7 +237,7 @@ static svn_error_t *mr_close_directory(void *dir_baton)
      for it. */
   if (dir->seen_change)
     {
-      (void) send_response(dir);
+      SVN_ERR( send_response(dir, TRUE /* is_dir */) );
     }
 
   svn_pool_destroy(dir->pool);
@@ -244,9 +280,8 @@ static svn_error_t *mr_replace_file(svn_string_t *name,
 
 static svn_error_t *mr_close_file(void *file_baton)
 {
-  (void) send_response(file_baton);
-
-  return NULL;
+  /* nothing to do except for sending the response. */
+  return send_response(file_baton, FALSE /* is_dir */);
 }
 
 
@@ -353,12 +388,23 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   serr = svn_fs_dir_delta(previous_root, "/", revs,
                           committed_root, "/",
                           editor, &mrc, pool);
+  if (serr != NULL)
+    {
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "could not process the merge delta.");
+    }
 
   /* we don't need to call close_edit, but we do need to send a response
      for the root if a change was made. */
   if (mrc.root_baton->seen_change)
     {
-      (void) send_response(mrc.root_baton);
+      serr = send_response(mrc.root_baton, TRUE /* is_dir */);
+      if (serr != NULL)
+        {
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "could not generate response for the "
+                                     "root directory.");
+        }
     }
 
   /* wrap up the merge response */
