@@ -1,19 +1,24 @@
 
-   DOCUMENT IN PROGRESS -- PLEASE DO NOT READ YET.  -kff
+           DOCUMENT IN PROGRESS.  PLEASE DO NOT READ YET.
 
-Last updated: $Date: 2001-04-16 22:34:16 $
+   [This is for eventual review by others, in particular JimB.  By the
+   way, JimB may be about to commit a roadmap/spec for these
+   improvements himself, but that's okay -- I'm still finding it
+   helpful to consider the problem from scratch.  -kff]
+
+Last updated: $Date: 2001-04-16 22:58:17 $
 
 Three related things that need to happen in the filesystem before we
 get to alpha:
 
    a) file contents need to be moved into a separate table
 
-   b) we need to do reverse-delta storage in the filesystem (with
-      checksums)
-
-   c) we need to operate on file contents without holding the entire
+   b) we need to operate on file contents without holding the entire
       contents in RAM.  Berkeley DB gives us tools to operate on
       regions within a value, we just need to use them.
+
+   c) we need to do reverse-delta storage in the filesystem (with
+      checksums)
 
 This is a rough guide to how we'll do these three things.  I'm writing
 it up here mainly so JimB can tear it down and replace it with
@@ -76,19 +81,16 @@ Next,
      svn_fs__get_node_rev_header(), yay, they'll never need to touch
      the contents.
 
+   - Split svn_fs__put_node_revision() similarly, etc, etc.
+
+
 I think only files store their data in the `strings' table, which
 would mean that svn_fs__get_node_rev_data() would have one code path
 to retrieve a directory's entries list, and a different path to get a
 file's data.  Not a huge deal, just something to think about.
 
 
-b) Reverse-delta storage.
-=========================
-
-   Uh, yeah.  Will discuss after (c) below.
-
-
-c) Operate on portions of files efficiently.
+b) Operate on portions of files efficiently.
 ============================================
 
 You're gonna love Berkeley DB even more after this, if that were
@@ -110,19 +112,55 @@ If it's a write operation, and dbt->size != dbt->dlen, then that range
 of the record will grow or shrink accordingly.  See
 http://www.sleepycat.com/docs/ref/am/partial.html for details.
 
-To take advantage of it, we change some interfaces:
+Here's how we take advantage of this:
 
-   - svn_fs__get_node_rev_header() and svn_fs__get_node_rev_data().
+   - dag_node_t gets two new fields: data_offset and data_len.  They
+     apply to the node's cache of the data, not the header.
 
-   - Find all callers of svn_fs__get_node_revision().  You know what
-     to do.  Some of them will only need to call
-     svn_fs__get_node_rev_header(), yay, they'll never need to touch
-     the contents.
+   - svn_fs__get_node_rev_data() takes offset and len arguments,
+     fetches only that data.  The dag_node_t will remember the offset
+     and len.
+
+   - svn_fs__put_node_rev_data() takes offset and len args as well.
+
+   - change set_node_revision() accordingly.
+
+   - ... todo thinking here ...
+
+So now, whenever you read or write a node revision, you are operating
+on a range.  There will be some way to say "I mean the whole thing",
+of course, so it won't be necessary to know the size in advance.
+
+Thought: possibly we should stop storing data in the dag_node_t
+itself, and just return the data in a void pointer passed to
+svn_fs__get_node_rev_data().  Still pondering.
 
 
+c) Reverse-delta storage.
+=========================
 
+The basic story is, we use Berkeley DB's partial record features to do
+the random access and windowing of our delta algorithm.
 
+Here's how nodes are represented now:
+   
+    REPRESENTATION ::= ("fulltext" NODE-REVISION)
+                     | ("younger" DELTA CHECKSUM) ;
+             DELTA ::= ("svndiff" DATA) ;
+          CHECKSUM ::= ("md5" BYTES) ;
+       DATA, BYTES ::= atom ;
 
-b) Now we can talk about reverse-delta storage.
-===============================================
+Let's change it to this:
+
+    REPRESENTATION ::= ("fulltext" NODE-REVISION)
+                     | ("younger" DELTA CHECKSUM) 
+                     | ("delta" BASE DELTA CHECKSUM) ;
+              BASE ::= atom ;        /* a key into the `strings' table */
+             DELTA ::= ("svndiff" DATA) ;
+          CHECKSUM ::= ("md5" BYTES) ;
+             BYTES ::= atom ;
+             DATA  ::= atom ;        /* a key into the `strings' table */
+
+... finish tomorrow morning ...
+
 
