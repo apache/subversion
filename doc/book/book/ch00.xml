@@ -1,11 +1,11 @@
 <preface id="svn-ch-0">
   <title>Preface</title>
-
+  
   <simplesect>
     
     <blockquote>
-      <!-- ### find a quote -->
-      <para>"Find a good opening quote."  --Anonymous</para>
+      <para><quote>If C gives you enough rope to hang yourself, think
+        of Subversion as a sort of rope storage facility.</quote></para>
     </blockquote>
 
     <para>
