@@ -16,8 +16,17 @@ dir_config('svn')
 
 $CFLAGS << ' -I. '
 
+$LDFLAGS << `apr-config --ldflags`.chop
+$LOCAL_LIBS << `apr-config --libs`.chop
+$CFLAGS << `apr-config --cflags`.chop
+
+# Linux needs -lpthread.
+if PLATFORM =~ /linux/ && $CFLAGS =~ /-pthread/ then
+  have_library('pthread')
+end
+
 # Extra libraries needed to compile
-libraries = %w{svn_subr svn_delta svn_client svn_wc svn_ra}
+libraries = %w{apr svn_subr svn_delta svn_client svn_wc svn_ra}
 libraries.each do |lib| 
   unless have_library(lib, nil)
     puts "You seem to be missing the #{lib} library.\nI can't compile the "+
@@ -28,15 +37,6 @@ end
 # These aren't required, but we'll link them if we have them
 have_library('svn_fs')
 have_library('svn_repos')
-
-$LDFLAGS << `apr-config --ldflags`.chop
-$LOCAL_LIBS << `apr-config --libs`.chop
-$CFLAGS << `apr-config --cflags`.chop
-
-# Linux needs -lpthread.
-if PLATFORM =~ /linux/ && $CFLAGS =~ /-pthread/ then
-  have_library('pthread')
-end
 
 with_config('svn')
 
