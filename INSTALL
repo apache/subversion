@@ -161,10 +161,9 @@ I.    BUILD REQUIREMENTS
       5.  Neon library 0.23.7
 
       The Neon library allows a Subversion client to interact with remote
-      repositories over the Internet. Although in theory you could have
-      the client interact only with local repositories, currently the
-      build system requires Neon to be present. Hopefully, this will be
-      fixed in the future.
+      repositories over the Internet via a WebDAV based protocol.  If you 
+      want to use Subversion to connect to a server over ra_dav (via a 
+      http:// or https:// url), you will require Neon.  
 
       The Neon library source code can be installed in "./neon" if you
       want Subversion to build it. The source code is included with the
