@@ -911,7 +911,7 @@ do_single_file_merge (const char *URL1,
   SVN_ERR (svn_io_remove_file (tmpfile2, pool));
   
   /* Deduce property diffs, and merge those too. */
-  SVN_ERR (svn_wc_get_local_propchanges (&propchanges, props1, props2, pool));
+  SVN_ERR (svn_wc_get_local_propchanges (&propchanges, props2, props1, pool));
 
   SVN_ERR (merge_props_changed (adm_access,
                                 &prop_state,
