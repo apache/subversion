@@ -51,6 +51,65 @@
 
 /*-----------------------------------------------------------------*/
 
+/** Helper functions **/
+
+/* Implementations of the svn_fs_get_locks_callback_t interface and
+   baton, for verifying expected output from svn_fs_get_locks(). */
+
+struct get_locks_baton_t
+{
+  apr_hash_t *locks;
+};
+
+static svn_error_t *
+get_locks_callback (void *baton, 
+                    svn_lock_t *lock, 
+                    apr_pool_t *pool)
+{
+  struct get_locks_baton_t *b = baton;
+  apr_pool_t *hash_pool = apr_hash_pool_get (b->locks);
+  svn_string_t *lock_path = svn_string_create (lock->path, hash_pool);
+  apr_hash_set (b->locks, lock_path->data, lock_path->len, 
+                svn_lock_dup (lock, hash_pool));
+  return SVN_NO_ERROR;
+}
+
+/* A factory function. */
+
+static struct get_locks_baton_t *
+make_get_locks_baton (apr_pool_t *pool)
+{
+  struct get_locks_baton_t *baton = apr_pcalloc (pool, sizeof (*baton));
+  baton->locks = apr_hash_make (pool);
+  return baton;
+}
+     
+     
+/* And verification function(s). */
+
+static svn_error_t *
+verify_matching_lock_paths (struct get_locks_baton_t *baton,
+                            const char *expected_paths[],
+                            int num_expected_paths,
+                            apr_pool_t *pool)
+{
+  int i;
+  if (num_expected_paths != apr_hash_count (baton->locks))
+    return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
+                             "Unexpected number of locks.");
+  for (i = 0; i < num_expected_paths; i++)
+    {
+      const char *path = expected_paths[i];
+      if (! apr_hash_get (baton->locks, path, APR_HASH_KEY_STRING))
+        return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
+                                  "Missing lock for path '%s'", path);
+    }
+  return SVN_NO_ERROR;
+}
+
+
+/*-----------------------------------------------------------------*/
+
 /** The actual lock-tests called by `make check` **/
 
 
@@ -210,18 +269,6 @@ attach_lock (const char **msg,
 }
 
 
-/* This implements the svn_fs_get_locks_callback_t interface, where
-   BATON is just a pointer to an integer. */
-static svn_error_t *
-get_locks_counter_callback (void *baton, 
-                            svn_lock_t *lock, 
-                            apr_pool_t *pool)
-{
-  int *lock_count = baton;
-  (*lock_count)++;
-  return SVN_NO_ERROR;
-}
-
 /* Test that we can get all locks under a directory. */
 static svn_error_t *
 get_locks (const char **msg,
@@ -236,7 +283,8 @@ get_locks (const char **msg,
   svn_revnum_t newrev;
   svn_fs_access_t *access;
   svn_lock_t *mylock;
-  int num_locks = 0;
+  struct get_locks_baton_t *get_locks_baton;
+  int i, num_expected_paths;
 
   *msg = "get locks";
 
@@ -257,24 +305,105 @@ get_locks (const char **msg,
   SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
   SVN_ERR (svn_fs_set_access (fs, access));
 
-  /* Lock all paths under /A/D/G. */
-  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/pi", "", 0, 0,
-                        SVN_INVALID_REVNUM, pool));
+  /* Lock our paths; verify from "/". */
+  {
+    static const char *expected_paths[] = { 
+      "/A/D/G/pi", 
+      "/A/D/G/rho", 
+      "/A/D/G/tau",
+      "/A/D/H/psi", 
+      "/A/D/H/chi", 
+      "/A/D/H/omega",
+      "/A/B/E/alpha",
+      "/A/B/E/beta",
+    };
+    num_expected_paths = sizeof (expected_paths) / sizeof (const char *);
+    for (i = 0; i < num_expected_paths; i++)
+      {
+        SVN_ERR (svn_fs_lock (&mylock, fs, expected_paths[i], "", 0, 0,
+                              SVN_INVALID_REVNUM, pool));
+      }
+    get_locks_baton = make_get_locks_baton (pool);
+    SVN_ERR (svn_fs_get_locks (fs, "", get_locks_callback,
+                               get_locks_baton, pool));
+    SVN_ERR (verify_matching_lock_paths (get_locks_baton, expected_paths,
+                                         num_expected_paths, pool));
+  }
 
-  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", "", 0, 0,
-                        SVN_INVALID_REVNUM, pool));
+  /* Verify from "/A/B". */
+  {
+    static const char *expected_paths[] = { 
+      "/A/B/E/alpha",
+      "/A/B/E/beta",
+    };
+    num_expected_paths = sizeof (expected_paths) / sizeof (const char *);
+    get_locks_baton = make_get_locks_baton (pool);
+    SVN_ERR (svn_fs_get_locks (fs, "A/B", get_locks_callback,
+                               get_locks_baton, pool));
+    SVN_ERR (verify_matching_lock_paths (get_locks_baton, expected_paths,
+                                         num_expected_paths, pool));
+  }
 
-  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/tau", "", 0, 0,
-                        SVN_INVALID_REVNUM, pool));
+  /* Verify from "/A/D". */
+  {
+    static const char *expected_paths[] = { 
+      "/A/D/G/pi", 
+      "/A/D/G/rho", 
+      "/A/D/G/tau",
+      "/A/D/H/psi", 
+      "/A/D/H/chi", 
+      "/A/D/H/omega",
+    };
+    num_expected_paths = sizeof (expected_paths) / sizeof (const char *);
+    get_locks_baton = make_get_locks_baton (pool);
+    SVN_ERR (svn_fs_get_locks (fs, "A/D", get_locks_callback,
+                               get_locks_baton, pool));
+    SVN_ERR (verify_matching_lock_paths (get_locks_baton, expected_paths,
+                                         num_expected_paths, pool));
+  }
 
-  SVN_ERR (svn_fs_get_locks (fs, "/A/D/G", get_locks_counter_callback, 
-                             &num_locks, pool));
-  if (num_locks != 3)
-    return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
-                             "Failed to retrieve all 3 locks under '/A/D/G'");
+  /* Verify from "/A/D/G". */
+  {
+    static const char *expected_paths[] = { 
+      "/A/D/G/pi", 
+      "/A/D/G/rho", 
+      "/A/D/G/tau",
+    };
+    num_expected_paths = sizeof (expected_paths) / sizeof (const char *);
+    get_locks_baton = make_get_locks_baton (pool);
+    SVN_ERR (svn_fs_get_locks (fs, "A/D/G", get_locks_callback,
+                               get_locks_baton, pool));
+    SVN_ERR (verify_matching_lock_paths (get_locks_baton, expected_paths,
+                                         num_expected_paths, pool));
+  }
+                                    
+  /* Verify from "/A/D/H/omega". */
+  {
+    static const char *expected_paths[] = { 
+      "/A/D/H/omega",
+    };
+    num_expected_paths = sizeof (expected_paths) / sizeof (const char *);
+    get_locks_baton = make_get_locks_baton (pool);
+    SVN_ERR (svn_fs_get_locks (fs, "A/D/H/omega", get_locks_callback,
+                               get_locks_baton, pool));
+    SVN_ERR (verify_matching_lock_paths (get_locks_baton, expected_paths,
+                                         num_expected_paths, pool));
+  }
+
+  /* Verify from "/iota" (which wasn't locked... tricky...). */
+  {
+    static const char *expected_paths[] = { 0 };
+    num_expected_paths = 0;
+    get_locks_baton = make_get_locks_baton (pool);
+    SVN_ERR (svn_fs_get_locks (fs, "iota", get_locks_callback,
+                               get_locks_baton, pool));
+    SVN_ERR (verify_matching_lock_paths (get_locks_baton, expected_paths,
+                                         num_expected_paths, pool));
+  }
 
   return SVN_NO_ERROR;
 }
+
 
 /* Test that we can create, fetch, and destroy a lock.  It exercises
    each of the five public fs locking functions.  */
@@ -605,6 +734,83 @@ lock_name_reservation (const char **msg,
 }
 
 
+/* Test that we can set and get locks in and under a directory.  We'll
+   use non-existent FS paths for this test, though, as the FS API
+   currently disallows directory locking.  */
+static svn_error_t *
+directory_locks_kinda (const char **msg,
+                       svn_boolean_t msg_only,
+                       svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_fs_access_t *access;
+  svn_lock_t *mylock;
+  int num_expected_paths, i;
+  struct get_locks_baton_t *get_locks_baton;
+
+  *msg = "directory locks (kinda)";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Prepare a filesystem and a new txn. */
+  SVN_ERR (svn_test__create_any_fs (&fs, "test-repo-directory-locks-kinda", 
+                                    opts->fs_type, pool));
+  SVN_ERR (svn_fs_begin_txn2 (&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+
+  /* We are now 'bubba'. */
+  SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
+  SVN_ERR (svn_fs_set_access (fs, access));
+
+  /*** Lock some various, non-existent, yet dir-name-spacily
+       overlapping paths; verify. ***/
+  {
+    static const char *expected_paths[] = { 
+      "/Program Files/Tigris.org/Subversion", 
+      "/Program Files/Tigris.org",
+      "/Stuff/Junk/Fluff",
+      "/Program Files",
+    };
+    num_expected_paths = sizeof (expected_paths) / sizeof (const char *);
+
+    /* Lock all paths under /A/D/G. */
+    for (i = 0; i < num_expected_paths; i++)
+      {
+        SVN_ERR (svn_fs_lock (&mylock, fs, expected_paths[i], "", 0, 0,
+                              SVN_INVALID_REVNUM, pool));
+      }
+    get_locks_baton = make_get_locks_baton (pool);
+    SVN_ERR (svn_fs_get_locks (fs, "/", get_locks_callback,
+                               get_locks_baton, pool));
+    SVN_ERR (verify_matching_lock_paths (get_locks_baton, expected_paths,
+                                         num_expected_paths, pool));
+  }
+
+  /*** Now unlock a "middle directory" ***/
+  {
+    static const char *expected_paths[] = { 
+      "/Program Files/Tigris.org/Subversion", 
+      "/Stuff/Junk/Fluff",
+      "/Program Files",
+    };
+    num_expected_paths = sizeof (expected_paths) / sizeof (const char *);
+
+    SVN_ERR (svn_fs_unlock (fs, "/Program Files/Tigris.org", NULL, 
+                            TRUE, pool));
+    get_locks_baton = make_get_locks_baton (pool);
+    SVN_ERR (svn_fs_get_locks (fs, "/", get_locks_callback,
+                               get_locks_baton, pool));
+    SVN_ERR (verify_matching_lock_paths (get_locks_baton, expected_paths,
+                                         num_expected_paths, pool));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Test that locks auto-expire correctly. */
 static svn_error_t *
@@ -833,10 +1039,9 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (final_lock_check),
     SVN_TEST_PASS (lock_dir_propchange),
     SVN_TEST_PASS (lock_name_reservation),
+    SVN_TEST_PASS (directory_locks_kinda),
     SVN_TEST_PASS (lock_expiration),
     SVN_TEST_PASS (lock_break_steal_refresh),
     SVN_TEST_PASS (lock_out_of_date),
     SVN_TEST_NULL
   };
-
-
