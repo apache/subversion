@@ -477,6 +477,16 @@ svn_client_blame (const char *target,
       SVN_ERR (svn_stream_close (stream));
       SVN_ERR (svn_io_file_close (file, iterpool));
 
+      if (ctx->notify_func)
+        ctx->notify_func (ctx->notify_baton,
+                          rev->path,
+                          svn_wc_notify_blame_revision,
+                          svn_node_none,
+                          NULL,
+                          svn_wc_notify_state_inapplicable,
+                          svn_wc_notify_state_inapplicable,
+                          rev->revision);
+
       if (last)
         {
           svn_diff_t *diff;
