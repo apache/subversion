@@ -1,0 +1,49 @@
+
+                The Subversion Testing Framework
+                ================================
+
+
+The three tenets of automated testing, which we hold dear:
+
+      1.  It must be easy to run a full set of tests.
+
+      2.  It must be easy and fast to discover what has failed.
+
+      3.  It must be easy to add new tests.
+
+These tenets are what guide our design decisions when it comes to
+testing.
+
+
+What automake gives us
+----------------------
+
+Automake allows to define a variable TESTS (in a `Makefile.am') which
+is a list of test-programs to run.  `make check' runs all these tests,
+examines the return value of each, and finally states how many passed.
+
+
+
+
+
+
+
+Practical wisdom:  when to write new tests
+------------------------------------------
+
+  The world of CVS development, people have noticed that the same bugs
+tend to recur over and over.  Thus the CVS community has adopted a
+hard-and-fast rule that whenever somebody fixes a bug, a *new* test is
+added to the suite to specifically check for it.  It's a common case
+that in the process of fixing a bug, several old bugs are accidentally
+resurrected... and then quickly revealed by the test suite -- quite a
+boon.
+
+  This same rule should apply to Subversion development:  ** If you
+fix a bug, write a test for it! **
+
+  (However, we should note that this rule is somewhat relaxed until
+Subversion hits 1.0.  A majority of pre-1.0 bugs are due to the code
+being in the "initial growth" stage.  The code is changing so fast
+that any fixed bug will probably never recur, simply because features
+and dependencies will be different a week later.)
