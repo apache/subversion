@@ -398,9 +398,9 @@ svn_path_basename (const char *path, apr_pool_t *pool)
 
 void
 svn_path_split (const char *path,
-                    const char **dirpath,
-                    const char **base_name,
-                    apr_pool_t *pool)
+                const char **dirpath,
+                const char **base_name,
+                apr_pool_t *pool)
 {
   assert (dirpath != base_name);
 
