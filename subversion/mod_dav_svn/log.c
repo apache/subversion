@@ -181,8 +181,13 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
 
           target = svn_stringbuf_create (resource->info->repos_path,
                                          resource->pool);
-          svn_path_add_component_nts (target,
-                                      child->first_cdata.first->text);
+          /* Don't add on an empty string, but do add the target to the
+             path.  This special case means that we have passed a single
+             directory to get the log of, and we need a path to call
+             svn_fs_revisions_changed on. */
+          if (child->first_cdata.first)
+            svn_path_add_component_nts (target,
+                                        child->first_cdata.first->text);
 
           (*((svn_stringbuf_t **)(apr_array_push (paths)))) = target;
         }
