@@ -60,7 +60,8 @@ svn_cl__move (apr_getopt_t *os,
   
   SVN_ERR (svn_client_move 
            (&commit_info, 
-            src_path, &(opt_state->start_revision), dst_path, auth_baton, 
+            src_path, &(opt_state->start_revision), dst_path,
+            opt_state->force, auth_baton, 
             &svn_cl__get_log_message,
             svn_cl__make_log_msg_baton (opt_state, NULL, pool),
             SVN_CL_NOTIFY(opt_state),

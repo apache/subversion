@@ -139,7 +139,7 @@ def basic_copy_and_move_files(sbox):
   svntest.main.run_svn(None, 'cp', alpha_path, alpha2_path)
 
   # Move mu to H -- local mods
-  svntest.main.run_svn(None, 'mv', mu_path, H_path)
+  svntest.main.run_svn(None, 'mv', '--force', mu_path, H_path)
 
   # Move iota to F -- no local mods
   svntest.main.run_svn(None, 'mv', iota_path, F_path)

@@ -61,6 +61,7 @@ static svn_error_t *
 wc_to_wc_copy (svn_stringbuf_t *src_path,
                svn_stringbuf_t *dst_path,
                svn_boolean_t is_move,
+               svn_boolean_t force,
                svn_wc_notify_func_t notify_func,
                void *notify_baton,
                apr_pool_t *pool)
@@ -88,25 +89,20 @@ wc_to_wc_copy (svn_stringbuf_t *src_path,
     return svn_error_createf (SVN_ERR_ENTRY_EXISTS, 0, NULL, pool,
                               "file `%s' already exists.", dst_path->data);
 
+  if (is_move && !force)
+    {
+      /* Ensure there are no "awkward" files. */
+      SVN_ERR_W (svn_client__can_delete (src_path, pool),
+                 "Pass --force to override this restriction");
+    }
+
   /* Perform the copy and (optionally) delete. */
   SVN_ERR (svn_wc_copy (src_path, parent, basename,
                         notify_func, notify_baton, pool));
   if (is_move)
     {
-      apr_status_t apr_err;
-
       SVN_ERR (svn_wc_delete (src_path,
                               notify_func, notify_baton, pool));
-
-      if (src_kind == svn_node_file)
-        {
-          apr_err = apr_file_remove (src_path->data, pool);
-          if (apr_err)
-            return svn_error_createf (apr_err, 0, NULL, pool, 
-                                      "error deleting %s", src_path->data);
-        }
-      /* else do nothing;  we don't want to blow away a directory,
-         because 'svn revert' wouldn't be able to undo such a thing. */      
     }
 
   return SVN_NO_ERROR;
@@ -855,6 +851,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
             const svn_delta_editor_t *after_editor,
             void *after_edit_baton,
             svn_boolean_t is_move,
+            svn_boolean_t force,
             svn_wc_notify_func_t notify_func,
             void *notify_baton,
             apr_pool_t *pool)
@@ -933,7 +930,7 @@ setup_copy (svn_client_commit_info_t **commit_info,
 
   /* Now, call the right handler for the operation. */
   if ((! src_is_url) && (! dst_is_url))
-    SVN_ERR (wc_to_wc_copy (src_path, dst_path, is_move,
+    SVN_ERR (wc_to_wc_copy (src_path, dst_path, is_move, force,
                             notify_func, notify_baton,
                             pool));
 
@@ -986,6 +983,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                      before_editor, before_edit_baton,
                      after_editor, after_edit_baton,
                      FALSE /* is_move */,
+                     TRUE /* force, set to avoid deletion check */,
                      notify_func, notify_baton,
                      pool);
 }
@@ -996,6 +994,7 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  svn_stringbuf_t *src_path,
                  const svn_client_revision_t *src_revision,
                  svn_stringbuf_t *dst_path,
+                 svn_boolean_t force,
                  svn_client_auth_baton_t *auth_baton,
                  svn_client_get_commit_log_t log_msg_func,
                  void *log_msg_baton,
@@ -1009,6 +1008,7 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                      NULL, NULL,  /* no before_editor, before_edit_baton */
                      NULL, NULL,  /* no after_editor, after_edit_baton */
                      TRUE /* is_move */,
+                     force,
                      notify_func, notify_baton,
                      pool);
 }

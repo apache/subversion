@@ -36,6 +36,44 @@
 /*** Code. ***/
 
 svn_error_t *
+svn_client__can_delete (svn_stringbuf_t *path,
+                        apr_pool_t *pool)
+{
+  apr_hash_t *hash = apr_hash_make (pool);
+  apr_hash_index_t *hi;
+
+  SVN_ERR (svn_wc_statuses (hash, path, TRUE, FALSE, TRUE, pool));
+  for (hi = apr_hash_first (pool, hash); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      void *val;
+      const svn_wc_status_t *statstruct;
+
+      apr_hash_this (hi, &key, NULL, &val);
+      statstruct = val;
+
+      if (!statstruct->entry)
+        {
+          return svn_error_createf (SVN_ERR_CLIENT_UNVERSIONED,
+                                    0, NULL, pool,
+                                    "'%s' is not under revision control", key);
+        }
+
+      if (statstruct->text_status != svn_wc_status_normal
+          ||
+          (statstruct->prop_status != svn_wc_status_none
+           && statstruct->prop_status != svn_wc_status_normal))
+        {
+          return svn_error_createf (SVN_ERR_CLIENT_MODIFIED,
+                                    0, NULL, pool,
+                                    "'%s' has local modifications", key);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_client_delete (svn_client_commit_info_t **commit_info,
                    svn_stringbuf_t *path,
                    svn_boolean_t force, 
@@ -46,7 +84,6 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                    void *notify_baton,
                    apr_pool_t *pool)
 {
-  apr_status_t apr_err;
   svn_string_t str;
 
   str.data = path->data;
@@ -125,18 +162,15 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
       return SVN_NO_ERROR;
     }
   
-  /* Mark the entry for deletion. */
-  SVN_ERR (svn_wc_delete (path, notify_func, notify_baton, pool));
-
-  if (force)
+  if (!force)
     {
-      /* Remove the file. */
-      apr_err = apr_file_remove (path->data, pool);
-      if (apr_err)
-        return svn_error_createf (apr_err, 0, NULL, pool,
-                                  "svn_client_delete: error deleting %s",
-                                  path->data);
+      /* Verify that there are no "awkward" files */
+      SVN_ERR_W (svn_client__can_delete (path, pool),
+                 "Pass --force to override this restriction");
     }
+
+  /* Mark the entry for commit deletion and perform wc deletion */
+  SVN_ERR (svn_wc_delete (path, notify_func, notify_baton, pool));
 
   return SVN_NO_ERROR;
 }

@@ -159,6 +159,15 @@ svn_client_commit_info_t *svn_client__make_commit_info (svn_revnum_t revision,
 
 /* ---------------------------------------------------------------- */
 
+/*** Status ***/
+
+/* Verify that the path can be deleted without losing stuff, i.e. ensure
+   that there are no modified or unversioned resources under PATH.  This is
+   similar to checking the output of the status command. */
+svn_error_t * svn_client__can_delete (svn_stringbuf_t *path, apr_pool_t *pool);
+
+/* ---------------------------------------------------------------- */
+
 /*** Checkout and update ***/
 
 svn_error_t *

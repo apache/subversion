@@ -486,6 +486,126 @@ mark_tree (svn_stringbuf_t *dir,
   return SVN_NO_ERROR;
 }
 
+/* Remove/erase PATH from the working copy. This involves deleting PATH
+ * from the physical filesystem. PATH is assumed to be an unversioned file
+ * or directory.
+ */
+static svn_error_t *
+erase_unversioned_from_wc (const char *path,
+                           apr_pool_t *pool)
+{
+  enum svn_node_kind kind;
+
+  SVN_ERR (svn_io_check_path (path, &kind, pool));
+  switch (kind)
+    {
+    default:
+      /* ### TODO: what do we do here? To handle Unix symlinks we
+         fallthrough to svn_node_file... gulp! */
+
+    case svn_node_file:
+      SVN_ERR (svn_io_remove_file (path, pool));
+      break;
+
+    case svn_node_dir:
+      {
+        /* We can remove the whole tree with no further checking */
+        apr_status_t status = apr_dir_remove_recursively (path, pool);
+        if (!APR_STATUS_IS_SUCCESS(status))
+          return svn_error_createf (status, 0, NULL, pool,
+                                    "failed removing directory '%s'", path);
+      }
+      break;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Remove/erase PATH from the working copy. For files this involves
+ * deletion from the physical filesystem.  For directories it involves the
+ * deletion from the filesystem of all unversioned children, and all
+ * versioned children that are files. By the time we get here, added but
+ * not committed items will have been scheduled for detetion which means
+ * they have become unversioned.
+ *
+ * The result is that all that remains are versioned directories, each with
+ * its .svn directory and .svn contents.
+ *
+ * KIND is the node kind appropriate for PATH
+ */
+static svn_error_t *
+erase_from_wc (svn_stringbuf_t *path,
+               svn_node_kind_t kind,
+               apr_pool_t *pool)
+{
+  switch (kind)
+    {
+    default:
+      /* ### TODO: what do we do here? */
+      break;
+
+    case svn_node_file:
+      SVN_ERR (svn_io_remove_file (path->data, pool));
+      break;
+
+    case svn_node_dir:
+      {
+        apr_hash_t *ver, *unver;
+        apr_hash_index_t *hi;
+
+        /* First handle the versioned items, this is better (probably) than
+           simply using svn_io_get_dirents for everything as it avoids the
+           need to do svn_io_check_path on each versioned item */
+        SVN_ERR (svn_wc_entries_read (&ver, path, pool));
+        for (hi = apr_hash_first (pool, ver); hi; hi = apr_hash_next (hi))
+          {
+            const void *key;
+            void *val;
+            const char *name;
+            svn_wc_entry_t *entry;
+
+            apr_hash_this (hi, &key, NULL, &val);
+            name = key;
+            entry = val;
+
+            if (!strcmp (name, SVN_WC_ENTRY_THIS_DIR))
+              continue;
+
+            svn_path_add_component_nts (path, name);
+            SVN_ERR (erase_from_wc (path, entry->kind, pool));
+            svn_path_remove_component (path);
+          }
+
+        /* Now handle any remaining unversioned items */
+        SVN_ERR (svn_io_get_dirents (&unver, path, pool));
+        for (hi = apr_hash_first (pool, unver); hi; hi = apr_hash_next (hi))
+          {
+            const void *key;
+            const char *name;
+
+            apr_hash_this (hi, &key, NULL, NULL);
+            name = key;
+
+            /* The admin directory will show up, we don't want to delete it */
+            if (!strcmp (name, SVN_WC_ADM_DIR_NAME))
+              continue;
+
+            /* Versioned directories will show up, don't delete those either */
+            if (apr_hash_get (ver, name, APR_HASH_KEY_STRING))
+              continue;
+
+            svn_path_add_component_nts (path, name);
+            SVN_ERR (erase_unversioned_from_wc (path->data, pool));
+            svn_path_remove_component (path);
+          }
+      }
+      /* ### TODO: move this dir into parent's .svn area */
+      break;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_wc_delete (svn_stringbuf_t *path,
@@ -493,45 +613,43 @@ svn_wc_delete (svn_stringbuf_t *path,
                void *notify_baton,
                apr_pool_t *pool)
 {
-  svn_stringbuf_t *dir, *basename;
   svn_wc_entry_t *entry;
-  svn_boolean_t dir_unadded = FALSE;
+  svn_boolean_t was_schedule_add;
 
-  /* Get the entry for the path we are deleting. */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
-  if (! entry)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool,
-       "'%s' does not appear to be under revision control", path->data);
+  if (!entry)
+    return erase_unversioned_from_wc (path->data, pool);
     
+  was_schedule_add = entry->schedule == svn_wc_schedule_add;
+
   if (entry->kind == svn_node_dir)
     {
-      /* Special case, delete of a newly added dir. */
-      if (entry->schedule == svn_wc_schedule_add)
-        dir_unadded = TRUE;
+      if (was_schedule_add)
+        {
+          /* Deleting a directory that has been added but not yet
+             committed is easy, just remove the adminstrative dir. */
+          svn_stringbuf_t *this_dir =
+            svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool);
+          SVN_ERR (svn_wc_remove_from_revision_control (path,
+                                                        this_dir,
+                                                        FALSE, pool));
+        }
       else
-        /* Recursively mark a whole tree for deletion. */
-        SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                            svn_wc_schedule_delete, FALSE,
-                            notify_func, notify_baton,
-                            pool));
+        {
+          /* Recursively mark a whole tree for deletion. */
+          SVN_ERR (mark_tree (path, SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                              svn_wc_schedule_delete, FALSE,
+                              notify_func, notify_baton,
+                              pool));
+        }
     }
-
-  /* Deleting a directory that has been added but not yet
-     committed is easy, just remove the adminstrative dir. */
-  if (dir_unadded)
-    {
-      svn_stringbuf_t *this_dir =
-        svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool);
-      SVN_ERR (svn_wc_remove_from_revision_control (path,
-                                                    this_dir,
-                                                    FALSE, pool));
-    }
-  else
+  
+  if (!(entry->kind == svn_node_dir && was_schedule_add))
     {
       /* We need to mark this entry for deletion in its parent's entries
          file, so we split off basename from the parent path, then fold in
          the addition of a delete flag. */
+      svn_stringbuf_t *dir, *basename;
       svn_path_split (path, &dir, &basename, pool);
       if (svn_path_is_empty (dir))
         svn_stringbuf_set (dir, ".");
@@ -544,6 +662,13 @@ svn_wc_delete (svn_stringbuf_t *path,
   /* Report the deletion to the caller. */
   if (notify_func != NULL)
     (*notify_func) (notify_baton, svn_wc_notify_delete, path->data);
+
+  /* By the time we get here, anything that was scheduled to be added has
+     become unversioned */
+  if (was_schedule_add)
+    SVN_ERR (erase_unversioned_from_wc (path->data, pool));
+  else
+    SVN_ERR (erase_from_wc (path, entry->kind, pool));
 
   return SVN_NO_ERROR;
 }

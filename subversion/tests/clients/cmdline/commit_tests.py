@@ -119,6 +119,7 @@ def make_standard_slew_of_changes(wc_dir):
   svntest.main.run_svn(None, 'rm', os.path.join('A', 'D', 'gamma'))
   
   # Replace one of the removed files
+  svntest.main.file_append(os.path.join('A', 'D', 'H', 'chi'), "chi")
   svntest.main.run_svn(None, 'add', os.path.join('A', 'D', 'H', 'chi'))
   
   # Make textual mods to two files
@@ -145,7 +146,6 @@ def make_standard_slew_of_changes(wc_dir):
     return 1
 
   return 0
-
 
 ######################################################################
 # Tests
@@ -665,8 +665,9 @@ def hudson_part_1(sbox):
   expected_output_tree = svntest.tree.build_generic_tree(\
     [ [gamma_path, None, {}, {'status' : 'D ' }] ])
 
-  # Expected disk tree:  everything.
+  # Expected disk tree:  everything but gamma
   my_greek_tree = svntest.main.copy_greek_tree()
+  my_greek_tree.pop(path_index(my_greek_tree, os.path.join('A','D','gamma')))
   expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
   
   # Expected status after update:  totally clean revision 2, minus gamma.
@@ -728,8 +729,11 @@ def hudson_part_1_variation_1(sbox):
   expected_output_tree = svntest.tree.build_generic_tree(\
     [ [H_path, None, {}, {'status' : 'D ' }] ])
 
-  # Expected disk tree:  everything.
+  # Expected disk tree:  everything except files in H
   my_greek_tree = svntest.main.copy_greek_tree()
+  my_greek_tree.pop(path_index(my_greek_tree,os.path.join('A','D','H','chi')))
+  my_greek_tree.pop(path_index(my_greek_tree,os.path.join('A','D','H','omega')))
+  my_greek_tree.pop(path_index(my_greek_tree,os.path.join('A','D','H','psi')))
   expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
 
   # Expected status after update:  totally clean revision 2, minus H.
@@ -786,6 +790,7 @@ def hudson_part_1_variation_2(sbox):
 
   # Now gamma should be marked as `deleted' under the hood.
   # Go ahead and re-add gamma, so that is *also* scheduled for addition.
+  svntest.main.file_append(gamma_path, "added gamma")
   svntest.main.run_svn(None, 'add', gamma_path)
 
   # For sanity, examine status: it should show a revision 2 tree with
@@ -1196,8 +1201,8 @@ def commit_deleted_edited(sbox):
   svntest.main.file_append(mu_path, "This file has been edited.")
 
   # Schedule the files for removal.
-  svntest.main.run_svn(None, 'remove', iota_path)
-  svntest.main.run_svn(None, 'remove', mu_path)
+  svntest.main.run_svn(None, 'remove', '--force', iota_path)
+  svntest.main.run_svn(None, 'remove', '--force', mu_path)
 
   # Make our output list
   output_list = [(iota_path, None, {}, {'verb' : 'Deleting'}),
@@ -1264,6 +1269,7 @@ def commit_in_dir_scheduled_for_addition(sbox):
   
 #----------------------------------------------------------------------
 
+# Does this make sense now that deleted files are always removed from the wc?
 def commit_rmd_and_deleted_file(sbox):
   "commit deleted (and missing) file"
 
@@ -1275,9 +1281,6 @@ def commit_rmd_and_deleted_file(sbox):
 
   # 'svn remove' mu
   svntest.main.run_svn(None, 'rm', mu_path)
-
-  # Now, physically remove mu from disk
-  os.unlink(mu_path)
 
   # Commit, hoping to see no errors
   out, err = svntest.main.run_svn(None, 'commit', '-m', '"logmsg"', mu_path)
