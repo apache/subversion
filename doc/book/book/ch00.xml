@@ -458,7 +458,21 @@
     <sect2 id="svn-ch-0-sect-6.2">
       <title>From Brian W. Fitzpatrick</title>
 
-      <para>### thanks ###</para>
+      <para>Huge thanks to my wife Marie for being incredibly
+        understanding, supportive, and most of all, patient.  A big
+        thank you to my brother Eric who first introduced me to UNIX
+        programming way back when, and to my Mom and Grandmother who
+        endured a Christmas holiday where I came home and promptly
+        buried my head in my laptop to work on the book.</para>
+
+      <para>To Mike and Ben: It was a pleasure working with you on the
+        book.  Heck, it's a pleasure working with you at work!</para>
+
+      <para>To everyone in the Subversion community and the Apache
+        Software Foundation, thanks for having me&mdash;not a day goes
+        by where I don't learn something from at least one of you.
+      </para>
+
     </sect2>
 
     <!-- ***************************************************************** -->
