@@ -3,7 +3,7 @@
 #
 # USAGE: ./dist.sh -v VERSION -r REVISION [-rs REVISION-SVN] [-pr REPOS-PATH]
 #                  [-apr PATH-TO-APR ] [-apu PATH-TO-APR-UTIL] 
-#                  [-neon PATH-TO-NEON ] [-alpha|-beta BETA_NUM]
+#                  [-neon PATH-TO-NEON ] [-alpha|-beta BETA_NUM|-rc RC_NUM]
 #
 #   Create a distribution tarball, labelling it with the given VERSION.
 #   The REVISION or REVISION-SVN will be used in the version string.
@@ -32,14 +32,14 @@
 #   For example:
 #      ./dist.sh -v 1.1.0 -r 10277 -pr branches/1.1.x -alpha
 #
-#   If neither an -beta option with a number or an -alpha option
+#   If neither an -beta or -rc option with a number or an -alpha option
 #   are specified, it will build a release tarball.
 
 
 # A quick and dirty usage message
 USAGE="USAGE: ./dist.sh -v VERSION -r REVISION \
 [-rs REVISION-SVN ] [-pr REPOS-PATH] \
-[-alpha|-beta BETA_NUM] [-apr APR_PATH ] \
+[-alpha|-beta BETA_NUM|-rc RC_NUM] [-apr APR_PATH ] \
 [-apu APR_UTIL_PATH] [-neon NEON_PATH ]
  EXAMPLES: ./dist.sh -v 0.36.0 -r 8278
            ./dist.sh -v 0.36.0 -r 8278 -pr trunk
@@ -59,6 +59,7 @@ do
          -r)  REVISION="$ARG" ;;
         -rs)  REVISION_SVN="$ARG" ;;
         -pr)  REPOS_PATH="$ARG" ;;
+	-rc)  RC="$ARG" ;;
        -apr)  APR_PATH="$ARG" ;;
        -apu)  APU_PATH="$ARG" ;;
       -neon)  NEON_PATH="$ARG" ;;
@@ -90,7 +91,9 @@ if [ -z "$REVISION_SVN" ]; then
   REVISION_SVN=$REVISION
 fi
 
-if [ -n "$ALPHA" ] && [ -n "$BETA" ] ; then
+if [ -n "$ALPHA" ] && [ -n "$BETA" ] ||
+   [ -n "$ALPHA" ] && [ -n "$RC" ] ||
+   [ -n "$BETA" ] && [ -n "$RC" ] ; then
   echo " $USAGE"
   exit 1
 elif [ -n "$ALPHA" ] ; then
@@ -99,6 +102,9 @@ elif [ -n "$ALPHA" ] ; then
 elif [ -n "$BETA" ] ; then
   VER_TAG="Beta $BETA"
   VER_NUMTAG="-beta$BETA"
+elif [ -n "$RC" ] ; then
+  VER_TAG="Release Candidate $RC"
+  VER_NUMTAG="-rc$RC"
 else
   VER_TAG="r$REVISION_SVN"
   VER_NUMTAG=""
