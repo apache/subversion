@@ -302,8 +302,17 @@ if [ -z "$ZIP" ]; then
   echo "Compressing to $DISTNAME.tar.bz2 ..."
   bzip2 -9fk "$DISTNAME.tar"
 
+  # Use the gzip -n flag - this prevents it from storing the original name of
+  # the .tar file, and far more importantly, the mtime of the .tar file, in the
+  # produced .tar.gz file. This is important, because it makes the gzip
+  # encoding reproducable by anyone else who has an similar version of gzip,
+  # and also uses "gzip -9n". This means that committers who want to GPG-sign
+  # both the .tar.gz and the .tar.bz2 can download the .tar.bz2 (which is
+  # smaller), and locally generate an exact duplicate of the official .tar.gz
+  # file. This metadata is data on the temporary uncompressed tarball itself,
+  # not any of its contents, so there will be no effect on end-users.
   echo "Compressing to $DISTNAME.tar.gz ..."
-  gzip -9f "$DISTNAME.tar"
+  gzip -9nf "$DISTNAME.tar"
 else
   echo "Rolling $DISTNAME.zip ..."
   (cd "$DIST_SANDBOX" > /dev/null && zip -q -r - "$DISTNAME") > \
