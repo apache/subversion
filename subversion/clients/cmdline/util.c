@@ -375,40 +375,21 @@ svn_cl__get_log_message (const char **log_msg,
   *tmp_file = NULL;
   if (lmb->message)
     {
-      const char *log_msg_utf8;
+      svn_string_t *log_msg_string = svn_string_create ("", pool);
+
+  
+      log_msg_string->data = lmb->message;
+      log_msg_string->len = strlen (lmb->message);
+
+      SVN_ERR (svn_subst_translate_string (&log_msg_string, log_msg_string,
+                                           lmb->message_encoding, pool));
+
+      *log_msg = log_msg_string->data;
 
       /* Trim incoming messages the EOF marker text and the junk that
          follows it.  */
-      truncate_buffer_at_prefix (NULL, lmb->message, EDITOR_EOF_PREFIX);
+      truncate_buffer_at_prefix (NULL, *log_msg, EDITOR_EOF_PREFIX);
 
-      /* If a special --message-encoding was given on the commandline,
-         convert the log message from that locale to UTF8: */
-      if (lmb->message_encoding)
-        {
-          apr_xlate_t *xlator;
-          apr_status_t apr_err =  
-            apr_xlate_open (&xlator, "UTF-8", lmb->message_encoding, pool);
-
-          if (apr_err != APR_SUCCESS)
-            return svn_error_create (apr_err, 0, NULL,
-                                     "failed to create a converter to UTF-8");
-
-          SVN_ERR (svn_utf_cstring_to_utf8 (&log_msg_utf8, lmb->message,
-                                            xlator, pool));
-        }
-      /* otherwise, just convert the message to utf8 by assuming it's
-         already in the 'default' locale of the environment. */
-      else        
-        SVN_ERR (svn_utf_cstring_to_utf8 (&log_msg_utf8, lmb->message,
-                                          NULL, pool));
-      
-      /* Convert the utf8 message to "repos normal" LF eol-style. */
-      SVN_ERR (svn_subst_translate_cstring (log_msg_utf8, log_msg,
-                                            "\n",  /* translate to LF */
-                                            FALSE, /* no repair */
-                                            NULL,  /* no keywords */
-                                            FALSE, /* no expansion */
-                                            pool));
       return SVN_NO_ERROR;
     }
 
@@ -469,9 +450,11 @@ svn_cl__get_log_message (const char **log_msg,
          libsvn_client. */
       if (msg2)
         {
-          svn_string_t *new_logval = svn_string_create (msg2, pool);
+          svn_string_t *new_logval = svn_string_create ("", pool);
+          new_logval->data = msg2;
+          new_logval->len = strlen (msg2);
           SVN_ERR (svn_subst_translate_string (&new_logval, new_logval,
-                                             NULL,pool));
+                                               NULL, pool));
           msg2 = new_logval->data;
         }        
 
