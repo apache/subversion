@@ -424,15 +424,23 @@ static int access_checker(request_rec *r)
     if (!conf->anonymous || !conf->access_file)
         return DECLINED;
 
-    /* It makes no sense to check if a location is both accessible
-     * anonymous and by an authenticated user.
-     */
-    if (ap_some_auth_required(r) && ap_satisfies(r) != SATISFY_ANY)
-        return DECLINED;
+    if (ap_some_auth_required(r)) {
+        /* It makes no sense to check if a location is both accessible
+         * anonymous and by an authenticated user (in the same request!).
+         */
+        if (ap_satisfies(r) != SATISFY_ANY)
+            return DECLINED;
 
-    /* XXX: Don't run when ap_some_auth_required(r) and an Authorization
-     * XXX: or Proxy-Authorization are present?
-     */
+        /* If the user is trying to authenticate, let him.  If anonymous
+         * access is allowed, so is authenticated access, by definition
+         * of the meaning of '*' in the access file.
+         */
+        if (apr_table_get(r->headers_in,
+                          (PROXYREQ_PROXY == r->proxyreq)
+                          ? "Proxy-Authorization" : "Authorization")) {
+            return DECLINED;
+        }
+    }
 
     /* If anon access is allowed, return OK */
     status = req_check_access(r, conf, &repos_path, &dest_repos_path);
