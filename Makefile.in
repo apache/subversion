@@ -54,17 +54,20 @@ prefix = @prefix@
 exec_prefix = @exec_prefix@
 libdir = @libdir@
 base_libdir = @libdir@
-fs_libdir= @libdir@
+fs_libdir = @libdir@
 bindir = @bindir@
-fs_bindir=@bindir@
+fs_bindir = @bindir@
 includedir = @includedir@
 mandir = @mandir@
 srcdir = @srcdir@
 infodir = @infodir@
+datadir = @datadir@
+templatedir = @templatedir@
+docdir = @docdir@
 
 # where to install libsvn_swig_*
-swig_py_libdir= @libdir@
-swig_java_libdir= @libdir@
+swig_py_libdir = @libdir@
+swig_java_libdir = @libdir@
 
 ### these possibly need further discussion
 swig_pydir = @libdir@/svn-python/svn
