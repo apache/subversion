@@ -124,6 +124,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Move or rename something working copy.\n"
     "usage: move SRC_PATH DST_PATH.\n" },
   { "mv",         TRUE, NULL, NULL },
+  { "rename",     TRUE, NULL, NULL },
   { "ren",        TRUE, NULL, NULL },
 
   { "propdel",    FALSE, svn_cl__propdel, 
