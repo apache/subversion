@@ -543,7 +543,6 @@ svn_wc_copy_and_translate (const char *src,
                                             src, dst, d, repair, pool)))
                 goto cleanup;
               newline_off = 0;
-              break;
             }
 
           /* If we aren't paying attention to keywords, just skip the
