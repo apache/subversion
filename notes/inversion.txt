@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.30 $ of this document.)
+              ($Revision: 1.31 $ of this document.)
 
 * Introduction
 
@@ -218,7 +218,10 @@ directory so far).
 
 Let's see what this looks like as an abstract data structure in the
 repository, and how that structure works in various operations (such
-as update, commit, and branch).
+as update, commit, and branch).  This data structure is described as
+though it lives in permanent heap memory; how we will actually
+accomplish permanent storage is an implementation detail, (probably
+involving DBM files of some sort).
 
 In the diagrams that follow, straight horizontal lines with arrowheads
 represent backwards time-flow (that is, the regression of versions),
@@ -602,7 +605,8 @@ little time as possible.
 These two issues are not directly related, but they must be
 synchronized with each other.  This is complex, so instead of
 specifying the sequence of events formally right away, let's run
-through an example.  Here's how to commit a new version of foo.
+through an example without locking first.  Here's how to commit a new
+version of foo:
 
   Step 1: Create the new node for foo:2.
 
@@ -756,7 +760,7 @@ be preferable -- and I like the mellow approach where you just grab
 whatever version happens to be in line when you're ready for it.
 Thoughts?
 
-** How renames work
+** How renames work, and what they imply
 
 Exactly how you think they do.
 
@@ -764,6 +768,20 @@ To rename an entity, you make a new node for its parent directory.  In
 this new node, the entity's dir_entry has the new name, but still
 points to the same node as the old dir_entry.  That's why a name is
 stored in the parent, not in the thing being named.
+
+This implies that each entity (where "entity" means roughly "a
+most-recent node along with everything it backlinks to") has some
+unique identifier aside from its name.  These identifiers are stored
+alongside the name in the parent's dir_entry, and are unique within
+the project.  
+
+Having both the human-visible name and an internal identifier allows
+Inversion to choose between following a history by name or by
+identity, which can result in two different retrieval scenarios
+(although such circumstances are unusual, we must support them).
+
+These unique identitifiers, once assigned, are _never_ changed.  When
+an entity is renamed, only the name changes, not the id number.
 
 ** How removals work.
 
@@ -819,7 +837,14 @@ It might be good to have two plists, actually: `inv_props', and
 a "store-and-ignore" policy for user_props.  And users should never
 store anything in inv_props, only Inversion handles that.
 
-** A closer look at the `node' data structure
+** A closer look at the `node' data structure (and friends)
+
+   typedef struct dir_entry
+   {
+      unsigned long int unique_id;   /* The unvarying id for this entity */
+      char *name;                    /* Child's name, multi-lingual I hope */
+      node *child;                   /* The target node. */
+   } dir_entry;
 
    typedef struct node
    {
