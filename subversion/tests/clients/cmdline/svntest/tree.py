@@ -490,15 +490,16 @@ def build_tree_from_status(lines):
   else:
     repos_rev = '?'
     
-  rm = re.compile ('^(..)(.)(.+)(\d+)\s+(.+)')
+  rm = re.compile ('^(..)(.)([^0-9]+)(\d+|-)\s+(.+)')
   for line in lines:
     match = rm.search(line)
     if match and match.groups():
-      new_branch = create_from_path(match.group(5), None, {},
-                                    {'status' : match.group(1),
-                                     'locked' : match.group(2),
-                                     'wc_rev' : match.group(4),
-                                     'repos_rev' : repos_rev})
+      if match.group(4) != '-': # ignore items that only exist on repos
+        new_branch = create_from_path(match.group(5), None, {},
+                                      {'status' : match.group(1),
+                                       'locked' : match.group(2),
+                                       'wc_rev' : match.group(4),
+                                       'repos_rev' : repos_rev})
       root.add_child(new_branch)
 
   return root

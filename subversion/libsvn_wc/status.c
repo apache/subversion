@@ -240,7 +240,7 @@ svn_wc_status (svn_wc_status_t **status,
   if (err)
     return err;
 
-  if (entry->existence == svn_wc_existence_deleted)
+  if (entry && entry->existence == svn_wc_existence_deleted)
     return svn_error_createf
       (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
        "entry '%s' has already been deleted", path->data);

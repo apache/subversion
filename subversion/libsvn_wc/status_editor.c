@@ -138,9 +138,32 @@ tweak_statushash (void *edit_baton,
   if (! statstruct)
     {
       svn_stringbuf_t *pathkey = svn_stringbuf_create (path, pool);
+        
+      /* Note:  the path may be one that doesn't exist at all in the
+         working copy (if the repository is reporting an "added"
+         item).  That means that statstruct->entry comes back as
+         NULL.  Let's be safe and at least create an empty entry as a
+         placeholder.  */
+      if (repos_text_status == svn_wc_status_added)
+        {
+          /* Make a status struct */
+          statstruct = apr_pcalloc (pool, sizeof(svn_wc_status_t *));
+          
+          /* Make an entry struct inside it */
+          statstruct->entry = apr_pcalloc (pool, sizeof(svn_wc_entry_t *));
+          statstruct->entry->revision = SVN_INVALID_REVNUM;
+          statstruct->entry->kind = svn_node_unknown; /* who cares? */
+          statstruct->entry->schedule = svn_wc_schedule_normal;
+          statstruct->entry->existence = svn_wc_existence_added;
+        }
 
-      /* Add a status structure just for PATH, using public API. */
-      SVN_ERR (svn_wc_status (&statstruct, pathkey, pool));
+      else
+        /* If this PATH isn't 'added', it must already exist in the
+           working copy.  Use the public API to get a statstruct: */
+        SVN_ERR (svn_wc_status (&statstruct, pathkey, pool));
+
+
+      /* Put the path/struct into the hash. */
       apr_hash_set (statushash, pathkey->data, pathkey->len, statstruct);
     }
 
@@ -443,7 +466,7 @@ add_directory (svn_stringbuf_t *name,
                       parent_dir_baton,
                       parent_dir_baton->pool);
 
-  /* Mark the new directory as "added", so we can ignore it later */
+  /* Mark the new directory as "added" */
   this_dir_baton->added = 1;
 
   /* Mark the parent as changed however;  it gained an entry. */
@@ -496,14 +519,22 @@ close_directory (void *dir_baton)
   struct dir_baton *db = dir_baton;
   svn_error_t *err = NULL;
 
-  if (! db->added 
-      && ((db->prop_changed) || (db->text_changed)))
+  if (db->added 
+      || db->prop_changed
+      || db->text_changed)
     {
-      /* Mark the directory in the statushash */
-      SVN_ERR (tweak_statushash (db->edit_baton,
-                                 db->path->data,
-                                 db->text_changed ? svn_wc_status_modified : 0,
-                                 db->prop_changed ? svn_wc_status_modified : 0));
+      if (db->added)
+        /* add the directory to the status hash */
+        SVN_ERR (tweak_statushash (db->edit_baton,
+                                   db->path->data,
+                                   svn_wc_status_added,
+                                   db->prop_changed ? svn_wc_status_added : 0));
+      else
+        /* mark the existing directory in the statushash */    
+        SVN_ERR (tweak_statushash (db->edit_baton,
+                                   db->path->data,
+                                   db->text_changed ? svn_wc_status_modified : 0,
+                                   db->prop_changed ? svn_wc_status_modified : 0));
 
     }
 
@@ -531,10 +562,7 @@ add_or_replace_file (svn_stringbuf_t *name,
   struct file_baton *this_file_baton
     = make_file_baton (parent_baton, name);
 
-  /* We're not going to report any status information on files or dirs
-     that we don't yet have. */
   if (adding)
-    /* Mark some structure as ADDED, and thus will be ignored later. */
     this_file_baton->added = 1;
     
   *file_baton = this_file_baton;
@@ -607,14 +635,22 @@ close_file (void *file_baton)
 {
   struct file_baton *fb = file_baton;
 
-  if (! fb->added 
-      && ((fb->prop_changed) || (fb->text_changed)))
+  if (fb->added 
+      || fb->prop_changed
+      || fb->text_changed)
     {
-      /* Mark the file in the statushash */
-      SVN_ERR (tweak_statushash (fb->dir_baton->edit_baton,
-                                 fb->path->data,
-                                 fb->text_changed ? svn_wc_status_modified : 0,
-                                 fb->prop_changed ? svn_wc_status_modified : 0));
+      if (fb->added)
+        /* add file to the hash */
+        SVN_ERR (tweak_statushash (fb->dir_baton->edit_baton,
+                                   fb->path->data,
+                                   svn_wc_status_added, 
+                                   fb->prop_changed ? svn_wc_status_added : 0));
+      else
+        /* mark the file in the statushash */
+        SVN_ERR (tweak_statushash (fb->dir_baton->edit_baton,
+                                   fb->path->data,
+                                   fb->text_changed ? svn_wc_status_modified : 0,
+                                   fb->prop_changed ? svn_wc_status_modified : 0));
     }
 
   /* Tell the directory it has one less thing to worry about. */
@@ -630,11 +666,11 @@ close_edit (void *edit_baton)
   struct edit_baton *eb = edit_baton;
   apr_hash_index_t *hi;
 
-  /* Loop through the statushash, set the REPOS_REV field in each.
-   (We got the youngest revision way back in editor->set_target_revision.) */
- for (hi = apr_hash_first (eb->pool, eb->statushash); 
-      hi; 
-      hi = apr_hash_next (hi))
+  /* Loop through the statushash, set the REPOS_REV field in each. (We
+     got the youngest revision way back in editor->set_target_revision.)  */
+  for (hi = apr_hash_first (eb->pool, eb->statushash); 
+       hi; 
+       hi = apr_hash_next (hi))
     {
       const void *key;
       void *val;
@@ -645,7 +681,7 @@ close_edit (void *edit_baton)
       status = (svn_wc_status_t *) val;
       status->repos_rev = eb->youngest_revision;
     }
-
+  
   /* The edit is over, free its pool. */
   svn_pool_destroy (eb->pool);
     

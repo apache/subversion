@@ -156,7 +156,20 @@ print_long_format (const char *path,
     local_rev = SVN_INVALID_REVNUM;
 
   /* Print */
-  if (local_rev == SVN_INVALID_REVNUM)
+
+
+  /* If the item is on the repository, but not in the working copy, we
+     do complex things: */
+  if (status->repos_text_status == svn_wc_status_added)
+    {
+      if (status->repos_prop_status == svn_wc_status_added) 
+        printf ("__     %c         -    %s\n", update_char, path);
+      else
+        printf ("_      %c         -    %s\n", update_char, path);
+    }
+
+  /* Otherwise, go ahead and show the local revision number. */
+  else if (local_rev == SVN_INVALID_REVNUM)
     printf ("%s    %c      ?       %s\n", str_status, update_char, path);
   else
     printf ("%s    %c    %6ld    %s\n", str_status, update_char,
