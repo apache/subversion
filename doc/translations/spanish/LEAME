@@ -209,13 +209,15 @@ Reglas mínimas para traductores
   problema --> dentro del propio texto. Así luego se puede hacer
   "grep TODO *" para ver qué falta.
 
-- Estar suscrito a la "lista virtual" de commits. Cada vez que se
-  hace un commit, el servidor manda un email a los traductores. Si
-  se es traductor y no se está recibiendo este email, dar un toque
-  a Grzegorz para que añada la dirección de email del traductor a
-  la lista. La lista es "virtual" porque en la dirección From del
-  mensaje se usa una dirección falsa. Intentar responder a esta
-  dirección por correo generará un mensaje de error, pues no existe.
+- Estar apuntado a la lista de correo de commits de Subversion:
+  svn@subversion.tigris.org. Las instrucciones para apuntarse están
+  en http://subversion.tigris.org/servlets/ProjectMailingListList.
+  Esta lista de correo incluye los cambios realizados en todo el
+  árbol del repositorio. Si la carga es excesiva, contactar con
+  Grzegorz. Puede crear una regla de reenvío de los mensajes
+  de commit siempre y cuando el título contenga la cadena
+  "trunk/doc/translations/spanish". Así sólo se recibirán esos
+  emails.
 
 - Si se añade un fichero de texto al repositorio, indicar que
   los retornos de línea sean "nativos" y que la codificación es
