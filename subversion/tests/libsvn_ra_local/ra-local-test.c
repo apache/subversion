@@ -112,10 +112,10 @@ get_ra_local_plugin (svn_ra_plugin_t **plugin)
   void *ra_baton;
 
   /* Load all available RA implementations. */
-  SVN_ERR (svn_client_init_ra_libs (&ra_baton, pool));
+  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
 
   /* Get the plugin which handles "file:" URLs */
-  SVN_ERR (svn_client_get_ra_library (plugin, ra_baton, "file:", pool));
+  SVN_ERR (svn_ra_get_ra_library (plugin, ra_baton, "file:", pool));
 
   return SVN_NO_ERROR;
 }

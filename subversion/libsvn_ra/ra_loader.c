@@ -118,8 +118,8 @@ load_ra_module (svn_ra_init_func_t **func,
 /*** Public Interfaces ***/
 
 svn_error_t *
-svn_client_init_ra_libs (void **ra_baton,
-                         apr_pool_t *pool)
+svn_ra_init_ra_libs (void **ra_baton,
+                     apr_pool_t *pool)
 {
   const struct ra_lib_defn *defn;
   apr_hash_t *ra_library_hash;
@@ -160,10 +160,10 @@ svn_client_init_ra_libs (void **ra_baton,
 
 
 svn_error_t *
-svn_client_get_ra_library (svn_ra_plugin_t **library,
-                           void *ra_baton,
-                           const char *URL,
-                           apr_pool_t *pool)
+svn_ra_get_ra_library (svn_ra_plugin_t **library,
+                       void *ra_baton,
+                       const char *URL,
+                       apr_pool_t *pool)
 {
   apr_hash_index_t *this;
   apr_hash_t *hash = ra_baton;
