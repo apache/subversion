@@ -82,6 +82,9 @@ svn_client_delete (svn_stringbuf_t *path,
       SVN_ERR (editor->delete_entry (target, root_baton));
       SVN_ERR (editor->close_edit (edit_baton));
 
+      /* Free the RA session */
+      SVN_ERR (ra_lib->close (session));
+
       return SVN_NO_ERROR;
     }
   

@@ -332,7 +332,11 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
   file_read_ctx_t *frc = userdata;
   svn_txdelta_window_t window = { 0 };
   svn_txdelta_op_t op;
-  svn_stringbuf_t data = { (char *)buf, len, len, frc->pool };
+  svn_stringbuf_t data;
+  data.data		= (char *)buf;
+  data.len		= len;
+  data.blocksize	= len;
+  data.pool		= frc->pool;
 
   if (frc->err)
     {
@@ -379,8 +383,12 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
   svn_error_t *err;
   svn_error_t *err2;
   int rv;
-  svn_string_t my_url = { url, strlen(url) };
-  svn_stringbuf_t *url_str = svn_path_uri_encode (&my_url, pool);
+  svn_string_t my_url;
+  svn_stringbuf_t *url_str;
+
+  my_url.data	= url;
+  my_url.len	= strlen(url);
+  url_str	= svn_path_uri_encode (&my_url, pool);
 
   err = (*editor->apply_textdelta)(file_baton,
                                    &frc.handler,

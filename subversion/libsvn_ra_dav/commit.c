@@ -256,7 +256,6 @@ static svn_error_t * create_activity(commit_ctx_t *cc)
   svn_stringbuf_t * activity_url;
   apr_uuid_t uuid;
   char uuid_buf[APR_UUID_FORMATTED_LENGTH + 1];
-  svn_stringbuf_t uuid_str = { uuid_buf, sizeof(uuid_buf), 0, NULL };
   int code;
 
   /* get the URL where we'll create activities */
@@ -267,7 +266,7 @@ static svn_error_t * create_activity(commit_ctx_t *cc)
   apr_uuid_format(uuid_buf, &uuid);
 
   /* ### grumble. this doesn't watch out for trailing "/" */
-  svn_path_add_component(activity_url, &uuid_str, svn_path_url_style);
+  svn_path_add_component_nts(activity_url, uuid_buf, svn_path_url_style);
 
   cc->activity_url = activity_url->data;
 
