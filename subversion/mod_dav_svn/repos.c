@@ -1384,18 +1384,30 @@ static int dav_svn_is_parent_resource(const dav_resource *res1,
 }
 
 
-dav_error * dav_svn_is_new_resource (request_rec *r,
-                                     const char *uri,
-                                     const char *root_path,
-                                     int *is_new)
+dav_error * dav_svn_resource_kind (request_rec *r,
+                                   const char *uri,
+                                   const char *root_path,
+                                   svn_node_kind_t *kind)
 {
   dav_error *derr;
   svn_error_t *serr;
   dav_resource *resource;
   svn_revnum_t base_rev;
   svn_fs_root_t *base_rev_root;
-  svn_node_kind_t kind;
+  char *saved_uri;
 
+  /* Temporarily insert the uri that the user actually wants us to
+     convert into a resource.  Typically, this is already r->uri, so
+     this is usually a no-op.  But sometimes the caller may pass in
+     the Destination: header uri.
+
+     ### WHAT WE REALLY WANT here is to refactor dav_svn_get_resource,
+     so that some alternate interface actually allows us to specify
+     the URI to process, i.e. not always process r->uri.
+  */
+  saved_uri = r->uri;
+  r->uri = apr_pstrdup(r->pool, uri);
+ 
   /* parse the uri and prep the associated resource. */
   derr = dav_svn_get_resource(r, root_path,
                               /* ### I can't believe that every single
@@ -1403,44 +1415,62 @@ dav_error * dav_svn_is_new_resource (request_rec *r,
                                  args below!! */
                               "ignored_label", 1,
                               &resource);
+  /* Restore r back to normal. */
+  r->uri = saved_uri;
+  
   if (derr)
     return derr;
 
-  /* verify that we've got a working resource */
-  if (resource->type != DAV_RESOURCE_TYPE_WORKING)
+  if (resource->type == DAV_RESOURCE_TYPE_REGULAR)
     {
-      /* callers can look for this specific parse error, as a way of
-         knowing that it's not a working resource. */
-      return dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
-                           DAV_ERR_IF_PARSE,
-                           "is_new_resource called on non-working resource.");
+      /* Either a public URI or a bc.  In both cases, prep_regular()
+         has already set the 'exists' and 'collection' flags by
+         querying the appropriate revision root and path.  */
+      if (! resource->exists)
+        *kind = svn_node_none;
+      else
+        *kind = resource->collection ? svn_node_dir : svn_node_file;
     }
 
-  /* easy out: if the working resource doesn't exist in the txn, then
-     yes indeed, the uri should be considered "new". */
-  if (! resource->exists)
+  else if (resource->type == DAV_RESOURCE_TYPE_VERSION)
     {
-      *is_new = 1;
+      if (resource->baselined)  /* bln */
+        *kind = svn_node_unknown;
+
+      else /* ver */
+        *kind = svn_fs_check_path (resource->info->root.root,
+                                   resource->info->repos_path, r->pool);
     }
+  
+  else if (resource->type == DAV_RESOURCE_TYPE_WORKING)
+    {
+      if (resource->baselined) /* wbl */
+        *kind = svn_node_unknown;
+      
+      else /* wrk */
+        {
+          /* don't call fs_check_path on the txn, but on the original
+             revision that the txn is based on. */
+          base_rev = svn_fs_txn_base_revision (resource->info->root.txn);
+          serr = svn_fs_revision_root (&base_rev_root,
+                                       resource->info->repos->fs,
+                                       base_rev, r->pool);
+          if (serr)
+            return 
+              dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  apr_psprintf
+                                  (r->pool,
+                                   "Could not open root of revision %"
+                                   SVN_REVNUM_T_FMT, base_rev));
+      
+          *kind = svn_fs_check_path (base_rev_root,
+                                     resource->info->repos_path, r->pool);
+        }
+    }
+
   else
-    {
-      /* we have a tangible item in the txn; see if it exists in the
-         original revision as well. */
-      base_rev = svn_fs_txn_base_revision (resource->info->root.txn);
-      serr = svn_fs_revision_root (&base_rev_root, resource->info->repos->fs,
-                                   base_rev, r->pool);
-      if (serr)
-        return 
-          dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                              apr_psprintf(r->pool,
-                                           "Could not open root of revision %"
-                                           SVN_REVNUM_T_FMT, base_rev));
-      
-      kind = svn_fs_check_path (base_rev_root,
-                                resource->info->repos_path, r->pool);
-      
-      *is_new = (kind == svn_node_none) ? 1 : 0;
-    }
+    /* act, his, vcc, or some other private resource */
+    *kind = svn_node_unknown;
 
   return NULL;
 }

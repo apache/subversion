@@ -417,21 +417,24 @@ dav_error * dav_svn_split_uri (request_rec *r,
 
 
 
-/* Given an apache request R, a working-resource URI, and a ROOT_PATH
-   to the svn location block, answer the question: "does this resource
-   -not- exist in the original baseline?"  (In svn terms, this is
-   equivalent to asking, "does this transaction resource -not- exist
-   in the original revision?")  Place the boolean answer into IS_NEW
-   as true (nonzero) or false (zero).
- 
-   The URI must represent a working resource, else error is returned.
+/* Given an apache request R and a ROOT_PATH to the svn location
+   block, set *KIND to the node-kind of the URI's associated
+   (revision, path) pair, if possible.
+   
+   Public uris, baseline collections, version resources, and working
+   (non-baseline) resources all have associated (revision, path)
+   pairs, and thus one of {svn_node_file, svn_node_dir, svn_node_none}
+   will be returned.
 
-   Use r->pool for temporary allocation.
+   If URI is something more abstract, then set *KIND to to
+   svn_node_unknown.  This is true for baselines, working baselines,
+   version controled configurations, activities, histories, and other
+   private resources.  
 */
-dav_error * dav_svn_is_new_resource (request_rec *r,
-                                     const char *uri,
-                                     const char *root_path,
-                                     int *is_new);
+dav_error * dav_svn_resource_kind (request_rec *r,
+                                   const char *uri,
+                                   const char *root_path,
+                                   svn_node_kind_t *kind);
 
 
 /* Generate the HTTP response body for a successful MERGE. */
