@@ -101,6 +101,17 @@ Bindings changes that affect the build system:
    [none pending right now]
 
 Bindings changes that don't affect the build system:
+Already have three +1 votes:
+
+
+   * r8233
+     Catch up r8213 authz_func renaming for SWIG / Perl bindings.
+     Votes:
+      +1: clkao, rooneg, kfogel
+
+
+Don't yet have three +1 votes:
+
 
    * r8057 (depends on core changes r8053, r8054)
      Constructor for svn_client_ctx_t used in javahl bindings.
@@ -157,12 +168,6 @@ Bindings changes that don't affect the build system:
      Votes:
       +1: clkao, epg
       +0: jerenkrantz
-
-
-   * r8233
-     Catch up r8213 authz_func renaming for SWIG / Perl bindings.
-     Votes:
-      +1: clkao, rooneg
 
 
    * r8238
