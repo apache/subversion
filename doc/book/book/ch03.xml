@@ -204,6 +204,7 @@ $ svn update --revision PREV foo.c
         Subversion accepts:</para>
 
       <screen>
+$ svn checkout --revision {2002-02-17}
 $ svn checkout --revision {2/17/02}
 $ svn checkout --revision {"17 Feb"}
 $ svn checkout --revision {"17 Feb 2002"}
@@ -777,7 +778,7 @@ Updated to revision 2.
           your working copy with no arguments, it will detect all file
           and tree changes you've made.  This example is designed to
           show all the different status codes that <command>svn
-          status</command> can return.  Note that the text following
+          status</command> can return.  The text following
           <literal>#</literal> is not printed by <command>svn
           status</command>.</para>
       
@@ -904,7 +905,8 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
         </variablelist>
 
         <para>The second column tells the status of a file or
-          directory's properties.  If an
+          directory's properties (See <xref linkend="svn-ch-6-sect-2">
+          for more information on properties).  If an
           <computeroutput>M</computeroutput> appears in the second
           column, then the properties have been modified, otherwise a
           whitespace will be printed.</para>
@@ -1013,12 +1015,22 @@ A                0         ?     ?        ./stuff/things/bloo.h
 
       <sect3 id="svn-ch-3-sect-4.3.2">
         <title><command>svn diff</command></title>
-           
+        
         <para>Another way to examine your changes is with the
           <command>svn diff</command> command.  You can find out
           <emphasis>exactly</emphasis> how you've modified things by
           running <command>svn diff</command> with no arguments, which
-          prints out file changes in unified diff format:</para>
+          prints out file changes in unified diff
+          format:<footnote><para>Subversion uses its internal diff
+          engine, which produces unified diff format, by default.  If
+          you want diff output in a different format, specify an
+          external diff program using <option>--diff-cmd</option> and
+          pass any flags you'd like to it using the
+          <option>--extensions</option> switch.  For example, to see
+          local differences in file <filename>foo.c</filename> in
+          context output format while ignoring whitespace changes, you
+          might run <quote>svn diff --diff-cmd /usr/bin/diff
+          --extensions '-bc' foo.c</quote>.</para>
         
         <screen>
 $ svn diff
@@ -1341,9 +1353,12 @@ svn: Aborting commit: '/home/sally/svn-work/sandwich.txt' remains in conflict.
 
       <para>Once you've resolved the conflict, you need to let
         Subversion know by running <command>svn resolve</command>.
-        This removes the three temporary files
-        and Subversion no longer considers the file
-        to be in a state of conflict.</para>
+        This removes the three temporary files and Subversion no
+        longer considers the file to be in a state of
+        conflict.<footnote><para>You can always remove the temporary
+        files yourself, but would you really want to do that when
+        Subversion can do it for you?  We didn't think so.</para>
+        </footnote></para>
 
       <screen>
 $ svn resolve sandwich.txt
