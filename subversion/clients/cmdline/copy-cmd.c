@@ -44,8 +44,8 @@ svn_cl__copy (apr_getopt_t *os,
   svn_string_t path_str;
   svn_client_auth_baton_t *auth_baton = NULL;
   svn_stringbuf_t *message = NULL;
-  const svn_delta_edit_fns_t *trace_editor;
-  void *trace_edit_baton;
+  const svn_delta_edit_fns_t *trace_editor = NULL;
+  void *trace_edit_baton = NULL;
   svn_boolean_t src_is_url, dst_is_url;
 
   targets = svn_cl__args_to_target_array (os, pool);
