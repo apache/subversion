@@ -41,7 +41,7 @@ Candidate changes:
     Justification: Trivial change, correctness, needed to allow build of
     bindings on platforms with stricter linking requirements.
     Votes:
-      +1: maxb, breser
+      +1: maxb, breser, ghudson
 
   * r10132, r10136, 10138, 10139
     Allow user to interrupt between auth prompts.
@@ -49,7 +49,7 @@ Candidate changes:
                     repeatedly complained about.
     Votes:
       +0: sussman (not yet reviewed)
-      +1: breser
+      +1: breser, ghudson
 
   * r10190
     Allow properties with colons in their name to be read with propget
