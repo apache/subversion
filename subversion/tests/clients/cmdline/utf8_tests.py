@@ -140,9 +140,13 @@ if localematch:
         localematch = None
         break
 
+
+########################################################################
+# Run the tests
+
 # list all tests here, starting with None:
 test_list = [ None,
-              Skip(basic_utf8_conversion, localematch is None)
+              Skip(basic_utf8_conversion, 1)
              ]
 
 if __name__ == '__main__':
