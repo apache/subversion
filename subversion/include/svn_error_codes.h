@@ -380,6 +380,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE,
               "The log message file is under version control.")
 
+  SVN_ERRDEF (SVN_ERR_CL_COMMIT_IN_ADDED_DIR,
+              "Commiting in directory scheduled for addition")
+
   /* END Client errors */
   
 

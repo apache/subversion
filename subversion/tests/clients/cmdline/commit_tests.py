@@ -1211,6 +1211,27 @@ def commit_deleted_edited():
     return 1
   return 0
   
+def commit_in_dir_scheduled_for_addition():
+  "commit a file inside a directory that's already scheduled to be added"
+
+  # Bootstrap:  make independent repo and working copy.
+  sbox = sandbox(commit_deleted_edited)
+  wc_dir = os.path.join(svntest.main.general_wc_dir, sbox)
+
+  if svntest.actions.make_repo_and_wc(sbox): return 1
+
+  A_path = os.path.join(wc_dir, 'A')
+  Z_path = os.path.join(wc_dir, 'Z')
+  mu_path = os.path.join(wc_dir, 'Z', 'mu')
+
+  svntest.main.run_svn(None, 'move', A_path, Z_path)
+
+  out, err = svntest.main.run_svn(1, 'commit', mu_path)
+
+  if len(err) == 0: 
+    return 1 
+
+  return 0
 
 ########################################################################
 # Run the tests
@@ -1233,7 +1254,8 @@ test_list = [ None,
               ## hook_test,
               merge_mixed_revisions,
               commit_uri_unsafe,
-              commit_deleted_edited
+              commit_deleted_edited,
+              commit_in_dir_scheduled_for_addition,
              ]
 
 if __name__ == '__main__':
