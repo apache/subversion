@@ -80,12 +80,12 @@ put_txn (svn_fs_t *fs,
   skel_t *txn_skel = svn_fs__make_empty_list (pool);
   DBT key, value;
 
-  svn_fs__prepend (svn_fs__mem_atom (unparsed_root_id->data,
-                                     unparsed_root_id->len,
-                                     pool),
-                   txn_skel);
   svn_fs__prepend (svn_fs__mem_atom (unparsed_base_root_id->data,
                                      unparsed_base_root_id->len,
+                                     pool),
+                   txn_skel);
+  svn_fs__prepend (svn_fs__mem_atom (unparsed_root_id->data,
+                                     unparsed_root_id->len,
                                      pool),
                    txn_skel);
   svn_fs__prepend (svn_fs__str_atom ((char *) "transaction", pool), txn_skel);
