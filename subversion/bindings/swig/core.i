@@ -281,6 +281,7 @@ apr_status_t *apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 %include svn_opt.h
 %include svn_auth.h
 %include svn_config.h
+%include svn_version.h
 
 
 /* SWIG won't follow through to APR's defining this to be empty, so we
@@ -301,6 +302,7 @@ apr_status_t *apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 #include "svn_opt.h"
 #include "svn_auth.h"
 #include "svn_config.h"
+#include "svn_version.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
