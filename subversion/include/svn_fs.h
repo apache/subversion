@@ -70,14 +70,17 @@ svn_fs_t *svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool);
 
 /** The type of a warning callback function.  @a baton is the value specified
  * in the call to @c svn_fs_set_warning_func; the filesystem passes it through
- * to the callback.  @a msg contains the warning message.
+ * to the callback.  @a err contains the warning message.
+ *
+ * The callback function should not clear the error that is passed to it;
+ * its caller should do that.
  */
 typedef void (*svn_fs_warning_callback_t) (void *baton, svn_error_t *err);
 
 
 /** Provide a callback function, @a warning, that @a fs should use to 
  * report (non-fatal) errors.  To print an error, the filesystem will call
- * @a warning, passing it @a baton and the error.
+ * @a warning, passing it @a warning_baton and the error.
  *
  * By default, this is set to a function that will crash the process.
  * Dumping to @c stderr or <tt>/dev/tty</tt> is not acceptable default 
