@@ -58,8 +58,26 @@ svn_cl__propedit (apr_getopt_t *os,
                                          &(opt_state->end_revision),
                                          FALSE, pool));
 
-  /* Add "." if user passed 0 file arguments */
-  svn_opt_push_implicit_dot_target (targets, pool);
+  /* The customary implicit dot rule has been prone to user error in
+   * propedit.  For example, Jon Trowbridge <trow@gnu.og> did
+   * 
+   *    $ svn propedit HACKING
+   *
+   * and then when he closed his editor, he was surprised to see
+   *
+   *    Set new value for property `HACKING' on `'
+   *
+   * ...meaning that the property named `HACKING' had been set on the
+   * current working directory, with the value taken from the editor.
+   * So this command doesn't do the implicit dot thing anymore; an
+   * explicit target is always required.
+   */
+  if (targets->nelts == 0)
+    {
+      return svn_error_create
+        (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL, pool,
+         "explicit target argument required.\n");
+    }
 
   /* Decide if we're making a local mod to a versioned working copy
      prop, or making a permanent change to an unversioned repository
