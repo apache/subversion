@@ -30,6 +30,9 @@ typedef struct svn_repos_report_baton_t
   /* The location under which all reporting will happen (in the fs) */
   svn_string_t *base_path;
 
+  /* The actual target of the report */
+  svn_string_t *target;
+
   /* finish_report() calls svn_fs_dir_delta(), and uses this arg to
      decide which revision to compare the transaction against. */
   svn_revnum_t revnum_to_update_to;
@@ -61,12 +64,13 @@ svn_repos_set_path (void *report_baton,
   /* If this is the very first call, no txn exists yet. */
   if (! rbaton->txn)
     {
-      /* Sanity check: make sure that PATH is really the target dir (""). */
-      if (path->len != 0)
+      /* Sanity check: make that we didn't call this with real data
+         before simply informing the reporter of our base revision. */
+      if (path)
         return 
           svn_error_create
           (SVN_ERR_RA_BAD_REVISION_REPORT, 0, NULL, rbaton->pool,
-           "svn_ra_local__set_path: initial revision report was bogus.");
+           "svn_repos_set_path: initial revision report was bogus.");
 
       /* Start a transaction based on REVISION. */
       SVN_ERR (svn_fs_begin_txn (&(rbaton->txn), rbaton->fs,
@@ -85,9 +89,17 @@ svn_repos_set_path (void *report_baton,
       /* Create the "from" root and path. */
       SVN_ERR (svn_fs_revision_root (&from_root, rbaton->fs,
                                      revision, rbaton->pool));
+
+      /* The path we are dealing with is the anchor (where the
+         reporter is rooted) + target (the top-level thing being
+         reported) + path (stuff relative to the target...this is the
+         empty string in the file case since the target is the file
+         itself, not a directory containing the file). */
       from_path = svn_string_dup (rbaton->base_path, rbaton->pool);
+      svn_path_add_component (from_path, rbaton->target, 
+                              svn_path_repos_style);
       svn_path_add_component (from_path, path, svn_path_repos_style);
-      
+
       /* Copy into our txn. */
       SVN_ERR (svn_fs_copy (from_root, from_path->data,
                             rbaton->txn_root, from_path->data, rbaton->pool));
@@ -96,6 +108,7 @@ svn_repos_set_path (void *report_baton,
       *rev_ptr = revision;
       apr_hash_set (rbaton->path_rev_hash, from_path->data,
                     from_path->len, rev_ptr);    
+
     }
 
   return SVN_NO_ERROR;
@@ -115,17 +128,14 @@ svn_repos_finish_report (void *report_baton)
                                  rbaton->revnum_to_update_to,
                                  rbaton->pool));
   
-  /* Ah!  The good stuff!  dir_delta does all the hard work. */  
-  SVN_ERR (svn_repos_dir_delta (rbaton->txn_root, rbaton->base_path,
-                                rbaton->path_rev_hash,
-                                rev_root, rbaton->base_path,
-                                rbaton->update_editor,             
-                                rbaton->update_edit_baton,
-                                rbaton->pool));
-
-  /* All done with the edit. */
-  SVN_ERR ((*rbaton->update_editor->close_edit) (rbaton->update_edit_baton));
-
+  /* Ah!  The good stuff!  svn_repos_update does all the hard work. */
+  SVN_ERR (svn_repos_update (rev_root, rbaton->txn_root, 
+                             rbaton->base_path, rbaton->target,
+                             rbaton->path_rev_hash,
+                             rbaton->update_editor,
+                             rbaton->update_edit_baton,
+                             rbaton->pool));
+                           
   /* Still here?  Great!  Throw out the transaction. */
   SVN_ERR (svn_fs_abort_txn (rbaton->txn));
 
@@ -151,7 +161,17 @@ svn_repos_begin_report (void **report_baton,
   rbaton->update_edit_baton = update_baton;
   rbaton->path_rev_hash = apr_hash_make (pool);
   rbaton->fs = fs;
-  rbaton->base_path = fs_base;
+
+  /* Split the filesystem path given to us into an ANCHOR (which is
+     the root of the report) and a TARGET (which is the target of the
+     report). */
+  svn_path_split (fs_base, &rbaton->base_path, &rbaton->target,
+                  svn_path_repos_style, pool);
+
+  /* If the target is "this dir", clear it out. */
+  if (svn_path_is_thisdir (rbaton->target, svn_path_repos_style))
+    svn_string_setempty (rbaton->target);
+
   rbaton->pool = pool;
   
   /* Hand reporter back to client. */

@@ -44,7 +44,14 @@
 
 struct edit_baton
 {
-  svn_string_t *dest_dir;
+  /* For updates, the "destination" of the edit is the ANCHOR (the
+     directory at which the edit is rooted) plus the TARGET (the
+     actual thing we wish to update).  For checkouts, ANCHOR holds the
+     whole path, and TARGET is unused. */
+  svn_string_t *anchor;
+  svn_string_t *target;
+
+  /* The revision we're targeting...or something like that. */
   svn_revnum_t target_revision;
 
   /* These used only in checkouts. */
@@ -115,14 +122,28 @@ make_dir_baton (svn_string_t *name,
                 struct dir_baton *parent_baton,
                 apr_pool_t *pool)
 {
+  struct edit_baton *eb = edit_baton;
   apr_pool_t *subpool = svn_pool_create (pool);
   struct dir_baton *d = apr_pcalloc (subpool, sizeof (*d));
-  svn_string_t *parent_path
-    = parent_baton ? parent_baton->path : edit_baton->dest_dir;
-  svn_string_t *path = svn_string_dup (parent_path, subpool);
+  svn_string_t *path;
+
+  if (parent_baton)
+    {
+      /* I, the baton-in-creation, have a parent, so base my path on
+         that of my parent. */
+      path = svn_string_dup (parent_baton->path, subpool);
+    }
+  else
+    {
+      /* I am Adam.  All my base are belong to me. */
+      path = svn_string_dup (eb->anchor, subpool);
+    }
 
   if (name)
-    svn_path_add_component (path, name, svn_path_local_style);
+    {
+      d->name = svn_string_dup (name, subpool);
+      svn_path_add_component (path, name, svn_path_local_style);
+    }
 
   d->path         = path;
   d->edit_baton   = edit_baton;
@@ -130,9 +151,6 @@ make_dir_baton (svn_string_t *name,
   d->ref_count    = 1;
   d->pool         = subpool;
   d->propchanges  = apr_array_make (subpool, 1, sizeof(svn_prop_t *));
-
-  if (name)
-    d->name = svn_string_dup (name, subpool);
 
   if (parent_baton)
     parent_baton->ref_count++;
@@ -151,21 +169,23 @@ free_dir_baton (struct dir_baton *dir_baton)
   svn_error_t *err;
   struct dir_baton *parent = dir_baton->parent_baton;
 
-  /* Bump this dir to the new revision. */
-  err = svn_wc__entry_fold_sync_intelligently
-    (dir_baton->path,
-     NULL,
-     dir_baton->edit_baton->target_revision,
-     svn_node_dir,
-     0,
-     0,
-     0,
-     dir_baton->pool,
-     NULL,
-     NULL);
-  
-   if (err)
-     return err;
+  /* Bump this dir to the new revision if this directory is beneath
+     the target of an update, or unconditionally if this is a
+     checkout. */
+  if (dir_baton->edit_baton->is_checkout || parent)
+    {
+      SVN_ERR (svn_wc__entry_fold_sync_intelligently
+               (dir_baton->path,
+                NULL,
+                dir_baton->edit_baton->target_revision,
+                svn_node_dir,
+                0,
+                0,
+                0,
+                dir_baton->pool,
+                NULL,
+                NULL));
+    }
 
   /* After we destroy DIR_BATON->pool, DIR_BATON itself is lost. */
   svn_pool_destroy (dir_baton->pool);
@@ -1447,12 +1467,21 @@ close_edit (void *edit_baton)
      this editor needs to make sure that *all* paths have had their
      revisions bumped to the new target revision. */
 
-  if (! eb->is_checkout)  /* checkouts already have a uniform wc
-                             revision;  only updates need this
-                             bumping. */
-    SVN_ERR (svn_wc__ensure_uniform_revision (eb->dest_dir,
-                                              eb->target_revision,
-                                              eb->pool));
+  if (! eb->is_checkout)  
+    {
+      /* checkouts already have a uniform wc revision; only updates
+         need this bumping, and only directory updates at that.
+         Updated files should already be up-to-date. */
+      svn_wc_entry_t *entry;
+      svn_string_t *full_path = svn_string_dup (eb->anchor, eb->pool);
+      svn_path_add_component (full_path, eb->target,
+                              svn_path_local_style);
+      SVN_ERR (svn_wc_entry (&entry, full_path, eb->pool));
+      if (entry->kind == svn_node_dir)
+        SVN_ERR (svn_wc__ensure_uniform_revision (full_path,
+                                                  eb->target_revision,
+                                                  eb->pool));
+    }
 
   /* The edit is over, free its pool. */
   svn_pool_destroy (eb->pool);
@@ -1484,10 +1513,36 @@ make_editor (svn_string_t *dest,
   /* Construct an edit baton. */
   eb = apr_palloc (subpool, sizeof (*eb));
   eb->pool            = subpool;
-  eb->dest_dir        = dest;
   eb->is_checkout     = is_checkout;
-  eb->ancestor_path   = ancestor_path;
   eb->target_revision = target_revision;
+  eb->ancestor_path   = ancestor_path;
+
+  if (is_checkout)
+    {
+      /* For checkouts, we'll let anchor represent the whole
+         destination. */
+      eb->anchor = dest;
+      eb->target = NULL;
+    }
+  else
+    {
+      /* For updates, our destination is composed of an anchor (where
+         the updated editor is rooted) and a target (the actual thing
+         we wish to update).  So we have to split the DEST path up
+         into those two components, correcting for '.' and such. */
+      if (svn_path_is_empty (dest, svn_path_local_style))
+        {
+          eb->anchor = svn_string_create (".", subpool);
+          eb->target = svn_string_create ("", subpool);
+        }
+      else
+        {
+          svn_path_split (dest, &eb->anchor, &eb->target,
+                          svn_path_local_style, subpool);
+          if (svn_path_is_empty (eb->anchor, svn_path_local_style))
+            svn_string_set (eb->anchor, ".");
+        }
+    }
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;

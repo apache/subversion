@@ -119,8 +119,9 @@ svn_repos_finish_report (void *report_baton);
    then those paths that have a base revision that differs from that
    of their parent directory.
 
-   The caller must call editor->close_edit on EDIT_BATON;
-   svn_fs_dir_delta does not close the edit itself.
+   Before completing successfully, this function calls
+   EDITOR->close_edit(), so the caller should expect its EDIT_BATON to
+   be invalid after its use with this function.
 
    Do any allocation necessary for the delta computation in POOL.
    This function's maximum memory consumption is at most roughly
@@ -154,13 +155,43 @@ svn_repos_dir_delta (svn_fs_root_t *source_root,
    then those paths that have a base revision that differs from that
    of their parent directory.
 
-   The caller must call editor->close_edit on EDIT_BATON;
-   svn_fs_dir_delta does not close the edit itself.
+   Before completing successfully, this function calls
+   EDITOR->close_edit(), so the caller should expect its EDIT_BATON to
+   be invalid after its use with this function.
 
    Do any allocation necessary for the delta computation in POOL.
    This function's maximum memory consumption is at most roughly
    proportional to the greatest depth of SOURCE_PATH under
-   TARGET_ROOT, not the total size of the delta.  */
+   TARGET_ROOT, not the total size of the delta. 
+
+   What's the difference between svn_repos_update and
+   svn_repos_dir_delta?
+
+   Say I have a Greek Tree at revision 1 in my working copy.  I type
+   `svn up A/mu'.  svn_repos_dir_delta doesn't know what to do with
+   files--it only takes directory args.  svn_repos_update, on the
+   other hand, can handle this.
+
+   Now, take the dir case.  Let's say that someone has removed the
+   directory A/D/G and added a new file A/D/G.  I type `svn up A/D/G.'
+   Once again, svn_repos_dir_delta would croak because it isn't
+   looking at two directories.
+
+   "So, why don't you just do the delta from one level higher," you
+   might be tempted to say.
+
+   "Fine," I reply, "but that means that everthing in A/D gets
+   updated...this is NOT what I requested."
+   
+   So, what I really need is a way to say, "Mr. Update Editor Driver,
+   I want you to have full knowledge of the directory A/D, but I need
+   you promise to only pay attention to the entry G in that
+   directory."
+   
+   And svn_repos_update complies. 
+
+   TODO:  It is entirely likely that these two functions will become
+   one in the near future, at least that is cmpilato's hope.  */
 svn_error_t *
 svn_repos_update (svn_fs_root_t *target_root,
                   svn_fs_root_t *source_root,

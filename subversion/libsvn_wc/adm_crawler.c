@@ -1113,44 +1113,54 @@ svn_wc_crawl_local_mods (svn_string_t *root_directory,
 
 
 svn_error_t *
-svn_wc_crawl_revisions (svn_string_t *root_directory,
+svn_wc_crawl_revisions (svn_string_t *path,
                         const svn_ra_reporter_t *reporter,
                         void *report_baton,
                         apr_pool_t *pool)
 {
-  svn_wc_entry_t *root_entry;
+  svn_wc_entry_t *entry;
   svn_revnum_t base_rev = SVN_INVALID_REVNUM;
 
   /* The first thing we do is get the base_rev from the working copy's
      ROOT_DIRECTORY.  This is the first revnum that entries will be
      compared to. */
-  SVN_ERR (svn_wc_entry (&root_entry, root_directory, pool));
-  base_rev = root_entry->revision;
+  SVN_ERR (svn_wc_entry (&entry, path, pool));
+  base_rev = entry->revision;
 
-  /* The first call to the reporter should be on "", telling it that
-     the top-level dir being updated is at BASE_REV. */
+  /* The first call to the reporter merely informs it that the
+     top-level directory being updated is at BASE_REV.  Its PATH
+     argument is ignored. */
   SVN_ERR (reporter->set_path (report_baton,
-                               svn_string_create ("", pool),
+                               NULL,
                                base_rev));
 
-  /* Recursively crawl ROOT_DIRECTORY and report differing revisions. */
-  SVN_ERR (report_revisions (root_directory,
-                             svn_string_create ("", pool),
-                             base_rev,
-                             reporter, report_baton, pool));
+  if (entry->kind == svn_node_dir)
+    {
+      /* Recursively crawl ROOT_DIRECTORY and report differing
+         revisions. */
+      SVN_ERR (report_revisions (path,
+                                 svn_string_create ("", pool),
+                                 base_rev,
+                                 reporter, report_baton, pool));
+    }
+  else if ((entry->kind == svn_node_file) 
+           && (entry->revision != base_rev))
+    {
+      /* If this entry is a file node, we just want to report that
+         node's revision.  Since we are looking at the actual target
+         of the report (not some file in a subdirectory of a target
+         directory), and that target is a file, we need to pass an
+         empty string to set_path. */
+      reporter->set_path (report_baton, 
+                          svn_string_create ("", pool),
+                          base_rev);
+    }
 
   /* Finish the report, which causes the update editor to be driven. */
   SVN_ERR (reporter->finish_report (report_baton));
 
   return SVN_NO_ERROR;
 }
-
-
-
-
-
-
-
 
 
 

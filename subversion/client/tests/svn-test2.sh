@@ -41,14 +41,16 @@ check_status 1
 
 ### Give t1/iota some file-properties via update.
 echo "Updating t1/iota with properties.  (up2.xml)"
-${SVN_PROG} update --xml-file $XML_DIR/up2.xml \
-                   --revision 17 ${TEST_DIR_1}
+(cd ${TEST_DIR_1}; \
+ ../${SVN_PROG} update --xml-file ../$XML_DIR/up2.xml --revision 17)
+
 check_status 2
 
 ### Give t1/A some dir-properties via update.
 echo "Updating t1/A/ with properties.  (up5.xml)"
-${SVN_PROG} update --xml-file $XML_DIR/up5.xml \
-                   --revision 18 ${TEST_DIR_1}
+(cd ${TEST_DIR_1}; \
+ ../${SVN_PROG} update --xml-file ../$XML_DIR/up5.xml --revision 18)
+
 check_status 3
 
 ### Examine the all the properties using "proplist":
@@ -92,14 +94,16 @@ check_status 8
 
 ### Update again.  This update should create conflicting properties.
 echo "Updating with (conflicting) properties.  (up-props.xml)"
-${SVN_PROG} update --xml-file $XML_DIR/up-props.xml \
-                   --revision 20 ${TEST_DIR_1}
+(cd  ${TEST_DIR_1}; \
+ ../${SVN_PROG} update --xml-file ../$XML_DIR/up-props.xml --revision 20)
+
 check_status 9
 
 ### Update again.  This update should create conflicting text.
 echo "Updating with (conflicting) text.  (pipatch.xml)"
-${SVN_PROG} update --xml-file $XML_DIR/pipatch.xml \
-                   --revision 21 ${TEST_DIR_1}
+(cd ${TEST_DIR_1}; \
+ ../${SVN_PROG} update --xml-file ../$XML_DIR/pipatch.xml --revision 21)
+
 check_status 10
 
 ### Examine status; we should see CONFLICTS present.

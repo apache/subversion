@@ -194,24 +194,29 @@ svn_repos_update (svn_fs_root_t *target_root,
 
   /* Check the node types of the parents -- they had better both be
      directories!  <voiceover fx="booming echo"> First thousand kids
-     get an existance check FREE!! </voiceover> */
-  SVN_ERR (svn_fs_is_dir (&source_parent_is_dir, source_root, 
-                          parent_dir->data, pool));
-  SVN_ERR (svn_fs_is_dir (&target_parent_is_dir, target_root, 
-                          parent_dir->data, pool));
-  if (! source_parent_is_dir)
+     get an existance check FREE!! </voiceover>  Obviously, if the
+     parent path is empty, we're looking at the root of the
+     repository, which is guaranteed to be a directory.  */
+  if (! svn_path_is_empty (parent_dir, svn_path_repos_style))
     {
-      return
-        svn_error_create
-        (SVN_ERR_FS_NOT_DIRECTORY, 0, 0, pool,
-         "directory delta source parent not a directory");
-    }
-  if (! target_parent_is_dir)
-    {
-      return
-        svn_error_create
-        (SVN_ERR_FS_NOT_DIRECTORY, 0, 0, pool,
-         "directory delta target parent not a directory");
+      SVN_ERR (svn_fs_is_dir (&source_parent_is_dir, source_root, 
+                              parent_dir->data, pool));
+      SVN_ERR (svn_fs_is_dir (&target_parent_is_dir, target_root, 
+                              parent_dir->data, pool));
+      if (! source_parent_is_dir)
+        {
+          return
+            svn_error_create
+            (SVN_ERR_FS_NOT_DIRECTORY, 0, 0, pool,
+             "directory delta source parent not a directory");
+        }
+      if (! target_parent_is_dir)
+        {
+          return
+            svn_error_create
+            (SVN_ERR_FS_NOT_DIRECTORY, 0, 0, pool,
+             "directory delta target parent not a directory");
+        }
     }
   
   /* Setup our pseudo-global structure here.  We need these variables
@@ -238,7 +243,7 @@ svn_repos_update (svn_fs_root_t *target_root,
       
   /* Construct the full path of the update item. */
   full_path = svn_string_dup (parent_dir, pool);
-  if (entry)
+  if (entry && entry->len > 0)
     svn_path_add_component (full_path, entry, 
                             svn_path_repos_style);
   
@@ -278,6 +283,9 @@ svn_repos_update (svn_fs_root_t *target_root,
 
   /* Make sure we close the root directory we opened above. */
   SVN_ERR (editor->close_directory (root_baton));
+
+  /* Close the edit. */
+  SVN_ERR (editor->close_edit (edit_baton));
 
   /* All's well that ends well. */
   return SVN_NO_ERROR;
@@ -370,6 +378,9 @@ svn_repos_dir_delta (svn_fs_root_t *source_root,
 
   /* Make sure we close the root directory we opened above. */
   SVN_ERR (editor->close_directory (root_baton));
+
+  /* Close the edit. */
+  SVN_ERR (editor->close_edit (edit_baton));
 
   /* All's well that ends well. */
   return SVN_NO_ERROR;

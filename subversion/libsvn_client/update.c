@@ -62,14 +62,27 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
   const svn_ra_reporter_t *reporter;
   void *report_baton;
   svn_wc_entry_t *entry;
-  const char *URL;
+  svn_string_t *URL;
 
   /* Sanity check.  Without this, the update is meaningless. */
   assert (path != NULL);
+  assert (path->len > 0);
 
   /* Get full URL from PATH. */
   SVN_ERR (svn_wc_entry (&entry, path, pool));
-  URL = entry->ancestor->data;
+  if (! entry)
+    return svn_error_createf
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+       "svn_client_update: %s is not under revision control",
+       path->data);
+
+  URL = svn_string_create (entry->ancestor->data, pool);
+
+  /* The following is an ugly kludge.  In order to let the RA layer
+     know the difference between updating entry 'Z' in dir 'X/Y' and
+     updating entry '.' in 'X/Y/Z', we'll append a '.' to the URL. */
+  if (svn_path_is_thisdir (path, svn_path_repos_style))
+     svn_path_add_component (URL, path, svn_path_repos_style);
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      either the RA or XML driver will call editor->set_target_revision
@@ -94,10 +107,10 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
 
       /* Get the RA vtable that matches URL. */
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
+      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL->data, pool));
 
       /* Open an RA session to URL */
-      SVN_ERR (ra_lib->open (&session, svn_string_create (URL, pool), pool));
+      SVN_ERR (ra_lib->open (&session, URL, pool));
       
       /* Tell RA to do a update of PATH to REVISION; if we pass an
          invalid revnum, that means RA will use the latest revision.  */
@@ -135,7 +148,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
       SVN_ERR (svn_delta_xml_auto_parse (svn_stream_from_aprfile (in, pool),
                                          update_editor,
                                          update_edit_baton,
-                                         svn_string_create (URL, pool),
+                                         URL,
                                          revision,
                                          pool));
       /* Close XML file. */

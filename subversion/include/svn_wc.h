@@ -369,9 +369,10 @@ svn_error_t *svn_wc_crawl_local_mods (svn_string_t *root_directory,
                                       apr_pool_t *pool);
 
 
-/* Do a depth-first crawl in a working copy, beginning at
-   ROOT_DIRECTORY.  Communicate the `state' of the working copy's
-   revisions to REPORTER/REPORT_BATON.  
+/* Do a depth-first crawl in a working copy, beginning at PATH.
+   Communicate the `state' of the working copy's revisions to
+   REPORTER/REPORT_BATON.  Obviously, if PATH is a file instead of a
+   directory, this depth-first crawl will be a short one.
 
    No locks are or logs are created, nor are any animals harmed in the
    process.  No cleanup is necessary.
@@ -381,7 +382,7 @@ svn_error_t *svn_wc_crawl_local_mods (svn_string_t *root_directory,
    copy.  Thus the return value may very well reflect the result of
    the update!  */
 svn_error_t *
-svn_wc_crawl_revisions (svn_string_t *root_directory,
+svn_wc_crawl_revisions (svn_string_t *path,
                         const svn_ra_reporter_t *reporter,
                         void *report_baton,
                         apr_pool_t *pool);
