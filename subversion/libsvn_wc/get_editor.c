@@ -879,7 +879,6 @@ add_or_open_file (svn_stringbuf_t *name,
   struct dir_baton *parent_dir_baton = parent_baton;
   struct file_baton *fb;
   apr_hash_t *dirents;
-  svn_error_t *err;
   apr_hash_t *entries = NULL;
   svn_wc_entry_t *entry;
   svn_boolean_t is_wc;
