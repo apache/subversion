@@ -144,6 +144,7 @@
 
 ;;; user setable variables
 (defvar svn-log-edit-file-name "++svn-log++" "*Name of a saved log file.")
+(defvar svn-log-edit-insert-files-to-commit t "*Insert the filelist to commit in the *svn-log* buffer")
 (defvar svn-status-hide-unknown nil "*Hide unknown files in *svn-status* buffer.")
 (defvar svn-status-hide-unmodified nil "*Hide unmodified files in *svn-status* buffer.")
 (defvar svn-status-directory-history nil "*List of visited svn working directories.")
@@ -1620,7 +1621,9 @@ When called with a prefix argument add the command line switch --force."
   (let* ((marked-files (svn-status-marked-files)))
     (setq svn-status-files-to-commit marked-files)
     (svn-log-edit-show-files-to-commit)
-    (svn-status-pop-to-commit-buffer)))
+    (svn-status-pop-to-commit-buffer)
+    (when svn-log-edit-insert-files-to-commit
+      (svn-log-edit-insert-files-to-commit))))
 
 (defun svn-status-pop-to-commit-buffer ()
   (interactive)
@@ -2179,6 +2182,8 @@ Commands:
   (message "svn-log editing done")
   (save-excursion
     (set-buffer (get-buffer "*svn-log-edit*"))
+    (when svn-log-edit-insert-files-to-commit
+      (svn-log-edit-remove-comment-lines))
     (set-buffer-file-coding-system 'undecided-unix nil)
     (write-region (point-min) (point-max)
                   (concat svn-status-temp-dir "svn-log-edit.txt" svn-temp-suffix) nil 1))
@@ -2223,6 +2228,27 @@ If ARG then show diff between some other version of the selected files."
   (interactive)
   (set-buffer "*svn-log-edit*")
   (erase-buffer))
+
+(defun svn-log-edit-insert-files-to-commit ()
+  (interactive)
+  (svn-log-edit-remove-comment-lines)
+  (let ((buf-size (- (point-max) (point-min))))
+    (save-excursion
+      (goto-char (point-min))
+      (insert "## Lines starting with '## ' will be removed from the log message.\n")
+      (insert "## File(s) to commit:\n")
+      (let ((file-list svn-status-files-to-commit))
+        (while file-list
+          (insert (concat "## " (svn-status-line-info->filename (car file-list)) "\n"))
+          (setq file-list (cdr file-list)))))
+    (when (= 0 buf-size)
+      (goto-char (point-max)))))
+
+(defun svn-log-edit-remove-comment-lines ()
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (flush-lines "^## .*")))
 
 
 ;; --------------------------------------------------------------------------------
