@@ -19,7 +19,7 @@ Candidate changes:
     Better log region max size in default DB_CONFIG.
     Justification: Trivial change, helps some sites avoid problems.
     Votes:
-      +1: kfogel
+      +1: kfogel, jerenkrantz
 
   * r12075
     Add pre-0.14 dumpfile compatability.
