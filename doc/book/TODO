@@ -83,4 +83,5 @@ List of 1.1 features/changes
 
   * document new 'svnadmin dump --deltas' in ch05 and ch09.
 
+  * svn export --native-eol
 
