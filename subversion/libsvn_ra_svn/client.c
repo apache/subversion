@@ -371,6 +371,7 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
   apr_array_header_t *mechlist, *caplist, *status_param;
   apr_procattr_t *attr;
   apr_proc_t *proc;
+  apr_status_t apr_status;
 
   if (parse_url(url, &tunnel, &user, &port, &hostname, pool) != 0)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
@@ -379,12 +380,19 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
   if (tunnel)
     {
       SVN_ERR(find_tunnel_agent(tunnel, hostname, &args, config, pool));
-      apr_procattr_create(&attr, pool);
-      apr_procattr_io_set(attr, 1, 1, 0);
-      apr_procattr_cmdtype_set(attr, APR_PROGRAM_PATH);
-      apr_procattr_child_errfn_set(attr, handle_child_process_error);
+      apr_status = apr_procattr_create(&attr, pool);
+      if (apr_status == APR_SUCCESS)
+        apr_status = apr_procattr_io_set(attr, 1, 1, 0);
+      if (apr_status == APR_SUCCESS)
+        apr_status = apr_procattr_cmdtype_set(attr, APR_PROGRAM_PATH);
+      if (apr_status == APR_SUCCESS)
+        apr_status = apr_procattr_child_errfn_set(attr,
+                                                  handle_child_process_error);
       proc = apr_palloc(pool, sizeof(*proc));
-      apr_proc_create(proc, *args, args, NULL, attr, pool);
+      if (apr_status == APR_SUCCESS)
+        apr_status = apr_proc_create(proc, *args, args, NULL, attr, pool);
+      if (apr_status != APR_SUCCESS)
+        return svn_error_create(apr_status, NULL, "Could not create tunnel.");
       conn = svn_ra_svn_create_conn(NULL, proc->out, proc->in, pool);
       conn->proc = proc;
 
