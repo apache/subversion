@@ -33,7 +33,13 @@
 
 # Allow --nodeps flag 0/1
 # Setting this to 1 ignores rpm dependencies during builds
-# NODEPS := 0
+NODEPS := 1
+
+# Docs only please
+# DOCS_ONLY := 1 
+
+# No documentation please
+NO_DOCS := 1
 
 # Silent 0/1
 # Setting this to 1 removes white noise
@@ -55,6 +61,9 @@
 # Setting this causes the system to use the build revision
 # This can only be set to sanctioned build numbers
 # BLESSED := 6982
+
+# FOP location
+# FOP := /opt/fop
 
 # The specific release number
 MDK_RELEASE := 1
@@ -152,6 +161,8 @@ GE_30           := $(shell sh ge-0-30-0 $(SVN_VERSION_MAJOR) $(SVN_VERSION_MINOR
 TMPDIR          := $(if $(TMPDIR),$(TMPDIR),/tmp)
 NODEPS          := $(if $(NODEPS),$(NODEPS),0)
 SILENT          := $(if $(SILENT),$(SILENT),1)
+DOCS_ONLY       := $(if $(DOCS_ONLY),$(DOCS_ONLY),0)
+NO_DOCS         := $(if $(NO_DOCS),$(NO_DOCS),0)
 NO_ACTIVATION   := $(if $(NO_ACTIVATION),$(NO_ACTIVATION),1)
 NO_APACHE2      := $(if $(NO_APACHE2),$(NO_APACHE2),0)
 REQUIRE_APACHE2 := $(if $(REQUIRE_APACHE2),$(REQUIRE_APACHE2),1)
@@ -164,8 +175,38 @@ APACHE_MIN      := $(if $(APACHE_MIN),$(APACHE_MIN),$(if $(GE_30),2.0.47,2.0.43)
 DB4_MIN         := $(if $(DB4_MIN),$(DB4_MIN),$(if $(GE_30),4.1.25,4.0.14))
 GPG_PATH        := $(if $(GPG_PATH),$(GPG_PATH),\~/.gnupg)
 GPG_PATH        := $(shell echo $(GPG_PATH)|sed 's/\//\\\//g' | sed 's/\./\\\./g')
-WIN32_RELEASE    := $(if $(WIN32_RELEASE),$(WIN32_RELEASE),0)
-MDK_RELEASE := $(if $(MDK_RELEASE),$(MDK_RELEASE),1)
+WIN32_RELEASE   := $(if $(WIN32_RELEASE),$(WIN32_RELEASE),0)
+MDK_RELEASE     := $(if $(MDK_RELEASE),$(MDK_RELEASE),1)
+DOCBOOK         := $(shell rpm -q docbook-style-xsl)
+XSLT            := $(shell rpm -q libxslt-proc)
+FOP             := $(if $(FOP),$(FOP),/opt/fop)
+FOP_PGM         := $(shell which $(FOP)/fop.sh)
+ifneq ($(XSLT),)
+ifneq ($(DOCBOOK),)
+ifneq ($(FOP_PGM),)
+DOCBOOK_PATH:=$(shell rpm -q -l docbook-style-xsl | grep stylesheets$$)
+endif
+endif
+endif
+
+ifeq ($(DOCBOOK_PATH),)
+NO_DOCS := 1
+endif
+
+
+ifeq ($(NO_DOCS),1)
+DOCBOOK_PATH :=
+NOT_JUST_DOCS:= \%define not_just_docs 1
+MAKE_DOC     := \%undefine docbook
+FOP_PATH     := \%undefine fop
+else
+ORG_DOCBOOK := $(DOCBOOK_PATH)
+DOCBOOK_PATH :=$(shell echo $(DOCBOOK_PATH)| sed 's/\//\\\//g')
+MAKE_DOC:=$(if $(DOCBOOK_PATH),\%define docbook $(DOCBOOK_PATH),\%undefine docbook)
+NOT_JUST_DOCS := \%define not_just_docs $(if $(shell sh just-docs $(DOCS_ONLY)),0,1)
+FOP_PATH      := \%define fop $(FOP):
+endif
+
 
 ifeq ($(WIN32_RELEASE),1)
 RELEASE_MODE    := \%define release_mode --release
@@ -212,12 +253,12 @@ ifeq ($(SILENT),1)
 SILENT      := \%define silent --silent
 SILENT_FLAG := \%define silent_flag -s
 # Trunk changes the silent patch slightly
-PATCH       := svn-install.patch svn-install-silent$(if $(GE_30),-ge-0-30-0,).patch
+PATCH       := svn-install.patch svn-book.patch svn-install-silent$(if $(GE_30),-ge-0-30-0,).patch
 SILENT_TGT  := all_silent
 else
 SILENT      := \%undefine silent
 SILENT_FLAG :=  \%undefine silent_flag
-PATCH       := svn-install.patch
+PATCH       := svn-install.patch svn-book.patch
 SILENT_TGT  := all_noisy
 endif
 ifeq ($(NO_ACTIVATION),1)
@@ -334,6 +375,7 @@ build_sources: $(TARBALL) $(RPMBITS)
 	cp -f $(SOURCES) $(SOURCE_RPM_DIR)
 	cp -f $(RCFILE) $(SOURCE_RPM_DIR)/$(RCFILE)-$(NAMEVER)
 	cat $(PATCH) > $(SOURCE_RPM_DIR)/svn-install.patch-$(NAMEVER)
+	if [ "$(DOCBOOK_PATH)" != "" ] ; then sh make-fo-patch $(ORG_DOCBOOK) >> $(SOURCE_RPM_DIR)/svn-install.patch-$(NAMEVER) ; fi
 	sh make-version-patch $(VERSION_FILE) $(RELEASE) $(MDK_RELEASE) $(BLESS) > $(SOURCE_RPM_DIR)/svn-version.patch-$(NAMEVER)
 	sed -e 's/@MDK_RELEASE@/$(MDK_RELEASE)/' \
 		-e 's/@REPOS_REV@/$(RELEASE)/' \
@@ -347,6 +389,9 @@ build_sources: $(TARBALL) $(RPMBITS)
 		-e 's/@DB4_RPM@/$(DB4_RPM)/' \
 		-e 's/@DB4_VER@/$(DB4_VER)/' \
 		-e 's/@APXS@/$(APXS)/' \
+		-e 's/@MAKE_DOC@/$(MAKE_DOC)/' \
+		-e 's/@FOP_PATH@/$(FOP_PATH)/' \
+		-e 's/@NOT_JUST_DOCS@/$(NOT_JUST_DOCS)/' \
 		-e 's/@GPG_PATH@/$(GPG_PATH)/' \
 		-e 's/@APR_CONFIG@/$(APR_CONFIG)/' \
 		-e 's/@APU_CONFIG@/$(APU_CONFIG)/' \
