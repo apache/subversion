@@ -111,7 +111,7 @@ typedef struct svn_client_auth_baton_t
 /* This is a structure which stores a filename and a hash of property
    names and values. */
 
-typedef struct
+typedef struct svn_client_proplist_item_s
 {
   /* The name of the node on which these properties are set. */
   svn_stringbuf_t *node_name;  
@@ -423,10 +423,11 @@ svn_client_file_diff (svn_stringbuf_t *path,
  * operation.
  *
  * DIFF_OPTIONS is used to pass additional command line options to the diff
- * processes invoked to compare files.
+ * processes invoked to compare files. DIFF_OPTIONS is an array of
+ * svn_stringbuf_t * items.
  */
 svn_error_t *svn_client_diff (svn_stringbuf_t *path,
-                              apr_array_header_t *diff_options,
+                              const apr_array_header_t *diff_options,
                               svn_client_auth_baton_t *auth_baton,
                               svn_revnum_t revision,
                               apr_time_t tm,
@@ -572,16 +573,3 @@ svn_client_proplist (apr_array_header_t **props,
  * eval: (load-file "../svn-dev.el")
  * end: 
  */
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -39,7 +39,7 @@
 #include <assert.h>
 
 struct diff_cmd_baton {
-  apr_array_header_t *options;
+  const apr_array_header_t *options;
   apr_pool_t *pool;
 };
 
@@ -158,7 +158,7 @@ svn_client_file_diff (svn_stringbuf_t *path,
 /* Compare working copy against the repository */
 svn_error_t *
 svn_client_diff (svn_stringbuf_t *path,
-                 apr_array_header_t *diff_options,
+                 const apr_array_header_t *diff_options,
                  svn_client_auth_baton_t *auth_baton,
                  svn_revnum_t revision,
                  apr_time_t tm,
@@ -175,7 +175,7 @@ svn_client_diff (svn_stringbuf_t *path,
   void *report_baton;
   const svn_delta_edit_fns_t *diff_editor;
   void *diff_edit_baton;
-  struct diff_cmd_baton diff_cmd_baton = { diff_options, pool };
+  struct diff_cmd_baton diff_cmd_baton;
 
   /* If both REVISION and TM are specified, this is an error.
      They mostly likely contradict one another. */
@@ -202,6 +202,8 @@ svn_client_diff (svn_stringbuf_t *path,
   if (tm)
     SVN_ERR (ra_lib->get_dated_revision (session, &revision, tm));
 
+  diff_cmd_baton.options = diff_options;
+  diff_cmd_baton.pool = pool;
   SVN_ERR (svn_wc_get_diff_editor (anchor, target,
                                    svn_client__diff_cmd, &diff_cmd_baton,
                                    recurse,
