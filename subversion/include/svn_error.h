@@ -99,6 +99,9 @@ typedef enum svn_errno_t {
   /* Trying to unlock when there's non-empty unwind stack. */
   SVN_ERR_WC_UNWIND_NOT_EMPTY,
 
+  /* A bogus working copy logfile (?) */
+  SVN_ERR_WC_BAD_ADM_LOG,
+
   /* A general filesystem error.  */
   SVN_ERR_FS_GENERAL,
 
