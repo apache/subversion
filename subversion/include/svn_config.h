@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_config.h
- * @brief Functions for accessing SVN configuration files.
+ * @brief Accessing SVN configuration files.
  */
 
 

@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_ra.h
- * @brief structures related to repository access
+ * @brief Repository Access
  */
 
 

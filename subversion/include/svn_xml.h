@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_xml.h
- * @brief xml code shared by various Subversion libraries.
+ * @brief XML code shared by various Subversion libraries.
  */
 
 

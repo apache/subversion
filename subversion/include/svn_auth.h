@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_auth.h
- * @brief Interface to Subversion authentication system
+ * @brief Subversion's authentication system
  */
 
 #ifndef SVN_AUTH_H

@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_io.h
- * @brief general Subversion I/O definitions
+ * @brief General file I/O for Subversion
  */
 
 /* ==================================================================== */
