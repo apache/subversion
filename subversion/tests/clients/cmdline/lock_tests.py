@@ -351,9 +351,9 @@ def enforce_lock(sbox):
   svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '      ', mu_path)
 
   # Check svn:needs-lock
-#  check_prop('svn:needs-lock', iota_path, ['*'])
-#  check_prop('svn:needs-lock', lambda_path, ['*'])
-#  check_prop('svn:needs-lock', mu_path, ['*'])
+  check_prop('svn:needs-lock', iota_path, ['*'])
+  check_prop('svn:needs-lock', lambda_path, ['*'])
+  check_prop('svn:needs-lock', mu_path, ['*'])
 
   # Now make sure that the perms were flipped on all files
   if os.name == 'posix':
