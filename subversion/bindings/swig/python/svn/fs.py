@@ -43,7 +43,7 @@ def entries(root, path, pool):
 
 
 class FileDiff:
-  def __init__(self, root1, path1, root2, path2, pool, diffoptions=''):
+  def __init__(self, root1, path1, root2, path2, pool, diffoptions=[]):
     assert path1 or path2
 
     self.tempfile1 = None
@@ -105,7 +105,7 @@ class FileDiff:
     # use an array for the command to avoid the shell and potential
     # security exposures
     cmd = ["diff"] \
-          + string.split(self.diffoptions) \
+          + self.diffoptions \
           + [self.tempfile1, self.tempfile2]
 
     # open the pipe, forget the end for writing to the child (we won't),
