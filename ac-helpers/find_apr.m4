@@ -82,7 +82,7 @@ build directory, or an apr-config file.])
     if test -n "$1"; then
       apr_temp_abs_srcdir="`cd $1 && pwd`"
       if test "$apr_found" = "yes" \
-              -a "`$apr_config --srcdir`" = "$apr_temp_abs_srcdir"; then
+         && test "`$apr_config --srcdir`" = "$apr_temp_abs_srcdir"; then
         dnl the installed apr-config represents our source directory, so
         dnl pretend we didn't see it and just use our bundled source
         apr_found="no"
