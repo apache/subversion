@@ -24,6 +24,8 @@
     about an "Unrecognized URL scheme."  What's up with that?</a></li>
 <li><a href="#repository">How do I create a repository?  How do I
     import data into it?</a></li> 
+<li><a href="#db-recover">I'm getting errors finding or opening a repository,
+    but I know my repository URL is correct.  What's wrong?</a></li> 
 <li><a href="#configure-sed-error">When I run `<tt>configure</tt>', I
     get errors <tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.  What's wrong?</a></li>
 <li><a href="#windows-msvc-build">I'm having trouble building
@@ -207,6 +209,48 @@ import data into it?</a></h2>
 href="http://svn.collab.net/repos/svn/trunk/README">
 http://svn.collab.net/repos/svn/trunk/README</a>;  specifically, look
 at section IV, the "Quickstart Guide".</p>
+
+
+<!-- ----------------------------------------------------------- -->
+
+<h2><a name="db-recover">I'm getting errors finding or opening a repository,
+    but I know my repository URL is correct.  What's wrong?</a></h2> 
+
+<p>Sometimes you'll see errors that look like this:</p>
+
+<blockquote>
+<pre>
+svn_error: #21100 : &lt;Couldn't find a repository.&gt;
+  svn_ra_local__split_URL: Unable to find valid repository
+   (file:///path/to/repos)
+</pre>
+</blockquote>
+
+<p>or</p>
+
+<blockquote>
+<pre>
+svn_error: #21089 : &lt;Berkeley DB error&gt;
+  REPORT request failed on /my-repos
+
+svn_error: #21089 : &lt;Berkeley DB error&gt;
+  
+Berkeley DB error while opening environment for filesystem /path/to/repos:
+No such file or directory
+</pre>
+</blockquote>
+
+<p>These sometimes mean that a repository administrator should run:<p>
+
+<blockquote>
+<pre>
+db_recover -ve -h /path/to/repos/db
+</pre>
+</blockquote>
+
+<p>Yes, we consider it a bug that <tt>db_recover</tt> needs to be run
+at all.  We're working on it, and volunteers are welcome :-).
+</p>
 
 <!-- ----------------------------------------------------------- -->
 
