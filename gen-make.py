@@ -151,7 +151,7 @@ def main(fname, oname=None, skip_depends=0):
   for g_name, g_targets in groups.items():
     ofile.write('%s: %s\n\n' % (g_name, string.join(g_targets)))
 
-  ofile.write('CLEAN_DIRS = %s\n' % string.join(target_dirs.keys()))
+  ofile.write('BUILD_DIRS = %s\n' % string.join(target_dirs.keys()))
 
   cfiles = [ ]
   for target in targets.values():
@@ -187,7 +187,7 @@ def main(fname, oname=None, skip_depends=0):
       errors = errors or s_errors
 
       ofile.write('\ninstall-mods-static: %s\n'
-                  '\t$(mkinstalldirs) %s\n'
+                  '\t$(MKDIR) %s\n'
                   % (string.join(la_tweaked + s_files),
                      os.path.join('$(APACHE_TARGET)', '.libs')))
       for file in la_tweaked:
@@ -207,7 +207,7 @@ def main(fname, oname=None, skip_depends=0):
 
     elif area != 'test':
       ofile.write('install-%s: %s\n'
-                  '\t$(mkinstalldirs) $(%sdir)\n'
+                  '\t$(MKDIR) $(%sdir)\n'
                   % (area, string.join(files), area))
       for file in files:
         ofile.write('\t$(INSTALL_%s) %s %s\n'
@@ -220,7 +220,7 @@ def main(fname, oname=None, skip_depends=0):
   errors = errors or i_errors
 
   ofile.write('install-include: %s\n'
-              '\t$(mkinstalldirs) $(includedir)\n'
+              '\t$(MKDIR) $(includedir)\n'
               % (string.join(includes),))
   for file in includes:
     ofile.write('\t$(INSTALL_INCLUDE) %s %s\n'

@@ -42,7 +42,7 @@ APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_TARGET = @APACHE_TARGET@
 INSTALL_APACHE_RULE = @INSTALL_APACHE_RULE@
 
-mkinstalldirs = @MKDIR@
+MKDIR = @MKDIR@
 
 CFLAGS = @CFLAGS@
 CPPFLAGS = @CPPFLAGS@
@@ -74,7 +74,7 @@ install: external-install local-install
 local-all: libs programs @FS_RULES@ @BUILD_APACHE_RULE@
 
 local-clean:
-	@list='$(CLEAN_DIRS)'; for i in $$list; do \
+	@list='$(BUILD_DIRS)'; for i in $$list; do \
 	    echo "Cleaning $$i ..." ; \
 	    (cd $$i && rm -f *.o *.lo *.la *.la-a && rm -rf .libs) ; \
 	done
@@ -120,6 +120,12 @@ check: $(TEST_DEPS)
 	if test "$$failed" = "yes"; then \
 	    grep FAIL $$logfile || /bin/true ; \
 	fi
+
+mkdir-init:
+	@list='$(BUILD_DIRS)'; for i in $$list; do \
+	    echo "$(MKDIR) $$i" ; \
+	    $(MKDIR) $$i ; \
+	done
 
 # recursive targets to handle external projects (e.g. APR, Neon)
 external-all external-clean external-distclean external--install:
