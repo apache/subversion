@@ -13,16 +13,16 @@ if ((not defined $repos) or ($repos eq ''))
    }
    
 # Get the youngest revision in the repository.
-my $youngest = `svnadmin youngest $repos`;
+my $youngest = `svnlook youngest $repos`;
 chomp $youngest;    # don't want carriage return
-die ("Error using svnadmin to get youngest revision") if (not $youngest =~
+die ("Error using svnlook to get youngest revision") if (not $youngest =~
 /^\d/);
 
 while ($youngest >= 1)
    {
        print "--------------------------------------------------------\n";
        print "Revision $youngest\n";
-       print `svnlook $repos rev $youngest info`;
+       print `svnlook info $repos -r $youngest`;
        print "\n";
        $youngest--;
    }

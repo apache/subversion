@@ -45,17 +45,12 @@ Item = svntest.wc.StateItem
 #                        subcommand failed catastrophically, every
 #                        test would fail and we would know instantly.)
 #
-#   'svnadmin youngest': Just commit a couple of times and directly parse
-#                        the printed number.
-#
 #   'svnadmin createtxn'
 #   'svnadmin rmtxn':    See below.
 #
 #   'svnadmin lstxns':   We don't care about the contents of transactions;
 #                        we only care that they exist or not.
 #                        Therefore, we can simply parse transaction headers.
-#
-#   'svnadmin lsrevs':   Parse headers as above.
 #
 #   'svnadmin dump':     A couple regression tests that ensure dump doesn't
 #                        error out. The actual contents of the dump aren't
@@ -66,24 +61,6 @@ Item = svntest.wc.StateItem
 ######################################################################
 # Helper routines
 
-
-def get_revs(repo_dir):
-  "Get a list of revisions in the repository, using 'svnadmin lsrevs'."
-
-  revs = []
-
-  output_lines, errput_lines = svntest.main.run_svnadmin("lsrevs", repo_dir)
-  rm = re.compile("^Revision\s+(.+)")
-
-  for line in output_lines:
-    match = rm.search(line)
-    if match:
-      revs.append(match.group(1))
-
-  # sort, just in case
-  revs.sort()
-
-  return revs
 
 def get_txns(repo_dir):
   "Get the txn names using 'svnadmin lstxns'."
@@ -120,50 +97,6 @@ def test_create(sbox):
 
   return 0  # success
 
-
-def test_youngest(sbox):
-  "test 'svnadmin youngest' subcommand"
-
-  if sbox.build():
-    return 1
-
-  wc_dir = sbox.wc_dir
-  repo_dir = sbox.repo_dir
-
-  # Make a couple of local mods to files
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.main.file_append (mu_path, 'appended mu text')
-  svntest.main.file_append (rho_path, 'new appended text for rho')
-
-  # Created expected output tree for 'svn ci'
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/mu' : Item(verb='Sending'),
-    'A/D/G/rho' : Item(verb='Sending'),
-    })
-
-  # Create expected status tree; all local revisions should be at 1,
-  # but mu and rho should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
-  expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
-
-  if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output,
-                                            expected_status,
-                                            None,
-                                            None, None,
-                                            None, None,
-                                            wc_dir):
-    return 1
-
-  # Youngest revision should now be 2.  Let's verify that.
-  output, errput = svntest.main.run_svnadmin("youngest", repo_dir)
-
-  if output[0] != "2\n":
-    return 1
-
-  return 0  # success
 
 #----------------------------------------------------------------------
 
@@ -222,77 +155,6 @@ def remove_txn(sbox):
 
 #----------------------------------------------------------------------
 
-def list_revs(sbox):
-  "test 'svnadmin lsrevs' subcommand"
-
-  if sbox.build():
-    return 1
-
-  wc_dir = sbox.wc_dir
-  repo_dir = sbox.repo_dir
-
-  # Make a couple of local mods to files
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.main.file_append (mu_path, 'appended mu text')
-  svntest.main.file_append (rho_path, 'new appended text for rho')
-
-  # Created expected output tree for 'svn ci'
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/mu' : Item(verb='Sending'),
-    'A/D/G/rho' : Item(verb='Sending'),
-    })
-
-  # Create expected status tree; all local revisions should be at 1,
-  # but mu and rho should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
-  expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
-
-  # Commit, and create revision 2.
-  if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output,
-                                            expected_status,
-                                            None,
-                                            None, None,
-                                            None, None,
-                                            wc_dir):
-    return 1
-
-  # Remove gamma
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  svntest.main.run_svn(None, 'rm', gamma_path)
-
-  # Created expected output tree for 'svn ci'
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/gamma' : Item(verb='Deleting'),
-    })
-
-  # Create expected status tree
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
-  expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
-  expected_status.remove('A/D/gamma')
-
-  # Commit, and create revision 3.
-  if svntest.actions.run_and_verify_commit (wc_dir,
-                                            expected_output,
-                                            expected_status,
-                                            None,
-                                            None, None,
-                                            None, None,
-                                            wc_dir):
-    return 1
-
-  # Now fetch all revisions from the repository.
-  tree_list = get_revs(repo_dir)
-  if tree_list != ['0', '1', '2', '3']:
-    return 1
-
-  return 0
-
-#----------------------------------------------------------------------
-
 def dump_copied_dir(sbox):
   "test 'svnadmin dump' on a copied directory"
   if sbox.build(): return 1
@@ -340,10 +202,8 @@ def dump_move_dir_modify_child(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               test_create,
-              test_youngest,
               create_txn,
               remove_txn,
-              list_revs,
               dump_copied_dir,
               dump_move_dir_modify_child
              ]

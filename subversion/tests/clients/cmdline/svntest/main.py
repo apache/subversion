@@ -227,6 +227,11 @@ def run_svnadmin(*varargs):
   "Run svnadmin with VARARGS, returns stdout, stderr as list of lines."
   return _run_command(svnadmin_binary, 1, *varargs)
 
+# For running svnadmin.  Ignores the output.
+def run_svnlook(*varargs):
+  "Run svnadmin with VARARGS, returns stdout, stderr as list of lines."
+  return _run_command(svnlook_binary, 1, *varargs)
+
 
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):

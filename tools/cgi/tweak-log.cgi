@@ -116,7 +116,7 @@ sub doInitialForm
 # (void)
 #-----------------------------------------------------------------------------#
 {
-    my $youngest = `$gSvnadminCmd youngest $gReposPath`;
+    my $youngest = `$gSvnlookCmd youngest $gReposPath`;
     my $rev;
     my $oldest;
     
@@ -138,7 +138,7 @@ sub doInitialForm
     $rev = $youngest;
     while( $rev >= $oldest )
     {
-        my @infolines = `$gSvnlookCmd $gReposPath rev $rev info`;
+        my @infolines = `$gSvnlookCmd info $gReposPath -r $rev`;
         my $author = shift @infolines;
         my $date = shift @infolines;
         my $log_size = shift @infolines;
@@ -166,7 +166,7 @@ sub isValidRev
 # (rev)
 #-----------------------------------------------------------------------------#
 {
-    my $youngest = `$gSvnadminCmd youngest $gReposPath`;
+    my $youngest = `$gSvnlookCmd youngest $gReposPath`;
     my $rev = shift @_;
 
     if(not (( $youngest =~ /^\d+$/) and
@@ -201,7 +201,7 @@ sub doFetchLog
     }
     
     # Fetch the log for that revision.
-    $log = `$gSvnlookCmd $gReposPath rev $rev log`;
+    $log = `$gSvnlookCmd log $gReposPath -r $rev`;
 
     $escaped_log = &html_escape ($log);
 
@@ -247,7 +247,7 @@ sub doCommitLog
     }
 
     # Get the original log from the repository.
-    $orig_log = `$gSvnlookCmd $gReposPath rev $rev log`;
+    $orig_log = `$gSvnlookCmd log $gReposPath -r $rev`;
 
     # If nothing was changed, go complain to the user (shame on him for
     # wasting our time like that!)
@@ -301,7 +301,7 @@ sub doCommitLog
     }
 
     # Now, re-read that logfile
-    $log = `$gSvnlookCmd $gReposPath rev $rev log`;
+    $log = `$gSvnlookCmd log $gReposPath -r $rev`;
     $log = &html_escape ($log);
 
     print "<html>\n<head>\n<title>Tweak Log - Log Changed</title>\n</head>\n";

@@ -208,8 +208,8 @@ my @svnlines = &read_from_process($svn, 'propget', '-r', $rev,
 # Figure out what directories have changed using svnlook.  This is
 # merely so we can determine what project might care about receiving
 # this log.
-my @dirschanged = &read_from_process($svnlook, $repos,
-                                     'rev', $rev, 'dirs-changed');
+my @dirschanged = &read_from_process($svnlook, 'dirs-changed', $repos,
+                                     '-r', $rev);
 
 ######################################################################
 # Assembly of log message.

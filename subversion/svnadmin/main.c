@@ -129,23 +129,22 @@ static svn_opt_subcommand_t
   subcommand_help,
   subcommand_load,
   subcommand_lscr,
-  subcommand_lsrevs,
   subcommand_lstxns,
   subcommand_recover,
   subcommand_rmtxns,
   subcommand_setlog,
   subcommand_shell,
-  subcommand_undeltify,
-  subcommand_youngest;
+  subcommand_undeltify;
 
 
 enum 
-  { svnadmin__incremental = SVN_OPT_FIRST_LONGOPT_ID,
+  { 
+    svnadmin__incremental = SVN_OPT_FIRST_LONGOPT_ID,
     svnadmin__follow_copies,
     svnadmin__long_output
   };
 
-/* Option codes and descriptions for the command line client.
+/* Option codes and descriptions.
  *
  * This must not have more than SVN_OPT_MAX_OPTIONS entries; if you
  * need more, increase that limit first. 
@@ -168,9 +167,6 @@ static const apr_getopt_option_t options_table[] =
 
     {"copies",   svnadmin__follow_copies, 0,
      "Follow copy history."},
-
-    {"long",   svnadmin__long_output, 0,
-     "Long (verbose) output format."},
 
     {0,               0, 0, 0}
   };
@@ -211,10 +207,10 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "a diff against the previous revision, instead of the usual fulltext.\n",
      {'r', svnadmin__incremental} },
 
-    { "help", subcommand_help, {"?", "h"},
-      "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
-      "Display this usage message.\n",
-      {0} },
+    {"help", subcommand_help, {"?", "h"},
+     "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
+     "Display this usage message.\n",
+     {0} },
 
     {"load", subcommand_load, {0},
      "usage: svnadmin load REPOS_PATH\n\n"
@@ -233,20 +229,10 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "repository.)\n",
      {svnadmin__follow_copies} },
 
-    {"lsrevs", subcommand_lsrevs, {0},
-     "usage: svnadmin lsrevs REPOS_PATH [-rLOWER_REV[:UPPER_REV]]\n\n"
-     "If no revision is given, print all revision trees.\n"
-     "If just LOWER_REV is given, print that revision tree.\n"
-     "If lower and upper revisions are given, print that range inclusively.\n"
-     "(Printing a tree shows its structure, node ids, and file sizes.)\n",
-     {'r'} },
-
     {"lstxns", subcommand_lstxns, {0},
-     "usage: svnadmin lstxns REPOS_PATH [--long]\n\n"
-     "Print all txn names and, if \"--long\" is specified, their\n"
-     "metadata and trees.\n"
-     "(Printing a tree shows its structure, node ids, and file sizes.)\n",
-     {svnadmin__long_output} },
+     "usage: svnadmin lstxns REPOS_PATH\n\n"
+     "Print the names of all uncommitted transactions.\n",
+     {0} },
 
     {"recover", subcommand_recover, {0},
      "usage: svnadmin recover REPOS_PATH\n\n"
@@ -280,11 +266,6 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      "If PATH represents a directory, perform a recursive\n"
      "undeltification of the tree starting at PATH.\n",
      {'r'} },
-
-    {"youngest", subcommand_youngest, {0},
-     "usage: svnadmin youngest REPOS_PATH\n\n"
-     "Print the latest revision number.\n",
-     {0} },
 
     { NULL, NULL, {0}, NULL, {0} }
   };
@@ -485,190 +466,23 @@ subcommand_lscr (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
-subcommand_lsrevs (apr_getopt_t *os, void *baton, apr_pool_t *pool)
-{
-  struct svnadmin_opt_state *opt_state = baton;
-  svn_repos_t *repos;
-  svn_fs_t *fs;
-  apr_pool_t *this_pool = svn_pool_create (pool);
-  svn_revnum_t
-    lower = SVN_INVALID_REVNUM,
-    upper = SVN_INVALID_REVNUM,
-    this;
-
-  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
-  fs = svn_repos_fs (repos);
-
-  /* ### We only handle revision numbers right now, not dates. */
-  if (opt_state->start_revision.kind == svn_opt_revision_number)
-    lower = opt_state->start_revision.value.number;
-  else
-    lower = SVN_INVALID_REVNUM;
-
-  if (opt_state->end_revision.kind == svn_opt_revision_number)
-    upper = opt_state->end_revision.value.number;
-  else
-    upper = SVN_INVALID_REVNUM;
-
-  /* Fill in implied revisions if necessary. */
-  if (lower == SVN_INVALID_REVNUM)
-    {
-      lower = 0;
-      svn_fs_youngest_rev (&upper, fs, pool);
-    }
-  else if (upper == SVN_INVALID_REVNUM)
-    upper = lower;
-        
-  if (lower > upper)
-    return svn_error_createf
-      (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
-       "first revision cannot be higher than second");
-
-  /* Loop, printing revisions. */
-  for (this = lower; this <= upper; this++)
-    {
-      svn_fs_root_t *this_root;
-      svn_string_t *datestamp;
-      svn_string_t *author;
-      svn_string_t *log;
-      const svn_fs_id_t *root_id;
-      svn_string_t *id_str;
-      const char *datestamp_native, *author_native, *log_native;
-
-      SVN_ERR (svn_fs_revision_root (&this_root, fs, this, this_pool));
-      SVN_ERR (svn_fs_revision_prop (&datestamp, fs, this, 
-                                     SVN_PROP_REVISION_DATE, this_pool));
-      SVN_ERR (svn_fs_revision_prop (&author, fs, this, 
-                                     SVN_PROP_REVISION_AUTHOR, 
-                                     this_pool));
-      if (! author)
-        author = svn_string_create ("", this_pool);
-            
-      SVN_ERR (svn_fs_revision_prop (&log, fs, this,
-                                     SVN_PROP_REVISION_LOG, this_pool));
-      if (! log)
-        log = svn_string_create ("", this_pool);
-            
-      SVN_ERR (svn_utf_cstring_from_utf8 (&datestamp_native,
-                                          datestamp->data,
-                                          this_pool));
-      SVN_ERR (svn_utf_cstring_from_utf8 (&author_native,
-                                          author->data, this_pool));
-      SVN_ERR (svn_utf_cstring_from_utf8 (&log_native, log->data,
-                                          this_pool));
-
-      printf ("Revision %" SVN_REVNUM_T_FMT "\n", this);
-      printf ("Created: %s\n", datestamp_native);
-      printf ("Author: %s\n", author_native);
-      printf ("Log (%" APR_SIZE_T_FMT " bytes):\n%s\n",
-              log->len, log_native);
-      printf ("==========================================\n");
-      SVN_ERR (svn_fs_node_id (&root_id, this_root, "", this_pool));
-      id_str = svn_fs_unparse_id (root_id, this_pool);
-      printf ("/ <%s>\n", id_str->data);
-      print_tree (this_root, "", 1, this_pool);
-      printf ("\n");
-
-      svn_pool_clear (this_pool);
-    }
-
-  svn_pool_destroy (this_pool);
-
-  SVN_ERR (svn_repos_close (repos));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* This implements `svn_opt_subcommand_t'. */
-static svn_error_t *
 subcommand_lstxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
-
   svn_repos_t *repos;
   svn_fs_t *fs;
   apr_array_header_t *txns;
-  const char *txn_name;
   int i;
-
-  /* only used if OPT_STATE->long_output is TRUE */
-  apr_pool_t *this_pool = NULL;
   
   SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs (repos);
-  SVN_ERR (svn_fs_list_transactions(&txns, fs, pool));
-  
-  if (opt_state->long_output)
-    this_pool = svn_pool_create (pool);
+  SVN_ERR (svn_fs_list_transactions (&txns, fs, pool));
   
   /* Loop, printing revisions. */
   for (i = 0; i < txns->nelts; i++)
     {
-      svn_fs_txn_t *txn;
-      svn_fs_root_t *this_root;
-      svn_string_t *datestamp;
-      svn_string_t *author;
-      svn_string_t *log;
-      
-      txn_name = APR_ARRAY_IDX (txns, i, const char *);
-      if (! opt_state->long_output)
-        {
-          printf ("%s\n", txn_name);
-        }
-      else
-        {
-          const svn_fs_id_t *root_id;
-          svn_string_t *id_str;
-          const char *txn_name_native, *datestamp_native;
-          const char *author_native, *log_native;
-          
-          SVN_ERR (svn_fs_open_txn (&txn, fs, txn_name, this_pool));
-          SVN_ERR (svn_fs_txn_root (&this_root, txn, this_pool));
-          SVN_ERR (svn_fs_txn_prop (&datestamp, txn,
-                                    SVN_PROP_REVISION_DATE, 
-                                    this_pool));
-          SVN_ERR (svn_fs_txn_prop (&author, txn,
-                                    SVN_PROP_REVISION_AUTHOR, 
-                                    this_pool));
-          if ((! datestamp) || (! datestamp->data))
-            datestamp = svn_string_create ("", this_pool);
-          if ((! author) || (! author->data))
-            author = svn_string_create ("", this_pool);
-          SVN_ERR (svn_fs_txn_prop (&log, txn,
-                                    SVN_PROP_REVISION_LOG, 
-                                    this_pool));
-          if (! log)
-            log = svn_string_create ("", this_pool);
-          
-          SVN_ERR (svn_utf_cstring_from_utf8 (&txn_name_native, txn_name,
-                                              this_pool));
-          SVN_ERR (svn_utf_cstring_from_utf8 (&datestamp_native,
-                                              datestamp->data,
-                                              this_pool));
-          SVN_ERR (svn_utf_cstring_from_utf8 (&author_native,
-                                              author->data,
-                                              this_pool));
-          SVN_ERR (svn_utf_cstring_from_utf8 (&log_native, log->data,
-                                              this_pool));
-          
-          printf ("Txn %s:\n", txn_name_native);
-          printf ("Created: %s\n", datestamp_native);
-          printf ("Author: %s\n", author_native);
-          printf ("Log (%" APR_SIZE_T_FMT " bytes):\n%s\n",
-                  log->len, log_native);
-          printf ("==========================================\n");
-          SVN_ERR (svn_fs_node_id (&root_id, this_root, "", pool));
-          id_str = svn_fs_unparse_id (root_id, pool);
-          printf ("/ <%s>\n", id_str->data);
-          print_tree (this_root, "", 1, this_pool);
-          printf ("\n");
-          svn_pool_clear (this_pool);
-        }
+      printf ("%s\n", APR_ARRAY_IDX (txns, i, const char *));
     }
-  
-  if (opt_state->long_output)
-    svn_pool_destroy (this_pool);
 
   SVN_ERR (svn_repos_close (repos));
   
@@ -881,26 +695,6 @@ static svn_error_t *
 subcommand_undeltify (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   return deltify_or_undeltify (FALSE, os, baton, pool);
-}
-
-
-/* This implements `svn_opt_subcommand_t'. */
-static svn_error_t *
-subcommand_youngest (apr_getopt_t *os, void *baton, apr_pool_t *pool)
-{
-  struct svnadmin_opt_state *opt_state = baton;
-  svn_revnum_t youngest_rev;
-  svn_repos_t *repos;
-  svn_fs_t *fs;
-
-  SVN_ERR (svn_repos_open (&repos, opt_state->repository_path, pool));
-  fs = svn_repos_fs (repos);
-  SVN_ERR (svn_fs_youngest_rev (&youngest_rev, fs, pool));
-  printf ("%" SVN_REVNUM_T_FMT "\n", youngest_rev);
-
-  SVN_ERR (svn_repos_close (repos));
-
-  return SVN_NO_ERROR;
 }
 
 

@@ -36,6 +36,7 @@
 #include "svn_repos.h"
 #include "svn_time.h"
 #include "svn_utf.h"
+#include "svn_opt.h"
 
 
 /*** Some convenience macros and types. ***/
@@ -46,21 +47,122 @@
    svn_private_config.h stuffs (with a default of perhaps "/tmp/.svnlook" */
 #define SVNLOOK_TMPDIR       ".svnlook"
 
-typedef enum svnlook_cmd_t
-{
-  svnlook_cmd_default = 0,
+
+/* Option handling. */
 
-  svnlook_cmd_author,
-  svnlook_cmd_changed,
-  svnlook_cmd_date,
-  svnlook_cmd_diff,
-  svnlook_cmd_dirs_changed,
-  svnlook_cmd_ids,
-  svnlook_cmd_info,
-  svnlook_cmd_log,
-  svnlook_cmd_tree
-  
-} svnlook_cmd_t;
+static svn_opt_subcommand_t
+  subcommand_author,
+  subcommand_changed,
+  subcommand_date,
+  subcommand_diff,
+  subcommand_dirschanged,
+  subcommand_help,
+  subcommand_info,
+  subcommand_log,
+  subcommand_tree,
+  subcommand_youngest;
+
+/* Option codes and descriptions. */
+enum 
+  { 
+    svnlook__show_ids = SVN_OPT_FIRST_LONGOPT_ID
+  };
+
+/*
+ * This must not have more than SVN_OPT_MAX_OPTIONS entries; if you
+ * need more, increase that limit first. 
+ *
+ * The entire list must be terminated with an entry of nulls.
+ */
+static const apr_getopt_option_t options_table[] =
+  {
+    {"help",          'h', 0,
+     "show help on a subcommand"},
+
+    {NULL,            '?', 0,
+     "show help on a subcommand"},
+
+    {"revision",      'r', 1,
+     "specify revision number ARG"},
+
+    {"transaction",  't', 1,
+     "specify transaction name ARG"},
+
+    {"show-ids",      svnlook__show_ids, 0,
+     "show node revision ids for each path"},
+
+    {0,               0, 0, 0}
+  };
+
+
+/* Array of available subcommands.
+ * The entire list must be terminated with an entry of nulls.
+ */
+static const svn_opt_subcommand_desc_t cmd_table[] =
+  {
+    {"author", subcommand_author, {0},
+     "usage: svnlook author REPOS_PATH\n\n"
+     "Print the author.\n",
+     {'r', 't'} },
+    
+    {"changed", subcommand_changed, {0},
+     "usage: svnlook changed REPOS_PATH\n\n"
+     "Print the paths that were changed.\n",
+     {'r', 't'} },
+    
+    {"date", subcommand_date, {0},
+     "usage: svnlook date REPOS_PATH\n\n"
+     "Print the date.\n",
+     {'r', 't'} },
+
+    {"diff", subcommand_diff, {0},
+     "usage: svnlook diff REPOS_PATH\n\n"
+     "Print GNU-style diffs of changed files and properties.\n",
+     {'r', 't'} },
+
+    {"dirs-changed", subcommand_dirschanged, {0},
+     "usage: svnlook dirs-changed REPOS_PATH\n\n"
+     "Print the directories that were changed.\n",
+     {'r', 't'} },
+    
+    {"help", subcommand_help, {"?", "h"},
+     "usage: svn help [SUBCOMMAND1 [SUBCOMMAND2] ...]\n\n"
+     "Display this usage message.\n",
+     {0} },
+
+    {"info", subcommand_info, {0},
+     "usage: svnlook info REPOS_PATH\n\n"
+     "Print the author, date, log message size, and log message.\n",
+     {'r', 't'} },
+
+    {"log", subcommand_log, {0},
+     "usage: svnlook log REPOS_PATH\n\n"
+     "Print the log message.\n",
+     {'r', 't'} },
+
+    {"tree", subcommand_tree, {0},
+     "usage: svnlook tree REPOS_PATH\n\n"
+     "Print the tree, optionally showing node revision ids.\n",
+     {'r', 't', svnlook__show_ids} },
+
+    {"youngest", subcommand_youngest, {0},
+     "usage: svnlook youngest REPOS_PATH\n\n"
+     "Print the youngest revision number.\n",
+     {0} },
+
+    { NULL, NULL, {0}, NULL, {0} }
+  };
+
+
+/* Baton for passing option/argument state to a subcommand function. */
+struct svnlook_opt_state
+{
+  const char *repos_path;
+  svn_revnum_t rev;
+  const char *txn;
+  svn_boolean_t show_ids;
+  svn_boolean_t help;
+};
 
 
 typedef struct svnlook_ctxt_t
@@ -68,6 +170,7 @@ typedef struct svnlook_ctxt_t
   svn_repos_t *repos;
   svn_fs_t *fs;
   svn_boolean_t is_revision;
+  svn_boolean_t show_ids;
   svn_revnum_t rev_id;
   svn_fs_txn_t *txn;
   const char *txn_name /* UTF-8! */;
@@ -381,7 +484,7 @@ dump_contents (apr_file_t *fh,
       if ((apr_err) || (len2 != len))
         return svn_error_createf 
           (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, 0, NULL,
-               "Error writing contents of %s", path);
+           "Error writing contents of %s", path);
       if (len != sizeof (buffer))
         break;
     }
@@ -586,13 +689,13 @@ print_diff_tree (svn_fs_root_t *root,
 }
 
 
-/* Recursively print all nodes in the tree. 
- * 
- * ### todo: I'd like to write a more descriptive doc string for this
- * function, but I wasn't able to figure out in a finite amount of
- * time why it even takes the arguments it takes, or why it does what
- * it does with them.  See issue #540.  -kff
- */
+/* Recursively print all nodes, and their node revision ids, in the
+   tree rooted at NODE.  
+
+   ROOT is the revision or transaction root used to build that tree.
+   PATH is the currently path being printed, and INDENTATION the
+   number of spaces to prepent to that path's printed output.  Use
+   POOL for all allocations.  */
 static svn_error_t *
 print_ids_tree (svn_repos_node_t *node,
                 svn_fs_root_t *root,
@@ -702,28 +805,20 @@ static svn_error_t *
 do_log (svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
 {
   svn_string_t *prop_value;
+  const char *log_native;
 
   SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_LOG, pool));
-
-  if (prop_value && prop_value->data)
+  if (! (prop_value && prop_value->data))
     {
-      const char *log_native;
-
-      if (print_size)
-        {
-          printf ("%" APR_SIZE_T_FMT "\n", prop_value->len);
-        }
-
-      SVN_ERR (svn_utf_cstring_from_utf8 (&log_native, prop_value->data,
-                                          pool));
-      printf ("%s", log_native);
-    }
-  else if (print_size)
-    {
-      printf ("0");
+      printf ("%s\n", print_size ? "0" : "");
+      return SVN_NO_ERROR;
     }
   
-  printf ("\n");
+  if (print_size)
+    printf ("%" APR_SIZE_T_FMT "\n", prop_value->len);
+
+  SVN_ERR (svn_utf_cstring_from_utf8 (&log_native, prop_value->data, pool));
+  printf ("%s\n", log_native);
   return SVN_NO_ERROR;
 }
 
@@ -734,20 +829,16 @@ do_log (svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
 static svn_error_t *
 do_date (svnlook_ctxt_t *c, apr_pool_t *pool)
 {
-  if (c->is_revision)
-    {
-      svn_string_t *prop_value;
-      
-      SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_DATE, pool));
+  svn_string_t *prop_value;
 
-      if (prop_value && prop_value->data)
-        {
-          /* Convert the date for humans. */
-          apr_time_t aprtime;
-          
-          SVN_ERR (svn_time_from_nts (&aprtime, prop_value->data, pool));
-          printf ("%s", svn_time_to_human_nts (aprtime, pool));
-        }
+  SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_DATE, pool));
+  if (prop_value && prop_value->data)
+    {
+      /* Convert the date for humans. */
+      apr_time_t aprtime;
+      
+      SVN_ERR (svn_time_from_nts (&aprtime, prop_value->data, pool));
+      printf ("%s", svn_time_to_human_nts (aprtime, pool));
     }
 
   printf ("\n");
@@ -762,13 +853,12 @@ do_author (svnlook_ctxt_t *c, apr_pool_t *pool)
   svn_string_t *prop_value;
 
   SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_AUTHOR, pool));
-
-  if (prop_value && prop_value->data) {
-    const char *author_native;
-    SVN_ERR (svn_utf_cstring_from_utf8 (&author_native, prop_value->data,
-                                        pool));
-    printf ("%s", author_native);
-  }
+  if (prop_value && prop_value->data) 
+    {
+      const char *native;
+      SVN_ERR (svn_utf_cstring_from_utf8 (&native, prop_value->data, pool));
+      printf ("%s", native);
+    }
   
   printf ("\n");
   return SVN_NO_ERROR;
@@ -882,267 +972,390 @@ do_tree (svnlook_ctxt_t *c, svn_boolean_t show_ids, apr_pool_t *pool)
   if (tree)
     {
       if (show_ids)
-        {
-          SVN_ERR (print_ids_tree (tree, root, "", 0, pool));
-        }
+        SVN_ERR (print_ids_tree (tree, root, "", 0, pool));
       else
-        {
-          SVN_ERR (print_tree (tree, 0, pool));
-        }
+        SVN_ERR (print_tree (tree, 0, pool));
     }
 
   return SVN_NO_ERROR;
 }
 
-
-/* Print author, date, log-size, and log associated with the given
-   revision or transaction. */
+
+/*** Subcommands. ***/
 static svn_error_t *
-do_info (svnlook_ctxt_t *c, apr_pool_t *pool)
+get_ctxt_baton (svnlook_ctxt_t **baton_p,
+                struct svnlook_opt_state *opt_state,
+                apr_pool_t *pool)
 {
+  svnlook_ctxt_t *baton = apr_pcalloc (pool, sizeof (*baton));
+
+  SVN_ERR (svn_repos_open (&(baton->repos), opt_state->repos_path, pool));
+  baton->fs = svn_repos_fs (baton->repos);
+  baton->show_ids = opt_state->show_ids;
+  baton->is_revision = opt_state->txn ? FALSE : TRUE;
+  baton->rev_id = opt_state->rev;
+  baton->txn_name = apr_pstrdup (pool, opt_state->txn);
+  if (baton->txn_name)
+    SVN_ERR (svn_fs_open_txn (&(baton->txn), baton->fs, 
+                              baton->txn_name, pool));
+  else if (baton->rev_id == SVN_INVALID_REVNUM)
+    SVN_ERR (svn_fs_youngest_rev (&(baton->rev_id), baton->fs, pool));
+
+  *baton_p = baton;
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_author (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+
+  SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
+  SVN_ERR (do_author (c, pool));
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_changed (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+
+  SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
+  SVN_ERR (do_changed (c, pool));
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_date (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+
+  SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
+  SVN_ERR (do_date (c, pool));
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_diff (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+
+  SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
+  SVN_ERR (do_diff (c, pool));
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_dirschanged (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+
+  SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
+  SVN_ERR (do_dirs_changed (c, pool));
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_help (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  const char *header =
+    "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
+    "Note: any subcommand which takes the '--revision' and '--transaction'\n"
+    "      options will, if invoked without one of those options, act on\n"
+    "      the repository's youngest revision.\n"
+    "Type \"svnlook help <subcommand>\" for help on a specific subcommand.\n"
+    "\n"
+    "Available subcommands:\n";
+
+  SVN_ERR (svn_opt_print_help (os, "svnlook", FALSE, FALSE, NULL,
+                               header, cmd_table, options_table, NULL,
+                               pool));
+  
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_info (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+
+  SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
   SVN_ERR (do_author (c, pool));
   SVN_ERR (do_date (c, pool));
   SVN_ERR (do_log (c, TRUE, pool));
   return SVN_NO_ERROR;
 }
 
-
-/* Print author, date, log-size, log, and the tree associated with the
-   given revision or transaction. */
+/* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
-do_default (svnlook_ctxt_t *c, apr_pool_t *pool)
+subcommand_log (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
-  SVN_ERR (do_info (c,pool));
-  SVN_ERR (do_tree (c, FALSE, pool));
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+
+  SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
+  SVN_ERR (do_log (c, FALSE, pool));
   return SVN_NO_ERROR;
 }
 
-
-
-
-/*** Argument parsing and usage. ***/
-static void
-do_usage (const char *progname, int exit_code)
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_tree (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
-  fprintf
-    (exit_code ? stderr : stdout,
-     "usage: %s REPOS_PATH rev REV [COMMAND] - inspect revision REV\n"
-     "       %s REPOS_PATH txn TXN [COMMAND] - inspect transaction TXN\n"
-     "       %s REPOS_PATH [COMMAND] - inspect the youngest revision\n"
-     "\n"
-     "REV is a revision number > 0.\n"
-     "TXN is a transaction name.\n"
-     "\n"
-     "If no command is given, the default output (which is the same as\n"
-     "running the subcommands `info' then `tree') will be printed.\n"
-     "\n"
-     "COMMAND can be one of: \n"
-     "\n"
-     "   author:        print author.\n"
-     "   changed:       print full change summary: all dirs & files changed.\n"
-     "   date:          print the timestamp (revisions only).\n"
-     "   diff:          print GNU-style diffs of changed files and props.\n"
-     "   dirs-changed:  print changed directories.\n"
-     "   ids:           print the tree, with nodes ids.\n"
-     "   info:          print the author, data, log_size, and log message.\n"
-     "   log:           print log message.\n"
-     "   tree:          print the tree.\n"
-     "\n",
-     progname,
-     progname,
-     progname);
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
 
-  exit (exit_code);
+  SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
+  SVN_ERR (do_tree (c, opt_state->show_ids, pool));
+  return SVN_NO_ERROR;
 }
 
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_youngest (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnlook_opt_state *opt_state = baton;
+  svnlook_ctxt_t *c;
+
+  SVN_ERR (get_ctxt_baton (&c, opt_state, pool));
+  printf ("%" SVN_REVNUM_T_FMT "\n", c->rev_id);
+  return SVN_NO_ERROR;
+}
 
 
 /*** Main. ***/
 
-#define INT_ERR(expr)                              \
-  do {                                             \
-    svn_error_t *svn_err__temp = (expr);           \
-    if (svn_err__temp) {                           \
-      svn_handle_error (svn_err__temp, stderr, 0); \
-      goto cleanup; }                              \
+#define INT_ERR(expr)                                       \
+  do {                                                      \
+    svn_error_t *svnlook_err__temp = (expr);                \
+    if (svnlook_err__temp) {                                \
+      svn_handle_error (svnlook_err__temp, stderr, FALSE);  \
+      return EXIT_FAILURE; }                                \
   } while (0)
 
 
 int
 main (int argc, const char * const *argv)
 {
+  svn_error_t *err;
+  apr_status_t apr_err;
+  int err2;
   apr_pool_t *pool;
-  const char *repos_path = NULL, *repos_path_utf8;
-  const char *txn_name = NULL;
-  int cmd_offset = 4;
-  svnlook_cmd_t command;
-  svnlook_ctxt_t c;
-  svn_boolean_t was_success = FALSE;
+
+  const svn_opt_subcommand_desc_t *subcommand = NULL;
+  struct svnlook_opt_state opt_state;
+  apr_getopt_t *os;  
+  int opt_id;
+  int received_opts[SVN_OPT_MAX_OPTIONS];
+  int i, num_opts = 0;
 
   setlocale (LC_CTYPE, "");
 
-  /* Initialize context variable. */
-  memset (&c, 0, sizeof (c));
-  c.rev_id = SVN_INVALID_REVNUM;
-
-  /* We require at least 1 arguments. */
-  if (argc < 2)
+  apr_err = apr_initialize ();
+  if (apr_err)
     {
-      do_usage (argv[0], 1);
+      fprintf (stderr, "error: apr_initialize\n");
+      return EXIT_FAILURE;
+    }
+  err2 = atexit (apr_terminate);
+  if (err2)
+    {
+      fprintf (stderr, "error: atexit returned %d\n", err2);
       return EXIT_FAILURE;
     }
 
-  /* Argument 1 is the repository path. */
-  repos_path = argv[1];
+  pool = svn_pool_create (NULL);
 
-  /* Argument 2 could be "rev" or "txn".  If "rev", Argument 3 is a
-     numerical revision number.  If "txn", Argument 3 is a transaction
-     name string.  If neither, this is an inspection of the youngest
-     revision.  */
-  if (argc > 3)
+  if (argc <= 1)
     {
-      if (! strcmp (argv[2], "txn")) /* transaction */
+      subcommand_help (NULL, NULL, pool);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
+
+  /* Initialize opt_state. */
+  memset (&opt_state, 0, sizeof (opt_state));
+  opt_state.rev = SVN_INVALID_REVNUM;
+
+  /* Parse options. */
+  apr_getopt_init (&os, pool, argc, argv);
+  os->interleave = 1;
+  while (1)
+    {
+      const char *opt_arg;
+
+      /* Parse the next option. */
+      apr_err = apr_getopt_long (os, options_table, &opt_id, &opt_arg);
+      if (APR_STATUS_IS_EOF (apr_err))
+        break;
+      else if (apr_err)
         {
-          c.is_revision = FALSE;
-          txn_name = argv[3];
+          subcommand_help (NULL, NULL, pool);
+          svn_pool_destroy (pool);
+          return EXIT_FAILURE;
         }
-      else if (! strcmp (argv[2], "rev")) /* revision */
+
+      /* Stash the option code in an array before parsing it. */
+      received_opts[num_opts] = opt_id;
+      num_opts++;
+
+      switch (opt_id) 
         {
-          c.is_revision = TRUE;
-          c.rev_id = SVN_STR_TO_REV (argv[3]);
-          if (c.rev_id < 1)
+        case 'r':
+          opt_state.rev = atoi (opt_arg);
+          if (! SVN_IS_VALID_REVNUM (opt_state.rev))
+            INT_ERR (svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL,
+                                       "Invalid revision number supplied."));
+          break;
+
+        case 't':
+          opt_state.txn = opt_arg;
+          break;
+
+        case 'h':
+        case '?':
+          opt_state.help = TRUE;
+          break;
+
+        case svnlook__show_ids:
+          opt_state.show_ids = TRUE;
+          break;
+
+        default:
+          subcommand_help (NULL, NULL, pool);
+          svn_pool_destroy (pool);
+          return EXIT_FAILURE;
+
+        }
+    }
+
+  /* The --transaction and --revision options may not co-exist. */
+  if ((opt_state.rev != SVN_INVALID_REVNUM) && opt_state.txn)
+    INT_ERR (svn_error_create 
+             (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, 0, NULL,
+              "The '--transaction' (-t) and '--revision' (-r) arguments "
+              "may no co-exist."));
+
+  /* If the user asked for help, then the rest of the arguments are
+     the names of subcommands to get help on (if any), or else they're
+     just typos/mistakes.  Whatever the case, the subcommand to
+     actually run is subcommand_help(). */
+  if (opt_state.help)
+    subcommand = svn_opt_get_canonical_subcommand (cmd_table, "help");
+
+  /* If we're not running the `help' subcommand, then look for a
+     subcommand in the first argument. */
+  if (subcommand == NULL)
+    {
+      if (os->ind >= os->argc)
+        {
+          fprintf (stderr, "subcommand argument required\n");
+          subcommand_help (NULL, NULL, pool);
+          svn_pool_destroy (pool);
+          return EXIT_FAILURE;
+        }
+      else
+        {
+          const char *first_arg = os->argv[os->ind++];
+          subcommand = svn_opt_get_canonical_subcommand (cmd_table, first_arg);
+          if (subcommand == NULL)
             {
-              do_usage (argv[0], 1);
+              fprintf (stderr, "unknown command: %s\n", first_arg);
+              subcommand_help (NULL, NULL, pool);
+              svn_pool_destroy (pool);
               return EXIT_FAILURE;
             }
         }
-      else
-        {
-          c.is_revision = TRUE;
-          cmd_offset = 2;
-        }
-    }
-  else
-    {
-      c.is_revision = TRUE;
-      cmd_offset = 2;
     }
 
-  /* If there is a subcommand, parse it. */
-  if (argc > cmd_offset)
+  /* If there's a second argument, it's probably the repository.
+     Every subcommand except `help' requires one, so we parse it out
+     here and store it in opt_state. */
+  if (subcommand->cmd_func != subcommand_help)
     {
-      if (! strcmp (argv[cmd_offset], "author"))
-        command = svnlook_cmd_author;
-      else if (! strcmp (argv[cmd_offset], "changed"))
-        command = svnlook_cmd_changed;
-      else if (! strcmp (argv[cmd_offset], "date"))
-        command = svnlook_cmd_date;
-      else if (! strcmp (argv[cmd_offset], "diff"))
-        command = svnlook_cmd_diff;
-      else if (! strcmp (argv[cmd_offset], "dirs-changed"))
-        command = svnlook_cmd_dirs_changed;
-      else if (! strcmp (argv[cmd_offset], "ids"))
-        command = svnlook_cmd_ids;
-      else if (! strcmp (argv[cmd_offset], "info"))
-        command = svnlook_cmd_info;
-      else if (! strcmp (argv[cmd_offset], "log"))
-        command = svnlook_cmd_log;
-      else if (! strcmp (argv[cmd_offset], "tree"))
-        command = svnlook_cmd_tree;
-      else
+      const char *repos_path = NULL;
+
+      if (os->ind < os->argc)
         {
-          do_usage (argv[0], 2);
+          INT_ERR (svn_utf_cstring_to_utf8 (&repos_path, os->argv[os->ind++],
+                                            NULL, pool));
+          repos_path = svn_path_canonicalize_nts (repos_path, pool);
+        }
+
+      if (repos_path == NULL)
+        {
+          fprintf (stderr, "repository argument required\n");
+          subcommand_help (NULL, NULL, pool);
+          svn_pool_destroy (pool);
+          return EXIT_FAILURE;
+        }
+
+      /* Copy repos path into the OPT_STATE structure. */
+      opt_state.repos_path = repos_path;      
+    }
+
+  /* Check that the subcommand wasn't passed any inappropriate options. */
+  for (i = 0; i < num_opts; i++)
+    {
+      opt_id = received_opts[i];
+
+      /* All commands implicitly accept --help, so just skip over this
+         when we see it. Note that we don't want to include this option
+         in their "accepted options" list because it would be awfully
+         redundant to display it in every commands' help text. */
+      if (opt_id == 'h' || opt_id == '?')
+        continue;
+
+      if (! svn_opt_subcommand_takes_option (subcommand, opt_id))
+        {
+          const char *optstr;
+          const apr_getopt_option_t *badopt = 
+            svn_opt_get_option_from_code (opt_id, options_table);
+          svn_opt_format_option (&optstr, badopt, FALSE, pool);
+          fprintf (stderr,
+                   "\nError: subcommand '%s' doesn't accept option '%s'\n\n",
+                   subcommand->name, optstr);
+          svn_opt_subcommand_help (subcommand->name,
+                                   cmd_table,
+                                   options_table,
+                                   pool);
+          svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
     }
+
+  /* Run the subcommand. */
+  err = (*subcommand->cmd_func) (os, &opt_state, pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
+        {
+          svn_handle_error (err, stderr, 0);
+          svn_opt_subcommand_help (subcommand->name, cmd_table,
+                                   options_table, pool);
+        }
+      else
+        svn_handle_error (err, stderr, 0);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
   else
     {
-      command = svnlook_cmd_default;
+      svn_pool_destroy (pool);
+      return EXIT_SUCCESS;
     }
-
-  /* Now, let's begin processing.  */
-
-  /* Initialize APR and our top-level pool. */
-  apr_initialize ();
-  pool = svn_pool_create (NULL);
-
-  /* Convert repository path and txn name (if present) to UTF-8 */
-  INT_ERR (svn_utf_cstring_to_utf8 (&repos_path_utf8, repos_path, NULL, pool));
-  repos_path_utf8 = svn_path_canonicalize_nts (repos_path_utf8, pool);
-  if(txn_name)
-    INT_ERR (svn_utf_cstring_to_utf8 (&c.txn_name, txn_name, NULL, pool));    
-
-  /* Open the repository with the given path. */
-  INT_ERR (svn_repos_open (&(c.repos), repos_path_utf8, pool));
-  c.fs = svn_repos_fs (c.repos);
-
-  /* If this is a transaction, open the transaction. */
-  if (! c.is_revision)
-    INT_ERR (svn_fs_open_txn (&(c.txn), c.fs, c.txn_name, pool));
- 
-  /* If this is a revision with an invalid revision number, just use
-     the head revision. */
-  if (c.is_revision && (! SVN_IS_VALID_REVNUM (c.rev_id)))
-    INT_ERR (svn_fs_youngest_rev (&(c.rev_id), c.fs, pool));
-
-  /* Now, out context variable is full of all the stuff we might need
-     to know.  Get to work.  */
-  switch (command)
-    {
-    case svnlook_cmd_author:
-      INT_ERR (do_author (&c, pool));
-      break;
-
-    case svnlook_cmd_changed:
-      INT_ERR (do_changed (&c, pool));
-      break;
-
-    case svnlook_cmd_date:
-      INT_ERR (do_date (&c, pool));
-      break;
-
-    case svnlook_cmd_diff:
-      INT_ERR (do_diff (&c, pool));
-      break;
-
-    case svnlook_cmd_dirs_changed:
-      INT_ERR (do_dirs_changed (&c, pool));
-      break;
-
-    case svnlook_cmd_ids:
-      INT_ERR (do_tree (&c, TRUE, pool));
-      break;
-
-    case svnlook_cmd_info:
-      INT_ERR (do_info (&c, pool));
-      break;
-
-    case svnlook_cmd_log:
-      INT_ERR (do_log (&c, FALSE, pool));
-      break;
-
-    case svnlook_cmd_tree:
-      INT_ERR (do_tree (&c, FALSE, pool));
-      break;
-
-    case svnlook_cmd_default:
-    default:
-      INT_ERR (do_default (&c, pool));
-      break;
-    }
-
-  /* We were successful in our subcommand. */
-  was_success = TRUE;
-
- cleanup:  /* Cleanup after ourselves. */
-  if (c.txn && (! c.is_revision))
-    svn_fs_close_txn (c.txn);
-
-  if (c.repos)
-    svn_repos_close (c.repos);
-
-  svn_pool_destroy (pool);
-  apr_terminate ();
-
-  return was_success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
+
