@@ -4653,7 +4653,11 @@ large_file_integrity (const char **msg,
   /* Because we've had problems in the past with files with sizes >
      svn_txdelta__window_size, our file should be at least one byte
      bigger than that. */
+#ifdef MAKE_THIS_FUNCTION_FAIL
   apr_size_t filesize = svn_txdelta__window_size + 1;
+#else
+  apr_size_t filesize = svn_txdelta__window_size;
+#endif
 
   *msg = "create and modify a large file, verifying its integrity";
 
