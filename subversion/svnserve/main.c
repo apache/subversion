@@ -78,16 +78,16 @@ enum connection_handling_mode {
  */
 static const apr_getopt_option_t svnserve__options[] =
   {
-    {"help",             'h', 0, "display this help"},
     {"daemon",           'd', 0, "daemon mode"},
-    {"tunnel",           't', 0, "tunnel mode"},
-    {"listen-once",      'X', 0, "listen once (useful for debugging)"},
+    {"help",             'h', 0, "display this help"},
     {"root",             'r', 1, "root of directory to serve"},
     {"read-only",        'R', 0, "deprecated; use repository config file"},
+    {"tunnel",           't', 0, "tunnel mode"},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     {"threads",          'T', 0, "use threads instead of fork"},
 #endif
     {"believe-username", 'u', 0, "deprecated; use password authentication"},
+    {"listen-once",      'X', 0, "listen once (useful for debugging)"},
     {0,                  0,   0, 0}
   };
 
