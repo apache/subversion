@@ -378,3 +378,21 @@ already know about.)
      Votes:
       +1: bliss, ghudson
       -0: gstein
+
+
+   * r7998, r8000, r8018, r8075, r8117, r8118, r8158
+     Perl bindings fixes and enhacements to date.
+     Justification: Strictly perl only, not even affecting build system.
+                    The bindings are not complete to be considered as
+                    1.0, the maintainer wishes svn to include the
+                    latest version in order to provide better supports.
+     Votes:
+      +1: clkao
+     
+
+   * r8106
+     Add --enable-swig-bindings option to select build targets
+     included in standard make.
+
+     Votes:
+      +1: clkao
