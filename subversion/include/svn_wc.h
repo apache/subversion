@@ -582,7 +582,7 @@ typedef enum svn_wc_notify_lock_state_t {
  * Structure used in the @c svn_wc_notify_func2_t function.
  *
  * @note Callers of notification functions should use @c svn_wc_create_notify
- * to create structures of this type to allow for exstinsibility. */
+ * to create structures of this type to allow for extensibility. */
 typedef struct svn_wc_notify_t {
   const char *path;
   svn_wc_notify_action_t action;
@@ -636,15 +636,16 @@ svn_wc_dup_notify (const svn_wc_notify_t *notify, apr_pool_t *pool);
  *
  * ### Design Notes:
  *
- * The purpose of the @a notify->kind, @a notify->mime_type,
- * @a notify->content_state, and @a notify->prop_state fields is to provide
- * "for free" information that this function is likely to want, and which it
- * would otherwise be forced to deduce via expensive operations such as
- * reading entries and properties.  However, if the caller does not have
- * this information, it will simply pass the corresponding `*_unknown'
- * values, and it is up to the implementation how to handle that (i.e.,
- * whether or not to attempt deduction, or just to punt and give a less
- * informative notification).
+ * The purpose of the @a notify->kind, @a notify->mime_type, @a
+ * notify->content_state, and @a notify->prop_state fields is to
+ * provide "for free" information that this function is likely to
+ * want, and which it would otherwise be forced to deduce via
+ * expensive operations such as reading entries and properties.
+ * However, if the caller does not have this information, it will
+ * simply pass the corresponding `*_unknown' values, and it is up to
+ * the implementation how to handle that (i.e., whether or not to
+ * attempt deduction, or just to punt and give a less informative
+ * notification).
  *
  * Recommendation: callers of @c svn_wc_notify_func2_t should avoid
  * invoking it multiple times on the same path within a given
@@ -1586,7 +1587,7 @@ svn_wc_status_set_repos_locks (void *set_Locks_baton,
 /** @} */
 
 
-/** @sincew New in 1.2.
+/** @since New in 1.2.
  *
  * Copy @a src to @a dst_basename in @a dst_parent, and schedule 
  * @a dst_basename for addition to the repository, remembering the copy 
@@ -1662,7 +1663,7 @@ svn_error_t *svn_wc_delete2 (const char *path,
 
 /** @deprecated Provided for backwards compatibility with the 1.2 API.
  *
- * Similart to @c svn_wc_delete2, but takes an @c svn_wc_notify_func_t instead.
+ * Similar to @c svn_wc_delete2, but takes an @c svn_wc_notify_func_t instead.
  */
 svn_error_t *svn_wc_delete (const char *path,
                             svn_wc_adm_access_t *adm_access,
@@ -1872,8 +1873,8 @@ svn_error_t *svn_wc_resolved_conflict2 (const char *path,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_wc_resolved_conflict2(), but taking an svn_wc_notify_func_t
- * and without cancellation support.
+ * Similar to svn_wc_resolved_conflict2(), but takes an
+ * svn_wc_notify_func_t and doesn't have cancellation support.
  */
 svn_error_t *svn_wc_resolved_conflict (const char *path,
                                        svn_wc_adm_access_t *adm_access,

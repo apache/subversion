@@ -389,7 +389,7 @@ typedef struct svn_client_ctx_t
   void *cancel_baton;
 
   /** @cinew New in 1.2.
-      notification function, defaulting to a function that forwads
+      notification function, defaulting to a function that forwards
       to @c notify_func. */
   svn_wc_notify_func2_t notify_func2;
   /** notification baton for the above. */
