@@ -19,7 +19,6 @@ USRBIN=/usr/bin
 DIRNAME=$USRBIN/dirname
 GREP=$BIN/grep
 MAKE=$USRBIN/make
-PWD=$BIN/pwd
 RM=$BIN/rm
 SED=$BIN/sed
 MSGATTRIB=/usr/local/bin/msgattrib
@@ -39,22 +38,25 @@ WC_L='/usr/bin/wc -l'
 
 cd $EXEC_PATH/../..
 
+root_path="$PWD"
+ROOT_PARENT_PATH="`$DIRNAME $root_path`"
+branch_name="`echo $root_path | $SED -e "s@$ROOT_PARENT_PATH/@@"`"
 
 wc_version=`$SVNVERSION . | $SED -e 's/M//'`
 cd subversion/po
 
 echo "
 
-Subversion translation status report for revision $wc_version
+Translation status report for revision $wc_version ($branch_name/)
 
 ============================================================================"
 
 
 for i in *.po ; do
-  translated=`$MSGATTRIB --translated $i | $GREP -E '^msgid *"' | $WC_L`
-  untranslated=`$MSGATTRIB --untranslated $i | $GREP -E '^msgid *"' | $WC_L`
-  fuzzy=`$MSGATTRIB --only-fuzzy $i | $GREP -E '^msgid *"' | $WC_L`
-  obsolete=`$MSGATTRIB --only-obsolete $i | $GREP -E '^msgid *"' | $WC_L`
+  translated=`$MSGATTRIB --translated $i | $GREP -E '^msgid *"' | $SED -n '2~1p' | $WC_L`
+  untranslated=`$MSGATTRIB --untranslated $i | $GREP -E '^msgid *"' | $SED -n '2~1p' | $WC_L`
+  fuzzy=`$MSGATTRIB --only-fuzzy $i | $GREP -E '^msgid *"' | $SED -n '2~1p' | $WC_L`
+  obsolete=`$MSGATTRIB --only-obsolete $i | $GREP -E '^msgid *"' | $SED -n '2~1p' | $WC_L`
 
   echo
   echo "Message counts per status flag for '$i'"

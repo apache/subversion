@@ -22,8 +22,7 @@ REVISION_PREFIX='r'
 EXEC_PATH="`$DIRNAME $0`"
 cd $EXEC_PATH/../..
 
-
-root_path="`$PWD`"
+root_path="$PWD"
 ROOT_PARENT_PATH="`$DIRNAME $root_path`"
 branch_name="`echo $root_path | $SED -e "s@$ROOT_PARENT_PATH/@@"`"
 
@@ -68,12 +67,12 @@ $MAKE locale-gnu-po-update 2>>$error_log >>$output_log || \
 }
 
 
-revision="`$SVNVERSION . | sed -e 's/M//'`"
+revision="`$SVNVERSION . | $SED -e 's/M//'`"
 
 $SENDMAIL -t <<EOF
 From: $mail_from
 To: $mail_to
 Subject: [l10n] Translation status for $branch_name $REVISION_PREFIX$revision
 
-`$EXEC_PATH/svn-po-status-report.sh`
+`tools/po/svn-po-status-report.sh`
 EOF
