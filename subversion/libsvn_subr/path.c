@@ -1140,13 +1140,13 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
     {
       *(dst++) = *(src++);
 
-#ifdef WIN32
+#if defined(WIN32) || defined(__CYGWIN__)
       /* On Windows permit two leading separator characters which means an
        * UNC path.  However, a double slash in a URI after the scheme is never
        * valid. */
       if (!uri && *src == '/')
         *(dst++) = *(src++);
-#endif /* WIN32 */
+#endif /* WIN32 or Cygwin */
       
     }
 
@@ -1185,12 +1185,12 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
   
   *dst = '\0';
 
-#ifdef WIN32
+#if defined(WIN32) || defined(__CYGWIN__)
   /* Skip leading double slashes when there are less than 2
    * canon segments. UNC paths *MUST* have two segments. */
   if (canon_segments < 2 && canon[0] == '/' && canon[1] == '/')
     return canon + 1;
-#endif /* WIN32 */
+#endif /* WIN32 or Cygwin */
 
   return canon;
 }
