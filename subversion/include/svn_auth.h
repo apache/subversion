@@ -1,4 +1,5 @@
-/*
+/**
+ * @copyright
  * svn_auth.h: authentication support for Subversion
  *
  * ====================================================================
@@ -14,6 +15,11 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ * @endcopyright
+ *
+ * @file svn_auth.h
+ * @brief Support for user authentication
+ * @{
  */
 
 #ifndef SVN_AUTH_H
@@ -96,6 +102,6 @@ svn_error_t * svn_auth_save_credentials(const char *cred_kind,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-
+/** @} */
 
 #endif /* SVN_AUTH_H */
