@@ -45,7 +45,7 @@ static const struct ra_lib_defn {
   const char *ra_name;
 
   /* the initialization function if linked in; otherwise, NULL */
-  svn_ra_init_func_t *initfunc;
+  svn_ra_init_func_t initfunc;
 
 } ra_libraries[] = {
   {
@@ -70,7 +70,7 @@ static const struct ra_lib_defn {
 
 
 static svn_error_t *
-load_ra_module (svn_ra_init_func_t **func,
+load_ra_module (svn_ra_init_func_t *func,
                 const char *ra_name, apr_pool_t *pool)
 {
   *func = NULL;
@@ -105,7 +105,7 @@ load_ra_module (svn_ra_init_func_t **func,
                                   libname, funcname);
       }
 
-    *func = (svn_ra_init_func_t *) symbol;
+    *func = (svn_ra_init_func_t) symbol;
   }
 #endif /* APR_HAS_DSO */
 
@@ -130,7 +130,7 @@ svn_ra_init_ra_libs (void **ra_baton,
 
   for (defn = ra_libraries; defn->ra_name != NULL; ++defn)
     {
-      svn_ra_init_func_t *initfunc = defn->initfunc;
+      svn_ra_init_func_t initfunc = defn->initfunc;
 
       if (initfunc == NULL)
         {
