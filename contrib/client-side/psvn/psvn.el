@@ -404,6 +404,14 @@ for  example: '(\"revert\" \"file1\"\)"
                     (setq svn-status-update-previous-process-output nil)))
                  ((eq svn-process-cmd 'log)
                   (svn-status-show-process-buffer-internal t)
+                  (pop-to-buffer "*svn-process*")
+                  (switch-to-buffer (get-buffer-create "*svn-log*"))
+                  (delete-region (point-min) (point-max))
+                  (insert-buffer-substring "*svn-process*")
+                  (svn-log-view-mode)
+                  (goto-char (point-min))
+                  (forward-line 3)
+                  (font-lock-fontify-buffer)
                   (message "svn log finished"))
                  ((eq svn-process-cmd 'info)
                   (svn-status-show-process-buffer-internal t)
@@ -591,11 +599,6 @@ A and B must be line-info's."
         (goto-char (point-min))
         (while (re-search-forward "\r$" (point-max) t)
           (replace-match "" nil nil))))))
-
-(defun svn-status-file-name-sans-versions (name &optional keep-backup-version)
-  "Strip the version info from a psvn revision file name."
-  (string-match "\\(.+\\)\\.~.+~" name)
-  (or (match-string-no-properties 1 name) name))
 
 (condition-case nil
     ;;(easy-menu-add-item nil '("tools") ["SVN Status" svn-status t] "PCL-CVS")
@@ -2127,6 +2130,8 @@ If ARG then show diff between some other vesion of the selected files."
 
 (when (not svn-log-view-mode-map)
   (setq svn-log-view-mode-map (make-sparse-keymap))
+  (define-key svn-log-view-mode-map (kbd "p") 'svn-log-view-prev)
+  (define-key svn-log-view-mode-map (kbd "n") 'svn-log-view-next)
   (define-key svn-log-view-mode-map (kbd "=") 'svn-log-view-diff)
   (define-key svn-log-view-mode-map (kbd "q") 'bury-buffer))
 (easy-menu-define svn-log-view-mode-menu svn-log-view-mode-map
@@ -2147,9 +2152,35 @@ Commands:
   (easy-menu-add svn-log-view-mode-menu)
   (set (make-local-variable 'font-lock-defaults) '(svn-log-view-font-lock-keywords t)))
 
+(defun svn-log-view-next ()
+  (interactive)
+  (when (re-search-forward "^r[0-9]+" nil t)
+    (beginning-of-line 3)))
+
+(defun svn-log-view-prev ()
+  (interactive)
+  (when (re-search-backward "^r[0-9]+" nil t 2)
+    (beginning-of-line 3)))
+
+(defun svn-log-revision-at-point ()
+  (save-excursion
+    (re-search-backward "^r\\([0-9]+\\)")
+    (match-string-no-properties 1)))
+
 (defun svn-log-view-diff ()
   (interactive)
-  (message "Not yet implemented."))
+  (let ((upper-rev (svn-log-revision-at-point))
+        (lower-rev (save-excursion
+                     (svn-log-view-next)
+                     (svn-log-revision-at-point))))
+    (when (string= upper-rev lower-rev)
+      (setq lower-rev (number-to-string (- (string-to-number lower-rev) 1))))
+    (svn-run-svn nil t 'diff "diff" (concat "-r" lower-rev ":" upper-rev))
+    (svn-status-show-process-buffer-internal t)
+    (save-excursion
+      (set-buffer "*svn-process*")
+      (diff-mode)
+      (font-lock-fontify-buffer))))
 
 (provide 'psvn)
 
