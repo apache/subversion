@@ -15,6 +15,8 @@
 #include <mod_dav.h>
 
 #include "svn_error.h"
+#include "svn_fs.h"
+
 #include "dav_svn.h"
 
 
@@ -72,6 +74,122 @@ const char *dav_svn_build_uri(const dav_resource *resource,
     }
 
   /* NOTREACHED */
+}
+
+svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
+                                      const dav_resource *relative,
+                                      const char *uri,
+                                      apr_pool_t *pool)
+{
+  uri_components comp;
+  const char *path;
+  apr_size_t len1;
+  apr_size_t len2;
+  const char *slash;
+
+  /* parse the input URI, in case it is more than just a path */
+  if (ap_parse_uri_components(pool, uri, &comp) != HTTP_OK)
+    goto malformed_uri;
+
+  /* ### ignore all URI parts but the path (for now) */
+
+  path = comp.path;
+
+  /*
+   * Does the URI path specify the same repository? It does not if one of:
+   *
+   * 1) input is shorter than the path to our repository
+   * 2) input is longer, but there is no separator
+   *    [ http://host/repos vs http://host/repository ]
+   * 3) the two paths do not match
+   */
+  len1 = strlen(path);
+  len2 = strlen(relative->info->repos->root_path);
+  if (len1 < len2
+      || (len1 > len2 && path[len2] != '/')
+      || memcmp(path, relative->info->repos->root_path, len2) != 0)
+    {
+      return svn_error_create(SVN_ERR_APMOD_MALFORMED_URI, 0, NULL, pool,
+                              "The specified URI does not refer to this "
+                              "repository, so it is unusable.");
+    }
+
+  path += len2; /* now points to "/" or "\0" */
+  len1 -= len2;
+
+  /* ### we don't handle http://host/repos or http://host/repos/ yet */
+  if (len1 <= 1)
+    goto unhandled_form;
+
+  /* skip over the leading "/" */
+  ++path;
+  --len1;
+
+  /* is this a special URI? */
+  len2 = strlen(relative->info->repos->special_uri);
+  if (len1 < len2
+      || (len1 > len2 && path[len2] != '/')
+      || memcmp(path, relative->info->repos->special_uri, len2) != 0)
+    {
+      /* ### we don't handle non-special URIs yet */
+      goto unhandled_form;
+    }
+
+  path += len2; /* now points to "/" or "\0" just past the special URI */
+  len1 -= len2;
+
+  /* ### we don't handle the root of the special area yet */
+  if (len1 <= 1)
+    goto unhandled_form;
+
+  /* Find the next component, and ensure something is there. */
+  slash = ap_strchr_c(path + 1, '/');
+  if (slash == NULL || slash[1] == '\0')
+    goto unhandled_form;
+  len2 = slash - path;
+
+  /* prep the return value */
+  memset(info, 0, sizeof(*info));
+  info->rev = SVN_INVALID_REVNUM;
+
+  /* Figure out what we have here */
+  if (len2 == 4 && memcmp(path, "/act/", 5) == 0)
+    {
+      /* an activity */
+      info->activity_id = path + 5;
+    }
+  else if (len2 == 4 && memcmp(path, "/ver/", 5) == 0)
+    {
+      /* a version resource */
+      path += 5;
+      len1 -= 5;
+      slash = ap_strchr_c(path, '/');
+      if (slash == NULL)
+        {
+          info->node_id = svn_fs_parse_id(path, len1, pool);
+          info->repos_path = "/";
+        }
+      else
+        {
+          info->node_id = svn_fs_parse_id(path, slash - path, pool);
+          info->repos_path = slash;
+        }
+      if (info->node_id == NULL)
+        goto malformed_uri;
+    }
+  else
+    goto unhandled_form;
+
+  return NULL;
+
+ malformed_uri:
+    return svn_error_create(SVN_ERR_APMOD_MALFORMED_URI, 0, NULL, pool,
+                            "The specified URI could not be parsed.");
+
+ unhandled_form:
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+                          "dav_svn_parse_uri does not support that "
+                          "URI form yet.");
 }
 
 

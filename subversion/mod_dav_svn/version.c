@@ -72,8 +72,9 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
                                    apr_array_header_t *activities,
                                    dav_resource **working_resource)
 {
-  const char *activity_id;
   const char *txn_name;
+  svn_error_t *serr;
+  dav_svn_uri_info parse;
 
   if (resource->type != DAV_RESOURCE_TYPE_VERSION)
     {
@@ -107,15 +108,127 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
                            "CHECKOUT.");
     }
 
-  activity_id = ((const char * const *)activities->elts)[0];
-  if ((txn_name = dav_svn_get_txn(resource->info->repos, activity_id)) == NULL)
+  serr = dav_svn_simple_parse_uri(&parse, resource,
+                                  APR_ARRAY_IDX(activities, 0, const char *),
+                                  resource->pool);
+  if (serr != NULL)
+    {
+      /* ### is BAD_REQUEST proper? */
+      return dav_svn_convert_err(serr, HTTP_CONFLICT,
+                                 "The activity href could not be parsed "
+                                 "properly.");
+    }
+  if (parse.activity_id == NULL)
+    {
+      return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
+                           "The provided href is not an activity URI.");
+    }
+
+  if ((txn_name = dav_svn_get_txn(resource->info->repos,
+                                  parse.activity_id)) == NULL)
     {
       return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
                            "The specified activity does not exist.");
     }
 
+  /* verify the specified version resource is the "latest", thus allowing
+     changes to be made. */
+  if (resource->baselined || resource->info->node_id == NULL)
+    {
+      /* a Baseline, or a standard Version Resource which was accessed
+         via a Label against a VCR within a Baseline Collection. */
+      /* ### at the moment, this branch is only reached for baselines */
+
+      svn_revnum_t youngest;
+
+      /* make sure the baseline being checked out is the latest */
+      serr = svn_fs_youngest_rev(&youngest, resource->info->repos->fs,
+                                 resource->pool);
+      if (serr != NULL)
+        {
+          /* ### correct HTTP error? */
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Could not determine the youngest "
+                                     "revision for verification against "
+                                     "the baseline being checked out.");
+        }
+
+      if (resource->info->root.rev != youngest)
+        {
+          return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
+                               "The specified baseline is not the latest "
+                               "baseline, so it may not be checked out.");
+        }
+    }
+  else
+    {
+      /* standard Version Resource */
+
+      svn_fs_id_t *res_id;
+      svn_fs_txn_t *txn;
+
+      /* open the specified transaction so that we can verify this version
+         resource corresponds to the current/latest in the transaction. */
+      serr = svn_fs_open_txn(&txn, resource->info->repos->fs, txn_name,
+                             resource->pool);
+      if (serr != NULL)
+        {
+          if (serr->apr_err == SVN_ERR_FS_NO_SUCH_TRANSACTION)
+            {
+              /* ### correct HTTP error? */
+              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                         "The transaction specified by the "
+                                         "activity does not exist");
+            }
+
+          /* ### correct HTTP error? */
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "There was a problem opening the "
+                                     "transaction specified by this "
+                                     "activity.");
+        }
+
+      /* assert: repos_path != NULL (for this type of resource) */
+
+      serr = svn_fs_node_id(&res_id, resource->info->root.root,
+                            resource->info->repos_path, resource->pool);
+      if (serr != NULL)
+        {
+          /* ### correct HTTP error? */
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Could not fetch the node ID of the "
+                                     "corresponding path within the "
+                                     "transaction tree.");
+        }
+
+      if (!svn_fs_id_eq(res_id, resource->info->node_id))
+        {
+          /* If the version resource is *newer* than the transaction
+             root, then the client started a commit, a new revision was
+             created within the repository, the client fetched the new
+             resource from that new revision, changed it (or merged in
+             a prior change), and then attempted to incorporate that
+             into the commit that was initially started.
+
+             So yes, it is possible to happen. And we could copy that new
+             node into our transaction and then modify it. But screw
+             that. We can stop the commit, and everything will be fine
+             again if the user simply restarts it (because we'll use
+             that new revision as the transaction root, thus incorporating
+             the new resource). */
+
+          return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
+                               "The version resource does not correspond "
+                               "to the resource within the transaction. "
+                               "Either the requested version resource is out "
+                               "of date (needs to be updated), or the "
+                               "requested version resource is newer than "
+                               "the transaction root (restart the commit).");
+        }
+    }
+
   *working_resource = dav_svn_create_working_resource(resource,
-                                                      activity_id,
+                                                      parse.activity_id,
                                                       txn_name,
                                                       resource->info->repos_path);
   return NULL;
@@ -128,6 +241,7 @@ static dav_error *dav_svn_uncheckout(dav_resource *resource)
 }
 
 static dav_error *dav_svn_checkin(dav_resource *resource,
+                                  int keep_checked_out,
                                   dav_resource **version_resource)
 {
   return dav_new_error(resource->pool, HTTP_NOT_IMPLEMENTED, 0,
