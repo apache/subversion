@@ -111,11 +111,11 @@ svn_stringbuf_t *svn_wc__adm_subdir (apr_pool_t *pool);
  * Varargs are (const char *)'s, the final one must be NULL.
  */
 svn_stringbuf_t * svn_wc__adm_path (svn_stringbuf_t *path,
-                                 svn_boolean_t tmp,
-                                 apr_pool_t *pool,
-                                 ...);
+                                    svn_boolean_t tmp,
+                                    apr_pool_t *pool,
+                                    ...);
 
-/* Return TRUE if a thing in the administratve area exists, FALSE
+/* Return TRUE if a thing in the administrative area exists, FALSE
    otherwise. */
 svn_boolean_t svn_wc__adm_path_exists (svn_stringbuf_t *path,
                                        svn_boolean_t tmp,
@@ -413,31 +413,6 @@ svn_error_t *svn_wc__log_commit (svn_stringbuf_t *path,
                                  svn_revnum_t revision,
                                  apr_pool_t *pool);
 
-
-/* Recurse from path, cleaning up unfinished log business. 
- * In each directory, starting from PATH, do the following:
- *
- *   1. If TARGETS is non-null but nothing in it indicates that this
- *      directory is relevant, then return immediately (if this dir or
- *      a file child of it appears in TARGETS, then this dir is
- *      relevant).  Else if TARGETS is null, then proceed to 2.
- *
- *   2. If the dir is locked, error out if BAIL_ON_LOCK is set.
- *      Otherwise, proceed to step 3.
- * 
- *   3. If there is a log, run each item in the log, in order.  When
- *      done, rm the log.
- *
- *   4. Clean out any remaining regular files in SVN/tmp/.
- *      And if BAIL_ON_LOCK is not set, remove any lock file as well.
- *
- * todo: this, along with all other recursers, will want to use the
- * svn_wc__compose_paths() convention for TARGETS eventually. 
- */
-svn_error_t *svn_wc__cleanup (svn_stringbuf_t *path,
-                              apr_hash_t *targets,
-                              svn_boolean_t bail_on_lock,
-                              apr_pool_t *pool);
 
 /* Process the instructions in the log file for PATH. */
 svn_error_t *svn_wc__run_log (svn_stringbuf_t *path, apr_pool_t *pool);

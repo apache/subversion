@@ -255,6 +255,12 @@ svn_client_file_diff (svn_stringbuf_t *path,
                       apr_pool_t *pool);
 
 
+/* Recursively cleanup a working copy directory DIR, finishing any
+   incomplete operations, removing lockfiles, etc. */
+svn_error_t *
+svn_client_cleanup (svn_stringbuf_t *dir,
+                    apr_pool_t *pool);
+
 #endif  /* SVN_CLIENT_H */
 
 #ifdef __cplusplus

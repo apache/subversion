@@ -1197,20 +1197,19 @@ svn_wc__run_log (svn_stringbuf_t *path, apr_pool_t *pool)
 /*** Recursively do log things. ***/
 
 svn_error_t *
-svn_wc__cleanup (svn_stringbuf_t *path,
-                 apr_hash_t *targets,
-                 svn_boolean_t bail_on_lock,
-                 apr_pool_t *pool)
+svn_wc_cleanup (svn_stringbuf_t *path,
+                apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_hash_t *entries = NULL;
   apr_hash_index_t *hi;
-  svn_boolean_t care_about_this_dir = 0;
+  svn_stringbuf_t *log_path = svn_wc__adm_path (path, 0, pool,
+                                                SVN_WC__ADM_LOG, NULL);
+  svn_boolean_t locked;
+  enum svn_node_kind kind;
 
   /* Recurse on versioned subdirs first, oddly enough. */
-  err = svn_wc_entries_read (&entries, path, pool);
-  if (err)
-    return err;
+  SVN_ERR (svn_wc_entries_read (&entries, path, pool));
 
   for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
     {
@@ -1227,25 +1226,6 @@ svn_wc__cleanup (svn_stringbuf_t *path,
           && (strcmp ((char *) key, SVN_WC_ENTRY_THIS_DIR) == 0))
         is_this_dir = TRUE;
 
-      /* If TARGETS tells us to care about this dir, we may need to
-         clean up locks later.  So find out in advance. */
-      if (targets)
-        {
-          if (! care_about_this_dir)
-            {
-              svn_stringbuf_t *target = svn_stringbuf_dup (path, pool);
-              svn_path_add_component 
-                (target,
-                 svn_stringbuf_ncreate ((char *) key, keylen, pool),
-                 svn_path_local_style);
-              
-              if (apr_hash_get (targets, target->data, target->len))
-                care_about_this_dir = 1;
-            }
-        }
-      else
-        care_about_this_dir = 1;
-
       if ((entry->kind == svn_node_dir) && (! is_this_dir))
         {
           /* Recurse */
@@ -1254,56 +1234,32 @@ svn_wc__cleanup (svn_stringbuf_t *path,
                                   svn_stringbuf_create ((char *) key, pool),
                                   svn_path_local_style);
 
-          err = svn_wc__cleanup (subdir, targets, bail_on_lock, pool);
-          if (err)
-            return err;
+          SVN_ERR (svn_wc_cleanup (subdir, pool));
         }
     }
 
+  /* Lock this working copy directory if it isn't already. */
+  SVN_ERR (svn_wc__locked (&locked, path, pool));
+  if (! locked)
+    SVN_ERR (svn_wc__lock (path, 0, pool));
 
-  if (care_about_this_dir)
+  /* Is there a log?  If so, run it and then remove it. */
+  err = svn_io_check_path (log_path, &kind, pool);
+  if (err)
     {
-      if (bail_on_lock)
-        {
-          svn_boolean_t locked;
-          err = svn_wc__locked (&locked, path, pool);
-          if (err)
-            return err;
-          
-          if (locked)
-            return svn_error_createf (SVN_ERR_WC_LOCKED,
-                                      0,
-                                      NULL,
-                                      pool,
-                                      "svn_wc__cleanup: %s locked",
-                                      path->data);
-        }
-      
-      /* Is there a log?  If so, run it and then remove it. */
-      {
-        enum svn_node_kind kind;
-        svn_stringbuf_t *log_path = svn_wc__adm_path (path, 0, pool,
-                                                   SVN_WC__ADM_LOG, NULL);
-        
-        err = svn_io_check_path (log_path, &kind, pool);
-        if (err) return err;
+      if (! APR_STATUS_IS_ENOENT(err->apr_err))
+        return err;
+    }
+  else if (kind == svn_node_file)
+    SVN_ERR (svn_wc__run_log (path, pool));
 
-        if (kind == svn_node_file)
-          {
-            err = svn_wc__run_log (path, pool);
-            if (err) return err;
-          }
-      }
-
-      /* Remove any lock here.  But we couldn't even be here if there were
-         a lock file and bail_on_lock were set, so do the obvious check
-         first. */
-      if (! bail_on_lock)
-        {
-          err = svn_wc__unlock (path, pool);
-          if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
-            return err;
-        }
+  /* Remove the lock here, making sure that the administrative
+     directory still exists after running the log! */
+  if (svn_wc__adm_path_exists (path, 0, pool))
+    {
+      err = svn_wc__unlock (path, pool);
+      if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
+        return err;
     }
 
   return SVN_NO_ERROR;
