@@ -103,39 +103,47 @@
       mezcladas, hay algunas limitaciones en cómo podemos<!--TODO:
       on how far we can abuse-->abusar de este modelo.</para>
 
-    <para>From a theoretical point of view, we define <quote>revision
-      5 of directory <filename>foo</filename></quote> to mean a
-      specific collection of directory-entries and properties.  Now
-      suppose we start adding and removing files from
-      <filename>foo</filename>, and then commit.  It would be a lie
-      to say that we still have revision 5 of
-      <filename>foo</filename>.  However, if we bumped
-      <filename>foo</filename>'s revision number after the commit,
-      that would be a lie too; there may be other changes to
-      <filename>foo</filename> we haven't yet received, because we
-      haven't updated yet.</para>
+    <para>Desde un punto de vista teórico, definimos <quote>revisión
+      5 del directorio <filename>foo</filename></quote> para significar
+      una colección específica de directorios-entradas y características.
+      Ahora suponga que empezamos a añadir y a quitar ficheros de
+      <filename>foo</filename>, y luego envíamos el cambio. Sería una
+      mentira decir que todavía tenemos la revisión 5 de
+      <filename>foo</filename>. Sin embargo, si vemos <!--TODO:
+      if we bumped <filename>foo</filename>'s revision number-->el número
+      de revisión de <filename>foo</filename> despues del envío,
+      tambien sería esto una mentira; puede haber otros cambios en
+      <filename>foo</filename> que todavía no hayamos recibido, porque
+      no hemos actualizado todavia.</para>
     
-    <para>Subversion deals with this problem by quietly tracking
-      committed adds and deletes in the <filename>.svn</filename>
-      area.  When you eventually run <command>svn update</command>,
-      all accounts are settled with the repository, and the
-      directory's new revision number is set correctly.
-      <emphasis>Therefore, only after an update is it truly safe to
-      say that you have a <quote>perfect</quote> revision of a
-      directory.</emphasis> Most of the time, your working copy will
-      contain <quote>imperfect</quote> directory revisions.</para>
+    <para>Subversion trata este problema siguiendo silenciosamente
+      <!--TODO:by quietly tracking committed adds and deletes-->
+      las agregaciones y las eliminaciones enviadas en el área
+      <filename>.svn</filename>. Cuando usted ejecuta finalmente
+      <command>svn update</command>, todas las cuentas se fijan
+      <!--TODO:are settled--> con el repositorio, y el nuevo número
+      de revisión se fija correctamente. <emphasis>Por lo tanto,
+      solamente después de una actualización es verdaderamente
+      seguro decir que usted tiene una revisión <quote>perfecta</quote>
+      de un directorio.</emphasis> La mayoría del tiempo, su copia
+      de trabajo contendrá revisiones <quote>imperfectas</quote> del
+      directorio.</para>
     
-    <para>Similarly, a problem arises if you attempt to commit
-      property changes on a directory.  Normally, the commit would
-      bump the working directory's local revision number.  But again,
-      that would be a lie, because there may be adds or deletes that
-      the directory doesn't yet have, because no update has happened.
-      <emphasis>Therefore, you are not allowed to commit
-      property-changes on a directory unless the directory is
-      up-to-date.</emphasis></para>
+    <para>Similarmente, un problema surge si usted intenta enviar
+      <!--TODO:property changes on a directory--> cambios de las
+      caracteristicas de un directorio. Normalmente, el envío
+      <!--TODO:would bump--> chocaría con  el número local de revisión
+      del directorio de trabajo. Pero otra vez, eso sería una mentira,
+      porque puede haber añadidos<!--TODO:adds or deletes--> o
+      eliminaciones que el directorio todavía no tiene, porque no ha
+      habido ninguna actualización. <emphasis>Por lo tanto, usted no
+      tiene<!--TODO:you are not allowed--> permiso para enviar
+      cambios-características<!--TODO:property-changes--> sobre un
+      directorio a menos que el directorio esté
+      actualizado.</emphasis></para>
 
-    <para>For more discussion about the limitations of directory
-      versioning, see <xref linkend="svn-ch-2-sect-3.4"/>.</para>
+    <para>Para más discusión sobre las limitaciones del versionado de
+      directorios, vea <xref linkend="svn-ch-2-sect-3.4"/>.</para>
 
   </sect1>
 
