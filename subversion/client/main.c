@@ -84,6 +84,10 @@ static svn_cl__cmd_opts_t proplist_opts = {
   svn_cl__proplist_command,
   "List all properties for given files and directories." };
 
+static svn_cl__cmd_opts_t propget_opts = {
+  svn_cl__propget_command,
+  "Get the value of a file or directory property." };
+
 static svn_cl__cmd_opts_t status_opts = {
   svn_cl__status_command,
   "Print the status of working copy files and directories." };
@@ -116,6 +120,10 @@ static svn_cl__cmd_desc_t cmd_table[] = {
   { "proplist",   FALSE,  svn_cl__proplist, &proplist_opts },
   { "plist",      TRUE,   svn_cl__proplist, &proplist_opts },
   { "pl",         TRUE,   svn_cl__proplist, &proplist_opts },
+
+  { "propget",    FALSE,  svn_cl__propget,  &propget_opts },
+  { "pget",       TRUE,   svn_cl__propget,  &propget_opts },
+  { "pg",         TRUE,   svn_cl__propget,  &propget_opts },
 
   { "status",     FALSE,  svn_cl__status,   &status_opts },
   { "stat",       TRUE,   svn_cl__status,   &status_opts },
@@ -228,6 +236,16 @@ parse_command_options (int argc,
           else
             p_opt_st->revision = (svn_revnum_t) atoi (argv[i]);
         }
+      else if (strcmp (argv[i], "--name") == 0)
+        {
+          if (++i >= argc)
+            {
+              fprintf (stderr, needs_arg, cmdname, "name");
+              exit (EXIT_FAILURE);
+            }
+          else
+            p_opt_st->name = svn_string_create (argv[i], pool);
+        }
       else if (strcmp (argv[i], "--force") == 0)
         p_opt_st->force = 1;
       else if (*(argv[i]) == '-')
@@ -286,7 +304,18 @@ parse_command_options (int argc,
       case svn_cl__commit_command:
       case svn_cl__status_command:
       case svn_cl__proplist_command:
+      case svn_cl__propget_command:
         p_opt_st->target = svn_string_create (".", pool);
+      default:
+      }
+
+  /* Check the need for a property name */
+  if (p_opt_st->name == NULL)
+    switch (cmd_code)
+      {
+      case svn_cl__propget_command:
+        fprintf (stderr, "svn %s: need \"--name PROPERTY_NAME\"\n", cmdname);
+        exit (EXIT_FAILURE);
       default:
       }
 
