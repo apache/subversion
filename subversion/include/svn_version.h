@@ -130,99 +130,114 @@ extern "C" {
 
 
 
-/* Querying the version number */
+/* Version queries and compatibility checks */
 
 /**
- * @since New in 1.1.
+ * Version information. Each library contains a function called
+ * svn_<i>libname</i>_version() that returns a pointer to a statically
+ * allocated object of this type.
  *
- * Version information. */
+ * @since New in 1.1.
+ */
 typedef struct svn_version_t
 {
-  int major;
-  int minor;
-  int micro;
+  int major;                    /**< Major version number */
+  int minor;                    /**< Minor version number */
+  int micro;                    /**< Patch number */
 
   /**
-   * The verison tag (@t SVN_VER_NUMTAG). Must always point to a
-   * statically allocated string, not something from a pool.
+   * The verison tag (#SVN_VER_NUMTAG).\ Must always point to a
+   * statically allocated string.
    */
   const char *tag;
 } svn_version_t;
 
-
 /**
+ * Define a static svn_version_t object.
  * @since New in 1.1.
- *
- * Generate the prototype for a version-query function. Returns a
- * pointer to a statically allocated @t svn_version_t structure.
  */
-#define SVN_VER_GEN_PROTO(name) \
-const svn_version_t *svn_##name##_version (void)
-
-/** 
- * @since New in 1.1.
- *
- * Generate the implementation of a version-query function. */
-#define SVN_VER_GEN_IMPL(name) \
-const svn_version_t *svn_##name##_version (void) \
-{ \
-  static const svn_version_t versioninfo = \
+#define SVN_VERSION_DEFINE(name) \
+  static const svn_version_t name = \
     { \
       SVN_VER_MAJOR, \
       SVN_VER_MINOR, \
       SVN_VER_MICRO, \
       SVN_VER_NUMTAG \
-    }; \
-  return &versioninfo; \
-}
+    } \
 
 /**
+ * Generate the implementation of a version query function.
  * @since New in 1.1.
- *
- * Check version compatibility for calls to the library. Returns @t
- * TRUE if the version info in @a versioninfo is compatible with the
- * one in @a major, @a minor, @a micro and @tag.
  */
-svn_boolean_t svn_ver_compatible (const svn_version_t *versioninfo,
-                                  int major, int minor, int micro,
-                                  const char *tag);
+#define SVN_VERSION_BODY \
+  SVN_VERSION_DEFINE (versioninfo); \
+  return &versioninfo
 
 /**
- * @since New in 1.1.
+ * Check library version compatibility. Returns #TRUE if the clent's
+ * version, given in @a my_version, is compatible with the library
+ * version, provided in @a lib_version.
  *
- * Check version compatibility for callbacks from the library. Returns
- * @t TRUE if the version info in @a versioninfo is compatible with
- * the one in @a major, @a minor, @a micro and @tag.
+ * This function checks for version compatibility as per our
+ * guarantees, but requires an exact match when linking to an
+ * unreleased library. A development client is always compatible with
+ * a previous released library.
+ *
+ * @since New in 1.1.
  */
-svn_boolean_t svn_ver_callback_compatible (const svn_version_t *versioninfo,
-                                           int major, int minor, int micro,
-                                           const char *tag);
-
-/** 
- * @since New in 1.1.
- *
- * Shorthand for calling @t svn_ver_compatible. */
-#define SVN_VER_COMPATIBLE(name) \
-  svn_ver_compatible(svn_##name##_version(), \
-                     SVN_VER_MAJOR, SVN_VER_MINOR, SVN_VER_MICRO, \
-                     SVN_VER_NUMTAG)
-
-/** 
- * @since New in 1.1.
- *
- * Shorthand for calling @t svn_ver_callback_compatible. */
-#define SVN_VER_CALLBACK_COMPATIBLE(name) \
-  svn_ver_callback_compatible(svn_##name##_version(), \
-                              SVN_VER_MAJOR, SVN_VER_MINOR, SVN_VER_MICRO, \
-                              SVN_VER_NUMTAG)
+svn_boolean_t svn_ver_compatible (const svn_version_t *my_version,
+                                  const svn_version_t *lib_version);
 
 
 /**
+ * An entry in the compatibility checklist.
+ * @see svn_ver_check_list()
  * @since New in 1.1.
- * (A prototype is being generated here, and the prototype is new in 1.1.)
+ */
+typedef struct svn_version_checklist_t
+{
+  const char *label;            /**< Entry label */
+
+  /** Version query function for this entry */
+  const svn_version_t *(*version_query) (void);
+} svn_version_checklist_t;
+
+
+/**
+ * Version error generator function type. The @a label and @a
+ * versioninfo parameters come from a version compatibility
+ * checklist. Implementations should wrap @a child a new
+ * #SVN_ERR_VERSION_MISMATCH error.
  *
- * libsvn_subr doesn't have an svn_subr header, so put the prototype here. */
-SVN_VER_GEN_PROTO(subr);
+ * @see svn_ver_check_list(), svn_version_checklist_t
+ * @since New in 1.1.
+ */
+typedef svn_error_t *(*svn_ver_error_generator_t)
+     (const char *label,
+      const svn_version_t *versioninfo,
+      svn_error_t *child);
+
+/**
+ * Perform a series of version compatibility checks. Checks if @a
+ * my_version is compatible with each entry in @a checklist, and calls
+ * @a mismatch_error for every incompatible entry, chaining and
+ * returning the generated errors. @a checklist must end with an entry
+ * whose label is @c NULL.
+ *
+ * @since New in 1.1.
+ */
+svn_error_t *svn_ver_check_list (const svn_version_t *my_version,
+                                 const svn_version_checklist_t *checklist,
+                                 svn_ver_error_generator_t mismatch_error);
+
+
+/* libsvn_subr doesn't have an svn_subr header, so put the prototype here. */
+/**
+ * Get libsvn_subr version information.
+ * @since New in version 1.1.
+ */
+const svn_version_t *svn_subr_version (void);
+
 
 #ifdef __cplusplus
 }

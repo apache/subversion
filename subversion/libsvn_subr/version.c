@@ -18,54 +18,52 @@
 
 
 
+#include "svn_error.h"
 #include "svn_version.h"
 
-SVN_VER_GEN_IMPL(subr)
-
-
-/* These functions check for version compatibility, as per our
-   compatilbility guarantees, but require an exact match when linking
-   to a non-release library version. A development client is always
-   compatible with a previous released library. */
-
-
-svn_boolean_t svn_ver_compatible (const svn_version_t *versioninfo,
-                                  int major, int minor, int micro,
-                                  const char *tag)
+const svn_version_t *
+svn_subr_version (void)
 {
-  if (versioninfo->tag[0] != '\0')
-    /* Development library; require exact match. */
-    return (major == versioninfo->major
-            && minor == versioninfo->minor
-            && micro == versioninfo->micro
-            && 0 == strcmp (tag, versioninfo->tag));
-  else if (tag[0] != '\0')
-    /* Development client; must be newer than the library. */
-    return (major == versioninfo->major
-            && (minor > versioninfo->minor
-                || (minor == versioninfo->minor
-                    && micro > versioninfo->micro)));
-  else
-    /* General compatibility rules for released versions. */
-    return (major == versioninfo->major
-            && minor >= versioninfo->minor);
+  SVN_VERSION_BODY;
 }
 
 
-/* Callback compatibility rules are as call rules, but inverted. */
-
-svn_boolean_t svn_ver_callback_compatible (const svn_version_t *versioninfo,
-                                           int major, int minor, int micro,
-                                           const char *tag)
+svn_boolean_t svn_ver_compatible (const svn_version_t *my_version,
+                                  const svn_version_t *lib_version)
 {
-  svn_version_t clientinfo;
-  clientinfo.major = major;
-  clientinfo.minor = minor;
-  clientinfo.micro = micro;
-  clientinfo.tag = tag;
-  return svn_ver_compatible (&clientinfo,
-                             versioninfo->major,
-                             versioninfo->minor,
-                             versioninfo->micro,
-                             versioninfo->tag);
+  if (lib_version->tag[0] != '\0')
+    /* Development library; require exact match. */
+    return (my_version->major == lib_version->major
+            && my_version->minor == lib_version->minor
+            && my_version->micro == lib_version->micro
+            && 0 == strcmp (my_version->tag, lib_version->tag));
+  else if (my_version->tag[0] != '\0')
+    /* Development client; must be newer than the library. */
+    return (my_version->major == lib_version->major
+            && (my_version->minor > lib_version->minor
+                || (my_version->minor == lib_version->minor
+                    && my_version->micro > lib_version->micro)));
+  else
+    /* General compatibility rules for released versions. */
+    return (my_version->major == lib_version->major
+            && my_version->minor >= lib_version->minor);
+}
+
+
+svn_error_t *
+svn_ver_check_list (const svn_version_t *my_version,
+                    const svn_version_checklist_t *checklist,
+                    svn_ver_error_generator_t mismatch_error)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  int i;
+
+  for (i = 0; checklist[i].label != NULL; ++i)
+    {
+      const svn_version_t *lib_version = checklist[i].version_query();
+      if (!svn_ver_compatible (my_version, lib_version))
+        err = mismatch_error (checklist[i].label, lib_version, err);
+    }
+
+  return err;
 }
