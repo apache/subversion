@@ -1036,7 +1036,7 @@ main (int argc, const char * const *argv)
   /* Set up our cancellation support. */
   apr_signal (SIGINT, signal_handler);
 #ifdef SIGHUP
-  apr_signal (SIGTERM, signal_handler);
+  apr_signal (SIGHUP, signal_handler);
 #endif
 #ifdef SIGTERM
   apr_signal (SIGTERM, signal_handler);
