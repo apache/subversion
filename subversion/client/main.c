@@ -129,7 +129,6 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "diff",     FALSE, svn_cl__diff,
     "Display local file changes as contextual diffs.\n"
     "usage: diff [TARGETS]\n" },
-  { "df",         TRUE, NULL, NULL },
   { "di",         TRUE, NULL, NULL },
 
   { "update",     FALSE, svn_cl__update,
