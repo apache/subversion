@@ -44,6 +44,9 @@ BOOK_HTML_XSLTPROC_OPTS =
 # BOOK_PDF_XSLTPROC_OPTS = --stringparam page.height 9in --stringparam page.width 6.4in
 # BOOK_PS_XSLTPROC_OPTS = --stringparam page.height 9in --stringparam page.width 6.4in
 
+# Uncomment the following line if you'd like to print on A4 paper
+# BOOK_PDF_XSLTPROC_OPTS = --stringparam paper.type A4
+
 all: all-html all-pdf all-ps
 
 install: install-book install-misc-docs
