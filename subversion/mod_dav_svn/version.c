@@ -816,6 +816,8 @@ static dav_error * dav_svn__drev_report(const dav_resource *resource,
   svn_revnum_t rev;
   apr_bucket_brigade *bb;
   svn_error_t *err;
+  apr_status_t apr_err;
+  dav_error *derr = NULL;
 
   /* Find the DAV:creationdate element and get the requested time from it. */
   ns = dav_svn_find_ns(doc->namespaces, "DAV:");
@@ -849,15 +851,25 @@ static dav_error * dav_svn__drev_report(const dav_resource *resource,
     }
 
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
-  ap_fprintf(output, bb,
-             DAV_XML_HEADER DEBUG_CR
-             "<S:dated-rev-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-             "xmlns:D=\"DAV:\">" DEBUG_CR
-             "<D:version-name>%" SVN_REVNUM_T_FMT "</D:version-name>"
-             "</S:dated-rev-report>", rev);
-  ap_fflush(output, bb);
+  apr_err = ap_fprintf(output, bb,
+                       DAV_XML_HEADER DEBUG_CR
+                       "<S:dated-rev-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+                       "xmlns:D=\"DAV:\">" DEBUG_CR
+                       "<D:version-name>%" SVN_REVNUM_T_FMT "</D:version-name>"
+                       "</S:dated-rev-report>", rev);
+  if (apr_err)
+    derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                               HTTP_INTERNAL_SERVER_ERROR,
+                               "Error writing REPORT response.");
 
-  return NULL;
+  /* Flush the contents of the brigade (returning an error only if we
+     don't already have one). */
+  if (((apr_err = ap_fflush(output, bb))) && (! derr))
+    derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
+                               HTTP_INTERNAL_SERVER_ERROR,
+                               "Error flushing brigade.");
+
+  return derr;
 }
 
 static dav_error *dav_svn_deliver_report(request_rec *r,
