@@ -78,7 +78,7 @@ do_tests (apr_pool_t *pool)
   printf ("Testing libsvn_string...\n");
 
   {
-    printf ("   %d. Make svn_string from cstring %n",
+    printf ("    %2d. Make svn_string from cstring %n",
             test_number, &written);
     a = svn_string_create (phrase_1, pool);
 
@@ -98,7 +98,7 @@ do_tests (apr_pool_t *pool)
   }
 
   {
-    printf ("   %d. Make svn_string from substring of cstring %n",
+    printf ("    %2d. Make svn_string from substring of cstring %n",
             test_number, &written);
     b = svn_string_ncreate (phrase_2, 16, pool);
 
@@ -121,7 +121,7 @@ do_tests (apr_pool_t *pool)
     char *tmp;
     size_t old_len;
 
-    printf ("   %d. Appending svn_string to svn_string %n",
+    printf ("    %2d. Appending svn_string to svn_string %n",
             test_number, &written);
     tmp = apr_palloc (pool, (a->len + b->len + 1));
     strcpy (tmp, a->data);
@@ -145,7 +145,7 @@ do_tests (apr_pool_t *pool)
   }
 
   {
-    printf ("   %d. Append bytes, then compare two strings %n",
+    printf ("    %2d. Append bytes, then compare two strings %n",
             test_number, &written);
     svn_string_appendbytes (a, ", new bytes to append", 11, pool);
 
@@ -166,7 +166,7 @@ do_tests (apr_pool_t *pool)
   }
 
   {
-    printf ("   %d. Dup two strings, then compare %n",
+    printf ("    %2d. Dup two strings, then compare %n",
             test_number, &written);
     c = svn_string_dup (a, pool);
 
@@ -188,7 +188,7 @@ do_tests (apr_pool_t *pool)
   {
     char *tmp;
     size_t old_len;
-    printf ("   %d. Chopping a string %n",
+    printf ("    %2d. Chopping a string %n",
             test_number, &written);
 
     old_len = c->len;
@@ -215,7 +215,7 @@ do_tests (apr_pool_t *pool)
   }
 
   {
-    printf ("   %d. Emptifying a string %n",
+    printf ("    %2d. Emptifying a string %n",
             test_number, &written);
 
     svn_string_setempty (c);
@@ -237,7 +237,7 @@ do_tests (apr_pool_t *pool)
   }
 
   {
-    printf ("   %d. Filling a string with hashmarks %n",
+    printf ("    %2d. Filling a string with hashmarks %n",
             test_number, &written);
 
     svn_string_fillchar (a, '#');
@@ -270,7 +270,7 @@ do_tests (apr_pool_t *pool)
     int chopped_okay_2 = 0;
     int chopped_okay_3 = 0;
 
-    printf ("   %d. String chopping %n",
+    printf ("    %2d. String chopping %n",
             test_number, &written);
 
     s = svn_string_create ("chop from slash/you'll never see this", pool);
@@ -290,6 +290,46 @@ do_tests (apr_pool_t *pool)
         && (num_chopped_1 == strlen ("/you'll never see this"))
         && (num_chopped_2 == 0)
         && (num_chopped_3 == strlen ("chop from slash")))
+      {
+        print_dots (max_pad - written);
+        printf (" OK\n");
+      }
+    else
+      {
+        print_dots (max_pad - written);
+        printf (" FAILED\n");
+      }
+    
+    test_number++;
+  }
+
+  {
+    svn_string_t *s, *t;
+    size_t len_1 = 0;
+    size_t len_2 = 0;
+    size_t block_len_1 = 0;
+    size_t block_len_2 = 0;
+
+    printf ("    %2d. Block initialization and growth %n",
+            test_number, &written);
+
+    s = svn_string_create ("a small string", pool);
+    len_1       = (s->len);
+    block_len_1 = (s->blocksize);
+
+    t = svn_string_create (", plus a string more than twice as long", pool);
+    svn_string_appendstr (s, t, pool);
+    len_2       = (s->len);
+    block_len_2 = (s->blocksize);
+
+    /* Test that:
+     *   - The initial block was just the right fit.
+     *   - The block more than doubled (because second string so long).
+     *   - The block grew by a power of 2.
+     */
+    if ((len_1 == (block_len_1 - 1))
+        && ((block_len_2 / block_len_1) > 2)
+        && (((block_len_2 / block_len_1) % 2) == 0))
       {
         print_dots (max_pad - written);
         printf (" OK\n");
