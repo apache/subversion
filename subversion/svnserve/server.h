@@ -27,8 +27,24 @@
 extern "C" {
 #endif /* __cplusplus */
 
-svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
-                   svn_boolean_t tunnel, svn_boolean_t read_only,
+typedef struct serve_params_t {
+  /* The virtual root of the repositories to serve.  The client URL
+     path is interpreted relative to this root and is not allowed to
+     escape it. */
+  const char *root;
+
+  /* True if the connection is tunneled over an ssh-like transport,
+     such that the client may use EXTERNAL to authenticate as the
+     current uid's username. */
+  svn_boolean_t tunnel;
+
+  /* True if the deprecated read-only flag was specified on the
+     command-line, which forces all connections to be read-only. */
+  svn_boolean_t read_only;
+} serve_params_t;
+
+/* Serve the connection CONN according to the parameters PARAMS. */
+svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                    apr_pool_t *pool);
 
 #ifdef __cplusplus

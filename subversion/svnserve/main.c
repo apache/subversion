@@ -165,9 +165,8 @@ static apr_status_t redirect_stdout(void *arg)
 
 /* "Arguments" passed from the main thread to the connection thread */
 struct serve_thread_t {
-  const char *root;
   svn_ra_svn_conn_t *conn;
-  svn_boolean_t read_only;
+  serve_params_t *params;
   apr_pool_t *pool;
 };
 
@@ -176,7 +175,7 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
 {
   struct serve_thread_t *d = data;
 
-  svn_error_clear(serve(d->conn, d->root, FALSE, d->read_only, d->pool));
+  svn_error_clear(serve(d->conn, d->params, d->pool));
   svn_pool_destroy(d->pool);
 
   return NULL;
@@ -186,7 +185,7 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
 int main(int argc, const char *const *argv)
 {
   enum run_mode run_mode = run_mode_none;
-  svn_boolean_t read_only = FALSE, foreground = FALSE;
+  svn_boolean_t foreground = FALSE;
   apr_socket_t *sock, *usock;
   apr_file_t *in_file, *out_file;
   apr_sockaddr_t *sa;
@@ -196,7 +195,8 @@ int main(int argc, const char *const *argv)
   apr_getopt_t *os;
   char errbuf[256];
   int opt;
-  const char *arg, *root = "/";
+  serve_params_t params;
+  const char *arg;
   apr_status_t status;
   svn_ra_svn_conn_t *conn;
   apr_proc_t proc;
@@ -218,6 +218,9 @@ int main(int argc, const char *const *argv)
 
   apr_getopt_init(&os, pool, argc, argv);
 
+  params.root = "/";
+  params.tunnel = FALSE;
+  params.read_only = FALSE;
   while (1)
     {
       status = apr_getopt_long(os, svnserve__options, &opt, &arg);
@@ -260,13 +263,13 @@ int main(int argc, const char *const *argv)
           break;
 
         case 'r':
-          SVN_INT_ERR(svn_utf_cstring_to_utf8(&root, arg, pool));
-          root = svn_path_internal_style(root, pool);
-          SVN_INT_ERR(svn_path_get_absolute(&root, root, pool));
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&params.root, arg, pool));
+          params.root = svn_path_internal_style(params.root, pool);
+          SVN_INT_ERR(svn_path_get_absolute(&params.root, params.root, pool));
           break;
 
         case 'R':
-          read_only = TRUE;
+          params.read_only = TRUE;
           fprintf(stderr, "Warning: -R is deprecated.\n");
           fprintf(stderr, "Anonymous access is now read-only by default.\n");
           fprintf(stderr, "To change, use conf/svnserve.conf in repos:\n");
@@ -292,13 +295,13 @@ int main(int argc, const char *const *argv)
 
   if (run_mode == run_mode_inetd || run_mode == run_mode_tunnel)
     {
+      params.tunnel = (run_mode == run_mode_tunnel);
       apr_pool_cleanup_register(pool, pool, apr_pool_cleanup_null,
                                 redirect_stdout);
       apr_file_open_stdin(&in_file, pool);
       apr_file_open_stdout(&out_file, pool);
       conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
-      svn_error_clear(serve(conn, root, run_mode == run_mode_tunnel,
-                            read_only, pool));
+      svn_error_clear(serve(conn, &params, pool));
       exit(0);
     }
 
@@ -374,7 +377,7 @@ int main(int argc, const char *const *argv)
 
       if (run_mode == run_mode_listen_once)
         {
-          err = serve(conn, root, FALSE, read_only, connection_pool);
+          err = serve(conn, &params, connection_pool);
 
           if (err && err->apr_err != SVN_ERR_RA_SVN_CONNECTION_CLOSED)
             svn_handle_error(err, stdout, FALSE);
@@ -392,8 +395,7 @@ int main(int argc, const char *const *argv)
           status = apr_proc_fork(&proc, connection_pool);
           if (status == APR_INCHILD)
             {
-              svn_error_clear(serve(conn, root, FALSE, read_only,
-                                    connection_pool));
+              svn_error_clear(serve(conn, &params, connection_pool));
               apr_socket_close(usock);
               exit(0);
             }
@@ -431,8 +433,7 @@ int main(int argc, const char *const *argv)
             }
           thread_data = apr_palloc(connection_pool, sizeof(*thread_data));
           thread_data->conn = conn;
-          thread_data->root = root;
-          thread_data->read_only = read_only;
+          thread_data->params = &params;
           thread_data->pool = connection_pool;
           status = apr_thread_create(&tid, tattr, serve_thread, thread_data,
                                      connection_pool);
@@ -447,8 +448,7 @@ int main(int argc, const char *const *argv)
 
         case connection_mode_single:
           /* Serve one connection at a time. */
-          svn_error_clear(serve(conn, root, FALSE, read_only,
-                                connection_pool));
+          svn_error_clear(serve(conn, &params, connection_pool));
           svn_pool_destroy(connection_pool);
         }
     }
