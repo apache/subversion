@@ -562,6 +562,41 @@ def relocate_deleted_and_missing(sbox):
 
 #----------------------------------------------------------------------
 
+def delete_subdir(sbox):
+  "switch that deletes a sub-directory"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  A_url = svntest.main.current_repo_url + '/A'
+  A2_url = svntest.main.current_repo_url + '/A2'
+  A2_B_F_url = svntest.main.current_repo_url + '/A2/B/F'
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 2.\n'], [],
+                                     'cp', '-m', 'make copy', A_url, A2_url)
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 3.\n'], [],
+                                     'rm', '-m', 'delete subdir', A2_B_F_url)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/F' : Item(status='D '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/F')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak('A', switched='S')
+  expected_status.tweak('', 'iota', wc_rev=1)
+
+  # XFails with a 'directory not locked' error for A/B/F
+  svntest.actions.run_and_verify_switch(wc_dir, A_path, A2_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+#----------------------------------------------------------------------
+
 ### ...and a slew of others...
 
 ########################################################################
@@ -578,6 +613,7 @@ test_list = [ None,
               rev_update_switched_things,
               log_switched_file,
               relocate_deleted_and_missing,
+              XFail(delete_subdir)
               ]
 
 if __name__ == '__main__':
