@@ -334,7 +334,7 @@ fetch_dirents (svn_ra_session_t *ras,
         }
     }
 
-  /* ### how to toss dph? */
+  dav_propfind_destroy(fc->dph);
 
   return NULL;
 }
