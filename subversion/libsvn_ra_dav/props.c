@@ -66,7 +66,6 @@ static const elem_defn elem_definitions[] =
   { ELEM_baseline_relpath_old, SVN_RA_DAV__PROP_BASELINE_RELPATH_OLD, 1 },
 #endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   { ELEM_md5_checksum, SVN_RA_DAV__PROP_MD5_CHECKSUM, 1 },
-  { ELEM_repository_uuid, SVN_RA_DAV__PROP_REPOSITORY_UUID, 1 },
   { 0 }
 };
 
@@ -90,8 +89,6 @@ static const struct ne_xml_elm neon_descriptions[] =
     NE_XML_CDATA },
 #endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   { SVN_DAV_PROP_NS_DAV, "md5-checksum", ELEM_md5_checksum,
-    NE_XML_CDATA },
-  { SVN_DAV_PROP_NS_DAV, "repository-uuid", ELEM_repository_uuid,
     NE_XML_CDATA },
 
   { NULL }
@@ -225,7 +222,6 @@ static int validate_element(void *userdata, ne_xml_elmid parent, ne_xml_elmid ch
           case ELEM_baseline_relpath_old:
 #endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
           case ELEM_md5_checksum:
-          case ELEM_repository_uuid:
           case ELEM_checked_in:
           case ELEM_resourcetype:
           case ELEM_vcc:

@@ -78,8 +78,7 @@ enum {
 #ifdef SVN_DAV_FEATURE_USE_OLD_NAMESPACES
   SVN_OLD_PROPID_baseline_relative_path,
 #endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
-  SVN_PROPID_md5_checksum,
-  SVN_PROPID_repository_uuid,
+  SVN_PROPID_md5_checksum
 };
 
 static const dav_liveprop_spec dav_svn_props[] =
@@ -110,7 +109,6 @@ static const dav_liveprop_spec dav_svn_props[] =
   SVN_RO_SVN_OLD_PROP(baseline_relative_path, baseline-relative-path),
 #endif /* SVN_DAV_FEATURE_USE_OLD_NAMESPACES */
   SVN_RO_SVN_PROP(md5_checksum, md5-checksum),
-  SVN_RO_SVN_PROP(repository_uuid, repository-uuid),
 
   { 0 } /* sentinel */
 };
@@ -515,16 +513,6 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       else
         return DAV_PROP_INSERT_NOTSUPP;
 
-      break;
-
-    case SVN_PROPID_repository_uuid:
-      serr = svn_fs_get_uuid(resource->info->repos->fs, &value, p);
-      if (serr != NULL)
-        {
-          /* ### what to do? */
-          value = "###error###";
-          break;
-        }
       break;
 
     default:

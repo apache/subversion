@@ -374,9 +374,9 @@ static svn_error_t *ra_svn_open(void **sess, const char *url,
   /* This is where the security layer would go into effect if we
    * supported security layers, which is a ways off. */
 
-  /* Send URL to server and read UUID response. */
+  /* Send URL to server and read empty response. */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "c", url));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "c", &conn->uuid));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
   *sess = conn;
   return SVN_NO_ERROR;
@@ -432,13 +432,6 @@ static svn_error_t *ra_svn_change_rev_prop(void *sess, svn_revnum_t rev,
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "change-rev-prop", "rcs",
                                rev, name, value));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *ra_svn_get_uuid(void *sess, const char **uuid)
-{
-  svn_ra_svn_conn_t *conn = sess;
-  *uuid = conn->uuid;
   return SVN_NO_ERROR;
 }
 
@@ -869,8 +862,7 @@ static const svn_ra_plugin_t ra_svn_plugin = {
   ra_svn_status,
   ra_svn_diff,
   ra_svn_log,
-  ra_svn_check_path,
-  ra_svn_get_uuid
+  ra_svn_check_path
 };
 
 svn_error_t *svn_ra_svn_init(int abi_version, apr_pool_t *pool,
