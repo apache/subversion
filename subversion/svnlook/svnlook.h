@@ -71,6 +71,7 @@ svnlook_rev_changes_editor (const svn_delta_edit_fns_t **editor,
                             void **edit_baton,
                             svn_fs_t *fs,
                             svn_fs_root_t *root,
+                            svn_fs_root_t *base_root,
                             apr_pool_t *pool);
 
 

@@ -37,7 +37,7 @@
   do {                                             \
     svn_error_t *svn_err__temp = (expr);           \
     if (svn_err__temp)                             \
-      svn_handle_error (svn_err__temp, stdout, 1); \
+      svn_handle_error (svn_err__temp, stdout, 0); \
   } while (0)
 
 
@@ -291,22 +291,23 @@ print_dirs_changed_tree (repos_node_t *root,
 static svn_error_t *
 do_dirs_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
 {
-  svn_fs_root_t *root1, *root2;
+  svn_fs_root_t *root, *base_root;
+  svn_revnum_t base_rev_id;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
   apr_hash_t *src_revs = apr_hash_make (pool);
   repos_node_t *tree;
 
+  SVN_ERR (get_root (&root, c, pool));
+  base_rev_id = c->rev_id - 1;
   apr_hash_set (src_revs, "", APR_HASH_KEY_STRING, &(c->rev_id));
-
-  SVN_ERR (get_root (&root1, c, pool));
-  SVN_ERR (svn_fs_revision_root (&root2, c->fs, c->rev_id - 1, pool));
+  SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
   SVN_ERR (svnlook_rev_changes_editor (&editor, &edit_baton, c->fs,
-                                       root1, pool));
+                                       root, base_root, pool));
   
-  SVN_ERR (svn_repos_dir_delta (root2, 
+  SVN_ERR (svn_repos_dir_delta (base_root, 
                                 svn_stringbuf_create ("", pool), 
-                                NULL, src_revs, root1, 
+                                NULL, src_revs, root, 
                                 svn_stringbuf_create ("", pool), 
                                 editor, edit_baton, pool));
 
@@ -363,22 +364,25 @@ print_changed_tree (repos_node_t *root,
 static svn_error_t *
 do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
 {
-  svn_fs_root_t *root1, *root2;
+  svn_fs_root_t *root, *base_root;
+  svn_revnum_t base_rev_id;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
   apr_hash_t *src_revs = apr_hash_make (pool);
   repos_node_t *tree;
 
-  apr_hash_set (src_revs, "", APR_HASH_KEY_STRING, &(c->rev_id));
+  SVN_ERR (get_root (&root, c, pool));
 
-  SVN_ERR (get_root (&root1, c, pool));
-  SVN_ERR (svn_fs_revision_root (&root2, c->fs, c->rev_id - 1, pool));
+  base_rev_id = c->rev_id - 1;
+  apr_hash_set (src_revs, "", APR_HASH_KEY_STRING, &base_rev_id);
+
+  SVN_ERR (svn_fs_revision_root (&base_root, c->fs, base_rev_id, pool));
   SVN_ERR (svnlook_rev_changes_editor (&editor, &edit_baton, c->fs,
-                                       root1, pool));
+                                       root, base_root, pool));
   
-  SVN_ERR (svn_repos_dir_delta (root2, 
+  SVN_ERR (svn_repos_dir_delta (base_root, 
                                 svn_stringbuf_create ("", pool), 
-                                NULL, src_revs, root1, 
+                                NULL, src_revs, root, 
                                 svn_stringbuf_create ("", pool), 
                                 editor, edit_baton, pool));
 
@@ -427,11 +431,11 @@ print_tree (repos_node_t *root,
     return;
 
   /* Recursively handle the node's children. */
-  print_tree (tmp_node, indentation + 2);
+  print_tree (tmp_node, indentation + 1);
   while (tmp_node->sibling)
     {
       tmp_node = tmp_node->sibling;
-      print_tree (tmp_node, indentation + 2);
+      print_tree (tmp_node, indentation + 1);
     }
 
   return;
@@ -442,22 +446,23 @@ print_tree (repos_node_t *root,
 static svn_error_t *
 do_tree (svnlook_ctxt_t *c, apr_pool_t *pool)
 {
-  svn_fs_root_t *root1, *root2;
+  svn_fs_root_t *root, *base_root;
+  svn_revnum_t base_rev_id;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
   apr_hash_t *src_revs = apr_hash_make (pool);
   repos_node_t *tree;
 
-  apr_hash_set (src_revs, "", APR_HASH_KEY_STRING, &(c->rev_id));
-
-  SVN_ERR (get_root (&root1, c, pool));
-  SVN_ERR (svn_fs_revision_root (&root2, c->fs, 0, pool));
+  SVN_ERR (get_root (&root, c, pool));
+  base_rev_id = c->rev_id - 1;
+  apr_hash_set (src_revs, "", APR_HASH_KEY_STRING, &base_rev_id);
+  SVN_ERR (svn_fs_revision_root (&base_root, c->fs, 0, pool));
   SVN_ERR (svnlook_rev_changes_editor (&editor, &edit_baton, c->fs,
-                                       root1, pool));
+                                       root, base_root, pool));
   
-  SVN_ERR (svn_repos_dir_delta (root2, 
+  SVN_ERR (svn_repos_dir_delta (base_root, 
                                 svn_stringbuf_create ("", pool), 
-                                NULL, src_revs, root1, 
+                                NULL, src_revs, root, 
                                 svn_stringbuf_create ("", pool), 
                                 editor, edit_baton, pool));
 
