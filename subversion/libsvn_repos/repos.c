@@ -140,9 +140,12 @@ create_repos_dir (const char *path, apr_pool_t *pool)
 
       SVN_ERR (svn_io_dir_empty (&is_empty, path, pool));
 
-      err = svn_error_createf (SVN_ERR_DIR_NOT_EMPTY, 0,
-                               "`%s' exists and is non-empty",
-                               path);
+      if (is_empty)
+        err = NULL;
+      else
+        err = svn_error_createf (SVN_ERR_DIR_NOT_EMPTY, 0,
+                                 "`%s' exists and is non-empty",
+                                 path);
     }
 
   return err;
