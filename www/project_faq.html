@@ -240,13 +240,19 @@ No such file or directory
 </pre>
 </blockquote>
 
-<p>These sometimes mean that a repository administrator should run:<p>
+<p>These sometimes mean that a repository administrator should run:</p>
 
 <blockquote>
 <pre>
 db_recover -ve -h /path/to/repos/db
 </pre>
 </blockquote>
+
+<p>Make sure you run this command as the user that owns and manages
+the database and not as root because running <tt>db_recover</tt> as
+root will leave root owned files in the db directory which cannot be
+opened by the non-root user that manages the database, which is
+typically your Apache process.</p>
 
 <p>Yes, we consider it a bug that <tt>db_recover</tt> needs to be run
 at all.  We're working on it, and volunteers are welcome :-).
@@ -341,8 +347,7 @@ software.  For Squid, the config option is</p>
    extension_methods REPORT MERGE MKACTIVITY CHECKOUT
 </pre>
 
-(Squid 2.4 and later already knows about PROPFIND.)
-</p>
+<p>(Squid 2.4 and later already knows about PROPFIND.)</p>
 
 <p>If it's difficult or impossible to get the proxy to allow
 Subversion traffic, but you want to check out the Subversion sources,
