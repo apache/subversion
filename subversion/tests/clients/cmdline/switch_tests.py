@@ -636,9 +636,12 @@ def nonrecursive_switching(sbox):
   wc1_new_file = os.path.join(wc1_dir, 'branch', 'version1', 'newfile')
   wc2_new_file = os.path.join(wc2_dir, 'newfile')
   wc2_mu_file = os.path.join(wc2_dir, 'mu')
+  wc2_B_dir = os.path.join(wc2_dir, 'B')
+  wc2_C_dir = os.path.join(wc2_dir, 'C')
+  wc2_D_dir = os.path.join(wc2_dir, 'D')
   
   # Check out the trunk as "wc2"
-  svntest.main.run_svn(None, 'co', '-N', trunk_url, wc2_dir)
+  svntest.main.run_svn(None, 'co', trunk_url, wc2_dir)
 
   # Make a branch, and add a new file, in "wc_dir" and repository
   svntest.main.run_svn(None, 'mkdir', '-m', '', branch_url)
@@ -651,6 +654,25 @@ def nonrecursive_switching(sbox):
   # Try to switch "wc2" to the branch (non-recursively)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'switch', '-N', version1_url, wc2_dir)
+
+  # Check the URLs of the (not switched) directories.
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'info', wc2_B_dir)
+  if out[1].find('/A/B') == -1:
+    print out[1]
+    raise svntest.Failure
+
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'info', wc2_C_dir)
+  if out[1].find('/A/C') == -1:
+    print out[1]
+    raise svntest.Failure
+
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'info', wc2_D_dir)
+  if out[1].find('/A/D') == -1:
+    print out[1]
+    raise svntest.Failure
 
   # Check the URLs of the switched files.
   # ("svn status -u" might be a better check: it fails when newfile's URL
@@ -744,7 +766,7 @@ test_list = [ None,
               relocate_deleted_and_missing,
               delete_subdir,
               XFail(file_dir_file),
-              XFail(nonrecursive_switching),
+              nonrecursive_switching,
               failed_anchor_is_target,
              ]
 
