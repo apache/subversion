@@ -219,8 +219,9 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       self.fake_projects[target] = fake.target
 
     # Get list of targets to generate project files for
-    install_targets = self.graph.get_all_sources(gen_base.DT_PROJECT)   \
-                      + self.graph.get_all_sources(gen_base.DT_INSTALL)
+    install_targets = self.graph.get_all_sources(gen_base.DT_INSTALL) \
+                      + self.graph.get_sources(gen_base.DT_LIST,
+                                               gen_base.LT_PROJECT)
 
     # Don't create projects for scripts
     install_targets = filter(lambda x: not isinstance(x, gen_base.TargetScript),

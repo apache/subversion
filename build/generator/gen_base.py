@@ -40,13 +40,6 @@ class GeneratorBase:
       raise GenError('Unable to extract version.')
 
     self.sections = { }
-    self.includes = [ ]
-    self.test_progs = [ ]
-    self.test_deps = [ ]
-    self.fs_test_progs = [ ]
-    self.fs_test_deps = [ ]
-    self.target_dirs = { }
-    self.manpages = [ ]
     self.graph = DependencyGraph()
 
     if not hasattr(self, 'skip_sections'):
@@ -74,33 +67,6 @@ class GeneratorBase:
       section.create_targets(self.graph, section_name, self.cfg,
                              self._extension_map)
 
-      self.manpages.extend(string.split(options.get('manpages', '')))
-
-      if issubclass(target_class, TargetLinked) and \
-        not issubclass(target_class, TargetSWIG):
-        # collect test programs
-        if issubclass(target_class, TargetExe):
-          if section.target.install == 'test':
-            self.test_deps.append(section.target.filename)
-            if options.get('testing') != 'skip':
-              self.test_progs.append(section.target.filename)
-          elif section.target.install == 'fs-test':
-            self.fs_test_deps.append(section.target.filename)
-            if options.get('testing') != 'skip':
-              self.fs_test_progs.append(section.filename)
-
-        # collect all the paths where stuff might get built
-        ### we should collect this from the dependency nodes rather than
-        ### the sources. "what dir are you going to put yourself into?"
-        self.target_dirs[section.target.path] = None
-        for pattern in string.split(options.get('sources', '')):
-          idx = string.rfind(pattern, '/')
-          if idx != -1:
-            ### hmm. probably shouldn't be os.path.join() right here
-            ### (at this point in the control flow; defer to output)
-            self.target_dirs[os.path.join(section.target.path,
-                                          pattern[:idx])] = None
-
     # compute intra-library dependencies
     for section in self.sections.values():
       dep_types = ((DT_LINK, section.options.get('libs')),
@@ -123,14 +89,7 @@ class GeneratorBase:
     self.scripts = _collect_paths(parser.get('test-scripts', 'paths'))
     self.fs_scripts = _collect_paths(parser.get('fs-test-scripts', 'paths'))
 
-    # get all the test scripts' directories
-    script_dirs = map(os.path.dirname, self.scripts + self.fs_scripts)
-
-    # remove duplicate directories between targets and tests
-    build_dirs = self.target_dirs.copy().keys()
-    build_dirs.extend(script_dirs)
-    build_dirs.extend(string.split(parser.get('swig-dirs', 'paths')))
-    self.build_dirs = build_dirs
+    self.swig_dirs = string.split(parser.get('swig-dirs', 'paths'))
 
   def find_sections(self, section_list):
     """Return a list of section objects from a string of section names."""
@@ -159,7 +118,7 @@ class GeneratorBase:
     # than I cared to do right now)
     #
     include_deps = _create_include_deps(self.includes)
-    for d in self.target_dirs.keys():
+    for d in unique(self.graph.get_sources(DT_LIST, LT_TARGET_DIRS)):
       hdrs = glob.glob(os.path.join(d, '*.h'))
       if hdrs:
         more_deps = _create_include_deps(hdrs, include_deps)
@@ -239,13 +198,23 @@ dep_types = [
   'DT_LINK',     # a libtool-linked filename, depending upon object fnames
   'DT_INCLUDE',  # filename includes (depends) on sources (all basenames)
   'DT_NONLIB',   # filename depends on object fnames, but isn't linked to them
-  'DT_PROJECT',  # visual c++ projects
   'DT_MSVC',     # MSVC project dependency
   'DT_FAKE',     # dependency through a do-nothing project, to prevent linking
+  'DT_LIST',     # arbitrary listS of values, see list_types below
+  ]
+
+list_types = [
+  'LT_PROJECT',       # Visual C++ projects (TargetSpecial instances)
+  'LT_TEST_DEPS',     # Test programs to build
+  'LT_TEST_PROGS',    # Test programs to run (subset of LT_TEST_DEPS)
+  'LT_FS_TEST_DEPS',  # File system test programs to build
+  'LT_FS_TEST_PROGS', # File system test programs to run
+  'LT_TARGET_DIRS',   # directories where files are built
+  'LT_MANPAGES',      # manpages
   ]
 
 # create some variables for these
-for _dt in dep_types:
+for _dt in dep_types + list_types:
   # e.g. DT_INSTALL = 'DT_INSTALL'
   globals()[_dt] = _dt
 
@@ -379,12 +348,42 @@ class TargetLinked(Target):
       # target (a linked item) depends upon object
       graph.add(DT_LINK, self.name, ofile)
 
+    # collect all the paths where stuff might get built
+    ### we should collect this from the dependency nodes rather than
+    ### the sources. "what dir are you going to put yourself into?"
+    graph.add(DT_LIST, LT_TARGET_DIRS, self.path)
+    for pattern in string.split(self.sources):
+      idx = string.rfind(pattern, '/')
+      if idx != -1:
+        ### hmm. probably shouldn't be os.path.join() right here
+        ### (at this point in the control flow; defer to output)
+        graph.add(DT_LIST, LT_TARGET_DIRS, os.path.join(self.path,
+                                                        pattern[:idx]))
+
 class TargetExe(TargetLinked):
   def __init__(self, name, options, cfg, extmap):
     TargetLinked.__init__(self, name, options, cfg, extmap)
 
     self.objext = extmap['exe', 'object']
     self.filename = os.path.join(self.path, name + extmap['exe', 'target'])
+
+    self.manpages = options.get('manpages', '')
+    self.testing = options.get('testing')
+
+  def add_dependencies(self, graph, cfg, extmap):
+    TargetLinked.add_dependencies(self, graph, cfg, extmap)
+
+    # collect test programs
+    if self.install == 'test':
+      graph.add(DT_LIST, LT_TEST_DEPS, self.filename)
+      if self.testing != 'skip':
+        graph.add(DT_LIST, LT_TEST_PROGS, self.filename)
+    elif self.install == 'fs-test':
+      graph.add(DT_LIST, LT_FS_TEST_DEPS, self.filename)
+      if self.testing != 'skip':
+        graph.add(DT_LIST, LT_FS_TEST_PROGS, self.filename)
+
+    graph.bulk_add(DT_LIST, LT_MANPAGES, string.split(self.manpages))
 
 class TargetScript(Target):
   def add_dependencies(self, graph, cfg, extmap):
@@ -543,7 +542,7 @@ class TargetExternal(Target):
 
   def add_dependencies(self, graph, cfg, extmap):
     if self.msvc_project:
-      graph.add(DT_PROJECT, 'notused', self)
+      graph.add(DT_LIST, LT_PROJECT, self)
 
 class TargetProject(Target):
   def __init__(self, name, options, cfg, extmap):
@@ -554,7 +553,7 @@ class TargetProject(Target):
     self.filename = name
 
   def add_dependencies(self, graph, cfg, extmap):
-    graph.add(DT_PROJECT, 'notused', self)
+    graph.add(DT_LIST, LT_PROJECT, self)
 
 class TargetSWIGProject(TargetProject):
   def __init__(self, name, options, cfg, extmap):
