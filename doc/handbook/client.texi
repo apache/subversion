@@ -784,7 +784,7 @@ Transmitting file data ..
 Committed revision 10.
 $
 
-  [ ... ] # developer continues on and realizes he made a mistake
+[...] # developer continues on and realizes he made a mistake
 
 $ svn merge -r 10:9 .
 U ./bar.c
@@ -812,7 +812,7 @@ Transmitting file data ..
 Committed revision 12.
 $
 
-[ ... ] # developer continues on and later makes another mistake
+[...] # developer continues on and later makes another mistake
 
 $ svn merge -r 13:12 baz/foo.c baz/foo.c
 U ./baz/foo.c
