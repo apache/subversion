@@ -192,7 +192,6 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   lrb.bb = apr_brigade_create(resource->pool,  /* not the subpool! */
                               output->c->bucket_alloc);
   lrb.output = output;
-  lrb.pool = svn_pool_create(resource->pool);
 
   /* Start the log report. */
   send_xml(&lrb,
@@ -215,9 +214,6 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
 
   /* flush the contents of the brigade */
   ap_fflush(output, lrb.bb);
-
-  /* All done with the pool! */
-  svn_pool_destroy(lrb.pool);
 
   if (serr)
     {
