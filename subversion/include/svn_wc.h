@@ -670,8 +670,8 @@ svn_wc_set_auth_file (svn_stringbuf_t *path,
 
 /*** Tmp files ***/
 
-/* Create a unique temporary file in administrative tmp/ area of PATH.
-   Return a handle in *FP.
+/* Create a unique temporary file in administrative tmp/ area of
+   directory PATH.  Return a handle in *FP.
    
    The flags will be APR_WRITE | APR_CREATE | APR_EXCL | APR_DELONCLOSE.
 
