@@ -1,10 +1,12 @@
 ## Makefile.in is generated from this by automake.
 
-noinst_PROGRAMS = deltaparse-test vdelta-test random-test xml-output-test
+noinst_PROGRAMS = deltaparse-test vdelta-test random-test xml-output-test \
+		  svndiff-test
 deltaparse_test_SOURCES = deltaparse-test.c
 vdelta_test_SOURCES = vdelta-test.c
 random_test_SOURCES = random-test.c
 xml_output_test_SOURCES = xml-output-test.c
+svndiff_test_SOURCES = svndiff-test.c
 
 ## Flags needed when compiling:
 CFLAGS = @CFLAGS@ -pthread
@@ -34,6 +36,12 @@ xml_output_test_LDADD = ../libsvn_delta.la \
                         ../../libsvn_string/libsvn_string.la \
                         ../../../apr/libapr.a \
                         ../../../expat-lite/libexpat.la
+
+svndiff_test_LDADD = ../libsvn_delta.la \
+                     ../../libsvn_subr/libsvn_subr.la \
+                     ../../libsvn_string/libsvn_string.la \
+                     ../../../apr/libapr.a \
+                     ../../../expat-lite/libexpat.la
 
 
 ## Make libtool be quiet
