@@ -39,7 +39,7 @@ backup_dir = "/usr/backup"
 svnadmin = "/usr/local/bin/svnadmin"
 
 # Path to db_archive program
-db_archive = "/usr/local/BerkeleyDB.3.3/bin/db_archive"
+db_archive = "/usr/local/BerkeleyDB.4.0/bin/db_archive"
 
 ######################################################################
 
