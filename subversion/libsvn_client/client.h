@@ -265,32 +265,6 @@ svn_client__get_diff_editor (svn_stringbuf_t *target,
 
 */
 
-/* State flags for use with the svn_client_commit_item_t structure
-   (see the note about the namespace for that structure, which also
-   applies to these flags). */
-#define SVN_CLIENT_COMMIT_ITEM_ADD         0x01
-#define SVN_CLIENT_COMMIT_ITEM_DELETE      0x02
-#define SVN_CLIENT_COMMIT_ITEM_TEXT_MODS   0x04
-#define SVN_CLIENT_COMMIT_ITEM_PROP_MODS   0x08
-#define SVN_CLIENT_COMMIT_ITEM_IS_COPY     0x10
-
-
-/* The commit candidate structure. */
-typedef struct svn_client_commit_item_t
-{
-  svn_stringbuf_t *path;      /* absolute working-copy path of item */
-  svn_stringbuf_t *url;       /* commit url for this item */
-  svn_wc_entry_t *entry;      /* entry for this item */
-  apr_byte_t state_flags;     /* state flags */
-
-} svn_client_commit_item_t; /* ### This should probably be
-                               svn_client__commit_item_t, but the
-                               final location for this structure has
-                               not yet been decided.  It will probably
-                               move to svn_client.h, now that I think
-                               about it, so it can be used with client
-                               binaries as they generate initial
-                               commit log messages. */
 
 
 /* ### This is TEMPORARY! Until we can find out the canonical
