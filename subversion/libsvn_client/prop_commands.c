@@ -87,9 +87,10 @@ struct propset_walk_baton
   const char *propname;  /* The name of the property to set. */
   const svn_string_t *propval;  /* The value to set. */
   svn_wc_adm_access_t *base_access;  /* Access for the tree being walked. */
+  svn_boolean_t force;  /* True iff force was passed. */
 };
 
-/* An entries-walk callback for svn_client_propset.
+/* An entries-walk callback for svn_client_propset2.
  * 
  * For the path given by PATH and ENTRY,
  * set the property named wb->PROPNAME to the value wb->PROPVAL,
@@ -120,8 +121,8 @@ propset_walk_cb (const char *path,
                                 (entry->kind == svn_node_dir ? path
                                  : svn_path_dirname (path, pool)),
                                 pool));
-  err = svn_wc_prop_set (wb->propname, wb->propval,
-                         path, adm_access, pool);
+  err = svn_wc_prop_set2 (wb->propname, wb->propval,
+                          path, adm_access, wb->force, pool);
   if (err)
     {
       if (err->apr_err != SVN_ERR_ILLEGAL_TARGET)
@@ -133,15 +134,20 @@ propset_walk_cb (const char *path,
 }
 
 svn_error_t *
-svn_client_propset (const char *propname,
-                    const svn_string_t *propval,
-                    const char *target,
-                    svn_boolean_t recurse,
-                    apr_pool_t *pool)
+svn_client_propset2 (const char *propname,
+                     const svn_string_t *propval,
+                     const char *target,
+                     svn_boolean_t recurse,
+                     svn_boolean_t force,
+                     apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *node;
 
+  /* Since Subversion controls the "svn:" property namespace, we
+     don't honor the 'force' flag here.  Unusual property
+     combinations, like svn:eol-style with a non-text svn:mime-type,
+     are understandable, but revprops on local targets are not. */
   if (is_revision_prop_name (propname))
     {
       return svn_error_createf (SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
@@ -180,17 +186,30 @@ svn_client_propset (const char *propname,
       wb.base_access = adm_access;
       wb.propname = propname;
       wb.propval = propval;
+      wb.force = force;
 
       SVN_ERR (svn_wc_walk_entries (target, adm_access,
                                     &walk_callbacks, &wb, FALSE, pool));
     }
   else
     {
-      SVN_ERR (svn_wc_prop_set (propname, propval, target, adm_access, pool));
+      SVN_ERR (svn_wc_prop_set2 (propname, propval, target,
+                                 adm_access, force, pool));
     }
 
   SVN_ERR (svn_wc_adm_close (adm_access));
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client_propset (const char *propname,
+                    const svn_string_t *propval,
+                    const char *target,
+                    svn_boolean_t recurse,
+                    apr_pool_t *pool)
+{
+  return svn_client_propset2 (propname, propval, target, recurse, 0, pool);
 }
 
 
