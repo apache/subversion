@@ -679,7 +679,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
               return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                          "Could not parse src-path URL.");
             }
-          src_path = apr_pstrdup(resource->pool, this_info.repos_path);
+          src_path = this_info.repos_path;
         }
 
       if (child->ns == ns && strcmp(child->name, "dst-path") == 0)
@@ -702,7 +702,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
               return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                          "Could not parse dst-path URL.");
             }
-          dst_path = apr_pstrdup(resource->pool, this_info.repos_path);
+          dst_path = this_info.repos_path;
         }
 
       if (child->ns == ns && strcmp(child->name, "update-target") == 0)
