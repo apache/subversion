@@ -43,6 +43,12 @@
 
 /* The root structure.  */
 
+typedef enum root_kind_t {
+  unspecified_root = 0,
+  revision_root,
+  transaction_root
+} root_kind_t;
+
 struct svn_fs_root_t
 {
 
@@ -54,12 +60,15 @@ struct svn_fs_root_t
      holds.  */
   apr_pool_t *pool;
 
-  /* For transaction roots, the name of that transaction, allocated in
-     POOL.  For revision roots, this is zero.  */
+  /* What kind of root is this?  */
+  root_kind_t kind;
+
+  /* For transaction roots (i.e., KIND == transaction_root), the name of
+     that transaction, allocated in POOL.  */
   const char *txn;
 
-  /* For revision roots, the number of that revision.  For transaction
-     roots, it's -1.  */
+  /* For revision roots (i.e., KIND == revision_root), the number of
+     that revision.  */
   svn_revnum_t rev;
 
   /* For revision roots, this is a dag node for the revision's root
@@ -86,7 +95,6 @@ make_root (svn_fs_t *fs,
 
   root->fs = fs;
   root->pool = pool;
-  root->rev = -1;
 
   return root;
 }
@@ -101,6 +109,7 @@ make_revision_root (svn_fs_t *fs,
                     apr_pool_t *pool)
 {
   svn_fs_root_t *root = make_root (fs, pool);
+  root->kind = revision_root;
   root->rev = rev;
   root->root_dir = root_dir;
 
@@ -116,6 +125,7 @@ make_txn_root (svn_fs_t *fs,
                apr_pool_t *pool)
 {
   svn_fs_root_t *root = make_root (fs, pool);
+  root->kind = transaction_root;
   root->txn = apr_pstrdup (root->pool, txn);
 
   return root;
@@ -133,14 +143,14 @@ root_node (dag_node_t **node_p,
            svn_fs_root_t *root,
            trail_t *trail)
 {
-  if (root->rev != -1)
+  if (root->kind == revision_root)
     {
       /* It's a revision root, so we already have its root directory
          opened.  */
       *node_p = svn_fs__dag_dup (root->root_dir, trail);
       return SVN_NO_ERROR;
     }
-  else if (root->txn)
+  else if (root->kind == transaction_root)
     {
       /* It's a transaction root.  Open a fresh copy.  */
       return svn_fs__dag_txn_root (node_p, root->fs, root->txn, trail);
@@ -159,11 +169,11 @@ mutable_root_node (dag_node_t **node_p,
                    const char *error_path,
                    trail_t *trail)
 {
-  /* If it's a revision root, we can't change its contents.  */
-  if (root->rev != -1)
+  if (root->kind == transaction_root)
+    return svn_fs__dag_clone_root (node_p, root->fs, root->txn, trail);
+  else
+    /* If it's not a transaction root, we can't change its contents.  */
     return svn_fs__err_not_mutable (root->fs, root->rev, error_path);
-
-  return svn_fs__dag_clone_root (node_p, root->fs, root->txn, trail);
 }
 
 
@@ -187,14 +197,14 @@ svn_fs_root_fs (svn_fs_root_t *root)
 int
 svn_fs_is_txn_root (svn_fs_root_t *root)
 {
-  return !! root->txn;
+  return root->kind == transaction_root;
 }
 
 
 int
 svn_fs_is_revision_root (svn_fs_root_t *root)
 {
-  return root->rev != -1;
+  return root->kind == revision_root;
 }
 
 
@@ -202,7 +212,7 @@ const char *
 svn_fs_txn_root_name (svn_fs_root_t *root,
                       apr_pool_t *pool)
 {
-  if (root->txn)
+  if (root->kind == transaction_root)
     return apr_pstrdup (pool, root->txn);
   else
     return 0;
@@ -212,7 +222,10 @@ svn_fs_txn_root_name (svn_fs_root_t *root,
 svn_revnum_t
 svn_fs_revision_root_revision (svn_fs_root_t *root)
 {
-  return root->rev;
+  if (root->kind == revision_root)
+    return root->rev;
+  else
+    return -1;
 }
 
 
