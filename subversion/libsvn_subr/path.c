@@ -733,6 +733,7 @@ svn_path_uri_decode (const svn_string_t *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
   apr_size_t i;
+  int query_start = 0;
 
   if ((! path) || (! path->data))
     return NULL;
@@ -743,8 +744,18 @@ svn_path_uri_decode (const svn_string_t *path, apr_pool_t *pool)
   for (i = 0; i < path->len; i++)
     {
       char c = path->data[i];
-      if (c == '+') /* _encode() doesn't do this, but it's easy...whatever. */
-        c = ' ';
+
+      if (c == '?')
+        {
+          /* Mark the start of the query string, if it exists. */
+          query_start = 1;
+        }
+      else if (c == '+' && query_start)
+        {
+          /* Only do this if we are into the query string.
+           * RFC 2396, section 3.3  */
+          c = ' ';
+        }
       else if (c == '%')
         {
           char digitz[3];
