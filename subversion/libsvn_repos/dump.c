@@ -235,7 +235,7 @@ dump_node (struct edit_baton *eb,
     {
       SVN_ERR (svn_stream_printf (eb->stream, pool,
                                   SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n", 
-                                  path));
+                                  (*path == '/') ? path + 1 : path));
       if (kind == svn_node_file)
         SVN_ERR (svn_stream_printf (eb->stream, pool,
                                     SVN_REPOS_DUMPFILE_NODE_KIND ": file\n"));
