@@ -126,7 +126,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { "cat", svn_cl__cat, {0},
     "Output the content of specified files or URLs.\n"
     "usage: cat TARGET [TARGET [TARGET ... ]]\n",
-    {'r'} },
+    {'r', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
 
   { "checkout", svn_cl__checkout, {"co"},
     "Check out a working copy from a repository.\n"
