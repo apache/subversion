@@ -716,7 +716,7 @@ bail_if_unresolved_conflict (svn_stringbuf_t *full_path,
      this directory must have a schedule of either _add or _delete.
 
    - else, this directory must not be marked for deletion, which is an
-     automatic to fail this verifation!
+     automatic excuse to fail this verification!
 */
 static svn_error_t *
 verify_tree_deletion (svn_stringbuf_t *dir,
@@ -1118,7 +1118,8 @@ report_single_mod (const char *name,
       /* If this entry is a directory, we do a sanity check and make
          sure that all the directory's children are also marked for
          deletion.  If not, we're in a screwy state. */
-      if (entry->kind == svn_node_dir)
+      if ((entry->kind == svn_node_dir) 
+          && (! entry->existence == svn_wc_existence_deleted))
         SVN_ERR (verify_tree_deletion (full_path, entry->schedule, 
                                        (*stack)->pool));
 
