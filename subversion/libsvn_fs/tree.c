@@ -3826,7 +3826,7 @@ svn_fs_contents_changed (svn_boolean_t *changed_p,
   if ((svn_fs_root_fs (root1)) != (svn_fs_root_fs (root2)))
     return svn_error_create
       (SVN_ERR_FS_GENERAL, NULL,
-       "Asking props changed in two different filesystems.");
+       "Asking contents changed in two different filesystems.");
   
   /* Check that both paths are files. */
   {
