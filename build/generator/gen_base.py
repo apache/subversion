@@ -111,13 +111,9 @@ class GeneratorBase:
       for dt_type, deps_list in dep_types:
         if deps_list:
           for dep_section in self.find_sections(deps_list):            
-            if isinstance(dep_section, Target.Section):              
-              for target in section.get_targets():
-                self.graph.bulk_add(dt_type, target.name,
-                                    dep_section.get_dep_targets(target))
-            else:
-              for target in section.get_targets():
-                self.graph.add(dt_type, target.name, ExternalLibrary(dep_section))
+            for target in section.get_targets():
+              self.graph.bulk_add(dt_type, target.name,
+                                  dep_section.get_dep_targets(target))
 
     # collect various files
     self.includes = _collect_paths(parser.get('options', 'includes'))
@@ -140,10 +136,7 @@ class GeneratorBase:
     """Return a list of section objects from a string of section names."""
     sections = [ ]
     for section_name in string.split(section_list):
-      if self.sections.has_key(section_name):
-        sections.append(self.sections[section_name])
-      else:
-        sections.append(section_name)
+      sections.append(self.sections[section_name])
     return sections
 
   def compute_hdr_deps(self):
@@ -290,9 +283,6 @@ class SourceFile(DependencyNode):
 class SWIGSource(SourceFile):
   def __init__(self, filename):
     SourceFile.__init__(self, filename, os.path.dirname(filename))
-  pass
-
-class ExternalLibrary(DependencyNode):
   pass
 
 lang_abbrev = {
@@ -482,16 +472,7 @@ class TargetSWIG(TargetLib):
     # the library depends upon the object
     graph.add(DT_LINK, self.name, ofile)
 
-    # add some language-specific libraries for languages other than
-    # Java (SWIG doesn't seem to provide a libswigjava.so)
     abbrev = lang_abbrev[self.lang]
-    if abbrev != 'java':
-      ### fix this. get these from the .conf file
-      graph.add(DT_LINK, self.name, ExternalLibrary('-lswig' + abbrev))
-    ### fix this, too. find the right Target swigutil lib. we know there
-    ### will be only one.
-    util = graph.get_sources(DT_INSTALL, 'swig-%s-lib' % abbrev)[0]
-    graph.add(DT_LINK, self.name, util)
 
     # the specified install area depends upon the library
     graph.add(DT_INSTALL, 'swig-' + abbrev, self)
@@ -522,6 +503,7 @@ class TargetSWIGRuntime(TargetSWIG):
     self.name = self.lang + '_runtime' 
     self.path = os.path.join(self.path, self.lang)
     self.filename = os.path.join(self.path, libname)
+    self.make_lib = '-lswig' + abbrev
 
     cfile = SWIGObject(os.path.join(self.path, cname), self.lang)
     ofile = SWIGObject(os.path.join(self.path, oname), self.lang)
@@ -540,10 +522,23 @@ class TargetSWIGRuntime(TargetSWIG):
         target.add_dependencies(graph, cfg, extmap)
         self.targets[lang] = target
 
+class TargetSWIGLib(TargetLib):
+  def __init__(self, name, options, cfg, extmap):
+    TargetLib.__init__(self, name, options, cfg, extmap)
+    self.lang = options.get('lang')
+
+  class Section(TargetLib.Section):
+    def get_dep_targets(self, target):
+      if target.lang == self.target.lang:
+        return [ self.target ]
+      return [ ]
+
 class TargetExternal(Target):
   def __init__(self, name, options, cfg, extmap):
     Target.__init__(self, name, options, cfg, extmap)
+    self.make_lib = options.get('make-lib')
     self.msvc_project = options.get('msvc-project')
+    self.msvc_libs = string.split(options.get('msvc-libs', ''))
     self.filename = name
 
   def add_dependencies(self, graph, cfg, extmap):
@@ -564,7 +559,7 @@ class TargetProject(Target):
 class TargetSWIGProject(TargetProject):
   def __init__(self, name, options, cfg, extmap):
     TargetProject.__init__(self, name, options, cfg, extmap)
-    self.lang = options.get('language')
+    self.lang = options.get('lang')
 
 _build_types = {
   'exe' : TargetExe,
@@ -575,6 +570,7 @@ _build_types = {
   'external' : TargetExternal,
   'project' : TargetProject,
   'swig_runtime' : TargetSWIGRuntime,
+  'swig_lib' : TargetSWIGLib,
   'swig_project' : TargetSWIGProject,
   'ra-module': TargetRaModule,
   'apache-mod': TargetApacheMod,
@@ -800,5 +796,15 @@ def _sorted_files(graph, area):
 
 class CircularDependencies(Exception):
   pass
+
+def unique(seq):
+  "Eliminate duplicates from a sequence"
+  list = [ ]
+  dupes = { }
+  for e in seq:
+    if not dupes.has_key(e):
+      dupes[e] = None
+      list.append(e)
+  return list
 
 ### End of file.

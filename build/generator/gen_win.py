@@ -27,15 +27,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     ('script', 'object'): '',
     }
 
-  envvars={
-    "$(SVN_APR_LIBS)": ["apr"],
-    "$(SVN_APRUTIL_LIBS)": ["aprutil", "apriconv"],
-    "$(NEON_LIBS)":  ["neon"],
-    "$(SVN_DB_LIBS)": [],
-    "$(SVN_XMLRPC_LIBS)": [],
-    "$(SVN_RA_LIB_LINK)": ["libsvn_ra_dav", "libsvn_ra_local", "libsvn_ra_svn"],
-  }
-
   def copyfile(self, dest, src):
     "Copy file to dest from src"
 
@@ -121,7 +112,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     self.dbbindll = "%s//%s.dll" % (string.replace(self.dblibpath,
                                                    "lib", "bin"),
                                     self.dblibname)
-    self.envvars["$(SVN_DB_LIBS)"] = [self.dblibname]
 
     # Find the right perl library name to link swig bindings with
     fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
@@ -196,18 +186,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       if os.path.exists(os.path.join(x, name)):
         return x
 
-  def subst_win_env(self, s):
-    "Substitute s with a value from envvars if a match was found"
-
-    if not self.envvars.has_key(s):
-      return [s]
-
-    a=self.envvars[s]
-    ret=[]
-    for b in a:
-      ret.append(b)
-    return ret
-
   def map_rootpath(self, list, rootpath):
     "Return a list with rootpath prepended"
 
@@ -220,18 +198,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     "Return a list with all the current os slashes replaced with windows slashes"
 
     return map(lambda x:string.replace(x, os.sep, '\\'), list)
-
-  def find_sections(self, section_list):
-    "Override the parents find_sections function so that environment substitution happens first"
-
-    sections = [ ]
-    for x in string.split(section_list):
-      for section_name in self.subst_win_env(x):
-        if self.sections.has_key(section_name):
-          sections.append(self.sections[section_name])
-        else:
-          sections.append(section_name)
-    return sections
 
   def get_install_targets(self):
     "Generate the list of targets"
@@ -367,12 +333,12 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         if hasattr(lib, 'proj_name'):
           depends.append(lib)
           depends.extend(self.get_win_depends(lib, 0))        
-      if not isinstance(target, gen_base.TargetSWIGRuntime):
-        depends.extend(self.sections['swig_runtime'].get_dep_targets(target))
     elif isinstance(target, gen_base.Target):
       depends.extend(self.get_win_depends(target, 3))
     else:
       assert 0
+
+    depends = filter(lambda x: hasattr(x, 'proj_name'), depends)
     depends.sort() ### temporary
     return depends
     
@@ -426,13 +392,15 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     """
 
     for obj in self.graph.get_sources(gen_base.DT_LINK, target.name, gen_base.Target):
-      if isinstance(obj, gen_base.TargetExternal) and no_externals:
+      if isinstance(obj, gen_base.TargetExternal) and obj.msvc_project and no_externals:
         continue
 
       if deps is not None:
         deps[obj] = None
 
-      if child_deps is not None:
+      if isinstance(obj, gen_base.TargetExternal) and not obj.msvc_project:
+        self.get_win_depends_impl(obj, deps, child_deps, no_externals, no_child_externals)
+      elif child_deps is not None:
         self.get_win_depends_impl(obj, child_deps, child_deps, no_child_externals, no_child_externals)
 
   def get_win_defines(self, target, cfg):
@@ -543,14 +511,11 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     nondeplibs = ['setargv.obj']
     depends = [target] + self.get_win_depends(target, 1)
     for dep in depends:
-      for lib in self.graph.get_sources(gen_base.DT_LINK, dep.name):
-        if not isinstance(lib, gen_base.ExternalLibrary):
-          continue
+      if isinstance(dep, gen_base.TargetExternal):
+        nondeplibs.extend(map(lambda x: x + '.lib', dep.msvc_libs))
 
-        if lib.filename == self.dblibname:
+        if dep.make_lib == '$(SVN_DB_LIBS)':
           nondeplibs.append(dblib)
-        else:
-          nondeplibs.append(lib.filename+'.lib')
 
     return nondeplibs
 
