@@ -21,6 +21,7 @@
 #include <stdio.h>
 
 #include "svn_pools.h"
+#include "cl.h"
 
 
 
@@ -46,11 +47,15 @@ report_warning (apr_status_t status, const char *warning)
 }
 
 
+#if 0
+/* We're not overriding the report_progress feedback vtable function
+   at this time. */
 static apr_status_t 
 report_progress (const char *action, int percentage)
 {
   return APR_SUCCESS;
 }
+#endif
 
 
 void
