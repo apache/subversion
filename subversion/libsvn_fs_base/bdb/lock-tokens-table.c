@@ -129,7 +129,6 @@ svn_fs_bdb__lock_tokens_get (apr_hash_t **lock_tokens_p,
   base_fs_data_t *bfd = fs->fsap_data;
   DBC *cursor;
   DBT key, value;
-  u_int32_t key_size;
   int db_err;
 
   apr_hash_t *lock_tokens = apr_hash_make(trail->pool);
@@ -137,7 +136,6 @@ svn_fs_bdb__lock_tokens_get (apr_hash_t **lock_tokens_p,
   svn_fs_base__trail_debug (trail, "lock-tokens", "cursor");
   db_err = bfd->lock_tokens->cursor (bfd->lock_tokens, trail->db_txn,
                                      &cursor, 0);  
-
   SVN_ERR (BDB_WRAP (fs, "creating cursor for reading lock tokens", db_err));
 
   /* Since the key is going to be returned as well as the value
@@ -145,7 +143,6 @@ svn_fs_bdb__lock_tokens_get (apr_hash_t **lock_tokens_p,
    */
   svn_fs_base__str_to_dbt (&key, path);
   key.flags |= DB_DBT_MALLOC;
-  key_size = key.size;
 
   /* Get the first matching key that is either equal or greater
    * than the one passed in, by passing in the DB_RANGE_SET flag.
@@ -153,11 +150,10 @@ svn_fs_bdb__lock_tokens_get (apr_hash_t **lock_tokens_p,
   db_err = cursor->c_get(cursor, &key, svn_fs_base__result_dbt (&value),
                          DB_SET_RANGE);
 
-  /* As long as the returned key size (== path length) is equal
-   * or larger than the original key size, we know it is either
-   * the passed in path or a decendant thereof.
+  /* As long as the prefix of the returned KEY matches PATH 
+   * we know it is either PATH or a decendant thereof.
    */
-  while (! db_err && key.size >= key_size)
+  while (! db_err && strncmp(path, key.data, key.size) != 0)
     {
       svn_fs_base__track_dbt (&key, trail->pool);      
       svn_fs_base__track_dbt (&value, trail->pool);
@@ -189,15 +185,11 @@ svn_fs_bdb__lock_token_exists (svn_boolean_t *token_exists,
   base_fs_data_t *bfd = fs->fsap_data;
   DBC *cursor;
   DBT key, value;
-  u_int32_t key_size;
   int db_err;
-
-  apr_hash_t *lock_tokens = apr_hash_make(trail->pool);
 
   svn_fs_base__trail_debug (trail, "lock-tokens", "cursor");
   db_err = bfd->lock_tokens->cursor (bfd->lock_tokens, trail->db_txn,
                                      &cursor, 0);  
-
   SVN_ERR (BDB_WRAP (fs, "creating cursor for reading lock tokens", db_err));
 
   /* Since the key is going to be returned as well as the value
@@ -205,7 +197,6 @@ svn_fs_bdb__lock_token_exists (svn_boolean_t *token_exists,
    */
   svn_fs_base__str_to_dbt (&key, path);
   key.flags |= DB_DBT_MALLOC;
-  key_size = key.size;
 
   /* Get the first matching key that is either equal or greater
    * than the one passed in, by passing in the DB_RANGE_SET flag.
@@ -216,11 +207,10 @@ svn_fs_bdb__lock_token_exists (svn_boolean_t *token_exists,
   svn_fs_base__track_dbt (&value, trail->pool);
   
 
-  /* If the returned key size (== path length) is equal or larger
-   * than the original key size, we know it is either the passed in
-   * path or a decendant thereof.
+  /* As long as the prefix of the returned KEY matches PATH 
+   * we know it is either PATH or a decendant thereof.
    */
-  *token_exists = (! db_err && key.size >= key_size);
+  *token_exists = (! db_err && strncmp(path, key.data, key.size) != 0);
 
   cursor->c_close(cursor);
 
