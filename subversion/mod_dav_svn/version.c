@@ -1206,7 +1206,7 @@ static apr_status_t send_get_locations_report(ap_filter_t *output,
       path_quoted = apr_xml_quote_string(pool, value, 1);
       apr_err = ap_fprintf(output, bb, "<S:location "
                            "rev=\"%ld\" path=\"%s\"/>" DEBUG_CR,
-                           *(svn_revnum_t *)key, path_quoted);
+                           *(const svn_revnum_t *)key, path_quoted);
       if (apr_err)
         return apr_err;
     }
