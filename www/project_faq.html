@@ -31,7 +31,7 @@
 <li><a href="#windows-repository">I'm running Subversion under windows
     and I can create a repository fine, but I get errors trying to
     import or check out from it.  What's wrong?</a></li>
-<li><a href="#proxy">How do I access a repository through a proxy?</a></li>
+<li><a href="#proxy">What if I'm behind a proxy?</a></li>
 <li><a href="#globalrev">Why does the entire repository share the 
     same revision number? I want each of my projects to have their
     own revision numbers.  </a></li>
@@ -272,10 +272,11 @@ svn import file:///some/path/to/repos/on/d/drive e:\file\to\be\imported
 
 <!-- ----------------------------------------------------------- -->
 
-<h2><a name="proxy">How do I access a repository through a proxy?</a></h2>
+<h2><a name="proxy">What if I'm behind a proxy?</a></h2>
 
-<p>First, edit your ~/.subversion/proxies configuration file to
-indicate which proxy to use.  There are comments in the file
+<p>The Subversion client can go through a proxy, if you configure it
+to do so.  First, edit your ~/.subversion/proxies configuration file
+to indicate which proxy to use.  There are comments in the file
 explaining how to do this.  If you don't have that file, get the
 latest Subversion client and run any command; this will cause the
 configuration directory and template files to be created.</p>
@@ -284,7 +285,7 @@ configuration directory and template files to be created.</p>
 the HTTP methods Subversion uses.  Some proxy servers do not support
 these methods by default: PROPFIND, REPORT, MERGE, MKACTIVITY,
 CHECKOUT.  In general, solving this depends on the particular proxy
-software.  For Squid, the config option is
+software.  For Squid, the config option is</p>
 
 <pre>
    #  TAG: extension_methods
@@ -298,6 +299,19 @@ software.  For Squid, the config option is
 
 (Squid 2.4 and later already knows about PROPFIND.)
 </p>
+
+<p>If it's difficult or impossible to get the proxy to allow
+Subversion traffic, but you want to check out the Subversion sources,
+you may be able to go around the proxy.  Some proxies that filter port
+80 nevertheless allow anything on port 81.  For this reason, the
+<tt>svn.collab.net</tt> repository server listens on port 81 as well
+as on port 80.  Try:</p>
+
+<pre>
+   svn checkout http://svn.collab.net:81/repos/svn/trunk -d subversion
+</pre>
+
+<p>and maybe the proxy will let you through.</p>
 
 <!-- ----------------------------------------------------------- -->
 
