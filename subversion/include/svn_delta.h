@@ -557,7 +557,7 @@ void svn_free_xml_parser (svn_xml_parser_t *parser);
    and batons that were used to create the parser.)  If this is the
    final parser "push", ISFINAL must be set to true.  */
 svn_error_t *
-svn_xml_parsebytes (char *buffer, apr_size_t len, int isFinal, 
+svn_xml_parsebytes (const char *buffer, apr_size_t len, int isFinal, 
                     svn_xml_parser_t *svn_xml_parser);
 
 
