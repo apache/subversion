@@ -92,7 +92,6 @@ static void parse_tunnel(const char *url, const char **tunnel,
       *tunnel = apr_pstrmemdup(pool, url, p - url);
       url = p;
     }
-  return;
 }
 
 static svn_error_t *make_connection(const char *hostname, unsigned short port,
