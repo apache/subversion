@@ -49,7 +49,6 @@
 
 
 
-#include <stdio.h>       /* temporary, for printf() */
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -758,6 +757,10 @@ add_or_replace_file (svn_string_t *name,
 
   entry = apr_hash_get (entries, name->data, name->len);
 
+  /* kff todo: if file is marked as removed by user, then flag a
+     conflict in the entry and proceed.  Similarly if it has changed
+     kind. */
+
   /* Sanity checks. */
   if (adding && entry)
     return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL,
@@ -1047,22 +1050,74 @@ close_file (void *file_baton)
 
   if (fb->text_changed)
     {
-      svn_string_t *tmp_txtb = svn_wc__text_base_path (fb->name, 1, fb->pool);
-      svn_string_t *txtb     = svn_wc__text_base_path (fb->name, 0, fb->pool);
+      enum svn_node_kind wfile_status = svn_node_unknown;
+      svn_string_t *tmp_txtb  = svn_wc__text_base_path (fb->name, 1, fb->pool);
+      svn_string_t *txtb      = svn_wc__text_base_path (fb->name, 0, fb->pool);
+      
+      err = svn_io_check_path (fb->path, &wfile_status, fb->pool);
+      if (err)
+        return err;
 
-      /* Preserve any local modifications. */
-      svn_xml_make_open_tag (&entry_accum,
-                             fb->pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_RUN_CMD,
-                             SVN_WC__LOG_ATTR_NAME,  /* kff todo */
-                             tmp_txtb,
-                             SVN_WC__LOG_ATTR_NAME,  /* kff todo */
-                             txtb,
-                             SVN_WC__LOG_ATTR_DEST,  /* kff todo */
-                             svn_string_create ("kff todo", fb->pool),
-                             NULL);
+      if (wfile_status == svn_node_file)
+        {
+          /* To preserve local changes dominantly over received
+             changes, we record the received changes as a diff, to be
+             applied over the working file.  Rejected hunks will be from
+             the received changes, not the user's changes. */
+          apr_file_t *received_diff_file;
+          svn_string_t *received_diff_file_name;
+          svn_string_t *diff_cmd;
+          int diff_status;
+          svn_string_t *tmp_txtb_full_path
+            = svn_wc__text_base_path (fb->path, 1, fb->pool);
+          svn_string_t *txtb_full_path
+            = svn_wc__text_base_path (fb->path, 0, fb->pool);
+          svn_string_t *tmp_loc
+            = svn_wc__adm_path (fb->dir_baton->path, 1, fb->pool, 
+                                fb->name->data, NULL);
 
+          err = svn_io_open_unique_file (&received_diff_file,
+                                         &received_diff_file_name,
+                                         tmp_loc,
+                                         ".diff",
+                                         fb->pool);
+          if (err)
+            return err;
+          else
+            {
+              apr_status_t apr_err;
+              apr_err = apr_close (received_diff_file);
+              if (apr_err)
+                return svn_error_createf (apr_err, 0, NULL, fb->pool,
+                                          "close_file: error closing %s",
+                                          received_diff_file_name->data);
+            }
+          
+          /* kff todo: need to handle non-text formats here, and support
+             other merge programs.  And quote the arguments like civilized
+             programmers. */
+          
+          /* Preserve any local modifications:
+             diff -u SVN/text-base/F SVN/tmp/text-base/F > SVN/tmp/F.blah.diff
+             kff todo: wish diff took a --output option.  Redirection
+             isn't very portable.  What to do? */
+          diff_cmd = svn_string_create ("diff -u -- ", fb->pool);
+          svn_string_appendstr (diff_cmd, txtb_full_path);
+          svn_string_appendcstr (diff_cmd, " ");
+          svn_string_appendstr (diff_cmd, tmp_txtb_full_path);
+          svn_string_appendcstr (diff_cmd, " > ");
+          svn_string_appendstr (diff_cmd, received_diff_file_name);
+          diff_status = system (diff_cmd->data);
+          /* kff todo: what the _heck_ is up with this return code?
+             Success as 256?  */
+          if (diff_status && (diff_status != 256))
+            return svn_error_createf
+              (0, diff_status, NULL, fb->pool,
+               "close_file: error diffing %s with %s, outputting to %s",
+               tmp_txtb_full_path->data, txtb_full_path->data,
+               received_diff_file_name->data);
+        }
+          
       /* Move new text base over old text base. */
       svn_xml_make_open_tag (&entry_accum,
                              fb->pool,
@@ -1084,6 +1139,20 @@ close_file (void *file_baton)
                              SVN_WC__LOG_ATTR_DEST,
                              fb->name,
                              NULL);
+
+#if 0
+      svn_xml_make_open_tag (&entry_accum,
+                             fb->pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_RUN_CMD,
+                             SVN_WC__LOG_ATTR_NAME,
+                             tmp_txtb,
+                             SVN_WC__LOG_ATTR_NAME,
+                             txtb,
+                             SVN_WC__LOG_ATTR_DEST,
+                             svn_string_create ("kff todo", fb->pool),
+                             NULL);
+#endif /* 0 */
     }
 
   /* MERGE ANY PROPERTY CHANGES, if they exist... */

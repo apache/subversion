@@ -127,8 +127,8 @@ typedef enum svn_errno_t {
   /* Working copy is not up-to-date w.r.t. the repository. */
   SVN_ERR_WC_NOT_UP_TO_DATE,
 
-  /* No names available for tmp files. */
-  SVN_ERR_IO_TMP_NAMES_EXHAUSTED,
+  /* No unique names available for tmp files. */
+  SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
 
   /* If a working copy conflict is found (say, during a commit) */
   SVN_ERR_WC_FOUND_CONFLICT,

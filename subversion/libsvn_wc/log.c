@@ -70,37 +70,39 @@ struct log_runner
 
 /*** The XML handlers. ***/
 
+#if 0
 static svn_error_t *
-merge_text (svn_string_t *path,
-            const char *name,
-            const char *saved_mods,
-            apr_pool_t *pool)
+run_cmd_under_directory (svn_string_t *path,
+                         const char *cmd,
+                         const char *dest,
+                         svn_boolean_t rename,
+                         apr_pool_t *pool)
 {
-  svn_string_t *filepath;
-  svn_error_t *err;
-  void *diff;
+  apr_status_t status;
+  svn_string_t *full_from_path, *full_dest_path;
 
-  filepath = svn_string_dup (path, pool);
-  svn_path_add_component_nts (filepath, name, svn_path_local_style);
+  full_from_path = svn_string_dup (path, pool);
+  full_dest_path = svn_string_dup (path, pool);
 
-  /* Get the local edits. */
-  err = svn_wc__get_local_changes (svn_wc__gnudiff_differ,
-                                   &diff,
-                                   filepath,
-                                   pool);
-  if (err)
-    return err;
+  svn_path_add_component_nts (full_from_path, name, svn_path_local_style);
+  svn_path_add_component_nts (full_dest_path, dest, svn_path_local_style);
 
-  /* Merge local edits into the updated revision. */
-  err = svn_wc__merge_local_changes (svn_wc__gnudiff_patcher,
-                                     diff,
-                                     filepath,
-                                     pool);
-  if (err)
-    return err;
+  if (rename)
+    {
+      status = apr_rename_file (full_from_path->data,
+                                full_dest_path->data, pool);
+      if (status)
+        return svn_error_createf (status, 0, NULL, pool,
+                                  "cp_or_mv_under_directory: "
+                                  "can't move %s to %s",
+                                  name, dest);
+    }
+  else
+    return svn_wc__copy_file (full_from_path, full_dest_path, pool);
 
   return SVN_NO_ERROR;
 }
+#endif /* 0 */
 
 
 /* Copy (or rename, if RENAME is non-zero) NAME to DEST, assuming that
