@@ -431,9 +431,14 @@ svn_error_t *svn_fs_commit_txn (const char **conflict_p,
  * discarded, and the filesystem is left unchanged.  Use @a pool for
  * any necessary allocations.
  *
- * NOTE: 
- *
  * Use @a pool for any necessary allocations.
+ *
+ * NOTE: This function first sets the state of the transaction to
+ * "dead", and then attempts to the purge the txn and any related data
+ * from the filesystem.  If some part of the cleanup process fails,
+ * the transaction and some portion of its data may remain in the
+ * database after this function returns.  Use @c svn_fs_purge_txn() to
+ * retry the transaction cleanup.
  */
 svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn,
                                apr_pool_t *pool);
@@ -442,7 +447,8 @@ svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn,
 /** Cleanup the dead transaction in @a fs whose ID is @a txn_id.  Use
  * @a pool for all allocations.  If the transaction is not yet dead,
  * the error @c SVN_ERR_FS_TRANSACTION_NOT_DEAD is returned.  (The
- * caller probably forgot to abort the transcation.) 
+ * caller probably forgot to abort the transaction, or the cleanup
+ * step of that abort failed for some reason.)
  */
 svn_error_t *svn_fs_purge_txn (svn_fs_t *fs,
                                const char *txn_id,

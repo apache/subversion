@@ -946,8 +946,7 @@ svn_fs_list_transactions (apr_array_header_t **names_p,
 
   args.names_p = &names;
   args.pool = pool;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_list_transactions, 
-                              &args, pool));
+  SVN_ERR (svn_fs__retry (fs, txn_body_list_transactions, &args, pool));
 
   *names_p = names;
   return SVN_NO_ERROR;

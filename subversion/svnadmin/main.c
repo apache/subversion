@@ -244,7 +244,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"rmtxns", subcommand_rmtxns, {0},
      "usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n\n"
      "Delete the named transaction(s).\n",
-     {0} },
+     {'q'} },
 
     {"setlog", subcommand_setlog, {0},
      "usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n\n"
@@ -611,12 +611,40 @@ subcommand_rmtxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* All the rest of the arguments are transaction names. */
   for (i = 0; i < args->nelts; i++)
     {
+      const char *txn_name = APR_ARRAY_IDX (args, i, const char *);
       const char *txn_name_utf8;
-      SVN_ERR (svn_utf_cstring_to_utf8 
-               (&txn_name_utf8, APR_ARRAY_IDX (args, i, const char *), 
-                subpool));
-      SVN_ERR (svn_fs_open_txn (&txn, fs, txn_name_utf8, subpool));
-      SVN_ERR (svn_fs_abort_txn (txn, subpool));
+      svn_error_t *err;
+
+      SVN_ERR (svn_utf_cstring_to_utf8 (&txn_name_utf8, txn_name, subpool));
+
+      /* Try to open the txn.  If that succeeds, try to abort it. */
+      err = svn_fs_open_txn (&txn, fs, txn_name_utf8, subpool);
+      if (! err)
+        err = svn_fs_abort_txn (txn, subpool);
+        
+      /* If either the open or the abort of the txn fails because that
+         transaction is dead, just try to purge the thing.  Else,
+         there was either an error worth reporting, or not error at
+         all.  */
+      if (err && (err->apr_err == SVN_ERR_FS_TRANSACTION_DEAD))
+        {
+          svn_error_clear (err);
+          err = svn_fs_purge_txn (fs, txn_name_utf8, subpool);
+        }
+
+      /* If we had a real from the txn open, abort, or purge, we clear
+         that error and just report to the user that we had an issue
+         with this particular txn. */
+      if (err)
+        {
+          svn_handle_error (err, stderr, FALSE /* non-fatal */);
+          svn_error_clear (err);
+        }
+      else if (! opt_state->quiet)
+        {
+          printf ("Transaction '%s' removed.\n", txn_name);
+        }
+
       svn_pool_clear (subpool);
     }
 
