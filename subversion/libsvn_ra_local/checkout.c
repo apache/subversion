@@ -149,7 +149,9 @@ walk_tree (svn_fs_root_t *root,
           void *new_dir_baton;
 
           SVN_ERR (editor->add_directory (dirent_name, dir_baton,
-                                          URL_path, NULL, &new_dir_baton));
+                                          URL_path,
+                                          SVN_INVALID_REVNUM, 
+                                          &new_dir_baton));
           SVN_ERR (set_any_props (root, dirent_path, new_dir_baton,
                                   editor, 1, subpool));
           /* Recurse */
@@ -162,7 +164,8 @@ walk_tree (svn_fs_root_t *root,
           void *file_baton;
 
           SVN_ERR (editor->add_file (dirent_name, dir_baton,
-                                     URL_path, NULL, &file_baton));          
+                                     URL_path, SVN_INVALID_REVNUM, 
+                                     &file_baton));          
           SVN_ERR (set_any_props (root, dirent_path, file_baton,
                                   editor, 0, subpool));
           SVN_ERR (send_file_contents (root, dirent_path, file_baton,

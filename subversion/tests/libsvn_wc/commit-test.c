@@ -39,7 +39,6 @@ main (int argc, char *argv[])
   apr_pool_t *globalpool;
   apr_file_t *stdout_handle;
   apr_hash_t *targets = NULL;
-  apr_hash_t *locks = NULL;
 
   const svn_delta_edit_fns_t *my_editor;
   void *my_edit_baton;
