@@ -145,11 +145,11 @@ Bindings changes that affect the build system:
       +1: breser
      
 Bindings changes that don't affect the build system:
-Already have three +1 votes:
+Already approved:
 
    [none pending right now]
 
-Don't yet have three +1 votes:
+Not yet approved:
 
 
    * r8057 (depends on core changes r8053, r8054)
