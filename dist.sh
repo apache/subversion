@@ -148,22 +148,24 @@ you probably want to use the "svn log" command -- and if it
 does not do what you need, please send in a patch!
 EOF
 
+ver_major=`echo $VERSION | cut -d '.' -f 1`
+ver_minor=`echo $VERSION | cut -d '.' -f 2`
+ver_micro=`echo $VERSION | cut -d '.' -f 3`
+
 vsn_file="$DISTPATH/subversion/include/svn_version.h"
 
-sed -e \
- "/#define *SVN_VER_TAG/s/dev build/r$REVISION_SVN/" \
+sed \
+ -e "/#define *SVN_VER_MAJOR/s/[0-9]\+/$ver_major/" \
+ -e "/#define *SVN_VER_MINOR/s/[0-9]\+/$ver_minor/" \
+ -e "/#define *SVN_VER_MICRO/s/[0-9]\+/$ver_micro/" \
+ -e "/#define *SVN_VER_TAG/s/dev build/r$REVISION_SVN/" \
+ -e '/#define *SVN_VER_NUMTAG/s/".*"/""/' \
+ -e "/#define *SVN_VER_REVISION/s/0/$REVISION_SVN/" \
   < "$vsn_file" > "$vsn_file.tmp"
 
-sed -e \
- "/#define *SVN_VER_NUMTAG/s/\+//" \
-  < "$vsn_file.tmp" > "$vsn_file.unq"
+mv -f "$vsn_file.tmp" "$vsn_file"
 
-sed -e \
- "/#define *SVN_VER_REVISION/s/0/$REVISION_SVN/" \
-  < "$vsn_file.unq" > "$vsn_file"
-
-rm -f "$vsn_file.tmp"
-rm -f "$vsn_file.unq"
+cp "$vsn_file" "svn_version.h.dist"
 
 # Do not use tar, it's probably GNU tar which produces tar files that are
 # not compliant with POSIX.1 when including filenames longer than 100 chars.
