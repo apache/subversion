@@ -98,6 +98,9 @@ svn_cl__checkout (apr_getopt_t *os,
       svn_stringbuf_t *repos_url
         = ((svn_stringbuf_t **) (opt_state->args->elts))[0];
 
+      /* Canonicalize the URL. */
+      svn_path_canonicalize (repos_url, svn_path_repos_style);
+
       /* Ensure that we have a default dir to checkout into. */
       if (! opt_state->target)
         local_dir = svn_path_last_component (repos_url,
