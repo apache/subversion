@@ -9,3 +9,9 @@ Status of 1.0.9:
 
 Candidate changes:
 
+  * r11137
+    Fix the verbose log code for revisions with no changed paths.
+    Justification:
+      Shallow silly bug.
+    Votes:
+      +1: bliss
