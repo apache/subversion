@@ -22,6 +22,7 @@
 
 /*** Includes. ***/
 
+#include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -41,6 +42,7 @@ svn_cl__cat (apr_getopt_t *os,
   apr_array_header_t *targets;
   int i;
   svn_stream_t *out;
+  apr_pool_t *subpool = svn_pool_create (pool);
 
   if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
     return svn_error_createf (SVN_ERR_CLIENT_REVISION_RANGE, NULL,
@@ -58,12 +60,14 @@ svn_cl__cat (apr_getopt_t *os,
 
   SVN_ERR (svn_stream_for_stdout (&out, pool));
 
-  for (i = 0; i < targets->nelts; i++)
+  for (i = 0; i < targets->nelts; i++, svn_pool_clear (subpool))
     {
       const char *target = ((const char **) (targets->elts))[i];
       SVN_ERR (svn_client_cat (out, target, &(opt_state->start_revision),
-                               ctx, pool));
+                               ctx, subpool));
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
     }
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }

@@ -511,14 +511,15 @@ sig_int (int unused)
 }
 
 /* Our cancellation callback. */
-static svn_error_t *
-check_cancel (void *baton)
+svn_error_t *
+svn_cl__check_cancel (void *baton)
 {
   if (cancelled)
-    return svn_error_create(SVN_ERR_CANCELLED, NULL, "caught SIGINT");
+    return svn_error_create (SVN_ERR_CANCELLED, NULL, "caught SIGINT");
   else
     return SVN_NO_ERROR;
 }
+
 
 
 /*** Main. ***/
@@ -995,7 +996,7 @@ main (int argc, const char * const *argv)
 
     /* Set up our cancellation support. */
     apr_signal (SIGINT, sig_int);
-    ctx.cancel_func = check_cancel;
+    ctx.cancel_func = svn_cl__check_cancel;
 
     /* Place any default --username or --password credentials into the
        auth_baton's run-time parameter hash. */

@@ -95,6 +95,7 @@ svn_cl__delete (apr_getopt_t *os,
       if (commit_info && ! opt_state->quiet)
         svn_cl__print_commit_info (commit_info);
       
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       svn_pool_clear (subpool);
     }
   

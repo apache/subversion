@@ -253,6 +253,7 @@ svn_cl__propedit (apr_getopt_t *os,
               printf ("No changes to property `%s' on `%s'\n",
                       pname, target_native);
             }
+          SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
         }
       svn_pool_destroy (subpool);
     }

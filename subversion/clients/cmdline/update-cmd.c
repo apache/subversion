@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include "svn_wc.h"
+#include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_path.h"
@@ -43,6 +44,7 @@ svn_cl__update (apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
+  apr_pool_t *subpool = svn_pool_create (pool);
   int i;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
@@ -63,17 +65,16 @@ svn_cl__update (apr_getopt_t *os,
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
                           FALSE, pool);
 
-  for (i = 0; i < condensed_targets->nelts; i++)
+  for (i = 0; i < condensed_targets->nelts; i++, svn_pool_clear (subpool))
     {
       const char *target = ((const char **) (condensed_targets->elts))[i];
       svn_error_t *err;
 
-      err = svn_client_update
-               (target,
-                &(opt_state->start_revision),
-                opt_state->nonrecursive ? FALSE : TRUE,
-                ctx,
-                pool);
+      err = svn_client_update (target,
+                               &(opt_state->start_revision),
+                               opt_state->nonrecursive ? FALSE : TRUE,
+                               ctx,
+                               subpool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
@@ -88,7 +89,9 @@ svn_cl__update (apr_getopt_t *os,
               return err;
         }
 
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
     }
 
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }

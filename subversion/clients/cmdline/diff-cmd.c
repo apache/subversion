@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include "svn_wc.h"
+#include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_path.h"
@@ -140,6 +141,8 @@ svn_cl__diff (apr_getopt_t *os,
     }
   else
     {
+      apr_pool_t *subpool = svn_pool_create (pool);
+
       /* This is the form 'svn diff -rN[:M] path1 path2 ...' 
 
          The code in main.c has already parsed '-r' and filled in
@@ -155,7 +158,7 @@ svn_cl__diff (apr_getopt_t *os,
 
       svn_opt_push_implicit_dot_target (targets, pool);
       
-      for (i = 0; i < targets->nelts; ++i)
+      for (i = 0; i < targets->nelts; ++i, svn_pool_clear (subpool))
         {
           const char *target = ((const char **) (targets->elts))[i];
   
@@ -190,8 +193,10 @@ svn_cl__diff (apr_getopt_t *os,
                                     outfile,
                                     errfile,
                                     ctx,
-                                    pool));
+                                    subpool));
+          SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
         }
+      svn_pool_destroy (subpool);
     }
   
   return SVN_NO_ERROR;

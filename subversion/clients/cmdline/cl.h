@@ -162,14 +162,17 @@ extern const apr_getopt_option_t svn_cl__options[];
 extern const char svn_cl__help_header[];
 extern const char svn_cl__help_footer[];
 
-
-/* Print out commit information found in COMMIT_INFO to the console. */
-void
-svn_cl__print_commit_info (svn_client_commit_info_t *commit_info);
+
+/* Our cancellation callback. */
+svn_error_t *svn_cl__check_cancel (void *baton);
 
 
 
 /*** Command-line output functions -- printing to the user. ***/
+
+/* Print out commit information found in COMMIT_INFO to the console. */
+void svn_cl__print_commit_info (svn_client_commit_info_t *commit_info);
+
 
 /* Print a hash that maps (char *) names to (svn_wc_status_t *)
    structs to stdout for human consumption.  Prints in abbreviated

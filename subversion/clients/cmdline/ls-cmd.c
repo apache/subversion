@@ -139,7 +139,7 @@ svn_cl__ls (apr_getopt_t *os,
                               opt_state->recursive, ctx, subpool));
 
       SVN_ERR (print_dirents (dirents, opt_state->verbose, subpool));
-
+      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       svn_pool_clear (subpool);
     }
 
