@@ -399,7 +399,19 @@ static int end_err_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
     case ELEM_human_readable:
       {
         if (cdata && *err)
-          (*err)->message = apr_pstrdup((*err)->pool, cdata);
+          {
+            /* On the server dav_error_response_tag() will add a leading
+               and trailing newline if DEBUG_CR is defined in mod_dav.h,
+               so remove any such characters here. */
+            apr_size_t len;
+            if (*cdata == '\n')
+              ++cdata;
+            len = strlen(cdata);
+            if (cdata[len-1] == '\n')
+              --len;
+
+            (*err)->message = apr_pstrmemdup((*err)->pool, cdata, len);
+          }
         break;
       }
 
