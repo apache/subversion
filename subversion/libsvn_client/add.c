@@ -49,9 +49,9 @@ svn_client_add (svn_string_t *path, apr_pool_t *pool)
   if (err)
     {
       if (err->apr_err == SVN_ERR_WC_ENTRY_EXISTS)
-		  return svn_error_createf(err->apr_err, err->src_err, err, NULL,
-				  "svn warning: Cannot add because: \"%s\" already exists.",
-				  path->data);
+        return svn_error_quick_wrap 
+          (err,
+           "svn warning: Cannot add because entry already exists.");
       else
           return err;
     }

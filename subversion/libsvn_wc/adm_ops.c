@@ -413,7 +413,7 @@ svn_wc_add_directory (svn_string_t *dir, apr_pool_t *pool)
 
   /* And finally, make sure this entry is marked for addition in its
      own administrative directory. */
-  SVN_ERR (svn_wc__entry_fold_sync_intelligently 
+  SVN_ERR (svn_wc__entry_fold_sync
            (dir, NULL, 0, svn_node_dir, SVN_WC_ENTRY_ADDED,
             0, 0, pool, NULL, NULL));
 
