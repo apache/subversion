@@ -85,3 +85,6 @@ List of 1.1 features/changes
 
   * svn export --native-eol
 
+  * In the section on "Supporting Multiple Repository Access Methods",
+    the chmod g+s command is no longer necessary for repositories
+    created with svn 1.1, since we take care of that now.
