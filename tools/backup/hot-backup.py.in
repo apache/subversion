@@ -22,7 +22,7 @@
 
 ######################################################################
 
-import sys, os, shutil, string
+import sys, os, shutil, string, re
 
 ######################################################################
 # Global Settings
@@ -36,7 +36,7 @@ db_archive = "/usr/local/BerkeleyDB.4.0/bin/db_archive"
 # Path to db_recover progrem
 db_recover = "/usr/local/BerkeleyDB.4.0/bin/db_recover"
 
-# Number of backups to keep around
+# Number of backups to keep around (0 for "keep them all")
 num_backups = 64
 
 ######################################################################
@@ -57,11 +57,38 @@ repo = os.path.basename(repo_dir)
 backup_dir = sys.argv[2]
 
 ######################################################################
+# Helper functions
+
+def comparator(a, b):
+  # We pass in filenames so there is never a case where they are equal.
+  regexp = re.compile("-(?P<revision>[0-9]+)(-(?P<increment>[0-9]+))?$")
+  matcha = regexp.search(a)
+  matchb = regexp.search(b)
+  reva = int(matcha.groupdict()['revision'])
+  revb = int(matchb.groupdict()['revision'])
+  if (reva < revb):
+    return -1
+  elif (reva > revb):
+    return 1
+  else:
+    inca = matcha.groupdict()['increment']
+    incb = matchb.groupdict()['increment']
+    if not inca:
+      return -1
+    elif not incb:
+      return 1;
+    elif (int(inca) < int(incb)):
+      return -1
+    else:
+      return 1
+
+######################################################################
+# Main
 
 print "Beginning hot backup of '"+ repo_dir + "'."
 
 
-# Step 1:  get the youngest revision.
+### Step 1: get the youngest revision.
 
 infile, outfile, errfile = os.popen3(svnlook + " youngest " + repo_dir)
 stdout_lines = outfile.readlines()
@@ -74,26 +101,36 @@ youngest = string.strip(stdout_lines[0])
 print "Youngest revision is", youngest
 
 
-# Step 2:  copy the whole repository structure.
+### Step 2: copy the whole repository structure.
 
 backup_subdir = os.path.join(backup_dir, repo + "-" + youngest)
 
-# If there is already a backup of this revision, append an increment
-# to the path.  (We still need to do a backup, because the repos might
-# have changed despite no new revision having been created.)
-try_count = 1
-while os.path.exists(backup_subdir):
-   backup_subdir = os.path.join(backup_dir, repo + "-"
-                                + youngest + "-" + `try_count`)
-   try_count += 1
+# If there is already a backup of this revision, then append the
+# next highest increment to the path. We still need to do a backup
+# because the repository might have changed despite no new revision
+# having been created. We find the highest increment and add one
+# rather than start from 1 and increment because the starting
+# increments may have already been removed due to num_backups.
 
+regexp = re.compile("^" + repo + "-" + youngest + "(-(?P<increment>[0-9]+))?$")
+directory_list = os.listdir(backup_dir)
+young_list = filter(lambda x: regexp.search(x), directory_list)
+if young_list:
+  young_list.sort(comparator)
+  increment = regexp.search(young_list.pop()).groupdict()['increment']
+  if increment:
+    backup_subdir = os.path.join(backup_dir, repo + "-" + youngest + "-"
+                                 + str(int(increment) + 1))
+  else:
+    backup_subdir = os.path.join(backup_dir, repo + "-" + youngest + "-1")
 
 print "Backing up repository to '" + backup_subdir + "'..."
 shutil.copytree(repo_dir, backup_subdir)
 print "Done."
 
 
-# Step 3:  re-copy the logfiles.  They must *always* be copied last.
+### Step 3: re-copy the Berkeley logfiles.  They must *always* be
+###         copied last.
 
 infile, outfile, errfile = os.popen3(db_archive + " -l -h "
                                      + os.path.join(repo_dir, "db"))
@@ -115,20 +152,8 @@ for item in stdout_lines:
 print "Backup completed."
 
 
-# Step 4:  look for a write `lock' file in backup_dir, else make one.
-
-lockpath = os.path.join(backup_dir, 'lock')
-if os.path.exists(lockpath):
-  print "Cannot cleanup logs:  lockfile already exists in", backup_dir
-  sys.exit(0)
-
-print "Writing lock for logfile cleanup..."
-fp = open(lockpath, 'a')  # open in (a)ppend mode
-fp.write("cleaning logfiles for repository " + repo_dir)
-fp.close()
-
-# Step 5:  put the archived database in a consistent state and remove
-#          the shared-memory environment files.
+### Step 4: put the archived database in a consistent state and remove
+###         the shared-memory environment files.
 
 infile, outfile, errfile = os.popen3(db_recover + " -h "
                                      + os.path.join(backup_subdir, "db"))
@@ -144,10 +169,25 @@ map(sys.stdout.write, stderr_lines)
 
 print "Done."
 
-# Step 6:  ask db_archive which logfiles can be expunged, and remove them.
+
+### Step 5: look for a write `lock' file in the repos_dir, else make one.
+
+lockpath = os.path.join(backup_dir, repo + 'lock')
+if os.path.exists(lockpath):
+  print "Cannot cleanup logs:  lockfile already exists in", backup_dir
+  sys.exit(0)
+
+print "Writing lock for logfile cleanup..."
+fp = open(lockpath, 'a')  # open in (a)ppend mode
+fp.write("cleaning logfiles for repository " + repo_dir)
+fp.close()
+
+
+### Step 6: ask db_archive which of the backup logfiles can be
+###         expunged, and remove them.
 
 infile, outfile, errfile = os.popen3(db_archive + " -a -h "
-                                     + os.path.join(repo_dir, "db"))
+                                     + os.path.join(backup_subdir, "db"))
 stdout_lines = outfile.readlines()
 stderr_lines = errfile.readlines()
 outfile.close()
@@ -163,28 +203,23 @@ for item in stdout_lines:
 
 print "Done."
 
-# Step 7:  remove the write lock.
+
+### Step 7:  remove the write lock.
 
 os.unlink(lockpath)
 print "Lock removed.  Cleanup complete."
 
-# Step 8:  finally, remove the repository back that's NUM_BACKUPS older
-# than the one we just created.  If there are multiple versions of
-# this repos backup, remove them too.
 
-kill_rev = int(youngest) - num_backups
-old_backup_subdir = os.path.join(backup_dir, repo + "-" + `kill_rev`)
-if os.path.exists(old_backup_subdir):
-  print "Removing old backup: " + old_backup_subdir
-  shutil.rmtree(old_backup_subdir)
-  try_count = 1
-  old_backup_subdir = os.path.join(backup_dir, repo + "-" + `kill_rev`
-                                   + "-" + `try_count`)
-  while os.path.exists(old_backup_subdir):
-     print "Removing old backup: " + old_backup_subdir
-     shutil.rmtree(old_backup_subdir)
-     try_count += 1
-     old_backup_subdir = os.path.join(backup_dir, repo + "-" + `kill_rev`
-                                      + "-" + `try_count`)
+### Step 8: finally, remove all repository backups other than the last
+###         NUM_BACKUPS.
 
-
+if num_backups > 0:
+  regexp = re.compile("^" + repo + "-[0-9]+")
+  directory_list = os.listdir(backup_dir)
+  old_list = filter(lambda x: regexp.search(x), directory_list)
+  old_list.sort(comparator)
+  del old_list[max(0,len(old_list)-num_backups):]
+  for item in old_list:
+    old_backup_subdir = os.path.join(backup_dir, item)
+    print "Removing old backup: " + old_backup_subdir
+    shutil.rmtree(old_backup_subdir)
