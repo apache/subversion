@@ -110,27 +110,27 @@ This works pretty well:  the details needs to be filled in below.
 
 
 
-OS X   (fitz/thom/sabi/sussman)
+OS X   (fitz/thom/sabi/sussman/jerenkrantz)
 ====
 
-NOTE: Apparently OS X's dav client is extremely sensitive; it won't
-write to any dav server that doesn't set environment variables in a
-specific way.  If you mount a DAV share in OS X and it appears
-read-only (when it shouldn't), then then you need to add this line to
-Apache2's httpd.conf:
+OS X's DAV client requires LOCK (DAV class 2 client).
 
-  BrowserMatch "^WebDAVFS/1.*" redirect-carefully
+Hacking it around so that "DAV: 2" is passed and it writes, but will
+fail when it tries to acquire a lock.  (How about implementing
+a no-op LOCK routine for now?)
 
-This sets the 'redirect-carefully' env. variable to 1, whenever an OS
-X client connects.
+DELETE works without LOCK.  Fun.
 
-There's an Apple issue on this:
-  
- http://docs.info.apple.com/article.html?artnum=107047&SaveKCWindowURL=http%3A%2F%2Fkbase.info.apple.com%2Fcgi-bin%2FWebObjects%2Fkbase.woa%2Fwa%2FSaveKCToHomePage&searchMode=Assisted&kbhost=kbase.info.apple.com&showButton=false&randomValue=100&showSurvey=false&sessionID=anonymous|160773135
+Note: It seems to try to create ._<file> as well.  Implications of this
+are not yet understood.
 
-Unfortunately, I've not yet been able to make this work.  OS X still
-mounts the share as read-only even when I add this directive.
+If you see a problem mounting the repository, you may need to enable
+the default BrowserMatch directive in httpd-std.conf for WebDAVFS.
+(It's included in the default httpd.conf now.)
 
+Something like:
+
+BrowserMatch "^WebDAVFS/1.[012]" redirect-carefully
 
 Linux davfs2   (hadaka)
 ============
