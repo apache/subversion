@@ -262,7 +262,7 @@ Committed revision 341.
       </figure>
       
       <sidebar>
-        <title>Copias baratas</title>
+        <title>Copias ligeras</title>
                 
         <para>El repositorio de Subversion sigue un diseño
           especial. Cuando copia un directorio, no necesita
@@ -278,22 +278,25 @@ Committed revision 341.
           ficheros continúan su existencia como enlaces a los
           ficheros originales del directorio original.</para>
       
-        <para>This is why you'll often hear Subversion users talk
-          about <quote>cheap copies</quote>.  It doesn't matter how
-          large the directory is&mdash;it takes a very tiny, constant
-          amount of time to make a copy of it.  In fact, this feature
-          is the basis of how commits work in Subversion: each
-          revision is a <quote>cheap copy</quote> of the previous
-          revision, with a few items lazily changed within.  (To read
-          more about this, visit Subversion's website and read about
-          the <quote>bubble up</quote> method in Subversion's design
-          documents.)</para>
+        <para>Por esta razón escuchará a los usuarios de Subversion
+          hablar con frecuencia sobre <quote>copias ligeras</quote>.
+          No importa cuán grande sea el directorio&mdash;sólo
+          requiere un tiempo constante muy pequeño realizar una
+          copia del mismo.  De hecho, esta es la característica en
+          la que se basan los cambios realizados en Subversion:
+          cada revisión es una <quote>copia ligera</quote> de
+          la revisión anterior, con algunos elementos cambiados.
+          (Para aprender más sobre esto, visite la página web de
+          Subversion y lea en los documentos sobre el diseño de
+          Subversion el método <quote>bubble up</quote>.)</para>
 
-        <para>Of course, these internal mechanics of copying and
-          sharing data are hidden from the user, who simply sees
-          copies of trees.  The main point here is that copies are
-          cheap, both in time and space.  Make branches as often as
-          you want. </para>
+        <para>Por supuesto, este mecanismo interno usado para copiar
+          y compartir datos está oculto al usuario, que simplemente
+          ve copias de árboles de ficheros. Lo importante es saber
+          que las copias son ligeras, tanto en tiempo como espacio.
+          Crée tantas ramas como desee.  <!-- TODO, aquí quizás cheap
+          debería traducirse tal cual.  Aparte, "crée" quizás pueda
+          reemplazarse por algo mejor--></para>
       </sidebar>
 
     </sect2>
