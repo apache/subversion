@@ -65,16 +65,19 @@ svn_diff__tree_create(svn_diff__tree_t **tree, apr_pool_t *pool)
 
 
 static
-svn_diff__node_t *
-svn_diff__tree_insert_token(svn_diff__tree_t *tree,
+svn_error_t *
+svn_diff__tree_insert_token(svn_diff__node_t **node, svn_diff__tree_t *tree,
                             void *diff_baton,
                             const svn_diff_fns_t *vtable,
                             apr_uint32_t hash, void *token)
 {
-  svn_diff__node_t *node;
+  svn_diff__node_t *new_node;
   svn_diff__node_t **node_ref;
   svn_diff__node_t *parent;
   int rv;
+
+  if (!token)
+    abort();
 
   parent = NULL;
   node_ref = &tree->root[hash % SVN_DIFF__HASH_SIZE];
@@ -85,15 +88,20 @@ svn_diff__tree_insert_token(svn_diff__tree_t *tree,
 
       rv = hash - parent->hash;
       if (!rv)
-        rv = vtable->token_compare(diff_baton, parent->token, token);
+        SVN_ERR(vtable->token_compare(diff_baton, parent->token, token, &rv));
 
       if (rv == 0)
         {
-          /* Discard the token */
+          /* Discard the previous token.  This helps in cases where
+           * only recently read tokens are still in memory.
+           */
           if (vtable->token_discard != NULL)
-            vtable->token_discard(diff_baton, token);
+            vtable->token_discard(diff_baton, parent->token);
 
-          return parent;
+          parent->token = token;
+          *node = parent;
+
+          return SVN_NO_ERROR;
         }
       else if (rv > 0)
         {
@@ -106,16 +114,16 @@ svn_diff__tree_insert_token(svn_diff__tree_t *tree,
     }
 
   /* Create a new node */
-  node = apr_palloc(tree->pool, sizeof(*node));
-  node->parent = parent;
-  node->left = NULL;
-  node->right = NULL;
-  node->hash = hash;
-  node->token = token;
+  new_node = apr_palloc(tree->pool, sizeof(*new_node));
+  new_node->parent = parent;
+  new_node->left = NULL;
+  new_node->right = NULL;
+  new_node->hash = hash;
+  new_node->token = token;
 
-  *node_ref = node;
+  *node = *node_ref = new_node;
 
-  return node;
+  return SVN_NO_ERROR;
 }
 
 
@@ -154,16 +162,16 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
         break;
 
       offset++;
-      node = svn_diff__tree_insert_token(tree,
-                                         diff_baton, vtable,
-                                         hash, token);
+      SVN_ERR(svn_diff__tree_insert_token(&node, tree,
+                                          diff_baton, vtable,
+                                          hash, token));
 
       /* Create a new position */
       position = apr_palloc(pool, sizeof(svn_diff__position_t));
       position->next = NULL;
       position->node = node;
       position->offset = offset;
-  
+
       *position_ref = position;
       position_ref = &position->next;
     }
