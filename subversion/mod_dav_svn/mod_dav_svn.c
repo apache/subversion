@@ -55,10 +55,11 @@ typedef struct {
 extern module AP_MODULE_DECLARE_DATA dav_svn_module;
 
 
-static void dav_svn_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp,
-                         server_rec *s)
+static int dav_svn_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp,
+                        server_rec *s)
 {
     ap_add_version_component(p, "SVN/" SVN_VERSION);
+    return OK;
 }
 
 static int dav_svn_header_parser(request_rec *r)
