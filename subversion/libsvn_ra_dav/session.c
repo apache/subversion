@@ -209,9 +209,9 @@ static svn_error_t *get_proxy(const char **proxy_host,
 
   /* If we find nothing, default to nulls. */
   *proxy_host     = NULL;
-  *proxy_port     = -1;
   *proxy_username = NULL;
   *proxy_password = NULL;
+  port_str = NULL;
 
   SVN_ERR( svn_config_read_proxies(&cfg, pool) );
 
