@@ -4736,7 +4736,7 @@ large_file_integrity (const char **msg,
      file in each revision currently in existence, and make the sure
      the checksum matches the checksum of the data prior to its
      commit. */
-  for (j = 1; j < youngest_rev; j++)
+  for (j = 1; j <= youngest_rev; j++)
     {
       svn_pool_clear (subpool);
       SVN_ERR (svn_fs_revision_root (&rev_root, fs, j, subpool));
