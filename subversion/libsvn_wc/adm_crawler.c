@@ -602,6 +602,10 @@ verify_tree_deletion (svn_stringbuf_t *dir,
       entry = (svn_wc_entry_t *) val;
       is_this_dir = strcmp (key, SVN_WC_ENTRY_THIS_DIR) == 0;
 
+      /* If the entry's existence is `deleted', skip it. */
+      if (entry->existence == svn_wc_existence_deleted)
+        continue;
+
       /* Construct the fullpath of this entry. */
       if (! is_this_dir)
         svn_path_add_component_nts (fullpath, key, svn_path_local_style);
@@ -708,6 +712,16 @@ report_single_mod (const char *name,
   if ((entry->schedule == svn_wc_schedule_add)
       || (entry->schedule == svn_wc_schedule_replace))
     {
+      do_add = TRUE;
+    }
+
+  /* If the entry's existence is `deleted' and it's still scheduled
+     for addition, do -both- actions, to insure an accurate repos
+     transaction. */
+  if ((entry->schedule == svn_wc_schedule_add)
+      && (entry->existence == svn_wc_existence_deleted))
+    {
+      do_delete = TRUE;
       do_add = TRUE;
     }
 
@@ -1052,6 +1066,11 @@ crawl_dir (svn_stringbuf_t *path,
 
       /* Get the entry for this file or directory. */
       current_entry = (svn_wc_entry_t *) val;
+
+      /* If the entry's existence is `deleted', skip it. */
+      if ((current_entry->existence == svn_wc_existence_deleted)
+          && (current_entry->schedule != svn_wc_schedule_add))
+        continue;
       
       /* Report mods for a single entry. */
       SVN_ERR (report_single_mod (keystring,
@@ -1188,12 +1207,15 @@ report_revisions (svn_stringbuf_t *wc_path,
 
       /* The Big Tests: */
       
-      /* If the entry isn't on disk, report it as missing. */
+      /* If the entry isn't on disk, report it as missing. 
+         Also report the entry as missing if it's already been `deleted'. */
       dirent_kind = (enum svn_node_kind *) apr_hash_get (dirents, key, klen);
-      if (! dirent_kind)
+
+      if ((! dirent_kind)
+          || (current_entry->existence == svn_wc_existence_deleted))
         SVN_ERR (reporter->delete_path (report_baton, full_entry_path));
 
-      else /* The entry exists on disk. */
+      else /* The entry exists on disk, and isn't `deleted'. */
         {
           if (current_entry->kind == svn_node_file) 
             {
@@ -1455,6 +1477,11 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
               apr_pool_t *subpool = svn_pool_create (pool);
               svn_stringbuf_t *basename;
               
+              if (tgt_entry->existence == svn_wc_existence_deleted)
+                return svn_error_createf
+                  (SVN_ERR_WC_ENTRY_NOT_FOUND, 0, NULL, pool,
+                   "entry '%s' has already been deleted", target->data);
+
               basename = svn_path_last_component (target,
                                                   svn_path_local_style, 
                                                   pool);
@@ -1491,7 +1518,7 @@ svn_wc_crawl_local_mods (svn_stringbuf_t *parent_dir,
                  "svn_wc_crawl_local_mods: '%s' is not a versioned resource",
                  target->data);
             }
-          
+
         } /*  -- End of main target loop -- */
       
       /* To finish, pop the stack all the way back to the grandaddy

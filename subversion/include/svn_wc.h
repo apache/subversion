@@ -170,7 +170,10 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_THIS_DIR  "svn:this_dir"
 
 
-/* Get the ENTRY structure for PATH, allocating from POOL. */
+/* Get the ENTRY structure for PATH, allocating from POOL. 
+
+   Warning to callers:  remember to check whether entry->existence is
+   `deleted'.  If it is, you probably want to ignore it. */
 svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
                            svn_stringbuf_t *path,
                            apr_pool_t *pool);
@@ -184,7 +187,10 @@ svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
    structures representing subdirs have only the `kind' and `state'
    fields filled in.  If you want info on a subdir, you must use this
    routine to open its PATH and read the SVN_WC_ENTRY_THIS_DIR
-   structure, or call svn_wc_get_entry on its PATH.  */
+   structure, or call svn_wc_get_entry on its PATH. 
+
+   Warning to callers: remember to check whether each entry->existence
+   is `deleted'.  If it is, you probably want to ignore it. */
 svn_error_t *svn_wc_entries_read (apr_hash_t **entries,
                                   svn_stringbuf_t *path,
                                   apr_pool_t *pool);
@@ -269,7 +275,7 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * structures.  All fields in each struct will be filled in except for
  * repos_rev, which would presumably be filled in by the caller.
  *
- * PATH is usually be a directory, since for a regular file, you would
+ * PATH will usually be a directory, since for a regular file, you would
  * have used svn_wc_status().  However, it is no error if PATH is not
  * a directory; its status will simply be stored in STATUSHASH like
  * any other.
@@ -283,6 +289,9 @@ svn_error_t *svn_wc_status (svn_wc_status_t **status,
  * If DESCEND is non-zero, statushash will contain statuses for PATH
  * and everything below it, including subdirectories.  In other
  * words, a full recursion.
+ *
+ * If any children of PATH are marked with existence `deleted', they
+ * will NOT be returned in the hash.
  */
 svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               svn_stringbuf_t *path,

@@ -847,10 +847,17 @@ add_or_replace_file (svn_stringbuf_t *name,
 
   /* ben sez: If we're trying to add a file that's already in
      `entries' (but not on disk), that's okay.  It's probably because
-     the user deleted the working version and ran 'svn up'.  Either
-     way, it certainly doesn't hurt to re-add the file.  We can't
-     possibly get the entry showing up twice in `entries', since it's
-     a hash; and we know that we won't lose any local mods. */
+     the user deleted the working version and ran 'svn up' as a means
+     of getting the file back.  
+
+     Or... perhaps the entry was removed and committed, leaving its
+     existence == `deleted'.  The user may be updating to a revision
+     where the entry exists again.
+
+     Either way, it certainly doesn't hurt to re-add the file.  We
+     can't possibly get the entry showing up twice in `entries', since
+     it's a hash; and we know that we won't lose any local mods.  Let
+     the existing entry be overwritten. */
 
   /* If replacing, make sure the SVN entry already exists. */
   if ((! adding) && (! entry))
