@@ -63,6 +63,8 @@
 #include "svn_hash.h"
 #include "svn_wc.h"
 
+#include "wc.h"
+
 
 
 /* If PATH exists already, return an svn error containing ERR_TO_REPORT.
@@ -171,20 +173,20 @@ add_directory (svn_string_t *name,
      to just store the path as a string.  But eventually we may want
      some more general sort of path-chain.
   */
-  apr_status_t apr_err;
+  svn_error_t *err;
   svn_string_t *path = (svn_string_t *) parent_baton;
   struct w_baton *wb = (struct w_baton *) walk_baton;
 
   path_add_component (path, name, wb->pool);
   printf ("%s/\n", path->data);
 
-  /* kff todo: we're going to be doing this a lot.  Maybe we should
-     have a wrapper around apr_make_dir().  But Yet Another
-     Wrapper... Hmmm. */
-  apr_err = apr_make_dir (path->data, APR_OS_DEFAULT, wb->pool);
-
-  if (apr_err)
-    return svn_create_error (apr_err, 0, path->data, NULL, wb->pool);
+  err = svn_wc__set_up_new_dir (path,
+                                ancestor_path,
+                                ancestor_version,
+                                wb->pool);
+  if (err)
+    return err;
+  /* else */
 
   *child_baton = path;
   return 0;
