@@ -1924,6 +1924,9 @@ close_edit (void *edit_baton,
                 eb->recurse,
                 eb->switch_url,
                 eb->target_revision,
+                eb->notify_func,
+                eb->notify_baton,
+                TRUE,
                 eb->pool));
     }
 
