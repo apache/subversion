@@ -177,6 +177,23 @@ The formats of these files are not specified yet.
 @node The working copy management library
 @subsection The working copy management library
 
+@itemize @bullet
+@item
+  @b{Requires:}
+  @itemize
+  @item
+    a working copy
+  @end itemize
+@item
+  @b{Provides:}
+  @itemize
+  @item
+    ability to manipulate the working copy's versioned data
+  @item
+    ability to manipulate the working copy's administrative files
+  @end itemize
+@end itemize
+
 This library performs "offline" operations on the working copy.  The
 prefix @code{wc_} is used to identify that this is the "working copy"
 library.
@@ -272,6 +289,21 @@ Return all property names for a directory entry.
 @node The repository access library
 @section The repository access library
 
+@itemize @bullet
+@item
+  @b{Requires:}
+  @itemize
+  @item
+    network access to a Subversion server
+  @end itemize
+@item
+  @b{Provides:}
+  @itemize
+  @item
+    the ability to interact with a repository
+  @end itemize
+@end itemize
+
 This library performs operations involving communication with the
 repository.  The prefix @code{ra_} is used for everything in this
 library.
@@ -355,6 +387,23 @@ library.
 @c -----------------------------------------------------------------------
 @node The client operation library
 @subsection The client operation library
+
+@itemize @bullet
+@item
+  @b{Requires:}
+  @itemize
+  @item
+    the working copy management library
+  @item
+    the repository access library
+  @end itemize
+@item
+  @b{Provides:}
+  @itemize
+  @item
+    all client-side Subversion commands
+  @end itemize
+@end itemize
 
 fooo working here:
 
