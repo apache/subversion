@@ -28,10 +28,47 @@
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_error.h"
+#include "svn_pools.h"
 #include "cl.h"
 
 
 /*** Code. ***/
+
+static svn_error_t *
+rewrite_urls(apr_array_header_t *targets,
+             svn_boolean_t recurse,
+             apr_pool_t *pool)
+{
+  apr_pool_t *subpool;
+  const char *from;
+  const char *to;
+  int i;
+ 
+  if (targets->nelts < 2)
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");
+          
+  from = ((const char **) (targets->elts))[0];
+  to = ((const char **) (targets->elts))[1];
+ 
+  subpool = svn_pool_create (pool);
+
+  if (targets->nelts == 2)
+    {
+      SVN_ERR(svn_client_relocate ("", from, to, recurse, pool));
+    }
+  else
+    {
+      for (i = 2; i < targets->nelts; i++)
+        {
+          const char *target = ((const char **) (targets->elts))[i];
+          SVN_ERR (svn_client_relocate (target, from, to, recurse, subpool));
+          svn_pool_clear (subpool);
+        }
+    }
+
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
 
 
 /* This implements the `svn_opt_subcommand_t' interface. */
@@ -58,6 +95,10 @@ svn_cl__switch (apr_getopt_t *os,
                                          &(opt_state->start_revision),
                                          &(opt_state->end_revision),
                                          FALSE, pool));
+
+  /* handle only-rewrite case specially */
+  if (opt_state->relocate)
+    return rewrite_urls (targets, !opt_state->nonrecursive, pool);
 
   if ((targets->nelts < 1) || (targets->nelts > 2))
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, "");

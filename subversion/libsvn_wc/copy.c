@@ -37,7 +37,9 @@
 /*** Code. ***/
 
 svn_error_t *
-svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access,
+                        svn_boolean_t recurse,
+                        apr_pool_t *pool)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
@@ -91,12 +93,12 @@ svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
         }        
 
       /* If a dir, recurse. */
-      else if (current_entry->kind == svn_node_dir)
+      else if (recurse && current_entry->kind == svn_node_dir)
         {
           svn_wc_adm_access_t *child_access;
           SVN_ERR (svn_wc_adm_retrieve (&child_access, adm_access, child_path,
                                         subpool));
-          SVN_ERR (svn_wc__remove_wcprops (child_access, subpool));
+          SVN_ERR (svn_wc__remove_wcprops (child_access, recurse, subpool));
         }
     }
 
@@ -305,7 +307,7 @@ copy_dir_administratively (const char *src_path,
      an optimization.  Note we use the normal locking mechanism here, even
      though this directory has not yet been added to the parent. */
   SVN_ERR (svn_wc_adm_open (&adm_access, NULL, dst_path, TRUE, TRUE, pool));
-  SVN_ERR (svn_wc__remove_wcprops (adm_access, pool));
+  SVN_ERR (svn_wc__remove_wcprops (adm_access, TRUE, pool));
   SVN_ERR (svn_wc_adm_close (adm_access));
 
   /* Schedule the directory for addition in both its parent and itself

@@ -105,7 +105,8 @@ const apr_getopt_option_t svn_cl__options[] =
            distressingly typical.  Thoughts? :-) */
     {"revprop",       svn_cl__revprop_opt, 0,
                       "operate on a revision property (use with -r)"},
-
+    {"relocate",      svn_cl__relocate_opt, 0,
+                      "relocate via url-rewriting"},
     {0,               0, 0, 0}
   };
 
@@ -467,11 +468,12 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "switch", svn_cl__switch, {"sw"},
     "Update working copy to mirror a new URL\n"
-    "usage: switch URL [PATH]\n\n"
-    "  Note:  this is the way to move a working copy to a new branch.\n",
+    "usage: switch URL [PATH]   or\n"
+    "       switch --relocate FROM TO [PATH ... ]\n\n"
+    "   Note:  this is the way to move a working copy to a new branch.\n",
     { 'r', 'N', 'q', svn_cl__auth_username_opt,
       svn_cl__auth_password_opt, svn_cl__no_auth_cache_opt,
-      svn_cl__non_interactive_opt } },
+      svn_cl__non_interactive_opt, svn_cl__relocate_opt } },
  
   { "update", svn_cl__update, {"up"}, 
     "Bring changes from the repository into the working copy.\n"
@@ -738,6 +740,9 @@ main (int argc, const char * const *argv)
         break;
       case svn_cl__non_interactive_opt:
         opt_state.non_interactive = TRUE;
+        break;
+      case svn_cl__relocate_opt:
+        opt_state.relocate = TRUE;
         break;
       case 'x':
         err = svn_utf_cstring_to_utf8 (&opt_state.extensions, opt_arg,

@@ -57,7 +57,8 @@ typedef enum {
   svn_cl__no_auth_cache_opt,
   svn_cl__non_interactive_opt,
   svn_cl__dry_run_opt,
-  svn_cl__revprop_opt
+  svn_cl__revprop_opt,
+  svn_cl__relocate_opt
 } svn_cl__longopt_t;
 
 
@@ -100,6 +101,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_auth_cache;   /* do not cache authentication information */
   svn_boolean_t dry_run;         /* try operation but make no changes */
   svn_boolean_t revprop;         /* operate on a revision property */
+  svn_boolean_t relocate;        /* rewrite urls (svn switch) */
 } svn_cl__opt_state_t;
 
 

@@ -710,6 +710,17 @@ svn_client_cleanup (const char *dir,
                     apr_pool_t *pool);
 
 
+/* Modify a working copy directory DIR, changing any
+   repository URLs that begin with FROM to begin with TO instead,
+   recursing into subdirectories if RECURSE is true. */
+svn_error_t *
+svn_client_relocate (const char *dir,
+                     const char *from,
+                     const char *to,
+                     svn_boolean_t recurse,
+                     apr_pool_t *pool);
+
+
 /** Revert any changes to a working copy path.
  *
  * Restore the pristine version of a working copy @a path, effectively

@@ -985,7 +985,7 @@ svn_wc_add (const char *path,
                               pool));
 
           /* Clean out the now-obsolete wcprops. */
-          SVN_ERR (svn_wc__remove_wcprops (adm_access, pool));
+          SVN_ERR (svn_wc__remove_wcprops (adm_access, TRUE, pool));
         }
     }
 

@@ -1507,6 +1507,19 @@ svn_wc_cleanup (const char *path,
                 svn_wc_adm_access_t *optional_adm_access,
                 apr_pool_t *pool);
 
+/* Changing repository references at PATH that begin with
+   FROM to begin with TO instead.  Perform necessary allocations in
+   POOL.  If RECURSE is true, do so.
+
+   ADM_ACCESS is an access baton for the directory containing
+   PATH. ADM_ACCESS must not be NULL.  */
+svn_error_t *
+svn_wc_relocate (const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 const char *from,
+                 const char *to,
+                 svn_boolean_t recurse,
+                 apr_pool_t *pool);
 
 /* Revert changes to PATH (perhaps in a RECURSIVE fashion).  Perform
    necessary allocations in POOL.
