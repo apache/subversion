@@ -81,7 +81,6 @@ call ..\ms\test
 cd ..\..
 
 rem ====== Build Apache 2
-perl httpd-2.0.49\srclib\apr-util\build\w32locatedb.pl dll src-%DIR%\db4-win32\include src-%DIR%\db4-win32\lib
 msdev httpd-2.0.49\apache.dsw /MAKE "BuildBin - Win32 Release"
 
 rem ====== Subversion
