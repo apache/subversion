@@ -34,6 +34,7 @@
 #include "svn_ra.h"
 #include "svn_wc.h"
 #include "svn_path.h"
+#include "svn_xml.h"
 
 #include "ra_dav.h"
 
@@ -404,11 +405,14 @@ static void record_prop_change(apr_pool_t *pool,
 {
   if (value)
     {
+      svn_stringbuf_t *escaped;
+
       /* changed/new property */
       if (r->prop_changes == NULL)
         r->prop_changes = apr_table_make(pool, 5);
 
-      apr_table_set(r->prop_changes, name->data, value->data);
+      svn_xml_escape_string(&escaped, value, pool);
+      apr_table_set(r->prop_changes, name->data, escaped->data);
     }
   else
     {
@@ -879,7 +883,28 @@ static svn_error_t * commit_close_edit(void *edit_baton)
 
   return NULL;
 }
- 
+
+static svn_error_t *get_baseline_url(svn_ra_session_t *ras,
+                                     const svn_string_t **baseline)
+{
+  const svn_string_t *vcc;
+
+  /* ### this whole sequence can/should be replaced with an expand-property
+     ### REPORT when that is available on the server. */
+
+  /* ### should we perform an OPTIONS to validate the server we're about
+     ### to talk to? */
+
+  /* fetch the DAV:version-controlled-configuration from the session's URL */
+  SVN_ERR( svn_ra_dav__get_one_prop(&vcc, ras, ras->root.path, NULL,
+                                    &svn_ra_dav__vcc_prop, ras->pool) );
+
+  /* Get the Baseline from the DAV:checked-in value */
+  SVN_ERR( svn_ra_dav__get_one_prop(baseline, ras, vcc->data, NULL,
+                                    &svn_ra_dav__checked_in_prop, ras->pool) );
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
@@ -894,6 +919,8 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   svn_ra_session_t *ras = session_baton;
   commit_ctx_t *cc;
   svn_delta_edit_fns_t *commit_editor;
+  const svn_string_t *baseline_url;
+  resource_t baseline_rsrc = { 0 };
 
   cc = apr_pcalloc(ras->pool, sizeof(*cc));
   cc->ras = ras;
@@ -909,7 +936,10 @@ svn_error_t * svn_ra_dav__get_commit_editor(
 
   SVN_ERR( create_activity(cc) );
 
-  /* ### check out the baseline and attach the log_msg */
+  SVN_ERR( get_baseline_url(ras, &baseline_url) );
+
+  baseline_rsrc.vsn_url = baseline_url->data;
+  SVN_ERR( checkout_resource(cc, &baseline_rsrc) );
 
   /*
   ** Set up the editor.
