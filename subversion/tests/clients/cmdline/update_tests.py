@@ -1273,6 +1273,59 @@ def update_deletion_inside_out(sbox):
                                         None)
 
 
+#----------------------------------------------------------------------
+# Regression test for issue #1793, whereby 'svn up dir' would delete
+# dir if schedule-add.  Yikes.
+
+def update_schedule_add_dir(sbox):
+  "update a schedule-add directory"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Delete directory A/D/G in the repository via immediate commit
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  G_url = svntest.main.current_repo_url + '/A/D/G'
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', G_url, '-m', 'rev 2')
+
+  # Update the wc to HEAD (r2)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G' : Item(status='D '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  # Do a URL->wc copy, creating a new schedule-add A/D/G.
+  # (Standard procedure when trying to resurrect the directory.)
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  svntest.actions.run_and_verify_svn("Copy error:", None, [],
+                                     'cp', '-r', '1', G_url, D_path)
+
+  # status should now show the dir scheduled for addition-with-history
+  expected_status.add({
+    'A/D/G'     : Item(status='A ', copied='+', wc_rev='-', repos_rev=2),
+    'A/D/G/pi'  : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
+    'A/D/G/rho' : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
+    'A/D/G/tau' : Item(status='  ', copied='+', wc_rev='-', repos_rev=2),
+    })
+  svntest.actions.run_and_verify_status (wc_dir, expected_status)
+
+  # Now update with the schedule-add dir as the target.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', G_path)
+
+  # The update should be a no-op, and the schedule-add directory
+  # should still exist!  'svn status' shouldn't change at all.
+  svntest.actions.run_and_verify_status (wc_dir, expected_status)
+  
+
+
 ########################################################################
 # Run the tests
 
@@ -1299,6 +1352,7 @@ test_list = [ None,
               checkout_empty_dir,
               update_to_deletion,
               update_deletion_inside_out,
+              update_schedule_add_dir,
              ]
 
 if __name__ == '__main__':
