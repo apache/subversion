@@ -11,20 +11,29 @@ INCLUDES = -I../../include -I../../../apr/include
 stringtest_LDADD = ../libsvn_string.la ../../../apr/libapr.a
 
 
-## Automatic test scripts to run for `make check`
+## Automatic tests run by `make check` -----------------------------
 
-## Whenever a new test is added to stringtest, add it to this list.
+## A list of test-programs to run.  (Each program contains sub-tests.)
+SVN_TEST_PROGRAMS = stringtest
 
-TESTS = strtest1.sh strtest2.sh strtest3.sh
+## We're overriding automake's own `check' rule, because it's extremely
+## inflexible;  we want better control over automated-test output. 
+check:
+	@echo > tests.log
+	@for prog in $(SVN_TEST_PROGRAMS); do \
+	  echo; \
+	  echo -n "Running all sub-tests in $$prog..."; \
+	  ./$$prog >> tests.log; \
+	  if [ $$? -eq 0 ]; \
+	  then \
+	     echo "SUCCESS"; \
+	  else \
+	     echo; \
+	     echo "at least one sub-test FAILED, check tests.log:"; echo; \
+	     cat tests.log | grep FAIL; \
+	  fi; \
+	done
 
-## The scripts mentioned above are created *on the fly*, executed, and
-## deleted.  The rule below makes this magic happen.  Each temporary
-## script `strtestN.sh' runs `stringtest N` and then deletes itself.
 
-strtest%.sh:
-	echo "#!/bin/sh" > $@; \
-	echo "./strtest.sh $* >> stringtest.log" >> $@; \
-	echo "rm $@" >> $@
-	chmod +x $@
 
 
