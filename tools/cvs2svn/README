@@ -1,26 +1,28 @@
 This is a python script which converts a CVS repository to an SVN Repository.
 
-It works by:
 
-  - using the rcsparse/ module to directly read the CVS repository
-      and deduce commits,
-  - creating a bunch of temporary scratchwork on disk,
-  - replaying all of the commits into either a full SVN dumpfile (in
-      --dump-only mode), or into an SVN repository.
-
-It works reasonably well, with two big caveats:
-
-  - it has known bugs in converting branches and tags
-  - there may be tiny bugs in the way it deduces CVS commits
-
-To see a list of significant open cvs2svn bugs, go to:
-
-  http://subversion.tigris.org/issues/buglist.cgi?component=subversion&issue_status=NEW&issue_status=STARTED&issue_status=REOPENED&target_milestone=cvs2svn-1.0
+   ****************************** Warning ******************************
+   *                                                                   *
+   * cvs2svn.py is not "1.0 quality" yet.  While it has successfully   *
+   * converted many repositories (including their branches and tags),  *
+   * for others it has either failed to complete the conversion, or    *
+   * converted the data in an unexpected or subtly wrong way.  It is   *
+   * also not well-packaged yet.  For example, there's no easy way to  *
+   * install it on your system: right now the recommended way to run   *
+   * cvs2svn.py is right out of this directory, so it can find the     *
+   * 'rcsparse' module on which it depends (see subdir rcsparse/).     *
+   *                                                                   *
+   *********************************************************************
 
 All that said, the script has been used on straightforward CVS
 repositories successfully.  As an example, the whole first year of
 Subversion's own history was converted from CVS into a 3000+ revision
-svn repository.  Your Mileage May Vary.
+svn repository.  Your Mileage May Vary.  To see a list of all open
+cvs2svn bugs, visit:
+
+   http://subversion.tigris.org/issues/buglist.cgi?component=subversion&issue_status=NEW&issue_status=STARTED&issue_status=REOPENED&target_milestone=cvs2svn-1.0
+Using cvs2svn:
+==============
 
 * Prerequisites:
 
@@ -52,17 +54,23 @@ svn repository.  Your Mileage May Vary.
 
      $ cvs2svn.py --create -s NEW_SVNREPOS CVSREPOS
 
+  To create a new Subversion repository containing only trunk commits,
+  and omitting all branches and tags from the CVS repository, do
+
+     $ cvs2svn.py --trunk-only --create -s NEW_SVNREPOS CVSREPOS
+
   To create a Subversion dumpfile (suitable for 'svnadmin load') from
   a CVS repository, run it like this:
 
      $ cvs2svn.py --dump-only --dumpfile DUMPFILE CVSREPOS
 
-  Note that cvs2svn.py will create a bunch of temporary files in the
-  current directory.  This is normal.  If the entire conversion is
-  successful, however, those tempfiles are removed for you.  If the
-  conversion is not successful, or if you specify the --skip-cleanup
-  option, cvs2svn leaves those temporary files for possible debugging.
+As it works, cvs2svn.py will create many temporary files in the
+current directory.  This is normal.  If the entire conversion is
+successful, however, those tempfiles will be automatically removed.
+If the conversion is not successful, or if you specify the
+'--skip-cleanup' option, cvs2svn will leave the temporary files behind
+for possible debugging.
 
-  To see more options, run:
+To see more options, run:
 
      $ cvs2svn.py --help
