@@ -125,19 +125,19 @@ do_crawl (svn_string_t *current_dir,
 {
   svn_error_t *err;
   svn_string_t *child;
+  int fruitful = 0;
 
   /* grab contents of current `delta-here' file */
-
   svn_string_t *localmod_buffer = get_delta_here_contents (current_dir);
   
   /* if non-empty, send the contents to the parser */
-
   if (localmod_buffer)
     {
       svn_string_appendbytes (xml_buffer, localmod_buffer, pool)
       err = flush_xml_buffer (xml_buffer, xml_parser);
       if (err)
         return err;
+      fruitful = 1;
     }
 
   /* recurse depth-first */
@@ -146,12 +146,26 @@ do_crawl (svn_string_t *current_dir,
     {
       write 3 "down" tags into xml_buffer;
       err = do_crawl (child);
-      if (err)
+
+      if (err->apr_err == SVN_NO_ERROR)
+        fruitful = 1;
+      
+      else if (err->apr_err == SVN_ERR_UNFRUITFUL_DESCENT)
+        /* effectively "undo" the descent tags */
+        remove 3 "down" tags from xml_buffer;
+
+      else /* uh-oh, a _real_ error */
         return err;
     } 
   
-  write 3 "up" tags into xml_buffer;
-  return SVN_NO_ERROR;
+  if (fruitful) 
+    {
+      write 3 "up" tags into xml_buffer;
+      return SVN_NO_ERROR;
+    }
+
+  else
+    return SVN_ERR_UNFRUITFUL_DESCENT;
 }
 
 
@@ -181,18 +195,29 @@ svn_cl_crawl_local_mods (svn_string_t *root_directory,
 
   /* Do the recursive crawl, starting at the root directory.  */
   err = do_crawl (root_directory, xml_buffer, xml_parser, pool);
-  if (err)
+
+  if (err->apr_err == SVN_NO_ERROR)
+    {
+      /* The descent was fruitful. */
+
+      /* Always finish with a lone "</text-delta>" */
+      svn_string_appendbytes (xml_buffer, "</text-delta>", 13, pool);
+      
+      /* Send whatever xml is left in the buffer. */
+      err = flush_xml_buffer (xml_buffer, xml_parser);
+      if (err)
+        return err;
+
+      return SVN_NO_ERROR;
+    }
+
+  if (err->apr_err == SVN_ERR_UNFRUITFUL_DESCENT)
+    /* There were *no* local mods *anywhere* in the tree!  That's
+       okay.  The parser gets no xml data from us.  Just return. */
+    return SVN_NO_ERROR;
+
+  else /* uh-oh, a _real_ error was passed back. */
     return err;
-
-  /* Always finish with a lone "</text-delta>" */
-  svn_string_appendbytes (xml_buffer, "</text-delta>", 13, pool);
-
-  /* Send whatever xml is left and exit. */
-  err = flush_xml_buffer (xml_buffer, xml_parser);
-  if (err)
-    return err;
-
-  return SVN_NO_ERROR;
 }
 
 
