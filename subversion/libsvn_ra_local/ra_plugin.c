@@ -15,6 +15,7 @@
 #include "ra_local.h"
 #include "svn_ra.h"
 #include "svn_repos.h"
+#include "svn_pools.h"
 
 /*----------------------------------------------------------------*/
 

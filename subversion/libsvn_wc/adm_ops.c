@@ -24,6 +24,7 @@
 #include <apr_file_io.h>
 #include <apr_time.h>
 #include "svn_types.h"
+#include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_hash.h"

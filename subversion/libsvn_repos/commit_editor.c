@@ -15,6 +15,7 @@
 #include "apr_pools.h"
 #include "apr_file_io.h"
 
+#include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_delta.h"

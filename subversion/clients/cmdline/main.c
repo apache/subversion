@@ -25,6 +25,7 @@
 #include <apr_tables.h>
 #include <apr_general.h>
 
+#include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"

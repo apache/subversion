@@ -15,7 +15,7 @@
 #include "ra_local.h"
 #include <assert.h>
 #include <string.h>
-
+#include "svn_pools.h"
 
 svn_error_t *
 svn_ra_local__split_URL (svn_stringbuf_t **repos_path,

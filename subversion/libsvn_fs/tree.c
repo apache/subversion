@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
 #include "skel.h"

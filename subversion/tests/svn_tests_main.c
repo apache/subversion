@@ -23,6 +23,7 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 
+#include "svn_pools.h"
 #include "svn_error.h"
 
 

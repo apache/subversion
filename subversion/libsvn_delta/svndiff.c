@@ -18,6 +18,7 @@
 #include "svn_delta.h"
 #include "svn_io.h"
 #include "delta.h"
+#include "svn_pools.h"
 
 #define NORMAL_BITS 7
 #define LENGTH_BITS 5

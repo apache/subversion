@@ -178,6 +178,10 @@ typedef svn_error_t *(*svn_close_fn_t) (void *baton);
 
 svn_stream_t *svn_stream_create (void *baton, apr_pool_t *pool);
 
+svn_stream_t *svn_stream_dup (svn_stream_t *stream, apr_pool_t *pool);
+
+void svn_stream_set_baton (svn_stream_t *stream, void *baton);
+
 void svn_stream_set_read (svn_stream_t *stream, svn_read_fn_t read_fn);
 
 void svn_stream_set_write (svn_stream_t *stream, svn_write_fn_t write_fn);

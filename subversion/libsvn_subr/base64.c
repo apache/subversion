@@ -20,6 +20,7 @@
 #include <apr_pools.h>
 #include <apr_general.h>        /* for APR_INLINE */
 
+#include "svn_pools.h"
 #include "svn_io.h"
 #include "svn_error.h"
 #include "svn_base64.h"

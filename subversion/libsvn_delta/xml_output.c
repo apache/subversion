@@ -23,7 +23,7 @@
 #include "svn_xml.h"
 #include "svn_base64.h"
 #include "svn_quoprint.h"
-#include "apr_pools.h"
+#include "svn_pools.h"
 #include "delta.h"
 
 /* TODO:

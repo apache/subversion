@@ -19,6 +19,7 @@
 
 /*** Includes. ***/
 #include "svn_wc.h"
+#include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_string.h"
 #include "cl.h"

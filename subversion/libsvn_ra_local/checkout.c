@@ -14,6 +14,7 @@
 
 #include "ra_local.h"
 #include <assert.h>
+#include "svn_pools.h"
 
 
 /* Helper to read data out of a file at ROOT:PATH and push it to
