@@ -25,6 +25,7 @@
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
+#include "svn_pools.h"
 #include "svn_subst.h"
 #include "svn_io.h"
 #include "svn_time.h"
@@ -48,32 +49,77 @@ svn_client_cat (svn_stream_t *out,
   svn_string_t *eol_style;
   svn_string_t *keywords;
   apr_hash_t *props;
-  const char *url;
+  const char *initial_url, *url;
+  svn_opt_revision_t *good_rev;
+  apr_pool_t *ra_subpool;
 
-  SVN_ERR (svn_client_url_from_path (&url, path_or_url, pool));
-  if (! url)
+  /* Open an RA session to the incoming URL. */
+  SVN_ERR (svn_client_url_from_path (&initial_url, path_or_url, pool));
+  if (! initial_url)
     return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
                               "'%s' has no URL", path_or_url);
 
-
-  /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, url, pool));
+  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, initial_url, pool));
 
-  /* Open a repository session to the URL. */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, NULL, NULL,
-                                        NULL, FALSE, FALSE,
-                                        ctx, pool));
+  ra_subpool = svn_pool_create (pool);
+  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, initial_url,
+                                        NULL, NULL, NULL, FALSE, FALSE,
+                                        ctx, ra_subpool));
 
-  /* Resolve REVISION into a real revnum. */
+  if (svn_path_is_url (path_or_url))
+    {
+      /* If an explicit URL was passed in, just use it. */
+      *good_rev = *revision;
+      url = initial_url;
+    }
+  else
+    {
+      /* For a working copy path, don't blindly use its initial_url
+         from the entries file.  Run the history function to get the
+         object's (possibly different) url in REVISION. */
+      svn_opt_revision_t base_rev, dead_end_rev, start_rev, *ignored_rev;
+      const char *ignored_url;
+
+      dead_end_rev.kind = svn_opt_revision_unspecified;
+      base_rev.kind = svn_opt_revision_base;
+
+      if (revision->kind == svn_opt_revision_unspecified)
+        start_rev.kind = svn_opt_revision_base;
+      else
+        start_rev = *revision;
+
+      SVN_ERR (svn_client__repos_locations (&url, &good_rev,
+                                            &ignored_url, &ignored_rev,
+                                            /* peg coords are path@BASE: */
+                                            path_or_url, &base_rev,
+                                            /* search range: */
+                                            &start_rev, &dead_end_rev,
+                                            ra_lib, session,
+                                            ctx, pool));
+
+      /* If 'url' turns out to be different than 'initial_url', then we
+         need to open a new RA session to it. */
+      if (strcmp (url, initial_url) != 0)
+        {
+          svn_pool_clear (ra_subpool);
+          SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url,
+                                                NULL, NULL, NULL, FALSE, FALSE,
+                                                ctx, ra_subpool));
+        }     
+    }
+
+  /* From here out, 'url' and 'good_rev' are the true repos
+     coordinates we need to fetch. */  
+
+  /* Resolve good_rev into a real revnum. */
   SVN_ERR (svn_client__get_revision_number (&rev, ra_lib, session,
-                                            revision, path_or_url, pool));
+                                            good_rev, url, pool));
   if (! SVN_IS_VALID_REVNUM (rev))
     SVN_ERR (ra_lib->get_latest_revnum (session, &rev, pool));
 
-  /* Decide if the URL is a file or directory. */
+  /* Make sure the object isn't a directory. */
   SVN_ERR (ra_lib->check_path (session, "", rev, &url_kind, pool));
-
   if (url_kind == svn_node_dir)
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
                              "URL '%s' refers to a directory", url);
