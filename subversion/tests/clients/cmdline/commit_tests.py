@@ -60,7 +60,7 @@ def get_standard_state(wc_dir):
 
 def make_standard_slew_of_changes(wc_dir):
   """Make a specific set of local mods to WC_DIR.  These will be used
-  by every commit-test.  Verify the 'svn status' output, return 0 on
+  by every commit-test.  Verify the 'svn status' output, return on
   success."""
 
   # Cache current working directory, move into wc_dir
@@ -124,7 +124,7 @@ def make_standard_slew_of_changes(wc_dir):
 ######################################################################
 # Tests
 #
-#   Each test must return 0 on success or non-zero on failure.
+#   Each test must return on success or raise on failure.
 
 
 #----------------------------------------------------------------------

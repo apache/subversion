@@ -44,7 +44,7 @@ i18n_logmsg = 'drie\xc3\xabntwintig keer was \xc3\xa9\xc3\xa9n keer teveel'
 ######################################################################
 # Tests
 #
-#   Each test must return 0 on success or non-zero on failure.
+#   Each test must return on success or raise on failure.
 
 
 def basic_utf8_conversion(sbox):

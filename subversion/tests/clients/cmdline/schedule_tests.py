@@ -46,7 +46,7 @@ def _tweak_paths(list):
 ######################################################################
 # Tests
 #
-#   Each test must return 0 on success or non-zero on failure.
+#   Each test must return on success or raise on failure.
 #
 #   NOTE: Tests in this section should be written in triplets.  First
 #   compose a test which make schedule changes and local mods, and
