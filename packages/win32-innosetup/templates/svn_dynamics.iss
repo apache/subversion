@@ -20,9 +20,15 @@
 #define path_is "E:\Inno Setup4"
 
 ;Build defines ----------------------------------------------------------------
+; File names
+#define libdb_dll "libdb42.dll"
+
 ; Uncomment the defines if true
 #define inc_dbgsyms
 #define VC7
+
+; Apache Server: The minimum required version
+#define apache_ver_min "2.0.48"
 
 ; You should edit the paths below the examples according to your system
 
@@ -73,4 +79,3 @@
 ;Python bindings
 #define path_py_bind_libsvn "C:\work\Subversion\binaries_svn\python_bindings\libsvn"
 #define path_py_bind_svn "C:\work\Subversion\binaries_svn\python_bindings\svn"
-

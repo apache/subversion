@@ -25,7 +25,7 @@ DefaultGroupName=Subversion
 LicenseFile={#= path_setup_in}\subversion\SubversionLicense.txt
 OutputDir={#= path_setup_out}
 OutputBaseFilename=svn-{#= svn_version}-setup
-Compression=lzma/max
+Compression=lzma
 InternalCompressLevel=max
 SolidCompression=true
 AppCopyright={#= svn_cpr}
@@ -33,7 +33,7 @@ UninstallDisplayIcon={app}\svn.exe
 UninstallDisplayName=Subversion {#= svn_version}{#= svn_pretxtrevision}{#= svn_revision} (Uninstall)
 AlwaysShowDirOnReadyPage=true
 AlwaysShowGroupOnReadyPage=true
-InfoAfterFile=Post.txt
+InfoAfterFile=Post.rtf
 InfoBeforeFile=Pre.rtf
 DisableStartupPrompt=false
 UseSetupLdr=true
@@ -50,6 +50,7 @@ ShowLanguageDialog=no
 [Tasks]
 Name: desktopicon; Description: Create &desktop icon for the Subversion documentation; GroupDescription: Desktop icons:
 Name: quicklaunchicon; Description: Create &Quick Launch icon for the Subversion Documentation; GroupDescription: Quick Launch icons:; MinVersion: 4.01.1998,5.00.2195
+Name: apachehandler; Description: Install and configure Subversion modules (the Setup will do a stop/uninstall/configure/install/start cycle of the Apache service); GroupDescription: Apache modules:; MinVersion: 0,4.0.1381; Check: ApacheTask
 
 [Files]
 ; Subversion files --------------------------------------------------------------
@@ -63,7 +64,7 @@ Source: {#= path_svnlook}\svnlook.exe; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_svnserve}\svnserve.exe; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_svnversion}\svnversion.exe; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_svndumpfilter}\svndumpfilter.exe; DestDir: {app}\bin; Flags: ignoreversion
-Source: {#= path_brkdb_dll}\libdb42.dll; DestDir: {app}\bin
+Source: {#= path_brkdb_dll}\{#= libdb_dll}; DestDir: {app}\bin
 Source: {#= path_iconv}\*.so; DestDir: {app}\iconv; Flags: ignoreversion
 
 Source: {#= path_setup_in}\berkeley\BerkeleyLicense.txt; DestDir: {app}

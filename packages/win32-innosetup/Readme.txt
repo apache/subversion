@@ -6,7 +6,7 @@ $LastChangedDate$
 CONTENTS:
 =========
   * Introduction (read first!)
-  * Directory structure
+  * Dynamic build data
   * Programs used for the Subversion installer and instructions
     - Inno Setup
     - Perl
@@ -22,21 +22,18 @@ Introduction
   This document describes the packages\win32-innosetup directory of the
   Subversion repository and tells you how you can roll out your own Windows
   installer for Subversion.
-  This instructions are for anyone who wants to roll out a Windows installer
-  for Subversion.  
 
   If you have trouble, make sure that you use the packages versions that are
   noted here (if noted) before asking for help.
 
-  If you haven't done it already:  -Please, Check out the subversion
-  sources to a place you like and download the programs and packages
-  from the links below. Reading the "Directory structure" part should
-  be the next.
+  If you haven't done it already:  -Please, Check out the subversion sources to
+  a place you like and download the programs and packages from the links below.
+  Reading the "Directory structure" part should be the next.
 
   Inno Setup
   ----------
-  Inno Setup QuickStart Pack 4.1.6. This package gives you Inno Setup (IS)
-  4.1.6 and "Inno Setup Pre Processor" (ISPP) which works with your downloaded
+  Inno Setup QuickStart Pack 4.2.1. This package gives you Inno Setup (IS)
+  4.2.1 and "Inno Setup Pre Processor" (ISPP) which works with your downloaded
   version of IS:
     http://www.jrsoftware.org/isdl.php
 
@@ -75,8 +72,22 @@ Introduction
   and using the downloaded packages.
 
 
-Directory structure
-===================
+Dynamic build data
+==================
+
+  The setup system must consider many dynamic data when creating the
+  installation program. This is things such as paths, different makers of the
+  setup (they may have different compilers and paths in their system) and that
+  binarys and contents might vary.
+
+  All this data are maintained by the file svn_dynamics.iss which has a lot
+  variables that is processed by Inno Setup Pre Processor (ISPP) during the
+  compiling of the setup.
+  A template can be found in the packages\win32-innosetup\templates directory.
+  Copy this file to the packages\win32-innosetup directory and edit it
+  according to the documentation inside it. This file is not under version
+  control (the template is) since the contents will vary depending on the
+  system they are in.
 
   The Inno setup file lives under the packages\win32-innosetup directory
   of the Subversion repository and are using folders which are both visible
@@ -86,15 +97,7 @@ Directory structure
   The setup system gets its files (and have files) from two kinds of places:
   * Static:  This files are always somewhere in the repository.
   * Dynamic: This files can be picked up anywhere from your computer (even from
-             the repository). All the paths here are determined by the file
-             svn_dynamics.iss which is variables that is processed by Inno
-             Setup Pre Processor (ISPP) during the compiling of the setup.
-             A template of this file can be found in the 
-             packages\win32-innosetup\templates directory. Copy this file to
-             the packages\win32-innosetup directory and edit it according to
-             the documentation inside it. This file is not under version
-             control (the template is) since the contents will vary from user
-             to user.
+             the repository).
 
   Visible folders looks like this: [ ] and hidden folders like this: [h].
   
