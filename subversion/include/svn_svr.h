@@ -74,14 +74,6 @@
 #include <svn_types.h>
 
 
-/* Makes the server library re-load `/etc/svn.conf'.  Network layers
-   *must* call this routine when first loaded!  
-
-   Returns failure (NULL) or success (non-NULL).
-*/
-
-char svn_svr_init (svn_string_t *config_file);
-
 
 
 /* For reading history */
@@ -208,7 +200,7 @@ svn_delta_t * svn_svr_get_update (svn_string_t *repos,
 
 */
 
-typedef struct svn_svr_plugin
+typedef struct svn_svr_plugin_t
 {
   /* An authorization function should return NULL (failure) or
      non-NULL (success).  If successful, it should fill in the
@@ -224,8 +216,47 @@ typedef struct svn_svr_plugin
   (svn_delta_t *) (* conflict_resolve_hook) (svn_delta_t *rejected_delta,
                                              int rejection_rationale);
 
-} svn_svr_plugin;
+} svn_svr_plugin_t;
 
+
+
+/******************************************
+
+   The API for general loading of policy config files
+
+******************************************/
+
+/* This object holds three lists that describe the information read in
+   from a `svn.conf' file.  Every svn_svr_ routine requires a pointer
+   to one of these! */
+
+
+typedef struct svn_svr_policies_t
+{
+  svn_prop_t *repository_aliases;    /* an array of props (key/value)
+                                        stores aliases for repositories */
+  unsigned long repos_len;           /* length of this array */
+
+  svn_string_t *global_restrictions; /* an array of strings describes
+                                        global security restrictions
+                                        (these are parsed individually) */
+  unsigned long restrict_len;        /* length of this array */
+
+  svn_svr_plugin_t *plugins;         /* an array of loaded plugin types */
+  unsigned long plugin_len;          /* length of this array */
+
+} svn_svr_policies_t;
+
+
+
+/* Makes the server library load a specified config file.  Network
+   layers *must* call this routine when first loaded.
+
+   Returns a svn_svr_policies object to be used with all server routines. 
+
+*/
+
+svn_svr_policies_t svn_svr_init (svn_string_t *config_file);
 
 
 
