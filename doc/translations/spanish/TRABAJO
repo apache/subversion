@@ -19,19 +19,25 @@ en dos tipos diferentes de revisión (e idealmente cada tipo de
 revisión sería llevado por personas diferentes, aunque puede que
 sea mucho pedir).
 
-Para que un fichero se de apruebe como traducción, debe aparecer
+Para que un fichero se apruebe como traducción, debe aparecer
 en el estado de traducido y en ambas secciones de revisión, y
 no debe tener marcas <!-- TODO ... --> pendientes por resolver,
 aunque puede tener perfectamente marcas de otro tipo, por ejemplo
 para aclarar detalles en la traducción realizada.
 
+Cuando varios autores han colaborado en un mismo fichero, se
+escribirá su nombre separado por comas, sin tener relevancia el
+órden de los nombres. Como caso especial para los ficheros en
+proceso de traducción, se indica primero el nombre de la persona
+que está trabajando de forma activa en el fichero.
+
 
 Relación nombre usuario <-> nombre real:
 ----------------------------------------
-gradha                  Grzegorz Adam Hankiewicz
-ruben                   Rubén Gómez
 beerfrick               Ariel Arjona
 dbrouard                Diego Brouard
+gradha                  Grzegorz Adam Hankiewicz
+ruben                   Rubén Gómez
 
 
 Ficheros huérfanos con traducción parcial:
@@ -40,7 +46,7 @@ Ficheros huérfanos con traducción parcial:
 
 Ficheros en proceso de traducción:
 ----------------------------------
-ch02.xml: dbrouard
+ch02.xml: dbrouard, beerfrick
 ch03.xml: ruben
 ch04.xml: gradha
 
