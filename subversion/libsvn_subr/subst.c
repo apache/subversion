@@ -542,9 +542,8 @@ svn_subst_translate_stream (svn_stream_t *s, /* src stream */
                             const svn_subst_keywords_t *keywords,
                             svn_boolean_t expand)
 {
-  svn_error_t *err = SVN_NO_ERROR;
-  svn_error_t *read_err, *close_err;
-  char c;
+  char buf[SVN_STREAM_CHUNK_SIZE + 1];
+  const char *p, *interesting;
   apr_size_t len, readlen;
   apr_size_t eol_str_len = eol_str ? strlen (eol_str) : 0;
   char       newline_buf[2] = { 0 };
@@ -556,224 +555,99 @@ svn_subst_translate_stream (svn_stream_t *s, /* src stream */
 
   /* The docstring requires that *some* translation be requested. */
   assert (eol_str || keywords);
+  interesting = (eol_str && keywords) ? "$\r\n" : eol_str ? "\r\n" : "$";
 
-  /* Copy bytes till the cows come home (or until one of them breaks a
-     leg, at which point you should trot out to the range with your
-     trusty sidearm, put her down, and consider steak dinners for the
-     next two weeks). */
-  while (err == SVN_NO_ERROR)
+  readlen = sizeof (buf);
+  while (readlen == sizeof (buf))
     {
-      /* Read a byte from SRC */
-      readlen = 1;
-      read_err = svn_stream_read (s, &c, &readlen);
+      SVN_ERR (svn_stream_read (s, buf, &readlen));
+      buf[readlen] = '\0';
 
-      if (read_err)
+      /* At the beginning of this loop, assume that we might be in an
+       * interesting state, i.e. with data in the newline or keyword
+       * buffer.  First try to get to the boring state so we can copy
+       * a run of boring characters; then try to get back to the
+       * interesting state. by processing an interesting character,
+       * and repeat. */
+      for (p = buf; p < buf + readlen;)
         {
-          /* Oops, something bad happened. */
-          err = read_err;
-          goto cleanup;
-        }
-      else if (readlen < 1)
-        {
-          /* A short read means we've reached the end of the stream.
-             Close up shop.  This means flushing our temporary
-             streams.  Since we shouldn't have data in *both*
-             temporary streams, order doesn't matter here.  However,
-             the newline buffer will need to be translated.  */
+          /* Try to get to the boring state, if necessary. */
           if (newline_off)
             {
-              if ((err = translate_newline (eol_str, eol_str_len, 
-                                            src_format, &src_format_len,
-                                            newline_buf, newline_off,
-                                            d, repair)))
-                goto cleanup;
-            }
-          if (((len = keyword_off)) && 
-              ((err = translate_write (d, keyword_buf, len))))
-            goto cleanup;
-          
-          /* Close the source and destination streams. */
-          close_err = svn_stream_close (s);
-          if (close_err)
-            goto cleanup;
-
-          close_err = svn_stream_close (d);
-          if (close_err)
-            goto cleanup;
-          
-          /* All done, all streams closed, all is well, and all that. */
-          return SVN_NO_ERROR;
-        }
-    
-
-      /* Handle the byte. */
-      switch (c)
-        {
-        case '$':
-          /* A-ha!  A keyword delimiter!  */
-
-          /* If we are currently collecting up a possible newline
-             string, this puts an end to that collection.  Flush the
-             newline buffer (translating as necessary) and move
-             along. */
-          if (newline_off)
-            {
-              if ((err = translate_newline (eol_str, eol_str_len, 
-                                            src_format, &src_format_len,
-                                            newline_buf, newline_off,
-                                            d, repair)))
-                goto cleanup;
+              if (*p == '\n')
+                newline_buf[newline_off++] = *p++;
+              SVN_ERR (translate_newline (eol_str, eol_str_len, src_format,
+                                          &src_format_len, newline_buf,
+                                          newline_off, d, repair));
               newline_off = 0;
             }
-
-          /* If we aren't paying attention to keywords, just skip the
-             rest of this stuff. */
-          if (! keywords)
+          else if (keyword_off && *p == '$')
             {
-              if ((err = translate_write (d, (const void *)&c, 1)))
-                goto cleanup;
-              break;
-            }
-
-          /* Put this character into the keyword buffer. */
-          keyword_buf[keyword_off++] = c;
-
-          /* If this `$' is the beginning of a possible keyword, we're
-             done with it for now.  */
-          if (keyword_off == 1)
-            break;
-
-          /* Else, it must be the end of one!  Attempt to translate
-             the buffer. */
-          len = keyword_off;
-          if (translate_keyword (keyword_buf, &len, expand, keywords))
-            {
-              /* We successfully found and translated a keyword.  We
-                 can write out this buffer now. */
-              if ((err = translate_write (d, keyword_buf, len)))
-                goto cleanup;
+              /* If translation fails, treat this '$' as a starting '$'. */
+              keyword_buf[keyword_off++] = '$';
+              if (translate_keyword (keyword_buf, &keyword_off, expand,
+                                     keywords))
+                p++;
+              else
+                keyword_off--;
+              SVN_ERR (translate_write (d, keyword_buf, keyword_off));
               keyword_off = 0;
             }
-          else
+          else if (keyword_off == SVN_KEYWORD_MAX_LEN - 1
+                   || (keyword_off && (*p == '\r' || *p == '\n')))
             {
-              /* No keyword was found here.  We'll let our
-                 "terminating `$'" become a "beginning `$'" now.  That
-                 means, write out all the keyword buffer (except for
-                 this `$') and reset it to hold only this `$'.  */
-              if ((err = translate_write (d, keyword_buf, keyword_off - 1)))
-                goto cleanup;
-              keyword_buf[0] = c;
-              keyword_off = 1;
-            }
-          break;
-
-        case '\n':
-        case '\r':
-          /* Newline character.  If we currently bagging up a keyword
-             string, this pretty much puts an end to that.  Flush the
-             keyword buffer, then handle the newline. */
-          if ((len = keyword_off))
-            {
-              if ((err = translate_write (d, keyword_buf, len)))
-                goto cleanup;
+              /* No closing '$' found; flush the keyword buffer. */
+              SVN_ERR (translate_write (d, keyword_buf, keyword_off));
               keyword_off = 0;
             }
-
-          if (! eol_str)
+          else if (keyword_off)
             {
-              /* Not doing newline translation...just write out the char. */
-              if ((err = translate_write (d, (const void *)&c, 1)))
-                goto cleanup;
+              keyword_buf[keyword_off++] = *p++;
+              continue;
+            }
+
+          /* We're in the boring state; look for interest characters.
+           * For lack of a memcspn(), manually skip past NULs. */
+          len = 0;
+          while (1)
+            {
+              len += strcspn (p + len, interesting);
+              if (p[len] != '\0' || p + len == buf + readlen)
+                break;
+              len++;
+            }
+          if (len)
+            SVN_ERR (translate_write (d, p, len));
+          p += len;
+
+          /* Set up state according to the interesting character, if any. */
+          switch (*p)
+            {
+            case '$':
+              keyword_buf[keyword_off++] = *p++;
               break;
-            }
-
-          /* If we aren't yet tracking the development of a newline
-             string, begin so now. */
-          if (! newline_off)
-            {
-              newline_buf[newline_off++] = c;
+            case '\r':
+              newline_buf[newline_off++] = *p++;
               break;
-            }
-          else
-            {
-              /* We're already tracking a newline string, so let's see
-                 if this is part of the same newline, or the start of
-                 a new one. */
-              char c0 = newline_buf[0];
-
-              if ((c0 == c) || ((c0 == '\n') && (c == '\r')))
-                {
-                  /* The first '\n' (or '\r') is the newline... */
-                  if ((err = translate_newline (eol_str, eol_str_len, 
-                                                src_format, &src_format_len,
-                                                newline_buf, 1,
-                                                d, repair)))
-                    goto cleanup;
-
-                  /* ...the second '\n' (or '\r') is at least part of our next
-                     newline. */
-                  newline_buf[0] = c;
-                  newline_off = 1;
-                }
-              else 
-                {
-                  /* '\r\n' is our newline */
-                  newline_buf[newline_off++] = c;
-                  if ((err = translate_newline (eol_str, eol_str_len, 
-                                                src_format, &src_format_len,
-                                                newline_buf, 2,
-                                                d, repair)))
-                    goto cleanup;
-                  newline_off = 0;
-                }
-            }
-          break;
-
-        default:
-          /* If we're currently bagging up a keyword string, we'll
-             add this character to the keyword buffer.  */
-          if (keyword_off)
-            {
-              keyword_buf[keyword_off++] = c;
-              
-              /* If we've reached the end of this buffer without
-                 finding a terminating '$', we just flush the buffer
-                 and continue on. */
-              if (keyword_off >= SVN_KEYWORD_MAX_LEN)
-                {
-                  if ((err = translate_write (d, keyword_buf, keyword_off)))
-                    goto cleanup;
-                  keyword_off = 0;
-                }
-              break;
-            }
-
-          /* If we're in a potential newline separator, this character
-             terminates that search, so we need to flush our newline
-             buffer (translating as necessary) and then output this
-             character.  */
-          if (newline_off)
-            {
-              if ((err = translate_newline (eol_str, eol_str_len, 
-                                            src_format, &src_format_len,
-                                            newline_buf, newline_off,
-                                            d, repair)))
-                goto cleanup;
+            case '\n':
+              newline_buf[newline_off++] = *p++;
+              SVN_ERR (translate_newline (eol_str, eol_str_len, src_format,
+                                          &src_format_len, newline_buf,
+                                          newline_off, d, repair));
               newline_off = 0;
+              break;
             }
-
-          /* Write out this character. */
-          if ((err = translate_write (d, (const void *)&c, 1)))
-            goto cleanup;
-          break; 
-
-        } /* switch (c) */
+        }
     }
 
-  return SVN_NO_ERROR;
+  if (newline_off)
+    SVN_ERR (translate_newline (eol_str, eol_str_len, src_format,
+                                &src_format_len, newline_buf, newline_off, d,
+                                repair));
+  if (keyword_off)
+    SVN_ERR (translate_write (d, keyword_buf, len));
 
- cleanup:
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
