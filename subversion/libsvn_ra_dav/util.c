@@ -509,7 +509,8 @@ parsed_request(ne_session *sess,
   int expected_code;
   const char *msg;
   svn_error_t *err = SVN_NO_ERROR;
-  svn_ra_session_t *ras = ne_get_session_private(sess, SVN_RA_NE_SESSION_ID);
+  svn_ra_dav__session_t *ras = ne_get_session_private(sess,
+                                                     SVN_RA_NE_SESSION_ID);
 
   /* create/prep the request */
   req = ne_request_create(sess, method, url);
@@ -733,7 +734,7 @@ svn_ra_dav__parsed_request_compat(ne_session *sess,
 
 
 svn_error_t *
-svn_ra_dav__maybe_store_auth_info(svn_ra_session_t *ras)
+svn_ra_dav__maybe_store_auth_info(svn_ra_dav__session_t *ras)
 {
   /* No auth_baton?  Never mind. */
   if (! ras->callbacks->auth_baton)

@@ -66,7 +66,7 @@ static int request_auth(void *userdata, const char *realm, int attempt,
                         char *username, char *password)
 {
   svn_error_t *err;
-  svn_ra_session_t *ras = userdata;
+  svn_ra_dav__session_t *ras = userdata;
   void *creds;
   svn_auth_cred_simple_t *simple_creds;  
 
@@ -152,7 +152,7 @@ server_ssl_callback(void *userdata,
                     int failures,
                     const ne_ssl_certificate *cert)
 {
-  svn_ra_session_t *ras = userdata;
+  svn_ra_dav__session_t *ras = userdata;
   svn_auth_cred_ssl_server_trust_t *server_creds = NULL;
   void *creds;
   svn_auth_iterstate_t *state;
@@ -223,7 +223,7 @@ server_ssl_callback(void *userdata,
 }
 
 static svn_boolean_t
-client_ssl_decrypt_cert(svn_ra_session_t *ras,
+client_ssl_decrypt_cert(svn_ra_dav__session_t *ras,
                         const char *cert_file,
                         ne_ssl_client_cert *clicert)
 {
@@ -279,7 +279,7 @@ client_ssl_callback(void *userdata, ne_session *sess,
                     const ne_ssl_dname *const *dnames,
                     int dncount)
 {
-  svn_ra_session_t *ras = userdata;
+  svn_ra_dav__session_t *ras = userdata;
   ne_ssl_client_cert *clicert = NULL;
   void *creds;
   svn_auth_iterstate_t *state;
@@ -542,7 +542,7 @@ svn_ra_dav__open (void **session_baton,
   apr_size_t len;
   ne_session *sess, *sess2;
   ne_uri uri = { 0 };
-  svn_ra_session_t *ras;
+  svn_ra_dav__session_t *ras;
   int is_ssl_session;
   svn_boolean_t compression;
   svn_config_t *cfg;
@@ -695,7 +695,7 @@ svn_ra_dav__open (void **session_baton,
 
   /* Store our RA session baton in Neon's private data slot so we can
      get at it in functions that take only ne_session_t *sess
-     (instead of the full svn_ra_session_t *ras). */
+     (instead of the full svn_ra_dav__session_t *ras). */
   ne_set_session_private(sess, SVN_RA_NE_SESSION_ID, ras);
   ne_set_session_private(sess2, SVN_RA_NE_SESSION_ID, ras);
 
@@ -763,7 +763,7 @@ static svn_error_t *svn_ra_dav__get_repos_root(void *session_baton,
                                                const char **url,
                                                apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session_baton;
 
   if (! ras->repos_root)
     {
@@ -791,7 +791,7 @@ static svn_error_t *svn_ra_dav__do_get_uuid(void *session_baton,
                                             const char **uuid,
                                             apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session_baton;
 
   if (! ras->uuid)
     {
