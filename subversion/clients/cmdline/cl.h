@@ -314,17 +314,6 @@ svn_error_t *svn_cl__cleanup_log_msg (void *log_msg_baton,
 /* Add a message about --force if appropriate */
 svn_error_t *svn_cl__may_need_force (svn_error_t *err);
 
-
-/*** Argument processing. ***/
-
-/* Given some TARGET from the command line, set *URL to an associated url.
-   If TARGET is already a url, set *URL to TARGET.  If TARGET is a
-   versioned item, set *URL to TARGET's entry's URL.  If TARGET is
-   unversioned (has no entry), set *URL to NULL. */
-svn_error_t *
-svn_cl__get_url_from_target (const char **URL,
-                             const char *target,
-                             apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

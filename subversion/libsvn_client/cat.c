@@ -34,7 +34,7 @@
 
 svn_error_t *
 svn_client_cat (svn_stream_t* out,
-                const char *url,
+                const char *path_or_url,
                 const svn_opt_revision_t *revision,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
@@ -47,6 +47,13 @@ svn_client_cat (svn_stream_t* out,
   svn_string_t *eol_style;
   apr_hash_t *props;
   const char *auth_dir;
+  const char *url;
+
+  SVN_ERR (svn_client_url_from_path (&url, path_or_url, pool));
+  if (! url)
+    return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
+                              "'%s' has no URL", path_or_url);
+
 
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
@@ -61,7 +68,7 @@ svn_client_cat (svn_stream_t* out,
 
   /* Resolve REVISION into a real revnum. */
   SVN_ERR (svn_client__get_revision_number (&rev, ra_lib, session,
-                                            revision, NULL, pool));
+                                            revision, path_or_url, pool));
   if (! SVN_IS_VALID_REVNUM (rev))
     SVN_ERR (ra_lib->get_latest_revnum (session, &rev));
 
