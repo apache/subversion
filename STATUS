@@ -17,6 +17,8 @@ Candidate changes:
     Notes:
       Proposed during 1.1.0 preparation, but it is too late and complicated
       to put in 1.1.0 at this stage.
+      This conflicts with the branch.  A patch against r11308 is here:
+      http://www.contactor.se/~dast/svn/archive-2004-10/0521.shtml
     Votes:
       +1: lundblad
 
