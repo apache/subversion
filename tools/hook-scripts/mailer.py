@@ -39,13 +39,7 @@ def main(pool, config_fname, repos_dir, rev):
   editor = ChangeCollector(repos.root_prev)
 
   e_ptr, e_baton = svn.delta.make_editor(editor, pool)
-  svn.repos.svn_repos_dir_delta(repos.root_prev, '', None, repos.root_this, '',
-                                e_ptr, e_baton,
-                                0,  # text_deltas
-                                1,  # recurse
-                                0,  # entry_props
-                                0,  # ignore_ancestry
-                                pool)
+  svn.repos.svn_repos_replay(repos.root_this, e_ptr, e_baton, pool)
 
   # get all the changes and sort by path
   changelist = editor.changes.items()
