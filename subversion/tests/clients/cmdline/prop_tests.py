@@ -841,32 +841,6 @@ def binary_props(sbox):
   prop_xml  = "This property has an <xml> tag."
   prop_binx = "This property has an <xml> tag and a zer\000 byte."
   
-  if re.search(r'^http', sbox.repo_url):
-
-    ### Remove this block of code after the final step of issue 1015
-    ### is implemented.  In its current intermediate state, ra-dav
-    ### servers can send binary props, but clients can't.  So, for
-    ### now, use ra_local to set some binary properties when ra-dav is
-    ### the main test schema.  Once the clients learn to transmit
-    ### binary props, we can lose this custom replacement of our main
-    ### working copy.
-    
-    wc_url = svntest.main.file_schema_prefix + \
-             os.path.abspath(os.getcwd()) + \
-             '/' + sbox.repo_dir
-
-    # Blow away our existing main working copy in favor of a new
-    # ra-local-based one.
-    svntest.main.safe_rmtree(wc_dir)
-
-    # Checkout over ra-local.
-    output, errput = \
-            svntest.main.run_svn (None, 'checkout',
-                                  '--username', svntest.main.wc_author,
-                                  '--password', svntest.main.wc_passwd,
-                                  wc_url, wc_dir)
-    if errput: raise svntest.Failure
-
   # Set some binary properties.
   propval_path = os.path.join(wc_dir, 'propval.tmp')
   propval_file = open(propval_path, 'wb')
