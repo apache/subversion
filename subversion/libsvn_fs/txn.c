@@ -202,7 +202,9 @@ txn_body_txn_root (void *baton,
   struct txn_root_args *args = baton;
   svn_fs_root_t *root;
 
+#if 0  /* Reinstate when tree.c is part of the compilation again. */
   SVN_ERR (svn_fs__txn_root_node (&root, args->txn->fs, args->txn->id, trail));
+#endif /* 0 */
 
   *args->root_p = root;
   return SVN_NO_ERROR;
