@@ -225,7 +225,6 @@ module MODULE_VAR_EXPORT dav_svn_module =
     dav_svn_create_server_config,	/* server config */
     dav_svn_merge_server_config,	/* merge server config */
     dav_svn_cmds,		/* command table */
-    NULL,                       /* handlers */
     register_hooks,             /* register hooks */
 };
 
