@@ -1,10 +1,11 @@
 #
-# svn.core: public Python interface for core compontents
+# core.py: public Python interface for core components
 #
-#  Subversion is a tool for revision control. 
-#  See http://subversion.tigris.org for more information.
+# Subversion is a tool for revision control. 
+# See http://subversion.tigris.org for more information.
 #    
-# ====================================================================
+######################################################################
+#
 # Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
@@ -14,7 +15,6 @@
 # newer version instead, at your option.
 #
 ######################################################################
-#
 
 # bring all the symbols up into this module
 ### in the future, we may want to limit this, rename things, etc
