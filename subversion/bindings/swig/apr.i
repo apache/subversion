@@ -46,8 +46,6 @@
 //%include apr_errno.h
 typedef int apr_status_t;
 
-/* ### seems that SWIG isn't picking up the definition of size_t */
-typedef unsigned long size_t;
 /* -----------------------------------------------------------------------
    apr_time_t
 */
@@ -66,26 +64,6 @@ typedef apr_int32_t time_t;
 #else
     %apply long long *OUTPUT { apr_time_t * };
 #endif
-
-/* -----------------------------------------------------------------------
-   create some INOUT typemaps for apr_size_t
-*/
-
-%apply unsigned long *INOUT { apr_size_t *INOUT };
-
-%typemap(python,in) apr_size_t *INOUT (apr_size_t temp) {
-    temp = (apr_size_t) PyInt_AsLong($input);
-    $1 = &temp;
-}
-%typemap(java,in) apr_size_t *INOUT (apr_size_t temp) {
-    temp = (apr_size_t) JCALL2(CallLongMethod, jenv, $input, svn_swig_java_mid_long_longvalue);
-    $1 = &temp;
-}
-
-%typemap(perl5,in) apr_size_t *INOUT (apr_size_t temp) {
-    temp = (apr_size_t) SvIV($input);
-    $1 = &temp;
-}
 
 /* -----------------------------------------------------------------------
    create an OUTPUT argument typemap for an apr_hash_t **

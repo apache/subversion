@@ -141,11 +141,6 @@
 }
 
 /* -----------------------------------------------------------------------
-   apr_size_t * is always an IN/OUT parameter in svn_io.h
-*/
-%apply apr_size_t *INOUT { apr_size_t * };
-
-/* -----------------------------------------------------------------------
    handle the MIME type return value of svn_io_detect_mimetype()
 */
 %apply const char **OUTPUT { const char ** };
