@@ -62,7 +62,7 @@ build_srpm_files : $(HOME)/.rpmmacros $(HOME)/$(RPMDIR) subversion.spec
 		-e 's/@VERSION@/$(VERSION)/' \
 		< $(SPECFILE) > $(SOURCE_RPM_DIR)/$(SPECFILE)
 	cd $(SOURCE_RPM_DIR); cp -r $(SVN_TOP_DIR) $(NAME)-$(VERSION); \
-	   tar cfz $(NAME)-$(VERSION)-$(RELEASE).tar.gz $(NAME)-$(VERSION) --exclude .svn; \
+	   tar cfz $(NAME)-$(VERSION)-$(RELEASE).tar.gz $(NAME)-$(VERSION) --exclude=.svn; \
 	   rm -rf $(NAME)-$(VERSION)
 
 $(HOME)/.rpmmacros : .rpmmacros
