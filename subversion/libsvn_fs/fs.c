@@ -62,6 +62,7 @@
 #include "err.h"
 #include "version.h"
 #include "node.h"
+#include "txn.h"
 
 
 /* Checking for return values, and reporting errors.  */
@@ -122,6 +123,7 @@ cleanup_fs (svn_fs_t *fs)
   /* Close the databases.  */
   SVN_ERR (cleanup_fs_db (fs, &fs->versions, "versions"));
   SVN_ERR (cleanup_fs_db (fs, &fs->nodes, "nodes"));
+  SVN_ERR (cleanup_fs_db (fs, &fs->transactions, "transactions"));
 
   /* Checkpoint any changes.  */
   db_err = txn_checkpoint (fs->env, 0, 0, 0);
@@ -204,6 +206,7 @@ svn_fs_new (apr_pool_t *parent_pool)
   }
 
   new->node_cache = apr_make_hash (new->pool);
+  new->open_txns = apr_make_hash (new->pool);
 
   new->warning = default_warning_func;
 
@@ -291,6 +294,8 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   if (svn_err) goto error;
   svn_err = svn_fs__create_nodes (fs);
   if (svn_err) goto error;
+  svn_err = svn_fs__create_transactions (fs);
+  if (svn_err) goto error;
 
   return 0;
 
@@ -327,6 +332,8 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   svn_err = svn_fs__open_versions (fs);
   if (svn_err) goto error;
   svn_err = svn_fs__open_nodes (fs);
+  if (svn_err) goto error;
+  svn_err = svn_fs__open_transactions (fs);
   if (svn_err) goto error;
 
   return 0;

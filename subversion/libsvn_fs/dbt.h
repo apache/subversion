@@ -95,7 +95,7 @@ DBT *svn_fs__track_dbt (DBT *dbt, apr_pool_t *pool);
 
 
 /* Compare two DBT values in byte-by-byte lexicographic order.  */
-int svn_fs__compare_dbt (DBT *a, DBT *b);
+int svn_fs__compare_dbt (const DBT *a, const DBT *b);
 
 
 #endif /* SVN_LIBSVN_FS_DBT_H */
