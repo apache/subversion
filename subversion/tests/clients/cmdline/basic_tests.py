@@ -1366,6 +1366,25 @@ def basic_import_executable(sbox):
                                                None, None, 1)
 
 
+#----------------------------------------------------------------------
+
+def basic_cat(sbox):
+  "basic cat of files"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Get repository text even if wc is modified
+  svntest.main.file_append(mu_path, "some text")
+  output, errput = svntest.main.run_svn(None, 'cat', mu_path)
+  if errput or output != ["This is the file 'mu'."]:
+    print output
+    return 1
+
 
 #----------------------------------------------------------------------
 def nonexistent_repository(sbox):
@@ -1430,6 +1449,7 @@ test_list = [ None,
               basic_checkout_deleted,
               basic_node_kind_change,
               basic_import,
+              basic_cat,
               Skip(basic_import_executable, (os.name != 'posix')),
               nonexistent_repository,
               ### todo: more tests needed:

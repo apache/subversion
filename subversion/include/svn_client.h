@@ -941,6 +941,22 @@ svn_client_ls (apr_hash_t **dirents,
                apr_pool_t *pool);
 
 
+/* Output the content of file identified by URL and REVISION to
+   the stream OUT.
+
+   Use AUTH_BATON to authenticate against the repository.
+
+   Perform all allocations from POOL.
+
+   ### TODO: Add an expansion/translation flag?
+*/
+svn_error_t *
+svn_client_cat (svn_stream_t* out,
+                const char *url,
+                const svn_opt_revision_t *revision,
+                svn_client_auth_baton_t *auth_baton,
+                apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

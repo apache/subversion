@@ -601,6 +601,14 @@ SVN_ERROR_START
               SVN_ERR_CLIENT_CATEGORY_START + 6,
               "Attempting restricted operation for modified resource")
 
+  SVN_ERRDEF (SVN_ERR_CLIENT_IS_DIRECTORY,
+              SVN_ERR_CLIENT_CATEGORY_START + 7,
+              "Operation does not apply to directory")
+
+  SVN_ERRDEF (SVN_ERR_CLIENT_REVISION_RANGE,
+              SVN_ERR_CLIENT_CATEGORY_START + 8,
+              "Revision range is not allowed")
+
   /* misc errors */
 
   SVN_ERRDEF (SVN_ERR_BASE,
