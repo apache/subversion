@@ -243,7 +243,7 @@ _svnadmin ()
 		cmdOpts="-r --revision -q --quiet"
 		;;
 	dump)
-		cmdOpts="-r --revision --incremental -q --quiet"
+		cmdOpts="-r --revision --incremental -q --quiet --deltas"
 		;;
 	help|h|\?)
 		cmdOpts="$cmds $qOpts"
