@@ -174,9 +174,9 @@ if [ "$1"x = "1"x ]; then
       /usr/share/info/dir \
       --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
 
-   /sbin/install-info /usr/share/info/svn-manual.info.gz \
+   /sbin/install-info /usr/share/info/svn-handbook.info.gz \
       /usr/share/info/dir \
-      --entry='* Subversion: (svn-manual).          Subversion Versioning System Manual'
+      --entry='* Subversion: (svn-handbook).          Subversion Versioning System Manual'
 
    /sbin/install-info /usr/share/info/svn_for_cvs_users.info.gz \
       /usr/share/info/dir \
@@ -190,9 +190,9 @@ if [ "$1"x = "0"x ]; then
       /usr/share/info/dir \
       --entry='* Subversion-design: (svn-design).          Subversion Versioning System Design Manual'
 
-   /sbin/install-info --delete /usr/share/info/svn-manual.info.gz \
+   /sbin/install-info --delete /usr/share/info/svn-handbook.info.gz \
       /usr/share/info/dir \
-      --entry='* Subversion: (svn-manual).          Subversion Versioning System Manual'
+      --entry='* Subversion: (svn-handbook).          Subversion Versioning System Manual'
 
    /sbin/install-info --delete /usr/share/info/svn_for_cvs_users.info.gz \
       /usr/share/info/dir \
