@@ -31,14 +31,6 @@ Item = svntest.wc.StateItem
 
 #----------------------------------------------------------------------
 
-# How we currently test 'svnlook' --
-#
-#   'svnlook youngest':  We don't care about the contents of transactions;
-#                        we only care that they exist or not.
-#                        Therefore, we can simply parse transaction headers.
-#
-######################################################################
-
 # Convenience functions to make writing more tests easier
 
 def run_svnlook(*varargs):
