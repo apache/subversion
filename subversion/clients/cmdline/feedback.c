@@ -43,58 +43,6 @@ struct notify_baton
 };
 
 
-
-#if 0  /* left for reference, soon to toss */
-static void
-notify_added (struct notify_baton *nb, const char *path)
-{
-  /* the pool (BATON) is typically the global pool; don't keep filling it */
-  apr_pool_t *subpool = svn_pool_create (nb->pool);
-  svn_wc_entry_t *entry;
-  svn_error_t *err;
-  const char *type = "      ";  /* fill with "binary" if binary, etc */
-
-  /* ### this sucks. we have to open/parse the entries file to get this
-     ### information. when adding thousands of files, this blows... */
-  err = svn_wc_entry (&entry, path, FALSE, subpool);
-  if (err)
-    {
-      printf ("WARNING: error fetching entry for %s\n", path);
-      goto done;
-    }
-  else if (! entry)
-    {
-      printf ("WARNING: apparently failed to add %s\n", path);
-      goto done;
-    }
-
-  if (entry->kind == svn_node_file)
-    {
-      const svn_string_t *value;
-
-      /* ### and again: open/parse a properties file. urk... */
-      err = svn_wc_prop_get (&value, SVN_PROP_MIME_TYPE, path, subpool);
-      if (err)
-        {
-          printf ("WARNING: error fetching %s property for %s\n",
-                  SVN_PROP_MIME_TYPE, path);
-          goto done;
-        }
-
-      /* If the property exists and it doesn't start with `text/', we'll
-         call it binary. */
-      if ((value) && (value->len > 5) && (strncmp (value->data, "text/", 5)))
-        type = "binary";
-    }
-
-  printf ("A  %s  %s\n", type, path);
-
- done:
-  svn_pool_destroy (subpool);
-}
-#endif /* 0 */
-
-
 /* This implements `svn_wc_notify_func_t'. */
 static void
 notify (void *baton,
@@ -129,22 +77,18 @@ notify (void *baton,
       break;
 
     case svn_wc_notify_add:
-      nb->received_some_change = TRUE;
-      if (kind == svn_node_dir)
-        {
-          printf ("A  %s\n", path);
-          break;
-        }
-      else if (kind == svn_node_file)
-        statchar_buf[0] = 'A';
-
-      /* fall thru to more file case */
+      /* We *should* only get the MIME_TYPE if PATH is a file.  If we
+         do get it, and the mime-type is not in the "text/" grouping,
+         note that this is a binary addition.  */
+      if (mime_type
+          && ((strlen (mime_type)) > 5)
+          && ((strncmp (mime_type, "text/", 5)) != 0))
+        printf ("A  (bin)  %s\n", path);
+      else
+        printf ("A         %s\n", path);
+      break;
 
     case svn_wc_notify_update:
-      /* note: maybe fell thru from above case */
-
-      /* ### printf ("U   %s\n", path); */
-
       nb->received_some_change = TRUE;
 
       if ((kind == svn_node_file) && (action == svn_wc_notify_update))
@@ -203,7 +147,7 @@ notify (void *baton,
       break;
 
     case svn_wc_notify_commit_modified:
-      printf ("Sending         %s\n", path);
+      printf ("Sending        %s\n", path);
       break;
 
     case svn_wc_notify_commit_added:
@@ -216,11 +160,11 @@ notify (void *baton,
       break;
 
     case svn_wc_notify_commit_deleted:
-      printf ("Deleting        %s\n", path);
+      printf ("Deleting       %s\n", path);
       break;
 
     case svn_wc_notify_commit_replaced:
-      printf ("Replacing       %s\n", path);
+      printf ("Replacing      %s\n", path);
       break;
 
     case svn_wc_notify_commit_postfix_txdelta:

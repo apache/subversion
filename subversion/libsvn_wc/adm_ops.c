@@ -884,7 +884,7 @@ svn_wc_add (const char *path,
   /* Report the addition to the caller. */
   if (notify_func != NULL)
     (*notify_func) (notify_baton, path, svn_wc_notify_add,
-                    svn_node_unknown,
+                    kind,
                     mimetype,
                     svn_wc_notify_state_unknown,
                     svn_wc_notify_state_unknown,
