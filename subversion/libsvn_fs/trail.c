@@ -61,7 +61,7 @@ print_trail_debug (trail_t *trail)
 }
 #else
 #define print_trail_debug(trail)
-#endif /* defined(SVN_FS__TRAIL_DEBUG)
+#endif /* defined(SVN_FS__TRAIL_DEBUG) */
 
 
 /* A single action to be undone.  Actions are chained so that later
