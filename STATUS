@@ -125,3 +125,10 @@ Candidate changes:
       Did you miss the part where I said "working copy ... busticated state"?
     Votes:
       +1: cmpilato
+
+  * r11730 (Issue #2108):
+    Fix UNC paths on Cygwin.
+    Justification:
+      Regression from 1.0.x
+    Votes:
+      +1: brane
