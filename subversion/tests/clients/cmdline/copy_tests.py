@@ -1494,7 +1494,7 @@ def url_to_non_existent_url_path(sbox):
     raise svntest.Failure
 
 
-
+#----------------------------------------------------------------------
 # Test for a copying (URL to URL) an old rev of a deleted file in a
 # deleted directory.
 def non_existent_url_to_url(sbox):
@@ -1502,9 +1502,9 @@ def non_existent_url_to_url(sbox):
 
   sbox.build()
 
-  adg_url = os.path.join(svntest.main.current_repo_url, 'A/D/G')
-  pi_url = os.path.join(svntest.main.current_repo_url, 'A/D/G/pi')
-  new_url = os.path.join(svntest.main.current_repo_url, 'newfile')
+  adg_url = svntest.main.current_repo_url + '/A/D/G'
+  pi_url = svntest.main.current_repo_url + '/A/D/G/pi'
+  new_url = svntest.main.current_repo_url + '/newfile'
 
   svntest.actions.run_and_verify_svn(None, None, None, 'delete',
                                      adg_url, '-m', '')
@@ -1513,15 +1513,16 @@ def non_existent_url_to_url(sbox):
                                      '-r', '1', pi_url, new_url,
                                      '-m', '')
 
+#----------------------------------------------------------------------
 def old_dir_url_to_url(sbox):
   "test URL to URL copying edge case"
 
   sbox.build()
 
-  adg_url = os.path.join(svntest.main.current_repo_url, 'A/D/G')
-  pi_url = os.path.join(svntest.main.current_repo_url, 'A/D/G/pi')
-  iota_url = os.path.join(svntest.main.current_repo_url, 'iota')
-  new_url = os.path.join(svntest.main.current_repo_url, 'newfile')
+  adg_url = svntest.main.current_repo_url, + '/A/D/G'
+  pi_url = svntest.main.current_repo_url + '/A/D/G/pi'
+  iota_url = svntest.main.current_repo_url + '/iota'
+  new_url = svntest.main.current_repo_url + '/newfile'
 
   # Delete a directory
   svntest.actions.run_and_verify_svn(None, None, None, 'delete',

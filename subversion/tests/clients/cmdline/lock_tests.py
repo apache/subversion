@@ -455,7 +455,7 @@ def deleted_path_lock(sbox):
   wc_dir = sbox.wc_dir
 
   iota_path = os.path.join(wc_dir, 'iota')
-  iota_url = os.path.join(svntest.main.current_repo_url, 'iota')
+  iota_url = svntest.main.current_repo_url + '/iota'
 
   svntest.actions.run_and_verify_svn(None, None, None, 'lock',
                                      '--username', svntest.main.wc_author,
