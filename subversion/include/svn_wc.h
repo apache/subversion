@@ -67,45 +67,63 @@
 #define SVN_WC_H
 
 #include <svn_types.h>
+#include <svn_delta.h>
 
 
 
-/* Functions taking an argument (apr_array_header_t *)PATHS are taking
- * an array of (svn_string_t *) file and/or directory names.  
+/* Where you see arguments of the form
+ * 
+ *   (apr_array_header_t *) paths
+ *
+ * that means an array of (svn_string_t *) types, each one of which is
+ * a file or directory path.  This is so we can do atomic operations
+ * on any random set of files and directories.
  */
 
-apr_status_t svn_wc_rename (svn_string_t *src, svn_string_t *dst);
-apr_status_t svn_wc_copy   (svn_string_t *src, svn_string_t *dst);
-apr_status_t svn_wc_add    (apr_array_header_t *paths);
-apr_status_t svn_wc_delete (apr_array_header_t *paths);
-
-svn_skelta_t svn_wc_make_skelta (apr_array_header_t *paths);
-
-/* Turn SKELTA into a full delta. */
-svn_delta_t svn_wc_fill_skelta (svn_skelta_t *skelta);
+svn_error_t *svn_wc_rename (svn_string_t *src, svn_string_t *dst);
+svn_error_t *svn_wc_copy   (svn_string_t *src, svn_string_t *dst);
+svn_error_t *svn_wc_add    (apr_array_header_t *paths);
+svn_error_t *svn_wc_delete (apr_array_header_t *paths);
 
 /* Update working copy to reflect the changes in DELTA. */
-svn_boolean_t svn_wc_apply_delta (svn_delta_t *delta);
+svn_error_t *svn_wc_apply_delta (svn_delta_stream_t *delta_stream,
+                                 svn_delta_read_fn_t *delta_stream_reader,
+                                 svn_delta_t *delta);
+
+#if 0
+/* Will have to think about the interface here a bit more. */
+svn_error_t *svn_wc_make_delta (svn_delta_stream_t *delta_stream,
+                                svn_delta_write_fn_t *delta_stream_writer,
+                                apr_array_header_t *paths);
+#endif /* 0 */
+
+
+/* A word about the implementation of working copy property storage:
+ *
+ * Since properties are key/val pairs, you'd think we store them in
+ * some sort of Berkeley DB-ish format, and even store pending changes
+ * to them that way too.
+ *
+ * However, we already have libsvn_subr/hashdump.c working, and it
+ * uses a human-readable format.  That will be very handy when we're
+ * debugging, and presumably we will not be dealing with any huge
+ * properties or property lists initially.  Therefore, we will
+ * continue to use hashdump as the internal mechanism for storing and
+ * reading from property lists, but note that the interface here is
+ * _not_ dependent on that.  We can swap in a DB-based implementation
+ * at any time and users of this library will never know the
+ * difference.
+ */
 
 /* Return local value of PROPNAME for the file or directory PATH. */
-svn_prop_t *svn_wc_get_node_prop (svn_string_t *path,
-                                  svn_string_t *propname);
+svn_error_t *svn_wc_get_path_prop (svn_string_t **value,
+                                   svn_string_t *propname,
+                                   svn_string_t *path);
 
 /* Return local value of PROPNAME for the directory entry PATH. */
-svn_prop_t *svn_wc_get_dirent_prop (svn_string_t *path,
-                                    svn_string_t *propname);
-
-/* Return all properties (names and values) of file or directory PATH. */
-apr_hash_t *svn_wc_get_node_proplist (svn_string_t *path);
-
-/* Return all properties (names and values) of directory entry PATH. */
-apr_hash_t *svn_wc_get_dirent_proplist (svn_string_t *path);
-
-/* Return all property names of file or directory PATH. */
-apr_hash_t *svn_wc_get_node_propnames (path);
-
-/* Return all property names of directory entry PATH. */
-apr_hash_t *svn_wc_get_dirent_propnames (path);
+svn_error_t *svn_wc_get_dirent_prop (svn_string_t **value,
+                                     svn_string_t *propname,
+                                     svn_string_t *path);
 
 #endif  /* SVN_WC_H */
 
@@ -114,4 +132,3 @@ apr_hash_t *svn_wc_get_dirent_propnames (path);
  * eval: (load-file "../svn-dev.el")
  * end: 
  */
-
