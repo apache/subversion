@@ -115,7 +115,7 @@ def do_routine_switching(wc_dir, verify):
                                              expected_status):
       return 1
   else:
-    svntest.main.run_svn(None, 'switch', iota_path, gamma_url)
+    svntest.main.run_svn(None, 'switch', gamma_url, iota_path)
   
   ### Switch the directory `A/D/H' to `A/D/G'.
 
@@ -156,7 +156,7 @@ def do_routine_switching(wc_dir, verify):
                                              expected_status):
       return 1
   else:
-    svntest.main.run_svn(None, 'switch', ADH_path, ADG_url)
+    svntest.main.run_svn(None, 'switch', ADG_url, ADH_path)
 
   return 0
 

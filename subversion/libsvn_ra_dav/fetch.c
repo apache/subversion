@@ -789,7 +789,7 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
 
   /* The root for the checkout is the Baseline Collection root, plus the
      relative location of the public URL to its repository root. */
-  *bc_root = svn_path_join(bc_url.data, bc_relative.data, pool);
+  *bc_root = svn_path_url_add_component(bc_url.data, bc_relative.data, pool);
 
   return NULL;
 }
@@ -861,7 +861,6 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
     {
       svn_revnum_t got_rev;
       svn_string_t bc_url, bc_relative;
-      svn_stringbuf_t *final_bc_url;
 
       SVN_ERR (svn_ra_dav__get_baseline_info(NULL,
                                              &bc_url, &bc_relative,
@@ -869,12 +868,9 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
                                              ras->sess,
                                              url, revision,
                                              ras->pool));
-
-      final_bc_url = svn_stringbuf_create_from_string(&bc_url, ras->pool);
-      svn_path_add_component_nts (final_bc_url, bc_relative.data);
-      
-      final_url = final_bc_url->data;
-
+      final_url = svn_path_url_add_component(bc_url.data,
+                                             bc_relative.data,
+                                             ras->pool);
       if (fetched_rev != NULL)
         *fetched_rev = got_rev;
     }
