@@ -42,7 +42,6 @@ svn_cl__merge (apr_getopt_t *os,
 {
   apr_array_header_t *targets;
   svn_client_auth_baton_t *auth_baton;
-  const char *parent_dir, *entry;
   const char *sourcepath1, *sourcepath2, *targetpath;
   svn_boolean_t using_alternate_syntax = FALSE;
   svn_error_t *err;

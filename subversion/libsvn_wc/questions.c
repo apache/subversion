@@ -269,7 +269,6 @@ svn_wc__files_contents_same_p (svn_boolean_t *same,
                                const char *file2,
                                apr_pool_t *pool)
 {
-  svn_error_t *err;
   svn_boolean_t q;
 
   SVN_ERR (svn_io_filesizes_different_p (&q, file1, file2, pool));
