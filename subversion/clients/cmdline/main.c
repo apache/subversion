@@ -97,7 +97,7 @@ const apr_getopt_option_t svn_cl__options[] =
                       N_("specify a username ARG")},
     {"password",      svn_cl__auth_password_opt, 1, 
                       N_("specify a password ARG")},
-    {"extensions",    'x', 1, N_("pass ARG as bundled options to GNU diff")},
+    {"extensions",    'x', 1, N_("pass ARG as bundled options to diff (default: '-u')")},
     {"targets",       svn_cl__targets_opt, 1,
                       N_("pass contents of file ARG as additional args")},
     {"xml",           svn_cl__xml_opt, 0, N_("output in XML")},
