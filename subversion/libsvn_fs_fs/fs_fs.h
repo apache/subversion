@@ -267,6 +267,42 @@ svn_error_t *svn_fs__fs_set_uuid (svn_fs_t *fs,
 /* Write out the zeroth revision for filesystem FS. */
 svn_error_t *svn_fs__fs_write_revision_zero (svn_fs_t *fs);
 
+/* Set *NAMES_P to an array of names which are all the active
+   transactions in filesystem FS.  Allocate the array from POOL. */
+svn_error_t *svn_fs__fs_list_transactions (apr_array_header_t **names_p,
+                                           svn_fs_t *fs,
+                                           apr_pool_t *pool);
+
+/* Open the transaction named NAME in filesystem FS.  Set *TXN_P to
+ * the transaction. If there is no such transaction, return
+ * SVN_ERR_FS_NO_SUCH_TRANSACTION.  Allocate the new transaction in
+ * POOL. */
+svn_error_t *svn_fs__fs_open_txn (svn_fs_txn_t **txn_p,
+                                  svn_fs_t *fs,
+                                  const char *name,
+                                  apr_pool_t *pool);
+
+/* Return the property list from transaction TXN and store it in
+   *PROPLIST.  Allocate the property list from POOL. */
+svn_error_t *svn_fs__fs_txn_proplist (apr_hash_t **proplist,
+                                      svn_fs_txn_t *txn,
+                                      apr_pool_t *pool);
+
+/* If the representation REP is mutable in transaction TXN_ID as part
+   of filesystem FS, remove it.  Perform temporary allocations in
+   POOL. */
+svn_error_t *svn_fs__fs_delete_rep_if_mutable (svn_fs_t *fs,
+                                               const svn_fs_id_t *id,
+                                               svn_fs__representation_t *rep,
+                                               const char *txn_id,
+                                               apr_pool_t *pool);
+
+/* If the node-revision referenced by ID is mutable in fileystem FS,
+   delete it.  Perform temporary allocations in POOL. */
+svn_error_t *svn_fs__fs_delete_node_revision (svn_fs_t *fs,
+                                              const svn_fs_id_t *id,
+                                              apr_pool_t *pool);
+
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
 

@@ -410,31 +410,26 @@ open_and_seek_revision (apr_file_t **file,
   return SVN_NO_ERROR;
 }
 
-/* Open the representation for a node-revision in transaction TXN_ID
-   in filesystem FS and store the newly opened file in FILE.  Seek to
-   location OFFSET before returning.  Perform temporary allocations in
+/* Return the name of the representation file for representation REP,
+   in filesystem FS and transaction TXN_ID.  Allocate the name from
    POOL. */
-static svn_error_t *
-open_and_seek_transaction (apr_file_t **file,
-                           svn_fs_t *fs,
-                           const svn_fs_id_t *id,
-                           const char *txn_id,
-                           apr_off_t offset,
-                           svn_boolean_t directory_contents,
-                           svn_boolean_t is_data_rep,
-                           apr_pool_t *pool)
+static const char *
+get_txn_representation_filename (svn_fs_t *fs,
+                                 const char *txn_id,
+                                 const svn_fs_id_t *id,
+                                 svn_fs__representation_t *rep,
+                                 apr_pool_t *pool)
 {
   const char *filename;
-  apr_file_t *rev_file;
 
   filename = svn_path_join_many (pool, fs->fs_path, SVN_FS_FS__TXNS_DIR,
                                  apr_pstrcat (pool, txn_id,
                                               SVN_FS_FS__TXNS_EXT, NULL),
                                  NULL);
 
-  if (! directory_contents)
+  if (! (rep->is_directory_contents))
     {
-      if (is_data_rep)
+      if (rep->is_data_rep)
         {
           filename = svn_path_join (filename, SVN_FS_FS__REV, pool);
         }
@@ -455,10 +450,32 @@ open_and_seek_transaction (apr_file_t **file,
                                               id->node_id, id->copy_id),
                                 pool);
     }
+  
+  return filename;
+}
 
+/* Open the representation for a node-revision in transaction TXN_ID
+   in filesystem FS and store the newly opened file in FILE.  Seek to
+   location OFFSET before returning.  Perform temporary allocations in
+   POOL. */
+static svn_error_t *
+open_and_seek_transaction (apr_file_t **file,
+                           svn_fs_t *fs,
+                           const svn_fs_id_t *id,
+                           const char *txn_id,
+                           svn_fs__representation_t *rep,
+                           apr_pool_t *pool)
+{
+  apr_file_t *rev_file;
+  const char *filename;
+  apr_off_t offset;
+
+  filename = get_txn_representation_filename (fs, txn_id, id, rep, pool);
+  
   SVN_ERR (svn_io_file_open (&rev_file, filename,
                              APR_READ, APR_OS_DEFAULT, pool));
 
+  offset = rep->offset;
   SVN_ERR (svn_io_file_seek (rev_file, APR_SET, &offset, pool));
 
   *file = rev_file;
@@ -484,9 +501,7 @@ open_and_seek_representation (apr_file_t **file_p,
   else
     {
       SVN_ERR (open_and_seek_transaction (file_p, fs, id, rep->txn_id,
-                                          rep->offset,
-                                          rep->is_directory_contents,
-                                          rep->is_data_rep, pool));
+                                          rep, pool));
     }
 
   return SVN_NO_ERROR;
@@ -3149,6 +3164,8 @@ write_final_current (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Obtain a write lock on the filesystem FS.  Temporary allocations
+   are from POOL. */
 static svn_error_t *
 get_write_lock (svn_fs_t *fs,
                 apr_pool_t *pool)
@@ -3328,9 +3345,10 @@ svn_fs__fs_create (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_fs__fs_get_uuid (const char **uuid_p,
-                                  svn_fs_t *fs,
-                                  apr_pool_t *pool)
+svn_error_t *
+svn_fs__fs_get_uuid (const char **uuid_p,
+                     svn_fs_t *fs,
+                     apr_pool_t *pool)
 {
   apr_file_t *uuid_file;
   char buf [APR_UUID_FORMATTED_LENGTH + 2];
@@ -3350,9 +3368,10 @@ svn_error_t *svn_fs__fs_get_uuid (const char **uuid_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_fs__fs_set_uuid (svn_fs_t *fs,
-                                  const char *uuid,
-                                  apr_pool_t *pool)
+svn_error_t *
+svn_fs__fs_set_uuid (svn_fs_t *fs,
+                     const char *uuid,
+                     apr_pool_t *pool)
 {
   apr_file_t *uuid_file;
 
@@ -3371,7 +3390,8 @@ svn_error_t *svn_fs__fs_set_uuid (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_fs__fs_write_revision_zero (svn_fs_t *fs)
+svn_error_t *
+svn_fs__fs_write_revision_zero (svn_fs_t *fs)
 {
   apr_pool_t *pool = fs->pool;
   const char *rev_filename;
@@ -3389,5 +3409,157 @@ svn_error_t *svn_fs__fs_write_revision_zero (svn_fs_t *fs)
                                "cpath: /\n"
                                "\n\n17 107\n", pool));
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_list_transactions (apr_array_header_t **names_p,
+                              svn_fs_t *fs,
+                              apr_pool_t *pool)
+{
+  const char *txn_dir;
+  apr_hash_t *dirents;
+  apr_hash_index_t *this;
+  apr_array_header_t *names;
+
+  names = apr_array_make (pool, 1, sizeof (const char *));
+  
+  /* Get the transactions directory. */
+  txn_dir = svn_path_join (fs->fs_path, SVN_FS_FS__TXNS_DIR, pool);
+
+  /* Now find a listing of this directory. */
+  SVN_ERR (svn_io_get_dirents (&dirents, txn_dir, pool));
+
+  /* Loop through all the entries, and return anything that ends with
+     a '.txn' and has the correct length. */
+  for (this = apr_hash_first (pool, dirents); this; this = apr_hash_next (this))
+    {
+      const void *key;
+      void *val;
+      apr_ssize_t keylen;
+      const char *name;
+
+      apr_hash_this (this, &key, &keylen, &val);
+
+      name = (const char *) key;
+
+      /* If this entry is exactly the right length, and ends with the
+         '.txn' extension, we'll count it as a transaction. */
+      if ((strlen (name) == (6 + strlen (SVN_FS_FS__TXNS_EXT)))
+          && (strcmp (name + 6, SVN_FS_FS__TXNS_EXT) == 0))
+        {
+          char *txn_id;
+
+          /* Truncate the extension. */
+          txn_id = apr_pcalloc (pool, 7);
+          memcpy (txn_id, name, 6);
+          txn_id[6] = '\0';
+          APR_ARRAY_PUSH (names, const char *) = txn_id;
+        }
+    }
+
+  *names_p = names;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_open_txn (svn_fs_txn_t **txn_p,
+                     svn_fs_t *fs,
+                     const char *name,
+                     apr_pool_t *pool)
+{
+  svn_fs_txn_t *txn;
+  svn_node_kind_t kind;
+  svn_fs__transaction_t *local_txn;
+  char *txn_dirname = svn_path_join_many (pool, fs->fs_path,
+                                          SVN_FS_FS__TXNS_DIR,
+                                          apr_pstrcat (pool, name,
+                                                       SVN_FS_FS__TXNS_EXT,
+                                                       NULL),
+                                          NULL);
+
+  /* First check to see if the directory exists. */
+  SVN_ERR (svn_io_check_path (txn_dirname, &kind, pool));
+
+  /* Did we find it? */
+  if (kind != svn_node_dir)
+      return svn_error_create (SVN_ERR_FS_NO_SUCH_TRANSACTION, NULL,
+                               "No such transaction.");
+      
+  txn = apr_pcalloc (pool, sizeof (*txn));
+
+  /* Read in the root node of this transaction. */
+  txn->id = apr_pstrdup (pool, name);
+  txn->fs = fs;
+
+  SVN_ERR (svn_fs__fs_get_txn (&local_txn, fs, name, pool));
+
+  txn->base_rev = local_txn->revision;
+
+  *txn_p = txn;
+
+  return SVN_NO_ERROR;
+}
+  
+svn_error_t *
+svn_fs__fs_txn_proplist (apr_hash_t **table_p,
+                         svn_fs_txn_t *txn,
+                         apr_pool_t *pool)
+{
+  apr_hash_t *proplist = apr_hash_make (pool);
+  SVN_ERR (get_txn_proplist (NULL, proplist, txn->fs, txn->id, pool));
+  *table_p = proplist;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_delete_rep_if_mutable (svn_fs_t *fs,
+                                  const svn_fs_id_t *id,
+                                  svn_fs__representation_t *rep,
+                                  const char *txn_id,
+                                  apr_pool_t *pool)
+{
+  const char *filename;
+  
+  /* If the rep is empty, return with no error. */
+  if (! rep)
+    return SVN_NO_ERROR;
+  
+  /* If this is not a mutable rep, return with no error. */
+  if (! rep->txn_id)
+    return SVN_NO_ERROR;
+
+  /* If this is file node contents, we can't delete so return with no
+     error. */
+  if (rep->is_data_rep && (! rep->is_directory_contents))
+    return SVN_NO_ERROR;
+
+  /* This rep is either directory contents, or a properties and can be
+     deleted.  Get the correct file and nuke it. */
+
+  filename = get_txn_representation_filename (fs, txn_id, id, rep, pool);
+
+  SVN_ERR (svn_io_remove_file (filename, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__fs_delete_node_revision (svn_fs_t *fs,
+                                 const svn_fs_id_t *id,
+                                 apr_pool_t *pool)
+{
+  char *filename;
+
+  filename = svn_path_join_many (pool, fs->fs_path,
+                                 SVN_FS_FS__TXNS_DIR,
+                                 apr_pstrcat (pool, id->txn_id, ".txn", NULL),
+                                 apr_pstrcat (pool, id->node_id, ".",
+                                              id->copy_id, NULL), NULL);
+
+  SVN_ERR (svn_io_remove_file (filename, pool));
+  
   return SVN_NO_ERROR;
 }

@@ -131,7 +131,7 @@ svn_error_t *
 svn_fs_berkeley_recover (const char *path,
                          apr_pool_t *pool)
 {
-  abort ();
+  /* This is a no-op for FSFS. */
 
   return SVN_NO_ERROR;
 }
