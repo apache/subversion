@@ -19,11 +19,25 @@
 #
 ######################################################################
 
-import sys
+import sys   # for argv
+import os    # for system()
+
+# Set this to the location of the svn binary
+svn_binary = '../../../client/svn'
 
 ######################################################################
 # Utilities shared by the tests
 
+def run_svn(*varargs):
+  "Run the subversion command with the supplied args."
+
+  command = svn_binary
+  for arg in varargs:
+    command = command + " " + `arg`
+  return os.system(command)
+
+  
+  
 
 #  -- put shared routines here --
 
