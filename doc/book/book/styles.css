@@ -1,10 +1,111 @@
+/* Generic tag-level style definitions */
+
+BODY
+{
+    background: white;
+    padding: 0.5in;
+}
+
+H1
+{
+    font-family: times new roman,times,serif;
+    font-size: 30pt;
+    font-style: normal;
+    font-weight: bold;
+    color: black;
+}
+
+H2
+{
+    font-family: times new roman,times,serif;
+    font-size: 24px;
+    font-style: normal;
+    font-weight: bold;
+    color: black;
+}
+
+H3
+{
+    font-family: times new roman,times,serif;
+    font-size: 20px;
+    font-style: normal;
+    font-weight: bold;
+    color: black;
+}
+
+H4
+{
+    font-family: times new roman,times,serif;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: bold;
+    color: black;
+}
+
+P,LI,UL,OL,DD,DT
+{
+    font-family: times new roman,times,serif;
+    font-size: 12pt;
+    font-style: normal;
+    font-weight: normal;
+    color: black;
+}
+
+TT,PRE
+{
+    font-family: courier new,courier,fixed;
+    font-size: 10pt;
+    font-style: normal;
+    font-weight: normal;
+    color: black;
+}
+
+A
+{
+    color: blue;
+    text-decoration: underline;
+}	
+
+A:hover 
+{
+    background: rgb(75%,75%,100%);
+    color: blue;
+    text-decoration: underline;
+}
+
+IMG
+{
+    border: none;
+    padding: 0.5in;
+}
+
+/* Overrides for individual classes */
+
+.author
+{
+    font-family: times new roman,times,serif;
+    font-size: 12pt;
+    font-style: italic;
+    font-weight: normal;
+    color: black;
+}
+
 .sidebar 
 {
     border: 1px solid;
     border-color: black;
     background: rgb(75%,75%,75%);
-    margin: 0.5in;
     padding: 0.12in;
 }
 
- 
+.tip
+{
+    border: none;
+    background: rgb(50%,100%,50%);
+}
+
+.warning
+{
+    border: none;
+    background: rgb(100%,100%,50%);
+}
