@@ -70,7 +70,7 @@ get_dir_contents (apr_hash_t *dirents,
 
 svn_error_t *
 svn_client_ls (apr_hash_t **dirents,
-               const char *url,
+               const char *path_or_url,
                svn_opt_revision_t *revision,
                svn_boolean_t recurse,               
                svn_client_ctx_t *ctx,
@@ -81,6 +81,12 @@ svn_client_ls (apr_hash_t **dirents,
   svn_revnum_t rev;
   svn_node_kind_t url_kind;
   const char *auth_dir;
+  const char *url;
+
+  SVN_ERR (svn_client_url_from_path (&url, path_or_url, pool));
+  if (! url)
+    return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
+                              "'%s' has no URL", path_or_url);
 
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));

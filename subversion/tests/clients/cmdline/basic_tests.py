@@ -1402,6 +1402,27 @@ def basic_cat(sbox):
 
 
 #----------------------------------------------------------------------
+
+def basic_ls(sbox):
+  "basic ls of files"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  output, errput = svntest.main.run_svn(None, 'ls',
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        mu_path)
+  if errput or output != ["mu\n"]:
+    print output
+    return 1
+
+
+#----------------------------------------------------------------------
 def nonexistent_repository(sbox):
   "'svn log file:///nonexistent_path' should fail"
 
@@ -1624,6 +1645,7 @@ test_list = [ None,
               basic_node_kind_change,
               basic_import,
               basic_cat,
+              basic_ls,
               Skip(basic_import_executable, (os.name != 'posix')),
               nonexistent_repository,
               basic_auth_cache,
