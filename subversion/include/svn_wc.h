@@ -600,8 +600,7 @@ typedef enum svn_wc_notify_lock_state_t {
  * to @a path.
  *
  * @a kind, @a content_state @a prop_state and @a lock_state are from
- * after
- * @a action, not before.  @a lock_state reflects the addition or
+ * after @a action, not before.  @a lock_state reflects the addition or
  * removal of a lock token in the working copy.
  *
  * If @a mime_type is non-null, it indicates the mime-type of @a path.
