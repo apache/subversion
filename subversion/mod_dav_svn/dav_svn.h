@@ -53,7 +53,15 @@ typedef struct {
 
      Example: the URI is "http://host/repos/file", this will be "/repos".
   */
-  const char *root_uri;
+  const char *root_path;
+
+  /* Remember an absolute URL for constructing other URLs. In the above
+     example, this would be "http://host" (note: no trailing slash)
+  */
+  const char *base_url;
+
+  /* Remember the special URI component for this repository */
+  const char *special_uri;
 
   /* This records the filesystem path to the SVN FS */
   const char *fs_path;
@@ -76,8 +84,6 @@ typedef struct {
 
 /* internal structure to hold information about this resource */
 struct dav_resource_private {
-  apr_pool_t *pool;     /* request_rec -> pool */
-
   /* Path from the SVN repository root to this resource. This value has
      a leading slash. It will never have a trailing slash, even if the
      resource represents a collection.
@@ -86,20 +92,35 @@ struct dav_resource_private {
 
      Note that the SVN FS does not like absolute paths, so we
      generally skip the first char when talking with the FS.
+
+     NOTE: this path is from the URI and does NOT necessarily correspond
+           to a path within the FS repository.
   */
-  svn_string_t *path;
+  svn_string_t *uri_path;
 
   /* the repository this resource is associated with */
   dav_svn_repos *repos;
 
-  /* resource-type-specific data */
-  const char *object_name;      /* ### not really defined right now */
+  /* resource-type-specific data
+   *
+   * REGULAR: unused
+   * VERSION: repository path (no leading "/")
+   * HISTORY: ???
+   * WORKING: repository path (no leading "/")
+   * ACTIVITY: unused
+   * PRIVATE: ???
+   */
+  const char *object_name;
 
   /* for REGULAR resources: an open node for the revision */
   svn_fs_node_t *node;
 
-  /* for ACTIVITY resources: the transaction name */
+  /* for WORKING, ACTIVITY resources: the activity, and the FS txn name */
+  const char *activity_id;
   const char *txn_name;
+
+  /* for VERSION resources: the node ID */
+  const svn_fs_id_t *node_id;
 };
 
 
@@ -163,6 +184,13 @@ const char *dav_svn_get_txn(dav_svn_repos *repos, const char *activity_id);
 dav_error *dav_svn_store_activity(dav_svn_repos *repos,
                                   const char *activity_id,
                                   const char *txn_name);
+
+/* construct a working resource */
+dav_resource *dav_svn_create_working_resource(const dav_resource *base,
+                                              const char *activity_id,
+                                              const char *txn_name,
+                                              const char *repos_path);
+
 
 #endif /* DAV_SVN_H */
 
