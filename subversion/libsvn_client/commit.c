@@ -41,15 +41,6 @@
 #include "client.h"
 
 
-
-/* Hash value for FILES hash in the import routines. */
-struct imported_file
-{
-  apr_pool_t *subpool;
-  void *file_baton;
-};
-
-
 /* Apply PATH's contents (as a delta against the empty string) to
    FILE_BATON in EDITOR.  Use POOL for any temporary allocation.  */
 static svn_error_t *
@@ -100,8 +91,7 @@ send_file_contents (const char *path,
  * Use POOL for any temporary allocation.
  */
 static svn_error_t *
-import_file (apr_hash_t *files,
-             const svn_delta_editor_t *editor,
+import_file (const svn_delta_editor_t *editor,
              void *dir_baton,
              const char *path,
              const char *edit_path,
@@ -110,15 +100,11 @@ import_file (apr_hash_t *files,
 {
   void *file_baton;
   const char *mimetype;
-  apr_pool_t *hash_pool = apr_hash_pool_get (files);
-  apr_pool_t *subpool = svn_pool_create (hash_pool);
-  const char *filepath = apr_pstrdup (hash_pool, path);
-  struct imported_file *value = apr_palloc (hash_pool, sizeof (*value));
   svn_boolean_t executable;
 
   /* Add the file, using the pool from the FILES hash. */
   SVN_ERR (editor->add_file (edit_path, dir_baton, NULL, SVN_INVALID_REVNUM, 
-                             subpool, &file_baton));
+                             pool, &file_baton));
 
   /* If the file has a discernable mimetype, add that as a property to
      the file. */
@@ -145,10 +131,11 @@ import_file (apr_hash_t *files,
                          svn_wc_notify_state_inapplicable,
                          SVN_INVALID_REVNUM);
 
-  /* Finally, add the file's path and baton to the FILES hash. */
-  value->subpool = subpool;
-  value->file_baton = file_baton;
-  apr_hash_set (files, filepath, APR_HASH_KEY_STRING, (void *)value);
+  /* Now, transmit the file contents. */
+  SVN_ERR (send_file_contents (path, file_baton, editor, pool));
+
+  /* Finally, close the file. */
+  SVN_ERR (editor->close_file (file_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -169,8 +156,7 @@ import_file (apr_hash_t *files,
  * 
  * Use POOL for any temporary allocation.  */
 static svn_error_t *
-import_dir (apr_hash_t *files,
-            const svn_delta_editor_t *editor, 
+import_dir (const svn_delta_editor_t *editor, 
             void *dir_baton,
             const char *path,
             const char *edit_path,
@@ -268,8 +254,7 @@ import_dir (apr_hash_t *files,
                                  SVN_INVALID_REVNUM);
 
           /* Recurse. */
-          SVN_ERR (import_dir (files,
-                               editor, this_dir_baton, 
+          SVN_ERR (import_dir (editor, this_dir_baton, 
                                this_path, this_edit_path, 
                                FALSE, excludes, ctx, subpool));
 
@@ -282,8 +267,7 @@ import_dir (apr_hash_t *files,
             continue;
 
           /* Import a file. */
-          SVN_ERR (import_file (files,
-                                editor, dir_baton, 
+          SVN_ERR (import_file (editor, dir_baton, 
                                 this_path, this_edit_path, ctx, subpool));
         }
       /* We're silently ignoring things that aren't files or
@@ -320,8 +304,7 @@ import_dir (apr_hash_t *files,
  * NEW_ENTRY can never be the empty string.
  * 
  * If CTX->NOTIFY_FUNC is non-null, invoke it with CTX->NOTIFY_BATON for 
- * each imported path, passing the actions svn_wc_notify_commit_added or
- * svn_wc_notify_commit_postfix_txdelta.
+ * each imported path, passing actions svn_wc_notify_commit_added.
  *
  * EXCLUDES is a hash whose keys are absolute paths to exclude from
  * the import (values are unused).
@@ -345,8 +328,6 @@ import (const char *path,
 {
   void *root_baton;
   svn_node_kind_t kind;
-  apr_hash_t *files = apr_hash_make (pool);
-  apr_hash_index_t *hi;
   apr_array_header_t *ignores;
 
   /* Get a root dir baton.  We pass an invalid revnum to open_root
@@ -375,8 +356,7 @@ import (const char *path,
                 (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                  "new entry name required when importing a file");
 
-          SVN_ERR (import_file (files,
-                                editor, root_baton,
+          SVN_ERR (import_file (editor, root_baton,
                                 path, new_entry, ctx, pool));
         }
     }
@@ -422,11 +402,10 @@ import (const char *path,
                              SVN_INVALID_REVNUM);
 #endif /* 0 */
 
-      SVN_ERR (import_dir 
-               (files,
-                editor, new_dir_baton ? new_dir_baton : root_baton, 
-                path, new_entry ? new_entry : "",
-                nonrecursive, excludes, ctx, pool));
+      SVN_ERR (import_dir (editor, 
+                           new_dir_baton ? new_dir_baton : root_baton, 
+                           path, new_entry ? new_entry : "",
+                           nonrecursive, excludes, ctx, pool));
 
       /* Close one baton or two. */
       if (new_dir_baton)
@@ -439,38 +418,8 @@ import (const char *path,
          "'%s' does not exist.", path);  
     }
 
+  /* Close up the show; it's time to go home. */
   SVN_ERR (editor->close_directory (root_baton, pool));
-
-  /* Do post-fix textdeltas here! */
-  for (hi = apr_hash_first (pool, files); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      void *val;
-      struct imported_file *value;
-      const char *full_path;
-      
-      apr_hash_this (hi, &key, NULL, &val);
-      value = val;
-      full_path = key;
-      SVN_ERR (send_file_contents (full_path, value->file_baton, 
-                                   editor, value->subpool));
-
-      /* ### full_path is wrong, should be remainder when path is
-         subtracted */
-      if (ctx->notify_func)
-        (*ctx->notify_func) (ctx->notify_baton,
-                             full_path,
-                             svn_wc_notify_commit_postfix_txdelta,
-                             svn_node_file,
-                             NULL,
-                             svn_wc_notify_state_inapplicable,
-                             svn_wc_notify_state_inapplicable,
-                             SVN_INVALID_REVNUM);
-
-      SVN_ERR (editor->close_file (value->file_baton, value->subpool));
-      svn_pool_destroy (value->subpool);
-    }
-
   SVN_ERR (editor->close_edit (edit_baton, pool));
 
   return SVN_NO_ERROR;
