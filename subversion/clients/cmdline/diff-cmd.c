@@ -50,7 +50,7 @@ svn_cl__diff (apr_getopt_t *os,
 
   options = svn_cl__stringlist_to_array (opt_state->extensions, pool);
 
-  targets = svn_cl__args_to_target_array (os, pool);
+  targets = svn_cl__args_to_target_array (os, opt_state, pool);
   svn_cl__push_implicit_dot_target (targets, pool);
   SVN_ERR (svn_path_remove_redundancies (&condensed_targets,
                                          targets,

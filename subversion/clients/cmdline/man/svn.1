@@ -85,6 +85,11 @@ Expand keywords in files whose names match GLOB.
 \fB-L\fP or \fB --line-conversion GLOB\fP
 Do line-end conversion for files matching GLOB.
 .TP
+\fB--targets\fP
+Supply a file used as entry and URL args for a given command. You can also
+supply '-' as the file to read from standard input. The file will be read
+as one argument for each line, even if given on standard input.
+.TP
 \fB--\fP
 End of option processing
 .TP

@@ -67,6 +67,7 @@ const apr_getopt_option_t svn_cl__options[] =
     {"username",      svn_cl__auth_username_opt, 1, "specify a username ARG"},
     {"password",      svn_cl__auth_password_opt, 1, "specify a password ARG"},
     {"extensions",    'x', 1, "pass \"ARG\" as bundled options to GNU diff"},
+    {"targets",       't', 1, "pass contents of file \"ARG\" as additional args"},
     {0,               0, 0}
   };
 
@@ -117,7 +118,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Put files and directories under revision control, scheduling\n"
     "them for addition to repository.  They will be added in next commit.\n"
     "usage: svn add [OPTIONS] [TARGETS]\n", 
-    {svn_cl__recursive_opt} },
+    {'t', svn_cl__recursive_opt} },
 
   { "checkout", svn_cl__checkout, {"co"},
     "Check out a working copy from a repository.\n"
@@ -137,7 +138,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "usage: svn commit [TARGETS]\n\n"
     "   Be sure to use one of -m or -F to send a log message;\n"
     "   the -r switch is only for use with --xml-file.\n",
-    {'m', 'F', 'q', 
+    {'m', 'F', 'q', 't',
      svn_cl__force_opt, svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__xml_file_opt, 'r'} },
   
@@ -158,7 +159,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    upon next commit.  (The working item itself will only be removed\n"
     "    if --force is passed.)  If run on URL, item is deleted from\n"
     "    repository via an immediate commit.\n",
-    {svn_cl__force_opt, 'm', 'F',
+    {svn_cl__force_opt, 'm', 'F', 't',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   
   { "diff", svn_cl__diff, {"di"},
@@ -202,7 +203,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "    svn log http://www.example.com/repo/project/foo.c\n"
     "\n"
     "    svn log http://www.example.com/repo/project foo.c bar.c\n",
-    {'r', 'D', 'v', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
+    {'r', 'D', 'v', 't', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   
   { "merge", svn_cl__merge, {0},
     "Merge changes in the working copy.  IMPLEMENTATION INCOMPLETE.\n"
@@ -250,14 +251,14 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Set property PROPNAME to PROPVAL on files or directories.\n"
     "usage: propset PROPNAME PROPVAL [TARGETS]\n\n"
     "    Use -F (instead of PROPVAL) to get the value from a file.\n",
-    {'F', 'q', svn_cl__recursive_opt} },
+    {'F', 'q', 't', svn_cl__recursive_opt} },
   
   { "revert", svn_cl__revert, {0},
     "Restore pristine working copy file (undo all local edits)\n"
     "usage: revert TARGET1 [TARGET2 [TARGET3 ... ]]\n\n"
     "    Note:  this routine does not require network access, and will\n"
     "    remove any .rej produced when a file is in a state of conflict.\n",
-    {svn_cl__recursive_opt} },
+    {'t', svn_cl__recursive_opt} },
   
   { "status", svn_cl__status, {"stat", "st"},
     "Print the status of working copy files and directories.\n"
@@ -347,7 +348,7 @@ format_option (char **string,
     opts = apr_pstrcat (pool, opts, " arg", NULL);
   
   if (doc)
-    opts = apr_pstrcat (pool, opts, ":   ", opt->description, NULL);
+    opts = apr_pstrcat (pool, opts, ":\t", opt->description, NULL);
 
   *string = opts;
 }
@@ -901,6 +902,18 @@ main (int argc, const char * const *argv)
             log_under_version_control = TRUE;
         }
         break;
+      case 't':
+	{
+	  svn_stringbuf_t *buffer;
+	  err = svn_string_from_file (&buffer, opt_arg, pool);
+	  if (err)
+	    {
+	      svn_handle_error (err, stdout, FALSE);
+	      svn_pool_destroy (pool);
+	      return EXIT_FAILURE;
+	    }
+	  opt_state.targets = svn_cl__newlinelist_to_array(buffer, pool);
+	}
       case 'M':
         opt_state.modified = TRUE;
         break;

@@ -45,7 +45,7 @@ svn_cl__delete (apr_getopt_t *os,
   int i;
   svn_client_commit_info_t *commit_info = NULL;
 
-  targets = svn_cl__args_to_target_array (os, pool);
+  targets = svn_cl__args_to_target_array (os, opt_state, pool);
 
   /* Take our message from ARGV or a FILE */
   if (opt_state->filedata) 

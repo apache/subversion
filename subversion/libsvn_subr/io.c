@@ -614,6 +614,16 @@ svn_string_from_file (svn_stringbuf_t **result,
   apr_status_t apr_err;
   apr_file_t *f = NULL;
 
+  /* If user passed '-', use stdin. We could use apr_file_open_stdin here, and
+   * in fact, it does work. Problem is that if the same command invokes the
+   * editor, stdin is crap, and the editor acts funny (if not die outright). I
+   * wanted to just disallow stdin reading and invoking the editor, but there's
+   * no easy callback for that right now.  */
+  if (filename[0] == '-' && filename[1] == '\0')
+    return svn_error_create
+        (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+         "reading from stdin is currently broken, so disabled");
+
   apr_err = apr_file_open (&f, filename, APR_READ, APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_createf (apr_err, 0, NULL, pool,
@@ -637,11 +647,12 @@ svn_string_from_aprfile (svn_stringbuf_t **result,
                          apr_pool_t *pool)
 {
   apr_size_t len;
-  apr_finfo_t finfo;
   apr_status_t apr_err;
   svn_stringbuf_t *res = svn_stringbuf_create("", pool);
   const char *fname;
-  char dummy;
+  char buf[BUFSIZ];
+
+  /* XXX: We should check the incoming data for being of type binary. */
 
   apr_err = apr_file_name_get (&fname, file);
   if (!APR_STATUS_IS_SUCCESS(apr_err))
@@ -649,25 +660,24 @@ svn_string_from_aprfile (svn_stringbuf_t **result,
       (apr_err, 0, NULL, pool,
        "svn_string_from_aprfile: failed to get filename");
 
-  apr_err = apr_stat (&finfo, fname, APR_FINFO_SIZE, pool);
-  if (!APR_STATUS_IS_SUCCESS(apr_err))
-    return svn_error_createf 
-      (apr_err, 0, NULL, pool,
-       "svn_string_from_aprfile: failed to stat '%s'", fname);
+  /* If the apr_file_t was opened with apr_file_open_std{in,out,err}, then we
+   * wont get a filename for it. We assume that since we are reading, that in
+   * this case we would only ever be using stdin.  */
+  if (NULL == fname)
+    fname = "stdin";
 
-  /* Reserve space for the data, ensuring that the stringbuf's pool is
-     used. */
-  svn_stringbuf_ensure (res, finfo.size + 1);
-  res->len = finfo.size;
-
-  apr_err = apr_file_read_full (file, res->data, res->len, &len);
-  if (!APR_STATUS_IS_SUCCESS(apr_err))
-    return svn_error_createf 
-      (apr_err, 0, NULL, pool,
-       "svn_string_from_aprfile: failed to read '%s'", fname);
+  /* apr_file_read will not return data and eof in the same call. So this loop
+   * is safe from missing read data.  */
+  len = sizeof(buf);
+  apr_err = apr_file_read (file, buf, &len);
+  while (APR_STATUS_IS_SUCCESS(apr_err))
+    {
+      svn_stringbuf_appendbytes(res, buf, len);
+      len = sizeof(buf);
+      apr_err = apr_file_read (file, buf, &len);
+    }
 
   /* Having read all the data we *expect* EOF */
-  apr_err = apr_file_read_full (file, &dummy, 1, &len);
   if (!APR_STATUS_IS_EOF(apr_err))
     return svn_error_createf 
       (apr_err, 0, NULL, pool,
@@ -858,6 +868,7 @@ svn_io_run_cmd (const char *path,
   /* Make sure we invoke cmd directly, not through a shell. */
   apr_err = apr_procattr_cmdtype_set (cmdproc_attr,
                                       inherit?APR_PROGRAM_PATH:APR_PROGRAM);
+
   if (! APR_STATUS_IS_SUCCESS (apr_err))
     return svn_error_createf 
       (apr_err, 0, NULL, pool,
