@@ -611,6 +611,7 @@ add_valid_target (commit_ctx_t *cc,
 }
 
 
+
 static svn_error_t * commit_open_root(void *edit_baton,
                                       svn_revnum_t base_revision,
                                       apr_pool_t *dir_pool,
@@ -683,6 +684,36 @@ static svn_error_t * commit_delete_entry(const char *path,
   return SVN_NO_ERROR;
 }
 
+
+/* Context for parsing <D:error> bodies, used when we call ne_copy(). */
+struct copy_baton
+{
+  /* A parser for handling <D:error> responses from mod_dav_svn. */
+  ne_xml_parser *error_parser;
+
+  /* If <D:error> is returned, here's where the parsed result goes. */
+  svn_error_t *err;
+
+  /* A place for allocating fields in this structure. */
+  apr_pool_t *pool;
+};
+
+
+/* A callback of type ne_pre_send_fn;  called whenever neon is just
+   about to send a COPY request. */
+static void
+pre_send_hook(ne_request *req,
+              void *userdata,
+              ne_buffer *header)
+{
+  struct copy_baton *cb = userdata;
+
+  cb->error_parser = ne_xml_create();
+  svn_ra_dav__add_error_handler(req, cb->error_parser,
+                                &(cb->err), cb->pool);
+}
+
+
 static svn_error_t * commit_add_dir(const char *path,
                                     void *parent_baton,
                                     const char *copyfrom_path,
@@ -721,6 +752,7 @@ static svn_error_t * commit_add_dir(const char *path,
     {
       svn_string_t bc_url, bc_relative;
       const char *copy_src;
+      struct copy_baton *cb;
       int status;
 
       /* This add has history, so we need to do a COPY. */
@@ -744,6 +776,13 @@ static svn_error_t * commit_add_dir(const char *path,
                                             bc_relative.data, 
                                             workpool);
 
+
+      /* Before ne_copy() sends the COPY request, it will call our
+         pre_send_hook() callback which attaches a <D:error> parser. */
+      cb = apr_pcalloc(workpool, sizeof(*cb));
+      cb->pool = workpool;
+      ne_hook_pre_send(parent->cc->ras->sess, pre_send_hook, cb);
+
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,
                        1,                   /* overwrite */
@@ -751,12 +790,26 @@ static svn_error_t * commit_add_dir(const char *path,
                        copy_src,            /* source URI */
                        child->rsrc->wr_url); /* dest URI */
 
+      /* Did we get a <D:error> response? */
+      if (cb->err)
+        {
+          if (cb->error_parser)
+            ne_xml_destroy(cb->error_parser);
+          return cb->err;
+        }
+
+      /* Did we get some error from neon? */
       if (status != NE_OK)
         {
           const char *msg = apr_psprintf(dir_pool, "COPY of %s", path);
+          if (cb->error_parser)
+            ne_xml_destroy(cb->error_parser);
           return svn_ra_dav__convert_error(parent->cc->ras->sess,
                                            msg, status, workpool);
         }
+
+      if (cb->error_parser)
+        ne_xml_destroy(cb->error_parser);
     }
 
   /* Add this path to the valid targets hash. */
@@ -919,6 +972,7 @@ static svn_error_t * commit_add_file(const char *path,
     {
       svn_string_t bc_url, bc_relative;
       const char *copy_src;
+      struct copy_baton *cb;
       int status;
 
       /* This add has history, so we need to do a COPY. */
@@ -942,6 +996,13 @@ static svn_error_t * commit_add_file(const char *path,
                                             bc_relative.data, 
                                             workpool);
 
+
+      /* Before ne_copy() sends the COPY request, it will call our
+         pre_send_hook() callback which attaches a <D:error> parser. */
+      cb = apr_pcalloc(workpool, sizeof(*cb));
+      cb->pool = workpool;
+      ne_hook_pre_send(parent->cc->ras->sess, pre_send_hook, cb);
+
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,
                        1,                   /* overwrite */
@@ -949,12 +1010,26 @@ static svn_error_t * commit_add_file(const char *path,
                        copy_src,            /* source URI */
                        file->rsrc->wr_url); /* dest URI */
 
+      /* Did we get a <D:error> response? */
+      if (cb->err)
+        {
+          if (cb->error_parser)
+            ne_xml_destroy(cb->error_parser);
+          return cb->err;
+        }
+
+      /* Did we get some error from neon? */
       if (status != NE_OK)
         {
           const char *msg = apr_psprintf(file_pool, "COPY of %s", path);
+          if (cb->error_parser)
+            ne_xml_destroy(cb->error_parser);
           return svn_ra_dav__convert_error(parent->cc->ras->sess,
                                            msg, status, workpool);
         }
+      
+      if (cb->error_parser)
+        ne_xml_destroy(cb->error_parser);
     }
 
   /* Add this path to the valid targets hash. */
