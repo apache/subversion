@@ -230,8 +230,7 @@ def run_svn(error_expected, *varargs):
  
      If ERROR_EXPECTED is None, any stderr also will be printed. """
 
-#  command = svn_binary
-  command = "/home/kfogel/src/safe-subversion/subversion/clients/cmdline/svn"
+  command = svn_binary
   for arg in varargs:                   # build the command string
     if windows: command = command + ' "' + str(arg) + '"'
     else: command = command + " " + `arg`

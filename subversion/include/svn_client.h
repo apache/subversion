@@ -407,9 +407,10 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
 
    In all cases, if NEW_ENTRY already exists in URL, return error.
    
-   If NOTIFY_FUNC is non-null, then call NOTIFY_FUNC with NOTIFY_BATON
-   as the import progresses, with any of the following actions:
-   svn_wc_notify_commit_added, svn_wc_notify_commit_postfix_txdelta.
+   BEFORE_EDITOR, BEFORE_EDIT_BATON, and AFTER_EDITOR,
+   AFTER_EDIT_BATON are pre- and post-import (i.e., post-commit) hook
+   editors.  They are optional; pass four NULLs here if you don't need
+   them.
 
    If XML_DST is non-NULL, it is a file in which to store the xml
    result of the commit, and REVISION is used as the revision.
@@ -435,8 +436,10 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
    right now.  
 */
 svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
-                                svn_wc_notify_func_t notify_func,
-                                void *notify_baton,
+                                const svn_delta_editor_t *before_editor,
+                                void *before_edit_baton,
+                                const svn_delta_editor_t *after_editor,
+                                void *after_edit_baton, 
                                 svn_client_auth_baton_t *auth_baton,   
                                 const char *path,
                                 const char *url,
@@ -458,11 +461,16 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
    be canonicalized nor condensed; this function will take care of
    that.
 
-   If NOTIFY_FUNC is non-null, then call NOTIFY_FUNC with NOTIFY_BATON
-   as the commit progresses, with any of the following actions:
-   svn_wc_notify_commit_modified, svn_wc_notify_commit_added,
-   svn_wc_notify_commit_deleted, svn_wc_notify_commit_replaced,
-   svn_wc_notify_commit_postfix_txdelta.
+   BEFORE_EDITOR, BEFORE_EDIT_BATON, and AFTER_EDITOR,
+   AFTER_EDIT_BATON are pre- and post-commit hook editors.  They are
+   optional; pass four NULLs here if you don't need them.
+
+   ### todo: this bit is vague, but will be fixed with the completion
+       of issue #662 anyway: ### 
+
+   Additionally, NOTIFY_FUNC/BATON will be called as the commit
+   progresses, as a way of describing actions to the application
+   layer.
 
    If XML_DST is NULL, then the commit will write to a repository, and
    the REVISION argument is ignored.
@@ -487,6 +495,10 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
  */
 svn_error_t *
 svn_client_commit (svn_client_commit_info_t **commit_info,
+                   const svn_delta_editor_t *before_editor,
+                   void *before_edit_baton,
+                   const svn_delta_editor_t *after_editor,
+                   void *after_edit_baton,
                    svn_wc_notify_func_t notify_func,
                    void *notify_baton,
                    svn_client_auth_baton_t *auth_baton,
@@ -704,6 +716,12 @@ svn_client_resolve (const char *path,
    repository.  If the commit succeeds, allocate (in POOL) and
    populate *COMMIT_INFO.
 
+   If the operation involves interaction between the working copy and
+   the repository, there may be an editor drive, in which case the
+   BEFORE_EDITOR, BEFORE_EDIT_BATON and AFTER_EDITOR, AFTER_EDIT_BATON
+   will be wrapped around the edit using svn_delta_wrap_editor()
+   (which see in svn_delta.h).
+
    If neither SRC_PATH nor DST_PATH is a URL, then this is just a
    variant of svn_client_add, where the DST_PATH items are scheduled
    for addition as copies.  No changes will happen to the repository
@@ -714,9 +732,10 @@ svn_client_resolve (const char *path,
    function can use to query for a commit log message when one is
    needed.
 
-   If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
-   item added at the new location (using the new, relative path of the
-   added item) */
+   For each item added (at the new location), NOTIFY_FUNC will be
+   called with the NOTIFY_BATON and the (new, relative) path of the
+   added item. If this information is not required, then NOTIFY_FUNC
+   may be NULL.  */
 svn_error_t *
 svn_client_copy (svn_client_commit_info_t **commit_info,
                  const char *src_path,
@@ -725,6 +744,10 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  svn_client_auth_baton_t *auth_baton,
                  svn_client_get_commit_log_t log_msg_func,
                  void *log_msg_baton,
+                 const svn_delta_editor_t *before_editor,
+                 void *before_edit_baton,
+                 const svn_delta_editor_t *after_editor,
+                 void *after_edit_baton,
                  svn_wc_notify_func_t notify_func,
                  void *notify_baton,
                  apr_pool_t *pool);
@@ -844,7 +867,10 @@ svn_client_proplist (apr_array_header_t **props,
    ### return boolean, where true indicates that the user requested
    ### cancellation.  The caller of the notification func can then
    ### take whatever action is appropriate (most editor functions will
-   ### probably return SVN_ERR_CANCELED, for example). */
+   ### probably return SVN_ERR_CANCELED, for example).
+   ###
+   ### See http://subversion.tigris.org/issues/show_bug.cgi?id=662.
+*/
 
 /* A function type for determining whether or not to cancel an operation.
  * Returns TRUE if should cancel, FALSE if should not.

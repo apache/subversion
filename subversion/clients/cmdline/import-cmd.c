@@ -42,11 +42,11 @@ svn_cl__import (apr_getopt_t *os,
   const char *path;
   const char *url;
   const char *new_entry;
+  const svn_delta_editor_t *trace_editor;
+  void *trace_edit_baton;
   svn_client_auth_baton_t *auth_baton;
   svn_client_commit_info_t *commit_info = NULL;
   svn_revnum_t revnum;
-  svn_wc_notify_func_t notify_func = NULL;
-  void *notify_baton = NULL;
   
   /* Build an authentication object to give to libsvn_client. */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
@@ -108,19 +108,27 @@ svn_cl__import (apr_getopt_t *os,
       (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL, pool,
        "too many arguments to import command");
   
+  /* Because we're working outside the context of a working copy, we
+     don't want the trace_editor to print out the 'local' paths like
+     it normally does.  This leads to very confusing output.  Instead,
+     for consistency, it will print those paths being added in the
+     repository, completely ignoring the local source.  */
+  SVN_ERR (svn_cl__get_trace_commit_editor (&trace_editor,
+                                            &trace_edit_baton,
+                                            NULL,
+                                            pool));
+
   /* Get revnum set to something meaningful, to cover the xml case. */
   if (opt_state->start_revision.kind == svn_client_revision_number)
     revnum = opt_state->start_revision.value.number;
   else
     revnum = SVN_INVALID_REVNUM; /* no matter, this is fine */
 
-  if (! opt_state->quiet)
-    svn_cl__get_notifier (&notify_func, &notify_baton,
-                          FALSE, FALSE, pool);
-
   SVN_ERR (svn_client_import 
            (&commit_info,
-            notify_func, notify_baton,
+            NULL, NULL,
+            opt_state->quiet ? NULL : trace_editor, 
+            opt_state->quiet ? NULL : trace_edit_baton,
             auth_baton,
             path,
             url,

@@ -445,8 +445,10 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
                   const char *dst_url, 
                   svn_client_auth_baton_t *auth_baton,
                   const char *message,
-                  svn_wc_notify_func_t notify_func,
-                  void *notify_baton,
+                  const svn_delta_editor_t *before_editor,
+                  void *before_edit_baton,
+                  const svn_delta_editor_t *after_editor,
+                  void *after_edit_baton,
                   apr_pool_t *pool)
 {
   const char *anchor, *target, *parent, *base_name;
@@ -556,10 +558,15 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   /* Make a note that we have a commit-in-progress. */
   commit_in_progress = TRUE;
 
+  /* Wrap the resulting editor with BEFORE and AFTER editors. */
+  svn_delta_wrap_editor (&editor, &edit_baton,
+                         before_editor, before_edit_baton,
+                         editor, edit_baton, 
+                         after_editor, after_edit_baton, pool);
+
   /* Perform the commit. */
   cmt_err = svn_client__do_commit (base_url, commit_items, editor, edit_baton, 
-                                   notify_func, notify_baton,
-                                   0, /* ### any notify_path_offset needed? */
+                                   NULL, NULL, 0,
                                    &tempfiles, pool);
 
   commit_in_progress = FALSE;
@@ -598,6 +605,10 @@ repos_to_wc_copy (const char *src_url,
                   const svn_client_revision_t *src_revision,
                   const char *dst_path, 
                   svn_client_auth_baton_t *auth_baton,
+                  const svn_delta_editor_t *before_editor,
+                  void *before_edit_baton,
+                  const svn_delta_editor_t *after_editor,
+                  void *after_edit_baton,
                   svn_wc_notify_func_t notify_func,
                   void *notify_baton,
                   apr_pool_t *pool)
@@ -687,10 +698,15 @@ repos_to_wc_copy (const char *src_url,
 
       /* Get a checkout editor and wrap it. */
       SVN_ERR (svn_wc_get_checkout_editor (dst_path, src_url, src_revnum, 1,
-                                           notify_func, notify_baton,
+                                           NULL, NULL,
                                            &editor, &edit_baton,
                                            NULL, pool));
       
+      svn_delta_wrap_editor (&editor, &edit_baton,
+                             before_editor, before_edit_baton,
+                             editor, edit_baton,
+                             after_editor, after_edit_baton, pool);
+
       /* Check out the new tree.  The parent dir will get no entry, so
          it will be as if the new tree isn't really there yet. */
       SVN_ERR (ra_lib->do_checkout (sess, src_revnum, 1, 
@@ -806,6 +822,10 @@ setup_copy (svn_client_commit_info_t **commit_info,
             svn_client_auth_baton_t *auth_baton,
             svn_client_get_commit_log_t log_msg_func,
             void *log_msg_baton,
+            const svn_delta_editor_t *before_editor,
+            void *before_edit_baton,
+            const svn_delta_editor_t *after_editor,
+            void *after_edit_baton,
             svn_boolean_t is_move,
             svn_boolean_t force,
             svn_wc_notify_func_t notify_func,
@@ -888,12 +908,15 @@ setup_copy (svn_client_commit_info_t **commit_info,
   else if ((! src_is_url) && (dst_is_url))
     SVN_ERR (wc_to_repos_copy (commit_info, src_path, dst_path, 
                                auth_baton, message, 
-                               notify_func, notify_baton,
+                               before_editor, before_edit_baton,
+                               after_editor, after_edit_baton,
                                pool));
 
   else if ((src_is_url) && (! dst_is_url))
     SVN_ERR (repos_to_wc_copy (src_path, src_revision, 
                                dst_path, auth_baton,
+                               before_editor, before_edit_baton,
+                               after_editor, after_edit_baton,
                                notify_func, notify_baton,
                                pool));
 
@@ -917,6 +940,10 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
                  svn_client_auth_baton_t *auth_baton,
                  svn_client_get_commit_log_t log_msg_func,
                  void *log_msg_baton,
+                 const svn_delta_editor_t *before_editor,
+                 void *before_edit_baton,
+                 const svn_delta_editor_t *after_editor,
+                 void *after_edit_baton,
                  svn_wc_notify_func_t notify_func,
                  void *notify_baton,
                  apr_pool_t *pool)
@@ -924,6 +951,8 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
   return setup_copy (commit_info, 
                      src_path, src_revision, dst_path, auth_baton, 
                      log_msg_func, log_msg_baton,
+                     before_editor, before_edit_baton,
+                     after_editor, after_edit_baton,
                      FALSE /* is_move */,
                      TRUE /* force, set to avoid deletion check */,
                      notify_func, notify_baton,
@@ -947,6 +976,8 @@ svn_client_move (svn_client_commit_info_t **commit_info,
   return setup_copy (commit_info,
                      src_path, src_revision, dst_path, auth_baton,
                      log_msg_func, log_msg_baton,
+                     NULL, NULL,  /* no before_editor, before_edit_baton */
+                     NULL, NULL,  /* no after_editor, after_edit_baton */
                      TRUE /* is_move */,
                      force,
                      notify_func, notify_baton,

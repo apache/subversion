@@ -87,8 +87,10 @@ svn_cl__commit (apr_getopt_t *os,
     svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
 
   /* Commit. */
-  SVN_ERR (svn_client_commit
+  SVN_ERR (svn_client_commit 
            (&commit_info,
+            NULL, NULL,
+            NULL, NULL,
             notify_func, notify_baton,
             auth_baton,
             targets,

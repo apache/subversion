@@ -56,9 +56,6 @@ def guarantee_greek_repository(path):
                                   '-m', 'Log message for revision 1.',
                                   url, main.greek_dump_dir)
 
-    for l in output:
-      print "KFF: ", l,
-
     # check for any errors from the import
     if len(errput):
       print "Errors during initial 'svn import':"
