@@ -76,6 +76,7 @@
 #define SVN_ERR_UNKNOWN_FS_ACTION                (APR_OS_START_USEERR + 4)
 #define SVN_ERR_UNEXPECTED_EOF                   (APR_OS_START_USEERR + 5)
 #define SVN_ERR_MALFORMED_FILE                   (APR_OS_START_USEERR + 6)
+#define SVN_ERR_MALFORMED_XML                    (APR_OS_START_USEERR + 7)
 
 
 typedef struct svn_error
