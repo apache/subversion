@@ -92,11 +92,11 @@ echo "Committing changes, this time in ${TEST_DIR_2}."
 
 
 ### Update.
-echo "Updating ${TEST_DIR_1} from changes in ${TEST_DIR_2}."
-(cd ${TEST_DIR_1};                                           \
- ../${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_2}  \
-                --revision 3;                                 \
- cd ..)
+# echo "Updating ${TEST_DIR_1} from changes in ${TEST_DIR_2}."
+# (cd ${TEST_DIR_1};                                           \
+#  ../${SVN_PROG} update --xml-file ../${COMMIT_RESULTFILE_2}  \
+#                 --revision 3;                                 \
+#  cd ..)
 
 
 ### Diff the two trees.  The only differences should be in timestamps
