@@ -774,6 +774,104 @@ get_locks_under_path (svn_fs_t *fs,
 }
 
 
+
+/* Utility function:  verify that a lock can be used.
+
+   If no username is attached to the FS, return SVN_ERR_FS_NO_USER.
+
+   If the FS username doesn't match LOCK's owner, return
+   SVN_ERR_FS_LOCK_OWNER_MISMATCH.
+
+   If FS hasn't been supplied with a matching lock-token for LOCK,
+   return SVN_ERR_FS_BAD_LOCK_TOKEN.
+
+   Otherwise return SVN_NO_ERROR.
+
+   ###It pains me that I had to copy and paste this and verify_locks()
+      from libsvn_base. -Fitz
+ */
+static svn_error_t *
+verify_lock (svn_fs_t *fs,
+             svn_lock_t *lock,
+             apr_pool_t *pool)
+{
+  if ((! fs->access_ctx) || (! fs->access_ctx->username))
+    return svn_error_createf 
+      (SVN_ERR_FS_NO_USER, NULL,
+       _("Cannot verify lock on path '%s'; no username available"),
+       lock->path);
+  
+  else if (strcmp (fs->access_ctx->username, lock->owner) != 0)
+    return svn_error_createf 
+      (SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL,
+       _("User %s does not own lock on path '%s' (currently locked by %s)"),
+       fs->access_ctx->username, lock->path, lock->owner);
+
+  else if (apr_hash_get (fs->access_ctx->lock_tokens, lock->token,
+                         APR_HASH_KEY_STRING) == NULL)
+    return svn_error_createf 
+      (SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+       _("Cannot verify lock on path '%s'; no matching lock-token available"),
+       lock->path);
+    
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements the svn_fs_get_locks_callback_t interface, where
+   BATON is just an svn_fs_t object. */
+static svn_error_t *
+get_locks_callback (void *baton, 
+                    svn_lock_t *lock, 
+                    apr_pool_t *pool)
+{
+  return verify_lock (baton, lock, pool);
+}
+
+
+/* The main routine for lock enforcement, used throughout libsvn_fs_fs. */
+svn_error_t *
+svn_fs_fs__allow_locked_operation (const char *path,
+                                   svn_node_kind_t kind,
+                                   svn_fs_t *fs,
+                                   svn_boolean_t recurse,
+                                   apr_pool_t *pool)
+{
+  if (kind == svn_node_dir)
+    {
+      if (recurse)
+        {
+          /* Discover all locks at or below the path. */
+          SVN_ERR (svn_fs_fs__get_locks (fs, path, get_locks_callback,
+                                         fs, pool));
+        }
+
+      /* If this function is called on a directory non-recursively,
+         then just return -- directory locking isn't supported, so a
+         directory can't be locked. */
+      return SVN_NO_ERROR;
+    }
+
+  /* We're either checking a file, or checking a dir non-recursively: */
+    {
+      svn_lock_t *lock;
+
+      /* Discover any lock attached to the path. */
+      SVN_ERR (get_lock_helper (fs, &lock, path, pool));
+
+      /* Easy out. */
+      if (! lock)
+        return SVN_NO_ERROR;
+
+      /* The path is locked;  are we allowed to change it? */
+      return verify_lock (fs, lock, pool);
+    }
+}
+
+
+
+/*** Public API implementations ***/
+
 svn_error_t *
 svn_fs_fs__lock (svn_lock_t **lock_p,
                  svn_fs_t *fs,
@@ -1098,95 +1196,3 @@ svn_fs_fs__get_locks (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Utility function:  verify that a lock can be used.
-
-   If no username is attached to the FS, return SVN_ERR_FS_NO_USER.
-
-   If the FS username doesn't match LOCK's owner, return
-   SVN_ERR_FS_LOCK_OWNER_MISMATCH.
-
-   If FS hasn't been supplied with a matching lock-token for LOCK,
-   return SVN_ERR_FS_BAD_LOCK_TOKEN.
-
-   Otherwise return SVN_NO_ERROR.
-
-   ###It pains me that I had to copy and paste this and verify_locks()
-      from libsvn_base. -Fitz
- */
-static svn_error_t *
-verify_lock (svn_fs_t *fs,
-             svn_lock_t *lock,
-             apr_pool_t *pool)
-{
-  if ((! fs->access_ctx) || (! fs->access_ctx->username))
-    return svn_error_createf 
-      (SVN_ERR_FS_NO_USER, NULL,
-       _("Cannot verify lock on path '%s'; no username available"),
-       lock->path);
-  
-  else if (strcmp (fs->access_ctx->username, lock->owner) != 0)
-    return svn_error_createf 
-      (SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL,
-       _("User %s does not own lock on path '%s' (currently locked by %s)"),
-       fs->access_ctx->username, lock->path, lock->owner);
-
-  else if (apr_hash_get (fs->access_ctx->lock_tokens, lock->token,
-                         APR_HASH_KEY_STRING) == NULL)
-    return svn_error_createf 
-      (SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
-       _("Cannot verify lock on path '%s'; no matching lock-token available"),
-       lock->path);
-    
-  return SVN_NO_ERROR;
-}
-
-
-/* This implements the svn_fs_get_locks_callback_t interface, where
-   BATON is just an svn_fs_t object. */
-static svn_error_t *
-get_locks_callback (void *baton, 
-                    svn_lock_t *lock, 
-                    apr_pool_t *pool)
-{
-  return verify_lock (baton, lock, pool);
-}
-
-
-/* The main routine for lock enforcement, used throughout libsvn_fs_fs. */
-svn_error_t *
-svn_fs_fs__allow_locked_operation (const char *path,
-                                   svn_node_kind_t kind,
-                                   svn_fs_t *fs,
-                                   svn_boolean_t recurse,
-                                   apr_pool_t *pool)
-{
-  if (kind == svn_node_dir)
-    {
-      if (recurse)
-        {
-          /* Discover all locks at or below the path. */
-          SVN_ERR (svn_fs_fs__get_locks (fs, path, get_locks_callback,
-                                         fs, pool));
-        }
-
-      /* If this function is called on a directory non-recursively,
-         then just return -- directory locking isn't supported, so a
-         directory can't be locked. */
-      return SVN_NO_ERROR;
-    }
-
-  /* We're either checking a file, or checking a dir non-recursively: */
-    {
-      svn_lock_t *lock;
-
-      /* Discover any lock attached to the path. */
-      SVN_ERR (get_lock_helper (fs, &lock, path, pool));
-
-      /* Easy out. */
-      if (! lock)
-        return SVN_NO_ERROR;
-
-      /* The path is locked;  are we allowed to change it? */
-      return verify_lock (fs, lock, pool);
-    }
-}
