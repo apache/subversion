@@ -484,10 +484,7 @@ open_root (void *edit_baton,
   /* Override the wcpath in our baton. */
   b->wcpath = eb->target ? apr_pstrdup (pool, eb->target) : "";
 
-  /* If there is no target, we care about this directory's properties,
-     too. */
-  if (! eb->target)
-    SVN_ERR (get_dirprops_from_ra (b));
+  SVN_ERR (get_dirprops_from_ra (b));
 
   *root_baton = b;
   return SVN_NO_ERROR;
