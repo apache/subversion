@@ -67,7 +67,7 @@ using a node revision number --- not a node number.  This means that
 a change to a file far down in a directory hierarchy requires the
 parent directory of the changed node to be updated, to hold the new
 node revision ID.  Now, since that parent directory has changed, its
-parent needs to be updated.
+parent needs to be updated, and so on to the root.
 
 If a particular subtree was unaffected by a given commit, the node
 revision ID that appears in its parent will be unchanged.  When
