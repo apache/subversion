@@ -172,9 +172,11 @@ svn_ra_dav__open (void **session_baton,
 
   if (ne_session_server(sess, uri.host, uri.port))
     {
+      svn_error_t *err =
+        svn_error_createf(SVN_ERR_RA_HOSTNAME_LOOKUP, 0, NULL, pool,
+                          "Hostname not found: %s", uri.host);
       uri_free(&uri);
-      return svn_error_createf(SVN_ERR_RA_HOSTNAME_LOOKUP, 0, NULL, pool,
-                               "Hostname not found: %s", uri.host);
+      return err;
     }
 
   ne_session_server(sess2, uri.host, uri.port);
