@@ -216,11 +216,11 @@ extern void svn_txdelta_free (svn_txdelta_stream_t *stream);
 
 
 
-/* Generating and consuming VCDIFF-format text deltas.  */
+/* Producing and consuming VCDIFF-format text deltas.  */
 
 /* Given a delta stream STREAM, set *READ_FN and *READ_BATON to a
    `read'-like function that will return a VCDIFF-format byte stream.
-   Do all allocation for the conversion in pool.  */
+   Do all allocation for the conversion in POOL.  */
 extern svn_error_t *svn_txdelta_to_vcdiff (svn_delta_read_fn_t **read_fn,
                                            void **read_baton,
                                            svn_txdelta_stream_t *stream,
@@ -357,11 +357,13 @@ typedef struct svn_delta_walk_t
        producer should pass this value as the WALK_BATON argument to
        every callback.
 
-     - DIR_BATON, a directory baton representing the root of the tree
-       we're applying the delta to.  The producer can use this to
-       describe changes to that root directory, or use `add_directory'
-       and `replace_directory' to obtain batons for other directories
-       in the tree, as explained below.
+     - DIR_BATON, a baton representing the root directory.  Each
+       callback function that adds, deletes, or changes objects in
+       some directory takes a directory baton argument representing
+       the directory in which the change takes place.  Given the
+       initial root baton, the producer can use `add_directory' or
+       `replace_directory', which return batons for subdirectories,
+       as explained below.
 
      In the case of `svn_delta_parse', these would be the WALK_BATON
      and DIR_BATON arguments.  Other producers will work differently.
