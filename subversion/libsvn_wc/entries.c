@@ -1026,7 +1026,7 @@ svn_wc__entries_write (apr_hash_t *entries,
                        svn_wc_adm_access_t *adm_access,
                        apr_pool_t *pool)
 {
-  svn_error_t *err = NULL, *err2 = NULL;
+  svn_error_t *err = NULL;
   svn_stringbuf_t *bigstr = NULL;
   apr_file_t *outfile = NULL;
   apr_status_t apr_err;
@@ -1087,22 +1087,17 @@ svn_wc__entries_write (apr_hash_t *entries,
     err = svn_error_createf (apr_err, 0, NULL, pool,
                              "svn_wc__entries_write: %s",
                              svn_wc_adm_access_path (adm_access));
-      
-  /* Close & sync. ### BUG? Why do we sync if the write failed? */
-  err2 = svn_wc__close_adm_file (outfile, svn_wc_adm_access_path (adm_access),
-                                 SVN_WC__ADM_ENTRIES, 1, pool);
+  else
+    err = svn_wc__close_adm_file (outfile,
+                                   svn_wc_adm_access_path (adm_access),
+                                   SVN_WC__ADM_ENTRIES, 1, pool);
 
   /* ### We would like to use entries to populate the access baton cache,
      ### but it's not yet always allocated from the correct pool */
   svn_wc__adm_access_set_entries (adm_access, TRUE, NULL);
   svn_wc__adm_access_set_entries (adm_access, FALSE, NULL);
 
-  if (err)
-    return err;
-  else if (err2)
-    return err2;
-
-  return SVN_NO_ERROR;
+  return err;
 }
 
 
