@@ -1,5 +1,5 @@
 /*
- * delta.c:   an editor driver for svn_repos_dir_delta
+ * delta.c:   an editor driver for expressing differences between two trees
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
