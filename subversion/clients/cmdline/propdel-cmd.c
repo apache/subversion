@@ -73,6 +73,6 @@ svn_cl__propdel (apr_getopt_t *os,
 
 /* 
  * local variables:
- * eval: (load-file "../../tools/dev/svn-dev.el")
+ * eval: (load-file "../../../tools/dev/svn-dev.el")
  * end: 
  */
