@@ -245,7 +245,7 @@ svn_svr_latest (svn_ver_t **latest_ver,
   svn_string_t *repository = svr__expand_repos_name (policy, repos);
 
   /* Check authorization, both server policy & auth hooks */
-  my_action = latest;
+  svn_svr_action_t my_action = svn_action_latest;
   svn_error_t *error = svn_svr_authorize (policy, repository, user, 
                                           my_action, NULL, NULL);
   RETURN_IF_ERROR(error);
@@ -273,7 +273,7 @@ svn_svr_get_ver_prop (svn_svr_policies_t *policy,
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = get_ver_prop;
+  svn_svr_action_t my_action = svn_action_get_ver_prop;
   authorized = svr__authorize (policy, repository, user, 
                                my_action, ver, NULL);
 
@@ -310,7 +310,7 @@ svn_svr_get_ver_proplist (svn_svr_policies_t *policy,
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = get_ver_proplist;
+  svn_svr_action_t my_action = svn_action_get_ver_proplist;
   authorized = svr__authorize (policy, repository, user, 
                                my_action, ver, NULL);
 
@@ -350,7 +350,7 @@ svn_svr_get_ver_propnames (svn_svr_policies_t *policy,
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = get_ver_propnames;
+  svn_svr_action_t my_action = svn_action_get_ver_propnames;
   authorized = svr__authorize (policy, repository, user, 
                                my_action, ver, NULL);
 
@@ -398,7 +398,7 @@ svn_svr_read (svn_svr_policies_t *policy,
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = read;
+  svn_svr_action_t my_action = svn_action_read;
   authorized = svr__authorize (policy, repository, user, 
                                my_action, ver, path);
 
@@ -438,7 +438,7 @@ svn_svr_get_node_prop (svn_svr_policies_t *policy,
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = get_node_prop;
+  svn_svr_action_t my_action = svn_action_get_node_prop;
   authorized = svr__authorize (policy, repository, user, 
                                my_action, ver, path);
 
@@ -477,7 +477,7 @@ svn_svr_get_dirent_prop (svn_svr_policies_t *policy,
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = get_dirent_prop;
+  svn_svr_action_t my_action = svn_action_get_dirent_prop;
   authorized = svr__authorize (policy, repository, user, 
                                my_action, ver, path);
 
@@ -516,7 +516,7 @@ svn_svr_get_node_proplist (svn_svr_policies_t *policy,
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = get_node_proplist;
+  svn_svr_action_t my_action = svn_action_get_node_proplist;
   authorized = svr__authorize (policy, repository, user, 
                                my_action, ver, path);
 
@@ -555,7 +555,7 @@ svn_svr_get_dirent_proplist (svn_svr_policies_t *policy,
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = get_dirent_proplist;
+  svn_svr_action_t my_action = svn_action_get_dirent_proplist;
   authorized = svr__authorize (policy, repository, user, 
                                my_action, ver, path);
 
@@ -593,7 +593,7 @@ svn_svr_get_node_propnames (svn_svr_policies_t *policy,
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = get_node_propnames;
+  svn_svr_action_t my_action = svn_action_get_node_propnames;
   authorized = svr__authorize (policy, repository, user, 
                                my_action, ver, path);
 
@@ -631,7 +631,7 @@ svn_svr_get_dirent_propnames (svn_svr_policies_t *policy,
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = get_dirent_propnames;
+  svn_svr_action_t my_action = svn_action_get_dirent_propnames;
   authorized = svr__authorize (policy, repository, user, 
                                my_action, ver, path);
 
@@ -679,7 +679,7 @@ svn_svr_submit (svn_svr_policies_t *policy,
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = submit;
+  svn_svr_action_t my_action = svn_action_submit;
   authorized = svr__authorize (policy, repository, user, 
                                my_action, NULL, NULL);
   /* TODO: perhaps the "path" argument to svr__authorize should be
@@ -719,7 +719,7 @@ svn_svr_write (svn_svr_policies_t *policy,
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = write;
+  svn_svr_action_t my_action = svn_action_write;
   authorized = svr__authorize (policy, repository, user, 
                                my_action, NULL, NULL);
   /* TODO: perhaps the "path" argument to svr__authorize should be
@@ -763,7 +763,7 @@ svn_svr_abandon (svn_svr_policies_t *policy,
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = abandon;
+  svn_svr_action_t my_action = svn_action_abandon;
   authorized = svr__authorize (policy, repository, user, 
                                my_action, NULL, NULL);
   /* TODO: 
@@ -817,7 +817,7 @@ svn_svr_get_delta (svn_svr_policies_t *policy,
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = get_delta;
+  svn_svr_action_t my_action = svn_action_get_delta;
   authorized = svr__authorize (policy, repository, user, 
                                my_action, ver1, path1);
   authorized = svr__authorize (policy, repository, user, 
@@ -862,7 +862,7 @@ svn_svr_get_diff (svn_svr_policies_t *policy,
 
   /* Check authorization, both server policy & auth hooks */
   svn_boolean_t authorized = FALSE;
-  svn_svr_action_t my_action = get_diff;
+  svn_svr_action_t my_action = svn_action_get_diff;
   authorized = svr__authorize (policy, repository, user, 
                                my_action, ver1, path1);
   authorized = svr__authorize (policy, repository, user, 
