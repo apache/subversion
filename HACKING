@@ -911,7 +911,8 @@ go to it.  If not, here's another way:
 Writing log messages
 ====================
 
-Certain guidelines should be adhered to when writing log messages:
+Certain guidelines should be adhered to when writing log messages for
+code changes:
 
 Make a log message for every change.  The value of the log becomes
 much less if developers cannot rely on its completeness.  Even if
@@ -1040,6 +1041,15 @@ searching for identifiers, and wasting time or producing unreadable
 entries by being exhaustive.  Use your best judgment --- and be
 considerate of your fellow developers.  (Also, run "svn log" to see
 how others have been writing their log entries.)
+
+Log messages for documentation or translation have somewhat looser
+guidelines.  The requirement to name every symbol obviously does not
+apply, and if the change is just one more increment in a continuous
+process such as translation, it's not even necessary to name every
+file.  Just briefly summarize the change, for example: "More work on
+Malagasy translation of the book."  When you finish a distinct stage
+of work, note it in the log message, for example: "Finish Chapter 3 of
+Malagasy book translation."
 
 
 
