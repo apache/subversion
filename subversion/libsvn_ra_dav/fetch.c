@@ -1722,6 +1722,7 @@ make_reporter (void *session_baton,
                void **report_baton,
                svn_revnum_t revision,
                svn_stringbuf_t *target,
+               const char *dst_path,
                svn_boolean_t recurse,
                const svn_delta_edit_fns_t *editor,
                void *edit_baton,
@@ -1797,6 +1798,26 @@ make_reporter (void *session_baton,
         }
     }
 
+
+  /* A NULL dst_path is also no problem;  this is only passed during a
+     'switch' operation.  If NULL, we don't mention it in the custom
+     report, and mod_dav_svn automatically runs dir_delta() on two
+     identical paths. */
+  if (dst_path)
+    {
+      svn_stringbuf_t *dst_path_str = NULL;
+      svn_xml_escape_nts (&dst_path_str, dst_path, ras->pool);
+
+      s = apr_psprintf(ras->pool, "<S:dst-path>%s</S:dst-path>",
+                       dst_path_str->data);
+      status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
+      if (status)
+        {
+          msg = "Failed writing the dst-path to the report tempfile.";
+          goto error;
+        }
+    }
+
   /* mod_dav_svn will assume recursive, unless it finds this element. */
   if (!recurse)
     {
@@ -1834,6 +1855,7 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                         report_baton,
                         revision_to_update_to,
                         update_target,
+                        NULL,
                         recurse,
                         wc_update,
                         wc_update_baton,
@@ -1854,10 +1876,34 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                         report_baton,
                         SVN_INVALID_REVNUM,
                         status_target,
+                        NULL,
                         recurse,
                         wc_status,
                         wc_status_baton,
                         FALSE); /* fetch_content */
+}
+
+
+svn_error_t * svn_ra_dav__do_switch(void *session_baton,
+                                    const svn_ra_reporter_t **reporter,
+                                    void **report_baton,
+                                    svn_revnum_t revision_to_update_to,
+                                    svn_stringbuf_t *update_target,
+                                    svn_boolean_t recurse,
+                                    svn_stringbuf_t *switch_url,
+                                    const svn_delta_edit_fns_t *wc_update,
+                                    void *wc_update_baton)
+{
+  return make_reporter (session_baton,
+                        reporter,
+                        report_baton,
+                        revision_to_update_to,
+                        update_target,
+                        switch_url->data,
+                        recurse,
+                        wc_update,
+                        wc_update_baton,
+                        TRUE); /* fetch_content */
 }
 
 

@@ -190,8 +190,15 @@ svn_client_switch (const svn_delta_edit_fns_t *before_editor,
       /* Create a generic stream that operates on this file.  */
       file_stream = svn_stream_from_aprfile (fp, pool);
 
-      /* Open an RA session to 'target' file URL. */      
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, switch_url, path,
+      /* Open an RA session to 'target' file URL. */
+      /* ### FIXME: we shouldn't be passing a NULL base-dir to
+         open_ra_session.  This is a just a way of forcing the server
+         to send a fulltext instead of svndiff data against something
+         in our working copy.  We need to add a callback to
+         open_ra_session that will fetch a 'source' stream from the
+         WC, so that ra_dav's implementation of get_file() can use the
+         svndiff data to construct a fulltext.  */
+      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, switch_url, NULL,
                                             TRUE, TRUE, auth_baton, pool));
       SVN_ERR (svn_client__get_revision_number
                (&revnum, ra_lib, session, revision, path->data, pool));

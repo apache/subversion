@@ -139,14 +139,20 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
   ++path;
   --len1;
 
+  /* prep the return value */
+  memset(info, 0, sizeof(*info));
+  info->rev = SVN_INVALID_REVNUM;
+
   /* is this a special URI? */
   len2 = strlen(relative->info->repos->special_uri);
   if (len1 < len2
       || (len1 > len2 && path[len2] != '/')
       || memcmp(path, relative->info->repos->special_uri, len2) != 0)
     {
-      /* ### we don't handle non-special URIs yet */
-      goto unhandled_form;
+      /* this is an ordinary "public" URI, so back up to include the
+         leading '/' and just return... no need to parse further. */
+      info->repos_path = path - 1;
+      return NULL;
     }
 
   path += len2; /* now points to "/" or "\0" just past the special URI */
@@ -161,10 +167,6 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
   if (slash == NULL || slash[1] == '\0')
     goto unhandled_form;
   len2 = slash - path;
-
-  /* prep the return value */
-  memset(info, 0, sizeof(*info));
-  info->rev = SVN_INVALID_REVNUM;
 
   /* Figure out what we have here */
   if (len2 == 4 && memcmp(path, "/act/", 5) == 0)

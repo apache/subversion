@@ -118,6 +118,17 @@ svn_error_t * svn_ra_dav__do_status(
   const svn_delta_edit_fns_t *wc_status,
   void *wc_status_baton);
 
+svn_error_t * svn_ra_dav__do_switch(
+  void *session_baton,
+  const svn_ra_reporter_t **reporter,
+  void **report_baton,
+  svn_revnum_t revision_to_update_to,
+  svn_stringbuf_t *update_target,
+  svn_boolean_t recurse,
+  svn_stringbuf_t *switch_url,
+  const svn_delta_edit_fns_t *wc_update,
+  void *wc_update_baton);
+
 svn_error_t * svn_ra_dav__get_log(
   void *session_baton,
   const apr_array_header_t *paths,
