@@ -827,9 +827,7 @@ svn_wc_add (const char *path,
           SVN_ERR (svn_wc_entry (&p_entry, parent_dir, FALSE, pool));
   
           /* Derive the parent path for our new addition here. */
-          new_url = svn_path_join (p_entry->url, 
-                                   svn_path_uri_encode (base_name, pool),
-                                   pool);
+          new_url = svn_path_url_add_component (p_entry->url, base_name, pool);
   
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
