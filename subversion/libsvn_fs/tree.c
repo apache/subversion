@@ -38,7 +38,6 @@
 #include "svn_fs.h"
 #include "svn_hash.h"
 #include "svn_sorts.h"
-#include "skel.h"
 #include "id.h"
 #include "fs.h"
 #include "err.h"
@@ -50,8 +49,6 @@
 #include "txn.h"
 #include "dag.h"
 #include "tree.h"
-#include "proplist.h"
-
 
 
 /* ### I believe this constant will become internal to reps-strings.c.
@@ -881,16 +878,15 @@ txn_body_node_prop (void *baton,
 {
   struct node_prop_args *args = baton;
   dag_node_t *node;
-  skel_t *proplist;
+  apr_hash_t *proplist;
 
   SVN_ERR (get_dag (&node, args->root, args->path, trail));
   SVN_ERR (svn_fs__dag_get_proplist (&proplist, node, trail));
-
-  /* Return the results of the generic property getting function. */
-  return svn_fs__get_prop (args->value_p,
-                           proplist,
-                           args->propname,
-                           trail->pool);
+  *(args->value_p) = NULL;
+  if (proplist)
+    *(args->value_p) = apr_hash_get (proplist, args->propname, 
+                                     APR_HASH_KEY_STRING);
+  return SVN_NO_ERROR;
 }
 
 
@@ -926,17 +922,13 @@ static svn_error_t *
 txn_body_node_proplist (void *baton, trail_t *trail)
 {
   struct node_proplist_args *args = baton;
-
   parent_path_t *parent_path;
-  skel_t *proplist;
+  apr_hash_t *proplist = NULL;
 
   SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
   SVN_ERR (svn_fs__dag_get_proplist (&proplist, parent_path->node, trail));
-
-  /* Return the results of the generic property hash getting function. */
-  return svn_fs__make_prop_hash (args->table_p,
-                                 proplist,
-                                 trail->pool);
+  *args->table_p = proplist ? proplist : apr_hash_make (trail->pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -974,15 +966,25 @@ txn_body_change_node_prop (void *baton,
 {
   struct change_node_prop_args *args = baton;
   parent_path_t *parent_path;
-  skel_t *proplist;
+  apr_hash_t *proplist = NULL;
 
   SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
   SVN_ERR (make_path_mutable (args->root, parent_path, args->path, trail));
   SVN_ERR (svn_fs__dag_get_proplist (&proplist, parent_path->node, trail));
-  SVN_ERR (svn_fs__set_prop (proplist, args->name, args->value, trail->pool));
-  SVN_ERR (svn_fs__dag_set_proplist (parent_path->node, proplist, trail));
 
-  return SVN_NO_ERROR;
+  /* If there's no proplist, but we're just deleting a property, exit now. */
+  if ((! proplist) && (! args->value))
+    return SVN_NO_ERROR;
+
+  /* Now, if there's no proplist, we know we need to make one. */
+  if (! proplist)
+    proplist = apr_hash_make (trail->pool);
+
+  /* Set the property. */
+  apr_hash_set (proplist, args->name, APR_HASH_KEY_STRING, args->value);
+
+  /* Overwrite the node's proplist. */
+  return svn_fs__dag_set_proplist (parent_path->node, proplist, trail);
 }
 
 
@@ -1259,11 +1261,11 @@ merge (const char **conflict_p,
 
      ### TODO: Please see issue #418 about the inelegance of this. */
   {
-    skel_t *tgt_skel, *anc_skel;
+    svn_fs__node_revision_t *tgt_nr, *anc_nr;
 
-    /* Convert dag_nodes into id's, and id's into skels. */
-    SVN_ERR (svn_fs__get_node_revision (&tgt_skel, fs, target_id, trail));
-    SVN_ERR (svn_fs__get_node_revision (&anc_skel, fs, ancestor_id, trail));
+    /* Get node revisions for our id's. */
+    SVN_ERR (svn_fs__get_node_revision (&tgt_nr, fs, target_id, trail));
+    SVN_ERR (svn_fs__get_node_revision (&anc_nr, fs, ancestor_id, trail));
         
     /* Now compare the prop-keys of the skels.  Note that just because
        the keys are different -doesn't- mean the proplists have
@@ -1271,8 +1273,7 @@ merge (const char **conflict_p,
        it doesn't do a brute-force comparison on textual contents, so
        it won't do that here either.  Checking to see if the propkey
        atoms are `equal' is enough. */
-    if (! svn_fs__skels_are_equal (SVN_FS__NR_PROP_KEY(tgt_skel),
-                                   SVN_FS__NR_PROP_KEY(anc_skel)))
+    if (! (tgt_nr->prop_key == anc_nr->prop_key))
       {
         *conflict_p = apr_pstrdup (trail->pool, target_path);
         return svn_error_createf (SVN_ERR_FS_CONFLICT, 0, NULL, trail->pool,
@@ -1280,9 +1281,18 @@ merge (const char **conflict_p,
       }
   }
 
-  SVN_ERR (svn_fs__dag_dir_entries_hash (&s_entries, source, trail));
-  SVN_ERR (svn_fs__dag_dir_entries_hash (&t_entries, target, trail));
-  SVN_ERR (svn_fs__dag_dir_entries_hash (&a_entries, ancestor, trail));
+  /* ### todo: it would be more efficient to simply check for a NULL
+     entries hash where necessary below than to allocate an empty hash
+     here, but another day, another day... */
+  SVN_ERR (svn_fs__dag_dir_entries (&s_entries, source, trail));
+  if (! s_entries)
+    s_entries = apr_hash_make (trail->pool);
+  SVN_ERR (svn_fs__dag_dir_entries (&t_entries, target, trail));
+  if (! t_entries)
+    t_entries = apr_hash_make (trail->pool);
+  SVN_ERR (svn_fs__dag_dir_entries (&a_entries, ancestor, trail));
+  if (! a_entries)
+    a_entries = apr_hash_make (trail->pool);
 
   /* for each entry E in a_entries... */
   for (hi = apr_hash_first (trail->pool, a_entries); 
@@ -1428,22 +1438,21 @@ merge (const char **conflict_p,
                                               s_entry->id) >= 1))
                     {
                       svn_fs_id_t *successor;
-                      skel_t *node_rev;
-
+                      svn_fs__node_revision_t *noderev;
+                      
                       /* Get a successor id. */
                       SVN_ERR (svn_fs__new_successor_id 
                                (&successor, fs, s_entry->id, trail));
                               
                       /* Copy the target node to the new successor id. */
                       SVN_ERR (svn_fs__get_node_revision 
-                               (&node_rev, fs, t_entry->id, trail));
+                               (&noderev, fs, t_entry->id, trail));
                       SVN_ERR (svn_fs__put_node_revision 
-                               (fs, successor, node_rev, trail));
+                               (fs, successor, noderev, trail));
                               
                       /* Update t_entry's parent with the new id. */
-                      SVN_ERR (svn_fs__dag_set_entry 
-                               (target, t_entry->name, 
-                                successor, trail));
+                      SVN_ERR (svn_fs__dag_set_entry (target, t_entry->name, 
+                                                      successor, trail));
 
                       /* Now, delete the old node revision. */
                       SVN_ERR (svn_fs__delete_nodes_entry 
@@ -1669,17 +1678,15 @@ txn_body_merge (void *baton, trail_t *trail)
           && (svn_fs_id_distance (ancestor_id, source_id) >= 1))
         {
           svn_fs_id_t *successor;
-          skel_t *node_rev;
+          svn_fs__node_revision_t *noderev;
           
           /* Get a successor id. */
           SVN_ERR (svn_fs__new_successor_id 
                    (&successor, fs, source_id, trail));
           
           /* Copy the target node to the new successor id. */
-          SVN_ERR (svn_fs__get_node_revision 
-                   (&node_rev, fs, target_id, trail));
-          SVN_ERR (svn_fs__put_node_revision 
-                   (fs, successor, node_rev, trail));
+          SVN_ERR (svn_fs__get_node_revision (&noderev, fs, target_id, trail));
+          SVN_ERR (svn_fs__put_node_revision (fs, successor, noderev, trail));
           
           /* Update the transaction with the new root id. */
           SVN_ERR (svn_fs__set_txn_root (fs, txn_name, successor, trail));
@@ -1988,12 +1995,15 @@ txn_body_dir_entries (void *baton,
 {
   struct dir_entries_args *args = baton;
   parent_path_t *parent_path;
-  apr_hash_t *table;
+  apr_hash_t *entries = NULL;
 
   SVN_ERR (open_path (&parent_path, args->root, args->path, 0, trail));
-  SVN_ERR (svn_fs__dag_dir_entries_hash (&table, parent_path->node, trail));
 
-  *args->table_p = table;
+  /* Get the entries for PARENT_PATH. */
+  SVN_ERR (svn_fs__dag_dir_entries (&entries, parent_path->node, trail));
+
+  /* Initialize the return value to an empty hash. */
+  *args->table_p = entries ? entries : apr_hash_make (trail->pool);
   return SVN_NO_ERROR;
 }
 
@@ -2011,7 +2021,9 @@ svn_fs_dir_entries (apr_hash_t **table_p,
   args.root    = root;
   args.path    = path;
   SVN_ERR (svn_fs__retry_txn (root->fs, txn_body_dir_entries, &args, pool));
-  
+
+  if (! table)
+    table = apr_hash_make (pool);
   *table_p = table;
   return SVN_NO_ERROR;
 }
@@ -2293,12 +2305,7 @@ txn_body_copied_from (void *baton, trail_t *trail)
   struct copied_from_args *args = baton;
   parent_path_t *path_down;
 
-  SVN_ERR (open_path (&path_down,
-                      args->root,
-                      args->path,
-                      0,
-                      trail));
-
+  SVN_ERR (open_path (&path_down, args->root, args->path, 0, trail));
   SVN_ERR (svn_fs__dag_copied_from (&(args->result_rev),
                                     &(args->result_path),
                                     path_down->node,

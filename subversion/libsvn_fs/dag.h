@@ -116,28 +116,19 @@ int svn_fs__dag_is_file (dag_node_t *node);
 int svn_fs__dag_is_directory (dag_node_t *node);
 
 
-/* Set *PROPLIST_P to a PROPLIST skel representing the entire property
-   list of NODE, as part of TRAIL.  This guarantees that *PROPLIST_P
-   is well-formed.
+/* Set *PROPLIST_P to a PROPLIST hash representing the entire property
+   list of NODE, as part of TRAIL.  The hash has const char * names
+   (the property names) and svn_string_t * values (the property values).
 
-   The caller must not change the returned skel --- it's shared with
-   dag.c's internal cache of node contents.
-
-   The returned skel is allocated in *either* TRAIL->pool or the pool
-   NODE was allocated in, at this function's discretion; the caller
-   must finish using it while both of those remain live.  If the
-   caller needs the property list to live longer, it can use
-   svn_fs__copy_skel to make its own copy.  */
-svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
+   The returned skel is allocated in TRAIL->pool.  */
+svn_error_t *svn_fs__dag_get_proplist (apr_hash_t **proplist_p,
                                        dag_node_t *node,
                                        trail_t *trail);
 
-
 /* Set the property list of NODE to PROPLIST, as part of TRAIL.  The
-   node being changed must be mutable.  This verifies that PROPLIST is
-   well-formed.  */
+   node being changed must be mutable.  */
 svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
-                                       skel_t *proplist,
+                                       apr_hash_t *proplist,
                                        trail_t *trail);
 
 
@@ -219,34 +210,17 @@ svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
                                trail_t *trail);
 
 
-/* Set *ENTRIES_P to the directory entry list skel of NODE, as part of
-   TRAIL.  The returned skel has the form (ENTRY ...), as described in
-   `structure'; this function guarantees that *ENTRIES_P is well-formed.
-
-   The caller must not modify the returned skel --- it's shared with
-   dag.c's internal cache of node contents.
-
-   The returned skel is allocated in *either* TRAIL->pool or the pool
-   NODE was allocated in, at this function's discretion; the caller
-   must finish using it while both of those remain live.  If the
-   caller needs the directory enttry list to live longer, it can use
-   svn_fs__copy_skel to make its own copy.  */
-svn_error_t *svn_fs__dag_dir_entries_skel (skel_t **entries_p,
-                                           dag_node_t *node,
-                                           trail_t *trail);
-
-
-/* Set *ENTRIES_P to a hash table of NODE's entries, as part of
-   TRAIL.  The keys of the table are entry names, and the values are
-   svn_fs_dirent_t's.
+/* Set *ENTRIES_P to a hash table of NODE's entries, as part of TRAIL,
+   or NULL if NODE has no entries.  The keys of the table are entry
+   names, and the values are svn_fs_dirent_t's.
 
    The returned table is allocated in *either* TRAIL->pool or the pool
    NODE was allocated in, at this function's discretion; the caller
    must finish using it while both of those remain live.  If the
    caller needs the table to live longer, it should copy the hash.  */
-svn_error_t *svn_fs__dag_dir_entries_hash (apr_hash_t **entries_p,
-                                           dag_node_t *node,
-                                           trail_t *trail);
+svn_error_t *svn_fs__dag_dir_entries (apr_hash_t **entries_p,
+                                      dag_node_t *node,
+                                      trail_t *trail);
 
 
 /* Set ENTRY_NAME in NODE to point to ID, as part of TRAIL.
@@ -271,26 +245,6 @@ svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
                                       trail_t *trail);
 
 
-/* Why do we have both svn_fs__dag_link and svn_fs__dag_rename?
-
-   They each have different limitations and abilities (kind of like
-   superheroes!) that allow them to ensure the consistency of the
-   filesystem.
-
-   - svn_fs__dag_link can't rename mutable nodes.  But since CHILD is
-     immutable, it knows that it's safe to create a new link to it:
-     mutable nodes must have exactly one parent, while immutable nodes
-     can be shared arbitrarily.
-
-   - svn_fs__dag_rename always deletes one link, and adds another, as
-     a single atomic operation.  Since it preserves the total number
-     of links to the node being renamed, you can use it on both
-     mutable nodes (which must always have one parent) and immutable
-     nodes (which can have as many parents as they please).  But by
-     the same token, you can't use it to create virtual copies, one of
-     the filesystem's defining features.  */
-
-
 /* Create a link to CHILD in PARENT named NAME, as part of TRAIL.
    PARENT must be mutable.  CHILD must be immutable.  NAME must be a
    single path component; it cannot be a slash-separated directory
@@ -304,20 +258,6 @@ svn_error_t *svn_fs__dag_link (dag_node_t *parent,
                                dag_node_t *child,
                                const char *name,
                                trail_t *trail);
-
-
-/* Rename the node named FROM_NAME in FROM_DIR to TO_NAME in TO_DIR,
-   as part of TRAIL.  FROM_DIR and TO_DIR must both be mutable; the
-   node being renamed may be either mutable or immutable.  FROM_NAME
-   and TO_NAME must be single path components; they cannot be
-   slash-separated directory paths.
-
-   This function ensures that the rename does not create a cyclic
-   directory structure, by checking that TO_DIR is not a child of
-   FROM_DIR.  */
-svn_error_t *svn_fs__dag_rename (dag_node_t *from_dir, const char *from_name,
-                                 dag_node_t *  to_dir, const char *  to_name,
-                                 trail_t *trail);
 
 
 /* Delete the directory entry named NAME from PARENT, as part of

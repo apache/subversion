@@ -54,30 +54,6 @@ svn_fs__count_id_components (const char *data, apr_size_t data_len)
 
 
 
-/* Validating SKELs. */
-
-int
-svn_fs__is_valid_proplist (skel_t *skel)
-{
-  int len = svn_fs__list_length (skel);
-
-  if (len >= 0
-      && (len & 1) == 0)
-    {
-      skel_t *elt;
-
-      for (elt = skel->children; elt; elt = elt->next)
-        if (! elt->is_atom)
-          return 0;
-
-      return 1;
-    }
-
-  return 0;
-}
-
-
-
 /* Validating paths. */
 
 int 

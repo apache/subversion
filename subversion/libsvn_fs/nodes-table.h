@@ -20,7 +20,6 @@
 
 #include "db.h"
 #include "svn_fs.h"
-#include "skel.h"
 #include "trail.h"
 
 #ifdef __cplusplus
@@ -76,29 +75,23 @@ svn_error_t *svn_fs__new_successor_id (svn_fs_id_t **successor_p,
                                        trail_t *trail);
 
 
-/* Set *SKEL_P to the NODE-REVISION skel for the node ID in FS, as
-   part of TRAIL.  Allocate the skel, and do any other temporary
-   allocation, in TRAIL->pool.
-
-   This function guarantees that SKEL is a well-formed NODE-REVISION
-   skel.  */
-svn_error_t *svn_fs__get_node_revision (skel_t **skel_p,
+/* Set *NODEREV_P to the node-revision for the node ID in FS, as
+   part of TRAIL.  Do any allocations in TRAIL->pool.  */
+svn_error_t *svn_fs__get_node_revision (svn_fs__node_revision_t **noderev_p,
                                         svn_fs_t *fs,
                                         const svn_fs_id_t *id,
                                         trail_t *trail);
 
 
-/* Store SKEL as the NODE-REVISION skel for the node revision whose id
+/* Store NODEREV as the node-revision for the node whose id
    is ID in FS, as part of TRAIL.  Do any necessary temporary
    allocation in TRAIL->pool.
-
-   This function checks that SKEL is a well-formed NODE-REVISION skel.
 
    After this call, the node table manager assumes that NODE's
    contents will change frequently.  */
 svn_error_t *svn_fs__put_node_revision (svn_fs_t *fs,
                                         const svn_fs_id_t *id,
-                                        skel_t *skel,
+                                        svn_fs__node_revision_t *noderev,
                                         trail_t *trail);
 
 

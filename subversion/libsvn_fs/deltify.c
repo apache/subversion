@@ -42,7 +42,7 @@ deltify (svn_fs_id_t *target_id,
          int props_only,
          trail_t *trail)
 {
-  skel_t
+  svn_fs__node_revision_t 
     *source_nr,           /* source node revision */
     *target_nr;           /* target node revision */
 
@@ -51,12 +51,6 @@ deltify (svn_fs_id_t *target_id,
     *target_dkey,         /* target data rep key      */
     *source_pkey,         /* source property rep key  */
     *source_dkey;         /* source data rep key      */
-
-  skel_t
-    *target_pkey_skel,    /* target property rep key skel */
-    *target_dkey_skel,    /* target data rep key skel */
-    *source_pkey_skel,    /* source property rep key skel */
-    *source_dkey_skel;    /* source data rep key skel */
 
   /* Turn those IDs into skels, so we can get the rep keys. */
   SVN_ERR (svn_fs__get_node_revision (&target_nr, fs, target_id, trail));
@@ -69,48 +63,10 @@ deltify (svn_fs_id_t *target_id,
     return SVN_NO_ERROR;
 
   /* We have a target and a source.  Get all the rep keys... */
-  {
-
-    /* Target property key. */
-    target_pkey_skel = SVN_FS__NR_PROP_KEY (target_nr);
-    if (target_pkey_skel->len != 0) {
-      target_pkey = apr_pstrndup (trail->pool,
-                                  target_pkey_skel->data,
-                                  target_pkey_skel->len);
-    }
-    else
-      target_pkey = NULL;
-
-    /* Target data key. */
-    target_dkey_skel = SVN_FS__NR_DATA_KEY (target_nr);
-    if (target_dkey_skel->len != 0) {
-      target_dkey = apr_pstrndup (trail->pool,
-                                  target_dkey_skel->data,
-                                  target_dkey_skel->len);
-    }
-    else
-      target_dkey = NULL;
-    
-    /* Source property key. */
-    source_pkey_skel = SVN_FS__NR_PROP_KEY (source_nr);
-    if (source_pkey_skel->len != 0) {
-      source_pkey = apr_pstrndup (trail->pool,
-                                  source_pkey_skel->data,
-                                  source_pkey_skel->len);
-    }
-    else
-      source_pkey = NULL;
-
-    /* Source data key. */
-    source_dkey_skel = SVN_FS__NR_DATA_KEY (source_nr);
-    if (source_dkey_skel->len != 0) {
-      source_dkey = apr_pstrndup (trail->pool,
-                                  source_dkey_skel->data,
-                                  source_dkey_skel->len);
-    }
-    else
-      source_dkey = NULL;
-  }
+  target_pkey = target_nr->prop_key;
+  target_dkey = target_nr->data_key;
+  source_pkey = source_nr->prop_key;
+  source_dkey = source_nr->data_key;
 
   if ((target_pkey && source_pkey)
       && (strcmp (target_pkey, source_pkey)))
@@ -132,36 +88,24 @@ undeltify (svn_fs_id_t *id,
            svn_fs_t *fs,
            trail_t *trail)
 {
-  skel_t *node_rev;
-  const char *prop_key = NULL, *data_key = NULL;
-  skel_t *pkey_skel, *dkey_skel;
+  svn_fs__node_revision_t *noderev;
 
   /* Turn ID into a skel so we can get the rep keys. */
-  SVN_ERR (svn_fs__get_node_revision (&node_rev, fs, id, trail));
+  SVN_ERR (svn_fs__get_node_revision (&noderev, fs, id, trail));
 
   /* Check that target exists.  If not, no big deal -- just do
      nothing. */
-  if (node_rev == NULL)
+  if (noderev == NULL)
     return SVN_NO_ERROR;
 
-  /* Get the property key. */
-  pkey_skel = SVN_FS__NR_PROP_KEY (node_rev);
-  if (pkey_skel->len != 0)
-    prop_key = apr_pstrndup (trail->pool, pkey_skel->data, pkey_skel->len);
-
-  /* Get the data key. */
-  dkey_skel = SVN_FS__NR_DATA_KEY (node_rev);
-  if (dkey_skel->len != 0)
-    data_key = apr_pstrndup (trail->pool, dkey_skel->data, dkey_skel->len);
-
   /* Undeltify the properties. */
-  if (prop_key)
-    SVN_ERR (svn_fs__rep_undeltify (fs, prop_key, trail));
+  if (noderev->prop_key)
+    SVN_ERR (svn_fs__rep_undeltify (fs, noderev->prop_key, trail));
 
   /* Undeltify the data (entries list for directories, file contents
      for files). */
-  if (data_key)
-    SVN_ERR (svn_fs__rep_undeltify (fs, data_key, trail));
+  if (noderev->data_key)
+    SVN_ERR (svn_fs__rep_undeltify (fs, noderev->data_key, trail));
 
   return SVN_NO_ERROR;
 }
@@ -241,23 +185,28 @@ deltify_undeltify (svn_fs_t *fs,
       apr_hash_t *entries;
       apr_hash_index_t *hi;
 
-      SVN_ERR (svn_fs__dag_dir_entries_hash (&entries, node, trail));
-      for (hi = apr_hash_first (subpool, entries); hi; hi = apr_hash_next (hi))
+      SVN_ERR (svn_fs__dag_dir_entries (&entries, node, trail));
+      if (entries)
         {
-          const void *key;
-          void *val;
-          apr_ssize_t klen;
-          svn_fs_dirent_t *entry;
-          
-          /* KEY will be the entry name in source, VAL the dirent */
-          apr_hash_this (hi, &key, &klen, &val);
-          entry = val;
-          
-          /* Construct the full path of this entry, and recurse. */
-          svn_stringbuf_set (full_path, path);
-          svn_path_add_component_nts (full_path, entry->name);
-          SVN_ERR (deltify_undeltify (fs, root, full_path->data, entry->id,
-                                      do_deltify, recurse, trail));
+          for (hi = apr_hash_first (subpool, entries); 
+               hi; 
+               hi = apr_hash_next (hi))
+            {
+              const void *key;
+              void *val;
+              apr_ssize_t klen;
+              svn_fs_dirent_t *entry;
+              
+              /* KEY will be the entry name in source, VAL the dirent */
+              apr_hash_this (hi, &key, &klen, &val);
+              entry = val;
+              
+              /* Construct the full path of this entry, and recurse. */
+              svn_stringbuf_set (full_path, path);
+              svn_path_add_component_nts (full_path, entry->name);
+              SVN_ERR (deltify_undeltify (fs, root, full_path->data, entry->id,
+                                          do_deltify, recurse, trail));
+            }
         }
     }
 
