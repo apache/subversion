@@ -1206,7 +1206,69 @@ def basic_node_kind_change(sbox):
 #----------------------------------------------------------------------
 
 def basic_import(sbox):
-  "basic import of (possibly executable) files"
+  "basic import of single new file"
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # create a new directory with files of various permissions
+  new_path = os.path.join(wc_dir, 'new_file')
+
+  svntest.main.file_append(new_path, "some text")
+
+  # import new files into repository
+  url = svntest.main.current_repo_url
+  output, errput = svntest.main.run_svn(None, 'import',
+                                        '--username', svntest.main.wc_author,
+                                        '--password', svntest.main.wc_passwd,
+                                        '-m', 'Log message for new import',
+                                        url, new_path, 'new_file')
+
+  # check output from import
+  if len(errput):
+    return 1
+  lastline = string.strip(output.pop())
+  cm = re.compile ("(Committed|Imported) revision [0-9]+.")
+  match = cm.search (lastline)
+  if not match:
+    return 1
+
+  # remove (uncontrolled) local file
+  os.remove(new_path)
+
+  # Create expected disk tree for the update (disregarding props)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'new_file' : Item('some text'),
+    })
+
+  # Create expected status tree for the update (disregarding props).
+  # Newly imported file should be at revision 2.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'new_file' : Item(status='  ', wc_rev=2, repos_rev=2),
+    })
+
+  # Create expected output tree for the update.
+  expected_output = svntest.wc.State(wc_dir, {
+    'new_file' : Item(status='A '),
+  })
+
+  # do update and check three ways
+  return svntest.actions.run_and_verify_update(wc_dir,
+                                               expected_output,
+                                               expected_disk,
+                                               expected_status,
+                                               None, None, None,
+                                               None, None, 1)
+
+#----------------------------------------------------------------------
+
+# this test should be SKIPped on systems without the executable bit
+def basic_import_executable(sbox):
+  "basic import of executable files"
 
   if sbox.build():
     return 1
@@ -1223,15 +1285,14 @@ def basic_import(sbox):
   other_path = os.path.join(wc_dir, "XT/other_exe")
 
   for path in [all_path, none_path, user_path, group_path, other_path]:
-    f = open(path, "w")
-    f.close()
+    svntest.main.file_append(path, "some text")
 
-  if (os.name == 'posix'):
-    os.chmod(all_path, 0777)
-    os.chmod(none_path, 0666)
-    os.chmod(user_path, 0766)
-    os.chmod(group_path, 0676)
-    os.chmod(other_path, 0667)
+  # set executable bits
+  os.chmod(all_path, 0777)
+  os.chmod(none_path, 0666)
+  os.chmod(user_path, 0766)
+  os.chmod(group_path, 0676)
+  os.chmod(other_path, 0667)
 
   # import new files into repository
   url = svntest.main.current_repo_url
@@ -1256,11 +1317,11 @@ def basic_import(sbox):
   # Create expected disk tree for the update (disregarding props)
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'all_exe' : Item(''),
-    'none_exe' : Item(''),
-    'user_exe' : Item(''),
-    'group_exe' : Item(''),
-    'other_exe' : Item(''),
+    'all_exe' :   Item('some text', props={'svn:executable' : ''}),
+    'none_exe' :  Item('some text'),
+    'user_exe' :  Item('some text', props={'svn:executable' : ''}),
+    'group_exe' : Item('some text'),
+    'other_exe' : Item('some text'),
     })
 
   # Create expected status tree for the update (disregarding props).
@@ -1282,13 +1343,6 @@ def basic_import(sbox):
     'group_exe' : Item(status='A '),
     'other_exe' : Item(status='A '),
   })
-
-  # account for executable property (posix only)
-  if (os.name == 'posix'):
-    expected_disk.tweak('all_exe', 'user_exe', props={ 
-      'svn:executable' : '' 
-      })
-    expected_status.tweak('all_exe', 'user_exe', status='  ')
 
   # do update and check three ways
   return svntest.actions.run_and_verify_update(wc_dir,
@@ -1363,6 +1417,7 @@ test_list = [ None,
               basic_checkout_deleted,
               basic_node_kind_change,
               basic_import,
+              Skip(basic_import_executable, (os.name != 'posix')),
               nonexistent_repository,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
