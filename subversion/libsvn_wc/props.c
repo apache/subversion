@@ -1201,6 +1201,9 @@ svn_wc__get_keywords (svn_io_keywords_t **keywords,
   int offset = 0;
   svn_stringbuf_t *found_word;
 
+  /* Sanity.  Safety.  Stop, drop, n' roll. */
+  *keywords = NULL;
+
   /* Choose a property value to parse:  either the one that came into
      this function, or the one attached to PATH. */
   if (optional_value == NULL)

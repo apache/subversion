@@ -1762,24 +1762,42 @@ crawl_local_mods (svn_stringbuf_t *parent_dir,
    
    Perform an atomic restoration of the file FILE_PATH; that is, copy
    the file's text-base to the administrative tmp area, and then move
-   that file to FILE_PATH.  */
+   that file to FILE_PATH with possible translations/expansions.  */
 static svn_error_t *
 restore_file (svn_stringbuf_t *file_path,
               apr_pool_t *pool)
 {
   apr_status_t status;
   svn_stringbuf_t *text_base_path, *tmp_text_base_path;
+  svn_io_keywords_t *keywords;
+  enum svn_wc__eol_style eol_style;
+  const char *eol;
 
   text_base_path = svn_wc__text_base_path (file_path, 0, pool);
   tmp_text_base_path = svn_wc__text_base_path (file_path, 1, pool);
 
   SVN_ERR (svn_io_copy_file (text_base_path, tmp_text_base_path, pool));
-  status = apr_file_rename (tmp_text_base_path->data, file_path->data, pool);
+
+  SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol,
+                                  file_path->data, pool));
+  SVN_ERR (svn_wc__get_keywords (&keywords,
+                                 file_path->data, NULL, pool));
+  
+  /* When copying the tmp-text-base out to the working copy, make
+     sure to do any eol translations or keyword substitutions,
+     as dictated by the property values.  If these properties
+     are turned off, then this is just a normal copy. */
+  SVN_ERR (svn_io_copy_and_translate (tmp_text_base_path->data,
+                                      file_path->data,
+                                      eol, FALSE, /* don't repair */
+                                      keywords,
+                                      TRUE, /* expand keywords */
+                                      pool));
+  
+  status = apr_file_remove (tmp_text_base_path->data, pool);
   if (status)
     return svn_error_createf (status, 0, NULL, pool,
-                              "error renaming `%s' to `%s'",
-                              tmp_text_base_path->data,
-                              file_path->data);
+                              "error removing `%s'", tmp_text_base_path->data);
 
   return SVN_NO_ERROR;
 }
