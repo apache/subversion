@@ -245,7 +245,8 @@ handle_external_item_change (const void *key, apr_ssize_t klen,
         SVN_ERR (svn_client_export3 (NULL, new_item->url, path,
                                      &(new_item->revision),
                                      &(new_item->revision),
-                                     TRUE, FALSE, NULL, ib->ctx, ib->pool));
+                                     TRUE, FALSE, TRUE, NULL,
+                                     ib->ctx, ib->pool));
       else
         SVN_ERR (svn_client__checkout_internal (NULL, new_item->url, path,
                                                 &(new_item->revision),
