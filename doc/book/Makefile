@@ -64,7 +64,11 @@ install-misc-docs: install-misc-html install-misc-pdf \
 clean: book-clean misc-docs-clean
 
 $(BOOK_VERSION_SOURCE):
-	echo '<!ENTITY svn.version "'`$(SVNVERSION) .`'">' > $(BOOK_VERSION_SOURCE)
+	@if $(SVNVERSION) .; then \
+ 	echo '<!ENTITY svn.version "Draft Revision '`$(SVNVERSION) .`'">' > $(BOOK_VERSION_SOURCE); \
+	else \
+	echo '<!ENTITY svn.version "Draft">' > $(BOOK_VERSION_SOURCE); \
+	fi
 
 book-html: $(BOOK_HTML_TARGET)
 

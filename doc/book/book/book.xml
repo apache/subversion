@@ -28,7 +28,7 @@
 
   <!-- Using revnumber would be more appropriate, but our stylesheets -->
   <!-- don't seem to render it. -->
-  <subtitle>Draft Revision &svn.version;</subtitle>
+  <subtitle>&svn.version;</subtitle>
 
   <bookinfo>
 
