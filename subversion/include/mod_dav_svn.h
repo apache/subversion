@@ -74,6 +74,13 @@ AP_MODULE_DECLARE(dav_error *) dav_svn_split_uri(request_rec *r,
                                                  const char **repos_path);
 
 
+/* Given an apache request R and a ROOT_PATH to the svn location
+   block sets *REPOS_PATH to the path of the repository on disk.
+*/
+AP_MODULE_DECLARE(dav_error *) dav_svn_get_repos_path(request_rec *r,
+                                                      const char *root_path,
+                                                      const char **repos_path);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
