@@ -14,12 +14,12 @@ usage: svn log [URL] [PATH1 [PATH2] ...]
     svn log http://www.example.com/repo/project foo.c bar.c
 
 Valid options:
-  -r [--revision] arg:	specify revision number ARG (or X:Y range)
-  -D [--date] arg:	specify a date ARG (instead of a revision)
-  -v [--verbose]:	print extra information
-  --targets arg:	pass contents of file "ARG" as additional args
-  --username arg:	specify a username ARG
-  --password arg:	specify a password ARG
+  -r [--revision] arg      : specify revision number ARG (or X:Y range)
+  -D [--date] arg          : specify a date ARG (instead of a revision)
+  -v [--verbose]           : print extra information
+  --targets arg            : pass contents of file "ARG" as additional args
+  --username arg           : specify a username ARG
+  --password arg           : specify a password ARG
 
 switch (sw): Update working copy to mirror a new URL
 usage: switch [TARGET] REPOS_URL
@@ -27,7 +27,7 @@ usage: switch [TARGET] REPOS_URL
    Note:  this is the way to move a working copy to a new branch.
 
 Valid options:
-  -r [--revision] arg:	specify revision number ARG (or X:Y range)
-  -n [--nonrecursive]:	operate on single directory only
-  --force:	force operation to run
+  -r [--revision] arg      : specify revision number ARG (or X:Y range)
+  -n [--nonrecursive]      : operate on single directory only
+  --force                  : force operation to run
 
