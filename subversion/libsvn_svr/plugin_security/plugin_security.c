@@ -126,7 +126,7 @@ plugin_security_init (svn_svr_policies_t *policy,
 
   /* Finally, register the new plugin in the server's global policy struct */
   err = svn_svr_register_plugin (policy, newplugin);
-  RETURN_IF_ERROR(err);
+  SVN_RETURN_IF_ERROR(err);
 
   return SVN_SUCCESS;
 }
