@@ -852,7 +852,7 @@ svn_error_t *svn_fs_get_editor (svn_delta_edit_fns_t **editor,
                                 svn_fs_t *fs,
                                 svn_revnum_t base_revision,
                                 svn_string_t *log_msg,
-                                svn_fs_commit_hook_t hook,
+                                svn_fs_commit_hook_t *hook,
                                 void *hook_baton,
                                 apr_pool_t *pool);
 

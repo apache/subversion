@@ -87,10 +87,6 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=".\clones-table.c"
-# End Source File
-# Begin Source File
-
 SOURCE=".\convert-size.c"
 # End Source File
 # Begin Source File
@@ -105,6 +101,10 @@ SOURCE=.\dbt.c
 
 SOURCE=.\delta.c
 # PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
+SOURCE=.\editor.c
 # End Source File
 # Begin Source File
 
@@ -125,12 +125,11 @@ SOURCE=.\id.c
 # End Source File
 # Begin Source File
 
-SOURCE=".\nodes-table.c"
+SOURCE=".\node-rev.c"
 # End Source File
 # Begin Source File
 
-SOURCE=.\rep.c
-# PROP Exclude_From_Build 1
+SOURCE=".\nodes-table.c"
 # End Source File
 # Begin Source File
 
@@ -169,10 +168,6 @@ SOURCE=.\validate.c
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
-# Begin Source File
-
-SOURCE=".\clones-table.h"
-# End Source File
 # Begin Source File
 
 SOURCE=".\convert-size.h"
