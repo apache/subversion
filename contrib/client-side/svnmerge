@@ -48,9 +48,9 @@ SVN_MERGE_PROP="${NAME}-integrated"
 SRCREV=`echo '$Rev$' | sed 's/^\$Rev: \([0-9]\{1,\}\).\{0,\}$/\1/g'`
 SRCDATE=`echo '$Date$' | sed 's/^\$Date: .\{0,\}(\(.\{0,\}\)).\{0,\}$/\1/g'`
 
-# We expect English output
-unset LANG
-unset LC_ALL
+# We expect non-localized output
+LC_MESSAGES="C"
+export LC_MESSAGES
 
 # Subroutine to output usage message
 usage()
