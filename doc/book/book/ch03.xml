@@ -284,13 +284,9 @@ Checked out revision 2499.
       <title>Repository Layout</title>
 
       <para>If you're wondering what <literal>trunk</literal> is all
-        about in the above URL, it's part of the way that we recommend
-        you lay out your Subversion repository. That is, when you
-        create a new Subversion repository, you should make three
-        top-level directories: <literal>trunk</literal>,
-        <literal>tags</literal>, and <literal>branches</literal>.
-        This may seem a little odd at the moment, but we'll talk a lot
-        more about these in <xref linkend="svn-ch-4"/>.</para>
+        about in the above URL, it's part of the way we recommend
+        you lay out your Subversion repository which we'll talk a lot
+        more about in <xref linkend="svn-ch-4"/>.</para>
 
     </sidebar>
 
@@ -313,12 +309,23 @@ Checked out revision 3678.
     <para>Since Subversion uses a <quote>copy-modify-merge</quote>
       model instead of <quote>lock-modify-unlock,</quote> (see <xref
       linkend="svn-ch-2"/>) you're now ready to start making changes
-      to the files and directories that you've checked out, known
-      collectively as your <firstterm>working copy</firstterm>. You
-      can even delete the entire working copy and forget about
-      it&mdash;there's no need to notify the Subversion server unless
-      you're ready to <firstterm>commit</firstterm> a new file or
-      directory, or changes to existing ones.</para>
+      to the files and directories that you've checked out (known
+      collectively as your <firstterm>working
+      copy</firstterm>).</para>
+
+    <para>In other words, your <quote>working copy</quote> is now just
+      like any other collection of files and/or directories on your
+      system<footnote><para>Well, except for the fact that every
+      directory within your <quote>working copy</quote>also contains a
+      <filename>.svn</filename> subdirectory.  But that's getting a
+      little ahead of ourselves.</para></footnote>.  You can edit and
+      change them, move them around, you can even delete the entire
+      working copy and forget about it.</para>
+
+    <para>Unless you're ready to <firstterm>commit</firstterm> a new
+      file or directory, or changes to existing ones, there's no need
+      to further notify the Subversion server that you've done
+      anything.</para>
 
     <sidebar>
       <title>What's with the <filename>.svn</filename> directory?</title>
@@ -369,27 +376,69 @@ Checked out revision 2499.
     <para>The typical work cycle looks like this:</para>
 
     <itemizedlist>
-
       <listitem>
         <para>Update your working copy</para>
+        <itemizedlist>
+          <listitem>
+            <para><command>svn update</command></para>
+          </listitem>
+        </itemizedlist>
+        
       </listitem>
-
+      
       <listitem>
         <para>Make changes</para>
+        <itemizedlist>
+          <listitem>
+            <para><command>svn add</command></para>
+          </listitem>
+          <listitem>
+            <para><command>svn delete</command></para>
+          </listitem>
+          <listitem>
+            <para><command>svn move</command></para>
+          </listitem>
+          <listitem>
+            <para><command>svn copy</command></para>
+          </listitem>
+        </itemizedlist>
       </listitem>
 
       <listitem>
         <para>Examine your changes</para>
+        <itemizedlist>
+          <listitem>
+            <para><command>svn status</command></para>
+          </listitem>
+          <listitem>
+            <para><command>svn diff</command></para>
+          </listitem>
+          <listitem>
+            <para><command>svn revert</command></para>
+          </listitem>
+        </itemizedlist>
       </listitem>
 
       <listitem>
         <para>Merge others' changes</para>
+        <itemizedlist>
+          <listitem>
+            <para><command>svn merge</command></para>
+          </listitem>
+          <listitem>
+            <para><command>svn resolve</command></para>
+          </listitem>
+        </itemizedlist>
       </listitem>
 
       <listitem>
         <para>Commit your changes</para>
+        <itemizedlist>
+          <listitem>
+            <para><command>svn commit</command></para>
+          </listitem>
+        </itemizedlist>
       </listitem>
-
     </itemizedlist>
 
     <sect2 id="svn-ch-3-sect-4.1">
@@ -606,6 +655,15 @@ Updated to revision 2.
 
       <sidebar>
         <title>Changing the Repository Without a Working Copy</title>
+
+        <!-- pll - Fri 07 Feb 2003 12:55:07                              -->
+        <!-- I find this sidebar rather confusing here, since you really   -->
+        <!-- haven't gone through explaining the svn command line syntax   -->
+        <!-- anywhere.  Maybe a short section explaining that subversion   -->
+        <!-- can be used both in networked and non-networked environments, -->
+        <!-- and which types of commands need URLs, etc.  This should      -->
+        <!-- probably be in chapter 2 (around the "Subversion in action"   -->
+        <!-- though, so that this sidebar makes more sense.                -->
         
         <para>Earlier in this chapter, we said that you have to commit
           any changes that you make in order for the repository to
@@ -648,6 +706,13 @@ Updated to revision 2.
         two commands to find out what files have changed in your
         working copy, and then perhaps the third to revert some (or
         all) of those changes.</para>
+      
+      <!-- pll - Fri 07 Feb 2003 12:55:07                                   -->
+      <!-- I find this following paragraph a little unclear.  Mostly for    -->
+      <!-- the same reasons as I found the sidebar above unclear.  There    -->
+      <!-- hasn't been much discussion of the Subversion architecture, and  -->
+      <!-- therefore, nothing has been clearly stated wrt the fact that the -->
+      <!-- repository may not be local.                                     -->
       
       <para>Subversion has been optimized to help you with this task,
         and is able to do many things without communicating with the
@@ -1252,8 +1317,9 @@ Resolved conflicted state of sandwich.txt
           going to have to edit <filename>sandwich.txt</filename> to
           resolve the conflicts.  First, let's take a look at the
           file:</para>
-        
+
         <screen>
+$ cat sandwich.txt
 Top piece of bread
 Mayonnaise
 Lettuce
@@ -1478,15 +1544,46 @@ $
       into</emphasis> the past.</para>
            
     <para>There are several commands that can provide you with
-      historical data from the repository.  <command>svn log</command>
-      shows you broad information: log messages attached to revisions,
-      and which paths changed in each revision.  <command>svn
-      diff</command>, on the other hand, can show you the specific
-      details of how a file changed over time. <command>svn
-      cat</command> can be used to retrieve any file as it existed in
-      a particular revision number and display it on your screen.  And
-      finally, <command>svn list</command> can display the files in a
-      directory for any given revision.</para>
+      historical data from the repository:</para>
+
+      <variablelist>
+
+        <varlistentry>
+          <term><command>svn log </command></term>
+          <listitem>
+            <para>Shows you broad information: log messages attached
+              to revisions, and which paths changed in each
+              revision.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><command>svn diff </command></term>
+          <listitem>
+            <para>Shows you the specific details of how a file changed
+              over time.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><command>svn cat </command></term>
+          <listitem>
+            <para>This is used to retrieve any file as it existed in a
+              particular revision number and display it on your
+              screen.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><command>svn list </command></term>
+          <listitem>
+            <para>Displays the files in a directory for any given
+              revision.</para>
+          </listitem>
+        </varlistentry>
+
+      </variablelist>
+
 
     <sect2 id="svn-ch-3-sect-5.1">
       <title><command>svn log</command></title>
