@@ -544,7 +544,7 @@ svn_error_t * svn_ra_dav__merge_activity(
     svn_revnum_t *new_rev,
     const char **committed_date,
     const char **committed_author,
-    svn_ra_session_t *ras,
+    svn_ra_dav__session_t *ras,
     const char *repos_url,
     const char *activity_url,
     apr_hash_t *valid_targets,

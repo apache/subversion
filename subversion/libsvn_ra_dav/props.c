@@ -1000,7 +1000,7 @@ do_setprop(ne_buffer *body,
 
 
 svn_error_t *
-svn_ra_dav__do_proppatch (svn_ra_session_t *ras,
+svn_ra_dav__do_proppatch (svn_ra_dav__session_t *ras,
                           const char *url,
                           apr_hash_t *prop_changes,
                           apr_array_header_t *prop_deletes,
@@ -1092,7 +1092,7 @@ svn_ra_dav__do_check_path(void *session_baton,
                           svn_node_kind_t *kind,
                           apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session_baton;
   const char *url = ras->url;
   svn_error_t *err;
   svn_boolean_t is_dir;

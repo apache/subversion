@@ -78,7 +78,7 @@ typedef struct
 
 typedef struct
 {
-  svn_ra_session_t *ras;
+  svn_ra_dav__session_t *ras;
   const char *activity_url;
 
   apr_hash_t *valid_targets;
@@ -145,7 +145,7 @@ static resource_t * dup_resource(resource_t *base, apr_pool_t *pool)
   return rsrc;
 }
 
-static svn_error_t * simple_request(svn_ra_session_t *ras, 
+static svn_error_t * simple_request(svn_ra_dav__session_t *ras, 
                                     const char *method,
                                     const char *url, 
                                     int *code,
@@ -589,7 +589,7 @@ will see an error about 'cannot checkout out-of-date parent'.  Not
 really a big deal I guess.
 
 */
-static svn_error_t * do_proppatch(svn_ra_session_t *ras,
+static svn_error_t * do_proppatch(svn_ra_dav__session_t *ras,
                                   const resource_t *rsrc,
                                   resource_baton_t *rb,
                                   apr_pool_t *pool)
@@ -1265,7 +1265,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(void *session_baton,
                                             void *callback_baton,
                                             apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session_baton;
   svn_delta_editor_t *commit_editor;
   commit_ctx_t *cc;
 

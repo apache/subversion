@@ -99,7 +99,7 @@ static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
 
 svn_error_t * svn_ra_dav__get_activity_collection(
   const svn_string_t **activity_coll,
-  svn_ra_session_t *ras,
+  svn_ra_dav__session_t *ras,
   const char *url,
   apr_pool_t *pool)
 {

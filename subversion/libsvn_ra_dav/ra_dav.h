@@ -133,7 +133,7 @@ typedef struct {
 
   svn_boolean_t compression;            /* should we use http compression? */
   const char *uuid;                     /* repository UUID */
-} svn_ra_session_t;
+} svn_ra_dav__session_t;
 
 
 /* Id used with ne_set_session_private() and ne_get_session_private()
@@ -457,7 +457,7 @@ svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
    of const svn_string_t * values keyed on Subversion user-visible
    property names) and PROP_DELETES (an array of property names to
    delete).  Use POOL for all allocations.  */
-svn_error_t *svn_ra_dav__do_proppatch (svn_ra_session_t *ras,
+svn_error_t *svn_ra_dav__do_proppatch (svn_ra_dav__session_t *ras,
                                        const char *url,
                                        apr_hash_t *prop_changes,
                                        apr_array_header_t *prop_deletes,
@@ -472,7 +472,7 @@ extern const ne_propname svn_ra_dav__checked_in_prop;
 /* send an OPTIONS request to fetch the activity-collection-set */
 svn_error_t * svn_ra_dav__get_activity_collection(
   const svn_string_t **activity_coll,
-  svn_ra_session_t *ras,
+  svn_ra_dav__session_t *ras,
   const char *url,
   apr_pool_t *pool);
 
@@ -647,7 +647,7 @@ svn_error_t * svn_ra_dav__merge_activity(
     svn_revnum_t *new_rev,
     const char **committed_date,
     const char **committed_author,
-    svn_ra_session_t *ras,
+    svn_ra_dav__session_t *ras,
     const char *repos_url,
     const char *activity_url,
     apr_hash_t *valid_targets,
@@ -668,7 +668,7 @@ void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src);
 /* If RAS contains authentication info, attempt to store it via client
    callbacks.  */
 svn_error_t *
-svn_ra_dav__maybe_store_auth_info (svn_ra_session_t *ras);
+svn_ra_dav__maybe_store_auth_info (svn_ra_dav__session_t *ras);
 
 
 /* Create an error object for an error from neon in the given session,
