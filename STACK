@@ -11,7 +11,11 @@ short-term tasks to it, if that's helpful.
 
 Ben and Karl and Jim:
    - Discuss implementation of editor "hooks".  It would be nice to
-     get feedback from the editor for debugging purposes.
+     get feedback from the editor for debugging purposes.  [Karl sez:
+     not just debugging purposes; possibly we've got ourselves a
+     generic hook interface for free now!  Mmm, except are windows a
+     convenient enough way to pass content?  Well, probably... after
+     all, they're good enough for the rest of Subversion.]
 
 Ben and Karl XML factorization todo:
    - generalize signal_expat_bailout
