@@ -1,27 +1,24 @@
 Version 0.28.0 (released 24 August 2003, rev XXXX, branches/release-0.28)
 
-#####################################################################
-##  WARNING  WARNING  WARNING  WARNING  WARNING  WARNING  WARNING  ##
-#####################################################################
-##                                                                 ##
-##  This release makes an incompatible change to the Subversion    ##
-##  repository filesystem schema.  Repositories created with       ##
-##  Subversion code prior to this release will unable to operate   ##
-##  with this new code.  To maintain the ability to use said       ##
-##  repositories, you must use a version 'svnadmin dump' prior to  ##
-##  this change to dump your repository to a dumpfile, then use    ##
-##  this new Subversion code to create, and load your dumpfile     ##
-##  a new repository using 'svnadmin load'.  And don't forget to   ##
-##  copy over any custom configuration/hooks from the old to the   ##
-##  new repository.                                                ##
-##                                                                 ##
-#####################################################################
-
- Please see the notes/repository_upgrade_HOWTO document located  for
- documentation on migrating pre-.28 repos to revision .28.
-
- Also located here:
-    http://svn.collab.net/repos/svn/trunk/notes/repos_upgrade_HOWTO
+  #####################################################################
+  ##  WARNING  WARNING  WARNING  WARNING  WARNING  WARNING  WARNING  ##
+  #####################################################################
+  ##                                                                 ##
+  ##  This release makes an incompatible change to the Subversion    ##
+  ##  repository filesystem schema.  Repositories created with       ##
+  ##  Subversion code prior to this release will unable to operate   ##
+  ##  with this new code.  To maintain the ability to use said       ##
+  ##  repositories, you must use a version 'svnadmin dump' prior to  ##
+  ##  this change to dump your repository to a dumpfile, then use    ##
+  ##  this new Subversion code to create, and load your dumpfile     ##
+  ##  a new repository using 'svnadmin load'.  And don't forget to   ##
+  ##  copy over any custom configuration/hooks from the old to the   ##
+  ##  new repository.                                                ##
+  ##                                                                 ##
+  ##  See http://subversion.tigris.org/project_faq.html#dumpload     ##
+  ##  for information on migrating pre-0.28 repositories to 0.28.    ##
+  ##                                                                 ##
+  #####################################################################
 
  User-visible changes:
  * fs schema change, see issue #1003 **NOTE: repos dump/load cycle required!**
