@@ -260,6 +260,7 @@ rep_undeltify_range (svn_fs_t *fs,
           /* That's it, no more source data is available. */
           break;
 
+      context.trivial = FALSE;
       for (cur_rep = 1; cur_rep < deltas->nelts; ++cur_rep)
         {
           svn_txdelta_window_t *window_A, *composite;
