@@ -88,9 +88,7 @@ process_externals (svn_stringbuf_t *path, apr_pool_t *pool)
 {
   const svn_string_t *externals;
 
-  SVN_ERR (svn_wc_get_wc_prop (path->data, SVN_PROP_EXTERNALS,
-                               &externals, pool));
-
+  SVN_ERR (svn_wc_prop_get (&externals, SVN_PROP_EXTERNALS, path->data, pool));
 
   if (externals)
     {
