@@ -173,8 +173,10 @@ static svn_error_t * simple_request(svn_ra_session_t *ras, const char *method,
   return NULL;
 }
 
-static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc,
-                                     svn_revnum_t revision)
+static svn_error_t * get_version_url(commit_ctx_t *cc,
+                                     resource_t *rsrc,
+                                     svn_revnum_t revision,
+                                     apr_pool_t *pool)
 {
   svn_ra_dav_resource_t *propres;
   const char *url;
@@ -187,7 +189,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc,
                                rsrc->local_path,
                                SVN_RA_DAV__LP_VSN_URL,
                                &vsn_url_value,
-                               cc->ras->pool) );
+                               pool) );
       if (vsn_url_value != NULL)
         {
           rsrc->vsn_url = vsn_url_value->data;
@@ -202,33 +204,34 @@ static svn_error_t * get_version_url(commit_ctx_t *cc, resource_t *rsrc,
   else
     {
       svn_string_t bc_url, bc_relative;
-      svn_stringbuf_t *bc;
 
       SVN_ERR( svn_ra_dav__get_baseline_info(NULL,
                                              &bc_url, &bc_relative, NULL,
                                              cc->ras->sess,
                                              rsrc->url,
                                              revision,
-                                             cc->ras->pool));
-      bc = svn_stringbuf_create_from_string(&bc_url, cc->ras->pool);
-      svn_path_add_component_nts(bc, bc_relative.data);
+                                             pool));
 
-      url = bc->data;
+      url = svn_path_join(bc_url.data, bc_relative.data, pool);
     }
 
   SVN_ERR( svn_ra_dav__get_props_resource(&propres, cc->ras->sess, url,
-                                          NULL, fetch_props, cc->ras->pool) );
-  rsrc->vsn_url = apr_hash_get(propres->propset,
-                               SVN_RA_DAV__PROP_CHECKED_IN,
-                               APR_HASH_KEY_STRING);
-  if (rsrc->vsn_url == NULL)
+                                          NULL, fetch_props, pool) );
+  url = apr_hash_get(propres->propset,
+                     SVN_RA_DAV__PROP_CHECKED_IN,
+                     APR_HASH_KEY_STRING);
+  if (url == NULL)
     {
       /* ### need a proper SVN_ERR here */
-      return svn_error_create(APR_EGENERAL, 0, NULL, cc->ras->pool,
+      return svn_error_create(APR_EGENERAL, 0, NULL, pool,
                               "Could not fetch the Version Resource URL "
                               "(needed during an import or when it is "
                               "missing from the local, cached props).");
     }
+
+  /* ensure we get the proper lifetime for this URL since it is going into
+     a resource object. */
+  rsrc->vsn_url = apr_pstrdup(cc->ras->pool, url);
 
   return NULL;
 }
@@ -301,12 +304,15 @@ static svn_error_t * create_activity(commit_ctx_t *cc)
   return NULL;
 }
 
+/* add a child resource. TEMP_POOL should be as "temporary" as possible,
+   but probably not as far as requiring a new temp pool. */
 static svn_error_t * add_child(resource_t **child,
                                commit_ctx_t *cc,
                                const resource_t *parent,
                                const char *name,
                                int created,
-                               svn_revnum_t revision)
+                               svn_revnum_t revision,
+                               apr_pool_t *temp_pool)
 {
   /* use ras->pool for the proper lifetime */
   apr_pool_t *pool = cc->ras->pool;
@@ -337,7 +343,7 @@ static svn_error_t * add_child(resource_t **child,
      This means it has a VR URL already, and the WR URL won't exist
      until it's "checked out". */
   else
-    SVN_ERR( get_version_url(cc, rsrc, revision) );
+    SVN_ERR( get_version_url(cc, rsrc, revision, temp_pool) );
 
   apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
 
@@ -564,7 +570,7 @@ static svn_error_t * commit_open_root(void *edit_baton,
   rsrc->url = cc->ras->root.path;
   rsrc->local_path = "";
 
-  SVN_ERR( get_version_url(cc, rsrc, SVN_INVALID_REVNUM) );
+  SVN_ERR( get_version_url(cc, rsrc, SVN_INVALID_REVNUM, dir_pool) );
 
   apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
 
@@ -639,7 +645,7 @@ static svn_error_t * commit_add_dir(const char *path,
   child = apr_pcalloc(dir_pool, sizeof(*child));
   child->cc = parent->cc;
   SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc,
-                     name, 1, SVN_INVALID_REVNUM) );
+                     name, 1, SVN_INVALID_REVNUM, dir_pool) );
 
   if (! copyfrom_path)
     {
@@ -712,7 +718,7 @@ static svn_error_t * commit_open_dir(const char *path,
 
   child->cc = parent->cc;
   SVN_ERR( add_child(&child->rsrc, parent->cc, parent->rsrc,
-                     name, 0, base_revision) );
+                     name, 0, base_revision, dir_pool) );
 
   /*
   ** Note: open_dir simply means that a change has occurred somewhere
@@ -783,7 +789,7 @@ static svn_error_t * commit_add_file(const char *path,
   file = apr_pcalloc(file_pool, sizeof(*file));
   file->cc = parent->cc;
   SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc,
-                     name, 1, SVN_INVALID_REVNUM) );
+                     name, 1, SVN_INVALID_REVNUM, file_pool) );
 
   if (! copyfrom_path)
     {
@@ -853,7 +859,7 @@ static svn_error_t * commit_open_file(const char *path,
   file = apr_pcalloc(file_pool, sizeof(*file));
   file->cc = parent->cc;
   SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc,
-                     name, 0, base_revision) );
+                     name, 0, base_revision, file_pool) );
 
   /* do the CHECKOUT now. we'll PUT the new file contents later on. */
   SVN_ERR( checkout_resource(parent->cc, file->rsrc) );
@@ -1066,9 +1072,8 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
 
   /* XML-Escape the log message. */
   xml_data = NULL;              /* Required by svn_xml_escape_stringbuf. */
-  svn_xml_escape_stringbuf(&xml_data,
-                           svn_stringbuf_create(log_msg->data, cc->ras->pool),
-                           cc->ras->pool);
+  svn_xml_escape_nts(&xml_data, log_msg->data, cc->ras->pool);
+
   po[0].name = &log_message_prop;
   po[0].type = ne_propset;
   po[0].value = xml_data->data;
