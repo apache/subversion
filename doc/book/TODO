@@ -59,6 +59,12 @@ To be fixed by cmpilato:
     think this level of information is the exact right level of BDB
     knowledge that users/admins need to use svn well.
 
+  - document 'svnadmin hotcopy' in the 'Repository Backup' section of
+    ch05.  it's mentioned briefly elsewhere in ch05, but this section
+    should talk about it explicitly, probably instead of mentioning
+    the hot-backup.py script.  ('svnadmin hotcopy' is preferred to
+    hot-backup.py now, isn't it?)
+
   - Please point out and explain why BerkeleyDB environments aren't
     portable.  You can't just move it from Unix to Win32.
 
