@@ -303,16 +303,20 @@ do_stack_append (svn_xml__digger_t *digger,
   apr_pool_t *pool = digger->pool;
   svn_xml__stackframe_t *youngest_frame = digger->stack;
 
-  if (youngest_frame->previous == NULL)
+  if (digger->stack == NULL)
     {
-      /* The stack contains only the "root" frame, so this is our
-         first time appending. */
+      /* First time appending. */
 
       /* Make sure that it's indeed a delta-pkg we're appending. */
       if (new_frame->tag != svn_delta__XML_deltapkg)
         return xml_validation_error (pool, tagname, FALSE);
+
+      /* Do the append and get out */
+      digger->stack = new_frame;
+
+      return SVN_NO_ERROR;
     }
-  
+
   /* <tree-delta> must follow either <dir> or <delta-pkg> */
   else if ((new_frame->tag == svn_delta__XML_treedelta)
            && ((youngest_frame->tag != svn_delta__XML_dir) 
@@ -401,10 +405,6 @@ do_stack_check_remove (svn_xml__digger_t *digger, const char *tagname)
 {
   apr_pool_t *pool = digger->pool;
   svn_xml__stackframe_t *youngest_frame = digger->stack;
-
-  if (youngest_frame->previous == NULL)
-    /* You can't remove the "root" stackframe! */
-    return xml_validation_error (pool, tagname, TRUE);
 
   /* Validity check: Make sure the kind of object we're removing (due
      to an XML TAGNAME closure) actually agrees with the type of frame
@@ -965,7 +965,8 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   /* Resurrect our digger structure */
   svn_xml__digger_t *my_digger = (svn_xml__digger_t *) userData;
 
-  /* Create new stackframe */
+  /* -------- Create and fill in new stackframe ------------ */
+
   svn_xml__stackframe_t *new_frame
     = apr_pcalloc (my_digger->pool, sizeof (svn_xml__stackframe_t));
 
@@ -1001,11 +1002,48 @@ xml_handle_start (void *userData, const char *name, const char **atts)
   if (value)
     new_frame->ref_id = svn_string_create (value, my_digger->pool);
 
-  /* If this frame represents a tree-delta, initialize an internal
-     hashtable to hold dirent names. */
+  /* If this frame is a <delta-pkg>, it's the top-most frame and must
+     hold the "base" ancestry info */
+  if (new_frame->tag == svn_delta__XML_deltapkg)
+    {
+      new_frame->ancestor_path = my_digger->base_path;
+      new_frame->ancestor_version = my_digger->base_version;
+    }
+
+  /* If this frame represents a new tree-delta, we need to fill in its
+     hashtable and possibly store a root_dir_baton in the parent
+     <delta-pkg> frame, too.  */
   if (new_frame->tag == svn_delta__XML_treedelta)
-    new_frame->namespace = apr_make_hash (my_digger->pool);
-  
+    {
+      /* Always create frame's hashtable to hold dirent names. */
+      new_frame->namespace = apr_make_hash (my_digger->pool);
+      
+      /* If this is the FIRST tree-delta we've ever seen... */
+      if (my_digger->stack->tag == svn_delta__XML_deltapkg)
+        {
+          /* Fetch the rootdir_baton by calling into the editor */
+          if (my_digger->editor->replace_root) 
+            {
+              void *rootdir_baton;
+
+              err = my_digger->editor->replace_root
+                (my_digger->edit_baton, &rootdir_baton);
+              if (err)
+                svn_xml_signal_bailout (err, my_digger->svn_parser);
+
+              /* Place this rootdir_baton into the parent of the whole
+              stack, our <delta-pkg> tag.  Then, when we push the
+              <tree-delta> frame to the stack, it will automatically
+              "inherit" the baton as well.  We end up with our top two
+              stackframes both containing the root_baton, but that's
+              harmless.  */
+              my_digger->stack->baton = rootdir_baton;
+            }          
+        }
+    }
+
+  /* ---------- Append the new stackframe to the stack ------- */
+
   /*  Append new frame to stack, validating in the process. 
       If successful, new frame will automatically inherit parent's baton. */
   err = do_stack_append (my_digger, new_frame, name);
@@ -1014,6 +1052,8 @@ xml_handle_start (void *userData, const char *name, const char **atts)
     svn_xml_signal_bailout (err, my_digger->svn_parser);
     return;
   }
+
+  /* ---------- Interpret the stackframe to the editor ---- */
 
   /* Now look for special events that the uber-caller (of
      svn_delta_parse()) might want to know about.  */
@@ -1213,29 +1253,31 @@ xml_handle_end (void *userData, const char *name)
           svn_xml_signal_bailout (err, digger->svn_parser);
       }
 
+  /* EVENT: when we get a </tree-delta>, it might be the *final* one,
+     and therefore needs to have it's root_dir_baton closed. */
+  if (strcmp (name, "tree-delta") == 0)
+    {
+      if (digger->stack->baton)
+        {
+          /* This function sends (digger->stack->baton) as the "dir_baton"
+             argument to the editor's close_directory() callback */
+          err = do_close_directory (digger);
+          if (err)
+            svn_xml_signal_bailout (err, digger->svn_parser);
+        }
+    }
+
 
   /* After checking for above events, do the stackframe removal. */
 
   /* Lose the pointer to the youngest frame. */
-  digger->stack = youngest_frame->previous;
-  digger->stack->next = NULL;
-
-  if (digger->stack->previous == NULL)
+  if (youngest_frame->previous) 
     {
-      /* There's nothing left on the stack but our "root" frame, which
-         means we must have just popped off the final </tree-delta>.
-
-         Therefore, it's time to close the "root" directory!
-      */
-
-      /* This function sends (digger->stack->baton) as the "dir_baton"
-      argument to the editor's close_directory() callback, which is
-      perfect: our "root" frame has the root_baton in this place, just
-      as it should be.  */
-      err = do_close_directory (digger);
-      if (err)
-        svn_xml_signal_bailout (err, digger->svn_parser);      
+      digger->stack = youngest_frame->previous;
+      digger->stack->next = NULL;
     }
+  else
+    digger->stack = NULL;
   
   /* This is a void expat callback, don't return anything. */
 }
@@ -1336,52 +1378,26 @@ svn_delta_make_xml_parser (svn_delta_xml_parser_t **parser,
                            svn_vernum_t base_version,
                            apr_pool_t *pool)
 {
-  svn_error_t *err;
-
   svn_delta_xml_parser_t *delta_parser;
   svn_xml_parser_t *svn_parser;
-
   svn_xml__digger_t *digger;
-  svn_xml__stackframe_t *rootframe;
-
   apr_pool_t *main_subpool;
-  void *rootdir_baton = NULL;
 
   /* Create a subpool to contain *everything*.  That way,
      svn_delta_free_xml_parser() has an easy target to destroy.  :) */
   main_subpool = svn_pool_create (pool);
-
-  /* Fetch the rootdir_baton by calling into the editor */
-  if (editor->replace_root) 
-    {
-      err = editor->replace_root (edit_baton, &rootdir_baton);
-      if (err)
-        return
-          svn_error_quick_wrap 
-          (err, "svn_delta_make_xml_parser: replace_root failed.");
-    }
       
-  /* Create a "root" stackframe that will always be the oldest object
-     in the digger's stack.  */
-  rootframe = apr_pcalloc (main_subpool, sizeof (svn_xml__stackframe_t));
-
-  rootframe->tag            = svn_delta__XML_dir;
-  rootframe->name           = NULL; /* This frame's distinguishing feature! */
-  rootframe->ancestor_path  = svn_string_dup (base_path, main_subpool);
-  rootframe->ancestor_version = base_version;
-  rootframe->baton          = rootdir_baton;
-
   /* Create a new digger structure and fill it out*/
   digger = apr_pcalloc (main_subpool, sizeof (svn_xml__digger_t));
 
   digger->pool             = main_subpool;
-  digger->stack            = rootframe;
+  digger->stack            = NULL;
   digger->editor           = editor;
   digger->base_path        = base_path;
   digger->base_version     = base_version;
   digger->edit_baton       = edit_baton;
-  digger->rootdir_baton    = rootdir_baton;
-  digger->dir_baton        = rootdir_baton;
+  digger->rootdir_baton    = NULL;
+  digger->dir_baton        = NULL;
   digger->validation_error = SVN_NO_ERROR;
   digger->svndiff_write    = NULL;
   digger->svndiff_baton    = NULL;
