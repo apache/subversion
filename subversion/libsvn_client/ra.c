@@ -114,46 +114,113 @@ push_wc_prop (void *baton,
               apr_pool_t *pool)
 {
   svn_client__callback_baton_t *cb = baton;
+  int i;
 
   /* If we're committing, search through the commit_items list for a
      match for this relative URL. */
-  if (cb->commit_items)
+  if (! cb->commit_items)
+    return svn_error_createf
+      (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
+       "Attempt to set wc property '%s' on '%s' in a non-commit operation",
+       name, relpath);
+
+  for (i = 0; i < cb->commit_items->nelts; i++)
     {
-      int i;
-      for (i = 0; i < cb->commit_items->nelts; i++)
+      svn_client_commit_item_t *item
+        = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
+      
+      if (strcmp (relpath, svn_path_uri_decode (item->url, pool)) == 0)
         {
-          svn_client_commit_item_t *item
-            = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
-
-          if (strcmp (relpath, svn_path_uri_decode (item->url, pool)) == 0)
+          apr_pool_t *cpool = item->wcprop_changes->pool;
+          svn_prop_t *prop = apr_palloc (cpool, sizeof (*prop));
+          
+          prop->name = apr_pstrdup (cpool, name);
+          if (value)
             {
-              apr_pool_t *cpool = item->wcprop_changes->pool;
-              svn_prop_t *prop = apr_palloc (cpool, sizeof (*prop));
-
-              prop->name = apr_pstrdup (cpool, name);
-              if (value)
-                {
-                  prop->value
-                    = svn_string_ncreate (value->data, value->len, cpool);
-                }
-              else
-                prop->value = NULL;
-
-              /* Buffer the propchange to take effect during the
-                 post-commit process. */
-
-              *((svn_prop_t **) apr_array_push (item->wcprop_changes)) = prop;
-
-              return SVN_NO_ERROR;
+              prop->value
+                = svn_string_ncreate (value->data, value->len, cpool);
             }
+          else
+            prop->value = NULL;
+          
+          /* Buffer the propchange to take effect during the
+             post-commit process. */
+          *((svn_prop_t **) apr_array_push (item->wcprop_changes)) = prop;
+          return SVN_NO_ERROR;
         }
     }
-  else
-    {
-      return svn_wc_prop_set (name, value, 
-                              svn_path_join (cb->base_dir, relpath, pool), 
-                              cb->base_access, pool);
-    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements the `svn_ra_set_wc_prop_func_t' interface. */
+static svn_error_t *
+set_wc_prop (void *baton,
+             const char *path,
+             const char *name,
+             const svn_string_t *value,
+             apr_pool_t *pool)
+{
+  svn_client__callback_baton_t *cb = baton;
+  svn_wc_adm_access_t *adm_access;
+  const char *full_path = svn_path_join (cb->base_dir, path, pool);
+
+  SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, cb->base_access,
+                                      full_path, pool));
+  return svn_wc_prop_set (name, value, full_path, adm_access, pool);
+}
+
+
+struct invalidate_wcprop_walk_baton
+{
+  /* The wcprop to invalidate. */
+  const char *prop_name;
+
+  /* Access baton for the top of the walk. */
+  svn_wc_adm_access_t *base_access;
+
+  /* You knew this was coming. */
+  apr_pool_t *pool;
+};
+
+/* This implements the `found_entry' prototype in
+   `svn_wc_entry_callbacks_t'. */
+static svn_error_t *
+invalidate_wcprop_for_entry (const char *path,
+                             const svn_wc_entry_t *entry,
+                             void *walk_baton)
+{
+  struct invalidate_wcprop_walk_baton *wb = walk_baton;
+  svn_wc_adm_access_t *entry_access;
+
+  SVN_ERR (svn_wc_adm_retrieve (&entry_access, wb->base_access,
+                                ((entry->kind == svn_node_dir)
+                                 ? path
+                                 : svn_path_dirname (path, wb->pool)),
+                                wb->pool));
+  return svn_wc_prop_set (wb->prop_name, NULL, path, entry_access, wb->pool);
+}
+
+/* This implements the `svn_ra_invalidate_wc_props_func_t' interface. */
+static svn_error_t *
+invalidate_wc_props (void *baton,
+                    const char *path,
+                    const char *prop_name,
+                    apr_pool_t *pool)
+{
+  svn_client__callback_baton_t *cb = baton;
+  svn_wc_entry_callbacks_t walk_callbacks;
+  struct invalidate_wcprop_walk_baton wb;
+
+  wb.base_access = cb->base_access;
+  wb.prop_name = prop_name;
+  wb.pool = pool;
+  walk_callbacks.found_entry = invalidate_wcprop_for_entry;
+
+  SVN_ERR (svn_wc_walk_entries (svn_path_join (cb->base_dir, path, pool),
+                                cb->base_access,
+                                &walk_callbacks, &wb, FALSE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -178,7 +245,9 @@ svn_client__open_ra_session (void **session_baton,
   cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
   cbtable->get_authenticator = svn_client__get_authenticator;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
-  cbtable->push_wc_prop = read_only_wc ? NULL : push_wc_prop;
+  cbtable->set_wc_prop = read_only_wc ? NULL : set_wc_prop;
+  cbtable->push_wc_prop = commit_items ? push_wc_prop : NULL;
+  cbtable->invalidate_wc_props = read_only_wc ? NULL : invalidate_wc_props;
 
   cb->auth_baton = auth_baton;
   cb->base_dir = base_dir;
