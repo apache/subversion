@@ -118,6 +118,7 @@ extern apr_size_t svn_txdelta__window_size;
 /* Types of XML tags we'll encounter */
 typedef enum svn_delta__XML_t
 {
+  svn_delta__XML_deltapkg,
   svn_delta__XML_treedelta,
   svn_delta__XML_add,
   svn_delta__XML_delete,
@@ -125,6 +126,7 @@ typedef enum svn_delta__XML_t
   svn_delta__XML_file,
   svn_delta__XML_dir,
   svn_delta__XML_textdelta,
+  svn_delta__XML_textdeltaref,
   svn_delta__XML_propdelta,
   svn_delta__XML_set
 
@@ -145,10 +147,17 @@ typedef struct svn_xml__stackframe_t
   void *baton;           /* holds caller data for the _current_ subdirectory */
   void *file_baton;      /* holds caller data for the _current_ file */
 
-  apr_hash_t *namespace; /* if this frame represents a tree-delta, use
-                            this hash to detect collisions in the
+  apr_hash_t *namespace; /* if this frame is a tree-delta, use this
+                            hash to detect collisions in the
                             dirent-namespace */
 
+  svn_string_t *ref_id;  /* if this frame is a postfix text-delta,
+                            here is its ID string */
+
+  svn_boolean_t hashed;  /* TRUE iff this is a <file> tag whose
+                            file_baton has been stored in a postfix
+                            hashtable. */
+  
   struct svn_xml__stackframe_t *next;
   struct svn_xml__stackframe_t *previous;
   
@@ -181,8 +190,7 @@ typedef struct svn_xml__stackframe_t
  * the uber-caller of "svn_delta_parse", such as batons and a editor_t
  * structure which tells us what to do in the case of certain parse
  * events.
- *
- */
+ * */
 
 typedef struct svn_xml__digger_t
 {
@@ -228,6 +236,10 @@ typedef struct svn_xml__digger_t
      added or replaced.*/
   svn_vcdiff_parser_t *vcdiff_parser;
 
+  /* A hashtable: text-delta-ref-IDs ==> file_batons.  
+     Used for "postfix" text-deltas. */
+  apr_hash_t *postfix_hash;
+  
   /* An in-memory prop-delta, possibly in the process of being
      buffered up */
   struct svn_propdelta_t *current_propdelta;
