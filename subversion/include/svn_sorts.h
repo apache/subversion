@@ -17,8 +17,6 @@
  *
  * @file svn_sorts.h
  * @brief all sorts of sorts.
- *
- * @{
  */
 
 
@@ -112,6 +110,5 @@ apr_hash_sorted_keys (apr_hash_t *ht,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-/** @} */
 
 #endif /* SVN_SORTS_H */

@@ -17,7 +17,6 @@
  *
  * @file svn_config.h
  * @brief Functions for accessing SVN configuration files.
- * @{
  */
 
 
@@ -211,6 +210,5 @@ svn_error_t *svn_config_ensure (apr_pool_t *pool);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-/** @} */
 
 #endif /* SVN_CONFIG_H */

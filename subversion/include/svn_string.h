@@ -47,8 +47,6 @@
  * Note that an @c svn_string(buf)_t may contain binary data, which means that
  * @c strlen(s->data) does not have to equal @c s->len. The null terminator is
  * provided to make it easier to pass @c s->data to C string interfaces.
- *
- * @{
  */
 
 
@@ -326,6 +324,5 @@ svn_boolean_t svn_cstring_match_glob_list (const char *str,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-/** @} */
 
 #endif  /* SVN_STRING_H */

@@ -17,8 +17,6 @@
  *
  * @file svn_error.h
  * @brief Common exception handling for Subversion.
- *
- * @{
  */
 
 
@@ -199,6 +197,5 @@ void svn_handle_warning (apr_pool_t *pool, void *data, const char *fmt, ...);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-/** @} */
 
 #endif /* SVN_ERROR_H */

@@ -17,8 +17,6 @@
  *
  * @file svn_pools.h
  * @brief APR pool management for Subversion
- *
- * @{
  */
 
 
@@ -78,6 +76,5 @@ void svn_pool_clear_debug (apr_pool_t *p,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-/** @} */
 
 #endif /* SVN_ERROR_H */
