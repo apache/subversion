@@ -29,7 +29,8 @@
    This is default in SWIG 1.3.17 and is a really good idea
 */
 
-%typemap(javagetcptr) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], SWIGTYPE (CLASS::*) %{
+%typemap(javagetcptr) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], \
+    SWIGTYPE (CLASS::*) %{
   protected static long getCPtr($javaclassname obj) {
     return (obj == null) ? 0 : obj.swigCPtr;
   }
@@ -47,38 +48,24 @@ typedef int apr_status_t;
 
 /* ### seems that SWIG isn't picking up the definition of size_t */
 typedef unsigned long size_t;
+/* -----------------------------------------------------------------------
+   apr_time_t
+*/
 
 /* Define the time type (rather than picking up all of apr_time.h) */
 typedef apr_int64_t apr_time_t;
 
+/* For apr_time_ansi_put().
+   We guess, because only the system C compiler can successfully parse
+   system headers if they incorporate weird include paths
+   (e.g. /usr/lib/gcc-lib/plat/ver/include). */
 typedef apr_int32_t time_t;
 
-/* -----------------------------------------------------------------------
-   handle the mappings for apr_time_t
-
-   Note: we don't generalize this to 'long long' since SWIG is starting
-   to handle that.
-*/
-
 #if APR_INT64_T_FMT == "ld"
-
-    %apply long { apr_time_t };
-
-    %typemap(python,argout,fragment="t_output_helper") apr_time_t *
-        "$result = t_output_helper($result, PyLong_FromLong(*$1));";
-
+    %apply long *OUTPUT { apr_time_t * };
 #else
-
-    %apply long long { apr_time_t };
-
-    %typemap(python,argout,fragment="t_output_helper") apr_time_t *
-        "$result = t_output_helper($result, PyLong_FromLongLong(*$1));";
-
+    %apply long long *OUTPUT { apr_time_t * };
 #endif
-
-/* 'apr_time_t *' will always be an OUTPUT parameter */
-%typemap(in,numinputs=0) apr_time_t * (apr_time_t temp)
-    "$1 = &temp;";
 
 /* -----------------------------------------------------------------------
    create some INOUT typemaps for apr_size_t
