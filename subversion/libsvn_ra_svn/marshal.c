@@ -731,6 +731,10 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
                                     "Malformed error list");
           SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "nccn", &apr_err,
                                           &message, &file, &line));
+          /* The message field should have been optional, but we can't
+             easily change that, so "" means a nonexistent message. */
+          if (!*message)
+            message = NULL;
           err = svn_error_create(apr_err, err, message);
           err->file = apr_pstrdup(err->pool, file);
           err->line = line;
@@ -831,10 +835,12 @@ svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
   SVN_ERR(svn_ra_svn_start_list(conn, pool));
   for (; err; err = err->child)
     {
+      /* The message string should have been optional, but we can't
+         easily change that, so marshal nonexistent messages as "". */
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "nccn",
                                      (apr_uint64_t) err->apr_err,
-                                     err->message, err->file,
-                                     (apr_uint64_t) err->line));
+                                     err->message ? err->message : "",
+                                     err->file, (apr_uint64_t) err->line));
     }
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
