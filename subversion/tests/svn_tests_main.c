@@ -167,6 +167,9 @@ main (int argc, char *argv[])
   test_argc = argc;
   test_argv = argv;
 
+  /* Create an iteration pool for the tests */
+  test_pool = svn_pool_create (pool);
+
   if (argc >= 2)  /* notice command-line arguments */
     {
       if (! strcmp (argv[1], "list"))
@@ -174,16 +177,17 @@ main (int argc, char *argv[])
           ran_a_test = 1;
 
           /* run all tests with MSG_ONLY set to TRUE */
-          test_pool = svn_pool_create (pool);
+
           printf("Test #  Mode   Test Description\n"
                  "------  -----  ----------------\n");
           for (i = 1; i <= array_size; i++)
             {
               if (do_test_num (prog_name, i, TRUE, test_pool))
                 got_error = 1;
+
+              /* Clear the per-function pool */
+              svn_pool_clear (test_pool);
             }
-          /* Clear the per-function pool */
-          svn_pool_destroy (test_pool);
         }
       else
         {
@@ -193,12 +197,11 @@ main (int argc, char *argv[])
                 {
                   ran_a_test = 1;
                   test_num = atoi (argv[i]);
-                  if (do_test_num (prog_name, test_num, FALSE,
-                                   test_pool = svn_pool_create (pool)))
+                  if (do_test_num (prog_name, test_num, FALSE, test_pool))
                     got_error = 1;
 
                   /* Clear the per-function pool */
-                  svn_pool_destroy (test_pool);
+                  svn_pool_clear (test_pool);
                 }
               else if (argv[i][0] != '-')
                 {
@@ -214,17 +217,16 @@ main (int argc, char *argv[])
       /* just run all tests */
       for (i = 1; i <= array_size; i++)
         {
-          if (do_test_num (prog_name, i, FALSE,
-                           test_pool = svn_pool_create (pool)))
+          if (do_test_num (prog_name, i, FALSE, test_pool))
             got_error = 1;
 
           /* Clear the per-function pool */
-          svn_pool_destroy (test_pool);
+          svn_pool_clear (test_pool);
         }
     }
 
   /* Clean up APR */
-  svn_pool_destroy (pool);
+  svn_pool_destroy (pool);      /* takes test_pool with it */
   apr_terminate();
 
   exit (got_error);

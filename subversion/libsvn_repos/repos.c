@@ -97,20 +97,6 @@ svn_repos_post_commit_hook (svn_repos_t *repos, apr_pool_t *pool)
 
 
 const char *
-svn_repos_read_sentinel_hook (svn_repos_t *repos, apr_pool_t *pool)
-{
-  return svn_path_join (repos->hook_path, SVN_REPOS__HOOK_READ_SENTINEL, pool);
-}
-
-
-const char *
-svn_repos_write_sentinel_hook (svn_repos_t *repos, apr_pool_t *pool)
-{
-  return svn_path_join (repos->hook_path, SVN_REPOS__HOOK_WRITE_SENTINEL, pool);
-}
-
-
-const char *
 svn_repos_pre_revprop_change_hook (svn_repos_t *repos, apr_pool_t *pool)
 {
   return svn_path_join (repos->hook_path, SVN_REPOS__HOOK_PRE_REVPROP_CHANGE,
@@ -594,65 +580,6 @@ create_hooks (svn_repos_t *repos, const char *path, apr_pool_t *pool)
                                 "closing hook file `%s'", this_path);
   } /* end post-revprop-change hook */
 
-
-  /* Read sentinel. */
-  {
-    this_path = apr_psprintf (pool, "%s%s",
-                              svn_repos_read_sentinel_hook (repos, pool),
-                              SVN_REPOS__HOOK_DESC_EXT);
-
-    SVN_ERR_W (svn_io_file_open (&f, this_path,
-                                 (APR_WRITE | APR_CREATE | APR_EXCL),
-                                 APR_OS_DEFAULT,
-                                 pool),
-               "creating hook file");
-    
-    contents =
-      "READ-SENTINEL\n"
-      "\n"
-      "The invocation convention and protocol for the read-sentinel\n"
-      "is yet to be defined.\n";
-
-    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
-    if (apr_err)
-      return svn_error_createf (apr_err, NULL,
-                                "writing hook file `%s'", this_path);
-
-    apr_err = apr_file_close (f);
-    if (apr_err)
-      return svn_error_createf (apr_err, NULL,
-                                "closing hook file `%s'", this_path);
-  }  /* end read sentinel */
-
-  /* Write sentinel. */
-  {
-    this_path = apr_psprintf (pool, "%s%s",
-                              svn_repos_write_sentinel_hook (repos, pool),
-                              SVN_REPOS__HOOK_DESC_EXT);
-
-    SVN_ERR_W (svn_io_file_open (&f, this_path,
-                                 (APR_WRITE | APR_CREATE | APR_EXCL),
-                                 APR_OS_DEFAULT,
-                                 pool),
-               "creating hook file");
-    
-    contents =
-      "WRITE-SENTINEL\n"
-      "\n"
-      "The invocation convention and protocol for the write-sentinel\n"
-      "is yet to be defined.\n";
-
-    apr_err = apr_file_write_full (f, contents, strlen (contents), &written);
-    if (apr_err)
-      return svn_error_createf (apr_err, NULL,
-                                "writing hook file `%s'", this_path);
-
-    apr_err = apr_file_close (f);
-    if (apr_err)
-      return svn_error_createf (apr_err, NULL,
-                                "closing hook file `%s'", this_path);
-  }  /* end write sentinel */
-
   return SVN_NO_ERROR;
 }
 
@@ -1048,18 +975,6 @@ svn_repos_delete (const char *path,
 }
 
 
-svn_error_t *
-svn_repos_close (svn_repos_t *repos)
-{
-  /* Shut down the filesystem. */
-  svn_fs_close_fs (repos->fs);
-
-  /* Null out the repos pointer. */
-  repos = NULL;
-  return SVN_NO_ERROR;
-}
-
-
 svn_fs_t *
 svn_repos_fs (svn_repos_t *repos)
 {
@@ -1130,7 +1045,6 @@ svn_repos_recover (const char *path,
   SVN_ERR (svn_fs_berkeley_recover (repos->db_path, subpool));
 
   /* Close shop and free the subpool, to release the exclusive lock. */
-  SVN_ERR (svn_repos_close (repos));
   svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;

@@ -109,9 +109,6 @@ write_new_rep (const char **msg,
   /* Write new rep to reps table. */
   SVN_ERR (svn_fs__retry_txn (args.fs, txn_body_write_new_rep, &args, pool));
 
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
-
   if (args.key == NULL)
     return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
                              "error writing new representation");
@@ -162,9 +159,6 @@ write_rep (const char **msg,
   /* Overwrite first rep in reps table. */
   SVN_ERR (svn_fs__retry_txn (new_args.fs, 
                               txn_body_write_rep, &args, pool));
-
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -276,9 +270,6 @@ read_rep (const char **msg,
   if (memcmp (skel_data->data, rep_after, rep_after_len) != 0)
     return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
                               "representation corrupted (second check)");
-  
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -336,9 +327,6 @@ delete_rep (const char **msg,
   if ((! err) && (read_args.skel))
     return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
                              "error deleting representation");
-  
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
 
   return SVN_NO_ERROR;
 }
@@ -600,10 +588,6 @@ test_strings (const char **msg,
                                "query failed with unexpected error");
   }
 
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
-
-
   return SVN_NO_ERROR;
 }
 
@@ -696,10 +680,6 @@ abort_string (const char **msg,
   SVN_ERR (svn_fs__retry_txn (args.fs, 
                               txn_body_verify_string, &args, pool));
 
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
-
-
   return SVN_NO_ERROR;
 }
 
@@ -746,10 +726,6 @@ copy_string (const char **msg,
   /* Verify record's size and contents. */
   SVN_ERR (svn_fs__retry_txn (args.fs, 
                               txn_body_verify_string, &args, pool));
-
-  /* Close the filesystem. */
-  SVN_ERR (svn_fs_close_fs (fs));
-
 
   return SVN_NO_ERROR;
 }

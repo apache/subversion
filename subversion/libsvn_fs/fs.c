@@ -352,14 +352,6 @@ svn_fs_set_berkeley_errcall (svn_fs_t *fs,
 }
 
 
-svn_error_t *
-svn_fs_close_fs (svn_fs_t *fs)
-{
-  /* ### bleck. gotta toss this function. */
-  return SVN_NO_ERROR;
-}
-
-
 
 /* Allocating an appropriate Berkeley DB environment object.  */
 

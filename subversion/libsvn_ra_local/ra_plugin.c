@@ -256,13 +256,12 @@ svn_ra_local__open (void **session_baton,
 static svn_error_t *
 svn_ra_local__close (void *session_baton)
 {
-  svn_ra_local__session_baton_t *baton = 
-    (svn_ra_local__session_baton_t *) session_baton;
+  svn_ra_local__session_baton_t *baton = session_baton;
 
-  /* Close the repository, which will free any memory used by it. */
-  SVN_ERR (svn_repos_close (baton->repos));
-  
-  /* NULL out the FS cache so no one is tempted to use it again. */
+  /* ### maybe arrange to have a pool which can be cleared... */
+
+  /* People shouldn't try and use these objects now. */
+  baton->repos = NULL;
   baton->fs = NULL;
 
   return SVN_NO_ERROR;

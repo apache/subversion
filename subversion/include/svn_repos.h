@@ -85,9 +85,6 @@ svn_error_t *svn_repos_create (svn_repos_t **repos_p,
                                const char *in_repos_template,
                                apr_pool_t *pool);
 
-/** Close the Subversion repository object @a repos. */
-svn_error_t *svn_repos_close (svn_repos_t *repos);
-
 /** Destroy the Subversion repository found at @a path, using @a pool for any
  * necessary allocations.
  */
@@ -138,13 +135,6 @@ const char *svn_repos_pre_commit_hook (svn_repos_t *repos, apr_pool_t *pool);
 
 /** Return the path to @a repos's post-commit hook, allocated in @a pool. */
 const char *svn_repos_post_commit_hook (svn_repos_t *repos, apr_pool_t *pool);
-
-/** Return the path to @a repos's read sentinel, allocated in @a pool. */
-const char *svn_repos_read_sentinel_hook (svn_repos_t *repos, apr_pool_t *pool);
-
-/** Return the path to @a repos's write sentinel, allocated in @a pool. */
-const char *svn_repos_write_sentinel_hook (svn_repos_t *repos,
-                                           apr_pool_t *pool);
 
 /** Return the path to @a repos's pre-revprop-change hook, allocated in 
  * @a pool.
