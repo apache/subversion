@@ -918,6 +918,12 @@ much less if developers cannot rely on its completeness.  Even if
 you've only changed comments, write a log that says "Doc fix." or
 something.
 
+Start off the log message with one line indicating the general nature
+of the change.  This not only helps put developers in the right frame
+of mind for reading the rest of the log message, but also plays well
+with the "CIA" bot that echoes the first line of each commit to
+realtime forums like IRC.  (See http://cia.navi.cx/ for details.)
+
 Use full sentences, not sentence fragments.  Fragments are more often
 ambiguous, and it takes only a few more seconds to write out what you
 mean.  Fragments like "Doc fix", "New file", or "New function" are
