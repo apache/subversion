@@ -328,7 +328,7 @@ log_do_detect_conflict (struct log_runner *loggy,
          svn_node_none,
          svn_wc_schedule_normal,
          svn_wc_existence_normal,
-         TRUE,
+         TRUE, FALSE,
          0,
          0,
          NULL,
@@ -430,6 +430,7 @@ log_do_modify_entry (struct log_runner *loggy,
                               entry->schedule,
                               entry->existence,
                               entry->conflicted,
+                              entry->copied,
                               entry->text_time,
                               entry->prop_time,
                               entry->url,
@@ -556,7 +557,7 @@ conflict_if_rejfile (svn_stringbuf_t *parent_dir,
                     svn_node_none,
                     svn_wc_schedule_normal,
                     svn_wc_existence_normal,
-                    FALSE,
+                    FALSE, FALSE,
                     0,
                     0,
                     NULL, NULL,
@@ -580,7 +581,7 @@ conflict_if_rejfile (svn_stringbuf_t *parent_dir,
                     svn_node_none,
                     svn_wc_schedule_normal,
                     svn_wc_existence_normal,
-                    TRUE,
+                    TRUE, FALSE,
                     0,
                     0,
                     NULL,
@@ -710,7 +711,7 @@ log_do_committed (struct log_runner *loggy,
                             svn_node_none, /* ignored */
                             svn_wc_schedule_normal,
                             svn_wc_existence_deleted,
-                            0, 0, 0, NULL, NULL, /* ignored */
+                            0, 0, 0, 0, NULL, NULL, /* ignored */
                             loggy->pool, NULL));
 
                   SVN_ERR (svn_wc__entry_modify 
@@ -725,7 +726,7 @@ log_do_committed (struct log_runner *loggy,
                             svn_node_none, /* ignored */
                             svn_wc_schedule_normal,
                             svn_wc_existence_deleted,
-                            0, 0, 0, NULL, NULL, /* ignored */
+                            0, 0, 0, 0, NULL, NULL, /* ignored */
                             loggy->pool, NULL));
                 }
               else
@@ -739,7 +740,7 @@ log_do_committed (struct log_runner *loggy,
                           svn_node_none, /* ignored */
                           svn_wc_schedule_normal,
                           svn_wc_existence_deleted,
-                          0, 0, 0, NULL, NULL, /* ignored */
+                          0, 0, 0, 0, NULL, NULL, /* ignored */
                           loggy->pool, NULL));
             }
           else  
@@ -970,6 +971,7 @@ log_do_committed (struct log_runner *loggy,
               | SVN_WC__ENTRY_MODIFY_SCHEDULE 
               | SVN_WC__ENTRY_MODIFY_EXISTENCE
               | SVN_WC__ENTRY_MODIFY_CONFLICTED
+              | SVN_WC__ENTRY_MODIFY_COPIED
               | SVN_WC__ENTRY_MODIFY_TEXT_TIME
               | SVN_WC__ENTRY_MODIFY_PROP_TIME
               | SVN_WC__ENTRY_MODIFY_FORCE),
@@ -977,6 +979,7 @@ log_do_committed (struct log_runner *loggy,
              svn_node_none,
              svn_wc_schedule_normal,
              svn_wc_existence_normal,
+             FALSE,
              FALSE,
              text_time,
              prop_time,
@@ -1021,11 +1024,13 @@ log_do_committed (struct log_runner *loggy,
                      basename,
                      (SVN_WC__ENTRY_MODIFY_SCHEDULE 
                       | SVN_WC__ENTRY_MODIFY_EXISTENCE
+                      | SVN_WC__ENTRY_MODIFY_COPIED
                       | SVN_WC__ENTRY_MODIFY_FORCE),
                      SVN_INVALID_REVNUM,
                      svn_node_dir,
                      svn_wc_schedule_normal,
                      svn_wc_existence_normal,
+                     FALSE,
                      FALSE,
                      0,
                      0,

@@ -250,8 +250,6 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
           entry->existence = svn_wc_existence_added;
         else if (! strcmp (existencestr->data, SVN_WC_ENTRY_VALUE_DELETED))
           entry->existence = svn_wc_existence_deleted;
-        else if (! strcmp (existencestr->data, SVN_WC_ENTRY_VALUE_COPIED))
-          entry->existence = svn_wc_existence_copied;
         else if (! strcmp (existencestr->data, ""))
           entry->existence = svn_wc_existence_normal;
         else
@@ -290,6 +288,33 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
         *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICTED;
       }
   }
+
+  /* Is this entry copied? */
+  {
+    svn_stringbuf_t *copiedstr
+      = apr_hash_get (entry->attributes,
+                      SVN_WC_ENTRY_ATTR_COPIED, APR_HASH_KEY_STRING);
+        
+    entry->copied = FALSE;
+    if (copiedstr)
+      {
+        if (! strcmp (copiedstr->data, "true"))
+          entry->copied = TRUE;
+        else if (! strcmp (copiedstr->data, "false"))
+          entry->copied = FALSE;
+        else if (! strcmp (copiedstr->data, ""))
+          entry->copied = FALSE;
+        else
+          return svn_error_createf 
+            (SVN_ERR_WC_ENTRY_ATTRIBUTE_INVALID, 0, NULL, pool,
+             "Entry '%s' has invalid '%s' value",
+             (name ? name->data : SVN_WC_ENTRY_THIS_DIR),
+             SVN_WC_ENTRY_ATTR_COPIED);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
+      }
+  }
+
 
   /* Attempt to set up timestamps. */
   {
@@ -550,10 +575,6 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
       valuestr = svn_stringbuf_create (SVN_WC_ENTRY_VALUE_DELETED, pool);
       break;
 
-    case svn_wc_existence_copied:
-      valuestr = svn_stringbuf_create (SVN_WC_ENTRY_VALUE_COPIED, pool);
-      break;
-
     case svn_wc_existence_normal:
     default:
       valuestr = NULL;
@@ -569,6 +590,13 @@ normalize_entry (svn_wc_entry_t *entry, apr_pool_t *pool)
 
   apr_hash_set (entry->attributes,
                 SVN_WC_ENTRY_ATTR_CONFLICTED, APR_HASH_KEY_STRING,
+                valuestr);
+
+  /* Copied */
+  valuestr = entry->copied ? svn_stringbuf_create ("true", pool) : NULL;
+
+  apr_hash_set (entry->attributes,
+                SVN_WC_ENTRY_ATTR_COPIED, APR_HASH_KEY_STRING,
                 valuestr);
   
   /* Timestamps */
@@ -1039,6 +1067,7 @@ fold_entry (apr_hash_t *entries,
             enum svn_wc_schedule_t schedule,
             enum svn_wc_existence_t existence,
             svn_boolean_t conflicted,
+            svn_boolean_t copied,
             apr_time_t text_time,
             apr_time_t prop_time,
             svn_stringbuf_t *ancestor,
@@ -1073,6 +1102,10 @@ fold_entry (apr_hash_t *entries,
   /* Conflicted */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_CONFLICTED)
     entry->conflicted = conflicted;
+
+  /* Copied */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_COPIED)
+    entry->copied = copied;
 
   /* Text modification time */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
@@ -1388,6 +1421,7 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
                       enum svn_wc_schedule_t schedule,
                       enum svn_wc_existence_t existence,
                       svn_boolean_t conflicted,
+                      svn_boolean_t copied,
                       apr_time_t text_time,
                       apr_time_t prop_time,
                       svn_stringbuf_t *ancestor,
@@ -1430,7 +1464,7 @@ svn_wc__entry_modify (svn_stringbuf_t *path,
   /* Fold changes into (or create) the entry. */
   if (! entry_was_deleted_p)
     fold_entry (entries, name, modify_flags, revision, kind, 
-                schedule, existence, conflicted, text_time,
+                schedule, existence, conflicted, copied, text_time,
                 prop_time, ancestor, attributes, pool, ap);
 
   SVN_ERR (svn_wc__entries_write (entries, path, pool));
@@ -1512,7 +1546,7 @@ svn_wc__recursively_rewrite_ancestry (svn_stringbuf_t *dirpath,
                            APR_HASH_KEY_STRING);
   fold_entry (entries, svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, subpool),
               SVN_WC__ENTRY_MODIFY_URL,
-              SVN_INVALID_REVNUM, svn_node_none, 0, 0, 0, 0, 0,
+              SVN_INVALID_REVNUM, svn_node_none, 0, 0, 0, 0, 0, 0,
               ancestor, NULL, subpool, NULL);
 
   /* Recursively loop over all children. */
@@ -1541,7 +1575,7 @@ svn_wc__recursively_rewrite_ancestry (svn_stringbuf_t *dirpath,
       if (current_entry->kind == svn_node_file)
         fold_entry (entries, svn_stringbuf_create (name, subpool),
                     SVN_WC__ENTRY_MODIFY_URL,
-                    SVN_INVALID_REVNUM, svn_node_none, 0, 0, 0, 0, 0,
+                    SVN_INVALID_REVNUM, svn_node_none, 0, 0, 0, 0, 0, 0,
                     child_url, NULL, subpool, NULL);
 
       /* If a dir, recurse. */
