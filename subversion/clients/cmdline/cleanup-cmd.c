@@ -25,6 +25,7 @@
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_path.h"
+#include "svn_pools.h"
 #include "svn_error.h"
 #include "cl.h"
 
@@ -38,26 +39,29 @@ svn_cl__cleanup (apr_getopt_t *os,
                  apr_pool_t *pool)
 {
   apr_array_header_t *targets;
+  apr_pool_t *subpool;
   int i;
 
   targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
 
   /* Add "." if user passed 0 arguments */
-  svn_cl__push_implicit_dot_target(targets, pool);
+  svn_cl__push_implicit_dot_target (targets, pool);
 
-  if (targets->nelts)
-    for (i = 0; i < targets->nelts; i++)
-      {
-        const char *target = ((const char **) (targets->elts))[i];
+  /* At this point, we should never have an empty TARGETS array, but
+     check it just in case. */
+  if (! targets->nelts)
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
 
-        SVN_ERR (svn_client_cleanup (target, pool));
-      }
-  else
+  subpool = svn_pool_create (pool);
+  for (i = 0; i < targets->nelts; i++)
     {
-      svn_cl__subcommand_help ("cleanup", pool);
-      return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
+      const char *target = ((const char **) (targets->elts))[i];
+
+      SVN_ERR (svn_client_cleanup (target, subpool));
+      svn_pool_clear (subpool);
     }
 
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 

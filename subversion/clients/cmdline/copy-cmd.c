@@ -49,10 +49,7 @@ svn_cl__copy (apr_getopt_t *os,
 
   targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
   if (targets->nelts != 2)
-    {
-      svn_cl__subcommand_help ("copy", pool);
-      return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
-    }
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
 
   /* Build an authentication object to give to libsvn_client. */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
