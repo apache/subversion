@@ -37,10 +37,6 @@ extern "C" {
 /* A baton which represents a single ra_local session. */
 typedef struct svn_ra_local__session_baton_t
 {
-  /* Each ra_local session does ALL allocation from this pool!  Kind
-     of like an Apache transaction, I guess. :) */
-  apr_pool_t *pool;
-  
   /* A `file://' URL containing a local repository and path. */
   const char *repository_URL;
 
@@ -61,10 +57,9 @@ typedef struct svn_ra_local__session_baton_t
   /* The UUID associated with REPOS above (cached) */
   const char *uuid;
 
-  /* Callback stuff. */
+  /* Callbacks/baton passed to svn_ra_open. */
   const svn_ra_callbacks_t *callbacks;
   void *callback_baton;
-
 } svn_ra_local__session_baton_t;
 
 

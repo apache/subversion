@@ -499,8 +499,7 @@ file_rev_handler (void *baton, const char *path, svn_revnum_t revnum,
 
 static svn_error_t *
 old_blame (const char *target, const char *url,
-           svn_ra_plugin_t *ra_lib,
-           void *session,
+           svn_ra_session_t *ra_session,
            struct file_rev_baton *frb);
 
 svn_error_t *
@@ -514,8 +513,7 @@ svn_client_blame2 (const char *target,
                    apr_pool_t *pool)
 {
   struct file_rev_baton frb;
-  svn_ra_plugin_t *ra_lib; 
-  void *session;
+  svn_ra_session_t *ra_session;
   const char *url;
   svn_revnum_t start_revnum, end_revnum;
   struct blame *walk;
@@ -530,11 +528,11 @@ svn_client_blame2 (const char *target,
       (SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
   /* Get an RA plugin for this filesystem object. */
-  SVN_ERR (svn_client__ra_lib_from_path (&ra_lib, &session, &end_revnum,
+  SVN_ERR (svn_client__ra_session_from_path (&ra_session, &end_revnum,
                                          &url, target, peg_revision, end,
                                          ctx, pool));
 
-  SVN_ERR (svn_client__get_revision_number (&start_revnum, ra_lib, session,
+  SVN_ERR (svn_client__get_revision_number (&start_revnum, ra_session,
                                             start, target, pool));
 
   if (end_revnum < start_revnum)
@@ -560,17 +558,17 @@ svn_client_blame2 (const char *target,
      We need to ensure that we get one revision before the start_rev,
      if available so that we can know what was actually changed in the start
      revision. */
-  err = ra_lib->get_file_revs (session, "",
-                               start_revnum - (start_revnum > 0 ? 1 : 0),
-                               end_revnum,
-                               file_rev_handler, &frb, pool);
-
+  err = svn_ra_get_file_revs (ra_session, "",
+                              start_revnum - (start_revnum > 0 ? 1 : 0),
+                              end_revnum,
+                              file_rev_handler, &frb, pool);
+  
   /* Fall back if it wasn't supported by the server.  Servers earlier
      than 1.1 need this. */
   if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
     {
       svn_error_clear (err);
-      err = old_blame (target, url, ra_lib, session, &frb);
+      err = old_blame (target, url, ra_session, &frb);
     }
 
   SVN_ERR (err);
@@ -640,8 +638,7 @@ svn_client_blame (const char *target,
 /* This is used when there is no get_file_revs available. */
 static svn_error_t *
 old_blame (const char *target, const char *url,
-           svn_ra_plugin_t *ra_lib,
-           void *session,
+           svn_ra_session_t *ra_session,
            struct file_rev_baton *frb)
 {
   const char *reposURL;
@@ -653,7 +650,7 @@ old_blame (const char *target, const char *url,
   svn_node_kind_t kind;
   apr_pool_t *pool = frb->mainpool;
 
-  SVN_ERR (ra_lib->check_path (session, "", frb->end_rev, &kind, pool));
+  SVN_ERR (svn_ra_check_path (ra_session, "", frb->end_rev, &kind, pool));
 
   if (kind == svn_node_dir)
     return svn_error_createf (SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
@@ -662,7 +659,7 @@ old_blame (const char *target, const char *url,
   condensed_targets = apr_array_make (pool, 1, sizeof (const char *));
   (*((const char **)apr_array_push (condensed_targets))) = "";
 
-  SVN_ERR (ra_lib->get_repos_root (session, &reposURL, pool));
+  SVN_ERR (svn_ra_get_repos_root (ra_session, &reposURL, pool));
 
   /* URI decode the path before placing it in the baton, since changed_paths
      passed into log_message_receiver will not be URI encoded. */
@@ -676,17 +673,18 @@ old_blame (const char *target, const char *url,
   /* Accumulate revision metadata by walking the revisions
      backwards; this allows us to follow moves/copies
      correctly. */
-  SVN_ERR (ra_lib->get_log (session,
-                            condensed_targets,
-                            frb->end_rev,
-                            frb->start_rev,
-                            TRUE,
-                            FALSE,
-                            log_message_receiver,
-                            &lmb,
-                            pool));
+  SVN_ERR (svn_ra_get_log (ra_session,
+                           condensed_targets,
+                           frb->end_rev,
+                           frb->start_rev,
+                           0, /* no limit */
+                           TRUE,
+                           FALSE,
+                           log_message_receiver,
+                           &lmb,
+                           pool));
 
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, reposURL, NULL,
+  SVN_ERR (svn_client__open_ra_session (&ra_session, reposURL, NULL,
                                         NULL, NULL, FALSE, FALSE,
                                         frb->ctx, pool));
 
@@ -758,8 +756,8 @@ old_blame (const char *target, const char *url,
                                  apr_pool_cleanup_null);
 
       stream = svn_stream_from_aprfile (file, frb->currpool);
-      SVN_ERR (ra_lib->get_file (session, rev->path + 1, rev->revision,
-                                 stream, NULL, &props, frb->currpool));
+      SVN_ERR (svn_ra_get_file (ra_session, rev->path + 1, rev->revision,
+                                stream, NULL, &props, frb->currpool));
       SVN_ERR (svn_stream_close (stream));
       SVN_ERR (svn_io_file_close (file, frb->currpool));
 

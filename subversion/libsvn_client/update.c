@@ -61,8 +61,7 @@ svn_client__update_internal (svn_revnum_t *result_rev,
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const char *diff3_cmd;
-  void *ra_baton, *session;
-  svn_ra_plugin_t *ra_lib;
+  svn_ra_session_t *ra_session;
   svn_wc_adm_access_t *dir_access;
   svn_config_t *cfg = ctx->config ? apr_hash_get (ctx->config, 
                                                   SVN_CONFIG_CATEGORY_CONFIG,
@@ -99,19 +98,15 @@ svn_client__update_internal (svn_revnum_t *result_rev,
                                 SVN_CONFIG_SECTION_MISCELLANY,
                                 SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
 
-  /* Get the RA vtable that matches URL. */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, entry->url, pool));
-
   /* Open an RA session for the URL */
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, entry->url, anchor, 
+  SVN_ERR (svn_client__open_ra_session (&ra_session, entry->url, anchor, 
                                         adm_access, NULL, TRUE, TRUE, 
                                         ctx, pool));
 
   /* ### todo: shouldn't svn_client__get_revision_number be able
      to take a URL as easily as a local path?  */
   SVN_ERR (svn_client__get_revision_number
-           (&revnum, ra_lib, session, revision, path, pool));
+           (&revnum, ra_session, revision, path, pool));
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
@@ -126,12 +121,12 @@ svn_client__update_internal (svn_revnum_t *result_rev,
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision.  */
-  SVN_ERR (ra_lib->do_update (session,
-                              &reporter, &report_baton,
-                              revnum,
-                              target,
-                              recurse,
-                              update_editor, update_edit_baton, pool));
+  SVN_ERR (svn_ra_do_update (ra_session,
+                             &reporter, &report_baton,
+                             revnum,
+                             target,
+                             recurse,
+                             update_editor, update_edit_baton, pool));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the

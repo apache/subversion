@@ -56,8 +56,7 @@ svn_client_log2 (const apr_array_header_t *targets,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  svn_ra_plugin_t *ra_lib;  
-  void *ra_baton, *session;
+  svn_ra_session_t *ra_session;
   const char *path;
   const char *base_url;
   const char *base_name = NULL;
@@ -157,13 +156,9 @@ svn_client_log2 (const apr_array_header_t *targets,
       targets = real_targets;
     }
 
-  /* Get the RA library that handles BASE_URL */
-  SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-  SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, base_url, pool));
-
   /* Open a repository session to the BASE_URL. */
   SVN_ERR (svn_path_condense_targets (&base_name, NULL, targets, TRUE, pool)); 
-  SVN_ERR (svn_client__open_ra_session (&session, ra_lib, base_url, 
+  SVN_ERR (svn_client__open_ra_session (&ra_session, base_url, 
                                         base_name, NULL, NULL,
                                         (NULL != base_name), TRUE, 
                                         ctx, pool));
@@ -196,11 +191,11 @@ svn_client_log2 (const apr_array_header_t *targets,
 
     if (! start_is_local)
       SVN_ERR (svn_client__get_revision_number
-               (&start_revnum, ra_lib, session, start, base_name, pool));
+               (&start_revnum, ra_session, start, base_name, pool));
 
     if (! end_is_local)
       SVN_ERR (svn_client__get_revision_number
-               (&end_revnum, ra_lib, session, end, base_name, pool));
+               (&end_revnum, ra_session, end, base_name, pool));
 
     if (start_is_local || end_is_local)
       {
@@ -235,38 +230,38 @@ svn_client_log2 (const apr_array_header_t *targets,
 
             if (start_is_local)
               SVN_ERR (svn_client__get_revision_number
-                       (&start_revnum, ra_lib, session, start, target, pool));
+                       (&start_revnum, ra_session, start, target, pool));
             
             if (end_is_local)
               SVN_ERR (svn_client__get_revision_number
-                       (&end_revnum, ra_lib, session, end, target, pool));
+                       (&end_revnum, ra_session, end, target, pool));
 
-            err = ra_lib->get_log2 (session,
-                                    condensed_targets,
-                                    start_revnum,
-                                    end_revnum,
-                                    limit,
-                                    discover_changed_paths,
-                                    strict_node_history,
-                                    receiver,
-                                    receiver_baton,
-                                    pool);
+            err = svn_ra_get_log (ra_session,
+                                  condensed_targets,
+                                  start_revnum,
+                                  end_revnum,
+                                  limit,
+                                  discover_changed_paths,
+                                  strict_node_history,
+                                  receiver,
+                                  receiver_baton,
+                                  pool);
             if (err)
               break;
           }
       }
     else  /* both revisions are static, so no loop needed */
       {
-        err = ra_lib->get_log2 (session,
-                                condensed_targets,
-                                start_revnum,
-                                end_revnum,
-                                limit,
-                                discover_changed_paths,
-                                strict_node_history,
-                                receiver,
-                                receiver_baton,
-                                pool);
+        err = svn_ra_get_log (ra_session,
+                              condensed_targets,
+                              start_revnum,
+                              end_revnum,
+                              limit,
+                              discover_changed_paths,
+                              strict_node_history,
+                              receiver,
+                              receiver_baton,
+                              pool);
       }
   }
   

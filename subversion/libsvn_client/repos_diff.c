@@ -57,8 +57,7 @@ struct edit_baton {
 
   /* RA_LIB is the vtable for making requests to the RA layer, RA_SESSION
      is the open session for these requests */
-  svn_ra_plugin_t *ra_lib;
-  void *ra_session;
+  svn_ra_session_t *ra_session;
 
   /* The rev1 from the '-r Rev1:Rev2' command line option */
   svn_revnum_t revision;
@@ -330,12 +329,12 @@ get_file_from_ra (struct file_baton *b)
   SVN_ERR (temp_file_cleanup_register (b->path_start_revision, b->pool));
 
   fstream = svn_stream_from_aprfile (file, b->pool);
-  SVN_ERR (b->edit_baton->ra_lib->get_file (b->edit_baton->ra_session,
-                                            b->path,
-                                            b->edit_baton->revision,
-                                            fstream, NULL,
-                                            &(b->pristine_props),
-                                            b->pool));
+  SVN_ERR (svn_ra_get_file (b->edit_baton->ra_session,
+                            b->path,
+                            b->edit_baton->revision,
+                            fstream, NULL,
+                            &(b->pristine_props),
+                            b->pool));
   SVN_ERR (svn_io_file_close (file, b->pool));
 
   return SVN_NO_ERROR;
@@ -345,12 +344,12 @@ get_file_from_ra (struct file_baton *b)
 static svn_error_t *
 get_dirprops_from_ra (struct dir_baton *b)
 {
-  SVN_ERR (b->edit_baton->ra_lib->get_dir (b->edit_baton->ra_session,
-                                           b->path,
-                                           b->edit_baton->revision,
-                                           NULL, NULL,
-                                           &(b->pristine_props),
-                                           b->pool));
+  SVN_ERR (svn_ra_get_dir (b->edit_baton->ra_session,
+                           b->path,
+                           b->edit_baton->revision,
+                           NULL, NULL,
+                           &(b->pristine_props),
+                           b->pool));
 
   return SVN_NO_ERROR;
 }
@@ -510,11 +509,11 @@ delete_entry (const char *path,
   svn_wc_notify_action_t action = svn_wc_notify_skip;
 
   /* We need to know if this is a directory or a file */
-  SVN_ERR (pb->edit_baton->ra_lib->check_path (pb->edit_baton->ra_session,
-                                               path,
-                                               pb->edit_baton->revision,
-                                               &kind,
-                                               pool));
+  SVN_ERR (svn_ra_check_path (pb->edit_baton->ra_session,
+                              path,
+                              pb->edit_baton->revision,
+                              &kind,
+                              pool));
   SVN_ERR (get_path_access (&adm_access, eb->adm_access, pb->wcpath,
                             TRUE, pool));
   if ((! eb->adm_access) || adm_access)
@@ -951,8 +950,7 @@ svn_client__get_diff_editor (const char *target,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,
                              svn_boolean_t dry_run,
-                             svn_ra_plugin_t *ra_lib,
-                             void *ra_session,
+                             svn_ra_session_t *ra_session,
                              svn_revnum_t revision,
                              svn_wc_notify_func_t notify_func,
                              void *notify_baton,
@@ -972,7 +970,6 @@ svn_client__get_diff_editor (const char *target,
   eb->diff_cmd_baton = diff_cmd_baton;
   eb->recurse = recurse;
   eb->dry_run = dry_run;
-  eb->ra_lib = ra_lib;
   eb->ra_session = ra_session;
   eb->revision = revision;
   eb->empty_file = NULL;

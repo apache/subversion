@@ -32,6 +32,7 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_xml.h"
+#include "../libsvn_ra/ra_loader.h"
 
 #include "ra_dav.h"
 
@@ -292,16 +293,16 @@ log_end_element(void *userdata,
 }
 
 
-svn_error_t * svn_ra_dav__get_log2(void *session_baton,
-                                   const apr_array_header_t *paths,
-                                   svn_revnum_t start,
-                                   svn_revnum_t end,
-                                   int limit,
-                                   svn_boolean_t discover_changed_paths,
-                                   svn_boolean_t strict_node_history,
-                                   svn_log_message_receiver_t receiver,
-                                   void *receiver_baton,
-                                   apr_pool_t *pool)
+svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
+                                  const apr_array_header_t *paths,
+                                  svn_revnum_t start,
+                                  svn_revnum_t end,
+                                  int limit,
+                                  svn_boolean_t discover_changed_paths,
+                                  svn_boolean_t strict_node_history,
+                                  svn_log_message_receiver_t receiver,
+                                  void *receiver_baton,
+                                  apr_pool_t *pool)
 {
   /* The Plan: Send a request to the server for a log report.
    * Somewhere in mod_dav_svn, there will be an implementation, R, of
@@ -315,7 +316,7 @@ svn_error_t * svn_ra_dav__get_log2(void *session_baton,
    */
 
   int i;
-  svn_ra_dav__session_t *ras = session_baton;
+  svn_ra_dav__session_t *ras = session->priv;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", ras->pool);
   struct log_baton lb;
   svn_string_t bc_url, bc_relative;
@@ -438,19 +439,4 @@ svn_error_t * svn_ra_dav__get_log2(void *session_baton,
   svn_pool_destroy (lb.subpool);
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t * svn_ra_dav__get_log(void *session_baton,
-                                  const apr_array_header_t *paths,
-                                  svn_revnum_t start,
-                                  svn_revnum_t end,
-                                  svn_boolean_t discover_changed_paths,
-                                  svn_boolean_t strict_node_history,
-                                  svn_log_message_receiver_t receiver,
-                                  void *receiver_baton,
-                                  apr_pool_t *pool)
-{
-  return svn_ra_dav__get_log2(session_baton, paths, start, end, 0,
-                              discover_changed_paths, strict_node_history,
-                              receiver, receiver_baton, pool);
 }
