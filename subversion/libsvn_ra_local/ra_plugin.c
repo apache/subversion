@@ -218,14 +218,14 @@ get_commit_editor (void *session_baton,
   closer->committed_targets = apr_hash_make (sess_baton->pool);
                                          
   /* Get the repos commit-editor */     
-  SVN_ERR (svn_repos_get_editor (&commit_editor, &commit_editor_baton,
-                                 sess_baton->fs, 
-                                 sess_baton->fs_path,
-                                 sess_baton->username,
-                                 log_msg,
-                                 cleanup_commit, closer, /* fs will call
-                                                            this when done.*/
-                                 sess_baton->pool));
+  SVN_ERR (svn_ra_local__get_editor (&commit_editor, &commit_editor_baton,
+                                     sess_baton->fs, 
+                                     sess_baton->fs_path,
+                                     sess_baton->username,
+                                     log_msg,
+                                     cleanup_commit, closer, /* fs will call
+                                                                when done.*/
+                                     sess_baton->pool));
 
   /* Get the commit `tracking' editor, telling it to store committed
      targets inside our `closer' object, and NOT to bump revisions.

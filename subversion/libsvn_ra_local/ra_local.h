@@ -81,6 +81,24 @@ typedef struct svn_ra_local__commit_closer_t
 
 
 
+
+/*** Making changes to a filesystem, editor-style.  */
+
+/* Hook function type for commits.  When a filesystem commit happens,
+ * one of these should be invoked on the NEW_REVISION that resulted
+ * from the commit, and the BATON that was provided with the hook
+ * originally.
+ *
+ * See also svn_ra_local__get_editor.
+ *
+ * NOTE: this "hook" is not related to the standard repository hooks
+ * run before and after commits, which are configured in the
+ * repository's conf/ subdirectory.  When most users say "hook",
+ * they're talking about those, not about this function type.
+ */
+typedef svn_error_t *svn_ra_local__commit_hook_t (svn_revnum_t new_revision,
+                                                  void *baton);
+
 
 
 
@@ -119,6 +137,34 @@ svn_ra_local__checkout (svn_fs_t *fs,
                         apr_pool_t *pool);
 
 
+/* Return an EDITOR and EDIT_BATON to commit changes to FS, beginning
+ * at location `rev:BASE_PATH', where "rev" is the argument given to
+ * replace_root().  Store USER as the author of the commit and
+ * LOG_MSG as the commit message.
+ *
+ * FS is a previously opened file system.
+ *
+ * Calling (*EDITOR)->close_edit completes the commit.  Before
+ * close_edit returns, but after the commit has succeeded, it will
+ * invoke HOOK with the new revision number and HOOK_BATON as
+ * arguments.  If HOOK returns an error, that error will be returned
+ * from close_edit, otherwise close_edit will return successfully
+ * (unless it encountered an error before invoking HOOK).
+ *
+ * NOTE: this HOOK is not related to the standard repository hooks
+ * run before and after commits, which are configured in the
+ * repository's conf/ subdirectory.  When most users say "hook",
+ * they're referring to those, not to this HOOK argument.
+ */
+svn_error_t *svn_ra_local__get_editor (svn_delta_edit_fns_t **editor,
+                                       void **edit_baton,
+                                       svn_fs_t *fs,
+                                       svn_stringbuf_t *base_path,
+                                       const char *user,
+                                       svn_stringbuf_t *log_msg,
+                                       svn_ra_local__commit_hook_t *hook,
+                                       void *hook_baton,
+                                       apr_pool_t *pool);
 
 
 
