@@ -798,16 +798,15 @@ do_entry_deletion (struct edit_baton *eb,
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t kind;
   const char *logfile_path;
-  apr_pool_t *subpool = svn_pool_create (pool);
-  const char *full_path = svn_path_join (eb->anchor, path, subpool);
-  svn_stringbuf_t *log_item = svn_stringbuf_create ("", subpool);
+  const char *full_path = svn_path_join (eb->anchor, path, pool);
+  svn_stringbuf_t *log_item = svn_stringbuf_create ("", pool);
 
-  SVN_ERR (svn_io_check_path (full_path, &kind, subpool));
+  SVN_ERR (svn_io_check_path (full_path, &kind, pool));
 
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
-                                parent_path, subpool));
+                                parent_path, pool));
 
-  logfile_path = svn_wc__adm_path (parent_path, FALSE, subpool,
+  logfile_path = svn_wc__adm_path (parent_path, FALSE, pool,
                                    SVN_WC__ADM_LOG, NULL);
 
   /* If trying to delete a locally-modified file, throw an 'obstructed
@@ -816,9 +815,9 @@ do_entry_deletion (struct edit_baton *eb,
     {
       svn_boolean_t tmodified_p, pmodified_p;
       SVN_ERR (svn_wc_text_modified_p (&tmodified_p, full_path, FALSE,
-                                       adm_access, subpool));
+                                       adm_access, pool));
       SVN_ERR (svn_wc_props_modified_p (&pmodified_p, full_path,
-                                        adm_access, subpool));
+                                        adm_access, pool));
 
       if (tmodified_p || pmodified_p)
         return svn_error_createf
@@ -831,7 +830,7 @@ do_entry_deletion (struct edit_baton *eb,
                                   parent_path,
                                   SVN_WC__ADM_LOG,
                                   (APR_WRITE | APR_CREATE), /* not excl */
-                                  subpool));
+                                  pool));
 
   /* Here's the deal: in the new editor interface, PATH is a full path
      below the editor's anchor, and parent_path is the parent directory.
@@ -839,9 +838,9 @@ do_entry_deletion (struct edit_baton *eb,
      log commands talk *only* about paths relative (and below)
      parent_path, i.e. where the log is being executed.  */
 
-  base_name = svn_path_basename (path, subpool);
+  base_name = svn_path_basename (path, pool);
   svn_xml_make_open_tag (&log_item,
-                         subpool,
+                         pool,
                          svn_xml_self_closing,
                          SVN_WC__LOG_DELETE_ENTRY,
                          SVN_WC__LOG_ATTR_NAME,
@@ -853,10 +852,10 @@ do_entry_deletion (struct edit_baton *eb,
      accurate reports about itself in the future. */
   if (strcmp (path, eb->target) == 0)
     {
-      tgt_rev_str = apr_psprintf (subpool, "%" SVN_REVNUM_T_FMT,
+      tgt_rev_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
                                   *(eb->target_revision));
 
-      svn_xml_make_open_tag (&log_item, subpool, svn_xml_self_closing,
+      svn_xml_make_open_tag (&log_item, pool, svn_xml_self_closing,
                              SVN_WC__LOG_MODIFY_ENTRY,
                              SVN_WC__LOG_ATTR_NAME,
                              path,
@@ -874,15 +873,15 @@ do_entry_deletion (struct edit_baton *eb,
     }
 
   SVN_ERR_W (svn_io_file_write_full (log_fp, log_item->data, 
-                                     log_item->len, NULL, subpool),
-             apr_psprintf (subpool, 
+                                     log_item->len, NULL, pool),
+             apr_psprintf (pool, 
                            "Error writing log file for '%s'", parent_path));
 
   SVN_ERR (svn_wc__close_adm_file (log_fp,
                                    parent_path,
                                    SVN_WC__ADM_LOG,
                                    TRUE, /* sync */
-                                   subpool));
+                                   pool));
     
   if (eb->switch_url)
     {
@@ -907,7 +906,7 @@ do_entry_deletion (struct edit_baton *eb,
 
           SVN_ERR (svn_wc_adm_retrieve
                    (&child_access, eb->adm_access,
-                    full_path, subpool));
+                    full_path, pool));
           
           SVN_ERR (leftmod_error_chain 
                    (svn_wc_remove_from_revision_control 
@@ -917,13 +916,13 @@ do_entry_deletion (struct edit_baton *eb,
                      TRUE, /* instant error */
                      eb->cancel_func,
                      eb->cancel_baton,
-                     subpool),
-                    logfile_path, parent_path, subpool));
+                     pool),
+                    logfile_path, parent_path, pool));
         }
     }
 
-  SVN_ERR (leftmod_error_chain (svn_wc__run_log (adm_access, NULL, subpool),
-                                logfile_path, parent_path, subpool));
+  SVN_ERR (leftmod_error_chain (svn_wc__run_log (adm_access, NULL, pool),
+                                logfile_path, parent_path, pool));
 
   /* The passed-in `path' is relative to the anchor of the edit, so if
    * the operation was invoked on something other than ".", then
@@ -933,7 +932,7 @@ do_entry_deletion (struct edit_baton *eb,
    */
   if (eb->notify_func)
     (*eb->notify_func) (eb->notify_baton,
-                        svn_path_join (parent_path, base_name, subpool),
+                        svn_path_join (parent_path, base_name, pool),
                         svn_wc_notify_update_delete,
                         svn_node_unknown,
                         NULL,
@@ -941,7 +940,6 @@ do_entry_deletion (struct edit_baton *eb,
                         svn_wc_notify_state_unknown,
                         SVN_INVALID_REVNUM);
 
-  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
