@@ -161,22 +161,13 @@ static item_baton_t *make_child_baton(item_baton_t *parent, const char *name,
   baton->uc = parent->uc;
 
   /* Telescope the path based on uc->anchor.  */
-  if (parent->path[1] == '\0')  /* must be "/" */
-    baton->path = apr_pstrcat(pool, "/", name, NULL);
-  else
-    baton->path = apr_pstrcat(pool, parent->path, "/", name, NULL);
+  baton->path = svn_path_join(parent->path, name, pool);
 
   /* Telescope the path based on uc->dst_path in the exact same way. */
-  if (parent->path2[1] == '\0')  /* must be "/" */
-    baton->path2 = apr_pstrcat(pool, "/", name, NULL);
-  else
-    baton->path2 = apr_pstrcat(pool, parent->path2, "/", name, NULL);
+  baton->path2 = svn_path_join(parent->path2, name, pool);
 
   /* Telescope the third path:  it's relative, not absolute, to dst_path. */
-  if (parent->path3[0] == '\0')
-    baton->path3 = apr_pstrdup(pool, name);
-  else
-    baton->path3 = apr_pstrcat(pool, parent->path3, "/", name, NULL);
+  baton->path3 = svn_path_join(parent->path3, name, pool);
 
   return baton;
 }

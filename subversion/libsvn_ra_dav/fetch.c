@@ -1543,13 +1543,14 @@ static int end_element(void *userdata,
       if ((rb->current_wcprop_path != NULL)
           && rb->ras->callbacks->set_wc_prop)
         {
-          svn_string_t *href_val = svn_string_create(rb->href->data,
-                                                     rb->ras->pool);
+          svn_string_t href_val;
+          href_val.data = rb->href->data;
+          href_val.len = rb->href->len;
 
           CHKERR( rb->ras->callbacks->set_wc_prop(rb->ras->callback_baton,
                                                   rb->current_wcprop_path,
-                                                  rb->vuh.name->data,
-                                                  href_val,
+                                                  SVN_RA_DAV__LP_VSN_URL,
+                                                  &href_val,
                                                   rb->ras->pool) );
         }
       
