@@ -34,6 +34,7 @@ struct edit_baton
 {
   svn_fs_t *fs;
   svn_fs_root_t *root;
+  svn_fs_root_t *base_root;
   apr_pool_t *pool;
   repos_node_t *node;
 };
@@ -69,8 +70,8 @@ delete_entry (svn_stringbuf_t *name,
   full_path = svn_stringbuf_dup (d->path, eb->pool);
   svn_path_add_component (full_path, name, svn_path_repos_style);
 
-  /* Is this a dir or file? */
-  SVN_ERR (svn_fs_is_dir (&is_dir, eb->root, full_path->data, eb->pool));
+  /* Was this a dir or file (we have to check the base root for this one) */
+  SVN_ERR (svn_fs_is_dir (&is_dir, eb->base_root, full_path->data, eb->pool));
 
   /* Get (or create) the change node and update it. */
   node = svnlook_find_child_by_name (d->node, name->data);
@@ -258,6 +259,7 @@ svnlook_rev_changes_editor (const svn_delta_edit_fns_t **editor,
                             void **edit_baton,
                             svn_fs_t *fs,
                             svn_fs_root_t *root,
+                            svn_fs_root_t *base_root,
                             apr_pool_t *pool)
 {
   svn_delta_edit_fns_t *my_editor;
@@ -280,6 +282,7 @@ svnlook_rev_changes_editor (const svn_delta_edit_fns_t **editor,
   my_edit_baton->pool = pool;
   my_edit_baton->fs = fs;
   my_edit_baton->root = root;
+  my_edit_baton->base_root = base_root;
 
   *editor = my_editor;
   *edit_baton = my_edit_baton;
