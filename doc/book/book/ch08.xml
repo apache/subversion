@@ -1699,7 +1699,7 @@ rev 28:  sally | 2003-01-07 21:48:33 -0600 (Tue, 07 Jan 2003) | 3 lines
             </screen>
 
             <para>If you want several distinct paths underneath the
-              same URL, you can use the <literal>[URL PATH
+              same URL, you can use the <literal>URL [PATH [PATH
               ...]]</literal> syntax.</para>
 
             <screen>
@@ -1793,7 +1793,7 @@ rev 27: ...
 
 
 
-            <warning>
+            <tip>
               <para>If you run <command>svn log</command> on a specific
                 path and provide a specific revision and get no output
                 at all</para>
@@ -1816,7 +1816,7 @@ rev 20:  sally | 2003-01-17 22:56:19 -0600 (Fri, 17 Jan 2003) | 1 line
 Made a change.
 ------------------------------------------------------------------------
               </screen>
-            </warning>
+            </tip>
 
           </refsect1>
         </refentry>
