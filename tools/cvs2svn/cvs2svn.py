@@ -105,6 +105,13 @@ class CollectData(rcsparse.Sink):
     """Record that REVISION is the branch number for BRANCH_NAME.
     REVISION is an RCS branch number with an odd number of components,
     for example '1.7.2' (never '1.7.0.2')."""
+    if self.branch_names.has_key(revision):
+      sys.stderr.write("Error while parsing '%s':\n"
+                       "   branch %s already has name '%s',\n"
+                       "   cannot also have name '%s'.\n" \
+                       % (self.fname, revision,
+                          self.branch_names[revision], name))
+      sys.exit(1)
     self.branch_names[revision] = name
 
   def get_branch_name(self, revision):

@@ -64,18 +64,21 @@ def run_program(program, error_re, *varargs):
   If there is any stderr, print it and then exit with error, unless
   ERROR_RE is not None, in which case it is a string regular
   expression that must match some line of the error output; if it
-  matches, return None, else exit with error."""
+  matches, return None, else return 1."""
   out, err = svntest.main.run_command(program, 1, 0, *varargs)
   if err:
     if error_re:
       for line in err:
         if re.match(error_re, line):
           return None
+      return 1  # We never matched, so return 1 for failure to match
     print '\n%s said:\n' % program
     for line in err:
       print '   ' + line,
     print
     sys.exit(1)
+  elif error_re:
+    return 1
   return out
 
 
@@ -84,7 +87,7 @@ def run_cvs2svn(error_re, *varargs):
   If there is any stderr, print it and then exit with error, unless
   ERROR_RE is not None, in which case it is a string regular
   expression that must match some line of the error output; if it
-  matches, return None, else exit with error."""
+  matches, return None, else return 1."""
   return run_program(cvs2svn, error_re, *varargs)
 
 
@@ -217,9 +220,16 @@ def ensure_conversion(name, error_re=None, no_prune=None):
   been converted before by this invocation of this script.  If it has
   been converted before, do nothing.
 
+  If no error, return a tuple:
+
+     svn_repository_path, wc_path, log_dict
+
+  ...log_dict being the type of dictionary returned by parse_log().
+
   If ERROR_RE is a string, it is a regular expression expected to
   match some error line from a failed conversion, in which case return
-  None if it fails as expected, otherwise exit with error.
+  the tuple (None, None, None) if it fails as expected, or (1, 1, 1)
+  if it fails to fail in the expected way.
 
   If NO_PRUNE is set, then pass the --no-prune option to cvs2svn.py
   when converting.
@@ -227,9 +237,7 @@ def ensure_conversion(name, error_re=None, no_prune=None):
   NAME is just one word.  For example, 'main' would mean to convert
   './test-data/main-cvsrepos', and after the conversion, the resulting
   Subversion repository would be in './tmp/main-svnrepos', and a
-  checked out head working copy in './tmp/main-wc'.
-
-  If no error, return the Subversion repository path and wc path. """
+  checked out head working copy in './tmp/main-wc'."""
 
   cvsrepos = os.path.abspath(os.path.join(test_data_dir, '%s-cvsrepos' % name))
 
@@ -250,16 +258,17 @@ def ensure_conversion(name, error_re=None, no_prune=None):
       erase(wc)
       
       if no_prune:
-        run_cvs2svn(error_re, '--trunk-only', '--no-prune', '--create', '-s',
-                    svnrepos, cvsrepos)
+        ret = run_cvs2svn(error_re, '--trunk-only', '--no-prune',
+                          '--create', '-s',
+                          svnrepos, cvsrepos)
       else:
-        run_cvs2svn(error_re, '--trunk-only', '--create', '-s',
-                    svnrepos, cvsrepos)
+        ret = run_cvs2svn(error_re, '--trunk-only', '--create', '-s',
+                          svnrepos, cvsrepos)
 
-      # If we were expecting an error with error_re, then we must have
-      # matched it, or this whole script would have exited.
+      # If we were expecting an error with error_re, then return Nones
+      # if we matched it, or 1s if not.
       if error_re:
-        return None
+        return ret, ret, ret
 
       run_svn('co', repos_to_url(svnrepos), wc)
       log_dict = parse_log(svnrepos)
@@ -297,7 +306,18 @@ def attr_exec():
 
 def bogus_tag():
   "fail early on encountering an invalid symbolic name"
-  ensure_conversion('bogus-tag', '.*is not a valid tag or branch name')
+  ret, ign, ign = ensure_conversion('bogus-tag',
+                                    '.*is not a valid tag or branch name')
+  if ret:
+    raise svntest.Failure
+
+
+def overlapping_branch():
+  "fail early on encountering a branch with two names"
+  ret, ign, ign = ensure_conversion('overlapping-branch',
+                                    '.*already has name')
+  if ret:
+    raise svntest.Failure
 
 
 def space_fname():
@@ -647,6 +667,7 @@ def split_branch():
 test_list = [ None,
               show_usage,
               bogus_tag,
+              overlapping_branch,
               attr_exec,
               space_fname,
               two_quick,
