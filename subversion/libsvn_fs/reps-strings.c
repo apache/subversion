@@ -89,7 +89,6 @@ delta_string_keys (apr_array_header_t **keys, skel_t *rep, apr_pool_t *pool)
 {
   const char *key;
   skel_t *window = rep->children->next;
-  skel_t *cur_window = window;
   int num_windows = 0;
 
   if (! rep_is_delta (rep))
@@ -98,14 +97,15 @@ delta_string_keys (apr_array_header_t **keys, skel_t *rep, apr_pool_t *pool)
        "delta_string_key: representation is not of type `delta'");
 
   /* Count the number of windows */
-  while (cur_window)
+  while (window)
     {
       num_windows++;
-      cur_window = cur_window->next;
+      window = window->next;
     }
 
   /* Now, push the string keys for each window into *KEYS */
   *keys = apr_array_make (pool, num_windows, sizeof (key));
+  window = rep->children->next;
   while (window)
     {
       skel_t *diff = window->children->next->children->children;
@@ -120,6 +120,24 @@ delta_string_keys (apr_array_header_t **keys, skel_t *rep, apr_pool_t *pool)
       window = window->next;
     }
 
+  return SVN_NO_ERROR;
+}
+
+
+/* Delete the strings associated with KEYS in FS as part of TRAIL.  */
+static svn_error_t *
+delete_strings (apr_array_header_t *keys, 
+                      svn_fs_t *fs, 
+                      trail_t *trail)
+{
+  int i;
+  const char *str_key;
+
+  for (i = 0; i < keys->nelts; i++)
+    {
+      str_key = ((const char **)(keys->elts))[i];
+      SVN_ERR (svn_fs__string_delete (fs, str_key, trail));
+    }
   return SVN_NO_ERROR;
 }
 
@@ -561,7 +579,7 @@ rep_read_range (svn_fs_t *fs,
 
 
 
-
+/*** Helper Functions ***/
 
 static int
 rep_is_mutable (skel_t *rep)
@@ -600,23 +618,27 @@ rep_set_mutable_flag (skel_t *rep, apr_pool_t *pool)
 }
 
 
-/* Make a mutable, fulltext rep skel with STR_KEY.  Allocate the
-   skel and its string key in POOL (i.e., STR_KEY will be copied
-   into new storage in POOL).
-   
-   Helper for svn_fs__get_mutable_rep().  */
+/* Return a `fulltext' rep skel which references the string STR_KEY,
+   performing allocations in POOL.  If MUTABLE is non-zero, make the
+   representation mutable.  If non-NULL, STR_KEY will be copied into
+   an allocation of POOL.  */
 static skel_t *
-make_mutable_fulltext_rep_skel (const char *str_key, apr_pool_t *pool)
+make_fulltext_rep_skel (const char *str_key, 
+                        int mutable,
+                        apr_pool_t *pool)
+
 {
   skel_t *rep_skel = svn_fs__make_empty_list (pool);
   skel_t *header = svn_fs__make_empty_list (pool);
 
-  svn_fs__prepend (svn_fs__str_atom ("mutable", pool), header);
-  svn_fs__prepend (svn_fs__str_atom ("fulltext", pool), header);
+  if (mutable)
+    svn_fs__prepend (svn_fs__str_atom ("mutable", pool), header);
 
-  svn_fs__prepend (svn_fs__str_atom (str_key, pool), rep_skel);
+  svn_fs__prepend (svn_fs__str_atom ("fulltext", pool), header);
+  svn_fs__prepend (str_key ? svn_fs__str_atom (str_key, pool)
+                           : svn_fs__mem_atom (0, 0, pool), rep_skel);
   svn_fs__prepend (header, rep_skel);
-  
+
   return rep_skel;
 }
 
@@ -706,7 +728,7 @@ svn_fs__get_mutable_rep (const char **new_rep,
                                                   trail));
                 }
 
-              rep_skel = make_mutable_fulltext_rep_skel (new_str, trail->pool);
+              rep_skel = make_fulltext_rep_skel (new_str, 1, trail->pool);
             }
         }
     }
@@ -714,7 +736,7 @@ svn_fs__get_mutable_rep (const char **new_rep,
     {
       const char *new_str = NULL;
       SVN_ERR (svn_fs__string_append (fs, &new_str, 0, NULL, trail));
-      rep_skel = make_mutable_fulltext_rep_skel (new_str, trail->pool);
+      rep_skel = make_fulltext_rep_skel (new_str, 1, trail->pool);
     }
 
   /* If we made it here, there's a new rep to store in the fs. */
@@ -777,14 +799,8 @@ svn_fs__delete_rep_if_mutable (svn_fs_t *fs,
   else 
     {
       apr_array_header_t *keys;
-      int i;
-
       SVN_ERR (delta_string_keys (&keys, rep_skel, trail->pool));
-      for (i = 0; i < keys->nelts; i++)
-        {
-          str_key = ((const char **)(keys->elts))[i];
-          SVN_ERR (svn_fs__string_delete (fs, str_key, trail));
-        }
+      SVN_ERR (delete_strings (keys, fs, trail));
     }
 
   SVN_ERR (svn_fs__delete_rep (fs, rep, trail));
@@ -1209,12 +1225,22 @@ svn_fs__rep_contents_clear (svn_fs_t *fs,
     }
   else /* delta */
     {
-#if DELTIFYING
-      /* ### todo: We'll convert the rep to fulltext that references
-         an empty string. */
-      SVN_ERR (svn_fs__string_clear (fs, str_key, trail));
-      SVN_ERR (svn_fs__string_append (fs, &str_key, 4, null_delta, trail));
-#endif /* DELTIFYING */
+      /* For deltas, we replace the rep with a `fulltext' rep, then
+         delete all the strings associated with the old rep. */
+      apr_array_header_t *orig_keys;
+
+      /* Get the list of strings associated with this rep. */
+      SVN_ERR (delta_string_keys (&orig_keys, rep_skel, trail->pool));
+      
+      /* Transform our rep into a `fulltext' rep with an empty string
+         behind it, and replace it in the filesystem. */
+      str_key = NULL;
+      SVN_ERR (svn_fs__string_append (fs, &str_key, 0, NULL, trail));
+      rep_skel = make_fulltext_rep_skel (str_key, 1, trail->pool);
+      SVN_ERR (svn_fs__write_rep (fs, rep, rep_skel, trail));
+
+      /* Now delete those old strings. */
+      SVN_ERR (delete_strings (orig_keys, fs, trail));
     }
 
   return SVN_NO_ERROR;
@@ -1530,7 +1556,7 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
   svn_stream_t *source_stream; /* stream to read the source */
   svn_stream_t *target_stream; /* stream to write the fulltext */
   struct write_string_baton target_baton;
-  const char *orig_str_key; /* original string key */
+  apr_array_header_t *orig_keys;
   skel_t *rep_skel;
   unsigned char buf[65536];
   apr_size_t len;
@@ -1542,9 +1568,9 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
   if (rep_is_fulltext (rep_skel))
     return SVN_NO_ERROR;
 
-  /* Get the original string key from REP (so we can delete it after
-     we write our new one out. */
-  SVN_ERR (string_key (&orig_str_key, rep_skel, trail->pool));
+  /* Get the original string keys from REP (so we can delete them after
+     we write our new skel out. */
+  SVN_ERR (delta_string_keys (&orig_keys, rep_skel, trail->pool));
   
   /* Set up a string to receive the svndiff data. */
   target_baton.fs = fs;
@@ -1571,24 +1597,15 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
     }
   while (len);
 
-
   /* Now `target_baton.key' has the key of the new string.  We
-     should hook it into the representation. */
-  {
-    skel_t *header = svn_fs__make_empty_list (trail->pool);
-    skel_t *rskel = svn_fs__make_empty_list (trail->pool);
+     should hook it into the representation.  So we make a new rep,
+     write it out... */
+  rep_skel = make_fulltext_rep_skel (target_baton.key, 0, trail->pool);
+  SVN_ERR (svn_fs__write_rep (fs, rep, rep_skel, trail));
 
-    /* The header. */
-    svn_fs__prepend (svn_fs__str_atom ("fulltext", trail->pool), header);
-    
-    /* The rep. */
-    svn_fs__prepend (svn_fs__str_atom (target_baton.key, trail->pool), rskel);
-    svn_fs__prepend (header, rskel);
+  /* ...then we delete our original strings. */
+  SVN_ERR (delete_strings (orig_keys, fs, trail));
 
-    /* Write out the new representation, and remove the old string. */
-    SVN_ERR (svn_fs__write_rep (fs, rep, rskel, trail));
-    SVN_ERR (svn_fs__string_delete (fs, orig_str_key, trail));
-  }
 #endif /* ! DELTIFYING */
 
   return SVN_NO_ERROR;
