@@ -33,20 +33,32 @@
  * @c svn_stringbuf_t uses a plain <tt>char *</tt> for its data, so it is 
  * most appropriate for modifiable data.
  *
- * <h3>Invariant</h3>
+ * <h3>Invariants</h3>
  *
- * Both structures maintain a significant invariant:
+ *   1. Null termination:
  *
- *     <tt>s->data[s->len] == '\\0'</tt>
+ *      Both structures maintain a significant invariant:
  *
- * The functions defined within this header file will maintain the invariant
- * (which does imply that memory is allocated/defined as @c len+1 bytes). If
- * code outside of the @c svn_string.h functions manually builds these
- * structures, then they must enforce this invariant.
+ *         <tt>s->data[s->len] == '\\0'</tt>
  *
- * Note that an @c svn_string(buf)_t may contain binary data, which means that
- * @c strlen(s->data) does not have to equal @c s->len. The null terminator is
- * provided to make it easier to pass @c s->data to C string interfaces.
+ *      The functions defined within this header file will maintain
+ *      the invariant (which does imply that memory is
+ *      allocated/defined as @c len+1 bytes).  If code outside of the
+ *      @c svn_string.h functions manually builds these structures,
+ *      then they must enforce this invariant.
+ *
+ *      Note that an @c svn_string(buf)_t may contain binary data,
+ *      which means that @c strlen(s->data) does not have to equal @c
+ *      s->len. The null terminator is provided to make it easier to
+ *      pass @c s->data to C string interfaces.
+ *
+ *
+ *   2. Non-null input:
+ *
+ *      All the functions below assume their input data is non-null,
+ *      unless otherwise documented, and may seg fault if passed
+ *      null.  The input data may *contain* null bytes, of course, just
+ *      the data pointer itself must not be null.
  */
 
 
