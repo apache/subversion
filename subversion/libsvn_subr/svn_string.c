@@ -323,7 +323,15 @@ svn_stringbuf_ensure (svn_stringbuf_t *str, apr_size_t minimum_size)
         str->blocksize = minimum_size;
       else
         while (str->blocksize < minimum_size)
-          str->blocksize *= 2;
+          {
+            apr_size_t prev_size = str->blocksize;
+            str->blocksize *= 2;
+            if (prev_size > str->blocksize)
+              {
+                str->blocksize = minimum_size;
+                break;
+              }
+          }
 
       str->data = (char *) my__realloc (str->data, 
                                         str->len,
