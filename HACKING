@@ -2,6 +2,7 @@ If you are contributing code to the Subversion project, please read
 this first.
 
 
+
 Building from a working copy
 ============================
 
@@ -22,7 +23,8 @@ make sure you have those tools installed).  Afterwards, do
 to build Subversion.
 
 
-Coding
+
+Coding Style
 ================================
 
 To understand how things work, read doc/svn-design.{texi,info,ps,pdf},
@@ -63,6 +65,23 @@ it's more important to make code readable than to fit that extra line
 on the screen.
 
 
+
+Using Page Breaks
+=================
+
+We're using page breaks (the Ctrl-L character, ASCII 12) for section
+boundaries in both code and plaintext prose files.  This file is a
+good example of how it's done: each section starts with a page break,
+and the immediately after the page break comes the title of the
+section.
+
+This helps out people who use the Emacs page commands, such as
+`pages-directory' and `narrow-to-page'.  Such people are not as scarce
+as you might think, and if you'd like to become one of them, then type
+C-x C-p C-h in Emacs sometime.
+
+
+
 Writing Log Entries
 ===================
 
@@ -177,6 +196,7 @@ means to include revision numbers.  Run "cvs2cl.pl --help" to see more
 about how to use it.
 
 
+
 Other Conventions:
 ==================
 
@@ -201,8 +221,7 @@ In addition to the GNU standards, Subversion uses these conventions:
    * Put this comment at the bottom of new source files to make Emacs
      automatically load svn-dev.el:
 
-        /* 
-         * local variables:
+        /* local variables:
          * eval: (load-file "svn-dev.el")
          * end:
          */
@@ -212,6 +231,7 @@ In addition to the GNU standards, Subversion uses these conventions:
 
 
 
+
 Automated Tests:
 ================
 
