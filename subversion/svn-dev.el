@@ -30,10 +30,11 @@
 local to the current buffer, which is presumably visiting a file in
 the Subversion project.  Python setup in other buffers will not be
 affected."
-  (make-local-variable 'py-indent-offset)
-  (setq py-indent-offset 2)
-  (make-local-variable 'py-smart-indentation)
-  (setq py-smart-indentation nil))
+  (when (string-match "/subversion/" (buffer-file-name))
+    (make-local-variable 'py-indent-offset)
+    (setq py-indent-offset 2)
+    (make-local-variable 'py-smart-indentation)
+    (setq py-smart-indentation nil)))
 
 (add-hook 'python-mode-hook 'svn-python-mode-hook)
 
