@@ -981,7 +981,6 @@ setup_copy (svn_client_commit_info_t **commit_info,
             apr_pool_t *pool)
 {
   svn_boolean_t src_is_url, dst_is_url;
-  const char *message;
 
   /* Are either of our paths URLs? */
   src_is_url = svn_path_is_url (src_path);
