@@ -422,7 +422,7 @@ bool Prompter::prompt(const char *realm, const char *username, bool maySave)
 			{
 				return false;
 			}
-			mid = env->GetMethodID(clazz, "userAllowedSave", "()Z");
+			mid2 = env->GetMethodID(clazz, "userAllowedSave", "()Z");
 			if(JNIUtil::isJavaExceptionThrown() || mid == 0)
 			{
 				return false;
@@ -444,7 +444,8 @@ bool Prompter::prompt(const char *realm, const char *username, bool maySave)
 		{
 			return false;
 		}
-		jboolean ret = env->CallBooleanMethod(m_prompter, mid, jrealm, jusername);
+        jboolean ret = env->CallBooleanMethod(m_prompter, mid, jrealm, 
+                                    jusername, maySave ? JNI_TRUE: JNI_FALSE);
 		if(JNIUtil::isJavaExceptionThrown())
 		{
 			return false;
