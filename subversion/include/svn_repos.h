@@ -738,7 +738,7 @@ enum svn_repos_load_uuid
 {
   svn_repos_load_uuid_default,
   svn_repos_load_uuid_ignore,
-  svn_repos_load_uuid_force,
+  svn_repos_load_uuid_force
 };
 
 /** Dump the contents of the filesystem within already-open @a repos into

@@ -43,7 +43,7 @@ static const char * const dav_svn_namespace_uris[] =
 };
 enum {
     DAV_SVN_NAMESPACE_URI_DAV,  /* the DAV: namespace URI */
-    DAV_SVN_NAMESPACE_URI,      /* the dav<->ra_dav namespace URI */
+    DAV_SVN_NAMESPACE_URI       /* the dav<->ra_dav namespace URI */
 };
 
 #define SVN_RO_DAV_PROP(name) \
@@ -64,7 +64,7 @@ enum {
 enum {
   SVN_PROPID_baseline_relative_path = 1,
   SVN_PROPID_md5_checksum,
-  SVN_PROPID_repository_uuid,
+  SVN_PROPID_repository_uuid
 };
 
 static const dav_liveprop_spec dav_svn_props[] =
