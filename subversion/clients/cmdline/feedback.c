@@ -64,10 +64,9 @@ report_added_item (const char *path, apr_pool_t *pool)
         binary = 1;
     }
 
-  printf ("A  %s  %s%s\n",
+  printf ("A  %s  %s\n",
           binary ? "binary" : "      ",
-          path,
-          entry->kind == svn_node_dir ? "/" : "");
+          path);
           
   return APR_SUCCESS;
 }
@@ -76,17 +75,7 @@ report_added_item (const char *path, apr_pool_t *pool)
 static apr_status_t 
 report_unadded_item (const char *path, apr_pool_t *pool)
 {
-  svn_stringbuf_t *spath = svn_stringbuf_create (path, pool);
-  enum svn_node_kind kind;
-  svn_error_t *err;
-
-  err = svn_io_check_path (spath, &kind, pool);
-  if (err)
-    return err->apr_err;
-
-  printf ("-  %s%s\n",
-          path,
-          kind == svn_node_dir ? "/" : "");
+  printf ("-  %s\n", path);
           
   return APR_SUCCESS;
 }
@@ -95,17 +84,7 @@ report_unadded_item (const char *path, apr_pool_t *pool)
 static apr_status_t 
 report_deleted_item (const char *path, apr_pool_t *pool)
 {
-  svn_stringbuf_t *spath = svn_stringbuf_create (path, pool);
-  svn_wc_entry_t *entry;
-  svn_error_t *err;
-
-  err = svn_wc_entry (&entry, spath, pool);
-  if (err)
-    return err->apr_err;
-
-  printf ("D  %s%s\n",
-          path,
-          entry->kind == svn_node_dir ? "/" : "");
+  printf ("D  %s\n", path);
           
   return APR_SUCCESS;
 }
@@ -114,17 +93,7 @@ report_deleted_item (const char *path, apr_pool_t *pool)
 static apr_status_t 
 report_undeleted_item (const char *path, apr_pool_t *pool)
 {
-  svn_stringbuf_t *spath = svn_stringbuf_create (path, pool);
-  svn_wc_entry_t *entry;
-  svn_error_t *err;
-
-  err = svn_wc_entry (&entry, spath, pool);
-  if (err)
-    return err->apr_err;
-
-  printf ("+  %s%s\n",
-          path,
-          entry->kind == svn_node_dir ? "/" : "");
+  printf ("+  %s\n", path);
           
   return APR_SUCCESS;
 }
