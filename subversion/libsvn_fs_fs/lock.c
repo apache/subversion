@@ -39,7 +39,6 @@
 
 /* Names of special lock directories in the fs_fs filesystem. */
 #define LOCK_ROOT_DIR "locks"
-#define LOCK_LOCK_DIR "locks"
 
 /* Names of hash keys used to store a lock for writing to disk. */
 #define PATH_KEY "path"
@@ -84,7 +83,6 @@ abs_path_to_lock_digest_file (const char **abs_path,
                               apr_pool_t *pool)
 {
   SVN_ERR (merge_paths (abs_path, fs->path, LOCK_ROOT_DIR, pool));
-  SVN_ERR (merge_paths (abs_path, *abs_path, LOCK_LOCK_DIR, pool));
   /* ###TODO create a 1 or 2 char subdir to spread the love across
      many directories */
   SVN_ERR (merge_paths (abs_path, *abs_path, digest, pool));
@@ -114,7 +112,6 @@ abs_path_to_lock_file (const char **abs_path,
   const char *digest_cstring;
 
   SVN_ERR (merge_paths (abs_path, fs->path, LOCK_ROOT_DIR, pool));
-  SVN_ERR (merge_paths (abs_path, *abs_path, LOCK_LOCK_DIR, pool));
 
   digest_cstring = make_digest (rel_path, pool);
 
@@ -125,6 +122,8 @@ abs_path_to_lock_file (const char **abs_path,
   return SVN_NO_ERROR;
 }
 
+/* ###Shouldn't abs_path_to_lock_file and base_path_to_lock_file be
+   using this function? */
 /* Set BASE_PATH to the directory in FS where lock files (and lock
    entries files) are stored. */
 static svn_error_t *
@@ -133,7 +132,6 @@ base_path_to_lock_file (const char **base_path,
                         apr_pool_t *pool)
 {
   SVN_ERR (merge_paths (base_path, fs->path, LOCK_ROOT_DIR, pool));
-  SVN_ERR (merge_paths (base_path, *base_path, LOCK_LOCK_DIR, pool));
   /* ###TODO create a 1 or 2 char subdir to spread the love across
      many directories (and take the hash as an optional arg. */
 
