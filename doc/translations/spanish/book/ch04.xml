@@ -1080,10 +1080,11 @@ Merged my-calc-branch changes r341:405 into the trunk.
 &hellip;
 </screen>
       
-      <para>Aha!  Since all branch-changes that happened between
-        revisions 341 and 405 were previously merged to the trunk as
-        revision 406, you now know that you want to merge only the
-        branch changes after that&mdash;by comparing revisions 406 and
+      <para>¡Ahá! Dado que todos los cambios que ocurrieron en la
+        rama entre las revisiones 341 y 405 fueron fusionados
+        con el tronco como la revisión 406, ahora sabe que sólo
+        quiere fusionar los cambios de la rama posteriores
+        a esto&mdash;comparando las revisiones 406 y
         <literal>HEAD</literal>.</para>
 
 <screen>
