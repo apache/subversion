@@ -904,6 +904,10 @@ svn_error_t *svn_wc_resolve_conflict (const char *path,
    date and author of the new revision; one or both may be NULL.
    ADM_ACCESS must hold a write lock appropriate for PATH.
 
+   If non-null, WCPROPS is an array of `svn_prop_t *' changes to wc
+   properties; if an svn_prop_t->value is null, then that property is
+   deleted.
+
    If RECURSE is true and PATH is a directory, then bump every
    versioned object at or under PATH.  This is usually done for
    copied trees.  */
@@ -913,6 +917,7 @@ svn_error_t *svn_wc_process_committed (const char *path,
                                        svn_revnum_t new_revnum,
                                        const char *rev_date,
                                        const char *rev_author,
+                                       apr_array_header_t *wcprop_changes,
                                        apr_pool_t *pool);
 
 
@@ -920,8 +925,8 @@ svn_error_t *svn_wc_process_committed (const char *path,
 /* DEPRECATED: This function will vanish when issue #806 is resolved.
    Use svn_wc_prop_set() instead.
 
-   This is a function of type svn_ra_set_wc_prop_func_t. Set property
-   NAME to VALUE on PATH.  If VALUE is null, remove property NAME. */
+   Set property NAME to VALUE on PATH.  If VALUE is null, remove
+   property NAME. */
 svn_error_t *svn_wc_set_wc_prop (const char *path,
                                  const char *name,
                                  const svn_string_t *value,

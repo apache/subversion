@@ -33,6 +33,7 @@
 
 #include "wc.h"
 #include "log.h"
+#include "props.h"
 #include "adm_files.h"
 #include "entries.h"
 #include "translate.h"
@@ -1084,6 +1085,34 @@ log_do_committed (struct log_runner *loggy,
 }
 
 
+/* See documentation for SVN_WC__LOG_MODIFY_WCPROP. */
+static svn_error_t *
+log_do_modify_wcprop (struct log_runner *loggy,
+                      const char *name,
+                      const XML_Char **atts)
+{
+  svn_string_t value;
+  const char *propname, *propval, *path; 
+
+  if (strcmp (name, SVN_WC_ENTRY_THIS_DIR) == 0)
+    path = svn_wc_adm_access_path (loggy->adm_access);
+  else
+    path = svn_path_join (svn_wc_adm_access_path (loggy->adm_access),
+                          name, loggy->pool);
+
+  propname = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_PROPNAME, atts);
+  propval = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_PROPVAL, atts);
+
+  if (propval)
+    {
+      value.data = propval;
+      value.len = strlen (propval);
+    }
+
+  return svn_wc__wcprop_set (name, propval ? &value : NULL, path, loggy->pool);
+}
+
+
 static void
 start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
 {
@@ -1117,6 +1146,9 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
   }
   else if (strcmp (eltname, SVN_WC__LOG_COMMITTED) == 0) {
     err = log_do_committed (loggy, name, atts);
+  }
+  else if (strcmp (eltname, SVN_WC__LOG_MODIFY_WCPROP) == 0) {
+    err = log_do_modify_wcprop (loggy, name, atts);
   }
   else if (strcmp (eltname, SVN_WC__LOG_RM) == 0) {
     err = log_do_rm (loggy, name);

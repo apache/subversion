@@ -81,13 +81,14 @@ add_committable (apr_hash_t *committables,
   /* Now update pointer values, ensuring that their allocations live
      in POOL. */
   new_item = apr_pcalloc (pool, sizeof (*new_item));
-  new_item->path         = apr_pstrdup (pool, path);
-  new_item->kind         = kind;
-  new_item->url          = apr_pstrdup (pool, url);
-  new_item->revision     = revision;
-  new_item->copyfrom_url = copyfrom_url
-                           ? apr_pstrdup (pool, copyfrom_url) : NULL;
-  new_item->state_flags  = state_flags;
+  new_item->path           = apr_pstrdup (pool, path);
+  new_item->kind           = kind;
+  new_item->url            = apr_pstrdup (pool, url);
+  new_item->revision       = revision;
+  new_item->copyfrom_url   = copyfrom_url 
+                             ? apr_pstrdup (pool, copyfrom_url) : NULL;
+  new_item->state_flags    = state_flags;
+  new_item->wcprop_changes = apr_array_make (pool, 1, sizeof (svn_prop_t *));
    
   /* Now, add the commit item to the array. */
   (*((svn_client_commit_item_t **) apr_array_push (array))) = new_item;

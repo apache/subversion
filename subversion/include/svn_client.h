@@ -157,6 +157,16 @@ typedef struct svn_client_commit_item_t
   const char *copyfrom_url;      /* copyfrom-url */
   apr_byte_t state_flags;        /* state flags */
 
+  /* An array of `svn_prop_t *' changes to wc properties.  If adding
+     to this array, allocate the svn_prop_t and its contents in
+     wcprop_changes->pool, so that it has the same lifetime as this
+     svn_client_commit_item_t.
+
+     See http://subversion.tigris.org/issues/show_bug.cgi?id=806 for 
+     what would happen if the post-commit process didn't group these
+     changes together with all other changes to the item :-). */
+  apr_array_header_t *wcprop_changes;
+
 } svn_client_commit_item_t;
 
 
