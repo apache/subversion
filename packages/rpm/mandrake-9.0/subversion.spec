@@ -197,7 +197,7 @@ LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
 	--enable-maintainer-mode \
 	--enable-shared \
 	--enable-dso \
-	--with-berkely-db=/usr/BerkeleyDB.4.0 \
+	--with-berkeley-db=/usr/BerkeleyDB.4.0 \
 	--with-apr=/usr/bin/apr-config \
 	--with-apr-util=/usr/bin/apu-config
 %patch0 -p1 
