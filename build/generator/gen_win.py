@@ -80,7 +80,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     move mod_dav_svn/log.c to mod_dav_svn/davlog.c &
     move mod_dav_svn/repos.c to mod_dav_svn/davrepos.c
 
-    Find db-4.0.x or db-4.1.x
+    Find db-4.0.x, db-4.1.x or db-4.2.x
 
     Configure inno-setup
     TODO Revisit this, it may not be needed
@@ -97,11 +97,13 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     self.dblibname = None
 
     #We translate all slashes to windows format later on
-    search = [("libdb41", "db4-win32/lib"),
+    search = [("libdb42", "db4-win32/lib"),
+              ("libdb41", "db4-win32/lib"),
               ("libdb40", "db4-win32/lib")]
 
     if self.bdb_path:
-      search = [("libdb41", self.bdb_path + "/lib"),
+      search = [("libdb42", self.bdb_path + "/lib"),
+                ("libdb41", self.bdb_path + "/lib"),
                 ("libdb40", self.bdb_path + "/lib")] + search
 
     for libname, path in search:
@@ -112,9 +114,9 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         self.dblibpath = libpath
 
     if not self.dblibname:
-      sys.stderr.write("DB not found; assuming db-4.0.X in db4-win32 "
+      sys.stderr.write("DB not found; assuming db-4.2.x in db4-win32 "
                        "by default\n")
-      self.dblibname = "libdb40"
+      self.dblibname = "libdb42"
       self.dblibpath = os.path.join("db4-win32","lib")
 
     self.dbincpath = string.replace(self.dblibpath, "lib", "include")
