@@ -68,6 +68,13 @@ TT,PRE
     font-family: courier new,courier,fixed;
 }
 
+.command, .screen, .programlisting
+{
+    font-family: courier new,courier,fixed;
+    font-style: normal;
+    font-weight: normal;
+}
+
 .filename
 {
     font-family: arial,helvetica,sans-serif;
