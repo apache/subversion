@@ -49,45 +49,45 @@
 #endif
 
 /* -----------------------------------------------------------------------
-   these types (as 'type **') will always be an OUT param
+   %apply-ing of typemaps defined elsewhere
 */
+
 %apply SWIGTYPE **OUTPARAM {
     svn_wc_entry_t **,
     svn_wc_adm_access_t **,
     svn_wc_status_t **
 };
 
-/* we can't use the OUTPARAM cuz that is only for pointers. use the
-   standard OUTPARAM definition for 'int' instead. */
+/* svn_wc_check_wc(wc_format) */
 %apply int *OUTPUT { int * };
 
-/* handle the property hash returned by svn_wc_prop_list */
+/* svn_wc_prop_list() */
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
 
 /* -----------------------------------------------------------------------
-   handle svn_wc_entries_read's entries hash
+   apr_hash_t ** <const char *, const svn_wc_entry_t *>
+   svn_wc_entries_read()
 */
 
-%typemap(python,in,numinputs=0) apr_hash_t **entries = apr_hash_t **OUTPUT;
-%typemap(python,argout,fragment="t_output_helper") apr_hash_t **entries {
+%typemap(python, in, numinputs=0) apr_hash_t **entries = apr_hash_t **OUTPUT;
+%typemap(python, argout, fragment="t_output_helper") apr_hash_t **entries {
     $result = t_output_helper(
         $result,
         svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_wc_entry_t));
 }
 
-
 /* -----------------------------------------------------------------------
-   handle svn_wc_notify_func_t/baton pairs
+   Callback: svn_wc_notify_func_t
+   svn_client_ctx_t
+   svn_wc many
 */
 
 %typemap(python,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
-
   $1 = svn_swig_py_notify_func;
   $2 = $input; /* our function is the baton. */
 }
 
 %typemap(java,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
-
   $1 = svn_swig_java_notify_func;
   $2 = (void*)$input; /* our function is the baton. */
 }
@@ -99,6 +99,22 @@
 %typemap(javaout) svn_wc_notify_func_t {
     return $jnicall;
   }
+
+/* -----------------------------------------------------------------------
+   Callback: svn_wc_status_func_t
+   svn_client_status()
+   svn_wc_get_status_editor()
+*/
+
+%typemap(python,in) (svn_wc_status_func_t status_func, void *status_baton) {
+  $1 = svn_swig_py_status_func;
+  $2 = $input; /* our function is the baton. */
+}
+
+%typemap(perl5,in) (svn_wc_status_func_t status_func, void *status_baton) {
+  $1 = svn_swig_pl_status_func;
+  $2 = $input; /* our function is the baton. */
+}
 
 /* ----------------------------------------------------------------------- */
 
