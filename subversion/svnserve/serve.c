@@ -503,7 +503,6 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_dirent_t *entry;
   const void *key;
   void *val;
-  svn_boolean_t is_dir;
   svn_fs_root_t *root;
   apr_pool_t *subpool;
   svn_boolean_t want_props, want_contents;
@@ -539,15 +538,14 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           entry = apr_pcalloc(pool, sizeof(*entry));
 
           /* kind */
-          SVN_CMD_ERR(svn_fs_is_dir(&is_dir, root, file_path, subpool));
-          entry->kind = is_dir ? svn_node_dir : svn_node_file;
+          entry->kind = fsent->kind;
 
           /* size */
-          if (is_dir)
+          if (entry->kind == svn_node_dir)
             entry->size = 0;
           else
             SVN_CMD_ERR(svn_fs_file_length(&entry->size, root, file_path,
-                                       subpool));
+                                           subpool));
 
           /* has_props */
           SVN_CMD_ERR(svn_fs_node_proplist(&file_props, root, file_path,
@@ -556,8 +554,8 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
           /* created_rev, last_author, time */
           SVN_CMD_ERR(svn_repos_get_committed_info(&entry->created_rev, &cdate,
-                                               &cauthor, root, file_path,
-                                               subpool));
+                                                   &cauthor, root, file_path,
+                                                   subpool));
           entry->last_author = apr_pstrdup (pool, cauthor);
           if (cdate)
             SVN_CMD_ERR(svn_time_from_cstring(&entry->time, cdate, subpool));
@@ -651,11 +649,12 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_boolean_t recurse;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb", &target, &recurse));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb?(?r)", 
+                                 &target, &recurse, &rev));
   if (svn_path_is_empty(target))
     target = NULL;  /* ### Compatibility hack, shouldn't be needed */
-
-  SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
+  if (!SVN_IS_VALID_REVNUM(rev))
+    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   return accept_report(conn, pool, b, rev, target, NULL, FALSE, recurse,
                        FALSE);
 }
@@ -844,7 +843,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
 {
   svn_error_t *err;
   apr_status_t apr_err;
-  const char *client_path, *full_path, *candidate;
+  const char *client_path, *full_path, *repos_root;
   const char *client_path_apr, *root_apr;
   char *buffer;
 
@@ -879,18 +878,16 @@ static svn_error_t *find_repos(const char *url, const char *root,
   full_path = svn_path_canonicalize(full_path, pool);
 
   /* Search for a repository in the full path. */
-  candidate = full_path;
-  while (1)
-    {
-      err = svn_repos_open(repos, candidate, pool);
-      if (err == SVN_NO_ERROR)
-        break;
-      if (!*candidate || strcmp(candidate, "/") == 0)
-        return svn_error_createf(SVN_ERR_RA_SVN_REPOS_NOT_FOUND, NULL,
-                                 "No repository found in '%s'", url);
-      candidate = svn_path_dirname(candidate, pool);
-    }
-  *fs_path = apr_pstrdup(pool, full_path + strlen(candidate));
+  repos_root = svn_repos_find_root_path(full_path, pool);
+  if (!repos_root)
+    return svn_error_createf(SVN_ERR_RA_SVN_REPOS_NOT_FOUND, NULL,
+                             "No repository found in '%s'", url);
+
+  err = svn_repos_open(repos, repos_root, pool);
+  if (err)
+    return svn_error_createf(SVN_ERR_RA_SVN_REPOS_NOT_FOUND, err,
+                             "No repository found in '%s'", url);
+  *fs_path = apr_pstrdup(pool, full_path + strlen(repos_root));
   *repos_url = apr_pstrmemdup(pool, url, strlen(url) - strlen(*fs_path));
   return SVN_NO_ERROR;
 }

@@ -188,7 +188,13 @@ int main(int argc, const char *const *argv)
   init_threads(pool);
 #endif
 
+#ifdef MAX_SECS_TO_LINGER
+  /* ### old APR interface */
   status = apr_socket_create(&sock, APR_INET, SOCK_STREAM, pool);
+#else
+  status = apr_socket_create(&sock, APR_INET, SOCK_STREAM, APR_PROTO_TCP,
+                             pool);
+#endif
   if (status)
     {
       fprintf(stderr, "Can't create server socket: %s\n",
@@ -201,7 +207,7 @@ int main(int argc, const char *const *argv)
   apr_socket_opt_set(sock, APR_SO_REUSEADDR, 1);
 
   apr_sockaddr_info_get(&sa, NULL, APR_INET, SVN_RA_SVN_PORT, 0, pool);
-  status = apr_bind(sock, sa);
+  status = apr_socket_bind(sock, sa);
   if (status)
     {
       fprintf(stderr, "Can't bind server socket: %s\n",
@@ -209,7 +215,7 @@ int main(int argc, const char *const *argv)
       exit(1);
     }
 
-  apr_listen(sock, 7);
+  apr_socket_listen(sock, 7);
 
 #if APR_HAS_FORK
   if (!listen_once)
@@ -225,7 +231,7 @@ int main(int argc, const char *const *argv)
          separate pools, that can be cleared at thread exit, are used */
       connection_pool = svn_pool_create(NULL);
 
-      status = apr_accept(&usock, sock, connection_pool);
+      status = apr_socket_accept(&usock, sock, connection_pool);
       if (handling_mode == connection_mode_fork)
         {
           /* Collect any zombie child processes. */
