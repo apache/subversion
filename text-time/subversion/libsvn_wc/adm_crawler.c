@@ -36,6 +36,7 @@
 #include "svn_base64.h"
 #include "svn_delta.h"
 #include "svn_path.h"
+#include "svn_time.h"
 
 #include "wc.h"
 #include "adm_files.h"

@@ -30,6 +30,7 @@
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_props.h"
+#include "svn_time.h"
 
 #include <assert.h>
 #include <stdlib.h>  /* for qsort() */
