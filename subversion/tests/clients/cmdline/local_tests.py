@@ -574,6 +574,124 @@ def update_from_wc_top():
                                expected_disk_tree,
                                expected_status_tree)
 
+#----------------------------------------------------------------------
+def merge_from_wc_top():
+  "merge into working copy"
+
+  wc_dir = os.path.join (general_wc_dir, 'merge_from_wc_top')
+  
+  if make_repo_and_wc('merge_from_wc_top'):
+    return 1
+  # First change the greek tree to make two files 10 lines long
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  mu_text = ""
+  rho_text = ""
+  for x in range(2,11):
+    mu_text = mu_text + '\nThis is line ' + `x` + ' in mu'
+    rho_text = rho_text + '\nThis is line ' + `x` + ' in rho'
+  svn_test_main.file_append (mu_path, mu_text)
+  svn_test_main.file_append (rho_path, rho_text)  
+
+  # Create expected output tree for initial commit
+  output_list = [ [mu_path, None, {'verb' : 'Changing' }],
+                  [rho_path, None, {'verb' : 'Changing' }] ]
+  expected_output_tree = svn_tree.build_generic_tree(output_list)
+
+  # Create expected status tree : rev 2 for rho and mu.
+  status_list = get_virginal_status_list(wc_dir, '1')
+  for item in status_list:
+    item[2]['repos_rev'] = '2'
+    if (item[0] == mu_path) or (item[0] == rho_path):
+      item[2]['wc_rev'] = '2'
+      item[2]['status'] = '_ '
+  expected_status_tree = svn_tree.build_generic_tree(status_list)
+  
+  # Initial commit.
+  if run_and_verify_commit (wc_dir, expected_output_tree,
+                            expected_status_tree, wc_dir):
+    return 1
+  # Make a backup copy of the working copy
+  wc_backup = os.path.join (general_wc_dir, 'merge_from_wc_top_backup')
+  duplicate_dir(wc_dir, wc_backup)
+
+  # Make a couple of local mods to files
+  svn_test_main.file_append (mu_path, ' Appended to line 10 of mu')
+  svn_test_main.file_append (rho_path, ' Appended to line 10 of rho')
+
+  # Created expected output tree for 'svn ci'
+  output_list = [ [mu_path, None, {'verb' : 'Changing' }],
+                  [rho_path, None, {'verb' : 'Changing' }] ]
+  expected_output_tree = svn_tree.build_generic_tree(output_list)
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but mu and rho should be at revision 3.
+  status_list = get_virginal_status_list(wc_dir, '1')
+  for item in status_list:
+    item[2]['repos_rev'] = '3'
+    if (item[0] == mu_path) or (item[0] == rho_path):
+      item[2]['wc_rev'] = '3'
+      item[2]['status'] = '_ '
+  expected_status_tree = svn_tree.build_generic_tree(status_list)
+
+  # Commit.
+  if run_and_verify_commit (wc_dir, expected_output_tree,
+                            expected_status_tree, wc_dir):
+    return 1
+
+  # Make local mods to wc_backup by recreating mu and rho
+  mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
+  rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
+  fp_mu = open(mu_path_backup, 'w+') # open in 'truncate to zero then write" mode
+  backup_mu_text='This is the new line 1 in the backup copy of mu'
+  for x in range(2,11):
+    backup_mu_text = backup_mu_text + '\nThis is line ' + `x` + ' in mu'
+  fp_mu.write(backup_mu_text)
+  fp_mu.close()
+  
+  fp_rho = open(rho_path_backup, 'w+') # now open rho in write mode
+  backup_rho_text='This is the new line 1 in the backup copy of rho'
+  for x in range(2,11):
+    backup_rho_text = backup_rho_text + '\nThis is line ' + `x` + ' in rho'
+  fp_rho.write(backup_rho_text)
+  fp_rho.close()
+  
+  # Create expected output tree for an update of the wc_backup.
+  output_list = [[os.path.join(wc_backup, 'A', 'mu'),
+                  None, {'status' : 'G '}],
+                 [os.path.join(wc_backup, 'A', 'D', 'G', 'rho'),
+                  None, {'status' : 'G '}]]
+  expected_output_tree = svn_tree.build_generic_tree(output_list)
+  
+  # Create expected disk tree for the update.
+  my_greek_tree = svn_test_main.copy_greek_tree()
+  my_greek_tree[2][1] = 'This is the new line 1 in the backup copy of mu'
+  for x in range(2,11):
+    my_greek_tree[2][1] = my_greek_tree[2][1] + '\nThis is line ' + `x` + ' in mu'
+  my_greek_tree[2][1] = my_greek_tree[2][1] + ' Appended to line 10 of mu'  
+  my_greek_tree[14][1] = 'This is the new line 1 in the backup copy of rho'
+  for x in range(2,11):
+    my_greek_tree[14][1] = my_greek_tree[14][1] + '\nThis is line ' + `x` + ' in rho'
+  my_greek_tree[14][1] = my_greek_tree[14][1] + ' Appended to line 10 of rho'
+  expected_disk_tree = svn_tree.build_generic_tree(my_greek_tree)
+
+  # Create expected status tree for the update.
+  status_list = get_virginal_status_list(wc_backup, '3')
+  for item in status_list:
+    if (item[0] == mu_path_backup) or (item[0] == rho_path_backup):
+      item[2]['status'] = 'M '
+  # Some discrepancy here about whether this should be M or G...M for now.    
+  expected_status_tree = svn_tree.build_generic_tree(status_list)
+  
+  # Do the update and check the results in three ways.
+  return run_and_verify_update(wc_backup,
+                               expected_output_tree,
+                               expected_disk_tree,
+                               expected_status_tree)
+
+
+
+
 
 
 ########################################################################
@@ -585,7 +703,8 @@ test_list = [ None,
               commit_one_file,
               commit_multiple_targets,
               commit_multiple_targets_2,
-              update_from_wc_top
+              update_from_wc_top,
+              merge_from_wc_top
              ]
 
 if __name__ == '__main__':  
