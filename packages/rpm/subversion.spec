@@ -50,7 +50,7 @@ Requires: subversion = %{version}-%{release}
 Requires: apache >= %{apache_version}
 %description devel
 The subversion-devel package includes the static libraries and include files
-for developers interacing with the subversion package.
+for developers interacting with the subversion package.
 
 %package server
 Group: Utilities/System
