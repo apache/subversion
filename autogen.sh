@@ -84,23 +84,23 @@ fi
 
 if test -n "$SKIP_DEPS"; then
   echo "Creating build-outputs.mk (no dependencies)..."
-  ./gen-make.py -s build.conf || gen_failed=1
+  /usr/bin/env python ./gen-make.py -s build.conf || gen_failed=1
 
   ### if apr and apr-util are not subdirs, then this fails. only do it
   ### for the release (from dist.sh; for now)
   if test -n "$RELEASE_MODE"; then
     echo "Creating MSVC files (no dependencies)..."
-    ./gen-make.py -t dsp -s build.conf || gen_failed=1
+    /usr/bin/env python ./gen-make.py -t dsp -s build.conf || gen_failed=1
   fi
 else
   echo "Creating build-outputs.mk..."
-  ./gen-make.py build.conf || gen_failed=1
+  /usr/bin/env python ./gen-make.py build.conf || gen_failed=1
 
   ### if apr and apr-util are not subdirs, then this fails. only do it
   ### for the release (from dist.sh; for now)
   if test -n "$RELEASE_MODE"; then
     echo "Creating MSVC files..."
-    ./gen-make.py -t dsp -s build.conf || gen_failed=1
+    /usr/bin/env python ./gen-make.py -t dsp -s build.conf || gen_failed=1
   fi
 fi
 
