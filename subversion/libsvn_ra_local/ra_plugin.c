@@ -625,6 +625,7 @@ static const svn_ra_plugin_t ra_local_plugin =
   do_checkout,
   do_update,
   do_status,
+  NULL,
   get_log,
   do_check_path
 };
