@@ -3,7 +3,7 @@ directories and greek letters are files.  There are no properties yet;
 once we get file contents working, we'll add properties.
 
 
-                                   A
+                                   A                       iota
           _______________________//|\
          /         ______________/ | \_____________
         mu        /                |               \
