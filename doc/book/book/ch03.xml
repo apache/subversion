@@ -525,8 +525,8 @@
         <computeroutput>L</computeroutput> if you run <command>svn
         status</command> in a directory you are currently running
         <command>svn commit</command> when you are editing the log
-        message.  If there are no running @command{svn}'s, then
-        presumably @command{svn} was forcibly quit or died and the
+        message.  If there are no running <command>svn</command>'s, then
+        presumably <command>svn</command> was forcibly quit or died and the
         lock needs to be cleaned up by running <command>svn
         cleanup</command>.  Locks typically appear if a Subversion
         command is interrupted before completion.</para>
@@ -536,13 +536,13 @@
         or directory is scheduled to be added or modified with
         additional attached history.  This typically happens when you
         <command>svn mv</command> or <command>svn cp</command> a file
-        or directory.  If you see <computeroutput>A @ @
+        or directory.  If you see <computeroutput>A  
         +</computeroutput>, this means the item is scheduled for
         addition-with-history.  It could be a file, or the root of a
-        copied directory.  <computeroutput>_ @ @ +</computeroutput>
+        copied directory.  <computeroutput>_   +</computeroutput>
         means the item is part of a subtree scheduled for
         addition-with-history, i.e. some parent got copied, and its
-        just coming along for the ride.  <computeroutput>M @ @
+        just coming along for the ride.  <computeroutput>M  
         +</computeroutput> means the item is part of a subtree
         scheduled for addition-with-history, <emphasis>and</emphasis>
         it has local mods.  When you commit, first some parent will be
@@ -643,11 +643,11 @@
         +
         +#include &lt;stdio.h&gt;
         
-        int main(void) @{
+        int main(void) {
         -  printf("Sixty-four slices of American Cheese...\n");
         +  printf("Sixty-five slices of American Cheese...\n");
         return 0;
-        @}
+        }
         
         Index: ./README
         ===================================================================
@@ -834,7 +834,7 @@
            
       <para>Another way to specify a log message is to place it in a
         file, and pass the filename with the <option>-F</option>
-        switch.  If you fail to specify either the @option{-m} or
+        switch.  If you fail to specify either the <option>-m</option> or
         <option>-F</option> switch, then Subversion will
         automatically launch your favorite <command>$EDITOR</command>
         for composing a log message.</para>

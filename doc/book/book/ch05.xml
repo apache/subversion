@@ -1049,7 +1049,7 @@ $ svnadmin dump myrepos > dumpfile
 * Dumped revision 0.
 * Dumped revision 1.
 * Dumped revision 2.
-@hellip;
+&hellip;
     </screen>
 
     <para>This stream describes every revision in your repository as a

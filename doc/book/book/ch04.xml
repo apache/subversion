@@ -515,7 +515,7 @@
 
     <para>The script also accepts a separate configuration file for
       applying properties to specific files and directories matching a
-      regular expression that are @emph{added} to the repository.
+      regular expression that are <emphasis>added</emphasis> to the repository.
       This script will not modify properties of already existing files
       or directories in the repository.  This configuration file is
       specified to <command>svn_load_dirs.pl</command> using the
@@ -547,7 +547,7 @@
       <literal>property_value</literal> columns, you must surround the
       value with either a single or double quote.  You can protect
       single or double quotes with a \ character.  The \ character is
-      removed by this script @emph{only} for whitespace or quote
+      removed by this script <emphasis>only</emphasis> for whitespace or quote
       characters, so you do not need to protect any other characters,
       beyond what you would normally protect for the regular
       expression.</para>
