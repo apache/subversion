@@ -37,7 +37,7 @@ extern "C" {
 /* Minor version number.
    Modify when new functionality is added or new interfaces are
    defined, but all changes are backward compatible. */
-#define SVN_VER_MINOR      0
+#define SVN_VER_MINOR      6
 
 /* Patch number.
    Modify for every released patch. */
@@ -47,8 +47,8 @@ extern "C" {
 /* Descriptive name: If a version number isn't appropriate (e.g., for
    pre-1.0 milestone versions), use this string for the version name
    instead. Otherwise, this symbol should be #undef'd. */
-/* #undef SVN_VER_NAME */
-#define SVN_VER_NAME       "M5"
+#undef SVN_VER_NAME
+/* #define SVN_VER_NAME       "M6" */
 
 
 /* Version tag: A string describing the of the version.
