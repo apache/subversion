@@ -47,7 +47,7 @@ The General Solution:  Trees
 
 Sam TH <sam@uchicago.edu> proposed and began work on a solution
 whereby all important, inspectable information is parsed into a
-general, in-memory tree representation
+general, in-memory tree representation.
 
 By comparing actual vs. expected tree structures, we get automated
 verification.
@@ -65,7 +65,7 @@ Each node in our generic trees have these fields:
 
   * subcommand output
 
-    svn_output.py provides functions to parse commandline output into
+    svntest.tree.* provides functions to parse commandline output into
     a tree.
 
          checkout/update:  a 'status' property is set to a two-character
@@ -79,9 +79,10 @@ Each node in our generic trees have these fields:
 
    * disk verification
 
-       We need a function that can walk a working copy and build a
-       tree in the obvious way -- including all file contents,
-       including all file & dir props.
+     svntest.tree.* also has routines that walk a regular working copy
+     and returns a tree representing disk contents
+
+   * `entries' files
 
        We need a function that can assemble all the 'entries' files
        into a tree.  The 'contents' field can be ignored;  xml
@@ -99,32 +100,30 @@ Each node in our generic trees have these fields:
 
 ------------------------------------------------------------------
 
-The files in this directory, grouped by function:
+The files in this directory:
 
- 
- * svn_test_main.py:      main test framework.
-                          exports client_test(), which runs a list of 
-                             provided tests.
+
+
+* local_tests.py:        tests: client operations using ra_local.
+
+* svntest/               subversion test framework, as a python package.
+
+    * main.py:               global vars, utility routines.
+                             exports run_tests(), the main test routine.
+
+    * svn_tree.py:           infrastructure for SVNTreeNode class.
+
+                             * tree constructors, tree comparison routines.
+
+                             * routines to parse subcommand output into
+                               specific kinds of trees.
+
+                             * routines to parse a working copy and
+                               entries files into specific kinds of trees.
+
+    * entry.py               parse an `entries' file (not used yet)
+
+
 
  * example_tests1.py:     template test script.
                           demonstrates how to write tests and then
-                             call svn_test_main.client_test() on them.
- -----
-
- * svn_tree.py:           infrastructure for SVNTreeNode class.
-
-                          * tree constructors, tree comparison routines.
-
-                          * routines to parse subcommand output into
-                            specific kinds of trees.
-
-                          * routines to parse a working copy and
-                            entries files into specific kinds of trees.
- -----
-
- * local_tests.py:        tests: client operations using ra_local.
-
- * dav_tests.py:          tests: client operations using ra_dav
-
- * xml_tests.py:          tests: client operations to/from XML.
-
