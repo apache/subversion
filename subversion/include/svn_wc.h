@@ -928,7 +928,7 @@ svn_error_t *svn_wc_mark_missing_deleted (const char *path,
                        
 
 
-/* Ensure that an administrative area exists for @a path, so that @a
+/** Ensure that an administrative area exists for @a path, so that @a
  * path is a working copy subdir based on @a url at @a revision, and
  * with repository UUID @a uuid.
  *
