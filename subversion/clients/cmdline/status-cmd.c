@@ -79,7 +79,7 @@ svn_cl__status (apr_getopt_t *os,
                                          FALSE, pool));
 
   /* We want our -u statuses to be against HEAD. */
-  rev.kind = svn_opt_revision_unspecified;
+  rev.kind = svn_opt_revision_head;
 
   /* The notification callback. */
   svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE, 
