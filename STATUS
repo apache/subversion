@@ -129,3 +129,12 @@ Candidate changes:
       "854 translated messages, 14 untranslated messages." (in 1.1.x).
     Votes:
       +1: nori, lundblad
+
+  * r10379,r10380,r10384,r10469,r10470,r10487
+    Support creation of zip archives for Windows.
+    Justification:
+      Long since planed.
+    Notes:
+      r10487 really doesn't need a vote, but I included it for completness.
+    Votes:
+      +1: breser
