@@ -63,7 +63,7 @@ enum svn_client_revision_kind {
   svn_client_revision_unspecified,   /* No revision information given. */
   svn_client_revision_number,        /* revision given as number */
   svn_client_revision_date,          /* revision given as date */
-  svn_client_revision_commited,      /* rev of most recent change */
+  svn_client_revision_committed,     /* rev of most recent change */
   svn_client_revision_previous,      /* (rev of most recent change) - 1 */
   svn_client_revision_current,       /* .svn/entries revision */
   svn_client_revision_head           /* repository youngest */
