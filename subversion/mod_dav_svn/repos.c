@@ -1139,6 +1139,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   svn_error_t *serr;
   dav_error *err;
   int had_slash;
+  dav_locktoken_list *ltl;
 
   repo_name = dav_svn_get_repo_name(r);
   xslt_uri = dav_svn_get_xslt_uri(r);
@@ -1318,6 +1319,42 @@ static dav_error * dav_svn_get_resource(request_rec *r,
         }      
     }
 
+  /* if a locktoken header is present, push the token into the FS */
+  err = dav_get_locktoken_list(r, &ltl);
+  
+  /* ### dav_get_locktoken_list claims to return a NULL list when no
+     locktokens are present.  But it actually throws this error
+     instead!  So we're deliberately trapping/ignoring it.  */
+  if (err && (err->error_id != DAV_ERR_IF_ABSENT))
+    return err;
+
+  if (ltl)
+    {
+      svn_fs_access_t *access_ctx;
+
+      serr = svn_fs_get_access (&access_ctx, repos->fs);
+      if (serr)
+        {
+          const char *new_msg = "Lock token is in request, but no username.";
+          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
+                                                          NULL, new_msg);
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                        "%s", serr->message);
+          svn_error_clear(serr);
+          return dav_svn_convert_err (sanitized_error,
+                                      HTTP_BAD_REQUEST,
+                                      apr_psprintf(r->pool, new_msg),
+                                      r->pool);
+        }
+
+      serr = svn_fs_access_add_lock_token (access_ctx,
+                                           ltl->locktoken->uuid_str);
+      if (serr)
+        return dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Error pushing token into filesystem.",
+                                    r->pool);
+    }
+
 
   /* Figure out the type of the resource. Note that we have a PARSE step
      which is separate from a PREP step. This is because the PARSE can
@@ -1377,6 +1414,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 }
 
 
+/* Helper func:  return the parent of PATH, allocated in POOL. */
 static const char *get_parent_path(const char *path,
                                    apr_pool_t *pool)
 {
@@ -1384,15 +1422,20 @@ static const char *get_parent_path(const char *path,
   const char *parentpath, *basename;
   char *tmp = apr_pstrdup(pool, path);
 
-  /* Remove any trailing slash; they make svn_path_split() assert and die.*/
   len = strlen(tmp);
-  if (tmp[len-1] == '/')
-    tmp[len-1] = '\0';
 
-  svn_path_split(tmp, &parentpath, &basename, pool);
-  
-  /* ### preserve the slash on the parent?? */
-  return parentpath;
+  if (len > 0)
+    {
+      /* Remove any trailing slash; else svn_path_split() asserts. */
+      if (tmp[len-1] == '/')
+        tmp[len-1] = '\0';      
+      svn_path_split(tmp, &parentpath, &basename, pool);
+
+      /* ### preserve the slash on the parent?? */
+      return parentpath;
+    }  
+
+  return path;
 }
 
 

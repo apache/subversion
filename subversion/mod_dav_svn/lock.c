@@ -33,13 +33,6 @@
 #include "dav_svn.h"
 
 
-/* Every provider needs to define an opaque locktoken type. */
-struct dav_locktoken
-{
-  /* This is identical to the 'token' field of an svn_lock_t. */
-  const char *uuid_str;
-};
-
 
 /* Helper func:  convert an svn_lock_t to a dav_lock, allocated in
    pool.  EXISTS_P indicates whether slock->path actually exists or not.
@@ -62,9 +55,10 @@ svn_lock_to_dav_lock(dav_lock **dlock,
   token->uuid_str = apr_pstrdup(pool, slock->token);
   lock->locktoken = token;
 
-  /* ### I really don't understand the difference here: */
-  lock->owner = apr_pstrdup(pool, slock->owner);
-  lock->auth_user = lock->owner;
+  /* ### todo:  map lock->comment to lock->owner. */
+
+  /* the svn_lock_t 'owner' is the actual authenticated owner of the lock. */
+  lock->auth_user = apr_pstrdup(pool, slock->owner);
 
   /* ### This is absurd.  apr_time.h has an apr_time_t->time_t func,
      but not the reverse?? */
@@ -83,31 +77,44 @@ svn_lock_to_dav_lock(dav_lock **dlock,
 
 
 /* Helper func:  convert a dav_lock to an svn_lock_t, allocated in pool. */
-static void
+static dav_error *
 dav_lock_to_svn_lock(svn_lock_t **slock,
                      const dav_lock *dlock,
                      const char *path,
                      apr_pool_t *pool)
 {
-  svn_lock_t *lock = apr_pcalloc(pool, sizeof(*lock));
+  svn_lock_t *lock;
 
+  /* Sanity checks */
+  if (dlock->type != DAV_LOCKTYPE_WRITE)
+    return dav_new_error(pool, HTTP_BAD_REQUEST,
+                         DAV_ERR_LOCK_SAVE_LOCK,
+                         "Only 'write' locks are supported.");
+
+  if (dlock->scope != DAV_LOCKSCOPE_EXCLUSIVE)
+    return dav_new_error(pool, HTTP_BAD_REQUEST,
+                         DAV_ERR_LOCK_SAVE_LOCK,
+                         "Only exclusive locks are supported.");
+
+  lock = apr_pcalloc(pool, sizeof(*lock));
   lock->path = apr_pstrdup(pool, path);
-
   lock->token = apr_pstrdup(pool, dlock->locktoken->uuid_str);
 
   /* DAV has no concept of lock creationdate, so assume 'now' */
   lock->creation_date = apr_time_now();
 
-  /* ### Should we use 'auth_user' field instead?  What's the difference? */
-  if (dlock->owner)
-    lock->owner = apr_pstrdup(pool, dlock->owner);
+  if (dlock->auth_user)
+    lock->owner = apr_pstrdup(pool, dlock->auth_user);
   
+  /* ### todo:  if (dlock->owner) --> store in lock->comment */
+
   if (dlock->timeout)
     lock->expiration_date = (apr_time_t)dlock->timeout * APR_USEC_PER_SEC;
   else
     lock->expiration_date = 0; /* never expires */
 
   *slock = lock;
+  return 0;
 }
 
 
@@ -272,8 +279,8 @@ dav_svn_create_lock(dav_lockdb *lockdb,
   
   dlock->rectype = DAV_LOCKREC_DIRECT;
   dlock->is_locknull = resource->exists;
-  dlock->scope = DAV_LOCKSCOPE_EXCLUSIVE;
-  dlock->type = DAV_LOCKTYPE_WRITE;
+  dlock->scope = DAV_LOCKSCOPE_UNKNOWN;
+  dlock->type = DAV_LOCKTYPE_UNKNOWN;
   dlock->depth = 0;
 
   /* Generate a UUID. */
@@ -448,15 +455,18 @@ dav_svn_append_locks(dav_lockdb *lockdb,
 {
   svn_lock_t *slock;
   svn_error_t *serr;
+  dav_error *derr;
 
   if (lock->next)
     return dav_new_error(resource->pool, HTTP_BAD_REQUEST,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Tried to attach multiple locks to a resource.");
 
-  /* Convert the dav_lock into an svn_lock_t. */
-  dav_lock_to_svn_lock(&slock, lock, resource->info->repos_path,
-                       resource->pool);
+  /* Convert the dav_lock into an svn_lock_t. */  
+  derr = dav_lock_to_svn_lock(&slock, lock, resource->info->repos_path,
+                              resource->pool);
+  if (derr)
+    return derr;
 
   /* Now use the svn_lock_t to actually perform the lock. */
   serr = svn_repos_fs_attach_lock(slock,

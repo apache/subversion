@@ -565,6 +565,14 @@ svn_error_t *dav_svn_authz_read(svn_boolean_t *allowed,
                                 apr_pool_t *pool);
 
 
+/* Every provider needs to define an opaque locktoken type. */
+struct dav_locktoken
+{
+  /* This is identical to the 'token' field of an svn_lock_t. */
+  const char *uuid_str;
+};
+
+
 
 #ifdef __cplusplus
 }
