@@ -91,7 +91,8 @@ typedef struct {
   svn_stringbuf_t *vsn_name;       /* DAV:version-name for this resource */
   svn_stringbuf_t *vsn_url;        /* DAV:checked-in for this resource */
   svn_stringbuf_t *committed_date; /* DAV:creationdate for this resource */
-  svn_stringbuf_t *last_author;    /* DAV:creator-displayname for this resource */
+  svn_stringbuf_t *last_author;    /* DAV:creator-displayname for this
+                                      resource */
 
   /* We only invoke set_prop() on targets listed in valid_targets.
      Some entities (such as directories that have had changes
