@@ -890,6 +890,113 @@ add_prop_to_hash (void *baton,
 }
 
 
+/* Helper for svn_ra_dav__get_file() and svn_ra_dav__get_dir().
+   Loop over the properties in RSRC->propset, examining namespaces and
+   such to filter Subversion, custom, etc. properties.  
+
+   User-visible props get added to the PROPS hash (alloced in POOL).
+   Special working copy props get forward to set_special_wc_prop().
+*/
+static svn_error_t *
+filter_props (apr_hash_t *props,
+              svn_ra_dav_resource_t *rsrc,
+              apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, rsrc->propset); hi; hi = apr_hash_next(hi)) 
+    {
+      const void *key;
+      void *val;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      
+      /* If the property is in the 'custom' namespace, then it's a
+         normal user-controlled property coming from the fs.  Just
+         strip off this prefix and add to the hash. */
+#define NSLEN (sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1)
+      if (strncmp(key, SVN_DAV_PROP_NS_CUSTOM, NSLEN) == 0)
+        apr_hash_set(props, &((const char *)key)[NSLEN], 
+                     APR_HASH_KEY_STRING, 
+                     svn_string_create(val, pool));    
+#undef NSLEN
+      /* ### Backwards compatibility: look for old 'svn:custom:'
+         namespace and strip it away, instead of the good URI
+         namespace.  REMOVE this block someday! */
+#define NSLEN (sizeof(SVN_PROP_CUSTOM_PREFIX) - 1)
+      if (strncmp(key, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
+        apr_hash_set(props, &((const char *)key)[NSLEN], 
+                     APR_HASH_KEY_STRING, 
+                     svn_string_create(val, pool));    
+#undef NSLEN
+      /* If the property is in the 'svn' namespace, then it's a
+         normal user-controlled property coming from the fs.  Just
+         strip off the URI prefix, add an 'svn:', and add to the hash. */
+#define NSLEN (sizeof(SVN_DAV_PROP_NS_SVN) - 1)
+      if (strncmp(key, SVN_DAV_PROP_NS_SVN, NSLEN) == 0)
+        {
+          const char *newkey = apr_pstrcat(pool,
+                                           SVN_PROP_PREFIX,
+                                           (const char *)key + NSLEN);
+          apr_hash_set(props, newkey, 
+                       APR_HASH_KEY_STRING, 
+                       svn_string_create(val, pool));    
+        }
+#undef NSLEN
+      /* ### Backwards compatibility: look for old 'svn:' instead
+         of the good URI namespace.  Filter out
+         baseline-rel-path. REMOVE this block someday! */
+#define NSLEN (sizeof(SVN_PROP_PREFIX) - 1)
+      if (strncmp(key, SVN_PROP_PREFIX, NSLEN) == 0)
+        {
+          if (strcmp((const char *)key + NSLEN,
+                     "baseline-relative-path") != 0)
+            apr_hash_set(props, key,
+                         APR_HASH_KEY_STRING, 
+                         svn_string_create(val, pool));    
+        }
+#undef NSLEN
+      else if (strcmp(key, SVN_RA_DAV__PROP_CHECKED_IN) == 0)
+        {
+          /* ### I *think* we have to remove any old
+             version-url-rev if we're going to set a new
+             version-url.  Not sure it's absolutely necessary
+             here, though (and note that this doesn't take effect
+             until the props hash is interpreted, meaning there
+             may still be a small window during which the old rev
+             is still around while the new url is on disk.
+             Sigh.)  
+             
+             And of course, we can't just store NULL in the hash,
+             because apr hash tables don't work that way.  So we
+             have to store SVN_INVALID_REVNUM as the actual
+             revision.  */
+          
+          {
+            const char *invalid_rev = apr_psprintf (pool,
+                                                    "%" SVN_REVNUM_T_FMT,
+                                                    SVN_INVALID_REVNUM);
+            
+            apr_hash_set(props, SVN_RA_DAV__LP_VSN_URL_REV,
+                         APR_HASH_KEY_STRING,
+                         svn_string_create(invalid_rev, pool));
+          }
+          
+          apr_hash_set(props, SVN_RA_DAV__LP_VSN_URL,
+                       APR_HASH_KEY_STRING, 
+                       svn_string_create(val, pool));
+        }
+      else
+        /* If it's one of the 'entry' props, this func will
+           recognize the DAV: name & add it to the hash mapped to a
+           new name recognized by libsvn_wc. */
+        SVN_ERR( set_special_wc_prop (key, val, add_prop_to_hash, props, 
+                                      pool) );
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_ra_dav__get_file(void *session_baton,
                                   const char *path,
                                   svn_revnum_t revision,
@@ -898,7 +1005,6 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
                                   apr_hash_t **props)
 {
   svn_ra_dav_resource_t *rsrc;
-  apr_hash_index_t *hi;
   const char *final_url;
   svn_ra_session_t *ras = (svn_ra_session_t *) session_baton;
   const char *url = svn_path_url_add_component (ras->url, path, ras->pool);
@@ -939,104 +1045,8 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
       SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras->sess, final_url, 
                                               NULL, NULL /* all props */, 
                                               ras->pool) ); 
-
       *props = apr_hash_make(ras->pool);
-
-      for (hi = apr_hash_first(ras->pool, rsrc->propset); 
-           hi; 
-           hi = apr_hash_next(hi)) 
-        {
-          const void *key;
-          void *val;
-
-          apr_hash_this(hi, &key, NULL, &val);
-
-          /* If the property is in the 'custom' namespace, then it's a
-             normal user-controlled property coming from the fs.  Just
-             strip off this prefix and add to the hash. */
-#define NSLEN (sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1)
-          if (strncmp(key, SVN_DAV_PROP_NS_CUSTOM, NSLEN) == 0)
-            apr_hash_set(*props, &((const char *)key)[NSLEN], 
-                         APR_HASH_KEY_STRING, 
-                         svn_string_create(val, ras->pool));    
-#undef NSLEN
-          /* ### Backwards compatibility: look for old 'svn:custom:'
-             namespace and strip it away, instead of the good URI
-             namespace.  REMOVE this block someday! */
-#define NSLEN (sizeof(SVN_PROP_CUSTOM_PREFIX) - 1)
-          if (strncmp(key, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
-            apr_hash_set(*props, &((const char *)key)[NSLEN], 
-                         APR_HASH_KEY_STRING, 
-                         svn_string_create(val, ras->pool));    
-#undef NSLEN
-
-          /* If the property is in the 'svn' namespace, then it's a
-             normal user-controlled property coming from the fs.  Just
-             strip off the URI prefix, add an 'svn:', and add to the hash. */
-#define NSLEN (sizeof(SVN_DAV_PROP_NS_SVN) - 1)
-          if (strncmp(key, SVN_DAV_PROP_NS_SVN, NSLEN) == 0)
-            {
-              const char *newkey = apr_pstrcat(ras->pool,
-                                               SVN_PROP_PREFIX,
-                                               (const char *)key + NSLEN);
-              apr_hash_set(*props, newkey, 
-                           APR_HASH_KEY_STRING, 
-                           svn_string_create(val, ras->pool));    
-            }
-#undef NSLEN
-          /* ### Backwards compatibility: look for old 'svn:' instead
-             of the good URI namespace.  Filter out
-             baseline-rel-path. REMOVE this block someday! */
-#define NSLEN (sizeof(SVN_PROP_PREFIX) - 1)
-          if (strncmp(key, SVN_PROP_PREFIX, NSLEN) == 0)
-            {
-              if (strcmp((const char *)key + NSLEN,
-                         "baseline-relative-path") != 0)
-                apr_hash_set(*props, key,
-                             APR_HASH_KEY_STRING, 
-                             svn_string_create(val, ras->pool));    
-            }
-#undef NSLEN
-          
-          else if (strcmp(key, SVN_RA_DAV__PROP_CHECKED_IN) == 0)
-            {
-              /* ### I *think* we have to remove any old
-                 version-url-rev if we're going to set a new
-                 version-url.  Not sure it's absolutely necessary
-                 here, though (and note that this doesn't take effect
-                 until the props hash is interpreted, meaning there
-                 may still be a small window during which the old rev
-                 is still around while the new url is on disk.
-                 Sigh.)  
-
-                 And of course, we can't just store NULL in the hash,
-                 because apr hash tables don't work that way.  So we
-                 have to store SVN_INVALID_REVNUM as the actual
-                 revision.  */
-
-              {
-                const char *invalid_rev = apr_psprintf (ras->pool,
-                                                        "%" SVN_REVNUM_T_FMT,
-                                                        SVN_INVALID_REVNUM);
-                
-                apr_hash_set(*props, SVN_RA_DAV__LP_VSN_URL_REV,
-                             APR_HASH_KEY_STRING,
-                             svn_string_create(invalid_rev, ras->pool));
-              }
-
-              apr_hash_set(*props, SVN_RA_DAV__LP_VSN_URL,
-                           APR_HASH_KEY_STRING, 
-                           svn_string_create(val, ras->pool));
-            }
-          else
-            /* If it's one of the 'entry' props, this func will
-               recognize the DAV: name & add it to the hash mapped to a
-               new name recognized by libsvn_wc. */
-            SVN_ERR( set_special_wc_prop ((const char *) key,
-                                          (const char *) val,
-                                          add_prop_to_hash, *props, 
-                                          ras->pool) );
-        }
+      SVN_ERR (filter_props (*props, rsrc, ras->pool));
     }
 
   return SVN_NO_ERROR;
@@ -1144,12 +1154,12 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
                       sizeof(SVN_DAV_PROP_NS_CUSTOM)) == 0)
             entry->has_props = TRUE;
 
-          else if (strncmp((const char *)kkey, SVN_PROP_CUSTOM_PREFIX,
-                           sizeof(SVN_PROP_CUSTOM_PREFIX)) == 0)
-            entry->has_props = TRUE;
-
           else if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_SVN,
                            sizeof(SVN_DAV_PROP_NS_SVN)) == 0)
+            entry->has_props = TRUE;
+
+          else if (strncmp((const char *)kkey, SVN_PROP_CUSTOM_PREFIX,
+                           sizeof(SVN_PROP_CUSTOM_PREFIX)) == 0)
             entry->has_props = TRUE;
 
           else if (strncmp((const char *)kkey, SVN_PROP_PREFIX,
@@ -1189,102 +1199,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
                                               ras->pool) ); 
 
       *props = apr_hash_make(ras->pool);
-
-      for (hi = apr_hash_first(ras->pool, rsrc->propset); 
-           hi; 
-           hi = apr_hash_next(hi)) 
-        {
-          const void *key;
-          void *val;
-
-          apr_hash_this(hi, &key, NULL, &val);
-
-          /* If the property is in the 'custom' namespace, then it's a
-             normal user-controlled property coming from the fs.  Just
-             strip off this prefix and add to the hash. */
-#define NSLEN (sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1)
-          if (strncmp(key, SVN_DAV_PROP_NS_CUSTOM, NSLEN) == 0)
-            apr_hash_set(*props, &((const char *)key)[NSLEN], 
-                         APR_HASH_KEY_STRING, 
-                         svn_string_create(val, ras->pool));    
-#undef NSLEN
-          /* ### Backwards compatibility: look for old 'svn:custom:'
-             namespace and strip it away, instead of the good URI
-             namespace.  REMOVE this block someday! */
-#define NSLEN (sizeof(SVN_PROP_CUSTOM_PREFIX) - 1)
-          if (strncmp(key, SVN_PROP_CUSTOM_PREFIX, NSLEN) == 0)
-            apr_hash_set(*props, &((const char *)key)[NSLEN], 
-                         APR_HASH_KEY_STRING, 
-                         svn_string_create(val, ras->pool));    
-#undef NSLEN
-
-          /* If the property is in the 'svn' namespace, then it's a
-             normal user-controlled property coming from the fs.  Just
-             strip off the URI prefix, add an 'svn:', and add to the hash. */
-#define NSLEN (sizeof(SVN_DAV_PROP_NS_SVN) - 1)
-          if (strncmp(key, SVN_DAV_PROP_NS_SVN, NSLEN) == 0)
-            {
-              const char *newkey = apr_pstrcat(ras->pool,
-                                               SVN_PROP_PREFIX,
-                                               (const char *)key + NSLEN);
-              apr_hash_set(*props, newkey, 
-                           APR_HASH_KEY_STRING, 
-                           svn_string_create(val, ras->pool));    
-            }
-#undef NSLEN
-          /* ### Backwards compatibility: look for old 'svn:' instead
-             of the good URI namespace.  Filter out
-             baseline-rel-path. REMOVE this block someday! */
-#define NSLEN (sizeof(SVN_PROP_PREFIX) - 1)
-          if (strncmp(key, SVN_PROP_PREFIX, NSLEN) == 0)
-            {
-              if (strcmp((const char *)key + NSLEN,
-                         "baseline-relative-path") != 0)
-                apr_hash_set(*props, key,
-                             APR_HASH_KEY_STRING, 
-                             svn_string_create(val, ras->pool));    
-            }
-#undef NSLEN
-          
-          else if (strcmp(key, SVN_RA_DAV__PROP_CHECKED_IN) == 0)
-            {
-              /* ### I *think* we have to remove any old
-                 version-url-rev if we're going to set a new
-                 version-url.  Not sure it's absolutely necessary
-                 here, though (and note that this doesn't take effect
-                 until the props hash is interpreted, meaning there
-                 may still be a small window during which the old rev
-                 is still around while the new url is on disk.
-                 Sigh.)  
-
-                 And of course, we can't just store NULL in the hash,
-                 because apr hash tables don't work that way.  So we
-                 have to store SVN_INVALID_REVNUM as the actual
-                 revision.  */
-
-              {
-                const char *invalid_rev = apr_psprintf (ras->pool,
-                                                        "%" SVN_REVNUM_T_FMT,
-                                                        SVN_INVALID_REVNUM);
-                
-                apr_hash_set(*props, SVN_RA_DAV__LP_VSN_URL_REV,
-                             APR_HASH_KEY_STRING,
-                             svn_string_create(invalid_rev, ras->pool));
-              }
-
-              apr_hash_set(*props, SVN_RA_DAV__LP_VSN_URL,
-                           APR_HASH_KEY_STRING, 
-                           svn_string_create(val, ras->pool));
-            }
-          else
-            /* If it's one of the 'entry' props, this func will
-               recognize the DAV: name & add it to the hash mapped to a
-               new name recognized by libsvn_wc. */
-            SVN_ERR( set_special_wc_prop ((const char *) key,
-                                          (const char *) val,
-                                          add_prop_to_hash, *props, 
-                                          ras->pool) );
-        }
+      SVN_ERR (filter_props (*props, rsrc, ras->pool));
     }
 
   return SVN_NO_ERROR;
