@@ -118,6 +118,12 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r13090
+    javahl binding cleanup of usage of path and url.
+    Justification:
+      javahl binding change only to be more stable on input path and url.
+    Votes:
+      +1: pmayweg
 
 Approved changes (further review is welcome, but not required):
 
