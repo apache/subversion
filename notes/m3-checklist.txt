@@ -41,7 +41,7 @@ What's left to do:
     just addressing the question of text vs binary, that's all we need
     for now.
 
-* DB_RUN_RECOVERY:  (kfogel, and maybe gstein?)
+* DB_RUN_RECOVERY:  (kfogel, with gstein on guru duty)
 
    Still need to write cross-process locking function so that the
    repository can repair itself when this error is returned.  We
