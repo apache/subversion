@@ -1,4 +1,4 @@
-/* node-rev.c --- storing and retrieving NODE-VERSION skels
+/* node-rev.c --- storing and retrieving NODE-REVISION skels
  *
  * ====================================================================
  * Copyright (c) 2000 CollabNet.  All rights reserved.
