@@ -1,4 +1,3 @@
-                             -*- outline -*-
 
                          The Road to Milestone 3
                          =======================
