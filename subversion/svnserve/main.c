@@ -123,7 +123,7 @@ static const apr_getopt_option_t svnserve__options[] =
   };
 
 
-static void enable_message_translation()
+static void enable_message_translation(void)
 {
   /* discard the result; if setlocale fails, we'll just be serving
      the english text instead of the localized version. */
