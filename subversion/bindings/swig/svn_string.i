@@ -26,6 +26,24 @@ typedef struct svn_stringbuf_t svn_stringbuf_t;
 typedef struct svn_string_t svn_string_t;
 
 /* -----------------------------------------------------------------------
+   generic OUT param typemap for svn_string(buf)_t. we can share these
+   because we only refer to the ->data and ->len values.
+*/
+%typemap(python,argout) RET_STRING {
+    PyObject *s;
+    if (*$1 == NULL) {
+        Py_INCREF(Py_None);
+        s = Py_None;
+    }
+    else {
+        s = PyString_FromStringAndSize((*$1)->data, (*$1)->len);
+        if (s == NULL)
+            return NULL;
+    }
+    $result = t_output_helper($result, s);
+}
+
+/* -----------------------------------------------------------------------
    TYPE: svn_stringbuf_t
 */
 
@@ -49,11 +67,7 @@ typedef struct svn_string_t svn_string_t;
 %typemap(ignore) svn_stringbuf_t ** (svn_stringbuf_t *temp) {
     $1 = &temp;
 }
-%typemap(python, argout) svn_stringbuf_t ** {
-    $result = t_output_helper($result,
-                              PyString_FromStringAndSize((*$1)->data,
-							 (*$1)->len));
-}
+%apply RET_STRING { svn_stringbuf_t ** };
 
 
 /* -----------------------------------------------------------------------
@@ -82,11 +96,7 @@ typedef struct svn_string_t svn_string_t;
 %typemap(ignore) svn_string_t ** (svn_string_t *temp) {
     $1 = &temp;
 }
-%typemap(python,argout) svn_string_t ** {
-    $result = t_output_helper($result,
-                              PyString_FromStringAndSize((*$1)->data,
-							 (*$1)->len));
-}
+%apply RET_STRING { svn_string_t ** };
 
 /* -----------------------------------------------------------------------
    define a way to return a 'const char *'

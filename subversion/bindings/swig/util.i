@@ -59,19 +59,20 @@
 /* -----------------------------------------------------------------------
    fix up the svn_stream_read() ptr/len arguments
 */
-%typemap(python, in) (char *buffer, apr_size_t *len) {
+%typemap(python, in) (char *buffer, apr_size_t *len) ($*2_type temp) {
     if (!PyInt_Check($input)) {
         PyErr_SetString(PyExc_TypeError,
                         "expecting an integer for the buffer size");
         return NULL;
     }
-    $2 = PyInt_AsLong($input);
-    if ($2 < 0) {
+    temp = PyInt_AsLong($input);
+    if (temp < 0) {
         PyErr_SetString(PyExc_ValueError,
                         "buffer size must be a positive integer");
         return NULL;
     }
-    $1 = malloc($2);
+    $1 = malloc(temp);
+    $2 = ($2_ltype)&temp;
 }
 
 %typemap(python, argout) (char *buffer, apr_size_t *len) {
