@@ -42,9 +42,6 @@ svn_cl__revert (apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  int i;
-  svn_boolean_t recursive = opt_state->recursive;
-  apr_pool_t *subpool;
 
   SVN_ERR (svn_opt_args_to_target_array (&targets, os, 
                                          opt_state->targets,
@@ -60,32 +57,7 @@ svn_cl__revert (apr_getopt_t *os,
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
                           FALSE, pool);
 
-  subpool = svn_pool_create (pool);
-  for (i = 0; i < targets->nelts; i++)
-    {
-      const char *target = ((const char **) (targets->elts))[i];
-      svn_error_t *err;
+  SVN_ERR (svn_client_revert (targets, opt_state->recursive, ctx, pool));
 
-      err = svn_client_revert (target, recursive, ctx, subpool);
-      if (err)
-        {
-          if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-            {
-              if (!opt_state->quiet)
-                {
-                  svn_handle_warning (stderr, err);
-                }
-              svn_error_clear (err);
-              continue;
-            }
-          else
-            return err;
-        }
-
-      SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-      svn_pool_clear (subpool);
-    }
-  
-  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }

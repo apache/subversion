@@ -36,16 +36,16 @@
 
 /*** Code. ***/
 
-svn_error_t *
-svn_client_revert (const char *path,
-                   svn_boolean_t recursive,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+static svn_error_t *
+revert (const char *path,
+        svn_boolean_t recursive,
+        svn_client_ctx_t *ctx,
+        apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t wc_root;
   svn_boolean_t use_commit_times;
-  svn_error_t *err;
+  svn_error_t *err, *err2;
 
   /* We need to open the parent of PATH, if PATH is not a wc root, but we
      don't know if path is a directory.  It gets a bit messy. */
@@ -97,12 +97,70 @@ svn_client_revert (const char *path,
                        ctx->notify_func, ctx->notify_baton,
                        pool);
 
-  out:
+ out:
+  /* Close the ADM, but only return errors from that operation if we
+     aren't already in an errorful state. */
+  err2 = svn_wc_adm_close (adm_access);
+  if (err && err2)
+    svn_error_clear (err2);
+  else if (err2)
+    err = err2;
 
-  SVN_ERR (svn_wc_adm_close (adm_access));
+  return err;
+}
+
+
+svn_error_t *
+svn_client_revert (const apr_array_header_t *paths,
+                   svn_boolean_t recursive,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_error_t *err = SVN_NO_ERROR;
+  int i;
+
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX (paths, i, const char *);
+
+      err = revert (path, recursive, ctx, subpool);
+      if (err)
+        {
+          /* If one of the targets isn't versioned, just send a 'skip'
+             notification and move on. */
+          if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+            {
+              if (ctx->notify_func)
+                (*ctx->notify_func) (ctx->notify_baton, path,
+                                     svn_wc_notify_skip, svn_node_unknown,
+                                     NULL, svn_wc_notify_state_unknown,
+                                     svn_wc_notify_state_unknown,
+                                     SVN_INVALID_REVNUM);
+              svn_error_clear (err);
+              err = SVN_NO_ERROR;
+              continue;
+            }
+          else
+            goto errorful;
+        }
+
+      /* See if we've been asked to cancel this operation. */
+      if ((ctx->cancel_func) 
+          && ((err = ctx->cancel_func (ctx->cancel_baton))))
+        goto errorful;
+
+      svn_pool_clear (subpool);
+    }
+  
+  svn_pool_destroy (subpool);
+  
+ errorful:
 
   /* Sleep to ensure timestamp integrity. */
   svn_sleep_for_timestamps ();
 
   return err;
 }
+
+

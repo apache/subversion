@@ -912,18 +912,17 @@ svn_client_relocate (const char *dir,
                      apr_pool_t *pool);
 
 
-/** Restore the pristine version of a working copy @a path, effectively
- * undoing any local mods.  If @a path is a directory, and @a recursive 
- * is @a true, this will be a recursive operation.
+/** Restore the pristine version of a working copy @a paths,
+ * effectively undoing any local mods.  For each path in @a paths, if
+ * it is a directory, and @a recursive is @a true, this will be a
+ * recursive operation.
  *
- * If @a ctx->notify_func is non-null, then for each item reverted, call
- * @a ctx->notify_func with @a ctx->notify_baton and the path of the reverted 
- * item.
- *
- * If @a path is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
+ * If @a ctx->notify_func is non-null, then for each item reverted,
+ * call @a ctx->notify_func with @a ctx->notify_baton and the path of
+ * the reverted item.
  */
 svn_error_t *
-svn_client_revert (const char *path,
+svn_client_revert (const apr_array_header_t *paths,
                    svn_boolean_t recursive,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
