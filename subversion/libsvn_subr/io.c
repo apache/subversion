@@ -365,11 +365,6 @@ svn_io_append_file (svn_stringbuf_t *src, svn_stringbuf_t *dst, apr_pool_t *pool
 #define SVN_TRANSLATE
 */
 
-/* #define this to turn on newline translation */
-/*
-#define SVN_TRANSLATE_NEWLINES
-*/
-
 #ifdef SVN_TRANSLATE
 /* Return an SVN error for status ERR, using VERB and PATH to describe
    the error, and allocating the svn_error_t in POOL.  */
@@ -609,6 +604,57 @@ translate_keyword (char *buf,
   /* No translations were successful.  Return FALSE. */
   return FALSE;
 }
+
+
+/* Translate NEWLINE_BUF (length of NEWLINE_LEN) to the newline format
+   specified in EOL_STR (length of EOL_STR_LEN), and write the
+   translated thing to FILE (whose path is DST_PATH).  
+
+   SRC_FORMAT (length *SRC_FORMAT_LEN) is a cache of the first newline
+   found while processing SRC_PATH.  If the current newline is not the
+   same style as that of SRC_FORMAT, look to the REPAIR parameter.  If
+   REPAIR is TRUE, ignore the inconsistency, else return an
+   SVN_ERR_IO_INCONSISTENT_EOL error.  If we are examining the first
+   newline in the file, copy it to {SRC_FORMAT, *SRC_FORMAT_LEN} to
+   use for later consistency checks.  
+
+   Use POOL to allocate errors that may occur. */
+static svn_error_t *
+translate_newline (const char *eol_str,
+                   apr_size_t eol_str_len,
+                   char *src_format,
+                   apr_size_t *src_format_len,
+                   char *newline_buf,
+                   apr_size_t newline_len,
+                   const char *src_path,
+                   const char *dst_path,
+                   apr_file_t *dst,
+                   svn_boolean_t repair,
+                   apr_pool_t *pool)
+{
+  /* If this is the first newline we've seen, cache it
+     future comparisons, else compare it with our cache to
+     check for consistency. */
+  if (*src_format_len)
+    {
+      /* Comparing with cache.  If we are inconsistent and
+         we are NOT repairing the file, generate an error! */
+      if ((! repair) &&
+          ((*src_format_len != newline_len) ||
+           (strncmp (src_format, newline_buf, newline_len)))) 
+        return svn_error_create
+          (SVN_ERR_IO_INCONSISTENT_EOL, 0, NULL, pool, src_path);
+    }
+  else
+    {
+      /* This is our first line ending, so cache it before
+         handling it. */
+      strncpy (src_format, newline_buf, newline_len);
+      *src_format_len = newline_len;
+    }
+  /* Translate the newline */
+  return translate_write (dst, dst_path, eol_str, eol_str_len, pool);
+}
 #endif /* SVN_TRANSLATE */
 
 svn_error_t *
@@ -623,22 +669,32 @@ svn_io_copy_and_translate (const char *src,
                            svn_boolean_t expand,
                            apr_pool_t *pool)
 {
-#ifdef SVN_TRANSLATE
+#ifndef SVN_TRANSLATE
+  return svn_io_copy_file (svn_stringbuf_create (src, pool),
+                           svn_stringbuf_create (dst, pool),
+                           pool);
+#else /* ! SVN_TRANSLATE */
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   apr_status_t apr_err;
   svn_error_t *err = SVN_NO_ERROR;
   apr_status_t read_err;
   char c;
   apr_size_t len;
-  char       newline_buf[3] = { 0 };
+  apr_size_t eol_str_len = eol_str ? strlen (eol_str) : 0;
+  char       newline_buf[2] = { 0 };
   apr_size_t newline_off = 0;
   char       keyword_buf[SVN_KEYWORD_MAX_LEN] = { 0 };
   apr_size_t keyword_off = 0;
+  char       src_format[2] = { 0 };
+  apr_size_t src_format_len = 0;
 
-#ifdef SVN_TRANSLATE_NEWLINES
-  char       src_format[3] = { 0 };
-#endif /* SVN_TRANSLATE_NEWLINES */
+#if 0 /* ### todo:  here's a little shortcut */
+  if (! (eol_str || revision || date || author || url))
+    return svn_io_copy_file (svn_stringbuf_create (src, pool),
+                             svn_stringbuf_create (dst, pool),
+                             pool);
 
+#endif /* 0 */
   /* Open source file. */
   apr_err = apr_file_open (&s, src, APR_READ, APR_OS_DEFAULT, pool);
   if (apr_err)
@@ -683,10 +739,16 @@ svn_io_copy_and_translate (const char *src,
               /* We've reached the end of the file.  Close up shop.
                  This means flushing our temporary streams.  Since we
                  shouldn't have data in *both* temporary streams,
-                 order doesn't matter here.  */
-              if (((len = newline_off)) && 
-                  ((err = translate_write (d, dst, newline_buf, len, pool))))
-                goto cleanup;
+                 order doesn't matter here.  However, the newline
+                 buffer will need to be translated.  */
+              if (newline_off)
+                {
+                  if ((err = translate_newline (eol_str, eol_str_len, 
+                                                src_format, &src_format_len,
+                                                newline_buf, newline_off,
+                                                src, dst, d, repair, pool)))
+                    goto cleanup;
+                }
               if (((len = keyword_off)) && 
                   ((err = translate_write (d, dst, keyword_buf, len, pool))))
                 goto cleanup;
@@ -718,17 +780,20 @@ svn_io_copy_and_translate (const char *src,
         case '$':
           /* A-ha!  A keyword delimiter!  */
 
-#ifdef SVN_TRANSLATE_NEWLINES
           /* If we are currently collecting up a possible newline
              string, this puts an end to that collection.  Flush the
              newline buffer (translating as necessary) and move
              along. */
           if (newline_off)
             {
-              /* ### todo: Translate the newline here. */
+              if ((err = translate_newline (eol_str, eol_str_len, 
+                                            src_format, &src_format_len,
+                                            newline_buf, newline_off,
+                                            src, dst, d, repair, pool)))
+                goto cleanup;
               newline_off = 0;
+              break;
             }
-#endif /* SVN_TRANSLATE_NEWLINES */
 
           /* Put this character into the keyword buffer. */
           keyword_buf[keyword_off++] = c;
@@ -776,18 +841,54 @@ svn_io_copy_and_translate (const char *src,
               keyword_off = 0;
             }
 
-#ifdef SVN_TRANSLATE_NEWLINES
-          if (eol_str)
+          if (! eol_str)
             {
-              /* Handle this as a translatable newline */
+              /* Not doing newline translation...just write out the char. */
+              if ((err = translate_write (d, dst, (const void *)&c, 1, pool)))
+                goto cleanup;
               break;
             }
-#else /* SVN_TRANSLATE_NEWLINES */
-          /* Write out this character. */
-          if ((err = translate_write (d, dst, (const void *)&c, 1, pool)))
-            goto cleanup;
-#endif /* SVN_TRANSLATE_NEWLINES */
 
+          /* If we aren't yet tracking the development of a newline
+             string, begin so now. */
+          if (! newline_off)
+            {
+              newline_buf[newline_off++] = c;
+              break;
+            }
+          else
+            {
+              /* We're already tracking a newline string, so let's see
+                 if this is part of the same newline, or the start of
+                 a new one. */
+              char c0 = newline_buf[0];
+
+              if (c0 == c)
+                {
+                  /* The first '\n' (or '\r') is the newline... */
+                  if ((err = translate_newline (eol_str, eol_str_len, 
+                                                src_format, &src_format_len,
+                                                newline_buf, 1,
+                                                src, dst, d, repair, pool)))
+                    goto cleanup;
+
+                  /* ...the second '\n' (or '\r') is at least part of our next
+                     newline. */
+                  newline_buf[0] = c;
+                  newline_off = 1;
+                }
+              else
+                {
+                  /* '\n\r' or '\n\r' is our newline */
+                  newline_buf[newline_off++] = c;
+                  if ((err = translate_newline (eol_str, eol_str_len, 
+                                                src_format, &src_format_len,
+                                                newline_buf, 2,
+                                                src, dst, d, repair, pool)))
+                    goto cleanup;
+                  newline_off = 0;
+                }
+            }
           break;
 
         default:
@@ -809,23 +910,26 @@ svn_io_copy_and_translate (const char *src,
               break;
             }
 
-#ifdef SVN_TRANSLATE_NEWLINES
           /* If we're in a potential newline separator, this character
              terminates that search, so we need to flush our newline
              buffer (translating as necessary) and then output this
              character.  */
           if (newline_off)
             {
-              /* ### todo:  I mean it--do the work! */
-              break;
+              if ((err = translate_newline (eol_str, eol_str_len, 
+                                            src_format, &src_format_len,
+                                            newline_buf, newline_off,
+                                            src, dst, d, repair, pool)))
+                goto cleanup;
+              newline_off = 0;
             }
-#endif /* SVN_TRANSLATE_NEWLINES */
 
           /* Write out this character. */
           if ((err = translate_write (d, dst, (const void *)&c, 1, pool)))
             goto cleanup;
           break; 
-        }
+
+        } /* switch (c) */
     }
   return SVN_NO_ERROR;
 
@@ -836,11 +940,7 @@ svn_io_copy_and_translate (const char *src,
     apr_file_close (d); /* toss */
   apr_file_remove (dst, pool); /* toss */
   return err;
-#else /* SVN_TRANSLATE */
-  return svn_io_copy_file (svn_stringbuf_create (src, pool),
-                           svn_stringbuf_create (dst, pool),
-                           pool);
-#endif /* SVN_TRANSLATE */
+#endif /* ! SVN_TRANSLATE */
 }
 
 
