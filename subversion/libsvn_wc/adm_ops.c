@@ -1185,6 +1185,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
                      const char *name,
                      svn_wc_entry_t *entry,
                      apr_uint32_t *modify_flags,
+                     svn_boolean_t use_commit_times,
                      apr_pool_t *pool)
 {
   const char *fullpath, *thing, *base_thing;
@@ -1277,6 +1278,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
              file. */
           svn_subst_keywords_t *keywords;
           const char *eol;
+          
           base_thing = svn_wc__text_base_path (fullpath, 0, pool);
 
           SVN_ERR (svn_wc__get_eol_style (NULL, &eol, fullpath, adm_access,
@@ -1301,8 +1303,20 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
           SVN_ERR (svn_wc__maybe_set_executable (NULL, fullpath, adm_access,
                                                  pool));
 
+          /* Possibly set the timestamp to last-commit-time, rather
+             than the 'now' time that already exists. */
+          if (use_commit_times)
+            {
+              SVN_ERR (svn_io_set_file_affected_time (entry->cmt_date,
+                                                      fullpath, pool));
+              tstamp = entry->cmt_date;
+            }
+          else
+            {
+              SVN_ERR (svn_io_file_affected_time (&tstamp, fullpath, pool));
+            }
+
           /* Modify our entry structure. */
-          SVN_ERR (svn_io_file_affected_time (&tstamp, fullpath, pool));
           *modify_flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
           entry->text_time = tstamp;
         }
@@ -1357,6 +1371,7 @@ svn_error_t *
 svn_wc_revert (const char *path,
                svn_wc_adm_access_t *parent_access,
                svn_boolean_t recursive,
+               svn_boolean_t use_commit_times,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func_t notify_func,
@@ -1529,10 +1544,10 @@ svn_wc_revert (const char *path,
       /* Revert the prop and text mods (if any). */
       if (entry->kind == svn_node_file)
         SVN_ERR (revert_admin_things (parent_access, bname, tmp_entry,
-                                      &modify_flags, pool));
+                                      &modify_flags, use_commit_times, pool));
       if (entry->kind == svn_node_dir)
         SVN_ERR (revert_admin_things (dir_access, NULL, tmp_entry,
-                                      &modify_flags, pool));
+                                      &modify_flags, use_commit_times, pool));
     }
 
   /* Deletions and replacements. */
@@ -1542,10 +1557,10 @@ svn_wc_revert (const char *path,
       /* Revert the prop and text mods (if any). */
       if (entry->kind == svn_node_file)
         SVN_ERR (revert_admin_things (parent_access, bname, tmp_entry,
-                                      &modify_flags, pool));
+                                      &modify_flags, use_commit_times, pool));
       if (entry->kind == svn_node_dir)
         SVN_ERR (revert_admin_things (dir_access, NULL, tmp_entry,
-                                      &modify_flags, pool));
+                                      &modify_flags, use_commit_times, pool));
 
       modify_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
     }
@@ -1621,6 +1636,7 @@ svn_wc_revert (const char *path,
 
           /* Revert the entry. */
           SVN_ERR (svn_wc_revert (full_entry_path, dir_access, TRUE,
+                                  use_commit_times,
                                   cancel_func, cancel_baton,
                                   notify_func, notify_baton, subpool));
 

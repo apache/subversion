@@ -1542,10 +1542,16 @@ svn_error_t *svn_wc_get_actual_target (const char *path,
  *
  * @a target_revision is the repository revision that results from this set
  * of changes.
+ *
+ * If @a use_commit_times is TRUE, then all edited/added files will
+ * have their working timestamp set to the last-committed-time.  If
+ * FALSE, the working files will be touched with the 'now' time.
+ *
  */
 svn_error_t *svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                                        const char *target,
                                        svn_revnum_t target_revision,
+                                       svn_boolean_t use_commit_times,
                                        svn_boolean_t recurse,
                                        svn_wc_notify_func_t notify_func,
                                        void *notify_baton,
@@ -1588,11 +1594,17 @@ svn_error_t *svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
  *
  * @a target_revision is the repository revision that results from this set
  * of changes.
+ *
+ * If @a use_commit_times is TRUE, then all edited/added files will
+ * have their working timestamp set to the last-committed-time.  If
+ * FALSE, the working files will be touched with the 'now' time.
+ *
  */
 svn_error_t *svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                                        const char *target,
                                        svn_revnum_t target_revision,
                                        const char *switch_url,
+                                       svn_boolean_t use_commit_times,
                                        svn_boolean_t recurse,
                                        svn_wc_notify_func_t notify_func,
                                        void *notify_baton,
@@ -1959,6 +1971,10 @@ svn_wc_relocate (const char *path,
  * error (typically @c SVN_ERR_CANCELLED), return that error
  * immediately.
  *
+ * If @a use_commit_times is TRUE, then all reverted working-files
+ * will have their timestamp set to the last-committed-time.  If
+ * FALSE, the reverted working-files will be touched with the 'now' time.
+ *
  * For each item reverted, @a notify_func will be called with @a notify_baton
  * and the path of the reverted item. @a notify_func may be @c NULL if this
  * notification is not needed.
@@ -1967,6 +1983,7 @@ svn_error_t *
 svn_wc_revert (const char *path, 
                svn_wc_adm_access_t *parent_access,
                svn_boolean_t recursive, 
+               svn_boolean_t use_commit_times,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func_t notify_func,

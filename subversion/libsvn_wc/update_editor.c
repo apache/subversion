@@ -73,6 +73,10 @@ struct edit_baton
   /* Whether this edit will descend into subdirs */
   svn_boolean_t recurse;
 
+  /* Need to know if the user wants us to overwrite the 'now' times on
+     edited/added files with the last-commit-time. */
+  svn_boolean_t use_commit_times;
+
   /* Was the root actually opened (was this a non-empty edit)? */
   svn_boolean_t root_opened;
 
@@ -345,6 +349,11 @@ struct file_baton
   /* An array of svn_prop_t structures, representing all the property
      changes to be applied to this file. */
   apr_array_header_t *propchanges;
+
+  /* The last-changed-date of the file.  This is actually a property
+     that comes through as an 'entry prop', and will be used to set
+     the working file's timestamp if it's added.  */
+  const char *last_changed_date;
 
   /* Bump information for the directory this file lives in */
   struct bump_dir_info *bump_info;
@@ -1371,6 +1380,12 @@ change_file_prop (void *file_baton,
      applied. */
   fb->prop_changed = 1;
 
+  /* Special case: if the file is added during a checkout, cache the
+     last-changed-date propval for future use. */
+  if (fb->edit_baton->use_commit_times
+      && (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0))
+    fb->last_changed_date = apr_pstrdup (fb->pool, value->data);
+
   return SVN_NO_ERROR;
 }
 
@@ -1444,6 +1459,10 @@ change_file_prop (void *file_baton,
  * If @a diff3_cmd is non-null, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
  *
+ * If @a timestamp_string is non-null, then use it to set the
+ * timestamp on the final working file.  The string should be
+ * formatted for use by svn_time_from_cstring().
+ *
  * @a pool is used for all bookkeeping work during the installation.
  */
 static svn_error_t *
@@ -1460,6 +1479,7 @@ install_file (svn_wc_notify_state_t *content_state,
               const char *copyfrom_url,
               svn_revnum_t copyfrom_rev,
               const char *diff3_cmd,
+              const char *timestamp_string,
               apr_pool_t *pool)
 {
   apr_file_t *log_fp = NULL;
@@ -1906,9 +1926,23 @@ install_file (svn_wc_notify_state_t *content_state,
       }
     }
 
+  /* This writes a whole bunch of log commands to install entryprops.  */
   if (wc_props)
     accumulate_wcprops (log_accum, base_name, wc_props, pool);
-  
+
+  /* Possibly write a log command to set timestamp on the final
+     working file.  This command should be LAST in the logfile! */
+  if (timestamp_string)
+    svn_xml_make_open_tag (&log_accum,
+                           pool,
+                           svn_xml_self_closing,
+                           SVN_WC__LOG_SET_TIMESTAMP,
+                           SVN_WC__LOG_ATTR_NAME,
+                           base_name,
+                           SVN_WC__LOG_ATTR_TIMESTAMP,
+                           timestamp_string,
+                           NULL);
+
   /* Write our accumulation of log entries into a log file */
   apr_err = apr_file_write_full (log_fp, log_accum->data, 
                                  log_accum->len, NULL);
@@ -2019,6 +2053,7 @@ close_file (void *file_baton,
                          NULL,
                          SVN_INVALID_REVNUM,
                          fb->edit_baton->diff3_cmd,
+                         fb->last_changed_date,
                          pool));
 
   /* We have one less referrer to the directory's bump information. */
@@ -2129,6 +2164,7 @@ make_editor (svn_wc_adm_access_t *adm_access,
              const char *anchor,
              const char *target,
              svn_revnum_t target_revision,
+             svn_boolean_t use_commit_times,
              const char *switch_url,
              svn_boolean_t recurse,
              svn_wc_notify_func_t notify_func,
@@ -2148,6 +2184,7 @@ make_editor (svn_wc_adm_access_t *adm_access,
   /* Construct an edit baton. */
   eb = apr_pcalloc (subpool, sizeof (*eb));
   eb->pool            = subpool;
+  eb->use_commit_times= use_commit_times;
   eb->target_revision = target_revision;
   eb->switch_url      = switch_url;
   eb->adm_access      = adm_access;
@@ -2192,6 +2229,7 @@ svn_error_t *
 svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                           const char *target,
                           svn_revnum_t target_revision,
+                          svn_boolean_t use_commit_times,
                           svn_boolean_t recurse,
                           svn_wc_notify_func_t notify_func,
                           void *notify_baton,
@@ -2204,7 +2242,7 @@ svn_wc_get_update_editor (svn_wc_adm_access_t *anchor,
                           apr_pool_t *pool)
 {
   return make_editor (anchor, svn_wc_adm_access_path (anchor),
-                      target, target_revision, NULL,
+                      target, target_revision, use_commit_times, NULL,
                       recurse, notify_func, notify_baton,
                       cancel_func, cancel_baton, diff3_cmd,
                       editor, edit_baton, traversal_info, pool);
@@ -2216,6 +2254,7 @@ svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
                           const char *target,
                           svn_revnum_t target_revision,
                           const char *switch_url,
+                          svn_boolean_t use_commit_times,
                           svn_boolean_t recurse,
                           svn_wc_notify_func_t notify_func,
                           void *notify_baton,
@@ -2230,7 +2269,7 @@ svn_wc_get_switch_editor (svn_wc_adm_access_t *anchor,
   assert (switch_url);
 
   return make_editor (anchor, svn_wc_adm_access_path (anchor),
-                      target, target_revision, switch_url,
+                      target, target_revision, use_commit_times, switch_url,
                       recurse, notify_func, notify_baton,
                       cancel_func, cancel_baton, diff3_cmd,
                       editor, edit_baton,
@@ -2504,6 +2543,7 @@ svn_wc_add_repos_file (const char *dst_path,
                          TRUE,
                          copyfrom_url,
                          copyfrom_rev,
+                         NULL,
                          NULL,
                          pool));
 

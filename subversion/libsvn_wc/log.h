@@ -74,6 +74,10 @@ extern "C" {
 /* Make file SVN_WC__LOG_ATTR_NAME readonly */
 #define SVN_WC__LOG_READONLY            "readonly"
 
+/* Set SVN_WC__LOG_ATTR_NAME to have timestamp SVN_WC__LOG_ATTR_TIMESTAMP. */
+#define SVN_WC__LOG_SET_TIMESTAMP       "set-timestamp"
+
+
 /* Handle closure after a commit completes successfully:  
  *
  *   If SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME exists, then
@@ -118,6 +122,7 @@ extern "C" {
 #define SVN_WC__LOG_ATTR_REVISION       "revision"
 #define SVN_WC__LOG_ATTR_TEXT_REJFILE   "text-rejfile"
 #define SVN_WC__LOG_ATTR_PROP_REJFILE   "prop-rejfile"
+#define SVN_WC__LOG_ATTR_TIMESTAMP      "timestamp"
 /* The rest are for SVN_WC__LOG_MERGE.  Extend as necessary. */
 #define SVN_WC__LOG_ATTR_ARG_1          "arg1"
 #define SVN_WC__LOG_ATTR_ARG_2          "arg2"

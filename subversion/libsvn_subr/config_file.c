@@ -965,6 +965,9 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "# global-ignores = " SVN_CONFIG_DEFAULT_GLOBAL_IGNORES "\n"
         "### Set log-encoding to the default encoding for log messages\n"
         "# log-encoding = latin1\n"
+        "### Set use-commit-times to make checkout/update/switch/revert\n"
+        "###    put last-committed timestamps on every file touched.\n"
+        "# use-commit-times = yes\n"
         "\n"
         "### See http://subversion.tigris.org/issues/show_bug.cgi?id=668\n"
         "### for what else will soon be customized in this file.\n";
