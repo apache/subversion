@@ -609,6 +609,16 @@ svn_diff3(svn_diff_t **diff,
                        < original_sync)
                   lcs_ol = lcs_ol->next;
 
+                /* If the sync point is the EOF, and our current lcs segment
+                 * doesn't reach as far as EOF, we need to skip this segment.
+                 */
+                if (lcs_om->length == 0 && lcs_ol->length > 0
+                    && lcs_ol->position[0]->offset + lcs_ol->length
+                       == original_sync
+                    && lcs_ol->position[1]->offset + lcs_ol->length
+                       != lcs_ol->next->position[1]->offset)
+                  lcs_ol = lcs_ol->next;
+
                 if (lcs_ol->position[0]->offset <= original_sync)
                     break;
               }
@@ -618,6 +628,16 @@ svn_diff3(svn_diff_t **diff,
 
                 while (lcs_om->position[0]->offset + lcs_om->length
                        < original_sync)
+                  lcs_om = lcs_om->next;
+
+                /* If the sync point is the EOF, and our current lcs segment
+                 * doesn't reach as far as EOF, we need to skip this segment.
+                 */
+                if (lcs_ol->length == 0 && lcs_om->length > 0
+                    && lcs_om->position[0]->offset + lcs_om->length
+                       == original_sync
+                    && lcs_om->position[1]->offset + lcs_om->length
+                       != lcs_om->next->position[1]->offset)
                   lcs_om = lcs_om->next;
 
                 if (lcs_om->position[0]->offset <= original_sync)
