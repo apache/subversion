@@ -91,6 +91,7 @@ svn_fs__bdb_new_node_id (svn_fs_id_t **id_p,
 
   /* Get the current value associated with the `next-key' key in the table.  */
   svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);
+  svn_fs__trail_debug (trail, "nodes", "get");
   SVN_ERR (BDB_WRAP (fs, "allocating new node ID (getting `next-key')",
                     fs->nodes->get (fs->nodes, trail->db_txn,
                                     &query, 
@@ -104,6 +105,7 @@ svn_fs__bdb_new_node_id (svn_fs_id_t **id_p,
   /* Bump to future key. */
   len = result.size;
   svn_fs__next_key (result.data, &len, next_key);
+  svn_fs__trail_debug (trail, "nodes", "put");
   db_err = fs->nodes->put (fs->nodes, trail->db_txn,
                            svn_fs__str_to_dbt (&query, 
                                                (char *) svn_fs__next_key_key),
@@ -168,6 +170,7 @@ svn_fs__bdb_delete_nodes_entry (svn_fs_t *fs,
 {
   DBT key;
   
+  svn_fs__trail_debug (trail, "nodes", "del");
   SVN_ERR (BDB_WRAP (fs, "deleting entry from `nodes' table",
                     fs->nodes->del (fs->nodes,
                                     trail->db_txn,
@@ -194,6 +197,7 @@ svn_fs__bdb_get_node_revision (svn_fs__node_revision_t **noderev_p,
   int db_err;
   DBT key, value;
 
+  svn_fs__trail_debug (trail, "nodes", "get");
   db_err = fs->nodes->get (fs->nodes, trail->db_txn,
                            svn_fs__id_to_dbt (&key, id, trail->pool),
                            svn_fs__result_dbt (&value),
@@ -235,6 +239,7 @@ svn_fs__bdb_put_node_revision (svn_fs_t *fs,
 
   /* Convert from native type into skel */
   SVN_ERR (svn_fs__unparse_node_revision_skel (&skel, noderev, pool));
+  svn_fs__trail_debug (trail, "nodes", "put");
   return BDB_WRAP (fs, "storing node revision",
                   fs->nodes->put (fs->nodes, db_txn,
                                   svn_fs__id_to_dbt (&key, id, pool),

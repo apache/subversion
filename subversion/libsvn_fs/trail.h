@@ -145,6 +145,10 @@ struct trail_t
   /* A record of the side-effects to be undone in various
      circumstances.  */
   struct undo *undo;
+
+#if defined(SVN_FS__TRAIL_DEBUG)
+  struct trail_debug_t *trail_debug;
+#endif
 };
 typedef struct trail_t trail_t;
 
@@ -223,6 +227,12 @@ void svn_fs__record_completion (trail_t *trail,
                                 void *baton);
                                      
 
+/* Record that OPeration is being done on TABLE in the TRAIL. */
+#if defined(SVN_FS__TRAIL_DEBUG)
+void svn_fs__trail_debug (trail_t *trail, const char *table, const char *op);
+#else
+#define svn_fs__trail_debug(trail, table, operation)
+#endif
 
 #ifdef __cplusplus
 }

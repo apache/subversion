@@ -78,6 +78,7 @@ svn_fs__bdb_changes_add (svn_fs_t *fs,
   /* Store a new record into the database. */
   svn_fs__str_to_dbt (&query, (char *) key);
   svn_fs__skel_to_dbt (&value, skel, trail->pool);
+  svn_fs__trail_debug (trail, "changes", "put");
   SVN_ERR (BDB_WRAP (fs, "creating change", 
                     fs->changes->put (fs->changes, trail->db_txn,
                                       &query, &value, 0)));
@@ -94,6 +95,7 @@ svn_fs__bdb_changes_delete (svn_fs_t *fs,
   int db_err;
   DBT query;
   
+  svn_fs__trail_debug (trail, "changes", "del");
   db_err = fs->changes->del (fs->changes, trail->db_txn,
                              svn_fs__str_to_dbt (&query, (char *) key), 0);
 
@@ -250,6 +252,7 @@ svn_fs__bdb_changes_fetch (apr_hash_t **changes_p,
 
   /* Get a cursor on the first record matching KEY, and then loop over
      the records, adding them to the return array. */
+  svn_fs__trail_debug (trail, "changes", "cursor");
   SVN_ERR (BDB_WRAP (fs, "creating cursor for reading changes",
                     fs->changes->cursor (fs->changes, trail->db_txn,
                                          &cursor, 0)));
@@ -339,6 +342,7 @@ svn_fs__bdb_changes_fetch_raw (apr_array_header_t **changes_p,
 
   /* Get a cursor on the first record matching KEY, and then loop over
      the records, adding them to the return array. */
+  svn_fs__trail_debug (trail, "changes", "cursor");
   SVN_ERR (BDB_WRAP (fs, "creating cursor for reading changes",
                     fs->changes->cursor (fs->changes, trail->db_txn,
                                          &cursor, 0)));

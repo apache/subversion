@@ -25,6 +25,45 @@
 #include "trail.h"
 
 
+#if defined(SVN_FS__TRAIL_DEBUG)
+
+struct trail_debug_t
+{
+  struct trail_debug_t *prev;
+  const char *table;
+  const char *op;
+};
+
+void
+svn_fs__trail_debug (trail_t *trail, const char *table, const char *op)
+{
+  struct trail_debug_t *trail_debug;
+
+  trail_debug = apr_palloc (trail->pool, sizeof (*trail_debug));
+  trail_debug->prev = trail->trail_debug;
+  trail_debug->table = table;
+  trail_debug->op = op;
+  trail->trail_debug = trail_debug;
+}
+
+void
+print_trail_debug (trail_t *trail)
+{
+  struct trail_debug_t *trail_debug;
+
+  trail_debug = trail->trail_debug;
+  while (trail_debug)
+    {
+      fprintf (stderr, "(%s, %s) ", trail_debug->table, trail_debug->op);
+      trail_debug = trail_debug->prev;
+    }
+  fprintf (stderr, "\n");
+}
+#else
+#define print_trail_debug(trail)
+#endif /* defined(SVN_FS__TRAIL_DEBUG)
+
+
 /* A single action to be undone.  Actions are chained so that later
    actions point to earlier actions.  Thus, walking the chain and
    applying the functions should undo actions in the reverse of the
@@ -135,6 +174,8 @@ svn_fs__retry_txn (svn_fs_t *fs,
         {
           /* The transaction succeeded!  Commit it.  */
           SVN_ERR (commit_trail (trail, fs));
+
+          print_trail_debug (trail);
 
           return SVN_NO_ERROR;
         }

@@ -80,6 +80,7 @@ put_copy (svn_fs_t *fs,
      will not attempt to modify COPY_ID, so the cast belongs here.  */
   svn_fs__str_to_dbt (&key, (char *) copy_id);
   svn_fs__skel_to_dbt (&value, copy_skel, trail->pool);
+  svn_fs__trail_debug (trail, "copies", "put");
   SVN_ERR (BDB_WRAP (fs, "storing copy record",
                     fs->copies->put (fs->copies, trail->db_txn,
                                      &key, &value, 0)));
@@ -102,6 +103,7 @@ svn_fs__bdb_reserve_copy_id (const char **id_p,
 
   /* Get the current value associated with the `next-id' key in the
      copies table.  */
+  svn_fs__trail_debug (trail, "copies", "get");
   SVN_ERR (BDB_WRAP (fs, "allocating new copy ID (getting `next-key')",
                     fs->copies->get (fs->copies, trail->db_txn,
                                      &query, svn_fs__result_dbt (&result), 
@@ -114,6 +116,7 @@ svn_fs__bdb_reserve_copy_id (const char **id_p,
   /* Bump to future key. */
   len = result.size;
   svn_fs__next_key (result.data, &len, next_key);
+  svn_fs__trail_debug (trail, "copies", "put");
   db_err = fs->copies->put (fs->copies, trail->db_txn,
                             svn_fs__str_to_dbt (&query, 
                                                 (char *) svn_fs__next_key_key),
@@ -149,6 +152,7 @@ svn_fs__bdb_delete_copy (svn_fs_t *fs,
   DBT key;
 
   svn_fs__str_to_dbt (&key, (char *) copy_id);
+  svn_fs__trail_debug (trail, "copies", "del");
   return BDB_WRAP (fs, "deleting entry from `copies' table",
                   fs->copies->del (fs->copies, trail->db_txn, &key, 0));
 }
@@ -167,6 +171,7 @@ svn_fs__bdb_get_copy (svn_fs__copy_t **copy_p,
 
   /* Only in the context of this function do we know that the DB call
      will not attempt to modify copy_id, so the cast belongs here.  */
+  svn_fs__trail_debug (trail, "copies", "get");
   db_err = fs->copies->get (fs->copies, trail->db_txn,
                             svn_fs__str_to_dbt (&key, (char *) copy_id),
                             svn_fs__result_dbt (&value),

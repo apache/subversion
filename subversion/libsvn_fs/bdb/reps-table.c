@@ -76,6 +76,7 @@ svn_fs__bdb_read_rep (svn_fs__representation_t **rep_p,
   int db_err;
   DBT query, result;
 
+  svn_fs__trail_debug (trail, "representations", "get");
   db_err = fs->representations->get
     (fs->representations,
      trail->db_txn,
@@ -116,6 +117,7 @@ svn_fs__bdb_write_rep (svn_fs_t *fs,
   SVN_ERR (svn_fs__unparse_representation_skel (&skel, rep, trail->pool));
 
   /* Now write the record. */
+  svn_fs__trail_debug (trail, "representations", "put");
   SVN_ERR (BDB_WRAP (fs, "storing representation",
                     fs->representations->put
                     (fs->representations, trail->db_txn,
@@ -142,6 +144,7 @@ svn_fs__bdb_write_new_rep (const char **key,
 
   /* Get the current value associated with `next-key'.  */
   svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key);
+  svn_fs__trail_debug (trail, "representations", "get");
   SVN_ERR (BDB_WRAP (fs, "allocating new representation (getting next-key)",
                     fs->representations->get (fs->representations,
                                               trail->db_txn,
@@ -158,6 +161,7 @@ svn_fs__bdb_write_new_rep (const char **key,
   /* Bump to future key. */
   len = result.size;
   svn_fs__next_key (result.data, &len, next_key);
+  svn_fs__trail_debug (trail, "representations", "put");
   db_err = fs->representations->put
     (fs->representations, trail->db_txn,
      svn_fs__str_to_dbt (&query, (char *) svn_fs__next_key_key),
@@ -176,6 +180,7 @@ svn_fs__bdb_delete_rep (svn_fs_t *fs, const char *key, trail_t *trail)
   int db_err;
   DBT query;
 
+  svn_fs__trail_debug (trail, "representations", "del");
   db_err = fs->representations->del
     (fs->representations, trail->db_txn,
      svn_fs__str_to_dbt (&query, (char *) key), 0);
