@@ -6,6 +6,7 @@
 for execfile in gen-make.py \
                 dist.sh \
                 buildcheck.sh \
+		build/PrintPath \
                 ac-helpers/get-neon-ver.sh \
                 ac-helpers/gnu-diff.sh \
                 ac-helpers/gnu-patch.sh \
@@ -26,11 +27,11 @@ done
 # ### eventually, we can/should toss this in favor of simply using
 # ### APR's libtool. deferring to a second round of change...
 #
-echo "Copying libtool helper files..."
 
 # Under Solaris 8, `which' prints "no blah in path1 path2..." if it
 # can't find the target.  The grep -v is to filter that out.
-libtoolize=`which glibtoolize libtoolize 2>/dev/null | grep -v '^no ' | head -1`
+libtoolize="`./build/PrintPath glibtoolize libtoolize`"
+
 if [ "x$libtoolize" = "x" ]; then
     echo "libtoolize not found in path"
     exit 1
@@ -38,14 +39,15 @@ fi
 
 $libtoolize --copy --automake
 
-ltpath=`dirname $libtoolize`
-ltfile=`cd $ltpath/../share/aclocal ; pwd`/libtool.m4
+ltpath="`dirname $libtoolize`"
+ltfile="`cd $ltpath/../share/aclocal ; pwd`"/libtool.m4
 
 if [ ! -f $ltfile ]; then
     echo "$ltfile not found"
     exit 1
 fi
 
+echo "Copying libtool helper: $ltfile"
 cp $ltfile ac-helpers/libtool.m4
 
 # This is just temporary until people's workspaces are cleared -- remove
