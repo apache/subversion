@@ -727,6 +727,14 @@ svn_wc__open_props (apr_file_t **handle,
 
   /* Check if path is a file or a dir. */
   SVN_ERR (svn_io_check_path (path, &kind, pool));
+  if (kind == svn_node_none)
+    {
+      /* Something changed, yet we can't find the local working directory
+         to put the change in place. */
+      /* ### we probably need to record a "missing" entry */
+      return svn_error_createf (SVN_ERR_WC_PATH_NOT_FOUND, 0, NULL, pool,
+                                "open_props: path '%s' not found", path);
+    }
 
   /* If file, split the path. */
   if (kind == svn_node_file)
