@@ -40,20 +40,14 @@ svn_cl__import (apr_getopt_t *os,
 {
   apr_array_header_t *targets;
   svn_stringbuf_t *message;
-
   svn_stringbuf_t *path;
   svn_stringbuf_t *url;
   svn_stringbuf_t *new_entry;
   svn_stringbuf_t *printpath;
-
   const svn_delta_edit_fns_t *trace_editor;
   void *trace_edit_baton;
-
   svn_client_auth_baton_t *auth_baton;
-  
-  svn_revnum_t new_rev;  /* The revision resulting from the commit. */
-  const char *date;      /* Server-side date of the commit. */
-  const char *author;    /* Server-side author of the commit. */
+  svn_client_commit_info_t *commit_info = NULL;
 
   /* Take our message from ARGV or a FILE */
   if (opt_state->filedata) 
@@ -133,7 +127,7 @@ svn_cl__import (apr_getopt_t *os,
                                             printpath,
                                             pool));
 
-  SVN_ERR (svn_client_import (&new_rev, &date, &author,
+  SVN_ERR (svn_client_import (&commit_info,
                               NULL, NULL,
                               opt_state->quiet ? NULL : trace_editor, 
                               opt_state->quiet ? NULL : trace_edit_baton,
@@ -146,11 +140,8 @@ svn_cl__import (apr_getopt_t *os,
                               opt_state->start_revision,
                               pool));
 
-  if (SVN_IS_VALID_REVNUM (new_rev))
-    printf ("Imported revision %ld.\n", new_rev);
-  else
-    printf ("Import succeeded.\n");
-
+  if (commit_info)
+    svn_cl__print_commit_info (commit_info);
 
   return SVN_NO_ERROR;
 }

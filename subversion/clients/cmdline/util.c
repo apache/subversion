@@ -219,10 +219,7 @@ svn_cl__stringlist_to_array(svn_stringbuf_t *buffer, apr_pool_t *pool)
   return array;
 } 
 
-/* Return the canonical command table entry for CMD (which may be the
- * entry for CMD itself, or some other entry if CMD is an alias).
- * If CMD is not found, return null.
- */
+
 const svn_cl__cmd_desc_t *
 svn_cl__get_canonical_command (const char *cmd)
 {
@@ -237,6 +234,16 @@ svn_cl__get_canonical_command (const char *cmd)
   return cmd_desc;
 }
 
+
+void
+svn_cl__print_commit_info (svn_client_commit_info_t *commit_info)
+{
+  if ((commit_info) 
+      && (SVN_IS_VALID_REVNUM (commit_info->revision)))
+    printf ("Committed revision %ld.\n", commit_info->revision);
+
+  return;
+}
 
 
 /* 

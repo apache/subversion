@@ -115,6 +115,15 @@ typedef struct svn_client_proplist_item_s
 } svn_client_proplist_item_t;
 
 
+/* Information about commits passed back to client from this module. */
+typedef struct svn_client_commit_info_t
+{
+  svn_revnum_t revision; /* just-committed revision. */
+  const char *date;      /* server-side date of the commit. */
+  const char *author;    /* author of the commit. */
+} svn_client_commit_info_t;
+
+
 /* Names of files that contain authentication information.
 
    These filenames are decided by libsvn_client, since this library
@@ -213,21 +222,25 @@ svn_client_add (svn_stringbuf_t *path,
                 apr_pool_t *pool);
 
 /* If PATH is a URL, use the AUTH_BATON and MESSAGE to immediately
-   attempt to commit the creation of the directory URL in the repository.
+   attempt to commit the creation of the directory URL in the
+   repository.  If the commit succeeds, allocate (in POOL) and
+   populate *COMMIT_INFO.
 
    Else, create the directory on disk, and attempt to schedule it for
    addition (using svn_client_add, whose docstring you should
    read). */
 svn_error_t *
-svn_client_mkdir (svn_stringbuf_t *path,
+svn_client_mkdir (svn_client_commit_info_t **commit_info,
+                  svn_stringbuf_t *path,
                   svn_client_auth_baton_t *auth_baton,
                   svn_stringbuf_t *message,
                   apr_pool_t *pool);
                   
 
 /* If PATH is a URL, use the AUTH_BATON and MESSAGE to immediately
-   attempt to commit a deletion of the URL from the repository.
-
+   attempt to commit a deletion of the URL from the repository.  If
+   the commit succeeds, allocate (in POOL) and populate *COMMIT_INFO.
+  
    Else, schedule a working copy PATH for removal from the repository.
    PATH's parent must be under revision control.  If FORCE is set,
    then PATH itself will be recursively removed as well; otherwise
@@ -236,7 +249,8 @@ svn_client_mkdir (svn_stringbuf_t *path,
    until a commit occurs.  This scheduling can be removed with
    svn_client_revert. */
 svn_error_t *
-svn_client_delete (svn_stringbuf_t *path,
+svn_client_delete (svn_client_commit_info_t **commit_info,
+                   svn_stringbuf_t *path,
                    svn_boolean_t force,
                    svn_client_auth_baton_t *auth_baton,
                    svn_stringbuf_t *message,
@@ -244,53 +258,48 @@ svn_client_delete (svn_stringbuf_t *path,
 
 
 /* Import a tree, using optional pre- and post-commit hook editors
- * (BEFORE_EDITOR, BEFORE_EDIT_BATON, and AFTER_EDITOR,
- * AFTER_EDIT_BATON).  These editors are purely optional and exist
- * only for extensibility; pass four NULLs here if you don't need
- * them.
- *
- * Set *COMMITTED_REVISION, *COMMITTED_DATE, and *COMMITTED_AUTHOR to
- * the number, server-side date, and author of the new revision,
- * respectively.  Any of these may be NULL, in which case not touched.
- * If not NULL, but some or all of the information is unavailable, set
- * to SVN_INVALID_REVNUM, NULL, and/or NULL respectively.
- *
- * Store LOG_MSG as the log of the commit.
- * 
- * PATH is the path to local tree being imported.  PATH can be a file
- * or directory.
- *
- * URL is the repository directory where the imported data is placed.
- *
- * NEW_ENTRY is the new entry created in the repository directory
- * identified by URL.
- *
- * If PATH is a file, that file is imported as NEW_ENTRY.  If PATH is
- * a directory, the contents of that directory are imported, under a
- * new directory the NEW_ENTRY in the repository.  Note and the
- * directory itself is not imported; that is, the basename of PATH is
- * not part of the import.
- *
- * If PATH is a directory and NEW_ENTRY is null, then the contents of
- * PATH are imported directly into the repository directory identified
- * by URL.  NEW_ENTRY may not be the empty string.
- *
- * If NEW_ENTRY already exists in the youngest revision, return error.
- * 
- * If XML_DST is non-NULL, it is a file in which to store the xml
- * result of the commit, and REVISION is used as the revision.
- * 
- * Use POOL for all allocation.
- * 
- * ### kff todo: This import is similar to cvs import, in that it does
- * not change the source tree into a working copy.  However, this
- * behavior confuses most people, and I think eventually svn _should_
- * turn the tree into a working copy, or at least should offer the
- * option. However, doing so is a bit involved, and we don't need it
- * right now.  */
-svn_error_t *svn_client_import (svn_revnum_t *committed_rev,
-                                const char **committed_date,
-                                const char **committed_author,
+   (BEFORE_EDITOR, BEFORE_EDIT_BATON, and AFTER_EDITOR,
+   AFTER_EDIT_BATON).  These editors are purely optional and exist
+   only for extensibility; pass four NULLs here if you don't need
+   them.
+  
+   If the import succeeds, allocate (in POOL) and populate
+   *COMMIT_INFO.
+  
+   Store LOG_MSG as the log of the commit.
+   
+   PATH is the path to local tree being imported.  PATH can be a file
+   or directory.
+  
+   URL is the repository directory where the imported data is placed.
+  
+   NEW_ENTRY is the new entry created in the repository directory
+   identified by URL.
+  
+   If PATH is a file, that file is imported as NEW_ENTRY.  If PATH is
+   a directory, the contents of that directory are imported, under a
+   new directory the NEW_ENTRY in the repository.  Note and the
+   directory itself is not imported; that is, the basename of PATH is
+   not part of the import.
+  
+   If PATH is a directory and NEW_ENTRY is null, then the contents of
+   PATH are imported directly into the repository directory identified
+   by URL.  NEW_ENTRY may not be the empty string.
+  
+   If NEW_ENTRY already exists in the youngest revision, return error.
+   
+   If XML_DST is non-NULL, it is a file in which to store the xml
+   result of the commit, and REVISION is used as the revision.
+   
+   Use POOL for all allocation.
+   
+   ### kff todo: This import is similar to cvs import, in that it does
+   not change the source tree into a working copy.  However, this
+   behavior confuses most people, and I think eventually svn _should_
+   turn the tree into a working copy, or at least should offer the
+   option. However, doing so is a bit involved, and we don't need it
+   right now.  */
+svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
                                 const svn_delta_edit_fns_t *before_editor,
                                 void *before_edit_baton,
                                 const svn_delta_edit_fns_t *after_editor,
@@ -311,14 +320,9 @@ svn_error_t *svn_client_import (svn_revnum_t *committed_rev,
    only for extensibility; pass four NULLs here if you don't need
    them.
 
-   Set *COMMITTED_REVISION, *COMMITTED_DATE, and *COMMITTED_AUTHOR to
-   the number, server-side date, and author of the new revision,
-   respectively.  Any of these may be NULL, in which case not touched.
-   If not NULL, but the date/author information is unavailable, then
-   *COMMITTED_DATE and *COMMITTED_AUTHOR will be set to NULL.
-
-   Store LOG_MSG as the log of the commit.
-
+   If the commit succeeds, allocate (in POOL) and populate
+   *COMMIT_INFO.
+  
    TARGETS is an array of svn_stringbuf_t * paths to commit.  They need
    not be canonicalized nor condensed; this function will take care of
    that.
@@ -338,9 +342,7 @@ svn_error_t *svn_client_import (svn_revnum_t *committed_rev,
    be committed.
  */
 svn_error_t *
-svn_client_commit (svn_revnum_t *committed_rev,
-                   const char **committed_date,
-                   const char **committed_author,
+svn_client_commit (svn_client_commit_info_t **commit_info,
                    const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
@@ -390,20 +392,20 @@ svn_client_status (apr_hash_t **statushash,
 
 
 /* Invoke RECEIVER with RECEIVER_BATON on each log message from START
- * to END in turn.  
- *
- * PATHS contains all the working copy paths (as svn_stringbuf_t *'s)
- * for which log messages are desired; the common prefix of PATHS
- * determines the repository and auth info.  RECEIVER is invoked only
- * on messages whose revisions involved a change to some path in
- * PATHS.
- *
- * ### todo: the above paragraph is not fully implemented yet.
- *
- * If DISCOVER_CHANGED_PATHS is set, then the `changed_paths' argument
- * to RECEIVER will be passed on each invocation.
- *
- * Use POOL for any temporary allocation.
+   to END in turn.  
+  
+   PATHS contains all the working copy paths (as svn_stringbuf_t *'s)
+   for which log messages are desired; the common prefix of PATHS
+   determines the repository and auth info.  RECEIVER is invoked only
+   on messages whose revisions involved a change to some path in
+   PATHS.
+  
+   ### todo: the above paragraph is not fully implemented yet.
+  
+   If DISCOVER_CHANGED_PATHS is set, then the `changed_paths' argument
+   to RECEIVER will be passed on each invocation.
+  
+   Use POOL for any temporary allocation.
  */
 svn_error_t *
 svn_client_log (svn_client_auth_baton_t *auth_baton,
@@ -417,22 +419,22 @@ svn_client_log (svn_client_auth_baton_t *auth_baton,
 
 
 /* Given a TARGET which is either a path in the working copy or an URL,
- * compare it against the given repository version(s).
- *
- * START_REVISION/START_DATE and END_REVISION/END_DATE are the two
- * repository versions, for each specify either the revision of the
- * date. If the two revisions are the different the two repository versions
- * are compared. If the two revisions are the same the working copy is
- * compared against the repository.
- *
- * If TARGET is a directory and RECURSE is true, this will be a recursive
- * operation.
- *
- * DIFF_OPTIONS is used to pass additional command line options to the diff
- * processes invoked to compare files. DIFF_OPTIONS is an array of
- * svn_stringbuf_t * items.
- *
- * AUTH_BATON is used to communicate with the repository.
+   compare it against the given repository version(s).
+  
+   START_REVISION/START_DATE and END_REVISION/END_DATE are the two
+   repository versions, for each specify either the revision of the
+   date. If the two revisions are the different the two repository versions
+   are compared. If the two revisions are the same the working copy is
+   compared against the repository.
+  
+   If TARGET is a directory and RECURSE is true, this will be a recursive
+   operation.
+  
+   DIFF_OPTIONS is used to pass additional command line options to the diff
+   processes invoked to compare files. DIFF_OPTIONS is an array of
+   svn_stringbuf_t * items.
+  
+   AUTH_BATON is used to communicate with the repository.
  */
 svn_error_t *svn_client_diff (svn_stringbuf_t *target,
                               const apr_array_header_t *diff_options,
@@ -471,7 +473,8 @@ svn_client_revert (svn_stringbuf_t *path,
 
    If either SRC_PATH or DST_PATH are URLs, use the AUTH_BATON and
    MESSAGE to immediately attempt to commit the copy action in the
-   repository.
+   repository.  If the commit succeeds, allocate (in POOL) and
+   populate *COMMIT_INFO.
 
    If the operation involves interaction between the working copy and
    the repository, there may be an editor drive, in which case the
@@ -485,7 +488,8 @@ svn_client_revert (svn_stringbuf_t *path,
    until a commit occurs.  This scheduling can be removed with
    svn_client_revert.  */
 svn_error_t *
-svn_client_copy (svn_stringbuf_t *src_path,
+svn_client_copy (svn_client_commit_info_t **commit_info,
+                 svn_stringbuf_t *src_path,
                  svn_revnum_t src_rev,
                  svn_stringbuf_t *dst_path,
                  svn_client_auth_baton_t *auth_baton,
@@ -503,19 +507,29 @@ svn_client_copy (svn_stringbuf_t *src_path,
    URL of a versioned item in the repository.  
 
    If SRC_PATH is a repository URL:
-   - DST_PATH must also be a repository URL (existent or not).
-   - SRC_REV is used to choose the revision from which to copy the
-     SRC_PATH.  
-   - AUTH_BATON and MESSAGE are used to commit the move
+
+     - DST_PATH must also be a repository URL (existent or not).
+
+     - SRC_REV is used to choose the revision from which to copy the
+       SRC_PATH.
+
+     - AUTH_BATON and MESSAGE are used to commit the move.
+
+     - The move operation will be immediately committed.  If the
+       commit succeeds, allocate (in POOL) and populate *COMMIT_INFO.
 
    If SRC_PATH is a working copy path
-   - DST_PATH must also be a working copy path (existent or not).
-   - SRC_REV, AUTH and MESSAGE are ignored.
-   - This is a scheduling operation.  No changes will happen to the
-     repository until a commit occurs.  This scheduling can be removed
-     with svn_client_revert. */
+
+     - DST_PATH must also be a working copy path (existent or not).
+
+     - SRC_REV, AUTH and MESSAGE are ignored.
+
+     - This is a scheduling operation.  No changes will happen to the
+       repository until a commit occurs.  This scheduling can be
+       removed with svn_client_revert. */
 svn_error_t *
-svn_client_move (svn_stringbuf_t *src_path,
+svn_client_move (svn_client_commit_info_t **commit_info,
+                 svn_stringbuf_t *src_path,
                  svn_revnum_t src_rev,
                  svn_stringbuf_t *dst_path,
                  svn_client_auth_baton_t *auth_baton,

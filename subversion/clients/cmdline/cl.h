@@ -163,8 +163,17 @@ svn_cl__cmd_proc_t
 /* make the command table information available to all commands */ 
 extern const svn_cl__cmd_desc_t svn_cl__cmd_table[];
 
+
+/* Return the canonical command table entry for CMD (which may be the
+ * entry for CMD itself, or some other entry if CMD is an alias).
+ * If CMD is not found, return null.
+ */
 const svn_cl__cmd_desc_t *
 svn_cl__get_canonical_command (const char *cmd);
+
+/* Print out commit information found in COMMIT_INFO to the console. */
+void
+svn_cl__print_commit_info (svn_client_commit_info_t *commit_info);
 
 
 /*** Miscellaneous utility commands ***/

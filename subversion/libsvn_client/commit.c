@@ -397,9 +397,7 @@ import (svn_stringbuf_t *path,
  *   don't need it right now.
  */
 static svn_error_t *
-send_to_repos (svn_revnum_t *committed_rev,
-               const char **committed_date,
-               const char **committed_author,
+send_to_repos (svn_client_commit_info_t **commit_info,
                const svn_delta_edit_fns_t *before_editor,
                void *before_edit_baton,
                const svn_delta_edit_fns_t *after_editor,
@@ -431,6 +429,9 @@ send_to_repos (svn_revnum_t *committed_rev,
   svn_boolean_t is_import;
   struct svn_wc_close_commit_baton ccb;
   apr_hash_t *committed_targets;
+  svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
+  const char *committed_date = NULL;
+  const char *committed_author = NULL;
   
   /* Note: if you ever make ccb.pool a subpool of pool, then change
      the assignments to committed_date and committed_author near the
@@ -443,17 +444,6 @@ send_to_repos (svn_revnum_t *committed_rev,
     is_import = TRUE;
   else
     is_import = FALSE;
-
-  /* Set to default values.  This is important to keep the docstring's
-     promise.  If the commit turns out to be a no-op, then the
-     commit-crawler will never call RA->commit_editor->close_edit(),
-     thereby guaranteeing these variables are never touched. */
-  if (committed_rev)
-    *committed_rev = SVN_INVALID_REVNUM;
-  if (committed_date)
-    *committed_date = NULL;
-  if (committed_author)
-    *committed_author = NULL;
 
   /* Sanity check: if this is an import, then NEW_ENTRY can be null or
      non-empty, but it can't be empty. */ 
@@ -544,9 +534,9 @@ send_to_repos (svn_revnum_t *committed_rev,
       SVN_ERR (ra_lib->get_commit_editor
                (session,
                 &editor, &edit_baton,
-                committed_rev,
-                committed_date,
-                committed_author,
+                &committed_rev,
+                &committed_date,
+                &committed_author,
                 log_msg,
                 /* wc prop fetching routine */
                 is_import ? NULL : svn_wc_get_wc_prop,
@@ -632,25 +622,27 @@ send_to_repos (svn_revnum_t *committed_rev,
       if (apr_err)
         return svn_error_createf (apr_err, 0, NULL, pool,
                                   "error closing %s", xml_dst->data);
-
-      /* Even though the revision was passed in, return it back in
-         committed_rev, so that the command-line client has something
-         reasonable to print.  :-)  */
-      if (committed_rev)
-        *committed_rev = revision;
     }
   else  
     /* We were committing to RA, so close the session. */
     SVN_ERR (ra_lib->close (session));
-  
-  /* Strictly speaking, no copying is necessary, as the session's pool
-     is the same as pool right now.  But I'd rather not rely on that
-     always being true.  */
-  if (committed_date && *committed_date)
-    *committed_date = apr_pstrdup (pool, *committed_date);
-  if (committed_author && *committed_author)
-    *committed_author = apr_pstrdup (pool, *committed_author);
 
+  /* Allocate (and populate) the commit_info */
+  if ((committed_date != NULL) 
+      || (committed_author != NULL) 
+      || (SVN_IS_VALID_REVNUM (committed_rev)))
+    {
+      svn_client_commit_info_t *info;
+
+      info = apr_pcalloc (pool, sizeof (**commit_info));
+      if (committed_date)
+        info->date = apr_pstrdup (pool, committed_date);
+      if (committed_author)
+        info->date = apr_pstrdup (pool, committed_author);
+      info->revision = committed_rev;
+      *commit_info = info;
+    }
+  
   return SVN_NO_ERROR;
 }
 
@@ -660,9 +652,7 @@ send_to_repos (svn_revnum_t *committed_rev,
 /*** Public Interfaces. ***/
 
 svn_error_t *
-svn_client_import (svn_revnum_t *committed_rev,
-                   const char **committed_date,
-                   const char **committed_author,
+svn_client_import (svn_client_commit_info_t **commit_info,
                    const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
@@ -676,9 +666,7 @@ svn_client_import (svn_revnum_t *committed_rev,
                    svn_revnum_t revision,
                    apr_pool_t *pool)
 {
-  SVN_ERR (send_to_repos (committed_rev,
-                          committed_date,
-                          committed_author,
+  SVN_ERR (send_to_repos (commit_info,
                           before_editor, before_edit_baton,
                           after_editor, after_edit_baton,                   
                           path, NULL,
@@ -693,9 +681,7 @@ svn_client_import (svn_revnum_t *committed_rev,
 
 
 svn_error_t *
-svn_client_commit (svn_revnum_t *committed_rev,
-                   const char **committed_date,
-                   const char **committed_author,
+svn_client_commit (svn_client_commit_info_t **commit_info,
                    const svn_delta_edit_fns_t *before_editor,
                    void *before_edit_baton,
                    const svn_delta_edit_fns_t *after_editor,
@@ -746,9 +732,7 @@ svn_client_commit (svn_revnum_t *committed_rev,
         }
     }
 
-  err = send_to_repos (committed_rev,
-                       committed_date,
-                       committed_author,
+  err = send_to_repos (commit_info,
                        before_editor, before_edit_baton,
                        after_editor, after_edit_baton,                   
                        base_dir,
