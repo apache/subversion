@@ -14,11 +14,11 @@ _svn()
 	COMPREPLY=()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
-	cmds='add cat checkout co cleanup commit ci copy cp delete del remove  \
-	      rm diff di export import info h help list ls log merge mkdir \
-	      move mv rename ren propdel pdel propedit pedit pe propget pget \
-	      pg proplist plist pl propset pset ps revert resolve status stat \
-	      st switch sw update up --version'
+	cmds='add cat checkout co get cleanup commit ci copy cp delete del \
+	      remove rm diff di export import info h help list ls log merge \
+	      mkdir move mv rename ren propdel pdel propedit pedit pe propget \
+	      pget pg proplist plist pl propset pset ps revert resolve status \
+	      stat st switch sw update up --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
@@ -40,7 +40,7 @@ _svn()
 	# note: continued lines must end '|' continuing lines must start '|'
 	optsParam="-r|--revision|--username|--password|--targets|\
 	           |-x|--extensions|-m|--message|-F|--file|--encoding|
-	           |--diff-cmd|--diff3-cmd"
+	           |--diff-cmd|--diff3-cmd|--editor-cmd"
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
@@ -67,19 +67,20 @@ _svn()
 	cat)
 		cmdOpts="$rOpts $pOpts"
 		;;
-	checkout|co)
+	checkout|co|get)
 		cmdOpts="$rOpts $qOpts $nOpts $pOpts"
 		;;
 	cleanup)
 		;;
 	commit|ci)
-		cmdOpts="$mOpts $qOpts $nOpts --targets --force $pOpts"
+		cmdOpts="$mOpts $qOpts $nOpts --targets --force --editor-cmd \
+		         $pOpts"
 		;;
 	copy|cp)
-		cmdOpts="$mOpts $rOpts $qOpts $pOpts"
+		cmdOpts="$mOpts $rOpts $qOpts --editor-cmd $pOpts"
 		;;
 	delete|del|remove|rm)
-		cmdOpts="--force $mOpts $qOpts --targets $pOpts"
+		cmdOpts="--force $mOpts $qOpts --targets --editor-cmd $pOpts"
 		;;
 	diff|di)
 		cmdOpts="$rOpts -x --extensions --diff-cmd --no-diff-deleted \
@@ -89,7 +90,8 @@ _svn()
 		cmdOpts="$rOpts $qOpts $pOpts"
 		;;
 	import)
-		cmdOpts="$mOpts $qOpts $nOpts --targets --force $pOpts"
+		cmdOpts="$mOpts $qOpts $nOpts --targets --force --editor-cmd \
+		         $pOpts"
 		;; 
 	info)
 		cmdOpts="--targets -R --recursive"
@@ -106,16 +108,16 @@ _svn()
 		         $pOpts"
 		;;
 	mkdir)
-		cmdOpts="$mOpts $qOpts $pOpts"
+		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts"
 		;;
 	move|mv|rename|ren)
-		cmdOpts="$mOpts $rOpts $qOpts $pOpts --force"
+		cmdOpts="$mOpts $rOpts $qOpts --force --editor-cmd $pOpts"
 		;;
 	propdel|pdel)
 		cmdOpts="$qOpts -R --recursive $rOpts --revprop $pOpts"
 		;;
 	propedit|pedit|pe)
-		cmdOpts="$rOpts --revprop --encoding $pOpts"
+		cmdOpts="$rOpts --revprop --encoding --editor-cmd $pOpts"
 		;;
 	propget|pget|pg)
 		cmdOpts="-R --recursive $rOpts --revprop $pOpts"
