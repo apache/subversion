@@ -43,10 +43,10 @@ To be fixed by someone:
 
 To be fixed by cmpilato:
 
-ch05:
-
-
-ch07:
+   - vendor branch section needs re-working.  again.  specifically,
+     note the "replacing 1.0 with 1.1 and 'missing files' stuff (files
+     not overwritten by a tarball explode wouldn't be missing, they'd
+     be untouched).
 
 --------------------------------------------------------------
 
@@ -77,6 +77,10 @@ ch06:
    - in server comparison table, add a footnote to svnserve
      authorization cell: note that per-directory *write* access can
      still be done by a hook script (but not read access).
+
+appA:
+
+   - explain why 'svn commit; svn log' won't show the commit.
 
 
 -----------------------------------------------
