@@ -246,6 +246,8 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
 
       if (!svn_fs_id_eq(res_id, resource->info->node_id))
         {
+          svn_boolean_t invalid = TRUE;
+
           /* If the version resource is *newer* than the transaction
              root, then the client started a commit, a new revision was
              created within the repository, the client fetched the new
@@ -258,15 +260,42 @@ static dav_error *dav_svn_checkout(dav_resource *resource,
              that. We can stop the commit, and everything will be fine
              again if the user simply restarts it (because we'll use
              that new revision as the transaction root, thus incorporating
-             the new resource). */
+             the new resource).
 
-          return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
-                               "The version resource does not correspond "
-                               "to the resource within the transaction. "
-                               "Either the requested version resource is out "
-                               "of date (needs to be updated), or the "
-                               "requested version resource is newer than "
-                               "the transaction root (restart the commit).");
+             Special exception case:
+
+             If the nodes are directories, and the transaction's node is
+             an immediate child of the requested node, then we're okay.
+             The issue is that we generate a child for the directory when
+             it goes from an immutable node in a revision root, into a
+             mutable node in the transaction root. We should not consider
+             this a change, and there would be no way for the client to
+             check out the transaction root's directory node anyway.
+
+             Files do not have this behavior because they are not spuriously
+             placed into the transaction root (directories are because of
+             the bubble up algorithm). The only time a file will shift is
+             when a true change is being made, and we'll see that anyways.
+          */
+          if (svn_fs_is_parent(resource->info->node_id, res_id))
+            {
+              int is_dir;
+
+              serr = svn_fs_is_dir(&is_dir, txn_root,
+                                   resource->info->repos_path, resource->pool);
+              if (serr == NULL)
+                invalid = !is_dir;
+              /* else ignore the error and go with the "out of date" msg */
+            }
+
+          if (invalid)
+            return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
+                                 "The version resource does not correspond "
+                                 "to the resource within the transaction. "
+                                 "Either the requested version resource is "
+                                 "out of date (needs to be updated), or the "
+                                 "requested version resource is newer than "
+                                 "the transaction root (restart the commit).");
         }
     }
 
