@@ -309,7 +309,7 @@ svn_ra_local__change_rev_prop (void *session_baton,
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  SVN_ERR (svn_repos_fs_change_rev_prop (baton->repos, rev,
+  SVN_ERR (svn_repos_fs_change_rev_prop (baton->repos, rev, baton->username,
                                          name, value, baton->pool));
 
   return SVN_NO_ERROR;
