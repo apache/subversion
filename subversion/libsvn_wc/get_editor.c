@@ -291,6 +291,12 @@ struct file_baton
   /* This gets set if an "entry" prop was stored. */
   svn_boolean_t entryprop_changed;
 
+  /* This gets set if SVN_PROP_EOL_STYLE was set to some value other
+     than 'none', and is -different- than the current value.   Also,
+     the new eol string that should be used. */
+  svn_boolean_t got_new_eol_style;
+  const char *new_eol;
+
   /* This gets set if there's a conflict when merging a prop-delta
      into the locally modified props.  */
   svn_boolean_t prop_conflict;
@@ -1081,6 +1087,27 @@ change_file_prop (void *file_baton,
      applied. */
   fb->prop_changed = 1;
 
+  /* If the 'svn:eol-style' was set to something different than it
+     used to be, and not set to 'none', then (for bootstrapping
+     purposes), then close_file() will need to guarantee the final
+     working file is in this style.  (The next time any code sees this
+     property, it will assume the working file already has this eol
+     style.) */
+  if (! strcmp (local_name->data, SVN_PROP_EOL_STYLE))
+    {
+      const char *eol;
+      enum svn_wc__eol_style currentstyle, newstyle;
+
+      svn_wc__eol_style_from_value (&newstyle, &fb->new_eol, value->data);
+      svn_wc__get_eol_style (&currentstyle, &eol, fb->path->data, fb->pool);
+
+      if ((newstyle != svn_wc__eol_style_none) && (newstyle != currentstyle))
+        {
+          fb->got_new_eol_style = TRUE;
+          fb->new_eol = eol;
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1093,8 +1120,11 @@ close_file (void *file_baton)
   svn_error_t *err;
   apr_status_t apr_err;
   char *revision_str = NULL;
-  svn_stringbuf_t *entry_accum, *txtb, *tmp_txtb;
+  svn_stringbuf_t *entry_accum, *txtb, *tmp_txtb, *tmp_loc;
+  svn_stringbuf_t *tmp_txtb_full_path, *txtb_full_path, *s_eol_str;
   svn_boolean_t has_binary_prop, is_locally_modified;
+  enum svn_wc__eol_style eol_style;
+  const char *eol_str;
 
   /* Lock the working directory while we change things. */
   SVN_ERR (svn_wc__lock (fb->dir_baton->path, 0, fb->pool));
@@ -1138,6 +1168,13 @@ close_file (void *file_baton)
          5. gpatch F < .svn/tmp/F.tmpfile
               ==> possibly producing F.blah.rej
 
+       Of course, newline-translation makes this a hair more complex.
+       If we need to use 'native' newline style, then in step 3 above
+       we generate the patch file by running gdiff on two *translated*
+       copies of the old and new text-base.  This ensures that the
+       patch file is in native EOL style as well, so it can be cleanly
+       applied to F.
+
   */
 
   /* Open a log file.  This is safe because the adm area is locked
@@ -1179,7 +1216,16 @@ close_file (void *file_baton)
          be automagically merged later on in this routine.) */
       SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
                                        fb->path, fb->pool));
-      
+
+      /* Does this file have EOL conversion or Keyword Expansion
+         turned on?  Query these properties too. */
+      SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol_str,
+                                      fb->path->data, fb->pool));
+      if (eol_style == svn_wc__eol_style_native)
+        s_eol_str = svn_stringbuf_create (eol_str, fb->pool);
+        
+      /* ### check keyword property here. */
+
       /* Before doing any logic, we *know* that the first thing the
          logfile should do is overwrite the old text-base file with the
          newly received one in tmp/.  */
@@ -1201,15 +1247,32 @@ close_file (void *file_baton)
           /* If there are no local mods (or we're doing an initial
              checkout), who cares whether it's a text or binary file!
              Just overwrite any working file with the new one. */
-          svn_xml_make_open_tag (&entry_accum,
-                                 fb->pool,
-                                 svn_xml_self_closing,
-                                 SVN_WC__LOG_CP,
-                                 SVN_WC__LOG_ATTR_NAME,
-                                 txtb,
-                                 SVN_WC__LOG_ATTR_DEST,
-                                 fb->name,
-                                 NULL);
+          if (eol_style == svn_wc__eol_style_native)
+            {
+              /* CP command:  translate to 'native' EOL style. */
+              svn_xml_make_open_tag (&entry_accum,
+                                     fb->pool,
+                                     svn_xml_self_closing,
+                                     SVN_WC__LOG_CP,
+                                     SVN_WC__LOG_ATTR_NAME,
+                                     txtb,
+                                     SVN_WC__LOG_ATTR_DEST,
+                                     fb->name,
+                                     SVN_WC__LOG_ATTR_EOL_STR,
+                                     s_eol_str,
+                                     NULL);
+            }
+          else
+            /* regular CP command */
+            svn_xml_make_open_tag (&entry_accum,
+                                   fb->pool,
+                                   svn_xml_self_closing,
+                                   SVN_WC__LOG_CP,
+                                   SVN_WC__LOG_ATTR_NAME,
+                                   txtb,
+                                   SVN_WC__LOG_ATTR_DEST,
+                                   fb->name,
+                                   NULL);
         }
   
       else   /* file is locally modified, and this is an update. */
@@ -1228,15 +1291,32 @@ close_file (void *file_baton)
                 {
                   /* If the working file is missing, then just copy
                      the new base text to the working file. */
-                  svn_xml_make_open_tag (&entry_accum,
-                                         fb->pool,
-                                         svn_xml_self_closing,
-                                         SVN_WC__LOG_CP,
-                                         SVN_WC__LOG_ATTR_NAME,
-                                         txtb,
-                                         SVN_WC__LOG_ATTR_DEST,
-                                         fb->name,
-                                         NULL);
+                  if (eol_style == svn_wc__eol_style_native)
+                    {
+                      /* CP command:  translate to 'native' EOL style. */
+                      svn_xml_make_open_tag (&entry_accum,
+                                             fb->pool,
+                                             svn_xml_self_closing,
+                                             SVN_WC__LOG_CP,
+                                             SVN_WC__LOG_ATTR_NAME,
+                                             txtb,
+                                             SVN_WC__LOG_ATTR_DEST,
+                                             fb->name,
+                                             SVN_WC__LOG_ATTR_EOL_STR,
+                                             s_eol_str,
+                                             NULL);
+                    }
+                  else
+                    /* regular CP command */
+                    svn_xml_make_open_tag (&entry_accum,
+                                           fb->pool,
+                                           svn_xml_self_closing,
+                                           SVN_WC__LOG_CP,
+                                           SVN_WC__LOG_ATTR_NAME,
+                                           txtb,
+                                           SVN_WC__LOG_ATTR_DEST,
+                                           fb->name,
+                                           NULL);
                 }
               else  /* working file exists */
                 {                  
@@ -1244,17 +1324,71 @@ close_file (void *file_baton)
                      create a temporary .diff file. */
                   apr_proc_t diff_proc;
                   apr_procattr_t *diffproc_attr;
-                  const char *diff_args[6];
-                  
+                  const char *diff_args[6];                  
                   apr_file_t *received_diff_file;
-                  svn_stringbuf_t *tmp_txtb_full_path
-                    = svn_wc__text_base_path (fb->path, 1, fb->pool);
-                  svn_stringbuf_t *txtb_full_path
-                    = svn_wc__text_base_path (fb->path, 0, fb->pool);
-                  svn_stringbuf_t *tmp_loc
+
+                  if (eol_style == svn_wc__eol_style_native)
+                    {
+                      /* Strategy: svn_io_copy_and_translate() both
+                         text-bases, and get the full paths to results. */
+                      apr_file_t *tr_txtb_fp, *tr_tmp_txtb_fp;
+                      svn_stringbuf_t *tr_txtb, *tr_tmp_txtb, *tmp1, *tmp2;
+                      
+                      /* full paths of the real text-bases */
+                      tmp_txtb_full_path
+                        = svn_wc__text_base_path (fb->path, 1, fb->pool);
+                      txtb_full_path
+                        = svn_wc__text_base_path (fb->path, 0, fb->pool);
+
+                      /* seed paths in the .svn/tmp/ area. */
+                      tmp1 = svn_wc__adm_path (fb->dir_baton->path, 1,
+                                               fb->pool, fb->name->data, NULL);
+                      tmp2 = svn_wc__adm_path (fb->dir_baton->path, 1,
+                                               fb->pool, fb->name->data, NULL);
+
+                      /* use seeds to create two unique files */
+                      SVN_ERR (svn_io_open_unique_file (&tr_txtb_fp,
+                                                        &tr_txtb,
+                                                        tmp1, SVN_WC__BASE_EXT,
+                                                        FALSE, fb->pool));
+                      SVN_ERR (svn_io_open_unique_file (&tr_tmp_txtb_fp,
+                                                        &tr_tmp_txtb,
+                                                        tmp2, SVN_WC__BASE_EXT,
+                                                        FALSE, fb->pool));
+
+                      /* now copy *translated* text-base files to
+                         these reserved locations. */
+                      SVN_ERR (svn_io_copy_and_translate 
+                               (txtb_full_path->data,
+                                tr_txtb->data,
+                                eol_str,
+                                0, NULL, NULL, NULL, NULL, fb->pool));
+
+                      SVN_ERR (svn_io_copy_and_translate 
+                               (tmp_txtb_full_path->data,
+                                tr_tmp_txtb->data,
+                                eol_str,
+                                0, NULL, NULL, NULL, NULL, fb->pool));
+                      
+                      /* now set our vars to point to the translated
+                         files. */
+                      txtb_full_path = svn_stringbuf_dup (tr_txtb, fb->pool);
+                      tmp_txtb_full_path = svn_stringbuf_dup (tr_tmp_txtb,
+                                                              fb->pool);
+                    }
+                  else  /* no translation going on */
+                    {
+                      /* just get full paths of the text bases to diff */
+                      tmp_txtb_full_path
+                        = svn_wc__text_base_path (fb->path, 1, fb->pool);
+                      txtb_full_path
+                        = svn_wc__text_base_path (fb->path, 0, fb->pool);
+                    }
+
+                  /* Reserve a filename for the patchfile we'll create. */
+                  tmp_loc
                     = svn_wc__adm_path (fb->dir_baton->path, 1, fb->pool, 
                                         fb->name->data, NULL);
-                  
                   SVN_ERR (svn_io_open_unique_file (&received_diff_file,
                                                     &received_diff_filename,
                                                     tmp_loc,
@@ -1323,8 +1457,49 @@ close_file (void *file_baton)
                     return svn_error_createf
                       (apr_err, 0, NULL, fb->pool,
                        "close_file: error waiting for diff process");
-                  
-                  
+
+
+                  /* The diff is finished.  If we had to create
+                     temporary 'translated' text-bases, write log
+                     commands to clean them up later. */
+                  if (eol_style == svn_wc__eol_style_native)
+                    {
+                      /* gack, we need the paths to be relative to the
+                         log's working directory.  this is copied from
+                         below.*/
+                      svn_stringbuf_t *relative_txtb_path = 
+                        svn_stringbuf_ncreate
+                        (relative_txtb_path->data 
+                         + fb->dir_baton->path->len + 1,
+                         relative_txtb_path->len
+                         - fb->dir_baton->path->len - 1,
+                         fb->pool);
+
+                      svn_stringbuf_t *relative_tmp_txtb_path = 
+                        svn_stringbuf_ncreate
+                        (relative_tmp_txtb_path->data 
+                         + fb->dir_baton->path->len + 1,
+                         relative_tmp_txtb_path->len
+                         - fb->dir_baton->path->len - 1,
+                         fb->pool);
+
+                      svn_xml_make_open_tag (&entry_accum,
+                                             fb->pool,
+                                             svn_xml_self_closing,
+                                             SVN_WC__LOG_RM,
+                                             SVN_WC__LOG_ATTR_NAME,
+                                             relative_txtb_path,
+                                             NULL);
+
+                      svn_xml_make_open_tag (&entry_accum,
+                                             fb->pool,
+                                             svn_xml_self_closing,
+                                             SVN_WC__LOG_RM,
+                                             SVN_WC__LOG_ATTR_NAME,
+                                             relative_tmp_txtb_path,
+                                             NULL);
+                    }
+   
                   /* Write a log message to `patch' the working file and
                      cleanup... */
 
@@ -1528,6 +1703,49 @@ close_file (void *file_baton)
                          SVN_WC_ENTRY_ATTR_REVISION,
                          svn_stringbuf_create (revision_str, fb->pool),
                          NULL);
+
+  /* If we just got a brand-new eol style turned on, we need to
+     guarantee that the working file has this style;  future queries
+     of this property will assume it does.  This solves the
+     bootstrapping problem. */
+  if (fb->got_new_eol_style)
+    {
+      apr_file_t *fp;
+      svn_stringbuf_t *tmp_path;
+      svn_stringbuf_t *seed = svn_wc__adm_path (fb->dir_baton->path, 1,
+                                                fb->pool,
+                                                fb->name->data, NULL);     
+      SVN_ERR (svn_io_open_unique_file (&fp, &tmp_path, seed,
+                                        SVN_WC__TMP_EXT, FALSE, fb->pool));
+      
+      /* Write a log command to copy a 'translated' version of the
+         working file to a reserved tmp file.*/
+      svn_xml_make_open_tag (&entry_accum,
+                             fb->pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_CP,
+                             SVN_WC__LOG_ATTR_NAME,
+                             fb->name,
+                             SVN_WC__LOG_ATTR_DEST,
+                             tmp_path,
+                             SVN_WC__LOG_ATTR_EOL_STR,
+                             svn_stringbuf_create (fb->new_eol, fb->pool),
+                             NULL);
+
+      /* Write a log command to copy/overwrite it back again, unchanged. */
+      svn_xml_make_open_tag (&entry_accum,
+                             fb->pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_CP,
+                             SVN_WC__LOG_ATTR_NAME,
+                             tmp_path,
+                             SVN_WC__LOG_ATTR_DEST,
+                             fb->name,
+                             SVN_WC__LOG_ATTR_EOL_STR,
+                             svn_stringbuf_create (fb->new_eol, fb->pool),
+                             NULL);
+    }
+
 
   if (fb->text_changed)
     {
