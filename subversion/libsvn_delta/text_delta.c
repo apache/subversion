@@ -139,7 +139,7 @@ svn_txdelta__insert_op (svn_txdelta_window_t *window,
       int const new_ops_size = (window->ops_size == 0
                                 ? 16 : 2 * window->ops_size);
       window->ops =
-        apr_pcalloc (window->pool, new_ops_size * sizeof (*window->ops));
+        apr_palloc (window->pool, new_ops_size * sizeof (*window->ops));
 
       /* Copy any existing ops into the new array */
       if (old_ops)
@@ -197,7 +197,7 @@ svn_txdelta (svn_txdelta_stream_t **stream,
   (*stream)->pool = subpool;
   (*stream)->more = TRUE;
   (*stream)->pos = 0;
-  (*stream)->sbuf = apr_pcalloc (subpool, svn_txdelta__window_size);
+  (*stream)->sbuf = apr_palloc (subpool, svn_txdelta__window_size);
   (*stream)->sbuf_len = 0;
   return SVN_NO_ERROR;
 }
