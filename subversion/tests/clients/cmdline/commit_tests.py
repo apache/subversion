@@ -1035,17 +1035,26 @@ def commit_uri_unsafe(sbox):
 
   wc_dir = sbox.wc_dir
 
+  # Note: on Windows, files can't have angle brachets in them, so we
+  # don't tests that case.
+  if svntest.main.windows:
+    angle_name = '$angle$'
+    nasty_name = '#![]{}()$$%'
+  else:
+    angle_name = '<angle>'
+    nasty_name = '#![]{}()<>%'
+
   # Make some convenient paths.
   hash_dir = os.path.join(wc_dir, '#hash#')
-  nasty_dir = os.path.join(wc_dir, '#![]{}()<>%')
+  nasty_dir = os.path.join(wc_dir, nasty_name)
   space_path = os.path.join(wc_dir, 'A', 'D', 'space path')
   bang_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bang!')
   bracket_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bra[ket')
   brace_path = os.path.join(wc_dir, 'A', 'D', 'H', 'bra{e')
-  angle_path = os.path.join(wc_dir, 'A', 'D', 'H', '<angle>')
+  angle_path = os.path.join(wc_dir, 'A', 'D', 'H', angle_name)
   paren_path = os.path.join(wc_dir, 'A', 'D', 'pare)(theses')
   percent_path = os.path.join(wc_dir, '#hash#', 'percen%')
-  nasty_path = os.path.join(wc_dir, 'A', '#![]{}()<>%')
+  nasty_path = os.path.join(wc_dir, 'A', nasty_name)
 
   os.mkdir(hash_dir)
   os.mkdir(nasty_dir)
@@ -1074,15 +1083,15 @@ def commit_uri_unsafe(sbox):
 
   expected_output = svntest.wc.State(wc_dir, {
     '#hash#' : Item(verb='Adding'),
-    '#![]{}()<>%' : Item(verb='Adding'),
+    nasty_name : Item(verb='Adding'),
     'A/D/space path' : Item(verb='Adding'),
     'A/D/H/bang!' : Item(verb='Adding'),
     'A/D/H/bra[ket' : Item(verb='Adding'),
     'A/D/H/bra{e' : Item(verb='Adding'),
-    'A/D/H/<angle>' : Item(verb='Adding'),
+    'A/D/H/' + angle_name : Item(verb='Adding'),
     'A/D/pare)(theses' : Item(verb='Adding'),
     '#hash#/percen%' : Item(verb='Adding'),
-    'A/#![]{}()<>%' : Item(verb='Adding'),
+    'A/' + nasty_name : Item(verb='Adding'),
     })
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
