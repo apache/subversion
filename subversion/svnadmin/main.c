@@ -38,7 +38,7 @@ print_tree (svn_fs_root_t *root,
   for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
     {
       const void *key;
-      apr_size_t keylen;
+      apr_ssize_t keylen;
       void *val;
       svn_fs_dirent_t *this_entry;
       const char *this_full_path;
