@@ -71,6 +71,9 @@
     in the filename.  How do I change it?</a></li>
 <li><a href="#merge-using-tags">I can't use tags to merge changes from a 
     branch into the trunk like I used to with CVS, can I?</a></li>
+<li><a href="#version-value-in-source">Why doesn't the $Revision$
+  keyword do what I want?  It expands to the file's last-changed revision,
+  but I want something that will expand to the file's current revision.</a></li>
 <p>
 <strong>Troubleshooting:</strong>
 </p>
@@ -1176,6 +1179,59 @@ $ svn merge file:///home/repos/tags/branch_traces/bar_last_merge \
 # and check the file content of 'foo.txt'
 
 </pre>
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="version-value-in-source">Why doesn't the $Revision$
+keyword do what I want?  It expands to the file's last-changed revision,
+but I want something that will expand to the file's current revision.</a></h3>
+
+<p>
+Subversion increments the revision number of the repository as a
+whole, so it can't expand any keyword to be that number - it would
+have to search and possibly modify every file in your working copy on
+every update and commit.
+</p>
+
+<p>
+The information you want (the revision of your working copy) is
+available from the command <tt>svnversion</tt>; it gives you
+information on the revision level of a working copy given a path (see
+<tt>svnversion --help</tt> for details). 
+</p>
+
+<p>
+You can incorporate it into your build or release process to get the
+information you need into the source itself.  For example, in a build
+environment based on <tt>make</tt>, add something like this to your
+<tt>Makefile</tt>:
+
+<pre>
+
+##
+## on every build, record the working copy revision string
+##
+svn_version.c: FORCE
+    echo -n 'const char* svn_version(void) { const char* SVN_Version = "' \
+                                       > svn_version.c
+    svnversion -n .                   >> svn_version.c
+    echo '"; return SVN_Version; }'   >> svn_version.c
+
+</pre>
+
+<p>
+any executable that links in <tt>svn_version.o</tt> will be able to
+call the function <tt>svn_version()</tt> to get a string that
+describes exactly what revision was built.
+</p>
+
+<p>
+Windows users may want to use <tt>SubWCRev.exe</tt>, available from
+the <a
+href='http://tortoisesvn.tigris.org/download.html'>TortoiseSVN
+download page</a>; it replaces all <tt>$WCREV$</tt> tags in a given
+file with the current working copy revision.
+</p>
 
 <![CDATA[=========================================================]]>
 
