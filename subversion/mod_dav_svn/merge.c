@@ -281,6 +281,7 @@ static svn_error_t *mr_open_file(const char *path,
 }
 
 static svn_error_t *mr_close_file(void *file_baton,
+                                  const char *text_checksum,
                                   apr_pool_t *pool)
 {
   /* nothing to do except for sending the response. */

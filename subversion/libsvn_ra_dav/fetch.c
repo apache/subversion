@@ -672,7 +672,6 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
                                       svn_boolean_t compression,
                                       void *file_baton,
                                       const char *base_checksum,
-                                      const char *result_checksum,
                                       const svn_delta_editor_t *editor,
                                       svn_ra_get_wc_prop_func_t get_wc_prop,
                                       void *cb_baton,
@@ -681,7 +680,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
   file_read_ctx_t frc = { 0 };
 
   SVN_ERR_W( (*editor->apply_textdelta)(file_baton,
-                                        base_checksum, result_checksum,
+                                        base_checksum,
                                         pool,
                                         &frc.handler,
                                         &frc.handler_baton),
@@ -736,8 +735,7 @@ static svn_error_t *fetch_file(ne_session *sess,
      simple_fetch_file() params related to fetching version URLs (for
      fetching deltas) */
   err = simple_fetch_file(sess, bc_url, NULL, TRUE, compression, file_baton, 
-                          NULL, (checksum ? checksum->data : NULL),
-                          editor, NULL, NULL, pool);
+                          NULL, editor, NULL, NULL, pool);
   if (err)
     {
       /* ### do we really need to bother with closing the file_baton? */
@@ -751,7 +749,7 @@ static svn_error_t *fetch_file(ne_session *sess,
   err = store_vsn_url(rsrc, file_baton, editor->change_file_prop, pool);
 
  error:
-  err2 = (*editor->close_file)(file_baton, pool);
+  err2 = (*editor->close_file)(file_baton, checksum->data, pool);
   return err ? err : err2;
 }
 
@@ -1921,6 +1919,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
       parent_dir = &TOP_DIR(rb);
       rb->file_pool = svn_pool_create(rb->ras->pool);
+      rb->result_checksum = NULL;
 
       /* Add this file's name into the directory's path buffer. It will be
          removed in end_element() */
@@ -1958,6 +1957,8 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       result_checksum = get_attr(atts, "result-checksum");
       if (result_checksum)
         rb->result_checksum = apr_pstrdup(rb->file_pool, result_checksum);
+      else
+        rb->result_checksum = NULL;
 
       /* Add this file's name into the directory's path buffer. It will be
          removed in end_element() */
@@ -2016,7 +2017,6 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
     case ELEM_fetch_file:
       base_checksum = get_attr(atts, "base-checksum");
-      result_checksum = get_attr(atts, "result-checksum");
       /* assert: rb->href->len > 0 */
       CHKERR( simple_fetch_file(rb->ras->sess2, 
                                 rb->href->data,
@@ -2025,11 +2025,18 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
                                 rb->ras->compression,
                                 rb->file_baton,
                                 base_checksum,
-                                result_checksum,
                                 rb->editor,
                                 rb->ras->callbacks->get_wc_prop,
                                 rb->ras->callback_baton,
                                 rb->file_pool) );
+
+      /* Save result_checksum for a later call to editor->close_file(). */
+      result_checksum = get_attr(atts, "result-checksum");
+      if (result_checksum)
+        rb->result_checksum = apr_pstrdup(rb->file_pool, result_checksum);
+      else
+        rb->result_checksum = NULL;
+
       break;
 
     case ELEM_delete_entry:
@@ -2157,7 +2164,6 @@ static int end_element(void *userdata,
                                 rb->ras->compression,
                                 rb->file_baton,
                                 NULL,  /* no base checksum in an add */
-                                rb->result_checksum,
                                 rb->editor,
                                 rb->ras->callbacks->get_wc_prop,
                                 rb->ras->callback_baton,
@@ -2167,7 +2173,9 @@ static int end_element(void *userdata,
       CHKERR( add_node_props(rb, rb->file_pool) );
 
       /* close the file and mark that we are no longer operating on a file */
-      CHKERR( (*rb->editor->close_file)(rb->file_baton, rb->file_pool) );
+      CHKERR( (*rb->editor->close_file)(rb->file_baton,
+                                        rb->result_checksum,
+                                        rb->file_pool) );
       rb->file_baton = NULL;
 
       /* Yank this file out of the directory's path buffer. */
@@ -2181,7 +2189,9 @@ static int end_element(void *userdata,
       CHKERR( add_node_props(rb, rb->file_pool) );
 
       /* close the file and mark that we are no longer operating on a file */
-      CHKERR( (*rb->editor->close_file)(rb->file_baton, rb->file_pool) );
+      CHKERR( (*rb->editor->close_file)(rb->file_baton,
+                                        rb->result_checksum,
+                                        rb->file_pool) );
       rb->file_baton = NULL;
 
       /* Yank this file out of the directory's path buffer. */

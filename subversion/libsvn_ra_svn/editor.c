@@ -232,7 +232,6 @@ static svn_error_t *ra_svn_svndiff_close_handler(void *baton)
 
 static svn_error_t *ra_svn_apply_textdelta(void *file_baton,
                                            const char *base_checksum,
-                                           const char *result_checksum,
                                            apr_pool_t *pool,
                                            svn_txdelta_window_handler_t *wh,
                                            void **wh_baton)
@@ -242,10 +241,9 @@ static svn_error_t *ra_svn_apply_textdelta(void *file_baton,
   svn_boolean_t wanted;
 
   /* Tell the other side we're starting a text delta. */
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "apply-textdelta", "c(?c)(?c)",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "apply-textdelta", "c(?c)",
                                b->token,
-                               (base_checksum ? base_checksum : ""),
-                               (result_checksum ? result_checksum : "")));
+                               (base_checksum ? base_checksum : "")));
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, "b", &wanted));
 
   if (wanted)
@@ -280,11 +278,15 @@ static svn_error_t *ra_svn_change_file_prop(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_close_file(void *file_baton, apr_pool_t *pool)
+static svn_error_t *ra_svn_close_file(void *file_baton,
+                                      const char *text_checksum,
+                                      apr_pool_t *pool)
 {
   ra_svn_baton_t *b = file_baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "close-file", "c", b->token));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "close-file", "c(?c)",
+                               b->token,
+                               text_checksum ? text_checksum : ""));
   SVN_ERR(svn_ra_svn_read_cmd_response(b->conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -565,21 +567,19 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
   svn_stream_t *stream;
   apr_pool_t *subpool;
   svn_ra_svn_item_t *item;
-  char *base_checksum, *result_checksum;
+  char *base_checksum;
 
   /* Parse arguments, make the editor call, and respond. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?c)(?c)", &token,
-                                 &base_checksum, &result_checksum));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?c)",
+                                 &token, &base_checksum));
 
   if (base_checksum[0] == '\0')
       base_checksum = NULL;
-  if (result_checksum[0] == '\0')
-      result_checksum = NULL;
 
   SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
   SVN_CMD_ERR(ds->editor->apply_textdelta(entry->baton,
-                                          base_checksum, result_checksum,
-                                          pool, &wh, &wh_baton));
+                                          base_checksum, pool,
+                                          &wh, &wh_baton));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "b", (wh != NULL)));
 
   /* If we said we didn't want text delta information, we're done. */
@@ -638,10 +638,16 @@ static svn_error_t *ra_svn_handle_close_file(svn_ra_svn_conn_t *conn,
   ra_svn_driver_state_t *ds = baton;
   const char *token;
   ra_svn_token_entry_t *entry;
+  const char *text_checksum;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &token));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?c)",
+                                 &token, &text_checksum));
+
+  if (text_checksum[0] == '\0')
+    text_checksum = NULL;
+  
   SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
-  SVN_CMD_ERR(ds->editor->close_file(entry->baton, pool));
+  SVN_CMD_ERR(ds->editor->close_file(entry->baton, text_checksum, pool));
   apr_hash_set(ds->tokens, token, APR_HASH_KEY_STRING, NULL);
   apr_pool_destroy(entry->pool);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));

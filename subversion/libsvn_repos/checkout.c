@@ -22,6 +22,8 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 
+#include <apr_md5.h>
+#include "svn_md5.h"
 
 /* Helper to read data out of a file at ROOT:PATH and push it to
    EDITOR via FILE_BATON.
@@ -44,7 +46,7 @@ send_file_contents (svn_fs_root_t *root,
   SVN_ERR (svn_fs_file_contents (&contents, root, path, pool));  
 
   /* Get an editor func that wants to consume the delta stream. */
-  SVN_ERR (editor->apply_textdelta (file_baton, NULL, NULL, pool,
+  SVN_ERR (editor->apply_textdelta (file_baton, NULL, pool,
                                     &handler, &handler_baton));
 
   /* Send the file's contents to the delta-window handler. */
@@ -209,6 +211,7 @@ walk_tree (svn_fs_root_t *root,
       else if (is_file)
         {
           void *file_baton;
+          unsigned char digest[MD5_DIGESTSIZE];
 
           SVN_ERR (editor->add_file (this_edit_path, dir_baton,
                                      NULL, SVN_INVALID_REVNUM, 
@@ -217,7 +220,12 @@ walk_tree (svn_fs_root_t *root,
                                   editor, 0, subpool));
           SVN_ERR (send_file_contents (root, dirent_path, file_baton,
                                        editor, subpool));
-          SVN_ERR (editor->close_file (file_baton, subpool));
+          SVN_ERR (svn_fs_file_md5_checksum
+                   (digest, root, dirent_path, subpool));
+          SVN_ERR (editor->close_file (file_baton,
+                                       svn_md5_digest_to_cstring (digest,
+                                                                  subpool),
+                                       subpool));
         }
 
       else

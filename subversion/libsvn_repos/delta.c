@@ -105,7 +105,6 @@ static svn_error_t *delta_proplists (struct context *c,
 static svn_error_t *send_text_delta (struct context *c,
                                      void *file_baton,
                                      const char *base_checksum,
-                                     const char *result_checksum,
                                      svn_txdelta_stream_t *delta_stream,
                                      apr_pool_t *pool);
 
@@ -576,13 +575,12 @@ delta_proplists (struct context *c,
 
 
 /* Change the contents of FILE_BATON in C->editor, according to the
-   text delta from DELTA_STREAM.  Pass BASE_CHECKSUM and
-   RESULT_CHECKSUM along to C->editor->apply_textdelta. */
+   text delta from DELTA_STREAM.  Pass BASE_CHECKSUM along to
+   C->editor->apply_textdelta. */
 static svn_error_t *
 send_text_delta (struct context *c,
                  void *file_baton,
                  const char *base_checksum,
-                 const char *result_checksum,
                  svn_txdelta_stream_t *delta_stream,
                  apr_pool_t *pool)
 {
@@ -590,8 +588,8 @@ send_text_delta (struct context *c,
   void *delta_handler_baton;
 
   /* Get a handler that will apply the delta to the file.  */
-  SVN_ERR (c->editor->apply_textdelta 
-           (file_baton, base_checksum, result_checksum, pool,
+  SVN_ERR (c->editor->apply_textdelta
+           (file_baton, base_checksum, pool,
             &delta_handler, &delta_handler_baton));
 
   /* Our editor didn't provide a window handler, so don't sweat the deltas. */
@@ -656,9 +654,7 @@ delta_files (struct context *c,
     {
       svn_txdelta_stream_t *delta_stream = NULL;
       unsigned char source_digest[MD5_DIGESTSIZE];
-      unsigned char target_digest[MD5_DIGESTSIZE];
       const char *source_hex_digest = NULL;
-      const char *target_hex_digest;
 
       if (c->text_deltas)
         {
@@ -680,13 +676,7 @@ delta_files (struct context *c,
                                                          subpool);
         }
 
-      SVN_ERR (svn_fs_file_md5_checksum
-               (target_digest, c->target_root, target_path, subpool));
-
-      target_hex_digest = svn_md5_digest_to_cstring (target_digest, subpool);
-
-      SVN_ERR (send_text_delta (c, file_baton,
-                                source_hex_digest, target_hex_digest,
+      SVN_ERR (send_text_delta (c, file_baton, source_hex_digest,
                                 delta_stream, subpool));
     }
 
@@ -769,13 +759,17 @@ add_file_or_dir (struct context *c, void *dir_baton,
   else
     {
       void *file_baton;
+      unsigned char digest[MD5_DIGESTSIZE];
 
       SVN_ERR (context->editor->add_file 
                (edit_path (c, t_fullpath), dir_baton,
                 copied_from_path, copied_from_revision, pool, &file_baton));
       SVN_ERR (delta_files (context, file_baton,
                             copied_from_path, t_fullpath, pool));
-      SVN_ERR (context->editor->close_file (file_baton, pool));
+      SVN_ERR (svn_fs_file_md5_checksum (digest, context->target_root,
+                                         t_fullpath, pool));
+      SVN_ERR (context->editor->close_file
+               (file_baton, svn_md5_digest_to_cstring (digest, pool), pool));
     }
 
   return SVN_NO_ERROR;
@@ -825,12 +819,17 @@ replace_file_or_dir (struct context *c,
   else
     {
       void *file_baton;
+      unsigned char digest[MD5_DIGESTSIZE];
 
       SVN_ERR (c->editor->open_file 
                (edit_path (c, t_fullpath), dir_baton, 
                 base_revision, pool, &file_baton));
       SVN_ERR (delta_files (c, file_baton, s_fullpath, t_fullpath, pool));
-      SVN_ERR (c->editor->close_file (file_baton, pool));
+      SVN_ERR (svn_fs_file_md5_checksum (digest, c->target_root,
+                                         t_fullpath, pool));
+      SVN_ERR (c->editor->close_file (file_baton,
+                                      svn_md5_digest_to_cstring (digest, pool),
+                                      pool));
     }
 
   return SVN_NO_ERROR;

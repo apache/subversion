@@ -62,7 +62,7 @@ send_file_contents (const char *path,
   contents = svn_stream_from_aprfile (f, pool);
 
   /* Get an editor func that wants to consume the delta stream. */
-  SVN_ERR (editor->apply_textdelta (file_baton, NULL, NULL, pool,
+  SVN_ERR (editor->apply_textdelta (file_baton, NULL, pool,
                                     &handler, &handler_baton));
 
   /* Send the file's contents to the delta-window handler. */
@@ -133,8 +133,8 @@ import_file (const svn_delta_editor_t *editor,
   /* Now, transmit the file contents. */
   SVN_ERR (send_file_contents (path, file_baton, editor, pool));
 
-  /* Finally, close the file. */
-  SVN_ERR (editor->close_file (file_baton, pool));
+  /* Finally, close the file.  ### issue#1100: Pass text_checksum here. */
+  SVN_ERR (editor->close_file (file_baton, NULL, pool));
 
   return SVN_NO_ERROR;
 }

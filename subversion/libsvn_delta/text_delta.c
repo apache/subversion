@@ -70,8 +70,10 @@ struct apply_baton {
   char *tbuf;                   /* Target buffer */
   apr_size_t tbuf_size;         /* Allocated target buffer space */
 
-  apr_md5_ctx_t md5_context;    /* Leads to result_checksum below. */
-  const char *result_checksum;  /* Hex MD5 digest of resultant fulltext. */
+  apr_md5_ctx_t md5_context;    /* Leads to result_digest below. */
+  unsigned char *result_digest; /* MD5 digest of resultant fulltext;
+                                   must point to at least MD5_DIGESTSIZE
+                                   bytes of storage. */
 
   const char *error_info;       /* Optional extra info for error returns. */
 };
@@ -425,25 +427,8 @@ apply_window (svn_txdelta_window_t *window, void *baton)
       /* We're done; just clean up.  */
       svn_error_t *err2 = NULL;
 
-      /* ### If streams had checksums, this code wouldn't be here... */
-      if (ab->result_checksum)
-        {
-          const char *actual_checksum;
-          unsigned char digest[MD5_DIGESTSIZE];
-          
-          apr_md5_final(digest, &(ab->md5_context));
-          actual_checksum = svn_md5_digest_to_cstring (digest, ab->pool);
-          
-          if (strcmp (ab->result_checksum, actual_checksum) != 0)
-            err2 = svn_error_createf
-              (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-               "apply_window: checksum mismatch after applying text delta\n"
-               "(%s):\n"
-               "   expected checksum:  %s\n"
-               "   actual checksum:    %s\n",
-               ab->error_info ? ab->error_info : "no additional context",
-               ab->result_checksum, actual_checksum);
-        }
+      if (ab->result_digest)
+        apr_md5_final (ab->result_digest, &(ab->md5_context));
 
       err = svn_stream_close (ab->target);
       svn_pool_destroy (ab->pool);
@@ -514,7 +499,7 @@ apply_window (svn_txdelta_window_t *window, void *baton)
      streams would do it automatically, and verify the checksum in
      svn_stream_closed().  But this might be overkill for issue #689;
      so for now we just update the context here. */
-  if (ab->result_checksum)
+  if (ab->result_digest)
     apr_md5_update(&(ab->md5_context), ab->tbuf, len);
 
   return svn_stream_write (ab->target, ab->tbuf, &len);
@@ -524,7 +509,7 @@ apply_window (svn_txdelta_window_t *window, void *baton)
 void
 svn_txdelta_apply (svn_stream_t *source,
                    svn_stream_t *target,
-                   const char *result_checksum,
+                   unsigned char *result_digest,
                    const char *error_info,
                    apr_pool_t *pool,
                    svn_txdelta_window_handler_t *handler,
@@ -543,14 +528,10 @@ svn_txdelta_apply (svn_stream_t *source,
   ab->sbuf_len = 0;
   ab->tbuf = NULL;
   ab->tbuf_size = 0;
+  ab->result_digest = result_digest;
 
-  if (result_checksum)
-    {
-      ab->result_checksum = apr_pstrdup (subpool, result_checksum);
-      apr_md5_init (&(ab->md5_context));
-    }
-  else
-    ab->result_checksum = NULL;
+  if (result_digest)
+    apr_md5_init (&(ab->md5_context));
 
   if (error_info)
     ab->error_info = apr_pstrdup (subpool, error_info);
