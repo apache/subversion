@@ -52,7 +52,7 @@ $txn->root->make_dir('trunk');
 $txn->commit;
 
 
-SVN::Repos::dir_delta ($root, '', undef,
+SVN::Repos::dir_delta ($root, '', '',
 		       $fs->revision_root (1), '',
 		       TestEditor->new(),
 		       undef, 1, 1, 0, 1);
