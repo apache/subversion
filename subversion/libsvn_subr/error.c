@@ -88,7 +88,7 @@ make_error_internal (apr_status_t apr_err,
     }
 
   /* Create the new error structure */
-  new_error = (svn_error_t *) apr_pcalloc (pool, sizeof (*new_error));
+  new_error = apr_pcalloc (pool, sizeof (*new_error));
 
   /* Fill 'er up. */
   new_error->apr_err = apr_err;
@@ -120,7 +120,7 @@ svn_error_create (apr_status_t apr_err,
   err = make_error_internal (apr_err, child);
 
   if (message)
-    err->message = (const char *) apr_pstrdup (err->pool, message);
+    err->message = apr_pstrdup (err->pool, message);
 
   return err;
 }
@@ -208,7 +208,8 @@ svn_error_compose (svn_error_t *chain, svn_error_t *new_err)
       chain->child = apr_palloc (pool, sizeof (*chain->child));
       chain = chain->child;
       *chain = *new_err;
-      chain->message = apr_pstrdup (pool, new_err->message);
+      if (chain->message)
+        chain->message = apr_pstrdup (pool, new_err->message);
       chain->pool = pool;
 #if defined(SVN_DEBUG_ERROR)
       if (! new_err->child)
@@ -251,6 +252,10 @@ svn_error_dup (svn_error_t *err)
       if (tmp_err->message)
         tmp_err->message = apr_pstrdup (pool, tmp_err->message);
     }
+
+#if defined(SVN_DEBUG_ERROR)
+  apr_pool_cleanup_register (pool, tmp_err, err_abort, NULL);
+#endif
 
   return new_err;
 }
