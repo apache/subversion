@@ -37,7 +37,7 @@
  *
  * Both structures maintain a significant invariant:
  *
- *     @c s->data[s->len] == @c 0
+ *     <tt>s->data[s->len] == '\\0'</tt>
  *
  * The functions defined within this header file will maintain the invariant
  * (which does imply that memory is allocated/defined as @c len+1 bytes). If
