@@ -44,6 +44,14 @@ svn_cl__checkout (apr_getopt_t *os,
 
   SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
                                          FALSE, pool));
+
+  /* If there are no targets at all, then let's just give the user a
+     friendly help message, rather than silently exiting.  */
+  if (targets->nelts == 0)
+    {
+      return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool,
+			       "" /* message is unused */);
+    }
   
   /* Put commandline auth info into a baton for libsvn_client.  */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
