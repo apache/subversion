@@ -216,8 +216,10 @@ svn_cl__subcommand_help (const char *subcommand,
 
 /* Print a hash that maps (char *) names to (svn_wc_status_t *)
    structs to stdout for human consumption.  Prints in abbreviated
-   format by default, or DETAILED format if flag is set, or
-   VERY_DETAILED format is flag is set.  In the latter case, print
+   format by default, or DETAILED format if flag is set.
+
+   When DETAILED is set, use SHOW_LAST_COMMITTED to toggle display of
+   the last-committed-revision and last-committed-author.  Also, print
    YOUNGEST as the youngest revision in the repository, unless it is
    SVN_INVALID_REVNUM, in which case don't print anything about the
    youngest revision.
@@ -227,7 +229,7 @@ svn_cl__subcommand_help (const char *subcommand,
 void svn_cl__print_status_list (apr_hash_t *statushash,
                                 svn_revnum_t youngest,
                                 svn_boolean_t detailed,
-                                svn_boolean_t very_detailed,
+                                svn_boolean_t show_last_committed,
                                 svn_boolean_t skip_unrecognized,
                                 apr_pool_t *pool);
 

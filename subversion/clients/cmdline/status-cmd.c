@@ -60,7 +60,7 @@ svn_cl__status (apr_getopt_t *os,
          requested by the user.
 
          svn_client_status directly understands the three commandline
-         switches (-n, -u, -v) : */
+         switches (-n, -u, -[vV]) : */
 
       SVN_ERR (svn_client_status (&statushash, &youngest, target, auth_baton,
                                   opt_state->nonrecursive ? 0 : 1,
@@ -74,7 +74,9 @@ svn_cl__status (apr_getopt_t *os,
          output format or not. */
       svn_cl__print_status_list (statushash, 
                                  youngest,
-                                 (opt_state->verbose || opt_state->update),
+                                 (opt_state->verbose || 
+                                  opt_state->update ||
+                                  opt_state->very_verbose),
                                  opt_state->very_verbose,
                                  opt_state->quiet,
                                  pool);
