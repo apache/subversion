@@ -429,6 +429,7 @@ svn_wc__do_property_merge (svn_string_t *path,
   svn_string_t *tmp_props, *real_props;
 
   svn_string_t *entryname;
+  svn_string_t *full_path;
   
   apr_array_header_t *local_propchanges; /* propchanges that the user
                                             has made since last update */
@@ -446,20 +447,23 @@ svn_wc__do_property_merge (svn_string_t *path,
     {
       /* We must be merging props on the directory PATH  */
       entryname = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
+      full_path = path;
       is_dir = TRUE;
     }
   else
     {
       /* We must be merging props on the file PATH/NAME */
       entryname = svn_string_dup (name, pool);
+      full_path = svn_string_dup (path, pool);
+      svn_path_add_component (full_path, name, svn_path_local_style);
       is_dir = FALSE;
     }
 
   /* Get paths to the local and pristine property files. */
-  err = svn_wc__prop_path (&local_propfile_path, path, 0, pool);
+  err = svn_wc__prop_path (&local_propfile_path, full_path, 0, pool);
   if (err) return err;
   
-  err = svn_wc__prop_base_path (&base_propfile_path, path, 0, pool);
+  err = svn_wc__prop_base_path (&base_propfile_path, full_path, 0, pool);
   if (err) return err;
 
   /* Load the base & working property files into hashes */
@@ -594,10 +598,10 @@ svn_wc__do_property_merge (svn_string_t *path,
   paths computed are ABSOLUTE pathnames, which is what our disk
   routines require.*/
 
-  err = svn_wc__prop_base_path (&base_prop_tmp_path, path, 1, pool);
+  err = svn_wc__prop_base_path (&base_prop_tmp_path, full_path, 1, pool);
   if (err) return err;
 
-  err = svn_wc__prop_path (&local_prop_tmp_path, path, 1, pool);
+  err = svn_wc__prop_path (&local_prop_tmp_path, full_path, 1, pool);
   if (err) return err;
   
   /* Write the merged pristine prop hash to either
