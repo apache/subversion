@@ -418,32 +418,55 @@ svn_client_revert (svn_stringbuf_t *path,
                    apr_pool_t *pool);
 
 
-/* Copy SRC_PATH to DST_PATH, and schedule DST_PATH for addition to
-   the repository, remembering the copy history.
+/* Copy SRC_PATH to DST_PATH.
 
-   SRC_PATH must be a file or directory under version control, and
-   DST_PATH must be a file or dir within the same working copy --
-   existent or not.
+   SRC_PATH must be a file or directory under version control, or the
+   URL of a versioned item in the repository.  If SRC_PATH is a URL,
+   SRC_REV is used to choose the revision from which to copy the
+   SRC_PATH.  DST_PATH must be a file or directory under version
+   control, or a repository URL, existent or not.
 
-   Important:  this is a variant of svn_client_add.  No changes will
-   happen to the repository until a commit occurs.  This scheduling
-   can be removed with svn_client_revert.  */
+   If either SRC_PATH or DST_PATH are URLs, use the AUTH_BATON and
+   MESSAGE to immediately attempt to commit the copy action in the
+   repository.
+
+   If neither SRC_PATH nor DST_PATH is a URL, then this is just a
+   variant of svn_client_add, where the DST_PATH items are scheduled
+   for addition as copies.  No changes will happen to the repository
+   until a commit occurs.  This scheduling can be removed with
+   svn_client_revert.  */
 svn_error_t *
 svn_client_copy (svn_stringbuf_t *src_path,
+                 svn_revnum_t src_rev,
                  svn_stringbuf_t *dst_path,
+                 svn_client_auth_baton_t *auth_baton,
+                 svn_stringbuf_t *message,
                  apr_pool_t *pool);
 
 
-/* Move/rename SRC_PATH to DST_PATH.  In Subversion, this operation is
-   (literally!) equivalent to
+/* Move SRC_PATH to DST_PATH.
 
-        svn_client_copy (src_path, dst_path, pool);
-        svn_client_delete (src_path, TRUE, pool):
+   SRC_PATH must be a file or directory under version control, or the
+   URL of a versioned item in the repository.  
 
-   Therefore, please read the docstrings for those two functions. */
+   If SRC_PATH is a repository URL:
+   - DST_PATH must also be a repository URL (existent or not).
+   - SRC_REV is used to choose the revision from which to copy the
+     SRC_PATH.  
+   - AUTH_BATON and MESSAGE are used to commit the move
+
+   If SRC_PATH is a working copy path
+   - DST_PATH must also be a working copy path (existent or not).
+   - SRC_REV, AUTH and MESSAGE are ignored.
+   - This is a scheduling operation.  No changes will happen to the
+     repository until a commit occurs.  This scheduling can be removed
+     with svn_client_revert. */
 svn_error_t *
 svn_client_move (svn_stringbuf_t *src_path,
+                 svn_revnum_t src_rev,
                  svn_stringbuf_t *dst_path,
+                 svn_client_auth_baton_t *auth_baton,
+                 svn_stringbuf_t *message,
                  apr_pool_t *pool);
 
 
