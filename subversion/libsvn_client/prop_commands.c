@@ -22,6 +22,8 @@
 
 /*** Includes. ***/
 
+#include <ctype.h>
+
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
@@ -32,6 +34,28 @@
 
 
 /*** Code. ***/
+
+/* Check whether the UTF8 NAME is a valid property name.  For now, this means
+ * the ASCII subset of an XML "Name".
+ * XML "Name" is defined at http://www.w3.org/TR/REC-xml#sec-common-syn */
+static svn_boolean_t
+is_valid_prop_name (const char *name)
+{
+  const char *p = name;
+
+  /* Each byte of a UTF8-encoded non-ASCII character has its high bit set and
+   * so will be rejected by this function. */
+  if (! isalpha (*p) && ! strchr ("_:", *p))
+    return FALSE;
+  p++;
+  for (; *p; p++)
+    {
+      if (! isalnum (*p) && ! strchr (".-_:", *p))
+        return FALSE;
+    }
+  return TRUE;
+}
+
 
 static svn_error_t *
 recursive_propset (const char *propname,
@@ -114,6 +138,10 @@ svn_client_propset (const char *propname,
          target);
     }
 
+  if (propval && ! is_valid_prop_name (propname))
+    return svn_error_createf (SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+                              "Bad property name: '%s'", propname);
+
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, TRUE, TRUE, pool));
   SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
   if (!node)
@@ -135,7 +163,6 @@ svn_client_propset (const char *propname,
 }
 
 
-
 svn_error_t *
 svn_client_revprop_set (const char *propname,
                         const svn_string_t *propval,
@@ -155,6 +182,10 @@ svn_client_revprop_set (const char *propname,
     return svn_error_create (SVN_ERR_CLIENT_REVISION_AUTHOR_CONTAINS_NEWLINE,
                              NULL,
                              "Pass --force to override this restriction");
+
+  if (propval && ! is_valid_prop_name (propname))
+    return svn_error_createf (SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+                              "Bad property name: '%s'", propname);
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files or store the auth data,
