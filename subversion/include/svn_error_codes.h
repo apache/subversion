@@ -122,6 +122,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_BAD_URL,
               "Bogus URL")
 
+  SVN_ERRDEF (SVN_ERR_BAD_DATE,
+              "Bogus date")
+
   SVN_ERRDEF (SVN_ERR_UNSUPPORTED_FEATURE,
               "Trying to use an unsupported feature")
 

@@ -71,7 +71,7 @@ test_time_from_nts (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  timestamp = svn_time_from_nts(test_timestring);
+  SVN_ERR (svn_time_from_nts (&timestamp, test_timestring, pool));
 
   if (timestamp != test_timestamp)
     {
@@ -98,7 +98,7 @@ test_time_from_nts_old (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  timestamp = svn_time_from_nts(test_old_timestring);
+  SVN_ERR (svn_time_from_nts (&timestamp, test_old_timestring, pool));
 
   if (timestamp != test_timestamp)
     {
@@ -128,7 +128,7 @@ test_time_invariant (const char **msg,
     return SVN_NO_ERROR;
 
   timestring = svn_time_to_nts(current_timestamp,pool);
-  timestamp = svn_time_from_nts(timestring);
+  SVN_ERR (svn_time_from_nts (&timestamp, timestring, pool));
 
   if (timestamp != current_timestamp)
     {
