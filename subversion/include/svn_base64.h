@@ -19,7 +19,9 @@
 #include "svn_io.h"
 
 /* Return a writable generic stream which will encode binary data in
-   base64 format and write the encoded data to OUTPUT.  */
+   base64 format and write the encoded data to OUTPUT.  Be sure to
+   close the stream when done writing in order to squeeze out the last
+   bit of encoded data.  */
 svn_stream_t *svn_base64_encode (svn_stream_t *output, apr_pool_t *pool);
 
 /* Return a writable generic stream which will decode base64-encoded

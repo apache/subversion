@@ -1196,11 +1196,8 @@ xml_handle_end (void *userData, const char *name)
     {
       if (digger->svndiff_parser != NULL)
         {     
-          /* (length = 0) implies that we're done parsing svndiff stream.
-             Let the parser flush its buffer, clean up, whatever it wants
-             to do. */
-          apr_size_t len = 0;
-          err = svn_stream_write (digger->svndiff_parser, NULL, &len);
+          /* Close the svndiff stream. */
+          err = svn_stream_close (digger->svndiff_parser);
           if (err)
             svn_xml_signal_bailout (err, digger->svn_parser);
         }

@@ -200,10 +200,9 @@ void svn_txdelta_apply (svn_stream_t *source,
 
 /* Prepare to produce an svndiff-format diff from text delta windows.
    OUTPUT is a writable generic stream to write the svndiff data to.
-   A zero-length write will be performed to signify the end of the
-   output.  Allocation takes place in a sub-pool of POOL.  On return,
-   *HANDLER is set to a window handler function and *HANDLER_BATON is
-   set to the value to pass as the BATON argument to *HANDLER.  */
+   Allocation takes place in a sub-pool of POOL.  On return, *HANDLER
+   is set to a window handler function and *HANDLER_BATON is set to
+   the value to pass as the BATON argument to *HANDLER.  */
 void svn_txdelta_to_svndiff (svn_stream_t *output,
                              apr_pool_t *pool,
                              svn_txdelta_window_handler_t **handler,
@@ -211,8 +210,7 @@ void svn_txdelta_to_svndiff (svn_stream_t *output,
 
 /* Return a writable generic stream which will parse svndiff-format
    data into a text delta, invoking HANDLER with HANDLER_BATON
-   whenever a new window is ready.  You must perform a zero-length
-   write to *PARSE at the end of your data stream.  */
+   whenever a new window is ready.  */
 svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
                                          void *handler_baton,
                                          apr_pool_t *pool);

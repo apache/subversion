@@ -348,6 +348,7 @@ apply_window (svn_txdelta_window_t *window, void *baton)
   if (window == NULL)
     {
       /* We're done; just clean up.  */
+      svn_stream_close (ab->target);
       apr_destroy_pool (ab->pool);
       return SVN_NO_ERROR;
     }

@@ -90,6 +90,7 @@ encode_bytes (svn_string_t *str, const char *data, apr_size_t len,
   *inbuflen += (end - p);
 }
 
+
 /* Encode leftover data, if any, and possibly a final newline,
    appending to STR.  LEN must be in the range 0..2.  */
 static void
@@ -112,6 +113,7 @@ encode_partial_group (svn_string_t *str, const char *extra, int len,
     svn_string_appendcstr (str, "\n");
 }
 
+
 /* Write handler for svn_base64_encode.  */
 static svn_error_t *
 encode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
@@ -122,23 +124,35 @@ encode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
   apr_size_t enclen;
   svn_error_t *err = SVN_NO_ERROR;
 
-  /* Encode this block of data, or finish up if there is no more.  */
-  if (*len > 0)
-    encode_bytes (encoded, data, *len, eb->buf, &eb->buflen, &eb->linelen);
-  else
-    encode_partial_group (encoded, eb->buf, eb->buflen, eb->linelen);
-
-  /* Write the output, clean up, go home.  */
+  /* Encode this block of data and write it out.  */
+  encode_bytes (encoded, data, *len, eb->buf, &eb->buflen, &eb->linelen);
   enclen = encoded->len;
   if (enclen != 0)
     err = svn_stream_write (eb->output, encoded->data, &enclen);
   apr_destroy_pool (subpool);
-  if (*len == 0)
-    {
-      if (err == SVN_NO_ERROR)
-	err = svn_stream_write (eb->output, NULL, len);
-      apr_destroy_pool (eb->pool);
-    }
+  return err;
+}
+
+
+/* Close handler for svn_base64_encode().  */
+static svn_error_t *
+finish_encoding_data (void *baton)
+{
+  struct encode_baton *eb = baton;
+  svn_string_t *encoded = svn_string_create ("", eb->pool);
+  apr_size_t enclen;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  /* Encode a partial group at the end if necessary, and write it out.  */
+  encode_partial_group (encoded, eb->buf, eb->buflen, eb->linelen);
+  enclen = encoded->len;
+  if (enclen != 0)
+    err = svn_stream_write (eb->output, encoded->data, &enclen);
+
+  /* Pass on the close request and clean up the baton.  */
+  if (err == SVN_NO_ERROR)
+    err = svn_stream_close (eb->output);
+  apr_destroy_pool (eb->pool);
   return err;
 }
 
@@ -156,6 +170,7 @@ svn_base64_encode (svn_stream_t *output, apr_pool_t *pool)
   eb->pool = subpool;
   stream = svn_stream_create (eb, pool);
   svn_stream_set_write (stream, encode_data);
+  svn_stream_set_close (stream, finish_encoding_data);
   return stream;
 }
 
@@ -239,6 +254,8 @@ decode_bytes (svn_string_t *str, const char *data, apr_size_t len,
     }
 }
 
+
+/* Write handler for svn_base64_decode.  */
 static svn_error_t *
 decode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
 {
@@ -247,14 +264,6 @@ decode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
   svn_string_t *decoded;
   apr_size_t declen;
   svn_error_t *err = SVN_NO_ERROR;
-
-  if (*len == 0)
-    {
-      /* No more data to decode; pass that on to db->output and clean up.  */
-      err = svn_stream_write (db->output, NULL, len);
-      apr_destroy_pool (db->pool);
-      return err;
-    }
 
   /* Decode this block of data.  */
   subpool = svn_pool_create (pool);
@@ -266,6 +275,20 @@ decode_data (void *baton, const char *data, apr_size_t *len, apr_pool_t *pool)
   if (declen != 0)
     err = svn_stream_write (db->output, decoded->data, &declen);
   apr_destroy_pool (subpool);
+  return err;
+}
+
+
+/* Close handler for svn_base64_decode().  */
+static svn_error_t *
+finish_decoding_data (void *baton)
+{
+  struct decode_baton *db = baton;
+  svn_error_t *err;
+
+  /* Pass on the close request and clean up the baton.  */
+  err = svn_stream_close (db->output);
+  apr_destroy_pool (db->pool);
   return err;
 }
 
@@ -283,6 +306,7 @@ svn_base64_decode (svn_stream_t *output, apr_pool_t *pool)
   db->pool = subpool;
   stream = svn_stream_create (db, pool);
   svn_stream_set_write (stream, decode_data);
+  svn_stream_set_close (stream, finish_decoding_data);
   return stream;
 }
 

@@ -117,9 +117,9 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 
   if (window == NULL)
     {
-      /* We're done; pass the word on to the output function and clean up.  */
+      /* We're done; clean up.  */
       len = 0;
-      err = svn_stream_write (eb->output, NULL, &len);
+      err = svn_stream_close (eb->output);
       apr_destroy_pool (eb->pool);
       return SVN_NO_ERROR;
     }
@@ -346,17 +346,6 @@ write_handler (void *baton,
   svn_txdelta_op_t *op;
   int ninst;
 
-  if (*len == 0)
-    {
-      /* We're done.  Or we should be, anyway.  */
-      if (db->header_bytes < 4 || db->buffer->len != 0)
-        return svn_error_create (SVN_ERR_MALFORMED_FILE, 0, NULL, pool,
-                                 "unexpected end of svndiff input");
-      db->consumer_func (NULL, db->consumer_baton);
-      apr_destroy_pool (db->pool);
-      return SVN_NO_ERROR;
-    }
-
   /* Chew up four bytes at the beginning for the header.  */
   if (db->header_bytes < 4)
     {
@@ -470,6 +459,25 @@ write_handler (void *baton,
   return err;
 }
 
+
+static svn_error_t *
+close_handler (void *baton)
+{
+  struct decode_baton *db = (struct decode_baton *) baton;
+  svn_error_t *err;
+
+  /* Make sure that we're at a plausible end of stream.  */
+  if (db->header_bytes < 4 || db->buffer->len != 0)
+    return svn_error_create (SVN_ERR_MALFORMED_FILE, 0, NULL, db->pool,
+                             "unexpected end of svndiff input");
+
+  /* Tell the window consumer that we're done, and clean up.  */
+  err = db->consumer_func (NULL, db->consumer_baton);
+  apr_destroy_pool (db->pool);
+  return err;
+}
+
+
 svn_stream_t *
 svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
                            void *handler_baton,
@@ -489,6 +497,7 @@ svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
   db->header_bytes = 0;
   stream = svn_stream_create (db, pool);
   svn_stream_set_write (stream, write_handler);
+  svn_stream_set_close (stream, close_handler);
   return stream;
 }
 
