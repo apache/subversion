@@ -10,9 +10,19 @@ Source0: subversion-%{version}-%{release}.tar.gz
 Patch0: expat.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
-Requires: apr >= 2001.10.24, db3 >= 3.3.11, expat, neon
-BuildPreReq: autoconf >= 2.52, db3-devel >= 3.3.11, libtool >= 1.4.2, python
-BuildPreReq: apr-devel >= 2001.10.24, expat-devel, neon >= 0.17.1
+Requires: apr >= 2001.10.24
+Requires: db3 >= 3.3.11
+Requires: expat
+Requires: libxml
+Requires: neon
+BuildPreReq: apr-devel >= 2001.10.24
+BuildPreReq: autoconf >= 2.52
+BuildPreReq: db3-devel >= 3.3.11
+BuildPreReq: expat-devel
+BuildPreReq: libtool >= 1.4.2
+BuildPreReq: libxml-devel
+BuildPreReq: neon >= 0.17.1
+BuildPreReq: python
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Prefix: /usr
 %description
