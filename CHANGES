@@ -1,3 +1,22 @@
+Version 1.0.7
+(17 September 2004, from /branches/1.0.x)
+http://svn.collab.net/repos/svn/tags/1.0.7
+
+ User-visible-changes:
+ * fixed: win32 'file not found' error [issue #1862]
+ * fixed: 'svn st -u' crash (r10841)
+ * fixed: potential repos corruption; ensure stdin/out/err always open (r10819)
+ * fixed: allow propnames containing ":" to be fetched via http:// (r10190)
+ * fixed: allow user to interrupt between authentication prompts (see r11014)
+ * fixed: work around +t directory-creation bug in APR (r10616, 10638, 10642)
+ * various small fixes to Book
+
+ Developer-visible changes:
+ * fix library dependencies for bindings (r9338, 9340)
+ * java bindings: fix a crash and other bugs (r9883, 9905, 8027)
+ * perl bindings: various fixes (see r11023)
+
+
 Version 1.0.6
 (19 July 2004, from /branches/1.0.x)
 http://svn.collab.net/repos/svn/tags/1.0.6
