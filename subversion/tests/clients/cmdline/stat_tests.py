@@ -23,6 +23,9 @@ import string, sys, os.path, re
 import svntest
 
 
+# (abbreviation)
+Skip = svntest.testcase.Skip
+XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 

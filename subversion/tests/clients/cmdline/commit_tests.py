@@ -23,6 +23,8 @@ import string, sys, os
 import svntest
 
 # (abbreviation)
+Skip = svntest.testcase.Skip
+XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 
@@ -1441,7 +1443,7 @@ def failed_commit(sbox):
 test_list = [ None,
               commit_one_file,
               commit_one_new_file,
-              svntest.main.XFAIL(commit_one_new_binary_file),
+              XFail(commit_one_new_binary_file),
               commit_multiple_targets,
               commit_multiple_targets_2,
               commit_inclusive_dir,
@@ -1452,7 +1454,7 @@ test_list = [ None,
               hudson_part_1_variation_1,
               hudson_part_1_variation_2,
               hudson_part_2,
-              svntest.main.XFAIL(hook_test),
+              XFail(hook_test),
               merge_mixed_revisions,
               commit_uri_unsafe,
               commit_deleted_edited,
@@ -1462,7 +1464,7 @@ test_list = [ None,
               commit_from_long_dir,
               commit_with_lock,
               commit_current_dir,
-              svntest.main.XFAIL(failed_commit),
+              XFail(failed_commit),
              ]
 
 if __name__ == '__main__':

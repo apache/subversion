@@ -53,6 +53,8 @@ msg_separator = '------------------------------------' \
 
 
 # (abbreviation)
+Skip = svntest.testcase.Skip
+XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
 
