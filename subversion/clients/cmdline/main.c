@@ -685,6 +685,7 @@ main (int argc, const char * const *argv)
   int i, num_opts = 0;
   const svn_cl__cmd_desc_t *subcommand = NULL;
   svn_boolean_t log_under_version_control = FALSE;
+  svn_boolean_t log_is_pathname = FALSE;
 
   /* FIXME: This is a first step towards support for localization in
      `svn'.  In real life, this call would be
@@ -736,6 +737,15 @@ main (int argc, const char * const *argv)
 
       switch (opt_id) {
       case 'm':
+        {
+          apr_finfo_t finfo;
+          if (apr_stat(&finfo, opt_arg, APR_FINFO_MIN, pool) == APR_SUCCESS)
+            {
+              /* woah! that log message is a file. I doubt the user
+                 intended that. */
+              log_is_pathname = TRUE;
+            }
+        }
         opt_state.message = svn_stringbuf_create (opt_arg, pool);
         break;
       case 'r':
@@ -905,6 +915,20 @@ main (int argc, const char * const *argv)
           "Log message file is a versioned file; use `--force' to override."),
          stderr,
          FALSE);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
+
+  /* If the log message is just a pathname, then the user probably did
+     not intend that. */
+  if (log_is_pathname && !opt_state.force)
+    {
+      svn_handle_error (svn_error_create (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME,
+                                          0, NULL, pool,
+                                          "The log message is a pathname "
+                                          "(was -F intended?); use `--force' "
+                                          "to override."),
+                        stderr, FALSE);
       svn_pool_destroy (pool);
       return EXIT_FAILURE;
     }

@@ -378,7 +378,10 @@ SVN_ERROR_START
               "Attempted command in administrative dir")
 
   SVN_ERRDEF (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE,
-              "The log message file is under version control.")
+              "The log message file is under version control")
+
+  SVN_ERRDEF (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME,
+              "The log message is a pathname")
 
   SVN_ERRDEF (SVN_ERR_CL_COMMIT_IN_ADDED_DIR,
               "Commiting in directory scheduled for addition")
