@@ -412,6 +412,9 @@ APR pool usage conventions
 (This assumes you already basically understand how APR pools work; see
 apr_pools.h for details.)
 
+Applications using the Subversion libraries must call apr_initialize()
+before calling any Subversion functions.
+
 Subversion's general pool usage strategy can be summed up in two
 principles:
 
