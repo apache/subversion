@@ -120,6 +120,7 @@ Bindings changes that affect the build system:
      Notes: This time it should be complete.
      Votes:
       +1: breser
+      +1 (concept and build system changes): ghudson
      
 Bindings changes that don't affect the build system:
 
