@@ -120,12 +120,14 @@ usage (const char *progname, int exit_code)
      "\n"
      "   createtxn REPOS_PATH BASE_REV\n"
      "      Create a new transaction based on BASE_REV.\n"
+#if 0 /* svn_fs_deltify() is not currently implemented. */
      "\n"
      "   deltify   REPOS_PATH REVISION PATH\n"
      "      Offer the repository a chance to deltify the storage\n"
      "      associated with PATH in REVISION.  If PATH represents\n"
      "      a directory, perform a recursive deltification of the\n"
      "      tree starting at PATH.\n"
+#endif /* 0 */
      "\n"
      "   dump   REPOS_PATH [LOWER_REV [UPPER_REV]]\n"
      "      Dump the contents of filesystem to stdout in a 'dumpfile'\n"
@@ -212,8 +214,10 @@ parse_command (const char *command)
     return svnadmin_cmd_setlog;
   else if (! strcmp (command, "shell"))
     return svnadmin_cmd_shell;
+#if 0 /* svn_fs_deltify() is not currently implemented. */
   else if (! strcmp (command, "undeltify"))
     return svnadmin_cmd_undeltify;
+#endif /* 0 */
   else if (! strcmp (command, "deltify"))
     return svnadmin_cmd_deltify;
   else if (! strcmp (command, "dump"))

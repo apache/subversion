@@ -4689,6 +4689,8 @@ undeltify_deltify (const char **msg,
                "%s:%" SVN_REVNUM_T_FMT
                " undeltified contents are incorrect", path, i_rev);
 
+#if 0 /* svn_fs_deltify() is not currently enabled as a feature  */
+
           /* Now, re-deltify, and again get its contents and verify them.  */
           SVN_ERR (svn_fs_deltify (rev_root, path, 0, iterpool));
           SVN_ERR (svn_test__get_file_contents (rev_root, path, &contents,
@@ -4698,7 +4700,7 @@ undeltify_deltify (const char **msg,
               (SVN_ERR_FS_CORRUPT, 0, NULL, pool,
                "%s:%" SVN_REVNUM_T_FMT
                " re-deltified contents are incorrect", path, i_rev);
-
+#endif /* 0 */
           /* Clear out the per-file pool. */
           svn_pool_clear (iterpool);
         }
@@ -4747,6 +4749,8 @@ undeltify_deltify (const char **msg,
       svn_pool_clear (subpool);
     }
 
+#if 0 /* svn_fs_deltify() is not currently enabled as a feature  */
+
   /* And re-deltify... */
   for (i_rev = 1; i_rev <= youngest_rev; i_rev++)
     {
@@ -4780,6 +4784,8 @@ undeltify_deltify (const char **msg,
          completely drains the other (iterpool)... */
       svn_pool_clear (subpool);
     }
+
+#endif /* 0 */
 
   /* Destroy the per-revision pool. */
   svn_pool_destroy (subpool);

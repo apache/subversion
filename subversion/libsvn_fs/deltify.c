@@ -196,9 +196,15 @@ svn_fs_deltify (svn_fs_root_t *root,
 {
   struct deltify_args args;
 
+  /* ### todo: make this work [currently, deltify_undeltify() does
+     nothing in the deltify case].  */
+  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL, pool,
+                           "svn_fs_deltify: currently not implemented");
+
   if (! svn_fs_is_revision_root (root))
     return svn_error_create (SVN_ERR_FS_NOT_REVISION_ROOT, 0, NULL, pool,
                              "svn_fs_deltify: root is not a revision root");
+
 
   args.fs = svn_fs_root_fs (root);
   args.root = root;
