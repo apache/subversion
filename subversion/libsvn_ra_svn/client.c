@@ -202,6 +202,23 @@ static svn_error_t *parse_prop_diffs(apr_array_header_t *list,
   return SVN_NO_ERROR;
 }
 
+/* Parse a lockdesc, provided in LIST as specified by the protocol into
+   LOCK, allocated in POOL. */
+static svn_error_t *parse_lock(apr_array_header_t *list, apr_pool_t *pool,
+                               svn_lock_t **lock)
+{
+  const char *cdate, *edate;
+  *lock = apr_pcalloc(pool, sizeof(*lock));
+  SVN_ERR(svn_ra_svn_parse_tuple(list, pool, "cccc(?c)", &(*lock)->path,
+                                 &(*lock)->token, &(*lock)->owner,
+                                 &cdate, &edate));
+  (*lock)->path = svn_path_canonicalize((*lock)->path, pool);
+  SVN_ERR(svn_time_from_cstring(&(*lock)->creation_date, cdate, pool));
+  if (edate)
+    SVN_ERR(svn_time_from_cstring(&(*lock)->expiration_date, edate, pool));
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *interpret_kind(const char *str, apr_pool_t *pool,
                                    svn_node_kind_t *kind)
 {
@@ -1130,6 +1147,17 @@ static svn_error_t *ra_svn_check_path(void *baton, const char *path,
   return SVN_NO_ERROR;
 }
 
+/* If ERR is a command not supported error, wrap it in a
+   SVN_ERR_RA_NOT_IMPLEMENTED with error message MSG.  Else, return err. */
+static svn_error_t *handle_unsupported_cmd(svn_error_t *err,
+                                           const char *msg)
+{
+  if (err && err->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD)
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                            msg);
+  return err;
+}
+
 static svn_error_t *ra_svn_get_locations(void *session_baton,
                                          apr_hash_t **locations,
                                          const char *path,
@@ -1144,7 +1172,6 @@ static svn_error_t *ra_svn_get_locations(void *session_baton,
   svn_boolean_t is_done;
   int i;
   const char *ret_path;
-  svn_error_t *err;
 
   /* Transmit the parameters. */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(cr(!",
@@ -1157,13 +1184,9 @@ static svn_error_t *ra_svn_get_locations(void *session_baton,
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
 
-  err = handle_auth_request(sess, pool);
-
   /* Servers before 1.1 don't support this command. Check for this here. */
-  if (err && err->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD)
-    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
-                             _("get-locations not implemented"));
-  SVN_ERR(err);
+  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
+                                 _("get-locations not implemented")));
 
   /* Read the hash items. */
   is_done = FALSE;
@@ -1200,7 +1223,6 @@ static svn_error_t *ra_svn_get_file_revs(void *session_baton, const char *path,
                                          void *handler_baton, apr_pool_t *pool)
 {
   ra_svn_session_baton_t *sess = session_baton;
-  svn_error_t *err;
   apr_pool_t *rev_pool, *chunk_pool;
   svn_ra_svn_item_t *item;
   const char *p;
@@ -1223,13 +1245,9 @@ static svn_error_t *ra_svn_get_file_revs(void *session_baton, const char *path,
   SVN_ERR(svn_ra_svn_write_cmd(sess->conn, pool, "get-file-revs",
                                "c(?r)(?r)", path, start, end));
 
-  err = handle_auth_request(sess, pool);
-
   /* Servers before 1.1 don't support this command.  Check for this here. */
-  if (err && err->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD)
-    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
-                             _("get-file-revs not implemented"));
-  SVN_ERR(err);
+  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
+                                 _("get-file-revs not implemented")));
 
   while (1)
     {
@@ -1301,52 +1319,107 @@ static svn_error_t *ra_svn_get_file_revs(void *session_baton, const char *path,
   return SVN_NO_ERROR;
 }
 
-
-
 static svn_error_t *ra_svn_lock(void *session_baton,
                                 svn_lock_t **lock,
                                 const char *path,
                                 svn_boolean_t force,
                                 apr_pool_t *pool)
 {
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                           "Function not yet implemented.");
+  ra_svn_session_baton_t *sess = session_baton;
+  svn_ra_svn_conn_t* conn = sess->conn;
+  apr_array_header_t *list;
+
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "lock", "cb", path, force));
+
+  /* Servers before 1.2 doesn't support locking.  Check this here. */
+  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
+                                 _("Server doesn't support the lock command")));
+
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &list));
+  SVN_ERR(parse_lock(list, pool, lock));
+  return SVN_NO_ERROR;
 }
-
-
 
 static svn_error_t *ra_svn_unlock(void *session_baton,
                                   const char *token,
                                   svn_boolean_t force,
                                   apr_pool_t *pool)
 {
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                           "Function not yet implemented.");
+  ra_svn_session_baton_t *sess = session_baton;
+  svn_ra_svn_conn_t* conn = sess->conn;
+
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "unlock", "cb", token, force));
+
+  /* Servers before 1.2 doesn't support locking.  Check this here. */
+  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
+                                 _("Server doesn't support the unlocks "
+                                   "command")));
+
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
+  return SVN_NO_ERROR;
 }
-
-
 
 static svn_error_t *ra_svn_get_lock(void *session_baton,
                                     svn_lock_t **lock,
                                     const char *path,
                                     apr_pool_t *pool)
 {
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                           "Function not yet implemented.");
-}
+  ra_svn_session_baton_t *sess = session_baton;
+  svn_ra_svn_conn_t* conn = sess->conn;
+  apr_array_header_t *list;
 
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-lock", "c", path));
+
+  /* Servers before 1.2 doesn't support locking.  Check this here. */
+  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
+                                 _("Server doesn't support the get-lock "
+                                   "command")));
+
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?l)", &list));
+  if (list)
+    SVN_ERR(parse_lock(list, pool, lock));
+  else
+    *lock = NULL;
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *ra_svn_get_locks(void *session_baton,
                                      apr_hash_t **locks,
                                      const char *path,
                                      apr_pool_t *pool)
 {
-  return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                           "Function not yet implemented.");
+  ra_svn_session_baton_t *sess = session_baton;
+  svn_ra_svn_conn_t* conn = sess->conn;
+  apr_array_header_t *list;
+  int i;
+  svn_ra_svn_item_t *elt;
+  svn_lock_t *lock;
+
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-locks", "c", path));
+
+  /* Servers before 1.2 doesn't support locking.  Check this here. */
+  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
+                                 _("Server doesn't support the get-lock "
+                                   "command")));
+
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &list));
+
+  *locks = apr_hash_make(pool);
+
+  for (i = 0; i < list->nelts; ++i)
+    {
+      elt = &APR_ARRAY_IDX(list, i, svn_ra_svn_item_t);
+
+      if (elt->kind != SVN_RA_SVN_LIST)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                _("Lock element not a list"));
+      SVN_ERR(parse_lock(elt->u.list, pool, &lock));
+      apr_hash_set(*locks, lock->path, APR_HASH_KEY_STRING, lock);
+    }
+
+  return SVN_NO_ERROR;
 }
-
-
-
 
 
 static const svn_ra_plugin_t ra_svn_plugin = {
