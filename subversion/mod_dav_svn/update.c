@@ -827,5 +827,5 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 				 "report.");
     }
 
-  return SVN_NO_ERROR;
+  return NULL;
 }
