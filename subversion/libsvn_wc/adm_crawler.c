@@ -958,6 +958,81 @@ report_local_mods (svn_string_t *path,
 
 
 
+/* The recursive crawler that describes a mixed-revision working
+   copy.  Used for updates.
+
+   This is a depth-first recursive walk of DIR_PATH.  Look at each
+   entry and check if its revision is different than DIR_REV.  If so,
+   report this fact to REPORTER.
+
+   Note: we're conspicuously creating a subpool in POOL and freeing it
+   at each level of subdir recursion; this is a safety measure that
+   protects us when reporting info on outrageously large or deep
+   trees. */
+static svn_error_t *
+report_revisions (svn_string_t *dir_path,
+                  svn_revnum_t dir_rev,
+                  const svn_ra_reporter_t *reporter,
+                  void *report_baton,
+                  apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool = svn_pool_create (pool);
+
+  SVN_ERR (svn_wc_entries_read (&entries, dir_path, subpool));
+
+  /* Loop over this directory's entries: */
+  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
+    {
+      const void *key;
+      const char *keystring;
+      apr_size_t klen;
+      void *val;
+      svn_string_t *current_entry_name;
+      svn_wc_entry_t *current_entry; 
+      svn_string_t *full_entry_path;
+
+      /* Get the next entry */
+      apr_hash_this (hi, &key, &klen, &val);
+      keystring = (const char *) key;
+      current_entry = (svn_wc_entry_t *) val;
+
+      /* Compute the name of the entry */
+      if (! strcmp (keystring, SVN_WC_ENTRY_THIS_DIR))
+        current_entry_name = NULL;
+      else
+        current_entry_name = svn_string_create (keystring, subpool);
+
+      /* Compute the complete path of the entry */
+      full_entry_path = svn_string_dup (dir_path, subpool);
+      if (current_entry_name)
+        svn_path_add_component (full_entry_path, current_entry_name,
+                                svn_path_url_style);
+
+      /* The Big Test: */
+      if (current_entry->revision != dir_rev)
+        /* Report this unexpected revision. */
+        SVN_ERR (reporter->set_path (report_baton,
+                                     full_entry_path,
+                                     current_entry->revision));
+      
+      /* If entry is a dir (and not `.'), then recurse. */
+      if ((current_entry->kind == svn_node_dir) && current_entry_name)
+        SVN_ERR (report_revisions (full_entry_path,
+                                   current_entry->revision,
+                                   reporter, report_baton, subpool));
+    }
+
+  /* We're done examining this dir's entries, so free them. */
+  apr_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
 
 
 /*------------------------------------------------------------------*/
@@ -1019,33 +1094,21 @@ svn_wc_crawl_revisions (svn_string_t *root_directory,
                         void *report_baton,
                         apr_pool_t *pool)
 {
-  svn_error_t *err;
   svn_wc_entry_t *root_entry;
-  svn_revnum_t master_revnum = SVN_INVALID_REVNUM;
+  svn_revnum_t base_rev = SVN_INVALID_REVNUM;
 
-  /* The first thing we do is get the master_revnum from the
-     working copy's ROOT_DIRECTORY.  This is the revnum that all
-     entries will be compared to. */
-  err = svn_wc_entry (&root_entry, root_directory, pool);
-  if (err)
-    return 
-      svn_error_quick_wrap 
-      (err, "svn_wc_crawl_revisions: couldn't find wc's master revnum");
-                            
-  master_revnum = root_entry->revision;
+  /* The first thing we do is get the base_rev from the working copy's
+     ROOT_DIRECTORY.  This is the first revnum that entries will be
+     compared to. */
+  SVN_ERR (svn_wc_entry (&root_entry, root_directory, pool));
+  base_rev = root_entry->revision;
 
-  /* Next, call replace_root() and push as first item on stack...? */
+  /* Recursively crawl ROOT_DIRECTORY and report revisions. */
+  SVN_ERR (report_revisions (root_directory, base_rev,
+                             reporter, report_baton, pool));
 
-
-  /* Start the mini-crawler. 
-     err = report_revisions (root_directory, NULL,
-     edit_fns, edit_baton,
-     &stack, master_revnum,
-     pool); */
-
-
-  /* Close the edit, causing the update_editor to be driven. */
-  /*  err = edit_fns->close_edit (edit_baton); */
+  /* Finish the report, which causes the update editor to be driven. */
+  SVN_ERR (reporter->finish_report (report_baton));
 
   return SVN_NO_ERROR;
 }
