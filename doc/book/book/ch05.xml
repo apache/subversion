@@ -1458,7 +1458,7 @@ $
           <filename>db</filename> subdirectory of your repository.
           This subdirectory is a regular Berkeley DB environment
           directory, and can therefore be used in conjunction with any
-          of Berkeley's database tools (you can see the documentation
+          of the Berkeley database tools (you can see the documentation
           for these tools at SleepyCat's website, <systemitem
           class="url">http://www.sleepycat.com/</systemitem>).</para>
 
@@ -1468,7 +1468,7 @@ $
           <command>svnadmin</command> tool.  For example,
           <command>svnadmin list-unused-dblogs</command> and
           <command>svnadmin list-dblogs</command> perform a
-          subset of what is provided by Berkeley's
+          subset of what is provided by the Berkeley
           <command>db_archive</command> command, and <command>svnadmin
           recover</command> reflects the common use-cases of the
           <command>db_recover</command> utility.</para>
