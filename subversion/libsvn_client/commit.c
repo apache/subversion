@@ -1086,7 +1086,7 @@ collect_lock_tokens (apr_hash_t **result,
 svn_error_t *
 svn_client_commit2 (svn_client_commit_info_t **commit_info,
                     const apr_array_header_t *targets,
-                    svn_boolean_t nonrecursive,
+                    svn_boolean_t recurse,
                     svn_boolean_t keep_locks,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
@@ -1123,8 +1123,7 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info,
 
   /* Condense the target list. */
   SVN_ERR (svn_path_condense_targets (&base_dir, &rel_targets, targets,
-                                      nonrecursive ? FALSE : TRUE,
-                                      pool));
+                                      recurse, pool));
 
   /* No targets means nothing to commit, so just return. */
   if (! base_dir)
@@ -1164,10 +1163,10 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info,
           /* If the final target is a dir, we want to recursively lock it */
           if (kind == svn_node_dir)
             {
-              if (nonrecursive)
-                APR_ARRAY_PUSH (dirs_to_lock, const char *) = target;
-              else
+              if (recurse)
                 APR_ARRAY_PUSH (dirs_to_lock_recursive, const char *) = target;
+              else
+                APR_ARRAY_PUSH (dirs_to_lock, const char *) = target;
             }
         }
       else
@@ -1207,11 +1206,11 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info,
                  lock it */
               if (kind == svn_node_dir)
                 {
-                  if (nonrecursive)
-                    APR_ARRAY_PUSH (dirs_to_lock, 
+                  if (recurse)
+                    APR_ARRAY_PUSH (dirs_to_lock_recursive, 
                                     const char *) = apr_pstrdup (pool, target);
                   else
-                    APR_ARRAY_PUSH (dirs_to_lock_recursive, 
+                    APR_ARRAY_PUSH (dirs_to_lock, 
                                     const char *) = apr_pstrdup (pool, target);
                 }
             }
@@ -1313,7 +1312,7 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info,
                                             target, pool),
                  _("Are all the targets part of the same working copy?"));
 
-      if (nonrecursive)
+      if (!recurse)
         {
           svn_wc_status_t *status;
           svn_node_kind_t kind;
@@ -1337,7 +1336,7 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info,
                                                    &lock_tokens,
                                                    base_dir_access,
                                                    rel_targets, 
-                                                   nonrecursive,
+                                                   recurse ? FALSE : TRUE,
                                                    ! keep_locks,
                                                    ctx,
                                                    pool)))
@@ -1435,7 +1434,7 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info,
         {
           svn_client_commit_item_t *item
             = ((svn_client_commit_item_t **) commit_items->elts)[i];
-          svn_boolean_t recurse = FALSE;
+          svn_boolean_t loop_recurse = FALSE;
           const char *adm_access_path;
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *entry;
@@ -1497,13 +1496,13 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info,
           if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD) 
               && (item->kind == svn_node_dir)
               && (item->copyfrom_url))
-            recurse = TRUE;
+            loop_recurse = TRUE;
 
           remove_lock = (! keep_locks && (item->state_flags
                                           & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN));
           assert (*commit_info);
           if ((bump_err = svn_wc_process_committed2 (item->path, adm_access,
-                                                     recurse,
+                                                     loop_recurse,
                                                      (*commit_info)->revision,
                                                      (*commit_info)->date,
                                                      (*commit_info)->author,
@@ -1549,6 +1548,8 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  return svn_client_commit2 (commit_info, targets, nonrecursive, TRUE,
+  return svn_client_commit2 (commit_info, targets, 
+                             nonrecursive ? FALSE : TRUE, 
+                             TRUE,
                              ctx, pool);
 }
