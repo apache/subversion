@@ -37,8 +37,8 @@ svn_wc_relocate (const char *path,
                  const char *from,
                  const char *to,
                  svn_boolean_t recurse,
+                 svn_wc_relocation_validator_t validator,
                  void *validator_baton,
-                 svn_wc_relocation_validator *validator,
                  apr_pool_t *pool)
 {
   svn_node_kind_t kind;

@@ -132,7 +132,7 @@ svn_client_relocate (const char *path,
 
   SVN_ERR (svn_ra_init_ra_libs (&baton.ra_baton, pool));
   SVN_ERR(svn_wc_relocate(path, adm_access, from, to,
-                          recurse, &baton, validator, pool));
+                          recurse, validator, &baton, pool));
 
   SVN_ERR(svn_wc_adm_close(adm_access));
 
