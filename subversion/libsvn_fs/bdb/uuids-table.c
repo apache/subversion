@@ -37,13 +37,12 @@ svn_fs__bdb_open_uuids_table (DB **uuids_p,
                               int create)
 {
   const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
-  char buffer[APR_UUID_FORMATTED_LENGTH + 1];
   DB *uuids;
   int error;
 
   BDB_ERR (svn_fs__bdb_check_version());
   BDB_ERR (db_create (&uuids, env, 0));
-  BDB_ERR (uuids->set_re_len (uuids, sizeof (buffer) - 1));
+  BDB_ERR (uuids->set_re_len (uuids, APR_UUID_FORMATTED_LENGTH));
   
   error = uuids->open (SVN_BDB_OPEN_PARAMS (uuids, NULL),
                        "uuids", 0, DB_RECNO,
@@ -62,6 +61,7 @@ svn_fs__bdb_open_uuids_table (DB **uuids_p,
 
   if (create)
     {
+      char buffer[APR_UUID_FORMATTED_LENGTH + 1];
       DBT key, value;
       apr_uuid_t uuid;
       int recno = 0;
@@ -106,7 +106,7 @@ svn_error_t *svn_fs__bdb_get_uuid (svn_fs_t *fs,
   SVN_ERR (BDB_WRAP (fs, "get repository uuid",
                      uuids->get (uuids, trail->db_txn, &key, &value, 0)));
   
-  *uuid = apr_pstrmemdup (trail->pool, value.data, value.size + 1);
+  *uuid = apr_pstrmemdup (trail->pool, value.data, value.size);
   
   return SVN_NO_ERROR;
 }
