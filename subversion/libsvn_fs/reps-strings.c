@@ -1361,6 +1361,7 @@ svn_fs__rep_deltify (svn_fs_t *fs,
 
     new_rep.kind = svn_fs__rep_kind_delta;
     new_rep.txn_id = NULL;
+    new_rep.checksum = NULL;
     chunks = apr_array_make (pool, windows->nelts, sizeof (chunk));
 
     /* Loop through the windows we wrote, creating and adding new
