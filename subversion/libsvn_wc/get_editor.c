@@ -1460,8 +1460,9 @@ close_edit (void *edit_baton)
          Updated files should already be up-to-date. */
       svn_wc_entry_t *entry;
       svn_string_t *full_path = svn_string_dup (eb->anchor, eb->pool);
-      svn_path_add_component (full_path, eb->target,
-                              svn_path_local_style);
+      if (eb->target)
+        svn_path_add_component (full_path, eb->target,
+                                svn_path_local_style);
       SVN_ERR (svn_wc_entry (&entry, full_path, eb->pool));
       if (entry->kind == svn_node_dir)
         SVN_ERR (svn_wc__ensure_uniform_revision (full_path,
@@ -1512,22 +1513,10 @@ make_editor (svn_string_t *dest,
     }
   else
     {
-      /* For updates, our destination is composed of an anchor (where
-         the updated editor is rooted) and a target (the actual thing
-         we wish to update).  So we have to split the DEST path up
-         into those two components, correcting for '.' and such. */
-      if (svn_path_is_empty (dest, svn_path_local_style))
-        {
-          eb->anchor = svn_string_create (".", subpool);
-          eb->target = svn_string_create ("", subpool);
-        }
-      else
-        {
-          svn_path_split (dest, &eb->anchor, &eb->target,
-                          svn_path_local_style, subpool);
-          if (svn_path_is_empty (eb->anchor, svn_path_local_style))
-            svn_string_set (eb->anchor, ".");
-        }
+      SVN_ERR (svn_wc_get_actual_update_target (dest,
+                                                &eb->anchor,
+                                                &eb->target,
+                                                subpool));
     }
 
   /* Construct an editor. */
@@ -1580,9 +1569,138 @@ svn_wc_get_checkout_editor (svn_string_t *dest,
 }
 
 
+/* THE GOAL
+
+   Note the following actions, where W is a working copy directory, N
+   is a non-working copy directory, and X is the thing we wish to
+   update:
+
+      1.  `svn up .' from inside X.
+      2.  `svn up ...W/X' from anywhere.
+      3.  `svn up ...N/X' from anywhere.
+
+   And consider the four cases for X's type in the working copy and
+   repository (file or dir):
+
+      A.  dir in working copy, dir in repos.
+      B.  dir in working copy, file in repos.
+      C.  file in working copy, dir in repos.
+      D.  file in working copy, file in repos.
+
+   Here are the results we expect for each combination of the above:
+
+      1A. Successfully update X.
+      2A. Successfully update X.
+      3A. Successfully update X.
+
+      1B. Error (you don't want to remove your current working
+          directory out from underneath the application).
+      2B. Successfully update X.
+      3B. Error (you can't create a versioned file X inside a
+          non-versioned directory).
+
+      1C. N/A (you can't be "inside X" if X is a file).
+      2C. Successfully update X.
+      3C. N/A (you can't have a versioned file X in a non-versioned 
+          directory).
+
+      1D. N/A (you can be "inside X" if X is a file).
+      2D. Successfully update X.
+      3D. N/A (you can't have a versioned file X in a non-versioned 
+          directory).
+
+   To summarize, case 2 always succeeds, and cases 1 and 3 always fail
+   *except* when the target is a dir that remains a dir after the
+   update.
+
+   ACCOMPLISHING THE GOAL
+
+   Given a path to be updated, conditionally split that path into a
+   parent directory and an entry in that directory.
+
+   Why do we bother with this?
+
+   First of all, updates are accomplished by driving an editor, and an
+   editor is "rooted" on a directory.  So, in order to update a file,
+   we need to break off the basename of the file, rooting the editor
+   in that file's parent directory (and then updating only that file,
+   not the other stuff in its parent directory).
+
+   Secondly, we look at the case where we wish to update a directory.
+   This is typically trivial.  However, one problematic case, exists
+   when we wish to update a directory that has been removed from the
+   repository and replaced with a file of the same name.  If we root
+   our edit at the initial directory, there is no editor mechanism for
+   for deleting that directory and replacing it with a file (this
+   would be like having an editor now anchored on a file, which is
+   disallowed).
+
+   So, what are the conditions?
+
+   Well, any time X is '.' (implying it is a directory), we won't lop
+   off a basename.  So we'll root our editor at X, and update all of
+   X.
+
+   Any time we are trying to update some path ...N/X, we again will
+   not lop off a basename.  We can't root an editor at ...N because
+   our editor only understands how to function inside a working copy,
+   and N does not represent a working copy directory.  We root at X,
+   and update X.
+
+   We will, however, lop off a basename when we are updating a path
+   ...W/X, rooting our editor at ...W and updating X.  This case
+   provides enough information to us to be able to gracefully handle
+   the above changed-type cases that might occur.
+
+   These conditions apply whether X is a file or directory.  */
+svn_error_t *
+svn_wc_get_actual_update_target (svn_string_t *path,
+                                 svn_string_t **parent_dir,
+                                 svn_string_t **entry,
+                                 apr_pool_t *pool)
+{
+  svn_string_t *dirname, *basename;
+  svn_boolean_t is_wc;
+
+  /* Case I:  If PATH is the current working directory, do not lop off
+     a basename.  Trivial.  */
+  if (svn_path_is_empty (path, svn_path_local_style))
+    {
+      *parent_dir = svn_string_dup (path, pool);
+      *entry = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* See if PATH's parent directory is versioned.  TODO: This should
+     probably also make sure that the parent directory is versioned in
+     the same repository as PATH!  */
+  svn_path_split (path, &dirname, &basename, svn_path_local_style, pool);
+  SVN_ERR (svn_wc_check_wc (dirname, &is_wc, pool));
+
+  if (! is_wc)
+    {
+      /* Case II: If PATH is an entry of a non-versioned directory, do
+         not lop off a basename.  */
+      *parent_dir = svn_string_dup (path, pool);
+      *entry = NULL;
+    }
+  else
+    {
+      /* Case III: If PATH is an entry of a versioned directory, lop
+         off its basename. */
+      *parent_dir = dirname;
+      if (svn_path_is_empty (dirname, svn_path_local_style))
+        svn_string_set (*parent_dir, ".");
+      *entry = basename;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
- * end:
+ * end: 
  */
+

@@ -172,22 +172,25 @@ svn_wc_set_revision (void *baton,
     }
   else
     {
-      /* PATH must be a dir, so we have to modify the entry in its
-       *parent* dir, updating the revision and removing ADD flag
-       *attributes. */
+      /* PATH must be a dir */
       svn_string_t *pdir, *bname;
-      svn_string_t *parentdir = svn_string_dup (log_parent, pool);
 
-      if (svn_path_is_empty (parentdir, svn_path_local_style))
+      if (svn_path_is_empty (log_parent, svn_path_local_style))
         {
+          /* We have an empty path.  Since there is no way to examine
+             the parent of an empty path, we ensure that the parent
+             directory is '.', and that we are looking at the "this
+             dir" entry. */
           pdir = svn_string_create (".", pool);
-          bname = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
         }
       else
         {
-          svn_path_split (parentdir, &pdir, &bname,
-                          svn_path_local_style, pool);
+          /* We were given a directory, so we look at that dir's "this
+             dir" entry. */
+          pdir = log_parent;
         }
+
+      bname = svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
 
       SVN_ERR (svn_wc__entry_fold_sync (pdir, bname, new_revnum,
                                         svn_node_none, 
