@@ -259,7 +259,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "Update working copy to mirror a new URL\n"
     "usage: switch [TARGET] REPOS_URL\n\n" /* ### should args be reversed? */
     "   Note:  this is the way to move a working copy to a new branch.\n",
-    {'r'} },
+    {'r', 'n', svn_cl__force_opt} },
  
   { "update", svn_cl__update, {"up"}, 
     "Bring changes from the repository into the working copy.\n"
