@@ -377,6 +377,16 @@ txn_body_string_size (void *baton, trail_t *trail)
 }
 
 
+static svn_error_t *
+txn_body_string_append_fail (void *baton, trail_t *trail)
+{
+  struct string_args *b = (struct string_args *) baton;
+  SVN_ERR (svn_fs__string_append (b->fs, &(b->key), b->len, 
+                                  b->text, trail));
+  return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL, trail->pool,
+                           "la dee dah, la dee day...");
+}
+
 static const char *bigstring1 = "\
     Alice opened the door and found that it led into a small
 passage, not much larger than a rat-hole:  she knelt down and
@@ -516,6 +526,69 @@ test_strings (const char **msg, apr_pool_t *pool)
 }
 
 
+static svn_error_t *
+abort_string (const char **msg, apr_pool_t *pool)
+{
+  struct string_args args, args2;
+  svn_fs_t *fs;
+
+  *msg = "Write a string, then abort during an overwrite.";
+
+  /* Create a new fs and repos */
+  SVN_ERR (svn_test__create_fs_and_repos
+           (&fs, "test-repo-abort-string", pool));
+
+  /* The plan:
+
+     1.  Write a new string (string1).
+     2.  Overwrite string1 with string2, but then ABORT the transaction.
+     3.  Read string to make sure it is still string1.
+  */
+
+  /* 1. Write a new string (string1). */
+  args.fs = fs;
+  args.key = NULL;
+  args.text = bigstring1;
+  args.len = strlen (bigstring1);
+  SVN_ERR (svn_fs__retry_txn (args.fs, 
+                              txn_body_string_append, &args, pool));
+
+  /* Make sure a key was returned. */
+  if (! args.key)
+    return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+                             "write of new string failed to return new key");
+
+  /* Verify record's size and contents. */
+  SVN_ERR (svn_fs__retry_txn (args.fs, 
+                              txn_body_verify_string, &args, pool));
+
+  /* Append a second string to our first one. */
+  args2.fs = fs;
+  args2.key = args.key;
+  args2.text = bigstring2;
+  args2.len = strlen (bigstring2);
+  {
+    svn_error_t *err;
+
+    /* This function is *supposed* to fail with SVN_ERR_TEST_FAILED */
+    err = svn_fs__retry_txn (args.fs, txn_body_string_append_fail, 
+                             &args2, pool);
+    if ((! err) || (err->apr_err != SVN_ERR_TEST_FAILED))
+      return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                               "failed to intentionally abort a trail.");
+  }
+  
+  /* Verify that record's size and contents are still that of string1 */
+  SVN_ERR (svn_fs__retry_txn (args.fs, 
+                              txn_body_verify_string, &args, pool));
+
+  /* Close the filesystem. */
+  SVN_ERR (svn_fs_close_fs (fs));
+
+
+  return SVN_NO_ERROR;
+}
+
 
 
 
@@ -530,6 +603,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   read_rep,
   delete_rep,
   test_strings,
+  abort_string,
   0
 };
 
