@@ -213,6 +213,7 @@ svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
 svn_error_t *
 svn_fs__dag_open_path (dag_node_t **child_p,
                        dag_node_t **parent_p,
+                       const char **name_p,
                        dag_node_t *root,
                        const char *path,
                        trail_t *trail)
@@ -232,6 +233,7 @@ svn_fs__dag_open_path (dag_node_t **child_p,
 
   *child_p = child;
   *parent_p = parent;
+  *name_p = name;
 #else
   abort ();
 #endif
