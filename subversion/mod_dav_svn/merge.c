@@ -323,7 +323,6 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   svn_revnum_t *rev_ptr;
   svn_delta_edit_fns_t *editor;
   merge_response_ctx mrc = { 0 };
-  svn_stringbuf_t *rootpath;
 
   serr = svn_fs_revision_root(&committed_root, repos->fs, new_rev, pool);
   if (serr != NULL)
@@ -431,13 +430,10 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   mrc.root = committed_root;
   mrc.repos = repos;
 
-  /* ### grumble */
-  rootpath = svn_stringbuf_create("/", pool);
-
-  serr = svn_repos_dir_delta(previous_root, rootpath,
+  serr = svn_repos_dir_delta(previous_root, "/",
                              NULL,      /* ### should fix */
                              revs,
-                             committed_root, rootpath,
+                             committed_root, "/",
                              editor, &mrc, 
                              FALSE, /* don't bother with text-deltas */
                              TRUE, /* Do recurse into subdirectories */

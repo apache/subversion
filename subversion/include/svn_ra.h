@@ -116,12 +116,12 @@ typedef struct svn_ra_reporter_t
      this will *override* any previous set_path() calls made on parent
      paths.  PATH is relative to the URL specified in open(). */
   svn_error_t *(*set_path) (void *report_baton,
-                            svn_stringbuf_t *path,
+                            const char *path,
                             svn_revnum_t revision);
 
   /* Describing a working copy PATH as missing. */
   svn_error_t *(*delete_path) (void *report_baton,
-                               svn_stringbuf_t *path);
+                               const char *path);
     
   /* WC calls this when the state report is finished; any directories
      or files not explicitly `set' above are assumed to be at the

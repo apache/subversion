@@ -151,12 +151,6 @@ svn_repos_get_logs (svn_repos_t *repos,
           svn_fs_root_t *base_root, *this_root;
           void *edit_baton;
 
-          /* ### dir_delta wants these as non-const stringbufs; does
-             it actually need them to be that?  It might telescope
-             them... */
-          svn_stringbuf_t *base_top = svn_stringbuf_create ("", subpool);
-          svn_stringbuf_t *this_top = svn_stringbuf_create ("", subpool);
-
           changed_paths = apr_hash_make (subpool);
           
           SVN_ERR (svn_fs_revision_root (&base_root, fs, this_rev - 1, pool));
@@ -174,11 +168,11 @@ svn_repos_get_logs (svn_repos_t *repos,
                                           subpool));
 
           SVN_ERR (svn_repos_dir_delta (base_root,
-                                        base_top,
+                                        "",
                                         NULL,
                                         NULL,
                                         this_root,
-                                        this_top,
+                                        "",
                                         editor,
                                         edit_baton,
                                         0,

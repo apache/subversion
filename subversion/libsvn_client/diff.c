@@ -281,9 +281,7 @@ svn_client_diff (svn_stringbuf_t *path,
                                   recurse,
                                   diff_editor, diff_edit_baton));
 
-      SVN_ERR (reporter->set_path (report_baton,
-                                   svn_stringbuf_create ("", pool),
-                                   start_revision));
+      SVN_ERR (reporter->set_path (report_baton, "", start_revision));
 
       SVN_ERR (reporter->finish_report (report_baton));
 

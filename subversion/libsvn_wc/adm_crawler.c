@@ -1888,7 +1888,7 @@ report_revisions (svn_stringbuf_t *wc_path,
                      Later on, the update editor will return an
                      'obstructed update' error.  :)  */
                   SVN_ERR (reporter->delete_path (report_baton,
-                                                full_entry_path));
+                                                  full_entry_path->data));
                   continue;  /* move to next entry */
                 }
 
@@ -1908,7 +1908,7 @@ report_revisions (svn_stringbuf_t *wc_path,
               /* Possibly report a differing revision. */
               if (current_entry->revision !=  dir_rev)                
                 SVN_ERR (reporter->set_path (report_baton,
-                                             full_entry_path,
+                                             full_entry_path->data,
                                              current_entry->revision));
             }
 
@@ -1918,7 +1918,7 @@ report_revisions (svn_stringbuf_t *wc_path,
                 {
                   /* We can't recreate dirs locally, so report as missing. */
                   SVN_ERR (reporter->delete_path (report_baton,
-                                                  full_entry_path));   
+                                                  full_entry_path->data));   
                   continue;  /* move on to next entry */
                 }
 
@@ -1946,7 +1946,7 @@ report_revisions (svn_stringbuf_t *wc_path,
                 
                 if (subdir_entry->revision != dir_rev)
                   SVN_ERR (reporter->set_path (report_baton,
-                                               full_entry_path,
+                                               full_entry_path->data,
                                                subdir_entry->revision));
                 /* Recurse. */
                 SVN_ERR (report_revisions (wc_path,
@@ -2253,9 +2253,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
   /* The first call to the reporter merely informs it that the
      top-level directory being updated is at BASE_REV.  Its PATH
      argument is ignored. */
-  SVN_ERR (reporter->set_path (report_baton,
-                               svn_stringbuf_create ("", pool),
-                               base_rev));
+  SVN_ERR (reporter->set_path (report_baton, "", base_rev));
 
   if (entry->schedule != svn_wc_schedule_delete)
     {
@@ -2272,8 +2270,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
         {
           /* Always report directories as missing;  we can't recreate
              them locally. */
-          err = reporter->delete_path (report_baton,
-                                       svn_stringbuf_create ("", pool));
+          err = reporter->delete_path (report_baton, "");
           if (err)
             {
               /* Clean up the fs transaction. */
@@ -2326,9 +2323,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
              of the report (not some file in a subdirectory of a target
              directory), and that target is a file, we need to pass an
              empty string to set_path. */
-          err = reporter->set_path (report_baton, 
-                                    svn_stringbuf_create ("", pool),
-                                    base_rev);
+          err = reporter->set_path (report_baton, "", base_rev);
           if (err)
             {
               /* Clean up the fs transaction. */

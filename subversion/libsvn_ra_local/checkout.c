@@ -74,7 +74,7 @@ send_file_contents (svn_fs_root_t *root,
    using OBJECT_BATON.  IS_DIR indicates which editor func to call. */
 static svn_error_t *
 set_any_props (svn_fs_root_t *root,
-               svn_stringbuf_t *path,
+               const svn_string_t *path,
                void *object_baton,
                const svn_delta_edit_fns_t *editor,
                int is_dir,
@@ -154,7 +154,7 @@ set_any_props (svn_fs_root_t *root,
    however.  :) */
 static svn_error_t *
 walk_tree (svn_fs_root_t *root,
-           svn_stringbuf_t *dir_path,
+           const svn_string_t *dir_path,
            void *dir_baton,
            const svn_delta_edit_fns_t *editor, 
            void *edit_baton,
@@ -179,7 +179,10 @@ walk_tree (svn_fs_root_t *root,
       svn_fs_dirent_t *dirent;
       svn_stringbuf_t *dirent_name;
       svn_stringbuf_t *URL_path = svn_stringbuf_dup (URL, iter_pool);
-      svn_stringbuf_t *dirent_path = svn_stringbuf_dup (dir_path, iter_pool);
+      svn_stringbuf_t *dirent_path;
+      svn_string_t dirent_str;
+
+      dirent_path = svn_stringbuf_create_from_string (dir_path, iter_pool);
 
       apr_hash_this (hi, &key, &klen, &val);
       dirent = (svn_fs_dirent_t *) val;
@@ -190,6 +193,9 @@ walk_tree (svn_fs_root_t *root,
       /* What is dirent? */
       SVN_ERR (svn_fs_is_dir (&is_dir, root, dirent_path->data, iter_pool));
       SVN_ERR (svn_fs_is_file (&is_file, root, dirent_path->data, iter_pool));
+
+      dirent_str.data = dirent_path->data;
+      dirent_str.len = dirent_path->len;
 
       if (is_dir && recurse)
         {
@@ -203,10 +209,10 @@ walk_tree (svn_fs_root_t *root,
                                           NULL,
                                           SVN_INVALID_REVNUM, 
                                           &new_dir_baton));
-          SVN_ERR (set_any_props (root, dirent_path, new_dir_baton,
+          SVN_ERR (set_any_props (root, &dirent_str, new_dir_baton,
                                   editor, 1, iter_pool));
           /* Recurse */
-          SVN_ERR (walk_tree (root, dirent_path, new_dir_baton, editor,
+          SVN_ERR (walk_tree (root, &dirent_str, new_dir_baton, editor,
                               edit_baton, URL_path, recurse, iter_pool));
         }
         
@@ -217,7 +223,7 @@ walk_tree (svn_fs_root_t *root,
           SVN_ERR (editor->add_file (dirent_name, dir_baton,
                                      URL_path, SVN_INVALID_REVNUM, 
                                      &file_baton));          
-          SVN_ERR (set_any_props (root, dirent_path, file_baton,
+          SVN_ERR (set_any_props (root, &dirent_str, file_baton,
                                   editor, 0, iter_pool));
           SVN_ERR (send_file_contents (root, dirent_path, file_baton,
                                        editor, iter_pool));
@@ -252,7 +258,7 @@ svn_ra_local__checkout (svn_fs_t *fs,
                         svn_revnum_t revnum, 
                         svn_boolean_t recurse,
                         svn_stringbuf_t *URL,
-                        svn_stringbuf_t *fs_path,
+                        const svn_string_t *fs_path,
                         const svn_delta_edit_fns_t *editor, 
                         void *edit_baton,
                         apr_pool_t *pool)
@@ -283,8 +289,3 @@ svn_ra_local__checkout (svn_fs_t *fs,
  * local variables:
  * eval: (load-file "../svn-dev.el")
  * end: */
-
-
-
-
-

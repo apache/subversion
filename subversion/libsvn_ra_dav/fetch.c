@@ -1560,7 +1560,7 @@ static int end_element(void *userdata,
 
 
 static svn_error_t * reporter_set_path(void *report_baton,
-                                       svn_stringbuf_t *path,
+                                       const char *path,
                                        svn_revnum_t revision)
 {
   report_baton_t *rb = report_baton;
@@ -1568,7 +1568,7 @@ static svn_error_t * reporter_set_path(void *report_baton,
   const char *entry;
   svn_stringbuf_t *qpath = NULL;
 
-  svn_xml_escape_stringbuf (&qpath, path, rb->ras->pool);
+  svn_xml_escape_nts (&qpath, path, rb->ras->pool);
   entry = apr_psprintf(rb->ras->pool,
                        "<S:entry rev=\"%ld\">%s</S:entry>" DEBUG_CR,
                        revision, qpath->data);
@@ -1587,15 +1587,17 @@ static svn_error_t * reporter_set_path(void *report_baton,
 
 
 static svn_error_t * reporter_delete_path(void *report_baton,
-                                          svn_stringbuf_t *path)
+                                          const char *path)
 {
   report_baton_t *rb = report_baton;
   apr_status_t status;
   const char *s;
+  svn_stringbuf_t *qpath = NULL;
 
+  svn_xml_escape_nts (&qpath, path, rb->ras->pool);
   s = apr_psprintf(rb->ras->pool,
                    "<S:missing>%s</S:missing>" DEBUG_CR,
-                   path->data);
+                   qpath->data);
 
   status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
   if (status)

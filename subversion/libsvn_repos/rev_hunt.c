@@ -155,7 +155,7 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
                               svn_string_t **committed_date,
                               svn_string_t **last_author,
                               svn_fs_root_t *root,
-                              svn_stringbuf_t *path,
+                              const svn_string_t *path,
                               apr_pool_t *pool)
 {
   svn_fs_t *fs = svn_fs_root_fs (root);

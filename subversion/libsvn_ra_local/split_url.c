@@ -22,8 +22,8 @@
 #include "svn_pools.h"
 
 svn_error_t *
-svn_ra_local__split_URL (svn_stringbuf_t **repos_path,
-                         svn_stringbuf_t **fs_path,
+svn_ra_local__split_URL (const svn_string_t **repos_path,
+                         const svn_string_t **fs_path,
                          svn_stringbuf_t *URL,
                          apr_pool_t *pool)
 {
@@ -100,8 +100,8 @@ svn_ra_local__split_URL (svn_stringbuf_t **repos_path,
   /* What remains of URL after being hacked at in the previous step is
      REPOS_PATH.  FS_PATH is what we've hacked off in the process.  We
      need to make sure these are allocated in the -original- pool. */
-  *repos_path = svn_stringbuf_dup (url, pool);
-  *fs_path = svn_stringbuf_create (path + url->len, pool);
+  *repos_path = svn_string_create_from_buf (url, pool);
+  *fs_path = svn_string_create (path + url->len, pool);
 
   /* Destroy our temporary memory pool. */
   svn_pool_destroy (subpool);

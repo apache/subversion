@@ -326,11 +326,11 @@ dir_deltas (const char **msg,
           /* Here's the kicker...do the directory delta. */
           SVN_ERR (svn_fs_revision_root (&revision_root, fs, j, subpool)); 
           SVN_ERR (svn_repos_dir_delta (txn_root,
-                                        svn_stringbuf_create ("", subpool),
+                                        "",
                                         NULL,
                                         rev_diffs,
                                         revision_root,
-                                        svn_stringbuf_create ("", subpool),
+                                        "",
                                         editor,
                                         edit_baton,
                                         TRUE,

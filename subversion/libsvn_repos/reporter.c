@@ -35,7 +35,7 @@ typedef struct svn_repos_report_baton_t
   const char *username;
 
   /* The location under which all reporting will happen (in the fs) */
-  svn_stringbuf_t *base_path;
+  const char *base_path;
 
   /* The actual target of the report */
   svn_stringbuf_t *target;
@@ -62,7 +62,7 @@ typedef struct svn_repos_report_baton_t
 
 svn_error_t *
 svn_repos_set_path (void *report_baton,
-                    svn_stringbuf_t *path,
+                    const char *path,
                     svn_revnum_t revision)
 {
   svn_fs_root_t *from_root;
@@ -73,9 +73,12 @@ svn_repos_set_path (void *report_baton,
   /* If this is the very first call, no txn exists yet. */
   if (! rbaton->txn)
     {
+      /* ### need to change svn_path_is_empty() */
+      svn_stringbuf_t *pathbuf = svn_stringbuf_create (path, rbaton->pool);
+
       /* Sanity check: make that we didn't call this with real data
          before simply informing the reporter of our base revision. */
-      if (! svn_path_is_empty (path))
+      if (! svn_path_is_empty (pathbuf))
         return 
           svn_error_create
           (SVN_ERR_RA_BAD_REVISION_REPORT, 0, NULL, rbaton->pool,
@@ -107,10 +110,10 @@ svn_repos_set_path (void *report_baton,
          reported) + path (stuff relative to the target...this is the
          empty string in the file case since the target is the file
          itself, not a directory containing the file). */
-      from_path = svn_stringbuf_dup (rbaton->base_path, rbaton->pool);
+      from_path = svn_stringbuf_create (rbaton->base_path, rbaton->pool);
       if (rbaton->target)
         svn_path_add_component (from_path, rbaton->target);
-      svn_path_add_component (from_path, path);
+      svn_path_add_component_nts (from_path, path);
 
       /* Copy into our txn. */
       SVN_ERR (svn_fs_link (from_root, from_path->data,
@@ -130,7 +133,7 @@ svn_repos_set_path (void *report_baton,
 
 svn_error_t *
 svn_repos_delete_path (void *report_baton,
-                       svn_stringbuf_t *path)
+                       const char *path)
 {
   svn_stringbuf_t *delete_path;
   svn_repos_report_baton_t *rbaton = report_baton;
@@ -140,11 +143,11 @@ svn_repos_delete_path (void *report_baton,
      reported) + path (stuff relative to the target...this is the
      empty string in the file case since the target is the file
      itself, not a directory containing the file). */
-  delete_path = svn_stringbuf_dup (rbaton->base_path, rbaton->pool);
+  delete_path = svn_stringbuf_create (rbaton->base_path, rbaton->pool);
   if (rbaton->target)
     svn_path_add_component (delete_path, rbaton->target);
-  svn_path_add_component (delete_path, path);
-  
+  svn_path_add_component_nts (delete_path, path);
+
 
   /* Remove the file or directory (recursively) from the txn. */
   SVN_ERR (svn_fs_delete_tree (rbaton->txn_root, delete_path->data, 
@@ -172,7 +175,7 @@ svn_repos_finish_report (void *report_baton)
 
   /* Construct the target path.  For our purposes, it's the same as
      the full source path.  */
-  rev_path = svn_stringbuf_dup (rbaton->base_path, rbaton->pool);
+  rev_path = svn_stringbuf_create (rbaton->base_path, rbaton->pool);
   if (rbaton->target)
     svn_path_add_component (rev_path, rbaton->target);
 
@@ -184,10 +187,10 @@ svn_repos_finish_report (void *report_baton)
   /* Ah!  The good stuff!  svn_repos_update does all the hard work. */
   SVN_ERR (svn_repos_dir_delta (rbaton->txn_root, 
                                 rbaton->base_path, 
-                                rbaton->target,
+                                rbaton->target ? rbaton->target->data : NULL,
                                 rbaton->path_rev_hash,
                                 rev_root, 
-                                rev_path,
+                                rev_path->data,
                                 rbaton->update_editor,
                                 rbaton->update_edit_baton,
                                 rbaton->text_deltas,
@@ -224,8 +227,8 @@ svn_repos_begin_report (void **report_baton,
                         svn_revnum_t revnum,
                         const char *username,
                         svn_repos_t *repos,
-                        svn_stringbuf_t *fs_base,
-                        svn_stringbuf_t *target,
+                        const char *fs_base,
+                        const char *target,
                         svn_boolean_t text_deltas,
                         svn_boolean_t recurse,
                         const svn_delta_edit_fns_t *editor,
@@ -241,13 +244,16 @@ svn_repos_begin_report (void **report_baton,
   rbaton->update_edit_baton = edit_baton;
   rbaton->path_rev_hash = apr_hash_make (pool);
   rbaton->repos = repos;
-  rbaton->username = username;
-  rbaton->base_path = fs_base;
-  rbaton->target = target;
   rbaton->text_deltas = text_deltas;
   rbaton->recurse = recurse;
   rbaton->pool = pool;
-  
+
+  /* Copy these since we're keeping them past the end of this function call.
+     We don't know what the caller might do with them after we return... */
+  rbaton->username = apr_pstrdup (pool, username);
+  rbaton->base_path = apr_pstrdup (pool, fs_base);
+  rbaton->target = target ? svn_stringbuf_create (target, pool) : NULL;
+
   /* Hand reporter back to client. */
   *report_baton = rbaton;
   return SVN_NO_ERROR;

@@ -430,13 +430,11 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   apr_xml_elem *child;
   void *rbaton;
   update_ctx_t uc = { 0 };
-  svn_stringbuf_t *fs_base;
   svn_revnum_t revnum = SVN_INVALID_REVNUM;
   int ns;
   svn_error_t *serr;
-  svn_stringbuf_t *pathstr;
   const dav_svn_repos *repos = resource->info->repos;
-  svn_stringbuf_t *target = NULL;
+  const char *target = NULL;
   svn_boolean_t recurse = TRUE;
 
   if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
@@ -466,8 +464,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       if (child->ns == ns && strcmp(child->name, "update-target") == 0)
         {
           /* ### assume no white space, no child elems, etc */
-          target = svn_stringbuf_create (child->first_cdata.first->text, 
-                                         resource->pool);
+          target = child->first_cdata.first->text;
         }
       if (child->ns == ns && strcmp(child->name, "recursive") == 0)
         {
@@ -505,18 +502,20 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   uc.resource = resource;
   uc.opool = resource->pool;  /* ### not ideal, but temporary anyhow */
   uc.output = report;
+  uc.anchor = resource->info->repos_path;
 
   /* Get the root of the revision we want to update to. This will be used
      to generated stable id values. */
   serr = svn_fs_revision_root(&uc.rev_root, repos->fs, revnum, resource->pool);
   if (serr != NULL)
     {
+      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                 "The revision root could not be created.");
     }
 
-  fs_base = svn_stringbuf_create(resource->info->repos_path, resource->pool);
-  uc.anchor = fs_base->data;
   serr = svn_repos_begin_report(&rbaton, revnum, repos->username, 
-                                repos->repos, fs_base, target, FALSE, recurse,
+                                repos->repos, resource->info->repos_path,
+                                target, FALSE, recurse,
                                 editor, &uc, resource->pool);
 
   if (serr != NULL)
@@ -525,10 +524,6 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                  "The state report gatherer could not be "
 				 "created.");
     }
-
-  /* ### move this into svn_string.h */
-#define MAKE_BUFFER(p) svn_stringbuf_ncreate("", 0, (p))
-  pathstr = MAKE_BUFFER(resource->pool);
 
   /* scan the XML doc for state information */
   for (child = doc->root->first_child; child != NULL; child = child->next)
@@ -545,8 +540,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             /* get cdata, stipping whitespace */
             path = dav_xml_get_cdata(child, resource->pool, 1);
 
-            svn_stringbuf_set(pathstr, path);
-            serr = svn_repos_set_path(rbaton, pathstr, rev);
+            serr = svn_repos_set_path(rbaton, path, rev);
             if (serr != NULL)
               {
                 /* ### This removes the fs txn.  todo: check error. */
@@ -564,8 +558,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             /* get cdata, stipping whitespace */
             path = dav_xml_get_cdata(child, resource->pool, 1);
 
-            svn_stringbuf_set(pathstr, path);
-            serr = svn_repos_delete_path(rbaton, pathstr);
+            serr = svn_repos_delete_path(rbaton, path);
             if (serr != NULL)
               {
                 /* ### This removes the fs txn.  todo: check error. */

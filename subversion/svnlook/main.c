@@ -141,10 +141,10 @@ generate_delta_tree (svn_repos_node_t **tree,
                                   base_root, root, pool, edit_pool));
   
   /* Drive our editor. */
-  SVN_ERR (svn_repos_dir_delta (base_root, 
-                                svn_stringbuf_create ("", edit_pool), 
-                                NULL, src_revs, root, 
-                                svn_stringbuf_create ("", edit_pool), 
+  SVN_ERR (svn_repos_dir_delta (base_root,
+                                "",
+                                NULL, src_revs, root,
+                                "",
                                 editor, edit_baton, FALSE, TRUE, edit_pool));
 
   /* Return the tree we just built. */
