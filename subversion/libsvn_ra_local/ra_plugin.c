@@ -147,8 +147,8 @@ svn_ra_local__get_file_revs (void *session_baton,
   /* Concatenate paths */
   abs_path = svn_path_join (abs_path, path, pool);
 
-  return svn_repos_get_file_revs (sbaton->repos, abs_path, start, end,
-                                  handler, handler_baton, pool);
+  return svn_repos_get_file_revs (sbaton->repos, abs_path, start, end, NULL,
+                                  NULL, handler, handler_baton, pool);
 }
 
 static svn_error_t *
@@ -287,8 +287,8 @@ svn_ra_local__change_rev_prop (void *session_baton,
 
   SVN_ERR (get_username (baton, pool));
 
-  SVN_ERR (svn_repos_fs_change_rev_prop (baton->repos, rev, baton->username,
-                                         name, value, pool));
+  SVN_ERR (svn_repos_fs_change_rev_prop2 (baton->repos, rev, baton->username,
+                                          name, value, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -329,7 +329,8 @@ svn_ra_local__rev_proplist (void *session_baton,
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  SVN_ERR (svn_fs_revision_proplist (props, baton->fs, rev, pool));
+  SVN_ERR (svn_repos_fs_revision_proplist (props, baton->repos, rev,
+                                           NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -345,7 +346,8 @@ svn_ra_local__rev_prop (void *session_baton,
   svn_ra_local__session_baton_t *baton = 
     (svn_ra_local__session_baton_t *) session_baton;
 
-  SVN_ERR (svn_fs_revision_prop (value, baton->fs, rev, name, pool));
+  SVN_ERR (svn_repos_fs_revision_prop (value, baton->repos, rev, name,
+                                       NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -633,15 +635,16 @@ svn_ra_local__get_log (void *session_baton,
       (*((const char **)(apr_array_push (abs_paths)))) = abs_path;
     }
 
-  return svn_repos_get_logs (sbaton->repos,
-                             abs_paths,
-                             start,
-                             end,
-                             discover_changed_paths,
-                             strict_node_history,
-                             receiver,
-                             receiver_baton,
-                             sbaton->pool);
+  return svn_repos_get_logs2 (sbaton->repos,
+                              abs_paths,
+                              start,
+                              end,
+                              discover_changed_paths,
+                              strict_node_history,
+                              NULL, NULL,
+                              receiver,
+                              receiver_baton,
+                              sbaton->pool);
 }
 
 
@@ -905,7 +908,7 @@ svn_ra_local__get_locations (void *session_baton,
 
   SVN_ERR (svn_repos_trace_node_locations (sbaton->fs, locations, abs_path,
                                            peg_revision, location_revisions,
-                                           pool));
+                                           NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }

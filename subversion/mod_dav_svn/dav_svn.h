@@ -261,6 +261,10 @@ const char *dav_svn_get_fs_parent_path(request_rec *r);
 /* for the repository referred to by this request, is autoversioning active? */
 svn_boolean_t dav_svn_get_autoversioning_flag(request_rec *r);
 
+/* for the repository referred to by this request, are subrequests active? */
+svn_boolean_t dav_svn_get_pathauthz_flag(request_rec *r);
+
+
 /* SPECIAL URI
 
    SVN needs to create many types of "pseudo resources" -- resources
@@ -528,6 +532,38 @@ dav_error * dav_svn__get_locations_report(const dav_resource *resource,
 svn_stream_t * dav_svn_make_base64_output_stream(apr_bucket_brigade *bb,
                                                  ap_filter_t *output,
                                                  apr_pool_t *pool);
+
+
+/* A baton needed by dav_svn_authz_read(). */
+typedef struct 
+{
+  /* The original request, needed to generate a subrequest. */
+  request_rec *r;
+
+  /* We need this to construct a URI based on a repository abs path. */
+  const dav_svn_repos *repos;
+
+} dav_svn_authz_read_baton;
+
+
+/* This function implements 'svn_repos_authz_func_t', specifically
+   for read authorization.
+
+   Convert incoming ROOT and PATH into a version-resource URI and
+   perform a GET subrequest on it.  This will invoke any authz modules
+   loaded into apache.  Set *ALLOWED to TRUE if the subrequest
+   succeeds, FALSE otherwise.
+
+   BATON must be a pointer to a dav_svn_authz_read_baton (see above).
+   Use POOL for for any temporary allocation.
+*/
+svn_error_t *dav_svn_authz_read(svn_boolean_t *allowed,
+                                svn_fs_root_t *root,
+                                const char *path,
+                                void *baton,
+                                apr_pool_t *pool);
+
+
 
 #ifdef __cplusplus
 }

@@ -117,6 +117,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   apr_pool_t *p = resource->info->pool;
   const dav_liveprop_spec *info;
   int global_ns;
+  dav_svn_authz_read_baton arb;
   svn_error_t *serr;
 
   /*
@@ -129,6 +130,10 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   */
   if (!resource->exists)
     return DAV_PROP_INSERT_NOTSUPP;
+
+  /* Build a baton for path-based authz function (dav_svn_authz_read) */
+  arb.r = resource->info->r;
+  arb.repos = resource->info->repos;
 
   /* ### we may want to respond to DAV_PROPID_resourcetype for PRIVATE
      ### resources. need to think on "proper" interaction with mod_dav */
@@ -219,10 +224,11 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
           }
         
         /* Get the date property of the created revision. */
-        serr = svn_fs_revision_prop(&last_author,
-                                    resource->info->repos->fs,
-                                    committed_rev,
-                                    SVN_PROP_REVISION_AUTHOR, p);
+        serr = svn_repos_fs_revision_prop(&last_author,
+                                          resource->info->repos->repos,
+                                          committed_rev,
+                                          SVN_PROP_REVISION_AUTHOR,
+                                          dav_svn_authz_read, &arb, p);
         if (serr != NULL)
           {
             /* ### what to do? */
@@ -660,7 +666,11 @@ int dav_svn_get_last_modified_time (const char **datestring,
   svn_string_t *committed_date = NULL;
   svn_error_t *serr;
   apr_time_t timeval_tmp;
+  dav_svn_authz_read_baton arb;
   
+  arb.r = resource->info->r;
+  arb.repos = resource->info->repos;
+
   if ((datestring == NULL) && (timeval == NULL))
     return 0;
 
@@ -689,10 +699,12 @@ int dav_svn_get_last_modified_time (const char **datestring,
     }
 
   /* Get the svn:date property of the CR */
-  serr = svn_fs_revision_prop(&committed_date,
-                              resource->info->repos->fs,
-                              committed_rev,
-                              SVN_PROP_REVISION_DATE, pool);
+  serr = svn_repos_fs_revision_prop(&committed_date,
+                                    resource->info->repos->repos,
+                                    committed_rev,
+                                    SVN_PROP_REVISION_DATE,
+                                    dav_svn_authz_read, &arb,
+                                    pool);
   if (serr != NULL)
     {
       svn_error_clear(serr);

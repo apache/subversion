@@ -41,6 +41,10 @@ struct dav_db {
 
   /* used for constructing repos-local names for properties */
   svn_stringbuf_t *work;
+
+  /* passed to svn_repos_ funcs that fetch revprops. */
+  svn_repos_authz_func_t authz_read_func;
+  void *authz_read_baton;
 };
 
 struct dav_deadprop_rollback {
@@ -102,9 +106,11 @@ static dav_error *get_value(dav_db *db, const dav_prop_name *name,
       serr = svn_fs_txn_prop(pvalue, db->resource->info->root.txn,
                              propname, db->p);
     else
-      serr = svn_fs_revision_prop(pvalue, db->resource->info->repos->fs,
-                                  db->resource->info->root.rev,
-                                  propname, db->p);
+      serr = svn_repos_fs_revision_prop(pvalue,
+                                        db->resource->info-> repos->repos,
+                                        db->resource->info->root.rev, propname,
+                                        db->authz_read_func,
+                                        db->authz_read_baton, db->p);
   else
     serr = svn_fs_node_prop(pvalue, db->resource->info->root.root,
                             get_repos_path(db->resource->info),
@@ -148,10 +154,13 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
          not a working resource!  But this is how we currently
          (hackily) allow the svn client to change unversioned rev
          props.  See issue #916. */
-      serr = svn_repos_fs_change_rev_prop(db->resource->info->repos->repos,
-                                          db->resource->info->root.rev,
-                                          db->resource->info->repos->username,
-                                          propname, value, db->resource->pool);
+      serr = svn_repos_fs_change_rev_prop2(db->resource->info->repos->repos,
+                                           db->resource->info->root.rev,
+                                           db->resource->info->repos->username,
+                                           propname, value,
+                                           db->authz_read_func,
+                                           db->authz_read_baton,
+                                           db->resource->pool);
   else
     serr = svn_repos_fs_change_node_prop(db->resource->info->root.root,
                                          get_repos_path(db->resource->info),
@@ -171,6 +180,7 @@ static dav_error *dav_svn_db_open(apr_pool_t *p, const dav_resource *resource,
                                   int ro, dav_db **pdb)
 {
   dav_db *db;
+  dav_svn_authz_read_baton *arb;
 
   /* Some resource types do not have deadprop databases. Specifically:
      REGULAR, VERSION, and WORKING resources have them. (SVN does not
@@ -204,6 +214,13 @@ static dav_error *dav_svn_db_open(apr_pool_t *p, const dav_resource *resource,
 
   /* ### temp hack */
   db->work = svn_stringbuf_ncreate("", 0, db->p);
+
+  /* make our path-based authz callback available to svn_repos_* funcs. */
+  arb = apr_pcalloc(p, sizeof(*arb));
+  arb->r = resource->info->r;
+  arb->repos = resource->info->repos;
+  db->authz_read_baton = arb;
+  db->authz_read_func = dav_svn_authz_read;
 
   /* ### use RO and node's mutable status to look for an error? */
 
@@ -364,10 +381,13 @@ static dav_error *dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
          not a working resource!  But this is how we currently
          (hackily) allow the svn client to change unversioned rev
          props.  See issue #916. */
-      serr = svn_repos_fs_change_rev_prop(db->resource->info->repos->repos,
-                                          db->resource->info->root.rev,
-                                          db->resource->info->repos->username,
-                                          propname, NULL, db->resource->pool);
+      serr = svn_repos_fs_change_rev_prop2(db->resource->info->repos->repos,
+                                           db->resource->info->root.rev,
+                                           db->resource->info->repos->username,
+                                           propname, NULL,
+                                           db->authz_read_func,
+                                           db->authz_read_baton,
+                                           db->resource->pool);
   else
     serr = svn_repos_fs_change_node_prop(db->resource->info->root.root,
                                          get_repos_path(db->resource->info),
@@ -402,9 +422,12 @@ static int dav_svn_db_exists(dav_db *db, const dav_prop_name *name)
       serr = svn_fs_txn_prop(&propval, db->resource->info->root.txn,
                              propname, db->p);
     else
-      serr = svn_fs_revision_prop(&propval, db->resource->info->repos->fs,
-                                  db->resource->info->root.rev,
-                                  propname, db->p);
+      serr = svn_repos_fs_revision_prop(&propval,
+                                        db->resource->info->repos->repos,
+                                        db->resource->info->root.rev,
+                                        propname,
+                                        db->authz_read_func,
+                                        db->authz_read_baton, db->p);
   else
     serr = svn_fs_node_prop(&propval, db->resource->info->root.root,
                             get_repos_path(db->resource->info),
@@ -457,10 +480,13 @@ static dav_error *dav_svn_db_first_name(dav_db *db, dav_prop_name *pname)
                                        db->resource->info->root.txn,
                                        db->p);
           else
-            serr = svn_fs_revision_proplist(&db->props,
-                                            db->resource->info->repos->fs,
-                                            db->resource->info->root.rev, 
-                                            db->p);
+            serr = svn_repos_fs_revision_proplist
+              (&db->props,
+               db->resource->info->repos->repos,
+               db->resource->info->root.rev,
+               db->authz_read_func,
+               db->authz_read_baton,
+               db->p);
         }
       else
         {
