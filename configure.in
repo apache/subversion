@@ -274,6 +274,12 @@ if test "$svn_lib_berkeley_db" = "yes"; then
   FS_TEST_PROGRAMS="\$(FS_TEST_PROGRAMS)"
 fi
 
+if test "$svn_lib_neon" = "yes"; then
+  BUILD_RULES="$BUILD_RULES dav-lib"
+  INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-dav-lib"
+  INSTALL_RULES="$INSTALL_RULES install-dav-lib"
+fi
+
 AC_SUBST(BUILD_RULES)
 AC_SUBST(INSTALL_STATIC_RULES)
 AC_SUBST(INSTALL_RULES)
@@ -450,10 +456,12 @@ AC_HELP_STRING([--enable-dso], [Turn on DSO loading of RA libraries]),
 ])
 
 if test "$enable_shared" = "no" -o "$enable_dso" != "yes"; then
-  AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_DAV, 1,
-        [Defined if libsvn_client should link against libsvn_ra_dav])
-  svn_ra_lib_deps="\$(RA_DAV_DEPS)"
-  svn_ra_lib_link="\$(RA_DAV_LINK)"
+  if test "$svn_lib_neon" = "yes"; then
+    AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_DAV, 1,
+          [Defined if libsvn_client should link against libsvn_ra_dav])
+    svn_ra_lib_deps="\$(RA_DAV_DEPS)"
+    svn_ra_lib_link="\$(RA_DAV_LINK)"
+  fi
 
   AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_SVN, 1,
       [Defined if libsvn_client should link against libsvn_ra_svn])
