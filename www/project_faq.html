@@ -885,6 +885,29 @@ section in chapter 6</a>, and pay particular attention to the
 "checklist" sidebar at the bottom.  It outlines a number of steps to
 make this scenario safer.</p>
 
+<b>Note for SELinux / Fedora Core 3+ / RedHat Enterprise users:</b>
+
+<p>In addition to regular Unix permissions, under SELinux every file,
+directory, process, etc. has a 'security context'.  When a process
+attempts to access a file, besides checking the Unix permissions the
+system also checks to see if the security context of the process is
+compatible with the security context of the file.</p>
+
+<p>Fedora Core 3, among other systems, comes with SELinux installed by
+default, configured so that Apache runs in a fairly restricted
+security context.  To run Subversion under Apache, you have to set the
+security context of the repository to allow Apache access (or turn off
+the restrictions on Apache, if you think all this is overkill).  The
+<tt>chcon</tt> command is used to set the security context of files
+(similarly to how the <tt>chmod</tt> sets the traditional Unix
+permissions).  For example, one user had to issue this command</p>
+
+<pre>   $ chcon -R -h -t httpd_sys_content_t <i>PATH_TO_REPOSITORY</i></pre>
+
+<p>to set the security context to be able to successfully
+access the repository.</p>
+
+
 <![CDATA[=========================================================]]>
 
 <h3><a name="readonly">Why do read-only operations still need repository
