@@ -434,6 +434,8 @@ dir_entry_id_from_node (const svn_fs_id_t **id_p,
   SVN_ERR (svn_fs__dag_dir_entries (&entries, parent, trail));
   if (entries)
     dirent = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
+  else
+    dirent = NULL;
     
   *id_p = dirent ? dirent->id : NULL;
   return SVN_NO_ERROR;
