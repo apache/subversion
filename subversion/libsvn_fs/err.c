@@ -195,15 +195,13 @@ svn_fs__err_corrupt_txn (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs__err_not_mutable (svn_fs_t *fs, const svn_fs_id_t *id)
+svn_fs__err_not_mutable (svn_fs_t *fs, svn_revnum_t rev, const char *path)
 {
-  svn_string_t *unparsed_id = svn_fs_unparse_id (id, fs->pool);
-
   return
     svn_error_createf
     (SVN_ERR_FS_NOT_MUTABLE, 0, 0, fs->pool,
-     "attempt to modify committed node revision `%s' in filesystem `%s'",
-     unparsed_id->data, fs->env_path);
+     "File is not mutable: filesystem `%s', revision %ld, path `%s'",
+     fs->env_path, rev, path);
 }
 
 
