@@ -57,6 +57,7 @@ I.    BUILD REQUIREMENTS
       versions of these libraries, you may want to run some of the cleanup
       commands described in section II.B before installing the following.
 
+
       1.  Apache Portable Runtime
 
       Whenever you want to build any part of Subversion, you need the
@@ -126,15 +127,15 @@ I.    BUILD REQUIREMENTS
       2.  autoconf 2.50 or newer (Unix only)
 
       This is required only if you plan to build from the latest source
-      (See section II.B). Generally only developers would be doing this,
-      but at this stage in Subversion's development chances are you'll
+      (see section II.B). Generally only developers would be doing this,
+      but at this stage in Subversion's development you'll probably
       want to do this as well.
 
 
       3.  libtool 1.4 or newer (Unix only)
 
       This is required only if you plan to build from the latest source
-      (See section II.B), which you probably want to do. See above.
+      (see section II.B), which you probably want to do. See above.
 
       Note: Some systems (Solaris, for example) require libtool 1.4.3 or
       newer. The autogen.sh script knows about that.
@@ -143,7 +144,7 @@ I.    BUILD REQUIREMENTS
       4.  bison or yacc (Unix only)
 
       This is required only if you plan to build from the latest source
-      (See section II.B), which you probably want to do. See above.
+      (see section II.B), which you probably want to do. See above.
 
       The reason one of these programs is required is that it will
       generate the code which parses complex date formats, so that
@@ -176,7 +177,7 @@ I.    BUILD REQUIREMENTS
 
       Without source code, a previously compiled library can be picked up
       from the standard locations. If you want to specify a nonstandard
-      location, you need to use the LDFLAGS environmental variable when
+      location, you need to use the LDFLAGS environment variable when
       you run "./configure". You may also have to specify where the
       neon-config script (which identifies various features of the Neon
       library) is kept by giving the "--with-neon=" option to
@@ -194,10 +195,10 @@ I.    BUILD REQUIREMENTS
       You'll need Berkeley DB 4.0.14 installed on your system.  You can
       get it from:
 
-          http://www.sleepycat.com/.
+          http://www.sleepycat.com/download/patchlogs.shtml
 
       If you already have another version of Berkeley DB installed and
-      don't want to downgrade, you can unpack the Berkeley 4.0.14
+      don't want to downgrade, you can unpack the Berkeley DB 4.0.14
       distribution into a subdir named `db' in the top-level of the
       Subversion source tree.  Then Subversion will ignore the system
       DB and use the one it found in its own source tree.
@@ -224,7 +225,8 @@ I.    BUILD REQUIREMENTS
       Apache server, and the modules that Apache needs to communicate
       with Subversion are complicated enough that there is a whole
       section at the end of this document that describes how it is
-      done. See section III for details.
+      done: See section III for details.
+
 
       8.  Python 2.0
 
@@ -437,7 +439,7 @@ II.   INSTALLATION
 
       (These instructions assume you have already installed Subversion
       and checked out a Subversion working copy.  See the section
-      "Bootstrapping From A Tarball Or RPM" above for more.)
+      "Bootstrapping from a Tarball or RPM" above for more.)
 
       You can discard the directory created by the tarball; you're
       about to build the latest, greatest Subversion client.
@@ -514,6 +516,7 @@ II.   INSTALLATION
       some systems the commands will still be dynamically linked to already
       installed shared libraries.  For a completely static build see the
       '--enable-all-static' option.)
+
 
   C.  Building under Unix in Different Directories
       --------------------------------------------
@@ -592,7 +595,7 @@ II.   INSTALLATION
 
       (These instructions assume you have already installed Subversion
       and checked out a Subversion working copy.  See the section
-      "Bootstrapping From A Zip File Under Windows" above for more.)
+      "Bootstrapping from a Zip File under Windows" above for more.)
 
       There is some support for building Subversion on Win32 platforms.
       The project files included in the source tree are from Microsoft
@@ -639,7 +642,7 @@ II.   INSTALLATION
       [NOTE: This binary package of Berkeley DB is provided for
           convenience only. Please don't address questions about
           Berkeley DB that aren't directly related to using Subversion
-          to the project list.]
+          to the project mailing list.]
 
       If you build Berkeley DB from the source, you will have to copy
       the file ..db-4.0.14\build_win32\db.h to <SVN>\db4-win32\include,
@@ -922,8 +925,8 @@ III.  BUILDING A SUBVERSION SERVER
       the HACKING file.
 
 
-  E. Alternative:  'svnserve' and ra_svn
-     -----------------------------------
+  E.  Alternative:  'svnserve' and ra_svn
+      -----------------------------------
 
       As of svn 0.16, we have a new repository-access implementation,
       libsvn_ra_svn (on the client side) and the 'svnserve' process on
@@ -940,7 +943,7 @@ III.  BUILDING A SUBVERSION SERVER
       logical term here; svnserve still needs write access to the
       database in this mode.)
 
-      For now, svnserve in daemon mode only support anonymous access.
+      For now, svnserve in daemon mode only supports anonymous access.
       But you can also tunnel ra_svn over ssh or any similar tool.  To
       do this, create a server group for the repository server in
       ~/.subversion/servers, and set the variable "svn-tunnel-agent"
