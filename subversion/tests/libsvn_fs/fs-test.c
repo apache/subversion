@@ -4653,11 +4653,7 @@ large_file_integrity (const char **msg,
   /* Because we've had problems in the past with files with sizes >
      svn_txdelta__window_size, our file should be at least one byte
      bigger than that. */
-#ifdef MAKE_THIS_FUNCTION_FAIL
   apr_size_t filesize = svn_txdelta__window_size + 1;
-#else
-  apr_size_t filesize = svn_txdelta__window_size;
-#endif
 
   *msg = "create and modify a large file, verifying its integrity";
 
@@ -4763,7 +4759,7 @@ large_file_integrity (const char **msg,
      file in each revision currently in existence, and make the sure
      the checksum matches the checksum of the data prior to its
      commit. */
-  for (j = 1; j <= youngest_rev; j++)
+  for (j = youngest_rev; j > 0; j--)
     {
       svn_pool_clear (subpool);
       SVN_ERR (svn_fs_revision_root (&rev_root, fs, j, subpool));
