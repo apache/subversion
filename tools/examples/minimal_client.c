@@ -117,7 +117,7 @@ main (int argc, const char **argv)
   svn_opt_revision_t revision;
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
-  svn_client_ctx_t ctx = { 0 };
+  svn_client_ctx_t *ctx;
   const char *URL;
 
   if (argc <= 1)
@@ -149,8 +149,15 @@ main (int argc, const char **argv)
 
   /* All clients need to fill out a client_ctx object. */
   {
+    /* Initialize and allocate the client_ctx object. */
+    if ((err = svn_client_create_context (&ctx, pool)))
+      {
+        svn_handle_error (err, stderr, 0);
+        return EXIT_FAILURE;
+      }
+    
     /* Load the run-time config file into a hash */
-    if ((err = svn_config_get_config (&(ctx.config), NULL, pool)))
+    if ((err = svn_config_get_config (&(ctx->config), NULL, pool)))
       {
         svn_handle_error (err, stderr, 0);
         return EXIT_FAILURE;
@@ -161,16 +168,16 @@ main (int argc, const char **argv)
 
     /* A func (& context) which receives event signals during
        checkouts, updates, commits, etc.  */
-    /* ctx.notify_func = my_notification_func;
-       ctx.notify_baton = NULL; */
+    /* ctx->notify_func = my_notification_func;
+       ctx->notify_baton = NULL; */
     
     /* A func (& context) which can receive log messages */
-    /* ctx.log_msg_func = my_log_msg_receiver_func;
-       ctx.log_msg_baton = NULL; */
+    /* ctx->log_msg_func = my_log_msg_receiver_func;
+       ctx->log_msg_baton = NULL; */
     
     /* A func (& context) which checks whether the user cancelled */
-    /* ctx.cancel_func = my_cancel_checking_func;
-       ctx.cancel_baton = NULL; */
+    /* ctx->cancel_func = my_cancel_checking_func;
+       ctx->cancel_baton = NULL; */
 
     /* Make the client_ctx capable of authenticating users */
     {
@@ -193,7 +200,7 @@ main (int argc, const char **argv)
       APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
       /* Register the auth-providers into the context's auth_baton. */
-      svn_auth_open (&ctx.auth_baton, providers, pool);      
+      svn_auth_open (&ctx->auth_baton, providers, pool);      
     }
   } /* end of client_ctx setup */
 
@@ -208,7 +215,7 @@ main (int argc, const char **argv)
   err = svn_client_ls (&dirents,
                        URL, &revision,
                        FALSE, /* no recursion */
-                       &ctx, pool);
+                       ctx, pool);
   if (err)
     {
       svn_handle_error (err, stderr, 0);

@@ -378,7 +378,9 @@ typedef svn_error_t *
 
 /** A client context structure, which holds client specific callbacks, 
  * batons, serves as a cache for configuration options, and other various 
- * and sundry things.
+ * and sundry things.  In order to avoid backwards compatability problems 
+ * clients should use @c svn_client_create_context() to allocate and 
+ * intialize this structure instead of doing so themselves.
  */
 typedef struct svn_client_ctx_t
 {
@@ -427,6 +429,19 @@ typedef struct svn_client_ctx_t
 /** @} */
 
 
+/** Initialize a client context.
+ * Return a client context in @a *ctx (allocated in @a pool) that 
+ * represents a particular instance of the svn client.  
+ *
+ * In order to avoid backwards compatability problems, clients must 
+ * use this function to intialize and allocate the 
+ * @c svn_client_ctx_t structure rather than doing so themselves, as 
+ * the size of this structure may change in the future. 
+ */ 
+svn_error_t *
+svn_client_create_context (svn_client_ctx_t **ctx,
+                           apr_pool_t *pool);
+
 /** Checkout a working copy of @a URL at @a revision, using @a path as
  * the root directory of the newly checked out working copy, and
  * authenticating with the authentication baton cached in @a ctx.  If
