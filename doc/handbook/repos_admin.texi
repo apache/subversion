@@ -375,6 +375,11 @@ repository while it's still up and running: recursively copy the
 entire repository directory, then re-copy the logfiles listed by
 @command{db_recover -l}.
 
+To start using a repository backup that you've restored, be sure to
+run @command{db_recover -ve} command in the @file{db} area first.
+This guarantees that any unfinished log transactions are fully played
+before the repository goes live again.
+
 Finally, note that Berkeley DB has a whole locking subsystem;  in
 extremely intensive svn operations, we have seen situations where the
 DB environment runs out of locks.  The maximum number of locks can be
