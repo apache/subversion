@@ -20,19 +20,15 @@
 #include <jni.h>
 #include <svn_wc.h>
 
-#define SVN_JNI__STATUS_CONSTRUCTOR \
-"(Lorg/tigris/subversion/lib/Entry;" \
-"Lorg/tigris/subversion/lib/Revision;" \
-"Lorg/tigris/subversion/lib/StatusKind;" \
-"Lorg/tigris/subversion/lib/StatusKind;" \
-"ZLorg/tigris/subversion/lib/StatusKind;" \
-"Lorg/tigris/subversion/lib/StatusKind;)V"
+#define SVN_JNI_STATUS__CONSTRUCTOR \
+"(Lorg/tigris/subversion/lib/Entry;IIIZII)V"
 
 jobject
 svn_jni_status__create(JNIEnv *env, svn_wc_status_t *status, 
 		       jboolean *hasException)
 {
   jobject jstatus = NULL;
+  jobject jentry = NULL;
   jboolean _hasException = JNI_FALSE;
 
 #ifdef SVN_JNI__VERBOSE
@@ -54,7 +50,7 @@ svn_jni_status__create(JNIEnv *env, svn_wc_status_t *status,
 	{
 	  statusConstructor = 
 	      (*env)->GetMethodID(env, statusClass,
-				  "<init>", SVN_JNI__STATUS_CONSTRUCTOR);
+				  "<init>", SVN_JNI_STATUS__CONSTRUCTOR);
 
 	  if( statusConstructor == NULL )
 	  {
@@ -62,9 +58,23 @@ svn_jni_status__create(JNIEnv *env, svn_wc_status_t *status,
 	  }
 	}
 
-      /* here the has to happen stuff, like construction and so on */
+      if( !_hasException )
+        {
+            //
+        }
 
-
+      if( !_hasException )
+        {
+          jstatus = (*env)->NewObject(env, statusClass, 
+                                      statusConstructor,
+                                      jentry,
+                                      status->repos_rev,
+                                      status->text_status,
+                                      status->prop_status,
+                                      status->locked,
+                                      status->repos_text_status,
+                                      status->repos_prop_status);
+        }
 
       (*env)->PopLocalFrame(env, jstatus);
     }
@@ -78,6 +88,8 @@ svn_jni_status__create(JNIEnv *env, svn_wc_status_t *status,
   return jstatus;
 }
 
-/* local variables:
+/* 
+ * local variables:
  * eval: (load-file "../../../svn-dev.el")
  * end: */
+
