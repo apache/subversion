@@ -195,7 +195,44 @@ def commit_one_new_file(sbox):
                                                 None, None,
                                                 gloo_path)
 
-  
+
+#----------------------------------------------------------------------
+
+def commit_one_new_binary_file(sbox):
+  "commit one newly added binary file."
+
+  if sbox.build():
+    return 1
+
+  wc_dir = sbox.wc_dir
+
+  # Make standard slew of changes to working copy.
+  if make_standard_slew_of_changes(wc_dir): return 1
+
+  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo')
+  svntest.main.run_svn(None, 'propset', 'svn:mime-type',
+                       'application/octet-stream', gloo_path)
+
+  # Create expected output tree.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H/gloo' : Item(verb='Adding  (bin)'),
+    })
+
+  # Created expected status tree.
+  expected_status = get_standard_state(wc_dir) # pre-commit status
+  expected_status.tweak(repos_rev=2) # post-commit status
+  expected_status.tweak('A/D/H/gloo', wc_rev=2, status='_ ')
+
+  # Commit the one file.
+  return svntest.actions.run_and_verify_commit (wc_dir,
+                                                expected_output,
+                                                expected_status,
+                                                None,
+                                                None, None,
+                                                None, None,
+                                                gloo_path)
+
+
 #----------------------------------------------------------------------
 
 def commit_multiple_targets(sbox):
@@ -1361,6 +1398,7 @@ def commit_current_dir(sbox):
 test_list = [ None,
               commit_one_file,
               commit_one_new_file,
+              (commit_one_new_binary_file, svntest.main.XFAIL),
               commit_multiple_targets,
               commit_multiple_targets_2,
               commit_inclusive_dir,
