@@ -371,7 +371,8 @@ typedef struct svn_client_ctx_t
 
   /** a hash mapping of <tt>const char *</tt> configuration file names to
    * @c svn_config_t *'s, for example, the '~/.subversion/config' file's 
-   * contents should have the key "config".
+   * contents should have the key "config".  May be left unset (or set to
+   * NULL) to use the built-in default settings and not use any configuration.
    */
   apr_hash_t *config;
 
