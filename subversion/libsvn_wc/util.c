@@ -125,51 +125,6 @@ svn_wc__ensure_directory (svn_string_t *path, apr_pool_t *pool)
 
 
 
-/* kff todo: not really needed anymore, but might be useful again
-   someday.  Likely enough that don't want to just relegate it to RCS
-   history... */
-
-/* If PATH exists already, return an svn error containing ERR_TO_REPORT.
- *
- * If PATH doesn't exist, return 0.
- *
- * If unable to determine whether or not PATH exists, due to another
- * error condition, return an svn error containing that apr error.
- */
-static svn_error_t *
-check_existence (svn_string_t *path,
-                 apr_status_t err_to_report,
-                 apr_pool_t *pool)
-{
-  apr_status_t apr_err;
-  apr_file_t *tmp_f = NULL;  /* init to NULL hugely important to APR */
-
-  apr_err = apr_open (&tmp_f, path->data,
-                     (APR_READ | APR_CREATE | APR_EXCL),
-                     APR_OS_DEFAULT, pool);
-
-  if (apr_err == APR_EEXIST)
-    {
-      svn_error_t *err 
-        = svn_create_error (err_to_report, 0, path->data, NULL, pool);
-      return err;
-    }
-  else if (apr_err)  /* some error other than APR_EEXIST */
-    {
-      svn_error_t *err 
-        = svn_create_error (apr_err, 0, path->data, NULL, pool);
-      return err;
-    }
-  else              /* path definitely does not exist */
-    {
-      apr_close (tmp_f);
-      apr_remove_file (path->data, pool);
-      return 0;
-    }
-}
-
-
-
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
