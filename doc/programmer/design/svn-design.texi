@@ -113,7 +113,6 @@ system.
 * Client::                       How the client works.
 * Protocol::                     How the client and server communicate.
 * Server::                       How the server works.
-* Future::                       Future plans.
 * License::                      Copyright.
 @end menu
 
