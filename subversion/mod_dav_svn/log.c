@@ -26,6 +26,7 @@
 #include "svn_pools.h"
 #include "svn_repos.h"
 #include "svn_fs.h"
+#include "svn_types.h"
 #include "svn_xml.h"
 #include "svn_path.h"
 
@@ -40,6 +41,10 @@ struct log_receiver_baton
 
   /* where to deliver the output */
   ap_filter_t *output;
+
+  /* Whether we've written the <S:log-report> header.  Allows for lazy
+     writes to support mod_dav-based error handling. */
+  svn_boolean_t needs_header;
 };
 
 
@@ -64,6 +69,16 @@ static svn_error_t * log_receiver(void *baton,
                                   apr_pool_t *pool)
 {
   struct log_receiver_baton *lrb = baton;
+
+  if (lrb->needs_header)
+    {
+      /* Start the log report. */
+      send_xml(lrb,
+               DAV_XML_HEADER DEBUG_CR
+               "<S:log-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+               "xmlns:D=\"DAV:\">" DEBUG_CR);
+      lrb->needs_header = FALSE;
+    }
 
   send_xml(lrb,
            "<S:log-item>" DEBUG_CR
@@ -236,12 +251,12 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   lrb.bb = apr_brigade_create(resource->pool,  /* not the subpool! */
                               output->c->bucket_alloc);
   lrb.output = output;
+  lrb.needs_header = TRUE;
 
-  /* Start the log report. */
-  send_xml(&lrb,
-           DAV_XML_HEADER DEBUG_CR
-           "<S:log-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-           "xmlns:D=\"DAV:\">" DEBUG_CR);
+  /* Our svn_log_message_receiver_t sends the <S:log-report> header in
+     a lazy fashion.  Before writing the first log message, it assures
+     that the header has already been sent (checking the needs_header
+     flag in our log_receiver_baton structure). */
 
   /* Send zero or more log items. */
   serr = svn_repos_get_logs(repos->repos,
@@ -256,27 +271,32 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
 
   if (serr)
     {
-      /* ### We've definitely generated some content into the output
-         ### filter, which means that we cannot return an error here.
-         ### In the future, mod_dav may specify a way to signal an
-         ### error even after the response stream has begun. 
-         ### 
-         ### So for now, we "return" the error by invoking the
-         ### log_receiver on the error message itself. 
-         ### 
-         ### http://subversion.tigris.org/issues/show_bug.cgi?id=816
-         ### describes a situation where this helps. */
+      /* If we can, report a DAV error. */
+      if (lrb.needs_header)
+        {
+          /* Bail out before writing any of <S:log-report>. */
+          return dav_svn_convert_err(serr, HTTP_BAD_REQUEST, serr->message);
+        }
+      else
+        {
+          /* ### We've sent some content to the output filter, meaning
+             ### that we cannot simply return an error here.  In the
+             ### future, mod_dav may specify a way to signal an error
+             ### even after the response stream has begun.
 
-      /* Don't bother to check for error; we can't do anything with it
-         if we get one. */
-      log_receiver(&lrb,
-                   NULL,
-                   SVN_INVALID_REVNUM,
-                   "", "",
-                   serr->message,
-                   resource->pool);
+             ### For now we punt, sending the error message to the
+             ### client as a <S:log-item> (using its <D:version-name>
+             ### and <D:comment> children).
 
-      serr = NULL;
+             ### http://subversion.tigris.org/issues/show_bug.cgi?id=816
+             ### describes a situation where this helps.*/
+          log_receiver(&lrb,
+                       NULL,
+                       SVN_INVALID_REVNUM,
+                       "", "",
+                       serr->message,
+                       resource->pool);
+        }
     }
   
   /* End the log report. */
