@@ -138,26 +138,40 @@ read_hook_line (char **cmd_p,
 
       /* Proceed, having handled or prepared any escapes on this char. */
 
+      /* ### todo: when have test suite from Mike, change this to
+         check for `\\' outside the switch below, and if it is an
+         escape, then just read the next char right away.  Then we can
+         get rid of the whole `escaped' switch block above. 
+
+         Likewise, check for comment char.  If have it, then call a
+         new function, eat_to_end_of_line(), then restart.  There's no
+         reason this whole state machine has to be done inline and
+         unrolled, the way it is right now.
+
+         We can do expansion the same way: see a dollar sign, expand
+         right away.  That will give us more flexible syntax in the
+         conf file anyway. */
+
       switch (c)
         {
         case '\\':
-          if (! suppress_escape_effect)
-              escaped = 1;
-          else
+          if (suppress_escape_effect)
             {
               suppress_escape_effect = 0;
               goto add_it;
             }
+          else
+            escaped = 1;
           break;
           
         case '#':
-          if (! suppress_comment_effect)
-              commented = 1;
-          else
+          if (suppress_comment_effect)
             {
               suppress_comment_effect = 0;
               goto add_it;
             }
+          else
+            commented = 1;
           break;
           
         case '\n':
