@@ -697,7 +697,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "SVNLOOK=" SVN_BINARY_DIR "/svnlook"
       APR_EOL_STR
-      "$SVNLOOK getlock \"$REPOS\" \"$PATH\" | \\"
+      "$SVNLOOK lock \"$REPOS\" \"$PATH\" | \\"
       APR_EOL_STR
       "   grep \"Owner\" > /dev/null && exit 1"
       APR_EOL_STR
@@ -805,7 +805,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "SVNLOOK=" SVN_BINARY_DIR "/svnlook"
       APR_EOL_STR
-      "OWNER_VALUE=`svnlook getlock \"$REPOS\" \"$PATH\" | \\"
+      "OWNER_VALUE=`svnlook lock \"$REPOS\" \"$PATH\" | \\"
       APR_EOL_STR
       "             /bin/grep \"^Owner: \" | /bin/sed 's/Owner: //'`"
       APR_EOL_STR
