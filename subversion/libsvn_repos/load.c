@@ -26,6 +26,51 @@
 
 #include "apr_lib.h"
 
+
+
+/*----------------------------------------------------------------------*/
+
+/** Batons used herein **/
+
+struct parse_baton
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+
+  svn_boolean_t use_history;
+  svn_stream_t *outstream;
+};
+
+struct revision_baton
+{
+  svn_revnum_t rev;
+
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+
+  const svn_string_t *datestamp;
+
+  apr_int32_t rev_offset;
+
+  struct parse_baton *pb;
+  apr_pool_t *pool;
+};
+
+struct node_baton
+{
+  const char *path;
+  enum svn_node_kind kind;
+  enum svn_node_action action;
+
+  svn_revnum_t copyfrom_rev;
+  const char *copyfrom_path;
+
+  struct revision_baton *rb;
+  apr_pool_t *pool;
+};
+
+
+
 /*----------------------------------------------------------------------*/
 
 /** The parser and related helper funcs **/
@@ -265,7 +310,26 @@ parse_content_block (svn_stream_t *stream,
         SVN_ERR (svn_stream_close (text_stream));
 
     } /* done slurping all the fulltext */
-    
+
+  /* Special case:  we have zero data content bytes, but this is
+     file.  Files *always* have contents, even if they are empty. */
+  else if (is_node)
+    {
+      struct node_baton *nb = record_baton;
+      if (nb->kind == svn_node_file)
+        {
+          apr_size_t wlen = 0;
+          svn_stream_t *text_stream;
+          
+          SVN_ERR (parse_fns->set_fulltext (&text_stream, record_baton));
+          if (text_stream != NULL)
+            {
+              SVN_ERR (svn_stream_write (text_stream, "", &wlen));
+              SVN_ERR (svn_stream_close (text_stream));
+            }
+        }
+    }
+
   /* Everything good, mission complete. */
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
@@ -434,44 +498,6 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 /*----------------------------------------------------------------------*/
 
 /** vtable for doing commits to a fs **/
-
-
-struct parse_baton
-{
-  svn_repos_t *repos;
-  svn_fs_t *fs;
-
-  svn_boolean_t use_history;
-  svn_stream_t *outstream;
-};
-
-struct revision_baton
-{
-  svn_revnum_t rev;
-
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-
-  const svn_string_t *datestamp;
-
-  apr_int32_t rev_offset;
-
-  struct parse_baton *pb;
-  apr_pool_t *pool;
-};
-
-struct node_baton
-{
-  const char *path;
-  enum svn_node_kind kind;
-  enum svn_node_action action;
-
-  svn_revnum_t copyfrom_rev;
-  const char *copyfrom_path;
-
-  struct revision_baton *rb;
-  apr_pool_t *pool;
-};
 
 
 static struct node_baton *
