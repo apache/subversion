@@ -22,6 +22,16 @@ Candidate changes:
     Votes:
       +1: lundblad, ghudson
 
+  * r11284, r11321
+    Fix memory usage bloat in ra-dav commits.
+    Justification:
+      Scalability.
+    Notes:
+      r11321 is just a docstring addition -- we can drop that from
+      this merge if folks really care.
+    Votes:
+      +1: cmpilato
+
   * r11458
     Fix mod_dav_svn error leaks.
     Justification:
