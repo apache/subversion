@@ -98,6 +98,8 @@ svn_client__revision_is_local (const svn_opt_revision_t *revision);
    particular resource has undergone when performing an RA->get_logs()
    operation on that resource.  */
 svn_error_t *svn_client__prev_log_path (const char **prev_path_p,
+                                        char *action_p,
+                                        svn_revnum_t *copyfrom_rev_p,
                                         apr_hash_t *changed_paths,
                                         const char *path,
                                         svn_node_kind_t kind,

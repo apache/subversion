@@ -328,6 +328,8 @@ svn_client_uuid_from_path (const char **uuid,
 
 svn_error_t *
 svn_client__prev_log_path (const char **prev_path_p,
+                           char *action_p,
+                           svn_revnum_t *copyfrom_rev_p,
                            apr_hash_t *changed_paths,
                            const char *path,
                            svn_node_kind_t kind,
@@ -339,6 +341,13 @@ svn_client__prev_log_path (const char **prev_path_p,
 
   /* It's impossible to find the predecessor path of a NULL path. */
   assert(path);
+
+  /* Initialize our return values for the action and copyfrom_rev in
+     case we have an unhandled case later on. */
+  if (action_p)
+    *action_p = 'M';
+  if (copyfrom_rev_p)
+    *copyfrom_rev_p = SVN_INVALID_REVNUM;
 
   /* If PATH was explicitly changed in this revision, that makes
      things easy -- we keep the path (but check to see).  If so,
@@ -355,6 +364,10 @@ svn_client__prev_log_path (const char **prev_path_p,
         prev_path = path;
 
       *prev_path_p = prev_path;
+      if (action_p)
+        *action_p = change->action;
+      if (copyfrom_rev_p)
+        *copyfrom_rev_p = change->copyfrom_rev;
       return SVN_NO_ERROR;
     }
   else if (apr_hash_count (changed_paths))
@@ -394,6 +407,10 @@ svn_client__prev_log_path (const char **prev_path_p,
           change = apr_hash_get (changed_paths, ch_path, len);
           if (change->copyfrom_path)
             {
+              if (action_p)
+                *action_p = change->action;
+              if (copyfrom_rev_p)
+                *copyfrom_rev_p = change->copyfrom_rev;
               prev_path = svn_path_join (change->copyfrom_path, 
                                          path + len + 1, pool);
               break;
@@ -481,7 +498,7 @@ log_receiver (void *baton,
 
   /* Figure out at which repository path our object of interest lived
      in the previous revision. */
-  SVN_ERR (svn_client__prev_log_path (&prev_path, changed_paths,
+  SVN_ERR (svn_client__prev_log_path (&prev_path, NULL, NULL, changed_paths,
                                       current_path, lrb->kind, 
                                       revision, pool));
 
