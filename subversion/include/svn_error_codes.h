@@ -151,7 +151,9 @@ SVN_ERROR_START
               SVN_ERR_BAD_CATEGORY_START + 4,
               "Bogus mime-type")
 
-  /* UNUSED error slot:                  + 5 */
+  SVN_ERRDEF (SVN_ERR_BAD_INPUT,
+              SVN_ERR_BAD_CATEGORY_START + 5,
+              "Bogus input data")
 
   SVN_ERRDEF (SVN_ERR_BAD_VERSION_FILE_FORMAT,
               SVN_ERR_BAD_CATEGORY_START + 6,
