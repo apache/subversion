@@ -493,6 +493,31 @@ svn_error_t *svn_io_get_dirents (apr_hash_t **dirents,
                                  apr_pool_t *pool);
 
 
+/** Callback function type for @c svn_io_dir_walk  */
+typedef svn_error_t * (*svn_io_walk_func_t) (void *baton,
+                                             const char *path,
+                                             const apr_finfo_t *finfo,
+                                             apr_pool_t *pool);
+
+/** Perform a "walk" over the files and directories, invoking a callback.
+ *
+ * This function will recursively walk over the files and directories
+ * rooted at @a dirname, a utf8-encoded path. For each file or directory,
+ * @a walk_func is invoked, passing in the @a walk_baton, the utf8-encoded
+ * full path to the entry, an @c apr_finfo_t structure, and a temporary
+ * pool for allocations.
+ *
+ * The set of information passed to @a walk_func is specified by @a wanted,
+ * and the items specified by @c APR_FINFO_TYPE and @c APR_FINFO_NAME.
+ *
+ * All allocations will be performed in @a pool.
+ */
+svn_error_t *svn_io_dir_walk (const char *dirname,
+                              apr_int32_t wanted,
+                              svn_io_walk_func_t walk_func,
+                              void *walk_baton,
+                              apr_pool_t *pool);
+
 /** Run a command.
  *
  * Invoke @a cmd with @a args, using utf8-encoded @a path as working directory.
