@@ -501,11 +501,10 @@ svn_client_propget (apr_hash_t **props,
                 }
               else  /* ### recursive case unimplemented */
                 {
-                  return svn_error_createf
+                  return svn_error_create
                     (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
-                 "Recursing on previous revision not yet supported.\n"
-                 "(http://subversion.tigris.org/issues/show_bug.cgi?id=943)\n",
-                     target);
+               "Recursing on previous revision not yet supported.\n"
+               "(http://subversion.tigris.org/issues/show_bug.cgi?id=1023)\n");
                   
                   /* In the recursive case, the correctest behavior is
                      hard to implement.  If the command is
@@ -911,11 +910,10 @@ svn_client_proplist (apr_array_header_t **props,
                 }
               else  /* ### recursive case unimplemented */
                 {
-                  return svn_error_createf
+                  return svn_error_create
                     (SVN_ERR_UNSUPPORTED_FEATURE, 0, NULL,
-                 "Recursing on previous revision not yet supported.\n"
-                 "(http://subversion.tigris.org/issues/show_bug.cgi?id=943)\n",
-                     target);
+              "Recursing on previous revision not yet supported.\n"
+              "(http://subversion.tigris.org/issues/show_bug.cgi?id=1023)\n");
                   
                   /* In the recursive case, the correctest behavior is
                      hard to implement.  If the command is
