@@ -6,7 +6,7 @@ Release: @RELEASE@
 Copyright: BSD
 Group: Utilities/System
 URL: http://subversion.tigris.org
-Source0: subversion-%{version}-r%{release}.tar.gz
+Source0: subversion-%{version}-%{release}.tar.gz
 Source1: apr-2001-09-28.tar.gz
 Source2: neon-%{neon_version}.tar.gz
 Vendor: Summersoft
@@ -27,6 +27,13 @@ package.
 %changelog
 * Thu Sep 27 2001 David Summers <david@summersoft.fay.ar.us>
 - Release M3-r117: Initial Version.
+
+%package devel
+Group: Utilities/System
+Summary: Development package for Subversion developers.
+%description devel
+The subversion-devel package includes the static libraries and include files
+for developers interacing with the subversion package.
 
 %prep
 %setup -q
@@ -57,8 +64,12 @@ rm -rf $RPM_BUILD_ROOT
 %doc AUTHORS BUGS COPYING HACKING IDEAS INSTALL NEWS PORTING
 %doc README STACK TASKS
 %doc doc notes tools subversion/LICENSE
-/usr/lib/lib*
 /usr/bin/svn
 /usr/bin/svnadmin
 /usr/bin/svnlook
 /usr/share/man/man1/*
+
+%files devel
+%defattr(-,root,root)
+/usr/lib/libsvn*
+/usr/include/svn*
