@@ -215,6 +215,11 @@ check: $(TEST_DEPS) @FS_TEST_DEPS@
                   '$(abs_srcdir)' '$(abs_builddir)' '$(PYTHON)' '$(SHELL)' \
                   $(TEST_PROGRAMS) @FS_TEST_PROGRAMS@
 
+davcheck: 
+	@make check BASE_URL=http://localhost
+svncheck: 
+	@make check BASE_URL=svn://localhost
+
 check-clean:
 	rm -rf subversion/tests/clients/cmdline/repositories   \
                subversion/tests/clients/cmdline/working_copies \
