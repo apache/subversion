@@ -149,8 +149,8 @@ typedef struct svn_delta_stream_t svn_delta_stream_t;
 /* Set *WINDOW to a pointer to the next window from the delta stream
    STREAM.  When we have completely reconstructed the target string,
    set *WINDOW to zero.  */
-extern svn_error_t *svn_next_delta_window (svn_delta_stream_t *stream,
-                                           svn_delta_window_t **window);
+extern svn_error_t *svn_next_delta_window (svn_delta_window_t **window,
+                                           svn_delta_stream_t *stream);
 
 /* Free the delta window WINDOW.  */
 extern void svn_free_delta_window (svn_delta_window_t *window);
@@ -159,27 +159,28 @@ extern void svn_free_delta_window (svn_delta_window_t *window);
    opaque structure indicating what we're reading, BUFFER is a buffer
    to hold the data, and *LEN indicates how many bytes to read.  Upon
    return, the function should set *LEN to the number of bytes
-   actually read, or zero at the end of the data stream.  */
+   actually read, or zero at the end of the data stream.
+
+   We will need to compute deltas for text drawn from files, memory,
+   sockets, and so on; the data may be huge --- too large to read into
+   memory at one time.  Using `read'-like functions allows us to
+   process the data as we go.  */
 typedef svn_error_t *svn_delta_read_fn_t (void *data,
                                           char *buffer,
                                           apr_off_t *len);
 
-/* Set *STREAM to a pointer to a delta stream that will turn the text
-   from SOURCE into the text from TARGET.
+/* Set *STREAM to a pointer to a delta stream that will turn the byte
+   string from SOURCE into the byte stream from TARGET.
 
-   SOURCE_FN and TARGET_FN are both functions which act like the Unix
-   `read' system call, given SOURCE_DATA or TARGET_DATA as their first
-   argument.  We will need to compute deltas for text drawn from
-   files, memory, sockets, and so on; the data may be huge --- too
-   large to read into memory at one time.  Using `read'-like functions
-   allows us to process the data as we go.  When we call
-   `svn_next_delta_window' on STREAM, it will call upon its SOURCE and
-   TARGET `read'-like functions to gather as much data as it needs.  */
-extern svn_error_t *svn_text_delta (svn_delta_read_fn_t *source_fn,
+   SOURCE_FN and TARGET_FN are both `read'-like functions, as
+   described above.  When we call `svn_next_delta_window' on *STREAM,
+   it will call upon its SOURCE_FN and TARGET_FN `read'-like functions
+   to gather as much data as it needs.  */
+extern svn_error_t *svn_text_delta (svn_delta_stream_t **stream,
+                                    svn_delta_read_fn_t *source_fn,
                                     void *source_data,
                                     svn_delta_read_fn_t *target_fn,
-                                    void *target_data,
-                                    svn_delta_stream_t **stream);
+                                    void *target_data);
 
 /* Free the delta stream STREAM.  */
 extern void svn_free_delta_stream (svn_delta_stream_t *stream);
@@ -187,17 +188,16 @@ extern void svn_free_delta_stream (svn_delta_stream_t *stream);
 /* Given a delta stream STREAM, set *READ_FN and *DATA to a `read'-like
    function that will return a VCDIFF-format byte stream.
    (Do we need a `free' function for disposing of DATA somehow?)  */
-extern svn_error_t *svn_delta_to_vcdiff (svn_delta_stream_t *stream,
-                                         svn_delta_read_fn_t **read_fn,
-                                         void **data);
+extern svn_error_t *svn_delta_to_vcdiff (svn_delta_read_fn_t **read_fn,
+                                         void **data,
+                                         svn_delta_stream_t *stream);
 
 /* Given READ_FN and DATA, a `read'-like function and data pointer that
    yield a VCDIFF-format byte stream, set *STREAM to a pointer to a
    delta stream carrying the data from the VCDIFF stream.  */
-extern svn_error_t *svn_vcdiff_to_delta (svn_delta_read_fn_t *read_fn,
-                                         void *data,
-                                         svn_delta_stream_t **stream);
-
+extern svn_error_t *svn_vcdiff_to_delta (svn_delta_stream_t **stream,
+                                         svn_delta_read_fn_t *read_fn,
+                                         void *data);
 
 
 /* Property deltas.  */
@@ -214,129 +214,108 @@ typedef struct svn_pdelta_t {
 } svn_pdelta_t;
 
 
-/* These are the in-memory tree-delta stackframes; they are used to
- * keep track of a delta's state while the XML stream is being parsed.
- * 
- * The XML representation has certain space optimizations.  For
- * example, if an ancestor is omitted, it means the same path at the
- * same version (taken from the surrounding delta context).  We may
- * well decide to use corresponding optimizations here -- an absent
- * svn_ancestor_t object means use the path and ancestor from the
- * delta, etc -- or we may not.  In any case it doesn't affect the
- * definitions of these data structures.  However, once we do know
- * what interpretive conventions we're using in code, we should
- * probably record them here.  */
+/* Traversing tree deltas.  */
 
-/* Note that deltas are constructed and deconstructed streamily.  That
- * way when you do a checkout of comp-tools, for example, the client
- * doesn't wait for an entire 200 meg tree delta to arrive before
- * doing anything.
- *
- * The delta being {de}constructed is passed along as one of the
- * arguments to the XML parser callbacks; the callbacks use the
- * existing delta, plus whatever the parser just saw that caused the
- * callback to be invoked, to figure out what to do next.
- */
-
-typedef size_t svn_version_t;   /* Would they ever need to be signed? */
-
-
-typedef struct svn_delta_stackframe_t
+/* A structure of callback functions the parser will invoke as it
+   reads in the delta.  */
+typedef struct svn_delta_walk_t
 {
-  enum {                     /* The type of XML object we're representing */
-    svn_XML_tree = 1,
-    svn_XML_edit,
-    svn_XML_content
-  } kind;
+  /* In the following callback functions:
 
-  enum {                     /* If this is an svn_XML_edit kind, */
-    svn_edit_add = 1,        /* this is the type of edit in progress */
-    svn_edit_del,
-    svn_edit_replace
-  } edit_kind;
+     - NAME is a single path component, not a full directory name.  The
+       caller should use its PARENT_BATON pointers to keep track of
+       the current complete subdirectory name, if necessary.
 
-  enum {                     /* If this is an svn_XML_content kind, */
-    svn_content_file = 1,    /* this is the type of content being processed */
-    svn_content_dir
-  } content_kind;
+     - WALK_BATON is the baton for the overall delta walk.  It is the
+       same value passed to `svn_delta_parse'.
 
-  svn_string_t *name;        /* Used by svn_XML_edit and svn_XML_content */
-  
-  /* Used by svn_XML_content only */
+     - PARENT_BATON is the baton for the current directory, whose
+       entries we are adding/removing/replacing.
 
-  svn_string_t *ancestor_path;
-  svn_version_t ancestor_ver;
-  svn_boolean_t inside_textdelta;
-  svn_boolean_t inside_propdelta;
+     - If BASE_PATH is non-zero, then BASE_PATH and BASE_VERSION
+       indicate the ancestor of the resulting object.
 
-  /* Our stackframe is a doubly-linked list */
+     - PDELTA is a property delta structure, describing either changes
+       to the existing object's properties (for the `replace_FOO'
+       functions), or a new object's property list as a delta against
+       the empty property list (for the `add_FOO' functions).
 
-  struct svn_delta_stackframe_t *next;
-  struct svn_delta_stackframe_t *previous;
+     So there.  */
+       
+  /* Remove the directory entry named NAME.  */
+  svn_error_t *(*delete) (svn_string_t *name,
+			  void *walk_baton, void *parent_baton);
 
-} svn_delta_stackframe_t;
+  /* Apply the property delta ENTRY_PDELTA to the property list of the
+     directory entry named NAME.  */
+  svn_error_t *(*entry_pdelta) (svn_string_t *name,
+				void *walk_baton, void *parent_baton,
+				svn_pdelta_t *entry_pdelta);
 
+  /* We are going to add a new subdirectory named NAME.  We will use
+     the value this callback stores in *CHILD_BATON as the
+     PARENT_BATON for further changes in the new subdirectory.  The
+     subdirectory is described as a series of changes to the base; if
+     BASE_PATH is zero, the changes are relative to an empty directory.  */
+  svn_error_t *(*add_directory) (svn_string_t *name,
+				 void *walk_baton, void *parent_baton,
+				 svn_string_t *base_path,
+				 svn_version_t base_version,
+				 svn_pdelta_t *pdelta,
+				 void **child_baton);
 
-
-/* An svn_delta_digger_t is passed as *userData to Expat (and from
- * there to registered callback functions).
- *
- * As the callbacks see various XML elements, they construct
- * digger->delta.  Most elements merely require a new component of the
- * delta to be built and hooked in, with no further action.  Other
- * elements, such as a directory or actual file contents, require
- * special action from the caller.  For example, if the caller is from
- * the working copy library, it might create the directory or the file
- * on disk; or if the caller is from the repository, it might want to
- * start building nodes for a commit.  The digger holds function
- * pointers for such callbacks, and the delta provides context to
- * those callbacks -- e.g., the name of the directory or file to
- * create.
- *
- *    Note ("heads we win, tails we lose"):
- *    =====================================
- *    A digger only stores the head of the delta, even though the
- *    place we hook things onto is the tail.  While it would be
- *    technically more efficient to keep a pointer to tail, it would
- *    also be more error-prone, since it's another thing to keep track
- *    of.  And the maximum chain length of the delta is proportional
- *    to the max directory depth of the tree the delta represents,
- *    since we always snip off any completed portion of the delta
- *    (i.e., every time we encounter a closing tag, we remove what it
- *    closed from the delta).  So cdr'ing down the chain to the end is
- *    not so bad.  Given that deltas usually result in file IO of some
- *    kind, a little pointer chasing should be lost in the noise.
- */
-typedef struct svn_delta_digger_t
-{
-  apr_pool_t *pool;
-  
-  svn_delta_stackframe_t *stack;
+  /* We are going to change the directory entry named NAME to a
+     subdirectory.  The callback must store a value in *CHILD_BATON
+     that will be used as the PARENT_BATON for subsequent changes in
+     this subdirectory.  The subdirectory is described as a series of
+     changes to the base; if BASE_PATH is zero, the changes are
+     relative to an empty directory.  */
+  svn_error_t *(*replace_directory) (svn_string_t *name,
+				     void *walk_baton, void *parent_baton,
+				     svn_string_t *base_path,
+				     svn_version_t base_version,
+				     svn_pdelta_t *pdelta,
+				     void **child_baton);
 
-  /* Caller uses delta context to determine if prop data or text data. */
-  svn_error_t *(*data_handler) (struct svn_delta_digger_t *digger,
-                                const char *data,
-                                int len);
+  /* We are done processing a subdirectory, whose baton is
+     CHILD_BATON.  This lets the caller do any cleanups necessary,
+     since CHILD_BATON won't be used any more.  */
+  svn_error_t *(*finish_directory) (void *child_baton);
 
-  /* Call handles dirs specially, because might want to create them. 
-   * It gets the digger for context, but also the current edit_content
-   * because that's a faster way to get this edit. 
-   */
-  svn_error_t *(*dir_handler) (struct svn_delta_digger_t *digger,
-                               svn_delta_stackframe_t *frame);
+  /* We are going to add a new file named NAME.  TEXT specifies the
+     file contents as a text delta versus the base text; if BASE_PATH
+     is zero, the changes are relative to the empty file.  */
+  svn_error_t *(*add_file) (svn_string_t *name,
+			    void *walk_baton, void *parent_baton,
+			    svn_string_t *base_path,
+			    svn_version_t base_version,
+			    svn_pdelta_t *pdelta,
+			    svn_delta_stream_t *text);
 
-  /* Caller optionally decides what to do with unrecognized elements. */
-  svn_error_t *(*unknown_elt_handler) (struct svn_delta_digger_t *digger,
-                                       const char *name);
+  /* We are going to change the directory entry named NAME to a file.
+     TEXT_DELTA specifies the file contents as a delta relative to the
+     base, or the empty file if BASE_PATH is zero.  */
+  svn_error_t *(*replace_file) (svn_string_t *name,
+				void *walk_baton, void *parent_baton,
+				svn_string_t *base_path,
+				svn_version_t base_version,
+				svn_pdelta_t *pdelta,
+				svn_delta_stream_t *text);
 
-} svn_delta_digger_t;
+} svn_delta_walk_t;
 
-
-
-
-/* Creates a parser with the common callbacks and userData registered. */
-XML_Parser svn_delta_make_xml_parser (svn_delta_digger_t *diggy);
-
+/* Create a delta parser that consumes data from SOURCE_FN and
+   SOURCE_BATON, and invokes the callback functions in WALKER as
+   appropriate.  CALLER_WALK is a data passthrough for the entire
+   traversal.  CALLER_DIR is a data passthrough for the root
+   directory; the callbacks can establish new CALLER_DIR values for
+   subdirectories.  Use POOL for allocations.  */
+extern svn_error_t *svn_delta_parse (svn_delta_read_fn_t *source_fn,
+				     void *source_baton,
+				     svn_delta_walk_t *walker,
+				     void *walk_baton,
+				     void *dir_baton,
+				     apr_pool_t *pool);
 
 #endif  /* SVN_DELTA_H */
 
