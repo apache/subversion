@@ -120,8 +120,9 @@
 %typemap(python, out) svn_error_t * {
     if ($1 != NULL) {
         if ($1->apr_err != SVN_ERR_SWIG_PY_EXCEPTION_SET)
-            PyErr_SetString(PyExc_RuntimeError,
-                            $1->message ? $1->message : "unknown error");
+            svn_swig_py_svn_exception($1);
+        else
+            svn_error_clear($1);
         return NULL;
     }
     Py_INCREF(Py_None);

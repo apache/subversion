@@ -95,6 +95,74 @@ void svn_swig_py_acquire_py_lock(void)
 #endif
 }
 
+
+
+/*** Custom SubversionException stuffs. ***/
+
+/* Global SubversionException class object. */
+static PyObject *SubversionException = NULL;
+
+
+PyObject *svn_swig_py_exception_type(void)
+{
+  Py_INCREF(SubversionException);
+  return SubversionException;
+}
+
+PyObject *svn_swig_py_register_exception(void)
+{
+  /* If we haven't created our exception class, do so. */
+  if (SubversionException == NULL)
+    {
+      SubversionException = PyErr_NewException
+        ((char *)"libsvn._core.SubversionException", NULL, NULL);
+    }
+
+  /* Regardless, return the exception class. */
+  return svn_swig_py_exception_type();
+}
+
+void svn_swig_py_svn_exception(svn_error_t *err)
+{ 
+  PyObject *exc_ob, *apr_err_ob;
+
+  if (err == NULL)
+    return;
+
+  /* Make an integer for the error code. */
+  apr_err_ob = PyInt_FromLong(err->apr_err);
+  if (apr_err_ob == NULL)
+    return;
+
+  /* Instantiate a SubversionException object. */
+  exc_ob = PyObject_CallFunction(SubversionException, (char *)"sO", 
+                                 err->message, apr_err_ob);
+  if (exc_ob == NULL)
+    {
+      Py_DECREF(apr_err_ob);
+      return;
+    }
+
+  /* Set the "apr_err" attribute of the exception to our error code. */
+  if (PyObject_SetAttrString(exc_ob, (char *)"apr_err", apr_err_ob) == -1)
+    {
+      Py_DECREF(apr_err_ob);
+      Py_DECREF(exc_ob);
+      return;
+    }
+
+  /* Finished with the apr_err object. */
+  Py_DECREF(apr_err_ob);
+
+  /* Set the error state to our exception object. */
+  PyErr_SetObject(SubversionException, exc_ob);
+
+  /* Finished with the exc_ob object. */
+  Py_DECREF(exc_ob);
+}
+
+
+
 /*** Helper/Conversion Routines ***/
 
 static PyObject *make_pointer(const char *typename, void *ptr)

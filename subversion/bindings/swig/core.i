@@ -298,6 +298,8 @@ apr_pool_t *current_pool;
 /* Allow None to be passed as config_dir argument */
 %typemap(python,in,parse="z") const char *config_dir "";
 
+PyObject *svn_swig_py_exception_type(void);
+
 
 /* ----------------------------------------------------------------------- */
 
@@ -352,3 +354,15 @@ apr_pool_t *current_pool;
 #include "swigutil_pl.h"
 #endif
 %}
+
+#ifdef SWIGPYTHON
+%init %{
+/* This is a hack.  I dunno if we can count on SWIG calling the module "m" */
+PyModule_AddObject(m, "SubversionException", 
+                   svn_swig_py_register_exception());
+%}
+
+%pythoncode %{
+SubversionException = _core.SubversionException
+%}
+#endif
