@@ -265,9 +265,6 @@ typedef svn_error_t *
  */
 typedef struct svn_client_ctx_t
 {
-  /** old-style auth baton, soon to die. */
-  svn_client_auth_baton_t *old_auth_baton;
-
   /** main auth baton. */
   svn_auth_baton_t *auth_baton;
 

@@ -156,7 +156,7 @@ svn_client_revprop_set (const char *propname,
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
   SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, auth_dir,
-                                        NULL, NULL, FALSE, FALSE, TRUE,
+                                        NULL, NULL, FALSE, TRUE,
                                         ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
@@ -470,7 +470,7 @@ svn_client_propget (apr_hash_t **props,
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, utarget, pool));
       SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, utarget,
-                                            auth_dir, NULL, NULL, TRUE,
+                                            auth_dir, NULL, NULL,
                                             FALSE, FALSE, ctx, pool));
 
       *props = apr_hash_make (pool);
@@ -599,7 +599,7 @@ svn_client_revprop_get (const char *propname,
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
   SVN_ERR (svn_client__dir_if_wc (&auth_dir, "", pool));
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, auth_dir,
-                                        NULL, NULL, FALSE, FALSE, TRUE,
+                                        NULL, NULL, FALSE, TRUE,
                                         ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
@@ -860,7 +860,7 @@ svn_client_proplist (apr_array_header_t **props,
       SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
       SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, utarget, pool));
       SVN_ERR (svn_client__open_ra_session (&session, ra_lib, utarget,
-                                            NULL, NULL, NULL, TRUE,
+                                            NULL, NULL, NULL,
                                             FALSE, FALSE, ctx, pool));
 
       /* Default to HEAD. */
@@ -972,7 +972,7 @@ svn_client_revprop_list (apr_hash_t **props,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
   SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, NULL,
-                                        NULL, NULL, FALSE, FALSE, TRUE,
+                                        NULL, NULL, FALSE, TRUE,
                                         ctx, pool));
 
   /* Resolve the revision into something real, and return that to the

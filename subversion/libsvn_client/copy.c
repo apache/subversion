@@ -279,7 +279,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
      directory, nor a place to put temp files or store the auth data. */
   SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, top_url,
                                         auth_dir,
-                                        NULL, NULL, FALSE, FALSE, TRUE, 
+                                        NULL, NULL, FALSE, TRUE, 
                                         ctx, pool));
 
   /* Pass null for the path, to ensure error if trying to get a
@@ -570,7 +570,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Open an RA session for the anchor URL. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, anchor, parent,
-                                        adm_access, NULL, TRUE, TRUE, TRUE, 
+                                        adm_access, NULL, TRUE, TRUE, 
                                         ctx, pool));
 
   /* Figure out the basename that will result from this operation. */
@@ -637,7 +637,7 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   SVN_ERR (svn_client__default_auth_dir (&auth_dir, base_path, pool));
   if ((cmt_err = svn_client__open_ra_session (&session, ra_lib, base_url,
                                               auth_dir, NULL, commit_items,
-                                              FALSE, FALSE, FALSE,
+                                              FALSE, FALSE,
                                               ctx, pool)))
     goto cleanup;
 
@@ -719,7 +719,7 @@ repos_to_wc_copy (const char *src_url,
      cannot go into the admin area. We do want to store the resulting
      auth data, though, once the WC is built. */
   SVN_ERR (svn_client__open_ra_session (&sess, ra_lib, src_url, auth_dir,
-                                        NULL, NULL, TRUE, FALSE, TRUE, 
+                                        NULL, NULL, FALSE, TRUE, 
                                         ctx, pool));
       
   /* Pass null for the path, to ensure error if trying to get a

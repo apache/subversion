@@ -504,7 +504,7 @@ get_ra_editor (void **ra_baton,
   /* Open an RA session to URL. */
   SVN_ERR (svn_client__open_ra_session (session, *ra_lib,
                                         base_url, base_dir, base_access,
-                                        commit_items, is_commit,
+                                        commit_items,
                                         is_commit, !is_commit,
                                         ctx, pool));
 

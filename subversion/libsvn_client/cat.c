@@ -63,7 +63,7 @@ svn_client_cat (svn_stream_t* out,
 
   /* Open a repository session to the URL. */
   SVN_ERR (svn_client__open_ra_session (&session, ra_lib, url, auth_dir, NULL,
-                                        NULL, FALSE, FALSE, FALSE,
+                                        NULL, FALSE, FALSE,
                                         ctx, pool));
 
   /* Resolve REVISION into a real revnum. */

@@ -878,8 +878,6 @@ main (int argc, const char * const *argv)
   command_baton.opt_state = &opt_state;
   command_baton.ctx = &ctx;
 
-  ctx.old_auth_baton = svn_cl__make_auth_baton (&opt_state, pool);
-
   ctx.prompt_func = svn_cl__prompt_user; 
   ctx.prompt_baton = NULL;
 
