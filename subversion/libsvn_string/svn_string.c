@@ -57,13 +57,18 @@
 
 
 /* Our own realloc, since APR doesn't have one.  Note: this is a
-   generic realloc for memory pools, *not* for strings.  append()
-   calls this on the svn_string_t's *data field.  */
+   generic realloc for memory pools, *not* for strings. */
 static void *
 my__realloc (char *data, const size_t oldsize, const size_t request, 
              apr_pool_t *pool)
 {
   void *new_area;
+
+  /* kff todo: it's a pity APR doesn't give us this -- sometimes it
+     could realloc the block merely by extending in place, sparing us
+     a memcpy(), but only the pool would know enough to be able to do
+     this.  We should add a realloc() to APR if someone hasn't
+     already. */
 
   /* malloc new area */
   new_area = apr_palloc (pool, request);
@@ -156,6 +161,19 @@ svn_string_isempty (const svn_string_t *str)
 }
 
 
+static void
+lengthen_block (svn_string_t *str, size_t minimum_new_size, apr_pool_t *pool)
+{
+  while (str->blocksize < minimum_new_size)
+    str->blocksize *= 2;
+
+  str->data = (char *) my__realloc (str->data, 
+                                    str->len,
+                                    str->blocksize,
+                                    pool); 
+}
+
+
 /* Copy COUNT bytes from BYTES onto the end of bytestring STR. */
 void
 svn_string_appendbytes (svn_string_t *str, const char *bytes, 
@@ -169,14 +187,7 @@ svn_string_appendbytes (svn_string_t *str, const char *bytes,
   /* if we need to realloc our first buffer to hold the concatenation,
      then make it twice the total size we need. */
 
-  if ((total_len + 1) >= str->blocksize)
-    {
-      str->blocksize = total_len * 2;
-      str->data = (char *) my__realloc (str->data, 
-                                        str->len,
-                                        str->blocksize,
-                                        pool); 
-    }
+  lengthen_block (str, (total_len + 1), pool);
 
   /* get address 1 byte beyond end of original bytestring */
   start_address = (str->data + str->len);
