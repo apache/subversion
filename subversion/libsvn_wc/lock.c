@@ -61,25 +61,15 @@ svn_wc__lock (svn_string_t *path, int wait, apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
 
-  /* kff todo: hmmm, feel kind of bad about this -- we're allocating
-     another error for every time we try and fail to get a lock.  But
-     it's not that much memory, and it happens rarely, and the number
-     of retries is likely to be very small.  Really cannot get used to
-     this pool stuff. :-) */
-
   do {
     err = svn_wc__make_adm_thing (path, SVN_WC__ADM_LOCK,
                                   svn_file_kind, 0, pool);
-    if (err)
+    if (err && (err->apr_err == APR_EEXIST))
       {
-        if (err->apr_err == APR_EEXIST)
-          {
-            /* kff todo: hey, apr_sleep() is broken. */
-            apr_sleep (1000);  /* micro-seconds */
-            wait--;
-          }
-        else
-          return err;
+        svn_error_free (err);
+        /* kff todo: hey, apr_sleep() is broken. */
+        apr_sleep (1000);  /* micro-seconds */
+        wait--;
       }
     else
       return SVN_NO_ERROR;
