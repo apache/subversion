@@ -49,7 +49,7 @@ svn_cl__propedit (apr_getopt_t *os,
   propname = ((svn_stringbuf_t **) (opt_state->args->elts))[0];
 
   /* Suck up all the remaining arguments into a targets array */
-  targets = svn_cl__args_to_target_array (os, opt_state, pool);
+  targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
 
   /* Add "." if user passed 0 file arguments */
   svn_cl__push_implicit_dot_target (targets, pool);

@@ -44,7 +44,7 @@ svn_cl__mkdir (apr_getopt_t *os,
   int i;
   svn_client_commit_info_t *commit_info = NULL;
 
-  targets = svn_cl__args_to_target_array (os, opt_state, pool);
+  targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
 
   /* Build an authentication object to give to libsvn_client. */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);

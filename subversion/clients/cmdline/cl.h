@@ -168,10 +168,18 @@ void svn_cl__push_svn_string (apr_array_header_t *array,
 
 /* Subcommands call this to pull any args left into the array of targets.
    This includes any extra args passed in the file specified by
-   --targets.  */
+   --targets.
+
+   If EXTRACT_REVISIONS is set, then this function will attempt to
+  look for trailing "@rev" syntax on the paths.   If one @rev is
+  found, it will overwrite the value of opt_state->start_revision.  If
+  a second one is found, it will overwrite opt_state->end_revision.
+  (Extra revisions beyond that are ignored.)
+  */
 apr_array_header_t*
 svn_cl__args_to_target_array (apr_getopt_t *os,
 			      svn_cl__opt_state_t *opt_state,
+                              svn_boolean_t extract_revisions,
                               apr_pool_t *pool);
 
 /* Splits a list of whitespace-separated values into an apr_array_header_t */
