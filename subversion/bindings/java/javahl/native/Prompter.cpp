@@ -495,7 +495,7 @@ int Prompter::askTrust(const char *question, bool maySave)
     return -1;
 }
 
-bool Prompter::prompt(const char *realm, const char *username, bool maySave)
+bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
 {
     JNIEnv *env = JNIUtil::getEnv();
     if(m_version3)
@@ -532,7 +532,7 @@ bool Prompter::prompt(const char *realm, const char *username, bool maySave)
         {
             return false;
         }
-        jstring jusername = JNIUtil::makeJString(username);
+        jstring jusername = JNIUtil::makeJString(pi_username);
         if(JNIUtil::isJavaExceptionThrown())
         {
             return false;
@@ -588,7 +588,7 @@ bool Prompter::prompt(const char *realm, const char *username, bool maySave)
         {
             return false;
         }
-        jstring jusername = JNIUtil::makeJString(username);
+        jstring jusername = JNIUtil::makeJString(pi_username);
         if(JNIUtil::isJavaExceptionThrown())
         {
             return false;

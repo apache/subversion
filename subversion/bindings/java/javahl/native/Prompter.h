@@ -61,7 +61,7 @@ private:
     bool m_maySave;
 
     Prompter(jobject jprompter, bool v2, bool v3);
-    bool prompt(const char *realm, const char *username, bool maySave);
+    bool prompt(const char *realm, const char *pi_username, bool maySave);
     bool askYesNo(const char *realm, const char *question, bool yesIsDefault);
     const char *askQuestion(const char *realm, const char *question,
                                 bool showAnswer, bool maySave);

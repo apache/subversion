@@ -89,8 +89,8 @@ public:
     jobjectArray logMessages(const char *path, Revision &revisionStart,
                                  Revision &revisionEnd, bool stopOnCopy);
     void setPrompt(Prompter *prompter);
-    void password(const char *password);
-    void username(const char *username);
+    void password(const char *pi_password);
+    void username(const char *pi_username);
     jobject singleStatus(const char *path, bool onServer);
     jobjectArray status(const char *path, bool descend, bool onServer,
                             bool getAll, bool noIgnore);

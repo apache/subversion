@@ -31,9 +31,9 @@
  * Create a new object and store the java object
  * @param notify    global reference to the java object
  */
-Notify::Notify(jobject notify)
+Notify::Notify(jobject p_notify)
 {
-    m_notify = notify;
+    m_notify = p_notify;
 }
 
 /**
