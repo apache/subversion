@@ -13,21 +13,24 @@
 # working copy's revisions of the doc master files, it's probably
 # simplest if you just make sure your working copy is at HEAD as well.
 # Then you won't get any unexpected results.
+#
 ##########################################################################
 
 ### Rolling block.
 DIST_SANDBOX=.dist_sandbox
 
 ### The "X.Y" part of ${DISTNAME}-X.Y.tar.gz
-VERSION=`grep SVN_VERSION configure.in | cut -f 2 -d ' ' | sed -e 's/"//g' | sed -e 's/,//g'`
+VERSION=`svn st README | sed  -e 's/.*(\(.*\)).*/\1/' | sed -e 's/ //g'`
 
 ### The tarball's basename, also the name of the subdirectory into which
 ### it should unpack.
-DISTNAME=subversion-${VERSION}
+DISTNAME=subversion-r${VERSION}
+echo "Distribution will be named: ${DISTNAME}"
 
 ### Clean up the old docs so we're guaranteed the latest ones.
 # This is necessary only because "make clean" doesn't appear
 # to clean up docs at the moment.
+echo "Cleaning old docs in docs/ ..."
 rm -f doc/programmer/design/svn-design.info
 rm -f doc/programmer/design/svn-design.info-*
 rm -f doc/programmer/design/svn-design.html
@@ -37,42 +40,52 @@ rm -f doc/user/manual/svn-manual.html
 rm -f doc/user/manual/svn-manual.txt
 
 ### Build new docs.
+echo "Building new docs in docs/ ..."
 make doc
 
 ### Prepare an area for constructing the dist tree.
 rm -rf ${DIST_SANDBOX}
 mkdir ${DIST_SANDBOX}
+echo "Removed and recreated ${DIST_SANDBOX}"
 
 ### Export the dist tree, clean it up.
+echo "Checking out latest revision of Subversion into sandbox..."
 (cd ${DIST_SANDBOX} && svn co http://svn.collab.net/repos/svn/trunk \
-			-d ${DISTNAME} --username "foo" --password "bar")
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name SVN -type d -print`
+                              -d ${DISTNAME} --username none --password none)
+echo "Removing all SVN/ and .svnignore files from the checkout..."
+rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name SVN -print`
 rm -rf `find ${DIST_SANDBOX}/${DISTNAME} -name .svnignore -print`
 
 ### Ship with (relatively) clean APR and neon working copies
 ### inside the tarball, just to make people's lives easier.
+echo "Copying apr into sandbox, making clean..."
 cp -r apr ${DIST_SANDBOX}/${DISTNAME}
 (cd ${DIST_SANDBOX}/${DISTNAME}/apr && make distclean)
 # Defang the APR working copy.
+echo "Removing all CVS/ and .cvsignore files from apr..."
 rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name CVS -type d -print`
 rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name .cvsignore -print`
 # Clean most of neon.
+echo "Coping neon into sandbox, making clean..."
 cp -r neon ${DIST_SANDBOX}/${DISTNAME}
 (cd ${DIST_SANDBOX}/${DISTNAME}/neon && make distclean)
 # Then do some extra cleaning in neon, since its `make distclean'
 # rule still leaves some .o files lying around.  Better to
 # patch Neon, of course; but the fix wasn't obvious to me --
 # something to do with @NEONOBJS@ in neon/src/Makefile.in?
+echo "Cleaning *.o in neon..."
 rm -f ${DIST_SANDBOX}/${DISTNAME}/neon/src/*.o
 
 ### Run autogen.sh in the dist, so we ship with a configure script.
 # First make sure autogen.sh is executable, because, as Mike Pilato
 # points out, until we get permission versioning working, it won't be
 # executable on export from svn.
+echo "Running ./autogen.sh in sandbox, to create ./configure ..."
 chmod a+x ${DIST_SANDBOX}/${DISTNAME}/autogen.sh
 (cd ${DIST_SANDBOX}/${DISTNAME} && ./autogen.sh)
 
 ### Copy all the pre-built docs, so we ship with ready documentation.
+echo "Copying new docs into sandbox..."
 for name in doc/programmer/design/svn-design.info   \
             doc/programmer/design/svn-design.info-* \
             doc/programmer/design/svn-design.html   \
@@ -100,6 +113,7 @@ echo "Rolling ${DISTNAME}.tar.gz ..."
 (cd ${DIST_SANDBOX} && tar zcvpf ${DISTNAME}.tar.gz ${DISTNAME})
 
 ### Copy it upstairs and clean up.
+echo "Copying tarball out, removing sandbox..."
 cp ${DIST_SANDBOX}/${DISTNAME}.tar.gz .
 rm -rf ${DIST_SANDBOX}
 
