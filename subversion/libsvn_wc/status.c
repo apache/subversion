@@ -334,6 +334,8 @@ add_unversioned_items (const char *path,
       /* Then add any svn:ignore globs to the PATTERNS array. */
       SVN_ERR (add_ignore_patterns (path, patterns, subpool));
     }
+  else
+    patterns = NULL;
 
   /* Add empty status structures for each of the unversioned things. */
   for (hi = apr_hash_first (subpool, dirents); hi; hi = apr_hash_next (hi))

@@ -173,7 +173,7 @@ svn_string_first_non_whitespace (const svn_string_t *str)
     }
 
   /* if we get here, then the string must be entirely whitespace */
-  return (-1);  
+  return (-1);   /* ### apr_size_t is unsigned! */
 }
 
 
@@ -184,6 +184,9 @@ svn_string_strip_whitespace (svn_string_t *str)
 
   /* Find first non-whitespace character */
   apr_size_t offset = svn_string_first_non_whitespace (str);
+
+  if (offset == (apr_size_t)-1)
+    return;
 
   /* Go ahead!  Waste some RAM, we've got pools! :)  */
   str->data += offset;
@@ -450,7 +453,7 @@ svn_stringbuf_first_non_whitespace (const svn_stringbuf_t *str)
     }
 
   /* if we get here, then the string must be entirely whitespace */
-  return (-1);  
+  return (-1);   /* ### apr_size_t is unsigned! */
 }
 
 
@@ -461,6 +464,9 @@ svn_stringbuf_strip_whitespace (svn_stringbuf_t *str)
 
   /* Find first non-whitespace character */
   apr_size_t offset = svn_stringbuf_first_non_whitespace (str);
+
+  if (offset == (apr_size_t)-1)
+    return;
 
   /* Go ahead!  Waste some RAM, we've got pools! :)  */
   str->data += offset;
