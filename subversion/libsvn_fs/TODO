@@ -1,5 +1,4 @@
-It would be nice to organize this file somehow (is this a recursive
-todo?).
+What's happening now
 
 Add `kind' member dag_node_t structure as a means of caching for quick
 access, independent of transactions and such, the node's kind (dir,
@@ -18,6 +17,28 @@ SVN path utilities.  A filesystem path is a well-defined Thing that
 should be held a safe distance away from future changes to SVN's
 general path library.
 
+
+Incorrectnesses
+
+We must ensure that node numbers are never reused.  If we open a node,
+svn_fs_delete it, and then create new nodes, what happens when the
+original node structure suddenly comes to refer to an entirely
+different node?  Files become directories?
+
+We should convert filenames to some canonical Unicode form, for
+comparison.
+
+Does everyone call svn_fs__check_fs who should?
+
+Does every operation on a deleted node or completed transaction fail
+gracefully?
+
+Produce helpful error messages when filename paths contain null
+characters.
+
+
+Uglinesses
+
 Add `public name' member to filesystem structure, to use to identify
 the filesystem in error messages.  When driven by DAV, this could be a
 URL.
@@ -26,25 +47,16 @@ When a dag function signals an error, it has no idea what the path of
 the relevant node was.  But node revision ID's are pretty useless to
 the user.  tree.c should probably rewrap some errors.
 
-We must ensure that node numbers are never reused.  If we open a node,
-svn_fs_delete it, and then create new nodes, what happens when the
-original node structure suddenly comes to refer to an entirely
-different node?  Files become directories?
+svn_fs__getsize shouldn't rely on a maximum value for detecting
+overflow.
 
-Extend svn_fs_copy to handle mutable nodes.
+The use of svn_fs__getsize in svn_fs__parse_id is ugly --- what if
+svn_vernum_t and apr_size_t aren't the same size?
 
-Does everyone call svn_fs__check_fs who should?
-
-svn_fs_delete will actually delete non-empty directories, if they're
-not cloned.  This is inconsistent; should it be fixed?
+
+Slownesses
 
 We don't store older node revisions as deltas yet.
-
-Produce helpful error messages when filename paths contain null
-characters.
-
-We should convert filenames to some canonical Unicode form, for
-comparison.
 
 The delta algorithm walks the whole tree using a single pool, so the
 memory used is proportional to the size of the target tree.  Instead,
@@ -53,25 +65,26 @@ directory, and free that subpool as soon as it's done processing that
 subdirectory, so the memory used is proportional to the depth of the
 tree.
 
-Probably file contents and delta contents should be stored in a
-separate table from the REPRESENTATION and NODE-REVISION skel, so we
-can parse those skels without having to read the whole file's data.
-Perhaps a "strings" table, where a skel of the form ("strings" NUM)
-instead of an atom means that the text should actually come from that
-table.  This would also help commits work better --- we could create
-the string objects while the user builds the transaction, and then
-move the transaction nodes into the real node table without having to
-touch all that text --- we just touch all that metainformation.
+We should move as much real content out of the NODE-REVISION skel as
+possible; the skels should be holding only small stuff (node kind,
+flags).
+- File contents and deltas should be moved out to a `contents' table.
+  The NODE-REVISION skel should simply contain a key into that table.
+- Directory contents should be moved out to a `directories' table,
+  with a separate table entry for each directory entry.  Keys into the
+  table should be of the form `NODE-ID ENTRY-NAME NODE-REVISION', and
+  values should be node revision ID's, or the word `deleted'; to look
+  up an entry named E in a directory whose node revision is N.R,
+  search for the entry `N E x', where x is the largest number present
+  <= R.
+- Property lists should be moved out to a table `properties', indexed
+  similarly to the above.  We could deltify property contents the
+  same way we do file contents.
 
-The skel syntax should be changed, so that implicit-length atoms don't
-require a trailing space.  That's too different from common practice.
+
+Amenities
 
-svn_fs__getsize shouldn't rely on a maximum value for detecting
-overflow.
-
-The use of svn_fs__getsize in svn_fs__parse_id is ugly --- what if
-svn_vernum_t and apr_size_t aren't the same size?
-
+Extend svn_fs_copy to handle mutable nodes.
 
 Long term ideas:
 
@@ -106,7 +119,6 @@ Long term ideas:
   in a non-canonical order, and find the appropriate matches, given
   the rules defined by the Unicode standard.
 
-
 Keeping repositories alive in the long term: Berkeley DB is infamous
 for changing its file format from one revision to the next.  If someone
 saves a Subversion 1.0 repository on a CD somewhere, and then tries to
@@ -126,13 +138,3 @@ the latest revision of Subversion is nil.  The solution:
 
 - Write a test suite that verifies that the repository dump program
   can handle all of the archived formats.
-
-
-Documentation:
-
-Document the svn_delta_edit_fns_t structure.  That's probably even
-more fundamental than the XML tree delta format.  Make sure to cover:
-- how you express deleting a file, and then adding a new file under the same
-  name
-- how you express "copy existing file A to new file B; update,
-  receiving new revision of A; rename B on top of A; now commit"
