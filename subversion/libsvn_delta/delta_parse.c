@@ -286,7 +286,7 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
 
       /* Create new stackframe */
       svn_delta_stackframe_t *new_frame 
-        = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t *));
+        = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t));
 
       new_frame->kind = svn_XML_tree;
       
@@ -317,7 +317,7 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
     {
       /* Create new stackframe */
       svn_delta_stackframe_t *new_frame 
-        = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t *));
+        = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t));
 
       new_frame->kind = svn_XML_edit;
       new_frame->edit_kind = svn_edit_add;
@@ -333,7 +333,7 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
     {
       /* Create new stackframe */
       svn_delta_stackframe_t *new_frame 
-        = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t *));
+        = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t));
 
       new_frame->kind = svn_XML_edit;
       new_frame->edit_kind = svn_edit_replace;
@@ -349,7 +349,7 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
     {
       /* Create new stackframe */
       svn_delta_stackframe_t *new_frame 
-        = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t *));
+        = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t));
 
       new_frame->kind = svn_XML_edit;
       new_frame->edit_kind = svn_edit_del;
@@ -366,7 +366,7 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
     {
       /* Create new stackframe */
       svn_delta_stackframe_t *new_frame 
-        = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t *));
+        = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t));
 
       new_frame->kind = svn_XML_content;
       new_frame->content_kind = svn_content_file;
@@ -382,7 +382,7 @@ svn_xml_handle_start (void *userData, const char *name, const char **atts)
     {
       /* Create new stackframe */
       svn_delta_stackframe_t *new_frame 
-        = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t *));
+        = apr_pcalloc (my_digger->pool, sizeof (svn_delta_stackframe_t));
 
       new_frame->kind = svn_XML_content;
       new_frame->content_kind = svn_content_dir;
