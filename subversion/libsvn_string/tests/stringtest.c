@@ -208,9 +208,9 @@ test9()
 {
   svn_string_t *s;
   
-  apr_off_t num_chopped_1 = 0;
-  apr_off_t num_chopped_2 = 0;
-  apr_off_t num_chopped_3 = 0;
+  apr_size_t num_chopped_1 = 0;
+  apr_size_t num_chopped_2 = 0;
+  apr_size_t num_chopped_3 = 0;
   
   int chopped_okay_1 = 0;
   int chopped_okay_2 = 0;

@@ -1148,7 +1148,7 @@ xml_handle_end (void *userData, const char *name)
 static void 
 xml_handle_data (void *userData, const char *data, int len)
 {
-  apr_off_t length = (apr_off_t) len;
+  apr_size_t length = (apr_size_t) len;
 
   /* Resurrect digger structure */
   svn_xml__digger_t *digger = (svn_xml__digger_t *) userData;
@@ -1301,7 +1301,7 @@ svn_free_xml_parser (svn_xml_parser_t *parser)
    variables for the tree-delta.  If this is the final parser "push",
    ISFINAL must be set to true.  */
 svn_error_t *
-svn_xml_parsebytes (char *buffer, apr_off_t len, int isFinal, 
+svn_xml_parsebytes (char *buffer, apr_size_t len, int isFinal, 
                     svn_xml_parser_t *svn_xml_parser)
 {
   svn_error_t *err;
@@ -1362,7 +1362,7 @@ svn_xml_auto_parse (svn_read_fn_t *source_fn,
                     apr_pool_t *pool)
 {
   char buf[BUFSIZ];
-  apr_off_t len;
+  apr_size_t len;
   int done;
   svn_error_t *err = SVN_NO_ERROR;
 

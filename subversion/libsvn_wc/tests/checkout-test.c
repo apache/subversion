@@ -64,7 +64,7 @@
 
 
 static svn_error_t *
-test_read_fn (void *baton, char *buffer, apr_off_t *len, apr_pool_t *pool)
+test_read_fn (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
 {
   apr_file_t *src = (apr_file_t *) baton;
   svn_error_t *err;
