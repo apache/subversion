@@ -38,7 +38,7 @@ main (int argc, char **argv)
   svn_txdelta_window_handler_t svndiff_handler;
   svn_stream_t *encoder;
   void *svndiff_baton;
-  apr_pool_t *pool = svn_pool_create (NULL);
+  apr_pool_t *pool;
 
   if (argc < 3)
     {
@@ -46,6 +46,8 @@ main (int argc, char **argv)
       exit (0);
     }
 
+  apr_initialize();
+  pool = svn_pool_create (NULL);
   apr_err = apr_file_open (&source_file, argv[1], (APR_READ | APR_BINARY),
                            APR_OS_DEFAULT, pool);
   if (! APR_STATUS_IS_SUCCESS (apr_err))
@@ -62,7 +64,6 @@ main (int argc, char **argv)
       exit (1);
     }
 
-  apr_initialize();
   svn_txdelta (&txdelta_stream,
                svn_stream_from_aprfile (source_file, pool),
                svn_stream_from_aprfile (target_file, pool),
