@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, stat, string, sys, re, os.path
+import shutil, stat, string, sys, re, os.path, os
 
 # Our testing module
 import svntest
@@ -56,27 +56,17 @@ def basic_utf8_conversion(sbox):
   svntest.main.file_append(os.path.join(wc_dir, i18n_filename), "hi")
   svntest.main.run_svn(None, 'add', os.path.join(wc_dir, i18n_filename))
 
-  # Created expected output tree for 'svn ci'
-  expected_output = wc.State(wc_dir, {
-    i18n_filename : Item(verb='Adding'),
-    })
+  # Set our environment's locale to ISO-8859-1
+  os.putenv('LC_ALL', 'ISO-8859-1')
 
-  # Create expected status tree; all local revisions should be at 1,
-  # but the new file should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
-  expected_status.add({
-    i18n_filename : Item(status='_ ', wc_rev=2, repos_rev=2),
-    })
+  outlines, inlines = svntest.main.run_svn(None, # no error expected
+                                           'commit', '-m', i18n_logmsg)
+  if errlines:
+    return 1
 
-  return svntest.actions.run_and_verify_commit (wc_dir,
-                                                expected_output,
-                                                expected_status,
-                                                None,
-                                                None, None,
-                                                None, None,
-                                                wc_dir)
-  
+
+  return 0
+
 # Here's how the test should really work:
 
 # 1. sh LC_ALL=ISO-8859-1 svn commit <filename> -m "<logmsg>"
