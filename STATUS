@@ -45,14 +45,6 @@ Candidate changes:
     Votes:
       +1: clkao, ghudson
 
-  * r10438
-    Replace references to APR_STATUS_IS_SUCCESS with a direct comparison
-    either to zero or APR_SUCCESS.
-    Justification:
-      APR_STATUS_IS_SUCCESS is no longer defined in APR HEAD.
-    Votes:
-      +1: mbk, lundblad, bliss
-
   * r10731
     Fix svn_path_dirname() so it returns canonical paths when passed a path
       with the last segment separated by multiple slashes.

@@ -50,7 +50,7 @@ main (int argc, char **argv)
   pool = svn_pool_create (NULL);
   apr_err = apr_file_open (&source_file, argv[1], (APR_READ | APR_BINARY),
                            APR_OS_DEFAULT, pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     {
       fprintf (stderr, "unable to open \"%s\" for reading\n", argv[1]);
       exit (1);
@@ -58,7 +58,7 @@ main (int argc, char **argv)
 
   apr_err = apr_file_open (&target_file, argv[2], (APR_READ | APR_BINARY),
                            APR_OS_DEFAULT, pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
+  if (apr_err)
     {
       fprintf (stderr, "unable to open \"%s\" for reading\n", argv[2]);
       exit (1);

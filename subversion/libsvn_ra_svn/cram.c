@@ -143,9 +143,9 @@ svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   /* Send a challenge. */
   status = make_nonce(&nonce);
-  if (APR_STATUS_IS_SUCCESS(status))
+  if (!status)
     status = apr_gethostname(hostbuf, sizeof(hostbuf), pool);
-  if (!APR_STATUS_IS_SUCCESS(status))
+  if (status)
     return fail(conn, pool, "Internal server error in authentication");
   challenge = apr_psprintf(pool,
                            "<%" APR_UINT64_T_FMT ".%" APR_TIME_T_FMT "@%s>",
