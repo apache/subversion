@@ -647,8 +647,8 @@ delta_files (struct context *c,
              const char *target_path,
              apr_pool_t *pool)
 {
-  svn_txdelta_stream_t *delta_stream = NULL;
   apr_pool_t *subpool;
+  int changed = 1;
 
   /* Make a subpool for local allocations. */
   subpool = svn_pool_create (pool);
@@ -657,49 +657,44 @@ delta_files (struct context *c,
   SVN_ERR (delta_proplists (c, source_path, target_path,
                             change_file_prop, file_baton, subpool));
 
-  if (c->text_deltas)
+  if (source_path)
     {
-      if (source_path)
-        {
-          int changed;
-          
-          /* Is this deltification worth our time? */
-          SVN_ERR (svn_fs_contents_changed (&changed,
-                                            c->target_root,
-                                            target_path,
-                                            c->source_root,
-                                            source_path,
-                                            subpool));
-          if (! changed)
-            {
-              svn_pool_destroy (subpool);
-              return SVN_NO_ERROR;
-            }
-          
-          /* Get a delta stream turning SOURCE_PATH's contents into
-             TARGET_PATH's contents.  */
-          SVN_ERR (svn_fs_get_file_delta_stream 
-                   (&delta_stream, 
-                    c->source_root, source_path,
-                    c->target_root, target_path,
-                    subpool));
-        }
-      else
+      /* Is this deltification worth our time? */
+      SVN_ERR (svn_fs_contents_changed (&changed, 
+                                        c->target_root, target_path,
+                                        c->source_root, source_path,
+                                        subpool));
+    }
+  else
+    {
+      /* If there isn't a source path, this is an add, which
+         necessarily has textual mods. */
+    }
+
+  /* If we care about text_deltas, and there, we need to get a delta
+     stream and hand that off to . */
+  if (changed)
+    {
+      svn_txdelta_stream_t *delta_stream = NULL;
+
+      if (c->text_deltas)
         {
           /* Get a delta stream turning an empty file into one having
              TARGET_PATH's contents.  */
           SVN_ERR (svn_fs_get_file_delta_stream 
-                   (&delta_stream, 0, 0,
+                   (&delta_stream, 
+                    source_path ? c->source_root : NULL,
+                    source_path ? source_path : NULL,
                     c->target_root, target_path, subpool));
         }
-    }
 
-  SVN_ERR (send_text_delta (c, file_baton, delta_stream, subpool));
+      SVN_ERR (send_text_delta (c, file_baton, delta_stream, subpool));
+    }
 
   /* Cleanup. */
   svn_pool_destroy (subpool);
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
