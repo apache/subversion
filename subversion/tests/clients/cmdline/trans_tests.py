@@ -324,6 +324,9 @@ def update_modified_with_translation(sbox):
   output_list = [ [rho_path, None, {}, {'status' : 'GU' }] ]
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
   my_greek_tree = svntest.main.copy_greek_tree()
+  for item in my_greek_tree:
+    if item[0] == 'A/D/G/rho':
+      item[1] = "This is the file 'rho'.\n10\n"  # local mod still present
   expected_disk_tree = svntest.tree.build_generic_tree(my_greek_tree)
 
   # Updating back to revision 1 should not error; the merge should
@@ -347,7 +350,7 @@ test_list = [ None,
               # enable_translation,
               # checkout_translated,
               # disable_translation,
-              # update_modified_with_translation,
+              update_modified_with_translation,
              ]
 
 if __name__ == '__main__':
