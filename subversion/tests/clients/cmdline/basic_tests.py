@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  local_tests.py:  testing working-copy interactions with ra_local
+#  basic_tests.py:  testing working-copy interactions with ra_local
 #
 #  Subversion is a tool for revision control. 
 #  See http://subversion.tigris.org for more information.
@@ -22,6 +22,9 @@ import shutil, string, sys, re, os.path
 # The `svntest' module
 import svntest
 
+# Quick macro for auto-generating sandbox names
+def sandbox(x):
+  return "basic_tests-" + `test_list.index(x)`
 
 ######################################################################
 # Tests
@@ -33,16 +36,17 @@ import svntest
 def basic_checkout():
   "basic checkout of a wc"
 
-  return svntest.actions.make_repo_and_wc('basic-checkout')
+  return svntest.actions.make_repo_and_wc(sandbox(basic_checkout))
 
 #----------------------------------------------------------------------
 
 def basic_status():
   "basic status command"
 
-  wc_dir = os.path.join (svntest.main.general_wc_dir, 'basic-status')
+  sbox = sandbox(basic_status)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
 
-  if svntest.actions.make_repo_and_wc('basic-status'):
+  if svntest.actions.make_repo_and_wc(sbox):
     return 1
 
   # Created expected output tree for 'svn status'
@@ -56,9 +60,10 @@ def basic_status():
 def basic_commit():
   "commit '.' in working copy"
 
-  wc_dir = os.path.join (svntest.main.general_wc_dir, 'basic_commit')
+  sbox = sandbox(basic_commit)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
   
-  if svntest.actions.make_repo_and_wc('basic_commit'):
+  if svntest.actions.make_repo_and_wc(sbox):
     return 1
 
   # Make a couple of local mods to files
@@ -92,9 +97,10 @@ def basic_commit():
 def commit_one_file():
   "commit one file only"
 
-  wc_dir = os.path.join (svntest.main.general_wc_dir, 'commit_one_file')
+  sbox = sandbox(commit_one_file)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
   
-  if svntest.actions.make_repo_and_wc('commit_one_file'):
+  if svntest.actions.make_repo_and_wc(sbox):
     return 1
 
   # Make a couple of local mods to files
@@ -130,9 +136,10 @@ def commit_one_file():
 def commit_multiple_targets():
   "commit multiple targets"
 
-  wc_dir = os.path.join (svntest.main.general_wc_dir, 'commit_multiple_targets')
+  sbox = sandbox(commit_multiple_targets)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
   
-  if svntest.actions.make_repo_and_wc('commit_multiple_targets'):
+  if svntest.actions.make_repo_and_wc(sbox):
     return 1
 
   # This test will commit three targets:  psi, B, and pi.  In that order.
@@ -190,9 +197,10 @@ def commit_multiple_targets():
 def commit_multiple_targets_2():
   "commit multiple targets, 2nd variation"
 
-  wc_dir = os.path.join (svntest.main.general_wc_dir, 'commit_multiple_targets_2')
+  sbox = sandbox(commit_multiple_targets_2)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox);
   
-  if svntest.actions.make_repo_and_wc('commit_multiple_targets_2'):
+  if svntest.actions.make_repo_and_wc(sbox):
     return 1
 
   # This test will commit three targets:  psi, B, omega and pi.  In that order.
@@ -250,13 +258,14 @@ def commit_multiple_targets_2():
 def basic_update():
   "update '.' in working copy"
 
-  wc_dir = os.path.join (svntest.main.general_wc_dir, 'basic_update')
+  sbox = sandbox(basic_update)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
   
-  if svntest.actions.make_repo_and_wc('basic_update'):
+  if svntest.actions.make_repo_and_wc(sbox):
     return 1
 
   # Make a backup copy of the working copy
-  wc_backup = os.path.join (svntest.main.general_wc_dir, 'basic_update_backup')
+  wc_backup = wc_dir + 'backup'
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Make a couple of local mods to files
@@ -311,9 +320,10 @@ def basic_update():
 def basic_merge():
   "merge into working copy"
 
-  wc_dir = os.path.join (svntest.main.general_wc_dir, 'basic_merge')
+  sbox = sandbox(basic_merge)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
   
-  if svntest.actions.make_repo_and_wc('basic_merge'):
+  if svntest.actions.make_repo_and_wc(sbox):
     return 1
   
   # First change the greek tree to make two files 10 lines long
@@ -348,7 +358,7 @@ def basic_merge():
     return 1
   
   # Make a backup copy of the working copy
-  wc_backup = os.path.join (svntest.main.general_wc_dir, 'basic_merge_backup')
+  wc_backup = wc_dir + 'backup'
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Make a couple of local mods to files
@@ -372,9 +382,9 @@ def basic_merge():
 
   # Commit.
   if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
-                            expected_status_tree,
-                            None, None, None, None,
-                            wc_dir):
+                                            expected_status_tree,
+                                            None, None, None, None,
+                                            wc_dir):
     return 1
 
   # Make local mods to wc_backup by recreating mu and rho
@@ -424,9 +434,9 @@ def basic_merge():
   
   # Do the update and check the results in three ways.
   return svntest.actions.run_and_verify_update(wc_backup,
-                               expected_output_tree,
-                               expected_disk_tree,
-                               expected_status_tree)
+                                               expected_output_tree,
+                                               expected_disk_tree,
+                                               expected_status_tree)
 
 
 #----------------------------------------------------------------------
@@ -452,14 +462,14 @@ def detect_conflict_files(node, extra_files):
 def basic_conflict():
   "make a conflict in working copy"
 
-  wc_dir = os.path.join (svntest.main.general_wc_dir, 'basic_conflict')
+  sbox = sandbox(basic_conflict)
+  wc_dir = os.path.join (svntest.main.general_wc_dir, sbox)
   
-  if svntest.actions.make_repo_and_wc('basic_conflict'):
+  if svntest.actions.make_repo_and_wc(sbox):
     return 1
 
   # Make a backup copy of the working copy
-  wc_backup = os.path.join (svntest.main.general_wc_dir,
-                            'basic_conflict_backup')
+  wc_backup = wc_dir + 'backup'
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Make a couple of local mods to files which will be committed
