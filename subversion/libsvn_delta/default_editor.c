@@ -128,20 +128,18 @@ apply_text (void *file_baton,
                                     pool,
                                     &handler, &handler_baton));
 
-  if (base)
+  if (! handler)
+    return SVN_NO_ERROR;
+  else if (! base)
+    return svn_txdelta_send_stream (target, handler, handler_baton, pool);
+  else
     {
       svn_txdelta_stream_t *txdelta_stream;
 
       svn_txdelta (&txdelta_stream, base, target, pool);
-      SVN_ERR (svn_txdelta_send_txstream
-               (txdelta_stream, handler, handler_baton, pool));
+      return svn_txdelta_send_txstream
+        (txdelta_stream, handler, handler_baton, pool);
     }
-  else
-    {
-      SVN_ERR (svn_txdelta_send_stream (target, handler, handler_baton, pool));
-    }
-
-  return SVN_NO_ERROR;
 }
 
 
