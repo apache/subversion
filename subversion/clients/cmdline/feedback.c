@@ -74,6 +74,6 @@ svn_cl__init_feedback_vtable (apr_pool_t *top_pool)
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../svn-dev.el")
  * end: 
  */

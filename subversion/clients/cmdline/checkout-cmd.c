@@ -124,6 +124,6 @@ svn_cl__checkout (apr_getopt_t *os,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../svn-dev.el")
  * end: 
  */

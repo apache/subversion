@@ -192,6 +192,6 @@ svn_cl__subcommand_help (const char* subcommand,
 
 /* 
  * local variables:
- * eval: (load-file "../svn-dev.el")
+ * eval: (load-file "../../svn-dev.el")
  * end: 
  */
