@@ -70,11 +70,12 @@
 svn_error_t *
 svn_wc__ensure_wc_prepared (svn_string_t *path,
                             svn_string_t *repository,
+                            svn_vernum_t version,
                             apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
 
-  err = svn_wc__ensure_adm (path, repository, pool);
+  err = svn_wc__ensure_adm (path, repository, version, pool);
   if (err)
     return err;
 

@@ -154,6 +154,7 @@ svn_error_t *svn_wc__remove_adm_thing (svn_string_t *path,
    (In practice, this means creating an adm area.) */
 svn_error_t *svn_wc__ensure_wc_prepared (svn_string_t *path,
                                          svn_string_t *repository,
+                                         svn_vernum_t version,
                                          apr_pool_t *pool);
 
 
@@ -162,6 +163,7 @@ svn_error_t *svn_wc__ensure_wc_prepared (svn_string_t *path,
    an error will result. */
 svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
                                  svn_string_t *repository,
+                                 svn_vernum_t version,
                                  apr_pool_t *pool);
 
 
