@@ -106,8 +106,10 @@ my_basename(const char *url, apr_pool_t *pool)
 {
   svn_string_t *s = svn_string_create(url, pool);
 
+  svn_path_canonicalize(s, svn_path_url_style);
+
   /* ### creates yet another string. let's optimize this stuff... */
-  return svn_path_last_component(s, 0, pool);
+  return svn_path_last_component(s, svn_path_url_style, pool);
 }
 
 static void *
@@ -507,6 +509,7 @@ svn_error_t * svn_ra_dav__checkout (void *session_baton,
           /* We're not in the root, add a directory */
           name = my_basename(url, ras->pool);
           
+          printf("adding directory: %s\n", name->data);
           err = (*editor->add_directory) (name, parent_baton,
                                           ancestor_path, ancestor_revision,
                                           &this_baton);
