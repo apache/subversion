@@ -359,6 +359,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       "# "
       APR_EOL_STR
       "# Here is an example hook script, for a Unix /bin/sh interpreter."
+      APR_EOL_STR
       PREWRITTEN_HOOKS_TEXT
       APR_EOL_STR
       APR_EOL_STR
@@ -483,6 +484,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       "# "
       APR_EOL_STR
       "# Here is an example hook script, for a Unix /bin/sh interpreter."
+      APR_EOL_STR
       PREWRITTEN_HOOKS_TEXT
       APR_EOL_STR
       APR_EOL_STR
@@ -620,6 +622,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       "# "
       APR_EOL_STR
       "# Here is an example hook script, for a Unix /bin/sh interpreter."
+      APR_EOL_STR
       PREWRITTEN_HOOKS_TEXT
       APR_EOL_STR
       APR_EOL_STR
@@ -1005,6 +1008,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       "# "
       APR_EOL_STR
       "# Here is an example hook script, for a Unix /bin/sh interpreter."
+      APR_EOL_STR
       PREWRITTEN_HOOKS_TEXT
       APR_EOL_STR
       APR_EOL_STR
@@ -1323,6 +1327,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       "# "
       APR_EOL_STR
       "# Here is an example hook script, for a Unix /bin/sh interpreter."
+      APR_EOL_STR
       PREWRITTEN_HOOKS_TEXT
       APR_EOL_STR
       APR_EOL_STR
