@@ -1,3 +1,16 @@
+Version 1.0.6
+(15 July 2004, from /branches/1.0.x)
+http://svn.collab.net/repos/svn/tags/1.0.6
+ 
+ User-visible-changes:
+ * fixed: crash in status command, caused by race (r10144)
+ * fixed: crashes when deleting a revision-prop (r10148, r10185, r10192)
+ * fixed: mod_authz_svn allows COPY method on repos with space in name (#1837)
+
+ Developer-visible changes:
+ * neon 0.24.7 now required (fixes wire compression bugs) (r10159, 10176)
+
+
 Version 1.0.5
 (10 Jun 2004, from /branches/1.0.5)
 http://svn.collab.net/repos/svn/tags/1.0.5
