@@ -41,13 +41,13 @@ svn_cl__merge (apr_getopt_t *os,
                apr_pool_t *pool)
 {
   apr_array_header_t *targets;
-  const svn_delta_editor_t *trace_editor = NULL;
-  void *trace_edit_baton = NULL;
   svn_client_auth_baton_t *auth_baton;
   const char *parent_dir, *entry;
   const char *sourcepath1, *sourcepath2, *targetpath;
   svn_boolean_t using_alternate_syntax = FALSE;
   svn_error_t *err;
+  svn_wc_notify_func_t notify_func;
+  void *notify_baton;
 
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
@@ -121,13 +121,12 @@ svn_cl__merge (apr_getopt_t *os,
   SVN_ERR (svn_wc_get_actual_target (targetpath, &parent_dir, &entry, pool));
 
   if (! opt_state->quiet)
-    SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor, &trace_edit_baton,
-                                              parent_dir, FALSE, TRUE, pool));
+    svn_cl__get_notifier (&notify_func, &notify_baton, FALSE, FALSE, pool);
 
   /* ### NOTE:  see issue #748.  We used to pass TARGETPATH into this
      function, but that argument has been temporarily removed.  All
      merging action happens in "." now.  */
-  err = svn_client_merge (trace_editor, trace_edit_baton,
+  err = svn_client_merge (notify_func, notify_baton,
                           auth_baton,
                           sourcepath1,
                           &(opt_state->start_revision),

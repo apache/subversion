@@ -646,13 +646,13 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
    unversioned items the operation will fail.  If FORCE is set such items
    will be deleted.
   
-   AFTER_EDITOR/BATON are optional.  If non-NULL, they represent some
-   sort of "trace" editor to be used during the merging.
+   If NOTIFY_FUNC is non-null, then call NOTIFY_FUNC with NOTIFY_BATON
+   once for each merged target, passing the target's local path.
 
    AUTH_BATON is used to communicate with the repository.  */
 svn_error_t *
-svn_client_merge (const svn_delta_editor_t *after_editor,
-                  void *after_edit_baton,
+svn_client_merge (svn_wc_notify_func_t notify_func,
+                  void *notify_baton,
                   svn_client_auth_baton_t *auth_baton,
                   const char *path1,
                   const svn_client_revision_t *revision1,

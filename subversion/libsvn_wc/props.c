@@ -357,7 +357,8 @@ svn_wc__get_existing_prop_reject_file (const char **reject_file,
 /*** Merging propchanges into the working copy ***/
 
 svn_error_t *
-svn_wc_merge_prop_diffs (const char *path,
+svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
+                         const char *path,
                          const apr_array_header_t *propchanges,
                          apr_pool_t *pool)
 {
@@ -397,7 +398,7 @@ svn_wc_merge_prop_diffs (const char *path,
   
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
-  SVN_ERR (svn_wc__merge_prop_diffs (NULL,
+  SVN_ERR (svn_wc__merge_prop_diffs (state,
                                      &ignored_conflicts,
                                      parent,
                                      base_name,
@@ -426,7 +427,7 @@ svn_wc_merge_prop_diffs (const char *path,
 
 
 svn_error_t *
-svn_wc__merge_prop_diffs (svn_boolean_t *merged,
+svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
                           apr_hash_t **conflicts,
                           const char *path,
                           const char *name,
@@ -495,12 +496,16 @@ svn_wc__merge_prop_diffs (svn_boolean_t *merged,
   SVN_ERR (svn_wc_get_local_propchanges (&local_propchanges,
                                          localhash, basehash, pool));
   
-  if (merged)
+  if (state)
     {
-      if (local_propchanges->nelts > 0)
-        *merged = TRUE;
+      /* Start out assuming no conflicts. */
+
+      if ((local_propchanges->nelts > 0) && propchanges->nelts)
+        *state = svn_wc_notify_state_merged;
+      else if ((local_propchanges->nelts > 0) || propchanges->nelts)
+        *state = svn_wc_notify_state_modified;
       else
-        *merged = FALSE;
+        *state = svn_wc_notify_state_unchanged;
     }
 
   /* Looping over the array of `update' propchanges we want to apply: */
@@ -565,6 +570,10 @@ svn_wc__merge_prop_diffs (svn_boolean_t *merged,
             apr_hash_set (*conflicts,
                           update_change->name, APR_HASH_KEY_STRING,
                           conflict_prop);
+
+            /* Reflect the conflict in the notification state. */
+            if (state)
+              *state = svn_wc_notify_state_conflicted;
 
             if (! reject_tmp_fp)
               {

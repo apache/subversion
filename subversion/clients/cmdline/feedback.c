@@ -95,32 +95,37 @@ notify (void *baton,
       break;
 
     case svn_wc_notify_update_update:
-      if (kind == svn_node_file)
-        {
-          /* Do this only for files, not for dirs, since we don't want
-             to treat directory closings as "change" events. */
-          nb->received_some_change = TRUE;
+      {
+        /* If this is an inoperative dir change, do no notification.
+           An inoperative dir change is when a directory gets closed
+           without any props having been changed. */
+        if (! ((kind == svn_node_dir)
+               && ((prop_state == svn_wc_notify_state_inapplicable)
+                   || (prop_state == svn_wc_notify_state_unknown)
+                   || (prop_state == svn_wc_notify_state_unchanged))))
+          {
+            nb->received_some_change = TRUE;
+            
+            if (kind == svn_node_file)
+              {
+                if (content_state == svn_wc_notify_state_conflicted)
+                  statchar_buf[0] = 'C';
+                else if (content_state == svn_wc_notify_state_merged)
+                  statchar_buf[0] = 'G';
+                else if (content_state == svn_wc_notify_state_modified)
+                  statchar_buf[0] = 'U';
+              }
+            
+            if (prop_state == svn_wc_notify_state_conflicted)
+              statchar_buf[1] = 'C';
+            else if (prop_state == svn_wc_notify_state_merged)
+              statchar_buf[1] = 'G';
+            else if (prop_state == svn_wc_notify_state_modified)
+              statchar_buf[1] = 'U';
 
-          if (content_state == svn_wc_notify_state_conflicted)
-            statchar_buf[0] = 'C';
-          else if (content_state == svn_wc_notify_state_merged)
-            statchar_buf[0] = 'G';
-          else if (content_state == svn_wc_notify_state_modified)
-            statchar_buf[0] = 'U';
-        }
-
-      if (prop_state == svn_wc_notify_state_conflicted)
-        statchar_buf[1] = 'C';
-      else if (prop_state == svn_wc_notify_state_merged)
-        statchar_buf[1] = 'G';
-      else if (prop_state == svn_wc_notify_state_modified)
-        statchar_buf[1] = 'U';
-
-      if (! ((kind == svn_node_dir)
-             && ((prop_state == svn_wc_notify_state_unknown)
-                 || (prop_state == svn_wc_notify_state_unchanged))))
-        printf ("%s %s\n", statchar_buf, path);
-
+            printf ("%s %s\n", statchar_buf, path);
+          }
+      }
       break;
 
     case svn_wc_notify_update_external:

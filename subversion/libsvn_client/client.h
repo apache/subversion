@@ -223,16 +223,21 @@ svn_client__update_internal (const svn_delta_editor_t *before_editor,
  *
  * REVISION is the start revision in the comparison.
  *
+ * If NOTIFY_FUNC is non-null, invoke it with NOTIFY_BATON for each
+ * file and directory operated on during the edit.
+ *
  * EDITOR/EDIT_BATON return the newly created editor and baton/
  */
 svn_error_t *
 svn_client__get_diff_editor (const char *target,
-                             const svn_diff_callbacks_t *diff_cmd,
+                             const svn_wc_diff_callbacks_t *diff_cmd,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,
                              svn_ra_plugin_t *ra_lib,
                              void *ra_session, 
                              svn_revnum_t revision,
+                             svn_wc_notify_func_t notify_func,
+                             void *notify_baton,
                              const svn_delta_editor_t **editor,
                              void **edit_baton,
                              apr_pool_t *pool);

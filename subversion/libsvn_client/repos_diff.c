@@ -44,7 +44,7 @@ struct edit_baton {
 
   /* The callback and calback argument that implement the file comparison
      function */
-  const svn_diff_callbacks_t *diff_callbacks;
+  const svn_wc_diff_callbacks_t *diff_callbacks;
   void *diff_cmd_baton;
 
   /* Flags whether to diff recursively or not. If set the diff is
@@ -66,6 +66,10 @@ struct edit_baton {
   /* A temporary empty file. Used for add/delete differences. This is
      cached here so that it can be reused, all empty files are the same. */
   const char *empty_file;
+
+  /* If the func is non-null, send notifications of actions. */
+  svn_wc_notify_func_t notify_func;
+  void *notify_baton;
 
   apr_pool_t *pool;
 };
@@ -384,6 +388,7 @@ delete_entry (const char *path,
                   b->path_start_revision,
                   b->path_end_revision,
                   b->edit_baton->diff_cmd_baton));
+
         break;
       }
     case svn_node_dir:
@@ -396,6 +401,16 @@ delete_entry (const char *path,
     default:
       break;
     }
+
+  if (pb->edit_baton->notify_func)
+    (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
+                                    path,
+                                    svn_wc_notify_delete,
+                                    kind,
+                                    NULL,
+                                    svn_wc_notify_state_unknown,
+                                    svn_wc_notify_state_unknown,
+                                    SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
 }
@@ -421,6 +436,16 @@ add_directory (const char *path,
   SVN_ERR (pb->edit_baton->diff_callbacks->dir_added 
            (path,
             pb->edit_baton->diff_cmd_baton));
+
+  if (pb->edit_baton->notify_func)
+    (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
+                                    path,
+                                    svn_wc_notify_add,
+                                    svn_node_dir,
+                                    NULL,
+                                    svn_wc_notify_state_unknown,
+                                    svn_wc_notify_state_unknown,
+                                    SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
 }
@@ -568,6 +593,9 @@ close_file (void *file_baton)
 {
   struct file_baton *b = file_baton;
   struct edit_baton *eb = b->edit_baton;
+  svn_wc_notify_state_t
+    content_state = svn_wc_notify_state_unknown,
+    prop_state = svn_wc_notify_state_unknown;
 
   if (b->path_end_revision)
     {
@@ -579,7 +607,8 @@ close_file (void *file_baton)
                   b->edit_baton->diff_cmd_baton));
       else
         SVN_ERR (eb->diff_callbacks->file_changed
-                 (b->path,
+                 (&content_state,
+                  b->path,
                   b->path_start_revision,
                   b->path_end_revision,
                   b->edit_baton->revision,
@@ -590,10 +619,22 @@ close_file (void *file_baton)
   if (b->propchanges->nelts > 0)
     {
       SVN_ERR (eb->diff_callbacks->props_changed
-               (b->path,
+               (&prop_state,
+                b->path,
                 b->propchanges, b->pristine_props,
                 b->edit_baton->diff_cmd_baton));
     }
+
+
+  if (eb->notify_func)
+    (*eb->notify_func) (eb->notify_baton,
+                        b->path, /* ### is this repos path?  wrong if so */
+                        svn_wc_notify_update_update,
+                        svn_node_file,
+                        NULL,
+                        content_state,
+                        prop_state,
+                        SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
 }
@@ -605,6 +646,7 @@ close_directory (void *dir_baton)
 {
   struct dir_baton *b = dir_baton;
   struct edit_baton *eb = b->edit_baton;
+  svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
 
   if (b->propchanges->nelts > 0)
     {
@@ -612,10 +654,21 @@ close_directory (void *dir_baton)
          that these property diffs are *against*.  We need an
          RA->get_dir() or something!  */
       SVN_ERR (eb->diff_callbacks->props_changed
-               (b->path,
+               (&prop_state,
+                b->path,
                 b->propchanges, apr_hash_make(b->pool),
                 b->edit_baton->diff_cmd_baton));
     }
+
+  if (eb->notify_func)
+    (*eb->notify_func) (eb->notify_baton,
+                        b->path,
+                        svn_wc_notify_update_update,
+                        svn_node_dir,
+                        NULL,
+                        svn_wc_notify_state_inapplicable,
+                        prop_state,
+                        SVN_INVALID_REVNUM);
 
   return SVN_NO_ERROR;
 }
@@ -674,12 +727,14 @@ close_edit (void *edit_baton)
  */
 svn_error_t *
 svn_client__get_diff_editor (const char *target,
-                             const svn_diff_callbacks_t *diff_callbacks,
+                             const svn_wc_diff_callbacks_t *diff_callbacks,
                              void *diff_cmd_baton,
                              svn_boolean_t recurse,
                              svn_ra_plugin_t *ra_lib,
                              void *ra_session,
                              svn_revnum_t revision,
+                             svn_wc_notify_func_t notify_func,
+                             void *notify_baton,
                              const svn_delta_editor_t **editor,
                              void **edit_baton,
                              apr_pool_t *pool)
@@ -697,6 +752,8 @@ svn_client__get_diff_editor (const char *target,
   eb->revision = revision;
   eb->empty_file = NULL;
   eb->pool = subpool;
+  eb->notify_func = notify_func;
+  eb->notify_baton = notify_baton;
 
   tree_editor->set_target_revision = set_target_revision;
   tree_editor->open_root = open_root;
