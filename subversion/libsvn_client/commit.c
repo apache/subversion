@@ -380,8 +380,10 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
   void *commit_edit_baton, *track_edit_baton;
   const svn_delta_edit_fns_t *editor;
   void *edit_baton;
+#if 0  /* restore post-M2, see related #if farther down */
   const svn_delta_edit_fns_t *test_editor;
   void *test_edit_baton;
+#endif /* 0 */
   void *ra_baton, *session;
   svn_ra_plugin_t *ra_lib;
   svn_boolean_t is_import;
@@ -477,19 +479,22 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
                 is_import ? NULL : svn_wc_set_revision,
                 /* baton for the three funcs */
                 &ccb));
-
-      SVN_ERR (svn_test_get_editor (&test_editor,
-                                    &test_edit_baton,
-                                    svn_stream_from_stdio (stdout, pool),
-                                    0,
-                                    base_dir,
-                                    pool));
-
-      svn_delta_compose_editors (&editor, &edit_baton,
-                                 editor, edit_baton,
-                                 test_editor, test_edit_baton, pool);
-
     }
+
+#if 0
+  /* ### kff todo: after M2, put this back wrapped in a conditional,
+     for implementing 'svn --trace' */
+  SVN_ERR (svn_test_get_editor (&test_editor,
+                                &test_edit_baton,
+                                svn_stream_from_stdio (stdout, pool),
+                                0,
+                                base_dir,
+                                pool));
+  
+  svn_delta_compose_editors (&editor, &edit_baton,
+                             editor, edit_baton,
+                             test_editor, test_edit_baton, pool);
+#endif /* 0 */
 
 
   /* Wrap the resulting editor with BEFORE and AFTER editors. */
