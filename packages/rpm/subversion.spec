@@ -1,4 +1,4 @@
-%define neon_version 0.17.2
+%define neon_version 0.18.2
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -79,7 +79,7 @@ rm -rf expat-lite/xmlparse.c
 rm -rf expat-lite/xmlrole*
 rm -rf expat-lite/xmltok*
 
-./configure --prefix=/usr
+./configure --prefix=/usr --with-apr=/usr
 
 # Fix up mod_dav_svn installation.
 %patch1 -p1
