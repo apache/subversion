@@ -325,9 +325,7 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, VARIANT_BOOL getAll, SAFEARRAY **pps
 		if (FAILED(hr))
 			goto Cleanup;
 		// This is what we want since the hash key is an absolute path.
-		pszKey = ((svn_stringbuf_t *)apr_hash_get (status->entry->attributes, 
-							   (const void *)SVN_WC_ENTRY_ATTR_NAME,
-							   strlen(SVN_WC_ENTRY_ATTR_NAME)))->data;
+		pszKey = ((svn_stringbuf_t *)(status->entry->name))->data;
 		// SVN_WC_ENTRY_THIS_DIR is ".", we don't care about its status.
 		if (strcmp(pszKey, SVN_WC_ENTRY_THIS_DIR) == 0) {
 			delete com_status;
