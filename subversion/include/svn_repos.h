@@ -261,6 +261,17 @@ const char *svn_repos_pre_revprop_change_hook (svn_repos_t *repos,
 const char *svn_repos_post_revprop_change_hook (svn_repos_t *repos,
                                                 apr_pool_t *pool);
 
+/** Return the path to @a repos's pre-lock hook, allocated in @a pool. */
+const char *svn_repos_pre_lock_hook (svn_repos_t *repos, apr_pool_t *pool);
+
+/** Return the path to @a repos's post-lock hook, allocated in @a pool. */
+const char *svn_repos_post_lock_hook (svn_repos_t *repos, apr_pool_t *pool);
+
+/** Return the path to @a repos's pre-unlock hook, allocated in @a pool. */
+const char *svn_repos_pre_unlock_hook (svn_repos_t *repos, apr_pool_t *pool);
+
+/** Return the path to @a repos's post-unlock hook, allocated in @a pool. */
+const char *svn_repos_post_unlock_hook (svn_repos_t *repos, apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------*/
@@ -888,7 +899,7 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
  * SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the caller sees this
  * error, it knows that the lock succeeded anyway.
  */
-svn_error_t *svn_repos_fs_lock (const char **token,
+svn_error_t *svn_repos_fs_lock (svn_lock_t **lock,
                                 svn_repos_t *repos,
                                 const char *path,
                                 svn_boolean_t force,
@@ -914,6 +925,22 @@ svn_error_t *svn_repos_fs_unlock (svn_repos_t *repos,
                                   const char *token,
                                   svn_boolean_t force,
                                   apr_pool_t *pool);
+
+
+
+/** 
+ * @since New in 1.2. 
+ *
+ * Like @c svn_fs_get_locks(), but use @a authz_read_func and @a
+ * authz_read_baton to "screen" all returned locks.  That is: do not
+ * return any locks on unreadable paths, just silently omit them.
+ */
+svn_error_t *svn_repos_fs_get_locks (apr_hash_t **locks,
+                                     svn_fs_t *fs,
+                                     const char *path,
+                                     svn_repos_authz_func_t authz_read_func,
+                                     void *authz_read_baton,
+                                     apr_pool_t *pool);
 
 
 /** 

@@ -382,6 +382,127 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
 }
 
 
+
+svn_error_t  *
+svn_repos__hooks_pre_lock (svn_repos_t *repos,
+                           const char *path,
+                           const char *username,
+                           apr_pool_t *pool)
+{
+  const char *hook = svn_repos_pre_lock_hook (repos, pool);
+  svn_boolean_t broken_link;
+
+  if ((hook = check_hook_cmd (hook, &broken_link, pool)) && broken_link)
+    {
+      return hook_symlink_error (hook);
+    }
+  else if (hook)
+    {
+      const char *args[5];
+
+      args[0] = hook;
+      args[1] = svn_repos_path (repos, pool);
+      args[2] = path;
+      args[3] = username;
+      args[4] = NULL;
+
+      SVN_ERR (run_hook_cmd ("pre-lock", hook, args, TRUE, NULL, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t  *
+svn_repos__hooks_post_lock (svn_repos_t *repos,
+                            const char *path,
+                            const char *username,
+                            apr_pool_t *pool)
+{
+  const char *hook = svn_repos_post_lock_hook (repos, pool);
+  svn_boolean_t broken_link;
+  
+  if ((hook = check_hook_cmd (hook, &broken_link, pool)) && broken_link)
+    {
+      return hook_symlink_error (hook);
+    }
+  else if (hook)
+    {
+      const char *args[5];
+
+      args[0] = hook;
+      args[1] = svn_repos_path (repos, pool);
+      args[2] = path;
+      args[3] = username;
+      args[4] = NULL;
+
+      SVN_ERR (run_hook_cmd ("post-lock", hook, args, FALSE, NULL, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t  *
+svn_repos__hooks_pre_unlock (svn_repos_t *repos,
+                             const char *path,
+                             const char *username,
+                             apr_pool_t *pool)
+{
+  const char *hook = svn_repos_pre_unlock_hook (repos, pool);
+  svn_boolean_t broken_link;
+
+  if ((hook = check_hook_cmd (hook, &broken_link, pool)) && broken_link)
+    {
+      return hook_symlink_error (hook);
+    }
+  else if (hook)
+    {
+      const char *args[5];
+
+      args[0] = hook;
+      args[1] = svn_repos_path (repos, pool);
+      args[2] = path;
+      args[3] = username;
+      args[4] = NULL;
+
+      SVN_ERR (run_hook_cmd ("pre-unlock", hook, args, TRUE, NULL, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t  *
+svn_repos__hooks_post_unlock (svn_repos_t *repos,
+                              const char *path,
+                              const char *username,
+                              apr_pool_t *pool)
+{
+  const char *hook = svn_repos_post_unlock_hook (repos, pool);
+  svn_boolean_t broken_link;
+  
+  if ((hook = check_hook_cmd (hook, &broken_link, pool)) && broken_link)
+    {
+      return hook_symlink_error (hook);
+    }
+  else if (hook)
+    {
+      const char *args[5];
+
+      args[0] = hook;
+      args[1] = svn_repos_path (repos, pool);
+      args[2] = path;
+      args[3] = username;
+      args[4] = NULL;
+
+      SVN_ERR (run_hook_cmd ("post-unlock", hook, args, FALSE, NULL, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* 
  * vim:ts=4:sw=4:expandtab:tw=80:fo=tcroq 
