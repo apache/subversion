@@ -90,15 +90,19 @@ href="http://www.freebsd.org/cgi/cvsweb.cgi/ports/devel/subversion/">http://www.
 <p><em>Maintainer: 
 <a href="mailto:chris01@users.sourceforge.net">Christian Schaffner</a></em></p>
 
-<p>Information about the latest Fink package can be found here:
+<p>Information about the latest <a href="http://fink.sourceforge.net/">Fink</a> 
+packages can be found here:
 <a href="http://fink.sourceforge.net/pdb/package.php/svn-ssl">http://fink.sourceforge.net/pdb/package.php/svn-ssl</a>.</p>
 
-<p>Just run 'fink install svn-ssl' or 'fink install svn-client-ssl' (if you only need the client).</p>
+<p>Just run 'fink install svn-ssl' to install a stand-alone server, 'fink install
+libapache2-ssl-mod-svn' for the apache2 module or 'fink install svn-client-ssl' 
+if you only need the client. Be sure to read the documentation of the package
+by typing 'fink describe svn-ssl'.</p>
 
-<p>Note that the svn Fink package is still in the unstable tree.  To
-enable it, please read the <a
+<p>Note that the svn Fink packages are still in the unstable tree.  To
+enable the unstable tree, please read the <a
 href="http://fink.sourceforge.net/faq/usage-fink.php#unstable">Fink FAQ</a>.
-Also remember to run 'fink selfupdate-cvs' often to get the latest package
+Also remember to run 'fink selfupdate' often to get the latest package
 descriptions.
 </p>
 
