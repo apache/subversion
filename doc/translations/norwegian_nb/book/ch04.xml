@@ -1659,15 +1659,27 @@ $ svn status
   <!-- ======================== SECTION 4 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-4">
+    <!-- @ENGLISH {{{
     <title>Common Use-Cases for Merging</title>
+    @ENGLISH }}} -->
+    <title>Vanlige bruksomr&#229;der for fletting</title>
 
+    <!-- @ENGLISH {{{
     <para>There are many different uses for <command>svn
       merge</command>, and this section describes the most common ones
       you're likely to run into.</para>
+    @ENGLISH }}} -->
+    <para>Det er mange forskjellige bruksomr&#229;der for <command>svn 
+      merge</command>, og denne seksjonen beskriver de vanligste du 
+      sannsynligvis vil komme over.</para>
 
     <sect2 id="svn-ch-4-sect-4.1">
+      <!-- @ENGLISH {{{
       <title>Merging a Whole Branch to Another</title>
+      @ENGLISH }}} -->
+      <title>Flette en hel gren til en annen</title>
 
+      <!-- @ENGLISH {{{
       <para>To complete our running example, we'll move forward in
         time.  Suppose several days have passed, and many changes have
         happened on both the trunk and your private branch.  Suppose
@@ -1675,7 +1687,16 @@ $ svn status
         feature or bug fix is finally complete, and now you want to
         merge all of your branch changes back into the trunk for
         others to enjoy.</para>
+      @ENGLISH }}} -->
+      <para>For &#229; fullf&#248;re eksempelet v&#229;rt vil vi n&#229; reise fram i tiden.
+        Tenk deg at flere dager har g&#229;tt, og mange forandringer har 
+        skjedd b&#229;de i trunk og p&#229; den private grenen din.
+        Tenk deg s&#229; at du er ferdig med arbeidet p&#229; den private grenen; 
+        funksjonaliteten eller feilrettingen er endelig fullf&#248;rt, og n&#229; 
+        vil du flette alle forandringene fra grenen din til trunk s&#229; 
+        andre kan f&#229; glede av dem.</para>
 
+      <!-- @ENGLISH {{{
       <para>So how do we use <command>svn merge</command> in this
         scenario?  Remember that this command compares two trees, and
         applies the differences to a working copy.  So to receive the
@@ -1683,7 +1704,18 @@ $ svn status
         assume that either you still have your original one lying
         around (fully updated), or that you recently checked out a
         fresh working copy of <filename>/calc/trunk</filename>.</para>
+      @ENGLISH }}} -->
+      <para>S&#229; hvordan bruker vi <command>svn merge</command> i dette 
+        scenariet?
+        Husk at denne kommandoen sammenligner to tr&#230;r og legger 
+        forandringene inn i en arbeidskopi.
+        For &#229; motta forandringene m&#229; du derfor ha en arbeidskopi av 
+        trunk.
+        Vi g&#229;r ut i fra at du enten har den originale liggende (helt 
+        oppdatert), eller at du nylig hentet ut en fersk arbeidskopi av 
+        <filename>/calc/trunk</filename>.</para>
 
+      <!-- @ENGLISH {{{
       <para>But which two trees should be compared?  At first glance,
         the answer may seem obvious: just compare the latest trunk
         tree with your latest branch tree.  But beware&mdash;this
@@ -1695,7 +1727,23 @@ $ svn status
         shows too many changes: it would not only show the addition of
         your branch changes, but also the <emphasis>removal</emphasis>
         of trunk changes that never happened on your branch.</para>
+      @ENGLISH }}} -->
+      <para>Men hvilke to tr&#230;r skal sammenlignes?
+        Ved f&#248;rste &#248;yekast ser det innlysende ut:
+        Bare sammenlign seneste treet fra trunk med det seneste treet 
+        fra forgreningen.
+        Men pass p&#229; &#8212; denne antakelsen er <emphasis>feil</emphasis>, noe 
+        som mange nye brukere har brent seg p&#229;.
+        Siden <command>svn merge</command> opererer p&#229; samme m&#229;te som
+        <command>svn diff</command>, vil en sammenligning mellom tr&#230;rne 
+        i nyeste trunk og gren <emphasis>ikke</emphasis> bare vise 
+        forandringene som du har gjort p&#229; grenen.
+        En slik sammenligning viser alt for mange forandringer:
+        Den vil ikke bare vise tilleggingene av dine forandringer p&#229; 
+        grenen, men ogs&#229; <emphasis>fjerningen</emphasis> av forandringer 
+        i trunk som aldri skjedde p&#229; din gren.</para>
 
+      <!-- @ENGLISH {{{
       <para>To express only the changes that happened on your branch,
         you need to compare the initial state of your branch to its
         final state.  Using <command>svn log</command> on your branch,
@@ -1705,25 +1753,65 @@ $ svn status
         compare revisions 341 and <literal>HEAD</literal> of your
         branch directory, and apply those differences to a working
         copy of the trunk.</para>
+      @ENGLISH }}} -->
+      <para>For &#229; bare vise forandringene som skjedde p&#229; din gren, m&#229; du 
+        sammenligne tilstanden ved starten av grenen din i forhold til 
+        dens endelige tilstand.
+        Ved &#229; bruke <command>svn log</command> p&#229; grenen kan du se at 
+        den ble opprettet i revisjon 341.
+        Og den endelige tilstanden f&#229;r du ved &#229; bruke 
+        <literal>HEAD</literal>-revisjonen.
+        Dette betyr at du vil sammenligne revisjonene 341 og 
+        <literal>HEAD</literal> i forgreningskatalogen og legge disse 
+        forskjellene inn i en arbeidskopi av trunk.</para>
 
       <tip>
+        <!-- @ENGLISH {{{
         <para>A nice way of finding the revision in which a branch was
           created (the <quote>base</quote> of the branch) is to use the
-          <option>--stop-on-copy</option> option to <command>svn
+          <option>-&#64738;-stop-on-copy</option> option to <command>svn
           log</command>.  The log subcommand will normally show every
           change ever made to the branch, including tracing back
           through the copy which created the branch.  So normally,
           you'll see history from the trunk as well.  The
-          <option>--stop-on-copy</option> will halt log output as soon
+          <option>-&#64738;-stop-on-copy</option> will halt log output as soon
           as <command>svn log</command> detects that its target was
           copied or renamed.</para>
+        @ENGLISH }}} -->
+        <para>En fin m&#229;te &#229; finne revisjonen en gren ble opprettet i 
+          (<quote>basen</quote> av forgreningen) er &#229; bruke valget 
+          <option>--stop-on-copy</option> til <command>svn 
+          log</command>.
+          Delkommandoen <command>svn log</command> vil normalt vise hver 
+          eneste forandring gjort p&#229; grenen, inkludert &#229; g&#229; forbi 
+          kopieringen som opprettet grenen.
+          S&#229; vanligvis vil du ogs&#229; se historien fra trunk.
+          <option>--stop-on-copy</option>-valget vil stoppe 
+          loggutlistingen med en gang <command>svn log</command> finner 
+          ut at m&#229;let ble kopiert eller skiftet navn.</para>
 
+        <!-- @ENGLISH {{{
         <para>So in our continuing example,</para>
+        @ENGLISH }}} -->
+        <para>S&#229; hvis vi g&#229;r videre i eksempelet,</para>
 
+<!-- @ENGLISH {{{
 <screen>
-$ svn log --verbose --stop-on-copy \
+$ svn log -&#64738;-verbose -&#64738;-stop-on-copy \
           http://svn.example.com/repos/calc/branches/my-calc-branch
 &hellip;
+-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-
+r341 | user | 2002-11-03 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+Changed paths:
+   A /calc/branches/my-calc-branch (from /calc/trunk:340)
+
+$
+</screen>
+@ENGLISH }}} -->
+        <screen>
+$ svn log --verbose --stop-on-copy \
+          http://svn.example.com/repos/calc/branches/my-calc-branch
+&#8230;
 ------------------------------------------------------------------------
 r341 | user | 2002-11-03 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
 Changed paths:
@@ -1732,14 +1820,24 @@ Changed paths:
 $
 </screen>
         
+        <!-- @ENGLISH {{{
         <para>As expected, the final revision printed by this command
           is the revision in which <filename>my-calc-branch</filename>
           was created by copying.</para>
+        @ENGLISH }}} -->
+        <para>Som forventet er den siste revisjonen skrevet ut av denne 
+          kommandoen den revisjonen der 
+          <filename>my-calc-branch</filename> ble opprettet ved 
+          kopiering.</para>
       </tip>
 
 
+      <!-- @ENGLISH {{{
       <para>Here's the final merging procedure, then:</para>
+      @ENGLISH }}} -->
+      <para>Her er den siste fletteprosedyren, og deretter:</para>
 
+<!-- @ENGLISH {{{
 <screen>
 $ cd calc/trunk
 $ svn update
@@ -1764,12 +1862,44 @@ Sending        Makefile
 Transmitting file data ...
 Committed revision 406.
 </screen>
+@ENGLISH }}} -->
+      <!-- &#164; --><screen>
+$ cd calc/trunk
+$ svn update
+At revision 405.
 
+$ svn merge -r 341:HEAD http://svn.example.com/repos/calc/branches/my-calc-branch
+U   integer.c
+U   button.c
+U   Makefile
+
+$ svn status
+M   integer.c
+M   button.c
+M   Makefile
+
+# &#8230; Unders&#248;k forskjellene, kompiler, test osv &#8230;
+
+$ svn commit -m "Merged my-calc-branch changes r341:405 into the trunk."
+Sending        integer.c
+Sending        button.c
+Sending        Makefile
+Transmitting file data ...
+Committed revision 406.
+</screen>
+
+      <!-- @ENGLISH {{{
       <para>Again, notice that the commit log message very
         specifically mentions the range of changes that was merged
         into the trunk.  Always remember to do this, because it's
         critical information you'll need later on.</para>
+      @ENGLISH }}} -->
+      <para>Igjen, legg merke til at loggmeldingen veldig spesifikt 
+        nevner omr&#229;det av forandringer som ble flettet inn p&#229; trunk.
+        Husk alltid &#229; gj&#248;re dette, fordi det er vital informasjon som du 
+        vil trenge senere.</para>
 
+      <!-- @ENGLISH {{{
       <para>For example, suppose you decide to keep working on your
         branch for another week, in order to complete an enhancement
         to your original feature or bug fix.  The repository's
@@ -1780,29 +1910,68 @@ Committed revision 406.
         you only want to merge everything <quote>new</quote> on your
         branch since the last time you merged.  The trick is to figure
         out what's new.</para>
+      @ENGLISH }}} -->
+      <para>For eksempel, tenk at du bestemmer deg for &#229; fortsette 
+        arbeidet p&#229; grenen en uke til, for &#229; fullf&#248;re feilrettingen 
+        eller en forbedring av den originale funksjonaliteten.
+        Depotets <literal>HEAD</literal>-revisjon er n&#229; 480, og du er 
+        klar til &#229; utf&#248;re en ny fletting fra den private grenen din til 
+        trunk.
+        Men som diskutert i <xref linkend="svn-ch-4-sect-3.2"/> vil du 
+        ikke flette forandringene du allerede har flettet f&#248;r; du vil 
+        bare flette alt <quote>nytt</quote> p&#229; grenen siden forrige gang 
+        du flettet.
+        Trikset er &#229; finne ut <emphasis>hva</emphasis> som er 
+        nytt.</para>
 
+      <!-- @ENGLISH {{{
       <para>The first step is to run <command>svn log</command> on the
         trunk, and look for a log message about the last time you
         merged from the branch:</para>
+      @ENGLISH }}} -->
+      <para>F&#248;rste skritt er &#229; kj&#248;re <command>svn log</command> p&#229; trunk 
+        og se etter en loggmelding fra forrige gang du flettet fra 
+        grenen:</para>
 
+      <!-- @ENGLISH {{{
       <screen>
 $ cd calc/trunk
 $ svn log
 &hellip;
+-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-
+r406 | user | 2004-02-08 11:17:26 -0600 (Sun, 08 Feb 2004) | 1 line
+
+Merged my-calc-branch changes r341:405 into the trunk.
+-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-
+&hellip;
+</screen>
+      @ENGLISH }}} -->
+      <!-- &#164; --><screen>
+$ cd calc/trunk
+$ svn log
+&#8230;
 ------------------------------------------------------------------------
 r406 | user | 2004-02-08 11:17:26 -0600 (Sun, 08 Feb 2004) | 1 line
 
 Merged my-calc-branch changes r341:405 into the trunk.
 ------------------------------------------------------------------------
-&hellip;
+&#8230;
 </screen>
       
+      <!-- @ENGLISH {{{
       <para>Aha!  Since all branch-changes that happened between
         revisions 341 and 405 were previously merged to the trunk as
         revision 406, you now know that you want to merge only the
         branch changes after that&mdash;by comparing revisions 406 and
         <literal>HEAD</literal>.</para>
+      @ENGLISH }}} -->
+      <para>Aha!
+        Siden alle grenforandringene som skjedde mellom revisjonene 341 
+        og 405 ble flettet til trunk som revisjon 406, vet du n&#229; at du 
+        bare vil flette grenforandringene etter dette &#8212; ved &#229; 
+        sammenligne revisjonene 406 og <literal>HEAD</literal>.</para>
 
+<!-- @ENGLISH {{{
 <screen>
 $ cd calc/trunk
 $ svn update
@@ -1822,18 +1991,50 @@ Sending        Makefile
 Transmitting file data ...
 Committed revision 481.
 </screen>
+@ENGLISH }}} -->
+      <!-- &#164; --><screen>
+$ cd calc/trunk
+$ svn update
+At revision 480.
 
+# Vi ser at HEAD er 480 for &#248;yeblikket, s&#229; vi bruker den for &#229; utf&#248;re 
+# flettingen:
+
+$ svn merge -r 406:480 http://svn.example.com/repos/calc/branches/my-calc-branch
+U   integer.c
+U   button.c
+U   Makefile
+
+$ svn commit -m "Merged my-calc-branch changes r406:480 into the trunk."
+Sending        integer.c
+Sending        button.c
+Sending        Makefile
+Transmitting file data ...
+Committed revision 481.
+</screen>
+
+      <!-- @ENGLISH {{{
       <para>Now the trunk contains the complete second wave of changes
         made to the branch.  At this point, you can either delete your
         branch (we'll discuss this later on), or continue working on
         your branch and repeat this procedure for subsequent
         merges.</para>
+      @ENGLISH }}} -->
+      <para>N&#229; inneholder trunk alle forandringene som ble gjort i den 
+        andre omgangen p&#229; grenen.
+        P&#229; dette punktet kan du enten slette grenen (dette vil vi komme 
+        tilbake til) eller fortsette arbeidet p&#229; grenen og repetere 
+        denne prosedyren for etterf&#248;lgende flettinger.</para>
 
     </sect2>
 
     <sect2 id="svn-ch-4-sect-4.2">
+      <!-- @ENGLISH {{{
       <title>Undoing Changes</title>
+      @ENGLISH }}} -->
+      <title>Omgj&#248;re forandringer</title>
 
+      <!-- @ENGLISH {{{
       <para>Another common use for <command>svn merge</command> is to
         roll back a change that has already been committed.  Suppose
         you're working away happily on a working copy of
@@ -1845,8 +2046,22 @@ Committed revision 481.
         working copy, and then commit the local modification to the
         repository.  All you need to do is to specify a
         <emphasis>reverse</emphasis> difference:</para>
+      @ENGLISH }}} -->
+      <para>En annen vanlig bruksm&#229;te for <command>svn merge</command> 
+        er &#229; omgj&#248;re en forandring som allerede er blitt lagt inn.
+        Tenk deg at du jobber glad og lykkelig p&#229; en arbeidskopi av 
+        <filename>/calc/trunk</filename>, og plutselig finner ut at 
+        forandringen du gjorde langt tilbake i revisjon 303, som 
+        forandret <filename>integer.c</filename>, er helt feil.
+        Den skulle aldri v&#230;rt lagt inn.
+        Du kan bruke <command>svn merge</command> for &#229; 
+        <quote>angre</quote> forandringen i arbeidskopien din, og 
+        deretter legge inn de lokale forandringene til depotet.
+        Alt du trenger &#229; gj&#248;re er &#229; spesifisere en 
+        <emphasis>omvendt</emphasis> forskjell:</para>
 
 
+<!-- @ENGLISH {{{
 <screen>
 $ svn merge -r 303:302 http://svn.example.com/repos/calc/trunk
 U  integer.c
@@ -1864,7 +2079,26 @@ Sending        integer.c
 Transmitting file data .
 Committed revision 350.
 </screen>
+@ENGLISH }}} -->
+      <!-- &#164; --><screen>
+$ svn merge -r 303:302 http://svn.example.com/repos/calc/trunk
+U  integer.c
 
+$ svn status
+M  integer.c
+
+$ svn diff
+&#8230;
+# Sjekk at forandringen er fjernet
+&#8230;
+
+$ svn commit -m "Undoing change committed in r303."
+Sending        integer.c
+Transmitting file data .
+Committed revision 350.
+</screen>
+
+      <!-- @ENGLISH {{{
       <para>One way to think about a repository revision is as a
         specific group of changes (some version control systems call
         these <firstterm>changesets</firstterm>).  By using the
@@ -1874,7 +2108,18 @@ Committed revision 350.
         change, we're asking <command>svn merge</command> to apply
         changeset #303 to our working copy
         <emphasis>backwards</emphasis>.</para>
+      @ENGLISH }}} -->
+      <para>En m&#229;te &#229; tenke p&#229; en depotrevisjon er som en spesifikk 
+        gruppe av forandringer (noen versjonskontrollsystemer kaller 
+        disse <firstterm>forandringssett</firstterm> &#8212; 
+        <foreignphrase>changesets</foreignphrase>).
+        Ved &#229; bruke <option>-r</option>-valget kan du be <command>svn 
+        merge</command> om &#229; legge inn et forandringssett, eller et helt 
+        omr&#229;de av forandringssett, vi ber <command>svn merge</command> 
+        om &#229; legge inn forandringssett nummer 303 
+        <emphasis>baklengs</emphasis> inn i arbeidskopien v&#229;r.</para>
     
+      <!-- @ENGLISH {{{
       <para>Keep in mind that rolling back a change like this is just
         like any other <command>svn merge</command> operation, so you
         should use <command>svn status</command> and <command>svn
@@ -1883,13 +2128,33 @@ Committed revision 350.
         to send the final version to the repository.  After
         committing, this particular changeset is no longer reflected
         in the <literal>HEAD</literal> revision.</para>
+      @ENGLISH }}} -->
+      <para>Husk at det &#229; rulle tilbake en forandring som dette er 
+        akkurat likt enhver annen <command>svn 
+        merge</command>-operasjon, s&#229; du b&#248;r bruke <command>svn 
+        status</command> og <command>svn diff</command> for &#229; forsikre 
+        deg om at arbeidet ditt er i den tilstanden du vil det skal v&#230;re 
+        i, og deretter bruke <command>svn commit</command> for &#229; sende 
+        den endelige versjonen til depotet.
+        <!-- &#164; Den engelske setninga der er kanskje litt uklar? -->Etter 
+        innleggingen er dette spesielle forandringssettet ikke lenger 
+        representert i <literal>HEAD</literal>-revisjonen.</para>
 
+      <!-- @ENGLISH {{{
       <para>Again, you may be thinking: well, that really didn't undo
         the commit, did it?  The change still exists in revision 303.
         If somebody checks out a version of the
         <filename>calc</filename> project between revisions 303 and
         349, they'll still see the bad change, right?</para>
+      @ENGLISH }}} -->
+      <para>Og s&#229; tenker du kanskje:
+        N&#229;h, dette omgjorde vel egentlig ikke innleggingen?
+        Forandringen eksisterer fortsatt i revisjon 303.
+        Hvis noen henter ut en versjon av 
+        <filename>calc</filename>-prosjektet mellom revisjonene 303 og 
+        349, vil de se den gale forandringen, ikke sant?</para>
 
+      <!-- @ENGLISH {{{
       <para>Yes, that's true.  When we talk about
         <quote>removing</quote> a change, we're really talking about
         removing it from <literal>HEAD</literal>.  The original change
@@ -1914,19 +2179,57 @@ Committed revision 350.
             workaround.</para>
         </footnote>
       </para>
+      @ENGLISH }}} -->
+      <para>Ja, det stemmer.
+        N&#229;r vi snakker om &#229; <quote>fjerne</quote> en forandring, snakker 
+        vi egentlig om &#229; fjerne den fra <literal>HEAD</literal>.
+        Den originale forandringen eksisterer fortsatt i depotets 
+        historie.
+        For de fleste situasjoner er dette bra nok.
+        De fleste er bare interessert i &#229; f&#248;lge <literal>HEAD</literal> 
+        av et prosjekt uansett.
+        Det er imidlertid spesielle tilfeller du virkelig vil &#248;delegge 
+        alle spor etter innleggingen, kanskje la noen inn et 
+        konfidensielt dokument ved en ulykke.
+        Dette er ikke s&#229; lett, viser det seg, fordi Subversion ble 
+        spesielt designet for &#229; aldri miste informasjon.
+        Revisjoner er uforanderlige tr&#230;r som bygger p&#229; hverandre.
+        Det &#229; fjerne en revisjon fra historien vil for&#229;rsake en 
+        dominoeffekt som vil f&#248;re til kaos i alle etterf&#248;lgende 
+        revisjoner og muligens gj&#248;re alle arbeidskopiene 
+        ubrukelige.<footnote><para>Subversionprosjektet har imidlertid 
+        planer om &#229; legge inn en <command>svnadmin 
+        obliterate</command>-kommando som vil ta seg av oppgaven med &#229; 
+        permanent slette informasjon.
+        I mellomtiden, se <xref linkend="svn-ch-5-sect-3.1.3"/> for en 
+        mulig omvei om problemet.</para></footnote></para>
 
     </sect2>
 
     <sect2 id="svn-ch-4-sect-4.3">
+      <!-- @ENGLISH {{{
       <title>Resurrecting Deleted Items</title>
+      @ENGLISH }}} -->
+      <title>Hente tilbake slettede elementer</title>
 
+      <!-- @ENGLISH {{{
       <para>The great thing about version control systems is that
         information is never lost.  Even when you delete a file or
         directory, it may be gone from the <literal>HEAD</literal>
         revision, but the object still exists in earlier revisions.
         One of the most common questions new users ask is, <quote>How
         do I get my old file or directory back?</quote></para>
+      @ENGLISH }}} -->
+      <para>Det som er fint med versjonskontrollsystemer er at 
+        informasjon g&#229;r aldri tapt.
+        Selv om du sletter en fil eller katalog, kan den v&#230;re borte fra 
+        <literal>HEAD</literal>-revisjonen, men objektet eksisterer 
+        fortsatt i tidligere revisjoner.
+        Et av de vanligste sp&#248;rsm&#229;lene nye brukere sp&#248;r er: 
+        <quote>Hvordan f&#229;r jeg den gamle filen eller katalogen min 
+        tilbake?</quote>.</para>
 
+      <!-- @ENGLISH {{{
       <para>The first step is to define exactly <emphasis
         role="bold">which</emphasis> item you're trying to resurrect.
         Here's a useful metaphor: you can think of every object in the
@@ -1935,7 +2238,19 @@ Committed revision 350.
         and the second coordinate is a path within that tree.  So
         every version of your file or directory can be defined by a
         specific coordinate pair.</para>
+      @ENGLISH }}} -->
+      <para>F&#248;rste skritt er &#229; definere n&#248;yaktig <emphasis 
+        role="bold">hvilket</emphasis> element du skal pr&#248;ve &#229; hente 
+        tilbake.
+        Her er en nyttig metafor:
+        Du kan tenke p&#229; hvert objekt i depotet som om det eksisterer i 
+        et slags todimensjonalt koordinatsystem.
+        Det f&#248;rste koordinatet er et spesifikt revisjonstre, og det 
+        andre koordinatet er en sti inne i dette treet.
+        S&#229; hver versjon av filen din eller katalogen kan bli definert 
+        som et spesifikt koordinatpar.</para>
 
+      <!-- @ENGLISH {{{
       <para>Subversion has no <filename>Attic</filename> directory
         like CVS does,
         <footnote>
@@ -1946,19 +2261,37 @@ Committed revision 350.
         so you need to use <command>svn
         log</command> to discover the exact coordinate pair you wish
         to resurrect.  A good strategy is to run <command>svn log
-        --verbose</command> in a directory which used to contain your
-        deleted item.  The <option>--verbose</option> option shows a
+        -&#64738;-verbose</command> in a directory which used to contain your
+        deleted item.  The <option>-&#64738;-verbose</option> option shows a
         list of all changed items in each revision; all you need to do
         is find the revision in which you deleted the file or
         directory.  You can do this visually, or by using another tool
         to examine the log output (via <command>grep</command>, or
         perhaps via an incremental search in an editor.)</para>
+      @ENGLISH }}} -->
+      <para>Subversion har ingen <filename>Attic</filename>-katalog som 
+        CVS har,<footnote><para>Fordi CVS ikke versjonerer tr&#230;r, lager 
+        den et <filename>Attic</filename>-omr&#229;de innenfor hver 
+        depotkatalog som en m&#229;te &#229; huske slettede filer 
+        p&#229;.</para></footnote>
+        s&#229; du m&#229; bruke <command>svn log</command> for &#229; finne det 
+        eksakte koordinatparet som du vil hente tilbake.
+        En god strategi er &#229; kj&#248;re <command>svn log --verbose</command> 
+        i en katalog som inneholdt det slettede elementet ditt.
+        Valget <command>--verbose</command> viser en liste over alle 
+        forandrede elementer i hver revisjon; alt du trenger &#229; gj&#248;re er 
+        &#229; finne revisjonen der du slettet filen eller katalogen.
+        Du kan gj&#248;re dette visuelt, eller ved &#229; bruke et annet verkt&#248;y 
+        for &#229; unders&#248;ke utdataene fra loggen (ved hjelp av 
+        <command>grep</command>, eller kanskje ved hjelp av et 
+        inkrementelt s&#248;k i en tekstbehandler).</para>
 
+      <!-- @ENGLISH {{{
       <screen>
 $ cd parent-dir
-$ svn log --verbose
+$ svn log -&#64738;-verbose
 &hellip;
-------------------------------------------------------------------------
+-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-&#64738;-
 r808 | joe | 2003-12-26 14:29:40 -0600 (Fri, 26 Dec 2003) | 3 lines
 Changed paths:
    D /calc/trunk/real.c
@@ -1968,7 +2301,22 @@ Added fast fourier transform functions to integer.c.
 Removed real.c because code now in double.c.
 &hellip;
 </screen>
+      @ENGLISH }}} -->
+      <!-- &#164; Eksempler tas seinere, men det visste du fra f&#248;r. 
+      --><screen>
+&#8230;
+------------------------------------------------------------------------
+r808 | joe | 2003-12-26 14:29:40 -0600 (Fri, 26 Dec 2003) | 3 lines
+Changed paths:
+   D /calc/trunk/real.c
+   M /calc/trunk/integer.c
 
+Added fast fourier transform functions to integer.c.
+Removed real.c because code now in double.c.
+&#8230;
+</screen>
+
+      <!-- @ENGLISH {{{
       <para>In the example, we're assuming that you're looking for a
         deleted file <filename>real.c</filename>.  By looking through
         the logs of a parent directory, you've spotted that this file
@@ -1977,11 +2325,27 @@ Removed real.c because code now in double.c.
         Conclusion: you want to resurrect the path
         <filename>/calc/trunk/real.c</filename> from revision
         807.</para>
+      @ENGLISH }}} -->
+      <para>I eksempelet g&#229;r vi ut i fra at du ser etter en slettet fil 
+        kalt <filename>real.c</filename>.
+        Ved &#229; se gjennom loggene for en foreldrekatalog, har du funnet 
+        ut at denne filen ble slettet i revisjon 808.
+        Derfor er den siste versjonen av filen der den fortsatt 
+        eksisterte i revisjonen like f&#248;r dette.
+        Konklusjon:
+        Du vil hente tilbake stien 
+        <filename>/calc/trunk/real.c</filename> fra revisjon 807.</para>
 
+      <!-- @ENGLISH {{{
       <para>That was the hard part&mdash;the research.  Now that you
         know what you want to restore, you have two different
         choices.</para>
+      @ENGLISH }}} -->
+      <para>Dette var den vanskelige delen &#8212; etterforskningen.
+        N&#229; som du vet hva du vil hente tilbake, har du to forskjellige 
+        valg.</para>
       
+      <!-- @ENGLISH {{{
       <para>One option is to use <command>svn merge</command> to apply
         revision 808 <quote>in reverse</quote>.  (We've already
         discussed how to undo changes, see <xref
@@ -1989,7 +2353,19 @@ Removed real.c because code now in double.c.
         re-adding <filename>real.c</filename> as a local modification.
         The file would be scheduled for addition, and after a commit,
         the file would again exist in <literal>HEAD</literal>.</para>
+      @ENGLISH }}} -->
+      <para>En m&#229;te er &#229; bruke <command>svn merge</command> for &#229; legge 
+        inn revisjon 808 <quote>i revers</quote>.
+        (Vi har allerede g&#229;tt gjennom hvordan vi omgj&#248;r forandringer, se 
+        <xref linkend="svn-ch-4-sect-4.2"/>.)
+        Dette vil ha samme effekten som &#229; legge til 
+        <filename>real.c</filename> en gang til som en lokal 
+        modifisering.
+        Filen vil bli klargjort for tillegging, og etter at du sender 
+        det inn til depotet med <command>svn commit</command>, vil filen 
+        atter en gang eksistere i <literal>HEAD</literal>.</para>
 
+      <!-- @ENGLISH {{{
       <para>In this particular example, however, this is probably not
         the best strategy.  Reverse-applying revision 808 would not
         only schedule <filename>real.c</filename> for addition, but
@@ -2000,13 +2376,35 @@ Removed real.c because code now in double.c.
         <filename>integer.c</filename>, but this technique doesn't
         scale well.  What if there were 90 files changed in revision
         808?</para>
+      @ENGLISH }}} -->
+      <para>Men i dette spesielle eksempelet er det kanskje ikke den 
+        beste strategien.
+        &#197; legge inn revisjon 808 i revers vil ikke bare klargj&#248;re 
+        <filename>real.c</filename> for tillegging, men loggmeldingen 
+        indikerer at det vil ogs&#229; bli omgjort forandringer i 
+        <filename>integer.c</filename>, noe som du ikke &#248;nsker.
+        Du kan selvf&#248;lgelig bakoverflette revisjon 808 og deretter kj&#248;re 
+        <command>svn revert</command> p&#229; de lokale forandringene i 
+        <filename>integer.c</filename>, men denne teknikken <!-- &#164; 
+        -->skalerer ikke alltid like bra.
+        Hva hvis det var 90 filer som forandret seg i revisjon 
+        808?</para>
 
+      <!-- @ENGLISH {{{
       <para>A second, more targeted strategy is not to use
         <command>svn merge</command> at all, but rather the
         <command>svn copy</command> command.  Simply copy the exact
         revision and path <quote>coordinate pair</quote> from the
         repository to your working copy:</para>
+      @ENGLISH }}} -->
+      <para>En annen og mer <!-- &#164; -->m&#229;lbevisst strategi er &#229; ikke 
+        bruke <command>svn merge</command> i det hele tatt, men derimot 
+        <command>svn copy</command>.
+        Kopier ganske enkelt den eksakte revisjonens og stiens 
+        <quote>koordinatpar</quote> fra depotet til arbeidskopien 
+        din:</para>
 
+      <!-- &#164; -->
       <screen>
 $ svn copy --revision 807 \
            http://svn.example.com/repos/calc/trunk/real.c ./real.c
@@ -2020,6 +2418,7 @@ Transmitting file data .
 Committed revision 1390.
 </screen>
 
+      <!-- @ENGLISH {{{
       <para>The plus sign in the status output indicates that the item
         isn't merely scheduled for addition, but scheduled for
         addition <quote>with history.</quote> Subversion remembers
@@ -2029,10 +2428,26 @@ Committed revision 1390.
         to revision 807.  In other words, this new
         <filename>real.c</filename> isn't really new; it's a direct
         descendant of the original, deleted file.</para>
+      @ENGLISH }}} -->
+      <para>Plusstegnet som vises i statusoversikten indikerer at 
+        elementet ikke bare er klargjort for tillegging, men er 
+        klargjort for tillegging <quote>med historie</quote>.
+        Subversion husker hvor det ble kopiert fra.
+        I framtiden vil kj&#248;ring av <command>svn log</command> p&#229; denne 
+        filen g&#229; tilbake forbi gjenoppstandelsen av filen og gjennom 
+        hele historien den hadde f&#248;r revisjon 807.
+        Med andre ord, denne nye <filename>real.c</filename> er ikke 
+        egentlig ny; den er en direkte etterkommer av den originale, 
+        slettede filen.</para>
 
+      <!-- @ENGLISH {{{
       <para>Although our example shows us resurrecting a file, note
         that these same techniques work just as well for resurrecting
         deleted directories.</para>
+      @ENGLISH }}} -->
+      <para>Selv om eksempelet v&#229;rt viser at vi henter tilbake en fil, 
+        legg merke til at disse samme teknikkene virker like godt n&#229;r 
+        det gjelder &#229; hente tilbake slettede kataloger.</para>
 
     </sect2>
 
