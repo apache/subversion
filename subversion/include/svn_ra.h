@@ -691,10 +691,11 @@ typedef struct svn_ra_plugin_t
                               svn_revnum_t revision,
                               apr_pool_t *pool);
 
-  /** Set @a *uuid to the repository's UUID.  The UUID has the same lifetime
-   *  as the session_baton. 
+  /** Set @a *uuid to the repository's UUID.
    *
-   * Use @a pool for memory allocation.
+   * NOTE: the UUID has the same lifetime as the session_baton. 
+   *
+   * Use @a pool for temporary memory allocation.
    */
   svn_error_t *(*get_uuid) (void *session_baton,
                             const char **uuid,
