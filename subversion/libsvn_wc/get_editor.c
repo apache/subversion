@@ -292,7 +292,6 @@ finish_directory (void *edit_baton, void *child_baton)
   svn_error_t *err;
   struct e_baton *eb = (struct e_baton *) edit_baton;
   svn_string_t *path = (svn_string_t *) child_baton;
-  int stack_empty;
 
   /* kff todo: what we really want here is the parent's dir baton.
      We don't store it currently.  That will change.
