@@ -16,6 +16,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "apr.h"
+#include "svn_pools.h"
 #include "svn_string.h"
 #include "../../libsvn_fs/fs.h"
 #include "../../libsvn_fs/skel.h"

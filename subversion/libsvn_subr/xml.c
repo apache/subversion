@@ -16,7 +16,7 @@
 
 #include <string.h>
 #include <assert.h>
-#include "apr_pools.h"
+#include "svn_pools.h"
 #include "svn_xml.h"
 
 

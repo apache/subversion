@@ -20,6 +20,7 @@
 #include "apr_hash.h"
 #include "wc.h"
 #include "svn_types.h"
+#include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_io.h"
 #include "svn_sorts.h"

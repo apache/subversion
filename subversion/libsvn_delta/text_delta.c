@@ -20,8 +20,8 @@
 
 #include "svn_delta.h"
 #include "svn_io.h"
+#include "svn_pools.h"
 #include "delta.h"
-
 
 
 /* Text delta stream descriptor. */

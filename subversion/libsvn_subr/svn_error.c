@@ -19,7 +19,9 @@
 #include "apr_general.h"
 #include "apr_pools.h"
 #include "apr_strings.h"
+#include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_io.h"
 
 /* Key for the error pool itself. */
 #define SVN_ERROR_POOL              "svn-error-pool"
@@ -28,6 +30,8 @@
    the pool whose prog_data we got it from. */
 #define SVN_ERROR_POOL_ROOTED_HERE  "svn-error-pool-rooted-here"
 
+/* Key for the svn_stream_t used for non-fatal feedback. */
+#define SVN_ERROR_STREAM            "svn-error-stream"
 
 
 /*** helpers for creating errors ***/
@@ -92,8 +96,8 @@ svn_error__make_error_pool (apr_pool_t *parent, apr_pool_t **error_pool)
   *error_pool = apr_pool_sub_make (parent, abort_on_pool_failure);
   
   /* Set the error pool on itself. */
-  apr_err = apr_pool_userdata_set (*error_pool, SVN_ERROR_POOL, apr_pool_cleanup_null,
-                              *error_pool);
+  apr_err = apr_pool_userdata_set (*error_pool, SVN_ERROR_POOL, 
+                                   apr_pool_cleanup_null, *error_pool);
 
   return apr_err;
 }
@@ -172,23 +176,42 @@ svn_pool__inherit_error_pool (apr_pool_t *p)
 }
 
 
+svn_stream_t *
+svn_pool_get_feedback_stream (apr_pool_t *p)
+{
+  svn_stream_t *feedback_stream;
+
+  apr_pool_userdata_get ((void **)&feedback_stream, SVN_ERROR_STREAM, p);
+  return feedback_stream;
+}
+
+
 apr_status_t
 svn_error_init_pool (apr_pool_t *top_pool)
 {
-  void *check_for_pool;
+  void *check;
   apr_pool_t *error_pool;
+  svn_stream_t *feedback_stream;
   apr_status_t apr_err;
 
   /* just return if an error pool already exists */
-  apr_pool_userdata_get (&check_for_pool, SVN_ERROR_POOL, top_pool);
-  if (check_for_pool != NULL)
-    return APR_SUCCESS;
+  apr_pool_userdata_get (&check, SVN_ERROR_POOL, top_pool);
+  if (check == NULL)
+    {
+      apr_err = svn_error__make_error_pool (top_pool, &error_pool);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return apr_err;
 
-  apr_err = svn_error__make_error_pool (top_pool, &error_pool);
-  if (! APR_STATUS_IS_SUCCESS (apr_err))
-    return apr_err;
-
-  svn_error__set_error_pool (top_pool, error_pool, 1);
+      svn_error__set_error_pool (top_pool, error_pool, 1);
+    }
+  
+  apr_pool_userdata_get (&check, SVN_ERROR_STREAM, top_pool);
+  if (check == NULL)
+    {
+      feedback_stream = svn_stream_create (NULL, top_pool);
+      apr_pool_userdata_set (feedback_stream, SVN_ERROR_STREAM, 
+                             apr_pool_cleanup_null, top_pool);
+    }
 
   return APR_SUCCESS;
 }
@@ -231,14 +254,19 @@ svn_pool_create_debug (apr_pool_t *parent_pool,
   /* If there is no parent, then initialize ret_pool as the "top". */
   if (parent_pool == NULL)
     {
-      apr_status_t apr_err;
-
-      apr_err = svn_error_init_pool (ret_pool);
+      apr_status_t apr_err = svn_error_init_pool (ret_pool);
       if (apr_err)
         abort_on_pool_failure (apr_err);
     }
   else
-    svn_pool__inherit_error_pool (ret_pool);
+    {
+      /* Inherit the error pool and feedback stream from the parent. */
+      svn_stream_t *stream;
+      svn_pool__inherit_error_pool (ret_pool);
+      apr_pool_userdata_get ((void **)&stream, SVN_ERROR_STREAM, parent_pool);
+      apr_pool_userdata_set (stream, SVN_ERROR_STREAM, 
+                             apr_pool_cleanup_null, ret_pool);
+    }
 
 #ifdef SVN_POOL_DEBUG
   {
@@ -263,6 +291,8 @@ svn_pool_clear_debug (apr_pool_t *p,
 {
   apr_pool_t *parent;
   apr_pool_t *error_pool;
+  apr_pool_t *tmp_pool;
+  svn_stream_t *stream, *stream_copy;
   svn_boolean_t subpool_of_p_p;  /* That's "predicate" to you, bud. */
     
 #ifdef SVN_POOL_DEBUG
@@ -278,27 +308,68 @@ svn_pool_clear_debug (apr_pool_t *p,
 
   parent = apr_pool_get_parent (p);
   if (parent)
-    svn_error__get_error_pool (parent, &error_pool, &subpool_of_p_p);
+    {
+      /* Get the error pool */
+      svn_error__get_error_pool (parent, &error_pool, &subpool_of_p_p);
+    }
   else
     {
       error_pool = NULL;    /* Paranoia. */
       subpool_of_p_p = 1;   /* The only possibility. */
     }
 
-  apr_pool_clear (p);
-
-  /* Clearing the pool invalidated all userdata attached to it,
-     so we must reattach its error pool.  However, clearing a pool
-     also destroys all its subpools; if the error pool was a subpool
-     of p (meaning it was created for p, rather than inherited from
-     p's parent), then we must conjure up a new error pool here.
-     Otherwise, we should stick with the old one, no point creating a
-     new error pool when we have a perfectly good one at hand. */
+  /* Get the feedback stream */
+  apr_pool_userdata_get ((void **)&stream, SVN_ERROR_STREAM, p);
 
   if (subpool_of_p_p)
-    svn_error__make_error_pool (p, &error_pool);
+    {
+      /* Here we have a problematic situation.  We're getting ready to
+         clear this pool P, which will invalidate all its userdata.
+         The problem is that as far as we can tell, the error pool and
+         feedback stream on this pool are copies of the originals,
+         they *are* the originals.  We need to be able to re-create
+         them in this pool after it has been cleared.
 
+         For the error pool, this turn out to be not that big of a
+         deal.  We don't actually need to keep *the* original error
+         pool -- we can just initialize a new error pool to stuff into
+         P here after it's been cleared.
+
+         The feedback stream doesn't offer quite the luxury.  We can't
+         really afford to just create a new feedback stream, since the
+         caller may have already set up the stream functions and baton
+         and such on this stream.  The svn_stream_t structure is
+         opaque, else we could just copy the stream into a static
+         structure temporarily.  So the only real course of action
+         here is to allocate a new global pool, dupe the stream in
+         this new global pool, then dup it back after we've cleared
+         P. */
+      apr_pool_create (&tmp_pool, NULL);
+      
+      /* Dupe the feedback stream in our temporary pool. */
+      stream_copy = svn_stream_dup (stream, tmp_pool);
+    }
+ 
+  /* Clear the pool.  All userdata of this pool is now invalid. */
+  apr_pool_clear (p);
+
+  if (subpool_of_p_p)
+    {
+      /* Make new error pool. */
+      svn_error__make_error_pool (p, &error_pool);
+
+      /* Dupe our squirreled-away stream back into P... */
+      stream = svn_stream_dup (stream_copy, p);
+
+      /* ...and clean up our mess. */
+      apr_pool_destroy (tmp_pool);
+    }
+
+  /* Now, reset the error pool and feedback stream on P. */
   svn_error__set_error_pool (p, error_pool, subpool_of_p_p);
+  apr_pool_userdata_set (stream, SVN_ERROR_STREAM, 
+                         apr_pool_cleanup_null, p);
+  
 }
 
 

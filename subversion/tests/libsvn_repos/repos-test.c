@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <apr_pools.h>
+#include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
 #include "svn_repos.h"

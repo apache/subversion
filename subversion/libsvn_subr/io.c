@@ -389,6 +389,27 @@ svn_stream_create (void *baton, apr_pool_t *pool)
 }
 
 
+svn_stream_t *
+svn_stream_dup (svn_stream_t *stream, apr_pool_t *pool)
+{
+  svn_stream_t *new_stream;
+
+  new_stream = apr_palloc (pool, sizeof (*new_stream));
+  new_stream->baton = stream->baton;
+  new_stream->read_fn = stream->read_fn;
+  new_stream->write_fn = stream->write_fn;
+  new_stream->close_fn = stream->close_fn;
+  return stream;
+}
+
+
+void
+svn_stream_set_baton (svn_stream_t *stream, void *baton)
+{
+  stream->baton = baton;
+}
+
+
 void
 svn_stream_set_read (svn_stream_t *stream, svn_read_fn_t read_fn)
 {

@@ -27,6 +27,7 @@
 #include <stdlib.h>     /* for free() */
 #endif
 
+#include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_ra.h"

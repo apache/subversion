@@ -19,6 +19,7 @@
 #include "svn_path.h"
 #include "apr_hash.h"
 #include "svn_repos.h"
+#include "svn_pools.h"
 
 
 

@@ -20,6 +20,7 @@
 #include "apr_pools.h"
 #include "apr_file_io.h"
 
+#include "svn_pools.h"
 #include "db.h"
 #include "svn_fs.h"
 #include "fs.h"

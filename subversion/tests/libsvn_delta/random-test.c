@@ -19,6 +19,7 @@
 #include "apr_general.h"
 #include "apr_getopt.h"
 #include "svn_delta.h"
+#include "svn_pools.h"
 #include "svn_error.h"
 
 #define DEFAULT_ITERATIONS 30

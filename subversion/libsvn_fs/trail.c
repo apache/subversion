@@ -13,6 +13,7 @@
 
 #include "db.h"
 #include "apr_pools.h"
+#include "svn_pools.h"
 #include "svn_fs.h"
 #include "fs.h"
 #include "err.h"

@@ -19,6 +19,7 @@
 #include <apr_general.h>
 
 #include "svn_types.h"
+#include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_delta.h"
