@@ -977,7 +977,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
   switch (kind)
     {
     case svn_node_none:
-      SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, subpool));
+      SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, subpool));
       if (entry && entry->schedule != svn_wc_schedule_delete)
         {
           /* Versioned but missing */
