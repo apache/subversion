@@ -38,7 +38,7 @@ BuildPreReq: openssl-devel
 BuildPreReq: python
 BuildPreReq: python-devel
 %if %{build_cvs2svn}
-BuildPreReq: swig >= 1.3.15
+BuildPreReq: swig >= 1.3.16
 %endif
 BuildPreReq: texinfo
 BuildPreReq: zlib-devel
@@ -83,7 +83,7 @@ the Apache directories and configuration.
 %package cvs2svn
 Group: Utilities/System
 Summary: Converts CVS repositories to Subversion repositories.
-Requires: swig-runtime >= 1.3.15
+Requires: swig-runtime >= 1.3.16
 %description cvs2svn
 Converts CVS repositories to Subversion repositories.
 

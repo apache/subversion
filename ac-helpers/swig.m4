@@ -44,8 +44,14 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_MSG_CHECKING([swig version])
     SWIG_VERSION="`$SWIG -version 2>&1 | sed -ne 's/^.*Version \(.*\)$/\1/p'`"
     AC_MSG_RESULT([$SWIG_VERSION])
+    # If you change the required swig version number, don't forget to update:
+    #   subversion/bindings/swig/INSTALL
+    #   subversion/bindings/swig/README
+    #   packages/rpm/mandrake-9.0/subversion.spec
+    #   packages/rpm/redhat-7.x/subversion.spec
+    #   packages/rpm/redhat-8.x/subversion.spec
     case $SWIG_VERSION in
-        [1.3.16*])
+        [1.3.1[67]*])
           SWIG_SUITABLE=yes
           ;;
         *)

@@ -4,7 +4,7 @@ BUILDING SWIG BINDINGS FOR SVN
 
 
 Step 1:  Build & install the proper version of SWIG (which is
-         currently swig 1.3.14 or greater).
+         currently swig 1.3.16).
 
     * Go to http://www.swig.org, download the sourceball, unpack.
 
