@@ -238,7 +238,7 @@
       </varlistentry>
 
       <varlistentry>
-        <term><option>-n</option> switch</term>
+        <term><option>-N</option> switch</term>
         <listitem>
           <para>Nonrecursive.</para>
         </listitem>
@@ -263,8 +263,8 @@ M     ./bar/baz.c
     <screen>
 % svn status -u
 M             1047    ./foo.c
-_      *      1045    ./faces.html
-_      *         -    ./bloo.png
+       *      1045    ./faces.html
+       *         -    ./bloo.png
 M             1050    ./bar/baz.c
 Head revision:   1066
     </screen>

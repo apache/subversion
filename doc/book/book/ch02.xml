@@ -298,7 +298,7 @@
         out</firstterm> some subtree of the repository.  (The term
         "check out" may sound like it has something to do with locking
         or reserving resources, but it doesn't; it simply creates a
-        private copy of the project for you.) For example, If you
+        private copy of the project for you.) For example, if you
         check out <filename>/calc</filename>, you will get a working
         copy like this: </para>
 

@@ -1474,7 +1474,7 @@ Cumulus clouds are appearing more frequently as summer approaches.
             <term><literal>LF</literal></term>
             <listitem>
               <para>This causes the file to contain
-                <literal>LF</literal> characters for EOL markers.
+                <literal>LF</literal> characters for EOL markers,
                 regardless of the operating system in use.</para>
             </listitem>
           </varlistentry>

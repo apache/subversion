@@ -391,7 +391,7 @@ Checked out revision 2499.
   <!-- ======================== SECTION 5 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-3-sect-5">
-    <title>Basic Workcycle</title>
+    <title>Basic Work Cycle</title>
 
     <para>Subversion has numerous features, options, bells and whistles, but on
       a day-to-day basis, odds are that you will only use a few of them. In
@@ -914,7 +914,7 @@ C      ./stuff/loot/lump.c   # this file has conflicts from an update
         <para>The third column will only show whitespace or an
           <computeroutput>L</computeroutput> which means that
           Subversion has locked the item in
-          the<filename>.svn</filename> working area.  You will see an
+          the <filename>.svn</filename> working area.  You will see an
           <computeroutput>L</computeroutput> if you run <command>svn
           status</command> in a directory where an <command>svn
           commit</command> is in progress&mdash;perhaps when you are
