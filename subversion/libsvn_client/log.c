@@ -230,13 +230,13 @@ svn_client_log (const apr_array_header_t *targets,
          *   $ svn log -rCOMMITTED foo.txt bar.c
          *   $ svn log -rCOMMITTED:42 foo.txt bar.c
          *
-         * We'll to iterate over each target in turn, getting the logs
+         * We'll iterate over each target in turn, getting the logs
          * for the named range.  This means that certain revisions may
          * be printed out more than once.  I think that's okay
          * behavior, since the sense of the command is that one wants
          * a particular range of logs for *this* file, then another
-         * range for *that* file, and so on.  But we should at
-         * probably some sort of separator header between the log
+         * range for *that* file, and so on.  But we should
+         * probably put some sort of separator header between the log
          * groups.  Of course, libsvn_client can't just print stuff
          * out -- it has to take a callback from the client to do
          * that.  So we need to define that callback interface, then

@@ -400,7 +400,7 @@ def compare_trees(a, b,
 
   If A and B are both files, then return if their contents,
   properties, and names are all the same; else raise a SVNTreeUnequal.
-  If A is a file and B is a directory, raise a SVNTypeMismatch; same
+  If A is a file and B is a directory, raise a SVNTreeUnequal; same
   vice-versa.  If both are directories, then for each entry that
   exists in both, call compare_trees on the two entries; otherwise, if
   the entry exists only in A, invoke FUNC_A on it, and likewise for

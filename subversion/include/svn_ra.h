@@ -644,7 +644,7 @@ typedef struct svn_ra_plugin_t
                            apr_pool_t *pool);
 
   /* Yoshiki Hayashi <yoshiki@xemacs.org> points out that a more
-     generic way to support 'discover_changed__paths' in logs would be
+     generic way to support 'discover_changed_paths' in logs would be
      to have these two functions:
     
          svn_error_t *(*get_rev_prop) (void *session_baton,

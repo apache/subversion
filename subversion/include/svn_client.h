@@ -410,7 +410,7 @@ typedef struct svn_client_ctx_t
 /** @} */
 
 
-/** Checkout a working copy of @a url at @a revision, using @a path as 
+/** Checkout a working copy of @a URL at @a revision, using @a path as 
  * the root directory of the newly checked out working copy, and 
  * authenticating with the authentication baton cached in @a ctx.
  *
@@ -794,7 +794,7 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
  * If either @a revision1 or @a revision2 has an `unspecified' or
  * unrecognized `kind', return @c SVN_ERR_CLIENT_BAD_REVISION.
  *
- * If @a recurse is true (and the @a urls are directories), apply changes
+ * If @a recurse is true (and the URLs are directories), apply changes
  * recursively; otherwise, only apply changes in the current
  * directory.
  *
@@ -903,10 +903,10 @@ svn_client_resolved (const char *path,
 /** Copy @a src_path to @a dst_path.
  *
  * @a src_path must be a file or directory under version control, or the
- * @a url of a versioned item in the repository.  If @a src_path is a @a 
- * url, @a src_revision is used to choose the revision from which to copy 
+ * URL of a versioned item in the repository.  If @a src_path is a 
+ * URL, @a src_revision is used to choose the revision from which to copy 
  * the @a src_path.  @a dst_path must be a file or directory under version
- * control, or a repository @a url, existent or not.
+ * control, or a repository URL, existent or not.
  *
  * If @a dst_path is a URL, use the authentication baton 
  * in @a ctx and @a ctx->log_msg_func/@a ctx->log_msg_baton to immediately 
@@ -1028,7 +1028,7 @@ svn_client_propset (const char *propname,
                     apr_pool_t *pool);
 
 /** Set @a propname to @a propval on revision @a revision in the repository
- * represented by @a url.  Use the authentication baton in @a ctx for 
+ * represented by @a URL.  Use the authentication baton in @a ctx for 
  * authentication, and @a pool for all memory allocation.  Return the actual 
  * rev affected in @a *set_rev.  A @a propval of @c NULL will delete the 
  * property.
@@ -1059,7 +1059,7 @@ svn_client_revprop_set (const char *propname,
                         apr_pool_t *pool);
                         
 /** Set @a *props to a hash table whose keys are `<tt>char *</tt>' paths,
- * prefixed by @a target (a working copy path or a url), of items on
+ * prefixed by @a target (a working copy path or a URL), of items on
  * which property @a propname is set, and whose values are `@c svn_string_t
  * *' representing the property value for @a propname at that path.
  *
@@ -1070,7 +1070,7 @@ svn_client_revprop_set (const char *propname,
  *
  * If @a revision->kind is @c svn_opt_revision_unspecified, then: get
  * properties from the working copy if @a target is a working copy path,
- * or from the repository head if @a target is a url.  Else get the
+ * or from the repository head if @a target is a URL.  Else get the
  * properties as of @a revision.  Use the authentication baton in @a ctx 
  * for authentication if contacting the repository.
  *
@@ -1090,7 +1090,7 @@ svn_client_propget (apr_hash_t **props,
                     apr_pool_t *pool);
 
 /** Set @a *propname to the value of @a propval on revision @a revision 
- * in the repository represented by @a url.  Use the authentication baton 
+ * in the repository represented by @a URL.  Use the authentication baton 
  * in @a ctx for authentication, and @a pool for all memory allocation.  
  * Return the actual rev queried in @a *set_rev.
  *
@@ -1109,7 +1109,7 @@ svn_client_revprop_get (const char *propname,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
 
-/** Set @a *props to the regular properties of @a target, a url or working
+/** Set @a *props to the regular properties of @a target, a URL or working
  * copy path.
  *
  * Each element of the returned array is (@c svn_client_proplist_item_t *).
@@ -1121,7 +1121,7 @@ svn_client_revprop_get (const char *propname,
  *
  * If @a revision->kind is @c svn_opt_revision_unspecified, then get
  * properties from the working copy, if @a target is a working copy path,
- * or from the repository head if @a target is a url.  Else get the
+ * or from the repository head if @a target is a URL.  Else get the
  * properties as of @a revision.  Use the authentication baton cached in @a ctx 
  * for authentication if contacting the repository.
  *
@@ -1140,7 +1140,7 @@ svn_client_proplist (apr_array_header_t **props,
                      apr_pool_t *pool);
 
 /** Set @a *props to a hash of the revision props attached to @a revision in
- * the repository represented by @a url.  Use the authentication baton cached 
+ * the repository represented by @a URL.  Use the authentication baton cached 
  * in @a ctx for authentication, and @a pool for all memory allocation.  
  * Return the actual rev queried in @a *set_rev.
  *
@@ -1244,7 +1244,7 @@ svn_client_cat (svn_stream_t* out,
 
 /** Set @a *url to the url for @a path_or_url.
  *
- * If @a path_or_url is already a url, set @a *url to @a path_or_url.
+ * If @a path_or_url is already a URL, set @a *url to @a path_or_url.
  *
  * If @a path_or_url is a versioned item, set @a *url to @a
  * path_or_url's entry url.  If @a path_or_url is a unversioned (has
