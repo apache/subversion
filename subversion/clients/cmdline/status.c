@@ -24,6 +24,7 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 #include "svn_sorts.h"
+#include "svn_path.h"
 #include "svn_wc.h"
 #include "svn_utf.h"
 #include "cl.h"
@@ -175,11 +176,8 @@ svn_cl__print_status_list (apr_hash_t *statushash,
       if (err)
         svn_handle_error (err, stderr, FALSE);
 
-      /* Always print some path */
-      if (path[0] == '\0')
-        path = ".";
-
-      print_status (path, detailed, show_last_committed, status);
+      print_status (svn_path_local_style (path, pool),
+                    detailed, show_last_committed, status);
     }
 
   /* If printing in detailed format, we might have a head revision to
