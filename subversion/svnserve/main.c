@@ -39,6 +39,8 @@
 #include "svn_repos.h"
 #include "svn_version.h"
 
+#include "svn_private_config.h"
+
 #include "server.h"
 
 /* The strategy for handling incoming connections.  Some of these may be
@@ -97,36 +99,38 @@ enum run_mode {
 
 static const apr_getopt_option_t svnserve__options[] =
   {
-    {"daemon",           'd', 0, "daemon mode"},
+    {"daemon",           'd', 0, N_("daemon mode")},
     {"listen-port",       SVNSERVE_OPT_LISTEN_PORT, 1,
-     "listen port (for daemon mode)"},
+     N_("listen port (for daemon mode)")},
     {"listen-host",       SVNSERVE_OPT_LISTEN_HOST, 1,
-     "listen hostname or IP address (for daemon mode)"},
+     N_("listen hostname or IP address (for daemon mode)")},
     {"foreground",        SVNSERVE_OPT_FOREGROUND, 0,
-     "run in foreground (useful for debugging)"},
-    {"help",             'h', 0, "display this help"},
+     N_("run in foreground (useful for debugging)")},
+    {"help",             'h', 0, N_("display this help")},
     {"version",           SVNSERVE_OPT_VERSION, 0,
-     "show version information"},
-    {"inetd",            'i', 0, "inetd mode"},
-    {"root",             'r', 1, "root of directory to serve"},
-    {"read-only",        'R', 0, "deprecated; use repository config file"},
-    {"tunnel",           't', 0, "tunnel mode"},
+     N_("show version information")},
+    {"inetd",            'i', 0, N_("inetd mode")},
+    {"root",             'r', 1, N_("root of directory to serve")},
+    {"read-only",        'R', 0, N_("deprecated; use repository config file")},
+    {"tunnel",           't', 0, N_("tunnel mode")},
     {"tunnel-user",      SVNSERVE_OPT_TUNNEL_USER, 1,
-     "tunnel username (default is current uid's name)"},
+     N_("tunnel username (default is current uid's name)")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
-    {"threads",          'T', 0, "use threads instead of fork"},
+    {"threads",          'T', 0, N_("use threads instead of fork")},
 #endif
-    {"listen-once",      'X', 0, "listen once (useful for debugging)"},
+    {"listen-once",      'X', 0, N_("listen once (useful for debugging)")},
     {0,                  0,   0, 0}
   };
 
 
-static void usage(const char *progname)
+static void usage(const char *progname, apr_pool_t *pool)
 {
   if (!progname)
     progname = "svnserve";
 
-  fprintf(stderr, "Type '%s --help' for usage.\n", progname);
+  svn_error_clear (svn_cmdline_fprintf(stderr, pool,
+                                       _("Type '%s --help' for usage.\n"),
+                                       progname));
   exit(1);
 }
 
@@ -134,9 +138,9 @@ static void help(apr_pool_t *pool)
 {
   apr_size_t i;
 
-  svn_error_clear (svn_cmdline_fputs("Usage: svnserve [options]\n"
-                                     "\n"
-                                     "Valid options:\n",
+  svn_error_clear (svn_cmdline_fputs(_("Usage: svnserve [options]\n"
+                                       "\n"
+                                       "Valid options:\n"),
                                      stdout, pool));
   for (i = 0; svnserve__options[i].name && svnserve__options[i].optch; i++)
     {
@@ -272,7 +276,7 @@ int main(int argc, const char *const *argv)
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
-        usage(argv[0]);
+        usage(argv[0], pool);
       switch (opt)
         {
         case 'h':
@@ -324,13 +328,16 @@ int main(int argc, const char *const *argv)
 
         case 'R':
           params.read_only = TRUE;
-          fprintf(stderr, "Warning: -R is deprecated.\n");
-          fprintf(stderr, "Anonymous access is now read-only by default.\n");
-          fprintf(stderr, "To change, use conf/svnserve.conf in repos:\n");
-          fprintf(stderr, "  [general]\n");
-          fprintf(stderr, "  anon-access = read|write|none (default read)\n");
-          fprintf(stderr, "  auth-access = read|write|none (default write)\n");
-          fprintf(stderr, "Forcing all access to read-only for now\n");
+          svn_error_clear
+            (svn_cmdline_fprintf
+               (stderr, pool,
+                _("Warning: -R is deprecated.\n"
+                  "Anonymous access is now read-only by default.\n"
+                  "To change, use conf/svnserve.conf in repos:\n"
+                  "  [general]\n"
+                  "  anon-access = read|write|none (default read)\n"
+                  "  auth-access = read|write|none (default write)\n"
+                  "Forcing all access to read-only for now\n")));
           break;
 
         case 'T':
@@ -339,18 +346,23 @@ int main(int argc, const char *const *argv)
         }
     }
   if (os->ind != argc)
-    usage(argv[0]);
+    usage(argv[0], pool);
 
   if (params.tunnel_user && run_mode != run_mode_tunnel)
     {
-      fprintf(stderr, "Option --tunnel-user is only valid in tunnel mode.\n");
+      svn_error_clear
+        (svn_cmdline_fprintf
+           (stderr, pool,
+            _("Option --tunnel-user is only valid in tunnel mode.\n")));
       exit(1);
     }
 
   if (run_mode == run_mode_none)
     {
-      fprintf(stderr, "You must specify one of -d, -i, -t or -X.\n");
-      usage(argv[0]);
+      svn_error_clear
+        (svn_cmdline_fprintf
+           (stderr, pool, _("You must specify one of -d, -i, -t or -X.\n")));
+      usage(argv[0], pool);
     }
 
   if (run_mode == run_mode_inetd || run_mode == run_mode_tunnel)
@@ -374,8 +386,10 @@ int main(int argc, const char *const *argv)
 #endif
   if (status)
     {
-      fprintf(stderr, "Can't create server socket: %s\n",
-              apr_strerror(status, errbuf, sizeof(errbuf)));
+      svn_error_clear
+        (svn_cmdline_fprintf
+           (stderr, pool, _("Can't create server socket: %s\n"),
+            apr_strerror(status, errbuf, sizeof(errbuf))));
       exit(1);
     }
 
@@ -386,16 +400,20 @@ int main(int argc, const char *const *argv)
   status = apr_sockaddr_info_get(&sa, host, APR_INET, port, 0, pool);
   if (status)
     {
-      fprintf(stderr, "Can't get address info: %s\n",
-              apr_strerror(status, errbuf, sizeof(errbuf)));
+      svn_error_clear
+        (svn_cmdline_fprintf
+           (stderr, pool, _("Can't get address info: %s\n"),
+            apr_strerror(status, errbuf, sizeof(errbuf))));
       exit(1);
     }
 
   status = apr_socket_bind(sock, sa);
   if (status)
     {
-      fprintf(stderr, "Can't bind server socket: %s\n",
-              apr_strerror(status, errbuf, sizeof(errbuf)));
+      svn_error_clear
+        (svn_cmdline_fprintf
+           (stderr, pool, _("Can't bind server socket: %s\n"),
+            apr_strerror(status, errbuf, sizeof(errbuf))));
       exit(1);
     }
 
