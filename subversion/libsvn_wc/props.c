@@ -569,8 +569,8 @@ svn_wc__do_property_merge (svn_string_t *path,
 
             /* Append the conflict to the open tmp/PROPS/---.prej file */
             err = append_prop_conflict (reject_tmp_fp,
-                                                conflict_description,
-                                                pool);
+                                        conflict_description,
+                                        pool);
             if (err) return err;
 
             continue;  /* skip to the next update_change */
@@ -690,9 +690,12 @@ svn_wc__do_property_merge (svn_string_t *path,
         {
           /* Reserve a new .prej file *above* the SVN/ directory by
              opening and closing it. */
+          svn_string_t *reserved_path;
+          svn_string_t *full_path = svn_string_dup (path, pool);
+          svn_path_add_component (full_path, name, svn_path_local_style);
           err = svn_io_open_unique_file (&reject_fp,
-                                         &reject_path,
-                                         name,
+                                         &reserved_path,
+                                         full_path,
                                          SVN_WC__PROP_REJ_EXT,
                                          pool);
           if (err) return err;
@@ -704,7 +707,14 @@ svn_wc__do_property_merge (svn_string_t *path,
                                       reject_path->data);
           
           /* This file will be overwritten when the log is run; that's
-             ok, because at least now we have a reservation on disk. */
+             ok, because at least now we have a reservation on
+             disk. */
+
+          /* Now just get the name of the reserved file.  This is the
+             "relative" path we will use in the log entry. */
+          reject_path = svn_path_last_component (reserved_path,
+                                                 svn_path_local_style,
+                                                 pool);
         }
 
       /* We've now guaranteed that some kind of .prej file exists
