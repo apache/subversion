@@ -93,18 +93,25 @@ path_index = svntest.actions.path_index
 ######################################################################
 
 
-# Paths that the tests
-global author_rev_unexp_path
-global author_rev_exp_path
-global bogus_keywords_path
-global embd_author_rev_unexp_path
-global embd_author_rev_exp_path
-global embd_bogus_keywords_path
+# Paths that the tests test.
+author_rev_unexp_path = ''
+author_rev_exp_path = ''
+bogus_keywords_path = ''
+embd_author_rev_unexp_path = ''
+embd_author_rev_exp_path = ''
+embd_bogus_keywords_path = ''
 
 def setup_working_copy(sbox):
   """Setup a standard test working copy, then create (but do not add)
   various files for testing translation."""
   
+  global author_rev_unexp_path
+  global author_rev_exp_path
+  global bogus_keywords_path
+  global embd_author_rev_unexp_path
+  global embd_author_rev_exp_path
+  global embd_bogus_keywords_path
+
   # NOTE: Only using author and revision keywords in tests for now,
   # since they return predictable substitutions.
   
@@ -215,7 +222,7 @@ def keywords_from_birth():
   expected_output_tree = svntest.tree.build_generic_tree(output_list)
 
   if svntest.actions.run_and_verify_commit (wc_dir, expected_output_tree,
-                                            expected_status_tree, None,
+                                            None, None,
                                             None, None, None, None, wc_dir):
     return 1
 
