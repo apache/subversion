@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-01-31 19:10+0100\n"
-"PO-Revision-Date: 2005-01-31 19:18+0100\n"
+"PO-Revision-Date: 2005-01-31 23:52+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -294,11 +294,11 @@ msgstr "Po podaniu URLa mogą występować tylko względne ścieżki"
 
 #: clients/cmdline/ls-cmd.c:294
 msgid "'verbose' option invalid in XML mode"
-msgstr ""
+msgstr "Opcja 'verbose' nie jest prawidłową opcją dla trybu XML"
 
 #: clients/cmdline/ls-cmd.c:306
 msgid "'incremental' option only valid in XML mode"
-msgstr ""
+msgstr "Opcja 'incremental' jest prawidłowa tylko w trybie XML"
 
 #: clients/cmdline/main.c:62
 msgid "force operation to run"
@@ -4448,9 +4448,9 @@ msgid "Config error: invalid boolean value '%s'"
 msgstr "Błąd w pliku konfiguracyjnym: niewłaściwa wartość typu boolean '%s'"
 
 #: libsvn_subr/config.c:807
-#, fuzzy, c-format
+#, c-format
 msgid "Config error: invalid integer value '%s'"
-msgstr "Błąd składniowy w nazwie native-eol '%s'"
+msgstr "Błąd w pliku konfiguracyjnym: niewłaściwa wartość typu integer '%s'"
 
 #: libsvn_subr/config_auth.c:94
 msgid "Unable to open auth file for reading"
@@ -4580,14 +4580,14 @@ msgid "Can't set access time of '%s'"
 msgstr "Nie można ustawić informacji o czasie dostępu  do '%s'"
 
 #: libsvn_subr/io.c:953
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set file '%s' read-only"
-msgstr "Nie można zamknąć katalogu '%s'"
+msgstr "Nie można ustawić atrybutu 'tylko do odczytu' dla pliku '%s'"
 
 #: libsvn_subr/io.c:978
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set file '%s' read-write"
-msgstr "Nie można zamknąć katalogu '%s'"
+msgstr "Nie można ustawić atrybutu 'do zapisu i odczytu' dla pliku '%s'"
 
 #: libsvn_subr/io.c:1033 libsvn_subr/io.c:1077 libsvn_subr/io.c:1101
 #, fuzzy, c-format
@@ -4595,9 +4595,8 @@ msgid "Can't change executability of file '%s'"
 msgstr "Nie można założyć blokady na pliku '%s'"
 
 #: libsvn_subr/io.c:1128
-#, fuzzy
 msgid "Error getting UID of process"
-msgstr "Błąd podczas czekania na proces '%s'"
+msgstr "Błąd pobierania UID procesu"
 
 #: libsvn_subr/io.c:1209
 #, c-format
@@ -4913,9 +4912,9 @@ msgid "Couldn't determine absolute path of '%s'"
 msgstr "Nie można ustalić absolutnej ścieżki '%s'"
 
 #: libsvn_subr/path.c:1109
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is neither a file nor a directory name"
-msgstr "'%s' nie jest plikiem ani katalogiem"
+msgstr "'%s' nie jest ani nazwą pliku ani katalogu"
 
 #: libsvn_subr/path.c:1215
 msgid "Can't determine the native path encoding"
