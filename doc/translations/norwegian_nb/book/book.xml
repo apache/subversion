@@ -23,8 +23,8 @@
 <!ENTITY colo     SYSTEM "colo.xml">
 ]>
 
-  <book id="svn">
-  <title>Version Control with Subversion</title>
+  <book id="svn" lang="no">
+  <title>Versjonskontroll med Subversion</title>
 
   <!-- Using revnumber would be more appropriate, but our stylesheets -->
   <!-- don't seem to render it. -->
@@ -32,7 +32,7 @@
 
   <bookinfo>
 
-    <edition>First</edition>
+    <edition>F&#248;rste</edition>
     <isbn>0-59600-448-6</isbn>
     <authorgroup>
 
@@ -58,7 +58,7 @@
       <surname>Mui</surname>
     </editor>
 
-    <pagenums>350 pages (est.)</pagenums>
+    <pagenums>350 sider (ca.)</pagenums>
     <pubdate>(TBA)</pubdate>
 
     <copyright>
@@ -70,17 +70,19 @@
       <holder>C. Michael Pilato</holder>
     </copyright>
 
-      <legalnotice><para>This work is licensed under the Creative
-        Commons Attribution License. To view a copy of this license,
-        visit http://creativecommons.org/licenses/by/2.0/ or send a
-        letter to Creative Commons, 559 Nathan Abbott Way, Stanford,
-        California 94305, USA.</para></legalnotice>
+      <legalnotice>
+        <para>
+          Dette verket er lisensiert under Creative Commons Attribution License.
+          For &#229; se en kopi av denne lisensen, g&#229; til http://creativecommons.org/licenses/by/2.0/ eller send et brev til Creative Commons, 559 Nathan Abbott Way, Stanford, California 94305, USA.
+        </para>
+      </legalnotice>
 
   </bookinfo>
 
   <!-- External entity refs -->
 
   &foreword;
+  <!-- CO {{{
   &ch00;
   &ch01;
   &ch02;
@@ -91,11 +93,15 @@
   &ch07;
   &ch08;
   &ch09;
+  }}} -->
   &appa;
+  <!-- CO {{{
   &appb;
   &appc;
   &appd;
   &license;
   &colo;
+  }}} -->
 
   </book>
+  <!-- vim: set textwidth=0 wrap expandtab shiftwidth=2 tabstop=2 softtabstop=2 fileencoding=utf8 : -->
