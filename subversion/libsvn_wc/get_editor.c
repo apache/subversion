@@ -479,13 +479,17 @@ replace_root (void *edit_baton,
 static svn_error_t *
 delete (svn_string_t *name, void *parent_baton)
 {
-#if 0
   struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
-#endif /* 0 */
-
-  /* kff todo */
-
-  return SVN_NO_ERROR;
+  
+  return svn_wc__entry_merge (parent_dir_baton->path, 
+                              name,
+                              SVN_INVALID_VERNUM,
+                              0, /* kff todo: kind irrelevant, fix interface */
+                              parent_dir_baton->pool,
+                              SVN_WC__ENTRIES_ATTR_DELETE,
+                              svn_string_create ("true",
+                                                 parent_dir_baton->pool),
+                              NULL);
 }
 
 

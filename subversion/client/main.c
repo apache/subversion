@@ -211,13 +211,15 @@ parse_options (int argc,
       fprintf (stderr, "%s: \"--force\" meaningless except for delete\n", s);
       exit (1);
     }
-  if ((*command == commit_command) && (*version == SVN_INVALID_VERNUM))
+  if (((*command == commit_command) && (*version == SVN_INVALID_VERNUM))
+      || ((*command == update_command) && (*version == SVN_INVALID_VERNUM)))
     {
       fprintf (stderr, "%s: please use \"--version VER\" "
                "to specify target version\n", s);
       exit (1);
     }
-  if ((*command == checkout_command) && (*target == NULL))
+  if (((*command == checkout_command) || (*command == update_command))
+      && (*target == NULL))
     *target = svn_string_create (".", pool);
 }
 
@@ -248,7 +250,7 @@ main (int argc, char **argv)
                                  ancestor_path, version, pool);
       break;
     case update_command:
-      err = svn_client_update (target, xml_file, pool);
+      err = svn_client_update (target, xml_file, version, pool);
       break;
     case add_command:
       err = svn_client_add (target, pool);
