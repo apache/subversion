@@ -87,7 +87,7 @@ typedef struct clone_path_t clone_path_t;
    It's really not safe to use a given svn_fs_node_t within the
    context of two Berkeley DB transactions simultanously.  */
 
-struct svn_fs_node_t
+struct svn_fs_root_t
 {
 
   /* What filesystem does this node belong to?  */
@@ -96,9 +96,6 @@ struct svn_fs_node_t
   /* All data belonging to this node is allocated in this pool.  Destroying
      this pool will correctly free all resources the node holds.  */
   apr_pool_t *pool;
-
-  /* What kind of node is this?  */
-  enum svn_node_kind kind;
 
   /* For transaction nodes, the name of that transaction, allocated in
      POOL.  For revision nodes, this is zero.  */
@@ -110,15 +107,6 @@ struct svn_fs_node_t
 
   /* For transaction nodes, non-zero if the node has been cloned.  */
   int is_cloned;
-
-  /* For uncloned transaction nodes, this is the path from the node to
-     the root of the transaction's base revision --- the nodes we need
-     to clone to change this one.
-
-     If we turn a node from uncloned to cloned as part of some
-     Berkeley DB transaction, this continues to be valid at least
-     until that transaction has been successfully committed.  */
-  clone_path_t *clone_path;
 
   /* The DAG node itself.  Well, our best guess, anyway:
      - For revision nodes and cloned transaction nodes, this is
@@ -146,21 +134,21 @@ struct svn_fs_node_t
 /* Internal node operations.  */
 
 
-/* Return a new, partially initialized node object in FS, allocated
+/* Return a new, partially initialized root object in FS, allocated
    from POOL.  */
-static svn_fs_node_t *
-new_node_object (svn_fs_t *fs,
+static svn_fs_root_t *
+new_root_object (svn_fs_t *fs,
                  apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_fs_node_t *node = apr_pcalloc (subpool, sizeof (*node));
+  svn_fs_root_t *root = apr_pcalloc (subpool, sizeof (*root));
+  /* xbc FIXME: Why are we creating a subpool for each root object? */
 
-  node->fs = fs;
-  node->pool = pool;
-  node->kind = svn_node_unknown;
-  node->rev = -1;
+  root->fs = fs;
+  root->pool = pool;
+  root->rev = -1;
 
-  return node;
+  return root;
 }
 
 
@@ -518,22 +506,26 @@ svn_fs_close_node (svn_fs_node_t *node)
 
 
 int
-svn_fs_node_is_dir (svn_fs_node_t *node)
+svn_fs_is_dir  (svn_fs_root_t *root,
+                const char *path)
 {
   return node->kind == svn_node_dir;
 }
 
 
 int
-svn_fs_node_is_file (svn_fs_node_t *node)
+svn_fs_is_file (svn_fs_root_t *root,
+                const char *path)
 {
   return node->kind == svn_node_file;
 }
 
 
-svn_fs_id_t *
-svn_fs_get_node_id (svn_fs_node_t *node,
-                    apr_pool_t *pool)
+svn_error_t *
+svn_fs_node_id (svn_fs_id_t **id_p,
+                svn_fs_root_t *root,
+                const char *path,
+                apr_pool_t *pool)
 {
   /* We could call `check_for_clone' here, but there's not much point,
      as the node could get cloned by another process as soon as we
@@ -602,10 +594,11 @@ txn_body_get_node_prop (void *baton,
 
 
 svn_error_t *
-svn_fs_get_node_prop (svn_string_t **value_p,
-                      svn_fs_node_t *node,
-                      svn_string_t *propname,
-                      apr_pool_t *pool)
+svn_fs_node_prop (svn_string_t **value_p,
+                  svn_fs_root_t *root,
+                  const char *path,
+                  svn_string_t *propname,
+                  apr_pool_t *pool)
 {
   struct get_node_prop_args args;
   svn_string_t *value;
@@ -622,9 +615,10 @@ svn_fs_get_node_prop (svn_string_t **value_p,
 
 
 svn_error_t *
-svn_fs_get_node_proplist (apr_hash_t **table_p,
-                          svn_fs_node_t *node,
-                          apr_pool_t *pool)
+svn_fs_node_proplist (apr_hash_t **table_p,
+                      svn_fs_root_t *root,
+                      const char *path,
+                      apr_pool_t *pool)
 {
   abort ();
 }
@@ -686,7 +680,8 @@ txn_body_change_node_prop (void *baton,
 
 
 svn_error_t *
-svn_fs_change_node_prop (svn_fs_node_t *node,
+svn_fs_change_node_prop (svn_fs_root_t *root,
+                         const char *path,
                          svn_string_t *name,
                          svn_string_t *value,
                          apr_pool_t *pool)
@@ -706,9 +701,12 @@ svn_fs_change_node_prop (svn_fs_node_t *node,
 
 svn_error_t *
 svn_fs_merge (const char **conflict_p,
-              svn_fs_node_t *source,
-              svn_fs_node_t *target,
-              svn_fs_node_t *ancestor,
+              svn_fs_root_t *source_root,
+              const char *source_path,
+              svn_fs_root_t *target_root,
+              const char *target_path,
+              svn_fs_root_t *ancestor_root,
+              const char *ancestor_path,
               apr_pool_t *pool)
 {
   abort ();
@@ -749,18 +747,9 @@ traverse_to_parent (svn_fs_node_t **parent_p,
 
 
 svn_error_t *
-svn_fs_open_node (svn_fs_node_t **child_p,
-                  svn_fs_node_t *parent,
-                  const char *path,
-                  apr_pool_t *pool)
-{
-  abort ();
-}
-
-
-svn_error_t *
 svn_fs_dir_entries (apr_hash_t **table_p,
-                    svn_fs_node_t *dir,
+                    svn_fs_root_t *root,
+                    const char *path,
                     apr_pool_t *pool)
 {
   abort ();
@@ -768,7 +757,7 @@ svn_fs_dir_entries (apr_hash_t **table_p,
 
 
 svn_error_t *
-svn_fs_make_dir (svn_fs_node_t *parent,
+svn_fs_make_dir (svn_fs_root_t *root,
                  const char *path,
                  apr_pool_t *pool)
 {
@@ -778,7 +767,7 @@ svn_fs_make_dir (svn_fs_node_t *parent,
 
 struct delete_args
 {
-  svn_fs_node_t *parent;
+  svn_fs_root_t *root;
   const char *path;
 };
 
@@ -789,31 +778,29 @@ txn_body_delete (void *baton,
 {
   struct delete_args *args = baton;
   const char *entry_name;
-  svn_fs_node_t *immediate_parent;
+  dag_node_t *parent;
+  dag_node_t *child;
 
-  SVN_ERR (traverse_to_parent (&immediate_parent, &entry_name, args->parent,
-                               args->path, trail));
+  SVN_ERR (svn_fs__dag_open_path (&child, &parent, &entry_name,
+                                  args->root, args->path, trail));
+  svn_fs__dag_close (child);
 
-  /* Make sure the entry actually exists before we clone everything.  */
-  {
-    dag_node_t *child;
-
-    SVN_ERR (svn_fs__dag_open (&child, immediate_parent->dag_node, entry_name,
-                               trail));
-    svn_fs__dag_close (child);
-  }
+  /* We can't remove the root of the filesystem. */
+  if (parent == NULL)
+    return svn_err_create (SVN_ERR_FS_NOT_MUTABLE, 0, NULL, trail->pool,
+                           "attemptng to delete the root directory");
 
   /* We have a bug here: we'll happily delete non-empty directories,
      if they're shared with the base revision.  */
-  SVN_ERR (make_clone (immediate_parent, trail));
-  SVN_ERR (svn_fs__dag_delete (immediate_parent->dag_node, entry_name, trail));
+  SVN_ERR (make_clone (parent, trail));
+  SVN_ERR (svn_fs__dag_delete (parent, entry_name, trail));
 
   return 0;
 }
 
 
 svn_error_t *
-svn_fs_delete (svn_fs_node_t *parent,
+svn_fs_delete (svn_fs_root_t *root,
                const char *path,
                apr_pool_t *pool)
 {
@@ -828,7 +815,7 @@ svn_fs_delete (svn_fs_node_t *parent,
 
 
 svn_error_t *
-svn_fs_delete_tree (svn_fs_node_t *parent,
+svn_fs_delete_tree (svn_fs_root_t *root,
                     const char *path,
                     apr_pool_t *pool)
 {
@@ -837,10 +824,9 @@ svn_fs_delete_tree (svn_fs_node_t *parent,
 
 
 svn_error_t *
-svn_fs_rename (svn_fs_node_t *old_parent,
-               const char *old_path,
-               svn_fs_node_t *new_parent,
-               const char *new_path,
+svn_fs_rename (svn_fs_root_t *root,
+               const char *from,
+               const char *to,
                apr_pool_t *pool)
 {
   abort ();
@@ -849,9 +835,10 @@ svn_fs_rename (svn_fs_node_t *old_parent,
 
 
 svn_error_t *
-svn_fs_copy (svn_fs_node_t *parent,
-             const char *path,
-             svn_fs_node_t *child,
+svn_fs_copy (svn_fs_root_t *from_root,
+             const char *from_path,
+             svn_fs_root_t *to_root,
+             const char *to_path,
              apr_pool_t *pool)
 {
   abort ();
@@ -863,23 +850,21 @@ svn_fs_copy (svn_fs_node_t *parent,
 
 
 svn_error_t *
-svn_fs__txn_root_node (svn_fs_node_t **root_p,
+svn_fs__txn_root_node (svn_fs_root_t **root_p,
                        svn_fs_t *fs,
                        const char *txn,
                        trail_t *trail)
 {
   svn_fs_id_t *root_id, *base_root_id;
   dag_node_t *dag_root;
-  svn_fs_node_t *root;
+  svn_fs_root_t *root;
 
   SVN_ERR (svn_fs__get_txn (&root_id, &base_root_id, fs, txn, trail));
   SVN_ERR (svn_fs__dag_txn_node (&dag_root, fs, txn, root_id, trail));
 
-  root = new_node_object (fs, trail->pool);
-  root->kind = svn_node_dir;
+  root = new_root_object (fs, trail->pool);
   root->txn = apr_pstrdup (root->pool, txn);
   root->is_cloned = ! svn_fs_id_eq (root_id, base_root_id);
-  root->clone_path = 0;         /* accurate in either case */
   root->dag_node = dag_root;
 
   *root_p = root;
