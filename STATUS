@@ -30,13 +30,6 @@ Candidate changes:
     Votes:
       +1: jaa, sussman
 
-  * r11202, r11243
-    Fix eol-style translation error for propget.
-    Justification:
-      Simple fix.
-    Votes:
-      +1: lundblad, brane, bliss
-
   * r11190
     Make it possible to set SVNPathAuthz to Off.
     Justification:
