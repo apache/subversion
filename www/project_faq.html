@@ -74,9 +74,8 @@
     get errors <tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.  What's wrong?</a></li>
 <li><a href="#windows-msvc-build">I'm having trouble building
     Subversion under Windows with MSVC++ 6.0.  What should I do?</a></li>
-<li><a href="#windows-repository">I'm running Subversion under windows
-    and I can create a repository fine, but I get errors trying to
-    import or check out from it.  What's wrong?</a></li>
+<li><a href="#windows-drive-letter">How can I specify a Windows drive letter in
+a <tt>file:</tt> URL?</a></li>
 <li><a href="#write-over-dav">I'm having trouble doing write
     operations to a Subversion repository over a network.</a></li>
 <li><a href="#windows-xp-server">Under Windows XP, the Subversion
@@ -970,22 +969,16 @@ ships with VC++ 6.0 is not recent enough.
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3>I'm running Subversion under windows and I can create a repository
-fine, but <a name="windows-repository">I get errors trying to import
-or check out from it.  What's wrong?</a></h3>
+<h3><a name="windows-drive-letter">How can I specify a Windows drive letter in
+a <tt>file:</tt> URL?</a></h3>
 
-<p>If the error looks something like:
+<p>Like this:</p>
 <pre>
-svn_error: #21085 : <URL is not a versioned resource>
-  svn_ra_local__split_URL: Unable to find valid repository
+svn import file:///d:/some/path/to/repos/on/d/drive
 </pre>
-Then the problem is that Subversion doesn't yet handle file URLs that have a
-drive specification.  Try changing to that drive then doing an import without
-the drive spec.  For example:
-<pre>
-d:
-svn import file:///some/path/to/repos/on/d/drive e:\file\to\be\imported
-</pre>
+<p>See <a
+href="http://svnbook.red-bean.com/html-chunk/ch02s03.html#svn-ch-2-sidebar-1">
+Repository URLs</a> in the Subversion Book for more details.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 

@@ -51,9 +51,8 @@
         </listitem>
 
         <listitem>
-          <para>I'm running Subversion under Windows and I can create
-            a repository fine, but I get errors trying to import or
-            check out from it.</para>
+          <para>How can I specify a Windows drive letter in a
+            <literal>file://</literal> URL?</para>
         </listitem>
 
         <listitem>
@@ -171,26 +170,10 @@ $ svn cleanup working-copy
 
 
         <sect3 id="svn-ap-c-sect-1.2.4">
-          <title>I'm Running Subversion Under Windows and I Can Create
-            a Repository Fine, but I Get Errors Trying to Import or
-            Check Out from It.</title>
+          <title>How can I specify a Windows drive letter in a
+            <literal>file://</literal> URL?</title>
 
-          <para>If the error looks something like:</para>
-
-          <screen>
-svn_error: #21085 : 
-  svn_ra_local__split_URL: Unable to find valid repository
-          </screen>
-
-          <para>Then the problem is that Subversion doesn't handle
-          file URLs that have a drive specification. Try changing to
-          that drive then doing an import without the drive spec. For
-          example:</para>
-
-          <screen>
-d: 
-svn import e:\file\to\be\imported file:///some/path/to/repos/on/d/drive
-          </screen>
+          <para>See <xref linkend="svn-ch-02-sidebar-1"/>.</para>
         </sect3>
 
         <sect3 id="svn-ap-c-sect-1.2.5">
