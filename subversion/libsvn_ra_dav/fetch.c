@@ -183,7 +183,9 @@ static const struct ne_xml_elm report_elements[] =
 static svn_stringbuf_t *my_basename(const char *url, apr_pool_t *pool)
 {
   /* ### be nice to lose the stringbuf portion */
-  return svn_stringbuf_create(svn_path_basename(url, pool), pool);
+  const char *bname = svn_path_basename(url, pool);
+  bname = svn_path_uri_decode(bname, pool);
+  return svn_stringbuf_create(bname, pool);
 }
 
 /* ### fold this function into store_vsn_url; not really needed */
@@ -688,7 +690,6 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
                                       apr_pool_t *pool)
 {
   file_read_ctx_t frc = { 0 };
-  const char *encoded_url = svn_path_uri_encode (url, pool);
 
   SVN_ERR_W( (*editor->apply_textdelta)(file_baton,
                                         &frc.handler,
@@ -704,7 +705,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 
   frc.pool = pool;
 
-  SVN_ERR( custom_get_request(sess, encoded_url, relpath,
+  SVN_ERR( custom_get_request(sess, url, relpath,
                               fetch_file_reader, &frc,
                               get_rev, get_wc_prop, cb_baton, pool) );
 
@@ -846,18 +847,14 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
 {
   svn_ra_dav_resource_t *rsrc;
   apr_hash_index_t *hi;
-  svn_stringbuf_t *url_str;
   const char *final_url;
   svn_ra_session_t *ras = (svn_ra_session_t *) session_baton;
-
-  /* First, create the full URL that the user wants to get. */
-  url_str = svn_stringbuf_create (ras->url, ras->pool);
-  svn_path_add_component_nts (url_str, path);
+  const char *url = svn_path_url_add_component (ras->url, path, ras->pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
      the public URL, because that will always get HEAD. */
   if ((! SVN_IS_VALID_REVNUM(revision)) && (fetched_rev == NULL))
-    final_url = url_str->data;
+    final_url = url;
 
   /* If the revision is something specific, we need to create a bc_url. */
   else
@@ -870,7 +867,7 @@ svn_error_t *svn_ra_dav__get_file(void *session_baton,
                                              &bc_url, &bc_relative,
                                              &got_rev,
                                              ras->sess,
-                                             url_str->data, revision,
+                                             url, revision,
                                              ras->pool));
 
       final_bc_url = svn_stringbuf_create_from_string(&bc_url, ras->pool);

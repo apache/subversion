@@ -314,6 +314,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc)
     relative = mc->href->data + mc->base_len + 1;
 
   /* bump the resource */
+  relative = svn_path_uri_decode (relative, mc->pool);
   return bump_resource(mc, relative, mc->vsn_url->data);
 }
 

@@ -1788,7 +1788,9 @@ close_edit (void *edit_baton)
     {
       /* Make sure our update target now has the new working revision.
          Also, if this was an 'svn switch', then rewrite the target's
-         url.  All of this tweaking might happen recursively! */
+         url.  All of this tweaking might happen recursively!  Note
+         that if eb->target is NULL, that's okay (albeit "sneaky",
+         some might say).  */
       SVN_ERR (svn_wc__do_update_cleanup
                (svn_path_join_many (eb->pool, eb->anchor, eb->target, NULL),
                 eb->recurse,
