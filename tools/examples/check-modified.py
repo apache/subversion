@@ -31,7 +31,7 @@ def run(files):
     try:
       entry = svn.wc.svn_wc_entry(fullpath, adm_baton, 0, pool)
 
-      if svn.wc.svn_wc_text_modified_p(fullpath, adm_baton, pool):
+      if svn.wc.svn_wc_text_modified_p(fullpath, False, adm_baton, pool):
         print "M      %s" % f
       else:
         print "       %s" % f
