@@ -1592,13 +1592,122 @@ close LASTDUMPED;
     <sect2 id="svn-ch-5-sect-3.5">
       <title>Repository Backup</title>
 
-      <para>###TODO: Write this.  Talk about
-        <command>hot-backup.py</command>, and use of <command>svnadmin
-        dump --incremental</command> +
-        <literal>post-revprop-change</literal> hooks (since the
-        versioned props might differ from what was incrementally
-        dumped).  Also, discuss pros and cons of keeping full repo
-        backups vs. per-commit ones.</para>
+      <para>Despite numerous advances in technology since the birth of
+        the modern computer, one thing unfortunately rings true with
+        crystalline clarity&mdash;sometimes, things go very, very
+        awry.  Power outages, network connectivity dropouts, corrupt
+        RAM and crashed hard drives are but a taste of the evil that
+        Fate is poised to unleash on even the most conscientious
+        administrator.  And so we arrive at a very important
+        topic&mdash;how to make backup copies your repository
+        data.</para>
+
+      <para>There are generally two types of backup methods available
+        for Subversion repository administrators&mdash;incremental and
+        full.  We discussed in an earlier section of this chapter how
+        to use <command>svnadmin dump --incremental</command> to
+        perform an incremental backup (see <xref
+        linkend="svn-ch-5-sect-3.4" />).  Essentially, the idea is to
+        only backup at a given time the changes to the repository
+        since the last time you made a backup.</para>
+
+      <para>A full backup of the repository is quite literally a
+        duplication of the entire repository directory (which includes
+        the Berkeley database environment).  Now, unless you
+        temporarily disable all other access to your repository,
+        simply doing a recursive directory copy runs the risk of
+        generating a defunct backup, since someone might be currently
+        writing to the database.</para>
+
+      <para>Fortunately, Sleepycat's Berkeley DB documents describe a
+        certain order in which database files can be copied which will
+        guarantee a valid backup copy.  And better still, you don't
+        have to implement that algorithm yourself, because the
+        Subversion development team has already done so.  The
+        <command>hot-backup.py</command> script is found in the
+        <filename>tools/backup/</filename> directory of the Subversion
+        source distribution.  Given a repository path and a backup
+        location, <command>hot-backup.py</command> will perform the
+        necessary steps for backing up your live
+        repository&mdash;without requiring that you bar public
+        repository access at all&mdash;and then will clean out the
+        dead Berkeley logfiles from your live repository.</para>
+
+      <para>Even if you also have an incrementalyou might want to run
+        this program on a regular basis.  For example, you might
+        consider adding <command>hot-backup.py</command> to a program
+        scheduler (such as <command>crond</command> on Unix systems).
+        Or, if you prefer fine-grained backup solutions, you could
+        have your post-commit hook script call
+        <command>hot-backup.py</command> (see <xref
+        linkend="svn-ch-5-sect-2.1" />), which will then cause a new
+        backup of your repository to occur with every new revision
+        created.  Simply add the following to the
+        <filename>hooks/post-commit</filename> script in your live
+        repository directory:</para>
+
+      <programlisting>
+(cd /path/to/hook/scripts; ./hot-backup.py ${REPOS} /path/to/backups &)
+</programlisting>
+
+      <para>The resulting backup is a fully functional Subversion
+        repository, able to be dropped in as a replacement for your
+        live repository should something go horribly wrong.</para>
+
+      <para>There are benefits to both types of backup methods.  The
+        easiest is by far the full backup, which will always result in
+        a perfect working replica of your repository.  This again
+        means that should something bad happen to your live
+        repository, you can restore from the backup with a simple
+        recursive directory copy.  Unfortunately, if you are
+        maintaining multiple backups of your repository, these full
+        copies will each eat up just as much disk space as your live
+        repository.</para>
+
+      <para>Incremental backups using the repository dump format are
+        excellent to have on hand if the database schema changes
+        between successive versions of Subversion itself.  Since a
+        full repository dump and load are generally required to
+        upgrade your repository to the new schema, it's very
+        convenience to already have half of that process (the dump
+        part) finished.  Unfortunately, the creation of&mdash;and
+        restoration from&mdash;incremental backups takes longer, as
+        each commit is effectively replayed into either the dumpfile
+        or the repository.</para>
+
+      <para>In either backup scenario, repository administrators need
+        to be aware of how modifications to unversioned revision
+        properties affect their backups.  Since these changes do not
+        themselves generate new revisions, they will not trigger
+        post-commit hooks, and may not even trigger the
+        pre-revprop-change and post-revprop-change hooks.
+        <footnote>
+          <para><command>svnadmin setlog</command>, for example,
+            bypasses the hook interface altogether.</para>
+        </footnote>  
+        And since you can change revision properties without respect
+        to chronological order&mdash;you can change any revision's
+        properties at any time&mdash;an incremental backup of the
+        latest few revisions might not catch a property modification
+        to a revision that was included as part of a previous 
+        backup.</para>
+
+      <para>Often, the best approach to repository backups is a
+        diversified one.  You can leverage combinations of full and
+        incremental backups, plus archives of commit emails.  The
+        Subversion developers, for example, back up the Subversion
+        source code repository after every new revision is created,
+        and keep an archive of all the commit and property change
+        notification emails.  Your solution might be similar, but
+        should be catered to your needs and that delicate balance of
+        convenience with paranoia.  And while all of this might not
+        save your hardware from the iron fist of Fate,
+        <footnote>
+          <para>You know&mdash;the collective term for all of her
+            <quote>fickle fingers</quote>.</para>
+        </footnote>
+        it should certainly help you recover from those trying 
+        times.</para>
 
     </sect2>
   </sect1>
