@@ -81,17 +81,12 @@ svn_cl__help (apr_getopt_t *os,
   int i;
 
   if (os)
-    targets = svn_cl__args_to_target_array (os, opt_state, FALSE, pool);
+    SVN_ERR (svn_cl__parse_all_args (&targets, os, opt_state, "help", pool));
 
   if (targets && targets->nelts)  /* help on subcommand(s) requested */
     for (i = 0; i < targets->nelts; i++)
       {
-        const char *this = (((const char **) (targets)->elts))[i];
-        const char *this_native;
-        /* This is a bit silly, but svn_cl__args_to_target_array()
-           converts the args to UTF-8, so we have to convert them back. */
-        SVN_ERR (svn_utf_cstring_from_utf8 (this, &this_native, pool));
-        svn_cl__subcommand_help (this_native, pool);
+        svn_cl__subcommand_help (((const char **) (targets->elts))[i], pool);
       }
   else if (opt_state && opt_state->version)  /* just -v or --version */
     SVN_ERR (print_version_info (pool));        

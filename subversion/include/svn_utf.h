@@ -35,6 +35,13 @@ svn_error_t *svn_utf_stringbuf_to_utf8 (const svn_stringbuf_t *src,
                                         apr_pool_t *pool);
 
 
+/* Set *DEST to a utf8-encoded string from native string SRC; allocate
+   *DEST in POOL. */
+svn_error_t *svn_utf_string_to_utf8 (const svn_string_t *src,
+                                     const svn_string_t **dest,
+                                     apr_pool_t *pool);
+
+
 /* Set *DEST to a utf8-encoded stringbuf from native C string SRC;
    allocate *DEST in POOL. */
 svn_error_t *svn_utf_cstring_to_utf8_stringbuf (const char *src,

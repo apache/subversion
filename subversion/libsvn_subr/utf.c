@@ -183,6 +183,22 @@ svn_utf_stringbuf_to_utf8 (const svn_stringbuf_t *src,
 
 
 svn_error_t *
+svn_utf_string_to_utf8 (const svn_string_t *src,
+                        const svn_string_t **dest,
+                        apr_pool_t *pool)
+{
+  svn_stringbuf_t *destbuf;
+  apr_xlate_t *convset;
+  /* Get a converter from the native character encoding to UTF-8 */
+  SVN_ERR (get_ntou_xlate_handle (&convset, pool));
+  SVN_ERR (convert_to_stringbuf (convset, src->data, src->len, 
+                                 &destbuf, pool));
+  *dest = svn_string_create_from_buf (destbuf, pool);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_utf_cstring_to_utf8_stringbuf (const char *src,
                                    svn_stringbuf_t **dest,
                                    apr_pool_t *pool)
@@ -345,6 +361,17 @@ svn_utf_stringbuf_to_utf8 (const svn_stringbuf_t *src,
 {
   SVN_ERR (check_non_ascii (src->data, src->len, pool));
   *dest = svn_stringbuf_dup (src, pool);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_utf_string_to_utf8 (const svn_string_t *src,
+                        const svn_string_t **dest,
+                        apr_pool_t *pool)
+{
+  SVN_ERR (check_non_ascii (src, strlen (src), pool));
+  *dest = svn_string_dup (src, pool);
   return SVN_NO_ERROR;
 }
 

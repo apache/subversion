@@ -37,34 +37,36 @@ svn_cl__export (apr_getopt_t *os,
                 svn_cl__opt_state_t *opt_state,
                 apr_pool_t *pool)
 {
-  svn_client_auth_baton_t *auth_baton;
   svn_wc_notify_func_t notify_func = NULL;
   void *notify_baton = NULL;
   const char *from, *to;
- 
-  SVN_ERR (svn_cl__parse_all_args (os, opt_state, "export", pool));
+  apr_array_header_t *targets;
 
-  /* Put commandline auth info into a baton for libsvn_client.  */
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
+  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
+                                         FALSE, pool));
 
-  if (opt_state->args->nelts == 1) 
-    svn_path_split_nts(((const char **) (opt_state->args->elts))[0], NULL, &to, pool);
-  else if (opt_state->args->nelts == 2) 
-    to = ((const char **) (opt_state->args->elts))[1];
-  else
+  /* We want exactly 1 or 2 targets for this subcommand. */
+  if ((targets->nelts < 1) || (targets->nelts > 2))
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
+  
+  /* The first target is the `from' path. */
+  from = ((const char **) (targets->elts))[0];
 
-  from = ((const char **) (opt_state->args->elts))[0];
-
-  auth_baton = svn_cl__make_auth_baton (opt_state, pool);
+  /* If only one target was given, split off the basename to use as
+     the `to' path.  Else, a `to' path was supplied. */
+  if (targets->nelts == 1) 
+    to = svn_path_basename (from, pool);
+  else
+    to = ((const char **) (targets->elts))[1];
 
   if (! opt_state->quiet)
     svn_cl__get_notifier (&notify_func, &notify_baton, TRUE, FALSE, pool);
 
+  /* Do the export. */
   SVN_ERR (svn_client_export (from,
                               to,
                               &(opt_state->start_revision),
-                              auth_baton,
+                              svn_cl__make_auth_baton (opt_state, pool),
                               notify_func,
                               notify_baton,
                               pool));

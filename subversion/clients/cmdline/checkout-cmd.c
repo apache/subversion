@@ -40,8 +40,10 @@ svn_cl__checkout (apr_getopt_t *os,
 {
   int i;
   svn_client_auth_baton_t *auth_baton;
-  
-  SVN_ERR (svn_cl__parse_all_args (os, opt_state, "checkout", pool));
+  apr_array_header_t *targets;
+
+  SVN_ERR (svn_cl__args_to_target_array (&targets, os, opt_state, 
+                                         FALSE, pool));
   
   /* Put commandline auth info into a baton for libsvn_client.  */
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
@@ -63,7 +65,8 @@ svn_cl__checkout (apr_getopt_t *os,
          B/dog
          B/pig
 
-     If I do 'cvs -d :pserver:fitz@subversion.tigris.org:/cvs co -d foo A', I get the following:
+     If I do 'cvs -d :pserver:fitz@subversion.tigris.org:/cvs co -d foo A', 
+     I get the following:
 
          foo/one_mississippi.txt
          foo/two_mississippi.txt
@@ -81,15 +84,15 @@ svn_cl__checkout (apr_getopt_t *os,
       
     Makes sense, right? Right. Note that we have no provision for this
     right now and we need to support it. My vote is that we stop
-    iterating over opt_state->args here and just pass the args into
+    iterating over targets here and just pass the args into
     svn_client_checkout and let it decide what to do based on
     (args->nelts == 1) or (args->nelts > 1). -Fitz
 
    */
-  for (i = 0; i < opt_state->args->nelts; i++)
+  for (i = 0; i < targets->nelts; i++)
     {
       const char *local_dir;
-      const char *repos_url = ((const char **) (opt_state->args->elts))[0];
+      const char *repos_url = ((const char **) (targets->elts))[0];
 
       /* Canonicalize the URL. */
       /* ### um. this function isn't really designed for URLs... */
