@@ -224,7 +224,7 @@ REGEDIT4
 "#ssl-client-cert-password"=""
 
 [HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\auth]
-"#store-password"="no"
+"#store-auth-creds"="no"
 
 [HKEY_CURRENT_USER\Software\Tigris.org\Subversion\Config\helpers]
 "#editor-cmd"="notepad"
@@ -413,17 +413,20 @@ collabnet = svn.collab.net
 
         <variablelist>
           <varlistentry>
-            <term><literal>store-password</literal></term>
+            <term><literal>store-auth-creds</literal></term>
             <listitem>
               <para>This instructs Subversion to cache, or not to
-                cache, passwords that are supplied by the user in
-                response to server authentication challenges.  The
-                default value is <literal>yes</literal>.  Set this to
-                <literal>no</literal> to disable this on-disk password
-                caching.  You can override this option for a single
-                instance of the <command>svn</command> command using
-                the <option>--no-auth-cache</option> command-line
-                parameter (for those subcommands that support it).</para>
+                cache, authentication credentials that are supplied by
+                the user in response to server authentication
+                challenges.  The default value is
+                <literal>yes</literal>.  Set this to
+                <literal>no</literal> to disable this on-disk
+                credential caching.  You can override this option for
+                a single instance of the <command>svn</command>
+                command using the <option>--no-auth-cache</option>
+                command-line parameter (for those subcommands that
+                support it).  For more information, see <xref
+                linkend="svn-ch-6-sect-2.2"/>.</para>
             </listitem>
           </varlistentry>
         </variablelist>
