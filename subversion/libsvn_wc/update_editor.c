@@ -716,6 +716,49 @@ open_root (void *edit_baton,
 }
 
 
+/* Helper for delete_entry().
+
+   Search an error chain (ERR) for evidence that a local mod was left.
+   If so, cleanup LOGFILE and return an appropriate error.  Otherwise,
+   just return the original error chain.
+*/
+static svn_error_t *
+leftmod_error_chain (svn_error_t *err,
+                     const char *logfile,
+                     const char *path,
+                     apr_pool_t *pool)
+{
+  svn_error_t *tmp_err = SVN_NO_ERROR;
+
+  if (! err)
+    return SVN_NO_ERROR;
+
+  /* Advance TMP_ERR to the part of the error chain that reveals that
+     a local mod was left, or to the NULL end of the chain. */
+  for (tmp_err = err; tmp_err; tmp_err = tmp_err->child)
+    if (tmp_err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
+      {
+        break;
+      }
+                   
+  /* If we found a "left a local mod" error, wrap and return it.
+     Otherwise, we just return our top-most error. */
+  if (tmp_err)
+    {
+      /* Remove the LOGFILE (and eat up errors from this process). */
+      svn_error_t *err2 = svn_io_remove_file (logfile, pool);
+      if (err2)
+        svn_error_clear (err2);
+
+      return svn_error_createf
+        (SVN_ERR_WC_OBSTRUCTED_UPDATE, tmp_err,
+         "failed to delete dir '%s': local mods found within.", path);
+    }
+
+  return err;
+}
+
+
 static svn_error_t *
 delete_entry (const char *path, 
               svn_revnum_t revision, 
@@ -724,7 +767,6 @@ delete_entry (const char *path,
 {
   struct dir_baton *pb = parent_baton;
   apr_status_t apr_err;
-  svn_error_t *err;
   apr_file_t *log_fp = NULL;
   const char *base_name = svn_path_basename (path, pool);
   const char *tgt_rev_str = NULL;
@@ -845,49 +887,21 @@ delete_entry (const char *path,
                    (&child_access, pb->edit_baton->adm_access,
                     full_path, pool));
           
-          err = svn_wc_remove_from_revision_control
-            (child_access,
-             SVN_WC_ENTRY_THIS_DIR,
-             TRUE, /* destroy */
-             TRUE, /* instant error */
-             pb->edit_baton->cancel_func,
-             pb->edit_baton->cancel_baton,
-             pool);
-          
-          if (err && err->child && err->child->child
-              && (err->child->child->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
-            {
-              SVN_ERR (svn_io_remove_file (logfile_path, pool));
-
-              return svn_error_createf
-                (SVN_ERR_WC_OBSTRUCTED_UPDATE, err->child->child,
-                 "failed to delete dir '%s': local mods found within.",
-                 pb->path);              
-            }
-          else if (err)
-            return err;
+          SVN_ERR (leftmod_error_chain 
+                   (svn_wc_remove_from_revision_control 
+                    (child_access,
+                     SVN_WC_ENTRY_THIS_DIR,
+                     TRUE, /* destroy */
+                     TRUE, /* instant error */
+                     pb->edit_baton->cancel_func,
+                     pb->edit_baton->cancel_baton,
+                     pool),
+                    logfile_path, pb->path, pool));
         }
     }
 
-  err = svn_wc__run_log (adm_access, NULL, pool);
-  if (err && err->child && err->child->child 
-      && (err->child->child->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
-    {
-      /* This means the loggy call to remove_from_revision_control()
-         found a locally modified file, and bailed out completely.  We
-         don't want the logfile hanging around, though; a user
-         shouldn't have to run 'svn cleanup' to continue.  Simply
-         moving the obstruction and re-running 'svn up' should finish
-         the job. */
-      SVN_ERR (svn_io_remove_file (logfile_path, pool));
-
-      return svn_error_createf
-        (SVN_ERR_WC_OBSTRUCTED_UPDATE, err->child->child,
-         "failed to delete dir '%s': local mods found within.",
-         pb->path);              
-    }
-  else if (err)
-    return err;
+  SVN_ERR (leftmod_error_chain (svn_wc__run_log (adm_access, NULL, pool),
+                                logfile_path, pb->path, pool));
 
   /* The passed-in `path' is relative to the anchor of the edit, so if
    * the operation was invoked on something other than ".", then

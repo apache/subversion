@@ -71,6 +71,9 @@ svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
              back up one level and try again. */
           const char *shorter = svn_path_dirname (path, pool);
 
+          /* Clear the error. */
+          svn_error_clear (err);
+
           if (shorter[0] == '\0')
             {
               /* A weird and probably rare situation. */

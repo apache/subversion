@@ -473,14 +473,20 @@ svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
                          pool);
   if (err)
     {
+      svn_error_t *err2;
+
       /* If we got an error on the parent dir, that means we failed to
          get an access baton for the child in the first place.  And if
          the reason we couldn't get the child access baton is that the
          child is not a versioned directory, then return an error
          about the child, not the parent. */ 
       svn_node_kind_t child_kind;
-      SVN_ERR (svn_io_check_path (path, &child_kind, pool));
-
+      if ((err2 = svn_io_check_path (path, &child_kind, pool)))
+        {
+          svn_error_compose (err, err2);
+          return err;
+        }
+  
       if ((dir != path)
           && (child_kind == svn_node_dir)
           && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))

@@ -503,6 +503,8 @@ static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                ### first one found */
             if (mc->err == NULL)
               mc->err = err;
+            else
+              svn_error_clear(err);
           }
         svn_pool_clear (mc->scratchpool);
       }

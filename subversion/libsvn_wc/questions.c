@@ -206,7 +206,7 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
 {
   svn_boolean_t same;
   const char *tmp_vfile;
-  svn_error_t *err = SVN_NO_ERROR;
+  svn_error_t *err = SVN_NO_ERROR, *err2 = SVN_NO_ERROR;
 
   SVN_ERR (svn_wc_translated_file (&tmp_vfile, versioned_file, adm_access,
                                    TRUE, pool));
@@ -215,9 +215,15 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
   *modified_p = (! same);
   
   if (tmp_vfile != versioned_file)
-    SVN_ERR (svn_io_remove_file (tmp_vfile, pool));
-  
-  return err;
+    err2 = svn_io_remove_file (tmp_vfile, pool);
+
+  if (err)
+    {
+      svn_error_compose (err, err2);
+      return err;
+    }
+
+  return err2;
 }
 
 

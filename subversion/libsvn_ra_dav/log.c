@@ -229,7 +229,12 @@ log_end_element(void *userdata,
         
         if (err)
           {
-            lb->err = err;         /* ### Wrap an existing error, if any? */
+            /* Only remember the first error. */
+            if (lb->err == NULL)
+              lb->err = err;
+            else
+              svn_error_clear(err);
+              
             return SVN_RA_DAV__XML_INVALID; /* ### Any other way to express
                                                    an err? */
           }
