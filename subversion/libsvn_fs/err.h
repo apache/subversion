@@ -30,53 +30,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
-/* Return an svn_error_t object that reports a Berkeley DB error.
-   DB_ERR is the error value returned by the Berkeley DB routine. */
-svn_error_t *svn_fs__dberr (int db_err);
-
-
-/* Allocate an error object for a Berkeley DB error, with a formatted message.
-
-   DB_ERR is the Berkeley DB error code.
-   FMT is a printf-style format string, describing how to format any
-      subsequent arguments.
-
-   The svn_error_t object returned has a message consisting of:
-   - the text specified by FMT and the subsequent arguments, and
-   - the Berkeley DB error message for the error code DB_ERR.
-
-   There is no separator between the two messages; if you want one,
-   you should include it in FMT.  */
-svn_error_t *svn_fs__dberrf (int db_err,
-                             const char *fmt, ...);
-
-
-/* Check the return status from the Berkeley DB operation.  If the
-   operation succeeded, return zero.  Otherwise, construct an
-   appropriate Subversion error object describing what went wrong.
-   - FS is the Subversion filesystem we're operating on.
-   - OPERATION is a gerund clause describing what we were trying to do.
-   - DB_ERR is the return status from the Berkeley DB function.  */
-svn_error_t *svn_fs__wrap_db (svn_fs_t *fs,
-                              const char *operation,
-                              int db_err);
-
-
-/* A terse wrapper for svn_fs__check_db.  */
-#define DB_WRAP(fs, op, err) (svn_fs__wrap_db ((fs), (op), (err)))
-
-
-/* If EXPR returns a non-zero value, return it.  This is like SVN_ERR,
-   but for functions that return a Berkeley DB error code.  */
-#define DB_ERR(expr)                            \
-  do {                                          \
-    int db_err__temp = (expr);                  \
-    if (db_err__temp)                           \
-      return db_err__temp;                      \
-  } while (0)
-
-
 /* Verify that FS refers to an open database; return an appropriate
    error if this is not the case.  */
 svn_error_t *svn_fs__check_fs (svn_fs_t *fs);

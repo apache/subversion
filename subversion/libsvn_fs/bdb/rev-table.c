@@ -1,4 +1,4 @@
-/* rev-table.c : working with the `revisions' table
+    /* rev-table.c : working with the `revisions' table
  *
  * ====================================================================
  * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
@@ -21,22 +21,23 @@
 #include "../err.h"
 #include "../util/skel.h"
 #include "../util/fs_skels.h"
+#include "bdb-err.h"
 #include "dbt.h"
 #include "rev-table.h"
 
 
 /* Opening/creating the `revisions' table.  */
 
-int svn_fs__open_revisions_table (DB **revisions_p,
-                                  DB_ENV *env,
-                                  int create)
+int svn_fs__bdb_open_revisions_table (DB **revisions_p,
+                                      DB_ENV *env,
+                                      int create)
 {
   const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   DB *revisions;
 
-  DB_ERR (svn_bdb__check_version());
-  DB_ERR (db_create (&revisions, env, 0));
-  DB_ERR (revisions->open (SVN_BDB_OPEN_PARAMS(revisions, NULL),
+  BDB_ERR (svn_fs__bdb_check_version());
+  BDB_ERR (db_create (&revisions, env, 0));
+  BDB_ERR (revisions->open (SVN_BDB_OPEN_PARAMS(revisions, NULL),
                            "revisions", 0, DB_RECNO,
                            open_flags | SVN_BDB_AUTO_COMMIT,
                            0666));
@@ -51,10 +52,10 @@ int svn_fs__open_revisions_table (DB **revisions_p,
 
 
 svn_error_t *
-svn_fs__get_rev (svn_fs__revision_t **revision_p,
-                 svn_fs_t *fs,
-                 svn_revnum_t rev,
-                 trail_t *trail)
+svn_fs__bdb_get_rev (svn_fs__revision_t **revision_p,
+                     svn_fs_t *fs,
+                     svn_revnum_t rev,
+                     trail_t *trail)
 {
   int db_err;
   DBT key, value;
@@ -77,7 +78,7 @@ svn_fs__get_rev (svn_fs__revision_t **revision_p,
     return svn_fs__err_dangling_rev (fs, rev);
 
   /* Handle any other error conditions.  */
-  SVN_ERR (DB_WRAP (fs, "reading filesystem revision", db_err));
+  SVN_ERR (BDB_WRAP (fs, "reading filesystem revision", db_err));
 
   /* Parse REVISION skel.  */
   skel = svn_fs__parse_skel (value.data, value.size, trail->pool);
@@ -97,10 +98,10 @@ svn_fs__get_rev (svn_fs__revision_t **revision_p,
    write a new revision and return its newly created revision number
    in *REV.  */
 svn_error_t *
-svn_fs__put_rev (svn_revnum_t *rev,
-                 svn_fs_t *fs,
-                 const svn_fs__revision_t *revision,
-                 trail_t *trail)
+svn_fs__bdb_put_rev (svn_revnum_t *rev,
+                     svn_fs_t *fs,
+                     const svn_fs__revision_t *revision,
+                     trail_t *trail)
 {
   int db_err;
   db_recno_t recno = 0;
@@ -120,14 +121,14 @@ svn_fs__put_rev (svn_revnum_t *rev,
         (fs->revisions, trail->db_txn,
          svn_fs__set_dbt (&query, &recno, sizeof (recno)),
          svn_fs__skel_to_dbt (&result, skel, trail->pool), 0);
-      return DB_WRAP (fs, "updating filesystem revision", db_err);
+      return BDB_WRAP (fs, "updating filesystem revision", db_err);
     }
       
   db_err = fs->revisions->put (fs->revisions, trail->db_txn,
                                svn_fs__recno_dbt(&key, &recno),
                                svn_fs__skel_to_dbt (&value, skel, trail->pool),
                                DB_APPEND);
-  SVN_ERR (DB_WRAP (fs, "storing filesystem revision", db_err));
+  SVN_ERR (BDB_WRAP (fs, "storing filesystem revision", db_err));
 
   /* Turn the record number into a Subversion revision number.
      Revisions are numbered starting with zero; Berkeley DB record
@@ -142,9 +143,9 @@ svn_fs__put_rev (svn_revnum_t *rev,
 
 
 svn_error_t *
-svn_fs__youngest_rev (svn_revnum_t *youngest_p,
-                      svn_fs_t *fs,
-                      trail_t *trail)
+svn_fs__bdb_youngest_rev (svn_revnum_t *youngest_p,
+                          svn_fs_t *fs,
+                          trail_t *trail)
 {
   int db_err;
   DBC *cursor = 0;
@@ -154,7 +155,7 @@ svn_fs__youngest_rev (svn_revnum_t *youngest_p,
   SVN_ERR (svn_fs__check_fs (fs));
 
   /* Create a database cursor.  */
-  SVN_ERR (DB_WRAP (fs, "getting youngest revision (creating cursor)",
+  SVN_ERR (BDB_WRAP (fs, "getting youngest revision (creating cursor)",
                     fs->revisions->cursor (fs->revisions, trail->db_txn,
                                            &cursor, 0)));
 
@@ -178,7 +179,7 @@ svn_fs__youngest_rev (svn_revnum_t *youngest_p,
            "revision 0 missing from `revisions' table, in filesystem `%s'",
            fs->path);
       
-      SVN_ERR (DB_WRAP (fs, "getting youngest revision (finding last entry)",
+      SVN_ERR (BDB_WRAP (fs, "getting youngest revision (finding last entry)",
                         db_err));
     }
 
@@ -188,7 +189,7 @@ svn_fs__youngest_rev (svn_revnum_t *youngest_p,
      reasons, and txn_commit shouldn't fail that way, and 
      2) using a cursor after committing its transaction can cause
      undetectable database corruption.  */
-  SVN_ERR (DB_WRAP (fs, "getting youngest revision (closing cursor)",
+  SVN_ERR (BDB_WRAP (fs, "getting youngest revision (closing cursor)",
                     cursor->c_close (cursor)));
 
   /* Turn the record number into a Subversion revision number.

@@ -203,8 +203,8 @@ get_node_revision (svn_fs__node_revision_t **noderev_p,
   if (! node->node_revision)
     {
       /* Read it in, and cache it.  */
-      SVN_ERR (svn_fs__get_node_revision (&noderev, node->fs, 
-                                          node->id, trail));
+      SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, node->fs, 
+                                              node->id, trail));
       cache_node_revision (node, noderev, trail);
     }
           
@@ -222,7 +222,7 @@ set_node_revision (dag_node_t *node,
                    trail_t *trail)
 {
   /* Write it out.  */
-  SVN_ERR (svn_fs__put_node_revision (node->fs, node->id, noderev, trail));
+  SVN_ERR (svn_fs__bdb_put_node_revision (node->fs, node->id, noderev, trail));
 
   /* Since the write succeeded, update the cache.  */
   cache_node_revision (node, noderev, trail);
@@ -276,7 +276,7 @@ svn_fs__dag_get_revision (svn_revnum_t *rev,
   const char *txn_id = svn_fs__id_txn_id (svn_fs__dag_get_id (node));
   
   /* Use the txn ID to look up the transaction.  */
-  SVN_ERR (svn_fs__get_txn (&txn, svn_fs__dag_get_fs (node), txn_id, trail));
+  SVN_ERR (svn_fs__bdb_get_txn (&txn, svn_fs__dag_get_fs (node), txn_id, trail));
 
   /* If the transaction has been committed, we can return the revision
      number, else we return the invalid revision number. */
@@ -364,26 +364,26 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
   /* Create empty root directory with node revision 0.0.0. */
   memset (&noderev, 0, sizeof (noderev));
   noderev.kind = svn_node_dir;
-  SVN_ERR (svn_fs__put_node_revision (fs, root_id, &noderev, trail));
+  SVN_ERR (svn_fs__bdb_put_node_revision (fs, root_id, &noderev, trail));
 
   /* Create a new transaction (better have an id of "0") */
-  SVN_ERR (svn_fs__create_txn (&txn_id, fs, root_id, trail));
+  SVN_ERR (svn_fs__bdb_create_txn (&txn_id, fs, root_id, trail));
   if (strcmp (txn_id, "0"))
     return svn_error_createf 
       (SVN_ERR_FS_CORRUPT, 0,
        "initial transaction id not `0' in filesystem `%s'", fs->path);
 
   /* Create a default copy (better have an id of "0") */
-  SVN_ERR (svn_fs__reserve_copy_id (&copy_id, fs, trail));
+  SVN_ERR (svn_fs__bdb_reserve_copy_id (&copy_id, fs, trail));
   if (strcmp (copy_id, "0"))
     return svn_error_createf 
       (SVN_ERR_FS_CORRUPT, 0,
        "initial copy id not `0' in filesystem `%s'", fs->path);
-  SVN_ERR (svn_fs__create_copy (copy_id, fs, NULL, NULL, root_id, trail));
+  SVN_ERR (svn_fs__bdb_create_copy (copy_id, fs, NULL, NULL, root_id, trail));
 
   /* Link it into filesystem revision 0. */
   revision.txn_id = txn_id;
-  SVN_ERR (svn_fs__put_rev (&rev, fs, &revision, trail));
+  SVN_ERR (svn_fs__bdb_put_rev (&rev, fs, &revision, trail));
   if (rev != 0)
     return svn_error_createf (SVN_ERR_FS_CORRUPT, 0,
                               "initial revision number is not `0'"
@@ -737,7 +737,7 @@ svn_fs__dag_set_proplist (dag_node_t *node,
   if (! svn_fs__same_keys (mutable_rep_key, rep_key))
     {
       noderev->prop_key = mutable_rep_key;
-      SVN_ERR (svn_fs__put_node_revision (fs, node->id, noderev, trail));
+      SVN_ERR (svn_fs__bdb_put_node_revision (fs, node->id, noderev, trail));
     }
 
   /* Replace the old property list with the new one. */
@@ -883,7 +883,7 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
       /* Of my own flesh and bone...
          (Get the NODE-REVISION for the base node, and then write
          it back out as the clone.) */
-      SVN_ERR (svn_fs__get_node_revision (&noderev, fs, base_root_id, trail));
+      SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, fs, base_root_id, trail));
 
       /* Store it. */
       /* ### todo: Does it even makes sense to have a different copy id for
@@ -1110,7 +1110,7 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
      representations and strings it points to. */
 
   /* Get a fresh node-revision. */
-  SVN_ERR (svn_fs__get_node_revision (&noderev, fs, id, trail));
+  SVN_ERR (svn_fs__bdb_get_node_revision (&noderev, fs, id, trail));
 
   /* Delete any mutable property representation. */
   if (noderev->prop_key)
@@ -1309,7 +1309,7 @@ svn_fs__dag_get_edit_stream (svn_stream_t **contents,
   
   /* We made a new rep, so update the node revision. */
   noderev->edit_key = mutable_rep_key;
-  SVN_ERR (svn_fs__put_node_revision (fs, file->id, noderev, trail));
+  SVN_ERR (svn_fs__bdb_put_node_revision (fs, file->id, noderev, trail));
 
   /* Return a writable stream with which to set new contents. */
   ws = svn_fs__rep_contents_write_stream (fs, mutable_rep_key, txn_id,
@@ -1356,7 +1356,7 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
   old_data_key = noderev->data_key;
   noderev->data_key = noderev->edit_key;
   noderev->edit_key = NULL;
-  SVN_ERR (svn_fs__put_node_revision (fs, file->id, noderev, trail));
+  SVN_ERR (svn_fs__bdb_put_node_revision (fs, file->id, noderev, trail));
   
   /* Only *now* can we safely destroy the old representation (if it
      even existed in the first place). */
@@ -1439,7 +1439,7 @@ svn_fs__dag_copy (dag_node_t *to_node,
       to_noderev = copy_node_revision (from_noderev, trail->pool);
       
       /* Reserve a copy ID for this new copy. */
-      SVN_ERR (svn_fs__reserve_copy_id (&copy_id, fs, trail));
+      SVN_ERR (svn_fs__bdb_reserve_copy_id (&copy_id, fs, trail));
 
       /* Create a successor with its predecessor pointing at the copy
          source. */
@@ -1455,7 +1455,7 @@ svn_fs__dag_copy (dag_node_t *to_node,
       /* Now that we've done the copy, we need to add the information
          about the copy to the `copies' table, using the COPY_ID we
          reserved above.  */
-      SVN_ERR (svn_fs__create_copy 
+      SVN_ERR (svn_fs__bdb_create_copy 
                (copy_id, fs, 
                 svn_fs__canonicalize_abspath (from_path, trail->pool), 
                 from_txn_id, id, trail));
@@ -1503,16 +1503,16 @@ svn_fs__dag_copied_from (svn_revnum_t *rev_p,
              a copied subtree item.  We examine the actual copy record
              to determine which is the case.  */
           svn_fs__copy_t *copy;
-          SVN_ERR (svn_fs__get_copy (&copy, svn_fs__dag_get_fs (node),
-                                     id_copy_id, trail));
+          SVN_ERR (svn_fs__bdb_get_copy (&copy, svn_fs__dag_get_fs (node),
+                                         id_copy_id, trail));
           if (svn_fs__id_eq (copy->dst_noderev_id, id))
             {
               /* We need to translate the COPY's transaction ID into a
                  revision.  So we lookup the transaction, and pull the
                  revision from it.  It's really not that complicated.  */
               svn_fs__transaction_t *txn;
-              SVN_ERR (svn_fs__get_txn (&txn, svn_fs__dag_get_fs (node),
-                                        copy->src_txn_id, trail));
+              SVN_ERR (svn_fs__bdb_get_txn (&txn, svn_fs__dag_get_fs (node),
+                                            copy->src_txn_id, trail));
               *rev_p = txn->revision;
               *path_p = copy->src_path;
             }
@@ -1580,11 +1580,11 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
 
   /* Add new revision entry to `revisions' table, copying the
      transaction's property list.  */
-  SVN_ERR (svn_fs__get_txn (&transaction, fs, txn_id, trail));
+  SVN_ERR (svn_fs__bdb_get_txn (&transaction, fs, txn_id, trail));
   revision.txn_id = txn_id;
   if (new_rev)
     *new_rev = SVN_INVALID_REVNUM;
-  SVN_ERR (svn_fs__put_rev (new_rev, fs, &revision, trail));
+  SVN_ERR (svn_fs__bdb_put_rev (new_rev, fs, &revision, trail));
 
   /* Promote the unfinished transaction to a committed one. */
   SVN_ERR (svn_fs__txn_make_committed (fs, txn_id, *new_rev, trail));

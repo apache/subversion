@@ -41,10 +41,10 @@ svn_fs__create_node (const svn_fs_id_t **id_p,
   svn_fs_id_t *id;
 
   /* Find an unused ID for the node.  */
-  SVN_ERR (svn_fs__new_node_id (&id, fs, txn_id, trail));
+  SVN_ERR (svn_fs__bdb_new_node_id (&id, fs, txn_id, trail));
 
   /* Store its NODE-REVISION skel.  */
-  SVN_ERR (svn_fs__put_node_revision (fs, id, noderev, trail));
+  SVN_ERR (svn_fs__bdb_put_node_revision (fs, id, noderev, trail));
 
   *id_p = id;
   return SVN_NO_ERROR;
@@ -66,11 +66,11 @@ svn_fs__create_successor (const svn_fs_id_t **new_id_p,
   svn_fs_id_t *new_id;
 
   /* Choose an ID for the new node, and store it in the database.  */
-  SVN_ERR (svn_fs__new_successor_id (&new_id, fs, old_id, copy_id,
-                                     txn_id, trail));
+  SVN_ERR (svn_fs__bdb_new_successor_id (&new_id, fs, old_id, copy_id,
+                                         txn_id, trail));
 
   /* Store the new skel under that ID.  */
-  SVN_ERR (svn_fs__put_node_revision (fs, new_id, new_noderev, trail));
+  SVN_ERR (svn_fs__bdb_put_node_revision (fs, new_id, new_noderev, trail));
 
   *new_id_p = new_id;
   return SVN_NO_ERROR;
@@ -88,5 +88,5 @@ svn_fs__delete_node_revision (svn_fs_t *fs,
   /* ### todo: here, we should adjust other nodes to compensate for
      the missing node. */
 
-  return svn_fs__delete_nodes_entry (fs, id, trail);
+  return svn_fs__bdb_delete_nodes_entry (fs, id, trail);
 }
