@@ -894,7 +894,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
 
 svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
                    svn_boolean_t tunnel, svn_boolean_t read_only,
-                   apr_pool_t *pool)
+                   svn_boolean_t believe_username, apr_pool_t *pool)
 {
   svn_error_t *err, *io_err;
   apr_uint64_t ver;
@@ -959,8 +959,12 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
 #endif
 
   if (strcmp(mech, "ANONYMOUS") == 0)
-    valid_mech = TRUE;
+    {
+      if (believe_username && mecharg && *mecharg)
+        user = mecharg;
 
+      valid_mech = TRUE;
+    }
   if (!valid_mech)  /* Client gave us an unlisted mech. */
     return SVN_NO_ERROR;
 
