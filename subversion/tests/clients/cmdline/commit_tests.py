@@ -1040,11 +1040,11 @@ def commit_uri_unsafe(sbox):
   if svntest.main.windows:
     angle_name = '$angle$'
     nasty_name = '#![]{}()$$%'
-    tab_name   = 'tab-name'
+    tab_name   = 'tab-path'
   else:
     angle_name = '<angle>'
     nasty_name = '#![]{}()<>%'
-    tab_name   = "tab\tname"
+    tab_name   = "tab\tpath"
   
   # Make some convenient paths.
   hash_dir = os.path.join(wc_dir, '#hash#')
