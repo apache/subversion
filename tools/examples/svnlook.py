@@ -27,8 +27,8 @@ class SVNLook:
   def __init__(self, pool, path, cmd, rev, txn):
     self.pool = pool
 
-    repos = repos.svn_repos_open(path, pool)
-    self.fs_ptr = repos.svn_repos_fs(repos)
+    repos_ptr = repos.svn_repos_open(path, pool)
+    self.fs_ptr = repos.svn_repos_fs(repos_ptr)
 
     if txn:
       self.txn_ptr = fs.open_txn(self.fs_ptr, txn, pool)
@@ -230,7 +230,7 @@ class ChangedEditor(delta.Editor):
   def change_dir_prop(self, dir_baton, name, value, pool):
     if dir_baton[0]:
       # the directory hasn't been printed yet. do it.
-      print '_U  ' + baton[1] + '/'
+      print '_U  ' + dir_baton[1] + '/'
       dir_baton[0] = 0
 
   def add_file(self, path, parent_baton,
@@ -250,7 +250,7 @@ class ChangedEditor(delta.Editor):
   def change_file_prop(self, file_baton, name, value, pool):
     file_baton[1] = 'U'
 
-  def close_file(self, text_checksum, file_baton):
+  def close_file(self, file_baton, text_checksum):
     text_mod, prop_mod, path = file_baton
     # test the path. it will be None if we added this file.
     if path:
