@@ -149,7 +149,7 @@
     </sect2>
 
     <!-- ***************************************************************** -->
-    <sect2 id="svn-ch-5-sect-1.2.A">
+    <sect2 id="svn-ch-5-sect-1.3">
       <title>Repository Data-Stores</title>
 
       <para>As of Subversion 1.1, there are two options for storing
@@ -157,8 +157,8 @@
         stores everything in a Berkeley DB database; the other kind
         stores data in ordinary flat files, using a custom
         format.  Because Subversion developers often refer to a
-        repository as "The [Versioned] Filesystem", they have adopted
-        the habit of referring to the latter type of repository as
+        repository as <quote>The [Versioned] Filesystem</quote>, they have
+        adopted the habit of referring to the latter type of repository as
         <firstterm>FSFS</firstterm>: that is, it's a versioned
         filesystem implementation that uses the native OS filesystem
         to store data.</para>
@@ -285,7 +285,7 @@
       </table>
       
     <!-- ***************************************************************** -->
-      <sect3 id="svn-ch-5-sect-1.3">
+      <sect3 id="svn-ch-5-sect-1.3.1">
         <title>Berkeley DB</title>
         
         <para>When the initial design phase of Subversion was in
@@ -320,15 +320,15 @@
 
         <para>Berkeley DB is also a very reliable database system.
           Subversion uses Berkeley DB's logging facilities, which
-          means that the database first writes to on-disk logfiles a
+          means that the database first writes to on-disk log files a
           description of any modifications it is about to make, and
           then makes the modification itself.  This is to ensure that
           if anything goes wrong, the database system can back up to
           a previous <firstterm>checkpoint</firstterm>&mdash;a
-          location in the logfiles known not to be corrupt&mdash;and
+          location in the log files known not to be corrupt&mdash;and
           replay transactions until the data is restored to a usable
           state.  See <xref linkend="svn-ch-5-sect-3.3"/> for more
-          about Berkeley DB logfiles.</para>
+          about Berkeley DB log files.</para>
 
         <para>But every rose has its thorn, and so we must note some
           known limitations of Berkeley DB.  First, Berkeley DB
@@ -378,7 +378,7 @@
       </sect3>
       
     <!-- ***************************************************************** -->
-      <sect3 id="svn-ch-5-sect-1.4">
+      <sect3 id="svn-ch-5-sect-1.3.2">
         <title>FSFS</title>
 
         <para>In mid-2004, a second type of repository storage system
@@ -1327,14 +1327,14 @@ Available subcommands:
           aren't careless about it, you can manually inspect and
           modify it.  Of course, the downside is that if you have two
           years' worth of repository activity encapsulated in what is
-          likely to be a very large dumpfile, it could take you a
+          likely to be a very large dump file, it could take you a
           long, long time to manually inspect and modify it.</para>
 
         <para>While it won't be the most commonly used tool at the
           administrator's disposal, <command>svndumpfilter</command>
           provides a very particular brand of useful
           functionality&mdash;the ability to quickly and easily modify
-          that dumpfile data by acting as a path-based filter.  Simply
+          that dump data by acting as a path-based filter.  Simply
           give it either a list of paths you wish to keep, or a list
           of paths you wish to not keep, then pipe your repository
           dump data through this filter.  The result will be a
@@ -1411,7 +1411,7 @@ Available subcommands:
 </screen>
 
         <para>To get these three projects into their own repositories,
-          we first make a dumpfile of the whole repository:</para>
+          we first dump the whole repository:</para>
 
         <screen>
 $ svnadmin dump /path/to/repos &gt; repos-dumpfile
@@ -1423,9 +1423,9 @@ $ svnadmin dump /path/to/repos &gt; repos-dumpfile
 $
 </screen>
 
-        <para>Next, run that dumpfile through the filter, each time
+        <para>Next, run that dump file through the filter, each time
           including only one of our top-level directories, and
-          resulting in three new dumpfiles:</para>
+          resulting in three new dump files:</para>
 
         <screen>
 $ cat repos-dumpfile | svndumpfilter include calc &gt; calc-dumpfile
@@ -1438,7 +1438,7 @@ $
 </screen>
 
         <para>At this point, you have to make a decision.  Each of
-          your dumpfiles will create a valid repository,
+          your dump files will create a valid repository,
           but will preserve the paths exactly as they were in the
           original repository.  This means that even though you would
           have a repository solely for your <literal>calc</literal>
@@ -1447,7 +1447,7 @@ $
           your <filename>trunk</filename>, <filename>tags</filename>,
           and <filename>branches</filename> directories to live in the
           root of your repository, you might wish to edit your
-          dumpfiles, tweaking the <literal>Node-path</literal> and
+          dump files, tweaking the <literal>Node-path</literal> and
           <literal>Copyfrom-path</literal> headers to no longer have
           that first <filename>calc/</filename> path component.  Also,
           you'll want to remove the section of dump data that creates
@@ -1472,7 +1472,7 @@ Content-length: 0
         </warning>
 
         <para>All that remains now is to create your three new
-          repositories, and load each dumpfile into the right
+          repositories, and load each dump file into the right
           repository:</para>
 
         <screen>
@@ -1538,7 +1538,7 @@ $
           useful, and a huge timesaver, there are unfortunately a
           couple of gotchas.  First, this utility is overly sensitive
           to path semantics.  Pay attention to whether paths in your
-          dumpfile are specified with or without leading slashes.
+          dump file are specified with or without leading slashes.
           You'll want to look at the <literal>Node-path</literal> and
           <literal>Copyfrom-path</literal> headers.</para>
 
@@ -1552,7 +1552,7 @@ Node-path: spreadsheet/Makefile
           include leading slashes in the paths you pass to
           <command>svndumpfilter include</command> and
           <command>svndumpfilter exclude</command> (and if they don't,
-          you shouldn't).  Further, if your dumpfile has an inconsistent
+          you shouldn't).  Further, if your dump file has an inconsistent
           usage of leading slashes for some reason,
           <footnote>
             <para>While <command>svnadmin dump</command> has a
@@ -1964,18 +1964,18 @@ $
           data that be cleaned up or reclaimed.</para>
 
         <para>Until recently, the largest offender of disk space usage
-          with respect to Subversion repositories was the logfiles to
+          with respect to Subversion repositories was the log files to
           which Berkeley DB performs its pre-writes before modifying
           the actual database files.  These files capture all the
           actions taken along the route of changing the database from
           one state to another&mdash;while the database files reflect
-          at any given time some state, the logfiles contain all the
+          at any given time some state, the log files contain all the
           many changes along the way between states.  As such, they
           can start to accumulate quite rapidly.</para>
 
         <para>Fortunately, beginning with the 4.2 release of Berkeley
           DB, the database environment has the ability to remove its
-          own unused logfiles without any external procedures.  Any
+          own unused log files without any external procedures.  Any
           repositories created using an <command>svnadmin</command>
           which is compiled against Berkeley DB version 4.2 or greater
           will be configured for this automatic log file removal.  If
@@ -2002,7 +2002,7 @@ $
           longer in use by Berkeley DB, and then remove them from disk
           to conserve space.  Use the <command>svnadmin
           list-unused-dblogs</command> command to list the unused
-          logfiles:</para>
+          log files:</para>
 
       <screen>
 $ svnadmin list-unused-dblogs /path/to/repos
@@ -2053,7 +2053,7 @@ $ svnadmin list-unused-dblogs /path/to/repos | xargs rm
     <sect2 id="svn-ch-5-sect-3.4">
       <title>Repository Recovery</title>
 
-      <para>As mentioned in <xref linkend="svn-ch-5-sect-1.3"/>, a
+      <para>As mentioned in <xref linkend="svn-ch-5-sect-1.3.1"/>, a
         Berkeley DB repository can sometimes be left in frozen state
         if not closed properly.  When this happens, an administrator
         needs to rewind the database back into a consistent
@@ -2292,19 +2292,19 @@ $ svnadmin create newrepos
 $ svnadmin dump myrepos | svnadmin load newrepos
 </screen>
 
-      <para>By default, the dumpfile will be quite large&mdash;much
+      <para>By default, the dump file will be quite large&mdash;much
         larger than the repository itself.  That's because every
         version of every file is expressed as a full text in the
-        dumpfile.  This is the fastest and simplest behavior, and nice
+        dump file.  This is the fastest and simplest behavior, and nice
         if you're piping the dump data directly into some other
         process (such as a compression program, filtering program, or
-        into a loading process).  But if you're creating dumpfile for
+        into a loading process).  But if you're creating a dump file for
         longer-term storage, you'll likely want to save disk space by
         using the <option>--deltas</option> switch.  With this option,
         successive revisions of files will be output as compressed,
         binary differences&mdash;just as file revisions are stored in
         a repository.  This option is slower, but results in a
-        dumpfile much closer in size to the original
+        dump file much closer in size to the original
         repository.</para>
 
       <para>We mentioned previously that <command>svnadmin
@@ -2384,7 +2384,7 @@ $ svnadmin load newrepos &lt; dumpfile3
         several different repositories into a single repository.  By
         using the <option>--parent-dir</option> option of <command>svnadmin
         load</command>, you can specify a new virtual root directory
-        for the load process.  That means if you have dumpfiles for
+        for the load process.  That means if you have dump files for
         three repositories, say <filename>calc-dumpfile</filename>,
         <filename>cal-dumpfile</filename>, and
         <filename>ss-dumpfile</filename>, you can first create a new
@@ -2408,7 +2408,7 @@ Committed revision 1.
 $ 
 </screen>
 
-      <para>Lastly, load the individual dumpfiles into their
+      <para>Lastly, load the individual dump files into their
         respective locations in the new repository:</para>
 
       <screen>
@@ -2528,7 +2528,7 @@ $
         convenient to already have half of that process (the dump
         part) finished.  Unfortunately, the creation of&mdash;and
         restoration from&mdash;incremental backups takes longer, as
-        each commit is effectively replayed into either the dumpfile
+        each commit is effectively replayed into either the dump file
         or the repository.</para>
 
       <para>In either backup scenario, repository administrators need

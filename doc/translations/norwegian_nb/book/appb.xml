@@ -48,9 +48,9 @@
           access your data.  Berkeley DB is a journaling system, meaning
           that it logs everything it is about to do before it does so.  If
           your process is interrupted (e.g. by a kill signal or segfault),
-          then a lockfile is left behind, along with a logfile describing
+          then a lock file is left behind, along with a log file describing
           unfinished business.  Any other process that attempts to
-          access the database will just hang, waiting for the lockfile
+          access the database will just hang, waiting for the lock file
           to disappear.  To awaken your repository, you need to ask
           Berkeley DB to either finish the work, or rewind the
           database to a previous state that is known to be
@@ -85,7 +85,7 @@ $ svnadmin recover /path/to/repos
           journaling mechanism to perform all actions. That is, it
           logs everything it is about to do before it does so. If
           <command>svn</command> is interrupted while performing an
-          action, then one or more lockfiles are left behind, along
+          action, then one or more lock files are left behind, along
           with log files describing the unfinished
           actions. (<command>svn status</command> will show an
           <literal>L</literal> next to locked directories.)</para>

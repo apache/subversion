@@ -1672,7 +1672,7 @@ $ svn status
         time.  Suppose several days have passed, and many changes have
         happened on both the trunk and your private branch.  Suppose
         that you've finished working on your private branch; the
-        feature or bugfix is finally complete, and now you want to
+        feature or bug fix is finally complete, and now you want to
         merge all of your branch changes back into the trunk for
         others to enjoy.</para>
 
@@ -1708,7 +1708,7 @@ $ svn status
 
       <tip>
         <para>A nice way of finding the revision in which a branch was
-          created (the "base" of the branch) is to use the
+          created (the <quote>base</quote> of the branch) is to use the
           <option>--stop-on-copy</option> option to <command>svn
           log</command>.  The log subcommand will normally show every
           change ever made to the branch, including tracing back
@@ -1772,7 +1772,7 @@ Committed revision 406.
 
       <para>For example, suppose you decide to keep working on your
         branch for another week, in order to complete an enhancement
-        to your original feature or bugfix.  The repository's
+        to your original feature or bug fix.  The repository's
         <literal>HEAD</literal> revision is now 480, and you're ready
         to do another merge from your private branch to the trunk.
         But as discussed in <xref linkend="svn-ch-4-sect-3.2"/>, you
@@ -2270,7 +2270,7 @@ Committed revision 351.
         <filename>calc</filename> example: suppose it contains a
         number of subdirectories and many more files.  In the course
         of your work, you may decide that you need to create a working
-        copy that is designed to have specific features and bugfixes.
+        copy that is designed to have specific features and bug fixes.
         You can accomplish this by selectively backdating files or
         directories to particular revisions (using <command>svn update
         -r</command> liberally), or by switching files and directories
@@ -2306,7 +2306,7 @@ Committed revision 352.
         Sometimes there are situations where you have a bunch of local
         changes made to your working copy, and you'd like a
         collaborator to see them.  Instead of running <command>svn
-        diff</command> and sending a patchfile (which won't capture
+        diff</command> and sending a patch file (which won't capture
         tree changes), you can instead use <command>svn copy</command>
         to <quote>upload</quote> your working copy to a private area
         of the repository.  Your collaborator can then either checkout
@@ -2453,10 +2453,10 @@ Committed revision 377.
       <para>And now developers are free to continue adding
         cutting-edge (or experimental) features to
         <filename>/calc/trunk</filename>, and you can declare a
-        project policy that only bugfixes are to be committed to
+        project policy that only bug fixes are to be committed to
         <filename>/calc/branches/stable-1.0</filename>.  That is, as
         people continue to work on the trunk, a human selectively
-        ports bugfixes over to the stable branch.  Even after the
+        ports bug fixes over to the stable branch.  Even after the
         stable branch has shipped, you'll probably continue to
         maintain the branch for a long time&mdash;that is, as long
         as you continue to support that release for customers.</para>
